@@ -27,7 +27,7 @@ import {
   type Dimension,
 } from "../_shared/notebook/dimensions";
 import CardTile from "./_parts/CardTile";
-import { Consequences, ScopeBar } from "./_parts/ScopeBar";
+import { Consequences, ScopeBar, type StateFilter } from "./_parts/ScopeBar";
 
 /** THE COLUMNS OF THE NOTEBOOK BEING DEALT. A notebook that declares its own
  *  columns (NOTEBOOK-SCHEMA, stage 2) is reviewed in them — but `buildCards`
@@ -91,6 +91,11 @@ function ColumnCards({
 
 export default function ResearchTriageBoard({ api, trouble }: { api: ScopeApi; trouble?: string | null }) {
   const [focus, setFocus] = useState<string | null>(null);
+  /** A state filter (descoped / liked / deepen / wounded) from the ScopeBar. It
+   *  INTERSECTS the column focus rather than replacing it: the two are
+   *  orthogonal axes, and replacing one with the other would make "wounded
+   *  cards in Mechanisms" unaskable. Clicking the applied state again clears it. */
+  const [stateFilter, setStateFilter] = useState<StateFilter | null>(null);
   /** Every card's record at once, for the expert who reads rather than sweeps.
    *  Off by default: the board's first job is the sweep (CardTile.tsx, CardBody). */
   const [detailsMode, setDetailsMode] = useRemembered("research.board.details", "off", DETAILS_MODES);
@@ -107,7 +112,19 @@ export default function ResearchTriageBoard({ api, trouble }: { api: ScopeApi; t
    *  how an alarm stops being read. */
   const hasUntagged = api.cards.some((c) => c.dimension === UNTAGGED_DIMENSION_ID);
   const columns = columnsFor({ derived: boardColumns(api), hasUntagged });
-  const shown = focus ? columns.filter((d) => d.id === focus) : columns;
+  const matchesState = (c: Card) => {
+    if (!stateFilter) return true;
+    if (stateFilter === "wounded") return woundOf(c.id) !== undefined;
+    const st = stateOf(api.scope, c.id, api.optIn);
+    return stateFilter === "descoped" ? st.descoped : stateFilter === "liked" ? st.liked : st.deepen;
+  };
+  const columnCards = (d: Dimension) => api.cards.filter((c) => c.dimension === d.id && matchesState(c));
+  // With a state filter on, a column with no matching card is not drawn: its
+  // "nothing here" alarm would be about the filter, not the run. The column
+  // chip row still lists every column, so nothing is lost from navigation.
+  const inFocus = focus ? columns.filter((d) => d.id === focus) : columns;
+  const shown = stateFilter ? inFocus.filter((d) => columnCards(d).length > 0) : inFocus;
+  const matchTotal = stateFilter ? inFocus.reduce((n, d) => n + columnCards(d).length, 0) : 0;
 
   /** `summary.byDim` is built from `DIMENSIONS` and so has no row for the
    *  untagged bucket. Counting here covers every column the board can draw —
@@ -131,7 +148,7 @@ export default function ResearchTriageBoard({ api, trouble }: { api: ScopeApi; t
             below is read off `columns`, so it cannot say the wrong number, and
             the grid IS the domains. */}
         <Eyebrow>triage board</Eyebrow>
-        <ScopeBar api={api} trouble={trouble} />
+        <ScopeBar api={api} trouble={trouble} stateFilter={stateFilter} onStateFilter={setStateFilter} />
       </header>
 
       {/* Column filter — the board's one navigation affordance. These are
@@ -201,16 +218,27 @@ export default function ResearchTriageBoard({ api, trouble }: { api: ScopeApi; t
           focus stays on the chip, so nothing else would say what happened — and
           it is a count, not a recital. */}
       <p aria-live="polite" className="sr-only">
-        {focus === null
+        {stateFilter
+          ? `Showing ${matchTotal} ${stateFilter} card(s)${focus === null ? "" : ` in ${inFocus[0]?.label ?? "that column"}`}.`
+          : focus === null
           ? `Showing all ${columns.length} columns.`
           : shown.length === 0
             ? "That column is no longer on the board."
             : `Showing ${shown[0].label} only — ${countOf(shown[0]).total} card(s).`}
       </p>
 
+      {stateFilter && matchTotal === 0 && (
+        <p data-testid="board-filter-empty" className="font-jetbrains text-label tracking-[0.12em] text-white/50">
+          no {stateFilter} cards{focus ? " in this column" : ""} —{" "}
+          <button type="button" onClick={() => setStateFilter(null)} className="text-cyan-200 hover:text-cyan-100">
+            clear filter
+          </button>
+        </p>
+      )}
+
       <div className={`grid gap-4 ${focus ? "" : "lg:grid-cols-2 xl:grid-cols-3"}`}>
         {shown.map((d) => {
-          const cards = api.cards.filter((c) => c.dimension === d.id);
+          const cards = columnCards(d);
           const n = countOf(d);
           // "Empty" means the run produced nothing here — NOT that everything
           // is descoped. Conflating the two hid the Conclusions column entirely,

@@ -7,9 +7,33 @@ import { StaleBadge } from "@/components/ui/signal";
 import Notice from "../../_shared/ui/Notice";
 import type { ScopeApi } from "../useScope";
 
+/** THE CROSS-CUTTING STATES A BOARD CAN BE FILTERED BY. Each is a count the
+ *  ScopeBar already draws; the filter is how that number becomes a way into the
+ *  cards it counts. */
+export type StateFilter = "descoped" | "liked" | "deepen" | "wounded";
+
 /** `trouble`: why the project's saved notebook is not the one dealt
- *  (`useActiveNotebook().trouble`); the board is the replay then. */
-export function ScopeBar({ api, trouble }: { api: ScopeApi; trouble?: string | null }) {
+ *  (`useActiveNotebook().trouble`); the board is the replay then.
+ *
+ *  `stateFilter` / `onStateFilter` make the four state counts into toggles. Both
+ *  are optional: a surface that passes neither (the guided review) keeps plain
+ *  numbers. A count of 0 is never a toggle — there is nothing behind it, unless
+ *  it is the filter already applied, which must stay clickable to be cleared. */
+export function ScopeBar({
+  api,
+  trouble,
+  stateFilter = null,
+  onStateFilter,
+}: {
+  api: ScopeApi;
+  trouble?: string | null;
+  stateFilter?: StateFilter | null;
+  onStateFilter?: (next: StateFilter | null) => void;
+}) {
+  const pick = (f: StateFilter) =>
+    onStateFilter
+      ? { pressed: stateFilter === f, onToggle: () => onStateFilter(stateFilter === f ? null : f) }
+      : undefined;
   const s = api.summary;
   const orphan = api.orphaned;
   return (
@@ -39,27 +63,58 @@ export function ScopeBar({ api, trouble }: { api: ScopeApi; trouble?: string | n
       {/* Cut and never-taken are two different facts about the board and only
           one of them is a decision. Folding them together lit this stat amber
           on arrival, because the conclusions start out of scope by design. */}
-      <Stat label="descoped" value={s.descoped} tone={s.descoped ? "warn" : undefined} />
+      <Stat label="descoped" value={s.descoped} tone={s.descoped ? "warn" : undefined} toggle={pick("descoped")} />
       {s.notTaken > 0 && <Stat label="not taken" value={s.notTaken} />}
-      <Stat label="liked" value={s.liked} tone={s.liked ? "good" : undefined} />
-      <Stat label="deepen" value={s.deepen} tone={s.deepen ? "info" : undefined} />
+      <Stat label="liked" value={s.liked} tone={s.liked ? "good" : undefined} toggle={pick("liked")} />
+      <Stat label="deepen" value={s.deepen} tone={s.deepen ? "info" : undefined} toggle={pick("deepen")} />
       <Stat
         label="wounded"
         value={s.wounds.length}
         tone={s.broken ? "bad" : s.wounds.length ? "warn" : undefined}
+        toggle={pick("wounded")}
       />
     </div>
   );
 }
 
-function Stat({ label, value, tone }: { label: string; value: string | number; tone?: "good" | "warn" | "bad" | "info" }) {
+function Stat({
+  label,
+  value,
+  tone,
+  toggle,
+}: {
+  label: string;
+  value: string | number;
+  tone?: "good" | "warn" | "bad" | "info";
+  toggle?: { pressed: boolean; onToggle: () => void };
+}) {
   const cls =
     tone === "bad" ? "text-rose-300" : tone === "warn" ? "text-amber-200" : tone === "good" ? "text-emerald-300" : tone === "info" ? "text-cyan-200" : "text-white/70";
-  return (
-    <span className="font-jetbrains text-label">
+  const body = (
+    <>
       <span className="tracking-[0.14em] text-white/30 uppercase">{label} </span>
       <span className={cls}>{value}</span>
-    </span>
+    </>
+  );
+  if (!toggle) return <span className="font-jetbrains text-label">{body}</span>;
+  // Nothing behind a zero, so it is not offered — unless it is the applied
+  // filter, which has to stay reachable to be taken off.
+  const empty = value === 0 || value === "0";
+  return (
+    <button
+      type="button"
+      data-testid={`scope-filter-${label}`}
+      onClick={toggle.onToggle}
+      aria-pressed={toggle.pressed}
+      disabled={empty && !toggle.pressed}
+      className={`font-jetbrains text-label rounded-full border px-2 py-0.5 transition disabled:cursor-default ${
+        toggle.pressed
+          ? "border-cyan-400/40 bg-cyan-400/10"
+          : "border-transparent enabled:hover:border-white/15 enabled:hover:bg-white/[0.04]"
+      }`}
+    >
+      {body}
+    </button>
   );
 }
 
