@@ -20,7 +20,7 @@ number on a tab rail is worse than no number.
 | --- | --- |
 | `app/foundry/plant.tsx` | the `Tab` union and the rail |
 | `app/foundry/FoundryView.tsx` | the mount |
-| `app/foundry/PipelineTab.tsx` | the shell: top bar, stage strip, the board's height, the arm |
+| `app/foundry/PipelineTab.tsx` | the shell: the controls row, the skin per medium, the board's height, the arm |
 | `app/foundry/pipelineModals.tsx` | the dispatch confirm, the rework note, the detail (two mounts) |
 | `app/foundry/pipeline/` | THE ENGINE — the board, the drag, the keyboard, two move dialogs |
 | `app/foundry/pipeline/skins/` | the skin — `ledger`, round 1's winner |
@@ -106,8 +106,13 @@ detail, where `standing` was added because it was the one of them the detail did
 carry. The card fell from 80px to 48px with them, and `CARD_W` went 272 → 282 because a
 one-line card truncates its title at the width.
 
-It renames two of the four canon stages in its own idiom (`working` → `running`, `done` →
-`settled`) and draws a `world` layer: one hairline in the middle of every row gap, as a
+It renames two of the four canon stages in its own idiom, **per medium**: articles reads
+`working` → `running`, audio reads `working` → `queue` (one Suno job runs and the rest wait
+behind it, so "running" would be false of every card but one); both read `done` → `settled`.
+`ledger` and `ledgerAudio` are two module-level objects, and `PipelineTab` picks one by medium
+and hands the SAME one to the canvas, the shell's stage words and the detail's order buttons —
+so the column head, a card's accessible name and an order button can never call a stage two
+things. It draws a `world` layer: one hairline in the middle of every row gap, as a
 repeating gradient per lane, so ruling a 500-row lane costs what ruling a 2-row one costs.
 
 
@@ -177,8 +182,8 @@ Amber, never rose: a stage whose upstream is absent is a **limit**, not a failur
 
 ### `hidden` — rows deliberately not drawn, with the reason
 
-A count and its `why`, drawn on the stage it belongs to as a `<Tally>` with the reason behind
-a disclosure. Articles hides uncovered topics past the first twenty (`HIDDEN 486 · uncovered
+A count and its `why`. **No longer drawn in the controls row** — the operator struck the
+`hidden` tallies (spark audio-queue-suno); the channel stays in `CanvasStatus.notes`. Articles hides uncovered topics past the first twenty (`HIDDEN 486 · uncovered
 topics past the first 20`) and landed posts older than seven days. "Nothing here" and "486
 things I could not place" are different sentences and only one of them is good news.
 
@@ -260,3 +265,90 @@ None of them closes over a write that failed. Confirming awaits the move, the co
 inert while it is in flight, and a refusal keeps the dialog up carrying the authority's own
 words — `aria-modal` has removed everything behind it from the accessibility tree, so a message
 rendered outside the dialog would reach nobody.
+
+---
+
+## 9. The controls row
+
+A flex row **above** the board, outside it — not a cluster floating over its corner. Floating,
+it sat exactly where the stage heads draw, and the fix was a measured `--gt-board-gutter` the
+heads had to stop short of; a row of its own needs no gutter, and the gutter is deleted.
+
+It carries, right-aligned: `degraded` chips (amber, reason behind a `<Hint>`), `DAMAGED n`,
+`CHOREO n/cap`, `DRY n` (the stub receipt — moves AND spending verbs), the group `Select`, the
+arm, and full screen. The `hidden` tallies and the `CARDS n` tally are gone: every stage head
+carries its count. The armed chip shows a price only where one is measured (articles'
+`RUN_COST_HINT`); an armed audio board says `LIVE` alone.
+
+The load line and the load failure sit in the same wrapper, and `useFillHeight`
+(`pipeline/boardMount.tsx`) observes that wrapper as well as the document: in full screen the
+shell is `position: fixed`, so a row that wraps or a load line that leaves moves the board
+without resizing the document. Toggling full screen re-measures on the next frame.
+
+## 10. The headers — one system, three rungs
+
+All three come from `pipeline/type.ts`, and full screen grows them together by rescaling the
+two type tokens:
+
+| rung | role | drawn as |
+| --- | --- | --- |
+| stage | `TYPE.label` in the stage's tone | dot · word · rolling count, on an opaque ink strip |
+| band | `TYPE.label`, quieter (`white/45`) + `TYPE.figure` count | ONE rounded bar per banded stage, segments split by hairlines, each over its own column |
+| lane | `TYPE.title` (`font-hanken text-content`) | the work's own name on head glass |
+
+The band bar spans exactly the stage, and each segment's left/width is its column's share of
+that span, so segments stay over their columns at every zoom. It registers with
+`stick={false}` (`pipeline/headRegistry.tsx`): the keep-in-view nudge that stage words get
+would slide the segments off their columns. The `0.12em` uppercase tracking is `TYPE.label` and
+is spelled nowhere else on the board (the drag's slot word in `CellLayer` uses it too).
+
+## 11. Cell and card menus — the source's verbs
+
+A source may add verbs (`lib/board/pipeline.ts`): `cellVerbs(target)` for a place,
+`cardVerbs(itemId)` for a card, `runVerb(id, target, input?)` to carry one out.
+
+- **Right-click a card** — the engine's own items, then `cardVerbs(id)` appended. Target:
+  `{ axis, itemId }`.
+- **Right-click off a card** — the cell under the pointer is read off `data-cell`
+  (`lane|stage|band`, parsed from the end because a lane key may hold `|`), or on a seam from
+  the world point by `resolveCell`. Clicks over the stage strip or the lane column resolve to
+  nothing. If `cellVerbs` returns verbs the menu opens with them; if it returns none the
+  **browser's own menu is left alone**. Target: `{ axis, lane, stage, band }`, `axis` being the
+  group axis the lanes are read under.
+- **A disabled verb** is drawn inert with its reason beside it; the reason is the item's
+  accessible description and the item stays in the arrow-key walk.
+- **A verb with `input`** opens `pipeline/modals/VerbAsk.tsx` (lazy, `next/dynamic`):
+  `suno-fields` = Title, Style (required), Lyrics, an Instrumental toggle that sets the lyrics to
+  `[Instrumental]`, Exclude — empty fields are omitted, never sent as `""`; `count` = a 1–8
+  stepper. `input.initial` prefills either. A refusal stays in the dialog.
+- **A verb without input** runs at once; a refusal is announced.
+- On `ok` the engine announces `result.announce` and **re-reads the board**.
+
+**The arm answers spending verbs.** `armSource` (`pipeline/arm.ts`) looks the verb up in the
+list the source itself returned for that target; a verb marked `spends: true` is answered
+`{ ok: true, announce: "dry: nothing was spent" }` while the arm is STUB, and bumps `DRY n`
+with the verb's label. LIVE passes it through. The source never sees a spending verb the money
+switch did not allow.
+
+## 12. Progress, polling and the re-read after a move
+
+**Progress.** A card whose item carries `progress` (`{ phase, startedAt }`, set only on the
+job a machine is on right now) draws a slow left-to-right sweep (`gt-indeterminate`, 3.2s), the
+phase verbatim and an elapsed `m:ss`. Reduced motion stops the sweep where it starts: a static
+partial bar. The clock is one shared 1s ticker (`ProgressClock`, `pipeline/Card.tsx`) that runs
+only while a progress card is mounted, and re-renders the clock's text, not the card. The card
+is `aria-busy` and its name carries the phase; there is no new live region. The card's memo
+compares `progress` as well as `version`.
+
+The ledger face also prints the lead fact when the adapter puts one first: a waiting job's
+`queue #n` before the title, a clip's `model` as a chip after it. An audio medium with no `src`
+yet draws a disabled play button whose accessible name says it is still rendering.
+
+**Polling.** After every load the canvas reads `source.pollMs?.()` and polls at that rate
+through `lib/usePolling` (in-flight guard, paused in a hidden tab); 0 stops it. The `pollMs`
+prop is the floor a shell may still set.
+
+**The re-read after a move.** `submitMoves` folds each answer in by the returned item's id, then
+calls `reload()` once per batch that resolved anything: a move may return a different item (a
+proposal queued becomes a job under a new id) or land somewhere the request did not name, and
+only the source's own account knows what it became.

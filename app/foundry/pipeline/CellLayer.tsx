@@ -13,6 +13,7 @@ import type { CanonStage } from "@/lib/board/pipeline";
 
 import { CARD_H, CARD_W, tailPos, type Column, type Lane, type Layout } from "./geometry";
 import { STAGE_TONE } from "./tone";
+import { TYPE } from "./type";
 import type { Verdict } from "./types";
 
 export interface DragPreview {
@@ -71,7 +72,7 @@ const Cell = memo(function Cell({
         <div
           aria-hidden
           data-slot={verdict.kind}
-          className={`font-jetbrains absolute top-0 left-0 grid place-items-center rounded-xl border-2 border-dashed text-label tracking-[0.12em] uppercase ${SLOT[verdict.kind]}`}
+          className={`${TYPE.label} absolute top-0 left-0 grid place-items-center rounded-xl border-2 border-dashed ${SLOT[verdict.kind]}`}
           style={{ width: CARD_W, height: CARD_H, transform: `translate3d(${tail.x}px, ${tail.y}px, 0)` }}
         >
           {slotWord}

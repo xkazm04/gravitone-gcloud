@@ -26,8 +26,19 @@
 // element cannot give it to all of them: the outer layer is the card's place in
 // the world (and its glide to a new place), the middle one is the entrance, the
 // inner one is the press lift.
+//
+// A CARD A MACHINE IS WORKING ON RIGHT NOW (`item.progress`) wears a slow sweep
+// left to right, its phase word and an elapsed clock. The sweep is the shared
+// `gt-indeterminate` CSS animation (globals.css), which claims no position -
+// a Suno render has no honest percentage - and which the global reduced-motion
+// rule stops where it stands, leaving a static partial bar. The clock is
+// `ProgressClock` below: ONE 1s ticker for the whole board, started by the first
+// clock to mount and stopped by the last to unmount, and it re-renders the
+// clock's text alone, never the card. No live region: the card is `aria-busy`
+// and its name carries the phase, and a count that changes every second is not
+// something to speak.
 
-import { memo, useLayoutEffect, useRef, useState } from "react";
+import { memo, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { Ellipsis } from "lucide-react";
 import { animate } from "motion/react";
@@ -80,7 +91,9 @@ const areEqual = (a: CardProps, b: CardProps): boolean =>
   a.glide === b.glide &&
   a.pos === b.pos &&
   a.skin === b.skin &&
-  a.domId === b.domId;
+  a.domId === b.domId &&
+  a.entry.item.progress?.phase === b.entry.item.progress?.phase &&
+  a.entry.item.progress?.startedAt === b.entry.item.progress?.startedAt;
 
 export const Card = memo(function Card({ entry, x, y, lane, selected, active, away, busy, flagged, glide, enter, pos, skin, domId }: CardProps) {
   const item = entry.item;
@@ -100,9 +113,13 @@ export const Card = memo(function Card({ entry, x, y, lane, selected, active, aw
     return () => a.stop();
   }, [enterAtMount]);
 
-  const name = `${item.title}, ${stage}${entry.placement.band ? ` · ${entry.placement.band}` : ""}, ${lane}${selected ? ", selected" : ""}${
-    pos ? `, ${pos}` : ""
-  }`;
+  const progress = item.progress;
+  // The stage as the SKIN says it ("queue", not "working"): the name a screen
+  // reader hears has to be the word the column head shows.
+  const word = skin.stageLabel?.[stage] ?? stage;
+  const name = `${item.title}, ${word}${entry.placement.band ? ` · ${entry.placement.band}` : ""}${progress ? `, ${progress.phase}` : ""}, ${lane}${
+    selected ? ", selected" : ""
+  }${pos ? `, ${pos}` : ""}`;
 
   return (
     <div
@@ -122,13 +139,14 @@ export const Card = memo(function Card({ entry, x, y, lane, selected, active, aw
           aria-roledescription="card"
           aria-label={name}
           aria-current={active ? "true" : undefined}
-          aria-busy={busy || undefined}
+          aria-busy={busy || !!progress || undefined}
           className={`group relative h-full w-full cursor-grab overflow-hidden rounded-xl border transition-[border-color,background-color,opacity,box-shadow] duration-150 select-none hover:border-white/30 active:-translate-y-px active:cursor-grabbing active:shadow-lg active:shadow-black/40 ${
             selected ? "border-cyan-300/70 bg-cyan-300/[0.12]" : tone.card
           } ${flagged ? "border-rose-300/70" : ""} ${away ? "opacity-30" : ""} ${busy ? "animate-pulse" : ""} ${
             active ? "ring-2 ring-cyan-300/80 ring-offset-1 ring-offset-[var(--gt-ink)]" : ""
           }`}
         >
+          {progress && <Sweep />}
           {skin.face ? skin.face(entry) : <DefaultFace entry={entry} />}
           <button
             type="button"
@@ -147,15 +165,76 @@ export const Card = memo(function Card({ entry, x, y, lane, selected, active, aw
 }, areEqual);
 
 /** What a card says when its skin says nothing: the title and the first facts,
- *  verbatim. */
+ *  verbatim — or, while a machine works on it, the phase and its clock. */
 export function DefaultFace({ entry }: { entry: PipelineEntry }) {
   const facts = entry.facts.slice(0, 2);
+  const progress = entry.item.progress;
   return (
     <div className="flex h-full min-w-0 flex-col justify-center gap-0.5 pr-10 pl-3">
       <p className="font-hanken truncate text-label text-white/90">{entry.item.title}</p>
-      <p className="font-jetbrains truncate text-label text-white/50">
-        {facts.length ? facts.map((f) => `${f.name} ${f.value}`).join(" · ") : entry.item.group ?? ""}
-      </p>
+      {progress ? (
+        <ProgressLine phase={progress.phase} startedAt={progress.startedAt} />
+      ) : (
+        <p className="font-jetbrains truncate text-label text-white/50">
+          {facts.length ? facts.map((f) => `${f.name} ${f.value}`).join(" · ") : entry.item.group ?? ""}
+        </p>
+      )}
     </div>
   );
+}
+
+/* ── progress ──────────────────────────────────────────────────────────── */
+
+/** The sweep: a third-width light crossing the card, slowly. Behind the face,
+ *  inert to the pointer; reduced motion leaves it parked at the left edge. */
+function Sweep() {
+  return (
+    <span aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+      <span className="gt-indeterminate absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-cyan-300/15 to-transparent" style={{ animationDuration: "3.2s" }} />
+      <span className="absolute inset-x-0 bottom-0 h-0.5 overflow-hidden bg-cyan-300/10">
+        <span className="gt-indeterminate block h-full w-1/3 bg-cyan-300/60" style={{ animationDuration: "3.2s" }} />
+      </span>
+    </span>
+  );
+}
+
+/** "creating v6 wild · 1:23" — the phase verbatim, then the clock. */
+export function ProgressLine({ phase, startedAt }: { phase: string; startedAt: number }) {
+  return (
+    <p className="font-jetbrains truncate text-label leading-none text-cyan-200/85">
+      {phase} · <ProgressClock startedAt={startedAt} />
+    </p>
+  );
+}
+
+// THE ONE TICKER. Module state on purpose: every progress card on the board
+// reads the same second, so there is one interval however many are running,
+// and none at all when nothing is.
+let tickNow = 0;
+let tickTimer = 0;
+const tickSubs = new Set<() => void>();
+function subscribeTick(cb: () => void): () => void {
+  tickSubs.add(cb);
+  tickNow = Date.now();
+  if (!tickTimer)
+    tickTimer = window.setInterval(() => {
+      tickNow = Date.now();
+      tickSubs.forEach((f) => f());
+    }, 1000);
+  return () => {
+    tickSubs.delete(cb);
+    if (!tickSubs.size && tickTimer) {
+      window.clearInterval(tickTimer);
+      tickTimer = 0;
+    }
+  };
+}
+const readTick = () => tickNow;
+const readTickServer = () => 0;
+
+/** Elapsed `m:ss` since `startedAt`; minutes run past 59 rather than wrap. */
+export function ProgressClock({ startedAt }: { startedAt: number }) {
+  const now = useSyncExternalStore(subscribeTick, readTick, readTickServer);
+  const s = now ? Math.max(0, Math.floor((now - startedAt) / 1000)) : 0;
+  return <span className="tabular-nums">{`${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`}</span>;
 }

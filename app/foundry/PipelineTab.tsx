@@ -11,7 +11,8 @@
 //   the three dialogs .... ./pipeline/BoardDialogs.tsx
 //   expand on `f` ........ ./pipeline/useFullScreen.ts
 //   the board's height ... ./pipeline/boardMount.tsx
-//   the control cluster .. ./pipeline/BoardControls.tsx
+//   the controls row ..... ./pipeline/BoardControls.tsx
+//   the skin per medium .. ./pipeline/skins (audio says "queue" where articles says "running")
 //
 // What is left here is the composition: pick the source for the medium, arm it,
 // give the board a measured height, and draw the two things that cannot be drawn
@@ -38,6 +39,7 @@ import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } fro
 
 import type { SelectOption } from "@/components/ui/Select";
 import { useAnnounce } from "@/lib/announcer";
+import { RUN_COST_HINT } from "@/lib/articles/types";
 import { type CanonStage, type PipelineEntry } from "@/lib/board/pipeline";
 import { makeArticlesSource } from "@/lib/board/sources/articles";
 import { makeAudioSource } from "@/lib/board/sources/audio";
@@ -47,7 +49,7 @@ import { useArmedSource } from "./pipeline/arm";
 import BoardControls from "./pipeline/BoardControls";
 import { BoardDialogs } from "./pipeline/BoardDialogs";
 import { CanvasMount, useFillHeight } from "./pipeline/boardMount";
-import { ledger } from "./pipeline/skins";
+import { ledger, ledgerAudio } from "./pipeline/skins";
 import { useFullScreen } from "./pipeline/useFullScreen";
 import { useOffers } from "./pipeline/useOffers";
 import { Glass, Label, Loading } from "./ui";
@@ -86,11 +88,16 @@ function PipelineShell({ media }: { media: MediaId }) {
   const [axisPick, setAxisPick] = useState<string | null>(null);
   const [status, setStatus] = useState<CanvasStatus | null>(null);
   const [open, setOpen] = useState<PipelineEntry | null>(null);
+  // ONE SKIN PER MEDIUM, chosen once: the same skin names the column heads,
+  // the shell's stage words and the detail's order buttons, so the three can
+  // never disagree about what `working` is called.
+  const skin = media === "audio" ? ledgerAudio : ledger;
   const api = useRef<PipelineHandle>(null);
   const boardRef = useRef<HTMLDivElement>(null);
-  const boardH = useFillHeight(boardRef);
+  const controlsRef = useRef<HTMLDivElement>(null);
   const full = useFullScreen(api);
-  const offers = useOffers(open, source, ledger);
+  const boardH = useFillHeight(boardRef, { watch: controlsRef, epoch: full.full });
+  const offers = useOffers(open, source, skin);
 
   // A pick that belongs to the other medium is not an axis here: every source
   // declares its own, and `groupAxes` is already the POPULATED set by contract
@@ -115,18 +122,40 @@ function PipelineShell({ media }: { media: MediaId }) {
 
   /* ── render ─────────────────────────────────────────────────────────────── */
 
-  const word = useCallback((s: CanonStage) => ledger.stageLabel?.[s] ?? s, []);
+  const word = useCallback((s: CanonStage) => skin.stageLabel?.[s] ?? s, [skin]);
   const axisOptions: SelectOption<string>[] = axes.map((a) => ({ value: a.id, label: a.label }));
 
   return (
     <div className={`flex flex-col gap-3 ${full.rootClass}`} style={full.rootStyle}>
-      {status?.loading && !status.total && <Loading label="reading the pipeline" />}
-      {status?.error && (
-        <Glass className="px-4 py-3">
-          <Label>load failed</Label>
-          <p className="font-jetbrains mt-1 text-label break-words text-rose-200/90">{status.error}</p>
-        </Glass>
-      )}
+      {/* EVERYTHING ABOVE THE BOARD, in one element the height is measured
+          against: the load line and the failure come and go and the controls
+          row wraps, and in full screen none of that resizes the document.
+
+          THE CONTROLS ARE A ROW, above the board and outside it. Floating over
+          the board's corner they sat where the stage heads draw, and the heads
+          had to measure them to stay clear; here nothing overlaps anything. */}
+      <div ref={controlsRef} className="flex flex-col gap-3">
+        {status?.loading && !status.total && <Loading label="reading the pipeline" />}
+        {status?.error && (
+          <Glass className="px-4 py-3">
+            <Label>load failed</Label>
+            <p className="font-jetbrains mt-1 text-label break-words text-rose-200/90">{status.error}</p>
+          </Glass>
+        )}
+        <BoardControls
+          arm={arm}
+          onArm={flipArm}
+          axisId={axisId}
+          axisOptions={axisOptions}
+          onAxis={setAxisPick}
+          status={status}
+          stub={stub}
+          full={full.full}
+          onFull={full.toggle}
+          word={word}
+          liveCost={media === "articles" ? `$${RUN_COST_HINT.usdLow}–${RUN_COST_HINT.usdHigh}` : null}
+        />
+      </div>
 
       {/* THE CANVAS FILLS ITS PARENT (./pipeline/index.ts), so the parent needs
           an explicit height and not a content-driven one. The number is
@@ -134,19 +163,7 @@ function PipelineShell({ media }: { media: MediaId }) {
           that was reserving 544px for chrome now about a third of that. */}
       <div ref={boardRef} className="flex gap-3" style={{ height: boardH }}>
         <CanvasMount>
-          <PipelineCanvas source={source} axisId={axisId} arm={arm} skin={ledger} onOpen={setOpen} onStatus={setStatus} apiRef={api} className="absolute inset-0" />
-          <BoardControls
-            arm={arm}
-            onArm={flipArm}
-            axisId={axisId}
-            axisOptions={axisOptions}
-            onAxis={setAxisPick}
-            status={status}
-            stub={stub}
-            full={full.full}
-            onFull={full.toggle}
-            word={word}
-          />
+          <PipelineCanvas source={source} axisId={axisId} arm={arm} skin={skin} onOpen={setOpen} onStatus={setStatus} apiRef={api} className="absolute inset-0" />
         </CanvasMount>
       </div>
 
@@ -154,3 +171,4 @@ function PipelineShell({ media }: { media: MediaId }) {
     </div>
   );
 }
+

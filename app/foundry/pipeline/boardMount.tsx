@@ -44,8 +44,19 @@ declare global {
  * document element catches the chrome above growing or shrinking (the top bar
  * wraps at narrow widths, the degraded strip appears and disappears) without
  * this needing to know what any of it is.
+ *
+ * THE DOCUMENT IS NOT ENOUGH, which the controls row proved. In full screen the
+ * shell is `position: fixed`, so a row above the board that wraps onto a second
+ * line moves the board down without changing the document's size by a pixel,
+ * and the observer above never fires. `watch` is that row: observed directly,
+ * so its wrap re-measures in either mode. `epoch` is anything that moves the
+ * board without resizing either — entering or leaving full screen — and is
+ * measured again on the frame after it lands, once the layout has.
  */
-export function useFillHeight(ref: React.RefObject<HTMLElement | null>, gutter = 12): number {
+export function useFillHeight(
+  ref: React.RefObject<HTMLElement | null>,
+  { gutter = 12, watch, epoch }: { gutter?: number; watch?: React.RefObject<HTMLElement | null>; epoch?: unknown } = {},
+): number {
   const [h, setH] = useState(520);
   useEffect(() => {
     const el = ref.current;
@@ -55,14 +66,18 @@ export function useFillHeight(ref: React.RefObject<HTMLElement | null>, gutter =
     // board of 0px reads as a board that failed to load.
     const measure = () => setH(Math.max(280, Math.round(window.innerHeight - el.getBoundingClientRect().top - gutter)));
     measure();
+    const raf = requestAnimationFrame(measure);
     const ro = new ResizeObserver(measure);
     ro.observe(document.documentElement);
+    const row = watch?.current;
+    if (row) ro.observe(row);
     window.addEventListener("resize", measure);
     return () => {
+      cancelAnimationFrame(raf);
       ro.disconnect();
       window.removeEventListener("resize", measure);
     };
-  }, [ref, gutter]);
+  }, [ref, gutter, watch, epoch]);
   return h;
 }
 

@@ -54,6 +54,7 @@ export function useBoardMoves({
   calm,
   say,
   colWord,
+  reload,
 }: {
   viewportRef: React.RefObject<HTMLDivElement | null>;
   deadRef: React.RefObject<boolean>;
@@ -64,6 +65,8 @@ export function useBoardMoves({
   calm: boolean;
   say(text: string): void;
   colWord(L: Layout, col: number): string;
+  /** The data layer's re-read, run after every batch that resolved a move. */
+  reload(): Promise<void>;
 }): BoardMoves {
   const [prompt, setPrompt] = useState<PromptState | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -94,7 +97,7 @@ export function useBoardMoves({
   /* ── submit ─────────────────────────────────────────────────────────── */
 
   /** The chokepoint, with the arm and the pending set bound to this board. */
-  const submit = (ids: string[], laneKey: string, col: number, answers: PromptAnswer = {}) => submitMoves(ids, laneKey, col, answers, { liveRef, deadRef, arm, setPending });
+  const submit = (ids: string[], laneKey: string, col: number, answers: PromptAnswer = {}) => submitMoves(ids, laneKey, col, answers, { liveRef, deadRef, arm, setPending, reload });
 
   const refuse = (ids: string[], reason: string, retry?: () => void) => {
     setNotice({ ids, text: reason, retry });

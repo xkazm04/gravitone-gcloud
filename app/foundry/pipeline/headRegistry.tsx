@@ -27,6 +27,10 @@ interface HeadSpec {
   axis: "x" | "y";
   at: number;
   size: number;
+  /** Keep the label in view while the span is wider than the viewport. Off for
+   *  a head that IS its span (the band bar), whose segments must stay over
+   *  their columns. */
+  stick: boolean;
 }
 
 export interface HeadRegistry {
@@ -49,13 +53,13 @@ export function createHeadRegistry(initial: Camera): HeadRegistry {
       // (the markup reads `group-data-[narrow]`), so the word is still a word.
       el.dataset.narrow = w < 170 ? "1" : "0";
       // The label stays in view while its span is wider than the viewport.
-      if (label) label.style.transform = `translate3d(${Math.max(0, Math.min(w - 96, 8 - left))}px,0,0)`;
+      if (label && s.stick) label.style.transform = `translate3d(${Math.max(0, Math.min(w - 96, 8 - left))}px,0,0)`;
     } else {
       const top = s.at * cam.k + cam.y - FRAME.top;
       const h = s.size * cam.k;
       el.style.transform = `translate3d(0,${top}px,0)`;
       el.style.height = `${h}px`;
-      if (label) label.style.transform = `translate3d(0,${Math.max(0, Math.min(h - 64, 8 - top))}px,0)`;
+      if (label && s.stick) label.style.transform = `translate3d(0,${Math.max(0, Math.min(h - 64, 8 - top))}px,0)`;
     }
   };
 
@@ -82,6 +86,7 @@ export function HeadSlot({
   axis,
   at,
   size,
+  stick = true,
   className,
   children,
 }: {
@@ -89,10 +94,11 @@ export function HeadSlot({
   axis: "x" | "y";
   at: number;
   size: number;
+  stick?: boolean;
   className: string;
   children: React.ReactNode;
 }) {
-  const ref = useCallback((el: HTMLDivElement | null) => (el ? reg.add(el, { axis, at, size }) : undefined), [reg, axis, at, size]);
+  const ref = useCallback((el: HTMLDivElement | null) => (el ? reg.add(el, { axis, at, size, stick }) : undefined), [reg, axis, at, size, stick]);
   return (
     <div ref={ref} className={`group/head absolute top-0 left-0 ${className}`}>
       {children}

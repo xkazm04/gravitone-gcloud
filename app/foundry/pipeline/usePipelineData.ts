@@ -25,10 +25,17 @@
 //     so none of it reaches `error`, and a board that dropped it would draw an
 //     empty column that looks like "no work" instead of "nobody could ask".
 //     Read once per load, beside the entries it describes.
+//   · THE SOURCE SETS THE PACE. `pollMs()` is read after every load, because
+//     the answer changes with the work: an audio queue with a job running wants
+//     a re-read every few seconds, and the same queue drained wants none. The
+//     poll is lib/usePolling's, so a slow answer is never stacked on by the next
+//     tick and a hidden tab stops asking. A `pollMs` prop is the floor a shell
+//     may still set; the source's own rate wins whenever it names one.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { PipelineEntry, PipelineItem, PipelineLoadNotes, PipelineSource } from "@/lib/board/pipeline";
+import { usePolling } from "@/lib/usePolling";
 
 export function reconcile(prev: readonly PipelineEntry[], next: readonly PipelineEntry[]): PipelineEntry[] {
   const byId = new Map<string, PipelineEntry>();
@@ -54,6 +61,8 @@ export interface PipelineData {
 
 export function usePipelineData(source: PipelineSource, pollMs = 0): PipelineData {
   const [state, setState] = useState<{ entries: readonly PipelineEntry[] | null; error: string | null; notes: PipelineLoadNotes | null }>({ entries: null, error: null, notes: null });
+  /** What the source asked for after its last load; 0 = no poll of its own. */
+  const [asked, setAsked] = useState(0);
   const seq = useRef(0);
   const supersede = useCallback(() => {
     seq.current++;
@@ -66,8 +75,10 @@ export function usePipelineData(source: PipelineSource, pollMs = 0): PipelineDat
       // Asked AFTER the load resolves and before anything is rendered: the
       // adapters write their account during `loadPipeline()`.
       const notes = source.lastLoad?.() ?? null;
+      const rate = source.pollMs?.() ?? 0;
       if (mine !== seq.current) return;
       setState((s) => ({ entries: s.entries ? reconcile(s.entries, next) : next, error: null, notes }));
+      setAsked(rate > 0 ? rate : 0);
     } catch (e) {
       // The board is kept, so the account that described it is kept too.
       if (mine !== seq.current) return;
@@ -77,12 +88,11 @@ export function usePipelineData(source: PipelineSource, pollMs = 0): PipelineDat
 
   useEffect(() => {
     void reload();
-    const id = pollMs > 0 ? window.setInterval(() => void reload(), pollMs) : 0;
-    return () => {
-      supersede();
-      if (id) window.clearInterval(id);
-    };
-  }, [reload, pollMs, supersede]);
+    return () => supersede();
+  }, [reload, supersede]);
+
+  const every = asked > 0 ? asked : pollMs;
+  usePolling(reload, every, every > 0);
 
   // A card the authority has just placed lands at the END of its new cell, which
   // is where the drag's preview showed the slot. The array order is the cell

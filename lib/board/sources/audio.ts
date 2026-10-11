@@ -127,7 +127,7 @@ const rowOf = (lane: SunoLane | null): string => (lane && lane.axis === "group" 
 
 const titleOf = (f: { title?: string; style: string }): string => f.title?.trim() || (f.style.length > 60 ? `${f.style.slice(0, 57)}...` : f.style);
 
-/** "creating v6 wild"; "opening suno" names no model, it has not picked one. */
+/** "creating v6-wild"; "opening suno" names no model, it has not picked one. */
 function phaseWord(job: SunoJob): string {
   if (!job.phase) return "starting";
   const word = SUNO_PHASE_WORD[job.phase];

@@ -12,6 +12,14 @@
 // THE REFUSAL IS A TOAST AND NOT A DIALOG on purpose: it carries the authority's
 // own words plus the retry, and it must not take the keyboard away from a board
 // the operator is still working. Escape dismisses it (./keymap.ts), R retries it.
+//
+// A FIFTH, ON DEMAND: the input a source verb asks for (./modals/VerbAsk.tsx),
+// loaded with next/dynamic like the shell's dialogs - nothing on a board that
+// nobody has right-clicked needs a form in its first chunk. It is `aria-modal`,
+// so the canvas's keys stand down while it is up, and closing it hands focus
+// back to the viewport like everything else here.
+
+import dynamic from "next/dynamic";
 
 import { X } from "lucide-react";
 
@@ -20,7 +28,9 @@ import type { Layout } from "./geometry";
 import MoveMap from "./MoveMap";
 import MovePrompt from "./MovePrompt";
 import type { BoardMoves } from "./useBoardMoves";
-import type { BoardVerbs } from "./useBoardVerbs";
+import { isCellMenu, type BoardVerbs } from "./useBoardVerbs";
+
+const VerbAsk = dynamic(() => import("./modals/VerbAsk").then((m) => m.VerbAsk));
 
 export function BoardOverlays({
   layout,
@@ -35,21 +45,43 @@ export function BoardOverlays({
   verbs: BoardVerbs;
   moves: BoardMoves;
 }) {
-  const { menu, map } = verbs;
+  const { menu, map, ask } = verbs;
   const { prompt, notice } = moves;
   const refocus = () => viewportRef.current?.focus({ preventScroll: true });
 
   return (
     <>
-      {menu && (
-        <ContextMenu
-          x={menu.x}
-          y={menu.y}
-          label={`Actions for ${layout.entryOf.get(menu.id)?.item.title ?? "card"}`}
-          items={verbs.verbItems(menu.id)}
-          onPick={(verb) => verbs.runVerb(menu.id, verb)}
-          onClose={() => verbs.setMenu(null)}
-          restoreTo={() => viewportRef.current}
+      {menu &&
+        (isCellMenu(menu) ? (
+          <ContextMenu
+            x={menu.x}
+            y={menu.y}
+            label={`Actions for ${menu.where}`}
+            items={verbs.cellItems(menu)}
+            onPick={(verb) => verbs.runCellVerb(menu, verb)}
+            onClose={() => verbs.setMenu(null)}
+            restoreTo={() => viewportRef.current}
+          />
+        ) : (
+          <ContextMenu
+            x={menu.x}
+            y={menu.y}
+            label={`Actions for ${layout.entryOf.get(menu.id)?.item.title ?? "card"}`}
+            items={verbs.verbItems(menu.id)}
+            onPick={(verb) => verbs.runVerb(menu.id, verb)}
+            onClose={() => verbs.setMenu(null)}
+            restoreTo={() => viewportRef.current}
+          />
+        ))}
+      {ask && (
+        <VerbAsk
+          verb={ask.verb}
+          where={ask.where}
+          run={(input) => verbs.perform(ask.target, ask.verb.id, input)}
+          onClose={() => {
+            verbs.setAsk(null);
+            requestAnimationFrame(refocus);
+          }}
         />
       )}
       {map && (

@@ -24,4 +24,4 @@
 // advertised on a claim its layer cannot satisfy is judged for the engine's
 // decision, not its own.
 
-export { ledger } from "./ledger";
+export { ledger, ledgerAudio } from "./ledger";

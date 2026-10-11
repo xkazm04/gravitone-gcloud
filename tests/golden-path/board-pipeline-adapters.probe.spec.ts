@@ -709,7 +709,7 @@ test("audio pipeline: working is the Suno queue - a dry move is stubbed, a live 
     // the active job wears its phase and the clock's start; the queued one its place
     const all = await src.loadPipeline();
     const entryOf = (id: string) => all.find((e) => e.item.id === id)!;
-    expect(entryOf("audio:suno:job:j2").item.progress).toEqual({ phase: "creating v6 wild", startedAt: NOW - 5000 });
+    expect(entryOf("audio:suno:job:j2").item.progress).toEqual({ phase: "creating v6-wild", startedAt: NOW - 5000 });
     expect(entryOf("audio:suno:job:j3").item.progress).toBeUndefined();
     expect(entryOf("audio:suno:job:j3").facts[0]).toEqual({ name: "queue", value: "#2" });
     expect(src.pollMs!()).toBe(2000);
@@ -762,7 +762,7 @@ test("audio pipeline: Suno clips sit in the gate by verdict, a drop is hidden an
     const c1 = entries.find((e) => e.item.id === "audio:suno:clip:c1")!;
     expect(c1.item.media[0]).toEqual({ kind: "audio", src: "https://cdn.example/song-c1.mp3" });
     expect(c1.href).toBe("https://suno.com/song/song-c1");
-    expect(c1.facts[0]).toEqual({ name: "model", value: "v6 wild" });
+    expect(c1.facts[0]).toEqual({ name: "model", value: "v6-wild" });
     // not streamable yet: an audio entry with no src, so no live play button
     expect(get("audio:suno:clip:c4").media[0]).toEqual({ kind: "audio" });
 

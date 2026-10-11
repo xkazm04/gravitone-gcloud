@@ -75,7 +75,7 @@ export type PipelineItem = BoardItem & {
   placement: PipelinePlacement;
   version: number;
   /** Set only while a machine is working on THIS item right now (the active
-   *  queue job). `phase` is the word the card shows ("creating v6 wild");
+   *  queue job). `phase` is the word the card shows ("creating v6-wild");
    *  `startedAt` (epoch ms) is what its elapsed clock counts from. Omitted -
    *  never null - on every item nothing is working on, including a job that is
    *  queued but not yet started. */

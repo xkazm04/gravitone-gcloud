@@ -19,7 +19,7 @@
 //   · it closes on a captured outside mousedown, scroll and resize, and flips
 //     (rather than clamps) at a viewport edge so it never covers its opener.
 
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 
 import { refusedKey } from "../keyGuard";
 
@@ -29,9 +29,16 @@ export interface MenuItem {
   /** Shown beside the label — a key, a count; never a sentence. */
   detail?: string;
   destructive?: boolean;
+  /** Present = shown but inert, and this is why. It stays in the walk (a
+   *  disabled menu item is still focusable, so a keyboard user can hear the
+   *  reason) and is its accessible description. */
+  disabled?: string;
 }
 
 const W = 232;
+/** The menu grows to fit a long verb or a disabled verb's reason, up to this;
+ *  the edge flip reckons with the widest it can be. */
+const W_MAX = 352;
 const ROW = 40;
 
 export default function ContextMenu({
@@ -53,6 +60,7 @@ export default function ContextMenu({
   restoreTo?: () => HTMLElement | null;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const uid = useId();
   const onCloseRef = useRef(onClose);
   const restoreRef = useRef(restoreTo);
   useEffect(() => {
@@ -109,7 +117,7 @@ export default function ContextMenu({
   };
 
   const H = items.length * ROW + 8;
-  const left = typeof window !== "undefined" && x + W > window.innerWidth ? Math.max(8, x - W) : x;
+  const left = typeof window !== "undefined" && x + W_MAX > window.innerWidth ? Math.max(8, x - W_MAX) : x;
   const top = typeof window !== "undefined" && y + H > window.innerHeight ? Math.max(8, y - H) : y;
 
   return (
@@ -118,28 +126,45 @@ export default function ContextMenu({
       role="menu"
       aria-label={label}
       onKeyDown={walk}
-      style={{ left, top, width: W }}
+      style={{ left, top, minWidth: W, maxWidth: W_MAX }}
       className="gt-float fixed z-50 rounded-xl border border-white/12 bg-slate-950/95 p-1 backdrop-blur-md"
     >
-      {items.map((item) => (
-        <button
-          key={item.id}
-          type="button"
-          role="menuitem"
-          tabIndex={-1}
-          onClick={() => {
-            onPick(item.id);
-            onClose();
-          }}
-          className={`font-hanken flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg px-3 text-left text-label transition focus-visible:outline-2 focus-visible:-outline-offset-2 ${
-            item.destructive ? "text-rose-200 hover:bg-rose-400/15" : "text-slate-200 hover:bg-white/10"
-          }`}
-          style={{ height: ROW }}
-        >
-          <span className="truncate">{item.label}</span>
-          {item.detail && <span className="font-jetbrains shrink-0 text-white/40">{item.detail}</span>}
-        </button>
-      ))}
+      {items.map((item, i) => {
+        const why = item.disabled ? `${uid}-why-${i}` : undefined;
+        return (
+          <button
+            key={item.id}
+            type="button"
+            role="menuitem"
+            tabIndex={-1}
+            aria-disabled={item.disabled ? true : undefined}
+            aria-label={item.disabled ? item.label : undefined}
+            aria-describedby={why}
+            onClick={() => {
+              if (item.disabled) return;
+              onPick(item.id);
+              onClose();
+            }}
+            className={`font-hanken flex w-full items-center justify-between gap-3 rounded-lg px-3 text-left text-label transition focus-visible:outline-2 focus-visible:-outline-offset-2 ${
+              item.disabled
+                ? "cursor-not-allowed text-white/40"
+                : item.destructive
+                  ? "cursor-pointer text-rose-200 hover:bg-rose-400/15"
+                  : "cursor-pointer text-slate-200 hover:bg-white/10"
+            }`}
+            style={{ height: ROW }}
+          >
+            <span className="truncate">{item.label}</span>
+            {item.disabled ? (
+              <span id={why} aria-hidden className="font-jetbrains min-w-0 shrink truncate text-white/40">
+                {item.disabled}
+              </span>
+            ) : (
+              item.detail && <span className="font-jetbrains shrink-0 text-white/40">{item.detail}</span>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }

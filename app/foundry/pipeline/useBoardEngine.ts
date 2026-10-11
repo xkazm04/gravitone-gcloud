@@ -36,7 +36,7 @@ import type { AnimationPlaybackControls } from "motion/react";
 
 import { usePrefersReducedMotion } from "@/components/ui/motionPreference";
 import { useAnnounce } from "@/lib/announcer";
-import { CHOREO_MAX_CARDS } from "@/lib/board/pipeline";
+import { CHOREO_MAX_CARDS, type CanonStage } from "@/lib/board/pipeline";
 
 import type { Live, PipelineCanvasProps } from "./canvasTypes";
 import type { HeadRegistry } from "./Frame";
@@ -130,11 +130,12 @@ export function useBoardEngine(props: PipelineCanvasProps & EngineHost): BoardEn
 
   const sel = useSelection(cursorRef);
   const viewport = useViewport({ viewportRef, worldRef, camRef, sizeRef, camAnimRef, deadRef, mountedRef, freshRef, liveRef, heads, layout, loading: data.loading, calm });
-  const moves = useBoardMoves({ viewportRef, deadRef, liveRef, viewport, layout, arm, calm, say, colWord });
-  const verbs = useBoardVerbs({ viewportRef, camRef, liveRef, moves, sel, layout, source, hasOpen: !!onOpen, say, colWord });
+  const moves = useBoardMoves({ viewportRef, deadRef, liveRef, viewport, layout, arm, calm, say, colWord, reload: data.reload });
+  const verbs = useBoardVerbs({ viewportRef, camRef, liveRef, moves, sel, layout, source, hasOpen: !!onOpen, say, colWord, axisId: axis.id, reload: data.reload });
   const playFromCard = useAudition();
   const drag = useCardDrag({ viewportRef, camRef, camAnimRef, cursorRef, pointerFocusRef, swallowRef, liveRef, viewport, moves, verbs, sel, say });
-  const pointer = usePointerVerbs({ liveRef, swallowRef, layout, sel, drag, verbs, playFromCard });
+  const stageWord = (st: CanonStage) => names[st] ?? st;
+  const pointer = usePointerVerbs({ liveRef, swallowRef, viewportRef, camRef, layout, sel, drag, verbs, playFromCard, axisId: axis.id, stageWord });
   const keys = useBoardKeys({ camRef, sizeRef, cursorRef, pointerFocusRef, liveRef, viewport, moves, verbs, sel, layout, hasOpen: !!onOpen, say, colWord });
   const cull = useBoardCull({
     layout,

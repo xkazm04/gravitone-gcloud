@@ -13,10 +13,18 @@
 //
 // The two floating surfaces are here too (`menu`, `map`), because opening one is
 // itself a verb and both are anchored off a card's own corner.
+//
+// THE SOURCE'S OWN VERBS ride the same menu. A card's list is the engine's
+// moves and then whatever `source.cardVerbs(id)` adds; a right-click on a CELL
+// opens a menu that is only the source's (`cellVerbs`), because the engine has
+// no verb for a place. Those verbs are carried out by the source
+// (`runVerb`), never here: this file only decides whether one needs input first
+// (`ask` - the modal BoardOverlays mounts), says the answer, and re-reads the
+// board, because a verb that wrote something has changed what the board is.
 
 import { useState } from "react";
 
-import type { PipelineSource } from "@/lib/board/pipeline";
+import type { BoardVerb, PipelineSource, VerbInput, VerbResult, VerbTarget } from "@/lib/board/pipeline";
 
 import type { Live } from "./canvasTypes";
 import type { MenuItem } from "./ContextMenu";
@@ -25,14 +33,37 @@ import { buildVerdicts, type Verdicts } from "./moves";
 import type { BoardMoves } from "./useBoardMoves";
 import type { Selection } from "./useSelection";
 
-export interface MenuAt {
+/** A card's menu: the engine's verbs for `id`, then the source's. */
+export interface CardMenuAt {
   x: number;
   y: number;
   id: string;
 }
-export interface MapAt extends MenuAt {
+/** A cell's menu: the source's verbs for that place, asked once at open. */
+export interface CellMenuAt {
+  x: number;
+  y: number;
+  cell: VerbTarget;
+  verbs: BoardVerb[];
+  /** "<lane> · <stage word>", for the menu's name and the modal's eyebrow. */
+  where: string;
+}
+export type MenuAt = CardMenuAt | CellMenuAt;
+export const isCellMenu = (m: MenuAt): m is CellMenuAt => "cell" in m;
+
+export interface MapAt extends CardMenuAt {
   verdicts: Verdicts;
 }
+
+/** A source verb waiting on its input form. */
+export interface VerbAsk {
+  verb: BoardVerb;
+  target: VerbTarget;
+  where: string;
+}
+
+/** The prefix that keeps a source's verb ids apart from the engine's own. */
+const SRC = "src:";
 
 export interface BoardVerbs {
   menu: MenuAt | null;
@@ -45,6 +76,13 @@ export interface BoardVerbs {
   stepMove(id: string, dir: Dir): void;
   verbItems(id: string): MenuItem[];
   runVerb(id: string, verb: string): void;
+  /** The cell menu's items, from the verbs it was opened with. */
+  cellItems(m: CellMenuAt): MenuItem[];
+  runCellVerb(m: CellMenuAt, verbId: string): void;
+  ask: VerbAsk | null;
+  setAsk: React.Dispatch<React.SetStateAction<VerbAsk | null>>;
+  /** Run one source verb with its input; says the answer and re-reads on ok. */
+  perform(target: VerbTarget, verbId: string, input?: VerbInput): Promise<VerbResult>;
 }
 
 export function useBoardVerbs({
@@ -58,6 +96,8 @@ export function useBoardVerbs({
   hasOpen,
   say,
   colWord,
+  axisId,
+  reload,
 }: {
   viewportRef: React.RefObject<HTMLDivElement | null>;
   camRef: React.RefObject<Camera>;
@@ -69,9 +109,13 @@ export function useBoardVerbs({
   hasOpen: boolean;
   say(text: string): void;
   colWord(L: Layout, col: number): string;
+  /** The group axis the lanes are read under — what a verb's `lane` means. */
+  axisId: string;
+  reload(): Promise<void>;
 }): BoardVerbs {
   const [menu, setMenu] = useState<MenuAt | null>(null);
   const [map, setMap] = useState<MapAt | null>(null);
+  const [ask, setAsk] = useState<VerbAsk | null>(null);
 
   const targetsFor = (id: string): string[] => (sel.selected.has(id) && sel.selected.size > 1 ? [...sel.selected].filter((i) => layout.slotOf.has(i)) : [id]);
 
@@ -99,6 +143,8 @@ export function useBoardVerbs({
     void moves.decide(targetsFor(id), cell.lane, cell.col, { drag: false });
   };
 
+  const asItem = (v: BoardVerb, prefix = ""): MenuItem => ({ id: `${prefix}${v.id}`, label: v.label, ...(v.disabled ? { disabled: v.disabled } : {}) });
+
   const verbItems = (id: string): MenuItem[] => {
     const entry = layout.entryOf.get(id);
     if (!entry || !layout.slotOf.has(id)) return [];
@@ -119,12 +165,54 @@ export function useBoardVerbs({
     toward("down", "⇧↓");
     items.push({ id: "map", label: `Move ${lead}to…`, detail: "M" });
     if (moves.retryOf(id)) items.push({ id: "retry", label: "Retry the move", detail: "R" });
+    for (const v of source.cardVerbs?.(id) ?? []) items.push(asItem(v, SRC));
     return items;
+  };
+
+  /* ── the source's verbs ─────────────────────────────────────────────── */
+
+  const perform = async (target: VerbTarget, verbId: string, input?: VerbInput): Promise<VerbResult> => {
+    let r: VerbResult;
+    try {
+      r = source.runVerb ? await source.runVerb(verbId, target, input) : { ok: false, reason: `${source.label} carries out no verbs` };
+    } catch (e) {
+      r = { ok: false, reason: e instanceof Error ? e.message : String(e) };
+    }
+    if (r.ok) {
+      say(r.announce);
+      await reload();
+    }
+    return r;
+  };
+
+  /** Input first if the verb asks for it; otherwise run it now and say how it
+   *  ended — there is no dialog to hold a refusal, so it is spoken. */
+  const startVerb = (verb: BoardVerb, target: VerbTarget, where: string) => {
+    if (verb.disabled) return;
+    if (verb.input) {
+      setAsk({ verb, target, where });
+      return;
+    }
+    void perform(target, verb.id).then((r) => {
+      if (!r.ok) say(r.reason);
+    });
+  };
+
+  const cellItems = (m: CellMenuAt): MenuItem[] => m.verbs.map((v) => asItem(v));
+
+  const runCellVerb = (m: CellMenuAt, verbId: string) => {
+    const verb = m.verbs.find((v) => v.id === verbId);
+    if (verb) startVerb(verb, m.cell, m.where);
   };
 
   const runVerb = (id: string, verb: string) => {
     const entry = layout.entryOf.get(id);
     if (!entry) return;
+    if (verb.startsWith(SRC)) {
+      const v = source.cardVerbs?.(id).find((x) => x.id === verb.slice(SRC.length));
+      if (v) startVerb(v, { axis: axisId, itemId: id }, entry.item.title);
+      return;
+    }
     if (verb === "select") sel.toggleSelect(id);
     else if (verb === "open") liveRef.current?.onOpen?.(entry);
     else if (verb === "map") openMap(id, menu ? { x: menu.x, y: menu.y } : undefined);
@@ -132,5 +220,5 @@ export function useBoardVerbs({
     else if (verb.startsWith("move-")) stepMove(id, verb.slice(5) as Dir);
   };
 
-  return { menu, setMenu, map, setMap, targetsFor, cardAnchor, openMap, stepMove, verbItems, runVerb };
+  return { menu, setMenu, map, setMap, targetsFor, cardAnchor, openMap, stepMove, verbItems, runVerb, cellItems, runCellVerb, ask, setAsk, perform };
 }

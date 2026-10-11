@@ -64,7 +64,7 @@ export interface SunoJob {
   lane: SunoLane;
   state: SunoJobState;
   phase?: SunoPhase;
-  /** The model the driver is on right now (with `phase`), for "creating v6 wild". */
+  /** The model the driver is on right now (with `phase`), for "creating v6-wild". */
   model?: SunoModel;
   models: SunoModel[];
   enqueuedAt: number;

@@ -45,6 +45,8 @@ import { Pause, Play } from "lucide-react";
 
 import type { CanonStage, PipelineEntry } from "@/lib/board/pipeline";
 
+import { ProgressLine } from "../Card";
+import { TYPE } from "../type";
 import { CARD_H, GAP, LANE_PAD, PITCH, type Layout } from "../geometry";
 import type { PipelineSkin } from "../types";
 
@@ -62,15 +64,41 @@ const GUTTER: Record<CanonStage, string> = {
 /** The first playable source on the item, or undefined. The audio adapter puts
  *  `{ kind: "audio", src }` on a take that has a file (lib/board/sources/audio.ts);
  *  a prompt with no take yet has only text, and gets no button. */
-const audioSrc = (entry: PipelineEntry): string | undefined =>
-  entry.item.media.find((m): m is { kind: "audio"; src: string } => m.kind === "audio")?.src;
+const audioSrc = (entry: PipelineEntry): string | undefined => entry.item.media.find((m) => m.kind === "audio" && m.src)?.src;
+
+/** An audio item whose file does not exist YET: the adapter puts `{ kind:
+ *  "audio" }` with no `src` on a Suno clip Suno has not exposed a stream for.
+ *  It gets a play button that cannot play, rather than no button — a missing
+ *  button reads as "this has no audio", which is false. */
+const audioPending = (entry: PipelineEntry): boolean => entry.item.media.some((m) => m.kind === "audio" && !m.src);
+
+/** THE LEAD FACT, when it is one a card shows. The adapter orders facts so the
+ *  one a face should print comes first (lib/board/sources/audio.ts): a waiting
+ *  job's place in the queue, a clip's model. Verbatim, and only these two —
+ *  a ledger row is not a fact sheet. */
+const leadFact = (entry: PipelineEntry): { name: "queue" | "model"; value: string } | null => {
+  const f = entry.facts[0];
+  return f && (f.name === "queue" || f.name === "model") ? { name: f.name, value: f.value } : null;
+};
 
 function ledgerFace(entry: PipelineEntry) {
   const stage = entry.placement.stage;
   const src = audioSrc(entry);
+  const lead = leadFact(entry);
   return (
     <div className="absolute inset-0 flex items-center gap-2.5 pr-11 pl-3">
       <span aria-hidden className={`absolute left-0 w-[3px] ${GUTTER[stage]}`} />
+      {lead?.name === "queue" && <span className={`${TYPE.figure} shrink-0 text-cyan-200/80`}>{lead.value}</span>}
+      {!src && audioPending(entry) && (
+        <button
+          type="button"
+          disabled
+          className="grid h-7 w-7 shrink-0 cursor-not-allowed place-items-center rounded-full border border-dashed border-white/20 text-white/30"
+        >
+          <Play aria-hidden className="h-3.5 w-3.5" />
+          <span className="sr-only">{`Play ${entry.item.title}, still rendering`}</span>
+        </button>
+      )}
       {src && (
         <button
           type="button"
@@ -96,7 +124,19 @@ function ledgerFace(entry: PipelineEntry) {
           <Pause aria-hidden className="hidden h-3.5 w-3.5 group-data-[playing]/play:block" />
         </button>
       )}
-      <p className={`font-hanken min-w-0 truncate text-content ${stage === "gate" ? "font-semibold text-white" : "text-white/85"}`}>{entry.item.title}</p>
+      {entry.item.progress ? (
+        // TWO LINES ONLY WHILE A MACHINE IS ON IT: the title, and under it the
+        // phase and its clock. Every other card stays the one-line ledger row.
+        <div className="flex min-w-0 flex-col gap-1">
+          <p className="font-hanken min-w-0 truncate text-content leading-tight text-white/85">{entry.item.title}</p>
+          <ProgressLine phase={entry.item.progress.phase} startedAt={entry.item.progress.startedAt} />
+        </div>
+      ) : (
+        <p className={`font-hanken min-w-0 truncate text-content ${stage === "gate" ? "font-semibold text-white" : "text-white/85"}`}>{entry.item.title}</p>
+      )}
+      {lead?.name === "model" && (
+        <span className={`${TYPE.figure} ml-auto shrink-0 rounded-full border border-white/15 px-2 leading-tight text-white/65`}>{lead.value}</span>
+      )}
     </div>
   );
 }
@@ -139,4 +179,13 @@ export const ledger: PipelineSkin = {
   // A ledger's own words. `gate` keeps its name because a ledger never renames
   // the line somebody has to sign.
   stageLabel: { working: "running", done: "settled" },
+};
+
+/** The same ledger for AUDIO, where `working` is a QUEUE: one Suno job runs and
+ *  the rest wait their turn behind it, so "running" would be true of one card
+ *  in the column and false of every other. Its own module-level object rather
+ *  than a prop, because the canvas memoises on skin identity. */
+export const ledgerAudio: PipelineSkin = {
+  ...ledger,
+  stageLabel: { working: "queue", done: "settled" },
 };

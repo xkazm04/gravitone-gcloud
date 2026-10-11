@@ -38,7 +38,7 @@
 import { useCallback, useMemo, useState } from "react";
 
 import { PIPELINE_ARM_KEY } from "@/lib/identityEviction";
-import type { MoveRequest, MoveResult, PipelineSource } from "@/lib/board/pipeline";
+import type { BoardVerb, MoveRequest, MoveResult, PipelineSource, VerbInput, VerbResult, VerbTarget } from "@/lib/board/pipeline";
 
 import type { Arm } from "../pipelineModals";
 
@@ -93,6 +93,15 @@ export function setLiveArm(a: Arm): void {
  * and does not reload the board.
  */
 export function armSource(base: PipelineSource, onStub: (wouldCall: string) => void): PipelineSource {
+  // A VERB IS A WRITE TOO. `move()` carries its own `live` flag for the adapter
+  // to honour; a verb has none, so the arm answers a spending verb HERE, before
+  // the source is asked. Which verbs spend is the SOURCE's word (`spends: true`),
+  // read off the very list it handed the menu for that target - never a second
+  // list kept on this side, which would drift the first time a verb was added.
+  const spendingVerb = (verbId: string, target: VerbTarget): BoardVerb | undefined => {
+    const list = target.itemId !== undefined ? base.cardVerbs?.(target.itemId) : base.cellVerbs?.(target);
+    return list?.find((v) => v.id === verbId && v.spends === true);
+  };
   return {
     ...base,
     async move(req: MoveRequest): Promise<MoveResult> {
@@ -100,6 +109,23 @@ export function armSource(base: PipelineSource, onStub: (wouldCall: string) => v
       if (r.ok && r.stub) onStub(r.wouldCall ?? "");
       return r;
     },
+    ...(base.cellVerbs ? { cellVerbs: (t: VerbTarget) => base.cellVerbs!(t) } : {}),
+    ...(base.cardVerbs ? { cardVerbs: (id: string) => base.cardVerbs!(id) } : {}),
+    ...(base.pollMs ? { pollMs: () => base.pollMs!() } : {}),
+    ...(base.runVerb
+      ? {
+          async runVerb(verbId: string, target: VerbTarget, input?: VerbInput): Promise<VerbResult> {
+            const spends = spendingVerb(verbId, target);
+            if (spends && currentArm() !== "live") {
+              // The dry receipt names the verb that was NOT run, as the move's
+              // names the route that was not called.
+              onStub(spends.label);
+              return { ok: true, announce: "dry: nothing was spent" };
+            }
+            return base.runVerb!(verbId, target, input);
+          },
+        }
+      : {}),
   };
 }
 
