@@ -179,6 +179,14 @@ test("a SAVED cut hydrates as itself — the picks never recompose over an edite
   expect(api.cut!.beats[0].label).toBe("AN EDIT NOBODY MAY DISCARD");
   expect(api.cut!.beats[0].label).not.toBe(composed.beats[0].label);
   h.unmount();
+
+  // A legacy record (a `cut`, no `origin`/`ops`) hydrates as its own origin with
+  // an empty log, and the save writes the new shape without losing the edit.
+  const after = await readStep<TrailerCutStepData>("p-edited", "script-trailer");
+  expect(after.ok && after.data?.origin?.beats[0].label, "the legacy cut became the origin").toBe("AN EDIT NOBODY MAY DISCARD");
+  expect(after.ok && after.data?.ops, "an empty log").toEqual([]);
+  expect(after.ok && after.data?.head).toBe(0);
+  expect(after.ok && after.data?.cut?.beats[0].label).toBe("AN EDIT NOBODY MAY DISCARD");
 });
 
 /* ── 4 · the join. What the hook wrote is what Frames decomposes ─────────────── */

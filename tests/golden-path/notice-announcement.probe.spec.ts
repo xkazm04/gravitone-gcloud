@@ -100,7 +100,7 @@ test("every warning/info Notice is announced or declared on-load", () => {
   for (const rel of Object.keys(ON_LOAD)) if (!onLoadSeen[rel]) bad.push(`${rel}: declared on-load but none found`);
   expect(bad).toEqual([]);
   // cases announced of cases that should be (action-triggered sites)
-  expect(announced).toBe(7);
+  expect(announced).toBe(8);
 });
 
 test("kit Loading is not a pre-filled live region, and speaks through useAnnounce", () => {

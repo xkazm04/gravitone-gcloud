@@ -1,6 +1,6 @@
 {
   "$generated": "pipeline/kit-census.mts — do not edit. `npx tsx pipeline/kit-census.mts` rewrites it; `--check` diffs it against the tree.",
-  "files": 753,
+  "files": 764,
   "parts": {
     "ASTERISM_PATH": {
       "home": "components/kit/brand/asterism.ts",
@@ -99,6 +99,7 @@
         "app/_phases/research/run/LiveResult.tsx",
         "app/_phases/score/CueTakes.tsx",
         "app/_phases/score/ScoreSpotting.tsx",
+        "app/_phases/script/trailer/BeatEditor.tsx",
         "app/articles/CritiquePanel.tsx",
         "app/articles/RunView.tsx",
         "app/articles/parts.tsx",
@@ -832,7 +833,8 @@
         "app/_phases/script/trailer/WithholdingPanel.tsx",
         "app/_projects/ProjectDialog.tsx",
         "app/articles/new/NewArticle.tsx",
-        "app/library/LibraryAtelier.tsx"
+        "app/library/LibraryAtelier.tsx",
+        "app/library/TrialMatrix.tsx"
       ]
     },
     "Select": {
@@ -974,6 +976,7 @@
         "app/_phases/research/run/LiveResult.tsx",
         "app/_phases/score/CueTakes.tsx",
         "app/_phases/score/ScoreSpotting.tsx",
+        "app/_phases/script/trailer/BeatEditor.tsx",
         "app/articles/CritiquePanel.tsx",
         "app/articles/RunView.tsx",
         "app/articles/parts.tsx",
@@ -1063,6 +1066,7 @@
         "app/foundry/StylesShelf.tsx",
         "app/foundry/pipeline/BoardControls.tsx",
         "app/foundry/pipeline/modals/ItemDetail.tsx",
+        "app/library/TrialMatrix.tsx",
         "app/playground/arrange/Board.tsx",
         "app/playground/hunt/Board.tsx",
         "app/playground/hunt/Lesson.tsx",
@@ -1231,6 +1235,13 @@
         "components/ui/StudioFrame.tsx"
       ]
     },
+    "activeKeymaps": {
+      "home": "components/ui/signal/keymap.ts",
+      "surfaces": [
+        "components/ui/signal/index.ts"
+      ],
+      "adopters": []
+    },
     "clock": {
       "home": "components/kit/Player.tsx",
       "surfaces": [
@@ -1273,6 +1284,15 @@
         "app/playground/triage/Strengths.tsx"
       ]
     },
+    "defineKeymap": {
+      "home": "components/ui/signal/keymap.ts",
+      "surfaces": [
+        "components/ui/signal/index.ts"
+      ],
+      "adopters": [
+        "app/foundry/cullKeymap.ts"
+      ]
+    },
     "gradeOf": {
       "home": "components/kit/Magnitude.tsx",
       "surfaces": [
@@ -1290,10 +1310,26 @@
         "app/_phases/research/beats/ModeChooser.tsx"
       ]
     },
+    "keycapsRows": {
+      "home": "components/ui/signal/keymap.ts",
+      "surfaces": [
+        "components/ui/signal/index.ts"
+      ],
+      "adopters": [
+        "app/board/partsChrome.tsx"
+      ]
+    },
     "pct": {
       "home": "components/kit/ScoreChip.tsx",
       "surfaces": [
         "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "resolveKey": {
+      "home": "components/ui/signal/keymap.ts",
+      "surfaces": [
+        "components/ui/signal/index.ts"
       ],
       "adopters": []
     },
@@ -1314,6 +1350,16 @@
       "adopters": [
         "app/_phases/_shared/notebook/Chips.tsx",
         "app/_phases/research/beats/ModeChooser.tsx"
+      ]
+    },
+    "useKeymap": {
+      "home": "components/ui/signal/keymap.ts",
+      "surfaces": [
+        "components/ui/signal/index.ts"
+      ],
+      "adopters": [
+        "app/board/useBoardKeys.ts",
+        "app/foundry/CullGrid.tsx"
       ]
     },
     "useRoving": {
@@ -1479,7 +1525,7 @@
       "suspectFiles": {}
     },
     "app/_phases/frames": {
-      "files": 31,
+      "files": 32,
       "kitImports": 0,
       "signalImports": 7,
       "parts": [
@@ -1538,7 +1584,7 @@
       "suspectFiles": {}
     },
     "app/_phases/research": {
-      "files": 40,
+      "files": 41,
       "kitImports": 2,
       "signalImports": 15,
       "parts": [
@@ -1635,11 +1681,12 @@
       }
     },
     "app/_phases/script": {
-      "files": 68,
+      "files": 71,
       "kitImports": 0,
-      "signalImports": 17,
+      "signalImports": 18,
       "parts": [
         "Button",
+        "CHIP_CLASS",
         "DeckCard",
         "DeckStage",
         "Fold",
@@ -1649,6 +1696,7 @@
         "Segmented",
         "StackBar",
         "StaleBadge",
+        "TALLY_TONE",
         "TabRail",
         "Tally",
         "UpstreamBreak"
@@ -1803,7 +1851,7 @@
     "app/board": {
       "files": 18,
       "kitImports": 1,
-      "signalImports": 5,
+      "signalImports": 6,
       "parts": [
         "Hint",
         "Keycaps",
@@ -1811,6 +1859,8 @@
         "StackBar",
         "Tally",
         "components/ui/Select#Select",
+        "keycapsRows",
+        "useKeymap",
         "useToast"
       ],
       "suspects": {
@@ -1857,9 +1907,9 @@
       "suspectFiles": {}
     },
     "app/foundry": {
-      "files": 91,
+      "files": 94,
       "kitImports": 5,
-      "signalImports": 14,
+      "signalImports": 16,
       "parts": [
         "Button",
         "CHIP_CLASS",
@@ -1878,6 +1928,8 @@
         "TextArea",
         "TextInput",
         "components/ui/Select#Select",
+        "defineKeymap",
+        "useKeymap",
         "useRoving",
         "useWindow"
       ],
@@ -2031,9 +2083,9 @@
       "suspectFiles": {}
     },
     "app/library": {
-      "files": 60,
+      "files": 62,
       "kitImports": 8,
-      "signalImports": 11,
+      "signalImports": 12,
       "parts": [
         "Button",
         "CHIP_CLASS",
@@ -2049,6 +2101,7 @@
         "Segmented",
         "TALLY_TONE",
         "TabRail",
+        "Tally",
         "ToastTray",
         "WorldRoot",
         "clock",
@@ -2246,7 +2299,7 @@
       "suspectFiles": {}
     },
     "components/ui/signal": {
-      "files": 14,
+      "files": 15,
       "kitImports": 0,
       "signalImports": 5,
       "parts": [
@@ -2257,6 +2310,7 @@
         "TALLY_TONE",
         "Tally",
         "hintRootClass",
+        "keycapsRows",
         "useHint"
       ],
       "suspects": {
@@ -2340,8 +2394,10 @@
     "VerdictKeys",
     "VerdictMark",
     "Waveform",
+    "activeKeymaps",
     "components/ui/Primitives#Waveform",
     "gradeOf",
-    "pct"
+    "pct",
+    "resolveKey"
   ]
 }

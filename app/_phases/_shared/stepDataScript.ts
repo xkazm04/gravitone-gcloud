@@ -6,6 +6,7 @@
 // comments on each interface say.
 
 import type { ScoreSpot } from "../score/spots";
+import type { CutOp } from "../script/trailer/ops";
 import type { TrailerCut, WithholdingBudget } from "../script/trailer/types";
 
 /** WHICH candidate script this project adopted, under phase key
@@ -42,6 +43,17 @@ export interface TrailerCutStepData {
    *  spine on the board — this is that record. Absent on cuts saved before the
    *  field existed, which readers treat as "unknown", never as "current". */
   spine?: Record<string, string>;
+  /** THE EDIT LOG (added 2026-10-12). `origin` is the cut as `composeCut` dealt
+   *  it, `ops` every edit the creator made since, `head` how many are applied
+   *  (the rest are the redo tail). `cut` above is kept as the DERIVED cache —
+   *  `replay(origin, ops[0..head))` — so Step 3's readers stay unchanged. A
+   *  record without `origin`/`ops` is a legacy one: `cut` is its own origin with
+   *  an empty log. `originBudget` is the budget the origin was dealt with;
+   *  `budget` is the derived one. */
+  origin?: TrailerCut;
+  originBudget?: WithholdingBudget;
+  ops?: CutOp[];
+  head?: number;
   savedAt?: number;
 }
 

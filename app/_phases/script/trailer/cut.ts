@@ -112,12 +112,42 @@ export function withPromisePayer(
 export function addPromise(cut: TrailerCut, beatId: string, sentence: string): TrailerCut {
   const s = sentence.trim();
   if (!s) return cut;
+  const beat = cut.beats.find((b) => b.id === beatId);
+  if (!beat) return cut;
+  return addPromiseWithId(cut, beatId, nextPromiseId(beat), s);
+}
+
+/** The id `addPromise` would give the next claim on this beat. Exposed so the
+ *  edit log (./ops.ts) can record the id it minted and replay it unchanged. */
+export function nextPromiseId(b: TrailerBeat): string {
+  const existing = b.promises ?? [];
+  const taken = new Set(existing.map((p) => p.id));
+  let n = existing.length + 1;
+  while (taken.has(`${b.id}-p${n}`)) n++;
+  return `${b.id}-p${n}`;
+}
+
+/** Append a claim under an id the caller chose. A repeated id is a no-op, so a
+ *  replay that meets its own earlier result cannot double the promise. */
+export function addPromiseWithId(cut: TrailerCut, beatId: string, promiseId: string, sentence: string): TrailerCut {
   return mapBeat(cut, beatId, (b) => {
     const existing = b.promises ?? [];
-    const taken = new Set(existing.map((p) => p.id));
-    let n = existing.length + 1;
-    while (taken.has(`${b.id}-p${n}`)) n++;
-    return { ...b, promises: [...existing, { id: `${b.id}-p${n}`, sentence: s, source: "claim" }] };
+    if (existing.some((p) => p.id === promiseId)) return b;
+    return { ...b, promises: [...existing, { id: promiseId, sentence, source: "claim" }] };
+  });
+}
+
+/** The inverse of `addPromiseWithId`. */
+export function removePromise(cut: TrailerCut, beatId: string, promiseId: string): TrailerCut {
+  return mapBeat(cut, beatId, (b) => {
+    const left = (b.promises ?? []).filter((p) => p.id !== promiseId);
+    // Last claim gone: the field goes back to ABSENT, as it was before the add.
+    if (left.length === 0) {
+      const { promises: _gone, ...rest } = b;
+      void _gone;
+      return rest;
+    }
+    return { ...b, promises: left };
   });
 }
 

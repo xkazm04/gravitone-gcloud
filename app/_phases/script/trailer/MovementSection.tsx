@@ -24,6 +24,8 @@ export default function MovementSection({
   previousRung,
   cue,
   onPatch,
+  edited,
+  onReset,
 }: {
   movement: Movement;
   /** This movement's beats, in chain order. */
@@ -33,7 +35,9 @@ export default function MovementSection({
   /** The last rung before this movement, for the repeat warning. */
   previousRung: TrailerBeat | null;
   cue?: Cue;
-  onPatch: (beatId: string, patch: BeatPatch) => void;
+  onPatch: (beatId: string, patch: BeatPatch, gesture?: string) => void;
+  edited?: (beatId: string) => boolean;
+  onReset?: (beatId: string) => void;
 }) {
   const section = cue?.sections.find((s) => s.id === movement.cueSection);
   const isEscalation = movement.role === "escalation";
@@ -91,7 +95,9 @@ export default function MovementSection({
                   beat={b}
                   isRung={isRung}
                   previousRaise={previousRaise}
-                  onPatch={(patch) => onPatch(b.id, patch)}
+                  onPatch={(patch, gesture) => onPatch(b.id, patch, gesture)}
+                  edited={edited?.(b.id)}
+                  onReset={onReset ? () => onReset(b.id) : undefined}
                 />
               </li>
             );

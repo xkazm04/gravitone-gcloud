@@ -125,6 +125,8 @@ export default function TrailerScript({
       previousRung={w.previousRung}
       cue={cut.cue}
       onPatch={api.setBeat}
+      edited={api.edited}
+      onReset={api.resetBeat}
     />
   ));
 
@@ -197,8 +199,8 @@ export default function TrailerScript({
                 <span aria-hidden>↻ </span>beats from the board&rsquo;s picks
               </span>
               <span className="text-rose-200/85">
-                <span aria-hidden>✕ </span>
-                <span className="sr-only">discards </span>your edits here
+                <span aria-hidden>✓ </span>
+                <span className="sr-only">keeps </span>your edits to beats the new spine still has
               </span>
               <span className="text-emerald-200/85">
                 <span aria-hidden>✓ </span>
@@ -240,6 +242,37 @@ export default function TrailerScript({
           <Hint>the last composed cut, and it stays until a new one is composed</Hint>
         </p>
       )}
+
+      {api.skipped.length > 0 && (
+        <div className="mt-4">
+          <Notice severity="warning" announce title={`${api.skipped.length} ${api.skipped.length === 1 ? "edit" : "edits"} did not carry`}>
+            <p data-testid="trailer-skipped-edits" className="font-jetbrains text-label text-white/60">
+              their beat was replaced by the new spine
+            </p>
+          </Notice>
+        </div>
+      )}
+
+      <div className="mt-3 flex items-center gap-2">
+        <button
+          type="button"
+          data-testid="trailer-undo"
+          disabled={!api.canUndo}
+          onClick={api.undo}
+          className="font-jetbrains rounded-full border border-white/12 px-3 py-1 text-label text-white/55 transition enabled:hover:border-cyan-400/40 enabled:hover:text-cyan-200 disabled:opacity-35"
+        >
+          undo
+        </button>
+        <button
+          type="button"
+          data-testid="trailer-redo"
+          disabled={!api.canRedo}
+          onClick={api.redo}
+          className="font-jetbrains rounded-full border border-white/12 px-3 py-1 text-label text-white/55 transition enabled:hover:border-cyan-400/40 enabled:hover:text-cyan-200 disabled:opacity-35"
+        >
+          redo
+        </button>
+      </div>
 
       <div className="mt-4">
         <EnergyCurve cut={cut} />

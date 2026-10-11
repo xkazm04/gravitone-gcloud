@@ -14,14 +14,25 @@ import {
 } from "../../_shared/stepStore";
 import { slotsFor } from "../../research/beats/beats";
 
+import { composeCut, type BeatPatch } from "./cut";
 import {
-  addPromise as addPromiseTo,
-  composeCut,
-  withAllowance,
-  withBeat,
-  withPromisePayer,
-  type BeatPatch,
-} from "./cut";
+  canRedo as logCanRedo,
+  canUndo as logCanUndo,
+  derive,
+  editAddPromise,
+  editAllowance,
+  editBeat,
+  editPayer,
+  edited as logEdited,
+  logFromRecord,
+  newLog,
+  rebase,
+  redo as logRedo,
+  resetBeat as logResetBeat,
+  undo as logUndo,
+  type CutLog,
+  type CutOp,
+} from "./ops";
 import { runStructureCheck, type StructureReport } from "./structure";
 import type { Allowance, TrailerCut, WithholdingBudget } from "./types";
 
@@ -43,8 +54,11 @@ export function useTrailerCut(opts: { projectId: string; discipline: Discipline;
   const { projectId, discipline, title } = opts;
   const [hydratedFor, setHydratedFor] = useState<string | null>(null);
   const hydrated = hydratedFor === projectId;
-  const [cut, setCut] = useState<TrailerCut | null>(null);
-  const [budget, setBudget] = useState<WithholdingBudget | null>(null);
+  // THE CUT IS AN EDIT LOG (./ops.ts): the dealt origin plus the creator's ops.
+  // `cut` and `budget` below are derived from it, never stored on their own.
+  const [log, setLog] = useState<CutLog | null>(null);
+  /** Edits the last rebuild could not carry: their beat was replaced. */
+  const [skipped, setSkipped] = useState<CutOp[]>([]);
   // The spine the cut on screen was composed from, and the spine the board
   // holds now. Both are needed to say honestly whether Script is behind Step 1
   // — see `staleSpine` below.
@@ -77,8 +91,8 @@ export function useTrailerCut(opts: { projectId: string; discipline: Discipline;
       const failure = !savedRead.ok ? savedRead.trouble : !picksRead.ok ? picksRead.trouble : null;
       if (failure) {
         setLoadTrouble(failure);
-        setCut(null);
-        setBudget(null);
+        setLog(null);
+        setSkipped([]);
         setComposedSpine(undefined);
         setBoardSpine(null);
         setHydratedFor(projectId);
@@ -90,8 +104,9 @@ export function useTrailerCut(opts: { projectId: string; discipline: Discipline;
       const confirmed = picks?.confirmed ?? null;
       setBoardSpine(confirmed && Object.keys(confirmed).length > 0 ? confirmed : null);
       if (saved?.cut) {
-        setCut(saved.cut);
-        setBudget(saved.budget ?? GLASS_HARBOR_BUDGET);
+        // A legacy record (no origin/ops) becomes its own origin with an empty log.
+        setLog(logFromRecord({ ...saved, budget: saved.budget ?? GLASS_HARBOR_BUDGET }));
+        setSkipped([]);
         // `null` = saved before the field existed: unknown provenance, drawn as
         // such rather than as current.
         setComposedSpine(saved.spine ?? null);
@@ -106,12 +121,12 @@ export function useTrailerCut(opts: { projectId: string; discipline: Discipline;
           slots: slotsFor(discipline),
           cue: GLASS_HARBOR_CUE,
         });
-        setCut(composed);
-        setBudget(GLASS_HARBOR_BUDGET);
+        setLog(newLog(composed, GLASS_HARBOR_BUDGET));
+        setSkipped([]);
         setComposedSpine(confirmed);
       } else {
-        setCut(null);
-        setBudget(null);
+        setLog(null);
+        setSkipped([]);
         setComposedSpine(undefined);
       }
       setHydratedFor(projectId);
@@ -122,13 +137,22 @@ export function useTrailerCut(opts: { projectId: string; discipline: Discipline;
   // Saves on every change once hydrated — including the seed, which is the
   // "saves once" the header promises. A null cut is never written.
   useEffect(() => {
-    if (!hydrated || loadTrouble || !cut || !budget) return;
+    if (!hydrated || loadTrouble || !log) return;
+    // `cut`/`budget` are the derived cache Step 3 reads; the log is the truth.
+    const derived = derive(log);
     void saveStep<TrailerCutStepData>(projectId, PHASE, {
-      cut,
-      budget,
+      cut: derived.cut,
+      budget: derived.budget,
+      origin: log.origin,
+      originBudget: log.originBudget,
+      ops: log.ops,
+      head: log.head,
       ...(composedSpine ? { spine: composedSpine } : {}),
     });
-  }, [projectId, cut, budget, composedSpine, hydrated, loadTrouble]);
+  }, [projectId, log, composedSpine, hydrated, loadTrouble]);
+
+  const cut: TrailerCut | null = useMemo(() => (log ? derive(log).cut : null), [log]);
+  const budget: WithholdingBudget | null = useMemo(() => (log ? derive(log).budget : null), [log]);
 
   /** Is the cut on screen older than the spine on the board?
    *  `true` — the board holds a confirmed spine that differs from the one this
@@ -148,38 +172,65 @@ export function useTrailerCut(opts: { projectId: string; discipline: Discipline;
    *  composed and nothing newer exists yet. */
   const spineReopened = !!cut && boardSpine === null;
 
-  /** Take the board's current spine: rebuild the cut from it. Beat edits made
-   *  on the old cut are discarded — the surface says so before the click. The
-   *  withholding budget is the campaign's, not the cut's, and is kept. */
+  /** Take the board's current spine: a REBASE. The new origin is composed from
+   *  it and the creator's beat edits are replayed over it; the ones whose beat
+   *  the new spine replaced have nowhere to land and are reported in `skipped`.
+   *  The withholding budget is the campaign's, not the cut's, and is kept. */
   const recompose = useCallback(() => {
-    if (!boardSpine) return;
-    setCut(
+    if (!boardSpine || !log) return;
+    const next = rebase(
+      log,
       composeCut({ projectId, title, picks: boardSpine, slots: slotsFor(discipline), cue: GLASS_HARBOR_CUE }),
     );
-    setBudget((b) => b ?? GLASS_HARBOR_BUDGET);
+    setLog(next.log);
+    setSkipped(next.skipped);
     setComposedSpine(boardSpine);
     setGeneration((g) => g + 1);
-  }, [boardSpine, projectId, title, discipline]);
+  }, [boardSpine, log, projectId, title, discipline]);
 
   const report: StructureReport | null = useMemo(
     () => (cut ? runStructureCheck(cut, { budget: budget ?? undefined }) : null),
     [cut, budget],
   );
 
-  const setBeat = useCallback((beatId: string, patch: BeatPatch) => {
-    setCut((c) => (c ? withBeat(c, beatId, patch) : c));
+  /** `gesture` groups the edits of one focus of one field into a single op. */
+  const setBeat = useCallback((beatId: string, patch: BeatPatch, gesture?: string) => {
+    setLog((l) => (l ? editBeat(l, beatId, patch, gesture) : l));
   }, []);
   const setPayer = useCallback((beatId: string, promiseId: string, payer: string) => {
-    setCut((c) => (c ? withPromisePayer(c, beatId, promiseId, payer) : c));
+    setLog((l) => (l ? editPayer(l, beatId, promiseId, payer) : l));
   }, []);
   const addPromise = useCallback((beatId: string, sentence: string) => {
-    setCut((c) => (c ? addPromiseTo(c, beatId, sentence) : c));
+    setLog((l) => (l ? editAddPromise(l, beatId, sentence) : l));
   }, []);
   const setAllowance = useCallback((assetId: string, allowance: Allowance, trade?: string) => {
-    setBudget((b) => (b ? withAllowance(b, assetId, allowance, trade) : b));
+    setLog((l) => (l ? editAllowance(l, assetId, allowance, trade) : l));
   }, []);
 
-  return { hydrated, loadTrouble, generation, cut, budget, report, staleSpine, spineReopened, recompose, setBeat, setPayer, addPromise, setAllowance };
+  // Undo, redo and reset change the cut under editors that seed local state
+  // from it, so each one is a new generation, exactly as a rebuild is.
+  const undo = useCallback(() => {
+    setLog((l) => (l ? logUndo(l) : l));
+    setGeneration((g) => g + 1);
+  }, []);
+  const redo = useCallback(() => {
+    setLog((l) => (l ? logRedo(l) : l));
+    setGeneration((g) => g + 1);
+  }, []);
+  const resetBeat = useCallback((beatId: string) => {
+    setLog((l) => (l ? logResetBeat(l, beatId) : l));
+    setGeneration((g) => g + 1);
+  }, []);
+  const canUndo = !!log && logCanUndo(log);
+  const canRedo = !!log && logCanRedo(log);
+  /** Has the creator changed this beat from the dealt one? */
+  const edited = useCallback((beatId: string) => !!log && logEdited(log, beatId), [log]);
+
+  return {
+    hydrated, loadTrouble, generation, cut, budget, report, staleSpine, spineReopened, skipped,
+    recompose, setBeat, setPayer, addPromise, setAllowance,
+    undo, redo, canUndo, canRedo, edited, resetBeat,
+  };
 }
 
 export type TrailerCutApi = ReturnType<typeof useTrailerCut>;
