@@ -17,8 +17,9 @@
 //     lane, and a genuinely empty source is `empty`. Those are different states.
 //   · Nothing spends without `live === true`: the dry path calls no write route.
 //   · Audio: the placement of every stage, the declared row order, and the
-//     in-flight request that vanishes on success and returns wearing the
-//     vendor's sentence on failure.
+//     Suno queue: a dry move is stubbed, a live one enqueues, a queued job
+//     cancels back to proposed, an active one is refused; the cell and card
+//     verbs; a failed Suno read degrades its stages and the takes still draw.
 //
 // Nothing here reaches a real route. A POST that a test lets through goes to the
 // replaced fetch, which records it and answers from a fixture.
@@ -31,6 +32,7 @@ import { stateOfEntries, stateOfError } from "@/lib/board/registry";
 import { articleMachineRefusal, articleTransitionRefusal, DONE_WINDOW_DAYS, isStubbedMove, makeArticlesSource, TOPIC_LIMIT } from "@/lib/board/sources/articles";
 import { AUDIO_UNJUDGED_REFUSAL, makeAudioSource } from "@/lib/board/sources/audio";
 import type { Hunt, HuntNode, SoundTake } from "@/lib/sound/types";
+import type { SunoClip, SunoJob, SunoProposal, SunoSnapshot } from "@/lib/suno/types";
 
 /* ── a replaced fetch ─────────────────────────────────────────────────────── */
 
@@ -491,14 +493,53 @@ function leaf(id: string, extra: Partial<HuntNode> = {}): HuntNode {
 const hunt = (nodes: HuntNode[]): Hunt => ({ id: "h1", kind: "music", idea: "calmer pad", createdAt: iso(3), nodes, draftedBy: null, lessonId: null });
 const GROUPS = { music: ["ambient", "cinematic", "electronic", "hip hop"], sfx: ["impacts", "whooshes", "risers", "ambiences", "ui"] };
 
-function soundApi(takes: SoundTake[], hunts: Hunt[], groups = GROUPS): Handler {
+const EMPTY_SUNO = (): SunoSnapshot => ({ proposals: [], jobs: [], clips: [], driver: { ok: true } });
+
+function soundApi(takes: SoundTake[], hunts: Hunt[], groups = GROUPS, suno: SunoSnapshot = EMPTY_SUNO()): Handler {
   return (url, method) => {
     if (url.pathname === "/api/sound/takes" && method === "GET") return json({ takes });
     if (url.pathname === "/api/sound/hunts" && method === "GET") return json({ hunts });
     if (url.pathname === "/api/sound/groups") return json({ groups });
+    if (url.pathname === "/api/sound/suno" && method === "GET") return json(suno);
     return json({ error: "unrouted in the probe" }, 404);
   };
 }
+
+/* ── suno fixtures ────────────────────────────────────────────────────────── */
+
+const proposal = (id: string, extra: Partial<SunoProposal> = {}): SunoProposal => ({
+  id,
+  fields: { title: `prompt ${id}`, style: "lo-fi house, warm, rhodes, 118 bpm", lyrics: "[Instrumental]" },
+  lane: { axis: "group", value: "electronic" },
+  origin: "custom",
+  createdAt: NOW - 60_000,
+  ...extra,
+});
+const job = (id: string, proposalId: string, extra: Partial<SunoJob> = {}): SunoJob => ({
+  id,
+  proposalId,
+  fields: { title: `prompt ${proposalId}`, style: "lo-fi house, warm, rhodes, 118 bpm" },
+  lane: { axis: "group", value: "electronic" },
+  state: "queued",
+  models: ["v6", "v6-wild"],
+  enqueuedAt: NOW - 30_000,
+  clipIds: [],
+  ...extra,
+});
+const sunoClip = (id: string, jobId: string, extra: Partial<SunoClip> = {}): SunoClip => ({
+  id,
+  jobId,
+  model: "v6-wild",
+  songId: `song-${id}`,
+  url: `https://suno.com/song/song-${id}`,
+  audioUrl: `https://cdn.example/song-${id}.mp3`,
+  imageUrl: null,
+  title: `clip ${id}`,
+  durationS: 121,
+  createdAt: NOW - 1000,
+  verdict: null,
+  ...extra,
+});
 
 async function audioLoaded() {
   const src = makeAudioSource({ now: () => NOW });
@@ -516,19 +557,31 @@ test("audio pipeline: every stage lands where the canon says, and the pool reads
     take("e", { verdict: "unjudged", stage: null, judgedAt: null }),
     take("f", { verdict: "rejected", stage: null }),
   ];
-  const f = install(soundApi(takes, [hunt([leaf("n1"), leaf("n2", { state: "rendered" }), leaf("n3", { state: "awaiting-return", provider: "suno" })])]));
+  const leaves = [
+    leaf("n1"),
+    leaf("n2", { state: "rendered" }),
+    leaf("n3", { state: "awaiting-return", provider: "suno" }),
+    leaf("n4", { state: "rendering" }),
+    leaf("n5", { state: "awaiting-return", provider: "suno", takeIds: ["e"] }),
+  ];
+  const f = install(soundApi(takes, [hunt(leaves)]));
   try {
     const { src, entries, get } = await audioLoaded();
     const site = (id: string) => {
       const p = src.placementOf(get(id));
       return `${p.stage}${p.band ? `/${p.band}` : ""}`;
     };
-    const placed = { a: site("audio:take:a"), b: site("audio:take:b"), c: site("audio:take:c"), d: site("audio:take:d"), e: site("audio:take:e"), idea: site("audio:hunt:h1:n1") };
+    const placed = { a: site("audio:take:a"), b: site("audio:take:b"), c: site("audio:take:c"), d: site("audio:take:d"), e: site("audio:take:e"), idea: site("audio:hunt:h1:n1"), suno: site("audio:hunt:h1:n3") };
     console.log(`\nAUDIO placement\n${JSON.stringify(placed, null, 2)}`);
-    expect(placed).toEqual({ a: "gate/pending", b: "gate/remaster", c: "gate/edit", d: "done", e: "gate/triage", idea: "proposed" });
-    // a rejected take has no stage; a rendered / awaiting-return leaf is drawn as its takes
-    expect(entries.map((e) => e.item.id)).not.toContain("audio:take:f");
-    expect(src.lastLoad().hidden).toEqual([{ stage: "proposed", count: 1, why: "hunt leaves rendering or awaiting a Suno return" }]);
+    // A Suno leaf awaiting a return that never came (no takes) is automatable now: a candidate.
+    expect(placed).toEqual({ a: "gate/pending", b: "gate/remaster", c: "gate/edit", d: "done", e: "gate/triage", idea: "proposed", suno: "proposed" });
+    // a rejected take has no stage; a rendered leaf, and a Suno leaf whose return was filed, are drawn as their takes
+    const ids = entries.map((e) => e.item.id);
+    expect(ids).not.toContain("audio:take:f");
+    expect(ids).not.toContain("audio:hunt:h1:n2");
+    expect(ids).not.toContain("audio:hunt:h1:n5");
+    expect(src.lastLoad().hidden).toEqual([{ stage: "proposed", count: 2, why: "hunt leaves rendering or awaiting a Suno return" }]);
+    expect(src.lastLoad().degraded).toBeUndefined();
   } finally {
     f.restore();
   }
@@ -605,68 +658,211 @@ test("audio pipeline: declared rows first in their declared order, then rows onl
   }
 });
 
-test("audio pipeline: working is a request in flight - it vanishes on success into triage, and a failure returns the card wearing the vendor's sentence", async () => {
-  let release!: (r: Response) => void;
-  const gate = new Promise<Response>((res) => (release = res));
-  let outcome: "ok" | "over-budget" = "ok";
+test("audio pipeline: working is the Suno queue - a dry move is stubbed, a live one enqueues, a queued job cancels back, an active one is refused", async () => {
+  const snap: SunoSnapshot = {
+    proposals: [proposal("p1"), proposal("p2"), proposal("p3")],
+    jobs: [job("j2", "p2", { state: "active", phase: "creating", model: "v6-wild", startedAt: NOW - 5000 }), job("j3", "p3")],
+    clips: [],
+    driver: { ok: true },
+  };
   const f = install((url, method, body) => {
-    if (method === "POST" && url.pathname === "/api/sound/generate") {
-      return outcome === "ok" ? gate : json({ error: "Music render ceiling reached: refused before the vendor was called", code: "over-budget" }, 402);
+    if (method === "POST" && url.pathname === "/api/sound/suno/queue") {
+      const b = body as { proposalIds?: string[]; huntNodeIds?: string[]; lane?: unknown };
+      if (b.proposalIds) return json({ jobs: [job("j1", b.proposalIds[0], { enqueuedAt: NOW })] }, 201);
+      return json({ jobs: [job("jh", "ph", { enqueuedAt: NOW, lane: b.lane as SunoJob["lane"] })] }, 201);
     }
-    if (method === "PATCH" && url.pathname.startsWith("/api/sound/takes/")) return json({ take: take("new", { verdict: "unjudged", stage: null, group: (body as { group: string }).group, judgedAt: null }) });
-    return soundApi([], [hunt([leaf("n1"), leaf("n2", { provider: "suno" })])])(url, method, body);
+    if (method === "DELETE" && url.pathname === "/api/sound/suno/queue/j3") return json({ job: job("j3", "p3", { state: "cancelled" }) });
+    return soundApi([], [hunt([leaf("n1")])], GROUPS, snap)(url, method, body);
   });
   try {
     const { src, get } = await audioLoaded();
-    const idea = get("audio:hunt:h1:n1");
+    const p1 = get("audio:suno:proposal:p1");
+    expect(src.placementOf(p1)).toMatchObject({ stage: "proposed", lane: "electronic" });
+    // a queued or active proposal is drawn as its job, not twice
+    expect(() => get("audio:suno:proposal:p2")).toThrow();
 
-    // the offer states SECONDS, not dollars
-    const offer = src.admits(idea, "working", null);
-    expect(offer).toMatchObject({ kind: "needs", needs: "confirm", cost: { seconds: 12 } });
-    expect(offer.kind === "needs" && "usdLow" in (offer.cost ?? {})).toBe(false);
-    // Suno is a manual round trip: refused before any call
-    expect(src.admits(get("audio:hunt:h1:n2"), "working", null).kind).toBe("refused");
-
-    // dry path: no write, and the caller can tell
-    const dry = await src.move({ itemId: idea.id, to: "working", band: null });
+    // the arm is the spend gate: no confirm dialog, and no write without `live`
+    expect(src.admits(p1, "working", null)).toEqual({ kind: "ok" });
+    const dry = await src.move({ itemId: p1.id, to: "working", band: null });
     expect(isStubbedMove(dry)).toBe(true);
+    expect(dry.ok && dry.wouldCall).toBe("POST /api/sound/suno/queue");
     expect(f.writes()).toHaveLength(0);
 
-    // a lane drop on a candidate is interface-local, then written as the group after the render
-    const laned = await src.move({ itemId: idea.id, to: "proposed", band: null, lane: "cinematic" });
-    expect(laned.ok && laned.item.lane).toBe("cinematic");
-    expect(f.writes()).toHaveLength(0);
+    // live: one enqueue, and the card comes back as a queued job behind the two already there
+    const live = await src.move({ itemId: p1.id, to: "working", band: null, live: true });
+    expect(live.ok).toBe(true);
+    expect(f.writes()).toEqual([{ method: "POST", path: "/api/sound/suno/queue", body: { proposalIds: ["p1"] } }]);
+    if (live.ok) {
+      expect(live.item.id).toBe("audio:suno:job:j1");
+      expect(live.item.placement).toMatchObject({ stage: "working", lane: "electronic" });
+      expect(live.item.progress).toBeUndefined();
+    }
 
-    // live: the call is held open; while it is, the card is in `working`, once
-    const live = src.move({ itemId: idea.id, to: "working", band: null, live: true });
-    await new Promise((r) => setTimeout(r, 10));
-    const during = await src.loadPipeline();
-    const inflight = during.filter((e) => e.item.placement.stage === "working");
-    expect(inflight.map((e) => e.item.id)).toEqual([idea.id]);
-    expect(during.filter((e) => e.item.id === idea.id)).toHaveLength(1);
-    expect(src.admits(inflight[0].item, "gate", "triage")).toEqual({ kind: "refused", reason: "a render is in flight; wait for the vendor's answer" });
-    release(json({ take: take("new", { verdict: "unjudged", stage: null, group: null, judgedAt: null, prompt: "slower", title: "leaf n1 — compose" }) }, 201));
-    const done = await live;
-    expect(done.ok).toBe(true);
-    if (done.ok) expect(done.item.placement).toMatchObject({ stage: "gate", band: "triage", lane: "cinematic" });
-    const gen = f.writes().find((w) => w.path === "/api/sound/generate")!;
-    expect(gen.body).toMatchObject({ kind: "music", provider: "elevenlabs", op: "compose", origin: "hunt", huntId: "h1", nodeId: "n1", durationS: 12 });
-    // nothing left in working
-    expect((await src.loadPipeline()).filter((e) => e.item.placement.stage === "working")).toHaveLength(0);
+    // a hunt leaf (ElevenLabs or not) is converted server-side and queued the same way
+    const idea = get("audio:hunt:h1:n1");
+    expect(src.admits(idea, "working", null)).toEqual({ kind: "ok" });
+    expect(isStubbedMove(await src.move({ itemId: idea.id, to: "working", band: null }))).toBe(true);
+    const leafLive = await src.move({ itemId: idea.id, to: "working", band: null, live: true, lane: "ambient", axis: "group" });
+    expect(leafLive.ok).toBe(true);
+    expect(f.writes()[1]).toEqual({ method: "POST", path: "/api/sound/suno/queue", body: { huntNodeIds: ["h1:n1"], lane: { axis: "group", value: "ambient" } } });
 
-    // failure: vendor's words, retryable only for transport; the card comes back wearing them
-    outcome = "over-budget";
-    const typed = src.propose({ kind: "sfx", prompt: "glass breaking", durationS: 2 });
-    expect(src.placementOf(typed)).toMatchObject({ stage: "proposed" });
-    const failed = await src.move({ itemId: typed.id, to: "working", band: null, live: true });
-    expect(failed).toEqual({ ok: false, reason: "Music render ceiling reached: refused before the vendor was called", retryable: false });
-    const back = (await src.loadPipeline()).find((e) => e.item.id === typed.id)!.item;
-    expect(back.placement.stage).toBe("proposed");
-    expect(back.note).toBe("Music render ceiling reached: refused before the vendor was called");
-    expect(src.discard(typed.id)).toBe(true);
-    expect((await src.loadPipeline()).some((e) => e.item.id === typed.id)).toBe(false);
+    // the active job wears its phase and the clock's start; the queued one its place
+    const all = await src.loadPipeline();
+    const entryOf = (id: string) => all.find((e) => e.item.id === id)!;
+    expect(entryOf("audio:suno:job:j2").item.progress).toEqual({ phase: "creating v6 wild", startedAt: NOW - 5000 });
+    expect(entryOf("audio:suno:job:j3").item.progress).toBeUndefined();
+    expect(entryOf("audio:suno:job:j3").facts[0]).toEqual({ name: "queue", value: "#2" });
+    expect(src.pollMs!()).toBe(2000);
+
+    // active: refused back, in the work's words
+    const active = entryOf("audio:suno:job:j2").item;
+    expect(src.admits(active, "proposed", null)).toEqual({ kind: "refused", reason: "rendering now - it lands in triage when Suno finishes" });
+    const refusedBack = await src.move({ itemId: active.id, to: "proposed", band: null });
+    expect(refusedBack).toEqual({ ok: false, reason: "rendering now - it lands in triage when Suno finishes", retryable: false });
+
+    // queued: back to proposed cancels it, and the proposal returns
+    const queuedJob = entryOf("audio:suno:job:j3").item;
+    expect(src.admits(queuedJob, "proposed", null)).toEqual({ kind: "ok" });
+    const back = await src.move({ itemId: queuedJob.id, to: "proposed", band: null });
+    expect(back.ok).toBe(true);
+    if (back.ok) expect(back.item).toMatchObject({ id: "audio:suno:proposal:p3", placement: { stage: "proposed" } });
+    expect(f.writes().at(-1)).toMatchObject({ method: "DELETE", path: "/api/sound/suno/queue/j3" });
+    // a queued card does not skip to the gate
+    expect(src.admits(entryOf("audio:suno:job:j3").item, "gate", "triage").kind).toBe("refused");
   } finally {
     f.restore();
+  }
+});
+
+test("audio pipeline: Suno clips sit in the gate by verdict, a drop is hidden and counted, a lane follows the axis it was written under", async () => {
+  const snap: SunoSnapshot = {
+    proposals: [proposal("p1"), proposal("pg", { lane: { axis: "genre", value: "techno" } })],
+    jobs: [job("j1", "p1", { state: "done", clipIds: ["c1", "c2", "c3"] })],
+    clips: [sunoClip("c1", "j1"), sunoClip("c2", "j1", { verdict: "keep", model: "v6" }), sunoClip("c3", "j1", { verdict: "drop" }), sunoClip("c4", "j1", { audioUrl: null })],
+    driver: { ok: true },
+  };
+  const f = install((url, method, body) => {
+    if (method === "PATCH" && url.pathname === "/api/sound/suno/clips/c1") return json({ clip: sunoClip("c1", "j1", { verdict: (body as { verdict: SunoClip["verdict"] }).verdict }) });
+    return soundApi([], [], GROUPS, snap)(url, method, body);
+  });
+  try {
+    const { src, entries, get } = await audioLoaded();
+    const site = (id: string) => {
+      const p = src.placementOf(get(id));
+      return `${p.stage}${p.band ? `/${p.band}` : ""}`;
+    };
+    expect({ c1: site("audio:suno:clip:c1"), c2: site("audio:suno:clip:c2") }).toEqual({ c1: "gate/triage", c2: "gate/pending" });
+    expect(entries.map((e) => e.item.id)).not.toContain("audio:suno:clip:c3");
+    expect(src.lastLoad().hidden).toEqual([{ stage: "gate", count: 1, why: "Suno clips dropped" }]);
+    // a done proposal is no longer a candidate
+    expect(entries.map((e) => e.item.id)).not.toContain("audio:suno:proposal:p1");
+    expect(src.pollMs!()).toBe(0);
+
+    // the clip card: its stream for the play button, the song page as href, the model first
+    const c1 = entries.find((e) => e.item.id === "audio:suno:clip:c1")!;
+    expect(c1.item.media[0]).toEqual({ kind: "audio", src: "https://cdn.example/song-c1.mp3" });
+    expect(c1.href).toBe("https://suno.com/song/song-c1");
+    expect(c1.facts[0]).toEqual({ name: "model", value: "v6 wild" });
+    // not streamable yet: an audio entry with no src, so no live play button
+    expect(get("audio:suno:clip:c4").media[0]).toEqual({ kind: "audio" });
+
+    // a lane written under "genre" draws in that lane under genre, and in the ungrouped row under the row axis
+    const genre = src.groupAxes.find((a) => a.id === "genre")!;
+    const pg = get("audio:suno:proposal:pg");
+    expect(genre.of(pg)).toBe("techno");
+    expect(src.groupAxes[0].of(pg)).toBe(UNGROUPED_LANE);
+    expect(src.groupAxes[0].of(get("audio:suno:clip:c1"))).toBe("electronic");
+    expect(src.groupAxes.find((a) => a.id === "provider")!.of(pg)).toBe("suno");
+
+    // triage <-> pending is the verdict; done is refused in the work's words
+    expect(src.admits(c1.item, "gate", "pending")).toEqual({ kind: "ok" });
+    expect(src.admits(c1.item, "done", null).kind).toBe("refused");
+    expect(src.admits(c1.item, "gate", "remaster").kind).toBe("refused");
+    const kept = await src.move({ itemId: c1.item.id, to: "gate", band: "pending" });
+    expect(f.writes()).toEqual([{ method: "PATCH", path: "/api/sound/suno/clips/c1", body: { verdict: "keep" } }]);
+    if (kept.ok) expect(kept.item.placement).toMatchObject({ stage: "gate", band: "pending" });
+  } finally {
+    f.restore();
+  }
+});
+
+test("audio pipeline: cell and card verbs - write, draft, queue the cell (a spending verb), riff, discard, keep, drop, cancel", async () => {
+  const snap: SunoSnapshot = {
+    proposals: [proposal("p1"), proposal("p2")],
+    jobs: [job("j9", "p9")],
+    clips: [sunoClip("c1", "j9")],
+    driver: { ok: true },
+  };
+  const f = install((url, method, body) => {
+    if (method === "POST" && url.pathname === "/api/sound/suno/proposals") return json({ proposal: proposal("pn", body as Partial<SunoProposal>) }, 201);
+    if (method === "POST" && url.pathname === "/api/sound/suno/propose") return json({ proposals: [proposal("d1"), proposal("d2"), proposal("d3")] }, 201);
+    if (method === "POST" && url.pathname === "/api/sound/suno/queue") return json({ jobs: (body as { proposalIds: string[] }).proposalIds.map((p, i) => job(`q${i}`, p)) }, 201);
+    if (method === "DELETE" && url.pathname === "/api/sound/suno/proposals/p1") return json({ ok: true });
+    return soundApi([], [], GROUPS, snap)(url, method, body);
+  });
+  try {
+    const { src } = await audioLoaded();
+    const cell = { axis: "group", lane: "electronic", stage: "proposed" as const, band: null };
+    const verbs = src.cellVerbs!(cell);
+    expect(verbs.map((v) => [v.id, v.label])).toEqual([
+      ["suno.write", "Write a prompt"],
+      ["suno.draft", "Draft like this"],
+      ["suno.queue-cell", "Queue all 2 here"],
+    ]);
+    expect(verbs[0].input).toEqual({ kind: "suno-fields" });
+    expect(verbs[1].input).toEqual({ kind: "count", initial: { kind: "count", count: 4 } });
+    expect(verbs[2].spends).toBe(true);
+    expect(verbs[2].disabled).toBeUndefined();
+    expect(src.cellVerbs!({ ...cell, lane: "ambient" })[2].disabled).toBeTruthy();
+    expect(src.cellVerbs!({ ...cell, stage: "working" })).toEqual([]);
+
+    expect(src.cardVerbs!("audio:suno:proposal:p1").map((v) => v.id)).toEqual(["suno.riff", "suno.discard"]);
+    expect(src.cardVerbs!("audio:suno:clip:c1").map((v) => v.id)).toEqual(["suno.keep", "suno.drop"]);
+    expect(src.cardVerbs!("audio:suno:job:j9").map((v) => v.id)).toEqual(["suno.cancel"]);
+
+    const write = await src.runVerb!("suno.write", cell, { kind: "suno-fields", style: "dub techno, foggy", title: "Fog" });
+    expect(write.ok).toBe(true);
+    expect(f.writes()[0]).toEqual({ method: "POST", path: "/api/sound/suno/proposals", body: { fields: { style: "dub techno, foggy", title: "Fog" }, lane: { axis: "group", value: "electronic" } } });
+
+    const draft = await src.runVerb!("suno.draft", cell, { kind: "count", count: 4 });
+    expect(draft).toMatchObject({ ok: true });
+    expect(f.writes()[1]).toEqual({ method: "POST", path: "/api/sound/suno/propose", body: { lane: { axis: "group", value: "electronic" }, count: 4 } });
+
+    const all = await src.runVerb!("suno.queue-cell", cell);
+    expect(all).toEqual({ ok: true, announce: "2 prompts queued" });
+    expect(f.writes()[2]).toEqual({ method: "POST", path: "/api/sound/suno/queue", body: { proposalIds: ["p1", "p2"] } });
+
+    const riff = await src.runVerb!("suno.riff", { axis: "group", itemId: "audio:suno:proposal:p2" });
+    expect(riff.ok).toBe(true);
+    expect(f.writes()[3].body).toEqual({ lane: { axis: "group", value: "electronic" }, count: 3, riffOf: "p2" });
+
+    expect((await src.runVerb!("suno.discard", { axis: "group", itemId: "audio:suno:proposal:p1" })).ok).toBe(true);
+    expect(f.writes()[4]).toMatchObject({ method: "DELETE", path: "/api/sound/suno/proposals/p1" });
+    // a verb on the wrong kind of card is refused, not guessed at
+    expect((await src.runVerb!("suno.keep", { axis: "group", itemId: "audio:suno:proposal:p2" })).ok).toBe(false);
+  } finally {
+    f.restore();
+  }
+});
+
+test("audio pipeline: a Suno read that fails degrades its stages and the takes still draw; a driver that is down with work queued says so", async () => {
+  const f = install((url, m, b) => (url.pathname === "/api/sound/suno" ? json({ error: "suno.json is not valid JSON" }, 500) : soundApi([take("a")], [])(url, m, b)));
+  try {
+    const { entries, src } = await audioLoaded();
+    expect(entries.map((e) => e.item.id)).toEqual(["audio:take:a"]);
+    expect(src.lastLoad().degraded?.map((d) => d.stage)).toEqual(["proposed", "working", "gate"]);
+    expect(src.lastLoad().degraded?.[0].reason).toContain("suno.json is not valid JSON");
+    expect(src.pollMs!()).toBe(0);
+  } finally {
+    f.restore();
+  }
+  const down: SunoSnapshot = { proposals: [proposal("p1")], jobs: [job("j1", "p1")], clips: [], driver: { ok: false, reason: "no Suno browser on :9334" } };
+  const g = install(soundApi([], [], GROUPS, down));
+  try {
+    const { src } = await audioLoaded();
+    expect(src.lastLoad().degraded).toEqual([{ stage: "working", reason: "no Suno browser on :9334 - run npm run suno:browser" }]);
+  } finally {
+    g.restore();
   }
 });
 

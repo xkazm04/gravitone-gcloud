@@ -4,6 +4,7 @@
 // `{ ok: false, status, error }`, the error being the engine's own words.
 
 import { accessHeader, withAccess } from "@/lib/imagingClient";
+import type { SunoClip, SunoFields, SunoJob, SunoLane, SunoProposal, SunoSnapshot, SunoVerdict } from "@/lib/suno/types";
 
 import type {
   GenerateRequest,
@@ -120,3 +121,27 @@ export const draftHuntLesson = (id: string) =>
  *  ADDED BY WP1 (2026-10-05), additive: the contract had no delete, and the
  *  brief's demo chip needs one. */
 export const clearFixtures = () => call<{ removed: number }>("/api/sound/takes?origin=fixture", { method: "DELETE" });
+
+/* ── the Suno queue (/api/sound/suno/*, lib/sound/suno) ───────────────────── */
+
+/** Proposals, jobs, clips and whether a signed-in Suno is reachable. */
+export const getSuno = () => call<SunoSnapshot>("/api/sound/suno");
+
+export const createSunoProposal = (fields: SunoFields, lane: SunoLane) =>
+  call<{ proposal: SunoProposal }>("/api/sound/suno/proposals", { method: "POST", body: JSON.stringify({ fields, lane }) });
+
+export const deleteSunoProposal = (id: string) =>
+  call<{ ok: true }>(`/api/sound/suno/proposals/${encodeURIComponent(id)}`, { method: "DELETE" });
+
+/** Spends a text turn: N prompts for a lane, or N riffs of `riffOf`. */
+export const proposeSuno = (lane: SunoLane, count: number, riffOf?: string) =>
+  call<{ proposals: SunoProposal[] }>("/api/sound/suno/propose", { method: "POST", body: JSON.stringify(riffOf ? { lane, count, riffOf } : { lane, count }) });
+
+/** Spends Suno credits once the worker reaches each job. */
+export const enqueueSuno = (req: { proposalIds: string[] } | { huntNodeIds: string[]; lane?: SunoLane }) =>
+  call<{ jobs: SunoJob[] }>("/api/sound/suno/queue", { method: "POST", body: JSON.stringify(req) });
+
+export const cancelSunoJob = (id: string) => call<{ job: SunoJob }>(`/api/sound/suno/queue/${encodeURIComponent(id)}`, { method: "DELETE" });
+
+export const setSunoVerdict = (id: string, verdict: SunoVerdict | null) =>
+  call<{ clip: SunoClip }>(`/api/sound/suno/clips/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ verdict }) });

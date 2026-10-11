@@ -57,6 +57,12 @@ import { GET as videoClipFileGET } from "@/app/api/video/clips/[id]/file/route";
 import { POST as soundGeneratePOST } from "@/app/api/sound/generate/route";
 import { POST as soundHuntsPOST } from "@/app/api/sound/hunts/route";
 import { POST as soundHuntLessonPOST } from "@/app/api/sound/hunts/[id]/lesson/route";
+import { POST as sunoProposalsPOST } from "@/app/api/sound/suno/proposals/route";
+import { DELETE as sunoProposalDELETE } from "@/app/api/sound/suno/proposals/[id]/route";
+import { POST as sunoProposePOST } from "@/app/api/sound/suno/propose/route";
+import { POST as sunoQueuePOST } from "@/app/api/sound/suno/queue/route";
+import { DELETE as sunoQueueDELETE } from "@/app/api/sound/suno/queue/[id]/route";
+import { PATCH as sunoClipPATCH } from "@/app/api/sound/suno/clips/[id]/route";
 import { POST as articlesCreatePOST } from "@/app/api/articles/route";
 import { POST as articlesApprovePOST } from "@/app/api/articles/[runId]/approve/route";
 import { POST as articlesResumePOST } from "@/app/api/articles/[runId]/resume/route";
@@ -175,6 +181,29 @@ const ROUTES: [string, string, (r: Request) => Promise<Response>][] = [
     "sound/hunts/lesson",
     "/api/sound/hunts/[id]/lesson",
     (r: Request) => soundHuntLessonPOST(r, { params: Promise.resolve({ id: "no-such-hunt" }) }),
+  ],
+  // The Suno queue (spark audio-queue-suno). Queue spends Suno credits once the
+  // worker reaches a job; propose spends a text turn; the other four write the
+  // queue's store. An empty body is a 400 from each one's own validation before
+  // the store or an engine is reached; the two DELETEs name no record, so the
+  // authed case is a 404 read BEFORE the store's lock (nothing is created).
+  ["sound/suno/proposals", "/api/sound/suno/proposals", sunoProposalsPOST],
+  [
+    "sound/suno/proposals/discard",
+    "/api/sound/suno/proposals/[id]",
+    (r: Request) => sunoProposalDELETE(r, { params: Promise.resolve({ id: "sp-0000000000" }) }),
+  ],
+  ["sound/suno/propose", "/api/sound/suno/propose", sunoProposePOST],
+  ["sound/suno/queue", "/api/sound/suno/queue", sunoQueuePOST],
+  [
+    "sound/suno/queue/cancel",
+    "/api/sound/suno/queue/[id]",
+    (r: Request) => sunoQueueDELETE(r, { params: Promise.resolve({ id: "sj-0000000000" }) }),
+  ],
+  [
+    "sound/suno/clips/verdict",
+    "/api/sound/suno/clips/[id]",
+    (r: Request) => sunoClipPATCH(r, { params: Promise.resolve({ id: "sc-0000000000" }) }),
   ],
   // The article pipeline (WP4). Create spends a research turn on the operator's
   // Claude seat; approve pushes a branch and opens a PR in ai-registry; resume
