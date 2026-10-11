@@ -265,7 +265,7 @@ function StyleSheet({
   const router = useRouter();
   // The refusal belongs to the style it was read for: stepping to the next
   // style must not carry it along.
-  const [adopting, setAdopting] = useState<{ id: string; state: "busy" | "failed"; reason?: string } | null>(null);
+  const [adopting, setAdopting] = useState<{ id: string; state: "busy" | "failed" | "left-out"; reason?: string; themeId?: string } | null>(null);
   const adopt = async (s: StyleDef) => {
     if (!user) return;
     setAdopting({ id: s.id, state: "busy" });
@@ -276,6 +276,11 @@ function StyleSheet({
         ...newTheme(user.uid, { name: draft.name, origin: "foundry", foundryStyleId: draft.styleId, block: draft.block, elements: [] }),
         proofs: draft.proofs,
       });
+      // Plates the caps kept out are said, not dropped: hold here with the way on.
+      if (draft.proofsLeftOut) {
+        const { count, reason } = draft.proofsLeftOut;
+        return setAdopting({ id: s.id, state: "left-out", themeId: made.id, reason: `${count} kept ${count === 1 ? "plate was" : "plates were"} left out of the draft's proofs: ${reason}.` });
+      }
       router.push(`/library?style=${encodeURIComponent(made.id)}`);
     } catch (e) {
       setAdopting({ id: s.id, state: "failed", reason: e instanceof Error ? e.message : "The style could not be adopted." });
@@ -338,6 +343,18 @@ function StyleSheet({
             </button>
           )}
           {adoptNote?.state === "failed" && <ErrorNote>{adoptNote.reason}</ErrorNote>}
+          {adoptNote?.state === "left-out" && adoptNote.themeId && (
+            <span className="font-jetbrains text-label text-white/70">
+              {adoptNote.reason}{" "}
+              <button
+                type="button"
+                onClick={() => router.push(`/library?style=${encodeURIComponent(adoptNote.themeId!)}`)}
+                className="cursor-pointer text-emerald-200 underline focus-visible:outline-2 focus-visible:outline-offset-2"
+              >
+                open in Library
+              </button>
+            </span>
+          )}
           {style && <StatusChip className="ml-auto" kind={statusKind(style)} word={`${style.status} · kept on ${scenes} scene${scenes === 1 ? "" : "s"}`} />}
         </div>
       }
