@@ -45,6 +45,10 @@ export interface FrameElement {
   w: number;
   h: number;
   accent?: boolean;
+  /** The notebook fact this element asserts. An arrow or loop states a relation
+   *  exactly as a sentence does, so it can cite what sourced it. Optional: a
+   *  purely compositional element (a rule, a bracket) asserts nothing. */
+  factId?: string;
   /** Hidden layers stay in the frame and out of the picture — the fastest way
    *  to ask "was this element carrying anything?" without deleting it. */
   hidden?: boolean;

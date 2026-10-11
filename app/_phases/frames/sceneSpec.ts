@@ -58,6 +58,7 @@ export const SCENE_SCHEMA = {
                 w: { type: "number" },
                 h: { type: "number" },
                 accent: { type: "boolean" },
+                factId: { type: "string" },
               },
             },
           },
@@ -154,6 +155,11 @@ function parseScene(
     const kind = String(el.kind ?? "");
     if (!(ELEMENT_KINDS as readonly string[]).includes(kind))
       throw new SceneSpecError(`Unknown element kind "${kind}".`);
+    // Optional, but never invented: an element that names a fact must name one
+    // the notebook holds, same as a text.
+    const factId = el.factId ? String(el.factId) : undefined;
+    if (factId && !knownFactIds.has(factId))
+      throw new SceneSpecError(`It cites "${factId}", which is not in this notebook.`);
     return {
       kind: kind as FrameElement["kind"],
       label: String(el.label ?? "").slice(0, 60),
@@ -162,6 +168,7 @@ function parseScene(
       w: clamp(num(el.w, 30)),
       h: clamp(num(el.h, 20)),
       accent: Boolean(el.accent),
+      factId,
     };
   });
 
