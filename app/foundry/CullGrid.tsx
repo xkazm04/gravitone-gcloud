@@ -28,6 +28,7 @@
 
 import { Maximize2 } from "lucide-react";
 import { Fragment, memo, useEffect, useMemo } from "react";
+import { vocabFields } from "@/lib/vocab/cinematography";
 
 import { useRoving } from "@/components/kit/useRoving";
 import { typing } from "@/lib/board/keys";
@@ -65,7 +66,8 @@ export function activatesOnEnter(t: { tagName?: string; getAttribute?: (n: strin
   return role === "button" || role === "link" || role === "menuitem" || role === "tab";
 }
 
-const CRAFT_SUMMARY = ["shot_size", "camera_angle", "composition", "lighting_key", "lighting_direction", "depth_of_field"];
+// The craft fields a tile summarises: the vocabulary file's `craft_summary` subset, not a list kept here.
+const CRAFT_SUMMARY = vocabFields("craft_summary");
 
 /** The one reading of a candidate's state, for the tile and the comparison alike.
  *  A verdict is only ever written onto a `ready` candidate: the tile hides the

@@ -13,6 +13,7 @@ import { CRITIQUE_SCHEMA, styleScore, usableFix } from "./vocabulary";
 import { book, isOverBudget, stopFor } from "./spend";
 import type { Critique, ExtractManifest, ReplicaRound } from "./types";
 import { unitLabel, type Unit } from "./units";
+import { VOCAB_VERSION } from "@/lib/vocab/cinematography";
 
 export async function performReplica(m: ExtractManifest, io: EngineIO, unit: Extract<Unit, { kind: "replica" }>): Promise<void> {
   setStage(m, "replicating");
@@ -69,7 +70,7 @@ export async function performReplica(m: ExtractManifest, io: EngineIO, unit: Ext
     const c = await io.recognize(img, critiqueInstruction(st, recipe), CRITIQUE_SCHEMA);
     book(m, io, "replica", "recognize", c);
     if (!isReadback(c.value)) throw new Error("the critique did not carry every observable");
-    round.critique = c.value as Critique;
+    round.critique = { ...(c.value as Critique), vocabVersion: VOCAB_VERSION };
     round.vision = c.model;
     const sc = styleScore(st.observables, round.critique);
     round.score = sc.score;

@@ -13,6 +13,7 @@ import { READBACK_SCHEMA, styleScore } from "./vocabulary";
 import { book, isOverBudget, stopFor } from "./spend";
 import type { ExtractManifest, Transfer } from "./types";
 import { unitLabel, type Unit } from "./units";
+import { VOCAB_VERSION } from "@/lib/vocab/cinematography";
 
 export async function performTransfer(m: ExtractManifest, io: EngineIO, unit: Extract<Unit, { kind: "transfer" }>): Promise<void> {
   setStage(m, "transferring");
@@ -45,7 +46,7 @@ export async function performTransfer(m: ExtractManifest, io: EngineIO, unit: Ex
     const r = await io.recognize(img, readbackInstruction(), READBACK_SCHEMA);
     book(m, io, "transfer", "recognize", r);
     if (!isReadback(r.value)) throw new Error("the readback did not carry every observable");
-    t.readback = r.value;
+    t.readback = { ...r.value, vocabVersion: VOCAB_VERSION };
     t.vision = r.model;
     const sc = styleScore(st.observables, t.readback);
     t.score = sc.score;

@@ -11,6 +11,7 @@ import { READBACK_SCHEMA, SINGLETON_SCHEMA } from "./vocabulary";
 import { book, isOverBudget, stopFor } from "./spend";
 import type { ExtractManifest } from "./types";
 import { unitLabel, type Unit } from "./units";
+import { VOCAB_VERSION } from "@/lib/vocab/cinematography";
 
 export async function performRead(m: ExtractManifest, io: EngineIO, unit: Extract<Unit, { kind: "read" }>): Promise<void> {
   setStage(m, "reading");
@@ -21,7 +22,7 @@ export async function performRead(m: ExtractManifest, io: EngineIO, unit: Extrac
     const r = await io.recognize(img, singleton ? singletonInstruction() : readbackInstruction(), singleton ? SINGLETON_SCHEMA : READBACK_SCHEMA);
     book(m, io, "read", "recognize", r);
     if (!isReadback(r.value)) throw new Error("the readback did not carry every observable");
-    s.readback = { ...r.value, dominant_colours: Array.isArray(r.value.dominant_colours) ? r.value.dominant_colours.slice(0, 5).map(String) : [] };
+    s.readback = { ...r.value, dominant_colours: Array.isArray(r.value.dominant_colours) ? r.value.dominant_colours.slice(0, 5).map(String) : [], vocabVersion: VOCAB_VERSION };
     m.engines.vision = r.model;
     logOffVocabulary(m, io, `read ${s.id}`, s.readback);
     log(m, io, `read ${s.id} (${s.name}): ${s.readback.render_mode}, ${s.readback.palette_strategy}`);

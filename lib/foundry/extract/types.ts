@@ -62,6 +62,10 @@ export type Observables = Record<ObservableField, string>;
  *  one from enums afterwards. */
 export interface Readback extends Observables {
   has_text: boolean;
+  /** The cinematography vocabulary version this readback was read against
+   *  (pipeline/vocab/cinematography.json). Absent on readbacks stored before
+   *  the stamp existed. */
+  vocabVersion?: number;
   /** Up to five colour words, most dominant first. */
   dominant_colours: string[];
   /** The look in one sentence a generator could obey — no subject matter. */
