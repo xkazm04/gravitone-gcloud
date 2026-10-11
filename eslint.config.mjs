@@ -176,6 +176,37 @@ const config = [
       "react-hooks/refs": "warn",
     },
   },
+  {
+    // --- FLOATING PROMISES: typed linting, ratcheted -----------------------
+    //
+    // `@typescript-eslint/no-floating-promises` needs type information, so this
+    // block (and only this block) turns on `parserOptions.projectService`. A
+    // promise started with no rejection path is invisible to typecheck, build
+    // and the probes, and in this app GlobalErrorBridge then narrates the
+    // rejection to the user as a storage write -- a WRONG message, so each one
+    // is a UX defect, not just a missing log (6ffecfb fixed two found by eye on
+    // the 4s Foundry poll; no gate could have found them).
+    //
+    // WARN + RATCHET, like the react-hooks buckets below: the first measured
+    // population is frozen in `lint-baseline.json` and `pipeline/lint-ratchet.mjs`
+    // refuses movement in either direction. PROMOTION TRIGGER: when the bucket
+    // reaches 0, delete its baseline entry AND the "warn" here so the rule
+    // stands at the preset's error severity.
+    //
+    // SCOPED to TS sources the root tsconfig includes (projectService errors on
+    // a file no tsconfig covers, which would kill the whole run), and `.mts`
+    // pipeline drivers are covered only if tsconfig includes them -- see below.
+    files: ["**/*.{ts,tsx}"],
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      "@typescript-eslint/no-floating-promises": "warn",
+    },
+  },
 ];
 
 export default config;
