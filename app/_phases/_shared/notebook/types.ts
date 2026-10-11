@@ -471,6 +471,16 @@ export interface CounterPosition {
  *  It is not a paragraph any more: the coupling is asserted in
  *  tests/golden-path/shared-notebook-contracts.probe.spec.ts, so a route that
  *  stops sending them fails rather than quietly making this true again. */
+export interface KilledFact {
+  id: string;
+  /** The claim as it stood, so a wound can name what it lost. */
+  claim: string;
+  /** Why a follow-up killed it. */
+  note: string;
+  /** The research revision that killed it. */
+  revisionId: string;
+}
+
 export interface Notebook {
   id: string;
   topic: string;
@@ -519,4 +529,9 @@ export interface Notebook {
   /** Reasoned claims this notebook carries, dealt as opt-in cards. Optional: a
    *  notebook without it deals none of its own. */
   conclusions?: Conclusion[];
+  /** Facts a follow-up revision KILLED (research/revisions.ts). The row is gone
+   *  from `facts`; the tombstone stays so the cards that rested on it are
+   *  reported as wounded, naming it, instead of quietly resting on nothing.
+   *  Absent on every notebook no revision has touched. */
+  killed?: KilledFact[];
 }
