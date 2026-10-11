@@ -28,6 +28,7 @@ import type {
   ExtractVerdicts,
   Observables,
 } from "./extract/types";
+import { graderStamp } from "./calibration";
 import { nearDuplicates } from "./extract/vocabulary";
 
 /** A keep that counts toward `proven`: a human's (or a record older than the
@@ -85,6 +86,7 @@ export function planForgeCommit(
     style_score: c.grade?.style?.score ?? null,
     has_text: c.grade?.veto?.has_text ?? null,
     at: effectiveVerdicts[c.id].at || "",
+    ...graderStamp(c.grade),
   }));
 
   const promotions: string[] = [];

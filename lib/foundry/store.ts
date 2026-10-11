@@ -52,6 +52,7 @@ import type {
 } from "./types";
 import { withCatalogue } from "./catalogue";
 import { humanKeep, planForgeCommit } from "./commitPlan";
+import { graderCalibrationText, graderStamp } from "./calibration";
 import {
   patchVerdictMap,
   readVerdictState,
@@ -296,9 +297,14 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave" = "r
         style_score: c.grade?.style?.score ?? null,
         has_text: c.grade?.veto?.has_text ?? null,
         at,
+        ...graderStamp(c.grade),
       });
     }
     await tx.write("ledger.json");
+    // The calibration is a pure function of the ledger just written, so it
+    // follows it directly: a crash between the two leaves a stale derived file
+    // that the retry (same ledger, same bytes) rewrites.
+    await fs.writeFile(foundryFile("grader-calibration.json"), graderCalibrationText(ledger.rows));
 
     for (const s of stylesDoc.styles) {
       // Same rule for the evidence list, and it matters more: `keptScenes`

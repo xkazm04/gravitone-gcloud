@@ -205,8 +205,8 @@ export interface LedgerRow {
   has_text: boolean | null;
   at: string;
   /** Who graded the row's scores -- the grade's `grader` and `grader_digest`.
-   *  Optional: no commit writes them yet, and every row before that is the
-   *  `unstamped` calibration series (lib/foundry/calibration.ts). */
+   *  Optional: the forge commit writes them from a stamped grade, and every
+   *  row before that is the `unstamped` calibration series (lib/foundry/calibration.ts). */
   grader?: string | null;
   grader_digest?: string | null;
 }
