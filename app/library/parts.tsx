@@ -22,7 +22,8 @@ import {
   statusOf,
 } from "@/lib/themes";
 
-import Playground from "./Playground";
+import { LOCK_PROBLEMS, sheetCoverage } from "@/lib/themes/coverage";
+import Playground, { type ProofLineage } from "./Playground";
 
 const STATUS_CLS: Record<ThemeStatus, string> = {
   draft: "border-white/12 text-white/50",
@@ -196,10 +197,13 @@ export function StyleSheet({
   /** Absent when locked — the playground then shows the slots as prose. */
   onBlockChange?: (block: StyleBlock) => void;
   onPromote: (proof: Proof) => void;
-  onKeepTrial: (r: GenerateResult, subject: string) => void | Promise<void>;
+  onKeepTrial: (r: GenerateResult, subject: string, lineage: ProofLineage) => void | Promise<void>;
 }) {
   const full = sheetFull(theme);
-  const approved = approvedProofs(theme);
+  const coverage = sheetCoverage(theme);
+  const staleIds = new Set(coverage.stale.map((p) => p.id));
+  // Approvals under an earlier block are not references any more (styleRefs).
+  const approved = approvedProofs(theme).filter((p) => !staleIds.has(p.id));
   return (
     <Panel className="space-y-4 p-5">
       {/* NO HEADER. It carried the style's name in an editable field, its
@@ -244,6 +248,26 @@ export function StyleSheet({
             max={PROOF_CAP}
             label={`${approved.length} of ${PROOF_CAP} reference slots approved`}
           />
+        )}
+        {/* COVERAGE: one row per trial problem, drawn from the same derivation
+            the lock gate reads. Filled = approved under the current block,
+            rose = rejected, hollow = not yet answered. */}
+        {!locked && (
+          <ul
+            className="font-jetbrains mb-3 flex flex-wrap gap-x-4 gap-y-1.5 text-label text-white/45"
+            aria-label={`trial problems covered, ${LOCK_PROBLEMS} needed to lock`}
+          >
+            {Object.entries(coverage.byProblem).map(([problem, c]) => (
+              <li key={problem} className="flex items-center gap-1.5">
+                <span>{problem}</span>
+                <PipRow
+                  states={[c.approved ? "filled" : c.rejected ? "rose" : "hollow"]}
+                  max={1}
+                  label={`${problem}: ${c.approved} approved, ${c.rejected} rejected`}
+                />
+              </li>
+            ))}
+          </ul>
         )}
         <Playground
           block={theme.block}

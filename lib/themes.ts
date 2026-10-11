@@ -18,6 +18,7 @@
 // frames that do not match.
 
 import type { Discipline } from "./projects";
+import { isLegacySheet, LOCK_PROBLEMS, missingProblems, problemsCovered, sheetCoverage } from "./themes/coverage";
 import { getByIndex, getRecord, openDb, runTx, BY_UID, THEMES_STORE } from "./studioDb";
 
 /* ── The style block ──────────────────────────────────────────────────────── */
@@ -62,6 +63,14 @@ export interface Proof {
   model?: string;
   provider?: string;
   costUsd?: number;
+  /** Which trial (app/library/trials.ts) this render answered. Absent means a
+   *  free subject, or a proof kept before lineage existed — absence, not a
+   *  guess. */
+  trialId?: string;
+  /** `blockDigest(block)` at render time (lib/themes/coverage.ts): which
+   *  version of the style block produced this picture. Absent on proofs kept
+   *  before lineage; those are reported as `unknownLineage`. */
+  blockDigest?: string;
   createdAt: number;
 }
 
@@ -206,8 +215,12 @@ export const PINNED_REFS = 2;
  *  "no references", never into a pending or rejected proof going up the wire. */
 export function styleRefs(t: Theme | null | undefined): { base64: string; mime: string }[] {
   if (!t) return [];
+  // Approvals rendered under a block the user has since rewritten no longer
+  // describe the style, so they are not sent. Proofs with no recorded digest
+  // are not stale (unknown is not wrong) and keep going out.
+  const stale = new Set(sheetCoverage(t).stale.map((p) => p.id));
   const approved = approvedProofs(t)
-    .slice()
+    .filter((p) => !stale.has(p.id))
     .sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id));
   const pinned = approved.slice(0, PINNED_REFS);
   const rolling = approved
@@ -233,14 +246,20 @@ export function sheetSpend(t: Theme): { usd: number; unpriced: number } {
 }
 
 /**
- * The lock gate. A theme locks when it has at least one approved proof and
- * nothing still undecided — a rejected proof is a decision, a pending one is
- * not. Rejections are kept on the sheet on purpose: they are the record of what
+ * The lock gate. A theme locks when nothing is still undecided and its
+ * approvals, rendered under the CURRENT block, cover at least LOCK_PROBLEMS
+ * distinct trial problems (lib/themes/coverage.ts) — a rejected proof is a
+ * decision, a pending one is not. A sheet made wholly of pre-lineage proofs
+ * keeps the old one-approval gate (`isLegacySheet`); a locked theme is never
+ * re-gated. Rejections are kept on the sheet on purpose: they are the record of what
  * this style is NOT, and re-generating one is how a sheet gets fixed.
  */
 export function canLock(t: Theme): boolean {
   if (t.lockedAt) return false;
-  return approvedProofs(t).length > 0 && t.proofs.every((p) => p.state !== "pending");
+  if (t.proofs.some((p) => p.state === "pending")) return false;
+  if (!approvedProofs(t).length) return false;
+  if (isLegacySheet(t)) return true;
+  return problemsCovered(t) >= LOCK_PROBLEMS;
 }
 
 /** The locked styles in a list — the only ones a project may be built on.
@@ -257,7 +276,13 @@ export function lockBlocker(t: Theme): string | null {
   const pending = t.proofs.filter((p) => p.state === "pending").length;
   if (pending) return `${pending} proof${pending > 1 ? "s" : ""} still undecided`;
   if (!approvedProofs(t).length) return "every proof was rejected — generate another";
-  return null;
+  if (isLegacySheet(t)) return null;
+  const covered = problemsCovered(t);
+  if (covered >= LOCK_PROBLEMS) return null;
+  const more = LOCK_PROBLEMS - covered;
+  const stale = sheetCoverage(t).stale.length;
+  const staleNote = stale ? ` (${stale} approved under an earlier block no longer count)` : "";
+  return `approve ${more} more problem${more > 1 ? "s" : ""} — ${covered} of ${LOCK_PROBLEMS} covered; missing ${missingProblems(t).join(", ")}${staleNote}`;
 }
 
 /**

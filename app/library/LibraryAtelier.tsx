@@ -34,6 +34,7 @@ import {
   StyleStepper,
   type Dependents,
 } from "./parts";
+import type { ProofLineage } from "./Playground";
 import PresetRail from "./PresetRail";
 import PresetShowcase from "./PresetShowcase";
 import SpecEditor from "./SpecEditor";
@@ -133,7 +134,7 @@ export default function LibraryAtelier({
     setBusy(false);
   };
 
-  const keepAsProof = async (t: Theme, r: GenerateResult, subject: string) => {
+  const keepAsProof = async (t: Theme, r: GenerateResult, subject: string, lineage: ProofLineage) => {
     const img = r.images[0];
     if (!img) return;
     const proof: Proof = {
@@ -149,6 +150,10 @@ export default function LibraryAtelier({
       // its lineage, and "which vendor made this" is not re-derivable later.
       provider: r.provenance.provider,
       costUsd: r.provenance.costUsd,
+      // Lineage: which trial this answered and which block made it, so the lock
+      // gate reads coverage rather than a count (lib/themes/coverage.ts).
+      trialId: lineage.trialId,
+      blockDigest: lineage.blockDigest,
       createdAt: Date.now(),
     };
     await addProof(t.id, proof);
@@ -276,7 +281,7 @@ export default function LibraryAtelier({
                 onJudge={(proofId, state) => void judgeProof(selected.id, proofId, state)}
                 onBlockChange={(block) => void update(selected.id, { block })}
                 onPromote={(p) => void keepOnShelf(selected, p)}
-                onKeepTrial={(r, subject) => keepAsProof(selected, r, subject)}
+                onKeepTrial={(r, subject, lineage) => keepAsProof(selected, r, subject, lineage)}
               />
             )}
           </>
