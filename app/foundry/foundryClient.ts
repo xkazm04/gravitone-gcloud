@@ -75,8 +75,28 @@ export function noteVerdicts<T extends { rev?: number; verdicts: object }>(kind:
 
 const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
+/** One save at a time per gate. The diff is computed against `synced`, which
+ *  only advances when a response lands; with two saves in flight both diffed
+ *  against the same base, so a clear (U) right after a set (K) diffed to
+ *  nothing and was dropped while the set went through: the candidate came back
+ *  as kept. Chaining makes each diff start from what the previous save stored,
+ *  and arrival order equal issue order. */
+const saveChain = new Map<string, Promise<unknown>>();
+
 /** Save `next` as the keyed diff against the last map this client saw. */
-export async function patchVerdictsTo<V>(kind: VerdictKind, id: string, next: Record<string, V>, surface: string): Promise<Record<string, V>> {
+export function patchVerdictsTo<V>(kind: VerdictKind, id: string, next: Record<string, V>, surface: string): Promise<Record<string, V>> {
+  const key = syncKey(kind, id);
+  const prev = saveChain.get(key) ?? Promise.resolve();
+  // A failed earlier save must not poison the later one; it reports to its own caller.
+  const run = prev.catch(() => undefined).then(() => patchVerdictsNow(kind, id, next, surface));
+  saveChain.set(key, run);
+  void run.catch(() => undefined).then(() => {
+    if (saveChain.get(key) === run) saveChain.delete(key);
+  });
+  return run;
+}
+
+async function patchVerdictsNow<V>(kind: VerdictKind, id: string, next: Record<string, V>, surface: string): Promise<Record<string, V>> {
   const key = syncKey(kind, id);
   let base = synced.get(key);
   if (!base) {
