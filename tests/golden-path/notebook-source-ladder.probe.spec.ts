@@ -131,3 +131,48 @@ test("a migrated row is migrated properly - class present, and the blob not left
     }
   }
 });
+
+/** The four other Fact fields the gauntlet control migration added beside
+ *  `sources[]`, counted the same way: BY ID, the adopters rather than the
+ *  laggards (each is carried by 1 of 21, so the short list is the readable one).
+ *  Frozen 2026-10-11. All four sit on `f-midtier-distribute`, the one row the
+ *  migration touched.
+ *
+ *  `kind` has a live consumer - `gate.ts::checkUtterances` filters on
+ *  `kind === "utterance"` - so while no row carries that value the check is a
+ *  no-op against this fixture. facts.ts says so in prose; the first test below
+ *  says it as a number. */
+const FIELD_ADOPTERS_BASELINE: Record<"kind" | "unit" | "period" | "contests", string[]> = {
+  kind: ["f-midtier-distribute"],
+  unit: ["f-midtier-distribute"],
+  period: ["f-midtier-distribute"],
+  contests: ["f-midtier-distribute"],
+};
+
+test("kind, unit, period and contests adoption is counted, and moves only on purpose", () => {
+  expect(FACTS.length, "the fact table is empty - this probe is reading the wrong module").toBeGreaterThan(15);
+
+  for (const field of Object.keys(FIELD_ADOPTERS_BASELINE) as (keyof typeof FIELD_ADOPTERS_BASELINE)[]) {
+    const base = FIELD_ADOPTERS_BASELINE[field];
+    const now = FACTS.filter((f) => {
+      const v = f[field];
+      return Array.isArray(v) ? v.length > 0 : !!v;
+    }).map((f) => f.id);
+    const gained = now.filter((id) => !base.includes(id));
+    const lost = base.filter((id) => !now.includes(id));
+    expect(
+      now.sort(),
+      [
+        `\`${field}\` is carried by ${now.length} of ${FACTS.length} facts, baseline ${base.length}.`,
+        gained.length ? `PROGRESS - newly carrying it: ${gained.join(", ")}. Add them to FIELD_ADOPTERS_BASELINE.${field} to lock the gain in.` : "",
+        lost.length ? `REGRESSION - no longer carrying it: ${lost.join(", ")}.` : "",
+      ].filter(Boolean).join(" "),
+    ).toEqual([...base].sort());
+  }
+
+  // The consumer's view of `kind`: how many rows `checkUtterances` can ever see.
+  expect(
+    FACTS.filter((f) => f.kind === "utterance").length,
+    "a fact now carries kind: \"utterance\" - gate.ts::checkUtterances is no longer a no-op against this fixture; update the note at the top of facts.ts",
+  ).toBe(0);
+});
