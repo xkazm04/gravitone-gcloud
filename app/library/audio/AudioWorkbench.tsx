@@ -34,7 +34,9 @@ import { ToastTray, WorldRoot, useToast } from "@/components/kit";
 import { pendingPanel } from "@/components/ui/Pending";
 import { Ghost } from "@/components/ui/signal";
 import { typing } from "@/lib/board/keys";
+import { fromSeed } from "@/lib/sound/fromSeed";
 import { useAuth } from "@/lib/useAuth";
+import { useMusicPrice } from "@/app/playground/shared/price";
 
 import type { Stage } from "./analysis";
 import {
@@ -67,6 +69,7 @@ import {
   type Target,
   type TermFacet,
   type TermSort,
+  type Variation,
   type Verdict,
 } from "./book";
 import { useBook } from "./bookStore";
@@ -132,6 +135,8 @@ export default function AudioWorkbench({ onCount }: { onCount?: (n: number) => v
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
   const [termCollapsed, setTermCollapsed] = useState<ReadonlySet<string>>(() => new Set());
   const [flash, setFlash] = useState<string | null>(null);
+  const [rendering, setRendering] = useState(false);
+  const cost = useMusicPrice();
   const [composer, setComposer] = useState<ComposerState | null>(null);
   const [target, setTarget] = useState<Target>("suno");
   const [stages, setStages] = useState<{ now: Stage; err?: string } | null>(null);
@@ -361,6 +366,47 @@ export default function AudioWorkbench({ onCount }: { onCount?: (n: number) => v
         : "clipboard blocked · draft kept",
       key: "copy",
     });
+  };
+
+  /** Render a seed on the studio server (ElevenLabs only; Suno has no API):
+   *  the draft is filed first so the take can name it, then the result lands as
+   *  an unjudged take with its draft, parent and variation, flashed and
+   *  selected. A refusal (the spend ceiling included) shows the engine's own
+   *  sentence, files no take and drops the draft. Resolves true on success. */
+  const renderDraft = async (
+    seed: Seed,
+    parent: string | null,
+    ref: string | null,
+    variation?: { axis: string; diff: string[] },
+  ): Promise<boolean> => {
+    const text = compose(seed, "elevenlabs", book.hands);
+    const draft = { ...newDraft(seed, "elevenlabs", text, parent, ref), ...(variation ? { variation } : {}) };
+    updateBook((b) => ({ ...b, drafts: [draft, ...b.drafts] }));
+    const r = await shelf.renderTake(fromSeed(seed, "elevenlabs", book.hands, { parentId: parent, draftId: draft.id, variation }));
+    if (!r.ok) {
+      updateBook((b) => ({ ...b, drafts: b.drafts.filter((d) => d.id !== draft.id) }));
+      push({ kind: "info", text: `render failed · ${r.error}`, key: "render" });
+      return false;
+    }
+    const t = takeFromAsset(r.asset);
+    if (ref) shelf.patch(t.id, { reference_track_id: ref });
+    setFlash(t.id);
+    setSel(t.id);
+    setKbd(true);
+    pending.current.row = t.id;
+    push({ kind: "ok", text: `rendered · ${t.title} · awaiting verdict`, key: "render" });
+    return true;
+  };
+
+  /** One render per variation, in order, stopping at the first refusal — a
+   *  spend ceiling hit on the second would otherwise be hit again on the third. */
+  const renderAll = async (list: Variation[], parent: string, ref: string | null) => {
+    setRendering(true);
+    try {
+      for (const v of list) if (!(await renderDraft(v.seed, parent, ref, { axis: v.axis, diff: v.diff }))) break;
+    } finally {
+      setRendering(false);
+    }
   };
 
   /** A returned file becomes a new unjudged take whose parent, draft and prompt
@@ -955,6 +1001,16 @@ export default function AudioWorkbench({ onCount }: { onCount?: (n: number) => v
                         selTake.reference_track_id,
                       )
                     }
+                    canRender={(selTake.vendor === "elevenlabs" ? "elevenlabs" : target) === "elevenlabs"}
+                    rendering={rendering}
+                    cost={cost}
+                    onRender={(v) => {
+                      setRendering(true);
+                      void renderDraft(v.seed, selTake.id, selTake.reference_track_id, { axis: v.axis, diff: v.diff }).finally(() =>
+                        setRendering(false),
+                      );
+                    }}
+                    onRenderAll={() => void renderAll(vars, selTake.id, selTake.reference_track_id)}
                   />
                 )}
                 <Composer
@@ -967,6 +1023,12 @@ export default function AudioWorkbench({ onCount }: { onCount?: (n: number) => v
                   onBlank={() => setSeed(blankSeed(), "blank", null, null)}
                   onTarget={setTarget}
                   onCopy={() => void copyDraft(composerState.seed, target, composerState.parent, composerState.ref)}
+                  rendering={rendering}
+                  cost={cost}
+                  onRender={() => {
+                    setRendering(true);
+                    void renderDraft(composerState.seed, composerState.parent, composerState.ref).finally(() => setRendering(false));
+                  }}
                 />
                 <Drafts
                   drafts={book.drafts}

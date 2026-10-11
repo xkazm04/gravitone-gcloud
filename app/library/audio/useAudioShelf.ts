@@ -28,8 +28,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { Asset, AudioMeta } from "@/lib/assets";
-import { clearFixtures, listTakes, patchTake, uploadTake } from "@/lib/sound/client";
-import type { SoundTake } from "@/lib/sound/types";
+import { clearFixtures, generateTake, listTakes, patchTake, uploadTake } from "@/lib/sound/client";
+import type { GenerateRequest, SoundTake } from "@/lib/sound/types";
 
 import { applyLocally, assetFromSoundTake, playUrl, splitPatch, uploadMetaOf } from "./soundAdapter";
 import { NO_ERRORS, patchKey, pickNotice, setNotice, type ShelfErrors } from "./shelfErrors";
@@ -163,6 +163,21 @@ export function useAudioShelf(uid: string | undefined) {
     [uid, notice],
   );
 
+  /** Render a request on the studio server and file the result as a new,
+   *  unjudged take. The error is the engine's own sentence (a spend-ceiling
+   *  refusal included) and nothing is filed when it fails. */
+  const renderTake = useCallback(
+    async (req: GenerateRequest): Promise<{ ok: true; asset: Asset } | { ok: false; error: string }> => {
+      if (!uid) return { ok: false, error: "sign in to render" };
+      const r = await generateTake(req);
+      if (!r.ok) return { ok: false, error: r.error };
+      const take = r.data.take;
+      setTakes((prev) => [take, ...(prev ?? []).filter((x) => x.id !== take.id)]);
+      return { ok: true, asset: assetFromSoundTake(take, uid) };
+    },
+    [uid],
+  );
+
   const fixtures = useMemo(() => (takes ?? []).filter((t) => t.origin === "fixture").length, [takes]);
 
   /** Delete every example take. Resolves true when the store confirmed it. */
@@ -177,5 +192,5 @@ export function useAudioShelf(uid: string | undefined) {
     return true;
   }, [notice]);
 
-  return { assets, urls, error, patch, attachReturn, fixtures, clearExamples, takes };
+  return { assets, urls, error, patch, attachReturn, renderTake, fixtures, clearExamples, takes };
 }

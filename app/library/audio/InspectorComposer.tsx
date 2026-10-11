@@ -8,6 +8,8 @@
 
 import { useId } from "react";
 
+import { DEFAULT_RENDER_S } from "@/lib/sound/fromSeed";
+
 import { compose, type Facet, type Hand, type Seed, type Target, type TermEntry } from "./book";
 import { AddTerm } from "./InspectorAddTerm";
 import { ComposerTempo } from "./InspectorComposerTempo";
@@ -38,6 +40,9 @@ export function Composer({
   onBlank,
   onTarget,
   onCopy,
+  rendering,
+  cost,
+  onRender,
 }: {
   state: ComposerState;
   voc: readonly TermEntry[];
@@ -49,6 +54,12 @@ export function Composer({
   onBlank: () => void;
   onTarget: (t: Target) => void;
   onCopy: () => void;
+  /** A render is in flight: the render control waits, and says so. */
+  rendering: boolean;
+  /** The price line for `seconds` of music — never $0.00 (lib/musicClient.ts#costLabel). */
+  cost: (seconds: number) => { text: string; title: string };
+  /** Render the draft on the studio server (ElevenLabs only). */
+  onRender: () => void;
 }) {
   const uid = useId();
   const dl = (f: Facet | "keys") => `${uid}-dl-${f}`;
@@ -164,6 +175,14 @@ export function Composer({
       <div className="actions" style={{ marginTop: 8 }}>
         <span className="dim mono">{text.length} chars</span>
         <span className="grow" />
+        {target === "elevenlabs" && (
+          <>
+            <span className="dim mono">{cost(DEFAULT_RENDER_S).text}</span>
+            <button type="button" className="btn btn--cyan" disabled={rendering} onClick={onRender}>
+              {rendering ? "Rendering…" : "Render"}
+            </button>
+          </>
+        )}
         <button type="button" className="btn btn--solid" onClick={onCopy}>
           Copy for {target === "suno" ? "Suno" : "ElevenLabs"}
         </button>
