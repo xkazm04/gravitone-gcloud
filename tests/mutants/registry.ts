@@ -200,4 +200,12 @@ export const MUTANTS: Mutant[] = [
     replace: "if (n < 0) continue;",
     why: "The palette lists a Board source with nothing waiting as a destination worth a keystroke.",
   },
+  {
+    id: "ast-switchcase-wrong-label",
+    probe: "_ast.probe.spec.ts",
+    file: "tests/golden-path/_ast.ts",
+    find: "ts.isStringLiteralLike(n.expression) && n.expression.text === label",
+    replace: "ts.isStringLiteralLike(n.expression) && n.expression.text !== label",
+    why: "A source probe asking for the Enter case is handed every other case, so a guard it demands is checked on the wrong branch.",
+  },
 ];
