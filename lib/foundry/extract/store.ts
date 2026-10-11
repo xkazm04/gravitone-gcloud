@@ -97,16 +97,25 @@ const readVerdicts = (id: string) => readJson<ExtractVerdicts>(path.join(runDir(
 
 /* ── Create ───────────────────────────────────────────────────────────────── */
 
-/** A run id: date + slug, suffixed until free. */
-async function freshId(slug: string): Promise<string> {
+/**
+ * Claim a run id: date + slug, suffixed until free. The DIRECTORY is the
+ * reservation — a non-recursive `mkdir` throws EEXIST atomically, so the id is
+ * held by the same syscall that proves it was free (a stat-then-create gap let
+ * two concurrent creates take the same id and overwrite each other's run.json).
+ * Only EEXIST means "taken"; any other error (permissions, disk) propagates.
+ */
+async function reserveRunDir(slug: string): Promise<{ id: string; dir: string }> {
   const day = new Date().toISOString().slice(0, 10);
   const base = `${day}-${slug}`;
+  await mkdir(EXTRACT_ROOT, { recursive: true });
   for (let i = 0; i < 100; i++) {
     const id = i ? `${base}-${i + 1}` : base;
+    const dir = path.join(EXTRACT_ROOT, id);
     try {
-      await stat(path.join(EXTRACT_ROOT, id));
-    } catch {
-      return id;
+      await mkdir(dir);
+      return { id, dir };
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
     }
   }
   throw new FoundryError("Too many runs with that slug today.", 409);
@@ -126,7 +135,7 @@ export async function createRun(slug: string, uploads: ExtractUpload[], options:
   // write one image at a time, refusing on the first bad one — so a gallery
   // whose third file was a GIF left `sources/s01`, `sources/s02` in a run
   // directory with no run.json: invisible to the list (no manifest), counted
-  // by `freshId` (the directory exists), so the operator's next attempt with
+  // by `reserveRunDir` (the directory exists), so the operator's next attempt with
   // the same slug landed on `-2` and the orphan stayed on disk for good. A
   // refusal must leave nothing behind, and the 400 must name the bad image
   // before anything has been written for it.
@@ -156,8 +165,7 @@ export async function createRun(slug: string, uploads: ExtractUpload[], options:
     });
   }
 
-  const id = await freshId(clean);
-  const dir = path.join(EXTRACT_ROOT, id);
+  const { id, dir } = await reserveRunDir(clean);
   await mkdir(path.join(dir, "sources"), { recursive: true });
   for (const p of prepared) await writeFile(path.join(dir, p.source.file), p.bytes);
   const sources = prepared.map((p) => p.source);
