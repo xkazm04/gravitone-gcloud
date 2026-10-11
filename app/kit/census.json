@@ -1,6 +1,6 @@
 {
   "$generated": "pipeline/kit-census.mts — do not edit. `npx tsx pipeline/kit-census.mts` rewrites it; `--check` diffs it against the tree.",
-  "files": 738,
+  "files": 739,
   "parts": {
     "ASTERISM_PATH": {
       "home": "components/kit/brand/asterism.ts",
@@ -1289,6 +1289,15 @@
       ],
       "adopters": []
     },
+    "useCountFilter": {
+      "home": "components/ui/signal/useCountFilter.ts",
+      "surfaces": [
+        "components/ui/signal/index.ts"
+      ],
+      "adopters": [
+        "app/calendar/BroadcastWeek.tsx"
+      ]
+    },
     "useHint": {
       "home": "components/ui/signal/Hint.tsx",
       "surfaces": [
@@ -1827,6 +1836,7 @@
         "TextArea",
         "TextInput",
         "components/ui/Select#Select",
+        "useCountFilter",
         "useWindow"
       ],
       "suspects": {
@@ -2210,7 +2220,7 @@
       "suspectFiles": {}
     },
     "components/ui/signal": {
-      "files": 13,
+      "files": 14,
       "kitImports": 0,
       "signalImports": 5,
       "parts": [

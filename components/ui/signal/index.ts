@@ -14,7 +14,9 @@ export { Hint, HintPopover, useHint, hintRootClass } from "./Hint";
 export type { HintVariant, HintTone, HintDisclosure } from "./Hint";
 
 export { Tally, CHIP_CLASS, TALLY_TONE } from "./Tally";
-export type { TallyTone } from "./Tally";
+export type { TallyProps, TallyTone } from "./Tally";
+
+export { useCountFilter } from "./useCountFilter";
 
 export { PipRow } from "./PipRow";
 export type { PipState } from "./PipRow";

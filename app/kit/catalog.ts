@@ -61,8 +61,8 @@ export const KIT_GROUPS = [
     for: "modules with counts, proportions (signal, extended)",
     parts: [
       { name: "TabRail", api: "<TabRail label tabs=[{id,label,tally?,testId?}] active onSelect/>" },
-      { name: "Tally", api: "<Tally value of? label? tone? hint?/>" },
-      { name: "StackBar", api: "<StackBar label segments=[{n,tone,label,hatched?}]/>" },
+      { name: "Tally", api: "<Tally value of? label? tone? zero?=\"neutral|keep\" hint? select?={pressed,onToggle}|href?/>" },
+      { name: "StackBar", api: "<StackBar label segments=[{n,tone,label,hatched?}] selected? onSegment?(label)/>" },
     ],
   },
   {
@@ -346,6 +346,7 @@ export const KIT_GROUPS = [
       { name: "StaleBadge", api: '<StaleBadge words? why? glyph?="hourglass|history"/>' },
       { name: "Provenance", api: "<Provenance model? run? step? vendor? cost?/>" },
       { name: "Fold", api: "<Fold title tally?={value,of?,tone?} marks? defaultOpen? open? onOpenChange? remember? level?>body</Fold>" },
+      { name: "useCountFilter", api: 'const [only, set, toggle] = useCountFilter("only") -> one selection held in ?only=, for a Tally select / StackBar onSegment' },
       { name: "useHint", api: "const d = useHint() -> {hintId, open, show, hide, toggle, rootProps, triggerProps}" },
       { name: "HintPopover", api: "<HintPopover d={useHint()}>twelve words</HintPopover>" },
       { name: "hintRootClass", api: "the wrapper class a useHint disclosure positions against" },

@@ -542,6 +542,19 @@ function ArmPair(picked: 0 | 1 | null, gone = false): [DuoArm, DuoArm] {
 
 // ── the demos, one per catalog part ─────────────────────────────────────────
 
+/** useCountFilter: a Tally as the filter for what it counts. The page holds the selection in `?only=`; the kit holds it in state so the specimen needs no router. */
+function CountDoorDemo() {
+  const [only, setOnly] = useState<string | null>("missed");
+  const toggle = (v: string) => setOnly((o) => (o === v ? null : v));
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Tally value={4} label="booked" tone="cyan" select={{ pressed: only === "booked", onToggle: () => toggle("booked") }} />
+      <Tally value={2} label="missed" tone="amber" select={{ pressed: only === "missed", onToggle: () => toggle("missed") }} />
+      <Tally value={0} label="aired" tone="emerald" select={{ pressed: only === "aired", onToggle: () => toggle("aired") }} />
+    </div>
+  );
+}
+
 /** useHint + HintPopover + hintRootClass: the Hint disclosure hung on a trigger of the caller's own. */
 function DisclosureDemo() {
   const d = useHint();
@@ -1110,6 +1123,7 @@ const DEMOS: Record<PartName, () => ReactNode> = {
       </Fold>
     </div>
   ),
+  useCountFilter: () => <CountDoorDemo />,
   useHint: () => <DisclosureDemo />,
   HintPopover: () => <DisclosureDemo />,
   hintRootClass: () => <Verbatim>{hintRootClass}</Verbatim>,
