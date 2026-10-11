@@ -278,6 +278,9 @@ export function lockBlocker(t: Theme): string | null {
  * A third surface, or one call to the exported `update`, and the reviewed work
  * silently no longer matches its ratified standard.
  *
+ * (A third rule, on `proofs`: the last approval cannot be withdrawn — see the
+ * final check below.)
+ *
  * TWO FIELDS, NOT ALL OF THEM. The technique's hard rules are that nothing
  * unlocks and that editing in place voids the approvals — so `lockedAt` and
  * `block` freeze, and nothing else does. In particular ADDING a proof to a
@@ -297,6 +300,11 @@ export function ratchetBlocker(t: Theme, patch: Partial<Theme>): string | null {
   // one field would otherwise be refused for carrying a block it did not touch.
   if (patch.block && JSON.stringify(patch.block) !== JSON.stringify(t.block))
     return "this style is locked and projects build on it — duplicate it into a new draft to change the block";
+  // Approvals may be ADDED, never all taken away: a lock whose last approval
+  // is rejected outlives the evidence it was granted on, which is the state
+  // `canLock` refuses to create. Judging one of several approvals is fine.
+  if (patch.proofs && approvedProofs(t).length > 0 && !patch.proofs.some((p) => p.state === "approved"))
+    return "this style is locked on its approved proof — keep at least one approval, or duplicate it into a new draft";
   return null;
 }
 

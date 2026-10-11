@@ -137,6 +137,27 @@ test("ratchet: what a lock does NOT freeze is as deliberate as what it does", ()
   expect(ratchetBlocker(t, { name: "Renamed" })).toBeNull();
 });
 
+test("ratchet: a locked sheet cannot lose its LAST approval, but may lose one of several", () => {
+  const t = locked();
+  const judged = (ps: Proof[]) => ratchetBlocker({ ...t, proofs: ps }, { proofs: ps.map((p) => p) });
+  expect(ratchetBlocker(t, { proofs: [proof("p1", "rejected")] })).toContain("approved proof");
+  expect(ratchetBlocker(t, { proofs: [proof("p1", "pending")] })).not.toBeNull();
+  const two = { ...t, proofs: [proof("p1", "approved"), proof("p2", "approved")] };
+  expect(ratchetBlocker(two, { proofs: [proof("p1", "rejected"), proof("p2", "approved")] })).toBeNull();
+  expect(judged([proof("p1", "approved")])).toBeNull();
+  // Drafts stay free to reject everything.
+  expect(ratchetBlocker({ ...draft(), proofs: [proof("p1", "approved")] }, { proofs: [proof("p1", "rejected")] })).toBeNull();
+});
+
+test("judgeProof asks the ratchet before it commits", () => {
+  const src = stripComments(readFileSync(resolve(__dirname, "../../lib/useThemes.ts"), "utf8"));
+  const from = src.indexOf("const judgeProof = useCallback");
+  expect(from).toBeGreaterThan(-1);
+  const body = src.slice(from, src.indexOf("const lock = useCallback", from));
+  expect(body).toMatch(/ratchetBlocker\s*\(/);
+  expect(body.indexOf("ratchetBlocker")).toBeLessThan(body.indexOf("commit("));
+});
+
 /* ── the one resolution point ─────────────────────────────────────────────── */
 
 test("resolution: a project's style is its OWN binding, and a miss is named", () => {
