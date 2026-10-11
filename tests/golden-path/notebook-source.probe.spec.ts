@@ -401,14 +401,17 @@ const FIXTURE_MODULES = "notebook|facts|conclusions|dimensions|unknowns";
  *                                  replay source; until research-scope-board-B
  *    · script/constraints.ts     - the hand ledger over the fixture's unknowns;
  *                                  until script-phase-A s2a
- *    · lib/notebook/validate.ts  - the engine side's FIXTURE_CONCLUSION_IDS, for a
- *                                  notebook that declares neither field; legitimate */
+ *    · lib/notebook/graph.ts      - the engine side's FIXTURE_CONCLUSION_IDS, for a
+ *                                  notebook that declares neither field; legitimate.
+ *                                  It was validate.ts until that 895-line file was
+ *                                  split; the graph half is where the constant was
+ *                                  always used. */
 const PINNED_CONSTANT_IMPORTERS = 4;
 const EXPECTED_IMPORTERS = [
   "app/_phases/research/followup.ts",
   "app/_phases/research/guided/RunStage.tsx",
   "app/_phases/script/constraints.ts",
-  "lib/notebook/validate.ts",
+  "lib/notebook/graph.ts",
 ];
 
 function constantImporters(): string[] {

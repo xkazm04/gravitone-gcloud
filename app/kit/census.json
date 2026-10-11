@@ -1,6 +1,6 @@
 {
   "$generated": "pipeline/kit-census.mts — do not edit. `npx tsx pipeline/kit-census.mts` rewrites it; `--check` diffs it against the tree.",
-  "files": 656,
+  "files": 682,
   "parts": {
     "ASTERISM_PATH": {
       "home": "components/kit/brand/asterism.ts",
@@ -1229,7 +1229,7 @@
       ],
       "adopters": [
         "app/library/audio/References.tsx",
-        "app/library/audio/book.ts"
+        "app/library/audio/format.ts"
       ]
     },
     "components/ui/Primitives#Waveform": {
@@ -1617,7 +1617,7 @@
       }
     },
     "app/_phases/script": {
-      "files": 53,
+      "files": 68,
       "kitImports": 0,
       "signalImports": 17,
       "parts": [
@@ -2011,7 +2011,7 @@
       "suspectFiles": {}
     },
     "app/library": {
-      "files": 41,
+      "files": 52,
       "kitImports": 7,
       "signalImports": 11,
       "parts": [
