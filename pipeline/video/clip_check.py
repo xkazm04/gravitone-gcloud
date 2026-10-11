@@ -108,6 +108,11 @@ PALETTE_FLOOR = 0.55
 # orange-and-yellow, coarse enough that a compression shift does not register.
 PALETTE_BINS = 4
 
+# Stored beside every verdict in the take ledger (pipeline/video/ledger.py), so a
+# regrade can tell which instrument produced a stored `check`. Bump it whenever a
+# threshold or a measure changes meaning.
+CHECKER_VERSION = 1
+
 # The busiest tenth. Not a tunable: it is the definition of "concentrated".
 BUSY_FRACTION = 0.10
 SCALE_W = 320
@@ -307,8 +312,44 @@ def inspect(video, source=None):
     }
 
 
+def regrade(pid, runs=None):
+    """Re-judge every take in <id>'s ledger from the bytes already on disk.
+
+    No render, and the take files are only READ, so their mtimes are unchanged.
+    Rewrites each row's `check` (stamped with CHECKER_VERSION) in the ledger.
+    """
+    sys.path.insert(0, str(Path(__file__).parent))
+    import ledger  # noqa: E402  (stdlib-only sibling)
+    root = Path(__file__).resolve().parent.parent.parent
+    source = root / "public" / "presets" / f"{pid}.jpg"
+    led = ledger.load(pid, runs)
+    if not led["takes"]:
+        raise SystemExit(f"{pid}: no takes in the ledger")
+    rows = []
+    for t in led["takes"]:
+        f = ledger.takes_dir(pid, runs) / t["file"]
+        if not f.exists():
+            raise SystemExit(f"{pid}: take {t['file']} is in the ledger and not on disk")
+        r = inspect(f, source if source.exists() else None)
+        check = {k: r[k] for k in ("ok", "reasons", "energy", "concentration",
+                                   "retention", "palette", "sharpness")}
+        check["checker"] = CHECKER_VERSION
+        ledger.set_check(pid, t["file"], check, runs)
+        rows.append((t["file"], r))
+    for name, r in rows:
+        print(f"  {name:28s} {'OK' if r['ok'] else 'FAIL'}")
+        for why in r["reasons"]:
+            print(f"      · {why}")
+    return all(r["ok"] for _, r in rows)
+
+
 def main():
     argv = sys.argv[1:]
+    if "--regrade" in argv:
+        # Exit 0 even when a take fails: regrading RECORDS verdicts, and a red
+        # one is data for the ledger, not an error of this command.
+        regrade(argv[argv.index("--regrade") + 1])
+        return
     # --source <still> turns the palette check on; without it that column is
     # blank rather than guessed at.
     source = None
