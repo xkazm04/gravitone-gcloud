@@ -147,6 +147,33 @@ for (const clip of manifest.clips ?? []) {
     fail.push(`${clip.id} runs ${seconds.toFixed(2)}s on disk, recorded as ${clip.seconds}s`);
 }
 
+// 5 — THE VERDICT TRAVELS WITH THE CLIP. A ledger-built entry (it records the
+// `engine` of the adopted take, see pipeline/video/ledger.py) must carry a
+// passing `check` or a `waiver` giving the reviewed reason a failing one is
+// wrong for it. An entry with neither shipped unjudged; one with a failing
+// check and no waiver is exactly what clip_check.py exists to stop.
+//
+// LEGACY ENTRIES (no `engine`: built before takes existed, with no stored
+// verdict) are counted and reported, not failed -- failing them would turn this
+// gate red on clips whose raws are not committed and so cannot be regraded.
+// They leave the legacy bucket the next time they are adopted from a take; once
+// the bucket is empty, make this check unconditional.
+let unjudgedLegacy = 0;
+for (const clip of manifest.clips ?? []) {
+  const waiver = typeof clip.waiver === "string" ? clip.waiver.trim() : "";
+  if (clip.engine === undefined && clip.check === undefined && !waiver) {
+    unjudgedLegacy++;
+    continue;
+  }
+  if (clip.check?.ok === true || waiver) continue;
+  fail.push(
+    clip.check
+      ? `${clip.id} carries a failing check and no waiver — adopt it with a reason, or re-adopt a passing take`
+      : `${clip.id} carries neither a passing check nor a waiver`,
+  );
+}
+if (unjudgedLegacy) note.push(`${unjudgedLegacy} legacy clip(s) with no stored verdict`);
+
 const total = [...onDisk.values()].reduce((n, b) => n + b, 0);
 if (total > TOTAL_BUDGET_KB * 1024) {
   fail.push(
