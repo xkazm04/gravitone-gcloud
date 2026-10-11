@@ -418,7 +418,10 @@ export async function commitExtractRun(
     const fs = foundryFs();
     const run = await readManifest(id);
     if (run.status === "committed") throw new FoundryError("This run is already committed.", 409);
-    if (run.status !== "done") throw new FoundryError("The run is not finished.", 409);
+    // `failed` is committable, as the forge's is: a breaker or budget stop leaves
+    // finished styles the operator can judge, and exemplars carry `settled`.
+    // Keep this array and EXTRACT_COMMITTABLE in app/foundry/parts.tsx identical.
+    if (!["done", "failed"].includes(run.status)) throw new FoundryError("The extract is still running this run.", 409);
     if (verdictsIn) await replaceVerdictMapHeld(verdictSpec(id), run, verdictsIn, "commit");
     const verdicts = await readVerdicts(id);
 

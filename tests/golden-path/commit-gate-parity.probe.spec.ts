@@ -89,9 +89,9 @@ test("the Extract tab's Commit button allows exactly what commitExtractRun allow
   const server = serverAllows(body, "commitExtractRun");
   console.log(`[commit-gate] extract server=${JSON.stringify(server)} client=${JSON.stringify([...EXTRACT_COMMITTABLE].sort())}`);
 
-  // Narrower than the forge's ON PURPOSE — a failed extraction has no partial
-  // artefact worth ratifying — so the two sets differing is not the finding.
-  // Either one differing from ITS OWN server is.
+  // A failed extract run keeps its finished styles, so it is committable like
+  // the forge's. Either side differing from ITS OWN server is the finding.
+  expect(server, "commitExtractRun no longer allows a failed run — was that deliberate?").toContain("failed");
   expect([...EXTRACT_COMMITTABLE].sort()).toEqual(server);
 });
 
