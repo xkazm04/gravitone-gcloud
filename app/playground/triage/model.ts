@@ -38,6 +38,8 @@ export const ORIGIN_RANK: Record<TakeOrigin, number> = {
   // A production cue rendered from the Score step: real work, heard after the
   // lab's own batches and before returns and imports.
   score: 2,
+  // A render from the Library composer: the operator's own, heard with the lab.
+  library: 1,
   "suno-return": 3,
   import: 4,
   fixture: 9,

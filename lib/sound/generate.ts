@@ -49,7 +49,7 @@ import { SoundError, withStore } from "./store";
 import type { GenerateRequest, SoundKind, SoundTake } from "./types";
 
 const OPS = ["compose", "plan", "section-edit", "sfx", "cue"] as const;
-const ORIGINS = ["agent", "lab", "hunt", "score"] as const;
+const ORIGINS = ["agent", "lab", "hunt", "score", "library"] as const;
 
 /** The vendor's windows, restated as the bounds a request is held to BEFORE
  *  anything is sent (lib/music/elevenlabs.ts states them for the wire). */
@@ -132,6 +132,9 @@ export function parseGenerateRequest(body: unknown): GenerateRequest {
   if (op === "cue" && origin !== "score") throw new SoundError('op "cue" is filed with origin "score"', 400);
   if (origin === "score" && op !== "cue" && op !== "section-edit")
     throw new SoundError('origin "score" is op "cue", or a "section-edit" of a score take', 400);
+  // A Library render is a compose of a seed (app/library/audio): it can carry
+  // its parent, draft and variation, and nothing else the other origins own.
+  if (origin === "library" && op !== "compose") throw new SoundError('origin "library" is op "compose"', 400);
   const link = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim().slice(0, 120) : null);
   const projectId = link(b.projectId);
   const cueId = link(b.cueId);
@@ -195,7 +198,19 @@ export function parseGenerateRequest(body: unknown): GenerateRequest {
     huntId: strOrNull(b.huntId),
     nodeId: strOrNull(b.nodeId),
     title: strOrNull(b.title),
+    parentId: origin === "library" ? strOrNull(b.parentId) : null,
+    draftId: origin === "library" ? strOrNull(b.draftId) : null,
+    variation: origin === "library" ? variationOf(b.variation) : null,
   };
+}
+
+/** A fan-out's one change, as the Library names it; absent when malformed. */
+function variationOf(v: unknown): { axis: string; diff: string[] } | null {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return null;
+  const o = v as Record<string, unknown>;
+  if (typeof o.axis !== "string" || !o.axis.trim()) return null;
+  const diff = Array.isArray(o.diff) ? o.diff.filter((x): x is string => typeof x === "string").slice(0, 20) : [];
+  return { axis: o.axis.trim().slice(0, 80), diff };
 }
 
 /** ElevenLabs' prompt mode has no exclude field (only a plan chunk does), so a
@@ -235,7 +250,7 @@ async function render(req: GenerateRequest): Promise<Rendered> {
     case "compose": {
       const prompt = withNegative(req.prompt, req.negative);
       const out = await composeDetailed({ prompt, lengthMs: Math.round(req.durationS * 1000), storeForInpainting: true });
-      return { b64: out.audio.b64, mime: out.audio.mime, songId: out.songId, plan: out.plan, durationS: req.durationS, parentId: null, prompt: req.prompt, link: NO_LINK };
+      return { b64: out.audio.b64, mime: out.audio.mime, songId: out.songId, plan: out.plan, durationS: req.durationS, parentId: req.parentId ?? null, prompt: req.prompt, link: NO_LINK };
     }
     case "cue": {
       // cueToPlan throws MusicError("bad-request") for a cue it will not brief;
@@ -352,6 +367,8 @@ export async function generateTake(req: GenerateRequest, now = new Date()): Prom
       durationS: r.durationS,
       loop: req.kind === "sfx" ? req.loop : null,
       parentId: r.parentId,
+      draftId: req.draftId ?? null,
+      variation: req.variation ?? null,
       huntId: req.huntId,
       nodeId: req.nodeId,
       songId: r.songId,
