@@ -481,3 +481,10 @@ jobs:
       # BLOCKING. Exits non-zero on any failing check, naming each one.
       - name: foundry selftest (5 cases, no GPU, no network)
         run: python pipeline/foundry/selftest.py
+
+      # selftest.py only load()s a handful of modules; this byte-compiles EVERY
+      # tracked .py under pipeline/foundry (dojo_run, dojo_pairs, dojo_video,
+      # grade, scene_demo, ...) so a syntax error in GPU-spending code fails
+      # here instead of on a paid run. Stdlib-only, same blocking rationale.
+      - name: foundry byte-compile (every .py, no GPU, no network)
+        run: python -m compileall -q pipeline/foundry
