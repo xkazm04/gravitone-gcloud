@@ -53,6 +53,7 @@ import Modal from "@/components/ui/Modal";
 import { pendingPanel } from "@/components/ui/Pending";
 import StudioFrame from "@/components/ui/StudioFrame";
 import { Keycaps } from "@/components/ui/signal";
+import { useAnnounce } from "@/lib/announcer";
 import { calibrate, seriesKey } from "@/lib/foundry/calibration";
 import type { CommitResult, ForgeCommitPlan, RunDetail, RunSummary, Verdict, Verdicts } from "@/lib/foundry/types";
 import { usePolling } from "@/lib/usePolling";
@@ -292,6 +293,9 @@ export default function FoundryView() {
 
   const readOnly = detail?.run.status === "committed";
 
+  const announce = useAnnounce();
+  const verdictNRef = useRef(0);
+
   /** Apply one verdict to one or many candidates. Idempotent; null clears. */
   const setVerdict = useCallback(
     (ids: string | string[], v: Verdict | null) => {
@@ -304,6 +308,12 @@ export default function FoundryView() {
         else delete next[id];
       }
       adoptVerdicts(next);
+      // The cull is keyboard-first, so the verdict has to be heard, not only seen: the
+      // tile's ring and stamp and the status strip's count change nothing for a screen
+      // reader. One event per decision, so the key is a counter (same-key repeats are
+      // dropped by the channel on purpose).
+      const word = v === "keep" ? "Kept" : v === "reject" ? "Rejected" : "Cleared verdict on";
+      announce({ key: `foundry-verdict:${++verdictNRef.current}`, text: `${word} ${list.length === 1 ? list[0] : `${list.length} candidates`}` });
       setSave("saving");
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
       const runId = selected;
@@ -314,7 +324,7 @@ export default function FoundryView() {
         );
       }, 400);
     },
-    [selected, readOnly, adoptVerdicts],
+    [selected, readOnly, adoptVerdicts, announce],
   );
 
   const order = useMemo(() => detail?.run.candidates.map((c) => c.id) ?? [], [detail]);
