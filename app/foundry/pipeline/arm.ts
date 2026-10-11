@@ -2,6 +2,28 @@
 
 // THE MONEY SWITCH, AND THE TWO COPIES OF IT.
 //
+// STUB IS THE DEFAULT AND IT SURVIVES A RELOAD. It is not decoration: in LIVE an
+// articles dispatch spends the operator's own Claude seat at the figures
+// RUN_COST_HINT carries, and an audio dispatch bills ElevenLabs per call.
+//
+// `MoveRequest.live` is the flag that decides, and lib/board/pipeline.ts is
+// explicit that "an unset `live` never bills". A shell cannot simply LABEL that,
+// because one path does not come through it: the canvas's own `MovePrompt`
+// answers a `needs: "confirm"` offer with `{ live: true }` unconditionally, and
+// the submit hands that straight to `source.move()`.
+//
+// SO THERE ARE TWO GUARDS AND BOTH MUST AGREE, deliberately. The engine clamps
+// every request at its own chokepoint (./submitMoves.ts) — that is the belt, and
+// it covers paths a shell does not know about. `armSource` below is the braces:
+// it is what counts the dry runs and keeps the last `wouldCall` for the receipt,
+// and it would still hold if somebody mounted the canvas without the `arm` prop.
+// A switch that spends $47-92 when it is wrong is worth two independent guards.
+//
+// A dry move comes back as `stubbedMove(item, wouldCall)` — a SUCCESS whose
+// `wouldCall` names the route that was not called. That string is drawn in the
+// control cluster, because a switch whose only evidence is that nothing happened
+// is a switch nobody trusts.
+//
 // The arm decides whether a move spends the operator's own Claude seat. It needs
 // to exist in two places at once and they must not drift: React's copy is what
 // the control draws, and a MODULE-level copy is what `source.move()` reads,
@@ -12,6 +34,8 @@
 // never gets evicted — and this one must be: left on the exempt list, an arm set
 // to LIVE would survive a sign-out and the next account on that browser would
 // inherit it.
+
+import { useCallback, useMemo, useState } from "react";
 
 import { PIPELINE_ARM_KEY } from "@/lib/identityEviction";
 import type { MoveRequest, MoveResult, PipelineSource } from "@/lib/board/pipeline";
@@ -77,4 +101,29 @@ export function armSource(base: PipelineSource, onStub: (wouldCall: string) => v
       return r;
     },
   };
+}
+
+/* ── the shell's half of it ───────────────────────────────────────────────── */
+
+/** THE ARM, THE WRAPPED SOURCE AND THE DRY-RUN RECEIPT, as one thing.
+ *
+ *  `flipArm` is the single writer for both copies — the module's (what `move()`
+ *  reads) and React's (what the control draws) — so the two cannot drift.
+ *
+ *  The wrapped source's identity is stable for the life of one media choice: the
+ *  canvas memoises on source identity, and a fresh source every render defeats
+ *  the engine. Flipping the arm therefore does not reload the board. */
+export function useArmedSource(base: PipelineSource) {
+  const [arm, setArm] = useState<Arm>(currentArm);
+  const [stub, setStub] = useState<{ n: number; wouldCall: string } | null>(null);
+
+  const flipArm = useCallback((a: Arm) => {
+    setLiveArm(a);
+    setArm(a);
+  }, []);
+
+  const onStub = useCallback((wouldCall: string) => setStub((s) => ({ n: (s?.n ?? 0) + 1, wouldCall })), []);
+  const source = useMemo(() => armSource(base, onStub), [base, onStub]);
+
+  return { arm, flipArm, stub, source };
 }
