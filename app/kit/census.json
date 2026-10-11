@@ -1,6 +1,6 @@
 {
   "$generated": "pipeline/kit-census.mts — do not edit. `npx tsx pipeline/kit-census.mts` rewrites it; `--check` diffs it against the tree.",
-  "files": 696,
+  "files": 738,
   "parts": {
     "ASTERISM_PATH": {
       "home": "components/kit/brand/asterism.ts",
@@ -62,7 +62,8 @@
         "app/foundry/pipeline/MovePrompt.tsx",
         "app/foundry/pipeline/modals/DispatchConfirm.tsx",
         "app/foundry/pipeline/modals/ReworkNote.tsx",
-        "app/foundry/ui.tsx",
+        "app/foundry/uiCommitDialog.tsx",
+        "app/foundry/uiDecisionBar.tsx",
         "app/library/AssetLightbox.tsx",
         "app/library/MoveDialog.tsx",
         "app/library/assets/EmptyShelf.tsx",
@@ -107,7 +108,7 @@
         "app/foundry/StripGrid.tsx",
         "app/foundry/StripLightbox.tsx",
         "app/foundry/StripsView.tsx",
-        "app/foundry/ui.tsx",
+        "app/foundry/uiLabels.tsx",
         "app/library/parts.tsx",
         "app/playground/hunt/Lesson.tsx"
       ]
@@ -299,7 +300,7 @@
       ],
       "adopters": [
         "app/_phases/research/MusicVideoResearch.tsx",
-        "app/library/audio/Inspector.tsx",
+        "app/library/audio/InspectorDrafts.tsx",
         "app/library/audio/References.tsx"
       ]
     },
@@ -430,7 +431,7 @@
         "app/_phases/script/trailer/MovementSection.tsx",
         "app/_phases/script/trailer/PromiseLedger.tsx",
         "app/articles/ArticlesView.tsx",
-        "app/foundry/ui.tsx",
+        "app/foundry/uiLabels.tsx",
         "app/library/LibraryAtelier.tsx",
         "app/library/MoveDialog.tsx",
         "app/library/PresetRail.tsx",
@@ -480,7 +481,7 @@
         "app/_projects/ProjectDialog.tsx",
         "app/_projects/wizard/stages.tsx",
         "app/articles/new/NewArticle.tsx",
-        "app/board/parts.tsx",
+        "app/board/partsVerdict.tsx",
         "app/foundry/ExtractBoard.tsx",
         "app/foundry/ExtractView.tsx",
         "app/foundry/pipeline/BoardControls.tsx",
@@ -519,7 +520,7 @@
         "app/_phases/frames/alternatives/VariantContactSheet.tsx",
         "app/_phases/motion/MotionStep.tsx",
         "app/_projects/ShelfHeader.tsx",
-        "app/board/parts.tsx",
+        "app/board/partsChrome.tsx",
         "app/calendar/BroadcastWeek.tsx",
         "app/foundry/DojoView.tsx",
         "app/foundry/ExtractView.tsx",
@@ -615,7 +616,7 @@
         "app/foundry/pipeline/modals/DispatchConfirm.tsx",
         "app/foundry/pipeline/modals/ItemDetail.tsx",
         "app/foundry/pipeline/modals/ReworkNote.tsx",
-        "app/foundry/ui.tsx",
+        "app/foundry/uiCommitDialog.tsx",
         "app/library/AssetLightbox.tsx",
         "app/library/MoveDialog.tsx",
         "app/library/parts.tsx",
@@ -717,7 +718,7 @@
         "app/_phases/cut/parts/FinishLine.tsx",
         "app/_phases/research/beats/BeatVariantBoard.tsx",
         "app/_phases/research/beats/SlotColumn.tsx",
-        "app/board/parts.tsx",
+        "app/board/partsMedia.tsx",
         "app/calendar/ChannelsTab.tsx",
         "app/foundry/StripGrid.tsx",
         "app/library/parts.tsx",
@@ -739,7 +740,7 @@
         "components/kit/index.ts"
       ],
       "adopters": [
-        "app/library/audio/Inspector.tsx"
+        "app/library/audio/InspectorTakePlayer.tsx"
       ]
     },
     "Prose": {
@@ -877,7 +878,7 @@
         "app/_projects/RaceSheet.tsx",
         "app/board/ContactSheet.tsx",
         "app/board/shared.tsx",
-        "app/foundry/ui.tsx"
+        "app/foundry/uiCommitDialog.tsx"
       ]
     },
     "StageRail": {
@@ -978,7 +979,7 @@
         "app/foundry/StripGrid.tsx",
         "app/foundry/StripLightbox.tsx",
         "app/foundry/StripsView.tsx",
-        "app/foundry/ui.tsx",
+        "app/foundry/uiLabels.tsx",
         "app/library/parts.tsx",
         "app/playground/hunt/Lesson.tsx"
       ]
@@ -1414,7 +1415,7 @@
       }
     },
     "app/_phases/_shared": {
-      "files": 29,
+      "files": 45,
       "kitImports": 0,
       "signalImports": 4,
       "parts": [
@@ -1783,9 +1784,9 @@
       }
     },
     "app/board": {
-      "files": 9,
+      "files": 18,
       "kitImports": 1,
-      "signalImports": 3,
+      "signalImports": 5,
       "parts": [
         "Hint",
         "Keycaps",
@@ -1803,7 +1804,7 @@
         "typing": 0
       },
       "suspectFiles": {
-        "app/board/parts.tsx": {
+        "app/board/partsMedia.tsx": {
           "media": 4
         }
       }
@@ -1838,9 +1839,9 @@
       "suspectFiles": {}
     },
     "app/foundry": {
-      "files": 81,
+      "files": 90,
       "kitImports": 5,
-      "signalImports": 13,
+      "signalImports": 14,
       "parts": [
         "Button",
         "CHIP_CLASS",
@@ -2011,8 +2012,8 @@
       "suspectFiles": {}
     },
     "app/library": {
-      "files": 52,
-      "kitImports": 7,
+      "files": 60,
+      "kitImports": 8,
       "signalImports": 11,
       "parts": [
         "Button",

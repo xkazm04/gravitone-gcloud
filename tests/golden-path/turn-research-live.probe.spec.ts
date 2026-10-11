@@ -401,6 +401,8 @@ test("the step starts, stops and resumes through the turn, and has no path that 
   // Nothing on unmount reaches the turn.
   expect(hook, "the hook cancels on unmount").not.toMatch(/return \(\) => [^\n]*(stop|cancel)/);
 
-  const stepData = readFileSync(join(process.cwd(), "app/_phases/_shared/stepStore.ts"), "utf8");
+  // ResearchNotebookStepData moved to stepDataResearch.ts when stepStore.ts was
+  // split into a door and its owners. Same shape, same assertion.
+  const stepData = readFileSync(join(process.cwd(), "app/_phases/_shared/stepDataResearch.ts"), "utf8");
   expect(stepData, "the notebook record does not carry the consumed turn id").toMatch(/\bturn\?:\s*string/);
 });

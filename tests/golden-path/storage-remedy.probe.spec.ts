@@ -138,7 +138,10 @@ test("case 6b (critic): an asset-blob quota is not cleared by a small step recor
 });
 
 test("case 6c (source ratchet): withStore's success path calls noteStorageOk(op, projectId, phase)", () => {
-  const src = stripComments(readFileSync(join(process.cwd(), "app/_phases/_shared/stepStore.ts"), "utf8"));
+  // withStore moved to its own file when stepStore.ts was split; stepStore.ts is
+  // the door now and holds no implementation. The ratchet is unchanged - it still
+  // reads the success path of the real withStore.
+  const src = stripComments(readFileSync(join(process.cwd(), "app/_phases/_shared/withStore.ts"), "utf8"));
   const start = src.indexOf("async function withStore");
   expect(start).toBeGreaterThan(-1);
   const body = src.slice(start, src.indexOf("catch (e)", start));
