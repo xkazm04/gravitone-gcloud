@@ -28,7 +28,7 @@ import { useEffect, useEffectEvent, useId, useMemo, useRef, useState } from "rea
 
 import { usePrefersReducedMotion } from "@/components/ui/motionPreference";
 import { Panel } from "@/components/ui/Primitives";
-import { Keycaps, Tally, type KeyBinding } from "@/components/ui/signal";
+import { Keycaps, Tally, useCountFilter, type KeyBinding } from "@/components/ui/signal";
 import { EASE } from "@/components/ui/tokens";
 import { overlayOpen, typing } from "@/lib/board/keys";
 import type { ScheduleSlot } from "@/lib/publish/types";
@@ -53,7 +53,7 @@ import type { ScheduleProps } from "./ScheduleTab";
 import { SlotSheet } from "./SlotSheet";
 import { ChannelGlyph, IconButton, LOOK, StatusDot, TONE_RULE, lookOf } from "./ui";
 import { usePointerDrag } from "./useDrag";
-import { atMinute, minuteOfDay, nextWaiting, stackClusters, weekKey, weekOffsetOf } from "./view";
+import { atMinute, matchesDoor, minuteOfDay, nextWaiting, parseDoor, stackClusters, weekKey, weekOffsetOf } from "./view";
 import { whenWords } from "./WhenPicker";
 
 const HOUR_H = 48;
@@ -112,10 +112,15 @@ export function BroadcastWeek(p: ScheduleProps) {
   const selected = slots.find((s) => s.id === selectedId) ?? null;
 
   const counts = {
-    scheduled: inWeek.filter((s) => s.status === "scheduled" || s.status === "publishing").length,
-    missed: inWeek.filter((s) => s.status === "missed" || s.status === "failed").length,
-    published: inWeek.filter((s) => s.status === "published").length,
+    booked: inWeek.filter((s) => matchesDoor(s, "booked")).length,
+    missed: inWeek.filter((s) => matchesDoor(s, "missed")).length,
+    aired: inWeek.filter((s) => matchesDoor(s, "aired")).length,
   };
+  // Every count is a door: a pressed tally keeps its own slots lit and washes
+  // the rest back. The selection is `?only=` so the view is linkable.
+  const [onlyRaw, , toggleOnly] = useCountFilter("only");
+  const only = parseDoor(onlyRaw);
+  const matched = (s: ScheduleSlot) => !only || matchesDoor(s, only);
 
   // Open on the working day: 07:00 at the top, or the week's earliest slot
   // when one sits before it (a missed 05:56 slot scrolled out of sight is the
@@ -208,9 +213,9 @@ export function BroadcastWeek(p: ScheduleProps) {
           </button>
           <h2 className="font-instrument ml-1 text-2xl leading-none text-white">{rangeLabel(start)}</h2>
           <div className="ml-auto flex flex-wrap items-center gap-2">
-            <Tally value={counts.scheduled} label="booked" tone={counts.scheduled ? "cyan" : "neutral"} />
-            <Tally value={counts.missed} label="missed" tone={counts.missed ? "amber" : "neutral"} />
-            <Tally value={counts.published} label="aired" tone={counts.published ? "emerald" : "neutral"} />
+            <Tally value={counts.booked} label="booked" tone="cyan" select={{ pressed: only === "booked", onToggle: () => toggleOnly("booked") }} />
+            <Tally value={counts.missed} label="missed" tone="amber" select={{ pressed: only === "missed", onToggle: () => toggleOnly("missed") }} />
+            <Tally value={counts.aired} label="aired" tone="emerald" select={{ pressed: only === "aired", onToggle: () => toggleOnly("aired") }} />
             <Keycaps map={KEYS} label="Week keys" />
           </div>
         </div>
@@ -321,7 +326,7 @@ export function BroadcastWeek(p: ScheduleProps) {
                     )}
 
                     {(stacks.get(k) ?? []).map((stack, i) => {
-                      const s = stack.find((x) => x.id === selectedId) ?? stack.find(needsDecision) ?? stack[0];
+                      const s = stack.find((x) => x.id === selectedId) ?? stack.find((x) => matched(x) && needsDecision(x)) ?? stack.find(matched) ?? stack[0];
                       const top = ((minuteOfDay(s.publishAt) ?? 0) / 60) * HOUR_H;
                       const key = `${k}:${stack[0].id}`;
                       return (
@@ -334,6 +339,7 @@ export function BroadcastWeek(p: ScheduleProps) {
                             top={top}
                             selected={s.id === selectedId}
                             dragging={drag?.item.id === s.id}
+                            matched={matched(s)}
                             handlers={bind(s)}
                             onPress={() => {
                               if (endedDrag()) return;
@@ -431,6 +437,7 @@ function SlotCard({
   top,
   selected,
   dragging,
+  matched,
   handlers,
   onPress,
 }: {
@@ -440,6 +447,8 @@ function SlotCard({
   top: number;
   selected: boolean;
   dragging: boolean;
+  /** false when a count filter is on and this slot is not one it counts */
+  matched: boolean;
   handlers: ReturnType<ReturnType<typeof usePointerDrag<ScheduleSlot, Landing>>["bind"]>;
   onPress: () => void;
 }) {
@@ -457,7 +466,7 @@ function SlotCard({
     <motion.button
       type="button"
       initial={reduced ? false : { opacity: 0, y: 6 }}
-      animate={{ opacity: dragging ? 0.35 : 1, y: 0 }}
+      animate={{ opacity: dragging ? 0.35 : matched ? 1 : 0.28, y: 0 }}
       transition={{ duration: 0.24, delay: reduced ? 0 : Math.min(index, 12) * 0.025, ease: EASE }}
       {...handlers}
       onClick={onPress}
@@ -465,6 +474,7 @@ function SlotCard({
       aria-label={`${s.title}, ${CHANNEL_NAME[s.channelId]}, ${timeLabel(s.publishAt)}, ${look === "drifted" ? "drifted" : STATUS_WORD[s.status]}`}
       data-testid={`calendar-week-slot-${s.id}`}
       data-slot-id={s.id}
+      data-matched={matched}
       className={`group absolute z-[5] touch-none overflow-hidden rounded-xl border text-left transition-[border-color,box-shadow] ${ring} ${
         movable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
       } ${s.status === "cancelled" ? "opacity-60" : ""}`}

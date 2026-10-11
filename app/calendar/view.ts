@@ -27,6 +27,22 @@ export function exportName(exp: Pick<ExportRef, "id" | "projectId"> | null, proj
   return projectTitle(exp.projectId, projects) ?? `export ${shortId(exp.id)}`;
 }
 
+/* ── the counts that are doors ────────────────────────────────────────── */
+
+/** The three week tallies, and the slots each one counts. `?only=<door>` keeps
+ *  a slot "matched" when its status is one the door counts. */
+export type CountDoor = "booked" | "missed" | "aired";
+export const COUNT_DOORS: readonly CountDoor[] = ["booked", "missed", "aired"];
+
+export function matchesDoor(s: Pick<ScheduleSlot, "status">, door: CountDoor): boolean {
+  if (door === "booked") return s.status === "scheduled" || s.status === "publishing";
+  if (door === "missed") return s.status === "missed" || s.status === "failed";
+  return s.status === "published";
+}
+
+/** `?only=` is user-editable, so anything but a known door is no filter. */
+export const parseDoor = (v: string | null): CountDoor | null => (COUNT_DOORS.includes(v as CountDoor) ? (v as CountDoor) : null);
+
 /* ── slots that share time ────────────────────────────────────────────── */
 
 /**
