@@ -101,6 +101,7 @@ const PLAN: Record<TextEnv, Record<TurnClass, TextProviderId[]>> = {
     "sound-lesson": ["claude-cli", "google"],
     "ad-ideas": ["claude-cli", "google"],
     "ad-scenarios": ["claude-cli", "google"],
+    repair: ["claude-cli", "google"],
     probe: ["claude-cli"],
   },
   cloud: {
@@ -113,6 +114,7 @@ const PLAN: Record<TextEnv, Record<TurnClass, TextProviderId[]>> = {
     "sound-lesson": ["google"],
     "ad-ideas": ["google"],
     "ad-scenarios": ["google"],
+    repair: ["google"],
     probe: ["google"],
   },
 };
@@ -194,6 +196,10 @@ const DEFAULT_TIMEOUT_MS: Record<TurnClass, number> = {
   // the engine gives up first and the creator gets a sentence.
   "ad-ideas": 300_000,
   "ad-scenarios": 300_000,
+  // A repair returns the WHOLE object (a notebook is the largest answer the app
+  // writes), so it gets the long ceiling even though it is flash-class: the
+  // output is as long as the research turn's, the thinking is not.
+  repair: 600_000,
   probe: 30_000,
 };
 

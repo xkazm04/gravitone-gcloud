@@ -138,6 +138,9 @@ const MODEL_FOR_TURN: Record<TextRequest["turn"], string> = {
   // Flash for scenarios: the idea is fixed, and the turn is arithmetic and
   // shot-writing against a typed schema that lib/ads/validate.ts checks.
   "ad-scenarios": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
+  // Flash: a repair edits the listed paths of an object it is handed; the
+  // judgement was spent on the turn that produced the draft.
+  repair: process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
   probe: process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
 };
 

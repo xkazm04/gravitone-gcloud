@@ -41,6 +41,22 @@ export const UNGUARDED_PROBE_BUDGET = 250;
 
 export const MUTANTS: Mutant[] = [
   {
+    id: "repair-no-shrink-guard-off",
+    probe: "repair-turn.probe.spec.ts",
+    file: "lib/text/repair.ts",
+    find: "if (lost > 0)",
+    replace: "if (lost > 9999)",
+    why: "A repair turn can delete the facts that failed validation to make the validator pass, and the creator keeps a thinner notebook believing it was repaired.",
+  },
+  {
+    id: "repair-unchanged-elsewhere-off",
+    probe: "repair-turn.probe.spec.ts",
+    file: "lib/text/repair.ts",
+    find: "if (allowed.some((a) => covers(a, changed))) continue;",
+    replace: "if (true) continue;",
+    why: "A repair turn may rewrite fields it was never asked about, and the paid-for draft is silently changed outside the listed paths.",
+  },
+  {
     id: "shelf-no-tiebreak",
     probe: "sort-stability.probe.spec.ts",
     file: "app/_projects/shelf.ts",

@@ -175,6 +175,14 @@ export interface SourceReceipt {
  *                        line's shape, the super's hold). A sibling of `ad-ideas`
  *                        and not the same word: a round that invents and a round
  *                        that times are different turns with different prompts.
+ *   · `repair`           lib/text/repair.ts — a paid-for answer that failed its
+ *                        validator, plus the path-addressed findings that refused
+ *                        it, in; the SAME object back with only those paths
+ *                        changed. A word of its own because a repair is a second
+ *                        bill for the same answer, and a spend chart that folded
+ *                        it into `research` or `edit-plan` could not say how much
+ *                        a validator costs. Flash-class: it edits a given object,
+ *                        it does not author one.
  */
 export type TurnClass =
   | "edit-plan"
@@ -186,6 +194,7 @@ export type TurnClass =
   | "sound-lesson"
   | "ad-ideas"
   | "ad-scenarios"
+  | "repair"
   | "probe";
 
 /**
