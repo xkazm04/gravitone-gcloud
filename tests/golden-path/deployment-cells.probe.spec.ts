@@ -17,8 +17,8 @@
 //   4. a route file with no cell expectation fails the lane, naming the file;
 //   5. .env.example's hosted block equals HOSTED_CAPS, variable by variable;
 //   7. after the lane, `process.env` deep-equals what it was before.
-// Number 6 (engineStatus ⇔ /api/recalibrate's no-engine answer) is not here:
-// see the note at the bottom of this file.
+//   6. engineStatus("edit-plan").serving is null iff POST /api/recalibrate with
+//      a VALID body answers the no-engine status (503 + an availability code).
 //
 // EACH CELL IS A FRESH DEPLOYMENT. Before a cell runs, every app/ and lib/
 // module is dropped from the require cache and the routes are loaded again,
@@ -48,6 +48,8 @@ import path from "node:path";
 
 import { test, expect } from "@playwright/test";
 
+import { RENDERS } from "@/app/_phases/script/renders";
+import { CONCLUSIONS } from "@/app/_phases/_shared/notebook/conclusions";
 import { ACCESS_SECRET_VAR } from "@/lib/apiAuth";
 import { CAPABILITY_ROUTES, HOSTED_CAPS, type Capabilities } from "@/lib/capabilities";
 import { resolveRegistryDir } from "@/lib/articles/registryRead";
@@ -463,7 +465,14 @@ function codeOf(text: string): string {
   return "";
 }
 
-async function drive(rel: string, method: Method, handler: Handler, bearer: string | null, body: unknown = {}): Promise<Answer> {
+async function drive(
+  rel: string,
+  method: Method,
+  handler: Handler,
+  bearer: string | null,
+  body: unknown = {},
+  search = "",
+): Promise<Answer> {
   const { url, params } = addressOf(rel);
   const headers: Record<string, string> = { "x-forwarded-for": nextIp() };
   if (bearer) headers.authorization = `Bearer ${bearer}`;
@@ -478,7 +487,7 @@ async function drive(rel: string, method: Method, handler: Handler, bearer: stri
   });
   const answered = (async (): Promise<Answer> => {
     try {
-      const res = await handler(new Request(`http://localhost${url}`, init), { params: Promise.resolve(params) });
+      const res = await handler(new Request(`http://localhost${url}${search}`, init), { params: Promise.resolve(params) });
       return { status: res.status, code: codeOf(await res.text().catch(() => "")) };
     } catch (e) {
       return { status: 0, code: `threw: ${(e as Error).message.slice(0, 80)}` };
@@ -499,6 +508,27 @@ const classOf = (s: number): "2xx" | "4xx" | "5xx" | "none" =>
 function unhidden(rel: string, a: Answer, caps: Capabilities): boolean {
   if (!NOT_READY.has(a.code)) return false;
   return !(Object.keys(CAPABILITY_ROUTES) as (keyof Capabilities)[]).some((c) => !caps[c] && CAPABILITY_ROUTES[c].includes(rel));
+}
+
+/** Acceptance 6: a body the route accepts (the shape recalibrate-route-e2e
+ *  drives), so the answer is the ENGINE's and not a refusal of the body. */
+const VALID_RECALIBRATE_BODY = {
+  projectId: "p-cells-engine",
+  notebook: {},
+  conclusions: CONCLUSIONS,
+  renders: RENDERS,
+  scope: {},
+  notes: [{ kind: "less-focus", cardId: "f-macro-cause" }],
+};
+/** `TextError` kinds that mean "no engine can serve this turn here": the
+ *  availability kinds lib/text/errors.ts answers 503 for. */
+const NO_ENGINE_CODES = new Set(["no-key", "not-installed", "not-logged-in", "policy-forbidden", "managed-platform"]);
+
+/** Invariant 6 as a function so the control below can run it on seeded answers:
+ *  "no engine serves" and "the route answers the no-engine status" are one fact. */
+function engineAgreement(serving: string | null, a: Answer): string {
+  const noEngine = a.status === 503 && NO_ENGINE_CODES.has(a.code);
+  return (serving === null) === noEngine ? "ok" : `engineStatus serves ${serving}, and a valid body answered ${a.status} ${a.code || "-"}`;
 }
 
 /* ── one cell ────────────────────────────────────────────────────────────── */
@@ -613,6 +643,15 @@ async function runCell(
                 say("ready", "POST", f, a, verdict);
               }
             lib.musicBudget.__resetMusicBudget();
+          }
+
+          // ── invariant 6: engineStatus and /api/recalibrate agree on "no engine" ──
+          if (caller !== "anonymous") {
+            const bearer = caller === "secret" ? CELL_SECRET : null;
+            const post = handlersOf("app/api/recalibrate/route.ts").find(([m]) => m === "POST")![1];
+            const a = await drive("app/api/recalibrate/route.ts", "POST", post, bearer, VALID_RECALIBRATE_BODY, "?wait=1");
+            const verdict = engineAgreement(status.serving, a);
+            say("engine", "POST", "app/api/recalibrate/route.ts", a, verdict);
           }
 
           // ── invariant 2: a managed cell starts no process ──
@@ -826,6 +865,13 @@ test("invariant 1 control: seeded - localRender on where spawning is forbidden -
  *  commit rewrote line endings, green on the next. */
 const RUNNER_OWNED = new Set(["BROWSERSLIST_IGNORE_OLD_DATA"]);
 
+test("invariant 6 control: seeded - an engine that serves but the route says no-key, and the reverse - is named", () => {
+  expect(engineAgreement("google", { status: 503, code: "no-key" })).toMatch(/engineStatus serves google.*503 no-key/);
+  expect(engineAgreement(null, { status: 502, code: "failed" })).toMatch(/engineStatus serves null.*502 failed/);
+  expect(engineAgreement(null, { status: 503, code: "no-key" })).toBe("ok");
+  expect(engineAgreement("claude-cli", { status: 502, code: "failed" })).toBe("ok");
+});
+
 test("the lane leaves process.env exactly as it found it (acceptance 7)", () => {
   const now = { ...process.env };
   const changed = [...new Set([...Object.keys(before), ...Object.keys(now)])].filter(
@@ -833,13 +879,3 @@ test("the lane leaves process.env exactly as it found it (acceptance 7)", () => 
   );
   expect(changed, "these variables differ from their value before the lane").toEqual([]);
 });
-
-// NOT YET: acceptance 6 — "engineStatus('edit-plan').available === false ⇔
-// POST /api/recalibrate with a VALID body answers the no-engine status". A
-// valid body makes the route read and cache pipeline/RECALIBRATE-PROMPT.md in a
-// module variable, and recalibrate-route-e2e.probe.spec.ts's first case exists
-// to observe that file MISSING, which it can only do in a process where no
-// earlier probe loaded it. This file sorts before it. The per-cell module reload
-// above does not help: that probe holds its own import of the route. It needs
-// either the prompt reader the AIO-B assembler extraction exposes, or that
-// probe's cache assumption made explicit — not a third probe racing it.
