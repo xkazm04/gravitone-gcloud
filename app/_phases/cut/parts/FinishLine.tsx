@@ -7,8 +7,13 @@
 
 import { Fragment } from "react";
 
-import { PipRow, type PipState } from "@/components/ui/signal";
+import { Hint, PipRow, type PipState } from "@/components/ui/signal";
+import { absenceReason } from "@/lib/capabilities";
+import { withAccess } from "@/lib/imagingClient";
+import { useCapabilities } from "@/lib/useCapabilities";
 
+import Notice from "../../_shared/ui/Notice";
+import { useAnimaticExport } from "../useAnimaticExport";
 import { useCutCtx } from "../useCut";
 import type { Verdict } from "../finishLine";
 
@@ -31,8 +36,14 @@ export function FinishLine({
   className?: string;
   dense?: boolean;
 }) {
-  const { checks, openStep } = useCutCtx();
+  const { checks, openStep, projectId, cut, offsets, takeIds } = useCutCtx();
   const failing = checks.filter((c) => c.verdict === "fail").length;
+  const animatic = useAnimaticExport({ projectId, cut, offsets, takeIds });
+  // The export spawns ffmpeg in the server process: off where the posture
+  // forbids it (lib/capabilities.ts localRender), shut while the answer is in
+  // flight. NOT gated on the verdicts — an animatic with holes is the review
+  // artifact, and the document carries the failing rows.
+  const { caps, facts, known: capsKnown } = useCapabilities();
   return (
     <section
       className={`rounded-2xl border border-white/8 bg-white/[0.02] p-4 ${className}`}
@@ -114,6 +125,50 @@ export function FinishLine({
           ))}
         </tbody>
       </table>
+      {!dense && (
+        <div className="mt-3 border-t border-white/6 pt-3" data-testid="animatic-export">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void animatic.run()}
+              disabled={animatic.status === "exporting" || !caps.localRender}
+              data-testid="animatic-export-run"
+              className="font-jetbrains rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-label text-cyan-100 transition enabled:hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {animatic.status === "exporting" ? "exporting animatic…" : animatic.result ? "export again" : "export animatic"}
+            </button>
+            {capsKnown && !caps.localRender && (
+              <Hint variant="lock" tone="amber" label="why export is off">
+                {absenceReason("localRender", facts)}
+              </Hint>
+            )}
+            {animatic.result && (
+              <a
+                href={withAccess(animatic.result.downloadUrl)}
+                download
+                data-testid="animatic-export-download"
+                className="font-jetbrains text-label text-cyan-200 underline-offset-2 hover:underline"
+              >
+                download mp4
+              </a>
+            )}
+          </div>
+          {animatic.result && (
+            <p className="font-jetbrains mt-2 text-label text-white/45" data-testid="animatic-export-summary">
+              {animatic.result.sidecar.gaps.picture} picture and {animatic.result.sidecar.gaps.audio} audio gaps
+              {failing ? `, ${failing} check${failing === 1 ? "" : "s"} open` : ""}
+              {animatic.result.unreachable.length ? `, ${animatic.result.unreachable.length} unreachable` : ""}
+            </p>
+          )}
+          {animatic.error && (
+            <div className="mt-2">
+              <Notice title="Animatic export failed">
+                <p data-testid="animatic-export-error">{animatic.error}</p>
+              </Notice>
+            </div>
+          )}
+        </div>
+      )}
     </section>
   );
 }

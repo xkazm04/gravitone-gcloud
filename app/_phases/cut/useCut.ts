@@ -31,6 +31,7 @@ import type { ScoreSpot } from "../score/spots";
 
 import type { CutClock } from "./clock";
 import { deriveTimeline, type DerivedCut, type OwnerStep } from "./deriveTimeline";
+import { takePointers } from "./cutDocument";
 import { finishLine, type FinishCheck } from "./finishLine";
 import type { Offsets } from "./offsets";
 
@@ -220,6 +221,10 @@ export function useCut(projectId: string) {
   );
   const checks: FinishCheck[] = useMemo(() => (cut ? finishLine(cut, offsets) : []), [cut, offsets]);
 
+  // cue id → the sound-store take its spot points at: what compileCut needs to
+  // name a take by id instead of by this browser's URL.
+  const takeIds = useMemo(() => takePointers(up?.spots ?? null), [up]);
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = cut?.clips.find((c) => c.id === selectedId) ?? null;
 
@@ -241,6 +246,7 @@ export function useCut(projectId: string) {
     trouble,
     cut,
     checks,
+    takeIds,
     offsets,
     setOffsets,
     undoOffsets,
