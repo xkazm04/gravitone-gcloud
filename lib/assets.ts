@@ -373,18 +373,22 @@ const folderSegment = (s: string) =>
 /**
  * A plate the user chose to keep, as a shelf entry that owns its bytes.
  *
- * Content-addressed like `promotedId`, for the same reason: keeping twice, or
- * the same picture from two projects, overwrites one row rather than minting a
- * second tile. A regenerate has different bytes, so it is a different row. The
+ * Content-addressed within a project, like `promotedId`: keeping the same
+ * plate twice overwrites one row rather than minting a second tile. The project
+ * is part of the id, so the same bytes kept from a second project get their own
+ * row (and their own copy of the bytes) instead of overwriting the first
+ * project's `meta.projectId` / `outputId`, which `listAssetsFor` and the kept
+ * mark read. A regenerate has different bytes, so it is a different row. The
  * bytes are COPIED, never pointed at: `deleteProject` does not touch this store,
  * but a plate's own `src` dies with the record that held it.
  */
 export function assetFromKeptPlate(uid: string, kept: KeptPlate): { asset: Asset; upload: UploadRecord } {
   const d16 = kept.digest.slice(0, 16);
-  const uploadId = `up-kept-${d16}`;
+  const key = `${d16}-${encodeURIComponent(kept.projectId)}`;
+  const uploadId = `up-kept-${key}`;
   return {
     asset: {
-      id: `as-kept-${d16}`,
+      id: `as-kept-${key}`,
       uid,
       path: ["kept", folderSegment(kept.projectTitle)],
       name: kept.name,
