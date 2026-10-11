@@ -1,0 +1,799 @@
+{
+ "craft_json_schema": {
+  "type": "object",
+  "properties": {
+   "shot_size": {
+    "type": "string",
+    "enum": [
+     "extreme-wide",
+     "wide",
+     "full",
+     "medium-full",
+     "medium",
+     "medium-close",
+     "close-up",
+     "extreme-close-up"
+    ],
+    "description": "How much of the main subject the frame holds."
+   },
+   "camera_angle": {
+    "type": "string",
+    "enum": [
+     "eye-level",
+     "low-angle",
+     "extreme-low-angle",
+     "high-angle",
+     "extreme-high-angle",
+     "overhead",
+     "dutch"
+    ],
+    "description": "Where the camera sits relative to the subject's eyeline."
+   },
+   "angle_evidence": {
+    "type": "string",
+    "description": "The visual cue that proves the angle, in under 15 words (converging verticals, visible ceiling, ground plane height)."
+   },
+   "lens_impression": {
+    "type": "string",
+    "enum": [
+     "ultra-wide",
+     "wide-angle",
+     "normal",
+     "telephoto",
+     "macro",
+     "indeterminate"
+    ],
+    "description": "The lens register the image reads as -- from perspective stretch and edge behaviour, NOT a guessed focal length. Answer 'indeterminate' unless the frame actually shows a cue: visible edge distortion, stretched foreground, or compressed background separation. A tight shot with no visible depth cues is indeterminate, and saying so is correct."
+   },
+   "lens_evidence": {
+    "type": "string",
+    "description": "The cue behind the lens call, under 15 words (edge distortion, background compression, foreground exaggeration). If indeterminate, say what is missing."
+   },
+   "depth_of_field": {
+    "type": "string",
+    "enum": [
+     "deep",
+     "moderate",
+     "shallow"
+    ],
+    "description": "How much of the depth is in focus."
+   },
+   "subject_scale": {
+    "type": "string",
+    "description": "How large the main subject sits in frame, as a fraction of height, e.g. 'about one third'."
+   },
+   "composition": {
+    "type": "string",
+    "enum": [
+     "centered",
+     "symmetrical",
+     "rule-of-thirds",
+     "diagonal",
+     "frame-within-frame",
+     "off-center-negative-space"
+    ],
+    "description": "How the subject is placed in the rectangle."
+   },
+   "exposure": {
+    "type": "string",
+    "enum": [
+     "dark",
+     "dim",
+     "mid",
+     "bright",
+     "blown"
+    ],
+    "description": "Overall brightness of the frame. This is the BRIGHTNESS question -- answer it here, not in lighting_key."
+   },
+   "true_black_share": {
+    "type": "string",
+    "enum": [
+     "none",
+     "small",
+     "large"
+    ],
+    "description": "How much of the frame is true black holding no detail at all. Look at the darkest regions and estimate their area: none, a small portion, or a large portion."
+   },
+   "lighting_key": {
+    "type": "string",
+    "enum": [
+     "high-key",
+     "low-key",
+     "neutral"
+    ],
+    "description": "The key-to-fill RATIO, which is about shadow depth and NOT about brightness. high-key = shadows filled in, few dark areas, gentle falloff. low-key = shadows left unfilled, much of the frame falling to black. A bright frame with deep black shadows is LOW-key; a dim frame lit evenly with no true blacks is HIGH-key. Judge the darkest areas, not the brightest."
+   },
+   "lighting_direction": {
+    "type": "string",
+    "enum": [
+     "front",
+     "side",
+     "back-rim",
+     "top",
+     "under",
+     "mixed"
+    ],
+    "description": "Dominant direction the key light comes from."
+   },
+   "lighting_quality": {
+    "type": "string",
+    "enum": [
+     "hard",
+     "soft",
+     "mixed"
+    ],
+    "description": "Shadow edge character."
+   },
+   "contrast": {
+    "type": "string",
+    "enum": [
+     "low",
+     "moderate",
+     "high",
+     "extreme"
+    ],
+    "description": "Distance between the brightest and darkest areas that carry detail."
+   },
+   "light_sources": {
+    "type": "array",
+    "items": {
+     "type": "string"
+    },
+    "description": "Light sources visible or clearly implied IN the frame (practical lamps, fire, screens, sun, emissive props). (at most 6 short entries)"
+   },
+   "palette": {
+    "type": "string",
+    "description": "The colour scheme in under 12 words."
+   },
+   "foreground": {
+    "type": "string",
+    "description": "What occupies the foreground layer, under 20 words. 'empty' if nothing."
+   },
+   "midground": {
+    "type": "string",
+    "description": "What occupies the midground layer -- usually the subject -- under 20 words."
+   },
+   "background": {
+    "type": "string",
+    "description": "What occupies the background layer, under 20 words."
+   },
+   "subjects": {
+    "type": "array",
+    "items": {
+     "type": "string"
+    },
+    "description": "The people or creatures in frame and what each is doing. (at most 6 short entries)"
+   },
+   "surrounding_objects": {
+    "type": "array",
+    "items": {
+     "type": "string"
+    },
+    "description": "Notable set objects and props that establish the place. (at most 6 short entries)"
+   },
+   "texture": {
+    "type": "string",
+    "enum": [
+     "film-grain",
+     "digital-clean",
+     "painterly",
+     "cel-animated",
+     "3d-rendered",
+     "glossy-cg"
+    ],
+    "description": "Surface character of the image itself."
+   },
+   "genre_register": {
+    "type": "string",
+    "enum": [
+     "noir",
+     "horror-slow-burn",
+     "horror-slasher",
+     "psychological-thriller",
+     "action-chaos",
+     "action-precision",
+     "romance",
+     "sci-fi-sterile",
+     "sci-fi-used-future",
+     "sci-fi-neon",
+     "period-drama",
+     "western",
+     "documentary-verite",
+     "commercial-product",
+     "coming-of-age",
+     "other"
+    ],
+    "description": "The genre contract the frame's light, camera and palette belong to."
+   },
+   "confidence": {
+    "type": "string",
+    "enum": [
+     "low",
+     "medium",
+     "high"
+    ],
+    "description": "How sure you are overall."
+   }
+  },
+  "required": [
+   "shot_size",
+   "camera_angle",
+   "angle_evidence",
+   "lens_impression",
+   "lens_evidence",
+   "depth_of_field",
+   "subject_scale",
+   "composition",
+   "exposure",
+   "true_black_share",
+   "lighting_key",
+   "lighting_direction",
+   "lighting_quality",
+   "contrast",
+   "light_sources",
+   "palette",
+   "foreground",
+   "midground",
+   "background",
+   "subjects",
+   "surrounding_objects",
+   "texture",
+   "genre_register",
+   "confidence"
+  ],
+  "additionalProperties": false
+ },
+ "craft_gemini_schema": {
+  "type": "object",
+  "properties": {
+   "shot_size": {
+    "type": "string",
+    "enum": [
+     "extreme-wide",
+     "wide",
+     "full",
+     "medium-full",
+     "medium",
+     "medium-close",
+     "close-up",
+     "extreme-close-up"
+    ],
+    "description": "How much of the main subject the frame holds."
+   },
+   "camera_angle": {
+    "type": "string",
+    "enum": [
+     "eye-level",
+     "low-angle",
+     "extreme-low-angle",
+     "high-angle",
+     "extreme-high-angle",
+     "overhead",
+     "dutch"
+    ],
+    "description": "Where the camera sits relative to the subject's eyeline."
+   },
+   "angle_evidence": {
+    "type": "string",
+    "description": "The visual cue that proves the angle, in under 15 words (converging verticals, visible ceiling, ground plane height)."
+   },
+   "lens_impression": {
+    "type": "string",
+    "enum": [
+     "ultra-wide",
+     "wide-angle",
+     "normal",
+     "telephoto",
+     "macro",
+     "indeterminate"
+    ],
+    "description": "The lens register the image reads as -- from perspective stretch and edge behaviour, NOT a guessed focal length. Answer 'indeterminate' unless the frame actually shows a cue: visible edge distortion, stretched foreground, or compressed background separation. A tight shot with no visible depth cues is indeterminate, and saying so is correct."
+   },
+   "lens_evidence": {
+    "type": "string",
+    "description": "The cue behind the lens call, under 15 words (edge distortion, background compression, foreground exaggeration). If indeterminate, say what is missing."
+   },
+   "depth_of_field": {
+    "type": "string",
+    "enum": [
+     "deep",
+     "moderate",
+     "shallow"
+    ],
+    "description": "How much of the depth is in focus."
+   },
+   "subject_scale": {
+    "type": "string",
+    "description": "How large the main subject sits in frame, as a fraction of height, e.g. 'about one third'."
+   },
+   "composition": {
+    "type": "string",
+    "enum": [
+     "centered",
+     "symmetrical",
+     "rule-of-thirds",
+     "diagonal",
+     "frame-within-frame",
+     "off-center-negative-space"
+    ],
+    "description": "How the subject is placed in the rectangle."
+   },
+   "exposure": {
+    "type": "string",
+    "enum": [
+     "dark",
+     "dim",
+     "mid",
+     "bright",
+     "blown"
+    ],
+    "description": "Overall brightness of the frame. This is the BRIGHTNESS question -- answer it here, not in lighting_key."
+   },
+   "true_black_share": {
+    "type": "string",
+    "enum": [
+     "none",
+     "small",
+     "large"
+    ],
+    "description": "How much of the frame is true black holding no detail at all. Look at the darkest regions and estimate their area: none, a small portion, or a large portion."
+   },
+   "lighting_key": {
+    "type": "string",
+    "enum": [
+     "high-key",
+     "low-key",
+     "neutral"
+    ],
+    "description": "The key-to-fill RATIO, which is about shadow depth and NOT about brightness. high-key = shadows filled in, few dark areas, gentle falloff. low-key = shadows left unfilled, much of the frame falling to black. A bright frame with deep black shadows is LOW-key; a dim frame lit evenly with no true blacks is HIGH-key. Judge the darkest areas, not the brightest."
+   },
+   "lighting_direction": {
+    "type": "string",
+    "enum": [
+     "front",
+     "side",
+     "back-rim",
+     "top",
+     "under",
+     "mixed"
+    ],
+    "description": "Dominant direction the key light comes from."
+   },
+   "lighting_quality": {
+    "type": "string",
+    "enum": [
+     "hard",
+     "soft",
+     "mixed"
+    ],
+    "description": "Shadow edge character."
+   },
+   "contrast": {
+    "type": "string",
+    "enum": [
+     "low",
+     "moderate",
+     "high",
+     "extreme"
+    ],
+    "description": "Distance between the brightest and darkest areas that carry detail."
+   },
+   "light_sources": {
+    "type": "array",
+    "items": {
+     "type": "string"
+    },
+    "description": "Light sources visible or clearly implied IN the frame (practical lamps, fire, screens, sun, emissive props). (at most 6 short entries)"
+   },
+   "palette": {
+    "type": "string",
+    "description": "The colour scheme in under 12 words."
+   },
+   "foreground": {
+    "type": "string",
+    "description": "What occupies the foreground layer, under 20 words. 'empty' if nothing."
+   },
+   "midground": {
+    "type": "string",
+    "description": "What occupies the midground layer -- usually the subject -- under 20 words."
+   },
+   "background": {
+    "type": "string",
+    "description": "What occupies the background layer, under 20 words."
+   },
+   "subjects": {
+    "type": "array",
+    "items": {
+     "type": "string"
+    },
+    "description": "The people or creatures in frame and what each is doing. (at most 6 short entries)"
+   },
+   "surrounding_objects": {
+    "type": "array",
+    "items": {
+     "type": "string"
+    },
+    "description": "Notable set objects and props that establish the place. (at most 6 short entries)"
+   },
+   "texture": {
+    "type": "string",
+    "enum": [
+     "film-grain",
+     "digital-clean",
+     "painterly",
+     "cel-animated",
+     "3d-rendered",
+     "glossy-cg"
+    ],
+    "description": "Surface character of the image itself."
+   },
+   "genre_register": {
+    "type": "string",
+    "enum": [
+     "noir",
+     "horror-slow-burn",
+     "horror-slasher",
+     "psychological-thriller",
+     "action-chaos",
+     "action-precision",
+     "romance",
+     "sci-fi-sterile",
+     "sci-fi-used-future",
+     "sci-fi-neon",
+     "period-drama",
+     "western",
+     "documentary-verite",
+     "commercial-product",
+     "coming-of-age",
+     "other"
+    ],
+    "description": "The genre contract the frame's light, camera and palette belong to."
+   },
+   "confidence": {
+    "type": "string",
+    "enum": [
+     "low",
+     "medium",
+     "high"
+    ],
+    "description": "How sure you are overall."
+   }
+  },
+  "required": [
+   "shot_size",
+   "camera_angle",
+   "angle_evidence",
+   "lens_impression",
+   "lens_evidence",
+   "depth_of_field",
+   "subject_scale",
+   "composition",
+   "exposure",
+   "true_black_share",
+   "lighting_key",
+   "lighting_direction",
+   "lighting_quality",
+   "contrast",
+   "light_sources",
+   "palette",
+   "foreground",
+   "midground",
+   "background",
+   "subjects",
+   "surrounding_objects",
+   "texture",
+   "genre_register",
+   "confidence"
+  ],
+  "propertyOrdering": [
+   "shot_size",
+   "camera_angle",
+   "angle_evidence",
+   "lens_impression",
+   "lens_evidence",
+   "depth_of_field",
+   "subject_scale",
+   "composition",
+   "exposure",
+   "true_black_share",
+   "lighting_key",
+   "lighting_direction",
+   "lighting_quality",
+   "contrast",
+   "light_sources",
+   "palette",
+   "foreground",
+   "midground",
+   "background",
+   "subjects",
+   "surrounding_objects",
+   "texture",
+   "genre_register",
+   "confidence"
+  ]
+ },
+ "craft_ordinal": {
+  "shot_size": [
+   "extreme-wide",
+   "wide",
+   "full",
+   "medium-full",
+   "medium",
+   "medium-close",
+   "close-up",
+   "extreme-close-up"
+  ],
+  "lens_impression": [
+   "ultra-wide",
+   "wide-angle",
+   "normal",
+   "telephoto",
+   "macro",
+   "indeterminate"
+  ],
+  "depth_of_field": [
+   "deep",
+   "moderate",
+   "shallow"
+  ],
+  "contrast": [
+   "low",
+   "moderate",
+   "high",
+   "extreme"
+  ]
+ },
+ "craft_prompt": "You are annotating a single frame from a film or animated series for a cinematography training corpus. Describe the CRAFT, not the story.\n\nReport only what this frame shows. Do not name the title, characters, actors or franchise -- the corpus records how the shot was made, not what it is from. Do not invent detail you cannot see: if a field is genuinely unreadable, choose the closest value and set confidence to low.\n\nJudge the camera from the image itself. Perspective stretch and edge behaviour give you the lens register; the ground plane and converging verticals give you the angle. Never report a focal length in millimetres -- report the register the image reads as.\n\nTWO FIELDS ARE ROUTINELY GOT WRONG. Read these before answering them.\n\n`exposure` is the brightness question. `lighting_key` is NOT. Key is the ratio between key and fill -- it is a question about SHADOWS, answered by looking at the DARKEST part of the frame, never the brightest. A brightly lit frame that still falls to true black is LOW-key. A dim frame lit evenly with no true blacks is HIGH-key. If you find yourself giving `lighting_key` and `exposure` the same answer, you have answered brightness twice and shadow depth not at all.\n\n`lens_impression` requires a visible cue: edge distortion, stretched foreground, or compressed background separation. Most tight shots contain no such cue, and the correct answer there is `indeterminate`. Do not default to `wide-angle` -- if the frame does not show you the lens, say so.\n\nWORD LIMITS ARE HARD. Every free-text field states a maximum. Answer those as clipped noun phrases, not sentences -- no \"The camera is positioned...\", just the cue itself. Going over the limit is an error even when the extra words are true.\n\nAnswer with JSON matching the given schema.",
+ "style_json_schema": {
+  "type": "object",
+  "properties": {
+   "render_mode": {
+    "type": "string",
+    "enum": [
+     "photographic",
+     "photoreal-cg",
+     "stylised-realistic",
+     "painterly",
+     "cel-shaded",
+     "graphic-abstract"
+    ],
+    "description": "How the images are made, judged from surfaces and edges rather than subject matter."
+   },
+   "detail_density": {
+    "type": "string",
+    "enum": [
+     "sparse",
+     "moderate",
+     "dense",
+     "hyper-dense"
+    ],
+    "description": "How much incidental detail fills the frame -- set dressing, wear, background business."
+   },
+   "surface_realism": {
+    "type": "string",
+    "enum": [
+     "flat",
+     "simplified",
+     "plausible",
+     "physically-convincing"
+    ],
+    "description": "How convincingly materials behave: skin, metal, cloth, stone."
+   },
+   "atmospherics": {
+    "type": "string",
+    "enum": [
+     "none",
+     "light-haze",
+     "heavy-haze",
+     "particulate",
+     "volumetric-shafts"
+    ],
+    "description": "Particulate and haze in the air across these frames."
+   },
+   "palette_strategy": {
+    "type": "string",
+    "enum": [
+     "monochrome",
+     "duotone",
+     "complementary-split",
+     "desaturated-naturalistic",
+     "saturated-vivid",
+     "warm-cool-split"
+    ],
+    "description": "How colour is organised across the set."
+   },
+   "black_handling": {
+    "type": "string",
+    "enum": [
+     "crushed",
+     "deep-neutral",
+     "lifted-milky"
+    ],
+    "description": "What happens in the darkest areas."
+   },
+   "edge_treatment": {
+    "type": "string",
+    "enum": [
+     "crisp",
+     "soft",
+     "bloom-heavy",
+     "diffused"
+    ],
+    "description": "How edges and highlights resolve."
+   },
+   "motion_treatment": {
+    "type": "string",
+    "enum": [
+     "frozen-crisp",
+     "motion-blur",
+     "strobed",
+     "mixed"
+    ],
+    "description": "How movement is rendered where visible."
+   },
+   "consistency_across_frames": {
+    "type": "string",
+    "enum": [
+     "uniform",
+     "mostly-uniform",
+     "varied"
+    ],
+    "description": "Whether these frames look like one production. A source whose own style varies is a finding."
+   },
+   "signature": {
+    "type": "string",
+    "description": "What makes this look distinctive, under 25 words. Name properties, not titles or franchises."
+   },
+   "imitable_recipe": {
+    "type": "string",
+    "description": "How you would instruct an image generator to reproduce this look, under 40 words. Concrete visual instructions only -- no proper nouns, no studio or franchise names."
+   }
+  },
+  "required": [
+   "render_mode",
+   "detail_density",
+   "surface_realism",
+   "atmospherics",
+   "palette_strategy",
+   "black_handling",
+   "edge_treatment",
+   "motion_treatment",
+   "consistency_across_frames",
+   "signature",
+   "imitable_recipe"
+  ],
+  "additionalProperties": false
+ },
+ "style_gemini_schema": {
+  "type": "object",
+  "properties": {
+   "render_mode": {
+    "type": "string",
+    "enum": [
+     "photographic",
+     "photoreal-cg",
+     "stylised-realistic",
+     "painterly",
+     "cel-shaded",
+     "graphic-abstract"
+    ],
+    "description": "How the images are made, judged from surfaces and edges rather than subject matter."
+   },
+   "detail_density": {
+    "type": "string",
+    "enum": [
+     "sparse",
+     "moderate",
+     "dense",
+     "hyper-dense"
+    ],
+    "description": "How much incidental detail fills the frame -- set dressing, wear, background business."
+   },
+   "surface_realism": {
+    "type": "string",
+    "enum": [
+     "flat",
+     "simplified",
+     "plausible",
+     "physically-convincing"
+    ],
+    "description": "How convincingly materials behave: skin, metal, cloth, stone."
+   },
+   "atmospherics": {
+    "type": "string",
+    "enum": [
+     "none",
+     "light-haze",
+     "heavy-haze",
+     "particulate",
+     "volumetric-shafts"
+    ],
+    "description": "Particulate and haze in the air across these frames."
+   },
+   "palette_strategy": {
+    "type": "string",
+    "enum": [
+     "monochrome",
+     "duotone",
+     "complementary-split",
+     "desaturated-naturalistic",
+     "saturated-vivid",
+     "warm-cool-split"
+    ],
+    "description": "How colour is organised across the set."
+   },
+   "black_handling": {
+    "type": "string",
+    "enum": [
+     "crushed",
+     "deep-neutral",
+     "lifted-milky"
+    ],
+    "description": "What happens in the darkest areas."
+   },
+   "edge_treatment": {
+    "type": "string",
+    "enum": [
+     "crisp",
+     "soft",
+     "bloom-heavy",
+     "diffused"
+    ],
+    "description": "How edges and highlights resolve."
+   },
+   "motion_treatment": {
+    "type": "string",
+    "enum": [
+     "frozen-crisp",
+     "motion-blur",
+     "strobed",
+     "mixed"
+    ],
+    "description": "How movement is rendered where visible."
+   },
+   "consistency_across_frames": {
+    "type": "string",
+    "enum": [
+     "uniform",
+     "mostly-uniform",
+     "varied"
+    ],
+    "description": "Whether these frames look like one production. A source whose own style varies is a finding."
+   },
+   "signature": {
+    "type": "string",
+    "description": "What makes this look distinctive, under 25 words. Name properties, not titles or franchises."
+   },
+   "imitable_recipe": {
+    "type": "string",
+    "description": "How you would instruct an image generator to reproduce this look, under 40 words. Concrete visual instructions only -- no proper nouns, no studio or franchise names."
+   }
+  },
+  "required": [
+   "render_mode",
+   "detail_density",
+   "surface_realism",
+   "atmospherics",
+   "palette_strategy",
+   "black_handling",
+   "edge_treatment",
+   "motion_treatment",
+   "consistency_across_frames",
+   "signature",
+   "imitable_recipe"
+  ],
+  "propertyOrdering": [
+   "render_mode",
+   "detail_density",
+   "surface_realism",
+   "atmospherics",
+   "palette_strategy",
+   "black_handling",
+   "edge_treatment",
+   "motion_treatment",
+   "consistency_across_frames",
+   "signature",
+   "imitable_recipe"
+  ]
+ }
+}
