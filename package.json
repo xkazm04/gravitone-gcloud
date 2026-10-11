@@ -26,6 +26,7 @@
     "check:gate": "npx tsx pipeline/gate-regression.mts",
     "check:assets-tree": "npx tsx pipeline/assets-tree-regression.mts",
     "preflight": "npx tsx pipeline/preflight.mts",
+    "test:mutants": "npx tsx pipeline/probe-mutants.mts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:ratchet": "node pipeline/lint-ratchet.mjs",
