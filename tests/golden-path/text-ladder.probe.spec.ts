@@ -47,6 +47,8 @@ const REAL_TURNS: TurnClass[] = [
   "sound-lesson",
   "suno-propose",
   "suno-riff",
+  "mv-treatment",
+  "mv-metadata",
   "ad-ideas",
   "ad-scenarios",
 ];

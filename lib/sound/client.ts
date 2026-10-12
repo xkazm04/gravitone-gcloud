@@ -4,6 +4,7 @@
 // `{ ok: false, status, error }`, the error being the engine's own words.
 
 import { accessHeader, withAccess } from "@/lib/imagingClient";
+import type { MvCalendarRequest, MvEnqueueRequest, MvFileKind, MvImportRequest, MvImportResult, MvJob, MvPatchRequest, MvQueueState, MvRegenerateRequest, MvSnapshot } from "./mv/types";
 import type { SunoClearRequest, SunoClearResult, SunoClip, SunoFields, SunoImportResult, SunoJob, SunoLane, SunoProposal, SunoQueueState, SunoSnapshot, SunoVerdict } from "@/lib/suno/types";
 
 import type {
@@ -162,3 +163,38 @@ export const setSunoQueueRunning = (running: boolean) =>
  *  on suno.com is touched. */
 export const clearSunoRecords = (req: SunoClearRequest) =>
   call<SunoClearResult>("/api/sound/suno/clear", { method: "POST", body: JSON.stringify(req) });
+
+/* ── the music-video queue (/api/sound/mv/*, lib/sound/mv) ────────────────── */
+
+/** Every job, the Settled queue's switch, and whether the still vendor is reachable. */
+export const getMv = () => call<MvSnapshot>("/api/sound/mv");
+
+/** A job per track; a track already holding a live job is skipped. Free until Start. */
+export const enqueueMv = (req: MvEnqueueRequest) =>
+  call<{ jobs: MvJob[] }>("/api/sound/mv", { method: "POST", body: JSON.stringify(req) });
+
+/** The Settled column's switch. Start spends: a Leonardo still and two text turns per job. */
+export const setMvQueueRunning = (running: boolean) =>
+  call<{ queue: MvQueueState }>("/api/sound/mv/run", { method: "POST", body: JSON.stringify({ running }) });
+
+/** Re-queue one part of a finished (or failed) job. */
+export const regenerateMv = (id: string, req: MvRegenerateRequest) =>
+  call<{ job: MvJob }>(`/api/sound/mv/jobs/${encodeURIComponent(id)}`, { method: "POST", body: JSON.stringify(req) });
+
+export const patchMv = (id: string, patch: MvPatchRequest) =>
+  call<{ job: MvJob }>(`/api/sound/mv/jobs/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(patch) });
+
+/** Cancels a queued job, or deletes a finished one's record and files. An active job is a 409. */
+export const deleteMv = (id: string) => call<{ ok: true }>(`/api/sound/mv/jobs/${encodeURIComponent(id)}`, { method: "DELETE" });
+
+/** A job's file for an <video>/<img>/<audio> src: the access key rides as `k=`. */
+export const mvFileUrl = (id: string, kind: MvFileKind) =>
+  withAccess(`/api/sound/mv/jobs/${encodeURIComponent(id)}/file?kind=${kind}`);
+
+/** Every audio file directly in a folder on the studio machine becomes a finalized take. */
+export const importMvFolder = (req: MvImportRequest) =>
+  call<MvImportResult>("/api/sound/mv/import", { method: "POST", body: JSON.stringify(req) });
+
+/** A dry-run YouTube slot in /calendar carrying the video and its metadata. */
+export const sendMvToCalendar = (id: string, req: MvCalendarRequest) =>
+  call<{ job: MvJob; slotId: string }>(`/api/sound/mv/jobs/${encodeURIComponent(id)}/calendar`, { method: "POST", body: JSON.stringify(req) });

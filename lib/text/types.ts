@@ -160,6 +160,20 @@ export interface SourceReceipt {
  *                        variations that keep its identity out. A sibling of
  *                        `suno-propose` so a spend chart can say how often the
  *                        operator riffs on a keeper versus drafts from a lane.
+ *   · `mv-treatment`     lib/sound/mv/treatment.ts — a track's title (its
+ *                        file prefix and (main)/(instrumental) tag stripped)
+ *                        and its analysis summary in, one Leonardo still prompt
+ *                        plus the pulsing element's kind/position and particle
+ *                        knobs out. Prompt: pipeline/MV-TREATMENT-PROMPT.md. No
+ *                        lyrics, by the operator's ruling (2026-10-12).
+ *   · `mv-metadata`      lib/sound/mv/metadata.ts — the same title and analysis
+ *                        plus the treatment's rationale in, a YouTube title,
+ *                        description and tags out, held to
+ *                        lib/publish/youtube.ts snippetProblem. Chapters are
+ *                        drawn by code from the section pass, never by the
+ *                        model. Its own word: a video's words are re-rolled
+ *                        alone ("Regenerate · metadata") far more often than
+ *                        its image.
  *   · `compose`          /api/script — a notebook, a scope, a template and a
  *                        clock in, up to three candidate renders out. Prompt:
  *                        pipeline/SCRIPT-PROMPT.md. A sibling of `edit-plan`
@@ -205,6 +219,8 @@ export type TurnClass =
   | "sound-lesson"
   | "suno-propose"
   | "suno-riff"
+  | "mv-treatment"
+  | "mv-metadata"
   | "ad-ideas"
   | "ad-scenarios"
   | "repair"

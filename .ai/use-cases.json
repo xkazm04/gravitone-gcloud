@@ -85,6 +85,26 @@
       "owner": "gravity"
     },
     {
+      "key": "text.mv-treatment",
+      "name": "Write a music video's still prompt and pulsing element",
+      "description": "Turns a track's title and analysis summary (duration, tempo candidates, energy shape, sections; no lyrics) into one Leonardo still prompt that leaves a clean area, plus the code-drawn pulsing element's kind and position and the particle knobs (pipeline/MV-TREATMENT-PROMPT.md); ranges clamped by lib/sound/mv/treatment.ts.",
+      "kind": "generation",
+      "status": "active",
+      "component": "lib/sound/mv/treatment.ts::writeTreatment -> lib/text/router.ts::reason()",
+      "expected_models": ["claude-opus-5", "gemini-3.6-flash"],
+      "owner": "gravity"
+    },
+    {
+      "key": "text.mv-metadata",
+      "name": "Propose a music video's YouTube title, description and tags",
+      "description": "Turns a track's title, analysis summary and treatment rationale into a YouTube title, description and tags (pipeline/MV-METADATA-PROMPT.md), held to lib/publish/youtube.ts snippetProblem; chapter lines are appended by code from the section pass.",
+      "kind": "generation",
+      "status": "active",
+      "component": "lib/sound/mv/metadata.ts::writeMetadata -> lib/text/router.ts::reason()",
+      "expected_models": ["claude-opus-5", "gemini-3.6-flash"],
+      "owner": "gravity"
+    },
+    {
       "key": "text.repair",
       "name": "Repair an answer that failed its validator",
       "description": "Hands a paid-for answer that failed validation back to the model with the path-addressed findings that refused it: change only those paths, return the whole object. Capped at two attempts; a repair that edits outside the listed paths or removes facts is refused, and the repaired object re-enters the same validator.",

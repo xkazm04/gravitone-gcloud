@@ -35,6 +35,7 @@ import {
 import { KEY_VAR, currentEnv, isConfigured, type ImagingEnv } from "./env";
 import { logCall } from "./log";
 import { agyProvider } from "./providers/agy";
+import { leonardoStudioProvider } from "./providers/leonardoStudio";
 import { googleProvider } from "./providers/google";
 import { leonardoProvider } from "./providers/leonardo";
 import { ollamaProvider } from "./providers/ollama";
@@ -113,6 +114,7 @@ const PROVIDERS: Record<ProviderId, () => ImagingProvider> = {
   qwen: qwenProvider,
   ollama: ollamaProvider,
   agy: agyProvider,
+  "leonardo-studio": leonardoStudioProvider,
 };
 
 /** Who would answer this capability right now, in order. Exported so the

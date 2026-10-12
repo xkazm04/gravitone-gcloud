@@ -40,6 +40,11 @@ export const KEY_VAR: Record<ProviderId, string> = {
   // special-case "agy" rather than reading this string as a variable name.
   // The entry exists only so this Record stays exhaustive.
   agy: "agy (presence-checked, not an env var)",
+  // The Leonardo WEB STUDIO's credit pool, reached by driving a signed-in
+  // Chrome profile over CDP (providers/leonardoStudio.ts). The "key" is the
+  // CDP endpoint; set = this machine opted in. A separate pool from the API
+  // key's (which returned 402 in 2026-10).
+  "leonardo-studio": "LEONARDO_STUDIO_CDP",
 };
 
 export function keyFor(provider: ProviderId): string {

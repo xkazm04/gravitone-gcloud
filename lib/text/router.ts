@@ -101,6 +101,8 @@ const PLAN: Record<TextEnv, Record<TurnClass, TextProviderId[]>> = {
     "sound-lesson": ["claude-cli", "google"],
     "suno-propose": ["claude-cli", "google"],
     "suno-riff": ["claude-cli", "google"],
+    "mv-treatment": ["claude-cli", "google"],
+    "mv-metadata": ["claude-cli", "google"],
     "ad-ideas": ["claude-cli", "google"],
     "ad-scenarios": ["claude-cli", "google"],
     repair: ["claude-cli", "google"],
@@ -116,6 +118,8 @@ const PLAN: Record<TextEnv, Record<TurnClass, TextProviderId[]>> = {
     "sound-lesson": ["google"],
     "suno-propose": ["google"],
     "suno-riff": ["google"],
+    "mv-treatment": ["google"],
+    "mv-metadata": ["google"],
     "ad-ideas": ["google"],
     "ad-scenarios": ["google"],
     repair: ["google"],
@@ -197,6 +201,10 @@ const DEFAULT_TIMEOUT_MS: Record<TurnClass, number> = {
   // out — the size of a hunt map, so the hunt's ceiling.
   "suno-propose": 300_000,
   "suno-riff": 300_000,
+  // The music-video pair: a title and a one-screen analysis summary in, one
+  // small schema-shaped answer out - the Suno pair's size.
+  "mv-treatment": 300_000,
+  "mv-metadata": 300_000,
   // The two ads concept rounds: a brief (and, for scenarios, one picked idea)
   // in, one schema-shaped answer out — staged generation and gate screening
   // inside the one turn, so longer than a sound map and far shorter than a

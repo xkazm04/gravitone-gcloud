@@ -131,6 +131,9 @@ const MODEL_FOR_TURN: Record<TextRequest["turn"], string> = {
   // Flash for the Suno pair, like the hunt: a few short schema-shaped prompts.
   "suno-propose": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
   "suno-riff": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
+  // Flash for the music-video pair: one short schema-shaped answer each.
+  "mv-treatment": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
+  "mv-metadata": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
   // THE PRO MODEL for the ideas round, like `research`: it is judgement — a
   // product truth, six ideas pushed apart by mechanism, five yes/no gates per
   // idea — and the ads discipline's whole bet is that the idea is most of the
