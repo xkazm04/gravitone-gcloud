@@ -71,7 +71,8 @@ KIND — colour, weight, chrome — not merely by its place on the X axis.
 Articles has eleven statuses and Audio has four; neither decides the geometry. Each adapter
 maps its own machine onto the canon and declares **sub-bands** where it has detail worth
 seeing — Articles draws four inside `working` (`rsrch · draft · crit · ck`), Audio draws four
-inside `gate` (`triage · pending · remaster · edit`). The furniture stays still; the detail is
+inside `gate` (`triage · pending · remaster · edit`) and three inside `done` (`tracks · videos ·
+kept`, section 14). The furniture stays still; the detail is
 honest.
 
 The Y axis is a **view choice**, not a write. The re-group `Select` offers
@@ -407,3 +408,66 @@ draws in the **ungrouped** lane under every axis until it is moved. Dropping a c
 lane (any gate band) writes its `lane` (`{ axis, value }`, the axis the board is grouped by)
 through `PATCH /api/sound/suno/clips/[id]`, and that lane wins over the job's from then on.
 The same import runs without the app: `npm run suno:import`.
+
+## 14. Music videos (Settled, audio)
+
+Audio's Settled column is a second hand-switched queue (`lib/sound/mv/`, store
+`foundry-out/sound/mv.json`), drawn in three bands: **tracks** (finalized takes, as before),
+**videos** (every job not kept — queued with its place, active with its phase and clock, failed
+wearing the error's first words, finished and unjudged, dropped) and **kept**. A video is the
+native kind `mv`, id `audio:mv:<jobId>`, and draws in its **track's** lane: the take's row, the
+clip's lane (or its job's), and under every other axis whatever the track's own card reads; a
+track the board does not draw leaves it ungrouped. A cancelled job is not drawn and is counted
+under `hidden`.
+
+**Making one is free.** A take with a file, or a **kept** Suno clip, dropped on `videos` — or
+its card's **Make video** — becomes a job (`POST /api/sound/mv`); the track stays where it was.
+A clip dropped on `tracks` is refused ("a Suno clip is a link, not a file: drop it on videos"),
+an unkept clip is refused until it is kept, and a take dropped on `tracks` still finalizes with
+its label. A track that already holds a live job is skipped by the server; its Make video is
+inert, saying so.
+
+**The queue is switched by hand**, like the Suno queue. The Videos tile's menu says
+**Start videos · n** (`spends`: a Leonardo still through the studio pool and two text turns per
+job, so the arm holds it while STUB; inert with "nothing queued" or the still vendor's own
+sentence) and **Stop videos**. A job analyses the track, writes a treatment from the title and
+the analysis only, renders one still, animates particles and one code-drawn pulsing element
+over it, and writes the YouTube proposal (title, description with its chapter lines, tags) and a
+thumbnail. The chip in the controls row reads `VIDEOS RUNNING` / `VIDEOS STOPPED`
+(`notes.switched` carries `label: "videos"`, because "settled running" names nothing), amber
+with the job and phase when a crash stopped it. The board polls every 2s while a video is
+active, or queued with the queue running. A music-video read that fails degrades Settled alone;
+the tracks and every Suno stage still draw.
+
+**The tiles.** `tracks` and `videos` both offer **Import audio folder** (free; one path,
+default `~/Downloads/Misu`, `~` read as the studio machine's home): every audio file directly in it becomes a finalized
+take, a file already imported (same path and size) is skipped, and the answer is
+`N imported, M already here`. `videos` ends with **Delete all n here**: the records and their
+render files go, queued jobs are cancelled, the tracks stay; a video rendering now is left to
+finish.
+
+**A video's verbs.** **Keep** / **Drop** while a finished video waits on a verdict (Drop deletes
+the video, still and thumbnail and keeps the record and its metadata; dragging between `videos`
+and `kept` is the same verdict). **Regenerate** — a part (`image`: a new treatment and still,
+then a re-render; `motion`: new effect parameters on the same still; `metadata`: new text, no
+render) and an optional note; everything not named is kept byte-identical; inert while queued or
+rendering. **Edit metadata** (title, description, tags). **Send to Calendar** — a publish date
+and time, a dry-run YouTube slot; finished videos only, inert once a slot exists. **Delete**
+(the record and its render files; the track stays). A verb on a card inside a selection acts on
+every selected video, stopping at the first refusal and saying how far it got.
+
+### The detail, for every source
+
+- **Video.** A `video` medium plays in a `<video controls preload="metadata">` with the first
+  image as its poster (the still is not drawn twice). The raw element is the reviewed
+  exception the kit census counts, as the `<audio>` is: `components/kit/Player` owns no element.
+- **The source's verbs.** `cardVerbs(id)` draws as a row of buttons under the move orders,
+  disabled ones with their reason beside them. A click takes the menu's path: input or a
+  consequence opens VerbAsk, which replaces the detail; otherwise it runs at once, and a refusal
+  stays in the detail. The source is the armed one, so a spending verb is dry while STUB. An
+  `ok` is announced, re-reads the board and closes the detail.
+- **Texts.** `PipelineEntry.texts` (`{ label, value }[]`) draws each as a labelled block with a
+  **copy** button (`Copy <label>`). A video fills Title, Description and Tags.
+
+VerbAsk's forms: `suno-fields`, `count`, `text` (one labelled line), `datetime` (the browser's
+picker, sent as ISO 8601), `choice` (pills from `input.options`, plus a note) and `metadata`.

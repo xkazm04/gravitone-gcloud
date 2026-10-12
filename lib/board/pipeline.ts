@@ -85,6 +85,12 @@ export type PipelineItem = BoardItem & {
 export type PipelineEntry = BoardEntry & {
   item: PipelineItem;
   placement: PipelinePlacement;
+  /** Long text the work hands on whole - a video's YouTube title,
+   *  description, tags - which the detail draws as labelled blocks with a copy
+   *  button. Not facts: a fact is short and read; these are long and pasted
+   *  somewhere else, and a <dd> that wraps a 3000-character description is a
+   *  fact sheet nobody can read. Omitted when the item has none. */
+  texts?: { label: string; value: string }[];
 };
 
 /** One way to group the Y axis. Only axes the adapter knows are POPULATED
@@ -215,8 +221,10 @@ export interface PipelineLoadNotes {
   /** A stage that works only while the operator has it switched on (the Suno
    *  queue: a browser spending credits is started and stopped by hand).
    *  `interrupted` names a run a crash cut short, for the operator to check
-   *  before switching it on again. Absent = the source has no such stage. */
-  switched?: { stage: CanonStage; on: boolean; interrupted?: string }[];
+   *  before switching it on again. Absent = the source has no such stage.
+   *  `label` names WHAT runs where the stage's word would misname it (audio's
+   *  Settled column runs videos: "settled running" reads as nonsense). */
+  switched?: { stage: CanonStage; on: boolean; interrupted?: string; label?: string }[];
 }
 
 /** Per-item version bookkeeping, so a card re-renders on its own change and
@@ -281,13 +289,17 @@ export interface VerbTarget {
 }
 
 /** A verb's input form. `suno-fields` opens the prompt writer (title, style,
- *  lyrics, exclude); `count` asks for a small integer. `initial` pre-fills it. */
-export type VerbInputKind = "suno-fields" | "count";
+ *  lyrics, exclude); `count` asks for a small integer; `text` one line (a
+ *  folder path); `datetime` a local date and time, answered as ISO 8601;
+ *  `choice` one of `options` plus an optional note; `metadata` a video's
+ *  title, description and tags. `initial` pre-fills it, `label` names the
+ *  field where the kind alone does not. */
+export type VerbInputKind = "suno-fields" | "count" | "text" | "datetime" | "choice" | "metadata";
 
 export interface BoardVerb {
   id: string;
   label: string;
-  input?: { kind: VerbInputKind; initial?: VerbInput };
+  input?: { kind: VerbInputKind; initial?: VerbInput; label?: string; options?: { value: string; label: string }[] };
   /** Present = the verb is shown but inert, with this as its reason. */
   disabled?: string;
   /** Deletes or cancels work. Drawn apart, and never the menu's first item. */
@@ -303,7 +315,11 @@ export interface BoardVerb {
 
 export type VerbInput =
   | { kind: "suno-fields"; title?: string; style: string; lyrics?: string; exclude?: string }
-  | { kind: "count"; count: number };
+  | { kind: "count"; count: number }
+  | { kind: "text"; text: string }
+  | { kind: "datetime"; at: string }
+  | { kind: "choice"; choice: string; note?: string }
+  | { kind: "metadata"; title: string; description: string; tags: string[] };
 
 export type VerbResult = { ok: true; announce: string } | { ok: false; reason: string };
 

@@ -2,7 +2,7 @@
 
 // THE INPUT A SOURCE VERB ASKS FOR, before the source is asked to run it.
 //
-// Two forms, named by the verb (`BoardVerb.input.kind`, lib/board/pipeline.ts):
+// Six forms, named by the verb (`BoardVerb.input.kind`, lib/board/pipeline.ts):
 //
 //   suno-fields  the four fields a Suno prompt IS - title, style, lyrics,
 //                exclude. Style is the only one Suno refuses to go without, so
@@ -13,6 +13,15 @@
 //                source would have to translate back.
 //   count        a small integer, 1-8, as a stepper - a number field would take
 //                "40" from a stray keystroke for a verb that drafts with an LLM.
+//   text         one line, named by `input.label` (a folder on the studio
+//                machine). Required: an empty path is not a folder.
+//   datetime     a local date and time, sent as ISO 8601 - the browser's own
+//                picker, because a hand-typed date is a format argument.
+//   choice       one of `input.options` as pills (Segmented: a real radio
+//                group), plus an optional note - the part a video regenerates,
+//                and what to do differently.
+//   metadata     a video's title, description and tags; tags typed
+//                comma-separated and sent as a list, empties dropped.
 //
 // AND A THIRD, WITH NO FORM: a destructive verb that states its consequence
 // (`BoardVerb.confirm`) is asked here before it runs. The sentence is the
@@ -32,7 +41,7 @@ import { useId, useState } from "react";
 
 import { Minus, Plus } from "lucide-react";
 
-import { Field, TextArea, TextInput } from "@/components/ui/Field";
+import { Field, Segmented, TextArea, TextInput } from "@/components/ui/Field";
 import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Primitives";
 import type { BoardVerb, VerbInput, VerbResult } from "@/lib/board/pipeline";
@@ -73,11 +82,44 @@ export function VerbAsk({
   const [instrumental, setInstrumental] = useState(seed?.lyrics === INSTRUMENTAL);
   const [exclude, setExclude] = useState(seed?.exclude ?? "");
   const [count, setCount] = useState(() => clamp(initial?.kind === "count" ? initial.count : 4));
+  const [text, setText] = useState(initial?.kind === "text" ? initial.text : "");
+  const [at, setAt] = useState(initial?.kind === "datetime" ? toLocal(initial.at) : "");
+  const options = verb.input?.options ?? [];
+  const [choice, setChoice] = useState(initial?.kind === "choice" ? initial.choice : (options[0]?.value ?? ""));
+  const [note, setNote] = useState(initial?.kind === "choice" ? (initial.note ?? "") : "");
+  const meta = initial?.kind === "metadata" ? initial : null;
+  const [metaTitle, setMetaTitle] = useState(meta?.title ?? "");
+  const [description, setDescription] = useState(meta?.description ?? "");
+  const [tags, setTags] = useState(meta?.tags.join(", ") ?? "");
 
-  const valid = kind === "count" || style.trim().length > 0;
+  const valid =
+    kind === "count" ||
+    (kind === "suno-fields" && style.trim().length > 0) ||
+    (kind === "text" && text.trim().length > 0) ||
+    (kind === "datetime" && at !== "" && !Number.isNaN(Date.parse(at))) ||
+    (kind === "choice" && options.some((o) => o.value === choice)) ||
+    (kind === "metadata" && metaTitle.trim().length > 0);
 
   const input = (): VerbInput => {
     if (kind === "count") return { kind: "count", count };
+    if (kind === "text") return { kind: "text", text: text.trim() };
+    // `datetime-local` is the operator's wall clock; the contract is ISO.
+    if (kind === "datetime") return { kind: "datetime", at: new Date(at).toISOString() };
+    if (kind === "choice") {
+      const n = note.trim();
+      return { kind: "choice", choice, ...(n ? { note: n } : {}) };
+    }
+    if (kind === "metadata") {
+      return {
+        kind: "metadata",
+        title: metaTitle.trim(),
+        description,
+        tags: tags
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean),
+      };
+    }
     const t = title.trim();
     const l = instrumental ? INSTRUMENTAL : lyrics.trim();
     const x = exclude.trim();
@@ -100,6 +142,10 @@ export function VerbAsk({
   const styleId = useId();
   const lyricsId = useId();
   const excludeId = useId();
+  const fieldId = useId();
+  const noteId = useId();
+  const descriptionId = useId();
+  const tagsId = useId();
   const ids = { title: titleId, style: styleId, lyrics: lyricsId, exclude: excludeId };
 
   return (
@@ -138,6 +184,44 @@ export function VerbAsk({
           <p className={`${TYPE.title} text-white/80`} data-testid="pipeline-verb-consequence">
             {verb.confirm}
           </p>
+        ) : kind === "text" ? (
+          <Field label={verb.input?.label ?? "Text"} htmlFor={fieldId}>
+            <TextInput id={fieldId} autoFocus required aria-required value={text} onChange={(e) => setText(e.target.value)} disabled={busy} className="font-jetbrains" data-testid="pipeline-verb-text" />
+          </Field>
+        ) : kind === "datetime" ? (
+          <Field label={verb.input?.label ?? "When"} htmlFor={fieldId}>
+            <TextInput
+              id={fieldId}
+              type="datetime-local"
+              autoFocus
+              required
+              aria-required
+              value={at}
+              onChange={(e) => setAt(e.target.value)}
+              disabled={busy}
+              className="[color-scheme:dark]"
+              data-testid="pipeline-verb-datetime"
+            />
+          </Field>
+        ) : kind === "choice" ? (
+          <>
+            <Segmented label={verb.input?.label ?? "Choice"} value={choice} options={options.map((o) => ({ id: o.value, label: o.label }))} onChange={setChoice} />
+            <Field label="Note" htmlFor={noteId}>
+              <TextArea id={noteId} rows={3} value={note} onChange={(e) => setNote(e.target.value)} disabled={busy} data-testid="pipeline-verb-note" />
+            </Field>
+          </>
+        ) : kind === "metadata" ? (
+          <>
+            <Field label="Title" htmlFor={fieldId}>
+              <TextInput id={fieldId} autoFocus required aria-required value={metaTitle} onChange={(e) => setMetaTitle(e.target.value)} disabled={busy} data-testid="pipeline-verb-meta-title" />
+            </Field>
+            <Field label="Description" htmlFor={descriptionId}>
+              <TextArea id={descriptionId} rows={10} value={description} onChange={(e) => setDescription(e.target.value)} disabled={busy} className="font-jetbrains" data-testid="pipeline-verb-description" />
+            </Field>
+            <Field label="Tags" htmlFor={tagsId}>
+              <TextInput id={tagsId} value={tags} onChange={(e) => setTags(e.target.value)} disabled={busy} data-testid="pipeline-verb-tags" />
+            </Field>
+          </>
         ) : kind === "suno-fields" ? (
           <>
             <Field label="Title" htmlFor={ids.title}>
@@ -205,6 +289,14 @@ export function VerbAsk({
       </form>
     </Modal>
   );
+}
+
+/** An ISO instant as a `datetime-local` value, in the browser's own zone. */
+function toLocal(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
 function clamp(n: number): number {

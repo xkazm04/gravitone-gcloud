@@ -21,9 +21,11 @@
 // audio-queue-suno). The count is every stage head's sum; `hidden` stays in
 // `CanvasStatus.notes` for any surface that wants it.
 //
-// A SWITCHED STAGE SAYS WHETHER IT IS ON (`notes.switched`: the Suno queue).
-// Started and stopped from that column's tile menu; the chip is its state, and
-// a crash that switched it off carries the job and model to check.
+// A SWITCHED STAGE SAYS WHETHER IT IS ON (`notes.switched`: the Suno queue, and
+// audio's Settled videos). Started and stopped from that column's tile menu;
+// the chip is its state, and a crash that switched it off carries the job and
+// model to check. It names what runs - `label` where the stage word would
+// misname it ("videos running", never "settled running").
 
 import { Maximize2, Minimize2, Pause, Play, Unplug } from "lucide-react";
 
@@ -104,10 +106,10 @@ export default function BoardControls({
         >
           {s.on ? <Play aria-hidden className="h-4 w-4 shrink-0" /> : <Pause aria-hidden className="h-4 w-4 shrink-0" />}
           <span className={TYPE.label}>
-            {word(s.stage)} {s.on ? "running" : "stopped"}
+            {s.label ?? word(s.stage)} {s.on ? "running" : "stopped"}
           </span>
           {s.interrupted && (
-            <Hint tone="amber" label={`why ${word(s.stage)} stopped`}>
+            <Hint tone="amber" label={`why ${s.label ?? word(s.stage)} stopped`}>
               {s.interrupted}
             </Hint>
           )}

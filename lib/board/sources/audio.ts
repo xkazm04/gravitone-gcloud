@@ -21,7 +21,10 @@
 //             clips and clips imported from the operator's Suno library
 //             (`suno.import-library`, a triage cell verb; free, idempotent);
 //             then `pending` (kept takes and kept clips), `remaster`, `edit`
-//   done      a take's stage finalized
+//   done      Settled, in three bands: `tracks` (a take's stage finalized),
+//             `videos` (music-video jobs not kept - queued with their place,
+//             active with `progress`, failed wearing the error, finished and
+//             unjudged, dropped) and `kept` (a video whose verdict is keep)
 //
 // THE QUEUE IS SUNO-ONLY. A hunt leaf dropped on `working` - an ElevenLabs one
 // included - becomes ONE Suno proposal (server-side, idempotent per leaf) and is
@@ -49,26 +52,45 @@
 //
 // A FAILED SUNO READ IS A DEGRADED STAGE, NOT A FAILED LANE. The takes and hunts
 // still draw; proposed, working and gate say the queue could not be read.
+//
+// SETTLED IS THE SECOND HAND-SWITCHED QUEUE (lib/sound/mv). A take with a file
+// or a KEPT Suno clip dropped on `done / videos` (or "Make video") becomes a
+// music-video job - free: enqueueing never starts the queue. The Videos tile's
+// menu starts it (`mv.queue-start` spends a Leonardo still and two text turns a
+// job, so the arm holds it while STUB) and stops it. A video draws in its
+// TRACK's lane, read the way the track itself is read under every axis: the
+// card is the track's next life, not a new row. A failed music-video read
+// degrades `done` alone; the finished tracks still draw.
 
 import {
   cancelSunoJob,
   clearSunoRecords,
   createSunoProposal,
+  deleteMv,
   deleteSunoProposal,
+  enqueueMv,
   enqueueSuno,
   getGroups,
+  getMv,
   getSuno,
+  importMvFolder,
   importSunoLibraryClips,
   listHunts,
   listTakes,
+  mvFileUrl,
+  patchMv,
   patchSunoClip,
   patchTake,
   proposeSuno,
+  regenerateMv,
+  sendMvToCalendar,
+  setMvQueueRunning,
   setSunoQueueRunning,
   setSunoVerdict,
   takeFileUrl,
   type Result,
 } from "@/lib/sound/client";
+import { MV_PARTS, type MvJob, type MvSnapshot, type MvSource } from "@/lib/sound/mv/types";
 import type { Hunt, HuntNode, SoundGroups, SoundKind, SoundTake, Stage, TakePatch } from "@/lib/sound/types";
 import { SUNO_MODEL_LABEL, SUNO_PHASE_WORD, sunoModelLabel, type SunoClip, type SunoJob, type SunoLane, type SunoProposal, type SunoSnapshot } from "@/lib/suno/types";
 import { stackVersions, suggestLabel } from "@/app/playground/arrange/model";
@@ -98,7 +120,17 @@ export const AUDIO_DECIDE_REFUSAL = "an audio take is judged in the Sound lab's 
 export const AUDIO_LANE_ONLY_PROMPT = "a candidate has no row of its own until it is rendered";
 export const AUDIO_UNJUDGED_REFUSAL = "judge it in Triage first: only a kept take has a stage";
 export const AUDIO_ACTIVE_REFUSAL = "rendering now - it lands in triage when Suno finishes";
-export const AUDIO_CLIP_DONE_REFUSAL = "import the clip into the Sound lab first: a Suno clip is a link, not a file";
+/** A clip on `done / tracks`: tracks are takes with local bytes. */
+export const AUDIO_CLIP_DONE_REFUSAL = "a Suno clip is a link, not a file: drop it on videos to make a video";
+export const AUDIO_CLIP_UNKEPT_REFUSAL = "keep the clip first: only a kept clip makes a video";
+export const AUDIO_TAKE_NO_FILE_REFUSAL = "this take has no audio file to make a video from";
+export const AUDIO_KEPT_BAND_REFUSAL = "kept is a verdict on a finished video: make one on videos first";
+export const AUDIO_MV_REFUSAL = "a video stays in settled: keep it, or move it back to videos";
+export const AUDIO_MV_LANE_REFUSAL = "a video draws in its track's lane";
+export const AUDIO_MV_UNFINISHED_REFUSAL = "only a finished video is kept";
+export const MV_ROUTE = "POST /api/sound/mv";
+/** Where the operator's Suno downloads land (spark audio-music-video-queue). */
+export const MV_IMPORT_DIR = "~/Downloads/Misu";
 export const AUDIO_SUNO_LANE_REFUSAL = "a Suno prompt keeps the lane it was written in";
 export const QUEUE_ROUTE = "POST /api/sound/suno/queue";
 
@@ -109,13 +141,26 @@ const GATE_BANDS: StageBand[] = [
   { id: "edit", label: "edit" },
 ];
 
+const DONE_BANDS: StageBand[] = [
+  { id: "tracks", label: "tracks" },
+  { id: "videos", label: "videos" },
+  { id: "kept", label: "kept" },
+];
+
+const bandsOf = (s: CanonStage): StageBand[] | null => (s === "gate" ? GATE_BANDS : s === "done" ? DONE_BANDS : null);
+
+/** A drop on Settled with no band is a drop on its first band. Callers from
+ *  before Settled had bands send `done` + null, and meant a finalized take. */
+const bandFor = (to: CanonStage, band: string | null): string | null => (to === "done" && band === null ? "tracks" : band);
+
 type TakeNative = { kind: "take"; take: SoundTake; versions: number; item: PipelineItem };
 type IdeaNative = { kind: "idea"; hunt: Hunt; node: HuntNode; item: PipelineItem };
 type ProposalNative = { kind: "proposal"; proposal: SunoProposal; item: PipelineItem };
 type JobNative = { kind: "job"; job: SunoJob; position: number | null; item: PipelineItem };
 type ClipNative = { kind: "clip"; clip: SunoClip; lane: SunoLane | null; item: PipelineItem };
+type MvNative = { kind: "mv"; job: MvJob; position: number | null; item: PipelineItem };
 type SunoNative = ProposalNative | JobNative | ClipNative;
-type Native = TakeNative | IdeaNative | SunoNative;
+type Native = TakeNative | IdeaNative | SunoNative | MvNative;
 
 export type AudioPipelineSource = PipelineSource & { lastLoad(): PipelineLoadNotes };
 
@@ -134,7 +179,7 @@ const opOf = (kind: SoundKind) => (kind === "sfx" ? ("sfx" as const) : ("compose
 function takeSite(t: SoundTake): { stage: CanonStage; band: string | null } {
   if (t.verdict !== "kept") return { stage: "gate", band: "triage" };
   const stage: Stage = t.stage ?? "pending";
-  return stage === "finalized" ? { stage: "done", band: null } : { stage: "gate", band: stage };
+  return stage === "finalized" ? { stage: "done", band: "tracks" } : { stage: "gate", band: stage };
 }
 
 /** The row a Suno item draws in under the `group` axis: its lane's value when
@@ -152,12 +197,34 @@ function phaseWord(job: SunoJob): string {
 
 const failMove = (reason: string, retryable = false): MoveResult => ({ ok: false, reason, retryable });
 
+/** The first words of an engine's error, for a card that has one line. The
+ *  detail carries the whole sentence (the item's note). */
+function firstWords(s: string, n = 5): string {
+  const words = s.trim().split(/\s+/);
+  return words.length > n ? `${words.slice(0, n).join(" ")}...` : words.join(" ");
+}
+
+/** The state a video card leads with. An active job shows its phase as
+ *  `progress` instead; a queued one its place. */
+function mvState(j: MvJob): string | null {
+  if (j.state === "failed") return `failed: ${firstWords(j.error ?? "no reason given")}`;
+  if (j.state !== "done") return null;
+  return j.verdict === "keep" ? "kept" : j.verdict === "drop" ? "dropped" : "done";
+}
+
+const isLive = (j: MvJob) => j.state === "queued" || j.state === "active";
+
 export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelineSource {
   const now = opts.now ?? Date.now;
   const natives = new Map<string, Native>();
   /** Every proposal and job of the last read, drawn or not: a cancel returns
    *  the job's proposal, which was not on the board while it was queued. */
   let suno: SunoSnapshot | null = null;
+  /** The music-video queue's last read; null when it could not be read. */
+  let mv: MvSnapshot | null = null;
+  /** Every take of the last read by id - a video's track may be a version the
+   *  board does not draw (only a stack's head is drawn). */
+  let takeById = new Map<string, SoundTake>();
   /** A lane a hunt leaf was dropped on: interface-local until it is queued,
    *  then written as its proposal's lane. */
   const laneOverride = new Map<string, string>();
@@ -292,6 +359,53 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
     return { kind: "clip", clip: c, lane, item };
   };
 
+  /** A video's lane is its TRACK's row: the take's group, the clip's lane (or
+   *  its job's), ungrouped when the track is not in the last read. */
+  const mvRowOf = (j: MvJob): string => {
+    if (j.source.kind === "take") return takeById.get(j.source.id)?.group ?? UNGROUPED_LANE;
+    const c = suno?.clips.find((x) => x.id === j.source.id);
+    return c ? rowOf(c.lane ?? jobLaneOf(c)) : UNGROUPED_LANE;
+  };
+
+  const mvPositionOf = (j: MvJob): number | null => {
+    if (j.state !== "queued" || !mv) return null;
+    const active = mv.jobs.filter((x) => x.state === "active").length;
+    const ahead = mv.jobs.filter((x) => x.state === "queued" && x.enqueuedAt < j.enqueuedAt).length;
+    return active + ahead + 1;
+  };
+
+  const mvItem = (j: MvJob): MvNative => {
+    const id = itemId("audio", `mv:${j.id}`);
+    const lane = mvRowOf(j);
+    const position = mvPositionOf(j);
+    // A regenerate rewrites the files under the same URL; `v` keeps a browser
+    // from serving the last render from its cache.
+    const v = `&v=${j.endedAt ?? j.enqueuedAt}`;
+    const media: BoardMedia[] = [
+      ...(j.files.video ? [{ kind: "video" as const, src: `${mvFileUrl(j.id, "video")}${v}` }] : []),
+      ...(j.files.still ? [{ kind: "image" as const, src: `${mvFileUrl(j.id, "still")}${v}` }] : []),
+    ];
+    const m = j.metadata;
+    const item: PipelineItem = {
+      id,
+      source: "audio",
+      title: j.source.title,
+      projectId: null,
+      group: lane === UNGROUPED_LANE ? null : lane,
+      media,
+      machinePick: j.treatment?.rationale ?? null,
+      verdict: j.verdict === "keep" ? "approve" : j.verdict === "drop" ? "reject" : null,
+      reasons: [],
+      note: j.error ?? null,
+      createdAt: new Date(j.enqueuedAt).toISOString(),
+      lane,
+      placement: { stage: "done", band: j.verdict === "keep" ? "kept" : "videos", lane },
+      ...(j.state === "active" ? { progress: { phase: j.phase ?? "starting", startedAt: j.startedAt ?? now() } } : {}),
+      version: stamp(id, [j.state, j.phase, j.verdict, j.error, j.startedAt, j.endedAt, position, j.files.video, j.files.still, j.slotId, j.redo?.join(","), m?.title, m?.description, m?.tags.join(","), lane].join("|")),
+    };
+    return { kind: "mv", job: j, position, item };
+  };
+
   const factsOf = (n: Native): { name: string; value: string }[] => {
     switch (n.kind) {
       case "take": {
@@ -342,7 +456,36 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
           { name: "song", value: n.clip.songId },
         ];
       }
+      case "mv": {
+        const j = n.job;
+        const state = mvState(j);
+        const a = j.analysis;
+        return [
+          // The place or the state LEADS: the face prints it beside the title.
+          ...(n.position !== null ? [{ name: "queue", value: `#${n.position}` }] : state ? [{ name: "state", value: state }] : []),
+          { name: "track", value: j.source.kind === "take" ? "take" : "suno clip" },
+          ...(a ? [{ name: "length", value: `${Math.round(a.durationS)} s` }] : []),
+          ...(a?.tempoBpm.length ? [{ name: "tempo", value: `${Math.round(a.tempoBpm[0])} bpm` }] : []),
+          ...(j.treatment ? [{ name: "focal", value: j.treatment.motion.focal.kind }] : []),
+          ...(j.redo?.length ? [{ name: "redo", value: j.redo.join(" + ") }] : []),
+          ...(j.note ? [{ name: "redo note", value: j.note }] : []),
+          ...(j.slotId ? [{ name: "calendar", value: j.slotId }] : []),
+        ];
+      }
     }
+  };
+
+  /** A video's YouTube text, whole, to copy out. The description already
+   *  carries its chapter lines - the engine draws them in by code
+   *  (lib/sound/mv/types.ts MvMetadata) - so they are not added twice here. */
+  const textsOf = (n: Native): PipelineEntry["texts"] => {
+    if (n.kind !== "mv" || !n.job.metadata) return undefined;
+    const m = n.job.metadata;
+    return [
+      { label: "Title", value: m.title },
+      { label: "Description", value: m.description },
+      { label: "Tags", value: m.tags.join(", ") },
+    ];
   };
 
   const hrefOf = (n: Native): string => {
@@ -353,18 +496,24 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
         return "/playground?m=hunt";
       case "clip":
         return n.clip.url;
+      case "mv":
+        return n.job.files.video ? mvFileUrl(n.job.id, "video") : "/playground?m=arrange";
       default:
         return "https://suno.com/create";
     }
   };
 
-  const entryOf = (n: Native): PipelineEntry => ({
-    item: n.item,
-    placement: n.item.placement,
-    href: hrefOf(n),
-    facts: factsOf(n),
-    refuse: { approve: AUDIO_DECIDE_REFUSAL, reject: AUDIO_DECIDE_REFUSAL, clear: AUDIO_DECIDE_REFUSAL },
-  });
+  const entryOf = (n: Native): PipelineEntry => {
+    const texts = textsOf(n);
+    return {
+      item: n.item,
+      placement: n.item.placement,
+      href: hrefOf(n),
+      facts: factsOf(n),
+      refuse: { approve: AUDIO_DECIDE_REFUSAL, reject: AUDIO_DECIDE_REFUSAL, clear: AUDIO_DECIDE_REFUSAL },
+      ...(texts ? { texts } : {}),
+    };
+  };
 
   /* ── axes ───────────────────────────────────────────────────────────────── */
 
@@ -393,7 +542,7 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
   // on origin "score") and `measured.durationS` (only after a browser
   // analysis) - an axis that reads blank for most cards cannot tell
   // "ungrouped" from "unwritten".
-  const groupAxes: GroupAxis[] = [
+  const baseAxes: GroupAxis[] = [
     { id: "group", label: "row", of: (item) => item.lane },
     {
       id: "genre",
@@ -412,7 +561,7 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
         const n = natives.get(item.id);
         if (!n) return UNGROUPED_LANE;
         if (isSuno(n)) return sunoUnder(n, "provider", "suno");
-        return n.kind === "take" ? n.take.provider : n.node.provider;
+        return n.kind === "take" ? n.take.provider : n.kind === "idea" ? n.node.provider : UNGROUPED_LANE;
       },
     },
     {
@@ -422,7 +571,7 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
         const n = natives.get(item.id);
         if (!n) return UNGROUPED_LANE;
         if (isSuno(n)) return sunoUnder(n, "op", "compose");
-        return n.kind === "take" ? n.take.op : opOf(n.hunt.kind);
+        return n.kind === "take" ? n.take.op : n.kind === "idea" ? opOf(n.hunt.kind) : UNGROUPED_LANE;
       },
     },
     {
@@ -432,10 +581,32 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
         const n = natives.get(item.id);
         if (!n) return UNGROUPED_LANE;
         if (isSuno(n)) return sunoUnder(n, "origin", originOfSuno(n));
-        return n.kind === "take" ? n.take.origin : "hunt";
+        return n.kind === "take" ? n.take.origin : n.kind === "idea" ? "hunt" : UNGROUPED_LANE;
       },
     },
   ];
+
+  /** The drawn card of a video's track, when the board draws it. */
+  const trackOf = (n: MvNative): Native | undefined =>
+    natives.get(itemId("audio", n.job.source.kind === "take" ? `take:${n.job.source.id}` : `suno:clip:${n.job.source.id}`));
+
+  // A VIDEO IS READ AS ITS TRACK under every axis, so it sits in the row its
+  // track sits in whichever way the board is grouped. Under the row axis that
+  // is its own `lane` (built from the track's); under the others it asks the
+  // track's card, and a track the board does not draw leaves it ungrouped.
+  const groupAxes: GroupAxis[] = baseAxes.map((a) =>
+    a.id === "group"
+      ? a
+      : {
+          ...a,
+          of: (item: PipelineItem) => {
+            const n = natives.get(item.id);
+            if (n?.kind !== "mv") return a.of(item);
+            const t = trackOf(n);
+            return t && t.kind !== "mv" ? a.of(t.item) : UNGROUPED_LANE;
+          },
+        },
+  );
 
   /** Declared rows first in their declared order (music, then effects), then rows
    *  that exist only in the data, then the ungrouped row last and always present:
@@ -460,12 +631,14 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
 
   const refused = (reason: string): MoveOffer => ({ kind: "refused", reason });
 
-  const admits = (item: PipelineItem, to: CanonStage, band: string | null): MoveOffer => {
+  const admits = (item: PipelineItem, to: CanonStage, asked: string | null): MoveOffer => {
     const n = natives.get(item.id);
     if (!n) return refused("this card is not on the board any more");
     const here = n.item.placement;
-    if (to === "gate" ? band === null || !GATE_BANDS.some((b) => b.id === band) : band !== null) {
-      return refused(to === "gate" ? "the gate is drawn in bands; drop on one" : `${to} has no bands`);
+    const band = bandFor(to, asked);
+    const declared = bandsOf(to);
+    if (declared ? band === null || !declared.some((b) => b.id === band) : band !== null) {
+      return refused(declared ? `${to} is drawn in bands; drop on one` : `${to} has no bands`);
     }
     const same = to === here.stage && band === here.band;
     if (same) return { kind: "ok" };
@@ -479,18 +652,31 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
         if (n.job.state === "active") return refused(AUDIO_ACTIVE_REFUSAL);
         return to === "proposed" ? { kind: "ok" } : refused("a queued prompt lands in triage when Suno finishes");
       case "clip":
-        if (to === "done") return refused(AUDIO_CLIP_DONE_REFUSAL);
+        if (to === "done") {
+          if (band === "tracks") return refused(AUDIO_CLIP_DONE_REFUSAL);
+          if (band === "kept") return refused(AUDIO_KEPT_BAND_REFUSAL);
+          // Free: a job waits until the Videos tile is started, so no confirm.
+          return n.clip.verdict === "keep" ? { kind: "ok" } : refused(AUDIO_CLIP_UNKEPT_REFUSAL);
+        }
         if (to !== "gate") return refused("a rendered clip does not go back to being a prompt");
         return band === "triage" || band === "pending" ? { kind: "ok" } : refused("a Suno clip is kept or undecided; remaster and edit take an imported take");
       case "take": {
         const t = n.take;
         if (t.verdict !== "kept") return refused(AUDIO_UNJUDGED_REFUSAL);
         if (to === "proposed" || to === "working") return refused("a rendered take does not go back to being an idea");
+        if (to === "done" && band === "videos") return t.file ? { kind: "ok" } : refused(AUDIO_TAKE_NO_FILE_REFUSAL);
+        if (to === "done" && band === "kept") return refused(AUDIO_KEPT_BAND_REFUSAL);
         if (to === "done") {
           if (t.label?.trim()) return { kind: "ok" };
           return { kind: "needs", needs: "label", prompt: `Library label for "${t.title}", the name agents select it by. Suggested: ${suggestLabel(t, t.group)}` };
         }
         if (band === "triage") return refused("un-keeping a take is a verdict: do it in Triage");
+        return { kind: "ok" };
+      }
+      case "mv": {
+        // videos <-> kept is the verdict; nothing else moves a video.
+        if (to !== "done" || band === "tracks") return refused(AUDIO_MV_REFUSAL);
+        if (band === "kept") return n.job.state === "done" && n.job.verdict !== "drop" ? { kind: "ok" } : refused(AUDIO_MV_UNFINISHED_REFUSAL);
         return { kind: "ok" };
       }
     }
@@ -536,14 +722,60 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
 
   const huntRef = (n: IdeaNative) => `${n.hunt.id}:${n.node.id}`;
 
+  const rememberMv = (jobs: MvJob[]) => {
+    if (!mv) mv = { jobs: [], queue: { running: false }, driver: { ok: true } };
+    for (const j of jobs) {
+      const at = mv.jobs.findIndex((x) => x.id === j.id);
+      if (at < 0) mv.jobs.push(j);
+      else mv.jobs[at] = j;
+    }
+  };
+
+  /** The track a take or clip card hands the video queue. */
+  const mvSourceOf = (n: TakeNative | ClipNative): MvSource =>
+    n.kind === "take" ? { kind: "take", id: n.take.id, title: n.take.title } : { kind: "clip", id: n.clip.id, title: n.item.title };
+
+  /** Can this card become a video? null = yes, else the reason it cannot. */
+  const mvRefusal = (n: Native): string | null => {
+    if (n.kind === "take") return n.take.verdict !== "kept" ? AUDIO_UNJUDGED_REFUSAL : n.take.file ? null : AUDIO_TAKE_NO_FILE_REFUSAL;
+    if (n.kind === "clip") return n.clip.verdict === "keep" ? null : AUDIO_CLIP_UNKEPT_REFUSAL;
+    return "only a track becomes a video";
+  };
+
+  /** The live job a track already holds - an enqueue skips it, not doubles it. */
+  const liveJobOf = (src: MvSource): MvJob | undefined => mv?.jobs.find((j) => isLive(j) && j.source.kind === src.kind && j.source.id === src.id);
+
+  const enqueueVideo = async (src: MvSource): Promise<MoveResult> => {
+    const r = await enqueueMv({ sources: [src] });
+    if (!r.ok) return failMove(r.error, r.status === 0);
+    rememberMv(r.data.jobs);
+    const job = r.data.jobs[0] ?? liveJobOf(src);
+    if (!job) return failMove("the video queue answered with no job");
+    return { ok: true, item: settle(mvItem(job)) };
+  };
+
   const move = async (req: MoveRequest): Promise<MoveResult> => {
     const n = natives.get(req.itemId);
     if (!n) return failMove("this card is not on the board any more");
     const offer = admits(n.item, req.to, req.band);
     if (offer.kind === "refused") return failMove(offer.reason);
     const axis = req.axis;
-    const sameCell = req.to === n.item.placement.stage && req.band === n.item.placement.band;
+    const band = bandFor(req.to, req.band);
+    const sameCell = req.to === n.item.placement.stage && band === n.item.placement.band;
     const laneMoved = req.lane !== undefined && req.lane !== n.item.lane;
+
+    // A TRACK DROPPED ON VIDEOS becomes a job; the track stays where it was.
+    // Free (nothing runs until the Videos tile is started), so no `live` gate.
+    if (req.to === "done" && band === "videos" && (n.kind === "take" || n.kind === "clip")) return enqueueVideo(mvSourceOf(n));
+
+    if (n.kind === "mv") {
+      if (req.lane !== undefined && req.lane !== axisById(axis ?? "group").of(n.item)) return failMove(AUDIO_MV_LANE_REFUSAL);
+      if (sameCell) return { ok: true, item: n.item };
+      const r = await patchMv(n.job.id, { verdict: band === "kept" ? "keep" : null });
+      if (!r.ok) return failMove(r.error, r.status === 0);
+      rememberMv([r.data.job]);
+      return { ok: true, item: settle(mvItem(r.data.job)) };
+    }
 
     if (n.kind === "idea") {
       if (laneMoved && axis !== undefined && axis !== "group") return failMove(`only the row axis is written; ${axis} is read off the leaf`);
@@ -681,8 +913,56 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
     return null;
   };
 
+  /** The videos drawn in one Settled cell. */
+  const cellMv = (t: VerbTarget): MvNative[] => {
+    if (t.lane === undefined || t.stage !== "done") return [];
+    const axis = axisById(t.axis);
+    const out: MvNative[] = [];
+    for (const n of natives.values()) if (n.kind === "mv" && n.item.placement.band === (t.band ?? null) && axis.of(n.item) === t.lane) out.push(n);
+    return out;
+  };
+
+  const importVerb: BoardVerb = {
+    id: "mv.import-folder",
+    label: "Import audio folder",
+    input: { kind: "text", label: "Folder", initial: { kind: "text", text: MV_IMPORT_DIR } },
+  };
+
+  /** Settled's tiles: tracks import, videos is the second queue. */
+  const doneVerbs = (t: VerbTarget): BoardVerb[] => {
+    if (t.band === "tracks") return [importVerb];
+    if (t.band !== "videos") return [];
+    const running = mv?.queue.running === true;
+    const queued = mv?.jobs.filter((j) => j.state === "queued").length ?? 0;
+    const list = cellMv(t);
+    const clearable = list.filter((n) => n.job.state !== "active").length;
+    const busy = list.length - clearable;
+    return [
+      running
+        ? { id: "mv.queue-stop", label: "Stop videos" }
+        : {
+            id: "mv.queue-start",
+            label: `Start videos · ${queued}`,
+            spends: true,
+            ...(queued === 0 ? { disabled: "nothing queued" } : mv && !mv.driver.ok ? { disabled: mv.driver.reason ?? "the still vendor cannot be reached" } : {}),
+          },
+      importVerb,
+      ...(clearable
+        ? [
+            {
+              id: "mv.clear-cell",
+              label: `Delete all ${clearable} here`,
+              destructive: true as const,
+              confirm: `${plural(clearable, "video record and its render files are", "video records and their render files are")} deleted; queued ones are cancelled. The tracks stay.${busy ? " The video rendering now finishes." : ""}`,
+            },
+          ]
+        : []),
+    ];
+  };
+
   const cellVerbs = (target: VerbTarget): BoardVerb[] => {
     if (target.lane === undefined) return [];
+    if (target.stage === "done") return doneVerbs(target);
     const clear = clearVerb(target);
     const tail = clear ? [clear] : [];
     if (target.stage === "working") {
@@ -717,9 +997,59 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
     ];
   };
 
+  /** The verbs a video card carries. Regenerate and Delete are shown in every
+   *  state, inert with the reason where the job is not there yet; Keep / Drop
+   *  only while a finished video waits on a verdict, Send to Calendar only
+   *  once there is a video to send. */
+  const mvVerbs = (j: MvJob): BoardVerb[] => {
+    const settled = j.state === "done" || j.state === "failed";
+    const unready = j.state === "queued" ? "queued" : j.state === "active" ? "rendering now" : j.state;
+    const out: BoardVerb[] = [];
+    if (j.state === "done" && j.verdict === null) {
+      out.push(
+        { id: "mv.keep", label: "Keep" },
+        { id: "mv.drop", label: "Drop", confirm: "The video, its still and its thumbnail are deleted. The record and its metadata stay." },
+      );
+    }
+    out.push({
+      id: "mv.regenerate",
+      label: "Regenerate",
+      input: { kind: "choice", label: "Part", options: MV_PARTS.map((p) => ({ value: p, label: p })), initial: { kind: "choice", choice: "image" } },
+      ...(settled ? {} : { disabled: unready }),
+    });
+    if (j.metadata) {
+      const m = j.metadata;
+      out.push({
+        id: "mv.edit-metadata",
+        label: "Edit metadata",
+        input: { kind: "metadata", initial: { kind: "metadata", title: m.title, description: m.description, tags: m.tags } },
+        ...(j.state === "active" ? { disabled: "rendering now" } : {}),
+      });
+    }
+    if (j.state === "done" && j.files.video) {
+      out.push({ id: "mv.calendar", label: "Send to Calendar", input: { kind: "datetime", label: "Publish at" }, ...(j.slotId ? { disabled: "already in Calendar" } : {}) });
+    }
+    out.push({
+      id: "mv.delete",
+      label: "Delete",
+      destructive: true,
+      confirm: "The video record and its render files are deleted. The track stays.",
+      ...(j.state === "active" ? { disabled: "rendering now" } : {}),
+    });
+    return out;
+  };
+
+  const makeVerb = (n: TakeNative | ClipNative): BoardVerb => {
+    const why = mvRefusal(n);
+    const live = !why ? liveJobOf(mvSourceOf(n)) : undefined;
+    return { id: "mv.make", label: "Make video", ...(why ? { disabled: why } : live ? { disabled: "already in the video queue" } : {}) };
+  };
+
   const cardVerbs = (id: string): BoardVerb[] => {
     const n = natives.get(id);
     if (!n) return [];
+    if (n.kind === "mv") return mvVerbs(n.job);
+    if (n.kind === "take") return n.item.placement.stage === "done" ? [makeVerb(n)] : [];
     if (n.kind === "proposal")
       return [
         { id: "suno.riff", label: "Riff 3 variations" },
@@ -727,6 +1057,7 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
       ];
     if (n.kind === "clip")
       return [
+        ...(n.clip.verdict === "keep" ? [makeVerb(n)] : []),
         n.clip.verdict === "keep" ? { id: "suno.undecide", label: "Back to triage" } : { id: "suno.keep", label: "Keep" },
         { id: "suno.drop", label: "Drop" },
         { id: "suno.delete", label: "Delete", destructive: true, confirm: "The record leaves the board. The song stays in your Suno library; a library import brings it back." },
@@ -747,12 +1078,25 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
   /** A card verb's cards: the selection when it was asked inside one, else the
    *  card alone - each of the lead card's kind, so "Drop" on a clip never
    *  reaches a prompt that happens to be selected too. */
-  const cardsOf = <K extends SunoNative["kind"]>(target: VerbTarget, kind: K): Extract<SunoNative, { kind: K }>[] => {
+  const cardsOf = <K extends Native["kind"]>(target: VerbTarget, kind: K): Extract<Native, { kind: K }>[] => {
     const ids = target.itemIds?.length ? target.itemIds : target.itemId ? [target.itemId] : [];
     return ids.flatMap((id) => {
       const x = natives.get(id);
-      return x && x.kind === kind ? [x as Extract<SunoNative, { kind: K }>] : [];
+      return x && x.kind === kind ? [x as Extract<Native, { kind: K }>] : [];
     });
+  };
+
+  /** One write per video, stopping at the first refusal and saying how far it
+   *  got - a selection of five where the third refused is two done. */
+  const eachMv = async (list: MvNative[], write: (j: MvJob) => Promise<Result<{ job: MvJob } | { ok: true }>>, did: string): Promise<VerbResult> => {
+    let done = 0;
+    for (const x of list) {
+      const r = await write(x.job);
+      if (!r.ok) return no(done ? `${plural(done, "video", "videos")} ${did}; then: ${r.error}` : r.error);
+      if ("job" in r.data) rememberMv([r.data.job]);
+      done++;
+    }
+    return ok(`${named(list, "video", "videos")} ${did}`);
   };
   const named = (list: { item: PipelineItem }[], one: string, many: string) => (list.length === 1 ? `"${list[0].item.title}"` : plural(list.length, one, many));
 
@@ -889,6 +1233,84 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
         }
         return ok(`${named(jobs, "prompt", "prompts")} taken off the queue`);
       }
+      case "mv.queue-start":
+      case "mv.queue-stop": {
+        const running = verbId === "mv.queue-start";
+        const r = await setMvQueueRunning(running);
+        if (!r.ok) return no(r.error);
+        if (mv) mv = { ...mv, queue: r.data.queue };
+        return ok(running ? "videos started" : "videos stopping; the step in flight finishes");
+      }
+      case "mv.import-folder": {
+        const dir = input?.kind === "text" && input.text.trim() ? input.text.trim() : MV_IMPORT_DIR;
+        const r = await importMvFolder({ dir });
+        if (!r.ok) return no(r.error);
+        return ok(`${r.data.added} imported, ${r.data.skipped} already here`);
+      }
+      case "mv.clear-cell": {
+        const list = cellMv(target).filter((x) => x.job.state !== "active");
+        if (!list.length) return no("nothing here to clear");
+        let removed = 0;
+        for (const x of list) {
+          const r = await deleteMv(x.job.id);
+          if (!r.ok) return no(removed ? `${removed} deleted; then: ${r.error}` : r.error);
+          natives.delete(x.item.id);
+          removed++;
+        }
+        return ok(`${removed} deleted`);
+      }
+      case "mv.make": {
+        // The lead card's kind decides, as for every card verb: a selection of
+        // takes and clips makes videos of the lead's kind only.
+        if (n?.kind !== "take" && n?.kind !== "clip") return no("only a track becomes a video");
+        const cards: (TakeNative | ClipNative)[] = n.kind === "take" ? cardsOf(target, "take") : cardsOf(target, "clip");
+        const sources = cards.filter((c) => mvRefusal(c) === null).map(mvSourceOf);
+        if (!sources.length) return no(mvRefusal(n) ?? "nothing here makes a video");
+        const r = await enqueueMv({ sources });
+        if (!r.ok) return no(r.error);
+        rememberMv(r.data.jobs);
+        const skipped = sources.length - r.data.jobs.length;
+        return ok(`${plural(r.data.jobs.length, "video", "videos")} queued${skipped > 0 ? `, ${skipped} already in the queue` : ""}`);
+      }
+      case "mv.keep":
+      case "mv.drop": {
+        const list = cardsOf(target, "mv").filter((x) => x.job.state === "done" && x.job.verdict === null);
+        if (!list.length) return no("keep and drop are for a finished video nobody has judged");
+        const verdict = verbId === "mv.keep" ? ("keep" as const) : ("drop" as const);
+        return eachMv(list, (j) => patchMv(j.id, { verdict }), verdict === "keep" ? "kept" : "dropped");
+      }
+      case "mv.regenerate": {
+        const part = input?.kind === "choice" ? MV_PARTS.find((p) => p === input.choice) : undefined;
+        if (!part) return no(`regenerate one part: ${MV_PARTS.join(", ")}`);
+        const list = cardsOf(target, "mv").filter((x) => x.job.state === "done" || x.job.state === "failed");
+        if (!list.length) return no("only a finished or failed video is regenerated");
+        const note = input?.kind === "choice" ? input.note?.trim() : undefined;
+        return eachMv(list, (j) => regenerateMv(j.id, { part, ...(note ? { note } : {}) }), `back in the queue: ${part}`);
+      }
+      case "mv.edit-metadata": {
+        if (n?.kind !== "mv") return no("metadata belongs to a video");
+        if (input?.kind !== "metadata" || !input.title.trim()) return no("a video needs a title");
+        const r = await patchMv(n.job.id, { metadata: { title: input.title.trim(), description: input.description, tags: input.tags } });
+        if (!r.ok) return no(r.error);
+        rememberMv([r.data.job]);
+        return ok(`"${n.item.title}" metadata saved`);
+      }
+      case "mv.calendar": {
+        // One card: a publish time is a slot, and a selection does not share one.
+        if (n?.kind !== "mv") return no("only a finished video goes to Calendar");
+        if (input?.kind !== "datetime" || Number.isNaN(Date.parse(input.at))) return no("a publish date and time");
+        const r = await sendMvToCalendar(n.job.id, { publishAt: input.at });
+        if (!r.ok) return no(r.error);
+        rememberMv([r.data.job]);
+        return ok(`"${n.item.title}" in Calendar`);
+      }
+      case "mv.delete": {
+        const list = cardsOf(target, "mv").filter((x) => x.job.state !== "active");
+        if (!list.length) return no("a video rendering now is not deleted");
+        const r = await eachMv(list, (j) => deleteMv(j.id), "deleted");
+        if (r.ok) for (const x of list) natives.delete(x.item.id);
+        return r;
+      }
       default:
         return no(`no verb ${verbId} on audio`);
     }
@@ -896,7 +1318,12 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
 
   // A stopped queue with work waiting changes only when somebody presses Start,
   // and that reloads; polling it would be a read every two seconds for nothing.
-  const pollMs = (): number => (suno?.jobs.some((j) => j.state === "active" || (j.state === "queued" && suno?.queue.running)) ? 2000 : 0);
+  // The video queue is read on the same rule.
+  const pollMs = (): number =>
+    suno?.jobs.some((j) => j.state === "active" || (j.state === "queued" && suno?.queue.running)) ||
+    mv?.jobs.some((j) => j.state === "active" || (j.state === "queued" && mv?.queue.running))
+      ? 2000
+      : 0;
 
   /* ── load ───────────────────────────────────────────────────────────────── */
 
@@ -904,7 +1331,7 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
     // Three reads that can fail the lane (a failure throws: unavailable or
     // error), and the Suno read, which can only degrade its stages. An empty
     // pool is the successful read of nothing and returns [].
-    const [takesR, huntsR, groupsR, sunoR] = await Promise.all([listTakes(), listHunts(), getGroups(), getSuno()]);
+    const [takesR, huntsR, groupsR, sunoR, mvR] = await Promise.all([listTakes(), listHunts(), getGroups(), getSuno(), getMv()]);
     const takes = must(takesR, "/api/sound/takes").takes;
     const hunts = must(huntsR, "/api/sound/hunts").hunts;
     groups = must(groupsR, "/api/sound/groups").groups;
@@ -915,6 +1342,13 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
       const reason = `the Suno queue could not be read: ${sunoR.error}`;
       for (const stage of ["proposed", "working", "gate"] as const) degraded.push({ stage, reason });
     }
+    // The video queue degrades Settled alone: the finished tracks still draw.
+    if (mvR.ok) mv = mvR.data;
+    else {
+      mv = null;
+      degraded.push({ stage: "done", reason: `the music-video queue could not be read: ${mvR.error}` });
+    }
+    takeById = new Map(takes.map((t) => [t.id, t]));
 
     const next = new Map<string, Native>();
     const kept = takes.filter((t) => t.verdict === "kept");
@@ -978,15 +1412,33 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
       }
     }
 
+    // After the takes and clips: a video's lane is read off its track.
+    let cancelled = 0;
+    if (mv) {
+      for (const j of mv.jobs) {
+        if (j.state === "cancelled") {
+          cancelled++;
+          continue;
+        }
+        const n = mvItem(j);
+        next.set(n.item.id, n);
+      }
+      if (!mv.driver.ok && mv.jobs.some((j) => j.state === "queued")) {
+        degraded.push({ stage: "done", reason: mv.driver.reason ?? "the still vendor cannot be reached" });
+      }
+    }
+
     natives.clear();
     for (const [k, v] of next) natives.set(k, v);
     const hidden: PipelineLoadNotes["hidden"] = [];
     if (stillOut > 0) hidden.push({ stage: "proposed", count: stillOut, why: "hunt leaves rendering or awaiting a Suno return" });
     if (dropped > 0) hidden.push({ stage: "gate", count: dropped, why: "Suno clips dropped" });
-    const switched: PipelineLoadNotes["switched"] = suno
-      ? [{ stage: "working", on: suno.queue.running, ...(suno.queue.interrupted ? { interrupted: suno.queue.interrupted } : {}) }]
-      : undefined;
-    notes = { hidden, damaged: [], ...(degraded.length ? { degraded } : {}), ...(switched ? { switched } : {}) };
+    if (cancelled > 0) hidden.push({ stage: "done", count: cancelled, why: "music-video jobs cancelled" });
+    const switched: NonNullable<PipelineLoadNotes["switched"]> = [
+      ...(suno ? [{ stage: "working" as const, on: suno.queue.running, ...(suno.queue.interrupted ? { interrupted: suno.queue.interrupted } : {}) }] : []),
+      ...(mv ? [{ stage: "done" as const, on: mv.queue.running, label: "videos", ...(mv.queue.interrupted ? { interrupted: mv.queue.interrupted } : {}) }] : []),
+    ];
+    notes = { hidden, damaged: [], ...(degraded.length ? { degraded } : {}), ...(switched.length ? { switched } : {}) };
     return [...natives.values()].map(entryOf);
   };
 
@@ -1001,7 +1453,7 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
     commitsOn: null,
 
     stages: ["proposed", "working", "gate", "done"],
-    bands: { gate: GATE_BANDS },
+    bands: { gate: GATE_BANDS, done: DONE_BANDS },
     groupAxes,
     lanes,
 

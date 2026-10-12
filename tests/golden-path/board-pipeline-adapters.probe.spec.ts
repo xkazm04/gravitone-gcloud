@@ -20,6 +20,10 @@
 //     Suno queue: a dry move is stubbed, a live one enqueues, a queued job
 //     cancels back to proposed, an active one is refused; the cell and card
 //     verbs; a failed Suno read degrades its stages and the takes still draw.
+//   · Audio's Settled column is the music-video queue: three bands, a video in
+//     its track's lane, a track dropped on videos enqueues (free), the Videos
+//     tile's switch spends, the card verbs reach their routes, and a failed
+//     music-video read degrades Settled alone.
 //
 // Nothing here reaches a real route. A POST that a test lets through goes to the
 // replaced fetch, which records it and answers from a fixture.
@@ -30,7 +34,16 @@ import { canTransition, ARTICLE_STATUSES, RUN_COST_HINT, type ArticleRun, type A
 import { CANON_STAGES, UNGROUPED_LANE, isPipelineSource, type CanonStage, type MoveOffer, type PipelineItem } from "@/lib/board/pipeline";
 import { stateOfEntries, stateOfError } from "@/lib/board/registry";
 import { articleMachineRefusal, articleTransitionRefusal, DONE_WINDOW_DAYS, isStubbedMove, makeArticlesSource, TOPIC_LIMIT } from "@/lib/board/sources/articles";
-import { AUDIO_UNJUDGED_REFUSAL, makeAudioSource } from "@/lib/board/sources/audio";
+import {
+  AUDIO_CLIP_DONE_REFUSAL,
+  AUDIO_CLIP_UNKEPT_REFUSAL,
+  AUDIO_MV_LANE_REFUSAL,
+  AUDIO_TAKE_NO_FILE_REFUSAL,
+  AUDIO_UNJUDGED_REFUSAL,
+  MV_IMPORT_DIR,
+  makeAudioSource,
+} from "@/lib/board/sources/audio";
+import type { MvJob, MvSnapshot } from "@/lib/sound/mv/types";
 import type { Hunt, HuntNode, SoundTake } from "@/lib/sound/types";
 import type { SunoClip, SunoJob, SunoProposal, SunoSnapshot } from "@/lib/suno/types";
 
@@ -495,12 +508,15 @@ const GROUPS = { music: ["ambient", "cinematic", "electronic", "hip hop"], sfx: 
 
 const EMPTY_SUNO = (): SunoSnapshot => ({ proposals: [], jobs: [], clips: [], driver: { ok: true }, queue: { running: false } });
 
-function soundApi(takes: SoundTake[], hunts: Hunt[], groups = GROUPS, suno: SunoSnapshot = EMPTY_SUNO()): Handler {
+const EMPTY_MV = (): MvSnapshot => ({ jobs: [], queue: { running: false }, driver: { ok: true } });
+
+function soundApi(takes: SoundTake[], hunts: Hunt[], groups = GROUPS, suno: SunoSnapshot = EMPTY_SUNO(), mv: MvSnapshot = EMPTY_MV()): Handler {
   return (url, method) => {
     if (url.pathname === "/api/sound/takes" && method === "GET") return json({ takes });
     if (url.pathname === "/api/sound/hunts" && method === "GET") return json({ hunts });
     if (url.pathname === "/api/sound/groups") return json({ groups });
     if (url.pathname === "/api/sound/suno" && method === "GET") return json(suno);
+    if (url.pathname === "/api/sound/mv" && method === "GET") return json(mv);
     return json({ error: "unrouted in the probe" }, 404);
   };
 }
@@ -575,7 +591,8 @@ test("audio pipeline: every stage lands where the canon says, and the pool reads
     const placed = { a: site("audio:take:a"), b: site("audio:take:b"), c: site("audio:take:c"), d: site("audio:take:d"), e: site("audio:take:e"), idea: site("audio:hunt:h1:n1"), suno: site("audio:hunt:h1:n3") };
     console.log(`\nAUDIO placement\n${JSON.stringify(placed, null, 2)}`);
     // A Suno leaf awaiting a return that never came (no takes) is automatable now: a candidate.
-    expect(placed).toEqual({ a: "gate/pending", b: "gate/remaster", c: "gate/edit", d: "done", e: "gate/triage", idea: "proposed", suno: "proposed" });
+    // Settled is drawn in bands since the music-video queue: a finalized take is a `tracks` card.
+    expect(placed).toEqual({ a: "gate/pending", b: "gate/remaster", c: "gate/edit", d: "done/tracks", e: "gate/triage", idea: "proposed", suno: "proposed" });
     // a rejected take has no stage; a rendered leaf, and a Suno leaf whose return was filed, are drawn as their takes
     const ids = entries.map((e) => e.item.id);
     expect(ids).not.toContain("audio:take:f");
@@ -938,6 +955,361 @@ test("audio pipeline: the verdict half is refused by name - a take is judged in 
   try {
     const src = makeAudioSource({ now: () => NOW });
     await expect(src.decide("audio:take:a", "approve")).rejects.toThrow(/Triage/);
+  } finally {
+    f.restore();
+  }
+});
+
+/* ── the music-video queue (Settled) ──────────────────────────────────────── */
+
+const mvJob = (id: string, extra: Partial<MvJob> = {}): MvJob => ({
+  id,
+  source: { kind: "take", id: "t1", title: "take t1" },
+  state: "queued",
+  files: {},
+  verdict: null,
+  enqueuedAt: NOW - 60_000,
+  ...extra,
+});
+
+const DONE_FILES = { audio: "mv/x/audio.mp3", still: "mv/x/still.png", video: "mv/x/video.mp4", thumb: "mv/x/thumb.jpg" };
+const METADATA = {
+  title: "Night Drive - lo-fi visualizer",
+  description: "A slow drive through rain.\n\n0:00 intro\n0:42 drop",
+  tags: ["lofi", "night drive", "visualizer"],
+  chapters: [
+    { startS: 0, label: "intro" },
+    { startS: 42, label: "drop" },
+  ],
+};
+
+/** A board with Settled populated: three tracks (a take in `cinematic`, a take
+ *  with no file, a kept clip in `electronic` by its job) and a video in each
+ *  state. */
+function settled(mvExtra: Partial<MvSnapshot> = {}) {
+  const takes = [
+    take("t1", { stage: "finalized", label: "Night", group: "cinematic", finalizedAt: iso(1) }),
+    take("t2", { stage: "finalized", label: "Bare", group: "ambient", file: null, finalizedAt: iso(1) }),
+    take("t3", { stage: "pending", group: "ambient" }),
+  ];
+  const suno: SunoSnapshot = {
+    proposals: [proposal("p1")],
+    jobs: [job("j1", "p1", { state: "done", clipIds: ["ck", "cu"] })],
+    clips: [sunoClip("ck", "j1", { verdict: "keep" }), sunoClip("cu", "j1")],
+    driver: { ok: true },
+    queue: { running: false },
+  };
+  const mv: MvSnapshot = {
+    jobs: [
+      mvJob("mj-queued", { enqueuedAt: NOW - 10_000 }),
+      mvJob("mj-active", { state: "active", phase: "rendering", startedAt: NOW - 4000, source: { kind: "clip", id: "ck", title: "clip ck" } }),
+      mvJob("mj-failed", { state: "failed", error: "leonardo studio: the profile is signed out of app.leonardo.ai", endedAt: NOW - 1000 }),
+      mvJob("mj-done", { state: "done", files: DONE_FILES, metadata: METADATA, endedAt: NOW - 500, analysis: { durationS: 181.4, tempoBpm: [92, 184], energyShape: [], sections: [] } }),
+      mvJob("mj-dropped", { state: "done", verdict: "drop", endedAt: NOW - 400 }),
+      mvJob("mj-kept", { state: "done", verdict: "keep", files: DONE_FILES, metadata: METADATA, slotId: "slot-1", endedAt: NOW - 300 }),
+      mvJob("mj-cancelled", { state: "cancelled" }),
+    ],
+    queue: { running: false },
+    driver: { ok: true },
+    ...mvExtra,
+  };
+  return { takes, suno, mv };
+}
+
+test("audio settled: three bands, every video in its band and its TRACK's lane, the face's lead fact, the detail's texts", async () => {
+  const { takes, suno, mv } = settled();
+  const f = install(soundApi(takes, [], GROUPS, suno, mv));
+  try {
+    const { src, entries, get } = await audioLoaded();
+    expect(src.bands.done?.map((b) => b.id)).toEqual(["tracks", "videos", "kept"]);
+    const site = (id: string) => {
+      const p = src.placementOf(get(id));
+      return `${p.stage}/${p.band}@${p.lane}`;
+    };
+    const placed = Object.fromEntries(["queued", "active", "failed", "done", "dropped", "kept"].map((k) => [k, site(`audio:mv:mj-${k}`)]));
+    console.log(`\nAUDIO settled placement\n${JSON.stringify(placed, null, 2)}`);
+    expect(placed).toEqual({
+      queued: "done/videos@cinematic",
+      // a clip's video takes the clip's lane, which is its job's
+      active: "done/videos@electronic",
+      failed: "done/videos@cinematic",
+      done: "done/videos@cinematic",
+      dropped: "done/videos@cinematic",
+      kept: "done/kept@cinematic",
+    });
+    expect(site("audio:take:t1")).toBe("done/tracks@cinematic");
+    // every done item lands in a band
+    expect(entries.filter((e) => e.placement.stage === "done").every((e) => e.placement.band !== null)).toBe(true);
+    // a cancelled job is not drawn, and is counted
+    expect(entries.map((e) => e.item.id)).not.toContain("audio:mv:mj-cancelled");
+    expect(src.lastLoad().hidden).toContainEqual({ stage: "done", count: 1, why: "music-video jobs cancelled" });
+
+    // under another axis a video reads as its track reads
+    const provider = src.groupAxes.find((a) => a.id === "provider")!;
+    expect(provider.of(get("audio:mv:mj-queued"))).toBe("elevenlabs");
+    expect(provider.of(get("audio:mv:mj-active"))).toBe("suno");
+
+    const entry = (k: string) => entries.find((e) => e.item.id === `audio:mv:mj-${k}`)!;
+    // the lead fact: a waiting job's place (behind the active one), else the state
+    expect(entry("queued").facts[0]).toEqual({ name: "queue", value: "#2" });
+    expect(entry("active").item.progress).toEqual({ phase: "rendering", startedAt: NOW - 4000 });
+    expect(entry("failed").facts[0]).toEqual({ name: "state", value: "failed: leonardo studio: the profile is..." });
+    expect(entry("failed").item.note).toBe("leonardo studio: the profile is signed out of app.leonardo.ai");
+    expect(entry("done").facts[0]).toEqual({ name: "state", value: "done" });
+    expect(entry("dropped").facts[0]).toEqual({ name: "state", value: "dropped" });
+    expect(entry("kept").facts[0]).toEqual({ name: "state", value: "kept" });
+
+    // media: the render and its still, through the file route
+    const media = entry("done").item.media;
+    expect(media.map((m) => m.kind)).toEqual(["video", "image"]);
+    expect(media[0].src).toContain("/api/sound/mv/jobs/mj-done/file?kind=video");
+    expect(media[1].src).toContain("/api/sound/mv/jobs/mj-done/file?kind=still");
+    expect(entry("queued").item.media).toEqual([]);
+
+    // the YouTube text, whole, to copy
+    expect(entry("done").texts).toEqual([
+      { label: "Title", value: METADATA.title },
+      { label: "Description", value: METADATA.description },
+      { label: "Tags", value: "lofi, night drive, visualizer" },
+    ]);
+    expect(entry("queued").texts).toBeUndefined();
+
+    // the switch: two switched stages, the second named for what runs
+    expect(src.lastLoad().switched).toEqual([
+      { stage: "working", on: false },
+      { stage: "done", on: false, label: "videos" },
+    ]);
+  } finally {
+    f.restore();
+  }
+});
+
+test("audio settled: pollMs - an active video polls, a queued one polls only while the video queue runs", async () => {
+  const quiet = settled({ jobs: [mvJob("mj-q")] });
+  const a = install(soundApi(quiet.takes, [], GROUPS, quiet.suno, quiet.mv));
+  try {
+    const { src } = await audioLoaded();
+    expect(src.pollMs!()).toBe(0);
+  } finally {
+    a.restore();
+  }
+  const running = settled({ jobs: [mvJob("mj-q")], queue: { running: true, interrupted: "mj-x stopped while rendering" } });
+  const b = install(soundApi(running.takes, [], GROUPS, running.suno, running.mv));
+  try {
+    const { src } = await audioLoaded();
+    expect(src.pollMs!()).toBe(2000);
+    expect(src.lastLoad().switched?.[1]).toEqual({ stage: "done", on: true, label: "videos", interrupted: "mj-x stopped while rendering" });
+  } finally {
+    b.restore();
+  }
+  const active = settled({ jobs: [mvJob("mj-a", { state: "active", phase: "imaging", startedAt: NOW })] });
+  const c = install(soundApi(active.takes, [], GROUPS, active.suno, active.mv));
+  try {
+    const { src } = await audioLoaded();
+    expect(src.pollMs!()).toBe(2000);
+  } finally {
+    c.restore();
+  }
+});
+
+test("audio settled: a take with a file or a kept clip dropped on videos enqueues (free); a clip on tracks, an unkept clip and a bare take are refused", async () => {
+  const { takes, suno, mv } = settled({ jobs: [mvJob("mj-done", { state: "done", files: DONE_FILES })] });
+  const f = install((url, method, body) => {
+    if (method === "POST" && url.pathname === "/api/sound/mv") {
+      const b = body as { sources: MvJob["source"][] };
+      return json({ jobs: b.sources.map((s, i) => mvJob(`mj-new${i}`, { source: s, enqueuedAt: NOW })) }, 201);
+    }
+    if (method === "PATCH" && url.pathname === "/api/sound/mv/jobs/mj-done") return json({ job: mvJob("mj-done", { state: "done", files: DONE_FILES, verdict: (body as { verdict: "keep" | null }).verdict }) });
+    if (method === "PATCH" && url.pathname === "/api/sound/takes/t3") return json({ take: { ...takes[2], ...(body as object) } });
+    return soundApi(takes, [], GROUPS, suno, mv)(url, method, body);
+  });
+  try {
+    const { src, get } = await audioLoaded();
+    const t1 = get("audio:take:t1");
+    const ck = get("audio:suno:clip:ck");
+    const cu = get("audio:suno:clip:cu");
+
+    expect(src.admits(t1, "done", "videos")).toEqual({ kind: "ok" });
+    expect(src.admits(ck, "done", "videos")).toEqual({ kind: "ok" });
+    expect(src.admits(cu, "done", "videos")).toEqual({ kind: "refused", reason: AUDIO_CLIP_UNKEPT_REFUSAL });
+    expect(src.admits(ck, "done", "tracks")).toEqual({ kind: "refused", reason: AUDIO_CLIP_DONE_REFUSAL });
+    expect(AUDIO_CLIP_DONE_REFUSAL).toContain("videos");
+    expect(src.admits(get("audio:take:t2"), "done", "videos")).toEqual({ kind: "refused", reason: AUDIO_TAKE_NO_FILE_REFUSAL });
+    expect(src.admits(t1, "done", "kept").kind).toBe("refused");
+    // a take in the gate dropped on tracks keeps today's finalize behaviour
+    expect(src.admits(get("audio:take:t3"), "done", "tracks")).toMatchObject({ kind: "needs", needs: "label" });
+
+    // free: no `live` flag, and it is not stubbed
+    const fromTake = await src.move({ itemId: t1.id, to: "done", band: "videos" });
+    expect(fromTake.ok && !fromTake.stub).toBe(true);
+    if (fromTake.ok) expect(fromTake.item).toMatchObject({ id: "audio:mv:mj-new0", placement: { stage: "done", band: "videos", lane: "cinematic" } });
+    const fromClip = await src.move({ itemId: ck.id, to: "done", band: "videos", lane: "ambient", axis: "group" });
+    expect(fromClip.ok).toBe(true);
+    if (fromClip.ok) expect(fromClip.item.placement.lane).toBe("electronic");
+    expect(f.writes()).toEqual([
+      { method: "POST", path: "/api/sound/mv", body: { sources: [{ kind: "take", id: "t1", title: "take t1" }] } },
+      { method: "POST", path: "/api/sound/mv", body: { sources: [{ kind: "clip", id: "ck", title: "clip ck" }] } },
+    ]);
+    const refused = await src.move({ itemId: cu.id, to: "done", band: "videos" });
+    expect(refused).toEqual({ ok: false, reason: AUDIO_CLIP_UNKEPT_REFUSAL, retryable: false });
+    expect(f.writes()).toHaveLength(2);
+
+    // videos <-> kept is the verdict; a video does not change lanes
+    const done = get("audio:mv:mj-done");
+    expect(src.admits(done, "done", "kept")).toEqual({ kind: "ok" });
+    expect(src.admits(done, "gate", "pending").kind).toBe("refused");
+    const kept = await src.move({ itemId: done.id, to: "done", band: "kept" });
+    expect(f.writes().at(-1)).toEqual({ method: "PATCH", path: "/api/sound/mv/jobs/mj-done", body: { verdict: "keep" } });
+    if (kept.ok) expect(kept.item.placement.band).toBe("kept");
+    expect(await src.move({ itemId: done.id, to: "done", band: "videos", lane: "ambient", axis: "group" })).toEqual({ ok: false, reason: AUDIO_MV_LANE_REFUSAL, retryable: false });
+  } finally {
+    f.restore();
+  }
+});
+
+test("audio settled: the Videos tile - Start spends and says why it cannot, Stop, import a folder, delete all with its consequence", async () => {
+  const { takes, suno, mv } = settled();
+  let running = false;
+  const f = install((url, method, body) => {
+    if (method === "POST" && url.pathname === "/api/sound/mv/run") {
+      running = (body as { running: boolean }).running;
+      return json({ queue: { running } });
+    }
+    if (method === "POST" && url.pathname === "/api/sound/mv/import") return json({ added: 3, skipped: 2, takeIds: ["i1", "i2", "i3"] });
+    if (method === "DELETE" && url.pathname.startsWith("/api/sound/mv/jobs/")) return json({ ok: true });
+    return soundApi(takes, [], GROUPS, suno, mv)(url, method, body);
+  });
+  try {
+    const { src } = await audioLoaded();
+    const videos = { axis: "group", lane: "cinematic", stage: "done" as const, band: "videos" };
+    const verbs = src.cellVerbs!(videos);
+    console.log(`\nAUDIO videos tile\n${JSON.stringify(verbs, null, 2)}`);
+    expect(verbs.map((v) => [v.id, v.label, v.spends ?? null])).toEqual([
+      ["mv.queue-start", "Start videos · 1", true],
+      ["mv.import-folder", "Import audio folder", null],
+      ["mv.clear-cell", "Delete all 4 here", null],
+    ]);
+    expect(verbs[0].disabled).toBeUndefined();
+    expect(verbs[1].input).toEqual({ kind: "text", label: "Folder", initial: { kind: "text", text: MV_IMPORT_DIR } });
+    expect(MV_IMPORT_DIR).toBe("~/Downloads/Misu");
+    // what leaves (records and render files) and what stays (the tracks)
+    expect(verbs[2]).toMatchObject({ destructive: true });
+    expect(verbs[2].confirm).toBe("4 video records and their render files are deleted; queued ones are cancelled. The tracks stay.");
+    // tracks imports; kept has nothing of its own
+    expect(src.cellVerbs!({ ...videos, band: "tracks" }).map((v) => v.id)).toEqual(["mv.import-folder"]);
+    expect(src.cellVerbs!({ ...videos, band: "kept" })).toEqual([]);
+
+    expect(await src.runVerb!("mv.queue-start", videos)).toEqual({ ok: true, announce: "videos started" });
+    expect(f.writes().at(-1)).toEqual({ method: "POST", path: "/api/sound/mv/run", body: { running: true } });
+    expect(src.cellVerbs!(videos)[0]).toEqual({ id: "mv.queue-stop", label: "Stop videos" });
+    expect((await src.runVerb!("mv.queue-stop", videos)).ok).toBe(true);
+    expect(f.writes().at(-1)).toEqual({ method: "POST", path: "/api/sound/mv/run", body: { running: false } });
+
+    expect(await src.runVerb!("mv.import-folder", videos, { kind: "text", text: "D:\\tracks" })).toEqual({ ok: true, announce: "3 imported, 2 already here" });
+    expect(f.writes().at(-1)).toEqual({ method: "POST", path: "/api/sound/mv/import", body: { dir: "D:\\tracks" } });
+
+    // the active job is not cleared (it is in another lane here anyway); every other one in the cell is
+    const at = f.writes().length;
+    expect(await src.runVerb!("mv.clear-cell", videos)).toEqual({ ok: true, announce: "4 deleted" });
+    expect(f.writes().slice(at).map((w) => `${w.method} ${w.path}`)).toEqual(
+      ["mj-queued", "mj-failed", "mj-done", "mj-dropped"].map((id) => `DELETE /api/sound/mv/jobs/${id}`),
+    );
+  } finally {
+    f.restore();
+  }
+  // Start is inert, with the reason: nothing queued; the driver's own sentence
+  const idle = settled({ jobs: [] });
+  const g = install(soundApi(idle.takes, [], GROUPS, idle.suno, idle.mv));
+  try {
+    const { src } = await audioLoaded();
+    expect(src.cellVerbs!({ axis: "group", lane: "cinematic", stage: "done", band: "videos" })[0].disabled).toBe("nothing queued");
+  } finally {
+    g.restore();
+  }
+  const down = settled({ jobs: [mvJob("mj-q")], driver: { ok: false, reason: "no signed-in Leonardo on :9333" } });
+  const h = install(soundApi(down.takes, [], GROUPS, down.suno, down.mv));
+  try {
+    const { src } = await audioLoaded();
+    expect(src.cellVerbs!({ axis: "group", lane: "cinematic", stage: "done", band: "videos" })[0].disabled).toBe("no signed-in Leonardo on :9333");
+    expect(src.lastLoad().degraded).toEqual([{ stage: "done", reason: "no signed-in Leonardo on :9333" }]);
+  } finally {
+    h.restore();
+  }
+});
+
+test("audio settled: card verbs - Make video on a track, keep/drop/regenerate/calendar/edit/delete on a video, each to its route", async () => {
+  const { takes, suno, mv } = settled();
+  const f = install((url, method, body) => {
+    if (method === "POST" && url.pathname === "/api/sound/mv") return json({ jobs: (body as { sources: MvJob["source"][] }).sources.map((s, i) => mvJob(`mj-n${i}`, { source: s })) }, 201);
+    const m = /^\/api\/sound\/mv\/jobs\/([^/]+)(\/calendar)?$/.exec(url.pathname);
+    if (m && method === "POST" && m[2]) return json({ job: mvJob(m[1], { state: "done", slotId: "slot-9" }), slotId: "slot-9" });
+    if (m && method === "POST") return json({ job: mvJob(m[1], { state: "queued", redo: [(body as { part: "image" }).part] }) });
+    if (m && method === "PATCH") return json({ job: mvJob(m[1], { state: "done", ...(body as object) }) });
+    if (m && method === "DELETE") return json({ ok: true });
+    return soundApi(takes, [], GROUPS, suno, mv)(url, method, body);
+  });
+  try {
+    const { src } = await audioLoaded();
+    const ids = (id: string) => src.cardVerbs!(id).map((v) => (v.disabled ? `${v.id}(${v.disabled})` : v.id));
+    // a finished track makes a video; a take still in the gate does not offer it
+    // (t1 already holds the queued job: the verb says so rather than doubling it)
+    expect(ids("audio:take:t1")).toEqual(["mv.make(already in the video queue)"]);
+    expect(ids("audio:take:t2")).toEqual([`mv.make(${AUDIO_TAKE_NO_FILE_REFUSAL})`]);
+    expect(ids("audio:take:t3")).toEqual([]);
+    // a kept clip with a live video says so; an unkept clip has no Make video
+    expect(ids("audio:suno:clip:ck")[0]).toBe("mv.make(already in the video queue)");
+    expect(ids("audio:suno:clip:cu")).toEqual(["suno.keep", "suno.drop", "suno.delete"]);
+    // a video's verbs by state
+    expect(ids("audio:mv:mj-done")).toEqual(["mv.keep", "mv.drop", "mv.regenerate", "mv.edit-metadata", "mv.calendar", "mv.delete"]);
+    expect(ids("audio:mv:mj-queued")).toEqual(["mv.regenerate(queued)", "mv.delete"]);
+    expect(ids("audio:mv:mj-active")).toEqual(["mv.regenerate(rendering now)", "mv.delete(rendering now)"]);
+    expect(ids("audio:mv:mj-failed")).toEqual(["mv.regenerate", "mv.delete"]);
+    expect(ids("audio:mv:mj-kept")).toEqual(["mv.regenerate", "mv.edit-metadata", "mv.calendar(already in Calendar)", "mv.delete"]);
+    const regen = src.cardVerbs!("audio:mv:mj-done").find((v) => v.id === "mv.regenerate")!;
+    expect(regen.input).toMatchObject({ kind: "choice", options: [{ value: "image" }, { value: "motion" }, { value: "metadata" }] });
+    expect(src.cardVerbs!("audio:mv:mj-done").find((v) => v.id === "mv.delete")).toMatchObject({ destructive: true, confirm: "The video record and its render files are deleted. The track stays." });
+
+    const card = (id: string, more: string[] = []) => ({ axis: "group", itemId: id, ...(more.length ? { itemIds: [id, ...more] } : {}) });
+    // Make video acts on the selection, of the lead card's kind only
+    expect(await src.runVerb!("mv.make", card("audio:take:t1", ["audio:take:t2", "audio:suno:clip:ck"]))).toEqual({ ok: true, announce: "1 video queued" });
+    expect(f.writes().at(-1)).toEqual({ method: "POST", path: "/api/sound/mv", body: { sources: [{ kind: "take", id: "t1", title: "take t1" }] } });
+
+    expect(await src.runVerb!("mv.keep", card("audio:mv:mj-done"))).toEqual({ ok: true, announce: '"take t1" kept' });
+    expect(f.writes().at(-1)).toEqual({ method: "PATCH", path: "/api/sound/mv/jobs/mj-done", body: { verdict: "keep" } });
+
+    expect((await src.runVerb!("mv.regenerate", card("audio:mv:mj-failed"), { kind: "choice", choice: "motion", note: "slower pulse" })).ok).toBe(true);
+    expect(f.writes().at(-1)).toEqual({ method: "POST", path: "/api/sound/mv/jobs/mj-failed", body: { part: "motion", note: "slower pulse" } });
+    expect((await src.runVerb!("mv.regenerate", card("audio:mv:mj-failed"), { kind: "choice", choice: "everything" })).ok).toBe(false);
+    // a queued job is not regenerated, even inside a selection
+    const before = f.writes().length;
+    expect((await src.runVerb!("mv.regenerate", card("audio:mv:mj-queued"), { kind: "choice", choice: "image" })).ok).toBe(false);
+    expect(f.writes()).toHaveLength(before);
+
+    expect((await src.runVerb!("mv.calendar", card("audio:mv:mj-done"), { kind: "datetime", at: "2026-10-20T16:00:00.000Z" })).ok).toBe(true);
+    expect(f.writes().at(-1)).toEqual({ method: "POST", path: "/api/sound/mv/jobs/mj-done/calendar", body: { publishAt: "2026-10-20T16:00:00.000Z" } });
+
+    expect((await src.runVerb!("mv.edit-metadata", card("audio:mv:mj-done"), { kind: "metadata", title: " New title ", description: "d", tags: ["a", "b"] })).ok).toBe(true);
+    expect(f.writes().at(-1)).toEqual({ method: "PATCH", path: "/api/sound/mv/jobs/mj-done", body: { metadata: { title: "New title", description: "d", tags: ["a", "b"] } } });
+
+    expect((await src.runVerb!("mv.delete", card("audio:mv:mj-failed"))).ok).toBe(true);
+    expect(f.writes().at(-1)).toEqual({ method: "DELETE", path: "/api/sound/mv/jobs/mj-failed", body: undefined });
+    expect((await src.runVerb!("mv.delete", card("audio:mv:mj-active"))).ok).toBe(false);
+  } finally {
+    f.restore();
+  }
+});
+
+test("audio settled: a music-video read that fails degrades Settled alone; the tracks and the Suno stages still draw", async () => {
+  const { takes, suno } = settled();
+  const f = install((url, m, b) => (url.pathname === "/api/sound/mv" ? json({ error: "mv.json is not valid JSON" }, 500) : soundApi(takes, [], GROUPS, suno)(url, m, b)));
+  try {
+    const { entries, src } = await audioLoaded();
+    expect(entries.map((e) => e.item.id)).toContain("audio:take:t1");
+    expect(entries.map((e) => e.item.id)).toContain("audio:suno:clip:ck");
+    expect(entries.some((e) => e.item.id.startsWith("audio:mv:"))).toBe(false);
+    expect(src.lastLoad().degraded).toEqual([{ stage: "done", reason: "the music-video queue could not be read: mv.json is not valid JSON" }]);
+    expect(src.lastLoad().switched).toEqual([{ stage: "working", on: false }]);
+    expect(src.cellVerbs!({ axis: "group", lane: "cinematic", stage: "done", band: "videos" })[0].disabled).toBe("nothing queued");
   } finally {
     f.restore();
   }

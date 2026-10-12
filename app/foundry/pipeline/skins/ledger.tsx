@@ -74,11 +74,12 @@ const audioPending = (entry: PipelineEntry): boolean => entry.item.media.some((m
 
 /** THE LEAD FACT, when it is one a card shows. The adapter orders facts so the
  *  one a face should print comes first (lib/board/sources/audio.ts): a waiting
- *  job's place in the queue, a clip's model. Verbatim, and only these two —
- *  a ledger row is not a fact sheet. */
-const leadFact = (entry: PipelineEntry): { name: "queue" | "model"; value: string } | null => {
+ *  job's place in the queue, a clip's model, a video's state ("done", "kept",
+ *  "failed: <first words>"). Verbatim, and only these three — a ledger row is
+ *  not a fact sheet. */
+const leadFact = (entry: PipelineEntry): { name: "queue" | "model" | "state"; value: string } | null => {
   const f = entry.facts[0];
-  return f && (f.name === "queue" || f.name === "model") ? { name: f.name, value: f.value } : null;
+  return f && (f.name === "queue" || f.name === "model" || f.name === "state") ? { name: f.name, value: f.value } : null;
 };
 
 function ledgerFace(entry: PipelineEntry) {
@@ -136,6 +137,15 @@ function ledgerFace(entry: PipelineEntry) {
       )}
       {lead?.name === "model" && (
         <span className={`${TYPE.figure} ml-auto shrink-0 rounded-full border border-white/15 px-2 leading-tight text-white/65`}>{lead.value}</span>
+      )}
+      {lead?.name === "state" && (
+        <span
+          className={`${TYPE.figure} ml-auto max-w-[45%] shrink-0 truncate rounded-full border px-2 leading-tight ${
+            lead.value.startsWith("failed") ? "border-rose-300/40 text-rose-200" : "border-white/15 text-white/65"
+          }`}
+        >
+          {lead.value}
+        </span>
       )}
     </div>
   );
