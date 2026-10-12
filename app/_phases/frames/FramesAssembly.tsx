@@ -22,7 +22,7 @@ import { Keycaps, Tally } from "@/components/ui/signal";
 import { typing } from "@/lib/board/keys";
 import { quoteBudget, type BudgetQuoteResult } from "@/lib/imagingClient";
 
-import { durationOf, humanMs, isComposed, type Frame, type FrameText, type LayerRef, type PlateState } from "./frames";
+import { durationOf, humanMs, isComposed, isStalePlate, type Frame, type FrameText, type LayerRef, type PlateState } from "./frames";
 import SourceChip from "../_shared/notebook/SourceChip";
 import type { Fact } from "../_shared/notebook/types";
 import { FrameCanvas, KindChip, LayerBreakdown } from "./parts";
@@ -129,6 +129,7 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
 
   const plan = planRender({
     missing: missing.length,
+    stale: frames.filter(isStalePlate).length,
     quote: missing.length > 0 ? (budgetQuoteResult?.quote ?? null) : null,
   });
 

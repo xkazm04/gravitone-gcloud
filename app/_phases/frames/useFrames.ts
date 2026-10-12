@@ -484,6 +484,9 @@ export function useFrames(projectId: string) {
             model: res.provenance.model,
             costUsd: res.provenance.costUsd,
             subject,
+            // Written only here, on a render that produced pixels: the subject
+            // those pixels came from, which a later edit to `subject` outlives.
+            renderedSubject: img ? subject : undefined,
           },
         }));
         return { outcome: img ? "ready" : "refused" };
@@ -538,7 +541,7 @@ export function useFrames(projectId: string) {
 
   const setText = useCallback(
     (id: string, textId: string, value: string) =>
-      patch(id, (f) => ({ ...f, texts: f.texts.map((t) => (t.id === textId ? { ...t, value } : t)) })),
+      patch(id, (f) => ({ ...f, texts: f.texts.map((t) => (t.id === textId ? { ...t, value, by: "human" as const } : t)) })),
     [patch],
   );
 
@@ -549,7 +552,7 @@ export function useFrames(projectId: string) {
    *  sourced, dated fact then nobody checked it, and the canvas marks it. */
   const bindFact = useCallback(
     (id: string, textId: string, factId: string | undefined) =>
-      patch(id, (f) => ({ ...f, texts: f.texts.map((t) => (t.id === textId ? { ...t, factId } : t)) })),
+      patch(id, (f) => ({ ...f, texts: f.texts.map((t) => (t.id === textId ? { ...t, factId, by: "human" as const } : t)) })),
     [patch],
   );
 
@@ -583,8 +586,8 @@ export function useFrames(projectId: string) {
     (id: string, ref: { type: "element" | "text"; id: string }, x: number, y: number) =>
       patch(id, (f) =>
         ref.type === "element"
-          ? { ...f, elements: f.elements.map((e) => (e.id === ref.id ? { ...e, x: clamp(x), y: clamp(y) } : e)) }
-          : { ...f, texts: f.texts.map((t) => (t.id === ref.id ? { ...t, x: clamp(x), y: clamp(y) } : t)) },
+          ? { ...f, elements: f.elements.map((e) => (e.id === ref.id ? { ...e, x: clamp(x), y: clamp(y), by: "human" as const } : e)) }
+          : { ...f, texts: f.texts.map((t) => (t.id === ref.id ? { ...t, x: clamp(x), y: clamp(y), by: "human" as const } : t)) },
       ),
     [patch],
   );
@@ -596,7 +599,7 @@ export function useFrames(projectId: string) {
       patch(id, (f) => ({
         ...f,
         elements: f.elements.map((e) =>
-          e.id === elId ? { ...e, w: Math.max(2, clamp(w)), h: Math.max(2, clamp(h)) } : e,
+          e.id === elId ? { ...e, w: Math.max(2, clamp(w)), h: Math.max(2, clamp(h)), by: "human" as const } : e,
         ),
       })),
     [patch],
