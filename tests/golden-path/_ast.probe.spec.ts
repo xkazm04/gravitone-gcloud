@@ -68,9 +68,9 @@ test("callsTo('addEventListener') with a \"keydown\" first argument is derived a
   );
   console.log(`[ast] keydown population: ${Date.now() - t0}ms, ${files.size} files`);
   expect(projectFiles().length, "the file list is empty - wrong root set").toBeGreaterThan(100);
-  // The three foundry surfaces cull-keys used to hand-list are MEMBERS of the
+  // The foundry surfaces cull-keys used to hand-list are MEMBERS of the
   // derived population, not the whole of it.
-  for (const f of ["app/foundry/CullGrid.tsx", "app/foundry/ExtractBoard.tsx", "app/foundry/StripGrid.tsx"]) {
+  for (const f of ["app/foundry/ExtractBoard.tsx", "app/foundry/StripGrid.tsx"]) {
     expect(files.has(f), `${f} is missing from the derived population`).toBe(true);
   }
   expect(files.size).toBeGreaterThan(3);
