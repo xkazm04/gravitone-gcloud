@@ -18,7 +18,7 @@
 
 import { useEffect, useState } from "react";
 
-import { Hint } from "@/components/ui/signal";
+import { Fold, Hint, StaleBadge } from "@/components/ui/signal";
 
 import { RENDERS } from "../renders";
 import { overrideFrom, overrideLineOf, receiptOf } from "../versions";
@@ -27,11 +27,19 @@ import { MODEL } from "@/lib/model";
 import DeclinedList, { declinedCount } from "./DeclinedList";
 import DispatchStrip from "../../_shared/ui/DispatchStrip";
 import { dispatchToggles } from "../dispatchToggles";
+import type { LostReason } from "../history";
 import type { Card } from "../../_shared/notebook/cards";
 import type { Scope } from "../../research/scope";
 import { conflictDelta } from "../scopeConflicts";
 import type { GateRollup } from "../gate";
 import type { VersionsApi } from "../useVersions";
+
+/** Why a staged run was not resumed, as the lost line names it. */
+const LOST_WHY: Record<LostReason, string> = {
+  "baseline-moved": "baseline moved",
+  "notebook-moved": "other notebook",
+  unreadable: "unreadable",
+};
 
 /** Elapsed, in the unit the number deserves. Minutes-long work should read as
  *  minutes, not as a three-digit second count. */
@@ -291,12 +299,27 @@ export default function RecalibrateControl({
         <p className="font-jetbrains text-content text-white/35">{inert} will not move a bar</p>
       )}
 
-      {/* A candidate is staged, never persisted — accepting is what makes a
-          version real. So closing the project throws one away, and saying so is
-          the difference between "my run vanished" and "I never accepted it". */}
+      {/* A ledger written on another notebook: held on disk, applied to nothing
+          here, and replaced by this notebook's first note (padState.ts). */}
+      {api.orphan && (
+        <p data-testid="pad-orphan" className="font-jetbrains flex flex-wrap items-center gap-1.5 text-content text-white/40">
+          <StaleBadge words="other notebook" glyph="history" why="written on another notebook; held, not applied" />
+          {api.orphan.accepted} version{api.orphan.accepted === 1 ? "" : "s"} · {api.orphan.notes} note
+          {api.orphan.notes === 1 ? "" : "s"} held
+        </p>
+      )}
+
+      {/* A staged run is saved and resumed on load (history.ts) — this line is
+          only for one that could not be: its baseline or notebook moved, or the
+          stored run was unreadable. The reason is the finding. */}
       {api.lostCandidate && (
         <p data-testid="lost-candidate" className="font-jetbrains text-content leading-snug text-amber-200/90">
           {api.lostCandidate.label} · staged, never accepted · lost
+          {api.lostCandidate.lost && (
+            <span data-testid="lost-candidate-why" className="ml-1.5">
+              · {LOST_WHY[api.lostCandidate.lost]}
+            </span>
+          )}
           <span className="ml-1.5 text-white/40">
             {api.lostCandidate.notes} note{api.lostCandidate.notes === 1 ? "" : "s"} still on the pad
           </span>
@@ -313,19 +336,28 @@ export default function RecalibrateControl({
           data-testid="baseline-declined"
           className="mt-1 rounded-xl border border-white/10 bg-white/[0.02] p-2.5"
         >
-          <p className="font-jetbrains text-content tracking-[0.14em] text-white/45 uppercase">
-            {api.baseline.label}
-            {declinedBaseline > 0 ? ` · declined ${declinedBaseline}` : ""}
-          </p>
+          {/* The override stays on the surface — it is the loudest part of the
+              record. The engine's summary and the itemised refusals are the
+              long part, and in a corner pad they pushed Recalibrate out of
+              reach; they are one press down, counted on the header. */}
           {overrideLineOf(api.baseline) && (
-            <p data-testid="baseline-override" className="font-jetbrains mt-1 text-content leading-snug text-rose-200/90">
+            <p data-testid="baseline-override" className="font-jetbrains mb-1 text-content leading-snug text-rose-200/90">
               {overrideLineOf(api.baseline)}
             </p>
           )}
-          {api.baseline.summary && (
-            <p className="mt-1 text-content leading-snug text-slate-300">{api.baseline.summary}</p>
+          {(api.baseline.summary || declinedBaseline > 0) && (
+            <Fold
+              title={api.baseline.label}
+              level={4}
+              remember="script.baseline-record"
+              tally={declinedBaseline > 0 ? { value: declinedBaseline, label: "declined", tone: "amber" } : undefined}
+            >
+              {api.baseline.summary && (
+                <p className="text-content leading-snug text-slate-300">{api.baseline.summary}</p>
+              )}
+              <DeclinedList version={api.baseline} />
+            </Fold>
           )}
-          <DeclinedList version={api.baseline} />
         </div>
       )}
       {api.engineNote && (

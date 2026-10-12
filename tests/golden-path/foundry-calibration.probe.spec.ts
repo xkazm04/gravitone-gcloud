@@ -41,6 +41,7 @@ import {
   calibrationFile,
   cullOrder,
   fieldStatus,
+  graderStamp,
   seriesKey,
   type CalibrationRow,
 } from "@/lib/foundry/calibration";
@@ -246,4 +247,12 @@ test("an inverted or chance field is drawn as a Ghost, its accessible reading ke
   const pill = elements(ScorePill({ label: "craft", value: 0.64, status: "inverted" }));
   expect(pill.filter((e) => e.type === Ghost).map((g) => g.props.label)).toEqual(["craft grader inverted"]);
   expect(pill.filter((e) => e.props.className === "sr-only").map((e) => textOf(e.props.children))).toContain("craft 64%, partly held");
+});
+
+/* ── 6. the commit stamps the row ─────────────────────────────────────────── */
+
+test("a stamped grade stamps its ledger row; an unstamped one adds no keys", () => {
+  expect(graderStamp({ grader: "m", grader_digest: "abc" })).toEqual({ grader: "m", grader_digest: "abc" });
+  expect(graderStamp({ grader: "m" })).toEqual({});
+  expect(graderStamp(null)).toEqual({});
 });

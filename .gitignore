@@ -107,6 +107,9 @@ pipeline/runs/*/captures/
 __pycache__/
 *.pyc
 /pipeline/vlm-probe/frames/*
+# Manifests hold only timestamps, filenames and hashes -- no pixels -- and are what
+# makes a clone able to re-materialize the frames (corpus.lock.json).
+!/pipeline/vlm-probe/frames/*-manifest.json
 !/pipeline/vlm-probe/frames/truth/
 !/pipeline/vlm-probe/frames/truth/*.json
 
@@ -212,3 +215,7 @@ __pycache__/
 /smoke-*.mjs
 /smoke-*.cjs
 /smoke-*.ts
+
+# the generated fixture universe (npm run fixtures) — the generator is the source
+/fixtures-out/
+/.next-fixtures/

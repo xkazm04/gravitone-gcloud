@@ -65,7 +65,7 @@ const TITLE_PROSE_CHARS = 45;
  * commit message, which sentence earned the exemption and why <Hint> was wrong
  * for it.
  */
-const TITLE_BUDGET = 5;
+const TITLE_BUDGET = 4;
 
 /**
  * The same ratchet for the EXPRESSION spelling, `title={...}`. The literal
@@ -76,7 +76,7 @@ const TITLE_BUDGET = 5;
  * the commit that added it: 8 sites, 6 after Chips.tsx moved to <Hint> (the
  * 6 are frozen, not blessed). LOWER, never raise.
  */
-const TITLE_EXPR_BUDGET = 6;
+const TITLE_EXPR_BUDGET = 5;
 
 /**
  * Words allowed inside a <Hint>. The README's number.

@@ -25,6 +25,7 @@ import { LOCAL_MODE } from "@/lib/localMode";
 import { Button } from "./Primitives";
 import SignOutDialog, { buildArchive, saveArchive } from "./SignOutDialog";
 import { errorText } from "./archiveSummary";
+import { useLayer } from "./layers";
 import { useWorld } from "./world";
 
 /** In the Almanac world (`useWorld`) the control wears the kit's skin (`k-acct`, `k-tray`
@@ -40,35 +41,35 @@ export default function UserMenu({ defaultOpen = false }: { defaultOpen?: boolea
   const [open, setOpen] = useState(defaultOpen);
   const seeded = useRef(defaultOpen);
   const panelId = useId();
-  const ref = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const firstItemRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    const onDoc = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, []);
 
   // ESCAPE, which this panel did not have at all. NotificationBell and
   // ContextMenu — the same dropdown shape, ten lines away in the same nav —
   // both closed on Escape; this one left a keyboard user with an open panel and
   // no way to dismiss it. Focus goes back to the trigger, so the next Tab
   // continues from where the user was rather than from the top of the document.
+  //
+  // Escape and the outside press are the layer stack's (./layers.ts): one
+  // listener for the whole shell, attached only while something is open. This
+  // panel's outside-press listener used to be attached for the component's
+  // whole life, closed or not.
   useEffect(() => {
     if (!open) return;
     // Seeded open (the /kit specimen): do not steal focus and scroll to the panel.
     if (!seeded.current) firstItemRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      setOpen(false);
-      triggerRef.current?.focus();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
   }, [open]);
+  useLayer(open, {
+    kind: "tray",
+    panelRef,
+    anchorRef: triggerRef,
+    claimsKeys: () => !seeded.current,
+    onDismiss: (reason) => {
+      setOpen(false);
+      if (reason === "escape") triggerRef.current?.focus();
+    },
+  });
 
   // `ready` is FIREBASE being configured. Local mode has a user and no Firebase by design, and
   // the LOCAL_MODE branch of the panel below (where the work lives) was unreachable behind
@@ -90,7 +91,7 @@ export default function UserMenu({ defaultOpen = false }: { defaultOpen?: boolea
   const initial = (profile?.displayName ?? user.email ?? "?").slice(0, 1).toUpperCase();
 
   return (
-    <div ref={ref} className="relative">
+    <div className="relative">
       <button
         type="button"
         ref={triggerRef}
@@ -128,6 +129,7 @@ export default function UserMenu({ defaultOpen = false }: { defaultOpen?: boolea
 
       {open && (
         <div
+          ref={panelRef}
           id={panelId}
           style={{ "--gt-rise-y": "-6px", "--gt-rise-dur": "160ms" } as React.CSSProperties}
           className={al ? "gt-rise k-tray k-tray--menu" : "gt-rise glass-panel absolute top-full right-0 z-50 mt-2 w-60 rounded-xl p-2"}

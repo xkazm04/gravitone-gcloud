@@ -23,6 +23,33 @@ import { test, expect } from "@playwright/test";
 
 import { keepEnv, stripComments } from "./_helpers";
 
+/** The `{ ... }` body that opens at or after `from`, by brace count. */
+function blockAt(src: string, from: number): string {
+  const open = src.indexOf("{", from);
+  if (open === -1) return "";
+  let depth = 0;
+  for (let i = open; i < src.length; i++) {
+    if (src[i] === "{") depth++;
+    else if (src[i] === "}" && --depth === 0) return src.slice(open + 1, i);
+  }
+  return src.slice(open + 1);
+}
+
+/** Helpers (`tests/golden-path/_*.ts`) whose own body registers keepEnv, by
+ *  name — derived, so a file that restores through `probeFoundryDir()` counts
+ *  because the helper really does it, not because the file has some other
+ *  `finally` lying around. */
+function restoringHelpers(dir: string): string[] {
+  const names: string[] = [];
+  for (const f of readdirSync(dir).filter((x) => x.startsWith("_") && x.endsWith(".ts"))) {
+    const src = stripComments(readFileSync(join(dir, f), "utf8"));
+    for (const m of src.matchAll(/export function (\w+)\s*\(/g)) {
+      if (/\bkeepEnv\(/.test(blockAt(src, m.index! + m[0].length))) names.push(m[1]);
+    }
+  }
+  return names;
+}
+
 const VAR = "GRAVITONE_ENV_ISOLATION_PROBE";
 keepEnv([VAR]);
 
@@ -44,6 +71,11 @@ test("every probe that writes process.env registers keepEnv", () => {
   // A walk that reads nothing reports "all compliant" in a voice
   // indistinguishable from success.
   expect(files.length, "the probe walk found nothing - it is reading the wrong tree").toBeGreaterThan(20);
+
+  const helpers = restoringHelpers(dir);
+  // The derivation must find the one helper known to register keepEnv, or the
+  // helper clause below is reading nothing and accepting nothing.
+  expect(helpers, "restoringHelpers() no longer finds probeFoundryDir").toContain("probeFoundryDir");
 
   const offenders: string[] = [];
   for (const f of files) {
@@ -77,7 +109,16 @@ test("every probe that writes process.env registers keepEnv", () => {
     const afterEachRestoresEnv = [...src.matchAll(/test\.afterEach\(([\s\S]*?)\n\}\)/g)].some((m) =>
       /process\.env/.test(m[1]),
     );
-    const restores = /keepEnv\(/.test(src) || afterEachRestoresEnv || /\}\s*finally\s*\{/.test(src);
+    // A `finally` counts on the same terms as an afterEach: its BODY must touch
+    // process.env. It used to be any `finally` at all, and
+    // foundry-commit-indices passed on a block that cleans up run directories —
+    // right by accident, since probeFoundryDir() registers keepEnv for it. So a
+    // file restoring through a helper is credited for the helper.
+    const finallyRestoresEnv = [...src.matchAll(/\}\s*finally\s*/g)].some((m) =>
+      /process\.env/.test(blockAt(src, m.index! + m[0].length)),
+    );
+    const viaHelper = helpers.some((h) => new RegExp(`\\b${h}\\(`).test(src));
+    const restores = /keepEnv\(/.test(src) || afterEachRestoresEnv || finallyRestoresEnv || viaHelper;
     if (!restores) offenders.push(f);
   }
 

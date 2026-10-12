@@ -1,0 +1,117 @@
+[
+ {
+  "context": "ui-shell",
+  "slot": "A",
+  "lens": "architecture-challenger",
+  "title": "One layer stack: Modal, bell and account own Escape, outside-press, keys",
+  "size": "L",
+  "effort": 7,
+  "impact": 8,
+  "risk": 6,
+  "write_set": [
+   "components/ui/Modal.tsx",
+   "components/ui/NotificationBell.tsx",
+   "components/ui/UserMenu.tsx",
+   "lib/board/keys.ts",
+   "tests/golden-path/board.probe.spec.ts"
+  ],
+  "new_files": [
+   "components/ui/layers.ts",
+   "tests/golden-path/layer-stack.probe.spec.ts"
+  ],
+  "shared_surfaces": [
+   "lib/board/keys.ts (the coupled file outside ui-shell; read by app/board/useBoardKeys.ts:25, app/calendar/BroadcastWeek.tsx:136, app/foundry/pipeline/PipelineCanvas.tsx:448, app/foundry/pipeline/gesture.ts:95)",
+   "tests/golden-path/{bell-focus-handoff,modal-escape-yields,modal-portal-world,modal-world-parity,bell-doors}.probe.spec.ts must stay green unchanged"
+  ],
+  "file_classes": {
+   "components/ui/layers.ts": "hand",
+   "components/ui/Modal.tsx": "hand",
+   "components/ui/NotificationBell.tsx": "hand",
+   "components/ui/UserMenu.tsx": "hand",
+   "lib/board/keys.ts": "hand",
+   "tests/golden-path/board.probe.spec.ts": "hand",
+   "tests/golden-path/layer-stack.probe.spec.ts": "hand"
+  },
+  "acceptance": [
+   "overlayOpen(root([]), [{id:'bell', kind:'tray'}]) -> true. Today an open bell tray or account panel is invisible to the key guard: BLOCKERS matches only [data-keys-block], dialog[open] and [aria-modal=true], and the tray is role=group. So on /board, with the tray open and focused, A approves the picked batch behind it",
+   "boardKeyAction({key:'Escape'}, overlay) with the layer stack [{id:'bell', kind:'tray'}] -> null, and escapeTarget(stack) -> 'bell'. One Escape closes the top layer only. Today the bell's document listener and the Board's window listener both run, so Escape closes the tray AND empties the Board's multi-pick (ContactSheet close -> setBatch(new Set()))",
+   "escapeTarget([{id:'A',kind:'modal'},{id:'B',kind:'modal'}]) -> 'B'; after remove('B') -> 'A'. Today every Modal adds its own document keydown that calls onClose without stopping it, so a nested pair closes together on one press",
+   "scroll lock is reference-counted: push modal A -> 'lock'; push modal B -> 'none'; remove A (out of order) -> 'none'; remove B -> 'unlock' with A's captured originals restored exactly once. Today each Modal captures `prev` from whatever the previous one left, so closing out of order restores overflow:'' under a still-open dialog",
+   "outsidePress(stack=[modal A, tray B], target inside A but outside B and B's anchor) -> ['B'] (never A); target on B's anchor (the bell button) -> [] so the trigger's own toggle is not double-applied",
+   "trapOwner([modal A, modal B]) -> 'B'; A's Tab handler is inert while B is on top",
+   "[guard] a keydown with cancelBubble already set (Hint inside a Modal, c6ac2db) -> escapeTarget yields null and the Modal stays open; the loupe rule is unchanged: overlayOpen(root([dialog(true)]), []) -> false",
+   "source ratchet: Modal.tsx, NotificationBell.tsx and UserMenu.tsx contain no document.addEventListener('keydown'|'mousedown'); layers.ts installs exactly one keydown and one pointerdown listener for the whole stack"
+  ],
+  "premise": [
+   "lib/board/keys.ts:55 - const BLOCKERS = '[data-keys-block], dialog[open], [aria-modal=\"true\"]' is the only signal the app's four key guards have that an overlay is up. It sniffs the DOM; no structure answers 'what is open'",
+   "lib/board/keys.ts:84-87 - Escape returns 'close' even with an overlay up (\"the overlay's own Escape handling will run as well\"). Two layers act on one press by design",
+   "components/ui/NotificationBell.tsx:260 - the tray is role=\"group\" with no aria-modal and no data-keys-block. :168 moves focus into it on open, and typing() (keys.ts:39-51) is false for a tabIndex=-1 div",
+   "app/board/ContactSheet.tsx:132-140 - useBoardKeys: approve/reject/clear run decideBatch over the picked set; close runs setBatch(new Set()) when no loupe is open",
+   "components/ui/NotificationBell.tsx:169-182 and components/ui/UserMenu.tsx:47-53,60-71 - two hand-wired copies of outside-mousedown + Escape + focus-return. UserMenu's mousedown listener is attached for the component's whole life, even while closed",
+   "components/ui/Modal.tsx:186-194 - Escape calls onCloseRef.current() with no stopPropagation and only yields to cancelBubble. :222 adds a per-instance document keydown",
+   "components/ui/Modal.tsx:228-245 - scroll lock captures prev overflow per instance and restores it on cleanup, which is LIFO-only by construction",
+   "tree count at b08bc7e: 37 Escape comparisons (grep 'key === \"Escape\"|key !== \"Escape\"' in app/ components/) and 6 mousedown outside-press listeners (NotificationBell:177, UserMenu:51, kit/ContextMenu:86, library/ContextMenu:77, foundry/pipeline/ContextMenu:79, script/_notes/PresetSelect:45)"
+  ],
+  "rollback": "Three commits: (1) layers.ts and its probe, additive; (2) Modal, NotificationBell and UserMenu adopt it; (3) keys.ts overlayOpen gains the layer argument. Reverting 3 then 2 restores the per-component listeners byte for byte. layers.ts has no reader other than these files, so it can stay or go. No storage, route or wire contract changes",
+  "gate": "architecture",
+  "runner_up": "Adopt UI-SHELL-A stage 1 plus the chrome half of stage 2: bind roles once and delete the 58 world forks in NotificationBell (42) and UserMenu (16). Held because critic-2026-10-07 ordered stage 2 after KIT-B 1, which is unbuilt",
+  "registry": "software-engineering/modal-stack: stack-ownership (registry variant), dismissal-semantics, focus-and-scroll-containment, layering-and-precedence",
+  "body": "## Summary\nThe shell's three overlays (Modal, the bell tray, the account panel) each own a private copy of dismissal: their own document keydown, their own outside-press, their own focus return and, for Modal, their own scroll lock. Nothing in the app can say what is on top. The app's key guards therefore sniff the DOM for `aria-modal` (lib/board/keys.ts:55), and that sniff cannot see the shell's own trays. This card adds one owned layer stack (`components/ui/layers.ts`) that these three surfaces push into and `overlayOpen` reads from, so 'what is open, and who gets this key' becomes a query.\n\n## Description\n`layers.ts` holds a module-level ordered stack of `{id, kind: 'modal'|'tray'|'popover', contains(node), anchor?}` and pure queries over it: `escapeTarget`, `outsidePress`, `trapOwner`, `lockTransition` (reference-counted) and `claimsKeys`. A `useLayer(open, {kind, panelRef, anchorRef, onDismiss})` hook pushes on open and removes by id on close (identity, never position). One document keydown and one pointerdown listener route each event to the top entry only. Modal keeps its focus-restore and trap logic but runs it only as `trapOwner`. Its lock goes through the refcount. NotificationBell and UserMenu delete their listener effects and keep their focus hand-offs. `overlayOpen(root, layers = openLayers())` returns true for any open layer, with the loupe exception unchanged, so the Board, the calendar week, the pipeline canvas and the gesture layer all stop deciding items behind a tray. The `cancelBubble` yield (c6ac2db) stays as the compatibility rule for popovers that are not on the stack yet (Hint, Select, the three ContextMenus). They are the next adopters, left out of this write set to keep it to one builder.\n\nThe cheap fix, `data-keys-block` on the two trays, closes acceptance case 1 only. It leaves the double-acting Escape (case 2), the nested-modal Escape and lock (cases 3 and 4), and the next tray someone adds, which will be invisible again. The stack is the move that stops the shell being the reason every key guard needs a DOM sniff.\n\n## Flow\n- bell opens -> useLayer pushes {id:'bell', kind:'tray'}\n- user presses A on /board -> useBoardKeys -> overlayOpen() sees the tray -> null; nothing is decided\n- user presses Escape -> the stack's single listener -> escapeTarget = 'bell' -> bell closes, focus returns to the trigger; Board's close does not run because boardKeyAction yields while a non-loupe layer is open\n- a Modal opened over a Modal -> Escape pops the inner one; the lock holds until the last modal leaves\n\n## Expected impact\nA real misdecision class closes: a batch approve, reject or clear through an open tray, and an Escape that wipes a multi-pick. The shell's three overlays shrink by their duplicated listener effects (~60 lines). Every future overlay gets dismissal, lock and key-claim by calling one hook, and the four key guards stop depending on an attribute convention.\n\n## Evaluation\nClaim: the shell's overlays become one owned stack, and the app's key guards consult it.\nBefore: 0 of 8 acceptance cases pass (cases 1-6 and 8 fail: no layers module, no layer argument; case 7 is a guard)\nAfter: 8 of 8\nMethod: gate - new tests/golden-path/layer-stack.probe.spec.ts (pure stack queries plus a source ratchet) and extended board.probe.spec.ts overlayOpen cases, Node probe lane, no DOM\nResult: better\nGate: architecture",
+  "evidence": "lib/board/keys.ts:55  const BLOCKERS = '[data-keys-block], dialog[open], [aria-modal=\"true\"]';\nlib/board/keys.ts:86  if (e.key === \"Escape\") return \"close\";\nlib/board/keys.ts:87  if (overlay) return null;\ncomponents/ui/NotificationBell.tsx:260  role=\"group\"   (no aria-modal, no data-keys-block)\ncomponents/ui/NotificationBell.tsx:177-178  document.addEventListener(\"mousedown\"|\"keydown\")\ncomponents/ui/UserMenu.tsx:51  document.addEventListener(\"mousedown\", onDoc);   (effect deps [], attached while closed)\ncomponents/ui/UserMenu.tsx:69  document.addEventListener(\"keydown\", onKey);\ncomponents/ui/Modal.tsx:191-193  if (e.cancelBubble || e.defaultPrevented) return; onCloseRef.current(); return;\ncomponents/ui/Modal.tsx:222  document.addEventListener(\"keydown\", onKey);\napp/board/ContactSheet.tsx:134  approve: picked.length && live ? () => void decideBatch(\"approve\") : base.approve,\napp/board/ContactSheet.tsx:137-139  close: () => { if (props.loupeOpen) props.closeLoupe(); else setBatch(new Set()); }\nreaders of overlayOpen(): app/board/useBoardKeys.ts:25, app/calendar/BroadcastWeek.tsx:136, app/foundry/pipeline/gesture.ts:95, app/foundry/pipeline/PipelineCanvas.tsx:448\ngrep -rn 'key === \"Escape\"|key !== \"Escape\"' app components -> 37\nmousedown outside-press listeners -> 6 files\nprior art checked: moonshots 07-design-system UI-SHELL-A (roles/worlds) and UI-SHELL-B (palette) are different seams; no lane or backlog row names overlays or the layer stack"
+ },
+ {
+  "context": "ui-shell",
+  "slot": "B",
+  "lens": "ux-elevation",
+  "title": "Storage trouble becomes a remedy: per-kind fix, all steps at risk, self-clearing",
+  "size": "M",
+  "effort": 6,
+  "impact": 8,
+  "risk": 5,
+  "write_set": [
+   "components/ui/NotificationBell.tsx",
+   "app/_phases/_shared/stepStore.ts"
+  ],
+  "new_files": [
+   "components/ui/storageRemedy.ts",
+   "tests/golden-path/storage-remedy.probe.spec.ts"
+  ],
+  "shared_surfaces": [
+   "app/_phases/_shared/stepStore.ts (the coupled file outside ui-shell: one exported noteStorageOk(op) plus one call on withStore's success path, line 617)",
+   "components/ui/SignOutDialog.tsx buildArchive/saveArchive imported, not edited",
+   "tests/golden-path/announcement.probe.spec.ts and bell-doors.probe.spec.ts must stay green unchanged"
+  ],
+  "file_classes": {
+   "components/ui/storageRemedy.ts": "hand",
+   "components/ui/NotificationBell.tsx": "hand",
+   "app/_phases/_shared/stepStore.ts": "hand",
+   "tests/golden-path/storage-remedy.probe.spec.ts": "hand"
+  },
+  "acceptance": [
+   "remedyFor({kind:'quota', op:'write', projectId:'p1', phase:'script'}, {uid:'u1', estimate:{usage:4.9e8, quota:5e8}}) -> actions [{kind:'archive', uid:'u1'}] and fact {used:490, of:500, unit:'MB'}. Today the card offers only 'dismiss', and outside local mode the archive is reachable only by starting a sign-out",
+   "remedyFor({kind:'blocked'}) -> actions [{kind:'reload'}] with no archive; remedyFor({kind:'missing-store'}) -> [{kind:'reload'}]; remedyFor({kind:'unavailable'}) -> [] (nothing is stored, so an archive would be empty)",
+   "remedyFor({kind:'non-storage', projectId:'p1', phase:'script'}) -> [{kind:'open', href:'/studio/p1?step=script'}]; projectId 'app', or a phase that is not a PhaseKey -> []",
+   "troubleReducer: report(quota@script) then report(quota@frames) -> state 'active', phases ['script','frames'], badge 1. Today stepStore's single `latest` slot overwrites, and the bell names only the last step that failed to save",
+   "troubleReducer: active -> dismiss -> 'deferred': badge contribution 0, the trouble and its phases kept as one row; a later report of a different kind -> 'active', badge 1. Dismiss no longer calls clearStorageTrouble, so 'nothing more will be saved' cannot be cleared while still true",
+   "stepStore: reportStorageTrouble('write','p1','script', QuotaExceededError) then noteStorageOk('write') -> lastStorageTrouble() === null; noteStorageOk('read') -> unchanged; a non-storage trouble is never cleared by noteStorageOk. Source ratchet: withStore's success path calls noteStorageOk(op)",
+   "troubleReducer: active(write) -> ok('write') -> 'clear' and emits exactly one polite announcement keyed 'trouble-cleared:<at>'; a second ok -> no further announcement",
+   "[guard] troubleAnnouncement(kind, 'script') output is unchanged for all six kinds (announcement.probe stays green)"
+  ],
+  "premise": [
+   "components/ui/NotificationBell.tsx:37-45 - TROUBLE_WORD.quota: 'Nothing more will be saved until you free space ... a reload would lose it' names an obligation",
+   "components/ui/NotificationBell.tsx:295-326 - the trouble card's only control is 'dismiss' (:304-313), which calls clearStorageTrouble(). Dismissing the card erases the fact that saving has stopped",
+   "app/_phases/_shared/stepStore.ts:301 - the module's own reading: '`quota` means stop and export, `blocked` means close the other tab'. Neither verb is offered by the one surface that reports it",
+   "app/_phases/_shared/stepStore.ts:352,401-404 - one `latest` slot; report() overwrites it, so a second failing step replaces the first in the bell",
+   "app/_phases/_shared/stepStore.ts:374-379,617 - clearStorageTrouble is the only reset, and withStore's success path (`return { ok: true, value: await fn(db) }`) never clears. After space is freed and saves resume, the card still says nothing will be saved",
+   "components/ui/SignOutDialog.tsx:50,56 - buildArchive(uid) and saveArchive(blob) exist. components/ui/UserMenu.tsx:142-160 offers them only under LOCAL_MODE; otherwise the archive lives inside SignOutDialog (:182), behind 'Sign out'",
+   "lib/jobLinks.ts:118 - badge = count + (trouble ? 1 : 0): the bell passes `trouble` in, so a deferred trouble can be withheld from the badge without editing jobLinks",
+   "grep 'storage.estimate' app components lib -> 0 hits: the app has never measured the quota it tells the user is full"
+  ],
+  "rollback": "Two commits. (1) storageRemedy.ts and its probe, plus stepStore's additive noteStorageOk export and its one call: revertable alone, and the bell is unchanged by it. (2) NotificationBell renders the remedy row and the deferred state. Reverting 2 restores today's card exactly. Reverting 1 removes self-clearing, so a trouble again persists until dismissed, which is today's behaviour. No storage schema, key or wire change",
+  "gate": "none",
+  "runner_up": "Interrupted cards get a 'run again' verb that re-issues the job from its recorded inputs. Not chosen: lib/jobs.tsx does not keep the inputs, so the inputs live outside ui-shell, and AIO-A's turn ledger is the right owner",
+  "registry": "software-engineering/toasts-notifications: actionable-toasts (one verb that lands at the fix; dismissal is deferral, not resolution), durable-notification-ledger, severity-taxonomy",
+  "body": "## Summary\nThe bell's storage card is the app's most expensive news: a full quota means the hour of work on screen is not being saved. Today it is a dead end. It shows a paragraph, a `phase · message` line and a 'dismiss' that erases the fact. This card makes it a remedy. Each failure kind gets the one verb that fixes it, every step that failed to save is named, the quota is shown as a measured fact, and the card clears itself when a write lands again. Dismissing it defers the card instead of deleting it.\n\n## Description\nA new pure module, `components/ui/storageRemedy.ts`, holds `remedyFor(trouble, {uid, estimate})`, which maps each kind to at most one primary action: quota -> 'save archive' (buildArchive/saveArchive, already written for the sign-out dialog), blocked/missing-store -> 'reload', non-storage with a studio phase -> 'open' (studioHref), unavailable -> none. It also holds `troubleReducer`: report / dismiss / ok events over an `active | deferred | clear` state that accumulates `phases`. stepStore gains `noteStorageOk(op)`, called on withStore's success path, which clears a storage trouble of the same op and never a `non-storage` one. NotificationBell feeds the reducer from `useStorageTrouble`, renders the phases as the existing mono `where` line (`script · frames · bookmark`), renders the quota fact as a `<Tally>` (`490/500 MB`, from `navigator.storage.estimate()`), and draws the verb beside 'dismiss' on the same compact text-button style as 'open'. A deferred trouble leaves the badge count but keeps the rose card as one row in the tray. Per CLAUDE.md, TROUBLE_WORD stays verbatim, because a real error explains itself. The card adds verbs and a number, not prose. Both worlds draw through the existing `k-tcard`/`k-tray__btn` classes and their Obsidian twins.\n\n## Flow\n- a quota write fails on Script -> the bell turns rose and the card shows `storage write failed`, the TROUBLE_WORD line, `script`, `490/500 MB` and [save archive] [dismiss]\n- a second write fails on Frames -> the same card now reads `script · frames`; the badge stays 1\n- the user presses save archive -> a .gravitone file downloads; the card stays because saving has not resumed\n- the user deletes assets and edits again -> saveStep succeeds -> noteStorageOk('write') -> the card clears and a polite 'Saving again' announcement plays once\n- dismiss instead -> the badge goes quiet and the row stays in the tray until a write lands\n\n## Expected impact\nThe one moment the app knows work is at risk becomes a door to the fix rather than homework. The archive is one press away in every mode, not behind a sign-out. The user learns every step at risk, not just the last. The card stops saying 'nothing will be saved' after saving resumes, and stops forgetting that saving stopped when someone clicks dismiss.\n\n## Evaluation\nClaim: storage trouble is actionable per kind, names every step at risk, and is resolved by evidence (a successful write) instead of by a click.\nBefore: 0 of 8 acceptance cases pass (case 8 is a guard and passes; cases 1-7 fail, with no remedy module and no noteStorageOk)\nAfter: 8 of 8\nMethod: gate - new tests/golden-path/storage-remedy.probe.spec.ts over storageRemedy.ts and stepStore's exported channel, Node probe lane, no DOM; announcement.probe and bell-doors.probe unchanged and green\nResult: better\nGate: none",
+  "evidence": "components/ui/NotificationBell.tsx:38  quota: \"This browser's storage is full. Nothing more will be saved until you free space — open work is still on screen, but a reload would lose it.\",\ncomponents/ui/NotificationBell.tsx:307  clearStorageTrouble();   (the card's only action, labelled 'dismiss' at :312)\napp/_phases/_shared/stepStore.ts:301   `quota` means stop and export, `blocked` means close the other tab, and\napp/_phases/_shared/stepStore.ts:352   let latest: StorageTrouble | null = null;\napp/_phases/_shared/stepStore.ts:402   latest = t;   (overwrite, single slot)\napp/_phases/_shared/stepStore.ts:617   return { ok: true, value: await fn(db) };   (success path; nothing clears)\ngrep -rn clearStorageTrouble app lib components -> only the definition (stepStore.ts:374) and the bell's dismiss\ncomponents/ui/SignOutDialog.tsx:50  export async function buildArchive(uid: string): Promise<Blob>\ncomponents/ui/SignOutDialog.tsx:56  export function saveArchive(file: Blob, now: Date = new Date()): void\ncomponents/ui/UserMenu.tsx:142  {LOCAL_MODE ? (   ... LocalArchiveItem   : the only non-dialog archive door, local mode only\nlib/jobLinks.ts:118  const badge = count + (trouble ? 1 : 0);\ngrep -rn 'storage.estimate' app components lib -> 0\nprior art checked: moonshots AUP-B (sign-out archive, BUILT 52ba721) offers the archive at sign-out, not at failure; no lane or backlog row names the storage card"
+ }
+]

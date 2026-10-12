@@ -99,8 +99,11 @@ const PLAN: Record<TextEnv, Record<TurnClass, TextProviderId[]>> = {
     research: ["claude-cli", "google"],
     "sound-hunt": ["claude-cli", "google"],
     "sound-lesson": ["claude-cli", "google"],
+    "suno-propose": ["claude-cli", "google"],
+    "suno-riff": ["claude-cli", "google"],
     "ad-ideas": ["claude-cli", "google"],
     "ad-scenarios": ["claude-cli", "google"],
+    repair: ["claude-cli", "google"],
     probe: ["claude-cli"],
   },
   cloud: {
@@ -111,8 +114,11 @@ const PLAN: Record<TextEnv, Record<TurnClass, TextProviderId[]>> = {
     research: ["google"],
     "sound-hunt": ["google"],
     "sound-lesson": ["google"],
+    "suno-propose": ["google"],
+    "suno-riff": ["google"],
     "ad-ideas": ["google"],
     "ad-scenarios": ["google"],
+    repair: ["google"],
     probe: ["google"],
   },
 };
@@ -181,12 +187,16 @@ const DEFAULT_TIMEOUT_MS: Record<TurnClass, number> = {
   // notebook is nine phases of judgement and one large structured answer. It
   // sits under /api/research's own `maxDuration` so the engine gives up first.
   research: 600_000,
-  // Both sound turns are small: one idea or one hunt's results in, one
+  // The sound turns are small: one idea or one hunt's results in, one
   // structured answer out. Five minutes is generous, and sits under the sound
   // routes' own maxDuration (app/api/sound/hunts/route.ts) so the engine gives
   // up before the platform does.
   "sound-hunt": 300_000,
   "sound-lesson": 300_000,
+  // The Suno pair: a lane's few example styles in, at most eight short prompts
+  // out — the size of a hunt map, so the hunt's ceiling.
+  "suno-propose": 300_000,
+  "suno-riff": 300_000,
   // The two ads concept rounds: a brief (and, for scenarios, one picked idea)
   // in, one schema-shaped answer out — staged generation and gate screening
   // inside the one turn, so longer than a sound map and far shorter than a
@@ -194,6 +204,10 @@ const DEFAULT_TIMEOUT_MS: Record<TurnClass, number> = {
   // the engine gives up first and the creator gets a sentence.
   "ad-ideas": 300_000,
   "ad-scenarios": 300_000,
+  // A repair returns the WHOLE object (a notebook is the largest answer the app
+  // writes), so it gets the long ceiling even though it is flash-class: the
+  // output is as long as the research turn's, the thinking is not.
+  repair: 600_000,
   probe: 30_000,
 };
 
@@ -633,8 +647,14 @@ function trailReason(e: TextError): RerouteStep["why"] {
  *
  * For a diagnostics surface and for a route that wants to fail fast with a good
  * sentence rather than after a minutes-long attempt. It walks the same plan the
- * router walks and asks the same two gates, so it cannot report an availability
- * the router disagrees with.
+ * router walks and asks the same two gates, with ONE deliberate difference: it
+ * probes EVERY unblocked candidate, where the router's walk probes only keyless
+ * providers (a key-holding provider's 401 is fast there, so the router skips
+ * the probe). A diagnostics surface should report what a provider can really
+ * do, not assume it from key presence. Today the two agree because the
+ * key-holding adapter's probe is a free key-presence check; if such a probe
+ * ever reaches the vendor, this surface may report a provider down that the
+ * router would still try, or spend a call the router would not.
  */
 export async function engineStatus(turn: TurnClass = "edit-plan"): Promise<{
   env: TextEnv;

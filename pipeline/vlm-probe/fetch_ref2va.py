@@ -104,7 +104,9 @@ def main():
         print(f"  -> {got}  {size:.2f} GB in {mins:.1f} min "
               f"({size * 1000 / max(mins * 60, 1):.0f} MB/s)", flush=True)
     print("\nfinal state:")
-    check()
+    # Run detached, so the exit code is the only thing anyone reads: a file
+    # given up on above must not finish 0.
+    sys.exit(0 if check() else 1)
 
 
 if __name__ == "__main__":

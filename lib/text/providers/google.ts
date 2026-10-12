@@ -128,6 +128,9 @@ const MODEL_FOR_TURN: Record<TextRequest["turn"], string> = {
   // not the nine-phase reasoning that earns the pro model above.
   "sound-hunt": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
   "sound-lesson": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
+  // Flash for the Suno pair, like the hunt: a few short schema-shaped prompts.
+  "suno-propose": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
+  "suno-riff": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
   // THE PRO MODEL for the ideas round, like `research`: it is judgement — a
   // product truth, six ideas pushed apart by mechanism, five yes/no gates per
   // idea — and the ads discipline's whole bet is that the idea is most of the
@@ -138,6 +141,9 @@ const MODEL_FOR_TURN: Record<TextRequest["turn"], string> = {
   // Flash for scenarios: the idea is fixed, and the turn is arithmetic and
   // shot-writing against a typed schema that lib/ads/validate.ts checks.
   "ad-scenarios": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
+  // Flash: a repair edits the listed paths of an object it is handed; the
+  // judgement was spent on the turn that produced the draft.
+  repair: process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
   probe: process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
 };
 

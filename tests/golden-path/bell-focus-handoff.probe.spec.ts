@@ -1,6 +1,6 @@
 // LANE — A BELL CONTROL THAT REMOVES ITSELF HANDS FOCUS TO THE TRAY.
 // The tray lists unread events only, so mark-all-read, event dismiss, interrupted
-// clear and storage-trouble dismiss each unmount the clicked element and focus
+// clear and storage-trouble dismiss (deferTrouble: the button leaves once deferred) each unmount the clicked element and focus
 // falls to <body> (the cost Modal.tsx documents). The panel is tabIndex=-1.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -9,7 +9,7 @@ import { test, expect } from "@playwright/test";
 
 import { stripComments } from "./_helpers";
 
-const CALLS = ["markAllRead", "clearStorageTrouble", "clear(act.jobId)", "markRead(act.eventId)"];
+const CALLS = ["markAllRead", "deferTrouble", "clear(act.jobId)", "markRead(act.eventId)"];
 
 test("each self-removing bell onClick also focuses the panel", () => {
   const s = stripComments(readFileSync(join(process.cwd(), "components/ui/NotificationBell.tsx"), "utf8"));

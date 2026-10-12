@@ -14,6 +14,7 @@ import {
   asString,
   errorResponse,
   readJson,
+  respondKeyed,
 } from "@/lib/imaging/api";
 import { generate } from "@/lib/imaging/router";
 import { guardRequest } from "@/lib/apiAuth";
@@ -28,7 +29,7 @@ export async function POST(req: Request) {
   if (denied) return denied;
   try {
     const body = await readJson(req);
-    const out = await generate({
+    const request = {
       ...asSteer(body),
       prompt: asString(body.prompt, "prompt"),
       negativePrompt: body.negativePrompt === undefined ? undefined : asString(body.negativePrompt, "negativePrompt"),
@@ -37,8 +38,10 @@ export async function POST(req: Request) {
       // 14 is the production model's reference-image window.
       references: asImages(body.references, "references", 14),
       seed: typeof body.seed === "number" ? body.seed : undefined,
-    });
-    return Response.json(out);
+    };
+    // An `idempotency-key` makes the paid result outlive this response: a
+    // duplicate joins the call in flight or replays it (lib/imaging/receipts.ts).
+    return await respondKeyed(req, "generate", request, () => generate(request));
   } catch (e) {
     return errorResponse(e);
   }

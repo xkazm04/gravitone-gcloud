@@ -30,6 +30,7 @@ import {
   Stamp,
   Workflow,
   type LucideIcon,
+  AudioLines,
 } from "lucide-react";
 
 import { DECK_ART } from "@/app/_studio/deckArt";
@@ -46,6 +47,7 @@ export const SOURCE_ICON: Record<BoardSourceId, LucideIcon> = {
   triage: ListChecks,
   publish: CalendarClock,
   articles: Newspaper,
+  audio: AudioLines,
 };
 
 /** A research card's kind (app/_phases/_shared/notebook/cards.ts CardKind). */

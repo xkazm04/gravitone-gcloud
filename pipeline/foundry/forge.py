@@ -47,7 +47,6 @@ dry run exists to answer:
 import argparse
 import base64
 import json
-import os
 import shutil
 import sys
 import time
@@ -61,6 +60,8 @@ OUT_ROOT = ROOT / "foundry-out" / "runs"
 PROBE_OUT = ROOT / "vlm-probe-out"
 STYLES = HERE / "styles.json"
 
+from atomic import replace_with_retry  # noqa: E402  (before PROBE joins sys.path)
+
 sys.path.insert(0, str(PROBE))
 import guard  # noqa: E402
 from consistency import COMFY_IN, generate, stage_reference  # noqa: E402
@@ -68,6 +69,8 @@ from probe import run_ollama  # noqa: E402
 from replicate import compose_prompt  # noqa: E402
 
 import grade  # noqa: E402
+import frame_manifest  # noqa: E402
+import refs  # noqa: E402
 
 NL = chr(10)
 ANNOTATOR = "qwen3.8:27b"
@@ -84,7 +87,7 @@ def now():
 def save(run_dir, manifest):
     """Atomic: the page polls this file while the forge writes it.
 
-    AND THE REPLACE IS RETRIED, because on Windows it is not unconditional.
+    The replace is retried (atomic.py has the measurement). On Windows
     os.replace raises PermissionError while any other handle to the destination
     is open, and "the page polls this file" is a description of a handle being
     open a great deal of the time. This function is called after every
@@ -97,14 +100,7 @@ def save(run_dir, manifest):
     """
     tmp = run_dir / "run.json.tmp"
     tmp.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
-    for attempt in range(20):
-        try:
-            os.replace(tmp, run_dir / "run.json")
-            return
-        except PermissionError:
-            if attempt == 19:
-                raise
-            time.sleep(0.01)
+    replace_with_retry(tmp, run_dir / "run.json")
 
 
 def log(manifest, run_dir, msg):
@@ -163,10 +159,9 @@ def cached_annotation(frame_name, model):
 
 
 def resolve_source(spec):
-    p = Path(spec)
-    if not p.is_absolute():
-        p = PROBE / "frames" / spec
-    return p
+    """`frame:<name>` / `lane:<lane>/<file>` or a bare filename under frames/.
+    An absolute path raises `non-portable reference` (refs.py)."""
+    return refs.resolve_spec(spec, PROBE / "frames")
 
 
 # ── prompts and workflows ───────────────────────────────────────────────────
@@ -272,6 +267,11 @@ def stage_annotate(manifest, run_dir, model):
     todo = [s for s in manifest["scenes"] if not s["annotation"]]
     set_stage(manifest, run_dir, "annotating", 0, len(todo))
     need_gpu = []
+    for s in manifest["scenes"]:  # which pixels were read -- also for scenes resumed with an annotation
+        if not s.get("source_sha256"):
+            src = resolve_source(s["frame"])
+            if src.exists():
+                s["source_sha256"] = frame_manifest.sha256_file(src)
     for s in todo:
         src = resolve_source(s["frame"])
         if not src.exists():
@@ -301,6 +301,27 @@ def stage_annotate(manifest, run_dir, model):
     save(run_dir, manifest)
 
 
+def adopt_plate(manifest, run_dir, c, mech, scenes):
+    """Give a plate adopted on resume the provenance a generated one carries.
+
+    The PNG is a finished generation, but the sidecar and `prompt` are written
+    only by the generation branch -- so every candidate that survived a crash
+    was the one with no record of its recipe. The prompt is a pure function of
+    the manifest (annotation + style), so it is rebuilt, not guessed. What was
+    never measured stays absent: no `generate_s` (nobody timed it) and no
+    `workflow` (its reference filename was staged by the dead process).
+    `adopted: true` says the record was reconstructed, not captured."""
+    prompt = candidate_prompt(scenes[c["scene"]]["annotation"], manifest["styles"][c["style"]])
+    c["prompt"] = prompt
+    sidecar = run_dir / c["sidecar"]
+    if not sidecar.exists():
+        sidecar.parent.mkdir(parents=True, exist_ok=True)
+        sidecar.write_text(json.dumps(
+            {"id": c["id"], "prompt": prompt, "mechanism": mech[c["mechanism"]], "seed": c["seed"],
+             "style": c["style"], "workflow": None, "adopted": True},
+            indent=2, ensure_ascii=False), encoding="utf-8")
+
+
 def stage_generate(manifest, run_dir, recycle_every):
     plan = manifest["plan"]
     mech = {m["id"]: m for m in plan["mechanisms"]}
@@ -310,6 +331,7 @@ def stage_generate(manifest, run_dir, recycle_every):
     for c in todo:
         if (run_dir / c["file"]).exists():
             c["status"] = "generated"
+            adopt_plate(manifest, run_dir, c, mech, scenes)
     todo = [c for c in todo if c["status"] != "generated"]
     set_stage(manifest, run_dir, "generating", 0, len(todo))
     if not todo:

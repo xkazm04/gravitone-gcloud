@@ -102,8 +102,12 @@ test("case 5: the modals render research.source, titled and footed by the notebo
 
 test("case 5: the pills name the counts of the notebook they open, and a reasoned-only project carries them", () => {
   const run = code("app/_phases/research/guided/RunStage.tsx");
-  expect(run).toMatch(/counts: NotebookCounts/);
-  expect(run).toContain("evidence log · {counts.facts} claims");
+  // The pill row moved to its own module (Wave 2) so the expert face can draw
+  // it without importing the run stage; the row's contract is read there.
+  const pills = code("app/_phases/research/guided/ArtifactPills.tsx");
+  expect(pills).toMatch(/counts: NotebookCounts/);
+  expect(pills).toContain("evidence log · {counts.facts} claims");
+  expect(pills).not.toContain("NOTEBOOK_COUNTS");
   expect(run).not.toContain("NOTEBOOK_COUNTS");
   // The replay card draws them only while the replay is dealt; the creator's own
   // card carries them otherwise.

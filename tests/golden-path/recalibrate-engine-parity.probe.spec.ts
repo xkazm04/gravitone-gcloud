@@ -22,7 +22,7 @@ import { buildCards } from "@/app/_phases/_shared/notebook/cards";
 import type { EditPlan } from "@/app/_phases/script/editPlan";
 
 const ctx = () => ({ cards: buildCards(), scope: {} });
-const emptyPlan = (): EditPlan => ({ edits: [], refusals: [], unchanged: [], summary: "no edits" });
+const emptyPlan = (): EditPlan => ({ edits: [], refusals: [], summary: "no edits" });
 
 /** Every (render, fact) pair the fixtures declare as a deliberate exclusion. */
 const declaredCuts = () =>
@@ -45,10 +45,16 @@ test("parity: a MODEL pass keeps every cut record, exactly as a simulated pass d
 });
 
 test("parity: the cut carries its REASON on both paths — a ✕ with no why is half a record", () => {
+  // BOTH paths, as the name says. This read only the model pass, so the
+  // simulated path — the one the other half of the parity rests on — could lose
+  // its reasons with this test green.
+  const sim = recalibrate(BASELINE, [], "v-sim", 1, ctx());
   const mod = recalibrateFromPlan(BASELINE, [], emptyPlan(), "v-mod", 1, ctx());
   for (const r of RENDERS)
-    for (const c of r.cutFacts)
-      expect(mod.impact[r.id]?.[c.factId]?.why, `${r.id}/${c.factId}`).toBe(c.why);
+    for (const c of r.cutFacts) {
+      expect(sim.impact[r.id]?.[c.factId]?.why, `simulated ${r.id}/${c.factId}`).toBe(c.why);
+      expect(mod.impact[r.id]?.[c.factId]?.why, `model ${r.id}/${c.factId}`).toBe(c.why);
+    }
 });
 
 test("parity: an edit that speaks a previously-cut fact WINS over the stale declaration", () => {
@@ -62,7 +68,6 @@ test("parity: an edit that speaks a previously-cut fact WINS over the stale decl
   const plan: EditPlan = {
     edits: [{ renderId: r.id, op: "rewrite", beatAt, text: "reinstated", cards: [cut.factId], why: "bring it back" }],
     refusals: [],
-    unchanged: [],
     summary: "reinstate one cut fact",
   };
   const mod = recalibrateFromPlan(BASELINE, [], plan, "v-mod", 1, ctx());

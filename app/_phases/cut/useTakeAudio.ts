@@ -23,6 +23,11 @@ import type { ClockState, CutClock } from "./clock";
 /** How far the element may sit from the playhead before it is re-seeked. */
 export const SLACK_S = 0.12;
 
+/** How far ahead of a playing playhead a take starts buffering in full. Long
+ *  enough to cover a slow first byte from the sound store; short enough that a
+ *  cut opened and never played fetches only metadata. */
+export const PRELOAD_AHEAD_S = 6;
+
 export type AudioAction =
   | { kind: "none" }
   | { kind: "pause" }
@@ -93,8 +98,16 @@ export function useTakeAudio(
     }
     for (const s of spans) {
       if (map.has(s.id)) continue;
-      const el = new Audio(s.src);
-      el.preload = "auto";
+      const el = new Audio();
+      // METADATA FIRST, THE BYTES WHEN THE PLAYHEAD COMES FOR THEM. A cut
+      // whose cues all have kept takes used to open by asking the sound store
+      // for every take in full — megabytes per cue — before anyone pressed
+      // play. Metadata is enough to know a take's length (the sync below
+      // reads `duration`); the element is raised to `auto` by `sync` once
+      // the playhead is within PRELOAD_AHEAD_S of its span, and a park-seek
+      // inside the span fetches what it needs regardless.
+      el.preload = "metadata";
+      el.src = s.src;
       map.set(s.id, el);
     }
   }, [spans]);
@@ -115,6 +128,10 @@ export function useTakeAudio(
         // A take shorter than its cue ends where IT ends: past its own length
         // the span is over, or every tick would re-`play()` an ended element.
         const durS = Number.isFinite(el.duration) ? Math.min(span.durS, el.duration) : span.durS;
+        if (el.preload !== "auto" && s.playing && s.rate > 0) {
+          const ahead = span.startS - s.t;
+          if (ahead <= PRELOAD_AHEAD_S && s.t < span.startS + durS) el.preload = "auto";
+        }
         const a = audioAction(s, { startS: span.startS, durS }, { time: el.currentTime, paused: el.paused }, jumped);
         if (a.kind === "pause") el.pause();
         else if (a.kind === "seek") el.currentTime = a.at;

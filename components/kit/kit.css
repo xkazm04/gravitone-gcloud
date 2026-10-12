@@ -213,6 +213,18 @@
   color: var(--al-white); font-weight: 400; letter-spacing: 0; text-transform: none; white-space: normal;
 }
 
+/* ---------- fold (signal/Fold, almanac skin): a ruled head, the body under it ---------- */
+/* `k-sect`, not `k-fold`: that name is the <details> fold of the report sheet further down. */
+:is([data-world="almanac"], [data-world="obsidian"]) .k-sect { border-top: 1px solid var(--al-line); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-sect__btn {
+  display: flex; align-items: center; gap: 8px; width: 100%; min-width: 0; padding: 12px 0; border: 0; background: none;
+  cursor: pointer; text-align: left; color: var(--al-vellum); font: inherit; font-size: var(--k-fs);
+}
+:is([data-world="almanac"], [data-world="obsidian"]) .k-sect__btn:hover, :is([data-world="almanac"], [data-world="obsidian"]) .k-sect__btn[aria-expanded="true"] { color: var(--al-white); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-sect__btn svg { color: var(--al-gold); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-sect__btn:focus-visible { outline: 2px solid var(--al-gold); outline-offset: 2px; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-sect__body { padding-bottom: 16px; }
+
 /* ---------- two-column layout, side list ---------- */
 .k-two { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: clamp(18px, 2.2vw, 36px); align-items: start; padding-top: 24px; }
 .k-side { position: sticky; top: calc(var(--k-bar) + var(--k-tabs) + 18px); }

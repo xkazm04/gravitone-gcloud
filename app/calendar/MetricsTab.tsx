@@ -8,17 +8,25 @@
 // client-safe): totals are the latest non-null lifetime value, the daily line
 // is per-day DELTAS with the first day null — a gap, not a dip — and groups
 // carry `lowerBound`.
+//
+// The publication list only grows, so the table draws 25 rows and a Pager
+// under them (every row also grabs its export's poster, one video read per
+// export); the rows are derived once per read of the store, not on every tick
+// of the page clock, and the sort is remembered.
 
 import { RefreshCw, SquareTerminal } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+
+import { Pager, useWindow } from "@/components/kit";
+import { useRemembered } from "@/lib/useRemembered";
 
 import { usePrefersReducedMotion } from "@/components/ui/motionPreference";
 import { Panel } from "@/components/ui/Primitives";
 import { CHIP_CLASS, TALLY_TONE, Tally } from "@/components/ui/signal";
 import { EASE } from "@/components/ui/tokens";
 import { dailySeries, groupSums, publicationTotals, snapshotsOf, type MetricKey, type MetricsData } from "@/lib/publish/metrics";
-import type { ChannelId, Publication } from "@/lib/publish/types";
+import type { ChannelId, MetricSnapshot, Publication, ScheduleSlot } from "@/lib/publish/types";
 
 import {
   CHANNEL_IDS,
@@ -46,6 +54,8 @@ interface Row {
 }
 
 type SortKey = "title" | "views" | "likes" | "comments" | "published";
+const SORTS: readonly SortKey[] = ["title", "views", "likes", "comments", "published"];
+const PAGE = 25;
 
 const COLS: { key: MetricKey; head: string; fmt: (n: number | null) => string }[] = [
   { key: "views", head: "Views", fmt: fmtNum },
@@ -64,11 +74,42 @@ function total(rows: Row[], key: MetricKey): Figure {
   return { value: measured.length ? measured.reduce((a, b) => a + b, 0) : null, lowerBound: measured.length > 0 && measured.length < vals.length };
 }
 
+/** One table row per publication. The slot it went out from is found through
+ *  one map, not a search of every slot per publication. */
+function rowsOf(publications: Publication[], snapshots: readonly MetricSnapshot[], slots: readonly ScheduleSlot[]): Row[] {
+  const bySlot = new Map(slots.map((s) => [s.id, s]));
+  return publications.map((p) => {
+    const t = publicationTotals(p, snapshots);
+    const slot = bySlot.get(p.slotId);
+    return {
+      pub: p,
+      title: slot?.title ?? p.slotId,
+      exportId: slot?.exportId ?? null,
+      data: t.data,
+      totals: t.totals,
+      daily: dailySeries(snapshotsOf(p.id, snapshots), "views").map((d) => d.delta),
+    };
+  });
+}
+
 export function MetricsTab({ cal, push }: { cal: Calendar; push: PushToast }) {
   const reduced = usePrefersReducedMotion();
   const [busy, setBusy] = useState(false);
   const [last, setLast] = useState<string | null>(null);
-  const [sort, setSort] = useState<SortKey>("published");
+  const [sort, setSort] = useRemembered<SortKey>("calendar.metrics.sort", "published", SORTS);
+  const data = cal.metrics?.ok ? cal.metrics.data : null;
+  const slotList = cal.schedule?.ok ? cal.schedule.data.slots : null;
+  const rows = useMemo(() => (data ? rowsOf(data.publications, data.snapshots, slotList ?? []) : []), [data, slotList]);
+  const sorted = useMemo(
+    () =>
+      [...rows].sort((a, b) => {
+        if (sort === "title") return a.title.localeCompare(b.title);
+        if (sort === "published") return b.pub.publishedAt.localeCompare(a.pub.publishedAt);
+        return (b.totals[sort] ?? -1) - (a.totals[sort] ?? -1);
+      }),
+    [rows, sort],
+  );
+  const win = useWindow(sorted, { size: PAGE, key: sort });
 
   if (!cal.metrics) {
     return (
@@ -85,24 +126,6 @@ export function MetricsTab({ cal, push }: { cal: Calendar; push: PushToast }) {
   if (!cal.metrics.ok) return <FailureCard r={cal.metrics} onRetry={cal.reload} />;
 
   const { publications, snapshots } = cal.metrics.data;
-  const slots = cal.schedule?.ok ? cal.schedule.data.slots : [];
-  const rows: Row[] = publications.map((p) => {
-    const t = publicationTotals(p, snapshots);
-    const slot = slots.find((s) => s.id === p.slotId);
-    return {
-      pub: p,
-      title: slot?.title ?? p.slotId,
-      exportId: slot?.exportId ?? null,
-      data: t.data,
-      totals: t.totals,
-      daily: dailySeries(snapshotsOf(p.id, snapshots), "views").map((d) => d.delta),
-    };
-  });
-  const sorted = [...rows].sort((a, b) => {
-    if (sort === "title") return a.title.localeCompare(b.title);
-    if (sort === "published") return b.pub.publishedAt.localeCompare(a.pub.publishedAt);
-    return (b.totals[sort] ?? -1) - (a.totals[sort] ?? -1);
-  });
   const dry = publications.filter((p) => p.dry).length;
   // every channel gets its row, a channel nothing went out on included: its
   // absence is a fact about the work, not a gap in the chart
@@ -212,7 +235,7 @@ export function MetricsTab({ cal, push }: { cal: Calendar; push: PushToast }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {sorted.map((r) => (
+                  {win.visible.map((r) => (
                     <tr key={r.pub.id} className="border-b border-white/[0.05] last:border-b-0 transition hover:bg-white/[0.025]">
                       <th scope="row" className="py-3 pr-3 pl-5 text-left font-normal">
                         <span className="flex items-center gap-3.5">
@@ -252,6 +275,11 @@ export function MetricsTab({ cal, push }: { cal: Calendar; push: PushToast }) {
                 </tbody>
               </table>
             </div>
+            {win.total > PAGE && (
+              <div className="px-5 pb-4">
+                <Pager shown={win.shown} total={win.total} onMore={win.more} onAll={win.all} step={PAGE} noun="publications" />
+              </div>
+            )}
           </Panel>
 
           <section aria-labelledby="m-groups" className="space-y-3">

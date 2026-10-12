@@ -12,7 +12,11 @@ export type BoardSourceId =
   | "alternative"
   | "triage"
   | "publish"
-  | "articles";
+  | "articles"
+  // The pipeline canvas's audio lane (app/foundry/pipeline). It is NOT in
+  // SOURCE_ORDER: /board's rail is unchanged, because an audio take is a
+  // stage to move, not a verdict to press, and only the canvas can ask that.
+  | "audio";
 
 /** `null` = undecided. */
 export type BoardVerdict = "approve" | "reject" | null;

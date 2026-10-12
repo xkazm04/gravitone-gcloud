@@ -20,15 +20,17 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Bell } from "lucide-react";
 
-import {
-  clearStorageTrouble,
-  useStorageTrouble,
-  type StorageFailure,
-} from "@/app/_phases/_shared/stepStore";
+import { type StorageFailure } from "@/app/_phases/_shared/stepStore";
 import { JobElapsed, jobNoun, useJobs } from "@/lib/jobs";
 import { trayModel } from "@/lib/jobLinks";
 import { politenessFor, useAnnounce } from "@/lib/announcer";
-import { Ghost } from "@/components/ui/signal";
+import { useAuth } from "@/lib/useAuth";
+
+import { useLayer } from "./layers";
+import { buildArchive, saveArchive } from "./SignOutDialog";
+import { errorText } from "./archiveSummary";
+import { deferTrouble, remedyFor, troubleBadge, useTroubleLedger, type RemedyContext } from "./storageRemedy";
+import { Ghost, Tally } from "@/components/ui/signal";
 import { useWorld } from "@/components/ui/world";
 
 /** What each failure MEANS FOR THE USER, in the user's terms. studioDb and
@@ -95,17 +97,50 @@ export function troubleAnnouncement(kind: StorageFailure, phase: string, message
 export default function NotificationBell({ defaultOpen = false }: { defaultOpen?: boolean } = {}) {
   const al = useWorld() === "almanac";
   const { unread, jobs, markRead, markAllRead, clear } = useJobs();
-  const trouble = useStorageTrouble();
+  // The card's state, not stepStore's single slot: every step at risk, whether
+  // the user put the card away (deferred: the badge goes quiet, the row stays),
+  // and whether a later success in the same scope resolved it
+  // (components/ui/storageRemedy.ts). `trouble` is what the card shows.
+  const ledger = useTroubleLedger();
+  const trouble = ledger.status === "clear" ? null : ledger.trouble;
+  const { user } = useAuth();
+  const [estimate, setEstimate] = useState<RemedyContext["estimate"]>(null);
+  const [archiving, setArchiving] = useState(false);
+  const [archiveFailure, setArchiveFailure] = useState<string | null>(null);
+  const archiveTries = useRef(0);
   const announce = useAnnounce();
   const [open, setOpen] = useState(defaultOpen);
   const panelId = useId();
-  const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const seeded = useRef(defaultOpen);
 
-  const { badge, pulse, emptyTone, runningCards, interruptedCards, eventCards } =
-    trayModel({ jobs, unread, trouble });
+  // A deferred trouble is withheld from the badge (and so from the rose tint and
+  // the pulse rule) but still decides which empty the tray is.
+  const badgeTrouble = troubleBadge(ledger) ? trouble : null;
+  const model = trayModel({ jobs, unread, trouble: badgeTrouble });
+  const { badge, pulse, runningCards, interruptedCards, eventCards } = model;
+  const emptyTone = trouble ? "trouble" : model.emptyTone;
+  const remedy = trouble ? remedyFor(trouble, { uid: user?.uid ?? null, estimate }) : null;
+
+  // The quota, measured: the card said storage was full without the app ever
+  // having asked how full. Re-measured per quota trouble.
+  const quotaAt = trouble?.kind === "quota" ? trouble.at : null;
+  useEffect(() => {
+    if (quotaAt === null) return;
+    let live = true;
+    navigator.storage?.estimate?.().then(
+      (e) => {
+        if (live) setEstimate({ usage: e.usage, quota: e.quota });
+      },
+      () => {
+        if (live) setEstimate(null);
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [quotaAt]);
 
   // ── ANNOUNCE (added 2026-08-24) ─────────────────────────────────────────
   //
@@ -155,6 +190,28 @@ export default function NotificationBell({ defaultOpen = false }: { defaultOpen?
     });
   }, [trouble, announce]);
 
+  // Saving resumed in every scope that had failed: said once, politely, keyed on
+  // the trouble it resolves so a remount cannot say it twice.
+  useEffect(() => {
+    if (ledger.status !== "clear" || !ledger.announce) return;
+    announce({ key: ledger.announce.key, text: ledger.announce.text, assertive: politenessFor("ok") });
+  }, [ledger, announce]);
+
+  const runArchive = async (uid: string) => {
+    setArchiving(true);
+    setArchiveFailure(null);
+    try {
+      saveArchive(await buildArchive(uid));
+    } catch (e) {
+      const text = errorText(e);
+      setArchiveFailure(text);
+      archiveTries.current += 1;
+      announce({ key: `trouble-archive-failed:${archiveTries.current}`, text });
+    } finally {
+      setArchiving(false);
+    }
+  };
+
   useEffect(() => {
     if (!open) return;
     // Focus moves into the tray on open and back to the bell on close. The
@@ -166,21 +223,23 @@ export default function NotificationBell({ defaultOpen = false }: { defaultOpen?
     // and a visible ring at every stop — which it now has.
     // A tray seeded open (the /kit specimen) must not steal focus and scroll the page to itself.
     if (!seeded.current) panelRef.current?.focus();
-    const onDoc = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      setOpen(false);
-      triggerRef.current?.focus();
-    };
-    document.addEventListener("mousedown", onDoc);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDoc);
-      document.removeEventListener("keydown", onKey);
-    };
   }, [open]);
+
+  // Escape and the outside press come from the layer stack (./layers.ts), which
+  // is also how the app's key guards learn the tray is up: it is role="group",
+  // so the aria-modal sniff never saw it, and A on /board approved the picked
+  // batch behind an open, focused tray. A press on the bell itself is the
+  // trigger's own toggle and is left to its onClick.
+  useLayer(open, {
+    kind: "tray",
+    panelRef,
+    anchorRef: triggerRef,
+    claimsKeys: () => !seeded.current,
+    onDismiss: (reason) => {
+      setOpen(false);
+      if (reason === "escape") triggerRef.current?.focus();
+    },
+  });
 
   const count = unread.length;
 
@@ -208,7 +267,7 @@ export default function NotificationBell({ defaultOpen = false }: { defaultOpen?
   const empty = EMPTY_TONE_INFO[emptyTone] ?? EMPTY_TONE_INFO.idle;
 
   return (
-    <div ref={ref} className="relative">
+    <div className="relative">
       <button
         type="button"
         ref={triggerRef}
@@ -237,9 +296,9 @@ export default function NotificationBell({ defaultOpen = false }: { defaultOpen?
             // thing on screen before the panel opens.
             className={
               al
-                ? `k-acct__badge${trouble ? " k-acct__badge--bad" : ""}`
+                ? `k-acct__badge${badgeTrouble ? " k-acct__badge--bad" : ""}`
                 : `font-jetbrains absolute -top-0.5 -right-0.5 grid h-4 min-w-4 place-items-center rounded-full px-1 text-label font-semibold ${
-                    trouble ? "bg-rose-400 text-slate-950" : "bg-cyan-300 text-slate-950"
+                    badgeTrouble ? "bg-rose-400 text-slate-950" : "bg-cyan-300 text-slate-950"
                   }`
             }
           >
@@ -301,16 +360,66 @@ export default function NotificationBell({ defaultOpen = false }: { defaultOpen?
                 <p className={al ? "k-caps k-tcard__k" : "font-jetbrains text-content tracking-[0.12em] text-rose-200 uppercase"}>
                   {isStorage(trouble.kind) ? `storage ${trouble.op} failed` : "background task failed"}
                 </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    clearStorageTrouble();
-                    panelRef.current?.focus();
-                  }}
-                  className={al ? "k-tray__btn" : "font-jetbrains shrink-0 text-label text-white/55 transition hover:text-white/85"}
-                >
-                  dismiss
-                </button>
+                <div className="flex items-center gap-2">
+                  {/* The one verb that lands at the fix, per kind. */}
+                  {remedy?.actions.map((act) => {
+                    if (act.kind === "archive") {
+                      return (
+                        <button
+                          key={act.kind}
+                          type="button"
+                          data-testid="bell-trouble-archive"
+                          onClick={() => void runArchive(act.uid)}
+                          disabled={archiving}
+                          aria-busy={archiving}
+                          className={al ? "k-tray__btn" : "font-jetbrains shrink-0 text-label text-rose-200 transition hover:text-rose-100 disabled:cursor-wait disabled:opacity-60"}
+                        >
+                          save archive
+                        </button>
+                      );
+                    }
+                    if (act.kind === "reload") {
+                      return (
+                        <button
+                          key={act.kind}
+                          type="button"
+                          data-testid="bell-trouble-reload"
+                          onClick={() => window.location.reload()}
+                          className={al ? "k-tray__btn" : "font-jetbrains shrink-0 text-label text-rose-200 transition hover:text-rose-100"}
+                        >
+                          reload
+                        </button>
+                      );
+                    }
+                    return (
+                      <a
+                        key={act.kind}
+                        href={act.href}
+                        data-testid="bell-open"
+                        onClick={() => setOpen(false)}
+                        className={al ? "k-tray__btn" : "font-jetbrains shrink-0 text-label text-cyan-300 transition hover:text-cyan-100"}
+                      >
+                        open
+                      </a>
+                    );
+                  })}
+                  {/* Deferral, not resolution: the badge goes quiet and the row
+                      stays until a success in the same scope lands. Gone once
+                      deferred, because there is nothing left for it to do. */}
+                  {ledger.status === "active" && (
+                    <button
+                      type="button"
+                      data-testid="bell-trouble-dismiss"
+                      onClick={() => {
+                        deferTrouble();
+                        panelRef.current?.focus();
+                      }}
+                      className={al ? "k-tray__btn" : "font-jetbrains shrink-0 text-label text-white/55 transition hover:text-white/85"}
+                    >
+                      dismiss
+                    </button>
+                  )}
+                </div>
               </div>
               <p className={al ? "k-tcard__t" : "mt-1 text-content leading-snug text-rose-100/90"}>
                 {TROUBLE_WORD[trouble.kind]}
@@ -320,8 +429,18 @@ export default function NotificationBell({ defaultOpen = false }: { defaultOpen?
                   theme sheet did not save", and the raw message is the only
                   thing that survives from studioDb's own classification. */}
               <p className={al ? "k-tcard__m" : "font-jetbrains mt-1 truncate text-content text-white/50"}>
-                {trouble.phase} · {trouble.message}
+                {ledger.phases.join(" · ")} · {trouble.message}
               </p>
+              {remedy?.fact && (
+                <div className="mt-1.5">
+                  <Tally value={remedy.fact.used} of={remedy.fact.of} label={remedy.fact.unit} tone="rose" />
+                </div>
+              )}
+              {archiveFailure && (
+                <p className={al ? "k-tcard__m" : "font-jetbrains mt-1 text-content leading-snug text-rose-200"}>
+                  {archiveFailure}
+                </p>
+              )}
             </div>
           )}
 

@@ -21,15 +21,17 @@ and still block. Pillow and numpy are imported INSIDE crop_letterbox and
 publish, so keep out of cases that call those; a case that needs a card belongs
 in a plan, not here.
 
-WHAT IT IS NOT. It is a courtesy, not yet a gate -- nothing invokes it. Running
-it is one command and it takes under a second; run it after touching anything
-in this directory.
+WHAT IT IS. A BLOCKING gate: the `python` job in .github/workflows/gates.yml
+runs it. It passes from any working directory (paths are anchored to HERE) and
+takes under a second; run it after touching anything in this directory.
 """
 
 import importlib.util
 import io
 import json
 import contextlib
+import re
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -149,6 +151,23 @@ def test_resume_regrades_an_unmeasured_candidate():
     regraded = sorted(c["id"] for c in m["candidates"] if c["grade"] is not None)
     check("resume re-grades every candidate with a plate on disk",
           regraded, ["flaky", "ok-one"])
+
+
+def test_resume_writes_provenance_for_an_adopted_plate():
+    """A plate adopted on --resume used to keep no sidecar and no `prompt`:
+    the survivors of a crash were the candidates that could not say which
+    recipe made them."""
+    F = load("forge")
+    m = manifest_with(candidate("lost", "pending"))
+    m["styles"]["st"]["recipe"] = "ink wash."
+    run_dir = staged_run(m)
+    F.stage_generate(m, run_dir, recycle_every=6)
+    c = m["candidates"][0]
+    sc = json.loads((run_dir / c["sidecar"]).read_text(encoding="utf-8"))
+    check("adopted plate gets a sidecar naming its prompt", sc["prompt"], c["prompt"])
+    check("the prompt leads with the style recipe", c["prompt"].startswith("ink wash."), True)
+    check("the sidecar says it was adopted", sc["adopted"], True)
+    check("no generate_s is invented", "generate_s" in c.get("timings", {}), False)
 
 
 def test_a_run_that_gave_up_mid_generation_does_not_report_done():
@@ -567,7 +586,7 @@ def test_lane_record_replay_argv_and_consistency_kwargs():
     LR = load_vlm("lane_record")
     C = load_vlm("consistency")
 
-    rec = LR.read("pipeline/vlm-probe/shots/reference-face-e25")
+    rec = LR.read(HERE.parent.parent / "pipeline/vlm-probe/shots/reference-face-e25")
     argv = LR.replay_argv(rec)
     want = ["consistency.py", "--lane", "reference", "--ref-crop", "face", "--late", "0.25", "--tag=-face-e25", "--steps", "20", "--seed", "770425"]
     check("replay_argv for reference-face-e25", argv, want)
@@ -593,7 +612,7 @@ def test_lane_record_replay_argv_and_consistency_kwargs():
 
 def test_lane_record_replay_argv_baseline_zoom():
     LR = load_vlm("lane_record")
-    rec = LR.read("pipeline/vlm-probe/shots/baseline-zoom")
+    rec = LR.read(HERE.parent.parent / "pipeline/vlm-probe/shots/baseline-zoom")
     argv = LR.replay_argv(rec)
     check("baseline-zoom replay_argv has --zoom", "--zoom" in argv, True)
     check("baseline-zoom replay_argv lane is baseline", "--lane" in argv and argv[argv.index("--lane") + 1] == "baseline", True)
@@ -613,7 +632,7 @@ def test_lane_record_reads_all_8_tracked_lanes():
         "pipeline/vlm-probe/clips/ref2va",
     ]
     for p in paths:
-        rec = LR.read(p)
+        rec = LR.read(HERE.parent.parent / p)
         check(f"read({p}) is not None", rec is not None, True)
         argv = LR.replay_argv(rec)
         check(f"replay_argv({p}) is non-empty", isinstance(argv, list) and len(argv) > 0, True)
@@ -786,7 +805,7 @@ def test_lane_record_record_clip_hero_repo_relative():
     )
     check("motion record hero is repo-relative", rec["hero"], "pipeline/vlm-probe/shots/reference/00-hero.png")
 
-    chain_rec = LR.read("pipeline/vlm-probe/clips/chain")
+    chain_rec = LR.read(HERE.parent.parent / "pipeline/vlm-probe/clips/chain")
     resolved_hero = Path(chain_rec["hero"])
     expected_hero = (ROOT / "pipeline" / "vlm-probe" / "shots" / "reference" / "00-hero.png").resolve()
     check("legacy clips/chain hero resolves to checkout root", resolved_hero, expected_hero)
@@ -891,12 +910,646 @@ def test_every_third_party_import_is_declared_in_requirements():
     check("requirements guard: a missing name is caught", got, ["pipeline/vlm-probe/identity.py: facenet_pytorch"])
 
 
+def _bytes(obj):
+    return io.BytesIO(json.dumps(obj).encode())
+
+
+def test_replicate_poll_survives_a_busy_card_and_names_a_dead_one():
+    """consistency.generate learned that a /history poll failing while the card
+    is busy is expected, and that a poll failing because the PROCESS is gone is
+    not. replicate.py carried its own copy of the loop with neither rule: one
+    slow poll failed the replica and recycled ComfyUI under a running job."""
+    import time as _time
+    import urllib.error
+    import urllib.request
+    R = load_vlm("replicate")
+    done = {"p1": {"outputs": {"13": {"images": [{"filename": "replica_00001_.png", "subfolder": ""}]}}}}
+
+    def run(alive, history):
+        polls = []
+
+        def fake_urlopen(req, timeout=None):
+            url = req if isinstance(req, str) else req.full_url
+            if url.endswith("/prompt"):
+                return _bytes({"prompt_id": "p1"})
+            polls.append(url)
+            return history(len(polls))
+        saved = (urllib.request.urlopen, _time.sleep, R.guard.comfy_process_ids)
+        urllib.request.urlopen, _time.sleep = fake_urlopen, (lambda s: None)
+        R.guard.comfy_process_ids = lambda: [4242] if alive else []
+        try:
+            return R.comfy_generate("a prompt", 7, timeout=60).name
+        except Exception as e:
+            return f"{type(e).__name__}: {e}"
+        finally:
+            urllib.request.urlopen, _time.sleep, R.guard.comfy_process_ids = saved
+
+    def busy_once(n):
+        if n == 1:
+            raise urllib.error.URLError("timed out while the card was busy")
+        return _bytes(done)
+    check("replicate: one failed poll on a busy card is not a failed replica",
+          run(True, busy_once), "replica_00001_.png")
+
+    def never(n):
+        raise urllib.error.URLError("connection refused")
+    got = run(False, never)
+    check("replicate: a vanished ComfyUI is named, not reported as a poll error",
+          "vanished" in got, True)
+
+
+def test_motion_collect_takes_the_newest_video_like_its_frames():
+    """collect() takes the NEWEST png per tag (hits[-1]) and took the OLDEST mp4
+    (first hit, then break), so a re-run lane paired fresh frames with the
+    previous run's video -- the one artefact the human check reads."""
+    M = load_vlm("motion")
+    tmp = Path(tempfile.mkdtemp())
+    out, dest = tmp / "comfy-out", tmp / "lane"
+    out.mkdir()
+    dest.mkdir()
+    for n in (1, 2):
+        (out / f"ref2va-01-turn_c-last_{n:05d}_.png").write_bytes(b"png %d" % n)
+        (out / f"ref2va-01-turn_{n:05d}_.mp4").write_bytes(b"mp4 %d" % n)
+    saved = M.COMFY_OUT
+    M.COMFY_OUT = out
+    try:
+        got = M.collect("ref2va-01-turn", dest, 73)
+    finally:
+        M.COMFY_OUT = saved
+    check("motion.collect: the frame is the newest run's", got["c-last"].read_bytes(), b"png 2")
+    check("motion.collect: ...and so is the video", sorted(p.name for p in dest.glob("*.mp4")),
+          ["ref2va-01-turn_00002_.mp4"])
+
+
+def test_motion_chain_refuses_to_restart_from_the_hero():
+    """The chain lane's whole claim is "clip N starts on clip N-1's last frame".
+    When a clip's last frame was not collected, the next clip silently started
+    on the HERO instead -- a ref-start clip recorded as a chain result."""
+    import types
+    M = load_vlm("motion")
+    tmp = Path(tempfile.mkdtemp())
+    hero = tmp / "hero.png"
+    hero.write_bytes(b"hero")
+    last = tmp / "01-turn_c-last.png"
+    last.write_bytes(b"last")
+
+    def run(collected):
+        staged = []
+        saved = (M.CLIPS, M.lane_record, M.stage_reference, M.generate, M.collect,
+                 M.guard.recycle_comfy, M.guard.vram_ok)
+        M.CLIPS = Path(tempfile.mkdtemp())
+        M.lane_record = types.SimpleNamespace(
+            check_resume=lambda *a, **k: None, record_clip=lambda **k: None,
+            read=lambda *a: {}, write_shot=lambda *a, **k: None)
+        M.stage_reference = lambda p: staged.append(Path(p).name) or Path(p).name
+        M.generate = lambda wf, timeout=0: None
+        M.collect = lambda prefix, dest, length: collected(prefix)
+        M.guard.recycle_comfy = lambda *a: True
+        M.guard.vram_ok = lambda: True
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                M.run("chain", 832, 480, 73, 4, True, hero)
+            err = None
+        except Exception as e:
+            err = str(e)
+        finally:
+            (M.CLIPS, M.lane_record, M.stage_reference, M.generate, M.collect,
+             M.guard.recycle_comfy, M.guard.vram_ok) = saved
+        return staged, err
+
+    # control: a collected last frame IS what the next clip starts on
+    staged, err = run(lambda prefix: {"c-last": last})
+    check("motion chain (control): clip 2 starts on clip 1's last frame", (staged[2], err),
+          ("01-turn_c-last.png", None))
+    staged, err = run(lambda prefix: {})
+    check("motion chain: a missing last frame stops the lane", err is not None and "02-walk" in err, True)
+    check("motion chain: ...and no clip after the first started on the hero", staged.count("hero.png"), 2)
+
+
+def test_fetch_ref2va_exit_code_reports_a_download_it_gave_up_on():
+    """The docstring says run it DETACHED, so the exit code is the only signal
+    anyone reads -- and a download abandoned after twelve attempts exited 0."""
+    import time as _time
+    import types
+    F = load_vlm("fetch_ref2va")
+    tmp = Path(tempfile.mkdtemp())
+
+    def refuse(**k):
+        raise OSError("stalled at 7 GB")
+    had = sys.modules.get("huggingface_hub")
+    saved = (F.COMFY_MODELS, _time.sleep, sys.argv)
+    sys.modules["huggingface_hub"] = types.SimpleNamespace(hf_hub_download=refuse)
+    F.COMFY_MODELS, _time.sleep, sys.argv = tmp, (lambda s: None), ["fetch_ref2va.py"]
+    code = "returned"
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            F.main()
+    except SystemExit as e:
+        code = e.code
+    finally:
+        F.COMFY_MODELS, _time.sleep, sys.argv = saved
+        if had is None:
+            sys.modules.pop("huggingface_hub", None)
+        else:
+            sys.modules["huggingface_hub"] = had
+    check("fetch_ref2va: a download it gave up on exits non-zero", code, 1)
+
+
+def test_reconcile_resume_is_per_annotator():
+    """reconciled.jsonl carries an `annotator` per row, but resume keyed on the
+    frame alone -- so adjudicating a second annotator's answers in the same run
+    skipped every frame the first one had covered and reported success."""
+    Rc = load_vlm("reconcile")
+    tmp = Path(tempfile.mkdtemp())
+    run_dir = tmp / "r"
+    run_dir.mkdir()
+    frame = "arcane-fights-001.jpg"
+    (run_dir / "results.jsonl").write_text("".join(
+        json.dumps({"frame": frame, "model": m, "ok": True, "parsed": {}}) + "\n"
+        for m in ("qwen", "gemma")), encoding="utf-8")
+    (run_dir / "reconciled.jsonl").write_text(
+        json.dumps({"frame": frame, "annotator": "qwen"}) + "\n", encoding="utf-8")
+
+    def go(annotator):
+        saved = (Rc.OUT_ROOT, Rc.judge, sys.argv)
+        Rc.OUT_ROOT = tmp
+        Rc.judge = lambda *a, **k: ({"corrected": {}, "corrections": [], "unanswerable": []}, {}, 0.0)
+        sys.argv = ["reconcile.py", "--run", "r", "--annotator", annotator]
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                Rc.main()
+        finally:
+            Rc.OUT_ROOT, Rc.judge, sys.argv = saved
+        rows = [json.loads(l) for l in (run_dir / "reconciled.jsonl").read_text(encoding="utf-8").splitlines()]
+        return sorted(r["annotator"] for r in rows)
+
+    check("reconcile: a second annotator's frame is adjudicated", go("gemma"), ["gemma", "qwen"])
+    check("reconcile (control): a frame already judged for its annotator is skipped",
+          go("qwen"), ["gemma", "qwen"])
+
+
+def test_replicate_one_unreadable_reannotation_does_not_end_phase_2():
+    """Phase 2 parsed each re-annotation with a bare json.loads, so one
+    malformed reply from the annotator ended the run and every frame after it
+    went unscored -- the phase reconcile.py already survives per frame."""
+    R = load_vlm("replicate")
+    tmp = Path(tempfile.mkdtemp())
+    run_dir, reps = tmp / "r", tmp / "replicas"
+    run_dir.mkdir()
+    reps.mkdir()
+    craft = {"shot_size": "wide", "contrast": "high"}
+    frames = ["arcane-fights-001.jpg", "arcane-fights-002.jpg"]
+    (run_dir / "results.jsonl").write_text("".join(
+        json.dumps({"frame": f, "model": R.ANNOTATOR, "ok": True, "parsed": craft}) + "\n"
+        for f in frames), encoding="utf-8")
+    for f in frames:
+        (reps / f"replica-{Path(f).stem}.png").write_bytes(b"png")
+    replies = iter(["the model wrote prose instead", json.dumps(craft)])
+    saved = (R.OUT_ROOT, R.REPLICA_DIR, R.run_ollama, R.guard.require_model, sys.argv)
+    R.OUT_ROOT, R.REPLICA_DIR = tmp, reps
+    R.run_ollama = lambda *a, **k: (next(replies), None)
+    R.guard.require_model = lambda *a, **k: None
+    sys.argv = ["replicate.py", "--run", "r", "--reuse-replicas"]
+    err = None
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            R.main()
+    except BaseException as e:
+        err = type(e).__name__
+    finally:
+        R.OUT_ROOT, R.REPLICA_DIR, R.run_ollama, R.guard.require_model, sys.argv = saved
+    out = run_dir / "replication.jsonl"
+    scored = [json.loads(l)["frame"] for l in out.read_text(encoding="utf-8").splitlines()] if out.exists() else []
+    check("replicate: phase 2 finishes past an unreadable re-annotation", (err, scored),
+          (None, ["arcane-fights-002.jpg"]))
+
+
+def test_motion_resume_refuses_a_different_hero():
+    """`motion.py --lane ref2va --hero other.png` over an existing lane.json
+    silently resumed a lane held against a different hero: check_resume had
+    no branch for the hero key motion.run passes."""
+    M = load_vlm("motion")
+    tmp = Path(tempfile.mkdtemp())
+    hero_a, hero_b = tmp / "heroA.png", tmp / "heroB.png"
+    hero_a.write_bytes(b"a")
+    hero_b.write_bytes(b"b")
+
+    class PastTheCheck(Exception):
+        pass
+
+    def run(first, second):
+        saved = (M.CLIPS, M.guard.recycle_comfy)
+        M.CLIPS = Path(tempfile.mkdtemp())
+
+        def reached(*a):
+            raise PastTheCheck()
+        M.guard.recycle_comfy = reached
+        try:
+            M.lane_record.record_clip(out_dir=M.CLIPS / "ref2va", lane="ref2va", seed=M.SEED,
+                                      steps=4, lora=True, width=832, height=480,
+                                      length=73, fps=M.FPS, hero=first)
+            with contextlib.redirect_stdout(io.StringIO()):
+                M.run("ref2va", 832, 480, 73, 4, True, second)
+            return "resumed"
+        except SystemExit as e:
+            return str(e)
+        except PastTheCheck:
+            return "resumed"
+        finally:
+            M.CLIPS, M.guard.recycle_comfy = saved
+
+    check("motion resume (control): the same hero resumes", run(hero_a, hero_a), "resumed")
+    msg = run(hero_a, hero_b)
+    check("motion resume: a different hero is refused, naming hero",
+          "Refusing to resume" in msg and "hero" in msg, True)
+
+
+def test_lane_record_check_resume_refuses_changed_ref_count():
+    """A reference lane resumed with a different --refs mixes conditions. The
+    count is recorded as intent up front: `references` is [] until the lane
+    finishes, so comparing the staged list would refuse an interrupted lane."""
+    LR = load_vlm("lane_record")
+    out = Path(tempfile.mkdtemp())
+    LR.record_stills(out_dir=out, lane="reference", refs=[], ref_count=2)
+    LR.check_resume(out / "lane.json", {"ref_count": 2})
+    try:
+        LR.check_resume(out / "lane.json", {"ref_count": 3})
+        err = None
+    except SystemExit as e:
+        err = str(e)
+    check("lane_record: a changed ref_count is refused", err is not None and "ref_count" in err, True)
+    legacy = Path(tempfile.mkdtemp())
+    LR.record_stills(legacy, lane="reference", refs=["a.png"])
+    LR.check_resume(legacy / "lane.json", {"ref_count": 3})
+    check("lane_record: a record with no ref_count still resumes", True, True)
+
+
+def test_survey_rhythm_counts_the_opening_and_closing_shots():
+    """rhythm() counted only the gaps BETWEEN cuts, so the opening shot and the
+    closing hold were never shots: [1,2,3] over 10s reported 2 shots for a
+    4-shot film and dropped the 7s closing hold from the held-shot share.
+    Scene detection never reports t=0, so the edges are implied."""
+    import types
+    stub = types.SimpleNamespace(FRAMES_DIR=None, download=None, extract=None,
+                                 keep_or_throw=None, probe_duration=None)
+    had = sys.modules.get("ingest")
+    sys.modules["ingest"] = stub  # the real one imports numpy and Pillow
+    try:
+        S = load_vlm("survey")
+    finally:
+        if had is None:
+            sys.modules.pop("ingest", None)
+        else:
+            sys.modules["ingest"] = had
+    r = S.rhythm([1, 2, 3], 10)
+    check("survey rhythm: opening and closing shots are counted", r["shots"], 4)
+    check("survey rhythm: the 7s closing hold is a held shot", r["share_time_in_shots_over_4s"], 0.7)
+    edge = S.rhythm([0, 1, 2, 3, 10], 10)
+    check("survey rhythm: a cut at 0 or at the end is not counted twice", edge["shots"], 4)
+
+
+def test_replicate_prefix_selects_a_non_default_corpus():
+    """replicate.main hard-coded startswith("arcane-fights") where reconcile.py
+    takes --prefix, so any other source's frames were unreachable without
+    listing each by name."""
+    R = load_vlm("replicate")
+    tmp = Path(tempfile.mkdtemp())
+    run_dir, reps = tmp / "r", tmp / "replicas"
+    run_dir.mkdir()
+    reps.mkdir()
+    craft = {"shot_size": "wide", "contrast": "high"}
+    frame = "matrix-bullets-001.jpg"
+    (run_dir / "results.jsonl").write_text(
+        json.dumps({"frame": frame, "model": R.ANNOTATOR, "ok": True, "parsed": craft}) + "\n",
+        encoding="utf-8")
+    (reps / f"replica-{Path(frame).stem}.png").write_bytes(b"png")
+    saved = (R.OUT_ROOT, R.REPLICA_DIR, R.run_ollama, R.guard.require_model, sys.argv)
+    R.OUT_ROOT, R.REPLICA_DIR = tmp, reps
+    R.run_ollama = lambda *a, **k: (json.dumps(craft), None)
+    R.guard.require_model = lambda *a, **k: None
+    sys.argv = ["replicate.py", "--run", "r", "--reuse-replicas", "--prefix", "matrix-bullets"]
+    err = None
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            R.main()
+    except BaseException as e:
+        err = str(e)
+    finally:
+        R.OUT_ROOT, R.REPLICA_DIR, R.run_ollama, R.guard.require_model, sys.argv = saved
+    out = run_dir / "replication.jsonl"
+    scored = [json.loads(l)["frame"] for l in out.read_text(encoding="utf-8").splitlines()] if out.exists() else []
+    check("replicate: --prefix selects another corpus's frames", (err, scored), (None, [frame]))
+
+
+def test_identity_decision_functions_load_without_torch_or_pil():
+    """identity.py owns the ruler that every published identity number is read
+    against, and its refusal (ruler_blindness) used to be unpinnable in CI
+    because torch and PIL were imported at module level."""
+    saved = {k: sys.modules.get(k) for k in ("torch", "PIL", "PIL.Image", "PIL.ImageDraw")}
+    for k in saved:
+        sys.modules[k] = None
+    try:
+        try:
+            I = load_vlm("identity")
+        except ImportError as e:
+            check("identity: loads with torch and PIL blocked", f"ImportError: {e}", "loaded")
+            return
+    finally:
+        for k, v in saved.items():
+            if v is None:
+                sys.modules.pop(k, None)
+            else:
+                sys.modules[k] = v
+    check("identity: loads with torch and PIL blocked", True, True)
+    inverted = {"id_within": 0.2, "id_floor": 0.5, "id_ceil": 0.4, "look_floor": 0.3}
+    sound = {"id_within": 0.2, "id_floor": 0.4, "id_ceil": 0.7, "look_floor": 0.3}
+    check("identity: an inverted scale is refused", isinstance(I.ruler_blindness(inverted), str), True)
+    check("identity: a sound scale is not refused", I.ruler_blindness(sound), None)
+    check("identity: a missing floor is refused",
+          isinstance(I.ruler_blindness({**sound, "id_floor": None}), str), True)
+    check("identity: no face reads as unscored", I.verdict(None, 0.1, sound), "unscored (no face detected)")
+    check("identity: at the ceiling reads as a different person",
+          I.verdict(0.7, 0.1, sound).startswith("READS AS A DIFFERENT PERSON"), True)
+    rows = [("floor", "a", "b", 0.3, 0.2, ""), ("hard-ceil", "a", "c", 0.6, 0.5, "")]
+    check("identity: scale_from reads floor and ceiling",
+          (I.scale_from(rows)["id_floor"], I.scale_from(rows)["id_ceil"]), (0.3, 0.6))
+    check("identity: missing_anchors names every absent still",
+          len(I.missing_anchors(tempfile.mkdtemp())), len(I.ANCHORS))
+
+
+def test_identity_person_box_detects_each_frame_once():
+    """look_vec and contact_sheet each ask person_box for the same frame; DETR
+    ran once per ASK. Pinned at the cache: 3 frames x 2 askers = 3 detections."""
+    saved = {k: sys.modules.get(k) for k in ("torch", "PIL", "PIL.Image", "PIL.ImageDraw")}
+    for k in saved:
+        sys.modules[k] = None
+    try:
+        I = load_vlm("identity")
+    finally:
+        for k, v in saved.items():
+            if v is None:
+                sys.modules.pop(k, None)
+            else:
+                sys.modules[k] = v
+    tmp = Path(tempfile.mkdtemp())
+    paths = []
+    for n in "abc":
+        f = tmp / f"{n}.jpg"
+        f.write_bytes(b"frame " + n.encode())
+        paths.append(f)
+    calls = []
+
+    def fake_detect(path, threshold=0.5):
+        calls.append(Path(path).name)
+        return (0, 0, 10, 10), 0.9
+    I._detect_person = fake_detect
+    first = [I.person_box(p) for p in paths]      # what look_vec asks
+    second = [I.person_box(p) for p in paths]     # what contact_sheet asks
+    check("identity: three frames asked twice are detected three times", len(calls), 3)
+    check("identity: the cached box is the detected box", second, first)
+    paths[0].write_bytes(b"frame a, regenerated in place")
+    I.person_box(paths[0])
+    check("identity: a frame regenerated in place is detected again", len(calls), 4)
+
+
+def test_dojo_video_follows_guard_comfy_and_survives_a_busy_card():
+    """dojo_video.generate_video hard-coded 127.0.0.1:8188 while ComfyUI resolves
+    per machine through guard.COMFY, and carried a poll loop with neither of
+    consistency.generate's rules."""
+    import time as _time
+    import urllib.error
+    import urllib.request
+    spec = importlib.util.spec_from_file_location("dojo_video", HERE / "dojo_video.py")
+    DV = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(DV)
+    done = {"p1": {"outputs": {"10": {"images": [{"filename": "dojo-video_00001_.webm", "subfolder": ""}]}}}}
+    urls = []
+    polls = []
+
+    def fake_urlopen(req, timeout=None):
+        url = req if isinstance(req, str) else req.full_url
+        urls.append(url)
+        if url.endswith("/prompt"):
+            return _bytes({"prompt_id": "p1"})
+        polls.append(url)
+        if len(polls) == 1:
+            raise urllib.error.URLError("timed out while the card was busy")
+        return _bytes(done)
+    saved = (urllib.request.urlopen, _time.sleep, DV.guard.COMFY, DV.guard.comfy_process_ids)
+    urllib.request.urlopen, _time.sleep = fake_urlopen, (lambda s: None)
+    DV.guard.COMFY = "http://sentinel-host:9999"
+    DV.guard.comfy_process_ids = lambda: [4242]
+    try:
+        got = DV.generate_video({"1": {}}, timeout=60).name
+    except Exception as e:
+        got = f"{type(e).__name__}: {e}"
+    finally:
+        urllib.request.urlopen, _time.sleep, DV.guard.COMFY, DV.guard.comfy_process_ids = saved
+    check("dojo_video: a failed poll on a busy card is survived", got, "dojo-video_00001_.webm")
+    check("dojo_video: every request goes to guard.COMFY",
+          sorted({u.split("/")[2] for u in urls}), ["sentinel-host:9999"])
+
+
+def test_truth_admit_confirms_disputes_and_refuses_stale_digest():
+    CS = load_vlm("craft_spec")
+    TA = load_vlm("truth_admit")
+    try:
+        CS.validate({"shot_size": "enormous"})
+        got = "no error"
+    except ValueError as e:
+        got = "shot_size" in str(e)
+    check("craft_spec rejects an off-vocabulary value naming the field", got, True)
+    try:
+        CS.validate({"not_a_field": "x"})
+        got = "no error"
+    except ValueError as e:
+        got = "not_a_field" in str(e)
+    check("craft_spec rejects an unknown field naming it", got, True)
+    sc = CS.sidecar("lane-a", "01-wide", "shots", seed=1)
+    r = {"shot_size": "extreme-wide", "camera_angle": "low-angle", "depth_of_field": "deep"}
+    agree = {"m1": r, "m2": dict(r)}
+    check("two agreeing blind reads confirm", TA.judge(sc, agree)[0], "dictated+confirmed")
+    check("one read is short of min_reads", TA.judge(sc, {"m1": r})[0], "dictated")
+    wrong = {k: dict(v, shot_size="close-up") for k, v in agree.items()}
+    basis, verdicts = TA.judge(sc, wrong)
+    check("reads that contradict the dictation dispute it", basis, "dictated-disputed")
+    check("only the contradicted field is disputed", verdicts["camera_angle"]["verdict"], "confirmed")
+    split = {"m1": r, "m2": dict(r, shot_size="close-up")}
+    check("a split read stays undecided", TA.judge(sc, split)[0], "dictated")
+    try:
+        TA.judge(dict(sc, spec_digest="0" * 64), agree)
+        got = "admitted"
+    except ValueError:
+        got = "refused"
+    check("a spec-digest mismatch is refused, never admitted", got, "refused")
+
+
+def test_score_admit_excludes_disputed_and_unscored():
+    S = load_vlm("score")
+    CS = load_vlm("craft_spec")
+    ok = dict(CS.sidecar("l", "01-wide", "shots", 1), basis="dictated+confirmed")
+    bad = dict(ok, basis="dictated-disputed")
+    stale = dict(ok, spec_digest="0" * 64)
+    scored, unscored, disputed = S.admit({"a": ok, "b": bad, "c": stale, "d": {"shot_size": "wide"}})
+    check("scored = confirmed sidecar + hand truth", sorted(scored), ["a", "d"])
+    check("disputed counted as compliance", disputed, ["b"])
+    check("stale digest is unscored", [f for f, _ in unscored], ["c"])
+
+
+DRIVE_PATH = re.compile(r"(?<![A-Za-z0-9])[A-Za-z]:[\\/]")
+
+
+def drive_letter_hits(root, files):
+    hits = []
+    for f in files:
+        text = (Path(root) / f).read_text(encoding="utf-8", errors="replace")
+        if DRIVE_PATH.search(text):
+            hits.append(f)
+    return hits
+
+
+def test_no_tracked_pipeline_json_holds_a_drive_letter_path():
+    repo = HERE.parent.parent
+    # the detector itself must fire on both spellings, or a green run below proves nothing
+    with tempfile.TemporaryDirectory() as d:
+        (Path(d) / "bad.json").write_text(json.dumps({"hero": "C:\\Users\\x\\a.png"}), encoding="utf-8")
+        (Path(d) / "bad2.json").write_text('{"hero": "D:/clone/a.png"}', encoding="utf-8")
+        (Path(d) / "ok.json").write_text('{"u": "https://example.com/a", "p": "shots/a.png"}', encoding="utf-8")
+        check("detector fires on both spellings, spares URLs",
+              drive_letter_hits(d, ["bad.json", "bad2.json", "ok.json"]), ["bad.json", "bad2.json"])
+    tracked = subprocess.run(["git", "ls-files", "pipeline/*.json"], cwd=repo, capture_output=True,
+                             text=True).stdout.split()
+    check("tracked pipeline json found", len(tracked) > 0, True)
+    check("tracked pipeline json with a drive-letter path", drive_letter_hits(repo, tracked), [])
+
+
+def _refusal(fn, *a):
+    try:
+        fn(*a)
+        return ""
+    except ValueError as e:
+        return str(e)
+
+
+def test_refs_resolve_logical_names_and_refuse_absolute_paths():
+    refs = load_vlm("refs")
+    check("frame ref", refs.resolve("frame:lotr-scene-008").name, "lotr-scene-008.jpg")
+    check("frame ref with extension", refs.resolve("frame:lotr-scene-008.jpg").parent.name, "frames")
+    check("lane ref", refs.resolve("lane:reference/00-hero.png").as_posix().endswith("shots/reference/00-hero.png"), True)
+    for bad in ("C:\\Users\\x\\a.png", "D:/x/a.png", "/home/x/a.png", "\\\\host\\share\\a.png"):
+        check(f"absolute {bad!r} refused", "non-portable reference" in _refusal(refs.resolve, bad), True)
+    check("bare plan filename still resolves", refs.resolve_spec("a.jpg").name, "a.jpg")
+
+
+def test_materialize_dry_lists_missing_and_flags_a_corrupt_frame():
+    from PIL import Image
+    fm, mat = load_vlm("frame_manifest"), load_vlm("materialize")
+    with tempfile.TemporaryDirectory() as d:
+        d = Path(d)
+        Image.effect_noise((64, 64), 60).convert("RGB").save(d / "a-001.jpg", quality=90)
+        Image.linear_gradient("L").convert("RGB").save(d / "a-002.jpg", quality=90)
+        rows = [{"frame": "a-001.jpg", "source": "a.mp4", "t_seconds": 1.0},
+                {"frame": "a-002.jpg", "source": "a.mp4", "t_seconds": 2.0},
+                {"frame": "a-003.jpg", "source": "a.mp4", "t_seconds": 3.0}]
+        fm.stamp_frames(rows, d, source_id="vid")
+        check("stamp adds sha256, phash, source_id", [k in rows[0] for k in ("sha256", "phash", "source_id")], [True] * 3)
+        rows[2].update(sha256="0" * 64, phash="0" * 16)  # a frame this clone does not have
+        fm.write(d / "a-manifest.json", "a", 10, "scene", 0.3, [], rows)
+        lock = fm.build_lock(d)
+        check("lock covers every stamped frame", sorted(lock["frames"]), ["a-001.jpg", "a-002.jpg", "a-003.jpg"])
+        check("lock entry fields", sorted(lock["frames"]["a-001.jpg"]),
+              ["extractor", "phash", "sha256", "slug", "source_id", "t_seconds"])
+        check("lock holds no pixels", max(len(json.dumps(v)) for v in lock["frames"].values()) < 400, True)
+        lp = d / "corpus.lock.json"
+        lp.write_text(json.dumps(lock), encoding="utf-8")
+        (d / "a-001.jpg").unlink()
+        (d / "a-002.jpg").unlink()
+        (d / "a-manifest.json").unlink()
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            rc = mat.main(["--dry", "--lock", str(lp), "--frames", str(d)])
+        check("--dry on an empty clone: 3 missing, exit 0", (rc, "missing 3" in out.getvalue()), (0, True))
+        Image.linear_gradient("L").convert("RGB").save(d / "a-001.jpg", quality=90)  # wrong pixels under a-001's name
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            rc = mat.main(["--dry", "--lock", str(lp), "--frames", str(d)])
+        check("wrong picture: mismatch row, exit 1", (rc, "mismatch a-001.jpg" in out.getvalue()), (1, True))
+        (d / "a-001.jpg").write_bytes(b"not a jpg")
+        with contextlib.redirect_stdout(io.StringIO()):
+            rc = mat.main(["--dry", "--lock", str(lp), "--frames", str(d)])
+        check("corrupt jpg: exit 1", rc, 1)
+
+
+def test_fetch_missing_keeps_exact_and_discards_a_foreign_extraction():
+    from PIL import Image
+    fm, mat = load_vlm("frame_manifest"), load_vlm("materialize")
+    with tempfile.TemporaryDirectory() as d:
+        d = Path(d)
+        good = d / "src.jpg"
+        Image.effect_noise((64, 64), 60).convert("RGB").save(good, quality=90)
+        row = [{"frame": "s-001.jpg", "source": "s.mp4", "t_seconds": 1.0}]
+        fm.stamp_frames(row, d)
+        row[0]["sha256"] = fm.sha256_file(good)
+        row[0]["phash"] = fm.phash_file(good)
+        entry = {"slug": "s", "t_seconds": 1.0, "sha256": row[0]["sha256"], "phash": row[0]["phash"]}
+        corpus = d / "corpus.json"
+        corpus.write_text(json.dumps({"sources": [{"slug": "s", "url": "u"}]}), encoding="utf-8")
+        out_dir = d / "frames"
+
+        def extract_good(video, t, dest):
+            Path(dest).write_bytes(good.read_bytes())
+            return True
+
+        def extract_foreign(video, t, dest):
+            Image.linear_gradient("L").convert("RGB").save(dest, quality=90)
+            return True
+
+        r = mat.fetch_missing([("s-001.jpg", entry, "missing")], out_dir, corpus, lambda u: "v.mp4", extract_good)
+        check("re-extracted identical bytes -> exact", r[0][2], "exact")
+        (out_dir / "s-001.jpg").unlink()
+        r = mat.fetch_missing([("s-001.jpg", entry, "missing")], out_dir, corpus, lambda u: "v.mp4", extract_foreign)
+        check("a different picture -> mismatch and not kept", (r[0][2], (out_dir / "s-001.jpg").exists()),
+              ("mismatch", False))
+
+
+def test_manifest_gitignore_reincludes_manifests_but_not_pixels():
+    repo = HERE.parent.parent
+
+    def ignored(p):
+        return subprocess.run(["git", "check-ignore", "-q", p], cwd=repo).returncode == 0
+
+    check("manifest not ignored", ignored("pipeline/vlm-probe/frames/lotr-scene-manifest.json"), False)
+    check("frame jpg still ignored", ignored("pipeline/vlm-probe/frames/x.jpg"), True)
+
+
+def test_forge_stamps_the_hash_of_the_frame_it_read():
+    from PIL import Image
+    F = load("forge")
+    check("forge refuses an absolute frame spec",
+          "non-portable reference" in _refusal(F.resolve_source, "C:\\x\\a.jpg"), True)
+    with tempfile.TemporaryDirectory() as d:
+        d = Path(d)
+        src = d / "f.jpg"
+        Image.effect_noise((64, 64), 60).convert("RGB").save(src, quality=90)
+        m = {"scenes": [{"id": "s", "frame": "f.jpg", "annotation": {"x": 1}}], "progress": {}, "log": []}
+        saved = (F.resolve_source, F.set_stage, F.save)
+        F.resolve_source = lambda spec: src
+        F.set_stage = lambda *a, **k: None
+        F.save = lambda *a, **k: None
+        try:
+            (d / "scenes" / "s").mkdir(parents=True)
+            F.stage_annotate(m, d, "model")
+        finally:
+            F.resolve_source, F.set_stage, F.save = saved
+        check("run.json scene carries source_sha256",
+              m["scenes"][0].get("source_sha256"), load_vlm("frame_manifest").sha256_file(src))
+
+
 TESTS = [
     test_palette_is_measured_and_the_sample_is_declared,
     test_frozen_is_a_number_not_a_poster_impression,
     test_ungradable_candidate_does_not_kill_the_run,
     test_scoreless_source_annotation_does_not_kill_the_run,
     test_resume_regrades_an_unmeasured_candidate,
+    test_resume_writes_provenance_for_an_adopted_plate,
     test_a_run_that_gave_up_mid_generation_does_not_report_done,
     test_a_grade_names_the_grader_version_not_just_the_model,
     test_list_survives_a_row_from_another_schema,
@@ -918,6 +1571,27 @@ TESTS = [
     test_lane_record_check_detects_tampering,
     test_dojo_gemini_key_travels_in_a_header_not_the_url,
     test_every_third_party_import_is_declared_in_requirements,
+    test_replicate_poll_survives_a_busy_card_and_names_a_dead_one,
+    test_motion_collect_takes_the_newest_video_like_its_frames,
+    test_motion_chain_refuses_to_restart_from_the_hero,
+    test_fetch_ref2va_exit_code_reports_a_download_it_gave_up_on,
+    test_reconcile_resume_is_per_annotator,
+    test_replicate_one_unreadable_reannotation_does_not_end_phase_2,
+    test_motion_resume_refuses_a_different_hero,
+    test_lane_record_check_resume_refuses_changed_ref_count,
+    test_survey_rhythm_counts_the_opening_and_closing_shots,
+    test_replicate_prefix_selects_a_non_default_corpus,
+    test_identity_decision_functions_load_without_torch_or_pil,
+    test_identity_person_box_detects_each_frame_once,
+    test_dojo_video_follows_guard_comfy_and_survives_a_busy_card,
+    test_truth_admit_confirms_disputes_and_refuses_stale_digest,
+    test_score_admit_excludes_disputed_and_unscored,
+    test_no_tracked_pipeline_json_holds_a_drive_letter_path,
+    test_refs_resolve_logical_names_and_refuse_absolute_paths,
+    test_materialize_dry_lists_missing_and_flags_a_corrupt_frame,
+    test_fetch_missing_keeps_exact_and_discards_a_foreign_extraction,
+    test_manifest_gitignore_reincludes_manifests_but_not_pixels,
+    test_forge_stamps_the_hash_of_the_frame_it_read,
 ]
 
 

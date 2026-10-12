@@ -20,7 +20,7 @@
 // here rather than stranding processes on an operator's machine.
 
 import { spawn, type ChildProcess } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -28,17 +28,27 @@ import { test, expect } from "@playwright/test";
 
 import { USES_SHELL, killTree } from "@/lib/claudeCli";
 
+/** ONE directory for the file, removed when the file is done (it used to mint
+ *  a fresh mkdtemp per spawn and remove none: +2 `gravitone-killtree-*` per run). */
+let dir: string | null = null;
+let spawns = 0;
+
 /** A process that writes its own pid to `pidFile` and then lives until killed. */
 function sleeper(): { script: string; pidFile: string } {
-  const dir = mkdtempSync(join(tmpdir(), "gravitone-killtree-"));
+  dir ??= mkdtempSync(join(tmpdir(), "gravitone-killtree-"));
   const script = join(dir, "sleeper.cjs");
-  const pidFile = join(dir, "pid");
+  const pidFile = join(dir, `pid-${spawns++}`);
   writeFileSync(
     script,
     'require("fs").writeFileSync(process.argv[2], String(process.pid)); setInterval(() => {}, 1000);\n',
   );
   return { script, pidFile };
 }
+
+test.afterAll(() => {
+  if (dir) rmSync(dir, { recursive: true, force: true });
+  dir = null;
+});
 
 const alive = (pid: number): boolean => {
   try {

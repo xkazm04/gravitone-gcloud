@@ -5,7 +5,7 @@
 // and a render at the right, the tracks along the bottom; a stage bar across
 // the top with the one next action.
 
-import { FinishLine, NextAction } from "./parts/FinishLine";
+import { FinishLine, FinishPips, NextAction } from "./parts/FinishLine";
 import { Inspector } from "./parts/Inspector";
 import { Lanes } from "./parts/Lanes";
 import { Monitor } from "./parts/Monitor";
@@ -17,6 +17,7 @@ export default function ControlRoom() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <OriginChip />
+        <FinishPips />
         <NextAction className="max-w-full" />
       </div>
       <div className="grid gap-4 xl:grid-cols-[19rem_minmax(0,1fr)_21rem]">

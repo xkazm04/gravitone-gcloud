@@ -73,5 +73,10 @@ test("transport: a missing `claude` REJECTS — it does not take the process dow
   // an uncaught `write EOF` and no assertion below ever ran.
   expect(err, "runClaude resolved on a machine with no `claude` — it should refuse").not.toBe(null);
   expect(err instanceof CliError, `expected a CliError, got ${String(err)}`).toBe(true);
-  expect((err as CliError).kind).not.toBe("timeout");
+  // And the verdict is the RIGHT one, not merely a non-timeout. `failed` here is
+  // the regression cli-exit-classification records: the text provider marks a
+  // `failed` call DISPATCHED (lib/text/providers/claudeCli.ts), so a machine
+  // without the CLI would read as a spent turn with the wrong remedy, and the
+  // ladder this header promises would not descend for the reason it says.
+  expect((err as CliError).kind).toBe("not-installed");
 });

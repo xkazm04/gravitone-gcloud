@@ -1,5 +1,7 @@
 "use client";
 
+import { STUDIO_DB_NAME } from "./fixtures/mode";
+
 // The studio's IndexedDB — the same mechanism the parent app used for its
 // playground (dolla/arm/gravitone/web/lib/playgroundDb.ts): raw IDB, no
 // dependency, ONE database with one connection helper and one transaction
@@ -9,7 +11,7 @@
 // promise the UI makes out loud, so a store that cannot be opened or written
 // has to reach the caller, which has a banner for exactly that.
 
-const DB_NAME = "gravitone-studio";
+const DB_NAME = STUDIO_DB_NAME;
 export const PROJECTS_STORE = "projects";
 /** Per-project step content — see app/_phases/_shared/stepStore.ts. */
 export const STEPS_STORE = "steps";

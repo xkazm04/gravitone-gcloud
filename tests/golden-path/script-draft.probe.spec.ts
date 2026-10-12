@@ -49,7 +49,7 @@ const sha256 = (s: string) => createHash("sha256").update(s).digest("hex");
 const IMPACT_SHA_2026_10_05 = "346e14ea9a49d8aadd55c6ab73d4dc1f5cad33d9982bd2220588576e58dabac5";
 /** Same day, `sha256(JSON.stringify(EDIT_PLAN_SCHEMA))` — also the key the
  *  recalibrate cassettes are recorded against (recalibrate-route-e2e). */
-const SCHEMA_SHA_2026_10_05 = "532bdd5adc8891da4411a6b6c1c958d4f4133a6b77d7643edac091b676c4d6d5";
+const SCHEMA_SHA_2026_10_11 = "d0bfadd10ccffc83569ea1b48a91de779056550a904f8158805f8c1216ad41f0";
 
 /** A draft whose renders are the fixture's, re-identified. Two renders that no
  *  fixture table has ever heard of. */
@@ -115,7 +115,6 @@ const planFor = (renderId: string, beatAt: string) =>
   JSON.stringify({
     edits: [{ renderId, op: "retime", beatAt, seconds: 6, why: "tighten" }],
     refusals: [],
-    unchanged: [],
     summary: "one retime",
   });
 
@@ -126,8 +125,8 @@ test("draft/2: editPlanSchema(draft) enumerates the draft's renders", () => {
 
 test("draft/2: the fixture schema is byte-identical to EDIT_PLAN_SCHEMA (the cassettes' key)", () => {
   expect(editPlanSchema(fixtureDraft())).toEqual(EDIT_PLAN_SCHEMA);
-  expect(sha256(JSON.stringify(editPlanSchema(fixtureDraft())))).toBe(SCHEMA_SHA_2026_10_05);
-  expect(sha256(JSON.stringify(EDIT_PLAN_SCHEMA))).toBe(SCHEMA_SHA_2026_10_05);
+  expect(sha256(JSON.stringify(editPlanSchema(fixtureDraft())))).toBe(SCHEMA_SHA_2026_10_11);
+  expect(sha256(JSON.stringify(EDIT_PLAN_SCHEMA))).toBe(SCHEMA_SHA_2026_10_11);
 });
 
 test("draft/2: parseEditPlan refuses a fixture render against a draft that does not hold it", () => {

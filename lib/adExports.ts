@@ -7,10 +7,12 @@
 
 import path from "node:path";
 
+import { outPath } from "./fixtures/roots";
+
 /** Read per call, so a probe can point it at a temp directory. */
 export function adExportRoot(): string {
   const env = process.env.AD_EXPORT_DIR?.trim();
-  return env ? path.resolve(env) : path.join(process.cwd(), "foundry-out", "ad-exports");
+  return env ? path.resolve(env) : outPath("ad-exports");
 }
 
 /** Export ids are minted by lib/adRender.ts as uuids; nothing else names a path. */

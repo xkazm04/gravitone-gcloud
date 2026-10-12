@@ -93,6 +93,8 @@ export function StackBar({
   segments,
   showCounts = true,
   label,
+  selected,
+  onSegment,
   className = "",
 }: {
   segments: StackSegment[];
@@ -100,8 +102,32 @@ export function StackBar({
   showCounts?: boolean;
   /** Names the whole rail — "commit". Optional; the list stands alone. */
   label?: string;
+  /** The segment label currently used as a filter, if any. */
+  selected?: string;
+  /**
+   * EVERY COUNT IS A DOOR: with this, each legend item of a non-empty segment
+   * becomes a `<button aria-pressed>` that calls `onSegment(label)` (the caller
+   * toggles). The rail itself stays `aria-hidden`; a zero-count segment stays a
+   * plain item, not focusable — there is nothing behind it to open.
+   */
+  onSegment?: (label: string) => void;
   className?: string;
 }) {
+  const door = (s: StackSegment, inner: React.ReactNode, cls: string) =>
+    onSegment && s.n > 0 ? (
+      <button
+        type="button"
+        aria-pressed={selected === s.label}
+        onClick={() => onSegment(s.label)}
+        className={`${cls} cursor-pointer rounded transition hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300/70 ${
+          selected === s.label ? "text-white underline decoration-white/50 underline-offset-4" : ""
+        }`}
+      >
+        {inner}
+      </button>
+    ) : (
+      <span className={cls}>{inner}</span>
+    );
   const total = segments.reduce((a, s) => a + s.n, 0);
   const almanac = useWorld() === "almanac";
   if (almanac) {
@@ -122,8 +148,14 @@ export function StackBar({
         <ul aria-label={label} className={showCounts ? "k-raill" : "sr-only"}>
           {segments.map((s, i) => (
             <li key={`${s.label}-${i}`}>
-              <i aria-hidden className={`k-sw ${A_FILL[s.tone]}${s.hatched ? " k-rail__hatch" : ""}`} />
-              <b>{s.n}</b> {s.label}
+              {door(
+                s,
+                <>
+                  <i aria-hidden className={`k-sw ${A_FILL[s.tone]}${s.hatched ? " k-rail__hatch" : ""}`} />
+                  <b>{s.n}</b> {s.label}
+                </>,
+                "",
+              )}
             </li>
           ))}
         </ul>
@@ -159,14 +191,20 @@ export function StackBar({
         }
       >
         {segments.map((s, i) => (
-          <li key={`${s.label}-${i}`} className="flex items-center gap-1.5">
-            <span
-              aria-hidden
-              className={`h-1.5 w-1.5 rounded-full ${DOT[s.tone]} ${s.hatched ? "opacity-50" : ""}`}
-            />
-            <span>
-              {s.label} {s.n}
-            </span>
+          <li key={`${s.label}-${i}`}>
+            {door(
+              s,
+              <>
+                <span
+                  aria-hidden
+                  className={`h-1.5 w-1.5 rounded-full ${DOT[s.tone]} ${s.hatched ? "opacity-50" : ""}`}
+                />
+                <span>
+                  {s.label} {s.n}
+                </span>
+              </>,
+              "flex items-center gap-1.5",
+            )}
           </li>
         ))}
       </ul>

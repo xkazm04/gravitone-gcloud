@@ -21,6 +21,15 @@ import { test, expect } from "@playwright/test";
 
 import { stripComments } from "./_helpers";
 
+// WHAT THIS CAN AND CANNOT PROVE. It counts mint sites (`blobUrl(` / `audioUrl(`)
+// against `revokeObjectURL` sites per file and requires at least as many revokes
+// as mints. That catches the file that mints twice and releases once, and the
+// file that never releases. It does NOT prove ownership: it cannot tell that a
+// revoke targets the url that was minted, or that it runs on the path that
+// outlives it (a callback mint with an unrelated unmount revoke passes), and a
+// loop that mints once per iteration counts as one site. A stricter matcher would
+// reject legitimate shapes, so the ceiling is stated here instead of raised.
+
 /** Callers that allocate an object URL and do not yet release it, each with the
  *  reason it is still here. An entry is a claim somebody defends in review. */
 const KNOWN_LEAKS: Record<string, string> = {
@@ -45,6 +54,14 @@ function code(src: string): string {
   return stripComments(src);
 }
 
+/** Mint and revoke call-site counts in comment-stripped source. */
+export function urlSites(src: string): { mints: number; revokes: number } {
+  return {
+    mints: (src.match(/\b(blobUrl|audioUrl)\s*\(/g) ?? []).length,
+    revokes: (src.match(/\brevokeObjectURL\b/g) ?? []).length,
+  };
+}
+
 /** Every source file under app/ and lib/. */
 function sources(): string[] {
   const out: string[] = [];
@@ -60,7 +77,7 @@ function sources(): string[] {
   return out;
 }
 
-test("every caller that MINTS an object URL also releases it", () => {
+test("every caller that MINTS an object URL releases at least as many as it mints", () => {
   const files = sources();
   // A walk that reads nothing reports "no leaks" in a voice indistinguishable
   // from success. Prove it read the tree before trusting the verdict.
@@ -80,7 +97,8 @@ test("every caller that MINTS an object URL also releases it", () => {
     if (/export function (blobUrl|audioUrl)\b/.test(src)) continue;
     if (!/\b(blobUrl|audioUrl)\s*\(/.test(src)) continue;
     minting.push(rel);
-    if (!/revokeObjectURL/.test(src)) leaking.push(rel);
+    const { mints, revokes } = urlSites(src);
+    if (revokes < mints) leaking.push(rel);
   }
 
   console.log(`[urls] ${minting.length} caller(s) mint an object URL: ${minting.join(", ")}`);
@@ -92,6 +110,11 @@ test("every caller that MINTS an object URL also releases it", () => {
 
   const unexplained = leaking.filter((f) => !KNOWN_LEAKS[f]);
   expect(unexplained, "these mint an object URL and never revoke it").toEqual([]);
+});
+
+test("the site counter notices two mints released once (the ceiling's floor)", () => {
+  expect(urlSites("const a = blobUrl(x); const b = blobUrl(y); URL.revokeObjectURL(a);")).toEqual({ mints: 2, revokes: 1 });
+  expect(urlSites("const a = audioUrl(x); URL.revokeObjectURL(a);")).toEqual({ mints: 1, revokes: 1 });
 });
 
 test("every known-leak exemption still describes a file that actually leaks", () => {

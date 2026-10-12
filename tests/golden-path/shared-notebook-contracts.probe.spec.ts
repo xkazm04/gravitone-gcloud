@@ -189,6 +189,8 @@ test("cards: the steel-man is the only card the board may not descope", () => {
  * shape and no entry is the finding.
  */
 const OWN_LOAD_GUARD: Record<string, string> = {
+  "components/ui/shell/ShellPalette.tsx":
+    "a fan-out on dialog open, not a keyed load: the project list and eight independent board counts each settle into their own slot of local state, and a failed source simply contributes no entry. The guard is the dialog being mounted, as in useBoard.ts.",
   "app/_phases/script/trailer/useTrailerCut.ts":
     "named in useLoadFor.ts's header: a branching two-stage load (the saved cut, else compose from confirmed picks) with two distinct guard points. Flattening it would hide the branch that is the whole logic of the hook.",
   "app/_phases/script/useVersions.ts":

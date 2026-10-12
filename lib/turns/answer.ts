@@ -21,6 +21,19 @@ const TEXT_KINDS = new Set<string>([
 
 const NOTHING_CHANGED = /Nothing was changed\.$/;
 
+/**
+ * What a refused answer adds to a failure body so it can be repaired rather than
+ * redone: the findings addressed by path (`items`) and the refused answer itself
+ * (`draft`). Empty for a failure that kept neither, so every other body is
+ * byte-for-byte what it was.
+ */
+export function repairable(err: NonNullable<TurnRecord["error"]>): { items?: unknown; draft?: unknown } {
+  return {
+    ...(err.items?.length ? { items: err.items } : {}),
+    ...(err.draft !== undefined ? { draft: err.draft } : {}),
+  };
+}
+
 /** `failed` is the route's own sentence for a failure that carried no message
  *  ("The recalibration failed. Nothing was changed."). */
 export function syncBody(rec: TurnRecord, failed: string): Response {
@@ -42,7 +55,7 @@ export function syncBody(rec: TurnRecord, failed: string): Response {
   // Every finding travels: the fix is a prompt change, and one finding per run
   // is a prompt edited five times for one run's worth of information.
   const findings = err.findings?.length ? { findings: err.findings } : {};
-  return Response.json({ ...(plain ? { detail } : { detail, code: kind }), ...findings }, { status: statusFor(kind) });
+  return Response.json({ ...(plain ? { detail } : { detail, code: kind }), ...findings, ...repairable(err) }, { status: statusFor(kind) });
 }
 
 /** The 409 both routes answer when the project's slot is held. */

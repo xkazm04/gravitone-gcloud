@@ -28,11 +28,10 @@ the local model tends to describe mood rather than surface).
 
 import argparse
 import json
-import os
 import sys
-import time
 from pathlib import Path
 
+from atomic import replace_with_retry
 from catalogue_lock import LOCK_NAME, CatalogueLocked, catalogue_lock, holds_lock, journal_intent
 
 HERE = Path(__file__).parent
@@ -76,23 +75,8 @@ def save_catalogue(cat, source, ids):
     cat["_rev"] = journal_intent(STYLES.parent, cat, "acquire", source, ids, by="acquire.py")
     tmp = STYLES.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(cat, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    # AND THE REPLACE IS RETRIED, because on Windows it is not unconditional:
-    # os.replace raises PermissionError while ANY other handle to the
-    # destination is open, and a polled file has one open a great deal of the
-    # time. Measured here on the real 30 KB catalogue with a reader in a tight
-    # loop: the bare replace lost 32 of 40 writes. Torn reads had gone to zero
-    # and the write had become the thing that failed -- a different defect, not
-    # a fix. The window is microseconds wide, so a few short retries close it;
-    # what must never happen is swallowing the failure, so the last attempt
-    # raises and the caller hears about it.
-    for attempt in range(20):
-        try:
-            os.replace(tmp, STYLES)
-            return
-        except PermissionError:
-            if attempt == 19:
-                raise
-            time.sleep(0.01)
+    # Retried on Windows PermissionError; see atomic.py for the measurement.
+    replace_with_retry(tmp, STYLES)
 
 
 def cell(parsed, field, width):

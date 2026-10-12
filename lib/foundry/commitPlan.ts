@@ -28,7 +28,13 @@ import type {
   ExtractVerdicts,
   Observables,
 } from "./extract/types";
+import { graderStamp } from "./calibration";
 import { nearDuplicates } from "./extract/vocabulary";
+
+/** A keep that counts toward `proven`: a human's (or a record older than the
+ *  `by` field). A model's keep is evidence, never a vote — commitRun applies
+ *  the same rule, so preview equals commit. */
+export const humanKeep = (e: { verdict: string; by?: string }): boolean => e.verdict === "keep" && e.by !== "model";
 
 /**
  * Pure projection of what `commitRun` will do to the filesystem and catalogue.
@@ -80,6 +86,7 @@ export function planForgeCommit(
     style_score: c.grade?.style?.score ?? null,
     has_text: c.grade?.veto?.has_text ?? null,
     at: effectiveVerdicts[c.id].at || "",
+    ...graderStamp(c.grade),
   }));
 
   const promotions: string[] = [];
@@ -89,12 +96,12 @@ export function planForgeCommit(
     evidence[s.id] = [];
     const prevKeptScenes = new Set(
       (s.evidence ?? [])
-        .filter((e) => e.run !== run.id && e.verdict === "keep")
+        .filter((e) => e.run !== run.id && humanKeep(e))
         .map((e) => `${e.run}/${e.scene}`),
     );
     const newKeptScenes = new Set(
       decided
-        .filter((c) => c.style === s.id && effectiveVerdicts[c.id]?.verdict === "keep")
+        .filter((c) => c.style === s.id && effectiveVerdicts[c.id] && humanKeep(effectiveVerdicts[c.id]))
         .map((c) => `${run.id}/${c.scene}`),
     );
     for (const c of decided.filter((c) => c.style === s.id)) {
@@ -104,6 +111,7 @@ export function planForgeCommit(
         mechanism: c.mechanism,
         verdict: effectiveVerdicts[c.id].verdict as Verdict,
         at: effectiveVerdicts[c.id].at || "",
+        ...(effectiveVerdicts[c.id].by ? { by: effectiveVerdicts[c.id].by } : {}),
       });
     }
     const combinedKeptScenes = new Set([...prevKeptScenes, ...newKeptScenes]);

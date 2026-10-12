@@ -16,6 +16,23 @@ const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR || ".next",
 };
 
+// ── package.json `sideEffects` — why the kit barrel stopped shipping the deck ──
+//
+// package.json declares `"sideEffects": ["*.css", "./lib/turns/kinds/*.ts"]`.
+// JSON holds no comments, so the reason lives here. Without it Turbopack had to
+// assume any module might do something on import, so a barrel re-export nobody
+// used still came along: `import { useToast } from "@/components/kit"` in
+// lib/board pulled the kit's Deck, and the Deck pulled `motion` (~116 KB raw)
+// into /board, /kit and /library, which draw no deck. Measured 2026-10-08:
+// /board 942 -> 743 KB and /kit 940 -> 736 KB first-load JS, every other route
+// 8-14 KB lighter.
+//
+// THE COST OF THE DECLARATION: a module imported ONLY for what it does on import
+// (`import "./registers-itself"`) is now dropped unless it is listed. Today
+// that is exactly lib/turns/kinds/* (app/api/turns/route.ts imports each one
+// bare so it calls registerTurnKind) and the stylesheets. A new bare import of a
+// .ts/.tsx module must be added to that list, or it silently stops running.
+
 // ── DevInspector — keeping the overlay out of what ships ────────────────────
 //
 // app/layout.tsx mounts the inspector behind `process.env.NODE_ENV ===

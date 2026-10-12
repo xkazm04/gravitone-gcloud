@@ -161,6 +161,7 @@
 .ab-tbl tbody tr.row.is-sel { background: color-mix(in srgb, var(--gt-accent-cyan) 7%, transparent); }
 .ab-tbl tbody tr.row.is-sel td:first-child { box-shadow: inset 3px 0 0 var(--gt-accent-cyan); }
 .ab-tbl tbody tr.row:focus-visible td { border-top: 1px solid var(--gt-accent-cyan); border-bottom: 1px solid var(--gt-accent-cyan); }
+.ab-tbl tbody tr.more td { padding: 2px 10px 10px; white-space: normal; }
 .ab-tbl tbody tr.row:focus-visible td:first-child { box-shadow: inset 3px 0 0 var(--gt-accent-cyan); }
 .ab-tbl tbody tr.row.is-v-rejected .c-title { color: var(--al-vellum); }
 .ab-tbl tbody tr.row.is-new { animation: ab-flash 2.4s var(--gt-ease); }

@@ -255,6 +255,14 @@ function DuelCardBody({
                 declared deviation — {d}
               </p>
             ))}
+            {/* WHAT WAS CUT, AND WHY (BACKLOG B-005, PR-L1-3) — the render's own
+                cut records, verbatim. Expert-face only until now, so the guided
+                reader adopted a script without seeing which claims it dropped. */}
+            {r.cutFacts.map((c) => (
+              <p key={c.factId} data-testid={`duel-cut-${r.id}`} className="text-content leading-snug text-white/45">
+                cut <span className="font-jetbrains text-white/60">{c.factId}</span> — {c.why}
+              </p>
+            ))}
             {/* Same badge, same words as HypothesisColumn: one staleness concept,
                 one spelling on both faces. Only the word count is re-measured. */}
             {rewritten && (

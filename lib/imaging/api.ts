@@ -4,9 +4,15 @@
 // three different opinions about what a refusal is, or three different words
 // for the same bad input. The routes stay thin enough to read in one screen.
 
+import { createHash } from "node:crypto";
+
+import { clientIp, resolvePrincipal } from "@/lib/apiAuth";
+import { principalRateKey } from "@/lib/principal";
+
 import { earliestExpiry } from "./budgetForecast";
 import { ImagingError, statusFor } from "./errors";
 import { logUnexpected, scrub } from "./log";
+import { IdempotencyConflict, withReceipt } from "./receipts";
 import {
   ASPECT_PX,
   PROVIDER_IDS,
@@ -83,6 +89,62 @@ export function asSteer(body: Record<string, unknown>): ProviderSteer {
   return { prefer, avoid };
 }
 
+/* ── Keyed requests (./receipts.ts) ──────────────────────────────────────── */
+
+export const IDEMPOTENCY_HEADER = "idempotency-key";
+export const RECEIPT_HEADER = "x-imaging-receipt";
+
+/** The caller's idempotency key: 1-128 printable ASCII characters, `undefined`
+ *  when the header is absent, a 400 when it is present and malformed. */
+export function asIdempotencyKey(req: Request): string | undefined {
+  const v = req.headers.get(IDEMPOTENCY_HEADER);
+  if (v === null) return undefined;
+  if (!/^[\x21-\x7e]{1,128}$/.test(v))
+    throw new BadRequest(`\`${IDEMPOTENCY_HEADER}\` must be 1-128 printable characters.`);
+  return v;
+}
+
+/** Keys sorted at every level, `undefined` dropped: two requests that mean the
+ *  same thing hash the same whatever order their fields arrived in. */
+function canonical(v: unknown): unknown {
+  if (Array.isArray(v)) return v.map(canonical);
+  if (typeof v !== "object" || v === null) return v;
+  const out: Record<string, unknown> = {};
+  for (const k of Object.keys(v).sort()) {
+    const x = (v as Record<string, unknown>)[k];
+    if (x !== undefined) out[k] = canonical(x);
+  }
+  return out;
+}
+
+/** sha256 over the VALIDATED request — reference bytes included — prefixed
+ *  with the route, so one key cannot be spent on two different routes. */
+export function bodyHash(route: string, validated: unknown): string {
+  return createHash("sha256").update(route).update("\u0000").update(JSON.stringify(canonical(validated))).digest("hex");
+}
+
+/**
+ * Run a paid imaging call and answer it — through a receipt when the caller
+ * sent an idempotency key, exactly as before when it did not.
+ *
+ * The scope is the verified person where there is one, else the client IP —
+ * the same key the rate limiter buckets on — so one person's key can never
+ * replay another person's pixels.
+ */
+export async function respondKeyed<T>(
+  req: Request,
+  route: string,
+  validated: unknown,
+  run: () => Promise<T>,
+): Promise<Response> {
+  const key = asIdempotencyKey(req);
+  if (key === undefined) return Response.json(await run());
+  const who = await resolvePrincipal(req);
+  const scope = principalRateKey(who) ?? `ip:${clientIp(req)}`;
+  const { value, receipt } = await withReceipt({ scope, key, bodyHash: bodyHash(route, validated) }, run);
+  return Response.json(value, { headers: { [RECEIPT_HEADER]: receipt } });
+}
+
 export async function readJson(req: Request): Promise<Record<string, unknown>> {
   try {
     const body = await req.json();
@@ -104,6 +166,10 @@ export function errorResponse(e: unknown, now: number = Date.now()): Response {
   // A BadRequest is ours end to end — this layer built the sentence from the
   // caller's own field names, and no vendor text can reach it.
   if (e instanceof BadRequest) return Response.json({ detail: e.message, code: "bad-request" }, { status: 400 });
+  // Ours too, and nothing was reserved or dispatched: the key names a
+  // different request, so this one is refused before the router is reached.
+  if (e instanceof IdempotencyConflict)
+    return Response.json({ detail: e.message, code: "idempotency-conflict" }, { status: 409 });
 
   // SCRUBBED, for the reason log.ts already gives about the same string: an
   // ImagingError's `message` READS as ours, but providers/google.ts:130 splices

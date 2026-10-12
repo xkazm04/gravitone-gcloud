@@ -7,8 +7,12 @@
 // TWO STAGES, ON PURPOSE.
 //
 //   1. RENDER, on the local Wan stack, by pipeline/video/render_preset_clips.py.
-//      Minutes per clip, needs the card, and lands a 1-3 MB raw .webm in
-//      pipeline/runs/preset-clips/ which is NOT committed. Run with --render, or
+//      Minutes per clip, needs the card, and lands 1-3 MB takes under
+//      pipeline/runs/preset-clips/<id>/takes/ (NOT committed), each graded once
+//      and recorded in <id>/ledger.json. Adopt one with
+//      `python pipeline/video/ledger.py adopt <id> <take> [--waiver "reason"]`.
+//      THIS script squeezes only the ADOPTED take, and refuses one whose check
+//      failed (or never ran) unless the adoption carries a waiver. Run with --render, or
 //      run the Python directly; without it this script uses what is already there.
 //
 //   2. SQUEEZE, here, by pipeline/video/transcode.mjs. Seconds, needs only
@@ -62,10 +66,45 @@ const { width, fps, seconds, budgetKB } = PROFILES[profile];
 console.log(`preset clips → ${path.relative(ROOT, outDir)}`);
 console.log(`profile ${profile} · ${width}px · ${fps}fps · ${seconds}s · ${budgetKB}KB per file\n`);
 
+/** A stored clip_check verdict (pipeline/video/clip_check.py), copied to the manifest. */
+interface Check {
+  ok: boolean;
+  reasons?: string[];
+  checker?: number;
+  [metric: string]: unknown;
+}
+
+/** One row of <id>/ledger.json takes[]. */
+interface Take {
+  file: string;
+  engine?: string;
+  seed?: number;
+  prompt?: string;
+  route?: string;
+  trim?: number;
+  retime?: number;
+  check?: Check;
+}
+
+/** Why a take may not ship, or null. Mirrors verdict_problem in pipeline/video/ledger.py. */
+function verdictProblem(take: Take, waiver?: string): string | null {
+  if (take.check?.ok === true) return null;
+  if (typeof waiver === "string" && waiver.trim()) return null;
+  if (!take.check) return `${take.file} was never judged (no check) and carries no waiver`;
+  const why = (take.check.reasons ?? []).join("; ") || "check.ok is false";
+  return `${take.file} failed its check (${why}) and carries no waiver`;
+}
+
 interface Entry {
   id: string;
   name: string;
   route: string;
+  engine?: string;
+  seed?: number;
+  prompt?: string;
+  /** Exactly one of these is present on a ledger-built entry. */
+  check?: Check;
+  waiver?: string;
   poster: string;
   sources: { src: string; type: string; bytes: number }[];
   bytes: number;
@@ -81,11 +120,51 @@ const built: Entry[] = [];
 let failed = 0;
 
 for (const preset of wanted) {
-  // Whichever renderer produced it. The local Wan graph saves .webm; a clip
-  // bought through pipeline/video/leonardo_reference.py arrives as .mp4.
-  const raw = [".webm", ".mp4"]
-    .map((ext) => path.join(rawDir, `${preset.id}${ext}`))
-    .find((p) => existsSync(p));
+  // THE LEDGER FIRST. When <id>/ledger.json exists, only the ADOPTED take is
+  // squeezed, and an adoption the verdict does not permit is refused by name.
+  // A preset with no ledger falls back to the legacy single raw (below), which
+  // carries no verdict; it is what shipped before takes existed.
+  const ledgerFile = path.join(rawDir, preset.id, "ledger.json");
+  let ledgerTake: Take | null = null;
+  let waiver: string | undefined;
+  let raw: string | undefined;
+  if (existsSync(ledgerFile)) {
+    const led = JSON.parse(readFileSync(ledgerFile, "utf8")) as {
+      takes?: Take[];
+      adopted?: { take: string; waiver?: string } | null;
+    };
+    const adopted = led.adopted;
+    if (!adopted) {
+      console.log(`REFUSE ${preset.id} · ledger exists but no take is adopted`);
+      failed++;
+      continue;
+    }
+    ledgerTake = (led.takes ?? []).find((t) => t.file === adopted.take) ?? null;
+    if (!ledgerTake) {
+      console.log(`REFUSE ${preset.id} · adopted take ${adopted.take} is not in the ledger`);
+      failed++;
+      continue;
+    }
+    waiver = adopted.waiver;
+    const problem = verdictProblem(ledgerTake, waiver);
+    if (problem) {
+      console.log(`REFUSE ${preset.id} · ${problem}`);
+      failed++;
+      continue;
+    }
+    raw = path.join(rawDir, preset.id, "takes", ledgerTake.file);
+    if (!existsSync(raw)) {
+      console.log(`MISS  ${preset.id} · adopted take ${ledgerTake.file} is not on disk`);
+      failed++;
+      continue;
+    }
+  } else {
+    // Whichever renderer produced it. The local Wan graph saves .webm; a clip
+    // bought through pipeline/video/leonardo_reference.py arrives as .mp4.
+    raw = [".webm", ".mp4"]
+      .map((ext) => path.join(rawDir, `${preset.id}${ext}`))
+      .find((p) => existsSync(p));
+  }
   if (!raw) {
     console.log(`MISS  ${preset.id} · no raw render — run with --render`);
     failed++;
@@ -100,7 +179,8 @@ for (const preset of wanted) {
     // its first frames are the source still holding while the model finds the
     // motion, which reads as a stall on a five-second card.
     const sidecar = raw.replace(/\.(webm|mp4)$/, ".json");
-    const meta = existsSync(sidecar) ? JSON.parse(readFileSync(sidecar, "utf8")) : {};
+    const meta: Partial<Take> =
+      ledgerTake ?? (existsSync(sidecar) ? JSON.parse(readFileSync(sidecar, "utf8")) : {});
     const trim = meta.trim ?? (meta.route === "compose" ? 0 : 0.35);
 
     // RETIME FIRST, when the sidecar asks. MiniMax H3 front-loads: the picture
@@ -140,6 +220,18 @@ for (const preset of wanted) {
       sources: made.sources.map((s) => ({ src: `/clips/presets/${s.src}`, type: s.type, bytes: s.bytes })),
       bytes: made.totalBytes,
       route: meta.route ?? "wan",
+      // PROVENANCE AND VERDICT travel with the clip. check-clips reads them.
+      ...(ledgerTake
+        ? {
+            engine: ledgerTake.engine,
+            seed: ledgerTake.seed,
+            prompt: ledgerTake.prompt,
+            ...(ledgerTake.check?.ok === true ? { check: ledgerTake.check } : {}),
+            ...(waiver && waiver.trim()
+              ? { waiver: waiver.trim(), ...(ledgerTake.check ? { check: ledgerTake.check } : {}) }
+              : {}),
+          }
+        : {}),
       ...made.measured,
     });
     console.log(

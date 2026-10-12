@@ -20,7 +20,7 @@ export type ProviderId = "elevenlabs" | "suno" | "local";
  *  excluded from the ledger, the insights and the agents' default listing.
  *  `score` is a production cue rendered from the studio's Score step — a real
  *  take, judged and ledgered like any other (MUSIC-B, 2026-10-05). */
-export type TakeOrigin = "agent" | "lab" | "hunt" | "import" | "suno-return" | "fixture" | "score";
+export type TakeOrigin = "agent" | "lab" | "hunt" | "import" | "suno-return" | "fixture" | "score" | "library";
 
 /** `proven` is never stored — it is read off a kept take's mean score (≥ 7). */
 export type Verdict = "unjudged" | "kept" | "rejected";
@@ -207,13 +207,19 @@ export interface GenerateRequest {
   terms: SoundTerms;
   tempoBpm: number | null;
   key: string | null;
-  origin: Extract<TakeOrigin, "agent" | "lab" | "hunt" | "score">;
+  origin: Extract<TakeOrigin, "agent" | "lab" | "hunt" | "score" | "library">;
   /** cue only: the Score cue's brief. The plan is derived from it server-side
    *  (lib/music/plan.ts cueToPlan), so `prompt`/`durationS`/`plan` are not read. */
   cue?: CueBrief | null;
   /** cue (required) and a score section-edit (inherited from the source). */
   projectId?: string | null;
   cueId?: string | null;
+  /** library only (optional): the take a Library variation was fanned out
+   *  from, the Library draft the render answers, and the one change it made —
+   *  filed on the take so a verdict says which axis mattered. */
+  parentId?: string | null;
+  draftId?: string | null;
+  variation?: { axis: string; diff: string[] } | null;
   /** section-edit only. */
   sourceTakeId: string | null;
   editModes: string[] | null;

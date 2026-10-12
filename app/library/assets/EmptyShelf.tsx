@@ -22,7 +22,32 @@ import { Ghost } from "@/components/ui/signal";
  * which is also the drop frame the section already accepts files into — plus
  * the one control that fills it.
  */
-export default function EmptyShelf({ hasAny, onOpenStyles }: { hasAny: boolean; onOpenStyles?: () => void }) {
+export default function EmptyShelf({
+  hasAny,
+  query,
+  onClearQuery,
+  onOpenStyles,
+}: {
+  hasAny: boolean;
+  /** A search that matched nothing is not an empty folder: it says what was
+   *  asked and offers the one act that brings the plates back. */
+  query?: string;
+  onClearQuery?: () => void;
+  onOpenStyles?: () => void;
+}) {
+  if (hasAny && query)
+    return (
+      <div className="rounded-2xl border border-dashed border-white/10 px-6 py-10 text-center">
+        <p className="font-instrument mb-4 text-2xl text-white">
+          No plate matches <span className="text-cyan-100">“{query}”</span>
+        </p>
+        {onClearQuery && (
+          <Button variant="ghost" onClick={onClearQuery}>
+            clear search
+          </Button>
+        )}
+      </div>
+    );
   return (
     <div className="rounded-2xl border border-dashed border-white/10 px-6 py-10">
       <p className="font-instrument mb-6 text-center text-2xl text-white">

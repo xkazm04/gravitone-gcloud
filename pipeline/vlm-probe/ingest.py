@@ -169,6 +169,17 @@ def shots_covered(sample_times, cut_times, duration):
     return hit, len(shots)
 
 
+def _corpus_id(slug):
+    """corpus.json id for a slug (None when the slug is not a corpus source)."""
+    try:
+        for s in json.loads((HERE / "corpus.json").read_text(encoding="utf-8")).get("sources", []):
+            if s.get("slug") == slug:
+                return s.get("id")
+    except (OSError, ValueError):
+        pass
+    return None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("source", help="YouTube URL or local video path")
@@ -241,6 +252,7 @@ def main():
                              "t_seconds": round(ts, 2), "std": round(m["std"], 1),
                              "edge": round(m["edge"], 2)})
         mf = FRAMES_DIR / f"{prefix}-manifest.json"
+        frame_manifest.stamp_frames(manifest, FRAMES_DIR, source_id=_corpus_id(prefix))
         frame_manifest.write(
             mf,
             slug=prefix,

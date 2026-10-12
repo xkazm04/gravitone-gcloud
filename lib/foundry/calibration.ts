@@ -246,6 +246,23 @@ export function calibrationFile(rows: readonly CalibrationRow[]): GraderCalibrat
   return { method: CALIBRATION_METHOD, ledger_rows: rows.length, series };
 }
 
+/** The grade stamp a ledger row carries, from the candidate's grade. Only a
+ *  stamped grade yields one: a row from before the stamp stays in the
+ *  `unstamped` series, and gains no null keys. */
+export function graderStamp(grade: { grader?: string | null; grader_digest?: string | null } | null | undefined): { grader: string; grader_digest: string } | Record<string, never> {
+  return grade?.grader_digest ? { grader: grade.grader ?? "?", grader_digest: grade.grader_digest } : {};
+}
+
+export const GRADER_CALIBRATION_PURPOSE =
+  "Does the automatic grader predict the human? Per grader series (model @ grade.py schema/prompt digest; rows from before the stamp are `unstamped`), per grade field, pooled and per mechanism: the AUC of a kept candidate outscoring a rejected one, a stratified bootstrap CI with a fixed seed, and a status (calibrated | inverted | chance | insufficient). Generated from ledger.json by pipeline/foundry/calibrate.mts (lib/foundry/calibration.ts); do not edit by hand.";
+
+/** The exact bytes of pipeline/foundry/grader-calibration.json for a ledger.
+ *  One definition shared by the forge commit and calibrate.mts, so the two
+ *  writers can never disagree about the file. */
+export function graderCalibrationText(rows: readonly CalibrationRow[]): string {
+  return JSON.stringify({ _purpose: GRADER_CALIBRATION_PURPOSE, ...calibrationFile(rows) }, null, 2) + "\n";
+}
+
 /* ── the readers ─────────────────────────────────────────────────────────── */
 
 /** A field's status for one mechanism: that mechanism's own bucket when it is

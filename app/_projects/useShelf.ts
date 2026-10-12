@@ -7,8 +7,19 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import type { Project } from "@/lib/projects";
+import { useRemembered } from "@/lib/useRemembered";
 
-import { deriveShelf, prefixOffsets, queryFromParams, queryToParams, windowRange, type ShelfQuery } from "./shelf";
+import {
+  DEFAULTS,
+  GROUPS,
+  SORTS,
+  deriveShelf,
+  prefixOffsets,
+  queryFromParams,
+  queryToParams,
+  windowRange,
+  type ShelfQuery,
+} from "./shelf";
 
 /* ── The query lives in the URL ───────────────────────────────────────────── */
 
@@ -102,8 +113,40 @@ export function useShelf(projects: readonly Project[]) {
     [local.query, params, pathname, write],
   );
 
-  const view = useMemo(() => deriveShelf(projects, query), [projects, query]);
-  return { query, setQuery, flush: write, ...view };
+  // THE ARRANGEMENT IS REMEMBERED; THE FILTERS ARE NOT (Wave 1, 2026-10-08).
+  //
+  // Somebody who reads the shelf "last updated" or grouped by discipline read
+  // it that way yesterday too, and on a shelf of two hundred the default order
+  // is a re-pick on every visit. Sort and group are a reader's habit, so they
+  // survive a reload (lib/useRemembered, one evicted record). Search and the
+  // filters narrow to a question, and yesterday's question is not today's —
+  // those stay in the URL only.
+  //
+  // The URL still wins: an `s=` / `g=` the URL carries is what renders. A URL
+  // that says nothing (the canonical spelling omits a default) falls back to
+  // the remembered habit instead of the global default. Picking the global
+  // default writes it as the habit, so the two can never disagree for long.
+  const [sortHabit, setSortHabit] = useRemembered("projects.sort", DEFAULTS.sort, SORTS);
+  const [groupHabit, setGroupHabit] = useRemembered("projects.group", DEFAULTS.group, GROUPS);
+  const shown = useMemo<ShelfQuery>(
+    () => ({
+      ...query,
+      sort: query.sort === DEFAULTS.sort ? sortHabit : query.sort,
+      group: query.group === DEFAULTS.group ? groupHabit : query.group,
+    }),
+    [query, sortHabit, groupHabit],
+  );
+  const setShown = useCallback(
+    (patch: Partial<ShelfQuery>) => {
+      if (patch.sort !== undefined) setSortHabit(patch.sort);
+      if (patch.group !== undefined) setGroupHabit(patch.group);
+      setQuery(patch);
+    },
+    [setQuery, setSortHabit, setGroupHabit],
+  );
+
+  const view = useMemo(() => deriveShelf(projects, shown), [projects, shown]);
+  return { query: shown, setQuery: setShown, flush: write, ...view };
 }
 
 /* ── The keyboard ─────────────────────────────────────────────────────────── */

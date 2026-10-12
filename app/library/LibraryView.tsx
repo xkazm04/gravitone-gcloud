@@ -22,14 +22,25 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
+import dynamic from "next/dynamic";
+
+import { pendingPanel } from "@/components/ui/Pending";
 import StudioFrame from "@/components/ui/StudioFrame";
 import { TabRail } from "@/components/ui/signal";
+import { useRemembered } from "@/lib/useRemembered";
 
-import AssetsBrowser from "./AssetsBrowser";
-import LibraryAtelier from "./LibraryAtelier";
-import AudioWorkbench from "./audio/AudioWorkbench";
+import { libraryArea } from "./areas";
+
+// ONE TAB ON SCREEN, ONE TAB IN THE BUNDLE. Each panel below is shown alone,
+// behind the tab rail, so each is its own chunk fetched when its tab is chosen
+// rather than all of them on first load (Wave 0, docs/waves/README.md).
+const AssetsBrowser = dynamic(() => import("./AssetsBrowser"), { loading: pendingPanel });
+const LibraryAtelier = dynamic(() => import("./LibraryAtelier"), { loading: pendingPanel });
+const AudioWorkbench = dynamic(() => import("./audio/AudioWorkbench"), { loading: pendingPanel });
 
 type ModuleId = "styles" | "assets" | "animations" | "audio";
+/** The modules a remembered choice may land on — Animations is locked. */
+const OPENABLE: readonly ModuleId[] = ["styles", "assets", "audio"];
 
 /** What each tab's blurb was reaching for: the count. Reported UP by whichever
  *  pane holds the live array, rather than read a third time from IndexedDB
@@ -54,12 +65,17 @@ export default function LibraryView() {
 }
 
 function LibraryShelf() {
-  const [module, setModule] = useState<ModuleId>("styles");
+  /** The module, REMEMBERED: somebody who works the audio ledger every day
+   *  should not land on Styles every time. A `?style=` handoff still wins for
+   *  the arrival it was made for. */
+  const [habit, setHabit] = useRemembered<ModuleId>("library.module", "styles", OPENABLE);
   /** A style just created and wanted open: by the Assets tab, or — through
    *  `?style=` — by a Foundry adoption. Consumed as the
    *  atelier's INITIAL selection: switching modules unmounts it, so the handoff
    *  needs no effect and cannot fight the user's later clicks. */
   const [focusStyle, setFocusStyle] = useState<string | null>(useSearchParams().get("style"));
+  const shown: ModuleId = focusStyle ? "styles" : habit;
+  const setModule = setHabit;
   const [counts, setCounts] = useState<Counts>({});
 
   return (
@@ -80,7 +96,7 @@ function LibraryShelf() {
 
           <TabRail
             label="library modules"
-            active={module}
+            active={shown}
             onSelect={(id) => {
               // A tab pressed by hand is not a handoff — drop any pending
               // focus so the atelier opens where the user left it.
@@ -91,7 +107,7 @@ function LibraryShelf() {
               {
                 id: "styles",
                 testId: "module-styles",
-                label: "Styles",
+                label: libraryArea("styles").label,
                 panelId: "library-panel",
                 // Locked-of-total, not total: the gate this whole page exists
                 // to enforce is "at least one locked style", so the ratio IS
@@ -110,21 +126,21 @@ function LibraryShelf() {
               {
                 id: "assets",
                 testId: "module-assets",
-                label: "Assets",
+                label: libraryArea("assets").label,
                 panelId: "library-panel",
                 ...(counts.assets === undefined ? {} : { tally: { value: counts.assets } }),
               },
               {
                 id: "animations",
                 testId: "module-animations",
-                label: "Animations",
-                disabled: true,
-                disabledReason: "no engine yet",
+                label: libraryArea("animations").label,
+                disabled: Boolean(libraryArea("animations").locked),
+                disabledReason: libraryArea("animations").locked,
               },
               {
                 id: "audio",
                 testId: "module-audio",
-                label: "Audio",
+                label: libraryArea("audio").label,
                 panelId: "library-panel",
                 ...(counts.audio === undefined ? {} : { tally: { value: counts.audio } }),
               },
@@ -133,7 +149,7 @@ function LibraryShelf() {
         </header>
 
         <section id="library-panel" role="tabpanel" className="mt-6">
-          {module === "assets" ? (
+          {shown === "assets" ? (
             // The shelf fills from Styles, so its empty state needs a way back
             // there. The module is this component's state, so the handler is
             // this component's to pass — an empty state that can only describe
@@ -145,7 +161,7 @@ function LibraryShelf() {
                 setModule("styles");
               }}
             />
-          ) : module === "audio" ? (
+          ) : shown === "audio" ? (
             <AudioWorkbench
               onCount={(audio) => setCounts((c) => (c.audio === audio ? c : { ...c, audio }))}
             />

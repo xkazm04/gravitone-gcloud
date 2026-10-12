@@ -106,7 +106,7 @@ export function makeExtractSource(): BoardSourceExt {
     async decide(id: string, verdict: BoardVerdict) {
       const { run, sid } = split(keyOfItem(id));
       const fresh = await read(() => fetchExtractRun(run));
-      await saveExtractVerdicts(run, withExtractVerdict(fresh.verdicts, sid, verdict));
+      await saveExtractVerdicts(run, withExtractVerdict(fresh.verdicts, sid, verdict), "board");
     },
   };
 }

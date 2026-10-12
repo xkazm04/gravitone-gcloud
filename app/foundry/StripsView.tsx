@@ -98,7 +98,7 @@ export function StripsView() {
       const ticket = ++detailTicket.current;
       // With a rejection path: an unhandled one is reported by
       // GlobalErrorBridge as a SAVE failure (FoundryView.loadDetail).
-      fetchStripRun(id).then(
+      return fetchStripRun(id).then(
         (d) => {
           if (ticket !== detailTicket.current) return;
           setRun(d.run);
@@ -115,7 +115,7 @@ export function StripsView() {
   );
 
   const loadRuns = useCallback(() => {
-    fetchStripRuns().then(
+    return fetchStripRuns().then(
       (r) => {
         setRuns(r);
         setListError(null);
@@ -128,7 +128,9 @@ export function StripsView() {
       (e) => setListError(e instanceof Error ? e.message : "failed"),
     );
   }, [loadDetail]);
-  useEffect(loadRuns, [loadRuns]);
+  useEffect(() => {
+    void loadRuns();
+  }, [loadRuns]);
 
   const selectRun = useCallback(
     (id: string) => {
@@ -148,8 +150,7 @@ export function StripsView() {
   usePolling(
     () => {
       if (!selected) return;
-      loadDetail(selected, true);
-      loadRuns();
+      return Promise.all([loadDetail(selected, true), loadRuns()]);
     },
     4000,
     Boolean(selected) && run?.status === "running",

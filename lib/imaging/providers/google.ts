@@ -229,6 +229,7 @@ export function googleProvider(): ImagingProvider {
 
       const res = await requestJson<Interaction>("google", ENDPOINT, {
         method: "POST",
+        billable: true,
         headers: { "x-goog-api-key": key },
         body: {
           model: VISION_MODEL,
@@ -306,6 +307,7 @@ async function runImage(
   const calls = Array.from({ length: n }, () =>
     requestJson<Interaction>("google", ENDPOINT, {
       method: "POST",
+      billable: true, // one generation per call: a 5xx or timeout is not re-sent (http.ts)
       headers: { "x-goog-api-key": key },
       body,
       timeoutMs: 180_000,

@@ -31,9 +31,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import dynamic from "next/dynamic";
+
 import Modal from "@/components/ui/Modal";
+import { pendingPanel } from "@/components/ui/Pending";
 import { Hint, TabRail, UpstreamBreak, type TabDef, type TallyTone } from "@/components/ui/signal";
 import { getProject, templateOf, type Discipline, type TemplateId } from "@/lib/projects";
+import { useRemembered } from "@/lib/useRemembered";
 
 import SourceChip from "../_shared/notebook/SourceChip";
 import { useActiveNotebook } from "../_shared/notebook/useActiveNotebook";
@@ -48,18 +52,24 @@ import BeatList from "./_parts/BeatList";
 import CandidatesDuel from "./candidates/CandidatesDuel";
 import { useAdoption } from "./candidates/useAdoption";
 import { useScriptFace } from "./candidates/useScriptFace";
-import HypothesisColumn from "./_parts/HypothesisColumn";
 import { conflictsIn } from "./scopeConflicts";
-import MatrixCoverage from "./_matrix/MatrixCoverage";
-import MatrixSpend from "./_matrix/MatrixSpend";
-import MatrixTracks from "./_matrix/MatrixTracks";
 import VersionBar from "./_matrix/VersionBar";
 import StickyNotebook from "./_notes/StickyNotebook";
 import { mmss, RENDERS, RENDER_BY_ID } from "./renders";
 import BaselineOnlyNote from "./_parts/BaselineOnlyNote";
-import AdsScenario from "./ads/AdsScenario";
-import TrailerScript from "./trailer/TrailerScript";
 import { useVersions } from "./useVersions";
+
+// LOADED WHEN DRAWN. A project opens on exactly one half of this step, and the
+// explainer half on exactly one tab and one face — so the trailer cut (with its
+// 1.3k-line structure checker), the ads scenario, the three weight grids and the
+// expert columns are each their own chunk, fetched the first time they mount.
+// The guided duel stays static: it is what a first visit paints on Candidates.
+const TrailerScript = dynamic(() => import("./trailer/TrailerScript"), { loading: pendingPanel });
+const AdsScenario = dynamic(() => import("./ads/AdsScenario"), { loading: pendingPanel });
+const MatrixCoverage = dynamic(() => import("./_matrix/MatrixCoverage"), { loading: pendingPanel });
+const MatrixSpend = dynamic(() => import("./_matrix/MatrixSpend"), { loading: pendingPanel });
+const MatrixTracks = dynamic(() => import("./_matrix/MatrixTracks"), { loading: pendingPanel });
+const HypothesisColumn = dynamic(() => import("./_parts/HypothesisColumn"), { loading: pendingPanel });
 
 type Tab = "candidates" | "coverage" | "spend" | "tracks";
 
@@ -85,6 +95,7 @@ const wordsIn = (beats: { text: string }[]) =>
 // reaching for is the tab's STATE, which is a count, so a count is what rides
 // there now (see `tallyFor` below); the step's own header comment holds the four
 // questions for whoever is reading the code.
+const TAB_IDS: readonly Tab[] = ["candidates", "coverage", "spend", "tracks"];
 const TABS: { key: Tab; label: string }[] = [
   { key: "candidates", label: "Candidates" },
   { key: "coverage", label: "Coverage" },
@@ -244,7 +255,9 @@ function MusicVideoScript({ projectId }: { projectId: string }) {
 
 /** The explainer half, exactly as it was — every tab and testid intact. */
 function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked }) {
-  const [tab, setTab] = useState<Tab>("candidates");
+  // The last tab read, across reloads and projects: a creator who weighs on the
+  // Spend bar comes back to the Spend bar, not to three cards they already chose.
+  const [tab, setTab] = useRemembered<Tab>("script.tab", "candidates", TAB_IDS);
   const [showing, setShowing] = useState<"baseline" | "candidate">("candidate");
   const [researched, setResearched] = useState<boolean | null>(null);
   const [trouble, setTrouble] = useState<StorageTrouble | null>(null);
@@ -385,7 +398,17 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
     : null;
   const tallyFor = (k: Tab): { value: number; label: string; tone: TallyTone } | null => {
     if (!state) return null;
-    if (k === "candidates") return { value: RENDERS.length, label: "renders", tone: "neutral" };
+    // THE GATE'S STATE, on the tab that holds the gate — visible from every tab.
+    // It was "3 renders", which is a constant and so not state at all. Blocking
+    // first; otherwise what the gate could not test, in the amber it is drawn in
+    // everywhere else (unmeasured is as loud as a violation); a clean, fully
+    // checked gate needs no chip.
+    if (k === "candidates")
+      return gate.blocked
+        ? { value: gate.violations, label: "blocking", tone: "rose" }
+        : gate.unmeasured > 0
+          ? { value: gate.unmeasured, label: "not checked", tone: "amber" }
+          : null;
     if (k === "coverage")
       return state.conflicts > 0 ? { value: state.conflicts, label: "conflict", tone: "rose" } : null;
     if (k === "spend")
@@ -524,6 +547,7 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
                           render={r}
                           source={source}
                           beats={chains[r.id]}
+                          report={gate.byRender[r.id]}
                           chainLabel={reading?.beats ? reading.label : undefined}
                           adopted={adoption.adoptedId === r.id}
                           onAdopt={() =>

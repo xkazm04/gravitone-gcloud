@@ -168,6 +168,7 @@ test("case 1: commitRun's effects land in the documented order — ledger, style
   expect(mutations.length, "the store made no call through lib/foundry/fsPort — the seam is not threaded").toBeGreaterThan(0);
   expect(mutations).toEqual([
     "writeJsonAtomic ledger.json",
+    "writeFile grader-calibration.json",
     "writeJsonAtomic styles.json",
     "unlink haze--ref--s1.png",
     "unlink haze--ref--s1.json",

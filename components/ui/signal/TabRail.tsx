@@ -46,14 +46,14 @@ import { Lock } from "lucide-react";
 
 import { useWorld } from "../world";
 import { HintPopover, hintRootClass, useHint } from "./Hint";
-import { Tally, type TallyTone } from "./Tally";
+import { Tally, type TallyProps } from "./Tally";
 
 export interface TabDef<T extends string> {
   id: T;
   /** One or two words. Not a sentence — there is nowhere for one to go. */
   label: string;
   /** The state the blurb used to describe, as a count or a ratio. */
-  tally?: { value: number; of?: number; tone?: TallyTone; label?: string };
+  tally?: Omit<TallyProps, "select" | "href">;
   /** Colours the tab's own text when it carries news (rose = something broke). */
   tone?: "cyan" | "amber" | "rose";
   /** Reachable by keyboard and readable, but not selectable. */
@@ -232,6 +232,7 @@ function TabButton<T extends string>({
             of={tab.tally.of}
             label={tab.tally.label}
             tone={tab.tally.tone ?? "neutral"}
+            zero={tab.tally.zero}
           />
         )}
       </button>

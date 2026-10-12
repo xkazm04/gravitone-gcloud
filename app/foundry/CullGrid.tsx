@@ -27,7 +27,8 @@
 // on a narrow tile instead of dropping one.
 
 import { Maximize2 } from "lucide-react";
-import { Fragment, useEffect, useMemo } from "react";
+import { Fragment, memo, useEffect, useMemo } from "react";
+import { vocabFields } from "@/lib/vocab/cinematography";
 
 import { useRoving } from "@/components/kit/useRoving";
 import { fieldStatus, type Calibration } from "@/lib/foundry/calibration";
@@ -35,36 +36,12 @@ import type { Candidate, RunManifest, Verdict, Verdicts } from "@/lib/foundry/ty
 
 import { fileUrl } from "./foundryClient";
 import { Art, FlagPill, ScoreMeters, VerdictButtons, VerdictStamp, verdictRing, type ArtState } from "./ui";
-import { refusedKey } from "./keyGuard";
+import { useKeymap } from "@/components/ui/signal/keymap";
+import { CULL } from "./cullKeymap";
+import { nextUndecided } from "./keyGuard";
 
-/** Elements the browser ACTIVATES on Enter.
- *
- *  The grid's keys are bound on `window`, which is right for arrows and for
- *  K/X/U: a cull is hundreds of decisions and the hand should not have to keep
- *  the browser's focus anywhere in particular. Enter is the exception, because
- *  it is the only one of them that the focused element already owns.
- *
- *  Nothing in this grid is focusable but the one roving tile, so the browser's
- *  focus is usually on something ELSE while a candidate is "focused" in app
- *  state, and `focused` becomes non-null on the first tile click anyone makes.
- *  Enter then reached this handler, which called `preventDefault()`, and a
- *  `<button>`'s Enter activation is precisely what that suppresses: after one
- *  click on one tile, Enter stopped working on the row K/X buttons, the run
- *  list, the tab strip and Commit, and opened the lightbox instead. Space still
- *  worked, which is the kind of half-working that takes a while to report.
- *
- *  Checked by tag and by role rather than with `closest`, because Enter is
- *  delivered to the focused element itself. */
-const ENTER_ACTIVATES = new Set(["BUTTON", "A", "SUMMARY", "SELECT", "TEXTAREA", "INPUT"]);
-
-export function activatesOnEnter(t: { tagName?: string; getAttribute?: (n: string) => string | null } | null): boolean {
-  if (!t) return false;
-  if (ENTER_ACTIVATES.has(t.tagName ?? "")) return true;
-  const role = t.getAttribute?.("role") ?? null;
-  return role === "button" || role === "link" || role === "menuitem" || role === "tab";
-}
-
-const CRAFT_SUMMARY = ["shot_size", "camera_angle", "composition", "lighting_key", "lighting_direction", "depth_of_field"];
+// The craft fields a tile summarises: the vocabulary file's `craft_summary` subset, not a list kept here.
+const CRAFT_SUMMARY = vocabFields("craft_summary");
 
 /** The one reading of a candidate's state, for the tile and the comparison alike.
  *  A verdict is only ever written onto a `ready` candidate: the tile hides the
@@ -92,6 +69,7 @@ export function CullGrid({
   onOpen,
   keysEnabled,
   calibration = null,
+  onUndo,
 }: {
   run: RunManifest;
   verdicts: Verdicts;
@@ -104,6 +82,8 @@ export function CullGrid({
   keysEnabled: boolean;
   /** The grader measured against the human ledger (lib/foundry/calibration.ts). */
   calibration?: Calibration | null;
+  /** Z: walk the last decision back (the gate kernel's undo). Absent = nothing to undo. */
+  onUndo?: () => void;
 }) {
   const columns = useMemo(
     () => run.plan.mechanisms.flatMap((m) => run.plan.seeds.map((seed) => ({ mechanism: m, seed }))),
@@ -140,61 +120,38 @@ export function CullGrid({
     arrows: false,
   });
 
-  useEffect(() => {
-    if (!keysEnabled) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (refusedKey(e)) return;
-      const t = e.target as HTMLElement | null;
-      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
-      const i = focused ? order.indexOf(focused) : -1;
-      const step = (d: number) => {
-        const n = Math.min(order.length - 1, Math.max(0, (i < 0 ? 0 : i) + d));
-        onFocus(order[n]);
-      };
-      switch (e.key) {
-        case "ArrowRight":
-          e.preventDefault();
-          step(1);
-          break;
-        case "ArrowLeft":
-          e.preventDefault();
-          step(-1);
-          break;
-        case "ArrowDown":
-          e.preventDefault();
-          step(columns.length);
-          break;
-        case "ArrowUp":
-          e.preventDefault();
-          step(-columns.length);
-          break;
-        case "k":
-        case "K":
-          if (focused && !readOnly && artStateOf(byId.get(focused), false) === "ready") onVerdict(focused, "keep");
-          break;
-        case "x":
-        case "X":
-          if (focused && !readOnly && artStateOf(byId.get(focused), false) === "ready") onVerdict(focused, "reject");
-          break;
-        case "u":
-        case "U":
-          if (focused && !readOnly && artStateOf(byId.get(focused), false) === "ready") onVerdict(focused, null);
-          break;
-        case "Enter":
-          // Enter belongs to the focused element when that element activates on
-          // it — see `activatesOnEnter`. Taking it here suppressed every button
-          // on the page.
-          if (activatesOnEnter(t)) return;
-          if (focused) {
-            e.preventDefault();
-            onOpen(focused);
-          }
-          break;
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [keysEnabled, readOnly, focused, order, byId, columns.length, onFocus, onVerdict, onOpen]);
+  // ONE KEYMAP (./cullKeymap): the guard (typing, overlay, repeat, modifier, Enter on a
+  // focused control) is the kernel's, so what is handled here is only what each action
+  // DOES. A handler returns `false` to leave the key to the browser.
+  const verdictOf = (v: Verdict | null) => () => {
+    if (focused && !readOnly && artStateOf(byId.get(focused), false) === "ready") onVerdict(focused, v);
+  };
+  useKeymap(
+    CULL,
+    {
+      move: (e) => {
+        const i = focused ? order.indexOf(focused) : -1;
+        const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : e.key === "ArrowDown" ? columns.length : -columns.length;
+        onFocus(order[Math.min(order.length - 1, Math.max(0, (i < 0 ? 0 : i) + d))]);
+      },
+      keep: verdictOf("keep"),
+      reject: verdictOf("reject"),
+      clear: verdictOf(null),
+      undo: () => {
+        if (!readOnly && onUndo) onUndo();
+      },
+      "next-undecided": () => {
+        // A drawn, ready, undecided tile — the same three conditions K/X need.
+        const next = nextUndecided(order, focused, (id) => drawn.has(id) && artStateOf(byId.get(id), false) === "ready" && !verdicts[id]);
+        if (next) onFocus(next);
+      },
+      compare: () => {
+        if (!focused) return false;
+        onOpen(focused);
+      },
+    },
+    { enabled: keysEnabled },
+  );
 
   useEffect(() => {
     if (!focused) return;
@@ -280,11 +237,12 @@ export function CullGrid({
                 label={`${name}, ${c?.mechanism ?? columns[ci].mechanism.id}, seed ${c?.seed ?? columns[ci].seed}`}
                 verdict={verdicts[id]?.verdict}
                 focused={focused === id}
-                rovingProps={indexOf.has(id) ? roving.itemProps(indexOf.get(id)!) : undefined}
+                rovingIndex={indexOf.get(id)}
+                tabStop={indexOf.get(id) === roving.active}
                 readOnly={readOnly}
-                onFocus={() => onFocus(id)}
-                onOpen={() => onOpen(id)}
-                onVerdict={(v) => onVerdict(id, v)}
+                onFocus={onFocus}
+                onOpen={onOpen}
+                onVerdict={onVerdict}
                 calibration={calibration}
               />
             );
@@ -378,7 +336,13 @@ export function cssId(id: string): string {
   return id.replace(/[^A-Za-z0-9_-]/g, "_");
 }
 
-function CandidateTile({
+/** One tile, memoised. A verdict or an arrow changes the props of one or two
+ *  tiles out of a sheet of hundreds, and before this every keypress of a cull
+ *  re-rendered all of them (picture, stamp, buttons, two meters each). So every
+ *  prop is either a primitive or a reference the parent holds stable: the
+ *  callbacks take the id rather than closing over it, and the roving tab stop
+ *  arrives as two primitives instead of a fresh `itemProps` object per render. */
+const CandidateTile = memo(function CandidateTile({
   run,
   id,
   candidate,
@@ -386,11 +350,12 @@ function CandidateTile({
   label,
   verdict,
   focused,
-  rovingProps,
+  rovingIndex,
+  tabStop,
   readOnly,
-  onFocus,
-  onOpen,
-  onVerdict,
+  onFocus: focusId,
+  onOpen: openId,
+  onVerdict: verdictIds,
   calibration,
 }: {
   run: string;
@@ -400,13 +365,19 @@ function CandidateTile({
   label: string;
   verdict: Verdict | undefined;
   focused: boolean;
-  rovingProps?: { tabIndex: 0 | -1; "data-roving": number };
+  /** This candidate's place in the roving order; absent for a cell no candidate fills. */
+  rovingIndex: number | undefined;
+  tabStop: boolean;
   readOnly: boolean;
-  onFocus: () => void;
-  onOpen: () => void;
-  onVerdict: (v: Verdict | null) => void;
+  onFocus: (id: string) => void;
+  onOpen: (id: string) => void;
+  onVerdict: (ids: string | string[], v: Verdict | null) => void;
   calibration: Calibration | null;
 }) {
+  const onFocus = () => focusId(id);
+  const onOpen = () => openId(id);
+  const onVerdict = (v: Verdict | null) => verdictIds(id, v);
+  const rovingProps = rovingIndex === undefined ? undefined : { tabIndex: (tabStop ? 0 : -1) as 0 | -1, "data-roving": rovingIndex };
   const state = artStateOf(candidate, working);
   const ready = state === "ready" && candidate !== undefined;
   const v = state === "ready" ? verdict : undefined;
@@ -494,4 +465,4 @@ function CandidateTile({
       </div>
     </div>
   );
-}
+});

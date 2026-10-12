@@ -32,7 +32,7 @@
 // storage engine on globalThis before any module under test reads `indexedDB`.
 import "fake-indexeddb/auto";
 import { test, expect } from "@playwright/test";
-import * as React from "react";
+import { assertHarnessInstalled, harness } from "./_studio/hooks";
 
 import { PROJECT, SCENES } from "@/app/_studio/scenes";
 import { SPOTS, cuesFrom, pictureFor } from "@/app/_studio/score";
@@ -264,115 +264,12 @@ test("the fixture path is unchanged — a caller that passes no project still ge
 });
 
 /* ────────────────────────── the hook, driven for real ───────────────────────
-   The harness is `trailer-cut-lifecycle.probe.spec.ts`'s, plus `useRef` —
-   `useScoreSpots` holds its save timer in one. Nothing else is implemented, so a
+   The harness is the lane's shared one (_studio/hooks.ts). `useScoreSpots`
+   settles on "stable": `useLoadFor` syncs its refs in a DEP-LESS effect that
+   re-queues every render. Nothing else is implemented, so a
    hook the subject starts using is a TypeError naming it rather than a silent
    stub. What is NOT covered is React's scheduling; that is the renderer's, and
    this lane has no DOM. */
-
-interface Internals {
-  H: unknown;
-}
-const INTERNALS = (React as unknown as Record<string, Internals>)
-  .__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
-
-const sameDeps = (a?: readonly unknown[], b?: readonly unknown[]) =>
-  a !== undefined && b !== undefined && a.length === b.length && a.every((x, i) => Object.is(x, b[i]));
-
-const settle = async () => {
-  for (let i = 0; i < 30; i++) await new Promise((r) => setTimeout(r, 0));
-};
-
-function harness<T>(run: () => T) {
-  const cells: unknown[] = [];
-  const refs: { current: unknown }[] = [];
-  const committed: { deps?: readonly unknown[]; cleanup?: () => void }[] = [];
-  const memos: { deps?: readonly unknown[]; value: unknown }[] = [];
-  let ci = 0;
-  let ri = 0;
-  let ei = 0;
-  let mi = 0;
-  let dirty = false;
-  let queue: (() => void)[] = [];
-
-  const dispatcher = {
-    useState(init: unknown) {
-      const k = ci++;
-      if (!(k in cells)) cells[k] = typeof init === "function" ? (init as () => unknown)() : init;
-      return [
-        cells[k],
-        (v: unknown) => {
-          const next = typeof v === "function" ? (v as (p: unknown) => unknown)(cells[k]) : v;
-          if (!Object.is(next, cells[k])) {
-            cells[k] = next;
-            dirty = true;
-          }
-        },
-      ];
-    },
-    useRef(init: unknown) {
-      const k = ri++;
-      if (!(k in refs)) refs[k] = { current: init };
-      return refs[k];
-    },
-    useEffect(fn: () => void | (() => void), deps?: readonly unknown[]) {
-      const k = ei++;
-      const prev = committed[k];
-      if (prev && sameDeps(prev.deps, deps)) return;
-      queue.push(() => {
-        prev?.cleanup?.();
-        const cleanup = fn();
-        committed[k] = { deps, cleanup: typeof cleanup === "function" ? cleanup : undefined };
-      });
-    },
-    useMemo(fn: () => unknown, deps?: readonly unknown[]) {
-      const k = mi++;
-      const prev = memos[k];
-      if (prev && sameDeps(prev.deps, deps)) return prev.value;
-      const value = fn();
-      memos[k] = { deps, value };
-      return value;
-    },
-    useCallback(fn: unknown, deps?: readonly unknown[]) {
-      return dispatcher.useMemo(() => fn, deps);
-    },
-  };
-
-  return {
-    async settleUp(): Promise<T> {
-      let out!: T;
-      for (let pass = 0; pass < 40; pass++) {
-        ci = 0;
-        ri = 0;
-        ei = 0;
-        mi = 0;
-        dirty = false;
-        const before = INTERNALS.H;
-        INTERNALS.H = dispatcher;
-        try {
-          out = run();
-        } finally {
-          INTERNALS.H = before;
-        }
-        const firing = queue;
-        queue = [];
-        for (const f of firing) f();
-        await settle();
-        // A PASS THAT CHANGED NO STATE IS THE SETTLE CONDITION, and "no effect
-        // fired" deliberately is not: `useLoadFor` keeps its `load`/`apply` in
-        // refs and syncs them in a DEP-LESS effect, which by design re-queues on
-        // every render. The sibling harness in trailer-cut-lifecycle can use the
-        // stricter condition because `useTrailerCut` has no such effect.
-        void firing;
-        if (!dirty) return out;
-      }
-      throw new Error("the hook never settled in 40 passes — a render loop, or deps that change every time");
-    },
-    unmount() {
-      for (const c of committed) c.cleanup?.();
-    },
-  };
-}
 
 async function clearSteps() {
   const db = await openDb();
@@ -391,8 +288,7 @@ test.beforeEach(async () => {
 });
 
 test("the harness is installed on the dispatcher React actually reads", () => {
-  expect(INTERNALS, "React's client internals are not where this harness expects").toBeTruthy();
-  expect("H" in INTERNALS).toBe(true);
+  expect(() => assertHarnessInstalled()).not.toThrow();
 });
 
 test("a project with a cut opens PROPOSED, and the session survives a reload as its own", async () => {
@@ -403,7 +299,7 @@ test("a project with a cut opens PROPOSED, and the session survives a reload as 
   });
   const scenes = pictureOf(cut, cut.beats.length, 120).scenes;
 
-  const first = harness(() => useScoreSpots("p-live", scenes));
+  const first = harness(() => useScoreSpots("p-live", scenes), { settleWhen: "stable" });
   const opened = await first.settleUp();
   console.log(`[spot] first open -> ${opened.origin?.kind}, ${opened.spots?.length} spots`);
   expect(opened.origin?.kind).toBe("proposed");
@@ -421,7 +317,7 @@ test("a project with a cut opens PROPOSED, and the session survives a reload as 
   first.unmount();
 
   // RELOAD. The stored session is the creator's and is never re-proposed over.
-  const second = harness(() => useScoreSpots("p-live", scenes));
+  const second = harness(() => useScoreSpots("p-live", scenes), { settleWhen: "stable" });
   const reopened = await second.settleUp();
   console.log(`[spot] reopened -> ${reopened.origin?.kind}, ${reopened.spots?.length} spots`);
   expect(reopened.origin?.kind).toBe("authored");
@@ -437,7 +333,7 @@ test("editing a spot makes it the creator's — it stops calling itself a propos
   });
   const scenes = pictureOf(cut, cut.beats.length, 120).scenes;
 
-  const h = harness(() => useScoreSpots("p-edit", scenes));
+  const h = harness(() => useScoreSpots("p-edit", scenes), { settleWhen: "stable" });
   const api = await h.settleUp();
   const target = api.spots![0].id;
 
@@ -465,7 +361,7 @@ test("a spot can be deleted and one can be added, and both survive to the record
   });
   const scenes = pictureOf(cut, cut.beats.length, 120).scenes;
 
-  const h = harness(() => useScoreSpots("p-add", scenes));
+  const h = harness(() => useScoreSpots("p-add", scenes), { settleWhen: "stable" });
   const api = await h.settleUp();
   const doomed = api.spots![0].id;
 
@@ -489,7 +385,7 @@ test("a spot can be deleted and one can be added, and both survive to the record
 
 test("a project with NO cut proposes nothing and writes nothing — the key stays absent", async () => {
   const scenes = pictureOf(wholeCut(), 4, 60).scenes;
-  const h = harness(() => useScoreSpots("p-nocut", scenes));
+  const h = harness(() => useScoreSpots("p-nocut", scenes), { settleWhen: "stable" });
   const api = await h.settleUp();
   console.log(`[spot] no cut -> origin=${api.origin?.kind}, ${api.spots?.length} spots`);
   expect(api.origin?.kind).toBe("no-cut");

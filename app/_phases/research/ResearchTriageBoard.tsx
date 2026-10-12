@@ -11,12 +11,14 @@
 
 import { useState } from "react";
 
-import { CircleSlash } from "lucide-react";
+import { ChevronsUpDown, CircleSlash } from "lucide-react";
 
+import { Pager, useWindow } from "@/components/kit";
 import { Eyebrow } from "@/components/ui/Primitives";
 import { Hint, Tally } from "@/components/ui/signal";
+import { useRemembered } from "@/lib/useRemembered";
 import type { ScopeApi } from "./useScope";
-import { stateOf } from "./scope";
+import { stateOf, type Card, type Wound } from "./scope";
 import {
   DIMENSIONS,
   UNTAGGED_DIMENSION_ID,
@@ -25,7 +27,7 @@ import {
   type Dimension,
 } from "../_shared/notebook/dimensions";
 import CardTile from "./_parts/CardTile";
-import { Consequences, ScopeBar } from "./_parts/ScopeBar";
+import { Consequences, ScopeBar, type StateFilter } from "./_parts/ScopeBar";
 
 /** THE COLUMNS OF THE NOTEBOOK BEING DEALT. A notebook that declares its own
  *  columns (NOTEBOOK-SCHEMA, stage 2) is reviewed in them — but `buildCards`
@@ -41,8 +43,63 @@ function boardColumns(api: ScopeApi): Dimension[] {
   return [...own, ...DIMENSIONS.filter((d) => !ids.has(d.id) && filed.has(d.id))];
 }
 
+/** How many cards a column draws before its pager. The shipped notebook's
+ *  fullest column holds seven, so the replay never meets it; a creator's own
+ *  notebook can file twenty facts under one domain, and a column that long is
+ *  a scroll past every other column before the next one starts. */
+const COLUMN_WINDOW = 10;
+
+const DETAILS_MODES = ["off", "on"] as const;
+
+/** One column's cards, a window at a time (Wave 2). The window resets when the
+ *  board is dealt from a different notebook (`api.source.digest`) — a new
+ *  notebook is a different list, not a longer one. */
+function ColumnCards({
+  cards,
+  api,
+  woundOf,
+  label,
+  details,
+}: {
+  cards: Card[];
+  api: ScopeApi;
+  woundOf: (id: string) => Wound | undefined;
+  label: string;
+  details: boolean;
+}) {
+  const w = useWindow(cards, { size: COLUMN_WINDOW, key: api.source.digest });
+  return (
+    <>
+      <ul className="mt-3 space-y-2.5">
+        {w.visible.map((c) => (
+          <CardTile key={c.id} card={c} api={api} wound={woundOf(c.id)} details={details} />
+        ))}
+      </ul>
+      {w.total > COLUMN_WINDOW && (
+        <Pager
+          shown={w.shown}
+          total={w.total}
+          onMore={w.more}
+          onAll={w.all}
+          step={COLUMN_WINDOW}
+          noun={`${label} cards`}
+        />
+      )}
+    </>
+  );
+}
+
 export default function ResearchTriageBoard({ api, trouble }: { api: ScopeApi; trouble?: string | null }) {
   const [focus, setFocus] = useState<string | null>(null);
+  /** A state filter (descoped / liked / deepen / wounded) from the ScopeBar. It
+   *  INTERSECTS the column focus rather than replacing it: the two are
+   *  orthogonal axes, and replacing one with the other would make "wounded
+   *  cards in Mechanisms" unaskable. Clicking the applied state again clears it. */
+  const [stateFilter, setStateFilter] = useState<StateFilter | null>(null);
+  /** Every card's record at once, for the expert who reads rather than sweeps.
+   *  Off by default: the board's first job is the sweep (CardTile.tsx, CardBody). */
+  const [detailsMode, setDetailsMode] = useRemembered("research.board.details", "off", DETAILS_MODES);
+  const details = detailsMode === "on";
   const woundOf = (id: string) => api.summary.wounds.find((w) => w.cardId === id);
 
   /** THE COLUMN THAT ONLY EXISTS WHEN IT HAS TO. `columnsFor` shipped with no
@@ -55,7 +112,19 @@ export default function ResearchTriageBoard({ api, trouble }: { api: ScopeApi; t
    *  how an alarm stops being read. */
   const hasUntagged = api.cards.some((c) => c.dimension === UNTAGGED_DIMENSION_ID);
   const columns = columnsFor({ derived: boardColumns(api), hasUntagged });
-  const shown = focus ? columns.filter((d) => d.id === focus) : columns;
+  const matchesState = (c: Card) => {
+    if (!stateFilter) return true;
+    if (stateFilter === "wounded") return woundOf(c.id) !== undefined;
+    const st = stateOf(api.scope, c.id, api.optIn);
+    return stateFilter === "descoped" ? st.descoped : stateFilter === "liked" ? st.liked : st.deepen;
+  };
+  const columnCards = (d: Dimension) => api.cards.filter((c) => c.dimension === d.id && matchesState(c));
+  // With a state filter on, a column with no matching card is not drawn: its
+  // "nothing here" alarm would be about the filter, not the run. The column
+  // chip row still lists every column, so nothing is lost from navigation.
+  const inFocus = focus ? columns.filter((d) => d.id === focus) : columns;
+  const shown = stateFilter ? inFocus.filter((d) => columnCards(d).length > 0) : inFocus;
+  const matchTotal = stateFilter ? inFocus.reduce((n, d) => n + columnCards(d).length, 0) : 0;
 
   /** `summary.byDim` is built from `DIMENSIONS` and so has no row for the
    *  untagged bucket. Counting here covers every column the board can draw —
@@ -79,45 +148,59 @@ export default function ResearchTriageBoard({ api, trouble }: { api: ScopeApi; t
             below is read off `columns`, so it cannot say the wrong number, and
             the grid IS the domains. */}
         <Eyebrow>triage board</Eyebrow>
-        <ScopeBar api={api} trouble={trouble} />
+        <ScopeBar api={api} trouble={trouble} stateFilter={stateFilter} onStateFilter={setStateFilter} />
       </header>
 
       {/* Column filter — the board's one navigation affordance. These are
           TOGGLES, so they carry `aria-pressed`: their only pressed signal is a
           cyan border, and every other toggle in this step already says it out
           loud (CardTile, beats/VariantTile). */}
-      <div className="font-jetbrains flex flex-wrap gap-1.5 text-label" role="group" aria-label="Filter columns">
+      <div className="font-jetbrains flex flex-wrap items-start gap-1.5 text-label">
+        <div className="flex flex-1 flex-wrap gap-1.5" role="group" aria-label="Filter columns">
+          <button
+            type="button"
+            onClick={() => setFocus(null)}
+            aria-pressed={focus === null}
+            className={`rounded-full border px-2.5 py-1 tracking-[0.1em] transition ${
+              focus === null ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200" : "border-white/10 text-white/40 hover:text-white/70"
+            }`}
+          >
+            all {columns.length}
+          </button>
+          {columns.map((d) => {
+            const n = countOf(d);
+            const orphan = d.id === UNTAGGED_DIMENSION_ID;
+            return (
+              <button
+                key={d.id}
+                type="button"
+                onClick={() => setFocus(focus === d.id ? null : d.id)}
+                aria-pressed={focus === d.id}
+                className={`rounded-full border px-2.5 py-1 tracking-[0.1em] transition ${
+                  focus === d.id
+                    ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200"
+                    : orphan
+                      ? "border-amber-400/35 text-amber-200/85 hover:text-amber-100"
+                      : "border-white/10 text-white/40 hover:text-white/70"
+                }`}
+              >
+                {d.label} <span className={orphan ? "text-amber-200/50" : "text-white/30"}>{n.kept}/{n.total}</span>
+              </button>
+            );
+          })}
+        </div>
         <button
           type="button"
-          onClick={() => setFocus(null)}
-          aria-pressed={focus === null}
-          className={`rounded-full border px-2.5 py-1 tracking-[0.1em] transition ${
-            focus === null ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200" : "border-white/10 text-white/40 hover:text-white/70"
+          data-testid="board-details"
+          onClick={() => setDetailsMode(details ? "off" : "on")}
+          aria-pressed={details}
+          className={`ml-auto inline-flex items-center gap-1 rounded-full border px-2.5 py-1 tracking-[0.1em] transition ${
+            details ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200" : "border-white/10 text-white/40 hover:text-white/70"
           }`}
         >
-          all {columns.length}
+          <ChevronsUpDown className="h-3.5 w-3.5" aria-hidden />
+          details
         </button>
-        {columns.map((d) => {
-          const n = countOf(d);
-          const orphan = d.id === UNTAGGED_DIMENSION_ID;
-          return (
-            <button
-              key={d.id}
-              type="button"
-              onClick={() => setFocus(focus === d.id ? null : d.id)}
-              aria-pressed={focus === d.id}
-              className={`rounded-full border px-2.5 py-1 tracking-[0.1em] transition ${
-                focus === d.id
-                  ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200"
-                  : orphan
-                    ? "border-amber-400/35 text-amber-200/85 hover:text-amber-100"
-                    : "border-white/10 text-white/40 hover:text-white/70"
-              }`}
-            >
-              {d.label} <span className={orphan ? "text-amber-200/50" : "text-white/30"}>{n.kept}/{n.total}</span>
-            </button>
-          );
-        })}
       </div>
 
       {/* WHAT CHANGED, RATHER THAN EVERYTHING THERE IS. `aria-live="polite"`
@@ -135,16 +218,27 @@ export default function ResearchTriageBoard({ api, trouble }: { api: ScopeApi; t
           focus stays on the chip, so nothing else would say what happened — and
           it is a count, not a recital. */}
       <p aria-live="polite" className="sr-only">
-        {focus === null
+        {stateFilter
+          ? `Showing ${matchTotal} ${stateFilter} card(s)${focus === null ? "" : ` in ${inFocus[0]?.label ?? "that column"}`}.`
+          : focus === null
           ? `Showing all ${columns.length} columns.`
           : shown.length === 0
             ? "That column is no longer on the board."
             : `Showing ${shown[0].label} only — ${countOf(shown[0]).total} card(s).`}
       </p>
 
+      {stateFilter && matchTotal === 0 && (
+        <p data-testid="board-filter-empty" className="font-jetbrains text-label tracking-[0.12em] text-white/50">
+          no {stateFilter} cards{focus ? " in this column" : ""} —{" "}
+          <button type="button" onClick={() => setStateFilter(null)} className="text-cyan-200 hover:text-cyan-100">
+            clear filter
+          </button>
+        </p>
+      )}
+
       <div className={`grid gap-4 ${focus ? "" : "lg:grid-cols-2 xl:grid-cols-3"}`}>
         {shown.map((d) => {
-          const cards = api.cards.filter((c) => c.dimension === d.id);
+          const cards = columnCards(d);
           const n = countOf(d);
           // "Empty" means the run produced nothing here — NOT that everything
           // is descoped. Conflating the two hid the Conclusions column entirely,
@@ -243,11 +337,7 @@ export default function ResearchTriageBoard({ api, trouble }: { api: ScopeApi; t
                       </Hint>
                     </div>
                   )}
-                  <ul className="mt-3 space-y-2.5">
-                    {cards.map((c) => (
-                      <CardTile key={c.id} card={c} api={api} wound={woundOf(c.id)} />
-                    ))}
-                  </ul>
+                  <ColumnCards cards={cards} api={api} woundOf={woundOf} label={d.label} details={details} />
                 </>
               )}
             </section>

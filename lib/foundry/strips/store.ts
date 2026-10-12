@@ -39,6 +39,15 @@ import { stat } from "node:fs/promises";
 import path from "node:path";
 
 import { withCatalogue } from "../catalogue";
+import {
+  patchVerdictMap,
+  readVerdictState,
+  replaceVerdictMap,
+  withRunLock,
+  type VerdictPatch,
+  type VerdictSpec,
+  type VerdictState,
+} from "../verdictLog";
 import { foundryFs } from "../fsPort";
 import {
   FoundryError,
@@ -50,7 +59,6 @@ import {
   readJson,
   readManifestFile,
   runRoot,
-  writeJsonAtomic,
 } from "../runStore";
 import {
   JUDGEABLE,
@@ -135,9 +143,9 @@ export async function listStripRuns(): Promise<StripRunSummary[]> {
   return items.sort((a, b) => (a.at < b.at ? 1 : -1));
 }
 
-export async function getStripRun(id: string): Promise<StripRunDetail> {
-  const [run, verdicts] = await Promise.all([readStripRun(id), readStripVerdicts(id)]);
-  return { run, verdicts };
+export async function getStripRun(id: string): Promise<StripRunDetail & { rev: number }> {
+  const [run, { verdicts, rev }] = await Promise.all([readStripRun(id), readVerdictState<StripVerdict>(runDir(id))]);
+  return { run, verdicts, rev };
 }
 
 /** Resolve a run-relative file for the file route: contained, and a servable
@@ -208,15 +216,27 @@ export function cleanStripVerdicts(run: StripRun, input: unknown): StripVerdicts
   return out;
 }
 
-/** Replace the verdict map. Whole-map on purpose, like the cull's: the tab
- *  autosaves after every decision, and a last-writer-wins replace of one small
- *  file cannot half-apply. */
+/** The strips gate rules for the verdict kernel (verdictLog.ts): the same
+ *  refuse-don't-trim validation as cleanStripVerdicts, one key at a time. */
+function verdictSpec(id: string): VerdictSpec<StripRun, StripVerdict> {
+  return {
+    dir: runDir(id),
+    readManifest: () => readStripRun(id),
+    committed: (m) => (m.status === "committed" ? "This strip run is committed; its verdicts are final." : null),
+    clean: (m, key, raw) => cleanStripVerdicts(m, { [key]: raw })[key],
+  };
+}
+
+/** PUT: the whole map, refused whole on anything unreadable, else written
+ *  through the kernel as the diff it amounts to. */
 export async function putStripVerdicts(id: string, input: unknown): Promise<StripVerdicts> {
-  const run = await readStripRun(id);
-  if (run.status === "committed") throw new FoundryError("This strip run is committed; its verdicts are final.", 409);
-  const clean = cleanStripVerdicts(run, input);
-  await writeJsonAtomic(path.join(runDir(id), "verdicts.json"), clean);
-  return clean;
+  if (!input || typeof input !== "object" || Array.isArray(input)) throw new FoundryError("Verdicts must be an object keyed by card id.", 400);
+  return (await replaceVerdictMap(verdictSpec(id), input as Record<string, unknown>)).verdicts;
+}
+
+/** PATCH: keyed changes against a revision; 409 on a stale base. */
+export function patchStripVerdicts(id: string, patch: VerdictPatch): Promise<VerdictState<StripVerdict>> {
+  return patchVerdictMap(verdictSpec(id), patch);
 }
 
 /* ── the commit ───────────────────────────────────────────────────────────── */
@@ -323,7 +343,9 @@ export function stripFindings(run: StripRun, verdicts: StripVerdicts, at: string
  *  the run. DESTRUCTIVE and one-way for the rejected; see the header. */
 export async function commitStripRun(id: string, token?: string): Promise<StripCommitResult> {
   const dir = runDir(id);
-  return withCatalogue({ op: "strip-commit", run: id }, async (tx) => {
+  // Run lock first, then the catalogue (verdictLog.ts): a verdict write that
+  // arrives mid-commit waits, then sees `committed`.
+  return withRunLock(dir, () => withCatalogue({ op: "strip-commit", run: id }, async (tx) => {
     const fs = foundryFs();
     const run = await readStripRun(id);
     if (run.status === "committed") throw new FoundryError("This strip run is already committed.", 409);
@@ -420,5 +442,5 @@ export async function commitStripRun(id: string, token?: string): Promise<StripC
       ledgerRows: decided.length,
       findings,
     };
-  });
+  }));
 }

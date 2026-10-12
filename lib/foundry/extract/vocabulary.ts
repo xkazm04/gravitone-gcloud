@@ -3,7 +3,7 @@
 //
 // Everything a style is described by is an OBSERVABLE, never a judgement:
 // the same lesson pipeline/vlm-probe/style.py learned when `lighting_key`
-// became a brightness detector. The enums below are that file's, verbatim,
+// became a brightness detector. The enums are that file's, via pipeline/vocab/cinematography.json,
 // so an extracted style, a forge-read style and a grader's readback all speak
 // one language and a score is a comparison of enums rather than an opinion.
 //
@@ -33,54 +33,28 @@ import type {
   Scored,
 } from "./types";
 import { OBSERVABLE_FIELDS } from "./types";
+import { subsetDescriptions, subsetEnums, subsetWeights, vocabFields } from "@/lib/vocab/cinematography";
 
 /* ── Enums ────────────────────────────────────────────────────────────────── */
 
-export const ENUMS: Record<ObservableField, readonly string[]> = {
-  render_mode: ["photographic", "photoreal-cg", "stylised-realistic", "painterly", "cel-shaded", "graphic-abstract"],
-  medium: ["photograph", "3d-render", "2d-digital-painting", "traditional-paint", "line-drawing", "mixed-media"],
-  detail_density: ["sparse", "moderate", "dense", "hyper-dense"],
-  surface_realism: ["flat", "simplified", "plausible", "physically-convincing"],
-  atmospherics: ["none", "light-haze", "heavy-haze", "particulate", "volumetric-shafts"],
-  particle_fx: ["none", "subtle-dust", "heavy-debris", "energy-glow"],
-  palette_strategy: ["monochrome", "duotone", "complementary-split", "desaturated-naturalistic", "saturated-vivid", "warm-cool-split"],
-  black_handling: ["crushed", "deep-neutral", "lifted-milky"],
-  edge_treatment: ["crisp", "soft", "bloom-heavy", "diffused"],
-  finish: ["clean-smooth", "weathered-gritty", "painterly-textured"],
-  focus: ["deep-focus", "shallow-bokeh", "motion-blurred"],
-};
+// The enums, descriptions and weights are the file's `style_image` subset
+// (pipeline/vocab/cinematography.json) — read, never re-declared here, so this
+// module can no longer drift from style.py. pipeline/check-vocab.mjs holds it.
+const SUBSET = "style_image";
 
-const DESCRIPTIONS: Record<ObservableField, string> = {
-  render_mode: "How the image is made, judged from surfaces and edges rather than subject matter.",
-  medium:
-    "What the image physically IS: a photograph; a 3D render (modelled forms, consistent specular, CG hair/cloth); a 2D digital painting (brushed or airbrushed shading on flat forms, painted hair as shapes); traditional paint on a real surface; a line drawing (pencil, ink); or mixed media.",
-  detail_density: "How much incidental detail fills the frame — set dressing, wear, background business.",
-  surface_realism: "How convincingly materials behave: skin, metal, cloth, stone.",
-  atmospherics: "Haze, fog and volumetric light in the air — the air itself.",
-  particle_fx:
-    "Floating debris IN the air, distinct from haze: none; subtle dust motes; heavy environmental debris (embers, snow, sparks, ash); or glowing energy effects. A clean studio render and an ember-swept action frame differ HERE.",
-  palette_strategy: "How colour is organised across the frame.",
-  black_handling: "What happens in the darkest areas.",
-  edge_treatment: "How edges and highlights resolve.",
-  finish: "Micro-texture of surfaces: pristine and smooth; weathered with dirt, scratches and grit; or visibly brush-painted.",
-  focus: "Lens behaviour: sharp front to back; a shallow photographic depth of field with blurred bokeh background; or dominated by motion blur.",
-};
+// OBSERVABLE_FIELDS (types.ts) stays a literal tuple so ObservableField is a
+// real union; this proves it is the subset, in order, the moment the module loads.
+if (OBSERVABLE_FIELDS.join() !== vocabFields(SUBSET).join()) {
+  throw new Error("OBSERVABLE_FIELDS drifted from the cinematography vocabulary's style_image subset");
+}
+
+export const ENUMS: Record<ObservableField, readonly string[]> = subsetEnums<ObservableField>(SUBSET);
+
+const DESCRIPTIONS: Record<ObservableField, string> = subsetDescriptions<ObservableField>(SUBSET);
 
 /** Weight per field in a score. render_mode is the style; the rest is how it
  *  is dressed. */
-export const WEIGHTS: Record<ObservableField, number> = {
-  render_mode: 2,
-  medium: 2,
-  detail_density: 1,
-  surface_realism: 1,
-  atmospherics: 1,
-  particle_fx: 1,
-  palette_strategy: 1,
-  black_handling: 1,
-  edge_treatment: 1,
-  finish: 1,
-  focus: 1,
-};
+export const WEIGHTS: Record<ObservableField, number> = subsetWeights<ObservableField>(SUBSET);
 
 /* ── Schemas (JSON Schema, vendor-native-safe: no oneOf/$ref/const) ───────── */
 

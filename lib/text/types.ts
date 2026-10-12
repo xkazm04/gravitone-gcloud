@@ -149,6 +149,17 @@ export interface SourceReceipt {
  *                        could not say which one a team actually leans on. The
  *                        draft is never stored by the model — a human confirms
  *                        it (lib/sound/ledger.ts appendLesson).
+ *   · `suno-propose`     /api/sound/suno/propose — a canvas lane (axis + value)
+ *                        and up to eight of its existing styles in, N Suno
+ *                        prompts (title, style, lyrics) out. Prompt:
+ *                        pipeline/SUNO-PROPOSE-PROMPT.md; lengths clamped in
+ *                        lib/sound/suno/store.ts parseFields. Its own word, not
+ *                        `sound-hunt`'s: a hunt drafts a map, this drafts the
+ *                        queue that spends Suno credits.
+ *   · `suno-riff`        the same route with `riffOf` — one prompt in, N
+ *                        variations that keep its identity out. A sibling of
+ *                        `suno-propose` so a spend chart can say how often the
+ *                        operator riffs on a keeper versus drafts from a lane.
  *   · `compose`          /api/script — a notebook, a scope, a template and a
  *                        clock in, up to three candidate renders out. Prompt:
  *                        pipeline/SCRIPT-PROMPT.md. A sibling of `edit-plan`
@@ -175,6 +186,14 @@ export interface SourceReceipt {
  *                        line's shape, the super's hold). A sibling of `ad-ideas`
  *                        and not the same word: a round that invents and a round
  *                        that times are different turns with different prompts.
+ *   · `repair`           lib/text/repair.ts — a paid-for answer that failed its
+ *                        validator, plus the path-addressed findings that refused
+ *                        it, in; the SAME object back with only those paths
+ *                        changed. A word of its own because a repair is a second
+ *                        bill for the same answer, and a spend chart that folded
+ *                        it into `research` or `edit-plan` could not say how much
+ *                        a validator costs. Flash-class: it edits a given object,
+ *                        it does not author one.
  */
 export type TurnClass =
   | "edit-plan"
@@ -184,8 +203,11 @@ export type TurnClass =
   | "research"
   | "sound-hunt"
   | "sound-lesson"
+  | "suno-propose"
+  | "suno-riff"
   | "ad-ideas"
   | "ad-scenarios"
+  | "repair"
   | "probe";
 
 /**

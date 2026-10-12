@@ -37,7 +37,7 @@ stated reason: a keymap is a table, not prose. Every row is a key and a verb,
 there is nothing in it to delete, and its length is a function of how many keys
 the surface binds.
 
-## The eleven
+## The twelve
 
 ### `<Hint>` — a real disclosure, not `title=`
 
@@ -233,6 +233,41 @@ Semantics: `role="tablist"` / `role="tab"` / `aria-selected`, roving tabindex,
 arrow keys and Home/End, **manual** activation (arrows move focus; Enter/Space
 selects). A locked tab is `aria-disabled`, never `disabled` — a `disabled` button
 leaves the tab order, which would put the explanation of the lock behind a mouse.
+
+### `<Fold>` — a section that opens on demand
+
+The second level of a layered screen. The state of the work rides on the first
+level; the record — every source, every gate detail verbatim, a run's log, the
+rejected candidates — sits one press down.
+
+```tsx
+<Fold title="Sources" tally={{ value: sources.length }} remember="research.sources">
+  <SourceList sources={sources} />
+</Fold>
+```
+
+Replaces five spellings of the same disclosure: four native `<details>`
+(`app/library/SpecEditor.tsx:57`, `app/articles/parts.tsx:386`,
+`app/articles/RunView.tsx:343`, `app/foundry/Lightbox.tsx:342`) and a hand-rolled
+`aria-expanded` button per surface (`app/_phases/frames/FramesAssembly.tsx:360`,
+`app/_projects/RaceSheet.tsx:501`, `app/playground/triage/Batch.tsx:73`).
+
+Waves 4–5 moved the articles pair and the foundry lightbox onto `Fold`; `SpecEditor`'s
+`<details>` is the one left.
+
+There is no `sub`, no `description` and no `blurb`: a title of one to four words,
+the count as `tally`, other state (a `PipRow`, a `StaleBadge`, a `Hint`) as
+`marks`. **A Fold is not where narration goes to hide.** Folding a paragraph about
+the app moves it one click away and changes nothing about it; the law deletes it.
+If the body would explain the screen, there should be no Fold.
+
+The button sits in a heading (`level`, default 3) with `aria-expanded` and
+`aria-controls`; `marks` sit beside it, never inside, because a `Hint` is itself a
+button. The body is not rendered until the first open, then stays mounted and
+`hidden`, so a closed Fold over a long list costs its header and a half-typed
+field survives a close. `remember` keeps the open state through
+`lib/useRemembered.ts` — one localStorage record, cleared by the identity
+eviction — and is hydration-safe.
 
 ## House rules these obey
 

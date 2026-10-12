@@ -120,15 +120,11 @@ def identity(cdir, hero):
 # -- exactly the blindness `reference-shows-only-invariants` predicts. Closed
 # enums, not prose: the probe's outcome is a count of landings, and prose
 # cannot be counted without a second judge in the loop.
-FACE_FIELDS = {
-    "mouth": ["wide-open-smile", "closed-smile", "neutral-closed", "pressed-flat",
-              "open-slack", "open-shouting", "not-visible"],
-    "eyes": ["wide-whites-showing", "narrowed-creased", "neutral-open", "lids-low",
-             "closed", "in-shadow", "not-visible"],
-    "brows": ["raised-together", "raised-apart", "neutral", "lowered-level", "not-visible"],
-    "gaze": ["to-camera", "off-camera-left", "off-camera-right", "down", "up", "not-visible"],
-    "face_light": ["front-lit", "side-lit", "rim-only-face-in-shadow", "flat", "not-visible"],
-}
+# The enums live in pipeline/vocab/cinematography.json (group `face_state`).
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "vocab"))
+import vocab  # noqa: E402
+
+FACE_FIELDS = vocab.group_enums("face_state")
 
 FACE_PROMPT = (
     "Look only at the SUBJECT'S FACE in this image and report what it is doing. "

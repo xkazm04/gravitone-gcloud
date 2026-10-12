@@ -230,6 +230,10 @@ export function notebookIssues(input: NotebookSource | Notebook = fixtureSource(
   const factIds = new Set(nb.facts.map((f) => f.id));
   const cards = buildCards(src);
   const cardIds = new Set(cards.map((c) => c.id));
+  // A fact a follow-up revision killed is gone on purpose and its tombstone is
+  // kept (types.ts::Notebook.killed) so what rested on it can be reported as
+  // wounded. That reference is therefore resolved, not dangling.
+  const killedIds = new Set((nb.killed ?? []).map((k) => k.id));
 
   const edge = (
     from: string,
@@ -240,7 +244,7 @@ export function notebookIssues(input: NotebookSource | Notebook = fixtureSource(
   ) => {
     for (const r of refs ?? []) {
       if (r == null) continue;
-      if (!universe.has(r))
+      if (!universe.has(r) && !killedIds.has(r))
         add("dangling-ref", `${from}.${field}`, r, `names no ${what} in this notebook. An id that resolves to nothing can never be descoped, so it can never wound what rests on it.`);
     }
   };
@@ -290,7 +294,7 @@ export function notebookIssues(input: NotebookSource | Notebook = fixtureSource(
   edge("currency", "durable", nb.currency.durable, cardIds, "card");
 
   for (const id of Object.keys(src.tags))
-    if (!cardIds.has(id))
+    if (!cardIds.has(id) && !killedIds.has(id))
       add("stale-tag", "CARD_DIMENSION", id, `tags an id this notebook does not have. If the card was renamed, the tag is dead AND the card is now untagged.`);
   for (const id of untaggedIds(src))
     add("untagged", "CARD_DIMENSION", id, `has no dimension. It carries "${UNTAGGED_DIMENSION_ID}" and renders in the Untagged column on both boards — a queue awaiting a domain, not a domain. Tag it in dimensions.ts::CARD_DIMENSION.`);

@@ -11,8 +11,17 @@
 // string matched by regex (providers/google.ts), Leonardo's is a terminal job
 // status (providers/leonardo.ts) — so there is no shared shape to hook. Each
 // adapter raises its own `refused` after this function has returned a body.
+//
+// RETRY IS BOUNDED BY MONEY, NOT ONLY BY COUNT. A request marked `billable` (a
+// vendor WORK call: a generation, an edit, a recognition) is re-sent only after
+// an attempt the billing rule calls free - errors.ts#presumedBilled, the same
+// predicate the router's meter books by. A 429 is free and is retried; a 5xx
+// the vendor answered and a timeout in flight are presumed billed and are not.
+// Re-sending those used to run up to three billed dispatches under one budget
+// hold and one ledger row. Idempotent reads (polls) and cleanup keep the plain
+// ladder: a repeated GET or DELETE starts no new work.
 
-import { ImagingError, type ImagingErrorKind } from "./errors";
+import { ImagingError, presumedBilled, type ImagingErrorKind } from "./errors";
 import { BlockedUrlError, safeFetch, type Resolver } from "./safeUrl";
 import type { ProviderId } from "./types";
 
@@ -23,6 +32,9 @@ export interface RequestOptions {
   timeoutMs?: number;
   /** Attempts for retryable failures (429/5xx/timeout). 1 = no retry. */
   attempts?: number;
+  /** This request starts vendor work the vendor bills for. Then an attempt
+   *  `presumedBilled` calls billed is never re-sent, whatever `attempts` says. */
+  billable?: boolean;
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -39,7 +51,7 @@ export async function requestJson<T>(
   url: string,
   opts: RequestOptions = {},
 ): Promise<T> {
-  const { method = "GET", headers = {}, body, timeoutMs = 120_000, attempts = 3 } = opts;
+  const { method = "GET", headers = {}, body, timeoutMs = 120_000, attempts = 3, billable = false } = opts;
 
   let last: ImagingError | null = null;
   for (let attempt = 1; attempt <= attempts; attempt++) {
@@ -66,6 +78,9 @@ export async function requestJson<T>(
         // this flag only records that the bytes arrived.
         err.dispatched = true;
         // 5xx and 429 are worth another go; a 400 will fail identically forever.
+        // Unless the go costs money: a billable 5xx was presumed billed, and a
+        // second dispatch would be a second bill the meter never sees.
+        if (billable && presumedBilled(err)) throw err;
         if (err.retryable || res.status >= 500) {
           last = err;
           if (attempt < attempts) {
@@ -97,7 +112,8 @@ export async function requestJson<T>(
         // The request was in flight when we hung up. The vendor may well have
         // finished the work and will bill for it; our clock ran out, not theirs.
         last.dispatched = true;
-        if (attempt >= attempts) throw last;
+        // ...which is exactly why a billable request is not sent again.
+        if (attempt >= attempts || (billable && presumedBilled(last))) throw last;
       } else {
         // NOT dispatched, on purpose: this is the transport refusing to connect
         // — DNS, TLS, an unreachable host — so nothing ever reached a vendor and

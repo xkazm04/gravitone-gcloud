@@ -84,13 +84,17 @@ test("exit: the missing-binary verdict is decided BEFORE stderr is read", () => 
 
 test("doors: the probe and the run both classify through the one function", () => {
   // Source, comments stripped, so a paragraph ABOUT the verdict does not count
-  // as the verdict. Two doors, two call sites — the probe's `close` and the
-  // run's `close`. A third door added later without it shows up as a count of 2
-  // where the file's own header promises the verdict is shared.
+  // as the verdict. Every child `close` handler is a door; each must classify
+  // through the one function. Counting the calls alone cannot see a third door
+  // that never calls it (the count stays 2), so the doors are counted too and
+  // the two numbers must agree.
   const src = stripComments(readFileSync(resolve(__dirname, "../../lib/claudeCli.ts"), "utf8"));
   const calls = src.match(/\bclassifyExit\(code, err\)/g) ?? [];
-  console.log(`[cli] classifyExit call sites: ${calls.length}`);
-  expect(calls.length).toBe(2);
+  const doors = src.match(/\bchild\.on\(\s*"close"/g) ?? [];
+  console.log(`[cli] close handlers: ${doors.length}, classifyExit call sites: ${calls.length}`);
+  // Floor: the probe and the run. A walk that reads nothing cannot pass on 0 === 0.
+  expect(doors.length).toBeGreaterThanOrEqual(2);
+  expect(calls.length).toBe(doors.length);
   // And the old inline verdict is gone from the run.
   expect(src).not.toMatch(/const hint = \/login\|auth\|credential\/i\.test\(err\)/);
 });

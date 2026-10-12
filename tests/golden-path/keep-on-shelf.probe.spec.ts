@@ -3,7 +3,7 @@
 // fake-indexeddb, no component mounted.
 //
 //   1  one keep -> one asset row, one upload row, the decoded bytes
-//   2  the same bytes kept twice (or from two projects) -> still one of each
+//   2  the same bytes kept twice -> one of each; from two projects -> a row each, both keep their project
 //   3  a copy, not a pointer: regenerate + deleteProject, the bytes remain
 //   4  only plates: missing, audio and src-less outputs are not keepable;
 //      the control is rendered behind `keepable` only
@@ -11,6 +11,8 @@
 //   6  a refused transaction writes nothing; the store's message comes back whole
 //   7  the kept mark follows the bytes: a regenerate drops it, a re-keep adds a row
 //   8  no new prose: three hand-wired TALLY_TONE sites stay three; the name is a verb
+//   9  the shelf's kept index reads one project's rows (listAssetsFor), and
+//      only this account's
 import "fake-indexeddb/auto";
 
 import { readFileSync } from "node:fs";
@@ -23,7 +25,7 @@ import type { Frame } from "@/app/_phases/frames/frames";
 import { unitsFromFrames } from "@/app/_phases/frames/picture/unit";
 import { keepPlate, keepable, keptIndex, plateBlob, plateDigest } from "@/app/_library/keepPlate";
 import { readOutputs, type Output } from "@/app/_library/projectOutputs";
-import { getUploadBlobs, listAssets, assetFromKeptPlate, type UploadRecord } from "@/lib/assets";
+import { getUploadBlobs, listAssets, listAssetsFor, assetFromKeptPlate, putAssets, type UploadRecord } from "@/lib/assets";
 import { deleteProject, newProject, putProject } from "@/lib/projects";
 
 import { stripComments } from "./_helpers";
@@ -89,7 +91,7 @@ test("case 1: one keep writes one asset row, one upload row, the decoded bytes",
   const rows = await keptRows();
   expect(rows).toHaveLength(1);
   const a = rows[0];
-  expect(a.id).toMatch(/^as-kept-[0-9a-f]{16}$/);
+  expect(a.id).toBe(`as-kept-${String(a.meta?.digest).slice(0, 16)}-${encodeURIComponent(p.id)}`);
   const d16 = a.id.slice("as-kept-".length);
   expect(a.src).toBe(`upload:up-kept-${d16}`);
   expect(a.path).toEqual(["kept", "glass-harbor"]);
@@ -103,12 +105,12 @@ test("case 1: one keep writes one asset row, one upload row, the decoded bytes",
     model: "gemini-x",
     costUsd: 0.04,
   });
-  expect(String(a.meta?.digest).startsWith(d16)).toBe(true);
+  expect(String(a.meta?.digest).startsWith(d16.slice(0, 16))).toBe(true);
   const blobs = await getUploadBlobs([`up-kept-${d16}`]);
   expect(await bytesOf(blobs.get(`up-kept-${d16}`)!)).toBe(BYTES_A);
 });
 
-test("case 2: the same bytes kept twice, or from two projects, leave one row and one blob", async () => {
+test("case 2: the same bytes kept twice leave one row and one blob; a second project keeps its own row", async () => {
   const p1 = await project("One");
   const p2 = await project("Two");
   await putFrames(p1.id, dataUrl(BYTES_A));
@@ -118,10 +120,15 @@ test("case 2: the same bytes kept twice, or from two projects, leave one row and
   await Promise.all([keepPlate(UID, p1.id, o1), keepPlate(UID, p1.id, o1)]);
   await keepPlate(UID, p2.id, o2);
   const digest = await plateDigest(o1.src!);
-  const rows = (await keptRows()).filter((r) => r.meta?.digest === digest);
-  expect(rows).toHaveLength(1);
-  const id = String(rows[0].meta?.uploadId);
-  expect((await getUploadBlobs([id])).size).toBe(1);
+  const rows = (await keptRows()).filter((r) => r.meta?.digest === digest && (r.meta?.projectId === p1.id || r.meta?.projectId === p2.id));
+  expect(rows).toHaveLength(2);
+  for (const p of [p1, p2]) {
+    const mine = rows.filter((r) => r.meta?.projectId === p.id);
+    expect(mine).toHaveLength(1);
+    expect((await getUploadBlobs([String(mine[0].meta?.uploadId)])).size).toBe(1);
+  }
+  expect(await listAssetsFor(UID, p1.id)).toHaveLength(1);
+  expect(keptIndex(await listAssetsFor(UID, p1.id)).get(o1.id)).toBe(digest);
 });
 
 test("case 3: a regenerate and a deleted project leave the kept bytes and the row", async () => {
@@ -188,7 +195,7 @@ test("case 7: the kept mark follows the bytes", async () => {
   await putFrames(p.id, dataUrl(BYTES_A));
   const o = await plateOf(p.id);
   await keepPlate(UID, p.id, o);
-  const marked = async (out: Output) => keptIndex(await listAssets(UID)).get(out.id) === (await plateDigest(out.src!));
+  const marked = async (out: Output) => keptIndex(await listAssetsFor(UID, p.id)).get(out.id) === (await plateDigest(out.src!));
   expect(await marked(o)).toBe(true);
 
   await putFrames(p.id, dataUrl(BYTES_B));
@@ -216,6 +223,23 @@ test("case 8: no new prose; the control's name is a verb; assetFromKeptPlate is 
     outputId: "frames:a",
     name: "n",
   });
-  expect(pair.asset.id).toBe("as-kept-abababababababab");
-  expect(pair.upload.id).toBe("up-kept-abababababababab");
+  expect(pair.asset.id).toBe("as-kept-abababababababab-p");
+  expect(pair.upload.id).toBe("up-kept-abababababababab-p");
+});
+
+test("case 9: listAssetsFor reads one project's rows, and only this account's", async () => {
+  const p1 = await project("Scoped One");
+  const p2 = await project("Scoped Two");
+  await putFrames(p1.id, dataUrl("\x89PNG\r\n\x1a\nscoped-1"));
+  await putFrames(p2.id, dataUrl("\x89PNG\r\n\x1a\nscoped-2"));
+  await keepPlate(UID, p1.id, await plateOf(p1.id));
+  await keepPlate(UID, p2.id, await plateOf(p2.id));
+  // Another account's row claiming the same project id must not leak in.
+  await putAssets([
+    { id: "as-other", uid: "uid-other", path: ["kept"], name: "theirs", src: "", kind: "image", meta: { projectId: p1.id }, createdAt: 1 },
+  ]);
+  const rows = await listAssetsFor(UID, p1.id);
+  expect(rows.length).toBeGreaterThan(0);
+  expect(rows.every((r) => r.uid === UID && r.meta?.projectId === p1.id)).toBe(true);
+  expect((await listAssets(UID)).some((r) => r.meta?.projectId === p2.id)).toBe(true);
 });

@@ -10,7 +10,9 @@
 // top of the component, before any of the standard hooks mount.
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 
+import { pendingPanel } from "@/components/ui/Pending";
 import { CHIP_CLASS, TALLY_TONE, Tally, UpstreamBreak } from "@/components/ui/signal";
 import { useElapsed, useJobs, type Job } from "@/lib/jobs";
 import { useAuth } from "@/lib/useAuth";
@@ -19,7 +21,12 @@ import { type MusicVideoSourceStepData } from "../../_shared/stepStore";
 import { useStepFor } from "../../_shared/useLoadFor";
 import { usePhaseReport } from "../../_shared/usePhaseReport";
 
-import EffectsStudio from "./EffectsStudio";
+// The effects studio and its compositor draw only once a poster exists, and a
+// project on its way to one (the style field, the generate button, the wait)
+// used to carry them anyway. Asked for as soon as a poster id is on the record,
+// so the bytes are usually here by the time the poster's blob is.
+const loadStudio = () => import("./EffectsStudio");
+const EffectsStudio = dynamic(loadStudio, { loading: pendingPanel });
 import { loadPosterAsset, useMusicVideoComposition } from "./useMusicVideoComposition";
 
 /** Real, measured progress language — not an indefinite spinner. ~57s is what
@@ -154,9 +161,12 @@ export default function MusicVideoFrames({ projectId }: { projectId: string }) {
 
       {loadSettled && !renderable && (
         <div className="space-y-2">
+          {/* "style (carried from Research, editable here)" was the label. The
+              field arrives filled with Research's style and is visibly a text
+              box; the parenthesis described the app, not the style. */}
           <label className="block space-y-1.5">
             <span className="font-jetbrains text-label uppercase tracking-[0.14em] text-white/45">
-              style (carried from Research, editable here)
+              style
             </span>
             <input
               type="text"

@@ -14,12 +14,11 @@ import { buildCards } from "@/app/_phases/_shared/notebook/cards";
 import { chainOf, attributionOf, renderPayloadFor, rendersInScope } from "@/app/_phases/script/chainBase";
 
 const ctx = () => ({ cards: buildCards(), scope: {} });
-const emptyPlan: EditPlan = { edits: [], refusals: [], unchanged: [], summary: "empty plan" };
+const emptyPlan: EditPlan = { edits: [], refusals: [], summary: "empty plan" };
 
 const cut145Plan: EditPlan = {
   edits: [{ renderId: "reversal-chain", op: "cut", beatAt: "1:45", why: "cut beat at 1:45" }],
   refusals: [],
-  unchanged: [],
   summary: "cut 1:45",
 };
 
@@ -45,7 +44,6 @@ test("case 3: subsequent cut @1:45 cuts v2's 1:45 beat (M2 beat) and keeps previ
   const cutM2Plan: EditPlan = {
     edits: [{ renderId: "reversal-chain", op: "cut", beatAt: "1:45", why: "cut v2's 1:45" }],
     refusals: [],
-    unchanged: [],
     summary: "cut 1:45 again",
   };
   const v3 = recalibrateFromPlan(v2, [], cutM2Plan, "v3", 2, ctx());
@@ -60,13 +58,11 @@ test("case 4: parseEditPlan validates against base version marks when base is pa
   const rawCut425 = JSON.stringify({
     edits: [{ renderId: "reversal-chain", op: "cut", beatAt: "4:25", why: "cut 4:25" }],
     refusals: [],
-    unchanged: [],
     summary: "cut 4:25",
   });
   const rawCut445 = JSON.stringify({
     edits: [{ renderId: "reversal-chain", op: "cut", beatAt: "4:45", why: "cut 4:45" }],
     refusals: [],
-    unchanged: [],
     summary: "cut 4:45",
   });
 
@@ -131,7 +127,6 @@ test("case 7: rendersInScope over renderPayloadFor(v2') sees inserted beat on de
       },
     ],
     refusals: [],
-    unchanged: [],
     summary: "insert beat on derived-short",
   };
   const v2Prime = recalibrateFromPlan(BASELINE, [], insertPlan, "v2-prime", 1, ctx());

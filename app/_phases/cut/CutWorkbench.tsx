@@ -12,6 +12,7 @@
 import { useMemo, useState } from "react";
 
 import { useCutClock } from "./clock";
+import { editPoints, musicGaps } from "./edits";
 import { drawnStart } from "./offsets";
 import { useTransportKeys } from "./parts/Transport";
 import { CutContext, useCut, type CutCtx, type CutModel } from "./useCut";
@@ -42,7 +43,11 @@ function Loaded({ model }: { model: CutModel }) {
   const clock = useCutClock(cut.totalS);
   const [muted, setMuted] = useState(false);
   const [refused, setRefused] = useState<string | null>(null);
-  useTransportKeys(clock);
+  // Edit points move with a nudge (they are where blocks are DRAWN); the gaps
+  // do not (they are measured on the marks the finish line counts).
+  const edits = useMemo(() => editPoints(cut, model.offsets), [cut, model.offsets]);
+  const gaps = useMemo(() => musicGaps(cut), [cut]);
+  useTransportKeys(clock, { edits, gaps, undo: model.canUndo ? model.undoOffsets : undefined });
 
   const spans: TakeSpan[] = useMemo(
     () =>
@@ -53,7 +58,7 @@ function Loaded({ model }: { model: CutModel }) {
   );
   useTakeAudio(clock, spans, muted, setRefused);
 
-  const ctx: CutCtx = { ...model, cut, clock, muted, setMuted, refused, setRefused };
+  const ctx: CutCtx = { ...model, cut, clock, edits, muted, setMuted, refused, setRefused };
 
   return (
     <CutContext.Provider value={ctx}>

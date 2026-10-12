@@ -1,7 +1,7 @@
 """Render one 5-second clip per preset, on the local stack, from its own swatch.
 
     python pipeline/video/render_preset_clips.py
-    python pipeline/video/render_preset_clips.py --only blueprint --force
+    python pipeline/video/render_preset_clips.py --only blueprint --takes 4
 
 IMAGE-TO-VIDEO, not text-to-video, and that is the whole design. The swatch in
 public/presets/<id>.jpg is the picture the rail already shows and the user is
@@ -19,14 +19,20 @@ The motion line comes from each preset's own `motion` field in
 app/library/presets.ts. It is deliberately small -- a drift, a settle, one
 element arriving. A style swatch that reorganises itself is no longer a swatch.
 
+TAKES, NOT A RAW. Every render is kept as a take under
+pipeline/runs/preset-clips/<id>/takes/<engine>-<seed>.webm and recorded in
+<id>/ledger.json (pipeline/video/ledger.py) with its clip_check verdict. Nothing
+is overwritten; `--takes N` renders the first N seeds of SEEDS; adopt one with
+`ledger.py adopt <id> <take> [--waiver ...]` and the build squeezes only that.
+
 Raw renders land in pipeline/runs/preset-clips/ and are NOT committed. The
 committed artefacts are what pipeline/build-preset-clips.mts makes of them.
 
 Resumable: a .webm on disk is a finished render.
 """
 import json
-import re
 import shutil
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -35,7 +41,9 @@ HERE = Path(__file__).parent
 ROOT = HERE.parent.parent
 sys.path.insert(0, str(ROOT / "pipeline" / "vlm-probe"))
 sys.path.insert(0, str(ROOT / "pipeline" / "foundry"))
+sys.path.insert(0, str(HERE))
 import guard  # noqa: E402
+import ledger  # noqa: E402
 import motion  # noqa: E402
 from consistency import stage_reference  # noqa: E402
 from dojo_video import generate_video  # noqa: E402
@@ -77,31 +85,31 @@ ENGINES = {
 }
 W, H, LEN, FPS = 848, 480, 121, 24  # wan's proven size on this card
 OUT = ROOT / "pipeline" / "runs" / "preset-clips"
-PRESETS_TS = ROOT / "app" / "library" / "presets.ts"
 SWATCHES = ROOT / "public" / "presets"
 
 # Seed is FIXED across every preset for the same reason the swatches share one
 # subject: the clips differ by style and motion line, and by nothing else.
 SEED = 770412
+# `--takes N` renders the first N of these. A fixed list, not random draws: a
+# take is reproducible, and "seed 3" means the same thing on every machine.
+SEEDS = [SEED, 770413, 770414, 770415, 770416, 770417, 770418, 770419]
 
 
 def read_presets():
-    """id, name and motion line, straight out of the TypeScript.
+    """id, name and motion line, from the real module via `npx tsx`.
 
-    Parsed rather than imported: this is the only Python that needs them, and a
-    JSON sidecar would be a second copy of a list that already has one home.
+    Evaluated, not regexed: the old regex model of the TypeScript string syntax
+    mis-read any motion line with an escaped quote or a newline. The emitter is
+    pipeline/emit-presets.mts, so the list still has exactly one home.
     """
-    src = PRESETS_TS.read_text(encoding="utf-8")
-    out = []
-    for block in re.finditer(r"\{\s*\n\s*id:\s*\"([a-z0-9-]+)\",\s*\n\s*name:\s*\"([^\"]+)\",", src):
-        pid, name = block.group(1), block.group(2)
-        tail = src[block.end():block.end() + 2000]
-        m = re.search(r"\n    motion:\s*\n?\s*\"((?:[^\"\\]|\\.)*)\"", tail)
-        if not m:
-            raise SystemExit(f"preset {pid} has no `motion:` line in presets.ts")
-        out.append({"id": pid, "name": name, "motion": m.group(1).replace('\\"', '"')})
+    npx = shutil.which("npx") or shutil.which("npx.cmd") or "npx"
+    r = subprocess.run([npx, "tsx", str(ROOT / "pipeline" / "emit-presets.mts")],
+                       capture_output=True, text=True, cwd=ROOT, encoding="utf-8")
+    if r.returncode != 0:
+        raise SystemExit(f"could not read presets via tsx: {(r.stderr or r.stdout).strip()[:300]}")
+    out = json.loads(r.stdout)
     if not out:
-        raise SystemExit("no presets parsed out of presets.ts")
+        raise SystemExit("no presets emitted by pipeline/emit-presets.mts")
     return out
 
 
@@ -171,28 +179,34 @@ def h3_workflow(prompt, start_image, cfg, prefix):
 def main():
     argv = sys.argv[1:]
     only = argv[argv.index("--only") + 1] if "--only" in argv else None
-    force = "--force" in argv
+    takes_n = int(argv[argv.index("--takes") + 1]) if "--takes" in argv else 1
+    if not 1 <= takes_n <= len(SEEDS):
+        raise SystemExit(f"--takes must be 1..{len(SEEDS)}")
     engine = argv[argv.index("--engine") + 1] if "--engine" in argv else "h3"
     # H3's noise seed lives at module scope in motion.py, so it is set rather
     # than passed. It is the ONLY lever left for a clip that comes out wrong:
     # the node takes no negative prompt, the prompt is already as short as it
     # can be, and every other setting was measured worse. A bad draw is redrawn.
+    seeds = SEEDS[:takes_n]
     if "--seed" in argv:
-        motion.SEED = int(argv[argv.index("--seed") + 1])
+        seeds = [int(argv[argv.index("--seed") + 1])]
     if engine not in ENGINES:
         raise SystemExit(f"--engine must be one of {', '.join(ENGINES)}")
     cfg = ENGINES[engine]
 
     presets = [p for p in read_presets() if not only or p["id"] == only]
     OUT.mkdir(parents=True, exist_ok=True)
-    todo = [p for p in presets
-            if force or not any((OUT / f"{p['id']}{e}").exists() for e in (".webm", ".mp4"))]
-    print(f"preset clips: {engine} · {len(presets)} preset(s), {len(todo)} to render "
-          f"at {cfg['w']}x{cfg['h']}x{cfg['len']} @ {cfg['fps']}fps", flush=True)
+    # One unit of work is (preset, seed). A take already on disk is a finished
+    # render and is skipped, never redone: takes are not overwritten.
+    todo = [(p, sd) for p in presets for sd in seeds
+            if not (ledger.takes_dir(p["id"]) / ledger.take_name(engine, sd)).exists()]
+    print(f"preset clips: {engine} · {len(presets)} preset(s) x {len(seeds)} seed(s), "
+          f"{len(todo)} take(s) to render at {cfg['w']}x{cfg['h']}x{cfg['len']} @ {cfg['fps']}fps",
+          flush=True)
     if not todo:
         return
 
-    missing = [p["id"] for p in todo if not (SWATCHES / f"{p['id']}.jpg").exists()]
+    missing = [p["id"] for p, _ in todo if not (SWATCHES / f"{p['id']}.jpg").exists()]
     if missing:
         raise SystemExit(f"no swatch to animate for: {', '.join(missing)} "
                          f"-- run build-preset-thumbs.mts first")
@@ -205,10 +219,11 @@ def main():
     guard.require(vram_gb=16, ram_gb=guard.RAM_FLOOR_GB, verbose=False)
 
     failed = []
-    for n, p in enumerate(todo, 1):
+    for n, (p, seed) in enumerate(todo, 1):
         if not guard.headroom_ok():
             guard.recycle_comfy("headroom")
         ref = stage_reference(SWATCHES / f"{p['id']}.jpg")
+        motion.SEED = seed  # h3's noise seed lives at module scope
         if engine == "h3":
             # "Animate the image" and nothing more. The authored motion line was
             # measured WORSE on every hosted and local engine tried: a long
@@ -217,36 +232,50 @@ def main():
             # description of stillness. See the README.
             wf = h3_workflow("Animate the image", ref, cfg, prefix=f"preset-{p['id']}")
         else:
-            wf = i2v_workflow(p["motion"], ref, SEED, prefix=f"preset-{p['id']}")
+            wf = i2v_workflow(p["motion"], ref, seed, prefix=f"preset-{p['id']}")
         t0 = time.time()
         try:
             vid = generate_video(wf)
         except Exception as e:  # noqa: BLE001
-            print(f"  [{n}/{len(todo)}] {p['id']} FAILED: {str(e)[:100]}", flush=True)
-            failed.append(p["id"])
+            print(f"  [{n}/{len(todo)}] {p['id']}@{seed} FAILED: {str(e)[:100]}", flush=True)
+            failed.append(f"{p['id']}@{seed}")
             if not guard.recycle_comfy("after failure"):
                 break
             continue
-        dest = OUT / f"{p['id']}{Path(vid).suffix}"
-        for stale in OUT.glob(f"{p['id']}.*"):
-            if stale != dest and stale.suffix in (".webm", ".mp4"):
-                stale.unlink()
+        name = ledger.take_name(engine, seed, Path(vid).suffix)
+        tdir = ledger.takes_dir(p["id"])
+        tdir.mkdir(parents=True, exist_ok=True)
+        dest = tdir / name
         shutil.copy2(vid, dest)
-        side = {"id": p["id"], "name": p["name"], "route": engine if engine == "h3" else "wan",
-                "engine": "minimax-h3-fl2va" if engine == "h3" else "wan2.2-ti2v-5B/i2v",
-                "size": [cfg["w"], cfg["h"], cfg["len"]], "fps": cfg["fps"],
-                "steps": cfg["steps"], "trim": 0 if engine == "h3" else 0.35,
-                "seed": motion.SEED,
-                "prompt": "Animate the image" if engine == "h3" else p["motion"]}
+        row = {"file": name, "id": p["id"], "name": p["name"],
+               "route": engine if engine == "h3" else "wan",
+               "engine": "minimax-h3-fl2va" if engine == "h3" else "wan2.2-ti2v-5B/i2v",
+               "size": [cfg["w"], cfg["h"], cfg["len"]], "fps": cfg["fps"],
+               "steps": cfg["steps"], "trim": 0 if engine == "h3" else 0.35,
+               "seed": seed,
+               "prompt": "Animate the image" if engine == "h3" else p["motion"]}
         if cfg["retime"]:
-            side["retime"] = cfg["retime"]
-        (OUT / f"{p['id']}.json").write_text(
-            json.dumps(side, indent=2, ensure_ascii=False), encoding="utf-8")
-        print(f"  [{n}/{len(todo)}] {p['id']} -> {time.time() - t0:.0f}s", flush=True)
+            row["retime"] = cfg["retime"]
+        # Grade ONCE, here, and keep the verdict: the number used to be printed
+        # by clip_check.py and never stored. Needs numpy/PIL/ffmpeg, which this
+        # renderer's environment already has; a failure to grade leaves the take
+        # ungraded (adoption then demands a waiver) rather than losing the render.
+        try:
+            import clip_check  # noqa: E402
+            r = clip_check.inspect(dest, SWATCHES / f"{p['id']}.jpg")
+            row["check"] = {k: r[k] for k in ("ok", "reasons", "energy", "concentration",
+                                              "retention", "palette", "sharpness")}
+            row["check"]["checker"] = clip_check.CHECKER_VERSION
+        except Exception as e:  # noqa: BLE001
+            print(f"      could not grade {name}: {str(e)[:100]}", flush=True)
+        ledger.add_take(p["id"], row)
+        verdict = "ungraded" if "check" not in row else ("ok" if row["check"]["ok"] else "FAIL")
+        print(f"  [{n}/{len(todo)}] {p['id']}@{seed} -> {time.time() - t0:.0f}s · {verdict}", flush=True)
 
-    done = sum(1 for p in presets
-               if any((OUT / f"{p['id']}{e}").exists() for e in (".webm", ".mp4")))
-    print(f"preset clips: {done}/{len(presets)} rendered into {OUT}", flush=True)
+    done = sum(1 for p in presets if ledger.load(p["id"])["takes"])
+    print(f"preset clips: {done}/{len(presets)} preset(s) have takes in {OUT}", flush=True)
+    print("adopt one per preset: python pipeline/video/ledger.py adopt <id> <take-file> "
+          '[--waiver "reason"]', flush=True)
     if failed:
         raise SystemExit(f"failed: {', '.join(failed)}")
 

@@ -31,12 +31,16 @@ import type { ScoreSpot } from "../score/spots";
 
 import type { CutClock } from "./clock";
 import { deriveTimeline, type DerivedCut, type OwnerStep } from "./deriveTimeline";
+import { takePointers } from "./cutDocument";
 import { finishLine, type FinishCheck } from "./finishLine";
 import type { Offsets } from "./offsets";
 
 /** This step's own key — unchanged from the timeline this replaces, so a sync
  *  pass saved before the rebuild still loads. */
 const PHASE = "cut";
+
+/** How many sync changes Ctrl/⌘+Z can walk back in one session. */
+const UNDO_DEPTH = 50;
 
 /** A file dropped into this session. NOT persisted: a `blob:` URL is dead on
  *  the next load. A cue's KEPT take is the Score step's — a sound-store take
@@ -121,9 +125,28 @@ export function useCut(projectId: string) {
     },
   );
 
-  /* ── the sync bench's offsets — persisted, as before ────────────────────── */
-  const [offsets, setOffsets] = useState<Offsets>({});
-  const hydrated = useStepFor<CutStepData>(projectId, PHASE, (saved) => setOffsets(saved?.offsets ?? {}));
+  /* ── the sync bench's offsets — persisted, as before, and now undoable ────
+     The offsets and the states they replaced live in ONE state object, so an
+     updater stays a pure function of the previous value: the batching probe
+     (cut-nudge-batching) holds that two nudges in one batch compose, and a
+     history kept in a ref beside the state would be written from inside an
+     updater React may run twice. Undo replaces the confirm a sync pass never
+     had: a nudge is cheap to make and now cheap to take back. The history is
+     this session's only — it is a keystroke's memory, not a record. */
+  const [sync, setSync] = useState<{ now: Offsets; past: Offsets[] }>({ now: {}, past: [] });
+  const offsets = sync.now;
+  const hydrated = useStepFor<CutStepData>(projectId, PHASE, (saved) =>
+    setSync({ now: saved?.offsets ?? {}, past: [] }),
+  );
+  const setOffsets = useCallback((next: Offsets | ((o: Offsets) => Offsets)) => {
+    setSync((s) => {
+      const now = typeof next === "function" ? next(s.now) : next;
+      return now === s.now ? s : { now, past: [...s.past.slice(1 - UNDO_DEPTH), s.now] };
+    });
+  }, []);
+  const undoOffsets = useCallback(() => {
+    setSync((s) => (s.past.length ? { now: s.past[s.past.length - 1], past: s.past.slice(0, -1) } : s));
+  }, []);
   useEffect(() => {
     // Never before hydration: the empty initial state is not an empty cut, and
     // saving it would erase the creator's sync pass with a blank one.
@@ -198,6 +221,10 @@ export function useCut(projectId: string) {
   );
   const checks: FinishCheck[] = useMemo(() => (cut ? finishLine(cut, offsets) : []), [cut, offsets]);
 
+  // cue id → the sound-store take its spot points at: what compileCut needs to
+  // name a take by id instead of by this browser's URL.
+  const takeIds = useMemo(() => takePointers(up?.spots ?? null), [up]);
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = cut?.clips.find((c) => c.id === selectedId) ?? null;
 
@@ -219,8 +246,11 @@ export function useCut(projectId: string) {
     trouble,
     cut,
     checks,
+    takeIds,
     offsets,
     setOffsets,
+    undoOffsets,
+    canUndo: sync.past.length > 0,
     takes,
     attachTake,
     detachTake,
@@ -237,6 +267,9 @@ export type CutModel = ReturnType<typeof useCut>;
 export interface CutCtx extends CutModel {
   cut: DerivedCut;
   clock: CutClock;
+  /** Every edit point on the lanes, drawn positions (../edits.ts) — what the
+   *  ↑/↓ jumps and a Shift-scrub snap to. */
+  edits: readonly number[];
   /** Set when a browser refused to play a take — reported, not swallowed. */
   refused: string | null;
   setRefused: (m: string | null) => void;

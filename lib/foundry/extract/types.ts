@@ -62,6 +62,10 @@ export type Observables = Record<ObservableField, string>;
  *  one from enums afterwards. */
 export interface Readback extends Observables {
   has_text: boolean;
+  /** The cinematography vocabulary version this readback was read against
+   *  (pipeline/vocab/cinematography.json). Absent on readbacks stored before
+   *  the stamp existed. */
+  vocabVersion?: number;
   /** Up to five colour words, most dominant first. */
   dominant_colours: string[];
   /** The look in one sentence a generator could obey — no subject matter. */
@@ -218,6 +222,39 @@ export interface ExtractOptions {
    *  the cull (and nearDuplicates) then says which singletons were one style
    *  all along. */
   grouping: "engine" | "none";
+  /** The most this run may spend, in USD. ABSENT MEANS UNLIMITED — not zero,
+   *  and not a default: a run with no ceiling is metered and never stopped for
+   *  money by its own scope (the period meter in lib/imaging/budget.ts still
+   *  applies). Before each unit the scheduler adds that unit's pre-call
+   *  estimate to `spend.usd`; a unit that would cross the line is not started. */
+  ceilingUsd?: number;
+}
+
+/** The stage a call's spend is attributed to — one per unit kind that calls a vendor. */
+export type SpendStage = "read" | "group" | "replica" | "transfer";
+
+/** What the run has spent, booked after every served call. Optional on the
+ *  manifest: a run written before metering existed reads as unmetered. */
+export interface ExtractSpend {
+  usd: number;
+  by_stage: Partial<Record<SpendStage, number>>;
+  /** Served calls that reported no cost; each is booked at its pre-call
+   *  estimate, so an unpriced vendor cannot run past the ceiling for free. */
+  unpriced: number;
+  /** `reported` while every figure is the vendor's own; `estimate` once any
+   *  booked figure is our arithmetic (an unpriced call, or an estimated cost). */
+  basis: "reported" | "estimate";
+}
+
+/** Why a run stopped for MONEY — kept apart from `fail_streak`, because a
+ *  budget wall is not a vendor failure. `run-ceiling` is this run's own
+ *  `ceilingUsd`; `period-ceiling` is the imaging meter's window refusing a
+ *  call. Cleared by a retry. */
+export interface ExtractStop {
+  by: "run-ceiling" | "period-ceiling";
+  spentUsd: number;
+  ceilingUsd?: number;
+  at: string;
 }
 
 export interface ExtractManifest {
@@ -244,6 +281,8 @@ export interface ExtractManifest {
    *  remaining unit into the same wall (measured 2026-08-27: a 400 on every
    *  generate burned fifty units in six seconds and finished "done"). */
   fail_streak?: number;
+  spend?: ExtractSpend;
+  stopped?: ExtractStop;
   log: { at: string; msg: string }[];
   error?: string;
   /** What the commit did. `kept` and `rejected` are the RUN-LOCAL style ids;
@@ -253,13 +292,26 @@ export interface ExtractManifest {
    *  Extract tab renders after a reload — names a style the catalogue has no
    *  entry for. Optional because manifests written before this field existed
    *  do not carry it; absent means "assume `kept`, and it may be wrong". */
-  committed?: { at: string; kept: string[]; rejected: string[]; written?: string[] };
+  committed?: {
+    at: string;
+    kept: string[];
+    rejected: string[];
+    written?: string[];
+    /** What the run spent, and that divided by the styles kept — the
+     *  cost-per-usable figure. Absent on a run that was never metered. */
+    spendUsd?: number;
+    costPerKeptUsd?: number;
+  };
 }
 
 export type ExtractVerdict = "keep" | "reject";
 export interface ExtractVerdictRecord {
   verdict: ExtractVerdict;
   at: string;
+  /** Why a style was rejected, as short tags; kept verbatim, never folded into the note. */
+  reasons?: string[];
+  note?: string;
+  by?: "human" | "model";
 }
 /** Keyed by style id. Absent = undecided. */
 export type ExtractVerdicts = Record<string, ExtractVerdictRecord>;
@@ -274,11 +326,15 @@ export interface ExtractSummary {
   styles: number;
   decided: number;
   kept: number;
+  /** Absent on a run that was never metered. */
+  spendUsd?: number;
 }
 
 export interface ExtractDetail {
   run: ExtractManifest;
   verdicts: ExtractVerdicts;
+  /** The verdict map's revision (lib/foundry/verdictLog.ts); a PATCH's baseRev. */
+  rev?: number;
 }
 
 /** What one `step` call did. `unit` is null when there was nothing left. */

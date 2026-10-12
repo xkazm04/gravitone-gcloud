@@ -302,6 +302,20 @@ running, unless explicitly forced. Verified against the live foundry job.
 **Anything on this machine that restarts ComfyUI must check first.** The
 alternative is two pipelines quietly destroying each other's work for hours.
 
+**Superseded as the mechanism, kept as the fallback (2026-10-12).** Looking
+before killing is still a guess, and it races: the job that starts between the
+look and the kill dies anyway. The card now has a lease
+(`pipeline/gpu/lease.py`, `lib/gpu/lease.ts`, protocol in `lease.py`'s header):
+one holder at a time, written to `foundry-out/gpu/lease.json`, FIFO queue,
+heartbeat/dead-pid reclaim, and `recycle_comfy()` is the holder's act — anyone
+else gets `LeaseHeld` naming the tenant. `guard.foreign_job()` reads the lease
+first and falls back to the prefix probe only when nobody holds one, which is
+the state every tenant that has not adopted the lease (forge, dojo_pairs,
+scene_demo, the preset-clip renderer) is still in. Adopted so far:
+`consistency.run_lane`, `dojo_video`, and the Next server's Ollama eye.
+`python pipeline/gpu/selftest.py` is the gate; `guard.py --status` prints the
+holder and the queue.
+
 ### Getting 21 GB onto the disk was harder than generating with it
 
 Worth recording, because all three failures were silent in the way this project

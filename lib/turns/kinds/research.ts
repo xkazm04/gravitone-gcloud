@@ -24,11 +24,19 @@
 //                the receipts on the retrieval rung and `false` on the other.
 //
 // A notebook that fails parseNotebook ends the turn `bad-response` with every
-// `NotebookError.findings` entry on the record.
+// `NotebookError.messages` entry on the record, with the path-addressed findings
+// and the refused answer (`draft`) beside them so it can be repaired, not redone.
 //
 // REGISTERED ON IMPORT, replaceably — see the recalibrate kind for why.
 
-import { crossCheckRetrieval, NotebookError, NOTEBOOK_SCHEMA, parseNotebook, RETRIEVE_NOTEBOOK_SCHEMA } from "@/lib/notebook/validate";
+import {
+  crossCheckRetrieval,
+  NotebookError,
+  NOTEBOOK_SCHEMA,
+  parseNotebook,
+  RETRIEVE_NOTEBOOK_SCHEMA,
+  type NotebookFinding,
+} from "@/lib/notebook/validate";
 import { retrievalEnabled } from "@/lib/text/env";
 import { TextError } from "@/lib/text/errors";
 import { reason, retrieve } from "@/lib/text/router";
@@ -52,6 +60,9 @@ class NotebookRefused extends Error {
   constructor(
     message: string,
     readonly findings: string[],
+    /** The same findings by path, and the refused answer, for a repair turn. */
+    readonly items: NotebookFinding[] = [],
+    readonly draft?: unknown,
   ) {
     super(message);
     this.name = "NotebookRefused";
@@ -161,7 +172,9 @@ export const RESEARCH_SPEC: TurnSpec<Prepared, ResearchResult> = {
       if (e instanceof NotebookError)
         throw new NotebookRefused(
           `The engine answered, and what came back does not satisfy NOTEBOOK-SCHEMA. ${e.message} Nothing was changed.`,
+          e.messages,
           e.findings,
+          e.draft,
         );
       throw e;
     }

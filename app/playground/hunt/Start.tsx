@@ -6,11 +6,12 @@
 // by its shape and its outcome (crowned leaves glow emerald) before its words
 // are read.
 
-import { useState } from "react";
+import { memo, useMemo, useState } from "react";
 
 import { motion, useReducedMotion } from "motion/react";
 import { BookCheck, Compass, Crown } from "lucide-react";
 
+import { Pager, useWindow } from "@/components/kit";
 import { Tally } from "@/components/ui/signal";
 import { Panel } from "@/components/ui/Primitives";
 import { EASE } from "@/components/ui/tokens";
@@ -102,6 +103,8 @@ export function Start({
   );
 }
 
+const HUNT_PAGE = 12;
+
 function PastHunts({
   hunts,
   onOpen,
@@ -110,9 +113,13 @@ function PastHunts({
   onOpen: (h: Hunt) => void;
 }) {
   const reduce = useReducedMotion();
-  const sorted = [...hunts].sort((a, b) =>
-    b.createdAt.localeCompare(a.createdAt),
+  const sorted = useMemo(
+    () => [...hunts].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [hunts],
   );
+  // Each card lays out its hunt's whole map as a thumbnail; the newest page
+  // is what a returning hunter opens, so the rest wait behind the pager.
+  const page = useWindow(sorted, { size: HUNT_PAGE });
   const [now] = useState(() => Date.now());
   return (
     <section aria-label="Hunts" className="grid gap-3">
@@ -139,7 +146,7 @@ function PastHunts({
         </div>
       ) : (
         <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(22rem,1fr))]">
-          {sorted.map((h, i) => {
+          {page.visible.map((h, i) => {
             const c = countsOf(h);
             return (
               <motion.button
@@ -190,6 +197,17 @@ function PastHunts({
           })}
         </div>
       )}
+      {page.remaining > 0 && (
+        <Pager
+          shown={page.shown}
+          total={page.total}
+          onMore={page.more}
+          onAll={page.all}
+          step={HUNT_PAGE}
+          noun="hunts"
+          auto
+        />
+      )}
     </section>
   );
 }
@@ -216,7 +234,9 @@ function GhostMini() {
 
 /** The hunt's own map, shrunk to a thumbnail: the same layout, cards as tiles
  *  tinted by what happened to them. */
-function MiniMap({ hunt }: { hunt: Hunt }) {
+// Memoised on the hunt: the idea field above re-renders this page per
+// keystroke, and every thumbnail is a full tree build and layout.
+const MiniMap = memo(function MiniMap({ hunt }: { hunt: Hunt }) {
   const tree = buildTree(hunt.nodes);
   const l = layoutTree(tree, 3);
   const byId = new Map(hunt.nodes.map((n) => [n.id, n] as const));
@@ -293,4 +313,4 @@ function MiniMap({ hunt }: { hunt: Hunt }) {
       )}
     </svg>
   );
-}
+});

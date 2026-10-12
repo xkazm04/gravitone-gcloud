@@ -30,6 +30,12 @@ import sys
 import time
 import urllib.request
 
+# The GPU tenancy lease (pipeline/gpu/lease.py) is the source of truth for who
+# may use -- and therefore who may recycle -- the card. Imported flat, like
+# every sibling module here.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "gpu"))
+import lease as gpu_lease  # noqa: E402
+
 OLLAMA = "http://127.0.0.1:11434"
 COMFY = "http://127.0.0.1:8188"
 
@@ -316,7 +322,7 @@ MY_PREFIXES = ("baseline", "reference", "hero", "chain-", "ref2va-", "shot", "re
 
 
 def foreign_job():
-    """A running ComfyUI job that this pipeline did not submit, or None.
+    """Who else is using ComfyUI right now, or None.
 
     **This box is not ours alone.** Discovered 2026-08-26 the expensive way: a
     second workload (`forge.py plans/sweep-01.json`, writing `foundry-*`) was
@@ -325,10 +331,20 @@ def foreign_job():
     before each motion clip -- would have killed whatever that pipeline had in
     flight, silently, from its point of view for no reason at all.
 
-    ComfyUI is a shared singleton with no notion of tenancy, so the only
-    available courtesy is to look before killing. Identify jobs by the
-    filename_prefix they will write: ours start with MY_PREFIXES.
+    TENANCY IS READ FROM THE LEASE (pipeline/gpu/lease.py), not guessed. A live
+    lease held by another process names its tenant here. Only when NO lease is
+    held at all does this fall back to the old look at the running queue --
+    identifying jobs by the filename_prefix they will write -- and that is the
+    transitional path for tenants that have not adopted the lease yet: ours
+    start with MY_PREFIXES. A process that holds the lease itself has declared
+    the card its own, so nothing is guessed for it.
     """
+    elsewhere = gpu_lease.holder_elsewhere()
+    if elsewhere:
+        return f"{elsewhere['tenant']} (gpu lease: {elsewhere['engine']}, pid {elsewhere['pid']})"
+    mine = gpu_lease.current_handle()
+    if mine:
+        return None            # the card is declared ours; there is nothing to guess
     try:
         q = _get(f"{COMFY}/queue", timeout=10)
     except Exception:
@@ -349,15 +365,28 @@ def foreign_job():
 def recycle_comfy(reason="", force=False):
     """Hard-restart ComfyUI to reclaim what a long batch has accumulated.
 
-    Refuses while someone else's job is running, because the restart would
-    destroy it. Pass force=True only when you know the other job is expendable.
+    **Only the lease holder may do this.** With a lease held by this process the
+    recycle is checked against lease.json under the lease lock, then runs. With
+    another tenant's live lease it raises LeaseHeld naming them and stops
+    nothing. With no lease anywhere it falls back to the old queue look
+    (foreign_job) for tenants that have not adopted the lease. Pass force=True
+    only when you know the other job is expendable.
     """
-    other = foreign_job()
-    if other and not force:
-        raise RuntimeError(
-            f"refusing to recycle ComfyUI: another pipeline's job is running "
-            f"({other!r}). A recycle is Stop-Process -Force and would kill it. "
-            f"Wait for it, or pass force=True if it is expendable.")
+    handle = gpu_lease.current_handle()
+    if not force:
+        if handle is not None and handle.rec["engine"] == "comfy":
+            return handle.recycle("comfy", stop=lambda: _restart_comfy(reason))
+        other = foreign_job()
+        if other:
+            raise gpu_lease.LeaseHeld(
+                f"refusing to recycle ComfyUI: another pipeline's job is running "
+                f"({other!r}). A recycle is Stop-Process -Force and would kill it. "
+                f"Wait for it, or pass force=True if it is expendable.",
+                gpu_lease.holder_elsewhere())
+    return _restart_comfy(reason)
+
+
+def _restart_comfy(reason):
     used, limit = commit()
     rf, _ = ram()
     print(f"  guard: recycling ComfyUI{' (' + reason + ')' if reason else ''} "
@@ -432,6 +461,7 @@ def status():
     print(f"DISK  {df:5.1f} free / {dt:.0f} GB   (pagefile {alloc:.0f} GB alloc, {peak:.0f} GB peak)")
     print(f"ollama resident: {res or 'nothing'}")
     print(f"comfyui: {'running' if comfy_up() else 'not running'}")
+    print(gpu_lease.format_status(gpu_lease.Broker().status()))
     return vf, rf
 
 

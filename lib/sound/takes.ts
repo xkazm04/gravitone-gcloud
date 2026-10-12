@@ -49,7 +49,7 @@ export interface TakeFilter {
 
 const KINDS: readonly SoundKind[] = ["music", "sfx"];
 const PROVIDERS: readonly ProviderId[] = ["elevenlabs", "suno", "local"];
-const ORIGINS: readonly TakeOrigin[] = ["agent", "lab", "hunt", "import", "suno-return", "fixture", "score"];
+const ORIGINS: readonly TakeOrigin[] = ["agent", "lab", "hunt", "import", "suno-return", "fixture", "score", "library"];
 const VERDICTS: readonly Verdict[] = ["unjudged", "kept", "rejected"];
 const OPS: readonly SoundOp[] = ["compose", "plan", "section-edit", "sfx", "manual", "cue"];
 

@@ -231,6 +231,19 @@ export function useScoreSpots(projectId: string, scenes: Scene[] | null) {
     setSession((s) => (s ? { ...s, hadRecord: true, spots: s.spots.filter((sp) => sp.id !== id) } : s));
   }, []);
 
+  /** Put a deleted spot back where it was — the undo that replaces a confirm
+   *  on delete. The row returns whole (title, tempo, note, take pointers and
+   *  `proposed` as it stood), at its old index so the list does not reorder
+   *  under the creator. A spot already back (a double undo) is not doubled. */
+  const restoreSpot = useCallback((spot: ScoreSpot, index: number) => {
+    setSession((s) => {
+      if (!s || s.spots.some((sp) => sp.id === spot.id)) return s;
+      const spots = [...s.spots];
+      spots.splice(Math.min(Math.max(0, index), spots.length), 0, spot);
+      return { ...s, hadRecord: true, spots };
+    });
+  }, []);
+
   /** Add the creator's own spot over the given scenes. */
   const addSpot = useCallback((sceneIds: string[]) => {
     setSession((s) =>
@@ -251,5 +264,6 @@ export function useScoreSpots(projectId: string, scenes: Scene[] | null) {
     patchSpot,
     updateTakes,
     removeSpot,
+    restoreSpot,
   };
 }

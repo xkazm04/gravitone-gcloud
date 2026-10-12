@@ -252,6 +252,11 @@ export const promotedFrom = (assets: Asset[], themeId: string): Asset[] =>
 const NO_BYTES =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgAAIAAAUAAXpeqz8AAAAASUVORK5CYII=";
 
+/** The same empty frame, for a drawer to show while an upload's bytes are still
+ *  being read (lib/useAssets.ts#useUploadSrcs). Not marked unresolved and not
+ *  renamed: nothing is wrong yet, the read simply has not landed. */
+export const EMPTY_PLATE = NO_BYTES;
+
 /**
  * Dereference every `proof:` pointer against the themes that hold the bytes.
  * Returns rows a gallery can draw — the STORED rows are untouched.
@@ -368,18 +373,22 @@ const folderSegment = (s: string) =>
 /**
  * A plate the user chose to keep, as a shelf entry that owns its bytes.
  *
- * Content-addressed like `promotedId`, for the same reason: keeping twice, or
- * the same picture from two projects, overwrites one row rather than minting a
- * second tile. A regenerate has different bytes, so it is a different row. The
+ * Content-addressed within a project, like `promotedId`: keeping the same
+ * plate twice overwrites one row rather than minting a second tile. The project
+ * is part of the id, so the same bytes kept from a second project get their own
+ * row (and their own copy of the bytes) instead of overwriting the first
+ * project's `meta.projectId` / `outputId`, which `listAssetsFor` and the kept
+ * mark read. A regenerate has different bytes, so it is a different row. The
  * bytes are COPIED, never pointed at: `deleteProject` does not touch this store,
  * but a plate's own `src` dies with the record that held it.
  */
 export function assetFromKeptPlate(uid: string, kept: KeptPlate): { asset: Asset; upload: UploadRecord } {
   const d16 = kept.digest.slice(0, 16);
-  const uploadId = `up-kept-${d16}`;
+  const key = `${d16}-${encodeURIComponent(kept.projectId)}`;
+  const uploadId = `up-kept-${key}`;
   return {
     asset: {
-      id: `as-kept-${d16}`,
+      id: `as-kept-${key}`,
       uid,
       path: ["kept", folderSegment(kept.projectTitle)],
       name: kept.name,
@@ -531,6 +540,45 @@ export async function listAssets(uid: string): Promise<Asset[]> {
   try {
     db = await openDb();
     const rows = await getByIndex<Asset>(db, ASSETS_STORE, BY_UID, uid);
+    return rows.sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
+  } finally {
+    db?.close();
+  }
+}
+
+/**
+ * One project's rows: every asset whose `meta.projectId` names it (the plates
+ * `keepPlate` files under `kept › <project>`).
+ *
+ * A CURSOR OVER THE ACCOUNT, FILTERED AS IT GOES — not an index. An index on
+ * `meta.projectId` would make this a keyed read, but adding one to an existing
+ * store is a DB_VERSION bump with an upgrade that has to reach into the
+ * upgrade transaction (lib/studioDb.ts), and every open tab on the old version
+ * then yields. For a store of pointer-sized rows that is not worth it: the
+ * cursor still walks the account's rows, but only the matches are kept, sorted
+ * and handed back, so the outputs shelf no longer materialises (and hashes
+ * through `keptIndex`) every plate the account owns to mark a dozen.
+ *
+ * Filtered after the read on the uid index, so a row of another account can
+ * never match on a shared project id.
+ */
+export async function listAssetsFor(uid: string, projectId: string): Promise<Asset[]> {
+  let db: IDBDatabase | null = null;
+  try {
+    db = await openDb();
+    const conn = db;
+    const rows = await new Promise<Asset[]>((resolve, reject) => {
+      const out: Asset[] = [];
+      const req = conn.transaction(ASSETS_STORE, "readonly").objectStore(ASSETS_STORE).index(BY_UID).openCursor(uid);
+      req.onsuccess = () => {
+        const cur = req.result;
+        if (!cur) return resolve(out);
+        const row = cur.value as Asset;
+        if (row.meta?.projectId === projectId) out.push(row);
+        cur.continue();
+      };
+      req.onerror = () => reject(req.error ?? new Error("read failed"));
+    });
     return rows.sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
   } finally {
     db?.close();

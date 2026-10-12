@@ -21,6 +21,7 @@
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { estimatePerImage } from "@/lib/imaging/pricing";
 import { generate, recognize } from "@/lib/imaging/router";
 import type { ImageRef } from "@/lib/imaging/types";
 import { reason } from "@/lib/text/router";
@@ -35,8 +36,9 @@ import {
   runRoot,
   writeJsonAtomic,
 } from "../runStore";
+import { outPath } from "../../fixtures/roots";
 import type { Exemplar, StyleDef } from "../types";
-import { foreignLease, newManifest, pruneFailures, settleReason, step } from "./engine";
+import { DEFAULT_CALL_ESTIMATE_USD, clampCeiling, foreignLease, newManifest, pruneFailures, settleReason, step } from "./engine";
 import type { EngineIO } from "./engine";
 import { imageDims, nearestAspect } from "./imageDims";
 import { withCatalogue } from "../catalogue";
@@ -51,11 +53,22 @@ import type {
   ExtractSource,
   ExtractSummary,
   ExtractUpload,
+  ExtractVerdictRecord,
   ExtractVerdicts,
   StepResult,
 } from "./types";
+import {
+  patchVerdictMap,
+  readVerdictState,
+  replaceVerdictMap,
+  replaceVerdictMapHeld,
+  withRunLock,
+  type VerdictPatch,
+  type VerdictSpec,
+  type VerdictState,
+} from "../verdictLog";
 
-export const EXTRACT_ROOT = path.join(process.cwd(), "foundry-out", "extract");
+export const EXTRACT_ROOT = outPath("extract");
 
 const EXT: Record<ExtractUpload["mime"], string> = { "image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp" };
 
@@ -84,16 +97,25 @@ const readVerdicts = (id: string) => readJson<ExtractVerdicts>(path.join(runDir(
 
 /* ── Create ───────────────────────────────────────────────────────────────── */
 
-/** A run id: date + slug, suffixed until free. */
-async function freshId(slug: string): Promise<string> {
+/**
+ * Claim a run id: date + slug, suffixed until free. The DIRECTORY is the
+ * reservation — a non-recursive `mkdir` throws EEXIST atomically, so the id is
+ * held by the same syscall that proves it was free (a stat-then-create gap let
+ * two concurrent creates take the same id and overwrite each other's run.json).
+ * Only EEXIST means "taken"; any other error (permissions, disk) propagates.
+ */
+async function reserveRunDir(slug: string): Promise<{ id: string; dir: string }> {
   const day = new Date().toISOString().slice(0, 10);
   const base = `${day}-${slug}`;
+  await mkdir(EXTRACT_ROOT, { recursive: true });
   for (let i = 0; i < 100; i++) {
     const id = i ? `${base}-${i + 1}` : base;
+    const dir = path.join(EXTRACT_ROOT, id);
     try {
-      await stat(path.join(EXTRACT_ROOT, id));
-    } catch {
-      return id;
+      await mkdir(dir);
+      return { id, dir };
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
     }
   }
   throw new FoundryError("Too many runs with that slug today.", 409);
@@ -113,7 +135,7 @@ export async function createRun(slug: string, uploads: ExtractUpload[], options:
   // write one image at a time, refusing on the first bad one — so a gallery
   // whose third file was a GIF left `sources/s01`, `sources/s02` in a run
   // directory with no run.json: invisible to the list (no manifest), counted
-  // by `freshId` (the directory exists), so the operator's next attempt with
+  // by `reserveRunDir` (the directory exists), so the operator's next attempt with
   // the same slug landed on `-2` and the orphan stayed on disk for good. A
   // refusal must leave nothing behind, and the 400 must name the bad image
   // before anything has been written for it.
@@ -143,8 +165,7 @@ export async function createRun(slug: string, uploads: ExtractUpload[], options:
     });
   }
 
-  const id = await freshId(clean);
-  const dir = path.join(EXTRACT_ROOT, id);
+  const { id, dir } = await reserveRunDir(clean);
   await mkdir(path.join(dir, "sources"), { recursive: true });
   for (const p of prepared) await writeFile(path.join(dir, p.source.file), p.bytes);
   const sources = prepared.map((p) => p.source);
@@ -168,14 +189,15 @@ export async function listExtractRuns(): Promise<ExtractSummary[]> {
       styles: m.styles.length,
       decided: Object.keys(v).length,
       kept: Object.values(v).filter((r) => r.verdict === "keep").length,
+      ...(m.spend ? { spendUsd: m.spend.usd } : {}),
     };
   });
   return items.sort((a, b) => (a.created < b.created ? 1 : -1));
 }
 
 export async function getExtractRun(id: string): Promise<ExtractDetail> {
-  const [run, verdicts] = await Promise.all([readManifest(id), readVerdicts(id)]);
-  return { run, verdicts };
+  const [run, { verdicts, rev }] = await Promise.all([readManifest(id), readVerdictState<ExtractVerdictRecord>(runDir(id))]);
+  return { run, verdicts, rev };
 }
 
 export async function extractFileStat(id: string, rel: string): Promise<{ abs: string; size: number }> {
@@ -196,7 +218,19 @@ const MIME_OF: Record<string, ImageRef["mime"]> = { ".png": "image/png", ".jpg":
  *  tabs are open — the in-process lock below serialises those. */
 export type DriverOwner = "app" | "cli";
 
+/** Test seam: wraps the live IO for one run, so a probe can swap the vendor
+ *  calls and keep the real disk. Null restores the live IO. */
+let __ioOverride: ((id: string, live: EngineIO) => EngineIO) | null = null;
+export function __setExtractIO(f: ((id: string, live: EngineIO) => EngineIO) | null): void {
+  __ioOverride = f;
+}
+
 export function liveIO(id: string, owner: DriverOwner): EngineIO {
+  const base = liveIOBase(id, owner);
+  return __ioOverride ? __ioOverride(id, base) : base;
+}
+
+function liveIOBase(id: string, owner: DriverOwner): EngineIO {
   const dir = runDir(id);
   return {
     async readImage(rel) {
@@ -211,16 +245,20 @@ export function liveIO(id: string, owner: DriverOwner): EngineIO {
     },
     async recognize(image, instruction, schema) {
       const r = await recognize({ image, instruction, schema });
-      return { value: r.json, model: `${r.provenance.provider}/${r.provenance.model}` };
+      return { value: r.json, model: `${r.provenance.provider}/${r.provenance.model}`, costUsd: r.provenance.costUsd, basis: r.provenance.costBasis };
     },
     async generate(prompt, negativePrompt, aspect, seed) {
       const g = await generate({ prompt, negativePrompt, aspect, count: 1, seed });
-      return { value: g.images[0], model: `${g.provenance.provider}/${g.provenance.model}` };
+      return { value: g.images[0], model: `${g.provenance.provider}/${g.provenance.model}`, costUsd: g.provenance.costUsd, basis: g.provenance.costBasis };
     },
     async reason(prompt, schema) {
       const r = await reason({ prompt, schema, turn: "style-synthesis" });
-      return { value: r.json, model: `${r.provenance.provider}/${r.provenance.model}` };
+      return { value: r.json, model: `${r.provenance.provider}/${r.provenance.model}`, costUsd: r.provenance.costUsd, basis: r.provenance.costBasis };
     },
+    // A generate is estimated at the imaging layer's own per-image figure (it
+    // errs high on purpose); vision and reasoning turns have no declared
+    // per-call rate, so they take the engine's defaults.
+    estimateUsd: (kind) => (kind === "generate" ? (estimatePerImage().usd ?? DEFAULT_CALL_ESTIMATE_USD.generate) : DEFAULT_CALL_ESTIMATE_USD[kind]),
     save: (m) => {
       const terminal = m.status === "done" || m.status === "failed" || m.status === "committed";
       if (terminal) delete m.lease;
@@ -251,7 +289,11 @@ export function __liveStepLocks(): number {
   return locks.size;
 }
 
-export async function stepRun(id: string, units = 1, retry = false): Promise<StepResult> {
+/** `ceilingUsd` sets (or raises) the run's own spend ceiling; it is applied
+ *  with a retry, which is also what clears a money stop. */
+export type StepRunOptions = { ceilingUsd?: number };
+
+export async function stepRun(id: string, units = 1, retry = false, opts: StepRunOptions = {}): Promise<StepResult> {
   const prev = locks.get(id) ?? Promise.resolve();
   const mine = prev.then(async () => {
     const m = await readManifest(id);
@@ -263,6 +305,11 @@ export async function stepRun(id: string, units = 1, retry = false): Promise<Ste
     // stage; the loop below then takes them again. On a run with nothing
     // failed it is a no-op.
     if (retry) {
+      const ceiling = clampCeiling(opts.ceilingUsd);
+      if (ceiling !== undefined) {
+        m.options.ceilingUsd = ceiling;
+        m.log.push({ at: io.now(), msg: `ceiling set to $${ceiling.toFixed(2)}` });
+      }
       const n = pruneFailures(m);
       m.log.push({ at: io.now(), msg: `retry: ${n} failed unit(s) pruned` });
       await io.save(m);
@@ -297,17 +344,38 @@ export async function stepRun(id: string, units = 1, retry = false): Promise<Ste
 
 /* ── Verdicts and commit ──────────────────────────────────────────────────── */
 
+/** The extractor's gate rules for the verdict kernel (verdictLog.ts): a known
+ *  style, keep or reject, and the reasons and note a reject carries. */
+function verdictSpec(id: string): VerdictSpec<ExtractManifest, ExtractVerdictRecord> {
+  return {
+    dir: runDir(id),
+    readManifest: () => readManifest(id),
+    committed: (m) => (m.status === "committed" ? "This run is committed; its verdicts are final." : null),
+    clean: (m, key, raw, by) => {
+      if (!m.styles.some((s) => s.id === key)) return undefined;
+      const rec = raw as Partial<ExtractVerdictRecord> | null;
+      if (!rec || (rec.verdict !== "keep" && rec.verdict !== "reject")) return undefined;
+      const reasons = Array.isArray(rec.reasons) ? rec.reasons.filter((r): r is string => typeof r === "string" && !!r).slice(0, 8) : [];
+      const who = rec.by === "human" || rec.by === "model" ? rec.by : by;
+      return {
+        verdict: rec.verdict,
+        at: rec.at || new Date().toISOString(),
+        ...(reasons.length ? { reasons } : {}),
+        ...(typeof rec.note === "string" && rec.note.trim() ? { note: rec.note.slice(0, 500) } : {}),
+        ...(who ? { by: who } : {}),
+      };
+    },
+  };
+}
+
+/** PUT: the whole map, written through the kernel as the diff it amounts to. */
 export async function putExtractVerdicts(id: string, verdicts: ExtractVerdicts): Promise<void> {
-  const run = await readManifest(id);
-  if (run.status === "committed") throw new FoundryError("This run is committed; its verdicts are final.", 409);
-  const known = new Set(run.styles.map((s) => s.id));
-  const clean: ExtractVerdicts = {};
-  for (const [sid, rec] of Object.entries(verdicts)) {
-    if (!known.has(sid)) continue;
-    if (rec.verdict !== "keep" && rec.verdict !== "reject") continue;
-    clean[sid] = { verdict: rec.verdict, at: rec.at || new Date().toISOString() };
-  }
-  await foundryFs().writeJsonAtomic(path.join(runDir(id), "verdicts.json"), clean);
+  await replaceVerdictMap(verdictSpec(id), verdicts);
+}
+
+/** PATCH: keyed changes against a revision; 409 on a stale base. */
+export function patchExtractVerdicts(id: string, patch: VerdictPatch): Promise<VerdictState<ExtractVerdictRecord>> {
+  return patchVerdictMap(verdictSpec(id), patch);
 }
 
 /** Preview what an extract commit will do without writing to styles.json. */
@@ -348,13 +416,21 @@ export async function commitExtractRun(
   // One catalogue transaction (lib/foundry/catalogue.ts): the status check,
   // the plan, its token comparison and the styles.json write share one lock,
   // so a forge commit or a second extract commit cannot land in between.
-  return withCatalogue({ op: "extract-commit", run: id }, async (tx) => {
+  //
+  // The run lock (verdictLog.ts) is taken FIRST, then the catalogue: a verdict
+  // write that arrives while this decides waits, then sees `committed`. Inline
+  // verdicts are written under the lock already held, never re-taking it.
+  const dir = runDir(id);
+  return withRunLock(dir, () => withCatalogue({ op: "extract-commit", run: id }, async (tx) => {
     // Every disk effect below goes through the port (lib/foundry/fsPort.ts).
     const fs = foundryFs();
     const run = await readManifest(id);
     if (run.status === "committed") throw new FoundryError("This run is already committed.", 409);
-    if (run.status !== "done") throw new FoundryError("The run is not finished.", 409);
-    if (verdictsIn) await putExtractVerdicts(id, verdictsIn);
+    // `failed` is committable, as the forge's is: a breaker or budget stop leaves
+    // finished styles the operator can judge, and exemplars carry `settled`.
+    // Keep this array and EXTRACT_COMMITTABLE in app/foundry/parts.tsx identical.
+    if (!["done", "failed"].includes(run.status)) throw new FoundryError("The extract is still running this run.", 409);
+    if (verdictsIn) await replaceVerdictMapHeld(verdictSpec(id), run, verdictsIn, "commit");
     const verdicts = await readVerdicts(id);
 
     const catalogue = await tx.read("styles.json");
@@ -411,9 +487,17 @@ export async function commitExtractRun(
     await tx.write("styles.json");
 
     run.status = "committed";
-    run.committed = { at, kept: kept.map((s) => s.id), rejected: rejected.map((s) => s.id), written };
+    // Cost per usable: what the whole run spent over what survived the cull.
+    const spendUsd = run.spend?.usd;
+    run.committed = {
+      at,
+      kept: kept.map((s) => s.id),
+      rejected: rejected.map((s) => s.id),
+      written,
+      ...(spendUsd !== undefined ? { spendUsd, costPerKeptUsd: Math.round((spendUsd / kept.length) * 1e6) / 1e6 } : {}),
+    };
     run.log.push({ at, msg: `committed: ${written.join(", ")} → styles.json` });
-    await fs.writeJsonAtomic(path.join(runDir(id), "run.json"), run);
+    await fs.writeJsonAtomic(path.join(dir, "run.json"), run);
     return { kept: kept.map((s) => s.id), rejected: rejected.map((s) => s.id), written };
-  });
+  }));
 }

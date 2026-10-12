@@ -42,6 +42,8 @@ const EXEMPT: Record<string, string> = {
     "The App Router boundary that REPLACES the root layout, so <GravitoneTokens> never renders and a var(--gt-ink) there resolves to nothing. The one file that must not read tokens.ts.",
   "app/_phases/frames/music-video/compositor.ts":
     "The music-video effects studio's particle/bloom colours — what a GENERATED VIDEO's overlay effects look like, not this app's own chrome. Same distinction as the style-preset exemption above, for video instead of a still image; deliberately not drawn from ACCENT.cyan so the rendered output never shifts if this app's own brand accent does.",
+  "app/_landing/cosmos/engine/inks.ts":
+    "The colours of the drawn paper artwork on the Paper Cosmos landing's canvases (the dusk horizon, the galaxy's sheets, the lamp, the reams' paper stock and latches, the grain, a sheet's lit edge and cast shadow) — illustration content painted into pixels, not this app's chrome. The landing's chrome reads --pc-* tokens; every engine module takes its paint from this one file so the exemption stays one file wide.",
 };
 
 /** A CSS colour literal: 3, 4, 6 or 8 hex digits, or an rgb()/rgba() call.
@@ -49,8 +51,22 @@ const EXEMPT: Record<string, string> = {
  *  The digit counts are enumerated rather than written `{3,8}`, which would
  *  also match five- and seven-digit runs that are not colours — an id or a
  *  fragment can produce those, and a gate that cries wolf on a non-colour is a
- *  gate somebody switches off. */
-const LITERAL = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})\b|\brgba?\(/;
+ *  gate somebody switches off.
+ *
+ *  The lookahead is that same care one step further: `rgba(${r},${g},${b},${a})`
+ *  is a colour being CONSTRUCTED from values the file was handed, and the only
+ *  thing present is the output syntax. app/_landing/cosmos/engine/rasterJobs.ts
+ *  does exactly that — `withAlpha(hex, a)` reformats a hex that came from the
+ *  exempted inks.ts palette — and it arrived with the Paper Cosmos merge as a
+ *  false positive. The alternative was to EXEMPT that file, which is worse than
+ *  it looks: an exemption is file-WIDE (`if (p in EXEMPT) continue` below), so it
+ *  would buy silence for every literal anyone adds there later, on the strength
+ *  of a reason that said the file holds no colour. Driven both ways: with this
+ *  lookahead the file passes, and a `#ff00ff` pasted into it still fails. A real
+ *  literal with an interpolated alpha — `rgba(255,0,0,${a})` — starts with a
+ *  digit, so it is still caught.
+ */
+const LITERAL = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})\b|\brgba?\((?!\$\{)/;
 
 /** Comments stripped first: tokens.ts's own rule exempts PROSE explicitly ("a
  *  comment that records a measurement has to name the values it measured"), and

@@ -71,6 +71,9 @@ export interface Evidence {
   mechanism: string;
   verdict: Verdict;
   at: string;
+  /** Who kept or rejected it; absent on evidence written before the field,
+   *  which counts as a human's. Only a human keep promotes a style. */
+  by?: VerdictBy;
 }
 
 /** A file that shows what a style looks like, outside the forge's ledger.
@@ -160,10 +163,13 @@ export interface RunManifest {
 }
 
 export type Verdict = "keep" | "reject";
+/** Who cast a verdict. Absent on records older than the field: a human's. */
+export type VerdictBy = "human" | "model";
 export interface VerdictRecord {
   verdict: Verdict;
   at: string;
   note?: string;
+  by?: VerdictBy;
 }
 /** Keyed by candidate id. Absent = undecided. */
 export type Verdicts = Record<string, VerdictRecord>;
@@ -183,6 +189,8 @@ export interface RunSummary {
 export interface RunDetail {
   run: RunManifest;
   verdicts: Verdicts;
+  /** The verdict map's revision (lib/foundry/verdictLog.ts); a PATCH's baseRev. */
+  rev?: number;
 }
 
 export interface LedgerRow {
@@ -197,8 +205,8 @@ export interface LedgerRow {
   has_text: boolean | null;
   at: string;
   /** Who graded the row's scores -- the grade's `grader` and `grader_digest`.
-   *  Optional: no commit writes them yet, and every row before that is the
-   *  `unstamped` calibration series (lib/foundry/calibration.ts). */
+   *  Optional: the forge commit writes them from a stamped grade, and every
+   *  row before that is the `unstamped` calibration series (lib/foundry/calibration.ts). */
   grader?: string | null;
   grader_digest?: string | null;
 }

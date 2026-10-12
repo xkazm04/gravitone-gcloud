@@ -14,8 +14,9 @@
 // no width-dropped columns, and the entry's design is all three. Reported as
 // a kit request rather than forked into components/kit from here.
 
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 
+import { Pager } from "@/components/kit";
 import { Keycaps } from "@/components/ui/signal";
 
 import RejectBox from "./RejectBox";
@@ -381,32 +382,84 @@ export default function Ledger({
                     </td>
                   </tr>
                 )}
-                {open &&
-                  g.rows.map((t) => (
-                    <Row
-                      key={t.id}
-                      t={t}
-                      cols={cols}
-                      sel={t.id === sel}
-                      dim={dim}
-                      kbd={kbd}
-                      flash={flash === t.id}
-                      rejecting={rejecting === t.id}
-                      reasons={reasons}
-                      onClick={() => onRowClick(t.id)}
-                      onRejectCommit={(r) => onRejectCommit(t.id, r)}
-                      onRejectCancel={onRejectCancel}
-                      engine={engine}
-                      playable={t.upload_id ? urlFor(t) !== null : true}
-                      onPlay={() => onPlay(t)}
-                    />
-                  ))}
+                {open && (
+                  <GroupRows rows={g.rows} sel={sel} span={cols.length}>
+                    {(t) => (
+                      <Row
+                        key={t.id}
+                        t={t}
+                        cols={cols}
+                        sel={t.id === sel}
+                        dim={dim}
+                        kbd={kbd}
+                        flash={flash === t.id}
+                        rejecting={rejecting === t.id}
+                        reasons={reasons}
+                        onClick={() => onRowClick(t.id)}
+                        onRejectCommit={(r) => onRejectCommit(t.id, r)}
+                        onRejectCancel={onRejectCancel}
+                        engine={engine}
+                        playable={t.upload_id ? urlFor(t) !== null : true}
+                        onPlay={() => onPlay(t)}
+                      />
+                    )}
+                  </GroupRows>
+                )}
               </Fragment>
             );
           })}
         </tbody>
       </table>
       {total === 0 && <div className="empty">0 / {corpus}</div>}
+    </>
+  );
+}
+
+/** Rows a group draws before its pager. The seed alone is 160 takes and every
+ *  one is a dozen cells; a group past this is drawn a page at a time. */
+const LEDGER_PAGE = 50;
+
+/**
+ * One group's rows, windowed. The window always reaches the SELECTED take: the
+ * keys walk `visibleIds` (AudioWorkbench) across every row of an open group, so
+ * j/k onto a row past the window — or a returned file selected on arrival —
+ * widens the window to it instead of focusing a row that is not drawn.
+ *
+ * Its own cap rather than kit `useWindow`: that hook widens from its own count,
+ * and a window already stretched to the selection would take a press of "more"
+ * that added nothing visible.
+ */
+function GroupRows({
+  rows,
+  sel,
+  span,
+  children,
+}: {
+  rows: Take[];
+  sel: string | null;
+  span: number;
+  children: (t: Take) => React.ReactNode;
+}) {
+  const [cap, setCap] = useState(LEDGER_PAGE);
+  const reach = sel ? rows.findIndex((r) => r.id === sel) + 1 : 0;
+  const n = Math.min(rows.length, Math.max(cap, reach));
+  return (
+    <>
+      {rows.slice(0, n).map(children)}
+      {n < rows.length && (
+        <tr className="more">
+          <td colSpan={span}>
+            <Pager
+              shown={n}
+              total={rows.length}
+              onMore={() => setCap(n + LEDGER_PAGE)}
+              onAll={() => setCap(rows.length)}
+              step={LEDGER_PAGE}
+              noun="takes"
+            />
+          </td>
+        </tr>
+      )}
     </>
   );
 }

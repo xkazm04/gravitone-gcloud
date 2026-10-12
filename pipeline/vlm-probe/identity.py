@@ -62,8 +62,9 @@ from pathlib import Path
 warnings.filterwarnings("ignore")
 logging.getLogger("transformers").setLevel(logging.ERROR)
 
-import torch
-from PIL import Image, ImageDraw
+# torch and PIL are imported inside the functions that use them: the pure
+# decision functions (ruler_blindness, verdict, scale_from, missing_anchors)
+# are pinned by the stdlib-only selftest, which cannot import either.
 
 HERE = Path(__file__).parent
 FRAMES = HERE / "frames"
@@ -115,13 +116,29 @@ def _load(kind):
     return _m[kind]
 
 
+_boxes = {}
+
+
 def person_box(path, threshold=0.5):
+    """_detect_person, once per file: look_vec and contact_sheet both ask for
+    the same frame's box, and DETR is the expensive call. Keyed on the file's
+    mtime and size so a frame regenerated in place is detected again."""
+    st = Path(path).stat()
+    key = (str(path), threshold, st.st_mtime_ns, st.st_size)
+    if key not in _boxes:
+        _boxes[key] = _detect_person(path, threshold)
+    return _boxes[key]
+
+
+def _detect_person(path, threshold=0.5):
     """The most confident person in the frame, as (l, t, r, b), plus its score.
 
     Most confident rather than largest: on a wide shot the largest box is often
     a foreground extra clipped by the frame edge, while the character the shot
     is about is the one the detector is sure of.
     """
+    import torch
+    from PIL import Image
     p, m = _load("detr")
     im = Image.open(path).convert("RGB")
     with torch.no_grad():
@@ -141,6 +158,8 @@ def person_box(path, threshold=0.5):
 
 def look_vec(path):
     """DINOv2 over the person box -- costume, palette, silhouette, and framing."""
+    import torch
+    from PIL import Image
     p, m = _load("dino")
     im = Image.open(path).convert("RGB")
     box, _ = person_box(path)
@@ -172,6 +191,8 @@ def face_vec(path):
     identity, and the caller must say so rather than skip the row. A face
     smaller than MIN_FACE_PX counts as "cannot be scored" for the same reason.
     """
+    import torch
+    from PIL import Image
     mt, net = _load("face")
     im = Image.open(path).convert("RGB")
     boxes, probs = mt.detect(im)
@@ -192,6 +213,7 @@ def face_vec(path):
 
 
 def cos(a, b):
+    import torch
     return round((1 - torch.dot(a, b)).item(), 4)
 
 
@@ -256,6 +278,7 @@ def verdict(idn, look, s):
 
 def contact_sheet(items, path, size=256):
     """Crops as the machine saw them. The naive human check happens here."""
+    from PIL import Image, ImageDraw
     sheet = Image.new("RGB", (size * max(1, len(items)), size + 18), (15, 15, 15))
     dr = ImageDraw.Draw(sheet)
     for i, (n, p) in enumerate(items):

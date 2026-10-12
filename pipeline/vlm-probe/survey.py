@@ -51,7 +51,13 @@ def rhythm(cuts, duration):
     which a 'shot' is usually a detector artefact on a flash or a whip rather
     than a cut a human would count.
     """
-    lens = [b - a for a, b in zip(cuts, cuts[1:]) if b - a > 0.15]
+    if not cuts:
+        return None
+    # Scene detection reports the moment a cut lands, never t=0, so the opening
+    # shot and the closing hold are implied edges; a cut already at an edge must
+    # not be counted twice.
+    edges = ([0.0] if cuts[0] > 0 else []) + list(cuts) + ([duration] if cuts[-1] < duration else [])
+    lens = [b - a for a, b in zip(edges, edges[1:]) if b - a > 0.15]
     if not lens:
         return None
     s = sorted(lens)

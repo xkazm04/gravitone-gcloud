@@ -2,7 +2,7 @@
 
 // One render, scored against the limits the research declared.
 
-import { Hint } from "@/components/ui/signal";
+import { Fold, Hint } from "@/components/ui/signal";
 
 import { handLedgerFor, type EffectiveState } from "../constraints";
 
@@ -29,26 +29,33 @@ export default function ConstraintLedger({ renderId, stale }: { renderId: string
   const { rows, dangling, atRisk, superseded } = handLedgerFor(renderId);
 
   return (
-    <div className="mt-3 border-t border-white/8 pt-3" data-testid={`ledger-${renderId}`}>
-      <p className="font-jetbrains flex items-baseline justify-between text-content tracking-[0.14em] uppercase">
-        <span className="text-white/35">constraint ledger</span>
-        {stale ? (
-          <span data-testid={`ledger-stale-${renderId}`} className="text-amber-200">
-            not re-scored
-          </span>
-        ) : (
-          <span className={atRisk ? "text-amber-200" : superseded ? "text-cyan-200" : "text-emerald-300"}>
-            {atRisk ? `${atRisk} at risk` : superseded ? `${superseded} superseded` : "clean"}
-          </span>
-        )}
-      </p>
-
-      {/* The header's "not re-scored" is the whole statement. The paragraph
-          under it explained that the ledger has no probe and told the reader to
-          read the computed gate instead — the gate is the next thing on the
-          page, and the rows now fade to the treatment BeatList gives a cut. */}
-
-      <ul className={`mt-2 space-y-1.5 ${stale ? "opacity-45" : ""}`}>
+    <div className="mt-3" data-testid={`ledger-${renderId}`}>
+      {/* The verdict rides the header; the rows — sentences a person typed about
+          this render — are one press down. The header's "not re-scored" is the
+          whole statement when stale: the ledger has no probe, and the computed
+          gate below carries the verdict instead. */}
+      <Fold
+        title="constraint ledger"
+        level={4}
+        tally={{ value: rows.length, label: "rows" }}
+        marks={
+          stale ? (
+            <span
+              data-testid={`ledger-stale-${renderId}`}
+              className="font-jetbrains text-label tracking-[0.14em] text-amber-200 uppercase"
+            >
+              not re-scored
+            </span>
+          ) : (
+            <span
+              className={`font-jetbrains text-label tracking-[0.14em] uppercase ${atRisk ? "text-amber-200" : superseded ? "text-cyan-200" : "text-emerald-300"}`}
+            >
+              {atRisk ? `${atRisk} at risk` : superseded ? `${superseded} superseded` : "clean"}
+            </span>
+          )
+        }
+      >
+      <ul className={`space-y-1.5 ${stale ? "opacity-45" : ""}`}>
         {rows.map((r) => {
           const m = MARK[r.effective];
           return (
@@ -73,6 +80,7 @@ export default function ConstraintLedger({ renderId, stale }: { renderId: string
           );
         })}
       </ul>
+      </Fold>
 
       {/* A row whose unknown no longer exists means this render was scored
           against a rule that has vanished. Saying so beats rendering three rows

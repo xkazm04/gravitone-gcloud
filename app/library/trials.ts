@@ -88,3 +88,9 @@ export const trialById = new Map(TRIALS.map((t) => [t.id, t]));
 
 /** Where build-style-trials.mts writes, and where any gallery reads. */
 export const trialSrc = (styleId: string, trialId: string) => `/trials/${styleId}/${trialId}.jpg`;
+
+/** The trial a rendered subject came from, or undefined for a free subject.
+ *  By exact text: the chips set the subject verbatim, and an edited subject is
+ *  no longer that trial's problem — a proof of it must not claim coverage. */
+export const trialIdFor = (subject: string): string | undefined =>
+  TRIALS.find((t) => t.subject === subject)?.id;

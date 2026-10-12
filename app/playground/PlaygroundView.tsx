@@ -27,7 +27,10 @@ import { useCallback, useId, useMemo, useState } from "react";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+import dynamic from "next/dynamic";
+
 import { useLoadFor } from "@/app/_phases/_shared/useLoadFor";
+import { pendingPanel } from "@/components/ui/Pending";
 import { TabRail, type TabDef } from "@/components/ui/signal";
 import { listHunts, listTakes } from "@/lib/sound/client";
 import type { SoundKind } from "@/lib/sound/types";
@@ -35,10 +38,14 @@ import type { SoundKind } from "@/lib/sound/types";
 // Explicit `/index`: on a case-insensitive disk `./hunt` resolved to the
 // round-3 `./Hunt.tsx` while that file existed (TS1261, 2026-10-05) — and a
 // file named like a module directory can come back.
-import ArrangeModule from "./arrange/index";
-import HuntModule from "./hunt/index";
 import { FlashLine, SoundLabContext, useFlash, type SoundLabShell } from "./shared/shell";
-import TriageModule from "./triage/index";
+
+// ONE TAB ON SCREEN, ONE TAB IN THE BUNDLE. Each panel below is shown alone,
+// behind the tab rail, so each is its own chunk fetched when its tab is chosen
+// rather than all of them on first load (Wave 0, docs/waves/README.md).
+const TriageModule = dynamic(() => import("./triage/index"), { loading: pendingPanel });
+const ArrangeModule = dynamic(() => import("./arrange/index"), { loading: pendingPanel });
+const HuntModule = dynamic(() => import("./hunt/index"), { loading: pendingPanel });
 
 type ModuleId = "triage" | "arrange" | "hunt";
 const MODULES: readonly ModuleId[] = ["triage", "arrange", "hunt"];

@@ -11,9 +11,8 @@
 //
 // The file is TRACKED and deterministic (fixed bootstrap seed, no timestamp),
 // so a diff of it is a diff of what the grader is worth. The /foundry commit
-// is meant to rewrite it after every ledger write; until that lands (the
-// commit is moving behind the foundry-engine-A write lock) this script is how
-// it is refreshed after a cull.
+// rewrites it right after every ledger write (lib/foundry/store.ts); this
+// script refreshes it by hand and --check proves it current.
 //
 // FOUNDRY_DIR aims it at another directory holding a ledger.json, the same
 // variable lib/foundry/store.ts reads, so a probe never rewrites the tracked file.
@@ -22,19 +21,16 @@ import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { GRADE_FIELDS, calibrationFile, type CalibrationRow, type FieldCalibration } from "../../lib/foundry/calibration";
+import { GRADE_FIELDS, calibrationFile, graderCalibrationText, type CalibrationRow, type FieldCalibration } from "../../lib/foundry/calibration";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DIR = process.env.FOUNDRY_DIR ? path.resolve(process.env.FOUNDRY_DIR) : HERE;
 const LEDGER = path.join(DIR, "ledger.json");
 const OUT = path.join(DIR, "grader-calibration.json");
 
-const PURPOSE =
-  "Does the automatic grader predict the human? Per grader series (model @ grade.py schema/prompt digest; rows from before the stamp are `unstamped`), per grade field, pooled and per mechanism: the AUC of a kept candidate outscoring a rejected one, a stratified bootstrap CI with a fixed seed, and a status (calibrated | inverted | chance | insufficient). Generated from ledger.json by pipeline/foundry/calibrate.mts (lib/foundry/calibration.ts); do not edit by hand.";
-
 const rows = (JSON.parse(readFileSync(LEDGER, "utf8")) as { rows: CalibrationRow[] }).rows;
 const file = calibrationFile(rows);
-const text = JSON.stringify({ _purpose: PURPOSE, ...file }, null, 2) + "\n";
+const text = graderCalibrationText(rows);
 
 const args = new Set(process.argv.slice(2));
 

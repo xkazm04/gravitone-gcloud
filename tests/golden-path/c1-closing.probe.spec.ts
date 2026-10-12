@@ -251,7 +251,7 @@ test("case 13: a record that fails dealable resolves to the replay AND sets a tr
   // The board draws it.
   const bar = code("app/_phases/research/_parts/ScopeBar.tsx");
   expect(bar).toMatch(/\{trouble && \(\s*<span data-testid="notebook-refused">\s*<StaleBadge/);
-  expect(code("app/_phases/research/ResearchTriageBoard.tsx")).toContain("<ScopeBar api={api} trouble={trouble} />");
+  expect(code("app/_phases/research/ResearchTriageBoard.tsx")).toMatch(/<ScopeBar api=\{api\} trouble=\{trouble\}[\s/>]/);
   expect(code("app/_phases/research/guided/GuidedResearch.tsx")).toContain("trouble={research.trouble}");
   expect(code("app/_phases/research/guided/useEducationalResearch.ts")).toContain("trouble: active.trouble");
 });

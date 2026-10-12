@@ -15,7 +15,7 @@
 // furniture. Chrome colour is a shared vocabulary, and two files spelling the
 // same grey differently is drift.
 //
-// Six things sit outside that rule; five always did and the rule simply never
+// Seven things sit outside that rule; five always did and the rule simply never
 // said so, which made it read as violated when it was not:
 //
 //  1. TAILWIND UTILITY CLASSES — `text-cyan-300`, `bg-white/5`,
@@ -64,10 +64,17 @@
 //     output must stay stable even if this app's own brand accent changes,
 //     since re-tinting a shipped video's bloom color is not a side effect
 //     this file's accents should ever have.
+//  7. app/_landing/cosmos/engine/inks.ts - the Paper Cosmos landing's CANVAS
+//     paint: the colours of the drawn paper artwork (the dusk horizon, the
+//     galaxy's seven sheets, the lamp's petals, the reams' paper stock and
+//     latches, the grain, a sheet's lit edge and cast shadow). Illustration,
+//     like item 2's palettes, not furniture: the landing's chrome reads the
+//     --pc-* tokens below. Every engine module takes its paint from that one
+//     file so the exemption stays one file wide.
 //
 // Everything that actually draws chrome obeys. The inventory above is meant to
 // be RECHECKABLE, so it is worth saying how: grep app/ and components/ for hex
-// and rgb() literals, subtract this file and the six classes above, and the
+// and rgb() literals, subtract this file and the seven classes above, and the
 // remainder should be empty. It was NOT, from 2026-08-14 until this line was
 // written — the list said "three things" and named globals.css prose plus the
 // preset data, while global-error.tsx had seven, which made the rule read as
@@ -318,6 +325,93 @@ export const SIGNAL_DEFAULTS: Record<string, string> = {
   "--gt-working": "0",
 };
 
+/**
+ * THE PAPER COSMOS WORLD, scoped. Chosen 2026-10-07 from contest
+ * landing-universe (variant "Paper Cosmos"): the public landing drawn as a
+ * backlit cut-paper shadow-box. The owner's instruction was to keep the
+ * winner's OWN design rather than restyle it in this app's kit, so these are
+ * the winner's colours, carried here only so the colour-literal rule holds:
+ * chrome is spelled in this file and nowhere else. The landing's root opts in
+ * with `data-world="paper-cosmos"`; nothing else reads these.
+ *
+ * The CANVAS paint of the paper artwork (sheet colours, the dusk horizon, ream
+ * tones) is illustration content, not chrome, and lives with the drawing code
+ * in app/_landing/cosmos/engine/inks.ts, exempted by name in the colour-literal
+ * probe (item 7 above).
+ * Alpha variants are written at the use site as color-mix over these tokens.
+ */
+export const WORLD_PAPER_COSMOS: Record<string, string> = {
+  "--pc-ink": "#251a33",
+  "--pc-ink2": "#3b2a47",
+  "--pc-bone": "#f3e6cf",
+  "--pc-cream": "#fff3da",
+  "--pc-indigo": "#161b45",
+  "--pc-coral": "#ee7358",
+  "--pc-ochre": "#f0aa50",
+  "--pc-rust": "#c4553d",
+  // The rest of the stylesheet's chrome, each named for where the winner used
+  // it. Several shadows differ by one or two units of blue; they are kept
+  // distinct because the brief was to port the design, not to tidy it.
+  "--pc-black": "#000000",
+  "--pc-white": "#ffffff",
+  "--pc-app": "#10153a",
+  "--pc-world": "#1b2150",
+  "--pc-art": "#2b2150",
+  "--pc-dim": "#0f0b2c",
+  "--pc-print": "#f4e8d2",
+  "--pc-print-ink": "#2f2230",
+  "--pc-tape": "#ecd8a8",
+  "--pc-tab": "#e6d3ae",
+  "--pc-tab-hot": "#fff0cc",
+  "--pc-tab-ink": "#3a2a2c",
+  "--pc-sheet": "#e9d9b8",
+  "--pc-sheet-ink": "#2a1c2c",
+  "--pc-cat": "#cdb890",
+  "--pc-pick": "#fff1cd",
+  "--pc-enter": "#ec6a4d",
+  "--pc-enter-hi": "#f68b6c",
+  "--pc-enter-lo": "#e45a3c",
+  "--pc-enter-ink": "#fff5e2",
+  "--pc-enter-edge": "#9c3b25",
+  "--pc-enter-glint": "#ffdcc8",
+  "--pc-sun-hi": "#ffd89a",
+  "--pc-sun-lo": "#b5452f",
+  "--pc-glow": "#ffc46e",
+  "--pc-ream-glow": "#ffbe64",
+  "--pc-depth-glow": "#ffa05a",
+  "--pc-lamp": "#ffecbe",
+  "--pc-lamp-2": "#ffb062",
+  "--pc-lamp-3": "#ff965a",
+  "--pc-flare": "#fff6d8",
+  "--pc-flare-sheet": "#fff0cf",
+  "--pc-flare-ink": "#2a2f7a",
+  "--pc-shadow": "#0a061e",
+  "--pc-shadow-2": "#0a061c",
+  "--pc-shadow-3": "#080418",
+  "--pc-umber": "#1e101e",
+  "--pc-plum": "#1e1232",
+  "--pc-depth-ring": "#160c2a",
+  "--pc-haze": "#0c0820",
+  "--pc-scrim": "#09071e",
+  "--pc-vignette": "#060416",
+  "--pc-sheet-shadow": "#040214",
+  "--pc-veil-in": "#120c30",
+  "--pc-veil-out": "#0a0720",
+  // The dusk the landing paints before any canvas exists (cosmos.css .sky0):
+  // the sky plane's own eight stops and the ground below the horizon, so the
+  // first paint and the painted sky that fades in over it are the same colours.
+  // engine/inks.ts HZ.sky and SKY_INK.ground read these, one source.
+  "--pc-sky-0": "#0c1132",
+  "--pc-sky-1": "#141a4a",
+  "--pc-sky-2": "#2a2161",
+  "--pc-sky-3": "#5a2f74",
+  "--pc-sky-4": "#a3496b",
+  "--pc-sky-5": "#e0795c",
+  "--pc-sky-6": "#f4ac62",
+  "--pc-sky-7": "#f8d495",
+  "--pc-ground": "#0b0f2e",
+};
+
 /** The `:root { … }` rule <GravitoneTokens> injects. */
 export function tokensCss(): string {
   const decls = [
@@ -332,7 +426,10 @@ export function tokensCss(): string {
   const obsidianKit = Object.entries(WORLD_OBSIDIAN_KIT)
     .map(([k, v]) => `${k}:${v};`)
     .join("");
-  return `:root{${decls}}[data-world="almanac"]{${world}}[data-world="obsidian"]{${obsidianKit}}`;
+  const paperCosmos = Object.entries(WORLD_PAPER_COSMOS)
+    .map(([k, v]) => `${k}:${v};`)
+    .join("");
+  return `:root{${decls}}[data-world="almanac"]{${world}}[data-world="obsidian"]{${obsidianKit}}[data-world="paper-cosmos"]{${paperCosmos}}`;
 }
 
 // ── TYPE SCALE, BY REFERENCE ────────────────────────────────────────────────

@@ -23,6 +23,7 @@
 //     nobody tagged falls to `untagged` — and no board renders that bucket.
 import { notebookIssues } from "../app/_phases/_shared/notebook/cards";
 import { CONCLUSIONS, conclusionIssues } from "../app/_phases/_shared/notebook/conclusions";
+import { diffSnapshots, measureCorpus, readSnapshot, SNAPSHOT_PATH, UPDATE_ENV } from "../lib/notebook/corpus";
 
 const issues = notebookIssues();
 for (const i of issues) {
@@ -41,9 +42,26 @@ const advisory = CONCLUSIONS.flatMap((c) =>
 console.log(`\nconclusion findings — ${advisory.length}, advisory, never failures`);
 for (const a of advisory) console.log(`  · ${a}`);
 
+// THE CORPUS. The graph check above reads one hand-retyped fixture; the tree also
+// tracks real notebooks from research runs, in the snake_case NOTEBOOK-SCHEMA
+// dialect. They walk the same door the app uses (adapter -> parseNotebook) and
+// their per-file verdict is pinned to an approved snapshot, the same one
+// tests/golden-path/notebook-corpus.probe.spec.ts reads. A REJECTED member is
+// not a failure here (every tracked run predates rules that bind new notebooks);
+// a verdict that CHANGED, or a member nobody approved, is.
+const corpus = measureCorpus(process.cwd());
+const corpusDiff = diffSnapshots(readSnapshot(process.cwd()), corpus);
+console.log(`\ncorpus — ${Object.keys(corpus).length} tracked notebook(s)`);
+for (const [p, v] of Object.entries(corpus)) {
+  const n = Object.values(v.findings).reduce((a, b) => a + b, 0);
+  console.log(`  · ${v.verdict.padEnd(8)} ${p}  (${v.dialect}, ${n} finding(s), ${Object.keys(v.unmapped).length} unmapped key(s))`);
+}
+for (const d of corpusDiff) console.log(`CORPUS  ${d}`);
+if (corpusDiff.length) console.log(`  re-approve with ${UPDATE_ENV}=1 on the probe, after reading the diff (${SNAPSHOT_PATH})`);
+
 console.log(
   issues.length
     ? `\n${issues.length} BROKEN EDGE(S) — every one is a card that cannot be wounded, or a row that vanished.`
     : `\nthe notebook graph resolves: no id spent twice, no reference to nothing, every card tagged.`,
 );
-process.exit(issues.length ? 1 : 0);
+process.exit(issues.length || corpusDiff.length ? 1 : 0);

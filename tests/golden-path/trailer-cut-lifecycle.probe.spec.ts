@@ -35,7 +35,7 @@ import { join } from "node:path";
 import { test, expect } from "@playwright/test";
 
 import { stripComments } from "./_helpers";
-import * as React from "react";
+import { assertHarnessInstalled, harness } from "./_studio/hooks";
 
 import { useTrailerCut } from "@/app/_phases/script/trailer/useTrailerCut";
 import { slotsFor } from "@/app/_phases/research/beats/beats";
@@ -52,117 +52,15 @@ import { composeCut } from "@/app/_phases/script/trailer/cut";
 import { trailerRender } from "@/app/_phases/frames/frames";
 import { shotsFromRender } from "@/app/_phases/frames/shots";
 
-/* ────────────────────────────── the harness ─────────────────────────────────
-   Sixty lines, and every one of them is a hook `useTrailerCut` actually calls:
-   useState, useEffect, useCallback, useMemo. Nothing else is implemented, so a
-   hook that starts using something else fails here with a TypeError naming it
-   rather than quietly returning undefined. */
-
-interface Internals {
-  H: unknown;
-}
-const INTERNALS = (React as unknown as Record<string, Internals>)
-  .__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
-
-const sameDeps = (a?: readonly unknown[], b?: readonly unknown[]) =>
-  a !== undefined && b !== undefined && a.length === b.length && a.every((x, i) => Object.is(x, b[i]));
-
-/** Let the effects' async bodies settle — they open a database and await it, so
- *  microtask flushing alone is not enough. */
-const settle = async () => {
-  for (let i = 0; i < 30; i++) await new Promise((r) => setTimeout(r, 0));
-};
-
-function harness<T>(run: () => T) {
-  const cells: unknown[] = [];
-  const committed: { deps?: readonly unknown[]; cleanup?: () => void }[] = [];
-  const memos: { deps?: readonly unknown[]; value: unknown }[] = [];
-  let ci = 0;
-  let ei = 0;
-  let mi = 0;
-  let dirty = false;
-  let queue: (() => void)[] = [];
-
-  const dispatcher = {
-    useState(init: unknown) {
-      const k = ci++;
-      if (!(k in cells)) cells[k] = typeof init === "function" ? (init as () => unknown)() : init;
-      return [
-        cells[k],
-        (v: unknown) => {
-          const next = typeof v === "function" ? (v as (p: unknown) => unknown)(cells[k]) : v;
-          if (!Object.is(next, cells[k])) {
-            cells[k] = next;
-            dirty = true;
-          }
-        },
-      ];
-    },
-    // No useRef, on purpose: useTrailerCut does not call it (measured
-    // 2026-09-06: zero occurrences), and the promise above is that a hook the
-    // subject starts using is a TypeError here rather than a silent stub. A
-    // stub for a hook nobody calls is the promise quietly not being kept.
-    useEffect(fn: () => void | (() => void), deps?: readonly unknown[]) {
-      const k = ei++;
-      const prev = committed[k];
-      if (prev && sameDeps(prev.deps, deps)) return;
-      queue.push(() => {
-        prev?.cleanup?.();
-        const cleanup = fn();
-        committed[k] = { deps, cleanup: typeof cleanup === "function" ? cleanup : undefined };
-      });
-    },
-    useMemo(fn: () => unknown, deps?: readonly unknown[]) {
-      const k = mi++;
-      const prev = memos[k];
-      if (prev && sameDeps(prev.deps, deps)) return prev.value;
-      const value = fn();
-      memos[k] = { deps, value };
-      return value;
-    },
-    useCallback(fn: unknown, deps?: readonly unknown[]) {
-      return dispatcher.useMemo(() => fn, deps);
-    },
-  };
-
-  return {
-    /** Render, commit effects, let their async bodies land, and repeat while
-     *  state keeps changing — which is what a renderer does, minus the parts
-     *  this lane cannot have. */
-    async settleUp(): Promise<T> {
-      let out!: T;
-      for (let pass = 0; pass < 40; pass++) {
-        ci = 0;
-        ei = 0;
-        mi = 0;
-        dirty = false;
-        const before = INTERNALS.H;
-        INTERNALS.H = dispatcher;
-        try {
-          out = run();
-        } finally {
-          INTERNALS.H = before;
-        }
-        const firing = queue;
-        queue = [];
-        for (const f of firing) f();
-        await settle();
-        if (!dirty && firing.length === 0) return out;
-      }
-      throw new Error("the hook never settled in 40 passes — a render loop, or an effect whose deps change every time");
-    },
-    unmount() {
-      for (const c of committed) c.cleanup?.();
-    },
-  };
-}
+/* The hook dispatcher is the lane's shared one (_studio/hooks.ts): useState,
+   useRef, useEffect, useMemo, useCallback, useReducer and nothing else, so a
+   hook that starts using something else fails with a TypeError naming it. */
 
 test("the harness is installed on the dispatcher React actually reads", () => {
   // If a React release moves this slot, this line fails and every test below is
-  // reported as broken TOOLING rather than as a broken hook — which is the whole
+  // reported as broken TOOLING rather than as a broken hook - which is the whole
   // reason it is a separate assertion.
-  expect(INTERNALS, "React's client internals are not where this harness expects").toBeTruthy();
-  expect("H" in INTERNALS).toBe(true);
+  expect(() => assertHarnessInstalled()).not.toThrow();
 });
 
 /* ───────────────────────────────── fixtures ─────────────────────────────────── */
@@ -281,6 +179,14 @@ test("a SAVED cut hydrates as itself — the picks never recompose over an edite
   expect(api.cut!.beats[0].label).toBe("AN EDIT NOBODY MAY DISCARD");
   expect(api.cut!.beats[0].label).not.toBe(composed.beats[0].label);
   h.unmount();
+
+  // A legacy record (a `cut`, no `origin`/`ops`) hydrates as its own origin with
+  // an empty log, and the save writes the new shape without losing the edit.
+  const after = await readStep<TrailerCutStepData>("p-edited", "script-trailer");
+  expect(after.ok && after.data?.origin?.beats[0].label, "the legacy cut became the origin").toBe("AN EDIT NOBODY MAY DISCARD");
+  expect(after.ok && after.data?.ops, "an empty log").toEqual([]);
+  expect(after.ok && after.data?.head).toBe(0);
+  expect(after.ok && after.data?.cut?.beats[0].label).toBe("AN EDIT NOBODY MAY DISCARD");
 });
 
 /* ── 4 · the join. What the hook wrote is what Frames decomposes ─────────────── */

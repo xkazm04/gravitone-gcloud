@@ -17,16 +17,16 @@ import type {
 // The request rule itself lives in foundryClient.ts and is imported, not
 // restated: this file used to hold a byte-identical copy, which is the shape
 // where a fix reaches one tab and not the other.
-import { call, fileUrl } from "./foundryClient";
+import { call, fileUrl, noteVerdicts, patchVerdictsTo } from "./foundryClient";
 
 export const fetchExtractRuns = () => call<{ runs: ExtractSummary[] }>("/api/foundry/extract").then((r) => r.runs);
-export const fetchExtractRun = (id: string) => call<ExtractDetail>(`/api/foundry/extract/${encodeURIComponent(id)}`);
+export const fetchExtractRun = (id: string) => call<ExtractDetail>(`/api/foundry/extract/${encodeURIComponent(id)}`).then((d) => noteVerdicts("extract", id, d));
 export const createExtractRun = (slug: string, images: ExtractUpload[], options: Partial<ExtractOptions>) =>
   call<{ run: ExtractManifest }>("/api/foundry/extract", { method: "POST", body: JSON.stringify({ slug, images, options }) }).then((r) => r.run);
 export const stepExtractRun = (id: string, units = 1, retry = false) =>
   call<StepResult>(`/api/foundry/extract/${encodeURIComponent(id)}/step`, { method: "POST", body: JSON.stringify({ units, retry }) });
-export const saveExtractVerdicts = (id: string, verdicts: ExtractVerdicts) =>
-  call<{ ok: true }>(`/api/foundry/extract/${encodeURIComponent(id)}/verdicts`, { method: "PUT", body: JSON.stringify({ verdicts }) });
+export const saveExtractVerdicts = (id: string, verdicts: ExtractVerdicts, surface = "foundry") =>
+  patchVerdictsTo("extract", id, verdicts, surface).then(() => ({ ok: true as const }));
 export const previewExtractCommit = (id: string) =>
   call<ExtractCommitPlan>(`/api/foundry/extract/${encodeURIComponent(id)}/commit`);
 export const commitExtractRun = (id: string, token?: string) =>

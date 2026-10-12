@@ -57,9 +57,19 @@ import { GET as videoClipFileGET } from "@/app/api/video/clips/[id]/file/route";
 import { POST as soundGeneratePOST } from "@/app/api/sound/generate/route";
 import { POST as soundHuntsPOST } from "@/app/api/sound/hunts/route";
 import { POST as soundHuntLessonPOST } from "@/app/api/sound/hunts/[id]/lesson/route";
+import { POST as sunoProposalsPOST } from "@/app/api/sound/suno/proposals/route";
+import { DELETE as sunoProposalDELETE } from "@/app/api/sound/suno/proposals/[id]/route";
+import { POST as sunoProposePOST } from "@/app/api/sound/suno/propose/route";
+import { POST as sunoQueuePOST } from "@/app/api/sound/suno/queue/route";
+import { DELETE as sunoQueueDELETE } from "@/app/api/sound/suno/queue/[id]/route";
+import { PATCH as sunoClipPATCH } from "@/app/api/sound/suno/clips/[id]/route";
+import { POST as sunoLibraryPOST } from "@/app/api/sound/suno/library/route";
+import { POST as sunoRunPOST } from "@/app/api/sound/suno/run/route";
+import { POST as sunoClearPOST } from "@/app/api/sound/suno/clear/route";
 import { POST as articlesCreatePOST } from "@/app/api/articles/route";
 import { POST as articlesApprovePOST } from "@/app/api/articles/[runId]/approve/route";
 import { POST as articlesResumePOST } from "@/app/api/articles/[runId]/resume/route";
+import { POST as articlesReworkPOST } from "@/app/api/articles/[runId]/rework/route";
 import { POST as turnsPOST } from "@/app/api/turns/route";
 import { POST as turnCancelPOST } from "@/app/api/turns/[id]/cancel/route";
 import { POST as motionDirectPOST } from "@/app/api/motion/direct/route";
@@ -175,6 +185,35 @@ const ROUTES: [string, string, (r: Request) => Promise<Response>][] = [
     "/api/sound/hunts/[id]/lesson",
     (r: Request) => soundHuntLessonPOST(r, { params: Promise.resolve({ id: "no-such-hunt" }) }),
   ],
+  // The Suno queue (spark audio-queue-suno). Queue spends Suno credits once the
+  // worker reaches a job; propose spends a text turn; the other four write the
+  // queue's store. An empty body is a 400 from each one's own validation before
+  // the store or an engine is reached; the two DELETEs name no record, so the
+  // authed case is a 404 read BEFORE the store's lock (nothing is created).
+  ["sound/suno/proposals", "/api/sound/suno/proposals", sunoProposalsPOST],
+  [
+    "sound/suno/proposals/discard",
+    "/api/sound/suno/proposals/[id]",
+    (r: Request) => sunoProposalDELETE(r, { params: Promise.resolve({ id: "sp-0000000000" }) }),
+  ],
+  ["sound/suno/propose", "/api/sound/suno/propose", sunoProposePOST],
+  ["sound/suno/queue", "/api/sound/suno/queue", sunoQueuePOST],
+  [
+    "sound/suno/queue/cancel",
+    "/api/sound/suno/queue/[id]",
+    (r: Request) => sunoQueueDELETE(r, { params: Promise.resolve({ id: "sj-0000000000" }) }),
+  ],
+  [
+    "sound/suno/clips/verdict",
+    "/api/sound/suno/clips/[id]",
+    (r: Request) => sunoClipPATCH(r, { params: Promise.resolve({ id: "sc-0000000000" }) }),
+  ],
+  // The library import drives the operator's signed-in Suno Chrome (free, read
+  // only) and writes the store: an empty body is a 400 ("all" must be true)
+  // before the browser or the store is reached.
+  ["sound/suno/library", "/api/sound/suno/library", sunoLibraryPOST],
+  ["sound/suno/run", "/api/sound/suno/run", sunoRunPOST],
+  ["sound/suno/clear", "/api/sound/suno/clear", sunoClearPOST],
   // The article pipeline (WP4). Create spends a research turn on the operator's
   // Claude seat; approve pushes a branch and opens a PR in ai-registry; resume
   // re-runs a step. An empty body is a 400 from create's topic check; the run
@@ -190,6 +229,12 @@ const ROUTES: [string, string, (r: Request) => Promise<Response>][] = [
     "articles/resume",
     "/api/articles/[runId]/resume",
     (r: Request) => articlesResumePOST(r, { params: Promise.resolve({ runId: "2026-10-05-no-such-run" }) }),
+  ],
+  // Rework restarts the drive, so it spends the seat the same way resume does.
+  [
+    "articles/rework",
+    "/api/articles/[runId]/rework",
+    (r: Request) => articlesReworkPOST(r, { params: Promise.resolve({ runId: "2026-10-05-no-such-run" }) }),
   ],
   // The turn ledger (AIO-A). Starting a turn spends the seat or a metered key;
   // an empty body is a 400 from the `kind` check before any kind's prompt is

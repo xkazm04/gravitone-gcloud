@@ -71,8 +71,16 @@ export interface Wound {
 /** What the scope decisions actually cost. This is the whole reason the step
  *  exists as a review rather than a checkbox list: the notebook is a graph, and
  *  removing a fact can silently disarm a turn three beats away. */
-export function woundsOf(cards: Card[], scope: Scope, optIn: ReadonlySet<string> = OPT_IN_IDS): Wound[] {
-  const gone = new Set(cards.filter((c) => stateOf(scope, c.id, optIn).descoped).map((c) => c.id));
+export function woundsOf(
+  cards: Card[],
+  scope: Scope,
+  optIn: ReadonlySet<string> = OPT_IN_IDS,
+  /** Facts a follow-up revision killed (revisions.ts). They are no longer cards,
+   *  so descoping cannot reach them - but whatever rested on one is exactly as
+   *  wounded as if the creator had cut it. */
+  killed: ReadonlySet<string> = new Set(),
+): Wound[] {
+  const gone = new Set([...cards.filter((c) => stateOf(scope, c.id, optIn).descoped).map((c) => c.id), ...killed]);
   const out: Wound[] = [];
   for (const c of cards) {
     if (gone.has(c.id) || !c.dependsOn.length) continue;
@@ -120,7 +128,7 @@ export function scopeSummary(cards: Card[], scope: Scope, source: NotebookSource
   const st = (id: string) => stateOf(scope, id, optIn);
   const kept = cards.filter((c) => !st(c.id).descoped);
   const out = cards.filter((c) => st(c.id).descoped);
-  const wounds = woundsOf(cards, scope, optIn);
+  const wounds = woundsOf(cards, scope, optIn, new Set((source.notebook.killed ?? []).map((k) => k.id)));
   const requiredGone = cards.filter((c) => c.required && st(c.id).descoped);
   const byDim = source.dimensions.map((d) => ({
     ...d,

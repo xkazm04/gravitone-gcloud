@@ -89,7 +89,7 @@ test.describe("kit catalog", () => {
     expect(rule, "the muting-level rule exists").toBeTruthy();
     const floor = Number(/(\d+(?:\.\d+)?):1/.exec(rule!.rule)?.[1]);
     expect(floor, "the rule states a ratio").toBeGreaterThan(0);
-    const flat = (k: string) => resolveToken(WORLD_ALMANAC[k], WORLD_ALMANAC)!;
+    const flat = (k: string) => resolveToken(WORLD_ALMANAC[k], WORLD_ALMANAC)!.rgb;
     const below: string[] = [];
     for (const t of ["--al-white", "--al-vellum"])
       for (const g of ["--al-night", "--al-deep", "--al-field"]) {

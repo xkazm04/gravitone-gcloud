@@ -1,0 +1,99 @@
+{
+  "gauntlet/runs/2026-08-12-l1-first-sweep/l2/conflict-osint/notebook.json": {
+    "dialect": "schema",
+    "verdict": "rejected",
+    "findings": {
+      "engineFit[].hazard is missing.": 1,
+      "facts[].claim is N characters; the budget is 90": 22
+    },
+    "unmapped": {
+      "$schema": 1,
+      "domains": 1,
+      "normal_range": 1,
+      "prior": 1,
+      "prior_outcome": 1,
+      "steel_man.provenance_note": 1,
+      "tension.strength_note": 1
+    }
+  },
+  "gauntlet/runs/2026-08-12-l1-first-sweep/l2/creator-economy/notebook.json": {
+    "dialect": "schema",
+    "verdict": "rejected",
+    "findings": {
+      "engineFit[].hazard is missing.": 1,
+      "facts[].claim ends in a period; a headline carries none": 11,
+      "facts[].claim is N characters; the budget is 90": 11
+    },
+    "unmapped": {
+      "_meta": 1,
+      "card_dimension": 1,
+      "conclusions[].note": 1,
+      "domain_fill": 1,
+      "domains": 1,
+      "prior": 1,
+      "prior_outcome": 1,
+      "scale_conversions[].note": 1,
+      "tension.normal_range": 1,
+      "withheld_note": 1
+    }
+  },
+  "gauntlet/runs/2026-08-12-l1-first-sweep/l2/news-reaction/notebook.json": {
+    "dialect": "schema",
+    "verdict": "rejected",
+    "findings": {
+      "engineFit[].hazard is missing.": 3,
+      "facts[] is `kind: \"\"` with no searchScope.": 4,
+      "facts[].claim is N characters; the budget is 90": 16
+    },
+    "unmapped": {
+      "$schema": 1,
+      "conclusions[].gate_note": 1,
+      "domains": 1,
+      "followups": 1,
+      "normal_range": 1,
+      "prior": 1,
+      "prior_verdict": 1,
+      "scale_conversions[].note": 3,
+      "steel_man.provenance_note": 1
+    }
+  },
+  "gauntlet/runs/2026-08-12-l1-first-sweep/l2/public-corruption/notebook.json": {
+    "dialect": "schema",
+    "verdict": "rejected",
+    "findings": {
+      "facts[].claim ends in a period; a headline carries none": 26,
+      "facts[].claim is N characters; the budget is 90": 28
+    },
+    "unmapped": {
+      "$schema": 1,
+      "analogy_candidates[].note": 1,
+      "conclusions[].gate_result": 3,
+      "counter_positions_to_state_fairly[].approach_status": 3,
+      "counter_positions_to_state_fairly[].must_not_descope": 2,
+      "counter_positions_to_state_fairly[].note": 3,
+      "domains": 1,
+      "prior": 1,
+      "prior_verdict": 1,
+      "run_metrics": 1,
+      "scale_conversions[].note": 3,
+      "scope_note": 1,
+      "tension.normal_range": 1
+    }
+  },
+  "pipeline/runs/2026-08-11-why-bitcoin-price-does-not-rise/notebook.json": {
+    "dialect": "schema",
+    "verdict": "rejected",
+    "findings": {
+      "`steelMan.provenance` must be `found`, `found-adjacent` or `constructed`.": 1,
+      "engineFit[].hazard is missing.": 4,
+      "facts[].claim is N characters; the budget is 90": 16,
+      "facts[].sources is empty.": 21,
+      "mechanisms[].chain[] opens \"\" — every link after the first is BUT, THEREFORE or TRANSFER.": 2,
+      "unknowns[].id is missing.": 3
+    },
+    "unmapped": {
+      "$schema": 1,
+      "followups": 1
+    }
+  }
+}

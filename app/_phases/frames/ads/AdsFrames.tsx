@@ -8,11 +8,12 @@
 // State and every write live in ./useAdsFrames (on ./useAdsShots); this file
 // only draws.
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/Primitives";
-import { CHIP_CLASS, Ghost, TALLY_TONE } from "@/components/ui/signal";
+import { CHIP_CLASS, Ghost, Keycaps, TALLY_TONE } from "@/components/ui/signal";
 import type { AdShotSpec } from "@/lib/ads/types";
+import { typing } from "@/lib/board/keys";
 
 import { usePhaseReport } from "../../_shared/usePhaseReport";
 
@@ -33,14 +34,48 @@ export default function AdsFrames({ projectId }: { projectId: string }) {
     !ctl.loaded || !ctl.picked || ctl.stale ? null : total > 0 && ctl.adoptedCount === total ? "done" : anyTakes ? "working" : null,
   );
 
-  const takeIds = Object.values(ctl.shotsData.shots).flatMap((s) => s.imageTakes);
+  const active = ctl.shots.find((s) => s.id === chosen) ?? ctl.shots[0];
+  // Bytes for the shot ON SCREEN only. Every take of every shot used to be read
+  // out of IndexedDB and minted an object URL on open — a dozen-shot spot at
+  // three takes a shot is thirty-six blobs for the three pictures the panel
+  // draws. A shot's URLs are minted when it is first opened and kept (and
+  // revoked on unmount) by useAssetUrls, so going back to it is instant.
+  const takeIds = active ? (ctl.shotsData.shots[active.id]?.imageTakes ?? []) : [];
   const urls = useAssetUrls(takeIds);
+
+  // PICKING BY KEYBOARD: 1–9 adopt that take of the open shot, N opens the next
+  // shot that has no adopted image (wrapping). Adopting is free — the takes
+  // are already paid for — so a spot is picked without the pointer.
+  const keys = useRef({ ctl, active });
+  useEffect(() => {
+    keys.current = { ctl, active };
+  });
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented || typing(e.target)) return;
+      const { ctl: c, active: a } = keys.current;
+      if (!c.loaded || !c.picked || !a) return;
+      if (/^[1-9]$/.test(e.key)) {
+        const id = c.shotsData.shots[a.id]?.imageTakes[Number(e.key) - 1];
+        if (!id || c.stale) return;
+        e.preventDefault();
+        c.adoptImage(a.id, id);
+      } else if (e.key.toLowerCase() === "n") {
+        const i = c.shots.indexOf(a);
+        const order = [...c.shots.slice(i + 1), ...c.shots.slice(0, i + 1)];
+        const next = order.find((s) => !c.shotsData.shots[s.id]?.adoptedImage);
+        if (!next) return;
+        e.preventDefault();
+        setChosen(next.id);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   if (!ctl.loaded) return <AdsLoading testId="AdsFrames-loading" />;
   const gate = <AdsGate base={ctl} projectId={projectId} current="frames" testId="AdsFrames-no-scenario" />;
   if (ctl.refused || !ctl.picked) return gate;
-
-  const active = ctl.shots.find((s) => s.id === chosen) ?? ctl.shots[0];
 
   return (
     <div className="space-y-4" data-testid="AdsFrames" data-project={projectId}>
@@ -102,7 +137,7 @@ function ShotPanel({ ctl, shot, index, urls }: { ctl: AdsFramesApi; shot: AdShot
                   <div className={`${frame} w-full bg-white/[0.03]`}>
                     {src && (
                       // eslint-disable-next-line @next/next/no-img-element -- a blob: URL from IndexedDB; next/image cannot optimise it
-                      <img src={src} alt={`shot ${index + 1}, take ${i + 1}`} className="h-full w-full object-cover" />
+                      <img src={src} alt={`shot ${index + 1}, take ${i + 1}`} decoding="async" className="h-full w-full object-cover" />
                     )}
                   </div>
                   <figcaption className="flex items-center justify-between gap-1 px-2 py-1.5">
@@ -119,9 +154,18 @@ function ShotPanel({ ctl, shot, index, urls }: { ctl: AdsFramesApi; shot: AdShot
               );
             })}
           </div>
-          <Button variant="ghost" size="sm" onClick={() => void ctl.generateTakes(shot)} disabled={Boolean(busy) || locked}>
-            {busy === "takes" ? "generating…" : "3 more takes"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => void ctl.generateTakes(shot)} disabled={Boolean(busy) || locked}>
+              {busy === "takes" ? "generating…" : "3 more takes"}
+            </Button>
+            <Keycaps
+              label="Take keys"
+              map={[
+                { keys: ["1", "–", "9"], does: "adopt take" },
+                { keys: ["N"], does: "next unadopted shot" },
+              ]}
+            />
+          </div>
         </div>
       )}
     </section>

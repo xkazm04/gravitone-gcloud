@@ -4,6 +4,7 @@
 //   npx tsx pipeline/article.mts status [<runId>]          # one run, or the list
 //   npx tsx pipeline/article.mts approve <runId> [--patches p1,p2]
 //   npx tsx pipeline/article.mts reject <runId> --note "<text>"
+//   npx tsx pipeline/article.mts rework <runId> --note "<text>"
 //   npx tsx pipeline/article.mts resume <runId> [--reviewers <file>]
 //   npx tsx pipeline/article.mts topics [--limit N] [--include-bundle <bundle>]
 //   npx tsx pipeline/article.mts loop (--target N | --add N) --budget-usd X [--concurrency 3] [--max-failures 3]
@@ -20,6 +21,11 @@
 //
 //   --json on any command: one JSON document on stdout, nothing else.
 //   Exit 0 ok · 1 the operation failed (a failed run, a refused approval) · 2 usage.
+//
+// `rework` is the third act at the gate: it sends the draft back with the note,
+// keeps the research and outline, and drives draft, critique and check again to
+// the gate. A real agent session on the operator's seat, like `resume`; it is
+// the operator's act, not an agent's.
 //
 // `run` drives to the human gate and stops: it prints {runId, dir, status} with
 // status `awaiting-approval` on success. It never approves. `approve` is the
@@ -62,7 +68,7 @@ const CALLER_CWD = process.cwd();
 // The store root and the prompt file are cwd-relative, as in the server.
 process.chdir(ROOT);
 
-const { approveRun, createRun, driveRun, getRun, listArticleRuns, rejectRun, resumeRun } = await import("../lib/articles/engine");
+const { approveRun, createRun, driveRun, getRun, listArticleRuns, rejectRun, resumeRun, reworkRun } = await import("../lib/articles/engine");
 const { listUncoveredTopics, runLoop } = await import("../lib/articles/loop");
 const { ArticleError, runDir } = await import("../lib/articles/store");
 const { EFFORT_LEVELS } = await import("../lib/articles/types");
@@ -84,9 +90,9 @@ function usage(msg?: string): never {
   else {
     if (msg) console.error(`article: ${msg}\n`);
     console.error(
-      "usage: npx tsx pipeline/article.mts <run|status|approve|reject|resume|topics|loop> [--json]\n" +
+      "usage: npx tsx pipeline/article.mts <run|status|approve|reject|rework|resume|topics|loop> [--json]\n" +
         '  run (--subject <bundle/slug> | --topic "<text>") [--angle "<text>"] [--model <id>] [--effort low|medium|high|xhigh|max] [--reviewers <file>]\n' +
-        "  status [<runId>]   approve <runId> [--patches p1,p2]   reject <runId> --note \"<text>\"   resume <runId> [--reviewers <file>]\n" +
+        "  status [<runId>]   approve <runId> [--patches p1,p2]   reject <runId> --note \"<text>\"   rework <runId> --note \"<text>\"   resume <runId> [--reviewers <file>]\n" +
         "  topics [--limit N] [--include-bundle <bundle>]\n" +
         "  loop (--target N | --add N) --budget-usd X [--concurrency 3] [--max-failures 3] [--max-resumes 2] [--run-usd 120] [--turn-usd 30] [--run-turns 45] [--est-run-usd 70] [--topics auto|<file>]",
     );
@@ -222,6 +228,13 @@ async function main() {
       const id = positional();
       const note = flag("note") ?? usage("reject needs --note \"<text>\"");
       return finish(await rejectRun(id, note), ["rejected"]);
+    }
+    case "rework": {
+      const id = positional();
+      const note = flag("note") ?? usage("rework needs --note \"<text>\"");
+      const r = await reworkRun(id, note);
+      if (!JSON_OUT) console.error(`article: ${id} sent back (rework ${r.rework?.count}); re-drafting from the kept research…`);
+      return finish(await driveRun(id), ["awaiting-approval"]);
     }
     case "topics": {
       const limit = numFlag("limit");

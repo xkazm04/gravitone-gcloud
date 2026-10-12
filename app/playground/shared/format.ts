@@ -116,6 +116,7 @@ export const ORIGIN_WORD: Record<TakeOrigin, string> = {
   "suno-return": "suno return",
   fixture: "demo",
   score: "score",
+  library: "library",
 };
 
 export const PROVIDER_NAME: Record<ProviderId, string> = {

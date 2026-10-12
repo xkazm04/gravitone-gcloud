@@ -132,10 +132,14 @@ export function useThemes(uid: string | null) {
     async (id: string, proofId: string, state: Proof["state"], note?: string) => {
       const current = themes?.find((t) => t.id === id);
       if (!current) return null;
-      return commit({
-        ...current,
-        proofs: current.proofs.map((p) => (p.id === proofId ? { ...p, state, note: note ?? p.note } : p)),
-      });
+      const proofs = current.proofs.map((p) => (p.id === proofId ? { ...p, state, note: note ?? p.note } : p));
+      // Same ratchet as update(): a locked sheet cannot lose its last approval.
+      const blocked = ratchetBlocker(current, { proofs });
+      if (blocked) {
+        setError(blocked);
+        return null;
+      }
+      return commit({ ...current, proofs });
     },
     [themes, commit],
   );

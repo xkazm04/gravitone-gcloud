@@ -26,7 +26,7 @@ import { useEffect } from "react";
 
 import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Primitives";
-import { Keycaps } from "@/components/ui/signal";
+import { Fold, Keycaps } from "@/components/ui/signal";
 import { fieldStatus, type Calibration } from "@/lib/foundry/calibration";
 import type { Candidate, RunManifest, Verdict, VerdictRecord } from "@/lib/foundry/types";
 
@@ -339,10 +339,12 @@ export function Lightbox({
           )}
 
           {candidate.prompt && (
-            <details className="group rounded-xl border border-white/8 bg-white/[0.02] px-4 py-3">
-              <summary className="font-jetbrains cursor-pointer text-label tracking-[0.14em] text-white/50 uppercase">prompt</summary>
-              <pre className="font-jetbrains mt-3 text-label leading-6 whitespace-pre-wrap text-white/75">{candidate.prompt}</pre>
-            </details>
+            // The house disclosure rather than a native <details>, and
+            // remembered: a curator auditing prompts opens it once and it stays
+            // open as ← / → step through the run.
+            <Fold title="prompt" remember="foundry.cull.prompt">
+              <pre className="font-jetbrains text-label leading-6 whitespace-pre-wrap text-white/75">{candidate.prompt}</pre>
+            </Fold>
           )}
         </div>
       )}

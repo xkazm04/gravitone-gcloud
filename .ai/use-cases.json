@@ -65,6 +65,36 @@
       "owner": "gravity"
     },
     {
+      "key": "text.suno-propose",
+      "name": "Draft Suno prompts for a canvas lane",
+      "description": "Turns a foundry audio lane (axis + value) and up to eight of its existing styles into N Suno prompts (title, style, lyrics) for the Proposed column (pipeline/SUNO-PROPOSE-PROMPT.md); lengths clamped to Suno's form limits before a proposal is kept.",
+      "kind": "generation",
+      "status": "active",
+      "component": "lib/sound/suno/propose.ts::proposeSuno -> lib/text/router.ts::reason()",
+      "expected_models": ["claude-opus-5", "gemini-3.6-flash"],
+      "owner": "gravity"
+    },
+    {
+      "key": "text.suno-riff",
+      "name": "Riff variations on one Suno prompt",
+      "description": "Turns one proposal's fields into N variations that vary tempo, mood and instrumentation while keeping its identity (pipeline/SUNO-PROPOSE-PROMPT.md, riff section).",
+      "kind": "generation",
+      "status": "active",
+      "component": "lib/sound/suno/propose.ts::proposeSuno -> lib/text/router.ts::reason()",
+      "expected_models": ["claude-opus-5", "gemini-3.6-flash"],
+      "owner": "gravity"
+    },
+    {
+      "key": "text.repair",
+      "name": "Repair an answer that failed its validator",
+      "description": "Hands a paid-for answer that failed validation back to the model with the path-addressed findings that refused it: change only those paths, return the whole object. Capped at two attempts; a repair that edits outside the listed paths or removes facts is refused, and the repaired object re-enters the same validator.",
+      "kind": "generation",
+      "status": "active",
+      "component": "lib/text/repair.ts::repairTurn -> lib/text/router.ts::reason()",
+      "expected_models": ["gemini-3.6-flash"],
+      "owner": "gravity"
+    },
+    {
       "key": "text.article-research",
       "name": "Research a technical blog post on the live web",
       "description": "An agent turn with WebSearch/WebFetch/Read/Write/Edit in an isolated workspace: a topic and the registry's post standard in, numbered dated sources and claims out (pipeline/ARTICLE-POST-PROMPT.md, research section). Validated in lib/articles/engine.ts before anything is kept.",

@@ -25,6 +25,7 @@ import { test, expect } from "@playwright/test";
 
 import { emptyClip, type Frame } from "@/app/_phases/frames/frames";
 import {
+  acceptIntoFramesRecord,
   clipAfter,
   directMotion,
   motionReport,
@@ -171,6 +172,25 @@ test("accept writes one frame's clip.motion, trims it, and refuses an empty line
   expect(next[1]).toBe(frames[1]);
   expect(withAcceptedMotion(frames, "f1", "   ")).toBe(frames);
   expect(withAcceptedMotion(frames, "nope", "x")).toBe(frames);
+});
+
+test("accept lands on the units too: the v2 record's units are what Frames reads back", () => {
+  // The bug this holds: accept wrote the `frames` shadow only, Frames rebuilt
+  // its frames from `units` on the next open, and the accepted line was gone.
+  const stored = { v: 2, frames: [frame("f1"), frame("f2")], units: [frame("f1"), frame("f2")] };
+  const r = acceptIntoFramesRecord(stored, "f1", "the bar rises");
+  if (!("put" in r)) throw new Error(`expected a write, got ${JSON.stringify(r)}`);
+  const put = r.put as typeof stored;
+  expect(put.frames[0].clip.motion).toBe("the bar rises");
+  expect(put.units[0].clip.motion).toBe("the bar rises");
+  expect(put.units[1]).toBe(stored.units[1]);
+  expect(put.v).toBe(2);
+
+  // v1: no units, written as it was
+  const v1 = acceptIntoFramesRecord({ frames: [frame("f1")] }, "f1", "x");
+  expect("put" in v1 && "units" in v1.put).toBe(false);
+  expect(acceptIntoFramesRecord(null, "f1", "x")).toEqual({ skip: "no frames record" });
+  expect(acceptIntoFramesRecord(stored, "f1", "   ")).toEqual({ skip: "unchanged" });
 });
 
 test("the step's own word: nothing directed -> nothing to report; anything authored or decided -> working", () => {

@@ -13,20 +13,38 @@
 // veo-3 clip — the image-to-video architecture this project measured its way
 // out of.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 
+import { pendingPanel } from "@/components/ui/Pending";
 import { TabRail } from "@/components/ui/signal";
 import { getProject, type Discipline } from "@/lib/projects";
 
 import Notice from "../_shared/ui/Notice";
 import { useLoadFor } from "../_shared/useLoadFor";
 
-import AlternativesView from "./alternatives/AlternativesView";
 import FramesAssembly from "./FramesAssembly";
-import AdsFrames from "./ads/AdsFrames";
-import MusicVideoFrames from "./music-video/MusicVideoFrames";
-import ShotSheet from "./ShotSheet";
 import { useFrames } from "./useFrames";
+
+// ONLY THE VIEW ON SCREEN IS IN THIS STEP'S CHUNK. The assembly ledger is the
+// explainer's first view and stays static. Everything else is drawn by a
+// minority of opens and used to ride along on every one of them:
+//
+//  · the contact sheet (alternatives) is a tab, opened on purpose;
+//  · the shot sheet carries the shot decomposition, the prompt builder and the
+//    reviewer (~1.5k lines) and is the FIRST view only for a promotional cut;
+//  · the ads and music-video steps are other disciplines entirely — the
+//    compositor and effects studio among them.
+//
+// `import()` is memoised by the bundler, so the idle preload in StandardFrames
+// and the dynamic below are one request: the tab the creator has not opened yet
+// is fetched while they read the one they have.
+const loadAlternatives = () => import("./alternatives/AlternativesView");
+const loadShots = () => import("./ShotSheet");
+const AlternativesView = dynamic(loadAlternatives, { loading: pendingPanel });
+const ShotSheet = dynamic(loadShots, { loading: pendingPanel });
+const AdsFrames = dynamic(() => import("./ads/AdsFrames"), { loading: pendingPanel });
+const MusicVideoFrames = dynamic(() => import("./music-video/MusicVideoFrames"), { loading: pendingPanel });
 
 // THE THREE VIEWS, AND NOTHING ABOUT THEM. Each id used to carry a `sub` — "the
 // cut as a production ledger", "keep, compare and choose plates per scene", "one
@@ -88,6 +106,25 @@ function StandardFrames({ projectId }: { projectId: string }) {
   // which also means a pick made on an explainer survives a look at a trailer.
   const promotionalCut = ctl.render.origin !== "explainer-fixture";
   const view: ViewId = promotionalCut && chosen !== "shots" ? "shots" : chosen;
+
+  // A promotional cut's FIRST view is the shot sheet, so its chunk is asked for
+  // the moment the chain is known — alongside the frames read, not after it.
+  const chainKnown = ctl.render.id !== "unresolved";
+  useEffect(() => {
+    if (chainKnown && promotionalCut) void loadShots().catch(() => {});
+  }, [chainKnown, promotionalCut]);
+
+  // The views not on screen, fetched once the browser is idle. A promotional
+  // cut can only ever show the shot sheet, so it fetches nothing it cannot draw.
+  useEffect(() => {
+    if (!ctl.loaded) return;
+    const idle = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 600));
+    const cancel = window.cancelIdleCallback ?? window.clearTimeout;
+    const id = idle(() => {
+      if (!promotionalCut) void Promise.all([loadAlternatives(), loadShots()]).catch(() => {});
+    });
+    return () => cancel(id);
+  }, [ctl.loaded, promotionalCut]);
 
   if (!ctl.loaded)
     return (

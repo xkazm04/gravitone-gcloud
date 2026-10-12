@@ -22,6 +22,7 @@ import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Primitives";
 import { Hint, Keycaps } from "@/components/ui/signal";
 import type { Asset } from "@/lib/assets";
+import { typing } from "@/lib/board/keys";
 
 import { blockRows, fmtUsd, fmtWhen, readAssetFacts } from "./assetMeta";
 import { PaletteDots } from "./parts";
@@ -32,6 +33,7 @@ export default function AssetLightbox({
   total,
   onClose,
   onStep,
+  onJump,
   onRemove,
   onRename,
   siblings,
@@ -44,6 +46,8 @@ export default function AssetLightbox({
   total: number;
   onClose: () => void;
   onStep: (delta: 1 | -1) => void;
+  /** Home / End: the folder's first or last plate. */
+  onJump?: (to: "first" | "last") => void;
   onRemove: () => void;
   onRename: (name: string) => void;
   /** Other plates from the same style, wherever they are filed. */
@@ -62,19 +66,21 @@ export default function AssetLightbox({
       // Not while the user is typing. The name field lives in this dialog, and
       // a left arrow meant to move the caret would otherwise step to the next
       // plate — remounting the field and abandoning the edit mid-word.
-      const el = e.target as HTMLElement | null;
-      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
+      if (typing(e.target)) return;
       if (e.key === "ArrowRight") {
         e.preventDefault();
         onStep(1);
       } else if (e.key === "ArrowLeft") {
         e.preventDefault();
         onStep(-1);
+      } else if ((e.key === "Home" || e.key === "End") && onJump) {
+        e.preventDefault();
+        onJump(e.key === "Home" ? "first" : "last");
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onStep]);
+  }, [onStep, onJump]);
 
   const facts = readAssetFacts(asset);
   const cost = fmtUsd(facts.costUsd);
@@ -130,6 +136,7 @@ export default function AssetLightbox({
               label="Viewer shortcuts"
               map={[
                 ...(total > 1 ? [{ keys: ["←", "→"], does: "step" }] : []),
+                ...(total > 1 && onJump ? [{ keys: ["Home", "End"], does: "first · last" }] : []),
                 { keys: ["Esc"], does: "close" },
               ]}
             />

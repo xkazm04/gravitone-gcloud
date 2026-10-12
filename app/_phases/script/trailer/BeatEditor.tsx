@@ -8,7 +8,10 @@
 // variables are not debounced — a chip toggle is a decision, and the finding
 // it changes should change with it.
 
+import { Pencil } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+
+import { CHIP_CLASS, TALLY_TONE } from "@/components/ui/signal";
 
 import RaisesChips from "./RaisesChips";
 import type { BeatPatch } from "./cut";
@@ -28,17 +31,30 @@ export default function BeatEditor({
   isRung,
   previousRaise,
   onPatch,
+  edited = false,
+  onReset,
 }: {
   beat: TrailerBeat;
   /** Escalation-role beats carry the raised-variable field. */
   isRung: boolean;
   previousRaise: RaisedVariable | null;
-  onPatch: (patch: BeatPatch) => void;
+  /** `gesture` groups every flush of one focus of one field into one op. */
+  onPatch: (patch: BeatPatch, gesture?: string) => void;
+  /** The creator has changed this beat from the dealt one. */
+  edited?: boolean;
+  /** Put the beat back as dealt (removes this beat's ops). */
+  onReset?: () => void;
 }) {
   const [label, setLabel] = useState(beat.label);
   const [text, setText] = useState(beat.text);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latest = useRef({ label, text });
+  // One token per focus of a field: the keystrokes (and debounce flushes) inside
+  // it coalesce into a single edit-log op. Null while nothing is focused.
+  const gesture = useRef<string | null>(null);
+  const beginGesture = (field: string) => {
+    gesture.current = `${beat.id}:${field}:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
+  };
   const flushRef = useRef<() => void>(() => {});
 
   const flush = () => {
@@ -48,7 +64,7 @@ export default function BeatEditor({
     const patch: BeatPatch = {};
     if (l !== beat.label) patch.label = l;
     if (t !== beat.text) patch.text = t;
-    if (Object.keys(patch).length) onPatch(patch);
+    if (Object.keys(patch).length) onPatch(patch, gesture.current ?? undefined);
   };
 
   // Refs are written after render, never during it — the compiler lint reads a
@@ -81,10 +97,27 @@ export default function BeatEditor({
             aria-label="beat label"
             value={label}
             onChange={(e) => { setLabel(e.target.value); schedule(); }}
-            onBlur={flush}
+            onFocus={() => beginGesture("label")}
+            onBlur={() => { flush(); gesture.current = null; }}
             className="font-jetbrains min-w-0 flex-1 rounded-lg border border-white/12 bg-white/[0.03] px-2 py-1 text-label tracking-[0.1em] text-white/80 placeholder:text-white/25"
             placeholder="label"
           />
+          {edited && (
+            <span data-testid={`tbeat-edited-${beat.id}`} className={`${CHIP_CLASS} ${TALLY_TONE.cyan}`}>
+              <Pencil className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              <span className="sr-only">edited from the dealt beat</span>
+            </span>
+          )}
+          {edited && onReset && (
+            <button
+              type="button"
+              data-testid={`tbeat-reset-${beat.id}`}
+              onClick={onReset}
+              className="font-jetbrains rounded border border-white/12 px-1.5 py-0.5 text-label text-white/45 transition hover:border-cyan-400/40 hover:text-cyan-200"
+            >
+              reset to dealt
+            </button>
+          )}
           {beat.spends?.length ? (
             <span className="font-jetbrains text-label text-amber-200/70">spends {beat.spends.join(", ")}</span>
           ) : null}
@@ -95,7 +128,8 @@ export default function BeatEditor({
           value={text}
           rows={3}
           onChange={(e) => { setText(e.target.value); schedule(); }}
-          onBlur={flush}
+          onFocus={() => beginGesture("text")}
+          onBlur={() => { flush(); gesture.current = null; }}
           className="font-hanken mt-1.5 w-full resize-y rounded-lg border border-white/12 bg-white/[0.03] px-2.5 py-1.5 text-label leading-relaxed text-slate-200 placeholder:text-white/25"
           placeholder="what is on screen"
         />

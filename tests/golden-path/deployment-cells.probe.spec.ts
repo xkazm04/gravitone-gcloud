@@ -17,8 +17,8 @@
 //   4. a route file with no cell expectation fails the lane, naming the file;
 //   5. .env.example's hosted block equals HOSTED_CAPS, variable by variable;
 //   7. after the lane, `process.env` deep-equals what it was before.
-// Number 6 (engineStatus ⇔ /api/recalibrate's no-engine answer) is not here:
-// see the note at the bottom of this file.
+//   6. engineStatus("edit-plan").serving is null iff POST /api/recalibrate with
+//      a VALID body answers the no-engine status (503 + an availability code).
 //
 // EACH CELL IS A FRESH DEPLOYMENT. Before a cell runs, every app/ and lib/
 // module is dropped from the require cache and the routes are loaded again,
@@ -48,8 +48,11 @@ import path from "node:path";
 
 import { test, expect } from "@playwright/test";
 
+import { RENDERS } from "@/app/_phases/script/renders";
+import { CONCLUSIONS } from "@/app/_phases/_shared/notebook/conclusions";
 import { ACCESS_SECRET_VAR } from "@/lib/apiAuth";
 import { CAPABILITY_ROUTES, HOSTED_CAPS, type Capabilities } from "@/lib/capabilities";
+import { resolveRegistryDir } from "@/lib/articles/registryRead";
 import { MANAGED_MARKERS } from "@/lib/deployment";
 import { serverCapabilities } from "@/lib/serverCapabilities";
 
@@ -71,7 +74,15 @@ const ROOT = process.cwd();
 const METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
 type Method = (typeof METHODS)[number];
 
-keepEnv([...new Set([...cellAxes(), ...storeRootVars(), ...FAKE_ENGINE_ENV])]);
+keepEnv([...new Set([...cellAxes(), ...storeRootVars(), ...FAKE_ENGINE_ENV, "SUNO_DRIVER"])]);
+
+/** The Suno driver attaches to the operator's own signed-in Chrome over a
+ *  loopback debugging port (lib/suno/browser.ts). Like the claude CLI, that is
+ *  a local machine dependency, not a property of a cell, so the lane stands it
+ *  in with the queue's fake driver (lib/sound/suno/fakeDriver.ts): the
+ *  snapshot GET answers without a fetch to 127.0.0.1:9334, and no cell can
+ *  reach the operator's browser. */
+const SUNO_STAND_IN = { SUNO_DRIVER: "fake" } as const;
 
 /* ── the population ──────────────────────────────────────────────────────── */
 
@@ -139,13 +150,40 @@ function addressOf(rel: string): { url: string; params: Record<string, string | 
  * with `local-binaries-forbidden` wherever the posture forbids spawning
  * (lib/deployment.ts) — in those cells that refusal is the expected answer,
  * whatever its status, and invariant 1 then asks whether a capability hides it.
+ *
+ * `registry` names the methods that read the sibling knowledge registry, which
+ * is an OPTIONAL dependency of this tree rather than a cell property: it is
+ * absent wherever that checkout is not beside this one, and `registry.local`
+ * is a relative sibling path, so it is absent in EVERY WORKTREE — one sits
+ * three levels down, where `../ai-registry` names nothing. Where it is absent,
+ * `registry-unreachable` (lib/articles/registryRead.ts, 503) is the expected
+ * answer; where it is present the declared `ok` class stands. Presence is
+ * measured by asking `resolveRegistryDir`, the one authority on the question,
+ * so this declaration is right in a worktree and in the main checkout both.
  */
 type Ok = "2xx" | "4xx";
 interface Expectation {
   door: Door;
   ok: Partial<Record<Method, Ok>>;
   local?: Method[];
+  registry?: Method[];
 }
+
+/**
+ * Is the sibling knowledge registry beside this checkout? Asked of
+ * `resolveRegistryDir`, which is what the routes themselves ask, so the answer
+ * cannot drift from theirs. It throws when there is none — that IS the answer.
+ * False in every worktree (`registry.local` is a relative sibling path and a
+ * worktree sits three levels down), true in the main checkout.
+ */
+const REGISTRY_PRESENT = (() => {
+  try {
+    resolveRegistryDir();
+    return true;
+  } catch {
+    return false;
+  }
+})();
 
 const EXPECT: Record<string, Expectation> = {
   "app/api/ads/ideas/route.ts": { door: "money", ok: { GET: "2xx", POST: "4xx" } },
@@ -157,31 +195,39 @@ const EXPECT: Record<string, Expectation> = {
   "app/api/articles/[runId]/file/[...path]/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/articles/[runId]/reject/route.ts": { door: "access", ok: { POST: "4xx" } },
   "app/api/articles/[runId]/resume/route.ts": { door: "money", ok: { POST: "4xx" } },
+  // Rework restarts the drive, so it spends the seat the way resume does.
+  "app/api/articles/[runId]/rework/route.ts": { door: "money", ok: { POST: "4xx" } },
   "app/api/articles/[runId]/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/articles/route.ts": { door: "money", ok: { GET: "2xx", POST: "4xx" } },
+  "app/api/articles/topics/route.ts": { door: "access", ok: { GET: "2xx" }, registry: ["GET"] },
   "app/api/capabilities/route.ts": { door: "access", ok: { GET: "2xx" } },
   "app/api/cut/export/file/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/cut/export/route.ts": { door: "money", ok: { POST: "4xx" }, local: ["POST"] },
+  // The fixture bundle. Behind the read door, then 404 unless
+  // NEXT_PUBLIC_GRAVITONE_DATA=fixtures was set at build time - which no cell
+  // here sets, so every cell drives the 404 branch and not the read.
+  "app/api/fixtures/browser/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/foundry/extract/[id]/commit/route.ts": { door: "access", ok: { GET: "4xx", POST: "4xx" } },
   "app/api/foundry/extract/[id]/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/foundry/extract/[id]/step/route.ts": { door: "money", ok: { POST: "4xx" } },
-  "app/api/foundry/extract/[id]/verdicts/route.ts": { door: "access", ok: { PUT: "4xx" } },
+  "app/api/foundry/extract/[id]/verdicts/route.ts": { door: "access", ok: { PUT: "4xx", PATCH: "4xx" } },
   "app/api/foundry/extract/route.ts": { door: "money", ok: { GET: "2xx", POST: "4xx" } },
   "app/api/foundry/file/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/foundry/runs/[id]/commit/route.ts": { door: "access", ok: { GET: "4xx", POST: "4xx" } },
   "app/api/foundry/runs/[id]/route.ts": { door: "access", ok: { GET: "4xx" } },
-  "app/api/foundry/runs/[id]/verdicts/route.ts": { door: "access", ok: { PUT: "4xx" } },
+  "app/api/foundry/runs/[id]/verdicts/route.ts": { door: "access", ok: { PUT: "4xx", PATCH: "4xx" } },
   "app/api/foundry/runs/route.ts": { door: "access", ok: { GET: "2xx" } },
   "app/api/foundry/styles/[id]/adopt/route.ts": { door: "money", ok: { POST: "4xx" } },
   "app/api/foundry/styles/route.ts": { door: "access", ok: { GET: "2xx" } },
   "app/api/foundry/strips/[id]/commit/route.ts": { door: "access", ok: { GET: "4xx", POST: "4xx" } },
   "app/api/foundry/strips/[id]/page/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/foundry/strips/[id]/route.ts": { door: "access", ok: { GET: "4xx" } },
-  "app/api/foundry/strips/[id]/verdicts/route.ts": { door: "access", ok: { PUT: "4xx" } },
+  "app/api/foundry/strips/[id]/verdicts/route.ts": { door: "access", ok: { PUT: "4xx", PATCH: "4xx" } },
   "app/api/foundry/strips/route.ts": { door: "access", ok: { GET: "2xx" } },
+  "app/api/foundry/training/[id]/blind/route.ts": { door: "access", ok: { PATCH: "4xx" } },
   "app/api/foundry/training/[id]/commit/route.ts": { door: "access", ok: { POST: "4xx" } },
   "app/api/foundry/training/[id]/route.ts": { door: "access", ok: { GET: "4xx" } },
-  "app/api/foundry/training/[id]/verdicts/route.ts": { door: "access", ok: { PUT: "4xx" } },
+  "app/api/foundry/training/[id]/verdicts/route.ts": { door: "access", ok: { PUT: "4xx", PATCH: "4xx" } },
   "app/api/foundry/training/route.ts": { door: "access", ok: { GET: "2xx" } },
   "app/api/frames/route.ts": { door: "money", ok: { POST: "4xx" } },
   "app/api/imaging/budget/route.ts": { door: "access", ok: { GET: "2xx" } },
@@ -213,6 +259,20 @@ const EXPECT: Record<string, Expectation> = {
   "app/api/sound/hunts/route.ts": { door: "money", ok: { GET: "2xx", POST: "4xx" } },
   "app/api/sound/insights/route.ts": { door: "access", ok: { GET: "2xx" } },
   "app/api/sound/lessons/route.ts": { door: "access", ok: { GET: "2xx", POST: "4xx" } },
+  // The Suno queue (spark audio-queue-suno). The snapshot GET reads the store
+  // and asks the driver whether a signed-in Suno answers (never launches one);
+  // every write is guardRequest and refuses an empty body or an id that names
+  // nothing before the store, the browser or a model is reached.
+  "app/api/sound/suno/route.ts": { door: "access", ok: { GET: "2xx" } },
+  "app/api/sound/suno/clips/[id]/route.ts": { door: "money", ok: { PATCH: "4xx" } },
+  "app/api/sound/suno/library/route.ts": { door: "money", ok: { POST: "4xx" } },
+  "app/api/sound/suno/run/route.ts": { door: "money", ok: { POST: "4xx" } },
+  "app/api/sound/suno/clear/route.ts": { door: "money", ok: { POST: "4xx" } },
+  "app/api/sound/suno/proposals/[id]/route.ts": { door: "money", ok: { DELETE: "4xx" } },
+  "app/api/sound/suno/proposals/route.ts": { door: "money", ok: { POST: "4xx" } },
+  "app/api/sound/suno/propose/route.ts": { door: "money", ok: { POST: "4xx" } },
+  "app/api/sound/suno/queue/[id]/route.ts": { door: "money", ok: { DELETE: "4xx" } },
+  "app/api/sound/suno/queue/route.ts": { door: "money", ok: { POST: "4xx" } },
   "app/api/sound/takes/[id]/file/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/sound/takes/[id]/route.ts": { door: "access", ok: { PATCH: "4xx" } },
   "app/api/sound/takes/route.ts": { door: "access", ok: { GET: "2xx", POST: "4xx", DELETE: "4xx" } },
@@ -428,7 +488,14 @@ function codeOf(text: string): string {
   return "";
 }
 
-async function drive(rel: string, method: Method, handler: Handler, bearer: string | null, body: unknown = {}): Promise<Answer> {
+async function drive(
+  rel: string,
+  method: Method,
+  handler: Handler,
+  bearer: string | null,
+  body: unknown = {},
+  search = "",
+): Promise<Answer> {
   const { url, params } = addressOf(rel);
   const headers: Record<string, string> = { "x-forwarded-for": nextIp() };
   if (bearer) headers.authorization = `Bearer ${bearer}`;
@@ -443,7 +510,7 @@ async function drive(rel: string, method: Method, handler: Handler, bearer: stri
   });
   const answered = (async (): Promise<Answer> => {
     try {
-      const res = await handler(new Request(`http://localhost${url}`, init), { params: Promise.resolve(params) });
+      const res = await handler(new Request(`http://localhost${url}${search}`, init), { params: Promise.resolve(params) });
       return { status: res.status, code: codeOf(await res.text().catch(() => "")) };
     } catch (e) {
       return { status: 0, code: `threw: ${(e as Error).message.slice(0, 80)}` };
@@ -466,6 +533,27 @@ function unhidden(rel: string, a: Answer, caps: Capabilities): boolean {
   return !(Object.keys(CAPABILITY_ROUTES) as (keyof Capabilities)[]).some((c) => !caps[c] && CAPABILITY_ROUTES[c].includes(rel));
 }
 
+/** Acceptance 6: a body the route accepts (the shape recalibrate-route-e2e
+ *  drives), so the answer is the ENGINE's and not a refusal of the body. */
+const VALID_RECALIBRATE_BODY = {
+  projectId: "p-cells-engine",
+  notebook: {},
+  conclusions: CONCLUSIONS,
+  renders: RENDERS,
+  scope: {},
+  notes: [{ kind: "less-focus", cardId: "f-macro-cause" }],
+};
+/** `TextError` kinds that mean "no engine can serve this turn here": the
+ *  availability kinds lib/text/errors.ts answers 503 for. */
+const NO_ENGINE_CODES = new Set(["no-key", "not-installed", "not-logged-in", "policy-forbidden", "managed-platform"]);
+
+/** Invariant 6 as a function so the control below can run it on seeded answers:
+ *  "no engine serves" and "the route answers the no-engine status" are one fact. */
+function engineAgreement(serving: string | null, a: Answer): string {
+  const noEngine = a.status === 503 && NO_ENGINE_CODES.has(a.code);
+  return (serving === null) === noEngine ? "ok" : `engineStatus serves ${serving}, and a valid body answered ${a.status} ${a.code || "-"}`;
+}
+
 /* ── one cell ────────────────────────────────────────────────────────────── */
 
 interface CellRun {
@@ -483,6 +571,7 @@ async function runCell(
   const files = routeFiles();
   const scratch = mkdtempSync(path.join(tmpdir(), `cells-${cell.name}-`));
   const restore = applyCell(cell, scratch);
+  Object.assign(process.env, SUNO_STAND_IN);
   const lines: string[] = [];
   const failures: string[] = [];
   const unhiddenSeen = new Set<string>();
@@ -543,11 +632,14 @@ async function runCell(
                 for (const [m, h] of handlersOf(f)) {
                   const a = await drive(f, m, h, bearer);
                   const forbidden = posture !== "available" && want?.local?.includes(m);
+                  const noRegistry = !REGISTRY_PRESENT && want?.registry?.includes(m);
                   let verdict: string;
                   if (!want?.ok[m]) verdict = `no expectation for ${m} (answered ${a.status})`;
                   else if (a.status === 401) verdict = "an authorised caller got 401";
                   else if (forbidden)
                     verdict = a.code === "local-binaries-forbidden" ? "ok" : `the posture forbids spawning and it answered ${a.status} ${a.code}`;
+                  else if (noRegistry)
+                    verdict = a.code === "registry-unreachable" ? "ok" : `the sibling registry is absent and it answered ${a.status} ${a.code}`;
                   else verdict = classOf(a.status) === want.ok[m] ? "ok" : `expected ${want.ok[m]}, answered ${a.status} ${a.code}`;
                   if (verdict === "ok" && unhidden(f, a, caps)) {
                     unhiddenSeen.add(f);
@@ -575,6 +667,15 @@ async function runCell(
                 say("ready", "POST", f, a, verdict);
               }
             lib.musicBudget.__resetMusicBudget();
+          }
+
+          // ── invariant 6: engineStatus and /api/recalibrate agree on "no engine" ──
+          if (caller !== "anonymous") {
+            const bearer = caller === "secret" ? CELL_SECRET : null;
+            const post = handlersOf("app/api/recalibrate/route.ts").find(([m]) => m === "POST")![1];
+            const a = await drive("app/api/recalibrate/route.ts", "POST", post, bearer, VALID_RECALIBRATE_BODY, "?wait=1");
+            const verdict = engineAgreement(status.serving, a);
+            say("engine", "POST", "app/api/recalibrate/route.ts", a, verdict);
           }
 
           // ── invariant 2: a managed cell starts no process ──
@@ -675,6 +776,7 @@ test("routes: every exported method has an expectation, and every expectation na
     for (const m of exported) if (!EXPECT[f].ok[m]) off.push(`${f} ${m}: exported, no expectation`);
     for (const m of Object.keys(EXPECT[f].ok)) if (!exported.includes(m as Method)) off.push(`${f} ${m}: expected, not exported`);
     for (const m of EXPECT[f].local ?? []) if (!exported.includes(m)) off.push(`${f} ${m}: declared local, not exported`);
+    for (const m of EXPECT[f].registry ?? []) if (!exported.includes(m)) off.push(`${f} ${m}: declared registry, not exported`);
   }
   expect(off).toEqual([]);
 });
@@ -787,6 +889,13 @@ test("invariant 1 control: seeded - localRender on where spawning is forbidden -
  *  commit rewrote line endings, green on the next. */
 const RUNNER_OWNED = new Set(["BROWSERSLIST_IGNORE_OLD_DATA"]);
 
+test("invariant 6 control: seeded - an engine that serves but the route says no-key, and the reverse - is named", () => {
+  expect(engineAgreement("google", { status: 503, code: "no-key" })).toMatch(/engineStatus serves google.*503 no-key/);
+  expect(engineAgreement(null, { status: 502, code: "failed" })).toMatch(/engineStatus serves null.*502 failed/);
+  expect(engineAgreement(null, { status: 503, code: "no-key" })).toBe("ok");
+  expect(engineAgreement("claude-cli", { status: 502, code: "failed" })).toBe("ok");
+});
+
 test("the lane leaves process.env exactly as it found it (acceptance 7)", () => {
   const now = { ...process.env };
   const changed = [...new Set([...Object.keys(before), ...Object.keys(now)])].filter(
@@ -794,13 +903,3 @@ test("the lane leaves process.env exactly as it found it (acceptance 7)", () => 
   );
   expect(changed, "these variables differ from their value before the lane").toEqual([]);
 });
-
-// NOT YET: acceptance 6 — "engineStatus('edit-plan').available === false ⇔
-// POST /api/recalibrate with a VALID body answers the no-engine status". A
-// valid body makes the route read and cache pipeline/RECALIBRATE-PROMPT.md in a
-// module variable, and recalibrate-route-e2e.probe.spec.ts's first case exists
-// to observe that file MISSING, which it can only do in a process where no
-// earlier probe loaded it. This file sorts before it. The per-cell module reload
-// above does not help: that probe holds its own import of the route. It needs
-// either the prompt reader the AIO-B assembler extraction exposes, or that
-// probe's cache assumption made explicit — not a third probe racing it.

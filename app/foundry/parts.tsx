@@ -41,9 +41,9 @@ export const LIVE: RunStatus[] = ["created", "annotating", "generating", "gradin
  *  them had been kept true. */
 export const COMMITTABLE: RunStatus[] = ["done", "incomplete", "failed"];
 
-/** The same, for an extract run. Narrower than the forge's on purpose: a
- *  failed extraction has no partial artefact worth ratifying. */
-export const EXTRACT_COMMITTABLE: ExtractStatus[] = ["done"];
+/** The same, for an extract run. A failed run (breaker or budget stop) keeps
+ *  the styles it finished, and the operator's verdicts gate what is written. */
+export const EXTRACT_COMMITTABLE: ExtractStatus[] = ["done", "failed"];
 
 export const EXTRACT_STATUS_WORD: Record<ExtractStatus, string> = {
   created: "ready to start",

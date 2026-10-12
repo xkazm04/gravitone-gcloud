@@ -11,6 +11,8 @@
 import { mkdir, readFile, readdir, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { catalogueDir } from "../fixtures/roots";
+
 export const RUN_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,120}$/;
 export const SERVABLE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".json"]);
 
@@ -45,11 +47,23 @@ export function containedIn(dir: string, rel: string, servableOnly = false, noun
 export async function readJson<T>(file: string): Promise<T | null>;
 export async function readJson<T>(file: string, fallback: T): Promise<T>;
 export async function readJson<T>(file: string, fallback: T | null = null): Promise<T | null> {
-  try {
-    return JSON.parse(await readFile(file, "utf8")) as T;
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return fallback;
-    throw e;
+  // A concurrent writer's rename can make the read fail transiently with
+  // EPERM/EBUSY/EACCES on Windows. Retry briefly (mirror of writeJsonAtomic);
+  // the last attempt still throws, so a genuinely unreadable file surfaces.
+  for (let attempt = 0; ; attempt++) {
+    let text: string;
+    try {
+      text = await readFile(file, "utf8");
+    } catch (e) {
+      const code = (e as NodeJS.ErrnoException).code;
+      if (code === "ENOENT") return fallback;
+      if ((code === "EPERM" || code === "EBUSY" || code === "EACCES") && attempt < 9) {
+        await new Promise((r) => setTimeout(r, 5 * (attempt + 1)));
+        continue;
+      }
+      throw e;
+    }
+    return JSON.parse(text) as T;
   }
 }
 
@@ -93,8 +107,11 @@ export async function writeJsonAtomic(file: string, data: unknown): Promise<void
 
 /** THE VERSIONED INDICES' ROOT, respecting process.env.FOUNDRY_DIR. */
 export function foundryFile(relPath: string): string {
-  return path.join(process.env.FOUNDRY_DIR || path.join(process.cwd(), "pipeline", "foundry"), relPath);
+  return path.join(catalogueDir(), relPath);
 }
+
+/** Runs read at once while listing a run directory. */
+const LIST_CONCURRENCY = 16;
 
 export interface ManifestWarning {
   id: string;
@@ -114,20 +131,35 @@ export async function listManifests<T, S>(
     if ((e as NodeJS.ErrnoException).code === "ENOENT") return { items: [], warnings: [] };
     throw e;
   }
+  const runNames = names.filter((n) => RUN_ID_RE.test(n));
+  // Bounded fan-out: each run's reads are independent, so they overlap, but a
+  // large directory must not open every descriptor at once. Results land in
+  // their directory slot so items and warnings keep readdir order.
+  const slots: Array<{ item?: S; warning?: ManifestWarning }> = new Array(runNames.length);
+  let next = 0;
+  const worker = async (): Promise<void> => {
+    while (next < runNames.length) {
+      const i = next++;
+      const name = runNames[i];
+      const m = await readManifestFile<T>(path.join(dir, name, fileName), name);
+      if (m === undefined) {
+        slots[i] = { warning: { id: name, reason: `${fileName} is unreadable` } };
+        continue;
+      }
+      if (!m) continue;
+      const item = await summarise(name, m);
+      if (item != null) slots[i] = { item };
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(LIST_CONCURRENCY, runNames.length) }, worker));
   const items: S[] = [];
   const warnings: ManifestWarning[] = [];
-  for (const name of names) {
-    if (!RUN_ID_RE.test(name)) continue;
-    const m = await readManifestFile<T>(path.join(dir, name, fileName), name);
-    if (m === undefined) {
-      const reason = `${fileName} is unreadable`;
-      console.warn(`[foundry] ${name}: ${reason} — skipped from the list`);
-      warnings.push({ id: name, reason });
-      continue;
-    }
-    if (!m) continue;
-    const item = await summarise(name, m);
-    if (item != null) items.push(item);
+  for (const slot of slots) {
+    if (!slot) continue;
+    if (slot.warning) {
+      console.warn(`[foundry] ${slot.warning.id}: ${slot.warning.reason} — skipped from the list`);
+      warnings.push(slot.warning);
+    } else if (slot.item !== undefined) items.push(slot.item);
   }
   return { items, warnings };
 }

@@ -1,0 +1,101 @@
+{
+  "commit": "a2ac08b1fa48abf6e36feffccbbb0b2863bed587",
+  "totalDurationMs": 253152,
+  "killed": 15,
+  "survived": 0,
+  "stale": 0,
+  "broken": 0,
+  "baselineRed": 0,
+  "mutants": [
+    {
+      "id": "shelf-no-tiebreak",
+      "probe": "sort-stability.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 21015
+    },
+    {
+      "id": "needs-you-no-tiebreak",
+      "probe": "sort-stability.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 10948
+    },
+    {
+      "id": "eviction-skip-upload-delete",
+      "probe": "identity-eviction-idb.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 21805
+    },
+    {
+      "id": "research-clear-keeps-followups",
+      "probe": "step-clear-completeness.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 14889
+    },
+    {
+      "id": "recalibrate-drops-chain-breaks",
+      "probe": "chain-break-reaches-the-reviewer.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 18338
+    },
+    {
+      "id": "spine-tail-first",
+      "probe": "spine-rank-total.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 16649
+    },
+    {
+      "id": "spine-ordinal-ignored",
+      "probe": "spine-rank-total.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 8971
+    },
+    {
+      "id": "alt-last-one-removable",
+      "probe": "alt-last-one-stays.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 16445
+    },
+    {
+      "id": "cancel-settled-job",
+      "probe": "cancel-settled-job.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 15193
+    },
+    {
+      "id": "clear-any-job",
+      "probe": "bell-doors.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 15074
+    },
+    {
+      "id": "cull-failed-looks-ready",
+      "probe": "cull-non-ready.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 24999
+    },
+    {
+      "id": "cull-deleted-looks-live",
+      "probe": "cull-non-ready.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 9501
+    },
+    {
+      "id": "exit-drops-stderr-tail",
+      "probe": "cli-exit-classification.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 12425
+    },
+    {
+      "id": "exit-login-not-detected",
+      "probe": "cli-exit-classification.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 7656
+    },
+    {
+      "id": "forbid-only-ignores-gate-switch",
+      "probe": "forbid-only-gate.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 39240
+    }
+  ]
+}

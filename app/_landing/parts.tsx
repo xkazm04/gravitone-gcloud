@@ -1,9 +1,9 @@
 "use client";
 
-// The door's one control. Everything else on the page is a picture; this is the
-// verb. The only strings the door carries are this button's label, the names of
-// the things drawn (constellations, pictures) and failure states — a sign-in
-// that did not work has to be sayable.
+// The landing's one control. Everything else on the page is a picture; this is
+// the verb. The only strings the landing carries are this button's label, the
+// names of the things drawn (types, templates, the library) and failure states
+// — a sign-in that did not work has to be sayable.
 
 import Link from "next/link";
 import { useState } from "react";
@@ -33,7 +33,18 @@ const REASON_CHIP: Record<string, string | undefined> = {
   "account-switched": "account changed",
 };
 
-export function EnterButton({ className = "" }: { className?: string }) {
+/** `appearance` picks the skin and nothing else: the two states, their words,
+ *  the reason chip and the error are the same on every landing. "almanac" is
+ *  the retired door's gold pill; "paper" hands the look to the Paper Cosmos stylesheet
+ *  (app/_landing/cosmos/cosmos.css, `.pc-enter*`), which draws the coral
+ *  cut-paper pill the owner chose with it. */
+export function EnterButton({
+  className = "",
+  appearance = "almanac",
+}: {
+  className?: string;
+  appearance?: "almanac" | "paper";
+}) {
   const { user, loading, signIn, error, lastTransition } = useAuth();
   // Real state about the user's work: the shelf was wiped because the session
   // ended or the account changed. A deliberate sign-out stays silent (the user
@@ -42,26 +53,28 @@ export function EnterButton({ className = "" }: { className?: string }) {
   const [seen, setSeen] = useState(false);
   const ended = !user && !seen ? REASON_CHIP[lastTransition ?? ""] : undefined;
 
-  const shell =
+  const almanacShell =
     "font-hanken inline-flex items-center gap-2.5 rounded-full whitespace-nowrap font-semibold tracking-[0.02em] " +
     "bg-[var(--al-gold)] text-[var(--al-night)] transition duration-300 hover:-translate-y-px hover:brightness-110 " +
     "shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--al-white)_35%,transparent),0_8px_34px_color-mix(in_srgb,var(--al-gold)_28%,transparent)] " +
     "px-4 py-2.5 text-[clamp(14px,1vw,14px)] min-[761px]:pl-[1.2em] min-[761px]:pr-[1.45em] min-[761px]:py-[0.8em] min-[761px]:text-[clamp(15px,0.78vw,19px)] " +
     "disabled:opacity-40";
+  const paper = appearance === "paper";
+  const shell = paper ? "pc-enter" : almanacShell;
 
   return (
-    <div className={`flex flex-col items-end gap-2 ${className}`}>
+    <div className={paper ? `pc-enter-wrap ${className}` : `flex flex-col items-end gap-2 ${className}`}>
       {user ? (
         <Link href="/projects" className={shell}>
           Enter
-          <ArrowRight className="h-[1.05em] w-[1.05em]" aria-hidden />
+          <ArrowRight className={paper ? "pc-enter-arrow" : "h-[1.05em] w-[1.05em]"} aria-hidden />
         </Link>
       ) : (
         <button onClick={() => {
           setSeen(true);
           void signIn();
         }} disabled={loading} className={`cursor-pointer ${shell}`}>
-          <svg viewBox="-10 -10 20 20" aria-hidden="true" className="h-[1.05em] w-[1.05em] max-[760px]:hidden">
+          <svg viewBox="-10 -10 20 20" aria-hidden="true" className={paper ? "pc-enter-g" : "h-[1.05em] w-[1.05em] max-[760px]:hidden"}>
             <path d="M5.3-5.3A7.5 7.5 0 1 0 7.4 1.3L2.4 1.3" fill="none" stroke="currentColor" strokeWidth="1.4" />
             <circle cx="5.3" cy="-5.3" r="1.7" fill="currentColor" />
             <circle cx="2.4" cy="1.3" r="2" fill="currentColor" />
@@ -73,7 +86,10 @@ export function EnterButton({ className = "" }: { className?: string }) {
         <StaleBadge words={ended} glyph="history" />
       )}
       {error && (
-        <p role="alert" className="font-hanken max-w-[240px] text-right text-label text-[var(--al-ant-t)]">
+        <p
+          role="alert"
+          className={paper ? "pc-enter-err" : "font-hanken max-w-[240px] text-right text-label text-[var(--al-ant-t)]"}
+        >
           {error}
         </p>
       )}

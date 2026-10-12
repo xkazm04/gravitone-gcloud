@@ -33,6 +33,10 @@ import type { ShotSourceBeat, ShotSourceRender } from "./shots";
 
 /* ── Layers ───────────────────────────────────────────────────────────────── */
 
+/** Who last wrote a layer. `human` is the one that must never be overwritten
+ *  silently; absent means a cut saved before provenance existed, read as `seed`. */
+export type LayerBy = "seed" | "pass" | "human";
+
 export type ElementKind = "arrow" | "bar" | "bracket" | "marker" | "rule" | "loop";
 
 export interface FrameElement {
@@ -45,9 +49,14 @@ export interface FrameElement {
   w: number;
   h: number;
   accent?: boolean;
+  /** The notebook fact this element asserts. An arrow or loop states a relation
+   *  exactly as a sentence does, so it can cite what sourced it. Optional: a
+   *  purely compositional element (a rule, a bracket) asserts nothing. */
+  factId?: string;
   /** Hidden layers stay in the frame and out of the picture — the fastest way
    *  to ask "was this element carrying anything?" without deleting it. */
   hidden?: boolean;
+  by?: LayerBy;
 }
 
 export type TextRole = "caption" | "figure" | "label" | "kicker";
@@ -62,6 +71,7 @@ export interface FrameText {
    *  factId is a number nobody checked — the gate Step 3 exists to hold. */
   factId?: string;
   hidden?: boolean;
+  by?: LayerBy;
 }
 
 export type PlateState = "empty" | "generating" | "ready" | "refused";
@@ -74,8 +84,29 @@ export interface Plate {
   costUsd?: number;
   /** What was asked for — the subject clause, not the whole style block. */
   subject?: string;
+  /** The subject the pixels in `src` were actually rendered from. Written once,
+   *  by a render; a later edit to `subject` leaves it alone, which is how a
+   *  plate knows it is stale. Absent on plates rendered before it existed. */
+  renderedSubject?: string;
   note?: string;
+  /** The idempotency key of the render in flight, held ONLY while `state` is
+   *  "generating". It is saved with the cut, so a reload that finds a plate
+   *  still generating re-issues under the same key and is handed the pixels
+   *  the server already paid for (lib/imaging/receipts.ts). Dropped when the
+   *  call settles: a deliberate re-render is a new paid call. */
+  receipt?: string;
 }
+
+/** A ready plate whose subject has moved on since it was rendered. Plates with
+ *  no `renderedSubject` (rendered before it was recorded) are unknown, not stale. */
+export const isStalePlate = (f: Frame): boolean => {
+  const { state, subject, renderedSubject } = f.plate;
+  return state === "ready" && renderedSubject !== undefined && subject !== undefined && subject.trim() !== renderedSubject.trim();
+};
+
+/** The key to re-issue a plate's render under, or `undefined` for a fresh one. */
+export const pendingReceipt = (plate: Plate): string | undefined =>
+  plate.state === "generating" ? plate.receipt : undefined;
 
 /* ── The clip ─────────────────────────────────────────────────────────────── */
 

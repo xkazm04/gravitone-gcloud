@@ -16,7 +16,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { generateImage, imgSrc, ImagingRequestError } from "@/lib/imagingClient";
+import { generateImage, imgSrc, ImagingRequestError, mintKey } from "@/lib/imagingClient";
 import { useJobs } from "@/lib/jobs";
 import { dispatchBlock, getTurn, resumeTurn, startFrames, type TurnRecord } from "@/lib/turns/client";
 import { useTurnPreview } from "@/lib/turns/usePreview";
@@ -51,6 +51,7 @@ import {
   emptyClip,
   explainerRender,
   framesLane,
+  pendingReceipt,
   subjectFor,
   trailerRender,
   type DirectionSpend,
@@ -416,6 +417,16 @@ export function useFrames(projectId: string) {
     };
   }, [frames, direction, consumed, stepLoaded, loadTrouble, projectId, source]);
 
+  /** The cut as of the last commit, for the callbacks that read ONE frame by id.
+   *  `generatePlate` used to close over `frames`, so it was a new function on
+   *  every edit — every keystroke in a caption and every pointer move of a drag
+   *  — and so was every ledger row it was handed to. Read through this ref it is
+   *  stable, and a drag re-renders the row being dragged, not the whole cut. */
+  const framesNow = useRef<Frame[]>(frames);
+  useEffect(() => {
+    framesNow.current = frames;
+  }, [frames]);
+
   const patch = useCallback((id: string, fn: (f: Frame) => Frame) => {
     setFrames((fs) => fs.map((f) => (f.id === id ? fn(f) : f)));
   }, []);
@@ -433,22 +444,37 @@ export function useFrames(projectId: string) {
    */
   const generatePlate = useCallback(
     async (id: string): Promise<PlateResult> => {
-      const frame = frames.find((f) => f.id === id);
+      const frame = framesNow.current.find((f) => f.id === id);
       if (!frame) return { outcome: "failed" };
       const subject = frame.plate.subject?.trim() || subjectFor(frame);
 
+      // A plate that is STILL generating when this runs is one a reload cut
+      // off: its render was paid for under the key stored on it, and re-issuing
+      // under that key is handed the same pixels instead of paying twice.
+      const persisted = pendingReceipt(frame.plate);
+      const key = persisted ?? mintKey();
+
       setBusy((b) => new Set(b).add(id));
       setError(null);
-      patch(id, (f) => ({ ...f, plate: { ...f.plate, state: "generating", subject } }));
+      patch(id, (f) => ({ ...f, plate: { ...f.plate, state: "generating", subject, receipt: key } }));
 
       try {
-        const res = await generateImage({
+        const body = {
           prompt: compilePrompt(block, subject),
           negativePrompt: NEGATIVE_PROMPT,
-          aspect: "16:9",
+          aspect: "16:9" as const,
           count: 1,
           references: references.length ? references : undefined,
-        });
+        };
+        let res;
+        try {
+          res = await generateImage(body, { key });
+        } catch (e) {
+          // The stored key named a different request — the subject or the style
+          // changed since the reload. That render is not this one: a new key, once.
+          if (!(persisted && e instanceof ImagingRequestError && e.code === "idempotency-conflict")) throw e;
+          res = await generateImage(body, { key: mintKey() });
+        }
         const img = res.images[0];
         patch(id, (f) => ({
           ...f,
@@ -458,6 +484,9 @@ export function useFrames(projectId: string) {
             model: res.provenance.model,
             costUsd: res.provenance.costUsd,
             subject,
+            // Written only here, on a render that produced pixels: the subject
+            // those pixels came from, which a later edit to `subject` outlives.
+            renderedSubject: img ? subject : undefined,
           },
         }));
         return { outcome: img ? "ready" : "refused" };
@@ -470,7 +499,14 @@ export function useFrames(projectId: string) {
 
         patch(id, (f) => ({
           ...f,
-          plate: { ...f.plate, state: refused ? "refused" : "empty", subject, note: e instanceof Error ? e.message : undefined },
+          plate: {
+            ...f.plate,
+            state: refused ? "refused" : "empty",
+            subject,
+            note: e instanceof Error ? e.message : undefined,
+            // A failure is never retained server-side, so the key is spent.
+            receipt: undefined,
+          },
         }));
         setError(e instanceof Error ? e.message : "The plate could not be generated.");
         if (isOverBudget) {
@@ -485,7 +521,7 @@ export function useFrames(projectId: string) {
         });
       }
     },
-    [frames, block, references, patch],
+    [block, references, patch],
   );
 
   /* ── layers ─────────────────────────────────────────────────────────────── */
@@ -505,7 +541,7 @@ export function useFrames(projectId: string) {
 
   const setText = useCallback(
     (id: string, textId: string, value: string) =>
-      patch(id, (f) => ({ ...f, texts: f.texts.map((t) => (t.id === textId ? { ...t, value } : t)) })),
+      patch(id, (f) => ({ ...f, texts: f.texts.map((t) => (t.id === textId ? { ...t, value, by: "human" as const } : t)) })),
     [patch],
   );
 
@@ -516,7 +552,7 @@ export function useFrames(projectId: string) {
    *  sourced, dated fact then nobody checked it, and the canvas marks it. */
   const bindFact = useCallback(
     (id: string, textId: string, factId: string | undefined) =>
-      patch(id, (f) => ({ ...f, texts: f.texts.map((t) => (t.id === textId ? { ...t, factId } : t)) })),
+      patch(id, (f) => ({ ...f, texts: f.texts.map((t) => (t.id === textId ? { ...t, factId, by: "human" as const } : t)) })),
     [patch],
   );
 
@@ -550,8 +586,8 @@ export function useFrames(projectId: string) {
     (id: string, ref: { type: "element" | "text"; id: string }, x: number, y: number) =>
       patch(id, (f) =>
         ref.type === "element"
-          ? { ...f, elements: f.elements.map((e) => (e.id === ref.id ? { ...e, x: clamp(x), y: clamp(y) } : e)) }
-          : { ...f, texts: f.texts.map((t) => (t.id === ref.id ? { ...t, x: clamp(x), y: clamp(y) } : t)) },
+          ? { ...f, elements: f.elements.map((e) => (e.id === ref.id ? { ...e, x: clamp(x), y: clamp(y), by: "human" as const } : e)) }
+          : { ...f, texts: f.texts.map((t) => (t.id === ref.id ? { ...t, x: clamp(x), y: clamp(y), by: "human" as const } : t)) },
       ),
     [patch],
   );
@@ -563,7 +599,7 @@ export function useFrames(projectId: string) {
       patch(id, (f) => ({
         ...f,
         elements: f.elements.map((e) =>
-          e.id === elId ? { ...e, w: Math.max(2, clamp(w)), h: Math.max(2, clamp(h)) } : e,
+          e.id === elId ? { ...e, w: Math.max(2, clamp(w)), h: Math.max(2, clamp(h)), by: "human" as const } : e,
         ),
       })),
     [patch],
@@ -716,6 +752,19 @@ export function useFrames(projectId: string) {
     };
   }, [ready, endedTurn, consumed, land]);
 
+  /** The beats the pass is briefed with — the at, kind, label, line and device
+   *  of each frame, none of which an edit on this step touches. Keyed on their
+   *  serialisation, so a caption typed or a layer dragged leaves the brief (and
+   *  the pre-flight's own serialisation of it) exactly where it was. */
+  const beatsJson = useMemo(
+    () => JSON.stringify(frames.map((f) => ({ at: f.at, kind: f.kind, label: f.title, text: f.line, device: f.device }))),
+    [frames],
+  );
+  const beats = useMemo(
+    () => JSON.parse(beatsJson) as { at: string; kind: string; label: string; text: string; device?: string }[],
+    [beatsJson],
+  );
+
   /** THE ONE BODY the direction pass sends and the pre-flight reads (AIO-B),
    *  so the strip beside the button cannot describe a different payload. */
   const directionInput = useMemo(
@@ -742,9 +791,9 @@ export function useFrames(projectId: string) {
       template: project?.template,
       targetS: project?.targetS,
       facts: facts.map((f) => ({ id: f.id, claim: f.claim, confidence: f.confidence, loadBearing: f.loadBearing })),
-      beats: frames.map((f) => ({ at: f.at, kind: f.kind, label: f.title, text: f.line, device: f.device })),
+      beats,
     }),
-    [render.title, block, project?.template, project?.targetS, frames, facts],
+    [render.title, block, project?.template, project?.targetS, beats, facts],
   );
 
   /** What the pass would send and who would serve it — free, debounced, and

@@ -22,7 +22,6 @@ import shutil
 import sys
 import time
 import subprocess
-import urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).parent
@@ -31,6 +30,8 @@ ROOT = HERE.parent.parent
 sys.path.insert(0, str(PROBE))
 sys.path.insert(0, str(HERE))
 import guard  # noqa: E402
+import consistency  # noqa: E402
+import lease as gpu_lease  # noqa: E402
 from consistency import COMFY_OUT  # noqa: E402
 from probe import run_ollama  # noqa: E402
 import grade  # noqa: E402
@@ -64,29 +65,11 @@ def wan_workflow(prompt, seed, width, height, length, steps=20, cfg=5.0, prefix=
 
 def generate_video(workflow, timeout=1800):
     """Queue and wait; returns the saved video path. Longer ceiling than a
-    still — a 121-frame decode is minutes on its own."""
-    body = json.dumps({"prompt": workflow}).encode()
-    req = urllib.request.Request("http://127.0.0.1:8188/prompt", data=body,
-                                 headers={"Content-Type": "application/json"}, method="POST")
-    with urllib.request.urlopen(req, timeout=60) as r:
-        pid = json.loads(r.read())["prompt_id"]
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        time.sleep(6)
-        try:
-            with urllib.request.urlopen(f"http://127.0.0.1:8188/history/{pid}", timeout=30) as r:
-                hist = json.loads(r.read())
-        except Exception:  # noqa: BLE001
-            continue
-        if pid not in hist:
-            continue
-        for node in hist[pid].get("outputs", {}).values():
-            for key in ("images", "video", "gifs"):
-                for item in node.get(key, []):
-                    if str(item.get("filename", "")).endswith((".webm", ".mp4")):
-                        return COMFY_OUT / item.get("subfolder", "") / item["filename"]
-        raise RuntimeError(f"finished with no video: {hist[pid].get('status')}")
-    raise RuntimeError(f"comfyui did not finish {pid} in {timeout}s")
+    still -- a 121-frame decode is minutes on its own. The poll loop is
+    consistency.generate's (guard.COMFY host, a failed poll tolerated while the
+    card is busy, a vanished process named)."""
+    return consistency.generate(workflow, timeout=timeout,
+                                kinds=("images", "video", "gifs"), exts=(".webm", ".mp4"))
 
 
 def posters(video, outdir, stem):
@@ -121,32 +104,36 @@ def main():
           f"at {W}x{H}x{L}", flush=True)
 
     if todo:
-        guard.require(ram_gb=0, free=["ollama"], verbose=False)
-        if guard.comfy_process_ids():
-            guard.recycle_comfy("fresh engine for dojo video")
-        elif not guard.start_comfy():
-            raise SystemExit("ComfyUI is not running and could not be started")
-        guard.require(vram_gb=16, ram_gb=guard.RAM_FLOOR_GB, verbose=False)
-        for n, (p, arm) in enumerate(todo, 1):
-            if not guard.headroom_ok():
-                guard.recycle_comfy("headroom")
-            wf = wan_workflow(p[arm]["prompt"], p["seed"], W, H, L, steps=spec.get("steps", 20),
-                              prefix=f"dojo-{cdir.name}")
-            t0 = time.time()
-            try:
-                vid = generate_video(wf)
-            except Exception as e:  # noqa: BLE001
-                print(f"  [{n}/{len(todo)}] {p['id']}--{arm} FAILED: {str(e)[:90]}", flush=True)
-                if not guard.recycle_comfy("after failure"):
-                    break
-                continue
-            out = pairs_dir / f"{p['id']}--{arm}.webm"
-            shutil.copy2(vid, out)
-            out.with_suffix(".json").write_text(json.dumps(
-                {"id": p["id"], "arm": arm, "seed": p["seed"], "prompt": p[arm]["prompt"],
-                 "size": [W, H, L]}, indent=2, ensure_ascii=False), encoding="utf-8")
-            posters(out, pairs_dir, f"{p['id']}--{arm}")
-            print(f"  [{n}/{len(todo)}] {p['id']}--{arm} -> {time.time()-t0:.0f}s", flush=True)
+        # One holder at a time on the card (pipeline/gpu/lease.py): the recycles below
+        # are this lease-holder's own, and another tenant is named, not killed.
+        with gpu_lease.acquire("foundry/dojo_video", "comfy", 20, wait=3600, ttl_s=900,
+                               job_prefix=f"dojo-{cdir.name}"):
+            guard.require(ram_gb=0, free=["ollama"], verbose=False)
+            if guard.comfy_process_ids():
+                guard.recycle_comfy("fresh engine for dojo video")
+            elif not guard.start_comfy():
+                raise SystemExit("ComfyUI is not running and could not be started")
+            guard.require(vram_gb=16, ram_gb=guard.RAM_FLOOR_GB, verbose=False)
+            for n, (p, arm) in enumerate(todo, 1):
+                if not guard.headroom_ok():
+                    guard.recycle_comfy("headroom")
+                wf = wan_workflow(p[arm]["prompt"], p["seed"], W, H, L, steps=spec.get("steps", 20),
+                                  prefix=f"dojo-{cdir.name}")
+                t0 = time.time()
+                try:
+                    vid = generate_video(wf)
+                except Exception as e:  # noqa: BLE001
+                    print(f"  [{n}/{len(todo)}] {p['id']}--{arm} FAILED: {str(e)[:90]}", flush=True)
+                    if not guard.recycle_comfy("after failure"):
+                        break
+                    continue
+                out = pairs_dir / f"{p['id']}--{arm}.webm"
+                shutil.copy2(vid, out)
+                out.with_suffix(".json").write_text(json.dumps(
+                    {"id": p["id"], "arm": arm, "seed": p["seed"], "prompt": p[arm]["prompt"],
+                     "size": [W, H, L]}, indent=2, ensure_ascii=False), encoding="utf-8")
+                posters(out, pairs_dir, f"{p['id']}--{arm}")
+                print(f"  [{n}/{len(todo)}] {p['id']}--{arm} -> {time.time()-t0:.0f}s", flush=True)
 
     # readbacks: three stills per clip, craft + style
     need = []
@@ -158,32 +145,35 @@ def main():
             if key not in readbacks:
                 need.append((p, arm))
     if need:
-        guard.require_model(model, vram_gb=20, ram_gb=guard.RAM_FLOOR_GB, free=["comfy"], verbose=False)
-        for n, (p, arm) in enumerate(need, 1):
-            key = f"{p['id']}--{arm}"
-            entry = {}
-            for tag in ("t0", "t1", "t2"):
-                b64 = base64.b64encode((pairs_dir / f"{key}--{tag}.png").read_bytes()).decode("ascii")
-                one = {}
-                try:
-                    text, _ = run_ollama(model, b64, "image/png")
-                    one["craft"] = grade.parse(text)
-                except Exception as e:  # noqa: BLE001
-                    one["craft_error"] = str(e)[:200]
-                entry[tag] = one
-            # An entry that produced no craft at all is NOT a readback, and caching it is
-            # worse than failing: `key not in readbacks` is the resume guard, so an error
-            # entry satisfies it forever and the clip is never read again. Observed
-            # 2026-09-20 with the annotator down -- all three tags of all four clips held
-            # only `craft_error`, the file was written, and the run still printed
-            # "4/4 read back". Persist only what actually read; leave the rest for the
-            # next run. `failure-not-empty-success`.
-            if not any("craft" in one for one in entry.values()):
-                print(f"  readback [{n}/{len(need)}] {key} FAILED -- not cached, will retry", flush=True)
-                continue
-            readbacks[key] = entry
-            rb_path.write_text(json.dumps(readbacks, indent=1, ensure_ascii=False), encoding="utf-8")
-            print(f"  readback [{n}/{len(need)}] {key}", flush=True)
+        # The annotator is the other engine on the card; it takes its own turn.
+        with gpu_lease.acquire("foundry/dojo_video-readback", "ollama", 22, wait=3600, ttl_s=900) as turn:
+            guard.require_model(model, vram_gb=20, ram_gb=guard.RAM_FLOOR_GB, free=["comfy"], verbose=False)
+            for n, (p, arm) in enumerate(need, 1):
+                turn.heartbeat()   # no ComfyUI poll to do it for us in this phase
+                key = f"{p['id']}--{arm}"
+                entry = {}
+                for tag in ("t0", "t1", "t2"):
+                    b64 = base64.b64encode((pairs_dir / f"{key}--{tag}.png").read_bytes()).decode("ascii")
+                    one = {}
+                    try:
+                        text, _ = run_ollama(model, b64, "image/png")
+                        one["craft"] = grade.parse(text)
+                    except Exception as e:  # noqa: BLE001
+                        one["craft_error"] = str(e)[:200]
+                    entry[tag] = one
+                # An entry that produced no craft at all is NOT a readback, and caching it is
+                # worse than failing: `key not in readbacks` is the resume guard, so an error
+                # entry satisfies it forever and the clip is never read again. Observed
+                # 2026-09-20 with the annotator down -- all three tags of all four clips held
+                # only `craft_error`, the file was written, and the run still printed
+                # "4/4 read back". Persist only what actually read; leave the rest for the
+                # next run. `failure-not-empty-success`.
+                if not any("craft" in one for one in entry.values()):
+                    print(f"  readback [{n}/{len(need)}] {key} FAILED -- not cached, will retry", flush=True)
+                    continue
+                readbacks[key] = entry
+                rb_path.write_text(json.dumps(readbacks, indent=1, ensure_ascii=False), encoding="utf-8")
+                print(f"  readback [{n}/{len(need)}] {key}", flush=True)
 
     rendered = sum(1 for p, arm in units if (pairs_dir / f"{p['id']}--{arm}.webm").exists())
     # Count what was READ, not what is keyed: the two diverge exactly when it matters.

@@ -112,6 +112,10 @@ export interface Version {
   /** Set only where this version was made the baseline over a BLOCKING gate
    *  verdict. Absent is the common case and means the gate was clean. */
   override?: GateOverride;
+  /** Set on a version minted by RESTORING an earlier one (history.ts): the id
+   *  it carries the content of. Absent on every run and on every version
+   *  written before restore existed. */
+  restoredFrom?: string;
 }
 
 /** A HUMAN OVERRODE THE GATE, AND THE VERSION CARRIES THE RECEIPT.
@@ -281,15 +285,20 @@ const secs = (ms: number) => {
 
 /** One line of receipt for a version, or null where there is nothing to report.
  *
- *  Three distinct answers, deliberately not collapsed into one:
+ *  Four distinct answers, deliberately not collapsed into one:
  *    · null          — this version was not produced by a run in this app at all
  *                      (the original renders). Absence, shown as absence.
  *    · "no model call" — the simulated transform produced it. It cost nothing
  *                      because nothing ran, which is not the same as costing 0.
+ *    · "restored from" — an earlier version carried forward (history.ts). No
+ *                      call either, and it is not the simulated fallback.
  *    · the receipt   — and inside it, any figure the engine did not report reads
  *                      as "not reported", never as zero. */
 export function receiptOf(v: Version): string | null {
   if (!v.basedOn) return null;
+  // Before the engine check: a restore of a model version keeps engine "model"
+  // but made no call, and a restore of a simulated one is not a fallback.
+  if (v.restoredFrom) return `restored from ${v.restoredFrom} · no model call`;
   if (v.engine !== "model") return "simulated locally — no model call, so nothing to bill";
   if (!v.engineRun) return "the engine returned a plan but reported nothing about the run";
   const r = v.engineRun;

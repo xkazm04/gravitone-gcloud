@@ -10,7 +10,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import {
   Bar,
@@ -103,6 +103,7 @@ import { ASTERISM_PATH, ASTERISM_STARS, Mark, Wordmark } from "@/components/kit/
 import {
   BandTrack,
   CHIP_CLASS,
+  Fold,
   HintPopover,
   Keycaps,
   PipRow,
@@ -110,10 +111,18 @@ import {
   StaleBadge,
   TALLY_TONE,
   UpstreamBreak,
+  activeKeymaps,
+  defineKeymap,
   hintRootClass,
+  keycapsRows,
+  resolveKey,
   useHint,
+  useKeymap,
   type TallyTone,
 } from "@/components/ui/signal";
+
+import { overlayOpen, typing } from "@/lib/board/keys";
+import { useRemembered } from "@/lib/useRemembered";
 
 import { KIT_GROUPS, PART_COUNT, type PartName } from "./catalog";
 import { BellDemo, PagerDemo, RovingDemo, StepsConstDemo, StepsDemo, TableDemo, UserDemo, WindowDemo } from "./PartsWorkbench";
@@ -538,6 +547,19 @@ function ArmPair(picked: 0 | 1 | null, gone = false): [DuoArm, DuoArm] {
 
 // ── the demos, one per catalog part ─────────────────────────────────────────
 
+/** useCountFilter: a Tally as the filter for what it counts. The page holds the selection in `?only=`; the kit holds it in state so the specimen needs no router. */
+function CountDoorDemo() {
+  const [only, setOnly] = useState<string | null>("missed");
+  const toggle = (v: string) => setOnly((o) => (o === v ? null : v));
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Tally value={4} label="booked" tone="cyan" select={{ pressed: only === "booked", onToggle: () => toggle("booked") }} />
+      <Tally value={2} label="missed" tone="amber" select={{ pressed: only === "missed", onToggle: () => toggle("missed") }} />
+      <Tally value={0} label="aired" tone="emerald" select={{ pressed: only === "aired", onToggle: () => toggle("aired") }} />
+    </div>
+  );
+}
+
 /** useHint + HintPopover + hintRootClass: the Hint disclosure hung on a trigger of the caller's own. */
 function DisclosureDemo() {
   const d = useHint();
@@ -549,6 +571,21 @@ function DisclosureDemo() {
       <HintPopover d={d}>flux-dev · 36 candidates · 12 kept</HintPopover>
     </span>
   );
+}
+
+/** The specimen keymap: declared once, drawn by Keycaps, resolved by the pure guard, bound (here disabled) by useKeymap. */
+const SPECIMEN_KEYS = defineKeymap<"keep" | "reject">({
+  id: "kit-specimen",
+  bindings: [
+    { keys: ["K"], does: "keep", action: "keep" },
+    { keys: ["X"], does: "reject", action: "reject" },
+  ],
+});
+
+/** useKeymap: one keymap bound with the kernel guard. Disabled here so a specimen never captures the page's keys. */
+function KeymapDemo() {
+  useKeymap(SPECIMEN_KEYS, { keep: () => {}, reject: () => {} }, { enabled: false });
+  return <Keycaps map={keycapsRows(SPECIMEN_KEYS)} label="Specimen keymap" />;
 }
 
 const TONES = Object.keys(TALLY_TONE) as TallyTone[];
@@ -1096,6 +1133,26 @@ const DEMOS: Record<PartName, () => ReactNode> = {
     </div>
   ),
   Provenance: () => <Provenance model="flux-dev" run="run-0412" step="frames" vendor="Leonardo" cost="$0.04" />,
+  Fold: () => (
+    <div>
+      <Fold title="Sources" tally={{ value: 12 }} defaultOpen>
+        <Verbatim>Reuters, 2026-09-14 — the fleet order was cut from 40 to 26.</Verbatim>
+      </Fold>
+      <Fold title="Rejected" tally={{ value: 3, tone: "rose" }} marks={<StaleBadge />}>
+        <Verbatim>three candidates, each with its reason verbatim</Verbatim>
+      </Fold>
+    </div>
+  ),
+  useCountFilter: () => <CountDoorDemo />,
+  defineKeymap: () => <Verbatim>{'defineKeymap({ id: "kit-specimen", bindings: [{ keys: ["K"], does: "keep", action: "keep" }, ...] })'}</Verbatim>,
+  useKeymap: () => <KeymapDemo />,
+  resolveKey: () => (
+    <Verbatim>{`K        -> ${resolveKey(SPECIMEN_KEYS, { key: "k" })}
+Ctrl+K   -> ${resolveKey(SPECIMEN_KEYS, { key: "k", ctrlKey: true })}
+held X   -> ${resolveKey(SPECIMEN_KEYS, { key: "x", repeat: true })}`}</Verbatim>
+  ),
+  keycapsRows: () => <Verbatim>{JSON.stringify(keycapsRows(SPECIMEN_KEYS))}</Verbatim>,
+  activeKeymaps: () => <Verbatim>{`bound now: ${activeKeymaps().join(", ") || "none"}`}</Verbatim>,
   useHint: () => <DisclosureDemo />,
   HintPopover: () => <DisclosureDemo />,
   hintRootClass: () => <Verbatim>{hintRootClass}</Verbatim>,
@@ -1139,7 +1196,93 @@ const WIDE: ReadonlySet<PartName> = new Set<PartName>([
   "UpstreamBreak", "BandTrack", "CHIP_CLASS",
 ]);
 
+// THE SHEET IS LAYERED. It drew every specimen at once — the Deck, the
+// Player, the Timeline and their fixtures included — so a builder who came to
+// check one part paid for every other. Now the first level is the groups, each
+// a <Fold> with its part count, and a group's specimens mount when it is first
+// opened (Fold's lazy body). Which groups are open is remembered, one record.
+// A search over name, call shape and group lands on the matches directly, every
+// matching group drawn open; `/` focuses it and Esc clears it, as on the
+// library shelf. A #g-<group> deep link opens its group before scrolling to it.
+const GROUP_IDS: readonly string[] = KIT_GROUPS.map((g) => g.id);
+const SEARCH_ID = "kr-parts-q";
+
+function partMatches(q: string, group: (typeof KIT_GROUPS)[number], part: { name: string; api: string }): boolean {
+  return part.name.toLowerCase().includes(q) || part.api.toLowerCase().includes(q) || group.title.toLowerCase().includes(q);
+}
+
 export function Parts() {
+  const [stored, setStored] = useRemembered<string>("kit.parts.open", "");
+  const open = useMemo(() => new Set(stored.split(",").filter((id) => GROUP_IDS.includes(id))), [stored]);
+  const setOpen = (next: Set<string>) => setStored(GROUP_IDS.filter((id) => next.has(id)).join(","));
+  const toggle = (id: string, on: boolean) => {
+    const next = new Set(open);
+    if (on) next.add(id);
+    else next.delete(id);
+    setOpen(next);
+  };
+  const allOpen = open.size === GROUP_IDS.length;
+
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const hits = useMemo(
+    () =>
+      q
+        ? KIT_GROUPS.map((g) => ({ g, parts: g.parts.filter((p) => partMatches(q, g, p)) })).filter((x) => x.parts.length > 0)
+        : [],
+    [q],
+  );
+  const hitCount = hits.reduce((n, x) => n + x.parts.length, 0);
+
+  // `/` focuses the search — never from a field, never under a dialog (the
+  // shared guards in lib/board/keys.ts). The deep link opens its group first:
+  // this panel is a dynamic chunk, so KitView's own scroll can run before the
+  // group exists, and a closed Fold has no specimens to scroll to.
+  const openRef = useRef(open);
+  const setStoredRef = useRef(setStored);
+  useEffect(() => {
+    openRef.current = open;
+    setStoredRef.current = setStored;
+  });
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey || typing(e.target) || overlayOpen()) return;
+      e.preventDefault();
+      document.getElementById(SEARCH_ID)?.focus();
+    };
+    const fromHash = () => {
+      const h = window.location.hash.replace("#", "");
+      const id = h.startsWith("g-") ? h.slice(2) : "";
+      if (!GROUP_IDS.includes(id)) return;
+      setQuery("");
+      if (!openRef.current.has(id)) {
+        const next = new Set(openRef.current).add(id);
+        setStoredRef.current(GROUP_IDS.filter((x) => next.has(x)).join(","));
+      }
+      requestAnimationFrame(() => requestAnimationFrame(() => document.getElementById(h)?.scrollIntoView()));
+    };
+    fromHash();
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("hashchange", fromHash);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("hashchange", fromHash);
+    };
+  }, []);
+
+  const specs = (g: (typeof KIT_GROUPS)[number], parts: readonly { name: string; api: string }[]) => (
+    <>
+      <p className="k-muted">{g.for}</p>
+      <div className="kr-specs">
+        {parts.map((p) => (
+          <Spec key={p.name} name={p.name} api={p.api} wide={WIDE.has(p.name as PartName)}>
+            {DEMOS[p.name as PartName]()}
+          </Spec>
+        ))}
+      </div>
+    </>
+  );
+
   return (
     <div className="kr-page">
       <section className="kr-section" aria-labelledby="kr-parts-h">
@@ -1147,26 +1290,54 @@ export function Parts() {
         <h2 id="kr-parts-h">
           Every export, in each of its states <small className="k-num">{PART_COUNT} parts · {KIT_GROUPS.length} groups</small>
         </h2>
-        <nav className="kr-jump k-caps" aria-label="Part groups">
-          {KIT_GROUPS.map((g) => (
-            <a key={g.id} href={`#g-${g.id}`}>{g.title}</a>
-          ))}
-        </nav>
-        {KIT_GROUPS.map((g) => (
-          <div key={g.id} id={`g-${g.id}`} style={{ scrollMarginTop: 140 }}>
-            <h3 className="kr-sub k-caps">
-              {g.title}
-              <span className="k-muted" style={{ textTransform: "none", letterSpacing: 0 }}>{g.for}</span>
-            </h3>
-            <div className="kr-specs">
-              {g.parts.map((p) => (
-                <Spec key={p.name} name={p.name} api={p.api} wide={WIDE.has(p.name)}>
-                  {DEMOS[p.name]()}
-                </Spec>
-              ))}
+        <div className="kr-row kr-find">
+          <TextInput
+            id={SEARCH_ID}
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape" && query) {
+                e.preventDefault();
+                setQuery("");
+              }
+            }}
+            placeholder="part, prop or group"
+            aria-label="Find a part"
+            autoComplete="off"
+          />
+          {q ? (
+            <Tally value={hitCount} of={PART_COUNT} label="parts" tone={hitCount ? "neutral" : "amber"} />
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => setOpen(allOpen ? new Set() : new Set(GROUP_IDS))}>
+              {allOpen ? "Close all" : "Open all"}
+            </Button>
+          )}
+          <Keycaps map={[{ keys: ["/"], does: "find" }, { keys: ["Esc"], does: "clear" }]} label="Specimen keys" />
+        </div>
+        {q ? (
+          hits.length === 0 ? (
+            <Ghost shape="row" label={`no part matches “${query.trim()}”`} action={<Button variant="ghost" size="sm" onClick={() => setQuery("")}>Clear search</Button>} />
+          ) : (
+            hits.map(({ g, parts }) => (
+              <div key={g.id} style={{ scrollMarginTop: 140 }}>
+                <h3 className="kr-sub k-caps">
+                  {g.title}
+                  <Tally value={parts.length} of={g.parts.length} />
+                </h3>
+                {specs(g, parts)}
+              </div>
+            ))
+          )
+        ) : (
+          KIT_GROUPS.map((g) => (
+            <div key={g.id} id={`g-${g.id}`} style={{ scrollMarginTop: 140 }}>
+              <Fold title={g.title} tally={{ value: g.parts.length, label: "parts" }} open={open.has(g.id)} onOpenChange={(on) => toggle(g.id, on)}>
+                {specs(g, g.parts)}
+              </Fold>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </section>
     </div>
   );

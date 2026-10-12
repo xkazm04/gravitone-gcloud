@@ -22,7 +22,8 @@ import { imgSrc, generateImage, ImagingRequestError, type GenerateResult } from 
 import { compilePrompt, NEGATIVE_PROMPT, PROMPT_CHAR_LIMIT } from "@/lib/stylePrompt";
 import { SEND_REFS, type StyleBlock } from "@/lib/themes";
 
-import { TRIALS } from "./trials";
+import { blockDigest } from "@/lib/themes/coverage";
+import { TRIALS, trialIdFor } from "./trials";
 
 const DEFAULT_SUBJECT = TRIALS[0].subject;
 
@@ -122,6 +123,11 @@ function priceLabel(price: PreClickPrice | "unknown" | null): { text: string; hi
   };
 }
 
+export interface ProofLineage {
+  trialId?: string;
+  blockDigest: string;
+}
+
 export default function Playground({
   block,
   references = [],
@@ -141,7 +147,11 @@ export default function Playground({
   onBlockChange?: (block: StyleBlock) => void;
   /** Approved proofs from this theme, newest first. */
   references?: { base64: string; mime: string }[];
-  onKeep?: (r: GenerateResult, subject: string) => void | Promise<void>;
+  /** `lineage` is what the render was MADE from, captured when it ran: the
+   *  trial it answered (absent for a free subject) and the digest of the block
+   *  at that moment. It is not recomputed at keep time, because the slots can
+   *  be edited between the render and the click. */
+  onKeep?: (r: GenerateResult, subject: string, lineage: ProofLineage) => void | Promise<void>;
   keepLabel?: string;
   disabled?: boolean;
   /** Estimated USD per image, for the price shown BEFORE the click. Left unset
@@ -154,6 +164,8 @@ export default function Playground({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GenerateResult | null>(null);
   const [kept, setKept] = useState(false);
+  /** What the shown render was made from — see `onKeep`. */
+  const [lineage, setLineage] = useState<ProofLineage | null>(null);
   /** In flight. Separate from `kept`, which means "the write finished": the gap
    *  between the click and that is exactly the double-submit window. */
   const [keeping, setKeeping] = useState(false);
@@ -209,6 +221,7 @@ export default function Playground({
     setError(null);
     setResult(null);
     setKept(false);
+    const made: ProofLineage = { trialId: trialIdFor(subject), blockDigest: blockDigest(block) };
     try {
       const res = await generateImage({
         prompt,
@@ -218,6 +231,7 @@ export default function Playground({
         references: conditioned ? refs : undefined,
       });
       setResult(res);
+      setLineage(made);
       // The money left the account whether or not the vendor named a figure, so
       // a render that came back unpriced is COUNTED rather than treated as free.
       setSpend((s) => ({
@@ -411,7 +425,7 @@ export default function Playground({
                   if (kept || keeping) return;
                   setKeeping(true);
                   try {
-                    await onKeep(result, subject);
+                    await onKeep(result, subject, lineage ?? { blockDigest: blockDigest(block) });
                     setKept(true);
                   } finally {
                     setKeeping(false);

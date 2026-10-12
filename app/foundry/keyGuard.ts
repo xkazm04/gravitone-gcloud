@@ -23,3 +23,22 @@ export function refusedKey(e: KeyLike): boolean {
   if (e.ctrlKey || e.metaKey || e.altKey) return true;
   return Boolean(e.repeat) && !e.key.startsWith("Arrow");
 }
+
+/** N — the next item still waiting on a verdict, after `from` and wrapping round.
+ *
+ *  A cull of hundreds is mostly decided in order, then finished by hunting the
+ *  few that were skipped: on a sheet three screens deep that hunt was arrows and
+ *  eyes. Every foundry triage surface (the cull grid, the Extract board, the Dojo
+ *  gate) binds N to this, so the hunt is one key. `open` says whether an item is
+ *  still undecided AND can take a verdict — a queued or failed candidate is not
+ *  waiting on the human, so N must not land on it. Null when nothing is left. */
+export function nextUndecided(order: readonly string[], from: string | null, open: (id: string) => boolean): string | null {
+  const n = order.length;
+  if (!n) return null;
+  const at = from ? order.indexOf(from) : -1;
+  for (let k = 1; k <= n; k++) {
+    const id = order[(at + k + n) % n];
+    if (open(id)) return id;
+  }
+  return null;
+}

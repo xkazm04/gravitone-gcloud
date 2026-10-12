@@ -38,6 +38,8 @@ export const ORIGIN_RANK: Record<TakeOrigin, number> = {
   // A production cue rendered from the Score step: real work, heard after the
   // lab's own batches and before returns and imports.
   score: 2,
+  // A render from the Library composer: the operator's own, heard with the lab.
+  library: 1,
   "suno-return": 3,
   import: 4,
   fixture: 9,
@@ -83,6 +85,9 @@ export function step(ids: readonly string[], id: string | null, by: number): str
  * the pair that collides with nothing else bound here. ↑/↓ and Tab move the
  * rubric dimension; ←/→ seek, as on every transport in the app.
  *
+ * Z takes back the newest verdict filed this session and reopens that take —
+ * the same letter the board and the foundry undo with (lib/board/keys.ts).
+ *
  * In `defects` mode (after X) the number row toggles defect chips instead of
  * scoring, Enter files the rejection, Escape backs out.
  */
@@ -96,6 +101,7 @@ export type TriageAction =
   | { type: "next" }
   | { type: "prev" }
   | { type: "clear" }
+  | { type: "undo" }
   | { type: "defect"; index: number }
   | { type: "confirm" }
   | { type: "cancel" };
@@ -129,6 +135,8 @@ export function resolveKey(key: string, mode: KeyMode, shift = false): TriageAct
       return { type: "prev" };
     case "u":
       return { type: "clear" };
+    case "z":
+      return { type: "undo" };
   }
   return null;
 }
@@ -144,6 +152,7 @@ export const KEYMAP: Record<KeyMode, { keys: string[]; does: string }[]> = {
     { keys: ["X"], does: "reject" },
     { keys: ["N", "P"], does: "next · prev" },
     { keys: ["U"], does: "unjudge" },
+    { keys: ["Z"], does: "undo" },
   ],
   defects: [
     { keys: ["1", "…", "−"], does: "defect" },

@@ -21,6 +21,9 @@ export interface RenderPlan {
   count: number;
   label: string;
   resumeAt: number | null;
+  /** Ready plates whose subject changed after they were rendered. Reported, not
+   *  rendered: a re-render is paid, and the user chooses it per frame. */
+  stale: number;
 }
 
 export type PlanAction =
@@ -31,8 +34,18 @@ export type PlanAction =
 /**
  * Compute batch render sizing and descriptive label from missing plates and budget quote.
  */
-export function planRender(args: { missing: number; quote?: PlanQuote | null }): RenderPlan {
-  const { missing, quote } = args;
+export function planRender(args: { missing: number; stale?: number; quote?: PlanQuote | null }): RenderPlan {
+  const { quote } = args;
+  const stale = Math.max(0, args.stale ?? 0);
+  const plan = planMissing(args.missing, quote);
+  return {
+    ...plan,
+    stale,
+    label: stale > 0 ? `${plan.label} · ${stale} stale` : plan.label,
+  };
+}
+
+function planMissing(missing: number, quote?: PlanQuote | null): Omit<RenderPlan, "stale"> {
 
   if (missing <= 0) {
     return { count: 0, label: "all plates composed", resumeAt: null };

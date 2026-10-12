@@ -3,6 +3,13 @@
 // /articles/new — a topic (a registry subject, or the operator's own words), an
 // optional angle, the model and its effort; Start creates the run and opens it.
 //
+// A returning operator is dealt their last topic kind, bundle, model and effort
+// (lib/useRemembered.ts), each only while it is still on offer: a bundle the
+// registry no longer lists, or a model the app stopped offering, falls back to
+// the default rather than to a choice the form cannot show. The subject, topic
+// text and angle are this post's own and are never carried over. Ctrl/⌘+Enter
+// in the angle starts the run, as Enter does in a one-line field.
+//
 // The subject list arrives as data from the server page (./page.tsx), which
 // read it through lib/articles/registryRead.ts. This file imports nothing from
 // lib/articles/ but its types.
@@ -18,6 +25,7 @@ import { Select, type SelectGroup, type SelectOption } from "@/components/ui/Sel
 import { Hint } from "@/components/ui/signal";
 import { SURFACE } from "@/components/ui/tokens";
 import { EFFORT_LEVELS, type CreateRunInput, type EffortLevel } from "@/lib/articles/types";
+import { useRemembered } from "@/lib/useRemembered";
 
 import { createRun } from "../articlesClient";
 
@@ -28,6 +36,8 @@ export interface PickerSubject {
 }
 
 type Kind = "subject" | "free";
+const KINDS: readonly Kind[] = ["subject", "free"];
+const FREE_ONLY: readonly Kind[] = ["free"];
 
 /** The model ids offered. The app's own default, then the CLI's aliases for
  *  the latest of each family (`claude --model` takes either form). */
@@ -46,13 +56,19 @@ export default function NewArticle({
   defaultModel: string;
 }) {
   const router = useRouter();
-  const [kind, setKind] = useState<Kind>(subjects.length ? "subject" : "free");
-  const [bundle, setBundle] = useState("");
+  const bundleIds = useMemo(() => [...new Set(subjects.map((s) => s.bundle))], [subjects]);
+  const modelIds = useMemo(() => modelOptions(defaultModel).map((o) => o.value), [defaultModel]);
+  const [kind, setKind] = useRemembered<Kind>("articles.new.kind", subjects.length ? "subject" : "free", subjects.length ? KINDS : FREE_ONLY);
+  const [bundle, setBundleRaw] = useRemembered<string>("articles.new.bundle", "", bundleIds);
   const [slug, setSlug] = useState("");
   const [text, setText] = useState("");
   const [angle, setAngle] = useState("");
-  const [model, setModel] = useState(defaultModel);
-  const [effort, setEffort] = useState<EffortLevel>("high");
+  const [model, setModel] = useRemembered<string>("articles.new.model", defaultModel, modelIds);
+  const [effort, setEffort] = useRemembered<EffortLevel>("articles.new.effort", "high", EFFORT_LEVELS);
+  const setBundle = (b: string) => {
+    setBundleRaw(b);
+    setSlug("");
+  };
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -131,10 +147,7 @@ export default function NewArticle({
                   value={bundle}
                   placeholder="choose a bundle"
                   options={bundles}
-                  onChange={(b) => {
-                    setBundle(b);
-                    setSlug("");
-                  }}
+                  onChange={setBundle}
                   className="w-full"
                   testId="articles-bundle"
                 />
@@ -148,7 +161,20 @@ export default function NewArticle({
         )}
 
         <Field label="Angle" htmlFor="article-angle" hint="optional">
-          <TextArea id="article-angle" rows={3} value={angle} maxLength={600} onChange={(e) => setAngle(e.target.value)} placeholder="the claim, the reader, the stakes" />
+          <TextArea
+            id="article-angle"
+            rows={3}
+            value={angle}
+            maxLength={600}
+            onChange={(e) => setAngle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                void start();
+              }
+            }}
+            placeholder="the claim, the reader, the stakes"
+          />
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">

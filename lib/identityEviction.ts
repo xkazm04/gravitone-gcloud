@@ -68,7 +68,9 @@
 // `IDENTITY_INDEPENDENT_LOCAL_KEYS` below so a probe can walk every module that
 // writes localStorage and demand each key be on ONE of the two lists.
 //
-// That list is EMPTY again as of 2026-09-08. Its one member was
+// That list holds one member again since 2026-10-07: the landing's device tier
+// (`gravitone.cosmos-tier.v1`), a fact about the machine's renderer, with its
+// reason on the entry. Before that it was empty from 2026-09-08; its earlier member was
 // `gravitone.deck.art` (components/ui/deck/useArtVariant.ts) — which art variant
 // the deck cards drew with, a per-browser display preference that said nothing
 // about who was signed in. The operator ordered the art switcher removed from
@@ -108,6 +110,9 @@ import { reportStorageTrouble } from "@/app/_phases/_shared/stepStore";
 // root-mounted provider's live copy of it untouched, which is the half a user of
 // the next account can actually read.
 import { __announceIdentityEvicted, __identityEvictionListenerCount } from "@/lib/jobs";
+// Remembered UI choices (which fold was open, which tab was last): one record,
+// cleared wholesale like the job tray, and its in-memory copy with it.
+import { REMEMBERED_KEY, forgetRemembered } from "@/lib/useRemembered";
 
 /**
  * WHY the identity changed.
@@ -172,6 +177,12 @@ const JOBS_KEY = "gravitone.jobs.v1";
  * surfaces on a shared machine. Exported so a probe can hold this list against
  * the modules that actually write those keys.
  */
+/** The pipeline board's LIVE/STUB arm. See the eviction note below. */
+export const PIPELINE_ARM_KEY = "gravitone.pipeline.arm";
+
+/** The fixture seeding stamp. See the eviction note below. */
+export const FIXTURE_SEED_KEY = "gravitone.fixtures.seed";
+
 export function userScopedLocalKeys(uid: string): string[] {
   return [
     `gravitone.seeded.${uid}`, // lib/useProjects.ts — "this account's shelf was seeded"
@@ -181,7 +192,26 @@ export function userScopedLocalKeys(uid: string): string[] {
     `gravitone.audio-seeded.${uid}`, // the audio module's first seed mark — no longer written, still evicted where a machine holds it
     `gravitone.sound-migrated.v1.${uid}`, // app/library/audio/soundMigration.ts — "this account's audio rows moved to the sound store"
     `gravitone.audio-annex.${uid}`, // the Library's old per-browser annex — no longer written since its facts became SoundTake fields (r4 closeout); read once and removed by app/library/audio/soundMigration.ts#migrateAnnex, still evicted where a machine holds it
+    `gravitone.palette.recents.${uid}`, // components/ui/shell/palette.ts — the shell palette's recent destinations, per account
     JOBS_KEY, // lib/jobs.tsx — profile-wide, cleared wholesale (see above)
+    REMEMBERED_KEY, // lib/useRemembered.ts — open folds, last tabs; profile-wide, cleared wholesale: a remembered key can name a project id
+    PIPELINE_ARM_KEY, // app/foundry/PipelineTab.tsx — evicted ON PURPOSE, and it is the
+    // one key here whose exemption would be a money bug rather than an
+    // inconvenience. It records whether the pipeline board may spend the
+    // operator's Claude seat ($47-92 a dispatch); it is profile-wide, like
+    // JOBS_KEY, so by shape it reads like an identity-independent preference.
+    // Left as an exception, a board someone armed to LIVE would stay armed
+    // across a sign-out and the next account on that browser would inherit
+    // it. Evicting it returns the arm to its safe default for whoever signs
+    // in next, which is the whole reason the default is STUB.
+    FIXTURE_SEED_KEY, // lib/fixtures/seedBrowser.ts - which fixture bundle this
+    // browser already holds. Profile-wide, like the two above. Its VALUE is
+    // `<uid>:<seedId>`, so a surviving stamp would not make the next account
+    // read the first one's shelf - the comparison misses and the seed re-runs.
+    // It is evicted for the smaller reason, which is still a reason: the value
+    // is the departed account's uid, left legible to whoever opens the console
+    // next, and the cost of removing it is one idempotent re-seed on a
+    // fixture-mode build.
   ];
 }
 
@@ -192,9 +222,12 @@ export function userScopedLocalKeys(uid: string): string[] {
  * that holds `userScopedLocalKeys` against the writers.
  */
 export const IDENTITY_INDEPENDENT_LOCAL_KEYS: readonly string[] = [
-  // Empty since 2026-09-08 — see the header. Empty is a legitimate state, not a
-  // stub: the probe's job is that every WRITER is accounted for, and today all
-  // three writers are user-scoped.
+  // The landing's quality tier (app/_landing/cosmos/engine/perf.ts, 2026-10-07):
+  // which renderer this MACHINE has and whether the frame governor had to step
+  // it down. A fact about the device, written before anyone signs in, and the
+  // same for every account on it - evicting it on a flip would only make the
+  // next visit re-measure the same GPU.
+  "gravitone.cosmos-tier.v1",
 ];
 
 /**
@@ -283,6 +316,9 @@ export async function evictIdentity(
   // different facts and the log has to be able to say which.
   // A dry run counts the listeners instead: announcing IS the wipe of that copy.
   report.trays = dry ? __identityEvictionListenerCount() : __announceIdentityEvicted();
+  // A tab whose storage write failed holds its remembered choices in memory
+  // only; the key removal above cannot reach that copy, this does.
+  if (!dry) forgetRemembered();
 
   if (typeof indexedDB === "undefined") return report;
 

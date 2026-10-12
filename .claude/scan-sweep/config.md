@@ -221,3 +221,19 @@ before matching, the population walked off the filesystem rather than listed, an
   is a generated surface that EVERY UI merge moves — tell workers not to regenerate it and
   regenerate once on the combined tree after the merges (`npx tsx pipeline/kit-census.mts`, no
   `--raise`), or two branches' refreshes auto-merge into a stale file.
+- **2026-10-08 — `pipeline/foundry/selftest.py` is red when run the way its own docstring says.**
+  From `pipeline/foundry` it exits 1 (`test_lane_record_reads_all_8_tracked_lanes` reads
+  cwd-relative paths); from the repo root, which is where CI's `python` job runs it, it is
+  green. Run it as `python pipeline/foundry/selftest.py` from the root until the Lane B card
+  `selftest-docstring-cwd` lands. It is also the right instrument for `pipeline/vlm-probe/`:
+  every module there except `identity.py` imports stdlib-only, so a ComfyUI, Ollama, HF or
+  `claude` CLI seam can be faked in a case with no rig. Six fixes went through it in one round.
+  When several fixes share that one test file, land them one commit each by writing each
+  intermediate tree from a scratch script (finals saved, later cases cut out) and asserting
+  the `N cases green` line per step. Do not try to split hunks; `git add -p` is unavailable here.
+- **2026-10-10 - challenge builders in one checkout need their own Playwright `--output`.** Four
+  builders running `npx playwright test` at once share `test-results/`, which each run wipes at start.
+  Brief every builder to pass `--output="$TEMP/pw-<card>"`; this run did and saw no cross-builder noise.
+  Also: `pipeline/kit-census.mts` walks `git ls-files` but reads WORKING-TREE content, so a builder that
+  regenerates `app/kit/census.json` bakes a concurrent session's uncommitted edits into a commit. Keep the
+  census coordinator-owned and regenerate it once per wave, only when `git status -- app components` is clean.

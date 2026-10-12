@@ -29,7 +29,9 @@ test("RunStage has no fake 'Next deals the takes' affordance", () => {
 });
 
 test("FaceSwitch carries no title attribute", () => {
-  const src = code("app/_phases/research/guided/GuidedResearch.tsx");
+  // FaceSwitch moved to its own module (Wave 2) so the expert face does not
+  // import the wizard to draw it.
+  const src = code("app/_phases/research/guided/FaceSwitch.tsx");
   const at = src.indexOf("export function FaceSwitch");
   expect(at).toBeGreaterThan(-1);
   const body = src.slice(at, src.indexOf("</button>", at));

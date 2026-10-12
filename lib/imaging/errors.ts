@@ -88,10 +88,14 @@ export class ImagingError extends Error {
    * `failed` and `bad-response` are deliberately NOT in this list, and the next
    * reader who wants to add them should read this first — it has been weighed:
    *
-   *  1. Everything transient has already been retried. http.ts makes three
-   *     attempts with backoff on 429 and every 5xx; what survives that and
-   *     arrives as `failed` is a 4xx, an unreachable host, or a bug in our own
-   *     adapter. A second vendor fixes none of the three.
+   *  1. What arrives as `failed` is a 4xx, a 5xx, an unreachable host, or a
+   *     bug in our own adapter. A second vendor fixes none of the first, third
+   *     or fourth. A 5xx on a vendor WORK request is presumed billed (see
+   *     presumedBilled below), so http.ts does not even retry it against the
+   *     same vendor; handing it to a different one would bill twice for a
+   *     request nobody declined. (A 503 was weighed as `rate-limited` and kept
+   *     here on purpose: that kind is reroutable, and in dev it would walk a
+   *     style-locked request to Leonardo - point 3.)
    *  2. Re-routing bills a vendor for a request the first one never declined.
    *     The chain exists to cross a POLICY edge (a refusal is deterministic and
    *     only another vendor's policy can clear it), not to paper over an
@@ -106,6 +110,65 @@ export class ImagingError extends Error {
    */
   get reroutable(): boolean {
     return this.kind === "refused" || this.kind === "rate-limited" || this.kind === "no-key";
+  }
+}
+
+/**
+ * Did this failure cost money? THE ONE AUTHORITY.
+ *
+ * Two readers, one rule. The router's meter books a failed row when this says
+ * true (router.ts re-exports it as `billedOnFailure`), and http.ts refuses to
+ * re-send a `billable` request when this says true. They used to answer apart:
+ * the meter called a 5xx-after-dispatch and a timeout billed, and the transport
+ * re-sent both up to three times under one hold, booking one row - a meter that
+ * under-read by up to 3x exactly during an incident.
+ *
+ * The rule is: the vendor is presumed to have billed only where it is presumed
+ * to have DONE WORK. Erring in either direction has a cost, and they are not
+ * symmetric - an over-count refuses calls the operator could afford, an
+ * under-count is a ceiling that lets an incident run. The kinds are enumerated
+ * rather than defaulted so that a new kind added to the taxonomy fails to
+ * compile here instead of silently landing on whichever side is written last.
+ *
+ *   timeout        BILLED. The request was in flight when our clock ran out. The
+ *                  vendor very likely finished and will invoice it; the one thing
+ *                  we know for certain is that we cannot know, and a spend guard
+ *                  that guesses should guess high.
+ *   bad-response   BILLED. The vendor answered. It ran.
+ *   refused        BILLED. A safety block is a decision the model makes AFTER
+ *                  reading the prompt, and the adapters raise it from a 200 body
+ *                  (see http.ts's header) - inference happened.
+ *   failed         BILLED ONLY IF DISPATCHED. This kind covers both a 4xx/5xx the
+ *                  vendor answered and a host that could not be reached at all.
+ *                  Only http.ts knows which, and it says so on the error.
+ *
+ *   rate-limited    NOT billed. A 429 is the door refusing before anything ran.
+ *   invalid-request NOT billed. An adapter checked one of the vendor's own
+ *                   limits and refused to dispatch. Nothing left the process.
+ *   no-key         NOT billed. Rejected at authentication, or never attempted.
+ *   unsupported    NOT billed. A routing-table fact; no call is made.
+ *   no-alternative NOT billed. The chain emptied before a vendor was chosen.
+ *   over-budget    NOT billed. Refused by our own ceiling, before any vendor.
+ *
+ * The last three never reach the router's catch - each is a `continue` or a
+ * throw upstream of it - and they are listed so the reasoning is complete
+ * rather than because the branch is live.
+ */
+export function presumedBilled(err: ImagingError): boolean {
+  switch (err.kind) {
+    case "timeout":
+    case "bad-response":
+    case "refused":
+      return true;
+    case "failed":
+      return err.dispatched;
+    case "rate-limited":
+    case "invalid-request":
+    case "no-key":
+    case "unsupported":
+    case "no-alternative":
+    case "over-budget":
+      return false;
   }
 }
 

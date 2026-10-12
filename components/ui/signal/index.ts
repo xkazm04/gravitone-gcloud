@@ -1,6 +1,6 @@
 // THE SIGNAL VOCABULARY — the barrel.
 //
-// Eleven components that draw what ~170 places in this app currently write a
+// Twelve components that draw what ~170 places in this app currently write a
 // sentence about. THE LAW they exist to serve is stated in ./README.md and it is
 // one line long: delete every sentence whose subject is the app; keep every
 // sentence whose subject is the work.
@@ -14,7 +14,9 @@ export { Hint, HintPopover, useHint, hintRootClass } from "./Hint";
 export type { HintVariant, HintTone, HintDisclosure } from "./Hint";
 
 export { Tally, CHIP_CLASS, TALLY_TONE } from "./Tally";
-export type { TallyTone } from "./Tally";
+export type { TallyProps, TallyTone } from "./Tally";
+
+export { useCountFilter } from "./useCountFilter";
 
 export { PipRow } from "./PipRow";
 export type { PipState } from "./PipRow";
@@ -33,6 +35,8 @@ export type { UpstreamBreakAction } from "./UpstreamBreak";
 
 export { Keycaps } from "./Keycaps";
 export type { KeyBinding } from "./Keycaps";
+export { activeKeymaps, defineKeymap, keycapsRows, resolveKey, useKeymap } from "./keymap";
+export type { Binding, Keymap } from "./keymap";
 
 export { StaleBadge } from "./StaleBadge";
 
@@ -41,3 +45,6 @@ export type { ProvenanceFields } from "./Provenance";
 
 export { TabRail } from "./TabRail";
 export type { TabDef } from "./TabRail";
+
+export { Fold } from "./Fold";
+export type { FoldProps } from "./Fold";

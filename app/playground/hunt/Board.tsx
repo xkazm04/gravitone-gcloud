@@ -14,7 +14,7 @@
 // ground draws a marquee, a branch card's pill takes its whole branch. What is
 // selected is what the render bar prices.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 
 import { motion, useReducedMotion } from "motion/react";
 import {
@@ -313,7 +313,7 @@ export function Board({
                           take={takeOf(n)}
                           selected={sel.has(n.id)}
                           focused={focus === n.id}
-                          onPress={(mods) => onLeaf(n.id, mods)}
+                          onLeaf={onLeaf}
                         />
                       </motion.div>
                     );
@@ -458,21 +458,26 @@ function BranchCard({
 
 /* ── a leaf: one answer you can hear ───────────────────────────────────── */
 
-export function LeafCard({
+/** Memoised, with every prop a value or a stable handler (`onLeaf` and the
+ *  take come from ./index.tsx's indexed, callback-wrapped lookups): a marquee
+ *  sets state on each pointer move and used to re-render every card, waveform
+ *  and all, to move one dashed rectangle. */
+export const LeafCard = memo(function LeafCard({
   node,
   kind,
   take,
   selected,
   focused,
-  onPress,
+  onLeaf,
 }: {
   node: HuntNode;
   kind: Hunt["kind"];
   take: SoundTake | null;
   selected: boolean;
   focused: boolean;
-  onPress: (mods: { shift: boolean; toggle: boolean }) => void;
+  onLeaf: (id: string, mods: { shift: boolean; toggle: boolean }) => void;
 }) {
+  const onPress = (mods: { shift: boolean; toggle: boolean }) => onLeaf(node.id, mods);
   const press = (e: React.MouseEvent | React.KeyboardEvent) =>
     onPress({ shift: e.shiftKey, toggle: e.ctrlKey || e.metaKey });
   const loop = kind === "sfx" && loopOf(node);
@@ -595,7 +600,7 @@ export function LeafCard({
       </div>
     </div>
   );
-}
+});
 
 function StateMark({ node }: { node: HuntNode }) {
   if (node.winner)

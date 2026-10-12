@@ -3,6 +3,7 @@
     python probe.py                      # all frames, all configured models
     python probe.py --models gemma4:12b gemini-3.7-flash
     python probe.py --frames arcane-vi-jinx.png --repeat 3
+    python probe.py --shots reference-face-e25 baseline   # consistency-lane shots
 
 Writes ../../vlm-probe-out/<run-id>/results.jsonl -- one row per
 (frame, model, repeat). Nothing lands inside the repo tree; the output
@@ -25,10 +26,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+from craft_spec import truth_id  # noqa: E402
 from schema import PROMPT, gemini_schema, json_schema  # noqa: E402
+import vocab  # noqa: E402  (schema.py puts pipeline/vocab on sys.path)
 
 HERE = Path(__file__).parent
 FRAMES_DIR = HERE / "frames"
+SHOTS = HERE / "shots"
 OUT_ROOT = HERE.parent.parent / "vlm-probe-out"
 ROOT = HERE.parent.parent
 
@@ -162,6 +166,34 @@ def extract_json(text):
         return json.loads(t[start:end + 1])
 
 
+def frame_name(path):
+    """The name a results row records for a frame. A consistency-lane shot
+    (shots/<lane-dir>/<shot>.png) is lane-qualified as its truth_id, because
+    every lane names its shots 01-wide, 02-medium, 03-close and score.py would
+    otherwise resolve all of them to one truth."""
+    p = Path(path)
+    try:
+        rel = p.resolve().relative_to(SHOTS.resolve())
+    except ValueError:
+        return p.name
+    if len(rel.parts) != 2:
+        return p.name
+    return truth_id(rel.parts[0], p.stem) + p.suffix
+
+
+def shot_frames(lane_dirs):
+    """The rendered shots of each lane directory; the hero stills (00-*) are
+    references, not shots, and carry no dictated truth."""
+    out = []
+    for lane in lane_dirs:
+        d = SHOTS / lane
+        if not d.is_dir():
+            sys.exit(f"no lane directory {d}")
+        out += sorted(p for p in d.iterdir()
+                      if p.suffix.lower() in MIME and not p.name.startswith("00"))
+    return out
+
+
 def vram_now():
     """What Ollama currently holds resident -- the local cost of the answer."""
     try:
@@ -176,6 +208,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--models", nargs="*", default=None)
     ap.add_argument("--frames", nargs="*", default=None)
+    ap.add_argument("--shots", nargs="*", default=None, metavar="LANE_DIR",
+                    help="consistency-lane directories under shots/ to annotate")
     ap.add_argument("--repeat", type=int, default=1,
                     help="runs per (frame, model) -- above 1 measures self-consistency")
     ap.add_argument("--run-id", default=None)
@@ -188,8 +222,8 @@ def main():
     ollama_key = env.get("OLLAMA_API_KEY") or os.environ.get("OLLAMA_API_KEY")
 
     models = args.models or (LOCAL_MODELS + REMOTE_MODELS)
-    if args.frames:
-        frames = [FRAMES_DIR / f for f in args.frames]
+    if args.frames or args.shots:
+        frames = [FRAMES_DIR / f for f in args.frames or []] + shot_frames(args.shots or [])
     else:
         frames = sorted(p for p in FRAMES_DIR.iterdir()
                         if p.is_file() and p.suffix.lower() in MIME)
@@ -223,15 +257,17 @@ def main():
     with results_path.open("a", encoding="utf-8") as fh:
         for frame in frames:
             raw = frame.read_bytes()
+            name = frame_name(frame)
             b64 = base64.b64encode(raw).decode("ascii")
             mime = MIME[frame.suffix.lower()]
             for model in models:
                 for rep in range(args.repeat):
-                    label = f"{frame.name:26s} {model:18s} #{rep + 1}"
+                    label = f"{name:26s} {model:18s} #{rep + 1}"
                     t0 = time.time()
                     row = {
-                        "run_id": run_id, "frame": frame.name, "model": model,
+                        "run_id": run_id, "frame": name, "model": model,
                         "repeat": rep + 1, "bytes": len(raw),
+                        "vocabVersion": vocab.version(),
                     }
                     try:
                         if model in REMOTE_MODELS or model.startswith("gemini"):

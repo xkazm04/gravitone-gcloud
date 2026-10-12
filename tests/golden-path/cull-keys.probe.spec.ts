@@ -13,17 +13,18 @@
 // stopped working on the row K/X buttons, the run list, the tab strip and Commit,
 // and opened the lightbox instead. Space still worked.
 //
-// `activatesOnEnter` is the rule, exported so this drives the real predicate
+// `enterBelongsToTarget` (components/ui/signal/keymap.ts) is the rule, exported so this drives the real predicate
 // rather than a copy of it. Enter is delivered to the focused element itself, so
 // the check is by tag and by role — no ancestor walk to reproduce here.
-import { readFileSync, readdirSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { activatesOnEnter } from "@/app/foundry/CullGrid";
+import { enterBelongsToTarget as activatesOnEnter } from "@/components/ui/signal/keymap";
 
 import { stripComments } from "./_helpers";
+import { callsTo, lineOf, sourceFile, switchCase } from "./_ast";
 
 const el = (tagName: string, role?: string) => ({
   tagName,
@@ -69,44 +70,16 @@ test("cull keys: an element with no getAttribute is handled, not thrown over", (
   expect(activatesOnEnter({})).toBe(false);
 });
 
-/** The Enter case's body, whichever form it takes.
- *
- *  Slicing to the first `break;` was the obvious reading and it is wrong the
- *  moment the case opens with a guard clause — `if (activatesOnEnter(t)) break;`
- *  IS a `break;`, so the slice stopped before the preventDefault it was about to
- *  order against, and the ordering assertion then compared against -1. The very
- *  fix this probe exists to require is what defeated the parser.
- *
- *  So: brace-match when the case is a block, otherwise run to the next `case` or
- *  the end of the switch. */
-function enterCaseBody(src: string, file: string): string {
-  const at = src.indexOf('case "Enter"');
-  expect(at, `${file}: no Enter case to read`).toBeGreaterThan(-1);
-  const colon = src.indexOf(":", at);
-  const rest = src.slice(colon + 1);
-  const firstNonSpace = rest.search(/\S/);
-  if (rest[firstNonSpace] === "{") {
-    let depth = 0;
-    for (let i = firstNonSpace; i < rest.length; i++) {
-      if (rest[i] === "{") depth++;
-      else if (rest[i] === "}" && --depth === 0) return rest.slice(firstNonSpace, i + 1);
-    }
-    throw new Error(`${file}: the Enter case's block is unbalanced`);
-  }
-  const next = rest.search(/\n\s*(case |default:|\})/);
-  return next > -1 ? rest.slice(0, next) : rest;
-}
-
 test("cull keys: the rule is WIRED into every Enter case, not merely exported", () => {
-  // Every assertion above passes with the guard deleted from the handler — they
+  // Every assertion above passes with the guard deleted from the handler - they
   // drive the predicate, and the predicate is not where the defect lived. So the
   // one thing that cannot be checked by calling a function is checked against
   // the source: that the Enter branch consults it before preventing the default.
   //
   // AND THE POPULATION IS DERIVED, which is the half this probe was missing.
-  // It named CullGrid.tsx. ExtractBoard.tsx — the Extract tab's board, same
+  // It named CullGrid.tsx. ExtractBoard.tsx - the Extract tab's board, same
   // shape, `<section onClick>` rows, a window keydown, `case "Enter"` with a
-  // preventDefault — never called the predicate at all, and this probe was
+  // preventDefault - never called the predicate at all, and this probe was
   // green throughout: it was reading the implementation it already knew about
   // instead of the ground truth. Measured 2026-09-05: 1 of 2 window-level Enter
   // handlers under app/foundry consulted the rule. The twelve buttons live
@@ -114,38 +87,51 @@ test("cull keys: the rule is WIRED into every Enter case, not merely exported", 
   // extraction", the tab strip, Commit) all stopped answering Enter after one
   // row click, exactly as CullGrid's own comment describes for the grid.
   //
-  // So: find every module that binds a keydown AND has an Enter case, and hold
-  // all of them to it. A third surface is covered by existing.
+  // So the population is every module under app/ and components/ that registers
+  // a "keydown" listener AND has an Enter case, and all of them are held to it.
+  // A third surface is covered by existing - and now so is a surface outside
+  // app/foundry.
   //
-  // COMMENTS ARE STRIPPED FIRST. The block above each Enter case names
-  // `activatesOnEnter` in prose, so a matcher over raw text is satisfied by a
-  // file that TALKS about the rule and does not call it — the exact shape this
-  // repo has already been caught by twice.
-  const dir = resolve(__dirname, "../../app/foundry");
-  const files = readdirSync(dir).filter((f) => /\.tsx$/.test(f));
-  expect(files.length, "the app/foundry walk found nothing — wrong tree").toBeGreaterThan(3);
+  // THIS READS THE PROGRAM, NOT THE TEXT (./_ast). A comment above an Enter case
+  // names `activatesOnEnter` in prose, and a text matcher is satisfied by a file
+  // that TALKS about the rule and does not call it; here a comment is not a
+  // node. It also sees EVERY switch with an Enter case in the file (the text
+  // version read the first and never knew about a second), and the brace-matching
+  // `enterCaseBody` that a guard clause's own `break;` once defeated is gone:
+  // a case clause's statements are a list, not a slice of characters.
+  const listeners = callsTo("addEventListener", ["app", "components"]).filter((c) => c.arg0 === "keydown");
+  expect(listeners.length, "no keydown listeners found under app/ and components/ - the walk is reading the wrong tree").toBeGreaterThan(5);
 
   const handlers: string[] = [];
-  for (const f of files) {
-    const src = stripComments(readFileSync(join(dir, f), "utf8"));
-    if (!/addEventListener\("keydown"/.test(src) || !src.includes('case "Enter"')) continue;
+  for (const f of [...new Set(listeners.map((c) => c.file))].sort()) {
+    const enters = switchCase(sourceFile(f), "Enter");
+    if (enters.length === 0) continue;
     handlers.push(f);
 
-    const body = enterCaseBody(src, f);
-    const guard = body.indexOf("activatesOnEnter");
-    const prevent = body.indexOf("preventDefault");
-    expect(guard, `${f}: the Enter case does not call activatesOnEnter`).toBeGreaterThan(-1);
-    // preventDefault must still be THERE — an Enter case that never takes the
-    // key is not this rule being honoured, it is the feature being deleted, and
-    // an ordering assertion over two -1s would call that a pass.
-    expect(prevent, `${f}: the Enter case no longer prevents the default at all`).toBeGreaterThan(-1);
-    // And it consults the rule BEFORE taking the key from the focused element.
-    expect(guard, `${f}: activatesOnEnter is consulted after preventDefault`).toBeLessThan(prevent);
+    for (const clause of enters) {
+      const at = `${f}:${lineOf(clause)}`;
+      const guard = callsTo("enterBelongsToTarget", clause)[0];
+      const prevent = callsTo("preventDefault", clause)[0];
+      expect(guard, `${at}: the Enter case does not call enterBelongsToTarget`).toBeDefined();
+      // preventDefault must still be THERE - an Enter case that never takes the
+      // key is not this rule being honoured, it is the feature being deleted, and
+      // an ordering assertion over two absences would call that a pass.
+      expect(prevent, `${at}: the Enter case no longer prevents the default at all`).toBeDefined();
+      // And it consults the rule BEFORE taking the key from the focused element.
+      expect(guard.node.getStart(), `${at}: enterBelongsToTarget is consulted after preventDefault`).toBeLessThan(
+        prevent.node.getStart(),
+      );
+    }
   }
 
-  console.log(`[cull-keys] window-level Enter handlers under app/foundry: ${handlers.join(", ")}`);
-  // Both known surfaces must still be IN the population — a rename that drops
-  // one out would leave the loop above vacuously green over what remains.
+  console.log(`[cull-keys] window-level Enter handlers: ${handlers.join(", ")}`);
+  // The known surfaces must still be IN the population - a rename that drops one
+  // out would leave the loop above vacuously green over what remains.
   // StripGrid.tsx joined 2026-10-06 (the Strips tab, the Cull's keys).
-  expect(handlers.sort()).toEqual(["CullGrid.tsx", "ExtractBoard.tsx", "StripGrid.tsx"]);
+  // CullGrid.tsx left the population when it moved onto the keymap kernel, which
+  // applies the rule to every binding; it is asserted below instead.
+  expect(handlers.sort()).toEqual(["app/foundry/ExtractBoard.tsx", "app/foundry/StripGrid.tsx"]);
+  const cull = stripComments(readFileSync(resolve(__dirname, "../../app/foundry/CullGrid.tsx"), "utf8"));
+  expect(cull, "CullGrid binds its keys through the kernel").toContain("useKeymap(");
+  expect(cull, "CullGrid has no private window keydown").not.toContain('addEventListener("keydown"');
 });

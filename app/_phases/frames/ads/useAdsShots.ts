@@ -65,10 +65,16 @@ export function useAssetUrls(ids: readonly string[]): Map<string, string> {
   useEffect(() => {
     disposed.current = false;
     const mine = owned.current;
+    const seen = asked.current;
     return () => {
       disposed.current = true;
       for (const u of mine.values()) URL.revokeObjectURL(u);
       mine.clear();
+      // What was revoked must be asked for again. A remount of the same
+      // instance (React's dev double-mount, a fast refresh) keeps this ref, and
+      // without the clear every id read as "already asked" and its picture
+      // stayed on a revoked URL.
+      seen.clear();
     };
   }, []);
 

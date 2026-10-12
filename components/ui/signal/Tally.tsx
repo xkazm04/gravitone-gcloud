@@ -27,6 +27,8 @@
 // The repo's pills (Eyebrow, the Deck rail, Segmented) are a different object:
 // they are CONTROLS or headings. A tally is a stamp.
 
+import Link from "next/link";
+
 import { useWorld } from "../world";
 
 export type TallyTone = "neutral" | "cyan" | "emerald" | "amber" | "rose";
@@ -61,6 +63,41 @@ const ALMANAC_TONE: Record<TallyTone, string> = {
   rose: "k-tally k-tally--err",
 };
 
+export interface TallyProps {
+  value: number;
+  /** The denominator, when this is a ratio rather than a count. */
+  of?: number;
+  /** A mono uppercase prefix — `KEPT 12/36`. Two words at most. */
+  label?: string;
+  tone?: TallyTone;
+  /**
+   * What `tone` does at zero. `"neutral"` (the default) is the "zero is not
+   * news" rule: a tone colours a chip only when there is something to see, so
+   * `missed 0` never glows amber. `"keep"` is the opt-out for a zero that IS
+   * news (a gate that must read green at 0 errors, say).
+   */
+  zero?: "neutral" | "keep";
+  /** Native tooltip. Prefer `hint`; this exists for the machine-short case
+   *  (an exact timestamp, an id) where a popover is more furniture than fact. */
+  title?: string;
+  /** Rendered as a <Hint> after the numerals. Same twelve-word rule. */
+  hint?: React.ReactNode;
+  /**
+   * EVERY COUNT IS A DOOR: the chip becomes the filter for the set it counts.
+   * Renders the same chip as a `<button aria-pressed>`; the accessible name
+   * stays "missed 2" and the pressed state is announced separately. Use `href`
+   * instead when the filtered view is a URL.
+   */
+  select?: { pressed: boolean; onToggle: () => void };
+  /** Same chip as a link. Mutually exclusive with `select` (select wins). */
+  href?: string;
+  className?: string;
+}
+
+/** A pressed chip reads as lit: the tone's own border, a ring, never a new hue. */
+const PRESSED = "ring-1 ring-white/40";
+const DOOR = "cursor-pointer transition hover:brightness-125 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300/70";
+
 /**
  * `<Tally value={12} of={36} />` → `12/36`. `<Tally value={3} />` → `3`.
  *
@@ -73,27 +110,21 @@ export function Tally({
   of,
   label,
   tone = "neutral",
+  zero = "neutral",
   title,
   hint,
+  select,
+  href,
   className = "",
-}: {
-  value: number;
-  /** The denominator, when this is a ratio rather than a count. */
-  of?: number;
-  /** A mono uppercase prefix — `KEPT 12/36`. Two words at most. */
-  label?: string;
-  tone?: TallyTone;
-  /** Native tooltip. Prefer `hint`; this exists for the machine-short case
-   *  (an exact timestamp, an id) where a popover is more furniture than fact. */
-  title?: string;
-  /** Rendered as a <Hint> after the numerals. Same twelve-word rule. */
-  hint?: React.ReactNode;
-  className?: string;
-}) {
+}: TallyProps) {
   const almanac = useWorld() === "almanac";
   const spoken = `${label ? `${label} ` : ""}${of === undefined ? `${value}` : `${value} of ${of}`}`;
-  return (
-    <span className={`${almanac ? ALMANAC_TONE[tone] : `${CHIP_CLASS} ${TALLY_TONE[tone]}`} ${className}`} title={title}>
+  const shown: TallyTone = value > 0 || zero === "keep" ? tone : "neutral";
+  const interactive = Boolean(select || href);
+  const skin = almanac ? ALMANAC_TONE[shown] : `${CHIP_CLASS} ${TALLY_TONE[shown]}`;
+  const cls = `${skin}${interactive ? ` ${DOOR}` : ""}${select?.pressed ? ` ${PRESSED}` : ""} ${className}`;
+  const body = (
+    <>
       {label && (
         <span aria-hidden className={almanac ? "uppercase" : "uppercase opacity-80"}>
           {label}
@@ -101,6 +132,36 @@ export function Tally({
       )}
       <span aria-hidden>{of === undefined ? value : `${value}/${of}`}</span>
       <span className="sr-only">{spoken}</span>
+    </>
+  );
+  // A hint is its own control; nesting it inside a button/link is invalid, so a
+  // door draws it beside the chip instead.
+  const withHint = (chip: React.ReactNode) =>
+    hint ? (
+      <span className="inline-flex items-center gap-1">
+        {chip}
+        {hint}
+      </span>
+    ) : (
+      chip
+    );
+  if (select) {
+    return withHint(
+      <button type="button" aria-pressed={select.pressed} onClick={select.onToggle} className={cls} title={title}>
+        {body}
+      </button>,
+    );
+  }
+  if (href) {
+    return withHint(
+      <Link href={href} className={cls} title={title}>
+        {body}
+      </Link>,
+    );
+  }
+  return (
+    <span className={cls} title={title}>
+      {body}
       {hint}
     </span>
   );

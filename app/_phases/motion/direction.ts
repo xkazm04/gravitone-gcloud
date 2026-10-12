@@ -323,3 +323,30 @@ export function plateImage(src: string | undefined): ImageRef | null {
 export function plateSig(src: string | undefined): string {
   return src ? `${src.length}:${src.slice(-32)}` : "";
 }
+
+/** The frames record with `motion` accepted onto one frame — what `useMotion`'s
+ *  accept hands `patchStep`. Pure, so the probe holds the rule below.
+ *
+ *  THE UNITS ARE THE RECORD; `frames` is their shadow (FramesStepData, v2).
+ *  Writing the line onto the shadow alone lost it: Frames rebuilds its frames
+ *  from `units` on every read, so the accepted motion vanished the next time
+ *  Frames opened, and Frames' next save rewrote the shadow from the units and
+ *  erased it on disk too. A unit keeps its frame's id (`unitsFromFrames`), so
+ *  the same rule lands it on both. A v1 record has no units and is written as
+ *  it was. */
+export function acceptIntoFramesRecord(
+  stored: unknown,
+  frameId: string,
+  motion: string,
+): { skip: string } | { put: Record<string, unknown> } {
+  if (typeof stored !== "object" || stored === null || Array.isArray(stored)) return { skip: "no frames record" };
+  const rec = stored as Record<string, unknown>;
+  if (!Array.isArray(rec.frames)) return { skip: "no frames record" };
+  const before = rec.frames as Frame[];
+  const after = withAcceptedMotion(before, frameId, motion);
+  if (after === before) return { skip: "unchanged" };
+  const units = Array.isArray(rec.units)
+    ? withAcceptedMotion(rec.units as Pick<Frame, "id" | "clip">[], frameId, motion)
+    : undefined;
+  return { put: { ...rec, frames: after, ...(units ? { units } : {}) } };
+}

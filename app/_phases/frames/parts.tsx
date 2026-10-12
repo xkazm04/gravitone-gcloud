@@ -124,8 +124,19 @@ export function FrameCanvas({
     >
       {show.plate && frame.plate.src ? (
         // data: URL from a just-generated buffer; next/image optimises files, not blobs.
+        // Lazy and async-decoded: a contact sheet holds dozens of these and a
+        // ledger sixteen, and a ~300KB plate decoded on the main thread for a
+        // column scrolled out of sight is a dropped frame for nothing. The box
+        // is `aspect-video` before the picture lands, so nothing shifts.
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={frame.plate.src} alt="" draggable={false} className="absolute inset-0 h-full w-full object-cover" />
+        <img
+          src={frame.plate.src}
+          alt=""
+          draggable={false}
+          loading="lazy"
+          decoding="async"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
       ) : (
         <div className="absolute inset-0 bg-[linear-gradient(135deg,var(--gt-wash),transparent)]" aria-hidden />
       )}

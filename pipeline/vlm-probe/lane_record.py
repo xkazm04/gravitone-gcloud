@@ -10,28 +10,203 @@ import hashlib
 import json
 import os
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 
-CHARACTER = (
-    "a woman in her early thirties with close-cropped platinum-blonde hair, "
-    "a thin pale scar running from her left eyebrow down across her cheekbone, "
-    "deep-set grey eyes, a scuffed charcoal flight jacket with a burnt-orange collar "
-    "worn over a grey undershirt"
-)
-
-LOCATION = (
-    "a derelict cargo hangar with corrugated steel walls, rust-stained concrete floor, "
-    "dusty shafts of afternoon sunlight cutting through high clerestory windows, "
-    "industrial shelving with forgotten wooden crates in the background"
-)
+# No CHARACTER / LOCATION here. The scene clauses belong to consistency.py,
+# which renders them; a copy here once described a different hangar, so a
+# record that defaulted to it described a scene no lane ever rendered. A record
+# written without clauses now carries none rather than an invented one.
 
 FLUX_MODELS = [
     "flux2_dev_fp8mixed.safetensors",
     "mistral_3_small_flux2_fp8.safetensors",
     "flux2-vae.safetensors",
 ]
+
+SEED = 770425
+DEFAULT_HERO = "pipeline/vlm-probe/shots/reference/00-hero.png"
+
+
+@dataclass(frozen=True)
+class LaneParam:
+    """One lane knob, declared once. argparse, the record writer, the resume
+    guard, replay_argv and the lane directory name are all projections of it.
+
+    type      int | float | bool | str | "path" (stored repo-relative)
+    key       the record key, when it differs from the kwarg/dest name
+    aliases   older record keys still read
+    flag      the CLI flag; None = recorded but fixed by the code, not the CLI
+    emit      replay: "always", or "changed" (only when it differs from default)
+    strict    a changed value refuses a resume
+    absent_is_default
+              a record without the key ran at the default (the knob predates
+              the record), rather than "unknown, do not compare"
+    record_default
+              write the default when the caller passed nothing
+    fallback  replay only: derive a value from an older record shape
+    """
+    name: str
+    type: object
+    default: object = None
+    key: str = None
+    aliases: tuple = ()
+    flag: str = None
+    choices: tuple = None
+    emit: str = "always"
+    strict: bool = True
+    absent_is_default: bool = False
+    record_default: bool = True
+    required: bool = False
+    fallback: object = None
+    help: str = None
+
+    @property
+    def rkey(self):
+        return self.key or self.name
+
+
+def _legacy_ref_count(rec):
+    # An older record kept only the staged list, and only once the lane finished.
+    refs = rec.get("refs") or rec.get("references")
+    return len(refs) if refs else None
+
+
+_SCENE = (
+    LaneParam("character", str, help="the character clause, verbatim in every prompt"),
+    LaneParam("location", str, help="the location clause, verbatim in every prompt"),
+)
+
+# Order is replay order: the tracked lanes' argv is a snapshot nobody should
+# have to re-derive.
+LANE_PARAMS = {
+    "stills": (
+        LaneParam("lane", str, flag="--lane", choices=("baseline", "reference"), required=True),
+        LaneParam("ref_crop", str, "full", flag="--ref-crop", choices=("full", "face"),
+                  emit="changed", absent_is_default=True),
+        LaneParam("late", float, 0.0, key="reference_joins_at", aliases=("late",), flag="--late",
+                  emit="changed", absent_is_default=True,
+                  help="fraction of denoising the text gets alone before the reference joins"),
+        LaneParam("tag", str, "", flag="--tag", emit="changed", absent_is_default=True,
+                  help="suffix for the output directory"),
+        LaneParam("zoom", bool, False, flag="--zoom", emit="changed", absent_is_default=True,
+                  help="the easy setups: focal length only"),
+        LaneParam("steps", int, 20, flag="--steps"),
+        LaneParam("seed", int, SEED, flag="--seed"),
+        # Intent, recorded up front: `references` stays [] until the lane
+        # finishes, so only this survives an interrupted run.
+        LaneParam("ref_count", int, 1, flag="--refs", emit="changed", record_default=False,
+                  fallback=_legacy_ref_count, help="how many copies of the hero to chain"),
+        LaneParam("width", int, 1280),
+        LaneParam("height", int, 720),
+        LaneParam("guidance", float, 4.0),
+        LaneParam("sampler", str, "euler"),
+    ) + _SCENE,
+    "clips": (
+        LaneParam("lane", str, flag="--lane", choices=("ref2va", "chain"), required=True),
+        LaneParam("width", int, 1344, flag="--width"),
+        LaneParam("height", int, 768, flag="--height"),
+        LaneParam("length", int, 73, flag="--length"),
+        LaneParam("steps", int, 4, flag="--steps"),
+        LaneParam("lora", bool, True, flag="--no-lora", emit="changed",
+                  help="full steps, no turbo LoRA"),
+        LaneParam("hero", "path", DEFAULT_HERO, flag="--hero", emit="changed",
+                  help="the still every clip is held against"),
+        LaneParam("seed", int, SEED),
+        LaneParam("fps", int, 24),
+    ) + _SCENE,
+}
+
+SCRIPT = {"stills": "consistency.py", "clips": "motion.py"}
+_MISSING = object()
+
+
+def param(kind, name):
+    for p in LANE_PARAMS[kind]:
+        if name in (p.name, p.rkey) or name in p.aliases:
+            return p
+    raise ValueError(f"{name!r} is not a {kind} lane param -- declare it in LANE_PARAMS")
+
+
+def kind_of(rec):
+    if rec.get("type") in LANE_PARAMS:
+        return rec["type"]
+    return "clips" if rec.get("lane") in param("clips", "lane").choices else "stills"
+
+
+def _recorded(p, rec):
+    for k in (p.rkey,) + p.aliases:
+        if k in rec:
+            return rec[k]
+    return _MISSING
+
+
+def _same(p, a, b):
+    if p.type == "path":
+        return resolve_from_repo(str(a)) == resolve_from_repo(str(b))
+    return a == b
+
+
+def lane_dir(kind, lane, zoom=False, tag=""):
+    """The directory name a lane renders into. params_from_dir is its inverse."""
+    if kind == "clips":
+        return lane
+    return lane + ("-zoom" if zoom else "") + tag
+
+
+def params_from_dir(kind, lane, dirname):
+    """Recover zoom and tag from a lane directory name (legacy records only)."""
+    if kind == "clips" or not dirname.startswith(lane):
+        return {"zoom": False, "tag": ""}
+    rest = dirname[len(lane):]
+    if rest.startswith("-zoom"):
+        return {"zoom": True, "tag": rest[len("-zoom"):]}
+    return {"zoom": False, "tag": rest}
+
+
+def _path_arg(value):
+    p = Path(value)
+    return p.resolve() if p.exists() else resolve_from_repo(value)
+
+
+def add_lane_args(ap, kind):
+    """The CLI projection of LANE_PARAMS[kind]: every flagged param, dest = name."""
+    for p in LANE_PARAMS[kind]:
+        if not p.flag:
+            continue
+        kw = {"dest": p.name, "help": p.help}
+        if p.type is bool:
+            kw["action"] = "store_false" if p.default else "store_true"
+        else:
+            kw["type"] = _path_arg if p.type == "path" else p.type
+            kw["metavar"] = p.flag.lstrip("-").upper()
+            if p.choices:
+                kw["choices"] = list(p.choices)
+            if p.required:
+                kw["required"] = True
+            else:
+                kw["default"] = p.default
+        ap.add_argument(p.flag, **kw)
+    return ap
+
+
+def build_arg_parser(kind):
+    return add_lane_args(argparse.ArgumentParser(prog=SCRIPT[kind]), kind)
+
+
+def fill(kind, **given):
+    """Every param with a value for this run: what was given, else its default."""
+    out = {}
+    given = {param(kind, k).name: v for k, v in given.items()}
+    for p in LANE_PARAMS[kind]:
+        v = given.get(p.name)
+        if v is None and p.record_default:
+            v = p.default
+        if v is not None:
+            out[p.name] = v
+    return out
 
 
 def sha256_file(path):
@@ -86,22 +261,10 @@ def read(path):
         raise FileNotFoundError(f"No lane.json found at {lane_file}")
 
     data = json.loads(lane_file.read_text(encoding="utf-8"))
-    lane = data.get("lane", "")
-    dirname = dir_path.name
-
-    if "zoom" not in data:
-        data["zoom"] = dirname.endswith("-zoom")
-
-    if "tag" not in data:
-        if dirname.endswith("-zoom"):
-            prefix = lane + "-zoom"
-            data["tag"] = dirname[len(prefix):] if dirname.startswith(prefix) else ""
-        elif dirname == lane:
-            data["tag"] = ""
-        elif dirname.startswith(lane):
-            data["tag"] = dirname[len(lane):]
-        else:
-            data["tag"] = ""
+    if "zoom" not in data or "tag" not in data:
+        inferred = params_from_dir(kind_of(data), data.get("lane", ""), dir_path.name)
+        for k, v in inferred.items():
+            data.setdefault(k, v)
 
     if "hero" in data and data["hero"]:
         data["hero"] = str(resolve_from_repo(data["hero"]))
@@ -110,91 +273,39 @@ def read(path):
     return data
 
 
-def record_stills(
-    out_dir,
-    lane,
-    seed=770425,
-    steps=20,
-    refs=(),
-    ref_crop="full",
-    late=0.0,
-    zoom=False,
-    tag="",
-    width=1280,
-    height=720,
-    guidance=4.0,
-    sampler="euler",
-    models=None,
-    character=None,
-    location=None,
-    shots=None,
-):
+def _write_record(kind, out_dir, lane, params, fixed):
     out_path = Path(out_dir)
     out_path.mkdir(parents=True, exist_ok=True)
-    rec = {
-        "schema": "lane-record/2",
-        "type": "stills",
-        "lane": lane,
-        "seed": seed,
-        "steps": steps,
-        "zoom": zoom,
-        "tag": tag,
-        "width": width,
-        "height": height,
-        "guidance": guidance,
-        "sampler": sampler,
+    values = fill(kind, lane=lane, **params)
+    rec = {"schema": "lane-record/2", "type": kind}
+    for p in LANE_PARAMS[kind]:
+        if p.name in values:
+            v = values[p.name]
+            rec[p.rkey] = relative_to_repo(v) if p.type == "path" else v
+    rec.update(fixed)
+    lane_file = out_path / "lane.json"
+    lane_file.write_text(json.dumps(rec, indent=2), encoding="utf-8")
+    rec["_dir"] = str(out_path.resolve())
+    return rec
+
+
+def record_stills(out_dir, lane, refs=(), models=None, shots=None, **params):
+    """Write a stills lane record. `params` are LANE_PARAMS["stills"] names;
+    anything else is refused, so an undeclared knob cannot be recorded."""
+    return _write_record("stills", out_dir, lane, params, {
         "models": models or list(FLUX_MODELS),
         "references": list(refs),
-        "ref_crop": ref_crop,
-        "reference_joins_at": late,
-        "character": character or CHARACTER,
-        "location": location or LOCATION,
         "shots": shots or {},
-    }
-    lane_file = out_path / "lane.json"
-    lane_file.write_text(json.dumps(rec, indent=2), encoding="utf-8")
-    rec["_dir"] = str(out_path.resolve())
-    return rec
+    })
 
 
-def record_clip(
-    out_dir,
-    lane,
-    seed=770425,
-    steps=4,
-    lora=True,
-    width=832,
-    height=480,
-    length=73,
-    fps=24,
-    hero=None,
-    character=None,
-    location=None,
-    beats=None,
-):
-    out_path = Path(out_dir)
-    out_path.mkdir(parents=True, exist_ok=True)
-    hero_rel = relative_to_repo(hero) if hero else ""
-    rec = {
-        "schema": "lane-record/2",
-        "type": "clips",
-        "lane": lane,
-        "seed": seed,
-        "steps": steps,
-        "lora": lora,
-        "width": width,
-        "height": height,
-        "length": length,
-        "fps": fps,
-        "hero": hero_rel,
-        "character": character or CHARACTER,
-        "location": location or LOCATION,
-        "beats": beats or {},
-    }
-    lane_file = out_path / "lane.json"
-    lane_file.write_text(json.dumps(rec, indent=2), encoding="utf-8")
-    rec["_dir"] = str(out_path.resolve())
-    return rec
+def record_clip(out_dir, lane, shots=None, beats=None, **params):
+    """Write a clip lane record. Per-clip checksums live under `shots` (where
+    write_shot puts them); `beats` is only the legacy v1 shape, kept if given."""
+    fixed = {"shots": shots or {}}
+    if beats:
+        fixed["beats"] = beats
+    return _write_record("clips", out_dir, lane, params, fixed)
 
 
 def write_shot(out_dir, shot_name, shot_file, prompt, **extra):
@@ -225,72 +336,34 @@ def write_shot(out_dir, shot_name, shot_file, prompt, **extra):
 
 
 def check_resume(record_or_path, current_kwargs):
+    """Refuse to resume a lane over pixels made with different parameters.
+
+    Every strict LANE_PARAMS entry is compared. A key the record does not carry
+    is skipped (unknown), unless the knob predates the record, in which case
+    the record ran at its default."""
     if isinstance(record_or_path, (str, Path)):
         rec = read(record_or_path)
     else:
         rec = record_or_path
+    kind = kind_of(rec)
 
     for key, val in current_kwargs.items():
-        if key == "steps":
-            old = rec.get("steps")
-            if old is not None and old != val:
-                raise SystemExit(
-                    f"Refusing to resume lane with changed parameters: steps {old} -> {val}"
-                )
-        elif key == "seed":
-            old = rec.get("seed")
-            if old is not None and old != val:
-                raise SystemExit(
-                    f"Refusing to resume lane with changed parameters: seed {old} -> {val}"
-                )
-        elif key == "ref_crop":
-            old = rec.get("ref_crop", "full")
-            if old != val:
-                raise SystemExit(
-                    f"Refusing to resume lane with changed parameters: ref_crop {old} -> {val}"
-                )
-        elif key in ("late", "reference_joins_at"):
-            old = rec.get("reference_joins_at", rec.get("late", 0.0))
-            if old != val:
-                raise SystemExit(
-                    f"Refusing to resume lane with changed parameters: late {old} -> {val}"
-                )
-        elif key == "zoom":
-            old = rec.get("zoom", False)
-            if old != val:
-                raise SystemExit(
-                    f"Refusing to resume lane with changed parameters: zoom {old} -> {val}"
-                )
-        elif key == "tag":
-            old = rec.get("tag", "")
-            if old != val:
-                raise SystemExit(
-                    f"Refusing to resume lane with changed parameters: tag {old} -> {val}"
-                )
-        elif key == "width":
-            old = rec.get("width")
-            if old is not None and old != val:
-                raise SystemExit(
-                    f"Refusing to resume lane with changed parameters: width {old} -> {val}"
-                )
-        elif key == "height":
-            old = rec.get("height")
-            if old is not None and old != val:
-                raise SystemExit(
-                    f"Refusing to resume lane with changed parameters: height {old} -> {val}"
-                )
-        elif key == "length":
-            old = rec.get("length")
-            if old is not None and old != val:
-                raise SystemExit(
-                    f"Refusing to resume lane with changed parameters: length {old} -> {val}"
-                )
-        elif key == "lora":
-            old = rec.get("lora")
-            if old is not None and old != val:
-                raise SystemExit(
-                    f"Refusing to resume lane with changed parameters: lora {old} -> {val}"
-                )
+        p = param(kind, key)
+        if not p.strict:
+            continue
+        old = _recorded(p, rec)
+        if old is _MISSING:
+            if not p.absent_is_default:
+                continue
+            old = p.default
+        if p.type == "path":
+            changed = bool(old and val) and not _same(p, old, val)
+        else:
+            changed = old is not None and old != val
+        if changed:
+            raise SystemExit(
+                f"Refusing to resume lane with changed parameters: {p.name} {old} -> {val}"
+            )
 
 
 def check(dir_path):
@@ -327,46 +400,28 @@ def check(dir_path):
 
 
 def replay_argv(record):
-    lane = record.get("lane", "")
-    if lane in ("chain", "ref2va"):
-        argv = ["motion.py", "--lane", lane]
-        if "width" in record:
-            argv.extend(["--width", str(record["width"])])
-        if "height" in record:
-            argv.extend(["--height", str(record["height"])])
-        if "length" in record:
-            argv.extend(["--length", str(record["length"])])
-        if "steps" in record:
-            argv.extend(["--steps", str(record["steps"])])
-        if "lora" in record and not record["lora"]:
-            argv.append("--no-lora")
-        return argv
-
-    argv = ["consistency.py", "--lane", lane]
-    ref_crop = record.get("ref_crop", "full")
-    if ref_crop and ref_crop != "full":
-        argv.extend(["--ref-crop", str(ref_crop)])
-
-    late = record.get("reference_joins_at", record.get("late", 0.0))
-    if late and float(late) != 0.0:
-        argv.extend(["--late", str(late)])
-
-    tag = record.get("tag", "")
-    if tag:
-        argv.append(f"--tag={tag}")
-
-    if record.get("zoom"):
-        argv.append("--zoom")
-
-    if "steps" in record:
-        argv.extend(["--steps", str(record["steps"])])
-    if "seed" in record:
-        argv.extend(["--seed", str(record["seed"])])
-
-    refs = record.get("refs") or record.get("references")
-    if refs and len(refs) > 1:
-        argv.extend(["--refs", str(len(refs))])
-
+    """The command that would re-render this lane, derived from LANE_PARAMS."""
+    kind = kind_of(record)
+    argv = [SCRIPT[kind]]
+    for p in LANE_PARAMS[kind]:
+        if not p.flag:
+            continue
+        v = _recorded(p, record)
+        if v is _MISSING and p.fallback:
+            v = p.fallback(record)
+            v = _MISSING if v is None else v
+        if v is _MISSING:
+            continue
+        if p.emit == "changed" and _same(p, v, p.default):
+            continue
+        if p.type is bool:
+            argv.append(p.flag)
+            continue
+        text = relative_to_repo(v) if p.type == "path" else str(v)
+        if text.startswith("-"):
+            argv.append(f"{p.flag}={text}")
+        else:
+            argv.extend([p.flag, text])
     return argv
 
 

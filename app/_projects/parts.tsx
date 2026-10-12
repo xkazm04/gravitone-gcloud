@@ -134,11 +134,16 @@ export function RowActions({
  *
  *  Sized `leading-none` on purpose: the tag sits on a lane's title line, and at
  *  text-label's own 1.45 line-height it (16 + 4 + 2 = 22px) stays under the
- *  title's line box instead of setting the line's height. */
+ *  title's line box instead of setting the line's height.
+ *
+ *  NO `title=` (Wave 1, 2026-10-08). It carried "An example production this
+ *  account was opened with — not your work. Delete it whenever you like." —
+ *  the app defining its own word and then granting a permission nobody asked
+ *  for. The word is the mark; the `demo N` chip in the toolbar (DemoChip
+ *  below) owns the act of clearing them. */
 export function DemoTag({ className = "" }: { className?: string }) {
   return (
     <span
-      title="An example production this account was opened with — not your work. Delete it whenever you like."
       className={`font-jetbrains shrink-0 rounded-full border border-white/15 px-1.5 py-0.5 text-label leading-none text-white/40 ${className}`}
     >
       demo

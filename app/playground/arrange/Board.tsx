@@ -83,6 +83,7 @@ export function Board({ a, kind }: { a: Arrange; kind: SoundKind }) {
   const [mapFor, setMapFor] = useState<string | null>(null);
   const [openVersions, setOpenVersions] = useState<ReadonlySet<string>>(new Set());
   const root = useRef<HTMLDivElement>(null);
+  const ghost = useRef<HTMLDivElement>(null);
   const rowsRef = useRef(rows);
   // A card that moved was re-mounted in its new cell; hand focus to it there,
   // on the render that follows the move (every move re-renders: it sets takes).
@@ -131,7 +132,16 @@ export function Board({ a, kind }: { a: Arrange; kind: SoundKind }) {
       const el = document.elementFromPoint(ev.clientX, ev.clientY)?.closest<HTMLElement>("[data-cell]");
       const next: Drag = { ...d, started: true, x: ev.clientX, y: ev.clientY, over: el?.dataset.cell ?? null };
       dragRef.current = next;
-      setDrag(next);
+      // The ghost follows the pointer by its own style; the BOARD re-renders
+      // only when the drag starts or the cell under the pointer changes. A
+      // setState per pointer move re-rendered every card, waveform and all,
+      // to move one lifted face a few pixels.
+      const g = ghost.current;
+      if (g) {
+        g.style.left = `${next.x - next.dx}px`;
+        g.style.top = `${next.y - next.dy}px`;
+      }
+      if (!d.started || d.over !== next.over) setDrag(next);
       if (ev.clientY < 70) window.scrollBy(0, -14);
       else if (ev.clientY > window.innerHeight - 70) window.scrollBy(0, 14);
     };
@@ -328,7 +338,7 @@ export function Board({ a, kind }: { a: Arrange; kind: SoundKind }) {
         ))}
       </div>
 
-      {drag?.started && <DragGhost d={drag} />}
+      {drag?.started && <DragGhost d={drag} ref={ghost} />}
     </div>
   );
 }
@@ -342,10 +352,11 @@ function overCheck(d: Drag, rows: readonly Row[]) {
 }
 
 /** What follows the pointer: the card's face, lifted. */
-function DragGhost({ d }: { d: Drag }) {
+function DragGhost({ d, ref }: { d: Drag; ref: React.Ref<HTMLDivElement> }) {
   const h = d.s.head;
   return (
     <div
+      ref={ref}
       aria-hidden
       style={{ left: d.x - d.dx, top: d.y - d.dy, width: d.w }}
       className="pointer-events-none fixed z-50 rotate-[1.2deg] rounded-xl border border-cyan-300/45 bg-[var(--gt-ink)]/90 p-3 shadow-2xl shadow-cyan-400/15 backdrop-blur-xl"

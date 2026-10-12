@@ -16,7 +16,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/Primitives";
 import { TextArea } from "@/components/ui/Field";
-import { CHIP_CLASS, Ghost, Provenance, TALLY_TONE, Tally, UpstreamBreak } from "@/components/ui/signal";
+import { CHIP_CLASS, Ghost, Keycaps, Provenance, TALLY_TONE, Tally, UpstreamBreak } from "@/components/ui/signal";
 import { getProject, type Discipline } from "@/lib/projects";
 
 import { useLoadFor } from "../_shared/useLoadFor";
@@ -130,7 +130,13 @@ function FrameRow({
     <li className="grid grid-cols-[minmax(0,10rem)_minmax(0,1fr)] gap-4 rounded-2xl border border-white/8 bg-white/[0.02] p-3">
       {directable ? (
         // eslint-disable-next-line @next/next/no-img-element -- a data: URL plate; next/image cannot optimise it
-        <img src={frame.plate.src} alt={frame.title} className="aspect-video w-full rounded-lg object-cover" />
+        <img
+          src={frame.plate.src}
+          alt={frame.title}
+          loading="lazy"
+          decoding="async"
+          className="aspect-video w-full rounded-lg object-cover"
+        />
       ) : (
         <Ghost shape="card" label="no plate" className="aspect-video w-full" />
       )}
@@ -181,6 +187,14 @@ function Proposal({
         rows={3}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
+        // Accept from the box the line was edited in, without reaching for the
+        // button — the same chord a chat input sends with.
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && draft.trim()) {
+            e.preventDefault();
+            onAccept(draft);
+          }
+        }}
         className="w-full"
       />
       <ul className="flex flex-wrap gap-1.5" aria-label="Moves">
@@ -194,6 +208,7 @@ function Proposal({
         <Button size="sm" onClick={() => onAccept(draft)} disabled={!draft.trim() || (accepted && draft === outcome.motion)}>
           Accept
         </Button>
+        <Keycaps label="Proposal keys" map={[{ keys: ["Ctrl", "Enter"], does: "accept" }]} />
         <Provenance model={outcome.basis.model} vendor={outcome.basis.provider} />
       </div>
     </div>

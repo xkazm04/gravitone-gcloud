@@ -47,22 +47,28 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import dynamic from "next/dynamic";
+
 import Modal from "@/components/ui/Modal";
+import { pendingPanel } from "@/components/ui/Pending";
 import StudioFrame from "@/components/ui/StudioFrame";
 import { Keycaps } from "@/components/ui/signal";
+import { useAnnounce } from "@/lib/announcer";
 import { calibrate, seriesKey } from "@/lib/foundry/calibration";
-import type { CommitResult, ForgeCommitPlan, RunDetail, RunSummary, Verdict, Verdicts } from "@/lib/foundry/types";
+import type { CommitResult, RunSummary, Verdict } from "@/lib/foundry/types";
 import { usePolling } from "@/lib/usePolling";
+import { useRemembered } from "@/lib/useRemembered";
 
 import { CullGrid } from "./CullGrid";
-import { DojoView } from "./DojoView";
-import { ExtractView } from "./ExtractView";
+import { CULL } from "./cullKeymap";
 import { Lightbox } from "./Lightbox";
-import { PipelineHeader, usePlant, useRunPreviews, type Tab } from "./plant";
+import FoundrySubnav from "./FoundrySubnav";
+import { MEDIA, type MediaId } from "./pipeline/media";
+import { engineLines, usePlant, useRunPreviews, type Tab } from "./plant";
 import { ForgeEmpty, RunBar, RunStrip } from "./RunCards";
-import { StripsView } from "./StripsView";
-import { StylesShelf } from "./StylesShelf";
-import { commitRun, fetchRun, fetchRuns, previewCommit, saveVerdicts } from "./foundryClient";
+import { fetchRuns } from "./foundryClient";
+import { cullGate } from "./gate/cull";
+import { useGate } from "./gate/useGate";
 import { COMMITTABLE, LIVE, STATUS_WORD } from "./parts";
 import {
   BarCount,
@@ -78,9 +84,19 @@ import {
   SaveNote,
   StatusChip,
   DecisionBar,
-  useCommitPlan,
-  type SaveKind,
 } from "./ui";
+
+// ONE TAB ON SCREEN, ONE TAB IN THE BUNDLE. Each panel below is shown alone,
+// behind the tab rail, so each is its own chunk fetched when its tab is chosen
+// rather than all of them on first load (Wave 0, docs/waves/README.md).
+// The cull grid is the default tab and stays a static import.
+const StylesShelf = dynamic(() => import("./StylesShelf").then((m) => m.StylesShelf), { loading: pendingPanel });
+const ExtractView = dynamic(() => import("./ExtractView").then((m) => m.ExtractView), { loading: pendingPanel });
+const DojoView = dynamic(() => import("./DojoView").then((m) => m.DojoView), { loading: pendingPanel });
+const StripsView = dynamic(() => import("./StripsView").then((m) => m.StripsView), { loading: pendingPanel });
+// The pipeline board — its engine, both sources, motion — is the heaviest tab
+// and not the default one, so it is its own chunk like the four above.
+const PipelineTab = dynamic(() => import("./PipelineTab"), { loading: pendingPanel });
 
 // THE TABS CARRIED A BLURB AND SO THE BLURB GOT WRITTEN — up to 45 words per
 // tab, printed as a paragraph under the row. None of the three headers has a
@@ -100,31 +116,51 @@ import {
 // commit deletes decided media keeping one thumbnail per approved improvement
 // (the Dojo dialog). Each is a consequence stated at the moment it is ordered.
 
-const CULL_KEYS = [
-  { keys: ["←", "→", "↑", "↓"], does: "move" },
-  { keys: ["K"], does: "keep" },
-  { keys: ["X"], does: "reject" },
-  { keys: ["U"], does: "clear" },
-  { keys: ["Enter"], does: "compare" },
-];
+/**
+ * Every station, for the remembered tab: a value from an older build that is no
+ * longer one of these reads as the cull.
+ *
+ * DERIVED FROM A RECORD, NOT TYPED AS AN ARRAY, and the difference is a tab that
+ * could not be opened for 30 hours. `readonly Tab[]` only says every ENTRY is a
+ * Tab; it says nothing about every Tab having an entry, so when the remembered
+ * tab landed (657f76d) this list was written with five of the six and tsc had no
+ * objection. `useRemembered` validates the stored value against it, so clicking
+ * Pipeline wrote "pipeline", failed the check on the way back out, and fell to
+ * the fallback — the station was on the rail, highlighted on hover, and simply
+ * would not open.
+ *
+ * A `Record<Tab, true>` is exhaustive by construction: the next member of the
+ * union fails to compile here until it is answered for. That is the same reason
+ * `ENGINE`, `lines()` and `station()` in ./plant.tsx are all `Record<Tab, …>`,
+ * stated in that file's own header — this one line had opted out of it.
+ */
+const TAB_SET: Record<Tab, true> = { cull: true, extract: true, styles: true, dojo: true, pipeline: true, strips: true };
+const TABS = Object.keys(TAB_SET) as readonly Tab[];
 
 export default function FoundryView() {
-  const [tab, setTab] = useState<Tab>("cull");
+  // THE STATION IS REMEMBERED. An operator who works the Extract bench or the
+  // Dojo gate came back to the cull on every reload and walked over again; the
+  // panel they left is the one they open on (lib/useRemembered.ts, one evicted
+  // record). The cull's own state still loads underneath — its runs feed the
+  // header's figures whichever station is in front.
+  const [tab, setTab] = useRemembered<Tab>("foundry.tab", "cull", TABS);
+  const [media, setMedia] = useState<MediaId>("articles");
   const plant = usePlant();
   const [runs, setRuns] = useState<RunSummary[] | null>(null);
-  const [runsError, setRunsError] = useState<string | null>(null);
+  const [listError, setRunsError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
-  const [detail, setDetail] = useState<RunDetail | null>(null);
-  const [verdicts, setVerdicts] = useState<Verdicts>({});
-  const [save, setSave] = useState<SaveKind>("idle");
+  // THE VERDICT STATE MACHINE IS THE GATE KERNEL'S (./gate/useGate.ts): the
+  // ticketed detail load, the optimistic map, the keyed write queue, undo (Z),
+  // the pagehide flush and the commit plan. This view keeps the rendering and
+  // the UI state around it.
+  const { gate, detail, verdicts, save, readOnly, loadError, canUndo, plan: planState } = useGate(cullGate);
   const [focused, setFocused] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [committing, setCommitting] = useState(false);
   /** The server's plan for the cull, asked for when the confirm opens. */
-  const plan = useCommitPlan<ForgeCommitPlan>();
-  const commitPlan = plan.plan;
-  const clearPlan = plan.clear;
+  const commitPlan = planState.plan;
+  const clearPlan = gate.clearPlan;
   const [result, setResult] = useState<CommitResult | null>(null);
   const [findingsOpen, setFindingsOpen] = useState(false);
   /** A commit that FAILED, shown inside the dialog that asked for it.
@@ -143,95 +179,39 @@ export default function FoundryView() {
    *  button that does nothing." Staying open was right; saying nothing was
    *  not. */
   const [commitError, setCommitError] = useState<string | null>(null);
-  const saveTimer = useRef<number | null>(null);
-  /** The latest verdict map, readable synchronously — see the header. */
-  const verdictsRef = useRef<Verdicts>({});
   const previews = useRunPreviews(runs);
-
-  const adoptVerdicts = useCallback((v: Verdicts) => {
-    verdictsRef.current = v;
-    setVerdicts(v);
-  }, []);
-
-  /** The newest detail request. A response holding an older ticket is dropped.
-   *
-   *  THIS USED TO WRITE ONE RUN'S HUMAN VERDICTS ONTO ANOTHER RUN. `loadDetail`
-   *  awaited `fetchRun(id)` and applied the result with no check that `id` was
-   *  still the selected run. Two paths reach it — `selectRun`, and the 4s poll —
-   *  so: click run A, click run B before A's fetch lands, and A's response calls
-   *  `adoptVerdicts(A.verdicts)` while `selected` is B. The next verdict edit then
-   *  autosaves that map to B (`setVerdict` reads `verdictsRef.current`), and B's
-   *  manifest now carries judgements a human made about A. Silent, and the poll
-   *  makes the window recur every four seconds rather than once.
-   *
-   *  A monotonic ticket rather than an `id === selected` comparison, because the
-   *  poll re-requests the SAME id: two in-flight loads for one run must still
-   *  resolve latest-wins, and comparing ids cannot express that. Same shape as
-   *  `claimSaveSlot` in app/_phases/_shared/stepStore.ts, for the same reason —
-   *  arrival order is not issue order. The ticket is taken at CALL time and
-   *  checked before anything is applied. */
-  const detailTicket = useRef(0);
-
-  const loadDetail = useCallback(
-    (id: string, keepVerdicts: boolean) => {
-      const ticket = ++detailTicket.current;
-      // AND A REJECTION PATH, because in this app an unhandled one is not
-      // silence -- it is a WRONG MESSAGE. GlobalErrorBridge listens on
-      // `unhandledrejection` and reports what it catches as
-      // `reportStorageTrouble("write", ...)`, so a failed READ of a run surfaces
-      // in the bell as the user's work failing to SAVE, and NotificationBell
-      // announces that one assertively (it is the app's only assertive case).
-      // On a 4s poll, a foundry that cannot be reached tells a screen-reader
-      // user their studio is not saving. `loadRuns` in this same file has
-      // always had its handler; this one did not.
-      fetchRun(id).then(
-        (d) => {
-          if (ticket !== detailTicket.current) return;
-          setDetail(d);
-          if (!keepVerdicts) adoptVerdicts(d.verdicts);
-          setRunsError(null);
-        },
-        (e) => {
-          if (ticket !== detailTicket.current) return;
-          setRunsError(e instanceof Error ? e.message : "could not load that run");
-        },
-      );
-    },
-    [adoptVerdicts],
-  );
 
   // Selecting a run is an event, not a derived state: the reset of the
   // per-run UI happens here, once, in the handler that chose it.
   const selectRun = useCallback(
     (id: string) => {
       setSelected(id);
-      setDetail(null);
       setResult(null);
       setFocused(null);
       setOpen(null);
       setFindingsOpen(false);
-      clearPlan();
-      setSave("idle");
-      loadDetail(id, false);
+      void gate.select(id);
     },
-    [loadDetail, clearPlan],
+    [gate],
   );
 
   const loadRuns = useCallback(() => {
-    fetchRuns().then(
+    return fetchRuns().then(
       (r) => {
         setRuns(r);
         setRunsError(null);
         setSelected((s) => {
           if (s || !r[0]) return s;
-          loadDetail(r[0].id, false);
+          void gate.select(r[0].id);
           return r[0].id;
         });
       },
       (e) => setRunsError(e instanceof Error ? e.message : "failed"),
     );
-  }, [loadDetail]);
-  useEffect(loadRuns, [loadRuns]);
+  }, [gate]);
+  useEffect(() => {
+    void loadRuns();
+  }, [loadRuns]);
 
   // A live run rewrites its manifest after every candidate; poll it — but
   // keep the local verdicts, which are the human's and never the forge's.
@@ -243,39 +223,32 @@ export default function FoundryView() {
   usePolling(
     () => {
       if (!selected) return;
-      loadDetail(selected, true);
-      loadRuns();
+      return Promise.all([gate.load(selected, true), loadRuns()]);
     },
     4000,
     Boolean(selected) && live,
   );
 
-  const readOnly = detail?.run.status === "committed";
+  const announce = useAnnounce();
+  const verdictNRef = useRef(0);
 
   /** Apply one verdict to one or many candidates. Idempotent; null clears. */
   const setVerdict = useCallback(
     (ids: string | string[], v: Verdict | null) => {
-      if (!selected || readOnly) return;
       const list = Array.isArray(ids) ? ids : [ids];
-      const at = new Date().toISOString();
-      const next = { ...verdictsRef.current };
-      for (const id of list) {
-        if (v) next[id] = { verdict: v, at };
-        else delete next[id];
-      }
-      adoptVerdicts(next);
-      setSave("saving");
-      if (saveTimer.current) window.clearTimeout(saveTimer.current);
-      const runId = selected;
-      saveTimer.current = window.setTimeout(() => {
-        saveVerdicts(runId, next).then(
-          () => setSave("saved"),
-          () => setSave("error"),
-        );
-      }, 400);
+      if (!gate.decide(list, v ? { verdict: v, at: new Date().toISOString() } : null, list[0])) return;
+      // The cull is keyboard-first, so the verdict has to be heard, not only seen: the
+      // tile's ring and stamp and the status strip's count change nothing for a screen
+      // reader. One event per decision, so the key is a counter (same-key repeats are
+      // dropped by the channel on purpose).
+      const word = v === "keep" ? "Kept" : v === "reject" ? "Rejected" : "Cleared verdict on";
+      announce({ key: `foundry-verdict:${++verdictNRef.current}`, text: `${word} ${list.length === 1 ? list[0] : `${list.length} candidates`}` });
     },
-    [selected, readOnly, adoptVerdicts],
+    [gate, announce],
   );
+  const undoVerdict = useCallback(() => {
+    if (gate.undo()) announce({ key: `foundry-verdict:${++verdictNRef.current}`, text: "Undid the last verdict" });
+  }, [gate, announce]);
 
   const order = useMemo(() => detail?.run.candidates.map((c) => c.id) ?? [], [detail]);
   const stepOpen = useCallback(
@@ -298,10 +271,9 @@ export default function FoundryView() {
 
   const openConfirm = () => {
     if (!selected) return;
-    const runId = selected;
     setConfirm(true);
     setCommitError(null);
-    plan.prepare(() => previewCommit(runId, "reject"));
+    void gate.prepareCommit();
   };
   const closeConfirm = () => {
     setConfirm(false);
@@ -314,13 +286,13 @@ export default function FoundryView() {
     setCommitting(true);
     setCommitError(null);
     try {
-      const r = await commitRun(selected, "reject", commitPlan?.token);
+      const r = await gate.commit();
       setResult(r);
       setConfirm(false);
       clearPlan();
       setOpen(null);
-      loadDetail(selected, false);
-      loadRuns();
+      void gate.load(selected, false);
+      void loadRuns();
     } catch (e) {
       setCommitError(e instanceof Error ? e.message : "commit failed");
     } finally {
@@ -384,8 +356,11 @@ export default function FoundryView() {
       onOpen={setOpen}
       keysEnabled={!open && !confirm && !findingsOpen}
       calibration={calibration}
+      onUndo={canUndo ? undoVerdict : undefined}
     />
   );
+  /** A failed run list, or a failed read of the selected run (the gate's). */
+  const runsError = listError ?? loadError;
   const noRuns = runs !== null && runs.length === 0;
   const pending = !run && selected ? <Loading label="reading the run" /> : null;
 
@@ -415,7 +390,16 @@ export default function FoundryView() {
       <main tabIndex={-1} className="pb-36">
         <h1 className="sr-only">Foundry</h1>
         <header className="pt-2">
-          <PipelineHeader tab={tab} onSelect={selectTab} runs={runs} plant={plant} previews={previews} />
+          {/* THE MEDIA CHOICE LIVES HERE, not in the tab, because the row that
+              shows it is this view's. It is the same kind of question as the
+              station beside it — which body of work am I looking at — and
+              hoisting it is what let the Pipeline's own top bar be deleted. */}
+          <FoundrySubnav
+            tab={tab}
+            onSelect={selectTab}
+            lines={engineLines(runs, plant)}
+            media={tab === "pipeline" ? { value: media, options: MEDIA, onChange: setMedia } : undefined}
+          />
         </header>
 
         <section role="tabpanel" aria-label={tab} className="mt-4">
@@ -425,6 +409,8 @@ export default function FoundryView() {
             <ExtractView />
           ) : tab === "dojo" ? (
             <DojoView />
+          ) : tab === "pipeline" ? (
+            <PipelineTab media={media} />
           ) : tab === "strips" ? (
             <StripsView />
           ) : (
@@ -438,7 +424,7 @@ export default function FoundryView() {
             <BarCount tone="rose" n={counts.rejected} label="rejected" />
             <BarCount tone="neutral" n={counts.undecided} label="undecided" />
             <SaveNote state={save} final={readOnly} />
-            {!readOnly && <Keycaps label="Cull shortcuts" map={CULL_KEYS} />}
+            {!readOnly && <Keycaps label="Cull shortcuts" map={CULL} />}
             <span className="ml-auto flex items-center gap-3">
               {readOnly ? (
                 <StatusChip kind="committed" word="committed" />
@@ -515,7 +501,7 @@ export default function FoundryView() {
             </>
           }
           busy={committing}
-          preparing={plan.loading}
+          preparing={planState.loading}
           confirmLabel={`Delete ${commitPlan ? commitPlan.counts.deleted + commitPlan.counts.undecided : counts.rejected + counts.undecided}, keep ${commitPlan ? commitPlan.counts.kept : counts.kept}`}
           onConfirm={doCommit}
           onCancel={closeConfirm}
@@ -523,9 +509,9 @@ export default function FoundryView() {
           {commitPlan && commitPlan.promotions.length > 0 && (
             <PlanFact label="Promoted to proven">{commitPlan.promotions.join(", ")}</PlanFact>
           )}
-          {plan.error && (
+          {planState.error && (
             <div className="mt-4">
-              <ErrorNote role="alert">Could not prepare the commit: {plan.error}</ErrorNote>
+              <ErrorNote role="alert">Could not prepare the commit: {planState.error}</ErrorNote>
             </div>
           )}
           {commitError && (
