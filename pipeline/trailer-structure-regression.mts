@@ -28,6 +28,13 @@ import {
   type StructureFinding,
   type StructureReport,
 } from "../app/_phases/script/trailer/structure";
+import { notesFromFindings } from "../app/_phases/script/trailer/notes";
+import {
+  parseTrailerPlan,
+  replayTrailerPlan,
+  structureDelta,
+  trailerEditPlanSchema,
+} from "../app/_phases/script/trailer/plan";
 import {
   VOCABULARIES_ARE_DISJOINT,
   atSeconds,
@@ -468,9 +475,69 @@ if (unroutable.length) {
   );
 }
 
+/* ───────────────────── notes and the edit plan (session 1) ─────────────────── */
+
+const planCheck = (name: string, ok: boolean, why: string) => {
+  if (!ok) bad++;
+  console.log(`${ok ? "OK  " : "FAIL"}  plan           · ${name}${ok ? "" : ` — ${why}`}`);
+};
+
+{
+  const base = baseline();
+  const andThen = withBeat(base, "b5", { connector: "AND THEN" });
+
+  // 1. one AND THEN -> one fix-connector note on that beat; clean -> none.
+  const notes = notesFromFindings(runStructureCheck(andThen), andThen);
+  planCheck(
+    "AND THEN yields one fix-connector note on its beat",
+    notes.length === 1 && notes[0].kind === "fix-connector" && notes[0].beatId === "b5",
+    JSON.stringify(notes.map((n) => [n.kind, n.beatId])),
+  );
+  const cleanNotes = notesFromFindings(runStructureCheck(base), base);
+  planCheck("a clean report yields no notes", cleanNotes.length === 0, `${cleanNotes.length} note(s)`);
+
+  // 2. refusals: unknown beat, kind change, movement change — findings listed.
+  const unknown = parseTrailerPlan(base, { ops: [{ beatId: "nope", patch: { text: "x" }, why: "w" }], summary: "" });
+  planCheck("refuses an op on a beat not in the cut", !unknown.ok && unknown.findings.length === 1, JSON.stringify(unknown));
+  const spine = parseTrailerPlan(base, {
+    ops: [
+      { beatId: "b3", patch: { kind: "peak" }, why: "w" },
+      { beatId: "b4", patch: { movement: "m3" }, why: "w" },
+    ],
+    summary: "",
+  });
+  planCheck("refuses a patch that changes kind or movement, listing both", !spine.ok && spine.findings.length === 2, JSON.stringify(spine));
+
+  // 3. a plan that sets the offending connector to BUT closes it, opens nothing.
+  const fix = parseTrailerPlan(andThen, { ops: [{ beatId: "b5", patch: { connector: "BUT" }, why: "w" }], summary: "s" });
+  if (!fix.ok) planCheck("accepts the connector fix", false, JSON.stringify(fix));
+  else {
+    const candidate = replayTrailerPlan(andThen, fix.plan);
+    const d = structureDelta(runStructureCheck(andThen), runStructureCheck(candidate));
+    planCheck(
+      "connector fix: 1 closed, 0 opened",
+      d.closed.length === 1 && d.closed[0] === "connector/b5" && d.opened.length === 0,
+      JSON.stringify(d),
+    );
+    planCheck("replay leaves the source cut untouched", andThen.beats.find((b) => b.id === "b5")?.connector === "AND THEN", "mutated");
+  }
+
+  // 4. a plan that opens a violation is still a valid plan; the delta says so.
+  const opens = parseTrailerPlan(base, { ops: [{ beatId: "b4", patch: { raises: ["intimacy", "threat", "cost"] }, why: "w" }], summary: "s" });
+  if (!opens.ok) planCheck("accepts a plan that opens a violation", false, JSON.stringify(opens));
+  else {
+    const d = structureDelta(runStructureCheck(base), runStructureCheck(replayTrailerPlan(base, opens.plan)));
+    planCheck("opening plan: 1 opened, 0 closed", d.opened.length === 1 && d.opened[0] === "escalation/b4" && d.closed.length === 0, JSON.stringify(d));
+  }
+
+  // the schema enumerates the cut's actual beat ids.
+  const enumIds = (trailerEditPlanSchema(base).properties.ops.items.properties.beatId as { enum: string[] }).enum;
+  planCheck("schema beatId enum is the cut's beat ids", enumIds.join() === base.beats.map((b) => b.id).join(), enumIds.join());
+}
+
 console.log(
   bad
     ? `\n${bad} REGRESSION FAILURE(S)`
-    : `\nall ${CASES.length} cases, 6 invariants and 5 seam checks behave correctly`,
+    : `\nall ${CASES.length} cases, 6 invariants, 5 seam checks and the plan cases behave correctly`,
 );
 process.exit(bad ? 1 : 0);
