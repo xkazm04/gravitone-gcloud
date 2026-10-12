@@ -1,0 +1,450 @@
+{
+ "schema": "conform-run/1",
+ "worker": "790137e4-ec5d-4a08-82ad-24c9703042e1",
+ "subject": "quality-gates",
+ "evaluatedAt": "2026-10-12T20:35:53.369266+00:00",
+ "provider": "grok",
+ "model": "grok-4.7",
+ "pairs": [
+  {
+   "context": "pipeline-scripts",
+   "subject": "quality-gates",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "pipeline/check-type-scale.mjs:81 A missing world-CSS directory adds no files and no finding, so check-type-scale still exits 0 and prints that the 14px floor held.",
+   "techniques": [
+    {
+     "technique": "gate-liveness",
+     "verdict": "deviation",
+     "evidence": "pipeline/check-type-scale.mjs:81 Empty CSS walk is not could-not-run; the OK line still claims the floor."
+    },
+    {
+     "technique": "oracle-frozen-during-repair",
+     "verdict": "deviation",
+     "evidence": "pipeline/lint-ratchet.mjs:131 The failure text tells the fixer to edit the ratchet baseline in the same commit."
+    },
+    {
+     "technique": "unparseable-form-is-a-finding",
+     "verdict": "deviation",
+     "evidence": "pipeline/check-manifest.mjs:166 A non-empty manifest line with no colon is dropped and never becomes a finding."
+    },
+    {
+     "technique": "policy-projection",
+     "verdict": "deviation",
+     "evidence": "pipeline/gates.mts:91 The registry projection of type-scale omits the world-CSS floor the script enforces."
+    },
+    {
+     "technique": "severity-by-construction",
+     "verdict": "conformant",
+     "evidence": "pipeline/lint-ratchet.mjs:107 Error-severity findings take exit 1; warnings are a separate ratchet, not an ignored log."
+    },
+    {
+     "technique": "blocking-by-input-determinism",
+     "verdict": "conformant",
+     "evidence": "pipeline/lint-ratchet.mjs:7 The lint verdict is a function of this tree plus a committed baseline, and a mismatch exits 1."
+    },
+    {
+     "technique": "false-positive-economics",
+     "verdict": "conformant",
+     "evidence": "pipeline/check-bundle.mjs:292 A measured false positive on NEXT_PUBLIC_ names was narrowed with a lookbehind instead of dropping the check."
+    },
+    {
+     "technique": "match-the-resolved-artifact",
+     "verdict": "conformant",
+     "evidence": "pipeline/check-bundle.mjs:157 Each fingerprint must still occur in comment-stripped source before absence from the bundle counts."
+    },
+    {
+     "technique": "refusal-names-a-reachable-remedy",
+     "verdict": "conformant",
+     "evidence": "pipeline/check-bundle.mjs:186 A dead fingerprint says to retarget a string in the same file and refuses deleting the entry."
+    },
+    {
+     "technique": "renameable-detector-keys",
+     "verdict": "conformant",
+     "evidence": "pipeline/check-bundle.mjs:180 Rewording a hunted string is could-not-run, not a clean bundle."
+    },
+    {
+     "technique": "self-reported-gate-inputs",
+     "verdict": "conformant",
+     "evidence": "pipeline/check-bundle.mjs:67 Server-only names are derived from the example file, with a floor of 8, after a hand-copied list went stale."
+    },
+    {
+     "technique": "decidable-in-a-window",
+     "verdict": "conformant",
+     "evidence": "pipeline/check-type-scale.mjs:27 The size floor parses the number on the line so a decimal class cannot hide from a digit pattern."
+    },
+    {
+     "technique": "unmeasurable-criteria",
+     "verdict": "conformant",
+     "evidence": "pipeline/check-bundle.mjs:27 No live secret in CI is not treated as a pass; the name check and positive control still have to run."
+    },
+    {
+     "technique": "instrument-answers-only-its-own-question",
+     "verdict": "conformant",
+     "evidence": "pipeline/drive-script-step.mjs:15 The driver exists because typecheck and build stayed green on a click-only crash."
+    },
+    {
+     "technique": "gate-laddering",
+     "verdict": "conformant",
+     "evidence": "pipeline/lint-ratchet.mjs:19 The same lint script is the check on the local rung and the pipeline rung."
+    },
+    {
+     "technique": "prose-rule-drift",
+     "verdict": "conformant",
+     "evidence": "pipeline/check-bundle.mjs:10 The server-only env rule is now a check over emitted chunks, not only the comment in .env.example."
+    },
+    {
+     "technique": "vacuous-by-evaluation",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/check-manifest.mjs:209 Missing required keys fail; no expander fills them before the check."
+    },
+    {
+     "technique": "hook-hygiene",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/drive-studio.mjs:5 The drive scripts are hand-started node processes, not commit or push hooks."
+    }
+   ],
+   "registryProposal": "oracle-frozen-during-repair lists a ratchet baseline as oracle and treats a same-commit edit as softening, but a symmetric ratchet cannot record a real fall except by editing that baseline; the release valve should name a reviewed re-baseline rather than forbid it."
+  },
+  {
+   "context": "ui-component-probes",
+   "subject": "quality-gates",
+   "bundle": "software-engineering",
+   "state": "conformant",
+   "evidence": "tests/golden-path/chrome-colour-literals.probe.spec.ts:99 The colour-literal probe refuses an empty walk before it will report the tree clean.",
+   "techniques": [
+    {
+     "technique": "gate-liveness",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/chrome-colour-literals.probe.spec.ts:99 A zero-file walk is a failed test, not a clean colour report."
+    },
+    {
+     "technique": "match-the-resolved-artifact",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/cards-carry-evidence-class.probe.spec.ts:81 CardTile is matched only after comments are removed, so prose cannot stand in for a read of card.sources."
+    },
+    {
+     "technique": "self-reported-gate-inputs",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/chrome-colour-literals.probe.spec.ts:83 The scanned population is git ls-files, not a list typed into the probe."
+    },
+    {
+     "technique": "decidable-in-a-window",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/dialog-closes-on-success.probe.spec.ts:21 Close-after-await is decided inside one function, and the probe scans that body."
+    },
+    {
+     "technique": "unparseable-form-is-a-finding",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/commit-gate-parity.probe.spec.ts:70 An unrecognised commit-guard shape throws instead of comparing an empty allow-list."
+    },
+    {
+     "technique": "refusal-names-a-reachable-remedy",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/chrome-colour-literals.probe.spec.ts:118 A colour finding names an in-repo edit: add the file to EXEMPT with a reason."
+    },
+    {
+     "technique": "false-positive-economics",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/chrome-colour-literals.probe.spec.ts:61 A constructed rgba() was excluded by lookahead rather than by exempting the whole file."
+    },
+    {
+     "technique": "severity-by-construction",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/object-url-ownership.probe.spec.ts:112 An unlisted mint-without-revoke fails the test; only the named map is spared."
+    },
+    {
+     "technique": "renameable-detector-keys",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/cull-keys.probe.spec.ts:129 Known Enter handlers must still be in the derived population, so a rename cannot empty the check."
+    },
+    {
+     "technique": "waiver-names-its-finding",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/object-url-ownership.probe.spec.ts:124 A leak exemption is one path plus a reason, and a stale path fails in both directions."
+    },
+    {
+     "technique": "prose-rule-drift",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/chrome-colour-literals.probe.spec.ts:9 The tokens.ts recheck instruction had no runner; this probe is that runner."
+    },
+    {
+     "technique": "gate-laddering",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/commit-failure-visible.probe.spec.ts:21 The failure-placement rule is checked as source order because a live 409 is the expensive rung."
+    },
+    {
+     "technique": "instrument-answers-only-its-own-question",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/cull-keys.probe.spec.ts:74 Calling enterBelongsToTarget does not prove the handler calls it, so the wiring is a separate assertion."
+    },
+    {
+     "technique": "vacuous-by-evaluation",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/cards-carry-evidence-class.probe.spec.ts:49 The card assertion is refused if the fixture row no longer has the sources the probe claims to follow."
+    },
+    {
+     "technique": "blocking-by-input-determinism",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/announcement.probe.spec.ts:16 The announcer probe's verdict does not move with wall clock or a live renderer."
+    },
+    {
+     "technique": "policy-projection",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/chrome-colour-literals.probe.spec.ts:125 EXEMPT is checked against the exemption names still written in tokens.ts."
+    }
+   ]
+  },
+  {
+   "context": "data-asset-probes",
+   "subject": "quality-gates",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "tests/golden-path/foundry-client-one-rule.probe.spec.ts:55 Only a fetch whose URL is a literal starting with /api/foundry is a finding, so the same call through a variable stays green.",
+   "techniques": [
+    {
+     "technique": "unparseable-form-is-a-finding",
+     "verdict": "deviation",
+     "evidence": "tests/golden-path/foundry-client-one-rule.probe.spec.ts:55 A non-literal fetch of the foundry API is not collected and does not fail."
+    },
+    {
+     "technique": "renameable-detector-keys",
+     "verdict": "deviation",
+     "evidence": "tests/golden-path/foundry-client-one-rule.probe.spec.ts:52 A second client that does not name the function call<T> is invisible to the one-definer expect."
+    },
+    {
+     "technique": "oracle-frozen-during-repair",
+     "verdict": "deviation",
+     "evidence": "tests/golden-path/notebook-source-ladder.probe.spec.ts:95 A real migration fails until the baseline list in this same probe is edited."
+    },
+    {
+     "technique": "gate-liveness",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/foundry-commit-indices.probe.spec.ts:154 The commit probe requires the tracked index files to exist and be non-empty before \"unchanged\" can pass."
+    },
+    {
+     "technique": "vacuous-by-evaluation",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/notebook-graph.probe.spec.ts:44 A planted duplicate id must be reported, so a checker that can no longer see duplicates fails."
+    },
+    {
+     "technique": "match-the-resolved-artifact",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/foundry-client-one-rule.probe.spec.ts:33 Comments are stripped because a naive stripper once hid the import and the probe stayed green."
+    },
+    {
+     "technique": "self-reported-gate-inputs",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/foundry-client-one-rule.probe.spec.ts:36 The client population is a directory walk, so a third file is in scope without being named."
+    },
+    {
+     "technique": "refusal-names-a-reachable-remedy",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/foundry-routes.probe.spec.ts:41 A 401 with no secret configured names the env var the operator has to set."
+    },
+    {
+     "technique": "false-positive-economics",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/notebook-source-ladder.probe.spec.ts:67 The joined-source detector was narrowed so a comma inside one citation is not a second publication."
+    },
+    {
+     "technique": "severity-by-construction",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/notebook-source-ladder.probe.spec.ts:27 Legacy rows stay on a blocking ratchet instead of a hard fail that would force the fixture to be rewritten."
+    },
+    {
+     "technique": "blocking-by-input-determinism",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/foundry-routes.probe.spec.ts:6 The route probe calls the handlers in process and does not depend on a live server or vendor."
+    },
+    {
+     "technique": "decidable-in-a-window",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/notebook-source-ladder.probe.spec.ts:73 The anti-shape is a pattern on one source string, which a window scan can decide."
+    },
+    {
+     "technique": "prose-rule-drift",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/notebook-graph.probe.spec.ts:14 notebookIssues had been a command someone had to remember; this probe runs it and seeds failures."
+    },
+    {
+     "technique": "gate-laddering",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/foundry-routes.probe.spec.ts:5 The route check runs the handler functions directly, on the cheap rung, with no server."
+    },
+    {
+     "technique": "fabrication-economics",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/notebook-source-ladder.probe.spec.ts:71 A comma that may be one publication is left as a named judgment instead of a regex deciding it."
+    },
+    {
+     "technique": "instrument-answers-only-its-own-question",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/notebook-graph.probe.spec.ts:10 woundsOf cannot see a dangling id, so notebookIssues is a separate check rather than the same green."
+    }
+   ]
+  },
+  {
+   "context": "signal-vocabulary",
+   "subject": "quality-gates",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "components/ui/signal/index.ts:3 These modules draw chips, rails and empty states and do not themselves refuse a change.",
+   "techniques": [
+    {
+     "technique": "severity-by-construction",
+     "verdict": "not-applicable",
+     "evidence": "components/ui/signal/UpstreamBreak.tsx:42 Rose versus cyan here is a display role, not an exit code."
+    },
+    {
+     "technique": "unmeasurable-criteria",
+     "verdict": "not-applicable",
+     "evidence": "components/ui/signal/StaleBadge.tsx:43 The badge prints a label the caller already chose; it does not skip, fail or refuse a condition."
+    },
+    {
+     "technique": "refusal-names-a-reachable-remedy",
+     "verdict": "not-applicable",
+     "evidence": "components/ui/signal/UpstreamBreak.tsx:58 The verb is a prop on a drawing, not the message of a blocking check."
+    },
+    {
+     "technique": "advancement-evidence-fields",
+     "verdict": "not-applicable",
+     "evidence": "components/ui/signal/Provenance.tsx:52 Empty provenance omits optional credit chips; it is not a stage-obligation cell."
+    },
+    {
+     "technique": "fabrication-economics",
+     "verdict": "not-applicable",
+     "evidence": "components/ui/signal/Hint.tsx:32 The twelve-word hint rule is copy guidance, not a required field a checker scores for meaning."
+    },
+    {
+     "technique": "item-liveness",
+     "verdict": "not-applicable",
+     "evidence": "components/ui/signal/StaleBadge.tsx:3 The badge marks a stale measurement, not an in-flight work item whose owner went silent."
+    },
+    {
+     "technique": "gate-liveness",
+     "verdict": "not-applicable",
+     "evidence": "components/ui/signal/BandTrack.tsx:18 BandTrack draws a range; it does not walk a population or exit."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "quality-gates",
+   "context": "probe-frame-data",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-12T20:35:53.369266+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "quality-gates"
+   ],
+   "techniques": [
+    "blocking-by-input-determinism",
+    "decidable-in-a-window",
+    "false-positive-economics",
+    "gate-laddering",
+    "gate-liveness",
+    "hook-hygiene",
+    "instrument-answers-only-its-own-question",
+    "match-the-resolved-artifact",
+    "oracle-frozen-during-repair",
+    "policy-projection",
+    "prose-rule-drift",
+    "refusal-names-a-reachable-remedy",
+    "renameable-detector-keys",
+    "self-reported-gate-inputs",
+    "severity-by-construction",
+    "unmeasurable-criteria",
+    "unparseable-form-is-a-finding",
+    "vacuous-by-evaluation"
+   ],
+   "deviations": 1,
+   "context": "pipeline-scripts",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  },
+  {
+   "ts": "2026-10-12T20:35:53.369266+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "quality-gates"
+   ],
+   "techniques": [
+    "blocking-by-input-determinism",
+    "decidable-in-a-window",
+    "false-positive-economics",
+    "gate-laddering",
+    "gate-liveness",
+    "instrument-answers-only-its-own-question",
+    "match-the-resolved-artifact",
+    "policy-projection",
+    "prose-rule-drift",
+    "refusal-names-a-reachable-remedy",
+    "renameable-detector-keys",
+    "self-reported-gate-inputs",
+    "severity-by-construction",
+    "unparseable-form-is-a-finding",
+    "vacuous-by-evaluation",
+    "waiver-names-its-finding"
+   ],
+   "deviations": 0,
+   "context": "ui-component-probes",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  },
+  {
+   "ts": "2026-10-12T20:35:53.369266+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "quality-gates"
+   ],
+   "techniques": [
+    "blocking-by-input-determinism",
+    "decidable-in-a-window",
+    "fabrication-economics",
+    "false-positive-economics",
+    "gate-laddering",
+    "gate-liveness",
+    "instrument-answers-only-its-own-question",
+    "match-the-resolved-artifact",
+    "oracle-frozen-during-repair",
+    "prose-rule-drift",
+    "refusal-names-a-reachable-remedy",
+    "renameable-detector-keys",
+    "self-reported-gate-inputs",
+    "severity-by-construction",
+    "unparseable-form-is-a-finding",
+    "vacuous-by-evaluation"
+   ],
+   "deviations": 1,
+   "context": "data-asset-probes",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  },
+  {
+   "ts": "2026-10-12T20:35:53.369266+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "quality-gates"
+   ],
+   "techniques": [
+    "advancement-evidence-fields",
+    "fabrication-economics",
+    "gate-liveness",
+    "item-liveness",
+    "refusal-names-a-reachable-remedy",
+    "severity-by-construction",
+    "unmeasurable-criteria"
+   ],
+   "deviations": 0,
+   "context": "signal-vocabulary",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  }
+ ]
+}
