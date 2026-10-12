@@ -112,6 +112,20 @@ async function start(): Promise<void> {
   await kickSunoWorker();
 }
 
+/** The first job, once the worker has persisted `phase` on it. Polled at 25ms,
+ *  not faster: Windows refuses a rename onto a file a reader holds open, and a
+ *  5ms poll kept suno.json open often enough that the worker's write retries
+ *  all lost (measured 2026-10-12, 6 in 120 runs) - the phase write was dropped,
+ *  the held driver never released, and the test timed out. */
+async function untilPhase(phase: SunoJob["phase"]): Promise<SunoJob | undefined> {
+  let seen: SunoJob | undefined;
+  for (let i = 0; i < 800 && seen?.phase !== phase; i++) {
+    await new Promise((r) => setTimeout(r, 25));
+    seen = (await readSuno()).jobs[0];
+  }
+  return seen;
+}
+
 const storeFile = () => path.join(process.env.SOUND_STORE_DIR!, "suno.json");
 function writeStore(f: SunoFile) {
   mkdirSync(path.dirname(storeFile()), { recursive: true });
@@ -188,11 +202,7 @@ test("the active phase and model are persisted while the driver works", async ()
   await enqueue([a.id]);
   expect((await runPOST(rq("/api/sound/suno/run", "POST", { running: true }))).status).toBe(200);
   const running = kickSunoWorker();
-  let seen: SunoJob | undefined;
-  for (let i = 0; i < 2000 && seen?.phase !== "creating"; i++) { // ~10s+: a loaded gate run reaches "creating" late
-    await new Promise((r) => setTimeout(r, 5));
-    seen = (await readSuno()).jobs[0];
-  }
+  const seen = await untilPhase("creating");
   expect(seen).toMatchObject({ state: "active", phase: "creating", model: "v6" });
   // a running job is not cancelled
   const refused = await queueDELETE(rq(`/api/sound/suno/queue/${seen!.id}`, "DELETE"), ctx(seen!.id));
@@ -312,7 +322,7 @@ test("stop: the create in flight finishes, its job goes back to the queue holdin
   FAKE_SUNO.hold = new Promise<void>((r) => (release = r));
   expect((await runPOST(rq("/api/sound/suno/run", "POST", { running: true }))).status).toBe(200);
   const running = kickSunoWorker();
-  for (let i = 0; i < 2000 && (await readSuno()).jobs[0].phase !== "creating"; i++) await new Promise((r) => setTimeout(r, 5));
+  expect((await untilPhase("creating"))?.phase).toBe("creating");
   const stop = await runPOST(rq("/api/sound/suno/run", "POST", { running: false }));
   expect(await read<{ queue: unknown }>(stop)).toEqual({ queue: { running: false } });
   FAKE_SUNO.hold = null;
