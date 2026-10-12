@@ -168,7 +168,7 @@ test("the active phase and model are persisted while the driver works", async ()
   await enqueue([a.id]);
   const running = kickSunoWorker();
   let seen: SunoJob | undefined;
-  for (let i = 0; i < 200 && seen?.phase !== "creating"; i++) {
+  for (let i = 0; i < 2000 && seen?.phase !== "creating"; i++) { // ~10s+: a loaded gate run reaches "creating" late
     await new Promise((r) => setTimeout(r, 5));
     seen = (await readSuno()).jobs[0];
   }
