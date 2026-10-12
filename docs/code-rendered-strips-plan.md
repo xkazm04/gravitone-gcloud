@@ -151,14 +151,16 @@ These are recorded and shown as badges. They never delete a strip.
   at least 3 of 8 seconds, and no black frames.
 - **Exact length:** exactly 240 frames.
 
-### 6. Leonardo supporting assets
+### 6. Supporting assets (imaging router, agy first)
 
 The approach card declares the asset, with
 `leonardo: none | texture | backdrop | sprite`.
 
-- It is generated **before** authoring, through `leonardoProvider()`
-  (`lib/imaging/providers/leonardo.ts:108`). Use the canonical script entry
-  in `pipeline/build-style-trials.mts:24-68`.
+- It is generated **before** authoring, through the imaging router's
+  `generate()` with `prefer: "agy"`. **Changed 2026-10-12:** it was
+  `leonardoProvider()` directly. agy, the operator's Gemini CLI, takes about
+  52 s per asset and runs sandboxed. Google and Leonardo remain the fallback.
+  The card field keeps its name `leonardo`.
 - Each card gets at most one asset. The whole run gets at most 10.
 - No text, no logos, no people.
 - Provenance and cost go into `meta.json`.
