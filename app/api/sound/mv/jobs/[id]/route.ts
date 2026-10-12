@@ -1,4 +1,4 @@
-// POST   /api/sound/mv/jobs/[id] { part, note? }            -> { job }   Regenerate
+// POST   /api/sound/mv/jobs/[id] { part, note?, prompt? }   -> { job }   Regenerate
 // PATCH  /api/sound/mv/jobs/[id] { verdict?, metadata? }    -> { job }
 // DELETE /api/sound/mv/jobs/[id]                            -> { ok: true }
 //

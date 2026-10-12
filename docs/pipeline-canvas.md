@@ -431,9 +431,10 @@ inert, saying so.
 **Start videos · n** (`spends`: a Leonardo still through the studio pool and two text turns per
 job, so the arm holds it while STUB; inert with "nothing queued" or the still vendor's own
 sentence) and **Stop videos**. A job analyses the track, writes a treatment from the title and
-the analysis only, renders one still, animates particles and one code-drawn pulsing element
-over it, and writes the YouTube proposal (title, description with its chapter lines, tags) and a
-thumbnail. The chip in the controls row reads `VIDEOS RUNNING` / `VIDEOS STOPPED`
+the analysis only, renders one still (GPT Image 2.5 Sunburst at High, 1376x768, 71 studio
+credits), animates particles and the low-band edge light over it, and writes the YouTube proposal
+(title, description with its chapter lines, tags). No thumbnail: it is taken from a frame of the
+video. The code-drawn pulsing element was descoped on 2026-10-12. The chip in the controls row reads `VIDEOS RUNNING` / `VIDEOS STOPPED`
 (`notes.switched` carries `label: "videos"`, because "settled running" names nothing), amber
 with the job and phase when a crash stopped it. The board polls every 2s while a video is
 active, or queued with the queue running. A music-video read that fails degrades Settled alone;
@@ -447,11 +448,13 @@ render files go, queued jobs are cancelled, the tracks stay; a video rendering n
 finish.
 
 **A video's verbs.** **Keep** / **Drop** while a finished video waits on a verdict (Drop deletes
-the video, still and thumbnail and keeps the record and its metadata; dragging between `videos`
+the video and still and keeps the record and its metadata; dragging between `videos`
 and `kept` is the same verdict). **Regenerate** — a part (`image`: a new treatment and still,
 then a re-render; `motion`: new effect parameters on the same still; `metadata`: new text, no
 render) and an optional note; everything not named is kept byte-identical; inert while queued or
-rendering. **Edit metadata** (title, description, tags). **Send to Calendar** — a publish date
+rendering. The API also takes `prompt` with `image`: the operator's own still prompt, used as
+written (the no-text clause welded on) in place of the treatment turn; the canvas form does not
+offer it yet. **Edit metadata** (title, description, tags). **Send to Calendar** — a publish date
 and time, a dry-run YouTube slot; finished videos only, inert once a slot exists. **Delete**
 (the record and its render files; the track stays). A verb on a card inside a selection acts on
 every selected video, stopping at the first refusal and saying how far it got.

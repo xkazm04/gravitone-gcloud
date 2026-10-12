@@ -7,10 +7,14 @@
 // transpiled-in-isolation `compositor.ts` (`renderFrame`, the seeded
 // particles, the low-band edge bloom, the flash limiter), the same numbered
 // PNG sequence, the same peak-limited single gain and the same
-// NVENC-then-libx264 mux. What the queue adds is passed in as three optional
-// render inputs - `fit: "cover"`, `particleHue`, `focal` - which the studio
-// never sets, so its frames are the frames they were (mv-render.probe pins
-// that against the pre-change compositor).
+// NVENC-then-libx264 mux. What the queue adds is passed in as optional render
+// inputs - `fit: "cover"`, `particleHue` - which the studio never sets, so its
+// frames are the frames they were (mv-render.probe pins that against the
+// pre-change compositor). The compositor's third input, the pulsing `focal`
+// element, is DESCOPED (operator, 2026-10-12: low quality beside the light
+// effects): it is never passed, even for an old job whose treatment names one.
+// `pulseStrength`, which only ever drove that element, now scales the edge
+// bloom instead (bloomIntensityFor).
 //
 // The envelope is computed INSIDE the headless page (`bakeEnvelopeInPage`):
 // lib/audioEnvelope.ts needs OfflineAudioContext, and a node port of it would
@@ -44,7 +48,7 @@ import {
 import { DEFAULT_EFFECT_PARAMS, type EffectParams } from "@/app/_phases/frames/music-video/compositor";
 
 import { detectSections, energyShape } from "./sections";
-import { MV_FOCAL_KINDS, type MvAnalysis, type MvMotion } from "./types";
+import type { MvAnalysis, MvMotion } from "./types";
 
 export interface AnalyseArgs {
   /** Absolute path of the track (mp3/wav/flac/m4a). */
@@ -67,16 +71,7 @@ export interface RenderArgs {
   onProgress?: (fraction: number) => void;
 }
 
-export interface ThumbnailArgs {
-  stillPath: string;
-  /** Drawn by code (registry law checkability-routes-the-pixel). */
-  title: string;
-  /** Absolute path of a 1280x720 jpg. */
-  outPath: string;
-}
-
 const VIDEO = { width: 1920, height: 1080 } as const;
-const THUMB = { width: 1280, height: 720 } as const;
 
 const IMAGE_MIME: Record<string, string> = {
   ".png": "image/png",
@@ -103,17 +98,9 @@ const clamp = (v: number | undefined, lo: number, hi: number, fallback: number) 
   typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : fallback;
 
 /** The LLM's numbers are proposals (types.ts): every one is clamped here,
- *  where the engine owns the ranges, and an unknown focal kind falls back to
- *  the softest one rather than failing a render over a word. */
+ *  where the engine owns the ranges. A descoped `focal` is dropped. */
 function clampMotion(m: MvMotion): MvMotion {
   return {
-    focal: {
-      kind: m.focal && MV_FOCAL_KINDS.includes(m.focal.kind) ? m.focal.kind : "halo",
-      x: clamp(m.focal?.x, 0, 1, 0.5),
-      y: clamp(m.focal?.y, 0, 1, 0.5),
-      r: clamp(m.focal?.r, 0.02, 0.5, 0.15),
-      hue: clamp(m.focal?.hue, 0, 360, 200),
-    },
     particleDensity: clamp(m.particleDensity, 0, 1, 0.5),
     particleHue: clamp(m.particleHue, 0, 360, 200),
     pulseStrength: clamp(m.pulseStrength, 0, 1, 0.6),
@@ -125,7 +112,18 @@ function clampMotion(m: MvMotion): MvMotion {
  *  default in the middle of the range, so the treatment can ask for less or
  *  more. */
 function effectParamsFor(m: MvMotion): EffectParams {
-  return { ...DEFAULT_EFFECT_PARAMS, particleCount: Math.round(DEFAULT_EFFECT_PARAMS.particleCount * 2 * m.particleDensity) };
+  return {
+    ...DEFAULT_EFFECT_PARAMS,
+    particleCount: Math.round(DEFAULT_EFFECT_PARAMS.particleCount * 2 * m.particleDensity),
+    bloomIntensity: bloomIntensityFor(m.pulseStrength),
+  };
+}
+
+/** `pulseStrength` against the compositor's default bloom: 0.5 IS the
+ *  default (the light the operator approved on 2026-10-12), 0 is 0.6x, 1 is
+ *  1.4x - a nudge, not a different look. */
+export function bloomIntensityFor(pulseStrength: number): number {
+  return Math.round(DEFAULT_EFFECT_PARAMS.bloomIntensity * (0.6 + 0.8 * pulseStrength) * 1000) / 1000;
 }
 
 /** The particle seed, from the motion itself: the same job re-renders the
@@ -177,7 +175,7 @@ export async function analyseTrack(args: AnalyseArgs): Promise<MvAnalysis> {
   return summarise(envelope);
 }
 
-/** The still + seeded particles + the pulsing focal element, frame by frame,
+/** The still + seeded particles + the low-band edge bloom, frame by frame,
  *  muxed with the track. Returns the rendered duration. */
 export async function renderMusicVideo(args: RenderArgs): Promise<{ durationS: number }> {
   assertCanSpawn("Rendering a music video needs a headless browser and ffmpeg on this machine");
@@ -214,7 +212,6 @@ export async function renderMusicVideo(args: RenderArgs): Promise<{ durationS: n
       effectParams: effectParamsFor(motion),
       fit: "cover",
       particleHue: motion.particleHue,
-      focal: { ...motion.focal, pulseStrength: motion.pulseStrength },
     });
 
     // Frames are nearly all of the wall time; the mux is the last 5%.
@@ -244,97 +241,3 @@ async function probedDuration(file: string, fallback: number): Promise<number> {
   }
 }
 
-/** 1280x720 jpg: the still covered to 16:9, a scrim on the lower third, the
- *  title over it in a system face (no network font: the page is offline). The
- *  title is drawn by code, never generated into the image. */
-export async function renderThumbnail(args: ThumbnailArgs): Promise<void> {
-  assertCanSpawn("Drawing a thumbnail needs a headless browser on this machine");
-  const posterDataUrl = await stillDataUrl(args.stillPath);
-  let browser: Browser | undefined;
-  try {
-    browser = await launchHeadless();
-    const page = await browser.newPage({ viewport: { ...THUMB } });
-    await page.setContent(`<!doctype html><html><body style="margin:0;background:#000">
-      <canvas id="t" width="${THUMB.width}" height="${THUMB.height}"></canvas>
-    </body></html>`);
-    const res = await page.evaluate(
-      async ({ posterDataUrl, title }: { posterDataUrl: string; title: string }) => {
-        try {
-          const canvas = document.getElementById("t") as HTMLCanvasElement;
-          const ctx = canvas.getContext("2d")!;
-          const w = canvas.width;
-          const h = canvas.height;
-          const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-            const i = new Image();
-            i.onload = () => resolve(i);
-            i.onerror = () => reject(new Error("the still did not decode in the thumbnail page"));
-            i.src = posterDataUrl;
-          });
-          // Cover: fill the frame, crop the overhang, centred.
-          const s = Math.max(w / img.naturalWidth, h / img.naturalHeight);
-          const dw = img.naturalWidth * s;
-          const dh = img.naturalHeight * s;
-          ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
-
-          // The scrim: transparent at 45% height to near-black at the bottom,
-          // so white type reads over any still.
-          const scrim = ctx.createLinearGradient(0, h * 0.45, 0, h);
-          scrim.addColorStop(0, "rgba(0,0,0,0)");
-          scrim.addColorStop(1, "rgba(0,0,0,0.78)");
-          ctx.fillStyle = scrim;
-          ctx.fillRect(0, h * 0.45, w, h * 0.55);
-
-          // Largest size from 88px down that fits in two lines; past the
-          // floor, the second line ends in an ellipsis.
-          const margin = 72;
-          const maxW = w - margin * 2;
-          const face = '"Segoe UI", "Helvetica Neue", Arial, "Liberation Sans", sans-serif';
-          const words = title.trim().split(/\s+/).filter(Boolean);
-          // No named helper in here: this function is serialised into the
-          // page, and a bundler that keeps function names (tsx's esbuild
-          // does) wraps a named arrow in a `__name` call the page never
-          // defined. Measured: "__name is not defined".
-          let size = 92;
-          let lines: string[] = [];
-          do {
-            size -= 4;
-            ctx.font = `700 ${size}px ${face}`;
-            lines = [];
-            let line = "";
-            for (const word of words) {
-              const next = line ? `${line} ${word}` : word;
-              if (ctx.measureText(next).width <= maxW || !line) line = next;
-              else {
-                lines.push(line);
-                line = word;
-              }
-            }
-            if (line) lines.push(line);
-          } while ((lines.length > 2 || lines.some((l) => ctx.measureText(l).width > maxW)) && size > 44);
-          if (lines.length > 2) {
-            let second = lines.slice(1).join(" ");
-            while (second.length > 1 && ctx.measureText(`${second}…`).width > maxW) second = second.slice(0, -1);
-            lines = [lines[0], `${second.trimEnd()}…`];
-          }
-
-          ctx.fillStyle = "#ffffff";
-          ctx.textBaseline = "alphabetic";
-          ctx.shadowColor = "rgba(0,0,0,0.55)";
-          ctx.shadowBlur = size * 0.25;
-          const lineH = size * 1.12;
-          const baseY = h - 64 - (lines.length - 1) * lineH;
-          lines.forEach((l, k) => ctx.fillText(l, margin, baseY + k * lineH, maxW));
-          return { jpg: canvas.toDataURL("image/jpeg", 0.9) };
-        } catch (e) {
-          return { error: e instanceof Error ? e.message : String(e) };
-        }
-      },
-      { posterDataUrl, title: args.title },
-    );
-    if ("error" in res) throw new ExportError(`Thumbnail page failed: ${res.error}`, "thumbnail-failed");
-    const jpg = Buffer.from(res.jpg.slice(res.jpg.indexOf(",") + 1), "base64");
-    await writeAtomically(args.outPath, jpg);
-  } finally {
-    await browser?.close().catch(() => {});
-  }
-}

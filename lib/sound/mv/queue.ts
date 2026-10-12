@@ -28,12 +28,13 @@
 //   imaging    still     one Leonardo still              (lib/imaging generate)
 //   writing    metadata  title, description, tags        (./metadata.ts, a text turn)
 //   rendering  video     the 1080p mp4
-//              thumb     the 1280x720 thumbnail
 //
-// WRITING RUNS BEFORE RENDERING, which is not MV_PHASES' list order, for two
-// reasons: the thumbnail draws the METADATA title, so metadata has to exist
-// before it; and a metadata answer that fails the YouTube validator fails the
-// job in seconds instead of after a multi-minute render.
+// No thumbnail step (removed 2026-10-12): the operator takes the thumbnail
+// from a frame of the video. A job made before keeps its thumb.jpg.
+//
+// WRITING RUNS BEFORE RENDERING, which is not MV_PHASES' list order: a
+// metadata answer that fails the YouTube validator fails the job in seconds
+// instead of after a multi-minute render.
 //
 // A FIRST RUN DOES WHAT IS MISSING. A step runs when its output is absent, so
 // a stopped or crashed job resumes at the missing step with no bookkeeping.
@@ -42,9 +43,11 @@
 // the middle of a regenerate resumes at the missing step instead of spending
 // the turn or the still again:
 //
-//   image     treat + still + video + thumb   (the note goes to the treatment)
-//   motion    motion + video                  (still and thumbnail untouched)
-//   metadata  metadata + thumb                (the title on the thumbnail may change)
+//   image     treat + still + video   (the note goes to the treatment; the
+//                                      operator's own prompt, when given,
+//                                      replaces the treatment turn)
+//   motion    motion + video          (the still untouched)
+//   metadata  metadata                (no render)
 //
 // Everything a part does not name is left byte-identical (registry law
 // edit-do-not-regenerate), and an old file is replaced only when its new one
@@ -62,9 +65,9 @@ import { generate } from "@/lib/imaging/router";
 import { filePathAbs, safeId, SoundError } from "../store";
 import { assertSourceHasAudio, fetchAudio, fetchClipBytes, type FetchClipFn } from "./fetchAudio";
 import { applyMetadataPatch, writeMetadata } from "./metadata";
-import { analyseTrack, renderMusicVideo, renderThumbnail, type AnalyseArgs, type RenderArgs, type ThumbnailArgs } from "./render";
+import { analyseTrack, renderMusicVideo, type AnalyseArgs, type RenderArgs } from "./render";
 import { cleanTitle, DROPPED_FILES, ensureJobDir, isLiveJob, jobDirRel, jobFileRel, landFile, mintMvId, readMv, stagingAbs, withMv, type MvFile, type MvStep } from "./store";
-import { treatmentInput, writeMotion, writeTreatment, type ReasonFn } from "./treatment";
+import { operatorTreatment, treatmentInput, writeMotion, writeTreatment, type ReasonFn } from "./treatment";
 import { MV_PARTS, type MvAnalysis, type MvDriverHealth, type MvFiles, type MvJob, type MvPart, type MvPhase, type MvQueueState, type MvSnapshot, type MvSource } from "./types";
 
 /* ── the engines ──────────────────────────────────────────────────────────── */
@@ -83,7 +86,6 @@ export interface StillImage {
 export interface MvEngines {
   analyse(args: AnalyseArgs): Promise<MvAnalysis>;
   render(args: RenderArgs): Promise<{ durationS: number }>;
-  thumbnail(args: ThumbnailArgs): Promise<void>;
   still(req: StillRequest): Promise<StillImage>;
   fetchClip: FetchClipFn;
   reason?: ReasonFn;
@@ -107,7 +109,6 @@ async function studioStill(req: StillRequest): Promise<StillImage> {
 const DEFAULTS: MvEngines = {
   analyse: analyseTrack,
   render: renderMusicVideo,
-  thumbnail: renderThumbnail,
   still: studioStill,
   fetchClip: fetchClipBytes,
   health: leonardoStudioHealth,
@@ -142,7 +143,7 @@ export function __resetMvWorker(): void {
 
 /* ── steps and plans ──────────────────────────────────────────────────────── */
 
-export const STEP_ORDER: readonly MvStep[] = ["fetch", "analyse", "treat", "motion", "still", "metadata", "video", "thumb"];
+export const STEP_ORDER: readonly MvStep[] = ["fetch", "analyse", "treat", "motion", "still", "metadata", "video"];
 
 export const PHASE_OF: Record<MvStep, MvPhase> = {
   fetch: "fetching",
@@ -152,13 +153,12 @@ export const PHASE_OF: Record<MvStep, MvPhase> = {
   still: "imaging",
   metadata: "writing",
   video: "rendering",
-  thumb: "rendering",
 };
 
 export const REDO_STEPS: Record<MvPart, readonly MvStep[]> = {
-  image: ["treat", "still", "video", "thumb"],
+  image: ["treat", "still", "video"],
   motion: ["motion", "video"],
-  metadata: ["metadata", "thumb"],
+  metadata: ["metadata"],
 };
 
 /** Steps whose output is absent. */
@@ -170,7 +170,6 @@ function missingSteps(j: MvJob): Set<MvStep> {
   if (!j.files.still) out.add("still");
   if (!j.metadata) out.add("metadata");
   if (!j.files.video) out.add("video");
-  if (!j.files.thumb) out.add("thumb");
   return out;
 }
 
@@ -235,17 +234,22 @@ function find(f: MvFile, id: string): MvJob {
   return j;
 }
 
-export function parseRegenerate(body: unknown): { part: MvPart; note?: string } {
+export function parseRegenerate(body: unknown): { part: MvPart; note?: string; prompt?: string } {
   const o = (body && typeof body === "object" ? body : {}) as Record<string, unknown>;
   const part = MV_PARTS.find((p) => p === o.part);
   if (!part) throw new SoundError(`"part" must be one of ${MV_PARTS.join(", ")}`, 400);
   if (o.note !== undefined && o.note !== null && typeof o.note !== "string") throw new SoundError('"note" must be a string', 400);
   const note = typeof o.note === "string" ? o.note.replace(/\s+/g, " ").trim().slice(0, 500) : "";
-  return note ? { part, note } : { part };
+  if (o.prompt !== undefined && o.prompt !== null && typeof o.prompt !== "string") throw new SoundError('"prompt" must be a string', 400);
+  const prompt = typeof o.prompt === "string" ? o.prompt.replace(/\s+/g, " ").trim() : "";
+  if (prompt && part !== "image") throw new SoundError(`"prompt" is the still's prompt; it goes with part "image" only`, 400);
+  // The treatment's ceiling minus room for the welded no-text clause.
+  if (prompt.length > 1400) throw new SoundError(`"prompt" is ${prompt.length} characters; the still's prompt holds 1400`, 400);
+  return { part, ...(note ? { note } : {}), ...(prompt ? { prompt } : {}) };
 }
 
 /** Re-queue one part of a done or failed job. */
-export async function regenerateMv(id: string, req: { part: MvPart; note?: string }, now = Date.now()): Promise<MvJob> {
+export async function regenerateMv(id: string, req: { part: MvPart; note?: string; prompt?: string }, now = Date.now()): Promise<MvJob> {
   await existing(id);
   const job = await withMv((f) => {
     const j = find(f, id);
@@ -254,6 +258,8 @@ export async function regenerateMv(id: string, req: { part: MvPart; note?: strin
     j.redo = [req.part];
     if (req.note) j.note = req.note;
     else delete j.note;
+    if (req.prompt && req.part === "image") j.prompt = req.prompt;
+    else delete j.prompt;
     j.verdict = null;
     j.enqueuedAt = now;
     delete j.error;
@@ -400,7 +406,8 @@ async function runStep(step: MvStep, j: MvJob, eng: MvEngines): Promise<(x: MvJo
       };
     }
     case "treat": {
-      const treatment = await writeTreatment(input(), { note: noteFor("image"), reason: eng.reason });
+      const own = j.redo?.includes("image") ? j.prompt : undefined;
+      const treatment = own ? operatorTreatment(own, j.treatment) : await writeTreatment(input(), { note: noteFor("image"), reason: eng.reason });
       return (x) => void (x.treatment = treatment);
     }
     case "motion": {
@@ -434,18 +441,6 @@ async function runStep(step: MvStep, j: MvJob, eng: MvEngines): Promise<(x: MvJo
       }
       await landFile(staged, rel);
       return (x) => void (x.files.video = rel);
-    }
-    case "thumb": {
-      const rel = jobFileRel(j.id, "thumb.jpg");
-      const staged = stagingAbs(rel);
-      try {
-        await eng.thumbnail({ stillPath: abs("still"), title: j.metadata?.title ?? title, outPath: staged });
-      } catch (e) {
-        await rm(staged, { force: true }).catch(() => {});
-        throw e;
-      }
-      await landFile(staged, rel);
-      return (x) => void (x.files.thumb = rel);
     }
   }
 }

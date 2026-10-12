@@ -133,8 +133,8 @@ export function leonardoStudioProvider(): ImagingProvider {
       const provenance: StudioProvenance = {
         provider: "leonardo-studio",
         model: run.model,
-        // The studio's control said "Auto"; the 2026-10-11 run saw it resolve
-        // to Lucid Origin. Our intent, not the vendor's echo.
+        // The model the driver's URL named and its model control confirmed
+        // (studio/selectors.ts STUDIO.model). Our intent, not the vendor's echo.
         modelBasis: "requested",
         remoteIds: [run.generationId],
         costUsd: price.usd,

@@ -10,6 +10,7 @@
 
 import { deflateSync, crc32 } from "node:zlib";
 import type { Aspect } from "../types";
+import { STUDIO } from "./selectors";
 import type { StudioHealth, StudioRun } from "./types";
 
 export interface FakeLeonardoStudioControl {
@@ -90,6 +91,6 @@ export async function fakeStudioGenerate(prompt: string, aspect: Aspect): Promis
     generationId,
     image: { base64: fakeStillBase64(), mime: "image/png", width: FAKE_STILL_PX.w, height: FAKE_STILL_PX.h },
     credits: FAKE_LEONARDO_STUDIO.credits,
-    model: "lucid-origin",
+    model: STUDIO.model.id,
   };
 }

@@ -2,7 +2,7 @@
 // on FAKE engines and a temp store.
 //
 // Every engine the worker reaches is swapped through `__setMvEngines`: the
-// analysis, the render, the thumbnail, the still, the clip download and the
+// analysis, the render, the still, the clip download and the
 // text turns (an injected reason function, as the Suno propose lane does). No
 // browser, no ffmpeg, no model, no vendor, no credits. One case drives the
 // still through the REAL router with LEONARDO_STUDIO_DRIVER=fake, the studio
@@ -15,13 +15,15 @@
 //     one job at a time, through every phase, persisting the phase while each
 //     engine runs; files land under mv/<jobId>/;
 //   · regenerate: each part re-runs ONLY its steps (engine calls counted) and
-//     every file it does not name is byte-identical (sha256);
+//     every file it does not name is byte-identical (sha256); an image
+//     regenerate with the operator's own prompt runs no treatment turn;
+//   · no thumbnail step (2026-10-12) and no pulsing element: a `focal` in the
+//     model's answer is dropped;
 //   · Stop between steps returns the job to the queue holding its files, and
 //     Start resumes at the missing step; a crash stops the queue naming the
 //     job and its phase, and Start resumes at the missing step;
-//   · the treatment: out-of-range numbers clamped, an unknown focal kind
-//     replaced, the no-text clause welded on; the turn sees the clean title
-//     and the analysis, never a lyric;
+//   · the treatment: out-of-range numbers clamped, the no-text clause welded
+//     on; the turn sees the clean title and the analysis, never a lyric;
 //   · the metadata: held to snippetProblem (trimmed by code, or the job fails
 //     with the validator's sentence); chapters only from >= 3 sections;
 //   · import: N added, a re-import adds 0, a missing dir is a 400; Drop
@@ -90,7 +92,6 @@ const ANALYSIS: MvAnalysis = {
 interface Calls {
   analyse: number;
   render: number;
-  thumb: string[];
   still: string[];
   fetchClip: number;
   treat: TextRequest[];
@@ -124,11 +125,6 @@ function fakeEngines(): Partial<MvEngines> {
       calls.phases.push(`render@${await phaseNow()}`);
       writeFileSync(outPath, `video #${calls.render} ${JSON.stringify(motion)}`);
       return { durationS: 95 };
-    },
-    thumbnail: async ({ outPath, title }) => {
-      calls.thumb.push(title);
-      calls.phases.push(`thumb@${await phaseNow()}`);
-      writeFileSync(outPath, `thumb #${calls.thumb.length} ${title}`);
     },
     still: async ({ prompt }) => {
       calls.still.push(prompt);
@@ -180,7 +176,7 @@ test.beforeEach(() => {
   process.env[ACCESS_SECRET_VAR] = SECRET;
   __resetRateLimit();
   __resetMvWorker();
-  calls = { analyse: 0, render: 0, thumb: [], still: [], fetchClip: 0, treat: [], motion: [], metadata: [], phases: [] };
+  calls = { analyse: 0, render: 0, still: [], fetchClip: 0, treat: [], motion: [], metadata: [], phases: [] };
   knobs = {
     analysis: ANALYSIS,
     stillHold: null,
@@ -266,8 +262,8 @@ function hashes(j: MvJob): Record<string, string> {
   return out;
 }
 
-const regenerate = async (id: string, part: string, note?: string) => {
-  const res = await jobPOST(rq(`/api/sound/mv/jobs/${id}`, "POST", { part, ...(note ? { note } : {}) }), ctx(id));
+const regenerate = async (id: string, part: string, note?: string, prompt?: string) => {
+  const res = await jobPOST(rq(`/api/sound/mv/jobs/${id}`, "POST", { part, ...(note ? { note } : {}), ...(prompt ? { prompt } : {}) }), ctx(id));
   expect(res.status).toBe(200);
   await kickMvWorker();
   return (await readMv()).jobs.find((j) => j.id === id)!;
@@ -287,7 +283,7 @@ test("enqueue never starts; Start drains FIFO through every phase, persisting ea
 
   await start();
   console.log(`\nMV steps\n${calls.phases.join("\n")}`);
-  const perJob = ["analyse@analysing", "mv-treatment@treating", "still@imaging", "mv-metadata@writing", "render@rendering", "thumb@rendering"];
+  const perJob = ["analyse@analysing", "mv-treatment@treating", "still@imaging", "mv-metadata@writing", "render@rendering"];
   expect(calls.phases).toEqual([...perJob, ...perJob]);
 
   const f = await readMv();
@@ -297,14 +293,14 @@ test("enqueue never starts; Start drains FIFO through every phase, persisting ea
     expect(j.id).toMatch(/^mj-[0-9a-f]{10}$/);
     expect(j.phase).toBeUndefined();
     expect(j.redo).toBeUndefined();
-    expect(Object.keys(j.files).sort()).toEqual(["audio", "envelope", "still", "thumb", "video"]);
-    expect(j.files).toMatchObject({ audio: `mv/${j.id}/audio.mp3`, still: `mv/${j.id}/still.jpg`, video: `mv/${j.id}/video.mp4`, thumb: `mv/${j.id}/thumb.jpg`, envelope: `mv/${j.id}/envelope.json` });
+    expect(Object.keys(j.files).sort()).toEqual(["audio", "envelope", "still", "video"]);
+    expect(j.files).toMatchObject({ audio: `mv/${j.id}/audio.mp3`, still: `mv/${j.id}/still.jpg`, video: `mv/${j.id}/video.mp4`, envelope: `mv/${j.id}/envelope.json` });
     for (const rel of Object.values(j.files)) expect(existsSync(abs(rel!))).toBe(true);
-    // the thumbnail carries the METADATA title, so metadata ran first
     expect(j.metadata!.title.startsWith(cleanTitle(j.source.title))).toBe(true);
+    // the model's answer named a focal; the element is descoped, so it is dropped
+    expect(j.treatment!.motion.focal).toBeUndefined();
     expect(j.verdict).toBeNull();
   }
-  expect(calls.thumb).toEqual(f.jobs.map((j) => j.metadata!.title));
   // the audio is a copy of the take's bytes
   expect(readFileSync(abs(f.jobs[0].files.audio!), "utf8")).toContain("01_Walls Unwind (main).mp3");
   // on disk, in the declared shape; nothing staged left behind
@@ -322,13 +318,13 @@ test("enqueue never starts; Start drains FIFO through every phase, persisting ea
 
 test("regenerate re-runs only its part's steps and keeps every other file byte-identical", async () => {
   const done = await oneDone();
-  const base = { analyse: calls.analyse, render: calls.render, thumb: calls.thumb.length, still: calls.still.length, treat: calls.treat.length, motion: calls.motion.length, metadata: calls.metadata.length };
+  const base = { analyse: calls.analyse, render: calls.render, still: calls.still.length, treat: calls.treat.length, motion: calls.motion.length, metadata: calls.metadata.length };
   const h0 = hashes(done);
 
-  // image: a new treatment (the note reaches it) + still + render + thumbnail
+  // image: a new treatment (the note reaches it) + still + render
   const img = await regenerate(done.id, "image", "colder, a lake at night");
   expect(img.state).toBe("done");
-  expect([calls.analyse - base.analyse, calls.treat.length - base.treat, calls.still.length - base.still, calls.render - base.render, calls.thumb.length - base.thumb, calls.metadata.length - base.metadata, calls.motion.length - base.motion]).toEqual([0, 1, 1, 1, 1, 0, 0]);
+  expect([calls.analyse - base.analyse, calls.treat.length - base.treat, calls.still.length - base.still, calls.render - base.render, calls.metadata.length - base.metadata, calls.motion.length - base.motion]).toEqual([0, 1, 1, 1, 0, 0]);
   expect(calls.treat.at(-1)!.prompt).toContain("colder, a lake at night");
   const h1 = hashes(img);
   expect([h1.audio, h1.envelope]).toEqual([h0.audio, h0.envelope]);
@@ -339,31 +335,44 @@ test("regenerate re-runs only its part's steps and keeps every other file byte-i
   expect(img.note).toBe("colder, a lake at night");
   expect(img.redo).toBeUndefined();
 
-  // motion: same prompt, same still, same thumbnail; only the render is new
-  const b2 = { render: calls.render, still: calls.still.length, thumb: calls.thumb.length, treat: calls.treat.length };
+  // motion: same prompt, same still; only the render is new
+  const b2 = { render: calls.render, still: calls.still.length, treat: calls.treat.length };
   const mot = await regenerate(done.id, "motion", "slower pulse");
-  expect([calls.motion.length - base.motion, calls.render - b2.render, calls.still.length - b2.still, calls.thumb.length - b2.thumb, calls.treat.length - b2.treat]).toEqual([1, 1, 0, 0, 0]);
+  expect([calls.motion.length - base.motion, calls.render - b2.render, calls.still.length - b2.still, calls.treat.length - b2.treat]).toEqual([1, 1, 0, 0]);
   expect(calls.motion[0].prompt).toContain("slower pulse");
   expect(mot.treatment!.prompt).toBe(img.treatment!.prompt);
   expect(mot.treatment!.negativePrompt).toBe(img.treatment!.negativePrompt);
-  // the focal keeps the position the still left room for; the rest is new
-  expect([mot.treatment!.motion.focal.x, mot.treatment!.motion.focal.y]).toEqual([img.treatment!.motion.focal.x, img.treatment!.motion.focal.y]);
-  expect(mot.treatment!.motion.focal.kind).toBe("ring");
+  expect(mot.treatment!.motion).toEqual({ particleDensity: 0.3, particleHue: 40, pulseStrength: 0.4 });
   const h2 = hashes(mot);
-  expect([h2.audio, h2.envelope, h2.still, h2.thumb]).toEqual([h1.audio, h1.envelope, h1.still, h1.thumb]);
+  expect([h2.audio, h2.envelope, h2.still]).toEqual([h1.audio, h1.envelope, h1.still]);
   expect(h2.video).not.toBe(h1.video);
 
-  // metadata: the text turn and a thumbnail re-render; no video render
-  const b3 = { render: calls.render, still: calls.still.length, thumb: calls.thumb.length, metadata: calls.metadata.length };
+  // metadata: the text turn only; no render
+  const b3 = { render: calls.render, still: calls.still.length, metadata: calls.metadata.length };
   const meta = await regenerate(done.id, "metadata");
-  expect([calls.metadata.length - b3.metadata, calls.thumb.length - b3.thumb, calls.render - b3.render, calls.still.length - b3.still]).toEqual([1, 1, 0, 0]);
+  expect([calls.metadata.length - b3.metadata, calls.render - b3.render, calls.still.length - b3.still]).toEqual([1, 0, 0]);
   expect(meta.note).toBeUndefined();
   expect(meta.metadata!.title).not.toBe(mot.metadata!.title);
-  expect(calls.thumb.at(-1)).toBe(meta.metadata!.title);
   const h3 = hashes(meta);
   expect([h3.audio, h3.envelope, h3.still, h3.video]).toEqual([h2.audio, h2.envelope, h2.still, h2.video]);
-  expect(h3.thumb).not.toBe(h2.thumb);
   expect(calls.analyse).toBe(base.analyse);
+
+  // image with the operator's own prompt: no treatment turn; the still is made
+  // from their words with the no-text clause welded on; the motion is kept
+  const own = "Cinematic film still, a young street guitarist in a narrow rain-wet alley at blue hour";
+  const b4 = { treat: calls.treat.length, still: calls.still.length, render: calls.render, metadata: calls.metadata.length };
+  const op = await regenerate(done.id, "image", undefined, own);
+  expect([calls.treat.length - b4.treat, calls.still.length - b4.still, calls.render - b4.render, calls.metadata.length - b4.metadata]).toEqual([0, 1, 1, 0]);
+  expect(calls.still.at(-1)).toBe(`${own} ${NO_TEXT_CLAUSE}`);
+  expect(op.prompt).toBe(own);
+  expect(op.treatment).toMatchObject({ prompt: `${own} ${NO_TEXT_CLAUSE}`, motion: meta.treatment!.motion, rationale: "the operator's own prompt" });
+  expect(op.treatment!.negativePrompt).toBeUndefined();
+  expect(hashes(op).still).not.toBe(h3.still);
+  // a later regenerate without a prompt forgets it
+  const after = await regenerate(done.id, "motion");
+  expect(after.prompt).toBeUndefined();
+  // a prompt goes with the image part only
+  expect((await jobPOST(rq(`/api/sound/mv/jobs/${done.id}`, "POST", { part: "motion", prompt: "x" }), ctx(done.id))).status).toBe(400);
 
   // regenerate is for finished jobs only, and names a known part
   expect((await jobPOST(rq(`/api/sound/mv/jobs/${done.id}`, "POST", { part: "everything" }), ctx(done.id))).status).toBe(400);
@@ -408,7 +417,7 @@ test("crash-resume: an active job goes back to queued, the queue stops naming th
   mkdirSync(dir, { recursive: true });
   writeFileSync(path.join(dir, "audio.mp3"), "audio");
   writeFileSync(path.join(dir, "envelope.json"), "{}");
-  const treatment = parseTreatment({ prompt: "fog over a harbour", motion: { focal: { kind: "orb", x: 0.3, y: 0.3, r: 0.1, hue: 20 } }, rationale: "r" });
+  const treatment = parseTreatment({ prompt: "fog over a harbour", motion: {}, rationale: "r" });
   const file: MvFile = {
     version: 1,
     queue: { running: true },
@@ -434,16 +443,14 @@ test("crash-resume: an active job goes back to queued, the queue stops naming th
 
 /* ── 4. the treatment turn ────────────────────────────────────────────────── */
 
-test("treatment: clamped numbers, a known focal kind, the no-text clause welded; the turn sees the clean title and no lyrics", async () => {
+test("treatment: clamped numbers, a focal dropped, the no-text clause welded; the turn sees the clean title and no lyrics", async () => {
   const t = parseTreatment({
     prompt: "  long-exposure night photograph,\n a lake  ",
     motion: { focal: { kind: "starburst", x: -3, y: 9, r: 5, hue: 900 }, particleDensity: 7, particleHue: -40, pulseStrength: "loud" },
     rationale: "x",
   });
-  expect(t.motion).toEqual({ focal: { kind: "halo", x: 0.05, y: 0.95, r: 0.4, hue: 360 }, particleDensity: 1, particleHue: 0, pulseStrength: 0.6 });
-  expect(t.prompt.startsWith("long-exposure night photograph, a lake")).toBe(true);
-  expect(t.prompt.endsWith(NO_TEXT_CLAUSE)).toBe(true);
-  expect(t.prompt).toContain("lower left of the frame calm");
+  expect(t.motion).toEqual({ particleDensity: 1, particleHue: 0, pulseStrength: 0.6 });
+  expect(t.prompt).toBe(`long-exposure night photograph, a lake ${NO_TEXT_CLAUSE}`);
   expect(t.negativePrompt!.split(", ").slice(0, 3)).toEqual(["text", "letters", "numbers"]);
   expect(parseTreatment({ prompt: "x".repeat(4000), motion: {} }).prompt.length).toBeLessThanOrEqual(1500);
   expect(() => parseTreatment({ prompt: "", motion: {} })).toThrow("no image prompt");
@@ -587,7 +594,7 @@ test("import adds N, a re-import adds 0, a missing dir is a 400; drop deletes fi
   const dj = (await read<{ job: MvJob }>(dropped)).job;
   expect(dj.verdict).toBe("drop");
   expect(Object.keys(dj.files)).toEqual(["envelope"]);
-  for (const k of ["audio", "still", "video", "thumb"] as const) expect(existsSync(abs(done.files[k]!))).toBe(false);
+  for (const k of ["audio", "still", "video"] as const) expect(existsSync(abs(done.files[k]!))).toBe(false);
   const rec = (await readMv()).jobs.find((j) => j.id === job.id)!;
   expect([rec.state, !!rec.treatment, !!rec.metadata, !!rec.analysis]).toEqual(["done", true, true, true]);
   expect((await fileGET(rq(`/api/sound/mv/jobs/${job.id}/file?kind=video`), ctx(job.id))).status).toBe(404);

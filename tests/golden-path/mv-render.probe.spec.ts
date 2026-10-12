@@ -1,6 +1,8 @@
 // LANE — THE MUSIC-VIDEO QUEUE'S RENDER, ON THIS MACHINE (node + headless
 // Chromium + ffmpeg). lib/sound/mv/render.ts and the focal element it added to
-// app/_phases/frames/music-video/compositor.ts.
+// app/_phases/frames/music-video/compositor.ts. The queue no longer passes the
+// focal element (descoped 2026-10-12) and draws no thumbnail; cases 3-5 hold
+// the compositor's own contract, which stays for a later return.
 //
 // The fixture is synthetic and made here: a 4 s WAV (a quiet 660 Hz bed with
 // a pitched-down kick every half second, 120 BPM) and two small PNG stills
@@ -20,7 +22,8 @@
 //   5. without the queue's extras the studio's frame is byte-identical to the
 //      compositor as it stood before the focal element (pinned commit below);
 //   6. a full render lands a 1920x1080 mp4 with audio, within 0.2 s of the
-//      track, and a 1280x720 thumbnail; the wall clock is printed.
+//      track; the wall clock is printed; pulseStrength scales the bloom with
+//      0.5 as the compositor's default.
 //
 // No ffmpeg/ffprobe or no Chromium: skip locally, FAIL when CI is set, so a
 // runner that lost its binaries cannot turn this into a green no-op.
@@ -38,7 +41,7 @@ import { keepEnv } from "./_helpers";
 import type { AudioEnvelope } from "@/lib/audioEnvelope";
 import { launchHeadless } from "@/lib/export/headless";
 import { setUpRenderPage } from "@/lib/musicVideoExport";
-import { analyseTrack, renderMusicVideo, renderThumbnail } from "@/lib/sound/mv/render";
+import { analyseTrack, bloomIntensityFor, renderMusicVideo } from "@/lib/sound/mv/render";
 import { detectSections, energyShape } from "@/lib/sound/mv/sections";
 import {
   DEFAULT_EFFECT_PARAMS,
@@ -359,7 +362,7 @@ test.describe.serial("the render engine on this machine", () => {
     await then.close();
   });
 
-  test("renderMusicVideo lands a 1920x1080 mp4 with audio; renderThumbnail a 1280x720 jpg", async () => {
+  test("renderMusicVideo lands a 1920x1080 mp4 with audio", async () => {
     test.setTimeout(600_000);
     needBinaries(chromiumOk);
     process.env.LOCAL_BINARIES = "on";
@@ -371,7 +374,7 @@ test.describe.serial("the render engine on this machine", () => {
       audioPath: wav,
       stillPath: darkPng,
       envelopePath: envPath,
-      motion: { focal: { kind: "ring", x: 0.62, y: 0.4, r: 0.16, hue: 280 }, particleDensity: 0.5, particleHue: 40, pulseStrength: 0.8 },
+      motion: { particleDensity: 0.5, particleHue: 40, pulseStrength: 0.8 },
       outPath: out,
       onProgress: (f) => progress.push(f),
     });
@@ -393,9 +396,7 @@ test.describe.serial("the render engine on this machine", () => {
     expect(progress.at(-1)).toBe(1);
     expect(progress.every((f, k) => k === 0 || f >= progress[k - 1])).toBe(true);
 
-    const thumb = join(dir, "job", "thumb.jpg");
-    await renderThumbnail({ stillPath: edgePng, title: "Night Drive Over the Harbour Lights (Extended Instrumental Mix)", outPath: thumb });
-    const t = ffprobe(thumb).streams[0];
-    expect([t.codec_name, t.width, t.height]).toEqual(["mjpeg", 1280, 720]);
+    expect(bloomIntensityFor(0.5)).toBe(DEFAULT_EFFECT_PARAMS.bloomIntensity);
+    expect(bloomIntensityFor(0)).toBeLessThan(bloomIntensityFor(1));
   });
 });

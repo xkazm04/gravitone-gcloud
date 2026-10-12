@@ -31,10 +31,11 @@ import path from "node:path";
 import type { MvFileKind, MvFiles, MvJob, MvQueueState } from "./types";
 import { filePathAbs, safeId, SoundError, storeRoot, withStore, writeJsonAtomic } from "../store";
 
-/** One worker step. A phase can hold more than one (`rendering` draws the
- *  video and then the thumbnail; `treating` writes a treatment or, for a
- *  motion regenerate, only new motion). */
-export type MvStep = "fetch" | "analyse" | "treat" | "motion" | "still" | "metadata" | "video" | "thumb";
+/** One worker step. A phase can hold more than one (`treating` writes a
+ *  treatment or, for a motion regenerate, only new motion). The thumbnail step
+ *  was removed on 2026-10-12: the operator takes the thumbnail from a frame of
+ *  the video. */
+export type MvStep = "fetch" | "analyse" | "treat" | "motion" | "still" | "metadata" | "video";
 
 export interface MvImportRecord {
   /** Absolute source path, as the import read it. */

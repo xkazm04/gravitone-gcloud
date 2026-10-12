@@ -261,11 +261,11 @@ export async function studioGenerate(prompt: string, aspect: Aspect): Promise<St
       throw new StudioError("leonardo studio prompt box not found", "failed");
     });
 
-    // The model: Auto resolved to Lucid Origin on 2026-10-11. A different
-    // model is not quietly accepted — it bills differently and draws differently.
+    // The model the URL named. A different one is not quietly accepted — it
+    // bills differently and draws differently.
     const model = page.locator(STUDIO.form.modelTrigger).filter({ visible: true }).first();
     if (!(await model.count()) || !STUDIO.form.modelOk.test(await model.innerText()))
-      throw new StudioError("leonardo studio model is not Auto (Lucid Origin)", "failed");
+      throw new StudioError(`leonardo studio model is not ${STUDIO.model.label}`, "failed");
     if (!(await clickIfPresent(page, STUDIO.form.aspect(aspect))))
       throw new StudioError(`leonardo studio has no ${aspect} aspect control`, "failed");
     if (!(await clickIfPresent(page, STUDIO.form.countOne)))
@@ -324,7 +324,7 @@ export async function studioGenerate(prompt: string, aspect: Aspect): Promise<St
     lastSeen.credits = g.credits ?? lastSeen.credits;
     // The page refreshes its balance after a spend; read whatever arrived last.
     lastSeen.balance = balance;
-    return { generationId: id, image, credits: g.credits, balance, model: "lucid-origin" };
+    return { generationId: id, image, credits: g.credits, balance, model: STUDIO.model.id };
   } finally {
     page.off("response", onResponse);
     await page.unroute(`${STUDIO.api.graphql}**`).catch(() => {});

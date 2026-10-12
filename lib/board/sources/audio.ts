@@ -466,7 +466,7 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
           { name: "track", value: j.source.kind === "take" ? "take" : "suno clip" },
           ...(a ? [{ name: "length", value: `${Math.round(a.durationS)} s` }] : []),
           ...(a?.tempoBpm.length ? [{ name: "tempo", value: `${Math.round(a.tempoBpm[0])} bpm` }] : []),
-          ...(j.treatment ? [{ name: "focal", value: j.treatment.motion.focal.kind }] : []),
+          ...(j.prompt ? [{ name: "prompt", value: "operator's own" }] : []),
           ...(j.redo?.length ? [{ name: "redo", value: j.redo.join(" + ") }] : []),
           ...(j.note ? [{ name: "redo note", value: j.note }] : []),
           ...(j.slotId ? [{ name: "calendar", value: j.slotId }] : []),
@@ -1008,7 +1008,7 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
     if (j.state === "done" && j.verdict === null) {
       out.push(
         { id: "mv.keep", label: "Keep" },
-        { id: "mv.drop", label: "Drop", confirm: "The video, its still and its thumbnail are deleted. The record and its metadata stay." },
+        { id: "mv.drop", label: "Drop", confirm: "The video and its still are deleted. The record and its metadata stay." },
       );
     }
     out.push({

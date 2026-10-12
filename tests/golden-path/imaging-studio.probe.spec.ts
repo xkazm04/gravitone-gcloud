@@ -88,7 +88,7 @@ test("1a. prefer leonardo-studio -> served by it, one call, provenance in studio
     prefer: "leonardo-studio",
   });
   expect(out.provenance.provider).toBe("leonardo-studio");
-  expect(out.provenance.model).toBe("lucid-origin");
+  expect(out.provenance.model).toBe("openai/gpt-image-2.5-sunburst");
   expect(out.provenance.modelBasis).toBe("requested");
   expect(out.provenance.remoteIds).toEqual(["fake-gen-0001"]);
   expect(out.provenance.reroutedFrom).toBeUndefined();

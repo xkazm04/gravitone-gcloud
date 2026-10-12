@@ -6,8 +6,10 @@
 // (lib/sound/mv/queue.ts) analyses the track, has an LLM write a treatment
 // from the TITLE AND THE ANALYSIS ONLY (operator, 2026-10-12: no lyrics, even
 // where Suno has them), renders one Leonardo still through the studio pool,
-// animates particles plus one code-drawn pulsing element over it, and writes
-// the YouTube proposal. It is rung 1 ("visualizer") of the registry's
+// animates particles and the low-band light over it, and writes the YouTube
+// proposal. (The code-drawn pulsing element was descoped on 2026-10-12: the
+// operator judged it low quality next to the light effects. Its types and the
+// compositor's drawing code stay for a later return; nothing sets it now.) It is rung 1 ("visualizer") of the registry's
 // music-video form ladder (music-video-production/form-follows-what-the-track-gives).
 //
 // ABSENT VALUES ARE OMITTED KEYS, never null or "" - except `verdict`, where
@@ -32,8 +34,8 @@ export type MvJobState = "queued" | "active" | "done" | "failed" | "cancelled";
 export type MvPhase = "fetching" | "analysing" | "treating" | "imaging" | "rendering" | "writing";
 export const MV_PHASES: readonly MvPhase[] = ["fetching", "analysing", "treating", "imaging", "rendering", "writing"];
 
-/** What Regenerate can redo. `image` = a new treatment AND a new still, then a
- *  re-render; `motion` = new effect parameters on the SAME still, then a
+/** What Regenerate can redo. `image` = a new treatment (or the operator's own
+ *  prompt) AND a new still, then a re-render; `motion` = new effect parameters on the SAME still, then a
  *  re-render; `metadata` = new YouTube text only, no render. Everything not
  *  named is kept byte-identical (registry law edit-do-not-regenerate). */
 export type MvPart = "image" | "motion" | "metadata";
@@ -41,8 +43,10 @@ export const MV_PARTS: readonly MvPart[] = ["image", "motion", "metadata"];
 
 export type MvVerdict = "keep" | "drop";
 
-/** The one code-drawn element the compositor pulses on the beat. Position and
- *  radius are normalised to the frame (0..1; r against the frame height). */
+/** The one code-drawn element the compositor can pulse on the beat. Position
+ *  and radius are normalised to the frame (0..1; r against the frame height).
+ *  DESCOPED 2026-10-12 - the treatment no longer asks for one and the render
+ *  never draws one; kept for a later, better-looking return. */
 export type MvFocalKind = "halo" | "ring" | "light" | "orb";
 export const MV_FOCAL_KINDS: readonly MvFocalKind[] = ["halo", "ring", "light", "orb"];
 
@@ -58,7 +62,9 @@ export interface MvFocal {
 /** The compositor's knobs the treatment sets. Ranges are clamped by the
  *  engine; the LLM's numbers are proposals. */
 export interface MvMotion {
-  focal: MvFocal;
+  /** Descoped (see MvFocal): only jobs made before 2026-10-12 carry it, and the
+   *  render ignores it. */
+  focal?: MvFocal;
   /** 0..1 - how many particles relative to the compositor's default. */
   particleDensity: number;
   /** 0..360. */
@@ -69,8 +75,7 @@ export interface MvMotion {
 
 /** The LLM's answer for `mv-treatment`. */
 export interface MvTreatment {
-  /** The Leonardo prompt. Leaves a clean, low-detail area where `motion.focal`
-   *  sits; never asks for text in the image (registry law
+  /** The Leonardo prompt. Never asks for text in the image (registry law
    *  checkability-routes-the-pixel). */
   prompt: string;
   negativePrompt?: string;
@@ -111,6 +116,8 @@ export interface MvFiles {
   audio?: string;
   still?: string;
   video?: string;
+  /** Only jobs made before 2026-10-12: the thumbnail is now taken from a
+   *  frame of the video by the operator, not drawn by the queue. */
   thumb?: string;
   envelope?: string;
 }
@@ -132,6 +139,10 @@ export interface MvJob {
   redo?: MvPart[];
   /** The operator's note for the regenerated part, passed to the text turn. */
   note?: string;
+  /** The operator's own still prompt for an `image` regenerate: used as the
+   *  prompt instead of the treatment turn's (the no-text clause is still
+   *  welded on). Cleared by a regenerate that does not carry one. */
+  prompt?: string;
   verdict: MvVerdict | null;
   /** The driver's or engine's own sentence, verbatim. */
   error?: string;
@@ -167,10 +178,12 @@ export interface MvEnqueueRequest {
   sources: MvSource[];
 }
 
-/** POST /api/sound/mv/jobs/<id> - Regenerate. */
+/** POST /api/sound/mv/jobs/<id> - Regenerate. `prompt` only with part
+ *  `image`: the still is made from it as written, and no treatment turn runs. */
 export interface MvRegenerateRequest {
   part: MvPart;
   note?: string;
+  prompt?: string;
 }
 
 /** PATCH /api/sound/mv/jobs/<id> */

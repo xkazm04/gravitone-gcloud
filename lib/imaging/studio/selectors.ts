@@ -27,21 +27,31 @@
 //     the generation id: `/generations/<generationId>/`. That is the same shape
 //     the REST API returns, so it does not depend on any GraphQL field name.
 
+const MODEL_ID = "openai/gpt-image-2.5-sunburst";
+
 export const STUDIO = {
+  /** 2026-10-12 recon — the model the stills are made with (operator,
+   *  2026-10-12: GPT Image 2.5 Sunburst at High, 1376x768, style Dynamic - the
+   *  studio's default style, id 111dc692-d470-4eec-b791-3475abac4c46). `id` is
+   *  the studio's own model key (its request schema's `model` const); `label`
+   *  is what the model control reads once the URL has set it. */
+  model: { id: MODEL_ID, label: "GPT Image 2.5 Sunburst" },
   page: {
     /** 2026-10-11 run — the launch URL the profile was opened on. */
     generateUrl: "https://app.leonardo.ai/generate",
     /** 2026-10-12 recon — the image form, set entirely by the URL. The bare
      *  generate page reopens the LAST model used (the recon found the profile
-     *  on hailuo-03 video, "Generate 90"), so the model, the aspect, one image
-     *  and prompt enhancement are named here rather than clicked: Lucid Origin
-     *  at 16:9 x1 reads "Generate 8" (Small, 1376x768; size=MEDIUM 11,
-     *  size=LARGE 1920x1088 17 - and the size a hand last picked STICKS to the
-     *  session, so SMALL is named too). promptEnhance=OFF: the studio's default Auto
-     *  rewrites short prompts, which could add the lettering the treatment
-     *  forbids. */
+     *  on hailuo-03 video, "Generate 90"), so the model, the aspect, one image,
+     *  the size, the quality and prompt enhancement are all named here rather
+     *  than clicked; a size or quality a hand last picked STICKS to the session
+     *  otherwise. Sunburst at 16:9 x1 reads (7 credits per megapixel times the
+     *  quality factor): size=SMALL 1376x768 quality=HIGH "Generate 71",
+     *  quality=MEDIUM 20, size=MEDIUM 2048x1136 at HIGH 155. promptEnhance=OFF:
+     *  the studio's Auto rewrites short prompts, which could add the lettering
+     *  the treatment forbids. (Lucid Origin, the first model: model=lucid-origin
+     *  at SMALL read "Generate 8".) */
     imageUrl: (aspect: string) =>
-      `https://app.leonardo.ai/generate?model=lucid-origin&aspectRatio=${encodeURIComponent(aspect)}&quantity=1&size=SMALL&promptEnhance=OFF`,
+      `https://app.leonardo.ai/generate?model=${encodeURIComponent(MODEL_ID)}&aspectRatio=${encodeURIComponent(aspect)}&quantity=1&size=SMALL&quality=HIGH&promptEnhance=OFF`,
     /** UNVERIFIED 2026-10-12 — a signed-out visit is redirected to an auth page. */
     signedOutPath: /\/(auth|login|sign-?in)\b/i,
   },
@@ -69,9 +79,9 @@ export const STUDIO = {
   form: {
     /** 2026-10-12 recon (1 match) — the prompt box: the page's one visible textarea. */
     prompt: "textarea",
-    /** 2026-10-12 recon — the model control reads "Model Lucid Origin" under imageUrl. */
-    modelTrigger: "button:has-text('Auto'), button:has-text('Lucid Origin')",
-    modelOk: /\b(auto|lucid origin)\b/i,
+    /** 2026-10-12 recon — the model control reads "Model GPT Image 2.5 Sunburst" under imageUrl. */
+    modelTrigger: "button:has-text('Model')",
+    modelOk: /\bGPT Image 2\.5 Sunburst\b/i,
     /** 2026-10-12 recon — the aspect chips are radio cards: <button role=radio value="16:9">. */
     aspect: (label: string) => `[role=radio][value='${label}']`,
     /** 2026-10-12 recon — the count chips read "1".."4" on the image form. */
@@ -87,9 +97,11 @@ export const STUDIO = {
     sessionCookie: /better-auth\.session_token|session-token|CognitoIdentityServiceProvider\..*\.(idToken|refreshToken)$/i,
   },
   limits: {
-    /** 2026-10-11 run — one Auto image billed 8 credits; the control read "Up to 40".
-     *  A price read off the button above this ceiling is refused before the click. */
-    maxCreditsPerImage: 40,
+    /** 2026-10-12 recon — one Sunburst image at Small/High reads "Generate 71"
+     *  (Lucid Origin was 8). A price read off the button above this ceiling is
+     *  refused before the click: a Medium size left in the session (155) or a
+     *  video model (90) is never bought by accident. */
+    maxCreditsPerImage: 80,
     /** 2026-10-11 run — 11 s for one image; three minutes is the API adapter's ceiling. */
     renderTimeoutMs: 3 * 60_000,
     /** How long the page may take to answer the click with `Generate`. */
