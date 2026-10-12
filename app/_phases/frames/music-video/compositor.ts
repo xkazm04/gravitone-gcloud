@@ -306,6 +306,183 @@ export interface RenderInput {
    *  is none in this build — see the module header) rather than removing the
    *  effect outright, per the registry's "replace, never remove" rule. */
   reducedMotion: boolean;
+  /** How the poster meets the canvas. Absent = "contain" (letterboxed, the
+   *  studio's own frame). The music-video queue covers its still to 16:9 -
+   *  a generated still has no bars worth keeping. */
+  fit?: "contain" | "cover";
+  /** Particle tint, 0..360. Absent = today's white dust. */
+  particleHue?: number;
+  /** The one code-drawn element pulsed by the low band (the music-video
+   *  queue's treatment places it). Absent = no element, and the frame is
+   *  byte-identical to the studio's (mv-render.probe pins that). */
+  focal?: FocalInput;
+}
+
+export type FocalKind = "halo" | "ring" | "light" | "orb";
+
+/** The focal element as `renderFrame` reads it. Mirrors `MvFocal`
+ *  (lib/sound/mv/types.ts) plus the pulse; declared here rather than imported
+ *  because this file must transpile in isolation for the export page. */
+export interface FocalInput {
+  kind: FocalKind;
+  /** Centre, normalised to the canvas (0..1). */
+  x: number;
+  y: number;
+  /** Radius against the canvas height (0..1). */
+  r: number;
+  hue: number;
+  /** 0..1 - how far the pulse moves radius and brightness. */
+  pulseStrength: number;
+  /** `focalPulseTrack(boundedLow, ...)` - precomputed ONCE per envelope. */
+  pulse: number[];
+}
+
+/* ───────────────────────────── the focal element ───────────────────────── */
+
+/** Attack and release of the pulse, in seconds. A fast attack so the swell
+ *  lands ON the kick, a slow release so it exhales between kicks instead of
+ *  snapping off - the difference between a pulse and a jitter. */
+const FOCAL_ATTACK_S = 0.03;
+const FOCAL_RELEASE_S = 0.28;
+/** The idle breath: a slow sine under everything, so a quiet passage still
+ *  moves and the frame never freezes. Period and depth are small on purpose -
+ *  4.5s and under a tenth of the range is breathing, not flashing. */
+const FOCAL_BREATH_S = 4.5;
+const FOCAL_BREATH_DEPTH = 0.08;
+const FOCAL_IDLE = 0.1;
+
+/**
+ * The focal element's drive channel: the flash-safe low band through an
+ * attack/release follower, then through `limitFlashRate` AGAIN.
+ *
+ * WHY TWICE. A follower cannot add excursions over the threshold (between two
+ * of its own crossings the input must have dipped below the line), but its
+ * attack delay can move an edge later and so bunch two edges closer than the
+ * input had them. Re-running the cap over the follower's own output makes
+ * "<= maxPerWindow per second" a property of the channel the element is
+ * actually drawn from, not an argument about it.
+ *
+ * Pure and whole-track, like `limitFlashRate`: computed once per envelope, so
+ * `renderFrame` reads `pulse[frameIndex]` and carries nothing between frames.
+ */
+export function focalPulseTrack(boundedLow: number[], fps: number, threshold = 0.6, maxPerWindow = 3): number[] {
+  const attack = 1 - Math.exp(-1 / Math.max(1e-6, fps * FOCAL_ATTACK_S));
+  const release = 1 - Math.exp(-1 / Math.max(1e-6, fps * FOCAL_RELEASE_S));
+  const out = new Array<number>(boundedLow.length);
+  let y = 0;
+  for (let i = 0; i < boundedLow.length; i++) {
+    const x = boundedLow[i] ?? 0;
+    y += (x > y ? attack : release) * (x - y);
+    out[i] = y;
+  }
+  return limitFlashRate(out, fps, threshold, maxPerWindow);
+}
+
+const clamp01 = (v: number) => (Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0);
+const hueOf = (h: number) => (((Number.isFinite(h) ? h : 0) % 360) + 360) % 360;
+const hsla = (h: number, s: number, l: number, a: number) =>
+  `hsla(${h.toFixed(1)},${s.toFixed(1)}%,${l.toFixed(1)}%,${clamp01(a).toFixed(4)})`;
+
+/** Draw the focal element for `frameIndex`. Every value is a function of the
+ *  frame index, the precomputed pulse and the element's own constants. */
+function drawFocal(ctx: CanvasRenderingContext2D, f: FocalInput, frameIndex: number, fps: number): void {
+  const w = ctx.canvas.width;
+  const h = ctx.canvas.height;
+  const t = frameIndex / fps;
+  const breath = FOCAL_IDLE + FOCAL_BREATH_DEPTH * Math.sin((2 * Math.PI * t) / FOCAL_BREATH_S);
+  const level = clamp01(breath + clamp01(f.pulseStrength) * (f.pulse[frameIndex] ?? 0));
+  const cx = clamp01(f.x) * w;
+  const cy = clamp01(f.y) * h;
+  const R = Math.max(0.02, Math.min(0.5, Number.isFinite(f.r) ? f.r : 0.15)) * h;
+  const hue = hueOf(f.hue);
+  const alpha = 0.3 + 0.7 * level;
+
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.globalAlpha = 1;
+  if (f.kind === "halo") {
+    const rr = R * (1 + 0.35 * level);
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, rr);
+    g.addColorStop(0, hsla(hue, 90, 72, alpha));
+    g.addColorStop(0.45, hsla(hue, 90, 60, alpha * 0.45));
+    g.addColorStop(1, hsla(hue, 90, 50, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(cx, cy, rr, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (f.kind === "ring") {
+    const rr = R * (0.9 + 0.18 * level);
+    // The ring's glow is a wide faint stroke under a thin bright one, not
+    // `shadowBlur`, whose kernel is each browser's own business.
+    ctx.lineWidth = Math.max(4, R * (0.18 + 0.12 * level));
+    ctx.strokeStyle = hsla(hue, 90, 60, alpha * 0.25);
+    ctx.beginPath();
+    ctx.arc(cx, cy, rr, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.lineWidth = Math.max(2, R * (0.04 + 0.03 * level));
+    ctx.strokeStyle = hsla(hue, 95, 78, alpha);
+    ctx.beginPath();
+    ctx.arc(cx, cy, rr, 0, Math.PI * 2);
+    ctx.stroke();
+  } else if (f.kind === "light") {
+    const rr = R * (1 + 0.5 * level);
+    const bloom = ctx.createRadialGradient(cx, cy, 0, cx, cy, rr);
+    bloom.addColorStop(0, hsla(hue, 80, 85, alpha * 0.8));
+    bloom.addColorStop(0.3, hsla(hue, 90, 65, alpha * 0.3));
+    bloom.addColorStop(1, hsla(hue, 90, 50, 0));
+    ctx.fillStyle = bloom;
+    ctx.beginPath();
+    ctx.arc(cx, cy, rr, 0, Math.PI * 2);
+    ctx.fill();
+    // Six rays turning slowly with the frame clock: the angle is arithmetic
+    // over `t`, never an accumulated rotation.
+    const turn = t * 0.12;
+    const len = R * (1.2 + 0.8 * level);
+    ctx.lineCap = "round";
+    ctx.lineWidth = Math.max(1.5, R * 0.025);
+    for (let k = 0; k < 6; k++) {
+      const ang = turn + (k * Math.PI) / 3;
+      const ex = cx + Math.cos(ang) * len;
+      const ey = cy + Math.sin(ang) * len;
+      const ray = ctx.createLinearGradient(cx, cy, ex, ey);
+      ray.addColorStop(0, hsla(hue, 80, 85, alpha * 0.6));
+      ray.addColorStop(1, hsla(hue, 80, 70, 0));
+      ctx.strokeStyle = ray;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+    }
+    const cr = R * 0.22 * (1 + 0.5 * level);
+    const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, cr);
+    core.addColorStop(0, hsla(hue, 30, 97, alpha + 0.2));
+    core.addColorStop(1, hsla(hue, 60, 85, 0));
+    ctx.fillStyle = core;
+    ctx.beginPath();
+    ctx.arc(cx, cy, cr, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    // ORB: a filled sphere (source-over: it occludes the still) lit from the
+    // upper left, inside an additive glow that carries most of the pulse.
+    const rr = R * (1 + 0.12 * level);
+    const glow = ctx.createRadialGradient(cx, cy, rr * 0.8, cx, cy, rr * 1.7);
+    glow.addColorStop(0, hsla(hue, 85, 60, alpha * 0.55));
+    glow.addColorStop(1, hsla(hue, 85, 50, 0));
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(cx, cy, rr * 1.7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = "source-over";
+    const body = ctx.createRadialGradient(cx - rr * 0.35, cy - rr * 0.35, rr * 0.05, cx, cy, rr);
+    body.addColorStop(0, hsla(hue, 70, 55 + 35 * level, 0.97));
+    body.addColorStop(0.7, hsla(hue, 70, 30 + 20 * level, 0.95));
+    body.addColorStop(1, hsla(hue, 70, 18, 0.9));
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.arc(cx, cy, rr, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
 }
 
 /** A few passes of a cheap separable box blur over a single-channel buffer —
@@ -378,7 +555,17 @@ export function renderFrame(ctx: CanvasRenderingContext2D, input: RenderInput): 
   const posterAspect = input.posterWidth / input.posterHeight;
   const canvasAspect = w / h;
   let dw = w, dh = h, dx = 0, dy = 0;
-  if (posterAspect > canvasAspect) {
+  if (input.fit === "cover") {
+    // COVER: the poster fills the canvas and its overhang is cropped - the
+    // contain branch below with the comparison turned round.
+    if (posterAspect > canvasAspect) {
+      dw = h * posterAspect;
+      dx = (w - dw) / 2;
+    } else {
+      dh = w / posterAspect;
+      dy = (h - dh) / 2;
+    }
+  } else if (posterAspect > canvasAspect) {
     dh = w / posterAspect;
     dy = (h - dh) / 2;
   } else {
@@ -408,6 +595,9 @@ export function renderFrame(ctx: CanvasRenderingContext2D, input: RenderInput): 
   // spatial motion in the vestibular-trigger sense this app's "replace, never
   // remove" rule is about.
   const shimmer = 0.4 + 0.6 * (highBand[frameIndex] ?? 0);
+  // Tinted dust stays pale (85% lightness): still dust in light, now in the
+  // treatment's colour. An absent hue keeps the studio's white exactly.
+  const particleFill = input.particleHue === undefined ? "rgba(255,255,255,1)" : hsla(hueOf(input.particleHue), 70, 85, 1);
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
   for (let i = 0; i < params.particleCount; i++) {
@@ -420,10 +610,13 @@ export function renderFrame(ctx: CanvasRenderingContext2D, input: RenderInput): 
     const py = dy + y * dh;
     const r = 1 + 1.5 * opacity;
     ctx.globalAlpha = Math.max(0, Math.min(1, opacity * shimmer));
-    ctx.fillStyle = "rgba(255,255,255,1)";
+    ctx.fillStyle = particleFill;
     ctx.beginPath();
     ctx.arc(px, py, r, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.restore();
+
+  // THE FOCAL ELEMENT, last and on top: the one thing the treatment placed.
+  if (input.focal) drawFocal(ctx, input.focal, frameIndex, input.fps);
 }

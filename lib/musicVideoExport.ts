@@ -64,7 +64,7 @@ import {
 } from "./export/headless";
 import type { AudioEnvelope } from "./audioEnvelope";
 import { outPath as fixtureOutPath } from "./fixtures/roots";
-import type { EffectParams } from "@/app/_phases/frames/music-video/compositor";
+import type { EffectParams, FocalInput } from "@/app/_phases/frames/music-video/compositor";
 
 // The browser launch, scratch dir, encoder fallback, atomic landing and sidecar
 // live in the shared kernel (lib/export/headless.ts) since the Cut's animatic
@@ -148,7 +148,18 @@ export function exportFilePath(id: string): string {
  *  never a copy cached across a long-running Node process that might be
  *  serving a hot-reloaded dev build. */
 function bundleCompositorScript(): string {
-  const srcPath = path.join(process.cwd(), "app", "_phases", "frames", "music-video", "compositor.ts");
+  return bundlePageModule(["app", "_phases", "frames", "music-video", "compositor.ts"], "__Compositor", "compositor-transpile-failed");
+}
+
+/** The same isolation transpile for any zero-import module the render page
+ *  needs: `lib/audioEnvelope.ts` rides in on it too, which is how the
+ *  music-video queue bakes its envelope with the browser's own
+ *  OfflineAudioContext instead of a node port of the analysis
+ *  (lib/sound/mv/render.ts). `failCode` keeps the compositor's error code
+ *  what it always was. */
+function bundlePageModule(relPath: string[], globalName: string, failCode: string): string {
+  const srcPath = path.join(process.cwd(), ...relPath);
+  const fileName = relPath[relPath.length - 1];
   const source = readFileSync(srcPath, "utf8");
   const { outputText, diagnostics } = ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
@@ -157,8 +168,8 @@ function bundleCompositorScript(): string {
   if (diagnostics && diagnostics.length) {
     const first = diagnostics[0];
     throw new ExportError(
-      `compositor.ts failed to transpile for the export page: ${ts.flattenDiagnosticMessageText(first.messageText, "\n")}`,
-      "compositor-transpile-failed",
+      `${fileName} failed to transpile for the export page: ${ts.flattenDiagnosticMessageText(first.messageText, "\n")}`,
+      failCode,
     );
   }
   return `(function(){
@@ -167,8 +178,36 @@ function bundleCompositorScript(): string {
     (function(exports, module){
 ${outputText}
     })(exports, module);
-    window.__Compositor = exports;
+    window.${globalName} = exports;
   })();`;
+}
+
+/** Decode `audio` and bake its envelope INSIDE `page`, with the very
+ *  `analyzeAudioEnvelope` the studio runs in the user's tab - same decoder
+ *  family, same filters, same default fps. The bytes cross as base64 in one
+ *  evaluate (a 4-minute mp3 is ~13 MB of string; CDP carries that in one
+ *  message), the envelope comes back as plain arrays. A file that does not
+ *  decode is an `ExportError` carrying the decoder's own sentence. */
+export async function bakeEnvelopeInPage(page: Page, audio: Buffer, name: string): Promise<AudioEnvelope> {
+  await page.addScriptTag({ content: bundlePageModule(["lib", "audioEnvelope.ts"], "__AudioEnvelope", "envelope-transpile-failed") });
+  const res = await page.evaluate(
+    async ({ b64, name }: { b64: string; name: string }) => {
+      try {
+        const bin = atob(b64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        const mod = (window as unknown as {
+          __AudioEnvelope: { analyzeAudioEnvelope: (f: File) => Promise<AudioEnvelope> };
+        }).__AudioEnvelope;
+        return { envelope: await mod.analyzeAudioEnvelope(new File([bytes], name)) };
+      } catch (e) {
+        return { error: e instanceof Error ? e.message : String(e) };
+      }
+    },
+    { b64: audio.toString("base64"), name },
+  );
+  if ("error" in res) throw new ExportError(`The track did not analyse in the render page: ${res.error}`, "envelope-failed");
+  return res.envelope;
 }
 
 /** One frame, captured from the page's own `window.renderFrameAt`. Returns the
@@ -184,18 +223,38 @@ async function captureFrame(page: Page, frameIndex: number): Promise<Buffer> {
  *  edge mask + bloom texture ONCE (same 640px analysis cap as
  *  `EffectsStudio.tsx#buildPosterRig`, for the same reason — a full-resolution
  *  Sobel pass spends CPU on detail the blur erases immediately), compute the
- *  flash-rate-limited low band once, and expose `window.renderFrameAt`. */
-async function setUpRenderPage(page: Page, req: ExportRequest, width: number, height: number): Promise<void> {
+ *  flash-rate-limited low band once, and expose `window.renderFrameAt`.
+ *
+ *  Shared by the studio export (`runExport`) and the music-video queue
+ *  (lib/sound/mv/render.ts). The queue's three extras - `fit`, `particleHue`,
+ *  `focal` - are passed to `renderFrame` only when set, so the studio's call
+ *  is the call it always was. */
+export interface RenderPageSetup {
+  width: number;
+  height: number;
+  posterDataUrl: string;
+  envelope: AudioEnvelope;
+  seed: number;
+  effectParams: EffectParams;
+  fit?: "contain" | "cover";
+  particleHue?: number;
+  /** The focal element without its pulse: the pulse is derived in the page
+   *  from the flash-safe low band (`focalPulseTrack`), once. */
+  focal?: Omit<FocalInput, "pulse">;
+}
+
+export async function setUpRenderPage(page: Page, setup: RenderPageSetup): Promise<void> {
+  const { width, height, posterDataUrl } = setup;
   await page.setContent(`<!doctype html><html><body style="margin:0;background:#000">
     <canvas id="c" width="${width}" height="${height}"></canvas>
   </body></html>`);
   await page.addScriptTag({ content: bundleCompositorScript() });
 
-  const posterDataUrl = `data:${req.posterMime};base64,${req.posterBase64}`;
   const setupError = await page.evaluate(
-    async ({ posterDataUrl, effectParams, envelope, seed }: {
+    async ({ posterDataUrl, effectParams, envelope, seed, fit, particleHue, focal }: {
       posterDataUrl: string;
       effectParams: EffectParams; envelope: AudioEnvelope; seed: number;
+      fit: RenderPageSetup["fit"] | null; particleHue: number | null; focal: RenderPageSetup["focal"] | null;
     }) => {
       try {
         const canvas = document.getElementById("c") as HTMLCanvasElement;
@@ -224,6 +283,7 @@ async function setUpRenderPage(page: Page, req: ExportRequest, width: number, he
             computeEdgeMask: (d: ImageData) => unknown;
             buildBloomTexture: (m: unknown, p: EffectParams) => CanvasImageSource;
             limitFlashRate: (low: number[], fps: number, t: number, m: number) => number[];
+            focalPulseTrack: (low: number[], fps: number, t: number, m: number) => number[];
             renderFrame: (ctx: CanvasRenderingContext2D, input: Record<string, unknown>) => void;
           };
         }).__Compositor;
@@ -234,6 +294,18 @@ async function setUpRenderPage(page: Page, req: ExportRequest, width: number, he
         const boundedLow = compositor.limitFlashRate(
           envelope.bands.low, envelope.fps, effectParams.flashThreshold, effectParams.flashMaxPerWindow,
         );
+
+        // The music-video queue's extras, added only when present: the
+        // studio's renderFrame input stays key-for-key what it was.
+        const extras: Record<string, unknown> = {};
+        if (fit) extras.fit = fit;
+        if (particleHue !== null) extras.particleHue = particleHue;
+        if (focal) {
+          extras.focal = {
+            ...focal,
+            pulse: compositor.focalPulseTrack(boundedLow, envelope.fps, effectParams.flashThreshold, effectParams.flashMaxPerWindow),
+          };
+        }
 
         (window as unknown as { renderFrameAt: (i: number) => string }).renderFrameAt = (frameIndex: number) => {
           compositor.renderFrame(ctx, {
@@ -252,6 +324,7 @@ async function setUpRenderPage(page: Page, req: ExportRequest, width: number, he
             // screen (`prefers-reduced-motion`), not a property of a baked
             // export file nobody is passively exposed to while it renders.
             reducedMotion: false,
+            ...extras,
           });
           return canvas.toDataURL("image/png");
         };
@@ -260,7 +333,15 @@ async function setUpRenderPage(page: Page, req: ExportRequest, width: number, he
         return e instanceof Error ? e.message : String(e);
       }
     },
-    { posterDataUrl, effectParams: req.effectParams, envelope: req.envelope, seed: req.seed },
+    {
+      posterDataUrl,
+      effectParams: setup.effectParams,
+      envelope: setup.envelope,
+      seed: setup.seed,
+      fit: setup.fit ?? null,
+      particleHue: setup.particleHue ?? null,
+      focal: setup.focal ?? null,
+    },
   );
   if (setupError) throw new ExportError(`Render page setup failed: ${setupError}`, "render-setup-failed");
 }
@@ -340,6 +421,34 @@ async function muxOnce(opts: {
   );
 }
 
+/** Walk `renderFrameAt` from 0 to `frameCount - 1`, writing the numbered PNG
+ *  sequence `muxFrameSequence` reads. `onFrame(done)` after each frame lands. */
+export async function captureFrameSequence(
+  page: Page,
+  frameCount: number,
+  framesDir: string,
+  onFrame?: (done: number) => void,
+): Promise<void> {
+  for (let i = 0; i < frameCount; i++) {
+    const png = await captureFrame(page, i);
+    await writeFile(path.join(framesDir, `f${String(i).padStart(6, "0")}.png`), png);
+    onFrame?.(i + 1);
+  }
+}
+
+/** Measure the track once, pick the one peak-limited gain, and mux the frame
+ *  sequence with it - NVENC first, libx264 once if NVENC cannot start; the
+ *  kernel logs the NVENC failure under `logTag` and this returns the encoder
+ *  that actually ran. */
+export async function muxFrameSequence(opts: {
+  framesDir: string; fps: number; audioPath: string; outPath: string; logTag: string;
+}): Promise<Encoder> {
+  const { framesDir, fps, audioPath, outPath, logTag } = opts;
+  const loudness = await measureLoudness(audioPath);
+  const gainDb = loudness ? peakLimitedGainDb(loudness.integratedLufs, loudness.truePeakDb) : 0;
+  return withEncoderFallback(logTag, (enc) => muxOnce({ framesDir, fps, audioPath, outPath, encoder: enc, gainDb }));
+}
+
 /**
  * Run one real export, end to end. Throws `ExportError` for every refusal
  * this module can name; anything else (an unexpected ffmpeg/Playwright
@@ -361,14 +470,18 @@ export async function runExport(req: ExportRequest): Promise<ExportResult> {
     browser = await launchHeadless();
 
     const page = await browser.newPage({ viewport: { width, height } });
-    await setUpRenderPage(page, req, width, height);
+    await setUpRenderPage(page, {
+      width,
+      height,
+      posterDataUrl: `data:${req.posterMime};base64,${req.posterBase64}`,
+      envelope: req.envelope,
+      seed: req.seed,
+      effectParams: req.effectParams,
+    });
 
     const captureStart = Date.now();
     const frameCount = req.envelope.frameCount;
-    for (let i = 0; i < frameCount; i++) {
-      const png = await captureFrame(page, i);
-      await writeFile(path.join(framesDir, `f${String(i).padStart(6, "0")}.png`), png);
-    }
+    await captureFrameSequence(page, frameCount, framesDir);
     const captureMs = Date.now() - captureStart;
 
     const audioExt = AUDIO_EXT[req.audioMime] ?? "mp3";
@@ -386,13 +499,9 @@ export async function runExport(req: ExportRequest): Promise<ExportResult> {
     const outPath = partialPath(OUT_ROOT, id);
 
     const muxStart = Date.now();
-    const loudness = await measureLoudness(audioPath);
-    const gainDb = loudness ? peakLimitedGainDb(loudness.integratedLufs, loudness.truePeakDb) : 0;
     // NVENC first, libx264 once if NVENC cannot start; the kernel logs the
     // NVENC failure and the result SAYS which encoder actually ran.
-    const encoder = await withEncoderFallback("music-video/export", (enc) =>
-      muxOnce({ framesDir, fps: req.envelope.fps, audioPath, outPath, encoder: enc, gainDb }),
-    );
+    const encoder = await muxFrameSequence({ framesDir, fps: req.envelope.fps, audioPath, outPath, logTag: "music-video/export" });
     const muxMs = Date.now() - muxStart;
 
     const { sizeBytes } = await landExport({
