@@ -38,8 +38,7 @@
 // downstream must not assume better than that.
 
 import { spawn, spawnSync } from "node:child_process";
-import { randomUUID } from "node:crypto";
-import { readFile, unlink } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -92,7 +91,15 @@ export function agyAvailable(): boolean {
  *  asked it to write. Sequential per call — agy's CLI takes one request at a
  *  time and a batch of N images is N full ~57s turns, not a batch endpoint. */
 async function generateOne(prompt: string, ratio: string): Promise<ImageRef> {
-  const outPath = join(tmpdir(), `agy-poster-${randomUUID()}.png`);
+  // A FRESH EMPTY WORKSPACE PER CALL, AND --sandbox. agy's print mode runs its
+  // own shell and file tools with no permission prompt. Measured 2026-10-12:
+  // a raw call started in the repo root ran 74 shell commands and read 34 repo
+  // files while chasing a follow-up question. The image prompt reaches this
+  // adapter from upstream LLM output, so the agent gets an empty directory as
+  // its workspace and the CLI's terminal restrictions. The same call
+  // sandboxed from an empty dir generated in 57s (unsandboxed: 64s).
+  const ws = await mkdtemp(join(tmpdir(), "agy-img-"));
+  const outPath = join(ws, "out.png");
   const instruction =
     `Use the generate_image tool to create an image of: ${prompt} ` +
     `Set AspectRatio to "${ratio}". Save the result to the absolute path ${outPath} ` +
@@ -111,7 +118,8 @@ async function generateOne(prompt: string, ratio: string): Promise<ImageRef> {
       // to thousands of tokens of prose on a real generation, which can fill
       // the OS pipe buffer and block the child's write(), turning every call
       // into a GENERATE_TIMEOUT_MS hang instead of the ~57s this measured.
-      child = spawn("agy", ["-p", instruction, "--output-format", "json"], {
+      child = spawn("agy", ["-p", instruction, "--output-format", "json", "--sandbox", "--disable-slash-commands"], {
+        cwd: ws,
         stdio: ["ignore", "ignore", "pipe"],
       });
     } catch {
@@ -159,10 +167,22 @@ async function generateOne(prompt: string, ratio: string): Promise<ImageRef> {
   } finally {
     // Best-effort — a leaked temp PNG is a disk-usage nit, not a result we may
     // fail the call over once the bytes are already in hand.
-    unlink(outPath).catch(() => {});
+    rm(ws, { recursive: true, force: true }).catch(() => {});
   }
 
-  return { base64: buf.toString("base64"), mime: "image/png" };
+  // THE BYTES DECIDE THE MIME, NOT THE FILENAME. agy's generate_image tool
+  // returns a JPEG (measured 2026-10-12: tool result `media.mime_type
+  // image/jpeg`); the agent usually converts it for the .png path we name, but
+  // nothing obliges it to, and a JPEG labelled image/png breaks every
+  // downstream data: URL.
+  return { base64: buf.toString("base64"), mime: sniffMime(buf) };
+}
+
+function sniffMime(b: Buffer): ImageRef["mime"] {
+  if (b[0] === 0xff && b[1] === 0xd8) return "image/jpeg";
+  if (b.subarray(0, 4).toString("latin1") === "RIFF" && b.subarray(8, 12).toString("latin1") === "WEBP") return "image/webp";
+  if (b[0] === 0x89 && b.subarray(1, 4).toString("latin1") === "PNG") return "image/png";
+  throw new ImagingError("agy wrote a file that is not a PNG, JPEG or WebP image.", "bad-response", "agy");
 }
 
 export function agyProvider(): ImagingProvider {
