@@ -1,0 +1,268 @@
+{
+  "schema": "conform-run/1",
+  "worker": "8a75fb9d-04f6-433f-8045-aff811a59a84",
+  "subject": "prompt-assembly",
+  "evaluatedAt": "2026-10-12T23:41:28.973540+00:00",
+  "provider": "grok",
+  "model": "grok-4.7",
+  "pairs": [
+    {
+      "context": "ai-orchestration",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "lib/stylePrompt.ts:57 The image-prompt compiler treats a silent 77-token tail drop as the budget policy, so the standing no-text rule is placed where a CLIP reader can lose it without a notice.",
+      "techniques": [
+        {
+          "technique": "context-budgeting",
+          "verdict": "deviation",
+          "evidence": "lib/stylePrompt.ts:57 No degradation ladder and no dropped-span notice; the 1500-character ceiling is only exposed for a UI warning."
+        },
+        {
+          "technique": "layered-composition",
+          "verdict": "deviation",
+          "evidence": "lib/stylePrompt.ts:62 The per-frame subject sits between the stable style block and the standing no-text constraint."
+        },
+        {
+          "technique": "variable-interpolation",
+          "verdict": "conformant",
+          "evidence": "lib/formatBrief.ts:358 An unknown format is written into the section as NOT STATED rather than rendered as an empty string."
+        },
+        {
+          "technique": "contributed-document-admission",
+          "verdict": "not-applicable",
+          "evidence": "lib/formatBrief.ts:54 The format table is authored in this module; no installed third-party document registry is admitted."
+        },
+        {
+          "technique": "capability-documentation",
+          "verdict": "not-applicable",
+          "evidence": "lib/claudeCli.ts:254 The headless door strips tools in argv; these files do not render an operation roster."
+        },
+        {
+          "technique": "history-compaction",
+          "verdict": "not-applicable",
+          "evidence": "lib/claudeCli.ts:282 Each CLI call is one turn with the whole prompt on stdin; there is no growing transcript to cut."
+        },
+        {
+          "technique": "context-ownership-regimes",
+          "verdict": "not-applicable",
+          "evidence": "lib/claudeCli.ts:277 The argv I read (lines 276-283) is a one-shot print call with no provider context-edit or compaction flag."
+        },
+        {
+          "technique": "fingerprinting-and-cache-keys",
+          "verdict": "deviation",
+          "evidence": "lib/turns/assemble/frames.ts:44 Opened from the frames route import: the standing system prompt is reused from a process map with no digest compare against the file."
+        },
+        {
+          "technique": "task-envelope",
+          "verdict": "conformant",
+          "evidence": "pipeline/FRAMES-SCENE-PROMPT.md:158 The scene prompt the route's assembler loads states the returned artifact; its opening also points at the script, notebook, and style."
+        }
+      ],
+      "registryProposal": "Say whether a one-shot image-model compiler is in scope. The truncation and layer-order rules decided these compilers; the transcript, cache-key, and compaction techniques had no precondition in this context."
+    },
+    {
+      "context": "production-script-probes",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "tests/golden-path/shot-decomposition.probe.spec.ts:256 This probe requires every proposed image prompt to open with the style block so a silent 77-token window keeps the style and can drop the rest.",
+      "techniques": [
+        {
+          "technique": "context-budgeting",
+          "verdict": "deviation",
+          "evidence": "tests/golden-path/shot-decomposition.probe.spec.ts:256 The gate locks silent head-truncation in, and the next assertion only checks a character ceiling."
+        },
+        {
+          "technique": "layered-composition",
+          "verdict": "deviation",
+          "evidence": "tests/golden-path/shot-decomposition.probe.spec.ts:257 Style at byte 0 puts the per-shot action before the standing no-text clause."
+        },
+        {
+          "technique": "history-compaction",
+          "verdict": "not-applicable",
+          "evidence": "tests/golden-path/shot-decomposition.probe.spec.ts:243 The prompt half is a proposal string, not a transcript. The other probes in this list drive cuts, DOM weight, edit plans, and extract locks."
+        }
+      ]
+    },
+    {
+      "context": "frames-phase",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "app/_phases/frames/shotPrompt.ts:217 Shot prompts are built as style, then the per-shot action, then the standing no-text clause, and the plate send does not walk a token ladder.",
+      "techniques": [
+        {
+          "technique": "layered-composition",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/shotPrompt.ts:217 The volatile action block is documented between the stable style and the standing constraint."
+        },
+        {
+          "technique": "context-budgeting",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/shotReview.ts:490 The only ceiling in these files is a character count on the proposal sheet; useFrames.ts posts compilePrompt output with no fitting step."
+        },
+        {
+          "technique": "variable-interpolation",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/shotPrompt.ts:206 An empty motion is omitted rather than rendered as a hole."
+        },
+        {
+          "technique": "history-compaction",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/shotPrompt.ts:5 Search of these files found no transcript compactor; compact hits are layout props."
+        },
+        {
+          "technique": "capability-documentation",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/sceneSpec.ts:7 SCENE_SCHEMA is an output shape for a headless engine, not a tool roster derived for a dispatcher."
+        },
+        {
+          "technique": "live-attachment-delta-resharing",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/useFrames.ts:467 References ride on a stateless generate call; there is no conversation that already holds a prior share."
+        }
+      ]
+    },
+    {
+      "context": "frames-score-cut",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "app/_phases/frames/shotPrompt.ts:217 alts.ts only stores kept plates. The prompt path in this context is the same shot compiler, character ceiling, and plate send.",
+      "techniques": [
+        {
+          "technique": "layered-composition",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/shotPrompt.ts:217 Style, then per-shot action, then the no-text clause."
+        },
+        {
+          "technique": "context-budgeting",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/shotReview.ts:490 Budget evidence in these files is a character cap on proposals; the plate post does not enforce it."
+        },
+        {
+          "technique": "variable-interpolation",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/shotPrompt.ts:206 Empty motion is left out of the action block."
+        },
+        {
+          "technique": "history-compaction",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/shotPrompt.ts:5 One image prompt per shot. No message-list compactor in this file set."
+        },
+        {
+          "technique": "capability-documentation",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/sceneSpec.ts:7 No operation registry is rendered from a dispatcher."
+        },
+        {
+          "technique": "live-attachment-delta-resharing",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/useFrames.ts:467 Each generate sends its references once; there is no prior-share witness."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "prompt-assembly",
+      "context": "studio-logic-probes",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor text-ladder.probe.spec.ts:138 is a section-divider comment. It doesn't show the 'literal prompt string passed to the router' claim, which is a few lines later, so the anchor is incidental."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-12T23:41:28.973540+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "prompt-assembly"
+      ],
+      "techniques": [
+        "capability-documentation",
+        "context-budgeting",
+        "context-ownership-regimes",
+        "contributed-document-admission",
+        "fingerprinting-and-cache-keys",
+        "history-compaction",
+        "layered-composition",
+        "task-envelope",
+        "variable-interpolation"
+      ],
+      "deviations": 1,
+      "context": "ai-orchestration",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-12T23:41:28.973540+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "prompt-assembly"
+      ],
+      "techniques": [
+        "context-budgeting",
+        "history-compaction",
+        "layered-composition"
+      ],
+      "deviations": 1,
+      "context": "production-script-probes",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-12T23:41:28.973540+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "prompt-assembly"
+      ],
+      "techniques": [
+        "capability-documentation",
+        "context-budgeting",
+        "history-compaction",
+        "layered-composition",
+        "live-attachment-delta-resharing",
+        "variable-interpolation"
+      ],
+      "deviations": 1,
+      "context": "frames-phase",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-12T23:41:28.973540+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "prompt-assembly"
+      ],
+      "techniques": [
+        "capability-documentation",
+        "context-budgeting",
+        "history-compaction",
+        "layered-composition",
+        "live-attachment-delta-resharing",
+        "variable-interpolation"
+      ],
+      "deviations": 1,
+      "context": "frames-score-cut",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-12T23:41:28.973540+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "prompt-assembly"
+      ],
+      "techniques": [
+        "fingerprinting-and-cache-keys",
+        "history-compaction",
+        "layered-composition"
+      ],
+      "deviations": 0,
+      "context": "studio-logic-probes",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    }
+  ]
+}

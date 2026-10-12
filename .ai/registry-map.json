@@ -531,7 +531,11 @@
           "revision": 43,
           "changedAt": "2026-10-02",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/stylePrompt.ts:57 The image-prompt compiler treats a silent 77-token tail drop as the budget policy, so the standing no-text rule is placed where a CLIP reader can lose it without a notice.",
+          "evaluatedAt": "2026-10-12",
+          "evaluatedAgainst": "sha256-b2:7436fd55a7cb2500",
+          "evaluatedRevision": 43
         },
         {
           "subject": "mcp-tools",
@@ -1846,8 +1850,12 @@
           "revision": 43,
           "changedAt": "2026-10-02",
           "confidence": "probable",
-          "state": "unknown",
-          "arrived": true
+          "state": "deviation",
+          "arrived": true,
+          "evidence": "app/_phases/frames/shotPrompt.ts:217 Shot prompts are built as style, then the per-shot action, then the standing no-text clause, and the plate send does not walk a token ladder.",
+          "evaluatedAt": "2026-10-12",
+          "evaluatedAgainst": "sha256-b2:7436fd55a7cb2500",
+          "evaluatedRevision": 43
         },
         {
           "subject": "cinematic-language",
@@ -2045,7 +2053,11 @@
           "revision": 43,
           "changedAt": "2026-10-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/_phases/frames/shotPrompt.ts:217 alts.ts only stores kept plates. The prompt path in this context is the same shot compiler, character ceiling, and plate send.",
+          "evaluatedAt": "2026-10-12",
+          "evaluatedAgainst": "sha256-b2:7436fd55a7cb2500",
+          "evaluatedRevision": 43
         },
         {
           "subject": "music-video-production",
@@ -3830,7 +3842,11 @@
           "revision": 43,
           "changedAt": "2026-10-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/golden-path/shot-decomposition.probe.spec.ts:256 This probe requires every proposed image prompt to open with the style block so a silent 77-token window keeps the style and can drop the rest.",
+          "evaluatedAt": "2026-10-12",
+          "evaluatedAgainst": "sha256-b2:7436fd55a7cb2500",
+          "evaluatedRevision": 43
         },
         {
           "subject": "agent-memory",

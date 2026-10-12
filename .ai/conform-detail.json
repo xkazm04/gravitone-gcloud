@@ -1246,6 +1246,202 @@
         "at": "2026-10-12T21:44:08.987155+00:00",
         "reason": "reviewer (sonnet): The anchor arcane.json:2 is a `_source` provenance line for a single still-frame file. It does not show that the context has no assembly or timeline surface. A grep of pipeline/vlm-probe for concat/ffmpeg/timeline/stitch/assembl matched ingest.py, materialize.py and motion.py, so the grep claim was "
       }
+    },
+    "88077279-217f-4b17-b941-74203bb2e1db/prompt-assembly": {
+      "context": "ai-orchestration",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-12",
+      "evaluatedTs": "2026-10-12T23:41:28.973Z",
+      "worker": "8a75fb9d-04f6-433f-8045-aff811a59a84",
+      "techniques": [
+        {
+          "technique": "context-budgeting",
+          "verdict": "deviation",
+          "evidence": "lib/stylePrompt.ts:57 No degradation ladder and no dropped-span notice; the 1500-character ceiling is only exposed for a UI warning."
+        },
+        {
+          "technique": "layered-composition",
+          "verdict": "deviation",
+          "evidence": "lib/stylePrompt.ts:62 The per-frame subject sits between the stable style block and the standing no-text constraint."
+        },
+        {
+          "technique": "variable-interpolation",
+          "verdict": "conformant",
+          "evidence": "lib/formatBrief.ts:358 An unknown format is written into the section as NOT STATED rather than rendered as an empty string."
+        },
+        {
+          "technique": "contributed-document-admission",
+          "verdict": "not-applicable",
+          "evidence": "lib/formatBrief.ts:54 The format table is authored in this module; no installed third-party document registry is admitted."
+        },
+        {
+          "technique": "capability-documentation",
+          "verdict": "not-applicable",
+          "evidence": "lib/claudeCli.ts:254 The headless door strips tools in argv; these files do not render an operation roster."
+        },
+        {
+          "technique": "history-compaction",
+          "verdict": "not-applicable",
+          "evidence": "lib/claudeCli.ts:282 Each CLI call is one turn with the whole prompt on stdin; there is no growing transcript to cut."
+        },
+        {
+          "technique": "context-ownership-regimes",
+          "verdict": "not-applicable",
+          "evidence": "lib/claudeCli.ts:277 The argv I read (lines 276-283) is a one-shot print call with no provider context-edit or compaction flag."
+        },
+        {
+          "technique": "fingerprinting-and-cache-keys",
+          "verdict": "deviation",
+          "evidence": "lib/turns/assemble/frames.ts:44 Opened from the frames route import: the standing system prompt is reused from a process map with no digest compare against the file."
+        },
+        {
+          "technique": "task-envelope",
+          "verdict": "conformant",
+          "evidence": "pipeline/FRAMES-SCENE-PROMPT.md:158 The scene prompt the route's assembler loads states the returned artifact; its opening also points at the script, notebook, and style."
+        }
+      ],
+      "registryProposal": "Say whether a one-shot image-model compiler is in scope. The truncation and layer-order rules decided these compilers; the transcript, cache-key, and compaction techniques had no precondition in this context."
+    },
+    "07ccdf07-2f2c-4965-81e0-85ae00430a4c/prompt-assembly": {
+      "context": "production-script-probes",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-12",
+      "evaluatedTs": "2026-10-12T23:41:28.973Z",
+      "worker": "8a75fb9d-04f6-433f-8045-aff811a59a84",
+      "techniques": [
+        {
+          "technique": "context-budgeting",
+          "verdict": "deviation",
+          "evidence": "tests/golden-path/shot-decomposition.probe.spec.ts:256 The gate locks silent head-truncation in, and the next assertion only checks a character ceiling."
+        },
+        {
+          "technique": "layered-composition",
+          "verdict": "deviation",
+          "evidence": "tests/golden-path/shot-decomposition.probe.spec.ts:257 Style at byte 0 puts the per-shot action before the standing no-text clause."
+        },
+        {
+          "technique": "history-compaction",
+          "verdict": "not-applicable",
+          "evidence": "tests/golden-path/shot-decomposition.probe.spec.ts:243 The prompt half is a proposal string, not a transcript. The other probes in this list drive cuts, DOM weight, edit plans, and extract locks."
+        }
+      ]
+    },
+    "fb7019fe-fc71-463f-8fa8-9dcab877274a/prompt-assembly": {
+      "context": "frames-phase",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-12",
+      "evaluatedTs": "2026-10-12T23:41:28.973Z",
+      "worker": "8a75fb9d-04f6-433f-8045-aff811a59a84",
+      "techniques": [
+        {
+          "technique": "layered-composition",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/shotPrompt.ts:217 The volatile action block is documented between the stable style and the standing constraint."
+        },
+        {
+          "technique": "context-budgeting",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/shotReview.ts:490 The only ceiling in these files is a character count on the proposal sheet; useFrames.ts posts compilePrompt output with no fitting step."
+        },
+        {
+          "technique": "variable-interpolation",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/shotPrompt.ts:206 An empty motion is omitted rather than rendered as a hole."
+        },
+        {
+          "technique": "history-compaction",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/shotPrompt.ts:5 Search of these files found no transcript compactor; compact hits are layout props."
+        },
+        {
+          "technique": "capability-documentation",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/sceneSpec.ts:7 SCENE_SCHEMA is an output shape for a headless engine, not a tool roster derived for a dispatcher."
+        },
+        {
+          "technique": "live-attachment-delta-resharing",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/useFrames.ts:467 References ride on a stateless generate call; there is no conversation that already holds a prior share."
+        }
+      ]
+    },
+    "edd5c776-72cc-4bf6-942c-fd223c97d138/prompt-assembly": {
+      "context": "frames-score-cut",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-12",
+      "evaluatedTs": "2026-10-12T23:41:28.973Z",
+      "worker": "8a75fb9d-04f6-433f-8045-aff811a59a84",
+      "techniques": [
+        {
+          "technique": "layered-composition",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/shotPrompt.ts:217 Style, then per-shot action, then the no-text clause."
+        },
+        {
+          "technique": "context-budgeting",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/shotReview.ts:490 Budget evidence in these files is a character cap on proposals; the plate post does not enforce it."
+        },
+        {
+          "technique": "variable-interpolation",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/shotPrompt.ts:206 Empty motion is left out of the action block."
+        },
+        {
+          "technique": "history-compaction",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/shotPrompt.ts:5 One image prompt per shot. No message-list compactor in this file set."
+        },
+        {
+          "technique": "capability-documentation",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/sceneSpec.ts:7 No operation registry is rendered from a dispatcher."
+        },
+        {
+          "technique": "live-attachment-delta-resharing",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/useFrames.ts:467 Each generate sends its references once; there is no prior-share witness."
+        }
+      ]
+    },
+    "680278fd-623d-4b75-89da-768d7634cc0b/prompt-assembly": {
+      "context": "studio-logic-probes",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-12",
+      "evaluatedTs": "2026-10-12T23:41:28.973Z",
+      "techniques": [
+        {
+          "technique": "layered-composition",
+          "verdict": "not-applicable",
+          "evidence": "tests/golden-path/text-ladder.probe.spec.ts:138 The probe hands the router a finished string. It does not compose layers."
+        },
+        {
+          "technique": "fingerprinting-and-cache-keys",
+          "verdict": "not-applicable",
+          "evidence": "tests/golden-path/_helpers.ts:268 This digest is the CLI argv for cassette replay, not a standing-prompt session stamp."
+        },
+        {
+          "technique": "history-compaction",
+          "verdict": "not-applicable",
+          "evidence": "tests/golden-path/text-log-line.probe.spec.ts:38 promptChars is a log fixture field. These probes do not hold a transcript."
+        }
+      ],
+      "withdrawn": {
+        "worker": "8a75fb9d-04f6-433f-8045-aff811a59a84",
+        "state": "not-applicable",
+        "at": "2026-10-12T23:42:15.906448+00:00",
+        "reason": "reviewer (sonnet): The anchor text-ladder.probe.spec.ts:138 is a section-divider comment. It doesn't show the 'literal prompt string passed to the router' claim, which is a few lines later, so the anchor is incidental."
+      }
     }
   }
 }
