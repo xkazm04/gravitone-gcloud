@@ -37,7 +37,7 @@ export type Mutant = {
  * unguarded probe lowers the live count and the same probe asks for this number
  * to be lowered to match, so the gain is kept.
  */
-export const UNGUARDED_PROBE_BUDGET = 250;
+export const UNGUARDED_PROBE_BUDGET = 249;
 
 export const MUTANTS: Mutant[] = [
   {
@@ -207,5 +207,117 @@ export const MUTANTS: Mutant[] = [
     find: "ts.isStringLiteralLike(n.expression) && n.expression.text === label",
     replace: "ts.isStringLiteralLike(n.expression) && n.expression.text !== label",
     why: "A source probe asking for the Enter case is handed every other case, so a guard it demands is checked on the wrong branch.",
+  },
+  {
+    id: "phase-heading-faded",
+    probe: "run-trace-phase-rank.probe.spec.ts",
+    file: "app/_phases/research/run/RunTrace.tsx",
+    find: "tracking-[0.16em] text-white/60 uppercase first:mt-0",
+    replace: "tracking-[0.16em] text-white/30 uppercase first:mt-0",
+    why: "The research trace's phase headings fall back to near-invisible text and the reader loses the run's outline.",
+  },
+  {
+    id: "job-noun-raw-kind",
+    probe: "job-noun.probe.spec.ts",
+    file: "lib/jobs.tsx",
+    find: "return JOB_NOUN[kind];",
+    replace: "return kind as string;",
+    why: "The bell names a job by its raw internal id instead of a word the creator knows.",
+  },
+  {
+    id: "kit-hash-law-lost",
+    probe: "kit-hash.probe.spec.ts",
+    file: "app/kit/catalog.ts",
+    find: "h === \"identity\" || h === \"law\" ||",
+    replace: "h === \"identity\" ||",
+    why: "A shared #law link opens the kit on no module.",
+  },
+  {
+    id: "pip-hollow-too-faint",
+    probe: "pip-contrast.probe.spec.ts",
+    file: "components/ui/signal/PipRow.tsx",
+    find: "hollow: \"border border-white/55\"",
+    replace: "hollow: \"border border-white/12\"",
+    why: "An empty slot pip disappears into the ink, so a row of slots reads as fewer than it is.",
+  },
+  {
+    id: "bandtrack-bounds-too-faint",
+    probe: "bandtrack-contrast.probe.spec.ts",
+    file: "components/ui/signal/BandTrack.tsx",
+    find: "text-label text-white/55",
+    replace: "text-label text-white/20",
+    why: "The min/max numbers under a band track fall below readable contrast.",
+  },
+  {
+    id: "signed-out-chip",
+    probe: "session-ended-reason.probe.spec.ts",
+    file: "app/_landing/parts.tsx",
+    find: "\"session-ended\": \"session ended\",",
+    replace: "\"session-ended\": \"session ended\", \"signed-out\": \"signed out\",",
+    why: "A deliberate sign-out is badged as a stale session, accusing the creator of a state they chose.",
+  },
+  {
+    id: "upstream-here-name-faint",
+    probe: "upstream-break-contrast.probe.spec.ts",
+    file: "components/ui/signal/UpstreamBreak.tsx",
+    find: "? \"text-white/85\"",
+    replace: "? \"text-white/10\"",
+    why: "The step you are on reads fainter than the ones not started, inverting the break's meaning.",
+  },
+  {
+    id: "tally-key-opacity-low",
+    probe: "chip-key-contrast.probe.spec.ts",
+    file: "components/ui/signal/Tally.tsx",
+    find: "\"uppercase opacity-80\"",
+    replace: "\"uppercase opacity-20\"",
+    why: "A Tally's key label drops below readable contrast.",
+  },
+  {
+    id: "deck-hint-faint",
+    probe: "deck-text-contrast.probe.spec.ts",
+    file: "components/ui/deck/Deck.tsx",
+    find: "\"font-jetbrains text-label text-white/60\"",
+    replace: "\"font-jetbrains text-label text-white/35\"",
+    why: "The Deck's hint text becomes the low-contrast grey the kit forbids.",
+  },
+  {
+    id: "energy-curve-unnamed",
+    probe: "energy-curve-type-floor.probe.spec.ts",
+    file: "app/_phases/script/trailer/EnergyCurve.tsx",
+    find: "role=\"img\"",
+    replace: "role=\"presentation\"",
+    why: "The energy curve loses its accessible name and a screen reader skips the figure.",
+  },
+  {
+    id: "unmeasured-check-reads-ok",
+    probe: "checklist-unmeasured-loud.probe.spec.ts",
+    file: "app/_phases/script/_parts/Meters.tsx",
+    find: "label: \"not checked\"",
+    replace: "label: \"ok\"",
+    why: "A gate that never measured reads as passed.",
+  },
+  {
+    id: "frame-count-on-explainer",
+    probe: "frames-header-honesty.probe.spec.ts",
+    file: "app/_phases/frames/FramesStep.tsx",
+    find: "{!promotionalCut && <>{ctl.frames.length} frames derived from </>}",
+    replace: "{true && <>{ctl.frames.length} frames derived from </>}",
+    why: "A promotional cut claims a frame count for a frame layer it does not have.",
+  },
+  {
+    id: "live-result-points-below",
+    probe: "live-notebook-pointer.probe.spec.ts",
+    file: "app/_phases/research/run/LiveResult.tsx",
+    find: "<p className=\"font-jetbrains text-label text-white/35\">",
+    replace: "<p className=\"font-jetbrains text-label text-white/35\">triage board below ",
+    why: "The live result points at a board that is not below it.",
+  },
+  {
+    id: "source-mojibake",
+    probe: "source-encoding.probe.spec.ts",
+    file: "app/kit/catalog.ts",
+    find: "export function kitModuleForHash",
+    replace: "// â€\nexport function kitModuleForHash",
+    why: "A double-encoded character lands in a shipped source file.",
   },
 ];
