@@ -1,0 +1,271 @@
+{
+  "schema": "conform-run/1",
+  "worker": "405c9109-fc23-4aa8-84cb-0bb671e7c8ee",
+  "subject": "video-assembly",
+  "evaluatedAt": "2026-10-12T21:42:53.004801+00:00",
+  "provider": "agy",
+  "model": "gemini-3.8-flash-high",
+  "pairs": [
+    {
+      "context": "frames-score-cut",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evidence": "app/_phases/frames/FramesAssembly.tsx:334 FramesAssembly.tsx derives each row's hold duration from the beat clock via durationOf, drawing the assembly ledger from a single time authority without hand-typed durations.",
+      "techniques": [
+        {
+          "technique": "multitrack-timeline-discipline",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/FramesAssembly.tsx:334 Row hold durations derive from durationOf over the beat clock, and coverage totals are computed reductions."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/FramesAssembly.tsx:374 Refused generation outcomes have their own explicit drawn state keyed by PlateState."
+        },
+        {
+          "technique": "derived-turn-markers",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/frames.ts:241 Single parser secondsOf delegates to atSeconds, and durationOf derives holds without inventing zeroes."
+        },
+        {
+          "technique": "cut-compiled-from-source",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/sceneSpec.ts:301 applySceneSpecs updates declarative layer properties while untouched plates and clip statuses are provably preserved."
+        },
+        {
+          "technique": "generated-shot-sourcing",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/frames.ts:119 Realizes rung zero where still plates are moved by the editor and clip motion is authored intent without video model generation."
+        },
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:5 Precondition fails: frames phase manages visual layers only; music spotting lives in score."
+        },
+        {
+          "technique": "drift-correction",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:133 Precondition fails: FrameClip carries motion intent and status with no audio sync mark or offset."
+        },
+        {
+          "technique": "motion-plate-library",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:143 Precondition fails: motion clips are never rendered in this phase, so no plates exist to bank or restyle."
+        },
+        {
+          "technique": "storyboard-grid-conditioning",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/useFrames.ts:466 Precondition fails: plate images are requested individually with count 1, with no multi-shot panel grid conditioning."
+        },
+        {
+          "technique": "alignment-names-its-text",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:159 Precondition fails: frame timing comes from script beat timestamps rather than speech synthesis alignment."
+        },
+        {
+          "technique": "seek-stable-composition-authoring",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:47 Precondition fails: elements use static percentage coordinates rather than time-animated properties with multiple writers."
+        }
+      ]
+    },
+    {
+      "context": "studio-workspace",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evidence": "app/_studio/score.ts:289 app/_studio/score.ts:289 hand-codes the TIMELINE table with fixed startS and durS values duplicating the scene and cue clocks derived in the same module, producing dual time authorities that agree only by coincidence.",
+      "techniques": [
+        {
+          "technique": "multitrack-timeline-discipline",
+          "verdict": "deviation",
+          "evidence": "app/_studio/score.ts:289 TIMELINE's startS and durS are typed constants that duplicate the scene clock derived at score.ts:178."
+        },
+        {
+          "technique": "derived-turn-markers",
+          "verdict": "deviation",
+          "evidence": "app/_studio/score.ts:298 The turn cue startS 13 is hardcoded in TIMELINE instead of folding scene durations up to the scene marked turn."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "conformant",
+          "evidence": "app/_studio/score.ts:158 Declined cues are explicitly typed as refused rather than failed and stated to play silence."
+        },
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "conformant",
+          "evidence": "app/_studio/score.ts:275 Spot cue spans derive their start and duration directly from the picture scenes they cover."
+        },
+        {
+          "technique": "cut-compiled-from-source",
+          "verdict": "conformant",
+          "evidence": "app/_studio/score.ts:229 The cut composition is authored as structured data from which timing and presentation are compiled."
+        }
+      ]
+    },
+    {
+      "context": "frames-phase",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evidence": "app/_phases/frames/frames.ts:252 app/_phases/frames/frames.ts:252 derives frame hold durations from script beat positions on a single clock without duplicate time authorities.",
+      "techniques": [
+        {
+          "technique": "multitrack-timeline-discipline",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/FramesAssembly.tsx:211 Coverage totals are computed reductions over the frame collection rather than static text."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/LayerPanel.tsx:94 Layer panel honestly displays clip status as authored without pretending an unbuilt video engine exists."
+        },
+        {
+          "technique": "derived-turn-markers",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/frames.ts:252 Frame hold durations are folded from the placeable beat markers to totalS, returning null for unplaced beats."
+        },
+        {
+          "technique": "cut-compiled-from-source",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/frames.ts:42 Overlay layers are authored as declarative vector elements and texts with explicit percent coordinates."
+        },
+        {
+          "technique": "generated-shot-sourcing",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/shots.ts:61 Shot decomposition is separated from frame generation orders, ensuring unapproved shots do not reach image models."
+        },
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/FramesStep.tsx:3 Precondition fails: frames phase routes visual generation and plate assembly without music spotting."
+        },
+        {
+          "technique": "drift-correction",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:134 Precondition fails: FrameClip carries status without audio marks or sync offsets."
+        },
+        {
+          "technique": "motion-plate-library",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/LayerPanel.tsx:111 Precondition fails: no motion clips are rendered, so no motion plates exist to bank or restyle."
+        },
+        {
+          "technique": "storyboard-grid-conditioning",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/FramesStep.tsx:57 Precondition fails: step views comprise assembly, alternatives, and shots without multi-shot panel grid conditioning."
+        },
+        {
+          "technique": "alignment-names-its-text",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:18 Precondition fails: frame timing is derived from script beats rather than synthesised speech character/word alignments."
+        },
+        {
+          "technique": "seek-stable-composition-authoring",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:47 Precondition fails: vector elements declare static coordinate boxes without multi-writer animation state."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "video-assembly",
+      "context": "music-service",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "video-assembly",
+      "context": "probe-frame-data",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor arcane.json:2 is a `_source` provenance line for a single still-frame file. It does not show that the context has no assembly or timeline surface. A grep of pipeline/vlm-probe for concat/ffmpeg/timeline/stitch/assembl matched ingest.py, materialize.py and motion.py, so the grep claim was "
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-12T21:42:53.004801+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "video-assembly"
+      ],
+      "techniques": [
+        "alignment-names-its-text",
+        "cut-compiled-from-source",
+        "derived-turn-markers",
+        "drift-correction",
+        "gap-and-refusal-honesty",
+        "generated-shot-sourcing",
+        "motion-plate-library",
+        "multitrack-timeline-discipline",
+        "music-spotting-against-picture",
+        "seek-stable-composition-authoring",
+        "storyboard-grid-conditioning"
+      ],
+      "deviations": 0,
+      "context": "frames-score-cut",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-12T21:42:53.004801+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "video-assembly"
+      ],
+      "techniques": [
+        "cut-compiled-from-source",
+        "derived-turn-markers",
+        "gap-and-refusal-honesty",
+        "multitrack-timeline-discipline",
+        "music-spotting-against-picture"
+      ],
+      "deviations": 1,
+      "context": "studio-workspace",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-12T21:42:53.004801+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "video-assembly"
+      ],
+      "techniques": [
+        "alignment-names-its-text",
+        "cut-compiled-from-source",
+        "derived-turn-markers",
+        "drift-correction",
+        "gap-and-refusal-honesty",
+        "generated-shot-sourcing",
+        "motion-plate-library",
+        "multitrack-timeline-discipline",
+        "music-spotting-against-picture",
+        "seek-stable-composition-authoring",
+        "storyboard-grid-conditioning"
+      ],
+      "deviations": 0,
+      "context": "frames-phase",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-12T21:42:53.004801+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "video-assembly"
+      ],
+      "techniques": [
+        "cut-compiled-from-source",
+        "derived-turn-markers",
+        "drift-correction",
+        "gap-and-refusal-honesty",
+        "multitrack-timeline-discipline",
+        "music-spotting-against-picture"
+      ],
+      "deviations": 0,
+      "context": "probe-frame-data",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
+}

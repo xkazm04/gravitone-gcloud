@@ -1014,6 +1014,238 @@
           "evidence": "components/ui/signal/BandTrack.tsx:18 BandTrack draws a range; it does not walk a population or exit."
         }
       ]
+    },
+    "edd5c776-72cc-4bf6-942c-fd223c97d138/video-assembly": {
+      "context": "frames-score-cut",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-12",
+      "evaluatedTs": "2026-10-12T21:42:53.004Z",
+      "worker": "405c9109-fc23-4aa8-84cb-0bb671e7c8ee",
+      "techniques": [
+        {
+          "technique": "multitrack-timeline-discipline",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/FramesAssembly.tsx:334 Row hold durations derive from durationOf over the beat clock, and coverage totals are computed reductions."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/FramesAssembly.tsx:374 Refused generation outcomes have their own explicit drawn state keyed by PlateState."
+        },
+        {
+          "technique": "derived-turn-markers",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/frames.ts:241 Single parser secondsOf delegates to atSeconds, and durationOf derives holds without inventing zeroes."
+        },
+        {
+          "technique": "cut-compiled-from-source",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/sceneSpec.ts:301 applySceneSpecs updates declarative layer properties while untouched plates and clip statuses are provably preserved."
+        },
+        {
+          "technique": "generated-shot-sourcing",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/frames.ts:119 Realizes rung zero where still plates are moved by the editor and clip motion is authored intent without video model generation."
+        },
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:5 Precondition fails: frames phase manages visual layers only; music spotting lives in score."
+        },
+        {
+          "technique": "drift-correction",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:133 Precondition fails: FrameClip carries motion intent and status with no audio sync mark or offset."
+        },
+        {
+          "technique": "motion-plate-library",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:143 Precondition fails: motion clips are never rendered in this phase, so no plates exist to bank or restyle."
+        },
+        {
+          "technique": "storyboard-grid-conditioning",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/useFrames.ts:466 Precondition fails: plate images are requested individually with count 1, with no multi-shot panel grid conditioning."
+        },
+        {
+          "technique": "alignment-names-its-text",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:159 Precondition fails: frame timing comes from script beat timestamps rather than speech synthesis alignment."
+        },
+        {
+          "technique": "seek-stable-composition-authoring",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:47 Precondition fails: elements use static percentage coordinates rather than time-animated properties with multiple writers."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "app/_phases/cut/CutTimeline.tsx:176 draws every block from the typed TIMELINE table (app/_studio/score.ts:289 hand-writes startS 0/6/13/19/26, the scene clock the same file derives at :178) while the turn marker at :41-48 is derived from SCENES, so one surface carries two time authorities and a retimed scene moves the mark and leaves the blocks; derived-turn-markers (:41-48, absence draws nothing), drift-correction (:60-129 stored offset, 50ms steps, snap-to-mark, status re-derived), gap-and-refusal-honesty (:131,:186-202,:231 gaps drawn and counted, dead preview copy removed) and music-spotting-against-picture (app/_phases/score/picture.ts:23-41, app/_phases/score/spots.ts:26-32 refuses to invent a tempo) are realized.",
+          "evaluatedAt": "2026-09-20",
+          "worker": null,
+          "reason": "replaced by 405c9109-fc23-4aa8-84cb-0bb671e7c8ee"
+        }
+      ]
+    },
+    "4e1bb407-bd8b-4a18-9e22-ddb434d07dbd/video-assembly": {
+      "context": "studio-workspace",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-12",
+      "evaluatedTs": "2026-10-12T21:42:53.004Z",
+      "worker": "405c9109-fc23-4aa8-84cb-0bb671e7c8ee",
+      "techniques": [
+        {
+          "technique": "multitrack-timeline-discipline",
+          "verdict": "deviation",
+          "evidence": "app/_studio/score.ts:289 TIMELINE's startS and durS are typed constants that duplicate the scene clock derived at score.ts:178."
+        },
+        {
+          "technique": "derived-turn-markers",
+          "verdict": "deviation",
+          "evidence": "app/_studio/score.ts:298 The turn cue startS 13 is hardcoded in TIMELINE instead of folding scene durations up to the scene marked turn."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "conformant",
+          "evidence": "app/_studio/score.ts:158 Declined cues are explicitly typed as refused rather than failed and stated to play silence."
+        },
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "conformant",
+          "evidence": "app/_studio/score.ts:275 Spot cue spans derive their start and duration directly from the picture scenes they cover."
+        },
+        {
+          "technique": "cut-compiled-from-source",
+          "verdict": "conformant",
+          "evidence": "app/_studio/score.ts:229 The cut composition is authored as structured data from which timing and presentation are compiled."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "app/_studio/score.ts:224-235 — TIMELINE's startS/durS are typed constants that duplicate the scene and cue clocks the same file derives at :147-216, so the Cut and Score surfaces are two time authorities that agree by coincidence.",
+          "evaluatedAt": "2026-09-22",
+          "worker": null,
+          "reason": "replaced by 405c9109-fc23-4aa8-84cb-0bb671e7c8ee"
+        }
+      ]
+    },
+    "fb7019fe-fc71-463f-8fa8-9dcab877274a/video-assembly": {
+      "context": "frames-phase",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-12",
+      "evaluatedTs": "2026-10-12T21:42:53.004Z",
+      "worker": "405c9109-fc23-4aa8-84cb-0bb671e7c8ee",
+      "techniques": [
+        {
+          "technique": "multitrack-timeline-discipline",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/FramesAssembly.tsx:211 Coverage totals are computed reductions over the frame collection rather than static text."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/LayerPanel.tsx:94 Layer panel honestly displays clip status as authored without pretending an unbuilt video engine exists."
+        },
+        {
+          "technique": "derived-turn-markers",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/frames.ts:252 Frame hold durations are folded from the placeable beat markers to totalS, returning null for unplaced beats."
+        },
+        {
+          "technique": "cut-compiled-from-source",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/frames.ts:42 Overlay layers are authored as declarative vector elements and texts with explicit percent coordinates."
+        },
+        {
+          "technique": "generated-shot-sourcing",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/shots.ts:61 Shot decomposition is separated from frame generation orders, ensuring unapproved shots do not reach image models."
+        },
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/FramesStep.tsx:3 Precondition fails: frames phase routes visual generation and plate assembly without music spotting."
+        },
+        {
+          "technique": "drift-correction",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:134 Precondition fails: FrameClip carries status without audio marks or sync offsets."
+        },
+        {
+          "technique": "motion-plate-library",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/LayerPanel.tsx:111 Precondition fails: no motion clips are rendered, so no motion plates exist to bank or restyle."
+        },
+        {
+          "technique": "storyboard-grid-conditioning",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/FramesStep.tsx:57 Precondition fails: step views comprise assembly, alternatives, and shots without multi-shot panel grid conditioning."
+        },
+        {
+          "technique": "alignment-names-its-text",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:18 Precondition fails: frame timing is derived from script beats rather than synthesised speech character/word alignments."
+        },
+        {
+          "technique": "seek-stable-composition-authoring",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:47 Precondition fails: vector elements declare static coordinate boxes without multi-writer animation state."
+        }
+      ]
+    },
+    "cb736239-b48b-4b73-882b-c973e17b4392/video-assembly": {
+      "context": "probe-frame-data",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-12",
+      "evaluatedTs": "2026-10-12T21:42:53.004Z",
+      "techniques": [
+        {
+          "technique": "multitrack-timeline-discipline",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/vlm-probe/frames/truth/arcane.json:2 Precondition fails: truth evaluation manifest contains visual labels without multitrack timeline tracks."
+        },
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/vlm-probe/shots/baseline/lane.json:5 Precondition fails: lane configuration defines generation parameters with no music spotting or audio cues."
+        },
+        {
+          "technique": "drift-correction",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/vlm-probe/clips/chain/lane.json:9 Precondition fails: video generation probe tests camera motion without audio sync marks or offset controls."
+        },
+        {
+          "technique": "cut-compiled-from-source",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/vlm-probe/frames/truth/arcane.json:11 Precondition fails: truth files grade visual parameters rather than declarative edit compositions."
+        },
+        {
+          "technique": "derived-turn-markers",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/vlm-probe/clips/chain/lane.json:14 Precondition fails: 01-turn is a prompt beat for physical motion rather than a derived timeline marker."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/vlm-probe/frames/truth/arcane.json:3 Precondition fails: why_thin explains evaluation design rather than timeline gap or refusal states."
+        }
+      ],
+      "withdrawn": {
+        "worker": "405c9109-fc23-4aa8-84cb-0bb671e7c8ee",
+        "state": "not-applicable",
+        "at": "2026-10-12T21:44:08.987155+00:00",
+        "reason": "reviewer (sonnet): The anchor arcane.json:2 is a `_source` provenance line for a single still-frame file. It does not show that the context has no assembly or timeline surface. A grep of pipeline/vlm-probe for concat/ffmpeg/timeline/stitch/assembl matched ingest.py, materialize.py and motion.py, so the grep claim was "
+      }
     }
   }
 }
