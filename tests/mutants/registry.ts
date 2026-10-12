@@ -340,8 +340,8 @@ export const MUTANTS: Mutant[] = [
     id: "mv-lease-ignores-live-holder",
     probe: "mv-queue.probe.spec.ts",
     file: "lib/sound/mv/queue.ts",
-    find: "if (pid > 0 && alive(pid)) return `the music-video queue is being run by another process (pid ${pid})`;",
-    replace: "if (pid > 0 && alive(pid) && pid < 0) return `the music-video queue is being run by another process (pid ${pid})`;",
+    find: "if (pid > 0 && pid !== process.pid && alive(pid)) return `the music-video queue is being run by another process (pid ${pid})`;",
+    replace: "if (pid > 0 && pid !== process.pid && alive(pid) && pid < 0) return `the music-video queue is being run by another process (pid ${pid})`;",
     why: "An album batch and a dev server drain one store together: the second one's crash recovery requeues the job the first is rendering, and a still is bought twice.",
   },
   {

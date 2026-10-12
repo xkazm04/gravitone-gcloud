@@ -460,7 +460,7 @@ offer it yet.
 queue over a folder: `plan` reads only; `run --yes` imports, queues each track (a failed one is
 retried from its failed step), drains, switches the queue off, and writes `<track>.mp4` and
 `<track> - youtube.txt` beside each source. One process drains the store at a time
-(`mv/worker.lock`): a dev server whose queue is on pauses the CLI naming its pid, and the reverse. **Edit metadata** (title, description, tags). **Send to Calendar** — a publish date
+(`mv.json` `worker`): a dev server whose queue is on pauses the CLI naming its pid, and the reverse. **Edit metadata** (title, description, tags). **Send to Calendar** — a publish date
 and time, a dry-run YouTube slot; finished videos only, inert once a slot exists. **Delete**
 (the record and its render files; the track stays). A verb on a card inside a selection acts on
 every selected video, stopping at the first refusal and saying how far it got.

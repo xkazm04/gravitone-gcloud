@@ -709,35 +709,34 @@ test("batch: --prompt replaces the treatment turn on every new job; a failed job
   expect(existsSync(path.join(dir, "05_Shape of you.mp4"))).toBe(true);
 });
 
-test("lease: a live process holding mv/worker.lock pauses this worker before crash recovery; a dead holder's lease is taken over", async () => {
+test("lease: a live process holding mv.json's worker lease pauses this worker before crash recovery; a dead holder's lease is taken over", async () => {
   const { takeIds } = await importDir(audioDir(["09_The Blue Cup.mp3"]));
   const [job] = await enqueueTakes(takeIds, ["09_The Blue Cup"]);
-  const lock = abs("mv/worker.lock");
-  mkdirSync(path.dirname(lock), { recursive: true });
   // the parent process: alive for as long as this probe runs, and not us
-  writeFileSync(lock, JSON.stringify({ pid: process.ppid, at: Date.now() }));
-  await withMvActive(job.id);
+  await asOtherProcess(job.id, process.ppid);
   await runPOST(rq("/api/sound/mv/run", "POST", { running: true }));
   await kickMvWorker();
   expect(mvWorkerPaused()).toBe(`the music-video queue is being run by another process (pid ${process.ppid})`);
   // the other process's active job was NOT requeued by our recovery
   expect((await readMv()).jobs[0].state).toBe("active");
+  expect((await readMv()).worker?.pid).toBe(process.ppid);
   expect(calls.phases).toEqual([]);
 
   // the holder is gone: its lease is stale and taken over; recovery then runs
-  writeFileSync(lock, JSON.stringify({ pid: 2 ** 22 + 12345, at: Date.now() }));
+  await asOtherProcess(job.id, 2 ** 22 + 12345);
   await kickMvWorker();
   expect((await readMv()).jobs[0].state).toBe("queued");
   expect((await readMv()).queue.interrupted).toContain('"The Blue Cup"');
   // our lease is dropped when the loop ends
-  expect(existsSync(lock)).toBe(false);
+  expect((await readMv()).worker).toBeUndefined();
 });
 
-/** Mark a job active, as another process's worker would have. */
-async function withMvActive(id: string): Promise<void> {
+/** Mark a job active and the lease held, as another process's worker would have. */
+async function asOtherProcess(id: string, pid: number): Promise<void> {
   const f = await readMv();
   const j = f.jobs.find((x) => x.id === id)!;
   j.state = "active";
   j.phase = "rendering";
+  f.worker = { pid, at: Date.now() };
   writeFileSync(abs("mv.json"), JSON.stringify(f));
 }

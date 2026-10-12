@@ -51,6 +51,8 @@ export interface MvFile {
   jobs: MvJob[];
   imports: MvImportRecord[];
   progress: Record<string, MvStep[]>;
+  /** The process draining the queue (./queue.ts lease); absent when none. */
+  worker?: { pid: number; at: number };
 }
 
 const empty = (): MvFile => ({ version: 1, queue: { running: false }, jobs: [], imports: [], progress: {} });
@@ -90,6 +92,7 @@ export async function readMv(): Promise<MvFile> {
     jobs: Array.isArray(parsed.jobs) ? parsed.jobs.map(jobOf) : [],
     imports: Array.isArray(parsed.imports) ? parsed.imports : [],
     progress: parsed.progress && typeof parsed.progress === "object" ? parsed.progress : {},
+    ...(parsed.worker && typeof parsed.worker.pid === "number" ? { worker: { pid: parsed.worker.pid, at: Number(parsed.worker.at) || 0 } } : {}),
   };
 }
 

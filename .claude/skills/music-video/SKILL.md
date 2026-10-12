@@ -50,7 +50,7 @@ Never use this skill to delete, Drop, Keep, regenerate or publish. Those are the
    names the port and defaults to 9333. `status` reports `studio ready` or the reason it is not.
 3. **A text engine:** the `claude` CLI logged in, or `GOOGLE_AI_API_KEY` in `.env.local`.
 4. **Nothing else draining the store.** Only one process runs the queue at a time
-   (`foundry-out/sound/mv/worker.lock`). If a dev server on the same store has its queue switched
+   (the `worker` lease in `foundry-out/sound/mv.json`). If a dev server on the same store has its queue switched
    on, the run stops short naming that pid. Stop that queue (Settled → Stop videos) or the server.
 
 The CLI always uses the REAL store (`foundry-out/`), even when `.env.local` says

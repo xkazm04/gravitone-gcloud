@@ -62,18 +62,19 @@
 // ONE PROCESS DRAINS THE STORE AT A TIME. The singleton above holds within a
 // process; across processes (a dev server and the batch CLI,
 // pipeline/music-video.mts, on one store) the loop takes a lease first -
-// mv/worker.lock, {pid, at} - and a lease held by another LIVE process pauses
+// mv.json `worker`, {pid, at}, claimed inside the store's own transaction
+// (no second lock file: lib/diskTx is the one lock kernel) - and a lease held
+// by another LIVE process pauses
 // this loop with that pid named. It is taken BEFORE crash recovery: recovery
 // would otherwise requeue the job the other process is rendering right now.
 // A lease whose pid is gone is stale and taken over.
 
-import { mkdir, open, readFile, rm, writeFile } from "node:fs/promises";
-import path from "node:path";
+import { rm, writeFile } from "node:fs/promises";
 
 import { leonardoStudioHealth } from "@/lib/imaging/providers/leonardoStudio";
 import { generate } from "@/lib/imaging/router";
 
-import { filePathAbs, safeId, SoundError, storeRoot } from "../store";
+import { filePathAbs, safeId, SoundError } from "../store";
 import { assertSourceHasAudio, fetchAudio, fetchClipBytes, type FetchClipFn } from "./fetchAudio";
 import { applyMetadataPatch, writeMetadata } from "./metadata";
 import { analyseTrack, renderMusicVideo, type AnalyseArgs, type RenderArgs } from "./render";
@@ -530,8 +531,6 @@ async function runOne(id: string, eng: MvEngines): Promise<void> {
 
 /* ── the cross-process lease (header) ─────────────────────────────────────── */
 
-const leaseFile = (): string => path.join(storeRoot(), "mv", "worker.lock");
-
 function alive(pid: number): boolean {
   try {
     process.kill(pid, 0);
@@ -544,38 +543,20 @@ function alive(pid: number): boolean {
 
 /** Take the lease, or return the sentence naming the process that holds it. */
 async function takeLease(): Promise<string | null> {
-  const file = leaseFile();
-  await mkdir(path.dirname(file), { recursive: true });
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const h = await open(file, "wx");
-      await h.writeFile(JSON.stringify({ pid: process.pid, at: Date.now() }));
-      await h.close();
-      return null;
-    } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
-    }
-    let pid = 0;
-    try {
-      pid = Number((JSON.parse(await readFile(file, "utf8")) as { pid?: unknown }).pid) || 0;
-    } catch {
-      // unreadable or half-written: treated as stale below
-    }
-    if (pid === process.pid) return null;
-    if (pid > 0 && alive(pid)) return `the music-video queue is being run by another process (pid ${pid})`;
-    await rm(file, { force: true });
-  }
-  return "the music-video queue's lease could not be taken";
+  // Read and claimed inside one store transaction (withMv holds the sound
+  // store's cross-process lock), so two processes cannot both see it free.
+  return withMv((f) => {
+    const pid = f.worker?.pid ?? 0;
+    if (pid > 0 && pid !== process.pid && alive(pid)) return `the music-video queue is being run by another process (pid ${pid})`;
+    f.worker = { pid: process.pid, at: Date.now() };
+    return null;
+  });
 }
 
 async function dropLease(): Promise<void> {
-  const file = leaseFile();
-  try {
-    const pid = Number((JSON.parse(await readFile(file, "utf8")) as { pid?: unknown }).pid);
-    if (pid === process.pid) await rm(file, { force: true });
-  } catch {
-    // gone already, or not ours
-  }
+  await withMv((f) => {
+    if (f.worker?.pid === process.pid) delete f.worker;
+  }).catch(() => {});
 }
 
 const oldestQueued = (f: MvFile): MvJob | null => f.jobs.filter((j) => j.state === "queued").sort((a, b) => a.enqueuedAt - b.enqueuedAt)[0] ?? null;
