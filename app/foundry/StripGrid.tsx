@@ -36,7 +36,8 @@ import { typing } from "@/lib/board/keys";
 import { JUDGEABLE } from "@/lib/foundry/strips/triage";
 import { STRIP_CHIPS, type Approach, type StripCard, type StripChip, type StripGates, type StripLane, type StripRun, type StripVerdict, type StripVerdicts } from "@/lib/foundry/strips/types";
 
-import { activatesOnEnter, cssId } from "./CullGrid";
+import { enterBelongsToTarget } from "@/components/ui/signal/keymap";
+import { cssId } from "./CullGrid";
 import { fileUrl } from "./foundryClient";
 import { refusedKey } from "./keyGuard";
 import { CARD_STATUS_WORD } from "./parts";
@@ -180,7 +181,7 @@ export function StripGrid({
           if (canJudge) onVerdict(focused!, null);
           return;
         case "Enter":
-          if (activatesOnEnter(e.target as HTMLElement | null)) return;
+          if (enterBelongsToTarget(e.target)) return;
           if (focused) {
             e.preventDefault();
             onOpen(focused);

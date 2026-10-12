@@ -21,7 +21,7 @@
 //     authority four times.
 //   · Enter and Space belong to a focused control (the card's actions button)
 //     before they belong to the canvas; `enterBelongsToTarget` is the same rule
-//     app/foundry/CullGrid.tsx's `activatesOnEnter` records, kept pure here so
+//     components/ui/signal/keymap.ts's `enterBelongsToTarget` records, kept pure here so
 //     this file imports nothing with a component in it.
 
 import { enterBelongsToTarget, typing } from "@/lib/board/keys";

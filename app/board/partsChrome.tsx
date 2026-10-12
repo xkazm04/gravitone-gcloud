@@ -5,20 +5,15 @@
 // banners.
 
 import { Check, LockKeyhole, X } from "lucide-react";
-import { Keycaps, type KeyBinding } from "@/components/ui/signal";
+import { Keycaps, keycapsRows, type KeyBinding } from "@/components/ui/signal";
+import { BOARD_KEYMAP } from "@/lib/board/keys";
 import type { BoardApi } from "./useBoard";
 
 /* ── the keymap ───────────────────────────────────────────────────────────── */
 
-export const BOARD_KEYS: KeyBinding[] = [
-  { keys: ["A"], does: "approve" },
-  { keys: ["X"], does: "reject" },
-  { keys: ["U"], does: "clear" },
-  { keys: ["J", "K"], does: "next · previous" },
-  { keys: ["Enter"], does: "loupe" },
-  { keys: ["Esc"], does: "close" },
-  { keys: ["Z"], does: "undo" },
-];
+// Drawn FROM the keymap the Board binds (lib/board/keys.ts), so the disclosure
+// cannot name a key the window listener does not honour.
+export const BOARD_KEYS: KeyBinding[] = keycapsRows(BOARD_KEYMAP);
 
 export function BoardKeymap({ extra = [] }: { extra?: KeyBinding[] }) {
   return <Keycaps map={[...BOARD_KEYS, ...extra]} label="Board keys" />;

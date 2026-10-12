@@ -13,7 +13,7 @@
 // stopped working on the row K/X buttons, the run list, the tab strip and Commit,
 // and opened the lightbox instead. Space still worked.
 //
-// `activatesOnEnter` is the rule, exported so this drives the real predicate
+// `enterBelongsToTarget` (components/ui/signal/keymap.ts) is the rule, exported so this drives the real predicate
 // rather than a copy of it. Enter is delivered to the focused element itself, so
 // the check is by tag and by role — no ancestor walk to reproduce here.
 import { readFileSync, readdirSync } from "node:fs";
@@ -21,7 +21,7 @@ import { join, resolve } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { activatesOnEnter } from "@/app/foundry/CullGrid";
+import { enterBelongsToTarget as activatesOnEnter } from "@/components/ui/signal/keymap";
 
 import { stripComments } from "./_helpers";
 
@@ -132,20 +132,25 @@ test("cull keys: the rule is WIRED into every Enter case, not merely exported", 
     handlers.push(f);
 
     const body = enterCaseBody(src, f);
-    const guard = body.indexOf("activatesOnEnter");
+    const guard = body.indexOf("enterBelongsToTarget");
     const prevent = body.indexOf("preventDefault");
-    expect(guard, `${f}: the Enter case does not call activatesOnEnter`).toBeGreaterThan(-1);
+    expect(guard, `${f}: the Enter case does not call enterBelongsToTarget`).toBeGreaterThan(-1);
     // preventDefault must still be THERE — an Enter case that never takes the
     // key is not this rule being honoured, it is the feature being deleted, and
     // an ordering assertion over two -1s would call that a pass.
     expect(prevent, `${f}: the Enter case no longer prevents the default at all`).toBeGreaterThan(-1);
     // And it consults the rule BEFORE taking the key from the focused element.
-    expect(guard, `${f}: activatesOnEnter is consulted after preventDefault`).toBeLessThan(prevent);
+    expect(guard, `${f}: enterBelongsToTarget is consulted after preventDefault`).toBeLessThan(prevent);
   }
 
   console.log(`[cull-keys] window-level Enter handlers under app/foundry: ${handlers.join(", ")}`);
   // Both known surfaces must still be IN the population — a rename that drops
   // one out would leave the loop above vacuously green over what remains.
   // StripGrid.tsx joined 2026-10-06 (the Strips tab, the Cull's keys).
-  expect(handlers.sort()).toEqual(["CullGrid.tsx", "ExtractBoard.tsx", "StripGrid.tsx"]);
+  // CullGrid.tsx left the population when it moved onto the keymap kernel, which
+  // applies the rule to every binding; it is asserted below instead.
+  expect(handlers.sort()).toEqual(["ExtractBoard.tsx", "StripGrid.tsx"]);
+  const cull = stripComments(readFileSync(join(dir, "CullGrid.tsx"), "utf8"));
+  expect(cull, "CullGrid binds its keys through the kernel").toContain("useKeymap(");
+  expect(cull, "CullGrid has no private window keydown").not.toContain('addEventListener("keydown"');
 });

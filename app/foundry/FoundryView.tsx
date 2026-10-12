@@ -60,6 +60,7 @@ import { usePolling } from "@/lib/usePolling";
 import { useRemembered } from "@/lib/useRemembered";
 
 import { CullGrid } from "./CullGrid";
+import { CULL } from "./cullKeymap";
 import { Lightbox } from "./Lightbox";
 import FoundrySubnav from "./FoundrySubnav";
 import PipelineTab, { MEDIA, type MediaId } from "./PipelineTab";
@@ -111,16 +112,6 @@ const StripsView = dynamic(() => import("./StripsView").then((m) => m.StripsView
 // styles join pipeline/foundry/styles.json (the Extract dialog), and a Dojo
 // commit deletes decided media keeping one thumbnail per approved improvement
 // (the Dojo dialog). Each is a consequence stated at the moment it is ordered.
-
-const CULL_KEYS = [
-  { keys: ["←", "→", "↑", "↓"], does: "move" },
-  { keys: ["K"], does: "keep" },
-  { keys: ["X"], does: "reject" },
-  { keys: ["U"], does: "clear" },
-  { keys: ["Z"], does: "undo" },
-  { keys: ["N"], does: "next undecided" },
-  { keys: ["Enter"], does: "compare" },
-];
 
 /**
  * Every station, for the remembered tab: a value from an older build that is no
@@ -434,7 +425,7 @@ export default function FoundryView() {
             <BarCount tone="rose" n={counts.rejected} label="rejected" />
             <BarCount tone="neutral" n={counts.undecided} label="undecided" />
             <SaveNote state={save} final={readOnly} />
-            {!readOnly && <Keycaps label="Cull shortcuts" map={CULL_KEYS} />}
+            {!readOnly && <Keycaps label="Cull shortcuts" map={CULL} />}
             <span className="ml-auto flex items-center gap-3">
               {readOnly ? (
                 <StatusChip kind="committed" word="committed" />

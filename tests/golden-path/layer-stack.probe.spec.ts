@@ -199,7 +199,9 @@ test("9 · wiring: the live surfaces push onto the stack, and the key guard read
   expect(src("components/ui/Modal.tsx")).toMatch(/useLayer\(\s*open && mounted\s*,\s*\{[^]*kind:\s*"modal"/);
   expect(src("components/ui/NotificationBell.tsx")).toMatch(/useLayer\(\s*open\s*,\s*\{[^]*kind:\s*"tray"/);
   expect(src("components/ui/UserMenu.tsx")).toMatch(/useLayer\(\s*open\s*,\s*\{[^]*kind:\s*"tray"/);
-  const keys = src("lib/board/keys.ts");
+  // The guard moved with the keymap kernel (components/ui/signal/keymap.ts); the Board
+  // is a definition over it.
+  const keys = src("components/ui/signal/keymap.ts");
   expect(keys).toMatch(/export function overlayOpen\([^)]*layers[^)]*=\s*openLayers\(\)/);
-  expect(keys).toMatch(/export function boardKeyAction\([^)]*layers[^)]*=\s*openLayers\(\)/);
+  expect(keys).toMatch(/opts\.layers \?\? openLayers\(\)/);
 });

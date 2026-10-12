@@ -35,6 +35,8 @@ export type { UpstreamBreakAction } from "./UpstreamBreak";
 
 export { Keycaps } from "./Keycaps";
 export type { KeyBinding } from "./Keycaps";
+export { activeKeymaps, defineKeymap, keycapsRows, resolveKey, useKeymap } from "./keymap";
+export type { Binding, Keymap } from "./keymap";
 
 export { StaleBadge } from "./StaleBadge";
 

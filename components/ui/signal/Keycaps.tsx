@@ -29,20 +29,19 @@
 // span gives the same two-column table without the content-model violation.
 
 import { Hint } from "./Hint";
+import { keycapsRows, type KeyRow, type Keymap } from "./keymap";
 
-export interface KeyBinding {
-  /** The caps, in press order — `["Ctrl", "K"]`, `["←", "→"]`. */
-  keys: string[];
-  /** What it does. One or two words. */
-  does: string;
-}
+/** One row: the caps and what they do. Derived from a keymap's bindings
+ *  (`keycapsRows`), or written by hand for a surface that binds nothing itself. */
+export type KeyBinding = KeyRow;
 
 export function Keycaps({
   map,
   label = "Keyboard shortcuts",
   className = "",
 }: {
-  map: KeyBinding[];
+  /** The rows, or the keymap the surface binds: its rows are then derived. */
+  map: KeyBinding[] | Keymap;
   /** The glyph's accessible name. */
   label?: string;
   className?: string;
@@ -50,7 +49,7 @@ export function Keycaps({
   return (
     <Hint variant="keys" label={label} className={className}>
       <span className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1.5">
-        {map.map((b, i) => (
+        {(Array.isArray(map) ? map : keycapsRows(map)).map((b, i) => (
           <span key={i} className="contents">
             <span className="flex items-center gap-1">
               {b.keys.map((k, j) => (

@@ -36,7 +36,7 @@ import { settleReason } from "@/lib/foundry/extract/engine";
 import type { ExtractManifest, ExtractVerdict, ExtractVerdicts, ExtractedStyle, ReplicaRound, SettleReason, Transfer } from "@/lib/foundry/extract/types";
 import { ABANDONED_SETTLES, OBSERVABLE_FIELDS } from "@/lib/foundry/extract/types";
 
-import { activatesOnEnter } from "./CullGrid";
+import { enterBelongsToTarget } from "@/components/ui/signal/keymap";
 import { extractFileUrl } from "./extractClient";
 import { Art, ErrorNote, FlagPill, Glass, Label, ScorePill, VerdictButtons, VerdictStamp, pct } from "./ui";
 import { nextUndecided, refusedKey } from "./keyGuard";
@@ -226,7 +226,7 @@ export function ExtractBoard({
           // list, "+ new extraction", the tab strip, Commit — and opened the
           // zoom instead. Space still worked, which is the kind of half-working
           // that takes a while to report.
-          if (activatesOnEnter(t)) break;
+          if (enterBelongsToTarget(t)) break;
           if (!focused) break;
           const st = run.styles.find((x) => x.id === focused);
           const z = st && focusedZoom(st, sourcesById);
