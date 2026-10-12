@@ -43,9 +43,13 @@ export const KEY_VAR: Record<ProviderId, string> = {
   // The Leonardo WEB STUDIO's credit pool, reached by driving a signed-in
   // Chrome profile over CDP (providers/leonardoStudio.ts). The "key" is the
   // CDP endpoint; set = this machine opted in. A separate pool from the API
-  // key's (which returned 402 in 2026-10).
+  // key's (which returned 402 in 2026-10). LEONARDO_STUDIO_DRIVER=fake also
+  // counts as configured: the fake needs no browser, and a probe or a dev run
+  // with the fake must reach the same router path the real driver does.
   "leonardo-studio": "LEONARDO_STUDIO_CDP",
 };
+
+const studioFake = () => process.env.LEONARDO_STUDIO_DRIVER?.trim() === "fake";
 
 export function keyFor(provider: ProviderId): string {
   if (provider === "agy") {
@@ -53,6 +57,7 @@ export function keyFor(provider: ProviderId): string {
       throw noKey("agy", "the `agy` CLI (not installed, not authenticated, or LOCAL_BINARIES=off)");
     return "agy-cli";
   }
+  if (provider === "leonardo-studio" && studioFake()) return "fake";
   const v = process.env[KEY_VAR[provider]];
   if (!v || !v.trim()) throw noKey(provider, KEY_VAR[provider]);
   return v.trim();
@@ -62,6 +67,7 @@ export function keyFor(provider: ProviderId): string {
  *  re-routes, so a fallback never turns a real vendor error into "no key". */
 export function isConfigured(provider: ProviderId): boolean {
   if (provider === "agy") return agyAvailable();
+  if (provider === "leonardo-studio" && studioFake()) return true;
   const v = process.env[KEY_VAR[provider]];
   return Boolean(v && v.trim());
 }

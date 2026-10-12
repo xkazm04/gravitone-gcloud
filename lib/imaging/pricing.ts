@@ -184,6 +184,20 @@ export const PRICES: readonly ModelPrice[] = [
       "one machine's plan, not a cost this app can generally claim.",
     checked: "2026-10-04",
   },
+  // leonardo-studio — the same model as the `leonardo` row, billed from a
+  // different meter: the web studio's prepaid plan credits, not the API pool.
+  // The API row's USD_PER_CREDIT prices the API pool and does not carry over.
+  {
+    provider: "leonardo-studio",
+    model: "lucid-origin",
+    bills: "per-image",
+    source:
+      "Billed in Leonardo STUDIO credits from the operator's prepaid plan (measured 2026-10-11: 8 credits " +
+      "for one Auto/Lucid Origin image), a separate pool from the API key's. No USD-per-studio-credit rate " +
+      "has been checked; the API's USD_PER_CREDIT prices a different meter. The credits spent ride on the " +
+      "result's provenance (providers/leonardoStudio.ts, studioCreditsOf).",
+    checked: "2026-10-12",
+  },
 ];
 
 const rowFor = (provider: ProviderId, model: string): ModelPrice | undefined =>

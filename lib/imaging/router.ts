@@ -117,6 +117,24 @@ const PROVIDERS: Record<ProviderId, () => ImagingProvider> = {
   "leonardo-studio": leonardoStudioProvider,
 };
 
+/**
+ * Providers reached ONLY by name: never planned, never a fallback.
+ *
+ * The Leonardo studio spends the operator's prepaid studio credits through
+ * their own signed-in browser. That is a choice somebody makes on purpose for
+ * one piece of work (the music-video still), not a vendor any Frames, poster
+ * or playground call should land on because the providers ahead of it had no
+ * key. So it is absent from PLAN in both environments, and `orderFor` puts it
+ * in a chain only when the request's `prefer` names it — and then ALONE: a
+ * request that chose whose credits to spend is not quietly moved onto a
+ * vendor billed in dollars because the studio's browser was closed. It fails
+ * with the studio's own sentence instead.
+ */
+const PREFER_ONLY: ReadonlySet<ProviderId> = new Set<ProviderId>(["leonardo-studio"]);
+
+/** Is this provider reachable only by a request that names it? */
+export const isPreferOnly = (id: ProviderId): boolean => PREFER_ONLY.has(id);
+
 /** Who would answer this capability right now, in order. Exported so the
  *  integration probe and any diagnostics surface report the same truth the
  *  router acts on rather than restating it. */
@@ -180,6 +198,8 @@ export async function unreachedPlanTops(
  * cannot be honoured is dropped, not raised: the caller asked for a better
  * first try, not for a failure. Which vendor actually served is in
  * `provenance.provider`, so a dropped preference is visible after the fact.
+ * The one exception is a PREFER_ONLY provider, which no plan holds: naming it
+ * replaces the chain rather than reordering it (see PREFER_ONLY).
  *
  * Exported so a diagnostics surface can show the real order without restating
  * the rules — the same reason planFor is exported.
@@ -189,7 +209,15 @@ export function orderFor(
   steer: ProviderSteer = {},
   env: ImagingEnv = currentEnv(),
 ): ProviderId[] {
-  const chain = planFor(cap, env);
+  // A prefer-only provider is its own one-entry chain, configured or not: an
+  // unconfigured one must still land in `trail` as `no-key` (its sentence names
+  // the variable to set) rather than drop the preference and bill the plan.
+  // `avoid` naming the same provider cancels it, as it would any preference.
+  if (steer.prefer && PREFER_ONLY.has(steer.prefer) && steer.prefer !== steer.avoid) return [steer.prefer];
+
+  // A prefer-only provider must never sit in a plan row; one that did would be
+  // reachable as a fallback, which is the whole thing PREFER_ONLY forbids.
+  const chain = planFor(cap, env).filter((id) => !PREFER_ONLY.has(id));
   const kept = steer.avoid ? chain.filter((id) => id !== steer.avoid) : chain;
   if (!kept.length) throw noAlternative(steer.avoid as ProviderId, cap);
 
