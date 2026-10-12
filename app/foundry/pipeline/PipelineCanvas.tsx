@@ -110,7 +110,7 @@ function PipelineCanvasImpl(props: PipelineCanvasProps) {
         onContextMenu={pointer.onContextMenu}
         onKeyDown={keys.onKeyDown}
         onFocus={keys.onFocus}
-        className="absolute inset-0 cursor-grab touch-none overflow-hidden rounded-xl border border-white/8 bg-[var(--gt-ink)]/50 outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 data-[dragging]:cursor-grabbing data-[mode=pan]:cursor-grabbing"
+        className="absolute inset-0 cursor-default touch-none overflow-hidden rounded-xl border border-white/8 bg-[var(--gt-ink)]/50 outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 data-[dragging]:cursor-grabbing"
       >
         <div
           ref={worldRef}

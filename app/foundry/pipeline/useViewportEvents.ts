@@ -18,9 +18,10 @@
 //
 //   THE WHEEL has to be a non-passive NATIVE listener. React's `onWheel` is
 //   passive, and a passive listener cannot `preventDefault`, so the page would
-//   scroll behind the board. Plain wheel pans, Shift pans horizontally,
-//   Ctrl/Cmd zooms at the pointer — and since the operator's ruling that the
-//   board must not be dragged, this is the only way to reach what is off-screen.
+//   scroll behind the board. The wheel zooms at the pointer; Shift pans
+//   horizontally, Alt vertically, and a trackpad's sideways swipe pans — since
+//   the operator's ruling that the board must not be dragged, this is the only
+//   way to reach what is off-screen.
 //
 // Every handler is an `useEffectEvent`, so each listener is bound exactly once
 // and still reads the current camera, size and layout.
@@ -121,11 +122,17 @@ export function useViewportEvents({
     const r = el.getBoundingClientRect();
     const c = camRef.current;
     const unit = e.deltaMode === 1 ? 16 : 1;
-    if (e.ctrlKey || e.metaKey) {
-      setCam(zoomAt(c, c.k * Math.exp((-e.deltaY * unit) / 400), e.clientX - r.left, e.clientY - r.top));
+    // A trackpad's sideways swipe (deltaX), Shift (horizontal) and Alt (vertical)
+    // pan; every other wheel step zooms at the pointer — the operator's ruling,
+    // 2026-10-12: the mouse wheel is a zoom, and zooming out then in at a spot is
+    // how a board without a drag reaches what is off-screen.
+    if (e.shiftKey || e.altKey) {
+      const d = (e.deltaY || e.deltaX) * unit;
+      setCam(e.shiftKey ? { ...c, x: c.x - d } : { ...c, y: c.y - d });
+    } else if (e.deltaX !== 0 && Math.abs(e.deltaX) > Math.abs(e.deltaY) && !e.ctrlKey) {
+      setCam({ ...c, x: c.x - e.deltaX * unit });
     } else {
-      const horizontal = e.shiftKey && e.deltaX === 0;
-      setCam({ k: c.k, x: c.x - (horizontal ? e.deltaY : e.deltaX) * unit, y: c.y - (horizontal ? 0 : e.deltaY) * unit });
+      setCam(zoomAt(c, c.k * Math.exp((-e.deltaY * unit) / 400), e.clientX - r.left, e.clientY - r.top));
     }
   });
   useEffect(() => {

@@ -9,10 +9,10 @@
  * the one thing the stage and lane heads buy you, which is knowing where you are
  * without looking.
  *
- * Reaching what is off-screen is the wheel's job and already was: a plain wheel
- * or two-finger scroll moves the board the way it moves any long page, Shift
- * makes it horizontal, and Ctrl/Cmd zooms (./useViewportEvents.ts). None of that
- * changed; what went is the pointer-drag path into the same camera.
+ * Reaching what is off-screen is the wheel's job: the wheel zooms at the
+ * pointer, Shift+wheel pans horizontally, Alt+wheel vertically, and a trackpad's
+ * sideways swipe pans (./useViewportEvents.ts). What went is the pointer-drag
+ * path into the same camera, and with it the grab cursor (2026-10-12).
  *
  * THE FOCUS HALF STAYS, and it is not incidental: the viewport carries
  * `aria-activedescendant`, so a click on the board is how a pointer user hands
