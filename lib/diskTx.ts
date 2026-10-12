@@ -68,7 +68,10 @@ export async function acquireLock(lockFile: string, opts: LockOptions = {}): Pro
       await fh.close();
       return () => rm(lockFile, { force: true });
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
+      // EPERM/EBUSY: Windows answers a create that races the holder's delete
+      // (a pending-delete file) with these instead of EEXIST. Contention, not failure.
+      const code = (e as NodeJS.ErrnoException).code;
+      if (code !== "EEXIST" && code !== "EPERM" && code !== "EBUSY") throw e;
       const age = await stat(lockFile).then((s) => Date.now() - s.mtimeMs).catch(() => 0);
       if (age > staleMs) {
         await rm(lockFile, { force: true });

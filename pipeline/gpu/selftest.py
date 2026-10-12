@@ -162,14 +162,15 @@ def test_fifo_and_bounded_wait():
 
 # -- case 4: Node <-> Python on one directory --------------------------------
 def tsx_cmd():
-    cli = ROOT / "node_modules" / "tsx" / "dist" / "cli.mjs"
-    return ["node", str(cli)] if cli.exists() else None
+    """`npx tsx`, as every .mts in this repo is run (package.json); None where npx is absent."""
+    npx = shutil.which("npx")
+    return [npx, "tsx"] if npx else None
 
 
 def test_node_python_interop():
     cmd = tsx_cmd()
     if not cmd:
-        print("SKIP  4. node_modules/tsx is not installed; run npm ci to exercise the interop")
+        print("SKIP  4. npx is not on PATH; the node half of the interop was not exercised")
         return
     d = tmpdir()
     env = {**__import__("os").environ, "GPU_LEASE_DIR": str(d)}
@@ -200,11 +201,10 @@ def test_node_python_interop():
     held.release()
 
     # a node-held lease whose process dies is reclaimed by python
-    node = subprocess.Popen(cmd + [script, "hold", "node-tenant", "comfy"], cwd=ROOT, env=env,
-                            stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+    node = subprocess.Popen(cmd + [script, "crash", "node-tenant", "comfy"], cwd=ROOT, env=env,
+                            stdout=subprocess.PIPE, text=True)
     node.stdout.readline()
-    node.kill()
-    node.wait()
+    node.wait(timeout=60)
     check("4. a dead node holder is reclaimed by python", py.acquire("py-tenant", "comfy", 20).rec["tenant"],
           "py-tenant")
     check("4. ...and counted", py.status()["reclaims"], 1)

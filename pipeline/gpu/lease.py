@@ -144,11 +144,13 @@ class Broker:
         while True:
             try:
                 fd = os.open(str(lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-            except FileExistsError:
+            except (FileExistsError, PermissionError):
+                # Windows answers a create that races the holder's DELETE with
+                # PermissionError (a pending-delete file), not FileExistsError.
                 try:
                     age = time.time() - lock.stat().st_mtime
                 except OSError:
-                    continue  # released between the failed create and the stat
+                    age = 0.0  # released between the failed create and the stat
                 if age > LOCK_STALE_S:
                     with contextlib.suppress(OSError):
                         lock.unlink()

@@ -268,60 +268,54 @@ def run_lane(lane, **overrides):
     # a crashed lane is reclaimed at once by its dead pid, not by the ttl.
     with gpu_lease.acquire(f"consistency/{lane}", "comfy", 20, wait=LEASE_WAIT_S, ttl_s=900,
                            job_prefix=",".join(guard.MY_PREFIXES)):
-        _run_lane_on_card(lane, params, out, lane_json_path)
+        if not guard.start_comfy():
+            raise RuntimeError("comfyui would not come up")
 
+        refs = []
+        if lane == "reference":
+            hero_path = out / "00-hero.png"
+            if not hero_path.exists() and (SHOTS / "reference" / "00-hero.png").exists():
+                # Reuse the hero across reference lanes: the variable under test is
+                # how the reference is applied, not which face it happens to show.
+                shutil.copyfile(SHOTS / "reference" / "00-hero.png", hero_path)
+                print("  hero still reused from the first reference lane")
+            if not hero_path.exists():
+                print("  hero still (the thing every shot will reference)")
+                src = generate(flux_workflow(prompt_for(HERO), seed, prefix="hero", steps=steps,
+                                             width=width, height=height))
+                shutil.copyfile(src, hero_path)
+                print(f"    -> {hero_path}")
+            if params["ref_crop"] == "face":
+                hero_path = face_reference(hero_path, out / "00b-hero-face.png")
+                print(f"    face-only reference -> {hero_path}")
+            refs = [stage_reference(hero_path)] * params["ref_count"]
+            print(f"  referencing {len(refs)} copy/copies of the hero still")
 
-def _run_lane_on_card(lane, params, out, lane_json_path):
-    steps, seed, late = params["steps"], params["seed"], params["late"]
-    width, height = params["width"], params["height"]
-    if not guard.start_comfy():
-        raise RuntimeError("comfyui would not come up")
+        spec_set = "zoom" if params["zoom"] else "shots"
+        spec = ZOOM_SPEC if params["zoom"] else SHOTS_SPEC
+        for name, clause, labels in spec:
+            dest = out / f"{name}.png"
+            prompt = prompt_for(clause)
+            if dest.exists():
+                print(f"  {name}: already generated, skipping")
+                continue
+            if not guard.headroom_ok():
+                guard.recycle_comfy("headroom dropped mid-lane")
+            t = time.time()
+            src = generate(flux_workflow(prompt, seed, refs=refs, width=width, height=height,
+                                         steps=steps, prefix=f"{lane}-{name}", late=late))
+            shutil.copyfile(src, dest)
+            lane_record.write_shot(out, name, dest, prompt,
+                                   steps=steps, seed=seed, late=late, prefix=f"{lane}-{name}",
+                                   spec_digest=craft_spec.digest(labels))
+            # Beside the shot, named for the lane, so probe.py's "<lane>--<shot>"
+            # row finds it and three lanes' 01-wide never share one truth.
+            craft_spec.write_sidecar(out, name, spec_set, seed=seed)
+            print(f"  {name}: {time.time() - t:.0f}s -> {dest}")
 
-    refs = []
-    if lane == "reference":
-        hero_path = out / "00-hero.png"
-        if not hero_path.exists() and (SHOTS / "reference" / "00-hero.png").exists():
-            # Reuse the hero across reference lanes: the variable under test is
-            # how the reference is applied, not which face it happens to show.
-            shutil.copyfile(SHOTS / "reference" / "00-hero.png", hero_path)
-            print("  hero still reused from the first reference lane")
-        if not hero_path.exists():
-            print("  hero still (the thing every shot will reference)")
-            src = generate(flux_workflow(prompt_for(HERO), seed, prefix="hero", steps=steps,
-                                         width=width, height=height))
-            shutil.copyfile(src, hero_path)
-            print(f"    -> {hero_path}")
-        if params["ref_crop"] == "face":
-            hero_path = face_reference(hero_path, out / "00b-hero-face.png")
-            print(f"    face-only reference -> {hero_path}")
-        refs = [stage_reference(hero_path)] * params["ref_count"]
-        print(f"  referencing {len(refs)} copy/copies of the hero still")
-
-    spec_set = "zoom" if params["zoom"] else "shots"
-    spec = ZOOM_SPEC if params["zoom"] else SHOTS_SPEC
-    for name, clause, labels in spec:
-        dest = out / f"{name}.png"
-        prompt = prompt_for(clause)
-        if dest.exists():
-            print(f"  {name}: already generated, skipping")
-            continue
-        if not guard.headroom_ok():
-            guard.recycle_comfy("headroom dropped mid-lane")
-        t = time.time()
-        src = generate(flux_workflow(prompt, seed, refs=refs, width=width, height=height,
-                                     steps=steps, prefix=f"{lane}-{name}", late=late))
-        shutil.copyfile(src, dest)
-        lane_record.write_shot(out, name, dest, prompt,
-                               steps=steps, seed=seed, late=late, prefix=f"{lane}-{name}",
-                               spec_digest=craft_spec.digest(labels))
-        # Beside the shot, named for the lane, so probe.py's "<lane>--<shot>"
-        # row finds it and three lanes' 01-wide never share one truth.
-        craft_spec.write_sidecar(out, name, spec_set, seed=seed)
-        print(f"  {name}: {time.time() - t:.0f}s -> {dest}")
-
-    rec = lane_record.read(out) if lane_json_path.exists() else {}
-    lane_record.record_stills(out_dir=out, refs=refs, shots=rec.get("shots", {}), **params)
-    print(f"\n  lane written to {out}\n  now score it:  python identity.py --set shots/{lane}")
+        rec = lane_record.read(out) if lane_json_path.exists() else {}
+        lane_record.record_stills(out_dir=out, refs=refs, shots=rec.get("shots", {}), **params)
+        print(f"\n  lane written to {out}\n  now score it:  python identity.py --set shots/{lane}")
 
 
 def build_arg_parser():
