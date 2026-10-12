@@ -42,7 +42,7 @@ import { readSchedule } from "@/lib/publish/store";
 import { snippetProblem } from "@/lib/publish/youtube";
 import { chaptersOf, fitMetadata } from "@/lib/sound/mv/metadata";
 import { __resetMvWorker, __setMvEngines, kickMvWorker, type MvEngines } from "@/lib/sound/mv/queue";
-import { cleanTitle, readMv, type MvFile } from "@/lib/sound/mv/store";
+import { cleanTitle, readMv, trackTitle, type MvFile } from "@/lib/sound/mv/store";
 import { NO_TEXT_CLAUSE, parseTreatment, treatmentInput } from "@/lib/sound/mv/treatment";
 import type { MvAnalysis, MvImportResult, MvJob, MvSnapshot } from "@/lib/sound/mv/types";
 import type { TextRequest, TextResult } from "@/lib/text/types";
@@ -193,8 +193,21 @@ test.beforeEach(() => {
 
 test.afterEach(async () => {
   knobs.stillHold = null;
-  await kickMvWorker(); // never leave a loop writing into a removed dir
-  __resetMvWorker();
+  // The drain kick runs against THIS test's store, pinned here: keepEnv's own
+  // afterEach (registered first) may already have restored SOUND_STORE_DIR to
+  // nothing, and a kick then lands on the real foundry-out/sound - where a
+  // fresh worker's crash recovery requeues whatever is active and switches
+  // the operator's queue off. Measured 2026-10-12: two probe runs stopped a
+  // live music-video render mid-job.
+  const restored = process.env.SOUND_STORE_DIR;
+  process.env.SOUND_STORE_DIR = path.join(root, "store");
+  try {
+    await kickMvWorker(); // never leave a loop writing into a removed dir
+  } finally {
+    __resetMvWorker();
+    if (restored === undefined) delete process.env.SOUND_STORE_DIR;
+    else process.env.SOUND_STORE_DIR = restored;
+  }
   rmSync(root, { recursive: true, force: true });
 });
 
@@ -443,6 +456,18 @@ test("treatment: clamped numbers, a known focal kind, the no-text clause welded;
     ["Instrumental", "Instrumental"],
   ])
     expect(cleanTitle(raw)).toBe(clean);
+  // the TRACK keeps its version, so a main and an instrumental are two names on
+  // the board (the 2026-10-12 live import labelled both "Walls Unwind"); the
+  // turn still sees the bare title
+  for (const [raw, track] of [
+    ["01_Walls Unwind (main)", "Walls Unwind"],
+    ["01_Walls Unwind (instrumental)", "Walls Unwind (instrumental)"],
+    ["10_Let the Small Hours Pass Us Instrumental", "Let the Small Hours Pass Us (instrumental)"],
+    ["13_Wasted day", "Wasted day"],
+  ]) {
+    expect(trackTitle(raw)).toBe(track);
+    expect(cleanTitle(trackTitle(raw))).toBe(cleanTitle(raw));
+  }
   // the turn's input is exactly two keys, whatever the analysis carries
   expect(Object.keys(treatmentInput("A", { ...ANALYSIS, lyrics: "la la" } as MvAnalysis)).sort()).toEqual(["analysis", "title"]);
   expect(Object.keys(treatmentInput("A", { ...ANALYSIS, lyrics: "la la" } as MvAnalysis).analysis).sort()).toEqual(["durationS", "energyShape", "sections", "tempoBpm"]);
@@ -517,7 +542,9 @@ test("import adds N, a re-import adds 0, a missing dir is a 400; drop deletes fi
   expect((await read<{ error: string }>(missing)).error).toContain("there is no folder at");
   expect((await importPOST(rq("/api/sound/mv/import", "POST", {}))).status).toBe(400);
   const takes = JSON.parse(readFileSync(abs("takes.json"), "utf8")) as { takes: { id: string; label: string; verdict: string; stage: string; origin: string }[] };
-  expect(takes.takes.find((t) => t.id === first.takeIds[0])).toMatchObject({ label: "Walls Unwind", verdict: "kept", stage: "finalized", origin: "import" });
+  expect(takes.takes.find((t) => t.id === first.takeIds[0])).toMatchObject({ label: "Walls Unwind (instrumental)", title: "Walls Unwind (instrumental)", verdict: "kept", stage: "finalized", origin: "import" });
+  // the main and the instrumental are two names, not one twice
+  expect(takes.takes.filter((t) => first.takeIds.includes(t.id)).map((t) => t.label).sort()).toEqual(["One Long Note", "Walls Unwind", "Walls Unwind (instrumental)"]);
   // a managed platform refuses after the body is read
   process.env.LOCAL_BINARIES = "off";
   const forbidden = await importPOST(rq("/api/sound/mv/import", "POST", { dir }));

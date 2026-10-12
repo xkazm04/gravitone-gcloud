@@ -7,7 +7,8 @@
 // EACH FILE IS A TAKE through lib/sound/takes.ts createTake - the one door the
 // upload route and the CLI use - with the origin that already means "brought
 // in from outside" (`import`), kept, staged `finalized`, labelled with its
-// clean title (./store.ts cleanTitle). createTake's own rules then hold: a
+// track title (./store.ts trackTitle - the version kept, so a main and an
+// instrumental stay two names). createTake's own rules then hold: a
 // finalized take needs that label, and finalizing stamps finalizedAt. A kept
 // take also writes its ledger row, as every judged take does.
 //
@@ -25,7 +26,7 @@ import path from "node:path";
 
 import { SoundError } from "../store";
 import { createTake, MAX_UPLOAD_BYTES } from "../takes";
-import { cleanTitle, readMv, withMv } from "./store";
+import { readMv, trackTitle, withMv } from "./store";
 import type { MvImportResult } from "./types";
 
 export const IMPORT_EXTS: readonly string[] = [".mp3", ".wav", ".flac", ".m4a", ".ogg"];
@@ -69,7 +70,7 @@ export async function importFolder(dirIn: string, now = Date.now()): Promise<MvI
       out.skipped++;
       continue;
     }
-    const label = cleanTitle(path.basename(name, path.extname(name)));
+    const label = trackTitle(path.basename(name, path.extname(name)));
     const { take } = await createTake(
       { origin: "import", kind: "music", title: label, label, verdict: "kept", stage: "finalized", fileName: name },
       { bytes: new Uint8Array(await readFile(abs)), mime: "", name },

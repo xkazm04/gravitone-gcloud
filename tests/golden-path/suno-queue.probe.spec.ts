@@ -76,8 +76,21 @@ test.beforeEach(() => {
 
 test.afterEach(async () => {
   FAKE_SUNO.health = { ok: true };
-  await kickSunoWorker(); // never leave a loop writing into a removed dir
-  __resetSunoWorker();
+  // The drain kick runs against THIS test's store, pinned here: keepEnv's own
+  // afterEach (registered first) may already have restored SOUND_STORE_DIR to
+  // nothing, and a kick then lands on the real foundry-out/sound - where a
+  // fresh worker's crash recovery requeues whatever is active and switches
+  // the operator's queue off. Measured 2026-10-12: two probe runs stopped a
+  // live music-video render mid-job.
+  const restored = process.env.SOUND_STORE_DIR;
+  process.env.SOUND_STORE_DIR = path.join(root, "store");
+  try {
+    await kickSunoWorker(); // never leave a loop writing into a removed dir
+  } finally {
+    __resetSunoWorker();
+    if (restored === undefined) delete process.env.SOUND_STORE_DIR;
+    else process.env.SOUND_STORE_DIR = restored;
+  }
   rmSync(root, { recursive: true, force: true });
 });
 

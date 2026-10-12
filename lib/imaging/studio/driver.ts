@@ -253,7 +253,7 @@ export async function studioGenerate(prompt: string, aspect: Aspect): Promise<St
   page.on("response", onResponse);
 
   try {
-    await page.goto(STUDIO.page.generateUrl, { waitUntil: "domcontentloaded", timeout: 45_000 });
+    await page.goto(STUDIO.page.imageUrl(aspect), { waitUntil: "domcontentloaded", timeout: 45_000 });
     if (STUDIO.page.signedOutPath.test(new URL(page.url()).pathname)) throw new StudioError("not signed in to leonardo", "signed-out");
 
     const box = page.locator(STUDIO.form.prompt).filter({ visible: true }).first();
@@ -392,7 +392,7 @@ export async function studioRecon(endpoint = studioEndpoint()): Promise<StudioRe
   page.on("request", onRequest);
   page.on("response", onResponse);
   try {
-    await page.goto(STUDIO.page.generateUrl, { waitUntil: "domcontentloaded", timeout: 45_000 });
+    await page.goto(STUDIO.page.imageUrl("16:9"), { waitUntil: "domcontentloaded", timeout: 45_000 });
     await page.waitForTimeout(8_000);
     const count = (sel: string) => page.locator(sel).filter({ visible: true }).count().catch(() => -1);
     const button = page.locator(STUDIO.form.generate).filter({ visible: true }).first();

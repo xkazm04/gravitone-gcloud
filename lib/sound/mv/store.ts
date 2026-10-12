@@ -184,6 +184,25 @@ export function cleanTitle(raw: string): string {
   return out || t;
 }
 
+/** A track's NAME as a person tells two files apart: the file's own name
+ *  without its number prefix and extension, a trailing "Instrumental" written
+ *  as "(instrumental)", and "(main)" dropped (it is the song itself). Unlike
+ *  `cleanTitle` it KEEPS the version: the Misu folder holds "Walls Unwind
+ *  (main)" and "Walls Unwind (instrumental)", and the 2026-10-12 live import
+ *  labelled both "Walls Unwind" - two cards nobody could tell apart, and the
+ *  smoke queued the wrong one. The text turns still get `cleanTitle`. */
+export function trackTitle(raw: string): string {
+  const t = raw.trim().replace(/\.(mp3|wav|flac|m4a|ogg)$/i, "");
+  const out = t
+    .replace(/^\d{1,3}\s*[_.\-]\s*/, "")
+    .replace(/[\s_\-]*\(main\)\s*$/i, "")
+    .replace(/[\s_\-]*(?:\(instrumental\)|\binstrumental)\s*$/i, " (instrumental)")
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return out || t;
+}
+
 /* ── a job's file, for the file route ─────────────────────────────────────── */
 
 const MIME_OF_EXT: Record<string, string> = {
