@@ -1,3 +1,7 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+
 import { defineConfig } from "@playwright/test";
 
 // ==============================================================================
@@ -21,6 +25,13 @@ import { defineConfig } from "@playwright/test";
 // server, to be refused against. Workers inherit it; only
 // spend-ledger.probe.spec.ts opts into the file store, in temp directories.
 process.env.SPEND_STORE = "memory";
+
+// THE GPU LEASE STAYS OFF THE REAL CARD'S DIRECTORY, for the same reason: the
+// Ollama adapter takes a lease per recognition (lib/gpu/lease.ts), and a probe
+// that ran while a real render held foundry-out/gpu/lease.json would be routed
+// off the local eye by a tenant that is not part of the test. gpu-lease.probe
+// points it at its own temp directories per case.
+process.env.GPU_LEASE_DIR ??= mkdtempSync(path.join(tmpdir(), "gpu-lease-pw-"));
 
 export default defineConfig({
   testDir: "./tests/golden-path",

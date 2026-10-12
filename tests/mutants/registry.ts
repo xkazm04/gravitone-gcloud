@@ -57,6 +57,22 @@ export const MUTANTS: Mutant[] = [
     why: "A repair turn may rewrite fields it was never asked about, and the paid-for draft is silently changed outside the listed paths.",
   },
   {
+    id: "gpu-recycle-any-caller",
+    probe: "gpu-lease.probe.spec.ts",
+    file: "lib/gpu/lease.ts",
+    find: "if (!holder || holder.ticket !== lease.ticket)",
+    replace: "if (false as boolean)",
+    why: "Any tenant can recycle an engine another tenant is using: the Stop-Process the lease exists to stop.",
+  },
+  {
+    id: "gpu-busy-eye-not-reroutable",
+    probe: "gpu-lease.probe.spec.ts",
+    file: "lib/imaging/providers/ollama.ts",
+    find: '"rate-limited",',
+    replace: '"failed",',
+    why: "A busy card fails the recognition outright instead of falling to the cloud eye.",
+  },
+  {
     id: "shelf-no-tiebreak",
     probe: "sort-stability.probe.spec.ts",
     file: "app/_projects/shelf.ts",
