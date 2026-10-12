@@ -39,11 +39,16 @@ test("cull non-ready: the Lightbox uses it, prints the error, and gates verdicts
 });
 
 test("cull non-ready: the grid's K/X/U are guarded by readiness", () => {
+  // The keys are declared once in cullKeymap and bound in CullGrid through useKeymap;
+  // every verdict action must route through the one readiness-guarded handler.
   const cg = read("CullGrid.tsx");
-  const sw = cg.slice(cg.indexOf('case "k"'), cg.indexOf('case "Enter"'));
-  expect(sw.length).toBeGreaterThan(0);
-  expect(sw).toContain("artStateOf(");
-  const calls = sw.split(/\r?\n/).filter((l) => l.includes("onVerdict(focused"));
-  expect(calls.length).toBe(3);
-  for (const l of calls) expect(l, "unguarded verdict key").toContain("artStateOf(");
+  const guard = cg.slice(cg.indexOf("const verdictOf"), cg.indexOf("useKeymap("));
+  expect(guard.length).toBeGreaterThan(0);
+  expect(guard).toContain("artStateOf(");
+  expect(guard).toContain("onVerdict(focused");
+  const binds = cg.slice(cg.indexOf("keep:"), cg.indexOf("undo:"));
+  for (const a of ["keep", "reject", "clear"]) expect(binds, `${a} is not behind verdictOf`).toContain(`${a}: verdictOf(`);
+  // And no verdict is handed for the focused tile on a line that does not check readiness.
+  const unguarded = cg.split(/\r?\n/).filter((l) => l.includes("onVerdict(focused") && !l.includes("artStateOf("));
+  expect(unguarded).toEqual([]);
 });
