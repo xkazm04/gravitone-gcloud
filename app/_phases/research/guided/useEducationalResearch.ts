@@ -50,7 +50,9 @@ import { useCallback, useEffect, useState } from "react";
 import { useJobs } from "@/lib/jobs";
 
 import { useActiveNotebook } from "../../_shared/notebook/useActiveNotebook";
-import { saveStep, type ResearchNotebookStepData, type ResearchStepData } from "../../_shared/stepStore";
+import { useRecord } from "../../_shared/records/useRecord";
+import type { ResearchNotebookStepData } from "../../_shared/stepStore";
+import { RESEARCH } from "../records";
 import { useLoadFor, useStepFor } from "../../_shared/useLoadFor";
 import { adoptSaved, LIVE_KIND, preflight, resumeLive, useLiveResearch, type Preflight } from "../run/live";
 import { useResearchRun } from "../run/useResearchRun";
@@ -76,7 +78,7 @@ export function useEducationalResearch(projectId: string) {
   // project's subject, already in the box and already enabled to run (uat
   // 2026-09-05: five Characters). The seeded Bitcoin project still opens on
   // its topic, because stepStore#seededFor supplies it as `saved`.
-  const topicHydrated = useStepFor<ResearchStepData>(projectId, "research", (saved) => {
+  const { hydrated: topicHydrated, save: saveResearch } = useRecord(RESEARCH, projectId, (saved) => {
     setTopic(saved?.topic ?? "");
     if (saved?.researched) run.load();
   });
@@ -131,8 +133,8 @@ export function useEducationalResearch(projectId: string) {
     // Nothing typed and nothing run is nothing to record — a project the
     // creator has not touched must not gain a research row on mount.
     if (!topic && !ready) return;
-    void saveStep(projectId, "research", { topic, researched: ready });
-  }, [projectId, topic, ready, hydrated]);
+    void saveResearch({ topic, researched: ready });
+  }, [saveResearch, topic, ready, hydrated]);
 
   /* ------------------------------------------- the background job round-trip */
   // "Is it running" has one answer, and the engine owns it. The job is the

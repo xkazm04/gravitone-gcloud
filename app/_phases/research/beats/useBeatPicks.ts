@@ -2,13 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import {
-  claimSaveSlot,
-  loadStep,
-  saveStep,
-  type BeatPicksStepData,
-  type ResearchStepData,
-} from "../../_shared/stepStore";
+import { patchRecord } from "../../_shared/records/patch";
+import { saveStep, type BeatPicksStepData } from "../../_shared/stepStore";
+import { RESEARCH } from "../records";
 import { useStepFor } from "../../_shared/useLoadFor";
 
 const PHASE = "research-beats";
@@ -65,13 +61,15 @@ export function useBeatPicks(projectId: string) {
     setModeState((m) => m ?? "beats");
     setConfirmed(frozen);
 
-    const slot = claimSaveSlot(projectId, "research");
-    const current = await loadStep<ResearchStepData>(projectId, "research");
-    if (!slot.stillNewest()) return;
-    await saveStep<ResearchStepData>(projectId, "research", {
+    // One transaction: read, keep the typed topic, mark researched. A failed
+    // or refused read writes nothing (loadStep flattened it to {} and wrote
+    // over the topic), and patches to the key apply in issue order, so a stale
+    // confirm no longer needs a hand-claimed slot.
+    await patchRecord(RESEARCH, projectId, (current) => ({
+      ...current,
       topic: current?.topic ?? "",
       researched: true,
-    });
+    }));
   }, [projectId, picks]);
 
   /** Unfreeze. The research record is NOT flipped back: Script keeps reading
