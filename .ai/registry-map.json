@@ -1199,7 +1199,11 @@
           "revision": 26,
           "changedAt": "2026-10-06",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/golden-path/shared-notebook-contracts.probe.spec.ts:124 The payload assertion searches for a bare word already guaranteed by the preceding body.conclusions assertion, so it cannot establish that conclusions enter the emitted prompt.",
+          "evaluatedAt": "2026-10-12",
+          "evaluatedAgainst": "sha256-b2:5521806124d93882",
+          "evaluatedRevision": 26
         },
         {
           "subject": "quality-gates",
@@ -3800,7 +3804,11 @@
           "revision": 26,
           "changedAt": "2026-10-06",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/golden-path/shot-decomposition.probe.spec.ts:409 The test claiming coverage of every emitted beat kind uses an unchecked handwritten population, so widening TrailerBeatKind without updating either copied list can leave it green.",
+          "evaluatedAt": "2026-10-12",
+          "evaluatedAgainst": "sha256-b2:5521806124d93882",
+          "evaluatedRevision": 26
         },
         {
           "subject": "prompt-assembly",
@@ -4938,7 +4946,11 @@
           "revision": 26,
           "changedAt": "2026-10-06",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/golden-path/chain-break-reaches-the-reviewer.probe.spec.ts:91 The panel-wiring assertion accepts a bare field name that remains in declinedCount even if the panel stops rendering chain breaks.",
+          "evaluatedAt": "2026-10-12",
+          "evaluatedAgainst": "sha256-b2:5521806124d93882",
+          "evaluatedRevision": 26
         },
         {
           "subject": "prompt-assembly",
@@ -5578,7 +5590,11 @@
           "revision": 26,
           "changedAt": "2026-10-06",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/golden-path/object-url-ownership.probe.spec.ts:61 The ownership ratchet credits any revokeObjectURL identifier as a release, allowing a reference without a call or a call on an unrelated URL to satisfy the check.",
+          "evaluatedAt": "2026-10-12",
+          "evaluatedAgainst": "sha256-b2:5521806124d93882",
+          "evaluatedRevision": 26
         },
         {
           "subject": "eval-harness",

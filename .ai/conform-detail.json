@@ -566,6 +566,115 @@
         }
       ],
       "registryProposal": "matcher scored this 'probable' on why:['text','cloud','engine'] — those terms mean 'LLM text generation over cloud/local engines' here, not text-to-speech. Worth a disambiguating negative example in voice-io's use_when if this pattern recurs across the fleet."
+    },
+    "07ccdf07-2f2c-4965-81e0-85ae00430a4c/test-harness": {
+      "context": "production-script-probes",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-12",
+      "evaluatedTs": "2026-10-12T18:34:38.708Z",
+      "worker": "306cde1b-b70c-44af-a264-619b81bb9871",
+      "techniques": [
+        {
+          "technique": "gate-scope-is-not-report-scope",
+          "verdict": "deviation",
+          "evidence": "tests/golden-path/shot-decomposition.probe.spec.ts:409 The enclosing test says every emitted kind; this string array is neither derived from TrailerBeatKind nor exhaustively keyed by it, and ROLE_HINTS is typed Record<string, TrailerRole>."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/shot-decomposition.probe.spec.ts:158 Removes the reset from the input fixture and drives the actual decomposition and reviewer, requiring the specific violation rather than merely checking a healthy derivation."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "deviation",
+          "evidence": "tests/golden-path/render-budget.probe.spec.ts:61 The test-local windowed function creates the bounded array itself; the tests claiming measured DOM and rerender bounds never execute RaceSheet or pin its adoption of that window."
+        }
+      ]
+    },
+    "680278fd-623d-4b75-89da-768d7634cc0b/test-harness": {
+      "context": "studio-logic-probes",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-12",
+      "evaluatedTs": "2026-10-12T18:34:38.708Z",
+      "worker": "306cde1b-b70c-44af-a264-619b81bb9871",
+      "techniques": [
+        {
+          "technique": "derived-selection-must-be-measured",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/step-clear-completeness.probe.spec.ts:99 The filesystem-derived store audit establishes a discovery floor before comparing detected stores with its owned and exempt populations."
+        },
+        {
+          "technique": "gate-scope-is-not-report-scope",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/spine-rank-total.probe.spec.ts:28 The role population is exhaustively keyed by the production union, so adding a role without extending the test population produces a type error."
+        },
+        {
+          "technique": "pin-the-call-not-the-name",
+          "verdict": "deviation",
+          "evidence": "tests/golden-path/chain-break-reaches-the-reviewer.probe.spec.ts:91 Does not identify the panel's rendering construct; the same file's independently tested declinedCount references chainBreaks and can satisfy this assertion without any rendered break rows."
+        }
+      ]
+    },
+    "1b96fc81-7518-4cc3-88f1-b666dc83a7ca/test-harness": {
+      "context": "ui-component-probes",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-12",
+      "evaluatedTs": "2026-10-12T18:34:38.708Z",
+      "worker": "306cde1b-b70c-44af-a264-619b81bb9871",
+      "techniques": [
+        {
+          "technique": "derived-selection-must-be-measured",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/comment-strip-ratchet.probe.spec.ts:64 The derived stripper inventory refuses an empty source population and checks surviving exemptions in the reverse direction."
+        },
+        {
+          "technique": "gate-scope-is-not-report-scope",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/chrome-colour-literals.probe.spec.ts:87 The colour rule's source population is derived from tracked app/components files rather than a handwritten list of repaired members; exclusions carry explicit reasons."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/comment-strip-ratchet.probe.spec.ts:88 Feeds the actual stripping and matching machinery deliberately offending source, alongside a control requiring the prose-only occurrence to remain unflagged."
+        },
+        {
+          "technique": "pin-the-call-not-the-name",
+          "verdict": "deviation",
+          "evidence": "tests/golden-path/object-url-ownership.probe.spec.ts:61 Counts the name rather than a call and does not bind a release to its minted resource; the file documents this limitation, but that does not meet the standard."
+        }
+      ]
+    },
+    "cdf0f2c4-e219-4ba2-90fa-dc33a84962ee/test-harness": {
+      "context": "data-asset-probes",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-12",
+      "evaluatedTs": "2026-10-12T18:34:38.708Z",
+      "worker": "306cde1b-b70c-44af-a264-619b81bb9871",
+      "techniques": [
+        {
+          "technique": "isolation-lanes",
+          "verdict": "deviation",
+          "evidence": "tests/golden-path/foundry-store-disk.probe.spec.ts:80 Places the corrupt fixture inside the application's ordinary run root and invokes listRuns over that root; unique IDs limit collisions but do not provide a fresh isolated store or reap prior crashed-run fixtures."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/notebook-graph.probe.spec.ts:44 Duplicates a real fact ID into the cloned notebook's unknowns and requires the production checker to detect it, alongside the clean shipped-fixture assertion."
+        },
+        {
+          "technique": "pin-the-call-not-the-name",
+          "verdict": "deviation",
+          "evidence": "tests/golden-path/shared-notebook-contracts.probe.spec.ts:124 The supposed payload pin matches declarations or the earlier-required body.conclusions read without identifying any serialization construct."
+        }
+      ]
     }
   }
 }
