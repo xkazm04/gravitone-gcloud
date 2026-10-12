@@ -200,8 +200,10 @@ function cut(text: string, max: number): string {
 
 /** A prompt with the no-text clause welded on, within PROMPT_MAX. */
 export function compilePrompt(prompt: string): string {
-  const body = cut(oneLine(prompt), PROMPT_MAX - NO_TEXT_CLAUSE.length - 1);
-  return `${body} ${NO_TEXT_CLAUSE}`;
+  const body = cut(oneLine(prompt), PROMPT_MAX - NO_TEXT_CLAUSE.length - 2);
+  // A prompt that ends mid-sentence (an operator's often does) gets its full
+  // stop, so the clause reads as its own sentence.
+  return `${body}${/[.!?]$/.test(body) ? "" : "."} ${NO_TEXT_CLAUSE}`;
 }
 
 /** The model's negative, with the no-text ban welded in, deduplicated. */

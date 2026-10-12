@@ -367,9 +367,9 @@ test("regenerate re-runs only its part's steps and keeps every other file byte-i
   const b4 = { treat: calls.treat.length, still: calls.still.length, render: calls.render, metadata: calls.metadata.length };
   const op = await regenerate(done.id, "image", undefined, own);
   expect([calls.treat.length - b4.treat, calls.still.length - b4.still, calls.render - b4.render, calls.metadata.length - b4.metadata]).toEqual([0, 1, 1, 0]);
-  expect(calls.still.at(-1)).toBe(`${own} ${NO_TEXT_CLAUSE}`);
+  expect(calls.still.at(-1)).toBe(`${own}. ${NO_TEXT_CLAUSE}`);
   expect(op.prompt).toBe(own);
-  expect(op.treatment).toMatchObject({ prompt: `${own} ${NO_TEXT_CLAUSE}`, motion: meta.treatment!.motion, rationale: "the operator's own prompt" });
+  expect(op.treatment).toMatchObject({ prompt: `${own}. ${NO_TEXT_CLAUSE}`, motion: meta.treatment!.motion, rationale: "the operator's own prompt" });
   expect(op.treatment!.negativePrompt).toBeUndefined();
   expect(hashes(op).still).not.toBe(h3.still);
   // a later regenerate without a prompt forgets it
@@ -454,7 +454,7 @@ test("treatment: clamped numbers, a focal dropped, the no-text clause welded; th
     rationale: "x",
   });
   expect(t.motion).toEqual({ particleDensity: 1, particleHue: 0, pulseStrength: 0.6 });
-  expect(t.prompt).toBe(`long-exposure night photograph, a lake ${NO_TEXT_CLAUSE}`);
+  expect(t.prompt).toBe(`long-exposure night photograph, a lake. ${NO_TEXT_CLAUSE}`);
   expect(t.negativePrompt!.split(", ").slice(0, 3)).toEqual(["text", "letters", "numbers"]);
   expect(parseTreatment({ prompt: "x".repeat(4000), motion: {} }).prompt.length).toBeLessThanOrEqual(1500);
   expect(() => parseTreatment({ prompt: "", motion: {} })).toThrow("no image prompt");
@@ -698,7 +698,7 @@ test("batch: --prompt replaces the treatment turn on every new job; a failed job
   const first = await runBatch(dir, { prompt: "Cinematic film still, a rain-wet alley at blue hour" });
   expect(first.jobs.map((j) => j.state)).toEqual(["failed"]);
   expect(calls.treat).toHaveLength(0);
-  expect(calls.still).toEqual([`Cinematic film still, a rain-wet alley at blue hour ${NO_TEXT_CLAUSE}`]);
+  expect(calls.still).toEqual([`Cinematic film still, a rain-wet alley at blue hour. ${NO_TEXT_CLAUSE}`]);
   expect((await planBatch(dir)).rows[0].action).toBe("retry");
 
   knobs.metadataFail = null;
