@@ -42,10 +42,13 @@ export function beginWaves(
     deadRef: React.RefObject<boolean>;
     wavingRef: React.RefObject<boolean>;
   },
+  /** The first slice. A cold board starts small (the caller passes WAVE_MIN) so
+   *  its first commit is a handful of cards, not the whole view. */
+  first: number = WAVE_FIRST,
 ) {
   wavingRef.current = true;
-  let slice = WAVE_FIRST;
-  let shown = WAVE_FIRST;
+  let slice = first;
+  let shown = first;
   setWave({ keep, from: 0, to: shown });
   const next = (t0: number) => {
     requestAnimationFrame((now) => {

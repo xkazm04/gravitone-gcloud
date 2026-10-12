@@ -47,21 +47,14 @@ import { makeAudioSource } from "@/lib/board/sources/audio";
 import { PipelineCanvas, type CanvasStatus, type PipelineHandle } from "./pipeline";
 import { useArmedSource } from "./pipeline/arm";
 import BoardControls from "./pipeline/BoardControls";
+import { BoardSkeleton } from "./pipeline/BoardSkeleton";
 import { BoardDialogs } from "./pipeline/BoardDialogs";
 import { CanvasMount, useFillHeight } from "./pipeline/boardMount";
+import type { MediaId } from "./pipeline/media";
 import { ledger, ledgerAudio } from "./pipeline/skins";
 import { useFullScreen } from "./pipeline/useFullScreen";
 import { useOffers } from "./pipeline/useOffers";
 import { Glass, Label, Loading } from "./ui";
-
-/* ── the two media ────────────────────────────────────────────────────────── */
-
-export type MediaId = "articles" | "audio";
-
-export const MEDIA: ReadonlyArray<{ id: MediaId; label: string }> = [
-  { id: "articles", label: "Articles" },
-  { id: "audio", label: "Audio" },
-];
 
 export default function PipelineTab({ media }: { media: MediaId }) {
   // KEYED ON THE MEDIA, so switching it REMOUNTS this shell. Everything the old
@@ -79,11 +72,11 @@ export default function PipelineTab({ media }: { media: MediaId }) {
 function PipelineShell({ media }: { media: MediaId }) {
   const announce = useAnnounce();
 
-  /* sources: constructed ONCE each. The canvas memoises on source identity and
-     a fresh source every render defeats the engine. */
-  const articles = useMemo(() => makeArticlesSource(), []);
-  const audio = useMemo(() => makeAudioSource(), []);
-  const { arm, flipArm, stub, source } = useArmedSource(media === "articles" ? articles : audio);
+  /* the source: constructed ONCE, and only the one this medium draws. The canvas
+     memoises on source identity and a fresh source every render defeats the
+     engine; the shell is keyed on the medium, so `media` never changes here. */
+  const raw = useMemo(() => (media === "articles" ? makeArticlesSource() : makeAudioSource()), [media]);
+  const { arm, flipArm, stub, source } = useArmedSource(raw);
 
   const [axisPick, setAxisPick] = useState<string | null>(null);
   const [status, setStatus] = useState<CanvasStatus | null>(null);
@@ -128,14 +121,13 @@ function PipelineShell({ media }: { media: MediaId }) {
   return (
     <div className={`flex flex-col gap-3 ${full.rootClass}`} style={full.rootStyle}>
       {/* EVERYTHING ABOVE THE BOARD, in one element the height is measured
-          against: the load line and the failure come and go and the controls
+          against: a failed load comes and goes and the controls
           row wraps, and in full screen none of that resizes the document.
 
           THE CONTROLS ARE A ROW, above the board and outside it. Floating over
           the board's corner they sat where the stage heads draw, and the heads
           had to measure them to stay clear; here nothing overlaps anything. */}
       <div ref={controlsRef} className="flex flex-col gap-3">
-        {status?.loading && !status.total && <Loading label="reading the pipeline" />}
         {status?.error && (
           <Glass className="px-4 py-3">
             <Label>load failed</Label>
@@ -164,6 +156,13 @@ function PipelineShell({ media }: { media: MediaId }) {
       <div ref={boardRef} className="flex gap-3" style={{ height: boardH }}>
         <CanvasMount>
           <PipelineCanvas source={source} axisId={axisId} arm={arm} skin={skin} onOpen={setOpen} onStatus={setStatus} apiRef={api} className="absolute inset-0" />
+          {/* Until the first load answers: placeholders on the grid, INSIDE the
+              board, so its answer moves nothing (./pipeline/BoardSkeleton.tsx). */}
+          {(!status || (status.loading && !status.total)) && (
+            <BoardSkeleton>
+              <Loading label="reading the pipeline" />
+            </BoardSkeleton>
+          )}
         </CanvasMount>
       </div>
 

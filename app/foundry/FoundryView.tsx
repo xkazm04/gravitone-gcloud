@@ -63,7 +63,7 @@ import { CullGrid } from "./CullGrid";
 import { CULL } from "./cullKeymap";
 import { Lightbox } from "./Lightbox";
 import FoundrySubnav from "./FoundrySubnav";
-import PipelineTab, { MEDIA, type MediaId } from "./PipelineTab";
+import { MEDIA, type MediaId } from "./pipeline/media";
 import { engineLines, usePlant, useRunPreviews, type Tab } from "./plant";
 import { ForgeEmpty, RunBar, RunStrip } from "./RunCards";
 import { fetchRuns } from "./foundryClient";
@@ -94,6 +94,9 @@ const StylesShelf = dynamic(() => import("./StylesShelf").then((m) => m.StylesSh
 const ExtractView = dynamic(() => import("./ExtractView").then((m) => m.ExtractView), { loading: pendingPanel });
 const DojoView = dynamic(() => import("./DojoView").then((m) => m.DojoView), { loading: pendingPanel });
 const StripsView = dynamic(() => import("./StripsView").then((m) => m.StripsView), { loading: pendingPanel });
+// The pipeline board — its engine, both sources, motion — is the heaviest tab
+// and not the default one, so it is its own chunk like the four above.
+const PipelineTab = dynamic(() => import("./PipelineTab"), { loading: pendingPanel });
 
 // THE TABS CARRIED A BLURB AND SO THE BLURB GOT WRITTEN — up to 45 words per
 // tab, printed as a paragraph under the row. None of the three headers has a
@@ -407,10 +410,6 @@ export default function FoundryView() {
           ) : tab === "dojo" ? (
             <DojoView />
           ) : tab === "pipeline" ? (
-            // The tab reads `?v=` through `useSearchParams` and carries its own
-            // Suspense boundary for it (./PipelineTab.tsx), which is why
-            // app/foundry/page.tsx still needs none: the boundary sits around
-            // the one component that reads a param, not around the view.
             <PipelineTab media={media} />
           ) : tab === "strips" ? (
             <StripsView />

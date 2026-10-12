@@ -24,14 +24,16 @@
 //   JUMP_OVERLAP or changed zoom by more than e^JUMP_LN, so little or none of
 //   what is wanted is mounted: hand it to ./waveRunner.ts.
 //
-// WAVE_FIRST is the floor under all of it: a view holding fewer cards than one
-// slice is never worth waving, however it was reached.
+// WAVE_FIRST is the floor under every view but the FIRST: a later view holding
+// fewer cards than one slice is never worth waving. The first view always waves,
+// from a WAVE_MIN slice, because a cold board is the one moment every card is
+// new at once — the commit is spread over frames and the cards arrive staggered.
 
 import { useRef, useState } from "react";
 
 import type { Live } from "./canvasTypes";
 import { countRect, overlap, quantize, sameRect, viewRect, type Camera, type Rect } from "./geometry";
-import { JUMP_LN, JUMP_OVERLAP, OVERSCAN_PX, quantum, WAVE_FIRST } from "./tunables";
+import { JUMP_LN, JUMP_OVERLAP, OVERSCAN_PX, quantum, WAVE_FIRST, WAVE_MIN } from "./tunables";
 import { beginWaves } from "./waveRunner";
 
 export interface ViewState {
@@ -91,9 +93,14 @@ export function useCullRect({
     viewRef.current = next;
     const now = countRect(L.layout, q);
     setView(next);
-    if (wavingRef.current || now <= WAVE_FIRST) return;
+    // THE FIRST VIEW ALWAYS WAVES, however few cards it holds. Below the floor a
+    // wave costs one extra frame, and it is what hands the cards their staggered
+    // entrance (./useBoardCull.ts `enters`): without it a cold board of twenty
+    // cards popped in as one block. Measured 2026-10-12, /foundry audio: 18 cards
+    // mounted in one commit with no entrance at all, articles 24 of 29.
+    if (wavingRef.current || (prev && now <= WAVE_FIRST) || now === 0) return;
     const jump = !prev || Math.abs(Math.log(cam.k / prev.k)) > JUMP_LN || overlap(prev.rect, q) < JUMP_OVERLAP;
-    if (jump) beginWaves(new Set(mountedRef.current.map((p) => p.id)), { setWave, liveRef, freshRef, deadRef, wavingRef });
+    if (jump) beginWaves(new Set(mountedRef.current.map((p) => p.id)), { setWave, liveRef, freshRef, deadRef, wavingRef }, prev ? WAVE_FIRST : WAVE_MIN);
   };
 
   const scheduleView = () => {
