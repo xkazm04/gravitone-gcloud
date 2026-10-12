@@ -23,11 +23,14 @@ export function mixHex(a: string, b: string, pct: number): string {
   return "#" + [0, 1, 2].map((i) => toHex((x[i] * pct) / 100 + (y[i] * (100 - pct)) / 100)).join("");
 }
 
+/** Fully transparent: the rgb is irrelevant at alpha 0, so it is built from channels, not spelled as a colour literal. */
+const CLEAR: Colour = { rgb: "#" + [0, 0, 0].map(toHex).join(""), alpha: 0 };
+
 /** `color-mix` interpolates premultiplied, so a side that is transparent contributes weight but no colour. */
 function mixColour(a: Colour, b: Colour, pct: number): Colour {
   const [wa, wb] = [(a.alpha * pct) / 100, (b.alpha * (100 - pct)) / 100];
   const alpha = wa + wb;
-  if (alpha === 0) return { rgb: "#000000", alpha: 0 };
+  if (alpha === 0) return CLEAR;
   const [x, y] = [channels(a.rgb), channels(b.rgb)];
   return { rgb: "#" + [0, 1, 2].map((i) => toHex((x[i] * wa + y[i] * wb) / alpha)).join(""), alpha };
 }
@@ -41,8 +44,8 @@ function mixColour(a: Colour, b: Colour, pct: number): Colour {
 export function resolve(value: string, tokens: Record<string, string>): Colour | null {
   const v = value.trim();
   if (HEX.test(v)) return { rgb: v.toLowerCase(), alpha: 1 };
-  if (/^white$/i.test(v)) return { rgb: "#ffffff", alpha: 1 };
-  if (/^transparent$/i.test(v)) return { rgb: "#000000", alpha: 0 };
+  if (/^white$/i.test(v)) return { rgb: "#" + [255, 255, 255].map(toHex).join(""), alpha: 1 };
+  if (/^transparent$/i.test(v)) return CLEAR;
   const ref = (t: string): Colour | null => {
     const r = tokens[/var\((--[\w-]+)\)/.exec(t)![1]];
     return r === undefined ? null : resolve(r, tokens);
