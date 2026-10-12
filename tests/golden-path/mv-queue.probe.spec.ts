@@ -26,6 +26,9 @@
 //     on; the turn sees the clean title and the analysis, never a lyric;
 //   · the metadata: held to snippetProblem (trimmed by code, or the job fails
 //     with the validator's sentence); chapters only from >= 3 sections;
+//   · the album batch: a read-only plan; a run that imports, queues, drains
+//     and copies <track>.mp4 + <track> - youtube.txt beside each source; a
+//     failed job retried from its failed step; the cross-process lease;
 //   · import: N added, a re-import adds 0, a missing dir is a 400; Drop
 //     deletes the files and keeps the record; Calendar creates a slot with the
 //     metadata; the file route answers a range with 206.
@@ -43,7 +46,8 @@ import { FAKE_LEONARDO_STUDIO, resetFakeLeonardoStudio } from "@/lib/imaging/pro
 import { readSchedule } from "@/lib/publish/store";
 import { snippetProblem } from "@/lib/publish/youtube";
 import { chaptersOf, fitMetadata } from "@/lib/sound/mv/metadata";
-import { __resetMvWorker, __setMvEngines, kickMvWorker, type MvEngines } from "@/lib/sound/mv/queue";
+import { CREDITS_PER_STILL, planBatch, runBatch } from "@/lib/sound/mv/batch";
+import { __resetMvWorker, __setMvEngines, kickMvWorker, mvWorkerPaused, type MvEngines } from "@/lib/sound/mv/queue";
 import { cleanTitle, readMv, trackTitle, type MvFile } from "@/lib/sound/mv/store";
 import { NO_TEXT_CLAUSE, parseTreatment, treatmentInput } from "@/lib/sound/mv/treatment";
 import type { MvAnalysis, MvImportResult, MvJob, MvSnapshot } from "@/lib/sound/mv/types";
@@ -652,3 +656,88 @@ test("a kept Suno clip is downloaded once; the still goes through the real route
   expect(calls.fetchClip).toBe(1);
 });
 
+
+/* ── 7. the album batch (pipeline/music-video.mts) and the lease ──────────── */
+
+test("batch: plan reads only; run imports, queues, drains and copies each video beside its source; a re-plan skips what is done", async () => {
+  const dir = audioDir(["01_Walls Unwind (main).mp3", "01_Walls Unwind (instrumental).mp3", "02_The Kettle Ticks.mp3"]);
+  const before = await planBatch(dir);
+  expect(before.rows.map((r) => [r.title, r.version, r.action])).toEqual([
+    ["Walls Unwind (instrumental)", "instrumental", "queue"],
+    ["Walls Unwind", "main", "queue"],
+    ["The Kettle Ticks", "main", "queue"],
+  ]);
+  expect([before.newJobs, before.estimatedCredits, before.textTurns]).toEqual([3, 3 * CREDITS_PER_STILL, 6]);
+  // planning wrote nothing
+  expect((await readMv()).imports).toHaveLength(0);
+  expect((await planBatch(dir, { versions: "instrumental" })).rows.filter((r) => r.action === "queue")).toHaveLength(1);
+  expect((await planBatch(dir, { limit: 2 })).rows.map((r) => r.action)).toEqual(["queue", "queue", "skip-limit"]);
+
+  const res = await runBatch(dir, { versions: "main" });
+  expect(res.paused).toBeUndefined();
+  expect(res.jobs.map((j) => [path.basename(j.file), j.state])).toEqual([
+    ["01_Walls Unwind (main).mp3", "done"],
+    ["02_The Kettle Ticks.mp3", "done"],
+  ]);
+  // beside the source: the video and the paste-ready metadata
+  for (const base of ["01_Walls Unwind (main)", "02_The Kettle Ticks"]) {
+    expect(readFileSync(path.join(dir, `${base}.mp4`), "utf8")).toMatch(/^video #/);
+    expect(readFileSync(path.join(dir, `${base} - youtube.txt`), "utf8")).toMatch(/^TITLE\n.+ambient visualizer, take \d\n\nDESCRIPTION\n[^]*\n0:00 Intro\n[^]*\nTAGS\nambient, /);
+  }
+  expect(existsSync(path.join(dir, "01_Walls Unwind (instrumental).mp4"))).toBe(false);
+  // the batch switched the queue off again
+  expect((await readMv()).queue.running).toBe(false);
+  const after = await planBatch(dir);
+  expect(after.rows.map((r) => r.action)).toEqual(["queue", "skip-done", "skip-done"]);
+  expect((await planBatch(dir, { again: true })).newJobs).toBe(3);
+});
+
+test("batch: --prompt replaces the treatment turn on every new job; a failed job is retried from the step that failed", async () => {
+  const dir = audioDir(["05_Shape of you.mp3"]);
+  knobs.metadataFail = "gemini answered 429: quota exhausted for mv-metadata";
+  const first = await runBatch(dir, { prompt: "Cinematic film still, a rain-wet alley at blue hour" });
+  expect(first.jobs.map((j) => j.state)).toEqual(["failed"]);
+  expect(calls.treat).toHaveLength(0);
+  expect(calls.still).toEqual([`Cinematic film still, a rain-wet alley at blue hour ${NO_TEXT_CLAUSE}`]);
+  expect((await planBatch(dir)).rows[0].action).toBe("retry");
+
+  knobs.metadataFail = null;
+  const again = await runBatch(dir);
+  expect(again.jobs.map((j) => j.state)).toEqual(["done"]);
+  // resumed at metadata: no second still, no treatment turn
+  expect([calls.still.length, calls.treat.length, calls.render]).toEqual([1, 0, 1]);
+  expect(existsSync(path.join(dir, "05_Shape of you.mp4"))).toBe(true);
+});
+
+test("lease: a live process holding mv/worker.lock pauses this worker before crash recovery; a dead holder's lease is taken over", async () => {
+  const { takeIds } = await importDir(audioDir(["09_The Blue Cup.mp3"]));
+  const [job] = await enqueueTakes(takeIds, ["09_The Blue Cup"]);
+  const lock = abs("mv/worker.lock");
+  mkdirSync(path.dirname(lock), { recursive: true });
+  // the parent process: alive for as long as this probe runs, and not us
+  writeFileSync(lock, JSON.stringify({ pid: process.ppid, at: Date.now() }));
+  await withMvActive(job.id);
+  await runPOST(rq("/api/sound/mv/run", "POST", { running: true }));
+  await kickMvWorker();
+  expect(mvWorkerPaused()).toBe(`the music-video queue is being run by another process (pid ${process.ppid})`);
+  // the other process's active job was NOT requeued by our recovery
+  expect((await readMv()).jobs[0].state).toBe("active");
+  expect(calls.phases).toEqual([]);
+
+  // the holder is gone: its lease is stale and taken over; recovery then runs
+  writeFileSync(lock, JSON.stringify({ pid: 2 ** 22 + 12345, at: Date.now() }));
+  await kickMvWorker();
+  expect((await readMv()).jobs[0].state).toBe("queued");
+  expect((await readMv()).queue.interrupted).toContain('"The Blue Cup"');
+  // our lease is dropped when the loop ends
+  expect(existsSync(lock)).toBe(false);
+});
+
+/** Mark a job active, as another process's worker would have. */
+async function withMvActive(id: string): Promise<void> {
+  const f = await readMv();
+  const j = f.jobs.find((x) => x.id === id)!;
+  j.state = "active";
+  j.phase = "rendering";
+  writeFileSync(abs("mv.json"), JSON.stringify(f));
+}

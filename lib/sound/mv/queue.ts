@@ -56,13 +56,24 @@
 // ANY THROW fails the job with the engine's sentence VERBATIM and the loop
 // goes on. A still vendor that is not reachable PAUSES the loop before a job
 // that needs a still (no job is failed for it); the next kick looks again.
+// A failed job goes back to the queue with `retryMv`, which keeps every file
+// and every redo it had, so the run resumes at the step that failed.
+//
+// ONE PROCESS DRAINS THE STORE AT A TIME. The singleton above holds within a
+// process; across processes (a dev server and the batch CLI,
+// pipeline/music-video.mts, on one store) the loop takes a lease first -
+// mv/worker.lock, {pid, at} - and a lease held by another LIVE process pauses
+// this loop with that pid named. It is taken BEFORE crash recovery: recovery
+// would otherwise requeue the job the other process is rendering right now.
+// A lease whose pid is gone is stale and taken over.
 
-import { rm, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, rm, writeFile } from "node:fs/promises";
+import path from "node:path";
 
 import { leonardoStudioHealth } from "@/lib/imaging/providers/leonardoStudio";
 import { generate } from "@/lib/imaging/router";
 
-import { filePathAbs, safeId, SoundError } from "../store";
+import { filePathAbs, safeId, SoundError, storeRoot } from "../store";
 import { assertSourceHasAudio, fetchAudio, fetchClipBytes, type FetchClipFn } from "./fetchAudio";
 import { applyMetadataPatch, writeMetadata } from "./metadata";
 import { analyseTrack, renderMusicVideo, type AnalyseArgs, type RenderArgs } from "./render";
@@ -206,13 +217,16 @@ const sameSource = (a: MvSource, b: MvSource) => a.kind === b.kind && a.id === b
  *  holding a queued or active job returns that job instead of a second one.
  *  A track with a FINISHED job gets a new one - another video of the same
  *  song is a legitimate ask; Regenerate is the edit of an existing one. */
-export async function enqueueMv(sources: readonly MvSource[], now = Date.now()): Promise<MvJob[]> {
+export async function enqueueMv(sources: readonly MvSource[], now = Date.now(), opts: { prompt?: string } = {}): Promise<MvJob[]> {
   for (const s of sources) await assertSourceHasAudio(s);
+  // The operator's own still prompt for every new job (the batch CLI's
+  // --prompt); it replaces the treatment turn exactly as on a regenerate.
+  const prompt = opts.prompt?.replace(/\s+/g, " ").trim();
   const jobs = await withMv((f) =>
     sources.map((s, i) => {
       const live = f.jobs.find((j) => sameSource(j.source, s) && isLiveJob(j));
       if (live) return { ...live };
-      const job: MvJob = { id: mintMvId(), source: { ...s }, state: "queued", files: {}, verdict: null, enqueuedAt: now + i };
+      const job: MvJob = { id: mintMvId(), source: { ...s }, state: "queued", files: {}, verdict: null, enqueuedAt: now + i, ...(prompt ? { prompt } : {}) };
       f.jobs.push(job);
       return { ...job };
     }),
@@ -266,6 +280,25 @@ export async function regenerateMv(id: string, req: { part: MvPart; note?: strin
     delete j.phase;
     delete j.endedAt;
     delete f.progress[id];
+    return { ...j };
+  });
+  void kickMvWorker();
+  return job;
+}
+
+/** A failed job back to the queue as it stands: every file it has and any
+ *  redo it was running are kept, so the worker resumes at the step that
+ *  failed instead of re-rolling a part (Regenerate is the re-roll). */
+export async function retryMv(id: string, now = Date.now()): Promise<MvJob> {
+  await existing(id);
+  const job = await withMv((f) => {
+    const j = find(f, id);
+    if (j.state !== "failed") throw new SoundError(`this job is ${j.state}; only a failed video is retried`, 409);
+    j.state = "queued";
+    j.enqueuedAt = now;
+    delete j.error;
+    delete j.phase;
+    delete j.endedAt;
     return { ...j };
   });
   void kickMvWorker();
@@ -406,8 +439,9 @@ async function runStep(step: MvStep, j: MvJob, eng: MvEngines): Promise<(x: MvJo
       };
     }
     case "treat": {
-      const own = j.redo?.includes("image") ? j.prompt : undefined;
-      const treatment = own ? operatorTreatment(own, j.treatment) : await writeTreatment(input(), { note: noteFor("image"), reason: eng.reason });
+      // The step runs on a first run or an image redo; either way a prompt the
+      // operator set (enqueue or regenerate) replaces the turn.
+      const treatment = j.prompt ? operatorTreatment(j.prompt, j.treatment) : await writeTreatment(input(), { note: noteFor("image"), reason: eng.reason });
       return (x) => void (x.treatment = treatment);
     }
     case "motion": {
@@ -494,10 +528,79 @@ async function runOne(id: string, eng: MvEngines): Promise<void> {
   }
 }
 
+/* ── the cross-process lease (header) ─────────────────────────────────────── */
+
+const leaseFile = (): string => path.join(storeRoot(), "mv", "worker.lock");
+
+function alive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    // EPERM: the process exists and belongs to someone else - alive.
+    return (e as NodeJS.ErrnoException).code === "EPERM";
+  }
+}
+
+/** Take the lease, or return the sentence naming the process that holds it. */
+async function takeLease(): Promise<string | null> {
+  const file = leaseFile();
+  await mkdir(path.dirname(file), { recursive: true });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const h = await open(file, "wx");
+      await h.writeFile(JSON.stringify({ pid: process.pid, at: Date.now() }));
+      await h.close();
+      return null;
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
+    }
+    let pid = 0;
+    try {
+      pid = Number((JSON.parse(await readFile(file, "utf8")) as { pid?: unknown }).pid) || 0;
+    } catch {
+      // unreadable or half-written: treated as stale below
+    }
+    if (pid === process.pid) return null;
+    if (pid > 0 && alive(pid)) return `the music-video queue is being run by another process (pid ${pid})`;
+    await rm(file, { force: true });
+  }
+  return "the music-video queue's lease could not be taken";
+}
+
+async function dropLease(): Promise<void> {
+  const file = leaseFile();
+  try {
+    const pid = Number((JSON.parse(await readFile(file, "utf8")) as { pid?: unknown }).pid);
+    if (pid === process.pid) await rm(file, { force: true });
+  } catch {
+    // gone already, or not ours
+  }
+}
+
 const oldestQueued = (f: MvFile): MvJob | null => f.jobs.filter((j) => j.state === "queued").sort((a, b) => a.enqueuedAt - b.enqueuedAt)[0] ?? null;
 
 async function loop(): Promise<void> {
   const w = worker();
+  // Nothing switched on: no lease, no recovery (a snapshot read kicks this
+  // on every poll, and must not contend with the process that is rendering).
+  if (!(await readMv()).queue.running) {
+    w.paused = null;
+    return;
+  }
+  const held = await takeLease();
+  if (held) {
+    w.paused = held;
+    return;
+  }
+  try {
+    await drain(w);
+  } finally {
+    await dropLease();
+  }
+}
+
+async function drain(w: WorkerState): Promise<void> {
   if (!w.recovered) {
     w.recovered = true;
     await recover();

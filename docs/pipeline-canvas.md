@@ -454,7 +454,13 @@ then a re-render; `motion`: new effect parameters on the same still; `metadata`:
 render) and an optional note; everything not named is kept byte-identical; inert while queued or
 rendering. The API also takes `prompt` with `image`: the operator's own still prompt, used as
 written (the no-text clause welded on) in place of the treatment turn; the canvas form does not
-offer it yet. **Edit metadata** (title, description, tags). **Send to Calendar** — a publish date
+offer it yet.
+
+**A whole album, headless.** `pipeline/music-video.mts` (the `/music-video` skill) runs the same
+queue over a folder: `plan` reads only; `run --yes` imports, queues each track (a failed one is
+retried from its failed step), drains, switches the queue off, and writes `<track>.mp4` and
+`<track> - youtube.txt` beside each source. One process drains the store at a time
+(`mv/worker.lock`): a dev server whose queue is on pauses the CLI naming its pid, and the reverse. **Edit metadata** (title, description, tags). **Send to Calendar** — a publish date
 and time, a dry-run YouTube slot; finished videos only, inert once a slot exists. **Delete**
 (the record and its render files; the track stays). A verb on a card inside a selection acts on
 every selected video, stopping at the first refusal and saying how far it got.

@@ -337,6 +337,14 @@ export const MUTANTS: Mutant[] = [
     why: "Regenerate · metadata re-rolls the still and re-renders the video, spending a Leonardo image and minutes of render to change a title.",
   },
   {
+    id: "mv-lease-ignores-live-holder",
+    probe: "mv-queue.probe.spec.ts",
+    file: "lib/sound/mv/queue.ts",
+    find: "if (pid > 0 && alive(pid)) return `the music-video queue is being run by another process (pid ${pid})`;",
+    replace: "if (pid > 0 && alive(pid) && pid < 0) return `the music-video queue is being run by another process (pid ${pid})`;",
+    why: "An album batch and a dev server drain one store together: the second one's crash recovery requeues the job the first is rendering, and a still is bought twice.",
+  },
+  {
     id: "mv-focal-deaf-to-the-beat",
     probe: "mv-render.probe.spec.ts",
     file: "app/_phases/frames/music-video/compositor.ts",
