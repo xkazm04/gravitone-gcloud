@@ -9,7 +9,7 @@
 //   ... --resume --run strips-r1                                    # continue after a crash
 //
 // Spends the operator's Claude seat (one author turn per card, plus fix turns)
-// and up to one Leonardo image per card that declares one. --dry lists the
+// and up to one supporting image per card (imaging router, agy first) that declares one. --dry lists the
 // cards and spends nothing.
 
 import { existsSync, readFileSync } from "node:fs";

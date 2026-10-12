@@ -112,21 +112,28 @@ export async function authorStrip(input: AuthorInput): Promise<AuthorOutput> {
   };
 }
 
-/** One supporting image from Leonardo. No text, no logos, no people — the
- *  card's prompt says so and the negative prompt repeats it. */
+/** One supporting image. No text, logos or people - the card says so and the prompt repeats it. */
 export async function makeAsset(approach: Approach, lane: StripLane, fileBase: string): Promise<{ file: string; provider: string; costUsd?: number }> {
-  const { leonardoProvider } = await import("../../lib/imaging/providers/leonardo");
+  // Through the imaging router, so the plan decides the engine: agy (the
+  // operator's CLI, verified end to end 2026-10-12) leads, and Google/Leonardo
+  // serve when agy is absent. The card fields keep their historical names
+  // (`leonardo`, `leonardoPrompt`); they now mean "supporting asset".
+  const { generate } = await import("../../lib/imaging/router");
   const aspect = approach.leonardo === "texture" ? "1:1" : lane === "edu" ? "16:9" : "9:16";
-  const res = await leonardoProvider().generate!({
-    prompt: approach.leonardoPrompt ?? "",
+  // agy takes one prose prompt and has no negative channel, so the exclusions
+  // ride in the prompt too; providers with a native channel also get them there.
+  const prompt = `${approach.leonardoPrompt ?? ""}. Strictly no text, letters, numbers, logos, watermarks, people, faces or hands.`;
+  const res = await generate({
+    prompt,
     negativePrompt: "text, letters, words, numbers, watermark, logo, signature, people, faces, hands",
     aspect,
     count: 1,
+    prefer: "agy",
   });
   const img = res.images[0];
-  if (!img) throw new Error("Leonardo returned no image");
+  if (!img) throw new Error(`${res.provenance.provider} returned no image`);
   const file = `${fileBase}.${img.mime === "image/jpeg" ? "jpg" : img.mime === "image/webp" ? "webp" : "png"}`;
   await mkdir(path.dirname(file), { recursive: true });
   await writeFile(file, Buffer.from(img.base64, "base64"));
-  return { file, provider: res.provenance.provider, costUsd: res.provenance.costUsd };
+  return { file, provider: `${res.provenance.provider}/${res.provenance.model}`, costUsd: res.provenance.costUsd };
 }
