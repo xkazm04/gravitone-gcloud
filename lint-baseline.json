@@ -30,6 +30,6 @@
     "react-hooks/set-state-in-effect": 10,
     "react-hooks/exhaustive-deps": 0,
     "react-hooks/refs": 1,
-    "@typescript-eslint/no-floating-promises": 21
+    "@typescript-eslint/no-floating-promises": 17
   }
 }
