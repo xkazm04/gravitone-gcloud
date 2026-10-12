@@ -1,0 +1,37 @@
+{
+ "schema": "conform-run/1",
+ "worker": "0da8554c-7eb6-4d56-b401-e1e450778c3f",
+ "subject": "agent-memory",
+ "evaluatedAt": "2026-10-12T22:49:55.865775+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "agent-memory",
+   "context": "script-phase",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "agent-memory",
+   "context": "production-script-probes",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "agent-memory",
+   "context": "studio-logic-probes",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "agent-memory",
+   "context": "phase-shared",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "agent-memory",
+   "context": "data-asset-probes",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": []
+}
