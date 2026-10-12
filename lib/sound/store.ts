@@ -190,7 +190,31 @@ export async function writeJsonAtomic(file: string, value: unknown): Promise<voi
   await mkdir(path.dirname(file), { recursive: true });
   const tmp = tmpOf(file);
   await writeFile(tmp, `${JSON.stringify(value, null, 2)}\n`, "utf8");
-  await rename(tmp, file);
+  await renameInto(tmp, file);
+}
+
+// Windows refuses a rename onto a file another process holds open (a reader, an
+// indexer, an antivirus scan) with EPERM/EBUSY/EACCES, and the refusal clears
+// within milliseconds. Without a retry the write throws and the tmp stays
+// behind beside a store that never got it: measured 2026-10-12, a
+// takes.json.<pid>.<n>.tmp from 2026-10-10 sat in foundry-out/sound with no takes.json.
+const RENAME_RETRY = new Set(["EPERM", "EBUSY", "EACCES"]);
+async function renameInto(tmp: string, file: string): Promise<void> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await rename(tmp, file);
+      return;
+    } catch (e) {
+      const code = (e as NodeJS.ErrnoException).code ?? "";
+      // Jittered: a reader polling on a fixed beat would otherwise meet every retry.
+      if (RENAME_RETRY.has(code) && attempt < 10) {
+        await new Promise((r) => setTimeout(r, Math.min(400, 10 * 2 ** attempt) * (0.5 + Math.random())));
+        continue;
+      }
+      await rm(tmp, { force: true }).catch(() => {});
+      throw e;
+    }
+  }
 }
 
 /** The same discipline for audio bytes. Returns the store-relative path. */
@@ -199,7 +223,7 @@ export async function writeBytesAtomic(rel: string, bytes: Uint8Array): Promise<
   await mkdir(path.dirname(abs), { recursive: true });
   const tmp = tmpOf(abs);
   await writeFile(tmp, bytes);
-  await rename(tmp, abs);
+  await renameInto(tmp, abs);
   return rel.split(path.sep).join("/");
 }
 
