@@ -4,10 +4,21 @@
 // THE WORKER IS A SINGLETON ON globalThis (`__gtSunoWorker`), because Next dev
 // re-evaluates this module on every HMR edit and a module-level `let` would
 // start a second loop driving the same Chrome tab. It starts lazily: on an
-// enqueue and on every snapshot read. The FIRST start in a process turns any
-// `active` job back into `queued` — a job that was active when the process died
-// is a crashed run, and models that already landed clips are not re-created
-// (one Suno create is credits; a resume spends only what is missing).
+// enqueue, on the operator's Start and on every snapshot read.
+//
+// THE QUEUE DRAINS ONLY WHILE IT IS SWITCHED ON (suno.json `queue.running`,
+// the Queue column's Start / Stop verbs). Putting a prompt in the queue never
+// starts it: the worker drives the operator's browser and spends their credits,
+// and a batch is reviewed in the column before it runs (operator, 2026-10-12).
+// Stop lets the model being created finish - a create cannot be called back -
+// and returns its job to the queue holding the clips it has.
+//
+// THE FIRST START IN A PROCESS turns any `active` job back into `queued` — a
+// job that was active when the process died is a crashed run, and models that
+// already landed clips are not re-created. The model that was mid-create may
+// have been spent on Suno with its clips never collected, so a crash also
+// switches the queue OFF and says which job and model (`queue.interrupted`):
+// the operator checks their Suno library before pressing Start again.
 //
 // THE LOOP: the oldest queued job -> active, startedAt -> for each model the
 // job still needs: model + phase persisted on every phase change ->
@@ -15,10 +26,10 @@
 // both models done: `done`, endedAt. Any throw: `failed` with the driver's
 // message VERBATIM, the proposal wears it, and the loop goes on to the next
 // job. A driver that is not ok PAUSES the loop (no job is failed for it); the
-// next enqueue or snapshot read starts it again.
+// next kick starts it again.
 
 import { createSunoTracks as realCreate, listSunoLibrary as realList, probeSuno as realProbe } from "@/lib/suno/driver";
-import { SUNO_MODELS, type SunoClip, type SunoClipRef, type SunoDriverHealth, type SunoFields, type SunoJob, type SunoLane, type SunoLibraryClip, type SunoModel, type SunoPhase, type SunoSnapshot } from "@/lib/suno/types";
+import { SUNO_MODEL_LABEL, SUNO_MODELS, type SunoQueueState, type SunoClip, type SunoClipRef, type SunoDriverHealth, type SunoFields, type SunoJob, type SunoLane, type SunoLibraryClip, type SunoModel, type SunoPhase, type SunoSnapshot } from "@/lib/suno/types";
 
 import { UNGROUPED_LANE } from "@/lib/board/pipeline";
 
@@ -75,7 +86,7 @@ export async function enqueueProposals(ids: readonly string[], now = Date.now())
   if (!ids.length) throw new SoundError('"proposalIds" is empty: name at least one proposal', 400);
   ids.forEach(safeId);
   const jobs = await withSuno((f) => enqueueIn(f, ids, now));
-  kickSunoWorker();
+  void kickSunoWorker();
   return jobs;
 }
 
@@ -149,7 +160,7 @@ export async function enqueueHuntLeaves(refs: readonly string[], lane: SunoLane 
     });
     return enqueueIn(f, ids, now);
   });
-  kickSunoWorker();
+  void kickSunoWorker();
   return jobs;
 }
 
@@ -184,12 +195,15 @@ interface WorkerState {
 const G = globalThis as typeof globalThis & { __gtSunoWorker?: WorkerState };
 const worker = (): WorkerState => (G.__gtSunoWorker ??= { loop: null, recovered: false, paused: null, again: false });
 
-/** A crashed run: every `active` job goes back to `queued`, keeping its clips. */
+/** A crashed run: every `active` job goes back to `queued`, keeping its clips,
+ *  and the queue is switched off with the job and model named. */
 async function recover(): Promise<number> {
   return withSuno((f) => {
     let n = 0;
     for (const j of f.jobs) {
       if (j.state !== "active") continue;
+      const what = `"${j.fields.title ?? j.fields.style}"${j.model ? ` on ${SUNO_MODEL_LABEL[j.model] ?? j.model}` : ""}`;
+      f.queue = { running: false, interrupted: `${what} was being created when the server stopped; check your Suno library before starting` };
       j.state = "queued";
       delete j.phase;
       delete j.model;
@@ -197,6 +211,17 @@ async function recover(): Promise<number> {
     }
     return n;
   });
+}
+
+/** The operator's switch. Start clears an interruption (they have looked) and
+ *  kicks the worker; Stop lets the create in flight finish. */
+export async function setSunoQueue(running: boolean): Promise<SunoQueueState> {
+  const state = await withSuno((f) => {
+    f.queue = { running };
+    return { ...f.queue };
+  });
+  if (running) void kickSunoWorker();
+  return state;
 }
 
 const oldestQueued = (f: SunoFile): SunoJob | null =>
@@ -223,6 +248,16 @@ async function runOne(driver: SunoDriver, id: string): Promise<void> {
     const have = new Set((await readSuno()).clips.filter((c) => c.jobId === id).map((c) => c.model));
     for (const model of job.models) {
       if (have.has(model)) continue;
+      // Stopped between models: back to the queue with the clips it has; the
+      // next Start creates only what is missing.
+      if (!(await readSuno()).queue.running) {
+        await patchJob(id, (j) => {
+          j.state = "queued";
+          delete j.phase;
+          delete j.model;
+        });
+        return;
+      }
       // Phase writes are chained, not awaited inline: the driver is not held
       // up by a disk write, and the last write lands before the clips do.
       let writes = Promise.resolve();
@@ -282,7 +317,12 @@ async function loop(): Promise<void> {
   }
   for (;;) {
     w.again = false;
-    const next = oldestQueued(await readSuno());
+    const f = await readSuno();
+    if (!f.queue.running) {
+      w.paused = null;
+      return;
+    }
+    const next = oldestQueued(f);
     if (!next) {
       if (w.again) continue;
       w.paused = null;
@@ -331,5 +371,5 @@ export async function sunoSnapshot(): Promise<SunoSnapshot> {
   // Not awaited; the loop's errors are its own.
   void kickSunoWorker();
   const f = await readSuno();
-  return { proposals: f.proposals, jobs: f.jobs, clips: f.clips, driver };
+  return { proposals: f.proposals, jobs: f.jobs, clips: f.clips, driver, queue: f.queue };
 }

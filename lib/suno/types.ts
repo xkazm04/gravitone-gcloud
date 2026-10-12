@@ -132,12 +132,37 @@ export const sunoModelLabel = (model: string): string => (SUNO_MODEL_LABEL as Re
 
 export type SunoDriverHealth = { ok: true } | { ok: false; reason: string };
 
+/** The queue's switch. It drains only while `running`: a browser spending
+ *  credits is started and stopped by the operator, never by an enqueue.
+ *  `interrupted` is set when a process died mid-create - that model may have
+ *  been spent on Suno already - and switches the queue off until the operator
+ *  starts it again (which clears it). */
+export interface SunoQueueState {
+  running: boolean;
+  interrupted?: string;
+}
+
 /** GET /api/sound/suno */
 export interface SunoSnapshot {
   proposals: SunoProposal[];
   jobs: SunoJob[];
   clips: SunoClip[];
   driver: SunoDriverHealth;
+  queue: SunoQueueState;
+}
+
+/** POST /api/sound/suno/clear - housekeeping on our records only; nothing on
+ *  suno.com is touched. A running job is never cancelled and a queued
+ *  proposal is never removed: those are `skipped`. */
+export interface SunoClearRequest {
+  proposalIds?: string[];
+  jobIds?: string[];
+  clipIds?: string[];
+}
+export interface SunoClearResult {
+  removed: number;
+  cancelled: number;
+  skipped: number;
 }
 
 /** The CDP port the dedicated profile listens on (Leonardo's was 9333). */

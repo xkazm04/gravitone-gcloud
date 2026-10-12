@@ -212,6 +212,11 @@ export interface PipelineLoadNotes {
   damaged: string[];
   /** A stage whose own read failed while the rest of the lane loaded. */
   degraded?: { stage: CanonStage; reason: string }[];
+  /** A stage that works only while the operator has it switched on (the Suno
+   *  queue: a browser spending credits is started and stopped by hand).
+   *  `interrupted` names a run a crash cut short, for the operator to check
+   *  before switching it on again. Absent = the source has no such stage. */
+  switched?: { stage: CanonStage; on: boolean; interrupted?: string }[];
 }
 
 /** Per-item version bookkeeping, so a card re-renders on its own change and
@@ -270,6 +275,9 @@ export interface VerbTarget {
   stage?: CanonStage;
   band?: string | null;
   itemId?: string;
+  /** A card verb asked on a card inside a selection of several: every
+   *  selected id, `itemId` among them. Absent = the card alone. */
+  itemIds?: string[];
 }
 
 /** A verb's input form. `suno-fields` opens the prompt writer (title, style,
@@ -282,6 +290,11 @@ export interface BoardVerb {
   input?: { kind: VerbInputKind; initial?: VerbInput };
   /** Present = the verb is shown but inert, with this as its reason. */
   disabled?: string;
+  /** Deletes or cancels work. Drawn apart, and never the menu's first item. */
+  destructive?: true;
+  /** The consequence, stated before a destructive verb runs ("12 clips leave
+   *  the board; Suno keeps the songs"). Present = the canvas asks first. */
+  confirm?: string;
   /** The verb bills a vendor (e.g. queues Suno creates). The canvas's arm
    *  wrapper (app/foundry/pipeline/arm.ts) answers it dry while STUB, so a
    *  source never sees a spending verb the money switch did not allow. */

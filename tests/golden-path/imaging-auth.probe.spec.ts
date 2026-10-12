@@ -64,6 +64,8 @@ import { POST as sunoQueuePOST } from "@/app/api/sound/suno/queue/route";
 import { DELETE as sunoQueueDELETE } from "@/app/api/sound/suno/queue/[id]/route";
 import { PATCH as sunoClipPATCH } from "@/app/api/sound/suno/clips/[id]/route";
 import { POST as sunoLibraryPOST } from "@/app/api/sound/suno/library/route";
+import { POST as sunoRunPOST } from "@/app/api/sound/suno/run/route";
+import { POST as sunoClearPOST } from "@/app/api/sound/suno/clear/route";
 import { POST as articlesCreatePOST } from "@/app/api/articles/route";
 import { POST as articlesApprovePOST } from "@/app/api/articles/[runId]/approve/route";
 import { POST as articlesResumePOST } from "@/app/api/articles/[runId]/resume/route";
@@ -210,6 +212,8 @@ const ROUTES: [string, string, (r: Request) => Promise<Response>][] = [
   // only) and writes the store: an empty body is a 400 ("all" must be true)
   // before the browser or the store is reached.
   ["sound/suno/library", "/api/sound/suno/library", sunoLibraryPOST],
+  ["sound/suno/run", "/api/sound/suno/run", sunoRunPOST],
+  ["sound/suno/clear", "/api/sound/suno/clear", sunoClearPOST],
   // The article pipeline (WP4). Create spends a research turn on the operator's
   // Claude seat; approve pushes a branch and opens a PR in ai-registry; resume
   // re-runs a step. An empty body is a 400 from create's topic check; the run

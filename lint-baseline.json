@@ -24,12 +24,12 @@
     "    downgrade in eslint.config.mjs, so the rule stands at plain blocking",
     "    severity."
   ],
-  "measuredAt": "2026-10-11",
+  "measuredAt": "2026-10-12",
   "filesFloor": 150,
   "warnings": {
     "react-hooks/set-state-in-effect": 10,
     "react-hooks/exhaustive-deps": 0,
     "react-hooks/refs": 1,
-    "@typescript-eslint/no-floating-promises": 17
+    "@typescript-eslint/no-floating-promises": 15
   }
 }

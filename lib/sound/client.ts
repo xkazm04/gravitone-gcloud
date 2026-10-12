@@ -4,7 +4,7 @@
 // `{ ok: false, status, error }`, the error being the engine's own words.
 
 import { accessHeader, withAccess } from "@/lib/imagingClient";
-import type { SunoClip, SunoFields, SunoImportResult, SunoJob, SunoLane, SunoProposal, SunoSnapshot, SunoVerdict } from "@/lib/suno/types";
+import type { SunoClearRequest, SunoClearResult, SunoClip, SunoFields, SunoImportResult, SunoJob, SunoLane, SunoProposal, SunoQueueState, SunoSnapshot, SunoVerdict } from "@/lib/suno/types";
 
 import type {
   GenerateRequest,
@@ -152,3 +152,13 @@ export const patchSunoClip = (id: string, patch: { verdict?: SunoVerdict | null;
 
 /** Read the operator's whole Suno library into triage. Free; idempotent by song id. */
 export const importSunoLibraryClips = () => call<SunoImportResult>("/api/sound/suno/library", { method: "POST", body: JSON.stringify({ all: true }) });
+
+/** The Queue column's switch. Start spends: the worker drives Suno until the
+ *  queue is empty or stopped. */
+export const setSunoQueueRunning = (running: boolean) =>
+  call<{ queue: SunoQueueState }>("/api/sound/suno/run", { method: "POST", body: JSON.stringify({ running }) });
+
+/** Remove prompts and clip records, cancel queued jobs, in one write. Nothing
+ *  on suno.com is touched. */
+export const clearSunoRecords = (req: SunoClearRequest) =>
+  call<SunoClearResult>("/api/sound/suno/clear", { method: "POST", body: JSON.stringify(req) });

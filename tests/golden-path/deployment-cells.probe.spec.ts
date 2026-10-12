@@ -266,6 +266,8 @@ const EXPECT: Record<string, Expectation> = {
   "app/api/sound/suno/route.ts": { door: "access", ok: { GET: "2xx" } },
   "app/api/sound/suno/clips/[id]/route.ts": { door: "money", ok: { PATCH: "4xx" } },
   "app/api/sound/suno/library/route.ts": { door: "money", ok: { POST: "4xx" } },
+  "app/api/sound/suno/run/route.ts": { door: "money", ok: { POST: "4xx" } },
+  "app/api/sound/suno/clear/route.ts": { door: "money", ok: { POST: "4xx" } },
   "app/api/sound/suno/proposals/[id]/route.ts": { door: "money", ok: { DELETE: "4xx" } },
   "app/api/sound/suno/proposals/route.ts": { door: "money", ok: { POST: "4xx" } },
   "app/api/sound/suno/propose/route.ts": { door: "money", ok: { POST: "4xx" } },

@@ -6,10 +6,15 @@
 // per test, and the worker singleton is reset as a fresh process would find
 // it. What is pinned, through the REAL route handlers where a route exists:
 //
+//   · the switch: an enqueue never starts the queue; Start does, Stop lets the
+//     create in flight finish and returns its job holding the clips it has;
 //   · FIFO: jobs run in the order they were queued, one at a time;
 //   · every job renders on BOTH models, 2 clips each = 4 clips, verdict null;
-//   · crash-resume: an `active` job found on start goes back to `queued`, and
-//     a model that already landed clips is not created again;
+//   · crash-resume: an `active` job found on start goes back to `queued`, the
+//     queue switches OFF naming the job and model, and after Start a model
+//     that already landed clips is not created again;
+//   · clear: prompts and clip records removed, queued jobs cancelled, a running
+//     job and a queued prompt skipped, all in one write;
 //   · a failure fails ITS job with the driver's sentence verbatim, the
 //     proposal wears it and is a candidate again, and the queue goes on;
 //   · cancel: a queued job only - an active one is a 409;
@@ -46,6 +51,8 @@ import { POST as queuePOST } from "@/app/api/sound/suno/queue/route";
 import { DELETE as queueDELETE } from "@/app/api/sound/suno/queue/[id]/route";
 import { PATCH as clipPATCH } from "@/app/api/sound/suno/clips/[id]/route";
 import { POST as libraryPOST } from "@/app/api/sound/suno/library/route";
+import { POST as runPOST } from "@/app/api/sound/suno/run/route";
+import { POST as clearPOST } from "@/app/api/sound/suno/clear/route";
 import { UNGROUPED_LANE } from "@/lib/board/pipeline";
 import { makeAudioSource } from "@/lib/board/sources/audio";
 
@@ -97,6 +104,14 @@ async function enqueue(ids: string[]): Promise<SunoJob[]> {
   return (await read<{ jobs: SunoJob[] }>(res)).jobs;
 }
 
+/** The Queue column's Start, through the real route. Returns the loop so a
+ *  test can await the drain. */
+async function start(): Promise<void> {
+  const res = await runPOST(rq("/api/sound/suno/run", "POST", { running: true }));
+  expect(res.status).toBe(200);
+  await kickSunoWorker();
+}
+
 const storeFile = () => path.join(process.env.SOUND_STORE_DIR!, "suno.json");
 function writeStore(f: SunoFile) {
   mkdirSync(path.dirname(storeFile()), { recursive: true });
@@ -113,6 +128,10 @@ test("FIFO, both models, 4 clips per job, persisted to suno.json", async () => {
   await enqueue([a.id]);
   await enqueue([b.id, c.id]);
   await kickSunoWorker();
+  // queued is not started: nothing spends until the operator presses Start
+  expect(FAKE_SUNO.calls).toEqual([]);
+  expect((await readSuno()).jobs.map((j) => j.state)).toEqual(["queued", "queued", "queued"]);
+  await start();
 
   console.log(`\nSUNO calls\n${FAKE_SUNO.calls.map((x) => `${x.style} @ ${x.model}`).join("\n")}`);
   expect(FAKE_SUNO.calls).toEqual([
@@ -141,7 +160,8 @@ test("FIFO, both models, 4 clips per job, persisted to suno.json", async () => {
 
   // on disk, in the declared shape, atomically (no tmp file left beside it)
   const disk = JSON.parse(readFileSync(storeFile(), "utf8")) as SunoFile;
-  expect(Object.keys(disk).sort()).toEqual(["clips", "jobs", "proposals", "version"]);
+  expect(Object.keys(disk).sort()).toEqual(["clips", "jobs", "proposals", "queue", "version"]);
+  expect(disk.queue).toEqual({ running: true });
   expect(disk.clips).toHaveLength(12);
   expect(readdirSync(path.dirname(storeFile())).filter((n) => n.endsWith(".tmp") || n === ".lock")).toEqual([]);
 
@@ -166,6 +186,7 @@ test("the active phase and model are persisted while the driver works", async ()
   let release!: () => void;
   FAKE_SUNO.hold = new Promise<void>((r) => (release = r));
   await enqueue([a.id]);
+  expect((await runPOST(rq("/api/sound/suno/run", "POST", { running: true }))).status).toBe(200);
   const running = kickSunoWorker();
   let seen: SunoJob | undefined;
   for (let i = 0; i < 2000 && seen?.phase !== "creating"; i++) { // ~10s+: a loaded gate run reaches "creating" late
@@ -185,11 +206,12 @@ test("the active phase and model are persisted while the driver works", async ()
   expect((await readSuno()).jobs[0].state).toBe("done");
 });
 
-test("crash-resume: an active job goes back to queued on start, and only the missing model is created", async () => {
+test("crash-resume: an active job goes back to queued, the queue stops naming it, and after Start only the missing model is created", async () => {
   const now = Date.now();
   const proposal: SunoProposal = { id: "sp-0000000001", fields: { style: "drill, 808 slides" }, lane: { axis: "group", value: "hip hop" }, origin: "custom", createdAt: now - 10_000 };
   writeStore({
     version: 1,
+    queue: { running: true },
     proposals: [proposal],
     jobs: [
       { id: "sj-0000000001", proposalId: proposal.id, fields: proposal.fields, lane: proposal.lane, state: "active", phase: "rendering", model: "v6-wild", models: ["v6", "v6-wild"], enqueuedAt: now - 9000, startedAt: now - 8000, clipIds: ["sc-0000000001", "sc-0000000002"] },
@@ -199,6 +221,15 @@ test("crash-resume: an active job goes back to queued on start, and only the mis
     clips: ["sc-0000000001", "sc-0000000002"].map((id, i) => ({ id, jobId: "sj-0000000001", model: "v6" as const, songId: `old-${i}`, url: `https://suno.com/song/old-${i}`, audioUrl: null, imageUrl: null, title: "old", durationS: null, createdAt: now - 7000, verdict: null }) as unknown as SunoClip),
   });
   await kickSunoWorker();
+  // the model that was mid-create may already be spent on Suno: nothing runs
+  // until the operator has looked
+  expect(FAKE_SUNO.calls).toEqual([]);
+  const stopped = await readSuno();
+  expect(stopped.jobs[0].state).toBe("queued");
+  expect(stopped.queue.running).toBe(false);
+  expect(stopped.queue.interrupted).toContain('"drill, 808 slides" on v6-wild');
+  await start();
+  expect((await readSuno()).queue).toEqual({ running: true });
   expect(FAKE_SUNO.calls).toEqual([{ style: "drill, 808 slides", model: "v6-wild" }]);
   const f = await readSuno();
   expect(f.jobs[0].state).toBe("done");
@@ -214,7 +245,7 @@ test("a failure fails its job verbatim, the proposal wears it and is a candidate
   const b = await propose("bossa nova, nylon guitar", "B");
   FAKE_SUNO.failWith = (fields, model) => (fields.style.startsWith("trap") && model === "v6-wild" ? "Suno refused the style: 'trap, dark' (moderation)" : null);
   await enqueue([a.id, b.id]);
-  await kickSunoWorker();
+  await start();
   const f = await readSuno();
   const [ja, jb] = f.jobs;
   expect(ja).toMatchObject({ state: "failed", error: "Suno refused the style: 'trap, dark' (moderation)" });
@@ -257,7 +288,7 @@ test("a driver that is not ok pauses the queue without failing a job; the next k
   FAKE_SUNO.health = { ok: false, reason: "Suno is signed out in the dedicated profile" };
   const a = await propose("synthwave, gated drums");
   await enqueue([a.id]);
-  await kickSunoWorker();
+  await start();
   expect((await readSuno()).jobs[0].state).toBe("queued");
   expect(sunoWorkerPaused()).toBe("Suno is signed out in the dedicated profile");
   const snap = await read<SunoSnapshot>(await sunoGET(rq("/api/sound/suno")));
@@ -271,6 +302,58 @@ test("a driver that is not ok pauses the queue without failing a job; the next k
   await kickSunoWorker();
   expect((await readSuno()).jobs[0].state).toBe("done");
   expect(sunoWorkerPaused()).toBeNull();
+});
+
+test("stop: the create in flight finishes, its job goes back to the queue holding its clips, and Start creates only what is missing", async () => {
+  const a = await propose("uk garage, shuffled hats", "A");
+  const b = await propose("cumbia, accordion", "B");
+  await enqueue([a.id, b.id]);
+  let release!: () => void;
+  FAKE_SUNO.hold = new Promise<void>((r) => (release = r));
+  expect((await runPOST(rq("/api/sound/suno/run", "POST", { running: true }))).status).toBe(200);
+  const running = kickSunoWorker();
+  for (let i = 0; i < 2000 && (await readSuno()).jobs[0].phase !== "creating"; i++) await new Promise((r) => setTimeout(r, 5));
+  const stop = await runPOST(rq("/api/sound/suno/run", "POST", { running: false }));
+  expect(await read<{ queue: unknown }>(stop)).toEqual({ queue: { running: false } });
+  FAKE_SUNO.hold = null;
+  release();
+  await running;
+  const f = await readSuno();
+  expect(FAKE_SUNO.calls).toEqual([{ style: "uk garage, shuffled hats", model: "v6" }]);
+  expect(f.jobs.map((j) => j.state)).toEqual(["queued", "queued"]);
+  expect(f.jobs[0].clipIds).toHaveLength(2);
+  await start();
+  expect(FAKE_SUNO.calls.slice(1)).toEqual([
+    { style: "uk garage, shuffled hats", model: "v6-wild" },
+    { style: "cumbia, accordion", model: "v6" },
+    { style: "cumbia, accordion", model: "v6-wild" },
+  ]);
+  // a switch without a boolean is refused before the store is read
+  expect((await runPOST(rq("/api/sound/suno/run", "POST", { running: "yes" }))).status).toBe(400);
+});
+
+test("clear: prompts and clip records removed, queued jobs cancelled; a running job and a queued prompt are skipped", async () => {
+  const a = await propose("afrobeat, horns", "A");
+  const b = await propose("shoegaze, wall of fuzz", "B");
+  const c = await propose("baile funk", "C");
+  await enqueue([a.id]);
+  await start(); // a: done, 4 clips
+  const [jb] = await enqueue([b.id]); // queued, queue stopped below
+  await runPOST(rq("/api/sound/suno/run", "POST", { running: false }));
+  const [jc] = await enqueue([c.id]);
+  const before = await readSuno();
+  const clipIds = before.clips.slice(0, 3).map((x) => x.id);
+  const res = await clearPOST(rq("/api/sound/suno/clear", "POST", { clipIds: [...clipIds, "sc-ffffffffff"], jobIds: [jb.id], proposalIds: [c.id] }));
+  expect(res.status).toBe(200);
+  // 3 clips removed; b's job cancelled; c's prompt skipped (its job is queued); the unknown clip skipped
+  expect(await read<unknown>(res)).toEqual({ removed: 3, cancelled: 1, skipped: 2 });
+  const f = await readSuno();
+  expect(f.clips).toHaveLength(1);
+  expect(f.jobs.find((j) => j.id === jb.id)!.state).toBe("cancelled");
+  expect(f.jobs.find((j) => j.id === jc.id)!.state).toBe("queued");
+  expect(f.proposals.map((p) => p.id).sort()).toEqual([a.id, b.id, c.id].sort());
+  expect(FAKE_SUNO.calls).toHaveLength(2); // clearing never reaches Suno
+  expect((await clearPOST(rq("/api/sound/suno/clear", "POST", {}))).status).toBe(400);
 });
 
 /* ── hunt leaves ──────────────────────────────────────────────────────────── */
@@ -372,7 +455,7 @@ test("library import: every song becomes an ungrouped, unjudged library clip; a 
   // the queue renders first: its first clip is song fake-0001, which the fake library lists too
   const a = await propose("lo-fi house, rhodes", "A");
   await enqueue([a.id]);
-  await kickSunoWorker();
+  await start();
   expect((await readSuno()).clips.map((c) => c.songId)).toContain("fake-0001");
 
   // an empty body names nothing: 400 before the driver is asked
@@ -423,6 +506,7 @@ function routeFetchToHandlers() {
     if (url.pathname === "/api/sound/groups") return Response.json({ groups: { music: ["ambient", "electronic"], sfx: [] } });
     if (url.pathname === "/api/sound/suno" && method === "GET") return sunoGET(rq(url.pathname));
     if (url.pathname === "/api/sound/suno/library" && method === "POST") return libraryPOST(rq(url.pathname, "POST", body));
+    if (url.pathname === "/api/sound/suno/clear" && method === "POST") return clearPOST(rq(url.pathname, "POST", body));
     const clip = /^\/api\/sound\/suno\/clips\/([^/]+)$/.exec(url.pathname);
     if (clip && method === "PATCH") return clipPATCH(rq(url.pathname, "PATCH", body), ctx(decodeURIComponent(clip[1])));
     return Response.json({ error: `unrouted in the probe: ${method} ${url.pathname}` }, { status: 404 });
@@ -438,6 +522,7 @@ test("library clips through the audio adapter: ungrouped in triage under every a
 
     // the import is a triage cell verb, free (no `spends`), and announces its counts
     const cell = { axis: "group", lane: UNGROUPED_LANE, stage: "gate" as const, band: "triage" };
+    // and no "Delete all" while the tile holds no clip
     expect(src.cellVerbs!(cell)).toEqual([{ id: "suno.import-library", label: "Import Suno library" }]);
     expect(src.cellVerbs!({ ...cell, band: "pending" })).toEqual([]);
     expect(await src.runVerb!("suno.import-library", cell)).toEqual({ ok: true, announce: "Suno library: added 3, skipped 0" });
@@ -485,7 +570,7 @@ test("library clips through the audio adapter: ungrouped in triage under every a
     // keep / drop verbs on another library clip, the same as on a queue clip
     const other = lib.find((e) => e.item.id !== shape.item.id)!;
     const otherId = other.item.id.replace("audio:suno:clip:", "");
-    expect(fresh.cardVerbs!(other.item.id).map((v) => v.id)).toEqual(["suno.keep", "suno.drop"]);
+    expect(fresh.cardVerbs!(other.item.id).map((v) => v.id)).toEqual(["suno.keep", "suno.drop", "suno.delete"]);
     expect((await fresh.runVerb!("suno.keep", { axis: "group", itemId: other.item.id })).ok).toBe(true);
     expect((await readSuno()).clips.find((c) => c.id === otherId)!.verdict).toBe("keep");
     expect((await fresh.runVerb!("suno.drop", { axis: "group", itemId: other.item.id })).ok).toBe(true);
@@ -494,6 +579,11 @@ test("library clips through the audio adapter: ungrouped in triage under every a
     expect(fresh.lastLoad().hidden).toEqual([{ stage: "gate", count: 1, why: "Suno clips dropped" }]);
     // kept, and under the row axis back in ungrouped: its lane now belongs to genre
     expect(last.find((e) => e.item.id === shape.item.id)!.placement).toEqual({ stage: "gate", band: "pending", lane: UNGROUPED_LANE });
+
+    // delete removes the record, never the song: the next import brings it back
+    expect(await fresh.runVerb!("suno.delete", { axis: "group", itemId: shape.item.id })).toMatchObject({ ok: true });
+    expect((await readSuno()).clips.map((c) => c.id)).not.toContain(shape.item.id.replace("audio:suno:clip:", ""));
+    expect(await fresh.runVerb!("suno.import-library", cell)).toEqual({ ok: true, announce: "Suno library: added 1, skipped 2" });
   } finally {
     net.restore();
   }

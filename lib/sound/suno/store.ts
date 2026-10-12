@@ -1,7 +1,10 @@
 // THE SUNO QUEUE'S STORE — one JSON file beside the sound store's three.
 // Server-only (node:fs).
 //
-//   <root>/suno.json   { version, proposals: SunoProposal[], jobs: SunoJob[], clips: SunoClip[] }
+//   <root>/suno.json   { version, queue: SunoQueueState, proposals: SunoProposal[], jobs: SunoJob[], clips: SunoClip[] }
+//
+// `queue` is the operator's switch (./queue.ts). A file written before it
+// existed reads as stopped: nothing spends until somebody presses Start.
 //
 // <root> is lib/sound/store.ts's storeRoot() (foundry-out/sound/, or
 // SOUND_STORE_DIR, read lazily per call so a probe can point it at a temp dir).
@@ -26,18 +29,24 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { SunoClip, SunoFields, SunoJob, SunoLane, SunoProposal } from "@/lib/suno/types";
+import type { SunoClearRequest, SunoClearResult, SunoClip, SunoFields, SunoJob, SunoLane, SunoProposal, SunoQueueState } from "@/lib/suno/types";
 
 import { SoundError, safeId, storeRoot, withStore, writeJsonAtomic } from "../store";
 
 export interface SunoFile {
   version: 1;
+  queue: SunoQueueState;
   proposals: SunoProposal[];
   jobs: SunoJob[];
   clips: SunoClip[];
 }
 
-const empty = (): SunoFile => ({ version: 1, proposals: [], jobs: [], clips: [] });
+const empty = (): SunoFile => ({ version: 1, queue: { running: false }, proposals: [], jobs: [], clips: [] });
+
+function queueOf(v: unknown): SunoQueueState {
+  const o = v && typeof v === "object" ? (v as Partial<SunoQueueState>) : {};
+  return { running: o.running === true, ...(typeof o.interrupted === "string" && o.interrupted ? { interrupted: o.interrupted } : {}) };
+}
 
 export const sunoFile = (): string => path.join(storeRoot(), "suno.json");
 
@@ -59,6 +68,7 @@ export async function readSuno(): Promise<SunoFile> {
   }
   return {
     version: 1,
+    queue: queueOf(parsed.queue),
     proposals: Array.isArray(parsed.proposals) ? parsed.proposals : [],
     jobs: Array.isArray(parsed.jobs) ? parsed.jobs.map((j) => ({ ...j, clipIds: Array.isArray(j.clipIds) ? j.clipIds : [] })) : [],
     clips: Array.isArray(parsed.clips) ? parsed.clips.map((c) => backfillClip(c, parsed.jobs)) : [],
@@ -223,5 +233,49 @@ export async function patchClip(id: string, patch: ClipPatch): Promise<SunoClip>
     if (patch.lane === null) delete c.lane;
     else if (patch.lane) c.lane = { ...patch.lane };
     return { ...c };
+  });
+}
+
+/* ── housekeeping ─────────────────────────────────────────────────────────── */
+
+/** Remove our records in one write: proposals (not while queued or running),
+ *  queued jobs (cancelled - a running one is skipped, its credits are spent),
+ *  and clips (the record only: the song stays in the operator's Suno library
+ *  and a library import brings it back). Unknown ids are skipped, not refused,
+ *  because a board read can be a poll behind. */
+export async function clearSuno(req: SunoClearRequest, now = Date.now()): Promise<SunoClearResult> {
+  const list = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
+  const proposalIds = list(req.proposalIds);
+  const jobIds = list(req.jobIds);
+  const clipIds = list(req.clipIds);
+  [...proposalIds, ...jobIds, ...clipIds].forEach(safeId);
+  if (!proposalIds.length && !jobIds.length && !clipIds.length) throw new SoundError('name what to clear: "proposalIds", "jobIds" and/or "clipIds"', 400);
+  return withSuno((f) => {
+    const out: SunoClearResult = { removed: 0, cancelled: 0, skipped: 0 };
+    for (const id of jobIds) {
+      const j = f.jobs.find((x) => x.id === id);
+      if (!j || j.state !== "queued") {
+        out.skipped++;
+        continue;
+      }
+      j.state = "cancelled";
+      j.endedAt = now;
+      out.cancelled++;
+    }
+    const drop = new Set<string>();
+    for (const id of proposalIds) {
+      const p = f.proposals.find((x) => x.id === id);
+      if (!p || f.jobs.some((j) => j.proposalId === id && isLiveJob(j))) out.skipped++;
+      else drop.add(id);
+    }
+    f.proposals = f.proposals.filter((p) => !drop.has(p.id));
+    out.removed += drop.size;
+    const gone = new Set(clipIds);
+    const before = f.clips.length;
+    f.clips = f.clips.filter((c) => !gone.has(c.id));
+    const removedClips = before - f.clips.length;
+    out.removed += removedClips;
+    out.skipped += clipIds.length - removedClips;
+    return out;
   });
 }

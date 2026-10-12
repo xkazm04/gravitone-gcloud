@@ -41,11 +41,18 @@
 // PATCH /api/sound/suno/clips/[id]), else its job's. A library clip has no job:
 // until it is moved it draws in the ungrouped lane under EVERY axis.
 //
+// THE QUEUE IS SWITCHED BY HAND. A prompt dropped on Queue (or "Queue all")
+// waits there; the Queue column's cell menu starts and stops the worker
+// (`suno.queue-start` spends, so the arm holds it while STUB). Every tile's
+// menu can clear what it holds (`suno.clear-cell`): prompts and clip records
+// are removed, queued jobs cancelled - nothing on suno.com is touched.
+//
 // A FAILED SUNO READ IS A DEGRADED STAGE, NOT A FAILED LANE. The takes and hunts
 // still draw; proposed, working and gate say the queue could not be read.
 
 import {
   cancelSunoJob,
+  clearSunoRecords,
   createSunoProposal,
   deleteSunoProposal,
   enqueueSuno,
@@ -57,6 +64,7 @@ import {
   patchSunoClip,
   patchTake,
   proposeSuno,
+  setSunoQueueRunning,
   setSunoVerdict,
   takeFileUrl,
   type Result,
@@ -498,7 +506,7 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
   /** Fold a server answer into the last snapshot, so the next item built from
    *  it (a cancel's proposal, a job's position) reads the server's state. */
   const remember = (jobs: SunoJob[] = [], proposals: SunoProposal[] = [], clips: SunoClip[] = []) => {
-    if (!suno) suno = { proposals: [], jobs: [], clips: [], driver: { ok: true } };
+    if (!suno) suno = { proposals: [], jobs: [], clips: [], driver: { ok: true }, queue: { running: false } };
     const put = <T extends { id: string }>(list: T[], xs: T[]) => {
       for (const x of xs) {
         const at = list.findIndex((y) => y.id === x.id);
@@ -621,10 +629,80 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
     return out;
   };
 
+  /** The Suno records drawn in one cell (lane x stage x band). Takes and hunt
+   *  leaves live in other stores and are not ours to clear. */
+  const cellSuno = (t: VerbTarget): SunoNative[] => {
+    if (t.lane === undefined || t.stage === undefined) return [];
+    const axis = axisById(t.axis);
+    const out: SunoNative[] = [];
+    for (const n of natives.values()) {
+      if (!isSuno(n)) continue;
+      const at = n.item.placement;
+      if (at.stage === t.stage && (at.band ?? null) === (t.band ?? null) && axis.of(n.item) === t.lane) out.push(n);
+    }
+    return out;
+  };
+
+  /** "Delete all" for a tile: what it removes, and the consequence said first.
+   *  A tile with nothing of ours in it offers none - an inert "Delete all 0"
+   *  in every empty tile is a line to read past. */
+  const clearVerb = (t: VerbTarget): BoardVerb | null => {
+    const list = cellSuno(t);
+    if (t.stage === "working") {
+      const queued = list.filter((n) => n.kind === "job" && n.job.state === "queued").length;
+      if (queued === 0) return null;
+      return {
+        id: "suno.clear-cell",
+        label: `Cancel all ${queued} queued`,
+        destructive: true,
+        confirm: `${plural(queued, "queued prompt goes", "queued prompts go")} back to Proposed. A prompt Suno is creating now finishes.`,
+      };
+    }
+    if (t.stage === "proposed") {
+      const n = list.filter((x) => x.kind === "proposal").length;
+      if (n === 0) return null;
+      return {
+        id: "suno.clear-cell",
+        label: `Delete all ${n} here`,
+        destructive: true,
+        confirm: `${plural(n, "prompt is", "prompts are")} deleted. Hunt leaves stay with their hunt.`,
+      };
+    }
+    if (t.stage === "gate") {
+      const n = list.filter((x) => x.kind === "clip").length;
+      if (n === 0) return null;
+      return {
+        id: "suno.clear-cell",
+        label: `Delete all ${n} here`,
+        destructive: true,
+        confirm: `${plural(n, "clip leaves", "clips leave")} the board. The songs stay in your Suno library; a library import brings them back.`,
+      };
+    }
+    return null;
+  };
+
   const cellVerbs = (target: VerbTarget): BoardVerb[] => {
+    if (target.lane === undefined) return [];
+    const clear = clearVerb(target);
+    const tail = clear ? [clear] : [];
+    if (target.stage === "working") {
+      const running = suno?.queue.running === true;
+      const queued = suno?.jobs.filter((j) => j.state === "queued").length ?? 0;
+      return [
+        running
+          ? { id: "suno.queue-stop", label: "Stop queue" }
+          : {
+              id: "suno.queue-start",
+              label: `Start queue · ${queued}`,
+              spends: true,
+              ...(queued === 0 ? { disabled: "nothing queued" } : suno && !suno.driver.ok ? { disabled: suno.driver.reason } : {}),
+            },
+        ...tail,
+      ];
+    }
     // Reading the library is free: no `spends`, so the arm does not hold it.
-    if (target.stage === "gate" && target.band === "triage") return [{ id: "suno.import-library", label: "Import Suno library" }];
-    if (target.stage !== "proposed" || target.lane === undefined) return [];
+    if (target.stage === "gate" && target.band === "triage") return [{ id: "suno.import-library", label: "Import Suno library" }, ...tail];
+    if (target.stage !== "proposed") return tail;
     const n = cellCandidates(target).length;
     return [
       { id: "suno.write", label: "Write a prompt", input: { kind: "suno-fields" } },
@@ -635,6 +713,7 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
         spends: true,
         ...(n === 0 ? { disabled: "no prompt in this cell" } : {}),
       },
+      ...tail,
     ];
   };
 
@@ -644,12 +723,13 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
     if (n.kind === "proposal")
       return [
         { id: "suno.riff", label: "Riff 3 variations" },
-        { id: "suno.discard", label: "Discard" },
+        { id: "suno.discard", label: "Delete", destructive: true },
       ];
     if (n.kind === "clip")
       return [
         n.clip.verdict === "keep" ? { id: "suno.undecide", label: "Back to triage" } : { id: "suno.keep", label: "Keep" },
         { id: "suno.drop", label: "Drop" },
+        { id: "suno.delete", label: "Delete", destructive: true, confirm: "The record leaves the board. The song stays in your Suno library; a library import brings it back." },
       ];
     if (n.kind === "job" && n.job.state === "queued") return [{ id: "suno.cancel", label: "Cancel" }];
     return [];
@@ -664,9 +744,51 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
   const laneName = (l: SunoLane) => (l.value === UNGROUPED_LANE ? "ungrouped" : l.value);
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
+  /** A card verb's cards: the selection when it was asked inside one, else the
+   *  card alone - each of the lead card's kind, so "Drop" on a clip never
+   *  reaches a prompt that happens to be selected too. */
+  const cardsOf = <K extends SunoNative["kind"]>(target: VerbTarget, kind: K): Extract<SunoNative, { kind: K }>[] => {
+    const ids = target.itemIds?.length ? target.itemIds : target.itemId ? [target.itemId] : [];
+    return ids.flatMap((id) => {
+      const x = natives.get(id);
+      return x && x.kind === kind ? [x as Extract<SunoNative, { kind: K }>] : [];
+    });
+  };
+  const named = (list: { item: PipelineItem }[], one: string, many: string) => (list.length === 1 ? `"${list[0].item.title}"` : plural(list.length, one, many));
+
   const runVerb = async (verbId: string, target: VerbTarget, input?: VerbInput): Promise<VerbResult> => {
     const n = target.itemId ? natives.get(target.itemId) : undefined;
     switch (verbId) {
+      case "suno.queue-start":
+      case "suno.queue-stop": {
+        const running = verbId === "suno.queue-start";
+        const r = await setSunoQueueRunning(running);
+        if (!r.ok) return no(r.error);
+        if (suno) suno = { ...suno, queue: r.data.queue };
+        return ok(running ? "queue started" : "queue stopping; a create in flight finishes");
+      }
+      case "suno.clear-cell": {
+        const list = cellSuno(target);
+        const req = {
+          proposalIds: list.flatMap((x) => (x.kind === "proposal" ? [x.proposal.id] : [])),
+          jobIds: list.flatMap((x) => (x.kind === "job" ? [x.job.id] : [])),
+          clipIds: list.flatMap((x) => (x.kind === "clip" ? [x.clip.id] : [])),
+        };
+        if (!req.proposalIds.length && !req.jobIds.length && !req.clipIds.length) return no("nothing here to clear");
+        const r = await clearSunoRecords(req);
+        if (!r.ok) return no(r.error);
+        const { removed, cancelled, skipped } = r.data;
+        const said = [removed ? `${removed} deleted` : "", cancelled ? `${cancelled} cancelled` : "", skipped ? `${skipped} skipped` : ""].filter(Boolean);
+        return ok(said.join(", ") || "nothing changed");
+      }
+      case "suno.delete": {
+        const clips = cardsOf(target, "clip");
+        if (!clips.length) return no("delete is for a Suno clip");
+        const r = await clearSunoRecords({ clipIds: clips.map((c) => c.clip.id) });
+        if (!r.ok) return no(r.error);
+        for (const c of clips) natives.delete(c.item.id);
+        return ok(`${named(clips, "clip", "clips")} deleted`);
+      }
       case "suno.write": {
         const lane = laneOfTarget(target);
         if (!lane) return no("a prompt is written into a cell");
@@ -724,21 +846,30 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
         return ok(`${plural(r.data.proposals.length, "riff", "riffs")} of "${n.item.title}"`);
       }
       case "suno.discard": {
-        if (n?.kind !== "proposal") return no("only a prompt that is still a candidate is discarded");
-        const r = await deleteSunoProposal(n.proposal.id);
-        if (!r.ok) return no(r.error);
-        natives.delete(n.item.id);
-        return ok(`"${n.item.title}" discarded`);
+        const props = cardsOf(target, "proposal");
+        if (!props.length) return no("only a prompt that is still a candidate is deleted");
+        if (props.length === 1) {
+          const r = await deleteSunoProposal(props[0].proposal.id);
+          if (!r.ok) return no(r.error);
+        } else {
+          const r = await clearSunoRecords({ proposalIds: props.map((x) => x.proposal.id) });
+          if (!r.ok) return no(r.error);
+        }
+        for (const x of props) natives.delete(x.item.id);
+        return ok(`${named(props, "prompt", "prompts")} deleted`);
       }
       case "suno.keep":
       case "suno.drop":
       case "suno.undecide": {
-        if (n?.kind !== "clip") return no("keep and drop are for a Suno clip");
+        const clips = cardsOf(target, "clip");
+        if (!clips.length) return no("keep and drop are for a Suno clip");
         const verdict = verbId === "suno.keep" ? "keep" : verbId === "suno.drop" ? "drop" : null;
-        const r = await setSunoVerdict(n.clip.id, verdict);
-        if (!r.ok) return no(r.error);
-        remember([], [], [r.data.clip]);
-        return ok(`"${n.item.title}" ${verdict === "keep" ? "kept" : verdict === "drop" ? "dropped" : "back in triage"}`);
+        for (const c of clips) {
+          const r = await setSunoVerdict(c.clip.id, verdict);
+          if (!r.ok) return no(r.error);
+          remember([], [], [r.data.clip]);
+        }
+        return ok(`${named(clips, "clip", "clips")} ${verdict === "keep" ? "kept" : verdict === "drop" ? "dropped" : "back in triage"}`);
       }
       case "suno.import-library": {
         const r = await importSunoLibraryClips();
@@ -746,18 +877,26 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
         return ok(`Suno library: added ${r.data.added}, skipped ${r.data.skipped}`);
       }
       case "suno.cancel": {
-        if (n?.kind !== "job") return no("only a queued prompt is cancelled");
-        const r = await cancelSunoJob(n.job.id);
-        if (!r.ok) return no(r.error);
-        remember([r.data.job]);
-        return ok(`"${n.item.title}" taken off the queue`);
+        const jobs = cardsOf(target, "job");
+        if (!jobs.length) return no("only a queued prompt is cancelled");
+        if (jobs.length === 1) {
+          const r = await cancelSunoJob(jobs[0].job.id);
+          if (!r.ok) return no(r.error);
+          remember([r.data.job]);
+        } else {
+          const r = await clearSunoRecords({ jobIds: jobs.map((x) => x.job.id) });
+          if (!r.ok) return no(r.error);
+        }
+        return ok(`${named(jobs, "prompt", "prompts")} taken off the queue`);
       }
       default:
         return no(`no verb ${verbId} on audio`);
     }
   };
 
-  const pollMs = (): number => (suno?.jobs.some((j) => j.state === "queued" || j.state === "active") ? 2000 : 0);
+  // A stopped queue with work waiting changes only when somebody presses Start,
+  // and that reloads; polling it would be a read every two seconds for nothing.
+  const pollMs = (): number => (suno?.jobs.some((j) => j.state === "active" || (j.state === "queued" && suno?.queue.running)) ? 2000 : 0);
 
   /* ── load ───────────────────────────────────────────────────────────────── */
 
@@ -844,7 +983,10 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
     const hidden: PipelineLoadNotes["hidden"] = [];
     if (stillOut > 0) hidden.push({ stage: "proposed", count: stillOut, why: "hunt leaves rendering or awaiting a Suno return" });
     if (dropped > 0) hidden.push({ stage: "gate", count: dropped, why: "Suno clips dropped" });
-    notes = { hidden, damaged: [], ...(degraded.length ? { degraded } : {}) };
+    const switched: PipelineLoadNotes["switched"] = suno
+      ? [{ stage: "working", on: suno.queue.running, ...(suno.queue.interrupted ? { interrupted: suno.queue.interrupted } : {}) }]
+      : undefined;
+    notes = { hidden, damaged: [], ...(degraded.length ? { degraded } : {}), ...(switched ? { switched } : {}) };
     return [...natives.values()].map(entryOf);
   };
 

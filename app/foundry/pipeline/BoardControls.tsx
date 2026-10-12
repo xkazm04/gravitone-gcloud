@@ -20,8 +20,12 @@
 // The `hidden` tallies and the card count were struck by the operator (spark
 // audio-queue-suno). The count is every stage head's sum; `hidden` stays in
 // `CanvasStatus.notes` for any surface that wants it.
+//
+// A SWITCHED STAGE SAYS WHETHER IT IS ON (`notes.switched`: the Suno queue).
+// Started and stopped from that column's tile menu; the chip is its state, and
+// a crash that switched it off carries the job and model to check.
 
-import { Maximize2, Minimize2, Unplug } from "lucide-react";
+import { Maximize2, Minimize2, Pause, Play, Unplug } from "lucide-react";
 
 import { Select, type SelectOption } from "@/components/ui/Select";
 import { Hint, Tally } from "@/components/ui/signal";
@@ -73,6 +77,7 @@ export default function BoardControls({
   const notes = status?.notes ?? null;
   const degraded = notes?.degraded ?? [];
   const damaged = notes?.damaged ?? [];
+  const switched = notes?.switched ?? [];
   const choreo = status?.choreo;
   return (
     <div className="flex flex-wrap items-center justify-end gap-2" data-testid="pipeline-controls">
@@ -87,6 +92,25 @@ export default function BoardControls({
           <Hint tone="amber" label={`why ${word(d.stage)} is empty`}>
             {d.reason}
           </Hint>
+        </span>
+      ))}
+
+      {switched.map((s) => (
+        <span
+          key={s.stage}
+          className={`${PILL} ${s.interrupted ? "border-amber-300/45 text-amber-100" : s.on ? "border-cyan-300/50 text-cyan-100" : "border-white/15 text-white/60"}`}
+          data-testid={`pipeline-switched-${s.stage}`}
+          data-on={s.on ? "" : undefined}
+        >
+          {s.on ? <Play aria-hidden className="h-4 w-4 shrink-0" /> : <Pause aria-hidden className="h-4 w-4 shrink-0" />}
+          <span className={TYPE.label}>
+            {word(s.stage)} {s.on ? "running" : "stopped"}
+          </span>
+          {s.interrupted && (
+            <Hint tone="amber" label={`why ${word(s.stage)} stopped`}>
+              {s.interrupted}
+            </Hint>
+          )}
         </span>
       ))}
 

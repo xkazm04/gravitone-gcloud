@@ -15,9 +15,13 @@
 // itself a verb and both are anchored off a card's own corner.
 //
 // THE SOURCE'S OWN VERBS ride the same menu. A card's list is the engine's
-// moves and then whatever `source.cardVerbs(id)` adds; a right-click on a CELL
-// opens a menu that is only the source's (`cellVerbs`), because the engine has
-// no verb for a place. Those verbs are carried out by the source
+// moves, then whatever `source.cardVerbs(id)` adds - asked of the whole
+// selection when the card is inside one (`VerbTarget.itemIds`) - and then the
+// verbs of the TILE the card sits in, under the tile's name, so a card is also
+// the way to its cell ("delete all here"). A right-click on a CELL opens a
+// menu that is only the source's (`cellVerbs`), because the engine has no verb
+// for a place. A verb that names a consequence (`confirm`) is asked first, in
+// the same modal as a verb that needs input. Those verbs are carried out by the source
 // (`runVerb`), never here: this file only decides whether one needs input first
 // (`ask` - the modal BoardOverlays mounts), says the answer, and re-reads the
 // board, because a verb that wrote something has changed what the board is.
@@ -62,8 +66,10 @@ export interface VerbAsk {
   where: string;
 }
 
-/** The prefix that keeps a source's verb ids apart from the engine's own. */
+/** The prefixes that keep a source's verb ids apart from the engine's own:
+ *  a card verb, and a verb of the tile the card sits in. */
 const SRC = "src:";
+const TILE = "tile:";
 
 export interface BoardVerbs {
   menu: MenuAt | null;
@@ -143,7 +149,29 @@ export function useBoardVerbs({
     void moves.decide(targetsFor(id), cell.lane, cell.col, { drag: false });
   };
 
-  const asItem = (v: BoardVerb, prefix = ""): MenuItem => ({ id: `${prefix}${v.id}`, label: v.label, ...(v.disabled ? { disabled: v.disabled } : {}) });
+  const asItem = (v: BoardVerb, prefix = "", extra: Partial<MenuItem> = {}): MenuItem => ({
+    id: `${prefix}${v.id}`,
+    label: v.label,
+    ...(v.disabled ? { disabled: v.disabled } : {}),
+    ...(v.destructive ? { destructive: true } : {}),
+    ...extra,
+  });
+
+  /** The cell a card sits in, as a verb target, and its name for the menu. */
+  const tileOf = (id: string): { target: VerbTarget; where: string } | null => {
+    const slot = layout.slotOf.get(id);
+    if (!slot) return null;
+    const lane = layout.lanes[slot.lane];
+    const col = layout.columns[slot.col];
+    if (!lane || !col) return null;
+    return { target: { axis: axisId, lane: lane.key, stage: col.stage, band: col.band }, where: `${lane.label || lane.key} · ${colWord(layout, slot.col)}` };
+  };
+
+  /** A card verb's target: the card, and the selection when it is inside one. */
+  const cardTarget = (id: string): VerbTarget => {
+    const all = targetsFor(id);
+    return { axis: axisId, itemId: id, ...(all.length > 1 ? { itemIds: all } : {}) };
+  };
 
   const verbItems = (id: string): MenuItem[] => {
     const entry = layout.entryOf.get(id);
@@ -165,7 +193,9 @@ export function useBoardVerbs({
     toward("down", "⇧↓");
     items.push({ id: "map", label: `Move ${lead}to…`, detail: "M" });
     if (moves.retryOf(id)) items.push({ id: "retry", label: "Retry the move", detail: "R" });
-    for (const v of source.cardVerbs?.(id) ?? []) items.push(asItem(v, SRC));
+    for (const v of source.cardVerbs?.(id) ?? []) items.push(asItem(v, SRC, many > 1 ? { detail: `×${many}` } : {}));
+    const tile = source.cellVerbs ? tileOf(id) : null;
+    if (tile) for (const v of source.cellVerbs!(tile.target)) items.push(asItem(v, TILE, { section: tile.where }));
     return items;
   };
 
@@ -189,7 +219,7 @@ export function useBoardVerbs({
    *  ended — there is no dialog to hold a refusal, so it is spoken. */
   const startVerb = (verb: BoardVerb, target: VerbTarget, where: string) => {
     if (verb.disabled) return;
-    if (verb.input) {
+    if (verb.input || verb.confirm) {
       setAsk({ verb, target, where });
       return;
     }
@@ -210,7 +240,14 @@ export function useBoardVerbs({
     if (!entry) return;
     if (verb.startsWith(SRC)) {
       const v = source.cardVerbs?.(id).find((x) => x.id === verb.slice(SRC.length));
-      if (v) startVerb(v, { axis: axisId, itemId: id }, entry.item.title);
+      const target = cardTarget(id);
+      if (v) startVerb(v, target, target.itemIds ? `${target.itemIds.length} cards` : entry.item.title);
+      return;
+    }
+    if (verb.startsWith(TILE)) {
+      const tile = tileOf(id);
+      const v = tile && source.cellVerbs?.(tile.target).find((x) => x.id === verb.slice(TILE.length));
+      if (tile && v) startVerb(v, tile.target, tile.where);
       return;
     }
     if (verb === "select") sel.toggleSelect(id);

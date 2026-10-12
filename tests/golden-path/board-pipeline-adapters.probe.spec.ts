@@ -493,7 +493,7 @@ function leaf(id: string, extra: Partial<HuntNode> = {}): HuntNode {
 const hunt = (nodes: HuntNode[]): Hunt => ({ id: "h1", kind: "music", idea: "calmer pad", createdAt: iso(3), nodes, draftedBy: null, lessonId: null });
 const GROUPS = { music: ["ambient", "cinematic", "electronic", "hip hop"], sfx: ["impacts", "whooshes", "risers", "ambiences", "ui"] };
 
-const EMPTY_SUNO = (): SunoSnapshot => ({ proposals: [], jobs: [], clips: [], driver: { ok: true } });
+const EMPTY_SUNO = (): SunoSnapshot => ({ proposals: [], jobs: [], clips: [], driver: { ok: true }, queue: { running: false } });
 
 function soundApi(takes: SoundTake[], hunts: Hunt[], groups = GROUPS, suno: SunoSnapshot = EMPTY_SUNO()): Handler {
   return (url, method) => {
@@ -665,6 +665,7 @@ test("audio pipeline: working is the Suno queue - a dry move is stubbed, a live 
     jobs: [job("j2", "p2", { state: "active", phase: "creating", model: "v6-wild", startedAt: NOW - 5000 }), job("j3", "p3")],
     clips: [],
     driver: { ok: true },
+    queue: { running: false },
   };
   const f = install((url, method, body) => {
     if (method === "POST" && url.pathname === "/api/sound/suno/queue") {
@@ -741,6 +742,7 @@ test("audio pipeline: Suno clips sit in the gate by verdict, a drop is hidden an
     jobs: [job("j1", "p1", { state: "done", clipIds: ["c1", "c2", "c3"] })],
     clips: [sunoClip("c1", "j1"), sunoClip("c2", "j1", { verdict: "keep", model: "v6" }), sunoClip("c3", "j1", { verdict: "drop" }), sunoClip("c4", "j1", { audioUrl: null })],
     driver: { ok: true },
+    queue: { running: false },
   };
   const f = install((url, method, body) => {
     if (method === "PATCH" && url.pathname === "/api/sound/suno/clips/c1") return json({ clip: sunoClip("c1", "j1", { verdict: (body as { verdict: SunoClip["verdict"] }).verdict }) });
@@ -793,12 +795,16 @@ test("audio pipeline: cell and card verbs - write, draft, queue the cell (a spen
     jobs: [job("j9", "p9")],
     clips: [sunoClip("c1", "j9")],
     driver: { ok: true },
+    queue: { running: false },
   };
   const f = install((url, method, body) => {
     if (method === "POST" && url.pathname === "/api/sound/suno/proposals") return json({ proposal: proposal("pn", body as Partial<SunoProposal>) }, 201);
     if (method === "POST" && url.pathname === "/api/sound/suno/propose") return json({ proposals: [proposal("d1"), proposal("d2"), proposal("d3")] }, 201);
     if (method === "POST" && url.pathname === "/api/sound/suno/queue") return json({ jobs: (body as { proposalIds: string[] }).proposalIds.map((p, i) => job(`q${i}`, p)) }, 201);
     if (method === "DELETE" && url.pathname === "/api/sound/suno/proposals/p1") return json({ ok: true });
+    if (method === "POST" && url.pathname === "/api/sound/suno/run") return json({ queue: { running: (body as { running: boolean }).running } });
+    if (method === "POST" && url.pathname === "/api/sound/suno/clear") return json({ removed: 2, cancelled: 0, skipped: 0 });
+    if (method === "PATCH" && url.pathname.startsWith("/api/sound/suno/clips/")) return json({ clip: sunoClip(url.pathname.split("/").pop()!, "j9", { verdict: (body as { verdict: "drop" }).verdict }) });
     return soundApi([], [], GROUPS, snap)(url, method, body);
   });
   try {
@@ -809,16 +815,31 @@ test("audio pipeline: cell and card verbs - write, draft, queue the cell (a spen
       ["suno.write", "Write a prompt"],
       ["suno.draft", "Draft like this"],
       ["suno.queue-cell", "Queue all 2 here"],
+      ["suno.clear-cell", "Delete all 2 here"],
     ]);
+    // a delete states its consequence before it runs, and is never first
+    expect(verbs[3]).toMatchObject({ destructive: true });
+    expect(verbs[3].confirm).toContain("2 prompts are deleted");
     expect(verbs[0].input).toEqual({ kind: "suno-fields" });
     expect(verbs[1].input).toEqual({ kind: "count", initial: { kind: "count", count: 4 } });
     expect(verbs[2].spends).toBe(true);
     expect(verbs[2].disabled).toBeUndefined();
     expect(src.cellVerbs!({ ...cell, lane: "ambient" })[2].disabled).toBeTruthy();
-    expect(src.cellVerbs!({ ...cell, stage: "working" })).toEqual([]);
+    // the Queue column is switched by hand: Start spends (the arm holds it), and
+    // its tile can cancel what waits in it
+    const queueCell = { ...cell, stage: "working" as const };
+    expect(src.cellVerbs!(queueCell).map((v) => [v.id, v.label, v.spends ?? null])).toEqual([
+      ["suno.queue-start", "Start queue · 1", true],
+      ["suno.clear-cell", "Cancel all 1 queued", null],
+    ]);
+    expect(src.pollMs!()).toBe(0); // queued but stopped: nothing changes until Start
+    // the triage tile clears its clips, never the songs on suno.com
+    const triage = src.cellVerbs!({ ...cell, stage: "gate", band: "triage" });
+    expect(triage.map((v) => v.id)).toEqual(["suno.import-library", "suno.clear-cell"]);
+    expect(triage[1].confirm).toContain("stay in your Suno library");
 
     expect(src.cardVerbs!("audio:suno:proposal:p1").map((v) => v.id)).toEqual(["suno.riff", "suno.discard"]);
-    expect(src.cardVerbs!("audio:suno:clip:c1").map((v) => v.id)).toEqual(["suno.keep", "suno.drop"]);
+    expect(src.cardVerbs!("audio:suno:clip:c1").map((v) => v.id)).toEqual(["suno.keep", "suno.drop", "suno.delete"]);
     expect(src.cardVerbs!("audio:suno:job:j9").map((v) => v.id)).toEqual(["suno.cancel"]);
 
     const write = await src.runVerb!("suno.write", cell, { kind: "suno-fields", style: "dub techno, foggy", title: "Fog" });
@@ -841,6 +862,19 @@ test("audio pipeline: cell and card verbs - write, draft, queue the cell (a spen
     expect(f.writes()[4]).toMatchObject({ method: "DELETE", path: "/api/sound/suno/proposals/p1" });
     // a verb on the wrong kind of card is refused, not guessed at
     expect((await src.runVerb!("suno.keep", { axis: "group", itemId: "audio:suno:proposal:p2" })).ok).toBe(false);
+
+    // a card verb inside a selection reaches every selected card OF ITS KIND
+    const at = f.writes().length;
+    const sel = await src.runVerb!("suno.drop", { axis: "group", itemId: "audio:suno:clip:c1", itemIds: ["audio:suno:clip:c1", "audio:suno:proposal:p2"] });
+    expect(sel).toEqual({ ok: true, announce: '"clip c1" dropped' });
+    expect(f.writes().slice(at)).toEqual([{ method: "PATCH", path: "/api/sound/suno/clips/c1", body: { verdict: "drop" } }]);
+
+    expect(await src.runVerb!("suno.queue-start", queueCell)).toEqual({ ok: true, announce: "queue started" });
+    expect(f.writes().at(-1)).toEqual({ method: "POST", path: "/api/sound/suno/run", body: { running: true } });
+    expect(src.cellVerbs!(queueCell)[0].id).toBe("suno.queue-stop");
+
+    expect(await src.runVerb!("suno.clear-cell", { ...cell, stage: "gate", band: "triage" })).toEqual({ ok: true, announce: "2 deleted" });
+    expect(f.writes().at(-1)).toEqual({ method: "POST", path: "/api/sound/suno/clear", body: { proposalIds: [], jobIds: [], clipIds: ["c1"] } });
   } finally {
     f.restore();
   }
@@ -857,7 +891,7 @@ test("audio pipeline: a Suno read that fails degrades its stages and the takes s
   } finally {
     f.restore();
   }
-  const down: SunoSnapshot = { proposals: [proposal("p1")], jobs: [job("j1", "p1")], clips: [], driver: { ok: false, reason: "no Suno browser on :9334" } };
+  const down: SunoSnapshot = { proposals: [proposal("p1")], jobs: [job("j1", "p1")], clips: [], driver: { ok: false, reason: "no Suno browser on :9334" }, queue: { running: false } };
   const g = install(soundApi([], [], GROUPS, down));
   try {
     const { src } = await audioLoaded();

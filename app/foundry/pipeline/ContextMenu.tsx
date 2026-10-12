@@ -19,9 +19,11 @@
 //   · it closes on a captured outside mousedown, scroll and resize, and flips
 //     (rather than clamps) at a viewport edge so it never covers its opener.
 
-import { useEffect, useId, useRef } from "react";
+import { Fragment, useEffect, useId, useRef } from "react";
 
 import { refusedKey } from "../keyGuard";
+
+import { TYPE } from "./type";
 
 export interface MenuItem {
   id: string;
@@ -33,6 +35,9 @@ export interface MenuItem {
    *  disabled menu item is still focusable, so a keyboard user can hear the
    *  reason) and is its accessible description. */
   disabled?: string;
+  /** The place this item acts on when it is not the card ("Ambient · Queue").
+   *  A change of section draws its name above the item, as a separator. */
+  section?: string;
 }
 
 const W = 232;
@@ -40,6 +45,7 @@ const W = 232;
  *  the edge flip reckons with the widest it can be. */
 const W_MAX = 352;
 const ROW = 40;
+const HEAD = 28;
 
 export default function ContextMenu({
   x,
@@ -116,7 +122,8 @@ export default function ContextMenu({
     list[to]?.focus();
   };
 
-  const H = items.length * ROW + 8;
+  const heads = items.filter((it, i) => it.section && it.section !== items[i - 1]?.section).length;
+  const H = items.length * ROW + heads * HEAD + 8;
   const left = typeof window !== "undefined" && x + W_MAX > window.innerWidth ? Math.max(8, x - W_MAX) : x;
   const top = typeof window !== "undefined" && y + H > window.innerHeight ? Math.max(8, y - H) : y;
 
@@ -131,38 +138,45 @@ export default function ContextMenu({
     >
       {items.map((item, i) => {
         const why = item.disabled ? `${uid}-why-${i}` : undefined;
+        const head = item.section && item.section !== items[i - 1]?.section ? item.section : null;
         return (
-          <button
-            key={item.id}
-            type="button"
-            role="menuitem"
-            tabIndex={-1}
-            aria-disabled={item.disabled ? true : undefined}
-            aria-label={item.disabled ? item.label : undefined}
-            aria-describedby={why}
-            onClick={() => {
-              if (item.disabled) return;
-              onPick(item.id);
-              onClose();
-            }}
-            className={`font-hanken flex w-full items-center justify-between gap-3 rounded-lg px-3 text-left text-label transition focus-visible:outline-2 focus-visible:-outline-offset-2 ${
-              item.disabled
-                ? "cursor-not-allowed text-white/40"
-                : item.destructive
-                  ? "cursor-pointer text-rose-200 hover:bg-rose-400/15"
-                  : "cursor-pointer text-slate-200 hover:bg-white/10"
-            }`}
-            style={{ height: ROW }}
-          >
-            <span className="truncate">{item.label}</span>
-            {item.disabled ? (
-              <span id={why} aria-hidden className="font-jetbrains min-w-0 shrink truncate text-white/40">
-                {item.disabled}
-              </span>
-            ) : (
-              item.detail && <span className="font-jetbrains shrink-0 text-white/40">{item.detail}</span>
+          <Fragment key={item.id}>
+            {head && (
+              <div role="separator" aria-label={head} className={`${TYPE.label} mt-1 flex items-center border-t border-white/10 px-3 text-white/45`} style={{ height: HEAD }}>
+                <span className="truncate">{head}</span>
+              </div>
             )}
-          </button>
+            <button
+              type="button"
+              role="menuitem"
+              tabIndex={-1}
+              aria-disabled={item.disabled ? true : undefined}
+              aria-label={item.disabled ? item.label : undefined}
+              aria-describedby={why}
+              onClick={() => {
+                if (item.disabled) return;
+                onPick(item.id);
+                onClose();
+              }}
+              className={`font-hanken flex w-full items-center justify-between gap-3 rounded-lg px-3 text-left text-label transition focus-visible:outline-2 focus-visible:-outline-offset-2 ${
+                item.disabled
+                  ? "cursor-not-allowed text-white/40"
+                  : item.destructive
+                    ? "cursor-pointer text-rose-200 hover:bg-rose-400/15"
+                    : "cursor-pointer text-slate-200 hover:bg-white/10"
+              }`}
+              style={{ height: ROW }}
+            >
+              <span className="truncate">{item.label}</span>
+              {item.disabled ? (
+                <span id={why} aria-hidden className="font-jetbrains min-w-0 shrink truncate text-white/40">
+                  {item.disabled}
+                </span>
+              ) : (
+                item.detail && <span className="font-jetbrains shrink-0 text-white/40">{item.detail}</span>
+              )}
+            </button>
+          </Fragment>
         );
       })}
     </div>

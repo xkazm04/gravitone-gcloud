@@ -14,6 +14,11 @@
 //   count        a small integer, 1-8, as a stepper - a number field would take
 //                "40" from a stray keystroke for a verb that drafts with an LLM.
 //
+// AND A THIRD, WITH NO FORM: a destructive verb that states its consequence
+// (`BoardVerb.confirm`) is asked here before it runs. The sentence is the
+// work's - what leaves, what stays - and the button carries the verb's own
+// label, so "Delete all 12 here" is pressed, never a bare "OK".
+//
 // ABSENT FIELDS ARE OMITTED, never sent as "". The contract's convention is that
 // an optional key is left out, and an empty title sent as "" is a title the
 // source has to decide is not one.
@@ -52,9 +57,10 @@ export function VerbAsk({
   verb: BoardVerb;
   /** The place or card the verb was asked on — the dialog's eyebrow. */
   where: string;
-  run(input: VerbInput): Promise<VerbResult>;
+  run(input: VerbInput | undefined): Promise<VerbResult>;
   onClose(): void;
 }) {
+  const confirmOnly = !verb.input && !!verb.confirm;
   const kind = verb.input?.kind ?? "count";
   const initial = verb.input?.initial;
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
@@ -81,7 +87,7 @@ export function VerbAsk({
   const submit = async () => {
     if (!valid || busy) return;
     setPhase({ kind: "busy" });
-    const r = await run(input());
+    const r = await run(confirmOnly ? undefined : input());
     if (r.ok) onClose();
     else setPhase({ kind: "failed", reason: r.reason });
   };
@@ -108,8 +114,15 @@ export function VerbAsk({
           <Button variant="ghost" size="sm" onClick={close} disabled={busy}>
             Cancel
           </Button>
-          <Button size="sm" onClick={() => void submit()} disabled={busy || !valid} aria-busy={busy} data-testid="pipeline-verb-submit">
-            {busy ? "sending…" : phase.kind === "failed" ? "Retry" : "Confirm"}
+          <Button
+            size="sm"
+            variant={verb.destructive ? "danger" : "primary"}
+            onClick={() => void submit()}
+            disabled={busy || !valid}
+            aria-busy={busy}
+            data-testid="pipeline-verb-submit"
+          >
+            {busy ? "sending…" : phase.kind === "failed" ? "Retry" : confirmOnly ? verb.label : "Confirm"}
           </Button>
         </div>
       }
@@ -121,7 +134,11 @@ export function VerbAsk({
           void submit();
         }}
       >
-        {kind === "suno-fields" ? (
+        {confirmOnly ? (
+          <p className={`${TYPE.title} text-white/80`} data-testid="pipeline-verb-consequence">
+            {verb.confirm}
+          </p>
+        ) : kind === "suno-fields" ? (
           <>
             <Field label="Title" htmlFor={ids.title}>
               <TextInput id={ids.title} value={title} onChange={(e) => setTitle(e.target.value)} disabled={busy} data-testid="pipeline-verb-title" />

@@ -212,6 +212,8 @@ The shell binds exactly one, `F`.
 | `R` | retry the move that failed |
 | `ContextMenu`, `Shift`+`F10` | the verb menu |
 | `+` `-` `0` | zoom in, zoom out, fit |
+| wheel | zoom at the pointer |
+| `Shift` + wheel, `Alt` + wheel | pan horizontally, vertically (a trackpad's sideways swipe pans too) |
 | `Esc` | closes the innermost thing: menu, map, selection, cursor |
 | `F` | fill the screen, and leave it — **the shell's, not the engine's** |
 
@@ -233,6 +235,10 @@ tokens on the container (`--text-label` 1rem → 1.0625rem, `--text-content` 1.1
 `font-size: var(--text-label)`, so every label and every card title under that root moves
 together; writing sizes into the markup instead would mean one arbitrary size per element,
 which is what `npm run check:type` exists to stop.
+
+The board is never dragged (the operator's ruling) and draws no grab cursor; only a card is
+pulled. The wheel is a zoom at the pointer (2026-10-12): zooming out and back in at a spot is
+how a board without a drag reaches what is off-screen, with `Shift`/`Alt` + wheel as the pans.
 
 An open `aria-modal` dialog disarms the canvas automatically, so the three dialogs here need no
 co-ordination with it.
@@ -274,7 +280,9 @@ A flex row **above** the board, outside it — not a cluster floating over its c
 it sat exactly where the stage heads draw, and the fix was a measured `--gt-board-gutter` the
 heads had to stop short of; a row of its own needs no gutter, and the gutter is deleted.
 
-It carries, right-aligned: `degraded` chips (amber, reason behind a `<Hint>`), `DAMAGED n`,
+It carries, right-aligned: `degraded` chips (amber, reason behind a `<Hint>`), a switched
+stage's state (`notes.switched`: `QUEUE RUNNING` / `QUEUE STOPPED`, amber with the job and model
+behind a `<Hint>` when a crash stopped it), `DAMAGED n`,
 `CHOREO n/cap`, `DRY n` (the stub receipt — moves AND spending verbs), the group `Select`, the
 arm, and full screen. The `hidden` tallies and the `CARDS n` tally are gone: every stage head
 carries its count. The armed chip shows a price only where one is measured (articles'
@@ -307,8 +315,12 @@ is spelled nowhere else on the board (the drag's slot word in `CellLayer` uses i
 A source may add verbs (`lib/board/pipeline.ts`): `cellVerbs(target)` for a place,
 `cardVerbs(itemId)` for a card, `runVerb(id, target, input?)` to carry one out.
 
-- **Right-click a card** — the engine's own items, then `cardVerbs(id)` appended. Target:
-  `{ axis, itemId }`.
+- **Right-click a card** — the engine's own items, then `cardVerbs(id)` appended, then the
+  verbs of the **tile the card sits in** (`cellVerbs` for its lane x stage x band) under a
+  separator naming the tile, so a card is also the way to its cell. Target: `{ axis, itemId }`,
+  plus `itemIds` (every selected id) when the card is inside a selection of several — a card
+  verb then acts on the selection, and the item's detail reads `×n`. A source applies it to the
+  selected cards of the lead card's kind only.
 - **Right-click off a card** — the cell under the pointer is read off `data-cell`
   (`lane|stage|band`, parsed from the end because a lane key may hold `|`), or on a seam from
   the world point by `resolveCell`. Clicks over the stage strip or the lane column resolve to
@@ -321,6 +333,9 @@ A source may add verbs (`lib/board/pipeline.ts`): `cellVerbs(target)` for a plac
   `suno-fields` = Title, Style (required), Lyrics, an Instrumental toggle that sets the lyrics to
   `[Instrumental]`, Exclude — empty fields are omitted, never sent as `""`; `count` = a 1–8
   stepper. `input.initial` prefills either. A refusal stays in the dialog.
+- **A verb with `confirm`** (destructive verbs carry `destructive: true`, drawn rose and never
+  first) opens the same modal with the consequence as its body and the verb's own label on the
+  button ("Delete all 12 here"). The sentence is the work's: what leaves, what stays.
 - **A verb without input** runs at once; a refusal is announced.
 - On `ok` the engine announces `result.announce` and **re-reads the board**.
 
@@ -353,12 +368,29 @@ calls `reload()` once per batch that resolved anything: a move may return a diff
 proposal queued becomes a job under a new id) or land somewhere the request did not name, and
 only the source's own account knows what it became.
 
+**Cold load.** The board is its own chunk (`next/dynamic` in FoundryView), so the other foundry tabs never pay for the engine. Until the first `loadPipeline()` answers, `BoardSkeleton` draws card-sized placeholders on the grid inside the board, with the load line, and nothing above the board changes height, so the answer moves nothing. The first view always mounts in waves, from `WAVE_MIN` cards nearest the middle, growing per frame by the measured frame cost, so a cold board arrives staggered rather than in one commit; later views wave only on a jump (a fit, a big zoom). Time to first card on a cold load is the data's, not the render's (measured 2026-10-12: articles waits on `/api/articles/topics` and nine ~250 KB details, `lib/board/sources/articles.ts`).
+
 ## 13. The Suno queue (audio)
 
 Audio's working column is a serial Suno queue (`lib/sound/suno/queue.ts`, store
 `foundry-out/sound/suno.json`): one job renders at a time, FIFO, persisted, every job on both
 models (`v6`, `v6-wild`), two clips each. A prompt (`proposed`) moved to `working` under LIVE
-enqueues it; under STUB the move is dry. A queued job moved back to `proposed` cancels it; the
+enqueues it; under STUB the move is dry.
+
+**The queue is switched by hand.** Queueing never starts it: the worker drives the operator's
+browser and spends credits, so a batch waits in the column until the Queue tile's menu says
+**Start queue · n** (`spends`: the arm holds it while STUB) and runs until it is empty or
+**Stop queue**. Stop lets the create in flight finish — a Suno create cannot be called back — and
+returns its job to the queue holding the clips it has; the next Start creates only the missing
+model. The state persists (`suno.json` `queue.running`, absent = stopped). A server that dies
+mid-create comes back with the queue **stopped** and `queue.interrupted` naming the job and
+model, because that model may already be spent on Suno: check the library, then Start.
+
+**Delete all, per tile.** Every audio tile's menu ends with a destructive clear (`suno.clear-cell`,
+one `POST /api/sound/suno/clear`): Proposed deletes its prompts (hunt leaves stay with their
+hunt), Queue cancels what waits (a job Suno is creating is skipped), the gate deletes its clip
+records. Nothing on suno.com is touched; a deleted library clip comes back with the next import.
+A clip card's own **Delete** does the same for the card or the selection. A queued job moved back to `proposed` cancels it; the
 active one is refused ("rendering now - it lands in triage when Suno finishes"). Finished clips
 land in `gate / triage` with no verdict; `pending` is keep; drop takes the clip off the board
 (counted under `hidden`). A clip's card links to its Suno song page. Hunt leaves dropped on
