@@ -111,8 +111,13 @@ import {
   StaleBadge,
   TALLY_TONE,
   UpstreamBreak,
+  activeKeymaps,
+  defineKeymap,
   hintRootClass,
+  keycapsRows,
+  resolveKey,
   useHint,
+  useKeymap,
   type TallyTone,
 } from "@/components/ui/signal";
 
@@ -566,6 +571,21 @@ function DisclosureDemo() {
       <HintPopover d={d}>flux-dev · 36 candidates · 12 kept</HintPopover>
     </span>
   );
+}
+
+/** The specimen keymap: declared once, drawn by Keycaps, resolved by the pure guard, bound (here disabled) by useKeymap. */
+const SPECIMEN_KEYS = defineKeymap<"keep" | "reject">({
+  id: "kit-specimen",
+  bindings: [
+    { keys: ["K"], does: "keep", action: "keep" },
+    { keys: ["X"], does: "reject", action: "reject" },
+  ],
+});
+
+/** useKeymap: one keymap bound with the kernel guard. Disabled here so a specimen never captures the page's keys. */
+function KeymapDemo() {
+  useKeymap(SPECIMEN_KEYS, { keep: () => {}, reject: () => {} }, { enabled: false });
+  return <Keycaps map={keycapsRows(SPECIMEN_KEYS)} label="Specimen keymap" />;
 }
 
 const TONES = Object.keys(TALLY_TONE) as TallyTone[];
@@ -1124,6 +1144,15 @@ const DEMOS: Record<PartName, () => ReactNode> = {
     </div>
   ),
   useCountFilter: () => <CountDoorDemo />,
+  defineKeymap: () => <Verbatim>{'defineKeymap({ id: "kit-specimen", bindings: [{ keys: ["K"], does: "keep", action: "keep" }, ...] })'}</Verbatim>,
+  useKeymap: () => <KeymapDemo />,
+  resolveKey: () => (
+    <Verbatim>{`K        -> ${resolveKey(SPECIMEN_KEYS, { key: "k" })}
+Ctrl+K   -> ${resolveKey(SPECIMEN_KEYS, { key: "k", ctrlKey: true })}
+held X   -> ${resolveKey(SPECIMEN_KEYS, { key: "x", repeat: true })}`}</Verbatim>
+  ),
+  keycapsRows: () => <Verbatim>{JSON.stringify(keycapsRows(SPECIMEN_KEYS))}</Verbatim>,
+  activeKeymaps: () => <Verbatim>{`bound now: ${activeKeymaps().join(", ") || "none"}`}</Verbatim>,
   useHint: () => <DisclosureDemo />,
   HintPopover: () => <DisclosureDemo />,
   hintRootClass: () => <Verbatim>{hintRootClass}</Verbatim>,
