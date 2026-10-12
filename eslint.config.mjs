@@ -72,6 +72,11 @@ const config = [
       // foundry grades minified bundles and the ratchet goes red on output a
       // fresh worktree never has.
       "foundry-out/**",
+      // The skill vault: gitignored session memory, not source. A note there can
+      // hold a code exercise (.vault/Masterpiece/exercises/*.tsx, 2026-10-12) that
+      // no tsconfig includes, so it graded as three parse ERRORS and blocked a
+      // push over files CI never sees.
+      ".vault/**",
       "imaging-probe-out/**",
       "frames-direction-out/**",
       "public/**",
