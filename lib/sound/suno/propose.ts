@@ -5,14 +5,8 @@
 // THE PROMPT IS A FILE: pipeline/SUNO-PROPOSE-PROMPT.md, sectioned `shared` +
 // `propose` | `riff`, read per call. A prompt is code; it lives in pipeline/.
 //
-// THE TURN CLASS. The brief names two turns, "suno-propose" and "suno-riff".
-// lib/text/types.ts TurnClass is a CLOSED union and adding a member touches the
-// router's two plans, its ceiling table, the Google model table, the
-// text-ladder probe and .ai/use-cases.json - none of them this package's files.
-// Until those land, both calls run as "sound-hunt": the same plan, the same
-// 300 s ceiling and the same size of answer (a few schema-shaped prompts), so
-// the spend lands on the sound line it belongs to. SUNO_TURN is the one place
-// to change when the classes exist.
+// THE TURN CLASS: "suno-propose" for a lane draft, "suno-riff" for variations
+// on one proposal (lib/text/types.ts). SUNO_TURN picks between them.
 //
 // WHAT THE MODEL MAY DECIDE: the words. What it may not: the lengths (Suno's
 // form limits are enforced in parseFields), the count (clamped), the lane
@@ -31,8 +25,8 @@ import { addProposals, parseFields, readSuno, STYLE_MAX, TITLE_MAX, type NewProp
 
 export type ReasonFn = (req: TextRequest) => Promise<TextResult>;
 
-/** propose / riff. See the header: "suno-propose" / "suno-riff" once TurnClass has them. */
-export const SUNO_TURN: Record<"propose" | "riff", TurnClass> = { propose: "sound-hunt", riff: "sound-hunt" };
+/** propose / riff. See the header. */
+export const SUNO_TURN: Record<"propose" | "riff", TurnClass> = { propose: "suno-propose", riff: "suno-riff" };
 
 export const PROPOSE_MAX = 8;
 const EXAMPLES_MAX = 8;

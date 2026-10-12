@@ -99,6 +99,8 @@ const PLAN: Record<TextEnv, Record<TurnClass, TextProviderId[]>> = {
     research: ["claude-cli", "google"],
     "sound-hunt": ["claude-cli", "google"],
     "sound-lesson": ["claude-cli", "google"],
+    "suno-propose": ["claude-cli", "google"],
+    "suno-riff": ["claude-cli", "google"],
     "ad-ideas": ["claude-cli", "google"],
     "ad-scenarios": ["claude-cli", "google"],
     repair: ["claude-cli", "google"],
@@ -112,6 +114,8 @@ const PLAN: Record<TextEnv, Record<TurnClass, TextProviderId[]>> = {
     research: ["google"],
     "sound-hunt": ["google"],
     "sound-lesson": ["google"],
+    "suno-propose": ["google"],
+    "suno-riff": ["google"],
     "ad-ideas": ["google"],
     "ad-scenarios": ["google"],
     repair: ["google"],
@@ -183,12 +187,16 @@ const DEFAULT_TIMEOUT_MS: Record<TurnClass, number> = {
   // notebook is nine phases of judgement and one large structured answer. It
   // sits under /api/research's own `maxDuration` so the engine gives up first.
   research: 600_000,
-  // Both sound turns are small: one idea or one hunt's results in, one
+  // The sound turns are small: one idea or one hunt's results in, one
   // structured answer out. Five minutes is generous, and sits under the sound
   // routes' own maxDuration (app/api/sound/hunts/route.ts) so the engine gives
   // up before the platform does.
   "sound-hunt": 300_000,
   "sound-lesson": 300_000,
+  // The Suno pair: a lane's few example styles in, at most eight short prompts
+  // out — the size of a hunt map, so the hunt's ceiling.
+  "suno-propose": 300_000,
+  "suno-riff": 300_000,
   // The two ads concept rounds: a brief (and, for scenarios, one picked idea)
   // in, one schema-shaped answer out — staged generation and gate screening
   // inside the one turn, so longer than a sound map and far shorter than a
