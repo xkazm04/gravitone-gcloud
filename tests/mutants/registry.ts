@@ -320,4 +320,28 @@ export const MUTANTS: Mutant[] = [
     replace: "// â€\nexport function kitModuleForHash",
     why: "A double-encoded character lands in a shipped source file.",
   },
+  {
+    id: "studio-prefer-only-off",
+    probe: "imaging-studio.probe.spec.ts",
+    file: "lib/imaging/router.ts",
+    find: "if (steer.prefer && PREFER_ONLY.has(steer.prefer) && steer.prefer !== steer.avoid) return [steer.prefer];",
+    replace: "if (steer.prefer && PREFER_ONLY.has(steer.prefer) && steer.prefer === steer.avoid) return [steer.prefer];",
+    why: "A music-video still that asked for the Leonardo studio's prepaid credits is quietly rendered by another vendor billed in dollars.",
+  },
+  {
+    id: "mv-regenerate-reruns-everything",
+    probe: "mv-queue.probe.spec.ts",
+    file: "lib/sound/mv/queue.ts",
+    find: "const redo = new Set((j.redo ?? []).flatMap((p) => REDO_STEPS[p]));",
+    replace: "const redo = new Set((j.redo ?? []).flatMap(() => STEP_ORDER));",
+    why: "Regenerate · metadata re-rolls the still and re-renders the video, spending a Leonardo image and minutes of render to change a title.",
+  },
+  {
+    id: "mv-focal-deaf-to-the-beat",
+    probe: "mv-render.probe.spec.ts",
+    file: "app/_phases/frames/music-video/compositor.ts",
+    find: "const level = clamp01(breath + clamp01(f.pulseStrength) * (f.pulse[frameIndex] ?? 0));",
+    replace: "const level = clamp01(breath);",
+    why: "The music video's pulsing element only breathes on a timer and never answers the kick it was placed to pulse with.",
+  },
 ];

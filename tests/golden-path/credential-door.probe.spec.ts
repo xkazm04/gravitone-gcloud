@@ -324,6 +324,9 @@ test("source: exactly the media routes read a query credential, and only through
       "app/api/foundry/strips/[id]/page/route.ts",
       "app/api/music-video/export/file/route.ts",
       "app/api/sound/takes/[id]/file/route.ts",
+      // 2026-10-12: a music video's mp4/still/thumb for <video>/<img> in the
+      // pipeline canvas's card detail. GET only, a read-only byte serve.
+      "app/api/sound/mv/jobs/[id]/file/route.ts",
       "app/api/video/clips/[id]/file/route.ts",
     ].sort(),
   );

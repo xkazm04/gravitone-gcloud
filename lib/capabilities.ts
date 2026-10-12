@@ -270,7 +270,14 @@ export const CAPABILITY_ROUTES: Readonly<Record<keyof Capabilities, readonly str
   musicSfx: ["app/api/music/sfx/route.ts"],
   localVideoRender: [],
   desktopTooling: [],
-  localRender: ["app/api/cut/export/route.ts", "app/api/music-video/export/route.ts", "app/api/ads/render/route.ts"],
+  localRender: [
+    "app/api/cut/export/route.ts",
+    "app/api/music-video/export/route.ts",
+    "app/api/ads/render/route.ts",
+    // Reads a folder on the studio machine's own disk (the Settled column's
+    // "Import audio folder"); answers local-binaries-forbidden elsewhere.
+    "app/api/sound/mv/import/route.ts",
+  ],
   publish: [
     "app/api/publish/channels/route.ts",
     "app/api/publish/exports/route.ts",

@@ -66,6 +66,11 @@ import { PATCH as sunoClipPATCH } from "@/app/api/sound/suno/clips/[id]/route";
 import { POST as sunoLibraryPOST } from "@/app/api/sound/suno/library/route";
 import { POST as sunoRunPOST } from "@/app/api/sound/suno/run/route";
 import { POST as sunoClearPOST } from "@/app/api/sound/suno/clear/route";
+import { POST as mvPOST } from "@/app/api/sound/mv/route";
+import { POST as mvRunPOST } from "@/app/api/sound/mv/run/route";
+import { POST as mvImportPOST } from "@/app/api/sound/mv/import/route";
+import { POST as mvJobPOST } from "@/app/api/sound/mv/jobs/[id]/route";
+import { POST as mvCalendarPOST } from "@/app/api/sound/mv/jobs/[id]/calendar/route";
 import { POST as articlesCreatePOST } from "@/app/api/articles/route";
 import { POST as articlesApprovePOST } from "@/app/api/articles/[runId]/approve/route";
 import { POST as articlesResumePOST } from "@/app/api/articles/[runId]/resume/route";
@@ -214,6 +219,26 @@ const ROUTES: [string, string, (r: Request) => Promise<Response>][] = [
   ["sound/suno/library", "/api/sound/suno/library", sunoLibraryPOST],
   ["sound/suno/run", "/api/sound/suno/run", sunoRunPOST],
   ["sound/suno/clear", "/api/sound/suno/clear", sunoClearPOST],
+  // The music-video queue (spark audio-music-video-queue). Enqueue and Start
+  // spend two text turns and a Leonardo studio still per job once the worker
+  // reaches it; Regenerate re-queues a part; import reads the studio's disk;
+  // calendar copies a render and writes the publish store. An empty body is a
+  // 400 from each one's own validation (sources / running / dir / part /
+  // publishAt) before any store, engine or file is reached. The jobs/[id]
+  // PATCH and DELETE share the POST's file and its door.
+  ["sound/mv", "/api/sound/mv", mvPOST],
+  ["sound/mv/run", "/api/sound/mv/run", mvRunPOST],
+  ["sound/mv/import", "/api/sound/mv/import", mvImportPOST],
+  [
+    "sound/mv/jobs/regenerate",
+    "/api/sound/mv/jobs/[id]",
+    (r: Request) => mvJobPOST(r, { params: Promise.resolve({ id: "mj-0000000000" }) }),
+  ],
+  [
+    "sound/mv/jobs/calendar",
+    "/api/sound/mv/jobs/[id]/calendar",
+    (r: Request) => mvCalendarPOST(r, { params: Promise.resolve({ id: "mj-0000000000" }) }),
+  ],
   // The article pipeline (WP4). Create spends a research turn on the operator's
   // Claude seat; approve pushes a branch and opens a PR in ai-registry; resume
   // re-runs a step. An empty body is a 400 from create's topic check; the run

@@ -273,6 +273,19 @@ const EXPECT: Record<string, Expectation> = {
   "app/api/sound/suno/propose/route.ts": { door: "money", ok: { POST: "4xx" } },
   "app/api/sound/suno/queue/[id]/route.ts": { door: "money", ok: { DELETE: "4xx" } },
   "app/api/sound/suno/queue/route.ts": { door: "money", ok: { POST: "4xx" } },
+  // The music-video queue (spark audio-music-video-queue). The snapshot GET
+  // reads the store and asks the Leonardo studio whether it answers (no
+  // LEONARDO_STUDIO_CDP in a cell: the health check answers from config, no
+  // fetch). Every write refuses an empty body or an id that names nothing
+  // before a store, an engine or a file is reached; the import's
+  // local-binaries refusal comes AFTER its body check, so an empty body is
+  // the same 400 in every cell.
+  "app/api/sound/mv/route.ts": { door: "money", ok: { GET: "2xx", POST: "4xx" } },
+  "app/api/sound/mv/run/route.ts": { door: "money", ok: { POST: "4xx" } },
+  "app/api/sound/mv/import/route.ts": { door: "money", ok: { POST: "4xx" }, local: ["POST"] },
+  "app/api/sound/mv/jobs/[id]/route.ts": { door: "money", ok: { POST: "4xx", PATCH: "4xx", DELETE: "4xx" } },
+  "app/api/sound/mv/jobs/[id]/file/route.ts": { door: "access", ok: { GET: "4xx" } },
+  "app/api/sound/mv/jobs/[id]/calendar/route.ts": { door: "money", ok: { POST: "4xx" } },
   "app/api/sound/takes/[id]/file/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/sound/takes/[id]/route.ts": { door: "access", ok: { PATCH: "4xx" } },
   "app/api/sound/takes/route.ts": { door: "access", ok: { GET: "2xx", POST: "4xx", DELETE: "4xx" } },
