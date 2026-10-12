@@ -172,6 +172,9 @@ function main() {
   for (const py of ["python3", "python"]) {
     const r = spawnSync(py, [path.join(ROOT, "pipeline/vocab/check_snapshot.py")], { cwd: ROOT, encoding: "utf8" });
     if (r.error) continue;
+    // Windows ships App Execution Alias stubs named python3/python that print "Python was not found"
+    // and exit 9009 instead of running anything. That is a missing interpreter, not a failed check.
+    if (r.status === 9009 || /Python was not found/i.test(r.stdout + r.stderr)) continue;
     ran = true;
     if (r.status !== 0) findings.push(`schema snapshot: ${(r.stdout + r.stderr).trim().split("\n").slice(-3).join(" | ")}`);
     break;
