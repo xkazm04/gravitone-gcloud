@@ -1949,8 +1949,12 @@
           "revision": 1,
           "changedAt": "2026-10-04",
           "confidence": "probable",
-          "state": "unknown",
-          "arrived": true
+          "state": "not-applicable",
+          "arrived": true,
+          "evidence": "app/_phases/frames/FramesStep.tsx:3 Context-directory searches for leader-adaptive, split-wipe, timing-plan, and evidence-card yielded 0 hits, as this phase composes storyboard stills and shot assemblies from script beats rather than rendering data-driven race animations.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:10a9cce44446d777",
+          "evaluatedRevision": 1
         },
         {
           "subject": "evidence-bound-visuals",
@@ -4444,8 +4448,12 @@
           "revision": 1,
           "changedAt": "2026-10-04",
           "confidence": "strong",
-          "state": "unknown",
-          "arrived": true
+          "state": "not-applicable",
+          "arrived": true,
+          "evidence": "app/_phases/research/ResearchStep.tsx:20 Context-directory searches for leader-adaptive, split-wipe, timing-plan, and evidence-card yielded 0 hits, as this step branches educational research notebooks against movie/trailer beats rather than rendering data video bar races.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:10a9cce44446d777",
+          "evaluatedRevision": 1
         },
         {
           "subject": "quality-gates",
@@ -5952,7 +5960,11 @@
           "revision": 1,
           "changedAt": "2026-10-04",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "components/ui/tokens.ts:152 Context-directory searches for leader-adaptive, split-wipe, timing-plan, and evidence-card yielded 0 hits, as this shell provides web application UI primitives and design tokens for a studio that explicitly carries no charting dependencies.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:10a9cce44446d777",
+          "evaluatedRevision": 1
         },
         {
           "subject": "test-harness",
@@ -6055,7 +6067,11 @@
           "revision": 1,
           "changedAt": "2026-10-04",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "pipeline/video/README.md:24 Context-directory searches for leader-adaptive, split-wipe, timing-plan, and evidence-card yielded 0 hits, as this pipeline optimizes short preset style motion swatches via diffusion video models and optical flow rather than rendering narration-free data videos.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:10a9cce44446d777",
+          "evaluatedRevision": 1
         },
         {
           "subject": "prompt-assembly",

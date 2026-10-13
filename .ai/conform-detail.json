@@ -2696,6 +2696,330 @@
           "evidence": "pipeline/vlm-probe/schema.py:8 The closed vocabulary includes the thirteen genre contracts alongside the light, lens and angle fields."
         }
       ]
+    },
+    "3f0df589-9680-4aed-86a6-d6e913ddf1f1/data-video-art-direction": {
+      "context": "research-scope-board",
+      "subject": "data-video-art-direction",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T09:06:04.033Z",
+      "worker": "9fec2b79-a056-4f65-9f22-630431bdbad0",
+      "techniques": [
+        {
+          "technique": "case-native-chart-form",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/ResearchTriageBoard.tsx:39 Board columns organize educational notebook dimensions rather than configuring native chart forms for data videos."
+        },
+        {
+          "technique": "champion-split-wipe",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/MusicVideoResearch.tsx:39 The music video intake surface accepts audio files for waveform analysis without title succession transitions or champion split wipes."
+        },
+        {
+          "technique": "concept-landing-proposals",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/scope.ts:10 Triage in scope.ts partitions notebook fact cards into kept and descoped sets for script generation, not 4-seat visual metaphor proposals for data videos."
+        },
+        {
+          "technique": "curiosity-title-thumbnail",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/useMusicVideoSource.ts:59 Audio source resolution extracts the uploaded track file name rather than composing curiosity titles or non-revealing teaser thumbnails for data races."
+        },
+        {
+          "technique": "ending-sequence",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/_parts/ScopeGate.tsx:26 ConfirmScope gates transition from research into the script phase, having no winner spotlight or StatReel end-sequence card."
+        },
+        {
+          "technique": "event-card-stack",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/_parts/FollowUpQueue.tsx:5 FollowUpQueue manages deepened research inquiry items rather than stacking timed evidence cards across an animated chart timeline."
+        },
+        {
+          "technique": "evidence-card-popup",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/_parts/FollowUpResult.tsx:5 FollowUpResult displays qualitative research findings and fact downgrades rather than animated evidence cards tied to chart data beats."
+        },
+        {
+          "technique": "leader-adaptive-theme",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/_parts/ScopeBar.tsx:13 State filters categorize research notebook triage states instead of binding visual backgrounds or palettes to chart ranking leaders."
+        },
+        {
+          "technique": "legibility-floor",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/followup.ts:24 Follow-up effects model qualitative facts with textual confidence ratings rather than vertical video viewport typography or safe-zone boundaries."
+        },
+        {
+          "technique": "motion-cue-budget",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/useFollowUps.ts:19 Follow-up state management isolates session-lived inquiries per project without managing on-screen motion cues or animation energy."
+        },
+        {
+          "technique": "photo-rights-ledger",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/useScope.ts:10 The research scope state layer serializes kept-or-cut card digests to step store without tracking photo licensing rights, attribution, or public domain status."
+        },
+        {
+          "technique": "photo-to-poster-portrait",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/ResearchStep.tsx:122 The research step routes based on discipline metadata and contains no portrait segmentation or poster-conversion image processing pipelines."
+        },
+        {
+          "technique": "timing-plan-first",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/useMusicVideoSource.ts:27 Audio decoding calculates music audio envelopes rather than generating non-linear data-density timing plans or time-warp curves."
+        },
+        {
+          "technique": "top-n-with-logos",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/scope.ts:32 Research cards represent Boolean inclusion decisions rather than ranked bar race entities with brand marks or logo normalizations."
+        }
+      ]
+    },
+    "fb7019fe-fc71-463f-8fa8-9dcab877274a/data-video-art-direction": {
+      "context": "frames-phase",
+      "subject": "data-video-art-direction",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T09:06:04.033Z",
+      "worker": "9fec2b79-a056-4f65-9f22-630431bdbad0",
+      "techniques": [
+        {
+          "technique": "case-native-chart-form",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/sceneSpec.ts:156 Frame element kinds represent visual storyboard layer elements rather than native chart forms or line/bar races."
+        },
+        {
+          "technique": "champion-split-wipe",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:80 Plates track visual generation state (empty, generating, ready) without leader-change split-wipe transitions."
+        },
+        {
+          "technique": "concept-landing-proposals",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/alternatives/AlternativesView.tsx:3 AlternativesView displays a contact sheet of candidate image plates for scenes rather than 4-seat landing proposals contrasting visual metaphors with data charts."
+        },
+        {
+          "technique": "curiosity-title-thumbnail",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/ShotSheet.tsx:3 The read-only shot sheet inspects promotional cinematic shot breakdowns rather than formatting question-hook titles or non-revealing data race thumbnails."
+        },
+        {
+          "technique": "ending-sequence",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/FramesAssembly.tsx:60 Assembly ledger completion filters uncomposed scene frames without rendering a winner spotlight or StatReel sign-off sequence."
+        },
+        {
+          "technique": "event-card-stack",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/LayerPanel.tsx:5 LayerPanel manages 2D graphic overlay layers (captions and arrows) on a single still plate rather than stacking time-decaying evidence cards on a moving chart timeline."
+        },
+        {
+          "technique": "evidence-card-popup",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/parts.tsx:9 Compositor canvas positions SVG and text annotations using coordinate percentages rather than popping up dated evidence cards on chart beats."
+        },
+        {
+          "technique": "leader-adaptive-theme",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/shotPrompt.ts:16 Style blocks enforce uniform project-wide style locking rather than switching palettes and backgrounds dynamically when ranking leaders change."
+        },
+        {
+          "technique": "legibility-floor",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/shotReview.ts:16 The shot reviewer verifies cinematic shot continuity and size progression, leaving vertical 26 px typography floors and phone safe-box constraints unmeasured."
+        },
+        {
+          "technique": "motion-cue-budget",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/shots.ts:30 Shot motion strings are seeded empty for manual or direction authoring rather than budgeted as at most two discrete motion cues per data frame."
+        },
+        {
+          "technique": "photo-rights-ledger",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/useFrames.ts:19 Frames generates AI plates via an imaging client instead of ingesting external editorial photos with license and attribution ledgers."
+        },
+        {
+          "technique": "photo-to-poster-portrait",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:345 Scene plates are rendered from abstract explainer script fixtures rather than transforming freely licensed photographs of historical champions into poster portraits."
+        },
+        {
+          "technique": "timing-plan-first",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:210 Scene timings map to explicit script beat timecodes rather than dynamically warped timelines calculated from data change density."
+        },
+        {
+          "technique": "top-n-with-logos",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/sceneSpec.ts:34 Scene schema validates LLM scene direction properties (subject, motion, rationale) without structuring Top-10 leaderboards or brand logos."
+        }
+      ]
+    },
+    "e9a96029-cbf6-44e5-b660-b38242d0ae6b/data-video-art-direction": {
+      "context": "video-clip-pipeline",
+      "subject": "data-video-art-direction",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T09:06:04.033Z",
+      "worker": "9fec2b79-a056-4f65-9f22-630431bdbad0",
+      "techniques": [
+        {
+          "technique": "case-native-chart-form",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/video/README.md:91 The video pipeline documents the inability of generative video diffusion models to animate flat vector graphics, operating on raster swatches instead of case-native chart forms."
+        },
+        {
+          "technique": "champion-split-wipe",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/video/compose_clip.py:32 Composed clip animation is constrained to translating a single isolated sprite along a straight path, without frame split-wipes across changing leaders."
+        },
+        {
+          "technique": "concept-landing-proposals",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/video/motion_author.py:24 Motion authoring analyzes preset swatches to propose element verbs rather than comparing 4-seat landing proposals against chart representations."
+        },
+        {
+          "technique": "curiosity-title-thumbnail",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/video/compare.py:27 Comparison video grids burn technical provenance labels onto test clips rather than writing question-hook titles or non-revealing data race thumbnails."
+        },
+        {
+          "technique": "ending-sequence",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/video/transcode.mjs:8 Transcoding transcodes short looping WebM/MP4 UI clips without building winner spotlights or StatReel end-cards."
+        },
+        {
+          "technique": "event-card-stack",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/video/retime.py:21 Optical-flow retiming stretches generated clip motion across seconds rather than scheduling card lifespans and stacking overlapping event cards."
+        },
+        {
+          "technique": "evidence-card-popup",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/video/leonardo_reference.py:1 Leonardo reference runner requests hosted benchmark image-to-video clips without creating dated evidence card pop-ups for data events."
+        },
+        {
+          "technique": "leader-adaptive-theme",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/video/render_preset_clips.py:18 Preset clip rendering takes motion prompts from static library presets rather than driving adaptive palettes and themes based on the current data leader."
+        },
+        {
+          "technique": "legibility-floor",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/video/clip_check.py:1 Quality verification evaluates pixel-level motion energy, concentration, retention, and sharpness rather than enforcing 26 px typography floors or safe zones."
+        },
+        {
+          "technique": "motion-cue-budget",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/video/README.md:79 Motion lines restrict diffusion prompt movement to camera drift and material effects rather than budgeting discrete chart motion cues per narrative beat."
+        },
+        {
+          "technique": "photo-rights-ledger",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/video/render_preset_clips.py:28 Preset clip runs process local synthetic assets in untracked scratch directories with no photo attribution or third-party image rights records."
+        },
+        {
+          "technique": "photo-to-poster-portrait",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/video/compose_clip.py:18 Inpainting plates are created using Flux 2 to erase sprite elements rather than cutting out and stylizing historical champion photographs into posterized portraits."
+        },
+        {
+          "technique": "timing-plan-first",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/video/gpu_trace.py:1 GPU performance sampling monitors hardware memory and compute bottlenecks during video generation rather than calculating data-velocity timing plans."
+        },
+        {
+          "technique": "top-n-with-logos",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/video/transcode.mjs:60 Transcode profiles define video dimensions and compression ladders for looping website showcases without Top-10 ranking leaderboards or brand logos."
+        }
+      ]
+    },
+    "99cf420c-88ff-4f45-b8da-259761919b83/data-video-art-direction": {
+      "context": "ui-shell",
+      "subject": "data-video-art-direction",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T09:06:04.033Z",
+      "worker": "9fec2b79-a056-4f65-9f22-630431bdbad0",
+      "techniques": [
+        {
+          "technique": "case-native-chart-form",
+          "verdict": "not-applicable",
+          "evidence": "components/ui/tokens.ts:149 Design tokens document the removal of unused chart palettes and the absence of charting libraries from the repository."
+        },
+        {
+          "technique": "champion-split-wipe",
+          "verdict": "not-applicable",
+          "evidence": "components/ui/Equalizer.tsx:13 Equalizer pauses audio waveform animations when scrolled offscreen rather than executing split-wipe transitions for champion handoffs."
+        },
+        {
+          "technique": "concept-landing-proposals",
+          "verdict": "not-applicable",
+          "evidence": "components/ui/deck/Deck.tsx:3 The deck shell manages stepped wizard card stages rather than setting up 4-seat image-triage rounds contrasting illustrative metaphors and data charts."
+        },
+        {
+          "technique": "curiosity-title-thumbnail",
+          "verdict": "not-applicable",
+          "evidence": "components/ui/StudioFrame.tsx:5 StudioFrame renders the top-level application navigation shell and brand wordmark without authoring topic titles or teaser thumbnails for data videos."
+        },
+        {
+          "technique": "ending-sequence",
+          "verdict": "not-applicable",
+          "evidence": "components/ui/NotificationBell.tsx:3 NotificationBell manages unread asynchronous job events in the app navigation bar rather than presenting an end card with winner spotlights or StatReel branding."
+        },
+        {
+          "technique": "event-card-stack",
+          "verdict": "not-applicable",
+          "evidence": "components/ui/Modal.tsx:12 Modal manages accessible dialog portals over HTML body without stacking overlapping event cards across an animated chart timeline."
+        },
+        {
+          "technique": "evidence-card-popup",
+          "verdict": "not-applicable",
+          "evidence": "components/ui/Field.tsx:3 Form field components style standard text and selection inputs without generating pop-up evidence cards for data events."
+        },
+        {
+          "technique": "leader-adaptive-theme",
+          "verdict": "not-applicable",
+          "evidence": "components/ui/GravitoneTokens.tsx:16 GravitoneTokens emits static application design system CSS variables at root layout rather than adapting theme backgrounds to chart leader changes."
+        },
+        {
+          "technique": "legibility-floor",
+          "verdict": "not-applicable",
+          "evidence": "components/ui/Primitives.tsx:25 UI primitives render web desktop glass containers and buttons without evaluating mobile phone vertical safe zones or minimum 26 px chart label floors."
+        },
+        {
+          "technique": "motion-cue-budget",
+          "verdict": "not-applicable",
+          "evidence": "components/ui/tokens.ts:95 UI token motion defines global CSS entrance easing curves rather than budgeting up to two discrete motion cues per data frame beat."
+        },
+        {
+          "technique": "photo-rights-ledger",
+          "verdict": "not-applicable",
+          "evidence": "components/ui/UserMenu.tsx:3 UserMenu renders user account sign-out and profile controls without tracking editorial photo rights or image copyright ledgers."
+        },
+        {
+          "technique": "photo-to-poster-portrait",
+          "verdict": "not-applicable",
+          "evidence": "components/ui/AuthGate.tsx:18 AuthGate controls user authentication redirects and fixture seeding without image processing for photo segmentation or poster portrait conversion."
+        },
+        {
+          "technique": "timing-plan-first",
+          "verdict": "not-applicable",
+          "evidence": "components/ui/HarnessBridge.tsx:3 HarnessBridge exposes test harness automation hooks for browser end-to-end testing rather than calculating data density time warps."
+        },
+        {
+          "technique": "top-n-with-logos",
+          "verdict": "not-applicable",
+          "evidence": "components/ui/tokens.ts:99 Tokens define application accent colors and button treatments rather than Top-10 race scales, odometers, or normalized logo layouts."
+        }
+      ]
     }
   }
 }
