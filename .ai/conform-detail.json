@@ -4200,6 +4200,32 @@
           "evidence": "app/_phases/frames/alternatives/AlternativesView.tsx:8 Each column is kept plates for one scene. Nothing fills a roster or directory cell the copy has named as a real person or place."
         }
       ]
+    },
+    "8db0a68b-ed49-4a51-8320-c9475357d2e5/music-prompt-composition": {
+      "context": "music-service",
+      "subject": "music-prompt-composition",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T21:29:01.548Z",
+      "worker": "3f74e239-780f-410e-bc3e-c03ee0eae6ef",
+      "techniques": [
+        {
+          "technique": "duration-and-tempo-locking",
+          "verdict": "conformant",
+          "evidence": "lib/music/plan.ts:51 Computes 4/4 bar duration using the 240/bpm formula and only requests hard endings on the beat when the picture span cleanly divides into bars."
+        },
+        {
+          "technique": "section-plan-as-the-brief",
+          "verdict": "conformant",
+          "evidence": "lib/music/plan.ts:203 Deconstructs the cue into an ordered array of sections mapped to scene cuts, each carrying individual durations in milliseconds and dedicated directives."
+        },
+        {
+          "technique": "sonic-style-vocabulary",
+          "verdict": "conformant",
+          "evidence": "lib/music/plan.ts:194 Restates the production style block in full on every section, enforces standing negative excludes (vocals, fade-outs), and layers mood vocabulary."
+        }
+      ]
     }
   }
 }

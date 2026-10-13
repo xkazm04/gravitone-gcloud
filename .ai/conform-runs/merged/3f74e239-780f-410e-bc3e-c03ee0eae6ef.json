@@ -1,0 +1,64 @@
+{
+ "schema": "conform-run/1",
+ "worker": "3f74e239-780f-410e-bc3e-c03ee0eae6ef",
+ "subject": "music-prompt-composition",
+ "evaluatedAt": "2026-10-13T21:29:01.548953+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [
+  {
+   "context": "music-service",
+   "subject": "music-prompt-composition",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "lib/music/plan.ts:169 Translates picture-locked spotting rows into structured multi-section music plans with exact durations, tempo locking, and full style block restatement.",
+   "techniques": [
+    {
+     "technique": "duration-and-tempo-locking",
+     "verdict": "conformant",
+     "evidence": "lib/music/plan.ts:51 Computes 4/4 bar duration using the 240/bpm formula and only requests hard endings on the beat when the picture span cleanly divides into bars."
+    },
+    {
+     "technique": "section-plan-as-the-brief",
+     "verdict": "conformant",
+     "evidence": "lib/music/plan.ts:203 Deconstructs the cue into an ordered array of sections mapped to scene cuts, each carrying individual durations in milliseconds and dedicated directives."
+    },
+    {
+     "technique": "sonic-style-vocabulary",
+     "verdict": "conformant",
+     "evidence": "lib/music/plan.ts:194 Restates the production style block in full on every section, enforces standing negative excludes (vocals, fade-outs), and layers mood vocabulary."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "music-prompt-composition",
+   "context": "frames-score-cut",
+   "reason": "The files in frames-score-cut (app/_phases/frames/*) implement visual storyboard and frame generation rather than music prompt composition. As not-applicable is not accepted from this seat, it is declined."
+  },
+  {
+   "subject": "music-prompt-composition",
+   "context": "imaging-music-probes",
+   "reason": "The files in imaging-music-probes are test suites (Playwright probes) asserting behavior of music and imaging modules rather than authoring music prompt compositions. As not-applicable is not accepted from this seat, it is declined."
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-13T21:29:01.548953+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "music-prompt-composition"
+   ],
+   "techniques": [
+    "duration-and-tempo-locking",
+    "section-plan-as-the-brief",
+    "sonic-style-vocabulary"
+   ],
+   "deviations": 0,
+   "context": "music-service",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  }
+ ]
+}
