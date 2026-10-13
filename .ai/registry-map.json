@@ -875,7 +875,11 @@
           "revision": 12,
           "changedAt": "2026-09-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "pipeline/vlm-probe/consistency.py:129 Prompts place camera and action first while placing the medium and style block at the end, deviating from style-first token ordering.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:ab55ca3342630ee1",
+          "evaluatedRevision": 12
         },
         {
           "subject": "quality-gates",
@@ -1912,8 +1916,12 @@
           "revision": 12,
           "changedAt": "2026-09-21",
           "confidence": "probable",
-          "state": "unknown",
-          "arrived": true
+          "state": "conformant",
+          "arrived": true,
+          "evidence": "app/_phases/frames/shotPrompt.ts:239 Frames phase compiles prompts using a two-block architecture that restates the locked style block and enforces no-text constraints.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:ab55ca3342630ee1",
+          "evaluatedRevision": 12
         },
         {
           "subject": "data-video-art-direction",
@@ -6284,7 +6292,11 @@
           "revision": 12,
           "changedAt": "2026-09-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "pipeline/vlm-probe/schema.py:3 Grepping the context found no prompt compilers, style blocks, or diffusion image generation calls; the module defines a read-only vision-model annotation contract rather than composing generation prompts.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:ab55ca3342630ee1",
+          "evaluatedRevision": 12
         },
         {
           "subject": "prompt-assembly",

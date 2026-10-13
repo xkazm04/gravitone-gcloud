@@ -1,0 +1,206 @@
+{
+  "schema": "conform-run/1",
+  "worker": "235066e7-807b-4b88-8828-6d649001dd28",
+  "subject": "image-prompt-composition",
+  "evaluatedAt": "2026-10-13T03:51:17.173529+00:00",
+  "provider": "agy",
+  "model": "gemini-3.8-flash-high",
+  "pairs": [
+    {
+      "context": "frames-phase",
+      "subject": "image-prompt-composition",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evidence": "app/_phases/frames/shotPrompt.ts:239 Frames phase compiles prompts using a two-block architecture that restates the locked style block and enforces no-text constraints.",
+      "techniques": [
+        {
+          "technique": "two-block-style-and-action",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/shotPrompt.ts:239 Prompts compile the project StyleBlock and shot action block into a single restated prompt."
+        },
+        {
+          "technique": "style-first-token-ordering",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/shotPrompt.ts:217 Prompts are compiled in strict order: style block first, then action, then trailing constraint clause."
+        },
+        {
+          "technique": "shape-language-over-nouns",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/shotPrompt.ts:85 Shot subject recipes specify geometry first to prevent text leakage from text-magnet nouns."
+        },
+        {
+          "technique": "negative-prompting",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/useFrames.ts:464 Image generation passes NEGATIVE_PROMPT containing standing architectural exclusions."
+        },
+        {
+          "technique": "prompt-budget-limits",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/shotReview.ts:490 Shot review verifies that every prompt fits within PROMPT_CHAR_LIMIT before calling providers."
+        },
+        {
+          "technique": "verbatim-text-locking",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:14 Epistemic split routes all text to vector layers, banning generated glyphs."
+        },
+        {
+          "technique": "reference-role-map",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/useFrames.ts:201 Only a single reference class (style references) is passed, so multi-role mapping does not apply."
+        },
+        {
+          "technique": "identity-split-from-state",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/shotPrompt.ts:93 Trailer recipes intentionally avoid recurring characters, using generic unidentifiable figures."
+        }
+      ]
+    },
+    {
+      "context": "character-consistency-testing",
+      "subject": "image-prompt-composition",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evidence": "pipeline/vlm-probe/consistency.py:129 Prompts place camera and action first while placing the medium and style block at the end, deviating from style-first token ordering.",
+      "techniques": [
+        {
+          "technique": "style-first-token-ordering",
+          "verdict": "deviation",
+          "evidence": "pipeline/vlm-probe/consistency.py:129 Camera/action shot_clause is placed at token position 0, while the style block NEGATIVE_STYLE is placed last."
+        },
+        {
+          "technique": "identity-split-from-state",
+          "verdict": "conformant",
+          "evidence": "pipeline/vlm-probe/consistency.py:66 Invariant character identity is scrubbed of transient expression/posture and reused verbatim across shots."
+        },
+        {
+          "technique": "reference-role-map",
+          "verdict": "conformant",
+          "evidence": "pipeline/vlm-probe/motion.py:98 Declares explicit role mapping for <Picture 1> to control the character's face and clothing."
+        },
+        {
+          "technique": "medium-vocabulary-locking",
+          "verdict": "conformant",
+          "evidence": "pipeline/vlm-probe/style.py:75 Style readback prompt forbids naming titles or studios, demanding concrete visual instructions."
+        },
+        {
+          "technique": "verbatim-text-locking",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/vlm-probe/consistency.py:123 Text generation is explicitly banned rather than locked verbatim."
+        }
+      ],
+      "registryProposal": "The reference-role-map technique notes that ComfyUI pipelines using ReferenceLatent manage reference authority through timestep ranges (e.g. late admission at 25% denoise) rather than prompt text labels, which should be explicitly documented as an architectural alternative."
+    },
+    {
+      "context": "vlm-frame-annotation",
+      "subject": "image-prompt-composition",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evidence": "pipeline/vlm-probe/schema.py:3 Grepping the context found no prompt compilers, style blocks, or diffusion image generation calls; the module defines a read-only vision-model annotation contract rather than composing generation prompts.",
+      "techniques": [
+        {
+          "technique": "two-block-style-and-action",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/vlm-probe/schema.py:3 Annotation probe analyzes existing frames and does not generate image prompts."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "image-prompt-composition",
+      "context": "probe-frame-data",
+      "reason": "withdrawn after review: reviewer (sonnet): The technique anchor duel-keyframe.json:2 is a _source note saying the image was generated with Flux 2 dev; nothing in that file says text generation is banned, so that claim could not be confirmed."
+    },
+    {
+      "subject": "image-prompt-composition",
+      "context": "video-clip-pipeline",
+      "reason": "withdrawn after review: reviewer (sonnet): The claim that the pipeline has no image prompt composition is contradicted: compose_clip.py runs Flux 2 inpainting with PLATE_PROMPT_TAIL and a CLIPTextEncode prompt, and motion_author.py's KEYFRAME_PROMPT writes a still-image prompt."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-13T03:51:17.173529+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "image-prompt-composition"
+      ],
+      "techniques": [
+        "identity-split-from-state",
+        "negative-prompting",
+        "prompt-budget-limits",
+        "reference-role-map",
+        "shape-language-over-nouns",
+        "style-first-token-ordering",
+        "two-block-style-and-action",
+        "verbatim-text-locking"
+      ],
+      "deviations": 0,
+      "context": "frames-phase",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T03:51:17.173529+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "image-prompt-composition"
+      ],
+      "techniques": [
+        "identity-split-from-state",
+        "medium-vocabulary-locking",
+        "reference-role-map",
+        "style-first-token-ordering",
+        "verbatim-text-locking"
+      ],
+      "deviations": 1,
+      "context": "character-consistency-testing",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T03:51:17.173529+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "image-prompt-composition"
+      ],
+      "techniques": [
+        "identity-split-from-state",
+        "reference-role-map",
+        "style-first-token-ordering",
+        "verbatim-text-locking"
+      ],
+      "deviations": 1,
+      "context": "probe-frame-data",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T03:51:17.173529+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "image-prompt-composition"
+      ],
+      "techniques": [
+        "two-block-style-and-action"
+      ],
+      "deviations": 0,
+      "context": "vlm-frame-annotation",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T03:51:17.173529+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "image-prompt-composition"
+      ],
+      "techniques": [
+        "two-block-style-and-action"
+      ],
+      "deviations": 0,
+      "context": "video-clip-pipeline",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
+}
