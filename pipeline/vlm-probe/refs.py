@@ -15,7 +15,7 @@ HERE = Path(__file__).parent
 FRAMES = HERE / "frames"
 LANE_ROOTS = (HERE / "shots", HERE / "clips")
 
-_DRIVE = re.compile(r"^[A-Za-z]:[\/]")
+_DRIVE = re.compile(r"^[A-Za-z]:[\\/]")
 
 
 class NonPortableReference(ValueError):
