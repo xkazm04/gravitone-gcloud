@@ -729,7 +729,11 @@
           "revision": 15,
           "changedAt": "2026-09-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/useProjects.ts:85 Instead of an enumerated status FSM preserving held data during reloads, useProjects accumulates boolean flags and resets projects to an empty array on reload failure.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:b667f5c1f4abdd9d",
+          "evaluatedRevision": 15
         },
         {
           "subject": "untrusted-extension-host",

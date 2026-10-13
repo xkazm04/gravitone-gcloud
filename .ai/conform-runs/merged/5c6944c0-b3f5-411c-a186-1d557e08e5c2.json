@@ -1,0 +1,112 @@
+{
+ "schema": "conform-run/1",
+ "worker": "5c6944c0-b3f5-411c-a186-1d557e08e5c2",
+ "subject": "client-state",
+ "evaluatedAt": "2026-10-13T22:53:32.021146+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [
+  {
+   "context": "auth-persistence",
+   "subject": "client-state",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/useProjects.ts:85 Instead of an enumerated status FSM preserving held data during reloads, useProjects accumulates boolean flags and resets projects to an empty array on reload failure.",
+   "techniques": [
+    {
+     "technique": "status-fsms",
+     "verdict": "deviation",
+     "evidence": "lib/useProjects.ts:85 Uses boolean/null flags and wipes held projects to empty array on reload failure instead of transitioning to an explicit stale status."
+    },
+    {
+     "technique": "async-race-guards",
+     "verdict": "deviation",
+     "evidence": "lib/useProjects.ts:110 The reload operation lacks monotonic tokens or in-flight deduplication, allowing out-of-order completions to overwrite newer state."
+    },
+    {
+     "technique": "identity-scoped-eviction",
+     "verdict": "conformant",
+     "evidence": "lib/identityEviction.ts:274 Single owner routine wipes all user-scoped IndexedDB and localStorage caches across an enumerated trigger list in an atomic transaction."
+    },
+    {
+     "technique": "persistence-and-migration",
+     "verdict": "conformant",
+     "evidence": "lib/projects.ts:84 Stored records pass through an append-only migration function updating retired phases and missing disciplines on every read."
+    },
+    {
+     "technique": "rehydration-narrowing",
+     "verdict": "conformant",
+     "evidence": "lib/projects.ts:113 Retired phase states merge into the survivor worst-news-first using a fixed ranking that resolves toward narrower states."
+    },
+    {
+     "technique": "effect-identity-and-latched-callbacks",
+     "verdict": "conformant",
+     "evidence": "lib/useAuth.tsx:91 Latches current identity in a stable ref cell so the auth subscription effect does not re-subscribe on render."
+    },
+    {
+     "technique": "singleton-lifecycle",
+     "verdict": "deviation",
+     "evidence": "lib/useThemes.ts:31 Module-scoped mutable set tracking purged accounts lacks a generation counter or test reset hatch, leaking state across test runs."
+    },
+    {
+     "technique": "store-slicing",
+     "verdict": "not-applicable",
+     "evidence": "lib/projects.ts:475 State is decentralized across independent domain hooks and IndexedDB operations rather than composed into a single sliced store."
+    },
+    {
+     "technique": "store-dependency-topology",
+     "verdict": "not-applicable",
+     "evidence": "lib/studioDb.ts:15 The application does not maintain a complex graph of interdependent singletons requiring topological ordering."
+    },
+    {
+     "technique": "optimistic-write-path",
+     "verdict": "not-applicable",
+     "evidence": "lib/useProjects.ts:149 Mutations await database confirmation before updating local state rather than performing optimistic updates."
+    },
+    {
+     "technique": "observed-read-subscription",
+     "verdict": "not-applicable",
+     "evidence": "lib/useProjects.ts:79 Custom hook returns plain state objects without proxy-based read tracking."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "client-state",
+   "context": "studio-logic-probes",
+   "reason": "Test suites and verification probes under tests/golden-path/ exercising logic and assertions, not an implementation of client-state architecture."
+  },
+  {
+   "subject": "client-state",
+   "context": "kit-specimen-route",
+   "reason": "Design system specimen showcase catalog route under app/kit/ demonstrating UI parts and brand guidelines, not managing client application state."
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-13T22:53:32.021146+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "client-state"
+   ],
+   "techniques": [
+    "async-race-guards",
+    "effect-identity-and-latched-callbacks",
+    "identity-scoped-eviction",
+    "observed-read-subscription",
+    "optimistic-write-path",
+    "persistence-and-migration",
+    "rehydration-narrowing",
+    "singleton-lifecycle",
+    "status-fsms",
+    "store-dependency-topology",
+    "store-slicing"
+   ],
+   "deviations": 1,
+   "context": "auth-persistence",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  }
+ ]
+}
