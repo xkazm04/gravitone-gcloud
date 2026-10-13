@@ -2516,6 +2516,186 @@
           "evidence": "app/_phases/research/guided/RunStage.tsx:201 The guided flow displays research results, without attached narration or read-aloud."
         }
       ]
+    },
+    "fb7019fe-fc71-463f-8fa8-9dcab877274a/cinematic-language": {
+      "context": "frames-phase",
+      "subject": "cinematic-language",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T08:33:16.013Z",
+      "worker": "c128c8ee-8434-4d43-98aa-290429f41cbb",
+      "techniques": [
+        {
+          "technique": "lighting-as-dramatic-instrument",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/frames.ts:540 The sent plate prompt has no in-world source and no darkness clause; sceneSpec only requires twenty characters."
+        },
+        {
+          "technique": "camera-position-semantics",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/shots.ts:550 Size phrases exist, but every derived shot leaves angle unset, so the attitude sentence is omitted, and placementFor emits only crosshair or thirds."
+        },
+        {
+          "technique": "movement-motivation",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/shots.ts:557 Motion is seeded empty and is not named locked-off; the review states it does not judge whether a move is a good one."
+        },
+        {
+          "technique": "performance-direction",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/shotPrompt.ts:103 Figure recipes use class verbs such as walking and advancing, with no counted beats."
+        },
+        {
+          "technique": "lens-effect-language",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/frames.ts:530 Live plate subjects are graphic shapes with no depth-of-field or perspective-effect clause."
+        },
+        {
+          "technique": "scene-grammar-progression",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/shots.ts:462 Screen direction is held screen-right and goes neutral only on reset and tail; sizes are chosen at least two steps apart."
+        },
+        {
+          "technique": "genre-visual-contracts",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/shotPrompt.ts:16 The restated block is palette, technique and finish, with no imperfection budget or other genre-layer rows."
+        }
+      ],
+      "registryProposal": "The diagonal-on-an-action-wide rule and the one-departure rule do not say what wins when a fast-cut doctrine wants the subject dead centre, or whether an angle left unset counts as the allowed neutral."
+    },
+    "edd5c776-72cc-4bf6-942c-fd223c97d138/cinematic-language": {
+      "context": "frames-score-cut",
+      "subject": "cinematic-language",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T08:33:16.013Z",
+      "worker": "c128c8ee-8434-4d43-98aa-290429f41cbb",
+      "techniques": [
+        {
+          "technique": "lighting-as-dramatic-instrument",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/frames.ts:540 The sent plate prompt has no source and no darkness clause."
+        },
+        {
+          "technique": "camera-position-semantics",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/shots.ts:550 Derived shots keep angle null, so the attitude phrase is not written."
+        },
+        {
+          "technique": "movement-motivation",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/shots.ts:557 Seeded motion is empty, with no locked-off clause."
+        },
+        {
+          "technique": "performance-direction",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/shotPrompt.ts:103 The setup medium recipe directs the figure with the class verb walking."
+        },
+        {
+          "technique": "lens-effect-language",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/frames.ts:530 Plate subjects describe shapes and carry no optical-effect clause."
+        },
+        {
+          "technique": "scene-grammar-progression",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/shots.ts:462 Axis is one sequence direction, with neutral reserved for reset and tail."
+        },
+        {
+          "technique": "genre-visual-contracts",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/shotPrompt.ts:16 What is restated on every prompt is palette, technique and finish."
+        }
+      ]
+    },
+    "07ccdf07-2f2c-4965-81e0-85ae00430a4c/cinematic-language": {
+      "context": "production-script-probes",
+      "subject": "cinematic-language",
+      "bundle": "media-generation",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T08:33:16.013Z",
+      "techniques": [
+        {
+          "technique": "camera-position-semantics",
+          "verdict": "deviation",
+          "evidence": "tests/golden-path/shot-decomposition.probe.spec.ts:124 The probe locks every seeded angle to null, so no attitude sentence is part of the derived brief."
+        },
+        {
+          "technique": "movement-motivation",
+          "verdict": "deviation",
+          "evidence": "tests/golden-path/shot-decomposition.probe.spec.ts:121 Empty motion is the required seed; locked-off is not written."
+        },
+        {
+          "technique": "performance-direction",
+          "verdict": "not-applicable",
+          "evidence": "tests/golden-path/shot-decomposition.probe.spec.ts:62 The brief under test is geometric forms, so there is no performer to count."
+        },
+        {
+          "technique": "scene-grammar-progression",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/shot-decomposition.probe.spec.ts:182 A one-step size pair with no angle is unmeasured, opposing angles pass, and the same angle is a violation."
+        },
+        {
+          "technique": "genre-visual-contracts",
+          "verdict": "deviation",
+          "evidence": "tests/golden-path/shot-decomposition.probe.spec.ts:61 What must be restated in full is a flat-vector three-colour block, not a genre layer table."
+        }
+      ],
+      "withdrawn": {
+        "worker": "c128c8ee-8434-4d43-98aa-290429f41cbb",
+        "state": "deviation",
+        "at": "2026-10-13T08:34:15.293880+00:00",
+        "reason": "reviewer (sonnet): The verdict faults a test file's assertions rather than shipped code; the probe's 'only probe that builds shot prompts' claim was not confirmed across the other eleven context files, and a test pinning the seed does not show a cinematic-language deviation in this context."
+      }
+    },
+    "1fcced52-ba63-4939-8918-f98d8a6fb42a/cinematic-language": {
+      "context": "vlm-frame-annotation",
+      "subject": "cinematic-language",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T08:33:16.013Z",
+      "worker": "c128c8ee-8434-4d43-98aa-290429f41cbb",
+      "techniques": [
+        {
+          "technique": "lighting-as-dramatic-instrument",
+          "verdict": "conformant",
+          "evidence": "pipeline/vlm-probe/schema.py:90 Key is defined as shadow depth: true black is low-key, even dim light with no black is high-key."
+        },
+        {
+          "technique": "camera-position-semantics",
+          "verdict": "conformant",
+          "evidence": "pipeline/vlm-probe/schema.py:82 Angle is read from the ground plane and verticals, and the schema docstring names the shot ladder and angle attitudes."
+        },
+        {
+          "technique": "movement-motivation",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/vlm-probe/extract_frames.py:15 A sampled still cannot recover a move, and the schema deliberately does not ask."
+        },
+        {
+          "technique": "performance-direction",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/vlm-probe/extract_frames.py:14 The still is asked for lens, angle and light, which is not a counted performance."
+        },
+        {
+          "technique": "lens-effect-language",
+          "verdict": "conformant",
+          "evidence": "pipeline/vlm-probe/schema.py:83 Lens is a visible register, and indeterminate is the answer when no cue is in frame."
+        },
+        {
+          "technique": "scene-grammar-progression",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/vlm-probe/extract_frames.py:10 Frame sampling is blind to cuts and does not plan eyelines or coverage across clips."
+        },
+        {
+          "technique": "genre-visual-contracts",
+          "verdict": "conformant",
+          "evidence": "pipeline/vlm-probe/schema.py:8 The closed vocabulary includes the thirteen genre contracts alongside the light, lens and angle fields."
+        }
+      ]
     }
   }
 }

@@ -1907,8 +1907,12 @@
           "revision": 8,
           "changedAt": "2026-09-07",
           "confidence": "probable",
-          "state": "unknown",
-          "arrived": true
+          "state": "deviation",
+          "arrived": true,
+          "evidence": "app/_phases/frames/frames.ts:540 The subject string actually compiled into a plate call is a flat graphic shape with an empty lower third, so the live prompt leaves light, optics and register to the model.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:d0f91a327c95da3c",
+          "evaluatedRevision": 8
         },
         {
           "subject": "image-prompt-composition",
@@ -2133,7 +2137,11 @@
           "revision": 8,
           "changedAt": "2026-09-07",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/_phases/frames/frames.ts:540 This context includes the same plate compiler and shot seeder, and the string that is sent still has no darkness, optics or genre-layer clause.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:d0f91a327c95da3c",
+          "evaluatedRevision": 8
         },
         {
           "subject": "frame-direction",
@@ -6291,7 +6299,11 @@
           "revision": 8,
           "changedAt": "2026-09-07",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "pipeline/vlm-probe/schema.py:83 The annotation prompt makes the model report lens register and shadow ratio in the subject's vocabulary, and it refuses millimetre optics.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:d0f91a327c95da3c",
+          "evaluatedRevision": 8
         },
         {
           "subject": "image-prompt-composition",

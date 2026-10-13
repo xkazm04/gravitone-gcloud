@@ -1,0 +1,235 @@
+{
+  "schema": "conform-run/1",
+  "worker": "c128c8ee-8434-4d43-98aa-290429f41cbb",
+  "subject": "cinematic-language",
+  "evaluatedAt": "2026-10-13T08:33:16.013461+00:00",
+  "provider": "grok",
+  "model": "grok-4.7",
+  "pairs": [
+    {
+      "context": "frames-phase",
+      "subject": "cinematic-language",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evidence": "app/_phases/frames/frames.ts:540 The subject string actually compiled into a plate call is a flat graphic shape with an empty lower third, so the live prompt leaves light, optics and register to the model.",
+      "techniques": [
+        {
+          "technique": "lighting-as-dramatic-instrument",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/frames.ts:540 The sent plate prompt has no in-world source and no darkness clause; sceneSpec only requires twenty characters."
+        },
+        {
+          "technique": "camera-position-semantics",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/shots.ts:550 Size phrases exist, but every derived shot leaves angle unset, so the attitude sentence is omitted, and placementFor emits only crosshair or thirds."
+        },
+        {
+          "technique": "movement-motivation",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/shots.ts:557 Motion is seeded empty and is not named locked-off; the review states it does not judge whether a move is a good one."
+        },
+        {
+          "technique": "performance-direction",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/shotPrompt.ts:103 Figure recipes use class verbs such as walking and advancing, with no counted beats."
+        },
+        {
+          "technique": "lens-effect-language",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/frames.ts:530 Live plate subjects are graphic shapes with no depth-of-field or perspective-effect clause."
+        },
+        {
+          "technique": "scene-grammar-progression",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/shots.ts:462 Screen direction is held screen-right and goes neutral only on reset and tail; sizes are chosen at least two steps apart."
+        },
+        {
+          "technique": "genre-visual-contracts",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/shotPrompt.ts:16 The restated block is palette, technique and finish, with no imperfection budget or other genre-layer rows."
+        }
+      ],
+      "registryProposal": "The diagonal-on-an-action-wide rule and the one-departure rule do not say what wins when a fast-cut doctrine wants the subject dead centre, or whether an angle left unset counts as the allowed neutral."
+    },
+    {
+      "context": "frames-score-cut",
+      "subject": "cinematic-language",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evidence": "app/_phases/frames/frames.ts:540 This context includes the same plate compiler and shot seeder, and the string that is sent still has no darkness, optics or genre-layer clause.",
+      "techniques": [
+        {
+          "technique": "lighting-as-dramatic-instrument",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/frames.ts:540 The sent plate prompt has no source and no darkness clause."
+        },
+        {
+          "technique": "camera-position-semantics",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/shots.ts:550 Derived shots keep angle null, so the attitude phrase is not written."
+        },
+        {
+          "technique": "movement-motivation",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/shots.ts:557 Seeded motion is empty, with no locked-off clause."
+        },
+        {
+          "technique": "performance-direction",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/shotPrompt.ts:103 The setup medium recipe directs the figure with the class verb walking."
+        },
+        {
+          "technique": "lens-effect-language",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/frames.ts:530 Plate subjects describe shapes and carry no optical-effect clause."
+        },
+        {
+          "technique": "scene-grammar-progression",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/shots.ts:462 Axis is one sequence direction, with neutral reserved for reset and tail."
+        },
+        {
+          "technique": "genre-visual-contracts",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/shotPrompt.ts:16 What is restated on every prompt is palette, technique and finish."
+        }
+      ]
+    },
+    {
+      "context": "vlm-frame-annotation",
+      "subject": "cinematic-language",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evidence": "pipeline/vlm-probe/schema.py:83 The annotation prompt makes the model report lens register and shadow ratio in the subject's vocabulary, and it refuses millimetre optics.",
+      "techniques": [
+        {
+          "technique": "lighting-as-dramatic-instrument",
+          "verdict": "conformant",
+          "evidence": "pipeline/vlm-probe/schema.py:90 Key is defined as shadow depth: true black is low-key, even dim light with no black is high-key."
+        },
+        {
+          "technique": "camera-position-semantics",
+          "verdict": "conformant",
+          "evidence": "pipeline/vlm-probe/schema.py:82 Angle is read from the ground plane and verticals, and the schema docstring names the shot ladder and angle attitudes."
+        },
+        {
+          "technique": "movement-motivation",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/vlm-probe/extract_frames.py:15 A sampled still cannot recover a move, and the schema deliberately does not ask."
+        },
+        {
+          "technique": "performance-direction",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/vlm-probe/extract_frames.py:14 The still is asked for lens, angle and light, which is not a counted performance."
+        },
+        {
+          "technique": "lens-effect-language",
+          "verdict": "conformant",
+          "evidence": "pipeline/vlm-probe/schema.py:83 Lens is a visible register, and indeterminate is the answer when no cue is in frame."
+        },
+        {
+          "technique": "scene-grammar-progression",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/vlm-probe/extract_frames.py:10 Frame sampling is blind to cuts and does not plan eyelines or coverage across clips."
+        },
+        {
+          "technique": "genre-visual-contracts",
+          "verdict": "conformant",
+          "evidence": "pipeline/vlm-probe/schema.py:8 The closed vocabulary includes the thirteen genre contracts alongside the light, lens and angle fields."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "cinematic-language",
+      "context": "probe-frame-data",
+      "reason": "evidence leans on baseline-zoom/lane.json, which is not a tracked file"
+    },
+    {
+      "subject": "cinematic-language",
+      "context": "production-script-probes",
+      "reason": "withdrawn after review: reviewer (sonnet): The verdict faults a test file's assertions rather than shipped code; the probe's 'only probe that builds shot prompts' claim was not confirmed across the other eleven context files, and a test pinning the seed does not show a cinematic-language deviation in this context."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-13T08:33:16.013461+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "cinematic-language"
+      ],
+      "techniques": [
+        "camera-position-semantics",
+        "genre-visual-contracts",
+        "lens-effect-language",
+        "lighting-as-dramatic-instrument",
+        "movement-motivation",
+        "performance-direction",
+        "scene-grammar-progression"
+      ],
+      "deviations": 1,
+      "context": "frames-phase",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-13T08:33:16.013461+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "cinematic-language"
+      ],
+      "techniques": [
+        "camera-position-semantics",
+        "genre-visual-contracts",
+        "lens-effect-language",
+        "lighting-as-dramatic-instrument",
+        "movement-motivation",
+        "performance-direction",
+        "scene-grammar-progression"
+      ],
+      "deviations": 1,
+      "context": "frames-score-cut",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-13T08:33:16.013461+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "cinematic-language"
+      ],
+      "techniques": [
+        "camera-position-semantics",
+        "genre-visual-contracts",
+        "movement-motivation",
+        "performance-direction",
+        "scene-grammar-progression"
+      ],
+      "deviations": 1,
+      "context": "production-script-probes",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-13T08:33:16.013461+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "cinematic-language"
+      ],
+      "techniques": [
+        "camera-position-semantics",
+        "genre-visual-contracts",
+        "lens-effect-language",
+        "lighting-as-dramatic-instrument",
+        "movement-motivation",
+        "performance-direction",
+        "scene-grammar-progression"
+      ],
+      "deviations": 0,
+      "context": "vlm-frame-annotation",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    }
+  ]
+}
