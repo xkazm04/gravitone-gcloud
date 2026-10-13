@@ -1997,8 +1997,12 @@
           "revision": 4,
           "changedAt": "2026-09-01",
           "confidence": "probable",
-          "state": "unknown",
-          "arrived": true
+          "state": "deviation",
+          "arrived": true,
+          "evidence": "app/_phases/frames/FramesAssembly.tsx:50 The missing-plate batch is only a component flag with an inline rendering label, so that multi-call render is not a background job the way the direction pass is.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:369bb547120f6c56",
+          "evaluatedRevision": 4
         },
         {
           "subject": "review-iteration-loops",
@@ -4228,8 +4232,12 @@
           "revision": 4,
           "changedAt": "2026-09-01",
           "confidence": "probable",
-          "state": "unknown",
-          "arrived": true
+          "state": "deviation",
+          "arrived": true,
+          "evidence": "app/_phases/research/run/live.ts:326 A cancelled live research turn is stored as idle, so an interrupted run looks the same as one that never started.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:369bb547120f6c56",
+          "evaluatedRevision": 4
         },
         {
           "subject": "quality-gates",
@@ -4438,8 +4446,12 @@
           "revision": 4,
           "changedAt": "2026-09-01",
           "confidence": "strong",
-          "state": "unknown",
-          "arrived": true
+          "state": "deviation",
+          "arrived": true,
+          "evidence": "app/_phases/research/useScope.ts:52 Scope confirm is only a checkpoint, and the script step reads the live board, so the graduation this board offers does not bind the next phase.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:369bb547120f6c56",
+          "evaluatedRevision": 4
         },
         {
           "subject": "content-research-grounding",
@@ -4602,7 +4614,11 @@
           "revision": 4,
           "changedAt": "2026-09-01",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/_phases/script/ScriptStep.tsx:234 The music-video script branch marks the phase done from the research flag alone, with no sign-off on this phase, so an empty script reads as locked.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:369bb547120f6c56",
+          "evaluatedRevision": 4
         },
         {
           "subject": "agent-memory",

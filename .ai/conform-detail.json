@@ -1680,6 +1680,142 @@
           "evidence": "lib/projects.ts:480 The preceding query explicitly selects the supplied uid's IndexedDB rows; this is not an unscopable protocol listing or a claim of server-side authorization."
         }
       ]
+    },
+    "f390705f-28cb-45c4-99e2-dae7d1842b17/production-pipeline-phasing": {
+      "context": "script-phase",
+      "subject": "production-pipeline-phasing",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T02:51:07.219Z",
+      "worker": "6383de81-6034-42c9-a40b-a36348384493",
+      "techniques": [
+        {
+          "technique": "phase-order-and-graduation",
+          "verdict": "deviation",
+          "evidence": "app/_phases/script/ScriptStep.tsx:234 Graduation is inferred from an upstream flag; the comment above says this happens with no user action."
+        },
+        {
+          "technique": "asset-vs-disposable-render",
+          "verdict": "deviation",
+          "evidence": "app/_phases/script/candidates/adoption.ts:41 A stored adoption id that no longer resolves is replaced by the first fixture script."
+        },
+        {
+          "technique": "long-run-as-background-job",
+          "verdict": "conformant",
+          "evidence": "app/_phases/script/useVersions.ts:238 Recalibration is a server turn: it survives leaving the step, one per project, elapsed time and no fraction."
+        },
+        {
+          "technique": "worst-news-first-progress",
+          "verdict": "deviation",
+          "evidence": "app/_phases/script/ScriptStep.tsx:218 This surface reports locked from research's flag rather than from script work it computed."
+        },
+        {
+          "technique": "shared-clock-across-phases",
+          "verdict": "conformant",
+          "evidence": "app/_phases/script/versions.ts:25 Beat seconds are derived from marks, and a plan that does not fit the fixed runtime is reported as overrun."
+        }
+      ],
+      "registryProposal": "asset-vs-disposable-render should say a committed id that no longer resolves must surface as missing rather than the positional default; that disclosure rule is only written for job results in long-run-as-background-job."
+    },
+    "3f0df589-9680-4aed-86a6-d6e913ddf1f1/production-pipeline-phasing": {
+      "context": "research-scope-board",
+      "subject": "production-pipeline-phasing",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T02:51:07.219Z",
+      "worker": "6383de81-6034-42c9-a40b-a36348384493",
+      "techniques": [
+        {
+          "technique": "phase-order-and-graduation",
+          "verdict": "deviation",
+          "evidence": "app/_phases/research/useScope.ts:52 The confirm control does not gate Script; the file says nothing outside this directory reads confirmed."
+        },
+        {
+          "technique": "asset-vs-disposable-render",
+          "verdict": "conformant",
+          "evidence": "app/_phases/research/scope.ts:143 A card becomes a scope decision only when the creator cuts or keeps it; the default opt-in is not treated as one."
+        },
+        {
+          "technique": "long-run-as-background-job",
+          "verdict": "conformant",
+          "evidence": "app/_phases/research/_parts/FollowUpQueue.tsx:239 Follow-up is a driven one-at-a-time job, and a persisted done job whose session results are gone is said out loud."
+        },
+        {
+          "technique": "worst-news-first-progress",
+          "verdict": "deviation",
+          "evidence": "app/_phases/research/MusicVideoResearch.tsx:26 A decode error is not a progress word; the reporter says nothing, so the shelf cannot repeat the refusal."
+        },
+        {
+          "technique": "shared-clock-across-phases",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/scope.ts:10 Scope decisions are kept versus cut cards. These files do not place scenes, cues, or clips on a runtime."
+        }
+      ]
+    },
+    "7e7c24d0-60e7-42bb-b7b2-e540cb5f2b65/production-pipeline-phasing": {
+      "context": "research-run-engine",
+      "subject": "production-pipeline-phasing",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T02:51:07.219Z",
+      "worker": "6383de81-6034-42c9-a40b-a36348384493",
+      "techniques": [
+        {
+          "technique": "long-run-as-background-job",
+          "verdict": "deviation",
+          "evidence": "app/_phases/research/run/live.ts:326 Cancel is demoted to idle. The simulated path does keep stopped-by-user as failed, and it shows elapsed time with no fraction."
+        },
+        {
+          "technique": "shared-clock-across-phases",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/run/controls.tsx:186 The only clock in these files is the run's wall time, which this technique keeps out of the product timeline."
+        }
+      ],
+      "registryProposal": "long-run-as-background-job should say whether a cancel the creator just performed may clear the on-screen run to idle, or whether idle is always forbidden because it matches never-started."
+    },
+    "fb7019fe-fc71-463f-8fa8-9dcab877274a/production-pipeline-phasing": {
+      "context": "frames-phase",
+      "subject": "production-pipeline-phasing",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T02:51:07.219Z",
+      "worker": "6383de81-6034-42c9-a40b-a36348384493",
+      "techniques": [
+        {
+          "technique": "phase-order-and-graduation",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/useFrames.ts:915 A full plate count is not treated as sign-off; the ceiling reported is review until a person locks it."
+        },
+        {
+          "technique": "asset-vs-disposable-render",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/frames.ts:119 Stills rehearse the cut and motion stays not-started; a later subject edit leaves the rendered pixels stale rather than replacing them."
+        },
+        {
+          "technique": "long-run-as-background-job",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/FramesAssembly.tsx:50 Direction is a server turn with elapsed time. The serial plate batch lives in this view flag."
+        },
+        {
+          "technique": "worst-news-first-progress",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/useFrames.ts:924 Any refused plate or direction rejection outranks review and working; nothing the user did stays unreported."
+        },
+        {
+          "technique": "shared-clock-across-phases",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/shots.ts:503 Holds come from the script clock; an unplaceable beat yields no shots and a null hold, not a zero."
+        },
+        {
+          "technique": "delivery-promise-lock",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/frames.ts:124 Imaging returns stills and the clip layer refuses to present that as motion."
+        }
+      ]
     }
   }
 }

@@ -1,0 +1,217 @@
+{
+ "schema": "conform-run/1",
+ "worker": "6383de81-6034-42c9-a40b-a36348384493",
+ "subject": "production-pipeline-phasing",
+ "evaluatedAt": "2026-10-13T02:51:07.219078+00:00",
+ "provider": "grok",
+ "model": "grok-4.7",
+ "pairs": [
+  {
+   "context": "script-phase",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/_phases/script/ScriptStep.tsx:234 The music-video script branch marks the phase done from the research flag alone, with no sign-off on this phase, so an empty script reads as locked.",
+   "techniques": [
+    {
+     "technique": "phase-order-and-graduation",
+     "verdict": "deviation",
+     "evidence": "app/_phases/script/ScriptStep.tsx:234 Graduation is inferred from an upstream flag; the comment above says this happens with no user action."
+    },
+    {
+     "technique": "asset-vs-disposable-render",
+     "verdict": "deviation",
+     "evidence": "app/_phases/script/candidates/adoption.ts:41 A stored adoption id that no longer resolves is replaced by the first fixture script."
+    },
+    {
+     "technique": "long-run-as-background-job",
+     "verdict": "conformant",
+     "evidence": "app/_phases/script/useVersions.ts:238 Recalibration is a server turn: it survives leaving the step, one per project, elapsed time and no fraction."
+    },
+    {
+     "technique": "worst-news-first-progress",
+     "verdict": "deviation",
+     "evidence": "app/_phases/script/ScriptStep.tsx:218 This surface reports locked from research's flag rather than from script work it computed."
+    },
+    {
+     "technique": "shared-clock-across-phases",
+     "verdict": "conformant",
+     "evidence": "app/_phases/script/versions.ts:25 Beat seconds are derived from marks, and a plan that does not fit the fixed runtime is reported as overrun."
+    }
+   ],
+   "registryProposal": "asset-vs-disposable-render should say a committed id that no longer resolves must surface as missing rather than the positional default; that disclosure rule is only written for job results in long-run-as-background-job."
+  },
+  {
+   "context": "research-scope-board",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/_phases/research/useScope.ts:52 Scope confirm is only a checkpoint, and the script step reads the live board, so the graduation this board offers does not bind the next phase.",
+   "techniques": [
+    {
+     "technique": "phase-order-and-graduation",
+     "verdict": "deviation",
+     "evidence": "app/_phases/research/useScope.ts:52 The confirm control does not gate Script; the file says nothing outside this directory reads confirmed."
+    },
+    {
+     "technique": "asset-vs-disposable-render",
+     "verdict": "conformant",
+     "evidence": "app/_phases/research/scope.ts:143 A card becomes a scope decision only when the creator cuts or keeps it; the default opt-in is not treated as one."
+    },
+    {
+     "technique": "long-run-as-background-job",
+     "verdict": "conformant",
+     "evidence": "app/_phases/research/_parts/FollowUpQueue.tsx:239 Follow-up is a driven one-at-a-time job, and a persisted done job whose session results are gone is said out loud."
+    },
+    {
+     "technique": "worst-news-first-progress",
+     "verdict": "deviation",
+     "evidence": "app/_phases/research/MusicVideoResearch.tsx:26 A decode error is not a progress word; the reporter says nothing, so the shelf cannot repeat the refusal."
+    },
+    {
+     "technique": "shared-clock-across-phases",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/research/scope.ts:10 Scope decisions are kept versus cut cards. These files do not place scenes, cues, or clips on a runtime."
+    }
+   ]
+  },
+  {
+   "context": "research-run-engine",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/_phases/research/run/live.ts:326 A cancelled live research turn is stored as idle, so an interrupted run looks the same as one that never started.",
+   "techniques": [
+    {
+     "technique": "long-run-as-background-job",
+     "verdict": "deviation",
+     "evidence": "app/_phases/research/run/live.ts:326 Cancel is demoted to idle. The simulated path does keep stopped-by-user as failed, and it shows elapsed time with no fraction."
+    },
+    {
+     "technique": "shared-clock-across-phases",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/research/run/controls.tsx:186 The only clock in these files is the run's wall time, which this technique keeps out of the product timeline."
+    }
+   ],
+   "registryProposal": "long-run-as-background-job should say whether a cancel the creator just performed may clear the on-screen run to idle, or whether idle is always forbidden because it matches never-started."
+  },
+  {
+   "context": "frames-phase",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/_phases/frames/FramesAssembly.tsx:50 The missing-plate batch is only a component flag with an inline rendering label, so that multi-call render is not a background job the way the direction pass is.",
+   "techniques": [
+    {
+     "technique": "phase-order-and-graduation",
+     "verdict": "conformant",
+     "evidence": "app/_phases/frames/useFrames.ts:915 A full plate count is not treated as sign-off; the ceiling reported is review until a person locks it."
+    },
+    {
+     "technique": "asset-vs-disposable-render",
+     "verdict": "conformant",
+     "evidence": "app/_phases/frames/frames.ts:119 Stills rehearse the cut and motion stays not-started; a later subject edit leaves the rendered pixels stale rather than replacing them."
+    },
+    {
+     "technique": "long-run-as-background-job",
+     "verdict": "deviation",
+     "evidence": "app/_phases/frames/FramesAssembly.tsx:50 Direction is a server turn with elapsed time. The serial plate batch lives in this view flag."
+    },
+    {
+     "technique": "worst-news-first-progress",
+     "verdict": "conformant",
+     "evidence": "app/_phases/frames/useFrames.ts:924 Any refused plate or direction rejection outranks review and working; nothing the user did stays unreported."
+    },
+    {
+     "technique": "shared-clock-across-phases",
+     "verdict": "conformant",
+     "evidence": "app/_phases/frames/shots.ts:503 Holds come from the script clock; an unplaceable beat yields no shots and a null hold, not a zero."
+    },
+    {
+     "technique": "delivery-promise-lock",
+     "verdict": "conformant",
+     "evidence": "app/_phases/frames/frames.ts:124 Imaging returns stills and the clip layer refuses to present that as motion."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "production-pipeline-phasing",
+   "context": "phase-shared",
+   "reason": "conformant with fewer than two techniques shown realized"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-13T02:51:07.219078+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "asset-vs-disposable-render",
+    "long-run-as-background-job",
+    "phase-order-and-graduation",
+    "shared-clock-across-phases",
+    "worst-news-first-progress"
+   ],
+   "deviations": 1,
+   "context": "script-phase",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  },
+  {
+   "ts": "2026-10-13T02:51:07.219078+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "asset-vs-disposable-render",
+    "long-run-as-background-job",
+    "phase-order-and-graduation",
+    "shared-clock-across-phases",
+    "worst-news-first-progress"
+   ],
+   "deviations": 1,
+   "context": "research-scope-board",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  },
+  {
+   "ts": "2026-10-13T02:51:07.219078+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "long-run-as-background-job",
+    "shared-clock-across-phases"
+   ],
+   "deviations": 1,
+   "context": "research-run-engine",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  },
+  {
+   "ts": "2026-10-13T02:51:07.219078+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "asset-vs-disposable-render",
+    "delivery-promise-lock",
+    "long-run-as-background-job",
+    "phase-order-and-graduation",
+    "shared-clock-across-phases",
+    "worst-news-first-progress"
+   ],
+   "deviations": 1,
+   "context": "frames-phase",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  }
+ ]
+}
