@@ -3020,6 +3020,48 @@
           "evidence": "components/ui/tokens.ts:99 Tokens define application accent colors and button treatments rather than Top-10 race scales, odometers, or normalized logo layouts."
         }
       ]
+    },
+    "be7ca5b4-877c-4eba-a4cf-94efc79d9843/agent-instruction-files": {
+      "context": "foundry-engine",
+      "subject": "agent-instruction-files",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T09:36:20.073Z",
+      "worker": "cbf0df69-93d5-445d-a699-bbe74c458496",
+      "techniques": [
+        {
+          "technique": "instruction-freshness",
+          "verdict": "deviation",
+          "evidence": ".claude/skills/train-style/SKILL.md:40 lib/foundry/extract/store.ts:247 calls recognize without a provider steer; lib/imaging/router.ts:102 specifies recognize: [\"ollama\", \"google\"], and lines 98–101 explain Qwen cloud's removal."
+        },
+        {
+          "technique": "restraint-amplifier-balance",
+          "verdict": "conformant",
+          "evidence": ".claude/skills/train-style/SKILL.md:69 The skill licenses independent observation and reporting of grader disagreement alongside its restrictions on references, budgets and concurrent runs."
+        }
+      ]
+    },
+    "5f28a7aa-bb6d-4846-9def-ea436e2a1812/agent-instruction-files": {
+      "context": "foundry-dojo",
+      "subject": "agent-instruction-files",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T09:36:20.073Z",
+      "worker": "cbf0df69-93d5-445d-a699-bbe74c458496",
+      "techniques": [
+        {
+          "technique": "enforcement-demotion",
+          "verdict": "conformant",
+          "evidence": "pipeline/foundry/dojo_run.py:45 The overlay's explicit-stack requirement is enforced by this conditional and the following SystemExit, independently of the agent following the prose."
+        },
+        {
+          "technique": "instruction-freshness",
+          "verdict": "deviation",
+          "evidence": ".claude/dojo/config.md:128 Line 129 completes the generation prohibition; pipeline/foundry/dojo_run.py:30–31 dispatches the existing video runners, and the overlay itself names dojo_video.py at line 82."
+        }
+      ]
     }
   }
 }

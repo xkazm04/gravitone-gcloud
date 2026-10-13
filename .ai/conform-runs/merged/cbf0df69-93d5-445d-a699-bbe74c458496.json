@@ -1,0 +1,97 @@
+{
+ "schema": "conform-run/1",
+ "worker": "cbf0df69-93d5-445d-a699-bbe74c458496",
+ "subject": "agent-instruction-files",
+ "evaluatedAt": "2026-10-13T09:36:20.073820+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "foundry-engine",
+   "subject": "agent-instruction-files",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": ".claude/skills/train-style/SKILL.md:40 Train-style names QWEN_API_KEY for dev recognition, while extraction delegates to a router whose dev recognition plan is Ollama then Google, so its preflight guidance describes a retired provider.",
+   "techniques": [
+    {
+     "technique": "instruction-freshness",
+     "verdict": "deviation",
+     "evidence": ".claude/skills/train-style/SKILL.md:40 lib/foundry/extract/store.ts:247 calls recognize without a provider steer; lib/imaging/router.ts:102 specifies recognize: [\"ollama\", \"google\"], and lines 98\u2013101 explain Qwen cloud's removal."
+    },
+    {
+     "technique": "restraint-amplifier-balance",
+     "verdict": "conformant",
+     "evidence": ".claude/skills/train-style/SKILL.md:69 The skill licenses independent observation and reporting of grader disagreement alongside its restrictions on references, budgets and concurrent runs."
+    }
+   ]
+  },
+  {
+   "context": "foundry-dojo",
+   "subject": "agent-instruction-files",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": ".claude/dojo/config.md:128 The active dimensions list prohibits video-assembly generation until a runner exists despite dojo_run.py dispatching video runners, leaving stale guidance that suppresses supported work.",
+   "techniques": [
+    {
+     "technique": "enforcement-demotion",
+     "verdict": "conformant",
+     "evidence": "pipeline/foundry/dojo_run.py:45 The overlay's explicit-stack requirement is enforced by this conditional and the following SystemExit, independently of the agent following the prose."
+    },
+    {
+     "technique": "instruction-freshness",
+     "verdict": "deviation",
+     "evidence": ".claude/dojo/config.md:128 Line 129 completes the generation prohibition; pipeline/foundry/dojo_run.py:30\u201331 dispatches the existing video runners, and the overlay itself names dojo_video.py at line 82."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "agent-instruction-files",
+   "context": "studio-workspace",
+   "reason": "Opened the listed files and searched the context and repository for instruction-file constructs; the context contains UI and fixture agent contracts, but I could not establish a context-specific standing instruction surface without substituting shared repository instructions."
+  },
+  {
+   "subject": "agent-instruction-files",
+   "context": "auth-persistence",
+   "reason": "Opened the listed files and searched for instruction-file constructs; authentication, persistence and deployment capabilities do not establish this subject's instruction contract, and the CLAUDE.md reference in capabilities.ts points to shared repository guidance."
+  },
+  {
+   "subject": "agent-instruction-files",
+   "context": "data-asset-probes",
+   "reason": "Opened the listed probes and searched for instruction-file constructs; their checks concern application data and stores, and I could not establish a context-specific instruction-file contract from them."
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-13T09:36:20.073820+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-instruction-files"
+   ],
+   "techniques": [
+    "instruction-freshness",
+    "restraint-amplifier-balance"
+   ],
+   "deviations": 1,
+   "context": "foundry-engine",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-13T09:36:20.073820+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-instruction-files"
+   ],
+   "techniques": [
+    "enforcement-demotion",
+    "instruction-freshness"
+   ],
+   "deviations": 1,
+   "context": "foundry-dojo",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

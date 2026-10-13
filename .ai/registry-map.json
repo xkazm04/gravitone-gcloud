@@ -1595,7 +1595,11 @@
           "revision": 31,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": ".claude/dojo/config.md:128 The active dimensions list prohibits video-assembly generation until a runner exists despite dojo_run.py dispatching video runners, leaving stale guidance that suppresses supported work.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:25b61236a62604b0",
+          "evaluatedRevision": 31
         }
       ],
       "governance": "governed"
@@ -1689,7 +1693,11 @@
           "revision": 31,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": ".claude/skills/train-style/SKILL.md:40 Train-style names QWEN_API_KEY for dev recognition, while extraction delegates to a router whose dev recognition plan is Ollama then Google, so its preflight guidance describes a retired provider.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:25b61236a62604b0",
+          "evaluatedRevision": 31
         },
         {
           "subject": "quality-gates",
