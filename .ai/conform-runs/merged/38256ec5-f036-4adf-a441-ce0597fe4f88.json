@@ -1,0 +1,207 @@
+{
+  "schema": "conform-run/1",
+  "worker": "38256ec5-f036-4adf-a441-ce0597fe4f88",
+  "subject": "eval-harness",
+  "evaluatedAt": "2026-10-13T00:40:07.112270+00:00",
+  "provider": "agy",
+  "model": "gemini-3.8-flash-high",
+  "pairs": [
+    {
+      "context": "foundry-forge",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "pipeline/foundry/plans/sweep-01.json:46 The sweep matrix specifies only a single seed (N=1) per candidate cell, failing to evaluate non-deterministic image generation over repeated trials with a declared aggregation.",
+      "techniques": [
+        {
+          "technique": "reliability-aggregation",
+          "verdict": "deviation",
+          "evidence": "pipeline/foundry/plans/sweep-01.json:46 Only a single seed is evaluated per candidate cell in the sweep matrix, omitting repeated trial distributions."
+        },
+        {
+          "technique": "metric-role-contract",
+          "verdict": "deviation",
+          "evidence": "pipeline/foundry/forge.py:454 Craft and style scores are logged side-by-side without declaring a single optimized metric and satisficing thresholds."
+        },
+        {
+          "technique": "judge-stability",
+          "verdict": "deviation",
+          "evidence": "pipeline/foundry/forge.py:76 The judge is configured via an unpinned Ollama tag alias rather than an immutable pinned dated model version."
+        },
+        {
+          "technique": "eval-economics",
+          "verdict": "conformant",
+          "evidence": "pipeline/foundry/selftest.py:17 The test suite fakes vendor Ollama and ComfyUI calls at the seam, enabling zero-cost deterministic harness self-tests."
+        },
+        {
+          "technique": "assertion-vs-judgment",
+          "verdict": "conformant",
+          "evidence": "pipeline/foundry/grade.py:18 Deterministic text veto and enum checks gate scoring, with unmeasured recorded as a distinct third verdict."
+        },
+        {
+          "technique": "scenario-design",
+          "verdict": "conformant",
+          "evidence": "pipeline/foundry/scenario_probe.py:14 Controlled scenarios specify countable physical properties in expectations rather than subjective aesthetic impressions."
+        },
+        {
+          "technique": "comparison-modes",
+          "verdict": "conformant",
+          "evidence": "pipeline/foundry/forge.py:8 Matrix plan preserves multi-dimensional cell identity across scenes, styles, mechanisms, and seeds."
+        }
+      ]
+    },
+    {
+      "context": "pipeline-scripts",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "pipeline/lint-ratchet.mjs:7 A search across context scripts for judge, rubric, model, and eval-harness terms yields zero hits, confirming these scripts are deterministic static linters, manifest checkers, and browser automation drivers rather than an eval harness.",
+      "techniques": [
+        {
+          "technique": "eval-economics",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/lint-ratchet.mjs:7 Static linters and Playwright browser drivers involve no model eval spend or non-deterministic test grids."
+        }
+      ],
+      "registryProposal": "The registry-map matcher assigned eval-harness on 'trials', 'regression', and 'matrix' keywords from Playwright test filenames; static linter and end-to-end browser drivers should not match non-deterministic model evaluation subjects."
+    },
+    {
+      "context": "foundry-dojo",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "pipeline/foundry/dojo_judge.py:85 The pairwise judge randomizes presentation order once rather than evaluating both mirrored presentations (A-B and B-A) to control for position bias and record order flips as ties.",
+      "techniques": [
+        {
+          "technique": "comparison-modes",
+          "verdict": "deviation",
+          "evidence": "pipeline/foundry/dojo_judge.py:85 Evaluates each pair in only a single randomized presentation order rather than mirrored both ways."
+        },
+        {
+          "technique": "uncontrolled-games-beside-the-win-rate",
+          "verdict": "deviation",
+          "evidence": "pipeline/foundry/dojo_judge.py:156 Unmirrored order picks are tallied directly into judge_pick_rate without position-control verification or reporting uncontrolled games."
+        },
+        {
+          "technique": "judge-stability",
+          "verdict": "deviation",
+          "evidence": "pipeline/foundry/dojo_judge.py:167 The retry ladder dynamically substitutes gemini-3.7-flash for gemini-3.6-flash, changing the judging instrument mid-sweep across pairs."
+        },
+        {
+          "technique": "assertion-vs-judgment",
+          "verdict": "conformant",
+          "evidence": "pipeline/foundry/dojo_measure.py:31 Mechanical pre-filters for edge density, face state, and motion energy assert observable properties before handing readbacks to the judge."
+        },
+        {
+          "technique": "eval-economics",
+          "verdict": "conformant",
+          "evidence": "pipeline/foundry/dojo_run.py:9 Pure local stack execution prevents accidental API spend during training cycles."
+        }
+      ]
+    },
+    {
+      "context": "ui-component-probes",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "tests/golden-path/adopted-render.probe.spec.ts:43 Searching the context probe files confirms absence of model judging, rubrics, or non-deterministic execution, as every test is a deterministic Playwright assertion over static TypeScript fixtures under a sealed network.",
+      "techniques": [
+        {
+          "technique": "assertion-vs-judgment",
+          "verdict": "not-applicable",
+          "evidence": "tests/golden-path/adopted-render.probe.spec.ts:43 Deterministic Playwright test asserting static table lookups on constants with no model under test."
+        }
+      ],
+      "registryProposal": "Probes in tests/golden-path/ matched eval-harness solely on the 'golden'/'probe' vocabulary overlap despite being sealed-network deterministic tests belonging to test-harness and quality-gates."
+    }
+  ],
+  "declined": [
+    {
+      "subject": "eval-harness",
+      "context": "script-phase",
+      "reason": "withdrawn after review: reviewer (sonnet): The evidence says a grep found no model involvement, but editPlan.ts and gate.ts in this context repeatedly describe model-written edit plans and say a model's output must be re-run through gate.ts; the not-applicable rests on a claim the code contradicts."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-13T00:40:07.112270+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "eval-harness"
+      ],
+      "techniques": [
+        "assertion-vs-judgment",
+        "comparison-modes",
+        "eval-economics",
+        "judge-stability",
+        "metric-role-contract",
+        "reliability-aggregation",
+        "scenario-design"
+      ],
+      "deviations": 1,
+      "context": "foundry-forge",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T00:40:07.112270+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "eval-harness"
+      ],
+      "techniques": [
+        "assertion-vs-judgment"
+      ],
+      "deviations": 0,
+      "context": "script-phase",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T00:40:07.112270+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "eval-harness"
+      ],
+      "techniques": [
+        "eval-economics"
+      ],
+      "deviations": 0,
+      "context": "pipeline-scripts",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T00:40:07.112270+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "eval-harness"
+      ],
+      "techniques": [
+        "assertion-vs-judgment",
+        "comparison-modes",
+        "eval-economics",
+        "judge-stability",
+        "uncontrolled-games-beside-the-win-rate"
+      ],
+      "deviations": 1,
+      "context": "foundry-dojo",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T00:40:07.112270+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "eval-harness"
+      ],
+      "techniques": [
+        "assertion-vs-judgment"
+      ],
+      "deviations": 0,
+      "context": "ui-component-probes",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
+}

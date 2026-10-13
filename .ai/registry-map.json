@@ -1507,7 +1507,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "pipeline/foundry/dojo_judge.py:85 The pairwise judge randomizes presentation order once rather than evaluating both mirrored presentations (A-B and B-A) to control for position bias and record order flips as ties.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "agent-memory",
@@ -1759,7 +1763,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "pipeline/foundry/plans/sweep-01.json:46 The sweep matrix specifies only a single seed (N=1) per candidate cell, failing to evaluate non-deterministic image generation over repeated trials with a declared aggregation.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "generated-output-grading",
@@ -3526,7 +3534,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "pipeline/lint-ratchet.mjs:7 A search across context scripts for judge, rubric, model, and eval-harness terms yields zero hits, confirming these scripts are deterministic static linters, manifest checkers, and browser automation drivers rather than an eval harness.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "translation-pipeline-topology",
@@ -5639,7 +5651,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "tests/golden-path/adopted-render.probe.spec.ts:43 Searching the context probe files confirms absence of model judging, rubrics, or non-deterministic execution, as every test is a deterministic Playwright assertion over static TypeScript fixtures under a sealed network.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "prompt-assembly",
