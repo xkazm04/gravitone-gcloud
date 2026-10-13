@@ -3819,6 +3819,183 @@
           "evidence": "lib/projects.ts:84 Migrates legacy schemas and initializes missing phase states at the decode seam before returning domain types."
         }
       ]
+    },
+    "335f68d6-a5f9-4814-978d-bf9e68497831/agent-cli-transport": {
+      "context": "text-engine",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T12:10:44.732Z",
+      "worker": "06615081-850e-4282-97b9-ab8548606a2b",
+      "techniques": [
+        {
+          "technique": "availability-probe",
+          "verdict": "conformant",
+          "evidence": "lib/claudeCli.ts:195 Zero-token probe runs claude --version through the spawn door with seatOnlyEnv(), naming its ceiling that login state is proven on real calls."
+        },
+        {
+          "technique": "subscription-auth-selection",
+          "verdict": "conformant",
+          "evidence": "lib/claudeCli.ts:155 Strips METERED_AUTH_VARS at the single spawn door so no ambient API key can silently convert seat runs to metered billing."
+        },
+        {
+          "technique": "child-observed-posture",
+          "verdict": "conformant",
+          "evidence": "lib/claudeCli.ts:281 Quotes empty tool allowlist on Windows shell to prevent the interpreter from dropping the zero-length argument and erasing restrictions."
+        },
+        {
+          "technique": "dated-capability-matrix",
+          "verdict": "conformant",
+          "evidence": "lib/text/providers/claudeCli.ts:60 Records schema enforcement capability with tool version and verification date, driving prompt augmentation when false."
+        },
+        {
+          "technique": "fallback-ladder",
+          "verdict": "conformant",
+          "evidence": "lib/text/router.ts:408 Selects preferred local CLI transport before falling back to alternate metered cloud provider, recording the rung on the result."
+        },
+        {
+          "technique": "output-normalization",
+          "verdict": "conformant",
+          "evidence": "lib/claudeCli.ts:318 Normalizes single JSON result object, extracting text and metadata while classifying envelope error subtypes."
+        },
+        {
+          "technique": "permission-stance-enforcement",
+          "verdict": "conformant",
+          "evidence": "lib/claudeCli.ts:282 Enforces generate stance by disallowing all tools and capping execution to a single turn."
+        },
+        {
+          "technique": "host-routed-approval-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/types.ts:37 Transport runs headless non-interactive batch turns with no tool permissions; no human is in the loop to route mid-turn approvals."
+        },
+        {
+          "technique": "thread-custody-across-resume",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/types.ts:38 Transport calls are stateless one-shot executions capped at one turn; conversation threads are never persisted or resumed across spawns."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "conformant",
+          "evidence": "lib/claudeCli.ts:70-148 realizes availability-probe (zero-token probeClaude through the same spawn door) and subscription-auth-selection (seatOnlyEnv strips METERED_AUTH_VARS at the one door, :63-74,117,201); dated-capability-matrix and fallback-ladder are deliberately deferred to lib/text/providers/claudeCli.ts + lib/deployment.ts, which this file's own header names as the reason it stays a thin adapter.",
+          "evaluatedAt": "2026-09-22",
+          "worker": null,
+          "reason": "replaced by 06615081-850e-4282-97b9-ab8548606a2b"
+        }
+      ]
+    },
+    "c825459c-a296-409e-8796-3876db9f15ec/agent-cli-transport": {
+      "context": "cli-infrastructure-probes",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T12:10:44.732Z",
+      "techniques": [
+        {
+          "technique": "availability-probe",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/cli-exit-classification.probe.spec.ts:38 Asserts that shell exit code 1 with not-found stderr classifies as not-installed across probe and run entry points."
+        },
+        {
+          "technique": "child-observed-posture",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/cli-sandbox-args.probe.spec.ts:109 Pins child-observed argument vector to confirm that restrictions survived platform interpreter concatenation."
+        },
+        {
+          "technique": "output-normalization",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/cli-exit-classification.probe.spec.ts:68 Asserts that non-zero exit diagnostics preserve a bounded stderr tail in the error without merging raw streams."
+        },
+        {
+          "technique": "permission-stance-enforcement",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/cli-sandbox-args.probe.spec.ts:87 Verifies that cliArgs constructs an empty tool allowlist and turn cap to enforce generate posture."
+        },
+        {
+          "technique": "fallback-ladder",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/cli-transport-resilience.probe.spec.ts:81 Tests that missing binary resolves cleanly to a typed not-installed error so router can descend fallback ladder."
+        },
+        {
+          "technique": "host-routed-approval-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "tests/golden-path/cli-sandbox-args.probe.spec.ts:88 Probes test headless batch runs with pre-approved tools and no interactive approval queue."
+        },
+        {
+          "technique": "thread-custody-across-resume",
+          "verdict": "not-applicable",
+          "evidence": "tests/golden-path/cli-sandbox-args.probe.spec.ts:88 Probes exercise single-turn stateless CLI calls; no conversation resume semantics exist."
+        }
+      ],
+      "withdrawn": {
+        "worker": "06615081-850e-4282-97b9-ab8548606a2b",
+        "state": "conformant",
+        "at": "2026-10-13T12:16:25.432900+00:00",
+        "reason": "reviewer (sonnet): The technique at cli-exit-classification.probe.spec.ts:38 only calls the pure classifyExit(); that file never calls probeClaude or runClaude, so 'across probe and run entry points' is not supported there."
+      }
+    },
+    "c03d034a-be0e-4f26-abdd-48ef01098974/agent-cli-transport": {
+      "context": "auth-persistence",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T12:10:44.732Z",
+      "techniques": [
+        {
+          "technique": "availability-probe",
+          "verdict": "not-applicable",
+          "evidence": "lib/firebase.ts:107 Handles Firebase authentication client initialization, not agent CLI binary availability probing."
+        },
+        {
+          "technique": "subscription-auth-selection",
+          "verdict": "not-applicable",
+          "evidence": "lib/devAuth.ts:30 Handles development user sign-in fixture, not child process subscription billing selection."
+        },
+        {
+          "technique": "child-observed-posture",
+          "verdict": "not-applicable",
+          "evidence": "lib/useAuth.tsx:78 React authentication provider tracking client auth state, with no child process posture observation."
+        },
+        {
+          "technique": "dated-capability-matrix",
+          "verdict": "not-applicable",
+          "evidence": "lib/capabilities.ts:215 Computes UI feature toggles rather than tool CLI versioned capability matrix rows."
+        },
+        {
+          "technique": "fallback-ladder",
+          "verdict": "not-applicable",
+          "evidence": "lib/apiAuth.ts:118 API request authorization guard for Next.js routes, not an LLM transport fallback ladder."
+        },
+        {
+          "technique": "output-normalization",
+          "verdict": "not-applicable",
+          "evidence": "lib/studioDb.ts:15 IndexedDB store configuration for studio projects, not agent CLI stdout envelope normalization."
+        },
+        {
+          "technique": "permission-stance-enforcement",
+          "verdict": "not-applicable",
+          "evidence": "lib/identityEviction.ts:274 Handles client data eviction on user sign-out, not agent subprocess permission stance enforcement."
+        },
+        {
+          "technique": "host-routed-approval-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "lib/projects.ts:43 Project model persistence without mid-turn interactive agent tool approval routing."
+        },
+        {
+          "technique": "thread-custody-across-resume",
+          "verdict": "not-applicable",
+          "evidence": "lib/themes.ts:387 Studio theme persistence; does not manage or resume agent conversation thread custody."
+        }
+      ],
+      "withdrawn": {
+        "worker": "06615081-850e-4282-97b9-ab8548606a2b",
+        "state": "not-applicable",
+        "at": "2026-10-13T12:16:25.470365+00:00",
+        "reason": "reviewer (sonnet): The anchor lib/capabilities.ts:267 (CAPABILITY_ROUTES) is incidental and does not itself show the CLI-transport precondition is absent. The absence terms (readonly-scan, host-routed, thread-custody) are not the right ones for agent-cli-transport, and the context's own files mention spawning and the "
+      }
     }
   }
 }

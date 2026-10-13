@@ -5559,14 +5559,13 @@
           "changedAt": "2026-10-02",
           "confidence": "probable",
           "state": "conformant",
-          "evidence": "lib/claudeCli.ts:70-148 realizes availability-probe (zero-token probeClaude through the same spawn door) and subscription-auth-selection (seatOnlyEnv strips METERED_AUTH_VARS at the one door, :63-74,117,201); dated-capability-matrix and fallback-ladder are deliberately deferred to lib/text/providers/claudeCli.ts + lib/deployment.ts, which this file's own header names as the reason it stays a thin adapter.",
-          "evaluatedAt": "2026-09-22",
-          "evaluatedAgainst": "sha256:fd190f2ed79b142e",
-          "evaluatedRevision": 6,
+          "evidence": "lib/claudeCli.ts:339 Headless Claude CLI transport wraps the local binary with seat-only auth, strict sandbox arguments, floored timeouts, tree termination, and output normalization behind the router's fallback ladder.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:5791230ffb7d9fad",
+          "evaluatedRevision": 9,
           "source": "conform",
           "adoptedFrom": "de5bdd42-0e8f-4ced-a1bb-5ff4fef12f28",
-          "revisionsBehind": 3,
-          "stale": true
+          "revisionsBehind": 3
         },
         {
           "subject": "cost-metering",

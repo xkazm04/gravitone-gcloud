@@ -1,0 +1,142 @@
+{
+  "schema": "conform-run/1",
+  "worker": "06615081-850e-4282-97b9-ab8548606a2b",
+  "subject": "agent-cli-transport",
+  "evaluatedAt": "2026-10-13T12:10:44.732909+00:00",
+  "provider": "agy",
+  "model": "gemini-3.8-flash-high",
+  "pairs": [
+    {
+      "context": "text-engine",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evidence": "lib/claudeCli.ts:339 Headless Claude CLI transport wraps the local binary with seat-only auth, strict sandbox arguments, floored timeouts, tree termination, and output normalization behind the router's fallback ladder.",
+      "techniques": [
+        {
+          "technique": "availability-probe",
+          "verdict": "conformant",
+          "evidence": "lib/claudeCli.ts:195 Zero-token probe runs claude --version through the spawn door with seatOnlyEnv(), naming its ceiling that login state is proven on real calls."
+        },
+        {
+          "technique": "subscription-auth-selection",
+          "verdict": "conformant",
+          "evidence": "lib/claudeCli.ts:155 Strips METERED_AUTH_VARS at the single spawn door so no ambient API key can silently convert seat runs to metered billing."
+        },
+        {
+          "technique": "child-observed-posture",
+          "verdict": "conformant",
+          "evidence": "lib/claudeCli.ts:281 Quotes empty tool allowlist on Windows shell to prevent the interpreter from dropping the zero-length argument and erasing restrictions."
+        },
+        {
+          "technique": "dated-capability-matrix",
+          "verdict": "conformant",
+          "evidence": "lib/text/providers/claudeCli.ts:60 Records schema enforcement capability with tool version and verification date, driving prompt augmentation when false."
+        },
+        {
+          "technique": "fallback-ladder",
+          "verdict": "conformant",
+          "evidence": "lib/text/router.ts:408 Selects preferred local CLI transport before falling back to alternate metered cloud provider, recording the rung on the result."
+        },
+        {
+          "technique": "output-normalization",
+          "verdict": "conformant",
+          "evidence": "lib/claudeCli.ts:318 Normalizes single JSON result object, extracting text and metadata while classifying envelope error subtypes."
+        },
+        {
+          "technique": "permission-stance-enforcement",
+          "verdict": "conformant",
+          "evidence": "lib/claudeCli.ts:282 Enforces generate stance by disallowing all tools and capping execution to a single turn."
+        },
+        {
+          "technique": "host-routed-approval-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/types.ts:37 Transport runs headless non-interactive batch turns with no tool permissions; no human is in the loop to route mid-turn approvals."
+        },
+        {
+          "technique": "thread-custody-across-resume",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/types.ts:38 Transport calls are stateless one-shot executions capped at one turn; conversation threads are never persisted or resumed across spawns."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "agent-cli-transport",
+      "context": "cli-infrastructure-probes",
+      "reason": "withdrawn after review: reviewer (sonnet): The technique at cli-exit-classification.probe.spec.ts:38 only calls the pure classifyExit(); that file never calls probeClaude or runClaude, so 'across probe and run entry points' is not supported there."
+    },
+    {
+      "subject": "agent-cli-transport",
+      "context": "auth-persistence",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor lib/capabilities.ts:267 (CAPABILITY_ROUTES) is incidental and does not itself show the CLI-transport precondition is absent. The absence terms (readonly-scan, host-routed, thread-custody) are not the right ones for agent-cli-transport, and the context's own files mention spawning and the "
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-13T12:10:44.732909+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-cli-transport"
+      ],
+      "techniques": [
+        "availability-probe",
+        "child-observed-posture",
+        "dated-capability-matrix",
+        "fallback-ladder",
+        "host-routed-approval-round-trip",
+        "output-normalization",
+        "permission-stance-enforcement",
+        "subscription-auth-selection",
+        "thread-custody-across-resume"
+      ],
+      "deviations": 0,
+      "context": "text-engine",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T12:10:44.732909+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-cli-transport"
+      ],
+      "techniques": [
+        "availability-probe",
+        "child-observed-posture",
+        "fallback-ladder",
+        "host-routed-approval-round-trip",
+        "output-normalization",
+        "permission-stance-enforcement",
+        "thread-custody-across-resume"
+      ],
+      "deviations": 0,
+      "context": "cli-infrastructure-probes",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T12:10:44.732909+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-cli-transport"
+      ],
+      "techniques": [
+        "availability-probe",
+        "child-observed-posture",
+        "dated-capability-matrix",
+        "fallback-ladder",
+        "host-routed-approval-round-trip",
+        "output-normalization",
+        "permission-stance-enforcement",
+        "subscription-auth-selection",
+        "thread-custody-across-resume"
+      ],
+      "deviations": 0,
+      "context": "auth-persistence",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
+}
