@@ -1580,6 +1580,106 @@
         }
       ],
       "registryProposal": "Probes in tests/golden-path/ matched eval-harness solely on the 'golden'/'probe' vocabulary overlap despite being sealed-network deterministic tests belonging to test-harness and quality-gates."
+    },
+    "c825459c-a296-409e-8796-3876db9f15ec/mcp-tools": {
+      "context": "cli-infrastructure-probes",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T01:50:07.915Z",
+      "worker": "f41e38d8-6007-48af-b185-605a6e666657",
+      "techniques": [
+        {
+          "technique": "tool-schema-design",
+          "verdict": "not-applicable",
+          "evidence": "tests/golden-path/cli-sandbox-args.probe.spec.ts:87 The tested reasoning configuration grants no tools; it publishes no MCP tool schema."
+        }
+      ]
+    },
+    "be7ca5b4-877c-4eba-a4cf-94efc79d9843/mcp-tools": {
+      "context": "foundry-engine",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T01:50:07.915Z",
+      "worker": "f41e38d8-6007-48af-b185-605a6e666657",
+      "techniques": [
+        {
+          "technique": "sealed-continuation-state",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/store.ts:266 Continuation state remains in a server-side manifest; the caller does not carry the state in an opaque blob."
+        },
+        {
+          "technique": "tool-schema-design",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:70 This schema describes a direct reasoning result contract, not a model-selectable MCP tool."
+        }
+      ]
+    },
+    "4a92f572-9c92-4b18-9b94-9dd38d123911/mcp-tools": {
+      "context": "kit-specimen-route",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T01:50:07.915Z",
+      "worker": "f41e38d8-6007-48af-b185-605a6e666657",
+      "techniques": [
+        {
+          "technique": "server-composition",
+          "verdict": "not-applicable",
+          "evidence": "app/kit/Parts.tsx:1279 Catalog entries resolve to rendered component demonstrations, not protocol handlers."
+        },
+        {
+          "technique": "tool-schema-design",
+          "verdict": "not-applicable",
+          "evidence": "app/kit/catalog.ts:286 The catalog documents JSX component APIs, not tool argument schemas."
+        }
+      ]
+    },
+    "88077279-217f-4b17-b941-74203bb2e1db/mcp-tools": {
+      "context": "ai-orchestration",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T01:50:07.915Z",
+      "worker": "f41e38d8-6007-48af-b185-605a6e666657",
+      "techniques": [
+        {
+          "technique": "fluent-syntax-bounded-grammar",
+          "verdict": "not-applicable",
+          "evidence": "lib/claudeCli.ts:465 The input is model prompt text, not a tool argument interpreted as a command or query grammar."
+        },
+        {
+          "technique": "tool-schema-design",
+          "verdict": "not-applicable",
+          "evidence": "lib/claudeCli.ts:340 This path runs a tool-disabled reasoning turn and parses its model envelope; it publishes no tool definition."
+        }
+      ]
+    },
+    "c03d034a-be0e-4f26-abdd-48ef01098974/mcp-tools": {
+      "context": "auth-persistence",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T01:50:07.915Z",
+      "worker": "f41e38d8-6007-48af-b185-605a6e666657",
+      "techniques": [
+        {
+          "technique": "authentication-and-scoping",
+          "verdict": "not-applicable",
+          "evidence": "lib/apiAuth.ts:538 This is an application HTTP access guard; no MCP credential issuance or tool-list authentication policy was found."
+        },
+        {
+          "technique": "enumeration-without-a-scope",
+          "verdict": "not-applicable",
+          "evidence": "lib/projects.ts:480 The preceding query explicitly selects the supplied uid's IndexedDB rows; this is not an unscopable protocol listing or a claim of server-side authorization."
+        }
+      ]
     }
   }
 }

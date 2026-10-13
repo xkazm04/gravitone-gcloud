@@ -551,7 +551,11 @@
           "revision": 31,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/claudeCli.ts:281 Context searches found no MCP terms and followed callers use direct reasoning or native vendor tools with MCP configuration excluded, so the inspected orchestration does not implement an MCP boundary.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:afba7a2b8c938ae1",
+          "evaluatedRevision": 31
         },
         {
           "subject": "test-harness",
@@ -653,7 +657,11 @@
           "revision": 31,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/projects.ts:479 Context searches found no MCP terms and repository searches found no protocol implementation or manifest; these files implement browser persistence and application API authentication rather than tool-server access.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:afba7a2b8c938ae1",
+          "evaluatedRevision": 31
         },
         {
           "subject": "prompt-assembly",
@@ -1072,7 +1080,11 @@
           "revision": 31,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "tests/golden-path/cli-sandbox-args.probe.spec.ts:112 Context and repository searches found no MCP implementation or manifest, while this probe explicitly checks that the reasoning subprocess receives an empty tool allow-list.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:afba7a2b8c938ae1",
+          "evaluatedRevision": 31
         },
         {
           "subject": "eval-harness",
@@ -1613,7 +1625,11 @@
           "revision": 31,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/foundry/extract/store.ts:255 Context searches found no MCP terms and repository searches found no protocol implementation or manifest; the inspected engine invokes the application's model router directly rather than publishing agent tools.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:afba7a2b8c938ae1",
+          "evaluatedRevision": 31
         },
         {
           "subject": "voice-io",
@@ -2613,8 +2629,12 @@
           "revision": 31,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown",
-          "arrived": true
+          "state": "not-applicable",
+          "arrived": true,
+          "evidence": "app/kit/Parts.tsx:1278 Context searches found no MCP terms and repository searches found no protocol implementation or manifest; this catalog renders React component specimens instead of exposing a model-controlled tool surface.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:afba7a2b8c938ae1",
+          "evaluatedRevision": 31
         },
         {
           "subject": "client-fetch-cache",
