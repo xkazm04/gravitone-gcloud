@@ -154,6 +154,18 @@ for (const id of Object.keys(TABLE)) {
     continue;
   }
   test(`legibility: ${id}`, async ({ page }) => {
+    // Whether a run control is enabled depends on which engines THIS machine can reach
+    // (a developer's box has a CLI, CI has none), and a disabled control is dimmed to
+    // opacity-40, so the same screen measured differently in the two places
+    // (2026-10-13: direct-the-cut read red only on CI). Pin the engine the baseline was
+    // curated against: the preview keeps its real manifest and answers "an engine serves".
+    await page.route("**/api/turns/preview", async (route) => {
+      const res = await route.fetch();
+      const body = await res.json().catch(() => null);
+      if (!res.ok() || !body?.engine) return route.fulfill({ response: res });
+      body.engine = { ...body.engine, available: true, provider: body.engine.provider ?? "pinned", rung: "preferred", transport: "local-subprocess", costBasis: "vendor-reported" };
+      return route.fulfill({ response: res, json: body });
+    });
     await reach(page, TABLE[id]);
     if (TABLE[id].wipe && (await page.locator(".gt-race").count()) > 0) {
       test.skip(true, "the wipe did not take (the seeded shelf re-populated) — not the empty shelf this id names");
