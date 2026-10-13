@@ -3996,6 +3996,78 @@
         "at": "2026-10-13T12:16:25.470365+00:00",
         "reason": "reviewer (sonnet): The anchor lib/capabilities.ts:267 (CAPABILITY_ROUTES) is incidental and does not itself show the CLI-transport precondition is absent. The absence terms (readonly-scan, host-routed, thread-custody) are not the right ones for agent-cli-transport, and the context's own files mention spawning and the "
       }
+    },
+    "8db0a68b-ed49-4a51-8320-c9475357d2e5/generated-music-acceptance": {
+      "context": "music-service",
+      "subject": "generated-music-acceptance",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T12:52:09.656Z",
+      "worker": "d8f72665-fd96-4a65-b4de-94a452272bf9",
+      "techniques": [
+        {
+          "technique": "brief-conformance-listen",
+          "verdict": "not-applicable",
+          "evidence": "lib/musicClient.ts:51 These files request and return generation results; they do not perform the first-listen acceptance event."
+        },
+        {
+          "technique": "generated-audio-defect-taxonomy",
+          "verdict": "not-applicable",
+          "evidence": "lib/music/elevenlabs.ts:271 The response check detects insufficient bytes, not a failed musical take requiring acoustic defect classification."
+        },
+        {
+          "technique": "loudness-and-peak-acceptance",
+          "verdict": "deviation",
+          "evidence": "lib/music/elevenlabs.ts:275 Returned MP3 bytes have no integrated loudness, true-peak measurement, measurement basis or destination target."
+        },
+        {
+          "technique": "rights-and-provenance-record",
+          "verdict": "deviation",
+          "evidence": "lib/music/elevenlabs.ts:281 The generation record includes vendor, model, requested duration, plan and timestamp, but omits account, plan tier, applicable terms, reference status and clearance destination."
+        },
+        {
+          "technique": "structure-verification-against-plan",
+          "verdict": "deviation",
+          "evidence": "lib/music/elevenlabs.ts:279 This records the requested duration; returned audio is not measured against that duration, section offsets, locked tempo or ending shape."
+        }
+      ]
+    },
+    "f7e5dc11-14d3-42db-a616-65bd5f36490d/generated-music-acceptance": {
+      "context": "library-assets-audio",
+      "subject": "generated-music-acceptance",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T12:52:09.656Z",
+      "worker": "d8f72665-fd96-4a65-b4de-94a452272bf9",
+      "techniques": [
+        {
+          "technique": "brief-conformance-listen",
+          "verdict": "not-applicable",
+          "evidence": "app/library/AssetLightbox.tsx:183 The viewer displays an image plate rather than auditioning generated music."
+        },
+        {
+          "technique": "generated-audio-defect-taxonomy",
+          "verdict": "not-applicable",
+          "evidence": "app/library/assets/Tile.tsx:113 The displayed defect is text leakage in an image, rather than an acoustic defect."
+        },
+        {
+          "technique": "loudness-and-peak-acceptance",
+          "verdict": "not-applicable",
+          "evidence": "app/library/assets/ShelfGallery.tsx:140 This shelf's upload input accepts image references; its underlying upload handler also rejects non-images."
+        },
+        {
+          "technique": "rights-and-provenance-record",
+          "verdict": "not-applicable",
+          "evidence": "app/library/assetMeta.ts:87 The metadata describes visual proof-sheet promotion, not acceptance or commercial clearance of generated music."
+        },
+        {
+          "technique": "structure-verification-against-plan",
+          "verdict": "not-applicable",
+          "evidence": "app/library/assetMeta.ts:44 The retained specification describes pixels and style slots, not musical sections or expected audio offsets."
+        }
+      ]
     }
   }
 }

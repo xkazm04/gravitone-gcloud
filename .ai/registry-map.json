@@ -2894,8 +2894,12 @@
           "revision": 2,
           "changedAt": "2026-08-29",
           "confidence": "probable",
-          "state": "unknown",
-          "arrived": true
+          "state": "not-applicable",
+          "arrived": true,
+          "evidence": "app/library/assets/ShelfGallery.tsx:140 The listed shelf files handle image references and plates; searches found audio acceptance constructs elsewhere, while dBTP and planTier had no matches in app/library.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:3f9de82f80a6905a",
+          "evaluatedRevision": 2
         },
         {
           "subject": "voice-io",
@@ -3392,7 +3396,11 @@
           "revision": 2,
           "changedAt": "2026-08-29",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/music/elevenlabs.ts:275 The service returns generated audio after a byte-count check without measuring loudness, peaks or delivered structure, leaving the required technical acceptance gates unrealized.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:3f9de82f80a6905a",
+          "evaluatedRevision": 2
         },
         {
           "subject": "video-assembly",
