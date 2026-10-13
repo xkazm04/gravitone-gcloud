@@ -1,0 +1,718 @@
+{
+ "schema": "conform-run/1",
+ "worker": "6db8251f-dba8-46f0-acdb-75bf72ce93d2",
+ "subject": "voice-io",
+ "evaluatedAt": "2026-10-13T07:33:46.241677+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "text-engine",
+   "subject": "voice-io",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/text/types.ts:58 The capability contract serves reasoning and retrieval, and searches of the context and repository found no getUserMedia, speechSynthesis, or SpeechRecognition implementation, so speech-channel requirements do not apply.",
+   "techniques": [
+    {
+     "technique": "authored-voice-identity",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/types.ts:30 These are text providers; no voice-authoring engine was found."
+    },
+    {
+     "technique": "caller-scoped-voice-binding",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/providers/claudeCli.ts:100 The adapter returns text, without a shared speech channel requiring caller voice bindings."
+    },
+    {
+     "technique": "decode-time-vocabulary-biasing",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/providers/google.ts:292 The decoder receives a text prompt, rather than captured speech and recognition vocabulary."
+    },
+    {
+     "technique": "duplex-agent-sessions",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/types.ts:58 Neither declared capability is a live listening-and-speaking session."
+    },
+    {
+     "technique": "engine-abstraction",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/types.ts:443 This abstraction is for reasoning; no transcription or synthesis interface was found."
+    },
+    {
+     "technique": "engine-choice-on-decisive-terms",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/providers/claudeCli.ts:58 The adapter supplies reasoning, rather than a speech recognizer to compare."
+    },
+    {
+     "technique": "on-device-vs-cloud",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/types.ts:238 Placement concerns text-model transport, without microphone-audio residency."
+    },
+    {
+     "technique": "portable-provider-package",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/types.ts:446 The additional provider seam retrieves text; no reusable voice-engine package is involved."
+    },
+    {
+     "technique": "real-time-synthesis-budget",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/providers/google.ts:294 Schema-constrained output is JSON, without live speech synthesis to time."
+    },
+    {
+     "technique": "render-acceptance",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/providers/google.ts:344 The payload failure checked here concerns text, rather than degenerate rendered audio."
+    },
+    {
+     "technique": "speech-ready-text",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/types.ts:397 The result contract carries text; no path preparing it for speech was found."
+    },
+    {
+     "technique": "spoken-intent-parsing",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/types.ts:317 Input is an assembled prompt, without a speech transcript-to-command crossing."
+    },
+    {
+     "technique": "stt-pipeline",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/providers/google.ts:336 Output extraction reads model text parts, rather than transcribing captured audio."
+    },
+    {
+     "technique": "transcript-handoff-receipts",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/types.ts:405 These receipts identify fetched web sources, without foreign-application dictation delivery."
+    },
+    {
+     "technique": "transcript-normalization",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/providers/google.ts:289 Prompt preparation adds schema instructions; it does not transform dictated prose."
+    },
+    {
+     "technique": "tts-pipeline",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/providers/claudeCli.ts:98 The cancellable operation runs a text reasoning process, without audible playback."
+    },
+    {
+     "technique": "unattended-caller-attribution",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/providers/google.ts:335 The response path extracts text; no caller can make this context speak."
+    },
+    {
+     "technique": "voice-setup-experience",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/env.ts:72 Configuration supplies a text-provider credential, without voice installation or selection."
+    },
+    {
+     "technique": "voice-ux-integration",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/router.ts:287 The entry point serves text reasoning, without narration or read-aloud affordances."
+    }
+   ],
+   "absenceTerms": [
+    "getUserMedia",
+    "speechSynthesis",
+    "SpeechRecognition"
+   ]
+  },
+  {
+   "context": "foundry-engine",
+   "subject": "voice-io",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/foundry/extract/engine.ts:68 Foundry generates image references and extracts visual styles, while searches of its files, directories, and repository found no getUserMedia, speechSynthesis, or SpeechRecognition implementation.",
+   "techniques": [
+    {
+     "technique": "authored-voice-identity",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/extract/prompts.ts:92 Authored specifications describe visual styles, without authored speech voices."
+    },
+    {
+     "technique": "caller-scoped-voice-binding",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/extract/store.ts:252 The serving result is an image, without callers sharing a speech channel."
+    },
+    {
+     "technique": "decode-time-vocabulary-biasing",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/extract/vocabulary.ts:51 Vocabulary enumerates visual observables, without speech-decoder biasing."
+    },
+    {
+     "technique": "duplex-agent-sessions",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/extract/engine.ts:70 The reasoning operation takes a prompt and schema, without a live audio conversation."
+    },
+    {
+     "technique": "engine-abstraction",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/extract/engine.ts:68 The generation abstraction returns images, rather than synthesized speech."
+    },
+    {
+     "technique": "engine-choice-on-decisive-terms",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/extract/engine.ts:66 Recognition consumes an image, without speech recognizers or decisive spoken terms."
+    },
+    {
+     "technique": "on-device-vs-cloud",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/extract/engine.ts:62 Input resources are image files, without raw microphone audio to place."
+    },
+    {
+     "technique": "portable-provider-package",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/extract/store.ts:247 The host calls image recognition, without wrapping a voice-engine package."
+    },
+    {
+     "technique": "real-time-synthesis-budget",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/extract/types.ts:104 Source media are images, without conversational speech synthesis."
+    },
+    {
+     "technique": "render-acceptance",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/extract/types.ts:86 Acceptance concerns visual style, without a synthesized-audio artifact."
+    },
+    {
+     "technique": "speech-ready-text",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/extract/prompts.ts:120 Text is prepared as an image-generation prompt, without spoken output."
+    },
+    {
+     "technique": "spoken-intent-parsing",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/extract/prompts.ts:96 Interpretation groups gallery sources into styles, without parsing spoken commands."
+    },
+    {
+     "technique": "stt-pipeline",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/extract/imageDims.ts:16 The input-byte inspection handles image headers, without capture or transcription."
+    },
+    {
+     "technique": "transcript-handoff-receipts",
+     "verdict": "not-applicable",
+     "evidence": "app/api/foundry/runs/[id]/route.ts:13 Run data leaves through a JSON response, without foreign-application dictation injection."
+    },
+    {
+     "technique": "transcript-normalization",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/extract/prompts.ts:126 Normalization trims visual recipe and scene text, without dictated prose."
+    },
+    {
+     "technique": "tts-pipeline",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/extract/engine.ts:64 Generated resources are written as images, without speech playback ownership."
+    },
+    {
+     "technique": "unattended-caller-attribution",
+     "verdict": "not-applicable",
+     "evidence": "app/api/foundry/runs/route.ts:12 The endpoint exposes run summaries, without enabling automated audible speech."
+    },
+    {
+     "technique": "voice-setup-experience",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/training/types.ts:63 Training setup concerns image or video media, without voice or recognizer selection."
+    },
+    {
+     "technique": "voice-ux-integration",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/training/types.ts:18 The media contract exposes visual artifacts, without a narration channel."
+    }
+   ],
+   "absenceTerms": [
+    "getUserMedia",
+    "speechSynthesis",
+    "SpeechRecognition"
+   ]
+  },
+  {
+   "context": "imaging-service",
+   "subject": "voice-io",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/imaging/types.ts:207 The provider contract generates and edits images or recognizes their contents, and context-directory and repository searches found no getUserMedia, speechSynthesis, or SpeechRecognition implementation.",
+   "techniques": [
+    {
+     "technique": "authored-voice-identity",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/types.ts:83 Conditioning references are images, without described or cloned voices."
+    },
+    {
+     "technique": "caller-scoped-voice-binding",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/types.ts:70 The preference steers an image vendor, without resolving a caller's speech voice."
+    },
+    {
+     "technique": "decode-time-vocabulary-biasing",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/providers/google.ts:236 Recognition receives an image and instruction, without speech decoding."
+    },
+    {
+     "technique": "duplex-agent-sessions",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/types.ts:207 The capability set contains image operations, without a duplex speech session."
+    },
+    {
+     "technique": "engine-abstraction",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/types.ts:245 The adapter interface generates images, rather than speech."
+    },
+    {
+     "technique": "engine-choice-on-decisive-terms",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/types.ts:247 The recognition seam is the image-input contract opened above, without speech-recognizer selection."
+    },
+    {
+     "technique": "on-device-vs-cloud",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/types.ts:46 Transported media are images, without microphone-audio residency decisions."
+    },
+    {
+     "technique": "portable-provider-package",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/types.ts:246 The provider seam edits images, without a portable voice provider."
+    },
+    {
+     "technique": "real-time-synthesis-budget",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/types.ts:34 Output sizing is in image pixels, without speech duration or first-audio admission."
+    },
+    {
+     "technique": "render-acceptance",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/providers/google.ts:252 The checked artifact is a vision-recognition response, without synthesized audio."
+    },
+    {
+     "technique": "speech-ready-text",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/providers/google.ts:162 Prepared text instructs image generation, without speech rendering."
+    },
+    {
+     "technique": "spoken-intent-parsing",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/types.ts:95 Recognition input is an image, without a spoken transcript-to-command boundary."
+    },
+    {
+     "technique": "stt-pipeline",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/api.ts:27 Request validation accepts image media, without audio capture or transcription."
+    },
+    {
+     "technique": "transcript-handoff-receipts",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/types.ts:51 The transfer representation is an image data URL, without foreign-field dictation delivery."
+    },
+    {
+     "technique": "transcript-normalization",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/providers/google.ts:260 The text is a vision-model answer parsed against a schema, without dictated prose."
+    },
+    {
+     "technique": "tts-pipeline",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/router.ts:514 The routed output is generated images, without utterance synthesis or playback."
+    },
+    {
+     "technique": "unattended-caller-attribution",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/providers/google.ts:220 The vendor is asked to return an image, without making the machine speak."
+    },
+    {
+     "technique": "voice-setup-experience",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/types.ts:29 Output choices concern image aspect ratios, without voice onboarding."
+    },
+    {
+     "technique": "voice-ux-integration",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/router.ts:517 The surface-facing operation recognizes images, without narration or read-aloud controls."
+    }
+   ],
+   "absenceTerms": [
+    "getUserMedia",
+    "speechSynthesis",
+    "SpeechRecognition"
+   ]
+  },
+  {
+   "context": "character-consistency-testing",
+   "subject": "voice-io",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "pipeline/vlm-probe/motion.py:124 The motion output constructs video from decoded images despite loading an audio VAE upstream, and context-directory and repository searches found no getUserMedia, speechSynthesis, or SpeechRecognition implementation.",
+   "techniques": [
+    {
+     "technique": "authored-voice-identity",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/vlm-probe/motion.py:98 The authored identity reference concerns appearance, without voice authoring or cloning."
+    },
+    {
+     "technique": "caller-scoped-voice-binding",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/vlm-probe/consistency.py:129 Identity is carried in a shot prompt, without callers sharing audible voices."
+    },
+    {
+     "technique": "decode-time-vocabulary-biasing",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/vlm-probe/consistency.py:148 Text conditions image generation, without vocabulary biasing a speech recognizer."
+    },
+    {
+     "technique": "duplex-agent-sessions",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/vlm-probe/motion.py:141 The model operation generates reference-conditioned video, without a live speech conversation."
+    },
+    {
+     "technique": "engine-abstraction",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/vlm-probe/consistency.py:133 Engine-specific work here concerns text-to-image generation, without a voice-engine seam."
+    },
+    {
+     "technique": "engine-choice-on-decisive-terms",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/vlm-probe/identity.py:145 The measurement model receives images, without recognition of decisive spoken terms."
+    },
+    {
+     "technique": "on-device-vs-cloud",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/vlm-probe/identity.py:143 The input is a stored image, without sensitive microphone capture to place."
+    },
+    {
+     "technique": "portable-provider-package",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/vlm-probe/consistency.py:200 The shared generator dispatches visual workflows, without a reusable voice package."
+    },
+    {
+     "technique": "real-time-synthesis-budget",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/vlm-probe/motion.py:104 The pipeline produces prepared visual artifacts, without live speech replies."
+    },
+    {
+     "technique": "render-acceptance",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/vlm-probe/motion.py:118 Acceptance samples video frames, without a rendered speech waveform to inspect."
+    },
+    {
+     "technique": "speech-ready-text",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/vlm-probe/consistency.py:185 Generation terminates in saved images, without text being spoken aloud."
+    },
+    {
+     "technique": "spoken-intent-parsing",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/vlm-probe/replicate.py:12 The interpretation loop consumes visual annotations, without spoken commands."
+    },
+    {
+     "technique": "stt-pipeline",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/vlm-probe/style.py:97 Model input consists of JPEG frames, without speech capture or transcription."
+    },
+    {
+     "technique": "transcript-handoff-receipts",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/vlm-probe/motion.py:189 The handoff copies a generated video artifact, without dictation through the clipboard."
+    },
+    {
+     "technique": "transcript-normalization",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/vlm-probe/style.py:105 Extracted text is a visual-style model answer, without a speech transcript."
+    },
+    {
+     "technique": "tts-pipeline",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/vlm-probe/motion.py:124 The output is assembled from images, without utterance synthesis or audible playback."
+    },
+    {
+     "technique": "unattended-caller-attribution",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/vlm-probe/motion.py:123 Automated output saves image artifacts, without speaking into a shared room."
+    },
+    {
+     "technique": "voice-setup-experience",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/vlm-probe/motion.py:63 Provisioned model identity belongs to reference-to-video generation, without voice setup."
+    },
+    {
+     "technique": "voice-ux-integration",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/vlm-probe/palette_measure.py:85 The inspection path reads image pixels, without narration affordances."
+    }
+   ],
+   "absenceTerms": [
+    "getUserMedia",
+    "speechSynthesis",
+    "SpeechRecognition"
+   ]
+  },
+  {
+   "context": "research-run-engine",
+   "subject": "voice-io",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/_phases/research/run/live.ts:315 Completed research lands a topic, notebook, and engine receipt, while searches of the context, its directories, and repository found no getUserMedia, speechSynthesis, or SpeechRecognition implementation.",
+   "techniques": [
+    {
+     "technique": "authored-voice-identity",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/research/guided/passes.tsx:187 Authored card presentation is visual, without voice identity authoring."
+    },
+    {
+     "technique": "caller-scoped-voice-binding",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/research/run/live.ts:359 The request starts topic research, without selecting a caller's audible voice."
+    },
+    {
+     "technique": "decode-time-vocabulary-biasing",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/research/guided/passes.tsx:124 Text preparation handles existing card titles, without speech-decoder vocabulary."
+    },
+    {
+     "technique": "duplex-agent-sessions",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/research/run/types.ts:33 Outcomes concern notebook research, without a duplex audio-session outcome."
+    },
+    {
+     "technique": "engine-abstraction",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/research/run/live.ts:116 The engine receipt accompanies a notebook, without transcription or synthesis results."
+    },
+    {
+     "technique": "engine-choice-on-decisive-terms",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/research/run/LiveResult.tsx:282 The displayed engine receipt attributes research, without comparing speech recognizers."
+    },
+    {
+     "technique": "on-device-vs-cloud",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/research/run/live.ts:87 Placement describes the research process, without microphone-audio residency."
+    },
+    {
+     "technique": "portable-provider-package",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/research/guided/RunStage.tsx:227 The shared operation starts research, without embedding a voice-provider package."
+    },
+    {
+     "technique": "real-time-synthesis-budget",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/research/run/types.ts:26 Timing concerns research trace steps, without synthesized-audio real-time factor."
+    },
+    {
+     "technique": "render-acceptance",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/research/run/live.ts:305 Accepted result shape is a notebook and receipt, without rendered speech audio."
+    },
+    {
+     "technique": "speech-ready-text",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/research/guided/passes.tsx:159 Card details are rendered as visible text, without a speech-output consumer."
+    },
+    {
+     "technique": "spoken-intent-parsing",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/research/run/controls.tsx:58 Topic input follows a text-field change event, without transcript-to-command parsing."
+    },
+    {
+     "technique": "stt-pipeline",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/research/run/controls.tsx:57 The opened input control holds typed topic text, without microphone capture."
+    },
+    {
+     "technique": "transcript-handoff-receipts",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/research/run/live.ts:314 Results persist in the product's step record, without foreign-application dictation handoff."
+    },
+    {
+     "technique": "transcript-normalization",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/research/run/live.ts:310 Topic selection reads notebook data, without normalization of dictated prose."
+    },
+    {
+     "technique": "tts-pipeline",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/research/run/live.ts:315 Completion publishes notebook state, without queued speech or playback."
+    },
+    {
+     "technique": "unattended-caller-attribution",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/research/run/live.ts:306 Background results are notebooks, without an automated caller making the machine speak."
+    },
+    {
+     "technique": "voice-setup-experience",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/research/guided/RunStage.tsx:217 Preflight configures the topic text field, without voice-engine onboarding."
+    },
+    {
+     "technique": "voice-ux-integration",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/research/guided/RunStage.tsx:201 The guided flow displays research results, without attached narration or read-aloud."
+    }
+   ],
+   "absenceTerms": [
+    "getUserMedia",
+    "speechSynthesis",
+    "SpeechRecognition"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-13T07:33:46.241677+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "voice-io"
+   ],
+   "techniques": [
+    "authored-voice-identity",
+    "caller-scoped-voice-binding",
+    "decode-time-vocabulary-biasing",
+    "duplex-agent-sessions",
+    "engine-abstraction",
+    "engine-choice-on-decisive-terms",
+    "on-device-vs-cloud",
+    "portable-provider-package",
+    "real-time-synthesis-budget",
+    "render-acceptance",
+    "speech-ready-text",
+    "spoken-intent-parsing",
+    "stt-pipeline",
+    "transcript-handoff-receipts",
+    "transcript-normalization",
+    "tts-pipeline",
+    "unattended-caller-attribution",
+    "voice-setup-experience",
+    "voice-ux-integration"
+   ],
+   "deviations": 0,
+   "context": "text-engine",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-13T07:33:46.241677+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "voice-io"
+   ],
+   "techniques": [
+    "authored-voice-identity",
+    "caller-scoped-voice-binding",
+    "decode-time-vocabulary-biasing",
+    "duplex-agent-sessions",
+    "engine-abstraction",
+    "engine-choice-on-decisive-terms",
+    "on-device-vs-cloud",
+    "portable-provider-package",
+    "real-time-synthesis-budget",
+    "render-acceptance",
+    "speech-ready-text",
+    "spoken-intent-parsing",
+    "stt-pipeline",
+    "transcript-handoff-receipts",
+    "transcript-normalization",
+    "tts-pipeline",
+    "unattended-caller-attribution",
+    "voice-setup-experience",
+    "voice-ux-integration"
+   ],
+   "deviations": 0,
+   "context": "foundry-engine",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-13T07:33:46.241677+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "voice-io"
+   ],
+   "techniques": [
+    "authored-voice-identity",
+    "caller-scoped-voice-binding",
+    "decode-time-vocabulary-biasing",
+    "duplex-agent-sessions",
+    "engine-abstraction",
+    "engine-choice-on-decisive-terms",
+    "on-device-vs-cloud",
+    "portable-provider-package",
+    "real-time-synthesis-budget",
+    "render-acceptance",
+    "speech-ready-text",
+    "spoken-intent-parsing",
+    "stt-pipeline",
+    "transcript-handoff-receipts",
+    "transcript-normalization",
+    "tts-pipeline",
+    "unattended-caller-attribution",
+    "voice-setup-experience",
+    "voice-ux-integration"
+   ],
+   "deviations": 0,
+   "context": "imaging-service",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-13T07:33:46.241677+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "voice-io"
+   ],
+   "techniques": [
+    "authored-voice-identity",
+    "caller-scoped-voice-binding",
+    "decode-time-vocabulary-biasing",
+    "duplex-agent-sessions",
+    "engine-abstraction",
+    "engine-choice-on-decisive-terms",
+    "on-device-vs-cloud",
+    "portable-provider-package",
+    "real-time-synthesis-budget",
+    "render-acceptance",
+    "speech-ready-text",
+    "spoken-intent-parsing",
+    "stt-pipeline",
+    "transcript-handoff-receipts",
+    "transcript-normalization",
+    "tts-pipeline",
+    "unattended-caller-attribution",
+    "voice-setup-experience",
+    "voice-ux-integration"
+   ],
+   "deviations": 0,
+   "context": "character-consistency-testing",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-13T07:33:46.241677+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "voice-io"
+   ],
+   "techniques": [
+    "authored-voice-identity",
+    "caller-scoped-voice-binding",
+    "decode-time-vocabulary-biasing",
+    "duplex-agent-sessions",
+    "engine-abstraction",
+    "engine-choice-on-decisive-terms",
+    "on-device-vs-cloud",
+    "portable-provider-package",
+    "real-time-synthesis-budget",
+    "render-acceptance",
+    "speech-ready-text",
+    "spoken-intent-parsing",
+    "stt-pipeline",
+    "transcript-handoff-receipts",
+    "transcript-normalization",
+    "tts-pipeline",
+    "unattended-caller-attribution",
+    "voice-setup-experience",
+    "voice-ux-integration"
+   ],
+   "deviations": 0,
+   "context": "research-run-engine",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

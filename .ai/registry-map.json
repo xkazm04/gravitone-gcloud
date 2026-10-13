@@ -959,7 +959,11 @@
           "revision": 19,
           "changedAt": "2026-09-30",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "pipeline/vlm-probe/motion.py:124 The motion output constructs video from decoded images despite loading an audio VAE upstream, and context-directory and repository searches found no getUserMedia, speechSynthesis, or SpeechRecognition implementation.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:fa1c8ca716f872dc",
+          "evaluatedRevision": 20
         },
         {
           "subject": "agent-memory",
@@ -1649,7 +1653,11 @@
           "revision": 19,
           "changedAt": "2026-09-30",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:68 Foundry generates image references and extracts visual styles, while searches of its files, directories, and repository found no getUserMedia, speechSynthesis, or SpeechRecognition implementation.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:fa1c8ca716f872dc",
+          "evaluatedRevision": 20
         },
         {
           "subject": "agent-runtime-assembly",
@@ -2500,7 +2508,11 @@
           "revision": 19,
           "changedAt": "2026-09-30",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/imaging/types.ts:207 The provider contract generates and edits images or recognizes their contents, and context-directory and repository searches found no getUserMedia, speechSynthesis, or SpeechRecognition implementation.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:fa1c8ca716f872dc",
+          "evaluatedRevision": 20
         },
         {
           "subject": "agent-runtime-assembly",
@@ -4295,8 +4307,12 @@
           "revision": 19,
           "changedAt": "2026-09-30",
           "confidence": "probable",
-          "state": "unknown",
-          "arrived": true
+          "state": "not-applicable",
+          "arrived": true,
+          "evidence": "app/_phases/research/run/live.ts:315 Completed research lands a topic, notebook, and engine receipt, while searches of the context, its directories, and repository found no getUserMedia, speechSynthesis, or SpeechRecognition implementation.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:fa1c8ca716f872dc",
+          "evaluatedRevision": 20
         },
         {
           "subject": "review-iteration-loops",
@@ -5420,14 +5436,13 @@
           "changedAt": "2026-09-30",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "lib/text/types.ts:96 enumerates the five turn classes this engine serves (edit-plan, scene-direction, style-synthesis, research, probe) and every one is text; no capture, transcription, synthesis or audio device appears anywhere in the context, whose chokepoint declares itself 'every reasoning call in the app' (lib/text/router.ts:1), so the audio precondition all 17 techniques share is unmet and the pairing is the lexical false positive 'style-synthesis' (lib/text/router.ts:95).",
-          "evaluatedAt": "2026-09-20",
-          "evaluatedAgainst": "sha256-b2:4337a608b34cbe4a",
-          "evaluatedRevision": 18,
+          "evidence": "lib/text/types.ts:58 The capability contract serves reasoning and retrieval, and searches of the context and repository found no getUserMedia, speechSynthesis, or SpeechRecognition implementation, so speech-channel requirements do not apply.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:fa1c8ca716f872dc",
+          "evaluatedRevision": 20,
           "source": "renamed",
           "renamedFrom": "e44e6001-80c3-4cdf-88ec-f9f99e6d7277",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "generative-provider-routing",
