@@ -619,7 +619,11 @@
           "revision": 27,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/claudeCli.ts:1 AI orchestration manages background UI polling jobs and invokes headless single-turn reasoning CLI calls with all tools disabled rather than assembling an extensible agent loop.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:9036e979656a8dc5",
+          "evaluatedRevision": 27
         }
       ],
       "governance": "governed"
@@ -1156,7 +1160,11 @@
           "revision": 27,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "tests/golden-path/cli-sandbox-args.probe.spec.ts:3 The CLI probe suite validates subprocess argv escaping, exit codes, and test harness gates for headless single-turn processes rather than an assembled multi-turn agent runtime.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:9036e979656a8dc5",
+          "evaluatedRevision": 27
         },
         {
           "subject": "untrusted-extension-host",
@@ -1677,7 +1685,11 @@
           "revision": 27,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:11 Foundry extraction operates as a bounded step machine for image critique and prompt synthesis rather than an assembled agent runtime with extension hooks or conversation checkpointers.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:9036e979656a8dc5",
+          "evaluatedRevision": 27
         },
         {
           "subject": "agent-instruction-files",
@@ -2548,7 +2560,11 @@
           "revision": 27,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/imaging/router.ts:1 The imaging service is a media provider routing layer with pricing and budget fallback rather than an agent runtime assembly coordinating model tool loops.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:9036e979656a8dc5",
+          "evaluatedRevision": 27
         },
         {
           "subject": "cost-metering",
@@ -4399,8 +4415,8 @@
           "revision": 27,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown",
-          "arrived": true
+          "arrived": true,
+          "state": "unknown"
         }
       ],
       "governance": "governed",

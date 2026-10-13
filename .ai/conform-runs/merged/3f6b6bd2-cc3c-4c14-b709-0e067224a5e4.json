@@ -1,0 +1,544 @@
+{
+  "schema": "conform-run/1",
+  "worker": "3f6b6bd2-cc3c-4c14-b709-0e067224a5e4",
+  "subject": "agent-runtime-assembly",
+  "evaluatedAt": "2026-10-13T10:15:54.317859+00:00",
+  "provider": "agy",
+  "model": "gemini-3.8-flash-high",
+  "pairs": [
+    {
+      "context": "foundry-engine",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/foundry/extract/engine.ts:11 Foundry extraction operates as a bounded step machine for image critique and prompt synthesis rather than an assembled agent runtime with extension hooks or conversation checkpointers.",
+      "techniques": [
+        {
+          "technique": "activation-is-a-separate-mutation",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:11 No extension installation or runtime callback activation exists in the foundry step machine."
+        },
+        {
+          "technique": "additive-input-at-the-call-boundary",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:11 Step execution does not accept mid-turn additive user inputs at a runtime call boundary."
+        },
+        {
+          "technique": "assembly-identity",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:11 No agent assembly digest or deployment composition identity exists for the engine."
+        },
+        {
+          "technique": "bounded-projection-of-external-work",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:11 The engine performs discrete sync units rather than projecting long-running external work into a conversational turn."
+        },
+        {
+          "technique": "checkpoint-mode-custody",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:11 State persistence uses a file manifest rather than conversation graph checkpointers with custody modes."
+        },
+        {
+          "technique": "guard-input-custody",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:11 No containment guards reading policy from agent working trees exist in the foundry engine."
+        },
+        {
+          "technique": "honest-hook-registry",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:11 There is no contributed hook registry or timed callback execution pipeline."
+        },
+        {
+          "technique": "host-routes-win",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:11 No contributed extensions mount HTTP routes or shadow host endpoints."
+        },
+        {
+          "technique": "indeterminate-closure-on-interruption",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:11 Interrupted runs resume at the next manifest unit rather than resolving indeterminate agent run closure."
+        },
+        {
+          "technique": "nested-run-is-not-its-parent",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:11 The step machine does not spawn or nest subagent runs with shared or distinct thread identities."
+        },
+        {
+          "technique": "observer-and-mutator-surfaces",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:11 No extension registration separating observers from mutator callbacks is present."
+        },
+        {
+          "technique": "operator-tier-code-loading",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:11 Code loading is statically bundled rather than operator-tier dynamic extension loading."
+        },
+        {
+          "technique": "rewrite-before-the-gate",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:11 No tool rewrite transforms or execution approval gates exist in the engine."
+        },
+        {
+          "technique": "semantic-hook-placement",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:11 There is no hook depth ordering or semantic placement chain for model/tool execution."
+        },
+        {
+          "technique": "session-scoped-capability",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:11 No session-scoped client capabilities or tool roster gating apply to extraction units."
+        },
+        {
+          "technique": "substituted-result-attribution",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:11 No substituted or cached tool call responses are attributed across provider frames."
+        }
+      ],
+      "absenceTerms": [
+        "assemblyIdentity",
+        "hookChain",
+        "checkpointer",
+        "toolRoster"
+      ]
+    },
+    {
+      "context": "cli-infrastructure-probes",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "tests/golden-path/cli-sandbox-args.probe.spec.ts:3 The CLI probe suite validates subprocess argv escaping, exit codes, and test harness gates for headless single-turn processes rather than an assembled multi-turn agent runtime.",
+      "techniques": [
+        {
+          "technique": "activation-is-a-separate-mutation",
+          "verdict": "not-applicable",
+          "evidence": "tests/golden-path/cli-sandbox-args.probe.spec.ts:3 No runtime extension installation or activation mutations are exercised by the probe tests."
+        },
+        {
+          "technique": "additive-input-at-the-call-boundary",
+          "verdict": "not-applicable",
+          "evidence": "tests/golden-path/cli-sandbox-args.probe.spec.ts:3 Subprocess probes test non-interactive single-turn calls with no mid-loop additive input boundary."
+        },
+        {
+          "technique": "assembly-identity",
+          "verdict": "not-applicable",
+          "evidence": "tests/golden-path/cli-sandbox-args.probe.spec.ts:3 The probe suite tests CLI argument arrays and process trees, not agent assembly composition digests."
+        },
+        {
+          "technique": "bounded-projection-of-external-work",
+          "verdict": "not-applicable",
+          "evidence": "tests/golden-path/cli-sandbox-args.probe.spec.ts:3 Probe tests assert on process termination and exit codes rather than conversational external work projection."
+        },
+        {
+          "technique": "checkpoint-mode-custody",
+          "verdict": "not-applicable",
+          "evidence": "tests/golden-path/cli-sandbox-args.probe.spec.ts:3 No graph or conversation checkpoint custody mechanisms exist in the test probes."
+        },
+        {
+          "technique": "guard-input-custody",
+          "verdict": "not-applicable",
+          "evidence": "tests/golden-path/cli-sandbox-args.probe.spec.ts:3 No agent containment guards reading policies from workspace trees are tested here."
+        },
+        {
+          "technique": "honest-hook-registry",
+          "verdict": "not-applicable",
+          "evidence": "tests/golden-path/cli-sandbox-args.probe.spec.ts:3 No contributed hook registry with timeouts is tested by the CLI probe specs."
+        },
+        {
+          "technique": "host-routes-win",
+          "verdict": "not-applicable",
+          "evidence": "tests/golden-path/cli-sandbox-args.probe.spec.ts:3 No extension route mounting onto host service routers is present in the probes."
+        },
+        {
+          "technique": "indeterminate-closure-on-interruption",
+          "verdict": "not-applicable",
+          "evidence": "tests/golden-path/cli-sandbox-args.probe.spec.ts:3 Probes verify process kill tree mechanics and exit classification rather than agent runtime state closure."
+        },
+        {
+          "technique": "nested-run-is-not-its-parent",
+          "verdict": "not-applicable",
+          "evidence": "tests/golden-path/cli-sandbox-args.probe.spec.ts:3 Probes test single subprocess execution rather than nested agent runs sharing conversation context."
+        },
+        {
+          "technique": "observer-and-mutator-surfaces",
+          "verdict": "not-applicable",
+          "evidence": "tests/golden-path/cli-sandbox-args.probe.spec.ts:3 No registration surfaces distinguishing observer hooks from mutators exist in the probe harness."
+        },
+        {
+          "technique": "operator-tier-code-loading",
+          "verdict": "not-applicable",
+          "evidence": "tests/golden-path/cli-sandbox-args.probe.spec.ts:3 The probes test platform-specific shell argv handling rather than operator-tier code loading."
+        },
+        {
+          "technique": "rewrite-before-the-gate",
+          "verdict": "not-applicable",
+          "evidence": "tests/golden-path/cli-sandbox-args.probe.spec.ts:3 No tool rewrite transforms or pre-execution approval gates exist; tools are stripped entirely."
+        },
+        {
+          "technique": "semantic-hook-placement",
+          "verdict": "not-applicable",
+          "evidence": "tests/golden-path/cli-sandbox-args.probe.spec.ts:3 No semantic hook placement chain exists around model or tool execution in the probes."
+        },
+        {
+          "technique": "session-scoped-capability",
+          "verdict": "not-applicable",
+          "evidence": "tests/golden-path/cli-sandbox-args.probe.spec.ts:3 No session-scoped capabilities or client-bound tool rosters are present in CLI subprocess tests."
+        },
+        {
+          "technique": "substituted-result-attribution",
+          "verdict": "not-applicable",
+          "evidence": "tests/golden-path/cli-sandbox-args.probe.spec.ts:3 No tool call response substitution or provenance attribution occurs in the probe test harness."
+        }
+      ],
+      "absenceTerms": [
+        "assemblyIdentity",
+        "hookChain",
+        "checkpointer",
+        "toolRoster"
+      ]
+    },
+    {
+      "context": "imaging-service",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/imaging/router.ts:1 The imaging service is a media provider routing layer with pricing and budget fallback rather than an agent runtime assembly coordinating model tool loops.",
+      "techniques": [
+        {
+          "technique": "activation-is-a-separate-mutation",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/router.ts:1 No extension installation or runtime callback activation occurs in the image router."
+        },
+        {
+          "technique": "additive-input-at-the-call-boundary",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/router.ts:1 The image router processes single request-response invocations without mid-turn additive user inputs."
+        },
+        {
+          "technique": "assembly-identity",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/router.ts:1 Provider configurations are statically defined in the router, not managed via an agent assembly identity."
+        },
+        {
+          "technique": "bounded-projection-of-external-work",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/router.ts:1 The router executes direct HTTP API provider calls rather than projecting external work into an agent turn."
+        },
+        {
+          "technique": "checkpoint-mode-custody",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/router.ts:1 No conversation checkpointers or state custody modes exist in the imaging service."
+        },
+        {
+          "technique": "guard-input-custody",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/router.ts:1 Provider calls perform capability matching and budgeting rather than agent workspace policy guards."
+        },
+        {
+          "technique": "honest-hook-registry",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/router.ts:1 No contributed hook registry wraps imaging service provider dispatches."
+        },
+        {
+          "technique": "host-routes-win",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/router.ts:1 No third-party extensions mount HTTP endpoints over the imaging router."
+        },
+        {
+          "technique": "indeterminate-closure-on-interruption",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/router.ts:1 Failed provider requests walk a deterministic fallback chain rather than managing agent interruption closure."
+        },
+        {
+          "technique": "nested-run-is-not-its-parent",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/router.ts:1 The router does not spawn subagent runs or parent-child conversation trees."
+        },
+        {
+          "technique": "observer-and-mutator-surfaces",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/router.ts:1 No observer or mutator extension registry surfaces exist for imaging dispatch."
+        },
+        {
+          "technique": "operator-tier-code-loading",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/router.ts:1 Image provider implementations are statically compiled modules, not dynamically loaded operator plugins."
+        },
+        {
+          "technique": "rewrite-before-the-gate",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/router.ts:1 The router translates image options across provider schemas rather than rewriting tool inputs before a guardrail gate."
+        },
+        {
+          "technique": "semantic-hook-placement",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/router.ts:1 No model or tool wrapping hook chain with depth constraints exists in the imaging layer."
+        },
+        {
+          "technique": "session-scoped-capability",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/router.ts:1 Image generation capability selection is governed by server pricing and API keys rather than session-scoped client tools."
+        },
+        {
+          "technique": "substituted-result-attribution",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/router.ts:1 Fallback provider execution records a trail of vendor attempts rather than substituting an agent tool result."
+        }
+      ],
+      "absenceTerms": [
+        "assemblyIdentity",
+        "hookChain",
+        "checkpointer",
+        "toolRoster"
+      ]
+    },
+    {
+      "context": "ai-orchestration",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/claudeCli.ts:1 AI orchestration manages background UI polling jobs and invokes headless single-turn reasoning CLI calls with all tools disabled rather than assembling an extensible agent loop.",
+      "techniques": [
+        {
+          "technique": "activation-is-a-separate-mutation",
+          "verdict": "not-applicable",
+          "evidence": "lib/claudeCli.ts:1 No extension installation or runtime callback activation is supported by the orchestration layer."
+        },
+        {
+          "technique": "additive-input-at-the-call-boundary",
+          "verdict": "not-applicable",
+          "evidence": "lib/claudeCli.ts:1 The CLI is invoked as a discrete single-turn reasoning call without additive mid-turn user inputs."
+        },
+        {
+          "technique": "assembly-identity",
+          "verdict": "not-applicable",
+          "evidence": "lib/claudeCli.ts:1 No agent assembly identity or composite digest tracks the CLI runtime configuration."
+        },
+        {
+          "technique": "bounded-projection-of-external-work",
+          "verdict": "not-applicable",
+          "evidence": "lib/claudeCli.ts:1 Jobs run asynchronously in background UI state without projecting long-running tool work into an agent conversation."
+        },
+        {
+          "technique": "checkpoint-mode-custody",
+          "verdict": "not-applicable",
+          "evidence": "lib/claudeCli.ts:1 No conversational checkpoint store or checkpoint mode custody mechanism exists."
+        },
+        {
+          "technique": "guard-input-custody",
+          "verdict": "not-applicable",
+          "evidence": "lib/claudeCli.ts:1 Containment is enforced by stripping all tools (--allowed-tools \"\") rather than by agent workspace policy guards."
+        },
+        {
+          "technique": "honest-hook-registry",
+          "verdict": "not-applicable",
+          "evidence": "lib/claudeCli.ts:1 No contributed hook registry wraps model invocations in the orchestration layer."
+        },
+        {
+          "technique": "host-routes-win",
+          "verdict": "not-applicable",
+          "evidence": "lib/claudeCli.ts:1 No third-party extensions mount HTTP service routes within the orchestration system."
+        },
+        {
+          "technique": "indeterminate-closure-on-interruption",
+          "verdict": "not-applicable",
+          "evidence": "lib/claudeCli.ts:1 Job cancellation terminates process trees via abort signals rather than resolving indeterminate agent loop closure."
+        },
+        {
+          "technique": "nested-run-is-not-its-parent",
+          "verdict": "not-applicable",
+          "evidence": "lib/claudeCli.ts:1 No nested subagent hierarchy or conversation identity partitioning is implemented."
+        },
+        {
+          "technique": "observer-and-mutator-surfaces",
+          "verdict": "not-applicable",
+          "evidence": "lib/claudeCli.ts:1 No observer or mutator extension registry surfaces exist for the CLI runner."
+        },
+        {
+          "technique": "operator-tier-code-loading",
+          "verdict": "not-applicable",
+          "evidence": "lib/claudeCli.ts:1 Subprocess execution invokes a static binary path rather than loading dynamic extension code."
+        },
+        {
+          "technique": "rewrite-before-the-gate",
+          "verdict": "not-applicable",
+          "evidence": "lib/claudeCli.ts:1 No tool rewriting exists because tools are completely disabled for the reasoning call."
+        },
+        {
+          "technique": "semantic-hook-placement",
+          "verdict": "not-applicable",
+          "evidence": "lib/claudeCli.ts:1 No semantic hook placement chain wraps the headless CLI process invocation."
+        },
+        {
+          "technique": "session-scoped-capability",
+          "verdict": "not-applicable",
+          "evidence": "lib/claudeCli.ts:1 The CLI engine operates with zero tools rather than client-negotiated session tool rosters."
+        },
+        {
+          "technique": "substituted-result-attribution",
+          "verdict": "not-applicable",
+          "evidence": "lib/claudeCli.ts:1 No tool response substitution or cache provider attribution exists in the orchestration layer."
+        }
+      ],
+      "absenceTerms": [
+        "assemblyIdentity",
+        "hookChain",
+        "checkpointer",
+        "toolRoster"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "agent-runtime-assembly",
+      "context": "research-run-engine",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor at live.ts:10 is a header comment about the client store's lifetime. It doesn't show that assembly identity or extension hooks are absent. The one technique anchor on assembly identity points at lib/claudeCli.ts:1, which is not in this context's files. The server-side engine that /api/res"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-13T10:15:54.317859+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-runtime-assembly"
+      ],
+      "techniques": [
+        "activation-is-a-separate-mutation",
+        "additive-input-at-the-call-boundary",
+        "assembly-identity",
+        "bounded-projection-of-external-work",
+        "checkpoint-mode-custody",
+        "guard-input-custody",
+        "honest-hook-registry",
+        "host-routes-win",
+        "indeterminate-closure-on-interruption",
+        "nested-run-is-not-its-parent",
+        "observer-and-mutator-surfaces",
+        "operator-tier-code-loading",
+        "rewrite-before-the-gate",
+        "semantic-hook-placement",
+        "session-scoped-capability",
+        "substituted-result-attribution"
+      ],
+      "deviations": 0,
+      "context": "foundry-engine",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T10:15:54.317859+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-runtime-assembly"
+      ],
+      "techniques": [
+        "activation-is-a-separate-mutation",
+        "additive-input-at-the-call-boundary",
+        "assembly-identity",
+        "bounded-projection-of-external-work",
+        "checkpoint-mode-custody",
+        "guard-input-custody",
+        "honest-hook-registry",
+        "host-routes-win",
+        "indeterminate-closure-on-interruption",
+        "nested-run-is-not-its-parent",
+        "observer-and-mutator-surfaces",
+        "operator-tier-code-loading",
+        "rewrite-before-the-gate",
+        "semantic-hook-placement",
+        "session-scoped-capability",
+        "substituted-result-attribution"
+      ],
+      "deviations": 0,
+      "context": "cli-infrastructure-probes",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T10:15:54.317859+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-runtime-assembly"
+      ],
+      "techniques": [
+        "activation-is-a-separate-mutation",
+        "additive-input-at-the-call-boundary",
+        "assembly-identity",
+        "bounded-projection-of-external-work",
+        "checkpoint-mode-custody",
+        "guard-input-custody",
+        "honest-hook-registry",
+        "host-routes-win",
+        "indeterminate-closure-on-interruption",
+        "nested-run-is-not-its-parent",
+        "observer-and-mutator-surfaces",
+        "operator-tier-code-loading",
+        "rewrite-before-the-gate",
+        "semantic-hook-placement",
+        "session-scoped-capability",
+        "substituted-result-attribution"
+      ],
+      "deviations": 0,
+      "context": "imaging-service",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T10:15:54.317859+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-runtime-assembly"
+      ],
+      "techniques": [
+        "activation-is-a-separate-mutation",
+        "additive-input-at-the-call-boundary",
+        "assembly-identity",
+        "bounded-projection-of-external-work",
+        "checkpoint-mode-custody",
+        "guard-input-custody",
+        "honest-hook-registry",
+        "host-routes-win",
+        "indeterminate-closure-on-interruption",
+        "nested-run-is-not-its-parent",
+        "observer-and-mutator-surfaces",
+        "operator-tier-code-loading",
+        "rewrite-before-the-gate",
+        "semantic-hook-placement",
+        "session-scoped-capability",
+        "substituted-result-attribution"
+      ],
+      "deviations": 0,
+      "context": "ai-orchestration",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T10:15:54.317859+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-runtime-assembly"
+      ],
+      "techniques": [
+        "activation-is-a-separate-mutation",
+        "additive-input-at-the-call-boundary",
+        "assembly-identity",
+        "bounded-projection-of-external-work",
+        "checkpoint-mode-custody",
+        "guard-input-custody",
+        "honest-hook-registry",
+        "host-routes-win",
+        "indeterminate-closure-on-interruption",
+        "nested-run-is-not-its-parent",
+        "observer-and-mutator-surfaces",
+        "operator-tier-code-loading",
+        "rewrite-before-the-gate",
+        "semantic-hook-placement",
+        "session-scoped-capability",
+        "substituted-result-attribution"
+      ],
+      "deviations": 0,
+      "context": "research-run-engine",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
+}
