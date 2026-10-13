@@ -1,0 +1,101 @@
+{
+ "schema": "conform-run/1",
+ "worker": "fa72d7e3-ed62-4185-9856-1a538c689658",
+ "subject": "character-identity-continuity",
+ "evaluatedAt": "2026-10-13T22:32:51.806351+00:00",
+ "provider": "grok",
+ "model": "grok-4.7",
+ "pairs": [
+  {
+   "context": "character-consistency-testing",
+   "subject": "character-identity-continuity",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "pipeline/vlm-probe/consistency.py:129 The hero still is minted with this same template, so the neutral mid-grey even-light sentence is followed by the hangar and its hard daylight shaft.",
+   "techniques": [
+    {
+     "technique": "camera-position-not-focal-length",
+     "verdict": "conformant",
+     "evidence": "pipeline/vlm-probe/consistency.py:94 Default list moves the camera (low behind a crate, right-side medium, left low-angle close); ZOOM_SPEC keeps the eye-level focal-length list separate, and the scar is on the left cheek."
+    },
+    {
+     "technique": "identity-ruler-calibration",
+     "verdict": "conformant",
+     "evidence": "pipeline/vlm-probe/identity.py:94 Within-take and cross-cut floor pairs sit in the same table; ruler_blindness refuses to score when the ceiling is not above the floor, and a missed or sub-80px face is printed as unscored."
+    },
+    {
+     "technique": "reference-admitted-late",
+     "verdict": "conformant",
+     "evidence": "pipeline/vlm-probe/consistency.py:174 Text holds the frame until late, then the reference conditioning starts; ref_crop is a separate flag, and the findings record joins at 0, 0.25 and 0.45."
+    },
+    {
+     "technique": "reference-shows-only-invariants",
+     "verdict": "deviation",
+     "evidence": "pipeline/vlm-probe/consistency.py:129 HERO asks for a neutral three-quarter, off-camera gaze, and flat even light on mid-grey, then this appends the hangar shaft. No fixed-camera coupling sweep is in the tree."
+    }
+   ],
+   "registryProposal": "The invariant-reference rule does not say what a shared prompt template may append after a neutral portrait clause; concatenating the scene location here put the hangar and the shaft into the hero."
+  },
+  {
+   "context": "probe-frame-data",
+   "subject": "character-identity-continuity",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "pipeline/vlm-probe/clips/ref2va/lane.json:14 One picture is assigned the face and the clothing while the head turn and chin lift exist only as prose, and the lane never records the reference's expression, gaze, or field.",
+   "techniques": [
+    {
+     "technique": "camera-position-not-focal-length",
+     "verdict": "conformant",
+     "evidence": "pipeline/vlm-probe/shots/baseline/lane.json:10 This setup is from her right, above eye level, with the shaft out of frame; the wide is low behind a crate and the close is from her left. baseline-zoom keeps a separate eye-level list, and the scar is on the left cheek."
+    },
+    {
+     "technique": "reference-admitted-late",
+     "verdict": "conformant",
+     "evidence": "pipeline/vlm-probe/shots/reference-face-e25/lane.json:9 Face crop and join time are separate keys: face-only records 0.0, this lane 0.25, reference-face-late 0.45. The full-hero lane has no join field. clips/ref2va records a hero and no entry point."
+    },
+    {
+     "technique": "reference-shows-only-invariants",
+     "verdict": "deviation",
+     "evidence": "pipeline/vlm-probe/clips/ref2va/lane.json:14 The hero value is only a path. Nothing in these lane files states expression, gaze, head angle, or ground."
+    }
+   ],
+   "registryProposal": "A lane record has no field for the reference's expression, gaze, head angle, or ground, so this technique cannot be audited from the shot record alone."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-13T22:32:51.806351+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "character-identity-continuity"
+   ],
+   "techniques": [
+    "camera-position-not-focal-length",
+    "identity-ruler-calibration",
+    "reference-admitted-late",
+    "reference-shows-only-invariants"
+   ],
+   "deviations": 1,
+   "context": "character-consistency-testing",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  },
+  {
+   "ts": "2026-10-13T22:32:51.806351+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "character-identity-continuity"
+   ],
+   "techniques": [
+    "camera-position-not-focal-length",
+    "reference-admitted-late",
+    "reference-shows-only-invariants"
+   ],
+   "deviations": 1,
+   "context": "probe-frame-data",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  }
+ ]
+}

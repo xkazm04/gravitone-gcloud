@@ -847,7 +847,11 @@
           "revision": 3,
           "changedAt": "2026-08-28",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "pipeline/vlm-probe/consistency.py:129 The hero still is minted with this same template, so the neutral mid-grey even-light sentence is followed by the hangar and its hard daylight shaft.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:1b3e132bebd8dcc9",
+          "evaluatedRevision": 3
         },
         {
           "subject": "visual-style-locking",
@@ -3803,7 +3807,11 @@
           "revision": 3,
           "changedAt": "2026-08-28",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "pipeline/vlm-probe/clips/ref2va/lane.json:14 One picture is assigned the face and the clothing while the head turn and chin lift exist only as prose, and the lane never records the reference's expression, gaze, or field.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:1b3e132bebd8dcc9",
+          "evaluatedRevision": 3
         },
         {
           "subject": "retrieval",
