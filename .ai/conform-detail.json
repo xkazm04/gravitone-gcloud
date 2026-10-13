@@ -3690,6 +3690,135 @@
         "at": "2026-10-13T10:52:50.616723+00:00",
         "reason": "reviewer (sonnet): alts.ts:21 is only the SceneAlt type (id, plate, createdAt, seeded). It does not show how variants are generated, and generation does pass references. The LayerPanel.tsx:12 anchor is a comment about layer ordering, not deterministic compositing, so the technique evidence does not say what is claimed"
       }
+    },
+    "be7ca5b4-877c-4eba-a4cf-94efc79d9843/data-access": {
+      "context": "foundry-engine",
+      "subject": "data-access",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T11:31:41.414Z",
+      "worker": "37daca59-a900-48c0-b89f-3fc9ed3f148d",
+      "techniques": [
+        {
+          "technique": "existence-authority-written-last",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/store.ts:331 Unlinks candidate files on the filesystem prior to committing the updated status to the run manifest."
+        },
+        {
+          "technique": "row-mapping",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/store.ts:79 Distinguishes malformed manifest syntax errors (503) from missing files (404) at the read seam."
+        },
+        {
+          "technique": "sequence-token-write-ordering",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/store.ts:265 Compares preview commit tokens against current manifest and catalog state to reject stale commits."
+        },
+        {
+          "technique": "read-models-and-projections",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/store.ts:92 Returns lightweight RunSummary projections rather than hydrating complete RunManifest aggregates."
+        },
+        {
+          "technique": "layering-rules",
+          "verdict": "conformant",
+          "evidence": "app/api/foundry/runs/route.ts:4 Transport API routes delegate directly to named repository functions without constructing raw file queries."
+        },
+        {
+          "technique": "batching-and-n-plus-one",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/store.ts:93 Lists runs with bounded concurrency worker pools rather than serial single-record file reads."
+        },
+        {
+          "technique": "transactions-and-units-of-work",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/store.ts:246 Ties multi-index ledger and styles updates within a shared catalogue transaction and run lock."
+        }
+      ]
+    },
+    "4a92f572-9c92-4b18-9b94-9dd38d123911/data-access": {
+      "context": "kit-specimen-route",
+      "subject": "data-access",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T11:31:41.414Z",
+      "techniques": [
+        {
+          "technique": "layering-rules",
+          "verdict": "not-applicable",
+          "evidence": "app/kit/KitView.tsx:8 Context is a design system specimen workbench with no data storage or repository layer."
+        }
+      ],
+      "withdrawn": {
+        "worker": "37daca59-a900-48c0-b89f-3fc9ed3f148d",
+        "state": "not-applicable",
+        "at": "2026-10-13T11:32:40.116339+00:00",
+        "reason": "reviewer (sonnet): app/kit/KitView.tsx:8 is only a header comment saying the data lives in catalog.ts, migrationMap.ts and census.json, so it does not show that no storage exists. Parts.tsx imports useRemembered, which is a persistence hook, and the verdict never checked it. The searched terms (indexedDB, transaction,"
+      }
+    },
+    "495e99ea-9e67-4910-ae9b-f22a66211a68/data-access": {
+      "context": "project-shelf",
+      "subject": "data-access",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T11:31:41.414Z",
+      "worker": "37daca59-a900-48c0-b89f-3fc9ed3f148d",
+      "techniques": [
+        {
+          "technique": "batching-and-n-plus-one",
+          "verdict": "deviation",
+          "evidence": "app/projects/ProjectsView.tsx:176 Sequentially awaits single-record remove calls in a loop rather than dispatching a batch deletion."
+        },
+        {
+          "technique": "read-models-and-projections",
+          "verdict": "conformant",
+          "evidence": "app/_projects/ProjectDialog.tsx:426 Reads key-only projections via readProjectContents rather than loading heavy step records to confirm deletion."
+        },
+        {
+          "technique": "layering-rules",
+          "verdict": "conformant",
+          "evidence": "app/projects/ProjectsView.tsx:32 Presentation route delegates downward to useProjects hooks without opening direct DB handles."
+        }
+      ]
+    },
+    "edd26dab-e7de-45bd-957b-080aaced51ba/data-access": {
+      "context": "studio-data-layer",
+      "subject": "data-access",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T11:31:41.414Z",
+      "worker": "37daca59-a900-48c0-b89f-3fc9ed3f148d",
+      "techniques": [
+        {
+          "technique": "layering-rules",
+          "verdict": "deviation",
+          "evidence": "lib/studioDb.ts:47 Exports raw IDBDatabase connection handles past the repository layer to arbitrary application call sites."
+        },
+        {
+          "technique": "batching-and-n-plus-one",
+          "verdict": "conformant",
+          "evidence": "lib/themes.ts:410 Fetches a batch of themes by IDs within a single read transaction rather than looping singular gets."
+        },
+        {
+          "technique": "transactions-and-units-of-work",
+          "verdict": "conformant",
+          "evidence": "lib/projects.ts:844 Deletes project records and associated step contents atomically inside a single multi-store transaction."
+        },
+        {
+          "technique": "read-models-and-projections",
+          "verdict": "conformant",
+          "evidence": "lib/projects.ts:793 Separately exposes lightweight ProjectContents read from index keys without loading full aggregate rows."
+        },
+        {
+          "technique": "row-mapping",
+          "verdict": "conformant",
+          "evidence": "lib/projects.ts:84 Migrates legacy schemas and initializes missing phase states at the decode seam before returning domain types."
+        }
+      ]
     }
   }
 }

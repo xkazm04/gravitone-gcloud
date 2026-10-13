@@ -1,0 +1,194 @@
+{
+  "schema": "conform-run/1",
+  "worker": "37daca59-a900-48c0-b89f-3fc9ed3f148d",
+  "subject": "data-access",
+  "evaluatedAt": "2026-10-13T11:31:41.414613+00:00",
+  "provider": "agy",
+  "model": "gemini-3.8-flash-high",
+  "pairs": [
+    {
+      "context": "foundry-engine",
+      "subject": "data-access",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "lib/foundry/store.ts:331 Rejected candidate files are unlinked on the filesystem before the run manifest status is updated to committed, removing dependent files before their existence authority.",
+      "techniques": [
+        {
+          "technique": "existence-authority-written-last",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/store.ts:331 Unlinks candidate files on the filesystem prior to committing the updated status to the run manifest."
+        },
+        {
+          "technique": "row-mapping",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/store.ts:79 Distinguishes malformed manifest syntax errors (503) from missing files (404) at the read seam."
+        },
+        {
+          "technique": "sequence-token-write-ordering",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/store.ts:265 Compares preview commit tokens against current manifest and catalog state to reject stale commits."
+        },
+        {
+          "technique": "read-models-and-projections",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/store.ts:92 Returns lightweight RunSummary projections rather than hydrating complete RunManifest aggregates."
+        },
+        {
+          "technique": "layering-rules",
+          "verdict": "conformant",
+          "evidence": "app/api/foundry/runs/route.ts:4 Transport API routes delegate directly to named repository functions without constructing raw file queries."
+        },
+        {
+          "technique": "batching-and-n-plus-one",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/store.ts:93 Lists runs with bounded concurrency worker pools rather than serial single-record file reads."
+        },
+        {
+          "technique": "transactions-and-units-of-work",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/store.ts:246 Ties multi-index ledger and styles updates within a shared catalogue transaction and run lock."
+        }
+      ]
+    },
+    {
+      "context": "project-shelf",
+      "subject": "data-access",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "app/projects/ProjectsView.tsx:176 The shelf clears multiple demo projects by sequentially awaiting single-record deletions in a loop, opening separate IndexedDB transactions for each item instead of using a batch delete operation.",
+      "techniques": [
+        {
+          "technique": "batching-and-n-plus-one",
+          "verdict": "deviation",
+          "evidence": "app/projects/ProjectsView.tsx:176 Sequentially awaits single-record remove calls in a loop rather than dispatching a batch deletion."
+        },
+        {
+          "technique": "read-models-and-projections",
+          "verdict": "conformant",
+          "evidence": "app/_projects/ProjectDialog.tsx:426 Reads key-only projections via readProjectContents rather than loading heavy step records to confirm deletion."
+        },
+        {
+          "technique": "layering-rules",
+          "verdict": "conformant",
+          "evidence": "app/projects/ProjectsView.tsx:32 Presentation route delegates downward to useProjects hooks without opening direct DB handles."
+        }
+      ]
+    },
+    {
+      "context": "studio-data-layer",
+      "subject": "data-access",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "lib/studioDb.ts:47 The data layer exports raw IDBDatabase handles via openDb and imports upward from the app presentation directory in useProjects, violating module boundary isolation and dependency direction.",
+      "techniques": [
+        {
+          "technique": "layering-rules",
+          "verdict": "deviation",
+          "evidence": "lib/studioDb.ts:47 Exports raw IDBDatabase connection handles past the repository layer to arbitrary application call sites."
+        },
+        {
+          "technique": "batching-and-n-plus-one",
+          "verdict": "conformant",
+          "evidence": "lib/themes.ts:410 Fetches a batch of themes by IDs within a single read transaction rather than looping singular gets."
+        },
+        {
+          "technique": "transactions-and-units-of-work",
+          "verdict": "conformant",
+          "evidence": "lib/projects.ts:844 Deletes project records and associated step contents atomically inside a single multi-store transaction."
+        },
+        {
+          "technique": "read-models-and-projections",
+          "verdict": "conformant",
+          "evidence": "lib/projects.ts:793 Separately exposes lightweight ProjectContents read from index keys without loading full aggregate rows."
+        },
+        {
+          "technique": "row-mapping",
+          "verdict": "conformant",
+          "evidence": "lib/projects.ts:84 Migrates legacy schemas and initializes missing phase states at the decode seam before returning domain types."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "data-access",
+      "context": "ui-component-probes",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "data-access",
+      "context": "kit-specimen-route",
+      "reason": "withdrawn after review: reviewer (sonnet): app/kit/KitView.tsx:8 is only a header comment saying the data lives in catalog.ts, migrationMap.ts and census.json, so it does not show that no storage exists. Parts.tsx imports useRemembered, which is a persistence hook, and the verdict never checked it. The searched terms (indexedDB, transaction,"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-13T11:31:41.414613+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "data-access"
+      ],
+      "techniques": [
+        "batching-and-n-plus-one",
+        "existence-authority-written-last",
+        "layering-rules",
+        "read-models-and-projections",
+        "row-mapping",
+        "sequence-token-write-ordering",
+        "transactions-and-units-of-work"
+      ],
+      "deviations": 1,
+      "context": "foundry-engine",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T11:31:41.414613+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "data-access"
+      ],
+      "techniques": [
+        "layering-rules"
+      ],
+      "deviations": 0,
+      "context": "kit-specimen-route",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T11:31:41.414613+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "data-access"
+      ],
+      "techniques": [
+        "batching-and-n-plus-one",
+        "layering-rules",
+        "read-models-and-projections"
+      ],
+      "deviations": 1,
+      "context": "project-shelf",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T11:31:41.414613+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "data-access"
+      ],
+      "techniques": [
+        "batching-and-n-plus-one",
+        "layering-rules",
+        "read-models-and-projections",
+        "row-mapping",
+        "transactions-and-units-of-work"
+      ],
+      "deviations": 1,
+      "context": "studio-data-layer",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
+}

@@ -1773,7 +1773,11 @@
           "revision": 18,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/store.ts:331 Rejected candidate files are unlinked on the filesystem before the run manifest status is updated to committed, removing dependent files before their existence authority.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:b67182492821d592",
+          "evaluatedRevision": 18
         }
       ],
       "governance": "governed"
@@ -2812,8 +2816,8 @@
           "revision": 18,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown",
-          "arrived": true
+          "arrived": true,
+          "state": "unknown"
         },
         {
           "subject": "settings",
@@ -4171,7 +4175,11 @@
           "revision": 18,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/projects/ProjectsView.tsx:176 The shelf clears multiple demo projects by sequentially awaiting single-record deletions in a loop, opening separate IndexedDB transactions for each item instead of using a batch delete operation.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:b67182492821d592",
+          "evaluatedRevision": 18
         },
         {
           "subject": "production-pipeline-phasing",
@@ -5046,7 +5054,11 @@
           "revision": 18,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/studioDb.ts:47 The data layer exports raw IDBDatabase handles via openDb and imports upward from the app presentation directory in useProjects, violating module boundary isolation and dependency direction.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:b67182492821d592",
+          "evaluatedRevision": 18
         }
       ],
       "governance": "governed"
