@@ -1,0 +1,149 @@
+{
+ "schema": "conform-run/1",
+ "worker": "0df82b53-47ea-4225-951a-4f70a7c28913",
+ "subject": "visual-style-locking",
+ "evaluatedAt": "2026-10-13T22:08:00.154037+00:00",
+ "provider": "grok",
+ "model": "grok-4.7",
+ "pairs": [
+  {
+   "context": "character-consistency-testing",
+   "subject": "visual-style-locking",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "pipeline/vlm-probe/motion.py:100 The motion hop hardcodes a shorter photographic suffix than the stills lane's shared NEGATIVE_STYLE, which also carries \"cinema still\" and \"no border\".",
+   "techniques": [
+    {
+     "technique": "style-block-restated-every-call",
+     "verdict": "deviation",
+     "evidence": "pipeline/vlm-probe/motion.py:100 Character and location are imported verbatim; the style tail is a second literal, and stills prompts never name the attached reference."
+    },
+    {
+     "technique": "approved-reference-sheet",
+     "verdict": "deviation",
+     "evidence": "pipeline/vlm-probe/consistency.py:291 One hero file is repeated as the payload. The same function generates it and stages it; face crop and mid-grey exist only as an optional crop."
+    },
+    {
+     "technique": "style-onboarding-from-sample",
+     "verdict": "deviation",
+     "evidence": "pipeline/vlm-probe/style.py:67 One joint readback becomes the recipe. No per-frame outlier drop, no owner edit, and palette_strategy is an enum rather than role-assigned colors."
+    },
+    {
+     "technique": "draft-proofing-locked-ratchet",
+     "verdict": "deviation",
+     "evidence": "pipeline/vlm-probe/style.py:146 The persisted profile has sampling and a measured palette and no proof list a lock could be derived from. The spike brief is a 20\u201330 shot trailer."
+    },
+    {
+     "technique": "rejections-as-negative-evidence",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/vlm-probe/identity.py:280 Judgment here is a distance verdict plus a contact sheet. Context py files have no rejected-proof record."
+    },
+    {
+     "technique": "consistency-control-arm",
+     "verdict": "deviation",
+     "evidence": "pipeline/vlm-probe/consistency.py:14 Baseline versus reference is a real control, scored on a film floor by a separate ruler, and it is the same character rather than style transferred onto a second subject."
+    },
+    {
+     "technique": "motion-sampled-under-a-frame-budget",
+     "verdict": "conformant",
+     "evidence": "pipeline/vlm-probe/palette_measure.py:39 style.py stores that object beside the readback and measure_frames. survey.py:132 still downsamples the publish set without writing stride."
+    }
+   ],
+   "registryProposal": "The control arm is specified only as style transfer onto a second subject. A same-subject baseline, which is the identity probe this repo actually runs, is unnamed, so a real control is easy to score as a miss."
+  },
+  {
+   "context": "video-clip-pipeline",
+   "subject": "visual-style-locking",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "pipeline/video/render_preset_clips.py:233 The default H3 clip is prompted with only \"Animate the image\", so the still-to-motion hop sends the swatch and no style block.",
+   "techniques": [
+    {
+     "technique": "style-block-restated-every-call",
+     "verdict": "deviation",
+     "evidence": "pipeline/video/render_preset_clips.py:233 motion_author.py:61 and :143 forbid style adjectives. The Wan branch sends only the preset motion line. flux_still.py accepts whatever prompt the caller passes."
+    },
+    {
+     "technique": "approved-reference-sheet",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/video/render_preset_clips.py:9 The swatch is the first frame of the clip the rail already shows. This path does not assemble a multi-image style sheet."
+    },
+    {
+     "technique": "style-onboarding-from-sample",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/video/motion_author.py:63 The still reader is told to name objects and skip style, so it does not capture an attribute grammar."
+    },
+    {
+     "technique": "draft-proofing-locked-ratchet",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/video/render_preset_clips.py:26 The gate in these files is which take ships. Presets are read from presets.ts; these files hold no style lifecycle."
+    },
+    {
+     "technique": "rejections-as-negative-evidence",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/video/render_preset_clips.py:22 Failed takes stay in the ledger with checker reasons. They are clip takes, not style-sheet proofs counted against a reference window."
+    },
+    {
+     "technique": "consistency-control-arm",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/video/clip_check.py:298 This is a per-clip absolute palette gate against the swatch. leonardo_reference.py:13 buys a hosted ceiling clip on the same swatch, not an unconditioned arm."
+    },
+    {
+     "technique": "motion-sampled-under-a-frame-budget",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/video/motion_author.py:62 Motion text is proposed from one still. clip_check samples output frames to compute numbers and does not publish a reference strip."
+    }
+   ],
+   "registryProposal": "The still-to-motion rule still requires a restated style core after saying that style words which fight the reference degrade both. It does not say what to do when a measured A/B finds a bare \"Animate the image\" holds the clip better than a longer instruction, which is the result this pipeline recorded."
+  }
+ ],
+ "declined": [
+  {
+   "subject": "visual-style-locking",
+   "context": "probe-frame-data",
+   "reason": "evidence leans on chain/lane.json, which is not a tracked file"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-13T22:08:00.154037+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "visual-style-locking"
+   ],
+   "techniques": [
+    "approved-reference-sheet",
+    "consistency-control-arm",
+    "draft-proofing-locked-ratchet",
+    "motion-sampled-under-a-frame-budget",
+    "rejections-as-negative-evidence",
+    "style-block-restated-every-call",
+    "style-onboarding-from-sample"
+   ],
+   "deviations": 1,
+   "context": "character-consistency-testing",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  },
+  {
+   "ts": "2026-10-13T22:08:00.154037+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "visual-style-locking"
+   ],
+   "techniques": [
+    "approved-reference-sheet",
+    "consistency-control-arm",
+    "draft-proofing-locked-ratchet",
+    "motion-sampled-under-a-frame-budget",
+    "rejections-as-negative-evidence",
+    "style-block-restated-every-call",
+    "style-onboarding-from-sample"
+   ],
+   "deviations": 1,
+   "context": "video-clip-pipeline",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  }
+ ]
+}

@@ -863,7 +863,11 @@
           "revision": 8,
           "changedAt": "2026-09-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "pipeline/vlm-probe/motion.py:100 The motion hop hardcodes a shorter photographic suffix than the stills lane's shared NEGATIVE_STYLE, which also carries \"cinema still\" and \"no border\".",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:281e1e4a619b1b07",
+          "evaluatedRevision": 8
         },
         {
           "subject": "image-prompt-composition",
@@ -6201,7 +6205,11 @@
           "revision": 8,
           "changedAt": "2026-09-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "pipeline/video/render_preset_clips.py:233 The default H3 clip is prompted with only \"Animate the image\", so the still-to-motion hop sends the swatch and no style block.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:281e1e4a619b1b07",
+          "evaluatedRevision": 8
         },
         {
           "subject": "cinematic-language",
