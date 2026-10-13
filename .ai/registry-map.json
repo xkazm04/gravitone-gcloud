@@ -2062,8 +2062,8 @@
           "revision": 10,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown",
-          "arrived": true
+          "arrived": true,
+          "state": "unknown"
         }
       ],
       "governance": "governed",
@@ -4455,8 +4455,8 @@
           "revision": 10,
           "changedAt": "2026-09-20",
           "confidence": "strong",
-          "state": "unknown",
-          "arrived": true
+          "arrived": true,
+          "state": "unknown"
         },
         {
           "subject": "data-video-art-direction",

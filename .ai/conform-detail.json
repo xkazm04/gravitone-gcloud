@@ -3522,6 +3522,174 @@
         "at": "2026-10-13T10:16:22.270706+00:00",
         "reason": "reviewer (sonnet): The anchor at live.ts:10 is a header comment about the client store's lifetime. It doesn't show that assembly identity or extension hooks are absent. The one technique anchor on assembly identity points at lib/claudeCli.ts:1, which is not in this context's files. The server-side engine that /api/res"
       }
+    },
+    "3f0df589-9680-4aed-86a6-d6e913ddf1f1/review-iteration-loops": {
+      "context": "research-scope-board",
+      "subject": "review-iteration-loops",
+      "bundle": "media-generation",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T10:52:07.689Z",
+      "techniques": [
+        {
+          "technique": "follow-up-that-can-kill-a-fact",
+          "verdict": "deviation",
+          "evidence": "app/_phases/research/_parts/FollowUpQueue.tsx:82 Deepen requests are admitted only on manual card toggles; load-bearing low-confidence claims are not auto-queued and kills do not propagate forward."
+        },
+        {
+          "technique": "scope-vs-preference-signals",
+          "verdict": "conformant",
+          "evidence": "app/_phases/research/scope.ts:15 Preference signals like liked are separated from consequential scope verdicts and never mutate the script."
+        },
+        {
+          "technique": "refusal-as-valid-outcome",
+          "verdict": "conformant",
+          "evidence": "app/_phases/research/_parts/FollowUpQueue.tsx:286 Unanswered is treated as an explicit terminal state rendered with the actual limit rather than a silent failure."
+        },
+        {
+          "technique": "critique-carries-its-fix",
+          "verdict": "conformant",
+          "evidence": "app/_phases/research/scope.ts:67 Wounds identify missing prerequisites, carrying the exact causal repair needed when cards are descoped."
+        },
+        {
+          "technique": "anchored-variation-slate",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/ResearchStep.tsx:142 This context is the educational notebook triage surface; divergence slates of rendered candidates live elsewhere."
+        },
+        {
+          "technique": "edit-plan-over-regeneration",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/_parts/ScopeGate.tsx:107 Scoping evidence and re-running research is draft generation; revision via edit plan is in script."
+        },
+        {
+          "technique": "partial-regeneration-seams",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/scope.ts:33 The medium is discrete cards rather than continuous audio or video media with seams."
+        },
+        {
+          "technique": "note-taxonomy-focus-scope-order",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/scope.ts:10 This surface collects scope commitments rather than focus, scope, and order notes on a draft script."
+        },
+        {
+          "technique": "attribution-share-accounting",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/ResearchTriageBoard.tsx:43 The triage board counts discrete cards across dimension columns rather than allocating duration seconds."
+        },
+        {
+          "technique": "gate-record-outlives-the-media",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/_parts/ScopeGate.tsx:40 Media culling and persistent gate evidence records apply to generated media runs rather than fact scope checkpoints."
+        }
+      ],
+      "withdrawn": {
+        "worker": "fc653f3d-9432-404f-8440-858dc269565e",
+        "state": "deviation",
+        "at": "2026-10-13T10:52:50.569138+00:00",
+        "reason": "reviewer (sonnet): FollowUpQueue.tsx:82 does show that deepen is a manual toggle. But the claim that kills do not propagate forward is contradicted by scope.ts woundsOf, which takes a `killed` set and wounds whatever depended on a killed fact. The scope.ts:67 anchor is only the Wound.missing field, and it carries no '"
+      }
+    },
+    "fb7019fe-fc71-463f-8fa8-9dcab877274a/review-iteration-loops": {
+      "context": "frames-phase",
+      "subject": "review-iteration-loops",
+      "bundle": "media-generation",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T10:52:07.689Z",
+      "techniques": [
+        {
+          "technique": "anchored-variation-slate",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/alternatives/AlternativesView.tsx:34 Scene alternatives are generated as unanchored re-rolls without per-candidate reference anchors or amplitude limits."
+        },
+        {
+          "technique": "edit-plan-over-regeneration",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/sceneSpec.ts:305 Frames lacking an authored spec in the direction pass remain untouched, retaining approved work and plates."
+        },
+        {
+          "technique": "partial-regeneration-seams",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/sceneSpec.ts:149 Text and vector layers are composited deterministically over generative plates, preventing lossy generative re-encodings of letters and shapes."
+        },
+        {
+          "technique": "refusal-as-valid-outcome",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/sceneSpec.ts:274 Scene specs violating rules are collected into explicit refusal records with reasons rather than silently corrupted or partially applied."
+        },
+        {
+          "technique": "critique-carries-its-fix",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/shotReview.ts:19 Checks downgrade to not-engaged when unexamined, and unpinpointed findings are preserved as unmeasured gaps for human triage without compelling automated hallucinations."
+        },
+        {
+          "technique": "attribution-share-accounting",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/useFrames.ts:886 Figures must cite notebook facts, but runtime duration splitting does not apply to still frames."
+        },
+        {
+          "technique": "follow-up-that-can-kill-a-fact",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/FramesStep.tsx:57 Frames views assemble pictures and decompose shots; evidence follow-up interrogation channels belong to research."
+        }
+      ],
+      "withdrawn": {
+        "worker": "fc653f3d-9432-404f-8440-858dc269565e",
+        "state": "deviation",
+        "at": "2026-10-13T10:52:50.593412+00:00",
+        "reason": "reviewer (sonnet): AlternativesView.tsx:34 is only the onAdopt callback that writes a chosen plate back to the frame, so it says nothing about how variants are generated. useAlternatives.ts passes `references` into generation, which contradicts 'unanchored', and I found no amplitude-limit code to confirm that claim ei"
+      }
+    },
+    "edd5c776-72cc-4bf6-942c-fd223c97d138/review-iteration-loops": {
+      "context": "frames-score-cut",
+      "subject": "review-iteration-loops",
+      "bundle": "media-generation",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T10:52:07.689Z",
+      "techniques": [
+        {
+          "technique": "anchored-variation-slate",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/alternatives/alts.ts:21 Scene alternatives store unanchored candidate plates without per-variant named reference anchors or amplitude limits."
+        },
+        {
+          "technique": "edit-plan-over-regeneration",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/sceneSpec.ts:305 Frames without authored specs in the plan remain untouched, preserving prior approvals."
+        },
+        {
+          "technique": "partial-regeneration-seams",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/LayerPanel.tsx:12 Text and vector layers composite deterministically over the generated plate, preventing lossy re-encoding loops."
+        },
+        {
+          "technique": "refusal-as-valid-outcome",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/sceneSpec.ts:274 Invalid scene specs are collected into explicit rejection records with reasons, and missing scenes remain untouched."
+        },
+        {
+          "technique": "critique-carries-its-fix",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/shotReview.ts:19 Structural shot checks record examined sites and downgrade to not-engaged when unexamined, surfacing gaps directly for human triage."
+        },
+        {
+          "technique": "attribution-share-accounting",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/useFrames.ts:886 Figures must cite notebook facts, but runtime duration splitting does not apply to still frames."
+        },
+        {
+          "technique": "follow-up-that-can-kill-a-fact",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/FramesStep.tsx:57 Frames views assemble pictures and decompose shots; evidence follow-up interrogation channels belong to research."
+        }
+      ],
+      "withdrawn": {
+        "worker": "fc653f3d-9432-404f-8440-858dc269565e",
+        "state": "deviation",
+        "at": "2026-10-13T10:52:50.616723+00:00",
+        "reason": "reviewer (sonnet): alts.ts:21 is only the SceneAlt type (id, plate, createdAt, seeded). It does not show how variants are generated, and generation does pass references. The LayerPanel.tsx:12 anchor is a comment about layer ordering, not deterministic compositing, so the technique evidence does not say what is claimed"
+      }
     }
   }
 }
