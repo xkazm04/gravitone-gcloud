@@ -126,11 +126,13 @@ export interface PlateResult {
  *  step's record would be inventing the artifact it exists to read.
  *
  *  v2 (frames-phase-A): the cut is `units` — picture units with an identity
- *  and a place on the film (./picture/unit.ts). `frames` is their read-only
- *  SHADOW, rebuilt from the units on every read and written beside them on
- *  every save, for the readers that have not moved to units yet (Score, Cut,
- *  the board). Read and written through `FRAMES_RECORD` (./records), whose
- *  migration walks a v1 record up at the read seam. */
+ *  and a place on the film (./picture/unit.ts) — a beat unit per explainer
+ *  beat, a shot unit per trailer shot. `frames` is the read-only SHADOW of the
+ *  beat units, rebuilt from them on every read and written beside them on every
+ *  save, for the readers that have not moved to units yet (Motion, the board).
+ *  Score and the Cut read units, through ./picture/read.ts. Read and written
+ *  through `FRAMES_RECORD` (./records), whose migration walks a v1 record up
+ *  at the read seam. */
 export interface FramesStepData {
   units: PictureUnit[];
   /** Shadow of `units`' beat units. Read it; never write it on its own. */
@@ -150,12 +152,38 @@ export interface FramesStepData {
   savedAt?: number;
 }
 
-/** The frames a chain derives, named as picture units: the fixture is
- *  re-resolved from the source's OWN id (for an explainer, the adopted render),
- *  and a trailer source derives no FRAMES — its units are shots, which this
- *  step does not draw as frames yet (stage 3 of frames-phase-A). */
-const derive = (source: FramesRender): Frame[] =>
-  framesFromUnits(unitsFromRender(source, resolveExplainerRender(source.id)));
+/** The units a chain derives: the fixture is re-resolved from the source's OWN
+ *  id (for an explainer, the adopted render). */
+const unitsOf = (source: FramesRender): PictureUnit[] =>
+  unitsFromRender(source, resolveExplainerRender(source.id));
+
+/** The frames a chain derives — its BEAT units. A trailer source derives no
+ *  frames: its units are shots, which this step does not draw as frames yet
+ *  (stage 3 of frames-phase-A), and which ride beside them as `shots`. */
+const derive = (source: FramesRender): Frame[] => framesFromUnits(unitsOf(source));
+
+const shotUnits = (units: readonly PictureUnit[]) => units.filter((u) => u.kind === "shot");
+
+/**
+ * THE SHOTS ON SCREEN, given the shots this chain derives now and the ones the
+ * record holds for it.
+ *
+ * Re-derived every open, never trusted from the record alone, because a
+ * trailer's chain id is the PROJECT's (`cut-${projectId}`): Step 2 can move a
+ * beat without the id changing, and a record that kept its shots on `sameCut`
+ * would keep a spine that no longer exists. What a shot carries that the
+ * derivation cannot reproduce — its plate and its clip — is taken from the
+ * stored unit of the same id. When the result is the stored list, the STORED
+ * array is returned, so the save sees nothing changed and writes nothing.
+ */
+function reconcileShots(derived: PictureUnit[], stored: PictureUnit[]): PictureUnit[] {
+  const kept = new Map(stored.map((u) => [u.id, u]));
+  const next = derived.map((u) => {
+    const was = kept.get(u.id);
+    return was ? { ...u, plate: was.plate, clip: was.clip } : u;
+  });
+  return JSON.stringify(next) === JSON.stringify(stored) ? stored : next;
+}
 
 export function useFrames(projectId: string) {
   const { user } = useAuth();
@@ -215,6 +243,10 @@ export function useFrames(projectId: string) {
   const render = source ?? UNRESOLVED;
 
   const [frames, setFrames] = useState<Frame[]>([]);
+  /** A trailer's SHOT units — on the clock and in the record, read by Score and
+   *  the Cut, and not drawn as frames by this step yet (stage 3). Always `[]`
+   *  for an explainer, whose units are its frames. */
+  const [shots, setShots] = useState<PictureUnit[]>([]);
   const [stepLoaded, setStepLoaded] = useState(false);
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -324,7 +356,12 @@ export function useFrames(projectId: string) {
    *  save below writes nothing: a stored record is rewritten when somebody
    *  changes it, never because somebody opened it. That is what lets a v1
    *  record sit on disk as v1 until its first edit (./picture/migrate.ts). */
-  const asRead = useRef<{ frames: Frame[]; direction: DirectionSpend | null; turn: string | null } | null>(null);
+  const asRead = useRef<{
+    frames: Frame[];
+    shots: PictureUnit[];
+    direction: DirectionSpend | null;
+    turn: string | null;
+  } | null>(null);
 
   useEffect(() => {
     if (!source) return;
@@ -357,7 +394,10 @@ export function useFrames(projectId: string) {
       const sameCut = Boolean(stored?.units?.length && stored.renderId === source.id);
       // The units' beat projection; a v1 record's missing clips were filled by
       // its migration on the way in.
-      const next = sameCut && stored ? framesFromUnits(stored.units) : derive(source);
+      const derived = unitsOf(source);
+      const next = sameCut && stored ? framesFromUnits(stored.units) : framesFromUnits(derived);
+      const storedShots = sameCut && stored ? shotUnits(stored.units) : [];
+      const shotsNow = reconcileShots(shotUnits(derived), storedShots);
       // The spend belongs to the cut it directed. A different render throws the
       // frames away, and carrying its bill onto the new ones would be the same
       // lie as omitting it — a figure that describes work not on screen.
@@ -366,10 +406,11 @@ export function useFrames(projectId: string) {
       // cut, so it is kept across a re-derive: a pass already taken is never
       // taken again, whichever frames it was taken onto.
       const took = stored?.turn ?? null;
-      asRead.current = sameCut ? { frames: next, direction: spend, turn: took } : null;
+      asRead.current = sameCut ? { frames: next, shots: storedShots, direction: spend, turn: took } : null;
       consumedRef.current = took;
       setConsumed(took);
       setFrames(next);
+      setShots(shotsNow);
       setDirection(spend);
       setStepLoaded(true);
     })();
@@ -395,6 +436,7 @@ export function useFrames(projectId: string) {
     if (
       asRead.current &&
       frames === asRead.current.frames &&
+      shots === asRead.current.shots &&
       direction === asRead.current.direction &&
       consumed === asRead.current.turn
     )
@@ -402,10 +444,12 @@ export function useFrames(projectId: string) {
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => {
       void saveRecord(FRAMES_RECORD, projectId, {
-        // Units are the record; `frames` is their shadow for the readers that
-        // have not moved yet. The units keep each frame's id — see
-        // `unitsFromFrames` for why an id is never re-minted on save.
-        units: unitsFromFrames(frames, { sourceId: source.id, totalS: source.durationS }),
+        // Units are the record; `frames` is the shadow of its beat units for
+        // the readers that have not moved yet. The units keep each frame's id
+        // — see `unitsFromFrames` for why an id is never re-minted on save —
+        // and a trailer's shots ride after them, since nothing re-derives a
+        // shot from `frames`.
+        units: [...unitsFromFrames(frames, { sourceId: source.id, totalS: source.durationS }), ...shots],
         frames,
         renderId: source.id,
         ...(direction ? { direction } : {}),
@@ -415,7 +459,7 @@ export function useFrames(projectId: string) {
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [frames, direction, consumed, stepLoaded, loadTrouble, projectId, source]);
+  }, [frames, shots, direction, consumed, stepLoaded, loadTrouble, projectId, source]);
 
   /** The cut as of the last commit, for the callbacks that read ONE frame by id.
    *  `generatePlate` used to close over `frames`, so it was a new function on

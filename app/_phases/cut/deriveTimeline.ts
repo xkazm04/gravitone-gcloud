@@ -8,23 +8,24 @@
 //
 // WHERE EACH LANE COMES FROM, scouted before a line of this was written:
 //
-//   picture  `FramesStepData.frames` (frames/useFrames.ts:107), key "frames".
-//            Order and duration are NOT stored: `Frame.atS` is the beat's
-//            start, and a frame holds until the next placeable beat, which is
-//            `durationOf` (frames/frames.ts:224). `pictureFromFrames`
-//            (score/picture.ts) already projects that into `Scene`s with
-//            `targetS` holds — the Score step spots against exactly this, so
-//            the Cut and the Score draw ONE clock rather than two derivations
-//            that could drift. The image is `Frame.plate.src` (a data: URL or
-//            a public path) when `plate.state === "ready"`. A Frame's CLIP has
-//            no URL and never will until a render seam exists: `FrameClip` is
-//            authored, never rendered (frames.ts — "No progress bar. No fake
-//            preview."), so the picture lane carries stills, honestly.
+//   picture  `FramesStepData.units` (frames/useFrames.ts), key "frames", read
+//            through its def (frames/picture/read.ts). A unit is an explainer
+//            beat or a trailer SHOT; `pictureFromUnits` (score/picture.ts)
+//            projects them into `Scene`s — a shot on its stored clock, a beat
+//            held until the next placeable beat (`durationOf`) — and the Score
+//            step spots against exactly this, so the Cut and the Score draw
+//            ONE clock rather than two derivations that could drift. Scene ids
+//            are unit ids. The image is `plate.src` (a data: URL or a public
+//            path) when `plate.state === "ready"`. A unit's CLIP has no URL and
+//            never will until a render seam exists: `FrameClip` is authored,
+//            never rendered (frames.ts — "No progress bar. No fake preview."),
+//            so the picture lane carries stills, honestly.
 //
 //   voice    NOTHING RECORDS A VOICE. No speech engine exists in lib/ or
 //            app/api/ (grep, 2026-10-05). What does exist is the line each
 //            frame says (`Frame.line`), so the voice lane draws one MISSING
-//            block per spoken line: written, not recorded. That is the true
+//            block per spoken line: written, not recorded. A trailer beat
+//            says its line once across all of its shots. That is the true
 //            state of the work, and it is the finish line's job to say so.
 //
 //   music    `ScoreStepData.spots` (stepStore.ts), key "score": the creator's
@@ -51,7 +52,8 @@ import { PROJECT, SCENES } from "../../_studio/scenes";
 import { TIMELINE, cuesFrom, sceneClock } from "../../_studio/score";
 import type { TimelineClip, TrackId } from "../../_studio/projectTypes";
 import type { Frame } from "../frames/frames";
-import { pictureFromFrames } from "../score/picture";
+import { frameOfUnit, unitsFromFrames, type PictureUnit } from "../frames/picture/unit";
+import { pictureFromUnits } from "../score/picture";
 import { toCueSpots, type ScoreSpot } from "../score/spots";
 import { takeFileUrl } from "@/lib/sound/client";
 
@@ -107,15 +109,22 @@ export interface DerivedCut {
   clips: CutClip[];
   /** Beats and spots that have no honest place on the clock. */
   unplaced: Unplaced[];
-  /** Frames by id, for the monitor's compositor. Empty for the fixture. */
+  /** Each unit as a frame, by unit id, for the monitor's compositor. A shot
+   *  unit's frame carries its beat's kind word. Empty for the fixture. */
   frames: Record<string, Frame>;
 }
 
 export interface CutInput {
   projectId: string;
   project: { title: string; logline: string; targetS: number } | null;
-  /** `null` = no frames record; `[]` = a record with no frames in it. */
-  frames: Frame[] | null;
+  /** The frames record's picture units — what the Cut reads. `null` = no
+   *  frames record; `[]` = a record with nothing in it. Absent: `frames` is
+   *  read instead. */
+  units?: PictureUnit[] | null;
+  /** A frame list, for a caller that holds frames rather than a record (the
+   *  probes). Projected to beat units keeping each frame's id; ignored when
+   *  `units` is given. */
+  frames?: Frame[] | null;
   /** `null` = the Score step never saved a spotting. */
   spots: ScoreSpot[] | null;
   /** Cue id → a take loaded into this session. */
@@ -172,8 +181,12 @@ function fromFixture(targetS: number | null): DerivedCut {
 export function deriveTimeline(input: CutInput): DerivedCut {
   const { projectId, project, frames, spots, takes = {}, storeTakeIds = null } = input;
   const targetS = project && project.targetS > 0 ? project.targetS : null;
+  const units =
+    input.units !== undefined
+      ? input.units
+      : frames ? unitsFromFrames(frames, { sourceId: "", totalS: project?.targetS ?? 0 }) : null;
 
-  if (!frames || frames.length === 0) {
+  if (!units || units.length === 0) {
     if (projectId === FIXTURE_PROJECT_ID) return fromFixture(targetS);
     // Zero on the clock, not the target: there is nothing to play, and a
     // transport that runs a needle across nothing is a dead control dressed
@@ -183,8 +196,9 @@ export function deriveTimeline(input: CutInput): DerivedCut {
 
   // The project's record closes the last beat; an unread record passes 0 and
   // the last beat takes durationOf's 1s floor — a sliver, never a guess.
-  const picture = pictureFromFrames(frames, project?.targetS ?? 0);
-  const byId: Record<string, Frame> = Object.fromEntries(frames.map((f) => [f.id, f]));
+  const picture = pictureFromUnits(units, project?.targetS ?? 0);
+  const unitById = new Map(units.map((u) => [u.id, u]));
+  const byId: Record<string, Frame> = Object.fromEntries(units.map((u) => [u.id, frameOfUnit(u)]));
   const clock = sceneClock(picture.scenes);
 
   const scenes: CutScene[] = clock.map(({ scene, startS }) => ({
@@ -213,15 +227,25 @@ export function deriveTimeline(input: CutInput): DerivedCut {
     });
   }
 
-  for (const sc of scenes) {
-    const line = byId[sc.id].line.trim();
+  // One spoken line per BEAT. A trailer beat is several shots and says its line
+  // once, across all of them — three blocks of the same sentence would read as
+  // three recordings to make.
+  const beatOf = (u: PictureUnit) => (u.kind === "shot" ? `${u.beatRef.beatId ?? u.beatRef.at}` : u.id);
+  for (const [i, sc] of scenes.entries()) {
+    const u = unitById.get(sc.id)!;
+    if (i > 0 && u.kind === "shot" && beatOf(unitById.get(scenes[i - 1].id)!) === beatOf(u)) continue;
+    let durS = sc.durS;
+    for (let j = i + 1; u.kind === "shot" && j < scenes.length && beatOf(unitById.get(scenes[j].id)!) === beatOf(u); j++)
+      durS += scenes[j].durS;
+    const line = u.line.trim();
     if (!line) continue;
     clips.push({
       id: `vo-${sc.id}`,
       track: "vo",
       label: line,
       startS: sc.startS,
-      durS: sc.durS,
+      // A sum of thirds, to the millisecond; a beat's own hold as it was.
+      durS: u.kind === "shot" ? Math.round(durS * 1000) / 1000 : durS,
       status: "missing",
       ref: sc.id,
       owner: "script",
@@ -230,9 +254,9 @@ export function deriveTimeline(input: CutInput): DerivedCut {
     });
   }
 
-  const unplaced: Unplaced[] = picture.unplaced.map((f) => ({
-    label: f.title,
-    why: `"${f.at}" is not a timecode`,
+  const unplaced: Unplaced[] = picture.unplaced.map((u) => ({
+    label: u.title,
+    why: `"${u.beatRef.at}" is not a timecode`,
     owner: "frames",
   }));
 

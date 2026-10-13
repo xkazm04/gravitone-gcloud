@@ -17,16 +17,12 @@ import { getProject } from "@/lib/projects";
 import { soundStoreListed } from "@/lib/capabilities";
 import { listTakes } from "@/lib/sound/client";
 
-import {
-  readStep,
-  saveStep,
-  type CutStepData,
-  type ScoreStepData,
-  type StorageTrouble,
-} from "../_shared/stepStore";
+import { saveStep, type CutStepData, type StorageTrouble } from "../_shared/stepStore";
+import { readRecord } from "../_shared/records/registry";
 import { useLoadFor, useStepFor } from "../_shared/useLoadFor";
-import type { Frame } from "../frames/frames";
-import type { FramesStepData } from "../frames/useFrames";
+import { readUnits } from "../frames/picture/read";
+import type { PictureUnit } from "../frames/picture/unit";
+import { SCORE } from "../score/records";
 import type { ScoreSpot } from "../score/spots";
 
 import type { CutClock } from "./clock";
@@ -57,7 +53,8 @@ export interface SessionTake {
 
 interface Upstream {
   project: { title: string; logline: string; targetS: number } | null;
-  frames: Frame[] | null;
+  /** The frames record's picture units; `null` = Frames never saved a cut. */
+  units: PictureUnit[] | null;
   spots: ScoreSpot[] | null;
 }
 
@@ -101,14 +98,29 @@ export function useCut(projectId: string) {
     projectId,
     async (id) => ({
       project: await getProject(id).catch(() => undefined),
-      frames: await readStep<FramesStepData>(id, "frames"),
-      score: await readStep<ScoreStepData>(id, "score"),
+      frames: await readUnits(id),
+      score: await readRecord(SCORE, id),
     }),
-    ({ project, frames, score }) => {
+    ({ project, frames, score }, id) => {
       // A frames record that will not open is NOT "no frames": deriving over it
       // would draw an empty cut — or the fixture — over work still on disk.
-      // The Score step refuses the same read on the same grounds.
-      const bad = !frames.ok ? frames.trouble : !score.ok ? score.trouble : null;
+      // The Score step refuses the same read on the same grounds. A record
+      // REFUSED by its def (a newer build's, or one that does not parse) is the
+      // same situation with a different cause, and reads as the same trouble.
+      const bad = !frames.ok
+        ? frames.trouble
+        : !score.ok
+          ? "trouble" in score
+            ? score.trouble
+            : {
+                kind: "failed" as const,
+                op: "read" as const,
+                projectId: id,
+                phase: SCORE.key,
+                message: `${score.refused} · ${score.detail}`,
+                at: Date.now(),
+              }
+          : null;
       if (bad) {
         setTrouble(bad);
         setUp(null);
@@ -119,7 +131,7 @@ export function useCut(projectId: string) {
         project: project
           ? { title: project.title, logline: project.logline, targetS: project.targetS }
           : null,
-        frames: frames.ok ? (frames.data?.frames ?? null) : null,
+        units: frames.ok ? frames.units : null,
         spots: score.ok ? (score.data?.spots ?? null) : null,
       });
     },

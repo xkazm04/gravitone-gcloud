@@ -33,7 +33,6 @@ const CALL = /\b(?:saveStep|readStep|loadStep|patchStep)\b(?:<[^()]*?>)?\(\s*[^,
 /** file -> literal-key calls still outside the defs. Shrink-only. */
 const BASELINE: Readonly<Record<string, number>> = {
   "app/_phases/cut/music-video/MusicVideoExport.tsx": 1,
-  "app/_phases/cut/useCut.ts": 2,
   "app/_phases/frames/music-video/MusicVideoFrames.tsx": 1,
   "app/_phases/research/guided/useEducationalResearch.ts": 1, // research-notebook: no def yet
   "app/_phases/research/ResearchStep.tsx": 2, // research-mode (+ notebook): no def yet

@@ -19,6 +19,7 @@
 
 import type { Scene } from "../../_studio/projectTypes";
 import { durationOf, type Frame } from "../frames/frames";
+import { frameOfUnit, type PictureUnit } from "../frames/picture/unit";
 
 export interface DerivedPicture {
   /** The beats that have a place on the clock, in narrative order. */
@@ -109,6 +110,60 @@ export function pictureFromFrames(frames: Frame[], targetS: number): DerivedPict
     // plate. Manufacturing a one-candidate list here would put a chosen mark on
     // a choice nobody made. The only reader of either is the landing contact
     // sheet, which draws the fixture.
+    frames: [],
+    pickedFrameId: null,
+  }));
+
+  return { scenes, unplaced, totalS: scenes.reduce((n, s) => n + s.targetS, 0) };
+}
+
+/** The picture as `pictureFromUnits` draws it: the same scenes and clock, with
+ *  the units that have no place on it carried out by identity. */
+export interface UnitPicture extends Omit<DerivedPicture, "unplaced"> {
+  unplaced: PictureUnit[];
+}
+
+/**
+ * Picture units → the picture, for one project. What Score and the Cut draw
+ * since frames-phase-A stage 2, because a trailer's picture is SHOTS and the
+ * `frames` shadow holds beat units only.
+ *
+ * Two grains, two clocks, and the split is deliberate:
+ *
+ *  · A SHOT unit's place is data — `startS`/`holdS`, divided exactly across its
+ *    beat's span (frames/picture/unit.ts#trailerUnits). It is read, not
+ *    re-derived: the shot layer's own rounded holds would walk every later
+ *    shot off its beat. A null hold is unplaced, as below.
+ *  · A BEAT unit's hold is re-derived by `durationOf` against `targetS`,
+ *    exactly as `pictureFromFrames` does. Its stored `holdS` closed the last
+ *    beat against the RENDER's length; this clock closes it against the
+ *    PROJECT's target, and an explainer's Score and Cut must not move by a
+ *    second because the record learned a new shape.
+ *
+ * Scene ids are unit ids, so a spot's `sceneIds` and the Cut's `unitRef` name
+ * the same picture the record does.
+ */
+export function pictureFromUnits(units: readonly PictureUnit[], targetS: number): UnitPicture {
+  const beats = units.filter((u) => u.kind === "beat");
+  const beatFrames = beats.map(frameOfUnit);
+  const beatHold = new Map(beats.map((u, i) => [u, durationOf(beatFrames, i, targetS)]));
+  const held = units.map((unit) => ({
+    unit,
+    holdS: unit.kind === "beat" ? beatHold.get(unit)! : unit.startS === null ? null : unit.holdS,
+  }));
+
+  const unplaced = held.filter((h) => h.holdS === null).map((h) => h.unit);
+  const placed = held.filter((h): h is { unit: PictureUnit; holdS: number } => h.holdS !== null);
+
+  // The same projection as `pictureFromFrames` — see its notes on each field.
+  const scenes: Scene[] = placed.map(({ unit, holdS }, i) => ({
+    id: unit.id,
+    index: i + 1,
+    // A shot is one of several pictures under its beat's label; its place in
+    // that beat is what tells three of them apart on the ruler.
+    slug: unit.kind === "shot" && unit.ofBeat > 1 ? `${unit.title} ${unit.ordinal}/${unit.ofBeat}` : unit.title,
+    mood: unit.beatKind,
+    targetS: holdS,
     frames: [],
     pickedFrameId: null,
   }));

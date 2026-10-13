@@ -77,14 +77,14 @@ import { useCapabilities } from "@/lib/useCapabilities";
 
 import { pendingPanel } from "@/components/ui/Pending";
 
-import { readStep, type StorageTrouble } from "../_shared/stepStore";
+import type { StorageTrouble } from "../_shared/stepStore";
 import { useLoadFor } from "../_shared/useLoadFor";
 import Notice from "../_shared/ui/Notice";
 import { usePhaseReport } from "../_shared/usePhaseReport";
-import type { Frame } from "../frames/frames";
-import type { FramesStepData } from "../frames/useFrames";
+import { readUnits } from "../frames/picture/read";
+import type { PictureUnit } from "../frames/picture/unit";
 import CueTakes from "./CueTakes";
-import { pictureFromFrames } from "./picture";
+import { pictureFromUnits } from "./picture";
 import SpotList from "./SpotList";
 import { gapRuns } from "./gaps";
 import { toCueSpots } from "./spots";
@@ -96,11 +96,6 @@ import { useScoreSpots, type SpotOrigin } from "./useSpots";
  *  before anything mounts, so a trailer or an explainer — the projects that
  *  spot — never carries the ad bed's planner in its chunk. */
 const AdsScore = dynamic(() => import("./ads/AdsScore"), { loading: pendingPanel });
-
-/** Step 3's key in the step store — read here, never written. `useFrames.ts` is
- *  the only writer, and a downstream step that seeded an upstream step's record
- *  would be inventing the artifact it exists to read. */
-const FRAMES_PHASE = "frames";
 
 /** THE EMPTY TEMPO SLOT is now a glyph in the place the number would be, not a
  *  sentence — three times over, which is what it was.
@@ -419,7 +414,11 @@ function StandardScore({ projectId }: { projectId: string }) {
    *  `null` means the read has not landed — which is NOT the same as an empty
    *  cut, and the three states below are drawn differently on purpose. */
   const [read, setRead] = useState<{
-    frames: Frame[];
+    /** The picture units Step 3 saved — an explainer's beats or a trailer's
+     *  shots. Read through the frames def (`readUnits`), never written here:
+     *  `useFrames.ts` is the only writer, and a downstream step that seeded an
+     *  upstream step's record would be inventing the artifact it exists to read. */
+    units: PictureUnit[];
     targetS: number;
     /** WHOSE FILM. Carried through to `cuesFrom` and from there into the vendor
      *  brief's only global narrative context — see `CueProject`. Read from the
@@ -476,10 +475,12 @@ function StandardScore({ projectId }: { projectId: string }) {
       // The record carries `targetS`, the cut's declared runtime, which is what
       // closes the last placeable beat — the same number FramesAssembly hands
       // `durationOf` as `render.durationS`. A record that will not open is not
-      // fatal here (see `pictureFromFrames`); a frames record that will not open
+      // fatal here (see `pictureFromUnits`); a frames record that will not open
       // is, and that is the one this surface refuses to draw over.
       const project = await getProject(id).catch(() => undefined);
-      const step = await readStep<FramesStepData>(id, FRAMES_PHASE);
+      // Through the def: a record this build cannot interpret is refused, and
+      // comes back as the same read trouble a failed read does.
+      const step = await readUnits(id);
       return { project, step };
     },
     ({ project, step }) => {
@@ -496,7 +497,7 @@ function StandardScore({ projectId }: { projectId: string }) {
       }
       setTrouble(null);
       setRead({
-        frames: step.data?.frames ?? [],
+        units: step.units ?? [],
         targetS: project?.targetS ?? 0,
         // A record that would not open leaves the title and logline EMPTY rather
         // than falling back to the fixture's. An empty narrative context is a
@@ -512,7 +513,7 @@ function StandardScore({ projectId }: { projectId: string }) {
    *  a project with no frames has no picture, which is a real state with a real
    *  screen rather than a reason to show somebody else's. */
   const picture = useMemo(
-    () => (read ? pictureFromFrames(read.frames, read.targetS) : null),
+    () => (read ? pictureFromUnits(read.units, read.targetS) : null),
     [read],
   );
 

@@ -3,11 +3,12 @@
 // v1 (`{ frames, renderId, direction? }`, no `v`) held a list of frames whose
 // identity was their index. v2 holds the same cut as PICTURE UNITS (./unit.ts):
 // each with an identity and its own place on the film. The `frames` list stays
-// in the record as a read-only SHADOW, written beside the units on every save,
-// because three readers have not moved to units yet — Score's picture
-// (score/picture.ts), the Cut (cut/useCut.ts) and the board's alternatives
-// source (lib/board/sources/alternative.ts) — and stage 2 of frames-phase-A is
-// where they do.
+// in the record as a read-only SHADOW of the BEAT units, written beside the
+// units on every save, because two readers have not moved to units yet — the
+// board's alternatives source (lib/board/sources/alternative.ts) and Motion
+// (motion/useMotion.ts) — and both move onto the def in phase-shared-A's
+// lineage stage. Score and Cut read units since frames-phase-A stage 2
+// (./read.ts).
 //
 // THIS RUNS ON READ ONLY. `decodeRecord` (../../_shared/records/registry.ts)
 // walks a stored v1 object through `framesV1ToV2` in memory and hands the hook
@@ -19,14 +20,23 @@
 // "because there is no migration seam to hang this off" — is folded in here,
 // because now there is one.
 //
-// THE BOARD STILL WRITES v1, and that is handled rather than forbidden. Its
-// `decide` saves `{ ...stored, frames }` through the def-less `saveStep`, which
-// stamps `v: 1` — so a v2 record it touches comes back as "v1 with stale units
-// riding along". This migration therefore always re-derives units from
-// `frames` and never trusts a `units` field on a v1 object, which is exactly
-// what makes the board's write land. (Beat units are a pure function of the
-// frame list, the render and its length; that stops being true when shot units
-// carry their own plates, and stage 3 has to move the board onto the def first.)
+// TWO WRITERS STILL WRITE v1, and that is handled rather than forbidden. The
+// board's `decide` and Motion's accept save `{ ...stored, frames }` through the
+// def-less store, which stamps `v: 1` — so a v2 record they touch comes back as
+// "v1 with units riding along". The two kinds of unit are treated differently:
+//
+//   · BEAT units are re-derived from `frames`, never trusted from the object.
+//     The writer edited `frames` (Motion's accepted line lives only there), and
+//     beat units are a pure function of the frame list, the render and its
+//     length — so re-deriving is exactly what makes those writes land.
+//   · SHOT units have no frame to be re-derived from: `frames` is beat units
+//     only. They are KEPT from the object when they were derived from the chain
+//     the object names (`sourceId === renderId`); without that, the next v1
+//     write would erase every shot a trailer saved. A shot from a different
+//     chain is stale and is dropped, as the hook would drop it.
+//
+// Stage 3 gives shots plates of their own; by then the board and Motion should
+// write through the def, and this branch becomes a reader of old records only.
 
 import { RENDER_BY_ID } from "../../script/renders";
 import type { ScriptRender } from "../../script/types";
@@ -59,7 +69,25 @@ function framesIn(raw: Record<string, unknown>): Frame[] {
 export function framesV1ToV2(raw: Record<string, unknown>): Record<string, unknown> {
   const frames = framesIn(raw);
   const renderId = typeof raw.renderId === "string" ? raw.renderId : "";
-  return { ...raw, frames, units: unitsFromFrames(frames, { sourceId: renderId, totalS: totalOf(renderId) }) };
+  const beats = unitsFromFrames(frames, { sourceId: renderId, totalS: totalOf(renderId) });
+  return { ...raw, frames, units: [...beats, ...shotsRiding(raw.units, renderId)] };
+}
+
+/** The shot units a v1 object carries for its own chain — see the header. A
+ *  v1 record from before units existed has none; anything that is not a shot
+ *  unit of this chain is left behind rather than cast. */
+function shotsRiding(units: unknown, renderId: string): PictureUnit[] {
+  if (!Array.isArray(units) || !renderId) return [];
+  return units.filter(
+    (u): u is PictureUnit =>
+      isPlainObject(u) &&
+      u.kind === "shot" &&
+      u.sourceId === renderId &&
+      typeof u.id === "string" &&
+      isPlainObject(u.plate) &&
+      Array.isArray(u.elements) &&
+      Array.isArray(u.texts),
+  );
 }
 
 /** A v2 object → the record. Units are the authority; the shadow is rebuilt

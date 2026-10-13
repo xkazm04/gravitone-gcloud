@@ -18,12 +18,13 @@
 // film as data (`startS`, `holdS`). An explainer beat projects to one unit; a
 // trailer shot to one unit each.
 //
-// STAGE 1 OF frames-phase-A, and what is deliberately NOT here yet: Score and
-// Cut still read the `frames` shadow of the record rather than units (stage 2),
-// trailer units generate no plates (stage 3 — `shotPrompt.ts` is the subject),
-// and the direction pass still keys scenes by `at` (stage 4, with `/api/frames`).
-// So `framesFromUnits` projects BEAT units only: a shot unit is on the clock and
-// has an identity, and nothing in the Frames step draws it as a frame yet.
+// STAGES 1-2 OF frames-phase-A, and what is deliberately NOT here yet: trailer
+// units generate no plates (stage 3 — `shotPrompt.ts` is the subject), and the
+// direction pass still keys scenes by `at` (stage 4, with `/api/frames`). Score
+// and Cut read units (stage 2, ./read.ts); the Frames step itself still draws
+// only BEAT units as frames, so `framesFromUnits` projects beat units only — a
+// shot unit is on the clock, has an identity and is saved, and nothing in the
+// Frames step draws it as a frame yet.
 
 import type { BeatKind, ScriptRender } from "../../script/types";
 import {
