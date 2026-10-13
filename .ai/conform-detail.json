@@ -4068,6 +4068,138 @@
           "evidence": "app/library/assetMeta.ts:44 The retained specification describes pixels and style slots, not musical sections or expected audio offsets."
         }
       ]
+    },
+    "edd5c776-72cc-4bf6-942c-fd223c97d138/evidence-bound-visuals": {
+      "context": "frames-score-cut",
+      "subject": "evidence-bound-visuals",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T13:52:43.642Z",
+      "worker": "1d85e201-e2e4-4df6-94eb-60fec154713b",
+      "techniques": [
+        {
+          "technique": "anchor-removal-ablation",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:6 A frame is already a plate plus drawn layers, and the plates are imaginative shapes, so there is no inseparable reconstruction to ablate."
+        },
+        {
+          "technique": "causal-arrow-discipline",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/frames.ts:497 A loop labelled the mechanism is seeded from beat kind with no factId. The spec treats every element citation as optional and never requires a causal grade."
+        },
+        {
+          "technique": "epistemic-draw-routing",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/sceneSpec.ts:139 Plate, elements and texts are separate layers, and a subject or motion that asks for glyphs is rejected. Returned plate pixels are not inspected for letters."
+        },
+        {
+          "technique": "figure-must-cite-a-fact",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/sceneSpec.ts:182 A figure with no fact id, or an id missing from the notebook, is rejected per beat, and the assembly header counts unbound figures. The gate trusts the role and does not scan captions for quantities."
+        },
+        {
+          "technique": "footage-claims-a-camera",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:119 No clip is generated. Shot wording uses a produced cinematic camera, which this technique leaves out."
+        },
+        {
+          "technique": "generous-strawman-rendering",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/frames.ts:500 The opposing beat is a canned bracket and the turn plate is a pair of arrows with a winner. No setup/turn pair is recorded, and verdict marks are not graded against evidence."
+        },
+        {
+          "technique": "performer-claims-need-a-person",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:168 Speech is the line over the frame. There is no cast record and no first-person experience brief."
+        },
+        {
+          "technique": "precision-limit-propagation",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/sceneSpec.ts:196 Only a low-confidence figure is refused as an exact value, so a medium-confidence fact is drawn exact. Human fact binding does not read the grade."
+        },
+        {
+          "technique": "screenshots-claim-a-record",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:530 Plate subjects are abstract shapes and cinematic staging. A search of these files found no screenshot, mockup, dashboard, or simulated-mark path."
+        },
+        {
+          "technique": "slots-claim-their-subjects",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/alternatives/alts.ts:7 The only slot is a kept plate for a scene. Nothing fills a roster or directory cell the copy has named as a real person or place."
+        }
+      ],
+      "registryProposal": "causal-arrow-discipline exempts thin leader lines from causal arrows but names no stored field that makes an arrow causal, so one arrow kind with an optional factId cannot enforce the grammar without also refusing pointing marks.",
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "app/_phases/frames/sceneSpec.ts:152-166 checks an element's kind and clamps its box but binds it to no fact, so an `arrow` or `loop` (app/_phases/frames/frames.ts:36-51 carries no factId) asserts a mechanism nothing graded, twenty lines above the text gate at :174-191 that does now cap a figure by the notebook's grade; epistemic-draw-routing (frames.ts:34-78, the plate/elements/texts split) and figure-must-cite-a-fact/precision-limit-propagation (:174-191 with useFrames.ts:628 carrying the grade) are realized, so the August grade half of this deviation is fixed and the connective-mark half is not.",
+          "evaluatedAt": "2026-09-20",
+          "worker": null,
+          "reason": "replaced by 1d85e201-e2e4-4df6-94eb-60fec154713b"
+        }
+      ]
+    },
+    "fb7019fe-fc71-463f-8fa8-9dcab877274a/evidence-bound-visuals": {
+      "context": "frames-phase",
+      "subject": "evidence-bound-visuals",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-13",
+      "evaluatedTs": "2026-10-13T13:52:43.642Z",
+      "worker": "1d85e201-e2e4-4df6-94eb-60fec154713b",
+      "techniques": [
+        {
+          "technique": "anchor-removal-ablation",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:6 A frame is already a plate plus drawn layers, and the plates are imaginative shapes, so there is no inseparable reconstruction to ablate."
+        },
+        {
+          "technique": "causal-arrow-discipline",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/frames.ts:497 A loop labelled the mechanism is seeded from beat kind with no factId. The layer panel warns unbound figures only, and element fact ids stay optional in the spec."
+        },
+        {
+          "technique": "epistemic-draw-routing",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/sceneSpec.ts:139 Plate, elements and texts are separate layers, and a subject or motion that asks for glyphs is rejected. Returned plate pixels are not inspected for letters."
+        },
+        {
+          "technique": "figure-must-cite-a-fact",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/sceneSpec.ts:182 A figure with no fact id, or an id missing from the notebook, is rejected per beat, and the assembly header counts unbound figures. The gate trusts the role and does not scan captions for quantities."
+        },
+        {
+          "technique": "footage-claims-a-camera",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:119 No clip is generated. Shot wording uses a produced cinematic camera, which this technique leaves out."
+        },
+        {
+          "technique": "generous-strawman-rendering",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/frames.ts:500 The opposing beat is a canned bracket and the turn plate is a pair of arrows with a winner. No setup/turn pair is recorded, and verdict marks are not graded against evidence."
+        },
+        {
+          "technique": "performer-claims-need-a-person",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:168 Speech is the line over the frame. There is no cast record and no first-person experience brief."
+        },
+        {
+          "technique": "precision-limit-propagation",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/sceneSpec.ts:196 Only a low-confidence figure is refused as an exact value, so a medium-confidence fact is drawn exact. Human fact binding does not read the grade."
+        },
+        {
+          "technique": "screenshots-claim-a-record",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/frames.ts:530 Plate subjects are abstract shapes and cinematic staging. A search of these files found no screenshot, mockup, dashboard, or simulated-mark path."
+        },
+        {
+          "technique": "slots-claim-their-subjects",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/frames/alternatives/AlternativesView.tsx:8 Each column is kept plates for one scene. Nothing fills a roster or directory cell the copy has named as a real person or place."
+        }
+      ]
     }
   }
 }

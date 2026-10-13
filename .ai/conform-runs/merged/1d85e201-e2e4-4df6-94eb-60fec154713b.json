@@ -1,0 +1,178 @@
+{
+ "schema": "conform-run/1",
+ "worker": "1d85e201-e2e4-4df6-94eb-60fec154713b",
+ "subject": "evidence-bound-visuals",
+ "evaluatedAt": "2026-10-13T13:52:43.642425+00:00",
+ "provider": "grok",
+ "model": "grok-4.7",
+ "pairs": [
+  {
+   "context": "frames-score-cut",
+   "subject": "evidence-bound-visuals",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/_phases/frames/sceneSpec.ts:160 An arrow or a loop is kept when it cites no fact, so the mark can assert a mechanism the notebook never graded.",
+   "techniques": [
+    {
+     "technique": "anchor-removal-ablation",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/frames/frames.ts:6 A frame is already a plate plus drawn layers, and the plates are imaginative shapes, so there is no inseparable reconstruction to ablate."
+    },
+    {
+     "technique": "causal-arrow-discipline",
+     "verdict": "deviation",
+     "evidence": "app/_phases/frames/frames.ts:497 A loop labelled the mechanism is seeded from beat kind with no factId. The spec treats every element citation as optional and never requires a causal grade."
+    },
+    {
+     "technique": "epistemic-draw-routing",
+     "verdict": "conformant",
+     "evidence": "app/_phases/frames/sceneSpec.ts:139 Plate, elements and texts are separate layers, and a subject or motion that asks for glyphs is rejected. Returned plate pixels are not inspected for letters."
+    },
+    {
+     "technique": "figure-must-cite-a-fact",
+     "verdict": "conformant",
+     "evidence": "app/_phases/frames/sceneSpec.ts:182 A figure with no fact id, or an id missing from the notebook, is rejected per beat, and the assembly header counts unbound figures. The gate trusts the role and does not scan captions for quantities."
+    },
+    {
+     "technique": "footage-claims-a-camera",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/frames/frames.ts:119 No clip is generated. Shot wording uses a produced cinematic camera, which this technique leaves out."
+    },
+    {
+     "technique": "generous-strawman-rendering",
+     "verdict": "deviation",
+     "evidence": "app/_phases/frames/frames.ts:500 The opposing beat is a canned bracket and the turn plate is a pair of arrows with a winner. No setup/turn pair is recorded, and verdict marks are not graded against evidence."
+    },
+    {
+     "technique": "performer-claims-need-a-person",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/frames/frames.ts:168 Speech is the line over the frame. There is no cast record and no first-person experience brief."
+    },
+    {
+     "technique": "precision-limit-propagation",
+     "verdict": "deviation",
+     "evidence": "app/_phases/frames/sceneSpec.ts:196 Only a low-confidence figure is refused as an exact value, so a medium-confidence fact is drawn exact. Human fact binding does not read the grade."
+    },
+    {
+     "technique": "screenshots-claim-a-record",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/frames/frames.ts:530 Plate subjects are abstract shapes and cinematic staging. A search of these files found no screenshot, mockup, dashboard, or simulated-mark path."
+    },
+    {
+     "technique": "slots-claim-their-subjects",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/frames/alternatives/alts.ts:7 The only slot is a kept plate for a scene. Nothing fills a roster or directory cell the copy has named as a real person or place."
+    }
+   ],
+   "registryProposal": "causal-arrow-discipline exempts thin leader lines from causal arrows but names no stored field that makes an arrow causal, so one arrow kind with an optional factId cannot enforce the grammar without also refusing pointing marks."
+  },
+  {
+   "context": "frames-phase",
+   "subject": "evidence-bound-visuals",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/_phases/frames/sceneSpec.ts:160 An arrow or a loop is kept when it cites no fact, so the mark can assert a mechanism the notebook never graded.",
+   "techniques": [
+    {
+     "technique": "anchor-removal-ablation",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/frames/frames.ts:6 A frame is already a plate plus drawn layers, and the plates are imaginative shapes, so there is no inseparable reconstruction to ablate."
+    },
+    {
+     "technique": "causal-arrow-discipline",
+     "verdict": "deviation",
+     "evidence": "app/_phases/frames/frames.ts:497 A loop labelled the mechanism is seeded from beat kind with no factId. The layer panel warns unbound figures only, and element fact ids stay optional in the spec."
+    },
+    {
+     "technique": "epistemic-draw-routing",
+     "verdict": "conformant",
+     "evidence": "app/_phases/frames/sceneSpec.ts:139 Plate, elements and texts are separate layers, and a subject or motion that asks for glyphs is rejected. Returned plate pixels are not inspected for letters."
+    },
+    {
+     "technique": "figure-must-cite-a-fact",
+     "verdict": "conformant",
+     "evidence": "app/_phases/frames/sceneSpec.ts:182 A figure with no fact id, or an id missing from the notebook, is rejected per beat, and the assembly header counts unbound figures. The gate trusts the role and does not scan captions for quantities."
+    },
+    {
+     "technique": "footage-claims-a-camera",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/frames/frames.ts:119 No clip is generated. Shot wording uses a produced cinematic camera, which this technique leaves out."
+    },
+    {
+     "technique": "generous-strawman-rendering",
+     "verdict": "deviation",
+     "evidence": "app/_phases/frames/frames.ts:500 The opposing beat is a canned bracket and the turn plate is a pair of arrows with a winner. No setup/turn pair is recorded, and verdict marks are not graded against evidence."
+    },
+    {
+     "technique": "performer-claims-need-a-person",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/frames/frames.ts:168 Speech is the line over the frame. There is no cast record and no first-person experience brief."
+    },
+    {
+     "technique": "precision-limit-propagation",
+     "verdict": "deviation",
+     "evidence": "app/_phases/frames/sceneSpec.ts:196 Only a low-confidence figure is refused as an exact value, so a medium-confidence fact is drawn exact. Human fact binding does not read the grade."
+    },
+    {
+     "technique": "screenshots-claim-a-record",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/frames/frames.ts:530 Plate subjects are abstract shapes and cinematic staging. A search of these files found no screenshot, mockup, dashboard, or simulated-mark path."
+    },
+    {
+     "technique": "slots-claim-their-subjects",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/frames/alternatives/AlternativesView.tsx:8 Each column is kept plates for one scene. Nothing fills a roster or directory cell the copy has named as a real person or place."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-13T13:52:43.642425+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "evidence-bound-visuals"
+   ],
+   "techniques": [
+    "anchor-removal-ablation",
+    "causal-arrow-discipline",
+    "epistemic-draw-routing",
+    "figure-must-cite-a-fact",
+    "footage-claims-a-camera",
+    "generous-strawman-rendering",
+    "performer-claims-need-a-person",
+    "precision-limit-propagation",
+    "screenshots-claim-a-record",
+    "slots-claim-their-subjects"
+   ],
+   "deviations": 1,
+   "context": "frames-score-cut",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  },
+  {
+   "ts": "2026-10-13T13:52:43.642425+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "evidence-bound-visuals"
+   ],
+   "techniques": [
+    "anchor-removal-ablation",
+    "causal-arrow-discipline",
+    "epistemic-draw-routing",
+    "figure-must-cite-a-fact",
+    "footage-claims-a-camera",
+    "generous-strawman-rendering",
+    "performer-claims-need-a-person",
+    "precision-limit-propagation",
+    "screenshots-claim-a-record",
+    "slots-claim-their-subjects"
+   ],
+   "deviations": 1,
+   "context": "frames-phase",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  }
+ ]
+}

@@ -1994,8 +1994,12 @@
           "revision": 8,
           "changedAt": "2026-09-23",
           "confidence": "probable",
-          "state": "unknown",
-          "arrived": true
+          "state": "deviation",
+          "arrived": true,
+          "evidence": "app/_phases/frames/sceneSpec.ts:160 An arrow or a loop is kept when it cites no fact, so the mark can assert a mechanism the notebook never graded.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:9c3c30c0335b8162",
+          "evaluatedRevision": 8
         },
         {
           "subject": "frame-direction",
@@ -2287,14 +2291,13 @@
           "changedAt": "2026-09-23",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "app/_phases/frames/sceneSpec.ts:152-166 checks an element's kind and clamps its box but binds it to no fact, so an `arrow` or `loop` (app/_phases/frames/frames.ts:36-51 carries no factId) asserts a mechanism nothing graded, twenty lines above the text gate at :174-191 that does now cap a figure by the notebook's grade; epistemic-draw-routing (frames.ts:34-78, the plate/elements/texts split) and figure-must-cite-a-fact/precision-limit-propagation (:174-191 with useFrames.ts:628 carrying the grade) are realized, so the August grade half of this deviation is fixed and the connective-mark half is not.",
-          "evaluatedAt": "2026-09-20",
-          "evaluatedAgainst": "sha256:50341b454060ae16",
-          "evaluatedRevision": 6,
+          "evidence": "app/_phases/frames/sceneSpec.ts:160 An arrow or a loop is kept when it cites no fact, so the mark can assert a mechanism the notebook never graded.",
+          "evaluatedAt": "2026-10-13",
+          "evaluatedAgainst": "sha256-b2:9c3c30c0335b8162",
+          "evaluatedRevision": 8,
           "source": "renamed",
           "renamedFrom": "6bdc9182-5119-4439-86a4-14dcbaa274fd",
-          "revisionsBehind": 2,
-          "stale": true
+          "revisionsBehind": 2
         }
       ],
       "governance": "governed"
