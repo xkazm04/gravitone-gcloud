@@ -278,6 +278,19 @@ and has an exit gate. Phases 2–6 are each run as /perfect waves (Director plus
 lots) inside the phase.
 
 ### Phase 0: settle the ground (S, about 1 session)
+
+> **Done 2026-10-14** (`daf16ec`..`1c473fe`). The approved prototype and the Almanac source are committed;
+> the overlay, CLAUDE.md and map-ownership drift is corrected; `@gt/catalog` exists and
+> `landing-isolation.probe` proves the landing reaches no `app/_phases`, `app/library`, `app/_studio`
+> or `studioDb`; ~95 pure modules moved to `lib/` behind one-line stubs and `no-app-imports.probe`
+> proves nothing under `lib/`, `components/` or `pipeline/` imports `app/` (allowlist: the
+> compositor's four importers, held by a live session); the node lane has a real network seal.
+> `npm run verify`: 21 of 22 gates pass. The one red is the `sound-store` probe, caused by
+> a sibling session's uncommitted sound ledger; Phase 0 did not cause it. Four new mutants killed.
+> Carried forward: move `app/_phases/frames/music-video/compositor.ts` once its session lands, then empty the allowlist;
+> probes must import `lib/` directly (a dynamic `import()` of an `export *` stub does not resolve
+> under the probe runner).
+
 - **0.1** Commit the fused prototype and kit as the design reference: `docs/next/prototype/` with
   real media thumbnails only. The full `data/` stays out of git (20 MB); a script regenerates it
   from `foundry-out/` and fixtures. Also commit the v2 Almanac source the `kit` overlay points to, so
