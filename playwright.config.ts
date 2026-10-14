@@ -4,6 +4,8 @@ import path from "node:path";
 
 import { defineConfig } from "@playwright/test";
 
+import { installNetworkSeal } from "./tests/_seal";
+
 // ==============================================================================
 // THE NODE LANE — golden-path DYNAMIC verification probes.
 //
@@ -24,6 +26,11 @@ import { defineConfig } from "@playwright/test";
 // must not leave $4 in foundry-out/spend/ for the next run, or the operator's
 // server, to be refused against. Workers inherit it; only
 // spend-ledger.probe.spec.ts opts into the file store, in temp directories.
+// THE NETWORK SEAL. This module is loaded in the runner and in every worker, so installing the
+// seal here covers every spec: loopback passes, any other host is refused (tests/_seal.ts;
+// negative control tests/golden-path/network-seal.probe.spec.ts).
+installNetworkSeal();
+
 process.env.SPEND_STORE = "memory";
 
 // THE GPU LEASE STAYS OFF THE REAL CARD'S DIRECTORY, for the same reason: the

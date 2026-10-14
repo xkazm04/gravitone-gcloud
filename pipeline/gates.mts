@@ -193,7 +193,7 @@ export const GATES: readonly Gate[] = [
     npmScript: "test",
     class: "blocking",
     outcomes: "01",
-    rationale: "Node-context probes over the repo's own modules; sealNetwork() proves no call leaves the process.",
+    rationale: "Node-context probes over the repo's own modules; tests/_seal.ts (installed by playwright.config.ts in every worker) refuses any non-loopback host, with network-seal.probe as its negative control.",
   },
   {
     id: "build",

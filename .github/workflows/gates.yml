@@ -87,9 +87,10 @@
 #
 #   probes               BLOCKING.  Input: the repo's own modules. The suite is
 #                        Node-context with no browser and no webServer, and
-#                        `sealNetwork()` in the imaging probes proves no call
-#                        leaves the process — so there is no live service whose
-#                        mood can redden a clean tree.
+#                        tests/_seal.ts (installed by playwright.config.ts in
+#                        every worker) refuses any non-loopback host, so no
+#                        live service's mood can redden a clean tree;
+#                        network-seal.probe is its negative control.
 #                        Changes the answer: if a probe is ever pointed at a real
 #                        vendor, that probe must be split out into its own
 #                        advisory job on a schedule; it may not stay in here.
