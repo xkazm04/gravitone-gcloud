@@ -1,0 +1,128 @@
+{
+  "about": "kernel/lease behaviour as a table. Run by packages/kernel/test/lease.spec.test.ts against the Node implementation (src/lease.ts) and by `python packages/kernel/py/lease_spec.py` against the Python one (py/lease.py), both over the same migrated SQLite schema. Times are seconds after `base`; `kill` marks an actor's pid dead (only a same-host claimant can see it). Outcomes: claim {granted: fence} | {queued: position} | {busy: holder|null, ahead: n}; heartbeat ok | {lost: reason}; release released | not-held; leave left | absent; fence ok | conflict; status {holder, fence, queue, reclaims, stale}; events lists every event so far as type[@lane].",
+  "base": "2026-10-15T00:00:00.000Z",
+  "ttlS": 60,
+  "actors": {
+    "A": { "bootId": "boot-a", "pid": 101, "host": "h1" },
+    "A2": { "bootId": "boot-a2", "pid": 101, "host": "h1" },
+    "B": { "bootId": "boot-b", "pid": 102, "host": "h1" },
+    "C": { "bootId": "boot-c", "pid": 201, "host": "h2" }
+  },
+  "scenarios": [
+    {
+      "name": "one holder; release keeps the fence; the next grant takes the next number",
+      "resource": "gpu.local",
+      "steps": [
+        { "t": 0, "op": "claim", "as": "A", "ticket": "a1", "wait": false, "expect": { "granted": 1 } },
+        { "t": 1, "op": "claim", "as": "B", "ticket": "b1", "wait": false, "expect": { "busy": "A", "ahead": 0 } },
+        { "t": 2, "op": "release", "as": "A", "fence": 1, "expect": "released" },
+        { "t": 3, "op": "release", "as": "A", "fence": 1, "expect": "not-held" },
+        { "t": 4, "op": "claim", "as": "B", "ticket": "b1", "wait": false, "expect": { "granted": 2 } },
+        { "t": 5, "op": "fence", "fence": 1, "expect": "conflict" },
+        { "t": 5, "op": "fence", "fence": 2, "expect": "ok" },
+        { "t": 5, "op": "status", "as": "B", "expect": { "holder": "B", "fence": 2, "queue": [], "reclaims": 0, "stale": null } },
+        { "t": 5, "op": "events", "expect": ["lease.claimed@gpu.local", "lease.released@gpu.local", "lease.claimed@gpu.local"] }
+      ]
+    },
+    {
+      "name": "FIFO: waiters are served in the order they asked, and a newcomer never jumps the line",
+      "resource": "gpu.local",
+      "steps": [
+        { "t": 0, "op": "claim", "as": "A", "ticket": "a1", "wait": false, "expect": { "granted": 1 } },
+        { "t": 1, "op": "claim", "as": "B", "ticket": "b1", "wait": true, "expect": { "queued": 1 } },
+        { "t": 2, "op": "claim", "as": "C", "ticket": "c1", "wait": true, "expect": { "queued": 2 } },
+        { "t": 3, "op": "release", "as": "A", "fence": 1, "expect": "released" },
+        { "t": 4, "op": "claim", "as": "C", "ticket": "c1", "wait": true, "expect": { "queued": 2 } },
+        { "t": 5, "op": "claim", "as": "A", "ticket": "a2", "wait": false, "expect": { "busy": null, "ahead": 2 } },
+        { "t": 5, "op": "status", "as": "A", "expect": { "holder": null, "fence": 1, "queue": ["B", "C"], "reclaims": 0, "stale": null } },
+        { "t": 6, "op": "claim", "as": "B", "ticket": "b1", "wait": true, "expect": { "granted": 2 } },
+        { "t": 7, "op": "release", "as": "B", "fence": 2, "expect": "released" },
+        { "t": 8, "op": "claim", "as": "C", "ticket": "c1", "wait": true, "expect": { "granted": 3 } },
+        { "t": 8, "op": "status", "as": "C", "expect": { "holder": "C", "fence": 3, "queue": [], "reclaims": 0, "stale": null } },
+        { "t": 8, "op": "events", "expect": ["lease.claimed@gpu.local", "lease.queued@gpu.local", "lease.queued@gpu.local", "lease.released@gpu.local", "lease.claimed@gpu.local", "lease.released@gpu.local", "lease.claimed@gpu.local"] }
+      ]
+    },
+    {
+      "name": "a same-host holder whose pid died is reclaimed at once, and counted",
+      "resource": "gpu.local",
+      "steps": [
+        { "t": 0, "op": "claim", "as": "A", "ticket": "a1", "wait": false, "expect": { "granted": 1 } },
+        { "t": 1, "op": "claim", "as": "B", "ticket": "b1", "wait": false, "expect": { "busy": "A", "ahead": 0 } },
+        { "t": 2, "op": "kill", "as": "A" },
+        { "t": 2, "op": "status", "as": "B", "expect": { "holder": "A", "fence": 1, "queue": [], "reclaims": 0, "stale": "holder-gone" } },
+        { "t": 3, "op": "claim", "as": "B", "ticket": "b1", "wait": false, "expect": { "granted": 2 } },
+        { "t": 3, "op": "fence", "fence": 1, "expect": "conflict" },
+        { "t": 3, "op": "status", "as": "B", "expect": { "holder": "B", "fence": 2, "queue": [], "reclaims": 1, "stale": null } },
+        { "t": 3, "op": "events", "expect": ["lease.claimed@gpu.local", "lease.reclaimed@gpu.local", "lease.claimed@gpu.local"] }
+      ]
+    },
+    {
+      "name": "a holder on another host cannot be probed: it is gone only by TTL, and the TTL's last instant still holds",
+      "resource": "gpu.local",
+      "steps": [
+        { "t": 0, "op": "claim", "as": "C", "ticket": "c1", "wait": false, "expect": { "granted": 1 } },
+        { "t": 0, "op": "kill", "as": "C" },
+        { "t": 30, "op": "claim", "as": "B", "ticket": "b1", "wait": false, "expect": { "busy": "C", "ahead": 0 } },
+        { "t": 60, "op": "claim", "as": "B", "ticket": "b1", "wait": false, "expect": { "busy": "C", "ahead": 0 } },
+        { "t": 60, "op": "status", "as": "B", "expect": { "holder": "C", "fence": 1, "queue": [], "reclaims": 0, "stale": null } },
+        { "t": 61, "op": "status", "as": "B", "expect": { "holder": "C", "fence": 1, "queue": [], "reclaims": 0, "stale": "heartbeat-expired" } },
+        { "t": 61, "op": "claim", "as": "B", "ticket": "b1", "wait": false, "expect": { "granted": 2 } },
+        { "t": 61, "op": "events", "expect": ["lease.claimed@gpu.local", "lease.reclaimed@gpu.local", "lease.claimed@gpu.local"] }
+      ]
+    },
+    {
+      "name": "a heartbeat keeps a live lease; past its TTL the lease is lost even before anyone takes it",
+      "resource": "gpu.local",
+      "steps": [
+        { "t": 0, "op": "claim", "as": "A", "ticket": "a1", "wait": false, "expect": { "granted": 1 } },
+        { "t": 50, "op": "heartbeat", "as": "A", "fence": 1, "expect": "ok" },
+        { "t": 110, "op": "fence", "fence": 1, "expect": "ok" },
+        { "t": 111, "op": "fence", "fence": 1, "expect": "conflict" },
+        { "t": 111, "op": "heartbeat", "as": "A", "fence": 1, "expect": { "lost": "expired" } },
+        { "t": 112, "op": "claim", "as": "B", "ticket": "b1", "wait": false, "expect": { "granted": 2 } },
+        { "t": 113, "op": "heartbeat", "as": "A", "fence": 1, "expect": { "lost": "taken-over" } },
+        { "t": 113, "op": "release", "as": "A", "fence": 1, "expect": "not-held" },
+        { "t": 113, "op": "events", "expect": ["lease.claimed@gpu.local", "lease.reclaimed@gpu.local", "lease.claimed@gpu.local"] }
+      ]
+    },
+    {
+      "name": "a pid this process inherited is not a live holder: the bootId tells them apart",
+      "resource": "gpu.local",
+      "steps": [
+        { "t": 0, "op": "claim", "as": "A", "ticket": "a1", "wait": false, "expect": { "granted": 1 } },
+        { "t": 1, "op": "claim", "as": "A2", "ticket": "a2", "wait": false, "expect": { "granted": 2 } },
+        { "t": 1, "op": "status", "as": "A2", "expect": { "holder": "A2", "fence": 2, "queue": [], "reclaims": 1, "stale": null } },
+        { "t": 1, "op": "events", "expect": ["lease.claimed@gpu.local", "lease.reclaimed@gpu.local", "lease.claimed@gpu.local"] }
+      ]
+    },
+    {
+      "name": "a dead waiter is skipped at once; an unseen waiter on another host is dropped after its TTL",
+      "resource": "gpu.local",
+      "steps": [
+        { "t": 0, "op": "claim", "as": "A", "ticket": "a1", "wait": false, "expect": { "granted": 1 } },
+        { "t": 1, "op": "claim", "as": "C", "ticket": "c1", "wait": true, "expect": { "queued": 1 } },
+        { "t": 2, "op": "claim", "as": "B", "ticket": "b1", "wait": true, "expect": { "queued": 2 } },
+        { "t": 2, "op": "kill", "as": "B" },
+        { "t": 3, "op": "release", "as": "A", "fence": 1, "expect": "released" },
+        { "t": 4, "op": "claim", "as": "A", "ticket": "a2", "wait": true, "expect": { "queued": 2 } },
+        { "t": 40, "op": "claim", "as": "A", "ticket": "a2", "wait": true, "expect": { "queued": 2 } },
+        { "t": 40, "op": "status", "as": "A", "expect": { "holder": null, "fence": 1, "queue": ["C", "A"], "reclaims": 0, "stale": null } },
+        { "t": 70, "op": "claim", "as": "A", "ticket": "a2", "wait": true, "expect": { "granted": 2 } },
+        { "t": 70, "op": "events", "expect": ["lease.claimed@gpu.local", "lease.queued@gpu.local", "lease.queued@gpu.local", "lease.released@gpu.local", "lease.left@gpu.local", "lease.queued@gpu.local", "lease.left@gpu.local", "lease.claimed@gpu.local"] }
+      ]
+    },
+    {
+      "name": "a waiter that leaves gives up its place; a resource that is not a lane carries no lane",
+      "resource": "forge.cycle-7",
+      "steps": [
+        { "t": 0, "op": "claim", "as": "A", "ticket": "a1", "wait": false, "expect": { "granted": 1 } },
+        { "t": 1, "op": "claim", "as": "B", "ticket": "b1", "wait": true, "expect": { "queued": 1 } },
+        { "t": 2, "op": "leave", "as": "B", "ticket": "b1", "expect": "left" },
+        { "t": 3, "op": "leave", "as": "B", "ticket": "b1", "expect": "absent" },
+        { "t": 4, "op": "release", "as": "A", "fence": 1, "expect": "released" },
+        { "t": 5, "op": "claim", "as": "C", "ticket": "c1", "wait": false, "expect": { "granted": 2 } },
+        { "t": 5, "op": "events", "expect": ["lease.claimed", "lease.queued", "lease.left", "lease.released", "lease.claimed"] }
+      ]
+    }
+  ]
+}

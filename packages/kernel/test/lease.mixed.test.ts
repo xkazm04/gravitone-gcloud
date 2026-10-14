@@ -1,0 +1,84 @@
+import { spawn, spawnSync } from "node:child_process";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { afterAll, describe, expect, it } from "vitest";
+import { eventsMigrations, verify } from "../src/events.ts";
+import { leaseMigrations } from "../src/lease.ts";
+import { migrate } from "../src/migrate.ts";
+import { openStore } from "../src/store.ts";
+import { must, scratch } from "./helpers.ts";
+
+// Node and Python processes contend for ONE lease on ONE store file (v1's
+// pipeline/gpu/selftest.py case 4, upgraded from "one try each" to sustained
+// contention). Every holder writes `enter` and `exit` under its fence; if two
+// ever held at once, the probe log would show two enters in a row. Python
+// also appends to the hash chain, so Node verifying the whole ledger proves
+// the two languages wrote one chain.
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const nodeChild = path.join(here, "fixtures", "lease-child.ts");
+const pyChild = path.join(here, "..", "py", "lease_contend.py");
+const tmp = scratch("lease-mixed");
+afterAll(() => tmp.dispose());
+
+function findPython(): string | undefined {
+  for (const bin of ["python", "python3", "py"]) {
+    const r = spawnSync(bin, ["-c", "import sys; print(sys.version_info[0])"], { encoding: "utf8" });
+    if (r.status === 0 && r.stdout.trim() === "3") return bin;
+  }
+  return undefined;
+}
+const python = findPython();
+if (python === undefined) console.warn("[lease.mixed] SKIPPED: no Python 3 on PATH; Node/Python contention did not run");
+
+function run(cmd: string, args: string[]): Promise<{ code: number | null; out: string; errText: string }> {
+  return new Promise((resolve) => {
+    const p = spawn(cmd, args, { stdio: ["ignore", "pipe", "pipe"] });
+    let out = "";
+    let errText = "";
+    p.stdout.on("data", (d: Buffer) => (out += d.toString()));
+    p.stderr.on("data", (d: Buffer) => (errText += d.toString()));
+    p.on("close", (code) => resolve({ code, out, errText }));
+  });
+}
+
+describe.skipIf(python === undefined)("Node and Python contend for one lease", () => {
+  it("exactly one holds at any instant, and fences strictly increase", async () => {
+    const db = path.join(tmp.dir, "mixed.sqlite");
+    const s = must(openStore(db));
+    must(migrate(s, [eventsMigrations, leaseMigrations], { snapshotDir: tmp.dir }));
+    must(s.tx((t) => t.exec("CREATE TABLE lease_probe (n INTEGER PRIMARY KEY, who TEXT NOT NULL, fence INTEGER NOT NULL, phase TEXT NOT NULL);")));
+    s.close();
+
+    const rounds = 8;
+    const node = (name: string) => run(process.execPath, ["--disable-warning=ExperimentalWarning", nodeChild, db, "gpu.local", String(rounds), name]);
+    const py = (name: string) => run(python ?? "python", ["-I", pyChild, db, "gpu.local", String(rounds), name]);
+    const results = await Promise.all([node("node-1"), py("py-1"), node("node-2"), py("py-2")]);
+    for (const r of results) expect({ code: r.code, stderr: r.errText }).toEqual({ code: 0, stderr: "" });
+
+    const check = must(openStore(db));
+    try {
+      const rows = must(check.read((r) => r.all("SELECT who, fence, phase FROM lease_probe ORDER BY n")));
+      expect(rows.length).toBe(4 * rounds * 2);
+      let last = 0;
+      for (let i = 0; i < rows.length; i += 2) {
+        const enter = rows[i];
+        const exit = rows[i + 1];
+        expect(enter?.["phase"], `row ${i}`).toBe("enter");
+        expect(exit?.["phase"], `row ${i + 1}: a second holder entered before the first left`).toBe("exit");
+        expect(exit?.["fence"]).toBe(enter?.["fence"]);
+        expect(exit?.["who"]).toBe(enter?.["who"]);
+        const fence = Number(enter?.["fence"]);
+        expect(fence, "fences strictly increase").toBeGreaterThan(last);
+        last = fence;
+      }
+      const writers = new Set(rows.map((r) => String(r["who"])));
+      expect(writers).toEqual(new Set(["node-1", "node-2", "py-1", "py-2"]));
+      const claimed = must(check.read((r) => r.get("SELECT count(*) AS n FROM events WHERE type = 'lease.claimed'")?.["n"]));
+      expect(claimed).toBe(4 * rounds);
+      expect(must(verify(check))).toMatchObject({ state: "intact" });
+    } finally {
+      check.close();
+    }
+  }, 120_000);
+});
