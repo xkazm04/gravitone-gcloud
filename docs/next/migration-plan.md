@@ -1,28 +1,45 @@
 # Gravitone Next: rebuild plan
 
-**Status:** proposed, 2026-10-14. Built from the owner's verdicts in contest family
-`foundry-next-design` (round 1: design reports; round 2: UI prototypes; round 3: the fusion), plus
+**Status:** proposed, 2026-10-14, revision 2. Built from the owner's verdicts in contest family
+`foundry-next-design` (round 1: design reports; round 2: UI prototypes; round 4: the fusion), plus
 three read-only inventories of the current code. Read this before writing any code for the new
 version.
 
-**The target:** *The Light Table · Full Score*. It is the round-2 winner (The Light Table) with the
-owner's four absorptions fused in: (a) a calendar rail that expands to a month view, (b) the Ledger
-route, (c) a Library built for thousands of items, and (d) per-resource composition plans with Runs
-as the place to oversee them. It was then polished in a /perfect-style wave.
+**The target:** *The Watershed*. It is the round-2 winner **The Weir** (seat a2, variant 2; blind
+key B/2) with the owner's four absorptions fused in:
+- (a) the Weir's calendar column, which expands to a month view;
+- (b) the Ledger route, from The Ratchet Board;
+- (c) the Library column grown into a Library built for thousands of items;
+- (d) projects as compositions on top of the pipeline, with a per-resource plan, and Runs as the
+  place to steer them. This half comes from The Switchboard.
 
-The prototype lives at `.contest/arena/foundry-next-design-r3/polish/variant-1/`, with `kit.html` as
-the design system. **That folder is git-ignored. Step 0.1 commits it.**
+It was then polished in /perfect-style waves that the owner gated.
+
+The prototype lives at `.contest/arena/foundry-next-design-r4/polish/variant-1/`. **That folder is
+git-ignored. Step 0.1 commits it.**
+
+> Revision 1 of this plan targeted *The Light Table*. The host had read the owner's seat/variant
+> label "A/2" as a blind letter. The owner corrected the mapping, and round 3 is closed as built on
+> the wrong baseline. Everything below targets The Watershed.
+
+**The owner's rule for the design system:** *the winning design establishes the new kit, not vice
+versa.* The kit is **extracted** from the prototype's pages. Tokens and components are named for
+what the design already does, and extraction must not change a pixel: the style contract between
+the prototype and the rebuilt route holds at 0 deviations. No token audit may bend the design
+toward an existing system.
 
 ---
 
 ## 1. What the owner gets
 
-- **One record from first sentence to published file.** An Idea carries its Plan, Runs, Decisions,
-  Outputs and Slots for every medium: image, article, audio, video and style. Today the same work is
+- **One floor from first prompt to published file.** Every medium flows Foundry → Weir → Library →
+  Calendar on one screen, and a Project carries its composition's Parts, Jobs, Decisions,
+  Library items and Slots for every medium: image, article, audio, video and style. Today the same work is
   split across five state models, seven header modules, three machines and one browser's IndexedDB.
-- **Every decision on one Gate, and every act in one Ledger.** Today there are four verdict state
+- **Every decision at the Weir, and every act in one Ledger.** Today there are four verdict state
   machines, three gate locations and no audit trail. After the rebuild there is one decision kernel,
-  one Gate wall, and one append-only Ledger that both the operator and agents can query.
+  one Weir with its Board sheet, and one append-only Ledger that both the operator and agents can
+  query.
 - **Every producer started from the screen, with cost and queue position shown first.** Today
   forge, Dojo and Strips can only be started from a CLI. After the rebuild every producer is a Job on
   a declared lane, with a dry run by default.
@@ -42,44 +59,51 @@ decides its future. Step 0.3 unhooks it from the code that is going away.
 
 ### 2.1 Routes (from the fused prototype)
 
+The Floor is the hub. Every other page is a deeper surface of one of its columns.
+
 | Route | What lives there | Replaces (v1) |
 |---|---|---|
-| `/foundry/docket` | Capture an idea (one sentence plus a medium); ideas grouped by state (at gate, running, …); calendar rail | Projects shelf, `/projects/new` wizard, Pipeline "proposed" column, article topics |
-| `/foundry/gate` | The Light Table: every undecided batch on one wall, a single cursor (K/X/U/Z/N, ⇧K/⇧X), loupe and dossier, commit with blast-radius preview | Foundry Cull, Extract, Dojo and Strips verdict UIs, `/board`, the per-step sign-off in `/studio`, article approval |
-| `/foundry/runs` (+ `/foundry/runs/:ideaId`) | The full score: one row per resource lane (gpu.local, box.render, box.chrome, seat.cli, cloud.google, cloud.elevenlabs, cloud.leonardo, calendar). Jobs are bars on a NOW line; selecting an idea shows its per-resource plan table; re-route, reorder, pause, retry | Pipeline canvas (articles, audio), music-video queue view, Suno queue view, the studio stepper |
-| `/foundry/i/:ideaId` | The idea record: brief, style, the **plan as centrepiece**, outputs, decisions, ledger | `/studio/[projectId]` (its six steps become plan parts) |
-| `/foundry/styles` | One catalogue: candidate → proven → locked | Foundry Styles plus Library themes (two catalogues) |
-| `/library` | References and ratified assets for all media. Built for thousands of items: kind, collection tree, vocabulary facets, virtualised grid, detail side panel with lineage | Library (Styles, Assets, Animations, Audio tabs) |
-| `/calendar` | Rail ⇄ month, channel and status filters, publish failures shown verbatim, ratified-unscheduled tray | `/calendar` |
-| `/ledger` (+ `/ledger/s/:record`, `/ledger/e/:seq`) | Append-only, hash-chained events. Facets for actor, act and source; filters in the URL; JSONL view; `LEDGER.query()` | Nothing (new) |
-| `/sound` | Sound lab: hunts, takes, triage | `/playground` (a redirect is kept) |
-| `/kit` | The design system as shipped | `/kit` (Almanac v2 retired) |
-| `/articles/:runId` | **Redirect** to the idea record or dossier. The `article-run` skill sends humans here | `/articles/*` |
+| `/` (studio) → **Floor** | Four media lanes (Image, Article, Audio, Video). Each lane flows left to right: **Foundry** column (a composer that shows cost, minutes and queue position before Launch; running work) → **the Weir** (piles awaiting the operator) → **Library / Projects** column (ratified) → **Calendar** rail. The header shows the NEXT decision, 24h spend and the ledger delta. `⇧1–4` focuses a lane | `/foundry` stations, the Pipeline canvas, the Projects shelf, article topics, Suno and music-video queue views, the Sound lab's place in the nav |
+| **Board** (a sheet over the Floor, deep-linkable) | The Sovereign Board: one decision desk per packet with matrix cull (K/X/U, reasons 1–4, ⇧K/⇧X row, Z zoom, ⌫ undo), blind pairs and packet review (articles, cuts). Commit is one act per packet. Esc returns to the Floor | `/board`, Foundry Cull, Extract, Dojo and Strips verdict UIs, article approval, the per-step sign-off in `/studio`, audio triage |
+| `/projects` → **Plan** | A project is a **composition** (recipe: Film, Album video, Explainer, …) of parts. Each part is a job: a model on a lane, with units, time, cost and dependencies. The model picker prices every choice. The style is chosen from the Library | `/projects`, `/projects/new`, `/studio/[projectId]` (its six steps become parts) |
+| `/projects` → **Runs** | The day-line across every resource (GPU box, render box, render box · Chrome, text seat, Google, ElevenLabs, Leonardo), the Weir lane and the Calendar lane. Select a part to see what blocks it and what it blocks. Re-route shows Δ finish time, Δ cost and queue position before you commit. Reorder, pause and retry | The Pipeline canvas, the music-video and Suno queues, the studio stepper |
+| `/projects` → **Compose** | A new composition from a recipe, a style, a take and a topic | The create wizard |
+| `/library` | References and ratified assets for all media, at thousands of items. The vocabulary is the spine: Kind, then that kind's real vocabulary, then state, collections and origin. Live counts, OR within a group and AND across groups. A virtualised grid or list and a detail panel with lineage | Library (Styles, Assets, Animations, Audio), Foundry Styles (the catalogue ratchet lives here) |
+| Calendar (the Floor rail ⇄ a month page) | The rail expands to a month with channel toggles and publish errors shown verbatim. Esc returns to the rail | `/calendar` |
+| `/ledger` | A typed, append-only event list. Facets for actor (operator, agent, machine), type and lane; a time strip; filters in the URL; a JSONL view; `query()`; every subject linked to its record | Nothing (new) |
+| `/kit` | The design system, extracted from these pages | `/kit` (Almanac v2 retired) |
+| `/articles/:runId`, `/board?…`, `/playground`, `/foundry`, `/studio/:id` | **Redirects** to the matching Board packet, Project or lane. Skills send humans to these addresses | — |
 
 ### 2.2 The record model (the spine; full schemas live in `lib/domain/` in Phase 1)
 
 ```ts
-Idea      { id, title, medium: "image"|"article"|"audio"|"video"|"style", recipe, brief?, styleId?,
-            origin: {kind:"captured"|"imported-project"|"topic"|"hunt", ref?}, state, createdAt }
-Plan      { ideaId, rev, parts: Part[] }                 // a composition, broken down per resource
+Run       { id, lane:"image"|"article"|"audio"|"video", producer, prompt, recipe?, styleId?,
+            estimate:{seconds,usd|null,unpricedReason?}, queuePos, state, projectId?, partId? }
+                                                       // launched from a Floor composer or as a project part
+Project   { id, title, recipe:"film/<template>"|"album-video"|"explainer"|…, styleId?, takeId?,
+            topic?, runtimeS?, rev, parts: Part[], state }      // a composition on top of the pipeline
 Part      { id, kind:"research"|"script"|"frames"|"motion"|"voice"|"score"|"sfx"|"cut"|"still"
-                 |"draft"|"critique"|"check"|"take"|"render"|"publish"|…,
-            model, lane, estimate:{seconds,usd|null,unpricedReason?}, inputs: PartId[],
-            gate?: "cull"|"approve"|"ratify" }
-Job       { id, partId, lane, state, lease?, attempt, progress, spend, error? }   // see 4.3
-Candidate { id, jobId, media: BlobRef, grades: Grade[] }  // grades shown only when calibrated (4.6)
-Decision  { key, verdict:"keep"|"reject"|null, rev, by:"operator"|"agent", surface, at }
-Output    { id, ideaId, media: BlobRef, ratifiedBy, ratifiedAt }
-Slot      { id, outputId, channel, at, state }            // the publish state machine (v1 lib/publish)
+                 |"words"|"render"|"draft"|"critique"|"publish"|…,
+            model, lane:"gpu.local"|"box.render"|"box.chrome"|"seat.text"|"cloud.google"|…,
+            units, estimate, after: PartId[], gate?:"verdict" }  // each part runs as one Job
+Job       { id, partId|runId, lane, state, lease?, attempt, progress, spend, error? }   // see 4.3
+Packet    { id, lane, source:"forge"|"extract"|"dojo"|"strips"|"article"|"triage"|"cut"|…,
+            mode:"matrix-cull"|"blind-pair"|"packet-review", items: Candidate[], state }  // a Weir pile
+Candidate { id, jobId, media: BlobRef, grades: Grade[] }  // grades shown only when calibrated (3.2)
+Decision  { key, verdict:"keep"|"reject"|null, reason?, rev, by:"operator"|"agent", surface, at }
+LibraryItem { id, kind, vocabulary:{…}, state, collections[], origin, rights,
+              source:"real"|"fixture"|"derived", lineage[], media?: BlobRef }   // ratified things live here
 Style     { id, status:"candidate"|"proven"|"locked", observables, recipe, negative, palette?, evidence[] }
-LibraryItem { id, kind, collectionPath, vocabulary:{…}, rights, source:"real"|"fixture"|"derived", lineage[] }
-Event     { seq, at, actor:{kind:"operator"|"agent"|"machine", id}, act, subject, cost?, data, prevHash, hash }
+Slot      { id, libraryItemId, channel, at, state }      // the publish state machine (v1 lib/publish)
+Event     { seq, at, actor:{kind:"operator"|"agent"|"machine", id}, type, subject:{kind,id}, lane?,
+            cost?:{usd,src:"real"|"model"|"illustrative"}, data, prevHash, hash }
 ```
 
-A v1 Project is imported as an **Idea with a Plan** (`origin.kind:"imported-project"`). The six
-studio steps become Parts, and per-step sign-off becomes Decisions. Discipline × template becomes a
-**plan template** (`film/trailer`, `film/short-educational-video`, `mv/album-track`,
-`article/registry-post`, `track/suno-song`, …). The fused prototype already uses these ids.
+A v1 Project is imported as a **Project** whose recipe comes from its discipline × template. Its
+six studio steps become Parts, and per-step sign-off becomes Decisions on the matching Packets. The
+recipes the prototype uses (Film, Album video, Explainer) are the first entries in `lib/catalog`'s
+recipe table. A Weir pile is a Packet. Every decision surface is a Packet mode, not a separate
+screen.
 
 ---
 
@@ -95,7 +119,7 @@ foundation primitive, or replaced by something strictly better. Sources: the thr
 |---|---|---|
 | `lib/diskTx.ts` (in-process FIFO plus cross-process lock; EEXIST/EPERM/EBUSY) and 3 weaker lock copies (`lib/sound/store.ts`, `lib/articles/store.ts`, Python `catalogue_lock.py`) | No lost updates across Next, CLIs and Python | **Generalise.** `kernel/store`: one transactional port. The local adapter is SQLite (WAL); a hosted adapter is added later. Content-addressed blobs stay on disk. Replaces all 4 lock copies, 4 atomic-write copies and 6 pid-liveness copies |
 | `lib/foundry/catalogue.ts` (write-ahead journal line, `_rev`, idempotent retry that reuses its revision) | Six writers in two languages converge | **Keep the semantics.** The catalogue becomes tables with a revision column. A git export of `styles.json` is kept as an artifact for diffs |
-| `lib/foundry/verdictLog.ts` + `app/foundry/gate/useGate.ts` (keyed revisioned patches, 409 with current rev, append-only log, 400 ms merge window, pagehide keepalive, ticketed commit plan) | Ends last-writer-wins between tabs and the Board; history outlives deleted media | **Generalise** into `kernel/decision` (server) plus `ui/gate` (client). Every Gate band is an adapter, so the Board stops being an adapter layer |
+| `lib/foundry/verdictLog.ts` + `app/foundry/gate/useGate.ts` (keyed revisioned patches, 409 with current rev, append-only log, 400 ms merge window, pagehide keepalive, ticketed commit plan) | Ends last-writer-wins between tabs and the Board; history outlives deleted media | **Generalise** into `kernel/decision` (server) plus `ui/board` (client). Every Weir packet mode (matrix cull, blind pair, packet review) is an adapter, so the Board stops being an adapter layer |
 | Extract step machine (`lib/foundry/extract/engine.ts`, pure `next()`, bounded `perform`, manifest-only state, TTL lease, breaker that excludes money stops, per-run ceiling checked before each unit) | Runs on Cloud Run's request ceilings and in a CLI with the same code | **Generalise** into `kernel/job`. Add a fencing token to the lease |
 | MV queue (`lib/sound/mv/queue.ts`: plan from missing outputs, redo-by-part, lease claimed before recovery, record updated before files are deleted) | Resume without bookkeeping; never re-spend | **Keep the planner idea** as the job model's default (`missingSteps`) |
 | Suno queue rules (crash means switch off and name what was running; driver-health pause; enqueue never spends) | Credits may already be spent; the operator looks first | **Keep** as job-engine defaults |
@@ -129,7 +153,7 @@ foundation primitive, or replaced by something strictly better. Sources: the thr
 | `lib/useRemembered.ts`, `lib/usePolling.ts`, `components/kit/Pager.tsx` (`useWindow`) + `useVirtual`, `components/ui/Pending.tsx` + `next/dynamic`, `sideEffects` | **Keep.** Merge the two windowing hooks into one. The Library's 5,000-item grid is the proving ground |
 | `lib/identityEviction.ts` + walk probe, `storageRemedy.ts`, `GlobalErrorBridge`, `announcer` | **Keep verbatim.** Put the 10 raw `localStorage` writers behind one storage adapter that registers keys with eviction by construction |
 | Pipeline canvas pure modules (`camera`, `geometry`, `grid`, `cells`), ghost flight, `MoveMap` (a keyboard alternative to drag) | **Keep for Runs**: drag a bar to another lane, with MoveMap as its accessible twin |
-| Design tokens: four "worlds" (Obsidian, Almanac kit with 75 parts that have zero adopters, Obsidian-kit, Paper Cosmos); `globals.css` redefines Tailwind's `text-sm` as 16 px | **Replace.** One world: the prototype's `css/tokens.css` + `components.css` become Tailwind 4 `@theme` **semantic** tokens (no redefined built-ins). Paper Cosmos stays only for the landing |
+| Design tokens: four "worlds" (Obsidian, Almanac kit with 75 parts that have zero adopters, Obsidian-kit, Paper Cosmos); `globals.css` redefines Tailwind's `text-sm` as 16 px | **Replace.** One world, **extracted from the winning design**: the prototype's `tokens.css` plus the values its page sheets (`floor.css`, `projects.css`, `library.css`, `ledger.css`) actually use. At extraction they held 318 colour literals and 142 px font sizes outside `tokens.css`. These become named Tailwind 4 `@theme` semantic tokens (no redefined built-ins), each named for the role the design gives it. The rule is the owner's: extraction changes names, never pixels. Paper Cosmos stays only for the landing |
 | Auth on every route through a client `AuthGate`; `firebase/auth` (~110 KB) in the root chunk of every route, including `/` | **Replace.** Auth lives in a `(studio)` route-group layout. Page data renders on the server, because the stores are server-side |
 
 ### 3.4 API layer
@@ -172,12 +196,14 @@ until their feature is rebuilt.** At that point they are ported, not dropped (Ph
 app/
   page.tsx, _landing/           untouched (step 0.3 moves its imports to lib/catalog)
   (studio)/layout.tsx           auth + shell; the only client boundary for identity
-  (studio)/foundry/{docket,gate,runs,styles}/, (studio)/foundry/i/[id]/
-  (studio)/{library,calendar,ledger,sound,kit}/
+  (studio)/page.tsx               the Floor (lanes, composers, Weir, Library/Projects column, Calendar rail)
+  (studio)/@sheet/board/[packet]  the Board sheet as a parallel/intercepting route over the Floor
+  (studio)/projects/[[...id]]/    Plan · Runs · Compose
+  (studio)/{library,calendar,ledger,kit}/
   api/<area>/…                  every handler wrapped in route()
 lib/
   kernel/     store · lease · job · decision · router · spend(moved) · dryrun · events · posture
-  domain/     idea · plan · part · run · job · candidate · decision · output · slot · style · library
+  domain/     run · project · part · job · packet · candidate · decision · library-item · style · slot
   producers/  forge · extract · dojo · strips · article · suno · mv · still · cut · publish …
               (each: plan-template parts → jobs; drivable by request, CLI or worker)
   catalog/    pure registry data (plan templates, presets, channels); no I/O, importable by the landing
@@ -272,41 +298,48 @@ lots) inside the phase.
   - `kernel/dryrun`
   - `lib/spend` SQLite adapter
 - **Server:** `route()`, `serveFile()`, `AppError`, one envelope. **Client:** `apiClient`.
-- **UI:** tokens and components from the Kit as Tailwind 4 semantic tokens; `ui/signal`, keymap,
+- **UI:** tokens and components **extracted from the prototype's pages** (the design leads; see the
+  owner's rule at the top) as Tailwind 4 semantic tokens; `ui/signal`, keymap,
   layers, one window hook, freshness, the storage adapter with eviction; the `(studio)` shell with
   auth in the layout.
 - **Gates:** new-tree lint 0, keydown lint rule, type-floor live probe over every new route,
   narration 0, kernel probes with mutants.
 - **Exit:**
-  - `/kit` renders on the new foundation and matches the prototype's kit (style-contract check:
-    `contest/scripts/style-contract.py`, 0 deviations on the named roles).
+  - `/kit` renders on the new foundation, and a capture of the prototype's own pages (Floor, Board
+    sheet, Plan, Runs, Library, Ledger) against kit specimens holds the style contract
+    (`contest/scripts/style-contract.py`, 0 deviations on the named roles).
   - The kernel probes pass, including crash-prefix enumeration and the cross-language lease test.
 
 ### Phase 2: Ledger and Runs, read-only first (M)
 - Adapters project every v1 store (forge runs, extract, training, strips, articles, Suno, mv,
   publish, turns, spend) into `Event`s and `Job`s. Nothing writes yet.
-- Ship `/ledger` (filters in the URL, JSONL, `query`) and `/foundry/runs` (lanes, NOW line,
-  per-idea plan table) over real data. **This is the first value:** the operator sees every lane and
+- Ship `/ledger` (filters in the URL, JSONL, `query`, deep links to each record) and
+  `/projects` → Runs (resource lanes, NOW line, what-blocks-what, the Weir and Calendar lanes) over
+  real data. **This is the first value:** the operator sees every lane and
   every act in one place, before any producer moves.
 - CLI auth token replaces the legacy shared secret on money routes.
 - **Exit:** ledger counts reconcile with the v1 stores (a probe compares them); Runs shows every
   live job the v1 UIs show.
 
-### Phase 3: the Gate (M–L)
+### Phase 3: the Floor and the Weir (M–L)
 - Every decision surface becomes a `kernel/decision` adapter: cull, extract, Dojo (blind), strips,
   article approve (dossier), audio triage, Suno bands, mv keep/drop, proof/adoption.
-- Ship `/foundry/gate`, the Light Table, and retire `/board`, the Foundry Cull, Extract, Dojo and
-  Strips views, and article approval. The per-step studio sign-off follows in Phase 4.
-- Move the gate kernel `useGate` into `ui/gate` unchanged in behaviour (its probe carries over).
+- Ship the **Floor** (four media lanes; the Foundry column is read-only until Phase 4 moves the
+  producers; the Weir piles; the Library/Projects column; the Calendar rail) and the **Board sheet**
+  over it: matrix cull, blind pair and packet review, with one commit per packet.
+- Retire `/board`, the Foundry Cull, Extract, Dojo and Strips views, and article approval. The
+  per-step studio sign-off follows in Phase 4.
+- Move the gate kernel `useGate` into `ui/board` unchanged in behaviour (its probe carries over).
 - **Exit:**
   - Drive every verdict, undo, commit and blast-radius preview in a browser and assert the store
     write.
   - The decision log is append-only and shows in the Ledger.
   - `/board` redirects.
 
-### Phase 4: Docket, Plans and Producers (L, the largest)
-- **Records:** `domain/idea` and `domain/plan`, with plan templates from `lib/catalog` (the 10 v1
-  templates plus `article/*`, `track/*`, `mv/*`, `style/*`, `strips/*`).
+### Phase 4: Composers, Projects and Producers (L, the largest)
+- **Records:** `domain/run`, `domain/project` and `domain/part`, with recipes from `lib/catalog`
+  (Film from the 10 v1 templates, Album video, Explainer, plus `article/*`, `track/*`, `style/*`,
+  `strips/*`).
 - **Producers on `kernel/job`, one wave each:**
   1. extract
   2. mv
@@ -319,11 +352,12 @@ lots) inside the phase.
 - Each producer's CLI keeps its contract (§5.1). Its domain gate is ported to the new code.
 - **Import:**
   - Browser projects arrive via the `.gravitone` archive (one-click export in v1, import in Next),
-    becoming Ideas with `origin.kind:"imported-project"`.
+    becoming Projects, with their steps as Parts.
   - `foundry-out/*` stores are imported by one-time scripts.
-- Ship `/foundry/docket` (capture plus states) and `/foundry/i/:id` (the plan as centrepiece). Runs
-  gains re-route, reorder, pause and retry. Every launch is a dry-run receipt, then a confirm.
-- Retire `/projects`, `/projects/new`, `/studio/[projectId]` (redirect to the idea), IndexedDB
+- Ship the Floor composers (cost, minutes and queue position before Launch), `/projects` → Plan
+  (parts with priced model pickers) and Compose. Runs gains re-route (Δ finish time, Δ cost and queue
+  position first), reorder, pause and retry. Every launch is a dry-run receipt, then a confirm.
+- Retire the v1 `/projects` shelf, `/projects/new`, `/studio/[projectId]` (redirect to the Project), IndexedDB
   `projects`/`steps`, and `lib/jobs.tsx` serialisation.
 - **Exit:**
   - Each producer can be started from the UI and from its CLI on the same job.
@@ -331,21 +365,28 @@ lots) inside the phase.
   - Spend reconciles to the meter.
   - An imported project round-trips with its plan.
 
-### Phase 5: Styles and Library (M)
+### Phase 5: Library and Styles (M)
 - One `Style` table merges `styles.json` and Library themes. The `proven` and `locked` ratchets are
   kept; the git export of `styles.json` stays for the Python writers until they are moved onto the
   store.
 - The Library becomes a server-side index (SQLite FTS5 for search, facet counts by SQL). It has a
-  collection tree, vocabulary facets, virtualised grid and a lineage side panel. Prove it at 50,000
+  vocabulary-as-spine rail (Kind, then that kind's vocabulary, then state, collections and origin),
+  virtualised grid and list, a detail panel with lineage, and an attention facet for unreadable or
+  missing media.
+- Media facts are computed **at ingest**, not in the browser: decodability, poster/keyframe,
+  duration and mean brightness. The prototype had to hard-code a list of near-black renders to keep a
+  pile from leading with a black cover, and probe every mp4 at boot to sink undecodable ones. Both
+  become columns on the blob record, so cover choice and the attention facet are queries. Prove it at 50,000
   items with a generated corpus (latency budget: search under 50 ms p95 at 50k; measure, do not
   assume).
 - Retire Foundry Styles plus Library theme tabs, `lib/themes.ts` and `lib/assets.ts` (IndexedDB).
 - **Exit:** the 50k probe meets the budget, and adopting a style to locked is driven end to end.
 
-### Phase 6: Calendar, Sound lab and cutover (M)
-- `/calendar` (rail ⇄ month, failures verbatim, ratified tray), with publish `tick` on the worker
-  scheduler.
-- `/sound` (redirect from `/playground`).
+### Phase 6: Calendar and cutover (M)
+- Calendar: the Floor rail ⇄ month page (channel toggles, failures verbatim), with publish `tick`
+  on the worker scheduler.
+- Sound lab: folded in as the design places it. Generation is the Audio lane's composer, triage is a
+  Weir packet, and kept takes are Library audio facets. `/playground` redirects to the Audio lane.
 - Delete the remaining v1: the Almanac kit, the dual-world `StudioFrame`, the v1 Foundry route and
   the v1 API routes now unused.
 - **After cutover:**
@@ -378,8 +419,11 @@ lots) inside the phase.
 ## 8. Decisions waiting on the owner
 
 1. **Store:** SQLite (`node:sqlite` plus Python `sqlite3`) as the local single source, as proposed in §4.
-2. **Route names:** keep `Foundry` as the module holding Docket/Gate/Runs/Styles (the prototype's
-   choice), or promote Gate and Runs to top level.
-3. **Sound lab:** stays a separate route (prototype) or becomes Gate bands plus Library audio only.
+2. **Board as a sheet or a page:** the prototype opens the Board as a sheet over the Floor (Esc
+   returns). This plan makes it a deep-linkable intercepting route, so the sheet is the default and a
+   link opens it full-page. Confirm.
+3. **Sound lab folded into the Audio lane** (the prototype's choice): generation is the Audio
+   composer, triage is a Weir packet, and kept takes are Library audio. Confirm, or keep a separate
+   route.
 4. **The `data/` reference set** for `docs/next/prototype/`: keep it out of git and regenerate it
    (proposed), or commit the 8 MB of thumbnails.
