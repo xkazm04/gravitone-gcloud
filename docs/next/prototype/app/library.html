@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Library · Gravitone</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="library.css">
+</head>
+<body>
+<header data-component="StudioHeader" id="hdr"></header>
+<main class="route lib" id="lib" data-component="Library" aria-label="Library">
+  <aside class="panel lnav" id="lnav" data-component="LibraryNav" aria-label="Library vocabulary">
+    <div class="panel-head"><span>Library</span><span class="sp"></span><span id="nav-total" class="mono"></span></div>
+    <div class="scale" id="scale" data-component="ScaleToggle"></div>
+    <div class="panel-body" id="nav-body"></div>
+  </aside>
+
+  <section class="lcenter" data-component="LibraryResults" aria-label="Results">
+    <div class="panel-head lhead">
+      <nav data-component="Crumbs" id="crumbs" aria-label="Breadcrumb"></nav>
+      <span class="sp"></span>
+      <span id="count"></span>
+      <span class="chip mono" id="rendered" aria-live="off"></span>
+    </div>
+    <div class="toolbar ltool" data-component="LibraryToolbar">
+      <label class="search lsearch"><span class="sr-only">Search the library</span>
+        <span aria-hidden="true" id="search-ico"></span>
+        <input class="field" id="q" type="search" placeholder="search · mood:tense · style:painted-3d" autocomplete="off" spellcheck="false">
+        <kbd class="keycap" aria-hidden="true">/</kbd>
+      </label>
+      <label class="sortl"><span class="sr-only">Sort</span>
+        <select class="field" id="sort">
+          <option value="new">newest</option>
+          <option value="name">name</option>
+          <option value="kind">kind</option>
+        </select>
+      </label>
+      <div class="seg" id="view" role="group" aria-label="View"></div>
+      <div class="seg" id="dens" role="group" aria-label="Tile size"></div>
+      <button class="toggle" id="det-tog" aria-pressed="true" aria-controls="det">detail <kbd class="keycap">]</kbd></button>
+    </div>
+    <div class="fchips" id="fchips" aria-label="Active filters"></div>
+    <div class="lcols" id="lcols" aria-hidden="true"></div>
+    <div class="vp" id="vp" tabindex="0" role="listbox" aria-label="Library items" aria-multiselectable="false">
+      <div class="spacer" id="spacer"></div>
+      <div class="layer" id="layer"></div>
+    </div>
+  </section>
+
+  <aside class="panel det" id="det" data-component="LibraryDetail" aria-label="Item detail"></aside>
+</main>
+<audio id="aud" preload="none"></audio>
+
+<script src="../data/gravitone.js"></script>
+<script src="fixtures.js"></script>
+<script src="model.js"></script>
+<script src="shell.js"></script>
+<script src="library-data.js"></script>
+<script src="library.js"></script>
+</body>
+</html>

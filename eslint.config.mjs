@@ -40,6 +40,9 @@ const config = [
       // pipeline/next-gates.mts to find (tests/next-gates). They are evidence, not source,
       // and sit outside every tsconfig program.
       "tests/next-gates/fixtures/**",
+      // The approved design reference (docs/next/prototype/README.md): prototype code kept as
+      // evidence of the design, never imported and never ported as-is.
+      "docs/next/prototype/**",
       // UAT L2 SCRIPT FRAGMENTS. `uat/runs/<id>/l2/*.js` are not modules: the
       // driver concatenates `_prelude.js` + `<character>.js` and evaluates the
       // result as ONE async function body (uat/driver/drive-script.mjs), so each

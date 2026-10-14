@@ -1,0 +1,41 @@
+/* kit.css — layout of the Kit page only; every specimen uses the shipped classes. */
+.kit{grid-template-columns:220px minmax(0,1fr)}
+.kit-nav{border-right:1px solid var(--hair);overflow:auto;padding:12px 8px 40px;background:rgba(0,0,0,.18)}
+.kit-nav .grp{font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding:14px 10px 6px}
+.kit-nav a{display:flex;justify-content:space-between;padding:6px 10px;border-radius:7px;font-size:14px;color:var(--muted)}
+.kit-nav a:hover{background:rgba(255,255,255,.04);color:var(--ink-bright)}
+.kit-nav a.on{color:var(--ink-bright);background:rgba(103,232,249,.08);box-shadow:inset 2px 0 0 var(--cyan)}
+.kit-nav a .mono{font-size:var(--fs-micro);color:var(--faint)}
+.kit-body{overflow:auto;padding:20px 28px 120px;scroll-behavior:smooth}
+.k-sec{max-width:1400px;margin:0 auto 34px;scroll-margin-top:12px}
+.k-sec>h2{display:flex;align-items:baseline;gap:12px;font:600 var(--fs-h2)/1.2 var(--sans);color:var(--ink-bright);padding-bottom:10px;margin-bottom:14px;border-bottom:1px solid var(--hair)}
+.k-sec>h2 .mono{font-size:var(--fs-micro);color:var(--faint);font-weight:500}
+.k-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--min,260px),1fr));gap:12px}
+.spec{border:1px solid var(--hair);border-radius:var(--r);background:rgba(255,255,255,.015);padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.spec>.nm{display:flex;justify-content:space-between;gap:8px;font:600 var(--fs-micro)/1 var(--mono);color:var(--faint);text-transform:none}
+.spec>.nm b{color:var(--ink-bright);font-weight:700}
+.spec .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.spec .col{display:flex;flex-direction:column;gap:8px}
+.spec .lab{font:500 var(--fs-micro)/1 var(--mono);color:var(--faint);min-width:84px}
+.sw{display:flex;flex-direction:column;gap:6px}
+.sw i{display:block;height:46px;border-radius:8px;border:1px solid var(--hair-2)}
+.sw span{font:600 var(--fs-micro)/1.3 var(--mono);color:var(--ink-bright)}
+.sw small{font:500 var(--fs-micro)/1.3 var(--mono);color:var(--faint)}
+.type-row{display:grid;grid-template-columns:150px minmax(0,1fr);gap:16px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--hair)}
+.type-row .mono{font-size:var(--fs-micro);color:var(--faint)}
+.space-row{display:flex;align-items:center;gap:12px}
+.space-row i{display:block;height:12px;background:var(--cyan);opacity:.6;border-radius:2px}
+.radius-box{width:64px;height:44px;border:1.5px solid var(--hair-3);background:var(--ink-3)}
+.motion-demo{display:flex;gap:10px;flex-wrap:wrap}
+.motion-demo button{width:120px;height:60px;border-radius:9px;border:1px solid var(--hair-2);background:var(--ink-2);font:600 var(--fs-micro)/1.3 var(--mono);color:var(--muted)}
+.motion-demo button:hover{border-color:var(--hair-3);color:var(--ink-bright)}
+.motion-demo .play-lock{animation:lockIn .9s var(--ease)}
+.motion-demo .play-fade{animation:fadeUp .35s var(--ease)}
+.motion-demo .play-moved{animation:moved .9s var(--ease)}
+.motion-demo .play-shake{animation:shake .4s}
+.track-demo{position:relative;height:150px;border:1px solid var(--hair);border-radius:8px;background:repeating-linear-gradient(90deg,transparent 0 59px,rgba(255,255,255,.04) 59px 60px)}
+.focus-demo{outline:2px solid var(--cyan);outline-offset:2px}
+.hover-demo{background:rgba(255,255,255,.05)!important}
+.k-floor-cell{position:relative;height:120px;border-radius:8px;overflow:hidden;border:1px solid var(--hair)}
+.k-wide{grid-column:1/-1}
+.k-frame{width:100%;height:560px;border:1px solid var(--hair-2);border-radius:10px;background:var(--ink)}

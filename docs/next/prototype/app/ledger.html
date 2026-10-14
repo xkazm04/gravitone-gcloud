@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ledger · Gravitone</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="ledger.css">
+</head>
+<body>
+<header data-component="StudioHeader" id="hdr"></header>
+<main class="route lg" id="lg" data-component="Ledger" aria-label="Ledger">
+  <div class="toolbar lg-top" id="lg-top" role="toolbar" aria-label="ledger filters"></div>
+  <div class="lg-strip" id="lg-strip" data-component="TimeStrip"></div>
+  <div class="lg-body">
+    <aside class="panel lg-facets" id="lg-facets" aria-label="facets"></aside>
+    <section class="lg-center" id="lg-center" aria-label="events"></section>
+    <aside class="panel lg-detail" id="lg-detail" aria-label="event detail"></aside>
+  </div>
+</main>
+<script src="../data/gravitone.js"></script>
+<script src="fixtures.js"></script>
+<script src="model.js"></script>
+<script src="studio.js"></script>
+<script src="shell.js"></script>
+<script src="ledger-data.js"></script>
+<script src="ledger.js"></script>
+</body>
+</html>

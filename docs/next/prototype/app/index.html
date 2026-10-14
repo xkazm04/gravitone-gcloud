@@ -1,0 +1,1397 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gravitone · Floor</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="floor.css">
+</head>
+<body>
+<header data-component="StudioHeader" id="hdr"></header>
+<main data-component="Floor" id="floor" aria-label="Studio floor"></main>
+<section id="month" data-component="MonthCalendar" aria-label="Calendar month" hidden></section>
+<div class="scrim" id="scrim"></div>
+<section data-component="LevelSheet" id="sheet" role="dialog" aria-modal="true" aria-label="Level" aria-hidden="true"></section>
+<div class="toast" id="toast" role="status"></div>
+<div id="live" class="sr-only" aria-live="polite"></div>
+<audio id="player" preload="none"></audio>
+
+<script src="../data/gravitone.js"></script>
+<script src="fixtures.js"></script>
+<script src="model.js"></script>
+<script src="shell.js"></script>
+<script>
+(function () {
+"use strict";
+const M = window.GT_MODEL;
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const RM = window.matchMedia("(prefers-reduced-motion: reduce)");
+const reduced = () => RM.matches;
+const titleCase = (id) => String(id).replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+const wait = (ms) => new Promise((r) => setTimeout(r, reduced() ? 0 : ms));
+const fmt = M.fmt;
+
+const I = GT.I;
+const MODE_ICON = { "matrix-cull": I.cull, "blind-pair": I.pair, "packet-review": I.review };
+const MODE_NAME = { "matrix-cull": "Matrix Cull", "blind-pair": "Blind Pair", "packet-review": "Packet Review" };
+
+/* ───────────── signal vocabulary (render fns) ───────────── */
+const { Tally, StackBar, PipRow, Hint, Keycaps, Wave } = GT;
+const CALIB = `<span class="chip rose" title="">craft AUC ${M.calibration.craft.auc} · inverted · hidden</span><span class="chip amber">style_score ${M.calibration.style_score.auc} · chance · hidden</span>`;
+
+/* ───────────── lanes & state ───────────── */
+const LANES = [
+  { id: "image", n: 1, name: "Image", shelfName: "Library · styles" },
+  { id: "article", n: 2, name: "Article", shelfName: "Library · posts" },
+  { id: "audio", n: 3, name: "Audio", shelfName: "Library · kept takes" },
+  { id: "video", n: 4, name: "Video", shelfName: "Projects" },
+];
+const laneById = Object.fromEntries(LANES.map((l) => [l.id, l]));
+const ARTICLE_STAGES = M.ARTICLE_STAGES;
+const forgeCands = M.media.filter((m) => m.kind === "forge.candidate");
+const stripPosters = M.media.filter((m) => m.kind === "strip.poster");
+const stripVideos = M.media.filter((m) => m.kind === "strip.video");
+const forgeStyles = [...new Set(forgeCands.map((c) => c.style))];
+
+const S = {
+  focus: null, level: null, spot: null, zoom: false,
+  cal: false, calMonth: { y: 2026, m: 9 }, calDay: null, calChanOff: {},
+  packets: M.packets,
+  runs: [],
+  shelf: M.styles.filter((s) => s.shelf).map((s) => ({ id: s.id, name: s.name, hero: s.hero, family: s.family, src: "proven" })),
+  motion: [], pins: [], posts: [],
+  kept: M.keptTakes.slice().sort((a, b) => (a.kind === b.kind ? 0 : a.kind === "music" ? -1 : 1)),
+  projects: M.projects.map((p) => ({ ...p, steps: p.steps.map((s) => ({ ...s })) })),
+  slots: M.slots.map((s) => ({ ...s })),
+  cull: {}, pair: {}, review: {}, cut: {},
+  spend: { lo: 0, hi: 0 },
+  seq: 0, playing: null,
+  comp: {
+    image: { text: "", style: "teal-orange-blockbuster", mechs: { text: true, "ref-early": true } },
+    article: { text: "", topic: "agent-run-budgeting" },
+    audio: { text: "", kind: "music" },
+    video: { text: "", subject: "edu-radar" },
+  },
+};
+S.packets.forEach((p) => { p.lane = p.media; });
+// running work already in the model
+M.runs.filter((r) => r.status === "running").forEach((r) => {
+  S.runs.push({ id: r.id, lane: r.lane === "articles" ? "article" : r.lane, title: r.title, status: "running", model: true, stage: r.stage, progress: r.progress, queue: r.queue, engine: r.engine, costNote: r.costNote, costRange: r.costRange });
+});
+
+const awaiting = (lane) => S.packets.filter((p) => p.status === "awaiting_gate" && (!lane || p.lane === lane));
+const nextPacket = () => { for (const l of LANES) { const a = awaiting(l.id); if (a.length) return a[0]; } return null; };
+const styleName = (id) => (M.styleById[id] && M.styleById[id].name) || titleCase(id);
+
+/* ───────────── per-packet decision state ───────────── */
+function flatItems(p) { const out = []; (p.rows || []).forEach((r) => r.items.forEach((it) => out.push({ ...it, row: r.key }))); return out; }
+function cullState(p) {
+  if (!S.cull[p.id]) { const items = flatItems(p); S.cull[p.id] = { items, marks: items.map(() => null), cur: 0, hist: [], spawn: {} }; }
+  return S.cull[p.id];
+}
+function pairState(p) { return S.pair[p.id] || (S.pair[p.id] = { i: 0, picks: [], revealed: false }); }
+function reviewState(p) { return S.review[p.id] || (S.review[p.id] = { focus: 0, notes: [], editing: null, dir: "more_weight" }); }
+function tallyOf(p) {
+  if (p.deskMode === "matrix-cull") { const c = S.cull[p.id]; if (!c) return { k: 0, x: 0, u: p.count }; let k = 0, x = 0; c.marks.forEach((m) => { if (m && m.v === "keep") k++; else if (m && m.v === "reject") x++; }); return { k, x, u: c.items.length - k - x }; }
+  if (p.deskMode === "blind-pair") { const c = S.pair[p.id]; const n = c ? c.picks.length : 0; const bad = c ? c.picks.filter((q) => q.pick === "bad").length : 0; return { k: n - bad, x: bad, u: p.count - n }; }
+  return { k: 0, x: 0, u: 1 };
+}
+
+/* ───────────── header ───────────── */
+function renderHeader() {
+  const nx = nextPacket();
+  const cur = S.cal ? "calendar" : S.level ? (S.level.kind === "board" ? "board" : "floor") : "floor";
+  const spend = S.spend.hi ? `$${S.spend.lo}–${S.spend.hi}` : "$0.00";
+  $("#hdr").innerHTML = GT.header({ current: cur, awaiting: awaiting().length, next: nx, spend });
+}
+function mirrorPulse() {
+  const m = $("#mirror"); if (!m) return;
+  m.classList.add("writing"); m.innerHTML = '<span class="dot"></span>mirror: writing'; m.className = "chip amber mirror writing";
+  setTimeout(() => { const n = $("#mirror"); if (n) { n.className = "chip emerald mirror"; n.innerHTML = '<span class="dot"></span>mirror: synced'; } }, 900);
+}
+
+/* ───────────── floor ───────────── */
+function renderFloor() {
+  const f = $("#floor");
+  const rows = LANES.map((l) => (S.focus ? (S.focus === l.id ? "minmax(0,1fr)" : "48px") : shelfCount(l) ? "minmax(0,1fr)" : "minmax(176px,.7fr)")).join(" ");
+  const k = awaiting().length, run = S.runs.length;
+  const shelfTotal = S.shelf.length + S.kept.length + S.projects.length + S.posts.length;
+  f.innerHTML = `
+    <div class="lanes" style="--rows:${rows}">
+      <div class="colheads" role="presentation">
+        <div class="colhead" style="border-right:1px solid var(--hair);background:var(--ink-1)"></div>
+        <div class="colhead c-foundry">Foundry <span class="sub">draft · running</span> ${Tally(run, "running")}<a class="chip cyan" href="projects.html#runs" style="margin-left:auto" aria-label="runs across every resource">runs ›</a></div>
+        <div class="colhead c-weir"><span class="weir-title">WEIR</span> <span class="sub">/board</span> ${Tally(k, "waiting")}</div>
+        <div class="colhead c-shelf">Library · Projects <span class="sub">ratified</span></div>
+      </div>
+      ${LANES.map(Lane).join("")}
+    </div>
+    ${CalendarColumn()}`;
+  if (S.spot) f.setAttribute("data-spot", S.spot); else f.removeAttribute("data-spot");
+}
+function Lane(l) {
+  const collapsed = S.focus && S.focus !== l.id;
+  const cls = collapsed ? "collapsed" : S.focus === l.id ? "focused" : "";
+  return `<section class="lane ${cls}" data-component="Lane" data-lane="${l.id}" aria-label="${l.name} lane">
+    <div class="lane-rail">
+      <kbd class="keycap" aria-label="key ${l.n}">${l.n}</kbd>
+      ${I[l.id]}
+      <span class="lname">${l.name}</span>
+      <button class="focus-btn" data-act="focus" data-lane="${l.id}" aria-label="${S.focus === l.id ? "show all lanes" : "focus " + l.name + " lane"}" aria-pressed="${S.focus === l.id}">${S.focus === l.id ? I.collapse : I.expand}</button>
+    </div>
+    <div class="cell c-foundry" data-component="FoundryCell" data-cell="foundry-${l.id}">${collapsed ? FoundrySummary(l) : IdeaComposer(l) + `<div data-component="RunTrack" id="track-${l.id}">${RunTrack(l)}</div>`}</div>
+    <div class="cell c-weir" data-component="WeirCell" data-cell="weir-${l.id}">${collapsed ? WeirSummary(l) : WeirPiles(l)}<div class="sluice" id="sluice-${l.id}" aria-hidden="true"></div></div>
+    <div class="cell c-shelf ${shelfCount(l) ? "" : "folded"}" data-component="ShelfCell" data-cell="shelf-${l.id}">${collapsed ? ShelfSummary(l) : Shelf(l)}</div>
+  </section>`;
+}
+function FoundrySummary(l) {
+  const r = S.runs.filter((x) => x.lane === l.id);
+  return `<div class="summary"><span class="ttl">${l.name}</span>${r.length ? `<span class="state running">${r.length} running</span>` : `<span class="state draft">idle</span>`}</div>`;
+}
+function WeirSummary(l) {
+  const a = awaiting(l.id); const items = a.reduce((n, p) => n + p.count, 0);
+  let k = 0, x = 0, u = 0; a.forEach((p) => { const t = tallyOf(p); k += t.k; x += t.x; u += t.u; });
+  return `<div class="summary">${Tally(a.length, "piles")} ${Tally(items, "items")} ${StackBar(k, x, u, l.name)}</div>`;
+}
+function shelfCount(l) { return { image: S.shelf.length, article: S.posts.length, audio: S.kept.length, video: S.projects.length }[l.id]; }
+function ShelfSummary(l) {
+  const n = shelfCount(l);
+  return `<div class="summary"><span class="state ratified">${n} ${l.shelfName.toLowerCase()}</span></div>`;
+}
+
+/* composer */
+function IdeaComposer(l) {
+  const c = S.comp[l.id];
+  let ctl = "", ph = "";
+  if (l.id === "image") {
+    const opts = (st) => `<option value="${st.id}" ${c.style === st.id ? "selected" : ""}>${esc(st.name)}</option>`;
+    const cand = M.styles.filter((s) => !s.shelf && s.plates.length), prov = M.styles.filter((s) => s.shelf);
+    ctl = `<div class="comp-row"><select class="comp-sel" data-comp="style" aria-label="style">
+        <optgroup label="candidate · lock trial">${cand.map(opts).join("")}</optgroup>
+        <optgroup label="proven · re-sweep">${prov.map(opts).join("")}</optgroup>
+        <option value="__sweep" ${c.style === "__sweep" ? "selected" : ""}>Sweep · all ${forgeStyles.length} forge styles</option></select>
+        <button class="toggle" type="button" data-comp="mech" aria-pressed="true" aria-label="mechanism ${mechLabel(c)}">${mechLabel(c)}</button></div>`;
+    ph = "Riders crest the ridge at dawn, banners low…";
+  } else if (l.id === "article") {
+    const byB = {}; M.topics.forEach((t) => (byB[t.bundle] = byB[t.bundle] || []).push(t));
+    ctl = `<div class="comp-row"><select class="comp-sel" data-comp="topic" aria-label="topic, ${M.topics.length} registry topics">${Object.keys(byB).map((b) => `<optgroup label="${esc(b)}">${byB[b].map((t) => `<option value="${t.slug}" ${c.topic === t.slug ? "selected" : ""}>${esc(t.title)}</option>`).join("")}</optgroup>`).join("")}</select></div>`;
+    ph = "Angle: the budget is a clock, not a pool…";
+  } else if (l.id === "audio") {
+    ctl = `<div class="comp-row">${["music", "sfx"].map((k) => `<button class="toggle" data-comp="kind" data-kind="${k}" aria-pressed="${c.kind === k}">${k}</button>`).join("")}<span class="chip ghost" style="margin-left:auto">fixture</span></div>`;
+    ph = M.hunts[0] ? M.hunts[0].idea.split(".")[0] + "…" : "A bed that holds a full minute…";
+  } else {
+    ctl = `<div class="comp-row"><select class="comp-sel" data-comp="subject" aria-label="strip subject">${["edu-radar", "edu-aqueduct", "edu-chokepoint"].map((s) => `<option value="${s}" ${c.subject === s ? "selected" : ""}>Strip · ${s}</option>`).join("")}</select></div>`;
+    ph = "Radar sweeps; one blip stays when the rest fade…";
+  }
+  return `<form data-component="IdeaComposer" data-lane="${l.id}" aria-label="${l.name} idea" onsubmit="return false">
+    ${ctl}
+    <textarea class="comp-text" data-comp="text" rows="2" placeholder="${esc(ph)}" aria-label="first sentence">${esc(c.text)}</textarea>
+    <div data-component="Estimate" id="est-${l.id}">${Estimate(l.id)}</div>
+    <button class="launch" type="button" data-act="launch" data-lane="${l.id}">Launch <kbd class="keycap">⏎</kbd></button>
+  </form>`;
+}
+function mechLabel(c) { return c.mechs.text && c.mechs["ref-early"] ? "text+ref" : c.mechs.text ? "text" : "ref-early"; }
+function simImagePlates() {
+  const c = S.comp.image;
+  const mechs = Object.keys(c.mechs).filter((k) => c.mechs[k]);
+  if (c.style === "__sweep") return forgeCands.filter((m) => mechs.includes(m.mechanism));
+  const st = M.styleById[c.style];
+  return (st ? st.plates : []).filter((m) => m.kind !== "forge.candidate" || mechs.includes(m.mechanism));
+}
+function laneActive(lane) { return S.runs.filter((r) => r.lane === lane).length; }
+function Estimate(lane) {
+  if (lane === "image") {
+    const n = simImagePlates().length; const e = M.estimate.forge(1, n, 1);
+    return `<span><b>${e.plates}</b> plates</span><span>~<b>${e.minutes}</b> min</span><span><b>$0</b> local</span><span>queue <b>#${laneActive("image") + 1}</b></span><span class="ill">illus.</span>`;
+  }
+  if (lane === "article") {
+    const e = M.estimate.article();
+    return `<span><b>$${e.usdRange[0]}–${e.usdRange[1]}</b></span><span>~<b>${e.minutes}</b> min</span><span>queue <b>#${laneActive("article") + 1}</b></span><span class="ill">pipeline hint</span>`;
+  }
+  if (lane === "audio") {
+    const e = M.estimate.audio(1);
+    return `<span><b>${e.clips}</b> clips</span><span>~<b>${e.minutes}</b> min</span><span>Suno queue <b>#${e.queueAhead + laneActive("audio")}</b></span><span class="ill">illus.</span>`;
+  }
+  return `<span><b>${stripPosters.filter((s) => s.card.startsWith(S.comp.video.subject)).length}</b> cards</span><span><b>240</b>f each</span><span><b>$0</b> code-rendered</span><span>~<b>2</b> min</span><span class="ill">illus.</span>`;
+}
+
+/* run track */
+function DeliveredRow(p) {
+  const it = p.rows ? flatItems(p)[0] : null; const pr = p.pairs ? p.pairs[0].a : null;
+  const th = p.media === "audio" ? Wave(it && it.take.peaks, 46, 26, "#fbbf24") : (it && it.url) || pr ? `<img src="${(it && it.url) || pr.url}" alt="">` : p.export ? `<video src="../data/${p.export.file}#t=0.6" muted preload="metadata" aria-hidden="true" style="width:100%;height:100%;object-fit:cover"></video>` : `<span class="para">¶</span>`;
+  return `<button data-component="RunRow" data-status="awaiting_gate" data-act="open" data-pid="${p.id}" style="text-align:left;opacity:.72">
+    <div class="run-thumb">${th}</div>
+    <div style="min-width:0"><div class="run-title">${esc(p.runId || (p.media === "article" ? titleCase(p.title) : p.title))}</div>
+      <div class="run-meta"><span class="state awaiting_gate">at weir</span><span>${p.count} ${p.deskMode === "packet-review" ? "packet" : "items"}</span></div></div></button>`;
+}
+function RunTrack(l) {
+  const runs = S.runs.filter((r) => r.lane === l.id);
+  const delivered = awaiting(l.id).filter((p) => p.origin === "foundry" && !p.simulated);
+  if (runs.length || delivered.length) return runs.map(RunRow).join("") + delivered.map(DeliveredRow).join("");
+  if (!runs.length) return `<div class="fold-row">${Tally(0, "runs")}</div>`;
+  return runs.map(RunRow).join("");
+}
+function RunRow(r) {
+  let thumb = "";
+  if (r.lane === "image" && r.out && r.out.length) thumb = `<img src="${r.out[Math.min(r.out.length - 1, Math.floor((r.progress || 0) * r.out.length))].url}" alt="">`;
+  else if (r.lane === "video" && r.out && r.out.length) thumb = `<img src="${r.out[0].url}" alt="">`;
+  else if (r.lane === "audio") thumb = Wave(r.peaks || M.unjudged[0].peaks, 46, 26, "#67e8f9");
+  else thumb = `<span class="para">¶</span>`;
+  let meta = "";
+  if (r.lane === "article") { const si = ARTICLE_STAGES.indexOf(r.stage); meta = `<span class="stagepips" role="img" aria-label="stage ${r.stage}">${ARTICLE_STAGES.slice(0, 5).map((s, i) => `<i class="${i < si ? "done" : i === si ? "cur" : ""}"></i>`).join("")}</span><span>${esc(r.stage)}</span>`; }
+  else if (r.lane === "image" && r.out) meta = `<span data-cnt>${Math.floor((r.progress || 0) * r.out.length)}/${r.out.length}</span><span>plates</span>`;
+  else if (r.queue != null && r.status === "draft") meta = `<span>queue #${r.queue}</span>`;
+  else if (r.queue != null) meta = `<span>queue ${r.queue}</span>`;
+  const sim = r.sim ? `<span class="chip ghost" style="height:20px;font-size:12px">simulated</span>` : "";
+  return `<div data-component="RunRow" data-run="${r.id}" data-status="${r.status}">
+    <div class="run-thumb">${thumb}</div>
+    <div style="min-width:0"><div class="run-title" title="">${esc(r.title)}</div>
+      <div class="run-meta"><span class="state ${r.status}">${r.status}</span>${meta}${sim}</div>
+      <div class="run-bar ${r.model ? "shimmer" : ""}"><i style="width:${Math.round((r.progress || 0) * 100)}%"></i></div></div>
+  </div>`;
+}
+function refreshTrack(lane) { const t = $("#track-" + lane); if (t) t.innerHTML = RunTrack(laneById[lane]); }
+
+/* weir piles */
+/* covers measured near-black (mean luma under 16/255, 2026-10-14): never a pile's lead */
+const DARK_COVER = new Set(["extract-2026-09-01-spiderverse-atsv-flat-black-field-replica-s02-r1.jpg", "extract-2026-09-01-spiderverse-atsv-flat-black-field-transfer-1.jpg", "extract-2026-09-01-spiderverse-atsv-src-s02.jpg", "extract-2026-09-01-spiderverse-atsv-src-s03.jpg", "extract-2026-09-01-spiderverse-atsv-black-photographic-void-transfer-1.jpg", "extract-2026-09-01-spiderverse-atsv-black-photographic-void-replica-s12-r1.jpg"]);
+const readable = (it) => !DARK_COVER.has(String(it.url || "").split("/").pop());
+function paletteOf(p) {
+  const prj = S.projects.find((x) => x.id === p.projectId);
+  const ids = [...(p.rows || []).flatMap((r) => [r.key, ...r.items.map((i) => i.style)]), prj && typeof prj.style === "string" ? prj.style : null];
+  const st = ids.map((id) => M.styleById[id]).find(Boolean);
+  return st && st.observables ? st.observables.palette_strategy : "";
+}
+/* the designed face: a pile's own data when its cover is missing or unreadable */
+function CoverFace(p) {
+  const kind = p.export ? (p.export.kind === "music-video" ? "mv" : p.export.kind) + " export" : (p.sourceKind || p.media);
+  const id = p.runId || (p.export ? p.export.id.slice(0, 8) : p.id);
+  const pal = paletteOf(p);
+  return `<div class="sheet-l fb" role="img" aria-label="cover unavailable: ${esc(id)}, ${esc(kind)}, ${p.count} items${pal ? ", " + esc(pal) : ""}"><span class="fb-kind">${esc(kind)}</span><span class="fb-id">${esc(id)}</span>${pal ? `<span class="fb-pal">${esc(pal)}</span>` : ""}</div>`;
+}
+document.addEventListener("error", (e) => {
+  const t = e.target; if (!(t instanceof HTMLImageElement || t instanceof HTMLVideoElement)) return;
+  const pile = t.closest("[data-component=Pile]");
+  const p = pile && S.packets.find((x) => x.id === pile.dataset.pid);
+  if (p) { const f = pile.querySelector(".pile-face"); if (f) f.outerHTML = PileFace(p, true); return; }
+  const th = t.closest(".run-thumb");
+  if (th) { th.innerHTML = `<span class="para fb-glyph" role="img" aria-label="cover unavailable">${t instanceof HTMLVideoElement ? "▶" : "▣"}</span>`; return; }
+  if (t instanceof HTMLImageElement) { const sq = document.createElement("span"); sq.className = "fb-sq"; sq.setAttribute("role", "img"); sq.setAttribute("aria-label", "cover unavailable"); sq.textContent = "no cover"; t.replaceWith(sq); }
+}, true);
+function PileFace(p, force) {
+  const mode = `<span class="mode mode-glyph" aria-hidden="true">${MODE_ICON[p.deskMode]}</span>`;
+  const tally = Tally(p.count);
+  if (force) return `<div class="pile-face">${mode}${CoverFace(p)}${tally}</div>`;
+  if (p.media === "article") return `<div class="pile-face">${mode}<div class="sheet-l l2 paper"></div><div class="sheet-l l1 paper"></div><div class="sheet-l paper"><small>turn ${p.turn || 1}</small><span class="pt">${esc(p.title)}</span></div>${tally}</div>`;
+  if (p.media === "audio") { const its = flatItems(p).slice(0, 3); return `<div class="pile-face">${mode}${its.map((it, i) => `<div class="sheet-l wav ${i === 0 ? "l2" : i === 1 ? "l1" : ""}">${Wave(it.take.peaks, 96, 34, "#67e8f9")}</div>`).join("")}${tally}</div>`; }
+  if (p.export) return `<div class="pile-face">${mode}<div class="sheet-l"><video src="../data/${p.export.file}#t=0.6" muted preload="metadata" aria-hidden="true"></video></div>${tally}</div>`;
+  if (p.pairs) { const pr = p.pairs[0]; return `<div class="pile-face">${mode}<div class="sheet-l l2"></div><div class="sheet-l l1"></div><div class="sheet-l"><div class="halves"><img src="${pr.a.url}" alt=""><img src="${pr.b.url}" alt=""></div></div>${tally}</div>`; }
+  const its = flatItems(p).filter(readable); const pick = [its[2], its[1], its[0]].filter(Boolean);
+  if (!pick.length) return PileFace(p, true);
+  return `<div class="pile-face">${mode}${pick.map((it, i) => `<div class="sheet-l ${pick.length - i === 3 ? "l2" : pick.length - i === 2 ? "l1" : ""}"><img src="${it.url}" alt="" loading="lazy"></div>`).join("")}${tally}</div>`;
+}
+function Pile(p, i) {
+  const t = tallyOf(p); const nx = nextPacket();
+  return `<button data-component="Pile" class="${nx && nx.id === p.id ? "next" : ""}" data-act="open" data-pid="${p.id}" style="--d:${i * 70}ms" aria-label="${esc(p.title)}, ${p.count} items, ${MODE_NAME[p.deskMode]}">
+    ${PileFace(p)}
+    <span class="pile-title">${esc(p.media === "article" ? titleCase(p.title) : p.title)}</span>
+    ${StackBar(t.k, t.x, t.u, p.title)}
+    <span class="pile-sub">${MODE_NAME[p.deskMode].toLowerCase()}${p.fixture ? " · fixture" : p.simulated ? " · simulated" : ""}</span>
+  </button>`;
+}
+function WeirPiles(l) {
+  const a = awaiting(l.id);
+  if (!a.length) return `<div class="weir-empty"><span class="chip emerald"><span class="dot"></span>clear</span></div>`;
+  const ordered = [...a.filter((p) => p.simulated).reverse(), ...a.filter((p) => !p.simulated)];
+  return `<div class="piles">${ordered.map(Pile).join("")}</div>`;
+}
+
+/* shelf (ratified) */
+function Shelf(l) {
+  if (l.id === "image") {
+    const cand = M.styles.length - S.shelf.length;
+    return `<div class="shelf-head"><span class="t">Library · styles</span>${Tally(S.shelf.length, "locked")}${S.motion.length ? Tally(S.motion.length, "motion") : ""}${S.pins.length ? Tally(S.pins.length, "pins") : ""}<button class="chip" data-act="nav" data-nav="library">${cand} candidates ›</button></div>
+      ${S.shelf.length ? `<div class="styles-grid">${S.shelf.map(ShelfStyle).join("")}</div>` : ""}`;
+  }
+  if (l.id === "article") {
+    return `<div class="shelf-head"><span class="t">Library · posts</span>${Tally(S.posts.length, "approved")}${S.posts.length ? `<span class="chip">${M.topics.length} topics</span>` : ""}</div>
+      ${S.posts.length ? `<div class="list">${S.posts.map((p) => `<div class="row-btn post-row ${p.fresh ? "arriving" : ""}" data-post="${p.id}"><span style="color:var(--emerald)">${I.article.replace("<svg", '<svg width="16" height="16"')}</span><span class="ell" style="color:var(--ink-bright)">${esc(p.title)}</span><span class="chip emerald">PR · ai-registry</span></div>`).join("")}</div>` : ""}`;
+  }
+  if (l.id === "audio") {
+    return `<div class="shelf-head"><a class="t" href="library.html#kind=audio">Library · kept takes ›</a>${Tally(S.kept.length, "kept")}<span class="chip ghost">fixture</span></div>
+      ${S.kept.length ? `<div class="list">${S.kept.map(TakeRow).join("")}</div>` : ""}`;
+  }
+  return `<div class="shelf-head"><a class="t" href="projects.html">Projects ›</a>${Tally(S.projects.length, "projects")}<a class="chip cyan" href="projects.html#runs">runs ›</a></div>
+    ${S.projects.length ? `<div class="list">${S.projects.map(ProjectRow).join("")}</div>` : ""}`;
+}
+function ShelfStyle(s) {
+  return `<button data-component="ShelfStyle" class="${s.fresh ? "arriving" : ""}" data-shelf="${s.id}" data-act="style" data-id="${s.id}" aria-label="${esc(s.name)}, locked style">
+    ${s.hero ? `<img src="${s.hero}" alt="" loading="lazy">` : ""}<span class="lock" aria-hidden="true">${I.lock}</span><span class="nm">${esc(s.name)}</span></button>`;
+}
+function TakeRow(t) {
+  const on = S.playing === t.id;
+  const spawned = S.projects.some((p) => p.fromTake === t.id);
+  return `<div class="row-btn take-row ${t.fresh ? "arriving" : ""}" data-take="${t.id}">
+    <button class="play ${on ? "on" : ""}" data-act="play" data-take="${t.id}" aria-label="${on ? "pause" : "play"} ${esc(t.title)}">${on ? I.pause : I.play}</button>
+    ${Wave(t.peaks, 74, 20, t.kind === "music" ? "#a78bfa" : "#67e8f9")}
+    <span class="ell" style="color:var(--ink-bright)">${esc(t.title)} <span class="mono" style="color:var(--faint);font-size:12px">${fmt.dur(t.durationS)}</span></span>
+    ${t.kind === "music" ? `<button class="mv-btn" data-act="spawn" data-take="${t.id}" ${spawned ? "disabled" : ""} aria-label="spawn music-video project from ${esc(t.title)}">${spawned ? "MV ✓" : "Spawn MV"}</button>` : `<span class="chip">sfx</span>`}
+  </div>`;
+}
+function ProjectRow(p) {
+  const states = p.steps.map((s) => s.state);
+  const nx = p.next;
+  return `<button class="row-btn proj-row ${p.fresh ? "arriving" : ""}" data-project="${p.id}" data-act="project" data-id="${p.id}" aria-label="${esc(p.title)}">
+    <span style="min-width:0"><span class="ell" style="display:block;color:var(--ink-bright)">${esc(p.title)}</span><span class="sub">${esc(p.template)} · ${esc(p.length)}${p.spawned ? " · from take" : ""}</span></span>
+    ${PipRow(states, p.steps.map((s) => s.key + " " + s.state).join(", "))}
+    ${nx ? `<span class="state ${nx.state}" style="min-width:64px">${nx.key}</span>` : `<span class="state ratified" style="min-width:64px">cut</span>`}
+  </button>`;
+}
+
+/* calendar column */
+const CHAN = { youtube: "YT", tiktok: "TT", instagram: "IG", blog: "PR" };
+function SlotRow(s, showErr) {
+  const at = new Date(s.publishAt);
+  const st = s.status === "scheduled" ? "awaiting_gate" : s.status === "publishing" ? "running" : s.status === "published" ? "ratified" : s.status === "failed" || s.status === "missed" ? "blocked" : "draft";
+  return `<button data-component="SlotRow" class="${s.status} ${s.fresh ? "arriving" : ""}" data-slot="${s.id}" data-act="slot" data-id="${s.id}" aria-label="${esc(s.title)}, ${s.status}">
+    <span class="tm">${fmt.time(at)}</span><span class="chan ${s.channelId}">${CHAN[s.channelId] || "··"}</span>
+    <span style="min-width:0"><span class="ttl" style="display:block;color:var(--ink-bright)">${esc(s.title)}</span>
+    <span class="st state ${st}" style="display:inline-flex">${s.status}${s.fixtureLabel === false ? "" : ""}</span>
+    ${showErr && s.error ? `<span class="err">${I.warn}<span>${esc(s.error)}</span></span>` : ""}</span>
+  </button>`;
+}
+function CalendarColumn() {
+  const now = M.NOW;
+  const up = S.slots.filter((s) => new Date(s.publishAt) >= now && s.status !== "published").sort((a, b) => new Date(a.publishAt) - new Date(b.publishAt));
+  const failed = S.slots.filter((s) => s.status === "failed" || s.status === "missed").sort((a, b) => new Date(b.publishAt) - new Date(a.publishAt));
+  const pub = S.slots.filter((s) => s.status === "published");
+  const views = pub.reduce((n, s) => n + ((s.metric && s.metric.views) || 0), 0);
+  let days = "", last = "";
+  up.forEach((s, i) => {
+    const d = fmt.day(new Date(s.publishAt));
+    if (i === 0) days += `<div class="now-line">NOW ${fmt.time(now)}</div>`;
+    if (d !== last) { days += `<div class="cal-day">${d}</div>`; last = d; }
+    days += SlotRow(s, true);
+  });
+  return `<aside data-component="CalendarColumn" aria-label="Calendar">
+    <div class="cal-head">Calendar <span class="chip ghost" style="margin-left:auto">fixture</span><button class="cal-expand" data-act="calopen" aria-label="expand calendar to month" aria-expanded="${S.cal}">${I.expand}<kbd class="keycap">C</kbd></button></div>
+    <div class="cal-body" id="cal-body">
+      <div class="cal-sec">Next ${Tally(up.length)}</div>${days}
+      <div class="cal-sec" style="color:var(--rose)">Failed · missed ${Tally(failed.length)}</div>${failed.map((s) => SlotRow(s, true)).join("")}
+      <div class="cal-sec" style="color:var(--emerald)">Published ${Tally(pub.length)} ${Tally(fmt.num(views), "views")}</div>${pub.slice().sort((a, b) => new Date(b.publishAt) - new Date(a.publishAt)).slice(0, 6).map((s) => SlotRow(s, false)).join("")}
+    </div></aside>`;
+}
+
+/* ───────────── level sheet ───────────── */
+function openLevel(lv) {
+  const wasOpen = !!S.level; S.level = lv; S.zoom = false;
+  renderLevel(); renderHeader();
+  const sh = $("#sheet"); sh.setAttribute("aria-hidden", "false"); $("#scrim").classList.add("on");
+  requestAnimationFrame(() => sh.classList.add("open"));
+  if (!wasOpen) setTimeout(() => { const f = $("#sheet"); f.setAttribute("tabindex", "-1"); f.focus({ preventScroll: true }); }, 50);
+}
+function closeLevel() {
+  S.level = null; S.zoom = false; stopAudio();
+  const sh = $("#sheet"); sh.classList.remove("open"); sh.setAttribute("aria-hidden", "true"); $("#scrim").classList.remove("on");
+  renderHeader();
+  setTimeout(() => { if (!S.level) sh.innerHTML = ""; }, 360);
+}
+function Crumbs(parts) {
+  return `<nav data-component="Crumbs" aria-label="breadcrumb"><button data-act="close">Floor</button>${parts.map((p, i) => `<span class="sep" aria-hidden="true">›</span>${i === parts.length - 1 ? `<span class="here" aria-current="page">${esc(p.l)}</span>` : `<button ${p.act}>${esc(p.l)}</button>`}`).join("")}</nav>`;
+}
+function renderLevel() {
+  const lv = S.level; if (!lv) return;
+  let crumbs = [], body = "";
+  if (lv.kind === "board") { const p = S.packets.find((x) => x.id === lv.id); crumbs = [{ l: "Board", act: 'data-act="board"' }, { l: laneById[p.lane].name, act: `data-act="open" data-pid="${p.id}"` }, { l: p.media === "article" ? titleCase(p.title) : p.title }]; body = BoardDesk(p); }
+  else if (lv.kind === "style") { const s = M.styleById[lv.id] || S.shelf.find((x) => x.id === lv.id); crumbs = [{ l: "Library", act: 'data-act="nav" data-nav="library"' }, { l: s ? s.name : lv.id }]; body = StyleDetail(lv.id); }
+  else if (lv.kind === "library") { crumbs = [{ l: "Library" }]; body = LibraryLevel(); }
+  else if (lv.kind === "project") { const p = S.projects.find((x) => x.id === lv.id); crumbs = [{ l: "Projects", act: 'data-act="nav" data-nav="projects"' }, { l: p.title }]; body = ProjectDetail(p); }
+  else if (lv.kind === "slot") { const s = S.slots.find((x) => x.id === lv.id); crumbs = [{ l: "Calendar", act: 'data-act="nav" data-nav="calendar"' }, { l: s.title }]; body = SlotDetail(s); }
+  const sh = $("#sheet");
+  sh.setAttribute("aria-label", crumbs.map((c) => c.l).join(" › "));
+  sh.innerHTML = `<div class="grab" aria-hidden="true"></div><div class="sheet-bar">${Crumbs(crumbs)}<div class="sheet-close"><kbd class="keycap">Esc</kbd><button class="btn" data-act="close" style="height:30px">Floor</button></div></div><div class="sheet-body">${body}</div>`;
+  afterLevelRender();
+}
+function afterLevelRender() {
+  const lv = S.level; if (!lv || lv.kind !== "board") return;
+  const p = S.packets.find((x) => x.id === lv.id);
+  if (p.deskMode === "matrix-cull") { const c = cullState(p); const t = $(`[data-tile="${c.cur}"]`); if (t) t.scrollIntoView({ block: "nearest" }); }
+  if (p.deskMode === "packet-review" && p.media === "video") { const v = $("#cutvid"); if (v) v.addEventListener("timeupdate", () => { const c = S.cut[p.id]; if (!c) return; const bi = c.beats.findIndex((b) => v.currentTime >= b.t0 && v.currentTime < b.t1 + 0.5); $$(".beat").forEach((el, i) => el.classList.toggle("playing", i === bi)); }); }
+}
+
+/* board desk */
+function PacketRail(cur) {
+  return `<nav data-component="PacketRail" aria-label="packets">${LANES.map((l) => {
+    const ps = S.packets.filter((p) => p.lane === l.id); const a = ps.filter((p) => p.status === "awaiting_gate").length;
+    return `<div class="rail-lane">${I[l.id].replace("<svg", '<svg width="14" height="14"')} ${l.name} ${Tally(a)}</div>${ps.map((p) => `<button class="rail-item ${p.status !== "awaiting_gate" ? "done" : ""}" data-act="open" data-pid="${p.id}" aria-current="${p.id === cur.id}"><span class="mode-glyph" aria-hidden="true" style="color:${p.status === "awaiting_gate" ? "var(--amber)" : p.status === "blocked" ? "var(--rose)" : "var(--emerald)"}">${p.status === "awaiting_gate" ? MODE_ICON[p.deskMode] : p.status === "blocked" ? "✕" : "✓"}</span><span class="ell">${esc(p.media === "article" ? titleCase(p.title) : p.title)}</span><span class="cnt">${p.count}</span></button>`).join("")}`;
+  }).join("")}</nav>`;
+}
+function Oracle(p) {
+  return `<div data-component="OracleStrip" aria-label="oracle before gate"><span class="chip ${p.oracle.passed ? "emerald" : "rose"}"><span class="dot"></span>oracle ${p.oracle.passed ? "pass" : "fail"}</span><span class="chip">${esc(p.oracle.summary)}</span><span class="chip mono" style="text-transform:none">${esc(p.digest)}</span>${p.fixture ? '<span class="chip ghost">fixture</span>' : ""}${p.simulated ? '<span class="chip ghost">simulated run</span>' : ""}</div>`;
+}
+function BoardDesk(p) {
+  let desk = "";
+  if (p.status !== "awaiting_gate") desk = DecidedDesk(p);
+  else if (p.deskMode === "matrix-cull") desk = MatrixCull(p);
+  else if (p.deskMode === "blind-pair") desk = BlindPair(p);
+  else if (p.media === "article") desk = ArticleReview(p);
+  else desk = CutReview(p);
+  return `<div data-component="BoardDesk">${PacketRail(p)}<div class="desk" id="desk">${desk}</div></div>`;
+}
+function DecidedDesk(p) {
+  const rec = M.decisions.slice().reverse().find((d) => d.packetId === p.id);
+  return `<div class="desk-top"><h2>${esc(p.title)}</h2><span class="state ${p.status}">${p.status}</span>${GT.LedgerLink(p.id, "ledger")}</div><div class="desk-main" style="padding:24px 18px">
+    ${rec ? `<div class="kv"><span class="chip">${esc(rec.id)}</span><span class="chip ${rec.verdict === "reject" ? "rose" : "emerald"}">${esc(rec.verdict)}</span><span class="chip">actor: ${rec.actorKind}</span><span class="chip mono" style="text-transform:none">${esc(rec.at.slice(11, 19))}Z</span></div>` : ""}
+    ${nextPacket() ? `<button class="btn amber" data-act="open" data-pid="${nextPacket().id}" style="margin-top:14px">Next · ${esc(nextPacket().title)} <kbd class="keycap">⏎</kbd></button>` : `<span class="chip emerald" style="margin-top:14px"><span class="dot"></span>weir clear</span>`}</div>`;
+}
+
+/* matrix cull */
+const REASONS = ["style", "subject", "motion", "text"];
+function MatrixCull(p) {
+  const c = cullState(p); const t = tallyOf(p);
+  const audio = p.media === "audio";
+  let idx = 0;
+  const rows = p.rows.map((r) => {
+    const label = p.sourceKind === "cull" || p.simulated ? `<span>${esc(r.label)}</span>${r.ref ? `<img src="${r.ref}" alt="reference ${esc(r.label)}"><span class="ref">reference · not output</span>` : ""}` : `<span>${esc(audio ? r.label : titleCase(r.label))}</span>${r.inCatalogue === false ? '<span class="chip ghost">new look</span>' : r.inCatalogue ? '<span class="chip">in catalogue</span>' : ""}`;
+    const tiles = r.items.length ? r.items.map(() => CullTile(p, c, idx++)).join("") : `<div class="ghost-card" style="height:60px;display:grid;place-items:center;font:600 12px var(--mono);color:var(--faint)">0 plates</div>`;
+    return `<div class="cull-row"><div class="cull-label">${label}</div><div class="tiles" style="--tile:${audio ? "230px" : "150px"}">${tiles}</div></div>`;
+  }).join("");
+  const keys = [[["K"], "keep"], [["X"], "reject"], [["U"], "undecide"], [["1", "2", "3", "4"], "reason"], [["←", "→"], "move"], [["⇧K", "⇧X"], "row"], [["Z"], "zoom"], [["⌫"], "undo"]];
+  if (audio) keys.push([["Space"], "play"], [["M"], "spawn MV"]);
+  return `<div class="desk-top"><div><h2>${esc(p.title)}</h2><span class="sub">${esc(p.sub)} · ${esc(p.runId || "")}</span></div>${Oracle(p)}${audio ? "" : CALIB}</div>
+    <div class="desk-main" id="deskmain"><div data-component="MatrixCull" role="grid" aria-label="candidates">${rows}</div></div>
+    <div class="desk-foot">${Keycaps(keys)}
+      <div style="display:flex;align-items:center;gap:8px;min-width:200px"><div style="flex:1">${StackBar(t.k, t.x, t.u, "packet")}</div><span class="mono" style="font-size:12.5px"><span style="color:var(--emerald)">${t.k}</span> · <span style="color:var(--rose)">${t.x}</span> · <span style="color:var(--muted)">${t.u}</span></span></div>
+      <button class="commit ${t.u ? "wait" : ""}" id="commit" data-act="commit" aria-label="commit packet${t.u ? ", " + t.u + " undecided" : ""}">Commit packet ${t.u ? `<span class="chip">${t.u} undecided</span>` : ""}<kbd class="keycap">⏎</kbd></button></div>${S.zoom ? Zoom(p, c) : ""}`;
+}
+function CullTile(p, c, i) {
+  const it = c.items[i]; const m = c.marks[i];
+  const cls = [i === c.cur ? "cur" : "", m ? m.v : ""].join(" ");
+  const reason = m && m.reason != null ? REASONS[m.reason] : "";
+  if (p.media === "audio") {
+    const t = it.take; const on = S.playing === t.id;
+    return `<button data-component="CullTile" class="${cls}" data-tile="${i}" data-act="tile" role="gridcell" aria-label="${esc(t.title)}${m ? ", " + m.v : ""}">
+      <div class="wavebox">${Wave(t.peaks, 210, 54, t.kind === "music" ? "#a78bfa" : "#67e8f9")}</div>
+      <div class="take-tile-body"><div class="tt">${on ? "▶ " : ""}${esc(t.title)}</div><div class="mono" style="font-size:12px;color:var(--faint)">${esc(t.provider)} · ${fmt.dur(t.durationS)}${t.tempoBpm ? " · " + t.tempoBpm + " bpm" : ""}${t.key ? " · " + esc(t.key) : ""}</div>${t.prompt ? `<div class="pr">${esc(t.prompt)}</div>` : ""}</div>
+      <span class="badge" aria-hidden="true">${m && m.v === "keep" ? "✓" : "✕"}</span>
+      <span class="reason chip rose ${reason ? "on" : ""}">${reason}</span>
+      ${c.spawn[i] ? '<span class="mvflag chip violet">MV</span>' : ""}
+    </button>`;
+  }
+  const media = it.video && S.zoom ? "" : `<img src="${it.url}" alt="" loading="lazy">`;
+  const sub = it.mechanism ? it.mechanism : it.role ? it.role : it.kind === "strip.poster" ? "strip" : "";
+  return `<button data-component="CullTile" class="${cls}" data-tile="${i}" data-act="tile" role="gridcell" aria-label="${esc(it.label)} ${esc(sub)}${m ? ", " + m.v : ""}">
+    ${media}<span class="cap"><span class="ell">${it.ledger ? `<i class="ldot ${it.ledger}" role="img" aria-label="sweep ledger ${esc(it.ledger)}"></i>` : ""}${esc(it.label)}</span><span class="m">${esc(sub)}${it.video ? " ▶" : ""}</span></span>
+    <span class="badge" aria-hidden="true">${m && m.v === "keep" ? "✓" : "✕"}</span>
+    <span class="reason chip rose ${reason ? "on" : ""}">${reason}</span>
+  </button>`;
+}
+function Zoom(p, c) {
+  const it = c.items[c.cur]; const m = c.marks[c.cur];
+  const media = it.video ? `<video src="${it.video}" autoplay muted loop playsinline></video>` : `<img src="${it.url}" alt="${esc(it.label)}">`;
+  return `<div class="zoom ${m ? m.v : ""}" id="zoom">${media}<div class="zcap"><span class="mono">${c.cur + 1}/${c.items.length}</span><b style="color:var(--ink-bright)">${esc(it.label)}</b><span class="chip">${esc(it.mechanism || it.role || it.kind)}</span>${m ? `<span class="chip ${m.v === "keep" ? "emerald" : "rose"}">${m.v}${m.reason != null ? " · " + REASONS[m.reason] : ""}</span>` : '<span class="chip ghost">undecided</span>'}${Keycaps([[["K"], "keep"], [["X"], "reject"], [["←", "→"], "move"], [["Z"], "close"]])}</div></div>`;
+}
+function paintCull(p) {
+  const c = cullState(p);
+  const z = $("#zoom"); if (z) z.outerHTML = Zoom(p, c);
+  else if (S.zoom) $("#desk").insertAdjacentHTML("beforeend", Zoom(p, c));
+  const t = tallyOf(p);
+  const foot = $(".desk-foot .stackbar"); if (foot) foot.outerHTML = StackBar(t.k, t.x, t.u, "packet");
+  const cnt = $(".desk-foot .mono"); if (cnt) cnt.innerHTML = `<span style="color:var(--emerald)">${t.k}</span> · <span style="color:var(--rose)">${t.x}</span> · <span style="color:var(--muted)">${t.u}</span>`;
+  const cm = $("#commit"); if (cm) { cm.className = "commit" + (t.u ? " wait" : ""); cm.innerHTML = `Commit packet ${t.u ? `<span class="chip">${t.u} undecided</span>` : ""}<kbd class="keycap">⏎</kbd>`; }
+}
+function repaintTile(p, i, pop) {
+  const c = cullState(p); const el = $(`[data-tile="${i}"]`); if (!el) return;
+  const tmp = document.createElement("div"); tmp.innerHTML = CullTile(p, c, i); const n = tmp.firstElementChild;
+  if (pop) n.classList.add("pop");
+  el.replaceWith(n);
+}
+function cullMove(p, to) {
+  const c = cullState(p); const prev = c.cur; c.cur = Math.max(0, Math.min(c.items.length - 1, to));
+  repaintTile(p, prev); repaintTile(p, c.cur);
+  const el = $(`[data-tile="${c.cur}"]`); if (el) el.scrollIntoView({ block: "nearest", behavior: reduced() ? "auto" : "smooth" });
+  if (p.media === "audio" && S.playing) playTake(c.items[c.cur].take);
+  paintCull(p);
+}
+// the state half of an act is separate from the painting, so the journal can replay it on load
+function cullApply(p, idxs, v, reason) {
+  const c = cullState(p);
+  c.hist.push(idxs.map((i) => ({ i, prev: c.marks[i], spawn: c.spawn[i] })));
+  idxs.forEach((i) => { c.marks[i] = v ? { v, reason: reason == null ? null : reason } : null; if (v !== "keep") delete c.spawn[i]; });
+}
+function cullSet(p, idxs, v, reason) {
+  const c = cullState(p);
+  GT.journal.add({ k: "mark", pid: p.id, idxs, v: v || null, reason: reason == null ? null : reason });
+  cullApply(p, idxs, v, reason);
+  idxs.forEach((i) => repaintTile(p, i, true));
+  paintCull(p);
+  announce(`${idxs.length > 1 ? idxs.length + " items" : c.items[idxs[0]].label} ${v || "undecided"}${reason != null ? ", " + REASONS[reason] : ""}`);
+}
+function cullUndoApply(p) {
+  const c = cullState(p); const h = c.hist.pop(); if (!h) return null;
+  h.forEach((e) => { c.marks[e.i] = e.prev; if (e.spawn) c.spawn[e.i] = true; else delete c.spawn[e.i]; });
+  return h;
+}
+function cullUndo(p) {
+  const c = cullState(p); if (!c.hist.length) return;
+  GT.journal.add({ k: "undo", pid: p.id });
+  const h = cullUndoApply(p);
+  const prev = c.cur; c.cur = h[0].i; repaintTile(p, prev); h.forEach((e) => repaintTile(p, e.i, true)); paintCull(p);
+  announce("undone");
+}
+function rowIndices(p, i) { const c = cullState(p); const row = c.items[i].row; return c.items.map((it, j) => (it.row === row ? j : -1)).filter((j) => j >= 0); }
+function cullVertical(p, dir) {
+  const c = cullState(p); const rows = [...new Set(c.items.map((it) => it.row))];
+  const ri = rows.indexOf(c.items[c.cur].row); const tr = rows[ri + dir]; if (tr == null) return;
+  const col = rowIndices(p, c.cur).indexOf(c.cur); const target = rowIndices(p, c.items.findIndex((it) => it.row === tr));
+  cullMove(p, target[Math.min(col, target.length - 1)]);
+}
+function cullKey(p, e) {
+  const c = cullState(p); const k = e.key.toLowerCase();
+  if ((e.ctrlKey || e.metaKey) && k === "z") { e.preventDefault(); return cullUndo(p); }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const adv = () => { if (c.cur < c.items.length - 1) cullMove(p, c.cur + 1); };
+  if (k === "k") { if (e.shiftKey) cullSet(p, rowIndices(p, c.cur), "keep"); else { cullSet(p, [c.cur], "keep"); adv(); } }
+  else if (k === "x") { if (e.shiftKey) cullSet(p, rowIndices(p, c.cur), "reject"); else { cullSet(p, [c.cur], "reject"); adv(); } }
+  else if (k === "u") cullSet(p, [c.cur], null);
+  else if (["1", "2", "3", "4"].includes(e.key)) { cullSet(p, [c.cur], "reject", +e.key - 1); adv(); }
+  else if (k === "arrowright" || k === "l") cullMove(p, c.cur + 1);
+  else if (k === "arrowleft" || k === "j") cullMove(p, c.cur - 1);
+  else if (k === "arrowdown") cullVertical(p, 1);
+  else if (k === "arrowup") cullVertical(p, -1);
+  else if (k === "backspace") cullUndo(p);
+  else if (k === "z") { S.zoom = !S.zoom; if (!S.zoom) { const z = $("#zoom"); if (z) z.remove(); } paintCull(p); }
+  else if (k === " " && p.media === "audio") playTake(c.items[c.cur].take);
+  else if (k === "m" && p.media === "audio") { const it = c.items[c.cur]; if (it.take.kind === "music" && c.marks[c.cur] && c.marks[c.cur].v === "keep") { GT.journal.add({ k: "spawnmark", pid: p.id, i: c.cur }); c.spawn[c.cur] = !c.spawn[c.cur]; if (!c.spawn[c.cur]) delete c.spawn[c.cur]; repaintTile(p, c.cur, true); announce(c.spawn[c.cur] ? "spawn MV on commit" : "MV cleared"); } else toast("Spawn MV · kept music takes only"); }
+  else if (k === "enter") commitCull(p);
+  else return;
+  e.preventDefault();
+}
+
+/* blind pair */
+function BlindPair(p) {
+  const st = pairState(p); const done = st.i >= p.pairs.length;
+  const pips = p.pairs.map((_, i) => (i < st.picks.length ? (st.picks[i].agree ? "ratified" : "awaiting_gate") : i === st.i ? "running" : "draft"));
+  let main;
+  if (done) {
+    const agree = st.picks.filter((q) => q.agree).length;
+    main = `<div style="display:grid;gap:12px;padding:10px 0">${p.pairs.map((pr, i) => { const q = st.picks[i]; const win = q.pick === "a" ? pr.a : q.pick === "b" ? pr.b : null; return `<div style="display:grid;grid-template-columns:160px 160px 1fr;gap:12px;align-items:center"><img src="${pr.a.url}" style="width:160px;border-radius:7px;${q.pick === "a" ? "outline:3px solid var(--emerald)" : "opacity:.5"}" alt=""><img src="${pr.b.url}" style="width:160px;border-radius:7px;${q.pick === "b" ? "outline:3px solid var(--emerald)" : "opacity:.5"}" alt=""><div><div style="color:var(--ink-bright);font-size:15px">${esc(pr.question)}</div><div class="kv"><span class="chip ${win ? "emerald" : q.pick === "bad" ? "rose" : ""}">${win ? "picked · " + esc(win.label) : q.pick === "bad" ? "both bad" : "tie"}</span><span class="chip ${q.agree ? "emerald" : "amber"}">machine ${q.agree ? "agrees" : "differs"}</span></div></div></div>`; }).join("")}
+      <div class="kv">${Tally(agree, "agreement", p.pairs.length)}</div></div>`;
+  } else {
+    const pr = p.pairs[st.i]; const rv = st.revealed; const q = rv ? st.picks[st.i] : null;
+    const arm = (side, a, key) => {
+      const cls = rv ? (q.pick === side ? "picked" : q.pick === "bad" ? "bad" : q.pick === "tie" ? "" : "dropped") : "";
+      const media = a.video ? `<video src="${a.video}" poster="${a.url}" autoplay muted loop playsinline></video>` : `<img src="${a.url}" alt="${side === "a" ? "left" : "right"} arm">`;
+      return `<button class="arm ${cls}" data-act="pick" data-pick="${side}" aria-label="${side === "a" ? "left" : "right"} arm">${media}
+        <div class="armcap"><kbd class="keycap">${key}</kbd><span class="lab">${rv ? esc(a.label) : `<span class="masked">${side === "a" ? "LEFT" : "RIGHT"} · ▒▒▒▒</span>`}</span>${rv && pr.machinePick === side ? '<span class="chip violet" style="margin-left:auto">machine pick</span>' : ""}</div></button>`;
+    };
+    main = `<div class="pair-arms">${arm("a", pr.a, "1")}${arm("b", pr.b, "2")}</div>
+      <div class="agree-banner" aria-live="polite">${rv ? `<span class="chip ${q.agree ? "emerald" : "amber"}">${q.agree ? "machine agrees" : "machine differs"}</span><span class="mono" style="color:var(--faint)">${esc(pr.a.label)} vs ${esc(pr.b.label)}</span>` : `<span class="chip">machine pick ▒▒ masked</span>`}</div>`;
+    main = `<div class="pair-q"><span class="mono" style="color:var(--faint)">${st.i + 1}/${p.pairs.length}</span><b>${esc(pr.question)}</b>${PipRow(pips, "pairs")}</div>` + main;
+  }
+  return `<div class="desk-top"><div><h2>${esc(p.title)}</h2><span class="sub">${esc(p.sub)}</span></div>${Oracle(p)}<span class="chip violet">dojo judge AUC ${M.calibration.dojo_judge.auc}</span></div>
+    <div class="desk-main"><div data-component="BlindPair">${main}</div></div>
+    <div class="desk-foot">${Keycaps([[["1"], "left"], [["2"], "right"], [["0"], "tie"], [["X"], "both bad"], [["⌫"], "undo"], [["⏎"], "commit"]])}
+      <button class="commit ${done ? "" : "wait"}" id="commit" data-act="commit">Commit packet ${done ? "" : `<span class="chip">${p.pairs.length - st.picks.length} left</span>`}<kbd class="keycap">⏎</kbd></button></div>`;
+}
+let pairTimer = null;
+// replay: a pick lands and the pair advances at once (the reveal is a live-only pause)
+function pairApply(p, pick) {
+  const st = pairState(p); if (st.i >= p.pairs.length) return;
+  st.picks[st.i] = { pick, agree: pick === p.pairs[st.i].machinePick }; st.i++;
+}
+function pairPick(p, pick) {
+  const st = pairState(p); if (st.i >= p.pairs.length || st.revealed) return;
+  GT.journal.add({ k: "pick", pid: p.id, pick });
+  const pr = p.pairs[st.i];
+  st.picks[st.i] = { pick, agree: pick === pr.machinePick };
+  st.revealed = true; renderDesk(); announce(`${pick === "a" ? "left" : pick === "b" ? "right" : pick} · machine ${st.picks[st.i].agree ? "agrees" : "differs"}`);
+  clearTimeout(pairTimer);
+  pairTimer = setTimeout(() => { st.revealed = false; st.i++; if (S.level && S.level.id === p.id) renderDesk(); }, reduced() ? 500 : 1150);
+}
+function pairKey(p, e) {
+  const st = pairState(p); const k = e.key.toLowerCase();
+  if (k === "1") pairPick(p, "a"); else if (k === "2") pairPick(p, "b"); else if (k === "0") pairPick(p, "tie"); else if (k === "x") pairPick(p, "bad");
+  else if (k === "backspace" || ((e.ctrlKey || e.metaKey) && k === "z")) { if (st.revealed || st.i > 0) GT.journal.add({ k: "pairback", pid: p.id }); clearTimeout(pairTimer); if (st.revealed) { st.revealed = false; st.picks.pop(); } else if (st.i > 0) { st.i--; st.picks.pop(); } renderDesk(); }
+  else if (k === "enter") commitPair(p);
+  else return;
+  e.preventDefault();
+}
+
+/* packet review · article */
+const DIRECTIVES = ["more_weight", "less_weight", "remove", "reposition", "free_text"];
+function ArticleReview(p) {
+  const st = reviewState(p);
+  const d = p.draft;
+  const checks = d ? d.checks : [{ name: "deterministic checks", value: "0 errors", ok: true }, { name: "reviewer quorum", value: p.oracle.summary.split("· ")[1] || "", ok: true }];
+  const reviewers = d ? d.reviewers : [];
+  let page;
+  if (d) {
+    page = `<span class="chip amber illus">${p.standIn ? "illustrative · stand-in text" : "illustrative draft"}</span><h1>${esc(p.standIn ? titleCase(p.topic.title) : d.title)}</h1><p class="standfirst">${esc(d.standfirst)}</p>
+      ${d.sections.map((s, i) => { const notes = st.notes.filter((n) => n.section === s.id); const regen = p.regen && p.regen.includes(s.id);
+        return `<section class="sec ${st.focus === i ? "focus" : ""} ${notes.length ? "noted" : ""}" data-sec="${i}" data-act="secfocus" data-i="${i}">
+          <div class="sec-tools"><button class="chip amber" data-act="note" data-i="${i}" aria-label="edit note on section ${i + 1}"><kbd class="keycap" style="height:16px;min-width:16px">E</kbd> note</button></div>
+          <h3><span class="secno">§${i + 1}</span>${esc(s.h)}${regen ? '<span class="chip cyan regen">regenerated · turn ' + p.turn + "</span>" : p.regen ? '<span class="chip regen">unchanged</span>' : ""}</h3><p>${esc(s.p)}</p>
+          ${notes.map((n) => `<div class="note-chip"><span class="chip amber">${n.directive}</span><span>${esc(n.text)}</span></div>`).join("")}
+          ${st.editing === i ? EditNote(st) : ""}</section>`; }).join("")}`;
+  } else {
+    page = `<span class="chip ghost illus">draft text not in this export</span><h1>${esc(titleCase(p.topic.title))}</h1><p class="standfirst" style="color:var(--muted)">${esc(p.topic.bundle)} · ${p.topic.techniques} techniques · turn ${p.turn}</p>${[0, 1, 2, 3].map(() => '<div class="ghost-card" style="height:90px;margin-bottom:12px"></div>').join("")}`;
+  }
+  const qv = reviewers.map((r) => (r.vote === "approve" ? "ratified" : "awaiting_gate"));
+  return `<div class="desk-top"><div><h2>${esc(titleCase(p.title))}</h2><span class="sub">${esc(p.sub)} · turn ${p.turn}</span></div>${Oracle(p)}</div>
+    <div class="desk-main"><div data-component="PacketReview">
+      <div class="page-wrap"><article data-component="ArticlePage">${page}</article></div>
+      <aside class="review-side">
+        <div class="side-h">oracle · before gate</div>
+        ${checks.map((c) => `<div class="checkrow"><span>${esc(c.name)}</span><b>${esc(c.value)}</b></div>`).join("")}
+        ${reviewers.length ? `<div class="side-h">reviewers ${PipRow(qv, "quorum")}</div>${reviewers.map((r) => `<div class="rev ${r.vote}"><div class="who"><span>${esc(r.who)}</span><span style="color:${r.vote === "approve" ? "var(--emerald)" : "var(--amber)"}">${esc(r.vote)}</span></div>${esc(r.note)}</div>`).join("")}` : ""}
+        <div class="side-h">edit plan ${Tally(st.notes.length, "notes")}</div>
+        ${st.notes.length ? st.notes.map((n) => `<div class="note-chip"><span class="chip">§${d.sections.findIndex((s) => s.id === n.section) + 1}</span><span class="chip amber">${n.directive}</span><span>${esc(n.text)}</span></div>`).join("") : '<div class="ghost-card" style="height:34px"></div>'}
+        <div class="side-h">spend</div><div class="checkrow"><span>run</span><b style="color:var(--ink-bright)">$${p.spendRange[0]}–${p.spendRange[1]}</b></div>
+      </aside></div></div>
+    <div class="desk-foot">${Keycaps([[["↑", "↓"], "section"], [["E"], "note"], [["⇧E"], "send edit plan"], [["A"], "approve"], [["R"], "reject"]])}
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn rose" data-act="reject">Reject <kbd class="keycap">R</kbd></button>
+        <button class="btn amber" data-act="editplan" ${st.notes.length ? "" : 'aria-disabled="true" style="opacity:.5"'}>Edit plan · ${st.notes.length} <kbd class="keycap">⇧E</kbd></button>
+        <button class="btn emerald" data-act="approve">Approve → calendar <kbd class="keycap">A</kbd></button></div></div>`;
+}
+function EditNote(st) {
+  return `<div data-component="EditNote" data-noclick><div class="directives" role="radiogroup" aria-label="directive">${DIRECTIVES.map((d) => `<button data-act="dir" data-dir="${d}" role="radio" aria-pressed="${st.dir === d}" aria-checked="${st.dir === d}">${d}</button>`).join("")}</div>
+    <input id="note-text" placeholder="§ directive detail" aria-label="note text"><div class="keymap" style="margin-top:7px">${Keycaps([[["Tab"], "directive"], [["⏎"], "attach"], [["Esc"], "cancel"]])}</div></div>`;
+}
+function reviewKey(p, e) {
+  const st = reviewState(p); const k = e.key.toLowerCase(); const d = p.draft;
+  if (st.editing != null) return;
+  const n = d ? d.sections.length : 0;
+  if ((k === "arrowdown" || k === "j") && n) { st.focus = Math.min(n - 1, st.focus + 1); renderDesk(); scrollSec(st.focus); }
+  else if ((k === "arrowup" || k === "k") && n) { st.focus = Math.max(0, st.focus - 1); renderDesk(); scrollSec(st.focus); }
+  else if (k === "e" && e.shiftKey) sendEditPlan(p);
+  else if (k === "e" && d) openNote(p, st.focus);
+  else if (k === "a") approveReview(p);
+  else if (k === "r") rejectPacket(p);
+  else return;
+  e.preventDefault();
+}
+function scrollSec(i) { const el = $(`[data-sec="${i}"]`); if (el) el.scrollIntoView({ block: "nearest", behavior: reduced() ? "auto" : "smooth" }); }
+function openNote(p, i) {
+  const st = reviewState(p); st.editing = i; st.focus = i; renderDesk(); scrollSec(i);
+  const inp = $("#note-text"); if (inp) inp.focus();
+}
+
+/* packet review · cut */
+function parseCaps(txt) {
+  if (!txt) return [];
+  const out = []; const re = /(\d{2}):(\d{2}):(\d{2})[.,](\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2})[.,](\d{3})\s*\n([\s\S]*?)(?=\n\s*\n|$)/g; let m;
+  const s = (h, mi, se, ms) => +h * 3600 + +mi * 60 + +se + +ms / 1000;
+  while ((m = re.exec(txt))) out.push({ t0: s(m[1], m[2], m[3], m[4]), t1: s(m[5], m[6], m[7], m[8]), text: m[9].trim() });
+  return out;
+}
+function cutState(p) { return S.cut[p.id] || (S.cut[p.id] = { beats: parseCaps(p.export && p.export.captions), focus: 0, notes: {}, chan: "youtube" }); }
+function slotProposal(p) { const d = new Date(M.NOW.getTime() + 2 * 864e5); d.setUTCHours(15, 0, 0, 0); return d; }
+function CutReview(p) {
+  const c = cutState(p); const prj = S.projects.find((x) => x.id === p.projectId);
+  const at = slotProposal(p);
+  return `<div class="desk-top"><div><h2>${esc(p.title)}</h2><span class="sub">${esc(p.sub)} · ${esc(p.phase)}</span></div>${Oracle(p)}</div>
+    <div class="desk-main"><div data-component="CutReview">
+      <div><div class="player"><video id="cutvid" src="../data/${p.export.file}" controls playsinline preload="metadata"></video></div>
+        <div class="kv" style="margin-top:10px"><span class="chip">${esc(p.export.kind)} export</span><span class="chip mono" style="text-transform:none">${esc(p.export.id.slice(0, 8))}</span>${prj ? `<span class="chip">${esc(prj.title)}</span>` : ""}</div>
+        ${prj ? `<div data-component="StepTrack" role="list" aria-label="steps">${prj.steps.map((s, i) => `<div class="step ${s.state}" role="listitem"><span class="node">${s.state === "ratified" ? "✓" : i + 1}</span><b>${s.key}</b></div>`).join("")}</div>` : ""}
+        ${prj && prj.style && M.styleById[prj.style] ? `<div style="display:flex;gap:12px;align-items:center;margin-top:8px"><img src="${M.styleById[prj.style].hero}" alt="" style="width:120px;border-radius:7px;border:1px solid var(--hair-2)"><div><div class="side-h">style · Library</div><div style="color:var(--ink-bright);font-size:15px;margin-top:4px">${esc(M.styleById[prj.style].name)} <span class="chip emerald">locked</span></div></div></div>` : ""}</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="side-h">beats · captions ${Tally(c.beats.length)}</div>
+        ${c.beats.length ? `<div class="beats">${c.beats.map((b, i) => `<button class="beat ${c.focus === i ? "focus" : ""} ${c.notes[i] ? "noted" : ""}" data-act="beat" data-i="${i}"><span class="tc">${fmt.dur(b.t0)}–${fmt.dur(b.t1)}</span><span>${esc(b.text)}${c.notes[i] ? `<span class="note-chip"><span class="chip amber">free_text</span>${esc(c.notes[i])}</span>` : ""}</span></button>${c.editing === i ? `<div data-component="EditNote"><input id="note-text" placeholder="beat ${i + 1} · free_text" aria-label="note on beat ${i + 1}"><div class="keymap" style="margin-top:7px">${Keycaps([[["⏎"], "attach"], [["Esc"], "cancel"]])}</div></div>` : ""}`).join("")}</div>` : `<div class="ghost-card" style="height:60px;display:grid;place-items:center;font:600 12px var(--mono);color:var(--faint)">no captions</div>`}
+        <div class="side-h">slot on approve</div>
+        <div class="chanpick">${["youtube", "tiktok", "instagram"].map((ch) => `<button class="toggle" data-act="chan" data-chan="${ch}" aria-pressed="${c.chan === ch}">${ch}</button>`).join("")}</div>
+        <div class="checkrow"><span>${fmt.day(at)}</span><b style="color:var(--ink-bright)">${fmt.time(at)} UTC</b></div>
+      </div></div></div>
+    <div class="desk-foot">${Keycaps([[["Space"], "play"], [["↑", "↓"], "beat"], [["E"], "note"], [["A"], "approve"], [["R"], "reject"]])}
+      <div style="margin-left:auto;display:flex;gap:8px"><button class="btn rose" data-act="reject">Reject <kbd class="keycap">R</kbd></button>
+      <button class="btn emerald" data-act="approve">Approve → slot <kbd class="keycap">A</kbd></button></div></div>`;
+}
+function cutKey(p, e) {
+  const c = cutState(p); const k = e.key.toLowerCase(); const v = $("#cutvid");
+  if (k === " ") { if (v) v.paused ? v.play() : v.pause(); }
+  else if ((k === "arrowdown" || k === "j") && c.beats.length) { c.focus = Math.min(c.beats.length - 1, c.focus + 1); renderDesk(); seekBeat(p); }
+  else if ((k === "arrowup" || k === "k") && c.beats.length) { c.focus = Math.max(0, c.focus - 1); renderDesk(); seekBeat(p); }
+  else if (k === "e" && c.beats.length) { c.editing = c.focus; renderDesk(); const inp = $("#note-text"); if (inp) inp.focus(); }
+  else if (k === "a") approveReview(p);
+  else if (k === "r") rejectPacket(p);
+  else return;
+  e.preventDefault();
+}
+function seekBeat(p) { const c = cutState(p); const v = $("#cutvid"); if (v && c.beats[c.focus]) { try { v.currentTime = c.beats[c.focus].t0; } catch (_) {} } }
+function renderDesk() {
+  const lv = S.level; if (!lv || lv.kind !== "board") return;
+  const p = S.packets.find((x) => x.id === lv.id);
+  const dm = $("#deskmain") || $(".desk-main"); const sc = dm ? dm.scrollTop : 0;
+  const v = $("#cutvid"); const vt = v ? v.currentTime : 0; const playing = v && !v.paused;
+  $("#desk").innerHTML = p.status !== "awaiting_gate" ? DecidedDesk(p) : p.deskMode === "matrix-cull" ? MatrixCull(p) : p.deskMode === "blind-pair" ? BlindPair(p) : p.media === "article" ? ArticleReview(p) : CutReview(p);
+  const dm2 = $("#deskmain") || $(".desk-main"); if (dm2) dm2.scrollTop = sc;
+  const v2 = $("#cutvid"); if (v2 && vt) { v2.addEventListener("loadedmetadata", () => { v2.currentTime = vt; if (playing) v2.play().catch(() => {}); }, { once: true }); }
+  const rail = $("[data-component=PacketRail]"); if (rail) { const st = rail.scrollTop; rail.outerHTML = PacketRail(p); const r2 = $("[data-component=PacketRail]"); if (r2) r2.scrollTop = st; }
+}
+
+/* ───────────── decisions → flow through the wall ───────────── */
+async function settle(p, apply, flights) {
+  if (GT.journal.replaying) { apply(); [S.shelf, S.kept, S.projects, S.slots, S.posts].forEach((arr) => arr.forEach((x) => delete x.fresh)); return; }
+  // capture where the pile sits, close the level, apply the state, then fly the kept work through the wall
+  closeLevel();
+  await wait(330);
+  const pileEl = $(`[data-component=Pile][data-pid="${p.id}"]`);
+  const lane = p.lane;
+  if (S.focus && S.focus !== lane) { S.focus = null; renderFloor(); await wait(420); }
+  const from = (pileEl || $(`[data-cell="weir-${lane}"]`)).getBoundingClientRect();
+  apply();
+  mirrorPulse();
+  renderFloor(); renderHeader();
+  const sl = $("#sluice-" + lane);
+  if (sl) sl.classList.add("open");
+  const fl = flights.filter((f) => f.sel);
+  await Promise.all(fl.map((f, i) => flyThrough(from, f.sel, f.html, lane, i * 110)));
+  fl.forEach((f) => { const el = $(f.sel); if (el) { el.classList.remove("arriving"); el.classList.add(f.cls || "locked-in"); } });
+  $$(".arriving").forEach((el) => el.classList.remove("arriving"));
+  [S.shelf, S.kept, S.projects, S.slots, S.posts].forEach((arr) => arr.forEach((x) => delete x.fresh));
+  setTimeout(() => { const s2 = $("#sluice-" + lane); if (s2) s2.classList.remove("open"); }, 500);
+}
+function flyThrough(fromRect, sel, html, lane, delay) {
+  return new Promise((res) => {
+    const target = $(sel);
+    if (!target || reduced()) return res();
+    target.scrollIntoView({ block: "nearest" });
+    const to = target.getBoundingClientRect();
+    const wall = $("#sluice-" + lane); const wr = wall ? wall.getBoundingClientRect() : to;
+    const w = 72, h = 46;
+    const g = document.createElement("div"); g.className = "flyer"; g.innerHTML = html;
+    const x0 = fromRect.left + fromRect.width / 2 - w / 2, y0 = fromRect.top + Math.min(40, fromRect.height / 2) - h / 2;
+    Object.assign(g.style, { left: x0 + "px", top: y0 + "px", width: w + "px", height: h + "px" });
+    document.body.appendChild(g);
+    const wx = wr.left + wr.width / 2 - w / 2 - x0, wy = wr.top + wr.height / 2 - h / 2 - y0;
+    const tx = to.left + to.width / 2 - w / 2 - x0, ty = to.top + to.height / 2 - h / 2 - y0;
+    const s = Math.max(0.35, Math.min(1.4, to.width / w));
+    const a = g.animate([
+      { transform: "translate(0,0) scale(1)", opacity: 0 },
+      { transform: `translate(${wx * 0.6}px,${wy * 0.6}px) scale(1)`, opacity: 1, offset: 0.25 },
+      { transform: `translate(${wx}px,${wy}px) scale(.8)`, opacity: 1, offset: 0.5 },
+      { transform: `translate(${tx}px,${ty}px) scale(${s})`, opacity: 0.2 },
+    ], { duration: 1100, delay, easing: "cubic-bezier(.45,0,.2,1)", fill: "both" });
+    a.onfinish = () => { g.remove(); res(); };
+  });
+}
+const thumb = (url) => `<img src="${url}" alt="">`;
+const waveThumb = (t) => `<div style="background:#121a26;width:100%;height:100%;display:grid;place-items:center">${Wave(t.peaks, 66, 30, "#a78bfa")}</div>`;
+const paperThumb = (title) => `<div style="background:#ece6d8;color:#1d1a16;width:100%;height:100%;padding:5px;font:600 12px/1.15 var(--serif)">${esc(title)}</div>`;
+
+function commitCull(p) {
+  const c = cullState(p); const t = tallyOf(p);
+  if (t.u) {
+    const b = $("#commit"); if (b) { b.classList.remove("refuse"); void b.offsetWidth; b.classList.add("refuse"); }
+    const first = c.marks.findIndex((m) => !m); c.marks.forEach((m, i) => { if (!m) { const el = $(`[data-tile="${i}"]`); if (el) { el.classList.remove("nudge"); void el.offsetWidth; el.classList.add("nudge"); } } });
+    cullMove(p, first); announce(`${t.u} undecided`); return;
+  }
+  const kept = c.items.filter((_, i) => c.marks[i].v === "keep");
+  GT.journal.add({ k: "commit", pid: p.id, st: kept.length ? "ratified" : "blocked" });
+  const rec = M.decide(p.id, kept.length ? "approve" : "reject", { kept: kept.map((k) => k.id), rejected: c.items.filter((_, i) => c.marks[i].v === "reject").map((it, j) => ({ id: it.id, reason: c.marks[c.items.indexOf(it)].reason != null ? REASONS[c.marks[c.items.indexOf(it)].reason] : null })) });
+  p.status = kept.length ? "ratified" : "blocked";
+  const flights = []; let applyFns = [];
+  if (p.media === "image") {
+    const byStyle = {};
+    kept.forEach((k) => { const sid = k.style || k.label; (byStyle[sid] = byStyle[sid] || []).push(k); });
+    const newly = [];
+    Object.keys(byStyle).forEach((sid) => {
+      const on = S.shelf.find((s) => s.id === sid);
+      if (on) flights.push({ sel: `[data-shelf="${sid}"]`, html: thumb(byStyle[sid][0].url) });
+      else { newly.push(sid); flights.push({ sel: `[data-shelf="${sid}"]`, html: thumb(byStyle[sid][0].url) }); }
+    });
+    applyFns.push(() => newly.forEach((sid) => S.shelf.push({ id: sid, name: styleName(sid), hero: byStyle[sid][0].url, src: p.sourceKind, fresh: true, keptPlates: byStyle[sid].map((k) => k.url) })));
+    toastLater(newly.length ? `${newly.length} style${newly.length > 1 ? "s" : ""} locked → Library · ${newly.map(styleName).join(", ")}` : `${kept.length} kept · evidence added to shelf`, rec);
+  } else if (p.media === "video") {
+    applyFns.push(() => kept.forEach((k) => S.motion.push(k)));
+    flights.push(...kept.slice(0, 4).map((k) => ({ sel: `[data-cell="shelf-video"] .shelf-head`, html: thumb(k.url), cls: "x" })));
+    toastLater(`${kept.length} motion card${kept.length === 1 ? "" : "s"} → Library · motion`, rec);
+  } else if (p.media === "audio") {
+    const spawnIdx = Object.keys(c.spawn).map(Number);
+    applyFns.push(() => {
+      kept.slice().reverse().forEach((k) => { if (!S.kept.find((x) => x.id === k.take.id)) S.kept.unshift({ ...k.take, verdict: "kept", fresh: true }); });
+      spawnIdx.forEach((i) => spawnProject(c.items[i].take, true));
+    });
+    kept.forEach((k) => flights.push({ sel: `[data-take="${k.take.id}"]`, html: waveThumb(k.take) }));
+    spawnIdx.forEach((i) => flights.push({ sel: `[data-project="mv-${c.items[i].take.id}"]`, html: waveThumb(c.items[i].take) }));
+    toastLater(`${kept.length} kept → Library${spawnIdx.length ? ` · ${spawnIdx.length} MV project${spawnIdx.length > 1 ? "s" : ""} spawned` : ""}`, rec);
+  }
+  settle(p, () => applyFns.forEach((f) => f()), flights.slice(0, 14));
+}
+function commitPair(p) {
+  const st = pairState(p);
+  if (st.i < p.pairs.length) { const b = $("#commit"); if (b) { b.classList.remove("refuse"); void b.offsetWidth; b.classList.add("refuse"); } return; }
+  GT.journal.add({ k: "commit", pid: p.id, st: "ratified" });
+  const rec = M.decide(p.id, "approve", { picks: st.picks });
+  const wins = p.pairs.map((pr, i) => (st.picks[i].pick === "a" ? pr.a : st.picks[i].pick === "b" ? pr.b : null)).filter(Boolean);
+  const lane = p.lane;
+  const flights = wins.map((w) => ({ sel: lane === "video" ? `[data-cell="shelf-video"] .shelf-head` : `[data-cell="shelf-image"] .shelf-head`, html: thumb(w.url), cls: "x" }));
+  toastLater(`${wins.length} pin${wins.length === 1 ? "" : "s"} → Library · agreement ${st.picks.filter((q) => q.agree).length}/${p.pairs.length}`, rec);
+  settle(p, () => { wins.forEach((w) => (lane === "video" ? S.motion : S.pins).push(w)); }, flights);
+}
+function approveReview(p) {
+  GT.journal.add({ k: "approve", pid: p.id, st: "ratified" });
+  if (p.media === "article") {
+    const rec = M.decide(p.id, "approve", { notes: reviewState(p).notes });
+    const at = new Date(M.NOW.getTime() + 864e5); at.setUTCHours(8, 0, 0, 0);
+    const slot = { id: "sl-art-" + (++S.seq), projectId: null, channelId: "blog", publishAt: at.toISOString(), status: "scheduled", title: titleCase(p.topic.title), description: "ai-registry PR · " + p.topic.bundle + "/" + p.topic.slug, tags: [p.topic.bundle], error: null, fresh: true, article: p.id };
+    const post = { id: "post-" + p.id, title: titleCase(p.topic.title), fresh: true };
+    toastLater(`approved → PR · ai-registry · ${fmt.day(at)} ${fmt.time(at)}`, rec);
+    settle(p, () => { S.slots.push(slot); S.posts.unshift(post); }, [{ sel: `[data-post="${post.id}"]`, html: paperThumb(post.title) }, { sel: `[data-slot="${slot.id}"]`, html: paperThumb(post.title) }]);
+  } else {
+    const c = cutState(p); const at = slotProposal(p);
+    const rec = M.decide(p.id, "approve", { channel: c.chan, publishAt: at.toISOString(), notes: c.notes });
+    const prj = S.projects.find((x) => x.id === p.projectId);
+    const slot = { id: "sl-cut-" + (++S.seq), projectId: p.projectId, exportId: p.export.id, channelId: c.chan, publishAt: at.toISOString(), status: "scheduled", title: p.title, description: "", tags: [], error: null, fresh: true };
+    toastLater(`approved → ${c.chan} · ${fmt.day(at)} ${fmt.time(at)} UTC`, rec);
+    settle(p, () => { if (prj) { prj.steps.forEach((s) => (s.state = "ratified")); prj.next = null; } S.slots.push(slot); }, [{ sel: `[data-slot="${slot.id}"]`, html: `<video src="../data/${p.export.file}#t=0.6" muted style="width:100%;height:100%;object-fit:cover"></video>` }, prj ? { sel: `[data-project="${prj.id}"]`, html: "<div style='background:#6ee7b7;width:100%;height:100%'></div>" } : {}]);
+  }
+}
+function rejectPacket(p) {
+  GT.journal.add({ k: "reject", pid: p.id, st: "blocked" });
+  const rec = M.decide(p.id, "reject", null); p.status = "blocked";
+  toastLater(`rejected · ${p.title}`, rec);
+  settle(p, () => {}, []);
+}
+function sendEditPlan(p) {
+  const st = reviewState(p); if (!st.notes.length) { toast("Edit plan · attach a note first (E)"); return; }
+  GT.journal.add({ k: "editplan", pid: p.id, st: "draft" });
+  const rec = M.decide(p.id, "edit-plan", { notes: st.notes }); p.status = "draft";
+  const secs = [...new Set(st.notes.map((n) => n.section))];
+  if (GT.journal.replaying) { launchRun("article", { rework: p, secs }); return; }
+  toastLater(`edit plan → Foundry · ${secs.length} section${secs.length > 1 ? "s" : ""} regenerate`, rec);
+  closeLevel();
+  setTimeout(() => {
+    renderFloor(); renderHeader();
+    launchRun("article", { rework: p, secs });
+  }, 360);
+}
+function spawnProject(take, silent) {
+  const id = "mv-" + take.id;
+  if (S.projects.find((p) => p.id === id)) return null;
+  const steps = M.STEPS.map((k) => ({ key: k, state: k === "score" ? "ratified" : k === "research" ? "ratified" : "draft" }));
+  const prj = { id, title: take.title + " — music video", discipline: "music-video", template: "music-video", length: fmt.dur(take.durationS), steps, style: null, spawned: true, fromTake: take.id, exports: [], slots: [], fresh: true };
+  prj.next = prj.steps.find((s) => s.state !== "ratified");
+  S.projects.unshift(prj);
+  GT.store.emit({ type: "plan.spawn", actor: OPERATOR, subject: { kind: "project", id, label: prj.title, href: "projects.html#plan/" + id }, projectId: id, note: "from kept take " + take.id });
+  return prj;
+}
+let toastQ = null;
+function toastLater(msg, rec) { if (GT.journal.replaying) return; toastQ = { msg, rec }; setTimeout(() => { if (toastQ) { toast(`${toastQ.msg} <span class="chip">${toastQ.rec.id} · human</span>`, true); toastQ = null; } }, reduced() ? 400 : 1500); }
+function toast(msg, html) { const t = $("#toast"); t[html ? "innerHTML" : "textContent"] = msg; t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), 3400); announce(t.textContent); }
+function announce(s) { $("#live").textContent = s; }
+
+/* ───────────── launching (composer → run → weir) ───────────── */
+function launchRun(lane, opts) {
+  opts = opts || {};
+  const c = S.comp[lane]; const n = ++S.seq;
+  const id = "sim-" + lane + "-" + n;
+  let r;
+  if (lane === "image") {
+    const plates = simImagePlates();
+    if (!plates.length) { toast("0 plates · pick a mechanism"); return; }
+    const sname = c.style === "__sweep" ? "sweep" : c.style;
+    r = { id, lane, sim: true, title: `Forge · ${c.style === "__sweep" ? "all styles" : styleName(c.style)}`, out: plates, dur: 6500, runId: `2026-10-14-${sname}-${String(n).padStart(2, "0")}` };
+  } else if (lane === "article") {
+    const topic = opts.rework ? opts.rework.topic : M.topics.find((t) => t.slug === c.topic);
+    r = { id, lane, sim: true, title: (opts.rework ? "rework · " : "") + titleCase(topic.title), topic, stage: opts.rework ? "draft" : "research", dur: opts.rework ? 5000 : 9000, rework: opts.rework, secs: opts.secs };
+    if (!opts.rework) { S.spend.lo += 47; S.spend.hi += 92; }
+  } else if (lane === "audio") {
+    const pool = M.takes.filter((t) => t.kind === c.kind && t.verdict === "rejected" && !S.packets.some((p) => p.simulated && flatItems(p).some((it) => it.take && it.take.id === t.id)));
+    const two = pool.slice(0, 2);
+    if (!two.length) { toast("fixture pool empty"); return; }
+    r = { id, lane, sim: true, title: `Suno · ${(c.text || (c.kind === "music" ? "untitled bed" : "untitled sfx")).slice(0, 48)}`, out: two, peaks: two[0].peaks, dur: 5200, queue: M.estimate.audio(1).queueAhead + laneActive("audio"), qdur: 2200 };
+  } else {
+    const out = stripPosters.filter((s) => s.card.startsWith(c.subject));
+    r = { id, lane, sim: true, title: `Strips · ${c.subject}`, out, dur: 5500 };
+  }
+  r.status = "draft"; r.progress = 0; r.t0 = performance.now(); r.text = c.text;
+  S.runs.unshift(r);
+  if (!opts.rework) GT.journal.add({ k: "launch", lane, comp: JSON.parse(JSON.stringify(c)) });
+  GT.store.emit({ type: opts.rework ? "run.rework" : "run.start", actor: OPERATOR, subject: { kind: "run", id: r.runId || r.id, label: r.title, href: "index.html" }, lane: laneOfMedia[lane], runId: r.runId || r.id, costUsd: lane === "article" && !opts.rework ? 69.5 : 0, costSrc: lane === "article" ? "model" : "illustrative", note: lane === "article" ? "$47–92 per run (pipeline hint)" : "simulated · replays real plates" });
+  c.text = "";
+  if (S.focus && S.focus !== lane) S.focus = null;
+  if (GT.journal.replaying) return;
+  renderFloor(); renderHeader();
+  announce(`${r.title} launched`);
+}
+function tick() {
+  const now = performance.now(); const changed = new Set();
+  S.runs.forEach((r) => {
+    if (!r.sim) return;
+    const el = (r.qdur || 900);
+    const t = now - r.t0;
+    if (r.status === "draft" && t > el) { r.status = "running"; changed.add(r.lane); }
+    if (r.status === "draft" && r.queue != null) { const q = Math.max(1, r.queue - Math.floor((t / el) * r.queue)); if (q !== r.qshow) { r.qshow = q; const m = $(`[data-run="${r.id}"] .run-meta span:nth-child(2)`); if (m) m.textContent = "queue #" + q; } }
+    if (r.status === "running") {
+      r.progress = Math.min(1, (t - el) / r.dur);
+      if (r.lane === "article") { const st = r.rework ? ["draft", "critique", "check"] : ARTICLE_STAGES.slice(0, 5); const s = st[Math.min(st.length - 1, Math.floor(r.progress * st.length))]; if (s !== r.stage) { r.stage = s; changed.add(r.lane); } }
+      const row = $(`[data-run="${r.id}"]`);
+      if (row) {
+        const bar = row.querySelector(".run-bar i"); if (bar) bar.style.width = Math.round(r.progress * 100) + "%";
+        if (r.lane === "image") { const k = Math.floor(r.progress * r.out.length); const cnt = row.querySelector("[data-cnt]"); if (cnt && cnt.textContent !== k + "/" + r.out.length) { cnt.textContent = k + "/" + r.out.length; const im = row.querySelector(".run-thumb img"); if (im) im.src = r.out[Math.min(r.out.length - 1, k)].url; } }
+      }
+      if (r.progress >= 1) arrive(r);
+    }
+  });
+  changed.forEach((l) => refreshTrack(l));
+}
+function arrive(r, digest) {
+  r.status = "awaiting_gate";
+  const row = $(`[data-run="${r.id}"]`); const from = row ? row.getBoundingClientRect() : null;
+  S.runs = S.runs.filter((x) => x !== r);
+  const p = makePacket(r);
+  if (digest) p.digest = digest;
+  S.packets.push(p);
+  GT.journal.add({ k: "arrive", a: "machine", rid: r.id, digest: p.digest });
+  GT.store.emit({ type: "gate.arrive", actor: { kind: "machine", id: laneOfMedia[r.lane] }, subject: { kind: "packet", id: p.id, label: p.media === "article" ? titleCase(p.title) : p.title, href: "index.html#open=" + p.id }, lane: laneOfMedia[r.lane], packetId: p.id, runId: r.runId || r.id, note: p.count + " items · " + MODE_NAME[p.deskMode].toLowerCase() });
+  if (GT.journal.replaying) return;
+  renderFloor(); renderHeader();
+  const pile = $(`[data-component=Pile][data-pid="${p.id}"]`);
+  if (from && pile && !reduced()) {
+    pile.style.animation = "none"; pile.style.opacity = "0";
+    const to = pile.getBoundingClientRect();
+    const g = document.createElement("div"); g.className = "flyer up";
+    g.innerHTML = r.out && r.out[0] && r.out[0].url ? thumb(r.out[0].url) : r.lane === "audio" ? waveThumb(r.out[0]) : paperThumb(r.title);
+    Object.assign(g.style, { left: from.left + "px", top: from.top + "px", width: "60px", height: "40px" });
+    document.body.appendChild(g);
+    const a = g.animate([{ transform: "translate(0,0)" }, { transform: `translate(${to.left - from.left + 20}px,${to.top - from.top + 12}px) scale(1.4)` }], { duration: 750, easing: "cubic-bezier(.22,1,.36,1)", fill: "forwards" });
+    a.onfinish = () => { g.remove(); pile.style.opacity = ""; pile.classList.add("locked-in"); };
+  }
+  toast(`${esc(p.media === "article" ? titleCase(p.title) : p.title)} · at the weir · ${p.count} ${p.deskMode === "packet-review" ? "packet" : "items"} <kbd class="keycap">${laneById[r.lane].n}</kbd>`, true);
+}
+function makePacket(r) {
+  const base = { id: "pkt_" + r.id, origin: "foundry", status: "awaiting_gate", lane: r.lane, media: r.lane, simulated: true, createdAt: new Date().toISOString(), oracle: { passed: true, summary: "" }, spendNote: "simulated" };
+  let p;
+  if (r.lane === "image") {
+    const rows = {}; r.out.forEach((m) => { const key = m.scene || (m.kind === "extract.transfer" ? "transfer" : "replica"); (rows[key] = rows[key] || []).push(m); });
+    const src = (sc) => (M.media.find((m) => m.kind === "forge.source" && m.scene === sc) || {}).url;
+    p = { ...base, deskMode: "matrix-cull", sourceKind: "cull", title: "Forge · " + r.runId, sub: r.out.length + " plates · replayed from sweep-01", runId: r.runId,
+      oracle: { passed: true, summary: `0 check errors · ${r.out.length}/${r.out.length} plates rendered` },
+      rows: Object.keys(rows).map((k) => ({ key: k, label: k, ref: src(k), items: rows[k].map((m, i) => ({ id: m.file + "#" + r.id + i, url: m.url, style: m.style, mechanism: m.mechanism || m.kind.split(".")[1], label: styleName(m.style), ledger: null })) })) };
+  } else if (r.lane === "article") {
+    if (r.rework) {
+      const old = r.rework;
+      p = { ...old, id: old.id + "_t" + (old.turn + 1), turn: old.turn + 1, status: "awaiting_gate", regen: r.secs, simulated: true, oracle: { passed: true, summary: "0 check errors · " + r.secs.length + " section rework" }, createdAt: new Date().toISOString() };
+      return finishPacket(p);
+    }
+    p = { ...base, deskMode: "packet-review", sourceKind: "article", title: r.topic.title, sub: r.topic.bundle + " · " + r.topic.techniques + " techniques", topic: r.topic, turn: 1, draft: M.illustrativeDraft, standIn: true, spendRange: [47, 92], oracle: { passed: true, summary: "0 check errors · quorum illustrative" } };
+  } else if (r.lane === "audio") {
+    p = { ...base, deskMode: "matrix-cull", sourceKind: "audio", fixture: true, title: "Audio · " + r.title.replace("Suno · ", ""), sub: r.out.length + " takes · fixture audio", oracle: { passed: true, summary: "loudness measured · " + r.out.length + "/" + r.out.length + " files" },
+      rows: [{ key: S.comp.audio.kind, label: S.comp.audio.kind === "music" ? "Music" : "Sound effects", items: r.out.map((t) => ({ id: t.id + "#" + r.id, take: t, label: t.title })) }] };
+  } else {
+    p = { ...base, deskMode: "matrix-cull", sourceKind: "strips", title: "Strips · " + S.comp.video.subject, sub: r.out.length + " cards · 240f", oracle: { passed: true, summary: "240f each · 0 render errors" },
+      rows: [{ key: S.comp.video.subject, label: S.comp.video.subject, items: r.out.map((s, i) => ({ id: s.file + "#" + r.id + i, url: s.url, kind: s.kind, label: s.card.split("--")[1], video: (stripVideos.find((v) => v.card === s.card) || {}).url || null })) }] };
+  }
+  return finishPacket(p);
+}
+function finishPacket(p) { p.digest = "sha256:" + Math.random().toString(16).slice(2, 6); p.count = p.rows ? p.rows.reduce((n, r) => n + r.items.length, 0) : p.pairs ? p.pairs.length : 1; return p; }
+
+/* ───────────── detail levels ───────────── */
+function StyleDetail(id) {
+  const s = M.styleById[id]; const sh = S.shelf.find((x) => x.id === id);
+  if (!s) {
+    // a look minted from an Extract run: not yet in styles.json
+    const look = Object.values(M.extractRuns).map((r) => r.looks[id]).find(Boolean);
+    const plates = look ? [...look.replicas, ...look.transfers] : [];
+    return `<div class="detail"><div class="detail-grid"><div>${sh && sh.hero ? `<img class="hero" src="${sh.hero}" alt="">` : ""}<div class="plates">${plates.map((m) => `<img src="${m.url}" alt="" loading="lazy">`).join("")}</div></div>
+      <div><div class="kv"><span class="chip emerald">${I.lock.replace("<svg", '<svg width="11" height="11"')} locked</span><span class="chip">extract</span><span class="chip ghost">not in styles.json</span></div><h1>${esc(titleCase(id))}</h1>
+      <h4>recipe</h4><div class="ghost-card" style="height:80px"></div><h4>plates</h4>${Tally(plates.length, "replicas + transfers")}</div></div></div>`;
+  }
+  const users = S.projects.filter((p) => p.style === id);
+  return `<div class="detail"><div class="detail-grid">
+    <div>${s.hero ? `<img class="hero" src="${(sh && sh.hero) || s.hero}" alt="${esc(s.name)} plate">` : `<div class="hero ghost-card"></div>`}
+      <h4>plates ${Tally(s.plates.length)}</h4><div class="plates">${s.plates.map((m) => `<img src="${m.url}" alt="${esc(m.scene || "")}" loading="lazy">`).join("")}</div>
+      <h4>evidence ledger ${Tally(s.keep, "keep")} ${Tally(s.reject, "reject")}</h4>
+      ${s.evidence && s.evidence.length ? `<table class="ledger-t"><thead><tr><th>run</th><th>scene</th><th>mechanism</th><th>verdict</th></tr></thead><tbody>${s.evidence.map((e) => `<tr><td class="mono" style="font-size:12.5px">${esc(e.run)}</td><td>${esc(e.scene)}</td><td class="mono" style="font-size:12.5px">${esc(e.mechanism)}</td><td class="v-${e.verdict}">${esc(e.verdict)}</td></tr>`).join("")}</tbody></table>` : `<div class="ghost-card" style="height:40px"></div>`}
+    </div>
+    <div>
+      <div class="kv"><span class="chip ${sh ? "emerald" : "amber"}">${sh ? "locked · Library" : s.status}</span><span class="chip">${esc(s.family)}</span>${s.origin ? `<span class="chip violet">${esc(s.origin.kind)} · ${esc(s.origin.source || "")}</span>` : ""}${CALIB}</div>
+      <h1>${esc(s.name)}</h1>
+      <div class="kv"><a class="ledger-link" href="library.html#kind=style&sel=${encodeURIComponent(s.id)}">${I.style.replace("<svg", '<svg width="13" height="13"')}library</a>${GT.LedgerLink(s.id, "ledger")}</div>
+      <h4>recipe</h4><p class="recipe">${esc(s.recipe)}</p>
+      <h4>negative</h4><p class="recipe" style="font-size:15.5px;color:var(--muted)">${esc(s.negative || "")}</p>
+      <h4>observables</h4><dl class="obs">${Object.entries(s.observables || {}).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
+      ${s.origin && s.origin.models ? `<h4>provenance</h4><div class="kv" data-component="Provenance">${s.origin.models.map((m) => `<span class="chip mono" style="text-transform:none">${esc(m)}</span>`).join("")}</div>` : ""}
+      <h4>consumed by ${Tally(users.length, "projects")}</h4>${users.length ? `<div class="list">${users.map(ProjectRow).join("")}</div>` : '<div class="ghost-card" style="height:36px"></div>'}
+    </div></div></div>`;
+}
+function LibraryLevel() {
+  const card = (s) => { const on = S.shelf.find((x) => x.id === s.id); return `<button class="lib-card" data-act="style" data-id="${s.id}">${s.hero ? `<img src="${s.hero}" alt="" loading="lazy">` : `<div class="noimg">0 plates</div>`}<div class="b"><span class="ell">${esc(s.name)}</span><span class="chip ${on ? "emerald" : ""}">${on ? "locked" : s.status}</span></div></button>`; };
+  const extra = S.shelf.filter((s) => !M.styleById[s.id]);
+  return `<div class="detail"><div style="max-width:1500px;margin:0 auto">
+    <div class="kv">${Tally(S.shelf.length, "locked")}${Tally(M.styles.length, "catalogue")}${Tally(S.kept.length, "kept takes")}${Tally(S.motion.length, "motion")}${Tally(S.pins.length, "pins")}</div>
+    <h4>locked · consumed by projects</h4><div class="lib-grid">${S.shelf.map((s) => card(M.styleById[s.id] || { ...s, status: "locked" })).join("")}</div>
+    <h4>candidates · Foundry</h4><div class="lib-grid">${M.styles.filter((s) => !S.shelf.find((x) => x.id === s.id)).map(card).join("")}</div>
+    ${extra.length ? "" : ""}</div></div>`;
+}
+function ProjectDetail(p) {
+  const st = p.style ? M.styleById[p.style] : null;
+  const ex = p.exports && p.exports[0];
+  const pkt = S.packets.find((x) => x.projectId === p.id && x.status === "awaiting_gate");
+  const slots = S.slots.filter((s) => s.projectId === p.id).sort((a, b) => new Date(a.publishAt) - new Date(b.publishAt));
+  return `<div class="detail"><div style="max-width:1500px;margin:0 auto">
+    <div class="kv"><span class="chip">${esc(p.discipline)}</span><span class="chip">${esc(p.template)}</span><span class="chip">${esc(p.length)}</span>${p.spawned ? '<span class="chip violet">spawned · kept take</span>' : '<span class="chip ghost">fixture</span>'}</div>
+    <h1>${esc(p.title)}</h1>
+    <div class="kv"><a class="btn sm cyan" href="projects.html#plan/${esc(p.id)}">Plan</a><a class="btn sm cyan" href="projects.html#runs/${esc(p.id)}">Runs</a>${GT.LedgerLink(p.id, "ledger")}</div>
+    <div data-component="StepTrack" role="list" aria-label="steps">${p.steps.map((s, i) => `<div class="step ${s.state}" role="listitem"><span class="node">${s.state === "ratified" ? "✓" : s.state === "blocked" ? "!" : i + 1}</span><b>${s.key}</b><span class="state ${s.state}">${s.state.replace("_", " ")}</span></div>`).join("")}</div>
+    ${pkt ? `<div style="margin:10px 0"><button class="btn amber" data-act="open" data-pid="${pkt.id}">At the weir · ${esc(pkt.title)} <kbd class="keycap">⏎</kbd></button></div>` : ""}
+    ${p.steps.some((s) => s.state === "blocked") ? `<div data-component="UpstreamBreak" role="status" style="border-color:rgba(103,232,249,.3);background:var(--cyan-a);margin:10px 0"><div class="ub-err" style="color:var(--ink-bright)">frames · blocked at the gate · open Board</div></div>` : ""}
+    <div class="detail-grid" style="margin-top:20px"><div>
+      <h4>export ${p.exports.length ? Tally(p.exports.length) : ""}</h4>
+      ${ex ? `<div class="player"><video src="../data/${ex.file}" controls preload="metadata" playsinline></video></div><div class="kv"><span class="chip">${esc(ex.kind)}</span><span class="chip ghost">fixture</span></div>` : `<div class="ghost-card" style="aspect-ratio:16/9"></div>`}
+      ${p.spawned ? `<h4>score</h4>${(() => { const t = M.takes.find((x) => x.id === p.fromTake); return t ? `<div class="row-btn take-row" data-take="${t.id}"><button class="play" data-act="play" data-take="${t.id}" aria-label="play">${I.play}</button>${Wave(t.peaks, 74, 20, "#a78bfa")}<span class="ell">${esc(t.title)}</span><span class="chip">${fmt.dur(t.durationS)}</span></div><div class="kv"><span class="chip">MV encode ~${M.estimate.mv().minutes} min</span>${Hint("full libx264 encode · design report figure")}</div>` : ""; })()}` : ""}
+    </div><div>
+      <h4>style · from Library</h4>${st ? `<button class="lib-card" data-act="style" data-id="${st.id}" style="max-width:320px">${st.hero ? `<img src="${st.hero}" alt="">` : ""}<div class="b"><span>${esc(st.name)}</span><span class="chip emerald">locked</span></div></button>` : `<div class="ghost-card" style="height:60px;display:grid;place-items:center;color:var(--faint);font:600 12px var(--mono)">no locked style</div>`}
+      <h4>slots ${Tally(slots.length)}</h4><div class="list">${slots.map((s) => SlotRow(s, true)).join("") || '<div class="ghost-card" style="height:36px"></div>'}</div>
+    </div></div></div></div>`;
+}
+function SlotDetail(s) {
+  const prj = S.projects.find((p) => p.id === s.projectId);
+  const ex = M.exports.find((e) => e.id === s.exportId);
+  const at = new Date(s.publishAt);
+  const failed = s.status === "failed" || s.status === "missed";
+  const brkAt = /token|OAuth|access/i.test(s.error || "") ? 1 : /quota|insert|upload|interrupted/i.test(s.error || "") ? 2 : /format|container/i.test(s.error || "") ? 2 : 3;
+  const nodes = ["scheduled", "auth", "upload", "live"];
+  const m = s.metric;
+  return `<div class="detail"><div class="detail-grid">
+    <div>${ex ? `<div class="player"><video src="../data/${ex.file}" controls preload="metadata" playsinline></video></div>` : `<div class="ghost-card" style="aspect-ratio:16/9;display:grid;place-items:center;color:var(--faint);font:600 12px var(--mono)">${s.channelId === "blog" ? "post · ai-registry PR" : "no export"}</div>`}
+      <h4>description · verbatim</h4><div class="desc">${esc(s.description || "—")}</div>
+      ${s.tags && s.tags.length ? `<div class="kv">${s.tags.map((t) => `<span class="chip" style="text-transform:none">#${esc(t)}</span>`).join("")}</div>` : ""}</div>
+    <div><div class="kv"><span class="chan ${s.channelId}" style="width:30px;height:22px">${CHAN[s.channelId] || ""}</span><span class="chip">${esc(s.channelId)}</span><span class="state ${failed ? "blocked" : s.status === "published" ? "ratified" : s.status === "publishing" ? "running" : "awaiting_gate"}">${esc(s.status)}</span><span class="chip ghost">${s.fresh === undefined && !String(s.id).startsWith("sl-art") && !String(s.id).startsWith("sl-cut") ? "fixture" : "this session"}</span></div>
+      <h1>${esc(s.title)}</h1>
+      <div class="kv">${GT.LedgerLink(s.id, "ledger")}${prj ? `<a class="ledger-link" href="projects.html#runs/${esc(prj.id)}">runs</a>` : ""}</div>
+      <div class="kv"><span class="chip">${fmt.day(at)} · ${fmt.time(at)} UTC</span><span class="chip mono" style="text-transform:none">${esc(s.id)}</span>${s.publicationId ? `<span class="chip mono" style="text-transform:none">${esc(s.publicationId)}</span>` : ""}</div>
+      ${s.error ? `<h4>error · verbatim</h4><div data-component="UpstreamBreak" role="alert"><div class="ub-rail">${nodes.map((n, i) => `${i ? `<span class="ub-link ${i > brkAt ? "off" : ""}"></span>` : ""}<span class="ub-node ${i === brkAt && failed ? "brk" : i > brkAt ? "todo" : ""}"><i></i>${n}</span>`).join("")}</div><div class="ub-err">${esc(s.error)}</div></div>` : ""}
+      ${m ? `<h4>metrics · ${esc(m.at.slice(0, 10))}</h4><div class="kv">${Tally(fmt.num(m.views), "views")}${Tally(fmt.num(m.likes), "likes")}${Tally(m.comments, "comments")}${Tally(m.shares, "shares")}${Tally(fmt.dur(m.avgViewDurationS), "avg view")}${Tally("+" + m.subsDelta, "subs")}</div>` : ""}
+      ${prj ? `<h4>project</h4><button class="row-btn proj-row" data-act="project" data-id="${prj.id}" style="border-color:var(--hair)"><span class="ell" style="color:var(--ink-bright)">${esc(prj.title)}</span>${PipRow(prj.steps.map((x) => x.state), "steps")}<span></span></button>` : ""}
+    </div></div></div>`;
+}
+
+/* ───────────── audio ───────────── */
+function playTake(t) {
+  const a = $("#player");
+  if (!t.url) { toast("no audio file · " + t.title); return; }
+  if (S.playing === t.id && !a.paused) { a.pause(); S.playing = null; }
+  else { a.src = t.url; a.currentTime = 0; a.play().catch(() => {}); S.playing = t.id; }
+  syncPlaying();
+}
+function stopAudio() { const a = $("#player"); a.pause(); if (S.playing) { S.playing = null; syncPlaying(); } }
+function syncPlaying() {
+  $$('[data-act="play"]').forEach((b) => { const on = b.dataset.take === S.playing; b.classList.toggle("on", on); b.innerHTML = on ? I.pause : I.play; });
+  if (S.level && S.level.kind === "board") { const p = S.packets.find((x) => x.id === S.level.id); if (p && p.media === "audio" && p.status === "awaiting_gate") { const c = cullState(p); c.items.forEach((it, i) => { const el = $(`[data-tile="${i}"] .tt`); if (el) el.textContent = (S.playing === it.take.id ? "▶ " : "") + it.take.title; }); } }
+}
+$("#player").addEventListener("ended", () => { S.playing = null; syncPlaying(); });
+
+/* ───────────── events ───────────── */
+function openPacket(id) { const p = S.packets.find((x) => x.id === id); if (!p) return; if (p.media === "audio") stopAudio(); openLevel({ kind: "board", id }); }
+function nav(id) {
+  if (id === "board") { const n = nextPacket() || S.packets[0]; return openPacket(n.id); }
+  if (id === "calendar") { if (S.level) closeLevel(); return setCal(true); }
+  if (id === "floor") { if (S.level) closeLevel(); if (S.cal) setCal(false); return; }
+  if (id === "library") { location.href = "library.html#kind=style"; return; }
+  if (id === "projects") { location.href = "projects.html"; return; }
+  if (id === "sound") { if (S.cal) setCal(false); S.focus = "audio"; renderFloor(); return; }
+}
+// header links that stay on the floor are handled in place
+document.addEventListener("click", (e) => {
+  const nx = e.target.closest("[data-act-next]");
+  if (nx) { e.preventDefault(); if (S.cal) setCal(false); return openPacket(nx.dataset.actNext); }
+  const a = e.target.closest("a[data-nav]"); if (!a) return;
+  const id = a.dataset.nav;
+  if (id === "floor" || id === "board" || id === "calendar") { e.preventDefault(); if (id !== "calendar" && S.cal) setCal(false); nav(id); }
+}, true);
+
+/* ───────────── calendar: the rail expands into the month ───────────── */
+const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const SLOT_STATE = (s) => (s.status === "scheduled" ? "awaiting_gate" : s.status === "publishing" ? "running" : s.status === "published" ? "ratified" : s.status === "failed" || s.status === "missed" ? "blocked" : "draft");
+const dayKey = (d) => d.toISOString().slice(0, 10);
+function setCal(on) {
+  const el = $("#month");
+  if (on === S.cal) { if (on) renderMonth(); return; }
+  S.cal = on;
+  if (on) {
+    renderMonth();
+    const rail = $("[data-component=CalendarColumn]"); const r = rail ? rail.getBoundingClientRect() : null;
+    el.style.setProperty("--from", r ? Math.max(0, r.left) + "px" : "70%");
+    el.hidden = false; el.classList.remove("open"); void el.offsetWidth; el.classList.add("open");
+    history.replaceState(null, "", "#calendar");
+    setTimeout(() => { const d = $("#month .mday.sel") || $("#month .mday.today"); if (d) d.focus({ preventScroll: true }); }, 60);
+  } else {
+    el.classList.remove("open");
+    setTimeout(() => { if (!S.cal) { el.hidden = true; el.innerHTML = ""; } }, GT.reduced() ? 0 : 420);
+    history.replaceState(null, "", location.pathname);
+  }
+  renderHeader(); renderFloor();
+}
+function monthSlots() { return S.slots.filter((s) => !S.calChanOff[s.channelId]); }
+function MonthSlot(s) {
+  const st = SLOT_STATE(s); const at = new Date(s.publishAt);
+  const bad = s.status === "failed" || s.status === "missed";
+  return `<button class="mslot ${st} ${s.status} ${s.fresh ? "fresh-slot" : ""}" data-act="slot" data-id="${s.id}" data-slot="${s.id}" aria-label="${esc(s.title)}, ${s.status}, ${fmt.time(at)}">
+    <span class="mrow"><span class="tm">${fmt.time(at)}</span><span class="chan ${s.channelId}">${CHAN[s.channelId] || "··"}</span><span class="ell t">${esc(s.title)}</span></span>
+    ${bad && s.error ? `<span class="merr">${esc(s.error)}</span>` : s.status === "cancelled" && s.error ? `<span class="merr dim">${esc(s.error)}</span>` : ""}</button>`;
+}
+function renderMonth() {
+  const el = $("#month"); if (!el) return;
+  const { y, m } = S.calMonth;
+  const first = new Date(Date.UTC(y, m, 1));
+  const lead = (first.getUTCDay() + 6) % 7;
+  const dim = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  const weeks = Math.ceil((lead + dim) / 7);
+  const slots = monthSlots();
+  const byDay = {}; slots.forEach((s) => { const k = s.publishAt.slice(0, 10); (byDay[k] = byDay[k] || []).push(s); });
+  Object.values(byDay).forEach((a) => a.sort((p, q) => new Date(p.publishAt) - new Date(q.publishAt)));
+  const today = dayKey(M.NOW);
+  const inMonth = slots.filter((s) => { const d = new Date(s.publishAt); return d.getUTCFullYear() === y && d.getUTCMonth() === m; });
+  const cnt = (st) => inMonth.filter((s) => s.status === st).length;
+  const chans = ["youtube", "tiktok", "instagram", "blog"].filter((c) => S.slots.some((s) => s.channelId === c));
+  let cells = "";
+  for (let i = 0; i < weeks * 7; i++) {
+    const d = new Date(Date.UTC(y, m, 1 - lead + i)); const k = dayKey(d);
+    const list = byDay[k] || []; const out = d.getUTCMonth() !== m;
+    const fails = list.filter((s) => s.status === "failed" || s.status === "missed").length;
+    const past = k < today;
+    let rows = ""; let nowDrawn = false;
+    list.forEach((s) => {
+      if (k === today && !nowDrawn && new Date(s.publishAt) >= M.NOW) { rows += `<span class="mnow" aria-hidden="true"><b>NOW ${fmt.time(M.NOW)}</b></span>`; nowDrawn = true; }
+      rows += MonthSlot(s);
+    });
+    if (k === today && !nowDrawn) rows += `<span class="mnow" aria-hidden="true"><b>NOW ${fmt.time(M.NOW)}</b></span>`;
+    cells += `<div class="mday ${out ? "out" : ""} ${past ? "past" : ""} ${k === today ? "today" : ""} ${S.calDay === k ? "sel" : ""} ${fails ? "has-fail" : ""}" data-act="calday" data-day="${k}" tabindex="${S.calDay === k || (!S.calDay && k === today) ? 0 : -1}" role="gridcell" aria-label="${fmt.day(d)}, ${list.length} slots${fails ? ", " + fails + " failed" : ""}">
+      <div class="mday-h"><span class="dn">${d.getUTCDate()}</span>${k === today ? '<span class="chip cyan" style="height:20px">today</span>' : ""}${fails ? `<span class="mfail">${I.warn.replace("<svg", '<svg width="11" height="11"')}${fails}</span>` : ""}${list.length ? `<span class="mcount">${list.length}</span>` : ""}</div>
+      <div class="mlist">${rows}</div></div>`;
+  }
+  const sel = S.calDay ? (byDay[S.calDay] || []) : null;
+  const failed = inMonth.filter((s) => s.status === "failed" || s.status === "missed").sort((a, b) => new Date(b.publishAt) - new Date(a.publishAt));
+  const upcoming = slots.filter((s) => new Date(s.publishAt) >= M.NOW && s.status !== "published" && s.status !== "cancelled").sort((a, b) => new Date(a.publishAt) - new Date(b.publishAt)).slice(0, 8);
+  const side = sel ? `<div class="side-h">${esc(fmt.day(new Date(S.calDay + "T12:00:00Z")))} ${Tally(sel.length, "slots")}<button class="chip" data-act="calday" data-day="" style="margin-left:auto">month ✕</button></div>
+      <div class="list">${sel.length ? sel.map((s) => SlotRow(s, true)).join("") : '<div class="ghost-card" style="height:40px"></div>'}</div>`
+    : `<div class="side-h" style="color:var(--rose)">failed · missed ${Tally(failed.length)}</div><div class="list">${failed.map((s) => SlotRow(s, true)).join("") || '<div class="ghost-card" style="height:36px"></div>'}</div>
+      <div class="side-h" style="margin-top:16px;color:var(--amber)">next ${Tally(upcoming.length)}</div><div class="list">${upcoming.map((s) => SlotRow(s, false)).join("")}</div>`;
+  el.innerHTML = `<div class="m-bar">
+      <nav data-component="Crumbs" aria-label="breadcrumb"><button data-act="calclose">Floor</button><span class="sep">›</span><button data-act="calday" data-day="">Calendar</button><span class="sep">›</span><span class="here" aria-current="page">${MONTHS[m]} ${y}</span></nav>
+      <div class="seg" role="group" aria-label="month"><button data-act="calmon" data-d="-1" aria-label="previous month">${I.chevL.replace("<svg", '<svg width="13" height="13"')}</button><button data-act="caltoday" aria-pressed="${y === 2026 && m === 9}">today</button><button data-act="calmon" data-d="1" aria-label="next month">${I.chevR.replace("<svg", '<svg width="13" height="13"')}</button></div>
+      <div class="m-chans" role="group" aria-label="channels">${chans.map((c) => `<button class="toggle" data-act="calchan" data-chan="${c}" aria-pressed="${!S.calChanOff[c]}" aria-label="${c}"><span class="chan ${c}" style="border:0;width:auto;height:auto">${CHAN[c]}</span> ${S.slots.filter((s) => s.channelId === c).length}</button>`).join("")}</div>
+      <div class="m-tallies">${[["scheduled", "awaiting_gate"], ["publishing", "running"], ["published", "ratified"], ["failed", "blocked"], ["missed", "blocked"], ["cancelled", "draft"]].filter(([st]) => cnt(st)).map(([st, cls]) => `<span class="state ${cls}">${cnt(st)} ${st}</span>`).join("")}</div>
+      <span class="chip ghost">fixture</span>
+      <div class="sheet-close"><kbd class="keycap">Esc</kbd><button class="btn sm" data-act="calclose" aria-label="collapse to rail">${I.collapse.replace("<svg", '<svg width="13" height="13"')} rail</button></div>
+    </div>
+    <div class="m-body">
+      <div class="m-grid" role="grid" aria-label="${MONTHS[m]} ${y}">
+        <div class="m-dow" role="row">${DOW.map((d) => `<span role="columnheader">${d}</span>`).join("")}</div>
+        <div class="m-weeks" style="--weeks:${weeks}">${cells}</div>
+      </div>
+      <aside class="m-side" aria-label="${sel ? "day" : "month"} agenda">${side}</aside>
+    </div>`;
+  requestAnimationFrame(markMonthOverflow);
+}
+// a busy day shows what fits and counts the rest
+function markMonthOverflow() {
+  $$("#month .mday").forEach((d) => {
+    const l = d.querySelector(".mlist"); if (!l) return;
+    const lim = l.getBoundingClientRect().bottom + 1; let hid = 0;
+    l.querySelectorAll(".mslot").forEach((x) => { if (x.getBoundingClientRect().bottom > lim) hid++; });
+    const old = d.querySelector(".mmore"); if (old) old.remove();
+    if (hid) d.insertAdjacentHTML("beforeend", '<span class="mmore">+' + hid + '</span>');
+  });
+}
+window.addEventListener("resize", () => { if (S.cal) markMonthOverflow(); });
+function calMoveDay(delta) {
+  const base = S.calDay ? new Date(S.calDay + "T12:00:00Z") : new Date(dayKey(M.NOW) + "T12:00:00Z");
+  base.setUTCDate(base.getUTCDate() + delta);
+  S.calDay = dayKey(base); S.calMonth = { y: base.getUTCFullYear(), m: base.getUTCMonth() };
+  renderMonth(); const d = $(`#month .mday[data-day="${S.calDay}"]`); if (d) d.focus({ preventScroll: true });
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const act = b.dataset.act;
+  if (act === "calopen") { e.stopPropagation(); setCal(!S.cal); }
+  else if (act === "calclose") setCal(false);
+  else if (act === "calmon") { const d = +b.dataset.d; let { y, m } = S.calMonth; m += d; if (m < 0) { m = 11; y--; } if (m > 11) { m = 0; y++; } S.calMonth = { y, m }; S.calDay = null; renderMonth(); }
+  else if (act === "caltoday") { S.calMonth = { y: 2026, m: 9 }; S.calDay = dayKey(M.NOW); renderMonth(); }
+  else if (act === "calchan") { const c = b.dataset.chan; S.calChanOff[c] = !S.calChanOff[c]; renderMonth(); }
+  else if (act === "calday") { if (e.target.closest(".mslot")) return; S.calDay = b.dataset.day ? (S.calDay === b.dataset.day ? null : b.dataset.day) : null; renderMonth(); const d = S.calDay && $(`#month .mday[data-day="${S.calDay}"]`); if (d) d.focus({ preventScroll: true }); }
+});
+
+/* ───────────── the ledger: every act on the floor is appended ───────────── */
+const OPERATOR = { kind: "operator", id: "operator" };
+const _decide = M.decide;
+M.decide = function (packetId, verdict, payload) {
+  const rec = _decide(packetId, verdict, payload);
+  const p = S.packets.find((x) => x.id === packetId);
+  const note = payload && payload.kept ? `kept ${payload.kept.length} · rejected ${(payload.rejected || []).length}` : payload && payload.picks ? `${payload.picks.length} picks · agree ${payload.picks.filter((q) => q.agree).length}` : payload && payload.channel ? `${payload.channel} · ${payload.publishAt.slice(0, 16)}Z` : payload && payload.notes ? `${payload.notes.length} notes` : null;
+  GT.store.emit({ type: verdict === "reject" ? "verdict.reject" : verdict === "edit-plan" ? "gate.edit-plan" : "commit", actor: OPERATOR, subject: { kind: "packet", id: packetId, label: p ? (p.media === "article" ? titleCase(p.title) : p.title) : packetId, href: "index.html#open=" + packetId }, packetId, verdict, note, runId: p && p.runId, projectId: p && p.projectId, decision: rec.id });
+  return rec;
+};
+const laneOfMedia = { image: "gpu.local", article: "seat.text", audio: "box.chrome", video: "box.render" };
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const act = b.dataset.act;
+  if (act === "open") openPacket(b.dataset.pid);
+  else if (act === "close") closeLevel();
+  else if (act === "board") nav("board");
+  else if (act === "nav") nav(b.dataset.nav);
+  else if (act === "focus") { S.focus = S.focus === b.dataset.lane ? null : b.dataset.lane; renderFloor(); }
+  else if (act === "launch") launchRun(b.dataset.lane);
+  else if (act === "style") openLevel({ kind: "style", id: b.dataset.id });
+  else if (act === "project") openLevel({ kind: "project", id: b.dataset.id });
+  else if (act === "slot") openLevel({ kind: "slot", id: b.dataset.id });
+  else if (act === "play") { e.stopPropagation(); const t = M.takes.find((x) => x.id === b.dataset.take) || S.kept.find((x) => x.id === b.dataset.take); if (t) playTake(t); }
+  else if (act === "spawn") {
+    const t = S.kept.find((x) => x.id === b.dataset.take); if (!t) return;
+    const from = b.getBoundingClientRect();
+    const prj = spawnProject(t); if (!prj) return;
+    GT.journal.add({ k: "spawnmv", take: t.id });
+    if (S.focus && S.focus !== "audio" && S.focus !== "video") S.focus = null;
+    if (S.focus === "audio") S.focus = null;
+    renderFloor(); mirrorPulse();
+    flyThrough(from, `[data-project="${prj.id}"]`, waveThumb(t), "audio", 0).then(() => { const el = $(`[data-project="${prj.id}"]`); if (el) { el.classList.remove("arriving"); el.classList.add("locked-in"); } delete prj.fresh; });
+    toast(`MV project spawned · ${esc(prj.title)} · encode ~${M.estimate.mv().minutes} min`, true);
+  }
+  else if (act === "tile") { const p = curPacket(); const c = cullState(p); const i = +b.dataset.tile; if (i === c.cur) { S.zoom = true; paintCull(p); } else cullMove(p, i); }
+  else if (act === "commit") { const p = curPacket(); p.deskMode === "matrix-cull" ? commitCull(p) : commitPair(p); }
+  else if (act === "pick") pairPick(curPacket(), b.dataset.pick);
+  else if (act === "approve") approveReview(curPacket());
+  else if (act === "reject") rejectPacket(curPacket());
+  else if (act === "editplan") sendEditPlan(curPacket());
+  else if (act === "note") { e.stopPropagation(); openNote(curPacket(), +b.dataset.i); }
+  else if (act === "secfocus") { if (e.target.closest("[data-noclick]")) return; const p = curPacket(); const st = reviewState(p); if (st.editing != null) return; st.focus = +b.dataset.i; renderDesk(); }
+  else if (act === "dir") { const p = curPacket(); const st = reviewState(p); st.dir = b.dataset.dir; const v = ($("#note-text") || {}).value; renderDesk(); const inp = $("#note-text"); if (inp) { inp.value = v || ""; inp.focus(); } }
+  else if (act === "beat") { const p = curPacket(); const c = cutState(p); c.focus = +b.dataset.i; c.editing = null; renderDesk(); seekBeat(p); }
+  else if (act === "chan") { const p = curPacket(); if (cutState(p).chan !== b.dataset.chan) GT.journal.add({ k: "chan", pid: p.id, chan: b.dataset.chan }); cutState(p).chan = b.dataset.chan; renderDesk(); }
+});
+$("#scrim").addEventListener("click", closeLevel);
+function curPacket() { return S.level && S.level.kind === "board" ? S.packets.find((x) => x.id === S.level.id) : null; }
+
+// composer inputs
+document.addEventListener("input", (e) => {
+  const el = e.target; const f = el.closest("[data-component=IdeaComposer]"); if (!f) return;
+  const lane = f.dataset.lane; const c = S.comp[lane];
+  if (el.dataset.comp === "text") c.text = el.value;
+  else if (el.dataset.comp === "style") c.style = el.value;
+  else if (el.dataset.comp === "topic") c.topic = el.value;
+  else if (el.dataset.comp === "subject") c.subject = el.value;
+  const est = $("#est-" + lane); if (est) est.innerHTML = Estimate(lane);
+});
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-comp]"); if (!b || b.tagName !== "BUTTON") return;
+  const f = b.closest("[data-component=IdeaComposer]"); const lane = f.dataset.lane; const c = S.comp[lane];
+  if (b.dataset.comp === "mech") { const cur = mechLabel(c); c.mechs = cur === "text+ref" ? { text: true } : cur === "text" ? { "ref-early": true } : { text: true, "ref-early": true }; b.textContent = mechLabel(c); b.setAttribute("aria-label", "mechanism " + mechLabel(c)); }
+  if (b.dataset.comp === "kind") { c.kind = b.dataset.kind; $$('[data-comp="kind"]', f).forEach((x) => x.setAttribute("aria-pressed", x.dataset.kind === c.kind)); }
+  const est = $("#est-" + lane); if (est) est.innerHTML = Estimate(lane);
+});
+
+document.addEventListener("keydown", (e) => {
+  const tgt = e.target; const typing = tgt && (tgt.tagName === "INPUT" || tgt.tagName === "TEXTAREA" || tgt.tagName === "SELECT");
+  // note editor inside article review
+  if (tgt && tgt.id === "note-text" && curPacket() && curPacket().media === "video") {
+    const p = curPacket(); const c = cutState(p);
+    if (e.key === "Enter") { e.preventDefault(); if (tgt.value.trim()) { c.notes[c.editing] = tgt.value.trim(); GT.journal.add({ k: "cutnote", pid: p.id, i: c.editing, text: c.notes[c.editing] }); } c.editing = null; renderDesk(); }
+    else if (e.key === "Escape") { e.preventDefault(); c.editing = null; renderDesk(); }
+    return;
+  }
+  if (tgt && tgt.id === "note-text") {
+    const p = curPacket(); const st = reviewState(p);
+    if (e.key === "Enter") { e.preventDefault(); const sec = p.draft.sections[st.editing]; st.notes.push({ section: sec.id, directive: st.dir, text: tgt.value.trim() || st.dir.replace("_", " ") }); GT.journal.add({ k: "note", pid: p.id, ...st.notes[st.notes.length - 1] }); st.editing = null; renderDesk(); announce("note attached to §" + (p.draft.sections.indexOf(sec) + 1)); }
+    else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); st.editing = null; renderDesk(); }
+    else if (e.key === "Tab") { e.preventDefault(); const i = DIRECTIVES.indexOf(st.dir); st.dir = DIRECTIVES[(i + (e.shiftKey ? DIRECTIVES.length - 1 : 1)) % DIRECTIVES.length]; const v = tgt.value; renderDesk(); const inp = $("#note-text"); inp.value = v; inp.focus(); }
+    return;
+  }
+  if (typing) {
+    const f = tgt.closest("[data-component=IdeaComposer]");
+    if (f && e.key === "Enter" && (tgt.tagName !== "TEXTAREA" || !e.shiftKey)) { e.preventDefault(); launchRun(f.dataset.lane); }
+    if (e.key === "Escape") tgt.blur();
+    return;
+  }
+  if (S.level) {
+    if (e.key === "Escape") { e.preventDefault(); if (S.zoom) { S.zoom = false; const z = $("#zoom"); if (z) z.remove(); return; } return closeLevel(); }
+    const p = curPacket();
+    if (p && p.status === "awaiting_gate") {
+      if (e.key === "]" || e.key === "[") { const a = awaiting(); const i = a.indexOf(p); const n = a[(i + (e.key === "]" ? 1 : a.length - 1)) % a.length]; if (n) openPacket(n.id); e.preventDefault(); return; }
+      if (p.deskMode === "matrix-cull") return cullKey(p, e);
+      if (p.deskMode === "blind-pair") return pairKey(p, e);
+      if (p.media === "article") return reviewKey(p, e);
+      return cutKey(p, e);
+    }
+    if (p && e.key === "Enter") { const n = nextPacket(); if (n) { e.preventDefault(); openPacket(n.id); } }
+    return;
+  }
+  if (S.cal) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const k = e.key;
+    if (k === "Escape") { e.preventDefault(); if (S.calDay) { S.calDay = null; renderMonth(); } else setCal(false); return; }
+    if (k === "c" || k === "C") { e.preventDefault(); return setCal(false); }
+    if (k === "ArrowRight") { e.preventDefault(); return calMoveDay(1); }
+    if (k === "ArrowLeft") { e.preventDefault(); return calMoveDay(-1); }
+    if (k === "ArrowDown") { e.preventDefault(); return calMoveDay(7); }
+    if (k === "ArrowUp") { e.preventDefault(); return calMoveDay(-7); }
+    if (k === "[" || k === "]") { e.preventDefault(); let { y, m } = S.calMonth; m += k === "]" ? 1 : -1; if (m < 0) { m = 11; y--; } if (m > 11) { m = 0; y++; } S.calMonth = { y, m }; S.calDay = null; return renderMonth(); }
+    if (k === "Enter" && S.calDay) { const first = monthSlots().filter((s) => s.publishAt.slice(0, 10) === S.calDay)[0]; if (first) { e.preventDefault(); openLevel({ kind: "slot", id: first.id }); } return; }
+    if (k === "b" || k === "B") { setCal(false); return nav("board"); }
+    return;
+  }
+  // floor
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key === "c" || e.key === "C") { e.preventDefault(); return setCal(true); }
+  const digit = e.code && e.code.startsWith("Digit") ? +e.code.slice(5) : NaN;
+  if (digit >= 1 && digit <= 4) {
+    const l = LANES[digit - 1]; e.preventDefault();
+    if (e.shiftKey) { S.focus = S.focus === l.id ? null : l.id; renderFloor(); return; }
+    const a = awaiting(l.id); if (a.length) openPacket(a[0].id); else toast(`${l.name} · weir clear`);
+  } else if (e.key === "Enter") { const n = nextPacket(); if (n && !(tgt && tgt.tagName === "BUTTON")) { e.preventDefault(); openPacket(n.id); } }
+  else if (e.key === "Escape" && S.focus) { S.focus = null; renderFloor(); }
+  else if (e.key.toLowerCase() === "b") nav("board");
+});
+
+/* ───────────── boot: the journal re-applies the acts over the fixture baseline ───────────── */
+function replayJournal() {
+  GT.journal.replay((acts) => acts.forEach((e) => {
+    try {
+      const p = e.pid ? S.packets.find((x) => x.id === e.pid) : null;
+      if (e.k === "launch") { S.comp[e.lane] = JSON.parse(JSON.stringify(e.comp)); launchRun(e.lane); }
+      else if (e.k === "arrive") { const r = S.runs.find((x) => x.id === e.rid); if (r) arrive(r, e.digest); }
+      else if (e.k === "spawnmv") { const t = S.kept.find((x) => x.id === e.take); if (t) spawnProject(t); }
+      else if (!p) return;
+      else if (e.k === "mark") cullApply(p, e.idxs, e.v, e.reason);
+      else if (e.k === "undo") cullUndoApply(p);
+      else if (e.k === "spawnmark") { const c = cullState(p); c.spawn[e.i] = !c.spawn[e.i]; if (!c.spawn[e.i]) delete c.spawn[e.i]; }
+      else if (e.k === "pick") pairApply(p, e.pick);
+      else if (e.k === "pairback") { const st = pairState(p); if (st.i > 0) { st.i--; st.picks.pop(); } }
+      else if (e.k === "note") reviewState(p).notes.push({ section: e.section, directive: e.directive, text: e.text });
+      else if (e.k === "cutnote") cutState(p).notes[e.i] = e.text;
+      else if (e.k === "chan") cutState(p).chan = e.chan;
+      else if (e.k === "commit") (p.deskMode === "matrix-cull" ? commitCull : commitPair)(p);
+      else if (e.k === "approve") approveReview(p);
+      else if (e.k === "reject") rejectPacket(p);
+      else if (e.k === "editplan") sendEditPlan(p);
+    } catch (err) { /* one stale entry never blocks the floor */ }
+  }));
+}
+replayJournal();
+renderHeader(); renderFloor();
+function fromHash() {
+  const h = decodeURIComponent(location.hash.slice(1));
+  if (!h) return;
+  if (h === "calendar") return setCal(true);
+  if (h === "board") return nav("board");
+  const [k, v] = h.split("=");
+  if (k === "open" && S.packets.find((x) => x.id === v)) return openPacket(v);
+  if (k === "slot" && S.slots.find((x) => x.id === v)) return openLevel({ kind: "slot", id: v });
+  if (k === "project" && S.projects.find((x) => x.id === v)) return openLevel({ kind: "project", id: v });
+  if (k === "style") return openLevel({ kind: "style", id: v });
+}
+fromHash();
+window.addEventListener("hashchange", fromHash);
+setInterval(tick, 120);
+// the model's own running runs keep moving (shimmer) — nothing completes on its own; the gate is the operator's.
+})();
+</script>
+</body>
+</html>
