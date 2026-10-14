@@ -3368,7 +3368,11 @@
           "revision": 26,
           "changedAt": "2026-10-13",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_phases/_shared/stepContract.ts:108 This registry enumerates production-phase contracts over project records rather than agent sessions, and searches of the context directories and repository found none of the listed fleet terms.",
+          "evaluatedAt": "2026-10-14",
+          "evaluatedAgainst": "sha256-b2:93bd71853ab468b1",
+          "evaluatedRevision": 28
         }
       ],
       "governance": "governed"
@@ -4685,7 +4689,11 @@
           "revision": 26,
           "changedAt": "2026-10-13",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/playground/hunt/useHunt.ts:205 The modules judge and arrange audio takes and render selected variants through generation requests rather than managing autonomous agent sessions, and searches of the context directories and repository found none of the listed fleet terms.",
+          "evaluatedAt": "2026-10-14",
+          "evaluatedAgainst": "sha256-b2:93bd71853ab468b1",
+          "evaluatedRevision": 28
         },
         {
           "subject": "structured-output",

@@ -4513,6 +4513,67 @@
           "evidence": "pipeline/foundry/dojo_video.py:47 ComfyUI workflows instantiate model pipelines exclusively from .safetensors weights instead of pickles."
         }
       ]
+    },
+    "afbf291c-d8ac-4f08-8340-5e045b361065/fleet-orchestration": {
+      "context": "golden-path-tests",
+      "subject": "fleet-orchestration",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-14",
+      "evaluatedTs": "2026-10-14T23:55:37.386Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "61e633f3-fe93-4422-bf5d-cc70270a78d9",
+        "state": "not-applicable",
+        "at": "2026-10-14T23:56:40.302611+00:00",
+        "reason": "reviewer (sonnet): The anchor (_helpers.ts:375) is the fake-engine PATH/version guard, which does not show that fleet orchestration is absent, and the context has many engine, agent and CLI-run probes (articles-loop, claude-run-bounded, cli-kill-tree, engine-door) that the verdict does not account for."
+      }
+    },
+    "b3881ab8-d7c5-4293-9f23-b9c2a1be2f98/fleet-orchestration": {
+      "context": "phase-shared-runtime",
+      "subject": "fleet-orchestration",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-14",
+      "evaluatedTs": "2026-10-14T23:55:37.386Z",
+      "worker": "61e633f3-fe93-4422-bf5d-cc70270a78d9",
+      "techniques": []
+    },
+    "bead053d-ba45-4b78-ae20-558d10dfb619/fleet-orchestration": {
+      "context": "board-decision-inbox",
+      "subject": "fleet-orchestration",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-14",
+      "evaluatedTs": "2026-10-14T23:55:37.386Z",
+      "techniques": [
+        {
+          "technique": "heterogeneous-model-panels",
+          "verdict": "deviation",
+          "evidence": "pipeline/ARTICLE-REVIEW-PROMPT.md:23 The dispatched review prompt explicitly exposes model identity instead of using only a masked seat alias."
+        },
+        {
+          "technique": "soft-budget-under-the-hard-cap",
+          "verdict": "deviation",
+          "evidence": "lib/articles/critiqueStep.ts:62 The loop enforces maxCritiqueRounds while critiqueTurn passes that same value into the prompt's MAX_ROUNDS; the brief has no smaller round budget."
+        }
+      ],
+      "withdrawn": {
+        "worker": "61e633f3-fe93-4422-bf5d-cc70270a78d9",
+        "state": "deviation",
+        "at": "2026-10-14T23:56:40.332630+00:00",
+        "reason": "reviewer (sonnet): The cited line is in pipeline/ARTICLE-REVIEW-PROMPT.md, outside this context's lib/board files, and the claim rests on a masked-alias standard I could not confirm; the second technique anchor (critiqueStep.ts:62, a round-budget loop) says nothing about seat aliases, and REVIEWER_ID is passed alongsi"
+      }
+    },
+    "a41c19e2-bf74-499c-a70f-96f78a55defd/fleet-orchestration": {
+      "context": "sound-lab-modules",
+      "subject": "fleet-orchestration",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-14",
+      "evaluatedTs": "2026-10-14T23:55:37.386Z",
+      "worker": "61e633f3-fe93-4422-bf5d-cc70270a78d9",
+      "techniques": []
     }
   }
 }

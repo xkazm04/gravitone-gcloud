@@ -1,0 +1,101 @@
+{
+  "schema": "conform-run/1",
+  "worker": "61e633f3-fe93-4422-bf5d-cc70270a78d9",
+  "subject": "fleet-orchestration",
+  "evaluatedAt": "2026-10-14T23:55:37.386875+00:00",
+  "provider": "codex",
+  "model": "gpt-6.1-sol",
+  "pairs": [
+    {
+      "context": "phase-shared-runtime",
+      "subject": "fleet-orchestration",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "app/_phases/_shared/stepContract.ts:108 This registry enumerates production-phase contracts over project records rather than agent sessions, and searches of the context directories and repository found none of the listed fleet terms.",
+      "techniques": [],
+      "absenceTerms": [
+        "hibernat",
+        "sessionRegistry",
+        "spawn_agent"
+      ]
+    },
+    {
+      "context": "sound-lab-modules",
+      "subject": "fleet-orchestration",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "app/playground/hunt/useHunt.ts:205 The modules judge and arrange audio takes and render selected variants through generation requests rather than managing autonomous agent sessions, and searches of the context directories and repository found none of the listed fleet terms.",
+      "techniques": [],
+      "absenceTerms": [
+        "hibernat",
+        "sessionRegistry",
+        "spawn_agent"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "fleet-orchestration",
+      "context": "golden-path-tests",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor (_helpers.ts:375) is the fake-engine PATH/version guard, which does not show that fleet orchestration is absent, and the context has many engine, agent and CLI-run probes (articles-loop, claude-run-bounded, cli-kill-tree, engine-door) that the verdict does not account for."
+    },
+    {
+      "subject": "fleet-orchestration",
+      "context": "board-decision-inbox",
+      "reason": "withdrawn after review: reviewer (sonnet): The cited line is in pipeline/ARTICLE-REVIEW-PROMPT.md, outside this context's lib/board files, and the claim rests on a masked-alias standard I could not confirm; the second technique anchor (critiqueStep.ts:62, a round-budget loop) says nothing about seat aliases, and REVIEWER_ID is passed alongsi"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-14T23:55:37.386875+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "fleet-orchestration"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "golden-path-tests",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-14T23:55:37.386875+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "fleet-orchestration"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "phase-shared-runtime",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-14T23:55:37.386875+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "fleet-orchestration"
+      ],
+      "techniques": [
+        "heterogeneous-model-panels",
+        "soft-budget-under-the-hard-cap"
+      ],
+      "deviations": 1,
+      "context": "board-decision-inbox",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-14T23:55:37.386875+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "fleet-orchestration"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "sound-lab-modules",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    }
+  ]
+}
