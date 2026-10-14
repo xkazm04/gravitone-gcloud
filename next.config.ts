@@ -14,6 +14,10 @@ const nextConfig: NextConfig = {
   // Defaults to `.next`, so an ordinary `npm run dev` / `npm run build` is
   // completely unchanged.
   distDir: process.env.NEXT_DIST_DIR || ".next",
+  // The new version's workspace packages (packages/*) ship TypeScript source, not
+  // builds: they run under Node 24 native type stripping for CLIs and workers,
+  // and Next transpiles them here. docs/next/migration-plan.md §9.
+  transpilePackages: ["@gt/domain", "@gt/ui"],
 };
 
 // ── package.json `sideEffects` — why the kit barrel stopped shipping the deck ──

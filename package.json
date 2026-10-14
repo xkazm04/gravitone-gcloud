@@ -2,11 +2,16 @@
   "name": "gravitone-gcloud",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "sideEffects": [
     "*.css",
     "./lib/turns/kinds/*.ts"
   ],
   "scripts": {
+    "test:unit": "vitest run",
+    "typecheck:next": "tsc -b packages/domain packages/ui",
     "dev": "next dev",
     "fixtures": "npx tsx pipeline/fixtures/generate.mts",
     "dev:fixtures": "node pipeline/dev-guard.mjs NEXT_PUBLIC_GRAVITONE_DATA=fixtures NEXT_PUBLIC_DEV_AUTH=1 NEXT_DIST_DIR=.next-fixtures next dev -p 3100",
@@ -52,18 +57,20 @@
     "next": "16.3.3",
     "playwright": "^1.62.1",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^24.19.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.3.3",
     "fake-indexeddb": "^6.2.5",
     "tailwindcss": "^4",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "vitest": "^5.0.4"
   }
 }
