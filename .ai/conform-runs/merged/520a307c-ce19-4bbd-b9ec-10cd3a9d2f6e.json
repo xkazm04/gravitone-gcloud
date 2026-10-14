@@ -1,0 +1,92 @@
+{
+  "schema": "conform-run/1",
+  "worker": "520a307c-ce19-4bbd-b9ec-10cd3a9d2f6e",
+  "subject": "supply-chain",
+  "evaluatedAt": "2026-10-14T23:18:55.871927+00:00",
+  "provider": "agy",
+  "model": "gemini-3.8-flash-high",
+  "pairs": [
+    {
+      "context": "foundry-pipeline",
+      "subject": "supply-chain",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "pipeline/foundry/selftest.py:906 The pipeline's self-test validates imports against an unpinned requirements manifest without verifying a resolved lockfile or evaluating security advisories.",
+      "techniques": [
+        {
+          "technique": "dependency-policy-gates",
+          "verdict": "deviation",
+          "evidence": "pipeline/foundry/selftest.py:906 Third-party imports are checked against an unpinned manifest of names with no lockfile or advisory scan."
+        },
+        {
+          "technique": "reading-is-not-running",
+          "verdict": "conformant",
+          "evidence": "pipeline/foundry/selftest.py:893 Static AST parsing is used to inventory third-party imports across all tracked Python files without executing them."
+        },
+        {
+          "technique": "unsafe-deserialization-off-by-default",
+          "verdict": "conformant",
+          "evidence": "pipeline/foundry/dojo_video.py:47 ComfyUI workflows instantiate model pipelines exclusively from .safetensors weights instead of pickles."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "supply-chain",
+      "context": "script-step",
+      "reason": "Step 2 of the production pipeline is a pure React UI component and screenplay state editor with no dependency resolution, package manifests, secret scanning, or archive extraction."
+    },
+    {
+      "subject": "supply-chain",
+      "context": "phase-shared-runtime",
+      "reason": "Shared production phase runtime provides typed IndexedDB storage and record migrations for studio data; it manages no package dependencies, external downloads, secret scanning, or archives."
+    },
+    {
+      "subject": "supply-chain",
+      "context": "audio-workbench",
+      "reason": "Audio library curation interface and WebAudio synthesis workbench operating entirely on client-side state and audio fixtures; it contains no dependency policy gates, external code fetching, secret scanning, or archive extraction."
+    },
+    {
+      "subject": "supply-chain",
+      "context": "pipeline-scripts",
+      "reason": "withdrawn after review: reviewer (sonnet): The deviation rests on pipeline/gates.mts:57 (the gate registry), which is not among this context's file_paths in context-map.json; the claim that the gate list has no dependency-advisory gate is true but concerns the repo-wide gate registry, not this context. The supporting technique anchors also c"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-14T23:18:55.871927+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "supply-chain"
+      ],
+      "techniques": [
+        "dependency-policy-gates",
+        "reading-is-not-running",
+        "secret-scanning-architecture",
+        "unsafe-deserialization-off-by-default",
+        "verification-scope"
+      ],
+      "deviations": 1,
+      "context": "pipeline-scripts",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-14T23:18:55.871927+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "supply-chain"
+      ],
+      "techniques": [
+        "dependency-policy-gates",
+        "reading-is-not-running",
+        "unsafe-deserialization-off-by-default"
+      ],
+      "deviations": 1,
+      "context": "foundry-pipeline",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
+}

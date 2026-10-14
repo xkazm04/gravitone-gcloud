@@ -2020,7 +2020,11 @@
           "revision": 6,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "pipeline/foundry/selftest.py:906 The pipeline's self-test validates imports against an unpinned requirements manifest without verifying a resolved lockfile or evaluating security advisories.",
+          "evaluatedAt": "2026-10-14",
+          "evaluatedAgainst": "sha256-b2:f5666db1094acd9f",
+          "evaluatedRevision": 6
         },
         {
           "subject": "agent-instruction-files",

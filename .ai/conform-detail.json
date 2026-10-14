@@ -4445,6 +4445,74 @@
           "evidence": "lib/useProjects.ts:79 Custom hook returns plain state objects without proxy-based read tracking."
         }
       ]
+    },
+    "2b0e4967-fd1d-4417-8ac8-a5eddc5d50ab/supply-chain": {
+      "context": "pipeline-scripts",
+      "subject": "supply-chain",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-14",
+      "evaluatedTs": "2026-10-14T23:18:55.871Z",
+      "techniques": [
+        {
+          "technique": "dependency-policy-gates",
+          "verdict": "deviation",
+          "evidence": "pipeline/gates.mts:57 The registered gate list defines all blocking gates but omits any dependency advisory or license compliance checks."
+        },
+        {
+          "technique": "verification-scope",
+          "verdict": "deviation",
+          "evidence": "pipeline/vlm-probe/fetch_ref2va.py:92 Downloads 23 GB of model weights directly from Hugging Face without pinning revisions or checking content hashes."
+        },
+        {
+          "technique": "reading-is-not-running",
+          "verdict": "conformant",
+          "evidence": "pipeline/check-manifest.mjs:20 Reads the manifest via a static subset parser without evaluating arbitrary YAML tags or executing runtime code."
+        },
+        {
+          "technique": "unsafe-deserialization-off-by-default",
+          "verdict": "conformant",
+          "evidence": "pipeline/vlm-probe/fetch_ref2va.py:44 Weights are fetched in the safe data-only .safetensors format rather than vulnerable executable pickle objects."
+        },
+        {
+          "technique": "secret-scanning-architecture",
+          "verdict": "deviation",
+          "evidence": "pipeline/check-bundle.mjs:20 Secret inspection is only executed against emitted browser output rather than scanning staged diffs on commit."
+        }
+      ],
+      "registryProposal": "Model weights and checkpoints downloaded from public hubs (e.g. via hf_hub_download or transformers from_pretrained) are commonly unpinned and unverified; verification-scope should explicitly treat AI model hub downloads alongside package managers and browser drivers.",
+      "withdrawn": {
+        "worker": "520a307c-ce19-4bbd-b9ec-10cd3a9d2f6e",
+        "state": "deviation",
+        "at": "2026-10-14T23:19:43.559435+00:00",
+        "reason": "reviewer (sonnet): The deviation rests on pipeline/gates.mts:57 (the gate registry), which is not among this context's file_paths in context-map.json; the claim that the gate list has no dependency-advisory gate is true but concerns the repo-wide gate registry, not this context. The supporting technique anchors also c"
+      }
+    },
+    "24c311f4-6dee-4c55-9ac4-22efb63955c8/supply-chain": {
+      "context": "foundry-pipeline",
+      "subject": "supply-chain",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-14",
+      "evaluatedTs": "2026-10-14T23:18:55.871Z",
+      "worker": "520a307c-ce19-4bbd-b9ec-10cd3a9d2f6e",
+      "techniques": [
+        {
+          "technique": "dependency-policy-gates",
+          "verdict": "deviation",
+          "evidence": "pipeline/foundry/selftest.py:906 Third-party imports are checked against an unpinned manifest of names with no lockfile or advisory scan."
+        },
+        {
+          "technique": "reading-is-not-running",
+          "verdict": "conformant",
+          "evidence": "pipeline/foundry/selftest.py:893 Static AST parsing is used to inventory third-party imports across all tracked Python files without executing them."
+        },
+        {
+          "technique": "unsafe-deserialization-off-by-default",
+          "verdict": "conformant",
+          "evidence": "pipeline/foundry/dojo_video.py:47 ComfyUI workflows instantiate model pipelines exclusively from .safetensors weights instead of pickles."
+        }
+      ]
     }
   }
 }
