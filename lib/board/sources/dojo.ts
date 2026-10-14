@@ -19,7 +19,7 @@
 // reload. Recorded as a request against lib/foundry/training/types.ts rather
 // than smuggled into another file.
 
-import { fetchTrainingCycle, fetchTrainingCycles, fileUrl, saveTrainingVerdicts } from "@/app/foundry/foundryClient";
+import { fetchTrainingCycle, fetchTrainingCycles, fileUrl, saveTrainingVerdicts } from "@/lib/foundry/client";
 import type { TrainingCycleDetail } from "@/lib/foundry/training/types";
 
 import type { BoardEntry, BoardSourceExt } from "../source";

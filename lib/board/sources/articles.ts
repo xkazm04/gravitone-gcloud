@@ -61,7 +61,7 @@ import {
   type RunDetail,
   type TopicChoice,
   type TopicList,
-} from "@/app/articles/articlesClient";
+} from "@/lib/articles/client";
 import { ARTICLE_STATUSES, CHECK_DIMENSIONS, RUN_COST_HINT, canTransition, type ArticleRun, type ArticleStatus } from "@/lib/articles/types";
 
 import type { CanonStage, GroupAxis, LaneDef, MoveOffer, MoveRequest, MoveResult, PipelineEntry, PipelineItem, PipelineLoadNotes, PipelineSource, StageBand } from "../pipeline";

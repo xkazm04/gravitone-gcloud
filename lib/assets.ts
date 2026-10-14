@@ -16,7 +16,7 @@
 // claim it. The cost is that you cannot make an empty folder, which for a shelf
 // of generated work is the right trade.
 
-import type { Provenance } from "@/app/_studio/types";
+import type { Provenance } from "@/lib/studio/types";
 
 import {
   getByIndex,

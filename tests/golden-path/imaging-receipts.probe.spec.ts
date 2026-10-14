@@ -338,8 +338,13 @@ test("9b. a coded server failure is not retried by the client (it was billed; a 
 
 test("10. wiring: the routes run through the receipt seam; the client sends the key; the frames hook persists and reuses it", () => {
   const read = (p: string) => stripComments(readFileSync(join(process.cwd(), p), "utf8"));
-  for (const route of ["app/api/imaging/generate/route.ts", "app/api/imaging/edit/route.ts"])
-    expect(read(route), route).toMatch(/respondKeyed\(/);
+  // The handler bodies (and so the receipt seam call) live in lib/imaging/handlers.ts;
+  // each route.ts must still delegate to its handler after its auth door.
+  const handlers = read("lib/imaging/handlers.ts");
+  expect(handlers).toMatch(/respondKeyed\(req, "generate"/);
+  expect(handlers).toMatch(/respondKeyed\(req, "edit"/);
+  for (const [route, fn] of [["generate", "generateHandler"], ["edit", "editHandler"]])
+    expect(read(`app/api/imaging/${route}/route.ts`), route).toMatch(new RegExp(`\\b${fn}\\(req\\)`));
   expect(read("lib/imaging/api.ts")).toMatch(/withReceipt\(/);
   const client = read("lib/imagingClient.ts");
   expect(client).toMatch(/"idempotency-key"/);

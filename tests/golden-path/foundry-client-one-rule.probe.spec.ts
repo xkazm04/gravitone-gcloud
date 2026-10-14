@@ -1,5 +1,7 @@
 // LANE — THE /api/foundry CLIENT RULE IS DEFINED ONCE (dynamic).
 //
+// The two clients live in lib/foundry (client.ts, extractClient.ts); app/foundry
+// keeps one-line stubs that re-export them so the views' imports keep working.
 // This directory has already paid for the other habit, in writing. ExtractView's
 // own docstring says of its stale-response defect: "Identical defect and
 // identical fix to app/foundry/FoundryView.tsx — this file is the newer copy of
@@ -15,7 +17,7 @@
 // in this repository could have said so.
 //
 // So the rule is stated once and imported. This probe holds that line, and it
-// walks app/foundry off the filesystem rather than naming the two files: a
+// walks lib/foundry and app/foundry off the filesystem rather than naming the two files: a
 // THIRD client, written next month, is exactly the case a hand-written list
 // would not cover.
 import { readFileSync, readdirSync } from "node:fs";
@@ -33,15 +35,20 @@ import { stripComments } from "./_helpers";
 // vacuously against a seeded defect. See _helpers.ts.
 const code = stripComments;
 
-/** Every client module under app/foundry — walked, never listed. */
-function clients(): string[] {
-  const dir = join(process.cwd(), "app", "foundry");
+/** Every top-level module under one directory — walked, never listed. */
+function modules(...parts: string[]): string[] {
+  const dir = join(process.cwd(), ...parts);
   return readdirSync(dir, { withFileTypes: true })
     .filter((e) => e.isFile() && /\.tsx?$/.test(e.name))
     .map((e) => relative(process.cwd(), join(dir, e.name)).split("\\").join("/"));
 }
 
-test("exactly one module under app/foundry defines the request rule", () => {
+/** The module tree the rule governs: the lib seam AND the views' folder. */
+function clients(): string[] {
+  return [...modules("lib", "foundry"), ...modules("app", "foundry")];
+}
+
+test("exactly one module under lib/foundry and app/foundry defines the request rule", () => {
   const files = clients();
   expect(files.length, "the walk found nothing — it is reading the wrong tree").toBeGreaterThan(5);
 
@@ -57,15 +64,15 @@ test("exactly one module under app/foundry defines the request rule", () => {
 
   console.log(`[one-rule] definers=${JSON.stringify(definers)} bare-fetchers=${JSON.stringify(fetchers)}`);
   expect(definers, "the request rule must be defined in exactly one module and imported").toEqual([
-    "app/foundry/foundryClient.ts",
+    "lib/foundry/client.ts",
   ]);
   expect(fetchers, "these reach /api/foundry with a bare fetch, around the shared rule").toEqual([]);
 });
 
 test("the extract client imports that rule rather than restating it", () => {
-  const src = code(readFileSync(join(process.cwd(), "app/foundry/extractClient.ts"), "utf8"));
-  expect(src.length, "extractClient.ts read as empty").toBeGreaterThan(500);
-  expect(/import \{[^}]*\bcall\b[^}]*\} from "\.\/foundryClient"/.test(src)).toBe(true);
+  const src = code(readFileSync(join(process.cwd(), "lib/foundry/extractClient.ts"), "utf8"));
+  expect(src.length, "lib/foundry/extractClient.ts read as empty").toBeGreaterThan(500);
+  expect(/import \{[^}]*\bcall\b[^}]*\} from "\.\/client"/.test(src)).toBe(true);
   // And it still does the work it exists for, so this cannot pass on an empty file.
   expect(/export const fetchExtractRuns/.test(src)).toBe(true);
   expect(/export async function prepareUpload/.test(src)).toBe(true);

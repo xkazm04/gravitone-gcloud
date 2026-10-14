@@ -281,10 +281,10 @@ const PLATE_SCHEMA = {
 if (!LIVE) {
   console.log(`\nimaging OFFLINE probe · fetch is sealed · no vendor is reachable · nothing is billed\n`);
 
-  const { POST: generateRoute } = await import("../app/api/imaging/generate/route");
-  const { POST: editRoute } = await import("../app/api/imaging/edit/route");
-  const { POST: recognizeRoute } = await import("../app/api/imaging/recognize/route");
-  const { GET: pricingRoute } = await import("../app/api/imaging/pricing/route");
+  const { generateHandler: generateRoute } = await import("../lib/imaging/handlers");
+  const { editHandler: editRoute } = await import("../lib/imaging/handlers");
+  const { recognizeHandler: recognizeRoute } = await import("../lib/imaging/handlers");
+  const { pricingHandler: pricingRoute } = await import("../lib/imaging/handlers");
 
   /** A 1×1 PNG. Nothing decodes it — it only has to survive the base64 round
    *  trip so a case can prove the bytes that came out are the bytes that went

@@ -12,7 +12,7 @@
 // Machine pick: the grader's craft and style scores. Hidden by the surface
 // until the human has decided, which is the point of carrying it separately.
 
-import { fetchRun, fetchRuns, fileUrl, saveVerdicts } from "@/app/foundry/foundryClient";
+import { fetchRun, fetchRuns, fileUrl, saveVerdicts } from "@/lib/foundry/client";
 import type { Candidate, RunDetail } from "@/lib/foundry/types";
 
 import type { BoardEntry, BoardSourceExt } from "../source";

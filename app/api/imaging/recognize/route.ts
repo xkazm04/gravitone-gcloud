@@ -5,9 +5,7 @@
 // what the style block asked for. Qwen 3.8-Max in dev, Gemini 3.6 Flash in
 // production.
 
-import { asImage, asSteer, asString, errorResponse, readJson } from "@/lib/imaging/api";
-import { BadRequest } from "@/lib/imaging/api";
-import { recognize } from "@/lib/imaging/router";
+import { recognizeHandler } from "@/lib/imaging/handlers";
 import { guardRequest } from "@/lib/apiAuth";
 
 export const runtime = "nodejs";
@@ -17,24 +15,5 @@ export async function POST(req: Request) {
   // Money route — auth + rate limit before anything is read or spent.
   const denied = await guardRequest(req);
   if (denied) return denied;
-  try {
-    const body = await readJson(req);
-
-    let schema: Record<string, unknown> | undefined;
-    if (body.schema !== undefined && body.schema !== null) {
-      if (typeof body.schema !== "object" || Array.isArray(body.schema))
-        throw new BadRequest("`schema` must be a JSON Schema object.");
-      schema = body.schema as Record<string, unknown>;
-    }
-
-    const out = await recognize({
-      ...asSteer(body),
-      image: asImage(body.image, "image"),
-      instruction: asString(body.instruction, "instruction"),
-      schema,
-    });
-    return Response.json(out);
-  } catch (e) {
-    return errorResponse(e);
-  }
+  return recognizeHandler(req);
 }

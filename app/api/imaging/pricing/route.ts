@@ -47,10 +47,10 @@
 // NOT a pricing API for third parties, and not cached infrastructure: the table
 // is a module constant and a plain response is the whole implementation.
 
-import { priceTable } from "@/lib/imaging/pricing";
+import { pricingHandler } from "@/lib/imaging/pricingHandler";
 
 export const runtime = "nodejs";
 
 export function GET(): Response {
-  return Response.json(priceTable());
+  return pricingHandler();
 }

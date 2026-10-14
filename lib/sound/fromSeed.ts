@@ -15,8 +15,8 @@
 // Asking for one is a thrown error, so a caller that forgot the gate fails
 // loudly instead of rendering something nobody asked for.
 
-import { compose, type Seed, type Target } from "@/app/library/audio/prompts";
-import type { Hand } from "@/app/library/audio/vocabulary";
+import { compose, type Seed, type Target } from "@/lib/sound/audio/prompts";
+import type { Hand } from "@/lib/sound/audio/vocabulary";
 
 import type { GenerateRequest } from "./types";
 

@@ -6,34 +6,10 @@
 // generation requests (apiAuth.ts:422-433).
 
 import { guardAccessOnly } from "@/lib/apiAuth";
-import { budgetStats } from "@/lib/imaging/budget";
-import { budgetQuote } from "@/lib/imaging/budgetForecast";
-import { estimatePerImage } from "@/lib/imaging/pricing";
+import { budgetHandler } from "@/lib/imaging/handlers";
 
 export async function GET(req: Request): Promise<Response> {
   const denied = await guardAccessOnly(req);
   if (denied) return denied;
-
-  const url = new URL(req.url);
-  const imagesParam = url.searchParams.get("images");
-  const parsed = imagesParam ? parseInt(imagesParam, 10) : undefined;
-  const count = Number.isFinite(parsed) && parsed! > 0 ? parsed! : 1;
-
-  const stats = await budgetStats();
-  const pricing = estimatePerImage();
-  const perImageUsd = typeof pricing.usd === "number" && Number.isFinite(pricing.usd) ? pricing.usd : null;
-  const quote = await budgetQuote({ images: count });
-
-  return Response.json({
-    ceilingUsd: stats.ceilingUsd,
-    spentUsd: stats.spentUsd,
-    remainingUsd: stats.remainingUsd,
-    windowMs: stats.windowMs,
-    // Where the window lives: this machine's ledger file, or (pinned or on the
-    // managed posture) this process alone, with the reason.
-    store: stats.store,
-    ...(stats.storeReason ? { storeReason: stats.storeReason } : {}),
-    perImageUsd,
-    quote,
-  });
+  return budgetHandler(req);
 }

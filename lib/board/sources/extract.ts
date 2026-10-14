@@ -11,7 +11,7 @@
 // transfer scores and any near-duplicate the engine flagged, hidden until the
 // human decides.
 
-import { extractFileUrl, fetchExtractRun, fetchExtractRuns, saveExtractVerdicts } from "@/app/foundry/extractClient";
+import { extractFileUrl, fetchExtractRun, fetchExtractRuns, saveExtractVerdicts } from "@/lib/foundry/extractClient";
 import type { ExtractDetail, ExtractedStyle } from "@/lib/foundry/extract/types";
 
 import type { BoardEntry, BoardSourceExt } from "../source";

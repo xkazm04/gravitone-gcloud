@@ -6,7 +6,7 @@
 // access refusal) means the source is unavailable here; anything else is a real
 // error and keeps its words.
 
-import { FoundryRequestError } from "@/app/foundry/foundryClient";
+import { FoundryRequestError } from "@/lib/foundry/client";
 
 import { SourceUnavailable } from "../source";
 

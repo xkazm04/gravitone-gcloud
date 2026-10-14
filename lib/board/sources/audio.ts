@@ -93,7 +93,7 @@ import {
 import { MV_PARTS, type MvJob, type MvSnapshot, type MvSource } from "@/lib/sound/mv/types";
 import type { Hunt, HuntNode, SoundGroups, SoundKind, SoundTake, Stage, TakePatch } from "@/lib/sound/types";
 import { SUNO_MODEL_LABEL, SUNO_PHASE_WORD, sunoModelLabel, type SunoClip, type SunoJob, type SunoLane, type SunoProposal, type SunoSnapshot } from "@/lib/suno/types";
-import { stackVersions, suggestLabel } from "@/app/playground/arrange/model";
+import { stackVersions, suggestLabel } from "@/lib/sound/arrangeModel";
 
 import type {
   BoardVerb,
