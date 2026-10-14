@@ -55,6 +55,8 @@ import { typing } from "@/lib/board/keys";
 import { usePolling } from "@/lib/usePolling";
 
 import { RailFrame, RailItem, Wash } from "./RunCards";
+import { usePollFreshness } from "@/lib/usePollFreshness";
+import { StalePoll } from "./StalePoll";
 import { fetchTrainingCycle, fetchTrainingCycles, saveTrainingBlind, saveTrainingVerdicts, commitTrainingCycle, fileUrl } from "./foundryClient";
 import { DOJO_STATUS_WORD, cycleKind } from "./parts";
 import { Art, BarCount, CommitDialog, DecisionBar, ErrorNote, Glass, Label, Loading, LockNote, PrimaryAction, SaveNote, StatusChip, VerdictButtons, VerdictStamp, ScorePill, type SaveKind } from "./ui";
@@ -93,6 +95,8 @@ export function DojoView() {
   const [listError, setListError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [detail, setDetail] = useState<CycleManifest | null>(null);
+  const pollFresh = usePollFreshness();
+  const { ok: pollOk, fail: pollFail } = pollFresh;
   const [verdicts, setVerdicts] = useState<TrainingVerdicts>({});
   const [save, setSave] = useState<SaveKind>("idle");
   const [focused, setFocused] = useState<string | null>(null);
@@ -141,14 +145,16 @@ export function DojoView() {
             adoptBlind(d.blind);
           }
           setListError(null);
+          pollOk();
         },
         (e) => {
           if (ticket !== detailTicket.current) return;
           setListError(e instanceof Error ? e.message : "could not load that cycle");
+          pollFail();
         },
       );
     },
-    [adoptVerdicts, adoptBlind],
+    [adoptVerdicts, adoptBlind, pollOk, pollFail],
   );
 
   const loadCycles = useCallback(() => {
@@ -366,6 +372,7 @@ export function DojoView() {
           {!selected && cycles && cycles.length > 0 && <PickACycle cycles={cycles} onPick={selectCycle} />}
           {detail && (
             <>
+              <StalePoll freshness={pollFresh.freshness} />
               <Glass className="p-5">
                 <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
                   <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">

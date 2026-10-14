@@ -41,6 +41,14 @@ export const UNGUARDED_PROBE_BUDGET = 249;
 
 export const MUTANTS: Mutant[] = [
   {
+    id: "poll-freshness-failure-never-restores",
+    probe: "poll-freshness.probe.spec.ts",
+    file: "lib/pollFreshness.ts",
+    find: "failAt <= okAt",
+    replace: "false",
+    why: "A poll edge that failed once stays flagged forever: every later successful read still shows the server-did-not-answer banner, so the operator stops trusting the one signal that says a status is stale.",
+  },
+  {
     id: "repair-no-shrink-guard-off",
     probe: "repair-turn.probe.spec.ts",
     file: "lib/text/repair.ts",

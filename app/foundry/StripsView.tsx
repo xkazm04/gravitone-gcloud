@@ -29,6 +29,8 @@ import { usePolling } from "@/lib/usePolling";
 import { RunsError } from "./RunCards";
 import { StripGrid, judgeable, stripOrder, type StripVerdictValue } from "./StripGrid";
 import { StripLightbox } from "./StripLightbox";
+import { usePollFreshness } from "@/lib/usePollFreshness";
+import { StalePoll } from "./StalePoll";
 import { commitStripRun, fetchStripRun, fetchStripRuns, previewStripCommit, saveStripVerdicts } from "./foundryClient";
 import { STRIP_STATUS_WORD, stripKind } from "./parts";
 import {
@@ -62,6 +64,8 @@ export function StripsView() {
   const [listError, setListError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [run, setRun] = useState<StripRun | null>(null);
+  const pollFresh = usePollFreshness();
+  const { ok: pollOk, fail: pollFail } = pollFresh;
   const [verdicts, setVerdicts] = useState<StripVerdicts>({});
   const [save, setSave] = useState<SaveKind>("idle");
   const [focused, setFocused] = useState<string | null>(null);
@@ -104,14 +108,16 @@ export function StripsView() {
           setRun(d.run);
           if (!keepVerdicts) adoptVerdicts(d.verdicts);
           setListError(null);
+          pollOk();
         },
         (e) => {
           if (ticket !== detailTicket.current) return;
           setListError(e instanceof Error ? e.message : "could not load that strip run");
+          pollFail();
         },
       );
     },
-    [adoptVerdicts],
+    [adoptVerdicts, pollOk, pollFail],
   );
 
   const loadRuns = useCallback(() => {
@@ -306,6 +312,7 @@ export function StripsView() {
       )}
       {runs === null && !listError && <Loading label="reading the strip runs" />}
       {selected && !run && !listError && <Loading label="reading the run" />}
+      {run && <StalePoll freshness={pollFresh.freshness} />}
 
       {run && (
         <Glass className="p-5">

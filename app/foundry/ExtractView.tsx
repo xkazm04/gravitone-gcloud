@@ -38,6 +38,8 @@ import { useRemembered } from "@/lib/useRemembered";
 
 import { ExtractBoard } from "./ExtractBoard";
 import { RailFrame, RailItem, when } from "./RunCards";
+import { usePollFreshness } from "@/lib/usePollFreshness";
+import { StalePoll } from "./StalePoll";
 import { commitExtractRun, createExtractRun, fetchExtractRun, fetchExtractRuns, prepareUpload, previewExtractCommit, saveExtractVerdicts, stepExtractRun } from "./extractClient";
 import { EXTRACT_COMMITTABLE, EXTRACT_LIVE, EXTRACT_STATUS_WORD, extractKind } from "./parts";
 import { BarCount, CommitDialog, DecisionBar, ErrorNote, Glass, Label, Loading, LockNote, PlanFact, PrimaryAction, ProgressRail, SaveNote, StatusChip, useCommitPlan, type SaveKind } from "./ui";
@@ -88,6 +90,8 @@ export function ExtractView() {
   /** The clock as of the last detail load — the lease is judged against
    *  this, not against render time, so render stays pure. */
   const [loadedAt, setLoadedAt] = useState(0);
+  const pollFresh = usePollFreshness();
+  const { ok: pollOk, fail: pollFail } = pollFresh;
   const saveTimer = useRef<number | null>(null);
   const verdictsRef = useRef<ExtractVerdicts>({});
   /** The drive loop reads this, not React state: a loop that captured a
@@ -133,6 +137,7 @@ export function ExtractView() {
           if (ticket !== detailTicket.current) return undefined;
           setDetail(d);
           setLoadedAt(Date.now());
+          pollOk();
           if (!keepVerdicts) adoptVerdicts(d.verdicts);
           setRunsError(null);
           return d;
@@ -145,11 +150,12 @@ export function ExtractView() {
           // not offer to prune anything. This lands beside the run list, where
           // `loadRuns` failures already show.
           setRunsError(e instanceof Error ? e.message : "could not load that run");
+          pollFail();
           return undefined;
         },
       );
     },
-    [adoptVerdicts],
+    [adoptVerdicts, pollOk, pollFail],
   );
 
   // THE EXTRACTION LEFT OPEN IS THE ONE THAT OPENS. Closing this tab pauses a
@@ -407,6 +413,7 @@ export function ExtractView() {
           {selected && !run && <Loading label="reading the extraction" />}
           {run && (
             <>
+              <StalePoll freshness={pollFresh.freshness} />
               <RunStrip run={run} now={loadedAt} driving={driving} driveError={driveError} onResume={() => drive(run.id)} onRetry={() => drive(run.id, true)} onPause={pause} />
               {result && (
                 <div role="status" className="font-jetbrains rounded-xl border border-emerald-400/25 bg-emerald-400/[0.06] px-4 py-3 text-label text-emerald-100/90">

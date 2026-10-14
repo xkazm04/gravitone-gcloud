@@ -1,101 +1,251 @@
 {
-  "commit": "a2ac08b1fa48abf6e36feffccbbb0b2863bed587",
-  "totalDurationMs": 253152,
-  "killed": 15,
+  "commit": "b328133540b788a534d9060452b353300ac126a8",
+  "totalDurationMs": 211698,
+  "killed": 40,
   "survived": 0,
   "stale": 0,
   "broken": 0,
   "baselineRed": 0,
   "mutants": [
     {
+      "id": "poll-freshness-failure-never-restores",
+      "probe": "poll-freshness.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 6156
+    },
+    {
+      "id": "repair-no-shrink-guard-off",
+      "probe": "repair-turn.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 8082
+    },
+    {
+      "id": "repair-unchanged-elsewhere-off",
+      "probe": "repair-turn.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 7908
+    },
+    {
+      "id": "gpu-recycle-any-caller",
+      "probe": "gpu-lease.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 7890
+    },
+    {
+      "id": "gpu-busy-eye-not-reroutable",
+      "probe": "gpu-lease.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 2754
+    },
+    {
       "id": "shelf-no-tiebreak",
       "probe": "sort-stability.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 21015
+      "durationMs": 5505
     },
     {
       "id": "needs-you-no-tiebreak",
       "probe": "sort-stability.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 10948
+      "durationMs": 2999
     },
     {
       "id": "eviction-skip-upload-delete",
       "probe": "identity-eviction-idb.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 21805
+      "durationMs": 5576
     },
     {
       "id": "research-clear-keeps-followups",
       "probe": "step-clear-completeness.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 14889
+      "durationMs": 4423
     },
     {
       "id": "recalibrate-drops-chain-breaks",
       "probe": "chain-break-reaches-the-reviewer.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 18338
+      "durationMs": 6214
     },
     {
       "id": "spine-tail-first",
       "probe": "spine-rank-total.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 16649
+      "durationMs": 4120
     },
     {
       "id": "spine-ordinal-ignored",
       "probe": "spine-rank-total.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 8971
+      "durationMs": 2307
     },
     {
       "id": "alt-last-one-removable",
       "probe": "alt-last-one-stays.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 16445
+      "durationMs": 3915
     },
     {
       "id": "cancel-settled-job",
       "probe": "cancel-settled-job.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 15193
+      "durationMs": 5149
     },
     {
       "id": "clear-any-job",
       "probe": "bell-doors.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 15074
+      "durationMs": 6095
     },
     {
       "id": "cull-failed-looks-ready",
       "probe": "cull-non-ready.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 24999
+      "durationMs": 8223
     },
     {
       "id": "cull-deleted-looks-live",
       "probe": "cull-non-ready.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 9501
+      "durationMs": 2553
     },
     {
       "id": "exit-drops-stderr-tail",
       "probe": "cli-exit-classification.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 12425
+      "durationMs": 3613
     },
     {
       "id": "exit-login-not-detected",
       "probe": "cli-exit-classification.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 7656
+      "durationMs": 2413
     },
     {
       "id": "forbid-only-ignores-gate-switch",
       "probe": "forbid-only-gate.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 39240
+      "durationMs": 11856
+    },
+    {
+      "id": "palette-keeps-zero-count-decisions",
+      "probe": "shell-palette.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 4422
+    },
+    {
+      "id": "ast-switchcase-wrong-label",
+      "probe": "_ast.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 8314
+    },
+    {
+      "id": "phase-heading-faded",
+      "probe": "run-trace-phase-rank.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 3641
+    },
+    {
+      "id": "job-noun-raw-kind",
+      "probe": "job-noun.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 4880
+    },
+    {
+      "id": "kit-hash-law-lost",
+      "probe": "kit-hash.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 8181
+    },
+    {
+      "id": "pip-hollow-too-faint",
+      "probe": "pip-contrast.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 4223
+    },
+    {
+      "id": "bandtrack-bounds-too-faint",
+      "probe": "bandtrack-contrast.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 3572
+    },
+    {
+      "id": "signed-out-chip",
+      "probe": "session-ended-reason.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 3879
+    },
+    {
+      "id": "upstream-here-name-faint",
+      "probe": "upstream-break-contrast.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 3314
+    },
+    {
+      "id": "tally-key-opacity-low",
+      "probe": "chip-key-contrast.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 3613
+    },
+    {
+      "id": "deck-hint-faint",
+      "probe": "deck-text-contrast.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 3145
+    },
+    {
+      "id": "energy-curve-unnamed",
+      "probe": "energy-curve-type-floor.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 3053
+    },
+    {
+      "id": "unmeasured-check-reads-ok",
+      "probe": "checklist-unmeasured-loud.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 2983
+    },
+    {
+      "id": "frame-count-on-explainer",
+      "probe": "frames-header-honesty.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 3355
+    },
+    {
+      "id": "live-result-points-below",
+      "probe": "live-notebook-pointer.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 2746
+    },
+    {
+      "id": "source-mojibake",
+      "probe": "source-encoding.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 2848
+    },
+    {
+      "id": "studio-prefer-only-off",
+      "probe": "imaging-studio.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 11418
+    },
+    {
+      "id": "mv-regenerate-reruns-everything",
+      "probe": "mv-queue.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 8372
+    },
+    {
+      "id": "mv-lease-ignores-live-holder",
+      "probe": "mv-queue.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 3965
+    },
+    {
+      "id": "mv-focal-deaf-to-the-beat",
+      "probe": "mv-render.probe.spec.ts",
+      "verdict": "killed",
+      "durationMs": 14019
     }
   ]
 }
