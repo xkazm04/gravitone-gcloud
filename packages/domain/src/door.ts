@@ -12,7 +12,11 @@ type OptKeys<T> = {
  */
 export type Parsed<T> = T extends readonly unknown[]
   ? { [I in keyof T]: Parsed<T[I]> }
-  : T extends Date
+  : // A branded id is `string & $brand<B>`, which also extends `object`; without
+    // this branch the brand is flattened away and `parseAt(...).id` stops being a ProjectId.
+    T extends string | number | boolean | bigint | symbol
+    ? T
+    : T extends Date
     ? T
     : T extends object
       ? Flat<

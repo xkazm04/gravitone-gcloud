@@ -46,3 +46,14 @@ describe("door", () => {
     expect(parseJsonAt("shot", Shot, '{"id":1}').ok).toBe(false);
   });
 });
+
+describe("Parsed keeps brands", () => {
+  it("a branded id read through parseAt is still the branded type", async () => {
+    const { projectIdSchema } = await import("../src/ids.ts");
+    type ProjectId = import("../src/ids.ts").ProjectId;
+    const r = parseAt("test", z.object({ id: projectIdSchema }), { id: "p1" });
+    if (!r.ok) throw r.error;
+    const id: ProjectId = r.value.id;
+    expect(id).toBe("p1");
+  });
+});

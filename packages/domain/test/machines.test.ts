@@ -1,0 +1,90 @@
+import { describe, expect, expectTypeOf, it } from "vitest";
+import { jobMachine, jobStateSchema, type JobState } from "../src/job.ts";
+import { packetMachine, packetStateSchema } from "../src/packet.ts";
+import { partMachine, partStateSchema } from "../src/part.ts";
+import { projectMachine, projectStateSchema } from "../src/project.ts";
+import { runMachine, runStateSchema } from "../src/run.ts";
+import { slotMachine, slotStateSchema } from "../src/slot.ts";
+import { styleMachine, styleStatusSchema } from "../src/style.ts";
+import type { Machine } from "../src/transitions.ts";
+
+function closedMachine<S extends string>(name: string, m: Machine<S>, schema: { readonly options: readonly string[] }) {
+  it(`${name}: the table is closed — every target is a declared state`, () => {
+    for (const from of m.states) for (const to of m.next(from)) expect(m.states, `${name}: ${from} -> ${to}`).toContain(to);
+  });
+  it(`${name}: the schema enum IS the machine's state list`, () => {
+    expect(schema.options).toEqual([...m.states]);
+  });
+  it(`${name}: every state is reachable from the first`, () => {
+    const first = m.states[0];
+    if (first === undefined) throw new Error(`${name} has no states`);
+    const seen = new Set<S>([first]);
+    const walk: S[] = [first];
+    for (let s = walk.pop(); s !== undefined; s = walk.pop())
+      for (const to of m.next(s))
+        if (!seen.has(to)) {
+          seen.add(to);
+          walk.push(to);
+        }
+    expect([...seen].sort()).toEqual([...m.states].sort());
+  });
+}
+
+describe("every machine", () => {
+  closedMachine("run", runMachine, runStateSchema);
+  closedMachine("project", projectMachine, projectStateSchema);
+  closedMachine("part", partMachine, partStateSchema);
+  closedMachine("job", jobMachine, jobStateSchema);
+  closedMachine("packet", packetMachine, packetStateSchema);
+  closedMachine("slot", slotMachine, slotStateSchema);
+  closedMachine("style", styleMachine, styleStatusSchema);
+  it("derives the state union from the table, so the record type moves with it", () => {
+    expectTypeOf<JobState>().toEqualTypeOf<"planned" | "queued" | "running" | "paused" | "failed" | "interrupted" | "done" | "cancelled">();
+  });
+});
+
+describe("the transitions v1 relied on", () => {
+  it("job: a crash-stop is its own state, and it never resumes without the queue", () => {
+    expect(jobMachine.can("running", "interrupted")).toBe(true);
+    expect(jobMachine.can("interrupted", "running")).toBe(false);
+    expect(jobMachine.can("interrupted", "done")).toBe(false);
+    expect(jobMachine.next("interrupted")).toEqual(["queued", "cancelled"]);
+    expect(jobMachine.states).toContain("failed");
+    expect(jobMachine.states).not.toContain("orphaned");
+  });
+  it("job: nothing skips the lease — only a running job finishes", () => {
+    for (const s of jobMachine.states) if (s !== "running") expect(jobMachine.can(s, "done"), s).toBe(false);
+    expect(jobMachine.can("queued", "running")).toBe(true);
+  });
+  it("job: done and cancelled are terminal", () => {
+    expect(jobMachine.next("done")).toEqual([]);
+    expect(jobMachine.next("cancelled")).toEqual([]);
+  });
+  it("slot: at-most-once — a claimed slot never goes back to scheduled", () => {
+    expect(slotMachine.can("scheduled", "publishing")).toBe(true);
+    expect(slotMachine.can("publishing", "scheduled")).toBe(false);
+    expect(slotMachine.next("publishing")).toEqual(["published", "failed"]);
+  });
+  it("slot: a missed slot is never published late, only rescheduled or cancelled", () => {
+    expect(slotMachine.can("missed", "publishing")).toBe(false);
+    expect(slotMachine.next("missed")).toEqual(["scheduled", "cancelled"]);
+  });
+  it("slot: v1's addition over StatReel — a failed slot is rescheduled, not re-created", () => {
+    expect(slotMachine.can("failed", "scheduled")).toBe(true);
+    expect(slotMachine.next("published")).toEqual([]);
+  });
+  it("packet: the commit is one final act; only an open packet is decided", () => {
+    expect(packetMachine.can("open", "committed")).toBe(true);
+    expect(packetMachine.next("committed")).toEqual([]);
+    expect(packetMachine.next("returned")).toEqual([]);
+  });
+  it("run: a pile sent back goes round again; a ratified run is done", () => {
+    expect(runMachine.can("awaiting_gate", "running")).toBe(true);
+    expect(runMachine.next("ratified")).toEqual([]);
+  });
+  it("style: the ratchet never demotes below proven", () => {
+    expect(styleMachine.can("proven", "candidate")).toBe(false);
+    expect(styleMachine.can("locked", "candidate")).toBe(false);
+    expect(styleMachine.can("locked", "proven")).toBe(true);
+  });
+});

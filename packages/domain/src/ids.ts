@@ -13,3 +13,37 @@ export function idSchema<const B extends string>(brand: B) {
   void brand;
   return z.string().min(1).brand<B>();
 }
+
+/* ── The record ids (plan §2.2) ───────────────────────────────────────────── */
+//
+// One brand per record, so a JobId handed where a PartId is wanted is a type
+// error rather than a lookup that quietly finds nothing. v1 had none of this:
+// every id was a bare `string`, and `lib/board/source.ts` had to prefix keys
+// with their source (`cull:...`) at runtime to keep them apart.
+
+export const runIdSchema = idSchema("RunId");
+export type RunId = z.output<typeof runIdSchema>;
+
+export const projectIdSchema = idSchema("ProjectId");
+export type ProjectId = z.output<typeof projectIdSchema>;
+
+export const partIdSchema = idSchema("PartId");
+export type PartId = z.output<typeof partIdSchema>;
+
+export const jobIdSchema = idSchema("JobId");
+export type JobId = z.output<typeof jobIdSchema>;
+
+export const packetIdSchema = idSchema("PacketId");
+export type PacketId = z.output<typeof packetIdSchema>;
+
+export const candidateIdSchema = idSchema("CandidateId");
+export type CandidateId = z.output<typeof candidateIdSchema>;
+
+export const libraryItemIdSchema = idSchema("LibraryItemId");
+export type LibraryItemId = z.output<typeof libraryItemIdSchema>;
+
+export const styleIdSchema = idSchema("StyleId");
+export type StyleId = z.output<typeof styleIdSchema>;
+
+export const slotIdSchema = idSchema("SlotId");
+export type SlotId = z.output<typeof slotIdSchema>;
