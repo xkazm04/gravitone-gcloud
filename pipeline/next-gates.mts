@@ -10,7 +10,8 @@
 //               another by package name, never by a relative path out of its own directory.
 //   cycles      zero import cycles among packages/ files (Tarjan over resolved edges).
 //   hygiene     zero `as unknown as`, `any`, JSON.parse outside packages/domain/src/door.ts,
-//               raw keydown listeners on window/document, and swallowed catches.
+//               raw keydown listeners (one named exemption: the keymap dispatcher may
+//               hold exactly ONE), and swallowed catches.
 //   size        no file over 400 lines.
 //
 // EXIT 0 clean · 1 violations · 2 could not run. A clean verdict over a walk that
@@ -38,6 +39,10 @@ const FORBIDDEN_ROOTS = ["app", "lib", "components", "pipeline"];
 const LAYER_ORDER = ["catalog", "domain", "kernel", "producers"];
 const MAX_LINES = 400;
 const DOOR = "packages/domain/src/door.ts";
+// The app's only keydown listener (plan §3.3: v1 had 30). Exempt by exact path, the
+// way DOOR is, and for ONE listener: a second addEventListener("keydown") in the same
+// file is a violation like any other, so the exemption cannot grow into a second bus.
+const KEYMAP_DISPATCHER = "packages/ui/src/keymap/dispatch.ts";
 
 class CouldNotRun extends Error {}
 
@@ -247,6 +252,7 @@ function hygiene(ctx: Ctx): Report {
   const violations: Violation[] = [];
   for (const s of ctx.srcs) {
     const sf = s.sf;
+    let keydownAllowance = s.rel === KEYMAP_DISPATCHER ? 1 : 0;
     const bad = (n: ts.Node, message: string): void => {
       violations.push({ file: s.rel, line: sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1, message });
     };
@@ -258,7 +264,8 @@ function hygiene(ctx: Ctx): Report {
         if (ts.isIdentifier(obj) && obj.text === "JSON" && name.text === "parse" && s.rel !== DOOR) bad(n, `JSON.parse outside ${DOOR}`);
         const first = n.arguments[0];
         if (name.text === "addEventListener" && first !== undefined && ts.isStringLiteralLike(first) && first.text === "keydown") {
-          bad(n, 'addEventListener("keydown") (keys go through the keymap registry)');
+          if (keydownAllowance > 0) keydownAllowance--;
+          else bad(n, `addEventListener("keydown") (keys go through the keymap registry; the one listener is ${KEYMAP_DISPATCHER})`);
         }
       }
       if (ts.isPropertyAccessExpression(n) && ts.isIdentifier(n.expression) && /^(window|document|globalThis)$/.test(n.expression.text) && n.name.text.toLowerCase() === "onkeydown") {

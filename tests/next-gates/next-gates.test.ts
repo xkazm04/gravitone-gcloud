@@ -29,6 +29,12 @@ const seeded: ReadonlyArray<readonly [fixture: string, file: string, line: numbe
   ["hygiene--any", "packages/domain/src/a.ts", 1],
   ["hygiene--json-parse", "packages/domain/src/a.ts", 1],
   ["hygiene--keydown", "packages/domain/src/a.ts", 1],
+  // The keymap dispatcher's exemption is one listener in one file: a listener in any
+  // other ui file, a second one in the dispatcher, and a same-named file elsewhere
+  // are all still caught.
+  ["hygiene--keydown-ui-other", "packages/ui/src/keymap/other.ts", 1],
+  ["hygiene--keydown-dispatcher-twice", "packages/ui/src/keymap/dispatch.ts", 2],
+  ["hygiene--keydown-dispatch-elsewhere", "packages/domain/src/keymap/dispatch.ts", 1],
   ["hygiene--catch-empty", "packages/domain/src/a.ts", 4],
   ["hygiene--catch-comment-only", "packages/domain/src/a.ts", 4],
   ["hygiene--catch-console-only", "packages/domain/src/a.ts", 4],
@@ -45,7 +51,7 @@ describe("seeded violations are refused", () => {
 });
 
 describe("clean twins pass", () => {
-  test.each(["boundaries--clean", "cycles--clean", "hygiene--clean", "size--clean"])("%s -> exit 0", (fixture) => {
+  test.each(["boundaries--clean", "cycles--clean", "hygiene--clean", "hygiene--keydown-dispatcher", "size--clean"])("%s -> exit 0", (fixture) => {
     const { code, out } = gate(fixture);
     expect(out).toContain("next-structure: clean");
     expect(code).toBe(0);
