@@ -305,7 +305,7 @@ behind the prompt and check changes of 2026-10-06. For the next author of a run:
   critique prompt now holds the post to a length ceiling (replacement, not addition) and the
   review prompt asks reviewers to say what a requested addition should displace. A reviewer's
   claim resting on a page it could not open is unverified and capped below `blocker`.
-- **Grok descoped (2026-10-14).** Four parallel runs the same day each lost grok to `cancelled: I'll read REVIEW.md…` before its first turn (cost $0.19 to $0.46 a run), so the engine, its envelope reader and its probes are gone and `gemini4` (agy, `gemini-4-argon`) holds its seat beside `gemini-3.8-flash`. Whether Gemini 4 completes rounds, and what it finds that the others do not, is what the second wave measures.
+- **Grok descoped (2026-10-14).** Four parallel runs the same day each lost grok to `cancelled: I'll read REVIEW.md…` before its first turn (cost $0.19 to $0.46 a run), so the engine, its envelope reader and its probes are gone and `gemini4` (agy, `gemini-4-argon`) holds its seat beside `gemini-3.8-flash`. Second wave (2026-10-14): at effort `high` and a 14 minute limit it timed out in 3 of the 4 first rounds (it completed round 1 in `blind-screening-and-redaction`, 13 findings and 2 blockers, and round 2 in `claim-verification-and-provenance`, 10 findings). It now runs at effort `medium` with a 35 minute limit.
 - **A panel of four gave two.** Grok returned 402 (balance), Gemini hung 25 minutes and then
   503ed (agy eligibility check). Both are recorded, not hidden, and the quorum of two held.
   Done (2026-10-06): agy's start-up line "Eligibility check failed: failed to get load code

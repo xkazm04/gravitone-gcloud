@@ -121,4 +121,4 @@ When several runs finish together, end with a table (check, findings accepted/re
 sources primary/counter, cost) and then what the batch says about the skill: which reviewer seat
 errored in every run (that is configuration, not bad luck: grok's `cancelled` in 4 of 4 runs on
 2026-10-14 is why it was descoped), whether every run ended in `rewrite`, and the wall-time spread.
-Per-reviewer yield is in `run.json` `critique.reviewers` and `<dir>/critique/round-<n>/reviews/<id>.json`.
+`gemini4` (Gemini 4 Argon) ran at `high` / 14 min and timed out in 3 of 4 first rounds, so it now runs at `medium` / 35 min; check that it completes. Per-reviewer yield is in `run.json` `critique.reviewers` and `<dir>/critique/round-<n>/reviews/<id>.json`.

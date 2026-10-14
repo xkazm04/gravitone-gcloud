@@ -258,7 +258,7 @@ test("panel: the operator's four reviewers, and a malformed panel is refused by 
   const p = await loadPanel(ROOT, {});
   expect(p.reviewers.map((r) => `${r.id}:${r.engine}:${r.model}@${r.effort}/${r.timeoutMin}`)).toEqual([
     "fable:claude:claude-fable-5-1@high/25",
-    "gemini4:agy:gemini-4-argon@high/14",
+    "gemini4:agy:gemini-4-argon@medium/35",
     "gemini:agy:gemini-3.8-flash@high/14",
     "gpt:codex:gpt-6-astra@high/25",
   ]);
@@ -487,7 +487,7 @@ test("write-back: publication.json `critique` and critique/{reviews,dispositions
   expect(pub.critique).toMatchObject({ rounds: 2, decision: "keep" });
   expect(pub.critique.reviewers).toEqual([
     { id: "fable", engine: "claude", model: "claude-fable-5-1", effort: "high", outcome: "completed", costUsd: 1 },
-    { id: "gemini4", engine: "agy", model: "gemini-4-argon", effort: "high", outcome: "unavailable" },
+    { id: "gemini4", engine: "agy", model: "gemini-4-argon", effort: "medium", outcome: "unavailable" },
     { id: "gemini", engine: "agy", model: "gemini-3.8-flash", effort: "high", outcome: "completed" },
     { id: "gpt", engine: "codex", model: "gpt-6-astra", effort: "high", outcome: "completed" },
   ]);

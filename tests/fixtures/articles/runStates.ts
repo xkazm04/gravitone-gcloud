@@ -74,7 +74,7 @@ export const SEED_STATES: readonly SeedState[] = [
 
 export const SEED_PANEL: ReviewerSpec[] = [
   { id: "fable", engine: "claude", model: "claude-fable-5-1", effort: "high", timeoutMin: 25 },
-  { id: "gemini4", engine: "agy", model: "gemini-4-argon", effort: "high", timeoutMin: 25 },
+  { id: "gemini4", engine: "agy", model: "gemini-4-argon", effort: "medium", timeoutMin: 35 },
   { id: "gemini", engine: "agy", model: "gemini-3.8-flash", effort: "high", timeoutMin: 25 },
   { id: "gpt", engine: "codex", model: "gpt-6-astra", effort: "high", timeoutMin: 25 },
 ];
