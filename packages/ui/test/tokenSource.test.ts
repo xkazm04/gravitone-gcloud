@@ -26,7 +26,7 @@ describe("tokenSource", () => {
     });
     const r = parseSource(dup);
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.error).toContain("duplicate token name: ink");
+    if (!r.ok) expect(r.error.message).toContain("duplicate token name: ink");
   });
 
   it("refuses non-JSON and a leading -- in a name (negative control)", () => {

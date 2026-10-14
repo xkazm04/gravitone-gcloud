@@ -10,7 +10,7 @@ import { parseSource } from "../packages/ui/src/tokenSource.ts";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const parsed = parseSource(readFileSync(join(root, "packages/ui/tokens/source.json"), "utf8"));
 if (!parsed.ok) {
-  console.error(`gen-tokens: ${parsed.error}`);
+  console.error(`gen-tokens: ${parsed.error.message}`);
   process.exit(1);
 }
 

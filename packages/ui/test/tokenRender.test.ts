@@ -5,7 +5,7 @@ import { parseSource, type TokenSource } from "../src/tokenSource.ts";
 
 function load(): TokenSource {
   const r = parseSource(readFileSync(new URL("../tokens/source.json", import.meta.url), "utf8"));
-  if (!r.ok) throw new Error(r.error);
+  if (!r.ok) throw r.error;
   return r.value;
 }
 

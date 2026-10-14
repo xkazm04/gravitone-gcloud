@@ -12,7 +12,7 @@ import { parseSource } from "../src/tokenSource.ts";
 const repo = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const sourceText = readFileSync(join(repo, "packages/ui/tokens/source.json"), "utf8");
 const parsed = parseSource(sourceText);
-if (!parsed.ok) throw new Error(parsed.error);
+if (!parsed.ok) throw parsed.error;
 const src = parsed.value;
 
 const made: string[] = [];

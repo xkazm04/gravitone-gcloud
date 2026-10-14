@@ -31,7 +31,7 @@ function listFiles(dir: string): string[] {
 
 const src = parseSource(readFileSync(join(root, "packages/ui/tokens/source.json"), "utf8"));
 if (!src.ok) {
-  console.error(`tokens:check: source.json invalid: ${src.error}`);
+  console.error(`tokens:check: source.json invalid: ${src.error.message}`);
   process.exit(2);
 }
 const allowed = tokenNames(src.value);

@@ -1,6 +1,8 @@
 // The schema door for packages/ui/tokens/source.json. Everything downstream (renderer, drift
 // check, raw-value lint) consumes the parsed Source, never the raw text.
 import { z } from "zod";
+import { parseJsonAt } from "@gt/domain/door";
+import type { Result } from "@gt/domain/errors";
 
 const tokenName = z.string().regex(/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/, "kebab-case, no leading --");
 
@@ -37,25 +39,9 @@ const sourceSchema = z
 export type TokenTier = "primitive" | "role";
 export type TokenSource = z.infer<typeof sourceSchema>;
 
-export type ParseResult =
-  | { readonly ok: true; readonly value: TokenSource }
-  | { readonly ok: false; readonly error: string };
-
-export function parseSource(text: string): ParseResult {
-  let raw: unknown;
-  try {
-    raw = JSON.parse(text);
-  } catch (e) {
-    return { ok: false, error: `source.json is not JSON: ${e instanceof Error ? e.message : String(e)}` };
-  }
-  const parsed = sourceSchema.safeParse(raw);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues.map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`).join("; "),
-    };
-  }
-  return { ok: true, value: parsed.data };
+/** source.json through the one schema door: never throws, the failure names the field. */
+export function parseSource(text: string): Result<TokenSource> {
+  return parseJsonAt("tokens/source.json", sourceSchema, text);
 }
 
 /** Every token name in the source: the allow-list a `var(--x)` must belong to. */

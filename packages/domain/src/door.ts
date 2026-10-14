@@ -1,9 +1,9 @@
 import type { z } from "zod";
 import { err, ok, type Result } from "./errors.ts";
 
-type Flat<T> = { [K in keyof T]: T[K] } & {};
+type Flat<T> = { [K in keyof T]: T[K] };
 type OptKeys<T> = {
-  [K in keyof T]-?: {} extends Pick<T, K> ? K : never;
+  [K in keyof T]-?: Record<never, never> extends Pick<T, K> ? K : never;
 }[keyof T];
 
 /**
