@@ -41,6 +41,22 @@ export const UNGUARDED_PROBE_BUDGET = 249;
 
 export const MUTANTS: Mutant[] = [
   {
+    id: "network-seal-lets-real-hosts-through",
+    probe: "network-seal.probe.spec.ts",
+    file: "tests/_seal.ts",
+    find: "if (u && !allowedUrl(u))",
+    replace: "if (u && false)",
+    why: "The node lane's seal stops refusing real hosts: a probe that reaches the internet by accident passes or fails on the network's state again, and every probe's verdict silently depends on it.",
+  },
+  {
+    id: "landing-takes-the-signal-barrel",
+    probe: "landing-isolation.probe.spec.ts",
+    file: "app/_landing/parts.tsx",
+    find: 'from "@/components/ui/signal/StaleBadge"',
+    replace: 'from "@/components/ui/signal"',
+    why: "The public landing imports StaleBadge through the barrel again, and the barrel's UpstreamBreak drags lib/projects and IndexedDB into a page with no signed-in work - the path Phase 0.3 cut.",
+  },
+  {
     id: "ad-overlay-fit-ignores-width",
     probe: "ad-overlay-fit.probe.spec.ts",
     file: "lib/adRender.ts",
