@@ -1,0 +1,36 @@
+/* Verbatim copy of the :root block of the approved prototype's tokens.css
+   (.contest/arena/foundry-next-design-r4/polish/variant-1/tokens.css, git-ignored there).
+   The generated CSS must carry every value here unchanged. */
+:root{
+  /* ground */
+  --ink:#080a10; --ink-1:#0b0e15; --ink-2:#10141d; --ink-3:#161b27; --ink-4:#1d2331;
+  --ink-bright:#f3f6fb; --text:#d9dfea; --muted:#9aa3b6; --faint:#7a8398;
+  --hair:rgba(255,255,255,.08); --hair-2:rgba(255,255,255,.14); --hair-3:rgba(255,255,255,.22);
+  /* signal — one meaning each */
+  --cyan:#67e8f9;    /* running · foundry · focus */
+  --amber:#fbbf24;   /* awaiting the operator · the weir */
+  --emerald:#6ee7b7; /* ratified · library */
+  --rose:#fb7185;    /* failed · blocked · rejected */
+  --violet:#a78bfa;  /* calendar · scheduled out */
+  --cyan-a:rgba(103,232,249,.10); --violet-a:rgba(167,139,250,.10); --emerald-a:rgba(110,231,183,.10); --amber-a:rgba(251,191,36,.10); --rose-a:rgba(251,113,133,.12);
+  --wall:#c88f1c; --wall-hi:#ffd66b;
+  /* actors (ledger) */
+  --actor-operator:#fbbf24; --actor-agent:#a78bfa; --actor-machine:#67e8f9;
+  /* type */
+  --sans:"Inter","Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;
+  --mono:"JetBrains Mono","Cascadia Mono",Consolas,ui-monospace,monospace;
+  --serif:"Iowan Old Style","Charter","Georgia",serif;
+  --fs-micro:12px;   /* mono caps labels, chips, tallies — the floor minimum */
+  --fs-meta:13px;    /* mono metadata */
+  --fs-ui:14px;      /* rows, controls, body-small */
+  --fs-body:15px;    /* body */
+  --fs-h3:16px; --fs-h2:19px; --fs-read:17px; --fs-h1:32px;
+  /* space · radii */
+  --sp-1:4px; --sp-2:6px; --sp-3:8px; --sp-4:10px; --sp-5:12px; --sp-6:18px; --sp-7:24px;
+  --r-xs:5px; --r-sm:7px; --r:10px; --r-lg:14px;
+  /* motion */
+  --ease:cubic-bezier(.22,1,.36,1); --dur-fast:.15s; --dur:.3s; --dur-slow:.6s;
+  /* frame */
+  --hdr-h:56px; --head-h:40px; --cal-w:clamp(260px,19vw,340px);
+  --cols:52px minmax(0,1.32fr) minmax(0,.9fr) minmax(0,1fr);
+}

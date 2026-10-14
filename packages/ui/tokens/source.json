@@ -1,0 +1,108 @@
+{
+  "source": "approved prototype .contest/arena/foundry-next-design-r4/polish/variant-1/tokens.css (:root), plus the roles admitted in tokens/ADMISSION.md",
+  "groups": [
+    {"id": "ground", "tokens": [
+      {"name": "ink", "tier": "primitive", "value": "#080a10"},
+      {"name": "ink-1", "tier": "primitive", "value": "#0b0e15"},
+      {"name": "ink-2", "tier": "primitive", "value": "#10141d"},
+      {"name": "ink-3", "tier": "primitive", "value": "#161b27"},
+      {"name": "ink-4", "tier": "primitive", "value": "#1d2331"},
+      {"name": "ink-bright", "tier": "primitive", "value": "#f3f6fb"},
+      {"name": "text", "tier": "primitive", "value": "#d9dfea"},
+      {"name": "muted", "tier": "primitive", "value": "#9aa3b6"},
+      {"name": "faint", "tier": "primitive", "value": "#7a8398"},
+      {"name": "hair", "tier": "primitive", "value": "rgba(255,255,255,.08)"},
+      {"name": "hair-2", "tier": "primitive", "value": "rgba(255,255,255,.14)"},
+      {"name": "hair-3", "tier": "primitive", "value": "rgba(255,255,255,.22)"}
+    ]},
+    {"id": "signal", "tokens": [
+      {"name": "cyan", "tier": "primitive", "value": "#67e8f9", "note": "running · foundry · focus"},
+      {"name": "amber", "tier": "primitive", "value": "#fbbf24", "note": "awaiting the operator · the weir"},
+      {"name": "emerald", "tier": "primitive", "value": "#6ee7b7", "note": "ratified · library"},
+      {"name": "rose", "tier": "primitive", "value": "#fb7185", "note": "failed · blocked · rejected"},
+      {"name": "violet", "tier": "primitive", "value": "#a78bfa", "note": "calendar · scheduled out"},
+      {"name": "cyan-a", "tier": "primitive", "value": "rgba(103,232,249,.10)"},
+      {"name": "violet-a", "tier": "primitive", "value": "rgba(167,139,250,.10)"},
+      {"name": "emerald-a", "tier": "primitive", "value": "rgba(110,231,183,.10)"},
+      {"name": "amber-a", "tier": "primitive", "value": "rgba(251,191,36,.10)"},
+      {"name": "rose-a", "tier": "primitive", "value": "rgba(251,113,133,.12)"},
+      {"name": "wall", "tier": "primitive", "value": "#c88f1c"},
+      {"name": "wall-hi", "tier": "primitive", "value": "#ffd66b"}
+    ]},
+    {"id": "actors", "tokens": [
+      {"name": "actor-operator", "tier": "primitive", "value": "#fbbf24"},
+      {"name": "actor-agent", "tier": "primitive", "value": "#a78bfa"},
+      {"name": "actor-machine", "tier": "primitive", "value": "#67e8f9"}
+    ]},
+    {"id": "type", "tokens": [
+      {"name": "sans", "tier": "primitive", "value": "\"Inter\",\"Segoe UI Variable Text\",\"Segoe UI\",system-ui,-apple-system,sans-serif"},
+      {"name": "mono", "tier": "primitive", "value": "\"JetBrains Mono\",\"Cascadia Mono\",Consolas,ui-monospace,monospace"},
+      {"name": "serif", "tier": "primitive", "value": "\"Iowan Old Style\",\"Charter\",\"Georgia\",serif"},
+      {"name": "fs-micro", "tier": "primitive", "value": "12px", "note": "mono caps labels, chips, tallies — the floor minimum"},
+      {"name": "fs-meta", "tier": "primitive", "value": "13px", "note": "mono metadata"},
+      {"name": "fs-ui", "tier": "primitive", "value": "14px", "note": "rows, controls, body-small"},
+      {"name": "fs-body", "tier": "primitive", "value": "15px", "note": "body"},
+      {"name": "fs-h3", "tier": "primitive", "value": "16px"},
+      {"name": "fs-h2", "tier": "primitive", "value": "19px"},
+      {"name": "fs-read", "tier": "primitive", "value": "17px"},
+      {"name": "fs-h1", "tier": "primitive", "value": "32px"}
+    ]},
+    {"id": "space", "tokens": [
+      {"name": "sp-1", "tier": "primitive", "value": "4px"},
+      {"name": "sp-2", "tier": "primitive", "value": "6px"},
+      {"name": "sp-3", "tier": "primitive", "value": "8px"},
+      {"name": "sp-4", "tier": "primitive", "value": "10px"},
+      {"name": "sp-5", "tier": "primitive", "value": "12px"},
+      {"name": "sp-6", "tier": "primitive", "value": "18px"},
+      {"name": "sp-7", "tier": "primitive", "value": "24px"}
+    ]},
+    {"id": "radii", "tokens": [
+      {"name": "r-xs", "tier": "primitive", "value": "5px"},
+      {"name": "r-sm", "tier": "primitive", "value": "7px"},
+      {"name": "r", "tier": "primitive", "value": "10px"},
+      {"name": "r-lg", "tier": "primitive", "value": "14px"}
+    ]},
+    {"id": "motion", "tokens": [
+      {"name": "ease", "tier": "primitive", "value": "cubic-bezier(.22,1,.36,1)"},
+      {"name": "dur-fast", "tier": "primitive", "value": ".15s"},
+      {"name": "dur", "tier": "primitive", "value": ".3s"},
+      {"name": "dur-slow", "tier": "primitive", "value": ".6s"}
+    ]},
+    {"id": "frame", "tokens": [
+      {"name": "hdr-h", "tier": "primitive", "value": "56px"},
+      {"name": "head-h", "tier": "primitive", "value": "40px"},
+      {"name": "cal-w", "tier": "primitive", "value": "clamp(260px,19vw,340px)"},
+      {"name": "cols", "tier": "primitive", "value": "52px minmax(0,1.32fr) minmax(0,.9fr) minmax(0,1fr)"}
+    ]},
+    {"id": "roles-surface", "tokens": [
+      {"name": "wash", "tier": "role", "value": "rgba(255,255,255,.04)", "note": "Resting hover fill on a neutral surface."},
+      {"name": "wash-hi", "tier": "role", "value": "rgba(255,255,255,.05)", "note": "Hover or selected fill on a control, one step above wash."},
+      {"name": "focus-line", "tier": "role", "value": "rgba(103,232,249,.55)", "note": "Border of a field or card that has focus or is hovered."},
+      {"name": "ink-veil", "tier": "role", "value": "rgba(8,10,16,.85)", "note": "Translucent ink behind a glyph or label sitting on imagery."},
+      {"name": "shadow", "tier": "role", "value": "rgba(0,0,0,.6)", "note": "Colour of every elevation shadow."},
+      {"name": "letterbox", "tier": "role", "value": "#000", "note": "Ground behind letterboxed video and imagery."},
+      {"name": "paper", "tier": "role", "value": "#ece6d8", "note": "Ground of a paper (script or document) surface."}
+    ]},
+    {"id": "roles-text", "tokens": [
+      {"name": "error-text", "tier": "role", "value": "#fecdd3", "note": "Text of an error message on a rose wash."},
+      {"name": "done-text", "tier": "role", "value": "#a7f3d0", "note": "Text of a ratified or done state, one step lighter than emerald."},
+      {"name": "illustrative-text", "tier": "role", "value": "#fcd77a", "note": "Text that marks content as illustrative rather than real."},
+      {"name": "reference-text", "tier": "role", "value": "#c3cad8", "note": "Text and rim of a reference-mode item."},
+      {"name": "reading", "tier": "role", "value": "#e9e4d8", "note": "Serif reading text on the dark ground."}
+    ]},
+    {"id": "roles-shape", "tokens": [
+      {"name": "r-chip", "tier": "role", "value": "6px", "note": "Corner of a chip, tally or small tag."},
+      {"name": "r-control", "tier": "role", "value": "8px", "note": "Corner of a button, segment or nav control."}
+    ]},
+    {"id": "roles-layer", "tokens": [
+      {"name": "z-docked", "tier": "role", "value": "25", "note": "Detail or month surface docked over a route."},
+      {"name": "z-header", "tier": "role", "value": "30", "note": "The studio header."},
+      {"name": "z-scrim", "tier": "role", "value": "40", "note": "The scrim behind a level sheet."},
+      {"name": "z-sheet", "tier": "role", "value": "50", "note": "The level sheet."},
+      {"name": "z-popover", "tier": "role", "value": "60", "note": "A popover anchored to a control."},
+      {"name": "z-tooltip", "tier": "role", "value": "80", "note": "A hint tooltip."},
+      {"name": "z-flyer", "tier": "role", "value": "200", "note": "A flyer animating between surfaces."},
+      {"name": "z-toast", "tier": "role", "value": "210", "note": "A toast above everything."}
+    ]}
+  ]
+}

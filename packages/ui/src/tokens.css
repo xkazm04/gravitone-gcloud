@@ -1,0 +1,106 @@
+/* GENERATED from packages/ui/tokens/source.json by pipeline/gen-tokens.mts - do not edit.
+   Regenerate with: npm run tokens:gen */
+:root {
+  /* ground */
+  --faint: #7a8398;
+  --hair: rgba(255,255,255,.08);
+  --hair-2: rgba(255,255,255,.14);
+  --hair-3: rgba(255,255,255,.22);
+  --ink: #080a10;
+  --ink-1: #0b0e15;
+  --ink-2: #10141d;
+  --ink-3: #161b27;
+  --ink-4: #1d2331;
+  --ink-bright: #f3f6fb;
+  --muted: #9aa3b6;
+  --text: #d9dfea;
+
+  /* signal */
+  --amber: #fbbf24; /* awaiting the operator · the weir */
+  --amber-a: rgba(251,191,36,.10);
+  --cyan: #67e8f9; /* running · foundry · focus */
+  --cyan-a: rgba(103,232,249,.10);
+  --emerald: #6ee7b7; /* ratified · library */
+  --emerald-a: rgba(110,231,183,.10);
+  --rose: #fb7185; /* failed · blocked · rejected */
+  --rose-a: rgba(251,113,133,.12);
+  --violet: #a78bfa; /* calendar · scheduled out */
+  --violet-a: rgba(167,139,250,.10);
+  --wall: #c88f1c;
+  --wall-hi: #ffd66b;
+
+  /* actors */
+  --actor-agent: #a78bfa;
+  --actor-machine: #67e8f9;
+  --actor-operator: #fbbf24;
+
+  /* type */
+  --fs-body: 15px; /* body */
+  --fs-h1: 32px;
+  --fs-h2: 19px;
+  --fs-h3: 16px;
+  --fs-meta: 13px; /* mono metadata */
+  --fs-micro: 12px; /* mono caps labels, chips, tallies — the floor minimum */
+  --fs-read: 17px;
+  --fs-ui: 14px; /* rows, controls, body-small */
+  --mono: "JetBrains Mono","Cascadia Mono",Consolas,ui-monospace,monospace;
+  --sans: "Inter","Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;
+  --serif: "Iowan Old Style","Charter","Georgia",serif;
+
+  /* space */
+  --sp-1: 4px;
+  --sp-2: 6px;
+  --sp-3: 8px;
+  --sp-4: 10px;
+  --sp-5: 12px;
+  --sp-6: 18px;
+  --sp-7: 24px;
+
+  /* radii */
+  --r: 10px;
+  --r-lg: 14px;
+  --r-sm: 7px;
+  --r-xs: 5px;
+
+  /* motion */
+  --dur: .3s;
+  --dur-fast: .15s;
+  --dur-slow: .6s;
+  --ease: cubic-bezier(.22,1,.36,1);
+
+  /* frame */
+  --cal-w: clamp(260px,19vw,340px);
+  --cols: 52px minmax(0,1.32fr) minmax(0,.9fr) minmax(0,1fr);
+  --hdr-h: 56px;
+  --head-h: 40px;
+
+  /* roles-surface */
+  --focus-line: rgba(103,232,249,.55); /* Border of a field or card that has focus or is hovered. */
+  --ink-veil: rgba(8,10,16,.85); /* Translucent ink behind a glyph or label sitting on imagery. */
+  --letterbox: #000; /* Ground behind letterboxed video and imagery. */
+  --paper: #ece6d8; /* Ground of a paper (script or document) surface. */
+  --shadow: rgba(0,0,0,.6); /* Colour of every elevation shadow. */
+  --wash: rgba(255,255,255,.04); /* Resting hover fill on a neutral surface. */
+  --wash-hi: rgba(255,255,255,.05); /* Hover or selected fill on a control, one step above wash. */
+
+  /* roles-text */
+  --done-text: #a7f3d0; /* Text of a ratified or done state, one step lighter than emerald. */
+  --error-text: #fecdd3; /* Text of an error message on a rose wash. */
+  --illustrative-text: #fcd77a; /* Text that marks content as illustrative rather than real. */
+  --reading: #e9e4d8; /* Serif reading text on the dark ground. */
+  --reference-text: #c3cad8; /* Text and rim of a reference-mode item. */
+
+  /* roles-shape */
+  --r-chip: 6px; /* Corner of a chip, tally or small tag. */
+  --r-control: 8px; /* Corner of a button, segment or nav control. */
+
+  /* roles-layer */
+  --z-docked: 25; /* Detail or month surface docked over a route. */
+  --z-flyer: 200; /* A flyer animating between surfaces. */
+  --z-header: 30; /* The studio header. */
+  --z-popover: 60; /* A popover anchored to a control. */
+  --z-scrim: 40; /* The scrim behind a level sheet. */
+  --z-sheet: 50; /* The level sheet. */
+  --z-toast: 210; /* A toast above everything. */
+  --z-tooltip: 80; /* A hint tooltip. */
+}
