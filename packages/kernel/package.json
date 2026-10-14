@@ -1,0 +1,13 @@
+{
+  "name": "@gt/kernel",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@gt/domain": "0.0.0",
+    "zod": "^4.6.7"
+  }
+}
