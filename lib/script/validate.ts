@@ -79,6 +79,14 @@ export const COMPOSE_TEMPLATE_RANGES: Readonly<Record<string, readonly [number, 
   "free-form": [15, 600],
 };
 
+/** Measured spoken delivery tops out near 252 wpm (talk-driven, dense, numerate);
+ *  the ceiling adds slack so only an arithmetic impossibility is refused. The
+ *  floor is far below professional narration (~130-175) and only advises. */
+const MAX_SPOKEN_WPM = 260;
+const MIN_SPOKEN_WPM = 100;
+/** A render may overshoot its own declared word budget by this factor. */
+const RATE_BUDGET_SLACK = 1.1;
+
 const own = (o: object, k: string) => Object.prototype.hasOwnProperty.call(o, k);
 
 /** The seconds a render may run for THIS project: `targetS` within the Cut
@@ -239,7 +247,7 @@ export function composeSchema(engines: readonly string[]) {
 /* ─────────────────────────────── the verdict ─────────────────────────────── */
 
 export interface DraftFinding {
-  rule: "attribution" | "connector" | "engine" | "duration" | "cut";
+  rule: "attribution" | "connector" | "engine" | "duration" | "cut" | "rate";
   renderId: string;
   verdict: Verdict;
   detail: string;
@@ -431,6 +439,30 @@ export function parseDraft(raw: string, ctx: ComposeContext): ComposeOutcome {
       });
 
     const spoken = beats.reduce((n, b) => n + words(b.text), 0);
+
+    // RATE x DURATION = WORD BUDGET (registry: creator-voice-and-tone/delivery-rate-budgeting).
+    // The clock above is the sum of seconds the ENGINE declared per beat, so
+    // "inside the band" is the engine agreeing with itself: 1,374 words declared
+    // as 300 s (275 wpm, unspeakable) passed every law until this one. Over-length
+    // is the refused direction because the cost of compressing to fit lands on
+    // hedges and figures first; under-fill is advisory (the slot is not full).
+    if (spoken > r.wordBudget * RATE_BUDGET_SLACK)
+      findings.push({
+        rule: "rate", renderId: id, verdict: "violation",
+        detail: `${id} speaks ${spoken} words against its own budget of ${Math.round(r.wordBudget)}; a script over budget gets cut at render time, and the cheapest words to cut are hedges and figures. Cut it here, or lengthen the video.`,
+      });
+    const impliedWpm = durationS ? (spoken / durationS) * 60 : 0;
+    if (impliedWpm > MAX_SPOKEN_WPM)
+      findings.push({
+        rule: "rate", renderId: id, verdict: "violation",
+        detail: `${id} puts ${spoken} words in ${durationS}s (${Math.round(impliedWpm)} wpm); no narrator speaks faster than ~${MAX_SPOKEN_WPM}, so the declared clock is not the one that will render.`,
+      });
+    else if (impliedWpm < MIN_SPOKEN_WPM)
+      findings.push({
+        rule: "rate", renderId: id, verdict: "unmeasured",
+        detail: `${id} puts ${spoken} words in ${durationS}s (${Math.round(impliedWpm)} wpm): the slot is mostly silence, so the rendered runtime will run well short of the declared one.`,
+      });
+
     return {
       form: "explainer",
       id,

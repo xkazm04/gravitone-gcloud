@@ -203,6 +203,37 @@ test("case 2: AND THEN between two movement beats is a finding from the gate's o
   expect(gated.blocked).toBe(true);
 });
 
+/* ───────────────────── 2b · rate x duration = word budget ───────────────── */
+
+test("case 2b: words declared into an impossible clock, or past the render's own budget, are refused; a thin slot only advises", () => {
+  const scaled = (factor: number, budget?: number): string => {
+    const raw = JSON.parse(answerOf("compose-ok")) as { renders: { wordBudget: number; beats: { text: string }[] }[] };
+    const r = raw.renders[0]!;
+    for (const b of r.beats) b.text = Array(factor).fill(b.text).join(" ");
+    if (budget) r.wordBudget = budget;
+    raw.renders = [r];
+    return JSON.stringify(raw);
+  };
+  const rate = (raw: string) => {
+    try {
+      return parseDraft(raw, ctx()).kind === "draft" ? "accepted" : "refused";
+    } catch (e) {
+      expect(e).toBeInstanceOf(DraftError);
+      return (e as DraftError).findings.filter((f) => f.rule === "rate").map((f) => f.detail).join(" | ") || "other";
+    }
+  };
+  // 1,374 words in 300 s is 275 wpm even when the engine raised its own budget to fit.
+  expect(rate(scaled(6, 1400))).toMatch(/275 wpm/);
+  // 1,145 words in 300 s is 229 wpm, inside the band, but 20% over the render's own 950-word budget.
+  expect(rate(scaled(5))).toMatch(/against its own budget of 950/);
+  // 916 words (183 wpm) inside a 950 budget is untouched.
+  expect(rate(scaled(4))).toBe("accepted");
+  // The recorded answer is thin (46 wpm): an advisory finding, never a refusal.
+  const thin = parseDraft(answerOf("compose-ok"), ctx());
+  expect(thin.kind).toBe("draft");
+  if (thin.kind === "draft") expect(thin.findings.some((f) => f.rule === "rate" && f.verdict === "unmeasured")).toBe(true);
+});
+
 /* ───────────────────────────── 3 · no engine fits ───────────────────────── */
 
 test("case 3: a notebook with no engine at good or better is a 200 refusal, no turn, no draft", async () => {
