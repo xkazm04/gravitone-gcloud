@@ -141,7 +141,7 @@
       "kind": "generation",
       "status": "active",
       "component": "lib/articles/engine.ts::reviewOnce -> lib/agent/cliSeam.ts::runReviewer()",
-      "expected_models": ["claude-fable-5-1", "gemini-3.8-flash-high", "gemini-4-argon-high", "gpt-6-astra"],
+      "expected_models": ["claude-opus-5-5", "gemini-3.8-flash-high", "gemini-4-argon-high", "gpt-6-astra"],
       "owner": "gravity"
     },
     {

@@ -199,7 +199,7 @@ test("case 2b: the critique panel's reading of every critique state, through GET
   expect(running.driving).toBe(true);
   expect(nodesOf(running.run, true).map((n) => n.state)).toEqual(["done", "done", "done", "running", "pending", "pending"]);
   const live = reviewerRows(running.critique!, 1, true);
-  expect(live.map((r) => `${r.spec.id}:${r.state}`)).toEqual(["fable:completed", "gemini4:reviewing", "gemini:reviewing", "gpt:completed"]);
+  expect(live.map((r) => `${r.spec.id}:${r.state}`)).toEqual(["opus:completed", "gemini4:reviewing", "gemini:reviewing", "gpt:completed"]);
   expect(reviewerRows(running.critique!, 1, false).map((r) => r.state)).toEqual(["completed", "not-run", "not-run", "completed"]);
   expect(roundTimeline(running.critique!)[0]).toMatchObject({ round: 1, completed: 2, of: 4, closed: false });
   expect(roundTimeline(running.critique!)[0].decision).toBeUndefined();
@@ -240,7 +240,7 @@ test("case 2b: the critique panel's reading of every critique state, through GET
   expect(countBySeverity(rewrite.critique!.rounds[1].reviews[0].findings)).toEqual({ blocker: 0, major: 0, minor: 1 });
   // cost only where the CLI reported one: the claude reviewer has it, codex and agy do not
   const cost = Object.fromEntries((rewrite.run.critique?.reviewers ?? []).map((r) => [r.id, r.costUsd]));
-  expect(cost.fable).toBeGreaterThan(0);
+  expect(cost.opus).toBeGreaterThan(0);
   expect(cost.gpt).toBeUndefined();
   expect(cost.gemini).toBeUndefined();
 });

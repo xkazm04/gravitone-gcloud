@@ -133,7 +133,7 @@ provider the operator has a login for review it, and the writer answers them. Th
 `lib/articles/critique.ts`.
 
 The panel is `pipeline/article-reviewers.json` (`ARTICLES_REVIEWERS_FILE`, or `--reviewers <file>`
-on the CLI, overrides it): `fable` (claude, `claude-fable-5-1`),
+on the CLI, overrides it): `opus` (claude, `claude-opus-5-5`, effort `xhigh`; it replaced `claude-fable-5-1` on 2026-10-15 until Fable 5.5 arrives),
 `gemini` (agy, `gemini-3.8-flash`), `gemini4` (agy, `gemini-4-argon`, added 2026-10-14 in the seat grok left), `gpt` (codex, `gpt-6-astra`; `gpt-6.1-astra` is not offered
 on this account), each at effort `high` with `timeoutMin` 25. The run snapshots the panel into
 `critique/reviewers.json` when its critique begins, and every round and resume reads the snapshot.

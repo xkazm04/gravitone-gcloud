@@ -88,8 +88,8 @@ const call = { model: "m", effort: "high", cwd: "C:/ws", prompt: "ARTICLE-REVIEW
 
 test("argv: each engine's read-only fence", () => {
   // claude: the writer's fence, research and read only
-  const c = reviewerCommand({ ...call, engine: "claude", model: "claude-fable-5-1" });
-  expect(c.argv).toEqual(agentArgs({ model: "claude-fable-5-1", effort: "high", tools: ["WebSearch", "WebFetch", "Read"] }));
+  const c = reviewerCommand({ ...call, engine: "claude", model: "claude-opus-5-5" });
+  expect(c.argv).toEqual(agentArgs({ model: "claude-opus-5-5", effort: "high", tools: ["WebSearch", "WebFetch", "Read"] }));
   expect(c.argv[c.argv.indexOf("--tools") + 1]).toBe("WebSearch,WebFetch,Read");
   expect(c.argv[c.argv.indexOf("--allowed-tools") + 1]).toBe("WebSearch,WebFetch,Read");
   expect(c.argv).toEqual(expect.arrayContaining(["--restricted", "--safe-mode", "--strict-mcp-config", "--disable-slash-commands", "--no-session-persistence"]));
@@ -228,21 +228,21 @@ test("schema: a review is held to the contract; the panel says who reviewed", ()
 });
 
 const reviewsOf = (): Review[] => [
-  { reviewer: "fable", model: "m", effort: "high", verdict: "revise", summary: "s", findings: [finding() as Review["findings"][number], finding({ id: "f2", severity: "minor", kind: "format" }) as Review["findings"][number]] },
+  { reviewer: "opus", model: "m", effort: "high", verdict: "revise", summary: "s", findings: [finding() as Review["findings"][number], finding({ id: "f2", severity: "minor", kind: "format" }) as Review["findings"][number]] },
   { reviewer: "gpt", model: "m", effort: "high", verdict: "publish", summary: "s", findings: [] },
 ];
 
 test("schema: every finding exactly one disposition with a reason; the decision is a closed word", () => {
   const good = [
-    { reviewer: "fable", findingId: "f1", disposition: "accepted", reason: "r", action: "a", round: 9, extra: true },
-    { reviewer: "fable", findingId: "f2", disposition: "rejected", reason: "r", action: "  " },
+    { reviewer: "opus", findingId: "f1", disposition: "accepted", reason: "r", action: "a", round: 9, extra: true },
+    { reviewer: "opus", findingId: "f2", disposition: "rejected", reason: "r", action: "  " },
   ];
   expect(validateDispositions(good, reviewsOf())).toEqual([
-    { reviewer: "fable", findingId: "f1", disposition: "accepted", reason: "r", action: "a" },
-    { reviewer: "fable", findingId: "f2", disposition: "rejected", reason: "r" },
+    { reviewer: "opus", findingId: "f1", disposition: "accepted", reason: "r", action: "a" },
+    { reviewer: "opus", findingId: "f2", disposition: "rejected", reason: "r" },
   ]);
-  expect(() => validateDispositions([good[0]], reviewsOf())).toThrow(/fable\/f2 has no disposition/);
-  expect(() => validateDispositions([...good, good[1]], reviewsOf())).toThrow(/fable\/f2 has 2 dispositions/);
+  expect(() => validateDispositions([good[0]], reviewsOf())).toThrow(/opus\/f2 has no disposition/);
+  expect(() => validateDispositions([...good, good[1]], reviewsOf())).toThrow(/opus\/f2 has 2 dispositions/);
   expect(() => validateDispositions([good[0], { ...good[1], reason: "" }], reviewsOf())).toThrow(/empty reason/);
   expect(() => validateDispositions([...good, { reviewer: "gpt", findingId: "f9", disposition: "accepted", reason: "r" }], reviewsOf())).toThrow(/gpt\/f9, which no review in this round holds/);
   expect(() => validateDispositions([good[0], { ...good[1], disposition: "ignored" }], reviewsOf())).toThrow(/disposition must be one of accepted, rejected, deferred/);
@@ -257,7 +257,7 @@ test("schema: every finding exactly one disposition with a reason; the decision 
 test("panel: the operator's four reviewers, and a malformed panel is refused by name", async () => {
   const p = await loadPanel(ROOT, {});
   expect(p.reviewers.map((r) => `${r.id}:${r.engine}:${r.model}@${r.effort}/${r.timeoutMin}`)).toEqual([
-    "fable:claude:claude-fable-5-1@high/25",
+    "opus:claude:claude-opus-5-5@xhigh/25",
     "gemini4:agy:gemini-4-argon@medium/35",
     "gemini:agy:gemini-3.8-flash@high/14",
     "gpt:codex:gpt-6-astra@high/25",
@@ -278,9 +278,9 @@ test("flow: keep after round 1 — four reviewers in parallel, the writer answer
   const run = await toGate();
   expect(run.status, run.error).toBe("awaiting-approval");
   expect(run.critique).toMatchObject({ rounds: 1, decision: "keep", findings: { total: 8, accepted: 4, rejected: 4, deferred: 0 } });
-  expect(run.critique?.reviewers.map((r) => `${r.id}:${r.engine}:${r.outcome}`)).toEqual(["fable:claude:completed", "gemini4:agy:completed", "gemini:agy:completed", "gpt:codex:completed"]);
+  expect(run.critique?.reviewers.map((r) => `${r.id}:${r.engine}:${r.outcome}`)).toEqual(["opus:claude:completed", "gemini4:agy:completed", "gemini:agy:completed", "gpt:codex:completed"]);
   expect(run.critique?.reviewers.every((r) => r.costUsd === undefined), "the stubs report no cost, so none is recorded").toBe(true);
-  for (const id of ["fable", "gemini4", "gemini", "gpt"]) expect(existsSync(at(run.id, `critique/round-1/reviews/${id}.json`)), id).toBe(true);
+  for (const id of ["opus", "gemini4", "gemini", "gpt"]) expect(existsSync(at(run.id, `critique/round-1/reviews/${id}.json`)), id).toBe(true);
   expect(json(run.id, "critique/round-1/decision.json")).toMatchObject({ round: 1, decision: "keep" });
   expect(existsSync(at(run.id, "critique/round-1/revised.json"))).toBe(false);
   expect(existsSync(at(run.id, "critique/round-2"))).toBe(false);
@@ -314,7 +314,7 @@ test("flow: rewrite then keep — round 2 reviews the revised post", async () =>
   expect(existsSync(at(run.id, "critique/round-1/researched.json"))).toBe(false);
   expect(readFileSync(at(run.id, "post/post.md"), "utf8")).toContain("The price was revised after review round 1 [2].");
   // round 2 reviewed the REVISED post
-  expect(readFileSync(at(run.id, "critique/round-2/prompts/fable.md"), "utf8")).toContain("The price was revised after review round 1 [2].");
+  expect(readFileSync(at(run.id, "critique/round-2/prompts/opus.md"), "utf8")).toContain("The price was revised after review round 1 [2].");
   expect(json<{ findings: unknown[] }>(run.id, "critique/round-2/reviews/gpt.json").findings).toHaveLength(1);
   // 4 x 2 round-1 findings + 4 x 1 round-2 findings, every one answered
   expect(run.critique?.findings.total).toBe(12);
@@ -370,7 +370,7 @@ test("flow: two of a three-reviewer panel unavailable is critique-quorum, before
     panel,
     JSON.stringify({
       reviewers: [
-        { id: "fable", engine: "claude", model: "claude-fable-5-1", effort: "high" },
+        { id: "opus", engine: "claude", model: "claude-opus-5-5", effort: "high" },
         { id: "gemini4", engine: "agy", model: "gemini-4-argon", effort: "high" },
         { id: "gpt", engine: "codex", model: "gpt-6-astra", effort: "high" },
       ],
@@ -403,7 +403,7 @@ test("resume inside the critique: a reviewer whose review exists never runs agai
   const done = await driveRun(failed.id, deps());
   expect(done.status, done.error).toBe("awaiting-approval");
   const after = argvLog().filter((l) => !l.entries.includes("inputs")).slice(before.length);
-  expect(after.map((l) => l.engine).sort(), "fable (claude) completed before and is not re-run").toEqual(["agy", "agy", "codex"]);
+  expect(after.map((l) => l.engine).sort(), "opus (claude) completed before and is not re-run").toEqual(["agy", "agy", "codex"]);
   expect(done.critique?.reviewers.every((r) => r.outcome === "completed")).toBe(true);
   // the research, outline and draft were not re-run either
   expect(argvLog().filter((l) => l.entries.includes("inputs"))).toHaveLength(3 + 1);
@@ -428,12 +428,12 @@ test("resume inside the critique: an invalid writer answer is retried once, then
 });
 
 test("a malformed review gets one retry; twice malformed is errored; a reviewer's write is recorded", async () => {
-  process.env.STUB_REVIEWERS = "gemini=garbage-once,gpt=garbage,fable=write";
+  process.env.STUB_REVIEWERS = "gemini=garbage-once,gpt=garbage,opus=write";
   const run = await toGate();
   expect(run.status, run.error).toBe("awaiting-approval");
   expect(json(run.id, "critique/round-1/receipts/gemini.json")).toMatchObject({ outcome: "completed", attempts: 2 });
   expect(json(run.id, "critique/round-1/receipts/gpt.json")).toMatchObject({ outcome: "errored", attempts: 2, errors: [expect.stringMatching(/^malformed review twice: the final message holds no JSON object/)] });
-  expect(json(run.id, "critique/round-1/receipts/fable.json")).toMatchObject({ outcome: "completed", wrote: ["notes.txt"] });
+  expect(json(run.id, "critique/round-1/receipts/opus.json")).toMatchObject({ outcome: "completed", wrote: ["notes.txt"] });
   expect(json(run.id, "critique/round-1/receipts/gemini4.json")).toMatchObject({ outcome: "completed", attempts: 1, dropped: 1 });
 });
 
@@ -486,7 +486,7 @@ test("write-back: publication.json `critique` and critique/{reviews,dispositions
   expect(Object.keys(pub.critique)).toEqual(["rounds", "reviewers", "findings", "decision"]);
   expect(pub.critique).toMatchObject({ rounds: 2, decision: "keep" });
   expect(pub.critique.reviewers).toEqual([
-    { id: "fable", engine: "claude", model: "claude-fable-5-1", effort: "high", outcome: "completed", costUsd: 1 },
+    { id: "opus", engine: "claude", model: "claude-opus-5-5", effort: "xhigh", outcome: "completed", costUsd: 1 },
     { id: "gemini4", engine: "agy", model: "gemini-4-argon", effort: "medium", outcome: "unavailable" },
     { id: "gemini", engine: "agy", model: "gemini-3.8-flash", effort: "high", outcome: "completed" },
     { id: "gpt", engine: "codex", model: "gpt-6-astra", effort: "high", outcome: "completed" },
@@ -495,7 +495,7 @@ test("write-back: publication.json `critique` and critique/{reviews,dispositions
   expect(pub.critique.findings).toEqual({ total: dispositions.length, accepted: 3, rejected: 3, deferred: 3 });
   expect(dispositions).toHaveLength(9);
   // shapes, key for key, as the registry's gate reads them
-  expect(reviews.map((r) => `${r.reviewer}#${r.round}`)).toEqual(["fable#1", "gemini#1", "gpt#1", "fable#2", "gemini#2", "gpt#2"]);
+  expect(reviews.map((r) => `${r.reviewer}#${r.round}`)).toEqual(["opus#1", "gemini#1", "gpt#1", "opus#2", "gemini#2", "gpt#2"]);
   for (const r of reviews) expect(Object.keys(r)).toEqual(["reviewer", "round", "model", "effort", "verdict", "summary", "findings"]);
   for (const f of reviews.flatMap((r) => r.findings as Record<string, unknown>[])) expect(Object.keys(f)).toEqual(["id", "kind", "severity", "location", "claim", "evidence", "suggestion"]);
   for (const d of dispositions) {
@@ -505,7 +505,7 @@ test("write-back: publication.json `critique` and critique/{reviews,dispositions
   expect(JSON.stringify([pub, reviews, dispositions])).not.toContain("null");
   // the PR says who reviewed
   const gh = JSON.parse(readFileSync(path.join(box.dir, "gh.log"), "utf8").trim()) as string[];
-  expect(gh[gh.indexOf("--body") + 1]).toMatch(/- Critique: 2 rounds, decision keep; reviewers fable \(claude claude-fable-5-1\) completed, gemini4 \(agy gemini-4-argon\) unavailable/);
+  expect(gh[gh.indexOf("--body") + 1]).toMatch(/- Critique: 2 rounds, decision keep; reviewers opus \(claude claude-opus-5-5\) completed, gemini4 \(agy gemini-4-argon\) unavailable/);
   // and the stub gate learned the record (counts, both files, rounds)
   expect(landed.landing?.gates.every((g) => g.ok)).toBe(true);
 

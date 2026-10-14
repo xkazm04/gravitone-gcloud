@@ -73,7 +73,7 @@ export const SEED_STATES: readonly SeedState[] = [
 /* ── the critique, written as its files ──────────────────────────────────── */
 
 export const SEED_PANEL: ReviewerSpec[] = [
-  { id: "fable", engine: "claude", model: "claude-fable-5-1", effort: "high", timeoutMin: 25 },
+  { id: "opus", engine: "claude", model: "claude-opus-5-5", effort: "high", timeoutMin: 25 },
   { id: "gemini4", engine: "agy", model: "gemini-4-argon", effort: "medium", timeoutMin: 35 },
   { id: "gemini", engine: "agy", model: "gemini-3.8-flash", effort: "high", timeoutMin: 25 },
   { id: "gpt", engine: "codex", model: "gpt-6-astra", effort: "high", timeoutMin: 25 },
@@ -161,7 +161,7 @@ export function writeSeedCritique(dir: string, rounds: SeedRound[], at: (min: nu
   return summarizeCritique(detail);
 }
 
-const ALL_OK = { fable: "completed", gemini4: "completed", gemini: "completed", gpt: "completed" } as const;
+const ALL_OK = { opus: "completed", gemini4: "completed", gemini: "completed", gpt: "completed" } as const;
 
 const AT = (min: number) => new Date(Date.UTC(2026, 9, 5, 9, min, 0)).toISOString();
 
@@ -225,7 +225,7 @@ export function seedRunStates(store: string, templateId: string, opts: { driverP
       case "critique-running":
         // Round 1 mid-flight: two reviewers back, two still out.
         drop("check.json", "check");
-        run.critique = writeSeedCritique(dir, [{ outcomes: { fable: "completed", gpt: "completed" } }], AT);
+        run.critique = writeSeedCritique(dir, [{ outcomes: { opus: "completed", gpt: "completed" } }], AT);
         run = { ...run, status: "critiquing", steps: [research, outline, draft, { name: "critique", status: "running", startedAt: AT(21) }] };
         break;
       case "critique-partial":
@@ -236,7 +236,7 @@ export function seedRunStates(store: string, templateId: string, opts: { driverP
       case "critique-quorum":
         // Only one reviewer completed: the run stopped before the gate.
         drop("check.json", "check");
-        run.critique = writeSeedCritique(dir, [{ outcomes: { fable: "completed", gemini4: "unavailable", gemini: "seat-limit", gpt: "timed-out" } }], AT);
+        run.critique = writeSeedCritique(dir, [{ outcomes: { opus: "completed", gemini4: "unavailable", gemini: "seat-limit", gpt: "timed-out" } }], AT);
         run = {
           ...run,
           status: "failed",
