@@ -41,10 +41,10 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { Conclusion } from "@/app/_phases/_shared/notebook/conclusions";
-import { EDIT_PLAN_SCHEMA } from "@/app/_phases/script/editPlan";
-import { rendersInScope } from "@/app/_phases/script/chainBase";
-import { ATTRIBUTION } from "@/app/_phases/script/impact";
+import type { Conclusion } from "@/lib/notebook/conclusions";
+import { EDIT_PLAN_SCHEMA } from "@/lib/script/editPlan";
+import { rendersInScope } from "@/lib/script/chainBase";
+import { ATTRIBUTION } from "@/lib/script/impact";
 
 import { joinBlocks, type Refusal, type TurnManifest } from "./manifest";
 

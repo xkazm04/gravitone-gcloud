@@ -11,9 +11,9 @@
 //
 // Case 2 is the correction that replaced it, and it must PASS. A gate that
 // flags the fix as the defect trains its user to ignore it.
-import { checkConstraints, PROBES } from "../app/_phases/script/gate";
-import { UNKNOWN_BY_ID } from "../app/_phases/_shared/notebook/notebook";
-import type { ScriptRender } from "../app/_phases/script/types";
+import { checkConstraints, PROBES } from "../lib/script/gate";
+import { UNKNOWN_BY_ID } from "../lib/notebook/notebook";
+import type { ScriptRender } from "../lib/script/types";
 const unknowns = Object.values(UNKNOWN_BY_ID);
 const mk = (text: string) => ({ id:"t", beats:[{ at:"3:10", kind:"movement", connector:null, label:"m3", text }] } as unknown as ScriptRender);
 

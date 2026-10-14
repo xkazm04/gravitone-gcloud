@@ -56,7 +56,7 @@
 // import it pulls in (`cards.ts` → `conclusions.ts`) is ~45KB that no client
 // surface should pay for twice.
 
-import type { Notebook } from "@/app/_phases/_shared/notebook/types";
+import type { Notebook } from "@/lib/notebook/types";
 import { graphFindings } from "./graph";
 import { NotebookError, type NotebookFinding } from "./failure";
 import { shapeFindings } from "./shape";

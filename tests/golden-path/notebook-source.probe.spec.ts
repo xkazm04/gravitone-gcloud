@@ -406,12 +406,20 @@ const FIXTURE_MODULES = "notebook|facts|conclusions|dimensions|unknowns";
  *                                  It was validate.ts until that 895-line file was
  *                                  split; the graph half is where the constant was
  *                                  always used. */
+/** The notebook itself, moved out of app/_phases/_shared/notebook/ into lib/notebook/: like the stubs
+ *  left behind, these files define the fixture constants and are not importers of them. graph, retrieval,
+ *  validate and corpus live beside them but are the engine side, and stay counted. */
+const NOTEBOOK_MODULE_FILES = new Set(
+  ["types", "conclusions", "dimensions", "counts", "facts", "unknowns", "notebook", "source", "cards"].map(
+    (n) => `lib/notebook/${n}.ts`,
+  ),
+);
 const PINNED_CONSTANT_IMPORTERS = 4;
 const EXPECTED_IMPORTERS = [
   "app/_phases/research/followup.ts",
   "app/_phases/research/guided/RunStage.tsx",
-  "app/_phases/script/constraints.ts",
   "lib/notebook/graph.ts",
+  "lib/script/constraints.ts",
 ];
 
 function constantImporters(): string[] {
@@ -425,6 +433,7 @@ function constantImporters(): string[] {
       else if (/\.(ts|tsx)$/.test(name)) {
         const rel = relative(root, p).split(sep).join("/");
         if (rel.startsWith("app/_phases/_shared/notebook/")) continue;
+        if (NOTEBOOK_MODULE_FILES.has(rel)) continue;
         const src = readFileSync(p, "utf8");
         const imports =
           src.match(new RegExp(`import\\s+(?:type\\s+)?\\{[^}]*\\}\\s+from\\s+["'][^"']*\\/(?:${FIXTURE_MODULES})["']`, "g")) ?? [];

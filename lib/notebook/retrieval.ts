@@ -2,7 +2,7 @@
 // notebook against the pages it actually fetched. Split out of validate.ts so the
 // door can stay a short file.
 
-import type { Notebook } from "@/app/_phases/_shared/notebook/types";
+import type { Notebook } from "@/lib/notebook/types";
 import type { SourceReceipt } from "@/lib/text/types";
 import { NotebookError } from "./failure";
 import { NOTEBOOK_SCHEMA } from "./schema";

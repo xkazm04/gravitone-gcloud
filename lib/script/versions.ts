@@ -1,0 +1,433 @@
+// SCRIPT VERSIONS — feedback in, a recalibrated set of renders out.
+//
+// The loop this models: you read the matrix, you stack notes against individual
+// research tracks ("more focus", "descope completely", "bring it earlier"), and
+// then you recalibrate ONCE against all of them. Note-by-note editing is what
+// this exists to avoid — a script rewritten per comment is a script pulled in
+// six directions, and the creator never sees the aggregate they actually asked
+// for.
+//
+// ─── what is real here and what is mocked ──────────────────────────────────
+//
+// Real: the note model, the aggregation, the one-at-a-time rule, the version
+// history, and the OVERRUN arithmetic (below).
+//
+// Mocked: the recalibration itself. A production build sends the notes and the
+// notebook to a model and gets new beats back. Here the transform is a
+// deterministic function of the note kind, and it is labelled as simulated
+// everywhere it surfaces. It does NOT rewrite beat text — so a recalibrated
+// version can be compared by weight, which is exactly what Coverage and the
+// Spend bar are for, and cannot be read as prose, which is why Candidates and
+// Tracks stay on the baseline.
+//
+// The honest constraint: a render's runtime is FIXED. Asking for more focus
+// everywhere does not make the video longer, it makes it over-committed — so
+// the recalibration reports an overrun rather than quietly rescaling everyone's
+// seconds to fit. A plan that does not fit is a finding, not a rounding error.
+
+import type { ChainBreak } from "@/lib/script/editPlan";
+import type { GateRollup } from "@/lib/script/gate";
+import { IMPACT, type Usage } from "@/lib/script/impact";
+import { RENDERS } from "@/lib/script/renders";
+
+export type NoteKind =
+  | "more-focus"
+  | "less-focus"
+  | "descope"
+  | "move-earlier"
+  | "move-later"
+  | "custom";
+
+export const NOTE_KINDS: { kind: NoteKind; label: string; hint: string }[] = [
+  { kind: "more-focus", label: "Can have more focus", hint: "give it more of the runtime — or bring it in if no render uses it" },
+  { kind: "less-focus", label: "Spends too long here", hint: "cut it back, keep it" },
+  { kind: "descope", label: "Descope completely", hint: "out of every render" },
+  { kind: "move-earlier", label: "Bring into the beginning", hint: "same weight, earlier in the running order" },
+  { kind: "move-later", label: "Push it later", hint: "same weight, later in the running order" },
+  { kind: "custom", label: "Something else…", hint: "free text — no weight change can be simulated from it" },
+];
+
+export const KIND_LABEL: Record<NoteKind, string> = Object.fromEntries(
+  NOTE_KINDS.map((k) => [k.kind, k.label]),
+) as Record<NoteKind, string>;
+
+export interface Note {
+  id: string;
+  cardId: string;
+  kind: NoteKind;
+  /** Only meaningful on `custom`; otherwise the kind carries the meaning. */
+  text?: string;
+  at: number;
+}
+
+export interface Version {
+  id: string;
+  label: string;
+  /** null on the baseline. */
+  basedOn: string | null;
+  /** The notes that produced it. Empty on the baseline. */
+  notes: Note[];
+  createdAt: number;
+  impact: Record<string, Record<string, Usage>>;
+  /** Per render: attributed seconds vs the runtime available. */
+  budget: Record<string, { attributed: number; duration: number; overrunS: number }>;
+  /** Notes the recalibration REFUSED, and why. A rebalance that can quietly do
+   *  what the triage board forbids is not a rebalance, it is a bypass. */
+  refusals: Refusal[];
+  /** Two notes on one track that cannot both hold. */
+  conflicts: Conflict[];
+  /** Cards still spoken whose supporting evidence this version removed. */
+  unsupported: Unsupported[];
+  /** WHICH ENGINE PRODUCED THIS.
+   *
+   *  The `simulated` label on the pad is derived from this field rather than
+   *  hand-removed: a version built by the model says so, a version built by the
+   *  fallback transform says so, and neither can be mistaken for the other by
+   *  editing a string. A label you delete when you believe the wiring is done is
+   *  a label that lies the first time the wiring falls back. */
+  engine: "model" | "simulated";
+  /** Set on `engine: "model"` (or preserved when simulated falls back from a model version)
+   *  — the beats the edit plan produced, per render. */
+  beats?: Record<string, import("@/lib/script/types").Beat[]>;
+  /** Set on `engine: "model"` (or preserved when simulated falls back from a model version)
+   *  — beat mark → card ids per render. */
+  attribution?: Record<string, Record<string, string[]>>;
+  /** The model's own account of what it did and would not do. */
+  summary?: string;
+  modelRefusals?: { note: string; why: string }[];
+  /** SEAMS AN EDIT BROKE. `applyEdits` has computed these since the chain-seam
+   *  work landed — a cut splices a beat out and its successor keeps arguing BUT
+   *  or THEREFORE from a beat that is no longer in front of it — and until now
+   *  the list was dropped on the floor when the version was built. The gate
+   *  re-run after apply is lexical, so both beats read as well-formed and the
+   *  broken argument between them passes; the break is visible only where what
+   *  CHANGED is still known, which is inside the apply. Carried here so it
+   *  survives to the person deciding whether to accept.
+   *
+   *  Absent on a simulated version, which re-weights without moving beats, and
+   *  on every version written before this field existed. */
+  chainBreaks?: (ChainBreak & { renderId: string })[];
+  /** WHAT THE TURN ACTUALLY COST. Absent on a simulated version — see EngineRun. */
+  engineRun?: EngineRun;
+  /** Set only where this version was made the baseline over a BLOCKING gate
+   *  verdict. Absent is the common case and means the gate was clean. */
+  override?: GateOverride;
+  /** Set on a version minted by RESTORING an earlier one (history.ts): the id
+   *  it carries the content of. Absent on every run and on every version
+   *  written before restore existed. */
+  restoredFrom?: string;
+}
+
+/** A HUMAN OVERRODE THE GATE, AND THE VERSION CARRIES THE RECEIPT.
+ *
+ *  Not a hard block, deliberately. `gate.ts` is LEXICAL: it matches patterns and
+ *  cannot read meaning, and its own header concedes the band is narrow —
+ *  `checkTraceability` reports spelled-out numbers as `unmeasured` and admits it
+ *  "covers a minority of what a viewer actually hears". A checker like that must
+ *  not be able to strand a script whose author knows it is fine, or running the
+ *  gate at all becomes the expensive choice. But an override that leaves no
+ *  trace is exactly the silent failure this repo exists to refuse. So the
+ *  version carries its own receipt and a later reader can see that a person
+ *  overrode a violation, which one, and when.
+ *
+ *  FROZEN AT THE CLICK, never recomputed. The verdict that was overridden is a
+ *  fact about a moment; re-running the gate later answers a different question
+ *  and would quietly rewrite history if the probes or the notebook moved. */
+export interface GateOverride {
+  at: number;
+  violations: number;
+  /** Which renders were blocking. A verdict you cannot locate is a rumour. */
+  blocking: string[];
+  /** How much of the gate could execute at all, on the weakest render — the
+   *  number that says how much the overridden verdict was worth. */
+  enforced: number;
+}
+
+export function overrideFrom(g: GateRollup, at: number): GateOverride {
+  return { at, violations: g.violations, blocking: [...g.blocking], enforced: g.enforced };
+}
+
+/** UTC and fixed-width, not localised. A receipt is read months later by
+ *  somebody in another timezone, and a locale-formatted date rendered from
+ *  state would also differ between the server pass and the client one. */
+const stampedAt = (ms: number) => `${new Date(ms).toISOString().slice(0, 16).replace("T", " ")} UTC`;
+
+/** One line of override receipt, or null where there was nothing to override. */
+export function overrideLineOf(v: Version): string | null {
+  const o = v.override;
+  if (!o) return null;
+  return `accepted over the gate — ${o.violations} blocking finding${o.violations === 1 ? "" : "s"} on ${o.blocking.join(", ")}, ${o.enforced}% of the gate enforced · overridden ${stampedAt(o.at)}`;
+}
+
+/** The engine's own account of the turn that produced a version.
+ *
+ *  Every field is optional because the CLI is not obliged to report any of them,
+ *  and the rule this type exists to hold is that **an unreported cost is
+ *  unknown, never zero**. A version with no `engineRun` at all did not make a
+ *  model call; a version whose `engineRun.costUsd` is absent made one and was
+ *  not told what it cost. Those are different facts and the surfaces say so
+ *  differently. */
+export interface EngineRun {
+  /** Which engine. "local-claude-code" or "cloud-api" — and the field existed,
+   *  with this exact comment, so that the second one could not arrive silently.
+   *  It has now arrived (lib/text/router.ts), and the three fields below are
+   *  what keep it from being silent. */
+  kind: string;
+  model?: string;
+  /** WHICH ENGINE ACTUALLY SERVED, and at which rung of the fallback ladder.
+   *
+   *  These are not decoration and they are not diagnostics. A version staged
+   *  from a metered cloud engine and one written by the operator's own local
+   *  seat cost different money, sent the creator's unpublished notebook to
+   *  different places, and are different findings about the same manuscript.
+   *  The ladder's cardinal sin is a lower rung rendering indistinguishably from
+   *  the preferred one, so the label travels onto the version and out to the
+   *  receipt line rather than living only in a server log that rotates.
+   *
+   *  Optional, like every other field here, because a version staged before this
+   *  existed has none — and absence reads as "not recorded", never as "local". */
+  provider?: string;
+  transport?: string;
+  rung?: string;
+  /** The CLI session, for anyone reading the run back out of `~/.claude`. */
+  sessionId?: string;
+  costUsd?: number;
+  durationMs?: number;
+  /** How much prompt the run was billed for. The one number that says whether a
+   *  payload change actually reduced anything. */
+  promptChars?: number;
+  /** WHAT THE ENGINE READ (AIO-B): the assembler's manifest for this run —
+   *  which renders and conclusions went in and which were held back, and what
+   *  the prompt was made of. Absent on a version staged before it existed, and
+   *  absence reads as "not recorded", never as "everything was sent". */
+  manifest?: RunManifest;
+}
+
+/** The manifest as a version keeps it: sizes and ids, never text (the same
+ *  rule lib/turns/assemble/manifest.ts holds for the wire). */
+export interface RunManifest {
+  blocks: { name: string; chars: number }[];
+  renders?: { sent: string[]; notSent: string[] };
+  conclusions?: { whole: string[]; held: string[] };
+  totalChars: number;
+  ceilingChars: number;
+}
+
+/** Take a manifest off the wire and keep only what has its shape. A list with
+ *  a non-string in it, or a size that is not a finite number, is not admitted
+ *  piecemeal — the manifest is a claim about the whole payload, so a damaged
+ *  one is dropped whole rather than half-believed. */
+export function manifestOf(raw: unknown): RunManifest | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const r = raw as Record<string, unknown>;
+  const fin = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+  const ids = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => typeof x === "string");
+  if (!fin(r.totalChars) || !fin(r.ceilingChars) || !Array.isArray(r.blocks)) return undefined;
+  const blocks = r.blocks.filter(
+    (b): b is { name: string; chars: number } =>
+      !!b && typeof b === "object" && typeof (b as { name?: unknown }).name === "string" && fin((b as { chars?: unknown }).chars),
+  );
+  if (blocks.length !== r.blocks.length) return undefined;
+  const pair = <A extends string, B extends string>(v: unknown, a: A, b: B) => {
+    if (v === undefined) return undefined;
+    const o = v as Record<string, unknown> | null;
+    return o && ids(o[a]) && ids(o[b]) ? ({ [a]: o[a], [b]: o[b] } as Record<A | B, string[]>) : null;
+  };
+  const renders = pair(r.renders, "sent", "notSent");
+  const conclusions = pair(r.conclusions, "whole", "held");
+  if (renders === null || conclusions === null) return undefined;
+  return {
+    blocks: blocks.map((b) => ({ name: b.name, chars: b.chars })),
+    ...(renders ? { renders } : {}),
+    ...(conclusions ? { conclusions } : {}),
+    totalChars: r.totalChars,
+    ceilingChars: r.ceilingChars,
+  };
+}
+
+/** The receipt for a run: the engine's account, with what it read stamped on.
+ *  A manifest without an engine account has nothing to ride on and is not kept
+ *  — an `engineRun` asserts a model call, and the manifest alone does not. */
+export function engineRunWith(engine: unknown, manifest: unknown): EngineRun | undefined {
+  const run = engineRunOf(engine);
+  const m = manifestOf(manifest);
+  return run && m ? { ...run, manifest: m } : run;
+}
+
+/** Take an engine block off the wire and keep only what is actually a number or
+ *  a string. A cost that arrived as `null`, `"0.4"` or `NaN` is not a cost, and
+ *  admitting it here would put a fabricated figure on a spend line. */
+export function engineRunOf(raw: unknown): EngineRun | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const r = raw as Record<string, unknown>;
+  if (typeof r.kind !== "string") return undefined;
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : undefined);
+  const str = (v: unknown) => (typeof v === "string" && v ? v : undefined);
+  return {
+    kind: r.kind,
+    model: str(r.model),
+    provider: str(r.provider),
+    transport: str(r.transport),
+    rung: str(r.rung),
+    sessionId: str(r.sessionId),
+    costUsd: num(r.costUsd),
+    durationMs: num(r.durationMs),
+    promptChars: num(r.promptChars),
+  };
+}
+
+const usd = (n: number) => `$${n.toFixed(n >= 1 ? 2 : n >= 0.01 ? 3 : 4)}`;
+
+const secs = (ms: number) => {
+  const s = Math.round(ms / 1000);
+  return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s`;
+};
+
+/** One line of receipt for a version, or null where there is nothing to report.
+ *
+ *  Four distinct answers, deliberately not collapsed into one:
+ *    · null          — this version was not produced by a run in this app at all
+ *                      (the original renders). Absence, shown as absence.
+ *    · "no model call" — the simulated transform produced it. It cost nothing
+ *                      because nothing ran, which is not the same as costing 0.
+ *    · "restored from" — an earlier version carried forward (history.ts). No
+ *                      call either, and it is not the simulated fallback.
+ *    · the receipt   — and inside it, any figure the engine did not report reads
+ *                      as "not reported", never as zero. */
+export function receiptOf(v: Version): string | null {
+  if (!v.basedOn) return null;
+  // Before the engine check: a restore of a model version keeps engine "model"
+  // but made no call, and a restore of a simulated one is not a fallback.
+  if (v.restoredFrom) return `restored from ${v.restoredFrom} · no model call`;
+  if (v.engine !== "model") return "simulated locally — no model call, so nothing to bill";
+  if (!v.engineRun) return "the engine returned a plan but reported nothing about the run";
+  const r = v.engineRun;
+  return [
+    r.costUsd === undefined ? "cost not reported" : usd(r.costUsd),
+    r.durationMs === undefined ? "duration not reported" : secs(r.durationMs),
+    r.promptChars === undefined ? null : `${Math.round(r.promptChars / 1000)}k prompt chars`,
+    // WHAT WAS HELD BACK, and only when something was: "3/3 renders" on every
+    // receipt is the unremarkable case, and the same rule as `via` below keeps
+    // it off. A receipt with no manifest says nothing here — not "all sent".
+    r.manifest?.renders?.notSent.length
+      ? `${r.manifest.renders.sent.length}/${r.manifest.renders.sent.length + r.manifest.renders.notSent.length} renders sent`
+      : null,
+    r.manifest?.conclusions?.held.length ? `${r.manifest.conclusions.held.length} conclusions held` : null,
+    r.model ?? null,
+    // WHERE IT RAN, on the receipt, and only when there is something to say.
+    //
+    // `transport` is absent on versions staged before the engine could be
+    // anything but local, and inventing "local" for them would assert a fact
+    // nobody recorded — so absence stays absence, exactly as an unreported cost
+    // does two lines up.
+    //
+    // A cloud turn is always labelled. A local turn is labelled ONLY when it
+    // arrived at rung 2 or lower, because on a local-first install "the engine
+    // you configured answered" is the unremarkable case and stamping every
+    // receipt with it would train the reader to stop seeing the word — which is
+    // exactly how the interesting case gets missed.
+    r.transport === "cloud-api"
+      ? `via ${r.provider ?? "a cloud engine"}${r.rung === "alternate" ? " (fallback)" : ""}`
+      : r.rung === "alternate"
+        ? `via ${r.provider ?? "a fallback engine"} (fallback)`
+        : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+/** A note that was not applied. */
+export interface Refusal {
+  cardId: string;
+  kind: NoteKind;
+  why: string;
+}
+
+/** Two instructions on one track that cannot both hold. */
+export interface Conflict {
+  cardId: string;
+  kinds: NoteKind[];
+  applied: NoteKind;
+  why: string;
+}
+
+/** A turn left arguing from evidence this version cut.
+ *
+ *  Severity mirrors the scope layer's wound graph (`research/scope.ts`) rather
+ *  than inventing a second vocabulary: `broken` = nothing it rests on survived,
+ *  `weakened` = some did. The first UAT fix only reported `broken`, so cutting
+ *  all three facts under a reversal that also cites a mechanism reported
+ *  nothing — the mechanism counted as a survivor and the turn looked fine. */
+export interface Unsupported {
+  cardId: string;
+  lost: string[];
+  severity: "broken" | "weakened";
+}
+
+/** Attributed seconds against the runtime available, per render.
+ *
+ *  `attributed` sums each card's SHARE of the beats that state it, so it is
+ *  bounded by the runtime and `overrunS` means what it says. It used to sum a
+ *  full beat duration per card — 1.96x the reversal chain's runtime, 2.80x the
+ *  adjudication's — so every version was drawn "over budget" by hundreds of
+ *  seconds, baseline included. See impact.ts::splitAcross.
+ *
+ *  WHAT IT MEASURES, AND WHAT IT CANNOT SEE. This is over-COMMITMENT — have more
+ *  seconds been promised to cards than the render has to give — which is the
+ *  question the simulated path can answer at all, because that path moves card
+ *  weights and never touches a beat. On the model path a chain can also run long
+ *  in a way this misses: a render's hook, question, promise and close rest on no
+ *  card, so up to `unattributedS` of extra chain length is absorbed here before
+ *  the number moves. Measuring that instead means measuring the CHAIN, which
+ *  lives in `AppliedRender.seconds` and would have to be threaded through
+ *  `recalibrate.ts` — a different number with a different name, not a correction
+ *  to this one. */
+export function budgetOf(impact: Record<string, Record<string, Usage>>) {
+  const out: Version["budget"] = {};
+  for (const r of RENDERS) {
+    const attributed = Object.values(impact[r.id] ?? {}).reduce((n, u) => n + u.seconds, 0);
+    out[r.id] = {
+      attributed,
+      duration: r.durationS,
+      overrunS: Math.max(0, attributed - r.durationS),
+    };
+  }
+  return out;
+}
+
+export const BASELINE: Version = {
+  id: "baseline",
+  label: "Baseline",
+  basedOn: null,
+  notes: [],
+  createdAt: 0,
+  impact: IMPACT,
+  budget: budgetOf(IMPACT),
+  refusals: [],
+  conflicts: [],
+  unsupported: [],
+  engine: "simulated",
+};
+
+export function usageIn(v: Version, renderId: string, cardId: string): Usage {
+  return v.impact[renderId]?.[cardId] ?? { kind: "unused", seconds: 0, beats: [] };
+}
+
+export function totalIn(v: Version, cardId: string) {
+  return RENDERS.reduce((n, r) => n + usageIn(v, r.id, cardId).seconds, 0);
+}
+
+export function coverageIn(v: Version, renderId: string, cardIds: string[]) {
+  const spoken = cardIds.filter((id) => usageIn(v, renderId, id).kind === "spoken");
+  const cut = cardIds.filter((id) => usageIn(v, renderId, id).kind === "cut");
+  const seconds = spoken.reduce((n, id) => n + usageIn(v, renderId, id).seconds, 0);
+  const b = v.budget[renderId];
+  return {
+    spoken: spoken.length,
+    cut: cut.length,
+    unused: cardIds.length - spoken.length - cut.length,
+    seconds,
+    unattributedS: Math.max(0, (b?.duration ?? 0) - seconds),
+    overrunS: b?.overrunS ?? 0,
+  };
+}

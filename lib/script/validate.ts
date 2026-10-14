@@ -34,13 +34,13 @@
 // `"use client"`. That is why the template ranges are restated below instead
 // of read from lib/projects.ts (see COMPOSE_TEMPLATE_RANGES).
 
-import { buildCards } from "@/app/_phases/_shared/notebook/cards";
-import type { NotebookSource } from "@/app/_phases/_shared/notebook/source";
-import type { EngineFit, Fit, Notebook } from "@/app/_phases/_shared/notebook/types";
+import { buildCards } from "@/lib/notebook/cards";
+import type { NotebookSource } from "@/lib/notebook/source";
+import type { EngineFit, Fit, Notebook } from "@/lib/notebook/types";
 import { RUNTIME_TOLERANCE } from "@/app/_phases/cut/finishLine";
-import type { DraftRender } from "@/app/_phases/script/draft";
-import { checkConnectors, type Verdict } from "@/app/_phases/script/gate";
-import type { Beat, BeatKind, CheckRow, Connector, CutFact } from "@/app/_phases/script/types";
+import type { DraftRender } from "@/lib/script/draft";
+import { checkConnectors, type Verdict } from "@/lib/script/gate";
+import type { Beat, BeatKind, CheckRow, Connector, CutFact } from "@/lib/script/types";
 
 /* ─────────────────────────────── the inputs ──────────────────────────────── */
 

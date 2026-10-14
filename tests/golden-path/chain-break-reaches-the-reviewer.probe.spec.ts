@@ -84,7 +84,7 @@ test("the version carries the field and the panel reads it — the wiring, asser
 
   const recal = strip("app/_phases/script/recalibrate.ts");
   const list = strip("app/_phases/script/_notes/DeclinedList.tsx");
-  const versions = strip("app/_phases/script/versions.ts");
+  const versions = strip("lib/script/versions.ts");
 
   expect(versions, "Version has no chainBreaks field").toContain("chainBreaks?:");
   expect(recal, "recalibrateFromPlan does not carry chainBreaks onto the version").toContain("chainBreaks:");

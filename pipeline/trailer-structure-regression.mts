@@ -27,14 +27,14 @@ import {
   runStructureCheck,
   type StructureFinding,
   type StructureReport,
-} from "../app/_phases/script/trailer/structure";
-import { notesFromFindings } from "../app/_phases/script/trailer/notes";
+} from "../lib/script/trailer/structure";
+import { notesFromFindings } from "../lib/script/trailer/notes";
 import {
   parseTrailerPlan,
   replayTrailerPlan,
   structureDelta,
   trailerEditPlanSchema,
-} from "../app/_phases/script/trailer/plan";
+} from "../lib/script/trailer/plan";
 import {
   VOCABULARIES_ARE_DISJOINT,
   atSeconds,
@@ -43,7 +43,7 @@ import {
   type TrailerBeat,
   type TrailerCut,
   type WithholdingBudget,
-} from "../app/_phases/script/trailer/types";
+} from "../lib/script/trailer/types";
 // THE DOWNSTREAM LANE. Imported here and not only in the Playwright probes,
 // because this control is what `npm run check:trailer-structure` runs and the
 // seam it guards is the one this whole file's subject matter dies at: a cut that
@@ -54,7 +54,7 @@ import {
   isTrailerFormat,
   shotsFromBeats,
   shotsFromRender,
-} from "../app/_phases/frames/shots";
+} from "../lib/frames/shots";
 
 /* ───────────────────────────── the baseline cut ─────────────────────────────
    A well-formed wide-release long cut. Deliberately abstract: it is a SHAPE under

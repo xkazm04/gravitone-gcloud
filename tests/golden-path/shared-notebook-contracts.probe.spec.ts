@@ -138,7 +138,7 @@ test("conclusions: the one consumer that serialises the notebook for a model sen
   // And neither note may go back to claiming otherwise. The prose is what a
   // reader acts on, so it is held to the same standard as the code.
   for (const file of ["types.ts", "conclusions.ts"]) {
-    const src = readFileSync(join(ROOT, "app/_phases/_shared/notebook", file), "utf8");
+    const src = readFileSync(join(ROOT, "lib/notebook", file), "utf8");
     expect(
       /recalibrate\/route\.ts[^\n]*\n?[^\n]*does not/.test(src),
       `${file} claims the recalibrate route does not send conclusions - it does`,

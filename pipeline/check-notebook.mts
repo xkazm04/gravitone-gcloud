@@ -21,8 +21,8 @@
 //     171), so a reused id silently overwrites the earlier row.
 //   · `CARD_DIMENSION` is a hand-maintained id→column table, so a new fact
 //     nobody tagged falls to `untagged` — and no board renders that bucket.
-import { notebookIssues } from "../app/_phases/_shared/notebook/cards";
-import { CONCLUSIONS, conclusionIssues } from "../app/_phases/_shared/notebook/conclusions";
+import { notebookIssues } from "../lib/notebook/cards";
+import { CONCLUSIONS, conclusionIssues } from "../lib/notebook/conclusions";
 import { diffSnapshots, measureCorpus, readSnapshot, SNAPSHOT_PATH, UPDATE_ENV } from "../lib/notebook/corpus";
 
 const issues = notebookIssues();

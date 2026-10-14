@@ -22,7 +22,7 @@
 // globalThis lets the new spec replace the old one rather than throw "already
 // registered" at the second evaluation.
 
-import { EDIT_PLAN_SCHEMA, PlanError, parseEditPlan, type EditPlan } from "@/app/_phases/script/editPlan";
+import { EDIT_PLAN_SCHEMA, PlanError, parseEditPlan, type EditPlan } from "@/lib/script/editPlan";
 import type { TextProvenance } from "@/lib/text/types";
 import type { Refusal, TurnManifest } from "@/lib/turns/assemble/manifest";
 import {

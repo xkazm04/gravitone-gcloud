@@ -131,7 +131,7 @@ export const MUTANTS: Mutant[] = [
   {
     id: "spine-tail-first",
     probe: "spine-rank-total.probe.spec.ts",
-    file: "app/_phases/script/trailer/types.ts",
+    file: "lib/script/trailer/types.ts",
     find: "tail: 4,",
     replace: "tail: -1,",
     why: "The tail movement is composed ahead of the cold open.",
@@ -139,7 +139,7 @@ export const MUTANTS: Mutant[] = [
   {
     id: "spine-ordinal-ignored",
     probe: "spine-rank-total.probe.spec.ts",
-    file: "app/_phases/script/trailer/cut.ts",
+    file: "lib/script/trailer/cut.ts",
     find: "return ra !== rb ? ra - rb : a.ordinal - b.ordinal;",
     replace: "return ra - rb;",
     why: "Two movements of the same role keep arrival order instead of their own ordinal.",

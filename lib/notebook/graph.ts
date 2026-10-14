@@ -1,10 +1,10 @@
 // THE GRAPH HALF: the graph checks on a notebook, reusing notebookIssues rather than
 // restating it. Split out of validate.ts so the door can stay a short file.
 
-import { notebookIssues, type GraphIssue } from "@/app/_phases/_shared/notebook/cards";
-import { CONCLUSIONS } from "@/app/_phases/_shared/notebook/conclusions";
-import { declaresOwn } from "@/app/_phases/_shared/notebook/source";
-import type { Notebook } from "@/app/_phases/_shared/notebook/types";
+import { notebookIssues, type GraphIssue } from "@/lib/notebook/cards";
+import { CONCLUSIONS } from "@/lib/notebook/conclusions";
+import { declaresOwn } from "@/lib/notebook/source";
+import type { Notebook } from "@/lib/notebook/types";
 
 import type { NotebookFinding } from "./failure";
 
