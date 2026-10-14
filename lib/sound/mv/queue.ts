@@ -69,7 +69,8 @@
 // would otherwise requeue the job the other process is rendering right now.
 // A lease whose pid is gone is stale and taken over.
 
-import { rm, writeFile } from "node:fs/promises";
+import { readFile, rm, writeFile } from "node:fs/promises";
+import path from "node:path";
 
 import { leonardoStudioHealth } from "@/lib/imaging/providers/leonardoStudio";
 import { generate } from "@/lib/imaging/router";
@@ -80,6 +81,7 @@ import { applyMetadataPatch, writeMetadata } from "./metadata";
 import { analyseTrack, renderMusicVideo, type AnalyseArgs, type RenderArgs } from "./render";
 import { cleanTitle, DROPPED_FILES, ensureJobDir, isLiveJob, jobDirRel, jobFileRel, landFile, mintMvId, readMv, stagingAbs, withMv, type MvFile, type MvStep } from "./store";
 import { operatorTreatment, treatmentInput, writeMotion, writeTreatment, type ReasonFn } from "./treatment";
+import type { MvLookId } from "./looks";
 import { MV_PARTS, type MvAnalysis, type MvDriverHealth, type MvFiles, type MvJob, type MvPart, type MvPhase, type MvQueueState, type MvSnapshot, type MvSource } from "./types";
 
 /* ── the engines ──────────────────────────────────────────────────────────── */
@@ -218,7 +220,7 @@ const sameSource = (a: MvSource, b: MvSource) => a.kind === b.kind && a.id === b
  *  holding a queued or active job returns that job instead of a second one.
  *  A track with a FINISHED job gets a new one - another video of the same
  *  song is a legitimate ask; Regenerate is the edit of an existing one. */
-export async function enqueueMv(sources: readonly MvSource[], now = Date.now(), opts: { prompt?: string } = {}): Promise<MvJob[]> {
+export async function enqueueMv(sources: readonly MvSource[], now = Date.now(), opts: { prompt?: string; stillFrom?: string; look?: MvLookId } = {}): Promise<MvJob[]> {
   for (const s of sources) await assertSourceHasAudio(s);
   // The operator's own still prompt for every new job (the batch CLI's
   // --prompt); it replaces the treatment turn exactly as on a regenerate.
@@ -227,7 +229,7 @@ export async function enqueueMv(sources: readonly MvSource[], now = Date.now(), 
     sources.map((s, i) => {
       const live = f.jobs.find((j) => sameSource(j.source, s) && isLiveJob(j));
       if (live) return { ...live };
-      const job: MvJob = { id: mintMvId(), source: { ...s }, state: "queued", files: {}, verdict: null, enqueuedAt: now + i, ...(prompt ? { prompt } : {}) };
+      const job: MvJob = { id: mintMvId(), source: { ...s }, state: "queued", files: {}, verdict: null, enqueuedAt: now + i, ...(prompt ? { prompt } : {}), ...(opts.stillFrom ? { stillFrom: opts.stillFrom } : {}), ...(opts.look ? { look: opts.look } : {}) };
       f.jobs.push(job);
       return { ...job };
     }),
@@ -414,6 +416,21 @@ async function patchJob(id: string, fn: (j: MvJob, f: MvFile) => void): Promise<
 
 const STILL_EXT: Record<StillImage["mime"], string> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" };
 
+const MIME_OF_EXT: Record<string, StillImage["mime"]> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp" };
+
+/** The operator's own picture, read from disk. */
+async function suppliedStill(file: string): Promise<StillImage> {
+  const mime = MIME_OF_EXT[path.extname(file).toLowerCase()];
+  if (!mime) throw new Error(`${file} is not a png, jpg or webp picture`);
+  return { bytes: await readFile(file), mime };
+}
+
+/** The treatment of a job whose picture was supplied: no prompt to write, the
+ *  motion defaults kept, and the metadata turn told why this picture. */
+function suppliedStillTreatment(current: MvJob["treatment"]): NonNullable<MvJob["treatment"]> {
+  return { ...operatorTreatment("the album's own cover art", current), rationale: "the album's own cover art" };
+}
+
 const need = <T>(v: T | undefined, what: string): T => {
   if (v === undefined || v === null) throw new Error(`cannot continue: ${what} is missing`);
   return v;
@@ -442,7 +459,7 @@ async function runStep(step: MvStep, j: MvJob, eng: MvEngines): Promise<(x: MvJo
     case "treat": {
       // The step runs on a first run or an image redo; either way a prompt the
       // operator set (enqueue or regenerate) replaces the turn.
-      const treatment = j.prompt ? operatorTreatment(j.prompt, j.treatment) : await writeTreatment(input(), { note: noteFor("image"), reason: eng.reason });
+      const treatment = j.stillFrom ? suppliedStillTreatment(j.treatment) : j.prompt ? operatorTreatment(j.prompt, j.treatment) : await writeTreatment(input(), { note: noteFor("image"), reason: eng.reason });
       return (x) => void (x.treatment = treatment);
     }
     case "motion": {
@@ -451,7 +468,10 @@ async function runStep(step: MvStep, j: MvJob, eng: MvEngines): Promise<(x: MvJo
     }
     case "still": {
       const t = need(j.treatment, "the treatment");
-      const img = await eng.still({ prompt: t.prompt, ...(t.negativePrompt ? { negativePrompt: t.negativePrompt } : {}) });
+      // A supplied picture (the album's cover) is copied, never bought.
+      const img = j.stillFrom
+        ? await suppliedStill(j.stillFrom)
+        : await eng.still({ prompt: t.prompt, ...(t.negativePrompt ? { negativePrompt: t.negativePrompt } : {}) });
       if (!img.bytes.byteLength) throw new Error("the still came back empty");
       const rel = jobFileRel(j.id, `still.${STILL_EXT[img.mime] ?? "png"}`);
       const staged = stagingAbs(rel);
@@ -469,7 +489,7 @@ async function runStep(step: MvStep, j: MvJob, eng: MvEngines): Promise<(x: MvJo
       const rel = jobFileRel(j.id, "video.mp4");
       const staged = stagingAbs(rel);
       try {
-        await eng.render({ audioPath: abs("audio"), stillPath: abs("still"), envelopePath: abs("envelope"), motion: need(j.treatment, "the treatment").motion, outPath: staged });
+        await eng.render({ audioPath: abs("audio"), stillPath: abs("still"), envelopePath: abs("envelope"), motion: need(j.treatment, "the treatment").motion, ...(j.look ? { look: j.look } : {}), outPath: staged });
       } catch (e) {
         await rm(staged, { force: true }).catch(() => {});
         throw e;
@@ -600,7 +620,7 @@ async function drain(w: WorkerState): Promise<void> {
       return;
     }
     const eng = engines();
-    if (planOf(next, f.progress[next.id] ?? []).includes("still")) {
+    if (!next.stillFrom && planOf(next, f.progress[next.id] ?? []).includes("still")) {
       const health = await eng.health().catch((e: unknown) => ({ ok: false as const, reason: e instanceof Error ? e.message : String(e) }));
       if (!health.ok) {
         w.paused = health.reason ?? "the still vendor is not reachable";

@@ -1,7 +1,7 @@
 // MUSIC-VIDEO — the headless surface of the music-video queue (lib/sound/mv/),
 // for a whole album on a render box. The /music-video skill wraps it.
 //
-//   npx tsx pipeline/music-video.mts plan <dir> [--versions all|main|instrumental] [--again] [--limit N] [--prompt "<text>" | --prompt-file <f>]
+//   npx tsx pipeline/music-video.mts plan <dir> [--versions all|main|instrumental] [--again] [--limit N] [--prompt "<text>" | --prompt-file <f>] [--still <picture>] [--look <id>]
 //   npx tsx pipeline/music-video.mts run <dir> --yes [same flags as plan]
 //   npx tsx pipeline/music-video.mts collect <dir>
 //   npx tsx pipeline/music-video.mts status
@@ -16,6 +16,13 @@
 //
 //   --json on any command: one JSON document on stdout, progress on stderr.
 //   Exit 0 ok · 1 a job failed or the drain stopped short · 2 usage.
+//
+// AN ALBUM WITH ITS OWN COVER: --still <picture> makes every video over that
+// one picture (copied, so no studio credits and no studio browser needed) and
+// --look <id> draws the look's placed rain, fire and light on it
+// (lib/sound/mv/looks.ts). Both can live in the folder instead, as
+// mv-album.json {"still":"cover.jpg","look":"siren-rain"}, so tracks added to
+// the album later get the same treatment with the plain command.
 //
 // IT OWNS NO LOGIC: lib/sound/mv/batch.ts plans, runs and collects; the queue
 // renders. A run SPENDS: one Leonardo studio still per new track (GPT Image 2.5
@@ -91,6 +98,7 @@ function flag(name: string): string | undefined {
   return v;
 }
 
+const { MV_LOOK_IDS, isLookId } = await import("../lib/sound/mv/looks");
 const { BATCH_VERSIONS, collectBatch, planBatch, runBatch } = await import("../lib/sound/mv/batch");
 const { mvSnapshot } = await import("../lib/sound/mv/queue");
 const { leonardoStudioHealth } = await import("../lib/imaging/providers/leonardoStudio");
@@ -109,7 +117,17 @@ function options() {
     if (prompt) usage("give --prompt or --prompt-file, not both");
     prompt = fs.readFileSync(path.resolve(CALLER_CWD, promptFile), "utf8");
   }
-  return { versions: v as BatchVersions, again: AGAIN, ...(limit ? { limit } : {}), ...(prompt?.trim() ? { prompt: prompt.trim() } : {}) };
+  const stillRaw = flag("still");
+  const look = flag("look");
+  if (look !== undefined && !isLookId(look)) usage(`--look must be one of ${MV_LOOK_IDS.join(", ")}`);
+  return {
+    versions: v as BatchVersions,
+    again: AGAIN,
+    ...(limit ? { limit } : {}),
+    ...(prompt?.trim() ? { prompt: prompt.trim() } : {}),
+    ...(stillRaw ? { still: path.resolve(CALLER_CWD, stillRaw) } : {}),
+    ...(look ? { look: look as import("../lib/sound/mv/looks").MvLookId } : {}),
+  };
 }
 
 function dirArg(): string {
@@ -122,6 +140,7 @@ function dirArg(): string {
 function printPlan(p: BatchPlan) {
   console.error(`folder ${p.dir}`);
   for (const r of p.rows) console.error(`  ${r.action.padEnd(12)} ${r.version.padEnd(12)} ${r.title}${r.job ? `  [${r.job.id} ${r.job.state}]` : ""}`);
+  if (p.still) console.error(`over ${p.still}${p.look ? ` · look ${p.look}` : ""}`);
   console.error(`new videos ${p.newJobs} · retries ${p.retries} · ~${p.estimatedCredits} studio credits · ${p.textTurns} text turns`);
 }
 
@@ -138,7 +157,7 @@ try {
     const p = await planBatch(dir, opts);
     if (!JSON_OUT) printPlan(p);
     if (!YES) usage(`run spends (~${p.estimatedCredits} studio credits, ${p.textTurns} text turns); add --yes`);
-    if (p.newJobs + p.retries > 0) {
+    if (!p.still && p.newJobs + p.retries > 0) {
       const health = await leonardoStudioHealth();
       if (!health.ok) throw new Error(`the still vendor is not ready: ${health.reason}`);
     }

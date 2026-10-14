@@ -15,6 +15,8 @@
 // ABSENT VALUES ARE OMITTED KEYS, never null or "" - except `verdict`, where
 // null is a real state ("not judged yet"), as on Suno clips.
 
+import type { MvLookId } from "./looks";
+
 /** Where the audio came from. `take` = a Sound-lab take with local bytes
  *  (including a folder import); `clip` = a kept Suno clip, fetched from its
  *  audioUrl when the job first runs. */
@@ -143,6 +145,13 @@ export interface MvJob {
    *  prompt instead of the treatment turn's (the no-text clause is still
    *  welded on). Cleared by a regenerate that does not carry one. */
   prompt?: string;
+  /** Absolute path of a picture the operator supplied (an album's cover): the
+   *  still step copies it instead of buying one, and no studio credits are
+   *  spent. */
+  stillFrom?: string;
+  /** The album's look (lib/sound/mv/looks.ts): placed rain, fire and light
+   *  drawn over the still. Absent = the treatment's particles and bloom only. */
+  look?: MvLookId;
   verdict: MvVerdict | null;
   /** The driver's or engine's own sentence, verbatim. */
   error?: string;

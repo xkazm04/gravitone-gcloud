@@ -64,7 +64,7 @@ import {
 } from "./export/headless";
 import type { AudioEnvelope } from "./audioEnvelope";
 import { outPath as fixtureOutPath } from "./fixtures/roots";
-import type { EffectParams, FocalInput } from "@/app/_phases/frames/music-video/compositor";
+import type { EffectParams, FocalInput, SceneFx } from "@/app/_phases/frames/music-video/compositor";
 
 // The browser launch, scratch dir, encoder fallback, atomic landing and sidecar
 // live in the shared kernel (lib/export/headless.ts) since the Cut's animatic
@@ -241,6 +241,8 @@ export interface RenderPageSetup {
   /** The focal element without its pulse: the pulse is derived in the page
    *  from the flash-safe low band (`focalPulseTrack`), once. */
   focal?: Omit<FocalInput, "pulse">;
+  /** The album look's placed light and weather (compositor `SceneFx`). */
+  scene?: SceneFx;
 }
 
 export async function setUpRenderPage(page: Page, setup: RenderPageSetup): Promise<void> {
@@ -251,10 +253,10 @@ export async function setUpRenderPage(page: Page, setup: RenderPageSetup): Promi
   await page.addScriptTag({ content: bundleCompositorScript() });
 
   const setupError = await page.evaluate(
-    async ({ posterDataUrl, effectParams, envelope, seed, fit, particleHue, focal }: {
+    async ({ posterDataUrl, effectParams, envelope, seed, fit, particleHue, focal, scene }: {
       posterDataUrl: string;
       effectParams: EffectParams; envelope: AudioEnvelope; seed: number;
-      fit: RenderPageSetup["fit"] | null; particleHue: number | null; focal: RenderPageSetup["focal"] | null;
+      fit: RenderPageSetup["fit"] | null; particleHue: number | null; focal: RenderPageSetup["focal"] | null; scene: SceneFx | null;
     }) => {
       try {
         const canvas = document.getElementById("c") as HTMLCanvasElement;
@@ -300,6 +302,10 @@ export async function setUpRenderPage(page: Page, setup: RenderPageSetup): Promi
         const extras: Record<string, unknown> = {};
         if (fit) extras.fit = fit;
         if (particleHue !== null) extras.particleHue = particleHue;
+        if (scene) {
+          extras.scene = scene;
+          extras.midBand = envelope.bands.mid;
+        }
         if (focal) {
           extras.focal = {
             ...focal,
@@ -341,6 +347,7 @@ export async function setUpRenderPage(page: Page, setup: RenderPageSetup): Promi
       fit: setup.fit ?? null,
       particleHue: setup.particleHue ?? null,
       focal: setup.focal ?? null,
+      scene: setup.scene ?? null,
     },
   );
   if (setupError) throw new ExportError(`Render page setup failed: ${setupError}`, "render-setup-failed");

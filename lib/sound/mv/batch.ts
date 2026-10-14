@@ -29,7 +29,7 @@
 // the batch's own output, and a re-run after a regenerate must hand over the
 // new video, not keep the old one.
 
-import { copyFile, readdir, stat, writeFile } from "node:fs/promises";
+import { copyFile, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import path from "node:path";
 
@@ -37,6 +37,7 @@ import { SoundError } from "../store";
 import { IMPORT_EXTS, importFolder } from "./importFolder";
 import { enqueueMv, kickMvWorker, mvWorkerPaused, retryMv, setMvQueue } from "./queue";
 import { filePathAbs } from "../store";
+import { isLookId, MV_LOOK_IDS, type MvLookId } from "./looks";
 import { readMv, trackTitle } from "./store";
 import type { MvJob, MvMetadata } from "./types";
 
@@ -70,11 +71,54 @@ export interface BatchPlan {
   newJobs: number;
   retries: number;
   estimatedCredits: number;
+  /** The supplied picture and look the run will use, when there are any. */
+  still?: string;
+  look?: MvLookId;
   /** Two text turns per new job (treatment, metadata); none when a prompt is given for the treatment. */
   textTurns: number;
 }
 
+/** An album folder's own defaults, `mv-album.json` beside the tracks:
+ *  {"still": "cover.jpg", "look": "siren-rain"}. The still is the one picture
+ *  every track's video is made over (no studio credits); the look is the
+ *  placed light and weather drawn on it. An album that fills up over time
+ *  keeps its look because the file is in the folder, not in anyone's
+ *  command line. Command-line flags win over the file. */
+export const ALBUM_FILE = "mv-album.json";
+
+export async function readAlbumFile(dir: string): Promise<{ still?: string; look?: MvLookId }> {
+  const raw = await readFile(path.join(dir, ALBUM_FILE), "utf8").catch(() => null);
+  if (raw === null) return {};
+  let o: Record<string, unknown>;
+  try {
+    o = JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    throw new SoundError(`${ALBUM_FILE} in ${dir} is not valid JSON`, 400);
+  }
+  const out: { still?: string; look?: MvLookId } = {};
+  if (typeof o.still === "string" && o.still.trim()) {
+    const abs = path.resolve(dir, o.still.trim());
+    if (!(await stat(abs).catch(() => null))?.isFile()) throw new SoundError(`${ALBUM_FILE}: there is no picture at ${abs}`, 400);
+    out.still = abs;
+  }
+  if (o.look !== undefined) {
+    if (!isLookId(o.look)) throw new SoundError(`${ALBUM_FILE}: look must be one of ${MV_LOOK_IDS.join(", ")}`, 400);
+    out.look = o.look;
+  }
+  return out;
+}
+
+/** The options with the folder's file filled in under them. */
+async function withAlbum(dir: string, opts: BatchOptions): Promise<BatchOptions> {
+  const album = await readAlbumFile(dir);
+  return { ...opts, ...(opts.still ?? album.still ? { still: opts.still ?? album.still } : {}), ...(opts.look ?? album.look ? { look: opts.look ?? album.look } : {}) };
+}
+
 export interface BatchOptions {
+  /** One picture for every new track (absolute path): copied, not bought. */
+  still?: string;
+  /** The placed light and weather over it (lib/sound/mv/looks.ts). */
+  look?: MvLookId;
   versions?: BatchVersions;
   /** Queue another video for a track whose video is done already. */
   again?: boolean;
@@ -100,8 +144,9 @@ async function audioFiles(dir: string): Promise<string[]> {
 }
 
 /** What a run over `dirIn` would do. Reads only. */
-export async function planBatch(dirIn: string, opts: BatchOptions = {}): Promise<BatchPlan> {
+export async function planBatch(dirIn: string, optsIn: BatchOptions = {}): Promise<BatchPlan> {
   const dir = resolveDir(dirIn);
+  const opts = await withAlbum(dir, optsIn);
   const versions = opts.versions ?? "all";
   const f = await readMv();
   const byPath = new Map(f.imports.map((r) => [r.path.toLowerCase(), r]));
@@ -134,8 +179,10 @@ export async function planBatch(dirIn: string, opts: BatchOptions = {}): Promise
     rows,
     newJobs,
     retries,
-    estimatedCredits: newJobs * CREDITS_PER_STILL,
-    textTurns: newJobs * (opts.prompt?.trim() ? 1 : 2),
+    estimatedCredits: opts.still ? 0 : newJobs * CREDITS_PER_STILL,
+    ...(opts.still ? { still: opts.still } : {}),
+    ...(opts.look ? { look: opts.look } : {}),
+    textTurns: newJobs * (opts.still || opts.prompt?.trim() ? 1 : 2),
   };
 }
 
@@ -165,8 +212,9 @@ export async function collectJob(job: MvJob, sourceFile: string): Promise<string
 
 /** Import, queue, drain, collect. Spends: a still and up to two text turns
  *  per new job. `onTick` is called while the drain runs (progress lines). */
-export async function runBatch(dirIn: string, opts: BatchOptions = {}, onTick?: (jobs: MvJob[]) => void): Promise<BatchResult> {
+export async function runBatch(dirIn: string, optsIn: BatchOptions = {}, onTick?: (jobs: MvJob[]) => void): Promise<BatchResult> {
   const dir = resolveDir(dirIn);
+  const opts = await withAlbum(dir, optsIn);
   await importFolder(dir);
   const plan = await planBatch(dir, opts);
   const owned = new Map<string, string>(); // job id -> source file
@@ -184,7 +232,7 @@ export async function runBatch(dirIn: string, opts: BatchOptions = {}, onTick?: 
     const jobs = await enqueueMv(
       fresh.map((r) => ({ kind: "take" as const, id: r.takeId!, title: r.title })),
       Date.now(),
-      opts.prompt?.trim() ? { prompt: opts.prompt } : {},
+      { ...(opts.prompt?.trim() ? { prompt: opts.prompt } : {}), ...(opts.still ? { stillFrom: opts.still } : {}), ...(opts.look ? { look: opts.look } : {}) },
     );
     jobs.forEach((j, i) => owned.set(j.id, fresh[i].file));
   }

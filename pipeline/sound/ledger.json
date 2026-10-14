@@ -479,6 +479,30 @@
       "huntId": null,
       "parentId": null,
       "judgedAt": "2026-10-12T11:18:36.989Z"
+    },
+    {
+      "takeId": "st-c9277548da",
+      "kind": "music",
+      "provider": "local",
+      "op": "manual",
+      "origin": "import",
+      "technique": [],
+      "terms": {
+        "genre": [],
+        "mood": [],
+        "instrument": [],
+        "sfxCategory": null
+      },
+      "prompt": "",
+      "negative": null,
+      "durationS": null,
+      "verdict": "kept",
+      "ratings": {},
+      "score": null,
+      "reasons": [],
+      "huntId": null,
+      "parentId": null,
+      "judgedAt": "2026-10-14T17:58:21.761Z"
     }
   ],
   "lessons": []

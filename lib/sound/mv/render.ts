@@ -47,6 +47,7 @@ import {
 } from "@/lib/musicVideoExport";
 import { DEFAULT_EFFECT_PARAMS, type EffectParams } from "@/app/_phases/frames/music-video/compositor";
 
+import { MV_LOOKS, type MvLookId } from "./looks";
 import { detectSections, energyShape } from "./sections";
 import type { MvAnalysis, MvMotion } from "./types";
 
@@ -64,6 +65,11 @@ export interface RenderArgs {
   /** The envelope written by `analyseTrack`. */
   envelopePath: string;
   motion: MvMotion;
+  /** Multiplies the edge bloom on top of `motion.pulseStrength`; 1 (the
+   *  default) is the approved look. A trial knob, not a treatment number. */
+  bloomGain?: number;
+  /** The album's look: placed rain, fire, voice threads and glow over the still. */
+  look?: MvLookId;
   /** Absolute path of the finished mp4 (1920x1080, the master audio under the
    *  peak-limited single gain of lib/musicVideoExport.ts). */
   outPath: string;
@@ -124,6 +130,11 @@ function effectParamsFor(m: MvMotion): EffectParams {
  *  1.4x - a nudge, not a different look. */
 export function bloomIntensityFor(pulseStrength: number): number {
   return Math.round(DEFAULT_EFFECT_PARAMS.bloomIntensity * (0.6 + 0.8 * pulseStrength) * 1000) / 1000;
+}
+
+function withBloomGain(p: EffectParams, gain: number | undefined): EffectParams {
+  const g = clamp(gain, 0, 5, 1);
+  return g === 1 ? p : { ...p, bloomIntensity: Math.round(p.bloomIntensity * g * 1000) / 1000 };
 }
 
 /** The particle seed, from the motion itself: the same job re-renders the
@@ -209,9 +220,10 @@ export async function renderMusicVideo(args: RenderArgs): Promise<{ durationS: n
       posterDataUrl,
       envelope,
       seed: seedFor(motion),
-      effectParams: effectParamsFor(motion),
+      effectParams: withBloomGain(effectParamsFor(motion), args.bloomGain),
       fit: "cover",
       particleHue: motion.particleHue,
+      ...(args.look ? { scene: MV_LOOKS[args.look] } : {}),
     });
 
     // Frames are nearly all of the wall time; the mux is the last 5%.

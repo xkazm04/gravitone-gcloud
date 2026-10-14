@@ -316,6 +316,11 @@ export interface RenderInput {
    *  queue's treatment places it). Absent = no element, and the frame is
    *  byte-identical to the studio's (mv-render.probe pins that). */
   focal?: FocalInput;
+  /** A look's placed light and weather (see `SceneFx`). Absent = the frame is
+   *  byte-identical to one rendered before scene effects existed. */
+  scene?: SceneFx;
+  /** The envelope's mid band, read by the scene's instrument glow. */
+  midBand?: number[];
 }
 
 export type FocalKind = "halo" | "ring" | "light" | "orb";
@@ -582,8 +587,13 @@ export function renderFrame(ctx: CanvasRenderingContext2D, input: RenderInput): 
   if (low > 0.001) {
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
-    ctx.globalAlpha = Math.min(1, low * params.bloomIntensity);
-    ctx.drawImage(bloomTexture, dx, dy, dw, dh);
+    // An intensity past 1 is drawn as extra additive passes rather than
+    // clamped at one: a clamp would turn "three times the light" into "the
+    // same light, saturated sooner". Under 1 this is the single draw it was.
+    for (let a = low * params.bloomIntensity; a > 0.001; a -= 1) {
+      ctx.globalAlpha = Math.min(1, a);
+      ctx.drawImage(bloomTexture, dx, dy, dw, dh);
+    }
     ctx.restore();
   }
 
@@ -617,6 +627,218 @@ export function renderFrame(ctx: CanvasRenderingContext2D, input: RenderInput): 
   }
   ctx.restore();
 
+  // THE SCENE'S OWN LIGHT AND WEATHER, when the album's look places any.
+  if (input.scene) {
+    drawScene(ctx, input.scene, {
+      seed, frameIndex, fps: input.fps, dx, dy, dw, dh,
+      low: boundedLow, mid: input.midBand ?? [], high: highBand,
+    });
+  }
+
   // THE FOCAL ELEMENT, last and on top: the one thing the treatment placed.
   if (input.focal) drawFocal(ctx, input.focal, frameIndex, input.fps);
+}
+
+
+/* ───────────────────────────── the scene's light and weather ─────────────── */
+
+// A LOOK is an album's fixed picture, so its light sources are placed ONCE, in
+// the picture's own 0..1 coordinates (x across, y down; radii against the
+// picture's height), and every layer below is a pure function of
+// (seed, frameIndex, envelope) - no state carried between frames, same as the
+// particle field. Each layer reads the band the thing it draws would answer
+// to: fire to the low band, the voice's threads to the high band, the
+// instruments' glow to the mid band. The flash limiter's bounded low band is
+// the only low band read, and every drive is averaged over ~0.25 s before it
+// moves anything, so a layer swells and exhales and never strobes.
+
+export interface ScenePoint { x: number; y: number }
+
+export interface SceneFx {
+  /** Fine falling rain over the whole frame. */
+  rain: { count: number; angleDeg: number; lengthPx: number; hue: number; warmZones: { x: number; y: number; r: number }[] };
+  /** Fire: a flickering glow and rising sparks at each source. */
+  fires: { x: number; y: number; r: number; sparks: number }[];
+  /** Light rising from `from` along curves to each target (the voice). */
+  threads: { from: ScenePoint; to: ScenePoint[]; count: number; hue: number };
+  /** Soft glows on the targets, rippled in order by `lagFrames`. */
+  glows: { x: number; y: number; r: number; hue: number; lagFrames: number }[];
+  /** A slow breathing halo. */
+  moon: { x: number; y: number; r: number };
+  /** Twinkling glints inside rects: amber left of `warmBelowX`, cool right of it. */
+  glints: { rects: { x0: number; y0: number; x1: number; y1: number }[]; count: number; warmBelowX: number };
+}
+
+interface SceneCtx {
+  seed: number;
+  frameIndex: number;
+  fps: number;
+  dx: number; dy: number; dw: number; dh: number;
+  low: number[]; mid: number[]; high: number[];
+}
+
+/** Mean of a band over the ~0.25 s ending at `frame` (0 when absent). */
+function drive(band: number[], frame: number, fps: number, lag = 0): number {
+  if (!band.length) return 0;
+  const n = Math.max(1, Math.round(fps * 0.25));
+  const end = Math.min(band.length - 1, Math.max(0, frame - lag));
+  let sum = 0;
+  let c = 0;
+  for (let i = Math.max(0, end - n + 1); i <= end; i++) {
+    sum += band[i];
+    c++;
+  }
+  return c ? sum / c : 0;
+}
+
+const fract = (v: number) => v - Math.floor(v);
+
+function radial(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, inner: string, outer: string): void {
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, inner);
+  g.addColorStop(1, outer);
+  ctx.fillStyle = g;
+  ctx.fillRect(x - r, y - r, r * 2, r * 2);
+}
+
+export function drawScene(ctx: CanvasRenderingContext2D, fx: SceneFx, c: SceneCtx): void {
+  const { seed, frameIndex, fps, dx, dy, dw, dh } = c;
+  const t = frameIndex / fps;
+  const px = (x: number) => dx + x * dw;
+  const py = (y: number) => dy + y * dh;
+  const u = dh / 1080; // pixel sizes are authored for a 1080-high frame
+  const low = drive(c.low, frameIndex, fps);
+  const high = drive(c.high, frameIndex, fps);
+  const level = (low + drive(c.mid, frameIndex, fps) + high) / 3;
+
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+
+  // THE MOON: a slow breath, kept low so the title space stays clean.
+  {
+    const breath = 0.5 + 0.5 * Math.sin((t / 7) * Math.PI * 2);
+    radial(ctx, px(fx.moon.x), py(fx.moon.y), fx.moon.r * dh * 3.2, hsla(214, 70, 82, 0.1 + 0.05 * breath), hsla(214, 70, 82, 0));
+  }
+
+  // RAIN. Each streak is a fixed lane that falls and wraps; denser and a touch
+  // brighter as the track gets louder. Streaks that pass a fire's glow turn amber.
+  {
+    const rad = (fx.rain.angleDeg * Math.PI) / 180;
+    const sx = Math.sin(rad);
+    const cy = Math.cos(rad);
+    const shown = Math.round(fx.rain.count * (0.65 + 0.35 * Math.min(1, level * 1.6)));
+    ctx.lineCap = "round";
+    for (let i = 0; i < shown; i++) {
+      const rng = mulberry32(hashSeed(seed ^ 0x51ed, i));
+      const lane = rng();
+      const phase = rng();
+      const depth = 0.35 + 0.65 * rng(); // near streaks are longer, faster, brighter
+      const speed = 0.55 + 0.9 * depth;
+      const p = fract(phase + t * speed * 0.9);
+      // The fall spans the frame plus its own length, so a streak enters and leaves off-screen.
+      const x = lane + sx * (p - 0.5) * 0.35;
+      const y = -0.08 + p * 1.16;
+      const len = fx.rain.lengthPx * depth * u;
+      const X = px(x);
+      const Y = py(y);
+      let warm = 0;
+      for (const z of fx.rain.warmZones) {
+        const d = Math.hypot((x - z.x) * dw, (y - z.y) * dh) / (z.r * dh);
+        if (d < 1) warm = Math.max(warm, 1 - d);
+      }
+      ctx.lineWidth = (0.7 + 0.9 * depth) * u;
+      ctx.strokeStyle = warm > 0.05
+        ? hsla(34, 95, 70, (0.12 + 0.32 * warm) * depth)
+        : hsla(fx.rain.hue, 60, 82, (0.07 + 0.2 * depth) * (0.8 + 0.4 * level));
+      ctx.beginPath();
+      ctx.moveTo(X, Y);
+      ctx.lineTo(X - sx * len, Y - cy * len);
+      ctx.stroke();
+    }
+  }
+
+  // FIRE: a flickering amber glow that rises a little on the low band, and sparks.
+  for (let fi = 0; fi < fx.fires.length; fi++) {
+    const f = fx.fires[fi];
+    const flick = 0.55 + 0.25 * Math.sin(t * 7.3 + fi * 2.1) + 0.12 * Math.sin(t * 13.7 + fi * 0.7) + 0.08 * Math.sin(t * 23.1 + fi);
+    const a = Math.max(0, flick * 0.2 + 0.2 * low);
+    radial(ctx, px(f.x), py(f.y), f.r * dh * (1 + 0.12 * low), hsla(32, 100, 58, a), hsla(26, 100, 45, 0));
+    for (let i = 0; i < f.sparks; i++) {
+      const rng = mulberry32(hashSeed(seed ^ (0xf1e0 + fi * 977), i));
+      const life = 2.2 + rng() * 2.8;
+      const age = fract(rng() + t / life); // 0 born .. 1 gone
+      const sway = (rng() - 0.5) * 0.05 + Math.sin(t * (1.1 + rng()) + rng() * 6.28) * 0.012 * (0.4 + age);
+      const x = f.x + (rng() - 0.5) * f.r * 0.5 * (dh / dw) + sway;
+      const y = f.y - age * (0.12 + 0.16 * rng());
+      const fade = Math.sin(Math.PI * Math.min(1, age * 1.15)) * (1 - age * 0.3);
+      const tw = 0.75 + 0.25 * Math.sin(t * (9 + rng() * 8) + rng() * 6.28);
+      const size = (1 + 2 * rng()) * (1 - age * 0.55) * u;
+      ctx.globalAlpha = Math.max(0, Math.min(1, fade * tw * 0.9));
+      ctx.fillStyle = hsla(26 + 18 * rng(), 100, 55 + 20 * (1 - age), 1);
+      ctx.beginPath();
+      ctx.arc(px(x), py(y), size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // THE INSTRUMENTS' GLOW: mid band, each a few frames behind the last, so a
+  // phrase travels lyre -> flute -> drum.
+  for (const g of fx.glows) {
+    const m = drive(c.mid, frameIndex, fps, g.lagFrames);
+    radial(ctx, px(g.x), py(g.y), g.r * dh * (1 + 0.1 * m), hsla(g.hue, 100, 72, 0.05 + 0.2 * m), hsla(g.hue, 100, 60, 0));
+  }
+
+  // THE VOICE'S THREADS: motes leave the singer and arc to the instruments;
+  // the high band (breath, sibilance, air) is what brightens them.
+  {
+    const th = fx.threads;
+    for (let i = 0; i < th.count; i++) {
+      const rng = mulberry32(hashSeed(seed ^ 0x7b3a, i));
+      const target = th.to[i % th.to.length];
+      const life = 3.5 + rng() * 3;
+      const p = fract(rng() + t / life);
+      const bow = (rng() - 0.5) * 0.16;
+      const wobble = Math.sin(t * (1.3 + rng()) + rng() * 6.28) * 0.012;
+      const e = p * p * (3 - 2 * p); // ease: leaves slowly, lands softly
+      const mx = (th.from.x + target.x) / 2;
+      const my = (th.from.y + target.y) / 2 - 0.09 - bow * 0.5;
+      const x = (1 - e) * (1 - e) * th.from.x + 2 * (1 - e) * e * mx + e * e * target.x + wobble;
+      const y = (1 - e) * (1 - e) * th.from.y + 2 * (1 - e) * e * my + e * e * target.y + wobble * 0.6;
+      const a = Math.sin(Math.PI * p) * (0.3 + 0.7 * Math.min(1, high * 1.8));
+      const size = (1.2 + 2.2 * rng()) * u;
+      ctx.globalAlpha = Math.max(0, Math.min(1, a));
+      radial(ctx, px(x), py(y), size * 4, hsla(th.hue, 100, 78, 0.5), hsla(th.hue, 100, 70, 0));
+      ctx.fillStyle = hsla(th.hue, 90, 92, 1);
+      ctx.beginPath();
+      ctx.arc(px(x), py(y), size * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // GLINTS on the wet steps and the sea: amber where the fire reflects, cool elsewhere.
+  {
+    const gl = fx.glints;
+    for (let i = 0; i < gl.count; i++) {
+      const rng = mulberry32(hashSeed(seed ^ 0x6c17, i));
+      const r = gl.rects[Math.floor(rng() * gl.rects.length)];
+      const x = r.x0 + rng() * (r.x1 - r.x0);
+      const y = r.y0 + rng() * (r.y1 - r.y0);
+      const f = 0.25 + rng() * 0.55;
+      const tw = Math.pow(Math.max(0, Math.sin(t * Math.PI * 2 * f + rng() * 6.28)), 6);
+      const a = tw * (0.35 + 0.65 * Math.min(1, low * 1.4 + 0.2));
+      if (a < 0.02) continue;
+      const warm = x < gl.warmBelowX;
+      const wpx = (3 + 9 * rng()) * u;
+      ctx.globalAlpha = Math.min(1, a);
+      ctx.fillStyle = warm ? hsla(34, 100, 66, 1) : hsla(208, 90, 82, 1);
+      ctx.beginPath();
+      ctx.ellipse(px(x), py(y), wpx, 0.9 * u + 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.restore();
 }
