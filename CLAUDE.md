@@ -211,12 +211,14 @@ in the app's own handshake file, `~/.personas/local-http.json` (`{"pid":...,"por
 
 **A live bridge is not enough: it must be the bridge whose database wrote the map.** This repo is
 checked out on two machines, each with its own Personas and its own project row, and a scan
-re-exports `context-map.json` from the LOCAL database. Measured 2026-10-06: the committed map came
-from project `d57f858b` at `C:/Users/kazda/kiro/gravitone-gcloud` (36 contexts); a subtree scan on the
-other machine (project `91d8170c`, a database a month behind) exported 19 contexts with 12 ungrouped,
-and nine scans were spent before anyone noticed. Before scanning, compare `project.root` in
-`context-map.json` with this checkout's path. If they differ, do not scan; log the needed scans in
-`.vault/map-drift.md` for the machine that owns the map. If a scan has already run, restore the map
+re-exports `context-map.json` from the LOCAL database. Measured 2026-10-06: a subtree scan on the
+machine whose database was a month behind exported 19 contexts with 12 ungrouped, and nine scans
+were spent before anyone noticed. **Which machine owns the map is a fact in the file, not in this
+text:** read `project.id` and `project.root` from `context-map.json` (since `3e87f6d`, 2026-10-11,
+the map belongs to project `91d8170c` at `C:/Users/mkdol/dolla/gravitone-gcloud`; the kazda checkout
+is project `d57f858b`). Compare the map's `project.root` with `git rev-parse --show-toplevel`, and its
+`project.id` with this checkout's `.personas/project.json`. If they differ, do not scan; log the
+needed scans in `.vault/map-drift.md` for the machine that owns the map. If a scan has already run, restore the map
 with `git checkout -- context-map.json CLAUDE.md`.
 
 ```bash
@@ -224,19 +226,22 @@ with `git checkout -- context-map.json CLAUDE.md`.
 PORT=$(python -c "import json,os;print(json.load(open(os.path.expanduser('~/.personas/local-http.json')))['port'])")
 TOK=$(python -c "import json,os;print(json.load(open(os.path.expanduser('~/.personas/local-http.json')))['token'])")
 AUTH=(-H "x-personas-local-token: $TOK")
-# 2. This repo's project id (stable; confirm against /dev-tools/projects if unsure)
-PID=91d8170c-2be4-45ac-b509-256bfa7726f1
+# 2. This checkout's project id and root, never hardcoded (two machines, two project rows)
+PID=$(python -c "import json;print(json.load(open('.personas/project.json'))['id'])")
+ROOT=$(git rev-parse --show-toplevel)
+# ...and the map must be this machine's, or stop here (see the paragraph above)
+python -c "import json,sys;m=json.load(open('context-map.json'))['project'];sys.exit(0 if m['id']=='$PID' else 1)"   || { echo "context-map.json belongs to project $(python -c "import json;print(json.load(open('context-map.json'))['project']['id'])") - do not scan here; log to .vault/map-drift.md"; exit 1; }
 
 # 3a. Files changed inside existing areas → DELTA scan (cheap; updates only what moved)
 curl -s "${AUTH[@]}" -X POST "http://127.0.0.1:$PORT/dev-tools/scan-codebase" \
   -H 'content-type: application/json' \
-  -d "{\"project_id\":\"$PID\",\"root_path\":\"C:/Users/mkdol/dolla/gravitone-gcloud\",\"delta_mode\":true}"
+  -d "{\"project_id\":\"$PID\",\"root_path\":\"$ROOT\",\"delta_mode\":true}"
 
 # 3b. A NEW step directory that deserves its own context → SUBTREE scan (scoped, safe:
 #     a subtree scan never clears the rest of the map)
 curl -s "${AUTH[@]}" -X POST "http://127.0.0.1:$PORT/dev-tools/scan-codebase" \
   -H 'content-type: application/json' \
-  -d "{\"project_id\":\"$PID\",\"root_path\":\"C:/Users/mkdol/dolla/gravitone-gcloud\",\"subtree\":\"app/_phases/motion\"}"
+  -d "{\"project_id\":\"$PID\",\"root_path\":\"$ROOT\",\"subtree\":\"app/_phases/motion\"}"
 
 # 4. Poll until status is done/failed — it streams progress lines
 curl -s "${AUTH[@]}" "http://127.0.0.1:$PORT/dev-tools/scan-status/<scan_id>"

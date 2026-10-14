@@ -131,8 +131,8 @@ before matching, the population walked off the filesystem rather than listed, an
 - **2026-09-06 — `cd` inside a Bash call persists and silently breaks later tool calls.**
   A `cd app/_phases/research` early in the round made a later `npx playwright test tests/...`
   report "No tests found" — which reads exactly like a broken spec file, not a wrong cwd. Use
-  absolute paths or a leading `cd /c/Users/mkdol/dolla/gravitone-gcloud &&` in every call that
-  runs a repo-root command.
+  absolute paths or a leading `cd "$(git rev-parse --show-toplevel)" &&` in every call that runs a
+  repo-root command (the checkout path differs per machine).
 - **2026-09-06 — scan-sweep v4.0.0 (three lanes) applied to this repo's backlog.** The split
   is in `.claude/scan-history/lanes.jsonl`: A:0 / B:8 across 6 write-set groups / C:4. Zero
   Lane A is the expected result — v3.0 already built everything a probe had measured, and

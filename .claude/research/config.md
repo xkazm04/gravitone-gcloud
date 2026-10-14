@@ -17,7 +17,7 @@ because they are cheap now and expensive later.
 
 ## Vault
 
-`C:/Users/mkdol/dolla/gravitone-gcloud/.vault` (in-repo, gitignored, Obsidian-openable). Create it on
+`.vault/` at the repo root (gitignored, Obsidian-openable). Create it on
 first run; do not commit it. `Lessons/`, `Patterns/` and `active-runs.md` are shared with the other
 adopted skills.
 

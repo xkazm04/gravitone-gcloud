@@ -1,7 +1,7 @@
 ---
 product: "Gravitone Studio"
 stack: "Next.js 16 (App Router, Turbopack) + React 19 + TypeScript + Tailwind v4. No database. Server-side vendor seams DO exist now: lib/imaging (Leonardo/OpenAI), lib/music (ElevenLabs), lib/text (reasoning chokepoint), lib/foundry (Extract engine)."
-vault: ["C:/Users/mkdol/dolla/gravitone-gcloud/.vault"]
+vault: [".vault"]
 vault_subdir: Perfect
 base_branch: main
 wave_size: 3
@@ -19,13 +19,13 @@ locale_count: 1
 
 ## Product brief
 
-One production walked through five steps (Research - Script - Frames - Score - Cut) over a Library
+One production walked through six steps (Research - Script - Frames - Motion - Score - Cut) over a Library
 that knows every asset's lineage. `lib/projects.ts`'s `PHASES` is the ONE source of that order;
 `app/studio/[projectId]/` is the composition root.
 
-- **Motion was retired as a step on 2026-08-14.** Frames owns the still and the clip made from it,
-  because they are one art-direction decision against one source frame. A direction proposing "the
-  motion step" is proposing a regression; a direction deepening Frames' clip half is in season.
+- **Motion is a step again.** Motion was retired on 2026-08-14 and reinstated as the sixth step on 2026-10-06 (`1c90240`); `RETIRED_PHASES` is empty. The whole step set is
+  being rebuilt as composition parts (`docs/next/migration-plan.md`); a v1 direction on a step must
+  check that plan's phases first.
 - **`app/_studio/*` holds the mocked fixtures every surface reads** — still true, and still the
   design seam. **But the "no live model" half of this rule expired.** As of 2026-08-29 three vendor
   domains bill real money behind server-only seams: `lib/imaging` (Leonardo · OpenAI),
@@ -152,7 +152,6 @@ EXPORTS this file, plus the managed `<!-- personas:context-map -->` block in `CL
   authorised — YouTube now, TikTok and Instagram declared — behind `lib/publish/` only, dry-run by
   default, with the schedule file-backed under `foundry-out/publish/` (no database). Every other
   new vendor is still out of scope.)
-- "Bring back the Motion step" - retired 2026-08-14 (see the product brief).
 - Localization - this repo ships English only, and `locale_count: 1` is deliberate.
 
 ## Skill improvement log

@@ -19,7 +19,8 @@ full-coverage sessions start only after the owner gates the foundry pilot.
 ## World
 
 The v2 world is **Almanac**, chosen 2026-09-29 by the owner from contest `landing-nextgen-brand-r2` (variant A/2).
-Source of truth for the look: `.contest/arena/landing-nextgen-brand-r2/entries/claude-claude-opus-5-5_xhigh-v2/variant-2/`
+Source of truth for the look: `docs/design/almanac-v2/` (committed 2026-10-14; the git-ignored
+arena copy at `.contest/arena/landing-nextgen-brand-r2/` exists only on the machine that ran it)
 (`index.html` door + brand sheet, `foundry.html` working surface, `NOTES.md` philosophy). It is scoped:
 `[data-world="almanac"]` on a route root switches a surface into v2; un-migrated surfaces keep Obsidian untouched.
 Colour literals for the world live in `components/ui/tokens.ts` (`WORLD_ALMANAC`) and nowhere else.

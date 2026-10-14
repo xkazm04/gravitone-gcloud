@@ -12,7 +12,7 @@ sources) and `/perfect` (the directional build loop).
 ## Vault
 
 ```
-VAULT="C:/Users/mkdol/dolla/gravitone-gcloud/.vault"   # in-repo and gitignored; create on first run
+VAULT=".vault"   # repo-relative, gitignored; create on first run (one checkout per machine)
 ```
 
 Not a hard-fail if absent. `Lessons/` and `Patterns/` are shared with the other adopted skills;

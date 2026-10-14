@@ -13,12 +13,12 @@ stops_per_session: 3
 
 ## Product brief
 
-One production walked through five steps — **Research · Script · Frames · Score · Cut** — over a
+One production walked through six steps — **Research · Script · Frames · Motion · Score · Cut** — over a
 Library that knows where every asset came from. `lib/projects.ts`'s `PHASES` is the ONE source of
 that order; `app/studio/[projectId]/` is the composition root.
 
 The user is a **solo creator making a short film or trailer**, not a team and not an operator. They
-arrive with an idea and a deadline, and the product's promise is that the five steps carry the idea
+arrive with an idea and a deadline, and the product's promise is that the six steps carry the idea
 to a cut without losing the thread between them. Every read should be taken from that person's
 seat.
 
@@ -55,13 +55,19 @@ source-a-look - a creator who needs a visual identity before anything can render
 | `studio-research` | app | `/studio/<id>?step=research` |
 | `studio-script` | app | `/studio/<id>?step=script` |
 | `studio-frames` | app | `/studio/<id>?step=frames` |
+| `studio-motion` | app | `/studio/<id>?step=motion` (reached via frames) |
 | `studio-score` | app | `/studio/<id>?step=score` |
 | `studio-cut` | app | `/studio/<id>?step=cut` |
+| `studio-outputs` | app | `/studio/<id>?step=cut`, Outputs opened |
 | `library-styles` | app | `/library` — Styles tab (default) |
 | `library-assets` | app | `/library` → Assets tab |
 | `library-animations` | app | `/library` → Animations tab (`ComingSoon`) |
 | `playground` | app · **operator** | `/playground` — music vendor bench, temporary by design |
 | `foundry` | app · **operator** | `/foundry` — Styles / Cull / Extract / Dojo |
+| `kit` | app | `/kit` |
+| `kit-law` | app | `/kit` → Law tab |
+| `kit-parts` | app | `/kit` → Parts tab |
+| `kit-migration` | app | `/kit` → Migration tab |
 
 Steps deep-link by query string. **Clicking the step tabs from Playwright silently does not change
 the step** (measured 2026-09-08) — always navigate by URL.
@@ -128,9 +134,9 @@ not landed the item.
    `lib/foundry` are server-only seams that bill real money.
 7. **`app/_studio/*` holds the mocked fixtures** every studio surface reads. A screen drawing
    fixture data must not imply the work is real — see the `fixture honesty` heuristic below.
-8. **`PHASES` in `lib/projects.ts` is the one source of step order.** Motion was retired as a step
-   on 2026-08-14; Frames owns the still and the clip made from it. Proposing "the motion step" is
-   proposing a regression.
+8. **`PHASES` in `lib/projects.ts` is the one source of step order.** Motion was retired on 2026-08-14 and reinstated as the sixth step on 2026-10-06 (`1c90240`); `RETIRED_PHASES` is empty. Read
+   `PHASES`, never a list remembered here; the step set is being rebuilt as composition parts
+   (`docs/next/migration-plan.md`).
 9. **Fixed `rem` widths do not follow the type scale.** Three grids broke when the scale moved 2px
    on 2026-09-08 (`ProjectsMatrix`'s phase tracks, the score/cut `LANE_GUTTER`, `ASSEMBLY_GRID`'s
    breakdown column). A track cut to fit a label must carry a comment saying what it measured.

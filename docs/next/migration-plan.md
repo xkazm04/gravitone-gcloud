@@ -189,7 +189,7 @@ probes; live lanes with the legibility negative control), the mutant registry,
 | Probes without a mutant | 249 | Unguarded budget starts at 0 for new probes |
 | Legibility baseline | ratchet | 0 contrast misses on new routes |
 
-**One v1 claim to resolve:** `sealNetwork`, which the `probes` gate and `pipeline/integration-imaging.mts` cite as the node lane's network seal, has no definition anywhere in the tree (scouted 2026-10-14). Phase 0 either finds it or re-implements it as a Vitest/Playwright setup with a negative control, before any probe is trusted offline.
+**One v1 claim to correct (scouted 2026-10-14; an earlier note here said `sealNetwork` did not exist - wrong):** `sealNetwork()` exists at `pipeline/integration-imaging.mts:102`, but it seals only that standalone script, which no gate runs. `pipeline/gates.mts` and `gates.yml` cite it as the `probes` lane's seal, and the lane has none: `playwright.config.ts` stubs nothing, and 243 of 284 specs never replace `fetch`. Phase 0.5 installs a real lane-wide seal (loopback allowed, every other host refused and reported) with a negative-control probe, and corrects the citations.
 
 Domain gates tied to retired features (`notebook`, `trailer-structure`, `render-gate`,
 `frames-prompt`, `ads-prompts`, `style-refs`, `clips`, `vocab`) are **kept running against v1
@@ -292,6 +292,7 @@ lots) inside the phase.
 - **0.3** Pull registry constants into `packages/catalog` (`@gt/catalog`) (no IndexedDB import) and point
   `app/_landing/*` at it. Delete `app/_landing/sky.ts` (dead for the landing).
 - **0.4** Move the pure logic named in §5.2 out of `app/` into `lib/`, leaving re-exports.
+- **0.5** Seal the node probe lane's network (see §3.5), and point the `probes` gate's citation at the mechanism that actually runs.
 - **Exit:**
   - `npm run verify` is green.
   - The landing imports nothing from `app/_phases`, `app/library` or `lib/studioDb`.

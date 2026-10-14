@@ -1,7 +1,7 @@
 ---
 product: "Gravitone Studio"
 stack: "Next.js 16 (App Router, Turbopack) + React 19 + TypeScript + Tailwind v4. IndexedDB project records; fixtures in app/_studio; governed imaging chokepoint in lib/imaging."
-vault: ["C:/Users/mkdol/dolla/gravitone-gcloud/.vault"]
+vault: [".vault"]
 vault_subdir: Spark
 context_map: context-map.json
 base_branch: main
