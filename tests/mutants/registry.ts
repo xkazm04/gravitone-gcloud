@@ -41,6 +41,14 @@ export const UNGUARDED_PROBE_BUDGET = 249;
 
 export const MUTANTS: Mutant[] = [
   {
+    id: "ad-overlay-fit-ignores-width",
+    probe: "ad-overlay-fit.probe.spec.ts",
+    file: "lib/adRender.ts",
+    find: "(lines.length > maxLines || widest(lines, size_, weight) > width)",
+    replace: "(lines.length > maxLines)",
+    why: "An unbreakable URL, handle or compound word keeps the line COUNT in range, so the overlay never shrinks and the text runs past the safe zone on every platform reframe - the defect 7dc56b5 fixed.",
+  },
+  {
     id: "poll-freshness-failure-never-restores",
     probe: "poll-freshness.probe.spec.ts",
     file: "lib/pollFreshness.ts",
