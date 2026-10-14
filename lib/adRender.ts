@@ -313,7 +313,7 @@ async function realResolveMusicFile(takeId: string): Promise<string> {
 
 /** The overlay page: one canvas, one draw function per spec kind. Lives as a
  *  string because it runs in the browser page, not in this process. */
-const OVERLAY_PAGE_SCRIPT = String.raw`
+export const OVERLAY_PAGE_SCRIPT = String.raw`
 window.__drawOverlay = async function (spec, size, safe) {
   const c = document.getElementById("c");
   c.width = size.w; c.height = size.h;
@@ -342,9 +342,16 @@ window.__drawOverlay = async function (spec, size, safe) {
     if (cur) lines.push(cur);
     return lines.slice(0, maxLines);
   }
+  // A line is also too long when one unbreakable word (a URL, a handle, a German compound)
+  // is wider than the box: wrap() cannot split it, so the line COUNT stays in range and
+  // only the width shows the overflow. Shrink on either.
+  function widest(lines, px, weight) {
+    g.font = weight + " " + px + "px " + FONT;
+    return Math.max.apply(null, lines.map((l) => g.measureText(l).width));
+  }
   function fit(text, px, weight, width, maxLines) {
     let size_ = px, lines = wrap(text, size_, weight, width, 99);
-    while (lines.length > maxLines && size_ > 18) { size_ = Math.round(size_ * 0.9); lines = wrap(text, size_, weight, width, 99); }
+    while ((lines.length > maxLines || widest(lines, size_, weight) > width) && size_ > 18) { size_ = Math.round(size_ * 0.9); lines = wrap(text, size_, weight, width, 99); }
     return { px: size_, lines: lines.slice(0, maxLines) };
   }
   if (spec.kind === "super") {
