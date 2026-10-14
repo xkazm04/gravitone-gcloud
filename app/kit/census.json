@@ -1437,7 +1437,7 @@
       }
     },
     "app/_landing": {
-      "files": 39,
+      "files": 38,
       "kitImports": 0,
       "signalImports": 1,
       "parts": [
@@ -1955,7 +1955,7 @@
       }
     },
     "app/kit": {
-      "files": 11,
+      "files": 12,
       "kitImports": 7,
       "signalImports": 1,
       "parts": [

@@ -12,7 +12,7 @@
 import { useEffect, useRef, useState } from "react";
 
 
-import { BOX, CONS, FIGURES } from "@/app/_landing/sky";
+import { BOX, CONS, FIGURES } from "@/app/kit/sky";
 import {
   Chip,
   Credit,

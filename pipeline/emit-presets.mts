@@ -6,7 +6,7 @@
 // a newline in a motion line round-trips exactly.
 //
 // Run:  npx tsx pipeline/emit-presets.mts
-import { PRESETS } from "../app/library/presets";
+import { PRESETS } from "@gt/catalog/presets";
 
 process.stdout.write(
   JSON.stringify(PRESETS.map((p) => ({ id: p.id, name: p.name, motion: p.motion }))) + "\n",

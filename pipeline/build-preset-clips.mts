@@ -33,7 +33,7 @@ import path from "node:path";
 
 import { makeClip, probe, formatBytes, PROFILES } from "./video/transcode.mjs";
 
-const { PRESETS } = await import("../app/library/presets");
+const { PRESETS } = await import("@gt/catalog/presets");
 
 const argv = process.argv.slice(2);
 const only = argv.includes("--only") ? argv[argv.indexOf("--only") + 1] : null;

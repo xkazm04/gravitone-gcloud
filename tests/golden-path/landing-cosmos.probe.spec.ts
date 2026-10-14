@@ -22,8 +22,8 @@ import { join } from "node:path";
 import { test, expect } from "@playwright/test";
 
 import { registryGalaxy } from "@/app/_landing/cosmos/data";
-import { LIBRARY_AREAS } from "@/app/library/areas";
-import { PRESETS, thumbSrc } from "@/app/library/presets";
+import { LIBRARY_AREAS } from "@gt/catalog/libraryAreas";
+import { PRESETS, thumbSrc } from "@gt/catalog/presets";
 import { DISCIPLINES, PHASES, TEMPLATES, TEMPLATE_FAMILY } from "@/lib/projects";
 
 import { stripComments } from "./_helpers";

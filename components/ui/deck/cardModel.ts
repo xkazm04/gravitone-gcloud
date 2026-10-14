@@ -2,7 +2,7 @@
 // Neither skin (DeckCard in Obsidian, DeckCardAlmanac in Almanac) decides these;
 // both draw what this model returns.
 
-import type { DeckArtFamily } from "@/app/_studio/deckArt";
+import type { DeckArtFamily } from "@gt/catalog/deckArt";
 import type { DeckArt } from "./DeckCard";
 import { hasEmblem } from "./emblems";
 

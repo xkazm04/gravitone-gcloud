@@ -38,7 +38,14 @@ import { LOCAL_MODE, LOCAL_USER } from "./localMode";
 // The eviction OWNER. It imports every user-scoped store; nothing it clears
 // imports it, and this context does not own the list — see lib/identityEviction.ts
 // for the enumerated triggers and the one deliberate exclusion.
-import { evictIdentity, transitionFor, type EvictionReason } from "./identityEviction";
+//
+// LOADED ON DEMAND, NOT IMPORTED. The owner statically imports every
+// user-scoped store (studioDb, assets, jobs, the step stores), and this context
+// is mounted by the public landing; a top-level import would drag all of them
+// into a page that has no signed-in work to evict. The first auth effect starts
+// the load, so by the time an identity flips the module is already resolved.
+import type { EvictionReason } from "./identityEviction";
+const loadEviction = () => import("./identityEviction");
 // The ID-token CACHE (not an eviction trigger) — see where it is subscribed below.
 import { subscribeSessionToken } from "./sessionToken";
 
@@ -120,6 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     const auth = authClient();
+    void loadEviction();
     // Complete a redirect-based sign-in if we came back from one.
     getRedirectResult(auth).catch((e) =>
       setError(e instanceof Error ? e.message : "sign-in failed"),
@@ -143,10 +151,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const now = u?.uid ?? null;
       // The trigger table lives at the owner, not here — including the case that
       // is NOT a flip. This context asks; it does not decide.
-      const reason = transitionFor(was, now);
-      if (was && reason) {
-        setLastTransition(reason);
-        void evictIdentity(was, reason);
+      if (was) {
+        void loadEviction().then(({ evictIdentity, transitionFor }) => {
+          const reason = transitionFor(was, now);
+          if (reason) {
+            setLastTransition(reason);
+            void evictIdentity(was, reason);
+          }
+        });
       }
       heldUid.current = now;
       setUser(u);
@@ -216,7 +228,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // evicting twice is harmless — the second pass finds nothing and reports
       // zeroes — while relying on the listener alone would make the guarantee
       // depend on the very call that just failed.
-      if (uid) await evictIdentity(uid, "signed-out");
+      if (uid) await (await loadEviction()).evictIdentity(uid, "signed-out");
       heldUid.current = null;
     }
   }, []);

@@ -11,10 +11,10 @@
 // Art comes from the deck-art manifest (app/_studio/deckArt.ts) by its
 // `<family>-<id>` key; an entry without art gets `null`, and the engine draws it.
 
-import { DECK_ART } from "@/app/_studio/deckArt";
-import { LIBRARY_AREAS } from "@/app/library/areas";
-import { PRESETS, thumbSrc } from "@/app/library/presets";
-import { DISCIPLINES, DISCIPLINE_LABEL, PHASES, TEMPLATES, TEMPLATE_FAMILY } from "@/lib/projects";
+import { DECK_ART } from "@gt/catalog/deckArt";
+import { LIBRARY_AREAS } from "@gt/catalog/libraryAreas";
+import { PRESETS, thumbSrc } from "@gt/catalog/presets";
+import { DISCIPLINES, DISCIPLINE_LABEL, PHASES, TEMPLATES, TEMPLATE_FAMILY } from "@gt/catalog/projects";
 
 import type { Galaxy, GalaxyFamily } from "./types";
 

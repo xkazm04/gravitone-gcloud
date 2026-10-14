@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
   // The new version's workspace packages (packages/*) ship TypeScript source, not
   // builds: they run under Node 24 native type stripping for CLIs and workers,
   // and Next transpiles them here. docs/next/migration-plan.md §9.
-  transpilePackages: ["@gt/domain", "@gt/ui"],
+  transpilePackages: ["@gt/catalog", "@gt/domain", "@gt/ui"],
 };
 
 // ── package.json `sideEffects` — why the kit barrel stopped shipping the deck ──

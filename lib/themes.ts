@@ -23,25 +23,10 @@ import { getByIndex, getRecord, openDb, runTx, BY_UID, THEMES_STORE } from "./st
 
 /* ── The style block ──────────────────────────────────────────────────────── */
 
-/** Which job a colour does. An unassigned palette drifts: the model re-casts
- *  which colour carries meaning on every frame. */
-export type ColorRole = "ground" | "objects" | "accent";
-
-export interface PaletteColor {
-  name: string;
-  hex: string;
-  role: ColorRole;
-}
-
-/** The four slots. Plain language on purpose — this is what the user edits,
- *  and it is compiled to model syntax only at generation time. */
-export interface StyleBlock {
-  technique: string;
-  subject: string;
-  /** Exactly three, one per role. */
-  palette: PaletteColor[];
-  finish: string;
-}
+// Declared in @gt/catalog (the presets there are typed by it); re-exported so
+// every importer of lib/themes keeps working.
+import type { StyleBlock } from "@gt/catalog/style";
+export type { ColorRole, PaletteColor, StyleBlock } from "@gt/catalog/style";
 
 /* ── Proofs ───────────────────────────────────────────────────────────────── */
 

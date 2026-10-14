@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 
-import { StaleBadge } from "@/components/ui/signal";
+import { StaleBadge } from "@/components/ui/signal/StaleBadge";
 import { useAuth } from "@/lib/useAuth";
 
 /**

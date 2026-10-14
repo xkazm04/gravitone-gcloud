@@ -32,8 +32,9 @@ import { stripComments } from "./_helpers";
 const EXEMPT: Record<string, string> = {
   "components/ui/tokens.ts":
     "The declaring file. This is where chrome colour is allowed to be spelled.",
-  "app/library/presets.ts":
-    "STYLE-PRESET DATA — what a GENERATED IMAGE should look like. Prompt input shown to the user as a style's palette; content, not chrome.",
+  // The style presets' palette hex (what a GENERATED IMAGE looks like — content, not chrome)
+  // moved to packages/catalog/src/presets.ts; this walk reads app/ and components/ only, so
+  // the file needs no entry, and app/library/presets.ts is now a hex-free stub.
   "app/library/LibraryAtelier.tsx":
     "The same preset data, beside the presets it describes.",
   "app/_dev-inspector/devInspectorUi.tsx":

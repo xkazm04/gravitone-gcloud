@@ -31,7 +31,7 @@ function loadEnv(file = ".env.local") {
 }
 loadEnv();
 
-const { PRESETS, CANON_SUBJECT } = await import("../app/library/presets");
+const { PRESETS, CANON_SUBJECT } = await import("@gt/catalog/presets");
 const { compilePrompt, NEGATIVE_PROMPT, PROMPT_CHAR_LIMIT } = await import("../lib/stylePrompt");
 const { generate } = await import("../lib/imaging/router");
 const { ImagingError } = await import("../lib/imaging/errors");

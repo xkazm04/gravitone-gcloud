@@ -11,7 +11,7 @@
   ],
   "scripts": {
     "test:unit": "vitest run",
-    "typecheck:next": "tsc -b packages/domain packages/ui",
+    "typecheck:next": "tsc -b packages/catalog packages/domain packages/ui",
     "next-structure": "node pipeline/next-gates.mts",
     "tokens:gen": "node pipeline/gen-tokens.mts",
     "tokens:check": "node pipeline/check-tokens.mts",
