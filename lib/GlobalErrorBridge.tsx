@@ -36,7 +36,7 @@
 
 import { useEffect } from "react";
 
-import { reportTaskTrouble, type StorageTrouble } from "@/app/_phases/_shared/stepStore";
+import { reportTaskTrouble, type StorageTrouble } from "@/lib/steps";
 
 /** WHERE the routing decision lives, out of the effect so it can be driven.
  *

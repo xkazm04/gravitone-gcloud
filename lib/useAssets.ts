@@ -13,7 +13,7 @@
 // the user deleting every seeded asset, or "remove" stops meaning remove and an
 // emptied shelf silently refills on the next reload.
 
-import { reportStorageTrouble } from "@/app/_phases/_shared/stepStore";
+import { reportStorageTrouble } from "@/lib/steps";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
@@ -38,7 +38,7 @@ import {
   type Asset,
 } from "./assets";
 import { getThemes, type Proof, type Theme } from "./themes";
-import { presetById } from "@/app/library/presets";
+import { presetById } from "@gt/catalog/presets";
 
 const seededKey = (uid: string) => `gravitone.assets.seeded.${uid}`;
 

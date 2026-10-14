@@ -19,10 +19,10 @@
 // own notebook (research/useScope.ts) — so a verdict over a scope that is already
 // orphaned is refused rather than written. C1 closing stage, part f.
 
-import { readActiveNotebook } from "@/app/_phases/_shared/notebook/useActiveNotebook";
-import { saveStep, type ScopeStepData } from "@/app/_phases/_shared/stepStore";
-import { buildCards, EMPTY, OPT_IN_DEFAULT, optInIds, stateOf } from "@/app/_phases/research/scope";
-import { digestOf, orphanOf } from "@/app/_phases/research/useScope";
+import { readActiveNotebook } from "@/lib/notebook/active";
+import { saveStep, type ScopeStepData } from "@/lib/steps";
+import { buildCards, EMPTY, OPT_IN_DEFAULT, optInIds, stateOf } from "@/lib/research/scope";
+import { digestOf, orphanOf } from "@/lib/research/scopeDigest";
 
 import type { BoardEntry, BoardSourceExt } from "../source";
 import { countEntries, itemId, itemsOf, keyOfItem, VerdictRefused } from "../source";

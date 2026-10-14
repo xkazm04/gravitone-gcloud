@@ -28,7 +28,7 @@
 
 import { useId, useRef, useState } from "react";
 
-import { useLoadFor } from "@/app/_phases/_shared/useLoadFor";
+import { useLoadFor } from "@/lib/useLoadFor";
 import { useAnnounce } from "@/lib/announcer";
 import { evictIdentity, type EvictionReport } from "@/lib/identityEviction";
 import { exportAccount } from "@/lib/studioArchive";

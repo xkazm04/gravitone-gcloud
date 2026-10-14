@@ -24,8 +24,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { reportStorageTrouble, type StorageTrouble } from "@/app/_phases/_shared/stepStore";
-import { seedProjects } from "@/app/_studio/projectSeed";
+import { reportStorageTrouble, type StorageTrouble } from "@/lib/steps";
+import { seedProjects } from "@/lib/studio/projectSeed";
 import {
   addProjects,
   deleteProject as dbDelete,

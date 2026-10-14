@@ -336,7 +336,11 @@ test("leaving the Frames step mid-run leaves the turn running; a remount takes t
 });
 
 test("useFrames has no unmount path that aborts the pass, resumes from the ledger, and persists the turn it took", () => {
-  const hook = stripComments(readFileSync(join(process.cwd(), "app/_phases/frames/useFrames.ts"), "utf8"));
+  // The record's type moved to lib/frames/stepData.ts; the hook still owns the rest.
+  const hook = stripComments(
+    readFileSync(join(process.cwd(), "app/_phases/frames/useFrames.ts"), "utf8") +
+      readFileSync(join(process.cwd(), "lib/frames/stepData.ts"), "utf8"),
+  );
   expect(hook.length).toBeGreaterThan(1000);
   expect(hook, "useFrames still aborts a request").not.toMatch(/\.abort\(/);
   expect(hook, "useFrames does not ask the ledger on mount").toMatch(/\bresumeTurn\(/);

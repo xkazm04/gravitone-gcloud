@@ -103,7 +103,7 @@ import {
 // name again, still spending the quota and still readable by anything that
 // opened the store.
 import { readUploadPointer } from "@/lib/assets";
-import { reportStorageTrouble } from "@/app/_phases/_shared/stepStore";
+import { reportStorageTrouble } from "@/lib/steps";
 // The job store, like every other store this file clears, is imported BY it and
 // does not import it. See the eviction door in lib/jobs.tsx: removing
 // `gravitone.jobs.v1` from localStorage evicts the record on disk and leaves the

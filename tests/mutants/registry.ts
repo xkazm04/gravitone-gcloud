@@ -384,4 +384,12 @@ export const MUTANTS: Mutant[] = [
     replace: "const level = clamp01(breath);",
     why: "The music video's pulsing element only breathes on a timer and never answers the kick it was placed to pulse with.",
   },
+  {
+    id: "lib-imports-app-stepstore",
+    probe: "no-app-imports.probe.spec.ts",
+    file: "lib/useThemes.ts",
+    find: 'import { reportStorageTrouble } from "@/lib/steps";',
+    replace: 'import { reportStorageTrouble } from "@/app/_phases/_shared/stepStore";',
+    why: "A library module names app/ again: the CLI and library lanes can no longer load it outside Next, and the stub at the old path can turn the edge into a cycle that evaluates empty.",
+  },
 ];

@@ -17,10 +17,10 @@
 // source decides by approve alone, and is `exclusive` — approving one plate
 // un-approves its sibling, and the undo stack records both.
 
-import { readStep, saveStep } from "@/app/_phases/_shared/stepStore";
+import { readStep, saveStep } from "@/lib/steps";
 import type { AltsStepData } from "@/lib/frames/alternatives/alts";
 import { SYNTH_MARK } from "@/lib/frames/alternatives/alts";
-import type { FramesStepData } from "@/app/_phases/frames/useFrames";
+import type { FramesStepData } from "@/lib/frames/stepData";
 
 import type { BoardEntry, BoardSourceExt } from "../source";
 import { countEntries, itemId, itemsOf, keyOfItem, VerdictRefused } from "../source";

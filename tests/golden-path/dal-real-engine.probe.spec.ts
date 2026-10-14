@@ -233,7 +233,7 @@ test("coupling: studioDb's own rejection text still reaches the `blocked` kind",
   // below vacuously true.
   expect(rejections.length).toBeGreaterThanOrEqual(4);
 
-  const { reportStorageTrouble } = await import("@/app/_phases/_shared/stepStore");
+  const { reportStorageTrouble } = await import("@/lib/steps");
   const kinds = rejections.map((s) => {
     const kind = reportStorageTrouble("write", "p1", "research", new Error(s)).kind;
     console.log(`[dal] "${s.slice(0, 44)}…" -> ${kind}`);

@@ -236,7 +236,7 @@ test("load guard: every hand-rolled `alive` site is the primitive itself or a na
   // indistinguishable from success.
   expect(sites.length, "the source walk found nothing - it is reading the wrong tree").toBeGreaterThan(3);
 
-  const PRIMITIVE = "app/_phases/_shared/useLoadFor.ts";
+  const PRIMITIVE = "lib/useLoadFor.ts";
   const unexplained = sites.filter((f) => f !== PRIMITIVE && !OWN_LOAD_GUARD[f]);
   console.log(`[load] ${sites.length} file(s) carry the shape; ${Object.keys(OWN_LOAD_GUARD).length} named exemptions`);
   expect(

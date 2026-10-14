@@ -85,7 +85,7 @@ export const EXEMPT: Record<string, string> = {
   "app/_phases/_shared/usePhaseReport.ts": `${LEGACY}: phase-report-retry`,
   "app/_phases/_shared/useStorageTrouble.ts": NO_DRIVER,
   "app/_projects/useShelf.ts": NO_DRIVER,
-  "app/_phases/_shared/useLoadFor.ts": `${LEGACY}: step-records (also reached through useSpots, which IS driven)`,
+  "app/_phases/_shared/useLoadFor.ts": `${LEGACY}: step-records, through the stub of lib/useLoadFor.ts (also reached through useSpots, which IS driven)`,
 };
 
 /* ───────────────────────────── derivation (pure) ──────────────────────────── */

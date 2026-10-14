@@ -21,7 +21,7 @@
 // picture: it is a picture plus what that picture DOES. See `FrameClip` — and
 // read the honesty note on it before drawing anything from it.
 
-import type { ClipStatus } from "@/app/_studio/projectTypes";
+import type { ClipStatus } from "@/lib/studio/projectTypes";
 
 import { templateOf, type Discipline, type TemplateId } from "@gt/catalog/projects";
 

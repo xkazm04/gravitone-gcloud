@@ -14,9 +14,9 @@
 // silently un-approves A, the source is `exclusive`: the Board re-reads it after
 // a decide so an undo restores A too (lib/board/undo.ts).
 
-import { saveStep, type ScriptAdoptionStepData } from "@/app/_phases/_shared/stepStore";
-import { ADOPTION_PHASE } from "@/app/_phases/script/candidates/adoption";
-import { RENDERS } from "@/app/_phases/script/renders";
+import { saveStep, type ScriptAdoptionStepData } from "@/lib/steps";
+import { ADOPTION_PHASE } from "@/lib/script/adoption";
+import { RENDERS } from "@/lib/script/renders";
 
 import type { BoardEntry, BoardSourceExt } from "../source";
 import { countEntries, itemId, itemsOf, keyOfItem, VerdictRefused } from "../source";

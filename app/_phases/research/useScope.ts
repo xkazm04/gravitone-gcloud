@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { digestOf, orphanOf, type Held, type Orphan } from "@/lib/research/scopeDigest";
+
 import { fixtureSource, type NotebookSource } from "../_shared/notebook/source";
 import { saveStep, type ScopeStepData } from "../_shared/stepStore";
 import { useStepFor } from "../_shared/useLoadFor";
@@ -9,42 +11,11 @@ import { buildCards, optInIds, scopeDiffs, scopeSummary, stateOf, type Card, typ
 
 const PHASE = "research-scope";
 
-/** The record as this hook holds it: the decisions, and the digest of the
- *  notebook they were made on (`undefined` until something is stored). */
-interface Held {
-  scope: Scope;
-  confirmed: Scope | null;
-  digest: string | undefined;
-}
+export type { Orphan };
+export { digestOf, orphanOf };
 
 const FRESH: Held = { scope: {}, confirmed: null, digest: undefined };
 const NO_SCOPE: Scope = {};
-
-/** A scope decided on a notebook other than the one being dealt. */
-export interface Orphan {
-  /** The digest it was decided on. */
-  digest: string;
-  /** Cards it holds a decision for. */
-  decisions: number;
-}
-
-/** The digest a stored scope was decided on. A scope with none was written
- *  before the stamp existed, and every one of those was written against the
- *  fixture — so it carries the fixture's, and keeps applying on the replay. */
-export function digestOf(saved: ScopeStepData | undefined): string | undefined {
-  if (!saved) return undefined;
-  return saved.digest ?? fixtureSource().digest;
-}
-
-/** Is this scope ORPHANED from `digest` — decided on another notebook? A scope
- *  with nothing in it is nobody's orphan: applying it and not applying it are
- *  the same board. */
-export function orphanOf(held: Held, digest: string): Orphan | null {
-  if (held.digest === undefined || held.digest === digest) return null;
-  const decisions = Object.keys(held.scope).length;
-  if (decisions === 0 && held.confirmed === null) return null;
-  return { digest: held.digest, decisions };
-}
 
 /** Scope state for a project.
  *

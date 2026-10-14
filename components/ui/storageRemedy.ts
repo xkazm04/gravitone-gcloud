@@ -31,7 +31,7 @@ import {
   onStorageTrouble,
   type StorageFailure,
   type StorageTrouble,
-} from "@/app/_phases/_shared/stepStore";
+} from "@/lib/steps";
 import { studioHref } from "@/lib/jobLinks";
 import { PHASES, type PhaseKey } from "@/lib/projects";
 

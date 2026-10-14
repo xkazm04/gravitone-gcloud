@@ -10,8 +10,8 @@
 // every row it names with `put`, which overwrites rather than duplicates — rows the bundle does not name (what a
 // tester made by hand) are left alone.
 
-import { seedProjects } from "@/app/_studio/projectSeed";
-import { saveStep } from "@/app/_phases/_shared/stepStore";
+import { seedProjects } from "@/lib/studio/projectSeed";
+import { saveStep } from "@/lib/steps";
 import { FIXTURE_SEED_KEY } from "@/lib/identityEviction";
 import { accessHeader } from "@/lib/imagingClient";
 

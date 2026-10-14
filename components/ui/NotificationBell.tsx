@@ -20,7 +20,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Bell } from "lucide-react";
 
-import { type StorageFailure } from "@/app/_phases/_shared/stepStore";
+import { type StorageFailure } from "@/lib/steps";
 import { JobElapsed, jobNoun, useJobs } from "@/lib/jobs";
 import { trayModel } from "@/lib/jobLinks";
 import { politenessFor, useAnnounce } from "@/lib/announcer";

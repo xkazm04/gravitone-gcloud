@@ -5,7 +5,7 @@
 // one project at a time so a shelf of hundreds never opens hundreds of
 // connections at once.
 
-import { readStep, type BeatPicksStepData, type ResearchNotebookStepData, type ResearchStepData } from "@/app/_phases/_shared/stepStore";
+import { readStep, type BeatPicksStepData, type ResearchNotebookStepData, type ResearchStepData } from "@/lib/steps";
 import { listProjects, type Project } from "@/lib/projects";
 
 import { SourceUnavailable } from "../source";

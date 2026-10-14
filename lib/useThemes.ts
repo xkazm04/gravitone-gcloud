@@ -12,7 +12,7 @@
 // and pre-filling it would be putting words in their mouth. The empty state
 // says "start from a preset", which is the correct first move anyway.
 
-import { reportStorageTrouble } from "@/app/_phases/_shared/stepStore";
+import { reportStorageTrouble } from "@/lib/steps";
 import { useCallback, useEffect, useState } from "react";
 
 import {
