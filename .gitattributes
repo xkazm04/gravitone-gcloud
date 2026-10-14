@@ -1,3 +1,7 @@
 # The pre-push hook is POSIX sh run by git's sh.exe on Windows — a CRLF
 # checkout breaks it at the shebang. Pin LF regardless of core.autocrlf.
 .githooks/* text eol=lf
+# Generated token outputs are compared byte-for-byte by `npm run tokens:check`
+# (pipeline/check-tokens.mts). A CRLF checkout would read as drift on every Windows clone.
+packages/ui/src/tokens.css text eol=lf
+packages/ui/src/tokens.ts text eol=lf
