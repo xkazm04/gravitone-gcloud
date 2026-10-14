@@ -1,0 +1,7 @@
+{
+  "name": "@gt/producers",
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  }
+}

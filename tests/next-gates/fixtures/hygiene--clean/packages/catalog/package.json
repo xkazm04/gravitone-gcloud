@@ -1,0 +1,7 @@
+{
+  "name": "@gt/catalog",
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  }
+}

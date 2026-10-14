@@ -1,0 +1,7 @@
+{
+  "name": "@gt/ui",
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  }
+}

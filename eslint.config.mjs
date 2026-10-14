@@ -36,6 +36,10 @@ const config = [
       // Contest and kit scratch: arena entries are throwaway prototypes, not product code.
       ".contest/**",
       ".kit/**",
+      // Governance-gate fixtures: each tree seeds ONE deliberate violation for
+      // pipeline/next-gates.mts to find (tests/next-gates). They are evidence, not source,
+      // and sit outside every tsconfig program.
+      "tests/next-gates/fixtures/**",
       // UAT L2 SCRIPT FRAGMENTS. `uat/runs/<id>/l2/*.js` are not modules: the
       // driver concatenates `_prelude.js` + `<character>.js` and evaluates the
       // result as ONE async function body (uat/driver/drive-script.mjs), so each

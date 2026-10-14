@@ -248,7 +248,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       # BLOCKING. `npm ci` — not `npm install` — so the lockfile is authority and
@@ -367,6 +367,26 @@ jobs:
       - name: vocab
         run: npm run check:vocab
 
+      # BLOCKING, new with the workspace packages. Boundaries, cycles, hygiene and
+      # the 400-line cap over packages/** only; tests/next-gates seeds one violation
+      # per check, so a gate that stopped looking would fail unit tests first. An
+      # empty walk exits 2, could-not-run, never a pass.
+      - name: next structure
+        run: npm run next-structure
+
+      # BLOCKING. packages/* under tsconfig.base.json's strict flags (tsc -b).
+      - name: next typecheck
+        run: npm run typecheck:next
+
+      # BLOCKING. Vitest: the packages' own tests and the gate liveness fixtures.
+      - name: next unit
+        run: npm run test:unit
+
+      # BLOCKING. Token drift against packages/ui/tokens/source.json, and no raw colour or
+      # px value in any *.module.css (packages/ui/test seeds each violation).
+      - name: next tokens
+        run: npm run tokens:check
+
       # The browser the probes launch (hint-tap, the articles render and landing
       # probes call chromium.launch()), at the version the committed lockfile
       # pins. Without it those probes fail with "Executable doesn't exist" on a
@@ -412,7 +432,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: install
@@ -477,7 +497,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: install

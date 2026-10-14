@@ -12,6 +12,9 @@
   "scripts": {
     "test:unit": "vitest run",
     "typecheck:next": "tsc -b packages/domain packages/ui",
+    "next-structure": "node pipeline/next-gates.mts",
+    "tokens:gen": "node pipeline/gen-tokens.mts",
+    "tokens:check": "node pipeline/check-tokens.mts",
     "dev": "next dev",
     "fixtures": "npx tsx pipeline/fixtures/generate.mts",
     "dev:fixtures": "node pipeline/dev-guard.mjs NEXT_PUBLIC_GRAVITONE_DATA=fixtures NEXT_PUBLIC_DEV_AUTH=1 NEXT_DIST_DIR=.next-fixtures next dev -p 3100",
@@ -38,7 +41,7 @@
     "test": "playwright test",
     "test:live": "playwright test -c playwright.live.config.ts",
     "verify": "node pipeline/run-gates.mts",
-    "verify:serial": "npm run typecheck && npm run lint:ratchet && npm run check:manifest && npm run check:notebook && npm run check:type && npm run check:narration && npm run check:clips && npm run check:trailer-structure && npm run check:gate && npm run check:frames-prompt && npm run check:ads-prompts && npm run check:style-refs && npm run check:assets-tree && npm run check:kit-census && npm run check:vocab && npm test && npm run build && npm run check:bundle",
+    "verify:serial": "npm run typecheck && npm run lint:ratchet && npm run check:manifest && npm run check:notebook && npm run check:type && npm run check:narration && npm run check:clips && npm run check:trailer-structure && npm run check:gate && npm run check:frames-prompt && npm run check:ads-prompts && npm run check:style-refs && npm run check:assets-tree && npm run check:kit-census && npm run check:vocab && npm run next-structure && npm run typecheck:next && npm run test:unit && npm run tokens:check && npm test && npm run build && npm run check:bundle",
     "prepare": "git config core.hooksPath .githooks || exit 0",
     "check:type": "node pipeline/check-type-scale.mjs",
     "check:frames-prompt": "npx tsx pipeline/frames-prompt-regression.mts",
