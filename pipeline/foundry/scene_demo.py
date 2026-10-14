@@ -75,6 +75,7 @@ ROOT = HERE.parent.parent
 sys.path.insert(0, str(PROBE))
 sys.path.insert(0, str(HERE))
 import guard  # noqa: E402
+from scene_lint import lint_shots  # noqa: E402
 from consistency import generate, stage_reference, flux_workflow  # noqa: E402
 
 SEED = 11
@@ -133,7 +134,7 @@ SHOTS = [
      "PROMOTE THE OBJECT: the insert that turns a key into the plot"),
     ("s5-turn",
      "Close-up. The old man's hand closing over the small brass key on the counter, his face above "
-     "it in the upper frame, eyes down on his own hand, the decision already made.",
+     "it in the upper frame, facing screen left, eyes down on his own hand, the decision already made.",
      ["ref-keeper"],
      "THE TURN: he takes it - she gets the envelope and pays for it"),
 ]
@@ -155,6 +156,10 @@ def main():
     cyc = Path(sys.argv[1])
     if not cyc.is_absolute():
         cyc = ROOT / cyc
+    # scene-grammar-progression: check the list before any generation is spent.
+    problems = lint_shots(SHOTS)
+    if problems:
+        raise SystemExit("scene_demo: shot list breaks scene grammar: " + "; ".join(problems))
     out = cyc / "scene"
     out.mkdir(parents=True, exist_ok=True)
 
