@@ -74,7 +74,7 @@ The Floor is the hub. Every other page is a deeper surface of one of its columns
 | `/kit` | The design system, extracted from these pages | `/kit` (Almanac v2 retired) |
 | `/articles/:runId`, `/board?…`, `/playground`, `/foundry`, `/studio/:id` | **Redirects** to the matching Board packet, Project or lane. Skills send humans to these addresses | — |
 
-### 2.2 The record model (the spine; full schemas live in `lib/domain/` in Phase 1)
+### 2.2 The record model (the spine; full schemas live in `packages/domain` (`@gt/domain`) in Phase 1)
 
 ```ts
 Run       { id, lane:"image"|"article"|"audio"|"video", producer, prompt, recipe?, styleId?,
@@ -101,7 +101,7 @@ Event     { seq, at, actor:{kind:"operator"|"agent"|"machine", id}, type, subjec
 
 A v1 Project is imported as a **Project** whose recipe comes from its discipline × template. Its
 six studio steps become Parts, and per-step sign-off becomes Decisions on the matching Packets. The
-recipes the prototype uses (Film, Album video, Explainer) are the first entries in `lib/catalog`'s
+recipes the prototype uses (Film, Album video, Explainer) are the first entries in `@gt/catalog`'s
 recipe table. A Weir pile is a Packet. Every decision surface is a Packet mode, not a separate
 screen.
 
@@ -153,7 +153,7 @@ foundation primitive, or replaced by something strictly better. Sources: the thr
 | `lib/useRemembered.ts`, `lib/usePolling.ts`, `components/kit/Pager.tsx` (`useWindow`) + `useVirtual`, `components/ui/Pending.tsx` + `next/dynamic`, `sideEffects` | **Keep.** Merge the two windowing hooks into one. The Library's 5,000-item grid is the proving ground |
 | `lib/identityEviction.ts` + walk probe, `storageRemedy.ts`, `GlobalErrorBridge`, `announcer` | **Keep verbatim.** Put the 10 raw `localStorage` writers behind one storage adapter that registers keys with eviction by construction |
 | Pipeline canvas pure modules (`camera`, `geometry`, `grid`, `cells`), ghost flight, `MoveMap` (a keyboard alternative to drag) | **Keep for Runs**: drag a bar to another lane, with MoveMap as its accessible twin |
-| Design tokens: four "worlds" (Obsidian, Almanac kit with 75 parts that have zero adopters, Obsidian-kit, Paper Cosmos); `globals.css` redefines Tailwind's `text-sm` as 16 px | **Replace.** One world, **extracted from the winning design**: the prototype's `tokens.css` plus the values its page sheets (`floor.css`, `projects.css`, `library.css`, `ledger.css`) actually use. At extraction they held 318 colour literals and 142 px font sizes outside `tokens.css`. These become named Tailwind 4 `@theme` semantic tokens (no redefined built-ins), each named for the role the design gives it. The rule is the owner's: extraction changes names, never pixels. Paper Cosmos stays only for the landing |
+| Design tokens: four "worlds" (Obsidian, Almanac kit with 75 parts that have zero adopters, Obsidian-kit, Paper Cosmos); `globals.css` redefines Tailwind's `text-sm` as 16 px | **Replace.** One world, **extracted from the winning design**: the prototype's `tokens.css` plus the values its page sheets (`floor.css`, `projects.css`, `library.css`, `ledger.css`) actually use. At extraction they held 318 colour literals and 142 px font sizes outside `tokens.css`. These become a derived token artifact in `packages/ui` (one `tokens/source.json`, primitives → roles; the generated `tokens.css` and `tokens.ts` mirror carry a regeneration header; the values stay byte-equal to the prototype). Components style themselves with co-located **CSS Modules over those variables**, never with Tailwind utilities, so the prototype's CSS ports nearly 1:1. The rule is the owner's: extraction changes names, never pixels. Tailwind and Paper Cosmos stay only for the landing, and for v1 until each surface is retired (§9) |
 | Auth on every route through a client `AuthGate`; `firebase/auth` (~110 KB) in the root chunk of every route, including `/` | **Replace.** Auth lives in a `(studio)` route-group layout. Page data renders on the server, because the stores are server-side |
 
 ### 3.4 API layer
@@ -169,20 +169,27 @@ Replace the hand-copied pieces with four foundation pieces:
 `pipeline/gates.mts` + `run-gates.mts` (one registry; blocking/advisory by determinism;
 outcomes 0/1/2; CI projection; liveness rule), `check-bundle.mjs` (with its positive control),
 `lint-ratchet.mjs`, `check-type-scale.mjs`, `check-narration.mjs`, the two Playwright lanes (node
-probes with a network seal; live lanes with the legibility negative control), the mutant registry,
+probes; live lanes with the legibility negative control), the mutant registry,
 `cx-screens.mjs` + `cx-capture.mjs`, `.githooks/*`, and the `.claude/settings.json` deny list.
 
 **New code starts at the strictest setting:**
 
 | Gate | v1 today | Next starts at |
 |---|---|---|
-| Lint warnings in the new tree | 150 (baseline) | 0 |
+| Lint warnings | 26 (`lint-baseline.json`; its 150 is `filesFloor`, not a warning count) | 0 in `packages/` |
+| Import cycles / layer inversions | 22 SCCs; lib→app 55, pipeline→app 31, components→app 4 | 0 (`next-structure`) |
+| `as unknown as` / `JSON.parse(...) as` | 53 / 30 | 0; `JSON.parse` only in `packages/domain/src/door.ts` |
+| Error classes / result shapes | 65 subclasses / ad hoc `{ok}` | one `AppError` taxonomy, one `Result` |
+| Files over 400 LOC | 101 (6 over 1,000) | hard cap 400 in `packages/` |
+| Unit rung | none (the Playwright runner is the node lane) | Vitest for every package, with template-copy SQLite fixtures |
 | Narration budget (`title=` prose, Hint words) | 6 | 0; Hint ≤ 12 words is the norm |
 | Type floor | 16 px label floor | 12 px absolute, 14 px body. The prototype's law, checked by a live probe on every route |
 | Raw keydown listeners | 30 | 0 (lint rule) |
 | Error envelopes / client helpers | 2 / ~7 | 1 / 1 |
 | Probes without a mutant | 249 | Unguarded budget starts at 0 for new probes |
 | Legibility baseline | ratchet | 0 contrast misses on new routes |
+
+**One v1 claim to resolve:** `sealNetwork`, which the `probes` gate and `pipeline/integration-imaging.mts` cite as the node lane's network seal, has no definition anywhere in the tree (scouted 2026-10-14). Phase 0 either finds it or re-implements it as a Vitest/Playwright setup with a negative control, before any probe is trusted offline.
 
 Domain gates tied to retired features (`notebook`, `trailer-structure`, `render-gate`,
 `frames-prompt`, `ads-prompts`, `style-refs`, `clips`, `vocab`) are **kept running against v1
@@ -194,22 +201,26 @@ until their feature is rebuilt.** At that point they are ported, not dropped (Ph
 
 ```
 app/
-  page.tsx, _landing/           untouched (step 0.3 moves its imports to lib/catalog)
+  page.tsx, _landing/           untouched (step 0.3 moves its imports to @gt/catalog)
   (studio)/layout.tsx           auth + shell; the only client boundary for identity
   (studio)/page.tsx               the Floor (lanes, composers, Weir, Library/Projects column, Calendar rail)
   (studio)/@sheet/board/[packet]  the Board sheet as a parallel/intercepting route over the Floor
   (studio)/projects/[[...id]]/    Plan · Runs · Compose
   (studio)/{library,calendar,ledger,kit}/
   api/<area>/…                  every handler wrapped in route()
-lib/
-  kernel/     store · lease · job · decision · router · spend(moved) · dryrun · events · posture
-  domain/     run · project · part · job · packet · candidate · decision · library-item · style · slot
-  producers/  forge · extract · dojo · strips · article · suno · mv · still · cut · publish …
-              (each: plan-template parts → jobs; drivable by request, CLI or worker)
-  catalog/    pure registry data (plan templates, presets, channels); no I/O, importable by the landing
-  ui/         tokens + components from the Kit, signal/, keymap, layers, gate client, window, freshness
+packages/     npm workspaces, TypeScript source run by Node 24 type stripping, transpiled by Next (§9)
+  catalog/    @gt/catalog   pure registry data (recipes, presets, channels); no I/O; the landing may import it
+  domain/     @gt/domain    ids · errors · transitions · door (shipped) + run · project · part · job ·
+                            packet · candidate · decision · library-item · style · slot schemas
+  kernel/     @gt/kernel    store · lease · job · decision · router · spend · dryrun · events · posture
+                            (io-free cores + one driver each; store seam with a contract suite)
+  producers/  @gt/producers forge · extract · dojo · strips · article · suno · mv · still · cut · publish
+                            (each: recipe parts → jobs; drivable by request, CLI or worker)
+  ui/         @gt/ui        generated tokens + React components with CSS Modules, keymap registry,
+                            layers, list window, freshness, storage adapter with eviction
+lib/          v1, frozen behind its ratchets; shrinks as each cutover deletes what it replaced
 workers/      render box: job runner, publish tick, GPU-lane forwarders (Python workers keep their CLIs)
-pipeline/     CLIs: same verbs, same --json, same exit codes 0/1/2, now thin over lib/producers
+pipeline/     CLIs: same verbs, same --json, same exit codes 0/1/2, now thin over @gt/producers
 ```
 
 **The ledger is the spine, not a log file.** Every state change is written in the same transaction
@@ -232,7 +243,7 @@ Skills, CLIs and agents call the app. A rename that is not versioned breaks them
 1. **The `lib/` seam and CLI interfaces.** Verbs, `--json` single-document stdout and exit codes
    0/1/2 stay the same for `article`, `music-video`, `sound`, `publish`, `strips/run`,
    `foundry/extract` and `preflight`, as do the spend guards (`--yes`, `--budget-usd`, `--dry`).
-   The CLIs become thin over `lib/producers`, with the same names exported or re-exported.
+   The CLIs become thin over `@gt/producers`, with the same names exported or re-exported.
 2. **Pure logic still inside `app/` that 11 CLIs and gates import:**
    - `app/_phases/frames/{shotPrompt,frames,sceneSpec,shots}.ts`
    - `app/library/{presets,trials}.ts`
@@ -278,7 +289,7 @@ lots) inside the phase.
     `lib/projects.ts` `PHASES` has it.
   - Four overlays point at `C:/Users/mkdol/...` vaults.
   - `.claude/cx/config.md` lists 17 screens; `cx-screens.mjs` has 23.
-- **0.3** Pull registry constants into `lib/catalog/` (no IndexedDB import) and point
+- **0.3** Pull registry constants into `packages/catalog` (`@gt/catalog`) (no IndexedDB import) and point
   `app/_landing/*` at it. Delete `app/_landing/sky.ts` (dead for the landing).
 - **0.4** Move the pure logic named in §5.2 out of `app/` into `lib/`, leaving re-exports.
 - **Exit:**
@@ -297,13 +308,17 @@ lots) inside the phase.
   - `kernel/router` (merged imaging and text capability tables)
   - `kernel/dryrun`
   - `lib/spend` SQLite adapter
-- **Server:** `route()`, `serveFile()`, `AppError`, one envelope. **Client:** `apiClient`.
+- **Server:** Server Components read `@gt/kernel` directly; every mutation is a Server Action that
+  goes through the `@gt/domain` door; live state arrives over SSE from the event ledger. `route()`,
+  `serveFile()` and the one `AppError` envelope serve only CLIs, agents and file bytes. There is no
+  general client fetch layer: client state is UI-only (cursor, selection, drafts).
 - **UI:** tokens and components **extracted from the prototype's pages** (the design leads; see the
-  owner's rule at the top) as Tailwind 4 semantic tokens; `ui/signal`, keymap,
+  owner's rule at the top) as generated token variables and CSS Modules (§9); `ui/signal`, keymap,
   layers, one window hook, freshness, the storage adapter with eviction; the `(studio)` shell with
   auth in the layout.
-- **Gates:** new-tree lint 0, keydown lint rule, type-floor live probe over every new route,
-  narration 0, kernel probes with mutants.
+- **Gates:** Phase 1 builds INSIDE the governance skeleton of §9, which is live before it starts
+  (`next-structure`, `next-typecheck`, `next-unit`, `next-tokens`, each proven red once), plus the
+  type-floor live probe over every new route, narration 0, and Vitest kernel tests with mutants.
 - **Exit:**
   - `/kit` renders on the new foundation, and a capture of the prototype's own pages (Floor, Board
     sheet, Plan, Runs, Library, Ledger) against kit specimens holds the style contract
@@ -337,7 +352,7 @@ lots) inside the phase.
   - `/board` redirects.
 
 ### Phase 4: Composers, Projects and Producers (L, the largest)
-- **Records:** `domain/run`, `domain/project` and `domain/part`, with recipes from `lib/catalog`
+- **Records:** `domain/run`, `domain/project` and `domain/part`, with recipes from `@gt/catalog`
   (Film from the 10 v1 templates, Album video, Explainer, plus `article/*`, `track/*`, `style/*`,
   `strips/*`).
 - **Producers on `kernel/job`, one wave each:**
@@ -428,3 +443,115 @@ lots) inside the phase.
 
 The design is approved as the rebuild's target: contest `foundry-next-design-r4`, winner A/1 "The
 Watershed".
+
+---
+
+## 9. Code quality architecture
+
+Designed in spark `watershed-code-quality` (2026-10-14, `.vault/Spark/ideas/watershed-code-quality.md`),
+from three measurements: v1's quality machinery, the prototype's code, and the registry subjects
+that govern it (`module-design`, `invariant-placement`, `quality-gates`, `metric-gates`,
+`test-harness`, `design-tokens`, `codegen`, `error-handling`, `migrations`, `dead-code`). The owner
+chose every structural fork; the rest follows convention or the registry. **Every phase builds
+inside this chapter; a phase that needs to loosen it asks the owner first.**
+
+### 9.1 Why v1 ended where it did (measured)
+
+No single decision made v1 hard to change; it accumulated:
+- **Layering:** 55 `lib → app` imports, 31 `pipeline → app`, 4 `components → app`.
+- **Cycles:** 22 import cycles (the largest 18, 15 and 13 files).
+- **Type safety:** 53 `as unknown as`; 30 `JSON.parse(...) as T` with no validator; 53 hand
+  validators plus two copies of a schema checker.
+- **Errors:** 65 Error subclasses and ad hoc `{ok}` result shapes.
+- **Tests:** 177 of 284 test probes assert by reading source text.
+- **File size:** 6 files over 1,000 lines.
+
+The winning prototype is a prototype: 433 string-HTML `esc(` calls, five copies of one status
+mapping, signal colours re-typed about 144 times past their tokens, no state machine kept as a
+table, and keys that change meaning per page. The rebuild extracts the design and leaves all of
+that behind (contest skill `references/port-quality.md`, 1.11.0).
+
+### 9.2 The structure (owner's choices)
+
+| Fork | Chosen | Rejected and why |
+|---|---|---|
+| Boundaries | **npm workspace packages** (`@gt/catalog < domain < kernel < producers`; `@gt/ui` may import `@gt/domain`, which is pure and sits below it, and nothing else), each with its own strict tsconfig and `exports` map. The app, CLIs and workers consume them as libraries | One package with lint-enforced folders: its boundaries hold only while a gate is alive |
+| Validation | **zod 4 at one door per boundary** (`@gt/domain/door`): a schema is the type, the runtime check, and the JSON Schema for structured LLM output | Hand validators: every schema kept in sync by hand, as the 53 in v1 are |
+| Test ladder | **Vitest** unit and integration rungs (template-copy SQLite fixtures, commit rung under a minute) plus a small serial **Playwright live** lane for screens and legibility | node:test (no watch or coverage); Playwright-only (the registry's named anti-pattern) |
+| Data access | **Server Components + Server Actions + SSE** from the event ledger; route handlers only for CLIs, agents and files | API routes plus a client fetch cache: more client code and a cache to own |
+| Styling | **CSS Modules over generated token variables**; an allow-list gate rejects raw values | Tailwind semantic utilities: about 2,000 px values become utility names, and drift follows |
+
+### 9.3 Conventions (decided by the registry, not asked)
+
+- **Strictness floor** (`tsconfig.base.json`):
+  - flags: `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`,
+    `noImplicitOverride`, `noImplicitReturns`, `noFallthroughCasesInSwitch`,
+    `verbatimModuleSyntax`, `erasableSyntaxOnly`;
+  - target ES2023 with `@types/node` 24;
+  - packages run under Node 24 native type stripping, so CLIs and workers need no build or `tsx`.
+- **Absent is omitted.** An optional field is an absent key, never `undefined` or `null`, unless
+  null is a real state (as a verdict "not judged yet" is). `parseAt` strips undefined keys so
+  zod's output type tells the truth.
+- **Ids are branded,** minted only at a schema door. A brand is assignable to `string`, never from
+  it. Lease validity is never a type: it has a clock and stays a runtime check.
+- **One error taxonomy:** `AppError` codes `invalid | not-found | conflict | refused | unavailable
+  | budget | internal`, each a code some consumer branches on. One `Result<T>`, one envelope
+  `{error, code, detail?}`. Every failure reaches a door (user, telemetry or log), and swallowed
+  catches are a gate.
+- **State machines are data:** `defineMachine(table)` infers the state union from the table, and
+  the same table runs on server and client.
+- **IO-free kernel cores:** each kernel module is a pure transition function, with time and
+  randomness as parameters, plus one driver that does the I/O. The store sits behind a seam with
+  one contract suite run against both the SQLite and the in-memory adapters.
+- **Small, deep modules:** 400 lines per file, hard. A file is split by what each part must know,
+  not by when it runs. No pass-through layers: a seam with one implementation and no substitution
+  is collapsed.
+- **One keymap registry** declares every binding per mode and runs a conflict report as a check.
+  The design's bindings are kept unless the owner rules otherwise.
+- **Migrations** are append-only. The ledger bump is the last write in each step's transaction.
+  Snapshots before a migration include the WAL sidecars. A fresh store is tested against one
+  migrated from the oldest version.
+- **Tokens are a derived artifact.** `packages/ui/tokens/source.json` (primitives → roles,
+  admission tests recorded in `ADMISSION.md`) → `npm run tokens:gen` → `tokens.css` +
+  `tokens.ts`, each with a generated header. Values stay byte-equal to the prototype.
+
+### 9.4 The governance skeleton (live before Phase 1)
+
+| Gate | Checks | Starts at |
+|---|---|---|
+| `next-structure` | boundaries (no reach into `app/`, `lib/`, `components/`, `pipeline/` or `@/`; layer order; ui imports only domain), cycles, hygiene (no `as unknown as`, `any`, `JSON.parse` outside the door, raw `keydown`, swallowed catch), file size 400 | 0 |
+| `next-typecheck` | `tsc -b` over every package under the strictness floor | 0 errors |
+| `next-unit` | Vitest over `packages/*/test` and the gates' own liveness tests | green |
+| `next-tokens` | generated outputs match `source.json` (drift); no raw colour or px value in `*.module.css`; every `var(--x)` names a token | 0 |
+
+Each gate:
+- prints its denominator (walked / checked / skipped);
+- exits 2 when it walked nothing it should have;
+- was **proven red once on a seeded violation** (`tests/next-gates/`, `packages/ui/test`).
+
+v1 keeps its own gates as a two-way ratchet: a drop below baseline needs a re-baseline whose
+message names the cause.
+
+### 9.5 Performance contract
+
+Performance is gated by counts, never by timings; timings are reported:
+- a **first-load JS budget per route**, gated by a deterministic byte count (`check-bundle` extended
+  per route);
+- every list that can exceed one screen is **virtualised**, and proven at 10× the prototype's
+  volume (the Library at 50,000 items, search p95 measured);
+- **no per-tick DOM churn**: a view rebuilds only when its inputs change;
+- **event-driven invalidation** over SSE, with polling only as a slow backstop;
+- **media facts computed at ingest** (decodability, poster, duration, brightness).
+
+### 9.6 Definition of done for every cutover
+
+A cutover is done only when all of these hold:
+1. **Fidelity:** the style contract against the prototype reads 0 deviations on the named roles,
+   and every named interaction has been driven.
+2. **Quality:** every §9.4 gate is green at zero.
+3. **Performance:** the §9.5 budgets hold, with the measurement command named.
+4. **Characterisation:** the old behaviour the cutover keeps was pinned first, at the cheapest rung
+   that sees it.
+5. **Deletion:** the v1 code it replaced is deleted in the same change, and a reachability check
+   shows nothing still reaches it.
+6. **Docs:** the doc surfaces it touches are updated in the same change.
