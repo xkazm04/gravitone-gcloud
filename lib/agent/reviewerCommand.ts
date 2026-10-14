@@ -39,11 +39,5 @@ export function reviewerCommand(call: Pick<ReviewerCall, "engine" | "model" | "e
         env: {},
       };
     }
-    case "grok":
-      return {
-        argv: ["-p", REVIEW_POINTER, "-m", call.model, "--effort", call.effort, "--output-format", "json", "--cwd", call.cwd, "--permission-mode", "plan", "--no-subagents"],
-        stdin: "",
-        env: { GROK_MEMORY: "0", GROK_AGENT_DASHBOARD: "0" },
-      };
   }
 }

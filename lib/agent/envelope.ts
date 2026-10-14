@@ -3,7 +3,7 @@
 // Split out of cliSeam.ts (the door, which re-exports these) because reading an
 // engine's output is separate from spawning it. This file turns stdout into
 // { final, errors, turns, costUsd } and then into an outcome. It holds the claude
-// JSON envelope reader, the codex, agy and grok envelope readers with their
+// JSON envelope reader, the codex and agy envelope readers with their
 // dispatch, the classification of errors into outcomes, and killTree, which both
 // spawners use. Apart from killTree, nothing here touches a process.
 
@@ -142,26 +142,8 @@ export function parseAgyEnvelope(stdout: string): ParsedEnvelope {
   return { final, errors, turns: typeof v.num_turns === "number" ? v.num_turns : 0 };
 }
 
-/** grok: success `{text, stopReason, num_turns, total_cost_usd}` (the contest
- *  runner's reading — not observed here, the account is at 402); failure
- *  `{type:"error", message, http_status}` (observed). */
-export function parseGrokEnvelope(stdout: string): ParsedEnvelope {
-  const v = lastJsonObject(stdout);
-  if (!v) return { final: "", errors: ["no JSON envelope on stdout"], turns: 0 };
-  if (v.type === "error") {
-    const status = typeof v.http_status === "number" ? ` (http ${v.http_status})` : "";
-    return { final: "", errors: [`${String(v.message ?? "error").slice(0, 300)}${status}`], turns: 0 };
-  }
-  const stop = v.stopReason ?? v.stop_reason ?? "unknown";
-  const final = String(v.text ?? v.result ?? "");
-  const out: ParsedEnvelope = { final, errors: stop === "end_turn" ? [] : [`${String(stop)}: ${final.slice(0, 300)}`], turns: typeof v.num_turns === "number" ? v.num_turns : 0 };
-  if (typeof v.total_cost_usd === "number") out.costUsd = v.total_cost_usd;
-  return out;
-}
-
 export function parseEngineEnvelope(engine: ReviewerEngineName, stdout: string): ParsedEnvelope {
   if (engine === "codex") return parseCodexEvents(stdout);
   if (engine === "agy") return parseAgyEnvelope(stdout);
-  if (engine === "grok") return parseGrokEnvelope(stdout);
   return parseEnvelope(stdout);
 }

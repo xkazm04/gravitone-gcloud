@@ -8,7 +8,7 @@ lenses, its output contract and that every slot is filled.
 Structure: one section, `review`. Everything outside the marker (this comment
 included) is never sent. The engine writes the filled prompt to REVIEW.md in the
 reviewer's isolated workspace (beside a copy of post/ and sources.json); claude
-and codex also receive it on stdin, agy and grok a pointer to the file.
+and codex also receive it on stdin, agy a pointer to the file.
 
 THE STANDARD IS NOT IN THIS FILE. It arrives in {{STANDARD}}, resolved from the
 registry by address on every run (lib/articles/registryRead.ts), exactly as the

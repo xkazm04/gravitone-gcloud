@@ -37,9 +37,9 @@
 //
 // SPENDING. `run` and `resume` start real agent sessions on the operator's
 // logged-in Claude seat (research uses web tools), and the critique runs the
-// reviewer panel through the local claude, codex, grok and agy CLIs on the
+// reviewer panel through the local claude, codex and agy CLIs on the
 // operator's own logins. ARTICLES_AGENT_BIN (the writer and claude reviewers)
-// and ARTICLES_CODEX_BIN / ARTICLES_GROK_BIN / ARTICLES_AGY_BIN replace them
+// and ARTICLES_CODEX_BIN / ARTICLES_AGY_BIN replace them
 // with the stub for a dry run (docs/articles.md, "Headless").
 
 import fs from "node:fs";

@@ -116,7 +116,7 @@ test("run to the gate: every file of the run contract, through the real seam", a
   }
   expect(writer[0].argv[writer[0].argv.indexOf("--tools") + 1]).toBe("WebSearch,WebFetch,Read,Write,Edit");
   expect(writer[2].argv[writer[2].argv.indexOf("--tools") + 1]).toBe("Read,Write,Edit");
-  expect(reviewers.map((s) => s.engine).sort()).toEqual(["agy", "claude", "codex", "grok"]);
+  expect(reviewers.map((s) => s.engine).sort()).toEqual(["agy", "agy", "claude", "codex"]);
   for (const s of reviewers) expect(s.entries, `${s.engine}'s workspace`).toEqual(["REVIEW.md", "post", "sources.json"]);
 
   const detail = await getRunDetail(run.id);

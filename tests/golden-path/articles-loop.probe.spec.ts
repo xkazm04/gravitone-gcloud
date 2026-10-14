@@ -1,7 +1,7 @@
 // LANE — THE ARTICLE LOOP AND TOPIC PICKER, offline (lib/articles/loop.ts, pipeline/article.mts).
 //
 // Every agent, writer and reviewer, is the stub (tests/golden-path/_articles.ts), so nothing spends.
-// STUB_AGENT_COST makes the claude and grok stubs report a cost, which is what the budget and the
+// STUB_AGENT_COST makes the claude stub report a cost, which is what the budget and the
 // ceilings count. What is pinned:
 //
 //   · which topics are uncovered: a subject with a run at the gate, or a publication, is not

@@ -4,7 +4,7 @@
 // lib/articles/critique.ts (the panel, the schema, the record) and the
 // `critique` step of lib/articles/engine.ts, driven end to end with
 // tests/fixtures/articles/stub-agent.mjs standing in for ALL FOUR CLIs through
-// the real seam (ARTICLES_AGENT_BIN, ARTICLES_CODEX_BIN, ARTICLES_GROK_BIN,
+// the real seam (ARTICLES_AGENT_BIN, ARTICLES_CODEX_BIN,
 // ARTICLES_AGY_BIN). Nothing spends, nothing reaches the network, the real
 // registry is never named. What is pinned:
 //
@@ -33,7 +33,6 @@ import {
   parseCodexEvents,
   parseEngineEnvelope,
   parseEnvelope,
-  parseGrokEnvelope,
   resolveEngineBin,
   REVIEW_POINTER,
   reviewerCommand,
@@ -120,23 +119,13 @@ test("argv: each engine's read-only fence", () => {
   expect(reviewerCommand({ ...call, engine: "agy", model: "gemini-3.8-flash", effort: "max" }).argv).toContain("gemini-3.8-flash-high");
   expect(reviewerCommand({ ...call, engine: "agy", model: "gemini-3.8-flash-medium" }).argv).toContain("gemini-3.8-flash-medium");
 
-  // grok (argv unproven against a live session: 402): plan mode, no subagents, memory off
-  const g = reviewerCommand({ ...call, engine: "grok", model: "grok-4.7" });
-  expect(g.argv.slice(0, 2)).toEqual(["-p", REVIEW_POINTER]);
-  expect(g.argv[g.argv.indexOf("-m") + 1]).toBe("grok-4.7");
-  expect(g.argv[g.argv.indexOf("--effort") + 1]).toBe("high");
-  expect(g.argv[g.argv.indexOf("--cwd") + 1]).toBe("C:/ws");
-  expect(g.argv[g.argv.indexOf("--permission-mode") + 1]).toBe("plan");
-  expect(g.argv).toContain("--no-subagents");
-  expect(g.argv.join(" ")).not.toMatch(/always-approve|bypassPermissions/);
-  expect(g.env).toEqual({ GROK_MEMORY: "0", GROK_AGENT_DASHBOARD: "0" });
-  expect(g.stdin).toBe("");
+  // gemini 4 rides the same agy argv: the slug carries the effort
+  expect(reviewerCommand({ ...call, engine: "agy", model: "gemini-4-argon", effort: "high" }).argv).toContain("gemini-4-argon-high");
 });
 
 test("environment: a reviewer sees no credential-named variable and no metered key", () => {
   const env = reviewerEnv("codex", { PATH: "/bin", ANTHROPIC_API_KEY: "sk", PROBE_FAKE_API_KEY: "x", PROBE_SECRET_THING: "y", GH_TOKEN: "z", HOME: "/h" } as unknown as NodeJS.ProcessEnv);
   expect(Object.keys(env).sort()).toEqual(["HOME", "PATH"]);
-  expect(reviewerEnv("grok", { PATH: "/bin" } as unknown as NodeJS.ProcessEnv)).toMatchObject({ PATH: "/bin", GROK_MEMORY: "0", GROK_AGENT_DASHBOARD: "0" });
 });
 
 test("binaries: an override wins; a CLI that is not installed is unavailable, by name", () => {
@@ -190,17 +179,9 @@ test("envelopes: each engine's success, a 402 and a usage limit", () => {
   expect(outcome(parseAgyEnvelope(JSON.stringify({ status: "ERROR", error: "RESOURCE_EXHAUSTED: quota exceeded" })), 0)).toBe("seat-limit");
   expect(parseAgyEnvelope("banner\n").errors).toEqual(["no JSON envelope on stdout"]);
 
-  // grok: the 402 envelope observed on 2026-10-05, and the contest runner's success shape
-  const g402 = parseGrokEnvelope(JSON.stringify({ type: "error", message: 'Internal error: {\n  "message": "API error (status 402 Payment Required): Grok Build usage balance exhausted",\n  "http_status": 402\n}' }));
-  expect(g402.errors[0]).toMatch(/402 Payment Required/);
-  expect(outcome(g402, 1)).toBe("unavailable");
-  expect(outcome(parseGrokEnvelope(JSON.stringify({ type: "error", message: "API error (status 429 Too Many Requests): rate limit", http_status: 429 })), 1)).toBe("seat-limit");
-  const gok = parseGrokEnvelope(JSON.stringify({ text: review, stopReason: "end_turn", num_turns: 2, total_cost_usd: 0.31 }));
-  expect(gok).toMatchObject({ final: review, errors: [], turns: 2, costUsd: 0.31 });
-  expect(outcome(parseGrokEnvelope(JSON.stringify({ text: "", stopReason: "max_turns" })), 0)).toBe("errored");
 
   // outcomes in order: a timeout is a timeout whatever the envelope says
-  expect(classifyOutcome(g402, { exit: 1, timedOut: true })).toBe("timed-out");
+  expect(classifyOutcome(parseAgyEnvelope(JSON.stringify({ status: "ERROR", error: "RESOURCE_EXHAUSTED: quota exceeded" })), { exit: 1, timedOut: true })).toBe("timed-out");
 });
 
 test("a hung reviewer is killed at its timeout, through the real seam", async () => {
@@ -277,14 +258,14 @@ test("panel: the operator's four reviewers, and a malformed panel is refused by 
   const p = await loadPanel(ROOT, {});
   expect(p.reviewers.map((r) => `${r.id}:${r.engine}:${r.model}@${r.effort}/${r.timeoutMin}`)).toEqual([
     "fable:claude:claude-fable-5-1@high/25",
-    "grok:grok:grok-4.7@high/25",
+    "gemini4:agy:gemini-4-argon@high/14",
     "gemini:agy:gemini-3.8-flash@high/14",
     "gpt:codex:gpt-6-astra@high/25",
   ]);
   expect(p).toMatchObject({ maxCritiqueRounds: 2, minCompleted: 2 });
   const one = { id: "a", engine: "claude", model: "m", effort: "high" };
   expect(() => validatePanel({ reviewers: [one, { ...one }] })).toThrow(/"a" repeats/);
-  expect(() => validatePanel({ reviewers: [one, { ...one, id: "b", engine: "gemini" }] })).toThrow(/engine must be one of claude, codex, grok, agy/);
+  expect(() => validatePanel({ reviewers: [one, { ...one, id: "b", engine: "gemini" }] })).toThrow(/engine must be one of claude, codex, agy/);
   expect(() => validatePanel({ minCompleted: 1, reviewers: [one, { ...one, id: "b" }] })).toThrow(/minCompleted must be an integer ≥ 2/);
   expect(() => validatePanel({ maxCritiqueRounds: 3, reviewers: [one, { ...one, id: "b" }] })).toThrow(/maxCritiqueRounds/);
   expect(validatePanel({ reviewers: [one, { ...one, id: "b" }] }).reviewers[0].timeoutMin).toBe(25);
@@ -297,9 +278,9 @@ test("flow: keep after round 1 — four reviewers in parallel, the writer answer
   const run = await toGate();
   expect(run.status, run.error).toBe("awaiting-approval");
   expect(run.critique).toMatchObject({ rounds: 1, decision: "keep", findings: { total: 8, accepted: 4, rejected: 4, deferred: 0 } });
-  expect(run.critique?.reviewers.map((r) => `${r.id}:${r.engine}:${r.outcome}`)).toEqual(["fable:claude:completed", "grok:grok:completed", "gemini:agy:completed", "gpt:codex:completed"]);
+  expect(run.critique?.reviewers.map((r) => `${r.id}:${r.engine}:${r.outcome}`)).toEqual(["fable:claude:completed", "gemini4:agy:completed", "gemini:agy:completed", "gpt:codex:completed"]);
   expect(run.critique?.reviewers.every((r) => r.costUsd === undefined), "the stubs report no cost, so none is recorded").toBe(true);
-  for (const id of ["fable", "grok", "gemini", "gpt"]) expect(existsSync(at(run.id, `critique/round-1/reviews/${id}.json`)), id).toBe(true);
+  for (const id of ["fable", "gemini4", "gemini", "gpt"]) expect(existsSync(at(run.id, `critique/round-1/reviews/${id}.json`)), id).toBe(true);
   expect(json(run.id, "critique/round-1/decision.json")).toMatchObject({ round: 1, decision: "keep" });
   expect(existsSync(at(run.id, "critique/round-1/revised.json"))).toBe(false);
   expect(existsSync(at(run.id, "critique/round-2"))).toBe(false);
@@ -372,14 +353,14 @@ test("flow: a critique research that renumbers the sources fails the step by nam
 });
 
 test("flow: one reviewer unavailable — recorded with its error, the run continues", async () => {
-  process.env.STUB_REVIEWERS = "grok=unavailable";
+  process.env.STUB_REVIEWERS = "gemini4=unavailable";
   const run = await toGate();
   expect(run.status, run.error).toBe("awaiting-approval");
-  const grok = run.critique?.reviewers.find((r) => r.id === "grok");
-  expect(grok).toMatchObject({ outcome: "unavailable", engine: "grok" });
-  expect(grok?.error).toMatch(/402 Payment Required/);
-  expect(existsSync(at(run.id, "critique/round-1/reviews/grok.json"))).toBe(false);
-  expect(json(run.id, "critique/round-1/receipts/grok.json")).toMatchObject({ outcome: "unavailable", attempts: 1 });
+  const gem4 = run.critique?.reviewers.find((r) => r.id === "gemini4");
+  expect(gem4).toMatchObject({ outcome: "unavailable", engine: "agy" });
+  expect(gem4?.error).toMatch(/402 Payment Required/);
+  expect(existsSync(at(run.id, "critique/round-1/reviews/gemini4.json"))).toBe(false);
+  expect(json(run.id, "critique/round-1/receipts/gemini4.json")).toMatchObject({ outcome: "unavailable", attempts: 1 });
   expect(run.critique?.findings.total).toBe(6);
 });
 
@@ -390,16 +371,16 @@ test("flow: two of a three-reviewer panel unavailable is critique-quorum, before
     JSON.stringify({
       reviewers: [
         { id: "fable", engine: "claude", model: "claude-fable-5-1", effort: "high" },
-        { id: "grok", engine: "grok", model: "grok-4.7", effort: "high" },
+        { id: "gemini4", engine: "agy", model: "gemini-4-argon", effort: "high" },
         { id: "gpt", engine: "codex", model: "gpt-6-astra", effort: "high" },
       ],
     }),
   );
   process.env.ARTICLES_REVIEWERS_FILE = panel;
-  process.env.STUB_REVIEWERS = "grok=unavailable,gpt=seat";
+  process.env.STUB_REVIEWERS = "gemini4=unavailable,gpt=seat";
   const run = await toGate();
   expect(run.status).toBe("failed");
-  expect(run.error).toMatch(/^critique: critique-quorum: round 1: 1 of 3 reviewers completed, 2 needed \(grok unavailable: .*402.*; gpt seat-limit: You've hit your usage limit\.\)$/);
+  expect(run.error).toMatch(/^critique: critique-quorum: round 1: 1 of 3 reviewers completed, 2 needed \(gemini4 unavailable: .*402.*; gpt seat-limit: You've hit your usage limit\.\)$/);
   expect(run.steps.find((s) => s.name === "critique")?.status).toBe("failed");
   expect(run.steps.some((s) => s.name === "check"), "the check never ran").toBe(false);
   expect(existsSync(at(run.id, "critique/round-1/closed.json"))).toBe(false);
@@ -409,11 +390,11 @@ test("flow: two of a three-reviewer panel unavailable is critique-quorum, before
 
 test("resume inside the critique: a reviewer whose review exists never runs again", async () => {
   process.env.STUB_AGENT_ARGV_LOG = path.join(box.dir, "argv.log");
-  process.env.STUB_REVIEWERS = "grok=unavailable,gemini=unavailable,gpt=unavailable";
+  process.env.STUB_REVIEWERS = "gemini4=unavailable,gemini=unavailable,gpt=unavailable";
   const failed = await toGate();
   expect(failed.error).toMatch(/critique-quorum/);
   const before = argvLog().filter((l) => !l.entries.includes("inputs"));
-  expect(before.map((l) => l.engine).sort()).toEqual(["agy", "claude", "codex", "grok"]);
+  expect(before.map((l) => l.engine).sort()).toEqual(["agy", "agy", "claude", "codex"]);
 
   delete process.env.STUB_REVIEWERS;
   const resumed = await resumeRun(failed.id);
@@ -422,7 +403,7 @@ test("resume inside the critique: a reviewer whose review exists never runs agai
   const done = await driveRun(failed.id, deps());
   expect(done.status, done.error).toBe("awaiting-approval");
   const after = argvLog().filter((l) => !l.entries.includes("inputs")).slice(before.length);
-  expect(after.map((l) => l.engine).sort(), "fable (claude) completed before and is not re-run").toEqual(["agy", "codex", "grok"]);
+  expect(after.map((l) => l.engine).sort(), "fable (claude) completed before and is not re-run").toEqual(["agy", "agy", "codex"]);
   expect(done.critique?.reviewers.every((r) => r.outcome === "completed")).toBe(true);
   // the research, outline and draft were not re-run either
   expect(argvLog().filter((l) => l.entries.includes("inputs"))).toHaveLength(3 + 1);
@@ -453,7 +434,7 @@ test("a malformed review gets one retry; twice malformed is errored; a reviewer'
   expect(json(run.id, "critique/round-1/receipts/gemini.json")).toMatchObject({ outcome: "completed", attempts: 2 });
   expect(json(run.id, "critique/round-1/receipts/gpt.json")).toMatchObject({ outcome: "errored", attempts: 2, errors: [expect.stringMatching(/^malformed review twice: the final message holds no JSON object/)] });
   expect(json(run.id, "critique/round-1/receipts/fable.json")).toMatchObject({ outcome: "completed", wrote: ["notes.txt"] });
-  expect(json(run.id, "critique/round-1/receipts/grok.json")).toMatchObject({ outcome: "completed", attempts: 1, dropped: 1 });
+  expect(json(run.id, "critique/round-1/receipts/gemini4.json")).toMatchObject({ outcome: "completed", attempts: 1, dropped: 1 });
 });
 
 /* ── the check item and the registry ─────────────────────────────────── */
@@ -487,7 +468,7 @@ test("check item: quorum in every round and every blocker factual answered", () 
 
 test("write-back: publication.json `critique` and critique/{reviews,dispositions}.json, every round flattened", async () => {
   process.env.STUB_GH_LOG = path.join(box.dir, "gh.log");
-  process.env.STUB_REVIEWERS = "grok=unavailable";
+  process.env.STUB_REVIEWERS = "gemini4=unavailable";
   process.env.STUB_CRITIQUE_DECISIONS = "rewrite,keep";
   process.env.STUB_AGENT_COST = "0.5";
   const run = await toGate();
@@ -506,7 +487,7 @@ test("write-back: publication.json `critique` and critique/{reviews,dispositions
   expect(pub.critique).toMatchObject({ rounds: 2, decision: "keep" });
   expect(pub.critique.reviewers).toEqual([
     { id: "fable", engine: "claude", model: "claude-fable-5-1", effort: "high", outcome: "completed", costUsd: 1 },
-    { id: "grok", engine: "grok", model: "grok-4.7", effort: "high", outcome: "unavailable" },
+    { id: "gemini4", engine: "agy", model: "gemini-4-argon", effort: "high", outcome: "unavailable" },
     { id: "gemini", engine: "agy", model: "gemini-3.8-flash", effort: "high", outcome: "completed" },
     { id: "gpt", engine: "codex", model: "gpt-6-astra", effort: "high", outcome: "completed" },
   ]);
@@ -524,7 +505,7 @@ test("write-back: publication.json `critique` and critique/{reviews,dispositions
   expect(JSON.stringify([pub, reviews, dispositions])).not.toContain("null");
   // the PR says who reviewed
   const gh = JSON.parse(readFileSync(path.join(box.dir, "gh.log"), "utf8").trim()) as string[];
-  expect(gh[gh.indexOf("--body") + 1]).toMatch(/- Critique: 2 rounds, decision keep; reviewers fable \(claude claude-fable-5-1\) completed, grok \(grok grok-4\.7\) unavailable/);
+  expect(gh[gh.indexOf("--body") + 1]).toMatch(/- Critique: 2 rounds, decision keep; reviewers fable \(claude claude-fable-5-1\) completed, gemini4 \(agy gemini-4-argon\) unavailable/);
   // and the stub gate learned the record (counts, both files, rounds)
   expect(landed.landing?.gates.every((g) => g.ok)).toBe(true);
 
