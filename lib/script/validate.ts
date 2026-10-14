@@ -37,7 +37,7 @@
 import { buildCards } from "@/lib/notebook/cards";
 import type { NotebookSource } from "@/lib/notebook/source";
 import type { EngineFit, Fit, Notebook } from "@/lib/notebook/types";
-import { RUNTIME_TOLERANCE } from "@/app/_phases/cut/finishLine";
+import { RUNTIME_TOLERANCE } from "@/lib/cut/finishLine";
 import type { DraftRender } from "@/lib/script/draft";
 import { checkConnectors, type Verdict } from "@/lib/script/gate";
 import type { Beat, BeatKind, CheckRow, Connector, CutFact } from "@/lib/script/types";

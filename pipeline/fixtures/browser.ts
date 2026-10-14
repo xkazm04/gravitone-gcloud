@@ -27,9 +27,9 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { explainerRender } from "@/app/_phases/frames/frames";
-import { framesFromUnits, unitsFromRender } from "@/app/_phases/frames/picture/unit";
-import { RENDER_BY_ID } from "@/app/_phases/script/renders";
+import { explainerRender } from "@/lib/frames/frames";
+import { framesFromUnits, unitsFromRender } from "@/lib/frames/picture/unit";
+import { RENDER_BY_ID } from "@/lib/script/renders";
 import { assetFromProof, uploadPointer, type Asset } from "@/lib/assets";
 import type { Proof, ProofState, Theme } from "@/lib/themes";
 

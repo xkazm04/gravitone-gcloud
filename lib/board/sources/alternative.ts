@@ -18,8 +18,8 @@
 // un-approves its sibling, and the undo stack records both.
 
 import { readStep, saveStep } from "@/app/_phases/_shared/stepStore";
-import type { AltsStepData } from "@/app/_phases/frames/alternatives/alts";
-import { SYNTH_MARK } from "@/app/_phases/frames/alternatives/alts";
+import type { AltsStepData } from "@/lib/frames/alternatives/alts";
+import { SYNTH_MARK } from "@/lib/frames/alternatives/alts";
 import type { FramesStepData } from "@/app/_phases/frames/useFrames";
 
 import type { BoardEntry, BoardSourceExt } from "../source";

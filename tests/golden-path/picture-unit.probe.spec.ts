@@ -278,7 +278,7 @@ const TRAILER_SOURCE: FramesRender = {
 /* ── 1 · an explainer unit IS today's frame, apart from its id ─────────────── */
 
 test("case 1: explainer → one unit per beat, byte-identical to framesFromRender apart from id", async () => {
-  const { unitsFromRender, framesFromUnits } = await import("@/app/_phases/frames/picture/unit");
+  const { unitsFromRender, framesFromUnits } = await import("@/lib/frames/picture/unit");
   let n = 0;
   for (const r of RENDERS) {
     const seeds = framesFromRender(r);
@@ -311,7 +311,7 @@ test("case 1: explainer → one unit per beat, byte-identical to framesFromRende
 });
 
 test("case 1: the frames the step derives carry unit ids — two renders share none", async () => {
-  const { unitsFromRender, framesFromUnits } = await import("@/app/_phases/frames/picture/unit");
+  const { unitsFromRender, framesFromUnits } = await import("@/lib/frames/picture/unit");
   const [a, b] = RENDERS;
   const idsA = new Set(framesFromUnits(unitsFromRender(explainerRender(a), a)).map((f) => f.id));
   const idsB = framesFromUnits(unitsFromRender(explainerRender(b), b)).map((f) => f.id);
@@ -323,7 +323,7 @@ test("case 1: the frames the step derives carry unit ids — two renders share n
 /* ── 2 · a trailer shot is a unit, on one clock ────────────────────────────── */
 
 test("case 2: trailer (3 beats → 7 shots, 30s) → 7 units, start strictly increasing, holds sum to the film", async () => {
-  const { unitsFromRender } = await import("@/app/_phases/frames/picture/unit");
+  const { unitsFromRender } = await import("@/lib/frames/picture/unit");
   const shots = shotsFromBeats(TRAILER_BEATS, TRAILER_SOURCE.durationS);
   expect(shots, "the fixture decomposes as designed").toHaveLength(7);
 
@@ -357,7 +357,7 @@ test("case 2: trailer (3 beats → 7 shots, 30s) → 7 units, start strictly inc
 });
 
 test("case 2: a trailer with no spine, and an unplaceable beat, derive no units at the wrong time", async () => {
-  const { unitsFromRender } = await import("@/app/_phases/frames/picture/unit");
+  const { unitsFromRender } = await import("@/lib/frames/picture/unit");
   expect(unitsFromRender({ ...TRAILER_SOURCE, beats: [], origin: "no-spine" }, RENDERS[0])).toEqual([]);
   const withTbd = [TRAILER_BEATS[0], { ...TRAILER_BEATS[1], at: "tbd" }, TRAILER_BEATS[2]];
   const units = unitsFromRender({ ...TRAILER_SOURCE, beats: withTbd }, RENDERS[0]);
@@ -709,8 +709,8 @@ test("stage 2 case 3: deriveTimeline over a trailer project's units → origin p
 /* ── stage 2 · 4 · the explainer does not move ───────────────────────────────────────── */
 
 test("stage 2 case 4: on every shipped render, pictureFromUnits gives pictureFromFrames' scenes, starts and holds", async () => {
-  const { pictureFromUnits } = await import("@/app/_phases/score/picture");
-  const { unitsFromRender } = await import("@/app/_phases/frames/picture/unit");
+  const { pictureFromUnits } = await import("@/lib/score/picture");
+  const { unitsFromRender } = await import("@/lib/frames/picture/unit");
   for (const r of RENDERS) {
     const units = unitsFromRender(explainerRender(r), r);
     const frames = framesFromRender(r).map((f, i) => ({ ...f, id: units[i].id }));
@@ -732,7 +732,7 @@ test("stage 2 case 5: Score's picture of a trailer project is 7 scenes at the sh
   const pid = await trailerProject();
   await openFrames(pid);
   const { readUnits } = await readerModule();
-  const { pictureFromUnits } = await import("@/app/_phases/score/picture");
+  const { pictureFromUnits } = await import("@/lib/score/picture");
   const read = await readUnits(pid);
   if (!read.ok || !read.units) throw new Error("unreadable");
 

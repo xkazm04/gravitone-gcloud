@@ -34,7 +34,7 @@ function loadEnv(file = ".env.local") {
 loadEnv();
 
 const { PRESETS } = await import("@gt/catalog/presets");
-const { TRIALS } = await import("../app/library/trials");
+const { TRIALS } = await import("../lib/library/trials");
 const { compilePrompt, NEGATIVE_PROMPT, PROMPT_CHAR_LIMIT } = await import("../lib/stylePrompt");
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- `generate` is used, but only in type position (`Parameters<typeof generate>` below); the rule does not count that as a value use, and dropping the binding breaks typecheck.
 const { generate, recognize } = await import("../lib/imaging/router");

@@ -9,7 +9,7 @@
 // and a list of Shot-shaped records; the output is one line of JSON per shot.
 import fs from "node:fs";
 
-import { actionFor } from "../../app/_phases/frames/shotPrompt";
+import { actionFor } from "../../lib/frames/shotPrompt";
 import { compilePrompt } from "../../lib/stylePrompt";
 
 const input = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));

@@ -31,9 +31,9 @@ import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { CutDocument } from "@/app/_phases/cut/cutDocument";
-import { cutDocumentHash } from "@/app/_phases/cut/cutDocument";
-import type { FinishCheck } from "@/app/_phases/cut/finishLine";
+import type { CutDocument } from "@/lib/cut/cutDocument";
+import { cutDocumentHash } from "@/lib/cut/cutDocument";
+import type { FinishCheck } from "@/lib/cut/finishLine";
 
 import {
   ExportError,

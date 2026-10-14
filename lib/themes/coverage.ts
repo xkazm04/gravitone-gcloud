@@ -11,7 +11,7 @@
 // Pure, and type-only against ../themes on purpose: themes.ts imports this
 // file at runtime, so a runtime edge back would be a cycle.
 
-import { TRIALS, trialById } from "@/app/library/trials";
+import { TRIALS, trialById } from "@/lib/library/trials";
 import { compileStyleBlock } from "../stylePrompt";
 import type { Proof, StyleBlock, Theme } from "../themes";
 

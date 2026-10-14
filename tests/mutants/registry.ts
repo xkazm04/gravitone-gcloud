@@ -163,7 +163,7 @@ export const MUTANTS: Mutant[] = [
   {
     id: "alt-last-one-removable",
     probe: "alt-last-one-stays.probe.spec.ts",
-    file: "app/_phases/frames/alternatives/alts.ts",
+    file: "lib/frames/alternatives/alts.ts",
     find: "isSynthetic(frameId) || keptCount > 1;",
     replace: "isSynthetic(frameId) || keptCount > 0;",
     why: "The last kept alternative can be removed, leaving a frame with nothing to show.",

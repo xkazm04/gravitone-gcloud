@@ -21,7 +21,7 @@ const check = (name: string, ok: boolean, where: string) => {
 };
 
 const doc = read("pipeline/FRAMES-SCENE-PROMPT.md");
-const shot = read("app/_phases/frames/shotPrompt.ts");
+const shot = read("lib/frames/shotPrompt.ts");
 
 // 2026-08-30-what-stays-dark (lighting-as-dramatic-instrument, unanimous)
 check("what-stays-dark: authoring rule", /Name the light source, and say what stays dark/.test(doc), "FRAMES-SCENE-PROMPT.md");

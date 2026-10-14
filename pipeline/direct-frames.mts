@@ -30,11 +30,11 @@ function loadEnv(file = ".env.local") {
 loadEnv();
 
 const { runClaude } = await import("../lib/claudeCli");
-const { RENDERS } = await import("../app/_phases/script/renders");
-const { FACTS } = await import("../app/_phases/_shared/notebook/facts");
-const { framesFromRender, subjectFor } = await import("../app/_phases/frames/frames");
-const { parseSceneSpecs, SCENE_SCHEMA } = await import("../app/_phases/frames/sceneSpec");
-const { PRESETS } = await import("../app/library/presets");
+const { RENDERS } = await import("../lib/script/renders");
+const { FACTS } = await import("../lib/notebook/facts");
+const { framesFromRender, subjectFor } = await import("../lib/frames/frames");
+const { parseSceneSpecs, SCENE_SCHEMA } = await import("../lib/frames/sceneSpec");
+const { PRESETS } = await import("@gt/catalog/presets");
 const { compilePrompt, NEGATIVE_PROMPT } = await import("../lib/stylePrompt");
 const { compileFormatBrief } = await import("../lib/formatBrief");
 const { generate, recognize } = await import("../lib/imaging/router");
