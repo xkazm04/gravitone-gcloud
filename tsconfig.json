@@ -61,6 +61,7 @@
     "node_modules",
     "gauntlet",
     "packages",
-    "tests/next-gates/fixtures"
+    "tests/next-gates/fixtures",
+    "docs/next/prototype/data"
   ]
 }
