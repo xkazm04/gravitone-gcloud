@@ -122,3 +122,23 @@ sources primary/counter, cost) and then what the batch says about the skill: whi
 errored in every run (that is configuration, not bad luck: grok's `cancelled` in 4 of 4 runs on
 2026-10-14 is why it was descoped), whether every run ended in `rewrite`, and the wall-time spread.
 `gemini4` (Gemini 4 Argon) ran at `high` / 14 min and timed out in 3 of 4 first rounds, so it now runs at `medium` / 35 min; check that it completes. Per-reviewer yield is in `run.json` `critique.reviewers` and `<dir>/critique/round-<n>/reviews/<id>.json`.
+
+## Registry yield (optional, after the gate)
+
+The research a run collects (`claims.json`, `sources.json`) is worth more to ai-registry than the
+article is, and the run's own `patches.json` does not show it: patches target the writing standard,
+never the subject's golden path (0 of 5 across eight runs, 2026-10-14). To measure the yield, run
+[subject-delta.md](subject-delta.md) as a read-only subagent per gated run, parallel and cheap
+beside the run itself. It compares every claim to the subject's golden path, techniques and
+applications, and opens the sources of its top five candidates.
+
+Land only what comes back **VERIFIED**, as lines in `.ai/registry-leads.jsonl` (the schema is the
+file's own: `ts, bundle, nearest, kind, claim, because, confidence, from`; a claim is "When X, do Y,
+because Z"; `from` is `article-run@<date>`). That file is the consumer-side channel: the registry's
+`leads-collect.mjs` folds it into `librarian/inbox.md`, and `/librarian` dispatches a scoped
+`/deepen` at the subject. Never edit the registry from here, and never write a lead from a claim
+the agent did not open the page for. The registry's `check-currency.mjs --volatile --subject <slug>`
+is how that `/deepen` run finds the dated facts to re-check.
+
+Spend where facts are set by a vendor or a platform (pricing, ad rules, API limits, standards
+status). Stable subjects returned small additions and no corrections.
