@@ -1,0 +1,141 @@
+{
+  "schema": "conform-run/1",
+  "worker": "d3222f40-f7d7-4075-88e8-3fc067c6903f",
+  "subject": "multi-provider-gateway-plane",
+  "evaluatedAt": "2026-10-15T00:22:55.229759+00:00",
+  "provider": "agy",
+  "model": "gemini-3.8-flash-high",
+  "pairs": [
+    {
+      "context": "text-providers",
+      "subject": "multi-provider-gateway-plane",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "lib/text/router.ts:341 The text gateway walks a flat array of provider candidates per turn class without strategy tree policy inheritance, continues sweeping down the chain on internal capability configuration defects when not at index 0, maps internal policy refusals to HTTP 503, and probes provider status sequentially over a uniform collection.",
+      "techniques": [
+        {
+          "technique": "strategy-tree-with-inherited-policy",
+          "verdict": "deviation",
+          "evidence": "lib/text/router.ts:93 Routing plan is a flat cascade of provider ID arrays per turn class rather than a composable strategy tree with inherited execution policy."
+        },
+        {
+          "technique": "router-versus-candidate-failure",
+          "verdict": "deviation",
+          "evidence": "lib/text/router.ts:364 Internal router capability configuration defects fall through to subsequent candidates when not at index 0, and errors lack an orthogonal router-versus-candidate attribution axis counted separately."
+        },
+        {
+          "technique": "policy-verdict-in-the-status-space",
+          "verdict": "deviation",
+          "evidence": "lib/text/errors.ts:185 Policy refusal by the plane (policy-forbidden) is mapped to HTTP 503, conflating an internal policy verdict with upstream service unavailability."
+        },
+        {
+          "technique": "named-members-over-a-uniform-collection",
+          "verdict": "deviation",
+          "evidence": "lib/text/router.ts:680 Upstream status discovery iterates sequentially over a uniform collection and awaits each probe in series rather than probing concurrently as named aggregate members."
+        },
+        {
+          "technique": "adapter-direction-asymmetry",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/types.ts:30 Precondition does not hold: the text gateway fronts only two vendor upstreams (claude-cli and Google), falling under the explicit exception for two or three upstreams."
+        },
+        {
+          "technique": "caller-scoped-normalization-strictness",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/types.ts:395 Precondition does not hold: callers are first-party internal routes consuming Gravitone's own schema, where caller-scoped normalization strictness is explicitly not recommended."
+        },
+        {
+          "technique": "per-provider-stream-framing",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/types.ts:443 Precondition does not hold: all reasoning calls return settled responses rather than streaming SSE frames."
+        },
+        {
+          "technique": "exclusive-authorship-of-a-measured-decision",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/types.ts:258 Precondition does not hold: candidate substitution is visibly declared in output provenance, and candidate selection is not measured or tuned against an evaluation."
+        },
+        {
+          "technique": "join-breadth-follows-the-wrong-match-cost",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/providers/google.ts:113 Precondition does not hold: models are directly mapped by turn class without fuzzy catalog joining."
+        },
+        {
+          "technique": "one-typed-carrier-for-echoed-state",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/types.ts:312 Precondition does not hold: reasoning calls are single-turn without opaque multi-turn continuation tokens."
+        },
+        {
+          "technique": "upstream-identity-before-inventory",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/router.ts:130 Precondition does not hold: upstreams speak proprietary interfaces rather than a shared anonymous wire protocol."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "multi-provider-gateway-plane",
+      "context": "app-infrastructure",
+      "reason": "Not a multi-provider gateway plane: app-infrastructure owns the Next.js App Router root layout, Firebase authentication, client-side persistence, and developer overlay tools; it does not front interchangeable external upstreams or route requests across candidates."
+    },
+    {
+      "subject": "multi-provider-gateway-plane",
+      "context": "board-decision-inbox",
+      "reason": "Not a multi-provider gateway plane: board-decision-inbox implements an internal human-in-the-loop review inbox consolidating application-level queues (cull, extract, dojo, etc.); it does not front external third-party upstreams or manage candidate routing."
+    },
+    {
+      "subject": "multi-provider-gateway-plane",
+      "context": "imaging-providers",
+      "reason": "withdrawn after review: reviewer (sonnet): The router.ts:180 claim that window-level reach 'conceals per-request substitutions' is contradicted by the doc comment (per-call re-routes are already recorded in the trail; unreachedPlanTops is an added window-level view), and I found no ledger or 'ineligible' marking for fallback samples in the o"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-15T00:22:55.229759+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "multi-provider-gateway-plane"
+      ],
+      "techniques": [
+        "adapter-direction-asymmetry",
+        "caller-scoped-normalization-strictness",
+        "exclusive-authorship-of-a-measured-decision",
+        "join-breadth-follows-the-wrong-match-cost",
+        "named-members-over-a-uniform-collection",
+        "one-typed-carrier-for-echoed-state",
+        "per-provider-stream-framing",
+        "policy-verdict-in-the-status-space",
+        "router-versus-candidate-failure",
+        "strategy-tree-with-inherited-policy",
+        "upstream-identity-before-inventory"
+      ],
+      "deviations": 1,
+      "context": "text-providers",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-15T00:22:55.229759+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "multi-provider-gateway-plane"
+      ],
+      "techniques": [
+        "adapter-direction-asymmetry",
+        "caller-scoped-normalization-strictness",
+        "exclusive-authorship-of-a-measured-decision",
+        "join-breadth-follows-the-wrong-match-cost",
+        "named-members-over-a-uniform-collection",
+        "one-typed-carrier-for-echoed-state",
+        "per-provider-stream-framing",
+        "policy-verdict-in-the-status-space",
+        "router-versus-candidate-failure",
+        "strategy-tree-with-inherited-policy",
+        "upstream-identity-before-inventory"
+      ],
+      "deviations": 1,
+      "context": "imaging-providers",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
+}

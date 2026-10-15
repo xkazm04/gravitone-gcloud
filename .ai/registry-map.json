@@ -5355,7 +5355,11 @@
           "revision": 9,
           "changedAt": "2026-09-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/text/router.ts:341 The text gateway walks a flat array of provider candidates per turn class without strategy tree policy inheritance, continues sweeping down the chain on internal capability configuration defects when not at index 0, maps internal policy refusals to HTTP 503, and probes provider status sequentially over a uniform collection.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:f268193750c0a517",
+          "evaluatedRevision": 9
         },
         {
           "subject": "mcp-tools",

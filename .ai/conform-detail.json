@@ -4574,6 +4574,143 @@
       "evaluatedTs": "2026-10-14T23:55:37.386Z",
       "worker": "61e633f3-fe93-4422-bf5d-cc70270a78d9",
       "techniques": []
+    },
+    "e44e6001-80c3-4cdf-88ec-f9f99e6d7277/multi-provider-gateway-plane": {
+      "context": "text-providers",
+      "subject": "multi-provider-gateway-plane",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T00:22:55.229Z",
+      "worker": "d3222f40-f7d7-4075-88e8-3fc067c6903f",
+      "techniques": [
+        {
+          "technique": "strategy-tree-with-inherited-policy",
+          "verdict": "deviation",
+          "evidence": "lib/text/router.ts:93 Routing plan is a flat cascade of provider ID arrays per turn class rather than a composable strategy tree with inherited execution policy."
+        },
+        {
+          "technique": "router-versus-candidate-failure",
+          "verdict": "deviation",
+          "evidence": "lib/text/router.ts:364 Internal router capability configuration defects fall through to subsequent candidates when not at index 0, and errors lack an orthogonal router-versus-candidate attribution axis counted separately."
+        },
+        {
+          "technique": "policy-verdict-in-the-status-space",
+          "verdict": "deviation",
+          "evidence": "lib/text/errors.ts:185 Policy refusal by the plane (policy-forbidden) is mapped to HTTP 503, conflating an internal policy verdict with upstream service unavailability."
+        },
+        {
+          "technique": "named-members-over-a-uniform-collection",
+          "verdict": "deviation",
+          "evidence": "lib/text/router.ts:680 Upstream status discovery iterates sequentially over a uniform collection and awaits each probe in series rather than probing concurrently as named aggregate members."
+        },
+        {
+          "technique": "adapter-direction-asymmetry",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/types.ts:30 Precondition does not hold: the text gateway fronts only two vendor upstreams (claude-cli and Google), falling under the explicit exception for two or three upstreams."
+        },
+        {
+          "technique": "caller-scoped-normalization-strictness",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/types.ts:395 Precondition does not hold: callers are first-party internal routes consuming Gravitone's own schema, where caller-scoped normalization strictness is explicitly not recommended."
+        },
+        {
+          "technique": "per-provider-stream-framing",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/types.ts:443 Precondition does not hold: all reasoning calls return settled responses rather than streaming SSE frames."
+        },
+        {
+          "technique": "exclusive-authorship-of-a-measured-decision",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/types.ts:258 Precondition does not hold: candidate substitution is visibly declared in output provenance, and candidate selection is not measured or tuned against an evaluation."
+        },
+        {
+          "technique": "join-breadth-follows-the-wrong-match-cost",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/providers/google.ts:113 Precondition does not hold: models are directly mapped by turn class without fuzzy catalog joining."
+        },
+        {
+          "technique": "one-typed-carrier-for-echoed-state",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/types.ts:312 Precondition does not hold: reasoning calls are single-turn without opaque multi-turn continuation tokens."
+        },
+        {
+          "technique": "upstream-identity-before-inventory",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/router.ts:130 Precondition does not hold: upstreams speak proprietary interfaces rather than a shared anonymous wire protocol."
+        }
+      ]
+    },
+    "9c62ab0b-7ff9-49ba-a123-0e4eff5b2a0d/multi-provider-gateway-plane": {
+      "context": "imaging-providers",
+      "subject": "multi-provider-gateway-plane",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T00:22:55.229Z",
+      "techniques": [
+        {
+          "technique": "strategy-tree-with-inherited-policy",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/router.ts:68 Candidate selection is a flat list of provider IDs per capability rather than a composable strategy tree with inherited execution policy."
+        },
+        {
+          "technique": "adapter-direction-asymmetry",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/providers/leonardo.ts:134 Outbound request translation across 6 providers is implemented as procedural code with manual limit checks rather than declarative data mapping tables."
+        },
+        {
+          "technique": "upstream-identity-before-inventory",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/providers/ollama.ts:34 The Ollama adapter assumes model identity from an environment variable rather than probing the endpoint for identity before dispatching."
+        },
+        {
+          "technique": "exclusive-authorship-of-a-measured-decision",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/router.ts:180 unreachedPlanTops checks substitution using a coarse window-level reach set rather than auditing request-level substitutions, and fallback samples are not marked ineligible in the ledger."
+        },
+        {
+          "technique": "router-versus-candidate-failure",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/router.ts:336 Internal capability configuration defects fall through to subsequent candidates when not at index 0, and router failures are not counted separately from candidate failures."
+        },
+        {
+          "technique": "policy-verdict-in-the-status-space",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/errors.ts:235 Internal budget refusal is mapped to HTTP 402 and safety refusal to 422 rather than 5xx, halting the failover loop before any vendor is touched."
+        },
+        {
+          "technique": "caller-scoped-normalization-strictness",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/types.ts:75 Precondition does not hold: all callers are first-party internal application routes with a shared contract."
+        },
+        {
+          "technique": "named-members-over-a-uniform-collection",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/router.ts:111 Precondition does not hold: imaging providers do not assemble an inventory aggregate at startup."
+        },
+        {
+          "technique": "per-provider-stream-framing",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/types.ts:245 Precondition does not hold: image generation and recognition endpoints do not stream."
+        },
+        {
+          "technique": "join-breadth-follows-the-wrong-match-cost",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/providers/leonardo.ts:36 Precondition does not hold: models are directly referenced by explicit IDs without fuzzy catalog name resolution."
+        },
+        {
+          "technique": "one-typed-carrier-for-echoed-state",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/types.ts:87 Precondition does not hold: image operations are stateless single-shot requests without echoed continuation tokens."
+        }
+      ],
+      "withdrawn": {
+        "worker": "d3222f40-f7d7-4075-88e8-3fc067c6903f",
+        "state": "deviation",
+        "at": "2026-10-15T00:23:17.200147+00:00",
+        "reason": "reviewer (sonnet): The router.ts:180 claim that window-level reach 'conceals per-request substitutions' is contradicted by the doc comment (per-call re-routes are already recorded in the trail; unreachedPlanTops is an added window-level view), and I found no ledger or 'ineligible' marking for fallback samples in the o"
+      }
     }
   }
 }
