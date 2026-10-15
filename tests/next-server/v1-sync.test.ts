@@ -3,16 +3,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 // The registry's adapters import v1 readers whose chain needs the app's `@/`
 // alias; these tests drive the sync with sources of their own.
-vi.mock("../../app/_server/v1/sources.ts", () => ({ V1_SOURCES: [] }));
+vi.mock("../../lib/ledger/v1/sources.ts", () => ({ V1_SOURCES: [] }));
 
 import { err, ok } from "@gt/domain/errors";
 import { queryEvents } from "@gt/kernel/events-query";
 import { claimState } from "@gt/kernel/ingest";
 import { openKernel, type Kernel } from "@gt/kernel/kernel";
 
-import { facts } from "../../app/_server/v1/facts.ts";
-import { BATCH, liveJobs, readAll, reconcile, syncSoon, syncV1, SYNC_CLAIM } from "../../app/_server/v1/sync.ts";
-import type { IngestEvent, ProjectCtx, Projection, Source } from "../../app/_server/v1/types.ts";
+import { facts } from "../../lib/ledger/v1/facts.ts";
+import { BATCH, liveJobs, readAll, reconcile, syncSoon, syncV1, SYNC_CLAIM } from "../../lib/ledger/v1/sync.ts";
+import type { IngestEvent, ProjectCtx, Projection, Source } from "../../lib/ledger/v1/types.ts";
 
 // The sync driver over sources made here: what it appends, what it refuses to
 // append twice, how one broken source is reported without stopping the rest,

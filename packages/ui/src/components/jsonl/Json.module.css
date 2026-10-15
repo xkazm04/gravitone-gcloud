@@ -1,0 +1,10 @@
+/* ledger.css .jl (one JSON Lines row) and .json (the detail's raw record). */
+.line{height:var(--h-line);padding:0 var(--sp-loose) 0 var(--sp-5);font:500 var(--fs-meta)/var(--h-line) var(--mono);white-space:pre;color:var(--code-text);cursor:default;min-width:100%;width:max-content}
+.line:hover{background:color-mix(in srgb,var(--wash) 75%,transparent)}
+.line[aria-selected=true]{background:var(--cyan-a)}
+.ln{display:inline-block;width:var(--w-line-no);color:var(--faint);user-select:none}
+.block{position:relative;margin:0;padding:var(--sp-4) var(--sp-5);border-radius:var(--r-control);border:1px solid var(--hair-2);background:var(--code-ground);font:500 var(--fs-meta)/1.5 var(--mono);color:var(--code-text);white-space:pre-wrap;word-break:break-all}
+.k{color:var(--code-key)}
+.sv{color:var(--code-string)}
+.nv{color:var(--cyan)}
+.bv{color:var(--violet)}

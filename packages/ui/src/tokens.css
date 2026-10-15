@@ -71,11 +71,26 @@
   /* frame */
   --cal-w: clamp(260px,19vw,340px);
   --cols: 52px minmax(0,1.32fr) minmax(0,.9fr) minmax(0,1fr);
+  --h-axis: 20px; /* Height of a time axis under a strip. */
+  --h-event: 34px; /* Height of an event row in a ledger list. */
+  --h-hours: 34px; /* Height of the hour axis over the Runs day-line. */
+  --h-line: 22px; /* Height of one JSON Lines row. */
+  --h-strip: 60px; /* Height of a time strip's bar box. */
   --hdr-h: 56px;
   --head-h: 40px;
+  --ledger-cols: 54px 96px 128px 128px minmax(0,1fr) 70px 90px; /* Columns of an event row and its head: # · time · actor · type · subject · cost · src. */
+  --w-detail: 344px; /* Width of a route's docked detail panel. */
+  --w-inspector: clamp(290px,23vw,360px); /* Width of the inspector beside the Runs day-line. */
+  --w-lane: 214px; /* Width of a resource lane's label column on the Runs day-line. */
+  --w-line-no: 46px; /* Width of the line number before a JSON line. */
+  --w-list: clamp(250px,19vw,300px); /* Width of the Projects route's composition list. */
+  --w-rail: 228px; /* Width of a route's left rail: the Ledger's facets and the time strip's readout above them. */
+  --w-search: clamp(220px,21vw,400px); /* Width of the search field in a route's toolbar. */
 
   /* roles-surface */
+  --code-ground: #06080d; /* Ground of a rendered JSON record. */
   --focus-line: rgba(103,232,249,.55); /* Border of a field or card that has focus or is hovered. */
+  --hatch-future: repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 3px,transparent 3px 7px); /* Fill of a day that has not happened yet. */
   --ink-veil: rgba(8,10,16,.85); /* Translucent ink behind a glyph or label sitting on imagery. */
   --letterbox: #000; /* Ground behind letterboxed video and imagery. */
   --paper: #ece6d8; /* Ground of a paper (script or document) surface. */
@@ -84,6 +99,9 @@
   --wash-hi: rgba(255,255,255,.05); /* Hover or selected fill on a control, one step above wash. */
 
   /* roles-text */
+  --code-key: #8b95ab; /* A key in rendered JSON. */
+  --code-string: #e7ebf3; /* A string value in rendered JSON. */
+  --code-text: #c9d1e0; /* Punctuation and plain text of rendered JSON. */
   --done-text: #a7f3d0; /* Text of a ratified or done state, one step lighter than emerald. */
   --error-text: #fecdd3; /* Text of an error message on a rose wash. */
   --illustrative-text: #fcd77a; /* Text that marks content as illustrative rather than real. */
@@ -117,6 +135,7 @@
   --size-glyph-btn: 18px; /* Side of a round glyph button. */
   --size-glyph-sm: 13px; /* Side of an inline glyph: an error mark, a checkbox, a link glyph. */
   --size-glyph-xs: 12px; /* Side of a chain node or a disclosure chevron. */
+  --size-mark: 14px; /* Side of a lane's mark and of a pin on a time track. */
   --size-pip: 10px; /* Diameter of a pip in a pip row. */
 
   /* roles-space */
@@ -139,15 +158,18 @@
   --r-meter: 3px; /* Corner of a meter rail or hatch. */
 
   /* roles-type */
+  --fs-bar: 12.5px; /* Label inside a bar on a time track. */
   --fs-control-sm: 13.5px; /* Text of a small button, a keymap legend, a hint tip. */
   --fs-error: 12.5px; /* A verbatim error line. */
   --fs-nav: 14.5px; /* Text of navigation, crumbs, facts and a toast. */
+  --fs-title: 24px; /* Serif title of what a Projects view is showing: a project, or Runs itself. */
 
   /* roles-mark */
   --ambient: radial-gradient(900px 500px at 8% -10%,rgba(34,211,238,.10),transparent 60%),radial-gradient(700px 600px at 100% 110%,rgba(139,92,246,.10),transparent 60%),radial-gradient(600px 400px at 70% 0%,rgba(16,185,129,.06),transparent 60%); /* The ambient light behind every page (prototype tokens.css body::before). */
   --chan-instagram: #f0a6e6; /* Mark colour of the Instagram channel. */
   --chan-tiktok: #8ef0f7; /* Mark colour of the TikTok channel. */
   --chan-youtube: #ff8a8a; /* Mark colour of the YouTube channel. */
+  --cloud-mark: #cbd5e1; /* Mark of a paid cloud resource. */
   --hatch: repeating-linear-gradient(135deg,rgba(255,255,255,.28) 0 2px,transparent 2px 5px); /* Fill of an undecided or unmeasured span. */
   --panel-ground: rgba(0,0,0,.14); /* Recessed ground of a route panel. */
   --warn-cut: #3b0712; /* Cut-out mark inside the warning glyph. */

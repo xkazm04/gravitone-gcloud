@@ -12,3 +12,4 @@
 .violet{border-color:color-mix(in srgb,var(--violet) 50%,transparent);background:var(--violet-a)}
 .cyan{border-color:color-mix(in srgb,var(--cyan) 50%,transparent);background:var(--cyan-a)}
 .glyph{width:var(--size-glyph-sm);height:var(--size-glyph-sm)}
+.after{width:var(--size-glyph-xs);height:var(--size-glyph-xs);margin-left:calc(-1 * var(--sp-1))}

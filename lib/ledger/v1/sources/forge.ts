@@ -7,7 +7,7 @@ import { err, ok, type Result } from "@gt/domain/errors";
 import type { Actor, EventData } from "@gt/domain/event";
 
 import { getRun, listRuns } from "../../../../lib/foundry/store.ts";
-import { COMMITTABLE, LIVE } from "../../../foundry/parts.tsx";
+import { COMMITTABLE, LIVE } from "../../../foundry/plant.ts";
 import { bump, facts, instant, readEach, seg, words } from "../facts.ts";
 import type { IngestEvent, LiveJob, ProjectCtx, Projection, Skipped, Source, WeirItem } from "../types.ts";
 
@@ -163,7 +163,7 @@ function tallyOf(runs: readonly ForgeRun[]): Projection["tally"] {
   return { records, facts: fs };
 }
 
-/** LIVE is the /foundry page's own set (app/foundry/parts.tsx), so Runs and v1 agree by construction. */
+/** LIVE is the /foundry page's own set (lib/foundry/plant.ts), so Runs and v1 agree by construction. */
 function liveOf({ run }: ForgeRun): LiveJob | null {
   if (!LIVE.includes(run.status)) return null;
   const startedAt = instant(run.created);

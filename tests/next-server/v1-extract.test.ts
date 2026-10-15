@@ -8,8 +8,8 @@ vi.mock("../../lib/foundry/extract/store.ts", () => store);
 
 import { activeLease, LEASE_TTL_MS } from "../../lib/foundry/extract/lease.ts";
 import type { ExtractManifest } from "../../lib/foundry/extract/types.ts";
-import { leaseState, projectExtract, type ExtractSnapshot } from "../../app/_server/v1/sources/extract.ts";
-import type { IngestEvent, ProjectCtx } from "../../app/_server/v1/types.ts";
+import { leaseState, projectExtract, type ExtractSnapshot } from "../../lib/ledger/v1/sources/extract.ts";
+import type { IngestEvent, ProjectCtx } from "../../lib/ledger/v1/types.ts";
 
 // The extract adapter over literal manifests in engine.ts's shapes. What it
 // must get right that the forge does not: a run is RUNNING only while a driver

@@ -6,7 +6,7 @@
 // are imported for real and called with real Requests: the token is verified by
 // lib/principal.ts against a JWKS stub serving a key minted here (no network),
 // and the stream reads a real kernel store in a temp file, opened through the
-// app's own singleton (app/_server/kernel.ts).
+// app's own singleton (lib/kernelStore.ts).
 //
 // "server-only" resolves the way Next resolves it for server code, for the
 // whole lane (playwright.config.ts).
@@ -54,9 +54,9 @@ test.beforeAll(async () => {
   routes = {
     session: (await import("../../app/api/session/route.ts")) as unknown as Routes["session"],
     stream: (await import("../../app/api/events/stream/route.ts")) as unknown as Routes["stream"],
-    kernel: ((await import("../../app/_server/kernel.ts")) as unknown as { kernel: Routes["kernel"] }).kernel,
+    kernel: ((await import("../../lib/kernelStore.ts")) as unknown as { kernel: Routes["kernel"] }).kernel,
   };
-  closeKernel = ((await import("../../app/_server/kernel.ts")) as unknown as { closeKernel: () => void }).closeKernel;
+  closeKernel = ((await import("../../lib/kernelStore.ts")) as unknown as { closeKernel: () => void }).closeKernel;
   append = ((await import("@gt/kernel/events")) as unknown as { append: typeof append }).append;
 });
 

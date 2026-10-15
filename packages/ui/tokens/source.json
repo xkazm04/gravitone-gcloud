@@ -72,7 +72,20 @@
       {"name": "hdr-h", "tier": "primitive", "value": "56px"},
       {"name": "head-h", "tier": "primitive", "value": "40px"},
       {"name": "cal-w", "tier": "primitive", "value": "clamp(260px,19vw,340px)"},
-      {"name": "cols", "tier": "primitive", "value": "52px minmax(0,1.32fr) minmax(0,.9fr) minmax(0,1fr)"}
+      {"name": "cols", "tier": "primitive", "value": "52px minmax(0,1.32fr) minmax(0,.9fr) minmax(0,1fr)"},
+      {"name": "w-rail", "tier": "role", "value": "228px", "note": "Width of a route's left rail: the Ledger's facets and the time strip's readout above them."},
+      {"name": "w-detail", "tier": "role", "value": "344px", "note": "Width of a route's docked detail panel."},
+      {"name": "w-search", "tier": "role", "value": "clamp(220px,21vw,400px)", "note": "Width of the search field in a route's toolbar."},
+      {"name": "ledger-cols", "tier": "role", "value": "54px 96px 128px 128px minmax(0,1fr) 70px 90px", "note": "Columns of an event row and its head: # · time · actor · type · subject · cost · src."},
+      {"name": "h-event", "tier": "role", "value": "34px", "note": "Height of an event row in a ledger list."},
+      {"name": "h-line", "tier": "role", "value": "22px", "note": "Height of one JSON Lines row."},
+      {"name": "w-line-no", "tier": "role", "value": "46px", "note": "Width of the line number before a JSON line."},
+      {"name": "h-strip", "tier": "role", "value": "60px", "note": "Height of a time strip's bar box."},
+      {"name": "h-axis", "tier": "role", "value": "20px", "note": "Height of a time axis under a strip."},
+      {"name": "w-lane", "tier": "role", "value": "214px", "note": "Width of a resource lane's label column on the Runs day-line."},
+      {"name": "h-hours", "tier": "role", "value": "34px", "note": "Height of the hour axis over the Runs day-line."},
+      {"name": "w-list", "tier": "role", "value": "clamp(250px,19vw,300px)", "note": "Width of the Projects route's composition list."},
+      {"name": "w-inspector", "tier": "role", "value": "clamp(290px,23vw,360px)", "note": "Width of the inspector beside the Runs day-line."}
     ]},
     {"id": "roles-surface", "tokens": [
       {"name": "wash", "tier": "role", "value": "rgba(255,255,255,.04)", "note": "Resting hover fill on a neutral surface."},
@@ -81,14 +94,19 @@
       {"name": "ink-veil", "tier": "role", "value": "rgba(8,10,16,.85)", "note": "Translucent ink behind a glyph or label sitting on imagery."},
       {"name": "shadow", "tier": "role", "value": "rgba(0,0,0,.6)", "note": "Colour of every elevation shadow."},
       {"name": "letterbox", "tier": "role", "value": "#000", "note": "Ground behind letterboxed video and imagery."},
-      {"name": "paper", "tier": "role", "value": "#ece6d8", "note": "Ground of a paper (script or document) surface."}
+      {"name": "paper", "tier": "role", "value": "#ece6d8", "note": "Ground of a paper (script or document) surface."},
+      {"name": "code-ground", "tier": "role", "value": "#06080d", "note": "Ground of a rendered JSON record."},
+      {"name": "hatch-future", "tier": "role", "value": "repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 3px,transparent 3px 7px)", "note": "Fill of a day that has not happened yet."}
     ]},
     {"id": "roles-text", "tokens": [
       {"name": "error-text", "tier": "role", "value": "#fecdd3", "note": "Text of an error message on a rose wash."},
       {"name": "done-text", "tier": "role", "value": "#a7f3d0", "note": "Text of a ratified or done state, one step lighter than emerald."},
       {"name": "illustrative-text", "tier": "role", "value": "#fcd77a", "note": "Text that marks content as illustrative rather than real."},
       {"name": "reference-text", "tier": "role", "value": "#c3cad8", "note": "Text and rim of a reference-mode item."},
-      {"name": "reading", "tier": "role", "value": "#e9e4d8", "note": "Serif reading text on the dark ground."}
+      {"name": "reading", "tier": "role", "value": "#e9e4d8", "note": "Serif reading text on the dark ground."},
+      {"name": "code-text", "tier": "role", "value": "#c9d1e0", "note": "Punctuation and plain text of rendered JSON."},
+      {"name": "code-key", "tier": "role", "value": "#8b95ab", "note": "A key in rendered JSON."},
+      {"name": "code-string", "tier": "role", "value": "#e7ebf3", "note": "A string value in rendered JSON."}
     ]},
     {"id": "roles-shape", "tokens": [
       {"name": "r-chip", "tier": "role", "value": "6px", "note": "Corner of a chip, tally or small tag."},
@@ -117,7 +135,8 @@
       {"name": "size-glyph-xs", "tier": "role", "value": "12px", "note": "Side of a chain node or a disclosure chevron."},
       {"name": "size-glyph-sm", "tier": "role", "value": "13px", "note": "Side of an inline glyph: an error mark, a checkbox, a link glyph."},
       {"name": "size-glyph", "tier": "role", "value": "15px", "note": "Side of a field glyph."},
-      {"name": "size-glyph-btn", "tier": "role", "value": "18px", "note": "Side of a round glyph button."}
+      {"name": "size-glyph-btn", "tier": "role", "value": "18px", "note": "Side of a round glyph button."},
+      {"name": "size-mark", "tier": "role", "value": "14px", "note": "Side of a lane's mark and of a pin on a time track."}
     ]},
     {"id": "roles-space", "tokens": [
       {"name": "sp-nudge", "tier": "role", "value": "2px", "note": "Optical nudge: a glyph to its first line, a rail to its tabs."},
@@ -141,7 +160,9 @@
     {"id": "roles-type", "tokens": [
       {"name": "fs-error", "tier": "role", "value": "12.5px", "note": "A verbatim error line."},
       {"name": "fs-control-sm", "tier": "role", "value": "13.5px", "note": "Text of a small button, a keymap legend, a hint tip."},
-      {"name": "fs-nav", "tier": "role", "value": "14.5px", "note": "Text of navigation, crumbs, facts and a toast."}
+      {"name": "fs-nav", "tier": "role", "value": "14.5px", "note": "Text of navigation, crumbs, facts and a toast."},
+      {"name": "fs-bar", "tier": "role", "value": "12.5px", "note": "Label inside a bar on a time track."},
+      {"name": "fs-title", "tier": "role", "value": "24px", "note": "Serif title of what a Projects view is showing: a project, or Runs itself."}
     ]},
     {"id": "roles-mark", "tokens": [
       {"name": "panel-ground", "tier": "role", "value": "rgba(0,0,0,.14)", "note": "Recessed ground of a route panel."},
@@ -150,7 +171,8 @@
       {"name": "warn-cut", "tier": "role", "value": "#3b0712", "note": "Cut-out mark inside the warning glyph."},
       {"name": "chan-youtube", "tier": "role", "value": "#ff8a8a", "note": "Mark colour of the YouTube channel."},
       {"name": "chan-tiktok", "tier": "role", "value": "#8ef0f7", "note": "Mark colour of the TikTok channel."},
-      {"name": "chan-instagram", "tier": "role", "value": "#f0a6e6", "note": "Mark colour of the Instagram channel."}
+      {"name": "chan-instagram", "tier": "role", "value": "#f0a6e6", "note": "Mark colour of the Instagram channel."},
+      {"name": "cloud-mark", "tier": "role", "value": "#cbd5e1", "note": "Mark of a paid cloud resource."}
     ]}
   ]
 }

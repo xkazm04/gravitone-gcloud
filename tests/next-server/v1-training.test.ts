@@ -5,8 +5,8 @@ vi.mock("server-only", () => ({}));
 const store = vi.hoisted(() => ({ listCycles: vi.fn(), getCycle: vi.fn() }));
 vi.mock("../../lib/foundry/training/store.ts", () => store);
 
-import { projectTraining, trainingSource, type TrainingSnapshot } from "../../app/_server/v1/sources/training.ts";
-import type { IngestEvent, ProjectCtx } from "../../app/_server/v1/types.ts";
+import { projectTraining, trainingSource, type TrainingSnapshot } from "../../lib/ledger/v1/sources/training.ts";
+import type { IngestEvent, ProjectCtx } from "../../lib/ledger/v1/types.ts";
 
 // The Dojo records fewer instants than the forge. Everything v1 wrote no time
 // for is observed by the sync (derived) and never given a past it did not have;

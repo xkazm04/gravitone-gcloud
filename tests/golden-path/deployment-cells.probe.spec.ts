@@ -207,6 +207,9 @@ const EXPECT: Record<string, Expectation> = {
   // The ledger as Server-Sent Events (app/_server/sse.ts): a 200 stream that
   // never ends by itself, so drive() cancels its body rather than reading it.
   "app/api/events/stream/route.ts": { door: "access", ok: { GET: "2xx" } },
+  // The ledger as JSON Lines for agents (app/api/ledger/route.ts). `format=jsonl` is required,
+  // and drive() sends no query, so an admitted caller meets the input door's 400.
+  "app/api/ledger/route.ts": { door: "access", ok: { GET: "4xx" } },
   // The fixture bundle. Behind the read door, then 404 unless
   // NEXT_PUBLIC_GRAVITONE_DATA=fixtures was set at build time - which no cell
   // here sets, so every cell drives the 404 branch and not the read.
@@ -743,7 +746,7 @@ async function runCell(
     // The kernel singleton holds the cell's store open under `scratch`, and
     // Windows refuses to delete an open file (EPERM). It lives on globalThis,
     // so this module instance closes whichever one a route opened.
-    load<{ closeKernel: () => void }>("app/_server/kernel.ts").closeKernel();
+    load<{ closeKernel: () => void }>("lib/kernelStore.ts").closeKernel();
     rmSync(scratch, { recursive: true, force: true });
     lib.apiAuth.__resetRateLimit();
   }

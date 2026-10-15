@@ -16,7 +16,7 @@
 //
 // ADDING A SOURCE (Phase 2 wave B) is one line in SOURCES below: its id, and
 // how to find its live records in the fixtures with v1's own rule (null when
-// the store has no live work). The CLI walks app/_server/v1/sources.ts, so its
+// the store has no live work). The CLI walks lib/ledger/v1/sources.ts, so its
 // events, tally and live list are already here; this table is what makes a
 // source that silently fell out of the registry a red probe instead of a
 // smaller report.
@@ -27,7 +27,9 @@ import { join } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
+import { WORKING } from "@/app/articles/runModel";
 import { EXTRACT_LIVE, LIVE, cycleKind } from "@/app/foundry/parts";
+import { LIVE as TURN_LIVE } from "@/lib/turns/ledger";
 
 const ROOT = process.cwd();
 const CLI = join(ROOT, "pipeline", "ledger-sync.mts");
@@ -42,6 +44,10 @@ type Json = Record<string, unknown>;
 function cli(...args: string[]): { status: number | null; doc: Json; stderr: string } {
   const env: NodeJS.ProcessEnv = { ...process.env, NEXT_PUBLIC_GRAVITONE_DATA: "fixtures" };
   delete env["GRAVITONE_STORE_PATH"];
+  // Every v1 store override, so each source reads the seeded universe: this lane's
+  // config points GPU_LEASE_DIR at a temp dir of its own, and probes that run
+  // earlier in the same process set the others.
+  for (const v of ["GPU_LEASE_DIR", "SOUND_STORE_DIR", "PUBLISH_STORE_DIR", "ARTICLES_STORE_DIR", "TEXT_TURN_DIR", "SPEND_STORE_DIR", "CLIP_STORE_DIR"]) delete env[v];
   const r = spawnSync(process.execPath, [CLI, ...args, "--json"], { cwd: dir, env, encoding: "utf8", timeout: 60_000 });
   const doc = r.stdout.trim() === "" ? {} : (JSON.parse(r.stdout) as Json);
   return { status: r.status, doc, stderr: r.stderr };
@@ -56,11 +62,33 @@ const liveIn = (sub: string, file: string, live: (status: string) => boolean) =>
     .map((m) => String(m["id"]));
 };
 const isCycleStatus = (s: string): s is Parameters<typeof cycleKind>[0] => ["planning", "generating", "judging", "awaiting-gate", "committed", "failed"].includes(s);
+/** The ids in one fixtures-out/<rel> JSON document that `pick` reads as live. */
+const liveInDoc = (rel: string, pick: (doc: Json) => string[]) => (): string[] => pick(JSON.parse(readFileSync(join(dir, "fixtures-out", rel), "utf8")) as Json);
+/** Records stored one file per id (fixtures-out/<sub>/<id>.json) whose status `live` accepts. */
+const liveInFiles = (sub: string, idKey: string, live: (status: string) => boolean) => (): string[] => {
+  const root = join(dir, "fixtures-out", sub);
+  return readdirSync(root)
+    .map((n) => JSON.parse(readFileSync(join(root, n), "utf8")) as Json)
+    .filter((m) => live(String(m["status"])))
+    .map((m) => String(m[idKey]));
+};
+const rows = (doc: Json, key: string): Json[] => (Array.isArray(doc[key]) ? (doc[key] as Json[]) : []);
+/** lib/sound/suno/store.ts LIVE_STATES and the MV queue's own pair (lib/sound/mv/queue.ts deleteMv, enqueueMv). */
+const QUEUE_LIVE = ["queued", "active"];
 
 const SOURCES: Record<string, (() => string[]) | null> = {
   forge: liveIn("runs", "run.json", (s) => LIVE.some((x) => x === s)),
   extract: liveIn("extract", "run.json", (s) => EXTRACT_LIVE.some((x) => x === s)),
   dojo: liveIn("training", "cycle.json", (s) => isCycleStatus(s) && cycleKind(s) === "live"),
+  strips: liveIn("strips", "run.json", (s) => s === "running"),
+  articles: liveIn("articles", "run.json", (s) => WORKING.some((x) => x === s)),
+  suno: liveInDoc("sound/suno.json", (d) => rows(d, "jobs").filter((j) => QUEUE_LIVE.includes(String(j["state"]))).map((j) => String(j["id"]))),
+  mv: liveInDoc("sound/mv.json", (d) => rows(d, "jobs").filter((j) => QUEUE_LIVE.includes(String(j["state"]))).map((j) => String(j["id"]))),
+  publish: null,
+  turns: liveInFiles("turns", "id", (s) => [...TURN_LIVE].some((x) => x === s)),
+  spend: null,
+  gpu: liveInDoc("gpu/lease.json", (d) => [String(d["ticket"])]),
+  clips: liveInFiles("clips", "clipId", (s) => s === "queued" || s === "rendering"),
 };
 
 test.describe.configure({ mode: "serial" });

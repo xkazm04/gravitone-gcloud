@@ -13,7 +13,7 @@
 
 import { eventsAfter } from "@gt/kernel/events-query";
 
-import { kernel } from "../../../_server/kernel.ts";
+import { kernel } from "../../../../lib/kernelStore.ts";
 import { route } from "../../../_server/route.ts";
 import { eventStreamResponse, resumeFrom } from "../../../_server/sse.ts";
 

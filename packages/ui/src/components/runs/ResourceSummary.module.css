@@ -1,0 +1,7 @@
+/* projects.css .res-list / .res / .res-h / .res-bar. */
+.list{display:flex;flex-direction:column;gap:var(--sp-3);list-style:none;margin:0;padding:0}
+.res{display:flex;flex-direction:column;gap:var(--sp-tight)}
+.head{display:flex;align-items:center;gap:var(--sp-3);min-width:0}
+.n{font:500 var(--fs-micro)/1 var(--mono);color:var(--faint);white-space:nowrap}
+.bar{display:block;height:calc(var(--h-meter) + 1px);border-radius:var(--r-meter);background:var(--wash-hi);overflow:hidden}
+.bar i{--share:0;display:block;height:100%;width:calc(var(--share) * 100%);background:linear-gradient(90deg,color-mix(in srgb,var(--cyan) 70%,transparent),color-mix(in srgb,var(--cyan) 35%,transparent));border-radius:var(--r-meter);transition:width .4s var(--ease)}

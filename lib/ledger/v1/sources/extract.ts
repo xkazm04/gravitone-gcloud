@@ -10,7 +10,7 @@ import type { ResourceLane } from "@gt/domain/lane";
 
 import { LEASE_TTL_MS } from "../../../../lib/foundry/extract/lease.ts";
 import { getExtractRun, listExtractRuns } from "../../../../lib/foundry/extract/store.ts";
-import { EXTRACT_COMMITTABLE, EXTRACT_LIVE } from "../../../foundry/parts.tsx";
+import { EXTRACT_COMMITTABLE, EXTRACT_LIVE } from "../../../foundry/plant.ts";
 import { bump, facts, instant, laneOfEngine, readEach, seg, words } from "../facts.ts";
 import type { IngestEvent, LiveJob, ProjectCtx, Projection, Skipped, Source, WeirItem } from "../types.ts";
 
@@ -29,7 +29,7 @@ import type { IngestEvent, LiveJob, ProjectCtx, Projection, Skipped, Source, Wei
 // commit, never as a `cost`, because Phase 2's spend adapter projects the money
 // ledger itself and the two would count the same dollars twice).
 //
-// LIVE IS STATUS AND A HOLDER. EXTRACT_LIVE (app/foundry/parts.tsx) is what the
+// LIVE IS STATUS AND A HOLDER. EXTRACT_LIVE (lib/foundry/plant.ts) is what the
 // Extract tab calls live, but an extract run only moves while a driver steps it
 // (the tab's loop or the CLI) and every step stamps `lease`. So:
 //   fresh lease (within LEASE_TTL_MS, lib/foundry/extract/lease.ts) -> running;

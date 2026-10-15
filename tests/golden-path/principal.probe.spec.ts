@@ -343,7 +343,7 @@ test("cli token: a token claim is judged as a token in legacy mode, before the s
     expect(r).toMatchObject({ kind: "refused", code: "token-store-unavailable", status: 503 });
     expect(jwksCalls, "a token claim never reaches the JWKS").toEqual([]);
   } finally {
-    const { closeKernel } = await import("../../app/_server/kernel.ts");
+    const { closeKernel } = await import("../../lib/kernelStore.ts");
     closeKernel();
     if (prev === undefined) delete process.env.GRAVITONE_STORE_PATH;
     else process.env.GRAVITONE_STORE_PATH = prev;

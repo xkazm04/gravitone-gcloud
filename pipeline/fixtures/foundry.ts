@@ -997,7 +997,7 @@ function extractFailed(): ExtractManifest {
   return m;
 }
 
-/** Two extract runs IN FLIGHT, for the v1 projection (app/_server/v1/sources/
+/** Two extract runs IN FLIGHT, for the v1 projection (lib/ledger/v1/sources/
  *  extract.ts) and Runs: one a driver is stepping right now (its lease stamp a
  *  minute old, inside lib/foundry/extract/lease.ts LEASE_TTL_MS), one whose
  *  driver went quiet mid-unit twenty minutes ago - EXTRACT_LIVE by status, but

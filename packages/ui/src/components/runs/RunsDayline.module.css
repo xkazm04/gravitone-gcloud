@@ -1,0 +1,109 @@
+/* projects.css "runs: the day-line". Positions are data (--l --t --bw --bh --x --w --h, set by
+   RunsDayline.tsx from dayline.ts); everything else is a token. A hue at the prototype's alpha
+   is color-mix over the hue token; the prototype's black and white alphas are mixed from
+   --letterbox, --hair and --ink-bright. */
+.root{display:flex;flex-direction:column;flex:1;min-height:0;min-width:0}
+.scroll{flex:1;min-height:0;overflow:auto;position:relative}
+.scroll:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:calc(var(--stroke-mark) * -1)}
+.canvas{--w:0;position:relative;width:calc(var(--w) + var(--w-lane))}
+
+/* the axis: a sticky corner over the label column, ticks over the tracks */
+.axis{position:sticky;top:0;z-index:8;display:flex;height:var(--h-hours);background:linear-gradient(180deg,var(--ink-1) 80%,color-mix(in srgb,var(--ink-1) 85%,transparent));border-bottom:1px solid var(--hair-2)}
+.corner{position:sticky;left:0;z-index:2;flex:none;width:var(--w-lane);height:100%;display:flex;align-items:center;justify-content:space-between;padding:0 var(--sp-5);background:var(--ink-1);border-right:1px solid var(--hair);font:500 var(--fs-micro)/1 var(--mono);color:var(--faint)}
+.ticks{position:relative;flex:none;width:var(--w);height:100%}
+.tick{--x:0;position:absolute;top:0;left:var(--x);height:100%;padding:var(--sp-6) 0 0 var(--sp-tight);border-left:1px solid var(--hair);font:500 var(--fs-micro)/1 var(--mono);color:var(--faint);white-space:nowrap}
+.day{border-left-color:var(--hair-3)}
+.day b{position:absolute;top:var(--sp-1);left:var(--sp-tight);color:var(--ink-bright);font-weight:700}
+
+/* rows */
+.rows{position:relative}
+.track{position:absolute;top:0;bottom:0;left:var(--w-lane);right:0;pointer-events:none}
+.night{--x:0;--nw:0;position:absolute;top:0;bottom:0;left:var(--x);width:var(--nw);background:color-mix(in srgb,var(--letterbox) 22%,transparent)}
+.row{--h:0;position:relative;display:flex;height:var(--h);border-bottom:1px solid var(--hair)}
+.row:hover .ln{color:var(--ink-bright)}
+.label{position:sticky;left:0;z-index:5;flex:none;width:var(--w-lane);padding:var(--sp-3) var(--sp-4) var(--sp-2) var(--sp-5);display:flex;flex-direction:column;gap:var(--sp-hair);background:var(--ink-1);border-right:1px solid var(--hair);min-width:0}
+.ln{display:flex;align-items:center;gap:var(--sp-snug);font:600 var(--fs-ui)/1.15 var(--sans);color:var(--ink-bright);white-space:nowrap}
+.lic{width:var(--size-mark);height:var(--size-mark);color:var(--muted);flex:none}
+.mark-weir{width:var(--sp-1);height:var(--size-mark);border-radius:1px;background:linear-gradient(180deg,var(--wall-hi),var(--wall));flex:none}
+.mark-calendar{width:var(--size-pip);height:var(--size-pip);border-radius:var(--sp-nudge);border:var(--stroke-glyph) solid var(--violet);flex:none}
+.cap{font:700 var(--fs-micro)/1 var(--mono);color:var(--faint);margin-left:auto}
+.en{font:500 var(--fs-micro)/1.25 var(--mono);color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.util{height:calc(var(--h-meter) - var(--sp-nudge));border-radius:var(--sp-nudge);background:color-mix(in srgb,var(--hair) 75%,transparent);overflow:hidden;margin-top:var(--sp-nudge)}
+.util i{--share:0;display:block;height:100%;width:calc(var(--share) * 100%);background:var(--cyan);opacity:.7}
+.ovf{font:700 var(--fs-micro)/1 var(--mono);height:var(--h-tag);min-width:var(--h-control-sm);padding:0 var(--sp-snug);border-radius:var(--r);border:1px solid var(--hair-3);background:var(--wash-hi);color:var(--ink-bright);margin-left:auto;cursor:pointer}
+.cap + .ovf{margin-left:var(--sp-2)}
+.ovf:hover,.on{background:color-mix(in srgb,var(--cyan) 14%,transparent);border-color:color-mix(in srgb,var(--cyan) 60%,transparent);color:var(--cyan)}
+.ovf:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}
+.lane{position:relative;flex:none;width:var(--w)}
+.r-weir{background:linear-gradient(90deg,color-mix(in srgb,var(--amber) 5%,transparent),color-mix(in srgb,var(--amber) 2%,transparent)),repeating-linear-gradient(90deg,transparent 0 calc(var(--size-mark) - 1px),color-mix(in srgb,var(--amber) 3%,transparent) calc(var(--size-mark) - 1px) var(--size-mark))}
+.r-weir .label{box-shadow:inset var(--sp-hair) 0 0 var(--wall)}
+.r-weir .ln{color:var(--amber)}
+.r-calendar{background:linear-gradient(90deg,color-mix(in srgb,var(--violet) 5%,transparent),color-mix(in srgb,var(--violet) 1.5%,transparent))}
+.r-calendar .ln{color:var(--violet)}
+
+/* bars */
+.bar{--l:0;--t:0;--bw:0;--bh:0;position:absolute;left:var(--l);top:var(--t);width:var(--bw);height:var(--bh);display:flex;align-items:center;gap:var(--sp-snug);padding:0 var(--sp-snug);border-radius:var(--r-chip);border:1px solid var(--hair-2);background:var(--wash);color:var(--text);font:inherit;text-align:left;overflow:hidden;white-space:nowrap;cursor:pointer;z-index:1;transition:left .5s var(--ease),width .5s var(--ease),top var(--dur) var(--ease),opacity .25s,box-shadow var(--dur-fast),background .2s}
+.bar:hover{z-index:3;min-width:max-content;box-shadow:0 var(--sp-2) var(--sp-6) color-mix(in srgb,var(--shadow) 83%,transparent),0 0 0 1px var(--hair-3)}
+.bar:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}
+.bl{font:600 var(--fs-bar)/1 var(--sans);color:var(--ink-bright);flex:none;position:relative}
+.bs{font:500 var(--fs-micro)/1 var(--mono);color:var(--muted);overflow:hidden;text-overflow:ellipsis;position:relative}
+.lab-hover .bl,.lab-beside .bl{display:none}
+.lab-hover:hover .bl,.lab-hover:focus-visible .bl,.lab-beside:focus-visible .bl{display:block}
+.lab-hover,.lab-beside{padding:0}
+.lab-hover:hover,.lab-hover:focus-visible,.lab-beside:focus-visible{padding:0 var(--sp-snug);z-index:6;background:var(--ink-3)}
+.lab-beside:hover{min-width:0;box-shadow:0 0 0 1px var(--hair-3)}
+.bo{--l:0;--t:0;--bh:0;position:absolute;left:var(--l);top:var(--t);height:var(--bh);display:flex;align-items:center;font:600 var(--fs-bar)/1 var(--sans);color:var(--muted);white-space:nowrap;pointer-events:none;z-index:1}
+.bo-failed{color:var(--error-text)}
+.bo-done{color:var(--done-text)}
+.bo-awaiting{color:var(--amber)}
+.canvas[data-lit] .bo{opacity:.4}
+.prog{--share:0;position:absolute;left:0;top:0;bottom:0;width:calc(var(--share) * 100%);background:color-mix(in srgb,var(--cyan) 22%,transparent)}
+
+/* one class per Look (status.ts): the state is also in each bar's name */
+.s-done{background:var(--emerald-a);border-color:color-mix(in srgb,var(--emerald) 32%,transparent)}
+.s-done .bl{color:var(--done-text)}
+.s-running{background:color-mix(in srgb,var(--cyan) 13%,transparent);border-color:color-mix(in srgb,var(--cyan) 70%,transparent);box-shadow:0 0 var(--sp-loose) color-mix(in srgb,var(--cyan) 15%,transparent)}
+.s-running::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(115deg,transparent 0 var(--sp-4),var(--cyan-a) var(--sp-4) calc(var(--sp-4) * 2));background-size:200% 100%;animation:barflow 2.6s linear infinite;pointer-events:none}
+@keyframes barflow{to{background-position:calc(var(--sp-4) * -6) 0}}
+.s-idle{background:color-mix(in srgb,var(--cyan) 3.5%,transparent);border:1px dashed color-mix(in srgb,var(--cyan) 45%,transparent)}
+.s-failed{background:var(--rose-a);border-color:var(--rose)}
+.s-failed .bl{color:var(--error-text)}
+.s-paused{background:repeating-linear-gradient(135deg,var(--hair) 0 var(--sp-hair),transparent var(--sp-hair) var(--sp-snug));border:1px dashed var(--faint)}
+.s-awaiting{background:var(--amber-a);border-color:color-mix(in srgb,var(--amber) 60%,transparent)}
+.s-awaiting .bl{color:var(--amber)}
+.blocked{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--rose) 10%,transparent) 0 var(--sp-hair),transparent var(--sp-hair) var(--sp-3));border:1px dashed color-mix(in srgb,var(--rose) 60%,transparent)}
+/* A pile is drawn from its arrival to NOW, so its name sits at the NOW end, where the view is. */
+.gatebar{border-radius:var(--r-box);padding:0 var(--sp-2);justify-content:flex-end}
+.gatebar.s-done{border-color:color-mix(in srgb,var(--emerald) 35%,transparent)}
+.gatebar.s-awaiting{animation:gateglow 2.4s ease-in-out infinite}
+@keyframes gateglow{50%{box-shadow:0 0 0 var(--ring-halo) color-mix(in srgb,var(--amber) 18%,transparent)}}
+.floor{border-radius:var(--r-meter)}
+.sel{box-shadow:0 0 0 var(--stroke-mark) var(--ink-bright),0 var(--sp-3) calc(var(--sp-7) - var(--sp-nudge)) var(--shadow);z-index:4}
+.canvas[data-lit] .bar:not(.thread){opacity:.26}
+.canvas[data-lit] .bar:not(.thread):hover{opacity:.8}
+
+/* calendar pins: a slot's state is its fill (prototype .pin.*) */
+.pin{--x:0;position:absolute;top:var(--sp-wide);left:var(--x);width:var(--size-mark);height:var(--size-mark);margin-left:calc(var(--size-mark) / -2);display:grid;place-items:center;z-index:1}
+.pin i{width:calc(var(--size-mark) * 9 / 14);height:calc(var(--size-mark) * 9 / 14);transform:rotate(45deg);border:var(--stroke-glyph) solid var(--violet);background:var(--ink-1);transition:transform var(--dur-fast)}
+.pin:hover i{transform:rotate(45deg) scale(1.4)}
+.pin:focus-visible{outline:var(--stroke-mark) solid var(--violet);outline-offset:1px}
+.pin-published i{background:var(--emerald);border-color:var(--emerald)}
+.pin-failed i,.pin-missed i{background:var(--rose);border-color:var(--rose)}
+.pin-cancelled i{border-color:var(--faint);opacity:.6}
+.pin-publishing i{background:var(--cyan);border-color:var(--cyan)}
+
+/* links: the lit thread's dependencies */
+.links{position:absolute;top:0;left:var(--w-lane);pointer-events:none;z-index:2;overflow:visible}
+.lk path{fill:none;stroke:color-mix(in srgb,var(--ink-bright) 28%,transparent);stroke-width:1.4}
+.lk circle{fill:color-mix(in srgb,var(--ink-bright) 40%,transparent)}
+.up path{stroke:var(--cyan);stroke-width:2.2}
+.up circle{fill:var(--cyan)}
+.down path{stroke:var(--amber);stroke-width:2.2}
+.down circle{fill:var(--amber)}
+.bad path{stroke:var(--rose);stroke-dasharray:4 3}
+
+/* NOW */
+.now{--x:0;position:absolute;top:0;bottom:0;left:calc(var(--w-lane) + var(--x));z-index:9;width:0;border-left:var(--stroke-glyph) solid var(--cyan);pointer-events:none;box-shadow:0 0 var(--sp-4) 1px color-mix(in srgb,var(--cyan) 35%,transparent)}
+.now b{position:sticky;top:0;display:inline-block;transform:translateX(-50%);margin-top:var(--sp-3);padding:var(--sp-hair) var(--sp-2);border-radius:var(--r-xs);background:var(--cyan);color:var(--ink);font:700 var(--fs-micro)/1 var(--mono);white-space:nowrap}
+
+@media (prefers-reduced-motion:reduce){.s-running::after,.gatebar.s-awaiting{animation:none}.bar{transition:none}}

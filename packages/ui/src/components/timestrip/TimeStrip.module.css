@@ -1,0 +1,33 @@
+/* ledger.css .lg-strip, .ts-*: the readout column beside the bars, the bars over an axis. */
+.strip{position:relative;display:grid;grid-template-columns:var(--w-rail) minmax(0,1fr);border-bottom:1px solid var(--hair);background:linear-gradient(180deg,color-mix(in srgb,var(--wash) 37.5%,transparent),transparent);user-select:none}
+.side{display:flex;flex-direction:column;justify-content:center;gap:var(--sp-snug);padding:var(--sp-3) var(--sp-5);border-right:1px solid var(--hair);min-width:0}
+.head{font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.read{font:600 var(--fs-micro)/1.35 var(--mono);color:var(--muted);min-height:calc(2 * 1.35 * var(--fs-micro))}
+.read b{color:var(--ink-bright)}
+.operator{color:var(--actor-operator)}
+.agent{color:var(--actor-agent)}
+.machine{color:var(--actor-machine)}
+.main{position:relative;padding:var(--sp-3) var(--sp-loose) 0 var(--sp-4);min-width:0}
+.bars{position:relative;height:var(--h-strip);display:flex;align-items:flex-end;gap:1px;cursor:crosshair;touch-action:none}
+.day{position:relative;flex:1 1 0;min-width:0;height:100%;display:flex;flex-direction:column-reverse;align-items:stretch;border-radius:var(--sp-nudge) var(--sp-nudge) 0 0}
+.day:hover{background:var(--wash-hi)}
+.day.sel{background:var(--cyan-a)}
+.day.dim>i{opacity:.28}
+.day i{--h:0;display:block;flex:none;height:var(--h)}
+.day i:last-of-type{border-radius:var(--sp-nudge) var(--sp-nudge) 0 0}
+.day i.operator{background:var(--actor-operator)}
+.day i.agent{background:var(--actor-agent)}
+.day i.machine{background:var(--actor-machine)}
+.fut{background:var(--hatch-future)}
+.zero::after{content:"";position:absolute;left:30%;right:30%;bottom:0;height:1px;background:var(--hair-2)}
+.now{--x:0;position:absolute;top:calc(-1 * var(--sp-1));bottom:0;left:calc(var(--x) * 100%);width:0;border-left:var(--stroke-mark) solid var(--wall-hi);pointer-events:none;box-shadow:0 0 var(--sp-4) color-mix(in srgb,var(--wall-hi) 50%,transparent)}
+.now span{position:absolute;top:0;left:var(--sp-1);font:700 var(--fs-micro)/1 var(--mono);color:var(--wall-hi);letter-spacing:.06em;background:var(--ink);padding:1px var(--sp-hair);border-radius:var(--r-meter)}
+.brush{--lo:0;--w:0;position:absolute;top:0;bottom:0;left:calc(var(--lo) * 100%);width:calc(var(--w) * 100%);background:color-mix(in srgb,var(--cyan) 12%,transparent);border:1px solid color-mix(in srgb,var(--cyan) 50%,transparent);border-radius:var(--r-meter);pointer-events:none}
+.axis{position:relative;height:var(--h-axis);font:600 var(--fs-micro)/var(--h-axis) var(--mono);color:var(--faint)}
+.axis span{--x:0;position:absolute;top:0;left:calc(var(--x) * 100%);white-space:nowrap;padding-left:var(--sp-1);border-left:1px solid var(--hair-2);line-height:calc(var(--fs-micro) + var(--sp-nudge));margin-top:var(--sp-hair)}
+.axis span.mo{color:var(--muted)}
+@media (max-width:1280px){
+  .strip{grid-template-columns:minmax(0,1fr)}
+  .side{flex-direction:row;align-items:center;gap:var(--sp-5);border-right:0;border-bottom:1px solid var(--hair);padding:var(--sp-2) var(--sp-5)}
+  .read{min-height:0}
+}

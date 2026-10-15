@@ -3,14 +3,15 @@
 // Nothing here draws and nothing here fetches — the drawing is ./ui.tsx, which
 // reads `PlantState` to pick a tone.
 
-/** Where a run, an extraction or a cycle stands, as the plant reads it. Six
- *  words because the page has six things to say: working, waiting on a cull,
- *  stopped short, broken, finished, and waiting on a gate. */
-export type PlantState = "live" | "ready" | "inc" | "failed" | "committed" | "gate";
 import type { ExtractStatus } from "@/lib/foundry/extract/types";
 import type { CardStatus, StripRun } from "@/lib/foundry/strips/types";
 import type { CycleStatus } from "@/lib/foundry/training/types";
 import type { RunStatus } from "@/lib/foundry/types";
+import { COMMITTABLE, EXTRACT_COMMITTABLE, EXTRACT_LIVE, LIVE, cycleKind, type PlantState } from "@/lib/foundry/plant";
+
+// The plant's reading of each lifecycle lives in lib/foundry/plant.ts so the ledger projection
+// (lib/ledger/v1) reads the same sets this page does without importing app/.
+export { COMMITTABLE, EXTRACT_COMMITTABLE, EXTRACT_LIVE, LIVE, cycleKind, type PlantState };
 
 export const STATUS_WORD: Record<RunStatus, string> = {
   created: "queued",
@@ -23,28 +24,6 @@ export const STATUS_WORD: Record<RunStatus, string> = {
   committed: "committed",
 };
 
-export const LIVE: RunStatus[] = ["created", "annotating", "generating", "grading"];
-
-/** The run statuses a cull may be committed from — the SAME set
- *  `commitRun` in lib/foundry/store.ts enforces, and
- *  tests/golden-path/commit-gate-parity.probe.spec.ts reads that function's
- *  own array off disk and fails if these two drift apart.
- *
- *  `failed` belongs here and its absence was a real loss. A forge run that
- *  dies partway is marked `failed` with every plate it did generate still on
- *  disk — which is exactly the run whose survivors are worth culling, and the
- *  server has always allowed it. The button disabled itself on anything but
- *  `done`, so those plates could not be reached from the page at all: hours of
- *  GPU, unreachable, with the server standing ready. The Extract tab's own
- *  button already mirrored ITS server rule (`done` only, which is what
- *  commitExtractRun enforces) — one rule, two implementations, and only one of
- *  them had been kept true. */
-export const COMMITTABLE: RunStatus[] = ["done", "incomplete", "failed"];
-
-/** The same, for an extract run. A failed run (breaker or budget stop) keeps
- *  the styles it finished, and the operator's verdicts gate what is written. */
-export const EXTRACT_COMMITTABLE: ExtractStatus[] = ["done", "failed"];
-
 export const EXTRACT_STATUS_WORD: Record<ExtractStatus, string> = {
   created: "ready to start",
   reading: "reading sources",
@@ -55,8 +34,6 @@ export const EXTRACT_STATUS_WORD: Record<ExtractStatus, string> = {
   failed: "failed",
   committed: "committed",
 };
-
-export const EXTRACT_LIVE: ExtractStatus[] = ["created", "reading", "grouping", "replicating", "transferring"];
 
 export const DOJO_STATUS_WORD: Record<CycleStatus, string> = {
   planning: "planning",
@@ -74,10 +51,6 @@ export function runKind(s: RunStatus): PlantState {
 
 export function extractKind(s: ExtractStatus): PlantState {
   return EXTRACT_LIVE.includes(s) ? "live" : s === "done" ? "ready" : s === "failed" ? "failed" : "committed";
-}
-
-export function cycleKind(s: CycleStatus): PlantState {
-  return s === "awaiting-gate" ? "gate" : s === "failed" ? "failed" : s === "committed" ? "committed" : "live";
 }
 
 export const STRIP_STATUS_WORD: Record<StripRun["status"], string> = {

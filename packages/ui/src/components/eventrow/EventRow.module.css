@@ -1,0 +1,37 @@
+/* ledger.css .ev and .ty: one act at --h-event, its columns --ledger-cols (the list head
+   uses the same template, so a header cell and its column can never drift apart). */
+.row{position:relative;display:grid;grid-template-columns:var(--ledger-cols);align-items:center;column-gap:var(--sp-3);padding:0 var(--sp-5) 0 var(--sp-loose);height:var(--h-event);border-bottom:1px solid color-mix(in srgb,var(--hair) 56.25%,transparent);font-size:var(--fs-ui);cursor:default;contain:layout paint}
+.row:hover{background:color-mix(in srgb,var(--wash) 70%,transparent)}
+.row::before{content:"";position:absolute;left:0;top:var(--sp-2);bottom:var(--sp-2);width:var(--stroke-mark);border-radius:var(--stroke-mark);background:var(--ac,transparent);opacity:.8}
+.operator{--ac:var(--actor-operator)}
+.agent{--ac:var(--actor-agent)}
+.machine{--ac:var(--actor-machine)}
+.row[aria-selected=true]{background:linear-gradient(90deg,color-mix(in srgb,var(--cyan) 13%,transparent),color-mix(in srgb,var(--cyan) 4%,transparent));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--cyan) 35%,transparent)}
+.fresh{animation:arrive 1.2s var(--ease)}
+@keyframes arrive{from{background:color-mix(in srgb,var(--emerald) 25%,transparent)}}
+.n{font:500 var(--fs-meta)/1 var(--mono);color:var(--faint);font-variant-numeric:tabular-nums}
+.t{font:500 var(--fs-meta)/1 var(--mono);color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.apx{display:inline-block;width:var(--sp-4);color:var(--faint)}
+.a{display:flex;align-items:center;gap:var(--sp-2);min-width:0;font-size:var(--fs-control-sm);color:var(--text)}
+.a span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.glyph{width:var(--size-glyph-sm);height:var(--size-glyph-sm);flex:none;color:var(--ac)}
+.ty{display:inline-flex;align-items:center;max-width:100%;height:var(--h-chip);padding:0 var(--sp-snug);border-radius:var(--r-xs);border:1px solid var(--hair-2);font:600 var(--fs-micro)/1 var(--mono);color:var(--muted);background:color-mix(in srgb,var(--wash) 50%,transparent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ty.cyan{color:var(--cyan);border-color:color-mix(in srgb,var(--cyan) 30%,transparent);background:var(--cyan-a)}
+.ty.emerald{color:var(--emerald);border-color:color-mix(in srgb,var(--emerald) 30%,transparent);background:var(--emerald-a)}
+.ty.rose{color:var(--rose);border-color:color-mix(in srgb,var(--rose) 36%,transparent);background:var(--rose-a)}
+.ty.amber{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 34%,transparent);background:var(--amber-a)}
+.ty.violet{color:var(--violet);border-color:color-mix(in srgb,var(--violet) 32%,transparent);background:var(--violet-a)}
+.s{display:flex;align-items:baseline;gap:var(--sp-3);min-width:0;white-space:nowrap;overflow:hidden}
+.k{font:600 var(--fs-micro)/1 var(--mono);color:var(--faint);flex:none}
+.s a{color:var(--ink-bright);overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;min-width:0}
+.s a:hover{text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--cyan) 60%,transparent);text-underline-offset:var(--sp-hair)}
+.nt{color:var(--faint);font-size:var(--fs-meta);overflow:hidden;text-overflow:ellipsis;flex:1 1 0;min-width:0}
+.nt.er{color:var(--error-text)}
+.c{font:500 var(--fs-meta)/1 var(--mono);text-align:right;color:var(--ink-bright);font-variant-numeric:tabular-nums;white-space:nowrap}
+.c.z{color:var(--faint)}
+.c sup{font-size:var(--fs-micro);color:var(--illustrative-text);margin-left:var(--sp-nudge);vertical-align:baseline}
+.sr{display:flex;align-items:center;gap:var(--sp-1);min-width:0}
+.src{font:500 var(--fs-micro)/1 var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:1120px){
+  .nt{display:none}
+}

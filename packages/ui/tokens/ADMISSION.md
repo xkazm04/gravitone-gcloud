@@ -129,3 +129,55 @@ here saying which component's constant it is and why no role fits.
 | `--one-off-w-node` | `70px` | UpstreamBreak |
 | `--one-off-dock` | `22px` | Toast |
 | `--one-off-rise` | `20px` | Toast |
+
+## Admitted at the Ledger port (Phase 2, lot 16)
+
+`ledger.css` sizes its route from a handful of layout constants and colours rendered JSON with
+four literals. Each is admitted with the one intent it serves; none merges with a neighbour,
+because every candidate neighbour differs by at least a pixel or a channel.
+
+| Role | Value | Uses | Definition |
+| --- | --- | --- | --- |
+| w-rail | `228px` | 2 | Width of a route's left rail: the Ledger's facets and the time strip's readout above them. |
+| w-detail | `344px` | 1 | Width of a route's docked detail panel. |
+| w-search | `clamp(220px,21vw,400px)` | 2 | Width of the search field in a route's toolbar (and the agent view's query column). |
+| ledger-cols | `54px 96px 128px 128px minmax(0,1fr) 70px 90px` | 2 | Columns of an event row and its head (the `cols` precedent: a grid template is one value). |
+| h-event | `34px` | 2 | Height of an event row; the list windows by it, so CSS and arithmetic read one number. |
+| h-line | `22px` | 2 | Height of one JSON Lines row. Equal to `h-chip` by value, not by intent. |
+| w-line-no | `46px` | 1 | Width of the line number before a JSON line. |
+| h-strip | `60px` | 1 | Height of a time strip's bar box. |
+| h-axis | `20px` | 1 | Height of a time axis under a strip. Equal to `h-tag` by value, not by intent. |
+| code-ground | `#06080d` | 1 | Ground of a rendered JSON record. |
+| code-text | `#c9d1e0` | 2 | Punctuation and plain text of rendered JSON. |
+| code-key | `#8b95ab` | 2 | A key in rendered JSON. |
+| code-string | `#e7ebf3` | 2 | A string value in rendered JSON. |
+| hatch-future | the 135deg white .035 stripe | 1 | Fill of a day that has not happened yet (much fainter than `hatch`, which marks undecided work). |
+
+Not admitted, mixed from a token instead: the strip's top light (`wash` at 37.5%, the
+prototype's .015), the row's hairline (`hair` at 56.25%, .045), the row hover (`wash` at 70%,
+.028). Moved a pixel, recorded in INVENTORY.md: an error trailing a row is `error-text`
+(`#fecdd3`) where the prototype wrote `#fda4af`; the raw JSON block's corner is `r-control`
+(8px) where the prototype wrote the rejected 9px.
+
+## Admitted at the Runs port (Phase 2, lot 18)
+
+`projects.css` draws the day-line from a few constants the token set had no word for. Each is
+admitted with the one intent it serves. The day-line's track geometry (30px tracks, 4px apart,
+rows at least 58px) is NOT here: the packer computes bar positions from it, so it lives once in
+`components/runs/dayline.ts` and reaches the sheet as data (`--t`, `--bh`, `--h`).
+
+| Role | Value | Uses | Definition |
+| --- | --- | --- | --- |
+| w-lane | `214px` | 4 | Width of a resource lane's label column on the Runs day-line (label, axis corner, links' and NOW's origin). |
+| h-hours | `34px` | 3 | Height of the hour axis over the Runs day-line. |
+| fs-bar | `12.5px` | 2 | Label inside a bar on a time track, and the same label set beside it. Equal to `fs-error` by value, not by intent. |
+| size-mark | `14px` | 4 | Side of a lane's mark and of a pin on a time track; the pin's diamond is 9/14 of it. |
+| cloud-mark | `#cbd5e1` | 1 rule, 3 lanes | Mark of a paid cloud resource (Google, ElevenLabs, Leonardo, Qwen) on a lane chip. |
+| w-list | `clamp(250px,19vw,300px)` | 1 | Width of the Projects route's composition list (the `cal-w` precedent: a clamped column is one value). |
+| w-inspector | `clamp(290px,23vw,360px)` | 1 | Width of the inspector beside the Runs day-line. |
+| fs-title | `24px` | 1 | Serif title of what a Projects view is showing; off the type scale (19, 32) in the prototype too. |
+
+Moved a pixel, recorded in INVENTORY.md: the NOW label's ink is `ink` (`#080a10`) where the
+prototype wrote `#05252b`; a hovered bar's ground is `ink-3` (`#161b27`) where it wrote `#141a26`;
+a done bar's label and the "beside" label of a done bar are `done-text` where it wrote `#c9f7e6`
+and `#9fd9c1`; the link stroke is `ink-bright` at 28% where it wrote white at .28.

@@ -17,13 +17,13 @@ across pages lives in `tokens.css` and `shell.js`, so that is where the kit come
 | `PipRow` | `.piprow .pip.*`, GT.PipRow | F P | pip per Look; capacity (`max`) as bare pips |
 | `Hint` | `.hint`, GT.Hint | F L | one; text capped at 12 words by type |
 | `Keycap`, `Keycaps` | `.keycap`, `.keymap`, GT.Keycaps, every hand-typed `<kbd>` | F P L G | md/sm cap; legend per keymap mode + facts/field |
-| `SourceTag` | `.src.*`, GT.Src | P L G | real, illustrative, model, fixture, derived, session |
+| `SourceTag` | `.src.*`, GT.Src | P L G | real, illustrative, model, fixture, derived, session; `value` (the figure it qualifies: `model $417`) |
 | `LedgerLink` | `.ledger-link`, GT.LedgerLink | F P L | one |
 | `ErrorLine` | `.err` (+ I.warn) | F P L G | static / live (role=alert) |
 | `ChannelBadge` | `.chan.*` | F P L | youtube, tiktok, instagram |
-| `Button` | `.btn`, `.btn.{tone}`, `.btn.sm`, `kbd.keycap` inside | F P L G | tone x size; glyph; badge chip; shortcut from keymap; aria-disabled |
-| `Toggle` | `.toggle[aria-pressed]` | F P L G | on/off |
-| `Seg` | `.seg button[aria-pressed]` | F P L G | one of n |
+| `Button` | `.btn`, `.btn.{tone}`, `.btn.sm`, `kbd.keycap` inside | F P L G | tone x size; glyph; badge chip; tally stamp (`history 9`); trailing glyph (`Open record ›`); shortcut from keymap; aria-disabled |
+| `Toggle` | `.toggle[aria-pressed]` | F P L G | on/off; glyph; count of what is on; keycap; aria-controls/expanded for a drawer |
+| `Seg` | `.seg button[aria-pressed]` | F P L G | one of n; option glyph, count, actor accent (Ledger actors) |
 | `Field`, `Select`, `Search` | `.field`, `select.field`, `.search` | P L G | keyfield; search caps from the mode's `search` verb |
 | `CapsHeading` | `.side-h`, `.h4` / `.detail h4` | F P L G | side / section; level; tally |
 | `Panel` | `.panel`, `.panel-head`, `.panel-body`, `.toolbar` | P L G | title + tally; toolbar |
@@ -33,8 +33,8 @@ across pages lives in `tokens.css` and `shell.js`, so that is where the kit come
 | `Crumbs` | `[data-component=Crumbs]` | F P L | link/button steps; current place |
 | `Facts` | `.obs` (dl) | F L | term/value rows |
 | `Wave` | GT.Wave | F P L | tone; playhead; empty midline |
-| `FacetRow` | library `.frow`, ledger `.fr` | L G | mark check (L) / rail (G) + share bar |
-| `Glyph` | shell.js `I.{ledger,search,warn,down}` | all | only the glyphs a primitive draws |
+| `FacetRow` | library `.frow`, ledger `.fr` | L G | mark check (L) / rail (G) + share bar; `nested` value with its tone (ledger `.fr.sub`) |
+| `Glyph` | shell.js `I.{ledger,search,warn,down,up,chevR,grid,doc,operator,agent,machine}` | all | only the glyphs a primitive draws; the three actor marks travel with ActorKind |
 
 Built for the signal vocabulary although on one page: `Fold` (library `.fgh`), `TabRail`
 (projects `.tabrail`), `UpstreamBreak` (floor slot detail), `Provenance` (floor style detail).
@@ -56,7 +56,7 @@ Layout-only classes are not components: `.kv` (a wrapping row; Provenance carrie
 | Ghost | `.ghost-card` | `Ghost` |
 | UpstreamBreak | floor `UpstreamBreak` | `UpstreamBreak` (error form only) |
 | Keycaps (+ keymap.ts) | `.keymap` (drawn open) | `Keycaps` from `keyTable`; keymap lives in `src/keymap` |
-| StaleBadge | ledger `.apx` (the "≈ derived time" mark) - a glyph, not a badge | not built; the `.apx` mark is ledger-only (wave 3) |
+| StaleBadge | ledger `.apx` (the "≈ derived time" mark) - a glyph, not a badge | `StaleBadge` over @gt/ui/freshness's edge (Phase 2, lot 16); the `≈` mark lives in `EventRow` and speaks "derived time" |
 | Provenance | floor `[data-component=Provenance]` | `Provenance` |
 | useCountFilter | none (route logic) | not a component |
 
@@ -67,11 +67,10 @@ Estimate, RunRow (+ stagepips, run-bar shimmer), RunTrack, WeirCell, Pile, Shelf
 ShelfStyle, CalendarColumn, SlotRow, MonthCalendar (mday/mslot), LevelSheet + scrim + grab,
 flyer, `.ledger-t` table. Board: BoardDesk, PacketRail, MatrixCull + CullTile, BlindPair,
 PacketReview, ArticlePage, EditNote, CutReview, OracleStrip, StepTrack, commit/wait/refuse.
-Projects: CompositionList (`.prow`), PlanBreakdown, RunsDayline (bars, dep links, lane
-chips), IdeaSlotRibbon (`.rnode`), re-route `.alt`, resource summary `.res`, launch-plan.
+Projects: CompositionList (`.prow`), PlanBreakdown, IdeaSlotRibbon (`.rnode`), re-route
+`.alt`, launch-plan. RunsDayline, lane chips and the resource summary: built in Phase 2 (below).
 Library: LibraryNav (`.kind`), FacetGroup body, LibraryToolbar (`.fchips`), LibraryResults
-(virtual grid/list), LibraryDetail. Ledger: TimeStrip, facet sections, event rows `.ev`,
-JSONL view, facet drawer. Kit page itself (`/kit`, wave 3).
+(virtual grid/list), LibraryDetail. Ledger: built in Phase 2 (below). Kit page itself (`/kit`, wave 3).
 
 ## Where extraction moved a pixel decision (owner to confirm)
 
@@ -84,3 +83,48 @@ JSONL view, facet drawer. Kit page itself (`/kit`, wave 3).
   pixel-exact; which survives is the owner's call.
 - The prototype's `blog` channel ("PR", amber) has no badge: the domain publishes to
   youtube, tiktok and instagram only.
+
+## Ledger parts (Phase 2, lot 16)
+
+| Kit name | Replaces (prototype) | Pages | States / variants |
+| --- | --- | --- | --- |
+| `TimeStrip` (+ `strip.ts`) | ledger.js `renderStrip`, `.lg-strip`, `.ts-*` | G | √n bars stacked machine/agent/operator; future days hatched; empty days drawn as measured zero; NOW line; drag sets a range, a click on the whole range clears it; hover readout as a live region |
+| `EventRow` (+ `usd.ts`) | ledger.js `rowHtml`, `.ev`, `.ty` | G | actor rule and glyph; type tag by tone; subject link; error/note trail; cost with `est`/`ill` mark; `≈` derived time (spoken); the v1 store it came from; selected; fresh |
+| `JsonLine`, `JsonBlock` (+ `highlight.ts`) | ledger.js `lineHtml`, `jsonHi`, `.jl`, `.json` | G | one line with its number (fixed height, windowed); one pretty record; runs, never HTML |
+| `StaleBadge` | v1 `signal/StaleBadge.tsx` | G | nothing when live; amber `stale 42 s` / `offline 9 min` from the freshness view |
+
+Not extracted: the facet drawer is the route's own layout (two media queries over the rail);
+the list's column head shares `--ledger-cols` with `EventRow` and stays in the route.
+
+Pixel decisions at the Ledger port (owner to confirm):
+- A row's trailing error is `--error-text` (`#fecdd3`); the prototype wrote `#fda4af` there only.
+- The raw JSON block's corner is `--r-control` (8px) where the prototype wrote the rejected 9px.
+- The `facets` toggle's glyph sits 4px from its word (the prototype's inline 5px margin).
+- A row carries no provenance tag (the prototype's `.src` per row): a store holds one universe,
+  so the toolbar says `fixture` once, as a solid chip - a dashed tag per row also read under
+  the 3:1 mark floor on every row of a fixture ledger.
+- The strip draws no session segment and no due marks: nothing writes from the studio in
+  Phase 2, and publish slots arrive with their source.
+
+## Runs parts (Phase 2, lot 18)
+
+| Kit name | Replaces (prototype) | Pages | States / variants |
+| --- | --- | --- | --- |
+| `RunsDayline` | projects.js `renderRuns`, `Bar`, `drawLinks`; projects.css "runs" | P | one row per `RESOURCE_LANES` lane + Weir + Calendar; bar per Look (status.ts) + gate ◆ + blocked + floor corner; sub-track packing to capacity, `+N` open/closed; label in / beside / hover; NOW; night bands; UTC axis at 12h · 24h · 3d · week; links up (cyan) / down (amber) / rest / bad (rose dashed); calendar pins per SlotState |
+| `LaneChip` | projects.css `.lane-chip` (+ `.l-*` classes) | P | mark by kind: local, seat, cloud, weir, calendar |
+| `ResourceSummary` | projects.css `.res-list` / `.res` | P | per lane: running, waiting, occupancy meter |
+
+Pure modules beside them: `runs/dayline.ts` (zooms, axis, nights, `pack`, `barBox`/`anchors` -
+one geometry for bars and links -, `inWindow`, `seatLabels`, `occupancy`), `runs/thread.ts`
+(`upstreamOf`, `downstreamOf`, `blockedBy`, `light`), `runs/lanes.ts` (`LANE_SPECS`, total over
+the domain's lanes; `LANE_ORDER`, its zod-free twin).
+
+Where this port moved from the prototype:
+- Utilisation is occupancy now (running over capacity), not next-24h planned minutes: v1 records
+  no ETA for any job, so minutes would be a guess. The meter returns to minutes with Phase 4 plans.
+- A live bar's end is NOW (open), and a job with no recorded start sits at NOW at the packer's
+  minimum width, marked ≈ in its name. The prototype drew planned futures; none exist yet.
+- The lane icons are the prototype's three SVGs (machine, agent, route) drawn by the row's kind,
+  so a lane added to the domain gets its kind's mark rather than none.
+- Moved a pixel: NOW label ink `ink` (prototype `#05252b`), bar hover ground `ink-3` (`#141a26`),
+  done labels `done-text` (`#c9f7e6`, `#9fd9c1`), link stroke `ink-bright` 28% (white .28).

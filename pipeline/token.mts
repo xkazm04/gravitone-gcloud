@@ -12,7 +12,7 @@
 // this script writes.
 //
 // THE SAME STORE THE SERVER OPENS. The location rule is @gt/kernel/process's
-// storeLocation, bound to v1's universe exactly as app/_server/kernel.ts binds
+// storeLocation, bound to v1's universe exactly as lib/kernelStore.ts binds
 // it: GRAVITONE_STORE_PATH, else <cwd>/<foundry-out|fixtures-out>/
 // gravitone.sqlite by NEXT_PUBLIC_GRAVITONE_DATA. Run it from the checkout root
 // with the server's environment, or the token lands in a store nobody reads.

@@ -1,0 +1,94 @@
+/* ledger.css, the route's own layout around the @gt/ui parts: toolbar, strip, then
+   facets | list | detail. Drawers below 1360px (detail) and 1280px (facets), as drawn. */
+.lg{flex:1;min-height:0;display:grid;grid-template-rows:auto auto minmax(0,1fr);grid-template-columns:minmax(0,1fr)}
+
+/* ── toolbar ── */
+.top{display:flex;align-items:center;flex-wrap:wrap;gap:var(--sp-3) var(--sp-4);padding:var(--sp-3) var(--sp-5);border-bottom:1px solid var(--hair);background:color-mix(in srgb,var(--shadow) 30%,transparent);min-height:var(--head-h)}
+.search{width:var(--w-search)}
+.cost{display:inline-flex;gap:var(--sp-2);align-items:center}
+.sp{flex:1}
+.facetToggle{display:none}
+
+/* ── body ── */
+.body{position:relative;min-height:0;display:grid;grid-template-columns:var(--w-rail) minmax(0,1fr) var(--w-detail)}
+.facets{min-height:0;display:flex;flex-direction:column;overflow:auto}
+.facets>section{flex:1}
+.sec{padding:var(--sp-4) var(--sp-3) var(--sp-1)}
+.secHead{display:flex;align-items:center;justify-content:space-between;padding:0 var(--sp-2) var(--sp-2)}
+.clear{font:600 var(--fs-micro)/1 var(--mono);color:var(--muted);padding:var(--sp-nudge) var(--sp-1);border-radius:var(--r-box)}
+.clear:hover{color:var(--ink-bright)}
+.keys{padding:var(--sp-5) var(--sp-loose) var(--sp-3);border-top:1px solid var(--hair);margin-top:var(--sp-3)}
+
+/* ── centre ── */
+.center{min-width:0;min-height:0;display:flex;flex-direction:column;border-right:1px solid var(--hair)}
+.cols{flex:none;display:grid;grid-template-columns:var(--ledger-cols);align-items:center;column-gap:var(--sp-3);padding:0 var(--sp-5) 0 var(--sp-loose);height:var(--head-h);border-bottom:1px solid var(--hair);font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.cols .r{text-align:right}
+.cols button{font:inherit;letter-spacing:inherit;text-transform:inherit;color:var(--muted);display:inline-flex;gap:var(--sp-1);align-items:center}
+.cols button:hover{color:var(--ink-bright)}
+.colGlyph{width:var(--size-glyph-xs);height:var(--size-glyph-xs)}
+.scroll{position:relative;flex:1;min-height:0;overflow:auto;outline:none}
+.scroll:focus-visible{box-shadow:inset 0 0 0 var(--stroke-mark) color-mix(in srgb,var(--cyan) 40%,transparent)}
+.lines{width:max-content;min-width:100%}
+.older{display:flex;justify-content:center;padding:var(--sp-4)}
+.avHead{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-3) var(--sp-4);padding:var(--sp-3) var(--sp-5);border-bottom:1px solid var(--hair);background:color-mix(in srgb,var(--violet) 4%,transparent)}
+.avQ{flex:1 1 var(--w-search);min-width:0;display:grid;gap:var(--sp-1)}
+.avQ code{display:block;font:500 var(--fs-meta)/1.35 var(--mono);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.avQ code i{font-style:normal;color:var(--faint)}
+
+/* ── detail ── */
+.detail{min-height:0;overflow:auto;background:color-mix(in srgb,var(--shadow) 36.67%,transparent)}
+.dtHead{position:sticky;top:0;z-index:1;display:flex;align-items:center;gap:var(--sp-3);height:var(--head-h);padding:0 var(--sp-5);border-bottom:1px solid var(--hair);background:var(--ink-1);font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.dtSeq{font-family:var(--mono);color:var(--ink-bright);letter-spacing:0}
+.close{display:none;width:var(--h-chip);height:var(--h-chip);border-radius:var(--r-chip);color:var(--muted);font-size:var(--fs-h2);line-height:1}
+.close:hover{color:var(--ink-bright);background:var(--wash-hi)}
+.dtEmpty{padding:var(--sp-7) var(--sp-wide);color:var(--faint);font:600 var(--fs-micro)/1.4 var(--mono)}
+.dt{padding:var(--sp-loose) var(--sp-wide) var(--sp-7);display:grid;gap:var(--sp-loose);align-content:start}
+.dtType{font:700 var(--fs-h2)/1.1 var(--mono);letter-spacing:-.01em;color:var(--ink-bright);word-break:break-all}
+.dtType.cyan{color:var(--cyan)}
+.dtType.emerald{color:var(--emerald)}
+.dtType.rose{color:var(--rose)}
+.dtType.amber{color:var(--amber)}
+.dtType.violet{color:var(--violet)}
+.dtActor{display:flex;align-items:center;gap:var(--sp-3);font-size:var(--fs-nav);color:var(--ink-bright);margin-top:var(--sp-2)}
+.dtGlyph{width:var(--size-glyph);height:var(--size-glyph)}
+.kd{font:700 var(--fs-micro)/1 var(--mono);text-transform:uppercase;letter-spacing:.08em}
+.dtActor.operator .dtGlyph,.dtActor.operator .kd{color:var(--actor-operator)}
+.dtActor.agent .dtGlyph,.dtActor.agent .kd{color:var(--actor-agent)}
+.dtActor.machine .dtGlyph,.dtActor.machine .kd{color:var(--actor-machine)}
+.dtTime{display:grid;gap:var(--sp-1);font:500 var(--fs-meta)/1.3 var(--mono);color:var(--text)}
+.row{display:flex;gap:var(--sp-3);align-items:center;flex-wrap:wrap}
+.rel{color:var(--muted)}
+.dtSubj{padding:var(--sp-5);border:1px solid var(--hair-2);border-radius:var(--r-control);background:var(--ink-2);display:grid;gap:var(--sp-3);justify-items:start}
+.lbl{font-size:var(--fs-h3);line-height:1.35;color:var(--ink-bright);word-break:break-word}
+.id{font:500 var(--fs-micro)/1.35 var(--mono);color:var(--faint);word-break:break-all}
+.acts{display:flex;gap:var(--sp-2);flex-wrap:wrap}
+.dtNote{font-size:var(--fs-nav);line-height:1.5;color:var(--text);padding:var(--sp-control) var(--sp-5);border-radius:var(--r-control);border:1px solid var(--hair);background:color-mix(in srgb,var(--wash) 50%,transparent);word-break:break-word}
+.relList{display:grid;gap:1px;border:1px solid var(--hair);border-radius:var(--r-control);overflow:hidden}
+.relList button{display:grid;grid-template-columns:var(--w-line-no) calc(var(--w-line-no) * 1.78) minmax(0,1fr);gap:var(--sp-3);align-items:center;padding:var(--sp-2) var(--sp-control);text-align:left;font-size:var(--fs-control-sm);background:color-mix(in srgb,var(--wash) 37.5%,transparent)}
+.relList button:hover{background:var(--wash-hi)}
+.n{font:500 var(--fs-micro)/1 var(--mono);color:var(--faint)}
+.t{font:500 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+.ty{display:inline-flex;align-items:center;justify-self:start;max-width:100%;height:var(--h-tag);padding:0 var(--sp-snug);border-radius:var(--r-xs);border:1px solid var(--hair-2);font:600 var(--fs-micro)/1 var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ty.cyan{color:var(--cyan);border-color:color-mix(in srgb,var(--cyan) 30%,transparent);background:var(--cyan-a)}
+.ty.emerald{color:var(--emerald);border-color:color-mix(in srgb,var(--emerald) 30%,transparent);background:var(--emerald-a)}
+.ty.rose{color:var(--rose);border-color:color-mix(in srgb,var(--rose) 36%,transparent);background:var(--rose-a)}
+.ty.amber{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 34%,transparent);background:var(--amber-a)}
+.ty.violet{color:var(--violet);border-color:color-mix(in srgb,var(--violet) 32%,transparent);background:var(--violet-a)}
+.relMore{font:600 var(--fs-micro)/1 var(--mono);color:var(--muted);padding:var(--sp-2) var(--sp-nudge)}
+.relMore:hover{color:var(--ink-bright)}
+.dtJsonH{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);margin-bottom:var(--sp-2)}
+
+/* ── narrow: the detail, then the facets, become drawers ── */
+@media (max-width:1360px){
+  .body{grid-template-columns:var(--w-rail) minmax(0,1fr);overflow:hidden}
+  .detail{position:absolute;z-index:var(--z-docked);top:0;right:0;bottom:0;width:min(var(--w-detail),92vw);border-left:1px solid var(--hair-2);background:var(--ink-1);box-shadow:calc(-1 * var(--sp-7)) 0 calc(var(--sp-7) * 2.5) var(--shadow);transform:translateX(105%);transition:transform var(--dur) var(--ease)}
+  .lg[data-detail=true] .detail{transform:none}
+  .close{display:inline-grid;place-items:center}
+}
+@media (max-width:1280px){
+  .facetToggle{display:inline-flex}
+  .body{grid-template-columns:minmax(0,1fr)}
+  .facets{position:absolute;z-index:var(--z-docked);top:0;left:0;bottom:0;width:min(var(--w-rail),92vw);border-right:1px solid var(--hair-2);background:var(--ink-1);box-shadow:var(--sp-7) 0 calc(var(--sp-7) * 2.5) var(--shadow);transform:translateX(-105%);transition:transform var(--dur) var(--ease)}
+  .lg[data-facets=true] .facets{transform:none}
+  .center{border-right:0}
+}

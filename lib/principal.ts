@@ -411,7 +411,7 @@ export function presentedToken(req: Request): string | undefined {
  * either.
  *
  * THE STORE IS THE PROCESS'S ONE HANDLE (@gt/kernel/process), the same one
- * app/_server/kernel.ts hands to pages and routes, bound to the same universe
+ * lib/kernelStore.ts hands to pages and routes, bound to the same universe
  * (OUT_DIRNAME): a second connection would carry its own statement cache and
  * WAL read mark, and a second copy of "where the store lives" could drift.
  *

@@ -28,6 +28,7 @@ import {
   type ReviewFinding,
   type ReviewVerdict,
   type StepName,
+  WORKING,
 } from "@/lib/articles/types";
 
 export type Tone = "cyan" | "amber" | "rose" | "emerald" | "neutral";
@@ -35,7 +36,7 @@ export type Tone = "cyan" | "amber" | "rose" | "emerald" | "neutral";
 /** What the page draws a run as. */
 export type RunPhase = "running" | "stalled" | "failed" | "gate" | "landing" | "landed" | "rejected";
 
-export const WORKING: readonly ArticleStatus[] = ["queued", "researching", "drafting", "critiquing", "checking", "approved", "landing"];
+export { WORKING };
 
 export function phaseOf(run: Pick<ArticleRun, "status">, driving: boolean): RunPhase {
   switch (run.status) {

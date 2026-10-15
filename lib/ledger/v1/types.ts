@@ -4,7 +4,7 @@ import type { JobState } from "@gt/domain/job";
 import type { MediaLane, ResourceLane } from "@gt/domain/lane";
 
 // THE v1 PROJECTION'S CONTRACT (Phase 2) - what every adapter under
-// app/_server/v1/sources/ implements, and what the sync, the Ledger and Runs
+// lib/ledger/v1/sources/ implements, and what the sync, the Ledger and Runs
 // build on.
 //
 // A Source is a reader and a PURE projection. `read()` is the only I/O and
@@ -75,6 +75,46 @@ export type WeirItem = {
   readonly href: string;
 };
 
+/**
+ * A Calendar slot that has not settled (lib/publish/types.ts ScheduleSlot).
+ * Not a job - a slot occupies no resource while it waits for its hour, and
+ * Runs draws it on the Calendar row - so it is its own list, as the Weir is
+ * (wave B, lot 15). `published` and `cancelled` slots are history: they are
+ * in the ledger, not here.
+ */
+export type LiveSlot = {
+  readonly source: string;
+  readonly id: string;
+  readonly title: string;
+  readonly channel: string;
+  readonly projectId: string;
+  /** When v1 will (or would have) published it. A reschedule moves this. */
+  readonly publishAt: string;
+  /** v1's own word, verbatim: the Calendar's state machine is not a job's. */
+  readonly status: "scheduled" | "publishing" | "missed" | "failed";
+  readonly error?: string;
+  readonly href: string;
+};
+
+/**
+ * Money a spend class has reserved and not yet settled (lib/spend/meter.ts
+ * reserve): in flight, not spent, not a job. v1's hold names no vendor - the
+ * provider is known only when the row is booked - so a hold carries its class
+ * and no resource lane; Runs draws it as in-flight money, never on a row it
+ * would have to guess.
+ */
+export type LiveHold = {
+  readonly source: string;
+  readonly id: string;
+  readonly spendClass: string;
+  readonly amount: number;
+  readonly unit: "usd" | "audio-s";
+  /** When it was reserved; absent when v1's stamp does not read as an instant. */
+  readonly since?: string;
+  /** The reserving process: `gone` is a hold v1's next transaction reclaims once its TTL has run. */
+  readonly owner: "alive" | "gone" | "unknown";
+};
+
 /** What the v1 store holds, counted the way the reconcile probe compares. */
 export type SourceTally = {
   /** Records by their v1 state (`run.done: 3`). */
@@ -90,6 +130,9 @@ export type Projection = {
   readonly events: readonly IngestEvent[];
   readonly live: readonly LiveJob[];
   readonly weir: readonly WeirItem[];
+  /** Only the publish source has slots and only the spend source has holds; absent elsewhere. */
+  readonly slots?: readonly LiveSlot[];
+  readonly holds?: readonly LiveHold[];
   readonly tally: SourceTally;
   readonly skipped: readonly Skipped[];
 };

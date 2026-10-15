@@ -50,6 +50,10 @@ export const ARTICLE_STATUSES = [
 ] as const;
 export type ArticleStatus = (typeof ARTICLE_STATUSES)[number];
 
+/** The statuses a driver is working through. With no live driver they are a stalled run, not a
+ *  running one (app/articles/runModel.ts phaseOf; the ledger projection reads the same set). */
+export const WORKING: readonly ArticleStatus[] = ["queued", "researching", "drafting", "critiquing", "checking", "approved", "landing"];
+
 /** The five steps. `outline` and `draft` both run while the status is
  *  `drafting`; `research` is `researching`; `critique` is `critiquing`;
  *  `check` is `checking`. */

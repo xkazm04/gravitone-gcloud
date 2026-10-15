@@ -9,10 +9,10 @@ import { appendOnce, finishClaim, recordSourceOutcome, takeClaim } from "@gt/ker
 import type { Store } from "@gt/kernel/store";
 
 import { FIXTURE_MODE } from "../../../lib/fixtures/mode.ts";
-import { kernel } from "../kernel.ts";
+import { kernel } from "../../kernelStore.ts";
 import { digest, facts, seg, words } from "./facts.ts";
 import { V1_SOURCES } from "./sources.ts";
-import type { IngestEvent, LiveJob, ProjectCtx, Projection, Source, WeirItem } from "./types.ts";
+import type { IngestEvent, LiveHold, LiveJob, LiveSlot, ProjectCtx, Projection, Source, WeirItem } from "./types.ts";
 
 // THE SYNC - every v1 source read, projected, and appended once (Phase 2).
 //
@@ -237,6 +237,9 @@ export function reconcile(store: Store, reads: readonly Read[], exact: boolean):
 export type LiveRead = {
   readonly jobs: readonly LiveJob[];
   readonly weir: readonly WeirItem[];
+  /** The Calendar's unsettled slots and the spend meter's open holds (wave B). */
+  readonly slots: readonly LiveSlot[];
+  readonly holds: readonly LiveHold[];
   /** Sources Runs could not read this time, with their words: drawn as gaps, never as "nothing running". */
   readonly failures: readonly { readonly source: string; readonly error: string }[];
 };
@@ -246,15 +249,19 @@ export async function liveJobs(sources: readonly Source<unknown>[], ctx: Project
   const reads = await readAll(sources, ctx);
   const jobs: LiveJob[] = [];
   const weir: WeirItem[] = [];
+  const slots: LiveSlot[] = [];
+  const holds: LiveHold[] = [];
   const failures: { source: string; error: string }[] = [];
   for (const r of reads) {
     if ("failure" in r) failures.push({ source: r.source, error: `${r.failure.class}: ${r.failure.error}` });
     else {
       jobs.push(...r.projection.live);
       weir.push(...r.projection.weir);
+      slots.push(...(r.projection.slots ?? []));
+      holds.push(...(r.projection.holds ?? []));
     }
   }
-  return { jobs, weir, failures };
+  return { jobs, weir, slots, holds, failures };
 }
 
 export type Freshness = { readonly started: true } | { readonly started: false; readonly nextAt: string; readonly owner: string };

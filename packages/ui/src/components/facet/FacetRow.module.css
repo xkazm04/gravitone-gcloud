@@ -19,3 +19,11 @@
 .rail[aria-pressed=true]{background:var(--cyan-a);box-shadow:inset var(--stroke-mark) 0 0 var(--cyan)}
 .share{position:absolute;left:var(--sp-2);right:var(--sp-2);bottom:var(--sp-nudge);height:var(--stroke-mark);border-radius:var(--stroke-mark);background:var(--wash);overflow:hidden}
 .fill{--share:0;display:block;height:100%;width:calc(var(--share) * 100%);background:color-mix(in srgb,var(--cyan) 35%,transparent)}
+/* ledger.css .fr.sub: a value under its group row, with the value's tone as a square. */
+.nested{height:calc(var(--h-row) - var(--sp-nudge));padding-left:calc(var(--sp-2) + var(--sp-wide));font:500 var(--fs-meta)/1 var(--mono);color:var(--muted)}
+.tone{width:var(--sp-3);height:var(--sp-3);border-radius:var(--sp-nudge);flex:none;background:var(--faint)}
+.cyan{background:var(--cyan)}
+.emerald{background:var(--emerald)}
+.rose{background:var(--rose)}
+.amber{background:var(--amber)}
+.violet{background:var(--violet)}

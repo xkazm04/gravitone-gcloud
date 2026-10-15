@@ -5,6 +5,7 @@
 // The design drew this row twice. The Library's carries a checkbox mark; the Ledger's a
 // left rule and a share bar under the label. Both are kept as `mark` because extraction
 // does not change pixels; which one survives is the owner's call (open question).
+import type { Tone } from "../chip/tone.ts";
 import { cx } from "../cx.ts";
 import { SrOnly } from "../a11y/SrOnly.tsx";
 import { vars } from "../vars.ts";
@@ -18,17 +19,23 @@ export type FacetRowProps = {
   readonly mark: "check" | "rail";
   /** The rail's share bar, 0..1 of the largest value in the group. */
   readonly share?: number;
+  /**
+   * A value nested under a group row (ledger.js `.fr.sub`: `job.fail` under `job`), drawn
+   * indented, in mono, with the tone the value carries everywhere else (the type tag's hue).
+   */
+  readonly nested?: { readonly tone: Tone };
 };
 
-export function FacetRow({ label, count, pressed, onToggle, mark, share }: FacetRowProps) {
+export function FacetRow({ label, count, pressed, onToggle, mark, share, nested }: FacetRowProps) {
   return (
     <button
       type="button"
-      className={cx(s.row, s[mark], count === 0 && s.zero)}
+      className={cx(s.row, s[mark], count === 0 && s.zero, nested !== undefined && s.nested)}
       aria-pressed={pressed}
       onClick={() => onToggle(!pressed)}
     >
       {mark === "check" && <span className={s.box} aria-hidden="true" />}
+      {nested !== undefined && <span className={cx(s.tone, nested.tone !== "neutral" && s[nested.tone])} aria-hidden="true" />}
       <span className={s.label}>{label}</span>
       <span className={s.count} aria-hidden="true">
         {count}

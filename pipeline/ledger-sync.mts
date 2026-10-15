@@ -1,7 +1,7 @@
 // LEDGER-SYNC — the v1 projection, on demand (Phase 2, lot 14).
 //
 //   node pipeline/ledger-sync.mts [sync] [--fixtures] [--store <file>] [--json]
-//        read every v1 source (app/_server/v1/sources.ts), append what the ledger
+//        read every v1 source (lib/ledger/v1/sources.ts), append what the ledger
 //        does not hold yet, print the per-source table
 //   node pipeline/ledger-sync.mts reconcile [--fixtures] [--store <file>] [--exact] [--json]
 //        sync, then compare the ledger's counts per source and event type with
@@ -105,17 +105,20 @@ function fail(message: string): never {
 
 if (verb === "seed-fixtures") {
   process.env["NEXT_PUBLIC_GRAVITONE_DATA"] = "fixtures";
-  // The generators of the stores app/_server/v1/sources.ts reads. A lot that
+  // The generators of the stores lib/ledger/v1/sources.ts reads. A lot that
   // adds a source whose fixtures come from another generator adds it here.
-  const foundry: { generate: () => string } = await import("./fixtures/foundry.ts");
-  const summary = foundry.generate();
-  out({ seeded: { foundry: summary } }, [`seeded fixtures-out/ (foundry): ${summary}`]);
+  const seeded: Record<string, string> = {};
+  for (const name of ["foundry", "publish", "work"]) {
+    const gen: { generate: () => string } = await import(`./fixtures/${name}.ts`);
+    seeded[name] = gen.generate();
+  }
+  out({ seeded }, Object.entries(seeded).map(([name, summary]) => `seeded fixtures-out/ (${name}): ${summary}`));
   process.exit(0);
 }
 
-const { kernel, closeKernel } = await import("../app/_server/kernel.ts");
-const { V1_SOURCES } = await import("../app/_server/v1/sources.ts");
-const { liveJobs, readAll, reconcile, syncV1, v1Ctx } = await import("../app/_server/v1/sync.ts");
+const { kernel, closeKernel } = await import("../lib/kernelStore.ts");
+const { V1_SOURCES } = await import("../lib/ledger/v1/sources.ts");
+const { liveJobs, readAll, reconcile, syncV1, v1Ctx } = await import("../lib/ledger/v1/sync.ts");
 
 const ctx = v1Ctx();
 
@@ -124,8 +127,10 @@ if (verb === "live") {
   out(live, [
     ...live.jobs.map((j) => `job   ${j.source.padEnd(8)} ${j.state.padEnd(12)} ${j.lane.padEnd(14)} ${j.title}${j.laneFrom === undefined ? "" : `  (lane: ${j.laneFrom})`}`),
     ...live.weir.map((w) => `weir  ${w.source.padEnd(8)} ${w.kind.padEnd(12)} ${`${w.pending} pending`.padEnd(14)} ${w.title}`),
+    ...live.slots.map((s) => `slot  ${s.source.padEnd(8)} ${s.status.padEnd(12)} ${s.publishAt.slice(0, 16).padEnd(14)} ${s.title}`),
+    ...live.holds.map((h) => `hold  ${h.source.padEnd(8)} ${h.owner.padEnd(12)} ${`${h.amount} ${h.unit}`.padEnd(14)} ${h.spendClass} ${h.id}`),
     ...live.failures.map((f) => `FAIL  ${f.source}: ${f.error}`),
-    `${live.jobs.length} live job(s), ${live.weir.length} Weir pile(s), ${live.failures.length} source(s) unreadable`,
+    `${live.jobs.length} live job(s), ${live.weir.length} Weir pile(s), ${live.slots.length} open slot(s), ${live.holds.length} hold(s), ${live.failures.length} source(s) unreadable`,
   ]);
   process.exit(live.failures.length > 0 ? 1 : 0);
 }

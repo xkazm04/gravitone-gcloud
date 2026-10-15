@@ -852,7 +852,7 @@ test("route video/clips GET: 401 without auth, 200 with it", async () => {
 //
 // The v1 door (resolvePrincipal, so every guardRequest/guardAccessOnly route)
 // against a REAL kernel store in a temp file, opened through the app's own
-// accessor (app/_server/kernel.ts), so the token minted here is the token the
+// accessor (lib/kernelStore.ts), so the token minted here is the token the
 // door reads. The shared secret stays configured throughout: a token must be
 // judged as a token even on a server where the secret would have passed.
 
@@ -861,7 +861,7 @@ test("route video/clips GET: 401 without auth, 200 with it", async () => {
 // this lane a `type: module` workspace file required by one path and imported
 // by the other is evaluated twice, once in the wrong module system.
 type TokenMod = typeof import("@gt/kernel/token");
-type KernelMod = typeof import("@/app/_server/kernel");
+type KernelMod = typeof import("@/lib/kernelStore");
 let tk: TokenMod;
 let km: KernelMod;
 const tokenDir = mkdtempSync(join(tmpdir(), "gt-l17-auth-"));
@@ -869,7 +869,7 @@ const OPERATOR = { kind: "operator", id: "probe" } as const;
 keepEnv(["GRAVITONE_STORE_PATH", SHARED_SECRET_CALLERS_VAR, RATE_CAPACITY_VAR, "PRINCIPAL_MODE"]);
 test.beforeAll(async () => {
   tk = await import("@gt/kernel/token");
-  km = await import("../../app/_server/kernel.ts");
+  km = await import("../../lib/kernelStore.ts");
 });
 test.afterAll(() => {
   km?.closeKernel();

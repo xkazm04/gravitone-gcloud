@@ -19,9 +19,11 @@ import { parseSource } from "@gt/ui/tokenSource";
 import { ContractSection } from "./Contract.tsx";
 import { ControlSections } from "./Controls.tsx";
 import { KitNav } from "./KitNav.tsx";
+import { LedgerSections } from "./LedgerKit.tsx";
 import { SignalSections } from "./Signal.tsx";
 import { StatusSection } from "./Status.tsx";
 import { StructureSection } from "./Structure.tsx";
+import { RunsSection } from "./RunsKit.tsx";
 import { DRAWN_GROUPS, TokenSections } from "./Tokens.tsx";
 import k from "./kit.module.css";
 
@@ -45,6 +47,8 @@ export default function KitPage() {
         <StatusSection />
         <ControlSections />
         <StructureSection />
+        <RunsSection />
+        <LedgerSections />
         <ContractSection />
       </div>
     </div>

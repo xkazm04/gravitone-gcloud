@@ -9,7 +9,7 @@ import type { JobState } from "@gt/domain/job";
 import type { ResourceLane } from "@gt/domain/lane";
 
 import { getCycle, listCycles } from "../../../../lib/foundry/training/store.ts";
-import { cycleKind } from "../../../foundry/parts.tsx";
+import { cycleKind } from "../../../foundry/plant.ts";
 import { bump, facts, instant, readEach, seg, words } from "../facts.ts";
 import type { IngestEvent, LiveJob, ProjectCtx, Projection, Skipped, Source, WeirItem } from "../types.ts";
 
@@ -29,7 +29,7 @@ import type { IngestEvent, LiveJob, ProjectCtx, Projection, Skipped, Source, Wei
 //                    `awaiting-gate` is the loop parking a pile for the human, so it
 //                    is the prototype's `gate.arrive` rather than a status line.
 //
-// LIVE: the plant's own reading (app/foundry/parts.tsx `cycleKind`: anything
+// LIVE: the plant's own reading (lib/foundry/plant.ts `cycleKind`: anything
 // not gated, failed or committed is live - DojoView.tsx's DOJO_LIVE). The lane
 // follows the phase: planning is the agent's text turn (seat.text); generating
 // and judging run on the stack the cycle uses, which v1 records only in the

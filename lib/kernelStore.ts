@@ -4,9 +4,9 @@ import type { Result } from "@gt/domain/errors";
 import type { Kernel } from "@gt/kernel/kernel";
 import { closeProcessKernel, processKernel, storeLocation as locate } from "@gt/kernel/process";
 
-import { OUT_DIRNAME } from "../../lib/fixtures/mode.ts";
+import { OUT_DIRNAME } from "./fixtures/mode.ts";
 
-// THE APP'S KERNEL - what Server Components, Server Actions and route handlers
+// THE APP'S KERNEL (lib/, so pages, v1 doors, the ledger projection and CLIs share it) - what Server Components, Server Actions and route handlers
 // read and write through: the process's one handle (@gt/kernel/process, which
 // says why it is one and why it survives hot reload), bound to the universe
 // the page is in.
