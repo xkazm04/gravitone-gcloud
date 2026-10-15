@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./tokens.css": "./src/tokens.css",
     "./components/*": "./src/components/*",
     "./*": "./src/*.ts"
   },

@@ -46,7 +46,7 @@ Layout-only classes are not components: `.kv` (a wrapping row; Provenance carrie
 
 | v1 | Prototype counterpart | New kit |
 | --- | --- | --- |
-| Hint (+ useHint, HintPopover) | `.hint` | `Hint`; Escape/outside dismissal not kept (see Hint.tsx) |
+| Hint (+ useHint, HintPopover) | `.hint` | `Hint`; the open tip is a `tooltip` layer, dismissed by Escape through the keymap (see Hint.tsx) |
 | Tally (+ CHIP_CLASS, TALLY_TONE) | `.tally` (stamp) and `.chip` (tag) | `Tally` + `Chip`; tone/zero/door move to Chip |
 | PipRow | `.piprow` | `PipRow` over Looks; label required |
 | TabRail | projects `.tabrail` | `TabRail` as nav + aria-current; no blurb |

@@ -1,6 +1,6 @@
 "use client";
 
-// BE ON THE LAYER STACK WHILE OPEN - the only door a sheet, dialog, popover or zoom
+// BE ON THE LAYER STACK WHILE OPEN - the only door a sheet, dialog, popover, zoom or tooltip
 // uses (v1 `useLayer`, components/ui/layers.ts).
 //
 // Options are latched through a ref and read at event time, so an inline onClose
@@ -67,7 +67,7 @@ export function useLayer(open: boolean, opts: UseLayerOptions): void {
     });
     return () => {
       remove();
-      focusAfterClose(opener, ref.current.landmark?.() ?? null)?.focus({ preventScroll: true });
+      focusAfterClose(kind, opener, ref.current.landmark?.() ?? null)?.focus({ preventScroll: true });
     };
   }, [open, id, kind, mode]);
 }

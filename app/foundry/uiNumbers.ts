@@ -19,8 +19,8 @@ export function pct(v: number | null | undefined): string {
 export type Grade = "held" | "partial" | "missed" | "ungraded";
 
 /** The thresholds every score on this route is read against — the same three
- *  the kit's ScoreChip used (components/kit/Magnitude.tsx), so a number did not
- *  change meaning when its drawing did. */
+ *  v1's kit ScoreChip used (retired with the Almanac kit in Phase 1), so a
+ *  number did not change meaning when its drawing did. */
 export function gradeOf(v: number | null | undefined): Grade {
   return typeof v !== "number" ? "ungraded" : v >= 0.75 ? "held" : v >= 0.5 ? "partial" : "missed";
 }

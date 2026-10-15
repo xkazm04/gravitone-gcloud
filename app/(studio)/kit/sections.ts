@@ -1,0 +1,21 @@
+// The kit's sections, in reading order (kit.js `SECTIONS`): one list the nav and the body both
+// read, so a section cannot be in one and missing from the other. The prototype's Floor,
+// Composition and Routes groups showed page compositions (RunRow, Pile, CullTile, the job
+// bar, live Library and Ledger frames); those arrive with their phases and join the kit then.
+
+export const SECTIONS = [
+  { id: "colour", group: "Tokens", title: "Colour", sub: "tokens/source.json · ground · signal · roles" },
+  { id: "type", group: "Tokens", title: "Type", sub: "--fs-* · floor 12px" },
+  { id: "space", group: "Tokens", title: "Space · size · radii", sub: "--sp-* · --h-* · --r-*" },
+  { id: "motion", group: "Tokens", title: "Motion", sub: "--ease · --dur-*" },
+  { id: "frame", group: "Tokens", title: "Frame · layers", sub: "--hdr-h · --z-*" },
+  { id: "signal", group: "Signal", title: "Chip · Tally · Source", sub: "chip · tally · source · ledger · channel" },
+  { id: "keys", group: "Signal", title: "Keys · Hint · Ghost", sub: "KEYMAP · every mode" },
+  { id: "evidence", group: "Signal", title: "Evidence", sub: "provenance · breaks · errors · facts" },
+  { id: "status", group: "Signal", title: "Status", sub: "STATUS · machine → look → label" },
+  { id: "controls", group: "Controls", title: "Buttons", sub: "tone · size · key · disabled" },
+  { id: "inputs", group: "Controls", title: "Choices · fields", sub: "toggle · seg · field · facet · fold" },
+  { id: "structure", group: "Structure", title: "Panels · headings · empty", sub: "panel · caps heading · empty" },
+] as const;
+
+export type SectionId = (typeof SECTIONS)[number]["id"];

@@ -2,34 +2,46 @@
 product: Gravitone Studio
 vault: []
 vault_subdir: Kit
-features_root: app
-entry: app/layout.tsx
+features_root: app/(studio)
+entry: app/(studio)/layout.tsx
 aliases: "@=."
-kit_path: components/kit
-doctrine: components/kit/README.md
+kit_path: packages/ui/src/components
+doctrine: packages/ui/src/components/INVENTORY.md
 batch_builders: 3
 contest_seats: ""
 ---
 
 # kit overlay - gravitone-gcloud
 
-Defaults in force: vault `<repo>/.kit`, subdir `Kit`. Pilot: `/foundry` first (2026-09-29); the long-running
-full-coverage sessions start only after the owner gates the foundry pilot.
+Defaults in force: vault `<repo>/.kit`, subdir `Kit`.
 
 ## World
 
-The v2 world is **Almanac**, chosen 2026-09-29 by the owner from contest `landing-nextgen-brand-r2` (variant A/2).
-Source of truth for the look: `docs/design/almanac-v2/` (committed 2026-10-14; the git-ignored
-arena copy at `.contest/arena/landing-nextgen-brand-r2/` exists only on the machine that ran it)
-(`index.html` door + brand sheet, `foundry.html` working surface, `NOTES.md` philosophy). It is scoped:
-`[data-world="almanac"]` on a route root switches a surface into v2; un-migrated surfaces keep Obsidian untouched.
-Colour literals for the world live in `components/ui/tokens.ts` (`WORLD_ALMANAC`) and nowhere else.
+**Corrected 2026-10-15 (Phase 1 wave 3).** This overlay pointed at v1's Almanac kit (`components/kit`,
+`/kit` as its specimen sheet, `WORLD_ALMANAC` in `components/ui/tokens.ts`). That kit retired: owner decision 5
+(`docs/next/migration-plan.md` §8) replaced it at `/kit` with the rebuild's design system. What is left of
+`components/kit` is only what a v1 route still imports, and it shrinks as each v1 surface is retired.
+
+The world is now **the Watershed** (contest `foundry-next-design-r4`, winner A/1), extracted from the approved
+prototype `docs/next/prototype/app/` (its own kit page is `kit.html` + `kit.js` + `kit.css`). It is scoped:
+`[data-world="next"]` is the root element of the `(studio)` route group (`app/(studio)/layout.tsx`); v1 routes
+keep their worlds untouched until their phase cuts them over.
+
+- Tokens: `packages/ui/tokens/source.json` (primitives -> roles, admission in `tokens/ADMISSION.md`) ->
+  `npm run tokens:gen` -> `packages/ui/src/tokens.css` + `tokens.ts`. Never edit the generated files.
+- Components: `packages/ui/src/components/<dir>/<File>.tsx` + a co-located `*.module.css` over token variables,
+  imported as `@gt/ui/components/<dir>/<File>.tsx`. Inventory and the v1 signal mapping: `INVENTORY.md`.
+- The specimen sheet: `/kit` (`app/(studio)/kit/`), every component in its states, the tokens read from
+  `source.json`, the whole status table, the key legend of every keymap mode.
 
 ## Gates
 
+- `npm run next-structure`
+- `npm run typecheck:next`
+- `npm run test:unit`
+- `npm run tokens:check` (no raw colour or px in a `*.module.css`; every `var(--x)` a token)
 - `npm run typecheck`
 - `npm run lint:ratchet`
-- `npm run check:type` (12px floor)
 - `npm run check:narration`
 - `npm test`
 - `npm run build`
@@ -37,23 +49,26 @@ Colour literals for the world live in `components/ui/tokens.ts` (`WORLD_ALMANAC`
 ## Instruments
 
 - Shooter: `NEXT_PUBLIC_DEV_AUTH=1 NEXT_DIST_DIR=.next-cx npx next dev -p 3007`, then
-  `CX_BASE=http://localhost:3007 node pipeline/cx-capture.mjs <screen-id> out.png --width 1920`
+  `CX_BASE=http://localhost:3007 node pipeline/cx-capture.mjs kit out.png --width 1920`
+- The kit probe: `tests/live/kit.live.spec.ts` (every component specimen rendered, nothing under 12px).
 - Divergence: `node ../ai-registry/skills/kit/scripts/style-divergence.mjs --repo . --out .kit/Kit/inventory`
 
 ## Repo law
 
 Read CLAUDE.md + AGENTS.md before building. Next.js here is not the one you know: read `node_modules/next/dist/docs/`.
 Rendered text: the app does not explain itself (see CLAUDE.md "The app does not explain itself"); state rides on
-tallies, marks, shapes. Real errors and destructive confirms explain in full. Colour literals only in tokens.ts.
-Type floor 12px. Commit on the current branch; never push. `--no-verify` is denied.
+tallies, marks, shapes. Real errors and destructive confirms explain in full. Design values only through tokens:
+a new value is admitted in `source.json` with its role, never typed into a module. Type floor 12px.
+Commit on the current branch; never push. `--no-verify` is denied.
 
 ## Visibility order
 
-/ (door), /foundry, /projects, /studio, /library
+/kit, then each rebuild route as its phase ships it: /ledger, /floor, /projects, /library
 
 ## Taste
 
 - 2026-09-29 owner: "not just theming, a systematical redesign (extraction of shared components, redesigning into v2 world,
-  application into new theme with possibly adjusted layout)". Exercise on /foundry first, then hand over to long sessions.
+  application into new theme with possibly adjusted layout)".
+- 2026-10-15 owner: extraction changes names, never pixels; the design leads (plan §3.3).
 
 ## Skill improvement log

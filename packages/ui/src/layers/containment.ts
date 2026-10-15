@@ -13,7 +13,10 @@
 // Focus return is new as a pure rule (modal-stack focus-and-scroll-containment):
 // the opener is captured AT OPEN, never looked up at close (by then it is a control
 // inside the closing panel), and if it is gone by close time focus falls to a
-// surviving landmark instead of the document root.
+// surviving landmark instead of the document root. A kind that never took focus
+// (the tooltip) returns none.
+
+import { POLICY, type LayerKind } from "./stack.ts";
 
 type Styled<K extends string> = { style: Record<K, string> };
 
@@ -59,8 +62,13 @@ export function createScrollLock(env: () => LockEnv | null): ScrollLock {
 
 export type Focusable = { readonly isConnected: boolean; focus(options?: { preventScroll?: boolean }): void };
 
-/** Where focus goes when a layer closes: its opener if still in the document, else the landmark. */
-export function focusAfterClose<T extends Focusable>(opener: T | null, landmark: T | null): T | null {
+/**
+ * Where focus goes when a layer closes: its opener if still in the document, else the
+ * landmark - unless the kind's policy says focus never moved in (a tooltip), in which
+ * case nowhere: the user's focus is left exactly where it is (WCAG 1.4.13).
+ */
+export function focusAfterClose<T extends Focusable>(kind: LayerKind, opener: T | null, landmark: T | null): T | null {
+  if (!POLICY[kind].returnsFocus) return null;
   if (opener?.isConnected === true) return opener;
   return landmark?.isConnected === true ? landmark : null;
 }

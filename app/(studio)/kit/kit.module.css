@@ -1,0 +1,64 @@
+/* The kit page's own layout (prototype kit.css). Specimens are drawn by @gt/ui's modules;
+   this file only places them on the sheet. Where kit.css used a value no token holds, the
+   nearest rung is used and the delta is in the Lot 9 report; the three marked PAGE MEASURE
+   are typographic lengths (em) waiting on the Director's local-constant ruling. */
+
+.kit{flex:1;min-height:0;display:grid;grid-template-columns:max-content minmax(0,1fr)}
+
+.nav{border-right:1px solid var(--hair);overflow:auto;padding:var(--sp-5) var(--sp-3) var(--sp-7);background:var(--panel-ground)}
+.grp{font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding:var(--sp-loose) var(--sp-4) var(--sp-2)}
+.nav a{display:flex;justify-content:space-between;gap:var(--sp-5);padding:var(--sp-2) var(--sp-4);border-radius:var(--r-sm);font-size:var(--fs-ui);color:var(--muted)}
+.nav a:hover{background:var(--wash);color:var(--ink-bright)}
+.nav a[aria-current=location]{color:var(--ink-bright);background:color-mix(in srgb,var(--cyan) 8%,transparent);box-shadow:inset var(--stroke-mark) 0 0 var(--cyan)}
+.count{font:500 var(--fs-micro)/1.5 var(--mono);color:var(--faint)}
+
+.body{overflow:auto;padding:var(--sp-6) var(--sp-7) calc(var(--sp-7) * 5);scroll-behavior:smooth}
+/* PAGE MEASURE: kit.css capped a section at 1400px. */
+.sec{max-width:93em;margin:0 auto calc(var(--sp-6) * 2);scroll-margin-top:var(--sp-5)}
+.sec>h2{display:flex;align-items:baseline;gap:var(--sp-5);font:600 var(--fs-h2)/1.2 var(--sans);color:var(--ink-bright);padding-bottom:var(--sp-4);margin-bottom:var(--sp-loose);border-bottom:1px solid var(--hair)}
+.sub{font:500 var(--fs-micro)/1 var(--mono);color:var(--faint)}
+
+/* PAGE MEASURE: kit.css's minmax(260px,1fr); a card is sized by the text it carries. */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,17.5em),1fr));gap:var(--sp-5)}
+.wide{grid-column:1/-1}
+
+.spec{border:1px solid var(--hair);border-radius:var(--r);background:color-mix(in srgb,var(--wash) 37.5%,transparent);padding:var(--sp-5);display:flex;flex-direction:column;gap:var(--sp-4);min-width:0}
+.nm{display:flex;justify-content:space-between;gap:var(--sp-3);font:600 var(--fs-micro)/1 var(--mono);color:var(--faint)}
+.nm b{color:var(--ink-bright);font-weight:700}
+.row{display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center}
+.col{display:flex;flex-direction:column;gap:var(--sp-3)}
+.lab{font:500 var(--fs-micro)/1.3 var(--mono);color:var(--faint);min-width:7em}
+.grow{flex:1;min-width:0}
+
+/* tokens */
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,9em),1fr));gap:var(--sp-5)}
+.sw{display:flex;flex-direction:column;gap:var(--sp-2);min-width:0}
+.sw i{display:block;height:calc(var(--h-control) + var(--sp-4));border-radius:var(--r-control);border:1px solid var(--hair-2)}
+.sw span{font:600 var(--fs-micro)/1.3 var(--mono);color:var(--ink-bright);overflow-wrap:anywhere}
+.sw small{font:500 var(--fs-micro)/1.3 var(--mono);color:var(--faint);overflow-wrap:anywhere}
+.typeRow{display:grid;grid-template-columns:minmax(0,12em) minmax(0,1fr);gap:var(--sp-wide);align-items:baseline;padding:var(--sp-3) 0;border-bottom:1px solid var(--hair)}
+.typeRow .lab{min-width:0}
+.sample{color:var(--ink-bright);overflow-wrap:anywhere}
+.measureRow{display:flex;align-items:center;gap:var(--sp-5)}
+.measureRow i{display:block;height:var(--sp-5);background:var(--cyan);opacity:.6;border-radius:var(--sp-nudge);flex:none}
+.radiusBox{width:calc(var(--h-control) * 1.8);height:calc(var(--h-control) + var(--sp-3));border:var(--stroke-glyph) solid var(--hair-3);background:var(--ink-3)}
+.value{font:500 var(--fs-meta)/1.3 var(--mono);color:var(--ink-bright)}
+
+.motion{display:flex;gap:var(--sp-4);flex-wrap:wrap}
+.motion button{width:calc(var(--h-control) * 3.33);height:calc(var(--h-control) * 1.67);border-radius:var(--r-control);border:1px solid var(--hair-2);background:var(--ink-2);font:600 var(--fs-micro)/1.3 var(--mono);color:var(--muted)}
+.motion button:hover{border-color:var(--hair-3);color:var(--ink-bright)}
+.playLock{animation:lockIn .9s var(--ease)}
+.playFade{animation:fadeUp .35s var(--ease)}
+.playMoved{animation:moved .9s var(--ease)}
+.playShake{animation:shake .4s}
+@keyframes lockIn{0%{transform:scale(.8);box-shadow:0 0 0 0 color-mix(in srgb,var(--emerald) 80%,transparent)}50%{transform:scale(1.05);box-shadow:0 0 0 var(--sp-3) transparent,0 0 calc(var(--sp-4) * 3) color-mix(in srgb,var(--emerald) 60%,transparent)}100%{transform:none}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(var(--sp-2))}}
+@keyframes moved{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--cyan) 90%,transparent)}100%{box-shadow:0 0 0 var(--sp-4) transparent}}
+@keyframes shake{25%{transform:translateX(calc(-1 * var(--sp-tight)))}75%{transform:translateX(var(--sp-tight))}}
+
+/* the status table */
+.table{width:100%;border-collapse:collapse;font-size:var(--fs-ui)}
+.table th,.table td{padding:var(--sp-2) var(--sp-3);border-bottom:1px solid var(--hair);text-align:left;vertical-align:middle}
+.table th{font:600 var(--fs-micro)/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.mono{font-family:var(--mono);font-size:var(--fs-meta);color:var(--muted)}
+.glyph{width:var(--size-glyph);height:var(--size-glyph);color:var(--muted)}

@@ -1,0 +1,67 @@
+/* THE NEW WORLD'S GLOBAL SHEET - what the @gt/ui components assume of the page around them
+   (the prototype's tokens.css reset, focus ring, motion rule), scoped to the world root so
+   it reaches nothing outside `[data-world="next"]`.
+
+   WHY `:where()`. Every rule here must LOSE to a component's CSS Module, exactly as the
+   prototype's bare `button{...}` (0,0,1) lost to `.btn` (0,1,0). `[data-world=next] button`
+   would be (0,1,1) and beat every module class - the reset would strip the borders off every
+   button in the kit. `:where()` contributes zero specificity, so these are (0,0,1) or less.
+
+   WHY UNLAYERED. v1's globals.css (Tailwind preflight, its focus ring) sits in `@layer base`;
+   unlayered rules win over any layer regardless of specificity, so this sheet overrides
+   preflight where the two disagree, and the modules (also unlayered, higher specificity)
+   override this sheet. Measured leak list: see the Lot 9 report.
+
+   Global CSS is never unloaded on client navigation (Next docs, CSS: "this currently does not
+   remove stylesheets as you navigate"), which is the other reason every selector is scoped:
+   after /kit -> /projects this sheet is still in the document and must touch nothing there. */
+
+/* text-rendering: v1's unlayered `* { text-rendering: optimizeLegibility }` reached every
+   element of the world and changes kerning and ligatures; the prototype rendered at auto. */
+:where([data-world="next"]),
+:where([data-world="next"]) *,
+:where([data-world="next"]) *::before,
+:where([data-world="next"]) *::after { box-sizing: border-box; margin: 0; padding: 0; text-rendering: auto; }
+
+:where([data-world="next"]) button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+:where([data-world="next"]) a { color: inherit; text-decoration: none; }
+:where([data-world="next"]) :where(input, select, textarea) { font: inherit; color: var(--ink-bright); }
+:where([data-world="next"]) img { display: block; }
+:where([data-world="next"]) :where(ul, ol) { list-style: none; }
+
+/* WHAT v1's PREFLIGHT CHANGES THAT THE PROTOTYPE DID NOT (measured on /kit, 2026-10-15: of
+   Tailwind's base rules matching inside the world, these four differ from the browser
+   defaults the prototype was drawn against). `revert` rolls each back to the user-agent
+   value; a module class still wins on specificity. The rest of preflight agrees with this
+   sheet's reset or is overridden by it (box-sizing, margins, button and link resets). */
+:where([data-world="next"]) :where(svg, video, canvas, audio, iframe, embed, object) { display: revert; vertical-align: revert; }
+:where([data-world="next"]) :where(h1, h2, h3, h4, h5, h6) { font-size: revert; font-weight: revert; }
+:where([data-world="next"]) small { font-size: revert; }
+:where([data-world="next"]) :where(code, kbd, samp, pre) { font-family: revert; font-size: revert; }
+
+/* The ring: tokens.css `:focus-visible`. v1's base ring is the same cyan at the same width;
+   the prototype adds the 6px corner, which v1's lacks. */
+:where([data-world="next"]) :focus-visible { outline: var(--stroke-mark) solid var(--cyan); outline-offset: var(--sp-nudge); border-radius: var(--r-chip); }
+
+:where([data-world="next"]) ::-webkit-scrollbar { width: var(--sp-3); height: var(--sp-3); }
+:where([data-world="next"]) ::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--cyan) 22%, transparent); border-radius: var(--sp-3); }
+:where([data-world="next"]) ::-webkit-scrollbar-track { background: transparent; }
+
+/* The prototype's ambient light (tokens.css `body::before`). Its three hues are Tailwind's
+   cyan-400, violet-500 and emerald-500, not the studio's signal tokens, and no token holds
+   them: they are kept literal here, in the one global sheet, rather than shifted onto the
+   signal hues. Owner to rule whether they become roles. */
+[data-world="next"]::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(900px 500px at 8% -10%, rgba(34, 211, 238, .10), transparent 60%),
+    radial-gradient(700px 600px at 100% 110%, rgba(139, 92, 246, .10), transparent 60%),
+    radial-gradient(600px 400px at 70% 0%, rgba(16, 185, 129, .06), transparent 60%);
+}
+
+/* The blanket motion rule (tokens.css), scoped. v1 has the same rule unscoped in globals.css. */
+@media (prefers-reduced-motion: reduce) {
+  :where([data-world="next"]) *,
+  :where([data-world="next"]) *::before,
+  :where([data-world="next"]) *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

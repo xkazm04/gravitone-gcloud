@@ -136,8 +136,40 @@ describe("focus returns to the opener", () => {
   it("the opener when it survives, else the landmark, never the void", () => {
     const opener = node(true);
     const landmark = node(true);
-    expect(focusAfterClose(opener, landmark)).toBe(opener);
-    expect(focusAfterClose(node(false), landmark)).toBe(landmark);
-    expect(focusAfterClose(null, node(false))).toBeNull();
+    expect(focusAfterClose("dialog", opener, landmark)).toBe(opener);
+    expect(focusAfterClose("dialog", node(false), landmark)).toBe(landmark);
+    expect(focusAfterClose("dialog", null, node(false))).toBeNull();
+  });
+  it("a tooltip moves no focus on close, even with its opener and a landmark alive (WCAG 1.4.13)", () => {
+    expect(focusAfterClose("tooltip", node(true), node(true))).toBeNull();
+    expect(focusAfterClose("popover", node(true), node(true))).not.toBeNull();
+  });
+});
+
+describe("the tooltip kind (a hover or focus disclosure)", () => {
+  const tip = (more: Partial<LayerEntry> = {}) => entry("tip", "tooltip", { contains: (n) => n === "tip", anchorContains: (n) => n === "glyph", ...more });
+  it("one Escape dismisses it without the pointer or focus moving, and only it", () => {
+    const s = stackOf(entry("sheet", "sheet", { mode: "board.cull" }), tip());
+    expect(verb(decide(key("Escape"), s, "floor"))).toBe("close:tip");
+    expect(verb(decide(key("Escape"), closing(s, "tip").stack, "floor"))).toBe("close:sheet");
+  });
+  it("does not claim the keyboard: the page's rows, and a layer's mode beneath, keep firing", () => {
+    expect(verb(decide(key("c"), stackOf(tip()), "floor"))).toBe("calendar");
+    expect(verb(decide(key("k"), stackOf(entry("sheet", "sheet", { mode: "board.cull" }), tip()), "floor"))).toBe("keep");
+  });
+  it("Escape in a named field still reaches the tip first: the dismissal is not an inner back-out", () => {
+    const s = stackOf(entry("sheet", "sheet", { mode: "board.review" }), tip());
+    expect(verb(decide(key("Escape", { target: { editable: true, field: "note", control: false } }), s, "floor"))).toBe("close:tip");
+  });
+  it("an outside press closes it and keeps walking; a press on its glyph or inside it does not", () => {
+    const s = stackOf(entry("menu", "popover", { contains: (n) => n === "panel" }), tip());
+    expect(outsidePress(s, "page")).toEqual(["tip", "menu"]);
+    expect(outsidePress(s, "panel")).toEqual(["tip"]);
+    expect(outsidePress(stackOf(tip()), "glyph")).toEqual([]);
+    expect(outsidePress(stackOf(tip()), "tip")).toEqual([]);
+  });
+  it("is never the focus-trap owner, so a dialog beneath it keeps its trap", () => {
+    expect(trapOwner(stackOf(tip()))).toBeNull();
+    expect(trapOwner(stackOf(entry("d", "dialog"), tip()))).toBe("d");
   });
 });

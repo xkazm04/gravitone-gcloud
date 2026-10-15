@@ -37,9 +37,17 @@ export type Mutant = {
  * unguarded probe lowers the live count and the same probe asks for this number
  * to be lowered to match, so the gain is kept.
  */
-export const UNGUARDED_PROBE_BUDGET = 249;
+export const UNGUARDED_PROBE_BUDGET = 246;
 
 export const MUTANTS: Mutant[] = [
+  {
+    id: "session-cross-origin-sets-cookie",
+    probe: "server-seam.probe.spec.ts",
+    file: "app/api/session/route.ts",
+    find: "  if (!sameOrigin(req)) return envelope(crossOrigin, \"session\");\n  const secure = secureFor(req);",
+    replace: "  const secure = secureFor(req);",
+    why: "A cross-site page posts its own Firebase token to /api/session and the victim's browser is signed in as the attacker.",
+  },
   {
     id: "network-seal-lets-real-hosts-through",
     probe: "network-seal.probe.spec.ts",
@@ -257,14 +265,6 @@ export const MUTANTS: Mutant[] = [
     why: "The bell names a job by its raw internal id instead of a word the creator knows.",
   },
   {
-    id: "kit-hash-law-lost",
-    probe: "kit-hash.probe.spec.ts",
-    file: "app/kit/catalog.ts",
-    find: "h === \"identity\" || h === \"law\" ||",
-    replace: "h === \"identity\" ||",
-    why: "A shared #law link opens the kit on no module.",
-  },
-  {
     id: "pip-hollow-too-faint",
     probe: "pip-contrast.probe.spec.ts",
     file: "components/ui/signal/PipRow.tsx",
@@ -347,9 +347,9 @@ export const MUTANTS: Mutant[] = [
   {
     id: "source-mojibake",
     probe: "source-encoding.probe.spec.ts",
-    file: "app/kit/catalog.ts",
-    find: "export function kitModuleForHash",
-    replace: "// â€\nexport function kitModuleForHash",
+    file: "app/(studio)/kit/sections.ts",
+    find: "export type SectionId",
+    replace: "// â€\nexport type SectionId",
     why: "A double-encoded character lands in a shipped source file.",
   },
   {

@@ -47,8 +47,12 @@ export const SCREENS = {
   "library-animations": { url: "/library", tab: "Animations" },
   playground: { url: "/playground" },
   foundry: { url: "/foundry" },
+  // The new world's kit (app/(studio)/kit, 2026-10-15). v1's Almanac kit had Law, Parts and
+  // Migration tabs; it retired whole, and the ids were kept (plan §5.7: ids are re-mapped
+  // here, the vocabulary stays) as anchors of the nearest section of the one page: the
+  // token law, the component specimens, and the status table that replaced the five copies.
   kit: { url: "/kit" },
-  "kit-law": { url: "/kit", tab: "Law" },
-  "kit-parts": { url: "/kit", tab: "Parts" },
-  "kit-migration": { url: "/kit", tab: "Migration" },
+  "kit-law": { url: "/kit#colour" },
+  "kit-parts": { url: "/kit#signal" },
+  "kit-migration": { url: "/kit#status" },
 };

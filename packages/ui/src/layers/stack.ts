@@ -25,8 +25,18 @@
 //     the same reason) instead of deleting the middle of the stack under them.
 // Dropped: v1's `onKey` trap delivery - non-Escape keys now reach a layer through
 // its keymap mode, so there is one routing path instead of two.
+//
+// The TOOLTIP kind (wave 3) is the disclosure a hover or a focus opens - the Hint's
+// tip. WCAG 1.4.13 asks three things of it and the policy row carries all three:
+// dismissible without moving the pointer or focus (it is on the stack, so Escape
+// routes to it like to any top layer), not claiming the keyboard (the page's rows
+// keep firing while a tip is up), and RETURNING NO FOCUS on close - focus never left
+// the control that opened it, so "restoring" it would at best do nothing and at
+// worst steal it from wherever the user has since moved. v1's Hint dismissed itself
+// with private Escape and pointerdown listeners (components/ui/signal/Hint.tsx); a
+// second Escape path is exactly what the stack exists to remove.
 
-export type LayerKind = "sheet" | "dialog" | "popover" | "zoom";
+export type LayerKind = "sheet" | "dialog" | "popover" | "zoom" | "tooltip";
 export type DismissReason = "escape" | "outside" | "explicit";
 
 export type LayerPolicy = {
@@ -36,18 +46,22 @@ export type LayerPolicy = {
   readonly outside: boolean;
   /** Traps focus and holds the scroll lock; an outside press never walks past it. */
   readonly modal: boolean;
+  /** On close, focus goes back to the opener. False only where focus never moved in. */
+  readonly returnsFocus: boolean;
 };
 
 /**
  * Policy by kind. The sheet and dialogs hold decisions and typed input, so a stray
  * press outside does not discard them; a popover holds nothing and closes lightly.
- * The zoom is a lens over the desk: the desk's keys keep working through it.
+ * The zoom is a lens over the desk: the desk's keys keep working through it. A
+ * tooltip is lighter still: it claims nothing and gives nothing back.
  */
 export const POLICY: Readonly<Record<LayerKind, LayerPolicy>> = {
-  sheet: { claimsKeys: true, outside: false, modal: true },
-  dialog: { claimsKeys: true, outside: false, modal: true },
-  popover: { claimsKeys: true, outside: true, modal: false },
-  zoom: { claimsKeys: false, outside: false, modal: false },
+  sheet: { claimsKeys: true, outside: false, modal: true, returnsFocus: true },
+  dialog: { claimsKeys: true, outside: false, modal: true, returnsFocus: true },
+  popover: { claimsKeys: true, outside: true, modal: false, returnsFocus: true },
+  zoom: { claimsKeys: false, outside: false, modal: false, returnsFocus: true },
+  tooltip: { claimsKeys: false, outside: true, modal: false, returnsFocus: false },
 };
 
 export type LayerEntry = {

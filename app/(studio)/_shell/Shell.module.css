@@ -1,0 +1,43 @@
+/* The (studio) world's frame and header: tokens.css `body` + `[data-component=StudioHeader]`,
+   `.brand`, `.nav`, `.hdr-right`, `.kit-link`. Every value is a token, a colour derived from
+   one, or (marked PAGE MEASURE) a typographic length with no token yet - see the report's
+   open question on a countable local-constant hatch. */
+
+/* The world root: the prototype's body. A fixed frame; each route scrolls inside itself. */
+.world{position:relative;isolation:isolate;height:100vh;display:flex;flex-direction:column;overflow:clip;background:var(--ink);color:var(--text);font:var(--fs-body)/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+.main{flex:1;min-height:0;position:relative;display:flex;flex-direction:column}
+
+.skip{position:absolute;z-index:var(--z-toast);left:var(--sp-wide);top:var(--sp-3);padding:var(--sp-2) var(--sp-4);border-radius:var(--r-control);background:var(--ink-4);color:var(--ink-bright);transform:translateY(-200%)}
+.skip:focus-visible{transform:none}
+
+.header{position:relative;z-index:var(--z-header);flex:none;height:var(--hdr-h);display:flex;align-items:center;gap:var(--sp-6);padding:0 var(--sp-wide);border-bottom:1px solid var(--hair);background:color-mix(in srgb,var(--ink) 86%,transparent);backdrop-filter:blur(var(--sp-4))}
+
+/* .brand: serif 20px in the prototype; the type scale has no 20 and this is its one use, so it
+   sits on --fs-h2 (19px). Logged as a 1px delta. */
+.brand{display:flex;align-items:center;gap:var(--sp-4);font:600 var(--fs-h2)/1 var(--serif);color:var(--ink-bright);letter-spacing:-.01em}
+.mark{flex:none}
+.markRim{stroke:var(--hair-3)}
+.markBars{stroke:var(--cyan);stroke-width:var(--stroke-mark);stroke-linecap:round}
+.markWall{stroke:var(--amber);stroke-width:calc(var(--stroke-mark) * 1.1)}
+
+.nav{display:flex;gap:1px;min-width:0}
+.nav a{white-space:nowrap;padding:var(--sp-3) var(--sp-4);border-radius:var(--r-control);font:500 var(--fs-nav)/1 var(--sans);color:var(--muted);display:inline-flex;gap:var(--sp-snug);align-items:center}
+.nav a[href]:hover{color:var(--ink-bright);background:var(--wash)}
+.nav [aria-current=page]{color:var(--ink-bright);box-shadow:inset 0 calc(-1 * var(--stroke-mark)) 0 var(--cyan)}
+.nav [aria-disabled=true]{color:var(--faint);cursor:not-allowed}
+.sep{width:1px;height:calc(var(--sp-4) * 2);background:var(--hair-2);margin:0 var(--sp-1);align-self:center}
+
+.right{margin-left:auto;display:flex;gap:var(--sp-3);align-items:center}
+/* PAGE MEASURE: the three slots hold the shape of the chips Phase 2 feeds into them. The
+   prototype's NEXT button capped at 360px; the chips sized to their text. */
+.slotNext{width:22em}
+.slotSpend{width:9em}
+.slotLedger{width:7em}
+
+.kitLink{font:600 var(--fs-micro)/1 var(--mono);color:var(--faint);padding:var(--sp-2) var(--sp-3);border-radius:var(--r-chip);border:1px solid var(--hair)}
+.kitLink:hover{color:var(--ink-bright);border-color:var(--hair-3)}
+.kitLink[aria-current=page]{color:var(--ink-bright);border-color:var(--hair-3)}
+
+@media (max-width:1500px){ .nav a{padding:var(--sp-3) var(--sp-snug);font-size:var(--fs-ui)} .header{gap:var(--sp-5)} .slotNext{width:16em} }
+@media (max-width:1340px){ .slotSpend{display:none} .slotNext{width:8em} }
+@media (max-width:1180px){ .brand span{display:none} .sep{display:none} .nav a{padding:var(--sp-3) var(--sp-2)} .kitLink{display:none} }
