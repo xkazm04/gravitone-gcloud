@@ -5590,6 +5590,118 @@
           "evidence": "lib/imaging/router.ts:518 Vision requests assert only a capability; their contract has no required semantic call class mapped to a tier-and-effort pair."
         }
       ]
+    },
+    "5e10d5d4-71e2-4a69-8ffc-518cfa9cb987/motion": {
+      "context": "studio-design-system",
+      "subject": "motion",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T23:16:49.706Z",
+      "worker": "eb1ea0c5-8ea1-4b28-86d4-8d2d431b59b3",
+      "techniques": [
+        {
+          "technique": "content-bearing-degradation",
+          "verdict": "deviation",
+          "evidence": "components/ui/deck/DeckCard.tsx:187 Both initial variants hide the entire card, making its content depend on playback rather than declaring a revealed, settled initial render."
+        },
+        {
+          "technique": "gesture-decomposition",
+          "verdict": "conformant",
+          "evidence": "components/ui/deck/cardModel.ts:111 The deal separates its timed opacity track from its transform spring, allowing their timing and character to be tuned independently."
+        },
+        {
+          "technique": "loop-pause-governance",
+          "verdict": "deviation",
+          "evidence": "components/ui/Equalizer.tsx:32 The equalizer derives its pause locally from visibility alone instead of consuming one merged signal covering preference, foreground state, visibility and user stop."
+        },
+        {
+          "technique": "performance-discipline",
+          "verdict": "deviation",
+          "evidence": "components/ui/deck/DeckCard.tsx:345 The detail reveal animates layout-affecting height instead of using the standard's measured transform approach."
+        },
+        {
+          "technique": "preset-vocabulary",
+          "verdict": "deviation",
+          "evidence": "components/ui/deck/cardModel.ts:106 The shared deal configuration inlines its fallback duration instead of referencing a duration class from a token ladder."
+        },
+        {
+          "technique": "reduced-motion-mechanics",
+          "verdict": "deviation",
+          "evidence": "app/globals.css:358 CSS reduction is implemented through the universal kill explicitly rejected by the technique."
+        },
+        {
+          "technique": "taste-budgets",
+          "verdict": "deviation",
+          "evidence": "components/ui/deck/DeckStage.tsx:55 The radial stagger grows with the number of rows and has neither a maximum delay nor a named total entrance budget."
+        },
+        {
+          "technique": "unprompted-motion-lifecycle",
+          "verdict": "deviation",
+          "evidence": "app/globals.css:136 The shell's automatic decorative aurora repeats indefinitely without a visible, operable stop control."
+        }
+      ]
+    },
+    "9c88a06c-339e-4987-a1fe-8fccba8a1776/motion": {
+      "context": "pipeline-board-interaction",
+      "subject": "motion",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T23:16:49.706Z",
+      "worker": "eb1ea0c5-8ea1-4b28-86d4-8d2d431b59b3",
+      "techniques": [
+        {
+          "technique": "content-bearing-degradation",
+          "verdict": "conformant",
+          "evidence": "app/foundry/pipeline/useBoardCull.ts:107 Disabling choreography removes entrance instructions while retaining the mounted card content."
+        },
+        {
+          "technique": "continuity-across-change",
+          "verdict": "conformant",
+          "evidence": "app/foundry/pipeline/useCards.tsx:60 Mounted cards retain item identity across placement updates, allowing the existing node's position to change through its transform transition."
+        },
+        {
+          "technique": "gesture-decomposition",
+          "verdict": "conformant",
+          "evidence": "app/foundry/pipeline/useGhostFlight.ts:86 A refused move enters an explicit return phase, retargets the ghost to its home position, and clears the phase after settlement."
+        },
+        {
+          "technique": "loop-pause-governance",
+          "verdict": "deviation",
+          "evidence": "app/foundry/pipeline/StageHeads.tsx:106 The header loop checks only element availability and reduced motion, without the required merged foreground, visibility and user-stop vetoes."
+        },
+        {
+          "technique": "one-shot-guarding",
+          "verdict": "deviation",
+          "evidence": "app/foundry/pipeline/Card.tsx:103 Entrance state dies with the card; culling waves assign entrances to cards absent from the currently mounted set without a retained seen-set."
+        },
+        {
+          "technique": "performance-discipline",
+          "verdict": "deviation",
+          "evidence": "app/foundry/pipeline/Card.tsx:143 Card transitions animate border color, background color and box shadow, exceeding the technique's transform-and-opacity restriction."
+        },
+        {
+          "technique": "preset-vocabulary",
+          "verdict": "deviation",
+          "evidence": "app/foundry/pipeline/Card.tsx:111 The reusable card entrance embeds its own duration rather than naming a shared duration class."
+        },
+        {
+          "technique": "reduced-motion-mechanics",
+          "verdict": "deviation",
+          "evidence": "app/foundry/pipeline/Card.tsx:107 The imperative entrance is gated by frozen mount-time eligibility; subsequent reduction changes cannot cancel its travel through this effect."
+        },
+        {
+          "technique": "taste-budgets",
+          "verdict": "deviation",
+          "evidence": "app/foundry/pipeline/useBoardCull.ts:97 Entrance delays use local numeric stagger values and an uncapped column multiplier; the visible-card cap does not enforce a total duration budget."
+        },
+        {
+          "technique": "unprompted-motion-lifecycle",
+          "verdict": "deviation",
+          "evidence": "app/foundry/pipeline/StageHeads.tsx:107 The automatically mounted header sweep repeats beyond five seconds without a visible pause or stop control."
+        }
+      ]
     }
   }
 }

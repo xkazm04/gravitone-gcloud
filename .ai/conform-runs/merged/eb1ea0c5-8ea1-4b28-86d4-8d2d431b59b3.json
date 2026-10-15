@@ -1,0 +1,165 @@
+{
+ "schema": "conform-run/1",
+ "worker": "eb1ea0c5-8ea1-4b28-86d4-8d2d431b59b3",
+ "subject": "motion",
+ "evaluatedAt": "2026-10-15T23:16:49.706004+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "studio-design-system",
+   "subject": "motion",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/globals.css:358 Reduced motion uses a universal animation and transition kill instead of the standard's per-preset fallbacks.",
+   "techniques": [
+    {
+     "technique": "content-bearing-degradation",
+     "verdict": "deviation",
+     "evidence": "components/ui/deck/DeckCard.tsx:187 Both initial variants hide the entire card, making its content depend on playback rather than declaring a revealed, settled initial render."
+    },
+    {
+     "technique": "gesture-decomposition",
+     "verdict": "conformant",
+     "evidence": "components/ui/deck/cardModel.ts:111 The deal separates its timed opacity track from its transform spring, allowing their timing and character to be tuned independently."
+    },
+    {
+     "technique": "loop-pause-governance",
+     "verdict": "deviation",
+     "evidence": "components/ui/Equalizer.tsx:32 The equalizer derives its pause locally from visibility alone instead of consuming one merged signal covering preference, foreground state, visibility and user stop."
+    },
+    {
+     "technique": "performance-discipline",
+     "verdict": "deviation",
+     "evidence": "components/ui/deck/DeckCard.tsx:345 The detail reveal animates layout-affecting height instead of using the standard's measured transform approach."
+    },
+    {
+     "technique": "preset-vocabulary",
+     "verdict": "deviation",
+     "evidence": "components/ui/deck/cardModel.ts:106 The shared deal configuration inlines its fallback duration instead of referencing a duration class from a token ladder."
+    },
+    {
+     "technique": "reduced-motion-mechanics",
+     "verdict": "deviation",
+     "evidence": "app/globals.css:358 CSS reduction is implemented through the universal kill explicitly rejected by the technique."
+    },
+    {
+     "technique": "taste-budgets",
+     "verdict": "deviation",
+     "evidence": "components/ui/deck/DeckStage.tsx:55 The radial stagger grows with the number of rows and has neither a maximum delay nor a named total entrance budget."
+    },
+    {
+     "technique": "unprompted-motion-lifecycle",
+     "verdict": "deviation",
+     "evidence": "app/globals.css:136 The shell's automatic decorative aurora repeats indefinitely without a visible, operable stop control."
+    }
+   ]
+  },
+  {
+   "context": "pipeline-board-interaction",
+   "subject": "motion",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/foundry/pipeline/Card.tsx:103 Entrance eligibility is remembered inside each card mount, so a previously viewed card assigned an entrance by a later culling wave can animate again.",
+   "techniques": [
+    {
+     "technique": "content-bearing-degradation",
+     "verdict": "conformant",
+     "evidence": "app/foundry/pipeline/useBoardCull.ts:107 Disabling choreography removes entrance instructions while retaining the mounted card content."
+    },
+    {
+     "technique": "continuity-across-change",
+     "verdict": "conformant",
+     "evidence": "app/foundry/pipeline/useCards.tsx:60 Mounted cards retain item identity across placement updates, allowing the existing node's position to change through its transform transition."
+    },
+    {
+     "technique": "gesture-decomposition",
+     "verdict": "conformant",
+     "evidence": "app/foundry/pipeline/useGhostFlight.ts:86 A refused move enters an explicit return phase, retargets the ghost to its home position, and clears the phase after settlement."
+    },
+    {
+     "technique": "loop-pause-governance",
+     "verdict": "deviation",
+     "evidence": "app/foundry/pipeline/StageHeads.tsx:106 The header loop checks only element availability and reduced motion, without the required merged foreground, visibility and user-stop vetoes."
+    },
+    {
+     "technique": "one-shot-guarding",
+     "verdict": "deviation",
+     "evidence": "app/foundry/pipeline/Card.tsx:103 Entrance state dies with the card; culling waves assign entrances to cards absent from the currently mounted set without a retained seen-set."
+    },
+    {
+     "technique": "performance-discipline",
+     "verdict": "deviation",
+     "evidence": "app/foundry/pipeline/Card.tsx:143 Card transitions animate border color, background color and box shadow, exceeding the technique's transform-and-opacity restriction."
+    },
+    {
+     "technique": "preset-vocabulary",
+     "verdict": "deviation",
+     "evidence": "app/foundry/pipeline/Card.tsx:111 The reusable card entrance embeds its own duration rather than naming a shared duration class."
+    },
+    {
+     "technique": "reduced-motion-mechanics",
+     "verdict": "deviation",
+     "evidence": "app/foundry/pipeline/Card.tsx:107 The imperative entrance is gated by frozen mount-time eligibility; subsequent reduction changes cannot cancel its travel through this effect."
+    },
+    {
+     "technique": "taste-budgets",
+     "verdict": "deviation",
+     "evidence": "app/foundry/pipeline/useBoardCull.ts:97 Entrance delays use local numeric stagger values and an uncapped column multiplier; the visible-card cap does not enforce a total duration budget."
+    },
+    {
+     "technique": "unprompted-motion-lifecycle",
+     "verdict": "deviation",
+     "evidence": "app/foundry/pipeline/StageHeads.tsx:107 The automatically mounted header sweep repeats beyond five seconds without a visible pause or stop control."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-15T23:16:49.706004+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "motion"
+   ],
+   "techniques": [
+    "content-bearing-degradation",
+    "gesture-decomposition",
+    "loop-pause-governance",
+    "performance-discipline",
+    "preset-vocabulary",
+    "reduced-motion-mechanics",
+    "taste-budgets",
+    "unprompted-motion-lifecycle"
+   ],
+   "deviations": 1,
+   "context": "studio-design-system",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-15T23:16:49.706004+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "motion"
+   ],
+   "techniques": [
+    "content-bearing-degradation",
+    "continuity-across-change",
+    "gesture-decomposition",
+    "loop-pause-governance",
+    "one-shot-guarding",
+    "performance-discipline",
+    "preset-vocabulary",
+    "reduced-motion-mechanics",
+    "taste-budgets",
+    "unprompted-motion-lifecycle"
+   ],
+   "deviations": 1,
+   "context": "pipeline-board-interaction",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

@@ -3526,7 +3526,11 @@
           "revision": 10,
           "changedAt": "2026-09-24",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/foundry/pipeline/Card.tsx:103 Entrance eligibility is remembered inside each card mount, so a previously viewed card assigned an entrance by a later culling wave can animate again.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:8d9b3eabe2f3b534",
+          "evaluatedRevision": 10
         },
         {
           "subject": "mcp-tools",
@@ -5132,7 +5136,11 @@
           "revision": 10,
           "changedAt": "2026-09-24",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/globals.css:358 Reduced motion uses a universal animation and transition kill instead of the standard's per-preset fallbacks.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:8d9b3eabe2f3b534",
+          "evaluatedRevision": 10
         },
         {
           "subject": "native-shell-integration",
