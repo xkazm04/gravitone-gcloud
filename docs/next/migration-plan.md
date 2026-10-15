@@ -312,6 +312,36 @@ lots) inside the phase.
   - No CLI imports from `app/`.
 
 ### Phase 1: foundation (L, 3–4 waves)
+
+> **Done 2026-10-15** (`5ff36c3`..`e6492e7`, four waves, 13 builder lots).
+> - `@gt/domain`: every §2.2 record as a zod schema; lifecycles as zod-free `*.machine.ts` tables
+>   (absorbed from v1's turn ledger, extract engine, MV/Suno queues, publish slots); `unauthenticated` (401) joins
+>   the error taxonomy.
+> - `@gt/kernel`: store (node:sqlite, WAL, BEGIN IMMEDIATE, sync tx callback; two-process no-lost-update test),
+>   migrate, blob, events (outbox by type, RFC 8785 hash chain verified by stdlib Python), lease (fencing;
+>   one JSON spec run by Node and Python; mixed-process contention test), job (missing-output planner,
+>   ceiling-before-unit, breaker, `interrupted` on crash), decision (revisioned, blind-first reveal,
+>   idempotent commit), calibration (v1's numbers pinned), spend (lapsed reservations keep counting;
+>   v1 SpendStore port), router + pricing + receipts, one DryRun mode; `openKernel`; crash-prefix
+>   enumeration in every driver.
+> - `@gt/ui`: keymap registry (one listener), layer stack (+ tooltip kind), window (50k proven), freshness,
+>   storage with eviction by registration; 29 components over generated tokens, one status table.
+> - Server seam `app/_server`: `action()`, `route()`, `serveFile()`, SSE `/api/events/stream`, session
+>   `/api/session`. `(studio)` shell + the new `/kit`; v1's Almanac kit retired (§8.5).
+> - Gates added: unit mutation rung (`npm run test:unit-mutants`, budget 0; 92/92 killed after fixes),
+>   client-closure guard (no classic zod in a browser module), per-route first-load budget
+>   (`/kit` 213,962 B gzip, of which 48.5 KB is v1's root until Phase 6), route-wide type floor +
+>   legibility live probe, `npm run style-contract` (8 prototype pages, 141 measurements).
+> - `npm run verify`: 21 of 22; the red is `sound-store` (a sibling session's uncommitted ledger), as at Phase 0.
+> - **Exit status:** kernel probes incl. crash-prefix and cross-language lease pass. The style contract holds
+>   on ledger, pair, plan, runs; five deviations remain where the prototype disagrees with ITSELF (owner to rule):
+>   `.btn` padding-right 8px in floor.css vs 10px in tokens.css; `.toggle` rest colour faint vs muted;
+>   search-field keycap inset 32px (Library) vs 34px (Ledger).
+> - **Carried forward:** Ghost outline 1.21:1 and disabled Button/TabRail text 2.2-4.3:1 are prototype-faithful
+>   contrast misses, baselined on `/kit` (owner: fix the design or keep); a lint hatch for single-component
+>   values (6 roles admitted against the test, ADMISSION.md); `(studio)` still nests under v1's root layout
+>   (Firebase in first load) until Phase 6; the compositor move to `lib/` (its session has landed);
+>   v1 `/foundry` shows new legibility findings from today's foundry-out data (not a Phase 1 change).
 - **Kernel:**
   - `kernel/store` (SQLite plus blob store, effect port for crash enumeration)
   - `kernel/lease` (with fencing token; spec tests shared with Python)
