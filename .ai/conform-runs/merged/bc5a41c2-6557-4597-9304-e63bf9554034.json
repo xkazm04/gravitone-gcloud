@@ -1,0 +1,22 @@
+{
+ "schema": "conform-run/1",
+ "worker": "bc5a41c2-6557-4597-9304-e63bf9554034",
+ "subject": "live-system-demo-film",
+ "evaluatedAt": "2026-10-15T22:17:12.713419+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "live-system-demo-film",
+   "context": "production-phases",
+   "reason": "not-applicable without the 2+ search terms that prove the absence"
+  },
+  {
+   "subject": "live-system-demo-film",
+   "context": "trailer-script",
+   "reason": "not-applicable without the 2+ search terms that prove the absence"
+  }
+ ],
+ "consults": []
+}
