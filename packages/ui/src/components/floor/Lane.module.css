@@ -1,0 +1,33 @@
+/* floor.css .lane, .lane-rail, .cell, .c-foundry, .c-weir (the wall), .c-shelf, .summary.
+   The column washes are the signal colours mixed down to the prototype's alphas; the wall's two
+   dark ends are --wall mixed toward --letterbox (the prototype wrote #5a3f0b and #7a5410). */
+.lane{display:grid;grid-template-columns:var(--cols);min-height:0}
+
+.rail{display:flex;flex-direction:column;align-items:center;gap:var(--sp-3);padding:var(--sp-4) 0;border-bottom:1px solid var(--hair);border-right:1px solid var(--hair);background:var(--ink-1);min-height:0;overflow:hidden}
+.key{flex:none}
+.mark{width:var(--size-glyph-btn);height:var(--size-glyph-btn);color:var(--muted);flex:none}
+.name{writing-mode:vertical-rl;transform:rotate(180deg);font:600 var(--fs-meta)/1 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-bright)}
+.focus{margin-top:auto;flex:none;width:var(--h-row);height:var(--h-row);border-radius:var(--r-sm);border:1px solid var(--hair-2);display:grid;place-items:center;color:var(--muted)}
+.focus:hover{color:var(--ink-bright);border-color:var(--hair-3)}
+.focus:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}
+.focusMark{width:var(--size-mark);height:var(--size-mark)}
+.focused .rail{box-shadow:inset var(--stroke-mark) 0 0 var(--cyan)}
+.folded .rail{flex-direction:row;padding:0 var(--sp-3);justify-content:center}
+/* Folded, the rail is one control wide: the mark gives way (the section still names its lane). */
+.folded .key,.folded .name,.folded .mark{display:none}
+.folded .focus{margin:0}
+
+.cell{position:relative;min-height:0;min-width:0;border-bottom:1px solid var(--hair);overflow:hidden}
+.foundry{background:linear-gradient(90deg,color-mix(in srgb,var(--cyan) 3.5%,transparent),color-mix(in srgb,var(--cyan) 1.2%,transparent))}
+.shelf{background:linear-gradient(90deg,color-mix(in srgb,var(--emerald) 2.5%,transparent),color-mix(in srgb,var(--emerald) .8%,transparent))}
+.weir{
+  background:
+    linear-gradient(90deg,color-mix(in srgb,var(--amber) 2%,transparent),color-mix(in srgb,var(--amber) 7.5%,transparent) 82%,transparent 82%),
+    repeating-linear-gradient(90deg,transparent 0 calc(var(--sp-loose) - 1px),color-mix(in srgb,var(--amber) 3.5%,transparent) calc(var(--sp-loose) - 1px) var(--sp-loose));
+  border-left:1px solid color-mix(in srgb,var(--amber) 18%,transparent);
+  border-bottom-color:color-mix(in srgb,var(--amber) 10%,transparent)
+}
+.weir::after{content:"";position:absolute;top:0;bottom:0;right:0;width:var(--w-wall);pointer-events:none;background:linear-gradient(90deg,color-mix(in srgb,var(--wall) 45%,var(--letterbox)),var(--wall) 45%,var(--wall-hi) 60%,color-mix(in srgb,var(--wall) 61%,var(--letterbox)));box-shadow:calc(-1 * var(--sp-2)) 0 var(--sp-6) color-mix(in srgb,var(--amber) 18%,transparent),var(--sp-hair) 0 var(--sp-loose) var(--shadow)}
+.shelfEmpty{overflow:hidden}
+
+.summary{display:flex;align-items:center;gap:var(--sp-3);height:100%;padding:0 var(--sp-5);font-size:var(--fs-ui);color:var(--muted);white-space:nowrap;overflow:hidden}

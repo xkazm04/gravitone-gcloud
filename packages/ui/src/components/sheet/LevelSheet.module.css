@@ -1,0 +1,13 @@
+/* tokens.css `.scrim` and `[data-component=LevelSheet]`, `.sheet-bar`, `.grab`, `.sheet-close`,
+   `.sheet-body`. The scrim's ink is the page ink at the prototype's .62 (it wrote 4,5,9, a hair
+   darker than --ink; recorded in INVENTORY). */
+.scrim{position:fixed;inset:var(--hdr-h) 0 0 0;background:color-mix(in srgb,var(--ink) 62%,transparent);z-index:var(--z-scrim)}
+.sheet{position:fixed;z-index:var(--z-sheet);left:var(--sp-loose);right:var(--sp-loose);top:calc(var(--hdr-h) + var(--sp-5));bottom:0;border-radius:var(--r-lg) var(--r-lg) 0 0;background:var(--sheet-ground);border:1px solid var(--hair-2);border-bottom:0;box-shadow:var(--shadow-sheet);transform:translateY(102%);transition:transform var(--dur-sheet) var(--ease);display:flex;flex-direction:column;overflow:hidden}
+.open{transform:none}
+.sheet:focus{outline:none}
+.full{position:relative;left:auto;right:auto;top:auto;bottom:auto;margin:var(--sp-5) var(--sp-loose) 0;height:calc(100vh - var(--hdr-h) - var(--sp-5));transform:none;transition:none}
+.specimen{position:relative;inset:auto;height:100%;transform:none;transition:none}
+.bar{flex:none;display:flex;align-items:center;gap:var(--sp-5);height:var(--h-sheet-bar);padding:0 var(--sp-wide);border-bottom:1px solid var(--hair)}
+.grab{position:absolute;top:var(--sp-tight);left:50%;width:var(--w-grab);height:var(--sp-1);margin-left:calc(var(--w-grab) / -2);border-radius:var(--r-meter);background:var(--hair-2)}
+.close{margin-left:auto;display:flex;gap:var(--sp-3);align-items:center;color:var(--muted);font-size:var(--fs-control-sm)}
+.body{flex:1;min-height:0;display:flex}

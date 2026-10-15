@@ -68,6 +68,10 @@ describe("packet", () => {
     refuse(packetSchema, { ...cull, source: "step", mode: "packet-review" }, "partId");
     accept(packetSchema, { ...cull, source: "step", mode: "packet-review", partId: "p-cut" });
   });
+  it("a source is decided only in its own modes", () => {
+    refuse(packetSchema, { ...cull, mode: "blind-pair", items: [forgeCandidate("a", "p1"), forgeCandidate("b", "p1")] }, "forge packet is decided in matrix-cull");
+    refuse(packetSchema, { ...cull, source: "triage" }, "source");
+  });
   it("only a packet review is sent back for another turn", () => {
     refuse(packetSchema, { ...cull, state: "returned" }, "packet review");
     accept(packetSchema, { ...cull, source: "article", lane: "article", mode: "packet-review", state: "returned" });
@@ -75,7 +79,7 @@ describe("packet", () => {
 });
 
 describe("decision", () => {
-  const keep = { key: "pkt_forge_sweep01::lotr-cavalry/painted-3d--text", verdict: "keep", rev: 4, by: "operator", surface: "board", at: AT };
+  const keep = { key: "pkt_forge_sweep01::lotr-cavalry/painted-3d--text", verdict: "keep", reasons: [], rev: 4, by: "operator", surface: "board", at: AT };
   it("parses a keep, keeping v1's <scope>::<item> key", () => {
     expect(accept(decisionSchema, keep).key).toBe(keep.key);
     const [packet, cand] = [cull.id, cull.items[0]!.id];
@@ -85,10 +89,11 @@ describe("decision", () => {
     expect(accept(decisionSchema, { ...keep, verdict: null }).verdict).toBeNull();
     refuse(decisionSchema, { ...keep, verdict: undefined }, "verdict");
   });
-  it("only a reject carries a reason, from the Board's four", () => {
-    accept(decisionSchema, { ...keep, verdict: "reject", reason: "style" });
-    refuse(decisionSchema, { ...keep, reason: "style" }, "reason");
-    refuse(decisionSchema, { ...keep, verdict: "reject", reason: "vibes" }, "reason");
+  it("only a reject carries reasons, and only a verdict carries a note", () => {
+    accept(decisionSchema, { ...keep, verdict: "reject", reasons: ["style", "text"] });
+    refuse(decisionSchema, { ...keep, reasons: ["style"] }, "only a reject");
+    accept(decisionSchema, { ...keep, note: "the horse reads" });
+    refuse(decisionSchema, { ...keep, verdict: null, note: "x" }, "no note");
   });
   it("refuses a key with no scope, and revision 0", () => {
     refuse(decisionSchema, { ...keep, key: "lotr-cavalry/painted-3d--text" }, "key");

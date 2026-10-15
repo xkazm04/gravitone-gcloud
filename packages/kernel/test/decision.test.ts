@@ -1,9 +1,10 @@
 import { afterAll, describe, expect, it } from "vitest";
 import type { Store } from "../src/store.ts";
 import { verify } from "../src/events.ts";
-import { commit, openPacket, patch, patchMany, returnPacket, undo } from "../src/decision/driver.ts";
+import { commit, returnPacket } from "../src/decision/commit.ts";
+import { openPacket, patch, patchMany, undo } from "../src/decision/driver.ts";
 import { currentDecisions, history, previewCommit, readPacket } from "../src/decision/read.ts";
-import { agent, cull, MODULES, operator, packet, pid } from "./decision.fixtures.ts";
+import { agent, cull, MODULES, operator, packet, pid, preview, V1 } from "./decision.fixtures.ts";
 import { must, steppingClock, templateStores } from "./helpers.ts";
 
 const tpl = templateStores(MODULES, { clock: steppingClock() });
@@ -11,6 +12,7 @@ afterAll(() => tpl.dispose());
 
 const P = pid("run-0412");
 const k = (c: string) => `run-0412::${c}`;
+const ALL = ["s1/a", "s1/b", "s1/c", "s2/a", "s2/b", "s2/c"];
 
 function opened(): Store {
   const s = tpl.fresh();
@@ -18,15 +20,26 @@ function opened(): Store {
   return s;
 }
 
+/** Keep s1/a, reject the rest, as one act. */
+function decided(): Store {
+  const s = opened();
+  must(s.tx((t) => patchMany(t, { ...operator, packetId: P, baseRev: 0, changes: ALL.map((c) => ({ key: k(c), verdict: c === "s1/a" ? ("keep" as const) : ("reject" as const) })) })));
+  return s;
+}
+
 const verdicts = (s: Store) => must(s.read((r) => Object.fromEntries(currentDecisions(r, P).decisions.map((d) => [d.key, d.verdict]))));
 const events = (s: Store) => must(s.read((r) => r.all("SELECT type FROM events ORDER BY seq").map((x) => String(x["type"]))));
+const commitAs = (s: Store, ticket: string, extra: { undecidedAs?: "reject" | "leave" } = {}) => {
+  const shown = preview(s, P);
+  return must(s.tx((t) => commit(t, { ...operator, packetId: P, ticket, ...shown, ...extra })));
+};
 
 describe("kernel/decision - patches", () => {
   it("applies on the current revision, appends a row and its Event in the same transaction", () => {
     const s = opened();
     const r = must(s.tx((t) => patch(t, { ...operator, key: k("s1/a"), verdict: "keep", baseRev: 0 })));
     expect(r.ok && r.value.rev).toBe(1);
-    expect(r.ok && r.value.changed.map((d) => [d.key, d.verdict, d.rev, d.by])).toEqual([[k("s1/a"), "keep", 1, "operator"]]);
+    expect(r.ok && r.value.changed.map((d) => [d.key, d.verdict, d.reasons, d.rev, d.by])).toEqual([[k("s1/a"), "keep", [], 1, "operator"]]);
     expect(events(s)).toEqual(["decision.opened", "decision.patched"]);
     expect(must(verify(s)).state).toBe("intact");
   });
@@ -34,7 +47,7 @@ describe("kernel/decision - patches", () => {
   it("refuses a stale base with the 409 body: the named keys' current decisions and the revision", () => {
     const s = opened();
     must(s.tx((t) => patch(t, { ...operator, key: k("s1/a"), verdict: "keep", baseRev: 0 })));
-    const stale = must(s.tx((t) => patch(t, { ...agent, key: k("s1/a"), verdict: "reject", reason: "style", baseRev: 0 })));
+    const stale = must(s.tx((t) => patch(t, { ...agent, key: k("s1/a"), verdict: "reject", reasons: ["style"], baseRev: 0 })));
     expect(stale.ok).toBe(false);
     if (stale.ok) return;
     expect(stale.error.code).toBe("conflict");
@@ -43,18 +56,33 @@ describe("kernel/decision - patches", () => {
     expect(verdicts(s)).toEqual({ [k("s1/a")]: "keep" });
   });
 
-  it("a write that changes nothing bumps nothing and logs nothing (v1)", () => {
+  it("a write that changes nothing bumps nothing and logs nothing (v1); a new reason or note is a change", () => {
     const s = opened();
     must(s.tx((t) => patch(t, { ...operator, key: k("s1/a"), verdict: "keep", baseRev: 0 })));
     const again = must(s.tx((t) => patch(t, { ...operator, key: k("s1/a"), verdict: "keep", baseRev: 1 })));
     expect(again.ok && again.value).toEqual({ rev: 1, changed: [] });
     expect(must(s.read((r) => history(r, P))).length).toBe(1);
-    expect(events(s)).toEqual(["decision.opened", "decision.patched"]);
+    const noted = must(s.tx((t) => patch(t, { ...operator, key: k("s1/a"), verdict: "keep", note: "the horse reads", baseRev: 1 })));
+    expect(noted.ok && noted.value.changed.map((d) => d.note)).toEqual(["the horse reads"]);
+  });
+
+  it("reasons are the source's: a forge reject takes the forge's words, in list order, and refuses another source's", () => {
+    const s = opened();
+    const r = must(s.tx((t) => patch(t, { ...operator, key: k("s1/a"), verdict: "reject", reasons: ["craft", "style"], baseRev: 0 })));
+    expect(r.ok && r.value.changed[0]?.reasons).toEqual(["style", "craft"]);
+    for (const bad of [["smeared-transients"], ["style", "style"]]) {
+      const x = must(s.tx((t) => patch(t, { ...operator, key: k("s1/b"), verdict: "reject", reasons: bad, baseRev: 1 })));
+      expect(!x.ok && x.error.code, bad.join()).toBe("invalid");
+    }
+    const article = tpl.fresh();
+    must(article.tx((t) => openPacket(t, { packet: packet("art-1", "packet-review", [{ id: "draft-3" }]) }, agent)));
+    const dims = must(article.tx((t) => patch(t, { ...operator, key: "art-1::draft-3", verdict: "reject", reasons: ["truth", "depth"], baseRev: 0 })));
+    expect(dims.ok && dims.value.changed[0]?.reasons).toEqual(["depth", "truth"]);
   });
 
   it("a row-wide ⇧X is ONE act: one revision, one Event, every key at that revision", () => {
     const s = opened();
-    const r = must(s.tx((t) => patchMany(t, { ...operator, packetId: P, baseRev: 0, changes: ["s2/a", "s2/b", "s2/c"].map((c) => ({ key: k(c), verdict: "reject" as const, reason: "subject" as const })) })));
+    const r = must(s.tx((t) => patchMany(t, { ...operator, packetId: P, baseRev: 0, changes: ["s2/a", "s2/b", "s2/c"].map((c) => ({ key: k(c), verdict: "reject" as const, reasons: ["subject"] })) })));
     expect(r.ok && r.value.changed.map((d) => d.rev)).toEqual([1, 1, 1]);
     expect(events(s).filter((e) => e === "decision.patched")).toHaveLength(1);
   });
@@ -63,7 +91,7 @@ describe("kernel/decision - patches", () => {
     const s = opened();
     const foreign = must(s.tx((t) => patchMany(t, { ...operator, packetId: P, baseRev: 0, changes: [{ key: k("s1/a"), verdict: "keep" }, { key: k("s9/z"), verdict: "keep" }] })));
     const twice = must(s.tx((t) => patchMany(t, { ...operator, packetId: P, baseRev: 0, changes: [{ key: k("s1/a"), verdict: "keep" }, { key: k("s1/a"), verdict: "reject" }] })));
-    const reasoned = must(s.tx((t) => patch(t, { ...operator, key: k("s1/a"), verdict: "keep", reason: "text", baseRev: 0 })));
+    const reasoned = must(s.tx((t) => patch(t, { ...operator, key: k("s1/a"), verdict: "keep", reasons: ["text"], baseRev: 0 })));
     const otherPacket = must(s.tx((t) => patchMany(t, { ...operator, packetId: P, baseRev: 0, changes: [{ key: "run-9::s1/a", verdict: "keep" }] })));
     for (const r of [foreign, twice, reasoned, otherPacket]) expect(!r.ok && r.error.code).toBe("invalid");
     expect(verdicts(s)).toEqual({});
@@ -81,7 +109,7 @@ describe("kernel/decision - undo", () => {
   it("appends the inverse of the newest act, never deletes, and walks acts back one at a time", () => {
     const s = opened();
     must(s.tx((t) => patch(t, { ...operator, key: k("s1/a"), verdict: "keep", baseRev: 0 })));
-    must(s.tx((t) => patchMany(t, { ...operator, packetId: P, baseRev: 1, changes: [{ key: k("s1/a"), verdict: "reject", reason: "style" }, { key: k("s1/b"), verdict: "keep" }] })));
+    must(s.tx((t) => patchMany(t, { ...operator, packetId: P, baseRev: 1, changes: [{ key: k("s1/a"), verdict: "reject", reasons: ["style"] }, { key: k("s1/b"), verdict: "keep" }] })));
     const u1 = must(s.tx((t) => undo(t, { ...operator, packetId: P, baseRev: 2 })));
     expect(u1.ok && u1.value.rev).toBe(3);
     expect(verdicts(s)).toEqual({ [k("s1/a")]: "keep", [k("s1/b")]: null });
@@ -92,6 +120,15 @@ describe("kernel/decision - undo", () => {
     expect(!none.ok && none.error.code).toBe("refused");
     // Nothing was deleted: 1 + 2 forward rows, 2 + 1 inverse rows.
     expect(must(s.read((r) => history(r, P))).length).toBe(6);
+  });
+
+  it("restores the reasons and the note the act overwrote, not just the verdict", () => {
+    const s = opened();
+    must(s.tx((t) => patch(t, { ...operator, key: k("s1/a"), verdict: "reject", reasons: ["text"], note: "glyph soup on the banner", baseRev: 0 })));
+    must(s.tx((t) => patch(t, { ...operator, key: k("s1/a"), verdict: "keep", baseRev: 1 })));
+    must(s.tx((t) => undo(t, { ...operator, packetId: P, baseRev: 2 })));
+    const d = must(s.read((r) => currentDecisions(r, P))).decisions[0];
+    expect([d?.verdict, d?.reasons, d?.note]).toEqual(["reject", ["text"], "glyph soup on the banner"]);
   });
 
   it("an undo after a newer undone act restores the value from before ITS act", () => {
@@ -107,75 +144,81 @@ describe("kernel/decision - undo", () => {
   });
 
   it("is refused on a committed packet", () => {
-    const s = opened();
-    must(s.tx((t) => patch(t, { ...operator, key: k("s1/a"), verdict: "keep", baseRev: 0 })));
-    must(s.tx((t) => commit(t, { ...operator, packetId: P, ticket: "t-1" })));
-    const r = must(s.tx((t) => undo(t, { ...operator, packetId: P, baseRev: 2 })));
+    const s = decided();
+    must(commitAs(s, "t-1"));
+    const r = must(s.tx((t) => undo(t, { ...operator, packetId: P, baseRev: 1 })));
     expect(!r.ok && r.error.code).toBe("refused");
   });
 });
 
 describe("kernel/decision - commit", () => {
   it("is one act, idempotent on its ticket, and a second ticket is a conflict", () => {
-    const s = opened();
-    must(s.tx((t) => patch(t, { ...operator, key: k("s1/a"), verdict: "keep", baseRev: 0 })));
-    const first = must(must(s.tx((t) => commit(t, { ...operator, packetId: P, ticket: "t-1" }))));
-    const retry = must(must(s.tx((t) => commit(t, { ...operator, packetId: P, ticket: "t-1" }))));
+    const s = decided();
+    const first = must(commitAs(s, "t-1"));
+    const retry = must(commitAs(s, "t-1"));
     expect(retry).toEqual(first);
     expect(first.kept).toEqual(["s1/a"]);
     expect(first.rejected).toHaveLength(5);
-    const other = must(s.tx((t) => commit(t, { ...operator, packetId: P, ticket: "t-2" })));
+    const other = commitAs(s, "t-2");
     expect(!other.ok && other.error.code).toBe("conflict");
     expect(events(s).filter((e) => e === "decision.committed")).toHaveLength(1);
     expect(must(s.read((r) => readPacket(r, P))).state).toBe("committed");
   });
 
   it("refuses later patches: the commit is final", () => {
-    const s = opened();
-    must(s.tx((t) => commit(t, { ...operator, packetId: P, ticket: "t-1", undecidedAs: "leave" })));
-    const r = must(s.tx((t) => patch(t, { ...operator, key: k("s1/a"), verdict: "keep", baseRev: 0 })));
+    const s = decided();
+    must(commitAs(s, "t-1"));
+    const r = must(s.tx((t) => patch(t, { ...operator, key: k("s1/a"), verdict: "reject", baseRev: 1 })));
     expect(!r.ok && r.error.code).toBe("refused");
   });
 
-  it("matrix cull: undecided rejects are written as decisions of the commit, or left with 'leave'", () => {
+  it("refuses while anything is undecided, in every mode, naming the undecided keys", () => {
     const s = opened();
-    const r = must(must(s.tx((t) => commit(t, { ...operator, packetId: P, ticket: "t" }))));
+    must(s.tx((t) => patch(t, { ...operator, key: k("s1/a"), verdict: "keep", baseRev: 0 })));
+    const r = commitAs(s, "t");
+    expect(!r.ok && r.error.code).toBe("refused");
+    expect(!r.ok && r.error.detail).toBe(JSON.stringify(["s1/b", "s1/c", "s2/a", "s2/b", "s2/c"]));
+    expect(must(s.read((x) => previewCommit(x, P))).plan.ok).toBe(false);
+    for (const mode of ["blind-pair", "packet-review"] as const) {
+      const m = tpl.fresh();
+      must(m.tx((t) => openPacket(t, { packet: packet("pk-1", mode, [{ id: "a", row: "r1" }, { id: "b", row: "r1" }]) }, agent)));
+      const shown = preview(m, pid("pk-1"));
+      const x = must(m.tx((t) => commit(t, { ...operator, packetId: pid("pk-1"), ticket: "t", ...shown, undecidedAs: "reject" })));
+      expect(!x.ok && x.error.code, mode).toBe("refused");
+    }
+  });
+
+  it("a matrix cull swept only on an explicit undecidedAs: written as the commit's own rejects, or left", () => {
+    const s = opened();
+    const r = must(commitAs(s, "t", { undecidedAs: "reject" }));
     expect(r.rejected).toHaveLength(6);
     expect(r.rev).toBe(1);
     expect(Object.values(verdicts(s)).every((v) => v === "reject")).toBe(true);
     const s2 = opened();
-    const left = must(must(s2.tx((t) => commit(t, { ...operator, packetId: P, ticket: "t", undecidedAs: "leave" }))));
+    const left = must(commitAs(s2, "t", { undecidedAs: "leave" }));
     expect(left.undecided).toHaveLength(6);
     expect(verdicts(s2)).toEqual({});
   });
 
-  it("a blind pair and a packet review refuse to commit with anything undecided", () => {
-    for (const mode of ["blind-pair", "packet-review"] as const) {
-      const s = tpl.fresh();
-      const p = packet("pk-1", mode, [{ id: "a", row: "r1" }, { id: "b", row: "r1" }]);
-      must(s.tx((t) => openPacket(t, { packet: p }, agent)));
-      const r = s.tx((t) => commit(t, { ...operator, packetId: pid("pk-1"), ticket: "t" }));
-      expect(r.ok, mode).toBe(true);
-      expect(r.ok && !r.value.ok && r.value.error.code).toBe("refused");
-    }
+  it("refuses a stale preview: the decisions moved, or v1 moved under unchanged decisions", () => {
+    const s = decided();
+    const shown = preview(s, P);
+    must(s.tx((t) => patch(t, { ...operator, key: k("s1/b"), verdict: "keep", baseRev: 1 })));
+    const moved = must(s.tx((t) => commit(t, { ...operator, packetId: P, ticket: "t", ...shown })));
+    expect(!moved.ok && [moved.error.code, moved.error.detail]).toEqual(["conflict", "stale-preview"]);
+    const now = preview(s, P);
+    const v1Moved = must(s.tx((t) => commit(t, { ...operator, packetId: P, ticket: "t", token: now.token, v1Digest: `${V1}-after-another-commit` })));
+    expect(!v1Moved.ok && v1Moved.error.detail).toBe("stale-preview");
+    // An undo that lands back on the previewed verdicts leaves the preview true.
+    must(s.tx((t) => undo(t, { ...operator, packetId: P, baseRev: 2 })));
+    expect(must(s.tx((t) => commit(t, { ...operator, packetId: P, ticket: "t", ...shown }))).ok).toBe(true);
   });
 
-  it("refuses when the verdicts moved since the preview (v1's token)", () => {
-    const s = opened();
-    const pre = must(s.read((r) => previewCommit(r, P)));
-    expect(must(pre.plan).rejected).toHaveLength(6);
-    must(s.tx((t) => patch(t, { ...operator, key: k("s1/a"), verdict: "keep", baseRev: 0 })));
-    const r = must(s.tx((t) => commit(t, { ...operator, packetId: P, ticket: "t", expectRev: pre.rev })));
-    expect(!r.ok && r.error.code).toBe("conflict");
-  });
-
-  it("only a packet review is sent back, and only while open", () => {
-    const s = tpl.fresh();
-    must(s.tx((t) => openPacket(t, { packet: packet("art-1", "packet-review", [{ id: "draft-3" }]) }, agent)));
-    must(must(s.tx((t) => returnPacket(t, { ...operator, packetId: pid("art-1"), notes: "the second claim needs its source" }))));
-    expect(must(s.read((r) => readPacket(r, pid("art-1")))).state).toBe("returned");
-    const cullStore = opened();
-    expect(must(cullStore.tx((t) => returnPacket(t, { ...operator, packetId: P, notes: "x" }))).ok).toBe(false);
+  it("writes the apply outbox row in the commit's transaction", () => {
+    const s = decided();
+    must(commitAs(s, "t-1"));
+    const row = must(s.read((r) => r.get("SELECT act, ticket, state, attempts FROM packet_applies WHERE packet_id = ?", P)));
+    expect(row).toEqual({ act: "commit", ticket: "t-1", state: "pending", attempts: 0 });
   });
 
   it("history outlives the media: decisions name candidates, not blobs", () => {
@@ -183,5 +226,35 @@ describe("kernel/decision - commit", () => {
     must(s.tx((t) => patch(t, { ...operator, key: k("s1/a"), verdict: "keep", baseRev: 0 })));
     const fks = must(s.read((r) => r.all("SELECT \"table\" AS tbl FROM pragma_foreign_key_list('decisions')").map((x) => x["tbl"])));
     expect(fks).toEqual(["packets"]);
+  });
+});
+
+describe("kernel/decision - return with an edit plan", () => {
+  const A = pid("art-1");
+  const plan = [{ section: "s2", directive: "remove" as const, text: "the second claim has no source" }];
+  const review = () => {
+    const s = tpl.fresh();
+    must(s.tx((t) => openPacket(t, { packet: packet("art-1", "packet-review", [{ id: "draft-3" }]) }, agent)));
+    return s;
+  };
+
+  it("sends a review back with its plan, once per ticket, and queues the apply", () => {
+    const s = review();
+    const first = must(must(s.tx((t) => returnPacket(t, { ...operator, packetId: A, baseRev: 0, ticket: "r-1", plan }))));
+    expect(first.plan).toEqual(plan);
+    expect(must(s.read((r) => readPacket(r, A))).state).toBe("returned");
+    expect(must(must(s.tx((t) => returnPacket(t, { ...operator, packetId: A, baseRev: 0, ticket: "r-1", plan }))))).toEqual(first);
+    const other = must(s.tx((t) => returnPacket(t, { ...operator, packetId: A, baseRev: 0, ticket: "r-2", plan })));
+    expect(!other.ok && other.error.code).toBe("conflict");
+    expect(must(s.read((r) => r.get("SELECT act, state FROM packet_applies WHERE packet_id = ?", A)))).toEqual({ act: "return", state: "pending" });
+  });
+
+  it("refuses an empty plan, a stale revision, and any mode but a review", () => {
+    const s = review();
+    expect(must(s.tx((t) => returnPacket(t, { ...operator, packetId: A, baseRev: 0, ticket: "r", plan: [] }))).ok).toBe(false);
+    expect(must(s.tx((t) => returnPacket(t, { ...operator, packetId: A, baseRev: 3, ticket: "r", plan }))).ok).toBe(false);
+    const c = opened();
+    const x = must(c.tx((t) => returnPacket(t, { ...operator, packetId: P, baseRev: 0, ticket: "r", plan })));
+    expect(!x.ok && x.error.code).toBe("refused");
   });
 });

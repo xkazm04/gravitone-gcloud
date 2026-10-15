@@ -10,8 +10,8 @@
 // `built: false` draws a disabled link, never a dead one. A section whose route does not
 // exist yet must not be a destination: a 404 behind a nav entry is the "hidden entry with a
 // reachable destination" app-shell entitlement-gating forbids, from the other side. The
-// Floor is Phase 3 (`/floor`, plan §8.6) and the Ledger Phase 2; each flips to `built: true`
-// in the change that ships its page. Projects and Library are v1's routes until their phases
+// Floor (Phase 3, `/floor`, plan §8.6) and the Ledger (Phase 2) flipped to `built: true` in
+// the changes that shipped their pages. Projects and Library are v1's routes until their phases
 // replace them, and are links out of this world until then.
 
 export type Section = {
@@ -24,7 +24,7 @@ export type Section = {
 };
 
 export const SECTIONS: readonly Section[] = [
-  { id: "floor", label: "Floor", href: "/floor", built: false, group: "hub" },
+  { id: "floor", label: "Floor", href: "/floor", built: true, group: "hub" },
   { id: "projects", label: "Projects", href: "/projects", built: true, group: "work" },
   // Runs is a Projects view (plan §2.1) the prototype's header also named on its own; it is
   // built in Phase 2 at /projects/runs while /projects is still v1's list.

@@ -2,9 +2,10 @@ import { afterAll, describe, expect, it } from "vitest";
 import type { Packet } from "@gt/domain/packet";
 import { canonical } from "../src/canonical.ts";
 import type { Store } from "../src/store.ts";
-import { commit, openPacket, patch, patchMany } from "../src/decision/driver.ts";
+import { commit } from "../src/decision/commit.ts";
+import { openPacket, patch, patchMany } from "../src/decision/driver.ts";
 import { currentDecisions, history, previewCommit, readPacket, revealPicks } from "../src/decision/read.ts";
-import { agent, cid, MODULES, operator, packet, pid } from "./decision.fixtures.ts";
+import { agent, cid, MODULES, operator, packet, pid, preview } from "./decision.fixtures.ts";
 import { fixedClock, must, templateStores } from "./helpers.ts";
 
 // BLIND-FIRST: the machine's pick on a pair is stored and never returned by
@@ -72,7 +73,7 @@ describe("kernel/decision - blind-first reveal", () => {
     expect(must(s.read((r) => revealPicks(r, P))).size, "an agent's verdict is not the operator's").toBe(0);
     must(s.tx((t) => patch(t, { ...operator, key: "trial-77::r1/chal", verdict: "keep", baseRev: 1 })));
     const picks = must(s.read((r) => revealPicks(r, P)));
-    expect([...picks]).toEqual([["r1", "r1/chal"]]);
+    expect([...picks]).toEqual([["r1", { candidate: "r1/chal", outcome: null, agrees: null }]]);
     const items = must(s.read((r) => readPacket(r, P))).items;
     expect(items.filter((c) => c.row === "r1").every((c) => c.grades.length === 1)).toBe(true);
     expect(items.filter((c) => c.row === "r2").every((c) => c.grades.length === 0)).toBe(true);
@@ -90,10 +91,11 @@ describe("kernel/decision - blind-first reveal", () => {
 
   it("commits only with every pair judged, and refuses picks that are not arms of their pair", () => {
     const s = world("challenger", "ab");
-    const early = must(s.tx((t) => commit(t, { ...operator, packetId: P, ticket: "t" })));
+    const early = must(s.tx((t) => commit(t, { ...operator, packetId: P, ticket: "t", token: "-", v1Digest: "-" })));
     expect(!early.ok && early.error.code).toBe("refused");
     must(s.tx((t) => patchMany(t, { ...operator, packetId: P, baseRev: 0, changes: [{ key: "trial-77::r1/chal", verdict: "keep" }, { key: "trial-77::r1/base", verdict: "reject" }, { key: "trial-77::r2/base", verdict: "keep" }, { key: "trial-77::r2/chal", verdict: "reject" }] })));
-    expect(must(must(s.tx((t) => commit(t, { ...operator, packetId: P, ticket: "t" })))).kept).toEqual(["r1/chal", "r2/base"]);
+    const shown = preview(s, P);
+    expect(must(must(s.tx((t) => commit(t, { ...operator, packetId: P, ticket: "t", ...shown })))).kept).toEqual(["r1/chal", "r2/base"]);
     const bad = tpl.fresh();
     expect(bad.tx((t) => openPacket(t, { packet: pair("ab"), machinePicks: [{ row: "r1", candidate: cid("r2/chal") }] }, agent)).ok).toBe(false);
     expect(bad.tx((t) => openPacket(t, { packet: packet("cull-1", "matrix-cull", [{ id: "a" }]), machinePicks: [{ row: "r1", candidate: cid("a") }] }, agent)).ok).toBe(false);

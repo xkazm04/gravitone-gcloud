@@ -74,18 +74,31 @@
   --h-axis: 20px; /* Height of a time axis under a strip. */
   --h-event: 34px; /* Height of an event row in a ledger list. */
   --h-hours: 34px; /* Height of the hour axis over the Runs day-line. */
+  --h-lane-folded: 48px; /* Height of a Floor lane folded to its summary while another lane is focused. */
+  --h-lane-min: 176px; /* Least height of an unfocused Floor lane whose ratified column is empty. */
   --h-line: 22px; /* Height of one JSON Lines row. */
+  --h-month-bar: 52px; /* Height of the calendar month's top bar. */
+  --h-pile-face: 64px; /* Height of a Weir pile's stacked face. */
+  --h-progress: 3px; /* Height of a run's progress rail. */
   --h-strip: 60px; /* Height of a time strip's bar box. */
+  --h-thumb: 36px; /* Height of a run's thumbnail in the Foundry column. */
   --hdr-h: 56px;
   --head-h: 40px;
   --ledger-cols: 54px 96px 128px 128px minmax(0,1fr) 70px 90px; /* Columns of an event row and its head: # · time · actor · type · subject · cost · src. */
+  --slot-cols: 42px 26px minmax(0,1fr); /* Columns of a calendar slot row: time, channel, title. */
   --w-detail: 344px; /* Width of a route's docked detail panel. */
   --w-inspector: clamp(290px,23vw,360px); /* Width of the inspector beside the Runs day-line. */
   --w-lane: 214px; /* Width of a resource lane's label column on the Runs day-line. */
   --w-line-no: 46px; /* Width of the line number before a JSON line. */
   --w-list: clamp(250px,19vw,300px); /* Width of the Projects route's composition list. */
+  --w-month-side: clamp(300px,25vw,400px); /* Width of the agenda beside the calendar month. */
+  --w-next: 360px; /* Widest the header's NEXT decision button grows. */
+  --w-pile: 112px; /* Least width of a Weir pile in its grid. */
   --w-rail: 228px; /* Width of a route's left rail: the Ledger's facets and the time strip's readout above them. */
   --w-search: clamp(220px,21vw,400px); /* Width of the search field in a route's toolbar. */
+  --w-shelf-tile: 86px; /* Least width of a style tile on a Library shelf. */
+  --w-thumb: 52px; /* Width of a run's thumbnail in the Foundry column. */
+  --w-wall: 9px; /* Width of the Weir's wall at the right edge of the Weir column. */
 
   /* roles-surface */
   --code-ground: #06080d; /* Ground of a rendered JSON record. */
@@ -105,6 +118,8 @@
   --done-text: #a7f3d0; /* Text of a ratified or done state, one step lighter than emerald. */
   --error-text: #fecdd3; /* Text of an error message on a rose wash. */
   --illustrative-text: #fcd77a; /* Text that marks content as illustrative rather than real. */
+  --paper-faint: #6d6455; /* Secondary text set on a paper surface: a turn or section label. */
+  --paper-ink: #1d1a16; /* Text set on a paper surface. */
   --reading: #e9e4d8; /* Serif reading text on the dark ground. */
   --reference-text: #c3cad8; /* Text and rim of a reference-mode item. */
 
@@ -173,4 +188,34 @@
   --hatch: repeating-linear-gradient(135deg,rgba(255,255,255,.28) 0 2px,transparent 2px 5px); /* Fill of an undecided or unmeasured span. */
   --panel-ground: rgba(0,0,0,.14); /* Recessed ground of a route panel. */
   --warn-cut: #3b0712; /* Cut-out mark inside the warning glyph. */
+
+  /* board */
+  --dur-sheet: .34s; /* How long a level sheet takes to rise over the Floor. */
+  --fs-article: 34px; /* Serif title of an article under review. */
+  --fs-beat: 15.5px; /* Text of a caption beat in the cut review. */
+  --h-commit: 38px; /* Height of the commit button that ends a desk. */
+  --h-directive: 26px; /* Height of a directive toggle in an edit note. */
+  --h-sheet-bar: 50px; /* Height of a level sheet's crumb bar. */
+  --h-wavebox: 86px; /* Height of the waveform box on an audio take tile. */
+  --note-text: #fde68a; /* Text of an operator's edit note attached to a section or a beat. */
+  --r-arm: 12px; /* Corner of a blind pair's arm and of the cut review's player. */
+  --r-tile: 9px; /* Corner of a decision tile, a pile face and the commit button. */
+  --reading-bright: #fbf7ee; /* Serif headings of an article under review. */
+  --reading-muted: #c9c2b3; /* An article's standfirst under its title. */
+  --shadow-sheet: 0 -30px 80px rgba(0,0,0,.7); /* The shadow a level sheet casts up over the Floor. */
+  --sheet-ground: linear-gradient(180deg,#0f131c,#0a0d14); /* Ground of a level sheet: the Board over the Floor. */
+  --size-badge: 26px; /* Side of the keep or reject badge on a decided tile. */
+  --sp-page: 28px; /* Inset of the article page in a review desk. */
+  --sp-page-end: 60px; /* Scroll room after the last section of a review desk's page. */
+  --sp-page-gap: 22px; /* Space between an article's standfirst and its first section. */
+  --w-cull-label: 132px; /* Width of a matrix cull row's label column and its reference image. */
+  --w-desk-side: 300px; /* Width of a review desk's side column: checks, reviewers, edit plan, beats. */
+  --w-foot-tally: 200px; /* Least width of the kept, rejected, undecided meter in a desk's foot. */
+  --w-grab: 44px; /* Width of the grab handle on a level sheet. */
+  --w-packet-rail: 268px; /* Width of the Board's packet rail beside the desk. */
+  --w-pair-thumb: 160px; /* Width of an arm's thumbnail in a blind pair's summary. */
+  --w-tile: 150px; /* Least width of an image tile in the matrix cull. */
+  --w-tile-audio: 230px; /* Least width of an audio take tile in the matrix cull. */
+  --w-timecode: 62px; /* Width of a caption beat's timecode column. */
+  --wave-ground: linear-gradient(180deg,#121a26,#0b1018); /* Ground behind an audio take's waveform. */
 }

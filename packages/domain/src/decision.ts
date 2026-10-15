@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { checkEditPlan, EDIT_DIRECTIVES, PICK_OUTCOMES, type EditPlan } from "./board.ts";
+import type { Parsed } from "./door.ts";
 import type { CandidateId, PacketId } from "./ids.ts";
 
 // A DECISION: one changed verdict on one item of a packet (plan §2.2). This is
@@ -8,12 +10,11 @@ import type { CandidateId, PacketId } from "./ids.ts";
 // entry — history outlives the media, and two tabs cannot overwrite a verdict
 // one of them never saw, because every write names the revision it read.
 
-/** The Board's four reject axes, bound to keys 1–4 in the order the matrix
- *  cull draws them (prototype index.html `REASONS`). v1's forge cull used the
- *  first two (lib/board/sources/cull.ts `reasonAxes`). */
-export const REJECT_REASONS = ["style", "subject", "motion", "text"] as const;
-export const rejectReasonSchema = z.enum(REJECT_REASONS);
-export type RejectReason = z.output<typeof rejectReasonSchema>;
+// REASONS ARE THE SOURCE'S (./source.ts SOURCES). The record carries them as
+// plain words, because a decision does not know its packet's source; the
+// kernel's door checks them against it (checkVerdict) before any row is
+// written. The first domain carried one `reason` from a fixed four; a store
+// written then reads back as `reasons: [reason]` (kernel decision v2).
 
 /**
  * `<packetId>::<candidateId>` — v1's Board key format (`<run>::<candidate id>`,
@@ -31,7 +32,10 @@ export const decisionSchema = z
     key: decisionKeySchema,
     /** `null` is "not judged yet" — an undecide (the Board's U) is a decision too. */
     verdict: z.enum(["keep", "reject"]).nullable(),
-    reason: rejectReasonSchema.optional(),
+    /** The source's words for a reject, in its list's order; empty otherwise. */
+    reasons: z.array(z.string().min(1)).max(11),
+    /** The operator's note, where the source keeps one (SOURCES[source].noteMax). */
+    note: z.string().min(1).max(2000).optional(),
     /** The packet's verdict revision this write produced. A write that changes
      *  nothing bumps nothing (v1), so every logged decision has rev >= 1. */
     rev: z.number().int().positive(),
@@ -44,7 +48,26 @@ export const decisionSchema = z
   })
   .superRefine((d, ctx) => {
     // v1 wrote reasons only on a reject (lib/board/verdicts.ts withCullVerdict).
-    if (d.reason !== undefined && d.verdict !== "reject")
-      ctx.addIssue({ code: "custom", path: ["reason"], message: "only a reject carries a reason" });
+    if (d.reasons.length > 0 && d.verdict !== "reject")
+      ctx.addIssue({ code: "custom", path: ["reasons"], message: "only a reject carries reasons" });
+    if (d.note !== undefined && d.verdict === null)
+      ctx.addIssue({ code: "custom", path: ["note"], message: "an undecided candidate carries no note" });
   });
-export type Decision = z.output<typeof decisionSchema>;
+/** As the door hands it out (`parseAt`): an absent note is an absent key. */
+export type Decision = Parsed<z.output<typeof decisionSchema>>;
+
+/* ── the two Board inputs a server receives, as doors ─────────────────────── */
+// Each runs the check the client runs (./board.ts checkEditPlan), so the
+// browser and the Server Action cannot disagree about what is valid.
+
+export const pickOutcomeSchema = z.enum(PICK_OUTCOMES);
+
+const editNoteSchema = z.object({ section: z.string(), directive: z.enum(EDIT_DIRECTIVES), text: z.string() });
+
+/** An edit plan off the wire: shaped by zod, then held to ./board.ts checkEditPlan (trimmed, bounded, non-empty). */
+export const editPlanSchema = z.array(editNoteSchema).transform((plan, ctx): EditPlan => {
+  const checked = checkEditPlan(plan);
+  if (checked.ok) return checked.value;
+  ctx.addIssue({ code: "custom", message: checked.error.message });
+  return z.NEVER;
+});

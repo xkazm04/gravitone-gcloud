@@ -20,7 +20,7 @@ across pages lives in `tokens.css` and `shell.js`, so that is where the kit come
 | `SourceTag` | `.src.*`, GT.Src | P L G | real, illustrative, model, fixture, derived, session; `value` (the figure it qualifies: `model $417`) |
 | `LedgerLink` | `.ledger-link`, GT.LedgerLink | F P L | one |
 | `ErrorLine` | `.err` (+ I.warn) | F P L G | static / live (role=alert) |
-| `ChannelBadge` | `.chan.*` | F P L | youtube, tiktok, instagram |
+| `ChannelBadge` | `.chan.*` | F P L | youtube, tiktok, instagram, blog (lot 20) |
 | `Button` | `.btn`, `.btn.{tone}`, `.btn.sm`, `kbd.keycap` inside | F P L G | tone x size; glyph; badge chip; tally stamp (`history 9`); trailing glyph (`Open record ›`); shortcut from keymap; aria-disabled |
 | `Toggle` | `.toggle[aria-pressed]` | F P L G | on/off; glyph; count of what is on; keycap; aria-controls/expanded for a drawer |
 | `Seg` | `.seg button[aria-pressed]` | F P L G | one of n; option glyph, count, actor accent (Ledger actors) |
@@ -81,8 +81,8 @@ Library: LibraryNav (`.kind`), FacetGroup body, LibraryToolbar (`.fchips`), Libr
 - Ghost rows are one height (32px, `--h-field`); the prototype set 32 or 34 inline per site.
 - The two facet rows (Library check, Ledger rail) are one component with two marks, both
   pixel-exact; which survives is the owner's call.
-- The prototype's `blog` channel ("PR", amber) has no badge: the domain publishes to
-  youtube, tiktok and instagram only.
+- The prototype's `blog` channel ("PR", amber) had no badge at first (the domain publishes to
+  youtube, tiktok and instagram only); lot 20 gave it one, as a badge, not a slot channel.
 
 ## Ledger parts (Phase 2, lot 16)
 
@@ -128,3 +128,74 @@ Where this port moved from the prototype:
   so a lane added to the domain gets its kind's mark rather than none.
 - Moved a pixel: NOW label ink `ink` (prototype `#05252b`), bar hover ground `ink-3` (`#141a26`),
   done labels `done-text` (`#c9f7e6`, `#9fd9c1`), link stroke `ink-bright` 28% (white .28).
+
+## Floor parts (Phase 3, lot 20)
+
+| Kit name | Replaces (prototype) | Pages | States / variants |
+| --- | --- | --- | --- |
+| `Lane`, `LaneSummary` | index.html `Lane`, floor.css `.lane`, `.lane-rail`, `.cell`, `.c-foundry/.c-weir/.c-shelf`, the weir wall, `.summary` | F | open / focused (cyan edge) / folded (rail lies down, cells hold a one-line summary); the rail's key is the keymap's `open-lane` cap by position |
+| `RunRow` | index.html `RunRow`, `.run-thumb`, `.run-meta`, `.run-bar` (+ `.shimmer`) | F | state via STATUS.job; done/total and stage; attempt > 1; v1's error verbatim; share rail, or shimmer when running uncounted; link or text |
+| `Pile` | index.html `Pile`, `PileFace`, `CoverFace`; `.pile-face`, `.sheet-l`, `.mode-glyph` | F | faces: paper (article), waveform sheets (audio), designed face source + run id (image, video), cover when known; mode glyph per desk; NEXT ring; decided/pending rail |
+| `ShelfCell`, `ShelfGrid`, `ShelfStyle`, `ShelfList`, `ShelfRow` | index.html `Shelf`, `ShelfStyle`, `TakeRow`, posts; `.shelf-head`, `.styles-grid`, `.row-btn` | F | head with door and counts; folded to its head when empty; style tile with lock (plate or designed ground); row with lead mark, title, fact, trailing chip |
+| `CalendarColumn` | index.html `CalendarColumn`, `.cal-head`, `.cal-sec`, `.cal-day`, `.now-line` | F | Next by UTC day with NOW after the overdue; Failed · missed with errors; Published (first 6); expand control with its C cap |
+| `SlotRow`, `SlotMark` | index.html `SlotRow`, `.chan` | F | STATUS.slot; error verbatim when failed/missed; cancelled struck; unknown channel id spoken behind a neutral mark |
+| `MonthCalendar` | index.html `renderMonth`, `MonthSlot`; `#month`, `.mday`, `.mslot`, `.m-side` | F | Monday-first whole weeks; out/past/today/selected/has-fail days; slot rule per look; +N past MAX_PER_DAY; channel toggles; month state counts; day or month agenda |
+| `NextButton`, `SpendChip`, `LedgerDelta` | shell.js `header()` `.next-btn`, `.hdr-spend`, `#hdr-ses` | all | NEXT with title, size, ⏎ / weir clear; spend total with each non-real source's share, `+` when the read was capped; ledger +N (cyan when new) |
+| `FloorGlyph` | shell.js `I.image/article/audio/video`, `I.cull/pair/review`, `I.lock/expand/collapse/chevL/chevR` | F | the Floor's own marks, beside the Floor rather than in `Glyph` |
+
+Pure modules beside them: `floor/floor.ts` (`FLOOR_LANES`, the zod-free twin of MEDIA_LANES;
+`modeOf`, `laneRows`, `progressShare`), `floor/calendar.ts` (UTC `clock`/`dayLabel`, `railOf`,
+`nextRows`, `monthCells`, `shiftMonth`, `moveDay`, `byDay`), `header/header.ts` (`spendParts`,
+`ledgerDelta`).
+
+Where this port moved from the prototype:
+- No composer, no Launch, no Estimate (COMMON decision 11): the Foundry cell is the run track
+  alone. RunRow thumbnails are the lane's mark, not a plate: v1's live work carries no preview.
+- Image and video piles draw the designed face (source + run id) where the prototype drew three
+  plates: v1's Weir item names no cover. A pile's rail is decided/pending, not kept/rejected:
+  v1 counts decided items without their split, and StackBar would have to invent it.
+- The shelf's play and Spawn MV controls are not drawn (the Floor writes nothing in this phase).
+- Calendar times are UTC and the NOW line says so; the prototype mixed UTC day keys with local
+  times. A scheduled slot past its hour stays under Next, before NOW, until v1 calls it missed.
+- The month's +N is a fixed count per day (MAX_PER_DAY 3), not a measured overflow.
+- Moved a pixel: the column washes, the weir's stripes and wall ends, the pile hovers and the
+  month's slot fills are their signal tokens mixed to the prototype's alphas (the wall's ends are
+  `--wall` mixed toward `--letterbox`, where it wrote `#5a3f0b` and `#7a5410`); the month ground
+  is `--ink-1` (`#0b0e15`, the prototype `#0a0c13`); the article pile's ink is `--paper-ink`.
+
+## Board parts (Phase 3, lot 21)
+
+| Kit name | Replaces (prototype) | Pages | States / variants |
+| --- | --- | --- | --- |
+| `LevelSheet` | tokens.css `[data-component=LevelSheet]`, `.scrim`, `.grab`, `.sheet-bar`, `.sheet-close`, index.html `openLevel` | F | sheet over the Floor (rises; a `sheet` layer in the desk's keymap mode; its close is the caller's) / full page (in flow, no scrim, still on the stack) / specimen |
+| `BoardDesk`, `DeskFrame` | `[data-component=BoardDesk]`, `.desk`, `.desk-top`, `.desk-main`, `.desk-foot` | F | title + mono second line; marks; foot; an overlay (the lens, the consequence) |
+| `PacketRail` | index.html `PacketRail`, `.rail-lane`, `.rail-item` (+ `.done`, `[aria-current]`) | F | grouped by lane (its FloorGlyph mark, open tally) then desk; open (amber mode mark, FloorGlyph), committed (✓), returned (↩); link + client open |
+| `OracleStrip` | index.html `Oracle` | F | pass / fail, summary, digest, fixture |
+| `CommitButton` | `.commit`, `.commit.wait`, `.commit.refuse` + `@keyframes shake` | F | ready / waiting (`N undecided`, `N left`) / refusal replayed per press; cap from the mode's `commit` row |
+| `MatrixCull`, `CullTile`, `Zoom` | index.html `MatrixCull`, `CullTile`, `Zoom`; `.cull-row`, `.cull-label`, `.tiles`, `.badge`, `.reason`, `.nudge`, `.wavebox`, `.take-tile-body`, `.zoom` | F | rows with label, reference, in-catalogue / new-look; tile image / video / audio take; cur / keep / reject / nudge; reasons as rose chips (several); the lens over the desk |
+| `Plate` | every `<img>` a desk draws | F | lazy or eager; the one exemption from next/image (a candidate is judged as its own bytes) |
+| `BlindPair` | index.html `BlindPair`; `.pair-q`, `.pair-arms`, `.arm` (+ `.picked .dropped .bad`), `.armcap`, `.masked`, `.agree-banner` | F | masked arms / revealed for a beat (agrees, differs, not comparable) / summary with agreement tally |
+| `PacketReview`, `ArticlePage`, `EditNote` | index.html `ArticleReview`, `EditNote`; `.page-wrap`, `.sec` (+ `.focus .noted .sec-tools`), `.directives`, `.note-chip`, `.review-side`, `.rev`, `.checkrow` | F | illustrative / stand-in draft; section focus and notes; the five directives; reviewers' quorum pips; edit plan; reject reasons from the source |
+| `CutReview` | index.html `CutReview`; `.player`, `.beats`, `.beat` (+ `.focus .noted`) | F | player, caption beats with seek, a note per beat; approve / reject |
+| `ConsequencePanel` | none (decision 6 is new) | F | reading / shown with counts, outward acts verbatim, deletes, promotions, writes, renames, near-duplicates, token / moved (stale preview replaced) / the failure verbatim |
+
+Pure modules beside them, in `src/board/`: `gate.ts` (the gate kernel moved from v1
+`app/foundry/gate/useGate.ts`, with a history mode), `useGate.ts` (its React binding),
+`undo.ts` (v1 `lib/board/undo.ts`), `port.ts` (the BoardPort contract and `Presentation`),
+`boardGate.ts` (the GatePort over a BoardPort), `cull.ts` (cells, rows, ↑/↓, tally, undecided,
+reason keys), `pair.ts` (current pair, arm looks, agreement), `commit.ts` (the commit flow as a
+machine, directives).
+
+Where this port moved from the prototype:
+- A reject may carry several reasons, from its source's own list (decision 4); the tile draws
+  each as a chip where the prototype drew one. A reason key on a standing reject toggles.
+- Approve and Reject on a review, and every commit, show the consequence before anything is
+  written (decision 6); the prototype committed on the key and flew thumbnails afterwards.
+- Spawn MV (audio M) is not drawn: the BoardPort has no spawn verb until Phase 4's projects.
+- The cut desk drops the prototype's slot proposal, channel toggles and StepTrack (the per-step
+  sign-off moves to Phase 4, decision 9).
+- Moved a pixel: the scrim and the lens are `--ink` at .62 / .94 (the prototype wrote 4,5,9 and
+  5,6,10); a tile's cursor shadow is `0 10px 24px` on `--shadow` (it wrote a 30px blur at .6);
+  a kept badge's mark is `--ink` (it wrote `#062a1d`); the rail's scroll room is 24px (30px);
+  the review side's ground is `--panel-ground` (.14 where it wrote .15) and its scroll room
+  60px (40px); the article page's side inset is 28px (30px).

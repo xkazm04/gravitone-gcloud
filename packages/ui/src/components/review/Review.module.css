@@ -1,0 +1,41 @@
+/* floor.css "packet review": [data-component=PacketReview], .page-wrap, ArticlePage (h1,
+   .standfirst), .sec (+ .focus .noted .sec-tools .secno .regen), EditNote (.directives,
+   input), .note-chip, .review-side, .side-h, .rev, .checkrow, .illus. The serif page's three
+   inks are the reading roles; a focused section's ground is wash at 87.5% (the prototype's
+   .035). */
+.review{display:grid;grid-template-columns:minmax(0,1fr) var(--w-desk-side);min-height:100%}
+.pageWrap{padding:var(--sp-page) var(--sp-page) var(--sp-page-end);display:flex;justify-content:center}
+.article{max-width:70ch;width:100%;font:var(--fs-read)/1.65 var(--serif);color:var(--reading)}
+.illus{display:inline-flex;margin-bottom:var(--sp-2)}
+.h1{font:600 var(--fs-article)/1.15 var(--serif);color:var(--reading-bright);letter-spacing:-.01em;margin:var(--sp-4) 0}
+.standfirst{font-size:var(--fs-h2);line-height:1.5;color:var(--reading-muted);margin:0 0 var(--sp-page-gap)}
+.sec{position:relative;padding:var(--sp-4) var(--sp-loose) var(--sp-4) var(--sp-wide);margin:0 calc(-1 * var(--sp-wide)) var(--sp-2);border-radius:var(--r-control);border-left:var(--ring-halo) solid transparent;transition:background .2s,border-color .2s}
+.h3{font:700 var(--fs-h2)/1.3 var(--serif);color:var(--reading-bright);margin:0 0 var(--sp-2)}
+.p{margin:0}
+.secno{font:600 var(--fs-micro)/1 var(--mono);color:var(--faint);margin-right:var(--sp-2)}
+.focus{background:color-mix(in srgb,var(--wash) 87.5%,transparent);border-left-color:var(--cyan)}
+.noted{border-left-color:var(--amber)}
+.regen{margin-left:var(--sp-2)}
+.secTools{position:absolute;right:var(--sp-3);top:var(--sp-3);opacity:0;transition:opacity var(--dur-fast)}
+.sec:hover .secTools,.focus .secTools{opacity:1}
+.editNote{margin-top:var(--sp-4);padding:var(--sp-4);border-radius:var(--r-control);border:1px solid color-mix(in srgb,var(--amber) 40%,transparent);background:color-mix(in srgb,var(--amber) 6%,transparent);font:var(--fs-ui)/1.45 var(--sans)}
+.directives{display:flex;flex-wrap:wrap;gap:var(--sp-tight);margin-bottom:var(--sp-3)}
+.directive{height:var(--h-directive);padding:0 var(--sp-control);border-radius:var(--r-chip);border:1px solid var(--hair-2);font:600 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+.directive[aria-checked=true]{color:var(--amber);border-color:var(--amber);background:var(--amber-a)}
+.noteText{width:100%;box-sizing:border-box;height:var(--h-field);padding:0 var(--sp-control);border-radius:var(--r-sm);border:1px solid var(--hair-2);background:var(--ink-2);font-size:var(--fs-ui);color:var(--ink-bright)}
+.noteKeys{margin-top:var(--sp-snug)}
+.noteChip{display:flex;gap:var(--sp-3);align-items:baseline;margin-top:var(--sp-3);font:var(--fs-ui)/1.4 var(--sans);color:var(--note-text)}
+.side{position:sticky;top:0;align-self:start;min-height:100%;box-sizing:border-box;border-left:1px solid var(--hair);padding:var(--sp-6) var(--sp-wide) var(--sp-page-end);display:flex;flex-direction:column;gap:var(--sp-loose);background:var(--panel-ground)}
+.sideHead{display:flex;align-items:center;gap:var(--sp-3)}
+.rev,.revRequest{font-size:var(--fs-ui);line-height:1.45;padding:var(--sp-3) var(--sp-4);border-radius:var(--r-control);border:1px solid var(--hair)}
+.revRequest{border-color:color-mix(in srgb,var(--amber) 35%,transparent)}
+.who{display:flex;justify-content:space-between;font:600 var(--fs-micro)/1 var(--mono);color:var(--muted);margin-bottom:var(--sp-tight)}
+.checkrow{display:flex;justify-content:space-between;gap:var(--sp-3);font-size:var(--fs-ui)}
+.checkrow b{font:600 var(--fs-meta)/1.4 var(--mono)}
+.ok{color:var(--emerald)}
+.bad{color:var(--rose)}
+.ask{color:var(--amber)}
+.bright{color:var(--ink-bright)}
+.reasons{display:flex;flex-wrap:wrap;gap:var(--sp-tight)}
+.ends{margin-left:auto;display:flex;gap:var(--sp-3)}
+@media (prefers-reduced-motion: reduce){.sec,.secTools{transition:none}}

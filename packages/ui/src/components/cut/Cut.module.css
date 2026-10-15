@@ -1,0 +1,17 @@
+/* floor.css "cut review": [data-component=CutReview], .player, .beats, .beat (+ .focus .noted,
+   and the prototype's `.playing` set from the player's timeupdate), and the beat's note input
+   in the EditNote frame. */
+.cut{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(var(--w-desk-side),1fr);gap:var(--sp-6);padding:var(--sp-6)}
+.player{border-radius:var(--r-arm);overflow:hidden;background:var(--letterbox);border:1px solid var(--hair-2)}
+.video{width:100%;aspect-ratio:16/9;max-height:58vh;display:block;background:var(--letterbox)}
+.kv{display:flex;flex-wrap:wrap;gap:var(--sp-2);margin-top:var(--sp-4)}
+.side{display:flex;flex-direction:column;gap:var(--sp-5)}
+.beats{display:flex;flex-direction:column;gap:var(--sp-2)}
+.beat{display:grid;grid-template-columns:var(--w-timecode) minmax(0,1fr);gap:var(--sp-4);width:100%;text-align:left;padding:var(--sp-control) var(--sp-4);border-radius:var(--r-control);border:1px solid var(--hair);font-size:var(--fs-beat);line-height:1.4;color:var(--ink-bright)}
+.tc{font:600 var(--fs-micro)/1.6 var(--mono);color:var(--muted)}
+.focus{border-color:color-mix(in srgb,var(--cyan) 50%,transparent);background:var(--cyan-a)}
+.noted{border-color:color-mix(in srgb,var(--amber) 50%,transparent)}
+.noteChip{display:flex;gap:var(--sp-3);align-items:baseline;margin-top:var(--sp-3);font:var(--fs-ui)/1.4 var(--sans);color:var(--note-text)}
+.editNote{margin-top:var(--sp-tight);padding:var(--sp-4);border-radius:var(--r-control);border:1px solid color-mix(in srgb,var(--amber) 40%,transparent);background:color-mix(in srgb,var(--amber) 6%,transparent);display:flex;flex-direction:column;gap:var(--sp-snug)}
+.noteText{width:100%;box-sizing:border-box;height:var(--h-field);padding:0 var(--sp-control);border-radius:var(--r-sm);border:1px solid var(--hair-2);background:var(--ink-2);font-size:var(--fs-ui);color:var(--ink-bright)}
+.ends{margin-left:auto;display:flex;gap:var(--sp-3)}

@@ -4,22 +4,18 @@ import { candidateSchema } from "./candidate.ts";
 import { packetIdSchema, partIdSchema, runIdSchema } from "./ids.ts";
 import { mediaLaneSchema } from "./lane.ts";
 import { packetMachine } from "./packet.machine.ts";
+import { PACKET_MODES, PACKET_SOURCES, SOURCES } from "./source.ts";
 
 // A PACKET: one pile at the Weir, decided at the Board in one of three desk
 // modes (plan §2.1, §2.2). Every v1 decision surface — the forge cull, the
 // extractor, Dojo, Strips triage, article approval, audio triage, the studio's
 // per-step sign-off — is a packet `source`, not a screen of its own.
 
-/** Where a pile came from (prototype model.js `sourceKind`). `trials` is the
- *  mechanism A/B the prototype draws as blind pairs; `step` is a Project
- *  part's gate (v1's per-step sign-off in /studio), and names its part. */
-export const PACKET_SOURCES = ["forge", "extract", "dojo", "strips", "trials", "article", "triage", "step"] as const;
+/** The sources and modes live in ./source.ts, zod-free, beside each source's
+ *  reason vocabulary; the enums here are built from the same arrays. */
+export { PACKET_MODES, PACKET_SOURCES, type PacketMode, type PacketSource } from "./source.ts";
 export const packetSourceSchema = z.enum(PACKET_SOURCES);
-export type PacketSource = z.output<typeof packetSourceSchema>;
-
-export const PACKET_MODES = ["matrix-cull", "blind-pair", "packet-review"] as const;
 export const packetModeSchema = z.enum(PACKET_MODES);
-export type PacketMode = z.output<typeof packetModeSchema>;
 
 /** The table and its union live in ./packet.machine.ts, zod-free, so a client can hold them. */
 export { packetMachine, type PacketState } from "./packet.machine.ts";
@@ -35,6 +31,8 @@ export const packetSchema = z
     state: packetStateSchema,
     runId: runIdSchema.optional(),
     partId: partIdSchema.optional(),
+    /** What the rail calls the pile (a run's name, an article's title), set by its adapter. */
+    title: z.string().min(1).max(200).optional(),
   })
   .superRefine((p, ctx) => {
     const issue = (path: string, message: string) => ctx.addIssue({ code: "custom", path: [path], message });
@@ -47,6 +45,8 @@ export const packetSchema = z
       }
       for (const [row, n] of rows) if (n !== 2) issue("items", `pair ${row} has ${n} arms; a blind pair has two`);
     }
+    const modes: readonly string[] = SOURCES[p.source].modes;
+    if (!modes.includes(p.mode)) issue("mode", `a ${p.source} packet is decided in ${modes.join(" or ")}, not ${p.mode}`);
     if (p.source === "step" && p.partId === undefined) issue("partId", "a step packet names the part it gates");
     if (p.state === "returned" && p.mode !== "packet-review") issue("state", "only a packet review is sent back for another turn");
   });

@@ -181,3 +181,71 @@ Moved a pixel, recorded in INVENTORY.md: the NOW label's ink is `ink` (`#080a10`
 prototype wrote `#05252b`; a hovered bar's ground is `ink-3` (`#161b27`) where it wrote `#141a26`;
 a done bar's label and the "beside" label of a done bar are `done-text` where it wrote `#c9f7e6`
 and `#9fd9c1`; the link stroke is `ink-bright` at 28% where it wrote white at .28.
+
+## Admitted at the Floor port (Phase 3, lot 20)
+
+`floor.css` lays the Floor out from a handful of lengths the set had no word for; each is admitted
+with the one intent it serves. Colours are not admitted: every wash, stripe and wall end on the
+Floor is a signal token mixed to the prototype's alpha (recorded in INVENTORY.md), except the
+paper ink, which the Board's article page (lot 21) sets on the same paper.
+
+| Role | Value | Uses | Definition |
+| --- | --- | --- | --- |
+| h-lane-folded | `48px` | 2 | Height of a Floor lane folded to its summary while another lane is focused. |
+| h-lane-min | `176px` | 2 | Least height of an unfocused Floor lane whose ratified column is empty. |
+| w-wall | `9px` | 1 | Width of the Weir's wall at the right edge of the Weir column. |
+| w-thumb | `52px` | 2 | Width of a run's thumbnail in the Foundry column (equal to the lane rail by value, not intent). |
+| h-thumb | `36px` | 1 | Height of a run's thumbnail. Equal to `h-control` by value, not by intent. |
+| h-pile-face | `64px` | 1 | Height of a Weir pile's stacked face. |
+| w-pile | `112px` | 2 | Least width of a Weir pile in its grid (the Floor and the kit). |
+| w-shelf-tile | `86px` | 1 | Least width of a style tile on a Library shelf. |
+| h-progress | `3px` | 1 | Height of a run's progress rail. |
+| slot-cols | `42px 26px minmax(0,1fr)` | 1 | Columns of a calendar slot row: time, channel, title (the `ledger-cols` precedent). |
+| w-next | `360px` | 2 | Widest the header's NEXT button grows (and a third of it, its title at 1340px). |
+| h-month-bar | `52px` | 1 | Height of the calendar month's top bar. |
+| w-month-side | `clamp(300px,25vw,400px)` | 1 | Width of the agenda beside the calendar month (the `cal-w` precedent). |
+| paper-ink | `#1d1a16` | 2 | Text set on a paper surface: a pile's article title, the Board's article page. |
+| paper-faint | `#6d6455` | 1 | Secondary text on paper: the turn or source label. |
+
+## Admitted at the Board port (Phase 3, lot 21)
+
+`floor.css`'s board desk, `tokens.css`'s level sheet and the inline sizes `index.html` set on the
+desks (`--tile:150px`/`230px`). Each role serves one intent of the Board; where a neighbour was
+equal by value but not by intent it was reused only where the intent matched (`fs-h2` for the
+article's 19px standfirst and section heads, `warn-cut` for a reject badge's cut-out mark).
+
+| Role | Value | Uses | Definition |
+| --- | --- | --- | --- |
+| w-packet-rail | `268px` | 1 | Width of the Board's packet rail beside the desk. |
+| h-sheet-bar | `50px` | 1 | Height of a level sheet's crumb bar. |
+| w-grab | `44px` | 1 | Width of the grab handle on a level sheet. |
+| dur-sheet | `.34s` | 1 | How long a level sheet takes to rise over the Floor. |
+| sheet-ground | the 180deg `#0f131c` → `#0a0d14` gradient | 2 | Ground of a level sheet (and of the consequence panel drawn on it). |
+| shadow-sheet | `0 -30px 80px rgba(0,0,0,.7)` | 1 | The shadow a level sheet casts up over the Floor (one value: a shadow is one declaration). |
+| h-commit | `38px` | 1 | Height of the commit button that ends a desk. |
+| r-tile | `9px` | 2 | Corner of a decision tile and the commit button (the 9px the table above left to the port). |
+| w-foot-tally | `200px` | 1 | Least width of the kept · rejected · undecided meter in a desk's foot. |
+| w-cull-label | `132px` | 2 | Width of a matrix row's label column and its reference image. |
+| w-tile | `150px` | 2 | Least width of an image tile in the matrix cull. |
+| w-tile-audio | `230px` | 1 | Least width of an audio take tile. |
+| size-badge | `26px` | 2 | Side of the keep / reject badge on a decided tile. |
+| h-wavebox | `86px` | 1 | Height of the waveform box on an audio take tile. |
+| wave-ground | the 180deg `#121a26` → `#0b1018` gradient | 1 | Ground behind an audio take's waveform (the pair the table above called a component constant; the lint has no colour hatch, so it is named for its one intent). |
+| r-arm | `12px` | 2 | Corner of a blind pair's arm and of the cut review's player. |
+| w-pair-thumb | `160px` | 2 | Width of an arm's thumbnail in a blind pair's summary. |
+| w-desk-side | `300px` | 2 | Width of a review desk's side column (the article's checks and plan, the cut's beats). |
+| sp-page | `28px` | 1 | Inset of the article page in a review desk. |
+| sp-page-end | `60px` | 2 | Scroll room after the last section of a review desk's page and side. |
+| sp-page-gap | `22px` | 1 | Space between an article's standfirst and its first section. |
+| fs-article | `34px` | 1 | Serif title of an article under review (off the 32px `fs-h1`). |
+| reading-bright | `#fbf7ee` | 2 | Serif headings of an article under review. |
+| reading-muted | `#c9c2b3` | 1 | An article's standfirst under its title. |
+| h-directive | `26px` | 1 | Height of a directive toggle in an edit note (equal to `size-badge` by value, not by intent). |
+| note-text | `#fde68a` | 2 | Text of an operator's edit note on a section or a beat. |
+| w-timecode | `62px` | 1 | Width of a caption beat's timecode column. |
+| fs-beat | `15.5px` | 1 | Text of a caption beat in the cut review. |
+
+Not admitted, mixed from a token instead: the commit button's emerald at .45 / .14 / .22, the
+refusal's rose at .6, the edit note's amber at .4 / .06, the focused section's wash at 87.5%
+(the prototype's white .035), the rail's and the foot's letterbox at .18 / .2, the tile caption
+ground `--ink` at .9. Moved a pixel, recorded in INVENTORY.md "Board parts".

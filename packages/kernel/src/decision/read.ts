@@ -1,10 +1,11 @@
 import { parseJsonAt } from "@gt/domain/door";
+import type { PickOutcome } from "@gt/domain/board";
 import type { Decision } from "@gt/domain/decision";
 import { AppError, type Result } from "@gt/domain/errors";
 import type { CandidateId } from "@gt/domain/ids";
 import { type Packet, packetSchema } from "@gt/domain/packet";
 import type { Reader } from "../store.ts";
-import { currentOf, planCommit, type CommitPlan, type UndecidedAs } from "./core.ts";
+import { currentOf, pairOutcomes, planCommit, type CommitPlan, type Current, type UndecidedAs } from "./core.ts";
 import { DECISION_COLUMNS, readDecisionRow, readItemRow, readPacketHead, toDecision, type DecisionRow, type ItemRow, type PacketHead } from "./schema.ts";
 
 // THE DECISION READS - every way a surface or an agent can look at a packet.
@@ -30,7 +31,7 @@ export function must<T>(r: Result<T>): T {
 }
 
 export function head(r: Reader, packetId: string): PacketHead {
-  const row = r.get("SELECT id, mode, state, rev, body FROM packets WHERE id = ?", packetId);
+  const row = r.get("SELECT id, json_extract(body, '$.source') AS source, mode, state, rev, body FROM packets WHERE id = ?", packetId);
   if (row === undefined) throw new AppError("not-found", `decision: no packet ${packetId}`);
   return must(readPacketHead(row));
 }
@@ -86,10 +87,57 @@ export function history(r: Reader, packetId: string): Decision[] {
   return rows(r, packetId).map((d) => must(toDecision(d)));
 }
 
-/** The machine's pick per pair - ONLY for pairs the operator has judged. */
-export function revealPicks(r: Reader, packetId: string): ReadonlyMap<string, CandidateId> {
+/** Each blind pair's arms in the stored (id-derived) order: [a, b]. */
+export function pairsOf(its: readonly ItemRow[]): Map<string, readonly [CandidateId, CandidateId]> {
+  const out = new Map<string, CandidateId[]>();
+  for (const it of its) {
+    if (it.row === null) continue;
+    const arms = out.get(it.row) ?? [];
+    arms.push(it.candidate_id);
+    out.set(it.row, arms);
+  }
+  const pairs = new Map<string, readonly [CandidateId, CandidateId]>();
+  for (const [row, arms] of out) {
+    const [a, b] = arms;
+    if (a !== undefined && b !== undefined && arms.length === 2) pairs.set(row, [a, b]);
+  }
+  return pairs;
+}
+
+export type RevealedPick = {
+  readonly candidate: CandidateId;
+  /** The operator's standing pick on the pair, or null when it was judged arm by arm. */
+  readonly outcome: PickOutcome | null;
+  /** Did the machine choose what the operator chose? Computed here, at reveal,
+   *  never stored: v1 measured agreement from the picks at read time too
+   *  (training/blind.ts measureBlind). A tie or both-bad is a disagreement,
+   *  as v1 counted a tie (the judge named an arm; the operator named none).
+   *  Null when the operator's answer names no single arm to compare. */
+  readonly agrees: boolean | null;
+};
+
+function chosenArm(arms: readonly [CandidateId, CandidateId], outcome: PickOutcome | null, current: ReadonlyMap<string, Current>): CandidateId | "neither" | undefined {
+  if (outcome === "a") return arms[0];
+  if (outcome === "b") return arms[1];
+  if (outcome === "tie" || outcome === "both-bad") return "neither";
+  // Judged arm by arm (a patch, or v1's imported verdicts): one keep against one reject names an arm.
+  const [va, vb] = [current.get(arms[0])?.verdict ?? null, current.get(arms[1])?.verdict ?? null];
+  if (va === "keep" && vb === "reject") return arms[0];
+  if (va === "reject" && vb === "keep") return arms[1];
+  return undefined;
+}
+
+/** The machine's pick per pair - ONLY for pairs the operator has judged - with
+ *  the operator's outcome and whether the two agree. */
+export function revealPicks(r: Reader, packetId: string): ReadonlyMap<string, RevealedPick> {
   head(r, packetId);
-  const out = new Map<string, CandidateId>();
+  const all = rows(r, packetId);
+  const pairs = pairsOf(items(r, packetId));
+  const armsOf = new Map<string, string>();
+  for (const [row, arms] of pairs) for (const a of arms) armsOf.set(a, row);
+  const outcomes = pairOutcomes(all, armsOf);
+  const current = currentOf(all);
+  const out = new Map<string, RevealedPick>();
   for (const x of r.all(
     `SELECT p.row AS row, p.candidate_id AS candidate_id FROM packet_picks p
       WHERE p.packet_id = ?
@@ -99,15 +147,20 @@ export function revealPicks(r: Reader, packetId: string): ReadonlyMap<string, Ca
     packetId,
   )) {
     const it = must(readItemRow(x));
-    if (it.row !== null) out.set(it.row, it.candidate_id);
+    if (it.row === null) continue;
+    const arms = pairs.get(it.row);
+    const outcome = outcomes.get(it.row) ?? null;
+    const chosen = arms === undefined ? undefined : chosenArm(arms, outcome, current);
+    out.set(it.row, { candidate: it.candidate_id, outcome, agrees: chosen === undefined ? null : chosen === it.candidate_id });
   }
   return out;
 }
 
-/** What a commit would do now, and the revision it would be done at: v1's
- *  preview plan, whose token a commit can echo back as `expectRev`. A commit
- *  that would be refused previews as that refusal, not as a throw. */
-export function previewCommit(r: Reader, packetId: string, undecidedAs: UndecidedAs = "reject"): { readonly rev: number; readonly plan: Result<CommitPlan> } {
+/** What a commit would do now, and the revision it would be done at: the
+ *  kernel's half of v1's preview plan. The blast radius on v1's side, and the
+ *  token a commit echoes back, are the source adapter's (consequence.ts). A
+ *  commit that would be refused previews as that refusal, not as a throw. */
+export function previewCommit(r: Reader, packetId: string, undecidedAs?: UndecidedAs): { readonly rev: number; readonly plan: Result<CommitPlan> } {
   const h = head(r, packetId);
   if (h.state !== "open") throw new AppError("refused", `decision: packet ${packetId} is ${h.state}`);
   return { rev: h.rev, plan: planCommit(h.mode, items(r, packetId).map((i) => i.candidate_id), currentOf(rows(r, packetId)), undecidedAs) };

@@ -1,0 +1,31 @@
+/* floor.css "board desk": [data-component=BoardDesk], PacketRail, .desk, .desk-top/.desk-main/
+   .desk-foot, OracleStrip and .commit (with .wait and the .refuse shake). The rail's and the
+   foot's dim grounds are black at the prototype's .18 and .2, mixed from the letterbox. */
+.board{flex:1;display:grid;grid-template-columns:var(--w-packet-rail) minmax(0,1fr);min-height:0}
+.rail{border-right:1px solid var(--hair);overflow:auto;padding:var(--sp-4) var(--sp-3) var(--sp-7);background:color-mix(in srgb,var(--letterbox) 18%,transparent)}
+.railLane{font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--faint);padding:var(--sp-5) var(--sp-3) var(--sp-2);display:flex;gap:var(--sp-2);align-items:center}
+.railItem{display:grid;grid-template-columns:var(--h-tag) minmax(0,1fr) auto;gap:var(--sp-3);align-items:center;width:100%;text-align:left;padding:var(--sp-snug) var(--sp-3);border-radius:var(--r-sm);font-size:var(--fs-ui);color:var(--text);text-decoration:none}
+.railItem:hover{background:var(--wash)}
+.railItem[aria-current=page]{background:var(--amber-a);box-shadow:inset var(--stroke-mark) 0 0 var(--amber);color:var(--ink-bright)}
+.done{color:var(--faint)}
+.railMark{display:grid;place-items:center;font:700 var(--fs-micro)/1 var(--mono)}
+.awaiting{color:var(--amber)}
+.committed{color:var(--emerald)}
+.returned{color:var(--muted)}
+.mode{width:var(--size-glyph-sm);height:var(--size-glyph-sm)}
+.laneMark{width:var(--size-mark);height:var(--size-mark)}
+.ell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.cnt{font:600 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+.desk{position:relative;display:flex;flex-direction:column;min-height:0;min-width:0}
+.top{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-4) var(--sp-loose);padding:var(--sp-5) var(--sp-6);border-bottom:1px solid var(--hair)}
+.title{font:600 var(--fs-h2)/1.2 var(--sans);color:var(--ink-bright);letter-spacing:-.01em;margin:0}
+.meta{font:500 var(--fs-bar)/1 var(--mono);color:var(--faint)}
+.oracle{display:flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center}
+.main{flex:1;min-height:0;overflow:auto;position:relative}
+.foot{flex:none;display:flex;align-items:center;gap:var(--sp-loose);padding:var(--sp-4) var(--sp-6);border-top:1px solid var(--hair);background:color-mix(in srgb,var(--letterbox) 20%,transparent)}
+.commit{white-space:nowrap;margin-left:auto;display:flex;align-items:center;gap:var(--sp-4);height:var(--h-commit);padding:0 var(--sp-3) 0 var(--sp-loose);border-radius:var(--r-tile);font-weight:600;font-size:var(--fs-nav);border:1px solid color-mix(in srgb,var(--emerald) 45%,transparent);background:color-mix(in srgb,var(--emerald) 14%,transparent);color:var(--ink-bright)}
+.commit:hover{background:color-mix(in srgb,var(--emerald) 22%,transparent)}
+.wait{border-color:var(--hair-2);background:color-mix(in srgb,var(--wash) 75%,transparent);color:var(--muted)}
+.refuse{border-color:color-mix(in srgb,var(--rose) 60%,transparent);background:var(--rose-a);animation:shake .4s}
+@keyframes shake{25%{transform:translateX(calc(-1 * var(--sp-tight)))}75%{transform:translateX(var(--sp-tight))}}
+@media (prefers-reduced-motion: reduce){.refuse{animation:none}}

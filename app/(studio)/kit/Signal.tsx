@@ -79,6 +79,7 @@ export function SignalSections() {
             <ChannelBadge channel="youtube" />
             <ChannelBadge channel="tiktok" />
             <ChannelBadge channel="instagram" />
+            <ChannelBadge channel="blog" />
           </Row>
         </Spec>
       </Section>

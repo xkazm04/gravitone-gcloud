@@ -85,7 +85,20 @@
       {"name": "w-lane", "tier": "role", "value": "214px", "note": "Width of a resource lane's label column on the Runs day-line."},
       {"name": "h-hours", "tier": "role", "value": "34px", "note": "Height of the hour axis over the Runs day-line."},
       {"name": "w-list", "tier": "role", "value": "clamp(250px,19vw,300px)", "note": "Width of the Projects route's composition list."},
-      {"name": "w-inspector", "tier": "role", "value": "clamp(290px,23vw,360px)", "note": "Width of the inspector beside the Runs day-line."}
+      {"name": "w-inspector", "tier": "role", "value": "clamp(290px,23vw,360px)", "note": "Width of the inspector beside the Runs day-line."},
+      {"name": "h-lane-folded", "tier": "role", "value": "48px", "note": "Height of a Floor lane folded to its summary while another lane is focused."},
+      {"name": "h-lane-min", "tier": "role", "value": "176px", "note": "Least height of an unfocused Floor lane whose ratified column is empty."},
+      {"name": "w-wall", "tier": "role", "value": "9px", "note": "Width of the Weir's wall at the right edge of the Weir column."},
+      {"name": "w-thumb", "tier": "role", "value": "52px", "note": "Width of a run's thumbnail in the Foundry column."},
+      {"name": "h-thumb", "tier": "role", "value": "36px", "note": "Height of a run's thumbnail in the Foundry column."},
+      {"name": "h-pile-face", "tier": "role", "value": "64px", "note": "Height of a Weir pile's stacked face."},
+      {"name": "w-pile", "tier": "role", "value": "112px", "note": "Least width of a Weir pile in its grid."},
+      {"name": "w-shelf-tile", "tier": "role", "value": "86px", "note": "Least width of a style tile on a Library shelf."},
+      {"name": "h-progress", "tier": "role", "value": "3px", "note": "Height of a run's progress rail."},
+      {"name": "slot-cols", "tier": "role", "value": "42px 26px minmax(0,1fr)", "note": "Columns of a calendar slot row: time, channel, title."},
+      {"name": "w-next", "tier": "role", "value": "360px", "note": "Widest the header's NEXT decision button grows."},
+      {"name": "h-month-bar", "tier": "role", "value": "52px", "note": "Height of the calendar month's top bar."},
+      {"name": "w-month-side", "tier": "role", "value": "clamp(300px,25vw,400px)", "note": "Width of the agenda beside the calendar month."}
     ]},
     {"id": "roles-surface", "tokens": [
       {"name": "wash", "tier": "role", "value": "rgba(255,255,255,.04)", "note": "Resting hover fill on a neutral surface."},
@@ -106,7 +119,9 @@
       {"name": "reading", "tier": "role", "value": "#e9e4d8", "note": "Serif reading text on the dark ground."},
       {"name": "code-text", "tier": "role", "value": "#c9d1e0", "note": "Punctuation and plain text of rendered JSON."},
       {"name": "code-key", "tier": "role", "value": "#8b95ab", "note": "A key in rendered JSON."},
-      {"name": "code-string", "tier": "role", "value": "#e7ebf3", "note": "A string value in rendered JSON."}
+      {"name": "code-string", "tier": "role", "value": "#e7ebf3", "note": "A string value in rendered JSON."},
+      {"name": "paper-ink", "tier": "role", "value": "#1d1a16", "note": "Text set on a paper surface."},
+      {"name": "paper-faint", "tier": "role", "value": "#6d6455", "note": "Secondary text set on a paper surface: a turn or section label."}
     ]},
     {"id": "roles-shape", "tokens": [
       {"name": "r-chip", "tier": "role", "value": "6px", "note": "Corner of a chip, tally or small tag."},
@@ -173,6 +188,36 @@
       {"name": "chan-tiktok", "tier": "role", "value": "#8ef0f7", "note": "Mark colour of the TikTok channel."},
       {"name": "chan-instagram", "tier": "role", "value": "#f0a6e6", "note": "Mark colour of the Instagram channel."},
       {"name": "cloud-mark", "tier": "role", "value": "#cbd5e1", "note": "Mark of a paid cloud resource."}
+    ]},
+    {"id": "board", "tokens": [
+      {"name": "w-packet-rail", "tier": "role", "value": "268px", "note": "Width of the Board's packet rail beside the desk."},
+      {"name": "h-sheet-bar", "tier": "role", "value": "50px", "note": "Height of a level sheet's crumb bar."},
+      {"name": "w-grab", "tier": "role", "value": "44px", "note": "Width of the grab handle on a level sheet."},
+      {"name": "dur-sheet", "tier": "role", "value": ".34s", "note": "How long a level sheet takes to rise over the Floor."},
+      {"name": "sheet-ground", "tier": "role", "value": "linear-gradient(180deg,#0f131c,#0a0d14)", "note": "Ground of a level sheet: the Board over the Floor."},
+      {"name": "shadow-sheet", "tier": "role", "value": "0 -30px 80px rgba(0,0,0,.7)", "note": "The shadow a level sheet casts up over the Floor."},
+      {"name": "h-commit", "tier": "role", "value": "38px", "note": "Height of the commit button that ends a desk."},
+      {"name": "r-tile", "tier": "role", "value": "9px", "note": "Corner of a decision tile, a pile face and the commit button."},
+      {"name": "w-foot-tally", "tier": "role", "value": "200px", "note": "Least width of the kept, rejected, undecided meter in a desk's foot."},
+      {"name": "w-cull-label", "tier": "role", "value": "132px", "note": "Width of a matrix cull row's label column and its reference image."},
+      {"name": "w-tile", "tier": "role", "value": "150px", "note": "Least width of an image tile in the matrix cull."},
+      {"name": "w-tile-audio", "tier": "role", "value": "230px", "note": "Least width of an audio take tile in the matrix cull."},
+      {"name": "size-badge", "tier": "role", "value": "26px", "note": "Side of the keep or reject badge on a decided tile."},
+      {"name": "h-wavebox", "tier": "role", "value": "86px", "note": "Height of the waveform box on an audio take tile."},
+      {"name": "wave-ground", "tier": "role", "value": "linear-gradient(180deg,#121a26,#0b1018)", "note": "Ground behind an audio take's waveform."},
+      {"name": "r-arm", "tier": "role", "value": "12px", "note": "Corner of a blind pair's arm and of the cut review's player."},
+      {"name": "w-pair-thumb", "tier": "role", "value": "160px", "note": "Width of an arm's thumbnail in a blind pair's summary."},
+      {"name": "w-desk-side", "tier": "role", "value": "300px", "note": "Width of a review desk's side column: checks, reviewers, edit plan, beats."},
+      {"name": "sp-page", "tier": "role", "value": "28px", "note": "Inset of the article page in a review desk."},
+      {"name": "sp-page-end", "tier": "role", "value": "60px", "note": "Scroll room after the last section of a review desk's page."},
+      {"name": "sp-page-gap", "tier": "role", "value": "22px", "note": "Space between an article's standfirst and its first section."},
+      {"name": "fs-article", "tier": "role", "value": "34px", "note": "Serif title of an article under review."},
+      {"name": "reading-bright", "tier": "role", "value": "#fbf7ee", "note": "Serif headings of an article under review."},
+      {"name": "reading-muted", "tier": "role", "value": "#c9c2b3", "note": "An article's standfirst under its title."},
+      {"name": "h-directive", "tier": "role", "value": "26px", "note": "Height of a directive toggle in an edit note."},
+      {"name": "note-text", "tier": "role", "value": "#fde68a", "note": "Text of an operator's edit note attached to a section or a beat."},
+      {"name": "w-timecode", "tier": "role", "value": "62px", "note": "Width of a caption beat's timecode column."},
+      {"name": "fs-beat", "tier": "role", "value": "15.5px", "note": "Text of a caption beat in the cut review."}
     ]}
   ]
 }

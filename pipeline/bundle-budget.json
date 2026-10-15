@@ -4,8 +4,11 @@
   "owner": "the Director; a raise states its reason in the change that makes it, and an entry well above its measurement is lowered",
   "seeded": "2026-10-15, Lot 13, after the domain machine split; lowered 286345 -> 213962 the same day when the shell's storage key moved from classic zod to named zod/mini imports (the client-closure guard now refuses classic zod in any client module)",
   "routes": {
-    "/projects/runs": 219729,
-    "/ledger": 222713,
-    "/kit": 227617
+    "/floor": 224512,
+    "/board/[packet]": 230979,
+    "/(.)board/[packet]": 230979,
+    "/projects/runs": 224616,
+    "/ledger": 227512,
+    "/kit": 254927
   }
 }

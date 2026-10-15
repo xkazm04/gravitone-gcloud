@@ -8,7 +8,7 @@
 // registration is the only write path, so the agreement is structural.
 
 // zod/mini, not classic zod: this file is in the shell's client bundle (see @gt/domain/door).
-import { minLength, string } from "zod/mini";
+import { int, minLength, nonnegative, string } from "zod/mini";
 import { defineKey, type KeyDef } from "@gt/ui/storage/store";
 
 /**
@@ -24,4 +24,17 @@ export const LAST_IDENTITY = defineKey({
   why: "the eviction trigger itself: it must outlive the identity it records, or no flip could ever be seen",
 });
 
-export const KEYS: readonly KeyDef[] = [LAST_IDENTITY];
+/**
+ * The ledger seq the operator last saw: the header's `ledger +N` counts the acts after it, and
+ * visiting the Ledger moves it to the head (app-shell badge-and-attention: a newness badge
+ * stores its mark in owned state and clears on exposure). Identity-scoped: another person on
+ * this machine has not seen what this one saw.
+ */
+export const LEDGER_SEEN = defineKey({
+  key: "gravitone.next.ledger-seen",
+  scope: "identity",
+  schema: int().check(nonnegative()),
+  why: "the header's ledger delta counts acts after this seq; the Ledger visit moves it",
+});
+
+export const KEYS: readonly KeyDef[] = [LAST_IDENTITY, LEDGER_SEEN];

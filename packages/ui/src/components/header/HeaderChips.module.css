@@ -1,0 +1,10 @@
+/* tokens.css .next-btn (+ .lbl, .t) and .hdr-spend. */
+.next{display:flex;align-items:center;gap:var(--sp-4);height:var(--h-control);padding:0 var(--sp-2) 0 var(--sp-5);border-radius:var(--r-control);border:1px solid color-mix(in srgb,var(--amber) 40%,transparent);background:linear-gradient(90deg,color-mix(in srgb,var(--amber) 14%,transparent),color-mix(in srgb,var(--amber) 4%,transparent));color:var(--ink-bright);font-size:var(--fs-ui);max-width:var(--w-next);min-width:0}
+.next:hover{border-color:var(--amber)}
+.next:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}
+.lbl{font:700 var(--fs-micro)/1 var(--mono);color:var(--amber);letter-spacing:.08em}
+.t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.spend{display:inline-flex;min-width:0}
+.spendRow{display:inline-flex;gap:var(--sp-1);align-items:center}
+@media (max-width:1340px){.t{max-width:calc(var(--w-next) / 3)}}
+@media (max-width:1180px){.t{display:none}}

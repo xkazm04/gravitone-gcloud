@@ -1,0 +1,23 @@
+/* floor.css [data-component=ShelfCell], .shelf-head, .styles-grid, [data-component=ShelfStyle],
+   .list, .row-btn (.post-row, .take-row). */
+.cell{padding:var(--sp-4) var(--sp-5);height:100%;overflow:auto}
+.head{display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-3);flex-wrap:wrap}
+.t{font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--emerald);margin-right:auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.door:hover{color:var(--ink-bright)}
+.door:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--w-shelf-tile),1fr));gap:var(--sp-3)}
+.style{position:relative;display:block;text-align:left;border-radius:var(--r-control);overflow:hidden;border:1px solid var(--hair);background:var(--ink-2);color:inherit}
+.style.door:hover{border-color:color-mix(in srgb,var(--emerald) 45%,transparent)}
+.hero{display:block;width:100%;aspect-ratio:16/10;object-fit:cover}
+.noHero{background:linear-gradient(135deg,var(--ink-4),var(--ink-2))}
+.lock{position:absolute;top:var(--sp-1);right:var(--sp-1);width:var(--size-glyph-btn);height:var(--size-glyph-btn);border-radius:var(--r-xs);display:grid;place-items:center;background:var(--ink-veil);color:var(--emerald)}
+.lockMark{width:var(--size-glyph-xs);height:var(--size-glyph-xs)}
+.nm{display:block;padding:var(--sp-1) var(--sp-2) var(--sp-tight);font-size:var(--fs-meta);line-height:1.2;color:var(--ink-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.list{display:flex;flex-direction:column;gap:var(--sp-1)}
+.row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:var(--sp-control);width:100%;text-align:left;padding:var(--sp-tight) var(--sp-snug);border-radius:var(--r-sm);border:1px solid transparent;font-size:var(--fs-ui);color:inherit}
+.row.door:hover{background:var(--wash);border-color:var(--hair)}
+.lead{display:inline-flex;align-items:center;color:var(--emerald)}
+.rowTitle{color:var(--ink-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.fact{font:500 var(--fs-micro)/1 var(--mono);color:var(--faint)}

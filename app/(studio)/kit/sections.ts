@@ -18,6 +18,8 @@ export const SECTIONS = [
   { id: "structure", group: "Structure", title: "Panels · headings · empty", sub: "panel · caps heading · empty" },
   { id: "runs", group: "Composition", title: "Runs", sub: "day-line · lane chip · resource summary" },
   { id: "ledger", group: "Composition", title: "Ledger", sub: "time strip · event row · json · stale" },
+  { id: "floor", group: "Composition", title: "Floor", sub: "lane · run · pile · shelf · calendar · month · header" },
+  { id: "board", group: "Composition", title: "Board", sub: "sheet · rail · cull · pair · review · cut · consequence" },
   { id: "contract", group: "Contract", title: "Style contract", sub: "docs/next/style-contract · each page's own words" },
 ] as const;
 

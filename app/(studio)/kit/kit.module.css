@@ -69,3 +69,12 @@
 .table th{font:600 var(--fs-micro)/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
 .mono{font-family:var(--mono);font-size:var(--fs-meta);color:var(--muted)}
 .glyph{width:var(--size-glyph);height:var(--size-glyph);color:var(--muted)}
+
+/* Floor parts (lot 20): frames sized to show each part as the Floor lays it out. */
+.floorLanes{display:grid;grid-template-rows:calc(var(--h-lane-min) * 1.4) var(--h-lane-folded);border:1px solid var(--hair);border-radius:var(--r-control);overflow:hidden}
+.glyphCell{display:inline-grid;place-items:center;width:var(--h-row);height:var(--h-row);border:1px solid var(--hair);border-radius:var(--r-sm)}
+.stack{display:flex;flex-direction:column;gap:var(--sp-2)}
+.piles{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--w-pile),1fr));gap:var(--sp-5) var(--sp-4)}
+.calRail{display:flex;height:calc(var(--h-lane-min) * 3);border:1px solid var(--hair);border-radius:var(--r-control);overflow:hidden}
+.calRail>*{flex:1}
+.month{position:relative;height:calc(var(--h-lane-min) * 3.6);border:1px solid var(--hair);border-radius:var(--r-control);overflow:hidden}

@@ -1,7 +1,10 @@
 // LANE - THE FOUNDRY GATE KERNEL (dynamic).
 //
 // The three /foundry tabs each carried their own copy of one verdict state
-// machine. app/foundry/gate/useGate.ts is the one copy; this file holds it to
+// machine. (Vitest lane since Phase 3: the gate is a pure ESM package now, and the Playwright
+// node lane loads @gt/* twice - once through its CommonJS transform, once natively - so a
+// probe there sees whichever copy its worker loaded first.) packages/ui/src/board/gate.ts is the one copy (moved from
+// app/foundry/gate/useGate.ts in Phase 3, which re-exports it); this file holds it to
 // the behaviours the copies existed to provide, in the Node lane, against a
 // fake adapter (and, for the cross-writer case, the REAL Cull adapter over a
 // replaced `fetch`):
@@ -12,11 +15,12 @@
 //   4. `pagehide` inside the window issues a keepalive write
 //   5. run A's slow response never lands on run B (latest-wins, tested once)
 //   6. a committed run is read-only: decide is refused with no network call
-import { test, expect } from "@playwright/test";
+import { expect, test } from "vitest";
 
 import { cullGate } from "@/app/foundry/gate/cull";
-import { createGate, type GateAdapter } from "@/app/foundry/gate/useGate";
+import { createGate, type GatePort as GateAdapter } from "@gt/ui/board/gate";
 import { fromKeep } from "@/lib/board/verdicts";
+
 
 type Rec = { verdict: "keep" | "reject"; at: string };
 interface Detail {

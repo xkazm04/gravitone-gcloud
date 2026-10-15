@@ -196,7 +196,7 @@ describe("keyTable is drawn from the same rows", () => {
       { keys: ["K"], does: "keep" },
       { keys: ["X"], does: "reject" },
       { keys: ["U"], does: "undecide" },
-      { keys: ["1", "2", "3", "4"], does: "reason" },
+      { keys: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-"], does: "reason" },
       { keys: ["←", "→"], does: "move" },
       { keys: ["⇧K", "⇧X"], does: "row" },
       { keys: ["Z"], does: "zoom" },

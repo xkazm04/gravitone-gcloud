@@ -1,0 +1,10 @@
+/* floor.css [data-component=SlotRow] (.tm, .chan, .ttl, .st, .cancelled). */
+.row{display:grid;grid-template-columns:var(--slot-cols);gap:var(--sp-3);align-items:start;width:100%;text-align:left;padding:var(--sp-2);border-radius:var(--r-sm);font-size:var(--fs-ui);line-height:1.3;color:inherit}
+.door:hover{background:var(--wash)}
+.door:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}
+.tm{font:600 var(--fs-micro)/1.6 var(--mono);color:var(--muted)}
+.main{min-width:0;display:flex;flex-direction:column}
+.ttl{display:block;color:var(--ink-bright);overflow-wrap:anywhere}
+.st{display:block;margin-top:var(--sp-hair)}
+.cancelled .ttl{text-decoration:line-through;color:var(--faint)}
+.err{display:block;margin-top:var(--sp-tight)}

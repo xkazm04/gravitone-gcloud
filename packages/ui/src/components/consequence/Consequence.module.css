@@ -1,0 +1,22 @@
+/* The consequence panel has no prototype counterpart (decision 6 is new); it is drawn from the
+   desk's own vocabulary: the zoom's veil over the desk, a sheet-ground panel with the desk's
+   hairlines, CapsHeading blocks, rows in the signal hues the prototype gives their meanings
+   (rose deletes, emerald ratifies, amber awaits the operator - here, what leaves the machine). */
+.backdrop{position:absolute;inset:0;z-index:30;display:grid;place-items:center;padding:var(--sp-6);background:color-mix(in srgb,var(--ink) 80%,transparent)}
+.inline{display:block}
+.panel{width:min(100%,72ch);max-height:100%;overflow:auto;box-sizing:border-box;display:flex;flex-direction:column;gap:var(--sp-loose);padding:var(--sp-6);border-radius:var(--r-lg);border:1px solid var(--hair-2);background:var(--sheet-ground);box-shadow:0 var(--sp-4) var(--sp-7) var(--shadow)}
+.head{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-3)}
+.title{font:600 var(--fs-h2)/1.2 var(--sans);color:var(--ink-bright);margin:0 var(--sp-3) 0 0}
+.counts{display:inline-flex;gap:var(--sp-2)}
+.wait{min-height:var(--h-control)}
+.body{display:flex;flex-direction:column;gap:var(--sp-5)}
+.block{display:flex;flex-direction:column;gap:var(--sp-2)}
+.rows{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--sp-1);font:500 var(--fs-meta)/1.45 var(--mono);color:var(--text)}
+.row{padding-left:var(--sp-4);border-left:var(--stroke-mark) solid var(--hair-2)}
+.rose,.amber,.emerald,.cyan{padding-left:var(--sp-4);border-left:var(--stroke-mark) solid}
+.rose{border-left-color:var(--rose)}
+.amber{border-left-color:var(--amber);color:var(--ink-bright)}
+.emerald{border-left-color:var(--emerald)}
+.cyan{border-left-color:var(--cyan)}
+.token{display:flex;gap:var(--sp-2)}
+.foot{display:flex;justify-content:flex-end;gap:var(--sp-3)}

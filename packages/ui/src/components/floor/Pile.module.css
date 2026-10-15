@@ -1,0 +1,33 @@
+/* floor.css [data-component=Pile], .pile-face, .sheet-l (.l1 .l2 .paper .wav .fb), .pile-title,
+   .pile-sub, .mode-glyph. The rail is .stackbar's geometry with two segments: decided, pending. */
+.pile{--d:0ms;display:flex;flex-direction:column;gap:var(--sp-tight);text-align:left;border-radius:var(--r-control);padding:var(--sp-tight);color:inherit;min-width:0;animation:pileIn .7s var(--ease) both;animation-delay:var(--d)}
+.pile:hover{background:color-mix(in srgb,var(--amber) 7%,transparent)}
+.pile:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}
+.next{background:color-mix(in srgb,var(--amber) 9%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--amber) 35%,transparent)}
+@keyframes pileIn{from{opacity:0;transform:translateX(calc(-1 * var(--sp-7) - var(--sp-loose)))}}
+@media (prefers-reduced-motion:reduce){.pile{animation:none}}
+
+.face{position:relative;display:block;height:var(--h-pile-face);margin:var(--sp-1) var(--sp-2) 0 0}
+.sheet{position:absolute;inset:0;border-radius:var(--r-chip);overflow:hidden;border:1px solid var(--hair-3);background:var(--ink-3);box-shadow:0 var(--sp-2) var(--sp-loose) color-mix(in srgb,var(--letterbox) 50%,transparent)}
+.l2{transform:translate(var(--sp-2),calc(-1 * var(--sp-tight))) rotate(2.5deg);opacity:.55}
+.l1{transform:translate(var(--sp-hair),calc(-1 * var(--sp-hair))) rotate(1.2deg);opacity:.8}
+.count{position:absolute;right:calc(-1 * var(--sp-1));bottom:calc(-1 * var(--sp-2));z-index:3}
+.mode{position:absolute;left:var(--sp-tight);top:var(--sp-tight);z-index:3;display:inline-grid;place-items:center;width:var(--h-tag);height:var(--h-tag);border-radius:var(--r-xs);background:var(--ink-veil);border:1px solid var(--hair-2);color:var(--amber)}
+.modeMark{width:var(--size-glyph-xs);height:var(--size-glyph-xs)}
+
+.paper{background:var(--paper);color:var(--paper-ink);padding:var(--sp-2) var(--sp-snug);font:600 var(--fs-error)/1.2 var(--serif);border-color:color-mix(in srgb,var(--letterbox) 20%,transparent);min-width:0}
+.paperKind{display:block;text-align:right;font:500 var(--fs-micro)/1 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--paper-faint);margin-bottom:var(--sp-tight)}
+.paperTitle{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;line-height:1.2;max-height:2.4em}
+.wav{display:grid;place-items:center;background:linear-gradient(180deg,var(--ink-3),var(--ink-1))}
+.designed{display:flex;flex-direction:column;justify-content:center;gap:var(--sp-hair);padding:var(--sp-tight) var(--sp-7) var(--sp-tight) var(--sp-3);background:linear-gradient(135deg,var(--ink-4),var(--ink-2));min-width:0}
+.fbKind{font:700 var(--fs-micro)/1 var(--mono);text-transform:uppercase;color:var(--amber);padding-left:var(--sp-loose);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fbId{font:600 var(--fs-micro)/1.15 var(--mono);color:var(--ink-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.title{min-width:0;overflow-wrap:anywhere;font-size:var(--fs-control-sm);line-height:1.25;color:var(--ink-bright);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rail{display:flex;height:var(--h-meter);border-radius:var(--r-meter);overflow:hidden;background:var(--wash-hi);gap:1px}
+.decided,.pending{--n:0;display:block;height:100%;flex-grow:var(--n)}
+.decided{background:var(--muted)}
+.pending{background:var(--hatch)}
+.sub{font:500 var(--fs-micro)/1.25 var(--mono);color:var(--faint);overflow-wrap:anywhere;min-width:0}
+/* On the NEXT ring's amber wash --faint drops under 4.5:1; the prototype drew it there anyway. */
+.next .sub{color:var(--muted)}

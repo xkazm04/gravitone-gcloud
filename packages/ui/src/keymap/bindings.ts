@@ -47,7 +47,7 @@ const board: Binding[] = [
   { mode: "board.cull", keys: ["K"], verb: "keep", does: "keep" },
   { mode: "board.cull", keys: ["X"], verb: "reject", does: "reject" },
   { mode: "board.cull", keys: ["U"], verb: "undecide", does: "undecide" },
-  { mode: "board.cull", keys: ["1", "2", "3", "4"], verb: "reason", does: "reason" },
+  { mode: "board.cull", keys: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-"], verb: "reason", does: "reason" },
   { mode: "board.cull", keys: ["←"], alias: ["J"], verb: "prev", does: "move", repeat: true },
   { mode: "board.cull", keys: ["→"], alias: ["L"], verb: "next", does: "move", repeat: true },
   { mode: "board.cull", keys: [], alias: ["↑"], verb: "row-up", does: "move", repeat: true },
@@ -74,7 +74,7 @@ const board: Binding[] = [
   { mode: "board.review", keys: ["A"], verb: "approve", does: "approve" },
   { mode: "board.review", keys: ["R"], verb: "reject", does: "reject" },
   { mode: "board.review", keys: ["Tab"], alias: ["⇧Tab"], verb: "directive", does: "directive", field: "note" },
-  { mode: "board.review", keys: ["⏎"], verb: "attach", does: "attach", field: "note" },
+  { mode: "board.review", keys: ["⏎"], verb: "attach", does: "attach", field: "note", onControl: true },
   { mode: "board.review", keys: ["Esc"], verb: "cancel-note", does: "cancel", field: "note" },
 
   { mode: "board.cut", keys: ["Space"], verb: "play", does: "play" },
@@ -83,7 +83,7 @@ const board: Binding[] = [
   { mode: "board.cut", keys: ["E"], verb: "note", does: "note", when: "beats" },
   { mode: "board.cut", keys: ["A"], verb: "approve", does: "approve" },
   { mode: "board.cut", keys: ["R"], verb: "reject", does: "reject" },
-  { mode: "board.cut", keys: ["⏎"], verb: "attach", does: "attach", field: "note" },
+  { mode: "board.cut", keys: ["⏎"], verb: "attach", does: "attach", field: "note", onControl: true },
   { mode: "board.cut", keys: ["Esc"], verb: "cancel-note", does: "cancel", field: "note" },
 ];
 

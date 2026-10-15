@@ -1,11 +1,11 @@
-import type { RejectReason } from "@gt/domain/decision";
+import type { PickOutcome } from "@gt/domain/board";
 import { err, ok, type Result } from "@gt/domain/errors";
-import type { PacketMode } from "@gt/domain/packet";
+import type { PacketMode } from "@gt/domain/source";
 import { sha256Hex } from "../canonical.ts";
 import type { DecisionRow } from "./schema.ts";
 
-// THE DECISION CORE - pure: what a patch, an undo and a commit WOULD write,
-// decided from rows already read. The driver reads, calls these, writes.
+// THE DECISION CORE - pure: what a patch, a pick, an undo and a commit WOULD
+// write, decided from rows already read. The driver reads, calls these, writes.
 //
 // Absorbed from three v1 places and upgraded where each had a gap:
 //   lib/foundry/verdictLog.ts  a write that changes nothing bumps nothing and
@@ -20,42 +20,42 @@ import type { DecisionRow } from "./schema.ts";
 //                              execution-emitted-inverse - the inverse is read
 //                              from what the act actually overwrote, the rows
 //                              before it, never re-derived from the request).
-//   lib/foundry/store.ts       commitRun(undecidedAs "reject" | "leave") and
-//   commitRun                  its preview token. The token becomes the packet
-//                              revision (monotonic, so a hash of the state adds
-//                              nothing), and the mode decides whether skipping
-//                              is allowed at all.
+//                              A blind pick is one act over two arms, so one
+//                              undo takes both back (gesture-coalescing).
+//   lib/foundry/store.ts       commitRun(undecidedAs "reject" | "leave"), whose
+//   commitRun                  default was "reject": a plate nobody kept was
+//                              swept. UPGRADED to refuse (Phase 3 decision 5):
+//                              the Board's ⇧K/⇧X make deciding a row one key,
+//                              so a sweep the operator did not ask for buys
+//                              nothing and loses the undecided set silently.
 
 export type Verdict = "keep" | "reject" | null;
-export type Current = { readonly verdict: Verdict; readonly reason?: RejectReason };
-export type Change = { readonly candidate: string; readonly verdict: Verdict; readonly reason?: RejectReason };
+export type Current = { readonly verdict: Verdict; readonly reasons: readonly string[]; readonly note?: string };
+export type Change = { readonly candidate: string; readonly verdict: Verdict; readonly reasons: readonly string[]; readonly note?: string };
 
-/**
- * Which modes may be committed with candidates left undecided (plan §2.1:
- * "commit is one act per packet"). A matrix cull is a pile the operator thins:
- * v1's forge commit took `undecidedAs` and defaulted it to reject, because a
- * plate nobody kept is not wanted. A blind pair exists to measure the machine
- * against the operator, so an unjudged pair is a hole in the measurement, and
- * a packet review is one verdict on one piece of work - neither may skip.
- */
-export const MODE_POLICY: { readonly [M in PacketMode]: { readonly skip: boolean } } = {
-  "matrix-cull": { skip: true },
-  "blind-pair": { skip: false },
-  "packet-review": { skip: false },
-};
+const UNDECIDED: Current = { verdict: null, reasons: [] };
+
+function currentOfRow(r: DecisionRow): Current {
+  return r.note === null ? { verdict: r.verdict, reasons: r.reasons } : { verdict: r.verdict, reasons: r.reasons, note: r.note };
+}
 
 /** Newest row per candidate, from rows in seq order. */
 export function currentOf(rows: readonly DecisionRow[]): Map<string, Current> {
   const out = new Map<string, Current>();
-  for (const r of rows) out.set(r.candidate_id, r.reason === null ? { verdict: r.verdict } : { verdict: r.verdict, reason: r.reason });
+  for (const r of rows) out.set(r.candidate_id, currentOfRow(r));
   return out;
 }
 
-const same = (a: Current | undefined, c: Change): boolean => (a?.verdict ?? null) === c.verdict && a?.reason === c.reason;
+const sameList = (a: readonly string[], b: readonly string[]): boolean => a.length === b.length && a.every((x, i) => x === b[i]);
+const same = (a: Current | undefined, c: Change): boolean => {
+  const cur = a ?? UNDECIDED;
+  return cur.verdict === c.verdict && sameList(cur.reasons, c.reasons) && cur.note === c.note;
+};
 
 /** The changes that actually change something. A key outside the packet, or
  *  named twice, refuses the whole write: v1 cleaned every key before writing
- *  any, so a refusal wrote and logged nothing. */
+ *  any, so a refusal wrote and logged nothing. The source's vocabulary was
+ *  checked at the door (driver.ts), before this runs. */
 export function planPatch(members: ReadonlySet<string>, current: ReadonlyMap<string, Current>, changes: readonly Change[]): Result<Change[]> {
   if (changes.length === 0) return err("invalid", "decision: a patch names at least one key");
   const seen = new Set<string>();
@@ -64,34 +64,70 @@ export function planPatch(members: ReadonlySet<string>, current: ReadonlyMap<str
     if (!members.has(c.candidate)) return err("invalid", `decision: candidate ${c.candidate} is not in this packet`);
     if (seen.has(c.candidate)) return err("invalid", `decision: candidate ${c.candidate} is named twice in one patch`);
     seen.add(c.candidate);
-    if (c.reason !== undefined && c.verdict !== "reject") return err("invalid", `decision: only a reject carries a reason (${c.candidate})`);
     if (!same(current.get(c.candidate), c)) out.push(c);
   }
   return ok(out);
 }
 
+/** Forward acts that no undo has reversed: the acts whose effect stands. */
+function undoneRevs(rows: readonly DecisionRow[]): Set<number> {
+  const undone = new Set<number>();
+  for (const r of rows) if (r.undoes !== null) undone.add(r.undoes);
+  return undone;
+}
+
+/**
+ * Each pair's standing outcome: the outcome of the newest STANDING act on its
+ * arms when that act was a pick, else null (an arm patched after the pick has
+ * overridden it, or the pair was never picked). Because undo always reverses
+ * the newest standing act, "the acts not undone" is exactly the state the
+ * operator sees, so an undone pick takes its outcome with it.
+ */
+export function pairOutcomes(rows: readonly DecisionRow[], armsOf: ReadonlyMap<string, string>): Map<string, PickOutcome | null> {
+  const undone = undoneRevs(rows);
+  const out = new Map<string, PickOutcome | null>();
+  for (const r of rows) {
+    if (r.act === "undo" || undone.has(r.rev)) continue;
+    const pair = armsOf.get(r.candidate_id);
+    if (pair !== undefined) out.set(pair, r.act === "pick" ? r.outcome : null);
+  }
+  return out;
+}
+
+/** The two writes a pick makes, or none when the pair already stands at this
+ *  outcome with these verdicts (a repeated key press changes nothing, as a
+ *  repeated patch does not). A pick carries no reasons and no note. */
+export function planPick(arms: readonly [string, string], verdicts: readonly [Verdict, Verdict], current: ReadonlyMap<string, Current>, standing: PickOutcome | null, outcome: PickOutcome): Change[] {
+  const changes: Change[] = [
+    { candidate: arms[0], verdict: verdicts[0], reasons: [] },
+    { candidate: arms[1], verdict: verdicts[1], reasons: [] },
+  ];
+  if (standing === outcome && changes.every((c) => same(current.get(c.candidate), c))) return [];
+  return changes;
+}
+
 export type UndoPlan = { readonly undoes: number; readonly changes: readonly Change[] };
 
 /**
- * The newest forward act (a patch) that no undo has reversed yet, and the
- * writes that reverse it: each key it touched back to its value in the row
- * BEFORE that act's row, or undecided when there was none.
+ * The newest forward act (a patch or a pick) that no undo has reversed yet,
+ * and the writes that reverse it: each key it touched back to its value in the
+ * row BEFORE that act's row, or undecided when there was none.
  *
  * Why that is the right "before" even after other undos: every forward act
  * newer than the one chosen has been undone, so each key it touched is back to
  * its value after the chosen act. Only one act's worth of state is ever
  * walked back at a time, so nothing in between can be skipped.
  *
- * A commit's own rows (an undecided pile written as rejects) are not an act
- * the operator can take back: a committed packet refuses undo before this runs.
+ * Not undoable: the `open` act (v1's verdicts, imported - the operator did not
+ * cast them here, and taking them back would erase history v1 kept) and a
+ * commit's own rows (a committed packet refuses undo before this runs).
  */
 export function planUndo(rows: readonly DecisionRow[]): UndoPlan | undefined {
-  const undone = new Set<number>();
-  for (const r of rows) if (r.undoes !== null) undone.add(r.undoes);
+  const undone = undoneRevs(rows);
   let target: number | undefined;
   for (let i = rows.length - 1; i >= 0; i--) {
     const r = rows[i];
-    if (r !== undefined && r.act === "patch" && !undone.has(r.rev)) {
+    if (r !== undefined && (r.act === "patch" || r.act === "pick") && !undone.has(r.rev)) {
       target = r.rev;
       break;
     }
@@ -104,23 +140,41 @@ export function planUndo(rows: readonly DecisionRow[]): UndoPlan | undefined {
   for (const r of [...act].reverse()) {
     let prev: DecisionRow | undefined;
     for (const p of rows) if (p.candidate_id === r.candidate_id && p.seq < first) prev = p;
-    changes.push(prev === undefined || prev.verdict === null ? { candidate: r.candidate_id, verdict: null } : prev.reason === null ? { candidate: r.candidate_id, verdict: prev.verdict } : { candidate: r.candidate_id, verdict: prev.verdict, reason: prev.reason });
+    const back = prev === undefined ? UNDECIDED : currentOfRow(prev);
+    changes.push({ candidate: r.candidate_id, ...back });
   }
   return { undoes: target, changes };
 }
 
+/** An explicit sweep of the undecided, kept for the one caller that needs it
+ *  (a matrix cull committed under an operator's "reject the rest"); absent
+ *  means refuse, for every mode. */
 export type UndecidedAs = "reject" | "leave";
+
+/**
+ * Which modes may be swept at all. A blind pair exists to measure the machine
+ * against the operator, so an unjudged pair is a hole in the measurement, and
+ * a packet review is one verdict on one piece of work: neither may skip, even
+ * when asked to.
+ */
+export const MODE_POLICY: { readonly [M in PacketMode]: { readonly sweep: boolean } } = {
+  "matrix-cull": { sweep: true },
+  "blind-pair": { sweep: false },
+  "packet-review": { sweep: false },
+};
 
 export type CommitPlan = {
   readonly kept: readonly string[];
   readonly rejected: readonly string[];
-  /** Left undecided by the commit (only a mode that may skip, with "leave"). */
+  /** Left undecided by the commit (only an explicit "leave" on a matrix cull). */
   readonly undecided: readonly string[];
-  /** Candidates the commit itself decides as rejects ("reject" on a skippable mode). */
+  /** Candidates the commit itself decides as rejects (an explicit "reject"). */
   readonly writeRejects: readonly string[];
 };
 
-export function planCommit(mode: PacketMode, members: readonly string[], current: ReadonlyMap<string, Current>, undecidedAs: UndecidedAs): Result<CommitPlan> {
+/** Refused with the undecided candidates in `detail` (a JSON array), so a
+ *  surface can jump to them rather than parse a sentence. */
+export function planCommit(mode: PacketMode, members: readonly string[], current: ReadonlyMap<string, Current>, undecidedAs?: UndecidedAs): Result<CommitPlan> {
   const kept: string[] = [];
   const rejected: string[] = [];
   const open: string[] = [];
@@ -130,8 +184,9 @@ export function planCommit(mode: PacketMode, members: readonly string[], current
     else if (v === "reject") rejected.push(c);
     else open.push(c);
   }
-  if (open.length > 0 && !MODE_POLICY[mode].skip) {
-    return err("refused", `decision: a ${mode} packet commits only when every candidate is decided; ${open.length} undecided (${open.slice(0, 5).join(", ")}${open.length > 5 ? ", ..." : ""})`);
+  if (open.length > 0 && (undecidedAs === undefined || !MODE_POLICY[mode].sweep)) {
+    const head = open.slice(0, 5).join(", ") + (open.length > 5 ? ", ..." : "");
+    return err("refused", `decision: a ${mode} packet commits only when every candidate is decided; ${open.length} undecided (${head})`, { detail: JSON.stringify(open) });
   }
   if (undecidedAs === "reject") return ok({ kept, rejected: [...rejected, ...open], undecided: [], writeRejects: open });
   return ok({ kept, rejected, undecided: open, writeRejects: [] });

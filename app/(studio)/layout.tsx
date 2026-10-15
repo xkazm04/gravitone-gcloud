@@ -28,7 +28,9 @@ import { Providers } from "./_shell/Providers.tsx";
 import { StudioHeader } from "./_shell/StudioHeader.tsx";
 import s from "./_shell/Shell.module.css";
 
-export default async function StudioLayout({ children }: { readonly children: ReactNode }) {
+// `sheet` is the Board's slot (./@sheet): a soft navigation to /board/<packet> draws the Board
+// there, over the page `children` keeps mounted; every other address draws nothing in it.
+export default async function StudioLayout({ children, sheet }: { readonly children: ReactNode; readonly sheet?: ReactNode }) {
   const who = await principal();
   // Two refusals, two meanings. 401: no cookie, or one the verifier rejected - the browser
   // may still hold a session, so the handoff decides. 503: the verifier could not reach its
@@ -51,6 +53,7 @@ export default async function StudioLayout({ children }: { readonly children: Re
           <main id="content" className={s.main} tabIndex={-1}>
             {children}
           </main>
+          {sheet}
         </Providers>
       )}
     </div>

@@ -65,6 +65,14 @@ process.env.SPEND_STORE = "memory";
 // points it at its own temp directories per case.
 process.env.GPU_LEASE_DIR ??= mkdtempSync(path.join(tmpdir(), "gpu-lease-pw-"));
 
+const NATIVE_ESM = [
+  "**/imaging-auth.probe.spec.ts",
+  "**/ledger-reconcile.probe.spec.ts",
+  "**/principal.probe.spec.ts",
+  "**/runs-live.probe.spec.ts",
+  "**/server-seam.probe.spec.ts",
+];
+
 export default defineConfig({
   testDir: "./tests/golden-path",
 
@@ -102,5 +110,16 @@ export default defineConfig({
   forbidOnly: !!process.env.CI || !!process.env.PW_FORBID_ONLY,
 
   reporter: [["list"]],
-  projects: [{ name: "node", use: {} }],
+  // TWO PROJECTS, BECAUSE THE LANE LOADS @gt/* TWO WAYS. A v1 probe that `require()`s a route
+  // module (deployment-cells' load()) pulls @gt/kernel through Playwright's CommonJS transform;
+  // a probe that `await import()`s it gets Node's native ESM. In one worker the second loader
+  // finds the first's copy and fails ("does not provide an export named 'err'", "exports is not
+  // defined in ES module scope") - order-dependent, so it read as flakes for two phases. Workers
+  // are never shared across projects, so the probes that import the new packages natively run
+  // in their own. A new probe that `await import()`s @gt/*, lib/kernelStore, lib/ledger or
+  // app/_server belongs in NATIVE_ESM.
+  projects: [
+    { name: "node", use: {}, testIgnore: NATIVE_ESM },
+    { name: "node-esm", use: {}, testMatch: NATIVE_ESM },
+  ],
 });

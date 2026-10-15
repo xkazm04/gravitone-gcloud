@@ -93,6 +93,9 @@ test.describe("/kit", () => {
     const hint = page.locator('[data-specimen="Hint"]');
     const glyph = hint.getByRole("button", { name: "spend" });
     const tip = hint.getByRole("tooltip");
+    // The Runs specimen seeds a selection and focuses that bar once its day-line has measured
+    // itself after hydration; wait for that, or it takes the focus this test sets below.
+    await page.locator('[data-component="RunsDayline"][data-measured]').first().waitFor();
     await glyph.scrollIntoViewIfNeeded();
     // Focus somewhere else first: the dismissal must leave it exactly there.
     await page.locator("#keys-h").evaluate((h) => {

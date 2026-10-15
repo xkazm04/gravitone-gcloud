@@ -4,6 +4,9 @@ import { packetSchema, type Packet } from "@gt/domain/packet";
 import { eventsMigrations } from "../src/events.ts";
 import { decisionMigrations } from "../src/decision/schema.ts";
 import { calibrationMigrations } from "../src/calibration/series.ts";
+import { consequenceToken } from "../src/decision/consequence.ts";
+import { currentDecisions } from "../src/decision/read.ts";
+import type { Store } from "../src/store.ts";
 import { must } from "./helpers.ts";
 
 // Packets for the decision, calibration and blind tests. Ids and grades follow
@@ -50,3 +53,12 @@ export const cull = (id = "run-0412"): Packet =>
 
 export const operator = { by: "operator", surface: "board", who: "op-kazda" } as const;
 export const agent = { by: "agent", surface: "cli", who: "agent-forge" } as const;
+
+/** The v1 digest a test's adapter "read" (the kernel never reads v1; it only carries the digest). */
+export const V1 = "v1-state-0412";
+
+/** What a Board preview would hand the commit: the token over the current decisions and `v1`. */
+export function preview(s: Store, packetId: PacketId, v1: string = V1): { token: string; v1Digest: string } {
+  const decisions = must(s.read((r) => currentDecisions(r, packetId))).decisions;
+  return { token: consequenceToken(decisions, v1), v1Digest: v1 };
+}
