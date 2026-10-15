@@ -3,7 +3,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 import { eventsMigrations, verify } from "../src/events.ts";
-import { leaseMigrations } from "../src/lease.ts";
+import { acquire, leaseMigrations, releaseIn } from "../src/lease.ts";
+import { blobStore } from "../src/blob.ts";
+import { liveEffects } from "../src/effects.ts";
 import { migrate } from "../src/migrate.ts";
 import { openStore } from "../src/store.ts";
 import { must, scratch } from "./helpers.ts";
@@ -82,3 +84,38 @@ describe.skipIf(python === undefined)("Node and Python contend for one lease", (
     }
   }, 120_000);
 });
+
+describe.skipIf(python === undefined)("a Python waiter while Node holds", () => {
+  // Deterministic, unlike the contention above: under a loaded machine the four children may
+  // never overlap, and then a Python side that ignored the holder would still log clean
+  // enter/exit pairs. Here Node holds for the whole Python attempt, so the only right answer
+  // is Python's own timeout.
+  it("is not granted, and times out with the holder named", async () => {
+    const db = path.join(tmp.dir, "held.sqlite");
+    const s = must(openStore(db));
+    must(migrate(s, [eventsMigrations, leaseMigrations], { snapshotDir: tmp.dir }));
+    const fx = liveEffects(s, blobStore(`${db}.blobs`));
+    const held = must(await acquire(fx, "gpu.local", { waitMs: 1_000, ttlS: 30 }));
+    try {
+      const code = [
+        "import sys",
+        `sys.path.insert(0, ${JSON.stringify(path.join(here, "..", "py"))})`,
+        "from lease import Leases, LeaseTimeout",
+        `l = Leases(${JSON.stringify(db)})`,
+        "try:",
+        "    l.acquire('gpu.local', wait_s=0.4, ttl_s=30, poll_s=0.02)",
+        "    print('GRANTED')",
+        "except LeaseTimeout:",
+        "    print('TIMEOUT')",
+        "finally:",
+        "    l.close()",
+      ].join("\n");
+      const r = await run(python ?? "python", ["-I", "-c", code]);
+      expect({ out: r.out.trim(), stderr: r.errText }).toEqual({ out: "TIMEOUT", stderr: "" });
+    } finally {
+      must(s.tx((t) => releaseIn(t, "gpu.local", held.fence)));
+      s.close();
+    }
+  });
+});
+
