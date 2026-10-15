@@ -2853,7 +2853,11 @@
           "revision": 11,
           "changedAt": "2026-09-17",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/imaging/router.ts:216 A prefer steer for leonardo-studio replaces the plan with a vendor PLAN never lists, so the steer leaves the capability table instead of only reordering inside it.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
+          "evaluatedRevision": 11
         },
         {
           "subject": "voice-io",
@@ -3051,7 +3055,11 @@
           "revision": 11,
           "changedAt": "2026-09-17",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/music/elevenlabs.ts:61 Every music call passes one ElevenLabs module that reserves a seconds ceiling before fetch, with a dated unpriced ledger and a reported floor, and there is no second vendor to hop.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
+          "evaluatedRevision": 11
         },
         {
           "subject": "mcp-tools",

@@ -1,0 +1,155 @@
+{
+ "schema": "conform-run/1",
+ "worker": "99bf878f-6c7d-46e0-a9bd-abb4c1cfc49c",
+ "subject": "generative-provider-routing",
+ "evaluatedAt": "2026-10-15T04:45:29.169644+00:00",
+ "provider": "grok",
+ "model": "grok-4.7",
+ "pairs": [
+  {
+   "context": "imaging-providers",
+   "subject": "generative-provider-routing",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/imaging/router.ts:216 A prefer steer for leonardo-studio replaces the plan with a vendor PLAN never lists, so the steer leaves the capability table instead of only reordering inside it.",
+   "techniques": [
+    {
+     "technique": "capability-to-vendor-plan",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/router.ts:216 Prefer of a PREFER_ONLY id becomes the whole chain even though PLAN does not list it; avoid-empties-the-chain and the env table are otherwise present."
+    },
+    {
+     "technique": "refusal-reroute-hop",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/errors.ts:112 Timeout and vendor failure do not hop; Leonardo COMPLETE with zero images is thrown as bad-response at lib/imaging/providers/leonardo.ts:246, not as refused. Google empty output is refused."
+    },
+    {
+     "technique": "non-silent-elimination",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/providers/google.ts:216 The edit body omits image_size, so the vendor's own size default ships with no trail entry; the four in-chain eliminations and reroutedFrom are otherwise recorded."
+    },
+    {
+     "technique": "vendor-fact-ledger",
+     "verdict": "conformant",
+     "evidence": "lib/imaging/pricing.ts:244 A row with no figure stays unpriced and carries its recorded reason; priced rows bind source, checked date, and atSize."
+    },
+    {
+     "technique": "cost-per-usable-economics",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/router.ts:83 Dev generate puts agy first with no usable-output grid; the 26/30 vs 7/30 measurement above ranks google over leonardo only. The pre-call ceiling itself is present."
+    },
+    {
+     "technique": "resolution-as-stage-property",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/providers/google.ts:53 Every Google generate pins one process-global size; the comment above names 0.5K\u20134K and a doubling price, and GenerateRequest has no stage or size field."
+    },
+    {
+     "technique": "unspent-budget-is-a-defect",
+     "verdict": "conformant",
+     "evidence": "lib/imaging/router.ts:180 Traffic that never served the plan's first provider is reported, and budgetStats.underFloor reports a band breach without refusing the call."
+    },
+    {
+     "technique": "extraction-model-bake-off",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/router.ts:99 Recognize is ordered ollama then google because the local eye is free; the plan does not cite a truth-set score or skip ollama on unresolved fields."
+    }
+   ],
+   "registryProposal": "The steer contract has no closed form for a vendor that must be named to run and must not fall through onto a dollar-billed vendor; PREFER_ONLY is that form, and the standard currently treats any steer outside the plan as a violation."
+  },
+  {
+   "context": "music-pipeline",
+   "subject": "generative-provider-routing",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "lib/music/elevenlabs.ts:61 Every music call passes one ElevenLabs module that reserves a seconds ceiling before fetch, with a dated unpriced ledger and a reported floor, and there is no second vendor to hop.",
+   "techniques": [
+    {
+     "technique": "capability-to-vendor-plan",
+     "verdict": "conformant",
+     "evidence": "lib/music/elevenlabs.ts:61 One module is the seam; api.elevenlabs.io is referenced only here outside tests, so the single-vendor seam is what the technique requires."
+    },
+    {
+     "technique": "refusal-reroute-hop",
+     "verdict": "not-applicable",
+     "evidence": "lib/music/types.ts:130 Provenance names one vendor, so a refusal has no next hop; 451 is still classified as refused and a tiny body is thrown rather than returned as success."
+    },
+    {
+     "technique": "non-silent-elimination",
+     "verdict": "conformant",
+     "evidence": "lib/music/elevenlabs.ts:49 With one vendor the trail shrinks to a named error; no-key is distinct from refused, rate-limited, and failed."
+    },
+    {
+     "technique": "vendor-fact-ledger",
+     "verdict": "conformant",
+     "evidence": "lib/music/pricing.ts:191 An unmeasured credits-per-second rate stays unpriced with the row source; the plan row is a declared zero with checked 2026-08-26."
+    },
+    {
+     "technique": "cost-per-usable-economics",
+     "verdict": "conformant",
+     "evidence": "lib/music/budget.ts:201 There is no second vendor to order by usable output; the applicable control is the pre-call ceiling, and it refuses before fetch."
+    },
+    {
+     "technique": "resolution-as-stage-property",
+     "verdict": "not-applicable",
+     "evidence": "lib/music/pricing.ts:21 The priced unit is seconds of audio. Searched lib/music and app/api/music for image_size and resolution; hits are composition drafts, not pixel rungs."
+    },
+    {
+     "technique": "unspent-budget-is-a-defect",
+     "verdict": "conformant",
+     "evidence": "lib/music/budget.ts:266 Floor breach is reported and is not an input to the gate; with one vendor the plan-top reachability half is vacuous, which the technique allows."
+    },
+    {
+     "technique": "extraction-model-bake-off",
+     "verdict": "not-applicable",
+     "evidence": "lib/music/pricing.ts:60 The closed operation set is plan, compose, generate, and sfx. Searched lib/music and app/api/music for recognize, extract, bake-off, truth set, and json_schema and found no hits."
+    }
+   ],
+   "registryProposal": "The golden path opens on image and video size economics, so an audio engine priced in seconds has no stated analogue of the resolution ladder."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-15T04:45:29.169644+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generative-provider-routing"
+   ],
+   "techniques": [
+    "capability-to-vendor-plan",
+    "cost-per-usable-economics",
+    "extraction-model-bake-off",
+    "non-silent-elimination",
+    "refusal-reroute-hop",
+    "resolution-as-stage-property",
+    "unspent-budget-is-a-defect",
+    "vendor-fact-ledger"
+   ],
+   "deviations": 1,
+   "context": "imaging-providers",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  },
+  {
+   "ts": "2026-10-15T04:45:29.169644+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generative-provider-routing"
+   ],
+   "techniques": [
+    "capability-to-vendor-plan",
+    "cost-per-usable-economics",
+    "extraction-model-bake-off",
+    "non-silent-elimination",
+    "refusal-reroute-hop",
+    "resolution-as-stage-property",
+    "unspent-budget-is-a-defect",
+    "vendor-fact-ledger"
+   ],
+   "deviations": 0,
+   "context": "music-pipeline",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  }
+ ]
+}
