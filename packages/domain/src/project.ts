@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { libraryItemIdSchema, projectIdSchema, styleIdSchema } from "./ids.ts";
 import { partSchema, type Part, type PartState } from "./part.ts";
-import { defineMachine } from "./transitions.ts";
+import { projectMachine, type ProjectState } from "./project.machine.ts";
 
 // A PROJECT: a composition on top of the pipeline — a recipe broken into
 // Parts, each run as a Job (plan §2.2). The v1 project record lived in the
@@ -29,23 +29,9 @@ export type Recipe = z.output<typeof recipeSchema>;
 
 /* ── the state ────────────────────────────────────────────────────────────── */
 
-/**
- * The prototype's project words (studio.js `projectTotals().state`). A
- * project's state is a function of its parts (`projectStateOf`), so this
- * machine is the closure of that function: every live state can become any
- * other as parts move, and `ratified` (shipped) is the end. `draft` is a plan
- * not yet launched; launching queues its parts.
- */
-export const projectMachine = defineMachine({
-  draft: ["queued"],
-  queued: ["running", "awaiting_gate", "blocked", "ratified"],
-  running: ["queued", "awaiting_gate", "blocked", "ratified"],
-  awaiting_gate: ["queued", "running", "blocked", "ratified"],
-  blocked: ["queued", "running", "awaiting_gate", "ratified"],
-  ratified: [],
-});
+/** The table and its union live in ./project.machine.ts, zod-free, so a client can hold them. */
+export { projectMachine, type ProjectState } from "./project.machine.ts";
 export const projectStateSchema = z.enum(projectMachine.states);
-export type ProjectState = z.output<typeof projectStateSchema>;
 
 /**
  * The prototype's precedence, kept: anything stuck outranks anything at the

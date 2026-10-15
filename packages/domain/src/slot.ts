@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { libraryItemIdSchema, slotIdSchema } from "./ids.ts";
 import { holderSchema } from "./job.ts";
-import { defineMachine } from "./transitions.ts";
+import { slotMachine } from "./slot.machine.ts";
 
 // A SLOT: one ratified thing, on one channel, at one time (plan §2.2) — v1's
 // calendar state machine (lib/publish/schedule.ts, ported there from
@@ -12,30 +12,9 @@ export const CHANNELS = ["youtube", "tiktok", "instagram"] as const;
 export const channelSchema = z.enum(CHANNELS);
 export type Channel = z.output<typeof channelSchema>;
 
-/**
- * v1's table, verbatim:
- *   scheduled  -> publishing (a tick CLAIMS it) | missed | cancelled | scheduled (reschedule)
- *   publishing -> published | failed
- *   missed     -> scheduled | cancelled
- *   failed     -> scheduled | cancelled
- *
- * AT-MOST-ONCE lives in what is ABSENT: there is no `publishing -> scheduled`.
- * A slot is claimed before anything is uploaded, and a holder that dies
- * mid-publish leaves it `publishing`; the next sweep marks it `failed`
- * ("interrupted"), visibly, and a person reschedules it. Nothing re-fires it.
- * MISSED: overdue past the window is never published late — a stale upload
- * after downtime is worse than none.
- */
-export const slotMachine = defineMachine({
-  scheduled: ["publishing", "missed", "cancelled", "scheduled"],
-  publishing: ["published", "failed"],
-  missed: ["scheduled", "cancelled"],
-  failed: ["scheduled", "cancelled"],
-  published: [],
-  cancelled: [],
-});
+/** The table and its union live in ./slot.machine.ts, zod-free, so a client can hold them. */
+export { slotMachine, type SlotState } from "./slot.machine.ts";
 export const slotStateSchema = z.enum(slotMachine.states);
-export type SlotState = z.output<typeof slotStateSchema>;
 
 /** v1's two ways a scheduled slot becomes unfireable. A drifted slot is never
  *  claimed, and the drift clears itself when its cause does. v1 had to carry

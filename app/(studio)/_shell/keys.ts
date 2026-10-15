@@ -7,7 +7,8 @@
 // agreement (lib/identityEviction.ts, tests/golden-path/identity-and-writes). Here the
 // registration is the only write path, so the agreement is structural.
 
-import { z } from "zod";
+// zod/mini, not classic zod: this file is in the shell's client bundle (see @gt/domain/door).
+import { minLength, string } from "zod/mini";
 import { defineKey, type KeyDef } from "@gt/ui/storage/store";
 
 /**
@@ -19,7 +20,7 @@ import { defineKey, type KeyDef } from "@gt/ui/storage/store";
 export const LAST_IDENTITY = defineKey({
   key: "gravitone.next.identity",
   scope: "device",
-  schema: z.string().min(1),
+  schema: string().check(minLength(1)),
   why: "the eviction trigger itself: it must outlive the identity it records, or no flip could ever be seen",
 });
 

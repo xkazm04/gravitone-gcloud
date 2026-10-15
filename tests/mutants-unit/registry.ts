@@ -145,7 +145,7 @@ export const MUTANTS: UnitMutant[] = [
   {
     id: "job-interrupted-resumes-directly",
     test: "packages/domain/test/machines.test.ts",
-    file: "packages/domain/src/job.ts",
+    file: "packages/domain/src/job.machine.ts",
     find: "interrupted: [\"queued\", \"cancelled\"],",
     replace: "interrupted: [\"queued\", \"running\", \"cancelled\"],",
     why: "A crashed job can resume straight to running without the queue or an operator's look, so a step whose vendor may already have been paid is paid for twice.",
@@ -153,7 +153,7 @@ export const MUTANTS: UnitMutant[] = [
   {
     id: "slot-claimed-goes-back-to-scheduled",
     test: "packages/domain/test/machines.test.ts",
-    file: "packages/domain/src/slot.ts",
+    file: "packages/domain/src/slot.machine.ts",
     find: "publishing: [\"published\", \"failed\"],",
     replace: "publishing: [\"published\", \"failed\", \"scheduled\"],",
     why: "A slot claimed for publishing can return to scheduled and fire again, breaking at-most-once: the same video posts twice.",

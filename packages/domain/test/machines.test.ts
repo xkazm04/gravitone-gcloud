@@ -7,6 +7,14 @@ import { runMachine, runStateSchema } from "../src/run.ts";
 import { slotMachine, slotStateSchema } from "../src/slot.ts";
 import { styleMachine, styleStatusSchema } from "../src/style.ts";
 import type { Machine } from "../src/transitions.ts";
+import * as jobTable from "../src/job.machine.ts";
+import * as packetTable from "../src/packet.machine.ts";
+import * as partTable from "../src/part.machine.ts";
+import * as projectTable from "../src/project.machine.ts";
+import * as runTable from "../src/run.machine.ts";
+import * as slotTable from "../src/slot.machine.ts";
+import * as styleTable from "../src/style.machine.ts";
+import type { z } from "zod";
 
 function closedMachine<S extends string>(name: string, m: Machine<S>, schema: { readonly options: readonly string[] }) {
   it(`${name}: the table is closed — every target is a declared state`, () => {
@@ -86,5 +94,27 @@ describe("the transitions v1 relied on", () => {
     expect(styleMachine.can("proven", "candidate")).toBe(false);
     expect(styleMachine.can("locked", "candidate")).toBe(false);
     expect(styleMachine.can("locked", "proven")).toBe(true);
+  });
+});
+
+// The split (wave 4): each table lives zod-free in <record>.machine.ts so a client can hold it,
+// and the schema file re-exports it. Two doors onto ONE table: a copy in either would let the
+// browser's vocabulary and the server's door disagree about which states exist.
+describe("one table, two doors", () => {
+  it.each([
+    ["job", jobTable.jobMachine, jobMachine],
+    ["packet", packetTable.packetMachine, packetMachine],
+    ["part", partTable.partMachine, partMachine],
+    ["project", projectTable.projectMachine, projectMachine],
+    ["run", runTable.runMachine, runMachine],
+    ["slot", slotTable.slotMachine, slotMachine],
+    ["style", styleTable.styleMachine, styleMachine],
+  ] as const)("%s: the schema file re-exports the machine module's own table", (_, fromTable, fromSchema) => {
+    expect(fromSchema).toBe(fromTable);
+  });
+  it("the machine's union is the schema door's output type", () => {
+    expectTypeOf<jobTable.JobState>().toEqualTypeOf<z.output<typeof jobStateSchema>>();
+    expectTypeOf<slotTable.SlotState>().toEqualTypeOf<z.output<typeof slotStateSchema>>();
+    expectTypeOf<styleTable.StyleStatus>().toEqualTypeOf<z.output<typeof styleStatusSchema>>();
   });
 });

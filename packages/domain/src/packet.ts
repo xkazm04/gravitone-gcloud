@@ -3,7 +3,7 @@ import { z } from "zod";
 import { candidateSchema } from "./candidate.ts";
 import { packetIdSchema, partIdSchema, runIdSchema } from "./ids.ts";
 import { mediaLaneSchema } from "./lane.ts";
-import { defineMachine } from "./transitions.ts";
+import { packetMachine } from "./packet.machine.ts";
 
 // A PACKET: one pile at the Weir, decided at the Board in one of three desk
 // modes (plan §2.1, §2.2). Every v1 decision surface — the forge cull, the
@@ -21,25 +21,9 @@ export const PACKET_MODES = ["matrix-cull", "blind-pair", "packet-review"] as co
 export const packetModeSchema = z.enum(PACKET_MODES);
 export type PacketMode = z.output<typeof packetModeSchema>;
 
-/**
- * Verdicts are cast while the packet is `open` (v1 lib/foundry/verdictLog.ts:
- * keyed revisioned patches, refused once the run is committed). The commit is
- * ONE act per packet and it is final — v1 deleted rejected plates and wrote
- * the catalogue in it, so there is nothing to reopen. A packet-review may
- * instead be `returned`: sent back for another turn with the operator's notes
- * (v1 articles, `awaiting-approval -> drafting`), and the next turn arrives as
- * a new packet. There is no `committing` state: v1's commit runs under one
- * lock with a write-ahead journal line, and a crash mid-commit leaves the
- * packet `open` for an idempotent retry (lib/foundry/catalogue.ts), which a
- * durable half-state would only make harder to reason about.
- */
-export const packetMachine = defineMachine({
-  open: ["committed", "returned"],
-  committed: [],
-  returned: [],
-});
+/** The table and its union live in ./packet.machine.ts, zod-free, so a client can hold them. */
+export { packetMachine, type PacketState } from "./packet.machine.ts";
 export const packetStateSchema = z.enum(packetMachine.states);
-export type PacketState = z.output<typeof packetStateSchema>;
 
 export const packetSchema = z
   .object({

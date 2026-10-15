@@ -1,0 +1,9 @@
+{
+  "counted": "first-load JS per (studio) route: gzip -9 bytes of the build's rootMainFiles plus every segment entry in the route's client-reference manifest; polyfills (nomodule) excluded. Read by pipeline/check-bundle.mjs.",
+  "slackPct": 2,
+  "owner": "the Director; a raise states its reason in the change that makes it, and an entry well above its measurement is lowered",
+  "seeded": "2026-10-15, Lot 13, after the domain machine split; lowered 286345 -> 213962 the same day when the shell's storage key moved from classic zod to named zod/mini imports (the client-closure guard now refuses classic zod in any client module)",
+  "routes": {
+    "/kit": 213962
+  }
+}

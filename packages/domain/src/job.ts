@@ -4,7 +4,7 @@ import { usdSchema } from "./estimate.ts";
 import type { AppErrorCode } from "./errors.ts";
 import { jobIdSchema, partIdSchema, runIdSchema } from "./ids.ts";
 import { resourceLaneSchema } from "./lane.ts";
-import { defineMachine } from "./transitions.ts";
+import { jobMachine } from "./job.machine.ts";
 
 // A JOB: the durable record of work occupying a resource lane (plan §2.2,
 // §4.3 `kernel/job`). One per Part, or one per Run launched from the Floor.
@@ -24,40 +24,9 @@ import { defineMachine } from "./transitions.ts";
 //                                before anything re-spends.
 //   prototype studio.js          paused, retry with `attempt++`, re-route.
 
-/**
- * `interrupted` is v1's `orphaned` (turns) and `queue.interrupted` (MV, Suno)
- * made one state. It is deliberately NOT `failed`: a failure is a known
- * outcome with a reason, and a retry takes it again; an interruption is an
- * UNKNOWN outcome — the vendor may have been paid — and the only honest next
- * act is an operator's look. v1 expressed that by switching the whole queue
- * off; here the job itself carries it, so one crashed job does not stop its
- * lane's neighbours. Its exits are the same as `failed`'s; what differs is who
- * may take them, which the kernel's driver enforces (an automatic resume never
- * leaves `interrupted`), and what the Runs view says.
- *
- * A money stop is `failed` with a `stop` record and `error.code: "budget"`, as
- * v1 extract had it (`status: "failed"` plus `stopped`): one failed state, the
- * reason as data, and the breaker (`failStreak`) never counts it.
- *
- * `running -> paused` is v1's Stop-between-steps (MV): the step in flight
- * finishes and the job holds every file it has. `running -> cancelled` exists
- * because a text turn can be aborted mid-flight (lib/turns); a producer whose
- * step cannot be called back refuses that edge in its own driver, as v1 MV did.
- * There is no `interrupted -> running`: nothing resumes a crashed job without
- * passing back through the queue.
- */
-export const jobMachine = defineMachine({
-  planned: ["queued", "cancelled"],
-  queued: ["running", "paused", "cancelled"],
-  running: ["done", "failed", "interrupted", "paused", "cancelled"],
-  paused: ["queued", "cancelled"],
-  failed: ["queued", "cancelled"],
-  interrupted: ["queued", "cancelled"],
-  done: [],
-  cancelled: [],
-});
+/** The table and its union live in ./job.machine.ts, zod-free, so a client can hold them. */
+export { jobMachine, type JobState } from "./job.machine.ts";
 export const jobStateSchema = z.enum(jobMachine.states);
-export type JobState = z.output<typeof jobStateSchema>;
 
 /** The closed taxonomy of `@gt/domain/errors`, exhaustive by its mapped type:
  *  a code added there is a type error here until it is added. */

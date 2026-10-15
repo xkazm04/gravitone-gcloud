@@ -3,7 +3,7 @@ import { z } from "zod";
 import { estimateSchema } from "./estimate.ts";
 import { partIdSchema } from "./ids.ts";
 import { resourceLaneSchema } from "./lane.ts";
-import { defineMachine } from "./transitions.ts";
+import { partMachine } from "./part.machine.ts";
 
 // A PART: one line of a Project's plan — a model on a resource lane, with
 // units, a priced estimate and the parts it waits for (plan §2.2). Each Part
@@ -35,30 +35,9 @@ export const PART_KINDS = [
 export const partKindSchema = z.enum(PART_KINDS);
 export type PartKind = z.output<typeof partKindSchema>;
 
-/**
- * The prototype's job words (projects.js STATUS_TO_STATE), which are the
- * design's: done -> ratified, planned -> draft, gate -> awaiting_gate.
- *
- * In the prototype a gate was a PART of its own (`gate:frames`). Here it is a
- * property of the part it judges (`gate: "verdict"`), so `awaiting_gate` is a
- * state of that part: its job finished and its pile is at the Weir. A reject
- * at the Weir is `failed` (the prototype's quiet-tariff frames: "gate: 0 of 18
- * plates kept · re-run needs a new route"); a packet sent back for another
- * turn re-queues it. `blocked` is "an upstream part failed or is paused"
- * (the prototype's `blockedBy`), cleared by that part moving again.
- */
-export const partMachine = defineMachine({
-  draft: ["queued"],
-  queued: ["running", "paused", "blocked"],
-  running: ["awaiting_gate", "ratified", "failed", "paused"],
-  paused: ["queued", "running"],
-  awaiting_gate: ["ratified", "failed", "queued"],
-  failed: ["queued"],
-  blocked: ["queued"],
-  ratified: [],
-});
+/** The table and its union live in ./part.machine.ts, zod-free, so a client can hold them. */
+export { partMachine, type PartState } from "./part.machine.ts";
 export const partStateSchema = z.enum(partMachine.states);
-export type PartState = z.output<typeof partStateSchema>;
 
 export const partSchema = z
   .object({

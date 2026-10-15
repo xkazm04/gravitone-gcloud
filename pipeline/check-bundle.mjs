@@ -48,6 +48,8 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createContext, runInContext } from "node:vm";
+import { gzipSync } from "node:zlib";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = resolve(ROOT, process.env.NEXT_DIST_DIR || ".next");
@@ -332,6 +334,62 @@ if (!controlSeen)
     "pass. If the tokens genuinely moved, update POSITIVE_CONTROL — deliberately.",
   ]);
 
+// ── FIRST-LOAD JS PER (studio) ROUTE (plan §9.5: a count, never a timing) ──────────
+// The route list is the build's own app-path-routes-manifest, never a hand list; a route's
+// first load is what its HTML names: the framework's rootMainFiles plus every segment
+// entry in its client-reference manifest (measured against a prerendered page's <script>
+// tags, 2026-10-15). Polyfills are `nomodule` and skipped. COUNTED: gzip level 9 bytes
+// (transfer), deterministic per Node zlib. Absent, stale or reshaped numbers exit 2, never
+// pass (page-load-pipeline/field-measured-load-budget: a byte gate must see the build it
+// judges; a new route enters with a ceiling). v1's root segments are REPORTED, not gated:
+// that debt retires at the Phase 6 cutover.
+const STUDIO = "(studio)";
+const readJson = (at, what) => existsSync(at) ? JSON.parse(readFileSync(at, "utf8")) : die(2, `COULD NOT RUN: ${what} is missing (${at}).`, ["The per-route budget reads it; without it there is no number to judge, and that is not a pass."]);
+const gzBytes = new Map();
+const gz = (f) => {
+  if (!gzBytes.has(f)) {
+    const at = join(DIST, f);
+    if (!existsSync(at)) die(2, `COULD NOT RUN: ${f} is named by a manifest and absent from ${DIST}.`, ["The manifests and the chunks come from different builds; a sum over them describes neither."]);
+    gzBytes.set(f, gzipSync(readFileSync(at), { level: 9 }).length);
+  }
+  return gzBytes.get(f);
+};
+const sum = (set) => [...set].reduce((n, f) => n + gz(f), 0);
+const rootMain = readJson(join(DIST, "build-manifest.json"), "build-manifest.json").rootMainFiles ?? [];
+const routes = [];
+for (const [entry, route] of Object.entries(readJson(join(DIST, "app-path-routes-manifest.json"), "app-path-routes-manifest.json"))) {
+  if (!entry.startsWith(`/${STUDIO}/`) || !entry.endsWith("/page")) continue;
+  const ctx = createContext({});
+  runInContext(readFileSync(join(DIST, "server", "app", `${entry.slice(1)}_client-reference-manifest.js`), "utf8"), ctx);
+  const segs = ctx.__RSC_MANIFEST?.[entry]?.entryJSFiles ?? {};
+  if (!segs[`[project]/app/${STUDIO}/layout`])
+    die(2, `COULD NOT RUN: ${route}'s client manifest names no ${STUDIO} layout entry.`, ["The manifest shape moved under this reader; a sum over it would be manufactured."]);
+  const first = new Set(rootMain);
+  const v1 = new Set();
+  for (const [seg, list] of Object.entries(segs))
+    for (const f of list) {
+      first.add(f);
+      if (!seg.startsWith(`[project]/app/${STUDIO}/`) && !rootMain.includes(f)) v1.add(f);
+    }
+  routes.push({ route, bytes: sum(first), v1: sum(v1) });
+}
+if (!routes.length) die(2, `COULD NOT RUN: the build lists no ${STUDIO} page.`, ["/kit at least must exist; an empty walk is a moved manifest, not a smaller app."]);
+const budget = readJson(join(ROOT, "pipeline", "bundle-budget.json"), "pipeline/bundle-budget.json");
+if (typeof budget.routes !== "object" || typeof budget.slackPct !== "number") die(2, "COULD NOT RUN: pipeline/bundle-budget.json lacks `routes` or `slackPct`.");
+const over = [];
+for (const { route, bytes, v1 } of routes.sort((a, b) => a.route.localeCompare(b.route))) {
+  const cap = budget.routes[route];
+  const note = cap === undefined ? "NO BUDGET" : `budget ${cap} (${bytes - cap >= 0 ? "+" : ""}${bytes - cap})`;
+  console.log(`first-load ${route}: ${bytes} B gzip, ${note}; of which v1 root segments ${v1} B (reported, retires at Phase 6)`);
+  if (cap === undefined) over.push(`${route} has no entry in pipeline/bundle-budget.json (measured ${bytes} B); a new route enters with a ceiling`);
+  else if (bytes > cap * (1 + budget.slackPct / 100)) over.push(`${route}: ${bytes} B is over its ${cap} B budget by more than ${budget.slackPct}%`);
+  else if (bytes < cap * (1 - budget.slackPct / 100)) console.log(`  ${route} sits ${cap - bytes} B under its budget: lower the entry to lock the win in.`);
+}
+for (const route of Object.keys(budget.routes)) if (!routes.some((r) => r.route === route)) over.push(`pipeline/bundle-budget.json names ${route}, which the build no longer has; delete the entry`);
+if (over.length && !findings.length)
+  die(1, `BUNDLE BUDGET: ${over.length} first-load budget finding(s) over ${routes.length} ${STUDIO} route(s).`, [...over, "", "Cut the import that grew it, or raise the ceiling with the reason in the change's description."]);
+findings.push(...over.map((o) => `FIRST-LOAD BUDGET: ${o}`));
+
 if (findings.length)
   die(1, `BUNDLE: ${findings.length} artefact(s) that must not ship reached browser output.`, [
     ...findings,
@@ -360,5 +418,6 @@ console.log(
   `bundle OK — ${files.length} browser chunk(s), ${(bytes / 1024).toFixed(0)}KB scanned; ` +
     `positive control found; ${SERVER_ONLY_VARS.length} server-only var name(s), ` +
     `${liveSecrets.length} live value(s), ${SERVER_MODULE_FINGERPRINTS.length} module ` +
-    `fingerprint(s) and ${TEST_ONLY_FINGERPRINTS.length} test-only seam(s) all absent.`,
+    `fingerprint(s) and ${TEST_ONLY_FINGERPRINTS.length} test-only seam(s) all absent; ` +
+    `${routes.length} ${STUDIO} route(s) within first-load budget.`,
 );

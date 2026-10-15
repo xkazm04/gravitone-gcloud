@@ -3,29 +3,16 @@ import { z } from "zod";
 
 import { blobRefSchema } from "./blob.ts";
 import { runIdSchema, styleIdSchema } from "./ids.ts";
-import { defineMachine } from "./transitions.ts";
+import { styleMachine } from "./style.machine.ts";
 
 // A STYLE: a visual identity the studio can reproduce, earned at the Weir
 // (plan §2.2, §3.1: the catalogue ratchet lives in the Library). The fields
 // are v1's catalogue entry (lib/foundry/types.ts `StyleDef`, written by six
 // writers through lib/foundry/catalogue.ts) — the ratchet reads every one.
 
-/**
- * THE RATCHET. v1 promotes `candidate -> proven` inside the commit, and only
- * on an operator's keeps in two distinct run/scene cells (lib/foundry/store.ts:
- * "`proven` is a human's claim: a keep by:"model" is evidence, not a vote").
- * Nothing in v1 ever demotes. `locked` is new: the operator pins a proven
- * recipe so a later commit cannot rewrite what projects already render with
- * (the prototype shows proven styles on the shelf as "locked"); unlocking
- * returns it to proven, never below.
- */
-export const styleMachine = defineMachine({
-  candidate: ["proven"],
-  proven: ["locked"],
-  locked: ["proven"],
-});
+/** The table and its union live in ./style.machine.ts, zod-free, so a client can hold them. */
+export { styleMachine, type StyleStatus } from "./style.machine.ts";
 export const styleStatusSchema = z.enum(styleMachine.states);
-export type StyleStatus = z.output<typeof styleStatusSchema>;
 
 /** v1's promotion threshold: distinct run/scene cells an operator kept. */
 export const PROVEN_KEEPS = 2;

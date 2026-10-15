@@ -43,7 +43,7 @@ export type StorageLike = {
   removeItem(key: string): void;
 };
 
-export type KeyDef<S extends z.ZodType = z.ZodType> = {
+export type KeyDef<S extends z.core.$ZodType = z.core.$ZodType> = {
   readonly key: string;
   readonly scope: Scope;
   readonly schema: S;
@@ -53,7 +53,7 @@ export type KeyDef<S extends z.ZodType = z.ZodType> = {
 
 export const NAMESPACE = "gravitone.";
 
-export function defineKey<S extends z.ZodType>(def: KeyDef<S>): KeyDef<S> {
+export function defineKey<S extends z.core.$ZodType>(def: KeyDef<S>): KeyDef<S> {
   return Object.freeze({ ...def });
 }
 
@@ -67,7 +67,7 @@ export type EvictionReport = {
 
 export type Store = {
   /** ok(undefined): never written. err: unreadable, corrupt, or not registered. */
-  read<S extends z.ZodType>(def: KeyDef<S>): Result<Parsed<z.output<S>> | undefined>;
+  read<S extends z.core.$ZodType>(def: KeyDef<S>): Result<Parsed<z.output<S>> | undefined>;
   /**
    * The raw stored text, or null when absent or unreadable. A string is stable by
    * value, so `useSyncExternalStore` can take it as its snapshot and parse with
@@ -75,7 +75,7 @@ export type Store = {
    */
   snapshot(def: KeyDef): string | null;
   /** Validates through the schema first; nothing invalid reaches storage. */
-  write<S extends z.ZodType>(def: KeyDef<S>, value: z.input<S>): Result<null>;
+  write<S extends z.core.$ZodType>(def: KeyDef<S>, value: z.input<S>): Result<null>;
   remove(def: KeyDef): Result<null>;
   evict(scope: Scope, opts?: { dryRun?: boolean }): EvictionReport;
   readonly keys: readonly KeyDef[];
@@ -84,7 +84,7 @@ export type Store = {
 
 /** Refuses a registration that could lie: a duplicate key, a key outside the namespace, a missing reason. */
 /** Text from storage, through the key's schema door. null is absence. */
-export function decode<S extends z.ZodType>(def: KeyDef<S>, raw: string | null): Result<Parsed<z.output<S>> | undefined> {
+export function decode<S extends z.core.$ZodType>(def: KeyDef<S>, raw: string | null): Result<Parsed<z.output<S>> | undefined> {
   return raw === null ? ok(undefined) : parseJsonAt(`storage:${def.key}`, def.schema, raw);
 }
 
@@ -125,14 +125,14 @@ export function createStore(defs: readonly KeyDef[], backing: () => StorageLike 
     }
   };
 
-  function read<S extends z.ZodType>(def: KeyDef<S>): Result<Parsed<z.output<S>> | undefined> {
+  function read<S extends z.core.$ZodType>(def: KeyDef<S>): Result<Parsed<z.output<S>> | undefined> {
     const reg = isRegistered(def);
     if (!reg.ok) return reg;
     const raw = rawOf(def.key);
     return raw.ok ? decode(def, raw.value) : raw;
   }
 
-  function write<S extends z.ZodType>(def: KeyDef<S>, value: z.input<S>): Result<null> {
+  function write<S extends z.core.$ZodType>(def: KeyDef<S>, value: z.input<S>): Result<null> {
     const reg = isRegistered(def);
     if (!reg.ok) return reg;
     const valid = parseAt(`storage:${def.key}`, def.schema, value);

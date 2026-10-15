@@ -3,7 +3,7 @@ import { z } from "zod";
 import { estimateSchema } from "./estimate.ts";
 import { partIdSchema, projectIdSchema, runIdSchema, styleIdSchema } from "./ids.ts";
 import { mediaLaneSchema } from "./lane.ts";
-import { defineMachine } from "./transitions.ts";
+import { runMachine } from "./run.machine.ts";
 
 // A RUN: one launch from a Floor composer, or one Part of a Project launched
 // as work (plan §2.2). The operator's unit — what the Foundry column lists and
@@ -17,29 +17,9 @@ export const PRODUCERS = ["forge", "extract", "dojo", "strips", "article", "suno
 export const producerSchema = z.enum(PRODUCERS);
 export type Producer = z.output<typeof producerSchema>;
 
-/**
- * The prototype's five words plus two it implied but never drew:
- *   queued     — it carries `queuePos` (the composer's "queue #2"), so waiting
- *                for a lane is a state, not a running run at 0%.
- *   cancelled  — every v1 queue has it (lib/turns/ledger.ts, lib/sound/mv,
- *                lib/suno), and a draft the operator discards must end somewhere.
- * `blocked` is the prototype's word for "needs the operator": the job failed,
- * stopped for money, was interrupted by a crash, or the Weir rejected the pile.
- * The reason lives on the Job and the Decision, not in more Run states.
- * `awaiting_gate -> running` is a packet sent back for another turn (v1's
- * article `awaiting-approval -> drafting`, lib/articles/types.ts TRANSITIONS).
- */
-export const runMachine = defineMachine({
-  draft: ["queued", "cancelled"],
-  queued: ["running", "cancelled"],
-  running: ["awaiting_gate", "blocked"],
-  awaiting_gate: ["ratified", "blocked", "running"],
-  blocked: ["queued", "cancelled"],
-  ratified: [],
-  cancelled: [],
-});
+/** The table and its union live in ./run.machine.ts, zod-free, so a client can hold them. */
+export { runMachine, type RunState } from "./run.machine.ts";
 export const runStateSchema = z.enum(runMachine.states);
-export type RunState = z.output<typeof runStateSchema>;
 
 export const runSchema = z
   .object({

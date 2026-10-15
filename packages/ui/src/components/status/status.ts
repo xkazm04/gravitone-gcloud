@@ -14,13 +14,13 @@
 // reference/candidate rings): eight shapes, each one colour role and one glyph. Machines
 // map onto looks; components draw looks. Nothing below the table names a colour.
 
-import type { JobState } from "@gt/domain/job";
-import type { PacketState } from "@gt/domain/packet";
-import type { PartState } from "@gt/domain/part";
-import type { ProjectState } from "@gt/domain/project";
-import type { RunState } from "@gt/domain/run";
-import type { SlotState } from "@gt/domain/slot";
-import type { StyleStatus } from "@gt/domain/style";
+import type { JobState } from "@gt/domain/job.machine";
+import type { PacketState } from "@gt/domain/packet.machine";
+import type { PartState } from "@gt/domain/part.machine";
+import type { ProjectState } from "@gt/domain/project.machine";
+import type { RunState } from "@gt/domain/run.machine";
+import type { SlotState } from "@gt/domain/slot.machine";
+import type { StyleStatus } from "@gt/domain/style.machine";
 import type { LibraryItem } from "@gt/domain/libraryItem";
 import type { TokenName } from "../../tokens.ts";
 

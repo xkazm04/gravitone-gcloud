@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import { safeParse } from "zod/v4/core";
 import { err, ok, type Result } from "./errors.ts";
 
 type Flat<T> = { [K in keyof T]: T[K] };
@@ -52,18 +53,23 @@ function at(door: string, issue: z.core.$ZodIssue | undefined): string {
 }
 
 /** The schema door: the only way unknown data becomes a typed value. Never throws. */
-export function parseAt<S extends z.ZodType>(
+//
+// The bound is zod's CORE type, so a classic schema and a `zod/mini` one both pass:
+// a client module builds its schemas from `zod/mini`, which tree-shakes, where one
+// classic `z.string()` drags all of classic zod (~93 KB gzip, measured on /kit) into
+// the first-load bundle. The kernel and the server keep classic zod.
+export function parseAt<S extends z.core.$ZodType>(
   door: string,
   schema: S,
   input: unknown,
 ): Result<Parsed<z.output<S>>> {
-  const r = schema.safeParse(input);
+  const r = safeParse(schema, input);
   if (r.success) return ok(omitUndefined(r.data) as Parsed<z.output<S>>);
   return err("invalid", at(door, r.error.issues[0]), { detail: door });
 }
 
 /** The only JSON.parse allowed in packages; a syntax error is an `invalid` result. */
-export function parseJsonAt<S extends z.ZodType>(
+export function parseJsonAt<S extends z.core.$ZodType>(
   door: string,
   schema: S,
   text: string,
