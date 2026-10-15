@@ -3,7 +3,7 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterAll, describe, expect, it } from "vitest";
 import { eventsMigrations } from "../src/events.ts";
-import { clearMigrationFailure, migrate, schemaOf, stepDigest, type ModuleMigrations } from "../src/migrate.ts";
+import { clearMigrationFailure, migrate, schemaOf, snapshotName, stepDigest, type ModuleMigrations } from "../src/migrate.ts";
 import { openStore, type Store } from "../src/store.ts";
 import { must, scratch, steppingClock } from "./helpers.ts";
 
@@ -134,7 +134,7 @@ describe("migrations", () => {
     const r = must(migrate(s, [probe]));
     expect(r.snapshot).toBeDefined();
     const snap = r.snapshot ?? "";
-    expect(path.basename(snap)).toMatch(/\.pre-migrate\..*probe-v1-v3\.sqlite$/);
+    expect(path.basename(snap)).toMatch(/^m-\d+\.sqlite\.pre-migrate\.[0-9TZ-]+\.[0-9a-f]{12}\.sqlite$/);
     const d = new DatabaseSync(snap, { readOnly: true });
     const cols = d.prepare("SELECT name FROM pragma_table_info('widgets')").all().map((c) => c["name"]);
     const ledger = d.prepare("SELECT max(version) AS v FROM _migrations").get()?.["v"];
@@ -145,14 +145,37 @@ describe("migrations", () => {
     s.close();
   });
 
+  it("a fresh store is not snapshotted: it has applied nothing a step could damage", () => {
+    const s = fileStore();
+    const r = must(migrate(s, [probe]));
+    expect(r.applied).toHaveLength(3);
+    expect(r.snapshot).toBeUndefined();
+    expect(readdirSync(tmp.dir).filter((f) => f.startsWith(`${path.basename(s.location)}.pre-migrate.`))).toEqual([]);
+    s.close();
+  });
+
   it("keeps the newest snapshots of a store and removes the rest", () => {
     const dir = tmp.dir;
     const s = fileStore();
-    for (let v = 1; v <= 3; v++) must(migrate(s, [upTo(probe, v)], { keepSnapshots: 2 }));
+    const taken: string[] = [];
+    for (let v = 1; v <= 3; v++) {
+      const snap = must(migrate(s, [upTo(probe, v)], { keepSnapshots: 1 })).snapshot;
+      if (snap !== undefined) taken.push(path.basename(snap));
+    }
+    // v1 ran on a fresh store (no snapshot); v2 and v3 each took one.
+    expect(taken).toHaveLength(2);
     const mine = readdirSync(dir).filter((f) => f.startsWith(`${path.basename(s.location)}.pre-migrate.`));
-    expect(mine).toHaveLength(2);
-    expect(mine.some((f) => f.includes("probe-v0-v1"))).toBe(false);
+    expect(mine).toEqual([taken[1]]);
     s.close();
+  });
+
+  it("a snapshot's name stays short however many modules are pending, and tells two plans apart", () => {
+    const many = Array.from({ length: 40 }, (_, i) => ({ module: `a-rather-long-module-name-${i}`, step: { version: 1, sql: "" }, digest: "" }));
+    const at = "2026-10-15T12:00:00.000Z";
+    const name = snapshotName("gravitone.sqlite", many, at);
+    expect(name.length).toBeLessThan(80);
+    expect(snapshotName("gravitone.sqlite", many.slice(1), at)).not.toBe(name);
+    expect(snapshotName("gravitone.sqlite", many, at)).toBe(name);
   });
 
   it("an in-memory store migrates without a snapshot", () => {

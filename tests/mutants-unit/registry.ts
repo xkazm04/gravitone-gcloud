@@ -1,0 +1,632 @@
+// THE UNIT MUTANT REGISTRY - every entry names a defect a package's Vitest file
+// claims to guard, in a form a machine can seed and watch go red.
+//
+// Wave 1-2 builders each proved their key invariants red BY HAND and wrote the
+// break into a report or a commit message. This file is that ritual as data, in
+// the shape of v1's tests/mutants/registry.ts with the guard moved from a
+// Playwright probe to one Vitest file:
+//
+//   - `node pipeline/unit-mutants.mts` applies each entry in a scratch worktree,
+//     runs `vitest run <test>`, and demands a FAILED TEST (a module that no longer
+//     loads is `broken`, not a kill);
+//   - tests/next-gates/unit-mutant-registry.test.ts (inside `npm run test:unit`)
+//     checks every `find` still occurs EXACTLY ONCE and that every package test
+//     file has at least one entry.
+//
+// Entry rules:
+//   - `find` occurs exactly once in `file` (verbatim, whitespace included);
+//   - `replace` differs from `find` and changes BEHAVIOUR - a toothless mutant is
+//     reported `survived`;
+//   - `test` is a repo-relative packages/<pkg>/test/**/*.test.ts file, and the
+//     defect is the one that file most exists to guard;
+//   - `typecheck: true` only where the guard is a TYPE: the runner then also runs
+//     `tsc -b packages/<pkg>` and an `error TS` line is the kill;
+//   - `why` is the counterfactual in a sentence: what breaks, for whom.
+
+export type UnitMutant = {
+  id: string;
+  /** Repo-relative Vitest file that must go red: packages/<pkg>/test/**\/*.test.ts. */
+  test: string;
+  /** Repo-relative source file, forward slashes. */
+  file: string;
+  find: string;
+  replace: string;
+  why: string;
+  /** The guard is a type: pair the Vitest run with `tsc -b packages/<pkg>`. */
+  typecheck?: true;
+};
+
+/**
+ * PACKAGE TEST FILES WITH NO MUTANT. v1's probe budget started at 249 and may only
+ * fall; the new code starts where v1 hopes to end (plan §3.5): zero. A new
+ * *.test.ts under packages/ lands with its mutant or test:unit is red.
+ */
+export const UNGUARDED_TEST_BUDGET = 0;
+
+export const MUTANTS: UnitMutant[] = [
+  // ---- @gt/domain and @gt/catalog
+  {
+    id: "door-keeps-explicit-undefined",
+    test: "packages/domain/test/door.test.ts",
+    file: "packages/domain/src/door.ts",
+    find: "if (x !== undefined) out[k] = omitUndefined(x);",
+    replace: "out[k] = omitUndefined(x);",
+    why: "An explicit undefined survives the door as a present key, so exactOptionalPropertyTypes lies: every `\"k\" in record` check and every envelope downstream sees a key the type says is absent.",
+  },
+  {
+    id: "door-refusal-loses-the-path",
+    test: "packages/domain/test/door.test.ts",
+    file: "packages/domain/src/door.ts",
+    find: "issue.path.length > 0 ? issue.path.map(String).join(\".\") : \"(root)\";",
+    replace: "\"(root)\";",
+    why: "Every refusal reads `door: (root): ...`, so a form or CLI can no longer say which field failed and the operator guesses.",
+  },
+  {
+    id: "door-parsed-flattens-brands",
+    test: "packages/domain/test/door.test.ts",
+    file: "packages/domain/src/door.ts",
+    find: "T extends string | number | boolean | bigint | symbol",
+    replace: "T extends number | boolean | bigint | symbol",
+    why: "A branded id read through parseAt is flattened to an object type and stops being a ProjectId, so every id from the door needs a cast - the Phase 0 defect 5ff36c3 fixed.",
+    typecheck: true,
+  },
+  {
+    id: "envelope-writes-absent-detail",
+    test: "packages/domain/test/errors.test.ts",
+    file: "packages/domain/src/errors.ts",
+    find: "if (e.detail !== undefined) env.detail = e.detail;",
+    replace: "env.detail = e.detail;",
+    why: "Every error envelope carries `detail: undefined`, so the one wire shape `{error, code, detail?}` no longer means absent-is-omitted and clients branch on a key that holds nothing.",
+  },
+  {
+    id: "id-schema-accepts-empty",
+    test: "packages/domain/test/ids.test.ts",
+    file: "packages/domain/src/ids.ts",
+    find: "return z.string().min(1).brand<B>();",
+    replace: "return z.string().brand<B>();",
+    why: "An empty string is minted as a valid branded id, so a record keyed by `\"\"` is written and every lookup that should have been refused at the door quietly finds nothing.",
+  },
+  {
+    id: "machine-allows-every-transition",
+    test: "packages/domain/test/transitions.test.ts",
+    file: "packages/domain/src/transitions.ts",
+    find: "const can = (from: S, to: S): boolean => next(from).includes(to);",
+    replace: "const can = (from: S, to: S): boolean => to.length > 0;",
+    why: "Every machine accepts undeclared transitions, so a job jumps from queued to done without a lease and a claimed slot can be re-scheduled - the tables become decoration.",
+  },
+  {
+    id: "estimate-null-usd-without-reason",
+    test: "packages/domain/test/estimate.test.ts",
+    file: "packages/domain/src/estimate.ts",
+    find: "if (e.usd === null && e.unpricedReason === undefined)",
+    replace: "if (e.usd === null && false)",
+    why: "An unpriced estimate with no reason is accepted, so a null price reads as free on every screen that sums it - v1's never-invent-a-price law broken at the record.",
+  },
+  {
+    id: "estimate-band-ignores-upper-bound",
+    test: "packages/domain/test/estimate.test.ts",
+    file: "packages/domain/src/estimate.ts",
+    find: "else if (!(lo <= e.usd && e.usd <= hi))",
+    replace: "else if (!(lo <= e.usd))",
+    why: "A point figure above its band is accepted, so the composer shows $47-92 while the total sums $120.",
+  },
+  {
+    id: "event-data-accepts-non-finite",
+    test: "packages/domain/test/event.test.ts",
+    file: "packages/domain/src/event.ts",
+    find: "if (typeof v === \"number\") return Number.isFinite(v);",
+    replace: "if (typeof v === \"number\") return true;",
+    why: "Infinity or NaN enters event data, which JSON serialises as null, so the stored row and its hash chain no longer describe the act the writer recorded.",
+  },
+  {
+    id: "event-cost-without-source",
+    test: "packages/domain/test/event.test.ts",
+    file: "packages/domain/src/event.ts",
+    find: "export const costSchema = z.object({ usd: z.number(), src: z.enum(COST_SOURCES) });",
+    replace: "export const costSchema = z.object({ usd: z.number(), src: z.enum(COST_SOURCES).optional() });",
+    why: "A cost travels without the word for where it came from, so the Ledger cannot tell real money from a model's guess - the prototype's costUsd/costSrc drift returns.",
+  },
+  {
+    id: "job-lease-outside-running",
+    test: "packages/domain/test/job.test.ts",
+    file: "packages/domain/src/job.ts",
+    find: "if ((j.state === \"running\") !== (j.lease !== undefined))",
+    replace: "if (j.state === \"running\" && j.lease === undefined)",
+    why: "A queued job may carry a lease, so a holder's lease outlives its run and the next taker sees a job held by nobody running it.",
+  },
+  {
+    id: "job-budget-error-without-stop",
+    test: "packages/domain/test/job.test.ts",
+    file: "packages/domain/src/job.ts",
+    find: "if ((j.stop !== undefined) !== (j.error?.code === \"budget\"))",
+    replace: "if (j.stop !== undefined && j.error?.code !== \"budget\")",
+    why: "A budget failure without its stop record is accepted, so a money stop cannot say which ceiling fired or what was spent, and the breaker cannot tell it from a vendor failure.",
+  },
+  {
+    id: "job-interrupted-resumes-directly",
+    test: "packages/domain/test/machines.test.ts",
+    file: "packages/domain/src/job.ts",
+    find: "interrupted: [\"queued\", \"cancelled\"],",
+    replace: "interrupted: [\"queued\", \"running\", \"cancelled\"],",
+    why: "A crashed job can resume straight to running without the queue or an operator's look, so a step whose vendor may already have been paid is paid for twice.",
+  },
+  {
+    id: "slot-claimed-goes-back-to-scheduled",
+    test: "packages/domain/test/machines.test.ts",
+    file: "packages/domain/src/slot.ts",
+    find: "publishing: [\"published\", \"failed\"],",
+    replace: "publishing: [\"published\", \"failed\", \"scheduled\"],",
+    why: "A slot claimed for publishing can return to scheduled and fire again, breaking at-most-once: the same video posts twice.",
+  },
+  {
+    id: "library-item-own-ancestor",
+    test: "packages/domain/test/library.test.ts",
+    file: "packages/domain/src/libraryItem.ts",
+    find: "if (it.lineage.some((l) => l.kind === \"library-item\" && l.id === it.id)) issue(",
+    replace: "if (it.lineage.some((l) => l.kind === \"library-item\" && false)) issue(",
+    why: "A derived item may name itself as its ancestor, so lineage satisfies the derived rule without pointing at any real source.",
+  },
+  {
+    id: "style-proven-counts-mechanisms",
+    test: "packages/domain/test/library.test.ts",
+    file: "packages/domain/src/style.ts",
+    find: "e.by === \"operator\").map((e) => `${e.run}/${e.scene}`));",
+    replace: "e.by === \"operator\").map((e) => `${e.run}/${e.scene}/${e.mechanism}`));",
+    why: "Two mechanisms on one run/scene cell count as two keeps, so a style is promoted to proven on a single judged scene.",
+  },
+  {
+    id: "shown-grades-include-inverted",
+    test: "packages/domain/test/packet.test.ts",
+    file: "packages/domain/src/candidate.ts",
+    find: "return c.grades.filter((g) => g.calibration.status === \"calibrated\");",
+    replace: "return c.grades.filter((g) => g.calibration.status !== \"insufficient\");",
+    why: "An inverted or chance-level grader's score is shown beside the calibrated one, so the Board shows v1's inverted craft score as if it meant quality.",
+  },
+  {
+    id: "blind-pair-accepts-one-arm",
+    test: "packages/domain/test/packet.test.ts",
+    file: "packages/domain/src/packet.ts",
+    find: "for (const [row, n] of rows) if (n !== 2) issue(",
+    replace: "for (const [row, n] of rows) if (n > 2) issue(",
+    why: "A blind pair with a single arm is accepted, so the operator is shown one image as a comparison and the trial's verdict is not a choice at all.",
+  },
+  {
+    id: "project-cycle-undetected",
+    test: "packages/domain/test/project.test.ts",
+    file: "packages/domain/src/project.ts",
+    find: "if (at >= 0) return [...path.slice(at), id];",
+    replace: "if (at >= 0) return null;",
+    why: "A plan with a dependency cycle is accepted, and the Runs day-line waits on it forever.",
+  },
+  {
+    id: "project-state-running-beats-gate",
+    test: "packages/domain/test/project.test.ts",
+    file: "packages/domain/src/project.ts",
+    find: "if (has(\"awaiting_gate\")) return \"awaiting_gate\";",
+    replace: "if (has(\"awaiting_gate\") && !has(\"running\")) return \"awaiting_gate\";",
+    why: "A project with a part waiting at the Weir shows as running while anything else runs, so the gate waits unseen by the operator.",
+  },
+  {
+    id: "template-fallback-shifts",
+    test: "packages/catalog/test/catalog.test.ts",
+    file: "packages/catalog/src/projects.ts",
+    find: "return TEMPLATES.find((t) => t.id === id) ?? TEMPLATES[1];",
+    replace: "return TEMPLATES.find((t) => t.id === id) ?? TEMPLATES[0];",
+    why: "A project whose template id is unknown falls back to the short-form clip instead of the short educational video, so old records reopen with the wrong steps and runtime.",
+  },
+  // ---- @gt/kernel: blob .. job
+  {
+    id: "blob-read-skips-hash-check",
+    test: "packages/kernel/test/blob.test.ts",
+    file: "packages/kernel/src/blob.ts",
+    find: "if (sha256(bytes) !== ref.sha256) return err(\"internal\"",
+    replace: "if (false) return err(\"internal\"",
+    why: "A blob damaged on disk is returned as if it were the media its ref names: silently wrong pixels or audio reach a cut instead of an internal error.",
+  },
+  {
+    id: "canonical-keys-unsorted",
+    test: "packages/kernel/test/canonical.test.ts",
+    file: "packages/kernel/src/canonical.ts",
+    find: "const keys = Object.keys(v).sort();",
+    replace: "const keys = Object.keys(v);",
+    why: "The ledger hashes insertion order instead of RFC 8785 order, so two writers of the same event get different hashes and the Python verifier disagrees with Node.",
+  },
+  {
+    id: "crash-harness-accepts-swallowed-crash",
+    test: "packages/kernel/test/crash.test.ts",
+    file: "packages/kernel/src/crash.ts",
+    find: "if (outcome !== \"crashed\") {",
+    replace: "if (outcome !== \"crashed\" && false) {",
+    why: "A driver that catches every throw passes crash enumeration, so a driver that would also swallow a real failure is certified as crash-safe.",
+  },
+  {
+    id: "cull-order-counts-uncalibrated-grades",
+    test: "packages/kernel/test/calibration.test.ts",
+    file: "packages/kernel/src/calibration/core.ts",
+    find: "if (g.calibration.status !== \"calibrated\") continue;",
+    replace: "if (false) continue;",
+    why: "An inverted craft score steers the cull again: the candidate the grader rates best but the operator rejects is shown first, the steer v1 measured at AUC 0.29.",
+  },
+  {
+    id: "calibration-labels-include-agent-verdicts",
+    test: "packages/kernel/test/calibration.test.ts",
+    file: "packages/kernel/src/calibration/series.ts",
+    find: "WHERE s.series = ? AND s.field = ? AND d.by = 'operator' AND d.verdict IS NOT NULL\n        AND d.seq = (SELECT max(d2.seq) FROM decisions d2\n                      WHERE d2.packet_id = s.packet_id AND d2.candidate_id = s.candidate_id AND d2.by = 'operator')",
+    replace: "WHERE s.series = ? AND s.field = ? AND d.verdict IS NOT NULL\n        AND d.seq = (SELECT max(d2.seq) FROM decisions d2\n                      WHERE d2.packet_id = s.packet_id AND d2.candidate_id = s.candidate_id)",
+    why: "A grader is calibrated against an agent's verdicts, a machine measured against a machine, so a series can read calibrated with no operator judgement behind it.",
+  },
+  {
+    id: "blind-pick-revealed-before-operator",
+    test: "packages/kernel/test/decision.blind.test.ts",
+    file: "packages/kernel/src/decision/read.ts",
+    find: "        AND EXISTS (SELECT 1 FROM packet_items i JOIN decisions d",
+    replace: "        AND NOT EXISTS (SELECT 1 FROM packet_items i JOIN decisions d",
+    why: "The blind reveal's EXISTS guard inverts: the machine's pick is shown before the operator judges the pair, and every blind trial measures an anchored operator.",
+  },
+  {
+    id: "decision-stale-base-accepted",
+    test: "packages/kernel/test/decision.test.ts",
+    file: "packages/kernel/src/decision/driver.ts",
+    find: "  if (input.baseRev !== h.rev) {",
+    replace: "  if (false) {",
+    why: "A patch written against an old revision lands over a newer verdict from another tab, and the operator's later keep is silently overwritten instead of a 409 with the current decisions.",
+  },
+  {
+    id: "commit-retry-ignores-ticket",
+    test: "packages/kernel/test/decision.crash.test.ts",
+    file: "packages/kernel/src/decision/driver.ts",
+    find: "  if (prior !== undefined) {",
+    replace: "  if (prior !== undefined && false) {",
+    why: "A commit whose caller crashed before hearing the answer cannot be retried with its ticket: the retry is refused as already committed and recovery never converges.",
+  },
+  {
+    id: "dry-port-calls-the-vendor",
+    test: "packages/kernel/test/dryrun.test.ts",
+    file: "packages/kernel/src/dryrun.ts",
+    find: "      dryEntry.add(fn);",
+    replace: "      void fn;",
+    why: "The dry port enters the vendor function for real: a rehearsal spends money and calls the provider while reporting a would-call.",
+  },
+  {
+    id: "dry-port-makes-undeclared-calls",
+    test: "packages/kernel/test/dryrun.test.ts",
+    file: "packages/kernel/src/dryrun.ts",
+    find: "      if (d === undefined) {",
+    replace: "      if (d === undefined && false) {",
+    why: "An external call with no declared intent is not refused in dry mode; the path v1's arm comment warned about is open again.",
+  },
+  {
+    id: "events-verify-skips-hash-compare",
+    test: "packages/kernel/test/events.test.ts",
+    file: "packages/kernel/src/events.ts",
+    find: "if (expect !== ev.hash) return",
+    replace: "if (false) return",
+    why: "A row whose data was edited with raw SQL verifies as intact: the hash chain stops detecting tampering, the one thing it exists for.",
+  },
+  {
+    id: "events-verify-skips-gap-check",
+    test: "packages/kernel/test/events.test.ts",
+    file: "packages/kernel/src/events.ts",
+    find: "if (ev.seq !== prev.seq + 1) return",
+    replace: "if (false) return",
+    why: "A deleted middle row is reported as a prevHash mismatch at the wrong seq instead of the gap, so the report no longer names what was removed.",
+  },
+  {
+    id: "python-verifier-sorts-by-code-point",
+    test: "packages/kernel/test/events.python.test.ts",
+    file: "packages/kernel/py/verify_events.py",
+    find: "keys = sorted(v.keys(), key=lambda k: k.encode(\"utf-16-be\"))",
+    replace: "keys = sorted(v.keys())",
+    why: "The second-language verifier sorts keys by code point, not UTF-16 unit, so any event with an astral key fails to verify outside Node.",
+  },
+  {
+    // Not `k <= n <= 21` -> 20: every float at that boundary is an integer >= 1e20,
+    // which ECMAScript prints without an exponent, so Python's json reads it back as
+    // an int and the float branch never sees it. Equivalent, measured survived.
+    id: "python-verifier-small-exponent-boundary",
+    test: "packages/kernel/test/events.python.test.ts",
+    file: "packages/kernel/py/verify_events.py",
+    find: "    elif -6 < n <= 0:",
+    replace: "    elif -7 < n <= 0:",
+    why: "Python prints 1e-7 as 0.0000001 where ECMAScript prints 1e-7, so every ledger holding a tiny number fails cross-language verification and the second-language audit cries tamper on an intact chain.",
+  },
+  {
+    // Not `seq > ?` -> `>=` on the SSE cursor: the test's own read loop never ends
+    // under it (the last event comes back forever) and the run times out - detected,
+    // but a hang is `broken`, never a kill. The paging twin terminates and is caught.
+    id: "events-page-repeats-boundary",
+    test: "packages/kernel/test/events.query.test.ts",
+    file: "packages/kernel/src/events-query.ts",
+    find: "eq(\"seq < ?\", q.before)",
+    replace: "eq(\"seq <= ?\", q.before)",
+    why: "Every `next` page of the Ledger starts with the event that ended the previous one, so a reader paging back through history sees each boundary event twice and counts drift from the ledger's own head.",
+  },
+  {
+    id: "job-ceiling-checked-after-unit",
+    test: "packages/kernel/test/job.core.test.ts",
+    file: "packages/kernel/src/job-core.ts",
+    find: "if (est > 0 && usd6(spent + est) > ceiling) {",
+    replace: "if (est > 0 && usd6(spent) > ceiling) {",
+    why: "The run ceiling is checked against what was already spent, not spent plus the next unit's estimate, so one step past the ceiling is always paid for.",
+  },
+  {
+    id: "job-money-stop-feeds-breaker",
+    test: "packages/kernel/test/job.core.test.ts",
+    file: "packages/kernel/src/job-core.ts",
+    find: "return { job: { ...move(base, \"failed\"), error: { code: \"budget\"",
+    replace: "return { job: { ...move(base, \"failed\"), failStreak: job.failStreak + 1, error: { code: \"budget\"",
+    why: "A spend-window refusal is counted as a vendor failure, so the record reads a breaker streak over a budget stop - the misreport v1 extract once shipped.",
+  },
+  {
+    id: "job-step-not-marked-in-flight",
+    test: "packages/kernel/test/job.crash.test.ts",
+    file: "packages/kernel/src/job-core.ts",
+    find: "progress: { done, total: Math.max(total, done), stage: step } };",
+    replace: "progress: { done, total: Math.max(total, done) } };",
+    why: "A crash mid-step leaves an interruption that names no stage, so a step re-performed after the operator's retry may have been paid twice with nothing saying so.",
+  },
+  {
+    id: "lease-fence-not-checked",
+    test: "packages/kernel/test/job.crash.test.ts",
+    file: "packages/kernel/src/lease.ts",
+    find: "if (lost !== undefined) throw new AppError(\"conflict\", `lease ${resource}: fence ${fence} no longer holds",
+    replace: "if (false) throw new AppError(\"conflict\", `lease ${resource}: fence ${fence} no longer holds",
+    why: "An old holder that wakes after a take-over writes its output over the new holder's, because no write presents a fence that can be refused.",
+  },
+  {
+    id: "job-lane-inferred-not-declared",
+    test: "packages/kernel/test/job.test.ts",
+    file: "packages/kernel/src/job-run.ts",
+    find: "if (job.lane !== producer.lane) throw",
+    replace: "if (false) throw",
+    why: "A producer for one lane runs a job declared on another, taking a lease on the wrong resource - the stack-purity rule v1 dojo_run enforced.",
+  },
+  // ---- @gt/kernel: lease .. store
+  {"id": "lease-python-grants-while-held", "test": "packages/kernel/test/lease.mixed.test.ts", "file": "packages/kernel/py/lease.py", "find": "    if held is None and ahead == 0:", "replace": "    if ahead == 0:", "why": "The Python worker takes the GPU while a Node holder still has it, so two processes render under one lease and the probe log shows two enters in a row."},
+  {"id": "lease-newcomer-jumps-the-queue", "test": "packages/kernel/test/lease.spec.test.ts", "file": "packages/kernel/src/lease-core.ts", "find": "const ahead = mine === undefined ? swept.live.length : swept.live.filter((w) => w.n < mine.n).length;", "replace": "const ahead = mine === undefined ? 0 : swept.live.filter((w) => w.n < mine.n).length;", "why": "A caller not in the queue is granted the moment the holder releases, jumping every FIFO waiter that asked before it."},
+  {"id": "lease-expiry-is-not-loss", "test": "packages/kernel/test/lease.spec.test.ts", "file": "packages/kernel/src/lease-core.ts", "find": "  if (expired(held.heartbeatAt, held.ttlS, nowMs)) return \"expired\";", "replace": "  if (false) return \"expired\";", "why": "A holder whose heartbeat lapsed past its TTL can still heartbeat and write, although a contender may already have read the resource as free."},
+  {"id": "lease-fence-check-only-on-expiry", "test": "packages/kernel/test/lease.test.ts", "file": "packages/kernel/src/lease.ts", "find": "  if (lost !== undefined) throw new AppError(\"conflict\", `lease ${resource}: fence ${fence} no longer holds", "replace": "  if (lost === \"expired\") throw new AppError(\"conflict\", `lease ${resource}: fence ${fence} no longer holds", "why": "A zombie holder that wakes after a take-over writes under its stale fence and the write commits beside the new holder's."},
+  {"id": "lease-acquire-aborts-on-store-busy", "test": "packages/kernel/test/lease.test.ts", "file": "packages/kernel/src/lease.ts", "find": "if (!r.ok && r.error.code === \"unavailable\" && now() < deadline) {", "replace": "if (false) {", "why": "A waiter whose poll finds the store busy past busy_timeout gives up instead of polling again, so under contention a worker fails a lease it would have been granted (the lease.mixed flake of 2026-10-15)."},
+  {"id": "lease-acquire-timeout-stays-queued", "test": "packages/kernel/test/lease.test.ts", "file": "packages/kernel/src/lease.ts", "find": "      if (o.kind === \"queued\") {", "replace": "      if (false) {", "why": "A waiter that gives up keeps its ticket in the queue, so the next caller waits behind a ghost until its TTL drops it."},
+  {"id": "migrate-edited-step-not-refused", "test": "packages/kernel/test/migrate.test.ts", "file": "packages/kernel/src/migrate.ts", "find": "      if (stepDigest(step) !== r.digest) {", "replace": "      if (false) {", "why": "A shipped migration edited after it ran is silently accepted, so stores migrated before and after the edit disagree on the schema with nothing saying so."},
+  {"id": "migrate-failed-step-bumps-ledger", "test": "packages/kernel/test/migrate.test.ts", "file": "packages/kernel/src/migrate.ts", "find": "      t.exec(p.step.sql);", "replace": "      try { t.exec(p.step.sql); } catch (e) { void e; }", "why": "A step that fails half-way commits its partial DDL and its ledger row, so the store records a version it never fully reached and the retry skips it."},
+  {"id": "price-vendor-zero-is-free", "test": "packages/kernel/test/pricing.test.ts", "file": "packages/kernel/src/pricing/quote.ts", "find": "q.vendorUsd > 0) {", "replace": "q.vendorUsd >= 0) {", "why": "A vendor that reports $0 is taken at its word, so a call that did cost money books as free instead of falling back to the table's estimate."},
+  {"id": "price-ignores-measured-size", "test": "packages/kernel/test/pricing.test.ts", "file": "packages/kernel/src/pricing/quote.ts", "find": "  if (row.atSize !== undefined && size !== row.atSize) {", "replace": "  if (false) {", "why": "A 2K or default-size image is priced at the 1K figure, under-quoting every call the price was never measured for."},
+  {"id": "receipt-interrupted-claims-afresh", "test": "packages/kernel/test/receipts.test.ts", "file": "packages/kernel/src/pricing/receipts.ts", "find": "    if (prior.state === \"interrupted\") {", "replace": "    if (false) {", "why": "A call interrupted mid-flight (the vendor may have billed it) is claimed fresh and called again with no operator ever looking."},
+  {"id": "receipt-dry-cost-reads-real", "test": "packages/kernel/test/receipts.test.ts", "file": "packages/kernel/src/pricing/receipts.ts", "find": "mode === \"live\" && q.basis === \"vendor-reported\" ? \"real\" : \"model\"", "replace": "q.basis === \"vendor-reported\" ? \"real\" : \"model\"", "why": "A dry run's vendor-shaped figure is booked as real money, so the ledger's real spend includes calls that never left the machine."},
+  {"id": "router-recovery-deletes-inflight-claims", "test": "packages/kernel/test/router.crash.test.ts", "file": "packages/kernel/src/pricing/receipts.ts", "find": "t.run(`UPDATE receipts SET state = 'interrupted' WHERE ${WHERE}`", "replace": "t.run(`DELETE FROM receipts WHERE ${WHERE}`", "why": "Recovery forgets a paid call that was in flight at the crash, so the resumed driver calls the vendor a second time for the same still."},
+  {"id": "posture-local-binaries-off-ignored", "test": "packages/kernel/test/router.posture.test.ts", "file": "packages/kernel/src/router/posture.ts", "find": "  if (o.value === \"off\") return ok(\"policy-forbidden\");", "replace": "  if (false) return ok(\"policy-forbidden\");", "why": "LOCAL_BINARIES=off no longer forbids spawning, so a machine whose operator turned local binaries off routes text to the CLI anyway."},
+  {"id": "posture-malformed-env-falls-back", "test": "packages/kernel/test/router.posture.test.ts", "file": "packages/kernel/src/router/posture.ts", "find": "return hit === undefined ? err(\"invalid\",", "replace": "return hit === undefined && false ? err(\"invalid\",", "why": "A misspelt TEXT_ENV or IMAGING_ENV silently degrades to the default plan instead of failing, so a production box can route on dev providers."},
+  {"id": "route-timeout-walks-the-chain", "test": "packages/kernel/test/router.route.test.ts", "file": "packages/kernel/src/router/route.ts", "find": "new Set<FailureKind>([\"refused\", \"rate-limited\"]);", "replace": "new Set<FailureKind>([\"refused\", \"rate-limited\", \"timeout\"]);", "why": "A timed-out call (the vendor may still be working, and billing) is re-routed to the next provider, paying twice for one request."},
+  {"id": "route-references-ignored", "test": "packages/kernel/test/router.route.test.ts", "file": "packages/kernel/src/router/route.ts", "find": "const missing = needs.filter((n) => !c.honours.includes(n));", "replace": "const missing = needs.filter((n) => !needs.includes(n));", "why": "A request carrying reference images lands on a provider that ignores them, and the result silently loses the references the user gave."},
+  {"id": "spend-crash-lapse-releases", "test": "packages/kernel/test/spend.crash.test.ts", "file": "packages/kernel/src/spend/ledger.ts", "find": "const r = close(t, cls, id, \"lapsed\");", "replace": "const r = close(t, cls, id, \"released\");", "why": "A crashed owner's hold is released instead of lapsed, so money the vendor charged before the crash drops out of the window and the ceiling under-counts."},
+  {"id": "spend-ceiling-ignores-holds", "test": "packages/kernel/test/spend.test.ts", "file": "packages/kernel/src/spend/core.ts", "find": "fits: totals.spent + totals.held + totals.lapsed + amount <= cls.ceiling", "replace": "fits: totals.spent + totals.lapsed + amount <= cls.ceiling", "why": "Calls in flight do not count against the ceiling, so concurrent reservations together pass it before any of them settles."},
+  {"id": "spend-zero-is-priced", "test": "packages/kernel/test/spend.test.ts", "file": "packages/kernel/src/spend/core.ts", "find": "Number.isFinite(n) && n > 0;", "replace": "Number.isFinite(n) && n >= 0;", "why": "A zero figure books as a free row instead of counting as unpriced, hiding calls whose cost nobody knows."},
+  {"id": "spend-v1port-reclaims-live-owner", "test": "packages/kernel/test/spend.v1port.test.ts", "file": "packages/kernel/src/spend/v1Port.ts", "find": "at - h.createdAt <= ttl() || isAlive(h.pid)) continue;", "replace": "at - h.createdAt <= ttl()) continue;", "why": "A long render in a live process has its hold reclaimed past the TTL, so its spend leaves the window while the call is still running - the port no longer behaves as v1."},
+  {"id": "store-deferred-begin", "test": "packages/kernel/test/store.file.test.ts", "file": "packages/kernel/src/store.ts", "find": "return run<T>(\"BEGIN IMMEDIATE\", \"\", (live) => {", "replace": "return run<T>(\"BEGIN\", \"\", (live) => {", "why": "A write transaction reads before it takes the lock, so two processes doing read-modify-write hit SQLITE_BUSY on upgrade and lose updates."},
+  {"id": "store-synchronous-normal", "test": "packages/kernel/test/store.file.test.ts", "file": "packages/kernel/src/store.ts", "find": "PRAGMA synchronous = FULL;", "replace": "PRAGMA synchronous = NORMAL;", "why": "A power cut can drop the last commits, including a spend reservation written before a paid call went out, so resume re-spends."},
+  {"id": "store-promise-body-commits", "test": "packages/kernel/test/store.contract.test.ts", "file": "packages/kernel/src/store.ts", "find": "\"then\" in out && typeof out.then === \"function\"", "replace": "\"then\" in out && typeof out.then === \"undefined\"", "why": "An async transaction body commits its first synchronous writes and the rest run outside any transaction."},
+  {"id": "store-read-can-write", "test": "packages/kernel/test/store.contract.test.ts", "file": "packages/kernel/src/store.ts", "find": "db.exec(\"PRAGMA query_only = 1\");", "replace": "db.exec(\"PRAGMA query_only = 0\");", "why": "A read transaction can write, so a reader that runs an INSERT ... RETURNING mutates the store without the write lock or a ledger event."},
+  {
+    // Wave 3 (L8). Written against the uncommitted file and killed by hand in the
+    // scratch tree (2 of 6 tests red); the runner reads it `stale` (file missing)
+    // until kernel.ts is committed, which is the honest verdict until then.
+    id: "kernel-forgets-a-module",
+    test: "packages/kernel/test/kernel.test.ts",
+    file: "packages/kernel/src/kernel.ts",
+    find: "  { migrations: receiptsMigrations, after: [\"events\"] },",
+    replace: "",
+    why: "openKernel opens a store with no receipts table, so the first priced call fails on a missing table after the kernel said it was ready - the hand-kept module list v1's per-store directories drifted on.",
+  },
+  // ---- @gt/ui
+  {
+    id: "ui-freshness-late-value-rolls-back",
+    test: "packages/ui/test/freshness.test.ts",
+    file: "packages/ui/src/freshness/core.ts",
+    find: "if (s.held !== undefined && e.at < s.held.at) return",
+    replace: "if (s.held !== undefined && false) return",
+    why: "An SSE replay or a slow poll landing after a fast one overwrites the held value with an older one, so a live badge shows a state the run already left.",
+  },
+  {
+    id: "ui-freshness-success-never-restores",
+    test: "packages/ui/test/freshness.test.ts",
+    file: "packages/ui/src/freshness/core.ts",
+    find: "const failing = s.failAt !== null && (s.heardAt === null || s.failAt >= s.heardAt);",
+    replace: "const failing = s.failAt !== null;",
+    why: "An edge that failed once reads stale forever, even after fresh successes, so the operator stops trusting the one signal that says a value is current.",
+  },
+  {
+    id: "ui-window-grid-holds-from-zero",
+    test: "packages/ui/test/window.test.ts",
+    file: "packages/ui/src/window/core.ts",
+    find: "const start = r0 * columns;",
+    replace: "const start = 0;",
+    why: "A scrolled grid holds every item from the top down to the viewport, so the Library at 50,000 items paints tens of thousands of tiles instead of a viewport plus overscan.",
+  },
+  {
+    id: "ui-window-rowat-off-by-one",
+    test: "packages/ui/test/window.test.ts",
+    file: "packages/ui/src/window/core.ts",
+    find: "if ((offsets[mid + 1] ?? Infinity) <= y) lo = mid + 1;",
+    replace: "if ((offsets[mid + 1] ?? Infinity) < y) lo = mid + 1;",
+    why: "A y on a row boundary resolves to the row above, so measured rows window one row late and reveal lands on the wrong item.",
+  },
+  {
+    id: "ui-keymap-shadow-overlap-not-a-conflict",
+    test: "packages/ui/test/keymap.test.ts",
+    file: "packages/ui/src/keymap/keymap.ts",
+    find: "if (inner.shadows !== true) out.push(",
+    replace: "if (false) out.push(",
+    why: "An inner mode silently takes an outer mode's key without declaring `shadows`, so two rows fight over one chord and the conflict report stays empty.",
+  },
+  {
+    id: "ui-keymap-held-key-repeats",
+    test: "packages/ui/test/keymap.test.ts",
+    file: "packages/ui/src/keymap/keymap.ts",
+    find: "if (press.repeat && b.repeat !== true) return null;",
+    replace: "if (false) return null;",
+    why: "A held K keeps firing and decides a whole row of items instead of one (v1 keyGuard's rule).",
+  },
+  {
+    id: "ui-layers-leaving-entry-owns-input",
+    test: "packages/ui/test/layers.test.ts",
+    file: "packages/ui/src/layers/stack.ts",
+    find: "s.entries.filter((e) => !s.leaving.has(e.id))",
+    replace: "s.entries.filter(() => true)",
+    why: "A URL layer that is already navigating back still owns Escape, so a second Escape calls back() again and walks the history two steps.",
+  },
+  {
+    id: "ui-layers-scroll-lock-toggled",
+    test: "packages/ui/test/layers.test.ts",
+    file: "packages/ui/src/layers/containment.ts",
+    find: "if (holders.size > 1) return \"none\";",
+    replace: "if (false) return \"none\";",
+    why: "Each modal re-captures the overflow the previous one set, so closing out of order restores scrolling under a dialog that is still open (v1's counted lock).",
+  },
+  {
+    id: "ui-storage-unregistered-twin-writes",
+    test: "packages/ui/test/storage.test.ts",
+    file: "packages/ui/src/storage/store.ts",
+    find: "registered.get(def.key) === def ?",
+    replace: "registered.has(def.key) ?",
+    why: "A KeyDef that merely reuses a registered key's name (with another scope) can write, so the registration stops being the eviction list and a value can escape identity eviction.",
+  },
+  {
+    id: "ui-storage-refresh-is-a-flip",
+    test: "packages/ui/test/storage.test.ts",
+    file: "packages/ui/src/storage/identity.ts",
+    find: "if (was === now) return null;",
+    replace: "if (was === \"\") return null;",
+    why: "A plain credential refresh classifies as an account switch, so routine token maintenance wipes the user's own stored work on a schedule nobody connects to it.",
+  },
+  {
+    id: "ui-tokenlint-unknown-var-passes",
+    test: "packages/ui/test/tokenLint.test.ts",
+    file: "packages/ui/src/tokenLint.ts",
+    find: "if (!allowedVars.has(name) && !local.has(name)) {",
+    replace: "if (false) {",
+    why: "A var() naming no token (a typo like --cyann) passes the lint and renders as the browser's fallback instead of a design value.",
+  },
+  {
+    id: "ui-tokenlint-rgba-not-a-colour",
+    test: "packages/ui/test/tokenLint.test.ts",
+    file: "packages/ui/src/tokenLint.ts",
+    find: "const COLOUR = /#[0-9a-fA-F]{3,8}\\b|\\b(?:rgba?|hsla?)\\(/g;",
+    replace: "const COLOUR = /#[0-9a-fA-F]{3,8}\\b/g;",
+    why: "A raw rgba()/hsl() colour slips into a module stylesheet unflagged, so drift from the tokens returns through the spelling the lint forgot.",
+  },
+  {
+    id: "ui-tokenrender-value-spacing-drifts",
+    test: "packages/ui/test/tokenRender.test.ts",
+    file: "packages/ui/src/tokenRender.ts",
+    find: "out.push(`  --${t.name}: ${t.value};",
+    replace: "out.push(`  --${t.name}:${t.value};",
+    why: "The generated tokens.css stops carrying the prototype's :root lines byte for byte, so the byte-equal extraction contract breaks silently.",
+  },
+  {
+    id: "ui-tokensource-duplicate-name-admitted",
+    test: "packages/ui/test/tokenSource.test.ts",
+    file: "packages/ui/src/tokenSource.ts",
+    find: "if (seen.has(t.name)) {",
+    replace: "if (false) {",
+    why: "Two tokens with one name both enter the source and the later one silently wins in the generated CSS.",
+  },
+  {
+    id: "ui-checktokens-drift-ignored",
+    test: "packages/ui/test/checkTokens.test.ts",
+    file: "pipeline/check-tokens.mts",
+    find: "if (have !== fresh) {",
+    replace: "if (false) {",
+    why: "Hand-edited or stale tokens.css/tokens.ts pass tokens:check, so the committed outputs drift from source.json with the gate green.",
+  },
+  {
+    id: "ui-checktokens-unreached-scss-passes",
+    test: "packages/ui/test/checkTokens.test.ts",
+    file: "pipeline/check-tokens.mts",
+    find: "if (unreached > 0) process.exit(2);",
+    replace: "if (false) process.exit(2);",
+    why: "A module stylesheet the lint cannot read (.scss) is a silent pass instead of could-not-run, so raw values hide behind a file extension.",
+  },
+  {
+    id: "ui-controls-disabled-link-navigates",
+    test: "packages/ui/test/components/controls.test.ts",
+    file: "packages/ui/src/components/button/Button.tsx",
+    find: "if (href !== undefined && !disabled) {",
+    replace: "if (href !== undefined) {",
+    why: "A disabled Button with an href renders as a live link, so a press the UI declared unavailable still navigates.",
+  },
+  {
+    id: "ui-controls-seg-presses-every-option",
+    test: "packages/ui/test/components/controls.test.ts",
+    file: "packages/ui/src/components/seg/Seg.tsx",
+    find: "aria-pressed={o.value === value}",
+    replace: "aria-pressed={true}",
+    why: "Every segment announces itself pressed, so assistive technology cannot tell which window is selected.",
+  },
+  {
+    id: "ui-keycaps-facts-dropped",
+    test: "packages/ui/test/components/keycaps.test.ts",
+    file: "packages/ui/src/components/keycaps/caps.ts",
+    find: "...(opts.facts !== undefined ? { facts: opts.facts } : {}),",
+    replace: "...({}),",
+    why: "The legend ignores the screen's facts, so an audio packet's desk does not draw Space play although the key works: the legend disagrees with the keymap.",
+  },
+  {
+    id: "ui-law-word-counter-counts-spaces",
+    test: "packages/ui/test/components/law.test.ts",
+    file: "packages/ui/src/components/hint/words.ts",
+    find: "return text.split(/\\s+/).filter((w) => w.length > 0).length;",
+    replace: "return text.split(\" \").length;",
+    why: "The runtime word counter counts runs of whitespace as words, so the narration gate and the type disagree at the twelve-word boundary.",
+  },
+  {
+    id: "ui-law-thirteen-words-compile",
+    test: "packages/ui/test/components/law.test.ts",
+    file: "packages/ui/src/components/hint/words.ts",
+    find: "N[\"length\"] extends 13",
+    replace: "N[\"length\"] extends 14",
+    why: "A thirteen-word Hint or Empty label compiles, so a paragraph moves behind a glyph with typecheck green (type-only guard: caught by tsc -b, not by Vitest).",
+    typecheck: true,
+  },
+  {
+    id: "ui-status-job-table-drops-interrupted",
+    test: "packages/ui/test/components/status.test.ts",
+    file: "packages/ui/src/components/status/status.ts",
+    find: "interrupted: e(\"awaiting\", \"interrupted\"),",
+    replace: "/* interrupted dropped */",
+    why: "An interrupted job has no entry, so the one state whose vendor may have been paid draws no look instead of amber awaiting.",
+  },
+  {
+    id: "ui-status-wire-reads-prototype-keys",
+    test: "packages/ui/test/components/status.test.ts",
+    file: "packages/ui/src/components/status/status.ts",
+    find: "const hit = Object.hasOwn(table, token) ? table[token] : undefined;",
+    replace: "const hit = table[token];",
+    why: "A wire token like `constructor` resolves to Object.prototype's function instead of UNKNOWN, so version skew draws garbage and is never reported.",
+  },
+  {
+    id: "ui-status-table-states-optional",
+    test: "packages/ui/test/components/status.test.ts",
+    file: "packages/ui/src/components/status/status.ts",
+    find: "{ readonly [S in Vocabulary[M]]: StatusEntry } };",
+    replace: "{ readonly [S in Vocabulary[M]]?: StatusEntry } };",
+    why: "A status table missing a machine state compiles, so a state added to a machine ships with no look (type-only guard: caught by tsc -b; statusOf in status.ts errors too).",
+    typecheck: true,
+  },
+  {
+    id: "ui-signal-break-node-drawn-done",
+    test: "packages/ui/test/components/signal.test.ts",
+    file: "packages/ui/src/components/upstream/UpstreamBreak.tsx",
+    find: "(i < brokeAt ? \"done\"",
+    replace: "(i <= brokeAt ? \"done\"",
+    why: "The step where the chain broke is drawn as done, so UpstreamBreak hides exactly the node the operator must look at.",
+  },
+  {
+    id: "ui-signal-tally-numerals-spoken",
+    test: "packages/ui/test/components/signal.test.ts",
+    file: "packages/ui/src/components/tally/Tally.tsx",
+    find: "<span aria-hidden=\"true\">{of === undefined",
+    replace: "<span>{of === undefined",
+    why: "Screen readers read the numerals as well as the sentence, so 12/36 is announced as twelve slash thirty-six before the spoken tally.",
+  },
+];

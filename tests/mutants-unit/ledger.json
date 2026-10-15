@@ -1,0 +1,859 @@
+{
+  "commit": "c134a49121197ea4ada92c486b016076d5373460",
+  "totalDurationMs": 185649,
+  "killed": 90,
+  "survived": 0,
+  "stale": 1,
+  "broken": 0,
+  "baselineRed": 1,
+  "mutants": [
+    {
+      "id": "door-keeps-explicit-undefined",
+      "test": "packages/domain/test/door.test.ts",
+      "verdict": "killed",
+      "durationMs": 979,
+      "caughtBy": [
+        "door drops an explicit undefined so the type does not lie"
+      ]
+    },
+    {
+      "id": "door-refusal-loses-the-path",
+      "test": "packages/domain/test/door.test.ts",
+      "verdict": "killed",
+      "durationMs": 512,
+      "caughtBy": [
+        "door refuses bad input, keeping door name, path and message"
+      ]
+    },
+    {
+      "id": "door-parsed-flattens-brands",
+      "test": "packages/domain/test/door.test.ts",
+      "typecheck": true,
+      "verdict": "killed",
+      "durationMs": 3454,
+      "caughtBy": [
+        "packages/domain/test/door.test.ts(56,11): error TS2322: Type 'Flat<{ [iterator]: Flat<{} & {}>; [$brand]: Flat<{ ProjectId: true; } & {}>; includes: Flat<{} & {}>; charAt: Flat<{} & {}>; charCodeAt: Flat<...>; ... 44 more ...; valueOf: Flat<...>; } & { ...; }>' is not assignable to type 'string & $brand<\"ProjectId\">'."
+      ]
+    },
+    {
+      "id": "envelope-writes-absent-detail",
+      "test": "packages/domain/test/errors.test.ts",
+      "verdict": "killed",
+      "durationMs": 962,
+      "caughtBy": [
+        "errors envelope omits an absent detail (negative control: no detail key)"
+      ]
+    },
+    {
+      "id": "id-schema-accepts-empty",
+      "test": "packages/domain/test/ids.test.ts",
+      "verdict": "killed",
+      "durationMs": 1007,
+      "caughtBy": [
+        "ids refuses an empty id"
+      ]
+    },
+    {
+      "id": "machine-allows-every-transition",
+      "test": "packages/domain/test/transitions.test.ts",
+      "verdict": "killed",
+      "durationMs": 910,
+      "caughtBy": [
+        "transitions refuses an undeclared transition, naming from -> to"
+      ]
+    },
+    {
+      "id": "estimate-null-usd-without-reason",
+      "test": "packages/domain/test/estimate.test.ts",
+      "verdict": "killed",
+      "durationMs": 940,
+      "caughtBy": [
+        "estimate — never invent a price refuses an unpriced estimate with no reason — null must not read as free"
+      ]
+    },
+    {
+      "id": "estimate-band-ignores-upper-bound",
+      "test": "packages/domain/test/estimate.test.ts",
+      "verdict": "killed",
+      "durationMs": 486,
+      "caughtBy": [
+        "estimate — never invent a price a band holds its point figure, and needs one (articles: $47–92 per run)"
+      ]
+    },
+    {
+      "id": "event-data-accepts-non-finite",
+      "test": "packages/domain/test/event.test.ts",
+      "verdict": "killed",
+      "durationMs": 932,
+      "caughtBy": [
+        "event data is a JSON object: no bare scalar, no non-finite number, no class instance"
+      ]
+    },
+    {
+      "id": "event-cost-without-source",
+      "test": "packages/domain/test/event.test.ts",
+      "verdict": "killed",
+      "durationMs": 542,
+      "caughtBy": [
+        "event a cost never travels without the word for where it came from"
+      ]
+    },
+    {
+      "id": "job-lease-outside-running",
+      "test": "packages/domain/test/job.test.ts",
+      "verdict": "killed",
+      "durationMs": 1185,
+      "caughtBy": [
+        "job holds a lease exactly while running"
+      ]
+    },
+    {
+      "id": "job-budget-error-without-stop",
+      "test": "packages/domain/test/job.test.ts",
+      "verdict": "killed",
+      "durationMs": 505,
+      "caughtBy": [
+        "job a money stop is failed + budget + stop, never a vendor failure"
+      ]
+    },
+    {
+      "id": "job-interrupted-resumes-directly",
+      "test": "packages/domain/test/machines.test.ts",
+      "verdict": "killed",
+      "durationMs": 1082,
+      "caughtBy": [
+        "the transitions v1 relied on job: a crash-stop is its own state, and it never resumes without the queue"
+      ]
+    },
+    {
+      "id": "slot-claimed-goes-back-to-scheduled",
+      "test": "packages/domain/test/machines.test.ts",
+      "verdict": "killed",
+      "durationMs": 558,
+      "caughtBy": [
+        "the transitions v1 relied on slot: at-most-once — a claimed slot never goes back to scheduled"
+      ]
+    },
+    {
+      "id": "library-item-own-ancestor",
+      "test": "packages/domain/test/library.test.ts",
+      "verdict": "killed",
+      "durationMs": 1047,
+      "caughtBy": [
+        "library item a derived item names the item it came from, and never itself"
+      ]
+    },
+    {
+      "id": "style-proven-counts-mechanisms",
+      "test": "packages/domain/test/library.test.ts",
+      "verdict": "killed",
+      "durationMs": 570,
+      "caughtBy": [
+        "style proven needs operator keeps in two distinct run/scene cells — two mechanisms on one cell are one",
+        "style an agent's keep is evidence, not a vote"
+      ]
+    },
+    {
+      "id": "shown-grades-include-inverted",
+      "test": "packages/domain/test/packet.test.ts",
+      "verdict": "killed",
+      "durationMs": 1056,
+      "caughtBy": [
+        "candidate and grade only calibrated grades are shown — v1's inverted craft score is not"
+      ]
+    },
+    {
+      "id": "blind-pair-accepts-one-arm",
+      "test": "packages/domain/test/packet.test.ts",
+      "verdict": "killed",
+      "durationMs": 528,
+      "caughtBy": [
+        "packet a blind pair is exactly two arms per pair"
+      ]
+    },
+    {
+      "id": "project-cycle-undetected",
+      "test": "packages/domain/test/project.test.ts",
+      "verdict": "killed",
+      "durationMs": 1025,
+      "caughtBy": [
+        "project refuses a plan with a cycle"
+      ]
+    },
+    {
+      "id": "project-state-running-beats-gate",
+      "test": "packages/domain/test/project.test.ts",
+      "verdict": "killed",
+      "durationMs": 573,
+      "caughtBy": [
+        "project derives its state with the prototype's precedence"
+      ]
+    },
+    {
+      "id": "template-fallback-shifts",
+      "test": "packages/catalog/test/catalog.test.ts",
+      "verdict": "killed",
+      "durationMs": 878,
+      "caughtBy": [
+        "projects catalogue falls back positionally to short-educational-video"
+      ]
+    },
+    {
+      "id": "blob-read-skips-hash-check",
+      "test": "packages/kernel/test/blob.test.ts",
+      "verdict": "killed",
+      "durationMs": 1276,
+      "caughtBy": [
+        "blob store refuses to return damaged bytes"
+      ]
+    },
+    {
+      "id": "canonical-keys-unsorted",
+      "test": "packages/kernel/test/canonical.test.ts",
+      "verdict": "killed",
+      "durationMs": 879,
+      "caughtBy": [
+        "canonical JSON (RFC 8785) sorts keys, recursively, with no whitespace",
+        "canonical JSON (RFC 8785) sorts keys by UTF-16 code unit, which differs from code point order past U+FFFF"
+      ]
+    },
+    {
+      "id": "crash-harness-accepts-swallowed-crash",
+      "test": "packages/kernel/test/crash.test.ts",
+      "verdict": "killed",
+      "durationMs": 1505,
+      "caughtBy": [
+        "crash-prefix enumeration reports a scenario that swallows the crash and carries on"
+      ]
+    },
+    {
+      "id": "cull-order-counts-uncalibrated-grades",
+      "test": "packages/kernel/test/calibration.test.ts",
+      "verdict": "killed",
+      "durationMs": 1278,
+      "caughtBy": [
+        "kernel/calibration - cullOrder ranks by calibrated grades only an inverted grade contributes nothing; an ungraded candidate keeps its place after the scored ones"
+      ]
+    },
+    {
+      "id": "calibration-labels-include-agent-verdicts",
+      "test": "packages/kernel/test/calibration.test.ts",
+      "verdict": "killed",
+      "durationMs": 825,
+      "caughtBy": [
+        "kernel/calibration - the registered series labels are the OPERATOR's newest verdicts; an agent's verdict and an undecided key are not labels"
+      ]
+    },
+    {
+      "id": "blind-pick-revealed-before-operator",
+      "test": "packages/kernel/test/decision.blind.test.ts",
+      "verdict": "killed",
+      "durationMs": 1221,
+      "caughtBy": [
+        "kernel/decision - blind-first reveal before the operator's verdict, no read path can tell two opposite picks (or a pick-first order) apart",
+        "kernel/decision - blind-first reveal reveals a pair's pick, and its grades, only once the OPERATOR has judged that pair",
+        "kernel/decision - blind-first reveal an undecide does not re-hide a pick: once the operator has seen it, it cannot be unseen"
+      ]
+    },
+    {
+      "id": "decision-stale-base-accepted",
+      "test": "packages/kernel/test/decision.test.ts",
+      "verdict": "killed",
+      "durationMs": 1388,
+      "caughtBy": [
+        "kernel/decision - patches refuses a stale base with the 409 body: the named keys' current decisions and the revision"
+      ]
+    },
+    {
+      "id": "commit-retry-ignores-ticket",
+      "test": "packages/kernel/test/decision.crash.test.ts",
+      "verdict": "killed",
+      "durationMs": 1273,
+      "caughtBy": [
+        "kernel/decision - crash prefixes of score -> keep -> commit -> delete a commit is all or nothing at every prefix, and a retried ticket converges"
+      ]
+    },
+    {
+      "id": "dry-port-calls-the-vendor",
+      "test": "packages/kernel/test/dryrun.test.ts",
+      "verdict": "killed",
+      "durationMs": 1249,
+      "caughtBy": [
+        "the dry port never enters the vendor function, books a would-call as model cost, and continues on the stand-in",
+        "the dry port stops the driver at a call with no stand-in, still without calling",
+        "a driver under the dry port makes zero real calls, holds zero spend and books zero real cost; its receipt is model cost",
+        "a driver under the dry port a dry rehearsal does not block the live launch that follows it"
+      ]
+    },
+    {
+      "id": "dry-port-makes-undeclared-calls",
+      "test": "packages/kernel/test/dryrun.test.ts",
+      "verdict": "killed",
+      "durationMs": 712,
+      "caughtBy": [
+        "the dry port refuses an undeclared external call instead of making it"
+      ]
+    },
+    {
+      "id": "events-verify-skips-hash-compare",
+      "test": "packages/kernel/test/events.test.ts",
+      "verdict": "killed",
+      "durationMs": 1161,
+      "caughtBy": [
+        "events verify names the first row whose data was tampered with raw SQL"
+      ]
+    },
+    {
+      "id": "events-verify-skips-gap-check",
+      "test": "packages/kernel/test/events.test.ts",
+      "verdict": "killed",
+      "durationMs": 586,
+      "caughtBy": [
+        "events verify sees a deleted middle row at the gap, and a cut tail only against an anchor"
+      ]
+    },
+    {
+      "id": "python-verifier-sorts-by-code-point",
+      "test": "packages/kernel/test/events.python.test.ts",
+      "verdict": "killed",
+      "durationMs": 1634,
+      "caughtBy": [
+        "events verified by Python re-derives every hash Node wrote, including non-integer and exponent numbers"
+      ]
+    },
+    {
+      "id": "python-verifier-small-exponent-boundary",
+      "test": "packages/kernel/test/events.python.test.ts",
+      "verdict": "killed",
+      "durationMs": 925,
+      "caughtBy": [
+        "events verified by Python re-derives every hash Node wrote, including non-integer and exponent numbers"
+      ]
+    },
+    {
+      "id": "events-page-repeats-boundary",
+      "test": "packages/kernel/test/events.query.test.ts",
+      "verdict": "killed",
+      "durationMs": 14492,
+      "caughtBy": [
+        "ledger query at 50000 events pages with `next` visit every match exactly once, in order"
+      ]
+    },
+    {
+      "id": "job-ceiling-checked-after-unit",
+      "test": "packages/kernel/test/job.core.test.ts",
+      "verdict": "killed",
+      "durationMs": 1202,
+      "caughtBy": [
+        "next checks the ceiling BEFORE the unit: a step that would cross it is not taken"
+      ]
+    },
+    {
+      "id": "job-money-stop-feeds-breaker",
+      "test": "packages/kernel/test/job.core.test.ts",
+      "verdict": "killed",
+      "durationMs": 801,
+      "caughtBy": [
+        "book a money stop is never a vendor failure: the streak stands where it was"
+      ]
+    },
+    {
+      "id": "job-step-not-marked-in-flight",
+      "test": "packages/kernel/test/job.crash.test.ts",
+      "verdict": "killed",
+      "durationMs": 5995,
+      "caughtBy": [
+        "job driver under crash-prefix enumeration (a) crashed at every prefix, swept, retried by the operator: done, no booked step re-performed",
+        "job driver under crash-prefix enumeration (b) a take-over after TTL while the old holder resumes: its write is refused by the fence"
+      ]
+    },
+    {
+      "id": "lease-fence-not-checked",
+      "test": "packages/kernel/test/job.crash.test.ts",
+      "verdict": "killed",
+      "durationMs": 2035,
+      "caughtBy": [
+        "job driver under crash-prefix enumeration (b) a take-over after TTL while the old holder resumes: its write is refused by the fence"
+      ]
+    },
+    {
+      "id": "job-lane-inferred-not-declared",
+      "test": "packages/kernel/test/job.test.ts",
+      "verdict": "killed",
+      "durationMs": 2926,
+      "caughtBy": [
+        "runJob refuses a producer whose lane is not the job's declared lane, before taking any lease"
+      ]
+    },
+    {
+      "id": "lease-python-grants-while-held",
+      "test": "packages/kernel/test/lease.mixed.test.ts",
+      "verdict": "baseline-red",
+      "durationMs": 54101
+    },
+    {
+      "id": "lease-newcomer-jumps-the-queue",
+      "test": "packages/kernel/test/lease.spec.test.ts",
+      "verdict": "killed",
+      "durationMs": 2225,
+      "caughtBy": [
+        "spec/lease.json against the Node implementation FIFO: waiters are served in the order they asked, and a newcomer never jumps the line",
+        "spec/lease.json against the Node implementation a dead waiter is skipped at once; an unseen waiter on another host is dropped after its TTL"
+      ]
+    },
+    {
+      "id": "lease-expiry-is-not-loss",
+      "test": "packages/kernel/test/lease.spec.test.ts",
+      "verdict": "killed",
+      "durationMs": 1129,
+      "caughtBy": [
+        "spec/lease.json against the Node implementation a heartbeat keeps a live lease; past its TTL the lease is lost even before anyone takes it"
+      ]
+    },
+    {
+      "id": "lease-fence-check-only-on-expiry",
+      "test": "packages/kernel/test/lease.test.ts",
+      "verdict": "killed",
+      "durationMs": 1492,
+      "caughtBy": [
+        "the fence is checked inside the writer's transaction: a refused fence takes the write down with it"
+      ]
+    },
+    {
+      "id": "lease-acquire-timeout-stays-queued",
+      "test": "packages/kernel/test/lease.test.ts",
+      "verdict": "killed",
+      "durationMs": 729,
+      "caughtBy": [
+        "acquire runs out without hanging, leaves the queue and names the holder"
+      ]
+    },
+    {
+      "id": "migrate-edited-step-not-refused",
+      "test": "packages/kernel/test/migrate.test.ts",
+      "verdict": "killed",
+      "durationMs": 2090,
+      "caughtBy": [
+        "migrations refuses a past step that was edited after it ran, and runs nothing"
+      ]
+    },
+    {
+      "id": "migrate-failed-step-bumps-ledger",
+      "test": "packages/kernel/test/migrate.test.ts",
+      "verdict": "killed",
+      "durationMs": 1049,
+      "caughtBy": [
+        "migrations a failed step leaves no trace of itself, marks the failure, and blocks every run until cleared"
+      ]
+    },
+    {
+      "id": "price-vendor-zero-is-free",
+      "test": "packages/kernel/test/pricing.test.ts",
+      "verdict": "killed",
+      "durationMs": 1309,
+      "caughtBy": [
+        "quote (lib/imaging/pricing.ts priceCall + lib/text/pricing.ts priceTurn) a vendor's own figure wins over the table; a zero or negative one is missing, not free"
+      ]
+    },
+    {
+      "id": "price-ignores-measured-size",
+      "test": "packages/kernel/test/pricing.test.ts",
+      "verdict": "killed",
+      "durationMs": 599,
+      "caughtBy": [
+        "quote (lib/imaging/pricing.ts priceCall + lib/text/pricing.ts priceTurn) prices only the size a figure was measured at"
+      ]
+    },
+    {
+      "id": "receipt-interrupted-claims-afresh",
+      "test": "packages/kernel/test/receipts.test.ts",
+      "verdict": "killed",
+      "durationMs": 1514,
+      "caughtBy": [
+        "receipts (lib/imaging/receipts.ts, made durable) a claim whose owner died is interrupted, named, and refused until an operator releases it"
+      ]
+    },
+    {
+      "id": "receipt-dry-cost-reads-real",
+      "test": "packages/kernel/test/receipts.test.ts",
+      "verdict": "killed",
+      "durationMs": 737,
+      "caughtBy": [
+        "receipts (lib/imaging/receipts.ts, made durable) a dry claim and a live claim on one key are separate rows"
+      ]
+    },
+    {
+      "id": "router-recovery-deletes-inflight-claims",
+      "test": "packages/kernel/test/router.crash.test.ts",
+      "verdict": "killed",
+      "durationMs": 2143,
+      "caughtBy": [
+        "route, reserve and call under a crash every prefix keeps decision and claim together, and recovery never calls the vendor twice"
+      ]
+    },
+    {
+      "id": "posture-local-binaries-off-ignored",
+      "test": "packages/kernel/test/router.posture.test.ts",
+      "verdict": "killed",
+      "durationMs": 1046,
+      "caughtBy": [
+        "posture (lib/deployment.ts, lib/imaging/env.ts, lib/text/env.ts) LOCAL_BINARIES is honoured in both directions, and the explicit envs win"
+      ]
+    },
+    {
+      "id": "posture-malformed-env-falls-back",
+      "test": "packages/kernel/test/router.posture.test.ts",
+      "verdict": "killed",
+      "durationMs": 564,
+      "caughtBy": [
+        "posture (lib/deployment.ts, lib/imaging/env.ts, lib/text/env.ts) absent degrades; a malformed value fails instead of reaching a fallback"
+      ]
+    },
+    {
+      "id": "route-timeout-walks-the-chain",
+      "test": "packages/kernel/test/router.route.test.ts",
+      "verdict": "killed",
+      "durationMs": 1134,
+      "caughtBy": [
+        "image routing (lib/imaging/router.ts, kept) a refusal walks to the next provider; a timeout stops the request"
+      ]
+    },
+    {
+      "id": "route-references-ignored",
+      "test": "packages/kernel/test/router.route.test.ts",
+      "verdict": "killed",
+      "durationMs": 650,
+      "caughtBy": [
+        "image routing (lib/imaging/router.ts, kept) a request carrying references never lands on a provider that ignores them"
+      ]
+    },
+    {
+      "id": "spend-crash-lapse-releases",
+      "test": "packages/kernel/test/spend.crash.test.ts",
+      "verdict": "killed",
+      "durationMs": 1884,
+      "caughtBy": [
+        "kernel/spend - crash prefixes of reserve -> call -> settle never under-counts money that may have been spent, at any prefix, crashed or recovered"
+      ]
+    },
+    {
+      "id": "spend-ceiling-ignores-holds",
+      "test": "packages/kernel/test/spend.test.ts",
+      "verdict": "killed",
+      "durationMs": 1557,
+      "caughtBy": [
+        "kernel/spend - reserve -> settle -> book the call that would cross is refused with `budget` and the numbers, and the refusal COMMITS its count"
+      ]
+    },
+    {
+      "id": "spend-zero-is-priced",
+      "test": "packages/kernel/test/spend.test.ts",
+      "verdict": "killed",
+      "durationMs": 865,
+      "caughtBy": [
+        "kernel/spend - reserve -> settle -> book unpriced is not free and not zero: absent, zero, negative or NaN books nothing and is counted"
+      ]
+    },
+    {
+      "id": "spend-v1port-reclaims-live-owner",
+      "test": "packages/kernel/test/spend.v1port.test.ts",
+      "verdict": "killed",
+      "durationMs": 2547,
+      "caughtBy": [
+        "v1 behaviour cases - the kernel port's file-store edges a hold this process owns is never reclaimed, however old"
+      ]
+    },
+    {
+      "id": "store-deferred-begin",
+      "test": "packages/kernel/test/store.file.test.ts",
+      "verdict": "killed",
+      "durationMs": 3554,
+      "caughtBy": [
+        "file store two real processes incrementing one counter lose no update"
+      ]
+    },
+    {
+      "id": "store-synchronous-normal",
+      "test": "packages/kernel/test/store.file.test.ts",
+      "verdict": "killed",
+      "durationMs": 835,
+      "caughtBy": [
+        "file store runs in WAL with synchronous FULL, and names sidecars by appending (a store with no extension)"
+      ]
+    },
+    {
+      "id": "store-promise-body-commits",
+      "test": "packages/kernel/test/store.contract.test.ts",
+      "verdict": "killed",
+      "durationMs": 1632,
+      "caughtBy": [
+        "store contract (file) refuses and rolls back a body that returns a promise",
+        "store contract (memory) refuses and rolls back a body that returns a promise"
+      ]
+    },
+    {
+      "id": "store-read-can-write",
+      "test": "packages/kernel/test/store.contract.test.ts",
+      "verdict": "killed",
+      "durationMs": 819,
+      "caughtBy": [
+        "store contract (file) a read transaction cannot write, and the store still writes afterwards",
+        "store contract (memory) a read transaction cannot write, and the store still writes afterwards"
+      ]
+    },
+    {
+      "id": "kernel-forgets-a-module",
+      "test": "packages/kernel/test/kernel.test.ts",
+      "verdict": "stale",
+      "durationMs": 0,
+      "note": "file missing"
+    },
+    {
+      "id": "ui-freshness-late-value-rolls-back",
+      "test": "packages/ui/test/freshness.test.ts",
+      "verdict": "killed",
+      "durationMs": 1062,
+      "caughtBy": [
+        "value + age + edge health a late value never rolls the held one back (an SSE replay, a slow poll after a fast one)"
+      ]
+    },
+    {
+      "id": "ui-freshness-success-never-restores",
+      "test": "packages/ui/test/freshness.test.ts",
+      "verdict": "killed",
+      "durationMs": 586,
+      "caughtBy": [
+        "value + age + edge health only a success newer than the failure restores health"
+      ]
+    },
+    {
+      "id": "ui-window-grid-holds-from-zero",
+      "test": "packages/ui/test/window.test.ts",
+      "verdict": "killed",
+      "durationMs": 1152,
+      "caughtBy": [
+        "a uniform list holds the rows in view plus overscan each side, half-open",
+        "§9.5: the Library at 50,000 items never holds more than a viewport plus overscan grid over 1,000 scroll positions",
+        "§9.5: the Library at 50,000 items never holds more than a viewport plus overscan list over 1,000 scroll positions"
+      ]
+    },
+    {
+      "id": "ui-window-rowat-off-by-one",
+      "test": "packages/ui/test/window.test.ts",
+      "verdict": "killed",
+      "durationMs": 650,
+      "caughtBy": [
+        "measured rows (v1 shelf.ts) rowAt finds the row whose box holds y"
+      ]
+    },
+    {
+      "id": "ui-keymap-shadow-overlap-not-a-conflict",
+      "test": "packages/ui/test/keymap.test.ts",
+      "verdict": "killed",
+      "durationMs": 1134,
+      "caughtBy": [
+        "conflicts() sees a collision an inner row over an outer chord without `shadows`"
+      ]
+    },
+    {
+      "id": "ui-keymap-held-key-repeats",
+      "test": "packages/ui/test/keymap.test.ts",
+      "verdict": "killed",
+      "durationMs": 538,
+      "caughtBy": [
+        "resolve: guards a held K decides ONE item; a held arrow walks",
+        "resolve: guards a refused repeat does not fall through to an outer row"
+      ]
+    },
+    {
+      "id": "ui-layers-leaving-entry-owns-input",
+      "test": "packages/ui/test/layers.test.ts",
+      "verdict": "killed",
+      "durationMs": 980,
+      "caughtBy": [
+        "the stack holds entries by identity closing a layer with layers above it closes them first, top-down, once each",
+        "Escape closes one thing a URL layer that is leaving owns no input: a second Escape does not navigate back twice",
+        "the active mode the page mode skips a mode a layer owns, so a leaving sheet's desk goes quiet",
+        "outside presses and the trap the topmost live modal owns the focus trap"
+      ]
+    },
+    {
+      "id": "ui-layers-scroll-lock-toggled",
+      "test": "packages/ui/test/layers.test.ts",
+      "verdict": "killed",
+      "durationMs": 510,
+      "caughtBy": [
+        "the scroll lock is counted, not toggled (v1) the first holder locks, the last one out restores, in any order"
+      ]
+    },
+    {
+      "id": "ui-storage-unregistered-twin-writes",
+      "test": "packages/ui/test/storage.test.ts",
+      "verdict": "killed",
+      "durationMs": 1213,
+      "caughtBy": [
+        "registration is the eviction list an unregistered key cannot be written, even with the same name"
+      ]
+    },
+    {
+      "id": "ui-storage-refresh-is-a-flip",
+      "test": "packages/ui/test/storage.test.ts",
+      "verdict": "killed",
+      "durationMs": 580,
+      "caughtBy": [
+        "identityFlip: the trigger table (v1 transitionFor) credential refresh: the bearer changed, the user did not"
+      ]
+    },
+    {
+      "id": "ui-tokenlint-unknown-var-passes",
+      "test": "packages/ui/test/tokenLint.test.ts",
+      "verdict": "killed",
+      "durationMs": 1094,
+      "caughtBy": [
+        "lintCss flags a var() that names no token and reports its line (negative control)",
+        "lintCss accepts a var() naming a custom property declared in the same file"
+      ]
+    },
+    {
+      "id": "ui-tokenlint-rgba-not-a-colour",
+      "test": "packages/ui/test/tokenLint.test.ts",
+      "verdict": "killed",
+      "durationMs": 659,
+      "caughtBy": [
+        "lintCss flags a raw colour in every spelling (negative control)"
+      ]
+    },
+    {
+      "id": "ui-tokenrender-value-spacing-drifts",
+      "test": "packages/ui/test/tokenRender.test.ts",
+      "verdict": "killed",
+      "durationMs": 1188,
+      "caughtBy": [
+        "renderCss carries every prototype :root value unchanged",
+        "renderCss stops carrying the prototype when a value is changed (negative control)"
+      ]
+    },
+    {
+      "id": "ui-tokensource-duplicate-name-admitted",
+      "test": "packages/ui/test/tokenSource.test.ts",
+      "verdict": "killed",
+      "durationMs": 1059,
+      "caughtBy": [
+        "tokenSource refuses a duplicate token name (negative control)"
+      ]
+    },
+    {
+      "id": "ui-checktokens-drift-ignored",
+      "test": "packages/ui/test/checkTokens.test.ts",
+      "verdict": "killed",
+      "durationMs": 3649,
+      "caughtBy": [
+        "tokens:check exits 1 on drifted outputs and prints the regeneration command; the in-date twin is green"
+      ]
+    },
+    {
+      "id": "ui-checktokens-unreached-scss-passes",
+      "test": "packages/ui/test/checkTokens.test.ts",
+      "verdict": "killed",
+      "durationMs": 1974,
+      "caughtBy": [
+        "tokens:check exits 2 when a module stylesheet exists that the walk does not read"
+      ]
+    },
+    {
+      "id": "ui-controls-disabled-link-navigates",
+      "test": "packages/ui/test/components/controls.test.ts",
+      "verdict": "killed",
+      "durationMs": 1307,
+      "caughtBy": [
+        "Button disabled stays a focusable button that says so and takes no press; a disabled link is a button"
+      ]
+    },
+    {
+      "id": "ui-controls-seg-presses-every-option",
+      "test": "packages/ui/test/components/controls.test.ts",
+      "verdict": "killed",
+      "durationMs": 628,
+      "caughtBy": [
+        "pressed controls Seg presses exactly its value and names the group"
+      ]
+    },
+    {
+      "id": "ui-keycaps-facts-dropped",
+      "test": "packages/ui/test/components/keycaps.test.ts",
+      "verdict": "killed",
+      "durationMs": 1149,
+      "caughtBy": [
+        "Keycaps renders the keymap's rows for a mode facts change the rows exactly as the keymap says (an audio packet draws play)"
+      ]
+    },
+    {
+      "id": "ui-law-word-counter-counts-spaces",
+      "test": "packages/ui/test/components/law.test.ts",
+      "verdict": "killed",
+      "durationMs": 1207,
+      "caughtBy": [
+        "the twelve-word rule the runtime counter agrees with the type at the boundary"
+      ]
+    },
+    {
+      "id": "ui-law-thirteen-words-compile",
+      "test": "packages/ui/test/components/law.test.ts",
+      "typecheck": true,
+      "verdict": "killed",
+      "durationMs": 5377,
+      "caughtBy": [
+        "packages/ui/test/components/law.test.ts(66,63): error TS2344: Type 'true' does not satisfy the constraint '\"Expected: literal boolean: true, Actual: literal boolean: false\"'.",
+        "packages/ui/test/components/law.test.ts(69,5): error TS2578: Unused '@ts-expect-error' directive.",
+        "packages/ui/test/components/law.test.ts(71,5): error TS2578: Unused '@ts-expect-error' directive."
+      ]
+    },
+    {
+      "id": "ui-status-job-table-drops-interrupted",
+      "test": "packages/ui/test/components/status.test.ts",
+      "verdict": "killed",
+      "durationMs": 1241,
+      "caughtBy": [
+        "the status table is exhaustive over each machine job: the table's keys are exactly the machine's states"
+      ]
+    },
+    {
+      "id": "ui-status-wire-reads-prototype-keys",
+      "test": "packages/ui/test/components/status.test.ts",
+      "verdict": "killed",
+      "durationMs": 671,
+      "caughtBy": [
+        "an unknown wire token a known token is not a miss, and a prototype key like `constructor` is not a state"
+      ]
+    },
+    {
+      "id": "ui-status-table-states-optional",
+      "test": "packages/ui/test/components/status.test.ts",
+      "typecheck": true,
+      "verdict": "killed",
+      "durationMs": 4466,
+      "caughtBy": [
+        "packages/ui/src/components/status/status.ts(142,3): error TS2322: Type 'StatusEntry | undefined' is not assignable to type 'StatusEntry'.",
+        "packages/ui/test/components/status.test.ts(58,5): error TS2578: Unused '@ts-expect-error' directive."
+      ]
+    },
+    {
+      "id": "ui-signal-break-node-drawn-done",
+      "test": "packages/ui/test/components/signal.test.ts",
+      "verdict": "killed",
+      "durationMs": 1431,
+      "caughtBy": [
+        "UpstreamBreak nodes before the break are done, the break is drawn, the rest unreached"
+      ]
+    },
+    {
+      "id": "ui-signal-tally-numerals-spoken",
+      "test": "packages/ui/test/components/signal.test.ts",
+      "verdict": "killed",
+      "durationMs": 835,
+      "caughtBy": [
+        "Tally the numerals and label are hidden and a sentence is spoken (12/36 is not 'twelve slash')"
+      ]
+    }
+  ]
+}

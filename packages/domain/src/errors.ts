@@ -9,6 +9,8 @@ export type AppErrorCode =
   | "not-found"
   /** the write lost a race or violates uniqueness; clients refetch and retry. */
   | "conflict"
+  /** no credential, or an expired one; the client signs in again. */
+  | "unauthenticated"
   /** the operation is not permitted in the current state (transitions, auth); UI disables the action. */
   | "refused"
   /** a dependency (provider, disk, network) is down; retry-with-backoff loops branch on it. */
@@ -58,6 +60,7 @@ const STATUS: Readonly<Record<AppErrorCode, number>> = {
   invalid: 400,
   "not-found": 404,
   conflict: 409,
+  unauthenticated: 401,
   refused: 403,
   unavailable: 503,
   budget: 402,

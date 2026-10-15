@@ -130,14 +130,20 @@ function readLedger(store: Store): Result<{ recorded: Recorded[]; failures: Fail
   return ok({ recorded, failures });
 }
 
-function snapshotName(store: Store, pending: readonly Pending[], at: string): string {
+/** The snapshot's file name: the store's, the time, and a 12-hex digest of
+ *  the plan (`module@from-to` per module). The plan used to be spelled out in
+ *  full, and with every kernel module pending at once the name alone ran past
+ *  Windows' 260-character path limit under a temp directory; the digest keeps
+ *  two different plans apart at a fixed length. The time comes first, so a
+ *  name sort is a time sort and rotation keeps the newest. */
+export function snapshotName(base: string, pending: readonly Pending[], at: string): string {
   const span = new Map<string, [number, number]>();
   for (const p of pending) {
     const s = span.get(p.module);
     span.set(p.module, s === undefined ? [p.step.version - 1, p.step.version] : [s[0], p.step.version]);
   }
-  const what = [...span].map(([m, [from, to]]) => `${m}-v${from}-v${to}`).join("+");
-  return `${path.basename(store.location)}.pre-migrate.${at.replace(/[:.]/g, "")}.${what}.sqlite`;
+  const plan = [...span].map(([m, [from, to]]) => `${m}@${from}-${to}`).join("+");
+  return `${base}.pre-migrate.${at.replace(/[:.]/g, "")}.${sha256Hex(plan).slice(0, 12)}.sqlite`;
 }
 
 function rotate(dir: string, base: string, keep: number): void {
@@ -146,9 +152,11 @@ function rotate(dir: string, base: string, keep: number): void {
 }
 
 /**
- * Bring the store up to every module's newest step. A file store is
- * snapshotted (VACUUM INTO, integrity-checked) before the first pending step;
- * if the snapshot fails, nothing runs.
+ * Bring the store up to every module's newest step. A file store that has
+ * applied a step before is snapshotted (VACUUM INTO, integrity-checked) before
+ * the first pending step; if the snapshot fails, nothing runs. A store with no
+ * applied step is not: it holds nothing a migration could damage, and its
+ * snapshot would be an empty file per fresh store (every test, every new cell).
  */
 export function migrate(store: Store, modules: readonly ModuleMigrations[], opts: MigrateOptions = {}): Result<MigrateReport> {
   const ledger = readLedger(store);
@@ -159,11 +167,11 @@ export function migrate(store: Store, modules: readonly ModuleMigrations[], opts
   if (pending.length === 0) return ok({ applied: [] });
 
   let snapshot: string | undefined;
-  if (store.location !== ":memory:") {
+  if (store.location !== ":memory:" && ledger.value.recorded.length > 0) {
     const dir = opts.snapshotDir ?? path.dirname(store.location);
     const stamp = store.read((r) => r.at);
     if (!stamp.ok) return stamp;
-    snapshot = path.join(dir, snapshotName(store, pending, stamp.value));
+    snapshot = path.join(dir, snapshotName(path.basename(store.location), pending, stamp.value));
     const snap = store.snapshot(snapshot);
     if (!snap.ok) return err("refused", `migrations: no step ran, the pre-migration snapshot failed: ${snap.error.message}`, { cause: snap.error });
     rotate(dir, path.basename(store.location), opts.keepSnapshots ?? KEEP_SNAPSHOTS);

@@ -65,6 +65,7 @@ const ERROR_CODES: { readonly [K in AppErrorCode]: K } = {
   invalid: "invalid",
   "not-found": "not-found",
   conflict: "conflict",
+  unauthenticated: "unauthenticated",
   refused: "refused",
   unavailable: "unavailable",
   budget: "budget",

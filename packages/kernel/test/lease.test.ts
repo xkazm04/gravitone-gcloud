@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, it } from "vitest";
+import { err } from "@gt/domain/errors";
 import { blobStore } from "../src/blob.ts";
 import { liveEffects } from "../src/effects.ts";
 import { eventsMigrations } from "../src/events.ts";
@@ -84,6 +85,21 @@ describe("acquire", () => {
     expect(must(s.read((r) => statusIn(r, "gpu.local", B, live))).queue).toEqual([]);
     const types = must(s.read((r) => r.all("SELECT type FROM events ORDER BY seq").map((e) => String(e["type"]))));
     expect(types).toEqual(["lease.claimed", "lease.queued", "lease.left"]);
+  });
+
+  it("a store busy past its timeout is contention while the wait has time left", async () => {
+    const s = tpl.fresh();
+    const live0 = fx(s);
+    let busy = 2;
+    const flaky: typeof live0 = {
+      ...live0,
+      tx: (name, fn) => (busy-- > 0 ? err("unavailable", "database is locked") : live0.tx(name, fn)),
+    };
+    const got = await acquire(flaky, "gpu.local", { holder: B, alive: live, waitMs: 10_000, now: () => 0, sleep: async () => {} });
+    expect(must(got)).toMatchObject({ holder: B, fence: 1 });
+    busy = 1;
+    const once = await acquire(flaky, "gpu.local", { holder: A, alive: live });
+    expect(once).toMatchObject({ ok: false, error: { code: "unavailable", message: "database is locked" } });
   });
 
   it("one try is one try: busy without queueing", async () => {

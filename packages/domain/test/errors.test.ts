@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { AppError, err, httpStatus, isOk, ok, toEnvelope, type AppErrorCode } from "../src/errors.ts";
 
-const codes: AppErrorCode[] = ["invalid", "not-found", "conflict", "refused", "unavailable", "budget", "internal"];
+const codes: AppErrorCode[] = ["invalid", "not-found", "conflict", "unauthenticated", "refused", "unavailable", "budget", "internal"];
 
 describe("errors", () => {
   it("ok and err discriminate", () => {
@@ -30,5 +30,9 @@ describe("errors", () => {
     const statuses = codes.map(httpStatus);
     expect(new Set(statuses).size).toBe(codes.length);
     for (const s of statuses) expect(s).toBeGreaterThanOrEqual(400);
+  });
+  it("no credential is 401 and a credential without permission is 403 - a client signs in again only for the first", () => {
+    expect(httpStatus("unauthenticated")).toBe(401);
+    expect(httpStatus("refused")).toBe(403);
   });
 });

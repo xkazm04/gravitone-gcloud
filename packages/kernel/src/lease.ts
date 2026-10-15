@@ -314,6 +314,13 @@ export async function acquire(fx: Effects, resource: string, opts: AcquireOption
   const deadline = now() + waitMs;
   for (;;) {
     const r = fx.tx("lease.claim", (t) => claimIn(t, req, opts.alive ?? pidAlive));
+    // A store busy past its busy_timeout is contention, not a fault: SQLite's busy
+    // handler is sleep-and-retry with no fairness, so under four hammering processes
+    // one waiter can starve past it. While the wait has time left, poll again.
+    if (!r.ok && r.error.code === "unavailable" && now() < deadline) {
+      await sleep(opts.pollMs ?? 250);
+      continue;
+    }
     if (!r.ok) return r;
     const o = r.value;
     if (o.kind === "granted") return ok(o.lease);

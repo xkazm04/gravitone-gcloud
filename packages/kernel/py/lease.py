@@ -357,8 +357,16 @@ class Leases:
         ticket = uuid.uuid4().hex
         deadline = time.monotonic() + wait_s
         while True:
-            with self.tx() as t:
-                o = claim_in(t, resource, self.holder, ticket, ttl_s, wait_s > 0, self.alive)
+            try:
+                with self.tx() as t:
+                    o = claim_in(t, resource, self.holder, ticket, ttl_s, wait_s > 0, self.alive)
+            except sqlite3.OperationalError as e:
+                # Busy past the connection timeout is contention, not a fault (the
+                # Node acquire says why); poll again while the wait has time left.
+                if ("locked" not in str(e) and "busy" not in str(e)) or time.monotonic() >= deadline:
+                    raise
+                time.sleep(poll_s)
+                continue
             if o["kind"] == "granted":
                 return Lease(self, resource, o["lease"]["fence"], ttl_s)
             if o["kind"] == "busy" or time.monotonic() >= deadline:
