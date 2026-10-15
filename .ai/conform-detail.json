@@ -4971,6 +4971,123 @@
           "evidence": "lib/assets.ts:420 Callers supply asset/blob pairs; the boundary hides database opening, both-store transaction handling and connection cleanup while preventing a partial upload commit."
         }
       ]
+    },
+    "fab029ff-06dc-49e8-b694-c43d79e707f5/chat-transcript": {
+      "context": "research-step",
+      "subject": "chat-transcript",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T03:20:13.586Z",
+      "techniques": [
+        {
+          "technique": "composer-turn-queue",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/followup.ts:39 Those statuses are a notebook follow-up dispatch, not a chat composer accepting text while a machine turn streams."
+        },
+        {
+          "technique": "immutable-model-cached-layout",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/_parts/CardTile.tsx:3 The row is a notebook triage card the page lays out, not a frozen chat message with a per-view layout cache."
+        },
+        {
+          "technique": "inline-structured-rows",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/followup.ts:20 Effect kinds say how a follow-up changes a notebook, not tool, approval, or artifact rows inside a chat turn."
+        },
+        {
+          "technique": "markdown-and-code-rendering",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/_parts/FollowUpResult.tsx:22 Here transcript means a stored run quotation kept verbatim, and no markdown or sanitizer door exists in this step."
+        },
+        {
+          "technique": "progress-narration",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/guided/RunStage.tsx:16 The run ledger is the stage's product and is kept on purpose, not narration inside a chat turn that must collapse."
+        },
+        {
+          "technique": "transcript-scroll",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/ResearchTriageBoard.tsx:49 Scroll here is reading across notebook columns, not pinning a transcript that grows at the tail."
+        },
+        {
+          "technique": "turn-metadata",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/run/controls.tsx:187 The clock is the research run's mocked wall time beside the log, not a settled chat turn's cost or recall strip."
+        },
+        {
+          "technique": "turn-model",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/run/types.ts:33 A run ends as a notebook, no tension, or a process failure, not as one chat element moving through pending, streaming, and settled."
+        },
+        {
+          "technique": "virtual-filtered-channel",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/_parts/ScopeBar.tsx:13 The filter toggles a static board of scope cards, which this technique treats as a filtered list rather than a channel over a stream."
+        }
+      ],
+      "withdrawn": {
+        "worker": "9b653c08-216a-4430-b520-4baa723969c3",
+        "state": "not-applicable",
+        "at": "2026-10-15T03:20:38.497284+00:00",
+        "reason": "reviewer (sonnet): The anchor (ResearchTriageBoard.tsx:5) is an incidental header comment on the board's sorting model, while the context also includes run/RunTrace.tsx, a live run log whose typed step rows (web etc.) arrive tick by tick, and followup.ts statuses queued/running, which the seat never ruled out; 'no str"
+      }
+    },
+    "61f506a9-1e7a-4c0a-a6dd-87ed084d7f7b/chat-transcript": {
+      "context": "pipeline-board-layout",
+      "subject": "chat-transcript",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T03:20:13.586Z",
+      "worker": "9b653c08-216a-4430-b520-4baa723969c3",
+      "techniques": [
+        {
+          "technique": "composer-turn-queue",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/useViewport.ts:11 What moves this surface on purpose are camera verbs, not a composer submit beside a running turn."
+        },
+        {
+          "technique": "immutable-model-cached-layout",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/grid.ts:4 Card positions are fixed-pitch arithmetic, not a frozen message model with a per-view text layout cache."
+        },
+        {
+          "technique": "inline-structured-rows",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/useBoardCull.ts:16 What is withheld from the board is a card already drawn as a ghost or drag, not a tool or approval row in a turn."
+        },
+        {
+          "technique": "markdown-and-code-rendering",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/index.ts:18 This barrel says the canvas draws no sentence of its own, so model markup never reaches a renderer here."
+        },
+        {
+          "technique": "progress-narration",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/buildLayout.ts:7 The module emits a layout when data or the axis changes, not a live activity thread inside a working turn."
+        },
+        {
+          "technique": "transcript-scroll",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/useViewportEvents.ts:21 The wheel zooms and pans the board camera and stops the page scrolling behind it, which is not a transcript pin contract."
+        },
+        {
+          "technique": "turn-metadata",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/canvasTypes.ts:85 That figure documents why a pipeline move defaults to a stub arm, and it is not a metadata strip on a settled chat turn."
+        },
+        {
+          "technique": "turn-model",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/index.ts:37 Identity here is a pipeline card id and version for re-render, not a chat turn carried from pending through settlement."
+        },
+        {
+          "technique": "virtual-filtered-channel",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/cells.ts:41 cullRect returns board cards whose cells a rectangle crosses, not a predicate applied to a message stream."
+        }
+      ]
     }
   }
 }

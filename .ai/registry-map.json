@@ -3624,7 +3624,11 @@
           "revision": 5,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/foundry/pipeline/camera.ts:15 The viewport is a board camera's world rectangle, and searches for transcript, composer, markdown, chat, and streaming under app/foundry/pipeline found none.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:5b4e7d399a4d924e",
+          "evaluatedRevision": 5
         },
         {
           "subject": "quality-gates",

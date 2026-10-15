@@ -1,0 +1,124 @@
+{
+  "schema": "conform-run/1",
+  "worker": "9b653c08-216a-4430-b520-4baa723969c3",
+  "subject": "chat-transcript",
+  "evaluatedAt": "2026-10-15T03:20:13.586542+00:00",
+  "provider": "grok",
+  "model": "grok-4.7",
+  "pairs": [
+    {
+      "context": "pipeline-board-layout",
+      "subject": "chat-transcript",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "app/foundry/pipeline/camera.ts:15 The viewport is a board camera's world rectangle, and searches for transcript, composer, markdown, chat, and streaming under app/foundry/pipeline found none.",
+      "techniques": [
+        {
+          "technique": "composer-turn-queue",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/useViewport.ts:11 What moves this surface on purpose are camera verbs, not a composer submit beside a running turn."
+        },
+        {
+          "technique": "immutable-model-cached-layout",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/grid.ts:4 Card positions are fixed-pitch arithmetic, not a frozen message model with a per-view text layout cache."
+        },
+        {
+          "technique": "inline-structured-rows",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/useBoardCull.ts:16 What is withheld from the board is a card already drawn as a ghost or drag, not a tool or approval row in a turn."
+        },
+        {
+          "technique": "markdown-and-code-rendering",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/index.ts:18 This barrel says the canvas draws no sentence of its own, so model markup never reaches a renderer here."
+        },
+        {
+          "technique": "progress-narration",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/buildLayout.ts:7 The module emits a layout when data or the axis changes, not a live activity thread inside a working turn."
+        },
+        {
+          "technique": "transcript-scroll",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/useViewportEvents.ts:21 The wheel zooms and pans the board camera and stops the page scrolling behind it, which is not a transcript pin contract."
+        },
+        {
+          "technique": "turn-metadata",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/canvasTypes.ts:85 That figure documents why a pipeline move defaults to a stub arm, and it is not a metadata strip on a settled chat turn."
+        },
+        {
+          "technique": "turn-model",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/index.ts:37 Identity here is a pipeline card id and version for re-render, not a chat turn carried from pending through settlement."
+        },
+        {
+          "technique": "virtual-filtered-channel",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/cells.ts:41 cullRect returns board cards whose cells a rectangle crosses, not a predicate applied to a message stream."
+        }
+      ],
+      "absenceTerms": [
+        "transcript",
+        "composer",
+        "markdown",
+        "chat",
+        "streaming"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "chat-transcript",
+      "context": "research-step",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor (ResearchTriageBoard.tsx:5) is an incidental header comment on the board's sorting model, while the context also includes run/RunTrace.tsx, a live run log whose typed step rows (web etc.) arrive tick by tick, and followup.ts statuses queued/running, which the seat never ruled out; 'no str"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-15T03:20:13.586542+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "chat-transcript"
+      ],
+      "techniques": [
+        "composer-turn-queue",
+        "immutable-model-cached-layout",
+        "inline-structured-rows",
+        "markdown-and-code-rendering",
+        "progress-narration",
+        "transcript-scroll",
+        "turn-metadata",
+        "turn-model",
+        "virtual-filtered-channel"
+      ],
+      "deviations": 0,
+      "context": "research-step",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    },
+    {
+      "ts": "2026-10-15T03:20:13.586542+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "chat-transcript"
+      ],
+      "techniques": [
+        "composer-turn-queue",
+        "immutable-model-cached-layout",
+        "inline-structured-rows",
+        "markdown-and-code-rendering",
+        "progress-narration",
+        "transcript-scroll",
+        "turn-metadata",
+        "turn-model",
+        "virtual-filtered-channel"
+      ],
+      "deviations": 0,
+      "context": "pipeline-board-layout",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    }
+  ]
+}
