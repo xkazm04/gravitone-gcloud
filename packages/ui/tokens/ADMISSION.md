@@ -56,3 +56,74 @@ numeric z-index in a module would be an unnamed position in it.
 | `border-radius: 9px` | 14 | Used by piles, tiles, panels and commit buttons with no shared intent; off the 5/7/10/14 scale. Port decides which rung it joins. |
 | Breakpoints 1360, 1180 | 3, 3 | A custom property cannot appear in `@media`; they stay literal there and the lint skips `@media` preludes. |
 | z-index 1-9, 19-26 (local stacking) | many | Component-local stacking inside a surface; not a global layer. |
+
+## Admitted at the component port (wave 2, lot 7)
+
+The token lint admits no raw colour or px in a `*.module.css` and has no hatch for a
+component-local constant, so every value a component draws is either an existing token, a
+derivation of one, or a role below. Counts are literals in the prototype's sheets outside
+`:root`, measured 2026-10-15 with the same method as above.
+
+**Derived, not admitted.** A hue at the prototype's alpha is `color-mix(in srgb, var(--hue) N%,
+transparent)`, which renders the same rgba (chip and button rims, the tally's ink at 82%,
+the ghost outline as hair-2 to hair-3 at 25%, white at .02/.03/.035 as wash at 50/75/87.5%).
+These are the per-hue alphas the table above left to the port: the hue stays a token, the
+alpha stays with the one component that uses it. Geometry with a real relation is `calc()`:
+the tab rail's 9px corner is the tab's 7px plus the rail's 2px inset (concentric curves);
+the search field's 30px inset is glyph inset + glyph + gap; the pip triangle is a pip + 1px.
+
+| Role | Value | Uses | Definition |
+| --- | --- | --- | --- |
+| h-tag | `20px` | 15 | Height of a compact tag: a channel badge, a keycap inside a tab. |
+| h-chip | `22px` | 6 | Height of a chip or keycap. |
+| h-row | `28px` | 12 | Height of a facet or list row. |
+| h-control-sm | `30px` | 15 | Height of a small button, toggle, segment, tab or group head. |
+| h-field | `32px` | 8 | Height of a text field, select or ghost row. |
+| h-control | `36px` | 5 | Height of a full button. |
+| h-meter | `5px` | 4 | Height of a proportional meter rail. |
+| size-dot | `7px` | 5 | Diameter of a status dot. |
+| size-pip | `10px` | 3 | Diameter of a pip in a pip row. |
+| size-glyph-xs | `12px` | 5 | Side of a chain node or a disclosure chevron. |
+| size-glyph-sm | `13px` | 12 | Side of an inline glyph: an error mark, a checkbox, a link glyph. |
+| size-glyph | `15px` | 6 | Side of a field glyph. |
+| size-glyph-btn | `18px` | 5 | Side of a round glyph button. |
+| sp-nudge | `2px` | 16 | Optical nudge: a glyph to its first line, a rail to its tabs. |
+| sp-hair | `3px` | 13 | Vertical inset of a source tag or count badge. |
+| sp-tight | `5px` | 26 | Space inside a chip, keycap or state: glyph to words, keycap sides. |
+| sp-snug | `7px` | 28 | Inset of a stamp (tally, ledger link, tip) and gap of an error line. |
+| sp-control | `9px` | 14 | Side inset of a toggle and of a field glyph. |
+| sp-loose | `14px` | 29 | Gap between keymap entries; side inset of a notice. |
+| sp-wide | `16px` | 15 | Side inset of a toast; gap between a term and its value. |
+| stroke-glyph | `1.5px` | 17 | Ring or dashed outline of a glyph, pip or placeholder. |
+| stroke-mark | `2px` | 17 | Thickness of a selection underline, keycap base or share bar. |
+| stroke-bar | `2.5px` | 2 | Bar width of the pause mark. |
+| ring-halo | `3px` | 6 | Spread of the halo around a node awaiting the operator. |
+| r-box | `4px` | 6 | Corner of a checkbox mark. |
+| r-meter | `3px` | 10 | Corner of a meter rail or hatch. |
+| fs-error | `12.5px` | 9 | A verbatim error line. |
+| fs-control-sm | `13.5px` | 13 | Text of a small button, a keymap legend, a hint tip. |
+| fs-nav | `14.5px` | 11 | Text of navigation, crumbs, facts and a toast. |
+| panel-ground | `rgba(0,0,0,.14)` | 2 | Recessed ground of a route panel (Projects, Library, Ledger). |
+| hatch | the 135deg white .28 stripe | 1 sheet rule, 2 components | Fill of an undecided or unmeasured span (StackBar; v1 BandTrack's hatched band). |
+| warn-cut | `#3b0712` | 1 glyph, 4 pages | Cut-out mark inside the warning glyph. |
+| chan-youtube / -tiktok / -instagram | `#ff8a8a` `#8ef0f7` `#f0a6e6` | 1 rule, 3 pages | Mark colour of a publish channel. |
+
+The space rungs are the off-scale steps the prototype's sheets use far more often than some
+on-scale ones (5px and 7px against 18px); they are named by what they space, not by value.
+
+### Admitted against the test (one component each) - Director to rule
+
+These fail "recurring intent": each is one component's constant. They are admitted only
+because the lint has no other legal spelling for a pixel. The better shape is a loud,
+countable local-constant hatch in the lint (design-tokens/token-taxonomy: "an escape hatch
+for the genuine one-off should exist, be syntactically loud, and be countable"); if one is
+added, these six move back into their modules.
+
+| Role | Value | Uses | Component |
+| --- | --- | --- | --- |
+| gap-bar | `3px` | 1 | StatusPill's pause mark |
+| measure-tip | `260px` | 2 | Hint |
+| w-chan | `28px` | 4 | ChannelBadge |
+| w-node | `70px` | 1 | UpstreamBreak |
+| toast-dock | `22px` | 2 | Toast |
+| toast-rise | `20px` | 1 | Toast |

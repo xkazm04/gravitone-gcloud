@@ -1,0 +1,4 @@
+/* tokens.css .ledger-link. */
+.link{display:inline-flex;align-items:center;gap:var(--sp-tight);font:600 var(--fs-micro)/1 var(--mono);color:var(--muted);padding:var(--sp-1) var(--sp-snug);border-radius:var(--r-chip);border:1px solid var(--hair)}
+.link:hover{color:var(--ink-bright);border-color:var(--hair-3)}
+.glyph{width:var(--size-glyph-sm);height:var(--size-glyph-sm)}

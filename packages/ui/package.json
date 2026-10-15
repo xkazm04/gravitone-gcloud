@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./components/*": "./src/components/*",
     "./*": "./src/*.ts"
   },
   "dependencies": {

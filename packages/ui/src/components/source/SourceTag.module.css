@@ -1,0 +1,4 @@
+/* tokens.css .src: where a shown figure came from. Dashed until it is real. */
+.src{font:600 var(--fs-micro)/1 var(--mono);text-transform:lowercase;padding:var(--sp-hair) var(--sp-2);border-radius:var(--r-xs);border:1px dashed var(--hair-3);color:var(--muted);white-space:nowrap}
+.real{border-style:solid;border-color:color-mix(in srgb,var(--emerald) 35%,transparent);color:var(--emerald)}
+.illustrative{border-color:color-mix(in srgb,var(--amber) 45%,transparent);color:var(--illustrative-text)}

@@ -1,0 +1,143 @@
+// Controls and containers: the state each exposes to assistive technology, the class each
+// variant maps to, and what renders when.
+import { createElement as h } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, test } from "vitest";
+import { Button } from "../../src/components/button/Button.tsx";
+import btn from "../../src/components/button/Button.module.css";
+import { Toggle } from "../../src/components/toggle/Toggle.tsx";
+import { Seg } from "../../src/components/seg/Seg.tsx";
+import { Field, Search, Select } from "../../src/components/field/Field.tsx";
+import { Fold } from "../../src/components/fold/Fold.tsx";
+import { TabRail } from "../../src/components/tabrail/TabRail.tsx";
+import { Crumbs } from "../../src/components/crumbs/Crumbs.tsx";
+import { FacetRow } from "../../src/components/facet/FacetRow.tsx";
+import facet from "../../src/components/facet/FacetRow.module.css";
+import { Toast } from "../../src/components/toast/Toast.tsx";
+import toast from "../../src/components/toast/Toast.module.css";
+import { Panel } from "../../src/components/panel/Panel.tsx";
+import { CapsHeading } from "../../src/components/heading/CapsHeading.tsx";
+import { Empty } from "../../src/components/empty/Empty.tsx";
+import { Facts } from "../../src/components/facts/Facts.tsx";
+
+const html = (el: Parameters<typeof renderToStaticMarkup>[0]): string => renderToStaticMarkup(el);
+const noop = (): void => {};
+
+describe("Button", () => {
+  test("tone and size map to classes; the shortcut's caps come from the keymap", () => {
+    const b = html(h(Button, { label: "Approve", tone: "emerald", size: "sm", shortcut: { mode: "board.review", verb: "approve" } }));
+    expect(b).toContain(`class="${btn.btn} ${btn.sm} ${btn.emerald}"`);
+    expect(b).toMatch(/Approve<kbd[^>]*>A<\/kbd><\/button>$/);
+  });
+
+  test("disabled stays a focusable button that says so and takes no press; a disabled link is a button", () => {
+    const d = html(h(Button, { label: "Commit", disabled: true, onPress: noop, href: "/x" }));
+    expect(d).toMatch(/^<button type="button"[^>]*aria-disabled="true">/);
+    expect(d).not.toContain(" disabled");
+    expect(d).not.toContain("href");
+  });
+
+  test("a badge is a chip after the label", () => {
+    expect(html(h(Button, { label: "Commit packet", badge: { label: "7 undecided" } }))).toMatch(/Commit packet<span[^>]*>7 undecided<\/span>/);
+  });
+});
+
+describe("pressed controls", () => {
+  test("Toggle exposes its state", () => {
+    expect(html(h(Toggle, { label: "music", on: true, onToggle: noop }))).toContain(`aria-pressed="true"`);
+    expect(html(h(Toggle, { label: "sfx", on: false, onToggle: noop }))).toContain(`aria-pressed="false"`);
+  });
+
+  test("Seg presses exactly its value and names the group", () => {
+    const opts = [{ value: "12h", label: "12h" }, { value: "24h", label: "24h" }, { value: "3d", label: "3d" }] as const;
+    const s = html(h(Seg<"12h" | "24h" | "3d">, { label: "window", options: opts, value: "24h", onChange: noop }));
+    expect(s).toMatch(/^<div[^>]*role="group" aria-label="window">/);
+    expect((s.match(/aria-pressed="true"/g) ?? []).length).toBe(1);
+    expect(s).toMatch(/aria-pressed="true">24h</);
+  });
+
+  test("FacetRow: the mark is a class, the count is spoken, zero dims", () => {
+    const f = html(h(FacetRow, { label: "agent", count: 0, pressed: false, onToggle: noop, mark: "rail", share: 0.5 }));
+    expect(f).toContain(`${facet.row} ${facet.rail} ${facet.zero}`);
+    expect(f).toContain(">, 0</span>");
+    expect(f).toContain("--share:0.5");
+    expect(html(h(FacetRow, { label: "image", count: 12, pressed: true, onToggle: noop, mark: "check" }))).toContain(`class="${facet.box}"`);
+  });
+});
+
+describe("fields", () => {
+  test("every field is named; the keyfield reaches the keymap's attribute", () => {
+    const f = html(h(Field, { label: "query", value: "", onChange: noop, keyfield: "search" }));
+    expect(f).toContain(`aria-label="query"`);
+    expect(f).toContain(`data-keyfield="search"`);
+  });
+
+  test("Search draws the search verb's caps from the mode", () => {
+    expect(html(h(Search, { mode: "library", label: "search library", value: "", onChange: noop }))).toMatch(/<kbd[^>]*>\/<\/kbd>/);
+  });
+
+  test("Select marks its value", () => {
+    const s = html(h(Select<"a" | "b">, { label: "model", options: [{ value: "a", label: "Flux" }, { value: "b", label: "Nano" }], value: "b", onChange: noop }));
+    expect(s).toMatch(/<option value="b" selected="">Nano<\/option>/);
+  });
+});
+
+describe("Fold", () => {
+  test("closed: expanded=false and the body is not rendered", () => {
+    const f = html(h(Fold, { title: "mood", open: false, onToggle: noop, total: 9, children: h("p", null, "rows") }));
+    expect(f).toContain(`aria-expanded="false"`);
+    expect(f).not.toContain("rows");
+    expect(f).toContain("hidden");
+  });
+
+  test("open: the body renders under the id the button controls", () => {
+    const f = html(h(Fold, { title: "mood", open: true, onToggle: noop, active: 2, children: h("p", null, "rows") }));
+    const id = /aria-controls="([^"]+)"/.exec(f)?.[1] ?? "";
+    expect(f).toContain(`<div id="${id}"><p>rows</p></div>`);
+    expect(f).toContain(">, 2 selected</span>");
+  });
+});
+
+describe("navigation", () => {
+  test("TabRail is navigation with aria-current, keycaps from the keymap, a locked tab readable", () => {
+    const t = html(
+      h(TabRail<"plan" | "runs">, {
+        label: "view",
+        mode: "projects",
+        current: "runs",
+        tabs: [
+          { id: "plan", label: "Plan", href: "#plan", verb: "plan", disabled: true },
+          { id: "runs", label: "Runs", href: "#runs", verb: "runs" },
+        ],
+      }),
+    );
+    expect(t).toMatch(/^<nav[^>]*aria-label="view">/);
+    expect(t).toMatch(/<a class="[^"]*" aria-disabled="true">Plan<kbd[^>]*>P<\/kbd><\/a>/);
+    expect(t).toMatch(/href="#runs" aria-current="page">Runs<kbd[^>]*>R<\/kbd>/);
+  });
+
+  test("Crumbs: steps link back, the place is current", () => {
+    const c = html(h(Crumbs, { trail: [{ label: "Floor", href: "/" }, { label: "Board", onPress: noop }], here: "sweep-01" }));
+    expect(c).toContain(`<a class="`);
+    expect(c).toContain(`<button type="button"`);
+    expect(c).toMatch(/aria-current="page">sweep-01<\/span><\/nav>$/);
+  });
+});
+
+describe("containers", () => {
+  test("Toast is always a polite region, empty while closed", () => {
+    expect(html(h(Toast, { message: "kept 12", open: false }))).toBe(`<div class="${toast.toast}" role="status" aria-live="polite"></div>`);
+    expect(html(h(Toast, { message: "kept 12", open: true }))).toBe(`<div class="${toast.toast} ${toast.on}" role="status" aria-live="polite">kept 12</div>`);
+  });
+
+  test("Panel is a named section with a heading and its tally", () => {
+    const p = html(h(Panel, { title: "facets", tally: { value: 688 }, children: "x" }));
+    expect(p).toMatch(/^<section[^>]*aria-label="facets"><h2[^>]*>facets<span/);
+  });
+
+  test("CapsHeading takes a level and a tally, Empty is a status with its act, Facts is a dl", () => {
+    expect(html(h(CapsHeading, { text: "after", tally: { value: 3 }, level: 4 }))).toMatch(/^<h4[^>]*>after<span/);
+    expect(html(h(Empty<"no events match">, { label: "no events match", action: { label: "Clear" } }))).toMatch(/^<div[^>]*role="status"><span>no events match<\/span><button/);
+    expect(html(h(Facts, { facts: [{ term: "model", value: "flux-2" }] }))).toMatch(/^<dl[^>]*><dt[^>]*>model<\/dt><dd[^>]*>flux-2<\/dd><\/dl>$/);
+  });
+});

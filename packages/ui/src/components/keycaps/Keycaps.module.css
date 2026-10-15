@@ -1,0 +1,5 @@
+/* tokens.css .keycap and .keymap. */
+.cap{display:inline-flex;align-items:center;justify-content:center;min-width:var(--h-chip);height:var(--h-chip);padding:0 var(--sp-tight);border-radius:var(--r-xs);border:1px solid var(--hair-3);border-bottom-width:var(--stroke-mark);font:700 var(--fs-micro)/1 var(--mono);color:var(--ink-bright);background:var(--ink-3)}
+.map{display:flex;flex-wrap:wrap;gap:var(--sp-2) var(--sp-loose);align-items:center;font-size:var(--fs-control-sm);color:var(--muted)}
+.row{display:inline-flex;gap:var(--sp-tight);align-items:center}
+.sm{height:var(--h-tag);min-width:var(--h-tag)}

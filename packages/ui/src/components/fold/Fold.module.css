@@ -1,0 +1,9 @@
+/* library.css .fg / .fgh: a facet group's head that opens and closes its rows. */
+.fold{padding:0 var(--sp-2)}
+.head{display:flex;align-items:center;gap:var(--sp-2);width:100%;height:var(--h-control-sm);padding:0 var(--sp-3);border-radius:var(--r-chip);font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left}
+.head:hover{color:var(--ink-bright);background:color-mix(in srgb,var(--wash) 75%,transparent)}
+.chev{width:var(--size-glyph-xs);height:var(--size-glyph-xs);flex:none;transition:transform var(--dur-fast) var(--ease)}
+.head[aria-expanded=false] .chev{transform:rotate(-90deg)}
+.active{margin-left:auto;color:var(--cyan);background:var(--cyan-a);border-radius:var(--r-xs);padding:var(--sp-hair) var(--sp-tight);letter-spacing:0}
+.total{margin-left:auto;color:var(--faint);letter-spacing:0;font-weight:500}
+.active+.total{margin-left:var(--sp-2)}

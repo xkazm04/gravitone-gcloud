@@ -1,0 +1,4 @@
+/* tokens.css .obs: a term column in mono, a value column bright. */
+.facts{display:grid;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-wide);font-size:var(--fs-nav)}
+.term{font:500 var(--fs-meta)/1.6 var(--mono);color:var(--faint)}
+.value{color:var(--ink-bright)}

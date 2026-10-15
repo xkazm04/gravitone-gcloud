@@ -1,0 +1,4 @@
+/* tokens.css .ghost-card: a dashed outline a quarter of the way from hair-2 to hair-3
+   (the prototype's rgba(255,255,255,.16)), at .55. Rows are a field's height. */
+.list{display:flex;flex-direction:column;gap:var(--sp-3)}
+.card{height:var(--h-field);border:var(--stroke-glyph) dashed color-mix(in srgb,var(--hair-3) 25%,var(--hair-2));border-radius:var(--r-control);opacity:.55}

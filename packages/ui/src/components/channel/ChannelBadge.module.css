@@ -1,0 +1,5 @@
+/* tokens.css .chan. */
+.chan{width:var(--w-chan);height:var(--h-tag);border-radius:var(--r-xs);display:inline-grid;place-items:center;font:700 var(--fs-micro)/1 var(--mono);border:1px solid var(--hair-2);color:var(--muted);flex:none}
+.youtube{color:var(--chan-youtube)}
+.tiktok{color:var(--chan-tiktok)}
+.instagram{color:var(--chan-instagram)}

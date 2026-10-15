@@ -1,0 +1,6 @@
+/* tokens.css [data-component=Crumbs]. */
+.crumbs{display:flex;align-items:center;gap:var(--sp-3);font-size:var(--fs-nav);color:var(--muted);min-width:0}
+.step{color:var(--muted);padding:var(--sp-1) var(--sp-2);border-radius:var(--r-chip);white-space:nowrap}
+.step:hover{color:var(--ink-bright);background:var(--wash-hi)}
+.here{color:var(--ink-bright);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sep{color:var(--faint)}

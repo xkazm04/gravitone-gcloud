@@ -1,0 +1,14 @@
+/* tokens.css .btn. Tone fills are each hue's own wash; the emerald and rose fills are the
+   prototype's .12 and .08, mixed from the hue rather than admitted (one use each). */
+.btn{display:inline-flex;align-items:center;gap:var(--sp-3);height:var(--h-control);padding:0 var(--sp-4) 0 var(--sp-5);border-radius:var(--r-control);border:1px solid var(--hair-2);font-weight:600;font-size:var(--fs-ui);color:var(--ink-bright);white-space:nowrap;transition:background var(--dur-fast),border-color var(--dur-fast)}
+.btn:hover{background:var(--wash-hi)}
+.btn:active{transform:translateY(1px)}
+.btn[aria-disabled=true]{opacity:.45;cursor:default;border-style:dashed}
+.btn[aria-disabled=true]:active{transform:none}
+.sm{height:var(--h-control-sm);font-size:var(--fs-control-sm);padding:0 var(--sp-3) 0 var(--sp-4)}
+.emerald{border-color:color-mix(in srgb,var(--emerald) 50%,transparent);background:color-mix(in srgb,var(--emerald) 12%,transparent)}
+.amber{border-color:color-mix(in srgb,var(--amber) 50%,transparent);background:var(--amber-a)}
+.rose{border-color:color-mix(in srgb,var(--rose) 50%,transparent);background:color-mix(in srgb,var(--rose) 8%,transparent)}
+.violet{border-color:color-mix(in srgb,var(--violet) 50%,transparent);background:var(--violet-a)}
+.cyan{border-color:color-mix(in srgb,var(--cyan) 50%,transparent);background:var(--cyan-a)}
+.glyph{width:var(--size-glyph-sm);height:var(--size-glyph-sm)}

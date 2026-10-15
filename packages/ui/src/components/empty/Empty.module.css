@@ -1,0 +1,2 @@
+/* tokens.css .empty. */
+.empty{display:grid;place-items:center;gap:var(--sp-3);height:100%;color:var(--faint);font:600 var(--fs-micro)/1.4 var(--mono)}

@@ -1,0 +1,21 @@
+/* library.css .frow (mark "check") and ledger.css .fr (mark "rail"): one facet value with
+   its live count. The two pages drew the row two ways; both are kept, pixel for pixel. */
+.row{display:flex;align-items:center;gap:var(--sp-3);width:100%;border-radius:var(--r-chip);font-size:var(--fs-ui);color:var(--text);text-align:left;position:relative}
+.label{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.count{font:600 var(--fs-micro)/1 var(--mono);color:var(--muted);flex:none}
+.rail .count{font-variant-numeric:tabular-nums}
+.zero{opacity:.42}
+.row[aria-pressed=true]{color:var(--ink-bright)}
+
+.check{min-height:var(--h-row);padding:0 var(--sp-3) 0 var(--sp-4)}
+.check:hover{background:color-mix(in srgb,var(--wash) 87.5%,transparent);color:var(--ink-bright)}
+.check[aria-pressed=true]{background:color-mix(in srgb,var(--cyan) 7%,transparent)}
+.check[aria-pressed=true] .count{color:var(--cyan)}
+.box{width:var(--size-glyph-sm);height:var(--size-glyph-sm);border-radius:var(--r-box);border:var(--stroke-glyph) solid var(--hair-3);flex:none;display:grid;place-items:center;transition:all var(--dur-fast)}
+.check[aria-pressed=true] .box{background:var(--cyan);border-color:var(--cyan);box-shadow:inset 0 0 0 var(--stroke-mark) var(--ink-1)}
+
+.rail{height:var(--h-row);padding:0 var(--sp-2)}
+.rail:hover{background:var(--wash);color:var(--ink-bright)}
+.rail[aria-pressed=true]{background:var(--cyan-a);box-shadow:inset var(--stroke-mark) 0 0 var(--cyan)}
+.share{position:absolute;left:var(--sp-2);right:var(--sp-2);bottom:var(--sp-nudge);height:var(--stroke-mark);border-radius:var(--stroke-mark);background:var(--wash);overflow:hidden}
+.fill{--share:0;display:block;height:100%;width:calc(var(--share) * 100%);background:color-mix(in srgb,var(--cyan) 35%,transparent)}

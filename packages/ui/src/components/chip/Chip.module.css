@@ -1,0 +1,15 @@
+/* tokens.css .chip. The rest fill is wash at half (the prototype's rgba(255,255,255,.02));
+   each tone's border is its hue at the prototype's alpha, mixed from the hue token so a
+   re-themed hue re-themes its border. */
+.chip{--chip-rest:color-mix(in srgb,var(--wash) 50%,transparent);display:inline-flex;align-items:center;gap:var(--sp-tight);height:var(--h-chip);padding:0 var(--sp-3);border-radius:var(--r-chip);border:1px solid var(--hair-2);font:600 var(--fs-micro)/1 var(--mono);letter-spacing:.03em;text-transform:uppercase;color:var(--muted);white-space:nowrap;background:var(--chip-rest)}
+.value{color:var(--ink-bright);font-weight:700}
+.cyan{color:var(--cyan);border-color:color-mix(in srgb,var(--cyan) 32%,transparent);background:var(--cyan-a)}
+.violet{color:var(--violet);border-color:color-mix(in srgb,var(--violet) 32%,transparent);background:var(--violet-a)}
+.emerald{color:var(--emerald);border-color:color-mix(in srgb,var(--emerald) 32%,transparent);background:var(--emerald-a)}
+.amber{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 34%,transparent);background:var(--amber-a)}
+.rose{color:var(--rose);border-color:color-mix(in srgb,var(--rose) 36%,transparent);background:var(--rose-a)}
+.ghost{border-style:dashed}
+.lower{text-transform:none;letter-spacing:0}
+.dot{width:var(--size-dot);height:var(--size-dot);border-radius:50%;background:currentColor}
+.door{cursor:pointer}
+.door:hover{border-color:var(--hair-3);color:var(--ink-bright)}

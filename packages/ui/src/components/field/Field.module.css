@@ -1,0 +1,10 @@
+/* tokens.css .field and .search. The search field's left inset is the glyph's inset, the
+   glyph, and a gap: 9 + 15 + 6, the prototype's 30px. */
+.field{height:var(--h-field);padding:0 var(--sp-4);border-radius:var(--r-sm);border:1px solid var(--hair-2);background:var(--ink-2);font-size:var(--fs-ui);color:var(--ink-bright);min-width:0}
+.field::placeholder{color:var(--faint)}
+.field:focus{outline:none;border-color:var(--focus-line)}
+.field option{background:var(--ink-2)}
+.search{position:relative;display:flex;align-items:center}
+.glyph{position:absolute;left:var(--sp-control);width:var(--size-glyph);height:var(--size-glyph);color:var(--faint);pointer-events:none}
+.search .field{padding-left:calc(var(--sp-control) + var(--size-glyph) + var(--sp-2));width:100%}
+.cap{position:absolute;right:var(--sp-2);display:inline-flex}

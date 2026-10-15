@@ -1,0 +1,11 @@
+/* floor.css [data-component=UpstreamBreak]: the chain drawn to the step that broke, then the
+   break's own words. */
+.ub{border-radius:var(--r);border:1px solid color-mix(in srgb,var(--rose) 35%,transparent);background:var(--rose-a);padding:var(--sp-5) var(--sp-loose)}
+.rail{display:flex;align-items:center;gap:0;margin-bottom:var(--sp-4)}
+.node{display:flex;flex-direction:column;align-items:center;gap:var(--sp-tight);font:600 var(--fs-micro)/1 var(--mono);color:var(--muted);min-width:var(--w-node)}
+.mark{width:var(--size-glyph-xs);height:var(--size-glyph-xs);border-radius:50%;background:var(--emerald)}
+.brk .mark{background:var(--rose);border-radius:0;clip-path:polygon(50% 0,100% 100%,0 100%);width:calc(var(--size-glyph-xs) + var(--sp-nudge));height:var(--size-glyph-sm)}
+.todo .mark{background:none;border:var(--stroke-glyph) dashed var(--faint)}
+.link{flex:1;height:var(--stroke-mark);background:var(--emerald);margin-bottom:var(--sp-wide)}
+.off{background:var(--hair-2)}
+.detail{font:500 var(--fs-ui)/1.5 var(--mono);color:var(--error-text)}

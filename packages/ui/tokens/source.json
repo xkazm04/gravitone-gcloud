@@ -103,6 +103,61 @@
       {"name": "z-tooltip", "tier": "role", "value": "80", "note": "A hint tooltip."},
       {"name": "z-flyer", "tier": "role", "value": "200", "note": "A flyer animating between surfaces."},
       {"name": "z-toast", "tier": "role", "value": "210", "note": "A toast above everything."}
+    ]},
+    {"id": "roles-size", "tokens": [
+      {"name": "h-tag", "tier": "role", "value": "20px", "note": "Height of a compact tag: a channel badge, a keycap inside a tab."},
+      {"name": "h-chip", "tier": "role", "value": "22px", "note": "Height of a chip or keycap."},
+      {"name": "h-row", "tier": "role", "value": "28px", "note": "Height of a facet or list row."},
+      {"name": "h-control-sm", "tier": "role", "value": "30px", "note": "Height of a small button, toggle, segment, tab or group head."},
+      {"name": "h-field", "tier": "role", "value": "32px", "note": "Height of a text field, select or ghost row."},
+      {"name": "h-control", "tier": "role", "value": "36px", "note": "Height of a full button."},
+      {"name": "h-meter", "tier": "role", "value": "5px", "note": "Height of a proportional meter rail."},
+      {"name": "size-dot", "tier": "role", "value": "7px", "note": "Diameter of a status dot."},
+      {"name": "size-pip", "tier": "role", "value": "10px", "note": "Diameter of a pip in a pip row."},
+      {"name": "size-glyph-xs", "tier": "role", "value": "12px", "note": "Side of a chain node or a disclosure chevron."},
+      {"name": "size-glyph-sm", "tier": "role", "value": "13px", "note": "Side of an inline glyph: an error mark, a checkbox, a link glyph."},
+      {"name": "size-glyph", "tier": "role", "value": "15px", "note": "Side of a field glyph."},
+      {"name": "size-glyph-btn", "tier": "role", "value": "18px", "note": "Side of a round glyph button."}
+    ]},
+    {"id": "roles-space", "tokens": [
+      {"name": "sp-nudge", "tier": "role", "value": "2px", "note": "Optical nudge: a glyph to its first line, a rail to its tabs."},
+      {"name": "sp-hair", "tier": "role", "value": "3px", "note": "Vertical inset of a source tag or count badge."},
+      {"name": "sp-tight", "tier": "role", "value": "5px", "note": "Space inside a chip, keycap or state: glyph to words, keycap sides."},
+      {"name": "sp-snug", "tier": "role", "value": "7px", "note": "Inset of a stamp (tally, ledger link, tip) and gap of an error line."},
+      {"name": "sp-control", "tier": "role", "value": "9px", "note": "Side inset of a toggle and of a field glyph."},
+      {"name": "sp-loose", "tier": "role", "value": "14px", "note": "Gap between keymap entries; side inset of a notice."},
+      {"name": "sp-wide", "tier": "role", "value": "16px", "note": "Side inset of a toast; gap between a term and its value."}
+    ]},
+    {"id": "roles-stroke", "tokens": [
+      {"name": "stroke-glyph", "tier": "role", "value": "1.5px", "note": "Ring or dashed outline of a glyph, pip or placeholder."},
+      {"name": "stroke-mark", "tier": "role", "value": "2px", "note": "Thickness of a selection underline, keycap base or share bar."},
+      {"name": "stroke-bar", "tier": "role", "value": "2.5px", "note": "Bar width of the pause mark."},
+      {"name": "ring-halo", "tier": "role", "value": "3px", "note": "Spread of the halo around a node awaiting the operator."}
+    ]},
+    {"id": "roles-corner", "tokens": [
+      {"name": "r-box", "tier": "role", "value": "4px", "note": "Corner of a checkbox mark."},
+      {"name": "r-meter", "tier": "role", "value": "3px", "note": "Corner of a meter rail or hatch."}
+    ]},
+    {"id": "roles-type", "tokens": [
+      {"name": "fs-error", "tier": "role", "value": "12.5px", "note": "A verbatim error line."},
+      {"name": "fs-control-sm", "tier": "role", "value": "13.5px", "note": "Text of a small button, a keymap legend, a hint tip."},
+      {"name": "fs-nav", "tier": "role", "value": "14.5px", "note": "Text of navigation, crumbs, facts and a toast."}
+    ]},
+    {"id": "roles-mark", "tokens": [
+      {"name": "panel-ground", "tier": "role", "value": "rgba(0,0,0,.14)", "note": "Recessed ground of a route panel."},
+      {"name": "hatch", "tier": "role", "value": "repeating-linear-gradient(135deg,rgba(255,255,255,.28) 0 2px,transparent 2px 5px)", "note": "Fill of an undecided or unmeasured span."},
+      {"name": "warn-cut", "tier": "role", "value": "#3b0712", "note": "Cut-out mark inside the warning glyph."},
+      {"name": "chan-youtube", "tier": "role", "value": "#ff8a8a", "note": "Mark colour of the YouTube channel."},
+      {"name": "chan-tiktok", "tier": "role", "value": "#8ef0f7", "note": "Mark colour of the TikTok channel."},
+      {"name": "chan-instagram", "tier": "role", "value": "#f0a6e6", "note": "Mark colour of the Instagram channel."}
+    ]},
+    {"id": "roles-component", "tokens": [
+      {"name": "gap-bar", "tier": "role", "value": "3px", "note": "Gap between the two bars of the pause mark. One component: see ADMISSION.md."},
+      {"name": "measure-tip", "tier": "role", "value": "260px", "note": "Widest line of a hint tip. One component: see ADMISSION.md."},
+      {"name": "w-chan", "tier": "role", "value": "28px", "note": "Width of a channel badge. One component: see ADMISSION.md."},
+      {"name": "w-node", "tier": "role", "value": "70px", "note": "Least width of a chain node. One component: see ADMISSION.md."},
+      {"name": "toast-dock", "tier": "role", "value": "22px", "note": "Distance of a toast from the viewport foot. One component: see ADMISSION.md."},
+      {"name": "toast-rise", "tier": "role", "value": "20px", "note": "Distance a toast rises as it arrives. One component: see ADMISSION.md."}
     ]}
   ]
 }

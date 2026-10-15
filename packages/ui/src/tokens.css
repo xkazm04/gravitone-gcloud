@@ -103,4 +103,59 @@
   --z-sheet: 50; /* The level sheet. */
   --z-toast: 210; /* A toast above everything. */
   --z-tooltip: 80; /* A hint tooltip. */
+
+  /* roles-size */
+  --h-chip: 22px; /* Height of a chip or keycap. */
+  --h-control: 36px; /* Height of a full button. */
+  --h-control-sm: 30px; /* Height of a small button, toggle, segment, tab or group head. */
+  --h-field: 32px; /* Height of a text field, select or ghost row. */
+  --h-meter: 5px; /* Height of a proportional meter rail. */
+  --h-row: 28px; /* Height of a facet or list row. */
+  --h-tag: 20px; /* Height of a compact tag: a channel badge, a keycap inside a tab. */
+  --size-dot: 7px; /* Diameter of a status dot. */
+  --size-glyph: 15px; /* Side of a field glyph. */
+  --size-glyph-btn: 18px; /* Side of a round glyph button. */
+  --size-glyph-sm: 13px; /* Side of an inline glyph: an error mark, a checkbox, a link glyph. */
+  --size-glyph-xs: 12px; /* Side of a chain node or a disclosure chevron. */
+  --size-pip: 10px; /* Diameter of a pip in a pip row. */
+
+  /* roles-space */
+  --sp-control: 9px; /* Side inset of a toggle and of a field glyph. */
+  --sp-hair: 3px; /* Vertical inset of a source tag or count badge. */
+  --sp-loose: 14px; /* Gap between keymap entries; side inset of a notice. */
+  --sp-nudge: 2px; /* Optical nudge: a glyph to its first line, a rail to its tabs. */
+  --sp-snug: 7px; /* Inset of a stamp (tally, ledger link, tip) and gap of an error line. */
+  --sp-tight: 5px; /* Space inside a chip, keycap or state: glyph to words, keycap sides. */
+  --sp-wide: 16px; /* Side inset of a toast; gap between a term and its value. */
+
+  /* roles-stroke */
+  --ring-halo: 3px; /* Spread of the halo around a node awaiting the operator. */
+  --stroke-bar: 2.5px; /* Bar width of the pause mark. */
+  --stroke-glyph: 1.5px; /* Ring or dashed outline of a glyph, pip or placeholder. */
+  --stroke-mark: 2px; /* Thickness of a selection underline, keycap base or share bar. */
+
+  /* roles-corner */
+  --r-box: 4px; /* Corner of a checkbox mark. */
+  --r-meter: 3px; /* Corner of a meter rail or hatch. */
+
+  /* roles-type */
+  --fs-control-sm: 13.5px; /* Text of a small button, a keymap legend, a hint tip. */
+  --fs-error: 12.5px; /* A verbatim error line. */
+  --fs-nav: 14.5px; /* Text of navigation, crumbs, facts and a toast. */
+
+  /* roles-mark */
+  --chan-instagram: #f0a6e6; /* Mark colour of the Instagram channel. */
+  --chan-tiktok: #8ef0f7; /* Mark colour of the TikTok channel. */
+  --chan-youtube: #ff8a8a; /* Mark colour of the YouTube channel. */
+  --hatch: repeating-linear-gradient(135deg,rgba(255,255,255,.28) 0 2px,transparent 2px 5px); /* Fill of an undecided or unmeasured span. */
+  --panel-ground: rgba(0,0,0,.14); /* Recessed ground of a route panel. */
+  --warn-cut: #3b0712; /* Cut-out mark inside the warning glyph. */
+
+  /* roles-component */
+  --gap-bar: 3px; /* Gap between the two bars of the pause mark. One component: see ADMISSION.md. */
+  --measure-tip: 260px; /* Widest line of a hint tip. One component: see ADMISSION.md. */
+  --toast-dock: 22px; /* Distance of a toast from the viewport foot. One component: see ADMISSION.md. */
+  --toast-rise: 20px; /* Distance a toast rises as it arrives. One component: see ADMISSION.md. */
+  --w-chan: 28px; /* Width of a channel badge. One component: see ADMISSION.md. */
+  --w-node: 70px; /* Least width of a chain node. One component: see ADMISSION.md. */
 }

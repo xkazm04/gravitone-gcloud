@@ -1,0 +1,4 @@
+/* tokens.css .side-h and .h4: the mono caps heading over a rail group or a detail section.
+   The section heading's 22px/8px margins are placement, the caller's. */
+.caps{font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint);display:flex;gap:var(--sp-2);align-items:center}
+.section{gap:var(--sp-3)}

@@ -93,6 +93,54 @@ export const tokens = {
   "z-sheet": "50",
   "z-toast": "210",
   "z-tooltip": "80",
+  // roles-size
+  "h-chip": "22px",
+  "h-control": "36px",
+  "h-control-sm": "30px",
+  "h-field": "32px",
+  "h-meter": "5px",
+  "h-row": "28px",
+  "h-tag": "20px",
+  "size-dot": "7px",
+  "size-glyph": "15px",
+  "size-glyph-btn": "18px",
+  "size-glyph-sm": "13px",
+  "size-glyph-xs": "12px",
+  "size-pip": "10px",
+  // roles-space
+  "sp-control": "9px",
+  "sp-hair": "3px",
+  "sp-loose": "14px",
+  "sp-nudge": "2px",
+  "sp-snug": "7px",
+  "sp-tight": "5px",
+  "sp-wide": "16px",
+  // roles-stroke
+  "ring-halo": "3px",
+  "stroke-bar": "2.5px",
+  "stroke-glyph": "1.5px",
+  "stroke-mark": "2px",
+  // roles-corner
+  "r-box": "4px",
+  "r-meter": "3px",
+  // roles-type
+  "fs-control-sm": "13.5px",
+  "fs-error": "12.5px",
+  "fs-nav": "14.5px",
+  // roles-mark
+  "chan-instagram": "#f0a6e6",
+  "chan-tiktok": "#8ef0f7",
+  "chan-youtube": "#ff8a8a",
+  "hatch": "repeating-linear-gradient(135deg,rgba(255,255,255,.28) 0 2px,transparent 2px 5px)",
+  "panel-ground": "rgba(0,0,0,.14)",
+  "warn-cut": "#3b0712",
+  // roles-component
+  "gap-bar": "3px",
+  "measure-tip": "260px",
+  "toast-dock": "22px",
+  "toast-rise": "20px",
+  "w-chan": "28px",
+  "w-node": "70px",
 } as const;
 
 export type TokenName = keyof typeof tokens;

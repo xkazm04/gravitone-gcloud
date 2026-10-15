@@ -1,0 +1,2 @@
+/* The cut-out mark inside the warning triangle (shell.js I.warn). */
+.cut{fill:var(--warn-cut)}

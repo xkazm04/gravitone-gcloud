@@ -1,0 +1,10 @@
+/* shell.js Wave: bars in the lane's hue; unplayed bars at .35, the empty strip a dashed
+   midline at .5. The prototype passed the hue as a hex; here it is the token. */
+.wave{display:block}
+.cyan{color:var(--cyan)}
+.violet{color:var(--violet)}
+.emerald{color:var(--emerald)}
+.amber{color:var(--amber)}
+.bar{fill:currentColor;opacity:.95}
+.later{opacity:.35}
+.flat{stroke:currentColor;stroke-dasharray:3 3;opacity:.5}

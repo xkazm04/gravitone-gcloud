@@ -1,0 +1,6 @@
+/* tokens.css .stackbar. Segment widths are data: each segment carries its count as --n. */
+.bar{display:flex;height:var(--h-meter);border-radius:var(--r-meter);overflow:hidden;background:var(--wash-hi);gap:1px}
+.seg{--n:0;display:block;height:100%;flex-grow:var(--n);transition:flex-grow .35s var(--ease)}
+.keep{background:var(--emerald)}
+.reject{background:var(--rose)}
+.undecided{background:var(--hatch)}

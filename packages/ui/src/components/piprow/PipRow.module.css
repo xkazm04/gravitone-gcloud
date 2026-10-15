@@ -1,0 +1,10 @@
+/* tokens.css .piprow/.pip. A bare pip (no look class) is capacity: allowed, not spoken for. */
+.row{display:inline-flex;gap:var(--sp-1);align-items:center}
+.pip{width:var(--size-pip);height:var(--size-pip);border-radius:50%;border:var(--stroke-glyph) solid var(--faint);flex:none;position:relative}
+.done{background:var(--emerald);border-color:var(--emerald)}
+.awaiting{border-color:var(--amber);box-shadow:0 0 0 var(--ring-halo) color-mix(in srgb,var(--amber) 18%,transparent)}
+.running{border-color:var(--cyan);background:radial-gradient(circle,var(--cyan) 35%,transparent 40%);animation:pulse 1.6s ease-in-out infinite}
+/* The triangle is one pixel wider than a pip so it reads as the same size. */
+.failed{border:0;width:calc(var(--size-pip) + 1px);height:var(--size-pip);border-radius:0;background:var(--rose);clip-path:polygon(50% 0,100% 100%,0 100%)}
+.idle{border-style:dashed}
+@keyframes pulse{50%{box-shadow:0 0 0 var(--sp-1) color-mix(in srgb,var(--cyan) 15%,transparent)}}

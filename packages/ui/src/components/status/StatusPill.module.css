@@ -1,0 +1,16 @@
+/* tokens.css .state + library.css's reference/candidate rings. One class per Look; the
+   colour comes from the look's role, the mark from ::before. */
+.state{font:600 var(--fs-micro)/1 var(--mono);text-transform:uppercase;letter-spacing:.05em;display:inline-flex;gap:var(--sp-tight);align-items:center;white-space:nowrap}
+.state::before{content:"";width:var(--size-dot);height:var(--size-dot);border-radius:50%;background:currentColor;flex:none}
+.idle,.paused{color:var(--faint)}
+.running{color:var(--cyan)}
+.awaiting{color:var(--amber)}
+.done{color:var(--emerald)}
+.failed{color:var(--rose)}
+.reference{color:var(--reference-text)}
+.candidate{color:var(--amber)}
+.running::before{animation:pulse 1.4s infinite}
+.paused::before{border-radius:1px;background:none;border-left:var(--stroke-bar) solid currentColor;border-right:var(--stroke-bar) solid currentColor;width:var(--gap-bar)}
+.reference::before{background:none;border:var(--stroke-glyph) solid currentColor;width:var(--sp-tight);height:var(--sp-tight)}
+.candidate::before{background:none;border:var(--stroke-glyph) dashed currentColor;width:var(--sp-tight);height:var(--sp-tight)}
+@keyframes pulse{50%{box-shadow:0 0 0 var(--sp-1) color-mix(in srgb,var(--cyan) 15%,transparent)}}
