@@ -4011,13 +4011,13 @@
           "digest": "sha256-b2:809d2a648d853f13",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "this context's files are gate implementations and one-off drivers consumed by a hand-written .github/workflows/gates.yml (not itself in this context); the repo is a single Next.js deliverable, below pipeline-authoring's own generation threshold ('a single-deliverable repository with six steps gains nothing and loses readability').",
-          "evaluatedAt": "2026-08-31",
-          "evaluatedAgainst": "sha256:013f395f996b2f29",
+          "evidence": "pipeline/lint-ratchet.mjs:19 The lint gate walks one fixed tree for every caller, and a search of pipeline/ and knowledge/ for paths-filter, merge-base, workflow_dispatch, and generatePipeline found no delivery-plan generator, path filter, or change-scoped selector.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:809d2a648d853f13",
           "source": "retained",
           "revision": 5,
           "changedAt": "2026-09-25",
-          "stale": true
+          "evaluatedRevision": 5
         }
       ],
       "governance": "governed"

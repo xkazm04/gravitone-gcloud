@@ -538,13 +538,49 @@
       "subject": "pipeline-authoring",
       "bundle": "software-engineering",
       "state": "not-applicable",
-      "evaluatedAt": "2026-08-31",
-      "worker": "w10-gravitone-pof",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T02:32:00.161Z",
+      "worker": "6a36911c-965a-4ab0-8e3e-729b6937af2a",
       "techniques": [
+        {
+          "technique": "change-scoped-work-selection",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/lint-ratchet.mjs:72 The gate lints the repository root in one call; nothing in the context reads a merge base or a changed-file set."
+        },
+        {
+          "technique": "foreign-config-replay",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/check-manifest.mjs:3 This checks a product manifest against its spec; it does not fan pipeline units out of another tool's config. lint-ratchet calls ESLint's own API instead."
+        },
+        {
+          "technique": "human-checkpoints-in-a-pipeline",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/dev-guard.mjs:19 The guard launches a local next dev process; no deploy or migration waits on a named approver."
+        },
+        {
+          "technique": "pipeline-plan-auditability",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/lint-ratchet.mjs:139 A passing run prints a lint tally. No resolved delivery plan is captured, because none is generated."
+        },
         {
           "technique": "runtime-pipeline-generation",
           "verdict": "not-applicable",
-          "evidence": "gates.yml is a static hand-written file; the repo has one deliverable and the plan's shape is not a function of anything a generator would compute"
+          "evidence": "pipeline/probes/liveness-ab.mjs:49 The only matrix is a hardcoded probe loop over child shapes and policies, not a bootstrap that prints a plan."
+        },
+        {
+          "technique": "step-identity-stability",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/drive-script-step.mjs:2 Step here is a studio screen driven in a browser. vlm-probe lane names are image-generation experiments, not delivery-plan units with dependency edges."
+        }
+      ],
+      "registryProposal": "The words lane, step, and pipeline also name studio phases and image-generation experiments; a use_when that required a delivery-system plan would stop those homonyms from matching this subject.",
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "this context's files are gate implementations and one-off drivers consumed by a hand-written .github/workflows/gates.yml (not itself in this context); the repo is a single Next.js deliverable, below pipeline-authoring's own generation threshold ('a single-deliverable repository with six steps gains nothing and loses readability').",
+          "evaluatedAt": "2026-08-31",
+          "worker": null,
+          "reason": "replaced by 6a36911c-965a-4ab0-8e3e-729b6937af2a"
         }
       ]
     },

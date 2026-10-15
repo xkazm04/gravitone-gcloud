@@ -1,0 +1,78 @@
+{
+ "schema": "conform-run/1",
+ "worker": "6a36911c-965a-4ab0-8e3e-729b6937af2a",
+ "subject": "pipeline-authoring",
+ "evaluatedAt": "2026-10-15T02:32:00.161078+00:00",
+ "provider": "grok",
+ "model": "grok-4.7",
+ "pairs": [
+  {
+   "context": "pipeline-scripts",
+   "subject": "pipeline-authoring",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "pipeline/lint-ratchet.mjs:19 The lint gate walks one fixed tree for every caller, and a search of pipeline/ and knowledge/ for paths-filter, merge-base, workflow_dispatch, and generatePipeline found no delivery-plan generator, path filter, or change-scoped selector.",
+   "techniques": [
+    {
+     "technique": "change-scoped-work-selection",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/lint-ratchet.mjs:72 The gate lints the repository root in one call; nothing in the context reads a merge base or a changed-file set."
+    },
+    {
+     "technique": "foreign-config-replay",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/check-manifest.mjs:3 This checks a product manifest against its spec; it does not fan pipeline units out of another tool's config. lint-ratchet calls ESLint's own API instead."
+    },
+    {
+     "technique": "human-checkpoints-in-a-pipeline",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/dev-guard.mjs:19 The guard launches a local next dev process; no deploy or migration waits on a named approver."
+    },
+    {
+     "technique": "pipeline-plan-auditability",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/lint-ratchet.mjs:139 A passing run prints a lint tally. No resolved delivery plan is captured, because none is generated."
+    },
+    {
+     "technique": "runtime-pipeline-generation",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/probes/liveness-ab.mjs:49 The only matrix is a hardcoded probe loop over child shapes and policies, not a bootstrap that prints a plan."
+    },
+    {
+     "technique": "step-identity-stability",
+     "verdict": "not-applicable",
+     "evidence": "pipeline/drive-script-step.mjs:2 Step here is a studio screen driven in a browser. vlm-probe lane names are image-generation experiments, not delivery-plan units with dependency edges."
+    }
+   ],
+   "absenceTerms": [
+    "paths-filter",
+    "merge-base",
+    "workflow_dispatch",
+    "generatePipeline"
+   ],
+   "registryProposal": "The words lane, step, and pipeline also name studio phases and image-generation experiments; a use_when that required a delivery-system plan would stop those homonyms from matching this subject."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-15T02:32:00.161078+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "pipeline-authoring"
+   ],
+   "techniques": [
+    "change-scoped-work-selection",
+    "foreign-config-replay",
+    "human-checkpoints-in-a-pipeline",
+    "pipeline-plan-auditability",
+    "runtime-pipeline-generation",
+    "step-identity-stability"
+   ],
+   "deviations": 0,
+   "context": "pipeline-scripts",
+   "via": "curator-multi:grok",
+   "model": "grok-4.7"
+  }
+ ]
+}
