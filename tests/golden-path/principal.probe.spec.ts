@@ -36,6 +36,9 @@ import {
 import {
   ID_TOKEN_HEADER as SERVER_ID_TOKEN_HEADER,
   PRINCIPAL_MODE_VAR,
+  TOKEN_PREFIX,
+  principalRateKey,
+  refuse,
   SECURETOKEN_JWKS_URL,
   __resetJwksCache,
   __setJwksFetch,
@@ -311,6 +314,40 @@ test("legacy (the default): the shared-secret gate's responses are unchanged", a
 test("an unrecognised PRINCIPAL_MODE fails closed (verified), not open (legacy)", async () => {
   process.env[PRINCIPAL_MODE_VAR] = "verifed";
   expect((await guardRequest(req(bearer(SECRET))))?.status).toBe(401);
+});
+
+/* ── CLI tokens: a named kind, keyed by its accessor, never the secret ───── */
+
+test("cli token: a named principal; its bucket is its accessor; a wrong scope is 403, the rest 401 or 503", async () => {
+  // The door spells the prefix itself (it loads the kernel only on a token);
+  // the kernel mints it. Two spellings, pinned to one.
+  const kernelToken = await import("@gt/kernel/token");
+  expect(TOKEN_PREFIX).toBe(kernelToken.TOKEN_PREFIX);
+  const who = { kind: "cli-token", uid: "token:0123456789ab", tokenId: "0123456789ab", name: "dojo-skill", scope: "money" } as const;
+  expect(principalRateKey(who)).toBe("token:0123456789ab");
+  expect(refuse("token-scope").status).toBe(403);
+  expect(refuse("token-store-unavailable").status).toBe(503);
+  for (const c of ["token-unknown", "token-expired", "token-revoked", "token-in-url", "shared-secret-cli"] as const) {
+    expect(refuse(c).status, c).toBe(401);
+    expect(refuse(c).detail, `${c} names its fix`).toMatch(/GRAVITONE_CLI_TOKEN|pipeline\/token\.mts/);
+  }
+});
+
+test("cli token: a token claim is judged as a token in legacy mode, before the secret, even beside the right secret", async () => {
+  // No store is reachable at a path under a file, so the claim fails closed
+  // (503) - and the right secret beside it does not rescue it.
+  const prev = process.env.GRAVITONE_STORE_PATH;
+  process.env.GRAVITONE_STORE_PATH = join(process.cwd(), "package.json", "no.sqlite");
+  try {
+    const r = await resolvePrincipal(req({ ...bearer(`gt_ffffffffffff_${"A".repeat(43)}`), "x-imaging-access-secret": SECRET }));
+    expect(r).toMatchObject({ kind: "refused", code: "token-store-unavailable", status: 503 });
+    expect(jwksCalls, "a token claim never reaches the JWKS").toEqual([]);
+  } finally {
+    const { closeKernel } = await import("../../app/_server/kernel.ts");
+    closeKernel();
+    if (prev === undefined) delete process.env.GRAVITONE_STORE_PATH;
+    else process.env.GRAVITONE_STORE_PATH = prev;
+  }
 });
 
 /* ── JWKS outage: closed for money, reads keep the last good keys ───────── */

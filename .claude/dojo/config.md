@@ -155,8 +155,10 @@ tracking the human better, and record the decision here):
 - 2026-08-30 — gate rehearsal without the browser: when the Chrome extension is
   not connected, the Foundry → Dojo gate can be exercised through the app's own
   routes (`PUT /api/foundry/training/<id>/verdicts`, `POST .../commit`) with
-  `Authorization: Bearer $IMAGING_ACCESS_SECRET` from `.env.local` — same code
-  path the tab drives. Reflect must SKIP rows whose cycle id is a fixture:
+  `Authorization: Bearer $GRAVITONE_CLI_TOKEN` (2026-10-15: the shared secret is
+  the browser's; mint this skill its own once with
+  `node pipeline/token.mts mint --name dojo-skill --scope read` - these two
+  routes spend nothing) — same code path the tab drives. Reflect must SKIP rows whose cycle id is a fixture:
   revert `training-ledger.json` and delete `thumbs/fixture-*` instead of
   editing prompt surfaces.
 - 2026-08-30 — first live window (2 cycles, 24 candidates, ~1h40 GPU): the

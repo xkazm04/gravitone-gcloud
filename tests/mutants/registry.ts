@@ -37,7 +37,7 @@ export type Mutant = {
  * unguarded probe lowers the live count and the same probe asks for this number
  * to be lowered to match, so the gain is kept.
  */
-export const UNGUARDED_PROBE_BUDGET = 246;
+export const UNGUARDED_PROBE_BUDGET = 244;
 
 export const MUTANTS: Mutant[] = [
   {
@@ -391,5 +391,61 @@ export const MUTANTS: Mutant[] = [
     find: 'import { reportStorageTrouble } from "@/lib/steps";',
     replace: 'import { reportStorageTrouble } from "@/app/_phases/_shared/stepStore";',
     why: "A library module names app/ again: the CLI and library lanes can no longer load it outside Next, and the stub at the old path can turn the edge into a cycle that evaluates empty.",
+  },
+  {
+    id: "shared-secret-cli-door-open",
+    probe: "imaging-auth.probe.spec.ts",
+    file: "lib/apiAuth.ts",
+    find: "verdict === \"ok\" && (opts.use ?? \"money\") === \"money\" && sharedSecretCallers() === \"browser\" && !browserMarked(req)",
+    replace: "verdict === \"ok\" && false",
+    why: "Under SHARED_SECRET_CALLERS=browser a script still spends with the public bundle secret, so the operator's cutover to per-caller tokens retires nothing.",
+  },
+  {
+    id: "cli-token-never-judged",
+    probe: "imaging-auth.probe.spec.ts",
+    file: "lib/apiAuth.ts",
+    find: "  if (token !== undefined) return resolveCliToken(req, token, opts.use ?? \"money\", opts.now);",
+    replace: "  if (token !== undefined && false) return resolveCliToken(req, token, opts.use ?? \"money\", opts.now);",
+    why: "Every minted token is read as a wrong shared secret: no CLI can authenticate with the credential the operator gave it.",
+  },
+  {
+    id: "cli-token-scope-unchecked",
+    probe: "imaging-auth.probe.spec.ts",
+    file: "lib/principal.ts",
+    find: "  if (!scopeAdmits(t.scope, use)) return refuse(\"token-scope\");",
+    replace: "",
+    why: "A read-scope token is admitted on a money route, so the credential minted for a read-only skill spends vendor balance.",
+  },
+  {
+    id: "cli-token-accepted-from-url",
+    probe: "imaging-auth.probe.spec.ts",
+    file: "lib/principal.ts",
+    find: "  if (new URL(req.url).searchParams.get(\"k\") === token) return refuse(\"token-in-url\");",
+    replace: "",
+    why: "A month-long CLI token rides a `?k=` URL into access logs, browser history and Referer headers, and is honoured there.",
+  },
+  {
+    id: "cli-token-shares-ip-bucket",
+    probe: "principal.probe.spec.ts",
+    file: "lib/principal.ts",
+    find: "  if (r.kind === \"cli-token\") return r.uid;",
+    replace: "",
+    why: "A token's calls are bucketed by forwarded IP, which the caller writes: one looping script spreads past its limit, or starves every other caller behind one proxy.",
+  },
+  {
+    id: "route-read-token-reads-as-unauthenticated",
+    probe: "server-seam.probe.spec.ts",
+    file: "app/_server/route.ts",
+    find: "  if (r.status === 403) return { error: new AppError(\"refused\", r.detail, { detail: r.code }), headers: {} };",
+    replace: "",
+    why: "route() answers a read token on a money route with 401 unauthenticated, so the caller re-mints the same read token forever instead of asking for a money one.",
+  },
+  {
+    id: "ledger-forge-drops-the-commit",
+    probe: "ledger-reconcile.probe.spec.ts",
+    file: "app/_server/v1/sources/forge.ts",
+    find: "  if (run.committed !== undefined) {",
+    replace: "  if (run.committed !== undefined && false) {",
+    why: "The forge adapter stops projecting a run's commit: the Ledger never shows the act that deleted the rejected plates and wrote styles.json, while every count still looks plausible - only the reconcile against v1's own tally can see the missing fact.",
   },
 ];

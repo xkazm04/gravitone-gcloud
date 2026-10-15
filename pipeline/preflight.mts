@@ -143,7 +143,9 @@ const { leonardoProvider } = await import("../lib/imaging/providers/leonardo");
 const { googleProvider } = await import("../lib/imaging/providers/google");
 const { qwenProvider } = await import("../lib/imaging/providers/qwen");
 const { isMusicConfigured, MUSIC_KEY_VAR } = await import("../lib/music/elevenlabs");
-const { ACCESS_SECRET_VAR, accessSecret } = await import("../lib/apiAuth");
+const { ACCESS_SECRET_VAR, accessSecret, SHARED_SECRET_CALLERS_VAR, sharedSecretCallers } = await import("../lib/apiAuth");
+// The token's shape is the kernel's fact (packages/kernel/src/token.ts), not this file's.
+const { isTokenShaped } = await import("@gt/kernel/token");
 const { channelReadiness, PUBLISH_ENV_VARS, PUBLISH_MODE_VAR } = await import("../lib/publish/channels");
 const { YOUTUBE_ENV_VARS } = await import("../lib/publish/oauth");
 // The declared deployment cells (CIP-B). The probe lane judges every route in
@@ -389,6 +391,36 @@ add({
   source: "lib/apiAuth.ts · accessSecret() / checkAccess()",
   vars: [ACCESS_SECRET_VAR, ACCESS_SECRET_PUBLIC_VAR],
 });
+
+/* 3b · the caller's own credential — what a script, skill or curl line presents */
+
+{
+  const CLI_TOKEN_VAR = "GRAVITONE_CLI_TOKEN";
+  const raw = process.env[CLI_TOKEN_VAR]?.trim() ?? "";
+  const callers = sharedSecretCallers();
+  const shaped = raw !== "" && isTokenShaped(raw);
+  add({
+    id: "cli-token",
+    label: "CLI token (non-browser callers)",
+    // A token is checked against the server's store only by the server: this
+    // script opens no store (opening one migrates it), so "set and well-formed"
+    // is all it can say. Revoked or expired is the server's 401, by name.
+    outcome: shaped || (raw === "" && callers === "any") ? "reachable" : "after-action",
+    posture: `${SHARED_SECRET_CALLERS_VAR}=${callers}; ${CLI_TOKEN_VAR} ${raw === "" ? "unset" : shaped ? "set, well-formed" : "set, NOT a gt_ token"}`,
+    probe: `${CLI_TOKEN_VAR}=${shownAs(CLI_TOKEN_VAR)}, ${SHARED_SECRET_CALLERS_VAR}=${callers}`,
+    why: shaped
+      ? `Scripts and skills on this machine present ${CLI_TOKEN_VAR} as \`Authorization: Bearer\`; the server verifies it against its own store.`
+      : raw !== ""
+        ? `${CLI_TOKEN_VAR} is set but is not a token (gt_<id>_<secret>); the server refuses it as token-unknown. Mint one: node pipeline/token.mts mint --name <caller> --scope money.`
+        : callers === "any"
+          ? `No ${CLI_TOKEN_VAR}: a script still reaches the money routes with the shared secret, because ${SHARED_SECRET_CALLERS_VAR}=any. ` +
+            "That door closes when the operator sets it to `browser`; mint each caller its token first: node pipeline/token.mts mint --name <caller> --scope money."
+          : `The shared secret is refused to scripts here (${SHARED_SECRET_CALLERS_VAR}=browser). Mint this caller a token: ` +
+            `node pipeline/token.mts mint --name <caller> --scope money, and set ${CLI_TOKEN_VAR}.`,
+    source: "lib/apiAuth.ts · resolvePrincipal() + packages/kernel/src/token.ts",
+    vars: [CLI_TOKEN_VAR, SHARED_SECRET_CALLERS_VAR],
+  });
+}
 
 /* 4 · reasoning — the ladder with no floor */
 
@@ -689,6 +721,8 @@ const wantedVars = [
   MUSIC_KEY_VAR,
   ACCESS_SECRET_VAR,
   ACCESS_SECRET_PUBLIC_VAR,
+  "GRAVITONE_CLI_TOKEN",
+  SHARED_SECRET_CALLERS_VAR,
   ...CAP_FLAG.values(),
   ...PUBLISH_ENV_VARS,
 ];

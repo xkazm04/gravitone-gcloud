@@ -149,3 +149,76 @@ test("stream: 401 without a credential; with the session cookie it carries the l
   const ids = [...text.matchAll(/^id: (\d+)$/gm)].map((m) => m[1]);
   expect(ids).toEqual(["2", "3"]);
 });
+
+// THE NEW DOOR TAKES CLI TOKENS (Phase 2, lot 17). route()'s guardOf resolves a
+// `Bearer gt_...` through v1's own resolver, against this lane's real store, so
+// a token minted by pipeline/token.mts is judged identically by a v1 money route
+// and a route() handler. A presented token is a credential: it never falls
+// through to the session cookie.
+
+keepEnv(["SHARED_SECRET_CALLERS", "IMAGING_RATE_CAPACITY"]);
+
+type Minted = { record: { id: string }; token: string };
+async function mintIn(scope: "money" | "read"): Promise<Minted> {
+  const { mintToken } = (await import("@gt/kernel/token")) as unknown as { mintToken: (t: unknown, i: unknown, a: unknown) => Minted };
+  const store = routes.kernel().value?.store as { tx(fn: (t: unknown) => Minted): { ok: boolean; value?: Minted } };
+  const r = store.tx((t) => mintToken(t, { name: `seam-${scope}`, scope }, { kind: "operator", id: "probe" }));
+  if (!r.ok || r.value === undefined) throw new Error("mint failed");
+  return r.value;
+}
+async function revokeIn(id: string): Promise<void> {
+  const { revokeToken } = (await import("@gt/kernel/token")) as unknown as { revokeToken: (t: unknown, id: string, a: unknown) => unknown };
+  const store = routes.kernel().value?.store as { tx(fn: (t: unknown) => unknown): { ok: boolean } };
+  expect(store.tx((t) => revokeToken(t, id, { kind: "operator", id: "probe" })).ok).toBe(true);
+}
+async function moneyRoute(): Promise<(req: Request) => Promise<Response>> {
+  const { route } = (await import("../../app/_server/route.ts")) as unknown as {
+    route: (o: unknown, h: (c: { who: { kind: string; name?: string } | null }) => Promise<unknown>) => (req: Request) => Promise<Response>;
+  };
+  const { ok } = (await import("@gt/domain/errors")) as unknown as { ok: (v: unknown) => unknown };
+  return route({ guard: "money", bodyCap: 0 }, async ({ who }) => ok({ kind: who?.kind, name: who?.name }));
+}
+let seamIp = 0;
+const call = (bearer: string, extra: Record<string, string> = {}) =>
+  new Request(`${ORIGIN}/api/probe-money`, { method: "POST", headers: { authorization: `Bearer ${bearer}`, origin: ORIGIN, "x-forwarded-for": `10.31.0.${++seamIp}`, ...extra } });
+
+test("route(): a money token passes, a read token is refused (403), a revoked one is unauthenticated (401)", async () => {
+  const handler = await moneyRoute();
+  const money = await mintIn("money");
+  const pass = await handler(call(money.token));
+  expect(pass.status).toBe(200);
+  expect(await pass.json()).toEqual({ kind: "cli-token", name: "seam-money" });
+
+  const read = await mintIn("read");
+  const r403 = await handler(call(read.token));
+  expect(r403.status).toBe(403);
+  expect(await r403.json()).toMatchObject({ code: "refused", detail: "token-scope" });
+
+  await revokeIn(money.record.id);
+  const r401 = await handler(call(money.token));
+  expect(r401.status).toBe(401);
+  expect(await r401.json()).toMatchObject({ code: "unauthenticated", detail: "token-revoked" });
+
+  const unknown = await handler(call(`gt_ffffffffffff_${"C".repeat(43)}`));
+  expect(unknown.status).toBe(401);
+  expect(await unknown.json()).toMatchObject({ detail: "token-unknown" });
+});
+
+test("route(): a bad token with a valid session cookie is still refused - the token is judged alone", async () => {
+  const handler = await moneyRoute();
+  const made = await routes.session.POST(post({ idToken: await sign() }));
+  const res = await handler(call(`gt_ffffffffffff_${"D".repeat(43)}`, { cookie: cookieOf(made) }));
+  expect(res.status).toBe(401);
+  expect(await res.json()).toMatchObject({ detail: "token-unknown" });
+});
+
+test("route(): under SHARED_SECRET_CALLERS=browser the secret is refused from a CLI, a token is not", async () => {
+  const handler = await moneyRoute();
+  process.env.IMAGING_ACCESS_SECRET = "seam-secret";
+  process.env.SHARED_SECRET_CALLERS = "browser";
+  const cli = await handler(call("seam-secret"));
+  expect(cli.status).toBe(401);
+  expect(await cli.json()).toMatchObject({ code: "unauthenticated", detail: "shared-secret-cli" });
+  const money = await mintIn("money");
+  expect((await handler(call(money.token))).status).toBe(200);
+});

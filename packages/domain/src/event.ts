@@ -60,22 +60,57 @@ export type EventData = z.output<typeof eventDataSchema>;
 export const eventTypeSchema = z.string().regex(TYPE_RE);
 export const hashSchema = z.string().regex(HASH_RE);
 
+/** How an event's `occurredAt` is known (COMMON decision 1). `recorded`: the
+ *  source wrote the instant down when it happened (a manifest's `created`, a
+ *  log line's `at`). `derived`: the instant was inferred - the sync observed a
+ *  rewritten field and stamps its own clock, never a fabricated past time. The
+ *  prototype spelled the first `real` (ledger-data.js `atSrc`), the same word as
+ *  a cost's source; here the two vocabularies share no word. */
+export const AT_SOURCES = ["recorded", "derived"] as const;
+export type AtSource = (typeof AT_SOURCES)[number];
+
+/** A projection's natural key, `<source>:<recordId>:<fact>` - the identity
+ *  that makes re-running a projection append nothing it appended before. */
+export const eventKeySchema = z.string().min(3).max(512).regex(/^[a-z][a-z0-9-]*:[^\s:][^\s]*$/);
+
+// The two clocks travel together: an `occurredAt` without the word for how it
+// is known is the prototype's `costUsd` without `costSrc` again.
+const clocksPaired = (e: { occurredAt?: string | undefined; atSrc?: AtSource | undefined }): boolean =>
+  (e.occurredAt === undefined) === (e.atSrc === undefined);
+const PAIRED = { message: "occurredAt and atSrc come together or not at all", path: ["atSrc"] };
+
 /** What a writer hands the ledger. `seq`, `at` and both hashes are the
- *  ledger's to assign, so a caller cannot forge them. */
-export const eventInputSchema = z.object({
+ *  ledger's to assign, so a caller cannot forge them. `occurredAt`/`atSrc`/
+ *  `key` are a PROJECTION's: an act the kernel itself performs happens at `at`
+ *  and has no natural key; a fact projected from a v1 store happened earlier,
+ *  and carries when and how that is known, plus the key that dedupes it. */
+const inputShape = z.object({
   actor: actorSchema,
   type: eventTypeSchema,
   subject: subjectSchema,
   lane: z.string().min(1).optional(),
   cost: costSchema.optional(),
   data: eventDataSchema,
+  // UTC `Z` with milliseconds, exactly `Date#toISOString`'s shape, like `at`:
+  // the index orders by string, and "…00Z" sorts AFTER "…00.500Z" ('.' < 'Z'),
+  // so a second-precision v1 stamp (forge.py's `+00:00`) is normalised at the
+  // adapter, never stored as written.
+  occurredAt: z.iso.datetime({ precision: 3 }).optional(),
+  atSrc: z.enum(AT_SOURCES).optional(),
+  key: eventKeySchema.optional(),
 });
+export const eventInputSchema = inputShape.refine(clocksPaired, PAIRED);
 export type EventInput = z.output<typeof eventInputSchema>;
 
-export const eventSchema = eventInputSchema.extend({
-  seq: z.number().int().positive(),
-  at: z.iso.datetime(),
-  prevHash: hashSchema,
-  hash: hashSchema,
-});
+export const eventSchema = inputShape
+  .extend({
+    seq: z.number().int().positive(),
+    at: z.iso.datetime(),
+    prevHash: hashSchema,
+    hash: hashSchema,
+  })
+  .refine(clocksPaired, PAIRED);
 export type Event = z.output<typeof eventSchema>;
+
+/** The instant the Ledger orders and filters by: when it happened if known, else when it was recorded. */
+export const eventTime = (e: Pick<Event, "at" | "occurredAt">): string => e.occurredAt ?? e.at;

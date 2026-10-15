@@ -17,6 +17,11 @@ Canonical JSON is RFC 8785. The two places Python's json module differs from
 it are handled here: numbers (Python writes 1.0, 1e-07, -0.0; ECMAScript writes
 1, 1e-7, 0) and key order (Python sorts by code point; RFC 8785 by UTF-16 code
 unit, which sorting on the UTF-16-BE bytes reproduces).
+
+Events v3 (Phase 2, the v1 projection) added three optional covered fields -
+occurredAt, atSrc, key - each omitted from the hash input when NULL, exactly as
+lane and cost are. A store migrated before v3 has no such columns; the verifier
+reads the columns the file actually has, so it checks old and new stores alike.
 """
 
 import hashlib
@@ -26,7 +31,9 @@ import sqlite3
 import sys
 
 GENESIS = "0" * 64
-COLUMNS = "seq, at, actor_kind, actor_id, type, subject_kind, subject_id, lane, cost_usd, cost_src, data, prev_hash, hash"
+BASE_COLUMNS = ["seq", "at", "actor_kind", "actor_id", "type", "subject_kind", "subject_id", "lane", "cost_usd", "cost_src", "data", "prev_hash", "hash"]
+# Optional covered fields: column -> the key it carries in the hash input.
+OPTIONAL = [("occurred_at", "occurredAt"), ("at_src", "atSrc"), ("key", "key")]
 _REPR = re.compile(r"^(\d+)(?:\.(\d+))?(?:e([+-]?\d+))?$")
 
 
@@ -86,8 +93,8 @@ def chain_hash(prev_hash, body):
     return hashlib.sha256((prev_hash + canonical(body)).encode("utf-8")).hexdigest()
 
 
-def body_of(row):
-    seq, at, actor_kind, actor_id, typ, subject_kind, subject_id, lane, cost_usd, cost_src, data, prev_hash, _ = row
+def body_of(row, extra=OPTIONAL):
+    seq, at, actor_kind, actor_id, typ, subject_kind, subject_id, lane, cost_usd, cost_src, data, prev_hash, _ = row[:13]
     body = {
         "seq": seq,
         "at": at,
@@ -101,10 +108,13 @@ def body_of(row):
         body["lane"] = lane
     if cost_usd is not None:
         body["cost"] = {"usd": cost_usd, "src": cost_src}
+    for (_, name), value in zip(extra, row[13:]):
+        if value is not None:
+            body[name] = value
     return body
 
 
-def verify(rows, anchor=None):
+def verify(rows, anchor=None, extra=OPTIONAL):
     prev_seq, prev_hash = 0, GENESIS
     for row in rows:
         seq, stored_prev, stored_hash = row[0], row[11], row[12]
@@ -113,7 +123,7 @@ def verify(rows, anchor=None):
         if stored_prev != prev_hash:
             return {"state": "tampered", "seq": seq, "reason": "prevHash does not match the hash of seq %d" % prev_seq}
         try:
-            expect = chain_hash(stored_prev, body_of(row))
+            expect = chain_hash(stored_prev, body_of(row, extra))
         except (ValueError, TypeError) as e:
             return {"state": "tampered", "seq": seq, "reason": "unreadable: %s" % e}
         if expect != stored_hash:
@@ -139,7 +149,10 @@ def main(argv):
         # Read-only, through the URI form, so a verifier can never write the store it checks.
         db = sqlite3.connect("file:%s?mode=ro" % argv[1].replace("\\", "/"), uri=True)
         try:
-            report = verify(db.execute("SELECT %s FROM events ORDER BY seq" % COLUMNS), anchor)
+            have = {r[1] for r in db.execute("PRAGMA table_info(events)")}
+            extra = [(c, n) for c, n in OPTIONAL if c in have]
+            columns = BASE_COLUMNS + [c for c, _ in extra]
+            report = verify(db.execute("SELECT %s FROM events ORDER BY seq" % ", ".join(columns)), anchor, extra)
         finally:
             db.close()
     except sqlite3.Error as e:

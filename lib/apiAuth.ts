@@ -37,6 +37,31 @@
 // Promise, which is truthy, and returns it: a refusal still refuses, an
 // admitted request answers nothing. principal.probe.spec.ts walks every call.
 //
+// PER-CALLER TOKENS (Phase 2, 2026-10-15). The secret above cannot say which
+// caller spent and cannot be withdrawn from one of them, so every non-browser
+// caller now presents its own token, minted by the operator
+// (`node pipeline/token.mts mint --name <caller> --scope money`, kept in the
+// caller's GRAVITONE_CLI_TOKEN) and verified against the kernel store
+// (packages/kernel/src/token.ts). A token-shaped Bearer is judged as a token in
+// either mode and never falls through to the secret; a read-scope token on a
+// money route is 403; the money bucket keys on the token id.
+//
+// THE SECRET'S RETIREMENT IS A POSTURE, `SHARED_SECRET_CALLERS`:
+//   · `any` (the default) - the secret is accepted as before, so nothing breaks
+//     on upgrade and callers move to tokens one at a time;
+//   · `browser` - on a MONEY route the secret is accepted only from a request a
+//     browser's fetch marks `Sec-Fetch-Site: same-origin`; a CLI presenting it
+//     is told to mint a token. A value that is neither reads as `browser`.
+// WHAT THAT MARK IS, HONESTLY: a lane marker, not a boundary. Browsers set it
+// and page script cannot, but curl can send any header it likes, and the
+// secret it would pair it with is in the bundle. It retires the secret for
+// every caller that follows the rules; it cannot retire it for one that does
+// not. The browser on a local-mode machine has no other credential (no
+// Firebase, so no ID token and no session cookie), so the secret retires
+// FULLY only when the v1 screens are gone (Phase 6). Read routes keep
+// accepting it in both postures: they spend nothing, and a skill that curls a
+// read route moves to a token at its own pace.
+//
 // SERVER ONLY. Reads `IMAGING_ACCESS_SECRET`, which is never NEXT_PUBLIC_ and
 // must never appear in a client bundle. Keys are read lazily per call (like
 // lib/imaging/env.ts) so a handler that booted before .env.local was filled in
@@ -50,7 +75,10 @@ import {
   SHARED_SECRET,
   isRefusal,
   principalMode,
+  presentedToken,
   principalRateKey,
+  refuse,
+  resolveCliToken,
   resolveVerified,
   type KeyUse,
   type Refusal,
@@ -58,6 +86,29 @@ import {
 } from "./principal";
 
 export const ACCESS_SECRET_VAR = "IMAGING_ACCESS_SECRET";
+/** Who may still present the shared secret on a money route: `any` | `browser`. */
+export const SHARED_SECRET_CALLERS_VAR = "SHARED_SECRET_CALLERS";
+
+export type SecretCallers = "any" | "browser";
+
+let warnedCallers: string | null = null;
+
+/** The posture, read per call. Unset or `any` is today's gate; anything else is
+ *  `browser` - a typo must not leave the operator believing the CLI door shut. */
+export function sharedSecretCallers(): SecretCallers {
+  const raw = (process.env[SHARED_SECRET_CALLERS_VAR] ?? "").trim().toLowerCase();
+  if (raw === "" || raw === "any") return "any";
+  if (raw !== "browser" && warnedCallers !== raw) {
+    warnedCallers = raw;
+    console.log(`[api] ${SHARED_SECRET_CALLERS_VAR}="${raw}" is not any|browser — running browser (closed to CLIs)`);
+  }
+  return "browser";
+}
+
+/** A request a browser's own fetch made from this origin. See the header: a marker, not a proof. */
+export function browserMarked(req: Request): boolean {
+  return req.headers.get("sec-fetch-site")?.trim().toLowerCase() === "same-origin";
+}
 
 /** The configured secret, trimmed, or `undefined` when unset/blank. */
 export function accessSecret(): string | undefined {
@@ -444,9 +495,12 @@ const LEGACY_DETAIL: Record<Exclude<AccessVerdict, "ok">, string> = {
  * WHO IS CALLING — one principal per request, or a typed refusal.
  *
  *   · the dev fixture first, in either mode (`devOpen`, non-production only);
+ *   · a token-shaped Bearer, in either mode: lib/principal.ts resolveCliToken,
+ *     judged alone (a bad token never falls through to the secret);
  *   · legacy: the shared-secret verdict, unchanged. Admitted callers are the
- *     local owner under NEXT_PUBLIC_LOCAL_MODE, else the shared secret. No
- *     token is read and nothing is fetched;
+ *     local owner under NEXT_PUBLIC_LOCAL_MODE, else the shared secret - except
+ *     that under SHARED_SECRET_CALLERS=browser a money route admits the secret
+ *     only from a browser-marked request. No ID token is read, nothing is fetched;
  *   · verified: lib/principal.ts — a Firebase ID token or a refusal. The secret
  *     is never consulted, so no refusal can fall through to it.
  *
@@ -458,8 +512,13 @@ export async function resolvePrincipal(
   opts: { use?: KeyUse; now?: number } = {},
 ): Promise<Resolution> {
   if (devOpen()) return DEV_FIXTURE;
+  const token = presentedToken(req);
+  if (token !== undefined) return resolveCliToken(req, token, opts.use ?? "money", opts.now);
   if (principalMode() === "legacy") {
     const verdict = checkAccess(req);
+    if (verdict === "ok" && (opts.use ?? "money") === "money" && sharedSecretCallers() === "browser" && !browserMarked(req)) {
+      return refuse("shared-secret-cli");
+    }
     if (verdict === "ok") return process.env.NEXT_PUBLIC_LOCAL_MODE === "1" ? LOCAL_OWNER : SHARED_SECRET;
     return { kind: "refused", code: verdict, status: 401, detail: LEGACY_DETAIL[verdict] };
   }
@@ -474,7 +533,7 @@ function refusalResponse(r: Refusal): Response {
   // The legacy verdicts keep their old body exactly: `{ detail, code }`.
   if (r.code === "no-config" || r.code === "missing" || r.code === "wrong") return deny(401, r.detail, "unauthorized");
   const headers: Record<string, string> = r.status === 503 ? { "retry-after": "30" } : {};
-  const code = r.status === 503 ? "verifier-unavailable" : "unauthorized";
+  const code = r.status === 503 ? "verifier-unavailable" : r.status === 403 ? "forbidden" : "unauthorized";
   return Response.json({ detail: r.detail, code, refusal: r.code }, { status: r.status, headers });
 }
 

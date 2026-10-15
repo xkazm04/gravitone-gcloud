@@ -16,7 +16,7 @@
 //
 // SERVER ONLY. No filesystem, no environment read at module load.
 
-import { ACCESS_SECRET_VAR } from "./apiAuth";
+import { ACCESS_SECRET_VAR, SHARED_SECRET_CALLERS_VAR } from "./apiAuth";
 import { HOSTED_CAPS } from "./capabilities";
 import { MANAGED_MARKERS, type LocalPosture } from "./deployment";
 import { PRINCIPAL_MODE_VAR, PROJECT_ID_VAR } from "./principal";
@@ -34,6 +34,13 @@ export const POSTURE_AXES: readonly string[] = [
   // lib/principal.ts: `verified` closes the shared-secret door. Every declared
   // cell runs the legacy default.
   PRINCIPAL_MODE_VAR,
+  // lib/apiAuth.ts: `browser` refuses the shared secret on a money route from
+  // a caller a browser's fetch did not mark; such a caller presents its own
+  // CLI token (GRAVITONE_CLI_TOKEN, minted by pipeline/token.mts). Every
+  // declared cell runs the default, `any`: the lane drives routes as a CLI
+  // would, with the secret and no fetch marks. A token is not a cell
+  // credential - it lives in the kernel store, not the server's environment.
+  SHARED_SECRET_CALLERS_VAR,
   "NEXT_PUBLIC_DEV_AUTH",
   "NEXT_PUBLIC_LOCAL_MODE",
   "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",

@@ -95,7 +95,15 @@ What it would need, and nothing it would get for free:
   - `IMAGING_ACCESS_SECRET` (+ its public browser copy
     `NEXT_PUBLIC_IMAGING_ACCESS_SECRET`) — the shared access secret gating
     the money/compute routes per `lib/apiAuth.ts`; the routes fail closed
-    (401) without it.
+    (401) without it. It is the BROWSER's credential: every script, skill and
+    curl line presents its own CLI token instead (`GRAVITONE_CLI_TOKEN`,
+    minted per caller with `node pipeline/token.mts mint --name <caller>
+    --scope money`, verified against the kernel store, revoked with
+    `node pipeline/token.mts revoke <id>`).
+  - `SHARED_SECRET_CALLERS` — `any` (default) or `browser`. Under `browser`
+    a money route accepts the shared secret only from a browser's own fetch
+    (`Sec-Fetch-Site: same-origin`) and tells any other caller to use a token.
+    Set it once every non-browser caller holds a token.
 - **An `engines`-based Node pin** in `package.json`, matching the CI pin, so
   the host resolves the same toolchain the gate graded.
 - **The registry's deployment-contract subject** as the standard to implement

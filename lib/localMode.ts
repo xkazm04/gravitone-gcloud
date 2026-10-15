@@ -19,7 +19,10 @@
 // WHAT IT DOES NOT DO. It does not turn off the money-route gate: the
 // /api/music/* and /api/imaging/* seams still require IMAGING_ACCESS_SECRET
 // (+ the NEXT_PUBLIC_ twin) and still fail closed without it — being local
-// changes who you are, not what spending requires. And it does not sync
+// changes who you are, not what spending requires. (That secret is the
+// BROWSER's: a script on the same machine presents its own CLI token,
+// pipeline/token.mts, and under SHARED_SECRET_CALLERS=browser the secret is
+// refused to it - lib/apiAuth.ts.) And it does not sync
 // anything anywhere: a local studio's work lives in this browser profile and
 // nowhere else, which is the point, and also the caveat.
 //

@@ -5,6 +5,9 @@
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  // v1 modules import each other as `@/lib/...` (tsconfig paths); the v1 adapters under
+  // app/_server/v1 read through them, so their tests resolve the same alias.
+  resolve: { alias: [{ find: /^@\//, replacement: `${import.meta.dirname}/` }] },
   test: {
     include: ["packages/*/test/**/*.test.ts", "tests/next-gates/**/*.test.ts", "tests/next-server/**/*.test.ts"],
     exclude: ["**/node_modules/**", "tests/next-gates/fixtures/**"],

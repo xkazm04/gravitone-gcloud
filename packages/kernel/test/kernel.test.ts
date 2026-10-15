@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 import { eventsMigrations } from "../src/events.ts";
+import { ingestMigrations } from "../src/ingest.ts";
 import { kernelModules, openKernel, orderModules } from "../src/kernel.ts";
 import { migrate, schemaOf, type ModuleMigrations } from "../src/migrate.ts";
 import { openStore } from "../src/store.ts";
@@ -11,6 +12,7 @@ import { must, scratch, steppingClock } from "./helpers.ts";
 import { KERNEL as JOB_FIXTURE } from "./job-fixture.ts";
 import { receiptsMigrations } from "../src/pricing/receipts.ts";
 import { spendMigrations } from "../src/spend/ledger.ts";
+import { tokenMigrations } from "../src/token.ts";
 
 const tmp = scratch("kernel");
 afterAll(() => tmp.dispose());
@@ -56,7 +58,7 @@ describe("openKernel", () => {
   });
 
   it("a fresh store reaches the union of every per-module fixture's schema, and nothing else", () => {
-    const fixtures: readonly (readonly ModuleMigrations[])[] = [JOB_FIXTURE, DECISION_FIXTURE, [eventsMigrations, receiptsMigrations, spendMigrations]];
+    const fixtures: readonly (readonly ModuleMigrations[])[] = [JOB_FIXTURE, DECISION_FIXTURE, [eventsMigrations, ingestMigrations, receiptsMigrations, spendMigrations, tokenMigrations]];
     const union = new Set<string>();
     for (const mods of fixtures) {
       const s = must(openStore(file()));

@@ -40,7 +40,10 @@
 // SERVER ONLY. Reads PRINCIPAL_MODE and the project id per call (like
 // lib/apiAuth.ts), and must never be imported by a client module.
 
+import type { TokenScope } from "@gt/kernel/token";
+
 import { DEV_UID } from "./devAuth";
+import { OUT_DIRNAME } from "./fixtures/mode";
 import { LOCAL_UID } from "./localMode";
 
 /** Where a legacy bundle sends the ID token (Authorization holds its secret).
@@ -76,10 +79,16 @@ export function firebaseProjectId(): string | undefined {
 
 /* ── The principal ─────────────────────────────────────────────────────────── */
 
-/** Who is calling. Only `firebase` is a per-person identity the server proved;
+/** Who is calling. `firebase` is a person the server proved and `cli-token` a
+ *  caller the operator minted a credential for (packages/kernel/src/token.ts);
  *  the other three are postures, named so nothing has to infer them. */
 export type Principal =
   | { kind: "firebase"; uid: string; authTime: number; exp: number }
+  /** A per-caller token minted by the operator (pipeline/token.mts). `uid` is
+   *  `token:<id>`: the accessor, which is what a log line and the rate bucket
+   *  may name - never the secret. Accepted in both modes: the server verifies
+   *  it itself, against its own store. */
+  | { kind: "cli-token"; uid: `token:${string}`; tokenId: string; name: string; scope: TokenScope }
   /** lib/localMode.ts — the single local owner. Legacy mode only. */
   | { kind: "local-owner"; uid: typeof LOCAL_UID }
   /** lib/devAuth.ts — the automation fixture, non-production builds only. */
@@ -107,12 +116,24 @@ export type RefusalCode =
   | "iat-future"
   | "bad-auth-time"
   | "no-sub"
-  | "jwks-unavailable";
+  | "jwks-unavailable"
+  // CLI tokens, either mode
+  | "token-unknown"
+  | "token-expired"
+  | "token-revoked"
+  | "token-scope"
+  | "token-in-url"
+  | "token-store-unavailable"
+  // legacy mode, SHARED_SECRET_CALLERS=browser (lib/apiAuth.ts)
+  | "shared-secret-cli";
 
 export interface Refusal {
   kind: "refused";
   code: RefusalCode;
-  status: 401 | 503;
+  /** 401: no acceptable credential - present another. 403: a credential this
+   *  door accepts as WHO but not for THIS (a read token on a money route) -
+   *  presenting it again changes nothing. 503: the verifier could not decide. */
+  status: 401 | 403 | 503;
   detail: string;
 }
 
@@ -121,6 +142,9 @@ export type Resolution = Principal | Refusal;
 /** Which door is asking. `money` refuses on a key set it cannot confirm;
  *  `read` may verify against the last good one. */
 export type KeyUse = "money" | "read";
+
+/** The fix every token refusal names. */
+const MINT_HINT = "node pipeline/token.mts mint --name <caller> --scope money";
 
 const DETAIL: Record<Exclude<RefusalCode, "no-config" | "missing" | "wrong">, string> = {
   "verifier-no-config": `This route verifies Firebase ID tokens and no ${PROJECT_ID_VAR} is configured, so it is closed.`,
@@ -138,6 +162,15 @@ const DETAIL: Record<Exclude<RefusalCode, "no-config" | "missing" | "wrong">, st
   "bad-auth-time": "The ID token's auth_time is missing or in the future.",
   "no-sub": "The ID token names no user.",
   "jwks-unavailable": "Google's signing keys could not be fetched, so the ID token cannot be verified. Retry shortly.",
+  "token-unknown": `This token is not one this server minted. Mint one with \`${MINT_HINT}\` and send it as \`Authorization: Bearer $GRAVITONE_CLI_TOKEN\`.`,
+  "token-expired": `This token has expired. Mint a new one with \`${MINT_HINT}\` and replace GRAVITONE_CLI_TOKEN.`,
+  "token-revoked": `This token was revoked. Mint a new one with \`${MINT_HINT}\` and replace GRAVITONE_CLI_TOKEN.`,
+  "token-scope": `This token's scope is read, and this route spends. Mint a money token with \`${MINT_HINT}\`.`,
+  "token-in-url": "A CLI token is never accepted from a URL. Send it as `Authorization: Bearer $GRAVITONE_CLI_TOKEN`.",
+  "token-store-unavailable": "The token store could not be read, so no token is accepted. Retry shortly; `node pipeline/token.mts list` shows whether it opens.",
+  "shared-secret-cli":
+    `The shared access secret is accepted here only from the studio in a browser. Mint a token for this caller with \`${MINT_HINT}\` ` +
+    "and send it as `Authorization: Bearer $GRAVITONE_CLI_TOKEN`.",
 };
 
 export function isRefusal(v: unknown): v is Refusal {
@@ -145,14 +178,19 @@ export function isRefusal(v: unknown): v is Refusal {
 }
 
 export function refuse(code:Exclude<RefusalCode, "no-config" | "missing" | "wrong">): Refusal {
-  return { kind: "refused", code, status: code === "jwks-unavailable" ? 503 : 401, detail: DETAIL[code] };
+  const status = code === "jwks-unavailable" || code === "token-store-unavailable" ? 503 : code === "token-scope" ? 403 : 401;
+  return { kind: "refused", code, status, detail: DETAIL[code] };
 }
 
 /** The rate-bucket key a resolution earns, or null for "use today's key". Only
  *  a verified per-person identity gets one: the fixture, the local owner and
  *  the shared secret say nothing about which person is calling. */
 export function principalRateKey(r: Resolution): string | null {
-  return r.kind === "firebase" ? `uid:${r.uid}` : null;
+  if (r.kind === "firebase") return `uid:${r.uid}`;
+  // One minted caller is one bucket, from any address: a loop in one script
+  // meets its own limit, not every other caller's.
+  if (r.kind === "cli-token") return r.uid;
+  return null;
 }
 
 /* ── Where the token is presented ─────────────────────────────────────────── */
@@ -347,6 +385,72 @@ export async function resolveVerified(
     return refuse(opts.secretPresented ? "shared-secret-closed" : "missing-token");
   }
   return verifyIdToken(token, { use: opts.use, now: opts.now });
+}
+
+/* ── CLI tokens ───────────────────────────────────────────────────────────── */
+
+/** packages/kernel/src/token.ts TOKEN_PREFIX. Spelled here because this module
+ *  loads the kernel only when a token is presented (see resolveCliToken). */
+export const TOKEN_PREFIX = "gt_";
+
+/** A Bearer value that claims to be a token, or undefined. The prefix alone
+ *  routes a credential here: a token claim is judged as a token - a malformed
+ *  one is `token-unknown` - and never falls through to the shared secret, as a
+ *  bad ID token never does in verified mode. (A shared secret that itself began
+ *  with `gt_` would be read as a token claim and refused: choose another.) */
+export function presentedToken(req: Request): string | undefined {
+  const auth = req.headers.get("authorization");
+  const m = auth ? /^Bearer\s+(.+)$/i.exec(auth.trim()) : null;
+  const v = m?.[1]?.trim();
+  return v !== undefined && v.startsWith(TOKEN_PREFIX) ? v : undefined;
+}
+
+/**
+ * Resolve a presented CLI token against the process's one store. `use` is the
+ * door: a money door needs a money token (403 otherwise); a read door takes
+ * either.
+ *
+ * THE STORE IS THE PROCESS'S ONE HANDLE (@gt/kernel/process), the same one
+ * app/_server/kernel.ts hands to pages and routes, bound to the same universe
+ * (OUT_DIRNAME): a second connection would carry its own statement cache and
+ * WAL read mark, and a second copy of "where the store lives" could drift.
+ *
+ * FAILS CLOSED: a store that cannot be opened or read admits no token (503,
+ * a retry), and a row that will not parse is the same failure, never a token
+ * with no limits.
+ *
+ * A TOKEN IN A URL IS REFUSED. The byte-serving routes rebuild `?k=` into an
+ * Authorization header for the read door (lib/apiAuth.ts guardAccessOnly); an
+ * ID token there is an hour of exposure in a log, a CLI token is a month. The
+ * request's own URL still carries `k`, so the rebuilt header is recognisable.
+ */
+export async function resolveCliToken(req: Request, token: string, use: KeyUse, now: number = Date.now()): Promise<Resolution> {
+  if (new URL(req.url).searchParams.get("k") === token) return refuse("token-in-url");
+  // Loaded here, not at the top: lib/principal.ts is imported by every v1
+  // route and by CLIs run under tsx, none of which should load SQLite to judge
+  // a shared secret. (In the node lane it is also what keeps a `type: module`
+  // workspace file from being required by one path and imported by another.)
+  const { processKernel, storeLocation } = await import("@gt/kernel/process");
+  const { needsTouch, scopeAdmits, touchToken, verifyToken } = await import("@gt/kernel/token");
+  const k = processKernel(storeLocation(OUT_DIRNAME));
+  if (!k.ok) {
+    console.log(`[api] token store unavailable: ${k.error.message}`);
+    return refuse("token-store-unavailable");
+  }
+  const v = verifyToken(k.value.store, token, now);
+  if (!v.ok) {
+    console.log(`[api] token store unreadable: ${v.error.message}`);
+    return refuse("token-store-unavailable");
+  }
+  if (!v.value.ok) return refuse(v.value.why === "unknown" ? "token-unknown" : v.value.why === "expired" ? "token-expired" : "token-revoked");
+  const t = v.value.token;
+  if (!scopeAdmits(t.scope, use)) return refuse("token-scope");
+  if (needsTouch(t, now)) {
+    const touched = touchToken(k.value.store, t.id, now);
+    // Advisory: the decision is made. Reported, never a reason to refuse.
+    if (!touched.ok) console.log(`[api] token ${t.id} lastUsedAt not recorded: ${touched.error.message}`);
+  }
+  return { kind: "cli-token", uid: `token:${t.id}`, tokenId: t.id, name: t.name, scope: t.scope };
 }
 
 /** The fixed principals, built once. */

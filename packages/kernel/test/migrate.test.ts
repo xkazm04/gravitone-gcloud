@@ -43,6 +43,7 @@ describe("migrations", () => {
     expect(first.applied).toEqual([
       { module: "events", version: 1 },
       { module: "events", version: 2 },
+      { module: "events", version: 3 },
       { module: "probe", version: 1 },
       { module: "probe", version: 2 },
       { module: "probe", version: 3 },
@@ -181,7 +182,7 @@ describe("migrations", () => {
   it("an in-memory store migrates without a snapshot", () => {
     const s = must(openStore(":memory:"));
     const r = must(migrate(s, ALL));
-    expect(r.applied).toHaveLength(5);
+    expect(r.applied).toHaveLength(6);
     expect(r.snapshot).toBeUndefined();
     s.close();
   });

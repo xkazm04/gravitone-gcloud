@@ -37,8 +37,13 @@ import { cookieValue, SESSION_COOKIE, verifySession } from "./session.ts";
 // THE STATUS FOLLOWS THE CODE. No principal at all - no credential, an expired
 // one - is `unauthenticated` (401) with v1's refusal code in `detail`
 // ("missing-token", "expired"): the client signs in again. A principal that
-// may not do this (a cookie riding a cross-origin write) is `refused` (403):
-// signing in again would change nothing. A JWKS outage and the rate limit are
+// may not do this (a cookie riding a cross-origin write, a read-scope CLI token
+// on a money route) is `refused` (403): signing in again would change nothing.
+//
+// A CLI TOKEN (`Authorization: Bearer gt_...`, packages/kernel/src/token.ts)
+// is resolved by the same v1 resolver every v1 money route uses, so the two
+// doors cannot disagree about one: it counts as a presented credential, is
+// judged alone, never falls through to the cookie, and its id is its bucket. A JWKS outage and the rate limit are
 // `unavailable` (503) with Retry-After - the code a retry loop already
 // branches on. The taxonomy still has no 429; the limit is a retry, not a
 // distinct client branch.
@@ -78,6 +83,8 @@ const SAFE = new Set(["GET", "HEAD", "OPTIONS"]);
 
 function refusalError(r: Refusal): { error: AppError; headers: HeadersInit } {
   if (r.status === 503) return { error: new AppError("unavailable", r.detail, { detail: r.code }), headers: { "retry-after": "30" } };
+  // A read token on a money route: the caller IS known, and may not do this.
+  if (r.status === 403) return { error: new AppError("refused", r.detail, { detail: r.code }), headers: {} };
   return { error: new AppError("unauthenticated", r.detail, { detail: r.code }), headers: {} };
 }
 

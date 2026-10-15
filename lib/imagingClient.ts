@@ -90,6 +90,14 @@ export class ImagingRequestError extends Error {
  *
  * The token comes from lib/sessionToken.ts, fed by useAuth's onIdTokenChanged.
  * Empty when there is neither — the server then answers 401 by name.
+ *
+ * THE BUNDLE SECRET IS NOW THE BROWSER'S ALONE (Phase 2, 2026-10-15). Every
+ * non-browser caller presents its own CLI token (pipeline/token.mts), and a
+ * server set to SHARED_SECRET_CALLERS=browser accepts this secret on a money
+ * route only from a request the browser's fetch marks same-origin - which
+ * every call through here is. On a local-mode machine the browser has no other
+ * credential (no Firebase, so no ID token and no session cookie), so this
+ * path stays until the v1 screens retire (Phase 6).
  */
 export function accessHeader(): Record<string, string> {
   const secret = bundleSecret();

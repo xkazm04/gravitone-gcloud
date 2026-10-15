@@ -2,12 +2,14 @@ import { err, ok, type Result } from "@gt/domain/errors";
 import { calibrationMigrations } from "./calibration/series.ts";
 import { decisionMigrations } from "./decision/schema.ts";
 import { eventsMigrations } from "./events.ts";
+import { ingestMigrations } from "./ingest.ts";
 import { jobMigrations } from "./job.ts";
 import { leaseMigrations } from "./lease.ts";
 import { migrate, type MigrateOptions, type MigrateReport, type ModuleMigrations } from "./migrate.ts";
 import { receiptsMigrations } from "./pricing/receipts.ts";
 import { spendMigrations } from "./spend/ledger.ts";
 import { openStore, type Store, type StoreOptions } from "./store.ts";
+import { tokenMigrations } from "./token.ts";
 
 // THE KERNEL, OPENED - one store, every module's schema, in one call.
 //
@@ -35,12 +37,14 @@ type Entry = { readonly migrations: ModuleMigrations; readonly after: readonly s
 
 const DECLARED: readonly Entry[] = [
   { migrations: eventsMigrations, after: [] },
+  { migrations: ingestMigrations, after: ["events"] },
   { migrations: leaseMigrations, after: ["events"] },
   { migrations: spendMigrations, after: ["events"] },
   { migrations: jobMigrations, after: ["events", "lease", "spend"] },
   { migrations: receiptsMigrations, after: ["events"] },
   { migrations: decisionMigrations, after: ["events"] },
   { migrations: calibrationMigrations, after: ["events", "decision"] },
+  { migrations: tokenMigrations, after: ["events"] },
 ];
 
 /** The pure check: `entries` in an order where every module follows what it names. */

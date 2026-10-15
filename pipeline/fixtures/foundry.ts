@@ -997,6 +997,33 @@ function extractFailed(): ExtractManifest {
   return m;
 }
 
+/** Two extract runs IN FLIGHT, for the v1 projection (app/_server/v1/sources/
+ *  extract.ts) and Runs: one a driver is stepping right now (its lease stamp a
+ *  minute old, inside lib/foundry/extract/lease.ts LEASE_TTL_MS), one whose
+ *  driver went quiet mid-unit twenty minutes ago - EXTRACT_LIVE by status, but
+ *  nobody holds it, so it is not running and a unit may have spent. */
+function extractInFlight(): ExtractManifest[] {
+  const S = (name: string, depiction: string): SrcSpec => ({ name, aspect: "16:9", depiction });
+  const mk = (id: string, slug: string, createdAgo: number, status: ExtractManifest["status"], leaseAgo: number, done: number): ExtractManifest => {
+    const m = buildExtract({
+      id, slug, createdAgo, status, options: OPTS,
+      sources: [S(`${slug}-01.png`, "A crew crossing a rail yard at dusk, wide shot."), S(`${slug}-02.png`, "A figure at a signal box window, medium shot.")],
+      styles: [{ spec: EMBER, members: ["s01", "s02"], replicas: [{ source: "s01", misses: [3], end: "round-cap" }], transfers: [] }],
+    });
+    m.progress = { stage: status, done, total: 9 };
+    m.lease = { owner: "app", at: at(leaseAgo) };
+    // A run in flight has not reached the engine's last lines yet.
+    m.log = m.log.slice(0, 3);
+    writeJson(outFile("extract", m.id, "run.json"), m);
+    writeJson(outFile("extract", m.id, "verdicts.json"), {});
+    return m;
+  };
+  return [
+    mk(`${dayOf(9 * MIN)}-railyard-dusk`, "railyard-dusk", 9 * MIN, "replicating", 1 * MIN, 4),
+    mk(`${dayOf(50 * MIN)}-signal-box`, "signal-box", 50 * MIN, "transferring", 20 * MIN, 7),
+  ];
+}
+
 /* ═══════════════════════════ DOJO CYCLES ══════════════════════════════════ */
 
 const BASE_PAL = ["#2b3a52", "#4a5a72", "#6b7a8f", "#1d2a3c"];
@@ -1196,6 +1223,15 @@ function trainingCycles(): { ledger: TrainingLedgerRow[]; commit: { id: string; 
   writeJson(outFile("training", d3.id, "verdicts.json"), dverd);
   writeBytes(outFile("training", d3.id, "findings.md"), `# Dojo findings — ${d3.id}\n\nCommitted ${commitAt}. 3 decided by hand.\n\n_Fixture data._\n`);
 
+  // 5 · in flight: the loop is generating its pairs (DOJO_LIVE in app/foundry/DojoView.tsx).
+  const d5 = buildCycle({
+    id: `${dayOf(40 * MIN)}-held-final-beat`, agoMs: 40 * MIN, dimension: "media-generation", subject: "cinematic-language", status: "generating", media: "image",
+    imps: [{ ...IMP_HEAD, id: "imp-1", pairs: IMP_HEAD.pairs.slice(0, 1), thumb: 0 }], files: true, costUsd: 0.04,
+    log: ["planned 1 improvement", "generating seed-matched pairs on the local stack"],
+  });
+  writeJson(outFile("training", d5.id, "cycle.json"), d5);
+  writeJson(outFile("training", d5.id, "verdicts.json"), {});
+
   // 4 · failed: the judge never came back.
   const d4 = buildCycle({
     id: `${dayOf(4 * DAY)}-lens-and-focus`, agoMs: 4 * DAY, dimension: "media-generation", subject: "frame-direction", status: "failed", media: "image",
@@ -1278,10 +1314,10 @@ export function generate(): string {
   const ext = extractCommitted();
   const forge = committedForgeRun();
   const runs = [forge.manifest, doneFullyGraded(), doneWithVerdicts(), incompleteRun(), failedRun(), generatingRun()];
-  const extracts = [ext.m, extractDone(), extractFailed()];
+  const extracts = [ext.m, extractDone(), extractFailed(), ...extractInFlight()];
   const dojo = trainingCycles();
   const cat = catalogue(forge, ext, dojo);
 
   const nCand = runs.reduce((n, r) => n + r.candidates.length, 0);
-  return `${runs.length} forge runs (${nCand} candidates) · ${extracts.length} extract runs · 4 Dojo cycles · catalogue ${cat.styles} styles, ${cat.ledger}+${dojo.ledger.length} ledger rows, rev ${cat.rev}`;
+  return `${runs.length} forge runs (${nCand} candidates) · ${extracts.length} extract runs · 5 Dojo cycles · catalogue ${cat.styles} styles, ${cat.ledger}+${dojo.ledger.length} ledger rows, rev ${cat.rev}`;
 }

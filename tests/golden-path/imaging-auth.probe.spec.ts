@@ -12,7 +12,8 @@
 //   · a valid secret passes the guard (the route then 4xx's on the bad body,
 //     never 401 — proving the guard let it through WITHOUT spending);
 //   · the rate limiter refuses past its capacity with 429.
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 
 import { test, expect } from "@playwright/test";
@@ -20,6 +21,9 @@ import { test, expect } from "@playwright/test";
 import { keepEnv, stripComments } from "./_helpers";
 import {
   checkAccess,
+  guardAccessOnly,
+  resolvePrincipal,
+  SHARED_SECRET_CALLERS_VAR,
   guardRequest,
   rateLimit,
   rateStats,
@@ -842,4 +846,134 @@ test("route video/clips GET: 401 without auth, 200 with it", async () => {
     new Request("http://localhost/api/video/clips", { headers: { authorization: `Bearer ${SECRET}`, "x-forwarded-for": "172.16.2.2" } }),
   );
   expect(authed.status).toBe(200);
+});
+
+// ── CLI tokens (Phase 2, lot 17): one credential per caller, in place of the secret ──
+//
+// The v1 door (resolvePrincipal, so every guardRequest/guardAccessOnly route)
+// against a REAL kernel store in a temp file, opened through the app's own
+// accessor (app/_server/kernel.ts), so the token minted here is the token the
+// door reads. The shared secret stays configured throughout: a token must be
+// judged as a token even on a server where the secret would have passed.
+
+// LOADED THE WAY THE DOOR LOADS THEM. lib/principal.ts reaches the kernel by a
+// dynamic import (only when a token is presented), so this file does too: in
+// this lane a `type: module` workspace file required by one path and imported
+// by the other is evaluated twice, once in the wrong module system.
+type TokenMod = typeof import("@gt/kernel/token");
+type KernelMod = typeof import("@/app/_server/kernel");
+let tk: TokenMod;
+let km: KernelMod;
+const tokenDir = mkdtempSync(join(tmpdir(), "gt-l17-auth-"));
+const OPERATOR = { kind: "operator", id: "probe" } as const;
+keepEnv(["GRAVITONE_STORE_PATH", SHARED_SECRET_CALLERS_VAR, RATE_CAPACITY_VAR, "PRINCIPAL_MODE"]);
+test.beforeAll(async () => {
+  tk = await import("@gt/kernel/token");
+  km = await import("../../app/_server/kernel.ts");
+});
+test.afterAll(() => {
+  km?.closeKernel();
+  rmSync(tokenDir, { recursive: true, force: true });
+});
+
+function store() {
+  process.env.GRAVITONE_STORE_PATH = join(tokenDir, "auth.sqlite");
+  const k = km.kernel();
+  if (!k.ok) throw new Error(k.error.message);
+  return k.value.store;
+}
+function mint(scope: "money" | "read" = "money"): { id: string; token: string } {
+  const r = store().tx((t) => tk.mintToken(t, { name: `probe-${scope}`, scope }, OPERATOR));
+  if (!r.ok) throw new Error(r.error.message);
+  return { id: r.value.record.id, token: r.value.token };
+}
+const [, GEN_PATH, generate] = ROUTES[0]!;
+let tokenIp = 0;
+const nextIp = () => `172.20.0.${++tokenIp}`;
+const bodyOf = async (r: Response | null) => (r === null ? null : ((await r.json()) as { code?: string; refusal?: string; detail?: string }));
+
+test("token: a minted money token passes a money route (4xx on the bad body, never 401/403)", async () => {
+  const { token } = mint("money");
+  const res = await generate(req(GEN_PATH, { ip: nextIp(), bearer: token, body: {} }));
+  expect(res.status).toBeGreaterThanOrEqual(400);
+  expect(res.status).toBeLessThan(500);
+  expect([401, 403]).not.toContain(res.status);
+  const who = await resolvePrincipal(req(GEN_PATH, { ip: nextIp(), bearer: token }), { use: "money" });
+  expect(who).toMatchObject({ kind: "cli-token", name: "probe-money", scope: "money" });
+});
+
+test("token: a read token is 403 on a money route and admitted on a read route", async () => {
+  const { token } = mint("read");
+  const money = await guardRequest(req(GEN_PATH, { ip: nextIp(), bearer: token }));
+  expect(money?.status).toBe(403);
+  expect(await bodyOf(money)).toMatchObject({ code: "forbidden", refusal: "token-scope" });
+  expect(await guardAccessOnly(req("/api/foundry/runs", { ip: nextIp(), bearer: token }))).toBeNull();
+});
+
+test("token: revoked, expired and unknown are 401, each naming the fix", async () => {
+  const { id, token } = mint("money");
+  const unknown = token.replace(/_[^_]+$/, `_${"A".repeat(43)}`);
+  const u = await guardRequest(req(GEN_PATH, { ip: nextIp(), bearer: unknown }));
+  expect(u?.status).toBe(401);
+  expect(await bodyOf(u)).toMatchObject({ refusal: "token-unknown", detail: expect.stringContaining("pipeline/token.mts mint") });
+  const later = Date.now() + 31 * 24 * 3_600_000;
+  expect(await resolvePrincipal(req(GEN_PATH, { ip: nextIp(), bearer: token }), { use: "money", now: later })).toMatchObject({ status: 401, code: "token-expired" });
+  const r = store().tx((t) => tk.revokeToken(t, id, OPERATOR));
+  expect(r.ok).toBe(true);
+  const gone = await guardRequest(req(GEN_PATH, { ip: nextIp(), bearer: token }));
+  expect(gone?.status).toBe(401);
+  expect(await bodyOf(gone)).toMatchObject({ refusal: "token-revoked" });
+});
+
+test("token: judged in verified mode too, and a bad one never falls through to the secret", async () => {
+  const { token } = mint("money");
+  process.env.PRINCIPAL_MODE = "verified";
+  expect(await resolvePrincipal(req(GEN_PATH, { ip: nextIp(), bearer: token }), { use: "money" })).toMatchObject({ kind: "cli-token" });
+  delete process.env.PRINCIPAL_MODE;
+  // Legacy, secret configured, and the bad token is still refused for itself.
+  const bad = `gt_ffffffffffff_${"B".repeat(43)}`;
+  const r = new Request(`http://localhost${GEN_PATH}`, { method: "POST", headers: { authorization: `Bearer ${bad}`, "x-imaging-access-secret": SECRET, "x-forwarded-for": nextIp() } });
+  expect((await guardRequest(r))?.status).toBe(401);
+});
+
+test("token: the money bucket keys on the token id, whatever address it arrives from", async () => {
+  const { token } = mint("money");
+  process.env[RATE_CAPACITY_VAR] = "2";
+  const statuses: number[] = [];
+  for (let i = 0; i < 3; i++) statuses.push((await guardRequest(req(GEN_PATH, { ip: nextIp(), bearer: token })))?.status ?? 200);
+  expect(statuses).toEqual([200, 200, 429]);
+});
+
+test("token: never accepted from a URL (the byte-serves' ?k= rebuild is recognised)", async () => {
+  const { token } = mint("money");
+  const viaK = new Request(`http://localhost/api/foundry/file?k=${encodeURIComponent(token)}`, { headers: { authorization: `Bearer ${token}` } });
+  const res = await guardAccessOnly(viaK);
+  expect(res?.status).toBe(401);
+  expect(await bodyOf(res)).toMatchObject({ refusal: "token-in-url" });
+});
+
+test("token: no store, no token - fails closed with 503, never open", async () => {
+  const { token } = mint("money");
+  const blocker = join(tokenDir, "not-a-dir");
+  writeFileSync(blocker, "x");
+  process.env.GRAVITONE_STORE_PATH = join(blocker, "store.sqlite");
+  const res = await guardRequest(req(GEN_PATH, { ip: nextIp(), bearer: token }));
+  expect(res?.status).toBe(503);
+  expect(await bodyOf(res)).toMatchObject({ refusal: "token-store-unavailable" });
+});
+
+test("shared secret: SHARED_SECRET_CALLERS=browser refuses it on a money route from a CLI, admits a browser's fetch", async () => {
+  // Unset: today's gate, unchanged.
+  expect(await guardRequest(req(GEN_PATH, { ip: nextIp(), bearer: SECRET }))).toBeNull();
+  process.env[SHARED_SECRET_CALLERS_VAR] = "browser";
+  const cli = await guardRequest(req(GEN_PATH, { ip: nextIp(), bearer: SECRET }));
+  expect(cli?.status).toBe(401);
+  expect(await bodyOf(cli)).toMatchObject({ refusal: "shared-secret-cli", detail: expect.stringContaining("GRAVITONE_CLI_TOKEN") });
+  const browser = new Request(`http://localhost${GEN_PATH}`, { method: "POST", headers: { authorization: `Bearer ${SECRET}`, "sec-fetch-site": "same-origin", "x-forwarded-for": nextIp() } });
+  expect(await guardRequest(browser)).toBeNull();
+  // A read route keeps the secret: it spends nothing.
+  expect(await guardAccessOnly(req("/api/foundry/runs", { ip: nextIp(), bearer: SECRET }))).toBeNull();
+  // A typo is the closed posture, not the open one.
+  process.env[SHARED_SECRET_CALLERS_VAR] = "browsr";
+  expect((await guardRequest(req(GEN_PATH, { ip: nextIp(), bearer: SECRET })))?.status).toBe(401);
 });

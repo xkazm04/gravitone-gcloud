@@ -28,15 +28,23 @@ import type { Reader, Row, Store, Tx } from "./store.ts";
 // reports a ledger that no longer reaches it.
 //
 // Covered fields (the hash's input, fixed): seq, at, actor{kind,id}, type,
-// subject{kind,id}, lane, cost{usd,src}, data, prevHash. `lane` and `cost` are
-// omitted from the input when absent (NULL in their columns), which is the
-// record model's "absent is omitted" rule, and is deterministic either way.
+// subject{kind,id}, lane, cost{usd,src}, data, prevHash, and - since events v3
+// - occurredAt, atSrc, key. Every optional field is omitted from the input when
+// absent (NULL in its column), the record model's "absent is omitted" rule: a
+// row written before v3 has none of the three, so its canonical body, and so
+// its hash, is byte-for-byte what it was (test/events.ingest.test.ts verifies a
+// chain written by the v2 schema after the upgrade).
 //
-// ONE CLOCK. `at` is when the ledger recorded the act (the transaction's
-// instant; `seq` breaks ties). A fact learned after it happened - an import, a
-// backfill - carries its own effective time inside `data`; a second indexed
-// clock is added when the first such writer exists (audit-logging:
-// two-clock-records), not before.
+// TWO CLOCKS, since the first writer that needed one (audit-logging:
+// two-clock-records; Phase 2's v1 projection). `at` is when the ledger
+// recorded the act - the transaction's instant, monotonic with `seq`. A fact
+// projected from a v1 store happened earlier and says so: `occurredAt`, with
+// `atSrc` naming whether that instant was written down at the time
+// (`recorded`) or inferred at sync (`derived`). The Ledger orders and windows
+// by `t = coalesce(occurred_at, at)`, a generated, indexed column, so a
+// backfill lands in its own week rather than in the week it was imported.
+// The chain stays in `seq` order: `t` is how a reader looks, never how the
+// hash links.
 //
 // APPEND-ONLY is enforced by the schema, not by politeness: UPDATE and DELETE
 // on `events` raise. Retention, when it comes, trims at a checkpoint boundary
@@ -89,10 +97,49 @@ CREATE INDEX events_lane ON events (lane) WHERE lane IS NOT NULL;
 CREATE INDEX events_lane_group ON events (lane_group) WHERE lane_group IS NOT NULL;
 CREATE INDEX events_at ON events (at);`,
     },
+    {
+      // THE PROJECTION'S COLUMNS (Phase 2). ADD COLUMN, never a rebuild: the
+      // append-only triggers forbid the UPDATE a copy-and-swap would need, and
+      // no existing row changes - every new column is NULL on it, which is
+      // exactly "absent" to the hash.
+      //   - `key` is UNIQUE among the rows that have one, so idempotence is the
+      //     store's, not the adapter's memory: two processes projecting the same
+      //     v1 record race to the same key and the second INSERT is refused
+      //     under the write lock (appendOnce reads first; the index is the
+      //     backstop that makes a raced or forgetful writer fail loudly).
+      //   - `t` replaces `at` as the window column: a projected fact is filtered
+      //     by when it happened. For every row with no `occurred_at`, t = at, so
+      //     every pre-v3 query answers as it did.
+      //   - `source` (the key's first segment), `project_id` (data.projectId)
+      //     and `run_id` (data.runId) are the reconcile probe's and the Ledger's
+      //     `project:` / `run:` tokens' lookups - a run's verdicts and grades
+      //     have the candidate as their subject, so "everything about run r" is
+      //     data.runId, not subject_id. Generated, so no writer can let them
+      //     disagree with the row.
+      //     `json_valid` first: the index evaluates the column on every write,
+      //     and a row whose data was damaged by hand must still be WRITABLE so
+      //     that `verify` can report it, not refused at the damage itself.
+      version: 3,
+      sql: `
+ALTER TABLE events ADD COLUMN occurred_at TEXT;
+ALTER TABLE events ADD COLUMN at_src TEXT CHECK (at_src IN ('recorded', 'derived'));
+ALTER TABLE events ADD COLUMN key TEXT;
+ALTER TABLE events ADD COLUMN t TEXT GENERATED ALWAYS AS (coalesce(occurred_at, at)) VIRTUAL;
+ALTER TABLE events ADD COLUMN source TEXT GENERATED ALWAYS AS (CASE WHEN instr(key, ':') > 0 THEN substr(key, 1, instr(key, ':') - 1) END) VIRTUAL;
+ALTER TABLE events ADD COLUMN project_id TEXT GENERATED ALWAYS AS (CASE WHEN json_valid(data) THEN json_extract(data, '$.projectId') END) VIRTUAL;
+CREATE UNIQUE INDEX events_key ON events (key) WHERE key IS NOT NULL;
+DROP INDEX events_at;
+CREATE INDEX events_t ON events (t);
+CREATE INDEX events_source ON events (source) WHERE source IS NOT NULL;
+CREATE INDEX events_project ON events (project_id) WHERE project_id IS NOT NULL;
+ALTER TABLE events ADD COLUMN run_id TEXT GENERATED ALWAYS AS (CASE WHEN json_valid(data) THEN json_extract(data, '$.runId') END) VIRTUAL;
+CREATE INDEX events_run ON events (run_id) WHERE run_id IS NOT NULL;`,
+    },
   ],
 };
 
-export const EVENT_COLUMNS = "seq, at, actor_kind, actor_id, type, subject_kind, subject_id, lane, cost_usd, cost_src, data, prev_hash, hash";
+export const EVENT_COLUMNS =
+  "seq, at, actor_kind, actor_id, type, subject_kind, subject_id, lane, cost_usd, cost_src, data, prev_hash, hash, occurred_at, at_src, key";
 
 /** The hash input: the row without its hash, absent keys omitted. */
 function bodyOf(e: Omit<Event, "hash">): Record<string, unknown> {
@@ -107,6 +154,9 @@ function bodyOf(e: Omit<Event, "hash">): Record<string, unknown> {
   };
   if (e.lane !== undefined) body["lane"] = e.lane;
   if (e.cost !== undefined) body["cost"] = { usd: e.cost.usd, src: e.cost.src };
+  if (e.occurredAt !== undefined) body["occurredAt"] = e.occurredAt;
+  if (e.atSrc !== undefined) body["atSrc"] = e.atSrc;
+  if (e.key !== undefined) body["key"] = e.key;
   return body;
 }
 
@@ -133,7 +183,7 @@ export function append(t: Tx, input: EventInput): Event {
   const draft: Omit<Event, "hash"> = { ...v, seq: prev.seq + 1, at: t.at, prevHash: prev.hash };
   const hash = chainHash(prev.hash, bodyOf(draft));
   t.run(
-    `INSERT INTO events (${EVENT_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO events (${EVENT_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     draft.seq,
     draft.at,
     v.actor.kind,
@@ -147,6 +197,9 @@ export function append(t: Tx, input: EventInput): Event {
     canonical(v.data),
     draft.prevHash,
     hash,
+    v.occurredAt ?? null,
+    v.atSrc ?? null,
+    v.key ?? null,
   );
   return { ...draft, hash };
 }
@@ -170,6 +223,10 @@ export function rowToEvent(row: Row): Result<Event> {
   };
   if (row["lane"] !== null) shaped["lane"] = row["lane"];
   if (row["cost_usd"] !== null) shaped["cost"] = { usd: row["cost_usd"], src: row["cost_src"] };
+  // `?? null`: a row read by an older SELECT has no such keys at all.
+  if ((row["occurred_at"] ?? null) !== null) shaped["occurredAt"] = row["occurred_at"];
+  if ((row["at_src"] ?? null) !== null) shaped["atSrc"] = row["at_src"];
+  if ((row["key"] ?? null) !== null) shaped["key"] = row["key"];
   return parseAt("event row", eventSchema, shaped);
 }
 

@@ -54,6 +54,9 @@ appended secret does not land in a commit. Confirm that is still true before wri
 - It does **not** open the money routes. `IMAGING_ACCESS_SECRET` (+ its `NEXT_PUBLIC_` twin) is
   still required by `lib/apiAuth.ts`, which fails closed. Being local changes *who you are*, not
   *what spending requires*.
+- A script, skill or curl line does **not** use that secret: it gets its own token,
+  `node pipeline/token.mts mint --name <caller> --scope money` (printed once; the operator puts it in
+  that caller's `GRAVITONE_CLI_TOKEN`). Never write a token into `.env*` on the operator's behalf.
 - Anything that generates — a plate, a cue, a clip — still needs its vendor key. Local mode gets you
   the whole studio; it does not get you a render.
 
@@ -99,7 +102,8 @@ One account each. Every one of them is optional; none is needed to see the studi
 
 | Variable | Account | Page | Notes worth repeating |
 |---|---|---|---|
-| `IMAGING_ACCESS_SECRET` + `NEXT_PUBLIC_IMAGING_ACCESS_SECRET` | **none** | — | **The R4 exception.** Locally chosen, not vendor-issued. You may offer to generate it — and you must write **both** halves in the same edit, because the gate fails closed and the browser can only present the secret that shipped in its bundle. Gates imaging, music, frames, recalibrate and foundry. |
+| `IMAGING_ACCESS_SECRET` + `NEXT_PUBLIC_IMAGING_ACCESS_SECRET` | **none** | — | **The R4 exception.** Locally chosen, not vendor-issued. You may offer to generate it — and you must write **both** halves in the same edit, because the gate fails closed and the browser can only present the secret that shipped in its bundle. Gates imaging, music, frames, recalibrate and foundry. It is the **browser's** credential; a script presents its own token (next row). |
+| `GRAVITONE_CLI_TOKEN` | **none** | — | A per-caller token, minted by the operator with `node pipeline/token.mts mint --name <caller> --scope money\|read` and shown once. Lives in the CALLER's environment (a shell, a skill's env), never in the server's. `SHARED_SECRET_CALLERS=browser` on the server then refuses the shared secret to anything that is not the studio in a browser. |
 | `GOOGLE_AI_API_KEY` | Google AI Studio | see `.env.example`'s own comment | One key, two seams: the text engine's cloud rung *and* all three imaging capabilities. Both `AIza…` and `AQ.…` shapes work. |
 | `LEONARDO_API_KEY` | Leonardo | linked in `.env.example`'s Leonardo comment | Dev **re-route target** for generate, not the default — it reads no style references. |
 | `QWEN_API_KEY` | Alibaba DashScope | see `.env.example` | Recognition in dev. `QWEN_BASE_URL` only if the account lives on the Beijing host. |

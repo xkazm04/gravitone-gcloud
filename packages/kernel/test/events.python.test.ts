@@ -70,6 +70,23 @@ describe.skipIf(python === undefined)("events verified by Python", () => {
     expect(out.status).toBe(0);
   });
 
+  it("re-derives the projection's fields (occurredAt, atSrc, key) and sees an edit to them", () => {
+    const s = tpl.fresh();
+    must(s.tx((t) => {
+      append(t, tricky);
+      append(t, { ...tricky, occurredAt: "2026-08-26T12:00:00.000Z", atSrc: "recorded", key: "forge:2026-08-26-sweep-01:run.start" });
+      append(t, { ...tricky, occurredAt: "2026-10-15T09:30:00.123Z", atSrc: "derived", key: "forge:2026-08-26-sweep-01:status.done" });
+    }));
+    const head = must(chainHead(s));
+    expect(runVerifier(s.location).report).toEqual({ state: "intact", count: 3, head });
+    must(s.tx((t) => t.exec("DROP TRIGGER events_no_update; UPDATE events SET at_src = 'recorded' WHERE seq = 3;")));
+    const node = must(verify(s));
+    s.close();
+    const out = runVerifier(s.location);
+    expect(node).toMatchObject({ state: "tampered", seq: 3 });
+    expect(out.report).toEqual(node);
+  });
+
   it("finds the same broken link Node finds", () => {
     const s = tpl.fresh();
     must(s.tx((t) => {
