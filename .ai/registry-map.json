@@ -1572,7 +1572,11 @@
           "revision": 2,
           "changedAt": "2026-10-07",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "app/_phases/cut/CutTimeline.tsx:79 Music-video projects export an envelope-driven visualizer, so the standard's exceptions for coverage and generated segments apply.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:2d32bc9195341316",
+          "evaluatedRevision": 2
         },
         {
           "subject": "voice-io",
@@ -2399,7 +2403,11 @@
           "revision": 2,
           "changedAt": "2026-10-07",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "app/_phases/frames/music-video/MusicVideoFrames.tsx:200 Frames builds a deterministic poster visualizer from the existing audio envelope and applies whole-track flash limiting before preview rendering.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:2d32bc9195341316",
+          "evaluatedRevision": 2
         },
         {
           "subject": "production-pipeline-phasing",

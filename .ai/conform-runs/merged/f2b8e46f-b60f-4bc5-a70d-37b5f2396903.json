@@ -1,0 +1,111 @@
+{
+ "schema": "conform-run/1",
+ "worker": "f2b8e46f-b60f-4bc5-a70d-37b5f2396903",
+ "subject": "music-video-production",
+ "evaluatedAt": "2026-10-15T23:53:57.104801+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "cut-phase",
+   "subject": "music-video-production",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "app/_phases/cut/CutTimeline.tsx:79 Music-video projects export an envelope-driven visualizer, so the standard's exceptions for coverage and generated segments apply.",
+   "techniques": [
+    {
+     "technique": "cut-rate-follows-the-section",
+     "verdict": "conformant",
+     "evidence": "lib/musicVideoExport.ts:296 The export implementation preprocesses the whole low-band envelope through the flash limiter; composition defaults set three threshold crossings per second."
+    },
+    {
+     "technique": "form-follows-what-the-track-gives",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/cut/music-video/MusicVideoExport.tsx:83 Cut exports an already established poster composition and offers resolution selection; it does not choose a treatment or performance form."
+    },
+    {
+     "technique": "segment-on-the-master-clock",
+     "verdict": "not-applicable",
+     "evidence": "lib/musicVideoExport.ts:509 Export renders the composition frame by frame for the envelope's frame count, invoking the explicit exception for visualizers without generated segments."
+    },
+    {
+     "technique": "track-map-before-treatment",
+     "verdict": "conformant",
+     "evidence": "app/_phases/cut/music-video/useMusicVideoExport.ts:127 Cut passes the existing baked analysis to export, which reads its energy arrays, frame count and frame rate instead of deriving another timing authority; the visualizer needs only the energy layer."
+    }
+   ]
+  },
+  {
+   "context": "frames-composition-step",
+   "subject": "music-video-production",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "app/_phases/frames/music-video/MusicVideoFrames.tsx:200 Frames builds a deterministic poster visualizer from the existing audio envelope and applies whole-track flash limiting before preview rendering.",
+   "techniques": [
+    {
+     "technique": "coverage-across-the-phrase",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/frames/FramesStep.tsx:61 The music-video branch uses one poster rather than performance setups, matching the visualizer exception."
+    },
+    {
+     "technique": "cut-rate-follows-the-section",
+     "verdict": "conformant",
+     "evidence": "app/_phases/frames/music-video/EffectsStudio.tsx:149 Preview preprocesses the entire brightness-driving band with the shared limiter, whose composition default is three threshold crossings per second; this form has no editorial cuts."
+    },
+    {
+     "technique": "form-follows-what-the-track-gives",
+     "verdict": "conformant",
+     "evidence": "app/_phases/frames/music-video/MusicVideoFrames.tsx:200 The established visualizer form animates a poster from audio energy without claiming sung or instrumental performance sync, and its renderer derives animation from frame-indexed inputs."
+    },
+    {
+     "technique": "segment-on-the-master-clock",
+     "verdict": "not-applicable",
+     "evidence": "app/_phases/frames/music-video/compositor.ts:580 Each frame redraws the same poster with computed effects, so generator clip caps, phrase seams and segment handles do not arise."
+    },
+    {
+     "technique": "track-map-before-treatment",
+     "verdict": "conformant",
+     "evidence": "app/_phases/frames/music-video/MusicVideoFrames.tsx:59 Frames reads Research's previously baked envelope and blocks the composition surface when it is missing; the standard explicitly permits energy-only analysis for this visualizer."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-15T23:53:57.104801+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "music-video-production"
+   ],
+   "techniques": [
+    "cut-rate-follows-the-section",
+    "form-follows-what-the-track-gives",
+    "segment-on-the-master-clock",
+    "track-map-before-treatment"
+   ],
+   "deviations": 0,
+   "context": "cut-phase",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-15T23:53:57.104801+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "music-video-production"
+   ],
+   "techniques": [
+    "coverage-across-the-phrase",
+    "cut-rate-follows-the-section",
+    "form-follows-what-the-track-gives",
+    "segment-on-the-master-clock",
+    "track-map-before-treatment"
+   ],
+   "deviations": 0,
+   "context": "frames-composition-step",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
