@@ -2829,7 +2829,11 @@
           "revision": 15,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/imaging/router.ts:290 Unpriced recognition calls release their reservations without accumulating spend, allowing repeated metered recognition calls through the window ceiling.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:7247db31eb8f3dce",
+          "evaluatedRevision": 15
         },
         {
           "subject": "generative-provider-routing",
@@ -5439,7 +5443,11 @@
           "revision": 15,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/text/spend.ts:106 Failed provider calls without a vendor-reported cost leave no ledger row, hiding incurred but unmeasured spend.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:7247db31eb8f3dce",
+          "evaluatedRevision": 15
         },
         {
           "subject": "quality-gates",

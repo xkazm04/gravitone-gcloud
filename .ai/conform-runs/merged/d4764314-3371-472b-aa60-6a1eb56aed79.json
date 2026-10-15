@@ -1,0 +1,207 @@
+{
+ "schema": "conform-run/1",
+ "worker": "d4764314-3371-472b-aa60-6a1eb56aed79",
+ "subject": "cost-metering",
+ "evaluatedAt": "2026-10-15T03:39:49.737742+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "imaging-providers",
+   "subject": "cost-metering",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/imaging/router.ts:290 Unpriced recognition calls release their reservations without accumulating spend, allowing repeated metered recognition calls through the window ceiling.",
+   "techniques": [
+    {
+     "technique": "budget-enforcement",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/router.ts:290 Recognition has a pre-call hold, but unpriced settlements book nothing; sequential calls therefore do not exhaust the ceiling."
+    },
+    {
+     "technique": "engagement-paced-cadence",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/handlers.ts:28 These are request-driven operations; searches and provider reads found bounded job polling, rather than a continuously self-driven agent loop."
+    },
+    {
+     "technique": "housekeeping-calls-obey-the-ceiling",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/types.ts:207 The exposed imaging operations have no budgeted conversation history or application compaction/summarization path."
+    },
+    {
+     "technique": "preflight-estimation",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/budget.ts:369 An unavailable estimate becomes zero for admission, and the pipeline does not retain per-call estimates alongside actuals to monitor calibration."
+    },
+    {
+     "technique": "price-tables",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/pricing.ts:239 The unknown-model branch supplies no conservative default price or counted default-priced row, contrary to the standard."
+    },
+    {
+     "technique": "reversible-debit-and-settle",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/budget.ts:397 The mechanism reserves estimated vendor spend and releases holds; it does not debit a customer's prepaid balance."
+    },
+    {
+     "technique": "spend-attribution",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/budget.ts:487 Failed bookings omit model, while the model rollup skips missing values without an unknown-model bucket; its slices can sum to less than total spend."
+    },
+    {
+     "technique": "spend-observability",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/budget.ts:122 Spend records retain the binary outcome but no failure reason, preventing the required failed-spend breakdown by reason."
+    },
+    {
+     "technique": "time-ceilings-count-working-time",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/providers/google.ts:249 The inspected time limits are individual request deadlines, rather than working-time ceilings over interactive agent sessions."
+    },
+    {
+     "technique": "unit-classes-are-open",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/providers/google.ts:80 Google's usage block is declared but never extracted or preserved, so reported unit classes receive neither explicit nesting nor counted residual treatment."
+    },
+    {
+     "technique": "usage-ledgers",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/budget.ts:436 An unpriced provider call gets a counter instead of a durable per-call row carrying unknown cost and usage."
+    },
+    {
+     "technique": "whole-prompt-denominator",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/providers/qwen.ts:109 This layer does not currently calculate token bills or cache ratios from provider usage fields; failure to extract those fields is covered by unit-classes-are-open."
+    }
+   ]
+  },
+  {
+   "context": "text-providers",
+   "subject": "cost-metering",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/text/spend.ts:106 Failed provider calls without a vendor-reported cost leave no ledger row, hiding incurred but unmeasured spend.",
+   "techniques": [
+    {
+     "technique": "budget-enforcement",
+     "verdict": "deviation",
+     "evidence": "lib/text/router.ts:407 Dispatch has no spend gate; text spending is explicitly count-only, which does not realize the standard's budget enforcement."
+    },
+    {
+     "technique": "engagement-paced-cadence",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/router.ts:287 Reasoning and retrieval run in response to requests; searches found no spontaneous wake schedule in this provider layer."
+    },
+    {
+     "technique": "housekeeping-calls-obey-the-ceiling",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/providers/google.ts:292 The application sends constructed request prompts and implements no budgeted-session compaction or summarization path."
+    },
+    {
+     "technique": "one-pot-across-delegation",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/providers/claudeCliRetrieve.ts:61 Reasoning disables tools and the retrieval tool fence permits only search and fetch; this layer implements no sub-agent delegation."
+    },
+    {
+     "technique": "preflight-estimation",
+     "verdict": "deviation",
+     "evidence": "lib/text/stats.ts:82 The preview uses historical successful-call median cost without input/output assumptions or a stored estimate-versus-actual calibration loop."
+    },
+    {
+     "technique": "price-tables",
+     "verdict": "deviation",
+     "evidence": "lib/text/pricing.ts:154 Unknown models receive no conservative default rate, and the in-service Google rows also lack rates."
+    },
+    {
+     "technique": "reversible-debit-and-settle",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/router.ts:319 Text spend is booked after provider completion; there is no upfront customer debit to reverse."
+    },
+    {
+     "technique": "spend-attribution",
+     "verdict": "deviation",
+     "evidence": "lib/text/spend.ts:85 Booking discards the CLI's available session identity and carries no execution or actor identity, preventing per-run spend attribution."
+    },
+    {
+     "technique": "spend-observability",
+     "verdict": "deviation",
+     "evidence": "lib/text/spend.ts:41 The spend schema stores no failure reason, so outcome aggregates cannot supply the required failed-spend breakdown by reason."
+    },
+    {
+     "technique": "time-ceilings-count-working-time",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/http.ts:62 This timer bounds an individual HTTP request; the layer has no interactive-session working-time budget."
+    },
+    {
+     "technique": "unit-classes-are-open",
+     "verdict": "deviation",
+     "evidence": "lib/text/providers/google.ts:361 The extractor explicitly handles known output classes but has no residual capture or counter for additional reported usage classes."
+    },
+    {
+     "technique": "usage-ledgers",
+     "verdict": "deviation",
+     "evidence": "lib/text/spend.ts:106 Failed calls without a vendor cost are discarded rather than recorded with unknown usage/cost and a failure reason."
+    },
+    {
+     "technique": "whole-prompt-denominator",
+     "verdict": "deviation",
+     "evidence": "lib/text/lighttrack.ts:94 The usage contract transmits only input/output, with no declared whole-prompt convention or nullable cache-read/write subsets required by the technique."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-15T03:39:49.737742+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "cost-metering"
+   ],
+   "techniques": [
+    "budget-enforcement",
+    "engagement-paced-cadence",
+    "housekeeping-calls-obey-the-ceiling",
+    "preflight-estimation",
+    "price-tables",
+    "reversible-debit-and-settle",
+    "spend-attribution",
+    "spend-observability",
+    "time-ceilings-count-working-time",
+    "unit-classes-are-open",
+    "usage-ledgers",
+    "whole-prompt-denominator"
+   ],
+   "deviations": 1,
+   "context": "imaging-providers",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-15T03:39:49.737742+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "cost-metering"
+   ],
+   "techniques": [
+    "budget-enforcement",
+    "engagement-paced-cadence",
+    "housekeeping-calls-obey-the-ceiling",
+    "one-pot-across-delegation",
+    "preflight-estimation",
+    "price-tables",
+    "reversible-debit-and-settle",
+    "spend-attribution",
+    "spend-observability",
+    "time-ceilings-count-working-time",
+    "unit-classes-are-open",
+    "usage-ledgers",
+    "whole-prompt-denominator"
+   ],
+   "deviations": 1,
+   "context": "text-providers",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
