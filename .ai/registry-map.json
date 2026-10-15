@@ -3093,7 +3093,11 @@
           "revision": 5,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/_phases/_shared/notebook/sections/Argument.tsx:108 The notebook contract renders the steel-man and counters but omits the declared prior and discovery-or-mirror classification required by the technique to prevent polemics.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:094f1b2708130460",
+          "evaluatedRevision": 5
         },
         {
           "subject": "agent-memory",
@@ -4187,7 +4191,11 @@
           "revision": 5,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/_phases/research/run/trace.ts:24 The research run begins searching at step t1 without capturing a declared prior or evaluating the verdict as a discovery versus mirror.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:094f1b2708130460",
+          "evaluatedRevision": 5
         },
         {
           "subject": "voice-io",

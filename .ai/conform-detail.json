@@ -375,45 +375,47 @@
       "subject": "content-research-grounding",
       "bundle": "media-generation",
       "state": "deviation",
-      "evaluatedAt": "2026-08-29",
-      "worker": "g-3",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T01:23:46.966Z",
+      "worker": "344ecb32-55ed-49aa-871e-1cf2f284c61d",
       "techniques": [
         {
-          "technique": "tension-finding-taxonomy",
-          "verdict": "deviation",
-          "evidence": "Strongly realized: the null is a first-class SUCCESSFUL ending (app/_phases/research/ResearchStep.tsx:190-193 settles the job `done`, not `failed`; TopicPanel.tsx:118-126; run/trace.ts:50-62), the triple is typed and rendered (app/_phases/_shared/notebook/types.ts:440-445; sections/Argument.tsx:19-28), the five shapes drive the run (run/trace.ts:30-31). Missing: the baseline. The repo's own brief mandates the baseline row (pipeline/RESEARCH-PROMPT.md:31, :36, :72-81) but the shipped review columns are seven with a counter-case and no baseline (app/_phases/_shared/notebook/dimensions.ts:76-108, drawn by ResearchTriageBoard.tsx:39), the spine trace runs six searches with none (app/_phases/research/run/trace.ts:24-29), and `strength` is a free string (types.ts:444; notebook.ts:31) that no surviving counter-case can step down one grade. Consequence: 'strength: high' is asserted with no distribution behind it and no column a reviewer could look for one in."
+          "technique": "evidence-grading-ladder",
+          "verdict": "conformant",
+          "evidence": "app/_phases/research/_parts/CardTile.tsx:282 Triage cards render structured sources with their evidence class chip and interest flag to guide scoping decisions."
+        },
+        {
+          "technique": "pre-linked-causal-mechanisms",
+          "verdict": "conformant",
+          "evidence": "app/_phases/research/run/trace.ts:32 The research trace models mechanisms as BUT/THEREFORE chains to author causal spines rather than sequences."
         },
         {
           "technique": "prior-declaration-and-steel-man",
           "verdict": "deviation",
-          "evidence": "The steel-man half is realized: provenance found/found-adjacent/constructed with its origin story (app/_phases/_shared/notebook/types.ts:227-249), and the counter-case is a mandatory search whose column can never be legitimately empty - an unfound counter-case is recorded as a fact about the search (dimensions.ts:98-100; run/trace.ts:29). The prior half does not exist: pipeline/RESEARCH-PROMPT.md:20-24 and its checklist at :165 require `prior` written before the first search and a discovery-or-mirror call, and the Notebook contract has no such field (app/_phases/_shared/notebook/types.ts:431-445) and no section renders one (NotebookBody.tsx:17-28). Consequence: this is the technique's own dead-lesson shape - a mandate with no field and no consumer - so no reviewer can tell a discovery from a mirror."
-        },
-        {
-          "technique": "pre-linked-causal-mechanisms",
-          "verdict": "deviation",
-          "evidence": "The vocabulary is modelled exactly, TRANSFER included, with the fake-THEREFORE anti-shape named (app/_phases/_shared/notebook/types.ts:149-164), per-link evidence typed (ChainStep, :166-177), the script layer held at zero AND THEN (:140-147) and the defect drawn as a chip (Chips.tsx:11-28). But the shipped asset is on the legacy prose form: app/_phases/_shared/notebook/notebook.ts:40-47 carries connectors inside the sentences and link 5 (:45) is a bare 'AND sellers at the same price level absorb what does arrive' - the untyped connector the TRANSFER extension was added for - with no `steps[]`, therefore no per-link evidence, and pipeline/check-notebook.mts gates no connector at all. Consequence: a chain can be well-sourced in aggregate while its load-bearing link is supported by nothing, and nothing can count the joints because they are prose."
-        },
-        {
-          "technique": "scale-conversion-of-numbers",
-          "verdict": "deviation",
-          "evidence": "The recompute discipline is realized as a surface, on the technique's own canonical scar: app/_phases/research/followup.ts:100-128 refuses to edit the transcript that called 77,800 'slightly more than' ~270,000 across different windows, and revisionsOf (:143-161) renders the corrected row, its arithmetic and its downgraded confidence beside the verbatim claim. The bookkeeping fields exist (unit/period/denominator, types.ts:97-102). The break: all six shipped conversions omit `for` (app/_phases/_shared/notebook/notebook.ts:98-105), the fact link the type itself calls uncheckable-by-construction when absent (types.ts:372-375). Consequence: a felt form polished from a low-confidence figure launders it, and no gate can follow the link back to the grade that should cap it."
-        },
-        {
-          "technique": "unknowns-as-constraints",
-          "verdict": "conformant",
-          "evidence": "app/_phases/_shared/notebook/unknowns.ts:1-63 writes each unknown as a prohibition with an impact, scopes it with `about` (:24-31) against the global-hedge failure, and keeps resolved unknowns flagged rather than deleted (:4-7, u-cohorts :40-41, u-liquidity-vendor :54-55) with the index-shift incident named as the reason. Rows are keyed by stable id through UNKNOWN_BY_ID (app/_phases/research/followup.ts:227) and a reference to an unknown the notebook does not carry is REPORTED, never dropped (followup.ts:228-233). Per-render scoring with at-risk/superseded lives one step downstream and is pointed at from unknowns.ts:17-20. The must-say half is typed and honestly declared unpopulated (types.ts:455-459)."
-        },
-        {
-          "technique": "evidence-grading-ladder",
-          "verdict": "deviation",
-          "evidence": "Both ladders are modelled well - class including `protected`, interested-is-not-low-confidence, plural FactSource with locator, fact kind, three dates, unit/period/denominator, load-bearing and confidenceNote (app/_phases/_shared/notebook/types.ts:12-138) - and the dangerous combination is flagged at triage (CardTile.tsx:62, :143-147) and in the evidence log (ResearchStep.tsx:297-302). The break is at the surface the ladder names: app/_phases/_shared/notebook/cards.ts:62 carries the @deprecated comma-joined `f.source` (types.ts:82-83) and drops `sources[]`, so app/_phases/research/_parts/CardTile.tsx:137-141 prints a source-shaped blob plus a confidence chip and no evidence-class chip - while pipeline/NOTEBOOK-SCHEMA.md:18 routes `facts[].sources[].evidence_class` to exactly 'the provenance chip at card triage'. Follow-ups reopen the same anti-shape: Effect 'adds-fact' types `source: string` (app/_phases/research/followup.ts:23) and a shipped row semicolon-joins two publications (:63). Consequence: a reviewer cuts an aggregator-sourced fact and a primary-record fact on identical information."
+          "evidence": "app/_phases/research/run/trace.ts:24 The research trace begins with factual searches at step t1 without a preliminary prior-declaration step or verdict discovery-vs-mirror classification."
         },
         {
           "technique": "provenance-signal-asymmetry",
           "verdict": "deviation",
-          "evidence": "The durable guards the technique prefers are realized - a `primary` rung on the class ladder, three dates, and a locator that makes a claim checkable (app/_phases/_shared/notebook/types.ts:27-33, :62-69, :89-96) - but no machine-provenance state exists anywhere in the contract, and there is no field in which 'not checked' can be recorded distinctly from 'not detected'. The exposure is real rather than theoretical: follow-ups admit new facts sourced to open-web aggregator pages (app/_phases/research/followup.ts:82, :85, :90-94) through an Effect type that carries only a source string (:23). Consequence: a source whose origin was never questioned is indistinguishable at triage from one that was, which is the merge the three-state vocabulary exists to prevent. Lower consequence than the ladder deviation above, and it would be fixed in the same field."
+          "evidence": "app/_phases/research/followup.ts:24 Follow-up research adds facts using an unparsed source string without provenance checking or three-state machine-generation tracking."
+        },
+        {
+          "technique": "scale-conversion-of-numbers",
+          "verdict": "conformant",
+          "evidence": "app/_phases/research/followup.ts:144 revisionsOf identifies where transcribed research claims were arithmetically faulty and displays the recomputed claim alongside its downgraded confidence note."
+        },
+        {
+          "technique": "tension-finding-taxonomy",
+          "verdict": "conformant",
+          "evidence": "app/_phases/research/guided/useEducationalResearch.ts:161 A topic with no tension stops and settles the job as done rather than forcing a script into production."
+        },
+        {
+          "technique": "unknowns-as-constraints",
+          "verdict": "conformant",
+          "evidence": "app/_phases/research/followup.ts:237 Resolutions of unknowns are verified against stable notebook IDs and preserved as resolved rather than deleted."
         }
-      ]
+      ],
+      "registryProposal": "prior-declaration-and-steel-man should clarify whether Phase 0 prior declarations must be captured interactively in research UI runners or whether they are strictly an offline researcher discipline."
     },
     "afbf291c-d8ac-4f08-8340-5e045b361065/test-harness": {
       "context": "golden-path-tests",
@@ -4804,6 +4806,53 @@
           "evidence": "app/foundry/pipeline/useCardDrag.ts:91 Drag tracking uses the shared inverse mapping; context-menu placement also uses toScreen and background hit testing uses toWorld."
         }
       ]
+    },
+    "408d0735-25d7-45cc-bc6a-21d4a7eb860b/content-research-grounding": {
+      "context": "phase-shared-notebook",
+      "subject": "content-research-grounding",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T01:23:46.966Z",
+      "worker": "344ecb32-55ed-49aa-871e-1cf2f284c61d",
+      "techniques": [
+        {
+          "technique": "evidence-grading-ladder",
+          "verdict": "conformant",
+          "evidence": "app/_phases/_shared/notebook/FactRow.tsx:85 Renders structured sources with their evidence class and interest flag, keeping interest distinct from confidence."
+        },
+        {
+          "technique": "pre-linked-causal-mechanisms",
+          "verdict": "conformant",
+          "evidence": "app/_phases/_shared/notebook/sections/Argument.tsx:51 Renders mechanisms as typed chain steps with explicit BUT, THEREFORE, and TRANSFER connectors and per-step evidence."
+        },
+        {
+          "technique": "prior-declaration-and-steel-man",
+          "verdict": "deviation",
+          "evidence": "app/_phases/_shared/notebook/sections/Argument.tsx:108 The notebook renders the steel-man but lacks any schema field or UI section for declaring prior beliefs or classifying verdicts as discoveries versus mirrors."
+        },
+        {
+          "technique": "provenance-signal-asymmetry",
+          "verdict": "deviation",
+          "evidence": "app/_phases/_shared/notebook/Chips.tsx:135 Source chips model human reporting classes and interest but do not track machine-generation detection state or provide the three-state vocabulary (detected, not detected, not checked)."
+        },
+        {
+          "technique": "scale-conversion-of-numbers",
+          "verdict": "conformant",
+          "evidence": "app/_phases/_shared/notebook/sections/Apparatus.tsx:40 Scale conversions map raw quantities directly to felt expressions at research time and are rendered under the numbers section."
+        },
+        {
+          "technique": "tension-finding-taxonomy",
+          "verdict": "conformant",
+          "evidence": "app/_phases/_shared/notebook/sections/Argument.tsx:28 Tension is rendered as an explicit triple of expectation, reality, and why-it-is-a-tension along with a strength score."
+        },
+        {
+          "technique": "unknowns-as-constraints",
+          "verdict": "conformant",
+          "evidence": "app/_phases/_shared/notebook/EvidenceLog.tsx:58 EvidenceLog presents open unknowns specifically highlighting their impact constraint on script rendering."
+        }
+      ],
+      "registryProposal": "prior-declaration-and-steel-man requires both declaring a prior before searching and constructing a steel-man, but downstream notebook schemas frequently decouple them, preserving only the steel-man and dropping the prior because no rendering step directly consumes the researcher's going-in belief."
     }
   }
 }

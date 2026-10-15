@@ -1,0 +1,143 @@
+{
+ "schema": "conform-run/1",
+ "worker": "344ecb32-55ed-49aa-871e-1cf2f284c61d",
+ "subject": "content-research-grounding",
+ "evaluatedAt": "2026-10-15T01:23:46.966638+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [
+  {
+   "context": "phase-shared-notebook",
+   "subject": "content-research-grounding",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/_phases/_shared/notebook/sections/Argument.tsx:108 The notebook contract renders the steel-man and counters but omits the declared prior and discovery-or-mirror classification required by the technique to prevent polemics.",
+   "techniques": [
+    {
+     "technique": "evidence-grading-ladder",
+     "verdict": "conformant",
+     "evidence": "app/_phases/_shared/notebook/FactRow.tsx:85 Renders structured sources with their evidence class and interest flag, keeping interest distinct from confidence."
+    },
+    {
+     "technique": "pre-linked-causal-mechanisms",
+     "verdict": "conformant",
+     "evidence": "app/_phases/_shared/notebook/sections/Argument.tsx:51 Renders mechanisms as typed chain steps with explicit BUT, THEREFORE, and TRANSFER connectors and per-step evidence."
+    },
+    {
+     "technique": "prior-declaration-and-steel-man",
+     "verdict": "deviation",
+     "evidence": "app/_phases/_shared/notebook/sections/Argument.tsx:108 The notebook renders the steel-man but lacks any schema field or UI section for declaring prior beliefs or classifying verdicts as discoveries versus mirrors."
+    },
+    {
+     "technique": "provenance-signal-asymmetry",
+     "verdict": "deviation",
+     "evidence": "app/_phases/_shared/notebook/Chips.tsx:135 Source chips model human reporting classes and interest but do not track machine-generation detection state or provide the three-state vocabulary (detected, not detected, not checked)."
+    },
+    {
+     "technique": "scale-conversion-of-numbers",
+     "verdict": "conformant",
+     "evidence": "app/_phases/_shared/notebook/sections/Apparatus.tsx:40 Scale conversions map raw quantities directly to felt expressions at research time and are rendered under the numbers section."
+    },
+    {
+     "technique": "tension-finding-taxonomy",
+     "verdict": "conformant",
+     "evidence": "app/_phases/_shared/notebook/sections/Argument.tsx:28 Tension is rendered as an explicit triple of expectation, reality, and why-it-is-a-tension along with a strength score."
+    },
+    {
+     "technique": "unknowns-as-constraints",
+     "verdict": "conformant",
+     "evidence": "app/_phases/_shared/notebook/EvidenceLog.tsx:58 EvidenceLog presents open unknowns specifically highlighting their impact constraint on script rendering."
+    }
+   ],
+   "registryProposal": "prior-declaration-and-steel-man requires both declaring a prior before searching and constructing a steel-man, but downstream notebook schemas frequently decouple them, preserving only the steel-man and dropping the prior because no rendering step directly consumes the researcher's going-in belief."
+  },
+  {
+   "context": "research-step",
+   "subject": "content-research-grounding",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/_phases/research/run/trace.ts:24 The research run begins searching at step t1 without capturing a declared prior or evaluating the verdict as a discovery versus mirror.",
+   "techniques": [
+    {
+     "technique": "evidence-grading-ladder",
+     "verdict": "conformant",
+     "evidence": "app/_phases/research/_parts/CardTile.tsx:282 Triage cards render structured sources with their evidence class chip and interest flag to guide scoping decisions."
+    },
+    {
+     "technique": "pre-linked-causal-mechanisms",
+     "verdict": "conformant",
+     "evidence": "app/_phases/research/run/trace.ts:32 The research trace models mechanisms as BUT/THEREFORE chains to author causal spines rather than sequences."
+    },
+    {
+     "technique": "prior-declaration-and-steel-man",
+     "verdict": "deviation",
+     "evidence": "app/_phases/research/run/trace.ts:24 The research trace begins with factual searches at step t1 without a preliminary prior-declaration step or verdict discovery-vs-mirror classification."
+    },
+    {
+     "technique": "provenance-signal-asymmetry",
+     "verdict": "deviation",
+     "evidence": "app/_phases/research/followup.ts:24 Follow-up research adds facts using an unparsed source string without provenance checking or three-state machine-generation tracking."
+    },
+    {
+     "technique": "scale-conversion-of-numbers",
+     "verdict": "conformant",
+     "evidence": "app/_phases/research/followup.ts:144 revisionsOf identifies where transcribed research claims were arithmetically faulty and displays the recomputed claim alongside its downgraded confidence note."
+    },
+    {
+     "technique": "tension-finding-taxonomy",
+     "verdict": "conformant",
+     "evidence": "app/_phases/research/guided/useEducationalResearch.ts:161 A topic with no tension stops and settles the job as done rather than forcing a script into production."
+    },
+    {
+     "technique": "unknowns-as-constraints",
+     "verdict": "conformant",
+     "evidence": "app/_phases/research/followup.ts:237 Resolutions of unknowns are verified against stable notebook IDs and preserved as resolved rather than deleted."
+    }
+   ],
+   "registryProposal": "prior-declaration-and-steel-man should clarify whether Phase 0 prior declarations must be captured interactively in research UI runners or whether they are strictly an offline researcher discipline."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-15T01:23:46.966638+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "content-research-grounding"
+   ],
+   "techniques": [
+    "evidence-grading-ladder",
+    "pre-linked-causal-mechanisms",
+    "prior-declaration-and-steel-man",
+    "provenance-signal-asymmetry",
+    "scale-conversion-of-numbers",
+    "tension-finding-taxonomy",
+    "unknowns-as-constraints"
+   ],
+   "deviations": 1,
+   "context": "phase-shared-notebook",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  },
+  {
+   "ts": "2026-10-15T01:23:46.966638+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "content-research-grounding"
+   ],
+   "techniques": [
+    "evidence-grading-ladder",
+    "pre-linked-causal-mechanisms",
+    "prior-declaration-and-steel-man",
+    "provenance-signal-asymmetry",
+    "scale-conversion-of-numbers",
+    "tension-finding-taxonomy",
+    "unknowns-as-constraints"
+   ],
+   "deviations": 1,
+   "context": "research-step",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  }
+ ]
+}
