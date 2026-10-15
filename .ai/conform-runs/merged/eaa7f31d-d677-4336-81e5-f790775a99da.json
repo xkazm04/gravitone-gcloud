@@ -1,0 +1,96 @@
+{
+  "schema": "conform-run/1",
+  "worker": "eaa7f31d-d677-4336-81e5-f790775a99da",
+  "subject": "frame-direction",
+  "evaluatedAt": "2026-10-15T04:23:58.825880+00:00",
+  "provider": "agy",
+  "model": "gemini-3.8-flash-high",
+  "pairs": [
+    {
+      "context": "frames-step",
+      "subject": "frame-direction",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evidence": "app/_phases/frames/useFrames.ts:713 The direction pass applies scene specifications lacking visual function categorization and motif lifecycle threading, falling back to position-keyed frames and rhetorical kind templates.",
+      "techniques": [
+        {
+          "technique": "visual-function-vocabulary",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/useFrames.ts:461 Lacking visual function labels, plate generation falls back to subjectFor(frame) and rhetorical beat kind templates."
+        },
+        {
+          "technique": "one-function-per-visual",
+          "verdict": "deviation",
+          "evidence": "lib/frames/sceneSpec.ts:264 reviewSceneSpecs refuses a second scene for any beat, preventing splitting multi-obligation beats into multiple stills under the same narration."
+        },
+        {
+          "technique": "motif-establish-vary-payoff",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/useFrames.ts:821 Motifs are described as an engine aspirational goal in comments but lack named threads or machine-checkable lifecycle operations."
+        },
+        {
+          "technique": "motion-intent-authoring",
+          "verdict": "conformant",
+          "evidence": "lib/frames/sceneSpec.ts:149 Validates motion as descriptive intent and rejects motions that merely restate the subject at rest."
+        },
+        {
+          "technique": "plate-elements-text-split",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/parts.tsx:345 Flags figures lacking supporting fact citations on the frame canvas, upholding the epistemic checkability split."
+        },
+        {
+          "technique": "per-beat-rejection",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/FramesAssembly.tsx:457 Renders the specific failure reason on the beat's own ledger row while keeping the beat's existing frame intact."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "frame-direction",
+      "context": "frames-composition-step",
+      "reason": "withdrawn after review: reviewer (sonnet): The ShotSheet.tsx:14 technique claim is contradicted: lib/frames/shots.ts (re-exported by app/_phases/frames/shots.ts, a context file) is a 'one beat, one to MANY shots' decomposition layer, and the verdict.ts:54 anchor only shows 'clips authored' and does not confirm that no video provider renders "
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-15T04:23:58.825880+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "frame-direction"
+      ],
+      "techniques": [
+        "motif-establish-vary-payoff",
+        "motion-intent-authoring",
+        "one-function-per-visual",
+        "per-beat-rejection",
+        "plate-elements-text-split",
+        "visual-function-vocabulary"
+      ],
+      "deviations": 1,
+      "context": "frames-composition-step",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-15T04:23:58.825880+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "frame-direction"
+      ],
+      "techniques": [
+        "motif-establish-vary-payoff",
+        "motion-intent-authoring",
+        "one-function-per-visual",
+        "per-beat-rejection",
+        "plate-elements-text-split",
+        "visual-function-vocabulary"
+      ],
+      "deviations": 1,
+      "context": "frames-step",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
+}

@@ -2509,7 +2509,11 @@
           "revision": 1,
           "changedAt": "2026-08-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/_phases/frames/useFrames.ts:713 The direction pass applies scene specifications lacking visual function categorization and motif lifecycle threading, falling back to position-keyed frames and rhetorical kind templates.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:a6a34384ba8aa499",
+          "evaluatedRevision": 1
         },
         {
           "subject": "evidence-bound-visuals",

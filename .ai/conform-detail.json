@@ -335,38 +335,39 @@
       "subject": "frame-direction",
       "bundle": "media-generation",
       "state": "deviation",
-      "evaluatedAt": "2026-08-29",
-      "worker": "g-3",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T04:23:58.825Z",
+      "worker": "eaa7f31d-d677-4336-81e5-f790775a99da",
       "techniques": [
         {
           "technique": "visual-function-vocabulary",
           "verdict": "deviation",
-          "evidence": "app/_phases/frames/sceneSpec.ts:19-29 (and SCENE_SCHEMA :32-80) carries beatAt/subject/motion/rationale/elements/texts and no `function`; the beat carries only a rhetorical `kind` (app/_phases/script/types.ts:9-19). The seven-function vocabulary exists solely in pipeline/DIRECTOR-DIMENSION.md, whose own header at :3 states 'Nothing here is implemented.' Consequence: the metaphor-visual cap, the image-led/narration-led ratio and the confidence cap are uncomputable over a cut, and the category lookup PROBLEM_OF -> subjectFor (app/_phases/frames/frames.ts:238-249, :325-339) is still the seeded and fallback subject at app/_phases/frames/useFrames.ts:209 - attractor #1 of the golden path, live."
+          "evidence": "app/_phases/frames/useFrames.ts:461 Lacking visual function labels, plate generation falls back to subjectFor(frame) and rhetorical beat kind templates."
         },
         {
           "technique": "one-function-per-visual",
           "verdict": "deviation",
-          "evidence": "pipeline/FRAMES-SCENE-PROMPT.md:59 softens the rule to 'Prefer one idea per frame' and nothing enforces it (the validator's checks are enumerated at app/_phases/frames/sceneSpec.ts:120-177 and count no functions, because there is no function field). app/_phases/frames/sceneSpec.ts:232 refuses a second scene for a beat, so the technique's prescribed remedy - more stills under the same narration - is closed on this path; the one-beat-to-many-shots surface is read-only (app/_phases/frames/FramesStep.tsx:26-29). Consequence: a beat doing two jobs ships as one cluttered frame and nothing on the surface can detect it. The frame-local corollaries that ARE realized: one move per frame (prompt :74) and 'an element states what it asserts' as a required label (sceneSpec.ts:148, prompt :88-90, :146)."
-        },
-        {
-          "technique": "plate-elements-text-split",
-          "verdict": "conformant",
-          "evidence": "app/_phases/frames/frames.ts:5-15 states the epistemic split verbatim and :33-62 types the three layers; app/_phases/frames/sceneSpec.ts:126-127 rejects a subject asking for glyphs, :163-164 rejects an uncited figure and :165-166 a factId absent from the notebook; app/_phases/frames/frames.ts:338 reserves the lower third; app/_phases/frames/useFrames.ts:217 compiles the subject inside the locked style block; uncited figures are surfaced at app/_phases/frames/parts.tsx:321-323, LayerPanel.tsx:174 and FramesAssembly.tsx:99-102. The precision-limit rule is satisfied by construction: FrameElement (frames.ts:35-48) has no ticks or numeric axis to over-claim with, and every quantity must travel as a cited figure text."
-        },
-        {
-          "technique": "motion-intent-authoring",
-          "verdict": "conformant",
-          "evidence": "app/_phases/frames/frames.ts:79-106 authors the move at composition time with no renderer, no duration field and the honesty note that status can only be 'not-started'; app/_phases/frames/sceneSpec.ts:134-139 enforces a picturable length, no text in the move, and rejects a motion that restates its subject; pipeline/FRAMES-SCENE-PROMPT.md:62-84 carries all four rules including near-stillness written as such; app/_phases/frames/frames.ts:309-312 seeds motion EMPTY rather than guessing from the beat kind; the surface says 'authored - not rendered' (FramesAssembly.tsx:404-414). Narrowness worth noting, not a failure: the restatement check is exact case-insensitive equality (sceneSpec.ts:138), so a subject with a verb bolted on passes."
+          "evidence": "lib/frames/sceneSpec.ts:264 reviewSceneSpecs refuses a second scene for any beat, preventing splitting multi-obligation beats into multiple stills under the same narration."
         },
         {
           "technique": "motif-establish-vary-payoff",
           "verdict": "deviation",
-          "evidence": "app/_phases/frames/sceneSpec.ts:19-29 and :32-80 define no named thread and no lifecycle operation, so 'change' and 'reprise' have no prerequisite 'establish' to check - the structural invariant per-beat-rejection itself lists as enforceable. Motifs survive only as prose inside `rationale`, sliced to 200 chars (sceneSpec.ts:176), and direction is re-attached to beats by timestamp (applySceneSpecs, sceneSpec.ts:262-266), which is the position-keyed rot the technique warns against when a re-render reorders beats. The intent is explicit and unserved: app/_phases/frames/useFrames.ts:382-390 justifies the whole-cut pass by the engine's ability to 'carry a motif from the hook into the turn', and pipeline/FRAMES-SCENE-PROMPT.md:101-106 asks for it in prose. Consequence: a partial apply can admit a change whose establish was rejected, and no re-render can prove a reprise refers to something the viewer has seen."
+          "evidence": "app/_phases/frames/useFrames.ts:821 Motifs are described as an engine aspirational goal in comments but lack named threads or machine-checkable lifecycle operations."
+        },
+        {
+          "technique": "motion-intent-authoring",
+          "verdict": "conformant",
+          "evidence": "lib/frames/sceneSpec.ts:149 Validates motion as descriptive intent and rejects motions that merely restate the subject at rest."
+        },
+        {
+          "technique": "plate-elements-text-split",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/parts.tsx:345 Flags figures lacking supporting fact citations on the frame canvas, upholding the epistemic checkability split."
         },
         {
           "technique": "per-beat-rejection",
           "verdict": "conformant",
-          "evidence": "app/_phases/frames/sceneSpec.ts:101-113 returns applied/rejected/missing with the disjointness argument written out; :115-119 reports the FIRST defect per beat, phrased for the beat's own row; :200-245 collects findings while still hard-failing what invalidates the whole response (:207-215); :141-176 splits clamp-what-is-safe from reject-what-changes-meaning; :129-133 documents the deliberate non-checks. app/_phases/frames/sceneSpec.ts:262-266 leaves a rejected beat with what it had, and app/_phases/frames/useFrames.ts:451-474 routes reasons to rows, counts rejected and missing separately, and names invented timestamps; FramesAssembly.tsx:281-286 draws 'This beat kept what it had.' The economics are told to the generator at pipeline/FRAMES-SCENE-PROMPT.md:161-164."
+          "evidence": "app/_phases/frames/FramesAssembly.tsx:457 Renders the specific failure reason on the beat's own ledger row while keeping the beat's existing frame intact."
         }
       ]
     },
@@ -5235,6 +5236,52 @@
           "evidence": "lib/text/lighttrack.ts:94 The usage contract transmits only input/output, with no declared whole-prompt convention or nullable cache-read/write subsets required by the technique."
         }
       ]
+    },
+    "2572d964-95d6-47e9-84e6-3275360466eb/frame-direction": {
+      "context": "frames-composition-step",
+      "subject": "frame-direction",
+      "bundle": "media-generation",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-15",
+      "evaluatedTs": "2026-10-15T04:23:58.825Z",
+      "techniques": [
+        {
+          "technique": "visual-function-vocabulary",
+          "verdict": "deviation",
+          "evidence": "lib/frames/frames.ts:526 Fallback composition uses rhetorical beat kind categories rather than a closed visual function vocabulary."
+        },
+        {
+          "technique": "one-function-per-visual",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/ShotSheet.tsx:14 The frames layer rigidly treats each beat as exactly one picture with no mechanism to split a beat requiring two functions into multiple stills."
+        },
+        {
+          "technique": "motif-establish-vary-payoff",
+          "verdict": "deviation",
+          "evidence": "lib/frames/sceneSpec.ts:300 Direction is mapped by timestamp position rather than tracking named motif threads with explicit lifecycle operations."
+        },
+        {
+          "technique": "motion-intent-authoring",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/verdict.ts:54 Tracks motion as authored intent on the frame while confirming clips are not yet rendered by any video provider."
+        },
+        {
+          "technique": "plate-elements-text-split",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/shotReview.ts:473 Validates that every generative prompt enforces the no-text clause so text and cards remain in the vector layer."
+        },
+        {
+          "technique": "per-beat-rejection",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/shotReview.ts:514 Practices validator restraint by refusing to enforce unmeasured impressions like verb whitelists or easing vocabulary."
+        }
+      ],
+      "withdrawn": {
+        "worker": "eaa7f31d-d677-4336-81e5-f790775a99da",
+        "state": "deviation",
+        "at": "2026-10-15T04:24:28.416942+00:00",
+        "reason": "reviewer (sonnet): The ShotSheet.tsx:14 technique claim is contradicted: lib/frames/shots.ts (re-exported by app/_phases/frames/shots.ts, a context file) is a 'one beat, one to MANY shots' decomposition layer, and the verdict.ts:54 anchor only shows 'clips authored' and does not confirm that no video provider renders "
+      }
     }
   }
 }
