@@ -1037,7 +1037,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/board/sources/dojo.ts:109 The Dojo adapter persists the verdict but keeps rejection reasons only in memory, so reloading loses the required decision rationale.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "mcp-tools",
@@ -1264,7 +1268,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/board/boardGate.ts:76 The active Board automatically retries stale verdicts against the latest revision, allowing a conflicting human decision to be superseded without conflict review.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "translation-pipeline-topology",

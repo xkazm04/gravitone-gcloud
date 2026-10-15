@@ -1,0 +1,105 @@
+{
+ "schema": "conform-run/1",
+ "worker": "e89dcd14-f05b-4f23-ad57-cd24c8fb4677",
+ "subject": "hitl-approval",
+ "evaluatedAt": "2026-10-15T21:36:54.860386+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "board-decision-inbox",
+   "subject": "hitl-approval",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/board/sources/dojo.ts:109 The Dojo adapter persists the verdict but keeps rejection reasons only in memory, so reloading loses the required decision rationale.",
+   "techniques": [
+    {
+     "technique": "decision-records",
+     "verdict": "deviation",
+     "evidence": "lib/board/sources/dojo.ts:109 The preceding save persists only the verdict; rejection reasons remain in sessionReasons and disappear on reload."
+    },
+    {
+     "technique": "fail-loud-classification-default",
+     "verdict": "deviation",
+     "evidence": "lib/board/verdicts.ts:170 A slot with missedAt or error and an unrecognized status falls through to approved; the HTTP reader casts unvalidated data and supplies no defaulting marker."
+    },
+    {
+     "technique": "gate-state-machines",
+     "verdict": "deviation",
+     "evidence": "lib/board/sources/proof.ts:75 Proof decisions replace state without an expected revision or prior-verdict condition; getTheme and putTheme use separate transactions, allowing conflicting writes to overwrite decisions."
+    },
+    {
+     "technique": "review-queues",
+     "verdict": "deviation",
+     "evidence": "lib/board/sources/publish.ts:72 A successful response missing slots becomes an empty queue; call also converts invalid JSON to {}, making unreadable pending data indistinguishable from no pending items."
+    }
+   ]
+  },
+  {
+   "context": "board-review",
+   "subject": "hitl-approval",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/ui/src/board/boardGate.ts:76 The active Board automatically retries stale verdicts against the latest revision, allowing a conflicting human decision to be superseded without conflict review.",
+   "techniques": [
+    {
+     "technique": "decision-records",
+     "verdict": "deviation",
+     "evidence": "packages/ui/src/components/cull/MatrixCull.tsx:128 The reject shortcut supplies neither rationale nor note, and the server's checkVerdict permits an empty reason list, contrary to mandatory rejection rationale."
+    },
+    {
+     "technique": "gate-state-machines",
+     "verdict": "deviation",
+     "evidence": "packages/ui/src/board/boardGate.ts:76 Conflict recovery resends the same changes without checking whether the same candidate received a conflicting verdict; the kernel accepts the replacement at the refreshed revision."
+    },
+    {
+     "technique": "oracle-before-gate",
+     "verdict": "deviation",
+     "evidence": "packages/ui/src/components/desk/PacketRail.tsx:34 The packet rail orders by desk mode, age, and identity and filters by media lane; oracle availability does not participate in ordering or filtering."
+    },
+    {
+     "technique": "review-queues",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/board/_board/load.ts:46 Failure to list packets becomes a successful render with an empty rail, hiding pending decisions without reporting the queue failure."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-15T21:36:54.860386+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "hitl-approval"
+   ],
+   "techniques": [
+    "decision-records",
+    "fail-loud-classification-default",
+    "gate-state-machines",
+    "review-queues"
+   ],
+   "deviations": 1,
+   "context": "board-decision-inbox",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-15T21:36:54.860386+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "hitl-approval"
+   ],
+   "techniques": [
+    "decision-records",
+    "gate-state-machines",
+    "oracle-before-gate",
+    "review-queues"
+   ],
+   "deviations": 1,
+   "context": "board-review",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
