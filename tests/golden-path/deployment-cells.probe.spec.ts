@@ -101,13 +101,14 @@ function routeFiles(): string[] {
 }
 
 /** The gate a route calls, read from its comment-stripped source: `money`
- *  (guardRequest on any method), `access` (guardAccessOnly / checkAccess
- *  only) or `public` (no door at all). */
+ *  (guardRequest, or the rebuild's `route({ guard: "money" })`, on any
+ *  method), `access` (guardAccessOnly / checkAccess / `guard: "access"` only)
+ *  or `public` (no door at all, or `guard: "public"` declared). */
 type Door = "money" | "access" | "public";
 function doorOf(rel: string): Door {
   const src = stripComments(readFileSync(path.join(ROOT, rel), "utf8"));
-  if (/\bguardRequest\s*\(/.test(src)) return "money";
-  if (/\b(guardAccessOnly|checkAccess)\s*\(/.test(src)) return "access";
+  if (/\bguardRequest\s*\(/.test(src) || /\broute\s*\(\s*\{\s*guard:\s*"money"/.test(src)) return "money";
+  if (/\b(guardAccessOnly|checkAccess)\s*\(/.test(src) || /\broute\s*\(\s*\{\s*guard:\s*"access"/.test(src)) return "access";
   return "public";
 }
 
@@ -203,6 +204,9 @@ const EXPECT: Record<string, Expectation> = {
   "app/api/capabilities/route.ts": { door: "access", ok: { GET: "2xx" } },
   "app/api/cut/export/file/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/cut/export/route.ts": { door: "money", ok: { POST: "4xx" }, local: ["POST"] },
+  // The ledger as Server-Sent Events (app/_server/sse.ts): a 200 stream that
+  // never ends by itself, so drive() cancels its body rather than reading it.
+  "app/api/events/stream/route.ts": { door: "access", ok: { GET: "2xx" } },
   // The fixture bundle. Behind the read door, then 404 unless
   // NEXT_PUBLIC_GRAVITONE_DATA=fixtures was set at build time - which no cell
   // here sets, so every cell drives the 404 branch and not the read.
@@ -252,6 +256,10 @@ const EXPECT: Record<string, Expectation> = {
   "app/api/recalibrate/route.ts": { door: "money", ok: { POST: "4xx" } },
   "app/api/research/route.ts": { door: "money", ok: { GET: "2xx", POST: "4xx" } },
   "app/api/script/route.ts": { door: "money", ok: { POST: "4xx" } },
+  // The door a session is made at: public by necessity, so it guards itself.
+  // GET answers {kind: "none"} with no cookie, DELETE clears one either way,
+  // and POST refuses an empty body as `invalid` before any token is judged.
+  "app/api/session/route.ts": { door: "public", ok: { GET: "2xx", POST: "4xx", DELETE: "2xx" } },
   "app/api/sound/generate/route.ts": { door: "money", ok: { POST: "4xx" } },
   "app/api/sound/groups/route.ts": { door: "access", ok: { GET: "2xx", PUT: "4xx" } },
   "app/api/sound/hunts/[id]/lesson/route.ts": { door: "money", ok: { POST: "4xx" } },
@@ -524,6 +532,12 @@ async function drive(
   const answered = (async (): Promise<Answer> => {
     try {
       const res = await handler(new Request(`http://localhost${url}${search}`, init), { params: Promise.resolve(params) });
+      // An event stream answers once and then never ends; its status is the
+      // answer, and reading the body would hold the lane until the 15 s hang.
+      if (res.headers.get("content-type")?.includes("text/event-stream")) {
+        await res.body?.cancel();
+        return { status: res.status, code: "" };
+      }
       return { status: res.status, code: codeOf(await res.text().catch(() => "")) };
     } catch (e) {
       return { status: 0, code: `threw: ${(e as Error).message.slice(0, 80)}` };
@@ -621,9 +635,12 @@ async function runCell(
               const door = doorOf(f);
               for (const [m, h] of handlersOf(f)) {
                 const a = await drive(f, m, h, null);
+                // A public route answers anyone what it answers the authorised
+                // caller: its declared class, never a 401 and never a 5xx.
+                const publicOk = EXPECT[f]?.ok[m];
                 const verdict =
                   door === "public"
-                    ? a.status === 200
+                    ? publicOk !== undefined && classOf(a.status) === publicOk
                       ? "ok"
                       : `a public route answered ${a.status}`
                     : caller === "dev-auth"
@@ -723,6 +740,10 @@ async function runCell(
     });
   } finally {
     restore();
+    // The kernel singleton holds the cell's store open under `scratch`, and
+    // Windows refuses to delete an open file (EPERM). It lives on globalThis,
+    // so this module instance closes whichever one a route opened.
+    load<{ closeKernel: () => void }>("app/_server/kernel.ts").closeKernel();
     rmSync(scratch, { recursive: true, force: true });
     lib.apiAuth.__resetRateLimit();
   }

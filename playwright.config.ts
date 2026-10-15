@@ -1,4 +1,5 @@
 import { mkdtempSync } from "node:fs";
+import Module from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -30,6 +31,30 @@ import { installNetworkSeal } from "./tests/_seal";
 // seal here covers every spec: loopback passes, any other host is refused (tests/_seal.ts;
 // negative control tests/golden-path/network-seal.probe.spec.ts).
 installNetworkSeal();
+
+// "server-only" RESOLVES AS NEXT RESOLVES IT FOR SERVER CODE. Probes import route
+// modules and app/_server directly, and those open with `import "server-only"`.
+// Outside Next the package's default entry throws by design (it is not even
+// installed standalone - Next vendors it), and Next's server compilers alias it
+// to next/dist/compiled/server-only/empty (next/dist/build/create-compiler-
+// aliases.js). Every probe in this lane is server code, so the lane takes the
+// server's alias, once, here - beside the seal, loaded in the runner and in
+// every worker. NOT a tsconfig `paths` entry: that would reach the client
+// bundles too and disarm the guard where it is the whole point.
+//
+// Why Module._resolveFilename and not node:module's registerHooks: measured
+// 2026-10-15 on Node 24.14, a .ts module reached by a probe's `await import()`
+// is loaded by the ESM translator's CommonJS `require`, which calls
+// Module._resolveFilename directly and consults neither registerHooks nor a
+// register()ed loader. The property is the seam Playwright's own CJS transform
+// hook patches (playwright/lib/transform/esmLoader.js installCJSHooks), and it
+// covers require() and import() alike.
+const SERVER_ONLY = path.join(process.cwd(), "node_modules", "next", "dist", "compiled", "server-only", "empty.js");
+const resolveFilename: unknown = Reflect.get(Module, "_resolveFilename");
+if (typeof resolveFilename !== "function") throw new Error("playwright.config.ts: Module._resolveFilename is gone; the server-only alias needs another seam");
+Reflect.set(Module, "_resolveFilename", function (this: unknown, request: unknown, ...rest: unknown[]): unknown {
+  return request === "server-only" ? SERVER_ONLY : Reflect.apply(resolveFilename, this, [request, ...rest]);
+});
 
 process.env.SPEND_STORE = "memory";
 

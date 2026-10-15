@@ -294,7 +294,22 @@ const DELIBERATELY_PUBLIC: Record<string, string> = {
 };
 
 /**
- * THE DOORS A ROUTE MAY GATE THROUGH — all of them, because there are three.
+ * Routes that are public because they ARE the door a credential is made at.
+ *
+ * Kept apart from DELIBERATELY_PUBLIC because the claim differs: those read no
+ * environment at all (asserted transitively below), and these cannot - judging
+ * a token means reading the project id and the verifier's mode. What each one
+ * claims instead is that it guards itself, and the server-seam probe drives
+ * that claim (tests/golden-path/server-seam.probe.spec.ts).
+ */
+const PUBLIC_CREDENTIAL_DOORS: Record<string, string> = {
+  "app/api/session/route.ts":
+    "the bridge from a Firebase sign-in to the session cookie: nobody holds a session before it, so it cannot require one. It guards itself - writes only from this origin, and a token is verified before any cookie is set",
+};
+const isPublic = (rel: string): boolean => rel in DELIBERATELY_PUBLIC || rel in PUBLIC_CREDENTIAL_DOORS;
+
+/**
+ * THE DOORS A ROUTE MAY GATE THROUGH — v1's three, and the rebuild's one.
  *
  * This check used to look for `guardRequest(` alone. lib/apiAuth.ts has grown two
  * more doors since, and both are in use on committed routes:
@@ -314,20 +329,28 @@ const DELIBERATELY_PUBLIC: Record<string, string> = {
  * next actually-ungated route lands inside a failure everyone has learned to
  * step over.
  *
- * Each door is asserted to EXIST in lib/apiAuth.ts by the test below, so a
+ * The rebuild's door is the one wrapper every new handler goes through,
+ * app/_server/route.ts `route({ guard })`. Only a `money` or `access` guard is a
+ * gate; `guard: "public"` is a declaration, and a route that makes it must still
+ * be named in an exemption above or it reads as ungated - the wrapper does not
+ * get to exempt a route by itself.
+ *
+ * Each door is asserted to EXIST in its module by the test below, so a
  * renamed door reddens this probe instead of silently matching nothing — the
  * failure mode a matcher list has, and the reason the route population itself is
  * derived from the filesystem rather than listed.
  */
 const GATE_DOORS = [
-  { name: "guardRequest", matcher: /\bguardRequest\s*\(/ },
-  { name: "guardAccessOnly", matcher: /\bguardAccessOnly\s*\(/ },
-  { name: "checkAccess", matcher: /\bcheckAccess\s*\(/ },
+  { name: "guardRequest", file: "lib/apiAuth.ts", money: true, matcher: /\bguardRequest\s*\(/ },
+  { name: "guardAccessOnly", file: "lib/apiAuth.ts", money: false, matcher: /\bguardAccessOnly\s*\(/ },
+  { name: "checkAccess", file: "lib/apiAuth.ts", money: false, matcher: /\bcheckAccess\s*\(/ },
+  { name: "route", file: "app/_server/route.ts", money: true, matcher: /\broute\s*\(\s*\{\s*guard:\s*"money"/ },
+  { name: "route", file: "app/_server/route.ts", money: false, matcher: /\broute\s*\(\s*\{\s*guard:\s*"access"/ },
 ] as const;
 
-/** The door that marks a route as spending a vendor balance or local compute.
- *  What must be DRIVEN below is read off this rather than off a second list. */
-const MONEY_DOOR = GATE_DOORS[0];
+/** The doors that mark a route as spending a vendor balance or local compute.
+ *  What must be DRIVEN below is read off these rather than off a second list. */
+const MONEY_DOORS = GATE_DOORS.filter((d) => d.money);
 
 /** Source with `//` and block comments removed.
  *
@@ -345,14 +368,17 @@ function code(src: string): string {
   return stripComments(src);
 }
 
-test("the gate doors this probe looks for all still exist in lib/apiAuth.ts", () => {
-  const src = code(readFileSync(join(process.cwd(), "lib", "apiAuth.ts"), "utf8"));
-  for (const door of GATE_DOORS)
+test("the gate doors this probe looks for all still exist where they are looked for", () => {
+  for (const door of GATE_DOORS) {
+    const src = code(readFileSync(join(process.cwd(), door.file), "utf8"));
     expect(
-      new RegExp(`export function ${door.name}\\s*\\(`).test(src),
-      `${door.name} is no longer exported from lib/apiAuth.ts — the route matcher below is looking for a door that moved, and would report a gated route as ungated`,
+      new RegExp(`export function ${door.name}\\s*[<(]`).test(src),
+      `${door.name} is no longer exported from ${door.file} — the route matcher below is looking for a door that moved, and would report a gated route as ungated`,
     ).toBe(true);
-  console.log(`[auth] ${GATE_DOORS.length} gate door(s) verified in lib/apiAuth.ts: ${GATE_DOORS.map((d) => d.name).join(", ")}`);
+  }
+  // route()'s guard is a closed union; a fourth guard these matchers do not know would read as ungated.
+  expect(code(readFileSync(join(process.cwd(), "app/_server/route.ts"), "utf8"))).toMatch(/export type Guard = "money" \| "access" \| "public";/);
+  console.log(`[auth] ${GATE_DOORS.length} gate door(s) verified: ${GATE_DOORS.map((d) => `${d.name} (${d.file})`).join(", ")}`);
 });
 
 /**
@@ -388,11 +414,11 @@ test("every API route either gates or is deliberately public — derived, not li
 
   const ungated: string[] = [];
   for (const rel of found) {
-    if (DELIBERATELY_PUBLIC[rel]) continue;
+    if (isPublic(rel)) continue;
     const src = code(readFileSync(join(process.cwd(), rel), "utf8"));
     if (!GATE_DOORS.some((d) => d.matcher.test(src))) ungated.push(rel);
   }
-  console.log(`[auth] ${found.length} route(s) on disk, ${Object.keys(DELIBERATELY_PUBLIC).length} deliberately public, ${ungated.length} ungated`);
+  console.log(`[auth] ${found.length} route(s) on disk, ${Object.keys(DELIBERATELY_PUBLIC).length + Object.keys(PUBLIC_CREDENTIAL_DOORS).length} deliberately public, ${ungated.length} ungated`);
   expect(ungated, "these routes spend money or compute and check nobody").toEqual([]);
 
   // And the DRIVEN list must not fall behind the tree either, or the cases below
@@ -406,7 +432,7 @@ test("every API route either gates or is deliberately public — derived, not li
   // A new money route is therefore covered by existing, which is the property
   // this whole test was rewritten for.
   const spends = found.filter(
-    (f) => !DELIBERATELY_PUBLIC[f] && MONEY_DOOR.matcher.test(code(readFileSync(join(process.cwd(), f), "utf8"))),
+    (f) => !isPublic(f) && MONEY_DOORS.some((d) => d.matcher.test(code(readFileSync(join(process.cwd(), f), "utf8")))),
   );
   const driven = new Set(ROUTES.map(([, path]) => `app${path}/route.ts`));
   const undriven = spends.filter((f) => !driven.has(f));
@@ -416,7 +442,7 @@ test("every API route either gates or is deliberately public — derived, not li
 // A stale exemption is its own defect: it reads as a considered decision and is
 // really a path that moved.
 test("every deliberately-public exemption still names a route that exists", () => {
-  for (const rel of Object.keys(DELIBERATELY_PUBLIC))
+  for (const rel of [...Object.keys(DELIBERATELY_PUBLIC), ...Object.keys(PUBLIC_CREDENTIAL_DOORS)])
     expect(existsSync(join(process.cwd(), rel)), `${rel} is exempted and does not exist`).toBe(true);
 });
 
