@@ -26,7 +26,8 @@ const day = (d: string, operator: number, agent: number, machine: number): DayCo
 
 describe("time strip geometry", () => {
   test("a bar is √n of the busiest day's height, and a day with one act is never shorter than MIN_BAR", () => {
-    const b = bars([day("2026-10-01", 0, 0, 400), day("2026-10-02", 0, 0, 100), day("2026-10-03", 1, 0, 0), day("2026-10-04", 0, 0, 0)], { today: "2026-10-04", range: null });
+    // 40000 on the busiest day: one act is 56/200 = 0.28 px raw, so only the floor keeps it visible.
+    const b = bars([day("2026-10-01", 0, 0, 40000), day("2026-10-02", 0, 0, 10000), day("2026-10-03", 1, 0, 0), day("2026-10-04", 0, 0, 0)], { today: "2026-10-04", range: null });
     expect(b.map((x) => x.px)).toEqual([BAR_MAX, BAR_MAX / 2, MIN_BAR, 0]);
   });
 

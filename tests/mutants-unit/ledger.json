@@ -1,8 +1,8 @@
 {
-  "commit": "ec399f280e2e17c5d5074af8653aa42c3e8d137e",
-  "totalDurationMs": 147276,
-  "killed": 107,
-  "survived": 0,
+  "commit": "d2785b0beef701cf0004d76270845dd8965f2084",
+  "totalDurationMs": 159454,
+  "killed": 116,
+  "survived": 1,
   "stale": 0,
   "broken": 0,
   "baselineRed": 0,
@@ -11,7 +11,7 @@
       "id": "door-keeps-explicit-undefined",
       "test": "packages/domain/test/door.test.ts",
       "verdict": "killed",
-      "durationMs": 1176,
+      "durationMs": 1348,
       "caughtBy": [
         "door drops an explicit undefined so the type does not lie"
       ]
@@ -20,7 +20,7 @@
       "id": "door-refusal-loses-the-path",
       "test": "packages/domain/test/door.test.ts",
       "verdict": "killed",
-      "durationMs": 645,
+      "durationMs": 799,
       "caughtBy": [
         "door refuses bad input, keeping door name, path and message"
       ]
@@ -30,7 +30,7 @@
       "test": "packages/domain/test/door.test.ts",
       "typecheck": true,
       "verdict": "killed",
-      "durationMs": 3689,
+      "durationMs": 3808,
       "caughtBy": [
         "packages/domain/test/door.test.ts(56,11): error TS2322: Type 'Flat<{ [iterator]: Flat<{} & {}>; [$brand]: Flat<{ ProjectId: true; } & {}>; includes: Flat<{} & {}>; charAt: Flat<{} & {}>; charCodeAt: Flat<...>; ... 44 more ...; valueOf: Flat<...>; } & { ...; }>' is not assignable to type 'string & $brand<\"ProjectId\">'."
       ]
@@ -39,7 +39,7 @@
       "id": "envelope-writes-absent-detail",
       "test": "packages/domain/test/errors.test.ts",
       "verdict": "killed",
-      "durationMs": 1140,
+      "durationMs": 952,
       "caughtBy": [
         "errors envelope omits an absent detail (negative control: no detail key)"
       ]
@@ -48,7 +48,7 @@
       "id": "id-schema-accepts-empty",
       "test": "packages/domain/test/ids.test.ts",
       "verdict": "killed",
-      "durationMs": 1080,
+      "durationMs": 1168,
       "caughtBy": [
         "ids refuses an empty id"
       ]
@@ -57,7 +57,7 @@
       "id": "machine-allows-every-transition",
       "test": "packages/domain/test/transitions.test.ts",
       "verdict": "killed",
-      "durationMs": 986,
+      "durationMs": 1071,
       "caughtBy": [
         "transitions refuses an undeclared transition, naming from -> to"
       ]
@@ -66,7 +66,7 @@
       "id": "estimate-null-usd-without-reason",
       "test": "packages/domain/test/estimate.test.ts",
       "verdict": "killed",
-      "durationMs": 1151,
+      "durationMs": 1113,
       "caughtBy": [
         "estimate — never invent a price refuses an unpriced estimate with no reason — null must not read as free"
       ]
@@ -75,7 +75,7 @@
       "id": "estimate-band-ignores-upper-bound",
       "test": "packages/domain/test/estimate.test.ts",
       "verdict": "killed",
-      "durationMs": 623,
+      "durationMs": 573,
       "caughtBy": [
         "estimate — never invent a price a band holds its point figure, and needs one (articles: $47–92 per run)"
       ]
@@ -84,7 +84,7 @@
       "id": "event-data-accepts-non-finite",
       "test": "packages/domain/test/event.test.ts",
       "verdict": "killed",
-      "durationMs": 1104,
+      "durationMs": 1253,
       "caughtBy": [
         "event data is a JSON object: no bare scalar, no non-finite number, no class instance"
       ]
@@ -93,7 +93,7 @@
       "id": "event-cost-without-source",
       "test": "packages/domain/test/event.test.ts",
       "verdict": "killed",
-      "durationMs": 593,
+      "durationMs": 862,
       "caughtBy": [
         "event a cost never travels without the word for where it came from"
       ]
@@ -102,7 +102,7 @@
       "id": "job-lease-outside-running",
       "test": "packages/domain/test/job.test.ts",
       "verdict": "killed",
-      "durationMs": 1148,
+      "durationMs": 1522,
       "caughtBy": [
         "job holds a lease exactly while running"
       ]
@@ -111,7 +111,7 @@
       "id": "job-budget-error-without-stop",
       "test": "packages/domain/test/job.test.ts",
       "verdict": "killed",
-      "durationMs": 559,
+      "durationMs": 966,
       "caughtBy": [
         "job a money stop is failed + budget + stop, never a vendor failure"
       ]
@@ -120,7 +120,7 @@
       "id": "job-interrupted-resumes-directly",
       "test": "packages/domain/test/machines.test.ts",
       "verdict": "killed",
-      "durationMs": 1400,
+      "durationMs": 1919,
       "caughtBy": [
         "the transitions v1 relied on job: a crash-stop is its own state, and it never resumes without the queue"
       ]
@@ -129,7 +129,7 @@
       "id": "slot-claimed-goes-back-to-scheduled",
       "test": "packages/domain/test/machines.test.ts",
       "verdict": "killed",
-      "durationMs": 596,
+      "durationMs": 1202,
       "caughtBy": [
         "the transitions v1 relied on slot: at-most-once — a claimed slot never goes back to scheduled"
       ]
@@ -138,7 +138,7 @@
       "id": "library-item-own-ancestor",
       "test": "packages/domain/test/library.test.ts",
       "verdict": "killed",
-      "durationMs": 1169,
+      "durationMs": 1662,
       "caughtBy": [
         "library item a derived item names the item it came from, and never itself"
       ]
@@ -147,7 +147,7 @@
       "id": "style-proven-counts-mechanisms",
       "test": "packages/domain/test/library.test.ts",
       "verdict": "killed",
-      "durationMs": 594,
+      "durationMs": 665,
       "caughtBy": [
         "style proven needs operator keeps in two distinct run/scene cells — two mechanisms on one cell are one",
         "style an agent's keep is evidence, not a vote"
@@ -157,7 +157,7 @@
       "id": "shown-grades-include-inverted",
       "test": "packages/domain/test/packet.test.ts",
       "verdict": "killed",
-      "durationMs": 1112,
+      "durationMs": 1230,
       "caughtBy": [
         "candidate and grade only calibrated grades are shown — v1's inverted craft score is not"
       ]
@@ -166,7 +166,7 @@
       "id": "blind-pair-accepts-one-arm",
       "test": "packages/domain/test/packet.test.ts",
       "verdict": "killed",
-      "durationMs": 554,
+      "durationMs": 720,
       "caughtBy": [
         "packet a blind pair is exactly two arms per pair"
       ]
@@ -175,7 +175,7 @@
       "id": "project-cycle-undetected",
       "test": "packages/domain/test/project.test.ts",
       "verdict": "killed",
-      "durationMs": 1165,
+      "durationMs": 1483,
       "caughtBy": [
         "project refuses a plan with a cycle"
       ]
@@ -184,7 +184,7 @@
       "id": "project-state-running-beats-gate",
       "test": "packages/domain/test/project.test.ts",
       "verdict": "killed",
-      "durationMs": 562,
+      "durationMs": 692,
       "caughtBy": [
         "project derives its state with the prototype's precedence"
       ]
@@ -193,7 +193,7 @@
       "id": "template-fallback-shifts",
       "test": "packages/catalog/test/catalog.test.ts",
       "verdict": "killed",
-      "durationMs": 1049,
+      "durationMs": 1130,
       "caughtBy": [
         "projects catalogue falls back positionally to short-educational-video"
       ]
@@ -202,7 +202,7 @@
       "id": "blob-read-skips-hash-check",
       "test": "packages/kernel/test/blob.test.ts",
       "verdict": "killed",
-      "durationMs": 1203,
+      "durationMs": 1459,
       "caughtBy": [
         "blob store refuses to return damaged bytes"
       ]
@@ -211,7 +211,7 @@
       "id": "canonical-keys-unsorted",
       "test": "packages/kernel/test/canonical.test.ts",
       "verdict": "killed",
-      "durationMs": 1007,
+      "durationMs": 1218,
       "caughtBy": [
         "canonical JSON (RFC 8785) sorts keys, recursively, with no whitespace",
         "canonical JSON (RFC 8785) sorts keys by UTF-16 code unit, which differs from code point order past U+FFFF"
@@ -221,7 +221,7 @@
       "id": "crash-harness-accepts-swallowed-crash",
       "test": "packages/kernel/test/crash.test.ts",
       "verdict": "killed",
-      "durationMs": 1433,
+      "durationMs": 1720,
       "caughtBy": [
         "crash-prefix enumeration reports a scenario that swallows the crash and carries on"
       ]
@@ -230,7 +230,7 @@
       "id": "cull-order-counts-uncalibrated-grades",
       "test": "packages/kernel/test/calibration.test.ts",
       "verdict": "killed",
-      "durationMs": 1412,
+      "durationMs": 1742,
       "caughtBy": [
         "kernel/calibration - cullOrder ranks by calibrated grades only an inverted grade contributes nothing; an ungraded candidate keeps its place after the scored ones"
       ]
@@ -239,7 +239,7 @@
       "id": "calibration-labels-include-agent-verdicts",
       "test": "packages/kernel/test/calibration.test.ts",
       "verdict": "killed",
-      "durationMs": 732,
+      "durationMs": 856,
       "caughtBy": [
         "kernel/calibration - the registered series labels are the OPERATOR's newest verdicts; an agent's verdict and an undecided key are not labels"
       ]
@@ -248,7 +248,7 @@
       "id": "blind-pick-revealed-before-operator",
       "test": "packages/kernel/test/decision.blind.test.ts",
       "verdict": "killed",
-      "durationMs": 1285,
+      "durationMs": 1448,
       "caughtBy": [
         "kernel/decision - blind-first reveal before the operator's verdict, no read path can tell two opposite picks (or a pick-first order) apart",
         "kernel/decision - blind-first reveal reveals a pair's pick, and its grades, only once the OPERATOR has judged that pair",
@@ -259,7 +259,7 @@
       "id": "decision-stale-base-accepted",
       "test": "packages/kernel/test/decision.test.ts",
       "verdict": "killed",
-      "durationMs": 1638,
+      "durationMs": 1754,
       "caughtBy": [
         "kernel/decision - patches refuses a stale base with the 409 body: the named keys' current decisions and the revision"
       ]
@@ -268,7 +268,7 @@
       "id": "commit-retry-ignores-ticket",
       "test": "packages/kernel/test/decision.crash.test.ts",
       "verdict": "killed",
-      "durationMs": 1429,
+      "durationMs": 1545,
       "caughtBy": [
         "kernel/decision - crash prefixes of score -> keep -> commit -> delete a commit is all or nothing at every prefix, and a retried ticket converges"
       ]
@@ -277,7 +277,7 @@
       "id": "dry-port-calls-the-vendor",
       "test": "packages/kernel/test/dryrun.test.ts",
       "verdict": "killed",
-      "durationMs": 1540,
+      "durationMs": 1620,
       "caughtBy": [
         "the dry port never enters the vendor function, books a would-call as model cost, and continues on the stand-in",
         "the dry port stops the driver at a call with no stand-in, still without calling",
@@ -289,7 +289,7 @@
       "id": "dry-port-makes-undeclared-calls",
       "test": "packages/kernel/test/dryrun.test.ts",
       "verdict": "killed",
-      "durationMs": 706,
+      "durationMs": 772,
       "caughtBy": [
         "the dry port refuses an undeclared external call instead of making it"
       ]
@@ -298,7 +298,7 @@
       "id": "events-verify-skips-hash-compare",
       "test": "packages/kernel/test/events.test.ts",
       "verdict": "killed",
-      "durationMs": 1318,
+      "durationMs": 1297,
       "caughtBy": [
         "events verify names the first row whose data was tampered with raw SQL"
       ]
@@ -307,7 +307,7 @@
       "id": "events-verify-skips-gap-check",
       "test": "packages/kernel/test/events.test.ts",
       "verdict": "killed",
-      "durationMs": 809,
+      "durationMs": 616,
       "caughtBy": [
         "events verify sees a deleted middle row at the gap, and a cut tail only against an anchor"
       ]
@@ -316,7 +316,7 @@
       "id": "python-verifier-sorts-by-code-point",
       "test": "packages/kernel/test/events.python.test.ts",
       "verdict": "killed",
-      "durationMs": 2184,
+      "durationMs": 1832,
       "caughtBy": [
         "events verified by Python re-derives every hash Node wrote, including non-integer and exponent numbers",
         "events verified by Python re-derives the projection's fields (occurredAt, atSrc, key) and sees an edit to them"
@@ -326,7 +326,7 @@
       "id": "python-verifier-small-exponent-boundary",
       "test": "packages/kernel/test/events.python.test.ts",
       "verdict": "killed",
-      "durationMs": 978,
+      "durationMs": 1019,
       "caughtBy": [
         "events verified by Python re-derives every hash Node wrote, including non-integer and exponent numbers",
         "events verified by Python re-derives the projection's fields (occurredAt, atSrc, key) and sees an edit to them"
@@ -336,7 +336,7 @@
       "id": "events-page-repeats-boundary",
       "test": "packages/kernel/test/events.query.test.ts",
       "verdict": "killed",
-      "durationMs": 10186,
+      "durationMs": 10991,
       "caughtBy": [
         "ledger query at 50000 events pages with `next` visit every match exactly once, in order"
       ]
@@ -345,7 +345,7 @@
       "id": "job-ceiling-checked-after-unit",
       "test": "packages/kernel/test/job.core.test.ts",
       "verdict": "killed",
-      "durationMs": 1149,
+      "durationMs": 1300,
       "caughtBy": [
         "next checks the ceiling BEFORE the unit: a step that would cross it is not taken"
       ]
@@ -354,7 +354,7 @@
       "id": "job-money-stop-feeds-breaker",
       "test": "packages/kernel/test/job.core.test.ts",
       "verdict": "killed",
-      "durationMs": 564,
+      "durationMs": 704,
       "caughtBy": [
         "book a money stop is never a vendor failure: the streak stands where it was"
       ]
@@ -363,7 +363,7 @@
       "id": "job-step-not-marked-in-flight",
       "test": "packages/kernel/test/job.crash.test.ts",
       "verdict": "killed",
-      "durationMs": 2119,
+      "durationMs": 2972,
       "caughtBy": [
         "job driver under crash-prefix enumeration (a) crashed at every prefix, swept, retried by the operator: done, no booked step re-performed",
         "job driver under crash-prefix enumeration (b) a take-over after TTL while the old holder resumes: its write is refused by the fence"
@@ -373,7 +373,7 @@
       "id": "lease-fence-not-checked",
       "test": "packages/kernel/test/job.crash.test.ts",
       "verdict": "killed",
-      "durationMs": 1154,
+      "durationMs": 1090,
       "caughtBy": [
         "job driver under crash-prefix enumeration (b) a take-over after TTL while the old holder resumes: its write is refused by the fence"
       ]
@@ -382,7 +382,7 @@
       "id": "job-lane-inferred-not-declared",
       "test": "packages/kernel/test/job.test.ts",
       "verdict": "killed",
-      "durationMs": 1896,
+      "durationMs": 1714,
       "caughtBy": [
         "runJob refuses a producer whose lane is not the job's declared lane, before taking any lease"
       ]
@@ -391,7 +391,7 @@
       "id": "lease-python-grants-while-held",
       "test": "packages/kernel/test/lease.mixed.test.ts",
       "verdict": "killed",
-      "durationMs": 16857,
+      "durationMs": 3659,
       "caughtBy": [
         "Node and Python contend for one lease exactly one holds at any instant, and fences strictly increase"
       ]
@@ -400,7 +400,7 @@
       "id": "lease-newcomer-jumps-the-queue",
       "test": "packages/kernel/test/lease.spec.test.ts",
       "verdict": "killed",
-      "durationMs": 1811,
+      "durationMs": 2087,
       "caughtBy": [
         "spec/lease.json against the Node implementation FIFO: waiters are served in the order they asked, and a newcomer never jumps the line",
         "spec/lease.json against the Node implementation a dead waiter is skipped at once; an unseen waiter on another host is dropped after its TTL"
@@ -410,7 +410,7 @@
       "id": "lease-expiry-is-not-loss",
       "test": "packages/kernel/test/lease.spec.test.ts",
       "verdict": "killed",
-      "durationMs": 925,
+      "durationMs": 937,
       "caughtBy": [
         "spec/lease.json against the Node implementation a heartbeat keeps a live lease; past its TTL the lease is lost even before anyone takes it"
       ]
@@ -419,7 +419,7 @@
       "id": "lease-fence-check-only-on-expiry",
       "test": "packages/kernel/test/lease.test.ts",
       "verdict": "killed",
-      "durationMs": 1464,
+      "durationMs": 1445,
       "caughtBy": [
         "the fence is checked inside the writer's transaction: a refused fence takes the write down with it"
       ]
@@ -428,7 +428,7 @@
       "id": "lease-acquire-aborts-on-store-busy",
       "test": "packages/kernel/test/lease.test.ts",
       "verdict": "killed",
-      "durationMs": 716,
+      "durationMs": 823,
       "caughtBy": [
         "acquire a store busy past its timeout is contention while the wait has time left"
       ]
@@ -437,7 +437,7 @@
       "id": "lease-acquire-timeout-stays-queued",
       "test": "packages/kernel/test/lease.test.ts",
       "verdict": "killed",
-      "durationMs": 723,
+      "durationMs": 1034,
       "caughtBy": [
         "acquire runs out without hanging, leaves the queue and names the holder"
       ]
@@ -446,7 +446,7 @@
       "id": "migrate-edited-step-not-refused",
       "test": "packages/kernel/test/migrate.test.ts",
       "verdict": "killed",
-      "durationMs": 1545,
+      "durationMs": 1619,
       "caughtBy": [
         "migrations refuses a past step that was edited after it ran, and runs nothing"
       ]
@@ -455,7 +455,7 @@
       "id": "migrate-failed-step-bumps-ledger",
       "test": "packages/kernel/test/migrate.test.ts",
       "verdict": "killed",
-      "durationMs": 705,
+      "durationMs": 747,
       "caughtBy": [
         "migrations a failed step leaves no trace of itself, marks the failure, and blocks every run until cleared"
       ]
@@ -464,7 +464,7 @@
       "id": "price-vendor-zero-is-free",
       "test": "packages/kernel/test/pricing.test.ts",
       "verdict": "killed",
-      "durationMs": 1258,
+      "durationMs": 1430,
       "caughtBy": [
         "quote (lib/imaging/pricing.ts priceCall + lib/text/pricing.ts priceTurn) a vendor's own figure wins over the table; a zero or negative one is missing, not free"
       ]
@@ -473,7 +473,7 @@
       "id": "price-ignores-measured-size",
       "test": "packages/kernel/test/pricing.test.ts",
       "verdict": "killed",
-      "durationMs": 604,
+      "durationMs": 671,
       "caughtBy": [
         "quote (lib/imaging/pricing.ts priceCall + lib/text/pricing.ts priceTurn) prices only the size a figure was measured at"
       ]
@@ -482,7 +482,7 @@
       "id": "receipt-interrupted-claims-afresh",
       "test": "packages/kernel/test/receipts.test.ts",
       "verdict": "killed",
-      "durationMs": 1207,
+      "durationMs": 1588,
       "caughtBy": [
         "receipts (lib/imaging/receipts.ts, made durable) a claim whose owner died is interrupted, named, and refused until an operator releases it"
       ]
@@ -491,7 +491,7 @@
       "id": "receipt-dry-cost-reads-real",
       "test": "packages/kernel/test/receipts.test.ts",
       "verdict": "killed",
-      "durationMs": 633,
+      "durationMs": 686,
       "caughtBy": [
         "receipts (lib/imaging/receipts.ts, made durable) a dry claim and a live claim on one key are separate rows"
       ]
@@ -500,7 +500,7 @@
       "id": "router-recovery-deletes-inflight-claims",
       "test": "packages/kernel/test/router.crash.test.ts",
       "verdict": "killed",
-      "durationMs": 1531,
+      "durationMs": 1561,
       "caughtBy": [
         "route, reserve and call under a crash every prefix keeps decision and claim together, and recovery never calls the vendor twice"
       ]
@@ -509,7 +509,7 @@
       "id": "posture-local-binaries-off-ignored",
       "test": "packages/kernel/test/router.posture.test.ts",
       "verdict": "killed",
-      "durationMs": 1162,
+      "durationMs": 1131,
       "caughtBy": [
         "posture (lib/deployment.ts, lib/imaging/env.ts, lib/text/env.ts) LOCAL_BINARIES is honoured in both directions, and the explicit envs win"
       ]
@@ -518,7 +518,7 @@
       "id": "posture-malformed-env-falls-back",
       "test": "packages/kernel/test/router.posture.test.ts",
       "verdict": "killed",
-      "durationMs": 583,
+      "durationMs": 550,
       "caughtBy": [
         "posture (lib/deployment.ts, lib/imaging/env.ts, lib/text/env.ts) absent degrades; a malformed value fails instead of reaching a fallback"
       ]
@@ -527,7 +527,7 @@
       "id": "route-timeout-walks-the-chain",
       "test": "packages/kernel/test/router.route.test.ts",
       "verdict": "killed",
-      "durationMs": 1295,
+      "durationMs": 1278,
       "caughtBy": [
         "image routing (lib/imaging/router.ts, kept) a refusal walks to the next provider; a timeout stops the request"
       ]
@@ -536,7 +536,7 @@
       "id": "route-references-ignored",
       "test": "packages/kernel/test/router.route.test.ts",
       "verdict": "killed",
-      "durationMs": 610,
+      "durationMs": 581,
       "caughtBy": [
         "image routing (lib/imaging/router.ts, kept) a request carrying references never lands on a provider that ignores them"
       ]
@@ -545,7 +545,7 @@
       "id": "spend-crash-lapse-releases",
       "test": "packages/kernel/test/spend.crash.test.ts",
       "verdict": "killed",
-      "durationMs": 1645,
+      "durationMs": 1452,
       "caughtBy": [
         "kernel/spend - crash prefixes of reserve -> call -> settle never under-counts money that may have been spent, at any prefix, crashed or recovered"
       ]
@@ -554,7 +554,7 @@
       "id": "spend-ceiling-ignores-holds",
       "test": "packages/kernel/test/spend.test.ts",
       "verdict": "killed",
-      "durationMs": 1500,
+      "durationMs": 1236,
       "caughtBy": [
         "kernel/spend - reserve -> settle -> book the call that would cross is refused with `budget` and the numbers, and the refusal COMMITS its count"
       ]
@@ -563,7 +563,7 @@
       "id": "spend-zero-is-priced",
       "test": "packages/kernel/test/spend.test.ts",
       "verdict": "killed",
-      "durationMs": 777,
+      "durationMs": 804,
       "caughtBy": [
         "kernel/spend - reserve -> settle -> book unpriced is not free and not zero: absent, zero, negative or NaN books nothing and is counted"
       ]
@@ -572,7 +572,7 @@
       "id": "spend-v1port-reclaims-live-owner",
       "test": "packages/kernel/test/spend.v1port.test.ts",
       "verdict": "killed",
-      "durationMs": 1907,
+      "durationMs": 1957,
       "caughtBy": [
         "v1 behaviour cases - the kernel port's file-store edges a hold this process owns is never reclaimed, however old"
       ]
@@ -581,7 +581,7 @@
       "id": "store-deferred-begin",
       "test": "packages/kernel/test/store.file.test.ts",
       "verdict": "killed",
-      "durationMs": 2004,
+      "durationMs": 2398,
       "caughtBy": [
         "file store two real processes incrementing one counter lose no update"
       ]
@@ -590,7 +590,7 @@
       "id": "store-synchronous-normal",
       "test": "packages/kernel/test/store.file.test.ts",
       "verdict": "killed",
-      "durationMs": 732,
+      "durationMs": 833,
       "caughtBy": [
         "file store runs in WAL with synchronous FULL, and names sidecars by appending (a store with no extension)"
       ]
@@ -599,7 +599,7 @@
       "id": "store-promise-body-commits",
       "test": "packages/kernel/test/store.contract.test.ts",
       "verdict": "killed",
-      "durationMs": 1198,
+      "durationMs": 1255,
       "caughtBy": [
         "store contract (file) refuses and rolls back a body that returns a promise",
         "store contract (memory) refuses and rolls back a body that returns a promise"
@@ -609,7 +609,7 @@
       "id": "store-read-can-write",
       "test": "packages/kernel/test/store.contract.test.ts",
       "verdict": "killed",
-      "durationMs": 602,
+      "durationMs": 650,
       "caughtBy": [
         "store contract (file) a read transaction cannot write, and the store still writes afterwards",
         "store contract (memory) a read transaction cannot write, and the store still writes afterwards"
@@ -619,7 +619,7 @@
       "id": "kernel-forgets-a-module",
       "test": "packages/kernel/test/kernel.test.ts",
       "verdict": "killed",
-      "durationMs": 1460,
+      "durationMs": 1668,
       "caughtBy": [
         "openKernel carries every module that exports migrations - forgetting one fails here",
         "openKernel a fresh store reaches the union of every per-module fixture's schema, and nothing else"
@@ -629,7 +629,7 @@
       "id": "ui-freshness-late-value-rolls-back",
       "test": "packages/ui/test/freshness.test.ts",
       "verdict": "killed",
-      "durationMs": 967,
+      "durationMs": 996,
       "caughtBy": [
         "value + age + edge health a late value never rolls the held one back (an SSE replay, a slow poll after a fast one)"
       ]
@@ -638,7 +638,7 @@
       "id": "ui-freshness-success-never-restores",
       "test": "packages/ui/test/freshness.test.ts",
       "verdict": "killed",
-      "durationMs": 489,
+      "durationMs": 488,
       "caughtBy": [
         "value + age + edge health only a success newer than the failure restores health"
       ]
@@ -647,7 +647,7 @@
       "id": "ui-window-grid-holds-from-zero",
       "test": "packages/ui/test/window.test.ts",
       "verdict": "killed",
-      "durationMs": 925,
+      "durationMs": 1111,
       "caughtBy": [
         "a uniform list holds the rows in view plus overscan each side, half-open",
         "§9.5: the Library at 50,000 items never holds more than a viewport plus overscan grid over 1,000 scroll positions",
@@ -658,7 +658,7 @@
       "id": "ui-window-rowat-off-by-one",
       "test": "packages/ui/test/window.test.ts",
       "verdict": "killed",
-      "durationMs": 509,
+      "durationMs": 612,
       "caughtBy": [
         "measured rows (v1 shelf.ts) rowAt finds the row whose box holds y"
       ]
@@ -667,7 +667,7 @@
       "id": "ui-keymap-shadow-overlap-not-a-conflict",
       "test": "packages/ui/test/keymap.test.ts",
       "verdict": "killed",
-      "durationMs": 1215,
+      "durationMs": 1073,
       "caughtBy": [
         "conflicts() sees a collision an inner row over an outer chord without `shadows`"
       ]
@@ -676,7 +676,7 @@
       "id": "ui-keymap-held-key-repeats",
       "test": "packages/ui/test/keymap.test.ts",
       "verdict": "killed",
-      "durationMs": 653,
+      "durationMs": 577,
       "caughtBy": [
         "resolve: guards a held K decides ONE item; a held arrow walks",
         "resolve: guards a refused repeat does not fall through to an outer row"
@@ -686,7 +686,7 @@
       "id": "ui-layers-leaving-entry-owns-input",
       "test": "packages/ui/test/layers.test.ts",
       "verdict": "killed",
-      "durationMs": 1214,
+      "durationMs": 1315,
       "caughtBy": [
         "the stack holds entries by identity closing a layer with layers above it closes them first, top-down, once each",
         "Escape closes one thing a URL layer that is leaving owns no input: a second Escape does not navigate back twice",
@@ -699,7 +699,7 @@
       "id": "ui-layers-scroll-lock-toggled",
       "test": "packages/ui/test/layers.test.ts",
       "verdict": "killed",
-      "durationMs": 560,
+      "durationMs": 823,
       "caughtBy": [
         "the scroll lock is counted, not toggled (v1) the first holder locks, the last one out restores, in any order"
       ]
@@ -708,7 +708,7 @@
       "id": "ui-storage-unregistered-twin-writes",
       "test": "packages/ui/test/storage.test.ts",
       "verdict": "killed",
-      "durationMs": 1267,
+      "durationMs": 1766,
       "caughtBy": [
         "registration is the eviction list an unregistered key cannot be written, even with the same name"
       ]
@@ -717,7 +717,7 @@
       "id": "ui-storage-refresh-is-a-flip",
       "test": "packages/ui/test/storage.test.ts",
       "verdict": "killed",
-      "durationMs": 591,
+      "durationMs": 614,
       "caughtBy": [
         "identityFlip: the trigger table (v1 transitionFor) credential refresh: the bearer changed, the user did not"
       ]
@@ -726,7 +726,7 @@
       "id": "ui-tokenlint-unknown-var-passes",
       "test": "packages/ui/test/tokenLint.test.ts",
       "verdict": "killed",
-      "durationMs": 1161,
+      "durationMs": 1335,
       "caughtBy": [
         "lintCss flags a var() that names no token and reports its line (negative control)",
         "lintCss accepts a var() naming a custom property declared in the same file"
@@ -736,7 +736,7 @@
       "id": "ui-tokenlint-rgba-not-a-colour",
       "test": "packages/ui/test/tokenLint.test.ts",
       "verdict": "killed",
-      "durationMs": 568,
+      "durationMs": 762,
       "caughtBy": [
         "lintCss flags a raw colour in every spelling (negative control)"
       ]
@@ -745,7 +745,7 @@
       "id": "ui-tokenlint-one-off-reuse-passes",
       "test": "packages/ui/test/tokenLint.test.ts",
       "verdict": "killed",
-      "durationMs": 685,
+      "durationMs": 951,
       "caughtBy": [
         "lintCss never admits a colour through the hatch, nor one name declared twice (negative control)"
       ]
@@ -754,7 +754,7 @@
       "id": "ui-tokenrender-value-spacing-drifts",
       "test": "packages/ui/test/tokenRender.test.ts",
       "verdict": "killed",
-      "durationMs": 1208,
+      "durationMs": 2330,
       "caughtBy": [
         "renderCss carries every prototype :root value unchanged",
         "renderCss stops carrying the prototype when a value is changed (negative control)"
@@ -764,7 +764,7 @@
       "id": "ui-tokensource-duplicate-name-admitted",
       "test": "packages/ui/test/tokenSource.test.ts",
       "verdict": "killed",
-      "durationMs": 1198,
+      "durationMs": 1395,
       "caughtBy": [
         "tokenSource refuses a duplicate token name (negative control)"
       ]
@@ -773,7 +773,7 @@
       "id": "ui-checktokens-drift-ignored",
       "test": "packages/ui/test/checkTokens.test.ts",
       "verdict": "killed",
-      "durationMs": 3285,
+      "durationMs": 4267,
       "caughtBy": [
         "tokens:check exits 1 on drifted outputs and prints the regeneration command; the in-date twin is green"
       ]
@@ -782,7 +782,7 @@
       "id": "ui-checktokens-unreached-scss-passes",
       "test": "packages/ui/test/checkTokens.test.ts",
       "verdict": "killed",
-      "durationMs": 1653,
+      "durationMs": 1654,
       "caughtBy": [
         "tokens:check exits 2 when a module stylesheet exists that the walk does not read"
       ]
@@ -791,7 +791,7 @@
       "id": "ui-controls-disabled-link-navigates",
       "test": "packages/ui/test/components/controls.test.ts",
       "verdict": "killed",
-      "durationMs": 1210,
+      "durationMs": 1216,
       "caughtBy": [
         "Button disabled stays a focusable button that says so and takes no press; a disabled link is a button"
       ]
@@ -800,7 +800,7 @@
       "id": "ui-controls-seg-presses-every-option",
       "test": "packages/ui/test/components/controls.test.ts",
       "verdict": "killed",
-      "durationMs": 555,
+      "durationMs": 589,
       "caughtBy": [
         "pressed controls Seg presses exactly its value and names the group"
       ]
@@ -809,7 +809,7 @@
       "id": "ui-keycaps-facts-dropped",
       "test": "packages/ui/test/components/keycaps.test.ts",
       "verdict": "killed",
-      "durationMs": 942,
+      "durationMs": 1125,
       "caughtBy": [
         "Keycaps renders the keymap's rows for a mode facts change the rows exactly as the keymap says (an audio packet draws play)"
       ]
@@ -818,7 +818,7 @@
       "id": "ui-law-word-counter-counts-spaces",
       "test": "packages/ui/test/components/law.test.ts",
       "verdict": "killed",
-      "durationMs": 1156,
+      "durationMs": 1441,
       "caughtBy": [
         "the twelve-word rule the runtime counter agrees with the type at the boundary"
       ]
@@ -828,7 +828,7 @@
       "test": "packages/ui/test/components/law.test.ts",
       "typecheck": true,
       "verdict": "killed",
-      "durationMs": 4116,
+      "durationMs": 5049,
       "caughtBy": [
         "packages/ui/test/components/law.test.ts(66,63): error TS2344: Type 'true' does not satisfy the constraint '\"Expected: literal boolean: true, Actual: literal boolean: false\"'.",
         "packages/ui/test/components/law.test.ts(69,5): error TS2578: Unused '@ts-expect-error' directive.",
@@ -839,7 +839,7 @@
       "id": "ui-status-job-table-drops-interrupted",
       "test": "packages/ui/test/components/status.test.ts",
       "verdict": "killed",
-      "durationMs": 1191,
+      "durationMs": 1477,
       "caughtBy": [
         "the status table is exhaustive over each machine job: the table's keys are exactly the machine's states"
       ]
@@ -848,7 +848,7 @@
       "id": "ui-status-wire-reads-prototype-keys",
       "test": "packages/ui/test/components/status.test.ts",
       "verdict": "killed",
-      "durationMs": 657,
+      "durationMs": 622,
       "caughtBy": [
         "an unknown wire token a known token is not a miss, and a prototype key like `constructor` is not a state"
       ]
@@ -858,7 +858,7 @@
       "test": "packages/ui/test/components/status.test.ts",
       "typecheck": true,
       "verdict": "killed",
-      "durationMs": 4161,
+      "durationMs": 5209,
       "caughtBy": [
         "packages/ui/src/components/status/status.ts(142,3): error TS2322: Type 'StatusEntry | undefined' is not assignable to type 'StatusEntry'.",
         "packages/ui/test/components/status.test.ts(58,5): error TS2578: Unused '@ts-expect-error' directive."
@@ -868,7 +868,7 @@
       "id": "ui-signal-break-node-drawn-done",
       "test": "packages/ui/test/components/signal.test.ts",
       "verdict": "killed",
-      "durationMs": 1168,
+      "durationMs": 1221,
       "caughtBy": [
         "UpstreamBreak nodes before the break are done, the break is drawn, the rest unreached"
       ]
@@ -877,7 +877,7 @@
       "id": "ui-signal-tally-numerals-spoken",
       "test": "packages/ui/test/components/signal.test.ts",
       "verdict": "killed",
-      "durationMs": 527,
+      "durationMs": 560,
       "caughtBy": [
         "Tally the numerals and label are hidden and a sentence is spoken (12/36 is not 'twelve slash')"
       ]
@@ -886,7 +886,7 @@
       "id": "token-revocation-ignored",
       "test": "packages/kernel/test/token.test.ts",
       "verdict": "killed",
-      "durationMs": 1301,
+      "durationMs": 1444,
       "caughtBy": [
         "token verify a revoked token is refused at once, whatever its expiry",
         "token verify judge is pure over the stored record, the secret and the clock"
@@ -896,7 +896,7 @@
       "id": "token-expiry-off-by-one",
       "test": "packages/kernel/test/token.test.ts",
       "verdict": "killed",
-      "durationMs": 749,
+      "durationMs": 776,
       "caughtBy": [
         "token verify expires at expiresAt exactly, not a millisecond later"
       ]
@@ -905,7 +905,7 @@
       "id": "token-read-scope-spends",
       "test": "packages/kernel/test/token.test.ts",
       "verdict": "killed",
-      "durationMs": 638,
+      "durationMs": 791,
       "caughtBy": [
         "token verify a read token admits a read door only; a money token admits both"
       ]
@@ -914,7 +914,7 @@
       "id": "token-ttl-unbounded",
       "test": "packages/kernel/test/token.test.ts",
       "verdict": "killed",
-      "durationMs": 613,
+      "durationMs": 655,
       "caughtBy": [
         "token mint refuses a life past the bound, or under an hour, rather than clamping it"
       ]
@@ -923,7 +923,7 @@
       "id": "token-unknown-id-confirms-half",
       "test": "packages/kernel/test/token.test.ts",
       "verdict": "killed",
-      "durationMs": 588,
+      "durationMs": 773,
       "caughtBy": [
         "token verify an unknown id, a wrong secret and a malformed string are one refusal: no half is confirmed"
       ]
@@ -932,7 +932,7 @@
       "id": "token-mint-event-carries-hash",
       "test": "packages/kernel/test/token.test.ts",
       "verdict": "killed",
-      "durationMs": 613,
+      "durationMs": 739,
       "caughtBy": [
         "token mint prints gt_<id>_<secret> once; the store keeps the hash, the ledger keeps neither"
       ]
@@ -941,7 +941,7 @@
       "id": "ingest-append-once-skips-the-key-check",
       "test": "packages/kernel/test/events.ingest.test.ts",
       "verdict": "killed",
-      "durationMs": 1522,
+      "durationMs": 1930,
       "caughtBy": [
         "appendOnce appends a key once; the second call returns the stored event and writes nothing",
         "appendOnce reports a key whose content moved, except a derived instant, which is the sync's own clock",
@@ -952,7 +952,7 @@
       "id": "events-key-not-unique",
       "test": "packages/kernel/test/events.ingest.test.ts",
       "verdict": "killed",
-      "durationMs": 824,
+      "durationMs": 914,
       "caughtBy": [
         "appendOnce the uniqueness is the store's: a writer that skips the check is refused, not doubled"
       ]
@@ -961,7 +961,7 @@
       "id": "events-hash-leaves-out-occurred-at",
       "test": "packages/kernel/test/events.ingest.test.ts",
       "verdict": "killed",
-      "durationMs": 822,
+      "durationMs": 949,
       "caughtBy": [
         "events v3: the second clock and the key a v3 field edited after the fact breaks the chain - the new fields are covered by the hash"
       ]
@@ -970,7 +970,7 @@
       "id": "ingest-claim-ignores-the-holder",
       "test": "packages/kernel/test/events.ingest.test.ts",
       "verdict": "killed",
-      "durationMs": 850,
+      "durationMs": 1022,
       "caughtBy": [
         "the sync claim one claimant at a time, then none until the interval after the finish has passed",
         "the sync claim a claimant that died is replaced after its TTL, and its late finish changes nothing"
@@ -980,7 +980,7 @@
       "id": "ledger-window-on-the-recorded-clock",
       "test": "packages/kernel/test/events.time.test.ts",
       "verdict": "killed",
-      "durationMs": 1277,
+      "durationMs": 1321,
       "caughtBy": [
         "the ledger by time windows by when it happened: an August fact recorded in October is in August"
       ]
@@ -989,7 +989,7 @@
       "id": "ledger-time-cursor-repeats-the-boundary",
       "test": "packages/kernel/test/events.time.test.ts",
       "verdict": "killed",
-      "durationMs": 688,
+      "durationMs": 659,
       "caughtBy": [
         "the ledger by time a desc time cursor visits every match exactly once across tied instants",
         "the ledger by time a asc time cursor visits every match exactly once across tied instants"
@@ -999,9 +999,99 @@
       "id": "facet-counted-under-its-own-filter",
       "test": "packages/kernel/test/events.time.test.ts",
       "verdict": "killed",
-      "durationMs": 659,
+      "durationMs": 651,
       "caughtBy": [
         "countEvents counts the whole match, and each facet with its own filter left out"
+      ]
+    },
+    {
+      "id": "runs-pack-ignores-the-selection",
+      "test": "packages/ui/test/components/runs.test.ts",
+      "verdict": "killed",
+      "durationMs": 1276,
+      "caughtBy": [
+        "pack the selection packs first, so it is never the bar hidden behind +N",
+        "an overflowed bar is counted, not drawn selecting the overflowed job (J/K walks onto it) packs it into a drawn track; another takes the +1"
+      ]
+    },
+    {
+      "id": "runs-pack-in-time-not-screen",
+      "test": "packages/ui/test/components/runs.test.ts",
+      "verdict": "killed",
+      "durationMs": 737,
+      "caughtBy": [
+        "pack footprints are in SCREEN space: a 1-minute bar still occupies its minimum width plus the gap"
+      ]
+    },
+    {
+      "id": "runs-thread-swaps-up-and-down",
+      "test": "packages/ui/test/components/runs.test.ts",
+      "verdict": "killed",
+      "durationMs": 727,
+      "caughtBy": [
+        "what a selection lights selecting a job lights its chains: upstream edges cyan, downstream amber, the rest of the world dims"
+      ]
+    },
+    {
+      "id": "runs-overflow-drawn-underneath",
+      "test": "packages/ui/test/components/runs.test.ts",
+      "verdict": "killed",
+      "durationMs": 643,
+      "caughtBy": [
+        "RunsDayline markup a third job on a one-at-a-time lane goes behind a +1 that names what it hides",
+        "an overflowed bar is counted, not drawn cap 1: exactly two bars in the DOM and a +1 naming the third",
+        "an overflowed bar is counted, not drawn selecting the overflowed job (J/K walks onto it) packs it into a drawn track; another takes the +1"
+      ]
+    },
+    {
+      "id": "runs-labels-seated-across-rows",
+      "test": "packages/ui/test/components/runs.test.ts",
+      "verdict": "killed",
+      "durationMs": 669,
+      "caughtBy": [
+        "labels are seated per row: a bar on the next lane does not crowd this lane's label"
+      ]
+    },
+    {
+      "id": "strip-bars-linear",
+      "test": "packages/ui/test/components/ledger.test.ts",
+      "verdict": "killed",
+      "durationMs": 1373,
+      "caughtBy": [
+        "time strip geometry a bar is √n of the busiest day's height, and a day with one act is never shorter than MIN_BAR"
+      ]
+    },
+    {
+      "id": "strip-one-act-rounds-to-nothing",
+      "test": "packages/ui/test/components/ledger.test.ts",
+      "verdict": "survived",
+      "durationMs": 694
+    },
+    {
+      "id": "strip-click-never-clears",
+      "test": "packages/ui/test/components/ledger.test.ts",
+      "verdict": "killed",
+      "durationMs": 730,
+      "caughtBy": [
+        "time strip geometry a drag sets the range between its ends; a click on the whole range clears it"
+      ]
+    },
+    {
+      "id": "json-runs-drop-the-colon",
+      "test": "packages/ui/test/components/ledger.test.ts",
+      "verdict": "killed",
+      "durationMs": 769,
+      "caughtBy": [
+        "JSON runs every character lands in exactly one run, so the runs re-joined are the input"
+      ]
+    },
+    {
+      "id": "stale-badge-shows-when-live",
+      "test": "packages/ui/test/components/ledger.test.ts",
+      "verdict": "killed",
+      "durationMs": 743,
+      "caughtBy": [
+        "StaleBadge live draws nothing; stale and down draw the word and the coarse age"
       ]
     }
   ]
