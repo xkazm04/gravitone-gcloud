@@ -1,0 +1,22 @@
+{
+ "schema": "conform-run/1",
+ "worker": "fce8fd21-8b56-4ff8-839e-5d47d006ed2a",
+ "subject": "docs-sync",
+ "evaluatedAt": "2026-10-15T03:59:35.939506+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "docs-sync",
+   "context": "cut-phase",
+   "reason": "Not a documentation synchronization surface: cut-phase implements the video and audio editing workbench in the production studio (assembling timeline lanes for frames, voice, and score cues, managing sync bench offset drift, and compiling CutDocument edit decision lists for media rendering); its files contain no documentation-as-code coupling, doc-rot detection, cross-repo drift queries, or prose synchronization mechanisms. Matched on homonyms ('sync', 'drift', 'document') in registry mapping."
+  },
+  {
+   "subject": "docs-sync",
+   "context": "phase-shared-notebook",
+   "reason": "Not a documentation synchronization surface: phase-shared-notebook defines the typed research notebook contract and its React rendering UI (facts, mechanisms, reversals, steel-man, unknowns, obligations, and evidence log) consumed during media production between Research and Script steps; it contains no docs-as-code synchronization gates, source-to-documentation mapping, doc-rot scanners, or documentation drift detection mechanisms. Matched on keywords ('fact', 'document', 'app') in registry mapping."
+  }
+ ],
+ "consults": []
+}
