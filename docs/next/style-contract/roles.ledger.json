@@ -1,0 +1,104 @@
+{
+  "page": {
+    "winner": "app/ledger.html",
+    "port": "/kit",
+    "drive": [
+      "click:#dt-copy",
+      "wait:300"
+    ],
+    "portDrive": [
+      "click:[data-role=toast-trigger] button",
+      "wait:300"
+    ]
+  },
+  "roles": {
+    "ground": {
+      "winner": "body",
+      "port": "[data-world=next]"
+    },
+    "header": {
+      "winner": "[data-component=StudioHeader]",
+      "port": "[data-component=StudioHeader]"
+    },
+    "brand": {
+      "winner": ".brand",
+      "port": "[data-component=StudioHeader] > span:first-child"
+    },
+    "nav-rest": {
+      "winner": ".nav a[data-nav=library]",
+      "port": "[data-role=\"nav-rest@library\"]"
+    },
+    "nav-current": {
+      "winner": ".nav [aria-current=page]",
+      "port": "[data-role=\"nav-current@ledger\"]"
+    },
+    "chip": {
+      "winner": ".hdr-spend",
+      "port": "[data-role=\"chip\"] > *"
+    },
+    "chip-value": {
+      "winner": ".hdr-spend b",
+      "port": "[data-role=\"chip\"] b"
+    },
+    "tally": {
+      "winner": ".next-btn .tally",
+      "port": "[data-role=\"tally\"] > *"
+    },
+    "keycap": {
+      "winner": ".next-btn .keycap",
+      "port": "[data-role=\"keycap\"] > *"
+    },
+    "toast": {
+      "winner": ".toast",
+      "port": "[data-world=next] [role=status][aria-live=polite]"
+    },
+    "panel": {
+      "winner": ".panel.lg-facets",
+      "port": "[data-role=\"panel@ledger\"] > *"
+    },
+    "panel-head": {
+      "winner": ".lg-facets .panel-head",
+      "port": "[data-role=\"panel@ledger\"] h2"
+    },
+    "search": {
+      "winner": ".lg-top .search",
+      "port": "[data-role=\"search@ledger\"] > *"
+    },
+    "field": {
+      "winner": ".lg-top .search .field",
+      "port": "[data-role=\"search@ledger\"] input"
+    },
+    "facet-rail": {
+      "winner": ".fr",
+      "port": "[data-role=\"facet-rail\"] > *"
+    },
+    "body-text": {
+      "winner": ".fr .l",
+      "port": "[data-role=\"facet-rail\"] > * > span:nth-of-type(1)"
+    },
+    "seg-on": {
+      "winner": "#lg-seg button[aria-pressed=true]",
+      "port": "[data-role=\"seg@ledger\"] [aria-pressed=true]"
+    },
+    "heading-sect": {
+      "winner": ".h4",
+      "port": "[data-role=\"heading-sect@ledger\"] > *"
+    },
+    "heading-side": {
+      "winner": ".ts-side .side-h",
+      "port": "[data-role=\"heading-side@ledger\"] > *"
+    },
+    "toggle-off": {
+      "winner": "#lg-view",
+      "port": "[data-role=\"toggle-off@ledger\"] > *"
+    },
+    "tally-of": {
+      "winner": ".lg-top .tally",
+      "port": "[data-role=\"tally-of\"] > *"
+    },
+    "source-real": {
+      "winner": ".src.real",
+      "port": "[data-role=\"source-real@ledger\"] > *"
+    }
+  }
+}

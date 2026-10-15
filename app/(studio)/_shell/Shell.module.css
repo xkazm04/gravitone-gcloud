@@ -25,6 +25,9 @@
 .nav a[href]:hover{color:var(--ink-bright);background:var(--wash)}
 .nav [aria-current=page]{color:var(--ink-bright);box-shadow:inset 0 calc(-1 * var(--stroke-mark)) 0 var(--cyan)}
 .nav [aria-disabled=true]{color:var(--faint);cursor:not-allowed}
+/* tokens.css `.nav .n`: the Board item's count of packets at the weir. The Floor feeds it
+   (Phase 3); until then only the kit draws it. */
+.n{font:700 var(--fs-micro)/1 var(--mono);color:var(--amber);background:var(--amber-a);border-radius:var(--r-xs);padding:var(--sp-hair) var(--sp-tight)}
 .sep{width:1px;height:calc(var(--sp-4) * 2);background:var(--hair-2);margin:0 var(--sp-1);align-self:center}
 
 .right{margin-left:auto;display:flex;gap:var(--sp-3);align-items:center}

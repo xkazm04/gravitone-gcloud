@@ -16,6 +16,7 @@ import type { Metadata } from "next";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { parseSource } from "@gt/ui/tokenSource";
 
+import { ContractSection } from "./Contract.tsx";
 import { ControlSections } from "./Controls.tsx";
 import { KitNav } from "./KitNav.tsx";
 import { SignalSections } from "./Signal.tsx";
@@ -44,6 +45,7 @@ export default function KitPage() {
         <StatusSection />
         <ControlSections />
         <StructureSection />
+        <ContractSection />
       </div>
     </div>
   );

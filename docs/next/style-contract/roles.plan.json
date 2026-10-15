@@ -1,0 +1,100 @@
+{
+  "page": {
+    "winner": "app/projects.html#plan",
+    "port": "/kit"
+  },
+  "roles": {
+    "ground": {
+      "winner": "body",
+      "port": "[data-world=next]"
+    },
+    "header": {
+      "winner": "[data-component=StudioHeader]",
+      "port": "[data-component=StudioHeader]"
+    },
+    "brand": {
+      "winner": ".brand",
+      "port": "[data-component=StudioHeader] > span:first-child"
+    },
+    "nav-rest": {
+      "winner": ".nav a[data-nav=library]",
+      "port": "[data-role=\"nav-rest@library\"]"
+    },
+    "nav-current": {
+      "winner": ".nav [aria-current=page]",
+      "port": "[data-role=\"nav-current@projects\"]"
+    },
+    "chip": {
+      "winner": ".hdr-spend",
+      "port": "[data-role=\"chip\"] > *"
+    },
+    "chip-value": {
+      "winner": ".hdr-spend b",
+      "port": "[data-role=\"chip\"] b"
+    },
+    "tally": {
+      "winner": ".next-btn .tally",
+      "port": "[data-role=\"tally\"] > *"
+    },
+    "keycap": {
+      "winner": ".next-btn .keycap",
+      "port": "[data-role=\"keycap\"] > *"
+    },
+    "panel": {
+      "winner": ".panel.plist",
+      "port": "[data-role=\"panel@plan\"] > *"
+    },
+    "panel-head": {
+      "winner": ".plist .panel-head",
+      "port": "[data-role=\"panel@plan\"] h2"
+    },
+    "tabrail": {
+      "winner": ".tabrail",
+      "port": "[data-role=\"tabrail\"] > *"
+    },
+    "tab-current": {
+      "winner": ".tabrail a[aria-selected=true]",
+      "port": "[data-role=\"tabrail\"] [aria-current=page]"
+    },
+    "tab-rest": {
+      "winner": ".tabrail a[aria-selected=false]",
+      "port": "[data-role=\"tabrail\"] a:not([aria-current])"
+    },
+    "source-ill": {
+      "winner": ".src.illustrative",
+      "port": "[data-role=\"source-ill\"] > *"
+    },
+    "source-model": {
+      "winner": ".src.model",
+      "port": "#signal [data-specimen=\"SourceTag\"] > div > span:nth-child(5)"
+    },
+    "ledger-link": {
+      "winner": ".totals .ledger-link",
+      "port": "[data-role=\"ledger-link\"] > *"
+    },
+    "heading-sect": {
+      "winner": ".h4",
+      "port": "[data-role=\"heading-sect@plan\"] > *"
+    },
+    "heading-side": {
+      "winner": ".psum .side-h",
+      "port": "[data-role=\"heading-side@plan\"] > *"
+    },
+    "mono-meta": {
+      "winner": ".c-model .model-fixed",
+      "port": "[data-role=\"mono-meta\"] > *"
+    },
+    "button-cyan": {
+      "winner": ".psum .btn.cyan",
+      "port": "[data-role=\"button-cyan@plan\"] > *"
+    },
+    "chip-lower": {
+      "winner": ".chip.lc",
+      "port": "[data-role=\"chip-lower\"] > *"
+    },
+    "status-idle": {
+      "winner": ".state.queued",
+      "port": "[data-role=\"status-idle@plan\"] > *"
+    }
+  }
+}

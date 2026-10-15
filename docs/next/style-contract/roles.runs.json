@@ -1,0 +1,76 @@
+{
+  "page": {
+    "winner": "app/projects.html#runs",
+    "port": "/kit"
+  },
+  "roles": {
+    "ground": {
+      "winner": "body",
+      "port": "[data-world=next]"
+    },
+    "header": {
+      "winner": "[data-component=StudioHeader]",
+      "port": "[data-component=StudioHeader]"
+    },
+    "brand": {
+      "winner": ".brand",
+      "port": "[data-component=StudioHeader] > span:first-child"
+    },
+    "nav-rest": {
+      "winner": ".nav a[data-nav=library]",
+      "port": "[data-role=\"nav-rest@library\"]"
+    },
+    "nav-current": {
+      "winner": ".nav [aria-current=page]",
+      "port": "[data-role=\"nav-current@runs\"]"
+    },
+    "chip": {
+      "winner": ".hdr-spend",
+      "port": "[data-role=\"chip\"] > *"
+    },
+    "chip-value": {
+      "winner": ".hdr-spend b",
+      "port": "[data-role=\"chip\"] b"
+    },
+    "tally": {
+      "winner": ".next-btn .tally",
+      "port": "[data-role=\"tally\"] > *"
+    },
+    "keycap": {
+      "winner": ".next-btn .keycap",
+      "port": "[data-role=\"keycap\"] > *"
+    },
+    "seg-on": {
+      "winner": ".seg button[aria-pressed=true]",
+      "port": "[data-role=\"seg@runs\"] [aria-pressed=true]"
+    },
+    "seg-off": {
+      "winner": ".seg button[aria-pressed=false]",
+      "port": "[data-role=\"seg@runs\"] [aria-pressed=false]"
+    },
+    "status-fail": {
+      "winner": ".deprow .state.failed",
+      "port": "[data-role=\"status-fail@runs\"] > *"
+    },
+    "status-run": {
+      "winner": ".deprow .state.running",
+      "port": "[data-role=\"status-run\"] > *"
+    },
+    "chip-cyan": {
+      "winner": ".totals .chip.cyan",
+      "port": "[data-role=\"chip-cyan@runs\"] > *"
+    },
+    "chip-amber": {
+      "winner": ".totals .chip.amber",
+      "port": "[data-role=\"chip-amber@runs\"] > *"
+    },
+    "chip-rose": {
+      "winner": ".totals .chip.rose",
+      "port": "[data-role=\"chip-rose@runs\"] > *"
+    },
+    "button-sm": {
+      "winner": ".dl-bar .btn.sm",
+      "port": "[data-role=\"button-sm@runs\"] > *"
+    }
+  }
+}

@@ -1,0 +1,104 @@
+{
+  "page": {
+    "winner": "app/index.html",
+    "port": "/kit"
+  },
+  "roles": {
+    "ground": {
+      "winner": "body",
+      "port": "[data-world=next]"
+    },
+    "header": {
+      "winner": "[data-component=StudioHeader]",
+      "port": "[data-component=StudioHeader]"
+    },
+    "brand": {
+      "winner": ".brand",
+      "port": "[data-component=StudioHeader] > span:first-child"
+    },
+    "nav-rest": {
+      "winner": ".nav a[data-nav=library]",
+      "port": "[data-role=\"nav-rest@library\"]"
+    },
+    "nav-current": {
+      "winner": ".nav [aria-current=page]",
+      "port": "[data-role=\"nav-current@floor\"]"
+    },
+    "chip": {
+      "winner": ".hdr-spend",
+      "port": "[data-role=\"chip\"] > *"
+    },
+    "chip-value": {
+      "winner": ".hdr-spend b",
+      "port": "[data-role=\"chip\"] b"
+    },
+    "tally": {
+      "winner": ".next-btn .tally",
+      "port": "[data-role=\"tally\"] > *"
+    },
+    "keycap": {
+      "winner": ".next-btn .keycap",
+      "port": "[data-role=\"keycap\"] > *"
+    },
+    "chip-cyan": {
+      "winner": ".c-foundry .chip.cyan",
+      "port": "[data-role=\"chip-cyan@floor\"] > *"
+    },
+    "chip-ghost": {
+      "winner": ".shelf-head .chip.ghost",
+      "port": "#signal [data-specimen=\"Chip\"] [class*=\"__ghost\"]"
+    },
+    "tally-label": {
+      "winner": ".c-foundry .tally",
+      "port": "[data-role=\"tally-label@floor\"] h2 > span"
+    },
+    "status-await": {
+      "winner": ".run-meta .state.awaiting_gate",
+      "port": "[data-role=\"status-await@floor\"] > *"
+    },
+    "status-run": {
+      "winner": ".run-meta .state.running",
+      "port": "[data-role=\"status-run\"] > *"
+    },
+    "status-idle": {
+      "winner": "[data-component=SlotRow] .state.draft",
+      "port": "[data-role=\"status-idle@floor\"] > *"
+    },
+    "pip-done": {
+      "winner": ".piprow .pip.ratified",
+      "port": "[data-role=\"piprow\"] > * > :nth-child(1)"
+    },
+    "pip-failed": {
+      "winner": ".piprow .pip.blocked",
+      "port": "[data-role=\"piprow\"] > * > :nth-child(3)"
+    },
+    "pip-idle": {
+      "winner": ".piprow .pip.draft",
+      "port": "[data-role=\"piprow\"] > * > :nth-child(4)"
+    },
+    "pip-await": {
+      "winner": ".piprow .pip.awaiting_gate",
+      "port": "[data-role=\"piprow-await\"] > * > :nth-child(1)"
+    },
+    "stackbar": {
+      "winner": "[data-component=Pile] .stackbar",
+      "port": "[data-role=\"stackbar\"] > *"
+    },
+    "toggle-on": {
+      "winner": ".comp-row .toggle[aria-pressed=true]",
+      "port": "[data-role=\"toggle-on@floor\"] > *"
+    },
+    "toggle-off": {
+      "winner": ".comp-row .toggle[aria-pressed=false]",
+      "port": "[data-role=\"toggle-off@floor\"] > *"
+    },
+    "error": {
+      "winner": ".err",
+      "port": "[data-role=\"error\"] > *"
+    },
+    "channel": {
+      "winner": ".chan.youtube",
+      "port": "[data-role=\"channel\"] > *"
+    }
+  }
+}

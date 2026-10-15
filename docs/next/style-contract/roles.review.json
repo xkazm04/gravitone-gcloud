@@ -1,0 +1,56 @@
+{
+  "page": {
+    "winner": "app/index.html#open=pkt_prj_glass_harbor_trailer_cut",
+    "port": "/kit"
+  },
+  "roles": {
+    "ground": {
+      "winner": "body",
+      "port": "[data-world=next]"
+    },
+    "header": {
+      "winner": "[data-component=StudioHeader]",
+      "port": "[data-component=StudioHeader]"
+    },
+    "brand": {
+      "winner": ".brand",
+      "port": "[data-component=StudioHeader] > span:first-child"
+    },
+    "nav-rest": {
+      "winner": ".nav a[data-nav=library]",
+      "port": "[data-role=\"nav-rest@library\"]"
+    },
+    "nav-current": {
+      "winner": ".nav [aria-current=page]",
+      "port": "[data-role=\"nav-current@board\"]"
+    },
+    "chip": {
+      "winner": ".hdr-spend",
+      "port": "[data-role=\"chip\"] > *"
+    },
+    "chip-value": {
+      "winner": ".hdr-spend b",
+      "port": "[data-role=\"chip\"] b"
+    },
+    "tally": {
+      "winner": ".next-btn .tally",
+      "port": "[data-role=\"tally\"] > *"
+    },
+    "keycap": {
+      "winner": ".next-btn .keycap",
+      "port": "[data-role=\"keycap\"] > *"
+    },
+    "button-emerald": {
+      "winner": ".btn.emerald",
+      "port": "[data-role=\"button-emerald\"] > *"
+    },
+    "button-rose": {
+      "winner": ".btn.rose",
+      "port": "[data-role=\"button-rose\"] > *"
+    },
+    "heading-side": {
+      "winner": "[data-component=LevelSheet] .side-h",
+      "port": "[data-role=\"heading-side@review\"] > *"
+    }
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "page": {
+    "winner": "app/index.html#board",
+    "port": "/kit"
+  },
+  "roles": {
+    "ground": {
+      "winner": "body",
+      "port": "[data-world=next]"
+    },
+    "header": {
+      "winner": "[data-component=StudioHeader]",
+      "port": "[data-component=StudioHeader]"
+    },
+    "brand": {
+      "winner": ".brand",
+      "port": "[data-component=StudioHeader] > span:first-child"
+    },
+    "nav-rest": {
+      "winner": ".nav a[data-nav=library]",
+      "port": "[data-role=\"nav-rest@library\"]"
+    },
+    "nav-current": {
+      "winner": ".nav [aria-current=page]",
+      "port": "[data-role=\"nav-current@board\"]"
+    },
+    "chip": {
+      "winner": ".hdr-spend",
+      "port": "[data-role=\"chip\"] > *"
+    },
+    "chip-value": {
+      "winner": ".hdr-spend b",
+      "port": "[data-role=\"chip\"] b"
+    },
+    "tally": {
+      "winner": ".next-btn .tally",
+      "port": "[data-role=\"tally\"] > *"
+    },
+    "keycap": {
+      "winner": ".next-btn .keycap",
+      "port": "[data-role=\"keycap\"] > *"
+    },
+    "chip-emerald": {
+      "winner": "[data-component=LevelSheet] .chip.emerald",
+      "port": "[data-role=\"chip-emerald\"] > *"
+    },
+    "chip-rose": {
+      "winner": ".desk-top .chip.rose",
+      "port": "[data-role=\"chip-rose@board\"] > *"
+    },
+    "chip-amber": {
+      "winner": ".desk-top .chip.amber",
+      "port": "[data-role=\"chip-amber@board\"] > *"
+    },
+    "crumbs": {
+      "winner": ".sheet-bar [data-component=Crumbs]",
+      "port": "[data-role=\"crumbs\"] > *"
+    },
+    "button": {
+      "winner": ".sheet-close .btn",
+      "port": "[data-role=\"button\"] > *"
+    }
+  }
+}
