@@ -1,6 +1,9 @@
 // MV-LOOK-FRAMES - look at a look before spending a render on it.
 //
-//   npx tsx pipeline/mv-look-frames.mts <still> <audio> <look> <outDir> [seconds,...]
+//   npx tsx pipeline/mv-look-frames.mts <still> <audio> <look> <outDir> [seconds,... | clip:<start>:<length>]
+//
+// `clip:60:15` writes every frame of those 15 seconds as outDir/clip/f%06d.png
+// (the numbered sequence the real mux reads), to try an encode setting on.
 //
 // Bakes the track's envelope, renders the named frames through the same
 // compositor and render page the music-video queue uses, and writes one PNG
@@ -35,7 +38,8 @@ const envelope = JSON.parse(fs.readFileSync(envPath, "utf8"));
 
 const still = path.resolve(stillArg);
 const mime = still.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg";
-const secs = (secsArg ?? "12,45,90,150,210").split(",").map(Number);
+const clip = /^clip:(\d+(?:\.\d+)?):(\d+(?:\.\d+)?)$/.exec(secsArg ?? "");
+const secs = clip ? [] : (secsArg ?? "12,45,90,150,210").split(",").map(Number);
 
 const browser = await launchHeadless();
 try {
@@ -48,9 +52,20 @@ try {
     seed: 12345,
     effectParams: { ...DEFAULT_EFFECT_PARAMS, bloomIntensity: 0.5 },
     fit: "cover",
-    particleHue: 200,
+    particleHue: MV_LOOKS[lookArg].particleHue ?? 200,
     scene: MV_LOOKS[lookArg],
   });
+  if (clip) {
+    const dir = path.join(out, "clip");
+    fs.mkdirSync(dir, { recursive: true });
+    const first = Math.round(Number(clip[1]) * envelope.fps);
+    const count = Math.round(Number(clip[2]) * envelope.fps);
+    for (let n = 0; n < count; n++) {
+      const url: string = await page.evaluate((i: number) => (window as unknown as { renderFrameAt: (i: number) => string }).renderFrameAt(i), Math.min(envelope.frameCount - 1, first + n));
+      fs.writeFileSync(path.join(dir, `f${String(n).padStart(6, "0")}.png`), Buffer.from(url.split(",")[1], "base64"));
+    }
+    console.log(`${count} frames at ${envelope.fps} fps -> ${dir}`);
+  }
   for (const s of secs) {
     const i = Math.min(envelope.frameCount - 1, Math.round(s * envelope.fps));
     const url: string = await page.evaluate((n: number) => (window as unknown as { renderFrameAt: (i: number) => string }).renderFrameAt(n), i);

@@ -33,6 +33,9 @@ import type { MvAnalysis, MvChapter, MvMetadata, MvPatchRequest } from "./types"
 export const METADATA_TURN: TurnClass = "mv-metadata";
 export const METADATA_PROMPT_FILE = "MV-METADATA-PROMPT.md";
 
+/** What the video shows when no look says otherwise: the studio's own visualizer. */
+export const DEFAULT_PICTURE = "one generated still image with drifting particles and edge light pulsing on the beat";
+
 export const TITLE_MAX = 100;
 export const DESCRIPTION_MAX_BYTES = 5000;
 export const TAGS_MAX_CHARS = 500;
@@ -153,8 +156,9 @@ export function fitMetadata(json: unknown, trackTitle: string, analysis: Pick<Mv
 /* ── the turn ─────────────────────────────────────────────────────────────── */
 
 /** Pure over its inputs, so a probe reads what would be sent. */
-export function metadataPrompt(sections: Record<string, string>, input: TreatmentInput, rationale: string | undefined, note: string | undefined): string {
+export function metadataPrompt(sections: Record<string, string>, input: TreatmentInput, rationale: string | undefined, note: string | undefined, picture?: string): string {
   return fill(sections.metadata, {
+    PICTURE: picture?.trim() || DEFAULT_PICTURE,
     TITLE: input.title,
     ANALYSIS: analysisText(input.analysis),
     RATIONALE: rationale?.trim() || "(none)",
@@ -163,9 +167,9 @@ export function metadataPrompt(sections: Record<string, string>, input: Treatmen
   });
 }
 
-export async function writeMetadata(input: TreatmentInput, opts: { rationale?: string; note?: string; reason?: ReasonFn } = {}): Promise<MvMetadata> {
+export async function writeMetadata(input: TreatmentInput, opts: { rationale?: string; note?: string; picture?: string; reason?: ReasonFn } = {}): Promise<MvMetadata> {
   const sections = await promptSections(METADATA_PROMPT_FILE, ["metadata"]);
-  const out = await (opts.reason ?? routerReason)({ turn: METADATA_TURN, prompt: metadataPrompt(sections, input, opts.rationale, opts.note), schema: METADATA_SCHEMA });
+  const out = await (opts.reason ?? routerReason)({ turn: METADATA_TURN, prompt: metadataPrompt(sections, input, opts.rationale, opts.note, opts.picture), schema: METADATA_SCHEMA });
   return fitMetadata(out.json, input.title, input.analysis);
 }
 

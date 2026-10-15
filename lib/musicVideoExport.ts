@@ -410,12 +410,12 @@ async function measureLoudness(audioPath: string): Promise<{ integratedLufs: num
  *  crf 31 made 55 MB with the wet-step detail still intact at 1080p. The
  *  upload platform re-encodes anyway, so the master only has to survive that
  *  one more pass. Software only: NVENC's quality scale does not hold a size. */
-const COMPACT_VIDEO_ARGS = ["-c:v", "libx264", "-preset", "medium", "-crf", "30"];
+const compactVideoArgs = (crf = 30) => ["-c:v", "libx264", "-preset", "medium", "-crf", String(crf)];
 
 async function muxOnce(opts: {
-  framesDir: string; fps: number; audioPath: string; outPath: string; encoder: Encoder; gainDb: number; compact?: boolean;
+  framesDir: string; fps: number; audioPath: string; outPath: string; encoder: Encoder; gainDb: number; compact?: boolean; crf?: number;
 }): Promise<void> {
-  const { framesDir, fps, audioPath, outPath, encoder, gainDb, compact } = opts;
+  const { framesDir, fps, audioPath, outPath, encoder, gainDb, compact, crf } = opts;
   await run(
     "ffmpeg",
     [
@@ -423,7 +423,7 @@ async function muxOnce(opts: {
       "-framerate", String(fps),
       "-i", path.join(framesDir, "f%06d.png"),
       "-i", audioPath,
-      ...(compact ? COMPACT_VIDEO_ARGS : videoArgs(encoder)),
+      ...(compact ? compactVideoArgs(crf) : videoArgs(encoder)),
       "-pix_fmt", "yuv420p",
       "-c:a", "aac", "-b:a", compact ? "192k" : "384k", "-ar", "48000",
       // One linear gain, measured once per export (see `peakLimitedGainDb`).
@@ -457,14 +457,18 @@ export async function captureFrameSequence(
  *  that actually ran. */
 export async function muxFrameSequence(opts: {
   framesDir: string; fps: number; audioPath: string; outPath: string; logTag: string;
-  /** libx264 crf 30 and 192k audio, for a master that is size-bound (see COMPACT_VIDEO_ARGS). */
+  /** libx264 and 192k audio, for a master that is size-bound (see compactVideoArgs). */
   compact?: boolean;
+  /** The compact encode's quality, 30 by default; a lower number keeps more
+   *  of a dark, hazy picture (measured 2026-10-15: crf 30 smooths a smoke
+   *  gradient that crf 24 keeps). */
+  crf?: number;
 }): Promise<Encoder> {
-  const { framesDir, fps, audioPath, outPath, logTag, compact } = opts;
+  const { framesDir, fps, audioPath, outPath, logTag, compact, crf } = opts;
   const loudness = await measureLoudness(audioPath);
   const gainDb = loudness ? peakLimitedGainDb(loudness.integratedLufs, loudness.truePeakDb) : 0;
   if (compact) {
-    await muxOnce({ framesDir, fps, audioPath, outPath, encoder: "libx264", gainDb, compact });
+    await muxOnce({ framesDir, fps, audioPath, outPath, encoder: "libx264", gainDb, compact, crf });
     return "libx264";
   }
   return withEncoderFallback(logTag, (enc) => muxOnce({ framesDir, fps, audioPath, outPath, encoder: enc, gainDb }));

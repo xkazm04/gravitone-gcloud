@@ -81,7 +81,7 @@ import { applyMetadataPatch, writeMetadata } from "./metadata";
 import { analyseTrack, renderMusicVideo, type AnalyseArgs, type RenderArgs } from "./render";
 import { cleanTitle, DROPPED_FILES, ensureJobDir, isLiveJob, jobDirRel, jobFileRel, landFile, mintMvId, readMv, stagingAbs, withMv, type MvFile, type MvStep } from "./store";
 import { operatorTreatment, treatmentInput, writeMotion, writeTreatment, type ReasonFn } from "./treatment";
-import type { MvLookId } from "./looks";
+import { MV_LOOK_NOTES, type MvLookId } from "./looks";
 import { MV_PARTS, type MvAnalysis, type MvDriverHealth, type MvFiles, type MvJob, type MvPart, type MvPhase, type MvQueueState, type MvSnapshot, type MvSource } from "./types";
 
 /* ── the engines ──────────────────────────────────────────────────────────── */
@@ -482,7 +482,7 @@ async function runStep(step: MvStep, j: MvJob, eng: MvEngines): Promise<(x: MvJo
       return (x) => void (x.files.still = rel);
     }
     case "metadata": {
-      const metadata = await writeMetadata(input(), { rationale: j.treatment?.rationale, note: noteFor("metadata"), reason: eng.reason });
+      const metadata = await writeMetadata(input(), { rationale: j.treatment?.rationale, note: noteFor("metadata"), ...(j.look ? { picture: MV_LOOK_NOTES[j.look] } : {}), reason: eng.reason });
       return (x) => void (x.metadata = metadata);
     }
     case "video": {

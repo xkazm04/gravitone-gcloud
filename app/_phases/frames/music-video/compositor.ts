@@ -658,18 +658,39 @@ export interface SceneFx {
   /** How far the band-driven part of every layer swings; 1 = the base look.
    *  Only the swing is scaled - a quiet passage rests where it always did. */
   intensity?: number;
+  /** A slow build across the track: the swing is scaled from `lo` where the
+   *  track is at its quietest to `hi` where it is at its fullest, by the
+   *  overall level smoothed over `smoothS` seconds. Derived once per envelope. */
+  arc?: { smoothS: number; lo: number; hi: number };
+  /** The dust's tint, 0..360, over the treatment's own. */
+  particleHue?: number;
+  /** The queue's compact encode quality for this look (30 when absent): a
+   *  dark, hazy picture wants a lower number. Read by the render, not drawn. */
+  crf?: number;
   /** Fine falling rain over the whole frame. */
-  rain: { count: number; angleDeg: number; lengthPx: number; hue: number; warmZones: { x: number; y: number; r: number }[] };
+  rain?: { count: number; angleDeg: number; lengthPx: number; hue: number; warmZones: { x: number; y: number; r: number }[] };
   /** Fire: a flickering glow and rising sparks at each source. */
-  fires: { x: number; y: number; r: number; sparks: number }[];
-  /** Light rising from `from` along curves to each target (the voice). */
-  threads: { from: ScenePoint; to: ScenePoint[]; count: number; hue: number };
+  fires?: { x: number; y: number; r: number; sparks: number }[];
+  /** Light rising from `from` along curves to each target (the voice).
+   *  `lift` is how far the curve arches above the straight line (0.09 default),
+   *  `l` the lightness of the motes (78 default). */
+  threads?: { from: ScenePoint; to: ScenePoint[]; count: number; hue: number; lift?: number; l?: number };
   /** Soft glows on the targets, rippled in order by `lagFrames`. */
-  glows: { x: number; y: number; r: number; hue: number; lagFrames: number }[];
+  glows?: { x: number; y: number; r: number; hue: number; lagFrames: number; l?: number }[];
   /** A slow breathing halo. */
-  moon: { x: number; y: number; r: number };
-  /** Twinkling glints inside rects: amber left of `warmBelowX`, cool right of it. */
-  glints: { rects: { x0: number; y0: number; x1: number; y1: number }[]; count: number; warmBelowX: number };
+  moon?: { x: number; y: number; r: number };
+  /** Twinkling glints inside rects: amber left of `warmBelowX`, cool right of
+   *  it - or all one `hue` when it is given. */
+  glints?: { rects: { x0: number; y0: number; x1: number; y1: number }[]; count: number; warmBelowX: number; hue?: number };
+  /** Steady lamps that swell on the low band (taillights): no flicker. */
+  lamps?: { points: ScenePoint[]; r: number; hue: number };
+  /** Soft vertical streaks (a lit thing's reflection in a wet floor), centred
+   *  on x, from y down by h, w wide, breathing on `band`. */
+  reflect?: { streaks: { x: number; y: number; w: number; h: number; band: "low" | "mid" | "high" }[]; hue: number };
+  /** Slow soft haze blobs drifting along a band of the frame. */
+  smoke?: { y0: number; y1: number; count: number; hue: number };
+  /** Faint steady lights with a slow twinkle (a skyline, a tube). */
+  beacons?: { x: number; y: number; r: number; hue: number; l: number; a: number; rate: number }[];
 }
 
 interface SceneCtx {
@@ -713,20 +734,20 @@ export function drawScene(ctx: CanvasRenderingContext2D, fx: SceneFx, c: SceneCt
   const low = drive(c.low, frameIndex, fps);
   const high = drive(c.high, frameIndex, fps);
   const level = (low + drive(c.mid, frameIndex, fps) + high) / 3;
-  const k = fx.intensity ?? 1;
+  const k = (fx.intensity ?? 1) * (fx.arc ? arcFactor(fx.arc, c) : 1);
 
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
 
   // THE MOON: a slow breath, kept low so the title space stays clean.
-  {
+  if (fx.moon) {
     const breath = 0.5 + 0.5 * Math.sin((t / 7) * Math.PI * 2);
     radial(ctx, px(fx.moon.x), py(fx.moon.y), fx.moon.r * dh * 3.2, hsla(214, 70, 82, 0.1 + 0.05 * breath), hsla(214, 70, 82, 0));
   }
 
   // RAIN. Each streak is a fixed lane that falls and wraps; denser and a touch
   // brighter as the track gets louder. Streaks that pass a fire's glow turn amber.
-  {
+  if (fx.rain) {
     const rad = (fx.rain.angleDeg * Math.PI) / 180;
     const sx = Math.sin(rad);
     const cy = Math.cos(rad);
@@ -762,8 +783,9 @@ export function drawScene(ctx: CanvasRenderingContext2D, fx: SceneFx, c: SceneCt
   }
 
   // FIRE: a flickering amber glow that rises a little on the low band, and sparks.
-  for (let fi = 0; fi < fx.fires.length; fi++) {
-    const f = fx.fires[fi];
+  const fires = fx.fires ?? [];
+  for (let fi = 0; fi < fires.length; fi++) {
+    const f = fires[fi];
     const flick = 0.55 + 0.25 * Math.sin(t * 7.3 + fi * 2.1) + 0.12 * Math.sin(t * 13.7 + fi * 0.7) + 0.08 * Math.sin(t * 23.1 + fi);
     const a = Math.max(0, flick * 0.2 + 0.2 * k * low);
     radial(ctx, px(f.x), py(f.y), f.r * dh * (1 + 0.12 * k * low), hsla(32, 100, 58, a), hsla(26, 100, 45, 0));
@@ -788,15 +810,18 @@ export function drawScene(ctx: CanvasRenderingContext2D, fx: SceneFx, c: SceneCt
 
   // THE INSTRUMENTS' GLOW: mid band, each a few frames behind the last, so a
   // phrase travels lyre -> flute -> drum.
-  for (const g of fx.glows) {
+  for (const g of fx.glows ?? []) {
     const m = drive(c.mid, frameIndex, fps, g.lagFrames);
-    radial(ctx, px(g.x), py(g.y), g.r * dh * (1 + 0.1 * k * m), hsla(g.hue, 100, 72, 0.05 + 0.2 * k * m), hsla(g.hue, 100, 60, 0));
+    const gl = g.l ?? 72;
+    radial(ctx, px(g.x), py(g.y), g.r * dh * (1 + 0.1 * k * m), hsla(g.hue, 100, gl, 0.05 + 0.2 * k * m), hsla(g.hue, 100, gl - 12, 0));
   }
 
   // THE VOICE'S THREADS: motes leave the singer and arc to the instruments;
   // the high band (breath, sibilance, air) is what brightens them.
-  {
+  if (fx.threads) {
     const th = fx.threads;
+    const tl = th.l ?? 78;
+    const lift = th.lift ?? 0.09;
     for (let i = 0; i < th.count; i++) {
       const rng = mulberry32(hashSeed(seed ^ 0x7b3a, i));
       const target = th.to[i % th.to.length];
@@ -806,14 +831,14 @@ export function drawScene(ctx: CanvasRenderingContext2D, fx: SceneFx, c: SceneCt
       const wobble = Math.sin(t * (1.3 + rng()) + rng() * 6.28) * 0.012;
       const e = p * p * (3 - 2 * p); // ease: leaves slowly, lands softly
       const mx = (th.from.x + target.x) / 2;
-      const my = (th.from.y + target.y) / 2 - 0.09 - bow * 0.5;
+      const my = (th.from.y + target.y) / 2 - lift - bow * 0.5;
       const x = (1 - e) * (1 - e) * th.from.x + 2 * (1 - e) * e * mx + e * e * target.x + wobble;
       const y = (1 - e) * (1 - e) * th.from.y + 2 * (1 - e) * e * my + e * e * target.y + wobble * 0.6;
       const a = Math.sin(Math.PI * p) * (0.3 + 0.7 * Math.min(1, k * high * 1.8));
       const size = (1.2 + 2.2 * rng()) * u;
       ctx.globalAlpha = Math.max(0, Math.min(1, a));
-      radial(ctx, px(x), py(y), size * 4, hsla(th.hue, 100, 78, 0.5), hsla(th.hue, 100, 70, 0));
-      ctx.fillStyle = hsla(th.hue, 90, 92, 1);
+      radial(ctx, px(x), py(y), size * 4, hsla(th.hue, 100, tl, 0.5), hsla(th.hue, 100, tl - 8, 0));
+      ctx.fillStyle = hsla(th.hue, 90, Math.min(96, tl + 14), 1);
       ctx.beginPath();
       ctx.arc(px(x), py(y), size * 0.6, 0, Math.PI * 2);
       ctx.fill();
@@ -822,7 +847,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, fx: SceneFx, c: SceneCt
   }
 
   // GLINTS on the wet steps and the sea: amber where the fire reflects, cool elsewhere.
-  {
+  if (fx.glints) {
     const gl = fx.glints;
     for (let i = 0; i < gl.count; i++) {
       const rng = mulberry32(hashSeed(seed ^ 0x6c17, i));
@@ -836,7 +861,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, fx: SceneFx, c: SceneCt
       const warm = x < gl.warmBelowX;
       const wpx = (3 + 9 * rng()) * u;
       ctx.globalAlpha = Math.min(1, a);
-      ctx.fillStyle = warm ? hsla(34, 100, 66, 1) : hsla(208, 90, 82, 1);
+      ctx.fillStyle = gl.hue !== undefined ? hsla(gl.hue, 100, 62, 1) : warm ? hsla(34, 100, 66, 1) : hsla(208, 90, 82, 1);
       ctx.beginPath();
       ctx.ellipse(px(x), py(y), wpx, 0.9 * u + 0.5, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -844,5 +869,88 @@ export function drawScene(ctx: CanvasRenderingContext2D, fx: SceneFx, c: SceneCt
     ctx.globalAlpha = 1;
   }
 
+
+  // HAZE: slow blobs along the floor band, a little denser as the track fills.
+  if (fx.smoke) {
+    const sm = fx.smoke;
+    for (let i = 0; i < sm.count; i++) {
+      const rng = mulberry32(hashSeed(seed ^ 0x5a0c, i));
+      const speed = (0.004 + 0.008 * rng()) * (rng() < 0.5 ? 1 : -1);
+      const x = fract(rng() + t * speed);
+      const y = sm.y0 + (sm.y1 - sm.y0) * rng() + Math.sin(t * 0.21 + rng() * 6.28) * 0.012;
+      const r = (0.1 + 0.12 * rng()) * dh;
+      const a = (0.025 + 0.03 * rng()) * (0.6 + 0.8 * Math.min(1, level * 1.4)) * k;
+      radial(ctx, px(x), py(y), r, hsla(sm.hue, 75, 45, a), hsla(sm.hue, 75, 35, 0));
+    }
+  }
+
+  // LAMPS: steady glow that swells on the kick and exhales between.
+  if (fx.lamps) {
+    const lp = fx.lamps;
+    for (const p of lp.points) {
+      radial(ctx, px(p.x), py(p.y), lp.r * dh * (1 + 0.18 * k * low), hsla(lp.hue, 100, 52, Math.min(0.9, 0.16 + 0.34 * k * low)), hsla(lp.hue, 100, 40, 0));
+    }
+  }
+
+  // REFLECTIONS: elliptical soft streaks on the floor, each on its own band.
+  if (fx.reflect) {
+    const rf = fx.reflect;
+    for (let i = 0; i < rf.streaks.length; i++) {
+      const st = rf.streaks[i];
+      const b = st.band === "low" ? low : st.band === "mid" ? drive(c.mid, frameIndex, fps) : high;
+      const shimmer = 0.75 + 0.25 * Math.sin(t * 1.7 + i * 2.3);
+      const a = Math.min(0.8, (0.07 + 0.2 * k * b) * shimmer);
+      ctx.save();
+      ctx.translate(px(st.x), py(st.y + st.h / 2));
+      ctx.scale((st.w * dw) / 2, (st.h * dh) / 2);
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+      g.addColorStop(0, hsla(rf.hue, 100, 50, a));
+      g.addColorStop(1, hsla(rf.hue, 100, 40, 0));
+      ctx.fillStyle = g;
+      ctx.fillRect(-1, -1, 2, 2);
+      ctx.restore();
+    }
+  }
+
+  // BEACONS: far lights that barely move.
+  for (const bc of fx.beacons ?? []) {
+    const tw = 0.6 + 0.4 * Math.sin(t * bc.rate * Math.PI * 2 + bc.x * 17);
+    radial(ctx, px(bc.x), py(bc.y), bc.r * dh, hsla(bc.hue, 100, bc.l, bc.a * tw * (0.8 + 0.2 * k)), hsla(bc.hue, 100, 50, 0));
+  }
+
   ctx.restore();
+}
+
+// THE ARC: the overall level (the three bands' mean) smoothed over `smoothS`
+// seconds and stretched to 0..1 across the track, so a three-wave build reads
+// as three steps of one slope. Derived from the envelope alone and cached on
+// it, so a frame still depends only on (seed, frameIndex, envelope).
+const arcCache = new WeakMap<number[], number[]>();
+
+function arcCurve(c: SceneCtx, smoothS: number): number[] {
+  const hit = arcCache.get(c.low);
+  if (hit) return hit;
+  const n = c.low.length;
+  const prefix = new Float64Array(n + 1);
+  for (let i = 0; i < n; i++) prefix[i + 1] = prefix[i] + (c.low[i] + (c.mid[i] ?? 0) + (c.high[i] ?? 0)) / 3;
+  const half = Math.max(1, Math.round((smoothS * c.fps) / 2));
+  const out = new Array<number>(n);
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (let i = 0; i < n; i++) {
+    const a = Math.max(0, i - half);
+    const b = Math.min(n, i + half + 1);
+    out[i] = (prefix[b] - prefix[a]) / (b - a);
+    if (out[i] < lo) lo = out[i];
+    if (out[i] > hi) hi = out[i];
+  }
+  const span = hi - lo > 1e-6 ? hi - lo : 1;
+  for (let i = 0; i < n; i++) out[i] = (out[i] - lo) / span;
+  arcCache.set(c.low, out);
+  return out;
+}
+
+function arcFactor(arc: NonNullable<SceneFx["arc"]>, c: SceneCtx): number {
+  const v = arcCurve(c, arc.smoothS)[Math.min(c.low.length - 1, Math.max(0, c.frameIndex))] ?? 0;
+  return arc.lo + (arc.hi - arc.lo) * v;
 }
