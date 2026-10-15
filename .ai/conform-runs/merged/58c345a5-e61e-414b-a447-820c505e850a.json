@@ -1,0 +1,135 @@
+{
+ "schema": "conform-run/1",
+ "worker": "58c345a5-e61e-414b-a447-820c505e850a",
+ "subject": "module-design",
+ "evaluatedAt": "2026-10-15T01:58:05.867315+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "pipeline-scripts",
+   "subject": "module-design",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "pipeline/vlm-probe/guard.py:223 start_comfy interpolates environment-derived paths into executable PowerShell without checked quoting or a written invariant establishing that the interpolation is valid.",
+   "techniques": [
+    {
+     "technique": "concurrency-at-the-edge",
+     "verdict": "conformant",
+     "evidence": "pipeline/probes/liveness-ab.mjs:42 Resetting the activity deadline on arriving bytes is the supervision policy itself; removing concurrency would require recreating its event coordination."
+    },
+    {
+     "technique": "declarative-or-sequential",
+     "verdict": "conformant",
+     "evidence": "pipeline/lint-ratchet.mjs:98 The surrounding explicit loop builds error diagnostics and per-rule warning counts through different branches, matching the multiple-output rule."
+    },
+    {
+     "technique": "io-free-core",
+     "verdict": "conformant",
+     "evidence": "pipeline/vlm-probe/identity.py:263 The verdict decision consumes supplied distances and scale values and returns text without loading models, reading files, waiting, or consulting a clock."
+    },
+    {
+     "technique": "locality-and-leverage",
+     "verdict": "conformant",
+     "evidence": "pipeline/vlm-probe/guard.py:49 The installation location has one declaration; consistency, motion and checkpoint fetching derive their paths from it, localizing installation changes."
+    },
+    {
+     "technique": "marked-unverifiable-region",
+     "verdict": "deviation",
+     "evidence": "pipeline/vlm-probe/guard.py:223 The PowerShell text embeds COMFY_DIR directly inside quotes; the surrounding code neither escapes it nor states an invariant excluding characters that alter that text."
+    },
+    {
+     "technique": "module-depth",
+     "verdict": "conformant",
+     "evidence": "pipeline/vlm-probe/consistency.py:200 The generation boundary returns a saved output path while hiding submission, polling, liveness detection and timeout handling; this wrapper supplies the probe's host and output configuration."
+    },
+    {
+     "technique": "scoreable-designs-are-built-not-argued",
+     "verdict": "conformant",
+     "evidence": "pipeline/probes/liveness-ab.mjs:49 Both supervision policies run through one harness against the same child cases and measurement fields; the file explicitly limits its claim to an imitation of the product policy."
+    }
+   ]
+  },
+  {
+   "context": "asset-library",
+   "subject": "module-design",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/library/assetMeta.ts:83 readAssetFacts asserts complete PromotedMeta after checking only two string identifiers, allowing its typed output to expose unvalidated block, cost and provenance values.",
+   "techniques": [
+    {
+     "technique": "declarative-or-sequential",
+     "verdict": "conformant",
+     "evidence": "lib/assets.ts:769 Folder renaming filters assets and maps them into one rename-plan collection; persistence remains outside that transformation."
+    },
+    {
+     "technique": "io-free-core",
+     "verdict": "conformant",
+     "evidence": "lib/assets.ts:465 Hydration receives already-created URLs and returns transformed rows; object-URL allocation and its lifetime remain the caller's responsibility."
+    },
+    {
+     "technique": "locality-and-leverage",
+     "verdict": "conformant",
+     "evidence": "lib/themes.ts:136 One styleFits predicate supplies the discipline rule to both the atelier and preset rail, localizing changes to that shared decision."
+    },
+    {
+     "technique": "marked-unverifiable-region",
+     "verdict": "deviation",
+     "evidence": "app/library/assetMeta.ts:83 isPromoted checks only themeId and proofId, while this assertion also promises block, provenance, promotedAt and other fields without validating them or stating an invariant establishing their shapes."
+    },
+    {
+     "technique": "module-depth",
+     "verdict": "conformant",
+     "evidence": "lib/assets.ts:420 Callers supply asset/blob pairs; the boundary hides database opening, both-store transaction handling and connection cleanup while preventing a partial upload commit."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "module-design",
+   "context": "phase-shared-notebook",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-15T01:58:05.867315+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "module-design"
+   ],
+   "techniques": [
+    "concurrency-at-the-edge",
+    "declarative-or-sequential",
+    "io-free-core",
+    "locality-and-leverage",
+    "marked-unverifiable-region",
+    "module-depth",
+    "scoreable-designs-are-built-not-argued"
+   ],
+   "deviations": 1,
+   "context": "pipeline-scripts",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-15T01:58:05.867315+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "module-design"
+   ],
+   "techniques": [
+    "declarative-or-sequential",
+    "io-free-core",
+    "locality-and-leverage",
+    "marked-unverifiable-region",
+    "module-depth"
+   ],
+   "deviations": 1,
+   "context": "asset-library",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
