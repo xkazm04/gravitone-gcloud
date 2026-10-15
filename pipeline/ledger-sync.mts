@@ -9,6 +9,10 @@
 //        with --exact (a fresh store) any difference is
 //   node pipeline/ledger-sync.mts live [--fixtures] [--json]
 //        v1's live work and Weir piles, as Runs reads them; writes nothing
+//   node pipeline/ledger-sync.mts apply [--fixtures] [--store <file>] [--json]
+//        deliver every due decision apply (a committed or returned packet whose
+//        outcome v1 has not taken yet) through its source adapter, then list the
+//        stuck ones with v1's sentence (lib/decision/v1/applier.ts; Phase 3)
 //   node pipeline/ledger-sync.mts seed-fixtures
 //        write the fixture universe the sources read (pipeline/fixtures) under
 //        <cwd>/fixtures-out - the reconcile probe runs this in a temp directory
@@ -71,7 +75,7 @@ registerHooks({
 });
 
 const args = process.argv.slice(2);
-const VERBS = ["sync", "reconcile", "live", "seed-fixtures"] as const;
+const VERBS = ["sync", "reconcile", "live", "apply", "seed-fixtures"] as const;
 type Verb = (typeof VERBS)[number];
 const isVerb = (v: string | undefined): v is Verb => VERBS.some((x) => x === v);
 const verb: Verb = isVerb(args[0]) ? args[0] : "sync";
@@ -108,7 +112,7 @@ if (verb === "seed-fixtures") {
   // The generators of the stores lib/ledger/v1/sources.ts reads. A lot that
   // adds a source whose fixtures come from another generator adds it here.
   const seeded: Record<string, string> = {};
-  for (const name of ["foundry", "publish", "work"]) {
+  for (const name of ["foundry", "publish", "work", "sound"]) {
     const gen: { generate: () => string } = await import(`./fixtures/${name}.ts`);
     seeded[name] = gen.generate();
   }
@@ -138,6 +142,26 @@ if (verb === "live") {
 const k = kernel();
 if (!k.ok) fail(`cannot open the kernel store: ${k.error.message}`);
 const s = k.value.store;
+
+if (verb === "apply") {
+  // The operator's explicit sweep: no reader's claim to wait on (each row is claimed by its own
+  // conditional write). Bounded, as every sweep is: what is left is due again next run.
+  const { drainNow } = await import("../lib/decision/v1/applier.ts");
+  const { listPacketSummaries } = await import("@gt/kernel/decision/view");
+  const done = await drainNow(s, { max: 64 });
+  const stuck = s.read((r) => [...listPacketSummaries(r, { state: "committed", limit: 500 }).packets, ...listPacketSummaries(r, { state: "returned", limit: 500 }).packets].filter((p) => p.apply?.state === "stuck"));
+  closeKernel();
+  if (!done.ok) fail(done.error.message);
+  if (!stuck.ok) fail(stuck.error.message);
+  const rows = stuck.value.map((p) => ({ packetId: p.id, attempts: p.apply?.attempts ?? 0, error: p.apply?.lastError ?? "" }));
+  out({ store: s.location, delivered: done.value, stuck: rows }, [
+    `store ${s.location}`,
+    ...done.value.map((d) => `apply ${d.result.padEnd(8)} ${d.packetId} (attempt ${d.attempt})`),
+    ...rows.map((r) => `STUCK ${r.packetId} after ${r.attempts} attempt(s): ${r.error}`),
+    `${done.value.length} delivered, ${rows.length} stuck`,
+  ]);
+  process.exit(rows.length > 0 || done.value.some((d) => d.result !== "applied") ? 1 : 0);
+}
 const report = await syncV1(s, V1_SOURCES, ctx);
 if (!report.ok) {
   closeKernel();

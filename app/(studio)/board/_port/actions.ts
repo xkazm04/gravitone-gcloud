@@ -9,11 +9,18 @@
 import { z } from "zod";
 
 import { editPlanSchema, pickOutcomeSchema } from "@gt/domain/decision";
+import { parseAt } from "@gt/domain/door";
+import { ok } from "@gt/domain/errors";
+import { packetIdSchema } from "@gt/domain/ids";
+import { redriveApply } from "@gt/kernel/decision/apply";
 import type { BoardPort } from "@gt/ui/board/port";
 
-import { runAction } from "../../../_server/actionCore.ts";
+import { kickApply } from "../../../../lib/decision/v1/applier.ts";
+import { kernel } from "../../../../lib/kernelStore.ts";
+import { runAction, type ActionResult } from "../../../_server/actionCore.ts";
 import { action } from "../../../_server/action.ts";
 import { principal } from "../../../_server/principal.ts";
+import type { Principal } from "../../../../lib/principal.ts";
 import { serverBoard } from "./port.ts";
 
 const id = z.string().min(1).max(400);
@@ -30,8 +37,11 @@ type Out<K extends keyof BoardPort> = ReturnType<BoardPort[K]>;
 
 const reader = () => principal("read");
 
+/** The ledger's actor id for a decision: the principal's uid; the shared secret names nobody. */
+const as = (p: Principal) => ("uid" in p ? { who: p.uid } : {});
+
 export async function loadPacket(input: In<"loadPacket">): Out<"loadPacket"> {
-  return runAction("board load", reader, z.object({ id }), (i) => serverBoard().loadPacket(i), input);
+  return runAction("board load", reader, z.object({ id }), (i, who) => serverBoard().loadPacket(i, as(who)), input);
 }
 
 export async function listPackets(): Out<"listPackets"> {
@@ -42,27 +52,47 @@ export async function preview(input: In<"preview">): Out<"preview"> {
   return runAction("board preview", reader, z.object({ id }), (i) => serverBoard().preview(i), input);
 }
 
-const patchAction = action("board patch", z.object({ id, baseRev: rev, changes: z.array(change).min(1).max(500) }), (i) => serverBoard().patch(i));
+const patchAction = action("board patch", z.object({ id, baseRev: rev, changes: z.array(change).min(1).max(500) }), (i, who) => serverBoard().patch(i, as(who)));
 export async function patch(input: In<"patch">): Out<"patch"> {
   return patchAction(input);
 }
 
-const undoAction = action("board undo", z.object({ id, baseRev: rev }), (i) => serverBoard().undo(i));
+const undoAction = action("board undo", z.object({ id, baseRev: rev }), (i, who) => serverBoard().undo(i, as(who)));
 export async function undo(input: In<"undo">): Out<"undo"> {
   return undoAction(input);
 }
 
-const pickAction = action("board pick", z.object({ id, baseRev: rev, pair: z.string().min(1).max(400), outcome: pickOutcomeSchema }), (i) => serverBoard().pick(i));
+const pickAction = action("board pick", z.object({ id, baseRev: rev, pair: z.string().min(1).max(400), outcome: pickOutcomeSchema }), (i, who) => serverBoard().pick(i, as(who)));
 export async function pick(input: In<"pick">): Out<"pick"> {
   return pickAction(input);
 }
 
-const commitAction = action("board commit", z.object({ id, rev, token: z.string().min(1).max(200), ticket: z.string().min(8).max(100) }), (i) => serverBoard().commit(i));
+const commitAction = action("board commit", z.object({ id, rev, token: z.string().min(1).max(200), ticket: z.string().min(8).max(100) }), (i, who) => serverBoard().commit(i, as(who)));
 export async function commit(input: In<"commit">): Out<"commit"> {
   return commitAction(input);
 }
 
-const returnAction = action("board return", z.object({ id, rev, plan: editPlanSchema }), (i) => serverBoard().returnPacket(i));
+const returnAction = action("board return", z.object({ id, rev, plan: editPlanSchema }), (i, who) => serverBoard().returnPacket(i, as(who)));
 export async function returnPacket(input: In<"returnPacket">): Out<"returnPacket"> {
   return returnAction(input);
+}
+
+// THE WAY BACK FROM A STUCK APPLY (decision 2; dead-letter-design: redrive). Not a BoardPort
+// verb: the desks never decide through it, and only the decided desk offers it, beside v1's
+// sentence. The kernel moves the row back to pending with a fresh budget (one tx, an Event);
+// the applier is kicked for that packet at once, so the next render shows where it landed.
+const redriveAction = action("board redrive", z.object({ id }), (i, who) => {
+  const k = kernel();
+  if (!k.ok) return k;
+  const store = k.value.store;
+  const packetId = parseAt("packet id", packetIdSchema, i.id);
+  if (!packetId.ok) return packetId;
+  const done = store.tx((t) => redriveApply(t, { by: "operator", surface: "board", ...as(who), packetId: packetId.value }));
+  if (!done.ok) return done;
+  if (!done.value.ok) return done.value;
+  kickApply(store, packetId.value);
+  return ok({ id: i.id });
+});
+export async function redrive(input: { readonly id: string }): Promise<ActionResult<{ readonly id: string }>> {
+  return redriveAction(input);
 }

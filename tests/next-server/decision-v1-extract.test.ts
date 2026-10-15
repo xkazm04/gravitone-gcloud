@@ -197,5 +197,5 @@ describe("extract adapter - consequence and apply over a temp v1 store", () => {
     writeFileSync(path.join(runDir, "run.json"), JSON.stringify({ ...run, committed: { at: "x", kept: [], rejected: ["haze", "grain"] } }));
     const r = await extractAdapter.apply(claim);
     expect(r.ok ? "" : r.error.message).toContain("haze is not kept in v1, keep here");
-  });
+  }, 30_000); // every crash prefix replays a commit: slow under a full parallel run
 });

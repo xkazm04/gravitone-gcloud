@@ -7,6 +7,7 @@ import { forgeSource } from "./sources/forge.ts";
 import { gpuSource } from "./sources/gpu.ts";
 import { mvSource } from "./sources/mv.ts";
 import { publishSource } from "./sources/publish.ts";
+import { soundSource } from "./sources/sound.ts";
 import { spendSource } from "./sources/spend.ts";
 import { stripsSource } from "./sources/strips.ts";
 import { sunoSource } from "./sources/suno.ts";
@@ -27,6 +28,7 @@ export const V1_SOURCES: readonly Source<unknown>[] = [
   articlesSource,
   sunoSource,
   mvSource,
+  soundSource,
   publishSource,
   turnsSource,
   spendSource,

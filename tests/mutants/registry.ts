@@ -37,7 +37,7 @@ export type Mutant = {
  * unguarded probe lowers the live count and the same probe asks for this number
  * to be lowered to match, so the gain is kept.
  */
-export const UNGUARDED_PROBE_BUDGET = 243;
+export const UNGUARDED_PROBE_BUDGET = 238;
 
 export const MUTANTS: Mutant[] = [
   {
@@ -191,22 +191,6 @@ export const MUTANTS: Mutant[] = [
     find: '!target || target.status !== "interrupted" || target.clearedAt != null',
     replace: "!target || target.clearedAt != null",
     why: "Clear works on running and finished jobs, not only interrupted ones.",
-  },
-  {
-    id: "cull-failed-looks-ready",
-    probe: "cull-non-ready.probe.spec.ts",
-    file: "app/foundry/CullGrid.tsx",
-    find: 'if (candidate?.status === "failed") return "failed";',
-    replace: 'if (candidate?.status === "failed") return "ready";',
-    why: "A failed candidate opens as a ready one, with Keep/Reject on a broken file.",
-  },
-  {
-    id: "cull-deleted-looks-live",
-    probe: "cull-non-ready.probe.spec.ts",
-    file: "app/foundry/CullGrid.tsx",
-    find: 'if (candidate?.deleted) return "deleted";',
-    replace: 'if (candidate?.deleted) return "queued";',
-    why: "A deleted candidate reappears in the grid as queued work.",
   },
   {
     id: "exit-drops-stderr-tail",

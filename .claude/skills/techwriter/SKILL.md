@@ -17,7 +17,7 @@ pipeline/article.mts ...` call, and the engine is the only thing that changes a 
 ## The one rule
 
 **This skill never runs `approve`, `reject` or any landing, and never pushes or opens a PR.** The
-post waits at the human gate (`/articles/<runId>`). Approval is the operator's act: it lands the
+post waits at the human gate (the Board: `/board/pkt:article:<runId>`, which `/articles/<runId>` links to). Approval is the operator's act: it lands the
 post in the registry's publications lane, with the Medium package beside it. If asked to approve,
 say that approval happens at the gate and give the run id.
 
@@ -123,7 +123,7 @@ own bound.)
 For every run at the gate read `<dir>/run.json`, `<dir>/check.json`, `<dir>/sources.json` and the
 critique files under `<dir>/critique/`, and report in this order:
 
-1. The run id, the status, and where it waits: `/articles/<runId>`. How to take it to Medium by hand
+1. The run id, the status, and where it waits: `/board/pkt:article:<runId>` (the run's page is `/articles/<runId>`). How to take it to Medium by hand
    if accepted: before approval `<dir>/post/index.html` is the page to copy from (open it in a
    browser and copy, or take `post.md`); approval at the gate lands it in the registry's
    `publications/<slug>/` with a `medium/` package.

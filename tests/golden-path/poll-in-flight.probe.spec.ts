@@ -22,9 +22,10 @@ test("a call pending past the cap is abandoned: the tick runs", () => {
   expect(mayTick(1_000, 1_000 + IN_FLIGHT_CAP_MS)).toBe(true);
 });
 
-test("the foundry polls hand the hook their promises", () => {
-  for (const f of ["FoundryView", "ExtractView", "DojoView", "StripsView"]) {
-    const src = readFileSync(join(process.cwd(), `app/foundry/${f}.tsx`), "utf8");
-    expect(src, f).toMatch(/return Promise\.all\(\[(?:loadDetail|gate\.load)\(selected, true\)/);
-  }
+test("the foundry's one poll hands the hook its promise", () => {
+  // Phase 3 retired the three detail views that polled beside it; the forge's run
+  // list is what is left, polled for the plant's cull dot.
+  const src = readFileSync(join(process.cwd(), "app/foundry/FoundryView.tsx"), "utf8");
+  expect(src).toMatch(/usePolling\(loadRuns,/);
+  expect(src).toMatch(/\(\) =>\s*fetchRuns\(\)\.then\(/);
 });

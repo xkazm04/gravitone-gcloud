@@ -33,8 +33,9 @@ videos, retries, studio credits, text turns). Pass `--yes` only after they agree
 own message already asked for the run with that scope. Never raise the scope past what they agreed
 to; `--again` in particular queues a SECOND video for every finished track.
 
-Never use this skill to delete, Drop, Keep, regenerate or publish. Those are the operator's acts in
-/foundry → Pipeline → Audio → Settled. Never close the operator's Chrome.
+Never use this skill to delete, Drop, Keep, regenerate or publish. Those are the operator's acts:
+Keep / Drop on the Board (`/board/pkt:mv:mv/settled`), the rest in /foundry → Pipeline → Audio →
+Settled. Never close the operator's Chrome.
 
 ## Before the first run on a machine (check, then say what is missing)
 
@@ -94,8 +95,10 @@ Beside each source file `<track>.mp3`, the run writes:
   sections) and TAGS.
 
 These two names are the batch's own output and are replaced on a re-run. There is no thumbnail:
-the operator takes one from a frame of the video. Every job also stays in /foundry → Pipeline →
-Audio → Settled → Videos, where Keep / Drop / Regenerate / Send to Calendar live.
+the operator takes one from a frame of the video. Keep / Drop is the operator's verdict on the
+Board: the settled videos are one pile in the Floor's video lane (`/board/pkt:mv:mv/settled`).
+Every job also stays in /foundry → Pipeline → Audio → Settled → Videos, where Regenerate and Send
+to Calendar live.
 
 ## Report
 

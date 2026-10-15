@@ -23,8 +23,8 @@ to a cut without losing the thread between them. Every read should be taken from
 seat.
 
 **Two surfaces in this repo are NOT the customer journey** and are out of scope for a stop unless
-the user asks: `/foundry` (an operator's mass-production and culling bench that runs for hours on a
-local GPU) and `/playground` (a temporary bench for exercising the music vendor's newest features
+the user asks: `/foundry` (an operator's mass-production bench that runs for hours on a local GPU;
+its culls are decided on the Board since Phase 3) and `/playground` (a temporary bench for exercising the music vendor's newest features
 before the Score step absorbs them). Both are named in `## Screens` so the map can see them; both
 are marked `operator`.
 
@@ -63,7 +63,7 @@ source-a-look - a creator who needs a visual identity before anything can render
 | `library-assets` | app | `/library` → Assets tab |
 | `library-animations` | app | `/library` → Animations tab (`ComingSoon`) |
 | `playground` | app · **operator** | `/playground` — music vendor bench, temporary by design |
-| `foundry` | app · **operator** | `/foundry` — Styles / Cull / Extract / Dojo |
+| `foundry` | app · **operator** | `/foundry` — Pipeline / Styles (Cull, Extract, Dojo, Strips decide on the Board) |
 | `kit` | app | `/kit` |
 | `kit-law` | app | `/kit` → Law tab |
 | `kit-parts` | app | `/kit` → Parts tab |

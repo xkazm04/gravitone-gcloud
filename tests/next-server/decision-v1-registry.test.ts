@@ -10,7 +10,7 @@ vi.mock("server-only", () => ({}));
 
 import { PACKET_SOURCES } from "@gt/domain/source";
 
-import { boardFor, packetIdOf as appPacketIdOf, parsePacketId as appParsePacketId } from "../../app/(studio)/_shell/links.ts";
+import { boardFor } from "../../app/(studio)/_shell/links.ts";
 import { adapterFor, DECISION_ADAPTERS } from "../../lib/decision/v1/registry.ts";
 import { packetIdOf, parsePacketId, weirPacketId } from "../../lib/ledger/v1/packet.ts";
 import { liveJobs } from "../../lib/ledger/v1/sync.ts";
@@ -35,10 +35,9 @@ describe("the adapter registry", () => {
 });
 
 describe("the packet id, one rule in lib/", () => {
-  it("spells and parses exactly as the app's links do, colons in the run id included", () => {
+  it("round-trips a run id holding colons; the Board links it as one segment", () => {
     for (const [source, run] of [["forge", "2026-10-14-sweep"], ["suno", "suno/triage"], ["article", "run:with:colons"]] as const) {
-      expect(packetIdOf(source, run)).toBe(appPacketIdOf(source, run));
-      expect(parsePacketId(packetIdOf(source, run))).toEqual(appParsePacketId(appPacketIdOf(source, run)));
+      expect(parsePacketId(packetIdOf(source, run))).toEqual({ source, runId: run });
     }
     expect(boardFor(packetIdOf("forge", "a"))).toBe("/board/pkt%3Aforge%3Aa");
   });

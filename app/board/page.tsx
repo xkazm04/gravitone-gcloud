@@ -1,24 +1,15 @@
-import { Suspense } from "react";
+// /board - v1's Board, retired in Phase 3 (decision 10). Its decisions are kernel packets now,
+// opened from the Floor's piles and decided on the new Board (/board/<packet>). An old address
+// - a skill's link, a bookmark, `?src=&i=` - is sent where its work is now (./redirect.ts).
+import { redirect } from "next/navigation";
 
-import AuthGate from "@/components/ui/AuthGate";
-import StudioFrame from "@/components/ui/StudioFrame";
+import { v1BoardTarget } from "./redirect.ts";
 
-import BoardView from "./BoardView";
+type Search = Promise<Readonly<Record<string, string | string[] | undefined>>>;
 
-export const metadata = {
-  title: "Board | Gravitone",
-};
+const one = (v: string | string[] | undefined): string | undefined => (Array.isArray(v) ? v[0] : v);
 
-// The view reads `?src=&st=&i=` through useSearchParams, which needs a
-// Suspense boundary above it in this Next (AGENTS.md; builder rules).
-export default function Page() {
-  return (
-    <AuthGate>
-      <StudioFrame>
-        <Suspense fallback={null}>
-          <BoardView />
-        </Suspense>
-      </StudioFrame>
-    </AuthGate>
-  );
+export default async function V1Board({ searchParams }: { readonly searchParams: Search }) {
+  const q = await searchParams;
+  redirect(v1BoardTarget({ src: one(q["src"]), i: one(q["i"]), item: one(q["item"]) }));
 }

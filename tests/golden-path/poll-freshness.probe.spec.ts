@@ -2,9 +2,6 @@
 // The foundry views keep the last run detail when a poll fails (the cache survives
 // the close). lib/pollFreshness.ts says how old it is and whether the edge is
 // healthy; each view renders that beside the value, not only beside the run list.
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-
 import { test, expect } from "@playwright/test";
 
 import { MAX_ACTIONABLE_AGE_MS, formatAge, pollFreshness } from "@/lib/pollFreshness";
@@ -37,11 +34,6 @@ test("age reads coarse", () => {
   expect(formatAge(300_000)).toBe("5 min");
 });
 
-test("every view that keeps a polled detail marks it", () => {
-  for (const f of ["ExtractView", "StripsView", "DojoView"]) {
-    const src = readFileSync(join(process.cwd(), `app/foundry/${f}.tsx`), "utf8");
-    expect(src, f).toMatch(/pollOk\(\);/);
-    expect(src, f).toMatch(/pollFail\(\);/);
-    expect(src, f).toMatch(/<StalePoll freshness=\{pollFresh\.freshness\} \/>/);
-  }
-});
+// "Every view that keeps a polled detail marks it" retired in Phase 3 with the three
+// views it read (Extract, Strips, Dojo): their details are Board packets, read per
+// request on the server, and the Floor's freshness is its StaleBadge (L20).

@@ -60,6 +60,9 @@ export function subjectLink(e: Pick<Event, "subject" | "key" | "data">): Subject
       return { label: id, href: `/ledger?src=${encodeURIComponent(id)}` };
     case "slot":
       return { label: id, href: "/calendar" };
+    // A decision packet (Phase 3) is its Board, open or decided.
+    case "packet":
+      return { label: id, href: boardFor(id) };
     // A kernel job (Phase 4 writes them) is a bar in Runs.
     case "job":
       return { label: id, href: `/projects/runs?job=${encodeURIComponent(id)}` };
@@ -70,30 +73,12 @@ export function subjectLink(e: Pick<Event, "subject" | "key" | "data">): Subject
 
 /* ── The packet id (Phase 3, COMMON decision 3) ───────────────────────────── */
 //
-// A v1 Weir pile is opened as a kernel packet whose id is derived, never minted: the
-// same pile always names the same packet, so opening is idempotent and the Floor, the
-// Board and the applier (L24) agree on it without a lookup table. v1's Board did the
-// same job at runtime by prefixing keys with their source (lib/board/source.ts
-// `cull:...`); here the source is the first segment and the run id is the REST, so a
-// run id that itself holds a colon survives the round trip. A source never holds one:
-// it is the v1 projection's id (lib/ledger/v1/sources/*), a bare word. Plain strings on
-// purpose - this module is client-safe, and the brand is minted at the kernel's door.
+// A v1 Weir pile is opened as a kernel packet whose id is derived, never minted. The rule
+// lives once, in lib/ledger/v1/packet.ts, because the projection and the decision adapters
+// (lib/) spell it too and lib/ may not import app/; this module re-exports it (wave B
+// ruling 10) so the Floor and the Board keep their one import. Both are client-safe.
 
-const PACKET = "pkt:";
-
-/** `pkt:<source>:<runId>` - the one spelling of a Weir pile's packet id. */
-export function packetIdOf(source: string, runId: string): string {
-  return `${PACKET}${source}:${runId}`;
-}
-
-/** The inverse of {@link packetIdOf}; null for anything it could not have produced. */
-export function parsePacketId(id: string): { readonly source: string; readonly runId: string } | null {
-  if (!id.startsWith(PACKET)) return null;
-  const rest = id.slice(PACKET.length);
-  const i = rest.indexOf(":");
-  if (i <= 0 || i === rest.length - 1) return null;
-  return { source: rest.slice(0, i), runId: rest.slice(i + 1) };
-}
+export { packetIdOf, parsePacketId } from "../../../lib/ledger/v1/packet.ts";
 
 /** The Board's page for a packet: the id is one path segment, so it is encoded as one. */
 export function boardFor(packetId: string): string {

@@ -83,6 +83,8 @@ const SOURCES: Record<string, (() => string[]) | null> = {
   strips: liveIn("strips", "run.json", (s) => s === "running"),
   articles: liveIn("articles", "run.json", (s) => WORKING.some((x) => x === s)),
   suno: liveInDoc("sound/suno.json", (d) => rows(d, "jobs").filter((j) => QUEUE_LIVE.includes(String(j["state"]))).map((j) => String(j["id"]))),
+  // A take is made whole by one call (lib/sound/takes.ts): the shelf has no live work.
+  sound: null,
   mv: liveInDoc("sound/mv.json", (d) => rows(d, "jobs").filter((j) => QUEUE_LIVE.includes(String(j["state"]))).map((j) => String(j["id"]))),
   publish: null,
   turns: liveInFiles("turns", "id", (s) => [...TURN_LIVE].some((x) => x === s)),

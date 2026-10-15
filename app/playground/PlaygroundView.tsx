@@ -38,17 +38,21 @@ import type { SoundKind } from "@/lib/sound/types";
 // Explicit `/index`: on a case-insensitive disk `./hunt` resolved to the
 // round-3 `./Hunt.tsx` while that file existed (TS1261, 2026-10-05) — and a
 // file named like a module directory can come back.
+import { boardFor, packetIdOf } from "../(studio)/_shell/links.ts";
 import { FlashLine, SoundLabContext, useFlash, type SoundLabShell } from "./shared/shell";
 
 // ONE TAB ON SCREEN, ONE TAB IN THE BUNDLE. Each panel below is shown alone,
 // behind the tab rail, so each is its own chunk fetched when its tab is chosen
 // rather than all of them on first load (Wave 0, docs/waves/README.md).
-const TriageModule = dynamic(() => import("./triage/index"), { loading: pendingPanel });
 const ArrangeModule = dynamic(() => import("./arrange/index"), { loading: pendingPanel });
 const HuntModule = dynamic(() => import("./hunt/index"), { loading: pendingPanel });
 
+// "triage" stays a tab id - the rail still carries the count of unjudged takes - but
+// it is a door: the judging is the audio packet on the Board (Phase 3), and
+// ./page.tsx redirects `?m=triage` there. ./triage/ is no longer mounted.
 type ModuleId = "triage" | "arrange" | "hunt";
-const MODULES: readonly ModuleId[] = ["triage", "arrange", "hunt"];
+const MODULES: readonly ModuleId[] = ["arrange", "hunt"];
+const TRIAGE_PACKET = boardFor(packetIdOf("audio", "audio/triage"));
 const KINDS: readonly SoundKind[] = ["music", "sfx"];
 
 interface Tallies {
@@ -80,7 +84,7 @@ export default function PlaygroundView() {
   const router = useRouter();
   const pathname = usePathname();
   const rawM = params.get("m") as ModuleId | null;
-  const active: ModuleId = rawM && MODULES.includes(rawM) ? rawM : "triage";
+  const active: ModuleId = rawM && MODULES.includes(rawM) ? rawM : "arrange";
   const kind: SoundKind = params.get("kind") === "sfx" ? "sfx" : "music";
 
   const setParam = useCallback(
@@ -145,13 +149,11 @@ export default function PlaygroundView() {
           label="sound lab modules"
           tabs={tabs}
           active={active}
-          onSelect={(id) => setParam("m", id, "triage")}
+          onSelect={(id) => (id === "triage" ? router.push(TRIAGE_PACKET) : setParam("m", id, "arrange"))}
           trailing={<KindSwitch kind={kind} onKind={(k) => setParam("kind", k, "music")} />}
         />
         <div id="sound-lab-panel" role="tabpanel" aria-label={active} className="mt-5">
-          {active === "triage" ? (
-            <TriageModule key={kind} kind={kind} />
-          ) : active === "arrange" ? (
+          {active === "arrange" ? (
             <ArrangeModule key={kind} kind={kind} />
           ) : (
             <HuntModule key={kind} kind={kind} />

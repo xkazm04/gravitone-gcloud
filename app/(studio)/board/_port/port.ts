@@ -2,42 +2,44 @@ import "server-only";
 
 // THE SEAM: which BoardPort the Board's Server Actions answer from. ONE switch, `SIDE`.
 //
-// Wave A (L21) built the desks against the fixture below; wave C (L24) writes `real` - the
-// kernel's decision driver plus each source's adapter (open from v1, consequence from v1's own
-// planners, apply through the outbox) - and flips SIDE. Nothing else in the Board changes: the
+// Wave A (L21) built the desks against the fixture (./fixture.ts); wave C (L24) wrote the real
+// side (./real.ts: the kernel's decision driver plus each source's v1 adapter, the apply
+// outbox kicked after every commit) and flipped SIDE. Nothing else in the Board changed: the
 // actions (./actions.ts), the keepalive route and the desks all reach the port through
-// `serverBoard()`.
+// `serverBoard()`. The fixture stays for the kit and for the desks' own tests.
 //
 // The server side speaks the domain's `Result<T>` (COMMON: "Server Actions, each returning
-// Result<T>"); ./actions.ts turns it into the wire envelope the client's BoardPort reads.
+// Result<T>"); ./actions.ts turns it into the wire envelope the client's BoardPort reads. Each
+// verb also takes who is acting, which the browser's port never names: the action core
+// resolved it from the session, and the ledger records it on the decision.
 
-import { err, type Result } from "@gt/domain/errors";
+import type { Result } from "@gt/domain/errors";
 import type { BoardPort, PortResult } from "@gt/ui/board/port";
 
+import { kernel } from "../../../../lib/kernelStore.ts";
+import { kickApply } from "../../../../lib/decision/v1/applier.ts";
+import { liveRead } from "../../_shell/live.ts";
 import { fixtureBoard } from "./fixture.ts";
+import { makeRealBoard, type Who } from "./real.ts";
 
 type Value<R> = R extends Promise<PortResult<infer T>> ? T : never;
 
-/** The BoardPort, server side: the same verbs, answering in the domain's Result. */
+/** The BoardPort, server side: the same verbs, answering in the domain's Result, told who acts. */
 export type ServerBoard = {
-  readonly [K in keyof BoardPort]: (...args: Parameters<BoardPort[K]>) => Promise<Result<Value<ReturnType<BoardPort[K]>>>>;
+  readonly [K in keyof BoardPort]: (...args: [...Parameters<BoardPort[K]>, Who?]) => Promise<Result<Value<ReturnType<BoardPort[K]>>>>;
 };
 
-export const SIDE: "fixture" | "real" = "fixture";
+export const SIDE: "fixture" | "real" = "real";
 
-const unwritten = <T>(): Promise<Result<T>> => Promise.resolve(err("unavailable", "board: the kernel side of the Board port is not wired yet (Phase 3 wave C, L24)"));
-
-/** L24 replaces this object, and only this object. */
-const real: ServerBoard = {
-  loadPacket: () => unwritten(),
-  listPackets: () => unwritten(),
-  patch: () => unwritten(),
-  undo: () => unwritten(),
-  pick: () => unwritten(),
-  preview: () => unwritten(),
-  commit: () => unwritten(),
-  returnPacket: () => unwritten(),
-};
+const real: ServerBoard = makeRealBoard({
+  store: () => {
+    const k = kernel();
+    return k.ok ? { ok: true, value: k.value.store } : k;
+  },
+  // The request's one liveNow(), shared with the header and the Floor (../../_shell/live.ts).
+  weir: async () => (await liveRead()).weir,
+  kick: (store, packetId) => kickApply(store, packetId),
+});
 
 export function serverBoard(): ServerBoard {
   return SIDE === "fixture" ? fixtureBoard() : real;

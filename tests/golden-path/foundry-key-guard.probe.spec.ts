@@ -53,7 +53,9 @@ test("every window keydown handler under app/foundry consults refusedKey before 
     const firstRead = src.search(/switch\s*\(\s*e\.key\s*\)|e\.key\s*===/);
     if (guard < 0 || firstRead < 0 || guard > firstRead) unguarded.push(f);
   }
-  expect(handlers.length, "no window keydown handler found — the walk read nothing").toBeGreaterThanOrEqual(5);
+  // Five until Phase 3, when the Cull, Extract, Dojo and Strips views retired to the
+  // Board (whose keys run through the @gt/ui keymap); what is left must still be found.
+  expect(handlers.length, "no window keydown handler found — the walk read nothing").toBeGreaterThanOrEqual(1);
   expect(unguarded).toEqual([]);
 });
 

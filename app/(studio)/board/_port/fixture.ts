@@ -15,7 +15,7 @@ import "server-only";
 //     matches the decisions and v1's state (`conflict`, detail "stale-preview"), and is
 //     idempotent on its ticket;
 //   · only a packet review is returned, with a checked edit plan.
-// State lives for the server process; `resetFixture` starts it over (the live lane's reset).
+// State lives for the server process; `resetFixture` starts it over.
 
 import { createHash } from "node:crypto";
 
@@ -77,14 +77,6 @@ export function resetFixture(): void {
   const u = universe();
   u.epoch++;
   u.piles = new Map(seeds().map((s) => [s.id, open(s)]));
-}
-
-/** Move v1's side under an unchanged decision map, as an edit in v1 would: the next commit's token is stale. */
-export function driftFixture(id: string): boolean {
-  const p = universe().piles.get(id);
-  if (p === undefined) return false;
-  p.digest = `${p.digest}+`;
-  return true;
 }
 
 const isSource = (x: string): x is PacketSource => PACKET_SOURCES.some((s) => s === x);

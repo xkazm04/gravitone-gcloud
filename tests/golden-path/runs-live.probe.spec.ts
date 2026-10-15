@@ -100,6 +100,8 @@ function predicates(): Record<string, (() => string[] | Promise<string[]>) | nul
     },
     publish: null,
     spend: null,
+    // The sound shelf (Phase 3): a take is made whole by one call, so nothing runs.
+    sound: null,
   };
 }
 

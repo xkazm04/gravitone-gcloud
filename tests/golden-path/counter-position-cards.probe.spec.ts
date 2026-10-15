@@ -13,7 +13,6 @@ import { sourceOf } from "@/app/_phases/_shared/notebook/source";
 import type { Notebook } from "@/app/_phases/_shared/notebook/types";
 import { KIND_LABEL } from "@/app/_phases/research/_parts/CardTile";
 import { scopeSummary, stateOf, woundsOf, type Scope } from "@/app/_phases/research/scope";
-import { KIND_ICON } from "@/app/board/look";
 
 const typed: Notebook = {
   ...NOTEBOOK,
@@ -66,9 +65,9 @@ test("4 · a counter is cuttable and wounded by the facts it cites", () => {
   expect(notebookIssues(typed).filter((i) => i.kind === "dangling-ref")).toEqual([]);
 });
 
+// The v1 Board's KIND_ICON table (app/board/look.ts) retired with it in Phase 3.
 test("5 · every per-kind table has the new kind", () => {
   expect(KIND_LABEL.counter).toBeTruthy();
-  expect(KIND_ICON.counter).toBeTruthy();
 });
 
 test("6 · the fixture's four-year-cycle counter is a scopeable card", () => {

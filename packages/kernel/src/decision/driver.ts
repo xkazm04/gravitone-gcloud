@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { pickVerdicts, type PickOutcome } from "@gt/domain/board";
-import { parseAt } from "@gt/domain/door";
+import { parseAt, parseJsonAt } from "@gt/domain/door";
 import type { Decision } from "@gt/domain/decision";
 import { AppError, err, ok } from "@gt/domain/errors";
 import { candidateIdSchema, packetIdSchema, type CandidateId, type PacketId } from "@gt/domain/ids";
@@ -108,12 +108,15 @@ function openShape(stored: Packet, picks: readonly { row: string; candidate: str
   return canonical({ packet: stored, picks: byRow, seeds: bySeed });
 }
 
+// The STORED body, never the incoming one: comparing the caller's packet with
+// itself let a re-open with other items through as a no-op.
 function storedShape(t: Tx, p: Packet): string {
+  const body = must(parseJsonAt("stored packet", packetSchema, String(t.get("SELECT body FROM packets WHERE id = ?", p.id)?.["body"])));
   const picks = t.all("SELECT row, candidate_id AS candidate FROM packet_picks WHERE packet_id = ?", p.id).map((x) => ({ row: String(x["row"]), candidate: String(x["candidate"]) }));
   const seeds: Seed[] = rows(t, p.id)
     .filter((r) => r.act === "open")
     .map((r) => ({ candidate: r.candidate_id, verdict: r.verdict === "keep" ? "keep" : "reject", reasons: r.reasons, ...(r.note === null ? {} : { note: r.note }), by: r.by, surface: r.surface, at: r.at }));
-  return openShape(p, picks, seeds);
+  return openShape(body, picks, seeds);
 }
 
 /**

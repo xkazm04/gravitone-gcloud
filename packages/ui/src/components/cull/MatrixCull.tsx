@@ -12,6 +12,8 @@
 // operator pressed, so 1-9, 0, − follow the source's list in order (@gt/domain/source).
 import { useEffect, useRef, useState } from "react";
 
+import { REASON_KEYS } from "@gt/domain/source";
+
 import type { BoardPacket } from "../../board/port.ts";
 import type { BoardVerdict } from "../../board/boardGate.ts";
 import { clamp, cullCells, reasonAct, rowOf, tallyOf, undecidedOf, vertical } from "../../board/cull.ts";
@@ -168,7 +170,7 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
       }
       foot={
         <>
-          <Keycaps mode="board.cull" label="cull keys" facts={new Set(isAudio ? ["audio"] : [])} />
+          <Keycaps mode="board.cull" label="cull keys" facts={new Set(isAudio ? ["audio"] : [])} only={{ reason: REASON_KEYS.slice(0, view.reasons.list.length) }} />
           <div className={s.tally}>
             <div className={s.stack}>
               <StackBar kept={t.kept} rejected={t.rejected} undecided={t.undecided} label="packet" />

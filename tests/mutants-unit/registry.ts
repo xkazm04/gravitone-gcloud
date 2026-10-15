@@ -1037,4 +1037,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "{...({})}",
     why: "The commit button looks ready while candidates are still open, so the refusal shake is the first the operator hears of them.",
   },
+  {
+    id: "board-legend-draws-every-reason-key",
+    test: "packages/ui/test/board-render.test.ts",
+    file: "packages/ui/src/components/keycaps/caps.ts",
+    find: "const keys = r.keys.filter((k) => keep.includes(k));",
+    replace: "const keys = [...r.keys];",
+    why: "A forge packet's legend offers 5-9, 0 and - as reasons, and a Suno packet offers eleven, where no key names a reason: the operator presses a drawn key and nothing happens.",
+  },
 ];

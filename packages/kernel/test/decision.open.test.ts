@@ -58,7 +58,10 @@ describe("kernel/decision - open from v1", () => {
     expect(must(s.read((r) => r.all("SELECT 1 FROM events WHERE type = 'decision.opened'")))).toHaveLength(1);
     const otherVerdict = s.tx((t) => openPacket(t, { packet: cull(), initial: [{ ...imported[0]!, verdict: "reject" }] }, agent));
     const otherItems = s.tx((t) => openPacket(t, { packet: packet("run-0412", "matrix-cull", [{ id: "s1/a", row: "s1" }]) }, agent));
-    for (const r of [otherVerdict, otherItems]) expect(!r.ok && r.error.code).toBe("conflict");
+    // Same imports, one more plate: only the stored body can tell these apart.
+    const grown = packet("run-0412", "matrix-cull", [...cull().items.map((c) => ({ id: c.id, row: c.row ?? "" })), { id: "s1/d", row: "s1" }]);
+    const moreItems = s.tx((t) => openPacket(t, { packet: grown, initial: imported }, agent));
+    for (const r of [otherVerdict, otherItems, moreItems]) expect(!r.ok && r.error.code).toBe("conflict");
   });
 
   it("refuses an import the source's vocabulary does not hold, or a candidate outside the pile", () => {

@@ -26,7 +26,7 @@ const FIXTURES = process.env["NEXT_PUBLIC_GRAVITONE_DATA"] === "fixtures";
 const STORE = process.env["GRAVITONE_STORE_PATH"];
 const LANES = ["image", "article", "audio", "video"] as const;
 
-type Pile = { source: string; id: string; media: string; pending: number; since?: string };
+type Pile = { source: string; id: string; media: string; pending: number; since?: string; packetId?: string };
 
 function cli(...args: string[]): string {
   const r = spawnSync(process.execPath, [join(ROOT, "pipeline", "ledger-sync.mts"), ...args], { cwd: ROOT, encoding: "utf8", timeout: 180_000, env: process.env });
@@ -41,7 +41,8 @@ function weir(): Pile[] {
 }
 
 /** The Board link of a pile: one encoded segment holding pkt:<source>:<runId>. */
-const boardHref = (p: Pick<Pile, "source" | "id">): string => `/board/${encodeURIComponent(`pkt:${p.source}:${p.id}`)}`;
+// The packet the live read stamped (articles decide as `article`, the sound shelf as `audio`).
+const boardHref = (p: Pick<Pile, "source" | "id" | "packetId">): string => `/board/${encodeURIComponent(p.packetId ?? `pkt:${p.source}:${p.id}`)}`;
 
 test.beforeAll(() => {
   if (!FIXTURES || STORE === undefined) return;

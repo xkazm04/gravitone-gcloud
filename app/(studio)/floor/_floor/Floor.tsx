@@ -147,7 +147,7 @@ export function Floor({ data, initial }: { readonly data: FloorData; readonly in
               onFocus={() => focus(l.id)}
               shelfEmpty={(shelfCount(l.id, data.shelf) ?? 1) === 0}
               foundry={<Foundry work={lanes[l.id]} folded={folded} />}
-              weir={<Weir work={lanes[l.id]} folded={folded} next={next} onOpen={open} />}
+              weir={<Weir work={lanes[l.id]} folded={folded} next={next} onOpen={open} unapplied={data.unapplied.filter((u) => u.lane === l.id)} />}
               shelf={<ShelfFor lane={l} shelf={data.shelf} folded={folded} />}
             />
           );

@@ -14,7 +14,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { PacketSummary } from "@gt/domain/board";
 import { createBoardGate, verdictsOfView, type BoardVerdict } from "@gt/ui/board/boardGate";
-import type { BoardPacket, BoardPort, VerdictChange } from "@gt/ui/board/port";
+import type { BoardPacket, BoardPort, PortResult, VerdictChange } from "@gt/ui/board/port";
 import { useGate } from "@gt/ui/board/useGate";
 import { SrOnly } from "@gt/ui/components/a11y/SrOnly.tsx";
 import { MatrixCull } from "@gt/ui/components/cull/MatrixCull.tsx";
@@ -30,6 +30,7 @@ import { boardFor } from "../../_shell/links.ts";
 import { useShell } from "../../_shell/Providers.tsx";
 import { CommitLayer, useCommitFlow } from "./commitFlow.tsx";
 import { DecidedDesk } from "./DecidedDesk.tsx";
+import { Losses } from "./Losses.tsx";
 
 /** pagehide: what is still queued leaves with the page (the keepalive route, ../[packet]/keepalive). */
 function beacon(id: string, rev: number, changes: readonly VerdictChange[]): void {
@@ -52,6 +53,8 @@ export type BoardProps = {
   /** The Server Actions (../_port/actions.ts), handed down by the server page: a client module
    *  that imported them would walk the bundler into the port's zod doors. */
   readonly port: BoardPort;
+  /** The decided desk's way back from a stuck v1 apply (../_port/actions.ts `redrive`). */
+  readonly redrive?: (input: { readonly id: string }) => Promise<PortResult<{ readonly id: string }>>;
 };
 
 /**
@@ -67,7 +70,7 @@ export function Board(props: BoardProps) {
   return <BoardIsland {...props} />;
 }
 
-function BoardIsland({ id, initial, rail, kind, port }: BoardProps) {
+function BoardIsland({ id, initial, rail, kind, port, redrive }: BoardProps) {
   const router = useRouter();
   const { toast } = useShell();
   const [said, setSaid] = useState("");
@@ -160,7 +163,20 @@ function BoardIsland({ id, initial, rail, kind, port }: BoardProps) {
   }, [loadError, toast]);
   const desk =
     packet.view.state !== "open" ? (
-      <DecidedDesk packet={packet} next={nextOpen} onNext={go} />
+      <DecidedDesk
+        packet={packet}
+        next={nextOpen}
+        onNext={go}
+        {...(redrive === undefined
+          ? {}
+          : {
+              onRedrive: () =>
+                void redrive({ id }).then((r) => {
+                  toast(r.ok ? "v1 apply · redriven" : r.error.error);
+                  refresh();
+                }),
+            })}
+      />
     ) : packet.view.mode === "matrix-cull" ? (
       <MatrixCull key={id} {...common} verdicts={verdicts} decide={decide} undo={() => void gate.undo()} />
     ) : packet.view.mode === "blind-pair" ? (
@@ -187,6 +203,7 @@ function BoardIsland({ id, initial, rail, kind, port }: BoardProps) {
       full={kind === "full"}
     >
       <BoardDesk rail={<PacketRail packets={rail} current={id} hrefOf={boardFor} onOpen={go} />}>
+        {packet.view.state === "open" && packet.present.losses !== undefined && <Losses losses={packet.present.losses} />}
         {desk}
         {flow.open && <CommitLayer flow={flow} />}
       </BoardDesk>

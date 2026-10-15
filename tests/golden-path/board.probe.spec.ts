@@ -8,11 +8,12 @@
 // asserts, without a browser:
 //
 //   · every source's verdict mapping, both directions (lib/board/verdicts.ts)
-//   · the undo stack — supersede, cap, and the replay order a one-of-N source
-//     needs (lib/board/undo.ts)
 //   · the key handler's suppression rules — typing, an overlay that is not the
 //     loupe, key repeat, modifiers (lib/board/keys.ts)
-//   · the URL state round trip (lib/board/url.ts)
+//   (The undo stack and the URL round trip retired with v1's Board in Phase 3:
+//   the gate's undo lives in @gt/ui/board/undo.ts with its tests, and a v1
+//   address is redirected by app/board/redirect.ts, tests/next-server/
+//   board-redirect.test.ts. The sources stay: the shell palette counts them.)
 //   · two adapters end to end over their real writers: the cull over a
 //     replaced `fetch` (the whole-map PUT, read fresh), and adoption + triage
 //     over the real step store on fake-indexeddb.
@@ -41,9 +42,7 @@ import {
   withCullVerdict,
   withExtractVerdict,
 } from "@/lib/board/verdicts";
-import { diffVerdicts, popUndo, pushUndo, reversal, undoFor, UNDO_CAP, type UndoEntry, type VerdictState } from "@/lib/board/undo";
 import { boardKeyAction, enterBelongsToTarget, LOUPE_MARK, overlayOpen, typing, type KeyLike } from "@/lib/board/keys";
-import { inFilter, parseQuery, writeQuery } from "@/lib/board/url";
 import { countEntries, itemId, keyOf, keyOfItem } from "@/lib/board/source";
 import { makeCullSource } from "@/lib/board/sources/cull";
 import { ADOPTION_REJECT_REFUSAL, makeAdoptionSource } from "@/lib/board/sources/adoption";
@@ -155,56 +154,6 @@ test("board: ids round-trip and counts never invent a zero", () => {
   expect(countEntries([e(null), e("approve"), e("reject"), e("reject")])).toEqual({ total: 4, pending: 1, decided: 3, rejected: 2 });
 });
 
-/* ── the undo stack ───────────────────────────────────────────────────────── */
-
-const vs = (verdict: "approve" | "reject" | null): VerdictState => ({ verdict, reasons: [], note: null });
-const entry = (id: number, changes: [string, "approve" | "reject" | null, "approve" | "reject" | null][]): UndoEntry => ({
-  id,
-  itemId: changes[0][0],
-  label: `e${id}`,
-  at: id,
-  changes: changes.map(([itemId, prev, next]) => ({ itemId, prev: vs(prev), next: vs(next) })),
-});
-
-test("board: undo — newest last, a newer decision on the same item supersedes, bounded", () => {
-  let st = pushUndo([], entry(1, [["a", null, "reject"]]));
-  st = pushUndo(st, entry(2, [["b", null, "approve"]]));
-  st = pushUndo(st, entry(3, [["a", "reject", "approve"]]));
-  expect(st.map((e) => e.id)).toEqual([2, 3]); // entry 1 superseded: Z never walks a back through "reject"
-  const [top, rest] = popUndo(st);
-  expect(top?.id).toBe(3);
-  expect(rest.map((e) => e.id)).toEqual([2]);
-  expect(undoFor(st, "b")?.id).toBe(2);
-  expect(undoFor(st, "zz")).toBe(null);
-
-  let big: UndoEntry[] = [];
-  for (let i = 0; i < UNDO_CAP + 5; i++) big = pushUndo(big, entry(i, [[`i${i}`, null, "approve"]]));
-  expect(big.length).toBe(UNDO_CAP);
-  expect(big[0].id).toBe(5);
-});
-
-test("board: undo — a one-of-N pick replays the old pick BEFORE clearing the new one", () => {
-  // Approving B moved A off: the source diff records both.
-  const before = new Map([
-    ["A", vs("approve")],
-    ["B", vs(null)],
-    ["C", vs(null)],
-  ]);
-  const after = new Map([
-    ["A", vs(null)],
-    ["B", vs("approve")],
-    ["C", vs(null)],
-  ]);
-  const changes = diffVerdicts(before, after);
-  expect(changes.map((c) => c.itemId).sort()).toEqual(["A", "B"]);
-  const e: UndoEntry = { id: 1, itemId: "B", label: "B", at: 0, changes };
-  // A scene always uses one plate: the clear of B is only writable once A is back.
-  expect(reversal(e).map((w) => [w.itemId, w.to.verdict])).toEqual([
-    ["A", "approve"],
-    ["B", null],
-  ]);
-});
-
 /* ── the key handler ──────────────────────────────────────────────────────── */
 
 const press = (key: string, over: Partial<KeyLike> = {}): KeyLike => ({ key, ctrlKey: false, metaKey: false, altKey: false, repeat: false, target: null, ...over });
@@ -272,21 +221,6 @@ test("board keys: Enter on a focused control is the control's, not the loupe's",
 });
 
 /* ── URL state ────────────────────────────────────────────────────────────── */
-
-test("board url: parse is defensive and write keeps foreign params", () => {
-  const p = (qs: string) => new URLSearchParams(qs);
-  expect(parseQuery(p(""))).toEqual({ src: null, st: "pending", i: null });
-  expect(parseQuery(p("src=cull&st=rejected&i=cull:r::c"))).toEqual({ src: "cull", st: "rejected", i: "cull:r::c" });
-  expect(parseQuery(p("src=nope&st=weird"))).toEqual({ src: null, st: "pending", i: null });
-  expect(writeQuery("v=3", { src: "proof", st: "pending", i: null })).toBe("v=3&src=proof");
-  expect(writeQuery("v=2&src=cull&st=decided", { src: null, st: "pending", i: "x" })).toBe("v=2&i=x");
-  expect(inFilter({ verdict: null }, "pending")).toBe(true);
-  expect(inFilter({ verdict: "approve" }, "decided")).toBe(true);
-  expect(inFilter({ verdict: "approve" }, "rejected")).toBe(false);
-  expect(inFilter({ verdict: "reject" }, "rejected")).toBe(true);
-});
-
-/* ── adapters over their real writers ─────────────────────────────────────── */
 
 test("board: the cull adapter reads FRESH and PATCHes only the one key it changed", async () => {
   const disk: Record<string, { verdict: "keep" | "reject"; at: string; note?: string }> = {

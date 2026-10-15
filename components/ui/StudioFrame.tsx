@@ -36,11 +36,10 @@ import { WorldRoot } from "@/components/kit/WorldRoot";
 export const MODULES = [
   { label: "Projects", href: "/projects" },
   { label: "Library", href: "/library" },
-  // The one decision inbox: every human gate in the app (foundry runs, style
-  // proofs, step adoptions, publish slots) decided in one vocabulary. The
-  // foundry keeps the engines that PRODUCE candidates; this is where they are
-  // judged.
-  { label: "Board", href: "/board" },
+  // The studio's hub (Phase 3): every lane's running work, its Weir of piles
+  // waiting on the operator - each one a packet decided on the Board - and the
+  // shelf. It replaced v1's /board inbox, which now redirects here.
+  { label: "Floor", href: "/floor" },
   // Publishing: the schedule, the channels a headless agent can post to, and
   // what came back from them.
   { label: "Calendar", href: "/calendar" },

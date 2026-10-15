@@ -59,6 +59,14 @@ describe("the matrix cull", () => {
     expect(html).toContain(">concept<");
   });
 
+  test("the key legend draws only the reason keys this source binds: four for a forge plate, none for Suno", () => {
+    const keysOf = (html: string) => [...(/<span[^>]*>((?:<kbd[^>]*>[^<]*<\/kbd>)+) reason<\/span>/.exec(html)?.[1] ?? "").matchAll(/<kbd[^>]*>([^<]*)<\/kbd>/g)].map((m) => m[1]);
+    const forge = packet({ source: "forge", items: [img("a", "r")] }, { items: {}, rows: [] });
+    expect(keysOf(renderToStaticMarkup(h(MatrixCull, { packet: forge, verdicts: {}, decide: noop, undo: noop, onCommit: noop, keys: false })))).toEqual(["1", "2", "3", "4"]);
+    const suno = packet({ source: "suno", lane: "audio", items: [img("a", "r")] }, { items: {}, rows: [] });
+    expect(renderToStaticMarkup(h(MatrixCull, { packet: suno, verdicts: {}, decide: noop, undo: noop, onCommit: noop, keys: false }))).not.toContain(" reason</span>");
+  });
+
   test("with nothing open the commit button waits for nothing", () => {
     const html = renderToStaticMarkup(h(MatrixCull, { packet: p, verdicts: { a: { verdict: "keep", reasons: [] }, b: { verdict: "keep", reasons: [] } }, decide: noop, undo: noop, onCommit: noop, keys: false }));
     expect(html).toContain('aria-label="commit packet"');

@@ -56,7 +56,6 @@ export const DERIVED_FILES = [
   "pipeline/vlm-probe/schema.py",
   "pipeline/vlm-probe/style.py",
   "lib/foundry/extract/vocabulary.ts",
-  "app/foundry/CullGrid.tsx",
   "pipeline/foundry/dojo_study.py",
   "pipeline/foundry/dojo_measure.py",
 ];

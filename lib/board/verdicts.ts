@@ -14,6 +14,8 @@ import type { ProofState } from "@/lib/themes";
 import type { SlotStatus } from "@/lib/publish/types";
 import type { ArticleStatus } from "@/lib/articles/types";
 
+import { encodeNote } from "@/lib/decision/v1/note";
+
 import type { BoardVerdict } from "./types";
 
 /* ── cull + extract: keep | reject, absent = undecided ───────────────────── */
@@ -70,26 +72,9 @@ export function withExtractVerdict(
 // a leading `reasons: style, subject` line so the record stays readable by a
 // human opening verdicts.json and the Board can read them back.
 
-const REASONS_LINE = /^reasons:\s*([^\n]*)\n?/;
-
-export function encodeNote(reasons: readonly string[], note: string | null): string | undefined {
-  const head = reasons.length ? `reasons: ${reasons.join(", ")}` : "";
-  const body = note?.trim() ?? "";
-  const out = [head, body].filter(Boolean).join("\n");
-  return out || undefined;
-}
-
-export function decodeNote(note: string | undefined | null): { reasons: string[]; note: string | null } {
-  if (!note) return { reasons: [], note: null };
-  const m = REASONS_LINE.exec(note);
-  if (!m) return { reasons: [], note };
-  const reasons = m[1]
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  const rest = note.slice(m[0].length).trim();
-  return { reasons, note: rest || null };
-}
+// The spelling lives once, in lib/decision/v1/note.ts (wave B ruling 11): the
+// decision adapters are its readers of record now.
+export { decodeNote, encodeNote } from "@/lib/decision/v1/note";
 
 /* ── dojo: approve | reject | null — the Board's own words ──────────────── */
 // lib/foundry/training/types.ts: `TrainingVerdicts` is already this

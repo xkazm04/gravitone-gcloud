@@ -13,7 +13,7 @@ import { launchRun } from "../../../articles/drive.ts";
 import { defaultDeps, type EngineDeps } from "../../../articles/engine.ts";
 import { driverAlive, inRun, readRun, readTextFile, slugify } from "../../../articles/store.ts";
 import { NOTE_MAX_CHARS, type ArticleRun, type ArticleRunDetail, type ArticleStatus } from "../../../articles/types.ts";
-import { encodeNote } from "../../../board/verdicts.ts";
+import { encodeNote } from "../note.ts";
 import { packetIdOf } from "../../../ledger/v1/packet.ts";
 import {
   buildConsequence,

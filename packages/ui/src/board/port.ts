@@ -77,7 +77,13 @@ export type Presentation = {
   readonly meta?: string;
   readonly review?: ReviewDoc;
   readonly cut?: CutDoc;
+  /** What v1 holds that this packet cannot carry whole (import-normalization: lossy-conversion
+   *  disclosure), shown at the gate so the operator sees it before committing (wave B ruling 8). */
+  readonly losses?: readonly Loss[];
 };
+
+/** One thing the v1 -> kernel conversion could not carry whole, graded. */
+export type Loss = { readonly candidate?: string; readonly grade: "approximate" | "dropped"; readonly reason: string };
 
 export type BoardPacket = { readonly view: PacketView; readonly present: Presentation };
 

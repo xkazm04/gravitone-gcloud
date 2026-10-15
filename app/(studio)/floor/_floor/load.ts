@@ -1,8 +1,12 @@
 import "server-only";
 
 import type { RailSlot } from "@gt/ui/components/floor/calendar.ts";
+import type { ApplyStatus } from "@gt/domain/board";
+import type { MediaLane } from "@gt/domain/lane";
+import { listPacketSummaries } from "@gt/kernel/decision/view";
 import { queryEvents } from "@gt/kernel/events-query";
 
+import { reconcileApplies } from "../../../../lib/decision/v1/applier.ts";
 import { FIXTURE_MODE } from "../../../../lib/fixtures/mode.ts";
 import { kernel } from "../../../../lib/kernelStore.ts";
 import type { LiveJob, WeirItem } from "../../../../lib/ledger/v1/types.ts";
@@ -21,7 +25,10 @@ import { readShelf, type Shelf } from "./shelf.ts";
 //   head        the ledger's newest seq, where the live feed continues from.
 //
 // It also asks for a fresh ledger (freshLedger: non-blocking, claim-guarded, at most every
-// 30 s), so a Floor left open keeps the ledger current, as Runs does.
+// 30 s), so a Floor left open keeps the ledger current, as Runs does - and, the same way, for
+// v1 to be caught up with the kernel's committed decisions (lib/decision/v1/applier.ts
+// reconcileApplies). A decided packet whose outcome v1 has not taken yet is read from the
+// kernel and drawn on its lane (`unapplied`): a stuck one with v1's sentence, verbatim.
 
 export const PUBLISHED_CAP = 40;
 
@@ -33,9 +40,16 @@ export type FloorData = {
   readonly weir: readonly WeirItem[];
   readonly slots: readonly RailSlot[];
   readonly shelf: Shelf;
+  /** Decided packets whose v1 apply has not landed (pending after a failure, or stuck). */
+  readonly unapplied: readonly Unapplied[];
   /** What could not be read, by source, in its own words: drawn as gaps, never as "nothing". */
   readonly problems: readonly { readonly source: string; readonly error: string }[];
 };
+
+export type Unapplied = { readonly packetId: string; readonly lane: MediaLane; readonly title: string; readonly apply: ApplyStatus };
+
+/** How many decided packets are looked at for an unapplied outcome (bounded-enumeration). */
+const UNAPPLIED_SCAN = 100;
 
 export async function loadFloor(now: number = Date.now()): Promise<FloorData> {
   const problems: { source: string; error: string }[] = [];
@@ -47,9 +61,17 @@ export async function loadFloor(now: number = Date.now()): Promise<FloorData> {
 
   const slots: RailSlot[] = live.slots.map(railSlot);
   let head = 0;
+  const unapplied: Unapplied[] = [];
   const k = kernel();
   if (!k.ok) problems.push({ source: "kernel", error: k.error.message });
   else {
+    const swept = reconcileApplies(k.value.store);
+    if (!swept.ok) problems.push({ source: "decision-apply", error: swept.error.message });
+    for (const state of ["committed", "returned"] as const) {
+      const decided = k.value.store.read((r) => listPacketSummaries(r, { state, limit: UNAPPLIED_SCAN }));
+      if (!decided.ok) problems.push({ source: "kernel", error: decided.error.message });
+      else for (const p of decided.value.packets) if (p.apply !== undefined && (p.apply.state === "stuck" || p.apply.lastError !== undefined)) unapplied.push({ packetId: p.id, lane: p.lane, title: p.title ?? p.id, apply: p.apply });
+    }
     const pubs = queryEvents(k.value.store, { type: ["publish"], by: "time", order: "desc", limit: PUBLISHED_CAP });
     if (!pubs.ok) problems.push({ source: "ledger", error: pubs.error.message });
     else {
@@ -61,5 +83,5 @@ export async function loadFloor(now: number = Date.now()): Promise<FloorData> {
     }
   }
 
-  return { now, head, universe: FIXTURE_MODE ? "fixture" : "real", jobs: live.jobs, weir: live.weir, slots, shelf, problems };
+  return { now, head, universe: FIXTURE_MODE ? "fixture" : "real", jobs: live.jobs, weir: live.weir, slots, shelf, unapplied, problems };
 }

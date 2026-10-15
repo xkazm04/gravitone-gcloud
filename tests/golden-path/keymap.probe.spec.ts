@@ -4,14 +4,28 @@
 // behind its own guard, so the drawing and the behaviour drifted: Ctrl+K stamped
 // a keep on the cull, and Enter on a checkbox was the grid's. components/ui/
 // signal/keymap.ts declares bindings once and derives the resolver, the window
-// binding and the rows. Asserted here over the pure resolver, with the cull's
-// and the Board's real definitions.
+// binding and the rows. Asserted here over the pure resolver, with the v1 Board's
+// keymap and, as a fixture, the forge cull's - its grid retired in Phase 3 (the
+// cull is a Board packet now), but its seven bindings are still the sharpest test
+// of the resolver every remaining v1 surface binds through.
 import { test, expect } from "@playwright/test";
 
-import { CULL } from "@/app/foundry/cullKeymap";
-import { BOARD_KEYS } from "@/app/board/partsChrome";
 import { BOARD_KEYMAP } from "@/lib/board/keys";
 import { activeKeymaps, defineKeymap, keycapsRows, resolveKey } from "@/components/ui/signal/keymap";
+
+/** The retired app/foundry/cullKeymap.ts, verbatim: a fixture of the resolver now. */
+const CULL = defineKeymap<"move" | "keep" | "reject" | "clear" | "undo" | "next-undecided" | "compare">({
+  id: "foundry-cull",
+  bindings: [
+    { keys: ["←", "→", "↑", "↓"], does: "move", action: "move", repeat: true },
+    { keys: ["K"], does: "keep", action: "keep" },
+    { keys: ["X"], does: "reject", action: "reject" },
+    { keys: ["U"], does: "clear", action: "clear" },
+    { keys: ["Z"], does: "undo", action: "undo" },
+    { keys: ["N"], does: "next undecided", action: "next-undecided" },
+    { keys: ["Enter"], does: "compare", action: "compare" },
+  ],
+});
 
 const el = (tagName: string, extra: Record<string, unknown> = {}) => ({ tagName, closest: () => null, getAttribute: () => null, ...extra });
 const NO_LAYERS = { layers: [] as const };
@@ -70,8 +84,7 @@ test("keymap: an overlay owns the keyboard, but Escape stays one-press-one-layer
   expect(resolveKey(BOARD_KEYMAP, { key: "Escape" }, { layers: [{ id: "bell", kind: "tray" }] })).toBe(null);
 });
 
-test("keymap: the Board draws what it binds", () => {
-  expect(BOARD_KEYS).toEqual(keycapsRows(BOARD_KEYMAP));
+test("keymap: the Board's keys resolve to what they say", () => {
   for (const b of BOARD_KEYMAP.bindings) {
     const k = b.keys[0] === "Esc" ? "Escape" : b.keys[0];
     expect(resolveKey(BOARD_KEYMAP, { key: k }, NO_LAYERS), b.does).toBe(b.action);

@@ -12,10 +12,11 @@ import type { ApplyClaim } from "@gt/kernel/decision/apply";
 import type { InitialDecision } from "@gt/kernel/decision/driver";
 import type { ItemWords, RowWords } from "@gt/ui/board/port";
 
-import { applyBlindEdit, blindComplete, blindKey, ledgerVerdict, measureBlind, pickToArm, pickedCount, type Arm, type BlindEdit, type BlindPick, type BlindState } from "../../../foundry/training/blind.ts";
+import { applyBlindEdit, blindComplete, blindKey, claimAllowed, ledgerVerdict, measureBlind, pickToArm, pickedCount, type Arm, type BlindPick, type BlindState } from "../../../foundry/training/blind.ts";
 import { commitCycle, getCycle, patchBlind, patchTrainingVerdicts, trainingFileStat } from "../../../foundry/training/store.ts";
-import type { CycleManifest, Improvement, MediaRef, PairResult, TrainingVerdict, TrainingVerdicts } from "../../../foundry/training/types.ts";
+import type { CycleManifest, Improvement, PairResult, TrainingVerdict, TrainingVerdicts } from "../../../foundry/training/types.ts";
 import { packetIdOf } from "../../../ledger/v1/packet.ts";
+import { decidedInV1, reviewClaims, reviewed, reviewPacket, shown, type Claim, type DojoV1 } from "./dojoReview.ts";
 import {
   buildConsequence,
   committedOutcome,
@@ -66,28 +67,16 @@ import {
 // written as `tie` - neither arm was preferred, which is what agreement
 // measures; an improvement v1 already decided, or one with no pairs, is not
 // re-asked (its claim stands as v1 recorded it, and commitCycle commits it).
+// A cycle whose every claim v1 already holds opens as a packet review instead
+// (./dojoReview.ts, wave B ruling 3).
 
-export type DojoV1 = {
-  readonly cycle: CycleManifest;
-  readonly verdicts: TrainingVerdicts;
-  readonly blind: BlindState;
-  readonly rev: number;
-  /** By cycle-relative file: the image each arm shows (a video arm shows its poster). */
-  readonly media: Readonly<Record<string, BlobRef>>;
-  /** When blind.json was last written: v1 stamps no instant on a pick. */
-  readonly picksAt: string;
-};
-
-/** What the Board may show of an arm: the image, or a video's poster (the only image v1 serves for it). */
-const shown = (ref: MediaRef): string => ref.poster ?? ref.file;
+export type { DojoV1 } from "./dojoReview.ts";
 
 /** An arm's candidate id: the pair's row plus a digest of which arm it is. Neither the id nor its sort order names the arm. */
 export function armId(cycle: string, imp: string, pair: string, arm: Arm): string {
   const h = createHash("sha256").update(`${cycle}\u0000${imp}\u0000${pair}\u0000${arm}`).digest("hex").slice(0, 12);
   return `${imp}/${pair}/${h}`;
 }
-
-const decidedInV1 = (v: TrainingVerdicts, imp: string): boolean => v[imp] === "approve" || v[imp] === "reject";
 
 type Pair = { readonly imp: Improvement; readonly pair: PairResult; readonly row: string; readonly baseline: string; readonly challenger: string };
 
@@ -113,19 +102,17 @@ async function read(ref: AdapterRef): Promise<Result<DojoV1>> {
   const { cycle, verdicts, blind, rev } = detail.value;
   const media: Record<string, BlobRef> = {};
   for (const imp of cycle.improvements) {
-    for (const p of imp.pairs) {
-      for (const r of [p.baseline, p.challenger]) {
-        if (r.deleted) continue;
-        const rel = shown(r);
-        const at = await v1Call(() => trainingFileStat(id, rel));
-        if (!at.ok) {
-          if (at.error.code === "not-found" || at.error.code === "invalid") continue;
-          return at;
-        }
-        const b = await mediaRef(at.value.abs);
-        if (b.ok) media[rel] = b.value;
-        else if (b.error.code !== "not-found") return b;
+    // The thumbnail is what a cycle decided wholly in v1 shows per improvement (ruling 3).
+    const rels = [...imp.pairs.flatMap((p) => [p.baseline, p.challenger].filter((r) => !r.deleted).map(shown)), ...(imp.thumbnail === undefined ? [] : [imp.thumbnail])];
+    for (const rel of rels) {
+      const at = await v1Call(() => trainingFileStat(id, rel));
+      if (!at.ok) {
+        if (at.error.code === "not-found" || at.error.code === "invalid") continue;
+        return at;
       }
+      const b = await mediaRef(at.value.abs);
+      if (b.ok) media[rel] = b.value;
+      else if (b.error.code !== "not-found") return b;
     }
   }
   const sidecar = await v1Call(() => trainingFileStat(id, "blind.json"));
@@ -153,8 +140,6 @@ function v1Pick(o: Outcome, slotA: Arm): BlindPick {
 }
 
 const slotOf = (blind: BlindState, imp: string, pair: string): Arm => blind.map[blindKey(imp, pair)] ?? "baseline";
-
-type Claim = { readonly imp: Improvement; readonly verdict: TrainingVerdict; readonly challenger: number; readonly baseline: number; readonly ties: number; readonly bothBad: number; readonly edits: readonly BlindEdit[] };
 
 /** The pairs whose two arms a packet holds, re-derived from the cycle by their opaque ids. */
 function pairsIn(cycle: CycleManifest, ids: ReadonlySet<string>): Pair[] {
@@ -220,7 +205,7 @@ function packet(v1: DojoV1): Result<OpenPlan> {
         : "a pair's image is not on disk; an improvement is judged whole, so it stays undecided in v1";
     losses.push({ candidate: imp.id, grade: "dropped", reason: why });
   }
-  if (pairs.length === 0) return err("refused", `dojo cycle ${cycle.id} has no improvement left to judge blind`);
+  if (pairs.length === 0) return reviewPacket(v1);
   const jobId = `dojo:${cycle.id}`;
   const minted = mintPacket({
     id: packetIdOf("dojo", cycle.id),
@@ -302,7 +287,15 @@ function consequence(v1: DojoV1, at: DecisionsAt): Result<Preview> {
   const { cycle } = v1;
   const no = refusal(cycle);
   if (no !== undefined) return err("refused", `dojo cycle ${cycle.id}: ${no}`);
-  const claims = claimsOf(v1, at.decisions);
+  const asked = pairsOf(v1);
+  // No pair left to ask blind: the cycle is reviewed as v1 decided it (ruling 3).
+  const review = asked.length === 0;
+  const items = review ? reviewed(v1).map((i) => i.id) : asked.flatMap((p) => [p.baseline, p.challenger]);
+  const claims = review ? reviewClaims(cycle, new Set(items), at.decisions) : claimsFrom(asked, v1.blind, at.decisions);
+  // v1's blind guard (store.ts guardClaims) refuses to CHANGE a claim off the Board unless its
+  // pairs were all picked blind or it was anchored; say so now, in v1's words, not at apply.
+  const overturned = review ? claims.filter((c) => c.verdict !== v1.verdicts[c.imp.id] && !claimAllowed(c.imp, v1.blind.improvements[c.imp.id])) : [];
+  if (overturned.length > 0) return err("refused", `Pick every pair blind (or skip blind) before deciding the claim: ${overturned.map((c) => c.imp.technique).join(", ")}.`);
   // The blind state and the claims commitCycle will read once apply has written them.
   let blind = v1.blind;
   for (const c of claims) for (const e of c.edits) blind = applyBlindEdit(blind, e);
@@ -325,9 +318,12 @@ function consequence(v1: DojoV1, at: DecisionsAt): Result<Preview> {
     const asIs = entry?.anchored || pickedCount(i, entry) > 0 ? entry : { picks: {}, anchored: true };
     const v = ledgerVerdict(human, measureBlind(i, asIs, blind.map), asIs);
     const claim = claims.find((c) => c.imp.id === i.id);
-    const why = claim
+    const why = claim !== undefined && review
+      ? verdicts[i.id] === v1.verdicts[i.id] ? " · as v1 recorded it" : ` · overturned here (v1: ${v1.verdicts[i.id] ?? "undecided"})`
+      : claim
       ? ` · challenger chosen in ${claim.challenger} of ${i.pairs.length} pair(s), baseline in ${claim.baseline}${claim.ties ? `, ${claim.ties} tie(s)` : ""}${claim.bothBad ? `, ${claim.bothBad} both bad (written as tie)` : ""}`
       : " · as v1 recorded it";
+    // A reviewed claim carries no pair counts: it was made in v1, and stands or is overturned whole.
     return { kind: "index-row" as const, target: "pipeline/foundry/training-ledger.json", candidate: i.id, detail: `${i.technique}: ${human} → ${v}${asIs?.anchored ? " (anchored)" : ""}${why}` };
   });
   const thumbs = decided
@@ -336,7 +332,7 @@ function consequence(v1: DojoV1, at: DecisionsAt): Result<Preview> {
   const v1Digest = digestOf(v1);
   return ok({
     v1Digest,
-    consequence: buildConsequence(at, pairsOf(v1).flatMap((p) => [p.baseline, p.challenger]), {
+    consequence: buildConsequence(at, items, {
       deletes,
       writes: [
         ...rows,
@@ -365,7 +361,8 @@ async function apply(claim: ApplyClaim): Promise<Result<void>> {
   if (!fresh.ok) return fresh;
   const { cycle, verdicts, blind, rev } = fresh.value;
   // The packet's own pairs, by their opaque ids: what v1 decided itself is not ours to rewrite.
-  const claims = claimsFrom(pairsIn(cycle, new Set<string>(claim.packet.items.map((c) => c.id))), blind, claim.decisions);
+  const ids = new Set<string>(claim.packet.items.map((c) => c.id));
+  const claims = claim.packet.mode === "packet-review" ? reviewClaims(cycle, ids, claim.decisions) : claimsFrom(pairsIn(cycle, ids), blind, claim.decisions);
 
   if (cycle.status === "committed") {
     const differ = claims.filter((c) => verdicts[c.imp.id] !== c.verdict);

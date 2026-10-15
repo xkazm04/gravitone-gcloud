@@ -21,13 +21,13 @@ import Link from "next/link";
 import { ArrowLeft, ExternalLink, FileWarning, Gavel, GitPullRequest, RotateCw } from "lucide-react";
 import { useState } from "react";
 
-import { Field, TextArea } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Primitives";
 import { CHIP_CLASS, Fold, Provenance, TALLY_TONE, Tally, type TallyTone } from "@/components/ui/signal";
 import { SURFACE } from "@/components/ui/tokens";
-import { NOTE_MAX_CHARS, STEP_NAMES, type ArticleRun } from "@/lib/articles/types";
+import { STEP_NAMES, type ArticleRun } from "@/lib/articles/types";
 
-import { approveRun, rejectRun, resumeRun, runFileUrl, type RunDetail } from "./articlesClient";
+import { boardFor, packetIdOf } from "../(studio)/_shell/links.ts";
+import { resumeRun, runFileUrl, type RunDetail } from "./articlesClient";
 import { CritiqueView } from "./CritiquePanel";
 import { CheckView, DraftFrame, PatchCard, PhaseChip, RefusedPatches, Section, SourcesTable, Stepper } from "./parts";
 import { costOf, fmtUsd, gateFigures, nodesOf, phaseOf, resumeVerb, topicLine, type GateFigures, type RunPhase } from "./runModel";
@@ -37,7 +37,6 @@ const MEDIUM_FILES = ["story.html", "tags.txt", "README.md"];
 
 export default function RunView({ runId }: { runId: string }) {
   const { state, live, reload, adopt } = useArticleRun(runId);
-  const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
 
   if (!state) {
     return (
@@ -83,7 +82,7 @@ export default function RunView({ runId }: { runId: string }) {
       </div>
       <Banner run={run} detail={d} phase={phase} onRun={adopt} />
 
-      {atGate && <GateSummary detail={d} gate={gate} picked={picked.size} />}
+      {atGate && <GateSummary detail={d} gate={gate} />}
 
       {/* Each record below is a section that opens on demand. At the gate the
           ones that hold the human's call open by themselves (the key remounts
@@ -172,9 +171,7 @@ export default function RunView({ runId }: { runId: string }) {
           title="Registry patches"
           defaultOpen={atGate && d.patches.length > 0}
           marks={
-            atGate ? (
-              <Tally value={picked.size} of={d.patches.length} label="approve" tone={picked.size ? "cyan" : "neutral"} />
-            ) : run.approval ? (
+            run.approval ? (
               <Tally value={approvedPatches.size} of={d.patches.length} label="approved" tone="emerald" />
             ) : (
               <Tally value={d.patches.length} label="proposed" />
@@ -186,23 +183,7 @@ export default function RunView({ runId }: { runId: string }) {
               <PatchCard
                 key={p.id}
                 patch={p}
-                {...(atGate
-                  ? {
-                      pick: {
-                        checked: picked.has(p.id),
-                        disabled: false,
-                        onChange: (on: boolean) =>
-                          setPicked((cur) => {
-                            const next = new Set(cur);
-                            if (on) next.add(p.id);
-                            else next.delete(p.id);
-                            return next;
-                          }),
-                      },
-                    }
-                  : run.approval
-                    ? { verdict: approvedPatches.has(p.id) ? ("approved" as const) : ("declined" as const) }
-                    : {})}
+                {...(run.approval ? { verdict: approvedPatches.has(p.id) ? ("approved" as const) : ("declined" as const) } : {})}
               />
             ))}
             {d.refused && d.refused.length > 0 && <RefusedPatches refused={d.refused} />}
@@ -210,7 +191,7 @@ export default function RunView({ runId }: { runId: string }) {
         </Section>
       )}
 
-      {atGate && <GatePanel run={run} patchCount={d.patches.length} picked={picked} onRun={adopt} />}
+      {atGate && <GateDoor run={run} />}
     </main>
   );
 }
@@ -423,7 +404,7 @@ function ResumeButton({ run, onRun }: { run: ArticleRun; onRun: (r: ArticleRun) 
 /** What the decision rests on, as counts that jump to their record: what the
  *  check failed or could not measure, which blockers the writer overruled,
  *  what is still unanswered, how many patches are picked. */
-function GateSummary({ detail, gate, picked }: { detail: RunDetail; gate: GateFigures; picked: number }) {
+function GateSummary({ detail, gate }: { detail: RunDetail; gate: GateFigures }) {
   const marks: { href: string; key: string; value: number; of?: number; label: string; tone: TallyTone }[] = [];
   if (detail.check) {
     if (gate.fail) marks.push({ href: "#check", key: "fail", value: gate.fail, label: "check fail", tone: "rose" });
@@ -434,7 +415,7 @@ function GateSummary({ detail, gate, picked }: { detail: RunDetail; gate: GateFi
     if (gate.blockers) marks.push({ href: "#critique", key: "blk", value: gate.blockers, label: "open blocker", tone: "rose" });
     if (gate.unanswered) marks.push({ href: "#critique", key: "ua", value: gate.unanswered, label: "unanswered", tone: "amber" });
   }
-  if (detail.patches.length) marks.push({ href: "#patches", key: "pt", value: picked, of: detail.patches.length, label: "patches", tone: picked ? "cyan" : "neutral" });
+  if (detail.patches.length) marks.push({ href: "#patches", key: "pt", value: detail.patches.length, label: "patches", tone: "neutral" });
   return (
     <nav aria-label="gate summary" className="flex flex-wrap items-center gap-2 rounded-2xl border border-amber-300/25 bg-amber-400/[0.05] px-5 py-3" data-testid="article-gate-summary">
       {marks.map((m) => (
@@ -455,70 +436,23 @@ function GateSummary({ detail, gate, picked }: { detail: RunDetail; gate: GateFi
 
 /* ── the gate ─────────────────────────────────────────────────────────── */
 
-function GatePanel({ run, patchCount, picked, onRun }: { run: ArticleRun; patchCount: number; picked: ReadonlySet<string>; onRun: (r: ArticleRun) => void }) {
-  const [confirming, setConfirming] = useState(false);
-  const [note, setNote] = useState("");
-  const [busy, setBusy] = useState<"approve" | "reject" | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const approve = async () => {
-    setBusy("approve");
-    setError(null);
-    const r = await approveRun(run.id, [...picked].sort());
-    setBusy(null);
-    setConfirming(false);
-    if (r.ok) onRun(r.data.run);
-    else setError(r.error);
-  };
-  const reject = async () => {
-    if (!note.trim()) return;
-    setBusy("reject");
-    setError(null);
-    const r = await rejectRun(run.id, note.trim());
-    setBusy(null);
-    if (r.ok) onRun(r.data.run);
-    else setError(r.error);
-  };
-
+// THE GATE MOVED TO THE BOARD (Phase 3, decision 10). Approve, reject and rework
+// were this panel's three acts, each a call to v1's route (approveRun, rejectRun);
+// they are a kernel packet now - `pkt:article:<run id>` - reviewed on the Board's
+// packet desk, where the approval's two outward acts (the push, the PR) are shown
+// verbatim before the commit, and a rework goes back as a structured edit plan.
+// The kernel's apply delivers the outcome through the same v1 writers
+// (lib/decision/v1/sources/article.ts). What stays here is the door.
+function GateDoor({ run }: { run: ArticleRun }) {
   return (
-    <section aria-labelledby="gate" className={`${SURFACE} space-y-5 rounded-2xl border-amber-300/25 p-5`} data-testid="article-gate">
+    <section aria-labelledby="gate" className={`${SURFACE} flex flex-wrap items-center gap-4 rounded-2xl border-amber-300/25 p-5`} data-testid="article-gate">
       <h2 id="gate" className="font-jetbrains text-label tracking-[0.18em] text-amber-200/90 uppercase">
         Gate
       </h2>
-      <div className="flex flex-wrap items-center gap-3">
-        {!confirming ? (
-          <Button variant="keep" disabled={busy !== null} onClick={() => setConfirming(true)} data-testid="article-approve">
-            Approve post{patchCount ? ` + ${picked.size} of ${patchCount} patches` : ""}
-          </Button>
-        ) : (
-          <>
-            {/* A destructive confirm states its consequence: this reaches
-                another repository and other people. */}
-            <span className="text-content text-amber-100">Pushes a branch to ai-registry and opens a PR.</span>
-            <Button disabled={busy !== null} onClick={approve} data-testid="article-approve-confirm">
-              {busy === "approve" ? "Approving…" : "Confirm"}
-            </Button>
-            <Button variant="ghost" size="sm" disabled={busy !== null} onClick={() => setConfirming(false)}>
-              Cancel
-            </Button>
-          </>
-        )}
-      </div>
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="min-w-0 flex-1">
-          <Field label="Rejection note" htmlFor="article-reject-note">
-            <TextArea id="article-reject-note" rows={2} value={note} maxLength={NOTE_MAX_CHARS} onChange={(e) => setNote(e.target.value)} data-testid="article-reject-note" />
-          </Field>
-        </div>
-        <Button variant="danger" disabled={busy !== null || !note.trim()} onClick={reject} data-testid="article-reject">
-          {busy === "reject" ? "Rejecting…" : "Reject"}
-        </Button>
-      </div>
-      {error && (
-        <p role="alert" className="font-jetbrains text-label break-words text-rose-200" data-testid="article-gate-error">
-          {error}
-        </p>
-      )}
+      <Link href={boardFor(packetIdOf("article", run.id))} className="font-jetbrains inline-flex items-center gap-1.5 text-label text-amber-100 hover:text-white" data-testid="article-gate-board">
+        <Gavel aria-hidden className="h-3.5 w-3.5" />
+        Board · {run.id}
+      </Link>
     </section>
   );
 }

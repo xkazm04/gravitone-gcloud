@@ -16,7 +16,7 @@ import { canonical, sha256Hex } from "@gt/kernel/canonical";
 import type { ApplyClaim } from "@gt/kernel/decision/apply";
 import { consequenceToken } from "@gt/kernel/decision/consequence";
 import type { By, InitialDecision, OpenInput } from "@gt/kernel/decision/driver";
-import type { Presentation } from "@gt/ui/board/port";
+import type { Loss as PresentLoss, Presentation } from "@gt/ui/board/port";
 
 // THE DECISION ADAPTER CONTRACT (Phase 3 wave B) - one v1 decision surface
 // as a kernel packet, and the kernel's committed outcome back into v1. One
@@ -64,12 +64,9 @@ import type { Presentation } from "@gt/ui/board/port";
 /** What names a Weir pile in v1: the run (cycle, aggregate) id after `pkt:<source>:`. */
 export type AdapterRef = { readonly runId: string };
 
-/** One thing the v1 -> kernel conversion could not carry whole (lossy-conversion-disclosure grades). */
-export type Loss = {
-  readonly candidate?: string;
-  readonly grade: "approximate" | "dropped";
-  readonly reason: string;
-};
+/** One thing the v1 -> kernel conversion could not carry whole (lossy-conversion-disclosure grades).
+ *  Spelled once, in the Board's Presentation, because the gate draws it (wave B ruling 8). */
+export type Loss = PresentLoss;
 
 export type OpenPlan = {
   /** Minted at the kernel's packet door (packetSchema), so its ids are branded. */

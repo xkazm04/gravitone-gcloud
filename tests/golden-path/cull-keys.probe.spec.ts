@@ -16,14 +16,10 @@
 // `enterBelongsToTarget` (components/ui/signal/keymap.ts) is the rule, exported so this drives the real predicate
 // rather than a copy of it. Enter is delivered to the focused element itself, so
 // the check is by tag and by role — no ancestor walk to reproduce here.
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-
 import { test, expect } from "@playwright/test";
 
 import { enterBelongsToTarget as activatesOnEnter } from "@/components/ui/signal/keymap";
 
-import { stripComments } from "./_helpers";
 import { callsTo, lineOf, sourceFile, switchCase } from "./_ast";
 
 const el = (tagName: string, role?: string) => ({
@@ -127,11 +123,9 @@ test("cull keys: the rule is WIRED into every Enter case, not merely exported", 
   console.log(`[cull-keys] window-level Enter handlers: ${handlers.join(", ")}`);
   // The known surfaces must still be IN the population - a rename that drops one
   // out would leave the loop above vacuously green over what remains.
-  // StripGrid.tsx joined 2026-10-06 (the Strips tab, the Cull's keys).
-  // CullGrid.tsx left the population when it moved onto the keymap kernel, which
-  // applies the rule to every binding; it is asserted below instead.
-  expect(handlers.sort()).toEqual(["app/foundry/ExtractBoard.tsx", "app/foundry/StripGrid.tsx"]);
-  const cull = stripComments(readFileSync(resolve(__dirname, "../../app/foundry/CullGrid.tsx"), "utf8"));
-  expect(cull, "CullGrid binds its keys through the kernel").toContain("useKeymap(");
-  expect(cull, "CullGrid has no private window keydown").not.toContain('addEventListener("keydown"');
+  // ExtractBoard.tsx and StripGrid.tsx were the last two (their tabs retired in
+  // Phase 3; the Board binds through the @gt/ui keymap, which applies the rule to
+  // every binding). An empty population is the end state, and a new window-level
+  // Enter handler must answer to the loop above.
+  expect(handlers.sort()).toEqual([]);
 });

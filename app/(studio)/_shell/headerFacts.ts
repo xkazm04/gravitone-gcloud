@@ -14,7 +14,8 @@ import { boardFor, packetIdOf } from "./links.ts";
 // `header({next, spend})`; the Ghosts of Phase 1 held their shape):
 //
 //   next   the oldest pile waiting on the operator (./facts.ts nextPile), linked to its packet's
-//          Board through the one packet-id rule (./links.ts packetIdOf).
+//          Board through the packet id the live read stamped (articles decide as `article`,
+//          the sound shelf as `audio`), else the one packet-id rule (./links.ts packetIdOf).
 //   spend  every priced ledger act in the last 24 hours. Only the spend projection prices acts
 //          (lib/ledger/v1/sources/spend.ts books a `cost`), so the read is that source's acts
 //          in the window, paged by time; past SPEND_PAGES pages the sum is reported as a floor.
@@ -40,7 +41,7 @@ export async function headerFacts(now: number = Date.now()): Promise<HeaderFacts
   const read = await liveRead();
   for (const f of read.failures) problems.push(`${f.source}: ${f.error}`);
   const n = nextPile(read.weir);
-  const next = n === null ? null : { title: n.title, count: n.pending, href: boardFor(packetIdOf(n.source, n.id)) };
+  const next = n === null ? null : { title: n.title, count: n.pending, href: boardFor(n.packetId ?? packetIdOf(n.source, n.id)) };
 
   const k = kernel();
   if (!k.ok) return { next, spend: null, head: 0, problems: [...problems, `kernel: ${k.error.message}`] };

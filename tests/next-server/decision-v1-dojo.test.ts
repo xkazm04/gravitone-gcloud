@@ -206,5 +206,46 @@ describe("dojo adapter - consequence and apply over a temp v1 store", () => {
     writeFileSync(path.join(cycleDir, "verdicts.json"), JSON.stringify({ fog: "approve", rim: "reject" }));
     const r = await dojoAdapter.apply(claim);
     expect(r.ok ? "" : r.error.message).toContain("tech-rim is reject in v1, approve here");
+  }, 30_000); // every crash prefix replays a commit: slow under a full parallel run
+});
+
+describe("dojo adapter - a cycle every claim of which was made in v1 (wave B ruling 3)", () => {
+  /** rim and fog decided in v1, with no blind pick at all (anchored: v1's gate let a claim skip blind). */
+  function seedDecided(verdicts: TrainingVerdicts): void {
+    seed();
+    writeFileSync(path.join(cycleDir, "verdicts.json"), JSON.stringify(verdicts));
+    writeFileSync(path.join(cycleDir, "blind.json"), JSON.stringify({ version: 1, map: {}, improvements: {} }));
+  }
+
+  it("still opens: a packet review of the decided improvements, v1's claims as its decisions, the undecided disclosed", async () => {
+    seedDecided({ rim: "approve", fog: "reject" });
+    const flow = await openFlow(dojoAdapter, CYCLE, blobDir);
+    expect(flow.plan.packet.mode).toBe("packet-review");
+    expect(flow.plan.packet.items.map((c) => c.id)).toEqual(["rim", "fog"]);
+    expect(flow.plan.initial.map((d) => [d.candidate, d.verdict])).toEqual([["rim", "keep"], ["fog", "reject"]]);
+    expect(flow.plan.losses).toEqual(expect.arrayContaining([expect.objectContaining({ candidate: "bare", grade: "dropped" })]));
+    // rim is reviewed by its thumbnail; fog has none and shows its challenger arm.
+    expect(flow.plan.urls["rim"]).toContain(encodeURIComponent("pairs/rim/p1/challenger.png"));
+    expect(flow.plan.urls["fog"]).toContain(encodeURIComponent("pairs/fog/q1/challenger.png"));
+  }, 30_000); // opens over a full temp v1 store: slow under a full parallel run
+
+  it("commits as v1 recorded it, through commitCycle; overturning an unpicked claim is v1's refusal, at the preview", async () => {
+    seedDecided({ rim: "approve", fog: "reject" });
+    const flow = await openFlow(dojoAdapter, CYCLE, blobDir);
+    flow.patch([{ candidate: "fog", verdict: "keep" }]);
+    const refused = flow.preview();
+    expect(refused.ok ? "" : refused.error.message).toBe("Pick every pair blind (or skip blind) before deciding the claim: tech-fog.");
+    flow.patch([{ candidate: "fog", verdict: "reject" }]);
+    const p = must(flow.preview());
+    expect(p.consequence.counts).toEqual({ kept: 1, rejected: 1, undecided: 0 });
+    expect(p.consequence.writes.find((w) => w.candidate === "fog")?.detail).toContain("as v1 recorded it");
+    must(flow.commit());
+    const claim = flow.claim();
+    must(await dojoAdapter.apply(claim));
+    const cycle = JSON.parse(readFileSync(path.join(cycleDir, "cycle.json"), "utf8")) as CycleManifest;
+    expect(cycle.status).toBe("committed");
+    expect(JSON.parse(readFileSync(path.join(cycleDir, "verdicts.json"), "utf8"))).toMatchObject({ rim: "approve", fog: "reject" });
+    // A second delivery of the same outcome is a no-op on the committed cycle.
+    must(await dojoAdapter.apply(claim));
   });
 });

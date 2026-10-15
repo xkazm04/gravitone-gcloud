@@ -17,14 +17,19 @@
 // "something over there wants you" is the one fact you cannot get without
 // leaving where you are.
 //
+// FOUR STATIONS ARE DOORS NOW (Phase 3): the cull, Extract, the Dojo and Strips
+// decide on the Board, so each is drawn as a link to the lane where its piles
+// wait, keeping its status dot - "something over there wants you" is still the
+// one fact this row exists to carry.
+//
 // THE MEDIA SWITCH RIDES HERE TOO, and only while the Pipeline is open. It is
 // the same kind of choice as the station — which body of work am I looking at —
 // so it belongs in the same row rather than in a bar of its own above the board,
 // which is the row this change deletes. It sits after a divider so it reads as
 // a second group and not a seventh station.
 
-import type { Tab } from "./plant";
-import { ENGINE, type EngineLine } from "./plant";
+import type { Station, Tab } from "./plant";
+import { DECIDED_ON, ENGINE, type EngineLine } from "./plant";
 import { Dot } from "./ui";
 
 export interface SubnavMedia<T extends string> {
@@ -95,11 +100,12 @@ export default function FoundrySubnav<T extends string>({
   tab: Tab;
   onSelect: (t: Tab) => void;
   /** Each station's one live fact, or null where it has none. */
-  lines: Partial<Record<Tab, EngineLine | null>>;
+  lines: Partial<Record<Station, EngineLine | null>>;
   /** Rendered only when the station that owns it is open. */
   media?: SubnavMedia<T>;
 }) {
-  const tabs = Object.keys(ENGINE) as Tab[];
+  const tabs: readonly Tab[] = ["styles", "pipeline"];
+  const doors = Object.keys(DECIDED_ON) as Exclude<Station, Tab>[];
   return (
     <div className="font-jetbrains flex w-full items-center gap-6 overflow-x-auto pb-1.5 text-label whitespace-nowrap md:gap-7">
       <div role="tablist" aria-label="foundry stations" className="flex items-center gap-6 md:gap-7">
@@ -112,6 +118,17 @@ export default function FoundrySubnav<T extends string>({
           );
         })}
       </div>
+      <nav aria-label="decided on the Board" className="flex items-center gap-6 md:gap-7">
+        {doors.map((d) => {
+          const l = lines[d] ?? null;
+          return (
+            <a key={d} href={DECIDED_ON[d]} data-testid={`foundry-door-${d}`} className="flex items-center gap-2 whitespace-nowrap text-white/70 transition hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4">
+              {l && <Dot tone={l.tone} pulse={l.pulse} />}
+              {ENGINE[d].name} ›
+            </a>
+          );
+        })}
+      </nav>
       {media && (
         <>
           <span aria-hidden className="h-4 w-px shrink-0 bg-white/12" />

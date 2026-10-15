@@ -34,12 +34,24 @@ import { fetchCatalogue, fetchRun, fetchStripRun, fetchStripRuns, fetchTrainingC
 import { EXTRACT_LIVE, LIVE, STATUS_WORD, runKind } from "./parts";
 import type { Tone } from "./ui";
 
-// A FIFTH AND A SIXTH TAB, and nothing retires: the operator decided the four
-// engines of the forge coexist with the pipeline board, and Strips landed beside
-// it from another lane. `ENGINE`, `lines()` and `station()`
-// below are all `Record<Tab, …>`, so tsc names every place a new member has to be
-// answered for — which is the point of keeping the union here.
-export type Tab = "cull" | "extract" | "styles" | "dojo" | "pipeline" | "strips";
+// SIX STATIONS, TWO TABS (Phase 3, decision 10). The plant still has six engines
+// and the header still reads all six (`ENGINE`, `engineLines()` are
+// `Record<Station, …>`, so tsc names every place a new one must be answered for).
+// But four of them were DECISION surfaces - the forge cull, the Extract bench,
+// the Dojo gate, the Strips triage - and their decisions are kernel packets now,
+// opened from the Floor's Weir and decided on the Board. Those four are no longer
+// tabs here: each is a door to the lane where its piles wait (`DECIDED_ON`).
+// What stays a tab is what is not a decision: the Styles shelf and the Pipeline.
+export type Station = "cull" | "extract" | "styles" | "dojo" | "pipeline" | "strips";
+export type Tab = Extract<Station, "styles" | "pipeline">;
+
+/** Where a retired station's decisions are made now: its media lane's Weir on the Floor. */
+export const DECIDED_ON: Record<Exclude<Station, Tab>, string> = {
+  cull: "/floor?lane=image",
+  extract: "/floor?lane=image",
+  dojo: "/floor?lane=image",
+  strips: "/floor?lane=video",
+};
 
 /* ── Reads ────────────────────────────────────────────────────────────────── */
 
@@ -207,9 +219,9 @@ function stripsLine(runs: StripRunSummary[] | undefined): EngineLine | null {
 }
 
 /** Each station's name and glyph. Exported for ./FoundrySubnav, which draws
- *  the row; this file keeps the table because `Record<Tab, …>` here is what makes
+ *  the row; this file keeps the table because `Record<Station, …>` here is what makes
  *  tsc name every place a new station has to be answered for. */
-export const ENGINE: Record<Tab, { name: string; icon: typeof Flame }> = {
+export const ENGINE: Record<Station, { name: string; icon: typeof Flame }> = {
   cull: { name: "Forge · Cull", icon: Flame },
   extract: { name: "Extract", icon: Pipette },
   styles: { name: "Styles", icon: Palette },
@@ -218,7 +230,7 @@ export const ENGINE: Record<Tab, { name: string; icon: typeof Flame }> = {
   strips: { name: "Strips", icon: Clapperboard },
 };
 
-export function engineLines(runs: RunSummary[] | null, plant: Plant): Record<Tab, EngineLine | null> {
+export function engineLines(runs: RunSummary[] | null, plant: Plant): Record<Station, EngineLine | null> {
   // NULL FOR THE PIPELINE, deliberately. Its figures — cards per stage, how many
   // are at the gate — come from `CanvasStatus`, which does not exist until the
   // canvas has mounted inside the tab. `usePlant` reads three lists and none of
@@ -256,6 +268,6 @@ export function engineLines(runs: RunSummary[] | null, plant: Plant): Record<Tab
 // these are the same kind of thing one level down.
 //
 // What stays here is the DATA behind that row: `ENGINE` (name and glyph) and
-// `engineLines()` (each station's one live fact). Both are `Record<Tab, …>` on
+// `engineLines()` (each station's one live fact). Both are `Record<Station, …>` on
 // purpose, so tsc names every place a new station must be answered for.
 

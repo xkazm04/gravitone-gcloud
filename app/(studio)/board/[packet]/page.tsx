@@ -8,12 +8,12 @@ import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 
 import { Board } from "../_board/Board.tsx";
 import { loadBoard } from "../_board/load.ts";
-import { BOARD_PORT } from "../_port/wire.ts";
+import { BOARD_PORT, BOARD_REDRIVE } from "../_port/wire.ts";
 
 export const metadata: Metadata = { title: "Gravitone · Board" };
 
 export default async function BoardPage({ params }: { readonly params: Promise<{ readonly packet: string }> }) {
   const r = await loadBoard(params);
   if (!r.ok) return <ErrorLine message={`board · ${r.id}: ${r.error.error}`} live />;
-  return <Board id={r.id} initial={r.packet} rail={r.rail} kind="full" port={BOARD_PORT} />;
+  return <Board id={r.id} initial={r.packet} rail={r.rail} kind="full" port={BOARD_PORT} redrive={BOARD_REDRIVE} />;
 }

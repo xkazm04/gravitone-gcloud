@@ -1,7 +1,5 @@
 {
-  "foundry": [
-    "text div.border.border-white/8.bg-gradient-to-b > div.grid.gap-0.lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] > div.flex.flex-col.justify-center > span.font-jetbrains.text-label.tracking-[0.16em]"
-  ],
+  "foundry": [],
   "kit": [
     "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn",
     "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan",
@@ -68,11 +66,9 @@
     "text span.flex.flex-wrap.items-center > span.flex.items-center.gap-1.5 > span.font-jetbrains.text-label.text-white/55 > span.text-white/30"
   ],
   "playground": [
-    "mark div.border.border-white/8.bg-gradient-to-b > div.relative > div.flex.flex-col.gap-2 > div.border.border-dashed.border-white/45",
-    "mark div.px-1.pb-1 > div.relative > div.flex.flex-col.gap-2 > div.border.border-dashed.border-white/45",
-    "text div.grid.gap-4 > div.grid.items-start.gap-5 > div.border.border-white/8.bg-gradient-to-b > span.font-jetbrains.text-label.uppercase",
-    "text section.grid.min-w-0.gap-4 > div.border.border-white/8.bg-gradient-to-b > button.flex.cursor-pointer.items-center > span.truncate.font-jetbrains.text-label",
-    "text section.grid.min-w-0.gap-4 > div.border.border-white/8.bg-gradient-to-b > div.flex.items-center.justify-between > span.font-jetbrains.text-label.uppercase"
+    "text div.contents > div.flex.min-h-[8.5rem].flex-col > div.min-w-0 > h3.truncate.font-jetbrains.text-label",
+    "text div.flex.items-start.gap-3 > div.min-w-0.flex-1 > div.mt-1.flex.flex-wrap > span.font-jetbrains.text-label.tabular-nums",
+    "text div.relative.flex.min-h-[8.5rem] > article.group/card.relative.cursor-grab > div.mt-1.5 > span.font-jetbrains.text-label.text-white/30"
   ],
   "projects": [
     "text div.gt-race.group.h-16 > div.min-w-0 > div.flex.min-w-0.items-center > span.font-jetbrains.shrink-0.rounded-full",

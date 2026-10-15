@@ -29,11 +29,8 @@ const NEEDS_DOM =
 /** hook path -> why it is not driven through _studio/hooks.ts. Shrink-only. */
 export const EXEMPT: Record<string, string> = {
   "app/articles/useArticles.ts": NO_DRIVER,
-  "app/board/useBoard.ts": NO_DRIVER,
-  "app/board/useBoardKeys.ts": NEEDS_DOM,
   "app/calendar/useCalendar.ts": NO_DRIVER,
   "app/calendar/useDrag.ts": NEEDS_DOM,
-  "app/foundry/gate/useGate.ts": NO_DRIVER,
   "app/foundry/pipeline/useAudition.ts": NO_DRIVER,
   "app/foundry/pipeline/useBoardCull.ts": NO_DRIVER,
   "app/foundry/pipeline/useBoardEngine.ts": NO_DRIVER,

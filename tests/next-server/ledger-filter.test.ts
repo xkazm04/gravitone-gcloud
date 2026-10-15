@@ -104,6 +104,10 @@ describe("subjectLink", () => {
     expect(subjectLink(e({ key: "ingest:forge:fail.read.x", subject: { kind: "source", id: "forge" } })).href).toBe("/ledger?src=forge");
   });
 
+  it("a decision packet opens its Board, open or decided", () => {
+    expect(subjectLink(e({ key: undefined, subject: { kind: "packet", id: "pkt:audio:audio/triage/17" } }))).toEqual({ label: "pkt:audio:audio/triage/17", href: "/board/pkt%3Aaudio%3Aaudio%2Ftriage%2F17" });
+  });
+
   it("a subject nobody mapped opens its own history in the Ledger, never a guessed route", () => {
     expect(subjectLink(e({ key: "turns:t1:x", subject: { kind: "turn", id: "t 1/x" } }))).toEqual({ label: "t 1/x", href: ledgerFor("t 1/x") });
     expect(ledgerFor("t 1/x")).toBe("/ledger?q=t%201%2Fx");

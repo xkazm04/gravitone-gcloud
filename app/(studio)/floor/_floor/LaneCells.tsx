@@ -19,11 +19,14 @@ import { Wave } from "@gt/ui/components/wave/Wave.tsx";
 
 import type { WeirItem } from "../../../../lib/ledger/v1/types.ts";
 import { boardFor, packetIdOf } from "../../_shell/links.ts";
+import type { Unapplied } from "./load.ts";
 import type { LaneWork } from "./model.ts";
 import type { Shelf } from "./shelf.ts";
 import s from "./Floor.module.css";
 
-export const pileHref = (w: Pick<WeirItem, "source" | "id">): string => boardFor(packetIdOf(w.source, w.id));
+/** A pile's Board: the packet id the live read stamped (`articles` decide as `article`, `sound`
+ *  as `audio` - lib/ledger/v1/packet.ts), else the projection's own spelling. */
+export const pileHref = (w: Pick<WeirItem, "source" | "id" | "packetId">): string => boardFor(w.packetId ?? packetIdOf(w.source, w.id));
 
 const dur = (sec: number): string => `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, "0")}`;
 
@@ -59,20 +62,42 @@ export function Foundry({ work, folded }: { readonly work: LaneWork; readonly fo
   );
 }
 
-export function Weir({ work, folded, next, onOpen }: { readonly work: LaneWork; readonly folded: boolean; readonly next: WeirItem | null; readonly onOpen: (href: string) => void }) {
+export type WeirProps = {
+  readonly work: LaneWork;
+  readonly folded: boolean;
+  readonly next: WeirItem | null;
+  readonly onOpen: (href: string) => void;
+  /** This lane's decided packets whose v1 apply has not landed (./load.ts Unapplied). */
+  readonly unapplied?: readonly Unapplied[];
+};
+
+/** A decided packet v1 has not taken: its state, v1's sentence verbatim, and its Board (where the redrive is). */
+function Owed({ u }: { readonly u: Unapplied }) {
+  return (
+    <div className={s.unapplied} data-component="Unapplied" data-packet={u.packetId}>
+      <Chip label={`v1 apply · ${u.apply.state}`} value={u.apply.attempts} tone={u.apply.state === "stuck" ? "rose" : "amber"} dot href={boardFor(u.packetId)} />
+      <span className={s.unappliedTitle}>{u.title}</span>
+      {u.apply.lastError !== undefined && <ErrorLine message={u.apply.lastError} />}
+    </div>
+  );
+}
+
+export function Weir({ work, folded, next, onOpen, unapplied = [] }: WeirProps) {
   const items = work.piles.reduce((n, p) => n + p.decided + p.pending, 0);
+  const owed = unapplied.map((u) => <Owed key={u.packetId} u={u} />);
   if (folded) {
     return (
       <LaneSummary>
         <Tally value={work.piles.length} label="piles" />
         <Tally value={items} label="items" />
+        {unapplied.some((u) => u.apply.state === "stuck") && <Chip label="v1 apply · stuck" tone="rose" dot />}
       </LaneSummary>
     );
   }
   if (work.piles.length === 0) {
     return (
       <div className={s.weirCell}>
-        <Chip label="clear" tone="emerald" dot />
+        {owed.length === 0 ? <Chip label="clear" tone="emerald" dot /> : owed}
       </div>
     );
   }
@@ -96,6 +121,7 @@ export function Weir({ work, folded, next, onOpen }: { readonly work: LaneWork; 
           />
         ))}
       </div>
+      {owed}
     </div>
   );
 }

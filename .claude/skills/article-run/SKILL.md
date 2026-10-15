@@ -16,7 +16,7 @@ thing that changes a run.
 ## The one rule
 
 **This skill never runs `approve`, `reject` or `resume`, and never lands anything in the registry.**
-Approval is the human's act at the gate (`/articles/<runId>`, or the operator typing `approve`
+Approval is the human's act at the gate (the Board, `/board/pkt:article:<runId>`, or the operator typing `approve`
 themselves). Landing pushes a branch and opens a PR in ai-registry; nothing an agent decides on its
 own may cause that. If the user asks this skill to approve, say that approval happens at the gate and
 give them the run id.
@@ -92,7 +92,7 @@ npx tsx pipeline/article.mts status --json           # every run, newest first
 
 After a run, read `<dir>/check.json` and report, in this order:
 
-1. The run id, its status, and the gate: `/articles/<runId>`.
+1. The run id, its status, and the gate: `/board/pkt:article:<runId>` (the run's page: `/articles/<runId>`).
 2. The critique, from `run.json` `critique`: rounds, each reviewer with its engine, model and
    outcome, and the error of any that did not complete (an `unavailable` or `seat-limit` reviewer
    is a review that did not happen, not a verdict). Then the findings by disposition and the

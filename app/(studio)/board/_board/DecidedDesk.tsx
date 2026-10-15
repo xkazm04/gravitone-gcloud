@@ -13,7 +13,15 @@ import { StatusPill } from "@gt/ui/components/status/StatusPill.tsx";
 import { ledgerFor } from "../../_shell/links.ts";
 import s from "./board.module.css";
 
-export function DecidedDesk({ packet, next, onNext }: { readonly packet: BoardPacket; readonly next: PacketSummary | undefined; readonly onNext: (id: string) => void }) {
+export type DecidedDeskProps = {
+  readonly packet: BoardPacket;
+  readonly next: PacketSummary | undefined;
+  readonly onNext: (id: string) => void;
+  /** A stuck apply's redrive (dead-letter-design): pending again, a fresh attempt budget. */
+  readonly onRedrive?: () => void;
+};
+
+export function DecidedDesk({ packet, next, onNext, onRedrive }: DecidedDeskProps) {
   const v = packet.view;
   const kept = v.decisions.filter((d) => d.verdict === "keep").length;
   const rejected = v.decisions.filter((d) => d.verdict === "reject").length;
@@ -36,6 +44,11 @@ export function DecidedDesk({ packet, next, onNext }: { readonly packet: BoardPa
           {v.returned !== undefined && <Chip label="edit plan" value={v.returned.length} tone="amber" />}
         </div>
         {v.apply?.lastError !== undefined && <ErrorLine message={v.apply.lastError} />}
+        {v.apply?.state === "stuck" && onRedrive !== undefined && (
+          <div className={s.kv}>
+            <Button label="Redrive v1 apply" tone="amber" onPress={onRedrive} />
+          </div>
+        )}
       </div>
     </DeskFrame>
   );

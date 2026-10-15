@@ -172,5 +172,5 @@ describe("strips adapter - consequence and apply over a temp v1 store", () => {
     writeFileSync(path.join(runDir, "verdicts.json"), JSON.stringify({ ...v, "edu-c1--E03": { verdict: "reject", at: "x" } }));
     const r = await stripsAdapter.apply(claim);
     expect(r.ok ? "" : r.error.message).toContain("edu-c1--E03 is reject in v1, keep here");
-  });
+  }, 30_000); // every crash prefix replays a commit: slow under a full parallel run
 });

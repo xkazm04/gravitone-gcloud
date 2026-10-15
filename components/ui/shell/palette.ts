@@ -94,7 +94,9 @@ export function paletteIndex({
       kind: "decision",
       id: `decision:${src}`,
       label: SOURCE_LABEL[src],
-      href: `/board?src=${src}`,
+      // Its piles wait on the Floor's Weir and are decided on the Board (Phase 3);
+      // v1's `/board?src=` address only redirects there now.
+      href: "/floor",
       facts: [{ value: n, label: "waiting" }],
     });
   }

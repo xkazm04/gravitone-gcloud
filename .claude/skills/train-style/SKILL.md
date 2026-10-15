@@ -70,7 +70,7 @@ The engine's scores are a grader's — a pre-filter, never a verdict. Before the
 
 ## Step 3 — the cull
 
-Prefer the app: `http://localhost:3001/foundry` → **Extract** → the run. Same keys as the Cull: ↑↓ move, **K** keep, **X** reject, **U** clear, **Enter** inspects the focused row (any tile zooms with its prompt/critique/readback behind it), then **Commit the kept styles**. The dev server is usually already on :3001 (repo memory); do not start a second one.
+Prefer the Board: the run is a pile in the Floor's image lane (`/floor?lane=image`), and it opens as `/board/pkt:extract:<run-id>`. A row is a look, a tile a cell: **K** keep, **X** reject, **1-4** the reasons (style, subject, text, craft), **U** clear, **Z** the lens, **⌫** undo, **⏎** shows what the commit will write (the looks kept into `styles.json`, the rest deleted) before it is committed. A look is kept if any of its cells is. The Board refuses to commit while a cell is undecided, so decide them all (⇧K / ⇧X do a row). The kernel records the decision and delivers it to v1's own commit.
 
 Headless, when the user has decided from your read:
 

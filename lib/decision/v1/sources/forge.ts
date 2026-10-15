@@ -12,7 +12,7 @@ import type { ApplyClaim } from "@gt/kernel/decision/apply";
 import type { InitialDecision } from "@gt/kernel/decision/driver";
 import type { ItemWords, RowWords } from "@gt/ui/board/port";
 
-import { decodeNote, encodeNote } from "../../../board/verdicts.ts";
+import { decodeNote, encodeNote } from "../note.ts";
 import { seriesKey, type FieldCalibration, type GradeField, type GraderCalibrationFile } from "../../../foundry/calibration.ts";
 import { planForgeCommit } from "../../../foundry/commitPlan.ts";
 import { foundryFs } from "../../../foundry/fsPort.ts";
@@ -53,7 +53,7 @@ import {
 //     graded, unmeasured, generated, not deleted) - the same plates the
 //     projection counts on the Weir (lib/ledger/v1/sources/forge.ts);
 //   · reasons ride in the note's leading `reasons: a, b` line
-//     (lib/board/verdicts.ts encodeNote / decodeNote), read back as the
+//     (../note.ts encodeNote / decodeNote, v1 lib/board/verdicts.ts), read back as the
 //     packet's reasons; a word that is not a forge reason stays in the note,
 //     disclosed as a loss, because the kernel's door refuses it;
 //   · the blast radius is planForgeCommit - the same pure planner commitRun

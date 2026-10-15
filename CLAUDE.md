@@ -475,7 +475,7 @@ mouse user can read is a regression, not a fix. Never delete a11y text to lower 
 
 `lib/articles/` (CLI `pipeline/article.mts`, skills `techwriter` for the topic dialogue and the nightly
 `--loop`, `article-run` for one headless run) writes a technical post from a
-registry topic and, on a human's approval, opens a PR in ai-registry. Read `docs/articles.md` first.
+registry topic and, on a human's approval on the Board (`/board/pkt:article:<runId>`), opens a PR in ai-registry. Read `docs/articles.md` first.
 Two rules an agent session must keep: a `run` spends the operator's Claude seat (use the stub agent,
 `ARTICLES_AGENT_BIN`, for anything that is not the real thing), and `approve` is never an agent's
 act: it pushes a branch and opens a PR in another repository.
