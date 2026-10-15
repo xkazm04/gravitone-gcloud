@@ -19,7 +19,7 @@ import type { AgentTool } from "./cliSeam";
  *
  * The workspace holds only REVIEW_WORKSPACE — a copy of `post/`, `sources.json`
  * and `REVIEW.md` (the full prompt). claude and codex also get the full prompt
- * on stdin; agy and grok take the prompt as an argument, so they get a short
+ * on stdin; agy takes the prompt as an argument, so they get a short
  * pointer at REVIEW.md, which keeps the argv far under Windows' command-line
  * ceiling (the contest runner's shape).
  *
@@ -46,19 +46,10 @@ import type { AgentTool } from "./cliSeam";
  *           alternative (a per-tool `permissions.allow` rule for read_url in the
  *           operator's agy settings.json) edits the operator's own
  *           configuration and is left to the operator. Reports no cost.
- *   grok    `-p <pointer> -m <model> --effort <e> --output-format json
- *           --cwd <ws> --permission-mode plan --no-subagents`, env GROK_MEMORY=0
- *           GROK_AGENT_DASHBOARD=0. ARGV UNPROVEN AGAINST A LIVE SESSION: the
- *           account answers 402 Payment Required (probed; the envelope is
- *           `{"type":"error","message":"…402 Payment Required…","http_status":402}`,
- *           exit 1). Whether plan mode permits web search is not known. grok
- *           1.0.40 also imports claude/cursor skills, MCP servers and hooks
- *           ("harness compatibility") and offers no headless switch to refuse
- *           them, so the operator's configuration is NOT excluded for grok.
  */
 
-export type ReviewerEngineName = "claude" | "codex" | "grok" | "agy";
-export const REVIEWER_ENGINE_NAMES: readonly ReviewerEngineName[] = ["claude", "codex", "grok", "agy"];
+export type ReviewerEngineName = "claude" | "codex" | "agy";
+export const REVIEWER_ENGINE_NAMES: readonly ReviewerEngineName[] = ["claude", "codex", "agy"];
 
 /** A claude reviewer's tools: research and read, never write. */
 export const REVIEWER_TOOLS: readonly AgentTool[] = ["WebSearch", "WebFetch", "Read"];

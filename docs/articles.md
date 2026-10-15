@@ -81,12 +81,12 @@ Call-site labels: `article-research`, `article-draft`, `article-review` and
 the reasoning router's plan table and these turns can never route there.
 
 `ARTICLES_AGENT_BIN` replaces the claude binary (`|`-separated argv; the writer and claude
-reviewers), and `ARTICLES_CODEX_BIN`, `ARTICLES_GROK_BIN`, `ARTICLES_AGY_BIN` replace the other
-three. The probes and every dry run use `node|tests/fixtures/articles/stub-agent.mjs`, with
+reviewers), and `ARTICLES_CODEX_BIN`, `ARTICLES_AGY_BIN` replace the other
+two. The probes and every dry run use `node|tests/fixtures/articles/stub-agent.mjs`, with
 `|--as=<engine>` for the reviewers so the stub answers in that engine's envelope. It writes canned,
 check-passing files and spends nothing.
 
-### Reviewers: four engines, read-only
+### Reviewers: three engines, read-only
 
 The critique's reviewers run through `runReviewer` in the same seam, on the operator's own CLI
 logins. A reviewer's workspace holds only a copy of `post/`, `sources.json` and `REVIEW.md` (the
@@ -101,12 +101,11 @@ every variable whose name looks like a credential (`KEY`, `SECRET`, `TOKEN`, `PA
 | claude | the writer's fence above with `--tools WebSearch,WebFetch,Read` (no Write, no Edit) | stdin | flags parse together (empty-prompt check, nothing spent) |
 | codex | `exec --json --skip-git-repo-check --ephemeral --ignore-user-config --ignore-rules -C <ws> --sandbox read-only -m <model> -c model_reasoning_effort="<e>" -c web_search="live" -` | stdin | one-line probe: the page opened through `web_search` and a file write was "blocked by policy" in the same session. `max` is sent as `xhigh` |
 | agy | `-p <pointer> --model <model>-<tier> --output-format json --dangerously-skip-permissions --sandbox --disable-slash-commands --print-timeout <n>m`, stdin closed empty, cwd = the workspace | pointer to REVIEW.md | without `--dangerously-skip-permissions` headless mode auto-denies `read_url` (empty answer). With it, `--sandbox` combines, but neither `--sandbox` nor `--mode plan` stopped a write INSIDE the workspace. agy is read-only by isolation, not by flag. The full argv parses (empty-prompt check) |
-| grok | `-p <pointer> -m <model> --effort <e> --output-format json --cwd <ws> --permission-mode plan --no-subagents`, env `GROK_MEMORY=0 GROK_AGENT_DASHBOARD=0` | pointer to REVIEW.md | **argv unproven against a live session**: the account answers `402 Payment Required` (envelope `{"type":"error","message":"…402…","http_status":402}`). Whether plan mode permits web search is unknown. grok 1.0.40 imports claude/cursor skills, MCP servers and hooks and offers no headless switch to refuse them |
 
 Outcomes: `completed | unavailable | timed-out | errored | seat-limit`. A 402, a model the account
 does not offer, or a CLI that is not installed is `unavailable`; a 429, usage limit or quota is
 `seat-limit`; the error is recorded either way, never a crash. `costUsd` is recorded only when
-the CLI reports one (claude and grok do; codex and agy do not).
+the CLI reports one (claude does; codex and agy do not).
 
 ## The standard, by address
 
@@ -134,8 +133,8 @@ provider the operator has a login for review it, and the writer answers them. Th
 `lib/articles/critique.ts`.
 
 The panel is `pipeline/article-reviewers.json` (`ARTICLES_REVIEWERS_FILE`, or `--reviewers <file>`
-on the CLI, overrides it): `fable` (claude, `claude-fable-5-1`), `grok` (grok, `grok-4.7`),
-`gemini` (agy, `gemini-3.8-flash`), `gpt` (codex, `gpt-6-astra`; `gpt-6.1-astra` is not offered
+on the CLI, overrides it): `opus` (claude, `claude-opus-5-5`, effort `xhigh`; it replaced `claude-fable-5-1` on 2026-10-15 until Fable 5.5 arrives),
+`gemini` (agy, `gemini-3.8-flash`), `gemini4` (agy, `gemini-4-argon`, added 2026-10-14 in the seat grok left), `gpt` (codex, `gpt-6-astra`; `gpt-6.1-astra` is not offered
 on this account), each at effort `high` with `timeoutMin` 25. The run snapshots the panel into
 `critique/reviewers.json` when its critique begins, and every round and resume reads the snapshot.
 
@@ -306,6 +305,7 @@ behind the prompt and check changes of 2026-10-06. For the next author of a run:
   critique prompt now holds the post to a length ceiling (replacement, not addition) and the
   review prompt asks reviewers to say what a requested addition should displace. A reviewer's
   claim resting on a page it could not open is unverified and capped below `blocker`.
+- **Grok descoped (2026-10-14).** Four parallel runs the same day each lost grok to `cancelled: I'll read REVIEW.md…` before its first turn (cost $0.19 to $0.46 a run), so the engine, its envelope reader and its probes are gone and `gemini4` (agy, `gemini-4-argon`) holds its seat beside `gemini-3.8-flash`. Second wave (2026-10-14): at effort `high` and a 14 minute limit it timed out in 3 of the 4 first rounds (it completed round 1 in `blind-screening-and-redaction`, 13 findings and 2 blockers, and round 2 in `claim-verification-and-provenance`, 10 findings). It now runs at effort `medium` with a 35 minute limit.
 - **A panel of four gave two.** Grok returned 402 (balance), Gemini hung 25 minutes and then
   503ed (agy eligibility check). Both are recorded, not hidden, and the quorum of two held.
   Done (2026-10-06): agy's start-up line "Eligibility check failed: failed to get load code
@@ -436,8 +436,8 @@ node tests/fixtures/articles/registry-fixture.mjs <scratch>/reg
 STUB=tests/fixtures/articles/stub-agent.mjs
 AI_REGISTRY_DIR=<scratch>/reg/registry ARTICLES_STORE_DIR=<scratch>/store \
   ARTICLES_AGENT_BIN="node|$STUB" ARTICLES_CODEX_BIN="node|$STUB|--as=codex" \
-  ARTICLES_GROK_BIN="node|$STUB|--as=grok" ARTICLES_AGY_BIN="node|$STUB|--as=agy" \
-  STUB_REVIEWERS="grok=unavailable" STUB_CRITIQUE_DECISIONS="rewrite,keep" \
+  ARTICLES_AGY_BIN="node|$STUB|--as=agy" \
+  STUB_REVIEWERS="gemini4=unavailable" STUB_CRITIQUE_DECISIONS="rewrite,keep" \
   npx tsx pipeline/article.mts run --subject software-engineering/token-budgeting
 ```
 

@@ -129,7 +129,7 @@ test("a critique revision is checked before the next round reviews it", async ()
   expect(json<CheckPassRecord>(run.id, "checks/round-1-2.json").failed).toEqual([]);
   expect(json<CheckPassRecord>(run.id, "checks/draft-1.json").failed).toEqual([]);
   // round 2's reviewers were given the FIXED post
-  const r2 = readFileSync(at(run.id, "critique/round-2/prompts/fable.md"), "utf8");
+  const r2 = readFileSync(at(run.id, "critique/round-2/prompts/opus.md"), "utf8");
   expect(r2).not.toContain("A pause");
   expect(readFileSync(at(run.id, "agent/fix-round-1-1-prompt.md"), "utf8")).toContain("`no-em-dash`");
 });
@@ -208,7 +208,7 @@ test("panel: the agy reviewer's timeout is the shorter one", async () => {
   const panel = await loadPanel(ROOT, {});
   const by = Object.fromEntries(panel.reviewers.map((r) => [r.id, r.timeoutMin]));
   expect(by.gemini).toBe(14);
-  expect(by.gemini).toBeLessThan(by.fable);
+  expect(by.gemini).toBeLessThan(by.opus);
 });
 
 test("the fix edits the seeded copy in place: unflagged bytes survive,", async () => {

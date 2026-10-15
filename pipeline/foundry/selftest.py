@@ -1461,6 +1461,29 @@ def test_forge_refuses_an_absolute_frame_spec():
           "non-portable reference" in _refusal(F.resolve_source, "C:\\x\\a.jpg"), True)
 
 
+def test_scene_lint_catches_grammar_breaks_before_generation():
+    L = load("scene_lint")
+    src = (HERE / "scene_demo.py").read_text(encoding="utf-8")
+    i = src.index("SHOTS = [")
+    ns = {}
+    exec(src[i:src.index("\n]\n", i) + 3], ns)
+    shots = ns["SHOTS"]
+    check("the shipped scene list is clean", L.lint_shots(shots), [])
+    s5 = [list(s) for s in shots]
+    s5[4][1] = s5[4][1].replace("facing screen left, ", "")
+    got = L.lint_shots([tuple(s) for s in s5])
+    check("a face with no screen direction is named", [p.split(":")[0] for p in got], ["direction"])
+    flip = [list(s) for s in shots]
+    flip[4][1] = flip[4][1].replace("screen left", "screen right")
+    got = L.lint_shots([tuple(s) for s in flip])
+    check("a flipped side is an axis finding", [p.split(":")[0] for p in got], ["axis"])
+    stutter = [shots[0], shots[1], (shots[1][0] + "b",) + tuple(shots[1][1:])]
+    check("two identical OTS on one subject stutter",
+          any(p.startswith("stutter") for p in L.lint_shots(stutter)), True)
+    check("an opening close-up is refused",
+          any(p.startswith("opening") for p in L.lint_shots(shots[3:])), True)
+
+
 TESTS = [
     test_palette_is_measured_and_the_sample_is_declared,
     test_frozen_is_a_number_not_a_poster_impression,
@@ -1508,6 +1531,7 @@ TESTS = [
     test_refs_resolve_logical_names_and_refuse_absolute_paths,
     test_manifest_gitignore_reincludes_manifests_but_not_pixels,
     test_forge_refuses_an_absolute_frame_spec,
+    test_scene_lint_catches_grammar_breaks_before_generation,
 ]
 
 

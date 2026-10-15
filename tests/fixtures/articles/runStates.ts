@@ -73,14 +73,14 @@ export const SEED_STATES: readonly SeedState[] = [
 /* ── the critique, written as its files ──────────────────────────────────── */
 
 export const SEED_PANEL: ReviewerSpec[] = [
-  { id: "fable", engine: "claude", model: "claude-fable-5-1", effort: "high", timeoutMin: 25 },
-  { id: "grok", engine: "grok", model: "grok-4.7", effort: "high", timeoutMin: 25 },
+  { id: "opus", engine: "claude", model: "claude-opus-5-5", effort: "high", timeoutMin: 25 },
+  { id: "gemini4", engine: "agy", model: "gemini-4-argon", effort: "medium", timeoutMin: 35 },
   { id: "gemini", engine: "agy", model: "gemini-3.8-flash", effort: "high", timeoutMin: 25 },
   { id: "gpt", engine: "codex", model: "gpt-6-astra", effort: "high", timeoutMin: 25 },
 ];
 
 const ERRORS: Partial<Record<ReviewerOutcome, string>> = {
-  unavailable: 'Internal error: { "message": "API error (status 402 Payment Required): Grok Build usage balance exhausted", "http_status": 402 } (http 402)',
+  unavailable: 'Internal error: { "message": "API error (status 402 Payment Required): Build usage balance exhausted", "http_status": 402 } (http 402)',
   "seat-limit": "RESOURCE_EXHAUSTED: quota exceeded",
   "timed-out": "did not finish within 25 min",
   errored: "malformed review twice: the final message holds no JSON object",
@@ -129,7 +129,7 @@ export function writeSeedCritique(dir: string, rounds: SeedRound[], at: (min: nu
       const receipt: ReviewerReceipt = {
         id: spec.id, engine: spec.engine, model: spec.model, effort: spec.effort, round, attempts: 1, turns: outcome === "completed" ? 4 : 0, durationMs: outcome === "completed" ? 412_000 : 900,
         outcome, errors: outcome === "completed" ? [] : [ERRORS[outcome] ?? outcome],
-        ...(outcome === "completed" && (spec.engine === "claude" || spec.engine === "grok") ? { costUsd: 0.4213 } : {}),
+        ...(outcome === "completed" && (spec.engine === "claude") ? { costUsd: 0.4213 } : {}),
       };
       receipts.push(receipt);
       w(`round-${round}/receipts/${spec.id}.json`, receipt);
@@ -161,7 +161,7 @@ export function writeSeedCritique(dir: string, rounds: SeedRound[], at: (min: nu
   return summarizeCritique(detail);
 }
 
-const ALL_OK = { fable: "completed", grok: "completed", gemini: "completed", gpt: "completed" } as const;
+const ALL_OK = { opus: "completed", gemini4: "completed", gemini: "completed", gpt: "completed" } as const;
 
 const AT = (min: number) => new Date(Date.UTC(2026, 9, 5, 9, min, 0)).toISOString();
 
@@ -225,23 +225,23 @@ export function seedRunStates(store: string, templateId: string, opts: { driverP
       case "critique-running":
         // Round 1 mid-flight: two reviewers back, two still out.
         drop("check.json", "check");
-        run.critique = writeSeedCritique(dir, [{ outcomes: { fable: "completed", gpt: "completed" } }], AT);
+        run.critique = writeSeedCritique(dir, [{ outcomes: { opus: "completed", gpt: "completed" } }], AT);
         run = { ...run, status: "critiquing", steps: [research, outline, draft, { name: "critique", status: "running", startedAt: AT(21) }] };
         break;
       case "critique-partial":
-        // grok out of balance (402), the other three completed: the run went on.
-        run.critique = writeSeedCritique(dir, [{ outcomes: { ...ALL_OK, grok: "unavailable" }, decision: { decision: "keep", rationale: "The blocker was a stale price; the fix is one sentence and is already in the draft." } }], AT);
+        // gemini4 out of balance (402), the other three completed: the run went on.
+        run.critique = writeSeedCritique(dir, [{ outcomes: { ...ALL_OK, gemini4: "unavailable" }, decision: { decision: "keep", rationale: "The blocker was a stale price; the fix is one sentence and is already in the draft." } }], AT);
         run = { ...run, status: "awaiting-approval" };
         break;
       case "critique-quorum":
         // Only one reviewer completed: the run stopped before the gate.
         drop("check.json", "check");
-        run.critique = writeSeedCritique(dir, [{ outcomes: { fable: "completed", grok: "unavailable", gemini: "seat-limit", gpt: "timed-out" } }], AT);
+        run.critique = writeSeedCritique(dir, [{ outcomes: { opus: "completed", gemini4: "unavailable", gemini: "seat-limit", gpt: "timed-out" } }], AT);
         run = {
           ...run,
           status: "failed",
           steps: [research, outline, draft, { name: "critique", status: "failed", startedAt: AT(21), endedAt: AT(47), costUsd: 0.4213 }],
-          error: `critique: critique-quorum: round 1: 1 of 4 reviewers completed, 2 needed (grok unavailable: ${ERRORS.unavailable}; gemini seat-limit: ${ERRORS["seat-limit"]}; gpt timed-out: ${ERRORS["timed-out"]})`,
+          error: `critique: critique-quorum: round 1: 1 of 4 reviewers completed, 2 needed (gemini4 unavailable: ${ERRORS.unavailable}; gemini seat-limit: ${ERRORS["seat-limit"]}; gpt timed-out: ${ERRORS["timed-out"]})`,
         };
         break;
       case "critique-keep":
@@ -253,8 +253,8 @@ export function seedRunStates(store: string, templateId: string, opts: { driverP
         run.critique = writeSeedCritique(
           dir,
           [
-            { outcomes: { ...ALL_OK, grok: "unavailable" }, decision: { decision: "research", rationale: "Two reviewers found the price stale; the current figure needs a primary source the research does not hold." }, revised: { research: true } },
-            { outcomes: { ...ALL_OK, grok: "unavailable" }, decision: { decision: "keep", rationale: "Only a minor engagement note remains; the closing already returns to the opening number." } },
+            { outcomes: { ...ALL_OK, gemini4: "unavailable" }, decision: { decision: "research", rationale: "Two reviewers found the price stale; the current figure needs a primary source the research does not hold." }, revised: { research: true } },
+            { outcomes: { ...ALL_OK, gemini4: "unavailable" }, decision: { decision: "keep", rationale: "Only a minor engagement note remains; the closing already returns to the opening number." } },
           ],
           AT,
         );

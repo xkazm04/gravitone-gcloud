@@ -163,11 +163,11 @@ Write exactly two files:
 ```
 `reason` is never empty. Omit `action` when nothing will change.
 
-A complete answer for two reviews, `fable` (findings f1 to f2) and `gpt` (finding f1), with the decision:
+A complete answer for two reviews, `opus` (findings f1 to f2) and `gpt` (finding f1), with the decision:
 ```json
 [
-  {"reviewer": "fable", "findingId": "f1", "disposition": "accepted", "reason": "The cited table lists the model twice.", "action": "Report both rows beside the claim."},
-  {"reviewer": "fable", "findingId": "f2", "disposition": "rejected", "reason": "Source [7] says the opposite: the limit is per request."},
+  {"reviewer": "opus", "findingId": "f1", "disposition": "accepted", "reason": "The cited table lists the model twice.", "action": "Report both rows beside the claim."},
+  {"reviewer": "opus", "findingId": "f2", "disposition": "rejected", "reason": "Source [7] says the opposite: the limit is per request."},
   {"reviewer": "gpt", "findingId": "f1", "disposition": "deferred", "reason": "Right, but a separate piece."}
 ]
 ```

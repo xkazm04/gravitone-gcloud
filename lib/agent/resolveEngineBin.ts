@@ -14,7 +14,7 @@ import type { ReviewerEngineName } from "./reviewerEngines";
 
 /** `ARTICLES_<ENGINE>_BIN` overrides one engine's binary (`|`-separated argv);
  *  claude reviewers use the writer's ARTICLES_AGENT_BIN. */
-const ENGINE_BIN_VAR = { codex: "ARTICLES_CODEX_BIN", grok: "ARTICLES_GROK_BIN", agy: "ARTICLES_AGY_BIN" } as const;
+const ENGINE_BIN_VAR = { codex: "ARTICLES_CODEX_BIN", agy: "ARTICLES_AGY_BIN" } as const;
 
 const splitOverride = (o: string) => o.split("|").map((s) => (s === "node" ? process.execPath : existsSync(path.resolve(s)) ? path.resolve(s) : s));
 
@@ -34,7 +34,6 @@ export function resolveEngineBin(engine: ReviewerEngineName, env: Record<string,
   const local = env.LOCALAPPDATA ?? path.join(home, "AppData", "Local");
   const fallbacks: Record<typeof engine, string[]> = {
     codex: [],
-    grok: [path.join(home, ".grok", "bin", win ? "grok.exe" : "grok")],
     agy: [path.join(local, "agy", "bin", "agy.exe"), path.join(home, ".local", "bin", "agy")],
   };
   const candidates: string[] = [];

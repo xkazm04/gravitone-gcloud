@@ -107,7 +107,7 @@ errored | seat-limit`) and `run.json` `error` says where. What has happened so f
   Cost of one lost turn: about $4.50 to $5.60.
 - **Triage timeout** (the writer's answer to the reviews): it once finished in 7 minutes on retry
   after timing out at 20. The limit is now 30 minutes; `resume` retries.
-- **Reviewer unavailable**: Grok has returned 402 (balance) in every run; Gemini has timed out
+- **Reviewer unavailable**: Grok was descoped on 2026-10-14 (402, then `cancelled` in 4 of 4 runs); Gemini has timed out
   (14 minute limit) or returned its early 503. A reviewer that did not complete is a review that
   did not happen, not a verdict. Two reviewers are the quorum.
 - **`seat-limit`**: the Claude seat's usage window ran out. Nothing is wrong with the topic; wait
@@ -160,8 +160,8 @@ discovered:
 - **Reviewers.** Claude and Codex find nearly all blockers, but which of them finds a given blocker
   changes from run to run (all four in one run from Codex alone), so keep both. Gemini raises few
   blockers and had the most rejected findings (up to 27 percent), but many of its findings are not
-  found by the others: use it for format and engagement, weight its blockers lower. Grok has been
-  unavailable on balance in every run: a panel of four is a panel of three.
+  found by the others: use it for format and engagement, weight its blockers lower. A second agy seat,
+  `gemini4` (Gemini 4 Argon), replaced grok on 2026-10-14; its yield is being measured.
 - **What fails and how resume behaves.** Resume re-runs only the step that did not finish and reuses
   everything before it (the research, the draft, the reviews, the triage). Two runs failed at the
   re-research ingest, one at a stalled triage; the resumes finished them. A resume costs only the

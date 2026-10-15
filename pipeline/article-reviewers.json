@@ -1,12 +1,36 @@
 {
   "schema": "article-reviewers/1",
-  "note": "The multi-model critique panel (scope amendment 1, 2026-10-05). Read by lib/articles/critique.ts loadPanel; ARTICLES_REVIEWERS_FILE or `article.mts run --reviewers <file>` overrides it. Each reviewer runs read-only with web access through its local CLI on the operator's own login (lib/agent/cliSeam.ts runReviewer). gpt runs gpt-6-astra because gpt-6.1-astra is not offered on this account (codex lists gpt-6.1-sol and gpt-6-astra, probed 2026-10-05); grok answered 402 Payment Required on 2026-10-05 and is kept on the panel so its absence is recorded, not hidden. gemini (agy) holds a 14 minute timeout because its two completed rounds took 11 minutes and its hung call on 2026-10-05 took 25 before a 503, and the engine stops agy at once on its eligibility-check 503 (lib/agent/cliSeam.ts earlyUnavailable). A run continues when at least minCompleted reviewers complete a round, and stops at critique-quorum otherwise.",
+  "note": "The multi-model critique panel (scope amendment 1, 2026-10-05). Read by lib/articles/critique.ts loadPanel; ARTICLES_REVIEWERS_FILE or `article.mts run --reviewers <file>` overrides it. Each reviewer runs read-only with web access through its local CLI on the operator's own login (lib/agent/cliSeam.ts runReviewer). gpt runs gpt-6-astra because gpt-6.1-astra is not offered on this account (codex lists gpt-6.1-sol and gpt-6-astra, probed 2026-10-05); grok was descoped on 2026-10-14 (402 on 2026-10-05, then `cancelled` before its first turn in 4 of 4 runs on 2026-10-14) and gemini4 (agy, `gemini-4-argon`, listed by `agy models` 2026-10-14) took its seat to see how it proves, beside gemini-3.8-flash. gemini (agy) holds a 14 minute timeout because its two completed rounds took 11 minutes and its hung call on 2026-10-05 took 25 before a 503, and the engine stops agy at once on its eligibility-check 503 (lib/agent/cliSeam.ts earlyUnavailable). A run continues when at least minCompleted reviewers complete a round, and stops at critique-quorum otherwise. gemini4 runs at effort medium with a 35 minute limit: at high and 14 minutes it timed out in 3 of the 4 first rounds of the 2026-10-14 second wave. The claude seat is Opus 5.5 at xhigh (id opus), which replaced claude-fable-5-1 on 2026-10-15 as the more capable reviewer until Fable 5.5 arrives.",
   "maxCritiqueRounds": 2,
   "minCompleted": 2,
   "reviewers": [
-    { "id": "fable", "engine": "claude", "model": "claude-fable-5-1", "effort": "high", "timeoutMin": 25 },
-    { "id": "grok", "engine": "grok", "model": "grok-4.7", "effort": "high", "timeoutMin": 25 },
-    { "id": "gemini", "engine": "agy", "model": "gemini-3.8-flash", "effort": "high", "timeoutMin": 14 },
-    { "id": "gpt", "engine": "codex", "model": "gpt-6-astra", "effort": "high", "timeoutMin": 25 }
+    {
+      "id": "opus",
+      "engine": "claude",
+      "model": "claude-opus-5-5",
+      "effort": "xhigh",
+      "timeoutMin": 25
+    },
+    {
+      "id": "gemini4",
+      "engine": "agy",
+      "model": "gemini-4-argon",
+      "effort": "medium",
+      "timeoutMin": 35
+    },
+    {
+      "id": "gemini",
+      "engine": "agy",
+      "model": "gemini-3.8-flash",
+      "effort": "high",
+      "timeoutMin": 14
+    },
+    {
+      "id": "gpt",
+      "engine": "codex",
+      "model": "gpt-6-astra",
+      "effort": "high",
+      "timeoutMin": 25
+    }
   ]
 }

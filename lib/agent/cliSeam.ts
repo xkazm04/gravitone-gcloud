@@ -46,7 +46,7 @@
 // not happen, and the caller may say so differently.
 //
 // FOUR ENGINES (scope amendment 1). The article critique runs REVIEWERS through
-// the local `claude`, `codex`, `grok` and `agy` CLIs on the operator's own
+// the local `claude`, `codex` and `agy` CLIs on the operator's own
 // logins — see "Reviewers" in ./reviewerEngines.ts. The writer turns above
 // are unchanged and stay claude-only.
 
@@ -91,7 +91,7 @@ export interface AgentResult {
 // under the same name and type; the bodies live in the sibling files.
 
 export { agentArgs, assertIsolatedWorkspace, resolveAgentBin } from "./agentArgs";
-export { classifyOutcome, earlyUnavailable, parseAgyEnvelope, parseCodexEvents, parseEngineEnvelope, parseEnvelope, parseGrokEnvelope } from "./envelope";
+export { classifyOutcome, earlyUnavailable, parseAgyEnvelope, parseCodexEvents, parseEngineEnvelope, parseEnvelope } from "./envelope";
 export type { ParsedEnvelope } from "./envelope";
 export { formatAgentLine, runAgent } from "./runAgent";
 export { REVIEWER_ENGINE_NAMES, REVIEWER_TOOLS, REVIEW_POINTER, REVIEW_PROMPT_FILE, REVIEW_WORKSPACE } from "./reviewerEngines";

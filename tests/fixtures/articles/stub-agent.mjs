@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// A STAND-IN FOR THE `claude`, `codex`, `grok` AND `agy` CLIs — for the article
+// A STAND-IN FOR THE `claude`, `codex` AND `agy` CLIs — for the article
 // probes and the CLI dry run.
 //
 // lib/agent/cliSeam.ts spawns whatever ARTICLES_AGENT_BIN (claude: the writer
-// and claude reviewers) or ARTICLES_<ENGINE>_BIN (codex, grok, agy reviewers)
+// and claude reviewers) or ARTICLES_<ENGINE>_BIN (codex, agy reviewers)
 // names, with the real argv and the real prompt. Point the override at this
 // script with `--as=<engine>` as its first argument
 // (`node|tests/fixtures/articles/stub-agent.mjs|--as=codex`) and it answers in
@@ -16,16 +16,16 @@
 // revise-research, revise.
 //
 // REVIEWER TURNS (any engine): the prompt (stdin for claude/codex, REVIEW.md in
-// the cwd for agy/grok) starts `ARTICLE-REVIEW`; it answers with one review
+// the cwd for agy) starts `ARTICLE-REVIEW`; it answers with one review
 // JSON in the final message, in the engine's envelope.
 //
 // It spends nothing and contacts nothing. It reports NO cost unless
-// STUB_AGENT_COST is set (claude and grok only — codex and agy report none),
+// STUB_AGENT_COST is set (claude only — codex and agy report none),
 // so a dry run never shows a figure nobody paid.
 //
 // STUB_AGENT_MODE: ok (default) | error | seat | hang | garbage   (writer turns)
 // STUB_AGENT_BAD_PATCH=1 adds a proposal that targets a path outside knowledge/.
-// STUB_REVIEWERS="grok=unavailable,gemini=garbage-once" — per reviewer id:
+// STUB_REVIEWERS="gemini4=unavailable,gemini=garbage-once" — per reviewer id:
 //   ok | unavailable | seat | error | hang | garbage | garbage-once | write
 // STUB_CRITIQUE_DECISIONS="rewrite,keep" — the writer's decision per round
 //   (default keep).
@@ -66,7 +66,7 @@ if (process.env.STUB_AGENT_ARGV_LOG) {
   fs.appendFileSync(process.env.STUB_AGENT_ARGV_LOG, `${JSON.stringify(seen)}\n`);
 }
 
-// claude and codex read the prompt on stdin; agy and grok get it as -p and
+// claude and codex read the prompt on stdin; agy gets it as -p and
 // stdin closed empty.
 const chunks = [];
 for await (const c of process.stdin) chunks.push(c);
@@ -105,7 +105,7 @@ if (/^ARTICLE-REVIEW\b/m.test(prompt)) {
     if (engine === "codex") {
       for (const l of [{ type: "thread.started", thread_id: "stub" }, { type: "turn.started" }, { type: "item.completed", item: { id: "item_0", type: "agent_message", text } }, { type: "turn.completed", usage: {} }]) console.log(JSON.stringify(l));
     } else if (engine === "agy") console.log(JSON.stringify({ conversation_id: "stub", status: "SUCCESS", response: text, num_turns: 1, usage: {} }));
-    else if (engine === "grok") console.log(JSON.stringify({ text, stopReason: "end_turn", num_turns: 2, ...(cost !== undefined ? { total_cost_usd: cost } : {}) }));
+    else if (engine === "gemini4") console.log(JSON.stringify({ text, stopReason: "end_turn", num_turns: 2, ...(cost !== undefined ? { total_cost_usd: cost } : {}) }));
     else console.log(claudeEnvelope(text));
     process.exit(0);
   };
@@ -114,17 +114,16 @@ if (/^ARTICLE-REVIEW\b/m.test(prompt)) {
       unavailable: {
         claude: "API Error: 402 Payment Required",
         codex: "The 'gpt-6.1-astra' model is not supported when using Codex with a ChatGPT account.",
-        agy: "model gemini-9 is not available",
-        grok: 'Internal error: {\n  "message": "API error (status 402 Payment Required): Grok Build usage balance exhausted",\n  "http_status": 402\n}',
+        agy: "model gemini-9 is not available (API error (status 402 Payment Required): balance exhausted)",
       },
-      seat: { claude: "Claude AI usage limit reached", codex: "You've hit your usage limit.", agy: "RESOURCE_EXHAUSTED: quota exceeded", grok: "API error (status 429 Too Many Requests): rate limit" },
-      error: { claude: "the stub was told to fail", codex: "stream disconnected", agy: "internal error", grok: "internal error" },
+      seat: { claude: "Claude AI usage limit reached", codex: "You've hit your usage limit.", agy: "RESOURCE_EXHAUSTED: quota exceeded" },
+      error: { claude: "the stub was told to fail", codex: "stream disconnected", agy: "internal error" },
     }[kind][engine];
     if (engine === "codex") {
       console.log(JSON.stringify({ type: "error", message: msg }));
       console.log(JSON.stringify({ type: "turn.failed", error: { message: msg } }));
     } else if (engine === "agy") console.log(JSON.stringify({ status: "ERROR", error: msg, num_turns: 0 }));
-    else if (engine === "grok") console.log(JSON.stringify({ type: "error", message: msg, ...(kind === "unavailable" ? { http_status: 402 } : {}) }));
+    else if (engine === "gemini4") console.log(JSON.stringify({ type: "error", message: msg, ...(kind === "unavailable" ? { http_status: 402 } : {}) }));
     else console.log(claudeEnvelope(msg, { subtype: "error_during_execution", is_error: true }));
     process.exit(1);
   };
@@ -155,7 +154,7 @@ if (/^ARTICLE-REVIEW\b/m.test(prompt)) {
         ]
       : [{ id: "f1", kind: "engagement", severity: "minor", location: "Closing section", claim: "The closing restates the numbers but not the opening question.", evidence: [], suggestion: "Return to the opening question in one sentence." }];
   const review = { reviewer: "ignored-by-the-engine", verdict: round === 1 ? "revise" : "publish", summary: `Stub review by ${reviewer}, round ${round}.`, findings };
-  // claude and codex answer with a fenced block, agy and grok bare: the engine
+  // claude and codex answer with a fenced block, agy bare: the engine
   // must read both.
   ok(engine === "claude" || engine === "codex" ? `Here is the review.\n\n\`\`\`json\n${JSON.stringify(review, null, 2)}\n\`\`\`` : JSON.stringify(review));
 }

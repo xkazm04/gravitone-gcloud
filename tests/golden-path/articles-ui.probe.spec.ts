@@ -199,18 +199,18 @@ test("case 2b: the critique panel's reading of every critique state, through GET
   expect(running.driving).toBe(true);
   expect(nodesOf(running.run, true).map((n) => n.state)).toEqual(["done", "done", "done", "running", "pending", "pending"]);
   const live = reviewerRows(running.critique!, 1, true);
-  expect(live.map((r) => `${r.spec.id}:${r.state}`)).toEqual(["fable:completed", "grok:reviewing", "gemini:reviewing", "gpt:completed"]);
+  expect(live.map((r) => `${r.spec.id}:${r.state}`)).toEqual(["opus:completed", "gemini4:reviewing", "gemini:reviewing", "gpt:completed"]);
   expect(reviewerRows(running.critique!, 1, false).map((r) => r.state)).toEqual(["completed", "not-run", "not-run", "completed"]);
   expect(roundTimeline(running.critique!)[0]).toMatchObject({ round: 1, completed: 2, of: 4, closed: false });
   expect(roundTimeline(running.critique!)[0].decision).toBeUndefined();
   // a round the writer has not answered: every finding is unanswered, never a made-up disposition
   expect(findingGroups(running.critique!.rounds[0]).flatMap((g) => g.rows).every((r) => r.disposition === undefined)).toBe(true);
 
-  // partial: grok out of balance, visible with its error; the run reached the gate
+  // partial: gemini4 out of balance, visible with its error; the run reached the gate
   const partial = await detail(ids["critique-partial"]);
   const prow = reviewerRows(partial.critique!, 1, false);
-  expect(prow.find((r) => r.spec.id === "grok")).toMatchObject({ state: "unavailable", error: expect.stringMatching(/402 Payment Required/) });
-  expect(prow.find((r) => r.spec.id === "grok")?.counts, "no review, no counts").toBeUndefined();
+  expect(prow.find((r) => r.spec.id === "gemini4")).toMatchObject({ state: "unavailable", error: expect.stringMatching(/402 Payment Required/) });
+  expect(prow.find((r) => r.spec.id === "gemini4")?.counts, "no review, no counts").toBeUndefined();
   expect(partial.run.critique).toMatchObject({ rounds: 1, decision: "keep", findings: { total: 9, accepted: 3, rejected: 3, deferred: 3 } });
   expect(partial.run.critique?.reviewers.map((r) => r.outcome)).toEqual(["completed", "unavailable", "completed", "completed"]);
 
@@ -218,7 +218,7 @@ test("case 2b: the critique panel's reading of every critique state, through GET
   const quorum = await detail(ids["critique-quorum"]);
   expect(phaseOf(quorum.run, false)).toBe("failed");
   expect(quorum.run.error).toMatch(/^critique: critique-quorum: round 1: 1 of 4/);
-  expect(quorum.run.error).toMatch(/grok unavailable.*gemini seat-limit.*gpt timed-out/);
+  expect(quorum.run.error).toMatch(/gemini4 unavailable.*gemini seat-limit.*gpt timed-out/);
   expect(reviewerRows(quorum.critique!, 1, false).map((r) => r.state)).toEqual(["completed", "unavailable", "seat-limit", "timed-out"]);
   expect(nodesOf(quorum.run, false).map((n) => n.state)).toEqual(["done", "done", "done", "failed", "pending", "pending"]);
 
@@ -240,7 +240,7 @@ test("case 2b: the critique panel's reading of every critique state, through GET
   expect(countBySeverity(rewrite.critique!.rounds[1].reviews[0].findings)).toEqual({ blocker: 0, major: 0, minor: 1 });
   // cost only where the CLI reported one: the claude reviewer has it, codex and agy do not
   const cost = Object.fromEntries((rewrite.run.critique?.reviewers ?? []).map((r) => [r.id, r.costUsd]));
-  expect(cost.fable).toBeGreaterThan(0);
+  expect(cost.opus).toBeGreaterThan(0);
   expect(cost.gpt).toBeUndefined();
   expect(cost.gemini).toBeUndefined();
 });

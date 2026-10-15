@@ -24,7 +24,6 @@ export const ARTICLE_ENV = [
   "ARTICLES_STORE_DIR",
   "ARTICLES_AGENT_BIN",
   "ARTICLES_CODEX_BIN",
-  "ARTICLES_GROK_BIN",
   "ARTICLES_AGY_BIN",
   "ARTICLES_REVIEWERS_FILE",
   "ARTICLES_GH_BIN",
@@ -54,7 +53,6 @@ export const ARTICLE_ENV = [
  *  engine's envelope. A probe that forgot this would spawn the real CLIs. */
 export const STUB_ENGINE_BINS = {
   ARTICLES_CODEX_BIN: `node|${STUB_AGENT}|--as=codex`,
-  ARTICLES_GROK_BIN: `node|${STUB_AGENT}|--as=grok`,
   ARTICLES_AGY_BIN: `node|${STUB_AGENT}|--as=agy`,
 } as const;
 
