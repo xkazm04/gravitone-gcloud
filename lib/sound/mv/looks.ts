@@ -15,6 +15,8 @@ export type MvLookId = "siren-rain";
  *  beside her, ghostly kithara / aulos / frame drum over the sea, moon upper
  *  right. Measured off the 2048x1136 cover on 2026-10-14. */
 const SIREN_RAIN: SceneFx = {
+  // 2026-10-14: the operator asked for 20% more swing on the beat.
+  intensity: 1.2,
   rain: {
     count: 320,
     angleDeg: 8,

@@ -655,6 +655,9 @@ export function renderFrame(ctx: CanvasRenderingContext2D, input: RenderInput): 
 export interface ScenePoint { x: number; y: number }
 
 export interface SceneFx {
+  /** How far the band-driven part of every layer swings; 1 = the base look.
+   *  Only the swing is scaled - a quiet passage rests where it always did. */
+  intensity?: number;
   /** Fine falling rain over the whole frame. */
   rain: { count: number; angleDeg: number; lengthPx: number; hue: number; warmZones: { x: number; y: number; r: number }[] };
   /** Fire: a flickering glow and rising sparks at each source. */
@@ -710,6 +713,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, fx: SceneFx, c: SceneCt
   const low = drive(c.low, frameIndex, fps);
   const high = drive(c.high, frameIndex, fps);
   const level = (low + drive(c.mid, frameIndex, fps) + high) / 3;
+  const k = fx.intensity ?? 1;
 
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
@@ -726,7 +730,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, fx: SceneFx, c: SceneCt
     const rad = (fx.rain.angleDeg * Math.PI) / 180;
     const sx = Math.sin(rad);
     const cy = Math.cos(rad);
-    const shown = Math.round(fx.rain.count * (0.65 + 0.35 * Math.min(1, level * 1.6)));
+    const shown = Math.round(fx.rain.count * (0.65 + 0.35 * k * Math.min(1, level * 1.6)));
     ctx.lineCap = "round";
     for (let i = 0; i < shown; i++) {
       const rng = mulberry32(hashSeed(seed ^ 0x51ed, i));
@@ -749,7 +753,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, fx: SceneFx, c: SceneCt
       ctx.lineWidth = (0.7 + 0.9 * depth) * u;
       ctx.strokeStyle = warm > 0.05
         ? hsla(34, 95, 70, (0.12 + 0.32 * warm) * depth)
-        : hsla(fx.rain.hue, 60, 82, (0.07 + 0.2 * depth) * (0.8 + 0.4 * level));
+        : hsla(fx.rain.hue, 60, 82, (0.07 + 0.2 * depth) * (0.8 + 0.4 * k * level));
       ctx.beginPath();
       ctx.moveTo(X, Y);
       ctx.lineTo(X - sx * len, Y - cy * len);
@@ -761,8 +765,8 @@ export function drawScene(ctx: CanvasRenderingContext2D, fx: SceneFx, c: SceneCt
   for (let fi = 0; fi < fx.fires.length; fi++) {
     const f = fx.fires[fi];
     const flick = 0.55 + 0.25 * Math.sin(t * 7.3 + fi * 2.1) + 0.12 * Math.sin(t * 13.7 + fi * 0.7) + 0.08 * Math.sin(t * 23.1 + fi);
-    const a = Math.max(0, flick * 0.2 + 0.2 * low);
-    radial(ctx, px(f.x), py(f.y), f.r * dh * (1 + 0.12 * low), hsla(32, 100, 58, a), hsla(26, 100, 45, 0));
+    const a = Math.max(0, flick * 0.2 + 0.2 * k * low);
+    radial(ctx, px(f.x), py(f.y), f.r * dh * (1 + 0.12 * k * low), hsla(32, 100, 58, a), hsla(26, 100, 45, 0));
     for (let i = 0; i < f.sparks; i++) {
       const rng = mulberry32(hashSeed(seed ^ (0xf1e0 + fi * 977), i));
       const life = 2.2 + rng() * 2.8;
@@ -786,7 +790,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, fx: SceneFx, c: SceneCt
   // phrase travels lyre -> flute -> drum.
   for (const g of fx.glows) {
     const m = drive(c.mid, frameIndex, fps, g.lagFrames);
-    radial(ctx, px(g.x), py(g.y), g.r * dh * (1 + 0.1 * m), hsla(g.hue, 100, 72, 0.05 + 0.2 * m), hsla(g.hue, 100, 60, 0));
+    radial(ctx, px(g.x), py(g.y), g.r * dh * (1 + 0.1 * k * m), hsla(g.hue, 100, 72, 0.05 + 0.2 * k * m), hsla(g.hue, 100, 60, 0));
   }
 
   // THE VOICE'S THREADS: motes leave the singer and arc to the instruments;
@@ -805,7 +809,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, fx: SceneFx, c: SceneCt
       const my = (th.from.y + target.y) / 2 - 0.09 - bow * 0.5;
       const x = (1 - e) * (1 - e) * th.from.x + 2 * (1 - e) * e * mx + e * e * target.x + wobble;
       const y = (1 - e) * (1 - e) * th.from.y + 2 * (1 - e) * e * my + e * e * target.y + wobble * 0.6;
-      const a = Math.sin(Math.PI * p) * (0.3 + 0.7 * Math.min(1, high * 1.8));
+      const a = Math.sin(Math.PI * p) * (0.3 + 0.7 * Math.min(1, k * high * 1.8));
       const size = (1.2 + 2.2 * rng()) * u;
       ctx.globalAlpha = Math.max(0, Math.min(1, a));
       radial(ctx, px(x), py(y), size * 4, hsla(th.hue, 100, 78, 0.5), hsla(th.hue, 100, 70, 0));
@@ -827,7 +831,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, fx: SceneFx, c: SceneCt
       const y = r.y0 + rng() * (r.y1 - r.y0);
       const f = 0.25 + rng() * 0.55;
       const tw = Math.pow(Math.max(0, Math.sin(t * Math.PI * 2 * f + rng() * 6.28)), 6);
-      const a = tw * (0.35 + 0.65 * Math.min(1, low * 1.4 + 0.2));
+      const a = tw * (0.35 + 0.65 * Math.min(1, k * low * 1.4 + 0.2));
       if (a < 0.02) continue;
       const warm = x < gl.warmBelowX;
       const wpx = (3 + 9 * rng()) * u;

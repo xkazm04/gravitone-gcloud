@@ -7,7 +7,8 @@
 // transpiled-in-isolation `compositor.ts` (`renderFrame`, the seeded
 // particles, the low-band edge bloom, the flash limiter), the same numbered
 // PNG sequence, the same peak-limited single gain and the same
-// NVENC-then-libx264 mux. What the queue adds is passed in as optional render
+// mux (NVENC-then-libx264 for the studio; the queue asks for the compact
+// libx264 master, see COMPACT_VIDEO_ARGS). What the queue adds is passed in as optional render
 // inputs - `fit: "cover"`, `particleHue` - which the studio never sets, so its
 // frames are the frames they were (mv-render.probe pins that against the
 // pre-change compositor). The compositor's third input, the pulsing `focal`
@@ -220,7 +221,7 @@ export async function renderMusicVideo(args: RenderArgs): Promise<{ durationS: n
       posterDataUrl,
       envelope,
       seed: seedFor(motion),
-      effectParams: withBloomGain(effectParamsFor(motion), args.bloomGain),
+      effectParams: withBloomGain(effectParamsFor(motion), args.bloomGain ?? (args.look ? MV_LOOKS[args.look].intensity : undefined)),
       fit: "cover",
       particleHue: motion.particleHue,
       ...(args.look ? { scene: MV_LOOKS[args.look] } : {}),
@@ -232,7 +233,7 @@ export async function renderMusicVideo(args: RenderArgs): Promise<{ durationS: n
     await browser.close().catch(() => {});
     browser = undefined;
 
-    await muxFrameSequence({ framesDir, fps: envelope.fps, audioPath: args.audioPath, outPath: partialPath(root, id), logTag: "mv/render" });
+    await muxFrameSequence({ framesDir, fps: envelope.fps, audioPath: args.audioPath, outPath: partialPath(root, id), logTag: "mv/render", compact: true });
     await landExport({ root, id, finalPath: args.outPath });
     report(1);
     return { durationS: await probedDuration(args.outPath, envelope.durationS) };

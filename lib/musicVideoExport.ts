@@ -404,10 +404,18 @@ async function measureLoudness(audioPath: string): Promise<{ integratedLufs: num
  *  exit so the caller can fall back. `maxBuffer` is generous — `execFile`
  *  buffers ffmpeg's stderr in memory, and `-loglevel error` keeps that small
  *  regardless, but a bad mux can still print a lot on the way out. */
+/** The size-conscious encode the music-video queue asks for. Measured
+ *  2026-10-14 on a 4:44 track over a rain-and-glint still: the shared NVENC
+ *  setting (vbr cq 19, ~9.7 Mb/s) made 357 MB; libx264 crf 28 made 75 MB and
+ *  crf 31 made 55 MB with the wet-step detail still intact at 1080p. The
+ *  upload platform re-encodes anyway, so the master only has to survive that
+ *  one more pass. Software only: NVENC's quality scale does not hold a size. */
+const COMPACT_VIDEO_ARGS = ["-c:v", "libx264", "-preset", "medium", "-crf", "30"];
+
 async function muxOnce(opts: {
-  framesDir: string; fps: number; audioPath: string; outPath: string; encoder: Encoder; gainDb: number;
+  framesDir: string; fps: number; audioPath: string; outPath: string; encoder: Encoder; gainDb: number; compact?: boolean;
 }): Promise<void> {
-  const { framesDir, fps, audioPath, outPath, encoder, gainDb } = opts;
+  const { framesDir, fps, audioPath, outPath, encoder, gainDb, compact } = opts;
   await run(
     "ffmpeg",
     [
@@ -415,9 +423,9 @@ async function muxOnce(opts: {
       "-framerate", String(fps),
       "-i", path.join(framesDir, "f%06d.png"),
       "-i", audioPath,
-      ...videoArgs(encoder),
+      ...(compact ? COMPACT_VIDEO_ARGS : videoArgs(encoder)),
       "-pix_fmt", "yuv420p",
-      "-c:a", "aac", "-b:a", "384k", "-ar", "48000",
+      "-c:a", "aac", "-b:a", compact ? "192k" : "384k", "-ar", "48000",
       // One linear gain, measured once per export (see `peakLimitedGainDb`).
       "-af", `volume=${gainDb.toFixed(2)}dB`,
       "-shortest",
@@ -449,10 +457,16 @@ export async function captureFrameSequence(
  *  that actually ran. */
 export async function muxFrameSequence(opts: {
   framesDir: string; fps: number; audioPath: string; outPath: string; logTag: string;
+  /** libx264 crf 30 and 192k audio, for a master that is size-bound (see COMPACT_VIDEO_ARGS). */
+  compact?: boolean;
 }): Promise<Encoder> {
-  const { framesDir, fps, audioPath, outPath, logTag } = opts;
+  const { framesDir, fps, audioPath, outPath, logTag, compact } = opts;
   const loudness = await measureLoudness(audioPath);
   const gainDb = loudness ? peakLimitedGainDb(loudness.integratedLufs, loudness.truePeakDb) : 0;
+  if (compact) {
+    await muxOnce({ framesDir, fps, audioPath, outPath, encoder: "libx264", gainDb, compact });
+    return "libx264";
+  }
   return withEncoderFallback(logTag, (enc) => muxOnce({ framesDir, fps, audioPath, outPath, encoder: enc, gainDb }));
 }
 
