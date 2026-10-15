@@ -58,7 +58,10 @@
     },
     "button": {
       "winner": ".sheet-close .btn",
-      "port": "[data-role=\"button\"] > *"
+      "port": "[data-role=\"button\"] > *",
+      "accept": [
+        "paddingRight"
+      ]
     }
   }
 }

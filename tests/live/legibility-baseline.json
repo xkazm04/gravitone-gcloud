@@ -3,9 +3,6 @@
     "text div.border.border-white/8.bg-gradient-to-b > div.grid.gap-0.lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] > div.flex.flex-col.justify-center > span.font-jetbrains.text-label.tracking-[0.16em]"
   ],
   "kit": [
-    "mark div.Shell-module__TfR5fa__right > div.Shell-module__TfR5fa__slotLedger > div.Ghost-module__fpciTW__list > div.Ghost-module__fpciTW__card",
-    "mark div.Shell-module__TfR5fa__right > div.Shell-module__TfR5fa__slotNext > div.Ghost-module__fpciTW__list > div.Ghost-module__fpciTW__card",
-    "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec > div.Ghost-module__fpciTW__list > div.Ghost-module__fpciTW__card",
     "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec > div.kit-module__1C-Zxa__row > span.SourceTag-module__weIhBG__src",
     "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn",
     "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan",
@@ -18,9 +15,6 @@
     "text div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > nav.TabRail-module__BgjLea__rail > a.TabRail-module__BgjLea__tab > kbd.Keycaps-module__pYObGq__cap.Keycaps-module__pYObGq__sm"
   ],
   "kit-law": [
-    "mark div.Shell-module__TfR5fa__right > div.Shell-module__TfR5fa__slotLedger > div.Ghost-module__fpciTW__list > div.Ghost-module__fpciTW__card",
-    "mark div.Shell-module__TfR5fa__right > div.Shell-module__TfR5fa__slotNext > div.Ghost-module__fpciTW__list > div.Ghost-module__fpciTW__card",
-    "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec > div.Ghost-module__fpciTW__list > div.Ghost-module__fpciTW__card",
     "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec > div.kit-module__1C-Zxa__row > span.SourceTag-module__weIhBG__src",
     "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn",
     "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan",
@@ -33,9 +27,6 @@
     "text div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > nav.TabRail-module__BgjLea__rail > a.TabRail-module__BgjLea__tab > kbd.Keycaps-module__pYObGq__cap.Keycaps-module__pYObGq__sm"
   ],
   "kit-migration": [
-    "mark div.Shell-module__TfR5fa__right > div.Shell-module__TfR5fa__slotLedger > div.Ghost-module__fpciTW__list > div.Ghost-module__fpciTW__card",
-    "mark div.Shell-module__TfR5fa__right > div.Shell-module__TfR5fa__slotNext > div.Ghost-module__fpciTW__list > div.Ghost-module__fpciTW__card",
-    "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec > div.Ghost-module__fpciTW__list > div.Ghost-module__fpciTW__card",
     "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec > div.kit-module__1C-Zxa__row > span.SourceTag-module__weIhBG__src",
     "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn",
     "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan",
@@ -48,9 +39,6 @@
     "text div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > nav.TabRail-module__BgjLea__rail > a.TabRail-module__BgjLea__tab > kbd.Keycaps-module__pYObGq__cap.Keycaps-module__pYObGq__sm"
   ],
   "kit-parts": [
-    "mark div.Shell-module__TfR5fa__right > div.Shell-module__TfR5fa__slotLedger > div.Ghost-module__fpciTW__list > div.Ghost-module__fpciTW__card",
-    "mark div.Shell-module__TfR5fa__right > div.Shell-module__TfR5fa__slotNext > div.Ghost-module__fpciTW__list > div.Ghost-module__fpciTW__card",
-    "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec > div.Ghost-module__fpciTW__list > div.Ghost-module__fpciTW__card",
     "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec > div.kit-module__1C-Zxa__row > span.SourceTag-module__weIhBG__src",
     "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn",
     "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan",

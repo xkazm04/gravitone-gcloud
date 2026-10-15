@@ -59,8 +59,8 @@ numeric z-index in a module would be an unnamed position in it.
 
 ## Admitted at the component port (wave 2, lot 7)
 
-The token lint admits no raw colour or px in a `*.module.css` and has no hatch for a
-component-local constant, so every value a component draws is either an existing token, a
+The token lint admits no raw colour or px in a `*.module.css` (the one hatch, `--one-off-*`, is
+described at the end of this section), so every value a component draws is either an existing token, a
 derivation of one, or a role below. Counts are literals in the prototype's sheets outside
 `:root`, measured 2026-10-15 with the same method as above.
 
@@ -112,19 +112,20 @@ the search field's 30px inset is glyph inset + glyph + gap; the pip triangle is 
 The space rungs are the off-scale steps the prototype's sheets use far more often than some
 on-scale ones (5px and 7px against 18px); they are named by what they space, not by value.
 
-### Admitted against the test (one component each) - Director to rule
+### One-offs, moved out of the source (owner ruling, 2026-10-15)
 
-These fail "recurring intent": each is one component's constant. They are admitted only
-because the lint has no other legal spelling for a pixel. The better shape is a loud,
-countable local-constant hatch in the lint (design-tokens/token-taxonomy: "an escape hatch
-for the genuine one-off should exist, be syntactically loud, and be countable"); if one is
-added, these six move back into their modules.
+These six were first admitted as roles against the "recurring intent" test, because the lint had
+no other legal spelling for a pixel. The lint now has one: a custom property named
+`--one-off-<name>`, declared once in the component's own module, may hold a px literal (never a
+colour). The name is the loud part, and `tokens:check` counts every one against a budget that
+may only fall (`ONE_OFF_BUDGET` in `pipeline/check-tokens.mts`). To raise the budget, add a row
+here saying which component's constant it is and why no role fits.
 
-| Role | Value | Uses | Component |
-| --- | --- | --- | --- |
-| gap-bar | `3px` | 1 | StatusPill's pause mark |
-| measure-tip | `260px` | 2 | Hint |
-| w-chan | `28px` | 4 | ChannelBadge |
-| w-node | `70px` | 1 | UpstreamBreak |
-| toast-dock | `22px` | 2 | Toast |
-| toast-rise | `20px` | 1 | Toast |
+| One-off | Value | Component |
+| --- | --- | --- |
+| `--one-off-gap-bar` | `3px` | StatusPill's pause mark |
+| `--one-off-measure` | `260px` | Hint |
+| `--one-off-w-chan` | `28px` | ChannelBadge |
+| `--one-off-w-node` | `70px` | UpstreamBreak |
+| `--one-off-dock` | `22px` | Toast |
+| `--one-off-rise` | `20px` | Toast |

@@ -44,4 +44,17 @@ describe("lintCss", () => {
     expect(kinds(".a { --tint: #fecdd3; color: var(--tint); }")).toEqual(["raw-colour"]);
     expect(kinds(".a { --det-w: 360px; width: var(--det-w); }")).toEqual(["raw-px"]);
   });
+
+  it("admits a px literal only under a --one-off-* name, and counts it", () => {
+    const r = lintCss(".a { --one-off-w: 28px; width: var(--one-off-w); }", allowed);
+    expect(r.findings).toEqual([]);
+    expect(r.oneOffs).toBe(1);
+    expect(lintCss(".a { width: var(--ink); }", allowed).oneOffs).toBe(0);
+  });
+
+  it("never admits a colour through the hatch, nor one name declared twice (negative control)", () => {
+    expect(kinds(".a { --one-off-tint: #fecdd3; color: var(--one-off-tint); }")).toEqual(["raw-colour"]);
+    expect(kinds(".a { --one-off-w: 28px; }\n.b { --one-off-w: 30px; }")).toEqual(["one-off-reused"]);
+    expect(kinds(".a { --oneoff-w: 28px; }")).toEqual(["raw-px"]);
+  });
 });

@@ -13,8 +13,9 @@
 //   · "keys change meaning per page" (plan §9.1) is legal now because each page is
 //     a MODE; `conflicts()` over this table is a unit test.
 //
-// Owner questions (one key, two verbs on one prototype page) are kept as the
-// prototype has them and marked OWNER below; they are listed in the Phase 1 report.
+// One key, two verbs: kept as the prototype has them, by owner ruling
+// (migration plan §8.7, 2026-10-15). A `when` or a mode separates the verbs, so
+// `conflicts()` still proves no two rows fire on one press.
 
 import { compile, type Binding } from "./keymap.ts";
 
@@ -98,8 +99,8 @@ const projects: Binding[] = [
   { mode: "projects", keys: ["Esc"], verb: "deselect", does: "deselect", when: "job" },
   { mode: "projects", keys: ["⏎"], verb: "rename", does: "rename", field: "title" },
   { mode: "projects", keys: ["Esc"], verb: "leave-field", does: "leave", field: "*" },
-  // OWNER: in Runs with a job selected, lower-case P pauses or resumes it, while
-  // ⇧P (and P anywhere else) opens Plan - one key, two verbs on one prototype page.
+  // In Runs with a job selected, lower-case P pauses or resumes it; ⇧P (and P
+  // anywhere else) opens Plan. Ruled §8.7: the selection is the context.
   { mode: "projects.runs", keys: ["P"], verb: "pause", does: "pause · resume", when: "job", shadows: true },
 ];
 

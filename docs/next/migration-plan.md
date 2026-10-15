@@ -489,6 +489,27 @@ lots) inside the phase.
    (Pulled forward from Phase 6.)
 6. **The Floor's address (2026-10-15):** `/floor`. The landing keeps `/`; its enter link and the
    retired v1 hubs redirect to `/floor`. Every `/` in §2.1 and §4 that names the Floor means `/floor`.
+7. **Phase 1 rulings (2026-10-15, the Director's recommendations, approved by the owner):**
+   - *The prototype against itself:* the shared sheet (`tokens.css`) wins over a page's local
+     redefinition (`.btn` right padding 10px, `.toggle` at rest `--muted`), and the search field
+     reserves 34px for its keycap. Recorded as `accept` in `docs/next/style-contract/roles.*.json`.
+   - *Contrast:* a Ghost outline is a mark and holds 3:1 (WCAG 1.4.11); the prototype's 1.21:1 is
+     a defect, fixed in `@gt/ui`. Disabled controls keep the prototype's dimming: WCAG 1.4.3
+     exempts inactive components, and they stay in the legibility baseline under that reason.
+   - *One-off values:* the token lint gets one loud, countable hatch (`--one-off-<name>`, px only,
+     declared once per module, budget in `tokens:check` that may only fall). The six
+     single-component roles moved back into their modules.
+   - *Keys:* one key with two verbs stays where a mode or a selection separates them: `P` in Runs
+     (pause the selected job, else open Plan); `K`/`J` (keep and previous in matrix cull, previous
+     and next section in packet review - the two modes never share a screen).
+   - *Lanes:* `cloud.qwen` is its own resource lane (its own key and rate); `agy` occupies
+     `seat.text` (the operator's own CLI install).
+   - *Reasons:* a Packet's reject reasons belong to its source. The Board's four (1-4) are the
+     image cull's; audio triage carries its own defect set through the same 1-4 keys.
+     `@gt/domain/decision` `REJECT_REASONS` becomes per-source in Phase 3, when triage becomes a
+     packet.
+   - *Steering:* a Runs re-route may only pick a route the plan's router already allows for the
+     part (a steer is a preference inside `kernel/router`'s table, never a new route).
 
 The design is approved as the rebuild's target: contest `foundry-next-design-r4`, winner A/1 "The
 Watershed".

@@ -151,12 +151,4 @@
   --hatch: repeating-linear-gradient(135deg,rgba(255,255,255,.28) 0 2px,transparent 2px 5px); /* Fill of an undecided or unmeasured span. */
   --panel-ground: rgba(0,0,0,.14); /* Recessed ground of a route panel. */
   --warn-cut: #3b0712; /* Cut-out mark inside the warning glyph. */
-
-  /* roles-component */
-  --gap-bar: 3px; /* Gap between the two bars of the pause mark. One component: see ADMISSION.md. */
-  --measure-tip: 260px; /* Widest line of a hint tip. One component: see ADMISSION.md. */
-  --toast-dock: 22px; /* Distance of a toast from the viewport foot. One component: see ADMISSION.md. */
-  --toast-rise: 20px; /* Distance a toast rises as it arrives. One component: see ADMISSION.md. */
-  --w-chan: 28px; /* Width of a channel badge. One component: see ADMISSION.md. */
-  --w-node: 70px; /* Least width of a chain node. One component: see ADMISSION.md. */
 }

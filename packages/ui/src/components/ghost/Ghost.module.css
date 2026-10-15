@@ -1,4 +1,6 @@
-/* tokens.css .ghost-card: a dashed outline a quarter of the way from hair-2 to hair-3
-   (the prototype's rgba(255,255,255,.16)), at .55. Rows are a field's height. */
+/* tokens.css .ghost-card drew a dashed outline at rgba(255,255,255,.16) and .55 opacity: 1.21:1
+   on ink, the same invisible Ghost the 2026-09 refactor shipped. Owner ruling 2026-10-15: the
+   outline is a mark, so it holds 3:1 (WCAG 1.4.11) - the faint ink at 80%. Rows are a field's
+   height. */
 .list{display:flex;flex-direction:column;gap:var(--sp-3)}
-.card{height:var(--h-field);border:var(--stroke-glyph) dashed color-mix(in srgb,var(--hair-3) 25%,var(--hair-2));border-radius:var(--r-control);opacity:.55}
+.card{height:var(--h-field);border:var(--stroke-glyph) dashed color-mix(in srgb,var(--faint) 80%,transparent);border-radius:var(--r-control)}

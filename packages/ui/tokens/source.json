@@ -151,14 +151,6 @@
       {"name": "chan-youtube", "tier": "role", "value": "#ff8a8a", "note": "Mark colour of the YouTube channel."},
       {"name": "chan-tiktok", "tier": "role", "value": "#8ef0f7", "note": "Mark colour of the TikTok channel."},
       {"name": "chan-instagram", "tier": "role", "value": "#f0a6e6", "note": "Mark colour of the Instagram channel."}
-    ]},
-    {"id": "roles-component", "tokens": [
-      {"name": "gap-bar", "tier": "role", "value": "3px", "note": "Gap between the two bars of the pause mark. One component: see ADMISSION.md."},
-      {"name": "measure-tip", "tier": "role", "value": "260px", "note": "Widest line of a hint tip. One component: see ADMISSION.md."},
-      {"name": "w-chan", "tier": "role", "value": "28px", "note": "Width of a channel badge. One component: see ADMISSION.md."},
-      {"name": "w-node", "tier": "role", "value": "70px", "note": "Least width of a chain node. One component: see ADMISSION.md."},
-      {"name": "toast-dock", "tier": "role", "value": "22px", "note": "Distance of a toast from the viewport foot. One component: see ADMISSION.md."},
-      {"name": "toast-rise", "tier": "role", "value": "20px", "note": "Distance a toast rises as it arrives. One component: see ADMISSION.md."}
     ]}
   ]
 }

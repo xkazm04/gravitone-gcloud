@@ -516,6 +516,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "A raw rgba()/hsl() colour slips into a module stylesheet unflagged, so drift from the tokens returns through the spelling the lint forgot.",
   },
   {
+    id: "ui-tokenlint-one-off-reuse-passes",
+    test: "packages/ui/test/tokenLint.test.ts",
+    file: "packages/ui/src/tokenLint.ts",
+    find: "if (seenOneOff.has(prop)) findings.push",
+    replace: "if (false) findings.push",
+    why: "A --one-off-* name declared twice passes, so a value two rules draw hides in the hatch instead of becoming a role.",
+  },
+  {
     id: "ui-tokenrender-value-spacing-drifts",
     test: "packages/ui/test/tokenRender.test.ts",
     file: "packages/ui/src/tokenRender.ts",

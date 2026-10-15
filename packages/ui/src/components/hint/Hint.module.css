@@ -3,7 +3,7 @@
    pointer is still over (WCAG 1.4.13); the prototype's :hover reveal could not be dismissed. */
 .hint{position:relative;display:inline-flex}
 .glyph{width:var(--size-glyph-btn);height:var(--size-glyph-btn);border-radius:50%;border:1px solid var(--hair-3);font:700 var(--fs-micro)/1 var(--mono);color:var(--muted)}
-.tip{position:absolute;z-index:var(--z-tooltip);top:calc(100% + var(--sp-2));left:50%;transform:translateX(-50%);width:max-content;max-width:var(--measure-tip);padding:var(--sp-snug) var(--sp-4);border-radius:var(--r-control);background:var(--ink-4);border:1px solid var(--hair-2);font-size:var(--fs-control-sm);color:var(--ink-bright);opacity:0;pointer-events:none;transition:opacity var(--dur-fast)}
+.tip{position:absolute;z-index:var(--z-tooltip);top:calc(100% + var(--sp-2));left:50%;transform:translateX(-50%);width:max-content;--one-off-measure:260px;max-width:var(--one-off-measure);padding:var(--sp-snug) var(--sp-4);border-radius:var(--r-control);background:var(--ink-4);border:1px solid var(--hair-2);font-size:var(--fs-control-sm);color:var(--ink-bright);opacity:0;pointer-events:none;transition:opacity var(--dur-fast)}
 /* The bridge: the gap between glyph and tip is part of the tip, so the pointer can cross it. */
 .tip::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:calc(var(--sp-2) + 1px)}
 .hint[data-open]>.tip{opacity:1;pointer-events:auto}

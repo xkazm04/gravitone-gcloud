@@ -5,9 +5,14 @@
 //   1px         the hairline border width; its colour is still a token
 //   100%        needs no entry: only colour and px literals are policed
 //   @media ...  a custom property cannot appear in a media prelude, so breakpoints stay literal
+// The one hatch: a custom property named `--one-off-<name>` may hold a px literal (never a colour:
+// a colour is always a role). It is loud by its name, declared once per file, and counted, so
+// check-tokens holds the total under a budget (design-tokens/token-taxonomy: an escape hatch for
+// the genuine one-off should exist, be syntactically loud, and be countable). A value two
+// components draw is a role in source.json, not two one-offs.
 export interface Finding {
   readonly line: number;
-  readonly kind: "raw-colour" | "raw-px" | "unknown-var";
+  readonly kind: "raw-colour" | "raw-px" | "unknown-var" | "one-off-reused";
   readonly text: string;
 }
 
@@ -15,7 +20,11 @@ export interface LintResult {
   readonly findings: readonly Finding[];
   readonly declarations: number;
   readonly varRefs: number;
+  /** `--one-off-*` declarations: px literals admitted by name, counted against a budget. */
+  readonly oneOffs: number;
 }
+
+const ONE_OFF = /^--one-off-[a-z][\w-]*$/;
 
 const COLOUR = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?)\(/g;
 const PX = /(?<![\w.#-])(-?\d*\.?\d+)px\b/g;
@@ -41,6 +50,8 @@ export function lintCss(css: string, allowedVars: ReadonlySet<string>): LintResu
   const findings: Finding[] = [];
   let declarations = 0;
   let varRefs = 0;
+  let oneOffs = 0;
+  const seenOneOff = new Set<string>();
   // A custom property declared in this same file is a legal var() target; its own value
   // still goes through the raw-value rules below.
   const local = new Set<string>();
@@ -51,8 +62,15 @@ export function lintCss(css: string, allowedVars: ReadonlySet<string>): LintResu
 
   for (const m of text.matchAll(DECL)) {
     declarations++;
+    const prop = m[1] ?? "";
     const value = m[2] ?? "";
     const base = (m.index ?? 0) + m[0].length - value.length;
+    const oneOff = ONE_OFF.test(prop);
+    if (oneOff) {
+      oneOffs++;
+      if (seenOneOff.has(prop)) findings.push({ line: lineAt(base), kind: "one-off-reused", text: prop });
+      seenOneOff.add(prop);
+    }
     for (const v of value.matchAll(VAR)) {
       varRefs++;
       const name = (v[1] ?? "").slice(2);
@@ -67,9 +85,9 @@ export function lintCss(css: string, allowedVars: ReadonlySet<string>): LintResu
     }
     for (const p of bare.matchAll(PX)) {
       const n = Number(p[1]);
-      if (n === 0 || p[1] === "1") continue;
+      if (n === 0 || p[1] === "1" || oneOff) continue;
       findings.push({ line: lineAt(base + (p.index ?? 0)), kind: "raw-px", text: p[0] });
     }
   }
-  return { findings, declarations, varRefs };
+  return { findings, declarations, varRefs, oneOffs };
 }

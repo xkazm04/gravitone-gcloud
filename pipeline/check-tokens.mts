@@ -17,6 +17,10 @@ const root =
     ? resolve(argRoot)
     : resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SCAN_ROOTS = ["packages", "app/(studio)"];
+// The `--one-off-*` hatch (tokenLint.ts) is counted, and the count may only fall. Raising it needs
+// a line in packages/ui/tokens/ADMISSION.md saying which component's constant it is and why no
+// role fits. 6 = the single-component values moved out of source.json, 2026-10-15.
+const ONE_OFF_BUDGET = 6;
 
 function listFiles(dir: string): string[] {
   const out: string[] = [];
@@ -64,6 +68,7 @@ let unreached = 0;
 let declarations = 0;
 let varRefs = 0;
 let findings = 0;
+let oneOffs = 0;
 for (const r of existing) {
   for (const file of listFiles(join(root, r))) {
     const rel = relative(root, file).split("\\").join("/");
@@ -72,6 +77,7 @@ for (const r of existing) {
       const res = lintCss(readFileSync(file, "utf8"), allowed);
       declarations += res.declarations;
       varRefs += res.varRefs;
+      oneOffs += res.oneOffs;
       for (const f of res.findings) {
         findings++;
         console.error(`${rel}:${f.line} ${f.kind} ${f.text}`);
@@ -88,6 +94,11 @@ console.log(
     `declarations ${declarations}, var() refs ${varRefs}, findings ${findings}` +
     (walked === 0 && unreached === 0 ? " - nothing to check" : ""),
 );
+console.log(`one-offs: ${oneOffs}/${ONE_OFF_BUDGET}`);
+if (oneOffs > ONE_OFF_BUDGET) {
+  console.error(`tokens:check: ${oneOffs} --one-off-* declarations, budget ${ONE_OFF_BUDGET}. Make it a role, or admit it in ADMISSION.md and raise the budget.`);
+  failed = true;
+}
 if (unreached > 0) process.exit(2);
 if (findings > 0) failed = true;
 process.exit(failed ? 1 : 0);

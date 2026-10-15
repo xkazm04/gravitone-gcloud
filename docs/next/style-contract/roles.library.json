@@ -50,7 +50,10 @@
     },
     "field": {
       "winner": ".lsearch .field",
-      "port": "[data-role=\"search@library\"] input"
+      "port": "[data-role=\"search@library\"] input",
+      "accept": [
+        "paddingRight"
+      ]
     },
     "facet-check": {
       "winner": ".frow",

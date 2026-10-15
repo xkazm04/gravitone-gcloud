@@ -135,13 +135,6 @@ export const tokens = {
   "hatch": "repeating-linear-gradient(135deg,rgba(255,255,255,.28) 0 2px,transparent 2px 5px)",
   "panel-ground": "rgba(0,0,0,.14)",
   "warn-cut": "#3b0712",
-  // roles-component
-  "gap-bar": "3px",
-  "measure-tip": "260px",
-  "toast-dock": "22px",
-  "toast-rise": "20px",
-  "w-chan": "28px",
-  "w-node": "70px",
 } as const;
 
 export type TokenName = keyof typeof tokens;

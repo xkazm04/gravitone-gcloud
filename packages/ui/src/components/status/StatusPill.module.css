@@ -10,7 +10,7 @@
 .reference{color:var(--reference-text)}
 .candidate{color:var(--amber)}
 .running::before{animation:pulse 1.4s infinite}
-.paused::before{border-radius:1px;background:none;border-left:var(--stroke-bar) solid currentColor;border-right:var(--stroke-bar) solid currentColor;width:var(--gap-bar)}
+.paused::before{border-radius:1px;background:none;border-left:var(--stroke-bar) solid currentColor;border-right:var(--stroke-bar) solid currentColor;--one-off-gap-bar:3px;width:var(--one-off-gap-bar)}
 .reference::before{background:none;border:var(--stroke-glyph) solid currentColor;width:var(--sp-tight);height:var(--sp-tight)}
 .candidate::before{background:none;border:var(--stroke-glyph) dashed currentColor;width:var(--sp-tight);height:var(--sp-tight)}
 @keyframes pulse{50%{box-shadow:0 0 0 var(--sp-1) color-mix(in srgb,var(--cyan) 15%,transparent)}}

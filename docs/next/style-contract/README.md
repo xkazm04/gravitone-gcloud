@@ -65,10 +65,12 @@ derives tone borders from their hue (`ADMISSION.md` rejects per-hue literal role
 is in the tool's `differs()`. As a guard, the runner refuses (exit 2) when its own count of the
 table's rows differs from the tool's count.
 
-## Open deviations (owner to rule; recorded 2026-10-15)
+## Accepted deviations (owner ruling, 2026-10-15)
 
-The prototype disagrees with itself on three points. The kit follows the shared sheet and does not
-pick a side silently. `accept` stays unused until the owner rules.
+The prototype disagrees with itself on three points. The owner ruled that the shared sheet
+(`tokens.css`) wins over a page's local redefinition, and that the search field reserves 34px.
+Each row is recorded as `accept` on its role, so a run reports it as accepted rather than failing.
+`accept` is for owner rulings only.
 
 | Page · role | Property | Prototype (winner) | Kit | Why it is open |
 | --- | --- | --- | --- | --- |
