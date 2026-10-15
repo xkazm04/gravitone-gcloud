@@ -11,6 +11,7 @@ import type { Store } from "@gt/kernel/store";
 import { FIXTURE_MODE } from "../../../lib/fixtures/mode.ts";
 import { kernel } from "../../kernelStore.ts";
 import { digest, facts, seg, words } from "./facts.ts";
+import { weirPacketId } from "./packet.ts";
 import { V1_SOURCES } from "./sources.ts";
 import type { IngestEvent, LiveHold, LiveJob, LiveSlot, ProjectCtx, Projection, Source, WeirItem } from "./types.ts";
 
@@ -244,6 +245,12 @@ export type LiveRead = {
   readonly failures: readonly { readonly source: string; readonly error: string }[];
 };
 
+/** A pile with its packet id, when its source has a decision adapter (./packet.ts). */
+function withPacketId(w: WeirItem): WeirItem {
+  const packetId = weirPacketId(w);
+  return packetId === undefined ? w : { ...w, packetId };
+}
+
 /** v1's live work, read now, written nowhere (COMMON decision 4). */
 export async function liveJobs(sources: readonly Source<unknown>[], ctx: ProjectCtx): Promise<LiveRead> {
   const reads = await readAll(sources, ctx);
@@ -256,7 +263,8 @@ export async function liveJobs(sources: readonly Source<unknown>[], ctx: Project
     if ("failure" in r) failures.push({ source: r.source, error: `${r.failure.class}: ${r.failure.error}` });
     else {
       jobs.push(...r.projection.live);
-      weir.push(...r.projection.weir);
+      // Every pile names the packet it opens as (Phase 3 decision 3): the Floor links it, the Board loads it.
+      weir.push(...r.projection.weir.map((w) => withPacketId(w)));
       slots.push(...(r.projection.slots ?? []));
       holds.push(...(r.projection.holds ?? []));
     }

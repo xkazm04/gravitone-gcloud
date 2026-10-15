@@ -73,6 +73,12 @@ export type WeirItem = {
   readonly decided: number;
   readonly pending: number;
   readonly href: string;
+  /**
+   * The kernel packet this pile opens as (`pkt:<packet source>:<id>`,
+   * ./packet.ts weirPacketId), stamped by the live read (./sync.ts liveJobs),
+   * not by each source. Absent when the pile's source has no decision adapter.
+   */
+  readonly packetId?: string;
 };
 
 /**
