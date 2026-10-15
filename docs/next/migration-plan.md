@@ -380,6 +380,37 @@ lots) inside the phase.
 - **Exit:** ledger counts reconcile with the v1 stores (a probe compares them); Runs shows every
   live job the v1 UIs show.
 
+> **Done 2026-10-15** (`9c17dfb` Phase 1 rulings, `ec399f2` wave A, `d2785b0` wave B,
+> `1f38dcd` a strengthened strip test). What landed:
+> - **The ledger knows v1** (`lib/ledger/v1`, `pipeline/ledger-sync.mts`): 12 sources (the plan's
+>   ten, the GPU queue, video clips) project into the kernel ledger, read-only. Two clocks on every
+>   projected event (`occurredAt` + `atSrc`, the derived ones drawn `≈`); a natural key makes
+>   re-sync idempotent in the store; a snapshot field is an observed fact, never back-dated. A sync
+>   starts from a page render without blocking it, claim-guarded across processes. Real
+>   `foundry-out`: 1387 events, every source reconciles exactly, Python verifier intact.
+> - **`/ledger`**: URL filters, facet counts with their own filter left out, the day strip, a
+>   windowed list, JSON Lines, a detail panel, live arrivals over SSE; `GET /api/ledger?format=jsonl`
+>   for agents.
+> - **Runs** at `/projects/runs` (beside v1's `/projects` until Phase 4): 8 resource lanes, Weir and
+>   Calendar rows, packing with +N, NOW, what-blocks-what, inspector. Read-only: write verbs are
+>   neither drawn nor bound.
+> - **Per-caller CLI tokens** (`pipeline/token.mts`, kernel `token`) on both doors. The shared secret
+>   retires for non-browser callers with `SHARED_SECRET_CALLERS=browser`; the browser's bundle
+>   secret is its only credential on a local-mode machine and retires at Phase 6 with the v1 screens.
+> - **Exit evidence:** `ledger-reconcile.probe` (all 12 sources, re-sync appends 0) and
+>   `runs-live.probe` (Runs' live set equals each v1 view's own predicate), 17/17 new probe mutants
+>   and 117/117 unit mutants killed. Verify: every gate green but `sound-store` (sibling ledger).
+> - **Decided in the Director's seat:** Runs reads v1 live work at render time and stores no Job rows
+>   for it; the six browser-only `lib/jobs.tsx` kinds are not observable server-side; in the fixture
+>   universe the new world reads `fixtures-out/` for all five stores v1 itself reads inconsistently
+>   (strips, articles, turns, spend, clips).
+> - **Carried forward:** v1 defects seen, not fixed - a strip run has no holder (a dead pipeline
+>   reads `running` forever); the Suno/MV snapshot GETs start paid workers; the Calendar GET and
+>   every spend read write their files. No OpenAI resource lane (such work is drawn on the vision
+>   engine's lane, marked). v1 has no per-record foundry URL (links go to `/foundry`). `LiveJob`
+>   carries no `projectId`/`after` yet, so threads light only where v1 records a project. The
+>   Ledger's search ⏎ applies the query rather than jumping to rows (revisit with Library, Phase 5).
+
 ### Phase 3: the Floor and the Weir (M–L)
 - Every decision surface becomes a `kernel/decision` adapter: cull, extract, Dojo (blind), strips,
   article approve (dossier), audio triage, Suno bands, mv keep/drop, proof/adoption.
