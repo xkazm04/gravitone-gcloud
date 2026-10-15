@@ -1,0 +1,201 @@
+{
+ "schema": "conform-run/1",
+ "worker": "7405c6e4-c678-4f43-a918-ea8ef98e8090",
+ "subject": "model-routing",
+ "evaluatedAt": "2026-10-15T22:47:16.171033+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "text-providers",
+   "subject": "model-routing",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/text/providers/google.ts:204 The Google adapter can discard additionalProperties constraints without marking translation loss, so a request can succeed with weaker enforcement than its reported native schema contract.",
+   "techniques": [
+    {
+     "technique": "admission-is-not-a-tier",
+     "verdict": "deviation",
+     "evidence": "lib/text/providers/google.ts:204 additionalProperties is discarded without setting lost, allowing native enforcement to be reported after a caller constraint was removed."
+    },
+    {
+     "technique": "cache-continuity",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/providers/google.ts:292 Requests are independent headless calls; the inspected request and transport contracts do not resume a continuing conversation."
+    },
+    {
+     "technique": "candidate-ranking",
+     "verdict": "deviation",
+     "evidence": "lib/text/router.ts:95 Candidates follow fixed posture tables and consumer preferences, without measurement-based scores carrying windows and sample sizes."
+    },
+    {
+     "technique": "capability-floors",
+     "verdict": "deviation",
+     "evidence": "lib/text/providers/google.ts:56 The claimed floor is justified by downstream consequences and assigned by turn class; the recorded live checks establish reachability and schema support rather than observed below-floor workload breakage."
+    },
+    {
+     "technique": "consumer-overrides",
+     "verdict": "deviation",
+     "evidence": "lib/text/providers/google.ts:118 Model override state is read inside the adapter, globally affecting consumers without consumer scope, attribution or a removal condition."
+    },
+    {
+     "technique": "effort-calibration",
+     "verdict": "deviation",
+     "evidence": "lib/claudeCli.ts:280 The shared CLI transport fixes every reasoning request at high effort instead of accepting a measured class-specific tier-and-effort pair."
+    },
+    {
+     "technique": "failover-horizon",
+     "verdict": "deviation",
+     "evidence": "lib/text/router.ts:441 Schema failures become bad-response, which is deliberately non-reroutable, so unusable structured answers stop the chain while the buffered response still permits substitution."
+    },
+    {
+     "technique": "model-identity",
+     "verdict": "deviation",
+     "evidence": "lib/text/providers/claudeCli.ts:103 The adapter records the requested constant as model identity; the inspected contracts have no serving-side identity capture or logical-model/member grouping."
+    },
+    {
+     "technique": "policy-governance",
+     "verdict": "deviation",
+     "evidence": "lib/text/log.ts:197 The final log, optional LightTrack event and spend record omit policy version, deciding rule and selected effort, preventing reconstruction of the required routing decision."
+    },
+    {
+     "technique": "quality-axis-separation",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/stats.ts:53 These are operational duration and spend statistics; outcomes do not feed a candidate quality score or semantic ranking."
+    },
+    {
+     "technique": "routing-policy",
+     "verdict": "deviation",
+     "evidence": "lib/text/router.ts:237 Policy resolution supplies a provider list without a governing rule chain, rule ownership or edit-time validation of configured model identifiers."
+    },
+    {
+     "technique": "turn-classification",
+     "verdict": "deviation",
+     "evidence": "lib/text/providers/google.ts:113 A required closed TurnClass exists, but its model mapping returns only a string; tier and effort do not travel together through the routing contract."
+    }
+   ]
+  },
+  {
+   "context": "imaging-providers",
+   "subject": "model-routing",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/imaging/providers/ollama.ts:120 Ollama can return an empty recognition as success when no schema was requested, preventing the router from treating that unusable answer as a substitution signal.",
+   "techniques": [
+    {
+     "technique": "admission-is-not-a-tier",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/providers/agy.ts:221 The preferred development generator forwards prompt and aspect but silently drops the common request's negativePrompt constraint."
+    },
+    {
+     "technique": "cache-continuity",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/providers/ollama.ts:96 Recognition sends an independent instruction and image rather than resuming a shared conversation whose incumbent cache must be preserved."
+    },
+    {
+     "technique": "candidate-ranking",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/router.ts:102 Recognition order is fixed by deployment posture; live latency, reliability, quota headroom and their measurement predicates do not determine ordering."
+    },
+    {
+     "technique": "capability-floors",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/providers/google.ts:48 The documented Lite model lacks style references but remains an unrestricted override while the adapter always advertises supportsReferences, so the style-reference requirement does not constrain model selection."
+    },
+    {
+     "technique": "consumer-overrides",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/providers/google.ts:49 The adapter reads a global model override internally instead of receiving an attributable consumer-scoped override."
+    },
+    {
+     "technique": "effort-calibration",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/providers/ollama.ts:106 Thinking is hardcoded off and then omitted on the fallback request after any ImagingError; no calibrated class-and-effort contract governs that change."
+    },
+    {
+     "technique": "failover-horizon",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/providers/ollama.ts:120 Without a requested schema, empty content reaches the successful return and is booked as served instead of triggering pre-delivery recovery."
+    },
+    {
+     "technique": "model-identity",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/providers/google.ts:337 Identity is derived from the request body and honestly marked requested, but the routing layer lacks logical-model/member grouping and serving-side substitution detection."
+    },
+    {
+     "technique": "policy-governance",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/log.ts:132 Call logs and spend bookings record provider, model and outcome but omit policy version, deciding rule, call class and effort."
+    },
+    {
+     "technique": "quality-axis-separation",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/log.ts:103 The log reports operational outcomes; no outcome-fed candidate quality estimator conflates those outcomes with semantic judgments."
+    },
+    {
+     "technique": "routing-policy",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/router.ts:142 The routing policy resolves to a static provider list rather than a decision carrying governing rules, with no edit-time validation of model overrides."
+    },
+    {
+     "technique": "turn-classification",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/router.ts:518 Vision requests assert only a capability; their contract has no required semantic call class mapped to a tier-and-effort pair."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-15T22:47:16.171033+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "model-routing"
+   ],
+   "techniques": [
+    "admission-is-not-a-tier",
+    "cache-continuity",
+    "candidate-ranking",
+    "capability-floors",
+    "consumer-overrides",
+    "effort-calibration",
+    "failover-horizon",
+    "model-identity",
+    "policy-governance",
+    "quality-axis-separation",
+    "routing-policy",
+    "turn-classification"
+   ],
+   "deviations": 1,
+   "context": "text-providers",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-15T22:47:16.171033+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "model-routing"
+   ],
+   "techniques": [
+    "admission-is-not-a-tier",
+    "cache-continuity",
+    "candidate-ranking",
+    "capability-floors",
+    "consumer-overrides",
+    "effort-calibration",
+    "failover-horizon",
+    "model-identity",
+    "policy-governance",
+    "quality-axis-separation",
+    "routing-policy",
+    "turn-classification"
+   ],
+   "deviations": 1,
+   "context": "imaging-providers",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

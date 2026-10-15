@@ -2929,7 +2929,11 @@
           "revision": 21,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/imaging/providers/ollama.ts:120 Ollama can return an empty recognition as success when no schema was requested, preventing the router from treating that unusable answer as a substitution signal.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:5484901d8df95b15",
+          "evaluatedRevision": 21
         },
         {
           "subject": "agent-instruction-files",
@@ -5447,7 +5451,11 @@
           "revision": 21,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/text/providers/google.ts:204 The Google adapter can discard additionalProperties constraints without marking translation loss, so a request can succeed with weaker enforcement than its reported native schema contract.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:5484901d8df95b15",
+          "evaluatedRevision": 21
         },
         {
           "subject": "cost-metering",
