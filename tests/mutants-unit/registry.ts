@@ -990,6 +990,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "Two keypresses inside the write window become one kernel act, so one ⌫ takes back two decisions the operator made separately (undo-history gesture-coalescing).",
   },
   {
+    id: "decision-reopen-compares-incoming",
+    test: "packages/kernel/test/decision.open.test.ts",
+    file: "packages/kernel/src/decision/driver.ts",
+    find: "  return openShape(body, picks, seeds);",
+    replace: "  return openShape(p, picks, seeds);",
+    why: "A pile re-opened with other plates under the same packet id is a silent no-op: the kernel keeps deciding the old items while v1 has moved on.",
+  },
+  {
     id: "board-stale-base-not-reread",
     test: "packages/ui/test/board-gate.test.ts",
     file: "packages/ui/src/board/boardGate.ts",

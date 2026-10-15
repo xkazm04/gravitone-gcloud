@@ -426,6 +426,46 @@ lots) inside the phase.
   - The decision log is append-only and shows in the Ledger.
   - `/board` redirects.
 
+> **Done 2026-10-15** (`47b8095` wave A, `694994f` a deterministic lease test, `7245d4b` wave B,
+> `26820a6` wave C). What landed:
+> - **Decision kernel v2** (`packages/kernel/src/decision`): reasons per source, picks
+>   `a|b|tie|both-bad`, a commit that refuses the undecided, a consequence token over the decisions
+>   and the digest of the v1 state read, and an apply outbox (retry ceiling 5, then stuck, redrive).
+> - **Eight adapters** (`lib/decision/v1`): forge, extract, Dojo (blind), strips, article,
+>   audio triage, Suno, mv. Each opens a v1 record as a packet carrying v1's verdicts, previews
+>   through v1's own planners, and applies through v1's own writers, idempotently; a v1 outcome that
+>   differs is parked as stuck, never overwritten. mv drops delete only at commit, after the preview.
+> - **The Floor** (`/floor`: four lanes, the Weir piles, NEXT) and **the Board sheet**
+>   (`/board/<packet>`, intercepted over the Floor): matrix cull, blind pair, packet review, losses
+>   shown at the gate, a legend of only the source's reason keys. Applies are kicked after a commit
+>   and swept, claim-guarded, on Floor and Board renders and by `ledger-sync apply`.
+> - **Retired:** v1 `/board` (a redirect; `?src=&i=` maps to its packet), the `/foundry` Cull,
+>   Extract, Dojo and Strips tabs, the article GatePanel, `/playground?m=triage`.
+> - **Exit evidence:** `tests/live/board-exit.live.spec.ts`, 11/11 over a seeded temp universe:
+>   every source opened from its Floor pile, decided with keys, undone, previewed, committed; the
+>   kernel events, the v1 store write (by v1's own reader) and `/ledger?q=<packet>` asserted; a
+>   second commit idempotent; a v1 write failing once drawn on the Floor and then landed by the
+>   reconciler; the store refusing to rewrite or delete a decision; `/board` redirecting.
+>   Mutants: 145/145 unit killed (the L24 red-proofs in its report; one live mutant,
+>   commit-apply-never-kicked, survives because the render sweep delivers anyway, and the Vitest
+>   mutant catches it). Verify: every gate green but `sound-store` (sibling ledger).
+> - **Decided in the Director's seat:** proof and adoption wait for Phase 4 (browser-only stores);
+>   a Dojo cycle fully decided in v1 still opens (as a review); aggregate piles carry a cutoff
+>   (`audio/triage/<ms>`, `suno/triage/<ms>`, `mv/settled/<ms>`); a stored packet is read, never
+>   re-opened; the kernel's re-open now compares the stored body (it compared the input with itself).
+> - **Deviations, recorded:** the v1 Foundry launch screens (Extract upload, Dojo, Strips, Cull)
+>   retired with their tabs, so launching from the browser waits for Phase 4 (the CLIs remain), and
+>   `extract-progress.live` retired with the upload screen. `PacketReview` decides `items[0]` only,
+>   so a multi-claim Dojo review cannot overturn its other claims (refused at the preview in v1's
+>   words). Unopened Weir piles join the rail without a cap of their own. `/playground` now opens on
+>   Arrange, whose pre-existing low-contrast labels entered the legibility baseline (5 -> 3 net).
+> - **Carried forward:** the fixture generator lacks an article post, an mv export and strip card
+>   files (the exit spec patches its own universe), and the strips store root is hard-coded to
+>   `foundry-out/` in both universes. `lib/board/**` stays where the palette counts, the pipeline
+>   canvas and `keys.ts` still import it. v1 defects seen earlier stand (strip run holder, paid
+>   snapshot GETs, writing readers). On this machine `.env.local`'s `NEXT_PUBLIC_LOCAL_MODE=1` makes
+>   `golden-path.live`'s bypass-account case read `local-owner`.
+
 ### Phase 4: Composers, Projects and Producers (L, the largest)
 - **Records:** `domain/run`, `domain/project` and `domain/part`, with recipes from `@gt/catalog`
   (Film from the 10 v1 templates, Album video, Explainer, plus `article/*`, `track/*`, `style/*`,
