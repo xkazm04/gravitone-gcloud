@@ -128,6 +128,7 @@ export const tokens = {
   "fs-error": "12.5px",
   "fs-nav": "14.5px",
   // roles-mark
+  "ambient": "radial-gradient(900px 500px at 8% -10%,rgba(34,211,238,.10),transparent 60%),radial-gradient(700px 600px at 100% 110%,rgba(139,92,246,.10),transparent 60%),radial-gradient(600px 400px at 70% 0%,rgba(16,185,129,.06),transparent 60%)",
   "chan-instagram": "#f0a6e6",
   "chan-tiktok": "#8ef0f7",
   "chan-youtube": "#ff8a8a",

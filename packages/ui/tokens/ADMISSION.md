@@ -105,6 +105,7 @@ the search field's 30px inset is glyph inset + glyph + gap; the pip triangle is 
 | fs-nav | `14.5px` | 11 | Text of navigation, crumbs, facts and a toast. |
 | panel-ground | `rgba(0,0,0,.14)` | 2 | Recessed ground of a route panel (Projects, Library, Ledger). |
 | hatch | the 135deg white .28 stripe | 1 sheet rule, 2 components | Fill of an undecided or unmeasured span (StackBar; v1 BandTrack's hatched band). |
+| ambient | the three radial glows, verbatim | 1 world sheet, every page | The ambient light behind every page. Its hues are the prototype's (cyan-400, violet-500, emerald-500), not the signal tokens; kept whole so the pixels stay byte-equal. |
 | warn-cut | `#3b0712` | 1 glyph, 4 pages | Cut-out mark inside the warning glyph. |
 | chan-youtube / -tiktok / -instagram | `#ff8a8a` `#8ef0f7` `#f0a6e6` | 1 rule, 3 pages | Mark colour of a publish channel. |
 

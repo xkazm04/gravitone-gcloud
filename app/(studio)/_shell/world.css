@@ -47,16 +47,10 @@
 :where([data-world="next"]) ::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--cyan) 22%, transparent); border-radius: var(--sp-3); }
 :where([data-world="next"]) ::-webkit-scrollbar-track { background: transparent; }
 
-/* The prototype's ambient light (tokens.css `body::before`). Its three hues are Tailwind's
-   cyan-400, violet-500 and emerald-500, not the studio's signal tokens, and no token holds
-   them: they are kept literal here, in the one global sheet, rather than shifted onto the
-   signal hues. Owner to rule whether they become roles. */
+/* The prototype's ambient light (tokens.css `body::before`), held whole by the `ambient` role. */
 [data-world="next"]::before {
   content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  background:
-    radial-gradient(900px 500px at 8% -10%, rgba(34, 211, 238, .10), transparent 60%),
-    radial-gradient(700px 600px at 100% 110%, rgba(139, 92, 246, .10), transparent 60%),
-    radial-gradient(600px 400px at 70% 0%, rgba(16, 185, 129, .06), transparent 60%);
+  background: var(--ambient);
 }
 
 /* The blanket motion rule (tokens.css), scoped. v1 has the same rule unscoped in globals.css. */
