@@ -3538,7 +3538,11 @@
           "revision": 6,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/foundry/pipeline/useBoardKeys.ts:162 Refocusing the canvas with an existing active card skips revealing it, so a card panned offscreen can remain the invisible keyboard focus.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:98dcec8d04236b95",
+          "evaluatedRevision": 6
         },
         {
           "subject": "translation-pipeline-topology",
@@ -3592,7 +3596,11 @@
           "revision": 6,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/foundry/pipeline/buildLayout.ts:131 An arrival that increases a lane's maximum row count shifts subsequent lanes, violating the standard's placement stability requirement.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:98dcec8d04236b95",
+          "evaluatedRevision": 6
         },
         {
           "subject": "chat-transcript",
@@ -3774,7 +3782,11 @@
           "revision": 6,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/foundry/pipeline/headRegistry.tsx:48 Headers independently reproduce world-to-screen conversion, creating a second coordinate authority that can diverge from the camera module.",
+          "evaluatedAt": "2026-10-15",
+          "evaluatedAgainst": "sha256-b2:98dcec8d04236b95",
+          "evaluatedRevision": 6
         },
         {
           "subject": "retrieval",

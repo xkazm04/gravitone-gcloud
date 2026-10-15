@@ -1,0 +1,151 @@
+{
+ "schema": "conform-run/1",
+ "worker": "2f553332-50b0-4557-8bdc-7eccf1e7ec4b",
+ "subject": "canvas-graph",
+ "evaluatedAt": "2026-10-15T00:52:06.877564+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "pipeline-board-layout",
+   "subject": "canvas-graph",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/foundry/pipeline/buildLayout.ts:131 An arrival that increases a lane's maximum row count shifts subsequent lanes, violating the standard's placement stability requirement.",
+   "techniques": [
+    {
+     "technique": "canvas-accessibility",
+     "verdict": "conformant",
+     "evidence": "app/foundry/pipeline/cells.ts:138 This context's keyboard traversal reads logical layout cells, so navigation includes unmounted cards."
+    },
+    {
+     "technique": "graph-layout",
+     "verdict": "deviation",
+     "evidence": "app/foundry/pipeline/buildLayout.ts:131 Lane heights depend on population; cumulative lane positioning therefore moves existing cards below a growing lane."
+    },
+    {
+     "technique": "render-budget",
+     "verdict": "conformant",
+     "evidence": "app/foundry/pipeline/useBoardCull.ts:75 Culling is cached on layout and viewport inputs, and mounts nothing before measurement; the surrounding implementation supplies overscan and mounting waves."
+    },
+    {
+     "technique": "viewport-transform",
+     "verdict": "deviation",
+     "evidence": "app/foundry/pipeline/useCullRect.ts:92 Screen-to-world margin conversion is repeated outside camera.ts, which already performs that conversion in viewRect."
+    }
+   ]
+  },
+  {
+   "context": "pipeline-board-surface",
+   "subject": "canvas-graph",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/foundry/pipeline/headRegistry.tsx:48 Headers independently reproduce world-to-screen conversion, creating a second coordinate authority that can diverge from the camera module.",
+   "techniques": [
+    {
+     "technique": "canvas-accessibility",
+     "verdict": "deviation",
+     "evidence": "app/foundry/pipeline/PipelineCanvas.tsx:101 The culled surface's accessible name omits the real item total required by the standard."
+    },
+    {
+     "technique": "direct-manipulation",
+     "verdict": "conformant",
+     "evidence": "app/foundry/pipeline/CellLayer.tsx:60 The surface previews target eligibility and refusal during dragging, with distinct hovered-target feedback and a provisional ghost."
+    },
+    {
+     "technique": "render-budget",
+     "verdict": "deviation",
+     "evidence": "app/foundry/pipeline/Card.tsx:150 Cards render their full face at every zoom; neither their props nor the face branch provides a zoom detail band or simplified distant representation."
+    },
+    {
+     "technique": "viewport-transform",
+     "verdict": "deviation",
+     "evidence": "app/foundry/pipeline/headRegistry.tsx:48 The header registry performs camera conversion itself instead of using the shared conversion authority."
+    }
+   ]
+  },
+  {
+   "context": "pipeline-board-interaction",
+   "subject": "canvas-graph",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/foundry/pipeline/useBoardKeys.ts:162 Refocusing the canvas with an existing active card skips revealing it, so a card panned offscreen can remain the invisible keyboard focus.",
+   "techniques": [
+    {
+     "technique": "canvas-accessibility",
+     "verdict": "deviation",
+     "evidence": "app/foundry/pipeline/useBoardKeys.ts:162 Focus restoration returns early when an active card exists, without panning that card into view."
+    },
+    {
+     "technique": "direct-manipulation",
+     "verdict": "deviation",
+     "evidence": "app/foundry/pipeline/gesture.ts:139 Capture is acquired and ordinary exits release it, but no lostpointercapture handler exists; repository searches confirmed that required cancellation path is missing."
+    },
+    {
+     "technique": "render-budget",
+     "verdict": "deviation",
+     "evidence": "app/foundry/pipeline/useBoardEngine.ts:91 Placement computation depends on the entire entries collection, so a version-only data refresh recomputes every placement even when placement inputs are unchanged."
+    },
+    {
+     "technique": "viewport-transform",
+     "verdict": "conformant",
+     "evidence": "app/foundry/pipeline/useCardDrag.ts:91 Drag tracking uses the shared inverse mapping; context-menu placement also uses toScreen and background hit testing uses toWorld."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-15T00:52:06.877564+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "canvas-graph"
+   ],
+   "techniques": [
+    "canvas-accessibility",
+    "graph-layout",
+    "render-budget",
+    "viewport-transform"
+   ],
+   "deviations": 1,
+   "context": "pipeline-board-layout",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-15T00:52:06.877564+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "canvas-graph"
+   ],
+   "techniques": [
+    "canvas-accessibility",
+    "direct-manipulation",
+    "render-budget",
+    "viewport-transform"
+   ],
+   "deviations": 1,
+   "context": "pipeline-board-surface",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-15T00:52:06.877564+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "canvas-graph"
+   ],
+   "techniques": [
+    "canvas-accessibility",
+    "direct-manipulation",
+    "render-budget",
+    "viewport-transform"
+   ],
+   "deviations": 1,
+   "context": "pipeline-board-interaction",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
