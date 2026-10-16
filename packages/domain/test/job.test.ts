@@ -27,7 +27,7 @@ describe("job", () => {
   it("holds a lease exactly while running", () => {
     accept(jobSchema, running);
     refuse(jobSchema, { ...queued, state: "running" }, "lease");
-    refuse(jobSchema, { ...queued, lease }, "lease");
+    refuse(jobSchema, { ...queued, lease, slot: "gpu.local#1" }, "lease"); // with its slot, so only the lease rule can refuse it
   });
   it("a lease is on a slot of the job's own lane, and a slot is held only under a lease (Phase 4 lane slots)", () => {
     refuse(jobSchema, { ...running, slot: undefined }, "slot");
