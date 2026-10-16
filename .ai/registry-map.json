@@ -991,7 +991,11 @@
           "revision": 14,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/library/audio/Ledger.tsx:159 Equal sort values are ordered by incoming array position rather than immutable row identity, so equivalent datasets can produce different row orders.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:c587a204413d5373",
+          "evaluatedRevision": 14
         },
         {
           "subject": "supply-chain",

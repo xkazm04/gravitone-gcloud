@@ -6070,6 +6070,62 @@
         }
       ],
       "registryProposal": "Consider defining explicit playback transport expectations for loop acceptance (e.g. requiring continuous two-pass joint audition in audio players) so interfaces can be mechanically verified against the seam listening standard."
+    },
+    "6f3417a8-4d5c-40f5-8a2c-93b44e9040c2/table": {
+      "context": "audio-workbench",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T01:47:34.184Z",
+      "worker": "f687e26f-f3f0-4d2b-951f-89223e1a81f6",
+      "techniques": [
+        {
+          "technique": "clipboard-range-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "app/library/audio/AudioWorkbench.tsx:354 The clipboard path copies a composed vendor prompt; searches found no cell-range copy or paste handler."
+        },
+        {
+          "technique": "compressed-scroll-space",
+          "verdict": "not-applicable",
+          "evidence": "app/library/audio/Ledger.tsx:448 The ledger renders an expanding prefix through load-more controls; searches found no virtual spacer or compressed scroll mapping."
+        },
+        {
+          "technique": "export-escapes-for-its-consumer",
+          "verdict": "not-applicable",
+          "evidence": "app/library/audio/AudioWorkbench.tsx:351 The outgoing text is a generation prompt; searches found no CSV export in this context."
+        },
+        {
+          "technique": "filtering",
+          "verdict": "deviation",
+          "evidence": "app/library/audio/AudioWorkbench.tsx:728 Local text filtering uses a 90 ms debounce, which the all-client decision rule explicitly replaces with deferred row derivation."
+        },
+        {
+          "technique": "grid-keyboard-model",
+          "verdict": "deviation",
+          "evidence": "app/library/audio/AudioWorkbench.tsx:494 Horizontal navigation changes a visual rating dimension while focus remains on the row; editable cells do not receive the required cell-level focus."
+        },
+        {
+          "technique": "loading-and-empty-states",
+          "verdict": "deviation",
+          "evidence": "app/library/audio/AudioWorkbench.tsx:822 Initial loading renders a separate heading and ghost instead of Ledger, withholding its schema-known column headers and group controls."
+        },
+        {
+          "technique": "one-door-for-range-writes",
+          "verdict": "not-applicable",
+          "evidence": "app/library/audio/useAudioShelf.ts:111 Judgments patch individual records; searches found no range paste, fill, cut, or block-clear writer."
+        },
+        {
+          "technique": "pagination",
+          "verdict": "conformant",
+          "evidence": "app/library/audio/Ledger.tsx:455 Each group initially renders 50 rows and expands on demand, with pager counts derived from that group's filtered rows."
+        },
+        {
+          "technique": "sorting",
+          "verdict": "deviation",
+          "evidence": "app/library/audio/Ledger.tsx:156 Absent-value ties use array indices; populated-value ties likewise lack the mandatory immutable identity tiebreaker."
+        }
+      ]
     }
   }
 }
