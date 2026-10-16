@@ -1,0 +1,17 @@
+/* library.css `.pv.aud`: a recessed box on the wave ground, the play button at its left, the
+   wave between the button and the right inset, the time under it. The prototype's play fills
+   were cyan at .14 / .45 / .26; they are mixed from the cyan token here. */
+.box{display:grid;gap:var(--sp-tight);width:100%;min-width:0}
+.pv{position:relative;height:var(--h-lib-audio);border-radius:var(--r-tile);overflow:hidden;border:1px solid var(--hair-2);background:var(--wave-ground)}
+.ill{border-style:dashed;border-color:color-mix(in srgb,var(--illustrative-text) 40%,transparent)}
+.play{position:absolute;left:var(--sp-loose);top:50%;transform:translateY(-50%);width:var(--size-play);height:var(--size-play);border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--cyan) 14%,transparent);border:1px solid color-mix(in srgb,var(--cyan) 45%,transparent);color:var(--cyan);cursor:pointer;transition:background var(--dur-fast) var(--ease)}
+.play:hover{background:color-mix(in srgb,var(--cyan) 26%,transparent)}
+.play:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}
+.on{background:var(--cyan);color:var(--ink)}
+.on:hover{background:var(--cyan)}
+.mark{width:var(--size-glyph-sm);height:var(--size-glyph-sm);fill:currentColor}
+.wave{position:absolute;left:var(--sp-wave-in);right:var(--sp-loose);top:var(--sp-page-gap);bottom:calc(var(--sp-7) + var(--sp-4))}
+.wave svg{width:100%;height:100%}
+.seek{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.seek:focus-visible{opacity:1;accent-color:var(--cyan)}
+.tm{position:absolute;left:var(--sp-wave-in);right:var(--sp-loose);bottom:var(--sp-4);display:flex;justify-content:space-between;font:600 var(--fs-micro)/1 var(--mono);color:var(--muted)}

@@ -1,0 +1,23 @@
+/* library.css .nsec, .side-h, .kinds, .kind, .frows, .more, and the state dot a State row
+   leads with. The rail's panel and its head are the page's. */
+.rail{padding:var(--sp-2) 0 calc(var(--sp-7) + var(--sp-1))}
+.sec{padding:var(--sp-2) 0 var(--sp-1);border-bottom:1px solid var(--hair)}
+.sec:last-child{border-bottom:0}
+.head{padding:var(--sp-3) var(--sp-5) var(--sp-2)}
+.vocabHead{display:flex;align-items:center;gap:var(--sp-2);color:var(--faint)}
+.headMark{width:var(--size-glyph-xs);height:var(--size-glyph-xs);flex:none}
+
+.kinds{display:flex;flex-direction:column;padding:0 var(--sp-2)}
+.kind{display:flex;align-items:center;gap:var(--sp-control);height:var(--h-field);padding:0 var(--sp-3);border-radius:var(--r-sm);font-size:var(--fs-ui);color:var(--text);text-align:left;width:100%;transition:background var(--dur-fast)}
+.kindMark{width:var(--sp-wide);height:var(--sp-wide);flex:none;color:var(--faint)}
+.label{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.count{font:600 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+.kind:hover{background:var(--wash);color:var(--ink-bright)}
+.kind[aria-current=true]{background:var(--cyan-a);color:var(--ink-bright);box-shadow:inset var(--stroke-mark) 0 0 var(--cyan)}
+.kind[aria-current=true] .kindMark{color:var(--cyan)}
+.zero{opacity:.45}
+
+.rows{display:flex;flex-direction:column;padding:0 0 var(--sp-2) var(--sp-nudge)}
+.more{margin:var(--sp-nudge) 0 0 var(--sp-4);align-self:flex-start;font:600 var(--fs-micro)/1 var(--mono);color:var(--muted);padding:var(--sp-tight) var(--sp-2);border-radius:var(--r-xs)}
+.more:hover{color:var(--ink-bright);background:var(--wash)}
+.dot{width:var(--sp-3);height:var(--sp-3);border-radius:50%;display:inline-block}

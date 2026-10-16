@@ -5,6 +5,8 @@
 // The design drew this row twice. The Library's carries a checkbox mark; the Ledger's a
 // left rule and a share bar under the label. Both are kept as `mark` because extraction
 // does not change pixels; which one survives is the owner's call (open question).
+import type { ReactNode } from "react";
+
 import type { Tone } from "../chip/tone.ts";
 import { cx } from "../cx.ts";
 import { SrOnly } from "../a11y/SrOnly.tsx";
@@ -24,9 +26,14 @@ export type FacetRowProps = {
    * indented, in mono, with the tone the value carries everywhere else (the type tag's hue).
    */
   readonly nested?: { readonly tone: Tone };
+  /**
+   * A mark drawn INSTEAD of the check box (library.js state rows: the state's own dot, so the
+   * State group reads in the same colours as the tiles). Decorative; the label names the value.
+   */
+  readonly lead?: ReactNode;
 };
 
-export function FacetRow({ label, count, pressed, onToggle, mark, share, nested }: FacetRowProps) {
+export function FacetRow({ label, count, pressed, onToggle, mark, share, nested, lead }: FacetRowProps) {
   return (
     <button
       type="button"
@@ -34,7 +41,13 @@ export function FacetRow({ label, count, pressed, onToggle, mark, share, nested 
       aria-pressed={pressed}
       onClick={() => onToggle(!pressed)}
     >
-      {mark === "check" && <span className={s.box} aria-hidden="true" />}
+      {lead !== undefined ? (
+        <span className={s.lead} aria-hidden="true">
+          {lead}
+        </span>
+      ) : (
+        mark === "check" && <span className={s.box} aria-hidden="true" />
+      )}
       {nested !== undefined && <span className={cx(s.tone, nested.tone !== "neutral" && s[nested.tone])} aria-hidden="true" />}
       <span className={s.label}>{label}</span>
       <span className={s.count} aria-hidden="true">

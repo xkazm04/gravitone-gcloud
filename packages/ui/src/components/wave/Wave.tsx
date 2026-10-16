@@ -12,12 +12,15 @@ export type WaveProps = {
   readonly tone: "cyan" | "violet" | "emerald" | "amber";
   /** The playhead, 0..1: bars after it dim. */
   readonly played?: number;
+  /** Fill the box the caller sizes, both ways (the prototype's Library preview set
+   *  preserveAspectRatio="none" on its strip); absent, the strip keeps its proportions. */
+  readonly stretch?: boolean;
 };
 
-export function Wave({ peaks, width, height, tone, played }: WaveProps) {
+export function Wave({ peaks, width, height, tone, played, stretch = false }: WaveProps) {
   const bars = waveBars(peaks, width, height, played);
   return (
-    <svg className={cx(s.wave, s[tone])} width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
+    <svg className={cx(s.wave, s[tone])} width={width} height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio={stretch ? "none" : undefined} aria-hidden="true">
       {bars.length === 0 ? (
         <line className={s.flat} x1="0" y1={height / 2} x2={width} y2={height / 2} />
       ) : (

@@ -1,0 +1,7 @@
+/* library.css `.prompt-s` (15.5px serif on --reading), `.neg` (mono meta, rose minus), `.dchips`. */
+.prompt{display:grid;gap:var(--sp-3)}
+.text{margin:0;font:var(--fs-beat)/1.55 var(--serif);color:var(--reading);white-space:pre-wrap;overflow-wrap:anywhere}
+.none{margin:0;font:500 var(--fs-meta)/1.5 var(--mono);color:var(--faint)}
+.neg{margin:0;font:500 var(--fs-meta)/1.5 var(--mono);color:var(--muted);overflow-wrap:anywhere}
+.neg b{color:var(--rose);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center}

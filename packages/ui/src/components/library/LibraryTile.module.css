@@ -1,0 +1,31 @@
+/* library.css .tile .th .kg .refmark .lk .sd .cap, and the .sd state dots. The grid sets the
+   thumb's height (--thumb) from the tile arithmetic (library.ts tileBox); the tile is that thumb
+   plus its caption. */
+.tile{position:relative;display:flex;flex-direction:column;height:100%;border-radius:var(--r);border:1px solid var(--hair);background:var(--ink-2);overflow:hidden;cursor:pointer;min-width:0;transition:border-color var(--dur-fast),box-shadow var(--dur-fast),background var(--dur-fast);contain:layout paint}
+.tile:hover{border-color:var(--hair-3);background:var(--ink-3)}
+.on,.on:hover{border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan),0 var(--sp-3) calc(var(--sp-7) - var(--sp-nudge)) var(--shadow)}
+.slot{cursor:default;background:linear-gradient(180deg,var(--ink-2),var(--ink-1));border-style:dashed;border-color:var(--hair)}
+
+.thumb{position:relative;flex:none;height:var(--thumb,calc(var(--w-lib-tile-m) * .625));overflow:hidden;background:var(--ink-1)}
+.tile:hover .thumb img{filter:brightness(1.06)}
+.kind{position:absolute;left:var(--sp-2);top:var(--sp-2);width:var(--size-kind-badge);height:var(--size-kind-badge);border-radius:var(--r-chip);display:grid;place-items:center;background:color-mix(in srgb,var(--ink) 78%,transparent);border:1px solid var(--hair-2);color:var(--ink-bright)}
+.kindMark{width:var(--size-mark);height:var(--size-mark)}
+.ref{position:absolute;left:calc(var(--size-kind-badge) + var(--sp-4));top:var(--sp-snug);height:var(--h-tag);padding:0 var(--sp-2);border-radius:var(--r-xs);display:inline-flex;align-items:center;font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.05em;text-transform:uppercase;background:color-mix(in srgb,var(--ink) 80%,transparent);color:var(--reference-text);border:1px solid var(--hair-2)}
+:global([data-density="s"]) .ref{display:none}
+.lock{position:absolute;right:calc(var(--sp-6) + var(--sp-1));top:var(--sp-tight);width:var(--sp-wide);height:var(--sp-wide);color:var(--emerald)}
+.dot{position:absolute;right:var(--sp-3);top:var(--sp-3);width:calc(var(--size-dot) + var(--sp-nudge));height:calc(var(--size-dot) + var(--sp-nudge));border-radius:50%;box-shadow:0 0 0 var(--stroke-mark) var(--ink-veil)}
+.ratified{background:var(--emerald)}
+.rejected{background:var(--rose)}
+.unjudged{background:var(--amber)}
+.candidate{background:var(--ink-veil);border:var(--stroke-mark) dashed var(--amber)}
+.reference{background:var(--ink-veil);border:var(--stroke-mark) solid var(--reference-text)}
+.trouble{position:absolute;left:var(--sp-2);bottom:var(--sp-2);height:var(--h-tag);padding:0 var(--sp-2);border-radius:var(--r-chip);display:inline-flex;align-items:center;font:600 var(--fs-micro)/1 var(--mono);color:var(--rose);border:1px solid color-mix(in srgb,var(--rose) 36%,transparent);background:color-mix(in srgb,var(--ink) 82%,transparent);z-index:2}
+
+.cap{flex:1;min-height:0;padding:var(--sp-2) var(--sp-control) var(--sp-snug);display:flex;flex-direction:column;justify-content:center;gap:var(--sp-hair)}
+.title{font-size:var(--fs-ui);line-height:1.25;color:var(--ink-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta{font:500 var(--fs-micro)/1.2 var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+:global([data-density="s"]) .meta{display:none}
+
+/* The grid around the held tiles: its columns and the thumb height are the window's
+   arithmetic (library.ts tileBox), handed in as data; the spacer padding is the window's. */
+.grid{--cols:1;--thumb:calc(var(--w-lib-tile-m) * .625);--tile-h:calc(var(--thumb) + var(--h-lib-cap));--gap:var(--sp-5);display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));grid-auto-rows:var(--tile-h);gap:var(--gap);padding-left:var(--sp-loose);padding-right:var(--sp-loose)}

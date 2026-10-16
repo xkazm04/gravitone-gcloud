@@ -119,6 +119,41 @@ export function parseProposals(json: unknown, count: number): { fields: NewPropo
 
 const sameLane = (a: SunoLane, b: SunoLane) => a.axis === b.axis && a.value === b.value;
 
+/* ── one prompt from a sentence (L52) ─────────────────────────────────────── */
+//
+// The Floor's audio composer launches from a SENTENCE ("A bed that holds a full minute…"), and
+// until Phase 5 its confirm was refused: a Suno take launched only from a proposal already in
+// the queue, and nothing turned a sentence into one. This is that turn: the same file, the same
+// schema and the same form limits as `proposeSuno`, its own `sentence` section, ONE prompt. The
+// lane it lands in is the caller's (the Floor names none: ungrouped), and so is the decision to
+// spend the turn at all - a dry launch never calls this (lib/sound/suno/draft.ts stands in).
+
+/** The prompt a sentence sends. Pure over its inputs, so a probe reads what would be sent. */
+export function sentencePrompt(sections: Record<string, string>, sentence: string, lane: SunoLane, examples: readonly string[]): string {
+  if (!sections.sentence) throw new SoundError('SUNO-PROPOSE-PROMPT.md needs a "sentence" section for a Floor launch', 500);
+  const slots = {
+    LANE_AXIS: lane.axis,
+    LANE_VALUE: lane.value,
+    COUNT: "1",
+    EXAMPLES: examples.length ? examples.map((e) => `- ${e}`).join("\n") : "(none yet)",
+    SENTENCE: sentence.trim(),
+    STYLE_MAX: String(STYLE_MAX),
+    TITLE_MAX: String(TITLE_MAX),
+  };
+  return [fill(sections.shared, slots), fill(sections.sentence, slots)].join("\n\n");
+}
+
+/** One Suno prompt drafted from a sentence: a text turn (`suno-propose`), held to the form. */
+export async function proposeFromSentence(sentence: string, lane: SunoLane, reason: ReasonFn = routerReason): Promise<{ fields: NewProposal["fields"]; note?: string }> {
+  if (!sentence.trim()) throw new SoundError("a Suno prompt needs a first sentence", 400);
+  const f = await readSuno();
+  const examples = [...new Set(f.proposals.filter((p) => sameLane(p.lane, lane)).reverse().map((p) => p.fields.style))].slice(0, EXAMPLES_MAX);
+  const out = await reason({ turn: SUNO_TURN.propose, prompt: sentencePrompt(await promptSections(), sentence, lane, examples), schema: PROPOSE_SCHEMA });
+  const [first] = parseProposals(out.json, 1);
+  if (first === undefined) throw new SoundError("the text engine wrote no usable Suno prompt", 502);
+  return first;
+}
+
 export async function proposeSuno(
   input: { lane: SunoLane; count: number; riffOf?: string },
   reason: ReasonFn = routerReason,

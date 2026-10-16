@@ -1,0 +1,17 @@
+/* library.css .lin, .lnode (+ .self), .lr, .lv, button.lk (+ .pj), .self-t. The thread is a
+   hairline gradient; each node a ring on it, THIS node lit cyan. */
+.lineage{list-style:none;margin:0;display:flex;flex-direction:column;position:relative;padding-left:calc(var(--sp-6) + var(--sp-nudge))}
+.lineage::before{content:"";position:absolute;left:var(--sp-1);top:var(--sp-5);bottom:var(--sp-5);width:var(--stroke-glyph);background:linear-gradient(180deg,var(--hair-3),var(--hair-2))}
+.node{position:relative;display:flex;align-items:center;gap:var(--sp-3);min-height:var(--h-field);font-size:var(--fs-ui);color:var(--text)}
+.node::before{content:"";position:absolute;left:calc(-1 * (var(--sp-6) + var(--stroke-glyph)));width:var(--sp-3);height:var(--sp-3);border-radius:50%;background:var(--ink-2);border:var(--stroke-glyph) solid var(--faint)}
+.self::before{background:var(--cyan);border-color:var(--cyan);box-shadow:0 0 0 var(--ring-halo) color-mix(in srgb,var(--cyan) 18%,transparent)}
+.role{font:600 var(--fs-micro)/1 var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;width:var(--w-lineage-role);flex:none}
+.refs{min-width:0;display:flex;flex-wrap:wrap;gap:var(--sp-tight);align-items:center}
+.link{display:inline-flex;align-items:center;gap:var(--sp-2);max-width:100%;padding:var(--sp-hair) var(--sp-snug) var(--sp-hair) var(--sp-hair);border-radius:var(--r-chip);border:1px solid var(--hair);color:var(--ink-bright);font-size:var(--fs-control-sm);text-align:left}
+.link:hover{border-color:var(--hair-3);background:var(--wash)}
+.plain{padding-left:var(--sp-snug)}
+.mono{font:500 var(--fs-meta)/1.3 var(--mono)}
+.thumb{width:var(--w-lineage-thumb);aspect-ratio:16/10;object-fit:cover;border-radius:var(--sp-hair);flex:none}
+.mark{width:var(--size-mark);height:var(--size-mark);flex:none;color:var(--muted);margin-left:var(--sp-1)}
+.ell{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.selfText{color:var(--ink-bright);font-weight:600}

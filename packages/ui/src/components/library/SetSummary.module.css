@@ -1,0 +1,26 @@
+/* library.css .sumh .stbar .stl .kbar .recent .keys-d: the set when nothing is selected. */
+.sum{display:flex;flex-direction:column}
+.head{display:flex;align-items:baseline;gap:var(--sp-4);margin:var(--sp-1) 0 var(--sp-5)}
+.big{font:600 var(--fs-lib-count)/1 var(--serif);color:var(--ink-bright)}
+.of{font:500 var(--fs-meta)/1 var(--mono);color:var(--muted)}
+.bar{display:flex;height:var(--sp-3);border-radius:var(--r-box);overflow:hidden;gap:1px;background:var(--wash)}
+.seg{--n:0;display:block;height:100%;flex-grow:var(--n)}
+.reference{background:var(--reference-text)}
+.candidate{background:repeating-linear-gradient(135deg,var(--amber) 0 var(--sp-nudge),transparent var(--sp-nudge) var(--sp-tight))}
+.ratified{background:var(--emerald)}
+.rejected{background:var(--rose)}
+.unjudged{background:var(--amber)}
+.states{display:flex;flex-direction:column;margin-top:var(--sp-4)}
+.state{display:flex;align-items:center;justify-content:space-between;height:var(--h-field);border-bottom:1px solid var(--hair);padding:0 var(--sp-nudge)}
+.state:hover{background:var(--wash)}
+.n{font:600 var(--fs-micro)/1 var(--mono);color:var(--muted);text-align:right}
+.kbar{display:grid;grid-template-columns:var(--h-chip) minmax(0,1fr) calc(var(--sp-7) * 1.85) calc(var(--sp-7) * 2.9);gap:var(--sp-3);align-items:center;font-size:var(--fs-ui);padding:var(--sp-tight) 0;border-bottom:1px solid var(--hair);width:100%;text-align:left;color:var(--text)}
+.kbar:hover{color:var(--ink-bright)}
+.kmark{width:var(--size-glyph);height:var(--size-glyph);color:var(--faint)}
+.ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meter{height:var(--h-meter);border-radius:var(--r-meter);background:var(--wash-hi);overflow:hidden}
+.meter i{--share:0;display:block;height:100%;width:calc(var(--share) * 100%);background:var(--cyan);opacity:.6}
+.recent{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp-2)}
+.recent button{border-radius:var(--r-chip);overflow:hidden;border:1px solid var(--hair);aspect-ratio:16/10;padding:0;background:var(--ink-1)}
+.recent button:hover{border-color:var(--hair-3)}
+.recent img{width:100%;height:100%;object-fit:cover;display:block}

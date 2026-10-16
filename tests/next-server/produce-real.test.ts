@@ -7,7 +7,8 @@
 //   · a Floor launch is a receipt, then a confirm: a stale token launches nothing; an article
 //     launch is one Run row and one DRY job under the article producer; a strips launch names
 //     its run in the receipt and launches under that same name, its manifest naming the job;
-//     an audio launch is priced and refused with the door that does launch it; an image launch
+//     an audio launch from a sentence is a dry Suno job drafted on the confirm (L52), an sfx one is
+//     priced and refused; an image launch
 //     (L45) is a forge sweep - priced statically, run.json prepared by forge.py on the confirm, one
 //     dry gpu.local job the Python worker claims;
 //   · a live receipt is refused where only dry may run (GRAVITONE_DRY_ONLY=1);
@@ -197,17 +198,60 @@ describe("the real produce port", () => {
     expect((await refusal(port.launchRun({ input, token: receipt.token }, who))).code).toBe("conflict");
   });
 
-  it("prices an audio launch and refuses it at confirm, naming the door that launches it", async () => {
+  it("launches a Floor sentence as a Suno take (L52): priced under a minted job, drafted on the confirm, one dry box.chrome job", async () => {
     const before = jobs().length;
-    for (const input of [
-      { lane: "audio", text: "Low brass bed.", kind: "music" },
-      { lane: "audio", text: "Whoosh.", kind: "sfx" },
-    ] satisfies ComposerInput[]) {
-      const r: Receipt = await v(port.composerReceipt({ input }, who));
-      const no = await refusal(port.launchRun({ input, token: r.token }, who));
-      expect(no.code).toBe("unavailable");
-      expect(no.message).toMatch(/launchSuno|sfx producer/);
-    }
+    const input: ComposerInput = { lane: "audio", text: "A bed that holds a full minute under the narrator.", kind: "music" };
+    const r: Receipt = await v(port.composerReceipt({ input }, who));
+    // The receipt names its job in the token and writes nothing: no proposal, no record, no job.
+    const jobId = r.token.slice(0, r.token.lastIndexOf(":"));
+    expect(jobId).toMatch(/^sj-floor-t\d+$/);
+    expect(r.lines.map((l) => [l.lane, l.label])).toEqual([["box.chrome", "A bed that holds a full minute under the narrator."]]);
+    const suno = (): { proposals: { id: string; origin: string; note?: string; fields: { style: string; lyrics?: string } }[]; jobs: { id: string; proposalId: string; state: string; job?: string }[] } =>
+      JSON.parse(readFileSync(path.join(ROOT, "sound", "suno.json"), "utf8"));
+    expect(existsSync(path.join(ROOT, "sound", "suno.json")) ? suno().jobs : []).toEqual([]);
+    expect(jobs()).toHaveLength(before);
+
+    const l = await v(port.launchRun({ input, token: r.token }, who));
+    if (l.kind !== "launched") throw new Error(`expected launched, got ${l.kind}`);
+    expect(l).toMatchObject({ runId: `suno.${jobId}`, jobId: `job:run:suno.${jobId}` });
+    expect(jobs().find((x) => x.id === l.jobId)).toMatchObject({ producer: "suno", lane: "box.chrome", mode: { kind: "dry" } });
+    // Dry: the sentence stands in for the drafted prompt - no text turn was paid.
+    const f = suno();
+    expect(f.proposals.find((p) => p.id === `sp-${jobId.slice(3)}`)).toMatchObject({ origin: "custom", note: "dry: the sentence as written, no text turn", fields: { style: "A bed that holds a full minute under the narrator", lyrics: "[Instrumental]" } });
+    expect(f.jobs.find((j) => j.id === jobId)).toMatchObject({ proposalId: `sp-${jobId.slice(3)}`, state: "queued", job: l.jobId });
+
+    // The same receipt again launches nothing new: the job exists, the confirm is stale or adopts it.
+    const again = await v(port.launchRun({ input, token: r.token }, who));
+    expect(jobs().filter((x) => x.id === l.jobId)).toHaveLength(1);
+    expect(suno().jobs.filter((j) => j.id === jobId)).toHaveLength(1);
+    expect(["launched", "stale"]).toContain(again.kind);
+  });
+
+  it("a Suno confirm the queue moved under answers the fresh receipt and leaves no record behind", async () => {
+    const input: ComposerInput = { lane: "audio", text: "Low brass bed.", kind: "music" };
+    const r: Receipt = await v(port.composerReceipt({ input }, who));
+    const jobId = r.token.slice(0, r.token.lastIndexOf(":"));
+    // Another launch lands on box.chrome between the read and the confirm.
+    const other: ComposerInput = { lane: "audio", text: "A second take, launched first.", kind: "music" };
+    const o = await v(port.composerReceipt({ input: other }, who));
+    expect((await v(port.launchRun({ input: other, token: o.token }, who))).kind).toBe("launched");
+    const stale = await v(port.launchRun({ input, token: r.token }, who));
+    if (stale.kind !== "stale") throw new Error(`expected stale, got ${stale.kind}`);
+    expect(stale.fresh.token.startsWith(`${jobId}:`)).toBe(true);
+    const f = JSON.parse(readFileSync(path.join(ROOT, "sound", "suno.json"), "utf8")) as { proposals: { id: string }[]; jobs: { id: string }[] };
+    expect(f.jobs.some((j) => j.id === jobId)).toBe(false);
+    expect(f.proposals.some((p) => p.id === `sp-${jobId.slice(3)}`)).toBe(false);
+    // The fresh receipt confirms.
+    expect((await v(port.launchRun({ input, token: stale.fresh.token }, who))).kind).toBe("launched");
+  });
+
+  it("prices an sfx launch and refuses it at confirm: no sfx producer is bound", async () => {
+    const before = jobs().length;
+    const input: ComposerInput = { lane: "audio", text: "Whoosh.", kind: "sfx" };
+    const r: Receipt = await v(port.composerReceipt({ input }, who));
+    const no = await refusal(port.launchRun({ input, token: r.token }, who));
+    expect(no.code).toBe("unavailable");
+    expect(no.message).toMatch(/sfx producer/);
     expect(jobs()).toHaveLength(before);
   });
 

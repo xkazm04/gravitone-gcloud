@@ -16,6 +16,7 @@ import type { Metadata } from "next";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { parseSource } from "@gt/ui/tokenSource";
 
+import { AudioSection } from "./AudioKit.tsx";
 import { BoardSection } from "./BoardKit.tsx";
 import { boardKitData } from "./boardKitData.ts";
 import { ContractSection } from "./Contract.tsx";
@@ -23,8 +24,10 @@ import { ControlSections } from "./Controls.tsx";
 import { FloorSection } from "./FloorKit.tsx";
 import { KitNav } from "./KitNav.tsx";
 import { LedgerSections } from "./LedgerKit.tsx";
+import { LibrarySection } from "./LibraryKit.tsx";
 import { SignalSections } from "./Signal.tsx";
 import { StatusSection } from "./Status.tsx";
+import { StyleSection } from "./StyleKit.tsx";
 import { StructureSection } from "./Structure.tsx";
 import { PartSection } from "./PartKit.tsx";
 import { ProduceSection } from "./ProduceKit.tsx";
@@ -58,6 +61,9 @@ export default function KitPage() {
         <BoardSection data={boardKitData()} />
         <ProduceSection />
         <PartSection />
+        <AudioSection />
+        <LibrarySection />
+        <StyleSection />
         <ContractSection />
       </div>
     </div>

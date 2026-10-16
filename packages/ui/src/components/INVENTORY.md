@@ -199,3 +199,30 @@ Where this port moved from the prototype:
   a kept badge's mark is `--ink` (it wrote `#062a1d`); the rail's scroll room is 24px (30px);
   the review side's ground is `--panel-ground` (.14 where it wrote .15) and its scroll room
   60px (40px); the article page's side inset is 28px (30px).
+
+## Library parts (Phase 5, L50)
+
+| Kit name | Replaces (prototype) | Pages | States / variants |
+| --- | --- | --- | --- |
+| `Rail`, `FacetGroup` | library.js `renderNav`, `groupHTML`; `.nsec`, `.kind`, `.fg`, `.frows`, `.more` | L | Kind with live counts (zero dimmed, current lit); vocabulary · kind; Attention only while it counts; State (state dots via FacetRow `lead`); Collections; Origin; 7 rows then +N more (only when it hides more than two), fewer; a pressed value kept at 0 |
+| `LibraryTile`, `TileGrid`, `TileSlot` | library.js `make` (grid), `.tile`, `.th`, `.kg`, `.refmark`, `.lk`, `.sd`, `.cap` | L | faces below; selected; REF on a reference image; lock on a ratified style; state dot per state; attention chip; S/M/L; a slot for a row not fetched yet |
+| `LibraryRow`, `LibraryColumns`, `ColumnsHead`, `RowList` | library.js `make` (list), `.lrow`, `.lcols` | L | thumb, name (+ attention), kind, three facets, state, date, source; >1360 / >1100 / phone columns; S/M/L |
+| `FaceView` | library.js `face`, `vface`; `.wv`, `.paper`, `.swatch`, `.vf` | L | image, poster, wave, paper, swatch, designed face; row / tile / preview sizes; palette as data |
+| `LibraryGlyph` (+ `KINDS`) | shell.js `I.ref|image|style|motion|doc|list|play|pause|retry` | L | one mark per kind; the kinds' order and words from `@gt/domain/library` KIND_LABELS |
+| `DetailPanel`, `DetailSection`, `DetailTitle`, `DetailChips`, `DetailFacets`, `DetailPreview` | library.js `detHead`, `body`, `preview`; `.det`, `.dbody`, `.pv`, `.dtitle`, `.did`, `.dchips`, `.det h4`, `.fdl` | L | head with kind, i / N, prev / next, close `]`; facets as pressed chips that filter; a clip loops muted, an export plays |
+| `Lineage` | library.js `lineage`, `node`; `.lin`, `.lnode`, `button.lk` | L | one line per role; item door (thumb or kind mark), facet door (+ ledger link for a run), text, ghost for a parent that is gone; THIS lit |
+| `SetSummary` | library.js `summary`; `.sumh`, `.stbar`, `.stl`, `.kbar`, `.recent`, `.keys-d` | L | count of N; state bar and state doors; kind bars on All; newest pictures; the library keymap |
+
+Pure module beside them: `library/library.ts` (`SIZES` from the tokens, `tileBox`, `layoutFor` for the
+one window, `orderValues`, `foldValues`, `blocksFor` + `BLOCK`, `stepTo`, `backStep`).
+
+Where this port moved from the prototype:
+- No corpus toggle (real · real + scaled): a stored item is never illustrative (@gt/domain/libraryItem),
+  so the fixture library is 5,000 `fixture` items, a tenth `derived`, and Origin carries the two
+  record fields (`origin` the mill, `source` real · fixture · derived).
+- No play button on an audio tile or row (a control inside an option); the detail's AudioPreview plays.
+- No browser-side media probe and no `markBad`: attention is a media fact from the index.
+- Moved a pixel: a tile's meta and the "+N more" are `--muted` (the prototype's `--faint` reads
+  under 4.5:1 on `--ink-2`); the detail head's left inset 12px as the panel head's; the lineage
+  thumbnail 30 x 18.75 (16:10) where it wrote 30 x 19; the kind bar's columns are multiples of
+  `--sp-7` (22 · 1fr · 44 · 70 became 22 · 1fr · 44.4 · 69.6).

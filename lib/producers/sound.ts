@@ -125,6 +125,9 @@ export type LaunchOptions = {
   /** Default: `GRAVITONE_DRY_ONLY=1` in the environment - live is then refused. */
   readonly dryOnly?: boolean;
   readonly now?: number;
+  /** The kernel to launch on; default the process's (`soundKernel`). A Floor door hands its own,
+   *  so its receipt and its confirm read the one store the port reads (L52). */
+  readonly store?: Store;
 };
 export type LaunchResult =
   | { readonly kind: "receipt"; readonly receipt: Receipt }
@@ -156,7 +159,7 @@ function receiptIn(r: Reader, spec: LaunchSpec, o: LaunchOptions): Receipt {
  * recomputed from what that transaction reads.
  */
 export function launchJobs(spec: LaunchSpec, o: LaunchOptions): LaunchResult {
-  const { store } = soundKernel();
+  const store = o.store ?? soundKernel().store;
   if (o.token === undefined) return { kind: "receipt", receipt: must(store.read((r) => receiptIn(r, spec, o))) };
   const token = o.token;
   return must(

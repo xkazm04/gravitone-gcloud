@@ -1,0 +1,41 @@
+/* library.css .wv, .paper, .swatch, .vf and the img/video fill: a face fills its box (the tile's
+   thumb, the list row's thumb, the detail's preview). The top inset leaves room for the tile's
+   kind mark. Density reaches a face through the tile's data-density. */
+.img{width:100%;height:100%;object-fit:cover;display:block;background:var(--ink-1)}
+
+.wave{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;background:var(--wave-ground);padding:calc(var(--sp-7) + var(--sp-4)) var(--sp-4) calc(var(--sp-7) + var(--sp-wide))}
+.wave svg{width:100%;height:100%;display:block}
+.wave.row{padding:var(--sp-hair) var(--sp-1)}
+:global([data-density="s"]) .wave.tile{padding:calc(var(--sp-7) + var(--sp-2)) var(--sp-2) var(--sp-4)}
+
+.paper{position:absolute;inset:0;background:var(--paper);color:var(--paper-ink);padding:calc(var(--sp-7) + var(--sp-loose)) var(--sp-5) var(--sp-4);display:flex;flex-direction:column;gap:var(--sp-2);font:600 var(--fs-read)/1.2 var(--serif)}
+.paperTitle{overflow:hidden;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical}
+.paperFoot{margin-top:auto;font:600 var(--fs-micro)/1.2 var(--mono);text-transform:uppercase;letter-spacing:.04em;color:var(--paper-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:1px solid color-mix(in srgb,var(--paper-faint) 30%,transparent);padding-top:var(--sp-2)}
+:global([data-density="s"]) .paper.tile{font-size:var(--fs-ui);padding:calc(var(--sp-7) + var(--sp-4)) var(--sp-control) var(--sp-3)}
+:global([data-density="s"]) .paper.tile .paperFoot{display:none}
+:global([data-density="l"]) .paper.tile{font-size:var(--fs-h2)}
+.paper.row{padding:var(--sp-hair) var(--sp-1);background:repeating-linear-gradient(180deg,var(--paper) 0 var(--sp-tight),color-mix(in srgb,var(--paper-faint) 30%,var(--paper)) var(--sp-tight) var(--sp-2))}
+.paper.row>*{display:none}
+.paper.preview{padding:calc(var(--sp-7) - var(--sp-nudge)) var(--sp-6) var(--sp-loose);font-size:var(--fs-title)}
+
+.swatch,.designed{--a:var(--lib-face-a);--b:var(--lib-face-b);position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;gap:var(--sp-2)}
+.swatch{padding:calc(var(--sp-7) + var(--sp-3)) var(--sp-5) var(--sp-4);background:radial-gradient(120% 90% at 20% 0%,var(--a),transparent 70%),radial-gradient(120% 90% at 100% 100%,var(--b),transparent 70%),var(--ink-2)}
+.swatchName{font:600 var(--fs-read)/1.15 var(--serif);color:var(--ink-bright);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.swatchSub{font:600 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+:global([data-density="s"]) .swatch.tile .swatchSub{display:none}
+.swatch.preview{padding:var(--sp-6)}
+.swatch.preview .swatchName{font-size:var(--fs-title)}
+
+.designed{gap:var(--sp-tight);padding:calc(var(--sp-7) + var(--sp-4)) var(--sp-5) var(--sp-4);background:linear-gradient(180deg,transparent 30%,color-mix(in srgb,var(--ink) 55%,transparent)),radial-gradient(120% 90% at 15% 0%,var(--a),transparent 70%),radial-gradient(120% 90% at 100% 100%,var(--b),transparent 70%),var(--ink-2)}
+.lead{font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.name{font:600 var(--fs-read)/1.15 var(--serif);color:var(--ink-bright);overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+.tail{font:600 var(--fs-micro)/1.2 var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.designed.tile{padding-bottom:calc(var(--sp-7) + var(--sp-3))}
+:global([data-density="s"]) .designed.tile{padding:calc(var(--sp-7) + var(--sp-3)) var(--sp-3) calc(var(--sp-7) + var(--sp-1))}
+:global([data-density="s"]) .designed.tile .lead,:global([data-density="s"]) .designed.tile .tail{display:none}
+:global([data-density="s"]) .designed.tile .name{font-size:var(--fs-ui);-webkit-line-clamp:2}
+:global([data-density="l"]) .designed.tile .name{font-size:var(--fs-title)}
+.designed.row,.swatch.row{padding:0}
+.designed.row>*,.swatch.row>*{display:none}
+.designed.preview{padding:calc(var(--sp-7) + var(--sp-4)) var(--sp-6) var(--sp-wide)}
+.designed.preview .name{font-size:var(--fs-title)}

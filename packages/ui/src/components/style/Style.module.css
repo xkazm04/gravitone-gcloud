@@ -1,0 +1,87 @@
+/* The style atelier's parts. The prototype draws a style only inside the Library's detail
+   (library.css: .det h4, .recipe-s, .evt, .plstrip), so those values are kept where they exist
+   and every other value is a kit token chosen to sit with them: the cull tile's corner and
+   width for a proof, the detail panel's table, the reading serif for words a person wrote. */
+
+/* ── the proof sheet ── */
+.sheet{display:flex;flex-direction:column;gap:var(--sp-5);min-width:0}
+.sheetHead{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-3) var(--sp-5)}
+.grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(calc(var(--w-tile) * 1.4),1fr));gap:var(--sp-5)}
+/* The tile's rim CARRIES its verdict (it is the plate's `data-state`), so it is a mark and holds
+   3:1 on the ground (WCAG 1.4.11; the owner's ruling on Ghost): an undecided rim is the faint ink
+   at 80% (Ghost's own recipe), a verdict's rim its signal at full strength. */
+.tile{margin:0;display:flex;flex-direction:column;gap:var(--sp-3);padding:var(--sp-3);border:1px solid color-mix(in srgb,var(--faint) 80%,transparent);border-radius:var(--r-tile);background:var(--ink-2);min-width:0}
+.tile.approved{border-color:var(--emerald)}
+.tile.rejected{border-color:var(--rose)}
+.tile.stale .plate{opacity:.55}
+.tile.held{box-shadow:0 0 0 var(--stroke-mark) var(--focus-line)}
+.plateBtn{position:relative;display:block;padding:0;border:0;background:var(--ink-3);border-radius:var(--r-sm);overflow:hidden;cursor:pointer;aspect-ratio:16/9;width:100%}
+.plateBtn:focus-visible{outline:var(--stroke-mark) solid var(--focus-line);outline-offset:var(--sp-nudge)}
+.plate{display:block;width:100%;height:100%;object-fit:cover}
+.mark{position:absolute;top:var(--sp-2);left:var(--sp-2);display:inline-flex;padding:var(--sp-1);border-radius:var(--r-xs);background:var(--ink-veil)}
+.cap{display:flex;flex-direction:column;gap:var(--sp-2);min-width:0}
+.label{font:600 var(--fs-ui)/1.3 var(--sans);color:var(--ink-bright);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chips{display:flex;flex-wrap:wrap;gap:var(--sp-1)}
+.meta{font:500 var(--fs-micro)/1.3 var(--mono);color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.note{font:italic var(--fs-ui)/1.4 var(--serif);color:var(--reading)}
+.judge,.noteRow{display:flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center}
+.noteRow > input{flex:1 1 calc(var(--w-tile) * .8)}
+
+/* ── the trial matrix ── */
+.matrix{display:flex;flex-direction:column;gap:var(--sp-3);min-width:0;overflow-x:auto}
+.mrow{display:grid;grid-template-columns:repeat(5,minmax(calc(var(--w-tile) * .8),1fr));gap:var(--sp-3)}
+.mhead{min-width:0}
+.mhead,.choose{display:flex;flex-direction:column;align-items:flex-start;gap:var(--sp-1)}
+.choose{width:100%;padding:var(--sp-2) var(--sp-3);border:1px solid var(--hair-2);border-radius:var(--r-sm);background:transparent;color:inherit;cursor:pointer;text-align:left}
+.choose:hover{background:var(--wash)}
+.choose:focus-visible{outline:var(--stroke-mark) solid var(--focus-line);outline-offset:var(--sp-nudge)}
+.chosen{border-color:var(--cyan);background:color-mix(in srgb,var(--cyan) 10%,transparent)}
+.problem{font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.trialLabel{font:500 var(--fs-ui)/1.3 var(--sans);color:var(--text)}
+.mcell{display:flex;flex-direction:column;gap:var(--sp-2);min-width:0}
+.mcell > div:first-child{aspect-ratio:16/9;justify-content:center;padding:var(--sp-3);border-radius:var(--r-sm);background:var(--hatch-future)}
+.face{display:block;padding:0;border:1px solid var(--hair-2);border-radius:var(--r-sm);overflow:hidden;aspect-ratio:16/9;background:var(--ink-3);cursor:pointer}
+.face.approved{border-color:color-mix(in srgb,var(--emerald) 55%,transparent)}
+.face.rejected{border-color:color-mix(in srgb,var(--rose) 55%,transparent)}
+.face:focus-visible{outline:var(--stroke-mark) solid var(--focus-line);outline-offset:var(--sp-nudge)}
+.counts{display:flex;flex-wrap:wrap;gap:var(--sp-2)}
+
+/* ── the ratchet ── */
+.gate{display:flex;flex-direction:column;gap:var(--sp-3)}
+.steps{list-style:none;margin:0;padding:0;display:flex;gap:var(--sp-1)}
+.step{flex:1;padding:var(--sp-1) 0 var(--sp-2);border-top:var(--stroke-mark) solid var(--hair-2);font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.passed{border-top-color:color-mix(in srgb,var(--emerald) 60%,transparent);color:var(--done-text)}
+.here{border-top-color:var(--cyan);color:var(--ink-bright)}
+.gateRow{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2) var(--sp-4)}
+.gateTerm{font:600 var(--fs-micro)/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.why{font:500 var(--fs-ui)/1.4 var(--sans);color:var(--text)}
+.blocker{margin:0;font:500 var(--fs-ui)/1.45 var(--sans);color:var(--amber)}
+.locked{margin:0;font:600 var(--fs-meta)/1.4 var(--mono);color:var(--done-text)}
+
+/* ── palette, evidence, plates ── */
+.palette{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--sp-2)}
+.swatchRow{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;align-items:center;gap:var(--sp-3)}
+.swatch{width:var(--size-mark);height:var(--size-mark);border-radius:50%;border:1px solid var(--hair-3)}
+.role{font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.cname{font:500 var(--fs-ui)/1.3 var(--sans);color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hex{font:500 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+.evidence{display:flex;flex-direction:column;gap:var(--sp-3)}
+.evRow{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-3)}
+.evt{width:100%;border-collapse:collapse;font-size:var(--fs-ui)}
+.evt th{text-align:left;padding:0 var(--sp-2) var(--sp-1) 0;font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.evt td{padding:var(--sp-1) var(--sp-2) var(--sp-1) 0;border-bottom:1px solid var(--hair);color:var(--text)}
+.evt td.m{font:500 var(--fs-micro)/1.3 var(--mono);color:var(--muted)}
+.vKeep{color:var(--done-text)}
+.vReject{color:var(--rose)}
+.strip{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(calc(var(--w-tile) * .8),1fr));gap:var(--sp-3)}
+.stripItem{display:flex;flex-direction:column;gap:var(--sp-1)}
+.stripItem .plate{aspect-ratio:16/9;border-radius:var(--r-sm);border:1px solid var(--hair-2)}
+.abandoned .plate{opacity:.55}
+
+/* ── the slots ── */
+.slots{display:flex;flex-direction:column;gap:var(--sp-4)}
+.slot{display:flex;flex-direction:column;gap:var(--sp-1)}
+.slotName{font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.prose{font:var(--fs-body)/1.55 var(--serif);color:var(--reading)}
+.area{resize:vertical;min-height:calc(var(--h-field) * 1.6);padding:var(--sp-3) var(--sp-4);border-radius:var(--r-sm);border:1px solid var(--hair-2);background:var(--ink-2);font:var(--fs-ui)/1.45 var(--sans);color:var(--ink-bright)}
+.area:focus{outline:none;border-color:var(--focus-line)}

@@ -27,3 +27,4 @@
 .rose{background:var(--rose)}
 .amber{background:var(--amber)}
 .violet{background:var(--violet)}
+.lead{flex:none;display:inline-grid;place-items:center;width:var(--size-glyph-sm);height:var(--size-glyph-sm)}

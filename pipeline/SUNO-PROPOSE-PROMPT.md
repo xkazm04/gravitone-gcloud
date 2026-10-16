@@ -1,8 +1,10 @@
 <!--
   SUNO-PROPOSE-PROMPT — read per call by lib/sound/suno/propose.ts.
   Sections: `shared` is always sent; then `propose` (N fresh prompts for one
-  lane of the audio board) or `riff` (N variations of one existing prompt).
-  Slots: {{LANE_AXIS}} {{LANE_VALUE}} {{COUNT}} {{EXAMPLES}} {{SOURCE}}
+  lane of the audio board), `riff` (N variations of one existing prompt) or
+  `sentence` (one prompt from the operator's sentence on the Floor's audio
+  composer; lib/sound/suno/propose.ts `proposeFromSentence`, L52).
+  Slots: {{LANE_AXIS}} {{LANE_VALUE}} {{COUNT}} {{EXAMPLES}} {{SOURCE}} {{SENTENCE}}
   {{STYLE_MAX}} {{TITLE_MAX}}. Text before the first section marker is never sent.
 -->
 
@@ -31,3 +33,10 @@ Write {{COUNT}} variations of this prompt:
 {{SOURCE}}
 
 Keep its identity — the genre and the thing that makes it that track — and vary tempo, mood and instrumentation, one or two of those per variation, so the clips can be compared against the original. Keep its lyrics choice (instrumental stays instrumental). Each title should read as a sibling of the original's.
+
+<!-- section: sentence -->
+Write {{COUNT}} prompt that turns the operator's sentence into a track they would keep:
+
+{{SENTENCE}}
+
+The sentence is a brief, not a style line: read what it asks the music to DO (hold under a voice, carry a minute, land a turn) and choose the genre, mood, instruments and tempo that do it. Keep anything the sentence names outright (an instrument, a tempo, a length, "no vocals"). Do not copy the sentence into `style`. The title names the track the sentence describes.

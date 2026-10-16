@@ -218,4 +218,32 @@
   --w-tile-audio: 230px; /* Least width of an audio take tile in the matrix cull. */
   --w-timecode: 62px; /* Width of a caption beat's timecode column. */
   --wave-ground: linear-gradient(180deg,#121a26,#0b1018); /* Ground behind an audio take's waveform. */
+
+  /* library */
+  --fs-lib-count: 34px; /* Serif count heading the Library's set summary. */
+  --fs-lib-title: 22px; /* Serif title of the item in the Library's detail panel. */
+  --h-lib-audio: 150px; /* Height of an audio item's preview in the Library's detail panel. */
+  --h-lib-cap: 48px; /* Height of a Library tile's caption at sizes M and L (title and meta). */
+  --h-lib-cap-s: 32px; /* Height of a Library tile's caption at size S (title only). */
+  --h-lib-row-l: 56px; /* Height of a Library list row at size L. */
+  --h-lib-row-m: 40px; /* Height of a Library list row at size M. */
+  --h-lib-row-s: 34px; /* Height of a Library list row at size S. */
+  --lib-cols: minmax(170px,2.6fr) 86px minmax(110px,1.4fr) 100px 84px 90px; /* A Library list row's columns after its thumbnail: name, kind, facets, state, date, source. */
+  --lib-cols-mid: minmax(140px,2fr) 84px minmax(90px,1.2fr) 100px 78px; /* The list row's columns below 1360px, where the source column goes. */
+  --lib-cols-narrow: minmax(140px,2fr) 84px 100px 78px; /* The list row's columns below 1100px, where the facet column goes too. */
+  --lib-face-a: #24304a; /* First ground of a designed face when the item names no palette. */
+  --lib-face-b: #3a2537; /* Second ground of a designed face when the item names no palette. */
+  --size-kind-badge: 24px; /* Side of the kind mark in a Library tile's corner. */
+  --size-play: 38px; /* Side of the round play button on an audio preview. */
+  --sp-wave-in: 60px; /* Inset of an audio preview's waveform from its left edge, clear of the play button. */
+  --w-lib-detail: clamp(340px,25vw,404px); /* Width of the Library's detail panel. */
+  --w-lib-nav: clamp(236px,17vw,276px); /* Width of the Library's vocabulary rail. */
+  --w-lib-thumb-l: 84px; /* Width of a Library list row's thumbnail at size L. */
+  --w-lib-thumb-m: 56px; /* Width of a Library list row's thumbnail at size M. */
+  --w-lib-thumb-s: 48px; /* Width of a Library list row's thumbnail at size S. */
+  --w-lib-tile-l: 300px; /* Least width of a Library grid tile at size L. */
+  --w-lib-tile-m: 206px; /* Least width of a Library grid tile at size M. */
+  --w-lib-tile-s: 150px; /* Least width of a Library grid tile at size S. */
+  --w-lineage-role: 62px; /* Width of a lineage node's role column (source, run, this, used by). */
+  --w-lineage-thumb: 30px; /* Width of the thumbnail on a lineage link. */
 }

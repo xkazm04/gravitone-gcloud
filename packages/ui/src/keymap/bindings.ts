@@ -238,7 +238,26 @@ const partL40: Binding[] = [
   { mode: "part.strips", keys: ["J", "K"], verb: "item", does: "card", repeat: true },
 ];
 
-export const BINDINGS: readonly Binding[] = [...floor, ...calendar, ...board, ...projects, ...compose, ...receipt, ...library, ...ledger, ...part, ...partL40];
+// L51 - THE STYLE ATELIER (Phase 5). v1's atelier bound nothing: approve/reject were hover
+// buttons on each plate (app/library/parts.tsx ProofThumb) and Lock a button three panes away.
+// J/K walk the sheet's proofs; A/R/U judge the held one (R opens its note first: a rejection is
+// kept with its reason - visual-style-locking/rejections-as-negative-evidence - and ⏎ in the note
+// lands it). G prices the chosen trial columns (the receipt opens; nothing renders before its
+// confirm). ⇧L locks, and only while the server's gate says it may - the shift because a lock is
+// one-way. Esc in any field leaves it (a slot commits on leaving; a note is dropped undecided).
+const style: Binding[] = [
+  { mode: "style", keys: ["J", "K"], verb: "item", does: "proof", repeat: true },
+  { mode: "style", keys: ["A"], verb: "approve", does: "approve", when: "judge" },
+  { mode: "style", keys: ["R"], verb: "reject", does: "reject · note", when: "judge" },
+  { mode: "style", keys: ["U"], verb: "undecide", does: "undecide", when: "judge" },
+  { mode: "style", keys: ["G"], verb: "generate", does: "render chosen", when: "chosen" },
+  { mode: "style", keys: ["⇧L"], verb: "lock", does: "lock", when: "lockable" },
+  { mode: "style", keys: ["Esc"], verb: "deselect", does: "deselect", when: "proof" },
+  { mode: "style", keys: ["⏎"], verb: "attach", does: "reject", field: "proof-note", onControl: true },
+  { mode: "style", keys: ["Esc"], verb: "leave-field", does: "leave", field: "*" },
+];
+
+export const BINDINGS: readonly Binding[] = [...floor, ...calendar, ...board, ...projects, ...compose, ...receipt, ...library, ...ledger, ...part, ...partL40, ...style];
 
 /** The app's one compiled keymap. */
 export const KEYMAP = compile(BINDINGS);

@@ -15,7 +15,7 @@
 // replace them, and are links out of this world until then.
 
 export type Section = {
-  readonly id: "floor" | "projects" | "runs" | "library" | "ledger" | "kit";
+  readonly id: "floor" | "projects" | "runs" | "library" | "audio" | "ledger" | "kit";
   readonly label: string;
   readonly href: string;
   readonly built: boolean;
@@ -30,6 +30,7 @@ export const SECTIONS: readonly Section[] = [
   // built in Phase 2 at /projects/runs while /projects is still v1's list.
   { id: "runs", label: "Runs", href: "/projects/runs", built: true, group: "work" },
   { id: "library", label: "Library", href: "/library", built: true, group: "record" },
+  { id: "audio", label: "Audio", href: "/audio", built: true, group: "record" },
   { id: "ledger", label: "Ledger", href: "/ledger", built: true, group: "record" },
   { id: "kit", label: "Kit", href: "/kit", built: true, group: "system" },
 ];

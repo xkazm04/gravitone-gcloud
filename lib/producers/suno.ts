@@ -13,6 +13,8 @@ import { defineSuno, SUNO_CREDITS } from "@gt/producers/suno/producer";
 import { standClipRefs } from "@/lib/sound/suno/fakeDriver";
 import type { SunoDriver } from "@/lib/sound/suno/drivers";
 import { mintSunoId, readSuno, withSuno, type SunoFile } from "@/lib/sound/suno/store";
+import { draftLabel, dropUnlaunched, ensureDraftJob, type DraftSource } from "@/lib/sound/suno/draft";
+import type { ReasonFn } from "@/lib/sound/suno/propose";
 import type { SunoClip, SunoClipRef, SunoJob, SunoPhase } from "@/lib/suno/types";
 
 import { creditOption, driveProducer, holdsSlot, jobIdOf, launchJobs, launchNow, must, soundKernel, type Drive, type DriveOptions, type LaunchOptions, type LaunchResult, type LaunchSpec } from "./sound";
@@ -173,13 +175,10 @@ export function sunoProducer(binding: { readonly driver: SunoDriver }): Producer
 
 const PACE = "illustrative: two models a prompt, two clips of about two minutes each (prototype model.js estimate.audio)";
 
+const SUNO_OPTION = creditOption({ key: "track/suno/v6+v6-wild", lane: "box.chrome", provider: "suno", model: "v6 + v6-wild", label: "Suno v6 + v6-wild · serial", seconds: 300, why: SUNO_CREDITS, pace: PACE });
+
 export function sunoLine(j: SunoJob): LaunchSpec["lines"][number] {
-  return {
-    jobId: sunoKernelId(j),
-    runId: sunoRunId(j),
-    label: j.fields.title ?? j.fields.style,
-    option: creditOption({ key: "track/suno/v6+v6-wild", lane: "box.chrome", provider: "suno", model: "v6 + v6-wild", label: "Suno v6 + v6-wild · serial", seconds: 300, why: SUNO_CREDITS, pace: PACE }),
-  };
+  return { jobId: sunoKernelId(j), runId: sunoRunId(j), label: j.fields.title ?? j.fields.style, option: SUNO_OPTION };
 }
 
 async function sunoSpec(ids: readonly string[]): Promise<LaunchSpec> {
@@ -202,6 +201,30 @@ async function nameJobs(jobIds: readonly string[]): Promise<void> {
 /** Launch queued v1 records as kernel jobs: a receipt without `token`, the jobs with it. */
 export async function launchSuno(ids: readonly string[], o: LaunchOptions): Promise<LaunchResult> {
   const r = launchJobs(await sunoSpec(ids), o);
+  if (r.kind === "launched") await nameJobs(r.jobIds);
+  return r;
+}
+
+/**
+ * A Suno take from a SENTENCE or a SEED, launched under the job id its receipt minted (L52: the
+ * Floor's audio composer, the Audio lane's composer). Without `token` it is the receipt and writes
+ * nothing - no turn, no record. With it: the receipt is re-read first (a stale token answers the
+ * fresh receipt before any text turn is paid), the proposal and its queued record are written
+ * (lib/sound/suno/draft.ts, idempotent by the job id), then the kernel job in one transaction; a
+ * queue that moved in between answers stale and the record is taken back out. The line's label
+ * is the draft's own words (`draftLabel`), which the turn does not change, so the receipt the
+ * operator read and the one the confirm recomputes are the same receipt.
+ */
+export async function launchSunoDraft(jobId: string, source: DraftSource, o: LaunchOptions & { readonly reason?: ReasonFn }): Promise<LaunchResult> {
+  const id = { id: jobId };
+  const spec: LaunchSpec = { producer: SUNO_PRODUCER, media: "audio", lines: [{ jobId: sunoKernelId(id), runId: sunoRunId(id), label: draftLabel(source), option: SUNO_OPTION }] };
+  const { token, reason, ...read } = o;
+  const pre = launchJobs(spec, read);
+  if (token === undefined || pre.kind !== "receipt") return pre;
+  if (pre.receipt.token !== token) return { kind: "stale", fresh: pre.receipt };
+  await ensureDraftJob(jobId, source, { dry: o.mode === "dry", now: o.now ?? Date.now(), ...(reason === undefined ? {} : { reason }) });
+  const r = launchJobs(spec, { ...read, token });
+  if (r.kind === "stale") await dropUnlaunched(jobId);
   if (r.kind === "launched") await nameJobs(r.jobIds);
   return r;
 }

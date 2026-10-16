@@ -33,6 +33,8 @@ export type WindowHandle<E extends HTMLElement> = Win & {
   readonly onScroll: (e: UIEvent<E>) => void;
   /** Scroll so item i is fully visible. */
   readonly reveal: (i: number) => void;
+  /** The container's measured width: what a grid sizes its tiles from (the Library's TileGrid). */
+  readonly width: number;
 };
 
 export function useWindow<E extends HTMLElement = HTMLDivElement>(opts: UseWindowOptions): WindowHandle<E> {
@@ -78,5 +80,5 @@ export function useWindow<E extends HTMLElement = HTMLDivElement>(opts: UseWindo
     if (top !== el.scrollTop) el.scrollTop = top;
   };
 
-  return { ...win, ref, onScroll, reveal };
+  return { ...win, ref, onScroll, reveal, width: size.width };
 }

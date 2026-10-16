@@ -1,0 +1,35 @@
+/* library.css .lrow, .lcols and their two narrowing steps. The list sets the row height
+   (--row-h) and the thumb column (--lt) per density (library.ts SIZES). */
+.row,.cols{display:grid;grid-template-columns:var(--lt,var(--w-lib-thumb-m)) var(--lib-cols);gap:var(--sp-5);align-items:center}
+.cols{flex:none;height:var(--h-control-sm);padding:0 var(--sp-6) 0 var(--sp-5);border-bottom:1px solid var(--hair);font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.row{height:var(--row-h,var(--h-lib-row-m));padding:0 var(--sp-5);border-bottom:1px solid var(--hair);cursor:pointer;font-size:var(--fs-ui);transition:background var(--dur-fast)}
+.row:hover{background:color-mix(in srgb,var(--wash) 87.5%,transparent)}
+.on,.on:hover{background:color-mix(in srgb,var(--cyan) 9%,transparent);box-shadow:inset var(--sp-hair) 0 0 var(--cyan)}
+.thumb{position:relative;height:calc(100% - var(--sp-3));border-radius:var(--r-xs);overflow:hidden;background:var(--ink-1);border:1px solid var(--hair)}
+.name{min-width:0;display:flex;align-items:center;gap:var(--sp-3)}
+.title{color:var(--ink-bright);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kind{display:flex;align-items:center;gap:var(--sp-2);color:var(--muted);font:500 var(--fs-meta)/1 var(--mono);min-width:0}
+.kindMark{width:var(--size-mark);height:var(--size-mark);flex:none}
+.ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.facets{display:flex;flex-wrap:wrap;gap:var(--sp-tight);min-width:0;height:var(--h-chip);overflow:hidden}
+.date{font:500 var(--fs-meta)/1 var(--mono);color:var(--muted)}
+.src{justify-self:start}
+
+@media (max-width:1359px){
+  .row,.cols{grid-template-columns:var(--lt,var(--w-lib-thumb-m)) var(--lib-cols-mid)}
+  .src{display:none}
+}
+@media (max-width:1099px){
+  .row,.cols{grid-template-columns:var(--lt,var(--w-lib-thumb-m)) var(--lib-cols-narrow)}
+  .facets{display:none}
+}
+/* Not in the prototype, which stopped at 1100px: at phone width a row is thumb, name, state. */
+@media (max-width:639px){
+  .row,.cols{grid-template-columns:var(--lt,var(--w-lib-thumb-m)) minmax(0,1fr) auto}
+  .kind,.date,.cols>:nth-child(3),.cols>:nth-child(6){display:none}
+}
+
+/* The list around the held rows: row height and thumb column per density. */
+.list{--lt:var(--w-lib-thumb-m);--row-h:var(--h-lib-row-m)}
+.list[data-density="s"]{--lt:var(--w-lib-thumb-s);--row-h:var(--h-lib-row-s)}
+.list[data-density="l"]{--lt:var(--w-lib-thumb-l);--row-h:var(--h-lib-row-l)}

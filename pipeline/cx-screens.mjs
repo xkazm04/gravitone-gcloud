@@ -39,6 +39,8 @@ export const SCREENS = {
   "studio-outputs": { url: `/projects/${PROJECT}` },
   "library-styles": { url: "/library" },
   "library-assets": { url: "/library", tab: "Assets" },
+  "library-next": { url: "/library-next" },
+  "library-next-detail": { url: "/library-next?kind=style&sel=style-0006" },
   "library-animations": { url: "/library", tab: "Animations" },
   playground: { url: "/playground" },
   foundry: { url: "/foundry" },

@@ -249,3 +249,32 @@ Not admitted, mixed from a token instead: the commit button's emerald at .45 / .
 refusal's rose at .6, the edit note's amber at .4 / .06, the focused section's wash at 87.5%
 (the prototype's white .035), the rail's and the foot's letterbox at .18 / .2, the tile caption
 ground `--ink` at .9. Moved a pixel, recorded in INVENTORY.md "Board parts".
+
+## Admitted at the Library port (Phase 5, L50)
+
+From `library.css` (the route's grid, the tile and row sizes per density, the list's columns, the
+detail's type) and the prototype's `PAL` fallback. Every value is the prototype's; each role is one
+intent of the Library. The tile and row sizes are read back by the window arithmetic through
+`tokens.ts` (`packages/ui/src/components/library/library.ts SIZES`), so CSS and JS share one number.
+
+| Role | Value | Uses | Definition |
+| --- | --- | --- | --- |
+| w-lib-nav | `clamp(236px,17vw,276px)` | 2 | Width of the vocabulary rail (column and drawer). |
+| w-lib-detail | `clamp(340px,25vw,404px)` | 3 | Width of the detail panel (column and drawer); the search field's cap is read from it. |
+| w-lib-tile-s / -m / -l | `150px` / `206px` / `300px` | 2 | Least width of a grid tile per size (equal to `w-tile` by value, not by intent). |
+| h-lib-cap-s / h-lib-cap | `32px` / `48px` | 2 | A tile's caption height per size. |
+| h-lib-row-s / -m / -l | `34px` / `40px` / `56px` | 2 | A list row's height per size. |
+| w-lib-thumb-s / -m / -l | `48px` / `56px` / `84px` | 2 | A list row's thumbnail column per size. |
+| lib-cols, lib-cols-mid, lib-cols-narrow | the `.lrow` track lists at >1360, >1100, below | 2 | A list row's columns after its thumbnail, at the prototype's two narrowing steps. |
+| size-kind-badge | `24px` | 2 | The kind mark in a tile's corner (and the ref mark's offset from it). |
+| fs-lib-title | `22px` | 1 | The item's serif title in the detail. |
+| fs-lib-count | `34px` | 1 | The set summary's serif count (equal to `fs-article` by value, not by intent). |
+| h-lib-audio | `150px` | 1 | The audio preview's height (drawn by L52's AudioPreview, defined once here). |
+| w-lineage-role | `62px` | 1 | A lineage node's role column (equal to `w-timecode` by value, not by intent). |
+| w-lineage-thumb | `30px` | 1 | The thumbnail on a lineage link. |
+| lib-face-a / lib-face-b | `#24304a` / `#3a2537` | 2 | A designed face's two grounds when the item names no palette (library.js `PAL` fallback). |
+
+Not admitted, mixed or composed from tokens instead: the scrim at `--ink` 58% (the prototype's
+`rgba(5,7,12,.58)`), the tile's kind badge ground `--ink` 78%, the ref mark's `--ink` 80%, the
+selected row's cyan at 9%, the summary's kind-bar columns as multiples of `--sp-7`. Moved a pixel,
+recorded in INVENTORY.md "Library parts".

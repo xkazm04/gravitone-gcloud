@@ -56,6 +56,7 @@ export const EXEMPT: Record<string, string> = {
   "app/playground/triage/useTriage.ts": NO_DRIVER,
   "app/_library/useProjectOutputs.ts": NO_DRIVER,
   "app/_phases/_shared/useStorageTrouble.ts": NO_DRIVER,
+  "app/(studio)/library-next/_library/useNarrow.ts": NEEDS_DOM,
   "app/_phases/_shared/useLoadFor.ts": `${LEGACY}: step-records, through the stub of lib/useLoadFor.ts`,
 };
 

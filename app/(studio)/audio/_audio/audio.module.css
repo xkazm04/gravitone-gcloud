@@ -1,0 +1,22 @@
+/* The Audio lane composer's layout around the @gt/ui parts (v1 audio-workbench.css's three
+   columns): terms | composer | the take, drafts, references. Below 1360px the right column
+   drops under the composer; below 900px everything is one column. */
+.lane{flex:1;min-height:0;display:grid;grid-template-columns:var(--w-rail) minmax(0,1fr) var(--w-month-side)}
+.rail,.main,.side{min-height:0;overflow:auto;padding:var(--sp-5) var(--sp-loose) var(--sp-page-end)}
+.rail{border-right:1px solid var(--hair);display:grid;gap:var(--sp-4);align-content:start}
+.main{display:grid;gap:var(--sp-6);align-content:start}
+.side{border-left:1px solid var(--hair);display:grid;gap:var(--sp-6);align-content:start;background:var(--panel-ground)}
+.from{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap}
+.take{display:grid;gap:var(--sp-3)}
+@media (max-width:1360px){
+  .lane{grid-template-columns:var(--w-rail) minmax(0,1fr);grid-template-rows:auto 1fr;align-content:start;overflow:auto}
+  .rail,.main,.side{min-height:auto}
+  .rail{grid-column:1;grid-row:1 / span 2;overflow:visible}
+  .main{grid-column:2;grid-row:1;overflow:visible}
+  .side{grid-column:2;grid-row:2;border-left:0;border-top:1px solid var(--hair);overflow:visible}
+}
+@media (max-width:900px){
+  .lane{display:flex;flex-direction:column}
+  .rail,.main,.side{overflow:visible;flex:none}
+  .rail{border-right:0;border-bottom:1px solid var(--hair)}
+}

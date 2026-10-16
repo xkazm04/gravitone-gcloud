@@ -1,0 +1,135 @@
+// The Library's parts (Phase 5, L50): the tile and row arithmetic, the rail's value order and
+// fold, the blocks a window asks for, what each key does to the selection, the Esc cascade - and
+// what the parts expose, rendered with react-dom/server (Vitest runs without a DOM; the route is
+// driven live in tests/live/library.live.spec.ts).
+import { createElement as h } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, test } from "vitest";
+
+import { DetailFacets } from "../../src/components/library/DetailPanel.tsx";
+import { backStep, blocksFor, BLOCK, foldValues, layoutFor, orderValues, SIZES, stepTo, tileBox, type FacetValue } from "../../src/components/library/library.ts";
+import { LibraryRow } from "../../src/components/library/LibraryRow.tsx";
+import { cardName, LibraryTile, type LibraryCard } from "../../src/components/library/LibraryTile.tsx";
+import { Lineage } from "../../src/components/library/Lineage.tsx";
+import { Rail, type RailGroup } from "../../src/components/library/Rail.tsx";
+import { columnsFor, windowOf } from "../../src/window/core.ts";
+
+const html = (el: Parameters<typeof renderToStaticMarkup>[0]): string => renderToStaticMarkup(el);
+const noop = (): void => {};
+const fv = (value: string, count: number, selected = false): FacetValue => ({ value, label: value, count, selected });
+
+describe("geometry", () => {
+  test("the sizes are the prototype's: tiles 150/206/300, captions 32/48/48, list rows 34/40/56", () => {
+    expect([SIZES.s.tile, SIZES.m.tile, SIZES.l.tile]).toEqual([150, 206, 300]);
+    expect([SIZES.s.caption, SIZES.m.caption, SIZES.l.caption]).toEqual([32, 48, 48]);
+    expect([SIZES.s.row, SIZES.m.row, SIZES.l.row]).toEqual([34, 40, 56]);
+  });
+
+  test("a tile is (inner - gaps) / columns wide with a 16:10 thumb; the window's columns agree", () => {
+    const b = tileBox(835, "m"); // the centre column at 1440: 1440 - 245 - 360
+    expect(b.columns).toBe(3);
+    expect(b.thumb).toBe(Math.round((b.width * 10) / 16));
+    expect(b.height).toBe(b.thumb + 48);
+    const lay = layoutFor("grid", "m", 835);
+    if (lay.kind !== "grid") throw new Error("grid expected");
+    expect(columnsFor(lay.width, lay.minTile, lay.gap, lay.pad)).toBe(b.columns);
+    expect(lay.rowHeight).toBe(b.height + SIZES.m.gap);
+  });
+
+  test("50,000 rows in a grid hold one screen of tiles, not 50,000", () => {
+    const w = windowOf({ count: 50_000, layout: layoutFor("grid", "s", 1200), viewport: 900, scrollTop: 2_000_000, overscan: 2 });
+    expect(w.shown).toBeLessThan(120);
+    expect(w.start % w.columns).toBe(0);
+  });
+});
+
+describe("the rail's values", () => {
+  test("by count then label; a selected value the counts no longer name is kept at 0", () => {
+    const out = orderValues("mood", [fv("warm", 3), fv("tense", 9), fv("bright", 3)], ["ominous"]);
+    expect(out.map((v) => [v.value, v.count, v.selected])).toEqual([
+      ["tense", 9, false],
+      ["bright", 3, false],
+      ["warm", 3, false],
+      ["ominous", 0, true],
+    ]);
+  });
+
+  test("state keeps the Library's order, never the count's", () => {
+    expect(orderValues("state", [fv("unjudged", 900), fv("reference", 1), fv("ratified", 50)], []).map((v) => v.value)).toEqual(["reference", "ratified", "unjudged"]);
+  });
+
+  test("seven rows then +N more - unless the rest is two or fewer; a selected value past the fold is drawn", () => {
+    const nine = Array.from({ length: 9 }, (_, i) => fv(`v${i}`, 9 - i));
+    expect(foldValues(nine, false)).toMatchObject({ hidden: 0, canFold: false });
+    const ten = [...nine, fv("v9", 0, true)];
+    const f = foldValues(ten, false);
+    expect(f.shown.map((v) => v.value)).toEqual(["v0", "v1", "v2", "v3", "v4", "v5", "v6", "v9"]);
+    expect(f.hidden).toBe(2);
+    expect(foldValues(ten, true)).toMatchObject({ hidden: 0, canFold: true });
+  });
+
+  test("Attention appears only while something needs attention; the vocabulary heads its kind", () => {
+    const groups: RailGroup[] = [
+      { key: "genre", label: "genre", section: "vocabulary", values: [fv("ambient", 4)] },
+      { key: "attention", label: "attention", section: "attention", values: [fv("missing", 0)] },
+      { key: "state", label: "state", section: "state", values: [fv("ratified", 4)] },
+    ];
+    const props = { kind: "audio" as const, kindCounts: { all: 4, audio: 4 }, closed: new Set<string>(), expanded: new Set<string>(), onKind: noop, onToggle: noop, onFold: noop, onMore: noop };
+    const quiet = html(h(Rail, { ...props, groups }));
+    expect(quiet).not.toContain('aria-label="Attention"');
+    expect(quiet).toContain("vocabulary · audio");
+    const loud = html(h(Rail, { ...props, groups: groups.map((g) => (g.key === "attention" ? { ...g, values: [fv("missing", 2)] } : g)) }));
+    expect(loud).toContain('aria-label="Attention"');
+  });
+});
+
+describe("blocks and keys", () => {
+  test("the blocks a window overlaps, and none for an empty window", () => {
+    expect(blocksFor(0, BLOCK)).toEqual([0]);
+    expect(blocksFor(BLOCK - 1, BLOCK + 1)).toEqual([0, 1]);
+    expect(blocksFor(5, 5)).toEqual([]);
+  });
+
+  test("arrows walk by one and by a row of columns; a list has no left or right; prev/next are one in either", () => {
+    expect(stepTo(5, "down", 100, 4, 12, "grid")).toBe(9);
+    expect(stepTo(5, "right", 100, 4, 12, "grid")).toBe(6);
+    expect(stepTo(5, "right", 100, 4, 12, "list")).toBe(5);
+    expect(stepTo(5, "next", 100, 4, 12, "list")).toBe(6);
+    expect(stepTo(5, "page-down", 100, 4, 12, "grid")).toBe(17);
+    expect(stepTo(98, "page-down", 100, 4, 12, "grid")).toBe(99);
+    expect(stepTo(-1, "down", 100, 4, 12, "grid")).toBe(0);
+    expect(stepTo(-1, "last", 100, 4, 12, "grid")).toBe(99);
+    expect(stepTo(3, "down", 0, 4, 12, "grid")).toBe(-1);
+  });
+
+  test("Esc backs out one layer per press, nearest first", () => {
+    const all = { railDrawer: true, detailDrawer: true, selected: true, query: true };
+    expect(backStep(all)).toBe("close-rail");
+    expect(backStep({ ...all, railDrawer: false })).toBe("close-detail");
+    expect(backStep({ ...all, railDrawer: false, detailDrawer: false })).toBe("deselect");
+    expect(backStep({ railDrawer: false, detailDrawer: false, selected: false, query: true })).toBe("clear-query");
+    expect(backStep({ railDrawer: false, detailDrawer: false, selected: false, query: false })).toBe("nothing");
+  });
+});
+
+describe("what the parts expose", () => {
+  const c: LibraryCard = { id: "video-0003", kind: "video", title: "Peak and Fall · ad spot 8", meta: "captions vtt", state: "rejected", source: "fixture", date: "2026-09-03", attention: "unreadable", chips: ["ad"], face: { kind: "designed", lead: "video", name: "Peak and Fall", tail: "vtt" } };
+
+  test("a tile and a row are options named by title, kind, state and the media trouble - never a tab stop", () => {
+    expect(cardName(c)).toBe("Peak and Fall · ad spot 8, video, rejected, media unreadable");
+    for (const el of [h(LibraryTile, { card: c, selected: true, domId: "x", onSelect: noop, onOpen: noop }), h(LibraryRow, { card: c, selected: false, domId: "y", onSelect: noop, onOpen: noop })]) {
+      const out = html(el);
+      expect(out).toMatch(/role="option"/);
+      expect(out).not.toMatch(/tabindex/i);
+      expect(out).toContain("media unreadable");
+    }
+  });
+
+  test("a detail facet chip says when it is in the filter; a lineage node of the item is current", () => {
+    const facets = html(h(DetailFacets, { lines: [{ group: "format", label: "format", values: [{ value: "ad", label: "ad", pressed: true }] }], onPress: noop }));
+    expect(facets).toContain('aria-pressed="true"');
+    expect(facets).toContain("format: ad, in the filter");
+    const lin = html(h(Lineage, { nodes: [{ role: "project", refs: [{ kind: "facet", group: "project", value: "p", label: "Peak and Fall" }] }, { role: "this", self: true, refs: [{ kind: "text", label: "video" }] }], onItem: noop, onFacet: noop }));
+    expect(lin).toContain('aria-current="true"');
+  });
+});

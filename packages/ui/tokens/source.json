@@ -218,6 +218,34 @@
       {"name": "note-text", "tier": "role", "value": "#fde68a", "note": "Text of an operator's edit note attached to a section or a beat."},
       {"name": "w-timecode", "tier": "role", "value": "62px", "note": "Width of a caption beat's timecode column."},
       {"name": "fs-beat", "tier": "role", "value": "15.5px", "note": "Text of a caption beat in the cut review."}
+    ]},
+    {"id": "library", "tokens": [
+      {"name": "w-lib-nav", "tier": "role", "value": "clamp(236px,17vw,276px)", "note": "Width of the Library's vocabulary rail."},
+      {"name": "w-lib-detail", "tier": "role", "value": "clamp(340px,25vw,404px)", "note": "Width of the Library's detail panel."},
+      {"name": "w-lib-tile-s", "tier": "role", "value": "150px", "note": "Least width of a Library grid tile at size S."},
+      {"name": "w-lib-tile-m", "tier": "role", "value": "206px", "note": "Least width of a Library grid tile at size M."},
+      {"name": "w-lib-tile-l", "tier": "role", "value": "300px", "note": "Least width of a Library grid tile at size L."},
+      {"name": "h-lib-cap-s", "tier": "role", "value": "32px", "note": "Height of a Library tile's caption at size S (title only)."},
+      {"name": "h-lib-cap", "tier": "role", "value": "48px", "note": "Height of a Library tile's caption at sizes M and L (title and meta)."},
+      {"name": "h-lib-row-s", "tier": "role", "value": "34px", "note": "Height of a Library list row at size S."},
+      {"name": "h-lib-row-m", "tier": "role", "value": "40px", "note": "Height of a Library list row at size M."},
+      {"name": "h-lib-row-l", "tier": "role", "value": "56px", "note": "Height of a Library list row at size L."},
+      {"name": "w-lib-thumb-s", "tier": "role", "value": "48px", "note": "Width of a Library list row's thumbnail at size S."},
+      {"name": "w-lib-thumb-m", "tier": "role", "value": "56px", "note": "Width of a Library list row's thumbnail at size M."},
+      {"name": "w-lib-thumb-l", "tier": "role", "value": "84px", "note": "Width of a Library list row's thumbnail at size L."},
+      {"name": "lib-cols", "tier": "role", "value": "minmax(170px,2.6fr) 86px minmax(110px,1.4fr) 100px 84px 90px", "note": "A Library list row's columns after its thumbnail: name, kind, facets, state, date, source."},
+      {"name": "lib-cols-mid", "tier": "role", "value": "minmax(140px,2fr) 84px minmax(90px,1.2fr) 100px 78px", "note": "The list row's columns below 1360px, where the source column goes."},
+      {"name": "lib-cols-narrow", "tier": "role", "value": "minmax(140px,2fr) 84px 100px 78px", "note": "The list row's columns below 1100px, where the facet column goes too."},
+      {"name": "size-kind-badge", "tier": "role", "value": "24px", "note": "Side of the kind mark in a Library tile's corner."},
+      {"name": "fs-lib-title", "tier": "role", "value": "22px", "note": "Serif title of the item in the Library's detail panel."},
+      {"name": "fs-lib-count", "tier": "role", "value": "34px", "note": "Serif count heading the Library's set summary."},
+      {"name": "h-lib-audio", "tier": "role", "value": "150px", "note": "Height of an audio item's preview in the Library's detail panel."},
+      {"name": "w-lineage-role", "tier": "role", "value": "62px", "note": "Width of a lineage node's role column (source, run, this, used by)."},
+      {"name": "w-lineage-thumb", "tier": "role", "value": "30px", "note": "Width of the thumbnail on a lineage link."},
+      {"name": "lib-face-a", "tier": "role", "value": "#24304a", "note": "First ground of a designed face when the item names no palette."},
+      {"name": "lib-face-b", "tier": "role", "value": "#3a2537", "note": "Second ground of a designed face when the item names no palette."},
+      {"name": "size-play", "tier": "role", "value": "38px", "note": "Side of the round play button on an audio preview."},
+      {"name": "sp-wave-in", "tier": "role", "value": "60px", "note": "Inset of an audio preview's waveform from its left edge, clear of the play button."}
     ]}
   ]
 }

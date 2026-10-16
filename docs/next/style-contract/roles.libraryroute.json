@@ -1,0 +1,41 @@
+{
+  "page": {
+    "winner": "app/library.html",
+    "port": "/library-next",
+    "note": "The Library route itself (L50), not /kit: the runner takes one port per roles file, and these roles are measured where they live - each is a layout-bound box (rail row, fold head, toolbar control, tile, detail head) whose width the shared tokens set, at the prototype's default state (All, grid, M, nothing selected)."
+  },
+  "roles": {
+    "lib-kind-current": {
+      "winner": ".kind[aria-current=true]",
+      "port": "#lib-rail section[aria-label=Kind] button[aria-current=true]"
+    },
+    "lib-kind": {
+      "winner": "section[aria-label=Kind] .kind:nth-child(2)",
+      "port": "#lib-rail section[aria-label=Kind] button:nth-child(2)"
+    },
+    "lib-fold-head": {
+      "winner": "section[aria-label=State] .fgh",
+      "port": "#lib-rail section[aria-label=State] h4 button"
+    },
+    "lib-facet-state": {
+      "winner": "section[aria-label=State] .frow",
+      "port": "#lib-rail section[aria-label=State] [data-group=state] button"
+    },
+    "lib-view-on": {
+      "winner": "#view button[aria-pressed=true]",
+      "port": "[role=group][aria-label=View] button[aria-pressed=true]"
+    },
+    "lib-detail-toggle": {
+      "winner": "#det-tog",
+      "port": "[role=toolbar] button[aria-controls=lib-detail]"
+    },
+    "lib-tile": {
+      "winner": "#layer .tile",
+      "port": "[role=listbox] [role=option]"
+    },
+    "lib-detail-head": {
+      "winner": "#det .panel-head",
+      "port": "[data-component=LibraryDetail] > div:first-child"
+    }
+  }
+}
