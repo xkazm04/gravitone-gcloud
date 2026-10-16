@@ -29,25 +29,11 @@
 // engine may return the same refusal on a hazard the fit scalar cannot see.
 // Either way no draft travels back, so none can be written.
 
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-
 import { guardRequest } from "@/lib/apiAuth";
 import { TextError, statusFor } from "@/lib/text/errors";
 import { reason } from "@/lib/text/router";
-import {
-  asNotebook,
-  cardsInScope,
-  COMPOSE_TEMPLATE_RANGES,
-  composeSchema,
-  DraftError,
-  parseDraft,
-  qualifyingEngines,
-  templateBand,
-  type ScopeRecord,
-} from "@/lib/script/validate";
-import type { Conclusion } from "@/app/_phases/_shared/notebook/conclusions";
-import { sourceOf } from "@/app/_phases/_shared/notebook/source";
+import { admitCompose, ComposePromptUnavailable, composePrompt } from "@/lib/script/compose";
+import { DraftError, parseDraft } from "@/lib/script/validate";
 import { draftOf } from "@/app/_phases/script/draft";
 import { gateDraft } from "@/app/_phases/script/gate";
 
@@ -55,60 +41,8 @@ export const runtime = "nodejs";
 /** Up to three whole beat chains is the largest answer any turn writes. */
 export const maxDuration = 800;
 
-/** A prompt document that could not be read: the install is broken, nothing
- *  was reached, and the creator is not sent to check the model. */
-class PromptUnavailable extends Error {}
-
-const cache = new Map<string, string>();
-async function doc(...parts: string[]): Promise<string> {
-  const at = path.join(process.cwd(), ...parts);
-  const hit = cache.get(at);
-  if (hit !== undefined) return hit;
-  try {
-    const text = await readFile(at, "utf8");
-    cache.set(at, text);
-    return text;
-  } catch {
-    throw new PromptUnavailable(`The composition prompt could not be read from ${at}.`);
-  }
-}
-
-/** The template's params, or null where the craft library measured none
- *  (free-form). Optional by design, unlike the prompt: absence is a fact about
- *  the template, said to the engine as NOT STATED. */
-async function templateParams(template: string): Promise<string | null> {
-  try {
-    return await readFile(path.join(process.cwd(), "knowledge", "templates", template, "steps", "01-script", "params.json"), "utf8");
-  } catch {
-    return null;
-  }
-}
-
-/** The turn band, when the params state one as `structure.turns.{min,max}`. */
-function turnBandOf(params: string | null): [number, number] | null {
-  if (!params) return null;
-  try {
-    const t = (JSON.parse(params) as { structure?: { turns?: { min?: unknown; max?: unknown } } }).structure?.turns;
-    return typeof t?.min === "number" && typeof t?.max === "number" ? [t.min, t.max] : null;
-  } catch {
-    return null;
-  }
-}
-
-/** The sections of ENGINES.md for the engines this run may use, plus the
- *  choosing/arbitration section — the catalogue entries the engine needs and
- *  not the ones it may not touch. Matched on the engine's label, which is how
- *  the catalogue's headings name them ("## A · Reversal Chain"). */
-function engineSections(md: string, labels: string[]): string {
-  const want = labels.map((l) => l.toLowerCase());
-  return md
-    .split(/^(?=## (?!#))/m)
-    .filter((s) => {
-      const head = s.split("\n", 1)[0]!.toLowerCase();
-      return head.startsWith("## ") && (head.includes("choosing") || want.some((l) => head.includes(l)));
-    })
-    .join("\n");
-}
+// The prompt assembly and the admission refusals live in lib/script/compose.ts (lifted for the
+// script producer, Phase 4 L37): one turn, two callers.
 
 type Loose = Record<string, unknown>;
 
@@ -154,92 +88,18 @@ export async function POST(req: Request) {
   const oversized = tooLarge(body);
   if (oversized) return Response.json({ detail: oversized, code: "too-large" }, { status: 413 });
 
-  const notebook = asNotebook(body.notebook);
-  if (!notebook) return bad("No readable notebook was sent, so there is nothing to compose from.");
-  const template = typeof body.template === "string" ? body.template : "";
-  if (!Object.prototype.hasOwnProperty.call(COMPOSE_TEMPLATE_RANGES, template))
-    return bad(
-      `Compose writes explainers (${Object.keys(COMPOSE_TEMPLATE_RANGES).join(", ")}); "${template}" is not one of them.`,
-    );
-  const targetS = typeof body.targetS === "number" ? body.targetS : NaN;
-  const band = templateBand(template, targetS);
-  if (!band) {
-    const [lo, hi] = COMPOSE_TEMPLATE_RANGES[template]!;
-    return bad(`A ${template} runs ${lo}–${hi}s; a target of ${String(body.targetS)}s is a clock no render can meet.`);
-  }
-  if (body.conclusions !== undefined && !Array.isArray(body.conclusions))
-    return bad("`conclusions` must be a list.");
-  const conclusions = (Array.isArray(body.conclusions) ? body.conclusions : []) as Conclusion[];
-  if (!conclusions.every((c) => c && typeof c.id === "string" && typeof c.claim === "string" && Array.isArray(c.restsOn)))
-    return bad("A conclusion was sent without an id, a claim and what it rests on.");
-  const scope = (body.scope && typeof body.scope === "object" ? body.scope : {}) as ScopeRecord;
-  const engines = Array.isArray(body.engines) ? body.engines.filter((e): e is string => typeof e === "string") : undefined;
   const projectId = typeof body.projectId === "string" && body.projectId ? body.projectId : "unassigned";
-
+  const admitted = admitCompose(body);
   // NOTHING QUALIFIES — said before any engine is paid to agree.
-  const fits = qualifyingEngines(notebook, engines);
-  if (!fits.length)
-    return Response.json({
-      refused: "no-engine-fits",
-      why: engines?.length
-        ? `None of the engines asked for (${engines.join(", ")}) is rated good or better by this notebook. Not a video in those shapes yet.`
-        : "No engine in this notebook's engineFit is rated good or better, so the material has no shape to compose into yet — it is a topic. Find the tension, then compose.",
-      considered: notebook.engineFit.map((e) => ({ engine: e.engine, fit: e.fit })),
-    });
-
-  const source = sourceOf(notebook, { conclusions });
-  const { kept, known } = cardsInScope(source, scope);
-  const takenOut = [...known].filter((id) => !kept.has(id));
-  const schema = composeSchema(fits.map((e) => e.engine));
-  const fitIds = new Set(fits.map((e) => e.engine));
+  if (admitted.kind === "refused") return Response.json({ refused: "no-engine-fits", why: admitted.why, considered: admitted.considered });
+  if (admitted.kind === "bad") return bad(admitted.detail);
+  const { source, scope, template, targetS, engines, schema } = admitted.run;
 
   // BUILT INSIDE THE TRY, as in /api/recalibrate: the prompt documents are
   // files on disk, and a throw above the try is a bare 500 the client reads
   // as "the model could not be reached".
   try {
-    const params = await templateParams(template);
-    const turnBand = turnBandOf(params);
-    const prompt = [
-      await doc("pipeline", "SCRIPT-PROMPT.md"),
-      "",
-      "---",
-      "",
-      "# THE RUN",
-      "",
-      "Return ONE JSON object and nothing else — no prose before or after, no code fence.",
-      "",
-      "## FORMAT",
-      JSON.stringify({ template, targetS, band, turnBand }),
-      "",
-      "## TEMPLATE PARAMS",
-      params ?? "NOT STATED — the craft library has measured nothing for this template. The band is all you have.",
-      "",
-      "## ENGINES YOU MAY USE",
-      JSON.stringify(fits),
-      "",
-      engineSections(await doc("knowledge", "ENGINES.md"), fits.map((e) => e.label)),
-      "",
-      "## ENGINES YOU MAY NOT USE",
-      JSON.stringify(notebook.engineFit.filter((e) => !fitIds.has(e.engine)).map((e) => ({ engine: e.engine, fit: e.fit }))),
-      "",
-      // engineFit travels above, as the engines; `sources` is a bibliography
-      // no beat can cite (every fact carries its own `source`).
-      "## NOTEBOOK",
-      JSON.stringify({ ...notebook, engineFit: undefined, sources: undefined }),
-      "",
-      "## CONCLUSIONS IN SCOPE",
-      JSON.stringify(conclusions.filter((c) => kept.has(c.id))),
-      "",
-      "## CONCLUSIONS NOT TAKEN",
-      JSON.stringify(conclusions.filter((c) => !kept.has(c.id)).map((c) => c.id)),
-      "",
-      "## CARDS YOU MAY CITE",
-      JSON.stringify([...kept]),
-      "",
-      "## CARDS TAKEN OUT",
-      JSON.stringify(takenOut),
-    ].join("\n");
-
+    const { prompt, turnBand } = await composePrompt(admitted.run);
     const run = await reason({ prompt, turn: "compose", schema });
     const outcome = parseDraft(run.text, { source, scope, template, targetS, engines, turnBand });
 
@@ -272,7 +132,7 @@ export async function POST(req: Request) {
       engine: receipt,
     });
   } catch (e) {
-    if (e instanceof PromptUnavailable)
+    if (e instanceof ComposePromptUnavailable)
       return Response.json(
         { detail: `${e.message} The engine was never started, so nothing was composed.` },
         { status: 500 },

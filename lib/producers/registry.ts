@@ -5,6 +5,15 @@ import { producerSet, type Bound } from "@gt/producers/set";
 
 import { articleProducer } from "./article.ts";
 import { extractProducer } from "./extract.ts";
+import { researchProducer } from "./research.ts";
+import { scriptProducer } from "./script.ts";
+import { framesProducer } from "./frames.ts";
+import { motionProducer } from "./motion.ts";
+import { scoreProducer } from "./score.ts";
+import { cutProducer } from "./cut.ts";
+import { stillProducer } from "./still.ts";
+import { wordsProducer } from "./words.ts";
+import { voiceProducer } from "./voice.ts";
 import { mvProducer } from "./mv.ts";
 import { stripsProducer } from "./strips.ts";
 import { sunoProducer } from "./suno.ts";
@@ -30,6 +39,15 @@ export const BOUND: readonly Bound[] = [
   { name: "mv", producer: mvProducer() },
   { name: "suno", producer: sunoProducer({ driver: sunoDriver() }) },
   { name: "strips", producer: stripsProducer() },
+  { name: "research", producer: researchProducer() },
+  { name: "script", producer: scriptProducer() },
+  { name: "frames", producer: framesProducer() },
+  { name: "motion", producer: motionProducer() },
+  { name: "score", producer: scoreProducer() },
+  { name: "cut", producer: cutProducer() },
+  { name: "still", producer: stillProducer() },
+  { name: "words", producer: wordsProducer() },
+  { name: "voice", producer: voiceProducer() },
 ];
 
 /** The map a worker hands kernel `workLoop`, keyed by the job's `producer`. */
