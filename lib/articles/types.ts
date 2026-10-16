@@ -273,6 +273,9 @@ export interface ArticleRun {
   /** The latest rework; earlier ones are in `rework/<n>/` under the run's directory. */
   rework?: ArticleRework;
   landing?: ArticleLanding;
+  /** The private Medium draft the gate reviews. Absent (the key omitted) until the
+   *  run first reached the gate; never set by anything but `ensureMediumDraft`. */
+  mediumDraft?: MediumDraft;
   /** WHEN THE POST LANDED, as an event: written once, by the `landed`
    *  transition and by nothing else, and absent (not null, not "") before it.
    *  It exists because a retention policy needs a clock that means one thing:
@@ -282,6 +285,21 @@ export interface ArticleRun {
    *  A run that landed before this field existed has none; a reader must say
    *  so rather than substitute `updatedAt`. */
   landedAt?: string;
+}
+
+/** The Medium draft made for a run at the gate. `ready` carries `url` (the
+ *  editor address) and `shot` (run-relative PNG of the draft as Medium rendered
+ *  it); `unavailable` carries `reason` verbatim and, when an earlier draft
+ *  exists, keeps its `url` so a retry replaces the body instead of starting a
+ *  second draft; `creating` is written first so the gate can say so. Absent fields are omitted, never null. */
+export interface MediumDraft {
+  state: "creating" | "ready" | "unavailable";
+  at: string;
+  url?: string;
+  shot?: string;
+  /** Figures the editor accepted. */
+  figures?: number;
+  reason?: string;
 }
 
 /** One numbered source. `took` is what the post took from it, in a clause. */

@@ -38,6 +38,8 @@ import type { RegistryLocation } from "./registryRead";
 
 /* ── dependencies (injectable for the probes) ──────────────────────────────── */
 
+import type { MediumDriver } from "@/lib/medium/types";
+
 export interface EngineDeps {
   runAgent: (input: RunAgentInput) => Promise<AgentResult>;
   /** One reviewer of the critique, any of the four engines. */
@@ -49,6 +51,8 @@ export interface EngineDeps {
   root: string;
   /** Resolved lazily when absent. */
   registry?: RegistryLocation;
+  /** The Medium draft driver; resolved from MEDIUM_DRIVER when absent. */
+  medium?: MediumDriver;
 }
 
 export function defaultDeps(over: Partial<EngineDeps> = {}): EngineDeps {
@@ -69,6 +73,7 @@ export { approveRun, rejectRun } from "./humanActs";
 export { reworkRun, reworkSection } from "./rework";
 export { resumePoint, resumeRun } from "./resume";
 export { driveRun, walk, type WalkReport } from "./drive";
+export { ensureMediumDraft } from "./mediumDraft";
 export { makeReviewerWorkspace, makeWorkspace } from "./agentSteps";
 export { validateClaims, validateSources } from "./ingestSources";
 export { diffFiles } from "./diffFiles";

@@ -1,8 +1,9 @@
 // THE MEDIUM PACKAGE — a paste-ready copy of an approved post. Server only.
 //
-// Nothing is sent to Medium. There is no Medium API call and no browser
-// automation of Medium anywhere in this pipeline (both are non-goals): the
-// package is three files a human pastes from, plus the figure PNGs.
+// This file sends nothing to Medium. There is no Medium API call; the only
+// automation of Medium is lib/medium, which pastes this package into a PRIVATE
+// draft at the gate (lib/articles/mediumDraft.ts) and never publishes. The
+// package stays what a human can paste from by hand, plus the figure PNGs.
 //
 //   medium/story.html   clean HTML from post/post.md — no scripts, no styles,
 //                       no classes; figures as <img> of PNGs
@@ -121,6 +122,9 @@ export function markdownToStoryHtml(md: string): string {
  *  reference is rewritten to its PNG so the story never embeds an SVG. */
 const toPngRefs = (md: string) => md.replace(/(\]\(\s*(?:\.\/)?figures\/[^)\s]+?)\.svg(\s*\))/g, "$1.png$2");
 
+/** The story's body: the post's Markdown as the HTML Medium's editor takes on a paste. */
+export const storyBody = (md: string): string => markdownToStoryHtml(toPngRefs(md));
+
 export function storyDocument(title: string, body: string): string {
   return `<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<title>${esc(title)}</title>\n</head>\n<body>\n${body}\n</body>\n</html>\n`;
 }
@@ -194,7 +198,7 @@ export async function buildMediumPackage(runDir: string, meta: PostMeta): Promis
   await mkdir(medium, { recursive: true });
   const md = await readFile(path.join(postDir, "post.md"), "utf8");
   const pngs = await renderFigurePngs(path.join(postDir, "figures"), path.join(medium, "figures"));
-  const story = storyDocument(meta.title, markdownToStoryHtml(toPngRefs(md)));
+  const story = storyDocument(meta.title, storyBody(md));
   const tags = meta.tags.map((t) => t.trim()).filter(Boolean).slice(0, 5);
   await writeFile(path.join(medium, "story.html"), story, "utf8");
   await writeFile(path.join(medium, "tags.txt"), `${tags.join("\n")}\n`, "utf8");

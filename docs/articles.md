@@ -4,7 +4,8 @@
 draft, a multi-model critique, and a deterministic check, then a stop at the human gate. On approval, deterministic code
 writes the post into ai-registry as a structured publication with any approved registry patches,
 runs the registry's gates, pushes a branch, opens a PR, and builds a paste-ready Medium package.
-Nothing is ever sent to Medium.
+At the gate the post is also pasted into a private Medium draft (`lib/medium`, below), so the human
+reads it as Medium renders it. Nothing is ever published to Medium.
 
 The post standard is registry content, not this repo's: the `technical-blog-post-authoring`
 recipe and the `technical-writing` knowledge bundle. The prompt references it by address and
@@ -50,7 +51,8 @@ for every read-modify-write, and a corrupt `run.json` is refused, never replaced
 | `agent/<step>.json`, `agent/<step>-prompt.md` | engine | each agent turn's outcome, turns, cost and the exact prompt sent |
 | `agent/<step>-out/` | engine | a failed turn's `out/`, kept for inspection |
 | `rework/<n>/before/` | rework | what the n-th rework made stale: the old `steps.json` (costs included), `critique-summary.json`, `critique/round-*`, `checks/`, `check.json`, `check/`, `agent/critique-*` and `agent/fix-*`, and copies of `post/` and the draft's receipt and prompt |
-| `medium/` | landing | `story.html`, `tags.txt`, `README.md`, `figures/*.png` |
+| `medium/` | gate, landing | `story.html`, `tags.txt`, `README.md`, `figures/*.png`; rebuilt at the gate for the draft and again at landing |
+| `medium/draft.png` | gate | the private Medium draft as the editor rendered it |
 | `landing.log` | landing | the registry gates' output |
 | `.lock`, `.driver` | store | the write lock and the one-driver lease |
 
@@ -411,6 +413,32 @@ in `run.landing.worktree`), writes `landing.log`, and sets `failed`. No PR is op
 tree. Credentials are the operator's existing git and gh logins; nothing is stored.
 `ARTICLES_GH_BIN` replaces `gh` (the probes use `tests/fixtures/articles/stub-gh.mjs`).
 
+## The Medium draft at the gate
+
+Decided 2026-10-16, reversing the earlier non-goal "no browser automation of Medium". The
+preview the app drew from `post/index.html` could not show how Medium reads the post (headings
+remap, quotes become italic, code is re-highlighted, figures are re-uploaded), so the gate now
+reviews the real thing.
+
+- When a run reaches `awaiting-approval`, `draftAtGate` (`lib/articles/mediumDraft.ts`) rebuilds
+  `medium/`, then `lib/medium` pastes `story.html`'s body into a private draft at
+  `medium.com/new-story` in the operator's signed-in Chrome profile (`~/.medium-chrome`, CDP port
+  9335, opened once with `npm run medium:browser`). Figures are pasted as PNG files and
+  captioned. The run records `mediumDraft {state: creating|ready|unavailable, url?, shot?,
+  figures?, reason?, at}`; absent fields are omitted.
+- A rework that returns to the gate replaces the body of the same draft (`url` is kept, also
+  through a failure). `post.md` stays the single source: nothing is read back from the draft, so a
+  change asked for at the gate goes through Rework.
+- The draft is a convenience, not a precondition. A browser that is not running, a signed-out
+  profile or a refused paste becomes `unavailable` with its reason verbatim, and the in-app
+  preview opens as the fallback.
+- `MEDIUM_DRIVER`: `live` drives the profile, `fake` drives nothing (probes), unset is off. It is
+  off by default so a probe or a CI run never reaches an account.
+- It cannot publish: no selector for it exists (`lib/medium/selectors.ts`), the page aborts any
+  request matching `/publish|/schedule|/submit`, and a probe fails on a publish or schedule button
+  name in `lib/medium`. Tags are set at publish time in Medium, so `tags.txt` stays by hand.
+- Recon and the driver's limits: `docs/medium-driver.md`.
+
 ## Headless
 
 ```bash
@@ -480,6 +508,7 @@ errors and bodies after the door. It is not an auth wrapper.
 | `POST …/approve` `{patches}` | `guardRequest` | `approveRun`, then `launchRun` (landing) |
 | `POST …/reject` `{note}` | `guardAccessOnly` | `rejectRun`. A note is required |
 | `POST …/resume` | `guardRequest` | `resumeRun`, then `launchRun` |
+| `POST …/medium` | `guardRequest` | `ensureMediumDraft`: make the gate's private Medium draft again (the same draft's body is replaced). 409 `bad-transition` off the gate, 409 `draft-in-flight` while one is being made |
 | `GET …/file/<path>[?k=]` | `guardAccessOnly` | serves files under `post/`, `check/` and `medium/` only. HTML and SVG are sent under `default-src 'none'; … sandbox` |
 
 Errors come back as `{error, code}` from `ArticleError`, word for word. The verbs read the run

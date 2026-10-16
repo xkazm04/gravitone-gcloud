@@ -30,6 +30,7 @@ export const ARTICLE_ENV = [
   "ARTICLES_REVIEWERS_FILE",
   "ARTICLES_GH_BIN",
   "ARTICLES_GIT_AUTHOR",
+  "MEDIUM_DRIVER",
   "STUB_AGENT_MODE",
   "STUB_AGENT_COST",
   "STUB_AGENT_BAD_PATCH",
@@ -119,6 +120,7 @@ export function articleSandbox(): ArticleSandbox {
     "STUB_GH_FAIL",
     "ARTICLES_GIT_AUTHOR",
     "ARTICLES_REVIEWERS_FILE",
+    "MEDIUM_DRIVER",
   ])
     delete process.env[k];
   return {
