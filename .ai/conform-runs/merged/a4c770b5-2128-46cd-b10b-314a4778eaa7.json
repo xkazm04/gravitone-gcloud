@@ -1,0 +1,71 @@
+{
+ "schema": "conform-run/1",
+ "worker": "a4c770b5-2128-46cd-b10b-314a4778eaa7",
+ "subject": "design-tokens",
+ "evaluatedAt": "2026-10-16T21:03:18.966572+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [
+  {
+   "context": "studio-design-system",
+   "subject": "design-tokens",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "components/ui/Primitives.tsx:50 UI primitives and components conditionally branch on theme identity to fork DOM structure and styling rather than resolving visual decisions through unified semantic tokens rebound at the scope root.",
+   "techniques": [
+    {
+     "technique": "cross-language-token-parity",
+     "verdict": "conformant",
+     "evidence": "components/ui/GravitoneTokens.tsx:17 Server-rendered style tag emits all tokens from the TypeScript authority into CSS custom properties, realizing single-source cross-runtime generation."
+    },
+    {
+     "technique": "density-and-scale-axes",
+     "verdict": "deviation",
+     "evidence": "components/ui/deck/DeckCard.tsx:90 Density is implemented as component props ('density=\"dense\"', 'size=\"sm\"') with markup forks rather than scope-root token rebinding."
+    },
+    {
+     "technique": "motion-tokens",
+     "verdict": "deviation",
+     "evidence": "components/ui/tokens.ts:98 No duration ladder or role-named easings exist in tokens, and reduced motion relies on 'animation: none !important' and per-component branching."
+    },
+    {
+     "technique": "theme-architecture",
+     "verdict": "deviation",
+     "evidence": "components/ui/Primitives.tsx:50 Components branch on theme identity ('useWorld() === \"almanac\"') to render structural variants rather than rebinding semantic variables at the root."
+    },
+    {
+     "technique": "token-enforcement",
+     "verdict": "deviation",
+     "evidence": "components/ui/tokens.ts:21 Tailwind utility classes are explicitly exempted from the token discipline, allowing components to consume raw palette values without linting."
+    },
+    {
+     "technique": "token-taxonomy",
+     "verdict": "deviation",
+     "evidence": "components/ui/tokens.ts:162 Token names encode literal color values ('cyan') instead of semantic intent, and components consume Tailwind palette primitives directly."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-16T21:03:18.966572+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "design-tokens"
+   ],
+   "techniques": [
+    "cross-language-token-parity",
+    "density-and-scale-axes",
+    "motion-tokens",
+    "theme-architecture",
+    "token-enforcement",
+    "token-taxonomy"
+   ],
+   "deviations": 1,
+   "context": "studio-design-system",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  }
+ ]
+}

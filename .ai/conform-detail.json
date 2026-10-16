@@ -6178,6 +6178,47 @@
         "at": "2026-10-16T02:21:30.775995+00:00",
         "reason": "reviewer (sonnet): The anchor (report.ts:62-72) is a deliberate unmeasured row that names the gap and routes the other modes to the `promise` and `withholding` rules, which is the prescribed handling. The 'can be called well-formed' claim is contradicted by the always-on efficacy row, and the cue.ts, reset.ts and esca"
       }
+    },
+    "5e10d5d4-71e2-4a69-8ffc-518cfa9cb987/design-tokens": {
+      "context": "studio-design-system",
+      "subject": "design-tokens",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T21:03:18.966Z",
+      "worker": "a4c770b5-2128-46cd-b10b-314a4778eaa7",
+      "techniques": [
+        {
+          "technique": "cross-language-token-parity",
+          "verdict": "conformant",
+          "evidence": "components/ui/GravitoneTokens.tsx:17 Server-rendered style tag emits all tokens from the TypeScript authority into CSS custom properties, realizing single-source cross-runtime generation."
+        },
+        {
+          "technique": "density-and-scale-axes",
+          "verdict": "deviation",
+          "evidence": "components/ui/deck/DeckCard.tsx:90 Density is implemented as component props ('density=\"dense\"', 'size=\"sm\"') with markup forks rather than scope-root token rebinding."
+        },
+        {
+          "technique": "motion-tokens",
+          "verdict": "deviation",
+          "evidence": "components/ui/tokens.ts:98 No duration ladder or role-named easings exist in tokens, and reduced motion relies on 'animation: none !important' and per-component branching."
+        },
+        {
+          "technique": "theme-architecture",
+          "verdict": "deviation",
+          "evidence": "components/ui/Primitives.tsx:50 Components branch on theme identity ('useWorld() === \"almanac\"') to render structural variants rather than rebinding semantic variables at the root."
+        },
+        {
+          "technique": "token-enforcement",
+          "verdict": "deviation",
+          "evidence": "components/ui/tokens.ts:21 Tailwind utility classes are explicitly exempted from the token discipline, allowing components to consume raw palette values without linting."
+        },
+        {
+          "technique": "token-taxonomy",
+          "verdict": "deviation",
+          "evidence": "components/ui/tokens.ts:162 Token names encode literal color values ('cyan') instead of semantic intent, and components consume Tailwind palette primitives directly."
+        }
+      ]
     }
   }
 }

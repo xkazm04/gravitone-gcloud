@@ -5036,7 +5036,11 @@
           "revision": 7,
           "changedAt": "2026-09-24",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "components/ui/Primitives.tsx:50 UI primitives and components conditionally branch on theme identity to fork DOM structure and styling rather than resolving visual decisions through unified semantic tokens rebound at the scope root.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:165125b7a54d0de3",
+          "evaluatedRevision": 7
         },
         {
           "subject": "data-video-art-direction",
