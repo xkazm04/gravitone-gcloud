@@ -18,7 +18,7 @@ import { dirname, join, relative } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { keepEnv, stripComments } from "./_helpers";
+import { keepEnv, stripComments } from "./_pure";
 import {
   checkAccess,
   guardAccessOnly,
@@ -64,16 +64,9 @@ import { POST as soundHuntLessonPOST } from "@/app/api/sound/hunts/[id]/lesson/r
 import { POST as sunoProposalsPOST } from "@/app/api/sound/suno/proposals/route";
 import { DELETE as sunoProposalDELETE } from "@/app/api/sound/suno/proposals/[id]/route";
 import { POST as sunoProposePOST } from "@/app/api/sound/suno/propose/route";
-import { POST as sunoQueuePOST } from "@/app/api/sound/suno/queue/route";
-import { DELETE as sunoQueueDELETE } from "@/app/api/sound/suno/queue/[id]/route";
 import { PATCH as sunoClipPATCH } from "@/app/api/sound/suno/clips/[id]/route";
 import { POST as sunoLibraryPOST } from "@/app/api/sound/suno/library/route";
-import { POST as sunoRunPOST } from "@/app/api/sound/suno/run/route";
-import { POST as sunoClearPOST } from "@/app/api/sound/suno/clear/route";
-import { POST as mvPOST } from "@/app/api/sound/mv/route";
-import { POST as mvRunPOST } from "@/app/api/sound/mv/run/route";
 import { POST as mvImportPOST } from "@/app/api/sound/mv/import/route";
-import { POST as mvJobPOST } from "@/app/api/sound/mv/jobs/[id]/route";
 import { POST as mvCalendarPOST } from "@/app/api/sound/mv/jobs/[id]/calendar/route";
 import { POST as articlesCreatePOST } from "@/app/api/articles/route";
 import { POST as articlesApprovePOST } from "@/app/api/articles/[runId]/approve/route";
@@ -99,6 +92,26 @@ function req(path: string, opts: { bearer?: string; ip: string; body?: unknown }
     body: JSON.stringify(opts.body ?? {}),
   });
 }
+
+// THE PRODUCER ROUTES LOAD NATIVELY. Since Phase 4 (L31) the Suno and music-video
+// queue routes reach the kernel (lib/producers/*), whose workspace packages are
+// `type: module`: required here statically they would be evaluated by this
+// lane's CommonJS transform, and the next native `import("@gt/...")` in this
+// worker - the token door below, ledger-reconcile after it - finds the wrong
+// copy ("exports is not defined in ES module scope"). So they are imported the
+// way the token door is: dynamically, once, before the table is driven.
+type Handler = (r: Request, c: { params: Promise<Record<string, string>> }) => Promise<Response>;
+const native = (load: () => Promise<Record<string, unknown>>, method: string) => async (r: Request, c?: { params: Promise<Record<string, string>> }): Promise<Response> => {
+  const fn = (await load())[method] as Handler;
+  return fn(r, c ?? { params: Promise.resolve({}) });
+};
+const sunoQueuePOST = native(() => import("../../app/api/sound/suno/queue/route.ts"), "POST");
+const sunoQueueDELETE = native(() => import("../../app/api/sound/suno/queue/[id]/route.ts"), "DELETE");
+const sunoRunPOST = native(() => import("../../app/api/sound/suno/run/route.ts"), "POST");
+const sunoClearPOST = native(() => import("../../app/api/sound/suno/clear/route.ts"), "POST");
+const mvPOST = native(() => import("../../app/api/sound/mv/route.ts"), "POST");
+const mvRunPOST = native(() => import("../../app/api/sound/mv/run/route.ts"), "POST");
+const mvJobPOST = native(() => import("../../app/api/sound/mv/jobs/[id]/route.ts"), "POST");
 
 const ROUTES: [string, string, (r: Request) => Promise<Response>][] = [
   ["generate", "/api/imaging/generate", generatePOST],

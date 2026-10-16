@@ -18,7 +18,7 @@ import { test, expect } from "@playwright/test";
 
 import { __resetJwksCache, __setJwksFetch, SECURETOKEN_JWKS_URL } from "@/lib/principal";
 
-import { keepEnv } from "./_helpers";
+import { keepEnv } from "./_pure";
 
 type Handler = (req: Request) => Promise<Response>;
 type Routes = { session: Record<"GET" | "POST" | "DELETE", Handler>; stream: { GET: Handler }; kernel: () => { ok: boolean; value?: { store: unknown } } };

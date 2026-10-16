@@ -23,7 +23,7 @@ import { dirname, join, relative } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { keepEnv, stripComments } from "./_helpers";
+import { keepEnv, stripComments } from "./_pure";
 import {
   ACCESS_SECRET_VAR,
   RATE_CAPACITY_VAR,
