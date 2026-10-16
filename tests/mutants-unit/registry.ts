@@ -1981,4 +1981,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "  if (job.state === \"running\") return \"existing\";",
     why: "A second launch of a queued run enqueues a second job: two drivers race one run.json.",
   },
+  {
+    id: "article-money-stop-unlabelled",
+    test: "packages/producers/test/article.test.ts",
+    file: "packages/producers/src/article/define.ts",
+    find: ", by: \"run-ceiling\" };",
+    replace: " };",
+    why: "A turn refused at the run's own ceiling is recorded as the spend window's stop, so the operator raises the wrong limit.",
+  },
 ];

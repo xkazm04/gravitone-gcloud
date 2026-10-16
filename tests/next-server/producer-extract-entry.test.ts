@@ -14,7 +14,15 @@ import { runCli } from "../../pipeline/foundry/extract.mts";
 import { POST } from "../../app/api/foundry/extract/[id]/step/route.ts";
 import { createRun } from "../../lib/foundry/extract/store.ts";
 import { usableFix as v1Fix } from "../../lib/foundry/extract/vocabulary.ts";
-import { closeKernel } from "../../lib/kernelStore.ts";
+import { closeKernel, kernel } from "../../lib/kernelStore.ts";
+import { loadJob } from "@gt/kernel/job";
+import { loadRun } from "@gt/kernel/records/schema";
+import type { Result } from "@gt/domain/errors";
+
+const must = <T,>(r: Result<T>): T => {
+  if (!r.ok) throw r.error;
+  return r.value;
+};
 
 // The extract job's two doors - the CLI and the /step route - act on THE SAME
 // job record: the CLI enqueues, the route kicks it, both name one job id. The
@@ -129,10 +137,21 @@ describe("the CLI contract", () => {
     expect((await cli(["--status", "2026-01-01-nothing-here", "--json"])).code).toBe(1);
   });
 
-  it("--budget-usd becomes the job's ceiling; a worst case over it is refused before anything is created", async () => {
+  it("--budget-usd becomes the job's ceiling; a worst case over it launches, says it may stop there, and stops at it", async () => {
+    // Director's ruling: a ceiling is a STOP POINT. The receipt marks it; the job stops before the unit that would cross it.
     const r = await cli([galleryDir("budget", 3), "--slug", "budget", "--dry", "--budget-usd", "0.01", "--json"]);
     expect(r.code).toBe(1);
-    expect(r.err).toMatch(/breaches the \$0\.01 ceiling/);
+    expect(r.err).toMatch(/may stop at ceiling: the worst case \$[0-9.]+ is over the \$0\.01 ceiling/);
+    const d = parseDoc(r.out);
+    expect(d.job?.state).toBe("failed");
+    const k = kernel();
+    if (!k.ok) throw k.error;
+    const { job } = must(k.value.store.read((x) => loadJob(x, d.jobId ?? "")));
+    expect(job).toMatchObject({ ceilingUsd: 0.01, error: { code: "budget" }, stop: { by: "run-ceiling", ceilingUsd: 0.01 } });
+    // Every launch writes its Run row: extract's own terms, the folder it read, its worst-case quote.
+    const { run } = must(k.value.store.read((x) => loadRun(x, d.runId ?? "")));
+    expect(run).toMatchObject({ producer: "extract", lane: "image", recipe: "style/extract", units: 3, input: { producer: "extract", slug: "budget", sources: 3 } });
+    expect("producer" in run.input && run.input.producer === "extract" ? run.input.folder : undefined).toMatch(/budget$/);
   });
 });
 

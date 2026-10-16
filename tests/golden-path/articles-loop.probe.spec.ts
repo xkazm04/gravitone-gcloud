@@ -195,14 +195,16 @@ test("loop: a run over its cost ceiling stops at a turn boundary, is marked for 
   expect(readFileSync(process.env.STUB_AGENT_ARGV_LOG, "utf8")).toMatch(/--max-budget-usd/);
 });
 
-test("loop: a run ceiling under a run's price is refused at the receipt, before any turn", async () => {
+test("loop: a run ceiling under a run's price launches - a stop point, not a refusal - and stops at it, marked for a human", async () => {
   addSubjects();
   process.env.STUB_AGENT_ARGV_LOG = path.join(box.dir, "argv.log");
+  // $25 is under the article band's top ($92): the receipt marks it over, the run is launched anyway
+  // (Director's ruling: a ceiling is where the job STOPS), and the job stops before the step that would cross it.
   const report = await runLoop({ add: 1, budgetUsd: 10_000, concurrency: 1, maxFailures: 1, ceilings: { runUsd: 25 } }, deps(), undefined, driver());
-  expect(report.runs[0]).toMatchObject({ end: "failed", turns: 0 });
-  expect(report.runs[0].error).toMatch(/the \$25 ceiling cannot hold it/);
-  expect((await readRun(report.runs[0].runId)).status).toBe("failed");
-  expect(existsSync(process.env.STUB_AGENT_ARGV_LOG)).toBe(false);
+  expect(report.runs[0]).toMatchObject({ end: "ceiling-stopped", resumes: 0 });
+  expect(report.runs[0].turns).toBeGreaterThan(0);
+  expect(await readRun(report.runs[0].runId)).toMatchObject({ status: "failed", error: expect.stringMatching(/run-ceiling/) });
+  expect(existsSync(process.env.STUB_AGENT_ARGV_LOG)).toBe(true);
 });
 
 test("loop: a turn ceiling counts reviewer turns as well", async () => {

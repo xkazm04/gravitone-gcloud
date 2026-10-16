@@ -5,18 +5,17 @@ import { parseAt } from "@gt/domain/door";
 import { AppError, err, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import { jobIdSchema } from "@gt/domain/ids";
-import type { Job, RunMode } from "@gt/domain/job";
-import { LANE_CAPACITY } from "@gt/domain/lane";
-import type { Receipt, ReceiptMode } from "@gt/domain/produce";
+import type { Job } from "@gt/domain/job";
+import type { ProducerRunInput, Receipt, ReceiptMode } from "@gt/domain/produce";
 import { blobStore } from "@gt/kernel/blob";
-import { armLive, DRY } from "@gt/kernel/dryrun";
+import { armLive } from "@gt/kernel/dryrun";
 import { liveEffects, type Effects } from "@gt/kernel/effects";
 import type { Producer } from "@gt/kernel/job-core";
-import { enqueue, get } from "@gt/kernel/job";
+import { get } from "@gt/kernel/job";
 import { runJob, type RunOptions, type RunReport } from "@gt/kernel/job-run";
 import { modelOptions } from "@gt/kernel/records/options";
-import { readQueue } from "@gt/kernel/records/read";
-import { receiptFor, type PlanLine } from "@gt/kernel/records/receipt";
+import { launchRun, runReceipt, type RunQuote } from "@gt/kernel/records/launch";
+import type { PlanLine } from "@gt/kernel/records/receipt";
 import type { NotPromise, Store, Tx } from "@gt/kernel/store";
 import { defineExtract, type ExtractPorts, type StepIO } from "@gt/producers/extract/define";
 import { stepName, type CallEstimates } from "@gt/producers/extract/units";
@@ -185,12 +184,24 @@ export function extractLine(shape: ExtractShape, est: CallEstimates, day: string
   return { key: shape.key, label: `extract · ${n} source(s)`, lane: option.lane, units: n, option, after: [], order: Number.MAX_SAFE_INTEGER, status: "pending" };
 }
 
-export function extractReceipt(store: Store, shape: ExtractShape, opts: { mode: ReceiptMode; ceilingUsd?: number; now: number; est?: CallEstimates }): Result<Receipt> {
-  const day = new Date(opts.now).toISOString().slice(0, 10);
-  const line = extractLine(shape, opts.est ?? estimatesOf(shape.key), day);
-  return store.read((r) =>
-    receiptFor({ subject: { kind: "run", lane: "image" }, lines: [line], plan: [line], queue: readQueue(r), capacity: LANE_CAPACITY, now: opts.now, mode: opts.mode, ...(opts.ceilingUsd === undefined ? {} : { ceilingUsd: opts.ceilingUsd }) }),
-  );
+/**
+ * What the run is, in extract's own terms (@gt/domain/produce `ProducerRunInput`): the Run row
+ * every launch now writes beside its job, so the queue prices it from its quote, Runs draws it
+ * and a re-route preview reads it. No bytes: the gallery stays in the manifest.
+ */
+export function extractInput(slug: string, sources: number, options: ExtractShape["options"], folder?: string): ProducerRunInput {
+  // v1 lets `transfers` be 0 (helpers.ts clampInt 0..scenes); the door counts from 1, so 0 is absent.
+  return { producer: "extract", slug, sources, ...(folder === undefined ? {} : { folder }), rounds: options.rounds, replicas: options.replicas, ...(options.transfers > 0 ? { transfers: options.transfers } : {}), grouping: options.grouping };
+}
+
+/** The receipt: L26 `runReceipt` over extract's input, quoted at its worst case (`extractLine`). */
+export function extractReceipt(store: Store, input: ProducerRunInput, shape: ExtractShape, opts: { mode: ReceiptMode; ceilingUsd?: number; now: number; est?: CallEstimates }): Result<Receipt> {
+  return runReceipt(store, input, { mode: opts.mode, ...(opts.ceilingUsd === undefined ? {} : { ceilingUsd: opts.ceilingUsd }), quote: quoteOf(shape, opts.est ?? estimatesOf(shape.key), opts.now) }, { now: opts.now });
+}
+
+function quoteOf(shape: ExtractShape, est: CallEstimates, now: number): RunQuote {
+  const line = extractLine(shape, est, new Date(now).toISOString().slice(0, 10));
+  return { key: line.key, label: line.label, ...(line.option === undefined ? {} : { option: line.option }) };
 }
 
 /** A gallery's receipt key: its slug and its files, so a token cannot confirm a different gallery. */
@@ -203,7 +214,8 @@ export function galleryKey(slug: string, uploads: readonly ExtractUpload[]): str
 /* ── Launch: receipt, then confirm ────────────────────────────────────────── */
 
 export type ExtractTarget =
-  | { readonly kind: "gallery"; readonly slug: string; readonly uploads: readonly ExtractUpload[]; readonly options: Partial<ExtractOptions> }
+  /** `folder`: where the CLI read the gallery, kept on the Run row (a route's uploads have none). */
+  | { readonly kind: "gallery"; readonly slug: string; readonly uploads: readonly ExtractUpload[]; readonly options: Partial<ExtractOptions>; readonly folder?: string }
   /** An existing run: v1's create route, a run from before Phase 4, or a re-run of a done one. */
   | { readonly kind: "run"; readonly runId: string; readonly rerun?: boolean };
 
@@ -263,7 +275,12 @@ export async function launchExtract(store: Store, target: ExtractTarget, opts: L
       : target.kind === "gallery"
         ? { key: galleryKey(target.slug, target.uploads), sources: target.uploads.length, options: { rounds: target.options.rounds ?? 2, replicas: target.options.replicas ?? 2, transfers: target.options.transfers ?? 1, grouping: target.options.grouping ?? "engine" } }
         : shapeOf(m ?? (await getExtractRun(target.runId)).run);
-  const receipt = extractReceipt(store, shape, { mode: opts.mode, now, ...(ceilingUsd === undefined ? {} : { ceilingUsd }), ...(m === undefined ? {} : { est: estimatesOf(m.id) }) });
+  const input =
+    m !== undefined ? extractInput(m.slug, m.sources.length, shape.options) : target.kind === "gallery" ? extractInput(target.slug, shape.sources, shape.options, target.folder) : undefined;
+  if (input === undefined) throw new AppError("internal", "extract launch: no run and no gallery");
+  const est = m === undefined ? undefined : estimatesOf(m.id);
+  const read = (): Result<Receipt> => extractReceipt(store, input, shape, { mode: opts.mode, now, ...(ceilingUsd === undefined ? {} : { ceilingUsd }), ...(est === undefined ? {} : { est }) });
+  const receipt = read();
   if (!receipt.ok) return receipt;
   if (opts.token === undefined) return ok({ kind: "receipt", receipt: receipt.value });
   if (opts.token !== receipt.value.token) return ok({ kind: "stale", fresh: receipt.value });
@@ -272,11 +289,10 @@ export async function launchExtract(store: Store, target: ExtractTarget, opts: L
   // it, with every booked unit kept (kernel job-core `next`).
 
   const at = new Date(now).toISOString();
-  let mode: RunMode = DRY;
   if (opts.mode === "live") {
+    // Refused here, before a gallery is stored, when this process may only run dry.
     const armed = armLive(opts.actor, at, `extract receipt ${opts.token.slice(0, 12)} confirmed`, { dryOnly: opts.dryOnly });
     if (!armed.ok) return armed;
-    mode = armed.value;
   }
   if (m === undefined && target.kind === "gallery") {
     // The ceiling travels with the JOB (kernel job.ts): the manifest is created without one.
@@ -288,16 +304,23 @@ export async function launchExtract(store: Store, target: ExtractTarget, opts: L
   // The manifest names its job BEFORE the job exists: a launch that dies between
   // the two leaves a run whose job is missing, which the next launch enqueues.
   m.job = jobId;
-  if (mode.kind === "dry") m.dry = true;
+  if (opts.mode === "dry") m.dry = true;
   if (m.options.ceilingUsd !== undefined) {
     m.log.push({ at, msg: `ceiling $${m.options.ceilingUsd.toFixed(2)} moved onto job ${jobId}` });
     delete m.options.ceilingUsd;
   }
-  m.log.push({ at, msg: `launched as job ${jobId} (${mode.kind})` });
+  m.log.push({ at, msg: `launched as job ${jobId} (${opts.mode})` });
   await saveManifest(m);
-  const q = enqueue(store, { id: jobId, of: { kind: "run", id: m.id }, producer: "extract", lane: "cloud.google", mode, ...(ceilingUsd === undefined ? {} : { ceilingUsd }), correlation: { runId: m.id } }, opts.actor);
-  if (!q.ok) return q;
-  return ok({ kind: "launched", runId: m.id, jobId, receipt: receipt.value });
+  // The Run row and its job, in one kernel transaction (L26 `launchRun`). The caller confirmed
+  // its receipt above; a queue that moved in the milliseconds since is re-read once, not refused.
+  let token = opts.token;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const l = launchRun(store, { input, token, mode: opts.mode, ...(ceilingUsd === undefined ? {} : { ceilingUsd }), quote: quoteOf(shape, est ?? estimatesOf(shape.key), now) }, opts.actor, { now, dryOnly: opts.dryOnly, id: m.id, jobId });
+    if (l.ok) return ok({ kind: "launched", runId: m.id, jobId, receipt: receipt.value });
+    if (l.fresh === undefined || l.error.detail !== "stale-receipt") return err(l.error.code, `extract run ${m.id} was created and not launched: ${l.error.message}`);
+    token = l.fresh.token;
+  }
+  return err("conflict", `extract run ${m.id} was created and not launched: its receipt went stale twice`);
 }
 
 /* ── Drive ─────────────────────────────────────────────────────────────────── */

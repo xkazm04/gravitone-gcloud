@@ -11,11 +11,13 @@
 // process environment says. A dry job and a live job can share a process (seat.text has
 // four slots), which is exactly what an env switch could not allow.
 //
-// The stand-in is the same stub, spawned here with the argv the seam would build
-// (`agentArgs`, `reviewerCommand`) and parsed with the seam's own envelope readers, so
-// a dry run still exercises the argv fence, the isolated workspace and the envelope
-// parse. Its binary is ARTICLES_DRY_AGENT_BIN (`|`-separated argv, as the other
-// overrides), else the repo's stub. It never resolves the real CLIs.
+// The stand-in is ./dryStandIn.mjs - product code: the stub's ordinary answers without
+// its test knobs - spawned here with the argv the seam would build (`agentArgs`,
+// `reviewerCommand`) and parsed with the seam's own envelope readers, so a dry run still
+// exercises the argv fence, the isolated workspace and the envelope parse. A product mode
+// no longer rests on a file under tests/. ARTICLES_DRY_AGENT_BIN (`|`-separated argv, as
+// the other overrides) replaces it - the probes point it at the fixture for its knobs.
+// It never resolves the real CLIs.
 
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -29,10 +31,10 @@ import { reviewerEnv } from "@/lib/agent/reviewerEnv";
 import { REVIEW_WORKSPACE } from "@/lib/agent/reviewerEngines";
 import { seatOnlyEnv } from "@/lib/claudeCli";
 
-/** The stand-in's argv prefix. Never a real CLI: the default is the repo's stub. */
+/** The stand-in's argv prefix. Never a real CLI: the default is lib/articles/dryStandIn.mjs. */
 export function dryAgentBin(env: Record<string, string | undefined> = process.env, root: string = process.cwd()): string[] {
   const o = env["ARTICLES_DRY_AGENT_BIN"]?.trim();
-  if (!o) return [process.execPath, path.join(root, "tests", "fixtures", "articles", "stub-agent.mjs")];
+  if (!o) return [process.execPath, path.join(root, "lib", "articles", "dryStandIn.mjs")];
   return o.split("|").map((s) => (s === "node" ? process.execPath : existsSync(path.resolve(s)) ? path.resolve(s) : s));
 }
 
@@ -84,13 +86,13 @@ function standIn(s: Spawned): Promise<AgentResult> {
   });
 }
 
-/** A writer turn, answered by the stub with the seam's argv. */
+/** A writer turn, answered by the stand-in with the seam's argv. */
 export function dryRunAgent(input: RunAgentInput): Promise<AgentResult> {
   assertIsolatedWorkspace(input.cwd);
   return standIn({ argv: agentArgs(input), stdin: input.prompt, cwd: input.cwd, env: seatOnlyEnv(), timeoutMin: input.timeoutMin, parse: parseEnvelope });
 }
 
-/** A reviewer turn, answered by the stub in the engine's envelope. */
+/** A reviewer turn, answered by the stand-in in the engine's envelope. */
 export function dryRunReviewer(call: ReviewerCall): Promise<AgentResult> {
   assertIsolatedWorkspace(call.cwd, REVIEW_WORKSPACE);
   const cmd = reviewerCommand(call);

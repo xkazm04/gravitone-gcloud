@@ -221,6 +221,8 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
         const rc = r0.value.receipt;
         const line = rc.lines[0];
         say(`receipt (${rc.mode}): ${line?.units ?? 0} source(s) on ${line?.lane ?? "?"} · worst case $${rc.totals.usd} · ~${Math.round(rc.totals.seconds / 60)} min · queue #${rc.queuePos}${rc.ceilingUsd === undefined ? "" : ` · ceiling $${rc.ceilingUsd}`}`);
+        // A ceiling under the worst case is a stop point, not a refusal: the job stops before the unit that would cross it.
+        if (rc.overCeiling) say(`  may stop at ceiling: the worst case $${rc.totals.usd} is over the $${rc.ceilingUsd ?? 0} ceiling`);
         // The CLI confirms its own receipt (COMMON decision 3): invoking it is the consent.
         const r1 = await x.launchExtract(store, target, { ...opts, token: rc.token });
         if (!r1.ok) throw r1.error;
@@ -265,7 +267,7 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
         ...(has("singletons") ? { grouping: "none" as const } : {}),
       };
       if (has("dry")) say(`dry: every vendor call is answered by a stand-in; the run is marked dry and is never committed. Keys: GOOGLE_AI_API_KEY ${io.env["GOOGLE_AI_API_KEY"] ? "set" : "MISSING (pixels + hosted eyes)"} · QWEN_API_KEY ${io.env["QWEN_API_KEY"] ? "set (dev eyes)" : "unset"}`);
-      return await launch({ kind: "gallery", slug, uploads, options });
+      return await launch({ kind: "gallery", slug, uploads, options, folder: abs });
     } finally {
       closeProcessKernel();
     }

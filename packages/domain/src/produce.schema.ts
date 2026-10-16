@@ -36,7 +36,7 @@ export const producerRunInputSchema = z.union([
       folder: ref.optional(),
       rounds: knob(10).optional(),
       replicas: knob(50).optional(),
-      transfers: knob(20).optional(),
+      transfers: z.number().int().nonnegative().max(20).optional(), // v1 allows 0 transfers
       grouping: z.enum(["engine", "none"]).optional(),
     })
     .strict(),

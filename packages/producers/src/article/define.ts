@@ -151,9 +151,9 @@ export function defineArticle<I, R extends TurnReport>(ports: ArticlePorts<I, R>
       if (r.ok) return produced({ runId, step: step.name, status: r.status, skipped: r.skipped }, t.used());
       const trip = t.tripped();
       // A turn refused at the ceiling is a money stop, never a vendor failure (v1 extract's breaker
-      // story). KERNEL GAP: a producer can only say `money-stop`, which the job records as
-      // `period-ceiling`; the sentence names the run ceiling until StepOutcome can.
-      return trip === undefined ? fatal("unavailable", r.message) : { kind: "money-stop", message: `${r.message} (${trip})` };
+      // story), and it is the RUN's ceiling the turn met: the record says so (`by`), so the
+      // operator raises the run's ceiling, not the spend window's.
+      return trip === undefined ? fatal("unavailable", r.message) : { kind: "money-stop", message: `${r.message} (${trip})`, by: "run-ceiling" };
     },
   };
 }

@@ -37,7 +37,7 @@ access through the local claude, codex and agy CLIs (agy serves two seats, Gemin
 8 agent turns at the least, 26 at the most (docs/articles.md, "The critique"). Say so before the
 first `run` of a session and wait for a yes, unless the user's own message already asked for the
 run explicitly. A dry run spends nothing: `--dry` makes the run's job dry, and every agent turn of
-it, writer and reviewer, is answered by the stub (`tests/fixtures/articles/stub-agent.mjs`, or
+it, writer and reviewer, is answered by the stand-in (`lib/articles/dryStandIn.mjs`, or
 `ARTICLES_DRY_AGENT_BIN`) whatever the environment says. Its turns are counted as would-calls:
 
 ```bash

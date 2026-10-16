@@ -6,7 +6,7 @@ import { AppError, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import { jobIdSchema, type JobId } from "@gt/domain/ids";
 import { LANE_CAPACITY, type MediaLane, type ResourceLane } from "@gt/domain/lane";
-import type { ModelOption, Receipt, ReceiptMode } from "@gt/domain/produce";
+import type { ModelOption, ProducerRunInput, Receipt, ReceiptMode } from "@gt/domain/produce";
 import { ceilingUsdSchema } from "@gt/domain/produce.schema";
 import { blobStore } from "@gt/kernel/blob";
 import { armLive, DRY, dryOnlyFrom } from "@gt/kernel/dryrun";
@@ -17,6 +17,7 @@ import { enqueueIn } from "@gt/kernel/job";
 import { recover, runJob, type RunOptions, type RunReport } from "@gt/kernel/job-run";
 import { assertFence } from "@gt/kernel/lease";
 import { processKernel, storeLocation } from "@gt/kernel/process";
+import { readRunIn, recordRunIn } from "@gt/kernel/records/launch";
 import { readQueue } from "@gt/kernel/records/read";
 import { receiptFor, type PlanLine } from "@gt/kernel/records/receipt";
 import type { Reader, Store } from "@gt/kernel/store";
@@ -94,7 +95,26 @@ export function creditOption(o: { key: string; lane: ResourceLane; provider: str
 
 /* ── launch: a receipt, then a confirm ────────────────────────────────────── */
 
-export type LaunchLine = { readonly jobId: string; readonly runId: string; readonly label: string; readonly option: ModelOption };
+export type LaunchLine = {
+  readonly jobId: string;
+  readonly runId: string;
+  readonly label: string;
+  readonly option: ModelOption;
+  /** The run in its producer's own terms; absent, it is read off the run id (`runInputOf`). */
+  readonly input?: ProducerRunInput;
+};
+
+/**
+ * What a line's run IS, for its Run row: the track a music-video run renders (`mv.<track>.<enqueuedAt>`,
+ * the stamp a number) or the proposal a Suno run sends (`suno.<proposal>`), from the ids mv.ts and
+ * suno.ts mint. Any other producer must hand its `input`.
+ */
+export function runInputOf(producer: string, l: LaunchLine): ProducerRunInput {
+  if (l.input !== undefined) return l.input;
+  if (producer === "mv" && l.runId.startsWith("mv.") && l.runId.lastIndexOf(".") > 3) return { producer: "mv", track: l.runId.slice(3, l.runId.lastIndexOf(".")) };
+  if (producer === "suno" && l.runId.startsWith("suno.")) return { producer: "suno", proposal: l.runId.slice(5) };
+  throw new AppError("internal", `launch: ${producer} run ${l.runId} names no run input`);
+}
 export type LaunchSpec = { readonly producer: string; readonly media: MediaLane; readonly lines: readonly LaunchLine[] };
 export type LaunchOptions = {
   readonly mode: ReceiptMode;
@@ -143,13 +163,17 @@ export function launchJobs(spec: LaunchSpec, o: LaunchOptions): LaunchResult {
     store.tx((t): LaunchResult => {
       const fresh = receiptIn(t, spec, o);
       if (fresh.token !== token) return { kind: "stale", fresh };
-      if (fresh.overCeiling) throw new AppError("budget", `the priced exposure breaches the $${fresh.ceilingUsd ?? 0} ceiling`);
+      // A receipt over its ceiling is launched: the ceiling is a stop point (Director's ruling).
       const dryOnly = o.dryOnly ?? dryOnlyFrom(process.env);
       const mode = o.mode === "dry" ? DRY : must(armLive(o.actor, t.at, `receipt ${token.slice(0, 12)} confirmed`, { dryOnly }));
       const ceilingUsd = ceilingOf(o);
       const jobIds: string[] = [];
       for (const l of spec.lines) {
         if (t.get("SELECT 1 AS x FROM jobs WHERE id = ?", l.jobId) === undefined) {
+          // Its Run row first, in this transaction (L32 `recordRunIn`): the queue prices the job
+          // from its quote, Runs draws it and a re-route preview reads it.
+          const read = readRunIn(t, runInputOf(spec.producer, l), { mode: o.mode, units: 1, quote: { key: l.jobId, label: l.label, option: l.option } }, { now: o.now ?? Date.now() });
+          recordRunIn(t, read, l.runId, l.jobId, o.actor);
           enqueueIn(t, { id: l.jobId, of: { kind: "run", id: l.runId }, producer: spec.producer, lane: l.option.lane, mode, ...(ceilingUsd === undefined ? {} : { ceilingUsd }), correlation: { runId: l.runId } }, o.actor);
         }
         jobIds.push(l.jobId);

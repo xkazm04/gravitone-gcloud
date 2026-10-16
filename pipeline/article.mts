@@ -29,8 +29,8 @@
 //   so a run launched in the browser is resumed here by its run id, and the reverse. This
 //   process then drives the job under the kernel's seat.text slot lease, unless:
 //     --detach      enqueue only and print the job id; the worker (npm run worker) drives it
-//     --dry         a dry job: every agent turn is answered by the stub (tests/fixtures/
-//                   articles/stub-agent.mjs, or ARTICLES_DRY_AGENT_BIN), nothing is spent,
+//     --dry         a dry job: every agent turn is answered by the stand-in
+//                   (lib/articles/dryStandIn.mjs, or ARTICLES_DRY_AGENT_BIN), nothing is spent,
 //                   and the would-calls are counted. A dry run's approval lands nothing.
 //     --budget-usd  on `run`: the job's ceiling. A run is priced at up to $92, so a ceiling
 //                   under that is refused at the receipt, before anything is created; one

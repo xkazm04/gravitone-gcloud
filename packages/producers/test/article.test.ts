@@ -150,6 +150,7 @@ describe("a live article job", () => {
     const r = must(await runJob(w.fx, defineArticle(f.ports), "job:run:2026-10-16-tax", RUN));
     expect(r.job).toMatchObject({ state: "failed", error: { code: "budget" }, spend: { usd: 12 } });
     expect(r.job?.error?.message).toMatch(/run-ceiling: reported cost \$12\.00 reached the job's \$10\.00 ceiling/);
+    expect(r.job?.stop).toMatchObject({ by: "run-ceiling", ceilingUsd: 10 });
     // research's six turns: claude 4, codex, claude 4, codex, claude (spent 8 < 10, capped at $2 - a
     // real seat stops itself there; this fake overspends to show the next one is refused), codex refused.
     expect(f.calls.live).toBe(5);
