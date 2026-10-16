@@ -57,7 +57,9 @@ export interface StoryTable {
 }
 
 const TABLE_ROW = /^\s*\|.*\|\s*$/;
-const TABLE_RULE = /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/;
+// GFM's delimiter row: any run of hyphens per cell, with optional colons (`:--` is valid; a
+// three-dash minimum left the figures-and-tables closing table as a paragraph of pipes).
+const TABLE_RULE = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
 const cellsOf = (row: string) =>
   row
     .trim()

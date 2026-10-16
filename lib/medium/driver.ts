@@ -155,7 +155,9 @@ async function createDraft(input: MediumDraftInput): Promise<MediumDraftResult> 
     await saved;
 
     const title = await page.locator(SELECTORS.editor.title).first().textContent({ timeout: STEP_MS }).catch(() => null);
-    const same = (a: string) => a.replace(/\s+/g, " ").trim();
+    // Medium sets its own typography: curly quotes and apostrophes, dashes, non-breaking spaces
+    // (2026-10-16: four titles with an apostrophe were refused as "not taken").
+    const same = (a: string) => a.replace(/[‘’ʼ]/g, "'").replace(/[“”]/g, '"').replace(/[–—]/g, "-").replace(/…/g, "...").replace(/\s+/g, " ").trim();
     if (!title || same(title) !== same(input.title)) throw new Error(`medium did not take the title (it holds "${same(title ?? "").slice(0, 60)}")`);
 
     for (let i = 0; i < captions.length; i++) {
@@ -195,6 +197,12 @@ async function createDraft(input: MediumDraftInput): Promise<MediumDraftResult> 
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: input.shotPath, fullPage: true, timeout: STEP_MS });
     return { url, figures: held.figures, expected: captions.length, markers: held.markers };
+  } catch (e) {
+    // A failure after Medium saved a draft still names it, so the next attempt replaces that
+    // draft instead of leaving it orphaned in the account and starting another.
+    const at = page.url().replace(/\?.*$/, "");
+    if (SELECTORS.page.draftUrl.test(at)) Object.assign(e as object, { draftUrl: at });
+    throw e;
   } finally {
     await page.close().catch(() => undefined);
   }
@@ -203,7 +211,8 @@ async function createDraft(input: MediumDraftInput): Promise<MediumDraftResult> 
 export const mediumDriver: MediumDriver = {
   probe: () => probeMediumOn(MEDIUM_CDP_PORT),
   createDraft: (input) =>
-    createDraft(input).catch((e: Error) => {
-      throw new Error(/^(medium|not signed in|the medium)/.test(e.message) ? e.message : `medium refused the draft: ${e.message.split("\n")[0]}`);
+    createDraft(input).catch((e: Error & { draftUrl?: string }) => {
+      const out = new Error(/^(medium|not signed in|the medium)/.test(e.message) ? e.message : `medium refused the draft: ${e.message.split("\n")[0]}`);
+      throw e.draftUrl ? Object.assign(out, { draftUrl: e.draftUrl }) : out;
     }),
 };

@@ -71,7 +71,9 @@ export async function ensureMediumDraft(id: string, deps: EngineDeps): Promise<A
     });
     return await record({ state: "ready", url: made.url, shot: SHOT, figures: made.figures, figuresOf: made.expected });
   } catch (e) {
-    return await record({ state: "unavailable", reason: (e as Error).message.split("\n")[0].slice(0, 300), ...(previous ? { url: previous } : {}) });
+    // A driver that failed after Medium saved a draft names it (`draftUrl`): keep it, so a retry replaces it.
+    const url = (e as { draftUrl?: string }).draftUrl ?? previous;
+    return await record({ state: "unavailable", reason: (e as Error).message.split("\n")[0].slice(0, 300), ...(url ? { url } : {}) });
   } finally {
     inFlight.delete(id);
   }

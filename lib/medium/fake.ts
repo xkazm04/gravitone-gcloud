@@ -6,9 +6,10 @@
 import { writeFile } from "node:fs/promises";
 import type { MediumDraftInput, MediumDriver, MediumHealth } from "./types";
 
-export const FAKE_MEDIUM: { health: MediumHealth; failWith: string | null; calls: MediumDraftInput[]; seq: number } = {
+export const FAKE_MEDIUM: { health: MediumHealth; failWith: string | null; failAfterSave: string | null; calls: MediumDraftInput[]; seq: number } = {
   health: { ok: true },
   failWith: null,
+  failAfterSave: null,
   calls: [],
   seq: 0,
 };
@@ -16,6 +17,7 @@ export const FAKE_MEDIUM: { health: MediumHealth; failWith: string | null; calls
 export function resetFakeMedium(): void {
   FAKE_MEDIUM.health = { ok: true };
   FAKE_MEDIUM.failWith = null;
+  FAKE_MEDIUM.failAfterSave = null;
   FAKE_MEDIUM.calls = [];
   FAKE_MEDIUM.seq = 0;
 }
@@ -29,6 +31,8 @@ export const fakeMediumDriver: MediumDriver = {
     FAKE_MEDIUM.calls.push(input);
     if (!FAKE_MEDIUM.health.ok) throw new Error(FAKE_MEDIUM.health.reason);
     if (FAKE_MEDIUM.failWith) throw new Error(FAKE_MEDIUM.failWith);
+    // Medium saved a draft, then a later step failed: the error names the draft (types.ts).
+    if (FAKE_MEDIUM.failAfterSave) throw Object.assign(new Error(FAKE_MEDIUM.failAfterSave), { draftUrl: input.existingUrl ?? `https://medium.com/p/fake${++FAKE_MEDIUM.seq}/edit` });
     await writeFile(input.shotPath, PNG_1X1);
     const n = input.storyHtml.split("<figure>").length - 1;
     return { url: input.existingUrl ?? `https://medium.com/p/fake${++FAKE_MEDIUM.seq}/edit`, figures: n, expected: n, markers: 0 };

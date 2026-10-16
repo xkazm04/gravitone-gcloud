@@ -113,7 +113,7 @@ test("nothing under lib/medium can publish", () => {
 });
 
 test("a Markdown table travels as a picture, in story order, and its cells keep their inline marks", () => {
-  const md = "# T\n\n![Fig one](figures/01-a.png)\nFig one [1]\n\n| A | B `c` |\n| --- | :---: |\n| x \\| y | [2] |\n| **z** | w |\n\nText.\n\n![Fig two](figures/02-b.png)\nFig two\n";
+  const md = "# T\n\n![Fig one](figures/01-a.png)\nFig one [1]\n\n| A | B `c` |\n| - | :-: |\n| x \\| y | [2] |\n| **z** | w |\n\nText.\n\n![Fig two](figures/02-b.png)\nFig two\n";
   const { html, tables } = markdownToStory(md);
   expect(tables).toHaveLength(1);
   expect(tables[0]).toMatchObject({ name: "table-01.png", head: ["A", "B <code>c</code>"], rows: [["x | y", "[2]"], ["<strong>z</strong>", "w"]] });
@@ -168,4 +168,14 @@ test("in-page anchors leave the story: [[n]](#src-n) reads [n], <a id> targets, 
   expect(html.replace(/<pre>[\s\S]*?<\/pre>/g, "")).not.toMatch(/#src-|#close|&lt;a id=/);
   // fenced code is the post's own example, not an anchor
   expect(html).toContain("&lt;a id=&quot;kept&quot;&gt;&lt;/a&gt; [[9]](#src-9)");
+});
+
+test("a failure after Medium saved the draft keeps its url, and the retry replaces that draft rather than orphaning it", async () => {
+  FAKE_MEDIUM.failAfterSave = "medium did not take the title";
+  const run = await toGate();
+  expect(run.mediumDraft).toMatchObject({ state: "unavailable", reason: "medium did not take the title", url: "https://medium.com/p/fake1/edit" });
+  FAKE_MEDIUM.failAfterSave = null;
+  const retried = await ensureMediumDraft(run.id, withFake());
+  expect(retried.mediumDraft).toMatchObject({ state: "ready", url: "https://medium.com/p/fake1/edit" });
+  expect(FAKE_MEDIUM.calls.map((c) => c.existingUrl)).toEqual([undefined, "https://medium.com/p/fake1/edit"]);
 });

@@ -35,7 +35,8 @@ export interface MediumDraftResult {
   markers: number;
 }
 
-/** What the pipeline needs of Medium. Nothing here can publish. */
+/** What the pipeline needs of Medium. Nothing here can publish. A `createDraft` that fails
+ *  after Medium saved a draft throws an Error carrying `draftUrl`, the draft's editor address. */
 export interface MediumDriver {
   probe: () => Promise<MediumHealth>;
   createDraft: (input: MediumDraftInput) => Promise<MediumDraftResult>;
