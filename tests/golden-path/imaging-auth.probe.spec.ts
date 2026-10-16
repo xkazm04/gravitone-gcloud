@@ -45,8 +45,6 @@ import { POST as musicPlanPOST } from "@/app/api/music/plan/route";
 import { POST as musicComposePOST } from "@/app/api/music/compose/route";
 import { POST as musicGeneratePOST } from "@/app/api/music/generate/route";
 import { POST as musicSfxPOST } from "@/app/api/music/sfx/route";
-import { POST as foundryExtractPOST } from "@/app/api/foundry/extract/route";
-import { POST as foundryStepPOST } from "@/app/api/foundry/extract/[id]/step/route";
 import { POST as foundryAdoptPOST } from "@/app/api/foundry/styles/[id]/adopt/route";
 import { POST as musicVideoExportPOST } from "@/app/api/music-video/export/route";
 import { POST as cutExportPOST } from "@/app/api/cut/export/route";
@@ -68,10 +66,6 @@ import { PATCH as sunoClipPATCH } from "@/app/api/sound/suno/clips/[id]/route";
 import { POST as sunoLibraryPOST } from "@/app/api/sound/suno/library/route";
 import { POST as mvImportPOST } from "@/app/api/sound/mv/import/route";
 import { POST as mvCalendarPOST } from "@/app/api/sound/mv/jobs/[id]/calendar/route";
-import { POST as articlesCreatePOST } from "@/app/api/articles/route";
-import { POST as articlesApprovePOST } from "@/app/api/articles/[runId]/approve/route";
-import { POST as articlesResumePOST } from "@/app/api/articles/[runId]/resume/route";
-import { POST as articlesReworkPOST } from "@/app/api/articles/[runId]/rework/route";
 import { POST as turnsPOST } from "@/app/api/turns/route";
 import { POST as turnCancelPOST } from "@/app/api/turns/[id]/cancel/route";
 import { POST as motionDirectPOST } from "@/app/api/motion/direct/route";
@@ -93,8 +87,9 @@ function req(path: string, opts: { bearer?: string; ip: string; body?: unknown }
   });
 }
 
-// THE PRODUCER ROUTES LOAD NATIVELY. Since Phase 4 (L31) the Suno and music-video
-// queue routes reach the kernel (lib/producers/*), whose workspace packages are
+// THE PRODUCER ROUTES LOAD NATIVELY. Since Phase 4 (L29-L31) the extract step, the
+// article and the Suno and music-video queue routes reach the kernel
+// (lib/producers/*), whose workspace packages are
 // `type: module`: required here statically they would be evaluated by this
 // lane's CommonJS transform, and the next native `import("@gt/...")` in this
 // worker - the token door below, ledger-reconcile after it - finds the wrong
@@ -112,6 +107,12 @@ const sunoClearPOST = native(() => import("../../app/api/sound/suno/clear/route.
 const mvPOST = native(() => import("../../app/api/sound/mv/route.ts"), "POST");
 const mvRunPOST = native(() => import("../../app/api/sound/mv/run/route.ts"), "POST");
 const mvJobPOST = native(() => import("../../app/api/sound/mv/jobs/[id]/route.ts"), "POST");
+const foundryExtractPOST = native(() => import("../../app/api/foundry/extract/route.ts"), "POST");
+const foundryStepPOST = native(() => import("../../app/api/foundry/extract/[id]/step/route.ts"), "POST");
+const articlesCreatePOST = native(() => import("../../app/api/articles/route.ts"), "POST");
+const articlesApprovePOST = native(() => import("../../app/api/articles/[runId]/approve/route.ts"), "POST");
+const articlesResumePOST = native(() => import("../../app/api/articles/[runId]/resume/route.ts"), "POST");
+const articlesReworkPOST = native(() => import("../../app/api/articles/[runId]/rework/route.ts"), "POST");
 
 const ROUTES: [string, string, (r: Request) => Promise<Response>][] = [
   ["generate", "/api/imaging/generate", generatePOST],

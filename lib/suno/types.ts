@@ -67,6 +67,9 @@ export interface SunoJob {
   /** The model the driver is on right now (with `phase`), for "creating v6-wild". */
   model?: SunoModel;
   models: SunoModel[];
+  /** The kernel job driving it, once launched (lib/producers/suno.ts): its
+   *  state is the running truth; this record keeps the clips. */
+  job?: string;
   enqueuedAt: number;
   startedAt?: number;
   endedAt?: number;

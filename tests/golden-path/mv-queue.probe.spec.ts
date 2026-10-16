@@ -1,34 +1,38 @@
 // LANE — THE MUSIC-VIDEO QUEUE (lib/sound/mv, app/api/sound/mv/*), offline,
 // on FAKE engines and a temp store.
 //
-// Every engine the worker reaches is swapped through `__setMvEngines`: the
-// analysis, the render, the still, the clip download and the
-// text turns (an injected reason function, as the Suno propose lane does). No
-// browser, no ffmpeg, no model, no vendor, no credits. One case drives the
-// still through the REAL router with LEONARDO_STUDIO_DRIVER=fake, the studio
-// package's own stand-in. SOUND_STORE_DIR, SOUND_LEDGER_PATH and the publish
-// roots point at a fresh temp dir per test, and the worker singleton is reset
-// as a fresh process would find it. What is pinned, through the real route
-// handlers wherever a route exists:
+// Since Phase 4 (L31) a queued track is a KERNEL JOB on box.render
+// (lib/producers/mv.ts), launched by Start and driven here by `drain` - the
+// same driveMv the batch CLI runs - with every engine it reaches bound per
+// drive (`mvProducer({ engines })`; v1's `__setMvEngines` and its worker are
+// gone): the analysis, the render, the still, the clip download and the text
+// turns (an injected reason function). No browser, no ffmpeg, no model, no
+// vendor, no credits. One case drives the still through the REAL router with
+// LEONARDO_STUDIO_DRIVER=fake, the studio package's own stand-in.
+// SOUND_STORE_DIR, SOUND_LEDGER_PATH, GRAVITONE_STORE_PATH and the publish
+// roots point at a fresh temp dir per test. What is pinned, through the real
+// route handlers wherever a route exists:
 //
-//   · the switch: an enqueue never starts the queue; Start drains it FIFO,
-//     one job at a time, through every phase, persisting the phase while each
-//     engine runs; files land under mv/<jobId>/;
+//   · the switch: an enqueue never launches; Start launches and the drive runs
+//     FIFO, one job at a time, through every phase, persisting the phase while
+//     each engine runs; files land under mv/<jobId>/;
 //   · regenerate: each part re-runs ONLY its steps (engine calls counted) and
 //     every file it does not name is byte-identical (sha256); an image
 //     regenerate with the operator's own prompt runs no treatment turn;
 //   · no thumbnail step (2026-10-12) and no pulsing element: a `focal` in the
 //     model's answer is dropped;
 //   · Stop between steps returns the job to the queue holding its files, and
-//     Start resumes at the missing step; a crash stops the queue naming the
-//     job and its phase, and Start resumes at the missing step;
+//     Start resumes at the missing step; a v1 worker's crashed record reads
+//     queued naming the job and its phase, and Start resumes it at the
+//     missing step (a crash under the kernel, and two drivers on one job, are
+//     tests/next-server/producer-mv-crash.test.ts - v1's pid lease is gone);
 //   · the treatment: out-of-range numbers clamped, the no-text clause welded
 //     on; the turn sees the clean title and the analysis, never a lyric;
 //   · the metadata: held to snippetProblem (trimmed by code, or the job fails
 //     with the validator's sentence); chapters only from >= 3 sections;
 //   · the album batch: a read-only plan; a run that imports, queues, drains
 //     and copies <track>.mp4 + <track> - youtube.txt beside each source; a
-//     failed job retried from its failed step; the cross-process lease;
+//     failed job retried from its failed step;
 //   · import: N added, a re-import adds 0, a missing dir is a 400; Drop
 //     deletes the files and keeps the record; Calendar creates a slot with the
 //     metadata; the file route answers a range with 206.
@@ -47,7 +51,10 @@ import { readSchedule } from "@/lib/publish/store";
 import { snippetProblem } from "@/lib/publish/youtube";
 import { chaptersOf, fitMetadata } from "@/lib/sound/mv/metadata";
 import { CREDITS_PER_STILL, planBatch, runBatch } from "@/lib/sound/mv/batch";
-import { __resetMvWorker, __setMvEngines, kickMvWorker, mvWorkerPaused, type MvEngines } from "@/lib/sound/mv/queue";
+import { closeProcessKernel } from "@gt/kernel/process";
+import { driveMv, mvKernelJobs } from "@/lib/producers/mv";
+import type { Drive } from "@/lib/producers/sound";
+import type { MvEngines } from "@/lib/sound/mv/queue";
 import { cleanTitle, readMv, trackTitle, type MvFile } from "@/lib/sound/mv/store";
 import { NO_TEXT_CLAUSE, parseTreatment, treatmentInput } from "@/lib/sound/mv/treatment";
 import type { MvAnalysis, MvImportResult, MvJob, MvSnapshot } from "@/lib/sound/mv/types";
@@ -65,6 +72,8 @@ const SECRET = "mv-probe-secret";
 keepEnv([
   "SOUND_STORE_DIR",
   "SOUND_LEDGER_PATH",
+  "GRAVITONE_STORE_PATH",
+  "GRAVITONE_DRY_ONLY",
   "PUBLISH_STORE_DIR",
   "PUBLISH_EXPORTS_DIR",
   "AD_EXPORT_DIR",
@@ -78,6 +87,8 @@ keepEnv([
 ]);
 
 let root = "";
+/** The engines every drive in this test binds. */
+let engines: Partial<MvEngines> = {};
 
 /* ── the fakes ────────────────────────────────────────────────────────────── */
 
@@ -171,6 +182,8 @@ test.beforeEach(() => {
   root = mkdtempSync(path.join(tmpdir(), "mv-probe-"));
   process.env.SOUND_STORE_DIR = path.join(root, "store");
   process.env.SOUND_LEDGER_PATH = path.join(root, "ledger.json");
+  process.env.GRAVITONE_STORE_PATH = path.join(root, "kernel.sqlite");
+  delete process.env.GRAVITONE_DRY_ONLY;
   process.env.PUBLISH_STORE_DIR = path.join(root, "publish");
   process.env.PUBLISH_EXPORTS_DIR = path.join(root, "exports");
   delete process.env.AD_EXPORT_DIR;
@@ -179,7 +192,6 @@ test.beforeEach(() => {
   delete process.env.LOCAL_BINARIES;
   process.env[ACCESS_SECRET_VAR] = SECRET;
   __resetRateLimit();
-  __resetMvWorker();
   calls = { analyse: 0, render: 0, still: [], fetchClip: 0, treat: [], motion: [], metadata: [], phases: [] };
   knobs = {
     analysis: ANALYSIS,
@@ -188,26 +200,15 @@ test.beforeEach(() => {
     metadataAnswer: (n) => ({ title: `ambient visualizer, take ${n}`, description: "A slow track that builds and falls away.", tags: ["ambient", "visualizer", "slow", "calm", "dusk", "valley", "music visualizer", "instrumental mood"] }),
     metadataFail: null,
   };
-  __setMvEngines(fakeEngines());
+  engines = fakeEngines();
 });
 
-test.afterEach(async () => {
+test.afterEach(() => {
   knobs.stillHold = null;
-  // The drain kick runs against THIS test's store, pinned here: keepEnv's own
-  // afterEach (registered first) may already have restored SOUND_STORE_DIR to
-  // nothing, and a kick then lands on the real foundry-out/sound - where a
-  // fresh worker's crash recovery requeues whatever is active and switches
-  // the operator's queue off. Measured 2026-10-12: two probe runs stopped a
-  // live music-video render mid-job.
-  const restored = process.env.SOUND_STORE_DIR;
-  process.env.SOUND_STORE_DIR = path.join(root, "store");
-  try {
-    await kickMvWorker(); // never leave a loop writing into a removed dir
-  } finally {
-    __resetMvWorker();
-    if (restored === undefined) delete process.env.SOUND_STORE_DIR;
-    else process.env.SOUND_STORE_DIR = restored;
-  }
+  // Nothing runs in the background any more (v1's worker loop did, and once
+  // stopped a live render from a probe): the kernel handle is closed so
+  // Windows lets the temp dir go.
+  closeProcessKernel();
   rmSync(root, { recursive: true, force: true });
 });
 
@@ -245,9 +246,22 @@ async function enqueueTakes(ids: string[], titles: string[]): Promise<MvJob[]> {
   return (await read<{ jobs: MvJob[] }>(res)).jobs;
 }
 
-async function start(): Promise<void> {
+/** Drive every queued music-video job on this process, in queue order, until
+ *  none is left or the drive stops short (the batch CLI's drive). */
+async function drain(): Promise<Drive> {
+  const queued = () => [...mvKernelJobs().values()].filter((j) => j.state === "queued").map((j) => j.id);
+  let last: Drive = { reports: [] };
+  for (let ids = queued(); ids.length; ids = queued()) {
+    last = await driveMv(ids, { engines, dryOnly: false });
+    if (last.stopped !== undefined) break;
+  }
+  return last;
+}
+
+/** The Settled column's Start, through the real route, then the drive. */
+async function start(): Promise<Drive> {
   expect((await runPOST(rq("/api/sound/mv/run", "POST", { running: true }))).status).toBe(200);
-  await kickMvWorker();
+  return drain();
 }
 
 /** One finished job from one imported track. */
@@ -269,7 +283,7 @@ function hashes(j: MvJob): Record<string, string> {
 const regenerate = async (id: string, part: string, note?: string, prompt?: string) => {
   const res = await jobPOST(rq(`/api/sound/mv/jobs/${id}`, "POST", { part, ...(note ? { note } : {}), ...(prompt ? { prompt } : {}) }), ctx(id));
   expect(res.status).toBe(200);
-  await kickMvWorker();
+  await drain();
   return (await readMv()).jobs.find((j) => j.id === id)!;
 };
 
@@ -281,7 +295,7 @@ test("enqueue never starts; Start drains FIFO through every phase, persisting ea
   // the same track again while it is queued: its live job, not a second one
   const again = await enqueueTakes([takeIds[0]], ["01_Walls Unwind (main)"]);
   expect(again[0].id).toBe(jobs[0].id);
-  await kickMvWorker();
+  await drain();
   expect(calls.phases).toEqual([]);
   expect((await readMv()).jobs.map((j) => j.state)).toEqual(["queued", "queued"]);
 
@@ -312,8 +326,10 @@ test("enqueue never starts; Start drains FIFO through every phase, persisting ea
   expect(disk.version).toBe(1);
   expect(disk.queue).toEqual({ running: true });
 
+  // The snapshot asks the REAL studio (the drive's engines are bound per drive):
+  // its health is pinned through the studio's own fake in the Suno-clip case.
   const snap = await read<MvSnapshot>(await mvGET(rq("/api/sound/mv")));
-  expect(snap.driver).toEqual({ ok: true });
+  expect(typeof snap.driver.ok).toBe("boolean");
   expect(snap.jobs).toHaveLength(2);
   expect(snap.queue).toEqual({ running: true });
 });
@@ -391,7 +407,7 @@ test("Stop between steps returns the job to the queue with its files; Start resu
   knobs.stillHold = new Promise<void>((r) => (release = r));
   const entered = new Promise<void>((r) => (knobs.stillEntered = r));
   expect((await runPOST(rq("/api/sound/mv/run", "POST", { running: true }))).status).toBe(200);
-  const running = kickMvWorker();
+  const running = drain();
   await entered;
   expect((await readMv()).jobs[0]).toMatchObject({ state: "active", phase: "imaging" });
   // the job being made is not deleted from under the worker
@@ -414,7 +430,7 @@ test("Stop between steps returns the job to the queue with its files; Start resu
   expect([calls.analyse, calls.treat.length, calls.still.length, calls.metadata.length, calls.render]).toEqual([1, 1, 1, 1, 1]);
 });
 
-test("crash-resume: an active job goes back to queued, the queue stops naming the job and phase, and Start resumes at the missing step", async () => {
+test("crash-resume: a v1 worker's active record reads queued, naming the job and phase, and Start resumes it at the missing step", async () => {
   const { takeIds } = await importDir(audioDir(["08_Stay (instrumental).mp3"]));
   const id = "mj-00000000aa";
   const dir = abs(`mv/${id}`);
@@ -430,11 +446,11 @@ test("crash-resume: an active job goes back to queued, the queue stops naming th
     progress: {},
   };
   writeFileSync(abs("mv.json"), JSON.stringify(file));
-  await kickMvWorker();
-  const stopped = await readMv();
+  await drain();
+  // a read names it; nothing runs until the operator presses Start
+  const stopped = await read<MvSnapshot>(await mvGET(rq("/api/sound/mv")));
   expect(calls.phases).toEqual([]);
   expect(stopped.jobs[0].state).toBe("queued");
-  expect(stopped.queue.running).toBe(false);
   expect(stopped.queue.interrupted).toContain('"Stay"');
   expect(stopped.queue.interrupted).toContain("imaging");
   await start();
@@ -625,12 +641,10 @@ test("a kept Suno clip is downloaded once; the still goes through the real route
   process.env.LOCAL_BINARIES = "off"; // nothing may launch a browser
   resetFakeLeonardoStudio();
   __resetBudget();
-  const engines = fakeEngines();
+  engines = fakeEngines();
   delete engines.still;
   delete engines.health;
   // the still and the health check are the real ones: the router, the studio
-  __setMvEngines(null);
-  __setMvEngines(engines);
 
   mkdirSync(process.env.SOUND_STORE_DIR!, { recursive: true });
   writeFileSync(
@@ -673,7 +687,7 @@ test("batch: plan reads only; run imports, queues, drains and copies each video 
   expect((await planBatch(dir, { versions: "instrumental" })).rows.filter((r) => r.action === "queue")).toHaveLength(1);
   expect((await planBatch(dir, { limit: 2 })).rows.map((r) => r.action)).toEqual(["queue", "queue", "skip-limit"]);
 
-  const res = await runBatch(dir, { versions: "main" });
+  const res = await runBatch(dir, { versions: "main" }, undefined, { engines, dryOnly: false });
   expect(res.paused).toBeUndefined();
   expect(res.jobs.map((j) => [path.basename(j.file), j.state])).toEqual([
     ["01_Walls Unwind (main).mp3", "done"],
@@ -685,7 +699,7 @@ test("batch: plan reads only; run imports, queues, drains and copies each video 
     expect(readFileSync(path.join(dir, `${base} - youtube.txt`), "utf8")).toMatch(/^TITLE\n.+ambient visualizer, take \d\n\nDESCRIPTION\n[^]*\n0:00 Intro\n[^]*\nTAGS\nambient, /);
   }
   expect(existsSync(path.join(dir, "01_Walls Unwind (instrumental).mp4"))).toBe(false);
-  // the batch switched the queue off again
+  // the batch never touched the column's switch: it launched and drove its own jobs
   expect((await readMv()).queue.running).toBe(false);
   const after = await planBatch(dir);
   expect(after.rows.map((r) => r.action)).toEqual(["queue", "skip-done", "skip-done"]);
@@ -695,48 +709,16 @@ test("batch: plan reads only; run imports, queues, drains and copies each video 
 test("batch: --prompt replaces the treatment turn on every new job; a failed job is retried from the step that failed", async () => {
   const dir = audioDir(["05_Shape of you.mp3"]);
   knobs.metadataFail = "gemini answered 429: quota exhausted for mv-metadata";
-  const first = await runBatch(dir, { prompt: "Cinematic film still, a rain-wet alley at blue hour" });
+  const first = await runBatch(dir, { prompt: "Cinematic film still, a rain-wet alley at blue hour" }, undefined, { engines, dryOnly: false });
   expect(first.jobs.map((j) => j.state)).toEqual(["failed"]);
   expect(calls.treat).toHaveLength(0);
   expect(calls.still).toEqual([`Cinematic film still, a rain-wet alley at blue hour. ${NO_TEXT_CLAUSE}`]);
   expect((await planBatch(dir)).rows[0].action).toBe("retry");
 
   knobs.metadataFail = null;
-  const again = await runBatch(dir);
+  const again = await runBatch(dir, {}, undefined, { engines, dryOnly: false });
   expect(again.jobs.map((j) => j.state)).toEqual(["done"]);
   // resumed at metadata: no second still, no treatment turn
   expect([calls.still.length, calls.treat.length, calls.render]).toEqual([1, 0, 1]);
   expect(existsSync(path.join(dir, "05_Shape of you.mp4"))).toBe(true);
 });
-
-test("lease: a live process holding mv.json's worker lease pauses this worker before crash recovery; a dead holder's lease is taken over", async () => {
-  const { takeIds } = await importDir(audioDir(["09_The Blue Cup.mp3"]));
-  const [job] = await enqueueTakes(takeIds, ["09_The Blue Cup"]);
-  // the parent process: alive for as long as this probe runs, and not us
-  await asOtherProcess(job.id, process.ppid);
-  await runPOST(rq("/api/sound/mv/run", "POST", { running: true }));
-  await kickMvWorker();
-  expect(mvWorkerPaused()).toBe(`the music-video queue is being run by another process (pid ${process.ppid})`);
-  // the other process's active job was NOT requeued by our recovery
-  expect((await readMv()).jobs[0].state).toBe("active");
-  expect((await readMv()).worker?.pid).toBe(process.ppid);
-  expect(calls.phases).toEqual([]);
-
-  // the holder is gone: its lease is stale and taken over; recovery then runs
-  await asOtherProcess(job.id, 2 ** 22 + 12345);
-  await kickMvWorker();
-  expect((await readMv()).jobs[0].state).toBe("queued");
-  expect((await readMv()).queue.interrupted).toContain('"The Blue Cup"');
-  // our lease is dropped when the loop ends
-  expect((await readMv()).worker).toBeUndefined();
-});
-
-/** Mark a job active and the lease held, as another process's worker would have. */
-async function asOtherProcess(id: string, pid: number): Promise<void> {
-  const f = await readMv();
-  const j = f.jobs.find((x) => x.id === id)!;
-  j.state = "active";
-  j.phase = "rendering";
-  f.worker = { pid, at: Date.now() };
-  writeFileSync(abs("mv.json"), JSON.stringify(f));
-}

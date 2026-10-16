@@ -1,26 +1,56 @@
-// POST /api/sound/mv/run { running: boolean } -> { queue }
+// GET  /api/sound/mv/run                      -> { receipt }   what Start would launch
+// POST /api/sound/mv/run { running, token? }  -> { queue }     | 409 { error, receipt }
 //
-// The Settled column's switch. MONEY ROUTE - Start lets the worker spend two
-// text turns and a Leonardo studio still on every queued job - so
-// guardRequest, and imaging-auth.probe.spec.ts drives it: a body without a
-// boolean "running" is a 400 before the store is touched. Stop lets the step
-// in flight finish (lib/sound/mv/queue.ts).
+// The Settled column's switch. MONEY ROUTE - Start launches every waiting
+// track as a kernel job (lib/producers/mv.ts), each spending two text turns
+// and a Leonardo studio still once a driver reaches it - so guardRequest, and
+// imaging-auth.probe.spec.ts drives it: a body without a boolean "running" is
+// a 400 before the store is touched. Stop pauses every waiting or running job;
+// the step in flight finishes (lib/sound/mv/queue.ts).
+//
+// A LAUNCH IS A RECEIPT, THEN A CONFIRM (Phase 4 decision 3). The GET reads the
+// receipt (lanes, est seconds, the credit reason, queue position, ETA) and
+// starts nothing; a POST carrying its `token` confirms exactly that receipt,
+// and a token gone stale (the queue moved) is a 409 with the fresh one. A POST
+// without a token is the v1 board's Start, whose STUB/LIVE arm is its confirm.
 
-import { guardRequest } from "@/lib/apiAuth";
-import { asContractDenial, readJson, toErrorResponse } from "@/lib/sound/http";
-import { setMvQueue } from "@/lib/sound/mv/queue";
+import { guardAccessOnly, guardRequest } from "@/lib/apiAuth";
+import { statusOf } from "@/lib/producers/sound";
+import { asContractDenial, errorResponse, readJson, toErrorResponse } from "@/lib/sound/http";
+import { mvStartReceipt, setMvQueue, startMvWith } from "@/lib/sound/mv/queue";
 import { SoundError } from "@/lib/sound/store";
 
 export const runtime = "nodejs";
+
+const fail = (e: unknown): Response => {
+  const status = statusOf(e);
+  return status !== undefined && e instanceof Error ? errorResponse(e.message, status) : toErrorResponse(e);
+};
+
+export async function GET(req: Request) {
+  const denied = await asContractDenial(await guardAccessOnly(req));
+  if (denied) return denied;
+  try {
+    return Response.json({ receipt: await mvStartReceipt() });
+  } catch (e) {
+    return fail(e);
+  }
+}
 
 export async function POST(req: Request) {
   const denied = await asContractDenial(await guardRequest(req));
   if (denied) return denied;
   try {
-    const body = (await readJson(req)) as { running?: unknown } | null;
+    const body = (await readJson(req)) as { running?: unknown; token?: unknown } | null;
     if (typeof body?.running !== "boolean") throw new SoundError('"running" must be true (start the queue) or false (stop it)', 400);
+    if (body.token !== undefined && (typeof body.token !== "string" || !body.token)) throw new SoundError('"token" must be the receipt\'s token', 400);
+    if (body.running && typeof body.token === "string") {
+      const r = await startMvWith(body.token);
+      if ("stale" in r) return Response.json({ error: "what Start would launch changed since its receipt; read the fresh receipt", receipt: r.stale }, { status: 409 });
+      return Response.json(r);
+    }
     return Response.json({ queue: await setMvQueue(body.running) });
   } catch (e) {
-    return toErrorResponse(e);
+    return fail(e);
   }
 }

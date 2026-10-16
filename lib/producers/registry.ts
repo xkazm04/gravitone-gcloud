@@ -5,6 +5,9 @@ import { producerSet, type Bound } from "@gt/producers/set";
 
 import { articleProducer } from "./article.ts";
 import { extractProducer } from "./extract.ts";
+import { mvProducer } from "./mv.ts";
+import { sunoProducer } from "./suno.ts";
+import { sunoDriver } from "../sound/suno/drivers.ts";
 
 // THE PRODUCERS THIS CHECKOUT CAN RUN (Phase 4, plan §4). One list, read by every
 // process that drives a job - the worker (workers/runner.mts), a producer's CLI, a
@@ -13,7 +16,6 @@ import { extractProducer } from "./extract.ts";
 // to v1's engines in `lib/producers/<name>.ts` and adds ONE line here:
 //
 //   { name: "extract", producer: extractProducer() },
-  { name: "article", producer: articleProducer() },
 //
 // The list is plain data on purpose: `producerSet` (packages/producers/src/set.ts)
 // is where a name the domain does not know, or a name bound twice, is refused -
@@ -23,6 +25,9 @@ import { extractProducer } from "./extract.ts";
 
 export const BOUND: readonly Bound[] = [
   { name: "extract", producer: extractProducer() },
+  { name: "article", producer: articleProducer() },
+  { name: "mv", producer: mvProducer() },
+  { name: "suno", producer: sunoProducer({ driver: sunoDriver() }) },
 ];
 
 /** The map a worker hands kernel `workLoop`, keyed by the job's `producer`. */

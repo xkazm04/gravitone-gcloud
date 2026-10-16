@@ -1,19 +1,23 @@
 // THE ALBUM BATCH — a folder of tracks in, a music video beside each one out.
 // Server-only; the engine behind pipeline/music-video.mts and the
-// /music-video skill. It owns no rendering: every track goes through the same
-// queue the Settled column drives (./queue.ts), so a batch and the canvas see
-// one store, one job per track, and one worker at a time (the queue's lease).
+// /music-video skill. It owns no rendering: every track becomes the same kernel
+// job the Settled column launches (lib/producers/mv.ts), so a batch and the
+// canvas see one store, one job per track, and one driver per job at a time
+// (the kernel's fenced lease on box.render - v1's mv.json pid lease is gone).
 //
 // THE PLAN IS READ-ONLY. `planBatch` lists the folder and matches each file to
 // the import index (path and size) and that take's newest job, and says what a
 // run would do with it - without importing, queueing or spending. A run then:
 //
 //   import    the folder (free; a file already imported is skipped)
-//   queue     each planned track: a new job, or `retryMv` for a failed one
-//             (it resumes at the step that failed - no part is re-rolled)
-//   drain     switch the queue on, run it until nothing it owns is queued,
-//             switch it off again
-//   collect   copy each finished video beside its source file
+//   queue     each planned track: a new record, or `retryMv` for a failed one
+//             (its job resumes at the step that failed - no part is re-rolled)
+//   launch    the records without a job, as ONE receipt confirmed by the run
+//             (the CLI's --yes was the confirm; --dry launches dry jobs)
+//   drive     every owned job in folder order on this process, unless
+//             `detach` leaves them to the worker
+//   collect   copy each finished video beside its source file (never for a
+//             dry run: its still is a placeholder, not the album's video)
 //
 // WHAT A TRACK'S ROW SAYS, newest job first:
 //   done       skipped - its video exists (`again` queues another one)
@@ -33,11 +37,17 @@ import { copyFile, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import path from "node:path";
 
+import type { Receipt, ReceiptMode } from "@gt/domain/produce";
+
+import { driveMv, launchMvNow, mvKernelId, mvKernelJobs, resumeMvJobs } from "@/lib/producers/mv";
+import { OPERATOR } from "@/lib/producers/sound";
+
 import { SoundError } from "../store";
 import { IMPORT_EXTS, importFolder } from "./importFolder";
-import { enqueueMv, kickMvWorker, mvWorkerPaused, retryMv, setMvQueue } from "./queue";
+import { enqueueMv, readMvLive, retryMv } from "./queue";
 import { filePathAbs } from "../store";
 import { isLookId, MV_LOOK_IDS, type MvLookId } from "./looks";
+import type { MvEngines } from "./steps";
 import { readMv, trackTitle } from "./store";
 import type { MvJob, MvMetadata } from "./types";
 
@@ -149,6 +159,8 @@ export async function planBatch(dirIn: string, optsIn: BatchOptions = {}): Promi
   const opts = await withAlbum(dir, optsIn);
   const versions = opts.versions ?? "all";
   const f = await readMv();
+  // A job's running state is the kernel's: an interrupted or paused job reads queued, never "failed".
+  f.jobs = (await readMvLive()).jobs;
   const byPath = new Map(f.imports.map((r) => [r.path.toLowerCase(), r]));
   const rows: BatchRow[] = [];
   let budget = opts.limit ?? Infinity;
@@ -190,8 +202,24 @@ export interface BatchResult {
   plan: BatchPlan;
   /** Every job this run queued, retried or found running, as it ended. */
   jobs: { file: string; id: string; state: MvJob["state"]; error?: string; video?: string }[];
-  /** Why the drain stopped short (the vendor's or the lease's sentence), if it did. */
+  /** Why the drive stopped short (the lane's, the vendor's or the interruption's sentence), if it did. */
   paused?: string;
+  /** The receipt the run confirmed, when it launched anything. */
+  receipt?: Receipt;
+  mode: ReceiptMode;
+}
+
+/** How a run spends and who drives it (pipeline/music-video.mts flags). */
+export interface BatchRun {
+  /** `dry`: every paid call answered by its stand-in, nothing collected. Default live. */
+  mode?: ReceiptMode;
+  /** The job ceiling (--budget-usd). */
+  ceilingUsd?: number;
+  /** Launch and return: the worker drives (--detach). */
+  detach?: boolean;
+  /** Engines bound for this drive (a test's fakes). */
+  engines?: Partial<MvEngines>;
+  dryOnly?: boolean;
 }
 
 /** The YouTube proposal as one paste-ready text file. */
@@ -210,18 +238,19 @@ export async function collectJob(job: MvJob, sourceFile: string): Promise<string
   return out;
 }
 
-/** Import, queue, drain, collect. Spends: a still and up to two text turns
- *  per new job. `onTick` is called while the drain runs (progress lines). */
-export async function runBatch(dirIn: string, optsIn: BatchOptions = {}, onTick?: (jobs: MvJob[]) => void): Promise<BatchResult> {
+/** Import, queue, launch, drive, collect. Live spends a still and up to two
+ *  text turns per new track. `onTick` is called as each job's drive lands. */
+export async function runBatch(dirIn: string, optsIn: BatchOptions = {}, onTick?: (jobs: MvJob[]) => void, run: BatchRun = {}): Promise<BatchResult> {
+  const mode = run.mode ?? "live";
   const dir = resolveDir(dirIn);
   const opts = await withAlbum(dir, optsIn);
   await importFolder(dir);
   const plan = await planBatch(dir, opts);
-  const owned = new Map<string, string>(); // job id -> source file
+  const owned = new Map<string, string>(); // record id -> source file
 
   for (const r of plan.rows) {
     if (r.action === "retry" && r.job) {
-      await retryMv(r.job.id);
+      await retryMv(r.job.id, Date.now(), { launch: false });
       owned.set(r.job.id, r.file);
     } else if (r.action === "running" && r.job) {
       owned.set(r.job.id, r.file);
@@ -232,41 +261,46 @@ export async function runBatch(dirIn: string, optsIn: BatchOptions = {}, onTick?
     const jobs = await enqueueMv(
       fresh.map((r) => ({ kind: "take" as const, id: r.takeId!, title: r.title })),
       Date.now(),
-      { ...(opts.prompt?.trim() ? { prompt: opts.prompt } : {}), ...(opts.still ? { stillFrom: opts.still } : {}), ...(opts.look ? { look: opts.look } : {}) },
+      { ...(opts.prompt?.trim() ? { prompt: opts.prompt } : {}), ...(opts.still ? { stillFrom: opts.still } : {}), ...(opts.look ? { look: opts.look } : {}), launch: false },
     );
     jobs.forEach((j, i) => owned.set(j.id, fresh[i].file));
   }
 
   let paused: string | undefined;
+  let receipt: Receipt | undefined;
   if (owned.size) {
-    await setMvQueue(true);
-    const tick = onTick ? setInterval(() => void readMv().then((f) => onTick(f.jobs.filter((j) => owned.has(j.id)))).catch(() => {}), 15_000) : null;
-    try {
-      for (;;) {
-        await kickMvWorker();
-        const f = await readMv();
-        const left = f.jobs.filter((j) => owned.has(j.id) && (j.state === "queued" || j.state === "active"));
-        if (!left.length) break;
-        // The loop returned with our work still queued: the vendor or the
-        // lease paused it, or the queue was switched off from elsewhere.
-        paused = mvWorkerPaused() ?? (f.queue.running ? undefined : f.queue.interrupted ?? "the queue was switched off");
-        if (paused) break;
-      }
-    } finally {
-      if (tick) clearInterval(tick);
-      await setMvQueue(false);
+    const records = (await readMv()).jobs.filter((j) => owned.has(j.id));
+    const kernel = mvKernelJobs();
+    const unlaunched = records.filter((j) => !kernel.has(mvKernelId(j))).map((j) => j.id);
+    if (unlaunched.length) {
+      const launched = await launchMvNow(unlaunched, { mode, actor: OPERATOR, ...(run.ceilingUsd === undefined ? {} : { ceilingUsd: run.ceilingUsd }), ...(run.dryOnly === undefined ? {} : { dryOnly: run.dryOnly }) });
+      receipt = launched.receipt;
+    }
+    const ids = records.map((j) => mvKernelId(j));
+    // v1's batch switched the queue on: a job the switch paused runs again. An
+    // interrupted one does NOT - v1's crash recovery stopped the batch short over it.
+    resumeMvJobs(OPERATOR, { retryInterrupted: false, only: new Set(ids) });
+    if (!run.detach) {
+      const tick = (): void => {
+        if (onTick === undefined) return;
+        void readMvLive().then((l) => onTick(l.jobs.filter((j) => owned.has(j.id))), () => undefined);
+      };
+      const drive = await driveMv(ids, { ...(run.engines === undefined ? {} : { engines: run.engines }), ...(run.dryOnly === undefined ? {} : { dryOnly: run.dryOnly }), onReport: tick });
+      paused = drive.stopped;
     }
   }
 
-  const f = await readMv();
+  const f = await readMvLive();
+  paused ??= owned.size && f.interrupted !== undefined ? f.interrupted : undefined;
   const jobs: BatchResult["jobs"] = [];
   for (const [id, file] of owned) {
     const j = f.jobs.find((x) => x.id === id);
     if (!j) continue;
-    const video = await collectJob(j, file);
+    // A dry run's still is a placeholder: nothing is copied beside the album.
+    const video = mode === "dry" ? undefined : await collectJob(j, file);
     jobs.push({ file, id, state: j.state, ...(j.error ? { error: j.error } : {}), ...(video ? { video } : {}) });
   }
-  return { plan, jobs, ...(paused ? { paused } : {}) };
+  return { plan, jobs, mode, ...(paused ? { paused } : {}), ...(receipt ? { receipt } : {}) };
 }
 
 /** Copy every finished video of the folder's tracks beside its source,

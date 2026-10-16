@@ -41,38 +41,9 @@
 // two syncs at once are already safe - every event is keyed, so the slower one
 // finds every key taken.
 
-import { existsSync, readFileSync, statSync } from "node:fs";
-import { registerHooks, stripTypeScriptTypes } from "node:module";
+import "./lib-hooks.mts";
+
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-
-const ROOT = path.resolve(import.meta.dirname, "..");
-const SERVER_ONLY = pathToFileURL(path.join(ROOT, "node_modules", "next", "dist", "compiled", "server-only", "empty.js")).href;
-const isFile = (p: string): boolean => existsSync(p) && statSync(p).isFile();
-
-function probe(abs: string): string | null {
-  if (isFile(abs)) return abs;
-  for (const ext of [".ts", ".tsx", "/index.ts", "/index.tsx"]) if (isFile(abs + ext)) return abs + ext;
-  return null;
-}
-
-registerHooks({
-  resolve(spec, ctx, next) {
-    if (spec === "server-only") return { url: SERVER_ONLY, shortCircuit: true };
-    let abs: string | null = null;
-    if (spec.startsWith("@/")) abs = path.join(ROOT, spec.slice(2));
-    else if ((spec.startsWith("./") || spec.startsWith("../")) && ctx.parentURL?.startsWith("file:") === true) abs = path.resolve(path.dirname(fileURLToPath(ctx.parentURL)), spec);
-    const hit = abs === null ? null : probe(abs);
-    return hit === null ? next(spec, ctx) : { url: pathToFileURL(hit).href, shortCircuit: true };
-  },
-  load(url, ctx, next) {
-    // lib/ imports JSON bare, as a bundler allows; Node wants `with { type: "json" }`.
-    if (url.startsWith("file:") && url.endsWith(".json") && !url.includes("/node_modules/")) return { format: "json", source: readFileSync(fileURLToPath(url), "utf8"), shortCircuit: true };
-    if (!url.startsWith("file:") || !/\.(ts|tsx|mts)$/.test(url) || url.includes("/node_modules/")) return next(url, ctx);
-    const source = stripTypeScriptTypes(readFileSync(fileURLToPath(url), "utf8"), { mode: "transform", sourceUrl: url });
-    return { format: "module", source, shortCircuit: true };
-  },
-});
 
 const args = process.argv.slice(2);
 const VERBS = ["sync", "reconcile", "live", "apply", "seed-fixtures"] as const;

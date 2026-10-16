@@ -1,8 +1,9 @@
 // POST /api/sound/suno/queue { proposalIds } | { huntNodeIds, lane? } -> 201 { jobs }
 //
-// Queue prompts for the Suno worker: every job renders on both models, two
-// clips each. MONEY ROUTE - each job is Suno credits on the operator's
-// account - so guardRequest, and imaging-auth.probe.spec.ts drives it: an
+// Queue prompts: a record per prompt, launched as a kernel job on box.chrome by
+// Start (or at once while the switch is on); every job renders on both
+// models, two clips each. MONEY ROUTE - each job is Suno credits on the
+// operator's account - so guardRequest, and imaging-auth.probe.spec.ts drives it: an
 // empty body is a 400 before the store is touched. Hunt leaves are converted
 // to one proposal each (idempotent per leaf) and queued through it.
 

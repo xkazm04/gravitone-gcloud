@@ -37,7 +37,7 @@ export type Mutant = {
  * unguarded probe lowers the live count and the same probe asks for this number
  * to be lowered to match, so the gain is kept.
  */
-export const UNGUARDED_PROBE_BUDGET = 238;
+export const UNGUARDED_PROBE_BUDGET = 237;
 
 export const MUTANTS: Mutant[] = [
   {
@@ -339,18 +339,10 @@ export const MUTANTS: Mutant[] = [
   {
     id: "mv-regenerate-reruns-everything",
     probe: "mv-queue.probe.spec.ts",
-    file: "lib/sound/mv/queue.ts",
+    file: "packages/producers/src/mv/plan.ts",
     find: "const redo = new Set((j.redo ?? []).flatMap((p) => REDO_STEPS[p]));",
     replace: "const redo = new Set((j.redo ?? []).flatMap(() => STEP_ORDER));",
     why: "Regenerate · metadata re-rolls the still and re-renders the video, spending a Leonardo image and minutes of render to change a title.",
-  },
-  {
-    id: "mv-lease-ignores-live-holder",
-    probe: "mv-queue.probe.spec.ts",
-    file: "lib/sound/mv/queue.ts",
-    find: "if (pid > 0 && pid !== process.pid && alive(pid)) return `the music-video queue is being run by another process (pid ${pid})`;",
-    replace: "if (pid > 0 && pid !== process.pid && alive(pid) && pid < 0) return `the music-video queue is being run by another process (pid ${pid})`;",
-    why: "An album batch and a dev server drain one store together: the second one's crash recovery requeues the job the first is rendering, and a still is bought twice.",
   },
   {
     id: "mv-focal-deaf-to-the-beat",

@@ -1,57 +1,47 @@
-// THE SUNO QUEUE — serial, FIFO, persisted, one worker per server process.
-// Server-only: it names SUNO_DRIVER and reaches the browser driver.
+// THE SUNO QUEUE — the operator's acts on suno.json's records, and the
+// snapshot the Queue column reads. Server-only: it names SUNO_DRIVER and
+// reaches the browser driver.
 //
-// THE WORKER IS A SINGLETON ON globalThis (`__gtSunoWorker`), because Next dev
-// re-evaluates this module on every HMR edit and a module-level `let` would
-// start a second loop driving the same Chrome tab. It starts lazily: on an
-// enqueue, on the operator's Start and on every snapshot read.
+// SINCE PHASE 4 (L31) A PROMPT'S RENDER IS A KERNEL JOB on box.chrome. The v1
+// worker that lived here - the `globalThis.__gtSunoWorker` singleton (the
+// queue's ONLY lease: two processes could drive one Chrome tab), its lazy kick
+// on every read, the first-start recovery that switched the whole queue off -
+// is gone; packages/producers/src/suno is the definition, lib/producers/suno.ts
+// binds it to the driver and to this store, and the kernel leases the lane,
+// recovers a crash as `interrupted` and HOLDS box.chrome until the operator
+// looks. suno.json stays the artefact store; the kernel job is the running
+// truth, and `sunoSnapshot` overlays it onto the records.
 //
-// THE QUEUE DRAINS ONLY WHILE IT IS SWITCHED ON (suno.json `queue.running`,
-// the Queue column's Start / Stop verbs). Putting a prompt in the queue never
-// starts it: the worker drives the operator's browser and spends their credits,
-// and a batch is reviewed in the column before it runs (operator, 2026-10-12).
-// Stop lets the model being created finish - a create cannot be called back -
-// and returns its job to the queue holding the clips it has.
-//
-// THE FIRST START IN A PROCESS turns any `active` job back into `queued` — a
-// job that was active when the process died is a crashed run, and models that
-// already landed clips are not re-created. The model that was mid-create may
-// have been spent on Suno with its clips never collected, so a crash also
-// switches the queue OFF and says which job and model (`queue.interrupted`):
-// the operator checks their Suno library before pressing Start again.
-//
-// THE LOOP: the oldest queued job -> active, startedAt -> for each model the
-// job still needs: model + phase persisted on every phase change ->
-// createSunoTracks -> SunoClips written (verdict null) and their ids pushed ->
-// both models done: `done`, endedAt. Any throw: `failed` with the driver's
-// message VERBATIM, the proposal wears it, and the loop goes on to the next
-// job. A driver that is not ok PAUSES the loop (no job is failed for it); the
-// next kick starts it again.
+// WHAT AN ACT DOES, NOW:
+//   enqueue  a record per proposal, `queued` - it NEVER spends (v1's rule:
+//            a batch is reviewed in the column before it runs). Idempotent per
+//            proposal while a job is live; a proposal that has rendered is
+//            refused ("riff it").
+//   Start    the column's switch on: the box.chrome hold a Suno crash left is
+//            acknowledged (the press was v1's "I have looked"), paused jobs
+//            resume, interrupted ones are retried, and every queued record
+//            without a job is LAUNCHED - a receipt, confirmed by the press.
+//   Stop     every waiting or running job pauses; the create in flight finishes.
+//   cancel   a waiting job only: one that is creating is refused - its credits
+//            are already spent.
+// Nothing here drives a job: the worker (L27) or pipeline/suno.mts does.
 
-import { createSunoTracks as realCreate, listSunoLibrary as realList, probeSuno as realProbe } from "@/lib/suno/driver";
-import { SUNO_MODEL_LABEL, SUNO_MODELS, type SunoQueueState, type SunoClip, type SunoClipRef, type SunoDriverHealth, type SunoFields, type SunoJob, type SunoLane, type SunoLibraryClip, type SunoModel, type SunoPhase, type SunoSnapshot } from "@/lib/suno/types";
+import { SUNO_MODEL_LABEL, SUNO_MODELS, type SunoFields, type SunoJob, type SunoLane, type SunoQueueState, type SunoSnapshot } from "@/lib/suno/types";
 
 import { UNGROUPED_LANE } from "@/lib/board/pipeline";
+import type { Job } from "@gt/domain/job";
+import type { Receipt } from "@gt/domain/produce";
+import { cancelSunoJob, launchSuno, launchSunoNow, pauseSunoJobs, resumeSunoJobs, sunoKernelId, sunoKernelJobs } from "@/lib/producers/suno";
+import { OPERATOR } from "@/lib/producers/sound";
 
 import { readHunts, safeId, SoundError } from "../store";
 import type { Hunt, HuntNode } from "../types";
-import { fakeCreateSunoTracks, fakeListSunoLibrary, fakeProbeSuno } from "./fakeDriver";
-import { clip, EXCLUDE_MAX, INSTRUMENTAL, isCandidate, isLiveJob, mintSunoId, readSuno, STYLE_MAX, TITLE_MAX, withSuno, type SunoFile } from "./store";
+import { sunoDriver } from "./drivers";
+import { clearSuno, clip, EXCLUDE_MAX, INSTRUMENTAL, isCandidate, isLiveJob, mintSunoId, readSuno, STYLE_MAX, TITLE_MAX, withSuno, type SunoFile } from "./store";
 
 /* ── the driver ───────────────────────────────────────────────────────────── */
 
-export interface SunoDriver {
-  probe(): Promise<SunoDriverHealth>;
-  create(fields: SunoFields, model: SunoModel, onPhase: (phase: SunoPhase) => void): Promise<SunoClipRef[]>;
-  /** The operator's Suno library, read-only (lib/sound/suno/library.ts). */
-  listLibrary(onPage?: (n: number, total: number | null) => void): Promise<SunoLibraryClip[]>;
-}
-
-const REAL: SunoDriver = { probe: realProbe, create: realCreate, listLibrary: realList };
-const FAKE: SunoDriver = { probe: fakeProbeSuno, create: fakeCreateSunoTracks, listLibrary: fakeListSunoLibrary };
-
-/** Read per call, so a probe can switch it after import. */
-export const sunoDriver = (): SunoDriver => (process.env.SUNO_DRIVER?.trim() === "fake" ? FAKE : REAL);
+export { FAKE_SUNO_DRIVER, REAL_SUNO, sunoDriver, type SunoDriver } from "./drivers";
 
 /* ── enqueue / cancel ─────────────────────────────────────────────────────── */
 
@@ -82,12 +72,34 @@ function enqueueIn(f: SunoFile, ids: readonly string[], now: number): SunoJob[] 
   return out;
 }
 
-export async function enqueueProposals(ids: readonly string[], now = Date.now()): Promise<SunoJob[]> {
+export async function enqueueProposals(ids: readonly string[], now = Date.now(), opts: { launch?: boolean } = {}): Promise<SunoJob[]> {
   if (!ids.length) throw new SoundError('"proposalIds" is empty: name at least one proposal', 400);
   ids.forEach(safeId);
   const jobs = await withSuno((f) => enqueueIn(f, ids, now));
-  void kickSunoWorker();
+  // pipeline/suno.mts `enqueue` never launches: its enqueue never spends, whatever the switch says.
+  if (opts.launch !== false) await launchIfRunning(jobs);
   return jobs;
+}
+
+/** The kernel's queued Suno jobs of one mode, in queue order: what a drive takes.
+ *  By mode, because a dry drive binds the fake driver and must never reach a live job. */
+export function queuedSunoJobs(mode: "dry" | "live"): string[] {
+  return [...sunoKernelJobs().values()].filter((j) => j.state === "queued" && j.mode.kind === mode).map((j) => j.id);
+}
+
+/** The records waiting for Start (queued, no job yet). */
+export const waitingSunoIds = (): Promise<string[]> => waitingIds();
+
+/** The column's mode: a process that may only run dry (every test lane, the
+ *  fixture universe) launches dry; otherwise Start is the operator's live arm. */
+const columnMode = (): "dry" | "live" => (process.env["GRAVITONE_DRY_ONLY"] === "1" ? "dry" : "live");
+
+/** While the switch is on, what was just queued is launched at once (v1: the kick drained it). */
+async function launchIfRunning(jobs: readonly SunoJob[]): Promise<void> {
+  const kernel = sunoKernelJobs();
+  const ids = jobs.filter((j) => j.state === "queued" && !kernel.has(sunoKernelId(j))).map((j) => j.id);
+  if (!ids.length || !(await readSuno()).queue.running) return;
+  await launchSunoNow(ids, { mode: columnMode(), actor: OPERATOR });
 }
 
 /* ── a hunt leaf becomes a proposal ───────────────────────────────────────── */
@@ -160,216 +172,149 @@ export async function enqueueHuntLeaves(refs: readonly string[], lane: SunoLane 
     });
     return enqueueIn(f, ids, now);
   });
-  void kickSunoWorker();
+  await launchIfRunning(jobs);
   return jobs;
 }
 
-/** Cancel a queued job. A running one is refused: the tab is mid-create and
- *  its credits are already spent. */
+/** Cancel a queued job, and its kernel job. A running one is refused: the tab
+ *  is mid-create and its credits are already spent. */
 export async function cancelJob(id: string): Promise<SunoJob> {
   safeId(id);
-  if (!(await readSuno()).jobs.some((j) => j.id === id)) throw new SoundError(`no Suno job ${id}`, 404);
+  const { jobs } = await readSunoLive();
+  const live = jobs.find((j) => j.id === id);
+  if (!live) throw new SoundError(`no Suno job ${id}`, 404);
+  if (live.state === "active") throw new SoundError("rendering now - it lands in triage when Suno finishes", 409);
+  if (live.state !== "queued") throw new SoundError(`this job is already ${live.state}`, 409);
+  const k = sunoKernelJobs().get(sunoKernelId(live));
+  if (k !== undefined) cancelSunoJob(k.id, OPERATOR);
   return withSuno((f) => {
     const j = f.jobs.find((x) => x.id === id);
     if (!j) throw new SoundError(`no Suno job ${id}`, 404);
-    if (j.state === "active") throw new SoundError("rendering now - it lands in triage when Suno finishes", 409);
-    if (j.state !== "queued") throw new SoundError(`this job is already ${j.state}`, 409);
     j.state = "cancelled";
     j.endedAt = Date.now();
+    delete j.phase;
+    delete j.model;
     return { ...j };
   });
 }
 
-/* ── the worker ───────────────────────────────────────────────────────────── */
-
-interface WorkerState {
-  /** The running loop, or null when idle / paused. */
-  loop: Promise<void> | null;
-  recovered: boolean;
-  /** The driver's reason while the loop is paused on it. */
-  paused: string | null;
-  /** A kick landed while the loop was running: look again before stopping. */
-  again: boolean;
+/** Housekeeping (lib/sound/suno/store.ts clearSuno) with the cancelled jobs' kernel jobs cancelled too. */
+export async function clearSunoQueue(req: Parameters<typeof clearSuno>[0], now = Date.now()): ReturnType<typeof clearSuno> {
+  const out = await clearSuno(req, now);
+  const named = new Set(Array.isArray(req.jobIds) ? req.jobIds : []);
+  if (!named.size || !out.cancelled) return out;
+  const kernel = sunoKernelJobs();
+  for (const j of (await readSuno()).jobs) {
+    if (!named.has(j.id) || j.state !== "cancelled") continue;
+    const k = kernel.get(sunoKernelId(j));
+    if (k !== undefined && (k.state === "queued" || k.state === "paused" || k.state === "planned")) cancelSunoJob(k.id, OPERATOR);
+  }
+  return out;
 }
 
-const G = globalThis as typeof globalThis & { __gtSunoWorker?: WorkerState };
-const worker = (): WorkerState => (G.__gtSunoWorker ??= { loop: null, recovered: false, paused: null, again: false });
+/* ── the running-state overlay ────────────────────────────────────────────── */
 
-/** A crashed run: every `active` job goes back to `queued`, keeping its clips,
- *  and the queue is switched off with the job and model named. */
-async function recover(): Promise<number> {
-  return withSuno((f) => {
-    let n = 0;
-    for (const j of f.jobs) {
-      if (j.state !== "active") continue;
-      const what = `"${j.fields.title ?? j.fields.style}"${j.model ? ` on ${SUNO_MODEL_LABEL[j.model] ?? j.model}` : ""}`;
-      f.queue = { running: false, interrupted: `${what} was being created when the server stopped; check your Suno library before starting` };
-      j.state = "queued";
-      delete j.phase;
-      delete j.model;
-      n++;
+/**
+ * The records as the kernel has them running (decision 9). An interrupted job
+ * reads `queued` with the column's `interrupted` sentence naming it and its
+ * model - the wire the board and lib/ledger/v1/sources/suno.ts already read.
+ */
+export function overlaySuno(jobs: readonly SunoJob[], kernel: ReadonlyMap<string, Job>): { jobs: SunoJob[]; interrupted?: string } {
+  let interrupted: string | undefined;
+  const out = jobs.map((j): SunoJob => {
+    const k = kernel.get(sunoKernelId(j));
+    const { phase: _phase, model: _model, ...still } = j;
+    if (k === undefined) {
+      // A record left `active` with no job is a v1 worker's crash from before the
+      // kernel drove this queue: v1's recover() said so and waited for Start, and
+      // so does this - Start launches it, and a model with clips is not created again.
+      if (j.state !== "active") return j;
+      interrupted ??= `"${j.fields.title ?? j.fields.style}"${j.model ? ` on ${SUNO_MODEL_LABEL[j.model] ?? j.model}` : ""} was being created when the server stopped; check your Suno library before starting`;
+      return { ...still, state: "queued" };
     }
-    return n;
+    switch (k.state) {
+      case "running":
+        return { ...j, state: "active" };
+      case "planned":
+      case "queued":
+      case "paused":
+        return { ...still, state: "queued" };
+      case "interrupted": {
+        const model = SUNO_MODELS.find((m) => k.interruption?.stage === `create:${m}`);
+        interrupted ??= `"${j.fields.title ?? j.fields.style}"${model ? ` on ${SUNO_MODEL_LABEL[model] ?? model}` : ""} was being created when its driver stopped; check your Suno library before starting`;
+        return { ...still, state: "queued" };
+      }
+      case "failed":
+        return { ...still, state: "failed", error: j.error ?? k.error?.message ?? "failed" };
+      case "cancelled":
+        return { ...still, state: "cancelled" };
+      case "done":
+        return j;
+    }
   });
+  return interrupted === undefined ? { jobs: out } : { jobs: out, interrupted };
 }
 
-/** The operator's switch. Start clears an interruption (they have looked) and
- *  kicks the worker; Stop lets the create in flight finish. */
+export async function readSunoLive(): Promise<{ file: SunoFile; jobs: SunoJob[]; interrupted?: string }> {
+  const file = await readSuno();
+  return { file, ...overlaySuno(file.jobs, sunoKernelJobs()) };
+}
+
+/* ── the switch ───────────────────────────────────────────────────────────── */
+
+/** The operator's switch (the Queue column's Start / Stop). Its state stays in
+ *  suno.json for the board to draw; what it DOES is to the jobs (header). */
 export async function setSunoQueue(running: boolean): Promise<SunoQueueState> {
   const state = await withSuno((f) => {
     f.queue = { running };
     return { ...f.queue };
   });
-  if (running) void kickSunoWorker();
+  if (!running) {
+    const paused = new Set(pauseSunoJobs(OPERATOR));
+    await withSuno((f) => {
+      for (const j of f.jobs) {
+        if (!paused.has(sunoKernelId(j)) || j.state !== "active") continue;
+        j.state = "queued";
+        delete j.phase;
+        delete j.model;
+      }
+    });
+    return state;
+  }
+  resumeSunoJobs(OPERATOR);
+  const waiting = await waitingIds();
+  if (waiting.length) await launchSunoNow(waiting, { mode: columnMode(), actor: OPERATOR });
   return state;
 }
 
-const oldestQueued = (f: SunoFile): SunoJob | null =>
-  f.jobs.filter((j) => j.state === "queued").sort((a, b) => a.enqueuedAt - b.enqueuedAt)[0] ?? null;
-
-async function patchJob(id: string, fn: (j: SunoJob, f: SunoFile) => void): Promise<void> {
-  await withSuno((f) => {
-    const j = f.jobs.find((x) => x.id === id);
-    if (j) fn(j, f);
-  });
+/** Queued records with no job yet (a v1 crash's included): what Start launches. */
+async function waitingIds(): Promise<string[]> {
+  const kernel = sunoKernelJobs();
+  return (await readSunoLive()).jobs.filter((j) => j.state === "queued" && !kernel.has(sunoKernelId(j))).map((j) => j.id);
 }
 
-async function runOne(driver: SunoDriver, id: string): Promise<void> {
-  const job = await withSuno((f) => {
-    const j = f.jobs.find((x) => x.id === id);
-    if (!j || j.state !== "queued") return null;
-    j.state = "active";
-    j.startedAt = Date.now();
-    delete j.error;
-    return { ...j };
-  });
-  if (!job) return;
-  try {
-    const have = new Set((await readSuno()).clips.filter((c) => c.jobId === id).map((c) => c.model));
-    for (const model of job.models) {
-      if (have.has(model)) continue;
-      // Stopped between models: back to the queue with the clips it has; the
-      // next Start creates only what is missing.
-      if (!(await readSuno()).queue.running) {
-        await patchJob(id, (j) => {
-          j.state = "queued";
-          delete j.phase;
-          delete j.model;
-        });
-        return;
-      }
-      // Phase writes are chained, not awaited inline: the driver is not held
-      // up by a disk write, and the last write lands before the clips do.
-      let writes = Promise.resolve();
-      let last: SunoPhase | null = null;
-      const onPhase = (phase: SunoPhase) => {
-        if (phase === last) return;
-        last = phase;
-        writes = writes.then(() => patchJob(id, (j) => {
-          j.model = model;
-          j.phase = phase;
-        })).catch(() => undefined);
-      };
-      onPhase("attaching");
-      let refs: SunoClipRef[];
-      try {
-        refs = await driver.create(job.fields, model, onPhase);
-      } finally {
-        await writes;
-      }
-      if (!refs.length) throw new Error(`Suno returned no clips for ${model}`);
-      await patchJob(id, (j, f) => {
-        const now = Date.now();
-        for (const r of refs) {
-          const c: SunoClip = { ...r, id: mintSunoId("sc"), origin: "queue", jobId: id, model, createdAt: now, verdict: null, prompt: { ...job.fields } };
-          f.clips.push(c);
-          j.clipIds.push(c.id);
-        }
-      });
-    }
-    await patchJob(id, (j, f) => {
-      j.state = "done";
-      j.endedAt = Date.now();
-      delete j.phase;
-      delete j.model;
-      const p = f.proposals.find((x) => x.id === j.proposalId);
-      if (p) delete p.error;
-    });
-  } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    await patchJob(id, (j, f) => {
-      j.state = "failed";
-      j.endedAt = Date.now();
-      j.error = message;
-      delete j.phase;
-      delete j.model;
-      const p = f.proposals.find((x) => x.id === j.proposalId);
-      if (p) p.error = message;
-    });
-  }
+/** What Start would launch, as a receipt (decision 3): GET /api/sound/suno/run. */
+export async function sunoStartReceipt(): Promise<Receipt> {
+  const r = await launchSuno(await waitingIds(), { mode: columnMode(), actor: OPERATOR });
+  if (r.kind !== "receipt") throw new SoundError("a receipt read launched something", 500);
+  return r.receipt;
 }
 
-async function loop(): Promise<void> {
-  const w = worker();
-  if (!w.recovered) {
-    w.recovered = true;
-    await recover();
-  }
-  for (;;) {
-    w.again = false;
-    const f = await readSuno();
-    if (!f.queue.running) {
-      w.paused = null;
-      return;
-    }
-    const next = oldestQueued(f);
-    if (!next) {
-      if (w.again) continue;
-      w.paused = null;
-      return;
-    }
-    const driver = sunoDriver();
-    const health = await driver.probe().catch((e: unknown) => ({ ok: false as const, reason: e instanceof Error ? e.message : String(e) }));
-    if (!health.ok) {
-      w.paused = health.reason;
-      return;
-    }
-    w.paused = null;
-    await runOne(driver, next.id);
-  }
-}
-
-/** Start the loop if it is not running. Returns the running loop, so a probe
- *  can await the queue draining. Never throws to the caller: a store error
- *  stops the loop and the next kick tries again. */
-export function kickSunoWorker(): Promise<void> {
-  const w = worker();
-  w.again = true;
-  if (!w.loop) {
-    w.loop = loop()
-      .catch((e: unknown) => console.error(`[suno] worker stopped: ${e instanceof Error ? e.message : String(e)}`))
-      .finally(() => {
-        w.loop = null;
-      });
-  }
-  return w.loop;
-}
-
-/** Why the worker is paused, or null. */
-export const sunoWorkerPaused = (): string | null => worker().paused;
-
-/** Probes only: forget the singleton, as a fresh process would. */
-export function __resetSunoWorker(): void {
-  delete G.__gtSunoWorker;
+/** Start, confirming a receipt by its token. A stale token launches nothing and returns the fresh receipt. */
+export async function startSunoWith(token: string): Promise<{ queue: SunoQueueState } | { stale: Receipt }> {
+  const r = await launchSuno(await waitingIds(), { mode: columnMode(), actor: OPERATOR, token });
+  if (r.kind === "stale") return { stale: r.fresh };
+  return { queue: await setSunoQueue(true) };
 }
 
 /* ── the snapshot ─────────────────────────────────────────────────────────── */
 
+/** A READ: the driver's reachability and the records with their jobs' running
+ *  state. It starts nothing - v1's snapshot kicked the worker; a read is a read. */
 export async function sunoSnapshot(): Promise<SunoSnapshot> {
-  const driver = await sunoDriver().probe().catch((e: unknown) => ({ ok: false as const, reason: e instanceof Error ? e.message : String(e) }));
-  // A snapshot read is a kick: an idle worker with queued work starts here.
-  // Not awaited; the loop's errors are its own.
-  void kickSunoWorker();
-  const f = await readSuno();
-  return { proposals: f.proposals, jobs: f.jobs, clips: f.clips, driver, queue: f.queue };
+  const driver = await sunoDriver()
+    .probe()
+    .catch((e: unknown) => ({ ok: false as const, reason: e instanceof Error ? e.message : String(e) }));
+  const { file, jobs, interrupted } = await readSunoLive();
+  return { proposals: file.proposals, jobs, clips: file.clips, driver, queue: { running: file.queue.running, ...(interrupted === undefined ? {} : { interrupted }) } };
 }

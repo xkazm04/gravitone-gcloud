@@ -157,6 +157,9 @@ export interface MvJob {
   error?: string;
   /** The schedule slot id once sent to Calendar. */
   slotId?: string;
+  /** The kernel job of the current attempt, once launched (lib/producers/mv.ts
+   *  `mvKernelId`): its state is the running truth. A Regenerate clears it. */
+  job?: string;
   enqueuedAt: number;
   startedAt?: number;
   endedAt?: number;

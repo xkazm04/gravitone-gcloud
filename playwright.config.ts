@@ -53,7 +53,11 @@ const SERVER_ONLY = path.join(process.cwd(), "node_modules", "next", "dist", "co
 const resolveFilename: unknown = Reflect.get(Module, "_resolveFilename");
 if (typeof resolveFilename !== "function") throw new Error("playwright.config.ts: Module._resolveFilename is gone; the server-only alias needs another seam");
 Reflect.set(Module, "_resolveFilename", function (this: unknown, request: unknown, ...rest: unknown[]): unknown {
-  return request === "server-only" ? SERVER_ONLY : Reflect.apply(resolveFilename, this, [request, ...rest]);
+  if (request === "server-only") return SERVER_ONLY;
+  // `@/` as tsconfig paths spell it: a lib/ module that a native-ESM probe reaches through
+  // `await import()` goes through this seam, not Playwright's CJS transform (Phase 4 L31).
+  const r = typeof request === "string" && request.startsWith("@/") ? path.join(process.cwd(), request.slice(2)) : request;
+  return Reflect.apply(resolveFilename, this, [r, ...rest]);
 });
 
 process.env.SPEND_STORE = "memory";
@@ -79,6 +83,15 @@ const NATIVE_ESM = [
 
 export default defineConfig({
   testDir: "./tests/golden-path",
+
+  // THE WORKSPACE PACKAGES ARE NODE'S, NOT PLAYWRIGHT'S (Phase 4). packages/* are
+  // native ESM TypeScript that Node 24 strips and require()s itself. Left to
+  // Playwright's CommonJS transform, one file could load twice in a worker - once
+  // transformed (via a lib/ re-export like lib/projects.ts -> @gt/catalog/projects)
+  // and once native (via a kernel import) - and the native importer found no named
+  // exports ("does not provide an export named 'TEMPLATES'"). Excluded, every path
+  // reaches the one native module instance.
+  build: { external: ["**/packages/**"] },
 
   // SERIAL, WITH THE REASON ATTACHED — a stated property, not caution, so nobody
   // "optimises" it into parallel flake. These probes MUTATE `process.env`

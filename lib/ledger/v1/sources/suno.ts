@@ -51,6 +51,8 @@ const jobSchema = z.object({
   phase: z.string().optional(),
   model: MODEL.optional(),
   models: z.array(MODEL),
+  /** The kernel job driving it (lib/producers/suno.ts); absent on a v1-only record. */
+  job: z.string().optional(),
   enqueuedAt: z.number(),
   startedAt: z.number().optional(),
   endedAt: z.number().optional(),
@@ -138,7 +140,10 @@ function tallyOf(s: SunoSnapshot): Projection["tally"] {
 function liveOf(s: SunoSnapshot): LiveJob[] {
   const named = interruptedJob(s.jobs, s.queue.interrupted);
   return s.jobs
-    .filter((j) => LIVE_STATES.includes(j.state))
+    // A record driven by a kernel job is the job store's to show live (Runs reads
+    // the job: state, slot, model in flight, interruption); drawn here too it
+    // would be a second, lagging copy. Its clips still project from suno.json.
+    .filter((j) => LIVE_STATES.includes(j.state) && j.job === undefined)
     .map((j) => {
       const state: JobState = j.state === "active" ? "running" : j.id === named ? "interrupted" : s.queue.running ? "queued" : "paused";
       const startedAt = j.state === "active" ? instant(j.startedAt) : null;

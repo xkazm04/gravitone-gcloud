@@ -277,7 +277,7 @@ const EXPECT: Record<string, Expectation> = {
   "app/api/sound/suno/route.ts": { door: "access", ok: { GET: "2xx" } },
   "app/api/sound/suno/clips/[id]/route.ts": { door: "money", ok: { PATCH: "4xx" } },
   "app/api/sound/suno/library/route.ts": { door: "money", ok: { POST: "4xx" } },
-  "app/api/sound/suno/run/route.ts": { door: "money", ok: { POST: "4xx" } },
+  "app/api/sound/suno/run/route.ts": { door: "money", ok: { GET: "2xx", POST: "4xx" } },
   "app/api/sound/suno/clear/route.ts": { door: "money", ok: { POST: "4xx" } },
   "app/api/sound/suno/proposals/[id]/route.ts": { door: "money", ok: { DELETE: "4xx" } },
   "app/api/sound/suno/proposals/route.ts": { door: "money", ok: { POST: "4xx" } },
@@ -292,7 +292,7 @@ const EXPECT: Record<string, Expectation> = {
   // local-binaries refusal comes AFTER its body check, so an empty body is
   // the same 400 in every cell.
   "app/api/sound/mv/route.ts": { door: "money", ok: { GET: "2xx", POST: "4xx" } },
-  "app/api/sound/mv/run/route.ts": { door: "money", ok: { POST: "4xx" } },
+  "app/api/sound/mv/run/route.ts": { door: "money", ok: { GET: "2xx", POST: "4xx" } },
   "app/api/sound/mv/import/route.ts": { door: "money", ok: { POST: "4xx" }, local: ["POST"] },
   "app/api/sound/mv/jobs/[id]/route.ts": { door: "money", ok: { POST: "4xx", PATCH: "4xx", DELETE: "4xx" } },
   "app/api/sound/mv/jobs/[id]/file/route.ts": { door: "access", ok: { GET: "4xx" } },

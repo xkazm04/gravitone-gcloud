@@ -2,24 +2,30 @@
 // against the FAKE driver and a temp store.
 //
 // SUNO_DRIVER=fake selects lib/sound/suno/fakeDriver.ts: no browser, no
-// network, no vendor, no credits. SOUND_STORE_DIR points at a fresh temp dir
-// per test, and the worker singleton is reset as a fresh process would find
-// it. What is pinned, through the REAL route handlers where a route exists:
+// network, no vendor, no credits. SOUND_STORE_DIR and GRAVITONE_STORE_PATH
+// point at a fresh temp dir per test. Since Phase 4 (L31) a queued prompt is
+// a KERNEL JOB on box.chrome (lib/producers/suno.ts), launched by Start and
+// driven here by `drain` - the same driveSuno pipeline/suno.mts runs; v1's
+// in-process worker and its kick are gone. What is pinned, through the REAL
+// route handlers where a route exists:
 //
-//   · the switch: an enqueue never starts the queue; Start does, Stop lets the
-//     create in flight finish and returns its job holding the clips it has;
+//   · the switch: an enqueue never launches; Start launches and the drive runs
+//     it, Stop lets the create in flight finish and returns its job holding
+//     the clips it has;
 //   · FIFO: jobs run in the order they were queued, one at a time;
 //   · every job renders on BOTH models, 2 clips each = 4 clips, verdict null;
-//   · crash-resume: an `active` job found on start goes back to `queued`, the
-//     queue switches OFF naming the job and model, and after Start a model
-//     that already landed clips is not created again;
+//   · crash-resume: an `active` record a v1 worker left behind reads queued,
+//     naming the job and model, and after Start a model that already landed
+//     clips is not created again (a crash under the kernel is
+//     tests/next-server/producer-suno-crash.test.ts);
 //   · clear: prompts and clip records removed, queued jobs cancelled, a running
 //     job and a queued prompt skipped, all in one write;
 //   · a failure fails ITS job with the driver's sentence verbatim, the
 //     proposal wears it and is a candidate again, and the queue goes on;
 //   · cancel: a queued job only - an active one is a 409;
-//   · a driver that is not ok PAUSES the queue without failing a job, and the
-//     next kick after it recovers drains it;
+//   · a driver that is not ok stops the drive without failing a job (kernel
+//     `unhealthy`), a snapshot read starts nothing, and the next drive after it
+//     recovers drains it;
 //   · a hunt leaf becomes ONE proposal however often it is queued;
 //   · the propose turn's answer is held to Suno's form limits (no model call:
 //     the reason function is injected);
@@ -39,7 +45,10 @@ import { test, expect } from "@playwright/test";
 import { ACCESS_SECRET_VAR, __resetRateLimit } from "@/lib/apiAuth";
 import { FAKE_SUNO, resetFakeSuno } from "@/lib/sound/suno/fakeDriver";
 import { proposeSuno } from "@/lib/sound/suno/propose";
-import { __resetSunoWorker, kickSunoWorker, sunoWorkerPaused } from "@/lib/sound/suno/queue";
+import { closeProcessKernel } from "@gt/kernel/process";
+import { driveSuno } from "@/lib/producers/suno";
+import type { Drive } from "@/lib/producers/sound";
+import { queuedSunoJobs, sunoDriver } from "@/lib/sound/suno/queue";
 import { readSuno, STYLE_MAX, type SunoFile } from "@/lib/sound/suno/store";
 import type { Hunt, HuntNode } from "@/lib/sound/types";
 import type { SunoClip, SunoImportResult, SunoJob, SunoProposal, SunoSnapshot } from "@/lib/suno/types";
@@ -59,38 +68,28 @@ import { makeAudioSource } from "@/lib/board/sources/audio";
 import { keepEnv } from "./_helpers";
 
 const SECRET = "suno-probe-secret";
-keepEnv(["SOUND_STORE_DIR", "SUNO_DRIVER", "NEXT_PUBLIC_DEV_AUTH", ACCESS_SECRET_VAR]);
+keepEnv(["SOUND_STORE_DIR", "SUNO_DRIVER", "NEXT_PUBLIC_DEV_AUTH", "GRAVITONE_STORE_PATH", "GRAVITONE_DRY_ONLY", ACCESS_SECRET_VAR]);
 
 let root = "";
 
 test.beforeEach(() => {
   root = mkdtempSync(path.join(tmpdir(), "suno-probe-"));
   process.env.SOUND_STORE_DIR = path.join(root, "store");
+  process.env.GRAVITONE_STORE_PATH = path.join(root, "kernel.sqlite");
   process.env.SUNO_DRIVER = "fake";
+  delete process.env.GRAVITONE_DRY_ONLY;
   delete process.env.NEXT_PUBLIC_DEV_AUTH;
   process.env[ACCESS_SECRET_VAR] = SECRET;
   __resetRateLimit();
-  __resetSunoWorker();
   resetFakeSuno();
 });
 
-test.afterEach(async () => {
+test.afterEach(() => {
   FAKE_SUNO.health = { ok: true };
-  // The drain kick runs against THIS test's store, pinned here: keepEnv's own
-  // afterEach (registered first) may already have restored SOUND_STORE_DIR to
-  // nothing, and a kick then lands on the real foundry-out/sound - where a
-  // fresh worker's crash recovery requeues whatever is active and switches
-  // the operator's queue off. Measured 2026-10-12: two probe runs stopped a
-  // live music-video render mid-job.
-  const restored = process.env.SOUND_STORE_DIR;
-  process.env.SOUND_STORE_DIR = path.join(root, "store");
-  try {
-    await kickSunoWorker(); // never leave a loop writing into a removed dir
-  } finally {
-    __resetSunoWorker();
-    if (restored === undefined) delete process.env.SOUND_STORE_DIR;
-    else process.env.SOUND_STORE_DIR = restored;
-  }
+  // Nothing runs in the background any more (v1's worker loop did, and once
+  // stopped a live render from a probe): the kernel handle is closed so
+  // Windows lets the temp dir go.
+  closeProcessKernel();
   rmSync(root, { recursive: true, force: true });
 });
 
@@ -117,12 +116,22 @@ async function enqueue(ids: string[]): Promise<SunoJob[]> {
   return (await read<{ jobs: SunoJob[] }>(res)).jobs;
 }
 
-/** The Queue column's Start, through the real route. Returns the loop so a
- *  test can await the drain. */
-async function start(): Promise<void> {
+/** Drive every queued Suno job on this process, in queue order, until none
+ *  is left or the drive stops short (pipeline/suno.mts start's loop). */
+async function drain(): Promise<Drive> {
+  let last: Drive = { reports: [] };
+  for (let ids = queuedSunoJobs("live"); ids.length; ids = queuedSunoJobs("live")) {
+    last = await driveSuno(ids, { driver: sunoDriver(), dryOnly: false });
+    if (last.stopped !== undefined) break;
+  }
+  return last;
+}
+
+/** The Queue column's Start, through the real route, then the drive. */
+async function start(): Promise<Drive> {
   const res = await runPOST(rq("/api/sound/suno/run", "POST", { running: true }));
   expect(res.status).toBe(200);
-  await kickSunoWorker();
+  return drain();
 }
 
 /** The first job, once the worker has persisted `phase` on it. Polled at 25ms,
@@ -154,8 +163,8 @@ test("FIFO, both models, 4 clips per job, persisted to suno.json", async () => {
   FAKE_SUNO.delayMs = 2;
   await enqueue([a.id]);
   await enqueue([b.id, c.id]);
-  await kickSunoWorker();
-  // queued is not started: nothing spends until the operator presses Start
+  await drain();
+  // queued is not launched: nothing spends until the operator presses Start
   expect(FAKE_SUNO.calls).toEqual([]);
   expect((await readSuno()).jobs.map((j) => j.state)).toEqual(["queued", "queued", "queued"]);
   await start();
@@ -214,7 +223,7 @@ test("the active phase and model are persisted while the driver works", async ()
   FAKE_SUNO.hold = new Promise<void>((r) => (release = r));
   await enqueue([a.id]);
   expect((await runPOST(rq("/api/sound/suno/run", "POST", { running: true }))).status).toBe(200);
-  const running = kickSunoWorker();
+  const running = drain();
   const seen = await untilPhase("creating");
   expect(seen).toMatchObject({ state: "active", phase: "creating", model: "v6" });
   // a running job is not cancelled
@@ -229,7 +238,7 @@ test("the active phase and model are persisted while the driver works", async ()
   expect((await readSuno()).jobs[0].state).toBe("done");
 });
 
-test("crash-resume: an active job goes back to queued, the queue stops naming it, and after Start only the missing model is created", async () => {
+test("crash-resume: a v1 worker's active record reads queued, naming it, and after Start only the missing model is created", async () => {
   const now = Date.now();
   const proposal: SunoProposal = { id: "sp-0000000001", fields: { style: "drill, 808 slides" }, lane: { axis: "group", value: "hip hop" }, origin: "custom", createdAt: now - 10_000 };
   writeStore({
@@ -243,13 +252,12 @@ test("crash-resume: an active job goes back to queued, the queue stops naming it
     // back as queue clips carrying their job's fields.
     clips: ["sc-0000000001", "sc-0000000002"].map((id, i) => ({ id, jobId: "sj-0000000001", model: "v6" as const, songId: `old-${i}`, url: `https://suno.com/song/old-${i}`, audioUrl: null, imageUrl: null, title: "old", durationS: null, createdAt: now - 7000, verdict: null }) as unknown as SunoClip),
   });
-  await kickSunoWorker();
+  await drain();
   // the model that was mid-create may already be spent on Suno: nothing runs
   // until the operator has looked
   expect(FAKE_SUNO.calls).toEqual([]);
-  const stopped = await readSuno();
+  const stopped = await read<SunoSnapshot>(await sunoGET(rq("/api/sound/suno")));
   expect(stopped.jobs[0].state).toBe("queued");
-  expect(stopped.queue.running).toBe(false);
   expect(stopped.queue.interrupted).toContain('"drill, 808 slides" on v6-wild');
   await start();
   expect((await readSuno()).queue).toEqual({ running: true });
@@ -277,8 +285,8 @@ test("a failure fails its job verbatim, the proposal wears it and is a candidate
   expect(f.proposals.find((p) => p.id === a.id)!.error).toBe("Suno refused the style: 'trap, dark' (moderation)");
   // a failed proposal can be queued again; the next success clears its error
   FAKE_SUNO.failWith = () => null;
-  await enqueue([a.id]);
-  await kickSunoWorker();
+  await enqueue([a.id]); // the switch is on: launched at once
+  await drain();
   const g = await readSuno();
   expect(g.jobs.at(-1)!.state).toBe("done");
   expect(g.proposals.find((p) => p.id === a.id)!.error).toBeUndefined();
@@ -292,7 +300,7 @@ test("cancel: a queued job only; enqueue is idempotent while a job is live", asy
   const [j1] = await enqueue([a.id]);
   const [j1again] = await enqueue([a.id]);
   expect(j1again.id).toBe(j1.id);
-  await kickSunoWorker();
+  await drain();
   const ok = await queueDELETE(rq(`/api/sound/suno/queue/${j1.id}`, "DELETE"), ctx(j1.id));
   expect(ok.status).toBe(200);
   expect((await read<{ job: SunoJob }>(ok)).job.state).toBe("cancelled");
@@ -307,24 +315,24 @@ test("cancel: a queued job only; enqueue is idempotent while a job is live", asy
   expect(FAKE_SUNO.calls).toHaveLength(0);
 });
 
-test("a driver that is not ok pauses the queue without failing a job; the next kick after it recovers drains it", async () => {
+test("a driver that is not ok stops the drive without failing a job; a read starts nothing; the next drive after it recovers drains it", async () => {
   FAKE_SUNO.health = { ok: false, reason: "Suno is signed out in the dedicated profile" };
   const a = await propose("synthwave, gated drums");
   await enqueue([a.id]);
-  await start();
+  const paused = await start();
   expect((await readSuno()).jobs[0].state).toBe("queued");
-  expect(sunoWorkerPaused()).toBe("Suno is signed out in the dedicated profile");
+  expect(paused.stopped).toBe("Suno is signed out in the dedicated profile");
   const snap = await read<SunoSnapshot>(await sunoGET(rq("/api/sound/suno")));
   expect(snap.driver).toEqual({ ok: false, reason: "Suno is signed out in the dedicated profile" });
-  await kickSunoWorker();
   expect(FAKE_SUNO.calls).toHaveLength(0);
 
   FAKE_SUNO.health = { ok: true };
-  // a snapshot read is a kick
+  // a snapshot read is a READ now: it starts nothing
   await sunoGET(rq("/api/sound/suno"));
-  await kickSunoWorker();
+  expect((await readSuno()).jobs[0].state).toBe("queued");
+  const drained = await drain();
   expect((await readSuno()).jobs[0].state).toBe("done");
-  expect(sunoWorkerPaused()).toBeNull();
+  expect(drained.stopped).toBeUndefined();
 });
 
 test("stop: the create in flight finishes, its job goes back to the queue holding its clips, and Start creates only what is missing", async () => {
@@ -334,7 +342,7 @@ test("stop: the create in flight finishes, its job goes back to the queue holdin
   let release!: () => void;
   FAKE_SUNO.hold = new Promise<void>((r) => (release = r));
   expect((await runPOST(rq("/api/sound/suno/run", "POST", { running: true }))).status).toBe(200);
-  const running = kickSunoWorker();
+  const running = drain();
   expect((await untilPhase("creating"))?.phase).toBe("creating");
   const stop = await runPOST(rq("/api/sound/suno/run", "POST", { running: false }));
   expect(await read<{ queue: unknown }>(stop)).toEqual({ queue: { running: false } });
@@ -361,7 +369,7 @@ test("clear: prompts and clip records removed, queued jobs cancelled; a running 
   const c = await propose("baile funk", "C");
   await enqueue([a.id]);
   await start(); // a: done, 4 clips
-  const [jb] = await enqueue([b.id]); // queued, queue stopped below
+  const [jb] = await enqueue([b.id]); // launched (the switch is on), then paused by Stop below
   await runPOST(rq("/api/sound/suno/run", "POST", { running: false }));
   const [jc] = await enqueue([c.id]);
   const before = await readSuno();

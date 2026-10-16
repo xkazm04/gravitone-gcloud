@@ -37,6 +37,13 @@ import type { IngestEvent, LiveJob, ProjectCtx, Projection, Source, WeirItem } f
 // though a job also spends text turns and a Leonardo still - those are booked
 // by the spend source on their own lanes.
 //
+// SINCE PHASE 4 (L31) A RECORD WHOSE CURRENT ATTEMPT IS A KERNEL JOB (`job`) is the
+// kernel's to show live: the Runs view reads that job (state, slot, step,
+// interruption) straight from the job store, so it is left out of `live` here
+// rather than drawn twice from a mirror that lags the job. Its clocks, verdict
+// and the weir still project from mv.json, which stays the artefact store.
+// `queue.running`, `queue.interrupted` and `worker` are only ever v1's now.
+//
 // THE WEIR: finished videos with no verdict are one cull pile (Board > Settled).
 
 const jobSchema = z.object({
@@ -50,6 +57,8 @@ const jobSchema = z.object({
   error: z.string().optional(),
   slotId: z.string().optional(),
   enqueuedAt: z.number(),
+  /** The kernel job of the current attempt (lib/producers/mv.ts); absent on a v1-only record. */
+  job: z.string().optional(),
   startedAt: z.number().optional(),
   endedAt: z.number().optional(),
 });
@@ -132,7 +141,7 @@ function stateOf(j: Job, s: MvSnapshot, named: string | null): JobState {
 function liveOf(s: MvSnapshot): LiveJob[] {
   const named = interruptedMv(s.jobs, s.queue.interrupted);
   return s.jobs
-    .filter((j) => j.state === "queued" || j.state === "active")
+    .filter((j) => (j.state === "queued" || j.state === "active") && j.job === undefined)
     .map((j) => {
       const state = stateOf(j, s, named);
       const startedAt = j.state === "active" ? instant(j.startedAt) : null;

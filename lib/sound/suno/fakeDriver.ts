@@ -1,5 +1,7 @@
-// THE FAKE SUNO DRIVER — selected by SUNO_DRIVER=fake (lib/sound/suno/queue.ts).
-// Server-only by use. Deterministic: the five phases in order, a short
+// THE FAKE SUNO DRIVER — selected by SUNO_DRIVER=fake (lib/sound/suno/queue.ts
+// `sunoDriver`, still read by the library import) or bound to a drive
+// (lib/producers/suno.ts `sunoProducer({ driver })`). Its clip shape is also the
+// DRY stand-in a dry Suno job continues on (`standClipRefs`). Server-only by use. Deterministic: the five phases in order, a short
 // configurable delay between them, and two clip references per create whose
 // song ids are counted, not random, so a probe can name them.
 //
@@ -84,6 +86,20 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export async function fakeProbeSuno(): Promise<SunoDriverHealth> {
   return FAKE_SUNO.health;
+}
+
+/** What a DRY create continues on (kernel dryrun `stand`): two references in
+ *  the fake's shape, marked so no one mistakes them for songs on suno.com. */
+export function standClipRefs(fields: SunoFields, model: SunoModel): SunoClipRef[] {
+  const tag = Array.from(crypto.getRandomValues(new Uint8Array(4)), (b) => b.toString(16).padStart(2, "0")).join("");
+  return [0, 1].map((i) => ({
+    songId: `dry-${tag}-${model}-${i}`,
+    url: `https://suno.com/song/dry-${tag}-${model}-${i}`,
+    audioUrl: null,
+    imageUrl: null,
+    title: `${fields.title ?? fields.style.split(",")[0]} (dry run, ${model}${i ? " b" : ""})`,
+    durationS: null,
+  }));
 }
 
 export async function fakeCreateSunoTracks(fields: SunoFields, model: SunoModel, onPhase: (phase: SunoPhase) => void): Promise<SunoClipRef[]> {

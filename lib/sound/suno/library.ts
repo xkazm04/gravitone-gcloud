@@ -15,7 +15,7 @@
 
 import type { SunoClip, SunoImportResult } from "@/lib/suno/types";
 
-import { sunoDriver } from "./queue";
+import { sunoDriver } from "./drivers";
 import { mintSunoId, withSuno } from "./store";
 
 export async function importSunoLibrary(onPage?: (n: number, total: number | null) => void): Promise<SunoImportResult> {

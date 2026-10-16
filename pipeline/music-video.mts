@@ -2,20 +2,28 @@
 // for a whole album on a render box. The /music-video skill wraps it.
 //
 //   npx tsx pipeline/music-video.mts plan <dir> [--versions all|main|instrumental] [--again] [--limit N] [--prompt "<text>" | --prompt-file <f>] [--still <picture>] [--look <id>]
-//   npx tsx pipeline/music-video.mts run <dir> --yes [same flags as plan]
+//   npx tsx pipeline/music-video.mts run <dir> (--yes | --dry) [--budget-usd X] [--detach] [same flags as plan]
 //   npx tsx pipeline/music-video.mts collect <dir>
 //   npx tsx pipeline/music-video.mts status
 //
 //   plan     reads only: what a run would queue, retry or skip, and what it costs
-//   run      imports the folder, queues the plan, drains the queue (blocks until
-//            every track it owns is done or failed), switches the queue off,
-//            and copies each finished video beside its source:
-//            <track>.mp4 and <track> - youtube.txt
+//   run      imports the folder, queues the plan, LAUNCHES each track as a kernel
+//            job (lib/producers/mv.ts; the receipt is printed and confirmed by
+//            --yes), drives them on this process (blocks until every track it
+//            owns is done, failed or stopped short), and copies each finished
+//            video beside its source: <track>.mp4 and <track> - youtube.txt
 //   collect  the copy step alone, for videos made from the canvas
-//   status   the queue and every job
+//   status   the records with their jobs' running state - a READ: it starts
+//            nothing (v1's status kicked the worker as a side effect)
 //
+//   --dry         launch DRY jobs: every paid call (the still, the text turns)
+//                 is answered by its stand-in and booked as a would-call; the
+//                 free local work still runs; nothing is collected. No --yes.
+//   --budget-usd  the job ceiling. Studio credits are not dollars and are
+//                 admitted under it; a text turn's reported cost counts.
+//   --detach      launch and return: the worker (or a later run) drives.
 //   --json on any command: one JSON document on stdout, progress on stderr.
-//   Exit 0 ok · 1 a job failed or the drain stopped short · 2 usage.
+//   Exit 0 ok · 1 a job failed or the drive stopped short · 2 usage.
 //
 // AN ALBUM WITH ITS OWN COVER: --still <picture> makes every video over that
 // one picture (copied, so no studio credits and no studio browser needed) and
@@ -35,9 +43,9 @@
 // unless --fixtures is given. The studio's Chrome is LEONARDO_STUDIO_CDP,
 // default port 9333 (lib/imaging/studio/browser.ts).
 //
-// ONE PROCESS DRAINS THE STORE AT A TIME (lib/sound/mv/queue.ts lease): a dev
-// server on the same store with its queue running pauses this run, naming its
-// pid, and the reverse.
+// ONE DRIVER PER JOB (the kernel's fenced lease on box.render): a worker or a
+// second run already driving the lane stops this run short with "busy", naming
+// the holder, and never renders the same job twice.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -49,7 +57,9 @@ const JSON_OUT = argv.includes("--json");
 const FIXTURES = argv.includes("--fixtures");
 const YES = argv.includes("--yes");
 const AGAIN = argv.includes("--again");
-const args = argv.filter((a) => !["--json", "--fixtures", "--yes", "--again"].includes(a));
+const DRY = argv.includes("--dry");
+const DETACH = argv.includes("--detach");
+const args = argv.filter((a) => !["--json", "--fixtures", "--yes", "--again", "--dry", "--detach"].includes(a));
 const cmd = args[0];
 
 /** .env then .env.local, never clobbering an exported value. */
@@ -84,7 +94,7 @@ function usage(msg?: string): never {
     console.error(
       "usage: npx tsx pipeline/music-video.mts <plan|run|collect|status> [--json]\n" +
         '  plan <dir> [--versions all|main|instrumental] [--again] [--limit N] [--prompt "<text>" | --prompt-file <f>]\n' +
-        "  run <dir> --yes [same flags]   collect <dir>   status   [--fixtures]",
+        "  run <dir> (--yes | --dry) [--budget-usd X] [--detach] [same flags]   collect <dir>   status   [--fixtures]",
     );
   }
   process.exit(2);
@@ -130,6 +140,15 @@ function options() {
   };
 }
 
+/** --budget-usd: the job ceiling (kernel: positive, at most $10,000). */
+function budget(): number | undefined {
+  const raw = flag("budget-usd");
+  if (raw === undefined) return undefined;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0 || n > 10_000) usage("--budget-usd must be a dollar amount above 0 and at most 10000");
+  return n;
+}
+
 function dirArg(): string {
   const d = args[1];
   if (!d || d.startsWith("--")) usage("name the folder of tracks");
@@ -154,35 +173,42 @@ try {
   } else if (cmd === "run") {
     const dir = dirArg();
     const opts = options();
+    const ceilingUsd = budget();
     const p = await planBatch(dir, opts);
     if (!JSON_OUT) printPlan(p);
-    if (!YES) usage(`run spends (~${p.estimatedCredits} studio credits, ${p.textTurns} text turns); add --yes`);
-    if (!p.still && p.newJobs + p.retries > 0) {
+    if (!YES && !DRY) usage(`run spends (~${p.estimatedCredits} studio credits, ${p.textTurns} text turns); add --yes, or --dry for a dry run`);
+    if (!DRY && !DETACH && !p.still && p.newJobs + p.retries > 0) {
       const health = await leonardoStudioHealth();
       if (!health.ok) throw new Error(`the still vendor is not ready: ${health.reason}`);
     }
     const t0 = Date.now();
     let last = "";
-    const res = await runBatch(dir, opts, (jobs) => {
-      const line = jobs.map((j) => `${j.source.title}:${j.state}${j.phase ? `/${j.phase}` : ""}`).join("  ");
-      if (line !== last) console.error(`[${clock(Date.now() - t0)}] ${line}`);
-      last = line;
-    });
-    const failed = res.jobs.filter((j) => j.state !== "done");
+    const res = await runBatch(
+      dir,
+      opts,
+      (jobs) => {
+        const line = jobs.map((j) => `${j.source.title}:${j.state}${j.phase ? `/${j.phase}` : ""}`).join("  ");
+        if (line !== last) console.error(`[${clock(Date.now() - t0)}] ${line}`);
+        last = line;
+      },
+      { mode: DRY ? "dry" : "live", detach: DETACH, ...(ceilingUsd === undefined ? {} : { ceilingUsd }) },
+    );
+    const short = DETACH ? [] : res.jobs.filter((j) => j.state !== "done");
     if (JSON_OUT) emit(JSON.stringify(res));
     else {
+      if (res.receipt) console.error(`launched ${res.receipt.lines.length} ${res.mode} job(s) · receipt ${res.receipt.token.slice(0, 12)} · ${res.receipt.totals.unpriced} credit-priced · eta ${res.receipt.etaAt}`);
       for (const j of res.jobs) console.error(`  ${j.state.padEnd(8)} ${path.basename(j.file)}${j.video ? ` -> ${path.basename(j.video)}` : ""}${j.error ? `  (${j.error})` : ""}`);
       if (res.paused) console.error(`stopped short: ${res.paused}`);
-      console.error(`${res.jobs.length - failed.length}/${res.jobs.length} done in ${clock(Date.now() - t0)}`);
+      if (DETACH) console.error("detached: the worker drives the launched jobs");
+      else console.error(`${res.jobs.length - short.length}/${res.jobs.length} done in ${clock(Date.now() - t0)}`);
     }
-    process.exitCode = failed.length || res.paused ? 1 : 0;
+    process.exitCode = short.length || res.paused ? 1 : 0;
   } else if (cmd === "collect") {
     const out = await collectBatch(dirArg());
     if (JSON_OUT) emit(JSON.stringify({ collected: out }));
     else for (const c of out) console.error(`  ${path.basename(c.file)} -> ${path.basename(c.video)}`);
   } else if (cmd === "status") {
-    // A snapshot read kicks the worker; with the queue off that is a no-op,
-    // and with it on in another process the lease pauses this one.
+    // A read: the records, their jobs' running state and the studio's health. It starts nothing.
     const s = await mvSnapshot();
     if (JSON_OUT) emit(JSON.stringify(s));
     else {
