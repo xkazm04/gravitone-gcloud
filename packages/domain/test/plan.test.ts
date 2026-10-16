@@ -1,8 +1,10 @@
+import type { z } from "zod";
 import { describe, expect, expectTypeOf, it } from "vitest";
 
 import { partStatesOf, runStateOf, weakest, type PartFacts } from "../src/plan.ts";
-import { composeInputSchema, composerInputSchema, partPatchSchema } from "../src/produce.schema.ts";
-import type { ComposeInput, PartPatch } from "../src/produce.ts";
+import { composeInputSchema, composerInputSchema, NATIVE_PRODUCERS, partPatchSchema, producerRunInputSchema, runInputSchema } from "../src/produce.schema.ts";
+import type { ComposeInput, PartPatch, ProducerRunInput } from "../src/produce.ts";
+import { PRODUCERS } from "../src/run.ts";
 import { accept, refuse } from "./_records.ts";
 
 // The film's shape, by key (studio.js RECIPES.film).
@@ -101,6 +103,31 @@ describe("produce doors", () => {
     refuse(composerInputSchema, { lane: "image", text: "x", mechanisms: ["text"], styleId: "s", sweep: true }, "Invalid");
     refuse(composerInputSchema, { lane: "image", text: "x", mechanisms: [] }, "Invalid");
     accept(composerInputSchema, { lane: "video", text: "x", subject: "edu-radar" });
+  });
+  it("accepts each producer's own launch in its own terms, and refuses a mixed or unknown shape", () => {
+    const own: ProducerRunInput[] = [
+      { producer: "extract", slug: "harbour", sources: 12, folder: "C:/galleries/harbour", rounds: 2, grouping: "none" },
+      { producer: "article", subject: "software-engineering/background-jobs", angle: "the sweep" },
+      { producer: "article", topic: "why a receipt comes first" },
+      { producer: "mv", track: "album-a/03-tide" },
+      { producer: "suno", proposal: "p-rain" },
+      { producer: "strips", lane: "all", only: ["E05", "S06"] },
+      { producer: "forge", plan: "sweep-01" },
+      { producer: "dojo", cycle: "2026-10-16-c1" },
+    ];
+    for (const i of own) expect(accept(producerRunInputSchema, i)).toEqual(i);
+    // One door for a Run's input: a composer's and a producer's both pass, nothing else does.
+    accept(runInputSchema, { lane: "audio", text: "rain", kind: "music" });
+    accept(runInputSchema, own[3]);
+    refuse(producerRunInputSchema, { producer: "article", subject: "background-jobs" }, "bundle/slug");
+    refuse(producerRunInputSchema, { producer: "article", subject: "a/b", topic: "both" }, "Invalid");
+    refuse(producerRunInputSchema, { producer: "extract", slug: "Harbour Night", sources: 3 }, "lower-case");
+    refuse(producerRunInputSchema, { producer: "mv", track: "t", bytes: "..." }, "bytes");
+    refuse(runInputSchema, { producer: "cut", cut: "c1" }, "Invalid");
+    // Every native producer is a producer the domain names, and each has its branch.
+    for (const p of NATIVE_PRODUCERS) expect(PRODUCERS).toContain(p);
+    expect(new Set(own.map((i) => i.producer))).toEqual(new Set(NATIVE_PRODUCERS));
+    expectTypeOf<z.output<typeof producerRunInputSchema>["producer"]>().toEqualTypeOf<ProducerRunInput["producer"]>();
   });
   it("holds the compose and part-change shapes to the contract", () => {
     const c = accept(composeInputSchema, { recipe: "explainer", topic: "provider routing", units: { cards: 6 } });

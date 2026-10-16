@@ -161,7 +161,14 @@ describe("audio and video (the prototype's providers, v1's capabilities)", () =>
   it("a local GPU render routes on its own lane with an illustrative pace", () => {
     const o = routed(route({ medium: "video", capability: "image-to-video", units: 3 }, LOCAL, facts(["wan"])));
     expect(o.choice).toMatchObject({ provider: "wan", lane: "gpu.local", seconds: 1080 });
-    expect(VIDEO_TABLE.candidates.every((c) => Object.values(c.pace ?? {}).every((p) => p.basis === "illustrative"))).toBe(true);
+    // Every video pace is the prototype's illustrative figure but one: strips, measured on strips-r1.
+    const measured = VIDEO_TABLE.candidates.flatMap((c) => Object.values(c.pace ?? {}).filter((p) => p.basis !== "illustrative").map((p) => [c.provider, p.secondsPerUnit]));
+    expect(measured).toEqual([["strips", 1020]]);
+  });
+
+  it("a strips card-round routes on the text seat, its paid lane, at its measured pace", () => {
+    const o = routed(route({ medium: "video", capability: "strip-render", units: 2 }, LOCAL, facts(["strips"])));
+    expect(o.choice).toMatchObject({ provider: "strips", lane: "seat.text", seconds: 2040 });
   });
 });
 

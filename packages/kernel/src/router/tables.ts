@@ -229,12 +229,21 @@ export const VIDEO_TABLE: MediumTable = {
     {
       provider: "strips",
       capabilities: ["strip-render"],
-      lane: "box.render",
+      // On the SEAT, not the render box: a strips card-round's cost and most of its wait are the
+      // author/review turns on the operator's text seat, and seat.text is the paid lane that holds
+      // on a crash (decision 6); the headless capture is a short tail inside the same step.
+      lane: "seat.text",
       transport: "local-binary",
       honours: [],
       models: { "strip-render": "strips-html-svg" },
-      pace: { "strip-render": proto(0.7, "strips, HTML/SVG 240 frames") },
-      credential: "headless Chromium on the render box",
+      pace: {
+        "strip-render": {
+          secondsPerUnit: 1020,
+          basis: "measured",
+          source: "strips-r1, 2026-10-06, n=1: ~879 s author turn + ~142 s headless capture, about 1020 s per card-round (pipeline/strips/run.mts)",
+        },
+      },
+      credential: "the operator's text seat (author/review turns) and headless Chromium for the capture",
     },
     {
       provider: "ffmpeg",

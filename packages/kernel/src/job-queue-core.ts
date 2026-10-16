@@ -17,6 +17,14 @@ import type { ResourceLane } from "@gt/domain/lane";
 //     Skipping it would run the line out of order behind it (delivery-
 //     guarantees: ordered-lane-blocking - an operator's order is meaning); the
 //     lane waits for a worker that has the producer, and the look says so.
+//   - A COOLING LANE OR PRODUCER TAKES NOTHING. A drive that came back busy (a
+//     slot held by a lease the job table does not show - a v1 GPU shim, another
+//     worker between its claim and its record), held (a hold that landed
+//     between the look and the claim) or unhealthy (the producer's driver is
+//     down) changed nothing, so the next look would pick the same head and get
+//     the same answer at the speed of the loop: L27 measured the worker spinning
+//     on exactly that. The worker cools what refused it for one idle period;
+//     a cooled head is neither a pick nor an orphan - it is simply waited for.
 
 export type LaneLook = {
   readonly lane: ResourceLane;
@@ -36,11 +44,23 @@ export type Picked = {
   readonly orphans: readonly Pick[];
 };
 
-export function pickWork(looks: readonly LaneLook[], carries: (producer: string) => boolean, mine: ReadonlyMap<ResourceLane, readonly string[]>): Picked {
+/** What the worker is waiting out: lanes that answered busy or held, producers that answered unhealthy. */
+export type Cooling = { readonly lanes: ReadonlySet<ResourceLane>; readonly producers: ReadonlySet<string> };
+export const NOT_COOLING: Cooling = { lanes: new Set(), producers: new Set() };
+
+/** Which of a drive's outcomes cool what, and which do not (anything that moved the job). */
+export function coolingOf(outcome: string, pick: Pick): { readonly lane?: ResourceLane; readonly producer?: string } {
+  if (outcome === "busy" || outcome === "held") return { lane: pick.lane };
+  if (outcome === "unhealthy") return { producer: pick.producer };
+  return {};
+}
+
+export function pickWork(looks: readonly LaneLook[], carries: (producer: string) => boolean, mine: ReadonlyMap<ResourceLane, readonly string[]>, cooling: Cooling = NOT_COOLING): Picked {
   const picks: Pick[] = [];
   const orphans: Pick[] = [];
   for (const l of looks) {
     if (l.held || l.head === undefined) continue;
+    if (cooling.lanes.has(l.lane) || cooling.producers.has(l.head.producer)) continue;
     const started = mine.get(l.lane) ?? [];
     if (started.includes(l.head.id)) continue;
     if (Math.max(l.running, started.length) >= l.capacity) continue;

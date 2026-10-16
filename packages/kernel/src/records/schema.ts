@@ -110,6 +110,13 @@ export function insertRun(t: Tx, run: Run, jobId: string): void {
   t.run("INSERT INTO runs (id, job_id, created_at, record) VALUES (?, ?, ?, ?)", v.id, jobId, v.createdAt, canonical(v));
 }
 
+/** A run launched again: the record as read now, serving its new job. */
+export function putRun(t: Tx, run: Run, jobId: string): void {
+  const v = must(parseAt("run", runSchema, run));
+  const n = t.run("UPDATE runs SET job_id = ?, record = ? WHERE id = ?", jobId, canonical(v), v.id).changes;
+  if (n !== 1) throw new AppError("not-found", `no run ${v.id}`);
+}
+
 export function loadRun(r: Reader, id: string): { run: Run; jobId: string } {
   const raw = r.get("SELECT job_id, record FROM runs WHERE id = ?", id);
   if (raw === undefined) throw new AppError("not-found", `no run ${id}`);

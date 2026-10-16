@@ -1,22 +1,22 @@
-import { COMPOSER_RECIPE } from "@gt/catalog/partOptions";
-import { planParts, recipeById, type WorkKind } from "@gt/catalog/recipes";
+import type { WorkKind } from "@gt/catalog/recipes";
 import { parseAt } from "@gt/domain/door";
 import { AppError, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import type { RunMode } from "@gt/domain/job";
-import { LANE_CAPACITY, type MediaLane, type ResourceLane } from "@gt/domain/lane";
+import { LANE_CAPACITY, type ResourceLane } from "@gt/domain/lane";
 import { isWork } from "@gt/domain/part";
-import type { ComposerInput, LaunchedProject, LaunchedRun, Receipt, ReceiptMode, RerouteOption } from "@gt/domain/produce";
-import { ceilingUsdSchema, composerInputSchema } from "@gt/domain/produce.schema";
-import { runSchema } from "@gt/domain/run";
+import type { LaunchedProject, LaunchedRun, ModelOption, Receipt, ReceiptMode, RerouteOption } from "@gt/domain/produce";
+import { ceilingUsdSchema, runInputSchema, type ParsedRunInput } from "@gt/domain/produce.schema";
+import { runSchema, type Run } from "@gt/domain/run";
 import { armLive, DRY } from "../dryrun.ts";
 import { append } from "../events.ts";
 import { enqueueIn } from "../job.ts";
-import type { Reader, Store } from "../store.ts";
+import type { Reader, Store, Tx } from "../store.ts";
 import { launchOf, modelOptions } from "./options.ts";
 import { projectModel, readQueue, type ReadContext } from "./read.ts";
 import { priceLine, receiptFor, rerouteDelta, type PlanLine } from "./receipt.ts";
-import { insertRun, loadParts, loadRun, putPart, putProject } from "./schema.ts";
+import { runPlanOf, type RunPlan } from "./runplan.ts";
+import { insertRun, loadParts, loadRun, putPart, putProject, putRun } from "./schema.ts";
 
 // LAUNCH IS A RECEIPT, THEN A CONFIRM (COMMON decision 3). `*Receipt` reads; `launch*` takes the
 // receipt's token back and, in ONE transaction, recomputes the receipt from what it reads now,
@@ -72,11 +72,15 @@ function modeFor(opts: LaunchOptions, actor: Actor, at: string, token: string, d
   return opts.mode === "dry" ? DRY : must(armLive(actor, at, `receipt ${token.slice(0, 12)} confirmed`, { dryOnly }));
 }
 
-/** The receipt is stale or over its ceiling: say so, with the receipt as it reads now. */
+/**
+ * The receipt is stale: say so, with the receipt as it reads now. A receipt OVER its ceiling is
+ * not refused (Director's ruling, Phase 4: a ceiling is a STOP POINT). The worst case breaching
+ * it says the run may stop there; the job stops before the step that would cross it (kernel
+ * job-core `next`), with what it made kept. Refusing here refused the article band's top ($92)
+ * under any ceiling below it, though most runs land near $70.
+ */
 function refusal<T>(fresh: Receipt, token: string): LaunchOutcome<T> | undefined {
   if (fresh.token !== token) return { ok: false, error: new AppError("conflict", "what this launch would do changed since its receipt; read the fresh receipt", { detail: "stale-receipt" }), fresh };
-  if (fresh.overCeiling)
-    return { ok: false, error: new AppError("budget", `the priced exposure $${fresh.totals.usdRange?.[1] ?? fresh.totals.usd} breaches the $${fresh.ceilingUsd} ceiling`), fresh };
   return undefined;
 }
 
@@ -135,7 +139,7 @@ export function launchProject(store: Store, input: { id: string; baseRev: number
       actor,
       type: "project.launched",
       subject: { kind: "project", id: project.id },
-      data: { projectId: project.id, rev: project.rev, jobs: jobIds, token: input.token, mode: mode.kind, usd: fresh.totals.usd, unpriced: fresh.totals.unpriced, ...(ceilingUsd === undefined ? {} : { ceilingUsd }) },
+      data: { projectId: project.id, rev: project.rev, jobs: jobIds, token: input.token, mode: mode.kind, usd: fresh.totals.usd, unpriced: fresh.totals.unpriced, ...(ceilingUsd === undefined ? {} : { ceilingUsd }), ...(fresh.overCeiling ? { overCeiling: true } : {}) },
     });
     return { ok: true, value: { projectId: project.id, rev: project.rev, jobIds } };
   });
@@ -150,98 +154,161 @@ function fallbackLaunch(kind: WorkKind, day: string): NonNullable<ReturnType<typ
   return picked;
 }
 
-/* ── a Floor run ──────────────────────────────────────────────────────────── */
+/* ── a run: a Floor composer's, or a producer's own launch ──────────────────── */
 
-type RunPlan = { recipe: string; kind: WorkKind; lane: MediaLane; units: number };
+/**
+ * A producer that prices its own line (extract's worst case over its gallery, Suno's credits):
+ * the option it quotes - on a lane the catalog lets it run that kind on - and the key that binds
+ * the receipt's token to what the run is FOR (a gallery digest), so a token cannot confirm a
+ * different launch. Absent: the kind's catalog option, keyed `run`.
+ */
+export type RunQuote = { readonly key?: string; readonly label?: string; readonly option?: ModelOption };
 
-function runPlanOf(input: ComposerInput, units: number | undefined): RunPlan {
-  const map = COMPOSER_RECIPE[input.lane];
-  const id = input.lane === "audio" ? ((input.kind === "sfx" ? map.sfx : map.music) ?? map.recipe) : map.recipe;
-  const recipe = recipeById(id);
-  const part = recipe === undefined ? undefined : planParts(recipe).find((p) => p.kind !== "gate" && p.kind !== "slot");
-  if (part === undefined) throw new AppError("internal", `composer: recipe ${id} has no work part`);
-  const range = part.unitsRange ?? [1, 200];
-  const n = units === undefined ? part.units : Math.min(range[1], Math.max(range[0], Math.round(units)));
-  return { recipe: id, kind: part.kind, lane: input.lane, units: n };
+export type RunLaunchOptions = LaunchOptions & { readonly units?: number; readonly quote?: RunQuote };
+
+type Picked = NonNullable<ReturnType<typeof launchOf>>;
+
+/** A run as read for its receipt: what `recordRunIn` writes and `launchRun` enqueues. */
+export type RunRead = { readonly receipt: Receipt; readonly plan: RunPlan; readonly input: ParsedRunInput; readonly line: PlanLine; readonly picked: Picked };
+
+/**
+ * The option a run launches on. A composer's run takes its kind's first option and the producer
+ * the catalog names for it. A producer's own launch runs under THAT producer, so only the kind's
+ * options it makes are candidates (Suno makes a `track` on Suno, never on ElevenLabs under the
+ * `score` producer), and a quoted option must sit on one of their lanes: a producer cannot price
+ * itself onto a lane its catalog row does not give it.
+ */
+function pickRun(input: ParsedRunInput, plan: RunPlan, quote: RunQuote | undefined, day: string): { picked: Picked; option: ModelOption } {
+  const own = "producer" in input ? input.producer : undefined;
+  const all = modelOptions(plan.kind, day).flatMap((o) => launchOf(plan.kind, o.key, day) ?? []);
+  const fit = own === undefined ? all : all.filter((p) => p.producer === own);
+  const q = quote?.option;
+  const onLane = q === undefined ? fit : fit.filter((p) => p.option.lane === q.lane);
+  const picked = q === undefined ? fit[0] : (onLane.find((p) => p.option.key === q.key) ?? onLane[0]);
+  if (picked === undefined) {
+    if (q !== undefined && fit.length > 0) throw new AppError("invalid", `${own ?? plan.kind}: a ${plan.kind} run is made on ${[...new Set(fit.map((p) => p.option.lane))].join(" or ")}, not ${q.lane}`);
+    throw new AppError("internal", `${own ?? "composer"}: the catalog gives ${plan.kind} no option${own === undefined ? "" : ` that ${own} makes`}`);
+  }
+  return { picked, option: q ?? picked.option };
 }
 
-function runLines(plan: RunPlan, day: string): PlanLine[] {
-  const option = modelOptions(plan.kind, day)[0];
-  if (option === undefined) throw new AppError("internal", `composer: ${plan.kind} has no option`);
-  return [{ key: "run", label: plan.kind, lane: option.lane, units: plan.units, option, after: [], order: Number.MAX_SAFE_INTEGER, status: "pending" }];
-}
-
-function runReceiptIn(r: Reader, raw: unknown, opts: LaunchOptions & { units?: number }, ctx: ReadContext): { receipt: Receipt; plan: RunPlan; input: ComposerInput; lines: PlanLine[] } {
-  const input = must(parseAt("composer input", composerInputSchema, raw));
+function runReceiptIn(r: Reader, raw: unknown, opts: RunLaunchOptions, ctx: ReadContext): RunRead {
+  const input = must(parseAt("run input", runInputSchema, raw));
   const plan = runPlanOf(input, opts.units);
-  const lines = runLines(plan, dayOf(ctx.now));
+  const { picked, option } = pickRun(input, plan, opts.quote, dayOf(ctx.now));
+  const line: PlanLine = { key: opts.quote?.key ?? "run", label: opts.quote?.label ?? plan.kind, lane: option.lane, units: plan.units, option, after: [], order: Number.MAX_SAFE_INTEGER, status: "pending" };
   const ceilingUsd = ceilingOf(opts);
   const receipt = receiptFor({
     subject: { kind: "run", lane: plan.lane },
-    lines,
-    plan: lines,
+    lines: [line],
+    plan: [line],
     queue: readQueue(r),
     capacity: capOf(ctx),
     now: ctx.now,
     mode: opts.mode,
     ...(ceilingUsd === undefined ? {} : { ceilingUsd }),
   });
-  return { receipt, plan, input, lines };
+  return { receipt, plan, input, line, picked };
 }
 
-/** The Floor composer's Estimate and receipt: what launching `input` now would occupy and cost. */
-export function runReceipt(store: Store, input: unknown, opts: LaunchOptions & { units?: number }, ctx: ReadContext): Result<Receipt> {
+/** The receipt for a run: what launching `input` now would occupy and cost (the composer's Estimate). */
+export function runReceipt(store: Store, input: unknown, opts: RunLaunchOptions, ctx: ReadContext): Result<Receipt> {
   return store.read((r) => runReceiptIn(r, input, opts, ctx).receipt);
 }
 
-/** Launch a Floor run: the Run record and its one Job, in one transaction. */
+/** Read a run inside a caller's transaction - a batch launch's receipt line, before `recordRunIn`. */
+export function readRunIn(r: Reader, input: unknown, opts: RunLaunchOptions, ctx: ReadContext): RunRead {
+  return runReceiptIn(r, input, opts, ctx);
+}
+
+/** A run's job id names its run: `job:run:<id>`, or `job:run:<id>~<n>` for a later launch of it. */
+export function runJobId(runId: string, given?: string): string {
+  const base = `job:run:${runId}`;
+  if (given === undefined || given === base) return base;
+  if (!given.startsWith(base) || !/^~[1-9][0-9]*$/.test(given.slice(base.length))) throw new AppError("invalid", `job ${given} does not name run ${runId}`);
+  return given;
+}
+
+/**
+ * Write the Run record for a read run in `t`, serving `jobId` - the half of a launch that a
+ * producer confirming several runs under ONE receipt calls once per run inside its own
+ * transaction (a batch of tracks). A run launched again (a re-run of a finished extract run, a
+ * regenerated music video) keeps its one row, which moves to the new job with `run.relaunched`;
+ * a run whose job is still at work is refused - one job serves a run at a time.
+ */
+export function recordRunIn(t: Tx, read: Pick<RunRead, "plan" | "input" | "line" | "picked">, id: string, jobId: string, actor: Actor): Run {
+  const option = read.line.option ?? read.picked.option;
+  const est = priceLine(read.line.units, option);
+  const run = must(
+    parseAt("run", runSchema, {
+      id,
+      lane: read.plan.lane,
+      producer: "producer" in read.input ? read.input.producer : read.picked.producer,
+      recipe: read.plan.recipe,
+      input: read.input,
+      ...("styleId" in read.input && read.input.styleId !== undefined ? { styleId: read.input.styleId } : {}),
+      units: read.plan.units,
+      option: option.key,
+      estimate: est.usd === null ? { seconds: est.seconds, usd: null, unpricedReason: est.unpricedReason ?? "unpriced" } : { seconds: est.seconds, usd: est.usd, ...(est.usdRange === undefined ? {} : { usdRange: [...est.usdRange] }) },
+      createdAt: t.at,
+    }),
+  );
+  const have = t.get("SELECT job_id FROM runs WHERE id = ?", id);
+  if (have === undefined) {
+    insertRun(t, run, runJobId(id, jobId));
+    return run;
+  }
+  const prior = String(have["job_id"]);
+  const state = t.get("SELECT state FROM jobs WHERE id = ?", prior)?.["state"];
+  if (prior === jobId || (state !== undefined && state !== "done" && state !== "cancelled")) {
+    throw new AppError("conflict", `run ${id} is served by job ${prior}${typeof state === "string" ? ` (${state})` : ""}; one job serves a run at a time`);
+  }
+  putRun(t, run, runJobId(id, jobId));
+  append(t, { actor, type: "run.relaunched", subject: { kind: "run", id }, data: { runId: id, from: prior, to: jobId } });
+  return run;
+}
+
+/**
+ * Launch a run - its Run record and its one Job, in one transaction, on the receipt's token. A
+ * receipt over its ceiling is launched (the ceiling is where the job STOPS, Director's ruling);
+ * the launch event records that it was confirmed over it.
+ */
 export function launchRun(
   store: Store,
-  input: { input: unknown; token: string; units?: number } & LaunchOptions,
+  input: { input: unknown; token: string } & RunLaunchOptions,
   actor: Actor,
-  ctx: LaunchContext & { readonly id: string },
+  ctx: LaunchContext & { readonly id: string; readonly jobId?: string },
 ): LaunchOutcome<LaunchedRun> {
   const r = store.tx((t): LaunchOutcome<LaunchedRun> => {
+    const jobId = runJobId(ctx.id, ctx.jobId);
     const read = runReceiptIn(t, input.input, input, ctx);
     const refused = refusal<LaunchedRun>(read.receipt, input.token);
     if (refused !== undefined) return refused;
-    const line = read.lines[0];
-    const picked = line?.option === undefined ? undefined : launchOf(read.plan.kind, line.option.key, dayOf(ctx.now));
-    if (line === undefined || picked === undefined) throw new AppError("internal", "composer: the run has no line");
-    const est = priceLine(line.units, picked.option);
-    const run = must(
-      parseAt("run", runSchema, {
-        id: ctx.id,
-        lane: read.plan.lane,
-        producer: picked.producer,
-        recipe: read.plan.recipe,
-        input: read.input,
-        ...(read.input.lane === "image" && "styleId" in read.input && read.input.styleId !== undefined ? { styleId: read.input.styleId } : {}),
-        units: read.plan.units,
-        option: picked.option.key,
-        estimate: est.usd === null ? { seconds: est.seconds, usd: null, unpricedReason: est.unpricedReason ?? "unpriced" } : { seconds: est.seconds, usd: est.usd, ...(est.usdRange === undefined ? {} : { usdRange: [...est.usdRange] }) },
-        createdAt: t.at,
-      }),
-    );
-    const jobId = `job:run:${run.id}`;
     const mode = modeFor(input, actor, t.at, input.token, ctx.dryOnly);
     const ceilingUsd = ceilingOf(input);
-    insertRun(t, run, jobId);
+    const run = recordRunIn(t, read, ctx.id, jobId, actor);
+    // The router pin rides only on the catalog's own routed option, never on a producer's quote.
+    const routed = read.picked.routed && read.picked.option.key === run.option;
     enqueueIn(
       t,
       {
         id: jobId,
         of: { kind: "run", id: run.id },
-        producer: picked.producer,
-        lane: picked.option.lane,
+        producer: run.producer,
+        lane: read.line.option?.lane ?? read.picked.option.lane,
         mode,
         ...(ceilingUsd === undefined ? {} : { ceilingUsd }),
-        ...(picked.routed ? { steer: { pin: picked.option.provider } } : {}),
+        ...(routed ? { steer: { pin: read.picked.option.provider } } : {}),
         correlation: { runId: run.id },
       },
       actor,
     );
-    append(t, { actor, type: "run.launched", subject: { kind: "run", id: run.id }, data: { runId: run.id, lane: run.lane, recipe: run.recipe, token: input.token, mode: mode.kind } });
+    append(t, {
+      actor,
+      type: "run.launched",
+      subject: { kind: "run", id: run.id },
+      data: { runId: run.id, jobId, lane: run.lane, recipe: run.recipe, producer: run.producer, token: input.token, mode: mode.kind, ...(read.receipt.overCeiling ? { overCeiling: true } : {}) },
+    });
     return { ok: true, value: { runId: run.id, jobId } };
   });
   return r.ok ? r.value : r;
@@ -269,9 +336,10 @@ export function rerouteOptions(store: Store, jobId: string, ctx: ReadContext): R
     const { run: rec } = loadRun(r, String(run["id"]));
     const kind = runPlanOf(rec.input, rec.units).kind;
     const queue = readQueue(r, new Set([jobId]));
-    const options = modelOptions(kind, day);
+    // A producer's own run moves only between options that producer makes: its job keeps its producer.
+    const options = modelOptions(kind, day).filter((o) => !("producer" in rec.input) || launchOf(kind, o.key, day)?.producer === rec.producer);
     const chosen = options.find((o) => o.key === rec.option) ?? options[0];
-    if (chosen === undefined) throw new AppError("internal", `run ${rec.id}: ${kind} has no option`);
+    if (chosen === undefined) throw new AppError("internal", `run ${rec.id}: ${kind} has no option ${rec.producer} makes`);
     const lines: PlanLine[] = [{ key: "run", label: kind, lane: chosen.lane, units: rec.units, option: chosen, after: [], order: 0, status: "pending" }];
     return options.map((option) => ({ option, current: option.key === rec.option, ...rerouteDelta(lines, "run", option, queue, capOf(ctx), ctx.now) }));
   });

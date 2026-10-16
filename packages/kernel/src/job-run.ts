@@ -9,9 +9,11 @@ import { DRY, kernelCall, withDryRun, type WouldCall } from "./dryrun.ts";
 import type { Effects } from "./effects.ts";
 import { BREAKER_LIMIT, book, claimed, failed, interrupted, move, next, started, stopped, type MissingStep, type Outputs, type Producer, type StepOutcome } from "./job-core.ts";
 import { holdLaneIn, laneHold } from "./job-queue.ts";
+import { settleAfter } from "./job-settle.ts";
 import { jobEvent, loadJob, loadOutputs, putJob } from "./job.ts";
 import { DEFAULT_TTL_S, fenceLoss, gone, type Alive } from "./lease-core.ts";
 import type { SpendClass } from "./spend/core.ts";
+import { releaseHeldIn } from "./records/write.ts";
 import { lapseOwner } from "./spend/ledger.ts";
 import { lapseOpen, stepMeter } from "./spend/meter.ts";
 import { chargeOutcome, meterOf } from "./spend/projection.ts";
@@ -90,6 +92,8 @@ export type RunReport = {
   readonly reason?: string;
   /** What a dry drive would have called, in order: the receipts a dry launch shows. */
   readonly wouldCalls?: readonly WouldCall[];
+  /** The producer's `settle` threw: its sentence. The job's ending stands regardless. */
+  readonly settle?: { readonly ok: false; readonly message: string };
 };
 
 /** Exponential with full jitter on its upper half, capped (retry-backoff: backoff-design). */
@@ -123,7 +127,16 @@ function runningOn(t: Tx, lane: string, slot: string): Job[] {
 
 type Claim = { kind: "granted"; fence: number; slot: string; job: Job } | { kind: "report"; report: RunReport };
 
+/**
+ * Drive one job (see `drive`), then tell its producer how it ended (job-settle.ts). The hook
+ * runs HERE, in the one driver, so the CLI, a route and the worker cannot disagree on whether a
+ * kernel stop reached the producer's own store.
+ */
 export async function runJob(fx: Effects, producer: Producer, jobId: string, opts: RunOptions = {}): Promise<Result<RunReport>> {
+  return settleAfter(fx, producer, jobId, await drive(fx, producer, jobId, opts), actorOf(opts.holder ?? processHolder()));
+}
+
+async function drive(fx: Effects, producer: Producer, jobId: string, opts: RunOptions): Promise<Result<RunReport>> {
   const holder = opts.holder ?? processHolder();
   const alive = opts.alive ?? pidAlive;
   const ttlS = opts.ttlS ?? DEFAULT_TTL_S;
@@ -255,8 +268,15 @@ export async function runJob(fx: Effects, producer: Producer, jobId: string, opt
             return finish(stopped(job, d, t.at), "job.stopped", "failed", { by: "run-ceiling", step: d.step, ceilingUsd: d.ceilingUsd, spentUsd: job.spend.usd });
           case "trip":
             return finish(failed(job, "unavailable", d.message), "job.failed", "failed", { code: "unavailable", message: d.message });
-          case "finish":
-            return finish(move(job, "done"), "job.done", "done", { spendUsd: job.spend.usd, ...(port.wouldCalls.length === 0 ? {} : { wouldCalls: port.wouldCalls.length }) });
+          case "finish": {
+            const end = finish(move(job, "done"), "job.done", "done", { spendUsd: job.spend.usd, ...(port.wouldCalls.length === 0 ? {} : { wouldCalls: port.wouldCalls.length }) });
+            // A part's job done is its part ratified: what waited for it is released in this same
+            // transaction (records/write.ts `releaseHeldIn`), so no crash can leave it parked.
+            // Only a part a plan launched (it names its project) - a bare part job has no plan to move.
+            const projectId = job.of.kind === "part" ? job.correlation?.projectId : undefined;
+            if (projectId !== undefined) releaseHeldIn(t, projectId, actor, { now: Date.parse(t.at) });
+            return end;
+          }
           case "claim":
           case "idle":
             releaseIn(t, slot, fence);
@@ -302,10 +322,10 @@ export async function runJob(fx: Effects, producer: Producer, jobId: string, opt
           t.run("INSERT INTO job_outputs (job_id, step, output, fence, at) VALUES (?, ?, ?, ?, ?)", jobId, step.name, canonical(b.output), fence, t.at);
         }
         putJob(t, b.job);
-        const data = outcome.kind === "produced" ? { step: step.name } : { step: step.name, kind: outcome.kind, message: outcome.message, failStreak: b.job.failStreak };
+        const data = outcome.kind === "produced" ? { step: step.name } : { step: step.name, kind: outcome.kind, message: outcome.message, failStreak: b.job.failStreak, ...(b.job.stop === undefined ? {} : { by: b.job.stop.by }) };
         jobEvent(t, actor, b.job, outcome.kind === "produced" ? "job.step-done" : "job.step-failed", data, b.cost);
         if (b.ended !== undefined) {
-          jobEvent(t, actor, b.job, outcome.kind === "money-stop" ? "job.stopped" : "job.failed", { code: b.job.error?.code ?? "internal", message: b.job.error?.message ?? "" });
+          jobEvent(t, actor, b.job, outcome.kind === "money-stop" ? "job.stopped" : "job.failed", { code: b.job.error?.code ?? "internal", message: b.job.error?.message ?? "", ...(b.job.stop === undefined ? {} : { by: b.job.stop.by }) });
           releaseIn(t, slot, fence);
         }
         return { ended: b.ended !== undefined, streak: b.job.failStreak, job: b.job };

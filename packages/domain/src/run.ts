@@ -3,7 +3,7 @@ import { z } from "zod";
 import { estimateSchema } from "./estimate.ts";
 import { runIdSchema, styleIdSchema } from "./ids.ts";
 import { mediaLaneSchema } from "./lane.ts";
-import { composerInputSchema } from "./produce.schema.ts";
+import { runInputSchema } from "./produce.schema.ts";
 import { runMachine } from "./run.machine.ts";
 
 // A RUN: one launch from a Floor composer (plan §2.2, COMMON decision 2). The operator's unit -
@@ -52,8 +52,12 @@ export const runSchema = z.object({
   producer: producerNameSchema,
   /** The @gt/catalog recipe the composer launched (`style/forge-sweep`, `track/music`...). */
   recipe: z.string().min(1),
-  /** What the composer sent, verbatim. */
-  input: composerInputSchema,
+  /**
+   * What launched it, verbatim: a Floor composer's input, or a producer's own launch (its CLI,
+   * its route) in that producer's terms (./produce.ts `ProducerRunInput`). For the latter,
+   * `recipe` is the catalog recipe whose work part the producer makes (kernel records/runplan.ts).
+   */
+  input: runInputSchema,
   styleId: styleIdSchema.optional(),
   /** Its units in the recipe's noun (plates, prompts, cards). */
   units: z.number().int().positive(),
@@ -62,5 +66,11 @@ export const runSchema = z.object({
   /** The figures the confirmed receipt showed. */
   estimate: estimateSchema,
   createdAt: z.iso.datetime(),
+}).superRefine((r, ctx) => {
+  // The input says who launched it; the record may not contradict it. A composer's lane IS the
+  // run's media lane; a producer's own launch names the producer its job runs under.
+  if ("producer" in r.input) {
+    if (r.input.producer !== r.producer) ctx.addIssue({ code: "custom", path: ["producer"], message: `a run launched by ${r.input.producer} runs under ${r.input.producer}` });
+  } else if (r.input.lane !== r.lane) ctx.addIssue({ code: "custom", path: ["lane"], message: `a ${r.input.lane} composer launches a run on the ${r.input.lane} lane` });
 });
 export type Run = z.output<typeof runSchema>;

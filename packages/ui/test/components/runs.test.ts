@@ -4,7 +4,7 @@ import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import { RESOURCE_LANES } from "@gt/domain/lane";
+import { LANE_CAPACITY, RESOURCE_LANES } from "@gt/domain/lane";
 
 import { GEOMETRY, HOUR_MS, anchors, barBox, inWindow, nights, pack, rowHeight, seatLabels, ticks, visibleTracks, xAt, type Timed } from "../../src/components/runs/dayline.ts";
 import { LANE_ORDER, LANE_SPECS } from "../../src/components/runs/lanes.ts";
@@ -173,7 +173,8 @@ describe("what a selection lights", () => {
 test("every resource lane of the domain has a row: label, capacity and engines", () => {
   for (const lane of RESOURCE_LANES) {
     expect(LANE_SPECS[lane].label.length, lane).toBeGreaterThan(0);
-    expect(LANE_SPECS[lane].cap, lane).toBeGreaterThan(0);
+    // The row packs exactly the slots the lease grants (it once drew Qwen at 2 against a lease of 1).
+    expect(LANE_SPECS[lane].cap, lane).toBe(LANE_CAPACITY[lane]);
   }
   expect(Object.keys(LANE_SPECS).sort()).toEqual([...RESOURCE_LANES].sort());
   expect(LANE_ORDER).toEqual(RESOURCE_LANES);

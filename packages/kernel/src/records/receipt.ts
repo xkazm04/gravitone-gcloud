@@ -143,7 +143,8 @@ export function receiptFor(i: ReceiptInput): Receipt {
   const totals = totalsOf(estimates);
   const first = [...out].sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.queuePos - b.queuePos))[0];
   const eta = etaOf(new Map([...placed].filter(([k]) => i.plan.some((l) => l.key === k && l.lane !== null))));
-  // Fail closed against the band's top: a ceiling is a promise about the worst case.
+  // Marked against the band's top: the worst case is what may reach the ceiling. A MARK, not a
+  // refusal (the ceiling is where the job stops - launch.ts `refusal`).
   const exposure = totals.usdRange?.[1] ?? totals.usd;
   return {
     token: tokenOf(i),

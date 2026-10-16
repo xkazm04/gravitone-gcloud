@@ -119,9 +119,14 @@ export function articlePorts(b: ArticleBinding = {}): ArticlePorts<ArticleTurn, 
   };
 }
 
-/** The bound producer - the one line lib/producers/registry.ts carries. */
+/** The bound producer (lib/producers/registry.ts). Its `settle` carries a kernel stop - made BETWEEN
+ *  steps, where no engine step ran to say so - onto run.json, whoever drove the job (the worker too). */
 export function articleProducer(b: ArticleBinding = {}): Producer {
-  return defineArticle(articlePorts(b));
+  const settle = async (job: Job): Promise<void> => {
+    const why = job.stop === undefined || job.error === undefined ? undefined : `${job.stop.by}: ${job.error.message}`;
+    if (why !== undefined) await updateRun(parseArticleJob(job.id).runId, (run) => (WORKING.includes(run.status) ? { ...run, status: "failed", error: why } : run));
+  };
+  return { ...defineArticle(articlePorts(b)), settle };
 }
 
 const ID_IN_TOPIC = /^([a-z0-9-]+)\/([a-z0-9-]+)$/;
@@ -142,9 +147,13 @@ async function ensureRun(job: Job, b: ArticleBinding): Promise<Result<{ runId: s
   if (!k.ok) return k;
   const rec = k.value.store.read((r) => loadRun(r, runId).run);
   if (!rec.ok) return err("not-found", `article job ${job.id}: no run.json and no Run record ${runId} to make one from`);
-  if (rec.value.input.lane !== "article") return err("invalid", `run ${runId} is a ${rec.value.input.lane} run, not an article`);
-  const m = ID_IN_TOPIC.exec(rec.value.input.topic);
-  const input: CreateRunInput = { topic: m === null ? { kind: "free", text: rec.value.input.topic } : { kind: "subject", bundle: m[1] ?? "", subject: m[2] ?? "", text: "" } };
+  // A composer's `topic`, or an article's own launch (`producer: "article"`): a subject or a topic.
+  const given = rec.value.input;
+  const words = "producer" in given ? (given.producer === "article" ? ("subject" in given ? given.subject : given.topic) : undefined) : given.lane === "article" ? given.topic : undefined;
+  if (words === undefined) return err("invalid", `run ${runId} is a ${rec.value.lane} run, not an article`);
+  const m = ID_IN_TOPIC.exec(words);
+  const angle = "producer" in given && given.producer === "article" && given.angle !== undefined ? { angle: given.angle } : {};
+  const input: CreateRunInput = { topic: m === null ? { kind: "free", text: words, ...angle } : { kind: "subject", bundle: m[1] ?? "", subject: m[2] ?? "", text: "", ...angle } };
   const made = await createRun(input, (b.engine ?? (() => defaultDeps()))(), { id: runId });
   return made.status === "failed" ? err("unavailable", made.error ?? `run ${runId} could not be created`) : ok({ runId, created: true });
 }
@@ -247,7 +256,8 @@ const topicOf = (t: ArticleTopic): string => (t.kind === "subject" && t.bundle &
 
 type Quoted = { readonly receipt: Receipt; readonly composer: { readonly lane: "article"; readonly text: string; readonly topic: string }; readonly now: number; readonly dryOnly: boolean };
 
-/** The receipt (L26 `runReceipt`), refused here when its exposure breaches the ceiling. */
+/** The receipt (L26 `runReceipt`). A ceiling under the band's top is a STOP POINT, not a refusal: the
+ *  receipt marks `overCeiling` and the job stops before the step that would cross it. */
 function quote(store: Store, topic: string, o: ActOptions): Result<Quoted> {
   const mode = modeOf(o, "article run launched");
   if (!mode.ok) return mode;
@@ -256,7 +266,6 @@ function quote(store: Store, topic: string, o: ActOptions): Result<Quoted> {
   const dryOnly = dryOnlyFrom(o.env ?? process.env);
   const read = runReceipt(store, composer, { mode: o.mode, ...(o.ceilingUsd === undefined ? {} : { ceilingUsd: o.ceilingUsd }) }, { now });
   if (!read.ok) return read;
-  if (read.value.overCeiling) return err("budget", `an article run is priced at up to $${read.value.totals.usdRange?.[1] ?? read.value.totals.usd}; the $${o.ceilingUsd} ceiling cannot hold it`);
   return ok({ receipt: read.value, composer, now, dryOnly });
 }
 
@@ -350,15 +359,7 @@ export async function resumeArticle(runId: string, o: ActOptions): Promise<Resul
 export async function driveArticle(jobId: string, o: { readonly binding?: ArticleBinding; readonly env?: Readonly<Record<string, string | undefined>>; readonly run?: RunOptions } = {}): Promise<Result<RunReport>> {
   const k = kernelOf(o.binding ?? {});
   if (!k.ok) return k;
-  const r = await runJob(k.value.fx, articleProducer({ ...o.binding, kernel: k.value }), jobId, { ...o.run, dryOnly: dryOnlyFrom(o.env ?? process.env) });
-  // The kernel stops a job BETWEEN steps (its ceiling against the next step's estimate), where no
-  // step of the engine ran to say so: run.json would read as a stalled drive. Say it on the run.
-  const stop = r.ok ? r.value.job?.stop : undefined;
-  if (r.ok && stop !== undefined && r.value.job?.error !== undefined) {
-    const why = `${stop.by}: ${r.value.job.error.message}`;
-    await updateRun(parseArticleJob(jobId).runId, (run) => (WORKING.includes(run.status) ? { ...run, status: "failed", error: why } : run));
-  }
-  return r;
+  return runJob(k.value.fx, articleProducer({ ...o.binding, kernel: k.value }), jobId, { ...o.run, dryOnly: dryOnlyFrom(o.env ?? process.env) });
 }
 
 /**

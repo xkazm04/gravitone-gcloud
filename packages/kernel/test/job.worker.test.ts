@@ -3,11 +3,13 @@ import { afterAll, describe, expect, it } from "vitest";
 import type { ResourceLane } from "@gt/domain/lane";
 import type { Producer } from "../src/job-core.ts";
 import { pickWork, type LaneLook } from "../src/job-queue-core.ts";
+import type { Effects } from "../src/effects.ts";
+import { claimIn } from "../src/lease.ts";
 import { runJob } from "../src/job-run.ts";
 import { workLoop } from "../src/job-worker.ts";
 import { enqueue, get, list } from "../src/job.ts";
 import { must, scratch } from "./helpers.ts";
-import { hostA, jobId, LIVE, openWorld, operator, type World } from "./job-fixture.ts";
+import { hostA, hostB, jobId, LIVE, openWorld, operator, type World } from "./job-fixture.ts";
 
 // The worker loop: the pure pick (which lane, which job), and the driver that
 // recovers first, fills every lane's free slots in order, and parks its drives
@@ -38,6 +40,14 @@ describe("pickWork", () => {
   it("a head whose producer this worker does not carry is named, and the line behind it waits", () => {
     const r = pickWork([look("box.render", { head: { id: "x", producer: "strips" } })], (p) => p !== "strips", new Map());
     expect(r).toEqual({ picks: [], orphans: [{ lane: "box.render", jobId: "x", producer: "strips" }] });
+  });
+});
+
+describe("pickWork cooling", () => {
+  it("a cooling lane or producer takes nothing, and its head is waited for, not named an orphan", () => {
+    const looks = [look("gpu.local"), look("seat.text", { head: { id: "t", producer: "article" } }), look("box.render")];
+    const r = pickWork(looks, () => true, new Map(), { lanes: new Set(["gpu.local"]), producers: new Set(["article"]) });
+    expect(r).toEqual({ picks: [{ lane: "box.render", jobId: "box.render-head", producer: "p" }], orphans: [] });
   });
 });
 
@@ -87,6 +97,60 @@ describe("workLoop", () => {
     expect(summary.started).toBe(6);
     expect(summary.orphans).toEqual([{ lane: "box.render", jobId: "s1", producer: "strips" }]);
     expect(must(get(w.store, jobId("s1"))).job.state).toBe("queued");
+    w.store.close();
+  }, 20_000);
+
+  // L27 measured the loop spinning: a head that comes back busy/held/unhealthy changed nothing, and
+  // the next look picked it again at once. Each such answer now cools its lane (or producer) for an
+  // idle period, so over ~300 ms at idleMs 60 a refused head is tried a handful of times, not thousands.
+  it("cools a producer that answers unhealthy for one idle period instead of asking it again at once", async () => {
+    const w = world();
+    must(enqueue(w.store, { id: "u1", of: { kind: "run", id: "u1" }, producer: "sick", lane: "gpu.local" }, operator));
+    let asked = 0;
+    const sick: Producer = {
+      lane: "gpu.local",
+      plan: () => [],
+      perform: async () => ({ kind: "produced", output: {} }),
+      health: async () => {
+        asked++;
+        return { ok: false, reason: "ComfyUI is not answering" };
+      },
+    };
+    const stop = new AbortController();
+    const loop = workLoop(w.fx, new Map([["sick", sick]]), { signal: stop.signal, holder: hostA, alive: () => true, idleMs: 60 });
+    await new Promise((r) => setTimeout(r, 300));
+    stop.abort();
+    const summary = must(await loop);
+    expect(asked).toBeGreaterThan(0);
+    expect(asked).toBeLessThanOrEqual(8);
+    expect(summary.started).toBe(asked);
+    expect(must(get(w.store, jobId("u1"))).job.state).toBe("queued");
+    w.store.close();
+  }, 20_000);
+
+  it("cools a lane whose every slot another holder keeps (busy) instead of re-claiming in a tight loop", async () => {
+    const w = world();
+    // A lease the job table does not show: a v1 GPU shim's holder on the card's one slot.
+    must(w.store.tx((t) => claimIn(t, { resource: "gpu.local#1", holder: hostB, ticket: "v1-shim", ttlS: 600, wait: false }, () => true)));
+    must(enqueue(w.store, { id: "b1", of: { kind: "run", id: "b1" }, producer: "gpu", lane: "gpu.local" }, operator));
+    let claims = 0;
+    const fx: Effects = {
+      ...w.fx,
+      tx: (name, fn) => {
+        if (name === "claim") claims++;
+        return w.fx.tx(name, fn);
+      },
+    };
+    const gpu = gated("gpu.local");
+    const stop = new AbortController();
+    const loop = workLoop(fx, new Map([["gpu", gpu.p]]), { signal: stop.signal, holder: hostA, alive: () => true, idleMs: 60 });
+    await new Promise((r) => setTimeout(r, 300));
+    stop.abort();
+    const summary = must(await loop);
+    expect(claims).toBeGreaterThan(0);
+    expect(claims).toBeLessThanOrEqual(8);
+    expect(summary.reports.every((r) => r.report.ok && r.report.value.outcome === "busy")).toBe(true);
+    expect(gpu.seen).toEqual([]);
     w.store.close();
   }, 20_000);
 

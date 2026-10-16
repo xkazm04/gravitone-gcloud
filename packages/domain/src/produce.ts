@@ -104,7 +104,11 @@ export type Receipt = {
   readonly queuePos: number;
   readonly etaAt: string;
   readonly ceilingUsd?: number;
-  /** The priced total breaches the ceiling; the confirm is refused while true. */
+  /**
+   * The worst case breaches the ceiling. A MARK, not a refusal (Director's ruling, Phase 4): a
+   * ceiling is a stop point, so the confirm stays armed and the job stops before the step that
+   * would cross it (kernel job-core `next`); the screen says "may stop at ceiling".
+   */
   readonly overCeiling: boolean;
   readonly readAt: string;
 };
@@ -281,6 +285,50 @@ export type ComposeInput = {
   /** Units by the recipe's unit names (plates, shots, prompts, cards, voice, stills). */
   readonly units?: Readonly<Record<string, number>>;
 };
+
+/* ── a producer's own launch ─────────────────────────────────────────────── */
+
+/**
+ * What a producer's OWN entry point launched - its CLI, its v1 route, a skill - in the producer's
+ * terms rather than a composer's. Every such launch writes a `runs` row like a Floor launch does
+ * (Phase 4 wave B, item 5), so the queue prices it from its quote, Runs reads it, and re-route
+ * previews it. Before this, extract, Suno and the music video enqueued a job with no row: the job
+ * served a run nobody could read, and `rerouteOptions` answered "serves no part or run".
+ *
+ * Each branch carries what the producer needs to find its work again, never the work itself (no
+ * uploaded bytes, no prompts): the artefact stays in the producer's own store (COMMON decision 9).
+ */
+export type ProducerRunInput =
+  /** A gallery: the folder the CLI read, or only the count a route uploaded; and the run's knobs. */
+  | {
+      readonly producer: "extract";
+      readonly slug: string;
+      readonly sources: number;
+      readonly folder?: string;
+      readonly rounds?: number;
+      readonly replicas?: number;
+      readonly transfers?: number;
+      readonly grouping?: "engine" | "none";
+    }
+  /** A registry subject, `bundle/slug`. */
+  | { readonly producer: "article"; readonly subject: string; readonly angle?: string }
+  /** The operator's own words for a topic. */
+  | { readonly producer: "article"; readonly topic: string; readonly angle?: string }
+  /** One track (its v1 id) rendered to a music video. */
+  | { readonly producer: "mv"; readonly track: string }
+  /** One proposal (its v1 id) sent to Suno. */
+  | { readonly producer: "suno"; readonly proposal: string }
+  /** A strips round: its lane (`all` = both) and the cards it is limited to. */
+  | { readonly producer: "strips"; readonly lane: "edu" | "stat" | "all"; readonly only?: readonly string[] }
+  /** A forge plan (its file under pipeline/foundry/plans, by name). */
+  | { readonly producer: "forge"; readonly plan: string }
+  /** A Dojo cycle (its directory under foundry-out/training, by id). */
+  | { readonly producer: "dojo"; readonly cycle: string };
+
+export type NativeProducer = ProducerRunInput["producer"];
+
+/** What a Run was launched from: a Floor composer, or a producer's own entry point. */
+export type RunInput = ComposerInput | ProducerRunInput;
 
 export type LaunchedRun = { readonly runId: string; readonly jobId: string };
 export type LaunchedProject = { readonly projectId: string; readonly rev: number; readonly jobIds: readonly string[] };

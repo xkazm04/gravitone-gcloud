@@ -121,6 +121,14 @@ describe("book", () => {
     expect(b.ended).toBe("failed");
   });
 
+  it("a money stop says whose limit it met: the job's own ceiling is recorded as the run's, with its figure", () => {
+    const capped = started(running({ ceilingUsd: 2 }), "a", 0, 1, AT);
+    const own = book(capped, step("a"), { kind: "money-stop", message: "the turn was refused at the run cap", by: "run-ceiling" }, AT, 3);
+    expect(valid(own.job).stop).toEqual({ by: "run-ceiling", spentUsd: 0, ceilingUsd: 2, at: AT });
+    const window = book(capped, step("a"), { kind: "money-stop", message: "the spend window is closed" }, AT, 3);
+    expect(valid(window.job).stop).toEqual({ by: "period-ceiling", spentUsd: 0, at: AT });
+  });
+
   it("a fatal outcome fails the job with the producer's sentence verbatim", () => {
     const b = book(flying, step("a"), { kind: "fatal", code: "invalid", message: "the model answered no JSON" }, AT, 3);
     expect(valid(b.job).error).toEqual({ code: "invalid", message: "the model answered no JSON" });

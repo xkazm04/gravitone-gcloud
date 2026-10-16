@@ -60,10 +60,20 @@ export type MissingStep = {
 export type StepOutcome =
   | { readonly kind: "produced"; readonly output: EventData; readonly costUsd?: number }
   | { readonly kind: "vendor-failure"; readonly message: string; readonly costUsd?: number }
-  /** The spend window refused the call: a money stop, never a breaker count. */
-  | { readonly kind: "money-stop"; readonly message: string }
+  /**
+   * A money stop, never a breaker count. `by` says WHOSE limit: the spend window's
+   * (`period-ceiling`, the default - the meter refused the call) or the job's own
+   * (`run-ceiling` - a producer that meters inside a step, an article turn refused at
+   * the run's cap, met the job's ceiling mid-step). The record says the same, so the
+   * operator raises the right limit; before `by` an article had to name its run ceiling
+   * in the sentence of a stop the record called `period-ceiling`.
+   */
+  | { readonly kind: "money-stop"; readonly message: string; readonly by?: MoneyStopBy }
   /** Anything else: the job fails with this sentence verbatim (v1 MV). */
   | { readonly kind: "fatal"; readonly code: AppErrorCode; readonly message: string };
+
+/** Whose limit stopped a job for money: its own ceiling, or the spend window's. */
+export type MoneyStopBy = "run-ceiling" | "period-ceiling";
 
 export type StepContext = {
   readonly job: Job;
@@ -100,7 +110,22 @@ export type Producer = {
   perform(step: MissingStep, ctx: StepContext): Promise<StepOutcome>;
   /** v1 MV/Suno driver health: asked before a claim; unhealthy claims nothing. */
   health?(): Promise<{ readonly ok: true } | { readonly ok: false; readonly reason: string }>;
+  /**
+   * Told the job's ending, after the drive that ended it (job-run.ts `runJob`): done, failed
+   * (its own outcome, the breaker, a ceiling stop, a thrown drive), interrupted (a lost fence),
+   * or stopped (an operator's pause or cancel that landed mid-step). The place a producer that
+   * still keeps a v1 artefact store copies onto it what the KERNEL decided without a step of its
+   * own running - a ceiling stop between steps, a fatal outcome - so extract's run.json and an
+   * article's run read the same ending whether the CLI, a route or the worker drove the job.
+   * Never told a yield (the job goes back to the queue, nothing ended). Idempotent: a re-drive of
+   * an ended job settles it again. A throw is reported on the drive (`RunReport.settle`) and
+   * as `job.settle-failed`; it never changes the job.
+   */
+  settle?(job: Job, ending: Ending): Promise<void>;
 };
+
+/** How a drive left its job, as `settle` is told it. */
+export type Ending = "done" | "failed" | "interrupted" | "stopped";
 
 /** v1 extract BREAKER_LIMIT: one refused frame is normal, two bad luck, three a wall. */
 export const BREAKER_LIMIT = 3;
@@ -165,6 +190,11 @@ export function claimed(job: Job, lease: Lease, slot: string): Job {
 export function started(job: Job, step: string, done: number, total: number, at: string): Job {
   const lease = job.lease === undefined ? {} : { lease: { ...job.lease, heartbeatAt: at } };
   return { ...job, ...lease, progress: { done, total: Math.max(total, done), stage: step } };
+}
+
+/** The stop record: a run-ceiling stop names the ceiling it met, a window stop has none of its own. */
+function stopOf(job: Job, by: MoneyStopBy, at: string): NonNullable<Job["stop"]> {
+  return { by, spentUsd: job.spend.usd, ...(by === "run-ceiling" && job.ceilingUsd !== undefined ? { ceilingUsd: job.ceilingUsd } : {}), at };
 }
 
 export function stopped(job: Job, d: { ceilingUsd: number; message: string }, at: string): Job {
@@ -245,7 +275,7 @@ function bookPure(job: Job, step: MissingStep, o: StepOutcome, at: string, break
     }
     case "money-stop":
       if (!running) return { job: base };
-      return { job: { ...move(base, "failed"), error: { code: "budget", message: o.message }, stop: { by: "period-ceiling", spentUsd: job.spend.usd, at } }, ended: "failed" };
+      return { job: { ...move(base, "failed"), error: { code: "budget", message: o.message }, stop: stopOf(job, o.by ?? "period-ceiling", at) }, ended: "failed" };
     case "fatal":
       if (!running) return { job: base };
       return { job: failed(base, o.code, o.message), ended: "failed" };

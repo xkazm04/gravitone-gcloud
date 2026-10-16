@@ -120,13 +120,19 @@ describe("launch: a receipt, then a confirm", () => {
     expect(must(readProject(s, "p1", ctx)).project.launched).toBe(false);
   });
 
-  it("refuses a receipt over its ceiling with budget, and a live launch under dry-only", () => {
+  it("launches a receipt over its ceiling - a stop point, not a refusal - with the ceiling on the job", () => {
     const s = store();
     ok(compose(s, { recipe: "article/post", topic: "provider routing" }, OP, { id: "a1" }));
     const capped = must(planReceipt(s, "a1", { mode: "dry", ceilingUsd: 50 }, ctx));
     expect(capped.overCeiling).toBe(true);
-    const over = launchProject(s, { id: "a1", baseRev: 1, token: capped.token, mode: "dry", ceilingUsd: 50 }, OP, lctx);
-    expect(over.ok ? "" : over.error.code).toBe("budget");
+    ok(launchProject(s, { id: "a1", baseRev: 1, token: capped.token, mode: "dry", ceilingUsd: 50 }, OP, lctx));
+    expect(must(s.read((r) => loadJob(r, "job:part:a1/article"))).job.ceilingUsd).toBe(50);
+    expect(String(events(s, "project.launched")[0]?.["data"])).toContain('"overCeiling":true');
+  });
+
+  it("refuses a live launch under dry-only, and arms one outside it", () => {
+    const s = store();
+    ok(compose(s, { recipe: "article/post", topic: "provider routing" }, OP, { id: "a1" }));
     const live = must(planReceipt(s, "a1", { mode: "live" }, ctx));
     const refused = launchProject(s, { id: "a1", baseRev: 1, token: live.token, mode: "live" }, OP, lctx);
     expect(refused.ok ? "" : refused.error.code).toBe("refused");

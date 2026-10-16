@@ -170,19 +170,23 @@ export function discard(store: Store, input: { id: string; baseRev: number }, ac
 
 /**
  * Release the jobs a launch enqueued `planned` (launch.ts `launchProject`) once every part they
- * wait for is ratified: L25's `releaseIn` moves each planned -> queued with `job.released`. Called after a job finishes and after a gate commits - the
- * dependency is the plan's, so the plan's module moves it, in one transaction per project.
+ * wait for is ratified: L25's `releaseIn` moves each planned -> queued with `job.released`. The
+ * dependency is the plan's, so the plan's module moves it, in one transaction per project. Two
+ * callers: the job driver, in the SAME transaction that books a part's job done (job-run.ts - so
+ * a crash can never leave a finished part with its dependents parked), and wave C's gate commit.
  */
+export function releaseHeldIn(t: Tx, projectId: string, actor: Actor, ctx: ReadContext): string[] {
+  const m = projectModel(t, projectId, ctx);
+  const released: string[] = [];
+  for (const row of m.rows) {
+    if (row.jobId === null || m.jobs.get(row.part.id)?.state !== "planned") continue;
+    if (!row.part.after.every((dep) => m.states.get(dep) === "ratified")) continue;
+    releaseIn(t, row.jobId, actor);
+    released.push(row.jobId);
+  }
+  return released;
+}
+
 export function releaseHeld(store: Store, projectId: string, actor: Actor, ctx: ReadContext): Result<string[]> {
-  return store.tx((t) => {
-    const m = projectModel(t, projectId, ctx);
-    const released: string[] = [];
-    for (const row of m.rows) {
-      if (row.jobId === null || m.jobs.get(row.part.id)?.state !== "planned") continue;
-      if (!row.part.after.every((dep) => m.states.get(dep) === "ratified")) continue;
-      releaseIn(t, row.jobId, actor);
-      released.push(row.jobId);
-    }
-    return released;
-  });
+  return store.tx((t) => releaseHeldIn(t, projectId, actor, ctx));
 }

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { LANE_CAPACITY, RESOURCE_LANES, type ResourceLane } from "./lane.capacity.ts";
+
 // TWO THINGS ARE CALLED A LANE, AND THEY MUST NOT BE SWAPPABLE.
 //
 // The Floor has four MEDIA lanes (what a Run or a Packet is about), and the
@@ -30,39 +32,10 @@ export type MediaLane = z.output<typeof mediaLaneSchema>;
  * `agy` (lib/imaging/providers/agy.ts) is the operator's own CLI install, so
  * it occupies `seat.text`, not a lane of its own.
  */
-export const RESOURCE_LANES = [
-  "gpu.local",
-  "box.render",
-  "box.chrome",
-  "seat.text",
-  "cloud.google",
-  "cloud.elevenlabs",
-  "cloud.leonardo",
-  "cloud.qwen",
-] as const;
+// The list and the capacity table live in ./lane.capacity.ts, zod-free, so the Runs view (a
+// client) reads the very numbers the lease does; re-exported so every import path holds.
+export { LANE_CAPACITY, RESOURCE_LANES, type ResourceLane } from "./lane.capacity.ts";
 export const resourceLaneSchema = z.enum(RESOURCE_LANES);
-export type ResourceLane = z.output<typeof resourceLaneSchema>;
-
-/**
- * HOW MANY JOBS A RESOURCE RUNS AT ONCE (Director's decision 5, Phase 4). The
- * kernel leases a SLOT, `<lane>#<i>`, not the whole lane, so two article turns
- * share the text seat while the one GPU still runs one thing. v1 had this as
- * four separate habits (lib/gpu/lease.ts one holder; the Suno and MV queues one
- * worker each; the turn ledger's concurrent CLI sessions; the imaging router's
- * per-vendor rate) and the Runs view drew a fifth copy as UI data
- * (@gt/ui runs/lanes.ts LANE_SPECS `cap`). The table lives here so the lease
- * and the view read one number.
- */
-export const LANE_CAPACITY: { readonly [L in ResourceLane]: number } = {
-  "gpu.local": 1,
-  "box.render": 1,
-  "box.chrome": 1,
-  "seat.text": 4,
-  "cloud.google": 3,
-  "cloud.elevenlabs": 2,
-  "cloud.leonardo": 2,
-  "cloud.qwen": 1,
-};
 
 /** The slot resources of a lane, in the order a claim tries them. */
 export function laneSlots(lane: ResourceLane): readonly string[] {

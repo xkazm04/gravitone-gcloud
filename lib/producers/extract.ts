@@ -145,8 +145,13 @@ export const extractPorts: ExtractPorts = {
   scenes: TRANSFER_SCENES.length,
 };
 
-/** The bound producer: the one line for lib/producers/registry.ts. */
-export const extractProducer = (): Producer => defineExtract(extractPorts);
+/**
+ * The bound producer: the one line for lib/producers/registry.ts. Its `settle` is the kernel's
+ * post-job hook (job-core `Producer.settle`), so the manifest learns a kernel stop the same way
+ * whether the CLI, the step route or the worker drove the job - the worker never called
+ * `settleExtractManifest` before, and a run it stopped at its ceiling read mid-stage.
+ */
+export const extractProducer = (): Producer => ({ ...defineExtract(extractPorts), settle: (job) => settleExtract(job) });
 
 /* ── The receipt ───────────────────────────────────────────────────────────── */
 
@@ -262,7 +267,9 @@ export async function launchExtract(store: Store, target: ExtractTarget, opts: L
   if (!receipt.ok) return receipt;
   if (opts.token === undefined) return ok({ kind: "receipt", receipt: receipt.value });
   if (opts.token !== receipt.value.token) return ok({ kind: "stale", fresh: receipt.value });
-  if (receipt.value.overCeiling) return err("budget", `the worst case of this run, $${receipt.value.totals.usd}, breaches the $${ceilingUsd} ceiling; raise --budget-usd or take fewer sources`);
+  // A worst case over the ceiling is NOT refused (Director's ruling: a ceiling is a stop point).
+  // The receipt carries `overCeiling`; the job stops unit by unit before the one that would cross
+  // it, with every booked unit kept (kernel job-core `next`).
 
   const at = new Date(now).toISOString();
   let mode: RunMode = DRY;
@@ -307,8 +314,8 @@ export type DriveOptions = RunOptions & {
 
 /**
  * Drive a job until it finishes, stops, or reaches the deadline (the route's
- * kick admits for a second; the CLI drives to the end). Then the v1 manifest is
- * told what the kernel decided without it (`settleExtractManifest`).
+ * kick admits for a second; the CLI drives to the end). The v1 manifest is told
+ * what the kernel decided without it by the producer's `settle`, inside `runJob`.
  */
 export async function driveExtract(store: Store, location: string, jobId: string, opts: DriveOptions = {}): Promise<Result<RunReport>> {
   const { onStep, ...run } = opts;
@@ -324,9 +331,13 @@ export async function driveExtract(store: Store, location: string, jobId: string
             return r;
           },
         };
-  const r = await runJob(fx, extractProducer(), jobId, run);
-  await settleExtractManifest(store, jobId);
-  return r;
+  return runJob(fx, extractProducer(), jobId, run);
+}
+
+/** `settleExtract` for a job read from the store (a repair, a test): the hook does the same. */
+export async function settleExtractManifest(store: Store, jobId: string): Promise<void> {
+  const job = jobOf(store, jobId);
+  if (job !== undefined) await settleExtract(job);
 }
 
 /**
@@ -334,11 +345,10 @@ export async function driveExtract(store: Store, location: string, jobId: string
  * that would have told run.json, so v1's readers (the commit's `done|failed`
  * gate, the Weir) would read a run still mid-stage. Copy the ending onto the
  * manifest as v1's `stopFor` wrote it. Idempotent; a run already ended is left
- * alone. The worker calls this after every extract drive too.
+ * alone.
  */
-export async function settleExtractManifest(store: Store, jobId: string): Promise<void> {
-  const job = jobOf(store, jobId);
-  if (job === undefined || job.producer !== "extract" || job.state !== "failed" || job.error === undefined) return;
+async function settleExtract(job: Job): Promise<void> {
+  if (job.producer !== "extract" || job.state !== "failed" || job.error === undefined) return;
   const { run: m } = await getExtractRun(job.of.id);
   if (m.job !== job.id || m.status === "done" || m.status === "failed" || m.status === "committed") return;
   m.status = "failed";

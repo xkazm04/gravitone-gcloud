@@ -100,6 +100,12 @@ describe("run", () => {
   it("refuses a composer input that does not match its lane's shape", () => {
     refuse(runSchema, { ...run, input: { lane: "audio", text: "x", kind: "speech" } }, "input");
   });
+  it("holds the record to what launched it: a composer's lane, a producer's own name", () => {
+    refuse(runSchema, { ...run, lane: "video" }, "lane");
+    const own = { ...run, producer: "suno", input: { producer: "suno", proposal: "p-rain" } };
+    accept(runSchema, own);
+    refuse(runSchema, { ...own, producer: "mv" }, "runs under suno");
+  });
   it("carries the estimate's law through", () => {
     refuse(runSchema, { ...run, estimate: { seconds: 1, usd: null } }, "unpricedReason");
     accept(runSchema, { ...run, estimate: PRICED });
