@@ -883,6 +883,9 @@ def test_every_third_party_import_is_declared_in_requirements():
     pipeline_local = {Path(f).stem for f in files if f.startswith("pipeline/")}
     # a package under pipeline/ (vlm-probe/ruler) is importable by its directory name
     pipeline_local |= {Path(f).parent.name for f in files if f.startswith("pipeline/") and Path(f).stem == "__init__"}
+    # the kernel's Python protocol (packages/kernel/py: job, kernel_store, kernel_ledger),
+    # which the GPU lease and the foundry worker put on sys.path by its path (Phase 4)
+    pipeline_local |= {Path(f).stem for f in files if f.startswith("packages/kernel/py/")}
 
     def undeclared(declared):
         out = set()

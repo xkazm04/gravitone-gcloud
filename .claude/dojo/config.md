@@ -26,6 +26,17 @@ verdict is about the stack its cycle names:
 
 - Wrapper: `python pipeline/foundry/dojo_run.py <cycle-dir>` dispatches on the
   spec's `stack` + `media`; a spec naming no stack is refused, never guessed.
+  **Since Phase 4 a cycle's renders are a kernel job** on the lane its stack
+  declares: local -> `gpu.local` (driven in the wrapper's process, or by the
+  GPU worker with `--detach`), google -> `cloud.google` (every Nano Banana and
+  Gemini call metered against the job). Flags: `--dry` (stand-ins, nothing
+  called), `--detach` (enqueue only; `python pipeline/foundry/worker.py`
+  drives local cycles), `--json` (one document), `--budget-usd N` (the job's
+  ceiling). Exit 0 done · 1 failed/refused · 2 usage. A cycle that ends with
+  units unrendered or unread is a FAILED job naming the count; `--resume`
+  retries that job from its booked units — nothing on disk is rendered or
+  billed again. The judge (`dojo_judge.py prepare|park`) runs after the job
+  is done, as before.
 - **Qwen cloud stays banned** (out of the router's dev plan).
 - The google stack's role: product-truth verification — NB re-runs of
   local-stack-gated rules settle transfer before a reflection merges.
@@ -49,6 +60,15 @@ Poll with Monitor, never a Bash background task — the 10-minute ceiling kills
 those (see the project memory note; a forge run is hours). Resumable per file:
 re-launching with `--resume` continues a dead run.
 
+Since Phase 4 the run is a kernel job on `gpu.local#1` (the card's lease —
+the forge is finally a tenant the others can see): `forge.py` prepares
+run.json, enqueues through `pipeline/foundry/launch.mts` and drives it in its
+own process. A killed forge is `interrupted` (no lane hold: the card is free)
+and `--resume` retries the job — no booked plate is drawn again. `--detach`
+leaves the job to `python pipeline/foundry/worker.py` (Start-Process it the
+same way for a long queue); `--dry` runs the plan on stand-ins; `--json`
+prints one document; exit 0 done · 1 failed/incomplete · 2 usage.
+
 ### pairs (composition cycles)
 
 When the thing under test is a PROMPT rather than a style recipe, the forge
@@ -57,8 +77,11 @@ renders a spec of seed-matched duos through the same ComfyUI + guard turn and
 reads every image back with qwen (craft annotation + style readback):
 
 ```powershell
-Start-Process -FilePath "python" -ArgumentList "pipeline/foundry/dojo_pairs.py", "foundry-out/training/<cycle-id>" -WorkingDirectory "C:/Users/kazda/kiro/gravitone-gcloud" -RedirectStandardOutput $log -RedirectStandardError "$log.err" -NoNewWindow
+Start-Process -FilePath "python" -ArgumentList "pipeline/foundry/dojo_run.py", "foundry-out/training/<cycle-id>" -WorkingDirectory "C:/Users/kazda/kiro/gravitone-gcloud" -RedirectStandardOutput $log -RedirectStandardError "$log.err" -NoNewWindow
 ```
+
+(`dojo_pairs.py <cycle>` still works and IS `dojo_run.py <cycle>`: the runner
+modules are unit passes the job drives, and the wrapper keeps stack purity.)
 
 Baseline prompts for shot-based cycles come from the LIVE compiler:
 `npx tsx pipeline/foundry/dojo-shot-prompts.mts <shots.json>` prints

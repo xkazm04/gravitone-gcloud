@@ -1,6 +1,6 @@
 """Dojo serial-lane runner: Wan t2v vs MiniMax H3 ref2va, per-arm engines.
 
-    python dojo_video_h3.py foundry-out/training/<cycle-id>
+    python dojo_video_h3.py foundry-out/training/<cycle-id>      (= dojo_run.py: a kernel job)
 
 The 2026-09-02 replication closed text-phrasing as a lever for serial
 continuity; the declared successor is reference conditioning (H3 ref2va held
@@ -19,12 +19,13 @@ H3 lengths must be congruent to 5 (mod 17) — 73 frames (~3 s) here; the wan
 arm renders 73 frames too so the judge compares equal durations.
 
 Posters (t0/t1/t2) and qwen readbacks follow dojo_video.py's discipline.
+
+SINCE PHASE 4 (L34) THIS MODULE IS A UNIT PASS driven by dojo_job.py as a kernel
+job; the engine order is the plan's order (`order`), so a resumed job keeps it.
 """
-import base64
 import json
 import shutil
 import sys
-import time
 from pathlib import Path
 
 HERE = Path(__file__).parent
@@ -35,33 +36,41 @@ sys.path.insert(0, str(HERE))
 import guard  # noqa: E402
 import motion  # noqa: E402
 from consistency import stage_reference  # noqa: E402
-from probe import run_ollama  # noqa: E402
-from dojo_video import generate_video, posters, wan_workflow, NEG  # noqa: E402
-import grade  # noqa: E402
+import dojo_video  # noqa: E402
+from dojo_video import generate_video, posters, wan_workflow  # noqa: E402
 
 W, H, LEN = 832, 480, 73  # H3's mod-17 law; wan matches for equal-duration pairs
+ARMS = ("baseline", "challenger")
+EXTS = (".webm", ".mp4")
+MEDIA = "video-serial-lanes"
 
 
-def main():
-    cdir = Path(sys.argv[1])
-    if not cdir.is_absolute():
-        cdir = ROOT / cdir
-    spec = json.loads((cdir / "gen-spec.json").read_text(encoding="utf-8"))
-    pairs_dir = cdir / "pairs"
-    pairs_dir.mkdir(parents=True, exist_ok=True)
-    rb_path = cdir / "readbacks.json"
-    readbacks = json.loads(rb_path.read_text(encoding="utf-8")) if rb_path.exists() else {}
-    model = spec.get("annotator", "qwen3.8:27b")
+def engine_of(p, arm):
+    return p[arm].get("engine", "wan")
 
-    units = [(p, arm) for p in spec["pairs"] for arm in ("baseline", "challenger")]
-    todo = [(p, a) for p, a in units if not (pairs_dir / f"{p['id']}--{a}.webm").exists()
-            and not (pairs_dir / f"{p['id']}--{a}.mp4").exists()]
-    todo.sort(key=lambda u: u[0][u[1]].get("engine", "wan"))  # h3 first alphabetically? no: group only
-    todo.sort(key=lambda u: 0 if u[0][u[1]].get("engine", "wan") == "wan" else 1)
-    print(f"dojo_video_h3: {len(spec['pairs'])} duo(s), {len(todo)} clip(s) to render "
-          f"(wan first, then h3) at {W}x{H}x{LEN}", flush=True)
 
-    if todo:
+def order(spec):
+    """Every wan clip first, then every h3 one (a stable sort keeps spec order inside each)."""
+    units = [(p, arm) for p in spec["pairs"] for arm in ARMS]
+    return sorted(units, key=lambda u: 0 if engine_of(*u) == "wan" else 1)
+
+
+def rendered(pairs_dir, p, arm):
+    for ext in EXTS:
+        f = pairs_dir / f"{p['id']}--{arm}{ext}"
+        if f.exists():
+            return f
+    return None
+
+
+class RenderPass:
+    def __init__(self, cdir, spec):
+        self.cdir, self.spec = cdir, spec
+        self.pairs_dir = cdir / "pairs"
+        self.pairs_dir.mkdir(parents=True, exist_ok=True)
+        self.current, self.staged = None, {}
+
+    def ready(self):
         if guard.foreign_job():
             raise SystemExit(f"runner: busy — foreign job on the engine: {guard.foreign_job()}")
         guard.require(ram_gb=0, free=["ollama"], verbose=False)
@@ -70,77 +79,58 @@ def main():
         # it. The engine-switch and headroom recycles below still fire.
         if not guard.comfy_process_ids() and not guard.start_comfy():
             raise SystemExit("ComfyUI is not running and could not be started")
-        current_engine = None
-        staged = {}
-        for n, (p, arm) in enumerate(todo, 1):
-            a = p[arm]
-            engine = a.get("engine", "wan")
-            if current_engine is not None and engine != current_engine:
-                guard.recycle_comfy(f"engine switch {current_engine} -> {engine}")
-            current_engine = engine
-            if not guard.headroom_ok():
-                guard.recycle_comfy("headroom")
-            if engine == "wan":
-                wf = wan_workflow(a["prompt"], p["seed"], W, H, LEN + 48,  # 121: wan's own sweet spot
-                                  steps=20, prefix=f"dojo-{cdir.name}")
-            else:
-                ref = a["ref"]
-                if ref not in staged:
-                    src = Path(ref)
-                    if not src.is_absolute():
-                        src = ROOT / ref
-                    staged[ref] = stage_reference(src)
-                motion.SEED = p["seed"]  # motion._tail reads the module global
-                wf = motion.ref2va_workflow(a["prompt"], staged[ref], W, H, LEN,
-                                            steps=4, prefix=f"dojo-{cdir.name}")
-            t0 = time.time()
-            try:
-                # H3's first-load pays ~70 min once; warm clips are minutes.
-                vid = generate_video(wf, timeout=5400 if engine != "wan" else 1800)
-            except Exception as e:  # noqa: BLE001
-                print(f"  [{n}/{len(todo)}] {p['id']}--{arm} FAILED: {str(e)[:90]}", flush=True)
-                if not guard.recycle_comfy("after failure"):
-                    break
-                current_engine = None
-                continue
-            out = pairs_dir / f"{p['id']}--{arm}{Path(vid).suffix}"
-            shutil.copy2(vid, out)
-            out.with_suffix(".json").write_text(json.dumps(
-                {"id": p["id"], "arm": arm, "engine": engine, "seed": p["seed"],
-                 "prompt": a["prompt"], "ref": a.get("ref")}, indent=2, ensure_ascii=False), encoding="utf-8")
-            posters(out, pairs_dir, f"{p['id']}--{arm}")
-            print(f"  [{n}/{len(todo)}] {p['id']}--{arm} ({engine}) -> {time.time()-t0:.0f}s", flush=True)
 
-    need = []
-    for p, arm in units:
-        key = f"{p['id']}--{arm}"
-        vids = [f for f in (pairs_dir / f"{key}.webm", pairs_dir / f"{key}.mp4") if f.exists()]
-        if vids:
-            if not (pairs_dir / f"{key}--t0.png").exists():
-                posters(vids[0], pairs_dir, key)
-            if key not in readbacks:
-                need.append((p, arm))
-    if need:
-        guard.require_model(model, vram_gb=20, ram_gb=guard.RAM_FLOOR_GB, free=["comfy"], verbose=False)
-        for n, (p, arm) in enumerate(need, 1):
-            key = f"{p['id']}--{arm}"
-            entry = {}
-            for tag in ("t0", "t1", "t2"):
-                b64 = base64.b64encode((pairs_dir / f"{key}--{tag}.png").read_bytes()).decode("ascii")
-                one = {}
-                try:
-                    text, _ = run_ollama(model, b64, "image/png")
-                    one["craft"] = grade.parse(text)
-                except Exception as e:  # noqa: BLE001
-                    one["craft_error"] = str(e)[:200]
-                entry[tag] = one
-            readbacks[key] = entry
-            rb_path.write_text(json.dumps(readbacks, indent=1, ensure_ascii=False), encoding="utf-8")
-            print(f"  readback [{n}/{len(need)}] {key}", flush=True)
+    def workflow(self, p, arm):
+        a = p[arm]
+        if engine_of(p, arm) == "wan":
+            return wan_workflow(a["prompt"], p["seed"], W, H, LEN + 48,  # 121: wan's own sweet spot
+                                steps=20, prefix=f"dojo-{self.cdir.name}")
+        ref = a["ref"]
+        if ref not in self.staged:
+            src = Path(ref)
+            if not src.is_absolute():
+                src = ROOT / ref
+            self.staged[ref] = stage_reference(src)
+        motion.SEED = p["seed"]  # motion._tail reads the module global
+        return motion.ref2va_workflow(a["prompt"], self.staged[ref], W, H, LEN, steps=4, prefix=f"dojo-{self.cdir.name}")
 
-    rendered = sum(1 for p, a in units if (pairs_dir / f"{p['id']}--{a}.webm").exists()
-                   or (pairs_dir / f"{p['id']}--{a}.mp4").exists())
-    print(f"dojo_video_h3: done -- {rendered}/{len(units)} clip(s), {len(readbacks)}/{len(units)} read back", flush=True)
+    def render(self, p, arm):
+        engine = engine_of(p, arm)
+        if self.current is not None and engine != self.current:
+            guard.recycle_comfy(f"engine switch {self.current} -> {engine}")
+        self.current = engine
+        if not guard.headroom_ok():
+            guard.recycle_comfy("headroom")
+        # H3's first-load pays ~70 min once; warm clips are minutes.
+        vid = generate_video(self.workflow(p, arm), timeout=5400 if engine != "wan" else 1800)
+        out = self.pairs_dir / f"{p['id']}--{arm}{Path(vid).suffix}"
+        shutil.copy2(vid, out)
+        out.with_suffix(".json").write_text(json.dumps(
+            {"id": p["id"], "arm": arm, "engine": engine, "seed": p["seed"],
+             "prompt": p[arm]["prompt"], "ref": p[arm].get("ref")}, indent=2, ensure_ascii=False), encoding="utf-8")
+        posters(out, self.pairs_dir, f"{p['id']}--{arm}")
+        return {"file": f"pairs/{out.name}", "engine": engine}
+
+    def after_failure(self):
+        self.current = None
+        return guard.recycle_comfy("after failure")
+
+    def close(self):
+        pass
+
+
+ready_readback = dojo_video.ready_readback
+
+
+def readback(pairs_dir, p, arm, model):
+    """dojo_video's triptych over whichever clip this arm rendered (.webm or .mp4).
+    v1 cached an all-error triptych here; it is not a readback (dojo_video says why)."""
+    return dojo_video.readback(pairs_dir, p, arm, model, video=rendered(pairs_dir, p, arm))
+
+
+def main():
+    import dojo_run
+    raise SystemExit(dojo_run.main(sys.argv[1:]))
 
 
 if __name__ == "__main__":

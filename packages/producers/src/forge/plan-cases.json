@@ -1,0 +1,83 @@
+{
+  "_": "forge_job.py `plan` and plan.ts `forgeSteps` on literal views of run.json; both languages must give `expect` (tests/next-server/producer-forge.test.ts).",
+  "cases": [
+    {
+      "name": "a fresh run: annotations first; no plate before its scene is annotated, nothing graded",
+      "view": {
+        "scenes": [{ "id": "s1", "annotated": false }, { "id": "s2", "annotated": true }],
+        "candidates": [
+          { "id": "s1/a--text--s1", "scene": "s1", "status": "pending", "plate": false },
+          { "id": "s2/a--text--s1", "scene": "s2", "status": "pending", "plate": false }
+        ]
+      },
+      "booked": [],
+      "attempt": 1,
+      "expect": ["annotate:s1", "generate:s2/a--text--s1"]
+    },
+    {
+      "name": "a PNG on disk is a finished generation (adopt_plate): no generate, it is graded",
+      "view": {
+        "scenes": [{ "id": "s1", "annotated": true }],
+        "candidates": [
+          { "id": "s1/a", "scene": "s1", "status": "pending", "plate": true },
+          { "id": "s1/b", "scene": "s1", "status": "failed", "plate": false },
+          { "id": "s1/c", "scene": "s1", "status": "generated", "plate": true }
+        ]
+      },
+      "booked": [],
+      "attempt": 1,
+      "expect": ["generate:s1/b", "grade:s1/a:a1", "grade:s1/c:a1"]
+    },
+    {
+      "name": "a booked step is never planned again: not a generate whose plate went missing, not a grade",
+      "view": {
+        "scenes": [{ "id": "s1", "annotated": true }],
+        "candidates": [
+          { "id": "s1/a", "scene": "s1", "status": "pending", "plate": false },
+          { "id": "s1/b", "scene": "s1", "status": "generated", "plate": true }
+        ]
+      },
+      "booked": ["generate:s1/a", "grade:s1/b:a1"],
+      "attempt": 1,
+      "expect": []
+    },
+    {
+      "name": "unmeasured is resumable: the next attempt grades it again, the graded one is left alone",
+      "view": {
+        "scenes": [{ "id": "s1", "annotated": true }],
+        "candidates": [
+          { "id": "s1/a", "scene": "s1", "status": "unmeasured", "plate": true },
+          { "id": "s1/b", "scene": "s1", "status": "graded", "plate": true }
+        ]
+      },
+      "booked": ["grade:s1/a:a1", "grade:s1/b:a1"],
+      "attempt": 2,
+      "expect": ["grade:s1/a:a2"]
+    },
+    {
+      "name": "abandoned: no more plates this drive, the grades still run",
+      "view": {
+        "scenes": [{ "id": "s1", "annotated": true }],
+        "candidates": [
+          { "id": "s1/a", "scene": "s1", "status": "failed", "plate": false },
+          { "id": "s1/b", "scene": "s1", "status": "generated", "plate": true }
+        ]
+      },
+      "booked": [],
+      "attempt": 1,
+      "abandoned": true,
+      "expect": ["grade:s1/b:a1"]
+    },
+    {
+      "name": "--skip-grade plans no grade",
+      "view": {
+        "scenes": [{ "id": "s1", "annotated": true }],
+        "candidates": [{ "id": "s1/a", "scene": "s1", "status": "generated", "plate": true }]
+      },
+      "booked": [],
+      "attempt": 1,
+      "skipGrade": true,
+      "expect": []
+    }
+  ]
+}

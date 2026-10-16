@@ -73,6 +73,15 @@ python forge.py plans/sweep-01.json                      # 5 scenes x 9 styles x
 python forge.py plans/sweep-01.json --run-id <id> --resume
 ```
 
+**A run is a kernel job (Phase 4).** `forge.py` prepares run.json, enqueues the
+job through `launch.mts` (its receipt, confirmed by the CLI) and drives it on
+`gpu.local#1` — the card's one slot, which is the GPU lease, so the forge is a
+tenant every other one sees. `--dry` runs the plan on stand-ins (no ComfyUI, no
+Ollama, placeholder plates), `--detach` leaves the job to `python worker.py`,
+`--json` prints one document; exit 0 done · 1 failed or incomplete · 2 usage. A
+killed forge is `interrupted`; `--resume` retries its job and draws no booked
+plate again. Dojo cycles (`dojo_run.py`) are jobs the same way.
+
 Launch anything longer than ten minutes **detached** (PowerShell
 `Start-Process python -ArgumentList '-u','forge.py',...`) — a shell tool's
 background task is killed at its ceiling, and the forge only survives that

@@ -1,0 +1,43 @@
+{
+  "_": "dojo_job.py `plan` and plan.ts `dojoLocalSteps` on literal unit views; both languages must give `expect` (tests/next-server/producer-dojo.test.ts).",
+  "cases": [
+    {
+      "name": "a fresh cycle: every render first, in the runner's order, then nothing read yet",
+      "units": [
+        { "key": "p1--baseline", "rendered": false, "read": false },
+        { "key": "p1--challenger", "rendered": false, "read": false }
+      ],
+      "booked": [],
+      "expect": ["render:p1--baseline", "render:p1--challenger"]
+    },
+    {
+      "name": "a file on disk is a finished render; a key in readbacks.json a finished readback",
+      "units": [
+        { "key": "p1--baseline", "rendered": true, "read": true },
+        { "key": "p1--challenger", "rendered": true, "read": false },
+        { "key": "p2--baseline", "rendered": false, "read": false }
+      ],
+      "booked": [],
+      "expect": ["render:p2--baseline", "readback:p1--challenger"]
+    },
+    {
+      "name": "a booked step is never planned again",
+      "units": [
+        { "key": "p1--baseline", "rendered": false, "read": false },
+        { "key": "p1--challenger", "rendered": true, "read": false }
+      ],
+      "booked": ["render:p1--baseline", "readback:p1--challenger"],
+      "expect": []
+    },
+    {
+      "name": "abandoned: no more renders this drive, the readbacks still run",
+      "units": [
+        { "key": "p1--baseline", "rendered": false, "read": false },
+        { "key": "p1--challenger", "rendered": true, "read": false }
+      ],
+      "booked": [],
+      "abandoned": true,
+      "expect": ["readback:p1--challenger"]
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 """Dojo video pair runner: seed-matched A/B duos of 5s CLIPS on the local stack.
 
-    python dojo_video.py foundry-out/training/<cycle-id>
+    python dojo_video.py foundry-out/training/<cycle-id>      (= dojo_run.py: a kernel job)
 
 Wan 2.2 TI2V 5B (t2v; the standard native ComfyUI graph: UNETLoader +
 umt5 CLIPLoader(type wan) + wan VAE + Wan22ImageToVideoLatent with no start
@@ -15,12 +15,17 @@ spare the cost); the chokepoint judge is the only machine judge.
 
 Resumable: a .webm on disk is a finished render; a key in readbacks.json a
 finished readback triptych.
+
+SINCE PHASE 4 (L34) THIS MODULE IS A UNIT PASS driven by dojo_job.py as a kernel
+job. The card: v1 took `gpu_lease.acquire` around each phase (one holder at a
+time, the recycles this holder's own). The job's slot on gpu.local#1 IS that
+lease now, and dojo_job names the tenant through `hold_for_job` before the pass
+starts, so the recycles below are still the holder's and nobody else's.
 """
 import base64
 import json
 import shutil
 import sys
-import time
 import subprocess
 from pathlib import Path
 
@@ -31,12 +36,12 @@ sys.path.insert(0, str(PROBE))
 sys.path.insert(0, str(HERE))
 import guard  # noqa: E402
 import consistency  # noqa: E402
-import lease as gpu_lease  # noqa: E402
-from consistency import COMFY_OUT  # noqa: E402
 from probe import run_ollama  # noqa: E402
 import grade  # noqa: E402
 
 ARMS = ("baseline", "challenger")
+EXTS = (".webm",)
+MEDIA = "video"
 NEG = ("static frame, frozen image, no motion, jitter, flicker, morphing anatomy, extra limbs, "
        "text, letters, watermark, logo, caption, subtitles")
 
@@ -86,99 +91,93 @@ def posters(video, outdir, stem):
     return out
 
 
+def order(spec):
+    return [(p, arm) for p in spec["pairs"] for arm in ARMS]
+
+
+def rendered(pairs_dir, p, arm):
+    f = pairs_dir / f"{p['id']}--{arm}.webm"
+    return f if f.exists() else None
+
+
+def size_of(spec):
+    return spec.get("width", 848), spec.get("height", 480), spec.get("length", 121)
+
+
+class RenderPass:
+    def __init__(self, cdir, spec):
+        self.cdir, self.spec = cdir, spec
+        self.pairs_dir = cdir / "pairs"
+        self.pairs_dir.mkdir(parents=True, exist_ok=True)
+
+    def ready(self):
+        guard.require(ram_gb=0, free=["ollama"], verbose=False)
+        if guard.comfy_process_ids():
+            guard.recycle_comfy("fresh engine for dojo video")
+        elif not guard.start_comfy():
+            raise SystemExit("ComfyUI is not running and could not be started")
+        guard.require(vram_gb=16, ram_gb=guard.RAM_FLOOR_GB, verbose=False)
+
+    def workflow(self, p, arm):
+        W, H, L = size_of(self.spec)
+        return wan_workflow(p[arm]["prompt"], p["seed"], W, H, L, steps=self.spec.get("steps", 20),
+                            prefix=f"dojo-{self.cdir.name}")
+
+    def render(self, p, arm):
+        if not guard.headroom_ok():
+            guard.recycle_comfy("headroom")
+        vid = generate_video(self.workflow(p, arm))
+        out = self.pairs_dir / f"{p['id']}--{arm}.webm"
+        shutil.copy2(vid, out)
+        out.with_suffix(".json").write_text(json.dumps(
+            {"id": p["id"], "arm": arm, "seed": p["seed"], "prompt": p[arm]["prompt"],
+             "size": list(size_of(self.spec))}, indent=2, ensure_ascii=False), encoding="utf-8")
+        posters(out, self.pairs_dir, f"{p['id']}--{arm}")
+        return {"file": f"pairs/{out.name}"}
+
+    def after_failure(self):
+        return guard.recycle_comfy("after failure")
+
+    def close(self):
+        pass
+
+
+def ready_readback(model):
+    # The annotator is the other engine on the card; it takes its own turn.
+    guard.require_model(model, vram_gb=20, ram_gb=guard.RAM_FLOOR_GB, free=["comfy"], verbose=False)
+
+
+def readback(pairs_dir, p, arm, model, video=None):
+    """Three stills per clip, craft each. Returns the triptych, or None when no
+    still read at all.
+
+    An entry that produced no craft at all is NOT a readback, and caching it is
+    worse than failing: `key not in readbacks` is the resume guard, so an error
+    entry satisfies it forever and the clip is never read again. Observed
+    2026-09-20 with the annotator down -- all three tags of all four clips held
+    only `craft_error`, the file was written, and the run still printed
+    "4/4 read back". Persist only what actually read; leave the rest for the
+    next run. `failure-not-empty-success`."""
+    key = f"{p['id']}--{arm}"
+    src = video or rendered(pairs_dir, p, arm)
+    if src is not None and not (pairs_dir / f"{key}--t0.png").exists():
+        posters(src, pairs_dir, key)
+    entry = {}
+    for tag in ("t0", "t1", "t2"):
+        b64 = base64.b64encode((pairs_dir / f"{key}--{tag}.png").read_bytes()).decode("ascii")
+        one = {}
+        try:
+            text, _ = run_ollama(model, b64, "image/png")
+            one["craft"] = grade.parse(text)
+        except Exception as e:  # noqa: BLE001
+            one["craft_error"] = str(e)[:200]
+        entry[tag] = one
+    return entry if any("craft" in one for one in entry.values()) else None
+
+
 def main():
-    cdir = Path(sys.argv[1])
-    if not cdir.is_absolute():
-        cdir = ROOT / cdir
-    spec = json.loads((cdir / "gen-spec.json").read_text(encoding="utf-8"))
-    pairs_dir = cdir / "pairs"
-    pairs_dir.mkdir(parents=True, exist_ok=True)
-    rb_path = cdir / "readbacks.json"
-    readbacks = json.loads(rb_path.read_text(encoding="utf-8")) if rb_path.exists() else {}
-    model = spec.get("annotator", "qwen3.8:27b")
-    W, H, L = spec.get("width", 848), spec.get("height", 480), spec.get("length", 121)
-
-    units = [(p, arm) for p in spec["pairs"] for arm in ARMS]
-    todo = [(p, arm) for p, arm in units if not (pairs_dir / f"{p['id']}--{arm}.webm").exists()]
-    print(f"dojo_video: {len(spec['pairs'])} duo(s), {len(units)} clip(s), {len(todo)} to render "
-          f"at {W}x{H}x{L}", flush=True)
-
-    if todo:
-        # One holder at a time on the card (pipeline/gpu/lease.py): the recycles below
-        # are this lease-holder's own, and another tenant is named, not killed.
-        with gpu_lease.acquire("foundry/dojo_video", "comfy", 20, wait=3600, ttl_s=900,
-                               job_prefix=f"dojo-{cdir.name}"):
-            guard.require(ram_gb=0, free=["ollama"], verbose=False)
-            if guard.comfy_process_ids():
-                guard.recycle_comfy("fresh engine for dojo video")
-            elif not guard.start_comfy():
-                raise SystemExit("ComfyUI is not running and could not be started")
-            guard.require(vram_gb=16, ram_gb=guard.RAM_FLOOR_GB, verbose=False)
-            for n, (p, arm) in enumerate(todo, 1):
-                if not guard.headroom_ok():
-                    guard.recycle_comfy("headroom")
-                wf = wan_workflow(p[arm]["prompt"], p["seed"], W, H, L, steps=spec.get("steps", 20),
-                                  prefix=f"dojo-{cdir.name}")
-                t0 = time.time()
-                try:
-                    vid = generate_video(wf)
-                except Exception as e:  # noqa: BLE001
-                    print(f"  [{n}/{len(todo)}] {p['id']}--{arm} FAILED: {str(e)[:90]}", flush=True)
-                    if not guard.recycle_comfy("after failure"):
-                        break
-                    continue
-                out = pairs_dir / f"{p['id']}--{arm}.webm"
-                shutil.copy2(vid, out)
-                out.with_suffix(".json").write_text(json.dumps(
-                    {"id": p["id"], "arm": arm, "seed": p["seed"], "prompt": p[arm]["prompt"],
-                     "size": [W, H, L]}, indent=2, ensure_ascii=False), encoding="utf-8")
-                posters(out, pairs_dir, f"{p['id']}--{arm}")
-                print(f"  [{n}/{len(todo)}] {p['id']}--{arm} -> {time.time()-t0:.0f}s", flush=True)
-
-    # readbacks: three stills per clip, craft + style
-    need = []
-    for p, arm in units:
-        key = f"{p['id']}--{arm}"
-        if (pairs_dir / f"{key}.webm").exists():
-            if not (pairs_dir / f"{key}--t0.png").exists():
-                posters(pairs_dir / f"{key}.webm", pairs_dir, key)
-            if key not in readbacks:
-                need.append((p, arm))
-    if need:
-        # The annotator is the other engine on the card; it takes its own turn.
-        with gpu_lease.acquire("foundry/dojo_video-readback", "ollama", 22, wait=3600, ttl_s=900) as turn:
-            guard.require_model(model, vram_gb=20, ram_gb=guard.RAM_FLOOR_GB, free=["comfy"], verbose=False)
-            for n, (p, arm) in enumerate(need, 1):
-                turn.heartbeat()   # no ComfyUI poll to do it for us in this phase
-                key = f"{p['id']}--{arm}"
-                entry = {}
-                for tag in ("t0", "t1", "t2"):
-                    b64 = base64.b64encode((pairs_dir / f"{key}--{tag}.png").read_bytes()).decode("ascii")
-                    one = {}
-                    try:
-                        text, _ = run_ollama(model, b64, "image/png")
-                        one["craft"] = grade.parse(text)
-                    except Exception as e:  # noqa: BLE001
-                        one["craft_error"] = str(e)[:200]
-                    entry[tag] = one
-                # An entry that produced no craft at all is NOT a readback, and caching it is
-                # worse than failing: `key not in readbacks` is the resume guard, so an error
-                # entry satisfies it forever and the clip is never read again. Observed
-                # 2026-09-20 with the annotator down -- all three tags of all four clips held
-                # only `craft_error`, the file was written, and the run still printed
-                # "4/4 read back". Persist only what actually read; leave the rest for the
-                # next run. `failure-not-empty-success`.
-                if not any("craft" in one for one in entry.values()):
-                    print(f"  readback [{n}/{len(need)}] {key} FAILED -- not cached, will retry", flush=True)
-                    continue
-                readbacks[key] = entry
-                rb_path.write_text(json.dumps(readbacks, indent=1, ensure_ascii=False), encoding="utf-8")
-                print(f"  readback [{n}/{len(need)}] {key}", flush=True)
-
-    rendered = sum(1 for p, arm in units if (pairs_dir / f"{p['id']}--{arm}.webm").exists())
-    # Count what was READ, not what is keyed: the two diverge exactly when it matters.
-    read_back = sum(1 for v in readbacks.values() if any("craft" in one for one in v.values()))
-    print(f"dojo_video: done -- {rendered}/{len(units)} clip(s), {read_back}/{len(units)} read back", flush=True)
+    import dojo_run
+    raise SystemExit(dojo_run.main(sys.argv[1:]))
 
 
 if __name__ == "__main__":
