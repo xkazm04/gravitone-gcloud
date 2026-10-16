@@ -821,7 +821,11 @@
           "revision": 17,
           "changedAt": "2026-09-30",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/library/assets/useShelf.ts:124 Context searches found no retrieval, embedding, BM25 or reranking implementation, and the inspected path filters loaded assets by folder and literal words rather than producing a relevance-ranked corpus slice.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:a49d27f889212d3f",
+          "evaluatedRevision": 19
         }
       ],
       "governance": "governed"
@@ -3858,7 +3862,11 @@
           "revision": 17,
           "changedAt": "2026-09-30",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/foundry/pipeline/useBoardCull.ts:75 Context searches found no retrieval, embedding, BM25 or reranking implementation, and the inspected surface selects loaded workflow cards by viewport geometry rather than corpus relevance.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:a49d27f889212d3f",
+          "evaluatedRevision": 19
         }
       ],
       "governance": "governed"

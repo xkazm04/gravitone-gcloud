@@ -5881,6 +5881,158 @@
           "evidence": "components/ui/HarnessBridge.tsx:144 The harness explicitly publishes its own browser control object; it does not resolve private OS entry points."
         }
       ]
+    },
+    "4c4736ce-971c-4b7c-b68a-0cb8b892ed12/retrieval": {
+      "context": "asset-library",
+      "subject": "retrieval",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T01:00:36.216Z",
+      "worker": "ca4b7569-1ad0-428f-9717-edd642a87e9a",
+      "techniques": [
+        {
+          "technique": "chunking-and-indexing",
+          "verdict": "not-applicable",
+          "evidence": "lib/assets.ts:593 Persistence writes whole asset records; no retrieval chunk ingest or derived matching index was found."
+        },
+        {
+          "technique": "embedding-lifecycle",
+          "verdict": "not-applicable",
+          "evidence": "lib/themes.ts:215 Selected style references contain image payloads, and searches found no stored embeddings or embedder lifecycle in this context."
+        },
+        {
+          "technique": "hybrid-lane-fusion",
+          "verdict": "not-applicable",
+          "evidence": "app/library/assets/useShelf.ts:124 One folder-scoped predicate filters the loaded rows; there are no matcher candidate lists to fuse."
+        },
+        {
+          "technique": "named-period-vote",
+          "verdict": "not-applicable",
+          "evidence": "app/library/AssetLightbox.tsx:87 This date is displayed as asset metadata; the inspected query path does not interpret named periods."
+        },
+        {
+          "technique": "padded-slots-are-misses",
+          "verdict": "not-applicable",
+          "evidence": "lib/assets.ts:633 Assets are read by durable keys, with no fixed-width nearest-neighbour results or positional sentinel hydration."
+        },
+        {
+          "technique": "query-decomposition-before-the-lanes",
+          "verdict": "not-applicable",
+          "evidence": "app/library/assets/shelf.ts:86 The browsing query supplies literal words to one predicate, rather than addressing indexes at different abstraction levels."
+        },
+        {
+          "technique": "ranking-budgets",
+          "verdict": "not-applicable",
+          "evidence": "app/library/assets/useShelf.ts:129 This window paginates filtered gallery rows; it does not allocate a retrieval budget across ranked candidates."
+        },
+        {
+          "technique": "relationship-proximity-lane",
+          "verdict": "not-applicable",
+          "evidence": "app/library/assets/useShelf.ts:161 The related-plate strip uses exact shared-style membership, matching the technique's exception for relations already expressible by a consumer filter."
+        },
+        {
+          "technique": "relevance-floors",
+          "verdict": "not-applicable",
+          "evidence": "app/library/assets/shelf.ts:93 Matching is a Boolean substring predicate, with no relevance scores or nearest-neighbour candidates requiring calibrated floors."
+        },
+        {
+          "technique": "retrieval-evaluation",
+          "verdict": "not-applicable",
+          "evidence": "app/_library/LibraryShelves.tsx:75 The project shelf performs title and kind filtering; no relevance-ranking production path was found to evaluate under this technique."
+        },
+        {
+          "technique": "retrieval-triggering",
+          "verdict": "not-applicable",
+          "evidence": "app/library/Playground.tsx:210 The inspected generation path compiles the supplied style and subject and uses supplied image references; it does not decide whether to retrieve corpus evidence."
+        },
+        {
+          "technique": "second-pass-rescoring",
+          "verdict": "not-applicable",
+          "evidence": "lib/assets.ts:543 Stored assets receive alphabetical ordering with an identity tiebreaker, rather than model rescoring of a fused pool."
+        },
+        {
+          "technique": "structural-centrality-lane",
+          "verdict": "not-applicable",
+          "evidence": "lib/assets.ts:518 The folder hierarchy is ordered for navigation, with no graph-derived relevance ranking."
+        }
+      ]
+    },
+    "74bcf0a3-bbe6-4401-9a9d-aaef4695de80/retrieval": {
+      "context": "pipeline-board-surface",
+      "subject": "retrieval",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T01:00:36.216Z",
+      "worker": "ca4b7569-1ad0-428f-9717-edd642a87e9a",
+      "techniques": [
+        {
+          "technique": "chunking-and-indexing",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/usePipelineData.ts:74 The surface loads workflow entries through its source; the inspected loading and layout path does not ingest retrieval chunks."
+        },
+        {
+          "technique": "embedding-lifecycle",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/Card.tsx:150 Cards render supplied entries through a skin, and searches found no embedding writes or comparisons in this context."
+        },
+        {
+          "technique": "hybrid-lane-fusion",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/CellLayer.tsx:104 These lanes and columns are workflow cells containing item IDs, rather than independent retrieval matchers."
+        },
+        {
+          "technique": "named-period-vote",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/Card.tsx:238 The clock computes elapsed job duration; the board accepts no temporal retrieval question to resolve or vote on."
+        },
+        {
+          "technique": "padded-slots-are-misses",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/useCards.tsx:56 Mounted cards resolve explicit IDs through a keyed map, with no nearest-neighbour filler slots."
+        },
+        {
+          "technique": "query-decomposition-before-the-lanes",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/buildLayout.ts:98 Lane selection groups workflow items by their chosen axis; it does not dispatch decomposed query keys to retrieval indexes."
+        },
+        {
+          "technique": "ranking-budgets",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/useBoardCull.ts:94 The bound controls how many cards mount in an animation wave, rather than spending a relevance-ranking budget."
+        },
+        {
+          "technique": "relationship-proximity-lane",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/MoveMap.tsx:54 The move map locates an explicitly selected card's workflow slot; it does not expand retrieval seeds along corpus relations."
+        },
+        {
+          "technique": "relevance-floors",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/BoardControls.tsx:94 The empty-stage explanation concerns source availability, not candidates rejected by a relevance threshold."
+        },
+        {
+          "technique": "retrieval-evaluation",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/boardMount.tsx:86 This surface's inspected instrumentation counts mounts; there is no retrieval-ranking path here requiring labeled-query evaluation."
+        },
+        {
+          "technique": "retrieval-triggering",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/usePipelineData.ts:95 Reloading follows the workflow polling interval, rather than a request's need for external corpus evidence."
+        },
+        {
+          "technique": "second-pass-rescoring",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/useBoardCull.ts:90 This order prioritizes mounting by geometric distance from the viewport centre, rather than rescoring fused retrieval results."
+        },
+        {
+          "technique": "structural-centrality-lane",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/buildLayout.ts:99 Layout places entries by workflow lane and stage without deriving a centrality ranking over corpus references."
+        }
+      ]
     }
   }
 }
