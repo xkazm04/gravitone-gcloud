@@ -123,12 +123,22 @@ test("the album's words are drafted by a turn; the render waits on a kept still"
 
 test("the ad's bed scores the picked scenario; its finish holds the render on clips", async ({ page }) => {
   const ad = await seeded(page, "rainshell-social-15", "research");
+  // The ad is one project for the whole lane (the part fixture composes it once, by title), and
+  // part-editors.live has already picked its first idea by the time this file runs: a picked idea
+  // draws a "picked" chip where "pick" was (AdsBrief), so the pick is made only when research is
+  // not READY yet - the same guard part-frames-motion's ads test holds. Likewise the adopt.
   await ready(page, `/projects/${ad}/research`);
-  await page.locator("[data-idea]").first().click();
-  await page.getByRole("button", { name: /^pick/ }).click();
+  if ((await chip(page).getAttribute("data-verdict")) !== "ready") {
+    await page.locator("[data-idea]").first().click();
+    await page.getByRole("button", { name: /^pick/ }).click();
+    await expect(chip(page)).toHaveAttribute("data-verdict", "ready");
+  }
   await ready(page, `/projects/${ad}/script`);
   if (await page.getByRole("button", { name: /generate scenarios/ }).count()) await confirm(page, /generate scenarios/);
-  await page.keyboard.press("a");
+  if ((await chip(page).getAttribute("data-verdict")) !== "ready") {
+    await page.keyboard.press("a");
+    await expect(chip(page)).toHaveAttribute("data-verdict", "ready");
+  }
   await ready(page, `/projects/${ad}/score`);
   const bpm = page.getByLabel("tempo · bpm");
   await bpm.fill("96");

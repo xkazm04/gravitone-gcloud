@@ -57,15 +57,16 @@ function seedUniverse(): void {
   const env: NodeJS.ProcessEnv = { ...process.env, NEXT_PUBLIC_GRAVITONE_DATA: "fixtures" };
   for (const v of ["GRAVITONE_STORE_PATH", "FOUNDRY_DIR", "SOUND_STORE_DIR", "ARTICLES_STORE_DIR", "PUBLISH_STORE_DIR", "CLIP_STORE_DIR", "GPU_LEASE_DIR", "TEXT_TURN_DIR", "SPEND_STORE_DIR"]) delete env[v];
   execFileSync(process.execPath, [CLI, "seed-fixtures"], { cwd: U, env, encoding: "utf8" });
-  // The strips store's root is foundry-out/ in both universes (pipeline/fixtures/work.ts).
-  cpSync(path.join(FO(), "strips"), path.join(U, "foundry-out", "strips"), { recursive: true });
-  // The seed writes strip manifests, not the strips: each rendered card gets placeholder files.
-  for (const run of readdirSync(path.join(U, "foundry-out", "strips"))) {
-    const m = json<{ cards: { id: string; status: string; files: Record<string, string> }[] }>(path.join(U, "foundry-out", "strips", run, "run.json"));
+  // The strips store is the universe's own `<out>/strips` (lib/foundry/strips/store.ts
+  // `stripsRoot`, since L33; before it, foundry-out/strips in both universes, which this seed used
+  // to copy into). The seed writes strip manifests, not the strips: each rendered card gets
+  // placeholder files, in place.
+  for (const run of readdirSync(path.join(FO(), "strips"))) {
+    const m = json<{ cards: { id: string; status: string; files: Record<string, string> }[] }>(path.join(FO(), "strips", run, "run.json"));
     for (const c of m.cards.filter((x) => x.status === "rendered")) {
       for (const rel of Object.values(c.files)) {
-        mkdirSync(path.dirname(path.join(U, "foundry-out", "strips", run, c.id, rel)), { recursive: true });
-        writeFileSync(path.join(U, "foundry-out", "strips", run, c.id, rel), `placeholder ${rel}`);
+        mkdirSync(path.dirname(path.join(FO(), "strips", run, c.id, rel)), { recursive: true });
+        writeFileSync(path.join(FO(), "strips", run, c.id, rel), `placeholder ${rel}`);
       }
     }
   }
@@ -295,13 +296,19 @@ async function cull(page: Page, withReason: boolean): Promise<number> {
   }
   await landed(page);
   // ⌫ takes back the newest act - what one gate window wrote, which may be several keys - so
-  // every tile it reopened is decided again.
+  // every tile it touched is decided again. An undo RESTORES what the tile held before, which is
+  // not always "undecided": the fixture seeds v1 verdicts for most of a forge sweep from an rng
+  // keyed by a dated run id, so on some days the last tile kept was a v1 reject and the undo
+  // correctly puts that reject back (measured 2026-10-16: dock-ambush/desaturated-newsreel s61002,
+  // seq 14 reject (v1) -> 24 keep -> 25 reject (the undo)). The cull's intent is "the first
+  // rejected, the rest kept", so every tile not holding its intended verdict is decided again.
   await page.keyboard.press("Backspace");
   await landed(page);
   for (let i = 0; i < n; i++) {
-    if (/, (keep|reject)/.test((await tiles(page).nth(i).getAttribute("aria-label")) ?? "")) continue;
+    const label = (await tiles(page).nth(i).getAttribute("aria-label")) ?? "";
+    if (i === 0 ? /, reject/.test(label) : /, keep$/.test(label)) continue;
     await tiles(page).nth(i).click();
-    await page.keyboard.press("k");
+    await page.keyboard.press(i === 0 ? "x" : "k");
   }
   await expect(commitButton(page)).toHaveAttribute("aria-label", "commit packet");
   return n;
@@ -385,7 +392,7 @@ test("strips: chips on the reason keys, the commit in v1's strips store", async 
   await cull(page, true);
   await previewAndCommit(page, /motion-styles|strips-ledger/);
   await applied(id);
-  expect(json<{ status: string }>(path.join(U, "foundry-out", "strips", pile.id, "run.json")).status).toBe("committed");
+  expect(json<{ status: string }>(path.join(FO(), "strips", pile.id, "run.json")).status).toBe("committed");
   await decidedEverywhere(page, id);
 });
 

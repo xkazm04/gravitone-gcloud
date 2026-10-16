@@ -75,7 +75,8 @@ a.checkLabel:hover{color:var(--ink-bright)}
 .v{font:700 var(--fs-micro)/1 var(--mono);text-transform:uppercase;letter-spacing:.06em;padding:var(--sp-hair) var(--sp-2);border-radius:var(--r-xs);border:1px solid var(--hair-2)}
 .v.pass{color:var(--done-text);border-color:color-mix(in srgb,var(--emerald) 40%,transparent)}
 .v.fail{color:var(--rose);border-color:color-mix(in srgb,var(--rose) 45%,transparent)}
-.v.unmeasured{color:var(--amber);border-style:dashed}
+/* Dashed in the hue itself: at hair-2 the outline read 1.43:1 on the ink (L47 legibility), a state mark nobody could see. */
+.v.unmeasured{color:var(--amber);border-style:dashed;border-color:color-mix(in srgb,var(--amber) 70%,transparent)}
 .checkDeny{grid-column:1 / -1}
 
 /* ── the monitor ──────────────────────────────────────────────────────── */

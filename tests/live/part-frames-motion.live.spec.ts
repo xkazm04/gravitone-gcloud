@@ -120,10 +120,22 @@ test("a trailer's shots render plates and carry the shot review with what it did
   const review = page.getByRole("region", { name: "shot review" });
   await expect(review).toContainText("not checked");
   await expect(review).toContainText("whether the cut WORKS");
-  await page.getByRole("listbox", { name: "units" }).focus();
+  // The fixture server is one universe for the whole lane, and glass-harbor-trailer is the only
+  // project its part fixture gives a beat board (BEAT_BOARDS is keyed by that id), so an earlier
+  // spec may already have rendered its plates (part-finish renders them all before spotting the
+  // score). The claim is therefore relative: the selected shot's plate is READY after its render,
+  // and exactly that one unit joined the ready ones.
+  const units = page.getByRole("listbox", { name: "units" });
+  const sel = units.locator('[role="option"][aria-selected="true"] [data-unit]');
+  const unitId = (await sel.getAttribute("data-unit")) ?? "";
+  const was = await sel.getAttribute("data-plate");
+  const plated = page.locator('[data-unit][data-plate="ready"]');
+  const before = await plated.count();
+  await units.focus();
   await page.keyboard.press("Enter");
   await confirm(page);
-  await expect(page.locator('[data-unit][data-plate="ready"]')).toHaveCount(1);
+  await expect(page.locator(`[data-unit="${unitId}"]`)).toHaveAttribute("data-plate", "ready");
+  await expect(plated).toHaveCount(before + (was === "ready" ? 0 : 1));
 });
 
 test("motion: ⏎ directs (receipt), ⌘⏎ accepts, R renders the clip (receipt)", async ({ page }) => {

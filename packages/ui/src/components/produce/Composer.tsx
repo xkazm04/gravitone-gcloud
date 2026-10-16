@@ -139,7 +139,10 @@ export type ComposerProps = {
 
 export function Composer({ name, lane, controls, text, onText, placeholder, estimate, onLaunch, busy, onFocus }: ComposerProps) {
   return (
-    <form className={s.composer} data-component="IdeaComposer" data-lane={lane} aria-label={name} onSubmit={(e) => e.preventDefault()}>
+    // `data-composer`, not the prototype's `data-lane`: the Lane section that holds this form
+    // carries `data-lane` with the same value, so `[data-lane="audio"]` named two elements of two
+    // roles (the lane and its idea form) and a lane query matched the form as well (L47).
+    <form className={s.composer} data-component="IdeaComposer" data-composer={lane} aria-label={name} onSubmit={(e) => e.preventDefault()}>
       <div className={s.row}>{controls}</div>
       <textarea
         className={s.text}

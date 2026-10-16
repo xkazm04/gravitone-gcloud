@@ -140,6 +140,18 @@ test("a faint text label names its selector", async ({ page }) => {
   expect(found.map(findingKey)).toEqual(["text span[data-testid=faint]"]);
 });
 
+// Disabled controls keep the prototype's dimming and are baselined under WCAG 1.4.3's exemption
+// (owner ruling 2026-10-15), so their key must say DISABLED: the same faint control while enabled
+// is a different key, and a baseline entry for the one can never absorb the other (L47).
+test("a disabled control's finding is keyed as disabled; the same control enabled is a different key", async ({ page }) => {
+  const faint = "color:rgba(255,255,255,.3);background:none;border:0";
+  await page.setContent(
+    `<body style="margin:0;background:${DEFAULT_GROUND}"><nav><button aria-disabled="true" style="${faint}">play</button><button style="${faint}">play</button></nav></body>`,
+  );
+  const keys = (await measureNow(page)).map(findingKey);
+  expect(keys).toEqual(["text nav > button[aria-disabled=true]", "text nav > button"]);
+});
+
 // Screens the lane cannot currently reach, each with its measured reason. A skip is listed
 // here, in the open, rather than silently narrowing the walk.
 const UNREACHABLE: Record<string, string> = {

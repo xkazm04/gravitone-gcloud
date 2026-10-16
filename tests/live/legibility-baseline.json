@@ -1,48 +1,54 @@
 {
   "foundry": [],
   "kit": [
-    "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn",
-    "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan",
-    "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > span.Chip-module__v4DkZW__chip.Chip-module__v4DkZW__ghost",
-    "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn",
-    "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan",
-    "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > nav.TabRail-module__BgjLea__rail > a.TabRail-module__BgjLea__tab",
-    "text div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn > span.Chip-module__v4DkZW__chip > b.Chip-module__v4DkZW__value",
-    "text div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn > span.Chip-module__v4DkZW__chip",
-    "text div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > nav.TabRail-module__BgjLea__rail > a.TabRail-module__BgjLea__tab > kbd.Keycaps-module__pYObGq__cap.Keycaps-module__pYObGq__sm"
+    "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
+    "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn[aria-disabled=true]",
+    "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
+    "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn[aria-disabled=true]",
+    "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > nav.TabRail-module__BgjLea__rail > a.TabRail-module__BgjLea__tab[aria-disabled=true]",
+    "text div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn[aria-disabled=true] > span.Chip-module__v4DkZW__chip > b.Chip-module__v4DkZW__value",
+    "text div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn[aria-disabled=true] > span.Chip-module__v4DkZW__chip",
+    "text div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > nav.TabRail-module__BgjLea__rail > a.TabRail-module__BgjLea__tab[aria-disabled=true] > kbd.Keycaps-module__pYObGq__cap.Keycaps-module__pYObGq__sm"
   ],
   "kit-law": [
-    "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn",
-    "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan",
-    "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > span.Chip-module__v4DkZW__chip.Chip-module__v4DkZW__ghost",
-    "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn",
-    "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan",
-    "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > nav.TabRail-module__BgjLea__rail > a.TabRail-module__BgjLea__tab",
-    "text div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn > span.Chip-module__v4DkZW__chip > b.Chip-module__v4DkZW__value",
-    "text div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn > span.Chip-module__v4DkZW__chip",
-    "text div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > nav.TabRail-module__BgjLea__rail > a.TabRail-module__BgjLea__tab > kbd.Keycaps-module__pYObGq__cap.Keycaps-module__pYObGq__sm"
+    "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
+    "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn[aria-disabled=true]",
+    "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
+    "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn[aria-disabled=true]",
+    "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > nav.TabRail-module__BgjLea__rail > a.TabRail-module__BgjLea__tab[aria-disabled=true]",
+    "text div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn[aria-disabled=true] > span.Chip-module__v4DkZW__chip > b.Chip-module__v4DkZW__value",
+    "text div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn[aria-disabled=true] > span.Chip-module__v4DkZW__chip",
+    "text div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > nav.TabRail-module__BgjLea__rail > a.TabRail-module__BgjLea__tab[aria-disabled=true] > kbd.Keycaps-module__pYObGq__cap.Keycaps-module__pYObGq__sm"
   ],
   "kit-migration": [
-    "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn",
-    "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan",
-    "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > span.Chip-module__v4DkZW__chip.Chip-module__v4DkZW__ghost",
-    "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn",
-    "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan",
-    "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > nav.TabRail-module__BgjLea__rail > a.TabRail-module__BgjLea__tab",
-    "text div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn > span.Chip-module__v4DkZW__chip > b.Chip-module__v4DkZW__value",
-    "text div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn > span.Chip-module__v4DkZW__chip",
-    "text div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > nav.TabRail-module__BgjLea__rail > a.TabRail-module__BgjLea__tab > kbd.Keycaps-module__pYObGq__cap.Keycaps-module__pYObGq__sm"
+    "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
+    "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn[aria-disabled=true]",
+    "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
+    "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn[aria-disabled=true]",
+    "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > nav.TabRail-module__BgjLea__rail > a.TabRail-module__BgjLea__tab[aria-disabled=true]",
+    "text div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn[aria-disabled=true] > span.Chip-module__v4DkZW__chip > b.Chip-module__v4DkZW__value",
+    "text div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn[aria-disabled=true] > span.Chip-module__v4DkZW__chip",
+    "text div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > nav.TabRail-module__BgjLea__rail > a.TabRail-module__BgjLea__tab[aria-disabled=true] > kbd.Keycaps-module__pYObGq__cap.Keycaps-module__pYObGq__sm"
+  ],
+  "kit-part": [
+    "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
+    "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn[aria-disabled=true]",
+    "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
+    "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn[aria-disabled=true]",
+    "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > nav.TabRail-module__BgjLea__rail > a.TabRail-module__BgjLea__tab[aria-disabled=true]",
+    "text div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn[aria-disabled=true] > span.Chip-module__v4DkZW__chip > b.Chip-module__v4DkZW__value",
+    "text div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn[aria-disabled=true] > span.Chip-module__v4DkZW__chip",
+    "text div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > nav.TabRail-module__BgjLea__rail > a.TabRail-module__BgjLea__tab[aria-disabled=true] > kbd.Keycaps-module__pYObGq__cap.Keycaps-module__pYObGq__sm"
   ],
   "kit-parts": [
-    "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn",
-    "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan",
-    "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > span.Chip-module__v4DkZW__chip.Chip-module__v4DkZW__ghost",
-    "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn",
-    "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan",
-    "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > nav.TabRail-module__BgjLea__rail > a.TabRail-module__BgjLea__tab",
-    "text div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn > span.Chip-module__v4DkZW__chip > b.Chip-module__v4DkZW__value",
-    "text div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn > span.Chip-module__v4DkZW__chip",
-    "text div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > nav.TabRail-module__BgjLea__rail > a.TabRail-module__BgjLea__tab > kbd.Keycaps-module__pYObGq__cap.Keycaps-module__pYObGq__sm"
+    "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
+    "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn[aria-disabled=true]",
+    "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
+    "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn[aria-disabled=true]",
+    "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > nav.TabRail-module__BgjLea__rail > a.TabRail-module__BgjLea__tab[aria-disabled=true]",
+    "text div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn[aria-disabled=true] > span.Chip-module__v4DkZW__chip > b.Chip-module__v4DkZW__value",
+    "text div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn[aria-disabled=true] > span.Chip-module__v4DkZW__chip",
+    "text div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > nav.TabRail-module__BgjLea__rail > a.TabRail-module__BgjLea__tab[aria-disabled=true] > kbd.Keycaps-module__pYObGq__cap.Keycaps-module__pYObGq__sm"
   ],
   "landing": [
     "text div.pc.fraunces_ebe4314e-module__R0SMlq__variable.dm_sans_be5b2ca0-module__yoVGkW__variable > div > div.pc-enter-wrap > a.pc-enter"
@@ -65,6 +71,24 @@
     "text section.mt-6 > div.grid.gap-5.lg:grid-cols-[240px_1fr_300px] > aside > p.font-jetbrains.mb-2.text-content",
     "text span.flex.flex-wrap.items-center > span.flex.items-center.gap-1.5 > span.font-jetbrains.text-label.text-white/55 > span.text-white/30"
   ],
+  "part-cut-timeline": [],
+  "part-explainer-strips": [],
+  "part-explainer-voice": [],
+  "part-frames-assembly": [],
+  "part-frames-shots": [],
+  "part-motion-plates": [],
+  "part-research-beats": [],
+  "part-research-notebook": [],
+  "part-score-spotting": [
+    "mark div.Part-module__y5rqKG__body > section.Part-module__y5rqKG__primary > div.Cut-module__woSsmW__bar > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm[aria-disabled=true]",
+    "mark div.Part-module__y5rqKG__body > section.Part-module__y5rqKG__rail > div.Cut-module__woSsmW__railHead > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm[aria-disabled=true]",
+    "text div.Part-module__y5rqKG__body > section.Part-module__y5rqKG__primary > div.Cut-module__woSsmW__bar > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm[aria-disabled=true]",
+    "text div.Part-module__y5rqKG__body > section.Part-module__y5rqKG__rail > div.Cut-module__woSsmW__railHead > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm[aria-disabled=true]",
+    "text section.Part-module__y5rqKG__primary > div.Cut-module__woSsmW__bar > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm[aria-disabled=true] > kbd.Keycaps-module__pYObGq__cap",
+    "text section.Part-module__y5rqKG__rail > div.Cut-module__woSsmW__railHead > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm[aria-disabled=true] > kbd.Keycaps-module__pYObGq__cap"
+  ],
+  "part-script-document": [],
+  "part-script-trailer": [],
   "playground": [
     "text div.contents > div.flex.min-h-[8.5rem].flex-col > div.min-w-0 > h3.truncate.font-jetbrains.text-label",
     "text div.flex.items-start.gap-3 > div.min-w-0.flex-1 > div.mt-1.flex.flex-wrap > span.font-jetbrains.text-label.tabular-nums",
@@ -72,20 +96,18 @@
   ],
   "projects": [],
   "projects-empty": [],
-  "studio-cut": [
-    "mark div.Cut-module__woSsmW__grow > div > div.Cut-module__woSsmW__check > span.Cut-module__woSsmW__v.Cut-module__woSsmW__unmeasured"
-  ],
+  "studio-cut": [],
   "studio-frames": [],
   "studio-motion": [],
   "studio-outputs": [],
   "studio-research": [],
   "studio-score": [
-    "mark div.Part-module__y5rqKG__body > section.Part-module__y5rqKG__primary > div.Cut-module__woSsmW__bar > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm",
-    "mark div.Part-module__y5rqKG__body > section.Part-module__y5rqKG__rail > div.Cut-module__woSsmW__railHead > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm",
-    "text div.Part-module__y5rqKG__body > section.Part-module__y5rqKG__primary > div.Cut-module__woSsmW__bar > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm",
-    "text div.Part-module__y5rqKG__body > section.Part-module__y5rqKG__rail > div.Cut-module__woSsmW__railHead > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm",
-    "text section.Part-module__y5rqKG__primary > div.Cut-module__woSsmW__bar > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm > kbd.Keycaps-module__pYObGq__cap",
-    "text section.Part-module__y5rqKG__rail > div.Cut-module__woSsmW__railHead > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm > kbd.Keycaps-module__pYObGq__cap"
+    "mark div.Part-module__y5rqKG__body > section.Part-module__y5rqKG__primary > div.Cut-module__woSsmW__bar > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm[aria-disabled=true]",
+    "mark div.Part-module__y5rqKG__body > section.Part-module__y5rqKG__rail > div.Cut-module__woSsmW__railHead > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm[aria-disabled=true]",
+    "text div.Part-module__y5rqKG__body > section.Part-module__y5rqKG__primary > div.Cut-module__woSsmW__bar > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm[aria-disabled=true]",
+    "text div.Part-module__y5rqKG__body > section.Part-module__y5rqKG__rail > div.Cut-module__woSsmW__railHead > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm[aria-disabled=true]",
+    "text section.Part-module__y5rqKG__primary > div.Cut-module__woSsmW__bar > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm[aria-disabled=true] > kbd.Keycaps-module__pYObGq__cap",
+    "text section.Part-module__y5rqKG__rail > div.Cut-module__woSsmW__railHead > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm[aria-disabled=true] > kbd.Keycaps-module__pYObGq__cap"
   ],
   "studio-script": [],
   "wizard-discipline": [],

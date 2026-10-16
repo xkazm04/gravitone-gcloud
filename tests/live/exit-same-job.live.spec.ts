@@ -427,7 +427,7 @@ test("forge · UI: the Floor's image composer launches a forge sweep through its
   const before = idsOf("forge");
   await page.goto("/floor", { waitUntil: "domcontentloaded" });
   await expect(page.locator('[data-component="Floor"][data-hydrated]')).toBeVisible();
-  const form = page.locator('form[data-component="IdeaComposer"][data-lane="image"]');
+  const form = page.locator('form[data-component="IdeaComposer"][data-composer="image"]');
   await expect(form).toBeVisible();
   const box = form.getByRole("textbox").first();
   await box.fill("painted-3d over the harbour frame");

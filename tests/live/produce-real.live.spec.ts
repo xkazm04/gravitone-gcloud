@@ -7,8 +7,8 @@
 //     it to done; Runs draws it; the Ledger lists its events. Arming the receipt live is refused
 //     in this process (GRAVITONE_DRY_ONLY=1), in the server's words, under the receipt;
 //   · a plan launch: one job per work part, the first queued, the rest planned behind it; the
-//     worker leaves a part whose kind no producer binds yet queued (wave C binds the step
-//     producers), never failing it;
+//     worker drives the head (research, a bound step producer since L37) dry to done and the
+//     parts behind it stay planned;
 //   · the Runs acts against those real jobs: pause and resume (P), later and earlier, a re-route
 //     to another lane through its own receipt (the job relaunched on cloud.google), and a crash
 //     on the text seat: the lane holds, the retry is refused until the hold is acknowledged (A),
@@ -189,12 +189,32 @@ async function shot(page: Page, name: string): Promise<void> {
 
 let articleJob = "";
 let film = "";
+/** A second composition, launched and never handed to a worker: its research job stays queued. */
+let held = "";
+
+/** Runs' `n` composes a film from the first recipe; its Plan's launch, through the receipt, enqueues it. */
+async function composeAndLaunch(page: Page): Promise<string> {
+  await open(page, "/projects/runs");
+  await expect(page.locator('[data-component="RunsDayline"][data-measured]')).toBeVisible();
+  await page.keyboard.press("n");
+  await expect(page.getByRole("dialog", { name: "compose" })).toBeVisible();
+  await page.keyboard.press("1");
+  await page.waitForURL(/\/projects\/untitled-film-[a-z0-9]+\?composed=1$/);
+  const id = decodeURIComponent(new URL(page.url()).pathname.split("/").pop() ?? "");
+  await expect(page.locator('[data-component="PlanTable"]')).toBeVisible();
+  await page.getByRole("button", { name: /Launch plan/ }).click();
+  await expect(receipt(page)).toBeVisible();
+  await expect(receipt(page)).toHaveAttribute("data-mode", "dry");
+  await page.keyboard.press("Enter");
+  await page.waitForURL(new RegExp(`/projects/runs\\?project=${id}$`));
+  return id;
+}
 
 test("a Floor article launch is one dry job the worker drives to done, in Runs and the Ledger", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await open(page, "/floor");
   await expect(page.locator('[data-component="Floor"][data-hydrated]')).toBeVisible();
-  const form = page.locator('form[data-component="IdeaComposer"][data-lane="article"]');
+  const form = page.locator('form[data-component="IdeaComposer"][data-composer="article"]');
   await expect(form.locator('[data-component="Estimate"]')).toContainText("$47–92");
   await form.getByRole("textbox", { name: "first sentence" }).fill("Budgets are counted in tokens.");
   await form.getByRole("textbox", { name: "first sentence" }).press("Enter");
@@ -230,37 +250,40 @@ test("a Floor article launch is one dry job the worker drives to done, in Runs a
   for (const t of ["job.enqueued", "job.done"]) await expect(page.getByRole("row").filter({ hasText: t }).first()).toBeVisible({ timeout: 20_000 });
 });
 
-test("a plan launch is one job per part; the worker leaves a part kind no producer binds queued, not failed", async ({ page }) => {
+// Since L37 the step producers are bound (lib/producers/research.ts and its siblings), so the
+// worker no longer leaves the plan's head queued: it drives the research part's job, dry, to done.
+// (L35 wrote this test while no producer carried a part kind, and asserted 0 drives.) The parts
+// behind it stay planned: preflight holds a part that cannot run yet (L45 item D).
+test("a plan launch is one job per part; the worker drives the head part's job, dry, to done and the rest stay planned", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await open(page, "/projects/runs");
-  await expect(page.locator('[data-component="RunsDayline"][data-measured]')).toBeVisible();
-  await page.keyboard.press("n");
-  await expect(page.getByRole("dialog", { name: "compose" })).toBeVisible();
-  await page.keyboard.press("1");
-  await page.waitForURL(/\/projects\/untitled-film-[a-z0-9]+\?composed=1$/);
-  film = decodeURIComponent(new URL(page.url()).pathname.split("/").pop() ?? "");
-  await expect(page.locator('[data-component="PlanTable"]')).toBeVisible();
-  await page.getByRole("button", { name: /Launch plan/ }).click();
-  await expect(receipt(page)).toBeVisible();
-  await expect(receipt(page)).toHaveAttribute("data-mode", "dry");
-  await page.keyboard.press("Enter");
-  await page.waitForURL(new RegExp(`/projects/runs\\?project=${film}$`));
+  film = await composeAndLaunch(page);
   const mine = jobsOf(film);
   expect(mine.map((j) => j.state).sort()).toEqual(["planned", "planned", "planned", "planned", "planned", "queued"]);
   expect(jobRow(`job:part:${film}/research`)?.state).toBe("queued");
   await expect(page.locator(`[data-bar="kernel:job:part:${film}/frames"]`)).toBeAttached();
   await shot(page, "runs-plan-launched-1440");
 
+  const research = `job:part:${film}/research`;
   const w = worker("seat.text");
   expect(w.code, `${w.out}\n${w.err}`).toBe(0);
-  // --once drains what this worker can start: a head whose producer it does not carry is not that.
-  expect(w.err).toContain("[worker] 0 drive(s), 0 recovered as interrupted, 0 failed");
-  expect(jobRow(`job:part:${film}/research`)?.state).toBe("queued");
+  expect(w.err).toContain("[worker] 1 drive(s), 0 recovered as interrupted, 0 failed");
+  expect(w.out).toContain(`"jobId":"${research}"`);
+  expect(w.out).toContain('"producer":"research"');
+  expect(jobRow(research)?.state).toBe("done");
+  expect(JSON.parse(jobRow(research)?.record ?? "{}")).toMatchObject({ mode: { kind: "dry" } });
+  expect(q<{ c: number }>("SELECT count(*) AS c FROM events WHERE subject_id = ? AND type = 'dryrun.would-call'", research)[0]?.c ?? 0).toBeGreaterThan(0);
+  expect(jobsOf(film).filter((j) => j.id !== research).map((j) => j.state)).toEqual(["planned", "planned", "planned", "planned", "planned"]);
+  await open(page, runsJob(research));
+  await expect(page.locator(`[data-bar="kernel:${research}"]`)).toBeAttached();
 });
 
 test("Runs acts on real jobs: pause and resume, later and earlier, a re-route to another lane through its receipt", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  const research = `job:part:${film}/research`;
+  // The first film's head is done (the worker drove it); pause, the queue moves and the crash below
+  // need a queued head, so a second composition is launched and handed to no worker.
+  held = await composeAndLaunch(page);
+  const research = `job:part:${held}/research`;
+  expect(jobRow(research)?.state).toBe("queued");
   await open(page, runsJob(research));
   const acts = page.locator('[data-component="JobActs"]');
   await expect(acts).toBeVisible();
@@ -294,7 +317,7 @@ test("Runs acts on real jobs: pause and resume, later and earlier, a re-route to
 
 test("a crash holds the text seat: the retry is refused until the hold is acknowledged, then it takes the job again", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  const research = `job:part:${film}/research`;
+  const research = `job:part:${held}/research`;
   expect(JSON.parse(crash(research))).toEqual([research]);
   expect(jobRow(research)?.state).toBe("interrupted");
   await open(page, runsJob(research));

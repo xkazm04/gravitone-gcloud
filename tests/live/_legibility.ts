@@ -165,7 +165,11 @@ export function measure(opts: { ground: string; textFloor: number; almanacFloor:
       const me = n;
       const sibs = me.parentElement ? Array.from(me.parentElement.children).filter((c) => c.tagName === me.tagName) : [];
       const nth = sibs.length > 1 ? `:nth-of-type(${sibs.indexOf(me) + 1})` : "";
-      parts.unshift(`${me.tagName.toLowerCase()}${cls ? "." + cls : ""}${nth}`);
+      // A disabled control keeps the prototype's dimming (WCAG 1.4.3 exempts inactive components;
+      // owner ruling 2026-10-15), so its findings are baselined - and the key says DISABLED, so the
+      // same control drawn faint while enabled is a different key and can never hide under it.
+      const off = me.getAttribute("aria-disabled") === "true" || me.hasAttribute("disabled") ? "[aria-disabled=true]" : "";
+      parts.unshift(`${me.tagName.toLowerCase()}${cls ? "." + cls : ""}${off}${nth}`);
     }
     return parts.join(" > ");
   };

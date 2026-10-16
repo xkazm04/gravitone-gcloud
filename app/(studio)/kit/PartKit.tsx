@@ -12,6 +12,7 @@ import { useState } from "react";
 import type { PartTab, PartVerdict } from "@gt/domain/partView";
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
+import { FrameCanvas, layerKey, type CanvasLayer } from "@gt/ui/components/part/FrameCanvas.tsx";
 import { PartTabs } from "@gt/ui/components/part/PartTabs.tsx";
 import { PartWorkspace } from "@gt/ui/components/part/PartWorkspace.tsx";
 import { RailList } from "@gt/ui/components/part/RailList.tsx";
@@ -37,7 +38,42 @@ const VERDICTS: readonly PartVerdict[] = [
   { state: "blocked", codes: [{ code: "gate-violation", text: "2 gate violation(s) in Why Bitcoin's Price Won't Rise" }, { code: "over-clock", text: "5:00 against a 2:00 clock" }] },
 ];
 const ITEMS = Array.from({ length: 40 }, (_, i) => ({ id: `f-${i + 1}`, title: `Card ${i + 1} — a claim the scope keeps or cuts` }));
+// The frames editor's unit (STEPS-DESIGN §2): elements, a figure with no source, a caption; one
+// canvas with no plate yet and one as Motion draws it, a mover proposed over it. (A hidden layer is
+// drawn faint on purpose - the editor's own state - so it is left off a sheet the legibility lane
+// measures.)
+const LAYERS: readonly CanvasLayer[] = [
+  { id: "e1", layer: "element", role: "box", label: "price panel", x: 8, y: 14, w: 38, h: 46, hidden: false, unsourced: false },
+  { id: "e2", layer: "element", role: "rule", label: "baseline", x: 8, y: 72, w: 84, h: 2, hidden: false, accent: true, unsourced: false },
+  { id: "t1", layer: "text", role: "kicker", label: "supply", x: 54, y: 14, hidden: false, unsourced: false },
+  { id: "t2", layer: "text", role: "figure", label: "21M", x: 54, y: 26, hidden: false, unsourced: true },
+  { id: "t3", layer: "text", role: "caption", label: "a cap nobody votes on", x: 54, y: 48, hidden: false, unsourced: false },
+];
 const PLAN_TABS: readonly PartTab[] = [tab("plan", "Plan", "research", "ready"), tab("runs", "Runs", "script", "working")];
+
+function CanvasSpecimen() {
+  const [layers, setLayers] = useState<readonly CanvasLayer[]>(LAYERS);
+  const [sel, setSel] = useState<string | null>("text:t2");
+  const put = (l: CanvasLayer, patch: Partial<CanvasLayer>) => setLayers((all) => all.map((x) => (layerKey(x) === layerKey(l) ? { ...x, ...patch } : x)));
+  return (
+    <Spec names={["FrameCanvas"]} source="part/FrameCanvas.tsx · v1 app/_phases/frames/parts.tsx" wide>
+      <Row label="frames">
+        <FrameCanvas
+          label="0:12 supply"
+          plate={{ url: null, state: "empty", dry: false }}
+          layers={layers}
+          selected={sel}
+          onSelect={setSel}
+          onMove={(l, x, y) => put(l, { x, y })}
+          onResize={(l, w, h) => put(l, { w, h })}
+        />
+      </Row>
+      <Row label="motion">
+        <FrameCanvas label="0:12 supply · moving" plate={{ url: null, state: "generating", dry: true }} layers={LAYERS} selected={null} movers={[{ label: "21M", verb: "count up", x: 62, y: 34 }]} />
+      </Row>
+    </Spec>
+  );
+}
 
 export function PartSection() {
   const [sel, setSel] = useState<string | null>("f-3");
@@ -87,6 +123,7 @@ export function PartSection() {
           </div>
         </Row>
       </Spec>
+      <CanvasSpecimen />
       <Spec names={["VerdictChip"]} source="part/VerdictChip.tsx · part.ts VERDICT_LOOK">
         <div className={k.col}>
           {VERDICTS.map((v) => (

@@ -8,7 +8,9 @@
 .emerald{color:var(--emerald);border-color:color-mix(in srgb,var(--emerald) 32%,transparent);background:var(--emerald-a)}
 .amber{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 34%,transparent);background:var(--amber-a)}
 .rose{color:var(--rose);border-color:color-mix(in srgb,var(--rose) 36%,transparent);background:var(--rose-a)}
-.ghost{border-style:dashed}
+/* A ghost outline is a mark: it holds 3:1 on the ink (plan §8 decision 7). Mixed from the chip's own
+   text colour, so a toned ghost stays its hue; at hair-2 it read 1.5:1 (L47). */
+.ghost{border-style:dashed;border-color:color-mix(in srgb,currentColor 65%,transparent)}
 .lower{text-transform:none;letter-spacing:0}
 .dot{width:var(--size-dot);height:var(--size-dot);border-radius:50%;background:currentColor}
 .door{cursor:pointer}

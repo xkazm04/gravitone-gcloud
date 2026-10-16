@@ -66,7 +66,7 @@ test("four lanes in the order the digits bind, and each lane's piles are v1's We
   expect(order).toEqual([...LANES]);
   for (const lane of LANES) {
     const want = live.filter((w) => w.media === lane).map(boardHref).sort();
-    const drawn = (await page.locator(`[data-lane="${lane}"] [data-component="Pile"]`).evaluateAll((els) => els.map((e) => e.getAttribute("href") ?? ""))).sort();
+    const drawn = (await page.locator(`[data-component="Lane"][data-lane="${lane}"] [data-component="Pile"]`).evaluateAll((els) => els.map((e) => e.getAttribute("href") ?? ""))).sort();
     expect(drawn, `${lane} lane piles`).toEqual(want);
   }
 });
@@ -89,16 +89,16 @@ test("⇧1-4 focuses a lane into the URL and folds the rest; Esc shows all lanes
   await openFloor(page);
   await page.keyboard.press("Shift+Digit3");
   await expect(page).toHaveURL(/[?&]lane=audio\b/);
-  await expect(page.locator('[data-lane="audio"]')).toHaveAttribute("data-state", "focused");
-  for (const lane of ["image", "article", "video"]) await expect(page.locator(`[data-lane="${lane}"]`)).toHaveAttribute("data-state", "folded");
+  await expect(page.locator('[data-component="Lane"][data-lane="audio"]')).toHaveAttribute("data-state", "focused");
+  for (const lane of ["image", "article", "video"]) await expect(page.locator(`[data-component="Lane"][data-lane="${lane}"]`)).toHaveAttribute("data-state", "folded");
   await page.keyboard.press("Escape");
   await expect(page).not.toHaveURL(/lane=/);
-  await expect(page.locator('[data-lane="audio"]')).toHaveAttribute("data-state", "open");
+  await expect(page.locator('[data-component="Lane"][data-lane="audio"]')).toHaveAttribute("data-state", "open");
 });
 
 test("a link carrying ?lane= opens with that lane focused", async ({ page }) => {
   await openFloor(page, "?lane=video");
-  await expect(page.locator('[data-lane="video"]')).toHaveAttribute("data-state", "focused");
+  await expect(page.locator('[data-component="Lane"][data-lane="video"]')).toHaveAttribute("data-state", "focused");
 });
 
 test("C opens the month over the Floor and Esc closes it back to the rail", async ({ page }) => {
@@ -124,7 +124,7 @@ test("a lane's digit opens its first pile's Board, and ⏎ opens the NEXT one", 
   expect(lane, "no lane has a pile").toBeDefined();
   if (lane === undefined) return;
   await openFloor(page);
-  const first = await page.locator(`[data-lane="${lane}"] [data-component="Pile"]`).first().getAttribute("href");
+  const first = await page.locator(`[data-component="Lane"][data-lane="${lane}"] [data-component="Pile"]`).first().getAttribute("href");
   await page.keyboard.press(`Digit${LANES.indexOf(lane) + 1}`);
   await expect(page).toHaveURL(new RegExp(`${(first ?? "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`));
   await openFloor(page);

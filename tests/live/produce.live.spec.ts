@@ -153,7 +153,7 @@ test("retry a failed job on the same route", async ({ page }) => {
 test("a Floor composer launches through its receipt", async ({ page }) => {
   await ready(page, "/floor");
   await expect(page.locator('[data-component="Floor"][data-hydrated]')).toBeVisible();
-  const form = page.locator('form[data-component="IdeaComposer"][data-lane="video"]');
+  const form = page.locator('form[data-component="IdeaComposer"][data-composer="video"]');
   await expect(form.locator('[data-component="Estimate"]')).toContainText("cards");
   await form.getByRole("textbox", { name: "first sentence" }).fill("Radar sweeps; one blip stays.");
   await form.getByRole("textbox", { name: "first sentence" }).press("Enter");
@@ -171,7 +171,7 @@ test("a Floor composer launches through its receipt", async ({ page }) => {
 test("a ceiling under the worst case is a stop point: the receipt says so and still confirms", async ({ page }) => {
   await ready(page, "/floor");
   await expect(page.locator('[data-component="Floor"][data-hydrated]')).toBeVisible();
-  const form = page.locator('form[data-component="IdeaComposer"][data-lane="article"]');
+  const form = page.locator('form[data-component="IdeaComposer"][data-composer="article"]');
   await expect(form.locator('[data-component="Estimate"]')).toContainText("$47–92");
   await form.getByRole("textbox", { name: "first sentence" }).fill("The budget is a clock, not a pool.");
   await form.getByRole("textbox", { name: "first sentence" }).press("Enter");
