@@ -3514,7 +3514,11 @@
           "revision": 5,
           "changedAt": "2026-09-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/foundry/pipeline/submitMoves.ts:74 Move submission awaits the authority without a deadline, so a stalled request can leave cards pending indefinitely instead of resolving to refusal with an explanation.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:31c96c1f832f7148",
+          "evaluatedRevision": 5
         },
         {
           "subject": "table",

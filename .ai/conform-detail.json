@@ -6219,6 +6219,47 @@
           "evidence": "components/ui/tokens.ts:162 Token names encode literal color values ('cyan') instead of semantic intent, and components consume Tailwind palette primitives directly."
         }
       ]
+    },
+    "9c88a06c-339e-4987-a1fe-8fccba8a1776/drag-drop": {
+      "context": "pipeline-board-interaction",
+      "subject": "drag-drop",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T21:29:31.985Z",
+      "worker": "ba24149a-2df1-413a-963f-5a1a31bcbb9f",
+      "techniques": [
+        {
+          "technique": "cross-surface-handoff",
+          "verdict": "not-applicable",
+          "evidence": "app/foundry/pipeline/useCardDrag.ts:96 Source cards and destination cells share one board layout, coordinate system, and PipelineSource; this interaction does not hand payloads between independent surfaces."
+        },
+        {
+          "technique": "drag-lifecycle",
+          "verdict": "deviation",
+          "evidence": "app/foundry/pipeline/useCardDrag.ts:105 The returned Gesture is discarded, and the hook neither retains it for unmount cancellation nor guards against another press starting a concurrent gesture; the existing common teardown therefore does not cover every required exit."
+        },
+        {
+          "technique": "drop-affordances",
+          "verdict": "deviation",
+          "evidence": "app/foundry/pipeline/useCardDrag.ts:142 Edge scrolling is proportional but uncapped: captured pointer coordinates outside the viewport produce speeds greater than EDGE_SPEED, contrary to the required capped scrolling."
+        },
+        {
+          "technique": "keyboard-alternatives",
+          "verdict": "deviation",
+          "evidence": "app/foundry/pipeline/useBoardVerbs.ts:149 Shift+Arrow submits immediately rather than previewing a keyboard-held item; the accessible, clickable move map provides an alternative operation but does not implement the required shared grab/move/drop mode and its grab/cancel announcements."
+        },
+        {
+          "technique": "ownership-boundaries",
+          "verdict": "deviation",
+          "evidence": "app/foundry/pipeline/submitMoves.ts:74 Pending state and authority-confirmed reconciliation exist, but submission has no timeout-to-refusal path; the inspected article and sound HTTP clients also provide no request deadline."
+        },
+        {
+          "technique": "payload-and-identity",
+          "verdict": "deviation",
+          "evidence": "app/foundry/pipeline/useCardDrag.ts:175 Item IDs are stable, but the destination is cached as numeric lane/column indices from the last pointer tracking update; decide interprets them against the latest layout, so a refresh that changes lane ordering can retarget the drop."
+        }
+      ]
     }
   }
 }
