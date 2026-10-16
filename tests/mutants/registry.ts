@@ -44,8 +44,8 @@ export const MUTANTS: Mutant[] = [
     id: "session-cross-origin-sets-cookie",
     probe: "server-seam.probe.spec.ts",
     file: "app/api/session/route.ts",
-    find: "  if (!sameOrigin(req)) return envelope(crossOrigin, \"session\");\n  const secure = secureFor(req);",
-    replace: "  const secure = secureFor(req);",
+    find: "import { envelope, sameOrigin } from \"../../_server/http.ts\";",
+    replace: "import { envelope } from \"../../_server/http.ts\"; const sameOrigin = (_r: Request): boolean => true;",
     why: "A cross-site page posts its own Firebase token to /api/session and the victim's browser is signed in as the attacker.",
   },
   {
@@ -115,7 +115,7 @@ export const MUTANTS: Mutant[] = [
   {
     id: "recalibrate-drops-chain-breaks",
     probe: "chain-break-reaches-the-reviewer.probe.spec.ts",
-    file: "app/_phases/script/recalibrate.ts",
+    file: "lib/script/recalibrate.ts",
     find: "(applied[r.id]?.chainBreaks ?? [])",
     replace: "([] as { renderId?: string }[])",
     why: "A cut that orphans a BUT is detected, then discarded before the reviewer can see it.",
@@ -255,14 +255,6 @@ export const MUTANTS: Mutant[] = [
     find: "if (steer.prefer && PREFER_ONLY.has(steer.prefer) && steer.prefer !== steer.avoid) return [steer.prefer];",
     replace: "if (steer.prefer && PREFER_ONLY.has(steer.prefer) && steer.prefer === steer.avoid) return [steer.prefer];",
     why: "A music-video still that asked for the Leonardo studio's prepaid credits is quietly rendered by another vendor billed in dollars.",
-  },
-  {
-    id: "mv-regenerate-reruns-everything",
-    probe: "mv-queue.probe.spec.ts",
-    file: "packages/producers/src/mv/plan.ts",
-    find: "const redo = new Set((j.redo ?? []).flatMap((p) => REDO_STEPS[p]));",
-    replace: "const redo = new Set((j.redo ?? []).flatMap(() => STEP_ORDER));",
-    why: "Regenerate · metadata re-rolls the still and re-renders the video, spending a Leonardo image and minutes of render to change a title.",
   },
   {
     id: "mv-focal-deaf-to-the-beat",
@@ -423,5 +415,13 @@ export const MUTANTS: Mutant[] = [
     find: "const interruptedJobs = jobs.filter((j) => j.status === \"interrupted\" && !j.clearedAt);",
     replace: "const interruptedJobs = jobs.filter((j) => j.status === \"interrupted\");",
     why: "A cleared interrupted job keeps its card and the bell keeps pulsing.",
+  },
+  {
+    id: "mv-enqueue-not-idempotent",
+    probe: "mv-queue.probe.spec.ts",
+    file: "lib/sound/mv/queue.ts",
+    find: "const live = f.jobs.find((j) => sameSource(j.source, s) && isLiveJob(j));",
+    replace: "const live = f.jobs.find(() => false);",
+    why: "A track already queued or rendering is queued again: a re-import doubles the queue and each copy buys its own still.",
   },
 ];

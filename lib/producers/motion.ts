@@ -12,7 +12,7 @@ import { meteredCall } from "@gt/producers/research/metered";
 import { madeFree, madePaid, type ActAsk, type ActPlan, type ActUnit, type UnitPrice } from "@gt/producers/research/partAct";
 import { landPart, partSnapshot, projectOf } from "@gt/producers/research/partJob";
 
-import { directMotion, READ_INSTRUCTION, type MotionOutcome } from "@/app/_phases/motion/direction";
+import { directMotion, READ_INSTRUCTION, type MotionOutcome } from "@/lib/motion/direction";
 import { AD_NATIVE_ASPECT } from "@/lib/ads/types";
 import type { PictureUnit } from "@/lib/frames/picture/unit";
 import { ImagingError } from "@/lib/imaging/errors";

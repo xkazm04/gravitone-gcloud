@@ -9,7 +9,7 @@
 //
 // Finish reads `activeTakeId` as the render's `musicTakeId`.
 
-import { defineRecord, malformed } from "../../_shared/records/registry";
+import { defineRecord, malformed } from "@/lib/steps/recordRegistry";
 
 export interface AdsScoreData {
   /** The picked scenario the takes were rendered for. */

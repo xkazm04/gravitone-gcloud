@@ -32,6 +32,22 @@ const ROOT = vi.hoisted(() => {
   process.env["FOUNDRY_DIR"] = path.join(dir, "catalogue");
   process.env["SOUND_STORE_DIR"] = path.join(dir, "sound");
   process.env["FOUNDRY_RUNS_DIR"] = path.join(dir, "runs");
+  // THE STOCK FRAME IS THE TEST'S OWN. The forge reads a plan's bare `frame` from
+  // FOUNDRY_FRAMES_DIR (lib/producers/forge.ts `framesDir`, forge.py `frames_dir`), else from the
+  // checkout's pipeline/vlm-probe/frames - which is gitignored, so a clone without the frames
+  // refused the sweep ("no stock scene's frame is on this machine") and this case passed or failed
+  // on the machine. Every frame the stock plan names is written here as a 1x1 JPEG: the dry job
+  // copies it whole and never decodes it, and the receipt only asks that it exists.
+  const frames = path.join(dir, "frames");
+  fs.mkdirSync(frames, { recursive: true });
+  process.env["FOUNDRY_FRAMES_DIR"] = frames;
+  const plan: unknown = JSON.parse(fs.readFileSync(path.join(process.cwd(), "pipeline", "foundry", "plans", "dry-run.json"), "utf8"));
+  const scenes = typeof plan === "object" && plan !== null && "scenes" in plan && Array.isArray(plan.scenes) ? (plan.scenes as unknown[]) : [];
+  const jpeg = Buffer.from("/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q==", "base64");
+  for (const sc of scenes) {
+    const frame = typeof sc === "object" && sc !== null && "frame" in sc ? sc.frame : undefined;
+    if (typeof frame === "string" && !/^(frame|lane):/.test(frame)) fs.writeFileSync(path.join(frames, frame), jpeg);
+  }
   return dir;
 });
 
@@ -196,7 +212,8 @@ describe("the real produce port", () => {
   });
 
   it("launches an image sweep as a forge run: priced without writing, prepared on the confirm, one dry gpu.local job", async () => {
-    // The style and the stock scene plan are the checkout's (pipeline/foundry/styles.json, plans/dry-run.json).
+    // The style and the stock scene plan are the checkout's (pipeline/foundry/styles.json, plans/dry-run.json);
+    // the plan's frame is the temp one the hoisted block wrote (FOUNDRY_FRAMES_DIR).
     const input: ComposerInput = { lane: "image", text: "A harbor at night.", mechanisms: ["text", "ref-early"], styleId: "ink-graphic-novel" };
     const receipt = await v(port.composerReceipt({ input }, who));
     const runId = receipt.token.slice(0, receipt.token.lastIndexOf(":"));

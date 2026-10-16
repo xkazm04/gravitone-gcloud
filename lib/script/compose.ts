@@ -8,8 +8,8 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { Conclusion } from "@/app/_phases/_shared/notebook/conclusions";
-import { sourceOf } from "@/app/_phases/_shared/notebook/source";
+import type { Conclusion } from "@/lib/notebook/conclusions";
+import { sourceOf } from "@/lib/notebook/source";
 import type { NotebookSource } from "@/lib/notebook/source";
 import type { Notebook } from "@/lib/notebook/types";
 import { asNotebook, cardsInScope, COMPOSE_TEMPLATE_RANGES, composeSchema, qualifyingEngines, templateBand, type ScopeRecord } from "@/lib/script/validate";

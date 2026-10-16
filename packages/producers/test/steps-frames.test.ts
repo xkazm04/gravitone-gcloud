@@ -96,4 +96,15 @@ describe("still takes", () => {
     const e = stillPlan({ prompt: " " }, { act: null }, image);
     expect(e.ok ? "" : e.error.message).toBe("still takes need a prompt");
   });
+
+  it("the batch is bounded: twelve takes plan, thirteen (or none, or a fraction) buy nothing", () => {
+    const n = (takes: number) => {
+      const r = stillPlan({ prompt: "Night Market", takes }, { act: null }, image);
+      return r.ok ? r.value.units.length : r.error.message;
+    };
+    expect(n(12)).toBe(12);
+    expect(n(13)).toBe("still takes are 1 to 12, not 13");
+    expect(n(0)).toBe("still takes are 1 to 12, not 0");
+    expect(n(2.5)).toBe("still takes are 1 to 12, not 2.5");
+  });
 });

@@ -10,8 +10,8 @@ import { madeFree, madePaid, type ActAsk, type ActPlan, type ActUnit } from "@gt
 import { landPart, partSnapshot, projectOf } from "@gt/producers/research/partJob";
 import { defineScore, scorePlan, type CueView, type ScoreView } from "@gt/producers/score/define";
 
-import { adBedRequest, DEFAULT_HOLD_S } from "@/app/_phases/score/ads/bed";
-import { bindTake, cueTakeRequest, revisionRequest, sectionsOf } from "@/app/_phases/score/takes";
+import { adBedRequest, DEFAULT_HOLD_S } from "@/lib/score/ads/bed";
+import { bindTake, cueTakeRequest, revisionRequest, sectionsOf } from "@/lib/score/takes";
 import type { AdBrief, AdScenario } from "@/lib/ads/types";
 import type { PictureUnit } from "@/lib/frames/picture/unit";
 import { MusicError } from "@/lib/music/errors";

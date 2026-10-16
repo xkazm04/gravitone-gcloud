@@ -104,9 +104,14 @@ test("every caller that MINTS an object URL releases at least as many as it mint
   console.log(`[urls] ${minting.length} caller(s) mint an object URL: ${minting.join(", ")}`);
   console.log(`[urls] ${leaking.length} do not release: ${leaking.join(", ") || "none"}`);
 
-  // The probe is pointless if nothing mints one — that would mean the matcher
-  // stopped seeing the call, not that the repo stopped making them.
-  expect(minting.length, "no caller mints an object URL - the matcher is broken").toBeGreaterThan(0);
+  // The probe is pointless if the matcher cannot see a mint. It used to prove that by requiring a
+  // CALLER, which held while the v1 studio (ScoreSpotting, the playground) minted take urls; that
+  // studio retired in Phase 4 (L43) and the factory has no caller left, so a population of zero is
+  // now the truth, not a broken matcher. The positive control is the factory file itself:
+  // lib/musicClient.ts's `audioUrl` mints through `blobUrl(`, so the matcher must see that call there.
+  // If the factory moves or is renamed, this fails and the matcher is pointed at the new name.
+  const factory = code(readFileSync(join(process.cwd(), "lib/musicClient.ts"), "utf8"));
+  expect(urlSites(factory).mints, "the matcher sees no mint even in the factory - it is broken").toBeGreaterThan(0);
 
   const unexplained = leaking.filter((f) => !KNOWN_LEAKS[f]);
   expect(unexplained, "these mint an object URL and never revoke it").toEqual([]);

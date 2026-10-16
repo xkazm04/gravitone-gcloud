@@ -4,11 +4,16 @@
   "owner": "the Director; a raise states its reason in the change that makes it, and an entry well above its measurement is lowered",
   "seeded": "2026-10-15, Lot 13, after the domain machine split; lowered 286345 -> 213962 the same day when the shell's storage key moved from classic zod to named zod/mini imports (the client-closure guard now refuses classic zod in any client module)",
   "routes": {
-    "/floor": 224512,
+    "/floor": 233565,
     "/board/[packet]": 230979,
     "/(.)board/[packet]": 230979,
-    "/projects/runs": 224616,
+    "/projects/runs": 237635,
     "/ledger": 227512,
-    "/kit": 254927
-  }
+    "/kit": 272716,
+    "/projects": 227776,
+    "/projects/[id]": 227130,
+    "/projects/[id]/[part]": 255545,
+    "/projects/import": 219443
+  },
+  "phase4": "2026-10-16, L46: measured against a real build of 47b8095. Raised for earned weight - /floor (+9.1 KB: the Floor composers, receipt, LevelSheet), /projects/runs (+13.0 KB: the Runs acts, compose, receipt, Dojo door, re-route, lane hold), /kit (+17.8 KB: specimens of every Phase 4 component); new routes seeded at measurement. A +56 KB regression (lib/jobs.tsx and ImportView.tsx pulling zod's core into every route) was fixed, not budgeted."
 }

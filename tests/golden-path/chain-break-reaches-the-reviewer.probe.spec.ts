@@ -79,7 +79,7 @@ test("the version carries the field — the wiring, asserted", () => {
   // throws chainBreaks away, which is exactly what it did.
   const strip = (p: string) => stripComments(readFileSync(p, "utf8"));
 
-  const recal = strip("app/_phases/script/recalibrate.ts");
+  const recal = strip("lib/script/recalibrate.ts");
   const versions = strip("lib/script/versions.ts");
 
   expect(versions, "Version has no chainBreaks field").toContain("chainBreaks?:");

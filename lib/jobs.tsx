@@ -25,9 +25,6 @@
 // one's job list off a mounted provider.
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { z } from "zod/mini";
-
-import { parseJsonAt } from "@gt/domain/door";
 
 import { usePolling } from "./usePolling";
 
@@ -122,15 +119,32 @@ const STORE_KEY = "gravitone.jobs.v1";
 const MARKS_V = 2;
 const READ_CAP = 200;
 
-/** The stored marks' door. The retired job store's v1 record (a jobs array) is not marks. */
-const marksSchema = z.object({ v: z.literal(MARKS_V), seenAt: z.number(), read: z.array(z.string()) });
+/** The stored marks' door, by hand. THIS PROVIDER IS MOUNTED BY THE ROOT LAYOUT, so whatever it
+ *  imports ships on every route: a zod door here (`zod/mini`'s namespace plus `@gt/domain/door`)
+ *  measured +56 KB gzip of first-load JS on each page (L44's final verify) to check three fields.
+ *  The jobs themselves arrive already parsed (the server action's answer); the marks are the one
+ *  thing read off the browser, and a three-field shape is checked here directly. The retired job
+ *  store's v1 record (a jobs array, no `v`) is not marks. */
+function marksOf(v: unknown): Marks | null {
+  if (typeof v !== "object" || v === null || Array.isArray(v)) return null;
+  const { v: version, seenAt, read } = v as { v?: unknown; seenAt?: unknown; read?: unknown };
+  if (version !== MARKS_V || typeof seenAt !== "number" || !Number.isFinite(seenAt)) return null;
+  if (!Array.isArray(read) || !read.every((x): x is string => typeof x === "string")) return null;
+  return { seenAt, read: read.slice(-READ_CAP) };
+}
 
 /** Parse the stored marks. A v1 record (the retired job store) or anything unreadable is not
  *  marks: the watermark starts at `now`, so a first visit is not a flood of old endings. */
 export function parseMarks(raw: string | null, now: number): Marks {
   if (raw === null) return { seenAt: now, read: [] };
-  const m = parseJsonAt("bell marks", marksSchema, raw);
-  return m.ok ? { seenAt: m.value.seenAt, read: m.value.read.slice(-READ_CAP) } : { seenAt: now, read: [] };
+  let v: unknown;
+  try {
+    v = JSON.parse(raw);
+  } catch {
+    // A torn write is no marks, the same answer as a missing record.
+    return { seenAt: now, read: [] };
+  }
+  return marksOf(v) ?? { seenAt: now, read: [] };
 }
 
 function loadMarks(): Marks {

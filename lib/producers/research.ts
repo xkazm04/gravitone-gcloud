@@ -26,8 +26,8 @@ import { failureOf, meteredCall } from "@gt/producers/research/metered";
 import { madeFree, madePaid, type ActAsk, type ActPlan, type ActUnit } from "@gt/producers/research/partAct";
 import { landPart, partSnapshot, projectOf } from "@gt/producers/research/partJob";
 
-import { resultFor, type FollowUpResult } from "@/app/_phases/research/followup";
-import { reviseNotebook, type NotebookRevision } from "@/app/_phases/research/revisions";
+import { resultFor, type FollowUpResult } from "@/lib/research/followup";
+import { reviseNotebook, type NotebookRevision } from "@/lib/research/revisions";
 import { engineOf as adEngineOf, ideasPrompt } from "@/lib/ads/concepts";
 import type { AdBrief, AdTemplateId } from "@/lib/ads/types";
 import { assignAngles, IDEAS_SCHEMA, parseIdeas } from "@/lib/ads/validate";

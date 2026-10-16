@@ -58,8 +58,11 @@ export const LIVE_GATES: GateDeps = {
   now: () => Date.now(),
 };
 
-/** A blob as the browser fetches it (app/api/blob/[sha]); the type is the ref's. */
-export const blobUrl = (b: BlobRef): string => `/api/blob/${b.sha256}?type=${encodeURIComponent(b.mime)}`;
+/** A blob as the browser fetches it (app/api/blob/[sha]); the type is the ref's. A ROUTE address,
+ *  not an object URL: this runs on the server, where there is no document to own one, and the
+ *  name says so because `blobUrl` is this repo's object-URL minter (lib/musicClient.ts), whose
+ *  callers owe a `revokeObjectURL` (tests/golden-path/object-url-ownership.probe.spec.ts). */
+export const blobRouteUrl = (b: BlobRef): string => `/api/blob/${b.sha256}?type=${encodeURIComponent(b.mime)}`;
 
 /* ── attempts ─────────────────────────────────────────────────────────────── */
 
@@ -284,7 +287,7 @@ export function gatePacket(v1: StepV1): Result<OpenPlan> {
       meta: v1.title,
       oracle: { passed: true, summary: textOf(v1.verdict), digest: v1.digest },
     },
-    urls: Object.fromEntries(v1.items.map((i) => [i.id, blobUrl(i.media)])),
+    urls: Object.fromEntries(v1.items.map((i) => [i.id, blobRouteUrl(i.media)])),
     losses: [],
   });
 }

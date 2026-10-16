@@ -11,7 +11,7 @@ import { madeFree, madePaid, type ActAsk, type ActPlan, type ActUnit } from "@gt
 import { landPart, partSnapshot, projectOf } from "@gt/producers/research/partJob";
 import { defineScript, scriptPlan, type ScriptView } from "@gt/producers/script/define";
 
-import { recalibrate, recalibrateFromPlan } from "@/app/_phases/script/recalibrate";
+import { recalibrate, recalibrateFromPlan } from "@/lib/script/recalibrate";
 import { scenariosPrompt } from "@/lib/ads/concepts";
 import { AD_END_CARD_HOLD_S, type AdIdea, type AdTemplateId } from "@/lib/ads/types";
 import { parseScenarios, SCENARIOS_SCHEMA } from "@/lib/ads/validate";

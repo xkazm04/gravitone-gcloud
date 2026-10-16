@@ -417,8 +417,9 @@ const NOTEBOOK_MODULE_FILES = new Set(
 // 3 since Phase 4 wave D: app/_phases/research/guided/RunStage.tsx retired with the v1 studio.
 const PINNED_CONSTANT_IMPORTERS = 3;
 const EXPECTED_IMPORTERS = [
-  "app/_phases/research/followup.ts",
+  // followup moved app/_phases/research -> lib/research in Phase 4 (L46): the same importer.
   "lib/notebook/graph.ts",
+  "lib/research/followup.ts",
   "lib/script/constraints.ts",
 ];
 

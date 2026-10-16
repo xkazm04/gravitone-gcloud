@@ -1,6 +1,6 @@
 import { encodeRecord, isStepKey, STEP_RECORDS, type StepKey, type StepKind } from "@gt/domain/steps/registry";
 
-import { framesV1ToV2 } from "@/app/_phases/frames/picture/migrate";
+import { framesV1ToV2 } from "@/lib/frames/picture/migrate";
 
 import { markOriginal, refsInRecord, type Sink } from "./bytes.ts";
 
@@ -11,7 +11,7 @@ import { markOriginal, refsInRecord, type Sink } from "./bytes.ts";
 // as `part_records`, each owned by the part of its step kind (STEP_RECORDS[key].owner). The walk
 // up to the kernel's version is v1's own where v1 had one, and the importer's where the domain
 // door said it would be (packages/domain/src/steps/frames.ts: "the importer is the road"):
-//   frames v1   v1's `framesV1ToV2` (app/_phases/frames/picture/migrate.ts, pure, the render
+//   frames v1   v1's `framesV1ToV2` (lib/frames/picture/migrate.ts, pure, the render
 //               registry it reads ships in this build) - then as v2;
 //   frames v2   plates' base64 -> blob refs (./bytes.ts), the `frames` shadow dropped (v3 holds
 //               units only; v1's own reader rebuilt the shadow from units on every read);

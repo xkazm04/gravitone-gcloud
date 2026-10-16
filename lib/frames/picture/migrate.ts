@@ -38,12 +38,12 @@
 // Stage 3 gives shots plates of their own; by then the board and Motion should
 // write through the def, and this branch becomes a reader of old records only.
 
-import { RENDER_BY_ID } from "../../script/renders";
-import type { ScriptRender } from "../../script/types";
-import { isPlainObject, malformed, type RecordRefusal } from "../../_shared/records/registry";
-import { emptyClip, type Frame } from "../frames";
+import { RENDER_BY_ID } from "@/lib/script/renders";
+import type { ScriptRender } from "@/lib/script/types";
+import { isPlainObject, malformed, type RecordRefusal } from "@/lib/steps/recordRegistry";
+import { emptyClip, type Frame } from "@/lib/frames/frames";
 import type { FramesStepData } from "@/lib/frames/stepData";
-import { framesFromUnits, unitsFromFrames, type PictureUnit } from "./unit";
+import { framesFromUnits, unitsFromFrames, type PictureUnit } from "@/lib/frames/picture/unit";
 
 /** The length of the chain a stored `renderId` names, when it names a shipped
  *  explainer render — the number `durationOf` closes the last beat with. An id

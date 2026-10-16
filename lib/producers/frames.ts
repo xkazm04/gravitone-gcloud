@@ -9,10 +9,10 @@ import { failureOf, meteredCall } from "@gt/producers/research/metered";
 import { madeFree, madePaid, type ActAsk, type ActPlan, type ActUnit, type UnitPrice } from "@gt/producers/research/partAct";
 import { landPart, partSnapshot } from "@gt/producers/research/partJob";
 
-import { PRESETS } from "@/app/library/presets";
+import { PRESETS } from "@gt/catalog/presets";
 import { AD_NATIVE_ASPECT, type AdScenario } from "@/lib/ads/types";
 import { addDirectionSpend } from "@/lib/frames/direction";
-import { planFromSpecs } from "@/app/_phases/frames/direction/plan";
+import { planFromSpecs } from "@/lib/frames/directionPlan";
 import { landDirection } from "@/lib/frames/direction";
 import { explainerRender, subjectFor, type Frame, type Plate } from "@/lib/frames/frames";
 import { frameOfUnit, framesFromUnits, unitsFromRender, type PictureUnit } from "@/lib/frames/picture/unit";

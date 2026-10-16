@@ -11,7 +11,7 @@ import { recipeById } from "@gt/catalog/recipes";
 import { derive } from "@/lib/script/trailer/ops";
 import type { AdScenario } from "@/lib/ads/types";
 import { NOT_CHECKED, reviewShotList } from "@/app/_phases/frames/shotReview";
-import { blobUrl } from "@/lib/parts/gates";
+import { blobRouteUrl } from "@/lib/parts/gates";
 import { partVerdict } from "@/lib/parts/verdict";
 
 import { cardsOf } from "./fixtureResearch.ts";
@@ -36,13 +36,13 @@ export function pickedScenario(ctx: KCtx): AdScenario | null {
 
 const DRY = "dry stand-in";
 /** Where a plate's pixels are fetched: a kernel blob through /api/blob, a public path as is. */
-export const plateUrl = (p: { readonly blob?: BlobRef; readonly src?: string }): string | null => (p.blob !== undefined ? blobUrl(p.blob) : p.src !== undefined && p.src.startsWith("/") ? p.src : null);
+export const plateUrl = (p: { readonly blob?: BlobRef; readonly src?: string }): string | null => (p.blob !== undefined ? blobRouteUrl(p.blob) : p.src !== undefined && p.src.startsWith("/") ? p.src : null);
 
 /** A take id as an ads shot stores it: a blob (imageBlobs), a dry stand-in, or an asset id the
  *  server cannot draw (v1's browser uploads store). */
 export function takeUrl(id: string, blobs: Readonly<Record<string, BlobRef>> | undefined): string | null {
   const b = blobs?.[id];
-  if (b !== undefined) return blobUrl(b);
+  if (b !== undefined) return blobRouteUrl(b);
   const m = /^dry:.*:(\d+)$/.exec(id);
   return m === null ? null : `/clips/presets/${["signal-ledger", "blueprint", "newsprint-cutout", "paper-relief", "data-neon", "chalk-argument"][Number(m[1]) % 6] ?? "signal-ledger"}.jpg`;
 }

@@ -2,7 +2,7 @@
 
 import { defineRecord, isPlainObject, malformed } from "../_shared/records/registry";
 import type { AltsStepData } from "./alternatives/alts";
-import { framesV1ToV2, parseFramesRecord } from "./picture/migrate";
+import { framesV1ToV2, parseFramesRecord } from "@/lib/frames/picture/migrate";
 import type { FramesStepData } from "@/lib/frames/stepData";
 
 /** The cut itself: picture units (v2) with a `frames` shadow for the readers

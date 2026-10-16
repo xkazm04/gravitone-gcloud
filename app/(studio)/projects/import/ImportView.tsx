@@ -15,7 +15,7 @@
 // v1's rows are never written: the browser keeps them until the shelf is retired.
 
 import { useEffect, useRef, useState } from "react";
-import { z } from "zod/mini";
+import { unknown } from "zod/mini";
 
 import { parseJsonAt } from "@gt/domain/door";
 
@@ -73,7 +73,7 @@ async function post(path: string, body: Blob): Promise<{ readonly status: number
     return { status: 503, json: { error: `the import could not be reached: ${e instanceof Error ? e.message : String(e)}`, code: "unavailable" } };
   }
   const text = await r.text();
-  const parsed = parseJsonAt("import answer", z.unknown(), text);
+  const parsed = parseJsonAt("import answer", unknown(), text);
   return { status: r.status, json: parsed.ok ? parsed.value : { error: text.slice(0, 300) || `the import answered ${r.status}`, code: "internal" } };
 }
 

@@ -113,6 +113,7 @@ const articlesCreatePOST = native(() => import("../../app/api/articles/route.ts"
 const articlesApprovePOST = native(() => import("../../app/api/articles/[runId]/approve/route.ts"), "POST");
 const articlesResumePOST = native(() => import("../../app/api/articles/[runId]/resume/route.ts"), "POST");
 const articlesReworkPOST = native(() => import("../../app/api/articles/[runId]/rework/route.ts"), "POST");
+const stripsPOST = native(() => import("../../app/api/foundry/strips/route.ts"), "POST");
 
 const ROUTES: [string, string, (r: Request) => Promise<Response>][] = [
   ["generate", "/api/imaging/generate", generatePOST],
@@ -134,6 +135,16 @@ const ROUTES: [string, string, (r: Request) => Promise<Response>][] = [
   ["music/generate", "/api/music/generate", musicGeneratePOST],
   ["music/sfx", "/api/music/sfx", musicSfxPOST],
   ["foundry/extract", "/api/foundry/extract", foundryExtractPOST],
+  // The strips launch (Phase 4, L33): a kernel job behind a receipt. Every field of its body is
+  // optional, so the empty body `req()` sends is a VALID launch request - it would answer with a
+  // receipt (dry, nothing spent, but a 2xx, not the refusal this case asserts). The authed case
+  // therefore carries a key the strict schema refuses, so the 4xx is the body check's, reached
+  // only through the guard, before a receipt is computed or a job enqueued.
+  [
+    "foundry/strips",
+    "/api/foundry/strips",
+    (r: Request) => stripsPOST(new Request(r, { body: JSON.stringify({ notAField: true }) })),
+  ],
   // A dynamic segment: the handler takes the route context as its second
   // argument, so it is adapted to the one-argument shape the cases below drive.
   // The id names no run on disk, which is what keeps the authenticated case a

@@ -14,7 +14,7 @@ import { applyNext } from "@gt/kernel/decision/apply";
 import { commit } from "@gt/kernel/decision/commit";
 import { patchMany } from "@gt/kernel/decision/driver";
 import { currentDecisions, readPacket } from "@gt/kernel/decision/read";
-import { loadJob, putJob } from "@gt/kernel/job";
+import { list, loadJob, putJob } from "@gt/kernel/job";
 import { openKernel, type Kernel } from "@gt/kernel/kernel";
 import { readPart, writePart } from "@gt/kernel/parts/driver";
 import { launchProject, planReceipt } from "@gt/kernel/records/launch";
@@ -86,6 +86,8 @@ const land = (s: Store, partId: string, next: Record<string, unknown>) =>
   must(writePart(s, { projectId: "p1", partId, baseRev: "current", act: "land", op: {}, label: "job", by: { kind: "machine", id: "job:test" }, next: () => ok(next) }));
 const pid = (id: string) => must(parseAt("id", packetIdSchema, id));
 const motionJob = (s: Store) => must(s.read((r) => loadJob(r, "job:part:p1/motion"))).job.state;
+/** Every job of the project and its state: what a gate's apply may move, read whole. */
+const jobStates = (s: Store) => Object.fromEntries(must(list(s)).map((j) => [j.id, j.state]));
 
 async function decideAndCommit(store: Store, deps: GateDeps, packet: string, verdicts: Readonly<Record<string, "keep" | "reject">>) {
   const packetId = pid(packet);
@@ -123,8 +125,13 @@ describe("the frames gate is a cull of its plates", () => {
     const [a, b, c] = [await png(blobs, 1), await png(blobs, 2), await png(blobs, 3)];
     land(store, "p1/frames", { frames: { renderId: "cut-1", units: [unit("u1", { state: "ready", blob: a }, 0), unit("u2", { state: "ready", blob: b }, 15)] } });
     must(await openReadyGates(deps, "p1", AUTHOR));
+    const held = jobStates(store);
     const first = must(await decideAndCommit(store, deps, "pkt:step:p1/gate:frames", { u1: "keep", u2: "reject" }));
     expect(first.delivered).toBe("applied");
+    // A failed cull moves NO job: not the motion behind it, and not a part held behind another
+    // fact that happens to read ratified now (here the score after the script, whose job this
+    // fixture finished by hand) - releasing those is the job of the act that ratified them.
+    expect(jobStates(store)).toEqual(held);
     expect(first.preview.consequence.writes).toEqual([{ kind: "index-row", target: "frames · u2", candidate: "u2", detail: "rejected — a re-render is owed" }]);
     const units = must(readPart(store, { projectId: "p1", partId: "p1/frames" })).records.get("frames")?.["units"];
     expect(Array.isArray(units) ? units[1] : null).toMatchObject({ plate: { state: "empty", rejected: { packetId: "pkt:step:p1/gate:frames", blob: b } } });

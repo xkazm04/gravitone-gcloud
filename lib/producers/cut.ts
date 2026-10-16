@@ -15,7 +15,7 @@ import { failureOf, meteredCall } from "@gt/producers/research/metered";
 import { madeFree, madePaid, type ActAsk, type ActPlan, type ActUnit } from "@gt/producers/research/partAct";
 import { landPart, partSnapshot, projectOf } from "@gt/producers/research/partJob";
 
-import { adRenderRequest, seedFinish, shotRows } from "@/app/_phases/cut/ads/finish";
+import { adRenderRequest, seedFinish, shotRows } from "@/lib/cut/ads/finish";
 import { adExportFilePath, AdRenderError, REAL_AD_RENDER_DEPS, startAdRender, type AdRenderDeps, type AdRenderReceipt } from "@/lib/adRender";
 import type { AdBrief, AdsFinishData, AdsShotsData } from "@/lib/ads/types";
 import { compileCut, cutDocumentHash, takePointers, type CutDocument } from "@/lib/cut/cutDocument";
