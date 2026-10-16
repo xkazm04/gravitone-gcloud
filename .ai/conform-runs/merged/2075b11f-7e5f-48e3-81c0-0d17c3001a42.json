@@ -1,0 +1,37 @@
+{
+  "schema": "conform-run/1",
+  "worker": "2075b11f-7e5f-48e3-81c0-0d17c3001a42",
+  "subject": "multi-project",
+  "evaluatedAt": "2026-10-16T22:02:39.017479+00:00",
+  "provider": "grok",
+  "model": "grok-4.7",
+  "pairs": [],
+  "declined": [
+    {
+      "subject": "multi-project",
+      "context": "studio-navigation",
+      "reason": "withdrawn after review: reviewer (sonnet): The evidence anchor (schema.ts:16) says state is derived at read with no stored rollup, which is conformant evidence rather than a deviation, and the technique anchors (projects/page.tsx, Runs.tsx, Plan.tsx, real.ts, read.ts) describe the (studio)/projects wall, not the files listed for studio-navig"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-16T22:02:39.017479+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "multi-project"
+      ],
+      "techniques": [
+        "cross-project-comparison",
+        "passive-signal-ingestion",
+        "per-project-tabs-and-state",
+        "portfolio-drill-hierarchy",
+        "project-identity-and-joins",
+        "project-onboarding-lifecycle"
+      ],
+      "deviations": 1,
+      "context": "studio-navigation",
+      "via": "curator-multi:grok",
+      "model": "grok-4.7"
+    }
+  ]
+}

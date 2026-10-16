@@ -6260,6 +6260,53 @@
           "evidence": "app/foundry/pipeline/useCardDrag.ts:175 Item IDs are stable, but the destination is cached as numeric lane/column indices from the last pointer tracking update; decide interprets them against the latest layout, so a refresh that changes lane ordering can retarget the drop."
         }
       ]
+    },
+    "115ef1be-a232-4f4b-8952-e878df48ff53/multi-project": {
+      "context": "studio-navigation",
+      "subject": "multi-project",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T22:02:39.017Z",
+      "techniques": [
+        {
+          "technique": "project-identity-and-joins",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/_port/real.ts:167 Compose builds the project id from a slug of the title or recipe plus a suffix. Rename later edits the title and leaves that id, but the key was still derived from a display name. v1 studio links join with kernelIdOf, which is the foreign id prefixed as v1-<id>, with no separate local map."
+        },
+        {
+          "technique": "portfolio-drill-hierarchy",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/records/read.ts:299 listProjects, the composition-list read, loads each project's full model and then prices and schedules it via view(). The row only shows pips, eta, gates, failed, and usd. Levels exist (list, plan, part editor) but the wall is assembled at read time from member depth."
+        },
+        {
+          "technique": "per-project-tabs-and-state",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/page.tsx:31 /projects always opens the first row in list order. The Plan/Runs TabRail is two hrefs for the current project, not a persisted identity-keyed working set. Shell storage registers only identity and ledger-seen; no open-project set was found."
+        },
+        {
+          "technique": "passive-signal-ingestion",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/runs/_runs/Runs.tsx:99 Runs stays current by polling and by treating the ledger stream as advice to re-render the page. There is no per-project pulse digest, and no unwatched verdict distinct from quiet. The Plan page does not subscribe to that feed at all."
+        },
+        {
+          "technique": "cross-project-comparison",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/_plan/CompositionList.tsx:59 Each row compares projects with a raw dollar figure and raw failed or gate counts. The summary also carries unpriced, but the row does not pass it, and there is no portfolio dimension registry, anchor policy, or coverage split."
+        },
+        {
+          "technique": "project-onboarding-lifecycle",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/records/schema.ts:71 Compose does insert a recipe's parts in one transaction. Leaving management is draft-only discard: the row remains but every read throws not-found. Launched projects are not archived; ratified has no outgoing transition, and paused is a job state, not a project state."
+        }
+      ],
+      "registryProposal": "The comparison and onboarding techniques assume a scored software portfolio (shared rubric, anchor policy, structure map, watcher subscription). This surface's cross-project vocabulary is recipe part-state plus a dollar estimate. The standard should say whether those operational numbers are the comparison surface, which must carry a predicate, or whether the technique does not apply when no rubric is in play.",
+      "withdrawn": {
+        "worker": "2075b11f-7e5f-48e3-81c0-0d17c3001a42",
+        "state": "deviation",
+        "at": "2026-10-16T22:02:56.822441+00:00",
+        "reason": "reviewer (sonnet): The evidence anchor (schema.ts:16) says state is derived at read with no stored rollup, which is conformant evidence rather than a deviation, and the technique anchors (projects/page.tsx, Runs.tsx, Plan.tsx, real.ts, read.ts) describe the (studio)/projects wall, not the files listed for studio-navig"
+      }
     }
   }
 }
