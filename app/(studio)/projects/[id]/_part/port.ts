@@ -4,6 +4,7 @@ import type { Result } from "@gt/domain/errors";
 
 import type { PartPort } from "./contract.ts";
 import { loadPart, opPart, undoPart } from "./fixture.ts";
+import { realPart } from "./real.ts";
 import { actReceipt, confirmAct } from "./fixtureActs.ts";
 
 // THE SEAM: which part side the editors answer from. ONE switch, `SIDE`, the produce port's shape
@@ -20,7 +21,10 @@ export type ServerPart = {
   readonly [K in keyof PartPort]: (...args: Parameters<PartPort[K]>) => Result<Value<ReturnType<PartPort[K]>>> | Promise<Result<Value<ReturnType<PartPort[K]>>>>;
 };
 
-export const SIDE = "fixture" as const;
+// The SAME switch as the produce port: a part lives in a project, so the editors and the Plan
+// must read one universe (the fixture projects are not in the kernel store, nor the real ones in
+// the fixture). GRAVITONE_PRODUCE_SIDE=fixture moves both.
+export const SIDE: "fixture" | "real" = process.env["GRAVITONE_PRODUCE_SIDE"] === "fixture" ? "fixture" : "real";
 
 const now = (): number => Date.now();
 /** The clock a page reads once, outside render, for the times it draws. */
@@ -35,5 +39,5 @@ const fixture: ServerPart = {
 };
 
 export function serverPart(): ServerPart {
-  return fixture;
+  return SIDE === "real" ? realPart : fixture;
 }

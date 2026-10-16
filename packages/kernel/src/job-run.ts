@@ -13,6 +13,7 @@ import { settleAfter } from "./job-settle.ts";
 import { jobEvent, loadJob, loadOutputs, putJob } from "./job.ts";
 import { DEFAULT_TTL_S, fenceLoss, gone, type Alive } from "./lease-core.ts";
 import type { SpendClass } from "./spend/core.ts";
+import { gateContext } from "./parts/gates.ts";
 import { releaseHeldIn } from "./records/write.ts";
 import { lapseOwner } from "./spend/ledger.ts";
 import { lapseOpen, stepMeter } from "./spend/meter.ts";
@@ -274,7 +275,7 @@ async function drive(fx: Effects, producer: Producer, jobId: string, opts: RunOp
             // transaction (records/write.ts `releaseHeldIn`), so no crash can leave it parked.
             // Only a part a plan launched (it names its project) - a bare part job has no plan to move.
             const projectId = job.of.kind === "part" ? job.correlation?.projectId : undefined;
-            if (projectId !== undefined) releaseHeldIn(t, projectId, actor, { now: Date.parse(t.at) });
+            if (projectId !== undefined) releaseHeldIn(t, projectId, actor, gateContext(t, Date.parse(t.at)));
             return end;
           }
           case "claim":

@@ -7,6 +7,7 @@ import { jobMigrations } from "./job.ts";
 import { leaseMigrations } from "./lease.ts";
 import { migrate, type MigrateOptions, type MigrateReport, type ModuleMigrations } from "./migrate.ts";
 import { receiptsMigrations } from "./pricing/receipts.ts";
+import { partsMigrations } from "./parts/schema.ts";
 import { recordsMigrations } from "./records/schema.ts";
 import { spendMigrations } from "./spend/ledger.ts";
 import { openStore, type Store, type StoreOptions } from "./store.ts";
@@ -43,6 +44,7 @@ const DECLARED: readonly Entry[] = [
   { migrations: spendMigrations, after: ["events"] },
   { migrations: jobMigrations, after: ["events", "lease", "spend"] },
   { migrations: recordsMigrations, after: ["events", "job"] },
+  { migrations: partsMigrations, after: ["events", "records"] },
   { migrations: receiptsMigrations, after: ["events"] },
   { migrations: decisionMigrations, after: ["events"] },
   { migrations: calibrationMigrations, after: ["events", "decision"] },

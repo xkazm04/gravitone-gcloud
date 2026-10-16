@@ -12,6 +12,7 @@ import { audioAdapter } from "./sources/audio.ts";
 import { mvAdapter } from "./sources/mv.ts";
 import { sunoAdapter } from "./sources/suno.ts";
 import type { DecisionAdapter } from "./types.ts";
+import { stepAdapter } from "@/lib/parts/gates";
 
 // EVERY PACKET SOURCE, AND WHO DECIDES IT - one line each (Phase 3 wave B).
 // The table is checked against @gt/domain/source's PACKET_SOURCES by
@@ -44,7 +45,7 @@ export const DECISION_ADAPTERS = {
   mv: adapter(mvAdapter),
   // No v1 surface
   trials: notDecidable("the prototype's mechanism trials have no v1 store; nothing opens a trials packet from v1"),
-  step: notDecidable("a part's step gate is v1's per-step sign-off, kept in browser IndexedDB, which the server cannot write; it moves with the studio in Phase 4 (Phase 3 decision 9)"),
+  step: adapter(stepAdapter),
 } as const satisfies { readonly [S in PacketSource]: AdapterEntry };
 
 /** The adapter that decides `source`, or `refused` with the reason none does. */

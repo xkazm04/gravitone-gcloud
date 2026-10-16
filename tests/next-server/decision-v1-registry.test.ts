@@ -26,11 +26,12 @@ describe("the adapter registry", () => {
     }
   });
 
-  it("the four image surfaces are decidable; a source with no v1 store says why not", () => {
-    for (const s of ["forge", "extract", "dojo", "strips"] as const) expect(adapterFor(s).ok).toBe(true);
-    const step = adapterFor("step");
-    expect(step.ok ? "" : step.error.code).toBe("refused");
-    expect(step.ok ? "" : step.error.message).toContain("Phase 4");
+  it("the four image surfaces and the part gates are decidable; a source with no v1 store says why not", () => {
+    // `step` became decidable in Phase 4 wave C: a part's gate is a packet over the kernel's part
+    // records (lib/parts/gates.ts), no longer v1's browser-held sign-off.
+    for (const s of ["forge", "extract", "dojo", "strips", "step"] as const) expect(adapterFor(s).ok).toBe(true);
+    const trials = adapterFor("trials");
+    expect(trials.ok ? "" : trials.error.code).toBe("refused");
   });
 });
 
