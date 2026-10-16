@@ -32,15 +32,24 @@
 // NO CHILD PROCESSES HERE. The loop calls the engine in this process; the engine's agent
 // seam (lib/agent/cliSeam.ts) is what spawns the CLIs, with its own argv fence and
 // environment strip. The loop adds no shell and no environment of its own.
+//
+// EACH RUN IS A KERNEL JOB (Phase 4, L30). The loop no longer drives a run itself: it
+// creates the manifest and hands the run to a `LoopDriver`, which the CLI binds to the
+// article producer (lib/producers/article.ts `loopDriver`): the run's gate job is launched
+// with the loop's per-run ceiling as the JOB's ceiling (so the kernel refuses a step whose
+// estimate would cross it, and the producer refuses a turn once the job's spend reaches
+// it), driven in this process under the kernel lease, and a failed run is the operator's
+// retry of that job. The guard below stays and wraps the metered turns: the loop's budget
+// across runs and the turn ceilings are the loop's, not any one job's.
 
 import fs from "node:fs/promises";
 import path from "node:path";
 
 import type { RunAgentInput, AgentResult } from "@/lib/agent/cliSeam";
 
-import { createRun, defaultDeps, driveRun, resumeRun, type EngineDeps } from "./engine";
+import { createRun, defaultDeps, type EngineDeps } from "./engine";
 import { listTopicSubjects, resolveRegistryDir, resolveTopicSubject } from "./registryRead";
-import { ArticleError, driverAlive, listRuns, storeRoot, writeJsonAtomic } from "./store";
+import { ArticleError, listRuns, storeRoot, writeJsonAtomic } from "./store";
 import type { ArticleRun, ArticleStatus, TopicSubject } from "./types";
 
 /* ── covered topics ────────────────────────────────────────────────────────── */
@@ -105,7 +114,9 @@ async function publicationItems(registryDir: string): Promise<{ item: CoveredIte
   return out;
 }
 
-export async function coverage(registryDir: string = resolveRegistryDir().dir): Promise<Coverage> {
+/** `driven` answers whether something holds a run that is not finished (its job is queued or running);
+ *  without one every such run counts as orphaned. */
+export async function coverage(registryDir: string = resolveRegistryDir().dir, driven: (runId: string) => Promise<boolean> = async () => false): Promise<Coverage> {
   const { runs } = await listRuns();
   const covered: CoveredItem[] = [];
   const claimed: string[] = [];
@@ -115,7 +126,7 @@ export async function coverage(registryDir: string = resolveRegistryDir().dir): 
     if (COVERING_STATUSES.includes(r.status)) covered.push({ key, source: "run", ref: r.id, status: r.status });
     else if (!NOT_RUNNING.includes(r.status)) {
       claimed.push(key);
-      if (!(await driverAlive(r.id))) orphaned.push(r.id);
+      if (!(await driven(r.id))) orphaned.push(r.id);
     }
   }
   const have = new Set(covered.map((c) => c.ref));
@@ -282,6 +293,20 @@ export function guardedDeps(base: EngineDeps, ledger: Ledger, box: RunBox, ceili
 
 /* ── the loop ──────────────────────────────────────────────────────────────── */
 
+/**
+ * Who runs one article for the loop. `guard` wraps the deps every turn goes through (the
+ * loop's budget and turn ceilings); `ceilingUsd` is the per-run ceiling, which the CLI's
+ * driver makes the job's own. Required: a loop with no driver would be a drive with no lease.
+ */
+export interface LoopDriver {
+  /** Launch the created run and drive it until it stops (the gate, or a failure). */
+  start(run: ArticleRun, guard: (deps: EngineDeps) => EngineDeps, ceilingUsd: number): Promise<ArticleRun>;
+  /** Retry the run's failed job (the operator's act: the loop is the operator's process) and drive it again. */
+  resume(runId: string, guard: (deps: EngineDeps) => EngineDeps): Promise<ArticleRun>;
+  /** Whether a job holds this unfinished run. */
+  driven(runId: string): Promise<boolean>;
+}
+
 export type LoopStop = "target-reached" | "budget-stopped" | "failure-stopped" | "topics-exhausted";
 export type LoopRunEnd = "at-the-gate" | "failed" | "ceiling-stopped" | "halted";
 
@@ -346,7 +371,7 @@ export function loopsRoot(): string {
 
 const NOTE = "spentUsd is what the engine reports (the Claude seat's turns). Codex and agy turns report no cost, so the real spend is higher.";
 
-export async function runLoop(opts: LoopOptions, baseDeps: EngineDeps = defaultDeps(), log: (line: string) => void = () => {}): Promise<LoopReport> {
+export async function runLoop(opts: LoopOptions, baseDeps: EngineDeps = defaultDeps(), log: (line: string) => void = () => {}, driver?: LoopDriver): Promise<LoopReport> {
   if (!Number.isFinite(opts.budgetUsd) || opts.budgetUsd <= 0) throw new ArticleError("a loop needs an explicit positive budgetUsd: there is no default", 400, "no-budget");
   if (!!opts.target === !!opts.add) throw new ArticleError("a loop needs exactly one of target (total covered topics) and add (new ones)", 400, "bad-target");
   const concurrency = Math.max(1, Math.min(opts.concurrency ?? 3, 5));
@@ -354,9 +379,10 @@ export async function runLoop(opts: LoopOptions, baseDeps: EngineDeps = defaultD
   const maxResumes = Math.max(0, opts.maxResumes ?? 2);
   const estRunUsd = opts.estRunUsd ?? DEFAULT_EST_RUN_USD;
   const ceilings: Ceilings = { ...DEFAULT_CEILINGS, ...opts.ceilings };
+  if (driver === undefined) throw new ArticleError("a loop needs a driver: each run is a kernel job (lib/producers/article.ts loopDriver)", 400, "no-driver");
   const registry = resolveRegistryDir();
 
-  const start = await coverage(registry.dir);
+  const start = await coverage(registry.dir, driver.driven);
   const target = opts.target ?? start.covered.length + (opts.add as number);
   const queue: LoopTopic[] = opts.topics
     ? opts.topics.filter((t) => !start.covered.some((c) => c.key === t.subject) && !start.claimed.includes(t.subject))
@@ -408,14 +434,14 @@ export async function runLoop(opts: LoopOptions, baseDeps: EngineDeps = defaultD
   const one = async (t: LoopTopic): Promise<void> => {
     const [bundle, subject] = t.subject.split("/");
     const box: RunBox = { topic: t.subject, cost: 0, turns: 0 };
-    const deps = guardedDeps(baseDeps, ledger, box, ceilings);
+    const guard = (d: EngineDeps): EngineDeps => guardedDeps(d, ledger, box, ceilings);
     const row: LoopRunReport = { runId: "", topic: t.subject, status: "unknown", end: "failed", resumes: 0, costUsd: 0, turns: 0 };
     report.runs.push(row);
     try {
-      const created = await createRun({ topic: { kind: "subject", bundle, subject, text: "", ...(t.angle ? { angle: t.angle } : {}) } }, deps);
+      const created = await createRun({ topic: { kind: "subject", bundle, subject, text: "", ...(t.angle ? { angle: t.angle } : {}) } }, baseDeps);
       row.runId = created.id;
       await event(`RUN ${t.subject} ${created.id}`);
-      let run = created.status === "failed" ? created : await driveRun(created.id, deps);
+      let run = created.status === "failed" ? created : await driver.start(created, guard, ceilings.runUsd);
       for (;;) {
         row.status = run.status;
         row.costUsd = box.cost;
@@ -428,7 +454,11 @@ export async function runLoop(opts: LoopOptions, baseDeps: EngineDeps = defaultD
           return;
         }
         if (run.error) row.error = run.error;
-        if (box.tripped?.startsWith("run-ceiling")) {
+        // The loop's guard tripped, or the run's job stopped at its own ceiling (between steps, or a
+        // turn the job refused inside one): either way the run hit its ceiling, not a failure.
+        const ceiling = box.tripped?.startsWith("run-ceiling") ? box.tripped : run.error?.includes("run-ceiling") ? run.error : undefined;
+        if (ceiling !== undefined) {
+          box.tripped ??= ceiling;
           row.end = "ceiling-stopped";
           failures++;
           await event(`CEILING ${t.subject} ${created.id}: ${box.tripped}; marked for a human, not resumed`);
@@ -442,8 +472,7 @@ export async function runLoop(opts: LoopOptions, baseDeps: EngineDeps = defaultD
         }
         row.resumes++;
         await event(`RESUME ${t.subject} ${created.id} attempt ${row.resumes}: ${run.error ?? run.status}`);
-        await resumeRun(created.id, deps);
-        run = await driveRun(created.id, deps);
+        run = await driver.resume(created.id, guard);
       }
     } catch (e) {
       row.end = "failed";

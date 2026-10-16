@@ -9,10 +9,12 @@ import { parseAt, type Parsed } from "@gt/domain/door";
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { Actor, EventData } from "@gt/domain/event";
 import type { JobState } from "@gt/domain/job";
+import { list } from "@gt/kernel/job";
 
 import { ARTICLE_STATUSES, STEP_NAMES } from "../../../../lib/articles/types.ts";
 import { readJsonFile, RUN_ID_RE, storeRoot } from "../../../../lib/articles/store.ts";
 import { pidAlive } from "../../../../lib/gpu/lease.ts";
+import { storeLocation } from "../../../../lib/kernelStore.ts";
 import { WORKING } from "../../../articles/types.ts";
 import { bump, facts, instant, readEach, words } from "../facts.ts";
 import type { IngestEvent, LiveJob, ProjectCtx, Projection, Skipped, Source, WeirItem } from "../types.ts";
@@ -36,8 +38,12 @@ import { universeRoot } from "./roots.ts";
 // Step cost rides in `data.costUsd`: the seat's spend is the spend source's to
 // project as money, and counting it here too would count it twice.
 //
-// LIVE IS STATUS AND A DRIVER (app/api/articles/route.ts GET; the WORKING set in lib/articles/types.ts,
-// read by app/articles/runModel.ts phaseOf). A WORKING status with a live `.driver` pid is running; without one
+// LIVE IS STATUS AND A HOLDER (app/api/articles/route.ts GET; the WORKING set in lib/articles/types.ts,
+// read by app/articles/runModel.ts phaseOf). Since Phase 4 (L30) the holder is the run's kernel job: a
+// job of the run (`job:run:<id>[:...]`, producer `article`) that is queued or running holds it - the
+// job record is the truth for running state, run.json for the work (§5.4). A `.driver` pid file a v1
+// build left still holds it while that pid lives, so a drive started before the cutover is not called
+// stalled. A WORKING status with a holder is running; without one
 // it is what /articles calls `stalled` - a drive that died (a restarted
 // server, a killed CLI) - and here `interrupted`: the kernel's word for "the
 // holder died, look before re-spending", and the page offers the same Resume.
@@ -87,7 +93,21 @@ async function driverAt(dir: string): Promise<boolean> {
   return pid.ok && pidAlive(pid.value.pid);
 }
 
-export async function readArticles(root: string): Promise<Result<ArticlesSnapshot>> {
+/**
+ * The article runs a kernel job holds (queued or running), by run id. A READER NEVER OPENS A STORE: it
+ * reads the process's kernel when this process has it open (the app opens it before any page reads,
+ * app/_server/kernel.ts), and a process that never did - a test over a store of its own - reads no
+ * jobs, so a `.driver` alone holds. Opening one here would leave a handle nobody closes.
+ */
+export function heldByJobs(): ReadonlySet<string> {
+  const open = globalThis.__gravitoneKernel;
+  if (open === undefined || open.location !== storeLocation()) return new Set();
+  const jobs = list(open.kernel.store);
+  if (!jobs.ok) return new Set();
+  return new Set(jobs.value.filter((j) => j.producer === "article" && j.of.kind === "run" && (j.state === "queued" || j.state === "running")).map((j) => j.of.id));
+}
+
+export async function readArticles(root: string, held: () => ReadonlySet<string> = () => new Set()): Promise<Result<ArticlesSnapshot>> {
   let names: string[];
   try {
     names = await readdir(root);
@@ -96,7 +116,8 @@ export async function readArticles(root: string): Promise<Result<ArticlesSnapsho
     names = [];
   }
   const ids = names.filter((n) => RUN_ID_RE.test(n)).sort().reverse().slice(0, ARTICLES_READ_CAP);
-  const got = await readEach(ids, async (id) => ({ id, raw: await readJsonFile<unknown>(path.join(root, id, "run.json"), null), driving: await driverAt(path.join(root, id)) }));
+  const byJob = held();
+  const got = await readEach(ids, async (id) => ({ id, raw: await readJsonFile<unknown>(path.join(root, id, "run.json"), null), driving: byJob.has(id) || (await driverAt(path.join(root, id))) }));
   const runs: Article[] = [];
   const skipped: Skipped[] = [...got.skipped];
   for (const d of got.items) {
@@ -187,4 +208,4 @@ export function projectArticles(s: ArticlesSnapshot, ctx: ProjectCtx): Projectio
   };
 }
 
-export const articlesSource: Source<ArticlesSnapshot> = { id: "articles", read: () => readArticles(articlesRoot()), project: projectArticles };
+export const articlesSource: Source<ArticlesSnapshot> = { id: "articles", read: () => readArticles(articlesRoot(), heldByJobs), project: projectArticles };

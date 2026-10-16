@@ -11,6 +11,8 @@ import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
+import { closeProcessKernel } from "@gt/kernel/process";
+
 import { REPO_LOCATING_GIT_VARS } from "@/lib/gitEnv";
 
 export const ROOT = path.resolve(__dirname, "../..");
@@ -41,6 +43,10 @@ export const ARTICLE_ENV = [
   "STUB_GH_LOG",
   "STUB_GH_FAIL",
   "ANTHROPIC_API_KEY",
+  // Phase 4 (L30): a run is a kernel job. articleSandbox() points the kernel store at the
+  // sandbox, so a route or CLI act a probe makes never writes the checkout's store.
+  "GRAVITONE_STORE_PATH",
+  "ARTICLES_DRY_AGENT_BIN",
   // articleSandbox() points the temp directory at the sandbox.
   "TMPDIR",
   "TEMP",
@@ -93,6 +99,8 @@ export function articleSandbox(): ArticleSandbox {
   for (const k of tmpVars) process.env[k] = tmp;
   process.env.AI_REGISTRY_DIR = registry;
   process.env.ARTICLES_STORE_DIR = store;
+  closeProcessKernel();
+  process.env.GRAVITONE_STORE_PATH = path.join(dir, "kernel", "gravitone.sqlite");
   process.env.ARTICLES_AGENT_BIN = `node|${STUB_AGENT}`;
   Object.assign(process.env, STUB_ENGINE_BINS);
   process.env.ARTICLES_GH_BIN = `node|${STUB_GH}`;
@@ -119,6 +127,8 @@ export function articleSandbox(): ArticleSandbox {
     origin,
     store,
     cleanup: () => {
+      // Windows refuses to delete a directory holding an open SQLite file.
+      closeProcessKernel();
       tmpVars.forEach((k, i) => (savedTmp[i] === undefined ? delete process.env[k] : (process.env[k] = savedTmp[i])));
       rmSync(dir, { recursive: true, force: true, maxRetries: 3 });
     },

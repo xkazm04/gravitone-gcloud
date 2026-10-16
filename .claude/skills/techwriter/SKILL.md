@@ -61,8 +61,11 @@ say that approval happens at the gate and give the run id.
    ```
 
    It blocks until the gate (use a background shell and wait for its completion notice; do not poll
-   it). stdout is one JSON line `{runId, dir, status}`; exit 0 is `awaiting-approval`, 1 is a run
-   that stopped elsewhere, 2 is a usage error.
+   it). stdout is one JSON line `{runId, dir, status, jobId, job, mode, spendUsd}`; exit 0 is
+   `awaiting-approval`, 1 is a run that stopped elsewhere, 2 is a usage error. The run is a kernel
+   job (`job:run:<runId>`, `lib/producers/article.ts`) driven in that process; `--dry` makes it a
+   dry job (the stub answers every turn, nothing spends) and `--budget-usd X` is the job's ceiling
+   (under $92, a run's top price, it is refused before anything is created).
 
 4. If it ends `failed`, see "When a run fails", then report. Otherwise report (below).
 
@@ -78,7 +81,9 @@ npx tsx pipeline/article.mts loop --add N --budget-usd B --json        # for --l
   run so far cost 92), and refuse to derive one above 8 topics: ask for an explicit `--budget`.
   The CLI itself refuses without `--budget-usd`.
 - **The budget counts what the engine reports** (the Claude seat). Codex and Gemini report no cost,
-  so the real spend is higher: say so in the report.
+  so the real spend is higher: say so in the report. Each run is a kernel job whose own ceiling is
+  the per-run cost ceiling (`--run-usd`, default 120), so the job also stops before a step whose
+  estimate would cross it; a `--run-usd` under $92 is refused at the run's receipt.
 - Concurrency is 3 by default. Three is the only value tested on a live seat (the overnight batch);
   the CLI accepts up to 5, but a seat's usage window may not, so use more only when asked.
 - It picks the ranked uncovered topics itself (`--topics <file>` takes a JSON array of
@@ -94,8 +99,10 @@ npx tsx pipeline/article.mts loop --add N --budget-usd B --json        # for --l
   After it ends, report as below for every run that reached the gate, then add one table for the
   loop: each run, its end (`at-the-gate`, `failed`, `ceiling-stopped`, `halted`), resumes, reported
   cost and turns, and why the loop stopped.
-- A loop that is killed leaves runs in the store with no driver: `status` lists them, and the
-  operator resumes them (`resume <runId>`). The skill does not resume on its own.
+- A loop that is killed leaves its in-flight runs' jobs `interrupted`, and the `seat.text` lane
+  HELD until the operator looks: `status <runId> --json` names the step each died in, and the
+  operator resumes them (`resume <runId>`, which acknowledges the hold and retries the job). The
+  skill does not resume on its own.
 
 ## When a run fails
 
@@ -112,8 +119,9 @@ errored | seat-limit`) and `run.json` `error` says where. What has happened so f
   did not happen, not a verdict. Two reviewers are the quorum.
 - **`seat-limit`**: the Claude seat's usage window ran out. Nothing is wrong with the topic; wait
   and `resume`.
-- **A ceiling or a budget stop** (error starts `run-ceiling` or `loop-halt`): the run was stopped on
-  purpose. Report it and leave it for the operator.
+- **A ceiling or a budget stop** (error starts `run-ceiling` or `loop-halt`, or the job stopped for
+  `budget`): the run was stopped on purpose. Report it and leave it for the operator; `resume
+  <runId> --budget-usd X` is how they raise the job's ceiling.
 
 Suggest `resume`; in a single run do not run it unasked. (In loop mode the CLI resumes within its
 own bound.)

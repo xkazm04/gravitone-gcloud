@@ -10,6 +10,9 @@
 // verbatim, and `code` the closed name an ArticleError carries
 // (lib/articles/store.ts). The UI and the Board render `error` as the work.
 
+import { httpStatus, type AppError } from "@gt/domain/errors";
+import type { Actor } from "@gt/domain/event";
+
 import { ArticleError, readRun } from "@/lib/articles/store";
 
 export function failure(e: unknown): Response {
@@ -32,6 +35,16 @@ export async function objectBody(req: Request): Promise<Record<string, unknown> 
   }
   return Response.json({ error: "the request body is not a JSON object", code: "bad-body" }, { status: 400 });
 }
+
+/** A refused act from lib/producers/article.ts: v1's own code when the engine refused it
+ *  (`detail`: "bad-transition", "busy"), else the kernel's - and the status its code maps to. */
+export function refusal(e: AppError): Response {
+  return Response.json({ error: e.message, code: e.detail ?? e.code }, { status: httpStatus(e.code) });
+}
+
+/** Who acts through these routes: the operator at /articles or the Board (the guard admitted them).
+ *  Each launch and act is that operator's confirm, and arms a live job (decision 4). */
+export const ROUTE_ACTOR: Actor = { kind: "operator", id: "operator" };
 
 /** A post served with the access secret as `k=` has its RELATIVE src/href
  *  rewritten to carry it too — an <img> inside an iframe sends no header, so

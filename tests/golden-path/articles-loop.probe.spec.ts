@@ -13,6 +13,11 @@
 //   · a failed run is resumed at most maxResumes times, then counts as a failure and the loop stops
 //   · a budget stops the launching (the next run would not fit) and, once crossed, the in-flight runs
 //   · a run over its cost ceiling is stopped at a turn boundary, marked for a human and never resumed
+//   · a run ceiling under a run's price is refused at the receipt, before any turn
+//
+// Each run is a kernel job (Phase 4, L30): the loop is driven through the CLI's own driver
+// (lib/producers/article.ts `loopDriver`, live jobs on the sandbox's kernel store), so the
+// ceilings below are the jobs' as well as the loop's.
 //   · the writer's CLI is given --max-budget-usd
 //   · the CLI refuses `loop` without --budget-usd
 import { execSync } from "node:child_process";
@@ -24,6 +29,7 @@ import { test, expect } from "@playwright/test";
 import { createRun, defaultDeps, driveRun } from "@/lib/articles/engine";
 import { EXCLUDED_BUNDLES, listUncoveredTopics, loopsRoot, rankUncovered, runLoop, suggestAngle } from "@/lib/articles/loop";
 import { readRun } from "@/lib/articles/store";
+import { loopDriver } from "@/lib/producers/article";
 
 import { keepEnv } from "./_helpers";
 import { ARTICLE_ENV, ROOT, articleSandbox, type ArticleSandbox } from "./_articles";
@@ -38,6 +44,7 @@ test.beforeEach(() => {
 test.afterEach(() => box.cleanup());
 
 const deps = () => defaultDeps({ render: false });
+const driver = () => loopDriver({ actor: { kind: "operator", id: "probe" }, mode: "live", env: {}, binding: { engine: deps } });
 
 /** More subjects in the throwaway registry: two more in software-engineering and a second bundle. */
 function addSubjects() {
@@ -113,7 +120,7 @@ test("loop: reaches the target through real runs and writes its report", async (
   addSubjects();
   process.env.STUB_AGENT_COST = "1";
   const log: string[] = [];
-  const report = await runLoop({ add: 2, budgetUsd: 1000, concurrency: 2 }, deps(), (l) => log.push(l));
+  const report = await runLoop({ add: 2, budgetUsd: 1000, concurrency: 2 }, deps(), (l) => log.push(l), driver());
   expect(report.stop).toBe("target-reached");
   expect(report.newlyCovered).toBe(2);
   expect(report.coveredNow).toBe(report.coveredAtStart + 2);
@@ -131,7 +138,7 @@ test("loop: reaches the target through real runs and writes its report", async (
   expect(report.note).toMatch(/Codex and agy/);
   expect(log.some((l) => l.startsWith("DONE"))).toBe(true);
   // the target is a total: asking for it again starts nothing
-  const again = await runLoop({ target: report.coveredNow, budgetUsd: 1000 }, deps());
+  const again = await runLoop({ target: report.coveredNow, budgetUsd: 1000 }, deps(), undefined, driver());
   expect(again.stop).toBe("target-reached");
   expect(again.runs).toHaveLength(0);
 });
@@ -139,7 +146,7 @@ test("loop: reaches the target through real runs and writes its report", async (
 test("loop: a failed run is resumed at most maxResumes times, then the loop stops on its failures", async () => {
   addSubjects();
   process.env.STUB_AGENT_MODE = "error";
-  const report = await runLoop({ add: 2, budgetUsd: 1000, concurrency: 1, maxFailures: 1, maxResumes: 2 }, deps());
+  const report = await runLoop({ add: 2, budgetUsd: 1000, concurrency: 1, maxFailures: 1, maxResumes: 2 }, deps(), undefined, driver());
   expect(report.stop).toBe("failure-stopped");
   expect(report.runs).toHaveLength(1);
   expect(report.runs[0]).toMatchObject({ end: "failed", resumes: 2, status: "failed" });
@@ -150,19 +157,19 @@ test("loop: a failed run is resumed at most maxResumes times, then the loop stop
 test("loop: the budget stops the launching, and once crossed it stops the runs in flight", async () => {
   addSubjects();
   process.env.STUB_AGENT_COST = "1";
-  const probe = await runLoop({ add: 1, budgetUsd: 1000, concurrency: 1 }, deps());
+  const probe = await runLoop({ add: 1, budgetUsd: 1000, concurrency: 1 }, deps(), undefined, driver());
   const c = probe.spentUsd;
   expect(c).toBeGreaterThan(0);
 
   // the next run would not fit: one run is made, the second is not started
-  const gate = await runLoop({ add: 3, budgetUsd: c * 1.5, estRunUsd: c, concurrency: 1 }, deps());
+  const gate = await runLoop({ add: 3, budgetUsd: c * 1.5, estRunUsd: c, concurrency: 1 }, deps(), undefined, driver());
   expect(gate.stop).toBe("budget-stopped");
   expect(gate.runs).toHaveLength(1);
   expect(gate.runs[0].end).toBe("at-the-gate");
   expect(gate.reason).toMatch(/would pass/);
 
   // a budget that is passed mid-run halts that run at its next turn boundary
-  const hard = await runLoop({ add: 3, budgetUsd: c * 0.5, estRunUsd: 0.01, concurrency: 1, watchMs: 20 }, deps());
+  const hard = await runLoop({ add: 3, budgetUsd: c * 0.5, estRunUsd: 0.01, concurrency: 1, watchMs: 20 }, deps(), undefined, driver());
   expect(hard.stop).toBe("budget-stopped");
   expect(hard.runs[0].end).toBe("halted");
   expect(hard.newlyCovered).toBe(0);
@@ -172,22 +179,35 @@ test("loop: the budget stops the launching, and once crossed it stops the runs i
 
 test("loop: a run over its cost ceiling stops at a turn boundary, is marked for a human and is never resumed", async () => {
   addSubjects();
-  process.env.STUB_AGENT_COST = "10";
+  // A run ceiling must clear the run's price ($92) to pass its receipt; the turns then cross it.
+  process.env.STUB_AGENT_COST = "30";
   process.env.STUB_AGENT_ARGV_LOG = path.join(box.dir, "argv.log");
-  const report = await runLoop({ add: 1, budgetUsd: 10_000, concurrency: 1, maxFailures: 1, ceilings: { runUsd: 25, turnUsd: 100 } }, deps());
+  const report = await runLoop({ add: 1, budgetUsd: 10_000, concurrency: 1, maxFailures: 1, ceilings: { runUsd: 100, turnUsd: 100 } }, deps(), undefined, driver());
   expect(report.stop).toBe("failure-stopped");
   expect(report.runs[0]).toMatchObject({ end: "ceiling-stopped", resumes: 0 });
-  expect(report.runs[0].costUsd).toBeGreaterThanOrEqual(25);
-  expect(report.runs[0].costUsd).toBeLessThan(25 + 3 * 10 + 1);
-  expect((await readRun(report.runs[0].runId)).status).toBe("failed");
+  // Stopped where it would cross: by a refused turn, or by the job before a step whose estimate
+  // would carry it over (the critique, at $54) - either way never more than a turn past it.
+  expect(report.runs[0].costUsd).toBeGreaterThan(0);
+  expect(report.runs[0].costUsd).toBeLessThan(100 + 3 * 30 + 1);
+  expect(await readRun(report.runs[0].runId)).toMatchObject({ status: "failed", error: expect.stringMatching(/run-ceiling/) });
   expect(readFileSync(path.join(loopsRoot(), report.id, "events.log"), "utf8")).toMatch(/CEILING .*marked for a human, not resumed/);
   // the writer's CLI was handed the per-turn cap
   expect(readFileSync(process.env.STUB_AGENT_ARGV_LOG, "utf8")).toMatch(/--max-budget-usd/);
 });
 
+test("loop: a run ceiling under a run's price is refused at the receipt, before any turn", async () => {
+  addSubjects();
+  process.env.STUB_AGENT_ARGV_LOG = path.join(box.dir, "argv.log");
+  const report = await runLoop({ add: 1, budgetUsd: 10_000, concurrency: 1, maxFailures: 1, ceilings: { runUsd: 25 } }, deps(), undefined, driver());
+  expect(report.runs[0]).toMatchObject({ end: "failed", turns: 0 });
+  expect(report.runs[0].error).toMatch(/the \$25 ceiling cannot hold it/);
+  expect((await readRun(report.runs[0].runId)).status).toBe("failed");
+  expect(existsSync(process.env.STUB_AGENT_ARGV_LOG)).toBe(false);
+});
+
 test("loop: a turn ceiling counts reviewer turns as well", async () => {
   addSubjects();
-  const report = await runLoop({ add: 1, budgetUsd: 10_000, concurrency: 1, maxFailures: 1, ceilings: { runTurns: 4 } }, deps());
+  const report = await runLoop({ add: 1, budgetUsd: 10_000, concurrency: 1, maxFailures: 1, ceilings: { runTurns: 4 } }, deps(), undefined, driver());
   expect(report.runs[0].end).toBe("ceiling-stopped");
   expect(report.runs[0].turns).toBe(4);
 });

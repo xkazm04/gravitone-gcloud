@@ -1,11 +1,11 @@
 // ARTICLE — the headless surface of the article pipeline (lib/articles/).
 //
-//   npx tsx pipeline/article.mts run (--subject <bundle/slug> | --topic "<text>") [--angle "<text>"] [--model <id>] [--effort <level>] [--reviewers <file>]
+//   npx tsx pipeline/article.mts run (--subject <bundle/slug> | --topic "<text>") [--angle "<text>"] [--model <id>] [--effort <level>] [--reviewers <file>] [--budget-usd X]
 //   npx tsx pipeline/article.mts status [<runId>]          # one run, or the list
 //   npx tsx pipeline/article.mts approve <runId> [--patches p1,p2]
 //   npx tsx pipeline/article.mts reject <runId> --note "<text>"
 //   npx tsx pipeline/article.mts rework <runId> --note "<text>"
-//   npx tsx pipeline/article.mts resume <runId> [--reviewers <file>]
+//   npx tsx pipeline/article.mts resume <runId> [--reviewers <file>] [--budget-usd X]
 //   npx tsx pipeline/article.mts topics [--limit N] [--include-bundle <bundle>]
 //   npx tsx pipeline/article.mts loop (--target N | --add N) --budget-usd X [--concurrency 3] [--max-failures 3]
 //        [--max-resumes 2] [--run-usd 120] [--turn-usd 30] [--run-turns 45] [--est-run-usd 70] [--topics auto|<file>]
@@ -22,27 +22,44 @@
 //   --json on any command: one JSON document on stdout, nothing else.
 //   Exit 0 ok · 1 the operation failed (a failed run, a refused approval) · 2 usage.
 //
+//   EVERY VERB THAT SPENDS OR LANDS IS A KERNEL JOB (Phase 4, L30; lib/producers/article.ts).
+//   `run` launches the run's gate job (a receipt, then this CLI's own confirm), `approve`
+//   enqueues the landing job, `rework` the rework's job, `resume` retries the run's job (or
+//   gives a v1 run its first one) - the SAME records the /articles routes and the Board make,
+//   so a run launched in the browser is resumed here by its run id, and the reverse. This
+//   process then drives the job under the kernel's seat.text slot lease, unless:
+//     --detach      enqueue only and print the job id; the worker (npm run worker) drives it
+//     --dry         a dry job: every agent turn is answered by the stub (tests/fixtures/
+//                   articles/stub-agent.mjs, or ARTICLES_DRY_AGENT_BIN), nothing is spent,
+//                   and the would-calls are counted. A dry run's approval lands nothing.
+//     --budget-usd  on `run`: the job's ceiling. A run is priced at up to $92, so a ceiling
+//                   under that is refused at the receipt, before anything is created; one
+//                   above it is held between steps and between the turns inside a step.
+//   GRAVITONE_DRY_ONLY=1 refuses every live job (decision 4).
+//
 // `rework` is the third act at the gate: it sends the draft back with the note,
 // keeps the research and outline, and drives draft, critique and check again to
 // the gate. A real agent session on the operator's seat, like `resume`; it is
 // the operator's act, not an agent's.
 //
-// `run` drives to the human gate and stops: it prints {runId, dir, status} with
+// `run` drives to the human gate and stops: it prints {runId, dir, status, jobId, mode} with
 // status `awaiting-approval` on success. It never approves. `approve` is the
 // human's act — it records the approval and then lands the post in the
 // registry (a branch, the registry gates, a PR); it is not for an agent.
 //
-// IT OWNS NO LOGIC. Every verb is one call into lib/articles/engine.ts — the
-// same calls the /api/articles routes make.
+// IT OWNS NO LOGIC. Every verb is one call into lib/producers/article.ts or
+// lib/articles/engine.ts — the same calls the /api/articles routes make.
 //
 // SPENDING. `run` and `resume` start real agent sessions on the operator's
 // logged-in Claude seat (research uses web tools), and the critique runs the
 // reviewer panel through the local claude, codex and agy CLIs on the
-// operator's own logins. ARTICLES_AGENT_BIN (the writer and claude reviewers)
-// and ARTICLES_CODEX_BIN / ARTICLES_AGY_BIN replace them
-// with the stub for a dry run (docs/articles.md, "Headless").
+// operator's own logins. `--dry` replaces every one of them with the stub for
+// that job, whatever the environment says. (ARTICLES_AGENT_BIN, ARTICLES_CODEX_BIN
+// and ARTICLES_AGY_BIN still point the LIVE seam at another binary - the probes'
+// fake vendor - and are no longer how a dry run is made.)
 
 import fs from "node:fs";
+import { userInfo } from "node:os";
 import path from "node:path";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -68,17 +85,25 @@ const CALLER_CWD = process.cwd();
 // The store root and the prompt file are cwd-relative, as in the server.
 process.chdir(ROOT);
 
-const { approveRun, createRun, driveRun, getRun, listArticleRuns, rejectRun, resumeRun, reworkRun } = await import("../lib/articles/engine");
+const { getRun, listArticleRuns, rejectRun } = await import("../lib/articles/engine");
 const { listUncoveredTopics, runLoop } = await import("../lib/articles/loop");
-const { ArticleError, runDir } = await import("../lib/articles/store");
+const { ArticleError, readRun, runDir } = await import("../lib/articles/store");
+const { approveArticle, articleJobsOf, articleKernel, driveArticle, launchArticle, loopDriver, resumeArticle, reworkArticle } = await import("../lib/producers/article");
+const { closeProcessKernel } = await import("@gt/kernel/process");
+type AppError = import("@gt/domain/errors").AppError;
 const { EFFORT_LEVELS } = await import("../lib/articles/types");
 type ArticleRun = import("../lib/articles/types").ArticleRun;
 type EffortLevel = import("../lib/articles/types").EffortLevel;
 
 const argv = process.argv.slice(2);
 const JSON_OUT = argv.includes("--json");
-const args = argv.filter((a) => a !== "--json");
+const DRY = argv.includes("--dry");
+const DETACH = argv.includes("--detach");
+const args = argv.filter((a) => a !== "--json" && a !== "--dry" && a !== "--detach");
 const cmd = args[0];
+/** The operator at this terminal: their confirm arms a live job, their retry may re-spend. */
+const ACTOR = { kind: "operator", id: userInfo().username || "operator" } as const;
+const acts = (ceilingUsd?: number) => ({ actor: ACTOR, mode: DRY ? ("dry" as const) : ("live" as const), ...(ceilingUsd === undefined ? {} : { ceilingUsd }) });
 
 // --json promises ONE document on stdout. The engine's per-turn log lines
 // ([agent] …) are written with console.log; under --json they go to stderr.
@@ -91,8 +116,9 @@ function usage(msg?: string): never {
     if (msg) console.error(`article: ${msg}\n`);
     console.error(
       "usage: npx tsx pipeline/article.mts <run|status|approve|reject|rework|resume|topics|loop> [--json]\n" +
-        '  run (--subject <bundle/slug> | --topic "<text>") [--angle "<text>"] [--model <id>] [--effort low|medium|high|xhigh|max] [--reviewers <file>]\n' +
-        "  status [<runId>]   approve <runId> [--patches p1,p2]   reject <runId> --note \"<text>\"   rework <runId> --note \"<text>\"   resume <runId> [--reviewers <file>]\n" +
+        '  run (--subject <bundle/slug> | --topic "<text>") [--angle "<text>"] [--model <id>] [--effort low|medium|high|xhigh|max] [--reviewers <file>] [--budget-usd X]\n' +
+        "  status [<runId>]   approve <runId> [--patches p1,p2]   reject <runId> --note \"<text>\"   rework <runId> --note \"<text>\"   resume <runId> [--reviewers <file>] [--budget-usd X]\n" +
+        "  run, approve, rework, resume, loop also take --dry (a dry job: the stub answers, nothing spends) and --detach (enqueue; the worker drives)\n" +
         "  topics [--limit N] [--include-bundle <bundle>]\n" +
         "  loop (--target N | --add N) --budget-usd X [--concurrency 3] [--max-failures 3] [--max-resumes 2] [--run-usd 120] [--turn-usd 30] [--run-turns 45] [--est-run-usd 70] [--topics auto|<file>]",
     );
@@ -127,7 +153,16 @@ function fail(e: unknown): never {
   const msg = e instanceof Error ? e.message : String(e);
   if (JSON_OUT) emit(JSON.stringify({ error: msg, ...(e instanceof ArticleError ? { code: e.code } : {}) }));
   else console.error(`article: ${msg}`);
+  closeProcessKernel();
   process.exit(e instanceof ArticleError && e.status === 400 ? 2 : 1);
+}
+
+/** A refused act (lib/producers/article.ts): v1's own code when the engine refused it. Bad input is usage. */
+function refused(e: AppError): never {
+  if (JSON_OUT) emit(JSON.stringify({ error: e.message, code: e.detail ?? e.code }));
+  else console.error(`article: ${e.message}`);
+  closeProcessKernel();
+  process.exit(e.code === "invalid" ? 2 : 1);
 }
 
 /** The run directory: repo-relative when it is inside the repo, else absolute. */
@@ -166,10 +201,32 @@ function printRun(r: ArticleRun) {
 }
 
 /** A run that stopped anywhere but where the verb meant to take it is exit 1. */
-function finish(r: ArticleRun, wanted: ArticleRun["status"][]) {
-  if (JSON_OUT) emit(JSON.stringify(brief(r)));
-  else printRun(r);
+function finish(r: ArticleRun, wanted: ArticleRun["status"][], job?: Record<string, unknown>): never {
+  if (JSON_OUT) emit(JSON.stringify({ ...brief(r), ...job }));
+  else {
+    printRun(r);
+    if (job) console.log(`  job      ${String(job["jobId"])} ${String(job["job"] ?? "")} ${String(job["mode"] ?? "")}${job["wouldCalls"] === undefined ? "" : ` · ${String(job["wouldCalls"])} would-calls`}`);
+  }
+  closeProcessKernel();
   process.exit(wanted.includes(r.status) ? 0 : 1);
+}
+
+/**
+ * The verb's job, then where the run stands. `--detach` stops at the enqueue (exit 0: the
+ * worker drives it); otherwise this process drives the job and the run's status decides the
+ * exit. A job the kernel would not start (its lane held after a crash, every slot busy) is
+ * exit 1 with the kernel's own sentence.
+ */
+async function drive(runId: string, jobId: string, wanted: ArticleRun["status"][]): Promise<never> {
+  if (DETACH) return finish(await readRun(runId), [(await readRun(runId)).status], { jobId, detached: true, mode: DRY ? "dry" : "live" });
+  if (!JSON_OUT) console.error(`article: driving job ${jobId}…`);
+  const r = await driveArticle(jobId);
+  if (!r.ok) return refused(r.error);
+  const rep = r.value;
+  const job = { jobId, job: rep.job?.state ?? rep.outcome, mode: rep.job?.mode.kind ?? (DRY ? "dry" : "live"), ...(rep.reason === undefined ? {} : { reason: rep.reason }), ...(rep.wouldCalls === undefined ? {} : { wouldCalls: rep.wouldCalls.length }), ...(rep.job?.error === undefined ? {} : { jobError: rep.job.error.message }), spendUsd: rep.job?.spend.usd ?? 0 };
+  const run = await readRun(runId);
+  // A dry landing lands nothing: the run stays approved, and that is where the verb meant to take it.
+  return finish(run, rep.job?.mode.kind === "dry" && wanted.includes("landed") ? [...wanted, "approved"] : wanted, job);
 }
 
 async function main() {
@@ -190,24 +247,34 @@ async function main() {
       if (effort && !EFFORT_LEVELS.includes(effort as EffortLevel)) usage(`--effort must be one of ${EFFORT_LEVELS.join(", ")}`);
       const angle = flag("angle");
       const model = flag("model");
-      let created: ArticleRun;
+      const budget = numFlag("budget-usd");
+      const opts = { ...(model ? { model } : {}), ...(effort ? { effort: effort as EffortLevel } : {}) };
+      let input: import("../lib/articles/types").CreateRunInput;
       if (subject) {
         const m = /^([a-z0-9-]+)\/([a-z0-9-]+)$/.exec(subject);
         if (!m) usage("--subject is <bundle>/<slug>");
-        created = await createRun({ topic: { kind: "subject", bundle: m[1], subject: m[2], text: "", ...(angle ? { angle } : {}) }, ...(model ? { model } : {}), ...(effort ? { effort: effort as EffortLevel } : {}) });
+        input = { topic: { kind: "subject", bundle: m[1], subject: m[2], text: "", ...(angle ? { angle } : {}) }, ...opts };
       } else {
-        created = await createRun({ topic: { kind: "free", text: topic!, ...(angle ? { angle } : {}) }, ...(model ? { model } : {}), ...(effort ? { effort: effort as EffortLevel } : {}) });
+        input = { topic: { kind: "free", text: topic!, ...(angle ? { angle } : {}) }, ...opts };
       }
-      if (!JSON_OUT) console.error(`article: run ${created.id} created (${created.status}); driving to the human gate…`);
-      const done = created.status === "failed" ? created : await driveRun(created.id);
-      return finish(done, ["awaiting-approval"]);
+      const launched = await launchArticle(input, acts(budget));
+      if (!launched.ok) return refused(launched.error);
+      const { run: created, jobId, receipt } = launched.value;
+      if (!JSON_OUT) console.error(`article: run ${created.id} created (${created.status}) · receipt ${receipt.token.slice(0, 12)} · ${DRY ? "dry" : "live"}${budget === undefined ? "" : ` · ceiling $${budget}`}; ${jobId === undefined ? "no job" : DETACH ? "enqueued" : "driving to the human gate…"}`);
+      if (jobId === undefined) return finish(created, ["awaiting-approval"]);
+      return drive(created.id, jobId, ["awaiting-approval"]);
     }
     case "status": {
       const id = args[1] && !args[1].startsWith("--") ? args[1] : undefined;
       if (id) {
         const r = await getRun(id);
-        if (JSON_OUT) return emit(JSON.stringify(r, null, 2));
-        return printRun(r);
+        const k = articleKernel();
+        const jobs = k.ok ? articleJobsOf(id, k.value.store) : k;
+        const rows = jobs.ok ? jobs.value.map((j) => ({ id: j.id, state: j.state, mode: j.mode.kind, spendUsd: j.spend.usd, ...(j.interruption?.stage === undefined ? {} : { stage: j.interruption.stage }) })) : [];
+        if (JSON_OUT) return emit(JSON.stringify({ ...r, jobs: rows }, null, 2));
+        printRun(r);
+        for (const j of rows) console.log(`  job      ${j.id} ${j.state} ${j.mode} $${j.spendUsd.toFixed(4)}${j.stage === undefined ? "" : ` (interrupted at ${j.stage})`}`);
+        return;
       }
       const { runs, damaged } = await listArticleRuns();
       if (JSON_OUT) return emit(JSON.stringify({ runs: runs.map(brief), damaged }, null, 2));
@@ -220,9 +287,10 @@ async function main() {
       const id = positional();
       const list = flag("patches");
       const patches = list ? list.split(",").map((s) => s.trim()).filter(Boolean) : [];
-      await approveRun(id, patches);
-      if (!JSON_OUT) console.error(`article: ${id} approved; landing in the registry…`);
-      return finish(await driveRun(id), ["landed"]);
+      const r = await approveArticle(id, patches, acts());
+      if (!r.ok) return refused(r.error);
+      if (!JSON_OUT) console.error(`article: ${id} approved; landing job ${r.value.jobId}…`);
+      return drive(id, r.value.jobId, ["landed"]);
     }
     case "reject": {
       const id = positional();
@@ -232,9 +300,10 @@ async function main() {
     case "rework": {
       const id = positional();
       const note = flag("note") ?? usage("rework needs --note \"<text>\"");
-      const r = await reworkRun(id, note);
-      if (!JSON_OUT) console.error(`article: ${id} sent back (rework ${r.rework?.count}); re-drafting from the kept research…`);
-      return finish(await driveRun(id), ["awaiting-approval"]);
+      const r = await reworkArticle(id, note, acts());
+      if (!r.ok) return refused(r.error);
+      if (!JSON_OUT) console.error(`article: ${id} sent back (rework ${r.value.run.rework?.count}); job ${r.value.jobId} re-drafts from the kept research…`);
+      return drive(id, r.value.jobId, ["awaiting-approval"]);
     }
     case "topics": {
       const limit = numFlag("limit");
@@ -274,7 +343,7 @@ async function main() {
         ...(numFlag("est-run-usd") ? { estRunUsd: numFlag("est-run-usd") } : {}),
         ceilings: ceilings as Partial<import("../lib/articles/loop").Ceilings>,
         ...(topics ? { topics } : {}),
-      }, undefined, (line) => console.error(`article: ${line}`));
+      }, undefined, (line) => console.error(`article: ${line}`), loopDriver(acts()));
       if (JSON_OUT) emit(JSON.stringify(report));
       else {
         console.log(`${report.id}  ${report.stop}  ${report.reason ?? ""}`);
@@ -283,13 +352,16 @@ async function main() {
         if (report.orphaned.length) console.log(`  orphaned (no driver, not finished): ${report.orphaned.join(", ")}`);
         console.log(`  ${report.note}`);
       }
+      closeProcessKernel();
       process.exit(report.stop === "target-reached" ? 0 : 1);
     }
     case "resume": {
       const id = positional();
-      const r = await resumeRun(id);
-      if (!JSON_OUT) console.error(`article: ${id} resumed at ${r.status}…`);
-      return finish(await driveRun(id), ["awaiting-approval", "landed"]);
+      // --budget-usd on resume raises the job's ceiling with the retry (a job stopped for budget).
+      const r = await resumeArticle(id, acts(numFlag("budget-usd")));
+      if (!r.ok) return refused(r.error);
+      if (!JSON_OUT) console.error(`article: ${id} resumed at ${r.value.run.status} (job ${r.value.jobId})…`);
+      return drive(id, r.value.jobId, ["awaiting-approval", "landed"]);
     }
     default:
       usage(cmd ? `unknown command ${cmd}` : undefined);

@@ -5,16 +5,18 @@
 // the detail does not carry, each read off the run directory as WP3 writes it
 // and each ABSENT when the file is absent — never an empty stand-in:
 //
-//   driving      a live process holds the run's driver lease (store.ts). A
-//                working status with no driver is a run whose drive died: the
-//                page offers Resume instead of a spinner that never ends.
+//   driving      the run's kernel job is queued or running (lib/producers/article.ts
+//                heldRuns; or a live `.driver` a v1 build left). A working status
+//                with neither is a run whose drive died: the page offers Resume
+//                instead of a spinner that never ends.
 //   refused      patches.rejected.json — proposals the engine refused, with why
 //   agent        agent/<step>.json — each turn's outcome, turns, cost, errors
 //   landingLog   landing.log — the registry gates' output, tail only
 
 import { guardAccessOnly } from "@/lib/apiAuth";
 import { getRunDetail } from "@/lib/articles/engine";
-import { driverAlive, inRun, readJsonFile, readTextFile } from "@/lib/articles/store";
+import { inRun, readJsonFile, readTextFile } from "@/lib/articles/store";
+import { heldRuns } from "@/lib/producers/article";
 
 import { failure } from "../_lib/respond";
 
@@ -40,7 +42,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ runId: s
   try {
     const detail = await getRunDetail(runId);
     const [driving, refused, log, ...receipts] = await Promise.all([
-      driverAlive(runId),
+      heldRuns([runId]).then((h) => h.held.has(runId)),
       readJsonFile<{ entry: unknown; reason: string }[] | null>(inRun(runId, "patches.rejected.json"), null),
       readTextFile(inRun(runId, "landing.log")),
       ...STEPS.map((s) => readJsonFile<AgentReceipt | null>(inRun(runId, `agent/${s}.json`), null)),

@@ -5,7 +5,7 @@ import { MODEL } from "@/lib/model";
 
 import { loadPromptFile, PROMPT_FILE } from "./prompt";
 import { resolveRegistryDir, resolveStandard, resolveTopicSubject } from "./registryRead";
-import { ArticleError, freshRunId, writeNewRun } from "./store";
+import { ArticleError, freshRunId, RUN_ID_RE, writeNewRun } from "./store";
 import { type ArticleRun, type CreateRunInput, EFFORT_LEVELS, type EffortLevel } from "./types";
 import { defaultDeps, type EngineDeps } from "./engine";
 
@@ -13,7 +13,13 @@ import { defaultDeps, type EngineDeps } from "./engine";
 
 const MODEL_RE = /^[A-Za-z0-9][A-Za-z0-9.\-[\]_]{0,63}$/;
 
-export async function createRun(input: CreateRunInput, deps: EngineDeps = defaultDeps()): Promise<ArticleRun> {
+/**
+ * `opts.id` names the run instead of minting one: a Run launched from the Floor composer
+ * already has its id (L26 `launchRun`), and its job's create step makes the manifest under
+ * that same id (lib/producers/article.ts), so the Run, its job and run.json are one name.
+ */
+export async function createRun(input: CreateRunInput, deps: EngineDeps = defaultDeps(), opts: { id?: string } = {}): Promise<ArticleRun> {
+  if (opts.id !== undefined && !RUN_ID_RE.test(opts.id)) throw new ArticleError(`not a run id: ${JSON.stringify(opts.id)}`, 400, "bad-id");
   const t = input.topic;
   if (!t || (t.kind !== "subject" && t.kind !== "free")) throw new ArticleError("topic.kind must be subject or free", 400, "bad-topic");
   const angle = t.angle?.trim() ? t.angle.trim().slice(0, 600) : undefined;
@@ -52,7 +58,7 @@ export async function createRun(input: CreateRunInput, deps: EngineDeps = defaul
   }
   if (angle) topic.angle = angle;
 
-  const id = await freshRunId(topic.subject ?? topic.text, now);
+  const id = opts.id ?? (await freshRunId(topic.subject ?? topic.text, now));
   const run: ArticleRun = {
     id,
     status: error ? "failed" : "queued",

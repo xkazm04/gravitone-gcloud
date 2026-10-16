@@ -49,6 +49,8 @@ import { ARTICLE_CLEAR_REFUSAL, ARTICLE_NOTE_REFUSAL, articleEntry, makeArticles
 import { VerdictRefused } from "@/lib/board/source";
 import { fromArticle } from "@/lib/board/verdicts";
 
+import { articleJobsOf, articleKernel, driveArticle } from "@/lib/producers/article";
+
 import { seedRunStates, SEED_STATES, type SeedState } from "../fixtures/articles/runStates";
 import { keepEnv } from "./_helpers";
 import { ARTICLE_ENV, articleSandbox, type ArticleSandbox } from "./_articles";
@@ -79,8 +81,20 @@ async function detail(id: string): Promise<RunDetail> {
   return (await res.json()) as RunDetail;
 }
 
-/** Wait until the run directory says the background drive has stopped. */
+/**
+ * Drive what the routes enqueued, then wait until the run says it stopped. Since Phase 4 (L30) a
+ * route enqueues the run's job and returns; the worker drives it. This probe is the worker: it
+ * drives the run's queued jobs through the same `driveArticle` the CLI uses.
+ */
 async function settle(id: string, want: ArticleRun["status"][], ms = 90_000): Promise<ArticleRun> {
+  const k = articleKernel();
+  if (!k.ok) throw k.error;
+  const jobs = articleJobsOf(id, k.value.store);
+  if (!jobs.ok) throw jobs.error;
+  for (const j of jobs.value.filter((x) => x.state === "queued")) {
+    const r = await driveArticle(j.id, { binding: { engine: deps } });
+    if (!r.ok) throw r.error;
+  }
   const t0 = Date.now();
   for (;;) {
     const r = await readRun(id);

@@ -6,7 +6,7 @@ import path from "node:path";
 
 import { copyDir, fileExists } from "./files";
 import { trimmedNote } from "./humanNote";
-import { ArticleError, driverAlive, runDir, updateRun, writeJsonAtomic } from "./store";
+import { ArticleError, runDir, updateRun, writeJsonAtomic } from "./store";
 import { type ArticleRework, type ArticleRun, NOTE_MAX_CHARS } from "./types";
 import { defaultDeps, type EngineDeps } from "./engine";
 
@@ -14,9 +14,9 @@ import { defaultDeps, type EngineDeps } from "./engine";
  * SEND THE DRAFT BACK. The operator read the post at the gate; the thinking was
  * fine and the writing is not. The run goes `awaiting-approval -> drafting` with
  * `rework {at, note, count}`, keeps its research, sources, claims and outline,
- * and re-does draft, critique and check. The caller then drives it
- * (`driveRun`, or `launchRun` from a route), exactly as after `approveRun` or
- * `resumeRun`: the engine does not start the drive itself.
+ * and re-does draft, critique and check. The caller then enqueues the rework's
+ * own job (lib/producers/article.ts), exactly as after `approveRun`: the engine
+ * does not start the drive itself.
  *
  * A REJECT IS NOT A REWORK. `rejected` stays terminal; rejecting throws the
  * piece away. A rework is one piece of work with one card.
@@ -40,9 +40,9 @@ import { defaultDeps, type EngineDeps } from "./engine";
 export async function reworkRun(id: string, note: string, deps: EngineDeps = defaultDeps()): Promise<ArticleRun> {
   const text = trimmedNote(note, "a rework");
   if (text.length > NOTE_MAX_CHARS) throw new ArticleError(`a rework note is at most ${NOTE_MAX_CHARS} characters; this one is ${text.length}`, 400, "bad-note");
-  // The drive that stopped at the gate releases its lease a moment after the status changes;
-  // a rework launched inside that moment would find no driver to start.
-  if (await driverAlive(id)) throw new ArticleError(`run ${id} is being driven right now`, 409, "busy");
+  // v1 refused here while a `.driver` lease was alive: the drive that stopped at the gate
+  // released it a moment after the status changed. That question is the job's now -
+  // lib/producers/article.ts `reworkArticle` refuses while the run's job is not finished.
   return updateRun(
     id,
     async (r) => {

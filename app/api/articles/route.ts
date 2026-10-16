@@ -4,23 +4,25 @@
 //         { topic: { kind: "subject", bundle, subject, angle? } | { kind: "free", text, angle? },
 //           model?, effort? }
 //
-// POST is a money route: it starts real agent sessions on the operator's seat
-// (lib/articles/engine.ts launchRun), so it takes the full guard (access +
-// rate). The drive is fire-and-forget; the run answers for itself on
-// GET /api/articles/<id>. A registry that cannot be reached creates a FAILED
-// run (the engine's rule), which is returned like any other: 201, status
-// `failed`, `error` naming why.
+// POST is a money route: it launches the run's kernel job, armed live by this
+// confirm (lib/producers/article.ts launchArticle: a receipt, then the route's own
+// confirm), so it takes the full guard (access + rate). The route ENQUEUES and
+// returns: the worker (workers/runner.mts) or `pipeline/article.mts resume <id>`
+// drives the same job. v1 started an un-awaited drive here. `mode: "dry"` launches
+// a dry job (the stub answers every turn); `ceilingUsd` is the job's ceiling. A
+// registry that cannot be reached creates a FAILED run with no job (the engine's
+// rule), returned like any other: 201, status `failed`, `error` naming why.
 
 import { guardAccessOnly, guardRequest } from "@/lib/apiAuth";
-import { createRun, launchRun, listArticleRuns } from "@/lib/articles/engine";
-import { driverAlive } from "@/lib/articles/store";
+import { listArticleRuns } from "@/lib/articles/engine";
 import { EFFORT_LEVELS, type ArticleStatus, type ArticleTopic, type CreateRunInput, type EffortLevel } from "@/lib/articles/types";
+import { heldRuns, launchArticle } from "@/lib/producers/article";
 
-import { failure, objectBody } from "./_lib/respond";
+import { failure, objectBody, refusal, ROUTE_ACTOR } from "./_lib/respond";
 
 export const runtime = "nodejs";
 
-/** The statuses a driver works in — the only ones worth asking about a lease. */
+/** The statuses a job works in — the only ones worth asking about a holder. */
 const WORKING: ArticleStatus[] = ["queued", "researching", "drafting", "critiquing", "checking", "approved", "landing"];
 
 export async function GET(req: Request) {
@@ -28,8 +30,9 @@ export async function GET(req: Request) {
   if (denied) return denied;
   try {
     const { runs, damaged } = await listArticleRuns();
-    const driving: string[] = [];
-    for (const r of runs) if (WORKING.includes(r.status) && (await driverAlive(r.id))) driving.push(r.id);
+    const working = runs.filter((r) => WORKING.includes(r.status)).map((r) => r.id);
+    const { held } = await heldRuns(working);
+    const driving = working.filter((id) => held.has(id));
     return Response.json({ runs, damaged, driving });
   } catch (e) {
     return failure(e);
@@ -67,11 +70,13 @@ export async function POST(req: Request) {
   }
   const model = str(body.model)?.trim();
   const input: CreateRunInput = { topic, ...(model ? { model } : {}), ...(effort ? { effort: effort as EffortLevel } : {}) };
+  const ceilingUsd = typeof body.ceilingUsd === "number" ? body.ceilingUsd : undefined;
 
   try {
-    const run = await createRun(input);
-    if (run.status === "queued") launchRun(run.id);
-    return Response.json({ run }, { status: 201 });
+    const r = await launchArticle(input, { actor: ROUTE_ACTOR, mode: body.mode === "dry" ? "dry" : "live", ...(ceilingUsd === undefined ? {} : { ceilingUsd }) });
+    if (!r.ok) return refusal(r.error);
+    const { run, jobId, receipt } = r.value;
+    return Response.json({ run, receipt, ...(jobId === undefined ? {} : { jobId }) }, { status: 201 });
   } catch (e) {
     return failure(e);
   }

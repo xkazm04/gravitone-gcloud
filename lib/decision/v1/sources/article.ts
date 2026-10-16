@@ -9,9 +9,9 @@ import type { ItemWords, ReviewCheck, ReviewDoc, ReviewSection, Reviewer, RowWor
 import { approveRun, rejectRun } from "../../../articles/humanActs.ts";
 import { reworkRun } from "../../../articles/rework.ts";
 import { getRunDetail } from "../../../articles/runReads.ts";
-import { launchRun } from "../../../articles/drive.ts";
 import { defaultDeps, type EngineDeps } from "../../../articles/engine.ts";
-import { driverAlive, inRun, readRun, readTextFile, slugify } from "../../../articles/store.ts";
+import { inRun, readRun, readTextFile, slugify } from "../../../articles/store.ts";
+import { continueArticle } from "../../../producers/article.ts";
 import { NOTE_MAX_CHARS, type ArticleRun, type ArticleRunDetail, type ArticleStatus } from "../../../articles/types.ts";
 import { encodeNote } from "../note.ts";
 import { packetIdOf } from "../../../ledger/v1/packet.ts";
@@ -35,8 +35,9 @@ import {
 // AN ARTICLE AT THE GATE AS A PACKET - one run of the article engine
 // (<store>/<runId>/, lib/articles/store.ts) at `awaiting-approval`, decided as a
 // packet review, and handed back through v1's own acts: approveRun then the
-// landing (launchRun -> land, exactly the approve route), rejectRun, or - on a
-// return - reworkRun with the edit plan rendered as v1's one note.
+// landing job (lib/producers/article.ts continueArticle, exactly the approve
+// route), rejectRun, or - on a return - reworkRun with the edit plan rendered as
+// v1's one note, then the rework's job.
 //
 // THE ITEMS ARE THE POST AND ITS REGISTRY PATCHES. v1's Board refused to approve
 // a run that proposed patches ("approve per patch on the run's page"), because
@@ -49,16 +50,18 @@ import {
 // APPROVE IS OUTWARD-FACING: the landing pushes a branch to ai-registry and opens
 // a pull request. The preview says so in those words (Consequence.outward)
 // before the commit, which v1's confirm said only as "pushes a branch and opens
-// a pull request". The landing stays fire-and-forget, as the route had it: the
-// apply's success is v1 HOLDING the approval with the landing started; a landing
-// that fails is the run's own `failed` status with its log, resumed on its page.
+// a pull request". The landing is ENQUEUED, as the route does: the apply's success
+// is v1 HOLDING the approval with its landing job recorded (Phase 4: approve starts
+// a second job, `job:run:<id>:landing`, which the worker drives); a landing that
+// fails is that job's failure and the run's own `failed` status with its log.
 //
 // IDEMPOTENT ON v1's RECORD (hitl-approval resume-after-decision): a redelivered
 // apply that finds its own outcome already on run.json - the same approval and
 // patch set, the same rejection note, a rework with the same note at or after
-// the return - succeeds, and starts the drive again only if a crash left the run
-// approved or reworked with no live driver. v1 holding ANOTHER outcome is
-// refused, never overwritten.
+// the return - succeeds, and enqueues the act's job again only while the run
+// still waits on it (approved, or reworking): the job id is the act's, so a job
+// that exists is found, not doubled. v1 holding ANOTHER outcome is refused,
+// never overwritten.
 
 const POST = "post";
 const PATCH = "patch/";
@@ -76,8 +79,9 @@ export type ArticleV1 = {
 export type ArticleAdapterDeps = {
   /** The engine's dependencies for the human acts (the probes inject a clock and a stub agent). */
   readonly engine?: () => EngineDeps;
-  /** What starts the drive after an approve or a rework. v1's routes: launchRun. */
-  readonly launch?: (runId: string) => void;
+  /** What starts the act's job after an approve or a rework: lib/producers/article.ts `continueArticle`,
+   *  idempotent by job id (the probes inject an in-process drive). */
+  readonly launch?: (runId: string) => void | Promise<Result<unknown>>;
 };
 
 /* ── read ──────────────────────────────────────────────────────────────────── */
@@ -274,20 +278,27 @@ function consequence(v1: ArticleV1, at: DecisionsAt): Result<Preview> {
 /* ── apply ─────────────────────────────────────────────────────────────────── */
 
 const refused = (sentence: string): Result<never> => err("refused", sentence);
+/** The Board's commit is the operator's confirm: it arms the act's job live (decision 4). */
+const OPERATOR_ACT = { kind: "operator", id: "board" } as const;
 const REWORKING: readonly ArticleStatus[] = ["drafting", "critiquing", "checking"];
 const sameSet = (a: readonly string[], b: readonly string[]): boolean => a.length === b.length && [...a].sort().join("\n") === [...b].sort().join("\n");
 
 export function makeArticleAdapter(deps: ArticleAdapterDeps = {}): DecisionAdapter<ArticleV1> {
   const engine = deps.engine ?? (() => defaultDeps());
-  const launch = deps.launch ?? ((id: string) => launchRun(id));
+  const enqueue = async (id: string): Promise<Result<unknown>> => {
+    const run = await v1Call(() => readRun(id));
+    return run.ok ? continueArticle(run.value, { actor: OPERATOR_ACT, mode: "live" }) : run;
+  };
+  const launchOf = deps.launch ?? enqueue;
+  const launch = async (id: string): Promise<Result<void>> => {
+    const r = await launchOf(id);
+    return r === undefined || r.ok ? ok(undefined) : r;
+  };
 
-  /** A crash between v1's act and the launch leaves the run waiting with no driver: start it once. */
+  /** A crash between v1's act and the enqueue leaves the run waiting on a job: enqueue it (idempotent by id). */
   async function relaunch(run: ArticleRun, waiting: readonly ArticleStatus[]): Promise<Result<void>> {
     if (!waiting.includes(run.status)) return ok(undefined);
-    const alive = await v1Call(() => driverAlive(run.id));
-    if (!alive.ok) return alive;
-    if (!alive.value) launch(run.id);
-    return ok(undefined);
+    return launch(run.id);
   }
 
   async function applyReturn(id: string, plan: EditPlan, at: string): Promise<Result<void>> {
@@ -299,8 +310,7 @@ export function makeArticleAdapter(deps: ArticleAdapterDeps = {}): DecisionAdapt
     if (rw !== undefined && rw.note === note.value && Date.parse(rw.at) >= Date.parse(at)) return relaunch(run.value, REWORKING);
     const r = await v1Call(() => reworkRun(id, note.value, engine()));
     if (!r.ok) return r;
-    launch(id);
-    return ok(undefined);
+    return launch(id);
   }
 
   async function apply(claim: ApplyClaim): Promise<Result<void>> {
@@ -318,8 +328,7 @@ export function makeArticleAdapter(deps: ArticleAdapterDeps = {}): DecisionAdapt
       if (rejection !== undefined) return refused(`run ${id.value} was rejected on its page; this packet approves it`);
       const r = await v1Call(() => approveRun(id.value, patches, engine()));
       if (!r.ok) return r;
-      launch(id.value);
-      return ok(undefined);
+      return launch(id.value);
     }
     if (post?.verdict === "reject") {
       const note = rejectionNote(post.reasons, post.note);

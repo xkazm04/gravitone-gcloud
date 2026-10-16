@@ -4,7 +4,12 @@
 // that `updateRun` refuses an illegal one BEFORE writing; that a corrupt
 // run.json is refused rather than replaced; that run ids are held to the minted
 // shape (a path is built from them); the per-run lock serialising concurrent
-// writers; and the driver lease — one live driver per run, a dead one broken.
+// writers; and that a `.driver` a v1 build left is read only while its pid lives.
+//
+// The driver lease itself moved (Phase 4, L30): one driver per run is the kernel
+// job's fenced slot lease now, and its proof - a second drive of the same job is
+// refused at the claim, a driver that lost its slot writes nothing - lives in
+// tests/next-server/producer-article.test.ts ("one driver per job").
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -12,11 +17,11 @@ import path from "node:path";
 import { test, expect } from "@playwright/test";
 
 import {
-  acquireDriver,
   ArticleError,
   canTransition,
   freshRunId,
   inRun,
+  legacyDriverAlive,
   listRuns,
   readRun,
   runDir,
@@ -143,13 +148,12 @@ test("listRuns: newest first", async () => {
   expect((await listRuns()).runs.map((r) => r.id)).toEqual(["2026-10-05-new", "2026-10-05-old"]);
 });
 
-test("driver lease: one live driver; a dead driver's lease is broken", async () => {
+test("a v1 `.driver`: read as driving while its pid lives, not once it is dead, never written", async () => {
   await writeNewRun(mkRun("2026-10-05-f"));
-  const lease = await acquireDriver("2026-10-05-f");
-  expect(await code(acquireDriver("2026-10-05-f"))).toBe("busy");
-  await lease.release();
+  expect(await legacyDriverAlive("2026-10-05-f")).toBe(false);
+  writeFileSync(path.join(root, "2026-10-05-f", ".driver"), JSON.stringify({ pid: process.pid, at: "x" }));
+  expect(await legacyDriverAlive("2026-10-05-f")).toBe(true);
   // a lease left by a process that no longer exists
   writeFileSync(path.join(root, "2026-10-05-f", ".driver"), JSON.stringify({ pid: 2 ** 22 + 12345, at: "x" }));
-  const again = await acquireDriver("2026-10-05-f");
-  await again.release();
+  expect(await legacyDriverAlive("2026-10-05-f")).toBe(false);
 });

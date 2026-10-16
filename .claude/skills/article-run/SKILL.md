@@ -13,9 +13,17 @@ A thin wrapper over the same CLI the /articles section's engine uses. It owns no
 `npx tsx pipeline/article.mts <verb> --json`, and the engine (`lib/articles/engine.ts`) is the only
 thing that changes a run.
 
+**A run is a kernel job** (Phase 4; `lib/producers/article.ts`). `run` launches the run's job
+(`job:run:<runId>`: a receipt, then the CLI's own confirm) and drives it in this process under the
+kernel's lease on the `seat.text` lane; the /articles page and the Board make the SAME job records, so
+a run started in the browser is driven or resumed here by its run id. `--detach` only enqueues (the
+worker, `npm run worker`, drives it). A run that dies mid-step is `interrupted` and HOLDS the
+`seat.text` lane until the operator resumes it ("credits may be spent - look first"): that is the
+operator's act, never this skill's.
+
 ## The one rule
 
-**This skill never runs `approve`, `reject` or `resume`, and never lands anything in the registry.**
+**This skill never runs `approve`, `reject`, `rework` or `resume`, and never lands anything in the registry.**
 Approval is the human's act at the gate (the Board, `/board/pkt:article:<runId>`, or the operator typing `approve`
 themselves). Landing pushes a branch and opens a PR in ai-registry; nothing an agent decides on its
 own may cause that. If the user asks this skill to approve, say that approval happens at the gate and
@@ -28,16 +36,18 @@ Claude seat (research uses web search and fetch). Then the critique runs four re
 access through the local claude, codex and agy CLIs (agy serves two seats, Gemini 3.8 Flash and Gemini 4 Argon), plus one to four more writer sessions:
 8 agent turns at the least, 26 at the most (docs/articles.md, "The critique"). Say so before the
 first `run` of a session and wait for a yes, unless the user's own message already asked for the
-run explicitly. A dry run with every engine stubbed spends nothing:
+run explicitly. A dry run spends nothing: `--dry` makes the run's job dry, and every agent turn of
+it, writer and reviewer, is answered by the stub (`tests/fixtures/articles/stub-agent.mjs`, or
+`ARTICLES_DRY_AGENT_BIN`) whatever the environment says. Its turns are counted as would-calls:
 
 ```bash
-STUB=tests/fixtures/articles/stub-agent.mjs
-ARTICLES_AGENT_BIN="node|$STUB" ARTICLES_CODEX_BIN="node|$STUB|--as=codex" \
-  ARTICLES_AGY_BIN="node|$STUB|--as=agy" \
-  npx tsx pipeline/article.mts run --topic "..." --json
+npx tsx pipeline/article.mts run --topic "..." --dry --json
 ```
 
-Leaving out one of the three variables runs that real CLI.
+A dry run's post is the stub's; approving it lands nothing (its landing job is dry too).
+`--budget-usd X` puts a ceiling on the run's job: a run is priced at up to $92, so a ceiling under
+that is refused before anything is created, and one above it is held between steps and between the
+turns inside a step. `GRAVITONE_DRY_ONLY=1` refuses every live run.
 
 The registry must be reachable: `$AI_REGISTRY_DIR`, else `.ai/manifest.yaml` `registry.local`, else
 `../ai-registry`. In a git worktree of this repo `../ai-registry` usually does not exist; set
@@ -57,9 +67,10 @@ npx tsx pipeline/article.mts run --topic "The token tax" --json
 ```
 
 The command blocks until the run reaches the gate (tens of minutes for a real run; use a background
-shell and wait for it rather than polling). Its stdout is one JSON line: `{runId, dir, status}` and
-`error` when it failed. Exit 0 means `awaiting-approval`; 1 means the run stopped elsewhere; 2 is a
-usage error.
+shell and wait for it rather than polling). Its stdout is one JSON line: `{runId, dir, status, jobId,
+job, mode, spendUsd}` (`wouldCalls` on a dry run) and `error` when it failed. Exit 0 means
+`awaiting-approval`; 1 means the run stopped elsewhere (or the kernel would not start its job - the
+`reason` says why, e.g. the lane is held); 2 is a usage error.
 
 ## Several runs at once
 
@@ -77,6 +88,10 @@ get a single completion notice:
 until [ "$(for r in <runId> <runId>; do python -c "import json;print(json.load(open('foundry-out/articles/$r/run.json'))['status'])"; done | grep -cvE 'awaiting-approval|failed|rejected|landed')" = 0 ]; do sleep 60; done
 ```
 
+**A run's job says whether anything holds it.** `status <runId> --json` carries `jobs`: each job of
+the run with its state (`queued`, `running`, `interrupted` with the step it died in, `failed`,
+`done`), mode and spend. A working status whose job is `running` is being driven.
+
 **A quiet `run.json` is not a dead run.** `run.json` is rewritten at step boundaries, and a critique
 fix round can leave it untouched for 30 minutes. Before calling a run stuck, list `<dir>/agent/` and
 `<dir>/critique/round-<n>/` by mtime: a file written in the last few minutes means it is working.
@@ -84,7 +99,7 @@ fix round can leave it untouched for 30 minutes. Before calling a run stuck, lis
 ## Status
 
 ```bash
-npx tsx pipeline/article.mts status <runId> --json   # the whole run.json
+npx tsx pipeline/article.mts status <runId> --json   # the whole run.json, plus `jobs`
 npx tsx pipeline/article.mts status --json           # every run, newest first
 ```
 

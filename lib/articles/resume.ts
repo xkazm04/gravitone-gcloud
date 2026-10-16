@@ -2,7 +2,7 @@
 // driver left mid-step is made drivable as it stands. Its own file, apart from the gate acts,
 // because resuming restarts a run rather than deciding one.
 
-import { ArticleError, driverAlive, updateRun } from "./store";
+import { ArticleError, updateRun } from "./store";
 import type { ArticleRun, ArticleStatus, StepName } from "./types";
 import { defaultDeps, type EngineDeps } from "./engine";
 
@@ -19,10 +19,11 @@ export function resumePoint(run: ArticleRun): ArticleStatus {
 const RESUMABLE: ArticleStatus[] = ["queued", "researching", "drafting", "critiquing", "checking", "approved", "landing"];
 
 /** Make a run drivable again. A `failed` run goes back to its resume point; a
- *  run left mid-step by a driver that died is resumable as it stands. The
- *  caller then drives it (`driveRun`, or `launchRun` from a route). */
+ *  run left mid-step by a driver that died is resumable as it stands. Whether
+ *  anyone is driving it is no longer this module's question: the run's kernel
+ *  job is (lib/producers/article.ts `resumeArticle` refuses a running job and
+ *  retries a failed or interrupted one, which walks back through here). */
 export async function resumeRun(id: string, deps: EngineDeps = defaultDeps()): Promise<ArticleRun> {
-  if (await driverAlive(id)) throw new ArticleError(`run ${id} is being driven right now`, 409, "busy");
   return updateRun(
     id,
     (r) => {

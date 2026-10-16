@@ -22,9 +22,10 @@
 // a run is. Every ArticleRun field is produced here; the CLI
 // (pipeline/article.mts) and /articles/[runId] consume it.
 //
-// ONE DRIVER PER RUN. `driveRun` holds the run's driver lease
-// (lib/articles/store.ts) for the whole drive, so a double-clicked resume or
-// the CLI and the server at once cannot spend twice.
+// ONE DRIVER PER RUN. The run is driven by its kernel job (lib/producers/article.ts),
+// one step per job step, under the kernel's fenced slot lease on `seat.text`: a
+// double-clicked resume or the CLI and the server at once find the job already
+// claimed and cannot spend twice. v1's `.driver` pid file is gone (drive.ts).
 
 import {
   runAgent as realRunAgent,
@@ -67,7 +68,7 @@ export { getRun, getRunDetail, listArticleRuns, readPatches } from "./runReads";
 export { approveRun, rejectRun } from "./humanActs";
 export { reworkRun, reworkSection } from "./rework";
 export { resumePoint, resumeRun } from "./resume";
-export { driveRun, launchRun } from "./drive";
+export { driveRun, walk, type WalkReport } from "./drive";
 export { makeReviewerWorkspace, makeWorkspace } from "./agentSteps";
 export { validateClaims, validateSources } from "./ingestSources";
 export { diffFiles } from "./diffFiles";

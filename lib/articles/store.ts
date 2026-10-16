@@ -282,18 +282,23 @@ export async function listRuns(): Promise<{ runs: ArticleRun[]; damaged: string[
   return { runs, damaged };
 }
 
-/* ── the driver lease ──────────────────────────────────────────────────────── */
+/* ── who drives a run ──────────────────────────────────────────────────────── */
 
-/**
- * WHO IS DRIVING THIS RUN. A run's steps take minutes, so a second driver (a
- * double-clicked resume, the CLI and the server at once) would spend twice and
- * race on the out/ files. A driver holds `.driver` — exclusive-create, with its
- * pid — for the whole drive. A lease whose pid is no longer alive is a crashed
- * driver and is broken; that is what makes `resume` possible after a kill.
- */
-export interface DriverLease {
-  release: () => Promise<void>;
-}
+// v1 kept a `.driver` file here - exclusive-create, with the driver's pid - so a second
+// drive (a double-clicked resume, the CLI and the server at once) could not spend twice.
+// Phase 4 (L30) moved that guarantee to the kernel: a run is driven by its job
+// (lib/producers/article.ts), and the job is claimed under a fenced slot lease on
+// `seat.text`, so a second driver is refused at the claim and a driver that woke after a
+// take-over writes nothing. What the pid file could not do and the fence does: tell a
+// live holder on another host from a dead one, and stop a zombie's write. Readers that
+// asked `driverAlive` ask the job now (lib/producers/article.ts `articleJobsOf`); a
+// `.driver` left by a v1 build is still read by the ledger projection
+// (lib/ledger/v1/sources/articles.ts) until its pid dies.
+//
+// The `.lock` above STAYS. It is not a driver lease: it makes one read-modify-write of
+// run.json atomic between processes, and the human's acts at the gate (approve, reject,
+// rework) write run.json from a route while no job holds the run. The kernel lease covers
+// the drive, not those.
 
 function pidAlive(pid: number): boolean {
   try {
@@ -304,25 +309,9 @@ function pidAlive(pid: number): boolean {
   }
 }
 
-export async function driverAlive(id: string): Promise<boolean> {
-  const file = path.join(runDir(id), ".driver");
-  const held = await readJsonFile<{ pid?: number } | null>(file, null).catch(() => null);
-  return !!held?.pid && pidAlive(held.pid);
-}
-
-export async function acquireDriver(id: string): Promise<DriverLease> {
-  const file = path.join(runDir(id), ".driver");
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const fh = await open(file, "wx");
-      await fh.writeFile(JSON.stringify({ pid: process.pid, at: new Date().toISOString() }));
-      await fh.close();
-      return { release: () => rm(file, { force: true }) };
-    } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
-      if (await driverAlive(id)) break;
-      await rm(file, { force: true });
-    }
-  }
-  throw new ArticleError(`run ${id} is already being driven by a live process`, 409, "busy");
+/** A `.driver` a v1 build left, whose pid is still alive: that process is driving the run
+ *  outside any job, and a reader must not call the run stalled. Nothing writes the file now. */
+export async function legacyDriverAlive(id: string): Promise<boolean> {
+  const held = await readJsonFile<{ pid?: number } | null>(path.join(runDir(id), ".driver"), null).catch(() => null);
+  return typeof held?.pid === "number" && pidAlive(held.pid);
 }

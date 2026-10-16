@@ -2,16 +2,17 @@
 //
 // The human's act at the gate: approves the post, and exactly the patches
 // named (an empty list approves the post alone). The engine records
-// `approval {at, patches}` and the route then starts the landing drive —
-// a branch in the registry, its gates, a push and a PR — fire-and-forget; the
-// run reports `landing`, then `landed` or `failed`, on GET.
+// `approval {at, patches}` and the route enqueues the landing — a SECOND job
+// (lib/producers/article.ts approveArticle): a branch in the registry, its gates,
+// a push and a PR, driven by the worker or the CLI; the run reports `landing`,
+// then `landed` or `failed`, on GET. A dry run's landing is dry: it pushes nothing.
 //
 // Full guard: landing writes to another repository and pushes.
 
 import { guardRequest } from "@/lib/apiAuth";
-import { approveRun, launchRun } from "@/lib/articles/engine";
+import { approveArticle } from "@/lib/producers/article";
 
-import { existing, failure, objectBody } from "../../_lib/respond";
+import { existing, failure, objectBody, refusal, ROUTE_ACTOR } from "../../_lib/respond";
 
 export const runtime = "nodejs";
 
@@ -28,9 +29,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ runId: 
   const missing = await existing(runId);
   if (missing) return missing;
   try {
-    const run = await approveRun(runId, raw as string[]);
-    launchRun(runId);
-    return Response.json({ run });
+    const r = await approveArticle(runId, raw as string[], { actor: ROUTE_ACTOR, mode: "live" });
+    if (!r.ok) return refusal(r.error);
+    return Response.json({ run: r.value.run, jobId: r.value.jobId });
   } catch (e) {
     return failure(e);
   }

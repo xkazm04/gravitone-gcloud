@@ -74,6 +74,7 @@ const NATIVE_ESM = [
   "**/runs-live.probe.spec.ts",
   "**/server-seam.probe.spec.ts",
   "**/gpu-lease.probe.spec.ts",
+  "**/access-only-401.probe.spec.ts",
 ];
 
 export default defineConfig({

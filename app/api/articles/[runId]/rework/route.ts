@@ -3,18 +3,19 @@
 // The human's third act at the gate, beside approve and reject: send the draft
 // back. The engine moves the run `awaiting-approval -> drafting`, keeps its
 // research and outline, records `rework {at, note, count}`, and the route then
-// restarts the drive (draft, critique, check), fire-and-forget as approve does;
-// the run reports `drafting` and onward on GET. 409 when the run is not at the
-// gate; 400 when the note is empty or over 2000 characters.
+// enqueues the rework's own job (draft, critique, check; lib/producers/article.ts
+// reworkArticle), driven by the worker or the CLI; the run reports `drafting` and
+// onward on GET. 409 when the run is not at the gate or a job of it is still at
+// work; 400 when the note is empty or over 2000 characters.
 //
 // Full guard: the drive restarts and spends the operator's seat (about the
 // price of a critique and a check, not of a whole run: RUN_COST_HINT is the
 // whole-run figure).
 
 import { guardRequest } from "@/lib/apiAuth";
-import { launchRun, reworkRun } from "@/lib/articles/engine";
+import { reworkArticle } from "@/lib/producers/article";
 
-import { existing, failure, objectBody } from "../../_lib/respond";
+import { existing, failure, objectBody, refusal, ROUTE_ACTOR } from "../../_lib/respond";
 
 export const runtime = "nodejs";
 
@@ -28,9 +29,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ runId: 
   const missing = await existing(runId);
   if (missing) return missing;
   try {
-    const run = await reworkRun(runId, body.note);
-    launchRun(runId);
-    return Response.json({ run });
+    const r = await reworkArticle(runId, body.note, { actor: ROUTE_ACTOR, mode: "live" });
+    if (!r.ok) return refusal(r.error);
+    return Response.json({ run: r.value.run, jobId: r.value.jobId });
   } catch (e) {
     return failure(e);
   }

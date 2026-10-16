@@ -3,6 +3,7 @@ import type { ProducerName } from "@gt/domain/run";
 import type { Producer } from "@gt/kernel/job-core";
 import { producerSet, type Bound } from "@gt/producers/set";
 
+import { articleProducer } from "./article.ts";
 import { extractProducer } from "./extract.ts";
 
 // THE PRODUCERS THIS CHECKOUT CAN RUN (Phase 4, plan §4). One list, read by every
@@ -12,6 +13,7 @@ import { extractProducer } from "./extract.ts";
 // to v1's engines in `lib/producers/<name>.ts` and adds ONE line here:
 //
 //   { name: "extract", producer: extractProducer() },
+  { name: "article", producer: articleProducer() },
 //
 // The list is plain data on purpose: `producerSet` (packages/producers/src/set.ts)
 // is where a name the domain does not know, or a name bound twice, is refused -
