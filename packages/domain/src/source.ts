@@ -79,7 +79,13 @@ export const SOURCES = {
   mv: { modes: ["matrix-cull"], reasons: [], maxReasons: 0, noteMax: 0 },
   // The prototype's mechanism trials: a pair is judged, never explained.
   trials: { modes: ["blind-pair"], reasons: [], maxReasons: 0, noteMax: 0 },
-  step: { modes: ["packet-review"], reasons: [], maxReasons: 0, noteMax: NOTE_LONG },
+  // A Project part's gate (Phase 4, COMMON decision 10). Frames is decided as a CULL of its
+  // plates (a reject owes a re-render), score and the album still as a PICK - a cull with one
+  // keep per row (cue / still), which @gt/domain has no separate mode for and needs none: the
+  // row-per-cue grid is the cull's own rows, and "one keep" is the adapter's commit rule
+  // (lib/parts/gates.ts). Cut, article and strips stay packet reviews. No reasons: what a plate
+  // or a take is rejected FOR is the note's, v1 had no vocabulary for either.
+  step: { modes: ["packet-review", "matrix-cull"], reasons: [], maxReasons: 0, noteMax: NOTE_LONG },
 } as const satisfies { readonly [S in PacketSource]: SourceSpec };
 
 /** The keys a reason list is bound to, in order (plan §8: the Board's 1-4 grew to eleven for audio). */

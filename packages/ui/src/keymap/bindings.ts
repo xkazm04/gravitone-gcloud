@@ -177,9 +177,68 @@ const part: Binding[] = [
   { mode: "part.script", keys: ["A"], verb: "adopt", does: "adopt · pick", when: "item" },
   { mode: "part.script", keys: ["V"], verb: "view", does: "inspector view" },
   { mode: "part.script", keys: ["Esc"], verb: "deselect", does: "deselect", when: "item" },
+
+  // L39 - frames and motion (STEPS-DESIGN §2). v1 FramesAssembly bound J/K rows, N next missing
+  // plate and Esc by a raw listener (:100-128) and resized by arrows on a focused handle
+  // (parts.tsx:248-262); MotionStep bound Ctrl+⏎ accept the same way (:192-197). J/K walk UNITS
+  // here (no transport in either editor). With a LAYER selected the arrows nudge it (⇧ 10%), H
+  // hides it and [ ] move it within its group - shadowing the frame's part tabs only while a
+  // layer is held, which is when a layer's order is the question. ⏎ prices the selected unit's
+  // render (the receipt opens; nothing renders before its confirm).
+  { mode: "part.frames", keys: ["J", "K"], verb: "item", does: "unit", repeat: true },
+  { mode: "part.frames", keys: ["N"], verb: "next-missing", does: "next missing" },
+  { mode: "part.frames", keys: ["⏎"], verb: "render", does: "render", when: "unit" },
+  { mode: "part.frames", keys: ["←", "→", "↑", "↓"], verb: "nudge", does: "nudge", when: "layer", repeat: true },
+  { mode: "part.frames", keys: ["⇧←", "⇧→", "⇧↑", "⇧↓"], verb: "nudge-far", does: "nudge 10%", when: "layer", repeat: true },
+  { mode: "part.frames", keys: ["[", "]"], verb: "order", does: "back · forward", when: "layer", shadows: true },
+  { mode: "part.frames", keys: ["H"], verb: "hide", does: "hide · show", when: "layer" },
+  { mode: "part.frames", keys: ["V"], verb: "view", does: "inspector view" },
+  { mode: "part.frames", keys: ["A"], verb: "accept", does: "accept direction", when: "proposal" },
+  { mode: "part.frames", keys: ["1", "2", "3", "4", "5", "6", "7", "8", "9"], verb: "adopt", does: "adopt take", when: "takes" },
+  { mode: "part.frames", keys: ["Esc"], verb: "deselect", does: "deselect", when: "layer" },
+
+  { mode: "part.motion", keys: ["J", "K"], verb: "item", does: "unit", repeat: true },
+  { mode: "part.motion", keys: ["⏎"], verb: "direct", does: "direct", when: "plate" },
+  { mode: "part.motion", keys: ["⌘⏎"], verb: "accept", does: "accept", when: "proposal" },
+  { mode: "part.motion", keys: ["R"], verb: "render", does: "render clip", when: "moving" },
+  { mode: "part.motion", keys: ["1", "2", "3", "4", "5", "6", "7", "8", "9"], verb: "adopt", does: "adopt clip", when: "clips" },
 ];
 
-export const BINDINGS: readonly Binding[] = [...floor, ...calendar, ...board, ...projects, ...compose, ...receipt, ...library, ...ledger, ...part];
+// L40 - score, cut, and the album and explainer parts (STEPS-DESIGN §2). J/K/L is the TRANSPORT
+// here, and only here: score and cut have a clock (v1 Transport.tsx:24-35 - 1x/2x/4x), so in
+// these two modes J/K/L shuttle and the arrows walk; everywhere else J/K walk items. The cut's
+// keys are v1's ControlRoom set (frame and second steps, ↑/↓ edit, G/⇧G music gap, Home/End)
+// moved from a window listener into the keymap; its 50-deep session ⌘Z is the frame's ⌫ now.
+// The score's ⇧←/⇧→ move the selected cue by one scene (the drop the drag makes), ⏎ prices its
+// render. , and . nudge the selected block ∓50 ms (v1's SyncBench buttons).
+const partL40: Binding[] = [
+  { mode: "part.score", keys: ["Space"], verb: "play", does: "play · pause" },
+  { mode: "part.score", keys: ["J", "K", "L"], verb: "shuttle", does: "1× · 2× · 4×" },
+  { mode: "part.score", keys: ["←", "→"], verb: "cue", does: "cue", repeat: true },
+  { mode: "part.score", keys: ["⇧←", "⇧→"], verb: "nudge-span", does: "move cue a scene", when: "cue", repeat: true },
+  { mode: "part.score", keys: ["⏎"], verb: "render", does: "render cue", when: "cue" },
+  { mode: "part.score", keys: ["N"], verb: "add-cue", does: "add cue" },
+  { mode: "part.score", keys: ["Z", "⇧Z"], verb: "zoom", does: "zoom in · out" },
+  { mode: "part.score", keys: ["Esc"], verb: "deselect", does: "deselect", when: "cue" },
+
+  { mode: "part.cut", keys: ["Space"], verb: "play", does: "play · pause" },
+  { mode: "part.cut", keys: ["J", "K", "L"], verb: "shuttle", does: "1× · 2× · 4×" },
+  { mode: "part.cut", keys: ["←", "→"], verb: "frame", does: "frame", repeat: true },
+  { mode: "part.cut", keys: ["⇧←", "⇧→"], verb: "second", does: "second", repeat: true },
+  { mode: "part.cut", keys: ["↑", "↓"], verb: "edit", does: "edit", repeat: true },
+  { mode: "part.cut", keys: ["G", "⇧G"], verb: "gap", does: "music gap" },
+  { mode: "part.cut", keys: ["Home", "End"], verb: "edge", does: "start · end" },
+  { mode: "part.cut", keys: [",", "."], verb: "nudge", does: "∓50 ms", when: "clip", repeat: true },
+  { mode: "part.cut", keys: ["Z", "⇧Z"], verb: "zoom", does: "zoom in · out" },
+  { mode: "part.cut", keys: ["Esc"], verb: "deselect", does: "deselect", when: "clip" },
+
+  { mode: "part.voice", keys: ["J", "K"], verb: "item", does: "line", repeat: true },
+  { mode: "part.voice", keys: ["⏎"], verb: "record", does: "record line", when: "line" },
+  { mode: "part.article", keys: ["J", "K"], verb: "item", does: "section", repeat: true },
+  { mode: "part.strips", keys: ["J", "K"], verb: "item", does: "card", repeat: true },
+];
+
+export const BINDINGS: readonly Binding[] = [...floor, ...calendar, ...board, ...projects, ...compose, ...receipt, ...library, ...ledger, ...part, ...partL40];
 
 /** The app's one compiled keymap. */
 export const KEYMAP = compile(BINDINGS);

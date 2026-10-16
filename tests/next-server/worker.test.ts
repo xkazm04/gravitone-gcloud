@@ -65,7 +65,7 @@ describe("the worker process", () => {
     expect(doc.ok && doc.value.applied).toBeGreaterThan(0);
     const again = parseJsonAt("migrate", z.object({ applied: z.number() }), node(RUNNER, file, ["--migrate", "--json"]).stdout.trim());
     expect(again.ok && again.value.applied).toBe(0);
-  });
+  }, 60_000); // spawns the real runner, which loads every producer: slow under a full run
 
   it("--once drains two dry jobs for a stub producer: one JSON line per job, exit 0, both done with their outputs", () => {
     const { file, k } = freshStore();

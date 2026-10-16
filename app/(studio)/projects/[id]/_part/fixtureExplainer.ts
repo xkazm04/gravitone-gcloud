@@ -1,0 +1,233 @@
+import "server-only";
+
+import type { BlobRef } from "@gt/domain/blob";
+import { err, ok, type Result } from "@gt/domain/errors";
+import { albumOpLabel, type ArticleData, type EngineView, type PartActView, type PartVerdict, type StripsData, type VoiceData } from "@gt/domain/partView";
+
+import type { CutClip, CutScene, DerivedCut } from "@/lib/cut/deriveTimeline";
+
+import { engineOf, held, takeView, type TakeRec } from "./fixtureScoreRecs.ts";
+import type { KCtx, KindModule } from "./kinds.ts";
+
+// THE EXPLAINER'S ARTICLE, STRIPS AND VOICE PARTS (L40; STEPS-DESIGN §2 "explainer parts"), and
+// the cut it lays them on. The article is the article producer's run (lib/articles: research,
+// outline, draft, check, critique - its Board packet is the article gate); the strips are the
+// strips run's cards (their packet is the strips gate); the voice is lines x takes, one line per
+// card. The cut part reads these through `explainerCut` and the finish line judges it like a
+// film's, without the music rows: an explainer plans no score.
+//
+// THE RECORDS GAP: @gt/domain/steps declares no record for article, strips or voice, so on the
+// real side these parts are read-only and their ops refuse (`stored: false`) - the producers book
+// their outputs on their jobs (L37) until records are declared. On the fixture side each dry act
+// lands a stand-in that says what it is by its engine (`mode: "dry"`), never a borrowed project's.
+
+export type ArticleSection = { readonly id: string; readonly heading: string; readonly body: string };
+export type ArticleRec = { readonly title: string | null; readonly sections: readonly ArticleSection[]; readonly engine?: EngineView };
+
+export type StripCard = { readonly id: string; readonly section: string; readonly title: string; readonly caption: string; readonly state: "drawn" | "pending" | "refused"; readonly blob?: BlobRef; readonly why?: string };
+export type StripsRec = { readonly cards: readonly StripCard[]; readonly engine?: EngineView };
+
+export type VoiceRec = {
+  /** The operator's rewrite of a line; absent = the card's caption. */
+  readonly text: Readonly<Record<string, string>>;
+  readonly takes: Readonly<Record<string, TakeRec>>;
+  readonly byLine: Readonly<Record<string, { readonly takeIds: readonly string[]; readonly active: string | null }>>;
+};
+
+const no = (m: string): Result<never> => err("invalid", m);
+const words = (s: string): number => s.split(/\s+/).filter((x) => x !== "").length;
+const topicOf = (ctx: KCtx): string => ctx.project.title;
+
+/* ── article ──────────────────────────────────────────────────────────────── */
+
+/** The article run's steps (lib/articles drive), as its dry stand-in reports them. */
+const STEPS = ["research", "outline", "draft", "check", "critique"] as const;
+const HEADINGS = ["What it is", "How it works", "Where it breaks", "What to do"] as const;
+
+function articleData(_ctx: KCtx, a: ArticleRec): ArticleData {
+  return {
+    face: "article",
+    title: a.title,
+    sections: a.sections.map((s) => ({ id: s.id, heading: s.heading, words: words(s.body), lead: s.body.split(/(?<=\.)\s/)[0] ?? "" })),
+    words: a.sections.reduce((n, s) => n + words(s.body), 0),
+    steps: a.title === null ? [] : STEPS.map((name) => ({ name, state: "done" as const, usd: null })),
+    ...(a.engine === undefined ? {} : { engine: a.engine }),
+  };
+}
+
+const articleVerdict = (_ctx: KCtx, a: ArticleRec): PartVerdict =>
+  a.sections.length === 0 ? { state: "empty", codes: [{ code: "no-article", text: "no article written" }] } : { state: "ready", codes: [{ code: "article-written", text: `${a.sections.length} sections · ${a.sections.reduce((n, s) => n + words(s.body), 0)} words` }] };
+
+export const ARTICLE_KIND: KindModule<"article"> = {
+  ops: [],
+  seed: () => ({ title: null, sections: [] }),
+  apply: () => no("an article is its run's: nothing in it is edited here"),
+  label: () => "article",
+  verdict: articleVerdict,
+  acts: (_ctx, a) => [{ act: "write-article", label: a.title === null ? "write article" : "write again", needs: [] }],
+  units: (_ctx, _a, act) => (act === "write-article" ? ok(1) : no(`${act} is not an article act`)),
+  land: (ctx, _a, act) => {
+    if (act !== "write-article") return no(`${act} is not an article act`);
+    const topic = topicOf(ctx);
+    const sections = HEADINGS.map((heading, i) => ({ id: `s${i + 1}`, heading, body: `${topic}: ${heading.toLowerCase()}.` }));
+    return ok({ title: ctx.project.title, sections, engine: engineOf(ctx, "article", 0) });
+  },
+  data: articleData,
+  actLabel: () => "article run",
+  fromRecords: () => ({ title: null, sections: [] }),
+  toRecords: () => ({}),
+  stored: false,
+};
+
+/* ── strips ───────────────────────────────────────────────────────────────── */
+
+const plannedCards = (ctx: KCtx): number => {
+  const p = ctx.plan.parts.find((x) => x.kind === "strips");
+  return p !== undefined && "units" in p ? p.units : 0;
+};
+
+function stripsVerdict(ctx: KCtx, s: StripsRec): PartVerdict {
+  if (s.cards.length === 0) return { state: "empty", codes: [{ code: "no-cards", text: "no cards drawn" }] };
+  const drawn = s.cards.filter((c) => c.state === "drawn").length;
+  const refused = s.cards.filter((c) => c.state === "refused").length;
+  const text = `${drawn} of ${s.cards.length} cards drawn`;
+  if (refused > 0) return { state: "blocked", codes: [{ code: "card-refused", text: `${refused} card${refused === 1 ? "" : "s"} refused` }, { code: "cards-drawn", text }] };
+  return drawn === s.cards.length && drawn >= plannedCards(ctx) ? { state: "ready", codes: [{ code: "cards-drawn", text }] } : { state: "working", codes: [{ code: "cards-drawn", text }] };
+}
+
+const stripsActs = (ctx: KCtx, s: StripsRec): PartActView[] => [{ act: "draw-strips", label: s.cards.length === 0 ? `draw ${plannedCards(ctx)} cards` : "draw again", needs: ctx.rec("article").sections.length === 0 ? ["an article"] : [] }];
+
+export const STRIPS_KIND: KindModule<"strips"> = {
+  ops: [],
+  seed: () => ({ cards: [] }),
+  apply: () => no("strips are their run's: nothing in them is edited here"),
+  label: () => "strips",
+  verdict: stripsVerdict,
+  acts: stripsActs,
+  units: (ctx, s, act) => {
+    const a = stripsActs(ctx, s)[0];
+    return act !== "draw-strips" || a === undefined ? no(`${act} is not a strips act`) : a.needs.length > 0 ? no(`${a.label} needs ${a.needs.join(" · ")}`) : ok(plannedCards(ctx));
+  },
+  land: (ctx, _s, act) => {
+    if (act !== "draw-strips") return no(`${act} is not a strips act`);
+    const sections = ctx.rec("article").sections;
+    if (sections.length === 0) return no("draw strips needs an article");
+    const cards = Array.from({ length: Math.max(1, plannedCards(ctx)) }, (_, i): StripCard => {
+      const s = sections[i % sections.length] ?? sections[0];
+      return { id: `card-${i + 1}`, section: s?.id ?? "", title: s?.heading ?? `card ${i + 1}`, caption: s?.body ?? "", state: "drawn" };
+    });
+    return ok({ cards, engine: engineOf(ctx, "strips", 0) });
+  },
+  data: (ctx, s): StripsData => ({
+    face: "strips",
+    planned: plannedCards(ctx),
+    cards: s.cards.map((c) => ({ id: c.id, title: c.title, caption: c.caption, section: c.section, state: c.state, ...(c.blob === undefined ? {} : { blob: c.blob.sha256 }), ...(c.why === undefined ? {} : { why: c.why }) })),
+    ...(s.engine === undefined ? {} : { engine: s.engine }),
+  }),
+  actLabel: () => "strips run",
+  fromRecords: () => ({ cards: [] }),
+  toRecords: () => ({}),
+  stored: false,
+};
+
+/* ── voice ────────────────────────────────────────────────────────────────── */
+
+type Line = { readonly id: string; readonly text: string; readonly card: string };
+const linesOf = (ctx: KCtx, v: VoiceRec): Line[] => ctx.rec("strips").cards.map((c) => ({ id: `line-${c.id}`, text: v.text[`line-${c.id}`] ?? c.caption, card: c.id }));
+const activeOf = (v: VoiceRec, lineId: string): TakeRec | undefined => {
+  const a = v.byLine[lineId]?.active;
+  return a === null || a === undefined ? undefined : v.takes[a];
+};
+
+function voiceVerdict(ctx: KCtx, v: VoiceRec): PartVerdict {
+  const lines = linesOf(ctx, v);
+  if (lines.length === 0) return { state: "empty", codes: [{ code: "no-lines", text: "no lines to record" }] };
+  const done = lines.filter((l) => held(activeOf(v, l.id))).length;
+  const text = `${done} of ${lines.length} lines recorded`;
+  return done === lines.length ? { state: "ready", codes: [{ code: "lines-recorded", text }] } : { state: done === 0 ? "empty" : "working", codes: [{ code: "lines-recorded", text }] };
+}
+
+function voiceApply(ctx: KCtx, v: VoiceRec, op: Parameters<KindModule<"voice">["apply"]>[2]): Result<VoiceRec> {
+  const line = linesOf(ctx, v).find((l) => l.id === op.lineId);
+  if (line === undefined) return no(`no line ${op.lineId}`);
+  const slot = v.byLine[line.id] ?? { takeIds: [], active: null };
+  switch (op.op) {
+    case "voice-line":
+      return op.text.trim() === "" ? no("a line needs words") : op.text === line.text ? no("unchanged") : ok({ ...v, text: { ...v.text, [line.id]: op.text } });
+    case "voice-use":
+      return !slot.takeIds.includes(op.takeId) ? no(`no take ${op.takeId} on this line`) : slot.active === op.takeId ? no("already in use") : ok({ ...v, byLine: { ...v.byLine, [line.id]: { ...slot, active: op.takeId } } });
+    case "voice-mark": {
+      const t = v.takes[op.takeId];
+      if (t === undefined || !slot.takeIds.includes(op.takeId)) return no(`no take ${op.takeId} on this line`);
+      return t.mark === op.mark ? no("unchanged") : ok({ ...v, takes: { ...v.takes, [t.id]: { ...t, mark: op.mark } } });
+    }
+  }
+}
+
+/** Recording is per line: the editor offers it for the selected line (with its target), so the
+ *  part-level act bar carries nothing a confirm without a line could only refuse. */
+const voiceActs = (_ctx: KCtx, _v: VoiceRec): PartActView[] => [];
+
+/** A spoken line's length at the pace v1's research measured for narration (2.5 words a second). */
+const spokenS = (text: string): number => Math.max(1, Math.round((words(text) / 2.5) * 10) / 10);
+
+export const VOICE_KIND: KindModule<"voice"> = {
+  ops: ["voice-use", "voice-mark", "voice-line"],
+  seed: () => ({ text: {}, takes: {}, byLine: {} }),
+  apply: voiceApply,
+  label: (op) => albumOpLabel(op),
+  verdict: voiceVerdict,
+  acts: voiceActs,
+  units: (ctx, v, act, target) => {
+    if (act !== "record-line") return no(`${act} is not a voice act`);
+    return linesOf(ctx, v).some((l) => l.id === target) ? ok(1) : no(target === undefined ? "record names a line" : `no line ${target}`);
+  },
+  land: (ctx, v, act, at, _jobId, target) => {
+    const line = linesOf(ctx, v).find((l) => l.id === target);
+    if (act !== "record-line" || line === undefined) return no("record names a line");
+    const slot = v.byLine[line.id] ?? { takeIds: [], active: null };
+    const id = `vtake-${at.toString(36)}-${Object.keys(v.takes).length + 1}`;
+    const secs = spokenS(line.text);
+    const t: TakeRec = { id, label: `take ${slot.takeIds.length + 1}`, at, seconds: secs, mark: null, engine: engineOf(ctx, "voice", 0), sections: [{ name: "line", startMs: 0, endMs: Math.round(secs * 1000) }] };
+    return ok({ ...v, takes: { ...v.takes, [id]: t }, byLine: { ...v.byLine, [line.id]: { takeIds: [...slot.takeIds, id], active: slot.active ?? id } } });
+  },
+  data: (ctx, v): VoiceData => ({
+    face: "voice",
+    voice: engineOf(ctx, "voice", 0).model,
+    lines: linesOf(ctx, v).map((l) => {
+      const slot = v.byLine[l.id] ?? { takeIds: [], active: null };
+      return { id: l.id, text: l.text, card: l.card, takes: slot.takeIds.map((id) => takeView(v.takes[id], id, id === slot.active)), activeTakeId: slot.active };
+    }),
+  }),
+  actLabel: () => "line take",
+  fromRecords: () => ({ text: {}, takes: {}, byLine: {} }),
+  toRecords: () => ({}),
+  stored: false,
+};
+
+/* ── the explainer's cut ──────────────────────────────────────────────────── */
+
+/** Strips as picture, voice as the vo lane, one card per scene held for its line's take (else
+ *  the line's spoken length): the DerivedCut lib/cut's finish line and edit maths read. */
+export function explainerCut(ctx: KCtx): DerivedCut {
+  const cards = ctx.rec("strips").cards;
+  const v = ctx.rec("voice");
+  const lines = linesOf(ctx, v);
+  const scenes: CutScene[] = [];
+  const clips: CutClip[] = [];
+  let at = 0;
+  cards.forEach((c, i) => {
+    const line = lines.find((l) => l.card === c.id);
+    const take = line === undefined ? undefined : activeOf(v, line.id);
+    const durS = take?.seconds ?? spokenS(line?.text ?? c.caption);
+    scenes.push({ id: c.id, index: i + 1, label: c.title, mood: c.section, startS: at, durS });
+    const drawn = c.state === "drawn";
+    clips.push({ id: `pic-${c.id}`, track: "video", label: c.title, startS: at, durS, status: drawn ? "ok" : "missing", ref: c.id, owner: "frames", note: c.caption, ...(c.blob === undefined ? {} : { src: `sha256:${c.blob.sha256}` }), ...(drawn ? {} : { why: c.why ?? "card not drawn" }) });
+    if (line !== undefined) {
+      const ok_ = held(take);
+      clips.push({ id: `vo-${c.id}`, track: "vo", label: line.text, startS: at, durS, status: ok_ ? "ok" : "missing", ref: line.id, owner: "script", note: line.text, ...(ok_ ? {} : { why: "written, not recorded" }), ...(take?.blob === undefined ? {} : { src: `sha256:${take.blob.sha256}` }) });
+    }
+    at += durS;
+  });
+  return { origin: cards.length === 0 ? "empty" : "project", totalS: at, targetS: ctx.project.targetS, scenes, clips, unplaced: [], frames: {} };
+}

@@ -34,8 +34,8 @@ const fixture: ServerPart = {
   loadPart: ({ projectId, key }) => loadPart(projectId, key, now()),
   opPart: ({ projectId, key, baseRev, op }) => opPart(projectId, key, baseRev, op, now()),
   undoPart: ({ projectId, key, baseRev }) => undoPart(projectId, key, baseRev, now()),
-  actReceipt: ({ projectId, key, act }) => actReceipt(projectId, key, act, now()),
-  act: ({ projectId, key, act, token }) => confirmAct(projectId, key, act, token, now()),
+  actReceipt: ({ projectId, key, act, target }) => actReceipt(projectId, key, act, now(), target),
+  act: ({ projectId, key, act, token, target }) => confirmAct(projectId, key, act, token, now(), target),
 };
 
 export function serverPart(): ServerPart {

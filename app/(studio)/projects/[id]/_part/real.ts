@@ -11,12 +11,22 @@ import type { BeatSlot } from "@/lib/research/beats";
 import { kernel } from "@/lib/kernelStore";
 import { keyOf, projectRead, type ProjectRead } from "@/lib/parts/context";
 import { LIVE_GATES, openReadyGates, type GateDeps } from "@/lib/parts/gates";
-import { partTrail, readPartIn, undoPart, writePartIn, type PartSnapshot } from "@gt/kernel/parts/driver";
+import { partTrail, projectRecords, readPartIn, undoPart, writePartIn, type PartSnapshot } from "@gt/kernel/parts/driver";
+import { isStepKind } from "@gt/domain/steps/registry";
 import type { Reader, Store } from "@gt/kernel/store";
+import { runningActs } from "@gt/producers/research/partJob";
+import { driveStep, launchPartAct, partActReceipt, researchProducer, researchUnits, withRecords, type StepFactory, type StepReceipt, type UnitsFn } from "@/lib/producers/research";
+import { scriptProducer, scriptUnits } from "@/lib/producers/script";
+import { voiceProducer, voiceUnits } from "@/lib/producers/voice";
+import { wordsProducer, wordsUnits } from "@/lib/producers/words";
+import { scoreProducer, scoreUnits } from "@/lib/producers/score";
+import { cutProducer, cutUnits } from "@/lib/producers/cut";
+import { framesProducer, framesUnits } from "@/lib/producers/frames";
+import { motionProducer, motionUnits } from "@/lib/producers/motion";
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import type { WorkPlanPart } from "@gt/domain/produce";
-import { OPS_SHOWN, isEditorKind, opLabel, type EditorKind, type PartActKind, type PartOp, type PartProject, type PartRef, type PartView, type ResearchOp, type ScriptOp } from "@gt/domain/partView";
+import { OPS_SHOWN, actBelongs, isEditorKind, opLabel, type EditorKind, type PartActKind, type PartOp, type PartProject, type PartReceipt, type PartRef, type PartRunning, type PartView, type ResearchOp, type ScriptOp } from "@gt/domain/partView";
 
 import type { ServerPart } from "./port.ts";
 import { RESEARCH, type ResearchRec } from "./fixtureResearch.ts";
@@ -24,6 +34,7 @@ import { SCRIPT, type ScriptRec } from "./fixtureScript.ts";
 import { emptyBrief } from "./fixtureAds.ts";
 import { receiptOf } from "./fixtureActs.ts";
 import type { ActBasis, Ctx } from "./fixture.ts";
+import { isLaterKind, later, recReader, type KCtx } from "./kinds.ts";
 
 // THE REAL PART SIDE (L36) - the PartPort over the kernel's `parts` module: the part's records
 // are rows under their v1 keys, every edit is a row in an append-only op log, undo appends the
@@ -37,7 +48,21 @@ import type { ActBasis, Ctx } from "./fixture.ts";
 // as a job write (`land`, by the job id). The studio step producers (L37) replace the landing
 // with a kernel job whose output lands the same way.
 
-export type RealDeps = { readonly store: () => Result<Store>; readonly now: () => number; readonly gates: GateDeps };
+export type RealDeps = {
+  readonly store: () => Result<Store>;
+  readonly now: () => number;
+  readonly gates: GateDeps;
+  /** How long a confirm waits for its job to end before answering with it running (default ACT_WAIT_MS). */
+  readonly actWaitMs?: number;
+};
+
+/** A dry act lands in milliseconds; a live turn takes minutes and is answered as running. */
+const ACT_WAIT_MS = 2500;
+
+/** The producer each editor kind's acts run under (L37), built for the job's own lane, and the
+ *  units its receipt and its job's plan step share. A kind absent here has no producer bound yet. */
+const FACTORIES: Readonly<Partial<Record<EditorKind, StepFactory>>> = { research: researchProducer, script: scriptProducer, words: wordsProducer, voice: voiceProducer, score: scoreProducer, cut: cutProducer, frames: framesProducer, motion: motionProducer };
+const UNITS: Readonly<Partial<Record<EditorKind, UnitsFn>>> = { research: withRecords(researchUnits), script: withRecords(scriptUnits), words: wordsUnits, voice: voiceUnits, score: scoreUnits, cut: cutUnits, frames: framesUnits, motion: motionUnits };
 
 type Recs = PartSnapshot["records"];
 type Obj = Readonly<Record<string, unknown>>;
@@ -159,21 +184,24 @@ function changed(before: Record<string, Obj>, after: Record<string, Obj>): Recor
 
 /* ── the context and the view ─────────────────────────────────────────────── */
 
-type Scene = { readonly read: ProjectRead; readonly ctx: Ctx; readonly part: WorkPlanPart; readonly kind: EditorKind; readonly snap: PartSnapshot };
+type Scene = { readonly read: ProjectRead; readonly ctx: KCtx; readonly part: WorkPlanPart; readonly kind: EditorKind; readonly snap: Pick<PartSnapshot, "records" | "rev"> };
 
 function sceneOf(r: Reader, projectId: string, key: string, now: number): Result<Scene> {
   const read = projectRead(r, projectId, now);
   const part = read.plan.parts.find((p) => keyOf(projectId, p.id) === key);
   if (part === undefined || !isEditorKind(part.kind) || !("options" in part)) return err("not-found", `no editor for ${key} in ${read.plan.project.title}`);
   const kind = part.kind;
-  const snap = readPartIn(r, { projectId, partId: part.id });
+  // A kind the step registry holds no records for (album, explainer parts) is read over the
+  // project's records and its log stays empty: rev 1, and its ops refuse (./kinds.ts `stored`).
+  const snap = isStepKind(kind) ? readPartIn(r, { projectId, partId: part.id }) : { records: projectRecords(r, projectId).records, rev: 1 };
   const p = read.plan.project;
   const project: PartProject = { id: p.id, title: p.title, recipe: p.recipe, recipeLabel: p.recipeLabel, discipline: read.discipline, targetS: read.targetS };
-  const ctx: Ctx = { project, plan: read.plan, now, research: () => researchOf(project, snap.records) };
+  const base: Ctx = { project, plan: read.plan, now, research: () => researchOf(project, snap.records) };
+  const ctx: KCtx = { ...base, rec: recReader({ research: base.research, script: () => scriptOf(snap.records), later: (k) => later(k).fromRecords(snap.records, base) }), records: () => snap.records };
   return ok({ read, ctx, part, kind, snap });
 }
 
-const verdictOf = (s: Scene, kind: EditorKind) => (kind === "research" ? RESEARCH.verdict(s.ctx, s.ctx.research()) : SCRIPT.verdict(s.ctx, scriptOf(s.snap.records)));
+const verdictOf = (s: Scene, kind: EditorKind) => (isLaterKind(kind) ? later(kind).verdict(s.ctx) : kind === "research" ? RESEARCH.verdict(s.ctx, s.ctx.research()) : SCRIPT.verdict(s.ctx, scriptOf(s.snap.records)));
 const refOf = (projectId: string, p: { id: string; kind: PartRef["kind"]; label: string }): PartRef => ({ partId: p.id, key: keyOf(projectId, p.id), kind: p.kind, label: p.label });
 
 function viewOf(r: Reader, s: Scene): PartView {
@@ -193,8 +221,9 @@ function viewOf(r: Reader, s: Scene): PartView {
     },
     tabs: s.read.plan.parts.map((p) => ({ ...refOf(id, p), editor: isEditorKind(p.kind), verdict: isEditorKind(p.kind) ? verdictOf(s, p.kind).state : null })),
     ops: partTrail(r, { projectId: id, partId: s.part.id }, OPS_SHOWN).map((o) => ({ n: o.n, label: o.label, by: o.by, at: o.at })),
-    running: [],
+    running: runningOf(r, s.part.id, s.kind),
   };
+  if (isLaterKind(s.kind)) return later(s.kind).view(s.ctx, base);
   if (s.kind === "research") {
     const rec = s.ctx.research();
     return { ...base, kind: "research", verdict: RESEARCH.verdict(s.ctx, rec), acts: RESEARCH.acts(s.ctx, rec), data: RESEARCH.data(s.ctx, rec) };
@@ -257,7 +286,7 @@ export function makeRealPart(deps: RealDeps): ServerPart {
   return {
     loadPart: ({ projectId, key }) => withStore((store) => read(store, projectId, key)),
     opPart: ({ projectId, key, baseRev, op }) => {
-      const w = write(projectId, key, baseRev, op, (_t, s) => ({
+      const w = write(projectId, key, baseRev, op, (_t, s) => isLaterKind(s.kind) ? laterOp(s, op) : ({
         act: "op",
         label: opLabel(op),
         by: OPERATOR,
@@ -285,22 +314,68 @@ export function makeRealPart(deps: RealDeps): ServerPart {
         if (!view.ok) return view;
         return ok(u.value.kind === "conflict" ? { kind: "conflict", current: view.value } : { kind: "applied", view: view.value });
       }),
-    actReceipt: ({ projectId, key, act }) => receiptFor(deps, projectId, key, act),
-    act: ({ projectId, key, act, token }) => {
-      const fresh = receiptFor(deps, projectId, key, act);
-      if (!fresh.ok) return fresh;
-      if (fresh.value.token !== token) return ok({ kind: "stale", fresh: fresh.value });
-      const jobId = `job:part:${fresh.value.subject.partId}:${act}:${fresh.value.subject.rev}`;
-      const w = write(projectId, key, 0, null, (_t, s) => ({
-        act: "land",
-        label: act,
-        by: { kind: "machine", id: jobId },
-        raw: { act, token },
-        next: nextOf(s, { research: (rec) => RESEARCH.land(s.ctx, rec, act, s.ctx.now), script: (rec) => SCRIPT.land(s.ctx, rec, act, s.ctx.now) }),
-      }));
-      return w.ok ? ok({ kind: "launched", jobId, view: w.value.view }) : w;
+    actReceipt: ({ projectId, key, act, target }) => receiptFor(deps, projectId, key, act, target),
+    act: async ({ projectId, key, act, token, target }) => {
+      const store = deps.store();
+      if (!store.ok) return store;
+      const launched = launchAct(deps, store.value, projectId, key, act, token, target);
+      if (!launched.ok) return launched;
+      if (launched.value.kind === "stale") return ok(launched.value);
+      const { jobId, kind_: kind } = launched.value;
+      // The job is the act (decision 3): driven here so a studio with no worker running still
+      // lands it, and fenced by the lane slot so a worker that claims it first wins and this drive
+      // reads `busy`. The confirm answers when the job ends or the wait runs out, whichever is
+      // first; a longer act shows in the view's `running` and lands where the editor reads it.
+      const factory = FACTORIES[kind];
+      if (factory === undefined) return err("unavailable", `no producer is bound for a ${kind} part yet`);
+      const drive = driveStep(factory, store.value, jobId, { hooks: { onSettled: async () => kick(store.value, projectId) } }).then(
+        (r) => {
+          if (!r.ok) console.error(`[part-act] ${jobId}: ${r.error.message}`);
+        },
+        (e: unknown) => console.error(`[part-act] ${jobId}: ${e instanceof Error ? e.message : String(e)}`),
+      );
+      await Promise.race([drive, new Promise((res) => setTimeout(res, deps.actWaitMs ?? ACT_WAIT_MS).unref())]);
+      const view = read(store.value, projectId, key);
+      return view.ok ? ok({ kind: "launched", jobId, view: view.value }) : view;
     },
   };
+}
+
+/**
+ * The confirm half of an act, in ONE transaction: the receipt is recomputed from what this
+ * transaction reads, a stale token answers the fresh receipt and writes nothing, and only then is
+ * the act's job enqueued (L37 `enqueueActIn`: the same act on the same unit while its job is live
+ * is that job - a double click is one purchase). The job runs under the part kind's producer on
+ * the chosen option's lane; the receipt's mode decides dry or live (live needs an arm, refused
+ * under GRAVITONE_DRY_ONLY).
+ */
+function launchAct(deps: RealDeps, store: Store, projectId: string, key: string, act: PartActKind, token: string, target?: string): Result<{ kind: "stale"; fresh: PartReceipt } | { kind: "go"; jobId: string; kind_: EditorKind }> {
+  const now = deps.now();
+  const scene = unwrap(store.read((r) => sceneOf(r, projectId, key, now)));
+  if (!scene.ok) return scene;
+  const kind = scene.value.kind;
+  const units = UNITS[kind];
+  if (units === undefined) return err("unavailable", `no producer is bound for a ${kind} part yet`);
+  const ref = { projectId, partId: scene.value.part.id, act, ...(target === undefined ? {} : { target }) };
+  const l = launchPartAct(store, ref, units, { mode: "dry", now, token, actor: OPERATOR });
+  if (!l.ok) return l;
+  return l.value.kind === "stale" ? ok({ kind: "stale", fresh: partReceiptOf(l.value.fresh, act) }) : ok({ kind: "go", jobId: l.value.jobId, kind_: kind });
+}
+
+/** The lib receipt in the editor contract's words (its act is this editor's own). */
+function partReceiptOf(r: StepReceipt, act: PartActKind): PartReceipt {
+  const { target: _target, ...subject } = r.subject;
+  return { ...r, subject: { ...subject, act } };
+}
+
+/** The part's jobs that have not ended, as the view's `running` (an act this editor offers). */
+function runningOf(r: Reader, partId: string, kind: EditorKind): PartRunning[] {
+  return runningActs(r, partId).flatMap((j) => {
+    const act = j.act;
+    if (act === null || !actBelongs(kind, act)) return [];
+    const since = r.get("SELECT at FROM events WHERE type = 'job.enqueued' AND subject_id = ? ORDER BY seq LIMIT 1", j.jobId)?.["at"];
+    return [{ jobId: j.jobId, act, since: typeof since === "string" ? since : new Date(0).toISOString(), ...(j.stage === undefined ? {} : { stage: j.stage }) }];
+  });
 }
 
 function unwrap<T>(r: Result<Result<T>>): Result<T> {
@@ -311,19 +386,48 @@ const RESEARCH_OPS: ReadonlySet<string> = new Set<ResearchOp["op"]>(["descope", 
 const isResearchOp = (op: PartOp): op is ResearchOp => RESEARCH_OPS.has(op.op);
 const isScriptOp = (op: PartOp): op is ScriptOp => !RESEARCH_OPS.has(op.op);
 
+/** A later kind's op as the driver writes it: the module's next record mapped to the step records
+ *  it changes. A kind with no step records refuses here, with the reason, before the kernel would. */
+function laterOp(s: Scene, op: PartOp): { act: "op"; label: string; by: Actor; next: Result<Record<string, Obj>>; raw: unknown } {
+  const m = isLaterKind(s.kind) ? later(s.kind) : null;
+  if (m === null) return { act: "op", label: op.op, by: OPERATOR, raw: op, next: err("internal", `${s.kind} is not a later kind`) };
+  const applied = m.apply(s.ctx, op);
+  const next: Result<Record<string, Obj>> = !m.stored ? err("refused", `${s.kind} holds no step records in the kernel yet`) : applied.ok ? ok(m.writes(s.ctx, applied.value.next)) : applied;
+  return { act: "op", label: applied.ok ? applied.value.label : op.op, by: OPERATOR, raw: op, next };
+}
+
 /** The act's subject as the receipt prices it: L38's ActBasis, built from the kernel's part. */
-function basisOf(r: Reader, projectId: string, key: string, act: PartActKind, now: number): Result<ActBasis> {
+function basisOf(r: Reader, projectId: string, key: string, act: PartActKind, now: number, target?: string): Result<ActBasis> {
   const s = sceneOf(r, projectId, key, now);
   if (!s.ok) return s;
+  if (isLaterKind(s.value.kind)) {
+    const u = later(s.value.kind).units(s.value.ctx, act, target);
+    if (!u.ok) return u;
+    return ok({ ctx: s.value.ctx, kind: s.value.kind, part: s.value.part, rev: s.value.snap.rev, units: u.value, ...(target === undefined ? {} : { target }) });
+  }
   const units = s.value.kind === "research" ? RESEARCH.units(s.value.ctx, s.value.ctx.research(), act) : SCRIPT.units(s.value.ctx, scriptOf(s.value.snap.records), act);
   if (!units.ok) return units;
   return ok({ ctx: s.value.ctx, kind: s.value.kind, part: s.value.part, rev: s.value.snap.rev, units: units.value });
 }
 
-function receiptFor(deps: RealDeps, projectId: string, key: string, act: PartActKind) {
+/**
+ * An act's receipt. A kind with a bound producer (L37) is priced from THAT producer's units - the
+ * same function its job's plan step books - placed among the live queue (lib/producers
+ * `partActReceipt`). A kind whose producer is not bound yet keeps the editor side's static receipt.
+ * Every receipt reads `dry` until the editor can arm live (decision 4: a confirm of a live receipt).
+ */
+function receiptFor(deps: RealDeps, projectId: string, key: string, act: PartActKind, target?: string): Result<PartReceipt> {
   const k = deps.store();
   if (!k.ok) return k;
-  const b = unwrap(k.value.read((r) => basisOf(r, projectId, key, act, deps.now())));
+  const now = deps.now();
+  const scene = unwrap(k.value.read((r) => sceneOf(r, projectId, key, now)));
+  if (!scene.ok) return scene;
+  const units = UNITS[scene.value.kind];
+  if (units !== undefined) {
+    const r = partActReceipt(k.value, { projectId, partId: scene.value.part.id, act, ...(target === undefined ? {} : { target }) }, units, { mode: "dry", now });
+    return r.ok ? ok(partReceiptOf(r.value, act)) : r;
+  }
+  const b = unwrap(k.value.read((r) => basisOf(r, projectId, key, act, now, target)));
   return b.ok ? ok(receiptOf(b.value, act)) : b;
 }
 

@@ -1,6 +1,7 @@
 import type { Actor } from "@gt/domain/event";
 import type { Result } from "@gt/domain/errors";
 import type { PacketFact } from "@gt/domain/plan";
+import { committedResult } from "../decision/commit.ts";
 import type { ReadContext } from "../records/read.ts";
 import { releaseHeldIn } from "../records/write.ts";
 import type { Reader, Store } from "../store.ts";
@@ -18,12 +19,37 @@ import type { Reader, Store } from "../store.ts";
 
 export const stepPacketId = (gatePartId: string): string => `pkt:step:${gatePartId}`;
 
-/** The packet's state as the plan reads it; undefined while no packet is open for the gate. */
+/**
+ * The gate's NEWEST attempt - `pkt:step:<gate>`, then `#2`, `#3` (lib/parts/gates.ts opens a new
+ * packet per attempt: a commit and a return are final) - as the plan reads it; undefined while no
+ * packet is open. A committed CULL ratifies only when every row (a candidate without a row is its
+ * own row) kept exactly one candidate: a rejected plate owes a re-render, so that attempt failed.
+ */
 export function gatePacketFact(r: Reader, gatePartId: string): PacketFact | undefined {
-  const row = r.get("SELECT state FROM packets WHERE id = ?", stepPacketId(gatePartId));
-  if (row === undefined) return undefined;
-  const state = row["state"];
-  return state === "committed" ? "committed" : state === "returned" ? "rejected" : "open";
+  const base = stepPacketId(gatePartId);
+  let best: { id: string; n: number; state: string; mode: string } | undefined;
+  for (const row of r.all("SELECT id, state, mode FROM packets WHERE id = ? OR substr(id, 1, ?) = ?", base, base.length + 1, `${base}#`)) {
+    const id = String(row["id"]);
+    const n = id === base ? 1 : Number(id.slice(base.length + 1));
+    if (Number.isInteger(n) && (best === undefined || n > best.n)) best = { id, n, state: String(row["state"]), mode: String(row["mode"]) };
+  }
+  if (best === undefined) return undefined;
+  if (best.state === "returned") return "rejected";
+  if (best.state !== "committed") return "open";
+  return best.mode !== "matrix-cull" || cullRatifies(r, best.id) ? "committed" : "rejected";
+}
+
+function cullRatifies(r: Reader, packetId: string): boolean {
+  const res = committedResult(r, packetId);
+  if (res === undefined || !res.ok) return false;
+  const kept = new Set<string>(res.value.kept);
+  const rows = new Map<string, number>();
+  for (const it of r.all("SELECT candidate_id, row FROM packet_items WHERE packet_id = ?", packetId)) {
+    const id = String(it["candidate_id"]);
+    const row = it["row"] === null || it["row"] === undefined ? `#${id}` : String(it["row"]);
+    rows.set(row, (rows.get(row) ?? 0) + (kept.has(id) ? 1 : 0));
+  }
+  return rows.size > 0 && [...rows.values()].every((n) => n === 1);
 }
 
 /**

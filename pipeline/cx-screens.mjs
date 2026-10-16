@@ -62,5 +62,18 @@ export const SCREENS = {
   "part-script-document": { url: "/projects/why-bitcoin/script" },
   "part-research-beats": { url: "/projects/glass-harbor-trailer/research" },
   "part-script-trailer": { url: "/projects/glass-harbor-trailer/script" },
+  // L39: frames and motion. The trailer's frames are its composed spine's SHOTS (derived on read,
+  // no adopt needed); the explainer's wait for Script's adopt, so its screen is the frame's own
+  // "no adopted script" state until a session adopts one.
+  "part-frames-shots": { url: "/projects/glass-harbor-trailer/frames" },
+  "part-frames-assembly": { url: "/projects/why-bitcoin/frames" },
+  "part-motion-plates": { url: "/projects/why-bitcoin/motion" },
+  // L40: score, cut and the explainer's parts. Each draws its own project's records; on a fresh
+  // server the trailer's score and cut wait on its frames record (a plate render writes it), the
+  // explainer's voice and strips on their runs - the screens show those states until a session acts.
+  "part-score-spotting": { url: "/projects/glass-harbor-trailer/score" },
+  "part-cut-timeline": { url: "/projects/glass-harbor-trailer/cut" },
+  "part-explainer-strips": { url: "/projects/provider-routing-explainer/strips" },
+  "part-explainer-voice": { url: "/projects/provider-routing-explainer/voice" },
   "kit-part": { url: "/kit#part" },
 };

@@ -71,7 +71,7 @@ test("every face opens in the workspace, each drawing its own project's work", a
   await ready(page, `/projects/${free}/research`);
   await expect(chip(page)).toHaveAttribute("data-verdict", "empty");
   // A part kind with no editor yet is a 404, never an empty editor.
-  expect((await page.request.get("/projects/why-bitcoin/frames")).status()).toBe(404);
+  expect((await page.request.get("/projects/why-bitcoin/gate:frames")).status()).toBe(404);
   expect((await page.request.get("/projects/why-bitcoin/nope")).status()).toBe(404);
 });
 

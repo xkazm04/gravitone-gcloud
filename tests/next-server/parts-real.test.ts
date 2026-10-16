@@ -111,7 +111,7 @@ describe("an ads project's research and script, over the kernel", () => {
     const { port } = universe("film/ad-social-15", "ad1");
     const wrong = await port.opPart({ projectId: "ad1", key: "research", baseRev: 1, op: { op: "pick-scenario", scenarioId: "x" } });
     expect(wrong.ok ? "" : wrong.error.code).toBe("invalid");
-    const none = await port.loadPart({ projectId: "ad1", key: "frames" });
+    const none = await port.loadPart({ projectId: "ad1", key: "gate:frames" });
     expect(none.ok ? "" : none.error.code).toBe("not-found");
   });
 });

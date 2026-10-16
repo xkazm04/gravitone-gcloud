@@ -19,7 +19,7 @@ import { err, ok, type Result } from "../errors.ts";
 // drops a field a sibling writer added"): the door checks what readers rely on and carries the
 // rest through.
 
-export const STEP_OWNERS = ["research", "script", "frames", "motion", "score", "cut"] as const;
+export const STEP_OWNERS = ["research", "script", "frames", "motion", "score", "cut", "still"] as const;
 export type StepOwner = (typeof STEP_OWNERS)[number];
 
 /** One pure vN -> vN+1 step over the stored object. */

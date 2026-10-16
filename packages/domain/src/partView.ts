@@ -24,8 +24,14 @@ import type { Discipline } from "@gt/catalog/projects";
 
 import type { Receipt } from "./produce.ts";
 import type { AdBriefField, Connector, NoteKind, ResearchData, ScriptData } from "./partView.data.ts";
+import { FRAMES_ACTS, MOTION_ACTS, type FramesData, type FramesOp, type MotionData, type MotionOp } from "./partView.frames.ts";
+import { CUT_ACTS, SCORE_ACTS, type CutData, type CutOp, type ScoreData, type ScoreOp } from "./partView.finish.ts";
+import { ARTICLE_ACTS, RENDER_ACTS, STRIPS_ACTS, VOICE_ACTS, WORDS_ACTS, type AlbumOp, type ArticleData, type ExplainerOp, type RenderData, type StripsData, type VoiceData, type WordsData } from "./partView.album.ts";
 
 export type * from "./partView.data.ts";
+export * from "./partView.frames.ts";
+export * from "./partView.finish.ts";
+export * from "./partView.album.ts";
 
 /* ── kinds ────────────────────────────────────────────────────────────────── */
 
@@ -34,7 +40,12 @@ export type PartKind = WorkKind | "gate" | "slot";
 
 /** The kinds whose editor exists. Frames, motion, score and cut join in later lots, each adding
  *  its entry to `PartData`; until then their route is a 404, never an empty editor. */
-export const EDITOR_KINDS = ["research", "script"] as const satisfies readonly WorkKind[];
+/* L39 (frames, motion) - its own block; partView.frames.ts holds their data, ops and acts. */
+const L39_KINDS = ["frames", "motion"] as const;
+/* L40 (score, cut; the album's words and render; the explainer's article, strips and voice) -
+   partView.finish.ts and partView.album.ts hold their data, ops and acts. */
+const L40_KINDS = ["score", "cut", "words", "render", "article", "strips", "voice"] as const;
+export const EDITOR_KINDS = ["research", "script", ...L39_KINDS, ...L40_KINDS] as const satisfies readonly WorkKind[];
 export type EditorKind = (typeof EDITOR_KINDS)[number];
 
 export function isEditorKind(kind: string): kind is EditorKind {
@@ -116,7 +127,11 @@ type ViewBase<K extends EditorKind> = {
   readonly running: readonly PartRunning[];
 };
 
-export type PartData = { readonly research: ResearchData; readonly script: ScriptData };
+export type PartData = { readonly research: ResearchData; readonly script: ScriptData } & L39Data & L40Data;
+/* L40 */
+type L40Data = { readonly score: ScoreData; readonly cut: CutData; readonly words: WordsData; readonly render: RenderData; readonly article: ArticleData; readonly strips: StripsData; readonly voice: VoiceData };
+/* L39 */
+type L39Data = { readonly frames: FramesData; readonly motion: MotionData };
 export type PartView<K extends EditorKind = EditorKind> = { readonly [P in K]: ViewBase<P> & { readonly data: PartData[P] } }[K];
 
 /* ── edits ────────────────────────────────────────────────────────────────── */
@@ -151,7 +166,11 @@ export type ScriptOp =
   | { readonly op: "reset-beat"; readonly beatId: string }
   | { readonly op: "pick-scenario"; readonly scenarioId: string };
 
-export type PartOps = { readonly research: ResearchOp; readonly script: ScriptOp };
+export type PartOps = { readonly research: ResearchOp; readonly script: ScriptOp } & L39Ops & L40Ops;
+/* L40 - the explainer's article and strips are their producers' runs: no edit lands on them here. */
+type L40Ops = { readonly score: ScoreOp; readonly cut: CutOp; readonly words: AlbumOp; readonly render: AlbumOp; readonly article: never; readonly strips: never; readonly voice: ExplainerOp };
+/* L39 */
+type L39Ops = { readonly frames: FramesOp; readonly motion: MotionOp };
 export type PartOp<K extends EditorKind = EditorKind> = PartOps[K];
 
 /** What an op (or an undo) came to. A stale `baseRev` writes nothing and hands back the view as
@@ -164,6 +183,17 @@ export type PartOpResult<K extends EditorKind = EditorKind> = { readonly kind: "
 export const PART_ACTS = {
   research: ["run-research", "follow-up", "generate-ideas"],
   script: ["compose-candidates", "recalibrate", "generate-scenarios"],
+  /* L39 */
+  frames: FRAMES_ACTS,
+  motion: MOTION_ACTS,
+  /* L40 */
+  score: SCORE_ACTS,
+  cut: CUT_ACTS,
+  words: WORDS_ACTS,
+  render: RENDER_ACTS,
+  article: ARTICLE_ACTS,
+  strips: STRIPS_ACTS,
+  voice: VOICE_ACTS,
 } as const satisfies { readonly [K in EditorKind]: readonly string[] };
 export type PartActKind = (typeof PART_ACTS)[EditorKind][number];
 /** `target` names one unit of the part (a plate, a cue, a clip) for the per-unit acts of later
@@ -182,8 +212,11 @@ export type PartActResult = { readonly kind: "launched"; readonly jobId: string;
 
 /* ── the op trail's words ─────────────────────────────────────────────────── */
 
-/** The words the undo trail shows for an op - one place, so the server's log and a test agree. */
-export function opLabel(op: ResearchOp | ScriptOp): string {
+/** The words the undo trail shows for an op - one place, so the server's log and a test agree.
+ *  A later kind's ops are labelled by its module (_part/kinds.ts `label`); the name stands in here. */
+export function opLabel(op: PartOp): string {
+  const name: string = op.op;
+  if (!isCoreOp(op)) return name;
   switch (op.op) {
     case "descope":
     case "restore":
@@ -228,3 +261,9 @@ export function opLabel(op: ResearchOp | ScriptOp): string {
       return op.op.replace("-", " ");
   }
 }
+
+const CORE_OPS: ReadonlySet<string> = new Set<(ResearchOp | ScriptOp)["op"]>([
+  "descope", "restore", "like", "deepen", "confirm-scope", "queue-follow-up", "drop-follow-up", "decide-effect", "set-face", "pick-beat", "compose-spine", "set-brief", "pick-idea",
+  "adopt", "note-add", "note-remove", "accept", "accept-over-gate", "discard-staged", "restore-version", "patch-beat", "set-connector", "reset-beat", "pick-scenario",
+]);
+const isCoreOp = (op: PartOp): op is ResearchOp | ScriptOp => CORE_OPS.has(op.op);

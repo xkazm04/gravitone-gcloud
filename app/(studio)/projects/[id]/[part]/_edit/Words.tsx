@@ -1,0 +1,98 @@
+"use client";
+
+// ALBUM · WORDS (STEPS-DESIGN §2 "album parts"): the platform's title, description and tags,
+// each counted against its limit as the platform counts it. The mv-metadata turn writes a draft
+// (the header's act, priced); every edit after it is an op, and the draft's own text stays on
+// the record so an edited field shows as edited. RAIL: the track the words are about.
+import { useState } from "react";
+
+import { WORDS_LIMITS, type PartView, type WordsData } from "@gt/domain/partView";
+import { Chip } from "@gt/ui/components/chip/Chip.tsx";
+import { cx } from "@gt/ui/components/cx.ts";
+import { Empty } from "@gt/ui/components/empty/Empty.tsx";
+import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
+import { PartWorkspace } from "@gt/ui/components/part/PartWorkspace.tsx";
+import { clock } from "@gt/ui/components/part/part.ts";
+import { Provenance } from "@gt/ui/components/provenance/Provenance.tsx";
+import { FIELD_ATTR } from "@gt/ui/keymap/target";
+
+import type { EditorProps } from "./PartEditor.tsx";
+import s from "./Cut.module.css";
+
+function Counted({ label, value, limit, area = false, commit }: { readonly label: string; readonly value: string; readonly limit: number; readonly area?: boolean; readonly commit: (v: string) => void }) {
+  const [v, setV] = useState(value);
+  const [base, setBase] = useState(value);
+  if (base !== value) {
+    setBase(value);
+    setV(value);
+  }
+  const done = (): void => {
+    if (v !== value) commit(v);
+  };
+  const count = <span className={cx(s.count, v.length > limit && s.over)}>{`${v.length} / ${limit}`}</span>;
+  return (
+    <label className={s.field}>
+      <span className={s.row}>
+        <span className={s.grow}>{label}</span>
+        {count}
+      </span>
+      {area ? (
+        <textarea className={s.area} value={v} onChange={(e) => setV(e.currentTarget.value)} onBlur={done} {...{ [FIELD_ATTR]: "part-text" }} />
+      ) : (
+        <input className={s.input} value={v} onChange={(e) => setV(e.currentTarget.value)} onBlur={done} {...{ [FIELD_ATTR]: "part-field" }} />
+      )}
+    </label>
+  );
+}
+
+export function WordsEditor({ frame, send, error, view }: EditorProps<PartView<"words">>) {
+  const d: WordsData = view.data;
+  const e = d.engine;
+  return (
+    <PartWorkspace
+      {...frame}
+      mode="part.words"
+      rail={{
+        label: "track",
+        children: (
+          <div className={s.railHead}>
+            {d.track === null ? (
+              <Empty label="no track on this project" />
+            ) : (
+              <div className={s.sect}>
+                <h2 className={s.h}>track</h2>
+                <p className={s.work}>{d.track.title}</p>
+                {d.track.durationS !== null && <span className={s.mono}>{clock(d.track.durationS)}</span>}
+                {e !== undefined && <Provenance model={e.model} vendor={e.provider} cost={e.usd === null ? (e.mode === "dry" ? "dry" : "unpriced") : `$${e.usd.toFixed(2)}`} />}
+                {d.edited && <Chip label="edited since the draft" tone="amber" casing="lower" />}
+              </div>
+            )}
+          </div>
+        ),
+      }}
+      primary={{
+        label: "words",
+        children: (
+          <>
+            {error !== null && (
+              <div className={s.err}>
+                <ErrorLine message={error} live />
+              </div>
+            )}
+            <div className={s.form}>
+              <Counted label="title" value={d.title} limit={WORDS_LIMITS.title} commit={(value) => send({ op: "words-field", field: "title", value })} />
+              <Counted label="description" value={d.description} limit={WORDS_LIMITS.description} area commit={(value) => send({ op: "words-field", field: "description", value })} />
+              <Counted label="tags · comma separated" value={d.tags.join(", ")} limit={WORDS_LIMITS.tags} commit={(v) => send({ op: "words-tags", tags: v.split(",") })} />
+              <div className={s.row}>
+                {d.tags.map((t) => (
+                  <Chip key={t} label={t} casing="lower" />
+                ))}
+              </div>
+            </div>
+          </>
+        ),
+      }}
+      inspector={null}
+    />
+  );
+}

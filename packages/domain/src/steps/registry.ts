@@ -7,6 +7,7 @@ import { ADS_FINISH, ADS_SCORE, CUT, MOTION_DIRECTION, SCORE } from "./finish.ts
 import { decodeStep, encodeStep, type StepOwner, type StepRecordDef } from "./record.ts";
 import { ADS_BRIEF, ADS_IDEAS, MUSIC_VIDEO_SOURCE, RESEARCH, RESEARCH_BEATS, RESEARCH_MODE, RESEARCH_NOTEBOOK, RESEARCH_SCOPE } from "./research.ts";
 import { ADS_SCENARIOS, SCRIPT_ADOPTED, SCRIPT_TRAILER, SCRIPT_VERSIONS } from "./script.ts";
+import { STILL } from "./still.ts";
 
 // EVERY STEP RECORD, DECLARED ONCE - the server's RECORD_DEFS. v1's list (stepContract.ts:133)
 // carried ten of the twenty-one keys, so frames-alts, motion-direction and every ads-* record
@@ -19,6 +20,7 @@ import { ADS_SCENARIOS, SCRIPT_ADOPTED, SCRIPT_TRAILER, SCRIPT_VERSIONS } from "
 // writes a record its part neither owns nor grows is a refusal, not a silent reach.
 
 export const STEP_RECORDS = {
+  still: STILL,
   research: RESEARCH,
   "research-notebook": RESEARCH_NOTEBOOK,
   "research-scope": RESEARCH_SCOPE,
@@ -52,7 +54,7 @@ export function isStepKey(key: string): key is StepKey {
   return Object.hasOwn(STEP_RECORDS, key);
 }
 
-/** The part kinds that hold step records (the studio's six). */
+/** The part kinds that hold step records (the studio's six, and the album still). */
 export type StepKind = StepOwner;
 
 /** What each kind may write besides what it owns (v1's cross-writes, INVENTORY §0). */
@@ -63,6 +65,7 @@ const GROWS: { readonly [K in StepKind]: readonly StepKey[] } = {
   motion: ["frames", "ads-shots"],
   score: [],
   cut: [],
+  still: [],
 };
 
 export function ownedBy(kind: StepKind): StepKey[] {
@@ -74,7 +77,7 @@ export function writableBy(kind: StepKind): ReadonlySet<StepKey> {
 }
 
 export function isStepKind(kind: string): kind is StepKind {
-  return kind === "research" || kind === "script" || kind === "frames" || kind === "motion" || kind === "score" || kind === "cut";
+  return kind === "research" || kind === "script" || kind === "frames" || kind === "motion" || kind === "score" || kind === "cut" || kind === "still";
 }
 
 type AnyDef = StepRecordDef<string, z.ZodType>;

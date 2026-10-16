@@ -1,0 +1,72 @@
+/* The frames, motion and take-grid editors' surfaces inside the part workspace (no prototype
+   source - the prototype has no step editor). Tokens only. The ledger row is ONE line that
+   ellipsises (v1's breakdown pips wrapped "texts 2" onto a second line and misaligned the rows);
+   the primary is the canvas, the inspector the selected unit's fields. */
+
+.row{display:grid;grid-template-columns:var(--w-timecode) auto minmax(0,1fr) auto;align-items:center;gap:var(--sp-2);height:100%;min-width:0}
+.tc{font:600 var(--fs-meta)/1 var(--mono);color:var(--muted)}
+.kind{font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
+.title{font-size:var(--fs-ui);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.marks{display:inline-flex;align-items:center;gap:var(--sp-1);font:700 var(--fs-micro)/1 var(--mono);color:var(--faint);white-space:nowrap}
+.m{display:inline-flex;align-items:center;justify-content:center;min-width:var(--sp-5);height:var(--sp-5);border-radius:var(--r-xs);border:1px solid var(--hair-2)}
+.m.ready{color:var(--done-text);border-color:color-mix(in srgb,var(--emerald) 40%,transparent)}
+.m.owed{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 40%,transparent)}
+.m.bad{color:var(--rose);border-color:color-mix(in srgb,var(--rose) 50%,transparent)}
+.m.moving{color:var(--cyan);border-color:color-mix(in srgb,var(--cyan) 40%,transparent)}
+
+.railHead{flex:none;padding:var(--sp-3) var(--sp-4) var(--sp-2);display:flex;align-items:center;gap:var(--sp-2);justify-content:space-between}
+.h{margin:0;font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.bar{display:flex;align-items:center;flex-wrap:wrap;gap:var(--sp-2) var(--sp-4);margin-bottom:var(--sp-4)}
+.cell{display:inline-flex;align-items:center;gap:var(--sp-2);font:600 var(--fs-micro)/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.stage{display:flex;flex-direction:column;gap:var(--sp-4);min-height:0}
+.line{font:400 var(--fs-read)/1.45 var(--serif);color:var(--text);margin:0;max-width:calc(var(--w-detail) * 2.6)}
+.proposal{display:flex;align-items:center;flex-wrap:wrap;gap:var(--sp-2) var(--sp-3);padding:var(--sp-3) var(--sp-4);margin-bottom:var(--sp-4);border:1px dashed var(--violet);border-radius:var(--r-tile)}
+.err{margin-bottom:var(--sp-3)}
+
+/* inspector */
+.sect{display:flex;flex-direction:column;align-items:flex-start;gap:var(--sp-2);margin-bottom:var(--sp-5)}
+.sect>*{max-width:100%}
+.sect>.area,.sect>.textRow,.sect>.layers,.sect>.sheet,.sect>.moves,.sect>.work{align-self:stretch}
+.work{font-size:var(--fs-ui);line-height:1.45;color:var(--text);margin:0}
+.why{font:italic 400 var(--fs-ui)/1.45 var(--serif);color:var(--violet);margin:0}
+.risk{font:500 var(--fs-meta)/1.4 var(--mono);color:var(--amber);margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:var(--sp-1);align-items:center}
+.acts{display:flex;flex-wrap:wrap;gap:var(--sp-2)}
+.area{width:100%;min-height:calc(var(--h-control) * 2);padding:var(--sp-2) var(--sp-3);border-radius:var(--r-sm);border:1px solid var(--hair-2);background:var(--ink-2);color:var(--text);font:400 var(--fs-ui)/1.45 var(--sans);resize:vertical;box-sizing:border-box}
+.input{height:var(--h-control-sm);padding:0 var(--sp-3);border-radius:var(--r-sm);border:1px solid var(--hair-2);background:var(--ink-2);color:var(--ink-bright);font:500 var(--fs-ui)/1 var(--sans);min-width:0;flex:1}
+.select{height:var(--h-control-sm);padding:0 var(--sp-2);border-radius:var(--r-sm);border:1px solid var(--hair-2);background:var(--ink-2);color:var(--ink-bright);font:500 var(--fs-micro)/1 var(--mono);max-width:100%}
+.area:focus,.input:focus,.select:focus{outline:none;border-color:var(--focus-line)}
+.textRow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:var(--sp-2)}
+.factRow{grid-column:2 / -1}
+.layers{display:flex;flex-direction:column;gap:var(--sp-hair)}
+.layer{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:var(--sp-2);padding:var(--sp-1) var(--sp-2);border-radius:var(--r-sm);border:1px solid transparent;font:500 var(--fs-meta)/1.2 var(--mono);color:var(--muted);background:none;text-align:left;cursor:pointer}
+.layer[aria-pressed=true]{border-color:color-mix(in srgb,var(--cyan) 45%,transparent);color:var(--ink-bright)}
+.layer .ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.layerActs{display:inline-flex;gap:var(--sp-1)}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--sp-1) var(--sp-3);font:500 var(--fs-meta)/1.35 var(--mono);color:var(--muted);margin:0}
+.kv dt{color:var(--faint)}
+.kv dd{margin:0;color:var(--text);overflow-wrap:anywhere}
+
+/* the contact sheet (alternatives) and the take grid (ads) */
+.sheet{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-3)}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sp-4)}
+.grid.tall{grid-template-columns:repeat(6,minmax(0,1fr))}
+.take{position:relative;display:flex;flex-direction:column;gap:var(--sp-1);padding:0;border:1px solid var(--hair-2);border-radius:var(--r-tile);background:var(--ink-2);overflow:hidden;cursor:pointer;color:var(--text);font:inherit;text-align:left}
+.take[aria-pressed=true],.take[aria-selected=true]{border-color:var(--emerald);box-shadow:inset 0 0 0 1px var(--emerald)}
+.take img,.take video,.take .blank{display:block;width:100%;aspect-ratio:16 / 9;object-fit:cover;background:var(--hatch)}
+.grid.tall .take img,.grid.tall .take video,.grid.tall .take .blank{aspect-ratio:9 / 16}
+.takeFoot{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-2);padding:var(--sp-1) var(--sp-3) var(--sp-2);font:600 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+.key{color:var(--faint)}
+
+/* motion */
+.moves{display:flex;flex-direction:column;gap:var(--sp-1)}
+.move{display:flex;align-items:center;gap:var(--sp-2);font:500 var(--fs-meta)/1.3 var(--mono);color:var(--text)}
+.clip{width:100%;max-width:calc(var(--w-detail) * 2.6);border-radius:var(--r-arm);border:1px solid var(--hair-2)}
+.shots{display:flex;flex-direction:column;gap:var(--sp-3)}
+
+@media (max-width:900px){
+  .grid,.grid.tall{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .row{grid-template-columns:auto minmax(0,1fr) auto}
+  .row .kind{display:none}
+}
+.head{display:flex;flex-wrap:wrap;gap:var(--sp-1);align-items:center;margin-bottom:var(--sp-5)}

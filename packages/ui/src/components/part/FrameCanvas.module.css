@@ -1,0 +1,32 @@
+/* The frame canvas (v1 parts.tsx FrameCanvas, redrawn in the kit's ink; no prototype source - the
+   prototype has no step editor). Percent geometry is inline (it is data); everything here is a
+   token. The plate fills the frame; layers sit over it in paint order; a hidden layer is faint,
+   a selected one ringed in the focus line. */
+.canvas{margin:0;width:100%;max-width:calc(var(--w-detail) * 2.6);container-type:inline-size}
+.frame{position:relative;width:100%;aspect-ratio:16 / 9;border-radius:var(--r-arm);overflow:hidden;border:1px solid var(--hair-2);background:var(--ink-2);touch-action:none;user-select:none}
+.tall{max-width:calc(var(--w-detail) * 1.1)}
+.tall .frame{aspect-ratio:9 / 16}
+.plate{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.ground{background:var(--hatch);border:1px dashed var(--muted);border-radius:var(--r-arm);box-sizing:border-box}
+.ground[data-state=refused]{border-color:var(--rose)}
+.ground[data-state=generating]{border-color:var(--cyan)}
+
+.el{position:absolute;box-sizing:border-box;border:var(--stroke-glyph) solid color-mix(in srgb,var(--ink-bright) 70%,transparent);border-radius:var(--r-xs);background:color-mix(in srgb,var(--ink) 25%,transparent);cursor:grab;display:flex;align-items:flex-end;padding:var(--sp-hair) var(--sp-tight);min-width:var(--sp-3);min-height:var(--sp-3)}
+.el.accent{border-color:var(--cyan);background:color-mix(in srgb,var(--cyan) 14%,transparent)}
+.el[data-kind=rule]{border-width:0 0 var(--stroke-mark) 0;border-radius:0;background:none}
+.el[data-kind=loop]{border-radius:50%}
+.elLabel{font:600 var(--fs-micro)/1.1 var(--mono);color:var(--ink-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;text-shadow:0 0 var(--sp-1) var(--ink)}
+.text{position:absolute;max-width:60%;cursor:grab;color:var(--ink-bright);font:600 var(--fs-ui)/1.2 var(--sans);text-shadow:0 0 var(--sp-2) var(--ink);padding:var(--sp-nudge) var(--sp-1);border-radius:var(--r-xs)}
+.caption{font:500 var(--fs-read)/1.3 var(--serif)}
+.figure{font:700 var(--fs-h2)/1.1 var(--mono);color:var(--cyan)}
+.kicker{font:700 var(--fs-micro)/1.1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--amber)}
+.label{font:600 var(--fs-meta)/1.2 var(--mono)}
+.unsourced{color:var(--amber);margin-right:var(--sp-1)}
+.hidden{opacity:.28}
+.on{outline:var(--stroke-mark) solid var(--focus-line);outline-offset:var(--sp-nudge)}
+.handle{position:absolute;right:calc(var(--sp-1) * -1);bottom:calc(var(--sp-1) * -1);width:var(--sp-4);height:var(--sp-4);border-radius:var(--r-xs);background:var(--focus-line);cursor:nwse-resize}
+
+.mover{position:absolute;display:inline-flex;align-items:center;gap:var(--sp-1);pointer-events:none;transform:translate(-50%,-50%)}
+.arrow{font:700 var(--fs-h2)/1 var(--sans);color:var(--amber);text-shadow:0 0 var(--sp-2) var(--ink)}
+.moverLabel{font:600 var(--fs-micro)/1.2 var(--mono);color:var(--ink);background:var(--amber);border-radius:var(--r-chip);padding:var(--sp-nudge) var(--sp-tight);white-space:nowrap}
+.dry{position:absolute;right:var(--sp-3);top:var(--sp-3);font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink);background:color-mix(in srgb,var(--amber) 85%,transparent);border-radius:var(--r-chip);padding:var(--sp-hair) var(--sp-tight)}

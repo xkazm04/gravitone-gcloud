@@ -8,17 +8,21 @@ import { RECIPES } from "@gt/catalog/recipes";
 import { EDITOR_KINDS, PART_ACTS, actBelongs, isEditorKind, opLabel, researchFaceOf, scriptFaceOf, type ResearchOp, type ScriptOp } from "../src/partView.ts";
 
 describe("editor kinds", () => {
-  test("only research and script have an editor today; gates and the slot never do", () => {
-    expect([...EDITOR_KINDS]).toEqual(["research", "script"]);
+  // Wave C grew the list: L39 frames and motion, L40 score, cut and the album and explainer parts.
+  test("the studio's work kinds have an editor; gates, the slot and the still (no record yet) never do", () => {
+    expect([...EDITOR_KINDS]).toEqual(["research", "script", "frames", "motion", "score", "cut", "words", "render", "article", "strips", "voice"]);
     expect(isEditorKind("research")).toBe(true);
-    for (const k of ["frames", "gate", "slot", "", "Research"]) expect(isEditorKind(k)).toBe(false);
+    for (const k of ["gate", "slot", "still", "", "Research"]) expect(isEditorKind(k)).toBe(false);
   });
 
-  test("every film recipe plans both editor kinds, so every film reaches them from its Plan", () => {
-    for (const r of RECIPES.filter((x) => x.family === "film")) {
-      const keys = r.parts.map((p) => p.kind);
-      for (const k of EDITOR_KINDS) expect(keys, r.id).toContain(k);
-    }
+  test("every film recipe plans the six film editors, the album and the explainer theirs, so each reaches them from its Plan", () => {
+    const plans = (id: string, kinds: readonly string[]) => {
+      const keys = RECIPES.find((x) => x.id === id)?.parts.map((p) => p.kind) ?? [];
+      for (const k of kinds) expect(keys, id).toContain(k);
+    };
+    for (const r of RECIPES.filter((x) => x.family === "film")) plans(r.id, ["research", "script", "frames", "motion", "score", "cut"]);
+    plans("album-video", ["words", "render"]);
+    plans("explainer", ["article", "strips", "voice", "cut"]);
   });
 });
 

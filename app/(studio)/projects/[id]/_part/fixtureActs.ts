@@ -5,6 +5,7 @@ import type { PartActKind, PartActResult, PartReceipt } from "@gt/domain/partVie
 
 import { actBasis, landAct, nextJobId, type ActBasis } from "./fixture.ts";
 import { digest } from "./hash.ts";
+import { isLaterKind, later, targetToken } from "./kinds.ts";
 
 // A PART ACT IS A RECEIPT, THEN A CONFIRM (COMMON decision 3), priced statically from the plan:
 // the part's chosen model option (the same `ModelOption` the Plan row shows and the router
@@ -16,7 +17,8 @@ import { digest } from "./hash.ts";
 // Every fixture act is DRY: `mode: "dry"` on the receipt, and the confirm runs the act's stand-in
 // and lands it as a job write. A live arm does not exist on this side (GRAVITONE_DRY_ONLY).
 
-const LABELS: Readonly<Record<PartActKind, string>> = {
+// The later kinds' acts label themselves (./kinds.ts `actLabel`); this table is research's and script's.
+const LABELS: Readonly<Partial<Record<PartActKind, string>>> = {
   "run-research": "research turn",
   "follow-up": "follow-up turns",
   "generate-ideas": "ideas round",
@@ -34,13 +36,13 @@ export function receiptOf(b: ActBasis, act: PartActKind): PartReceipt {
   const unpricedReason = usd === null ? (o?.unpricedReason ?? "no price for this route") : undefined;
   const src = o?.src ?? "illustrative";
   return {
-    token: digest({ part: b.part.id, rev: b.rev, act, option: o?.key ?? null, units: b.units }),
+    token: targetToken(digest({ part: b.part.id, rev: b.rev, act, option: o?.key ?? null, units: b.units }), b.target),
     subject: { kind: "part", projectId: b.ctx.project.id, partId: b.part.id, rev: b.rev, act },
     mode: "dry",
     lines: [
       {
         key: act,
-        label: LABELS[act],
+        label: (isLaterKind(b.kind) ? later(b.kind).actLabel(act) : LABELS[act]) ?? act,
         lane: o?.lane ?? "seat.text",
         provider: o?.provider ?? "—",
         model: o?.model ?? "—",
@@ -62,13 +64,13 @@ export function receiptOf(b: ActBasis, act: PartActKind): PartReceipt {
   };
 }
 
-export function actReceipt(projectId: string, key: string, act: PartActKind, now: number): Result<PartReceipt> {
-  const b = actBasis(projectId, key, act, now);
+export function actReceipt(projectId: string, key: string, act: PartActKind, now: number, target?: string): Result<PartReceipt> {
+  const b = actBasis(projectId, key, act, now, target);
   return b.ok ? ok(receiptOf(b.value, act)) : b;
 }
 
-export function confirmAct(projectId: string, key: string, act: PartActKind, token: string, now: number): Result<PartActResult> {
-  const b = actBasis(projectId, key, act, now);
+export function confirmAct(projectId: string, key: string, act: PartActKind, token: string, now: number, target?: string): Result<PartActResult> {
+  const b = actBasis(projectId, key, act, now, target);
   if (!b.ok) return b;
   const fresh = receiptOf(b.value, act);
   if (fresh.token !== token) return ok({ kind: "stale", fresh });

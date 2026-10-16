@@ -22,6 +22,8 @@ import {
 import { fixtureProduce } from "../../_port/port.ts";
 import { RESEARCH, type ResearchRec } from "./fixtureResearch.ts";
 import { SCRIPT, type ScriptRec } from "./fixtureScript.ts";
+import { encodeRecord } from "@gt/domain/steps/registry";
+import { isLaterKind, later, type KCtx, type LaterKind, type RecOf as KindRecOf } from "./kinds.ts";
 
 // THE FIXTURE PART UNIVERSE - per project, one revisioned record per editor part and its op
 // log, in memory, with the rules L36's server side will keep (STEPS-DESIGN §3, COMMON 3/4):
@@ -52,17 +54,17 @@ type Entry<R> = {
   undone: boolean;
 };
 type Rec<R> = { rev: number; data: R; readonly log: Entry<R>[] };
-type Records = { readonly research: Map<string, Rec<ResearchRec>>; readonly script: Map<string, Rec<ScriptRec>>; seq: number };
-type RecOf<K extends EditorKind> = K extends "research" ? ResearchRec : ScriptRec;
+type Records = { readonly research: Map<string, Rec<ResearchRec>>; readonly script: Map<string, Rec<ScriptRec>>; seq: number; readonly later: Map<string, Rec<object>> };
+type RecOf<K extends EditorKind> = KindRecOf[K];
 
 declare global {
   var __gtPartFixture: Records | undefined;
 }
 
-const records = (): Records => (globalThis.__gtPartFixture ??= { research: new Map(), script: new Map(), seq: 0 });
+const records = (): Records => (globalThis.__gtPartFixture ??= { research: new Map(), script: new Map(), seq: 0, later: new Map() });
 /** Start the part universe over (the live lane's reset, beside `resetProduce`). */
 export function resetParts(): void {
-  globalThis.__gtPartFixture = { research: new Map(), script: new Map(), seq: 0 };
+  globalThis.__gtPartFixture = { research: new Map(), script: new Map(), seq: 0, later: new Map() };
 }
 
 /* ── the project, read from the produce port ─────────────────────────────── */
@@ -70,16 +72,18 @@ export function resetParts(): void {
 /** The two projects the produce seed has no discipline for (ads, free), composed through the
  *  produce port's own `compose` the first time any part is read - so they are real projects
  *  with a Plan, not a part-only island. Found again by title after a produce reset. */
-const SEEDS = [
+const SEEDS: readonly { readonly title: string; readonly recipe: string; readonly takeId?: string }[] = [
   { title: "Rainshell — social 15", recipe: "film/ad-social-15" },
   { title: "Any video — the night market", recipe: "film/free-form" },
-] as const;
+  /* L40 - the album video (still · words · render), from a kept take; the produce seed has none. */
+  { title: "Salt lines — album video", recipe: "album-video", takeId: "take-salt-lines" },
+];
 
 function ensureSeeds(): void {
   const port = fixtureProduce();
   const list = port.listProjects();
   if (!list.ok) return;
-  for (const s of SEEDS) if (!list.value.projects.some((p) => p.title === s.title)) port.compose({ recipe: s.recipe, title: s.title });
+  for (const s of SEEDS) if (!list.value.projects.some((p) => p.title === s.title)) port.compose({ recipe: s.recipe, title: s.title, ...(s.takeId === undefined ? {} : { takeId: s.takeId }) });
 }
 
 export type Ctx = {
@@ -117,7 +121,8 @@ function contextOf(projectId: string, now: number): Result<Ctx> {
 /* ── records ──────────────────────────────────────────────────────────────── */
 
 function recOf<K extends EditorKind>(ctx: Ctx, kind: K): Rec<RecOf<K>> {
-  const map = records()[kind] as Map<string, Rec<RecOf<K>>>;
+  if (isLaterKind(kind)) return laterRec(ctx, kind) as Rec<RecOf<K>>;
+  const map = records()[kind as "research" | "script"] as Map<string, Rec<RecOf<K>>>;
   let rec = map.get(ctx.project.id);
   if (rec === undefined) {
     const data = (kind === "research" ? RESEARCH.seed(ctx) : SCRIPT.seed(ctx)) as RecOf<K>;
@@ -125,6 +130,47 @@ function recOf<K extends EditorKind>(ctx: Ctx, kind: K): Rec<RecOf<K>> {
     map.set(ctx.project.id, rec);
   }
   return rec;
+}
+
+/* ── the later kinds (./kinds.ts): one store, one context, the same log rules ── */
+
+/** A later module's output as the record store holds it (records are plain objects). */
+const asRec = (x: unknown): object => (typeof x === "object" && x !== null ? x : {});
+const seeding = new Set<string>();
+function laterRec(ctx: Ctx, kind: LaterKind): Rec<object> {
+  const map = records().later;
+  const at = `${kind}:${ctx.project.id}`;
+  let rec = map.get(at);
+  if (rec === undefined) {
+    // A seed reading its own kind back (directly or via `records()`) is a module defect, named.
+    if (seeding.has(at)) throw new TypeError(`${kind}: its seed reads its own record`);
+    seeding.add(at);
+    const data = asRec(later(kind).seed(kctxOf(ctx)));
+    seeding.delete(at);
+    map.set(at, (rec = { rev: 1, data, log: [] }));
+  }
+  return rec;
+}
+
+/** L38's context plus every editor kind's record of this project, and its step records. */
+export function kctxOf(ctx: Ctx): KCtx {
+  const k: KCtx = {
+    ...ctx,
+    rec: (kind) => recOf(ctx, kind).data,
+    // Through each record's DOOR as the kernel stores them: both sides' readers read one shape.
+    records: () => {
+      const out = new Map<string, Readonly<Record<string, unknown>>>();
+      const put = (key: string, v: object): void => {
+        const e = encodeRecord(key, v);
+        if (e.ok && typeof e.value === "object" && e.value !== null) out.set(key, { ...e.value });
+      };
+      const s = recOf(ctx, "script").data;
+      if (s.scenarios.length > 0) put("ads-scenarios", { ideaId: s.scenariosIdea, options: s.scenarios, pickedId: s.picked });
+      for (const p of ctx.plan.parts) if (isLaterKind(p.kind)) for (const [key, v] of Object.entries(later(p.kind).records(k))) put(key, v);
+      return out;
+    },
+  };
+  return k;
 }
 
 /** The top-level fields `next` changed from `prev` (records are replaced, never mutated). */
@@ -161,6 +207,7 @@ const refOf = (projectId: string, p: PlanView["parts"][number]): PartRef => ({
 });
 
 function verdictOf(ctx: Ctx, kind: EditorKind): PartVerdict {
+  if (isLaterKind(kind)) return later(kind).verdict(kctxOf(ctx));
   return kind === "research" ? RESEARCH.verdict(ctx, recOf(ctx, "research").data) : SCRIPT.verdict(ctx, recOf(ctx, "script").data);
 }
 
@@ -197,6 +244,7 @@ function viewOf(ctx: Ctx, kind: EditorKind): Result<PartView> {
       .map((e) => ({ n: e.n, label: e.label, by: e.by, at: new Date(e.at).toISOString() })),
     running: [],
   };
+  if (isLaterKind(kind)) return ok(later(kind).view(kctxOf(ctx), base));
   const r = recOf(ctx, "research").data;
   const view: PartView =
     kind === "research"
@@ -238,6 +286,14 @@ function withPart(projectId: string, key: string, now: number, run: (ctx: Ctx, k
 export function opPart(projectId: string, key: string, baseRev: number, op: PartOp, now: number): Result<PartOpResult> {
   let stale = false;
   const done = withPart(projectId, key, now, (ctx, kind) => {
+    if (isLaterKind(kind)) {
+      const rec = laterRec(ctx, kind);
+      if (rec.rev !== baseRev) return ((stale = true), ok(null));
+      const next = later(kind).apply(kctxOf(ctx), op);
+      if (!next.ok) return next;
+      write(rec, asRec(next.value.next), { label: next.value.label, by: "operator", kind: "op", at: now });
+      return ok(null);
+    }
     if (kind === "research") {
       const rec = recOf(ctx, "research");
       if (rec.rev !== baseRev) return ((stale = true), ok(null));
@@ -276,6 +332,10 @@ function undoIn<R extends object>(rec: Rec<R>, now: number): Result<null> {
 export function undoPart(projectId: string, key: string, baseRev: number, now: number): Result<PartOpResult> {
   let stale = false;
   const done = withPart(projectId, key, now, (ctx, kind) => {
+    if (isLaterKind(kind)) {
+      const rec = laterRec(ctx, kind);
+      return rec.rev !== baseRev ? ((stale = true), ok(null)) : undoIn(rec, now);
+    }
     const rec = kind === "research" ? recOf(ctx, "research") : recOf(ctx, "script");
     if (rec.rev !== baseRev) return ((stale = true), ok(null));
     return kind === "research" ? undoIn(recOf(ctx, "research"), now) : undoIn(recOf(ctx, "script"), now);
@@ -288,10 +348,10 @@ export function undoPart(projectId: string, key: string, baseRev: number, now: n
 
 /* ── acts: what the receipt and the dry landing need from the core ───────── */
 
-export type ActBasis = { readonly ctx: Ctx; readonly kind: EditorKind; readonly part: WorkPlanPart; readonly rev: number; readonly units: number };
+export type ActBasis = { readonly ctx: Ctx; readonly kind: EditorKind; readonly part: WorkPlanPart; readonly rev: number; readonly units: number; readonly target?: string };
 
 /** The act's subject as the receipt prices it: its part (for the routed model), rev and units. */
-export function actBasis(projectId: string, key: string, act: PartActKind, now: number): Result<ActBasis> {
+export function actBasis(projectId: string, key: string, act: PartActKind, now: number, target?: string): Result<ActBasis> {
   const k = kindOf(projectId, key, now);
   if (!k.ok) return k;
   const c = contextOf(projectId, now);
@@ -299,6 +359,11 @@ export function actBasis(projectId: string, key: string, act: PartActKind, now: 
   const ctx = c.value;
   const part = ctx.plan.parts.find((p) => p.kind === k.value);
   if (part === undefined || !work(part)) return err("not-found", `no ${k.value} part`);
+  if (isLaterKind(k.value)) {
+    const u = later(k.value).units(kctxOf(ctx), act, target);
+    if (!u.ok) return u;
+    return ok({ ctx, kind: k.value, part, rev: laterRec(ctx, k.value).rev, units: u.value, ...(target === undefined ? {} : { target }) });
+  }
   const units = k.value === "research" ? RESEARCH.units(ctx, recOf(ctx, "research").data, act) : SCRIPT.units(ctx, recOf(ctx, "script").data, act);
   if (!units.ok) return units;
   return ok({ ctx, kind: k.value, part, rev: recOf(ctx, k.value).rev, units: units.value });
@@ -307,6 +372,13 @@ export function actBasis(projectId: string, key: string, act: PartActKind, now: 
 /** Land a dry job's stand-in output as a job write, and answer the view after it. */
 export function landAct(b: ActBasis, act: PartActKind, jobId: string): Result<PartView> {
   const at = b.ctx.now;
+  if (isLaterKind(b.kind)) {
+    const rec = laterRec(b.ctx, b.kind);
+    const next = later(b.kind).land(kctxOf(b.ctx), act, at, jobId, b.target);
+    if (!next.ok) return next;
+    write(rec, asRec(next.value), { label: b.target === undefined ? act : `${act} ${b.target}`, by: jobId, kind: "job", at });
+    return viewOf(b.ctx, b.kind);
+  }
   if (b.kind === "research") {
     const rec = recOf(b.ctx, "research");
     const next = RESEARCH.land(b.ctx, rec.data, act, at);
@@ -322,5 +394,5 @@ export function landAct(b: ActBasis, act: PartActKind, jobId: string): Result<Pa
 }
 
 export function nextJobId(b: ActBasis, act: PartActKind): string {
-  return `job:part:${b.part.id}:${act}:${++records().seq}`;
+  return `job:part:${b.part.id}:${act}${b.target === undefined ? "" : `:${b.target}`}:${++records().seq}`;
 }

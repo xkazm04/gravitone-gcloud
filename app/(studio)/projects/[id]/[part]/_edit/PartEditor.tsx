@@ -30,11 +30,14 @@ import { outcomeOf, useReceipt } from "../../../_plan/receipt.tsx";
 import type { PartPort } from "../../_part/contract.ts";
 import { ResearchEditor } from "./Research.tsx";
 import { ScriptEditor } from "./Script.tsx";
+import { LaterEditor } from "./editors.tsx";
 
 /** The frame every editor hands to PartWorkspace; the editor adds its rail, primary, inspector. */
 export type Frame = Omit<PartWorkspaceProps, "rail" | "primary" | "inspector" | "mode" | "facts">;
 export type Send = (op: PartOp) => void;
-export type EditorProps<V> = { readonly view: V; readonly frame: Frame; readonly send: Send; readonly busy: boolean; readonly error: string | null };
+/** Launch an act through the receipt flow; `target` names one unit for a per-unit act. */
+export type Launch = (act: PartActKind, label: string, target?: string) => void;
+export type EditorProps<V> = { readonly view: V; readonly frame: Frame; readonly send: Send; readonly busy: boolean; readonly error: string | null; readonly act: Launch };
 
 /** A part receipt drawn by the produce Receipt: the same lines, about this project at this rev.
  *  (Asked of the Director: a `part` ReceiptSubject in @gt/domain/produce retires this.) */
@@ -92,16 +95,16 @@ export function PartEditor({ first, port, nowMs }: { readonly first: PartView; r
     { label: view.project.title, href: `/projects/${encodeURIComponent(view.projectId)}` },
   ];
 
-  const launch = (act: PartActKind, label: string): void => {
+  const launch: Launch = (act, label, target) => {
     void flow.open({
       trail,
       here: `${view.key} · ${label}`,
       read: async () => {
-        const r = await port.actReceipt({ ...at, act });
+        const r = await port.actReceipt({ ...at, act, ...(target === undefined ? {} : { target }) });
         return r.ok ? { ok: true, value: asReceipt(r.value) } : r;
       },
       confirm: async (token) =>
-        outcomeOf(await port.act({ ...at, act, token }), (v) => {
+        outcomeOf(await port.act({ ...at, act, token, ...(target === undefined ? {} : { target }) }), (v) => {
           if (v.kind === "stale") return { kind: "stale", fresh: asReceipt(v.fresh) };
           setView(v.view);
           return { kind: "done", note: `${label} · ${v.jobId}`, ledger: { href: `/ledger?q=${encodeURIComponent(v.jobId)}`, subject: v.jobId } };
@@ -146,9 +149,11 @@ export function PartEditor({ first, port, nowMs }: { readonly first: PartView; r
         onUndo={undo}
       />
       {view.kind === "research" ? (
-        <ResearchEditor key={view.partId} view={view} frame={frame} send={send} busy={busy} error={error} />
+        <ResearchEditor key={view.partId} view={view} frame={frame} send={send} busy={busy} error={error} act={launch} />
+      ) : view.kind === "script" ? (
+        <ScriptEditor key={view.partId} view={view} frame={frame} send={send} busy={busy} error={error} act={launch} />
       ) : (
-        <ScriptEditor key={view.partId} view={view} frame={frame} send={send} busy={busy} error={error} />
+        <LaterEditor key={view.partId} view={view} frame={frame} send={send} busy={busy} error={error} act={launch} />
       )}
       {flow.sheet}
     </>
