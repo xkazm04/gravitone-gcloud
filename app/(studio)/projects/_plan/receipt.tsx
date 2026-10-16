@@ -8,13 +8,20 @@
 //
 // The confirm is disarmed synchronously (a ref, not state): a second ⏎ that lands before the
 // re-render cannot send a second confirm (async-ui-states/action-busy-states). The ceiling the
-// operator types travels with the confirm; the server refuses a breach with `budget`, and its
-// words are drawn verbatim under the receipt.
+// operator types travels with the confirm; a worst case over it is marked on the receipt (a
+// ceiling is a stop point, never a refusal), and a refusal's words are drawn verbatim under it.
+//
+// ARMING LIVE (COMMON decision 4). A launch is dry unless the operator arms it, here, on the
+// receipt: the `live` toggle re-reads the receipt in live mode - its token binds the mode, so the
+// ⏎ that follows confirms the live receipt the operator is looking at, never a dry one quietly
+// promoted. A process that may only run dry refuses the live read, and its words are the error
+// line. A re-route keeps its job's mode and offers no toggle (`armable` absent).
 
 import { useCallback, useRef, useState, type ReactNode } from "react";
 
-import type { Receipt as ReceiptValue } from "@gt/domain/produce";
+import type { Receipt as ReceiptValue, ReceiptMode } from "@gt/domain/produce";
 import { LevelSheet } from "@gt/ui/components/sheet/LevelSheet.tsx";
+import { Toggle } from "@gt/ui/components/toggle/Toggle.tsx";
 import type { ToastLedger } from "@gt/ui/components/toast/Toast.tsx";
 import { Receipt } from "@gt/ui/components/produce/Receipt.tsx";
 import { parseCeiling, receiptChanges, type ReceiptChanges } from "@gt/ui/components/produce/produce.ts";
@@ -29,8 +36,10 @@ export type ReceiptSpec = {
   /** The sheet's place: `Floor › image`, `Projects › Glass Harbor`. */
   readonly trail: readonly { readonly label: string; readonly href: string }[];
   readonly here: string;
-  readonly read: () => Promise<ActionResult<ReceiptValue>>;
-  readonly confirm: (token: string, ceilingUsd: number | undefined) => Promise<Outcome>;
+  readonly read: (mode: ReceiptMode) => Promise<ActionResult<ReceiptValue>>;
+  readonly confirm: (token: string, ceilingUsd: number | undefined, mode: ReceiptMode) => Promise<Outcome>;
+  /** The receipt may be armed live (a launch); absent for an act that keeps its job's mode. */
+  readonly armable?: boolean;
   readonly done: (note: string, ledger?: ToastLedger) => void;
   readonly failed: (message: string) => void;
 };
@@ -63,7 +72,7 @@ export function useReceipt(nowMs: number): ReceiptFlow {
     inflight.current = true;
     setReading(true);
     try {
-      const r = await spec.read();
+      const r = await spec.read("dry");
       gen.current++;
       if (r.ok) setSt({ spec, receipt: r.value, ceiling: "", busy: false });
       else spec.failed(r.error.error);
@@ -78,6 +87,27 @@ export function useReceipt(nowMs: number): ReceiptFlow {
     setSt(null);
   }, []);
 
+  /** Re-read the open receipt in the other mode; the sheet shows THAT receipt, or the refusal. */
+  const arm = useCallback(
+    async (mode: ReceiptMode): Promise<void> => {
+      if (st === null || inflight.current) return;
+      inflight.current = true;
+      const mine = gen.current;
+      setSt({ ...st, busy: true });
+      try {
+        const r = await st.spec.read(mode);
+        if (gen.current !== mine) return;
+        if (r.ok) {
+          const { error: _error, changes: _changes, ...rest } = st;
+          setSt({ ...rest, receipt: r.value, busy: false });
+        } else setSt({ ...st, busy: false, error: r.error.error });
+      } finally {
+        inflight.current = false;
+      }
+    },
+    [st],
+  );
+
   const confirm = useCallback(async (): Promise<void | false> => {
     if (st === null || inflight.current) return false;
     const c = parseCeiling(st.ceiling);
@@ -86,7 +116,7 @@ export function useReceipt(nowMs: number): ReceiptFlow {
     const mine = gen.current;
     setSt({ ...st, busy: true });
     try {
-      const out = await st.spec.confirm(st.receipt.token, c.value);
+      const out = await st.spec.confirm(st.receipt.token, c.value, st.receipt.mode);
       if (out.kind === "done") st.spec.done(out.note, out.ledger);
       if (gen.current !== mine) return;
       if (out.kind === "done") {
@@ -122,6 +152,7 @@ export function useReceipt(nowMs: number): ReceiptFlow {
           {...(st.error === undefined ? {} : { error: st.error })}
           nowMs={nowMs}
         />
+        {st.spec.armable === true && <Toggle label="live" name={`arm live, now ${st.receipt.mode}`} on={st.receipt.mode === "live"} onToggle={(on) => void arm(on ? "live" : "dry")} />}
       </LevelSheet>
     );
   return { open, reading, sheet };

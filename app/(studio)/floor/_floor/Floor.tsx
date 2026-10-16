@@ -84,9 +84,10 @@ export function Floor({ data, initial, produce, choices }: FloorProps) {
     void flow.open({
       trail: [{ label: "Floor", href: "/floor" }],
       here: `${name} · launch`,
-      read: () => produce.composerReceipt({ input }),
-      confirm: async (token, ceilingUsd) =>
-        outcomeOf(await produce.launchRun({ input, token, ...(ceilingUsd === undefined ? {} : { ceilingUsd }) }), (v) => (v.kind === "stale" ? { kind: "stale", fresh: v.fresh } : { kind: "done", note: `${name} · launched · ${v.runId}`, ledger: { href: `/ledger?q=${encodeURIComponent(v.jobId)}`, subject: v.runId } })),
+      read: (mode) => produce.composerReceipt({ input, mode }),
+      armable: true,
+      confirm: async (token, ceilingUsd, mode) =>
+        outcomeOf(await produce.launchRun({ input, token, mode, ...(ceilingUsd === undefined ? {} : { ceilingUsd }) }), (v) => (v.kind === "stale" ? { kind: "stale", fresh: v.fresh } : { kind: "done", note: `${name} · launched · ${v.runId}`, ledger: { href: `/ledger?q=${encodeURIComponent(v.jobId)}`, subject: v.runId } })),
       done: (note, ledger) => {
         toast(note, ledger);
         setDrafts((cur) => (cur === null ? cur : { ...cur, [lane]: { ...cur[lane], text: "" } }));

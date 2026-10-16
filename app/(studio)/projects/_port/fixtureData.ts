@@ -11,6 +11,10 @@ import type { FigureSource, ModelOption } from "@gt/domain/produce";
 // Where the prototype priced a seat or a credit plan in dollars ($0 for a text-CLI turn), the
 // fixture says why it has no price instead (the catalog's own reasons, @gt/catalog/partOptions):
 // a $0 beside a measured $0.04 reads as a measurement (measurement-honesty).
+// One figure is a measurement, not the prototype's: a strips card is authored on the TEXT SEAT
+// and rendered inside the same step (L33), ~1021 s a card-round (strips-r1, 879 s of seat and
+// 142 s of capture, 2026-10-06) - the prototype drew it as 0.7 min on the render box, which put
+// a paid seat's turns on a free lane that never holds after a crash.
 
 const PROTO = "prototype studio.js CATALOG, a placeholder nobody measured";
 const MODEL = "prototype model.js estimate";
@@ -18,11 +22,15 @@ const MODEL = "prototype model.js estimate";
 export const SEAT = "billed to the text seat; the CLI reports cost after the run";
 export const SUNO = "Suno bills subscription credits, not dollars";
 export const STUDIO = "Leonardo studio credits from the prepaid plan, not dollars";
+export const STRIPS_SEAT = "each card's author turn bills the text seat, reported after the run (pipeline/strips/run.mts)";
+/** strips-r1 (lib/producers/strips.ts `stripsOption`): one card-round on the seat, capture included. */
+const STRIPS_ROUND_MIN = 1021 / 60;
+const STRIPS_ROUND = "strips-r1: 879 s of seat and 142 s of capture per card-round, measured 2026-10-06";
 
 type Price = number | readonly [number, number] | { readonly unpriced: string };
 
-function opt(kind: WorkKind, provider: string, model: string, label: string, lane: ResourceLane, minutes: number, price: Price, src: FigureSource = "illustrative"): ModelOption {
-  const note = src === "model" ? MODEL : PROTO;
+function opt(kind: WorkKind, provider: string, model: string, label: string, lane: ResourceLane, minutes: number, price: Price, src: FigureSource = "illustrative", measured?: string): ModelOption {
+  const note = measured ?? (src === "model" ? MODEL : PROTO);
   const usd: { readonly usdPerUnit: number | null; readonly usdRangePerUnit?: readonly [number, number]; readonly unpricedReason?: string } =
     typeof price === "number"
       ? { usdPerUnit: price }
@@ -66,13 +74,13 @@ export const OPTIONS: Readonly<Record<WorkKind, KindSpec>> = {
       opt("still", "comfy", "flux-2-dev-fp8", "Flux 2 dev fp8", "gpu.local", 1.6, 0, "model"),
     ],
   },
-  motion: { noun: "shot", options: [opt("motion", "wan", "wan-2.2-i2v", "Wan 2.2 · i2v", "gpu.local", 6, 0), opt("motion", "strips", "strip-render", "strips · HTML/SVG 240f", "box.render", 0.7, 0)] },
+  motion: { noun: "shot", options: [opt("motion", "wan", "wan-2.2-i2v", "Wan 2.2 · i2v", "gpu.local", 6, 0), opt("motion", "strips", "strip-render", "strips · HTML/SVG 240f", "seat.text", STRIPS_ROUND_MIN, u(STRIPS_SEAT), "real", STRIPS_ROUND)] },
   score: { noun: "prompt", options: [opt("score", "suno", "v6", "Suno v6 · serial", "box.chrome", 4, u(SUNO), "model"), opt("score", "elevenlabs", "music", "ElevenLabs · music", "cloud.elevenlabs", 1.5, 0.36)] },
   track: { noun: "prompt", options: [opt("track", "suno", "v6-wild", "Suno v6 + v6-wild · serial", "box.chrome", 4, u(SUNO), "model"), opt("track", "elevenlabs", "music", "ElevenLabs · music", "cloud.elevenlabs", 1.5, 0.36)] },
   sfx: { noun: "clip", options: [opt("sfx", "elevenlabs", "sfx", "ElevenLabs · sfx", "cloud.elevenlabs", 1, 0.04)] },
   voice: { noun: "take", options: [opt("voice", "elevenlabs", "voice", "ElevenLabs · voice", "cloud.elevenlabs", 2, 0.18), opt("voice", "local-tts", "tts", "local TTS", "seat.text", 5, 0)] },
   article: { noun: "run", options: [opt("article", "articles", "critique-4", "lib/articles · 4-model critique", "seat.text", 38, [47, 92], "model")] },
-  strips: { noun: "card", options: [opt("strips", "strips", "strip-render", "strips · HTML/SVG 240f", "box.render", 0.7, 0)] },
+  strips: { noun: "card", options: [opt("strips", "strips", "strip-render", "strips · HTML/SVG 240f", "seat.text", STRIPS_ROUND_MIN, u(STRIPS_SEAT), "real", STRIPS_ROUND)] },
   render: { noun: "encode", options: [opt("render", "ffmpeg", "libx264", "libx264 · full encode", "box.render", 31.5, 0, "model"), opt("render", "ffmpeg", "libx264-draft", "libx264 · draft preset", "box.render", 9, 0)] },
   cut: { noun: "cut", options: [opt("cut", "ffmpeg", "compositor", "ffmpeg · compositor", "box.render", 7, 0)] },
   extract: { noun: "source", options: [opt("extract", "google", "nano-banana", "Nano Banana · read back + replicate", "cloud.google", 0.8, 0.12)] },

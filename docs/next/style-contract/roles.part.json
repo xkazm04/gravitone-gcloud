@@ -1,0 +1,57 @@
+{
+  "page": {
+    "winner": "app/projects.html#plan",
+    "port": "/kit",
+    "note": "No prototype source: the prototype has no step editor (STEPS-DESIGN). The part workspace is built from the kit tokens; the one object it shares with a prototype page is the tab rail, so the part tabs are held to the Plan prototype tabrail, and the header roles every page measures."
+  },
+  "roles": {
+    "ground": {
+      "winner": "body",
+      "port": "[data-world=next]"
+    },
+    "header": {
+      "winner": "[data-component=StudioHeader]",
+      "port": "[data-component=StudioHeader]"
+    },
+    "brand": {
+      "winner": ".brand",
+      "port": "[data-component=StudioHeader] > span:first-child"
+    },
+    "nav-rest": {
+      "winner": ".nav a[data-nav=library]",
+      "port": "[data-role=\"nav-rest@library\"]"
+    },
+    "nav-current": {
+      "winner": ".nav [aria-current=page]",
+      "port": "[data-role=\"nav-current@projects\"]"
+    },
+    "chip": {
+      "winner": ".hdr-spend",
+      "port": "[data-role=\"chip\"] > *"
+    },
+    "chip-value": {
+      "winner": ".hdr-spend b",
+      "port": "[data-role=\"chip\"] b"
+    },
+    "tally": {
+      "winner": ".next-btn .tally",
+      "port": "[data-role=\"tally\"] > *"
+    },
+    "keycap": {
+      "winner": ".next-btn .keycap",
+      "port": "[data-role=\"keycap\"] > *"
+    },
+    "tabrail": {
+      "winner": ".tabrail",
+      "port": "[data-role=\"parttabs@part\"] > *"
+    },
+    "tab-current": {
+      "winner": ".tabrail a[aria-selected=true]",
+      "port": "[data-role=\"parttabs@part\"] [aria-current=page]"
+    },
+    "tab-rest": {
+      "winner": ".tabrail a[aria-selected=false]",
+      "port": "[data-role=\"parttabs@part\"] a:not([aria-current])"
+    }
+  }
+}

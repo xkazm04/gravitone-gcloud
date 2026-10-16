@@ -13,6 +13,10 @@
 //   ActOutcome                          what an act did, in the words its toast says.
 //   RerouteResult                       a re-route is a receipt first, then a confirm.
 //
+// A receipt is read DRY unless the operator arms it live (`mode`); the token binds the mode, so a
+// live confirm is a confirm of a live receipt the operator saw (COMMON decision 4). A re-route
+// keeps the mode its job was launched in.
+//
 // Every verb answers the action core's envelope (app/_server/actionCore.ts): `{ok, value}` or
 // `{ok, error}`, never a throw.
 
@@ -28,6 +32,7 @@ import type {
   PlanView,
   ProjectList,
   Receipt,
+  ReceiptMode,
   RerouteOption,
   StaleReceipt,
 } from "@gt/domain/produce";
@@ -100,8 +105,8 @@ type R<T> = Promise<ActionResult<T>>;
 /** The port the screens call (./wire.ts gathers the actions into one). */
 export type ProducePort = {
   readonly composerChoices: () => R<ComposerChoices>;
-  readonly composerReceipt: (i: { readonly input: ComposerInput }) => R<Receipt>;
-  readonly launchRun: (i: { readonly input: ComposerInput; readonly token: string; readonly ceilingUsd?: number }) => R<Confirmed<LaunchedRun>>;
+  readonly composerReceipt: (i: { readonly input: ComposerInput; readonly mode?: ReceiptMode }) => R<Receipt>;
+  readonly launchRun: (i: { readonly input: ComposerInput; readonly token: string; readonly ceilingUsd?: number; readonly mode?: ReceiptMode }) => R<Confirmed<LaunchedRun>>;
   readonly listProjects: () => R<ProjectList>;
   readonly loadPlan: (i: { readonly id: string }) => R<PlanView>;
   readonly composeChoices: () => R<ComposeChoices>;
@@ -109,8 +114,8 @@ export type ProducePort = {
   readonly setPart: (i: { readonly id: string; readonly rev: number; readonly partId: string; readonly patch: PartPatch }) => R<PlanView>;
   readonly rename: (i: { readonly id: string; readonly rev: number; readonly title: string }) => R<PlanView>;
   readonly discard: (i: { readonly id: string; readonly rev: number }) => R<{ readonly id: string }>;
-  readonly planReceipt: (i: { readonly id: string }) => R<Receipt>;
-  readonly launchPlan: (i: { readonly id: string; readonly rev: number; readonly token: string; readonly ceilingUsd?: number }) => R<Confirmed<LaunchedProject>>;
+  readonly planReceipt: (i: { readonly id: string; readonly mode?: ReceiptMode }) => R<Receipt>;
+  readonly launchPlan: (i: { readonly id: string; readonly rev: number; readonly token: string; readonly ceilingUsd?: number; readonly mode?: ReceiptMode }) => R<Confirmed<LaunchedProject>>;
   readonly pauseJob: (i: { readonly jobId: string }) => R<ActOutcome>;
   readonly resumeJob: (i: { readonly jobId: string }) => R<ActOutcome>;
   readonly retryJob: (i: { readonly jobId: string; readonly ceilingUsd?: number }) => R<ActOutcome>;

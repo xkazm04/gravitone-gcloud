@@ -26,6 +26,7 @@ import { LedgerSections } from "./LedgerKit.tsx";
 import { SignalSections } from "./Signal.tsx";
 import { StatusSection } from "./Status.tsx";
 import { StructureSection } from "./Structure.tsx";
+import { PartSection } from "./PartKit.tsx";
 import { ProduceSection } from "./ProduceKit.tsx";
 import { RunsSection } from "./RunsKit.tsx";
 import { DRAWN_GROUPS, TokenSections } from "./Tokens.tsx";
@@ -56,6 +57,7 @@ export default function KitPage() {
         <FloorSection />
         <BoardSection data={boardKitData()} />
         <ProduceSection />
+        <PartSection />
         <ContractSection />
       </div>
     </div>

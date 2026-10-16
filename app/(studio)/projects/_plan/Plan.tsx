@@ -14,9 +14,10 @@
 // Launch is a receipt and a confirm (../_plan/receipt.tsx), never the press itself.
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 
 import type { PartPatch, PlanView, ProjectList } from "@gt/domain/produce";
+import { isEditorKind } from "@gt/domain/partView";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
 import { Crumbs } from "@gt/ui/components/crumbs/Crumbs.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
@@ -121,9 +122,10 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
     void flow.open({
       trail: [{ label: "Projects", href: "/projects/runs" }],
       here: `${p.title} · launch plan`,
-      read: () => port.planReceipt({ id: p.id }),
-      confirm: async (token, ceilingUsd) =>
-        outcomeOf(await port.launchPlan({ id: p.id, rev: rev.current, token, ...(ceilingUsd === undefined ? {} : { ceilingUsd }) }), (v) => {
+      read: (mode) => port.planReceipt({ id: p.id, mode }),
+      armable: true,
+      confirm: async (token, ceilingUsd, mode) =>
+        outcomeOf(await port.launchPlan({ id: p.id, rev: rev.current, token, mode, ...(ceilingUsd === undefined ? {} : { ceilingUsd }) }), (v) => {
           if (v.kind !== "stale") return { kind: "done", note: `${p.title} · launched · ${v.jobIds.length} jobs`, ledger: { href: `/ledger?q=${encodeURIComponent(p.id)}`, subject: p.title } };
           // The fresh receipt was read at the plan's current revision: the next confirm names it.
           if (v.fresh.subject.kind === "project") rev.current = v.fresh.subject.rev;
@@ -148,6 +150,21 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
 
   const rows = ordered(list);
   const work = view.parts.filter(isWork);
+  // THE PLAN ROW LINK (Phase 4 wave C, L38): a part with an editor opens it - the row on a click
+  // that is not on one of its own controls, the selected row on E. PlanRow is L28's @gt/ui
+  // component and draws no anchor (asked: an `href` per row there retires this delegation).
+  const editorHref = (partId: string): string | null => {
+    const part = view.parts.find((x) => x.id === partId);
+    if (part === undefined || !isEditorKind(part.kind)) return null;
+    return `/projects/${encodeURIComponent(p.id)}/${encodeURIComponent(part.id.slice(p.id.length + 1))}`;
+  };
+  const openRow = (e: MouseEvent<HTMLDivElement>): void => {
+    if (!(e.target instanceof Element) || e.target.closest("select,input,button,a") !== null) return;
+    const id = e.target.closest("tr[data-part]")?.getAttribute("data-part");
+    const to = id === null || id === undefined ? null : editorHref(id);
+    if (to !== null) router.push(to);
+  };
+  const selHref = sel === null ? null : editorHref(sel);
   const walk = (dir: 1 | -1): void => {
     const ids = work.map((x) => x.id);
     const i = sel === null ? (dir === 1 ? -1 : ids.length) : ids.indexOf(sel);
@@ -168,6 +185,7 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
         router.push(`/projects/${encodeURIComponent(next.id)}`);
       },
       deselect: () => setSel(null),
+      "open-part": () => (selHref === null ? false : router.push(selHref)),
       rename: () => {
         commitTitle();
         titleRef.current?.blur();
@@ -177,7 +195,7 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
         if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
       },
     },
-    { facts: [...(draft ? ["unlaunched"] : []), ...(sel === null ? [] : ["job"])] },
+    { facts: [...(draft ? ["unlaunched"] : []), ...(sel === null ? [] : ["job"]), ...(selHref === null ? [] : ["editor"])] },
   );
 
   const t = view.totals;
@@ -229,7 +247,7 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
           </div>
         </div>
         <div className={s.plan} data-component="PlanBreakdown">
-          <div className={s.planMain}>
+          <div className={s.planMain} onClick={openRow}>
             {err !== null && <ErrorLine message={err} live />}
             <PlanTable parts={view.parts} selectedId={sel} draft={draft} nowMs={nowMs} onModel={(id, option) => patch(id, { option })} onUnits={(id, units) => patch(id, { units })} />
           </div>

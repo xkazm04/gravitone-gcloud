@@ -55,4 +55,12 @@ export const SCREENS = {
   "kit-law": { url: "/kit#colour" },
   "kit-parts": { url: "/kit#signal" },
   "kit-migration": { url: "/kit#status" },
+  // The part editors (Phase 4 wave C, L38): a part of a seeded project, reached as its Plan row
+  // reaches it. The fixture part side seeds these two projects' own records (their notebook,
+  // their beat board), so each screen draws real work, not an empty state.
+  "part-research-notebook": { url: "/projects/why-bitcoin/research" },
+  "part-script-document": { url: "/projects/why-bitcoin/script" },
+  "part-research-beats": { url: "/projects/glass-harbor-trailer/research" },
+  "part-script-trailer": { url: "/projects/glass-harbor-trailer/script" },
+  "kit-part": { url: "/kit#part" },
 };

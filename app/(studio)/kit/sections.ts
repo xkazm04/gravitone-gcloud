@@ -21,6 +21,7 @@ export const SECTIONS = [
   { id: "floor", group: "Composition", title: "Floor", sub: "lane · run · pile · shelf · calendar · month · header" },
   { id: "board", group: "Composition", title: "Board", sub: "sheet · rail · cull · pair · review · cut · consequence" },
   { id: "produce", group: "Composition", title: "Produce", sub: "composer · receipt · plan · compose · re-route · hold" },
+  { id: "part", group: "Composition", title: "Part workspace", sub: "workspace · rail · verdict · part tabs" },
   { id: "contract", group: "Contract", title: "Style contract", sub: "docs/next/style-contract · each page's own words" },
 ] as const;
 

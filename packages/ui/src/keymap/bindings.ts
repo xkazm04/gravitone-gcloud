@@ -99,6 +99,8 @@ const projects: Binding[] = [
   { mode: "projects", keys: ["Esc"], verb: "deselect", does: "deselect", when: "job" },
   { mode: "projects", keys: ["⏎"], verb: "rename", does: "rename", field: "title", onControl: true },
   { mode: "projects", keys: ["Esc"], verb: "leave-field", does: "leave", field: "*" },
+  // Phase 4 wave C (L38): the selected Plan row opens its part's editor.
+  { mode: "projects", keys: ["E"], verb: "open-part", does: "open part", when: "editor" },
   // In Runs with a job selected, lower-case P pauses or resumes it; ⇧P (and P
   // anywhere else) opens Plan. Ruled §8.7: the selection is the context.
   { mode: "projects.runs", keys: ["P"], verb: "pause", does: "pause · resume", when: "job", shadows: true },
@@ -151,7 +153,33 @@ const ledger: Binding[] = [
   { mode: "ledger", keys: ["↓"], alias: ["⏎"], verb: "to-rows", does: "events", field: "search" },
 ];
 
-export const BINDINGS: readonly Binding[] = [...floor, ...calendar, ...board, ...projects, ...compose, ...receipt, ...library, ...ledger];
+// THE PART EDITORS (Phase 4 wave C, L38; STEPS-DESIGN §0.7 and §2). v1 bound every editor with raw
+// window listeners and its shared keymap was used nowhere in app/studio (INVENTORY §0); J/K meant
+// rows in Frames and shuttle in Cut. Here `part` is the workspace frame (parts, undo, leaving a
+// field) and each editor kind is a mode beneath it. J/K walk ITEMS in both editors - there is no
+// transport in research or script, so nothing here is a shuttle - and H/L walk columns (a
+// notebook's dimensions, a beat board's slots). ⌫ undoes the last op of THIS part, server-side.
+const part: Binding[] = [
+  { mode: "part", keys: ["[", "]"], verb: "tab", does: "part" },
+  { mode: "part", keys: ["⌫"], alias: ["⌘Z"], verb: "undo", does: "undo" },
+  { mode: "part", keys: ["⏎"], verb: "commit-field", does: "save", field: "part-field", onControl: true },
+  { mode: "part", keys: ["Esc"], verb: "leave-field", does: "leave", field: "*" },
+
+  { mode: "part.research", keys: ["J", "K"], verb: "item", does: "card", repeat: true },
+  { mode: "part.research", keys: ["H", "L"], verb: "column", does: "column", repeat: true },
+  { mode: "part.research", keys: ["X"], verb: "descope", does: "descope · restore", when: "card" },
+  { mode: "part.research", keys: ["F"], verb: "like", does: "like", when: "card" },
+  { mode: "part.research", keys: ["D"], verb: "deepen", does: "deepen", when: "card" },
+  { mode: "part.research", keys: ["⏎"], verb: "open", does: "open · pick", when: "item" },
+  { mode: "part.research", keys: ["Esc"], verb: "deselect", does: "deselect", when: "item" },
+
+  { mode: "part.script", keys: ["J", "K"], verb: "item", does: "item", repeat: true },
+  { mode: "part.script", keys: ["A"], verb: "adopt", does: "adopt · pick", when: "item" },
+  { mode: "part.script", keys: ["V"], verb: "view", does: "inspector view" },
+  { mode: "part.script", keys: ["Esc"], verb: "deselect", does: "deselect", when: "item" },
+];
+
+export const BINDINGS: readonly Binding[] = [...floor, ...calendar, ...board, ...projects, ...compose, ...receipt, ...library, ...ledger, ...part];
 
 /** The app's one compiled keymap. */
 export const KEYMAP = compile(BINDINGS);

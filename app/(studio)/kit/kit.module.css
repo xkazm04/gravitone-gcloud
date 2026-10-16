@@ -78,3 +78,7 @@
 .calRail{display:flex;height:calc(var(--h-lane-min) * 3);border:1px solid var(--hair);border-radius:var(--r-control);overflow:hidden}
 .calRail>*{flex:1}
 .month{position:relative;height:calc(var(--h-lane-min) * 3.6);border:1px solid var(--hair);border-radius:var(--r-control);overflow:hidden}
+
+/* The part workspace specimens (PartKit.tsx): the frame fills a route, so the kit gives it one. */
+.workspace{display:flex;flex-direction:column;height:calc(var(--h-pile-face) * 8);border:1px solid var(--hair);border-radius:var(--r-box);overflow:hidden}
+.workspaceShort{display:flex;flex-direction:column;width:100%;height:calc(var(--h-pile-face) * 3);border:1px solid var(--hair);border-radius:var(--r-box);overflow:hidden}
