@@ -9,13 +9,17 @@
 //   · a rework that returns to the gate replaces the body of the SAME draft, not a second one
 //   · the draft is made at the gate only
 //   · nothing under lib/medium can publish: no selector, no click, and a request guard
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+//   · a table becomes a figure of its PNG in story order; a figure PNG is the drawing at
+//     2800 px wide, not a 680 px drawing in the corner of a blank canvas
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { test, expect } from "@playwright/test";
 
 import { createRun, defaultDeps, driveRun, ensureMediumDraft, reworkRun } from "@/lib/articles/engine";
 import { ArticleError, runDir } from "@/lib/articles/store";
+import { markdownToStory, renderFigurePngs, renderTablePngs, storyFigures, svgSize } from "@/lib/articles/mediumPackage";
+import { splitFigures } from "@/lib/medium/driver";
 import { FAKE_MEDIUM, fakeMediumDriver, resetFakeMedium } from "@/lib/medium/fake";
 
 import { keepEnv } from "./_helpers";
@@ -106,4 +110,32 @@ test("nothing under lib/medium can publish", () => {
     expect(code, f).not.toMatch(/name:\s*\/?["']?(publish|schedule|submit)/i);
     expect(code, f).not.toMatch(/text(-is)?\(\s*["'](publish|schedule|submit)/i);
   }
+});
+
+test("a Markdown table travels as a picture, in story order, and its cells keep their inline marks", () => {
+  const md = "# T\n\n![Fig one](figures/01-a.png)\nFig one [1]\n\n| A | B `c` |\n| --- | :---: |\n| x \\| y | [2] |\n| **z** | w |\n\nText.\n\n![Fig two](figures/02-b.png)\nFig two\n";
+  const { html, tables } = markdownToStory(md);
+  expect(tables).toHaveLength(1);
+  expect(tables[0]).toMatchObject({ name: "table-01.png", head: ["A", "B <code>c</code>"], rows: [["x | y", "[2]"], ["<strong>z</strong>", "w"]] });
+  expect(html).not.toContain("| ---");
+  expect(storyFigures(html)).toEqual(["figures/01-a.png", "figures/table-01.png", "figures/02-b.png"]);
+  // the driver turns every figure, captioned or not, into one marker in that same order
+  expect(splitFigures(html).captions).toEqual(["Fig one [1]", "", "Fig two"]);
+});
+
+test("a figure PNG is the drawing, not the drawing in the corner of a blank canvas", async () => {
+  const dir = path.join(box.dir, "svg");
+  mkdirSync(dir, { recursive: true });
+  // the writer's shape: width/height attributes equal to the viewBox, far narrower than a column
+  writeFileSync(path.join(dir, "01-x.svg"), '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 400" width="680" height="400"><rect width="680" height="400" fill="#c00"/></svg>');
+  expect(svgSize(readFileSync(path.join(dir, "01-x.svg"), "utf8"))).toEqual({ w: 680, h: 400 });
+  const out = path.join(box.dir, "png");
+  const r = await renderFigurePngs(dir, out);
+  expect(r).toEqual({ written: ["01-x.png"], failed: [] });
+  const png = readFileSync(path.join(out, "01-x.png"));
+  const [w, h] = [png.readUInt32BE(16), png.readUInt32BE(20)];
+  expect([w, h]).toEqual([2800, Math.round((400 * 2800) / 680)]);
+  const t = await renderTablePngs([{ name: "table-01.png", head: ["A", "B"], rows: [["1", "2"]] }], out);
+  expect(t.written).toEqual(["table-01.png"]);
+  expect(readFileSync(path.join(out, "table-01.png")).readUInt32BE(16)).toBe(2800);
 });

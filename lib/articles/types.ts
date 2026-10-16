@@ -297,8 +297,10 @@ export interface MediumDraft {
   at: string;
   url?: string;
   shot?: string;
-  /** Figures the editor accepted. */
+  /** Figures the saved draft holds, read back after a reload… */
   figures?: number;
+  /** …of the figures the story has; fewer is a draft to fix before publishing. */
+  figuresOf?: number;
   reason?: string;
 }
 

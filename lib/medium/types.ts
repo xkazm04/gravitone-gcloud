@@ -27,8 +27,12 @@ export interface MediumDraftInput {
 
 export interface MediumDraftResult {
   url: string;
-  /** Figures the editor accepted; fewer than `input.figures.length` is a result, not an error. */
+  /** Figures the saved draft holds, read back after a reload. */
   figures: number;
+  /** Figures the story has. */
+  expected: number;
+  /** Figure markers the saved draft still shows: a figure that never landed. */
+  markers: number;
 }
 
 /** What the pipeline needs of Medium. Nothing here can publish. */

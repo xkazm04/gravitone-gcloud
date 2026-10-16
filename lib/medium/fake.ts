@@ -30,6 +30,7 @@ export const fakeMediumDriver: MediumDriver = {
     if (!FAKE_MEDIUM.health.ok) throw new Error(FAKE_MEDIUM.health.reason);
     if (FAKE_MEDIUM.failWith) throw new Error(FAKE_MEDIUM.failWith);
     await writeFile(input.shotPath, PNG_1X1);
-    return { url: input.existingUrl ?? `https://medium.com/p/fake${++FAKE_MEDIUM.seq}/edit`, figures: input.figures.length };
+    const n = input.storyHtml.split("<figure>").length - 1;
+    return { url: input.existingUrl ?? `https://medium.com/p/fake${++FAKE_MEDIUM.seq}/edit`, figures: n, expected: n, markers: 0 };
   },
 };

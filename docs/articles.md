@@ -424,7 +424,9 @@ reviews the real thing.
   `medium/`, then `lib/medium` pastes `story.html`'s body into a private draft at
   `medium.com/new-story` in the operator's signed-in Chrome profile (`~/.medium-chrome`, CDP port
   9335, opened once with `npm run medium:browser`). Figures are pasted as PNG files and
-  captioned. The run records `mediumDraft {state: creating|ready|unavailable, url?, shot?,
+  captioned; each Markdown table travels as a PNG figure (`table-NN.png`), because Medium has
+  no table element. The driver reloads the saved draft and records how many figures it holds
+  (`figures` of `figuresOf`). The run records `mediumDraft {state: creating|ready|unavailable, url?, shot?,
   figures?, reason?, at}`; absent fields are omitted.
 - A rework that returns to the gate replaces the body of the same draft (`url` is kept, also
   through a failure). `post.md` stays the single source: nothing is read back from the draft, so a

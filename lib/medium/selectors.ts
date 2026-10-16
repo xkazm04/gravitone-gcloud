@@ -40,4 +40,5 @@ export const SELECTORS = {
   },
   /** A figure's place in the pasted HTML until the PNG is pasted over it. */
   marker: (n: number) => `⟦FIGURE ${n}⟧`,
+  markerPrefix: "⟦FIGURE",
 } as const;

@@ -14,7 +14,7 @@
 import { readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
-import { buildMediumPackage, storyBody } from "./mediumPackage";
+import { buildMediumPackage, storyBody, storyFigures } from "./mediumPackage";
 import { ArticleError, readJsonFile, readRun, runDir, updateRun } from "./store";
 import type { ArticleRun, MediumDraft, PostMeta } from "./types";
 import type { EngineDeps } from "./engine";
@@ -54,16 +54,22 @@ export async function ensureMediumDraft(id: string, deps: EngineDeps): Promise<A
     await rm(path.join(dir, "medium"), { recursive: true, force: true });
     const pkg = await buildMediumPackage(dir, meta);
     const md = await readFile(path.join(dir, "post", "post.md"), "utf8");
-    const figures = pkg.files.filter((f) => f.startsWith("medium/figures/")).map((f) => ({ name: path.basename(f), path: path.join(dir, f) }));
+    const storyHtml = storyBody(md);
+    // In the order the story shows them: the driver fills figure marker n with figures[n-1],
+    // and a table's PNG sits between the SVG figures, not after them.
+    // A figure whose PNG did not render keeps its slot (the driver empties its marker), so the
+    // ones after it still land in their own places.
+    const figures = storyFigures(storyHtml).map((f) => ({ name: path.basename(f), path: path.join(dir, "medium", f) }));
+    if (pkg.failedFigures.length) console.error(`[articles] ${id}: figures that did not render: ${pkg.failedFigures.join(", ")}`);
     const made = await driver.createDraft({
       title: meta.title,
       subtitle: meta.subtitle,
-      storyHtml: storyBody(md),
+      storyHtml,
       figures,
       ...(previous ? { existingUrl: previous } : {}),
       shotPath: path.join(dir, SHOT),
     });
-    return await record({ state: "ready", url: made.url, shot: SHOT, figures: made.figures });
+    return await record({ state: "ready", url: made.url, shot: SHOT, figures: made.figures, figuresOf: made.expected });
   } catch (e) {
     return await record({ state: "unavailable", reason: (e as Error).message.split("\n")[0].slice(0, 300), ...(previous ? { url: previous } : {}) });
   } finally {

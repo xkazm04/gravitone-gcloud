@@ -21,6 +21,9 @@ import { MEDIUM_CDP_PORT, type MediumDraftInput, type MediumDraftResult, type Me
 const PROBE_TTL_MS = 15_000;
 const STEP_MS = 30_000;
 const UPLOAD_MS = 60_000;
+/** No autosave in flight and none started for this long = Medium holds every edit. */
+const QUIET_MS = 5_000;
+const SETTLE_MS = 90_000;
 
 const probeCache = new Map<number, { at: number; health: MediumHealth }>();
 
@@ -90,9 +93,51 @@ async function pastePng(page: Page, name: string, png: Buffer): Promise<void> {
   );
 }
 
+/** Count the page's autosaves in flight. Medium saves in debounced batches, so the
+ *  tab may close only once they have gone quiet: closing after the first save lost
+ *  the last three of thirteen figures and left two markers in the draft (2026-10-16). */
+function saveWatch(page: Page) {
+  const state = { inFlight: 0, last: Date.now() };
+  const isSave = (r: { url: () => string; method: () => string }) => r.method() !== "GET" && SELECTORS.api.save.test(r.url());
+  page.on("request", (r) => {
+    if (isSave(r)) {
+      state.inFlight++;
+      state.last = Date.now();
+    }
+  });
+  const done = (r: { url: () => string; method: () => string }) => {
+    if (isSave(r)) {
+      state.inFlight = Math.max(0, state.inFlight - 1);
+      state.last = Date.now();
+    }
+  };
+  page.on("requestfinished", done);
+  page.on("requestfailed", done);
+  return {
+    touch: () => void (state.last = Date.now()),
+    settled: async () => {
+      const until = Date.now() + SETTLE_MS;
+      while (Date.now() < until) {
+        if (state.inFlight === 0 && Date.now() - state.last >= QUIET_MS) return;
+        await page.waitForTimeout(500);
+      }
+      throw new Error("medium was still saving the draft after 90 s");
+    },
+  };
+}
+
+/** What the saved draft holds, read after a reload rather than believed from the edit. */
+async function readBack(page: Page): Promise<{ figures: number; markers: number }> {
+  return page.locator(SELECTORS.editor.body).first().evaluate((el, a) => ({
+    figures: el.querySelectorAll(a.img).length,
+    markers: (el.textContent ?? "").split(a.marker).length - 1,
+  }), { img: SELECTORS.editor.figureImage, marker: SELECTORS.markerPrefix });
+}
+
 async function createDraft(input: MediumDraftInput): Promise<MediumDraftResult> {
   const browser = await attach({ spawn: true });
   const page = await profileContext(browser).newPage();
+  const saves = saveWatch(page);
   try {
     await page.route(SELECTORS.api.forbidden, (route) => route.abort());
     await page.goto(input.existingUrl ?? SELECTORS.page.newStoryUrl, { waitUntil: "domcontentloaded", timeout: STEP_MS });
@@ -113,12 +158,14 @@ async function createDraft(input: MediumDraftInput): Promise<MediumDraftResult> 
     const same = (a: string) => a.replace(/\s+/g, " ").trim();
     if (!title || same(title) !== same(input.title)) throw new Error(`medium did not take the title (it holds "${same(title ?? "").slice(0, 60)}")`);
 
-    let placed = 0;
-    for (let i = 0; i < input.figures.length && i < captions.length; i++) {
+    for (let i = 0; i < captions.length; i++) {
+      if (!input.figures[i]) break;
+      const png = await readFile(input.figures[i].path).catch(() => null);
       if (!(await selectMarker(page, SELECTORS.marker(i + 1)))) continue;
       await page.keyboard.press("Backspace");
+      if (!png) continue;
       const before = await page.locator(SELECTORS.editor.figureImage).count();
-      await pastePng(page, input.figures[i].name, await readFile(input.figures[i].path));
+      await pastePng(page, input.figures[i].name, png);
       try {
         await page.waitForFunction(
           (a) => {
@@ -131,20 +178,23 @@ async function createDraft(input: MediumDraftInput): Promise<MediumDraftResult> 
       } catch {
         continue;
       }
-      placed++;
       if (captions[i]) {
         await page.locator(SELECTORS.editor.caption).nth(before).click();
         await page.keyboard.type(captions[i], { delay: 0 });
       }
+      saves.touch();
     }
 
-    await page.waitForResponse((r) => SELECTORS.api.save.test(r.url()), { timeout: 10_000 }).catch(() => null);
-    await page.waitForTimeout(1500);
+    await saves.settled();
     if (!SELECTORS.page.draftUrl.test(page.url())) throw new Error("medium did not save a draft");
     const url = page.url().replace(/\?.*$/, "");
+    await page.reload({ waitUntil: "domcontentloaded", timeout: STEP_MS });
+    await body.waitFor({ timeout: STEP_MS });
+    await page.waitForTimeout(2_000);
+    const held = await readBack(page);
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: input.shotPath, fullPage: true, timeout: STEP_MS });
-    return { url, figures: placed };
+    return { url, figures: held.figures, expected: captions.length, markers: held.markers };
   } finally {
     await page.close().catch(() => undefined);
   }

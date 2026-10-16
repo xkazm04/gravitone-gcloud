@@ -7,7 +7,10 @@
 //
 //   medium/story.html   clean HTML from post/post.md — no scripts, no styles,
 //                       no classes; figures as <img> of PNGs
-//   medium/figures/     one PNG per post/figures/*.svg, rendered by Playwright
+//   medium/figures/     one PNG per post/figures/*.svg, rendered by Playwright,
+//                       and one per Markdown table (table-NN.png): Medium's
+//                       editor has no table element, so a table pastes as a
+//                       paragraph of pipes unless it travels as a picture
 //   medium/tags.txt     up to five tags, one per line
 //   medium/README.md    the paste steps
 //
@@ -39,10 +42,31 @@ function inline(text: string): string {
   return s.replace(/\u0000(\d+)\u0000/g, (_m, i: string) => codes[Number(i)]);
 }
 
-/** A deliberately small Markdown-to-HTML converter: the subset Medium keeps. */
-export function markdownToStoryHtml(md: string): string {
+/** One Markdown table, cells as inline HTML. */
+export interface StoryTable {
+  /** `table-NN.png`, numbered in story order from 01. */
+  name: string;
+  head: string[];
+  rows: string[][];
+}
+
+const TABLE_ROW = /^\s*\|.*\|\s*$/;
+const TABLE_RULE = /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/;
+const cellsOf = (row: string) =>
+  row
+    .trim()
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split(/(?<!\\)\|/)
+    .map((c) => inline(c.trim().replace(/\\\|/g, "|")));
+const plain = (html: string) => html.replace(/<[^>]+>/g, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&amp;/g, "&");
+
+/** A deliberately small Markdown-to-HTML converter: the subset Medium keeps,
+ *  with each table swapped for a figure of its PNG (see `renderTablePngs`). */
+export function markdownToStory(md: string): { html: string; tables: StoryTable[] } {
   const lines = md.replace(/\r\n/g, "\n").split("\n");
   const out: string[] = [];
+  const tables: StoryTable[] = [];
   let para: string[] = [];
   let list: { tag: "ul" | "ol"; items: string[] } | null = null;
   const flushPara = () => {
@@ -83,6 +107,18 @@ export function markdownToStoryHtml(md: string): string {
       out.push(`<figure><img src="${esc(img[2])}" alt="${esc(img[1])}"><figcaption>${inline(caption)}</figcaption></figure>`);
       continue;
     }
+    if (TABLE_ROW.test(line) && TABLE_RULE.test(lines[i + 1] ?? "")) {
+      flushPara();
+      flushList();
+      const head = cellsOf(line);
+      const rows: string[][] = [];
+      for (i += 2; i < lines.length && TABLE_ROW.test(lines[i]); i++) rows.push(cellsOf(lines[i]));
+      i--;
+      const name = `table-${String(tables.length + 1).padStart(2, "0")}.png`;
+      tables.push({ name, head, rows });
+      out.push(`<figure><img src="figures/${name}" alt="${esc(`Table: ${head.map(plain).join(", ")}`)}"></figure>`);
+      continue;
+    }
     const quote = /^>\s?(.*)$/.exec(line);
     if (quote) {
       flushPara();
@@ -115,8 +151,10 @@ export function markdownToStoryHtml(md: string): string {
   }
   flushPara();
   flushList();
-  return out.join("\n");
+  return { html: out.join("\n"), tables };
 }
+
+export const markdownToStoryHtml = (md: string): string => markdownToStory(md).html;
 
 /** Figures in the Markdown point at `figures/NN-name.png` by contract; an SVG
  *  reference is rewritten to its PNG so the story never embeds an SVG. */
@@ -124,6 +162,9 @@ const toPngRefs = (md: string) => md.replace(/(\]\(\s*(?:\.\/)?figures\/[^)\s]+?
 
 /** The story's body: the post's Markdown as the HTML Medium's editor takes on a paste. */
 export const storyBody = (md: string): string => markdownToStoryHtml(toPngRefs(md));
+
+/** The figure files the story shows, in the order it shows them (`figures/NN.png`, `figures/table-NN.png`). */
+export const storyFigures = (html: string): string[] => [...html.matchAll(/<img src="(figures\/[^"]+)"/g)].map((m) => m[1]);
 
 export function storyDocument(title: string, body: string): string {
   return `<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<title>${esc(title)}</title>\n</head>\n<body>\n${body}\n</body>\n</html>\n`;
@@ -140,7 +181,7 @@ export function readmeText(meta: PostMeta, figures: string[]): string {
     "1. Open `story.html` in a browser (it has no scripts and needs no network).",
     "2. Select everything in the page and copy it.",
     "3. In Medium, start a new story and paste. The title and subtitle land as the first two lines; check that Medium styled them as Title and Subtitle.",
-    "4. A paste cannot upload local image files. Where a figure belongs, drag in its PNG from `figures/` in order, and check its caption from `story.html` sits under it:",
+    "4. A paste cannot upload local image files. Where a figure belongs, drag in its PNG from `figures/` in this order, and check its caption from `story.html` sits under it. Tables travel as pictures (`table-NN.png`) because Medium has no table element:",
     ...figures.map((f) => `   - \`figures/${f}\``),
     "5. Code blocks: Medium keeps the block but not its colours. Leave them as plain code blocks.",
     "6. Before publishing, add the tags from `tags.txt` (Medium accepts at most five).",
@@ -149,7 +190,31 @@ export function readmeText(meta: PostMeta, figures: string[]): string {
   ].join("\n");
 }
 
-/** Render each SVG to a PNG at 1400 px wide (2x device scale). Returns the
+/** The width every figure PNG is rendered at, in device pixels (2x a 1400 px column). */
+const PNG_WIDTH = 2800;
+
+/** An SVG's drawing size: its width/height attributes when they are plain
+ *  numbers, else its viewBox, else 1400x900. */
+export function svgSize(svg: string): { w: number; h: number } {
+  const tag = /<svg\b[^>]*>/i.exec(svg)?.[0] ?? "";
+  const num = (name: string) => {
+    const m = new RegExp(`\\s${name}=["']\\s*([\\d.]+)(px)?\\s*["']`, "i").exec(tag);
+    return m ? Number(m[1]) : NaN;
+  };
+  const vb = /viewBox=["']\s*[-\d.]+[\s,]+[-\d.]+[\s,]+([\d.]+)[\s,]+([\d.]+)\s*["']/i.exec(tag);
+  let w = num("width");
+  let h = num("height");
+  if (!(w > 0) || !(h > 0)) {
+    w = vb ? Number(vb[1]) : 1400;
+    h = vb ? Number(vb[2]) : 900;
+  }
+  return { w, h };
+}
+
+/** Render each SVG to a PNG of exactly its drawing, PNG_WIDTH wide. The page is
+ *  the SVG's own size and the device scale makes up the width: a viewport wider
+ *  than the SVG's width attribute left it in the top-left corner of a blank
+ *  canvas, which Medium then showed cropped and small (2026-10-16). Returns the
  *  PNG names written; an SVG that will not render is named in `failed`. */
 export async function renderFigurePngs(svgDir: string, pngDir: string): Promise<{ written: string[]; failed: string[] }> {
   let names: string[] = [];
@@ -166,11 +231,10 @@ export async function renderFigurePngs(svgDir: string, pngDir: string): Promise<
   const failed: string[] = [];
   try {
     for (const name of names) {
-      const svg = await readFile(path.join(svgDir, name), "utf8");
-      const vb = /viewBox=["']\s*[-\d.]+[\s,]+[-\d.]+[\s,]+([\d.]+)[\s,]+([\d.]+)\s*["']/i.exec(svg);
-      const w = 1400;
-      const h = vb ? Math.max(100, Math.round((w * Number(vb[2])) / Number(vb[1]))) : 900;
-      const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2 });
+      const { w, h } = svgSize(await readFile(path.join(svgDir, name), "utf8"));
+      const width = Math.max(1, Math.round(w));
+      const height = Math.max(1, Math.round(h));
+      const ctx = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: PNG_WIDTH / width });
       const page = await ctx.newPage();
       await page.route("**/*", (route) => (/^https?:/i.test(route.request().url()) ? route.abort() : route.continue()));
       try {
@@ -190,6 +254,48 @@ export async function renderFigurePngs(svgDir: string, pngDir: string): Promise<
   return { written, failed };
 }
 
+/** The table's page: the post's reading face, a ruled header, hairline rows,
+ *  zebra stripes, nothing off the network. */
+export function tableDocument(t: StoryTable): string {
+  const row = (cells: string[], tag: "th" | "td") => `<tr>${cells.map((c) => `<${tag}>${c}</${tag}>`).join("")}</tr>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><style>
+html,body{margin:0;background:#fff}
+table{border-collapse:collapse;width:1400px;font:28px/1.45 Georgia,"Times New Roman",serif;color:#242424}
+th,td{text-align:left;vertical-align:top;padding:18px 22px;border-bottom:1px solid #e3e3e3}
+th{font:600 26px/1.35 -apple-system,"Segoe UI",Helvetica,Arial,sans-serif;border-bottom:2px solid #242424}
+tbody tr:nth-child(even) td{background:#f7f7f7}
+code{font:24px/1.4 Menlo,Consolas,monospace;background:#f2f2f2;padding:1px 5px;border-radius:3px}
+a{color:inherit}
+</style></head><body><table><thead>${row(t.head, "th")}</thead><tbody>${t.rows.map((r) => row(r, "td")).join("")}</tbody></table></body></html>`;
+}
+
+/** Render each table to `<pngDir>/<table.name>`, PNG_WIDTH wide. */
+export async function renderTablePngs(tables: StoryTable[], pngDir: string): Promise<{ written: string[]; failed: string[] }> {
+  if (!tables.length) return { written: [], failed: [] };
+  await mkdir(pngDir, { recursive: true });
+  const { chromium } = await import("playwright");
+  const browser = await chromium.launch();
+  const written: string[] = [];
+  const failed: string[] = [];
+  try {
+    const ctx = await browser.newContext({ viewport: { width: 1400, height: 800 }, deviceScaleFactor: PNG_WIDTH / 1400 });
+    await ctx.route("**/*", (route) => (/^https?:/i.test(route.request().url()) ? route.abort() : route.continue()));
+    const page = await ctx.newPage();
+    for (const t of tables) {
+      try {
+        await page.setContent(tableDocument(t), { waitUntil: "load" });
+        await page.locator("table").screenshot({ path: path.join(pngDir, t.name) });
+        written.push(t.name);
+      } catch {
+        failed.push(t.name);
+      }
+    }
+  } finally {
+    await browser.close();
+  }
+  return { written, failed };
+}
+
 /** Build `<runDir>/medium/` from the run's post. Returns the files written,
  *  run-relative. */
 export async function buildMediumPackage(runDir: string, meta: PostMeta): Promise<{ files: string[]; failedFigures: string[] }> {
@@ -198,13 +304,17 @@ export async function buildMediumPackage(runDir: string, meta: PostMeta): Promis
   await mkdir(medium, { recursive: true });
   const md = await readFile(path.join(postDir, "post.md"), "utf8");
   const pngs = await renderFigurePngs(path.join(postDir, "figures"), path.join(medium, "figures"));
-  const story = storyDocument(meta.title, storyBody(md));
+  const { html, tables } = markdownToStory(toPngRefs(md));
+  const tablePngs = await renderTablePngs(tables, path.join(medium, "figures"));
+  const story = storyDocument(meta.title, html);
   const tags = meta.tags.map((t) => t.trim()).filter(Boolean).slice(0, 5);
   await writeFile(path.join(medium, "story.html"), story, "utf8");
   await writeFile(path.join(medium, "tags.txt"), `${tags.join("\n")}\n`, "utf8");
-  await writeFile(path.join(medium, "README.md"), readmeText(meta, pngs.written), "utf8");
+  const written = new Set([...pngs.written, ...tablePngs.written]);
+  const shown = storyFigures(html).map((f) => f.slice("figures/".length));
+  await writeFile(path.join(medium, "README.md"), readmeText(meta, shown.filter((f) => written.has(f))), "utf8");
   return {
-    files: ["medium/story.html", "medium/tags.txt", "medium/README.md", ...pngs.written.map((p) => `medium/figures/${p}`)],
-    failedFigures: pngs.failed,
+    files: ["medium/story.html", "medium/tags.txt", "medium/README.md", ...[...written].sort().map((p) => `medium/figures/${p}`)],
+    failedFigures: [...pngs.failed, ...tablePngs.failed],
   };
 }
