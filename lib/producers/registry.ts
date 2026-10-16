@@ -6,6 +6,7 @@ import { producerSet, type Bound } from "@gt/producers/set";
 import { articleProducer } from "./article.ts";
 import { extractProducer } from "./extract.ts";
 import { mvProducer } from "./mv.ts";
+import { stripsProducer } from "./strips.ts";
 import { sunoProducer } from "./suno.ts";
 import { sunoDriver } from "../sound/suno/drivers.ts";
 
@@ -28,6 +29,7 @@ export const BOUND: readonly Bound[] = [
   { name: "article", producer: articleProducer() },
   { name: "mv", producer: mvProducer() },
   { name: "suno", producer: sunoProducer({ driver: sunoDriver() }) },
+  { name: "strips", producer: stripsProducer() },
 ];
 
 /** The map a worker hands kernel `workLoop`, keyed by the job's `producer`. */

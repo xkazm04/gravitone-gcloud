@@ -116,6 +116,26 @@ export interface StripRun {
    *  registry content; below it the picks are still picks. */
   discrimination?: Record<string, number>;
   status: "running" | "awaiting-triage" | "committed";
+  /** The kernel job driving this run (Phase 4, lib/producers/strips.ts); absent on a v1 run. */
+  job?: string;
+  /** A dry job's run: stand-in pages, no capture, never committed. */
+  dry?: boolean;
+  /** How the run was launched - the plan's half that is not the card list. Absent on a v1 run. */
+  options?: StripRunOptions;
+  /** Why the run's job ended before every card settled (a ceiling, a seat that never served). */
+  error?: string;
+}
+
+/** The launch flags a job needs again on every step (v1 kept them in the process's argv). */
+export interface StripRunOptions {
+  /** Fix rounds after the first render (v1 `--rounds`). */
+  rounds: number;
+  /** The round-0 contact-sheet review (v1: on unless `--no-review`). */
+  review: boolean;
+  /** Supporting images for the approaches that declare one (v1: on unless `--no-leonardo`). */
+  leonardo: boolean;
+  /** Minutes one author turn may take (v1 `--author-timeout`). */
+  authorTimeoutMin: number;
 }
 
 /** The closed reason vocabulary. Free notes cannot be aggregated; these can. */

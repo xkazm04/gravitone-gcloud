@@ -9,22 +9,20 @@ import { err, ok, type Result } from "@gt/domain/errors";
 import type { Actor, EventData } from "@gt/domain/event";
 
 import { listManifests, readJson } from "../../../../lib/foundry/runStore.ts";
+import { stripsRoot as v1StripsRoot } from "../../../../lib/foundry/strips/store.ts";
 import { JUDGEABLE, STRIP_COMMITTABLE } from "../../../../lib/foundry/strips/triage.ts";
 import { bump, facts, instant, seg, words } from "../facts.ts";
 import type { IngestEvent, LiveJob, ProjectCtx, Projection, Skipped, Source, WeirItem } from "../types.ts";
-import { universeRoot } from "./roots.ts";
 
 // CODE-RENDERED STRIPS, PROJECTED - foundry-out/strips/<id>/run.json (written
 // by pipeline/strips/run.mts) and the triage's verdicts.json
 // (lib/foundry/strips/store.ts), read through v1's own manifest lister
 // (lib/foundry/runStore.ts listManifests) at a root this adapter chooses.
 //
-// NOT through `listStripRuns`, and why: its root is a module constant
-// (store.ts OUT_ROOT, `foundry-out/strips` in both universes) and it returns a
-// summary that has dropped every card - the facts this source exists for. The
-// v1 defect is reported, not fixed here (lib/ is not this lot's): a fixture-mode
-// /foundry Strips tab reads the real strips store. roots.ts says how the
-// adapter reads the right one instead.
+// NOT through `listStripRuns`, which returns a summary that has dropped every
+// card - the facts this source exists for. The root is v1's own since Phase 4
+// (L33: store.ts `stripsRoot`, the universe's `<out>/strips` or STRIPS_STORE_DIR),
+// which used to be a module constant fixed to foundry-out/strips in both universes.
 //
 // A strip run records ONE instant of its own: `at`, when the pipeline began it.
 // Cards carry durations (authorMs, renderMs), never times, and the run has no
@@ -40,9 +38,12 @@ import { universeRoot } from "./roots.ts";
 // Card cost rides in `data.costUsd`, never `cost`: authoring is a text turn on
 // the operator's seat, and the spend source projects the money ledger itself.
 //
-// LIVE: `running` (the pipeline is still authoring or capturing) - and v1 keeps
-// no holder or heartbeat on a strip run, so a pipeline that died mid-run still
-// reads `running` on the Strips tab and here alike. The lane is seat.text
+// LIVE: `running` (the pipeline is still authoring or capturing) on a v1 run, which
+// keeps no holder or heartbeat, so a pipeline that died mid-run still reads `running`.
+// A run driven by a kernel job (Phase 4, L33: `job` on run.json) is NOT drawn here: the
+// job record is the truth for running state (plan §5.4) - Runs reads it, with its slot,
+// its step and, for a dead driver, its interruption - so it is never drawn twice from a
+// mirror that lags it. A dry job's run is kept off the Weir: its pages are stand-ins. The lane is seat.text
 // with the reason on the row: a run alternates authoring turns with headless
 // captures, and authoring is the longer half (measured on this machine's
 // strips-r1, 2026-10-15: a control card authored for 653 s and rendered in 24 s).
@@ -56,6 +57,9 @@ const runSchema = z.object({
   id: z.string().min(1),
   at: z.string(),
   status: z.enum(["running", "awaiting-triage", "committed"]),
+  /** The kernel job driving the run (lib/producers/strips.ts); absent on a v1 run. */
+  job: z.string().min(1).optional(),
+  dry: z.boolean().optional(),
   cards: z.array(
     z.object({
       id: z.string().min(1),
@@ -81,8 +85,8 @@ const OPERATOR: Actor = { kind: "operator", id: "operator" };
 const HREF = "/foundry";
 const LANE_FROM = "v1 records no per-card phase; a strip run is mostly authoring turns on the text seat, with short headless captures";
 
-/** v1's strips root in this universe: store.ts OUT_ROOT, which has no override. */
-export const stripsRoot = (): string => universeRoot("strips", () => path.join(process.cwd(), "foundry-out", "strips"));
+/** v1's strips root in this universe: store.ts `stripsRoot`, which honours the fixture switch itself. */
+export const stripsRoot = (): string => v1StripsRoot();
 
 /** Every strip run under `root`, through the door. A damaged run is skipped with its words. */
 export async function readStrips(root: string): Promise<Result<StripsSnapshot>> {
@@ -147,7 +151,7 @@ function tallyOf(runs: readonly StripRun[]): Projection["tally"] {
 }
 
 function liveOf({ run }: StripRun): LiveJob | null {
-  if (run.status !== "running") return null;
+  if (run.status !== "running" || run.job !== undefined) return null;
   const startedAt = instant(run.at);
   return {
     source: "strips",
@@ -164,7 +168,7 @@ function liveOf({ run }: StripRun): LiveJob | null {
 }
 
 function weirOf({ run, verdicts }: StripRun): WeirItem | null {
-  if (!STRIP_COMMITTABLE.includes(run.status)) return null;
+  if (!STRIP_COMMITTABLE.includes(run.status) || run.dry === true) return null;
   const plates = run.cards.filter((c) => JUDGEABLE.includes(c.status));
   if (plates.length === 0) return null;
   const judged = new Set(verdicts.map((v) => v.key));

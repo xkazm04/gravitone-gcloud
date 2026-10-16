@@ -1,348 +1,286 @@
-// THE STRIP RUN — author, lint, render and gate a set of approach cards, and
-// leave foundry-out/strips/<run>/ ready for triage in /foundry (Strips tab).
+// THE STRIP RUN — author, lint, render and gate a set of approach cards, and leave
+// <out>/strips/<run>/ ready for triage in /foundry (Strips tab).
 // Plan: docs/code-rendered-strips-plan.md. Contract: pipeline/strips/CONTRACT.md.
 //
 //   npx tsx pipeline/strips/run.mts --controls-only                 # P2: one control per case
 //   npx tsx pipeline/strips/run.mts --only E05,S06 --replicas E05,S06 # a pilot
 //   npx tsx pipeline/strips/run.mts --lane all --replicas E02,E07,E13,E18,S02,S07,S13,S18 \
 //        --effort-arm E10,S06,S19 --run strips-r1                   # the full round
-//   ... --resume --run strips-r1                                    # continue after a crash
+//   ... --resume --run strips-r1                                    # continue after a crash or a stop
+//   ... --status strips-r1 [--json]                                 # the run and its job
+//   ... --regate --run strips-r1                                    # re-capture every authored card, no seat
 //
-// Spends the operator's Claude seat (one author turn per card, plus fix turns)
-// and up to one supporting image per card (imaging router, agy first) that declares one. --dry lists the
-// cards and spends nothing.
+// SINCE PHASE 4 (L33) A RUN IS A KERNEL JOB (lib/producers/strips.ts), the same job
+// POST /api/foundry/strips enqueues and the worker drives: this CLI prints the receipt,
+// confirms it itself, and drives the job here (or leaves it to the worker with --detach).
+// Its spend behaviour is v1's: invoked, it runs LIVE - one author turn per card on the
+// operator's Claude seat, plus fix and review turns, plus up to one supporting image per
+// approach that declares one (imaging router, agy first). --dry runs the whole job on
+// stand-ins (a placeholder page, no capture, nothing spent; the run is marked dry and can
+// never be committed) - v1's --dry printed the card list, which is the receipt now.
+// --budget-usd is the job's ceiling: the job stops before the turn that would cross it,
+// and every writer turn is capped at what is left. --resume retries the run's job: no
+// booked turn is bought again, and a page that landed is adopted, never re-authored.
+// --concurrency is accepted and ignored: a job performs one step at a time.
+//
+// EXIT 0 done, enqueued or read · 1 failed, stopped, refused or interrupted · 2 usage.
+// NOT A TEST and not in `npm run verify` — invoked live it spends the operator's seat.
 
-import { existsSync, readFileSync } from "node:fs";
-import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
-import path from "node:path";
+import { pathToFileURL } from "node:url";
 
-import type { Approach, StripCard, StripLane, StripRun } from "../../lib/foundry/strips/types";
-import { STRIP_FPS, STRIP_FRAMES, STRIP_SIZE } from "../../lib/foundry/strips/types";
-import { authorStrip, makeAsset } from "./author.mjs";
-import { formatLint, lintStrip } from "./lint.mjs";
-import { launchHeadless, renderStrip, sheetDistances } from "./render.mjs";
+type Io = { readonly env: Readonly<Record<string, string | undefined>>; readonly out: (s: string) => void; readonly err: (s: string) => void };
 
-function loadEnv(file = ".env.local") {
-  const p = path.join(process.cwd(), file);
-  if (!existsSync(p)) return;
-  for (const line of readFileSync(p, "utf8").split(/\r?\n/)) {
-    const m = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line);
-    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].trim().replace(/^["']|["']$/g, "");
+const USAGE = [
+  "usage: npx tsx pipeline/strips/run.mts [--run <id>] [--lane edu|stat|all] [--only A,B] [--replicas A,B] [--effort-arm A,B] [--effort high]",
+  "         [--rounds 2] [--controls | --controls-only] [--no-leonardo] [--no-review] [--author-timeout 75]",
+  "         [--budget-usd N] [--dry] [--detach] [--json]",
+  "       npx tsx pipeline/strips/run.mts --resume --run <id> [--budget-usd N] [--detach] [--json]",
+  "       npx tsx pipeline/strips/run.mts --status <id> [--json]",
+  "       npx tsx pipeline/strips/run.mts --regate --run <id>",
+].join("\n");
+
+class Usage extends Error {}
+
+const SELECTION_FLAGS = ["lane", "only", "replicas", "effort-arm", "controls", "controls-only"];
+
+export async function runCli(argv: readonly string[], io: Io): Promise<number> {
+  const has = (k: string) => argv.includes(`--${k}`);
+  const flag = (k: string): string | undefined => {
+    const i = argv.indexOf(`--${k}`);
+    return i >= 0 ? argv[i + 1] : undefined;
+  };
+  const list = (k: string) => (flag(k) ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  const num = (k: string, d: number): number => {
+    const v = flag(k);
+    if (v === undefined) return d;
+    const n = Number(v);
+    if (!Number.isFinite(n)) throw new Usage(`--${k} needs a number, got "${v}"`);
+    return n;
+  };
+  const json = has("json");
+  const say = (s: string) => (json ? io.err(s) : io.out(s));
+  const doc = (d: Record<string, unknown>) => io.out(JSON.stringify(d, null, 2));
+
+  try {
+    if (has("help")) {
+      io.out(USAGE);
+      return 0;
+    }
+    const lane = flag("lane") ?? "all";
+    if (lane !== "edu" && lane !== "stat" && lane !== "all") throw new Usage(`--lane is edu, stat or all, not "${lane}"`);
+    const budgetRaw = flag("budget-usd");
+    const budget = budgetRaw === undefined ? undefined : num("budget-usd", 0);
+    if (budget !== undefined && !(budget > 0)) throw new Usage("--budget-usd needs a positive number of dollars");
+    if (has("concurrency")) say("--concurrency is ignored: a strip job performs one step at a time (lib/producers/strips.ts)");
+
+    const S = await import("../../lib/producers/strips.ts");
+    const { readStripRunNow, saveStripRun, stripRunDir } = await import("../../lib/foundry/strips/store.ts");
+    const { DEFAULT_OPTIONS } = await import("../../lib/foundry/strips/cards.ts");
+    const { ackLane, laneHold } = await import("@gt/kernel/job-queue");
+    const { resume, retry } = await import("@gt/kernel/job");
+    const { dryOnlyFrom } = await import("@gt/kernel/dryrun");
+    const { parseAt } = await import("@gt/domain/door");
+    const { jobIdSchema } = await import("@gt/domain/ids");
+
+    const actor = { kind: "operator" as const, id: "cli" };
+    const dryOnly = dryOnlyFrom(io.env);
+    const k = S.stripsKernel();
+    if (!k.ok) throw k.error;
+    const store = k.value.store;
+    const jid = (id: string) => {
+      const p = parseAt("job id", jobIdSchema, id);
+      if (!p.ok) throw p.error;
+      return p.value;
+    };
+
+    const report = (runId: string, extra: Record<string, unknown> = {}, outcome?: string): number => {
+      const m = readStripRunNow(runId);
+      const job = m.job === undefined ? undefined : S.jobOf(store, m.job);
+      const by = (s: string) => m.cards.filter((c) => c.status === s).length;
+      const failed = job?.state === "failed" || job?.state === "interrupted" || outcome === "held" || outcome === "busy" || outcome === "unhealthy" || outcome === "error";
+      const counts = { rendered: by("rendered"), pending: by("pending"), lintFailed: by("lint-failed"), renderFailed: by("render-failed"), authorFailed: by("author-failed") };
+      if (json) {
+        doc({
+          ok: !failed,
+          runId,
+          ...(m.job === undefined ? {} : { jobId: m.job }),
+          ...(outcome === undefined ? {} : { outcome }),
+          job: job === undefined ? null : { state: job.state, attempt: job.attempt, mode: job.mode.kind, spend: job.spend, progress: job.progress, ...(job.ceilingUsd === undefined ? {} : { ceilingUsd: job.ceilingUsd }), ...(job.error === undefined ? {} : { error: job.error }), ...(job.interruption === undefined ? {} : { interruption: job.interruption }) },
+          run: { status: m.status, dry: m.dry === true, cards: m.cards.length, ...counts, ...(m.error === undefined ? {} : { error: m.error }) },
+          ...extra,
+        });
+      } else {
+        if (job !== undefined) io.out(`job ${job.id} · ${job.state} · attempt ${job.attempt} · ${job.mode.kind} · $${job.spend.usd}${job.spend.unpriced ? ` (${job.spend.unpriced} unpriced)` : ""}${job.error ? ` · ${job.error.message}` : ""}`);
+        io.out(`run ${runId} · ${m.status}${m.dry ? " (dry)" : ""}: rendered ${counts.rendered}, lint-failed ${counts.lintFailed}, render-failed ${counts.renderFailed}, author-failed ${counts.authorFailed}, pending ${counts.pending}`);
+        if (m.status === "awaiting-triage" && !m.dry) io.out(`triage: /foundry -> Strips -> ${runId}`);
+      }
+      return failed ? 1 : 0;
+    };
+
+    const drive = async (runId: string, jobId: string): Promise<number> => {
+      if (has("detach")) {
+        say(`enqueued ${jobId}; the worker drives it`);
+        return report(runId, { detached: true });
+      }
+      const t0 = Date.now();
+      const r = await S.driveStrips(jobId, { dryOnly, onStep: (s) => say(`  ${Math.round((Date.now() - t0) / 1000)}s  ${s}`) });
+      if (!r.ok) {
+        say(`stopped: ${r.error.message}`);
+        report(runId, { error: r.error.message }, "error");
+        return 1;
+      }
+      if (r.value.reason !== undefined) say(r.value.reason);
+      return report(runId, { wouldCalls: r.value.wouldCalls?.length ?? 0 }, r.value.outcome);
+    };
+
+    if (has("status")) {
+      const id = flag("status");
+      if (!id) throw new Usage("--status needs a run id");
+      report(id);
+      return 0;
+    }
+
+    const runId = flag("run");
+    if (has("regate")) {
+      if (!runId) throw new Usage("--regate needs --run <id>");
+      return await regate(runId, io, { readStripRunNow, saveStripRun, stripRunDir, jobOf: (id) => S.jobOf(store, id) });
+    }
+
+    const selection = {
+      lane,
+      only: list("only"),
+      replicas: list("replicas"),
+      effortArm: list("effort-arm"),
+      effort: flag("effort") ?? "high",
+      controls: has("controls"),
+      controlsOnly: has("controls-only"),
+    } as const;
+    const options = {
+      rounds: Math.max(0, num("rounds", DEFAULT_OPTIONS.rounds)),
+      review: !has("no-review"),
+      leonardo: !has("no-leonardo"),
+      authorTimeoutMin: num("author-timeout", DEFAULT_OPTIONS.authorTimeoutMin),
+    };
+    const mode = has("dry") ? ("dry" as const) : ("live" as const);
+
+    if (has("resume")) {
+      if (!runId) throw new Usage("--resume needs --run <id>");
+      const m = readStripRunNow(runId);
+      const job = m.job === undefined ? undefined : S.jobOf(store, m.job);
+      if (job?.state === "running") throw new Error(`${runId} is being driven by job ${job.id} right now (${job.lease?.holder.host}/${job.lease?.holder.pid}); wait for it.`);
+      if (job?.state === "failed" || job?.state === "interrupted") {
+        // The hold this job left is the operator's to lift - and the operator just asked to retry it.
+        const held = store.read((r) => laneHold(r, "seat.text"));
+        if (held.ok && held.value?.jobId === job.id) {
+          const a = ackLane(store, "seat.text", actor);
+          if (!a.ok) throw a.error;
+        }
+        const r = retry(store, jid(job.id), actor, budget === undefined ? {} : { ceilingUsd: budget });
+        if (!r.ok) throw r.error;
+        say(`retried ${job.id} (attempt ${r.value.attempt})`);
+        return drive(runId, job.id);
+      }
+      if (job?.state === "paused") {
+        const r = resume(store, jid(job.id), actor);
+        if (!r.ok) throw r.error;
+        return drive(runId, job.id);
+      }
+      if (job?.state === "queued") return drive(runId, job.id);
+      const add = SELECTION_FLAGS.some(has) ? selection : undefined;
+      return launch({ kind: "run", runId, ...(add === undefined ? {} : { add }) });
+    }
+
+    const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "").replace(/^(\d{8})(\d{4})$/, "$1-$2");
+    return await launch({ kind: "new", runId: runId ?? `strips-${stamp}`, selection, options });
+
+    async function launch(target: Parameters<typeof S.launchStrips>[0]): Promise<number> {
+      const base = { mode, actor, dryOnly, ...(budget === undefined ? {} : { ceilingUsd: budget }) };
+      const r0 = await S.launchStrips(target, base);
+      if (!r0.ok) throw r0.error;
+      if (r0.value.kind === "existing") return drive(r0.value.runId, r0.value.jobId);
+      if (r0.value.kind !== "receipt") throw new Error(`unexpected ${r0.value.kind}`);
+      const rc = r0.value.receipt;
+      say(`receipt · ${mode} · ${r0.value.cards.length} card(s) · worst case $${rc.totals.usd} · eta ${rc.etaAt}${rc.ceilingUsd === undefined ? "" : ` · ceiling $${rc.ceilingUsd}${rc.overCeiling ? " (may stop at ceiling)" : ""}`}`);
+      for (const c of r0.value.cards) say(`  ${c}`);
+      let token = rc.token;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const r1 = await S.launchStrips(target, { ...base, token });
+        if (!r1.ok) throw r1.error;
+        if (r1.value.kind === "stale") {
+          token = r1.value.fresh.token;
+          continue;
+        }
+        if (r1.value.kind === "existing") return drive(r1.value.runId, r1.value.jobId);
+        if (r1.value.kind !== "launched") throw new Error(`unexpected ${r1.value.kind}`);
+        say(`launched ${r1.value.jobId}`);
+        return drive(r1.value.runId, r1.value.jobId);
+      }
+      throw new Error("the receipt went stale twice; run the command again");
+    }
+  } catch (e) {
+    const usage = e instanceof Usage;
+    const message = e instanceof Error ? e.message : String(e);
+    if (json) io.out(JSON.stringify({ ok: false, error: message, ...(usage ? { usage: true } : {}) }, null, 2));
+    else io.err(usage ? `${message}\n${USAGE}` : message);
+    return usage ? 2 : 1;
   }
 }
-loadEnv();
 
-const argv = process.argv.slice(2);
-const arg = (k: string) => (argv.includes(k) ? argv[argv.indexOf(k) + 1] : undefined);
-const list = (k: string) => (arg(k) ?? "").split(",").map((s) => s.trim()).filter(Boolean);
-const flag = (k: string) => argv.includes(k);
+type RegateDeps = {
+  readStripRunNow: typeof import("../../lib/foundry/strips/store.ts").readStripRunNow;
+  saveStripRun: typeof import("../../lib/foundry/strips/store.ts").saveStripRun;
+  stripRunDir: typeof import("../../lib/foundry/strips/store.ts").stripRunDir;
+  jobOf: (id: string) => { readonly state: string; readonly id: string } | undefined;
+};
 
-const STAMP = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "").replace(/^(\d{8})(\d{4})$/, "$1-$2");
-const RUN_ID = arg("--run") ?? `strips-${STAMP}`;
-const LANE = (arg("--lane") ?? "all") as StripLane | "all";
-const ONLY = list("--only");
-const REPLICAS = list("--replicas");
-const EFFORT_ARM = list("--effort-arm");
-const EFFORT = arg("--effort") ?? "high";
-const CONCURRENCY = Math.max(1, Number(arg("--concurrency") ?? 3));
-const MAX_ROUNDS = Math.max(0, Number(arg("--rounds") ?? 2));
-const CONTROLS = flag("--controls") || flag("--controls-only");
-const CONTROLS_ONLY = flag("--controls-only");
-const NO_LEONARDO = flag("--no-leonardo");
-/** Skip the contact-sheet review turn on a strip whose gates all pass. Controls always skip it:
- *  on the F1 control (2026-10-06) the review cost 7 min and changed nothing visible. */
-const NO_REVIEW = flag("--no-review");
-const RESUME = flag("--resume");
-/** Measured 2026-10-06: first authoring turns ran 6-38 min, and two intricate cards
- *  died at a 40-min cap before reporting. 75 leaves headroom without hiding a hang. */
-const AUTHOR_TIMEOUT_MIN = Number(arg("--author-timeout") ?? 75);
-const DRY = flag("--dry");
-/** Re-render and re-gate every authored card of --run, with no authoring turn. */
-const REGATE = flag("--regate");
-
-const ROOT = process.cwd();
-const RUN_DIR = path.join(ROOT, "foundry-out", "strips", RUN_ID);
-const DATA = path.join(ROOT, "pipeline", "strips", "data");
-
-const approaches: Approach[] = JSON.parse(readFileSync(path.join(ROOT, "pipeline", "strips", "approaches.json"), "utf8")).approaches;
-
-/** The positive control: the "infographic post" every approach must beat. */
-const control = (lane: StripLane, kase: string): Approach => ({
-  id: "CTRL",
-  lane,
-  case: kase,
-  name: "House infographic (control)",
-  medium: "svg",
-  grammar: lane === "stat" ? "reflow" : "draw-on",
-  density: "low",
-  leonardo: "none",
-  direction:
-    lane === "stat"
-      ? "The plain, correct baseline: flat light ground, one accent for the leader, a clean horizontal bar race in a neutral sans, year top right, source line. No theme, no texture, no metaphor."
-      : "The plain, correct baseline: flat light ground, one accent, a clean labelled diagram of the causal steps in a neutral sans, steps appearing in order. No theme, no texture, no metaphor.",
-  falsifier: "None intended: this card exists to prove the brief is legible and the harness works. If it fails its countable expectations, the brief or the harness is wrong.",
-});
-
-// ---- regate: re-render existing strips, spend no seat ------------------------
-if (REGATE) {
-  const runPath = path.join(RUN_DIR, "run.json");
-  const m: StripRun = JSON.parse(await readFile(runPath, "utf8"));
+/** Re-render and re-gate every authored card, with no authoring turn (v1 `--regate`). Free; refused while a job drives the run. */
+async function regate(runId: string, io: Io, d: RegateDeps): Promise<number> {
+  const { existsSync } = await import("node:fs");
+  const { writeFile } = await import("node:fs/promises");
+  const path = (await import("node:path")).default;
+  const m = d.readStripRunNow(runId);
+  const job = m.job === undefined ? undefined : d.jobOf(m.job);
+  if (job !== undefined && ["queued", "running", "paused"].includes(job.state)) throw new Error(`${runId} is held by job ${job.id} (${job.state}); a regate would race it`);
+  const { launchHeadless, renderStrip } = await import("./render.mts");
+  const dir = d.stripRunDir(runId);
   const browser = await launchHeadless();
   try {
     for (const card of m.cards) {
-      const html = path.join(RUN_DIR, card.id, "strip.html");
+      const html = path.join(dir, card.id, "strip.html");
       if (!existsSync(html) || card.status === "lint-failed" || card.status === "author-failed") continue;
-      const r = await renderStrip({ browser, htmlPath: html, outDir: path.join(RUN_DIR, card.id), lane: card.lane });
+      const r = await renderStrip({ browser, htmlPath: html, outDir: path.join(dir, card.id), lane: card.lane });
       card.gates = r.gates;
       card.error = r.error;
       card.status = r.ok ? "rendered" : "render-failed";
       card.renderMs = r.renderMs;
       card.files = { ...card.files, ...r.files };
-      await writeFile(path.join(RUN_DIR, card.id, "meta.json"), JSON.stringify(card, null, 2));
+      await writeFile(path.join(dir, card.id, "meta.json"), JSON.stringify(card, null, 2));
       const g = r.gates;
-      console.log(`[${card.id}] regated ${card.status}${g ? ` seek:${g.seek.ok ? "ok" : "X"} legibility:${g.legibility.ok ? "ok" : "X"} motion:${g.motion.ok ? "ok" : "X"}` : ""}`);
+      io.out(`[${card.id}] regated ${card.status}${g ? ` seek:${g.seek.ok ? "ok" : "X"} legibility:${g.legibility.ok ? "ok" : "X"} motion:${g.motion.ok ? "ok" : "X"}` : ""}`);
     }
-    await writeFile(runPath, JSON.stringify(m, null, 2));
+    await d.saveStripRun(m);
   } finally {
     await browser.close();
   }
-  process.exit(0);
+  return 0;
 }
 
-// ---- card selection ---------------------------------------------------------
-type Job = { card: StripCard; approach: Approach };
-const jobs: Job[] = [];
-const picked = approaches.filter((a) => (LANE === "all" || a.lane === LANE) && (!ONLY.length || ONLY.includes(a.id)));
-const cardId = (a: Approach, suffix = "") =>
-  `${a.case.startsWith(`${a.lane}-`) ? a.case : `${a.lane}-${a.case}`}--${a.id === "CTRL" ? "ctrl" : a.id}${suffix}`;
-const blank = (a: Approach, id: string, effort: string, replicaOf?: string): StripCard => ({
-  id, lane: a.lane, case: a.case, approach: a.id, ...(replicaOf ? { replicaOf } : {}), effort,
-  status: "pending", rounds: 0, authorMs: 0, renderMs: 0, files: {},
-});
-
-if (CONTROLS) {
-  const cases = [...new Map(picked.map((a) => [a.case, a.lane] as const)).entries()];
-  for (const [kase, lane] of cases) {
-    const c = control(lane, kase);
-    jobs.push({ card: blank(c, cardId(c), EFFORT), approach: c });
-  }
-}
-if (!CONTROLS_ONLY) {
-  for (const a of picked) {
-    jobs.push({ card: blank(a, cardId(a), EFFORT), approach: a });
-    if (REPLICAS.includes(a.id)) jobs.push({ card: blank(a, cardId(a, "--r2"), EFFORT, cardId(a)), approach: a });
-    if (EFFORT_ARM.includes(a.id)) jobs.push({ card: blank(a, cardId(a, "--low"), "low", cardId(a)), approach: a });
+/** v1's .env.local reader: the seat and the image router read their keys from the process. */
+async function loadEnv(file = ".env.local"): Promise<void> {
+  const { existsSync, readFileSync } = await import("node:fs");
+  const p = (await import("node:path")).join(process.cwd(), file);
+  if (!existsSync(p)) return;
+  for (const line of readFileSync(p, "utf8").split(/\r?\n/)) {
+    const m = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line);
+    if (m && m[1] && !process.env[m[1]]) process.env[m[1]] = (m[2] ?? "").trim().replace(/^["']|["']$/g, "");
   }
 }
 
-console.log(`run ${RUN_ID}: ${jobs.length} card(s), concurrency ${CONCURRENCY}, effort ${EFFORT}, rounds ≤${MAX_ROUNDS}`);
-for (const j of jobs) console.log(`  ${j.card.id}  ${j.approach.name}  [${j.card.effort}${j.approach.leonardo !== "none" ? `, leonardo ${j.approach.leonardo}` : ""}]`);
-if (DRY) process.exit(0);
-
-// ---- run manifest (one writer: this process; writes are serialized) --------
-await mkdir(RUN_DIR, { recursive: true });
-const runPath = path.join(RUN_DIR, "run.json");
-const prior: StripRun | null = RESUME && existsSync(runPath) ? JSON.parse(await readFile(runPath, "utf8")) : null;
-const manifest: StripRun = prior ?? {
-  version: 1,
-  id: RUN_ID,
-  at: new Date().toISOString(),
-  width: { edu: STRIP_SIZE.edu.width, stat: STRIP_SIZE.stat.width },
-  height: { edu: STRIP_SIZE.edu.height, stat: STRIP_SIZE.stat.height },
-  fps: STRIP_FPS,
-  frames: STRIP_FRAMES,
-  approaches: [],
-  cards: [],
-  status: "running",
-};
-manifest.status = "running";
-for (const j of jobs) {
-  if (j.approach.id !== "CTRL" && !manifest.approaches.some((a) => a.id === j.approach.id)) manifest.approaches.push(j.approach);
-  if (!manifest.cards.some((c) => c.id === j.card.id)) manifest.cards.push(j.card);
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  await loadEnv();
+  process.exitCode = await runCli(process.argv.slice(2), {
+    env: process.env,
+    out: (s) => void process.stdout.write(`${s}\n`),
+    err: (s) => void process.stderr.write(`${s}\n`),
+  });
 }
-let writing = Promise.resolve();
-const save = () => (writing = writing.then(() => writeFile(runPath, JSON.stringify(manifest, null, 2))));
-const put = async (card: StripCard) => {
-  const i = manifest.cards.findIndex((c) => c.id === card.id);
-  manifest.cards[i] = card;
-  await writeFile(path.join(RUN_DIR, card.id, "meta.json"), JSON.stringify(card, null, 2)).catch(() => {});
-  await save();
-};
-await save();
-
-// ---- shared resources -------------------------------------------------------
-const browser = await launchHeadless();
-let renderSlots = 2;
-const renderQueue: (() => void)[] = [];
-async function withRenderSlot<T>(fn: () => Promise<T>): Promise<T> {
-  if (renderSlots === 0) await new Promise<void>((r) => renderQueue.push(r));
-  renderSlots--;
-  try {
-    return await fn();
-  } finally {
-    renderSlots++;
-    renderQueue.shift()?.();
-  }
-}
-const assets = new Map<string, Promise<{ file: string; provider: string; costUsd?: number } | undefined>>();
-function assetFor(a: Approach) {
-  if (a.leonardo === "none" || NO_LEONARDO) return Promise.resolve(undefined);
-  if (!assets.has(a.id)) {
-    assets.set(
-      a.id,
-      (async () => {
-        const base = path.join(RUN_DIR, "_assets", a.id);
-        for (const ext of ["png", "jpg", "webp"]) if (existsSync(`${base}.${ext}`)) return { file: `${base}.${ext}`, provider: "leonardo (cached)" };
-        try {
-          return await makeAsset(a, a.lane, base);
-        } catch (e) {
-          console.warn(`[asset ${a.id}] ${(e as Error).message} - the strip renders without it`);
-          return undefined;
-        }
-      })(),
-    );
-  }
-  return assets.get(a.id)!;
-}
-
-function feedbackText(card: StripCard, lint: string[]): string {
-  const g = card.gates;
-  const lines = [`# Render ${card.rounds + 1} of your strip`, ""];
-  if (lint.length) lines.push("## Lint errors (the strip was NOT rendered)", ...lint.map((l) => `- ${l}`), "");
-  if (card.error) lines.push("## Render error", card.error, "");
-  if (g) {
-    lines.push("## Automated gates");
-    for (const [k, v] of Object.entries(g)) lines.push(`- ${k}: ${v.ok ? "pass" : "FAIL"} - ${v.detail}`);
-    lines.push("");
-  }
-  lines.push("inputs/sheet.png, if present, is a 4x3 contact sheet of frames 0, 20, 40 ... 220 (read left to right, top to bottom).");
-  return lines.join("\n");
-}
-
-// ---- one card ---------------------------------------------------------------
-async function runCard({ card: seed, approach }: Job): Promise<void> {
-  const existing = manifest.cards.find((c) => c.id === seed.id);
-  if (RESUME && existing?.status === "rendered") {
-    console.log(`[${seed.id}] already rendered - skipped`);
-    return;
-  }
-  const card: StripCard = { ...seed, files: {} };
-  const dir = path.join(RUN_DIR, card.id);
-  await mkdir(dir, { recursive: true });
-  const briefPath = path.join(DATA, `${approach.case}.json`);
-  if (!existsSync(briefPath)) {
-    card.error = `no data fixture at pipeline/strips/data/${approach.case}.json`;
-    await put(card);
-    console.warn(`[${card.id}] ${card.error}`);
-    return;
-  }
-  const brief = JSON.parse(await readFile(briefPath, "utf8"));
-  const asset = await assetFor(approach);
-  if (asset) card.asset = { file: path.relative(RUN_DIR, asset.file).replace(/\\/g, "/"), provider: asset.provider, costUsd: asset.costUsd };
-  const ws = path.join(RUN_DIR, "_ws", card.id);
-  const html = path.join(dir, "strip.html");
-  const style = path.join(dir, "style.json");
-
-  let cost = 0;
-  let feedback: Parameters<typeof authorStrip>[0]["feedback"];
-  for (let round = 0; round <= MAX_ROUNDS; round++) {
-    console.log(`[${card.id}] author turn ${round === 0 ? "1" : `fix ${round}`}`);
-    const t0 = Date.now();
-    const a = await authorStrip({ ws, lane: approach.lane, brief, approach, effort: card.effort, asset: asset?.file, feedback, timeoutMin: AUTHOR_TIMEOUT_MIN });
-    card.authorMs += Date.now() - t0;
-    cost += a.result.costUsd ?? 0;
-    card.costUsd = cost || undefined;
-    if (a.result.outcome !== "completed" || !a.html) {
-      if (round === 0 || !existsSync(html)) {
-        card.status = "author-failed";
-        card.error = `${a.result.outcome}: ${a.result.errors.join(" | ") || "no out/strip.html written"}`;
-        await put(card);
-        console.warn(`[${card.id}] author-failed - ${card.error}`);
-        return;
-      }
-      break; // a failed fix turn keeps the last good render
-    }
-    await copyFile(a.html, html);
-    if (a.style) await copyFile(a.style, style);
-    card.files.html = "strip.html";
-    if (a.style) card.files.style = "style.json";
-    if (round > 0) card.rounds = round;
-    if (round > 0 && !a.changed && card.status === "rendered") {
-      console.log(`[${card.id}] fix turn changed nothing - keeping render`);
-      break;
-    }
-
-    const lint = formatLint(lintStrip(await readFile(html, "utf8")));
-    card.lint = lint.length ? lint : undefined;
-    if (lint.length) {
-      card.status = "lint-failed";
-      console.warn(`[${card.id}] lint-failed - ${lint.join("; ").slice(0, 200)}`);
-      card.gates = undefined;
-      card.error = undefined;
-      await put(card);
-      if (round === MAX_ROUNDS) return;
-      feedback = { text: feedbackText(card, lint), current: html, style };
-      continue;
-    }
-
-    const r = await withRenderSlot(() => renderStrip({ browser, htmlPath: html, outDir: dir, lane: approach.lane }));
-    card.renderMs += r.renderMs;
-    card.gates = r.gates;
-    card.error = r.error;
-    card.status = r.ok ? "rendered" : "render-failed";
-    card.files = { ...card.files, ...r.files };
-    await put(card);
-    const g = r.gates;
-    console.log(`[${card.id}] ${card.status}${g ? ` seek:${g.seek.ok ? "ok" : "X"} legibility:${g.legibility.ok ? "ok" : "X"} motion:${g.motion.ok ? "ok" : "X"}` : ""}${r.error ? ` - ${r.error}` : ""}`);
-
-    // Round 1 always looks at its own sheet once; a second fix only on a failure.
-    const failing = !r.ok || (g && !(g.seek.ok && g.legibility.ok && g.motion.ok));
-    if (round === MAX_ROUNDS || (round >= 1 && !failing)) break;
-    if (round === 0 && !failing && (NO_REVIEW || approach.id === "CTRL")) break;
-    feedback = { text: feedbackText(card, []), sheet: path.join(dir, "sheet.png"), current: html, style };
-  }
-}
-
-// ---- pool -------------------------------------------------------------------
-const queue = [...jobs];
-async function worker() {
-  for (let j = queue.shift(); j; j = queue.shift()) {
-    try {
-      await runCard(j);
-    } catch (e) {
-      const card = manifest.cards.find((c) => c.id === j!.card.id)!;
-      card.status = card.status === "rendered" ? card.status : "render-failed";
-      card.error = `harness: ${(e as Error).message}`;
-      await put(card).catch(() => {});
-      console.error(`[${j.card.id}] harness error: ${(e as Error).message}`);
-    }
-  }
-}
-try {
-  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, jobs.length) }, worker));
-
-  // ---- replica discrimination ----------------------------------------------
-  const disc: Record<string, number> = { ...(manifest.discrimination ?? {}) };
-  for (const rep of manifest.cards.filter((c) => c.replicaOf && c.id.endsWith("--r2") && c.status === "rendered")) {
-    const orig = manifest.cards.find((c) => c.id === rep.replicaOf && c.status === "rendered");
-    if (!orig) continue;
-    // Peers share the case: across cases the content, not the style, would dominate the distance.
-    const peers = manifest.cards.filter((c) => c.case === orig.case && c.status === "rendered" && !c.replicaOf && c.id !== orig.id);
-    if (!peers.length) continue;
-    const sheets = [orig, rep, ...peers].map((c) => path.join(RUN_DIR, c.id, "sheet.png"));
-    const d = await sheetDistances(browser, sheets);
-    const noise = d[0][1];
-    const between = d[0].slice(2).reduce((s, x) => s + x, 0) / peers.length;
-    disc[orig.approach] = noise > 0 ? Math.round((between / noise) * 100) / 100 : Infinity;
-    console.log(`discrimination ${orig.approach}: between ${between.toFixed(1)} / replica ${noise.toFixed(1)} = ${disc[orig.approach]}`);
-  }
-  manifest.discrimination = disc;
-  manifest.status = "awaiting-triage";
-  await save();
-} finally {
-  await writing;
-  await browser.close();
-}
-const by = (s: string) => manifest.cards.filter((c) => c.status === s).length;
-console.log(`\nrun ${RUN_ID}: rendered ${by("rendered")}, lint-failed ${by("lint-failed")}, render-failed ${by("render-failed")}, author-failed ${by("author-failed")}`);
-console.log(`triage: /foundry -> Strips -> ${RUN_ID}`);

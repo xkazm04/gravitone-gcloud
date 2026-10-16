@@ -1,6 +1,7 @@
 import "server-only";
 
 import { stat } from "node:fs/promises";
+import path from "node:path";
 
 import type { BlobRef } from "@gt/domain/blob";
 import type { Decision } from "@gt/domain/decision";
@@ -10,7 +11,7 @@ import type { ApplyClaim } from "@gt/kernel/decision/apply";
 import type { InitialDecision } from "@gt/kernel/decision/driver";
 import type { ItemWords, RowWords } from "@gt/ui/board/port";
 
-import { commitStripRun, getStripRun, patchStripVerdicts, planStripCommit, previewStripCommit, stripFileStat } from "../../../foundry/strips/store.ts";
+import { commitStripRun, getStripRun, patchStripVerdicts, planStripCommit, previewStripCommit, stripFileStat, stripsRoot } from "../../../foundry/strips/store.ts";
 import { JUDGEABLE, STRIP_COMMITTABLE } from "../../../foundry/strips/triage.ts";
 import { STRIP_CHIPS, type StripCard, type StripChip, type StripRun, type StripVerdict, type StripVerdicts } from "../../../foundry/strips/types.ts";
 import { packetIdOf } from "../../../ledger/v1/packet.ts";
@@ -126,6 +127,7 @@ function refusal(run: StripRun): string | undefined {
   // v1's own sentences (lib/foundry/strips/store.ts commitStripRun).
   if (run.status === "committed") return "This strip run is already committed.";
   if (!STRIP_COMMITTABLE.includes(run.status)) return "The pipeline is still running this strip run.";
+  if (run.dry === true) return "This strip run was a dry job: its pages are stand-ins and nothing was captured. It cannot be committed.";
   return undefined;
 }
 
@@ -230,7 +232,8 @@ function consequence(v1: StripsV1, at: DecisionsAt): Result<Preview> {
   const ids = new Set(cards.map((c) => c.id));
   const verdicts = effectiveVerdicts(v1, at, ids);
   const plan = planStripCommit(v1.run, verdicts);
-  const runRel = (rel: string) => `foundry-out/strips/${v1.run.id}/${rel}`;
+  // The universe's own root (store.ts `stripsRoot`, Phase 4 L33), repo-relative as the consequence names it.
+  const runRel = (rel: string) => `${path.relative(process.cwd(), stripsRoot()).replace(/\\/g, "/")}/${v1.run.id}/${rel}`;
   const keptCards = v1.run.cards.filter((c) => verdicts[c.id]?.verdict === "keep");
   const decided = v1.run.cards.filter((c) => verdicts[c.id] !== undefined);
   const v1Digest = digestOf(v1);

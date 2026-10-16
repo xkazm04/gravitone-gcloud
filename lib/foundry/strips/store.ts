@@ -33,8 +33,18 @@
 // unlinked; a card's files are resolved inside that card's own directory.
 // strip.html is LLM-written code and is never served by the file route — only
 // by GET /api/foundry/strips/<id>/page, under a sandbox CSP.
+//
+// WHERE THE RUNS LIVE (Phase 4, L33): `stripsRoot()`, the universe's own
+// `<foundry-out | fixtures-out>/strips` (lib/fixtures/roots.ts outPath), or
+// STRIPS_STORE_DIR when a test points it at a temp root. Until then this was a
+// module constant fixed to foundry-out/strips in BOTH universes, so a fixture-mode
+// Strips tab read and committed the real store; the Ledger and the Board read it
+// through the same function now. Since Phase 4 the pipeline that writes run.json is
+// a kernel job (lib/producers/strips.ts): `readStripRunNow` and `saveStripRun` are
+// its two doors here, and a dry job's run is never committed.
 
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { stat } from "node:fs/promises";
 import path from "node:path";
 
@@ -48,6 +58,7 @@ import {
   type VerdictSpec,
   type VerdictState,
 } from "../verdictLog";
+import { outPath } from "../../fixtures/roots";
 import { foundryFs } from "../fsPort";
 import {
   FoundryError,
@@ -59,6 +70,7 @@ import {
   readJson,
   readManifestFile,
   runRoot,
+  writeJsonAtomic,
 } from "../runStore";
 import {
   JUDGEABLE,
@@ -74,7 +86,11 @@ import {
 } from "./triage";
 import { STRIP_CHIPS, type Approach, type StripCard, type StripChip, type StripRun, type StripVerdict, type StripVerdicts } from "./types";
 
-const OUT_ROOT = path.join(process.cwd(), "foundry-out", "strips");
+/** The strips store in this process's universe: STRIPS_STORE_DIR, else `<out>/strips`. Read per call. */
+export function stripsRoot(): string {
+  const o = process.env.STRIPS_STORE_DIR?.trim();
+  return o ? path.resolve(o) : outPath("strips");
+}
 /** Repo-relative, forward slashes on every OS — what the index records. */
 const MOTION_STYLES_REL = "pipeline/foundry/motion-styles";
 
@@ -88,8 +104,11 @@ const KEEP_FILES = ["html", "style", "poster", "sheet"] as const;
 const MEDIA_FILES = ["mp4", "webm", "poster", "sheet"] as const;
 
 function runDir(id: string): string {
-  return runRoot(OUT_ROOT, id, "strip run");
+  return runRoot(stripsRoot(), id, "strip run");
 }
+
+/** A run's directory, held to the store: the job's port writes its cards under it. */
+export const stripRunDir = runDir;
 
 /** A card's own directory, held inside its run. */
 function cardDir(id: string, card: StripCard): string {
@@ -112,6 +131,31 @@ export async function readStripRun(id: string): Promise<StripRun> {
   return m;
 }
 
+/**
+ * run.json, synchronously - the job's plan reads it inside the kernel's store
+ * transaction, which cannot await. A missing run is a 404, a torn one a 503,
+ * as `readStripRun` says them.
+ */
+export function readStripRunNow(id: string): StripRun {
+  const file = path.join(runDir(id), "run.json");
+  let text: string;
+  try {
+    text = readFileSync(file, "utf8");
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") throw new FoundryError(`No strip run called ${id}.`, 404);
+    throw e;
+  }
+  try {
+    return JSON.parse(text) as StripRun;
+  } catch (e) {
+    if (!(e instanceof SyntaxError)) throw e;
+    throw new FoundryError(`The manifest of strip run ${id} is unreadable — inspect ${path.join(stripsRoot(), id, "run.json")}.`, 503);
+  }
+}
+
+/** Write run.json back (tmp + rename), so a reader never sees half of it. The job's port presents its fence first. */
+export const saveStripRun = (m: StripRun): Promise<void> => writeJsonAtomic(path.join(runDir(m.id), "run.json"), m);
+
 async function readStripVerdicts(id: string): Promise<StripVerdicts> {
   return readJson<StripVerdicts>(path.join(runDir(id), "verdicts.json"), {});
 }
@@ -121,8 +165,9 @@ const isDecided = (v: StripVerdict | undefined): v is StripVerdict => v?.verdict
 /* ── reads ────────────────────────────────────────────────────────────────── */
 
 export async function listStripRuns(): Promise<StripRunSummary[]> {
-  const { items } = await listManifests<StripRun, StripRunSummary>(OUT_ROOT, "run.json", async (name, m) => {
-    const v = await readJson<StripVerdicts>(path.join(OUT_ROOT, name, "verdicts.json"), {}).catch(() => ({}) as StripVerdicts);
+  const root = stripsRoot();
+  const { items } = await listManifests<StripRun, StripRunSummary>(root, "run.json", async (name, m) => {
+    const v = await readJson<StripVerdicts>(path.join(root, name, "verdicts.json"), {}).catch(() => ({}) as StripVerdicts);
     const cards = Array.isArray(m.cards) ? m.cards : [];
     const lane = (l: "edu" | "stat") => {
       const cs = cards.filter((c) => c.lane === l);
@@ -349,6 +394,7 @@ export async function commitStripRun(id: string, token?: string): Promise<StripC
     const fs = foundryFs();
     const run = await readStripRun(id);
     if (run.status === "committed") throw new FoundryError("This strip run is already committed.", 409);
+    if (run.dry === true) throw new FoundryError("This strip run was a dry job: its pages are stand-ins and nothing was captured. It cannot be committed.", 409);
     if (!STRIP_COMMITTABLE.includes(run.status)) throw new FoundryError("The pipeline is still running this strip run.", 409);
     const verdicts = await readStripVerdicts(id);
     const plan = planStripCommit(run, verdicts);
