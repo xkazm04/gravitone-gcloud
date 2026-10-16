@@ -15,6 +15,7 @@ import { ackLane, move } from "@gt/kernel/job-queue";
 import { launchProject, planReceipt, rerouteOptions } from "@gt/kernel/records/launch";
 import { listProjects, readProject, type ReadContext } from "@gt/kernel/records/read";
 import { compose, discard, rename, setPart } from "@gt/kernel/records/write";
+import { gateFacts } from "@gt/kernel/parts/gates";
 import type { Store } from "@gt/kernel/store";
 
 import type { Confirmed } from "./contract.ts";
@@ -85,7 +86,9 @@ const slug = (s: string): string =>
 export function makeRealProduce(deps: RealDeps): ServerProduce {
   const cwd = deps.cwd ?? (() => process.cwd());
   const mint = deps.mint ?? mintSuffix;
-  const ctx = (): ReadContext => ({ now: deps.now() });
+  // Gate facts wired: a committed gate packet reads ratified on the Plan (L42 found every
+  // gate "at the Weir" after its commit - the context carried the clock alone).
+  const ctx = (): ReadContext => gateFacts(deps.now());
   const dryOnly = (): boolean => dryOnlyFrom(deps.env());
   const withStore = <T,>(fn: (s: Store) => Result<T>): Result<T> => {
     const s = deps.store();

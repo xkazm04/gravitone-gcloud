@@ -29,7 +29,8 @@ function must<T>(r: Result<T>): T {
 export type ReadContext = {
   readonly now: number;
   readonly capacity?: Readonly<Record<ResourceLane, number>>;
-  readonly packetOf?: (partId: string) => PacketFact | undefined;
+  /** Read inside the SAME snapshot as the plan (`r`): a store read cannot nest another. */
+  readonly packetOf?: (partId: string, r: Reader) => PacketFact | undefined;
   readonly slottedOf?: (partId: string) => boolean;
 };
 
@@ -128,7 +129,7 @@ export function projectModel(r: Reader, id: string, ctx: ReadContext): ProjectMo
         facts.set(p.id, { job: job.state });
       }
     } else if (p.kind === "gate") {
-      const packet = ctx.packetOf?.(p.id);
+      const packet = ctx.packetOf?.(p.id, r);
       if (packet !== undefined) facts.set(p.id, { packet });
     } else if (p.kind === "slot") {
       facts.set(p.id, { slotted: ctx.slottedOf?.(p.id) === true });

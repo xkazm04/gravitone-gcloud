@@ -26,9 +26,19 @@ export function gatePacketFact(r: Reader, gatePartId: string): PacketFact | unde
   return state === "committed" ? "committed" : state === "returned" ? "rejected" : "open";
 }
 
-/** The read context with the gate facts wired, for a reader inside `r`'s snapshot. */
-export function gateContext(r: Reader, now: number): ReadContext {
-  return { now, packetOf: (partId) => gatePacketFact(r, partId) };
+/**
+ * The read context with the gate facts wired. The lookup reads through the reader the plan is
+ * being read with, so a context can be built once, outside any transaction, and handed to every
+ * plan read (the produce port does): before, a caller without a reader in hand built `{ now }`
+ * alone and every committed gate read "at the Weir" on the Plan.
+ */
+export function gateFacts(now: number): ReadContext {
+  return { now, packetOf: (partId, r) => gatePacketFact(r, partId) };
+}
+
+/** `gateFacts` for a caller already inside a snapshot; the reader comes with each lookup. */
+export function gateContext(_r: Reader, now: number): ReadContext {
+  return gateFacts(now);
 }
 
 /**
