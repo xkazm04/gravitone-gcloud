@@ -2,7 +2,7 @@ import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import type { ResourceLane } from "@gt/domain/lane";
 import type { Producer } from "../src/job-core.ts";
-import { pickWork, type LaneLook } from "../src/job-queue-core.ts";
+import { pickWork, producerKey, type LaneLook } from "../src/job-queue-core.ts";
 import type { Effects } from "../src/effects.ts";
 import { claimIn } from "../src/lease.ts";
 import { runJob } from "../src/job-run.ts";
@@ -43,10 +43,25 @@ describe("pickWork", () => {
   });
 });
 
+describe("pickWork per lane (L41)", () => {
+  it("a name carried on one lane is not carried on another: the other lane's head is an orphan, never a pick runJob would refuse", () => {
+    const looks = [look("cloud.google", { capacity: 3, head: { id: "dg", producer: "dojo" } }), look("gpu.local", { head: { id: "dl", producer: "dojo" } })];
+    const bound = new Set([producerKey("dojo", "cloud.google")]);
+    const r = pickWork(looks, (name, lane) => bound.has(producerKey(name, lane)), new Map());
+    expect(r).toEqual({ picks: [{ lane: "cloud.google", jobId: "dg", producer: "dojo" }], orphans: [{ lane: "gpu.local", jobId: "dl", producer: "dojo" }] });
+  });
+
+  it("an unhealthy producer cools on its own lane only", () => {
+    const looks = [look("seat.text", { head: { id: "rt", producer: "research" } }), look("cloud.google", { head: { id: "rg", producer: "research" } })];
+    const r = pickWork(looks, () => true, new Map(), { lanes: new Set(), producers: new Set([producerKey("research", "seat.text")]) });
+    expect(r.picks.map((p) => p.jobId)).toEqual(["rg"]);
+  });
+});
+
 describe("pickWork cooling", () => {
   it("a cooling lane or producer takes nothing, and its head is waited for, not named an orphan", () => {
     const looks = [look("gpu.local"), look("seat.text", { head: { id: "t", producer: "article" } }), look("box.render")];
-    const r = pickWork(looks, () => true, new Map(), { lanes: new Set(["gpu.local"]), producers: new Set(["article"]) });
+    const r = pickWork(looks, () => true, new Map(), { lanes: new Set(["gpu.local"]), producers: new Set([producerKey("article", "seat.text")]) });
     expect(r).toEqual({ picks: [{ lane: "box.render", jobId: "box.render-head", producer: "p" }], orphans: [] });
   });
 });
@@ -84,7 +99,7 @@ describe("workLoop", () => {
     const text = gated("seat.text");
     const gpu = gated("gpu.local");
     const stop = new AbortController();
-    const loop = workLoop(w.fx, new Map([["text", text.p], ["gpu", gpu.p]]), { signal: stop.signal, holder: hostA, alive: () => true, idleMs: 5, run: { sleep: async () => {} } });
+    const loop = workLoop(w.fx, new Map([[producerKey("text", "seat.text"), text.p], [producerKey("gpu", "gpu.local"), gpu.p]]), { signal: stop.signal, holder: hostA, alive: () => true, idleMs: 5, run: { sleep: async () => {} } });
     await until(() => text.seen.length === 4 && gpu.seen.length === 1);
     // Four text sessions at once and the fifth waits; one GPU job.
     expect(text.seen.map((s) => s.split(":")[0]).sort()).toEqual(["t1", "t2", "t3", "t4"]);
@@ -97,6 +112,28 @@ describe("workLoop", () => {
     expect(summary.started).toBe(6);
     expect(summary.orphans).toEqual([{ lane: "box.render", jobId: "s1", producer: "strips" }]);
     expect(must(get(w.store, jobId("s1"))).job.state).toBe("queued");
+    w.store.close();
+  }, 20_000);
+
+  it("drives one name on two lanes with the producer bound for each lane, and leaves a lane it has no binding for queued", async () => {
+    const w = world();
+    must(enqueue(w.store, { id: "rt", of: { kind: "run", id: "rt" }, producer: "research", lane: "seat.text" }, operator));
+    must(enqueue(w.store, { id: "rg", of: { kind: "run", id: "rg" }, producer: "research", lane: "cloud.google" }, operator));
+    must(enqueue(w.store, { id: "rl", of: { kind: "run", id: "rl" }, producer: "research", lane: "gpu.local" }, operator));
+    const text = gated("seat.text");
+    const google = gated("cloud.google");
+    text.open();
+    google.open();
+    const stop = new AbortController();
+    const loop = workLoop(w.fx, new Map([[producerKey("research", "seat.text"), text.p], [producerKey("research", "cloud.google"), google.p]]), { signal: stop.signal, holder: hostA, alive: () => true, idleMs: 5 });
+    await until(() => must(list(w.store, { state: "done" })).length === 2);
+    stop.abort();
+    const summary = must(await loop);
+    expect(text.seen.map((s) => s.split(":")[0])).toEqual(["rt", "rt"]);
+    expect(google.seen.map((s) => s.split(":")[0])).toEqual(["rg", "rg"]);
+    expect(summary.reports.every((r) => r.report.ok && r.report.value.outcome === "done")).toBe(true);
+    expect(summary.orphans).toEqual([{ lane: "gpu.local", jobId: "rl", producer: "research" }]);
+    expect(must(get(w.store, jobId("rl"))).job.state).toBe("queued");
     w.store.close();
   }, 20_000);
 
@@ -117,7 +154,7 @@ describe("workLoop", () => {
       },
     };
     const stop = new AbortController();
-    const loop = workLoop(w.fx, new Map([["sick", sick]]), { signal: stop.signal, holder: hostA, alive: () => true, idleMs: 60 });
+    const loop = workLoop(w.fx, new Map([[producerKey("sick", "gpu.local"), sick]]), { signal: stop.signal, holder: hostA, alive: () => true, idleMs: 60 });
     await new Promise((r) => setTimeout(r, 300));
     stop.abort();
     const summary = must(await loop);
@@ -143,7 +180,7 @@ describe("workLoop", () => {
     };
     const gpu = gated("gpu.local");
     const stop = new AbortController();
-    const loop = workLoop(fx, new Map([["gpu", gpu.p]]), { signal: stop.signal, holder: hostA, alive: () => true, idleMs: 60 });
+    const loop = workLoop(fx, new Map([[producerKey("gpu", "gpu.local"), gpu.p]]), { signal: stop.signal, holder: hostA, alive: () => true, idleMs: 60 });
     await new Promise((r) => setTimeout(r, 300));
     stop.abort();
     const summary = must(await loop);
@@ -164,7 +201,7 @@ describe("workLoop", () => {
     await until(() => must(get(w.store, jobId("dead"))).job.state === "running");
     const render = gated("box.render");
     const stop = new AbortController();
-    const loop = workLoop(w.fx, new Map([["gpu", render.p]]), { signal: stop.signal, holder: hostA, alive: (pid) => pid !== corpse.pid, idleMs: 5 });
+    const loop = workLoop(w.fx, new Map([[producerKey("gpu", "box.render"), render.p]]), { signal: stop.signal, holder: hostA, alive: (pid) => pid !== corpse.pid, idleMs: 5 });
     await until(() => render.seen.length === 1);
     expect(must(get(w.store, jobId("dead"))).job.state).toBe("interrupted");
     stop.abort();

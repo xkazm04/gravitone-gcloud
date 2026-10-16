@@ -3,7 +3,7 @@ import type { Holder } from "@gt/domain/job";
 import { LANE_CAPACITY, RESOURCE_LANES, type ResourceLane } from "@gt/domain/lane";
 import type { Effects } from "./effects.ts";
 import type { Producer } from "./job-core.ts";
-import { coolingOf, pickWork, type LaneLook, type Pick } from "./job-queue-core.ts";
+import { coolingOf, pickWork, producerKey, type LaneLook, type Pick, type ProducerKey } from "./job-queue-core.ts";
 import { laneHold, nextClaimable } from "./job-queue.ts";
 import { recover, runJob, type RunOptions, type RunReport } from "./job-run.ts";
 import type { Alive } from "./lease-core.ts";
@@ -67,7 +67,7 @@ function look(fx: Effects): Result<LaneLook[]> {
   );
 }
 
-export async function workLoop(fx: Effects, producers: ReadonlyMap<string, Producer>, opts: WorkOptions): Promise<Result<WorkSummary>> {
+export async function workLoop(fx: Effects, producers: ReadonlyMap<ProducerKey, Producer>, opts: WorkOptions): Promise<Result<WorkSummary>> {
   const holder = opts.holder ?? processHolder();
   const alive = opts.alive;
   const idleMs = opts.idleMs ?? 1000;
@@ -78,7 +78,7 @@ export async function workLoop(fx: Effects, producers: ReadonlyMap<string, Produ
   const inFlight = new Map<string, { pick: Pick; done: Promise<void> }>();
   // What refused a drive, until when (job-queue-core: a cooling lane or producer takes nothing).
   const coolLanes = new Map<ResourceLane, number>();
-  const coolProducers = new Map<string, number>();
+  const coolProducers = new Map<ProducerKey, number>();
   const cool = (pick: Pick, report: Result<RunReport>): void => {
     if (!report.ok) return;
     const c = coolingOf(report.value.outcome, pick);
@@ -86,7 +86,7 @@ export async function workLoop(fx: Effects, producers: ReadonlyMap<string, Produ
     if (c.lane !== undefined) coolLanes.set(c.lane, until);
     if (c.producer !== undefined) coolProducers.set(c.producer, until);
   };
-  const coolingNow = (): { lanes: Set<ResourceLane>; producers: Set<string> } => {
+  const coolingNow = (): { lanes: Set<ResourceLane>; producers: Set<ProducerKey> } => {
     const now = clock();
     const live = <K,>(m: Map<K, number>): Set<K> => {
       for (const [k, until] of m) if (until <= now) m.delete(k);
@@ -113,12 +113,16 @@ export async function workLoop(fx: Effects, producers: ReadonlyMap<string, Produ
     looks++;
     const mine = new Map<ResourceLane, string[]>();
     for (const { pick } of inFlight.values()) mine.set(pick.lane, [...(mine.get(pick.lane) ?? []), pick.jobId]);
-    const decided = pickWork(seen.value, (name) => producers.has(name), mine, coolingNow());
+    const decided = pickWork(seen.value, (name, lane) => producers.has(producerKey(name, lane)), mine, coolingNow());
     orphans = decided.orphans;
+    // Only a drive actually started skips the idle wait: a pick with no binding (a `carries` that
+    // disagreed with the map) started nothing, and looping at once on it is a microtask spin.
+    let launched = 0;
     for (const pick of decided.picks) {
-      const producer = producers.get(pick.producer);
+      const producer = producers.get(producerKey(pick.producer, pick.lane));
       if (producer === undefined) continue;
       started++;
+      launched++;
       const done = runJob(fx, producer, pick.jobId, runOpts).then(
         (report) => {
           cool(pick, report);
@@ -134,7 +138,7 @@ export async function workLoop(fx: Effects, producers: ReadonlyMap<string, Produ
       ).finally(() => inFlight.delete(pick.jobId));
       inFlight.set(pick.jobId, { pick, done });
     }
-    if (decided.picks.length > 0) continue;
+    if (launched > 0) continue;
     await idle(idleMs, opts.signal, [...inFlight.values()].map((f) => f.done));
   }
   await Promise.all([...inFlight.values()].map((f) => f.done));

@@ -32,10 +32,19 @@ def main(argv):
     alive = lambda pid: pid not in killed  # noqa: E731
     jobs = {}
     runs = {}
+    # The settles a worker would pass (L41): `settles` records what it was told, `settle-raises` raises -
+    # so the table can hold both the once-per-ending rule and Node's settle-failed record.
+    told = []
+
+    def tell(job, ending):
+        told.append([job["id"], ending])
+
+    def refuse(job, ending):
+        raise RuntimeError("the cycle's files are not writable")
 
     def jobs_of(name):
         if name not in jobs:
-            jobs[name] = Jobs(store, holder=spec["actors"][name], alive=alive, clock=lambda: now[0])
+            jobs[name] = Jobs(store, holder=spec["actors"][name], alive=alive, clock=lambda: now[0], settles={"settles": tell, "settle-raises": refuse})
         return jobs[name]
 
     def fenced(fn):
@@ -83,6 +92,10 @@ def main(argv):
                 got = fenced(lambda: runs[key].park())
             elif kind == "heartbeat":
                 got = fenced(lambda: runs[key].heartbeat())
+            elif kind == "recover":
+                got = jobs_of(op["as"]).recover(op["producers"])
+            elif kind == "settled":
+                got = list(told)
             elif kind == "kill":
                 killed.add(spec["actors"][op["as"]]["pid"])
                 got = "ok"

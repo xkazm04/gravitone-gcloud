@@ -18,6 +18,8 @@ import { ackLane } from "../src/job-queue.ts";
 import { recover, runJob, type RunReport } from "../src/job-run.ts";
 import { enqueue, loadJob, loadOutputs, pause, release, retry } from "../src/job.ts";
 import { openKernel } from "../src/kernel.ts";
+import { launchProject, planReceipt } from "../src/records/launch.ts";
+import { compose } from "../src/records/write.ts";
 import { reconcileJobSpend } from "../src/spend/projection.ts";
 import type { Store } from "../src/store.ts";
 import { must, scratch } from "./helpers.ts";
@@ -49,6 +51,7 @@ const stepSchema = z.object({
   code: z.string().optional(),
   message: z.string().optional(),
   dryOnly: z.boolean().optional(),
+  producers: z.array(z.string()).optional(),
   expect: z.unknown(),
 });
 const jobSpec = z.object({ lane: resourceLaneSchema, producer: z.string(), state: z.literal("planned").optional(), mode: z.literal("live").optional() });
@@ -56,7 +59,17 @@ const specSchema = z.object({
   base: z.iso.datetime(),
   ttlS: z.number().int().positive(),
   actors: z.record(z.string(), holderSchema),
-  scenarios: z.array(z.object({ name: z.string(), jobs: z.record(z.string(), jobSpec), steps: z.array(stepSchema).min(1) })).min(1),
+  scenarios: z
+    .array(
+      z.object({
+        name: z.string(),
+        // A plan Node composes and launches dry before the steps: its part jobs are `job:part:<id>/<key>`.
+        project: z.object({ id: z.string(), recipe: z.string() }).optional(),
+        jobs: z.record(z.string(), jobSpec),
+        steps: z.array(stepSchema).min(1),
+      }),
+    )
+    .min(1),
 });
 type Step = z.output<typeof stepSchema>;
 
@@ -168,7 +181,7 @@ describe.skipIf(python === undefined)("spec/job.json: Node and Python drive jobs
         switch (s.op) {
           case "drive": {
             const j = id(s);
-            const lane = spec.scenarios[i]?.jobs[j]?.lane;
+            const lane = spec.scenarios[i]?.jobs[j]?.lane ?? must(store.read((r) => loadJob(r, j).job.lane));
             if (lane === undefined) throw new Error(`job ${j} is not in the scenario`);
             const d: Drive = { gate: undefined, blocked: deferred<string>(), done: Promise.resolve({ ok: true, value: { outcome: "stopped" } }) };
             const steps = s.steps ?? [];
@@ -224,6 +237,13 @@ describe.skipIf(python === undefined)("spec/job.json: Node and Python drive jobs
       };
 
       try {
+        if (sc.project !== undefined) {
+          const { id: pid, recipe } = sc.project;
+          must(compose(store, { recipe }, operator, { id: pid }));
+          const now = Date.parse(spec.base);
+          const receipt = must(planReceipt(store, pid, { mode: "dry" }, { now }));
+          must(launchProject(store, { id: pid, baseRev: 1, token: receipt.token, mode: "dry" }, operator, { now, dryOnly: true }));
+        }
         for (const [n, j] of Object.entries(sc.jobs)) {
           if (j === undefined) continue;
           must(enqueue(store, { id: n, of: { kind: "run", id: `run-${n}` }, producer: j.producer, lane: j.lane, ...(j.state === undefined ? {} : { state: j.state }), ...(j.mode === undefined ? {} : { mode: { kind: "live", arm: { by: operator, at: spec.base, reason: "spec: a live job" } } }) }, operator));

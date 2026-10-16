@@ -134,7 +134,8 @@ describe("the worker process", () => {
     expect(r.stdout.trim()).toBe("");
     expect(node(RUNNER, file, ["--lanes", "gpu"]).status).toBe(2);
     expect(node(RUNNER, file, ["--frobnicate"]).status).toBe(2);
-  });
+    // The real runner loads every bound producer (lib/producers/registry.ts) three times here: seconds under a loaded suite.
+  }, 60_000);
 });
 
 describe("stopping parks, it does not abandon", () => {

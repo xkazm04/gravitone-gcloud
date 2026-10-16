@@ -1,5 +1,5 @@
 {
-  "about": "The job protocol across two languages, as a table. Run by packages/kernel/test/job.python.test.ts: each scenario's jobs are enqueued by Node (in order, dry unless `mode` says live, queued unless `state` says planned), then its steps run in order on ONE store file - a `by: node` step through the Node kernel (runJob with a producer the step drives, the operator's acts, recover, loadJob), a `by: py` step through packages/kernel/py/job.py (py/job_spec.py serves them). Times are seconds after `base` on both clocks. Outcomes - py claim: granted | busy | {notQueued: state} | {held: jobId} | {refused: true}; py start/book/fail/failStep/finish/park/heartbeat: ok | conflict | {stopped: state} | {refused: true}; node drive/perform: {blocked: step} while a step is in flight, else {outcome} as runJob reported it, or {error: code}; node state: the record as Node's door reads it (state, attempt, outputs by step, stage, slot, error code) after checking its spend reconciles to the meter; kill marks an actor's pid dead on both sides; verify: both chain verifiers.",
+  "about": "The job protocol across two languages, as a table. Run by packages/kernel/test/job.python.test.ts: each scenario's jobs are enqueued by Node (in order, dry unless `mode` says live, queued unless `state` says planned), then its steps run in order (a `project` is composed and launched dry first: its part jobs are `job:part:<id>/<key>`) on ONE store file - a `by: node` step through the Node kernel (runJob with a producer the step drives, the operator's acts, recover, loadJob), a `by: py` step through packages/kernel/py/job.py (py/job_spec.py serves them). Times are seconds after `base` on both clocks. Outcomes - py claim: granted | busy | {notQueued: state} | {held: jobId} | {refused: true}; py start/book/fail/failStep/finish/park/heartbeat: ok | conflict | {stopped: state} | {refused: true}; node drive/perform: {blocked: step} while a step is in flight, else {outcome} as runJob reported it, or {error: code}; node state: the record as Node's door reads it (state, attempt, outputs by step, stage, slot, error code) after checking its spend reconciles to the meter; kill marks an actor's pid dead on both sides; verify: both chain verifiers. py recover: the ids it settled; py settled: every [job, ending] the server's settles were told (producer `settles` records, `settle-raises` raises).",
   "base": "2026-10-16T00:00:00.000Z",
   "ttlS": 60,
   "actors": {
@@ -185,6 +185,89 @@
         { "t": 0, "by": "py", "op": "claim", "as": "P", "job": "l1", "dryOnly": true, "expect": { "refused": true } },
         { "t": 1, "by": "node", "op": "drive", "as": "N", "job": "l1", "steps": ["a"], "dryOnly": true, "expect": { "error": "refused" } },
         { "t": 1, "by": "node", "op": "state", "job": "l1", "expect": { "state": "queued", "attempt": 1, "outputs": [] } }
+      ]
+    },
+    {
+      "name": "A Python finish releases the part waiting on it, in the finishing transaction, as Node's does",
+      "project": { "id": "p", "recipe": "film/trailer" },
+      "jobs": {},
+      "steps": [
+        { "t": 0, "by": "node", "op": "state", "job": "job:part:p/script", "expect": { "state": "planned", "attempt": 1, "outputs": [] } },
+        { "t": 0, "by": "py", "op": "claim", "as": "P", "job": "job:part:p/research", "expect": "granted" },
+        { "t": 1, "by": "py", "op": "start", "as": "P", "job": "job:part:p/research", "step": "notebook", "expect": "ok" },
+        { "t": 2, "by": "py", "op": "book", "as": "P", "job": "job:part:p/research", "step": "notebook", "expect": "ok" },
+        { "t": 2, "by": "node", "op": "state", "job": "job:part:p/script", "expect": { "state": "planned", "attempt": 1, "outputs": [] } },
+        { "t": 3, "by": "py", "op": "finish", "as": "P", "job": "job:part:p/research", "expect": "ok" },
+        { "t": 3, "by": "node", "op": "state", "job": "job:part:p/script", "expect": { "state": "queued", "attempt": 1, "outputs": [] } },
+        { "t": 3, "by": "node", "op": "events", "job": "job:part:p/script", "expect": ["job.enqueued", "job.released"] },
+        { "t": 3, "by": "node", "op": "state", "job": "job:part:p/frames", "expect": { "state": "planned", "attempt": 1, "outputs": [] } },
+        { "t": 3, "by": "node", "op": "verify", "expect": "intact" }
+      ]
+    },
+    {
+      "name": "Node's finish releases the same part the same way (the other side of the table)",
+      "project": { "id": "p", "recipe": "film/trailer" },
+      "jobs": {},
+      "steps": [
+        { "t": 0, "by": "node", "op": "drive", "as": "N", "job": "job:part:p/research", "steps": ["notebook"], "expect": { "blocked": "notebook" } },
+        { "t": 1, "by": "node", "op": "state", "job": "job:part:p/script", "expect": { "state": "planned", "attempt": 1, "outputs": [] } },
+        { "t": 2, "by": "node", "op": "perform", "job": "job:part:p/research", "expect": { "outcome": "done" } },
+        { "t": 2, "by": "node", "op": "state", "job": "job:part:p/script", "expect": { "state": "queued", "attempt": 1, "outputs": [] } },
+        { "t": 2, "by": "node", "op": "events", "job": "job:part:p/script", "expect": ["job.enqueued", "job.released"] }
+      ]
+    },
+    {
+      "name": "Every ending made in Python is told to its producer once: done, and a dead holder's job interrupted by the next claim",
+      "jobs": { "g1": { "lane": "gpu.local", "producer": "settles" }, "g2": { "lane": "gpu.local", "producer": "settles" } },
+      "steps": [
+        { "t": 0, "by": "py", "op": "claim", "as": "P", "job": "g1", "expect": "granted" },
+        { "t": 1, "by": "py", "op": "start", "as": "P", "job": "g1", "step": "annotate", "expect": "ok" },
+        { "t": 2, "by": "py", "op": "book", "as": "P", "job": "g1", "step": "annotate", "expect": "ok" },
+        { "t": 3, "by": "py", "op": "finish", "as": "P", "job": "g1", "expect": "ok" },
+        { "t": 3, "by": "py", "op": "settled", "as": "P", "expect": [["g1", "done"]] },
+        { "t": 4, "by": "py", "op": "recover", "as": "P", "producers": ["settles"], "expect": [] },
+        { "t": 5, "by": "py", "op": "claim", "as": "P", "job": "g2", "expect": "granted" },
+        { "t": 6, "by": "py", "op": "start", "as": "P", "job": "g2", "step": "generate", "expect": "ok" },
+        { "t": 7, "by": "py", "op": "kill", "as": "P", "expect": "ok" },
+        { "t": 8, "by": "py", "op": "recover", "as": "Q", "producers": ["settles"], "expect": ["g2"] },
+        { "t": 8, "by": "py", "op": "settled", "as": "Q", "expect": [["g1", "done"], ["g2", "interrupted"]] },
+        { "t": 8, "by": "node", "op": "state", "job": "g2", "expect": { "state": "interrupted", "attempt": 1, "outputs": [], "stage": "generate" } },
+        { "t": 9, "by": "node", "op": "events", "job": "g2", "expect": ["job.enqueued", "job.claimed", "job.step-started", "job.interrupted", "job.settled"] },
+        { "t": 9, "by": "node", "op": "verify", "expect": "intact" }
+      ]
+    },
+    {
+      "name": "A claim that takes over a dead holder's slot settles the job it interrupted, once",
+      "jobs": { "g1": { "lane": "gpu.local", "producer": "settles" }, "g2": { "lane": "gpu.local", "producer": "settles" } },
+      "steps": [
+        { "t": 0, "by": "py", "op": "claim", "as": "P", "job": "g1", "expect": "granted" },
+        { "t": 1, "by": "py", "op": "start", "as": "P", "job": "g1", "step": "generate", "expect": "ok" },
+        { "t": 2, "by": "py", "op": "kill", "as": "P", "expect": "ok" },
+        { "t": 3, "by": "py", "op": "claim", "as": "Q", "job": "g2", "expect": "granted" },
+        { "t": 3, "by": "py", "op": "settled", "as": "Q", "expect": [["g1", "interrupted"]] },
+        { "t": 3, "by": "node", "op": "state", "job": "g1", "expect": { "state": "interrupted", "attempt": 1, "outputs": [], "stage": "generate" } },
+        { "t": 4, "by": "py", "op": "recover", "as": "Q", "producers": ["settles"], "expect": [] },
+        { "t": 4, "by": "node", "op": "verify", "expect": "intact" }
+      ]
+    },
+    {
+      "name": "An ending a NODE recovery made is settled by the next Python sweep, once; a settle that raises is recorded and the ending stands",
+      "jobs": { "g1": { "lane": "gpu.local", "producer": "settles" }, "d1": { "lane": "box.render", "producer": "settle-raises" } },
+      "steps": [
+        { "t": 0, "by": "py", "op": "claim", "as": "P", "job": "g1", "expect": "granted" },
+        { "t": 1, "by": "py", "op": "start", "as": "P", "job": "g1", "step": "generate", "expect": "ok" },
+        { "t": 2, "by": "node", "op": "kill", "as": "P", "expect": "ok" },
+        { "t": 3, "by": "node", "op": "recover", "as": "N", "expect": ["g1"] },
+        { "t": 3, "by": "py", "op": "settled", "as": "Q", "expect": [] },
+        { "t": 4, "by": "py", "op": "recover", "as": "Q", "producers": ["settles"], "expect": ["g1"] },
+        { "t": 4, "by": "py", "op": "recover", "as": "Q", "producers": ["settles"], "expect": [] },
+        { "t": 4, "by": "py", "op": "settled", "as": "Q", "expect": [["g1", "interrupted"]] },
+        { "t": 5, "by": "py", "op": "claim", "as": "Q", "job": "d1", "expect": "granted" },
+        { "t": 6, "by": "py", "op": "finish", "as": "Q", "job": "d1", "expect": "ok" },
+        { "t": 6, "by": "node", "op": "state", "job": "d1", "expect": { "state": "done", "attempt": 1, "outputs": [] } },
+        { "t": 6, "by": "node", "op": "events", "job": "d1", "expect": ["job.enqueued", "job.claimed", "job.done", "job.settle-failed"] },
+        { "t": 7, "by": "py", "op": "recover", "as": "Q", "producers": ["settle-raises"], "expect": [] },
+        { "t": 7, "by": "node", "op": "verify", "expect": "intact" }
       ]
     }
   ]

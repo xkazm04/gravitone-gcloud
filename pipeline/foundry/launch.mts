@@ -14,8 +14,8 @@
 //                       worker loop. forge.py and dojo_run.py call this with --detach
 //                       and drive in their own process.
 //   dojo google         cloud.google: driven here (kernel runJob), every call metered.
-//                       --detach is refused until the Node worker carries `dojo` per
-//                       lane (lib/producers/dojo.ts says why).
+//                       --detach leaves it to the Node worker (`npm run worker`), which
+//                       carries dojo@cloud.google since the worker keys producers per lane.
 // An unfinished job of the same run/cycle is reused, never doubled; --resume retries
 // a failed or interrupted one (every booked output kept) and runs a done one again.
 // Invoked, it runs LIVE (v1's spend behaviour); --dry runs on stand-ins.
@@ -173,9 +173,8 @@ export async function main(argv: readonly string[], io: Io): Promise<number> {
       const r = pythonDrive(l.jobId, io, json);
       return emit({ ok: r.code === 0, ...head, ...(r.doc === undefined ? {} : { outcome: r.doc["outcome"], state: r.doc["state"], ...(r.doc["error"] === undefined ? {} : { error: r.doc["error"] }) }) }, r.code === 0 ? 0 : 1);
     }
-    if (a.flags.has("--detach")) {
-      return emit({ ok: false, ...head, error: "a google cycle is not left to the worker yet: the Node worker does not carry `dojo` (lib/producers/dojo.ts says why). Run without --detach; the job is enqueued and waits." }, 1);
-    }
+    // The Node worker carries dojo@cloud.google (lib/producers/registry.ts): a detached google cycle waits there.
+    if (a.flags.has("--detach")) return emit({ ok: true, ...head, detached: true }, 0);
     const r = await d.driveDojo(store, location, l.jobId, { dryOnly: base.dryOnly, root });
     if (!r.ok) return emit({ ok: false, ...head, error: r.error.message }, 1);
     const rep = r.value;

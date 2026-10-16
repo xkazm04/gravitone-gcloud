@@ -2,13 +2,12 @@ import path from "node:path";
 import { parseArgs } from "node:util";
 import { AppError, type Result } from "@gt/domain/errors";
 import { resourceLaneSchema, RESOURCE_LANES, type ResourceLane } from "@gt/domain/lane";
-import type { ProducerName } from "@gt/domain/run";
 import { blobStore } from "@gt/kernel/blob";
 import { dryOnlyFrom } from "@gt/kernel/dryrun";
 import { liveEffects, type Effects } from "@gt/kernel/effects";
 import type { Producer } from "@gt/kernel/job-core";
 import { nextClaimable } from "@gt/kernel/job-queue";
-import type { Pick } from "@gt/kernel/job-queue-core";
+import { producerKey, type Pick, type ProducerKey } from "@gt/kernel/job-queue-core";
 import type { RunReport } from "@gt/kernel/job-run";
 import { workLoop } from "@gt/kernel/job-worker";
 import { processHolder } from "@gt/kernel/lease";
@@ -84,14 +83,33 @@ function parse(argv: readonly string[]): Result<Args> {
 /** The outcomes a --once drain stops waiting on: the head waits on something this process cannot change. */
 const WAITING: ReadonlySet<RunReport["outcome"]> = new Set(["busy", "held", "unhealthy"]);
 
+type Carries = (name: string, lane: ResourceLane) => boolean;
+
 /** Whether any lane still has a head this worker could start now. */
-function drainable(store: Store, lanes: readonly ResourceLane[], carries: (name: string) => boolean, waiting: ReadonlySet<string>): boolean {
+function drainable(store: Store, lanes: readonly ResourceLane[], carries: Carries, waiting: ReadonlySet<string>): boolean {
   const r = store.read((rd) => lanes.some((lane) => {
     const head = nextClaimable(rd, lane);
-    return head !== undefined && carries(head.producer) && !waiting.has(head.id);
+    return head !== undefined && carries(head.producer, lane) && !waiting.has(head.id);
   }));
   // A read that failed is not proof the line is empty: keep draining, the loop reports the store's fault.
   return r.ok ? r.value : true;
+}
+
+/**
+ * The heads on this worker's lanes that it does not carry, as the store has them now. The loop
+ * names the orphans it LOOKED at; a --once drain that found nothing it could start never looks
+ * (it aborts before the first look), and an unbound head is then exactly the line an operator
+ * needs to read - L35 measured `--once` printing nothing at all over a queued step whose lane
+ * no binding reached. So the end of every run reads the lines again, whatever the loop saw.
+ */
+function unboundHeads(store: Store, lanes: readonly ResourceLane[], carries: Carries): Pick[] {
+  const r = store.read((rd) =>
+    lanes.flatMap((lane): Pick[] => {
+      const head = nextClaimable(rd, lane);
+      return head === undefined || carries(head.producer, lane) ? [] : [{ lane, jobId: head.id, producer: head.producer }];
+    }),
+  );
+  return r.ok ? r.value : [];
 }
 
 /** A job's outcome as one line: what a cron, a skill or a test reads. */
@@ -112,7 +130,7 @@ function line(pick: Pick, report: Result<RunReport>): Record<string, unknown> {
 const failedOutcome = (report: Result<RunReport>): boolean => !report.ok || report.value.outcome === "failed";
 
 /** Run the worker over `bound`; resolves to the process exit code. */
-export async function runWorker(argv: readonly string[], bound: Result<ReadonlyMap<ProducerName, Producer>>, io: WorkerIo): Promise<0 | 1 | 2> {
+export async function runWorker(argv: readonly string[], bound: Result<ReadonlyMap<ProducerKey, Producer>>, io: WorkerIo): Promise<0 | 1 | 2> {
   const args = parse(argv);
   if (!args.ok) {
     io.err(`[worker] ${args.error.message}\n${USAGE}`);
@@ -154,7 +172,7 @@ export async function runWorker(argv: readonly string[], bound: Result<ReadonlyM
     // heartbeat) ever ran. Until the loop itself backs off (reported to the Director),
     // the producer's health check is where the wait goes: its next drive first sleeps
     // `idleMs` on a real timer, cut short by a stop.
-    const cooling = new Set<string>();
+    const cooling = new Set<ProducerKey>();
     const pause = (ms: number): Promise<void> =>
       new Promise((resolve) => {
         const done = (): void => {
@@ -166,18 +184,18 @@ export async function runWorker(argv: readonly string[], bound: Result<ReadonlyM
         ac.signal.addEventListener("abort", done, { once: true });
       });
     const cooled = new Map(
-      [...mine].map(([name, p]): [ProducerName, Producer] => [
-        name,
+      [...mine].map(([key, p]): [ProducerKey, Producer] => [
+        key,
         {
           ...p,
           health: async () => {
-            if (cooling.delete(name)) await pause(idleMs);
+            if (cooling.delete(key)) await pause(idleMs);
             return p.health === undefined ? { ok: true as const } : p.health();
           },
         },
       ]),
     );
-    const carries = (name: string): boolean => [...mine.keys()].some((k) => k === name);
+    const carries: Carries = (name, lane) => mine.has(producerKey(name, lane));
     const uninstall = io.onSignal?.((hard) => {
       if (hard) {
         io.err("[worker] stopping hard: steps in flight are left for the next start's recovery");
@@ -210,7 +228,7 @@ export async function runWorker(argv: readonly string[], bound: Result<ReadonlyM
         const stalled = report.ok && WAITING.has(report.value.outcome);
         if (stalled) {
           waiting.add(pick.jobId);
-          cooling.add(pick.producer);
+          cooling.add(producerKey(pick.producer, pick.lane));
         } else waiting.delete(pick.jobId);
         const doc = line(pick, report);
         // A head that stays busy is said once per change, not once per look.
@@ -227,7 +245,10 @@ export async function runWorker(argv: readonly string[], bound: Result<ReadonlyM
       return 1;
     }
     const s = summary.value;
-    for (const o of s.orphans) io.err(`[worker] ${o.jobId} heads ${o.lane} for producer ${o.producer}, which this worker does not carry`);
+    // The loop looks at every lane; only this worker's lanes are its to report.
+    const named = new Map<string, Pick>();
+    for (const o of [...s.orphans.filter((o) => lanes.includes(o.lane)), ...unboundHeads(store, lanes, carries)]) named.set(o.jobId, o);
+    for (const o of named.values()) io.err(`[worker] ${o.jobId} heads ${o.lane} for producer ${o.producer}, which this worker does not carry`);
     io.err(`[worker] ${s.started} drive(s), ${s.recovered} recovered as interrupted, ${failures} failed`);
     return failures > 0 ? 1 : 0;
   } finally {

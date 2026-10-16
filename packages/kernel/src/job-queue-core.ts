@@ -25,6 +25,12 @@ import type { ResourceLane } from "@gt/domain/lane";
 //     the same answer at the speed of the loop: L27 measured the worker spinning
 //     on exactly that. The worker cools what refused it for one idle period;
 //     a cooled head is neither a pick nor an orphan - it is simply waited for.
+//   - A PRODUCER IS CARRIED PER LANE (L41). A name may be bound once on each
+//     lane its part options reach (research on seat.text AND cloud.google), so
+//     "does this worker make the head" asks for the name AT the head's lane:
+//     a worker binding Dojo's google stack must not take a gpu.local Dojo head
+//     (that one is Python's), and before the key carried the lane it would
+//     have claimed it and been refused by runJob - a drive per look, forever.
 
 export type LaneLook = {
   readonly lane: ResourceLane;
@@ -38,34 +44,39 @@ export type LaneLook = {
 
 export type Pick = { readonly lane: ResourceLane; readonly jobId: string; readonly producer: string };
 
+/** A bound producer's key: its name AT a lane. The producer map a worker runs is keyed by it. */
+export type ProducerKey = `${string}@${ResourceLane}`;
+export const producerKey = (name: string, lane: ResourceLane): ProducerKey => `${name}@${lane}`;
+
 export type Picked = {
   readonly picks: readonly Pick[];
   /** Heads that wait because no producer here makes them. */
   readonly orphans: readonly Pick[];
 };
 
-/** What the worker is waiting out: lanes that answered busy or held, producers that answered unhealthy. */
-export type Cooling = { readonly lanes: ReadonlySet<ResourceLane>; readonly producers: ReadonlySet<string> };
+/** What the worker is waiting out: lanes that answered busy or held, producers (by key) that answered unhealthy. */
+export type Cooling = { readonly lanes: ReadonlySet<ResourceLane>; readonly producers: ReadonlySet<ProducerKey> };
 export const NOT_COOLING: Cooling = { lanes: new Set(), producers: new Set() };
 
 /** Which of a drive's outcomes cool what, and which do not (anything that moved the job). */
-export function coolingOf(outcome: string, pick: Pick): { readonly lane?: ResourceLane; readonly producer?: string } {
+export function coolingOf(outcome: string, pick: Pick): { readonly lane?: ResourceLane; readonly producer?: ProducerKey } {
   if (outcome === "busy" || outcome === "held") return { lane: pick.lane };
-  if (outcome === "unhealthy") return { producer: pick.producer };
+  // An engine down on one lane (the google stack) says nothing about the same name on another.
+  if (outcome === "unhealthy") return { producer: producerKey(pick.producer, pick.lane) };
   return {};
 }
 
-export function pickWork(looks: readonly LaneLook[], carries: (producer: string) => boolean, mine: ReadonlyMap<ResourceLane, readonly string[]>, cooling: Cooling = NOT_COOLING): Picked {
+export function pickWork(looks: readonly LaneLook[], carries: (producer: string, lane: ResourceLane) => boolean, mine: ReadonlyMap<ResourceLane, readonly string[]>, cooling: Cooling = NOT_COOLING): Picked {
   const picks: Pick[] = [];
   const orphans: Pick[] = [];
   for (const l of looks) {
     if (l.held || l.head === undefined) continue;
-    if (cooling.lanes.has(l.lane) || cooling.producers.has(l.head.producer)) continue;
+    if (cooling.lanes.has(l.lane) || cooling.producers.has(producerKey(l.head.producer, l.lane))) continue;
     const started = mine.get(l.lane) ?? [];
     if (started.includes(l.head.id)) continue;
     if (Math.max(l.running, started.length) >= l.capacity) continue;
     const pick = { lane: l.lane, jobId: l.head.id, producer: l.head.producer };
-    if (carries(l.head.producer)) picks.push(pick);
+    if (carries(l.head.producer, l.lane)) picks.push(pick);
     else orphans.push(pick);
   }
   return { picks, orphans };

@@ -234,3 +234,37 @@ class DojoSession:
 
 def open_session(job, run, dry, gpu):
     return DojoSession(job, run, dry, gpu)
+
+
+# ── the settle: the job's ending, copied onto cycle.json (L41) ──────────────
+
+LIVE = ("planning", "generating")
+
+
+def settle(job, ending):
+    """packages/kernel/py/job_settle.py calls this once per ending of a Dojo job, whoever
+    ended it. A cycle whose render job died mid-pass read `generating` in cycle.json until
+    somebody ran it again; now a failed or interrupted job marks it `failed` with `ending`
+    and a log line (lib/foundry/training/types.ts CycleStatus has no `interrupted`). A done
+    job leaves the cycle to the judge, and a cycle past its passes (judging, at the gate,
+    committed) is never rewritten from here."""
+    if ending == "done":
+        return
+    rid = job["of"]["id"]
+    cycle_id = rid.split(":", 1)[1] if rid.startswith("dojo:") else rid
+    path = training_root() / cycle_id / "cycle.json"
+    if not path.exists():
+        return
+    cy = json.loads(path.read_text(encoding="utf-8"))
+    if cy.get("status") not in LIVE:
+        return
+    was = cy["status"]
+    stage = (job.get("interruption") or {}).get("stage")
+    cy["status"] = "failed"
+    cy["ending"] = ending
+    from datetime import datetime, timezone
+    at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    cy.setdefault("log", []).append({"at": at, "msg": f"job {job['id']} ended {ending} while {was}{f' at {stage}' if stage else ''}; retry the job, what is on disk is kept"})
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(cy, indent=1, ensure_ascii=False), encoding="utf-8")
+    os.replace(tmp, path)

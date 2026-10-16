@@ -104,6 +104,11 @@ def launch(producer, flags, node=None):
 
 # ── the drive: one claimed job, step by step ────────────────────────────────
 
+def settles():
+    """Each producer's settle (job_settle.py): the job's ending copied onto run.json / cycle.json."""
+    return {name: adapter(name).settle for name in ADAPTERS}
+
+
 def adapter(producer):
     name = ADAPTERS.get(producer)
     if name is None:
@@ -212,7 +217,7 @@ def drive_job(job_id, say=print, wait_s=None, poll_s=5.0, stop=None):
     who holds it; `wait_s` bounds the wait (None: until the job is claimed or the
     process is told to stop - the job then stays queued for the worker)."""
     stop = stop or StopFlag().install()
-    jobs = Jobs(ensure_store(store_location()))
+    jobs = Jobs(ensure_store(store_location()), settles=settles())
     try:
         deadline = None if wait_s is None else time.time() + wait_s
         told = False
@@ -242,11 +247,15 @@ def drive_job(job_id, say=print, wait_s=None, poll_s=5.0, stop=None):
 
 def work(producers, once, idle_s, emit, say, stop):
     """Claim the lane's head while it is ours, drive it, repeat. Returns the exit code."""
-    jobs = Jobs(ensure_store(store_location()))
+    jobs = Jobs(ensure_store(store_location()), settles=settles())
     code = 0
     refused = set()
     try:
         while not stop.is_set():
+            # RECOVERY FIRST, every look: what a dead holder left running is named interrupted,
+            # and every ending of these producers nobody settled (a Node recovery's included) is
+            # copied onto its run.json / cycle.json - v1's "generating forever" closes here.
+            jobs.recover(producers)
             try:
                 run = jobs.claim_next(LANE, producers)
             except (SlotsBusy, LaneHeld, NotQueued):

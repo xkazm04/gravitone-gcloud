@@ -33,12 +33,13 @@ the lane pays; the step in flight is `progress.stage`, set before the work and c
 its booking (job-coordination: in-flight-is-a-position); the breaker trips after
 BREAKER_LIMIT consecutive vendor failures; nothing resumes an interrupted job.
 
-PYTHON BOOKS NO MONEY. The tenants that run here are the local GPU (forge, Dojo's local
-stacks): a step is booked at $0 real, and the record's spend is re-projected from the
-meter (spend/projection.ts `meterOf`) exactly as the Node driver re-projects it, so the
-spend-reconciles-to-the-meter invariant holds for a Python job by construction. A priced
-Python step needs the meter's reserve/settle in Python; that is a later lot's, and until
-then there is no parameter here through which a price could be passed and lost.
+THE ENDING REACHES THE PRODUCER, AND THE PLAN MOVES (L41). `Jobs(..., settles={producer: fn})`:
+every ending made here is told to its producer once (job_settle.py), and a part's job finished
+here releases the planned jobs behind it in the finishing transaction (kernel_records.py).
+
+A STEP BOOKS NO MONEY. A step is booked at $0 real and the record's spend re-projected from the
+meter (`meter_of`), so spend reconciles for a Python job by construction; a priced call made
+under a job goes through kernel_meter.py (reserve, call, settle), never through a step's book.
 """
 import json
 import os
@@ -55,12 +56,15 @@ from job_record import (BREAKER_LIMIT, DEFAULT_TTL_S, ERROR_CODES, HOLD_SENTENCE
                         lane_slots, load, meter_of, move, ms, outputs_of, pid_alive, process_holder, put, read_row,
                         release_in, running_on, without_stage)
 from verify_events import canonical  # noqa: E402
+from kernel_records import release_held_in  # noqa: E402
+import job_settle  # noqa: E402
 
 # -- the drive ------------------------------------------------------------------
 class Jobs:
-    def __init__(self, path, holder=None, alive=None, clock=None):
+    def __init__(self, path, holder=None, alive=None, clock=None, settles=None):
         from datetime import datetime, timezone
         self.path = path
+        self.settles = dict(settles or {})
         self.conn = connect(path)
         self.holder = holder or process_holder()
         self.alive = alive or pid_alive
@@ -92,13 +96,16 @@ class Jobs:
     def claim(self, job_id, lane=None, ttl_s=DEFAULT_TTL_S, ticket=None, dry_only=None):
         dry_only = dry_only_from() if dry_only is None else dry_only
         ticket = ticket or uuid.uuid4().hex
+        taken = []
         with self.tx() as t:
-            outcome = self._claim_in(t, job_id, lane, ttl_s, ticket, dry_only)
+            outcome = self._claim_in(t, job_id, lane, ttl_s, ticket, dry_only, taken)
+        for orphan in taken:
+            self.settle(orphan)
         if isinstance(outcome, JobError):
             raise outcome
         return outcome
 
-    def _claim_in(self, t, job_id, lane, ttl_s, ticket, dry_only):
+    def _claim_in(self, t, job_id, lane, ttl_s, ticket, dry_only, taken):
         job = load(t, job_id)
         if lane is not None and job["lane"] != lane:
             raise Refused("job %s is declared on %s; a %s worker may not run it" % (job_id, job["lane"], lane))
@@ -122,6 +129,7 @@ class Jobs:
             for orphan in running_on(t, job["lane"], slot):
                 if orphan["lease"]["fence"] < fence:
                     out = interrupt(t, orphan, self.holder, "lane-taken-over")
+                    taken.append(out["id"])
                     if out["state"] == "interrupted" and lane_hold(t, job["lane"]) is not None:
                         held_now = out["id"]
             if held_now is not None:
@@ -135,6 +143,14 @@ class Jobs:
             return JobRun(self, job_id, job["lane"], slot, fence, ttl_s)
         why = "every %s slot is held (%s)" % (job["lane"], ", ".join(holders)) if holders else "every %s slot is held" % job["lane"]
         return SlotsBusy(why)
+
+    # -- the ending, settled (job_settle.py) ----------------------------------------
+
+    def settle(self, job_id):
+        return job_settle.settle(self, job_id)
+
+    def recover(self, producers):
+        return job_settle.recover(self, producers)
 
     def close(self):
         self.conn.close()
@@ -227,6 +243,7 @@ class JobRun:
                     job_event(t, self.jobs.holder, flying, "job.step-started", {"step": step, "estimateUsd": 0})
         if stopped is not None:
             self._stop_heartbeat()
+            self._told()
             raise stopped
 
     def book(self, step, output):
@@ -267,6 +284,7 @@ class JobRun:
                 job_event(t, self.jobs.holder, counted, "job.step-failed", data)
         if self.ended:
             self._stop_heartbeat()
+            self._told()
 
     def fail(self, code, message):
         """The job fails with this sentence verbatim (v1 MV). A step in flight is booked as fatal first."""
@@ -290,6 +308,7 @@ class JobRun:
                               {"step": stage, "kind": "fatal", "message": message, "failStreak": out["failStreak"]})
                 self._end(t, out, "job.failed", {"code": code, "message": message})
         self._stop_heartbeat()
+        self._told()
 
     def finish(self):
         self._alive_or_raise()
@@ -303,9 +322,16 @@ class JobRun:
             else:
                 if job["progress"].get("stage") is not None:
                     raise Refused("job %s: step %s is in flight; book or fail it before finishing" % (self.job_id, job["progress"]["stage"]))
-                self._end(t, move(job, "done"), "job.done", {"spendUsd": job["spend"]["usd"]})
+                done = move(job, "done")
+                self._end(t, done, "job.done", {"spendUsd": job["spend"]["usd"]})
+                # job-run.ts `finish`: a part's job done is its part ratified - what waited for it
+                # is released in THIS transaction, so no crash can leave it parked.
+                project_id = (done.get("correlation") or {}).get("projectId")
+                if done["of"]["kind"] == "part" and project_id is not None:
+                    release_held_in(t, project_id, self.jobs.holder)
                 stopped = None
         self._stop_heartbeat()
+        self._told()
         if stopped is not None:
             raise stopped
 
@@ -331,10 +357,16 @@ class JobRun:
             loss = fence_loss(read_row(t, self.slot), self.fence, ms(t.at))
             if loss is not None:
                 interrupt(t, job, self.jobs.holder, "fence-lost: %s" % loss)
-                return
-            out = move(job, "failed")
-            out["error"] = {"code": code, "message": message}
-            self._end(t, out, "job.failed", {"code": code, "message": message})
+            else:
+                out = move(job, "failed")
+                out["error"] = {"code": code, "message": message}
+                self._end(t, out, "job.failed", {"code": code, "message": message})
+        self.jobs.settle(self.job_id)
+
+    def _told(self):
+        """After a transaction that may have ended the job: its producer's settle, if it did."""
+        if self.ended:
+            self.jobs.settle(self.job_id)
 
     def __enter__(self):
         return self

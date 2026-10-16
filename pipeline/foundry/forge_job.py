@@ -231,3 +231,41 @@ class ForgeSession:
 
 def open_session(job, run, dry, gpu):
     return ForgeSession(job, run, dry, gpu)
+
+
+# ── the settle: the job's ending, copied onto run.json (L41) ────────────────
+
+TERMINAL = ("done", "incomplete", "failed", "committed")
+
+
+def settle(job, ending):
+    """packages/kernel/py/job_settle.py calls this once per ending of a forge job, whoever
+    ended it - this drive, the next claim's take-over sweep, a Node or Python recovery. A
+    SIGKILLed forge left run.json reading `generating` for good (v1's "generating forever":
+    a live status with no process behind it, which lib/foundry/plant.ts LIVE then drew as
+    running). A run already terminal is left alone; `done` is the session's own to write.
+
+    The status written is `failed`, with `ending` saying how: lib/foundry/types.ts RunStatus
+    and the ledger's v1 reader (lib/ledger/v1/sources/forge.ts) know no `interrupted`, and a
+    status they refuse would drop the run from the Ledger rather than mark it."""
+    if ending == "done":
+        return
+    rid = job["of"]["id"]
+    run_id = rid.split(":", 1)[1] if rid.startswith("forge:") else rid
+    run_dir = forge.runs_root() / run_id
+    path = run_dir / "run.json"
+    if not path.exists():
+        return
+    m = json.loads(path.read_text(encoding="utf-8"))
+    if m.get("status") in TERMINAL:
+        return
+    was = m.get("status")
+    stage = (job.get("interruption") or {}).get("stage")
+    m["status"] = "failed"
+    m["ending"] = ending
+    m["error"] = (f"interrupted while {was}{f' at {stage}' if stage else ''}: the process driving job {job['id']} died. "
+                  "Retry the job; booked plates are kept." if ending == "interrupted"
+                  else (job.get("error") or {}).get("message") or f"job {job['id']} ended {ending}")[:300]
+    m.setdefault("log", []).append({"at": forge.now(), "msg": f"job {job['id']} ended {ending} while {was}"})
+    m["progress"] = {"stage": "failed", "done": 0, "total": 0}
+    forge.save(run_dir, m)

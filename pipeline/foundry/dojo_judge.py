@@ -16,6 +16,18 @@ The chokepoint PICK itself is not made here -- it is a reasoning turn over
 choke-blind.json (a dispatched subagent), whose answer is the JSON array this
 script's `park` takes. The protocol is references/judge-protocol.md in the
 dojo skill: one pick, one reason, ties allowed, never scores.
+
+THE GEMINI JUDGE IS METERED (L41, decision 7). Each call goes through the kernel meter
+(packages/kernel/py/kernel_meter.py) and is booked to the cycle's newest Dojo job
+(`job:run:dojo:<cycle>`, the Run the cycle launched as), so the cycle's Ledger carries its
+judge beside its renders; a cycle launched before jobs existed books to the meter with no job.
+Refused BEFORE the call, never after: a dry job or GRAVITONE_DRY_ONLY=1 calls nothing (the pair
+reads `skipped`), and a call that would cross the job's ceiling is not made (the pair reads the
+stop as its `error`, an outage to `park`, never an opinion). WHY PYTHON AND NOT A NODE STEP: the
+judge runs in the skill's flow after the cycle's job is done, beside `park`, which reads the
+same files; a Node judge step would be a second launch with its own receipt for a call that
+belongs to the cycle already launched. The call's price is not read in Python (no price table
+here), so each call books its ESTIMATE, basis "estimate" - a model figure that says so.
 """
 import base64
 import datetime
@@ -28,6 +40,13 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent.parent
+KERNEL_PY = ROOT / "packages" / "kernel" / "py"
+if str(KERNEL_PY) not in sys.path:
+    sys.path.append(str(KERNEL_PY))  # behind the caller's: `lease` on this path stays the GPU broker
+from kernel_meter import DryCall as MeterDry, Meter, MoneyStop as MeterStop, newest_job  # noqa: E402
+# One judge call: two ~1K PNGs and a sentence in, one sentence out, on a flash model. A pre-call
+# figure, not a measurement (marked "estimate" on its row): ~3k input tokens at flash rates.
+JUDGE_EST_USD = 0.002
 MODELS = ["gemini-3.6-flash", "gemini-3.6-flash", "gemini-3.7-flash", "gemini-3.6-flash"]
 
 
@@ -66,6 +85,26 @@ def gemini(model, claim, cdir, pid, a_arm):
         return json.loads(json.load(resp)["candidates"][0]["content"]["parts"][0]["text"])
 
 
+def judge_meter(cdir):
+    """The meter the cycle's judge calls book through: its newest Dojo job, or none."""
+    from job_record import Tx, connect
+    from kernel_store import ensure_store, store_location
+    path = ensure_store(store_location())
+    conn = connect(path)
+    try:
+        with Tx(conn, lambda: datetime.datetime.now(datetime.timezone.utc)) as t:
+            job_id = newest_job(t, "job:run:dojo:%s" % cdir.name)
+    finally:
+        conn.close()
+    return Meter(path, job_id=job_id, who="dojo-judge/%s" % cdir.name)
+
+
+def metered_gemini(meter, model, claim, cdir, pid, a_arm):
+    """`gemini`, through the meter: refused before the call (dry, ceiling), booked after it."""
+    return meter.call("judge:%s:%s" % (pid, model), JUDGE_EST_USD, "google", model,
+                      lambda: (gemini(model, claim, cdir, pid, a_arm), None))
+
+
 def prepare(cdir, no_gemini=False):
     spec = json.loads((cdir / "gen-spec.json").read_text(encoding="utf-8"))
     rb = json.loads((cdir / "readbacks.json").read_text(encoding="utf-8"))
@@ -73,6 +112,7 @@ def prepare(cdir, no_gemini=False):
     claim = cycle["improvements"][0]["claim"]
     rng = random.Random(cdir.name)
     work, blind, gem = [], [], {}
+    meter = None if no_gemini else judge_meter(cdir)
     for p in spec["pairs"]:
         pid = p["id"]
         video = (cdir / "pairs" / f"{pid}--baseline.webm").exists()
@@ -97,8 +137,14 @@ def prepare(cdir, no_gemini=False):
         got = None
         for attempt, model in enumerate(MODELS):
             try:
-                got = gemini(model, claim, cdir, pid, w["gem_A"])
+                got = metered_gemini(meter, model, claim, cdir, pid, w["gem_A"])
                 got["model"] = model
+                break
+            except MeterDry as e:
+                got = {"skipped": str(e)}
+                break
+            except MeterStop as e:
+                got = {"error": str(e)}
                 break
             except urllib.error.HTTPError as e:
                 if e.code in (429, 500, 503):

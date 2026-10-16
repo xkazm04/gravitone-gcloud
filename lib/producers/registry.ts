@@ -1,11 +1,17 @@
+import { WORK_KINDS } from "@gt/catalog/recipes";
 import type { Result } from "@gt/domain/errors";
+import type { Job } from "@gt/domain/job";
+import type { ResourceLane } from "@gt/domain/lane";
 import type { ProducerName } from "@gt/domain/run";
 import type { Producer } from "@gt/kernel/job-core";
+import type { ProducerKey } from "@gt/kernel/job-queue-core";
+import { launchOf, modelOptions } from "@gt/kernel/records/options";
 import { producerSet, type Bound } from "@gt/producers/set";
 
 import { articleProducer } from "./article.ts";
+import { dojoProducer } from "./dojo.ts";
 import { extractProducer } from "./extract.ts";
-import { researchProducer } from "./research.ts";
+import { researchProducer, type DriveHooks, type StepFactory } from "./research.ts";
 import { scriptProducer } from "./script.ts";
 import { framesProducer } from "./frames.ts";
 import { motionProducer } from "./motion.ts";
@@ -28,10 +34,66 @@ import { sunoDriver } from "../sound/suno/drivers.ts";
 //   { name: "extract", producer: extractProducer() },
 //
 // The list is plain data on purpose: `producerSet` (packages/producers/src/set.ts)
-// is where a name the domain does not know, or a name bound twice, is refused -
-// at start, before a job is claimed, never by the job that would have hit it.
-// A head job naming a producer that is absent here is reported by `workLoop`
+// is where a name the domain does not know, or a name bound twice on one lane, is
+// refused - at start, before a job is claimed, never by the job that would have hit
+// it. A head job naming a producer that is absent here is reported by `workLoop`
 // (`unknown`) and left queued: a missing binding parks work, it does not fail it.
+//
+// A STEP IS BOUND ON EVERY LANE ITS PART OPTIONS REACH (L41). A part's option decides
+// its job's lane (research on the text seat or on Gemini, frames on the card, on Nano
+// Banana or on Leonardo), and the worker carries a producer per `<name>@<lane>`
+// (job-queue-core `producerKey`). The lanes are READ from the catalog joined with the
+// router table (records/options.ts - the same join a launch takes its lane from), so an
+// option added to @gt/catalog is a lane the worker carries with no second list to keep.
+// Before this a step was bound on its default lane only: a part whose option chose
+// another waited forever behind a head the route path (`driveStep`, which builds the
+// producer for the job's own lane) could drive and the worker could not.
+//
+// A STEP'S ENDING OPENS ITS READY GATE, WHOEVER DROVE IT (L41). The part route kicks
+// `openReadyGates` after its own drives (app/(studio)/projects/[id]/_part/real.ts); a
+// part job the worker drove reached the same READY with no packet opened, so the gate
+// waited for the next editor write to notice. The hook below is the step producers'
+// `settle` (kernel job-settle.ts runs it after every drive that ends a job), so the
+// worker, a CLI and the route open the same gate the same way. It loads lib/parts/gates
+// lazily: that module is `server-only` (the worker resolves it through
+// pipeline/lib-hooks.mts), and a CLI that imports this registry for a producer with no
+// part never loads it. A gate that cannot open is the settle's failure - recorded as
+// `job.settle-failed` on the job, never a change to the job's ending.
+
+/** After a part job ends: open the packet of every gate its project now has READY. */
+export async function openGatesAfter(job: Job): Promise<void> {
+  const projectId = job.correlation?.projectId;
+  if (job.of.kind !== "part" || projectId === undefined) return;
+  const { LIVE_GATES, openReadyGates } = await import("../parts/gates.ts");
+  const r = await openReadyGates(LIVE_GATES, projectId, { by: "agent", surface: "parts", who: "part-gates" });
+  if (!r.ok) throw r.error;
+}
+
+const STEP_HOOKS: DriveHooks = { onSettled: openGatesAfter };
+
+/** The studio steps, each a factory over its lane (lib/producers/research.ts `StepFactory`). */
+const STEPS: readonly (readonly [ProducerName, StepFactory])[] = [
+  ["research", researchProducer],
+  ["script", scriptProducer],
+  ["frames", framesProducer],
+  ["motion", motionProducer],
+  ["score", scoreProducer],
+  ["cut", cutProducer],
+  ["still", stillProducer],
+  ["words", wordsProducer],
+  ["voice", voiceProducer],
+];
+
+/** Every lane some part option runs `name` on, in catalog order (the lane is the router's, not the day's). */
+export function lanesOf(name: ProducerName, day: string = new Date().toISOString().slice(0, 10)): ResourceLane[] {
+  const lanes: ResourceLane[] = [];
+  for (const kind of WORK_KINDS) {
+    for (const o of modelOptions(kind, day)) if (launchOf(kind, o.key, day)?.producer === name && !lanes.includes(o.lane)) lanes.push(o.lane);
+  }
+  return lanes;
+}
+
+const stepsBound = (): Bound[] => STEPS.flatMap(([name, factory]) => lanesOf(name).map((lane): Bound => ({ name, producer: factory(lane, STEP_HOOKS) })));
 
 export const BOUND: readonly Bound[] = [
   { name: "extract", producer: extractProducer() },
@@ -39,18 +101,13 @@ export const BOUND: readonly Bound[] = [
   { name: "mv", producer: mvProducer() },
   { name: "suno", producer: sunoProducer({ driver: sunoDriver() }) },
   { name: "strips", producer: stripsProducer() },
-  { name: "research", producer: researchProducer() },
-  { name: "script", producer: scriptProducer() },
-  { name: "frames", producer: framesProducer() },
-  { name: "motion", producer: motionProducer() },
-  { name: "score", producer: scoreProducer() },
-  { name: "cut", producer: cutProducer() },
-  { name: "still", producer: stillProducer() },
-  { name: "words", producer: wordsProducer() },
-  { name: "voice", producer: voiceProducer() },
+  // Dojo's GOOGLE stack (cloud.google, metered in Node). Its local stacks are gpu.local and Python's
+  // (pipeline/foundry/worker.py): this Node worker names such a head an orphan and leaves it queued.
+  { name: "dojo", producer: dojoProducer() },
+  ...stepsBound(),
 ];
 
-/** The map a worker hands kernel `workLoop`, keyed by the job's `producer`. */
-export function producers(): Result<ReadonlyMap<ProducerName, Producer>> {
+/** The map a worker hands kernel `workLoop`, keyed by the job's `<producer>@<lane>`. */
+export function producers(): Result<ReadonlyMap<ProducerKey, Producer>> {
   return producerSet(BOUND);
 }

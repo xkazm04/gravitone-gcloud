@@ -298,6 +298,12 @@ export type Rerouted = {
 
 const choiceOf = (o: RouteOutcome): { provider: string; model: string } | null => (o.kind === "routed" ? { provider: o.choice.provider, model: o.choice.model } : null);
 
+/** The record's steer as the router reads it: absent keys absent, never `undefined`. */
+export function routerSteer(s: Steer | undefined): RouterSteer | undefined {
+  if (s === undefined) return undefined;
+  return { ...(s.pin === undefined ? {} : { pin: s.pin }), ...(s.prefer === undefined ? {} : { prefer: s.prefer }), ...(s.exclude === undefined ? {} : { exclude: s.exclude }) };
+}
+
 /**
  * The operator's re-route (Runs `r`, plan §8.7 steering): a new steer on the
  * record. THE ROUTER STAYS THE JUDGE - `judge` routes the job's own request
@@ -308,26 +314,23 @@ const choiceOf = (o: RouteOutcome): { provider: string; model: string } | null =
  * retry would (attempt++, operator only - prototype studio.js `reroute`).
  * Refused while running (the step in flight was routed already) or finished.
  */
-/** The record's steer as the router reads it: absent keys absent, never `undefined`. */
-export function routerSteer(s: Steer | undefined): RouterSteer | undefined {
-  if (s === undefined) return undefined;
-  return { ...(s.pin === undefined ? {} : { pin: s.pin }), ...(s.prefer === undefined ? {} : { prefer: s.prefer }), ...(s.exclude === undefined ? {} : { exclude: s.exclude }) };
+export function reroute(store: Store, id: JobId, steer: RouterSteer, actor: Actor, judge: (steer: RouterSteer | undefined) => RouteOutcome): Result<Rerouted> {
+  return store.tx((t) => rerouteIn(t, id, steer, actor, judge));
 }
 
-export function reroute(store: Store, id: JobId, steer: RouterSteer, actor: Actor, judge: (steer: RouterSteer | undefined) => RouteOutcome): Result<Rerouted> {
-  return store.tx((t) => {
-    const { job } = loadJob(t, id);
-    const s = must(parseAt("steer", steerSchema, steer));
-    if (job.state === "running" || job.state === "done" || job.state === "cancelled") throw new AppError("refused", `job ${id} is ${job.state}; only a waiting, paused, failed or interrupted job is re-routed`);
-    const requeue = job.state === "failed" || job.state === "interrupted";
-    if (requeue && actor.kind !== "operator") throw new AppError("refused", `job ${id}: only an operator re-routes a ${job.state} job; ${actor.kind} ${actor.id} may not`);
-    const before = judge(routerSteer(job.steer));
-    const after = judge(routerSteer(s));
-    if (after.kind === "refused") throw new AppError(after.code, `re-route of job ${id} refused by the router: ${after.message}`);
-    const steered: Job = { ...(requeue ? retried(job) : job), steer: s };
-    putJob(t, steered);
-    const dropped = after.steerDropped;
-    jobEvent(t, actor, steered, "job.rerouted", { from: job.state, was: choiceOf(before), now: choiceOf(after), steer: { ...s }, ...(dropped === undefined ? {} : { steerDropped: dropped }) });
-    return dropped === undefined ? { job: steered } : { job: steered, steerDropped: dropped };
-  });
+/** `reroute` inside the caller's transaction (records/reroute.ts moves the part or run row in the same one). */
+export function rerouteIn(t: Tx, id: string, steer: RouterSteer, actor: Actor, judge: (steer: RouterSteer | undefined) => RouteOutcome): Rerouted {
+  const { job } = loadJob(t, id);
+  const s = must(parseAt("steer", steerSchema, steer));
+  if (job.state === "running" || job.state === "done" || job.state === "cancelled") throw new AppError("refused", `job ${id} is ${job.state}; only a waiting, paused, failed or interrupted job is re-routed`);
+  const requeue = job.state === "failed" || job.state === "interrupted";
+  if (requeue && actor.kind !== "operator") throw new AppError("refused", `job ${id}: only an operator re-routes a ${job.state} job; ${actor.kind} ${actor.id} may not`);
+  const before = judge(routerSteer(job.steer));
+  const after = judge(routerSteer(s));
+  if (after.kind === "refused") throw new AppError(after.code, `re-route of job ${id} refused by the router: ${after.message}`);
+  const steered: Job = { ...(requeue ? retried(job) : job), steer: s };
+  putJob(t, steered);
+  const dropped = after.steerDropped;
+  jobEvent(t, actor, steered, "job.rerouted", { from: job.state, was: choiceOf(before), now: choiceOf(after), steer: { ...s }, ...(dropped === undefined ? {} : { steerDropped: dropped }) });
+  return dropped === undefined ? { job: steered } : { job: steered, steerDropped: dropped };
 }

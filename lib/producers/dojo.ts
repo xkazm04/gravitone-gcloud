@@ -49,13 +49,12 @@ import { launchTarget, newestJob } from "./forge.ts";
 // no ledger. The judge (dojo_judge.py prepare|park) stays the skill's act on the
 // cycle after its job is done, and the blind gate stays the Board packet.
 //
-// WHY `dojo` IS NOT (YET) A LINE IN lib/producers/registry.ts. kernel `pickWork`
-// carries a producer by NAME, not by (name, lane): a Node worker carrying `dojo`
-// would pick a gpu.local dojo head too and get "a cloud.google producer may not
-// run it" from runJob on every look. Until the worker carries per lane, a google
-// cycle is driven by its launcher (pipeline/foundry/launch.mts, `driveDojo`) and
-// `--detach` refuses for it. Plain-Node loadable except the google stack's live
-// calls, which load lib/imaging/router lazily (it needs `npx tsx`).
+// `dojo` IS BOUND ON cloud.google ONLY (lib/producers/registry.ts). The worker carries a producer
+// per `<name>@<lane>` (kernel job-queue-core `producerKey`, L41), so a Node worker binding this
+// google stack names a gpu.local Dojo head an orphan and leaves it to pipeline/foundry/worker.py,
+// instead of picking it and being refused by runJob on every look (which is why, until L41, a
+// google cycle was driven only by its launcher and `--detach` refused it). Plain-Node loadable
+// except the google stack's live calls, which load lib/imaging/router lazily (it needs `npx tsx`).
 
 /* ── Where cycles live, and what one says ─────────────────────────────────── */
 
@@ -173,7 +172,7 @@ export function dojoGooglePorts(root: string = trainingRoot()): DojoGooglePorts 
   };
 }
 
-/** The google stack's bound producer. NOT a registry line yet (see the head of this file). */
+/** The google stack's bound producer: `dojo@cloud.google` in lib/producers/registry.ts. */
 export const dojoProducer = (root?: string): Producer => defineDojoGoogle(dojoGooglePorts(root));
 
 /* ── The receipt ───────────────────────────────────────────────────────────── */
