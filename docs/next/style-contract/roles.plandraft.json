@@ -1,0 +1,20 @@
+{
+  "page": {
+    "winner": "app/projects.html#plan/seed-untitled",
+    "port": "/kit"
+  },
+  "roles": {
+    "ground": {
+      "winner": "body",
+      "port": "[data-world=next]"
+    },
+    "model-sel": {
+      "winner": ".plan-t .model-sel",
+      "port": "[data-role=\"model-sel@plandraft\"] > *"
+    },
+    "units-in": {
+      "winner": ".plan-t .units-in",
+      "port": "[data-role=\"plan@plan\"] input[type=number]"
+    }
+  }
+}

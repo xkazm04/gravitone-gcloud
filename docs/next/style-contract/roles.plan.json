@@ -95,6 +95,10 @@
     "status-idle": {
       "winner": ".state.queued",
       "port": "[data-role=\"status-idle@plan\"] > *"
+    },
+    "dep-done": {
+      "winner": ".plan-t .dep.ratified",
+      "port": "[data-role=\"plan@plan\"] [class*=\"__deps\"] > span"
     }
   }
 }

@@ -11,3 +11,6 @@
 .grab{position:absolute;top:var(--sp-tight);left:50%;width:var(--w-grab);height:var(--sp-1);margin-left:calc(var(--w-grab) / -2);border-radius:var(--r-meter);background:var(--hair-2)}
 .close{margin-left:auto;display:flex;gap:var(--sp-3);align-items:center;color:var(--muted);font-size:var(--fs-control-sm)}
 .body{flex:1;min-height:0;display:flex}
+/* A sheet that hugs its body (Phase 4 receipt): anchored to the bottom edge, as tall as it needs. */
+.fit{top:auto;max-height:calc(100vh - var(--hdr-h) - var(--sp-5))}
+.fit .body{flex:0 1 auto}

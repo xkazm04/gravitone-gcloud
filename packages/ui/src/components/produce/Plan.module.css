@@ -1,0 +1,45 @@
+/* projects.css .plan-t, .prow-t (.gate .slot .sel), .c-part, .pdot, .c-model, .model-sel,
+   .model-fixed, .units-in, .c-units .u, .c-start, .c-deps, .dep. The sticky head's ground is
+   the page ink (the prototype's literal #0b0e15 is --ink-1). */
+.table{width:100%;min-width:calc(var(--w-detail) * 2 + var(--w-pile));table-layout:fixed;border-collapse:separate;border-spacing:0;font-size:var(--fs-ui)}
+.cPart{width:11%}.cRes{width:13%}.cModel{width:17%}.cUnits{width:10%}.cTime{width:5%}.cCost{width:19%}.cStart{width:7%}.cAfter{width:10%}.cState{width:8%}
+.table th{position:sticky;top:calc(-1 * var(--sp-5));z-index:1;background:var(--ink-1);text-align:left;padding:var(--sp-control) var(--sp-2);font:600 var(--fs-micro)/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--hair-2);white-space:nowrap}
+.table td{padding:var(--sp-snug) var(--sp-2);border-bottom:1px solid var(--hair);vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.table td>*{max-width:100%}
+.table th.num,.table td.num{text-align:right}
+.table td.num{font-family:var(--mono);font-size:var(--fs-meta);color:var(--ink-bright)}
+.row td{transition:background var(--dur-fast)}
+.row:hover td{background:color-mix(in srgb,var(--wash) 62%,transparent)}
+.sel td{background:color-mix(in srgb,var(--cyan) 7%,transparent)}
+.gate td{background:linear-gradient(90deg,color-mix(in srgb,var(--amber) 6%,transparent),transparent 60%)}
+.slot td{background:linear-gradient(90deg,color-mix(in srgb,var(--violet) 6%,transparent),transparent 60%)}
+.part{color:var(--ink-bright);font-weight:600}
+.dot{display:inline-block;width:calc(var(--size-dot) + 1px);height:calc(var(--size-dot) + 1px);border-radius:50%;margin-right:var(--sp-3);border:var(--stroke-glyph) solid var(--faint);vertical-align:middle}
+.dot.done{background:var(--emerald);border-color:var(--emerald)}
+.dot.running{background:var(--cyan);border-color:var(--cyan)}
+.dot.awaiting{background:var(--amber);border-color:var(--amber)}
+.dot.failed{background:var(--rose);border-color:var(--rose)}
+.dot.idle,.dot.paused{border-style:dashed}
+.model{overflow:hidden}
+.picker{height:var(--h-control-sm);max-width:calc(var(--w-detail) - var(--sp-1));width:100%;padding:0 var(--sp-4);border-radius:var(--r-sm);border:1px solid var(--hair-2);background:var(--ink-2);font:500 var(--fs-meta)/1 var(--mono);color:var(--ink-bright)}
+.picker option{background:var(--ink-2)}
+.picker:focus{outline:none;border-color:var(--focus-line)}
+.fixed{font:500 var(--fs-meta)/1 var(--mono);color:var(--muted)}
+.verdict{font:500 var(--fs-meta)/1 var(--mono);color:var(--amber)}
+.publish{font:500 var(--fs-meta)/1 var(--mono);color:var(--violet)}
+.units{display:inline-flex;align-items:center;gap:var(--sp-1);width:100%}
+.unitsIn{width:calc(var(--w-thumb) + var(--sp-4));height:var(--h-row);padding:0 var(--sp-2);border-radius:var(--r-sm);border:1px solid var(--hair-2);background:var(--ink-2);font:600 var(--fs-meta)/1 var(--mono);color:var(--ink-bright)}
+.unitsIn:focus{outline:none;border-color:var(--focus-line)}
+.n{font-family:var(--mono)}
+.unit{font:500 var(--fs-micro)/1 var(--mono);color:var(--faint)}
+.unitsCell{white-space:nowrap}
+.costCell{white-space:normal}
+.start{font:500 var(--fs-meta)/1 var(--mono);color:var(--muted)}
+.deps{display:flex;gap:var(--sp-1);flex-wrap:wrap}
+.dep{font:600 var(--fs-micro)/1 var(--mono);padding:var(--sp-hair) var(--sp-2);border-radius:var(--r-xs);border:1px solid var(--hair-2);color:var(--muted)}
+.dep.done{color:var(--done-text);border-color:color-mix(in srgb,var(--emerald) 30%,transparent)}
+.dep.awaiting{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 35%,transparent)}
+.dep.failed{color:var(--rose);border-color:color-mix(in srgb,var(--rose) 40%,transparent)}
+/* projects.css @media (max-width:1440px): .model-sel 250px. */
+@media (max-width:1440px){.picker{max-width:calc(var(--w-rail) + var(--sp-7) - var(--sp-nudge))}}
+.cost{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:var(--sp-1) var(--sp-tight)}

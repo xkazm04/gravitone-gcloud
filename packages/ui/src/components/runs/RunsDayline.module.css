@@ -107,3 +107,5 @@
 .now b{position:sticky;top:0;display:inline-block;transform:translateX(-50%);margin-top:var(--sp-3);padding:var(--sp-hair) var(--sp-2);border-radius:var(--r-xs);background:var(--cyan);color:var(--ink);font:700 var(--fs-micro)/1 var(--mono);white-space:nowrap}
 
 @media (prefers-reduced-motion:reduce){.s-running::after,.gatebar.s-awaiting{animation:none}.bar{transition:none}}
+/* A lane on hold: the rose of a stop, as a tag beside the lane's name (Phase 4, decision 6). */
+.hold{font:700 var(--fs-micro)/1 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--rose);border:1px solid color-mix(in srgb,var(--rose) 45%,transparent);background:var(--rose-a);border-radius:var(--r-xs);padding:var(--sp-hair) var(--sp-tight)}

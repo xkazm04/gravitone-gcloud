@@ -1,0 +1,27 @@
+/* floor.css [data-component=IdeaComposer], .comp-row, .comp-sel, .comp-text, [data-component=Estimate],
+   .launch; projects.css .launch-plan. The composer's 40px sentence is a field and a step; the plan's
+   44px launch a full button and a step - both read off the prototype, both through tokens. */
+.composer{display:flex;flex-direction:column;gap:var(--sp-hair);padding:var(--sp-4);border-right:1px solid var(--hair);min-height:0;min-width:0;overflow:auto}
+.row{display:flex;gap:var(--sp-tight);align-items:center;min-width:0}
+.sel{flex:1;min-width:0;height:var(--h-control-sm);padding:0 var(--sp-3);border-radius:var(--r-sm);border:1px solid var(--hair-2);background:var(--ink-2);font-size:var(--fs-ui);color:var(--ink-bright)}
+.sel option,.sel optgroup{background:var(--ink-2)}
+/* Two lines of the sentence always show (an example sentence wraps; a field cut mid-line reads
+   as broken): 2 x 14px x 1.35 + insets + border = a button and a wide step, less a hair (the
+   descenders sit in the bottom inset). The column's gaps are 3px, not the prototype's 6, so a lane at its least height (176px) still holds
+   controls, two lines, a wrapped estimate and Launch. */
+.text{resize:none;flex:1 0 auto;min-height:calc(var(--h-control) + var(--sp-wide) - var(--sp-nudge));height:calc(var(--h-control) + var(--sp-wide) - var(--sp-nudge));padding:var(--sp-2) var(--sp-3);border-radius:var(--r-sm);border:1px solid var(--hair-2);background:var(--ink-2);font:inherit;font-size:var(--fs-ui);line-height:1.35;color:var(--ink-bright)}
+.text::placeholder{color:var(--faint)}
+.text:focus,.sel:focus{outline:none;border-color:var(--focus-line)}
+
+.estimate{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-nudge) var(--sp-3);font:500 var(--fs-bar)/1.35 var(--mono);color:var(--muted);flex:none}
+.estimate b{color:var(--ink-bright);font-weight:700}
+
+.launch{flex:none;display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);height:var(--h-field);padding:0 var(--sp-2) 0 var(--sp-5);border-radius:var(--r-control);background:linear-gradient(90deg,color-mix(in srgb,var(--cyan) 22%,transparent),color-mix(in srgb,var(--cyan) 10%,transparent));border:1px solid color-mix(in srgb,var(--cyan) 45%,transparent);font-weight:600;font-size:var(--fs-ui);color:var(--ink-bright);cursor:pointer}
+.launch:hover{background:color-mix(in srgb,var(--cyan) 28%,transparent)}
+.launch:active{transform:translateY(1px)}
+.launch:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}
+.plan{height:calc(var(--h-control) + var(--sp-3));padding:0 var(--sp-2) 0 var(--sp-loose);margin-top:var(--sp-3);border-radius:var(--r-tile);background:linear-gradient(90deg,color-mix(in srgb,var(--cyan) 24%,transparent),color-mix(in srgb,var(--cyan) 8%,transparent));border-color:color-mix(in srgb,var(--cyan) 55%,transparent);font-size:var(--fs-body);justify-content:flex-start}
+.plan:hover{background:color-mix(in srgb,var(--cyan) 30%,transparent)}
+.detail{font:500 var(--fs-micro)/1 var(--mono);color:var(--muted);margin-left:auto}
+.busy{cursor:progress;opacity:.7}
+.busy:active{transform:none}

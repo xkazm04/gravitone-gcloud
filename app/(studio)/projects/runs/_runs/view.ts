@@ -25,11 +25,23 @@ export function when(t: number, now: number, approx = false): string {
   return `${approx ? "≈ " : ""}${same ? "" : `${dayLabel(t)} `}${hm(t)}`;
 }
 
-export function rowsOf(m: RunsModel): DaylineRow[] {
+/** A lane on hold, as a row names it: which job holds it and in what stage. */
+export type RowHold = { readonly lane: ResourceLane; readonly title: string; readonly stage?: string };
+
+export function rowsOf(m: RunsModel, holds: readonly RowHold[] = []): DaylineRow[] {
   const lanes: DaylineRow[] = LANE_ORDER.map((lane) => {
     const spec = LANE_SPECS[lane];
     const running = m.jobs.filter((j) => j.lane === lane && HOLDING.has(j.state)).length;
-    return { id: lane, label: spec.label, engines: spec.engines, cap: spec.cap, kind: spec.kind, held: { share: occupancy(running, spec.cap), name: `${spec.label}: ${running} of ${spec.cap} running` } };
+    const h = holds.find((x) => x.lane === lane);
+    return {
+      id: lane,
+      label: spec.label,
+      engines: spec.engines,
+      cap: spec.cap,
+      kind: spec.kind,
+      held: { share: occupancy(running, spec.cap), name: `${spec.label}: ${running} of ${spec.cap} running` },
+      ...(h === undefined ? {} : { hold: { name: `${spec.label} on hold: ${h.title}${h.stage === undefined ? "" : `, ${h.stage}`}` } }),
+    };
   });
   return [...lanes, { ...WEIR_ROW, cap: 1, kind: "weir" }, { ...CALENDAR_ROW, cap: 1, kind: "calendar" }];
 }

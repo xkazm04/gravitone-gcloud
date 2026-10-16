@@ -1,9 +1,9 @@
 // THE INSPECTOR beside the day-line (projects.js `Inspector`, `ProjectInspector`,
 // `LanesInspector`): a selected job, a selected project, or - nothing selected - every
-// resource: what failed, what waits at the Weir, what runs, and which sources could not be
-// read. Read-only: the prototype's move, pause, retry and re-route are Phase 4 and are absent,
-// not disabled. What stays is every way OUT: the v1 page that decides the item today, the
-// project's thread, and the ledger.
+// resource: what is on hold, what failed, what waits at the Weir, what runs, and which sources
+// could not be read. A produce job carries its acts (./Acts.tsx: pause, retry, earlier/later,
+// re-route); v1's live work keeps its ways OUT - the v1 page that decides it today, the
+// project's thread, the ledger - and acts there stay v1's until its producer migrates.
 import type { ReactNode } from "react";
 
 import { Button } from "@gt/ui/components/button/Button.tsx";
@@ -19,12 +19,23 @@ import type { Dep } from "@gt/ui/components/runs/thread.ts";
 import { EntryPill, StatusPill } from "@gt/ui/components/status/StatusPill.tsx";
 import { STATUS } from "@gt/ui/components/status/status.ts";
 
+import type { LaneHoldView } from "../../_port/contract.ts";
+import { Holds, JobActs, type JobActsProps } from "./Acts.tsx";
 import type { RunJob, RunWeir, RunsModel } from "./model.ts";
-import { READ_KEYS } from "./readKeys.ts";
+import { RUNS_KEYS } from "./readKeys.ts";
 import { holdingOf, membersOf, when } from "./view.ts";
 import s from "./Runs.module.css";
 
+/** What the acts need, gathered by Runs (./Runs.tsx owns the calls and their state). */
+export type InspectorActs = Omit<JobActsProps, "job"> & {
+  readonly holds: readonly LaneHoldView[];
+  readonly onAck: (lane: LaneHoldView["lane"]) => void;
+};
+
 type Props = {
+  readonly acts: InspectorActs;
+  /** The selected project's title, when the produce port names it. */
+  readonly projectTitle: string | null;
   readonly m: RunsModel;
   readonly job: string | null;
   readonly project: string | null;
@@ -37,20 +48,20 @@ const ledgerHref = (q: string): string => `/ledger?q=${encodeURIComponent(q)}`;
 /** The v1 page an href leads to, named by its first segment: `/foundry` -> `foundry`. */
 const placeOf = (href: string): string => href.split(/[/?#]/).find((x) => x !== "") ?? "page";
 
-export function Inspector({ m, job, project, deps, blocked, onSelect }: Props) {
+export function Inspector({ acts, projectTitle, m, job, project, deps, blocked, onSelect }: Props) {
   const j = job === null ? undefined : m.jobs.find((x) => x.key === job);
   const w = job === null ? undefined : m.weir.find((x) => x.key === job);
   return (
     <aside className={s.inspector} aria-label="inspector">
       <div className={s.inspIn}>
         {j !== undefined ? (
-          <JobView j={j} m={m} deps={deps} blocked={blocked} onSelect={onSelect} />
+          <JobView j={j} m={m} deps={deps} blocked={blocked} onSelect={onSelect} acts={acts} />
         ) : w !== undefined ? (
           <WeirView w={w} m={m} />
         ) : project !== null ? (
-          <ProjectView id={project} m={m} onSelect={onSelect} />
+          <ProjectView id={project} title={projectTitle ?? project} m={m} onSelect={onSelect} />
         ) : (
-          <Everything m={m} onSelect={onSelect} />
+          <Everything m={m} onSelect={onSelect} acts={acts} />
         )}
       </div>
     </aside>
@@ -68,7 +79,7 @@ function DepRow({ j, m, at, onSelect }: { readonly j: RunJob; readonly m: RunsMo
   );
 }
 
-function JobView({ j, m, deps, blocked, onSelect }: { readonly j: RunJob; readonly m: RunsModel; readonly deps: readonly Dep[]; readonly blocked: ReadonlyMap<string, string>; readonly onSelect: (key: string) => void }) {
+function JobView({ j, m, deps, blocked, onSelect, acts }: { readonly j: RunJob; readonly m: RunsModel; readonly deps: readonly Dep[]; readonly blocked: ReadonlyMap<string, string>; readonly onSelect: (key: string) => void; readonly acts: InspectorActs }) {
   const byKey = new Map(m.jobs.map((x) => [x.key, x]));
   const after = deps.filter((d) => d.to === j.key).flatMap((d) => byKey.get(d.from) ?? []);
   const blocks = deps.filter((d) => d.from === j.key).flatMap((d) => byKey.get(d.to) ?? []);
@@ -94,15 +105,18 @@ function JobView({ j, m, deps, blocked, onSelect }: { readonly j: RunJob; readon
         </a>
       )}
       <Facts facts={facts} />
+      {j.act !== undefined && <JobActs job={j.act} {...acts} />}
       {j.error !== undefined && <ErrorLine message={j.error} />}
       {block !== undefined && <ErrorLine message={`blocked by ${byKey.get(block)?.title ?? block}`} />}
+      {j.act !== undefined && <Holds holds={acts.holds.filter((h) => h.lane === j.lane)} nowMs={m.now} busy={acts.busy} onAck={acts.onAck} />}
       {after.length > 0 && <Section title="after" n={after.length}>{after.map((d) => <DepRow key={d.key} j={d} m={m} at={d.e} onSelect={onSelect} />)}</Section>}
       {blocks.length > 0 && <Section title="blocks" n={blocks.length}>{blocks.map((d) => <DepRow key={d.key} j={d} m={m} at={d.s} onSelect={onSelect} />)}</Section>}
       <div className={s.acts}>
-        <Button size="sm" label={placeOf(j.href)} href={j.href} glyphAfter="chevR" />
+        {j.act === undefined && <Button size="sm" label={placeOf(j.href)} href={j.href} glyphAfter="chevR" />}
+        {j.projectId !== undefined && j.act !== undefined && <Button size="sm" label="plan" href={`/projects/${encodeURIComponent(j.projectId)}`} glyphAfter="chevR" />}
         <LedgerLink href={ledgerHref(j.id)} subject={j.title} />
       </div>
-      <Keycaps mode="projects" label="keys" map={READ_KEYS} facts={new Set(["job"])} />
+      <Keycaps mode="projects" label="keys" map={RUNS_KEYS} facts={new Set(["job", ...(j.act?.reroutable === true ? ["reroutable"] : []), ...(acts.holds.length > 0 ? ["hold"] : [])])} />
     </>
   );
 }
@@ -131,14 +145,14 @@ function WeirView({ w, m }: { readonly w: RunWeir; readonly m: RunsModel }) {
   );
 }
 
-function ProjectView({ id, m, onSelect }: { readonly id: string; readonly m: RunsModel; readonly onSelect: (key: string) => void }) {
+function ProjectView({ id, title, m, onSelect }: { readonly id: string; readonly title: string; readonly m: RunsModel; readonly onSelect: (key: string) => void }) {
   const members = membersOf(m, id);
   const jobs = m.jobs.filter((j) => members.has(j.key));
   const need = jobs.filter((j) => j.state === "failed" || j.state === "interrupted" || j.state === "paused");
   const slots = m.pins.filter((p) => p.projectId === id);
   return (
     <>
-      <h2 className={s.inspT}>{id}</h2>
+      <h2 className={s.inspT}>{title}</h2>
       <Section title="needs you" n={need.length}>
         {need.length === 0 ? <Ghost label="nothing needs you" /> : need.map((j) => <DepRow key={j.key} j={j} m={m} at={j.s} onSelect={onSelect} />)}
       </Section>
@@ -154,12 +168,12 @@ function ProjectView({ id, m, onSelect }: { readonly id: string; readonly m: Run
       <div className={s.acts}>
         <LedgerLink href={ledgerHref(id)} subject={id} />
       </div>
-      <Keycaps mode="projects" label="keys" map={READ_KEYS} />
+      <Keycaps mode="projects" label="keys" map={RUNS_KEYS} />
     </>
   );
 }
 
-function Everything({ m, onSelect }: { readonly m: RunsModel; readonly onSelect: (key: string) => void }) {
+function Everything({ m, onSelect, acts }: { readonly m: RunsModel; readonly onSelect: (key: string) => void; readonly acts: InspectorActs }) {
   const live = m.jobs.filter((j) => j.from !== "ledger");
   const failed = live.filter((j) => j.state === "failed" || j.state === "interrupted");
   const running = live.filter((j) => j.state === "running");
@@ -168,6 +182,7 @@ function Everything({ m, onSelect }: { readonly m: RunsModel; readonly onSelect:
   return (
     <>
       <h2 className={s.inspT}>Every resource</h2>
+      <Holds holds={acts.holds} nowMs={m.now} busy={acts.busy} onAck={acts.onAck} />
       <Section title="failed" n={failed.length} tone="rose">
         {failed.length === 0 ? <Ghost label="nothing failed" /> : failed.map((j) => <DepRow key={j.key} j={j} m={m} at="lane" onSelect={onSelect} />)}
       </Section>

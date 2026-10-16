@@ -30,7 +30,12 @@ export const pileHref = (w: Pick<WeirItem, "source" | "id" | "packetId">): strin
 
 const dur = (sec: number): string => `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, "0")}`;
 
-export function Foundry({ work, folded }: { readonly work: LaneWork; readonly folded: boolean }) {
+/**
+ * The Foundry cell: the lane's composer beside its run track (index.html `FoundryCell` =
+ * `IdeaComposer + RunTrack`, floor.css 196-232px then the track). A folded lane shows only the
+ * summary - no composer, as the prototype drew it.
+ */
+export function Foundry({ work, folded, composer }: { readonly work: LaneWork; readonly folded: boolean; readonly composer?: ReactNode }) {
   if (folded) {
     return (
       <LaneSummary>
@@ -38,7 +43,7 @@ export function Foundry({ work, folded }: { readonly work: LaneWork; readonly fo
       </LaneSummary>
     );
   }
-  return (
+  const track = (
     <div className={s.track} data-component="RunTrack">
       {work.jobs.length === 0 ? (
         <span className={s.foldRow}>
@@ -58,6 +63,13 @@ export function Foundry({ work, folded }: { readonly work: LaneWork; readonly fo
           />
         ))
       )}
+    </div>
+  );
+  if (composer === undefined) return track;
+  return (
+    <div className={s.foundryCell} data-component="FoundryCell">
+      {composer}
+      {track}
     </div>
   );
 }

@@ -14,6 +14,9 @@
 // intercepts over the Floor (COMMON decision 10); a modified click on a pile keeps the
 // browser's own meaning.
 //
+// The Foundry cell holds each lane's COMPOSER (Phase 4, L28; ./Composers.tsx): Launch, or ⏎ in
+// the sentence, opens the lane's receipt in the sheet layer, and only its confirm launches.
+//
 // Live, as Runs is (../../_shell/liveFeed.ts): the ledger's stream is advice to re-read, the
 // re-read is router.refresh(), coalesced; a slow poll is the backstop for v1 progress that is
 // not an event.
@@ -34,9 +37,12 @@ import { useFreshness, usePollBackstop } from "@gt/ui/freshness/useFreshness";
 import { useKeys } from "@gt/ui/keymap/dispatch";
 import { vars } from "@gt/ui/components/vars.ts";
 
+import type { ComposerChoices, ProducePort } from "../../projects/_port/contract.ts";
+import { outcomeOf, useReceipt } from "../../projects/_plan/receipt.tsx";
 import { nextPile } from "../../_shell/facts.ts";
 import { BACKSTOP_MS, openFeed } from "../../_shell/liveFeed.ts";
 import { useShell } from "../../_shell/Providers.tsx";
+import { FoundryComposer, initialDrafts, inputOf, type LaneDraft } from "./Composers.tsx";
 import type { FloorData } from "./load.ts";
 import { Foundry, ShelfFor, Weir, pileHref, shelfCount } from "./LaneCells.tsx";
 import { Month } from "./Month.tsx";
@@ -45,7 +51,15 @@ import s from "./Floor.module.css";
 
 const never = (): (() => void) => () => undefined;
 
-export function Floor({ data, initial }: { readonly data: FloorData; readonly initial: FloorUrl }) {
+export type FloorProps = {
+  readonly data: FloorData;
+  readonly initial: FloorUrl;
+  readonly produce: ProducePort;
+  /** What the composers offer; null when the port could not say (drawn as its error). */
+  readonly choices: { readonly ok: true; readonly value: ComposerChoices } | { readonly ok: false; readonly error: string };
+};
+
+export function Floor({ data, initial, produce, choices }: FloorProps) {
   const router = useRouter();
   // true only once hydrated (the server snapshot is false): the keys are bound from then on, and
   // the live lane waits for it rather than for a timer.
@@ -54,6 +68,33 @@ export function Floor({ data, initial }: { readonly data: FloorData; readonly in
   const [url, setUrl] = useState<FloorUrl>(initial);
 
   const lanes = useMemo(() => byLane(data.jobs, data.weir), [data.jobs, data.weir]);
+  const [drafts, setDrafts] = useState<Readonly<Record<MediaLane, LaneDraft>> | null>(() => (choices.ok ? initialDrafts(choices.value) : null));
+  const [active, setActive] = useState<MediaLane | null>(null);
+  const flow = useReceipt(data.now);
+
+  const launch = (lane: MediaLane): void | false => {
+    const d = drafts?.[lane];
+    if (d === undefined || flow.reading) return false;
+    const name = FLOOR_LANES.find((l) => l.id === lane)?.name ?? lane;
+    if (d.text.trim() === "") {
+      toast(`${name} · first sentence`);
+      return;
+    }
+    const input = inputOf(lane, d.choice, d.text);
+    void flow.open({
+      trail: [{ label: "Floor", href: "/floor" }],
+      here: `${name} · launch`,
+      read: () => produce.composerReceipt({ input }),
+      confirm: async (token, ceilingUsd) =>
+        outcomeOf(await produce.launchRun({ input, token, ...(ceilingUsd === undefined ? {} : { ceilingUsd }) }), (v) => (v.kind === "stale" ? { kind: "stale", fresh: v.fresh } : { kind: "done", note: `${name} · launched · ${v.runId}`, ledger: { href: `/ledger?q=${encodeURIComponent(v.jobId)}`, subject: v.runId } })),
+      done: (note, ledger) => {
+        toast(note, ledger);
+        setDrafts((cur) => (cur === null ? cur : { ...cur, [lane]: { ...cur[lane], text: "" } }));
+        router.refresh();
+      },
+      failed: (message) => toast(message),
+    });
+  };
   const next = useMemo(() => nextPile(data.weir), [data.weir]);
   const rail = useMemo(() => railOf(data.slots, data.now), [data.slots, data.now]);
   const waiting = FLOOR_LANES.reduce((n, l) => n + lanes[l.id].piles.length, 0);
@@ -105,6 +146,7 @@ export function Floor({ data, initial }: { readonly data: FloorData; readonly in
         else open(pileHref(next));
       },
       unfocus: () => focus(null),
+      launch: () => (active === null ? false : launch(active)),
     },
     { facts: url.lane === null ? [] : ["lane-focused"], enabled: !url.cal },
   );
@@ -120,6 +162,7 @@ export function Floor({ data, initial }: { readonly data: FloorData; readonly in
             Foundry <span className={s.sub}>running</span>
             <Tally value={data.jobs.length} label="running" />
             <span className={s.push}>
+              {data.produce === "fixture" && <Chip label="produce · fixture" casing="lower" />}
               <Chip label="runs ›" tone="cyan" href="/projects/runs" />
             </span>
           </div>
@@ -146,7 +189,33 @@ export function Floor({ data, initial }: { readonly data: FloorData; readonly in
               state={state}
               onFocus={() => focus(l.id)}
               shelfEmpty={(shelfCount(l.id, data.shelf) ?? 1) === 0}
-              foundry={<Foundry work={lanes[l.id]} folded={folded} />}
+              foundry={
+                <Foundry
+                  work={lanes[l.id]}
+                  folded={folded}
+                  composer={
+                    drafts === null || !choices.ok ? (
+                      <ErrorLine message={choices.ok ? "no choices" : `composer · ${choices.error}`} />
+                    ) : (
+                      <FoundryComposer
+                        lane={l.id}
+                        name={l.name}
+                        choices={choices.value}
+                        draft={drafts[l.id]}
+                        onDraft={(d) => setDrafts((cur) => (cur === null ? cur : { ...cur, [l.id]: d }))}
+                        port={produce}
+                        epoch={data.now}
+                        busy={flow.reading && active === l.id}
+                        onLaunch={() => {
+                          setActive(l.id);
+                          launch(l.id);
+                        }}
+                        onFocus={() => setActive(l.id)}
+                      />
+                    )
+                  }
+                />
+              }
               weir={<Weir work={lanes[l.id]} folded={folded} next={next} onOpen={open} unapplied={data.unapplied.filter((u) => u.lane === l.id)} />}
               shelf={<ShelfFor lane={l} shelf={data.shelf} folded={folded} />}
             />
@@ -161,6 +230,7 @@ export function Floor({ data, initial }: { readonly data: FloorData; readonly in
         )}
       </div>
       <CalendarColumn rail={rail} nowMs={data.now} open={url.cal} onOpen={() => setCal(!url.cal)} slotHref="/calendar" />
+      {flow.sheet}
       {url.cal && (
         <Month
           slots={data.slots}

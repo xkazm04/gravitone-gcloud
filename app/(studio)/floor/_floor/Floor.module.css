@@ -28,3 +28,8 @@
 /* A decided packet whose v1 apply has not landed: its chip, its title, v1's sentence. */
 .unapplied{display:flex;flex-wrap:wrap;gap:var(--sp-2) var(--sp-3);align-items:center;margin-top:var(--sp-4)}
 .unappliedTitle{font-size:var(--fs-ui);color:var(--text)}
+
+/* floor.css [data-component=FoundryCell]: the composer's column (196-232px: a lane label less a
+   step, the rail and a hair more) beside the run track. */
+.foundryCell{display:grid;grid-template-columns:minmax(calc(var(--w-lane) - var(--sp-6)),calc(var(--w-rail) + var(--sp-1))) minmax(0,1fr);height:100%;min-height:0}
+@media (max-width:700px){.foundryCell{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}}

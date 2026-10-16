@@ -1,0 +1,133 @@
+"use server";
+
+// THE PRODUCE SERVER ACTIONS - the ProducePort the Floor composers, the Plan, Compose and the
+// Runs acts call (./contract.ts), over whichever side ./port.ts switches to. Each goes through
+// the one action core (app/_server/actionCore.ts): who first, then the input through its zod
+// door, then the body, then the wire envelope. Reads resolve the principal with `read` key use;
+// every write - and a receipt is the first half of one - with `money`, as the Board's do: a
+// launch spends, and a spend on a key set nobody could confirm is refused.
+//
+// The doors are the domain's (@gt/domain/produce.schema, L26) where it has one. The composer's
+// RECEIPT takes an empty first sentence (the estimate is drawn before a word is typed, the
+// prototype's `Estimate()` on every input); its LAUNCH does not.
+
+import { z } from "zod";
+
+import { composeInputSchema, composerInputSchema, ceilingUsdSchema, partPatchSchema } from "@gt/domain/produce.schema";
+import { RESOURCE_LANES } from "@gt/domain/lane";
+
+import { runAction } from "../../../_server/actionCore.ts";
+import { action } from "../../../_server/action.ts";
+import { principal } from "../../../_server/principal.ts";
+import type { ProducePort } from "./contract.ts";
+import { serverProduce } from "./port.ts";
+
+type In<K extends keyof ProducePort> = Parameters<ProducePort[K]>[0];
+type Out<K extends keyof ProducePort> = ReturnType<ProducePort[K]>;
+
+const reader = () => principal("read");
+const id = z.string().min(1).max(200);
+const rev = z.number().int().positive();
+const token = z.string().min(8).max(200);
+const ceilingUsd = ceilingUsdSchema.optional();
+const mechanisms = z.array(z.enum(["text", "ref-early"])).min(1);
+const draft = z.string().max(4000);
+// The estimate's door: the composer union with the sentence allowed empty.
+const estimateInput = z.union([
+  z.object({ lane: z.literal("image"), text: draft, mechanisms, styleId: z.string().min(1) }).strict(),
+  z.object({ lane: z.literal("image"), text: draft, mechanisms, sweep: z.literal(true) }).strict(),
+  z.object({ lane: z.literal("article"), text: draft, topic: z.string().trim().min(1) }).strict(),
+  z.object({ lane: z.literal("audio"), text: draft, kind: z.enum(["music", "sfx"]) }).strict(),
+  z.object({ lane: z.literal("video"), text: draft, subject: z.string().trim().min(1) }).strict(),
+]);
+
+export async function composerChoices(): Out<"composerChoices"> {
+  return runAction("produce composer choices", reader, z.undefined(), () => serverProduce().composerChoices(), undefined);
+}
+
+const composerReceiptAction = action("produce composer receipt", z.object({ input: estimateInput }), (i) => serverProduce().composerReceipt(i));
+export async function composerReceipt(input: In<"composerReceipt">): Out<"composerReceipt"> {
+  return composerReceiptAction(input);
+}
+
+const launchRunAction = action("produce launch run", z.object({ input: composerInputSchema, token, ceilingUsd }), (i) => serverProduce().launchRun(i));
+export async function launchRun(input: In<"launchRun">): Out<"launchRun"> {
+  return launchRunAction(input);
+}
+
+export async function listProjects(): Out<"listProjects"> {
+  return runAction("produce list", reader, z.undefined(), () => serverProduce().listProjects(), undefined);
+}
+
+export async function loadPlan(input: In<"loadPlan">): Out<"loadPlan"> {
+  return runAction("produce plan", reader, z.object({ id }), (i) => serverProduce().loadPlan(i), input);
+}
+
+export async function composeChoices(): Out<"composeChoices"> {
+  return runAction("produce compose choices", reader, z.undefined(), () => serverProduce().composeChoices(), undefined);
+}
+
+const composeAction = action("produce compose", composeInputSchema, (i) => serverProduce().compose(i));
+export async function compose(input: In<"compose">): Out<"compose"> {
+  return composeAction(input);
+}
+
+const setPartAction = action("produce set part", z.object({ id, rev, partId: id.max(400), patch: partPatchSchema }), (i) => serverProduce().setPart(i));
+export async function setPart(input: In<"setPart">): Out<"setPart"> {
+  return setPartAction(input);
+}
+
+const renameAction = action("produce rename", z.object({ id, rev, title: z.string().trim().min(1).max(200) }), (i) => serverProduce().rename(i));
+export async function rename(input: In<"rename">): Out<"rename"> {
+  return renameAction(input);
+}
+
+const discardAction = action("produce discard", z.object({ id, rev }), (i) => serverProduce().discard(i));
+export async function discard(input: In<"discard">): Out<"discard"> {
+  return discardAction(input);
+}
+
+const planReceiptAction = action("produce plan receipt", z.object({ id }), (i) => serverProduce().planReceipt(i));
+export async function planReceipt(input: In<"planReceipt">): Out<"planReceipt"> {
+  return planReceiptAction(input);
+}
+
+const launchPlanAction = action("produce launch plan", z.object({ id, rev, token, ceilingUsd }), (i) => serverProduce().launchPlan(i));
+export async function launchPlan(input: In<"launchPlan">): Out<"launchPlan"> {
+  return launchPlanAction(input);
+}
+
+const job = z.object({ jobId: id.max(400) });
+const pauseAction = action("produce pause", job, (i) => serverProduce().pauseJob(i));
+export async function pauseJob(input: In<"pauseJob">): Out<"pauseJob"> {
+  return pauseAction(input);
+}
+
+const resumeAction = action("produce resume", job, (i) => serverProduce().resumeJob(i));
+export async function resumeJob(input: In<"resumeJob">): Out<"resumeJob"> {
+  return resumeAction(input);
+}
+
+const retryAction = action("produce retry", job.extend({ ceilingUsd }), (i) => serverProduce().retryJob(i));
+export async function retryJob(input: In<"retryJob">): Out<"retryJob"> {
+  return retryAction(input);
+}
+
+const moveAction = action("produce move", job.extend({ dir: z.enum(["earlier", "later"]) }), (i) => serverProduce().moveJob(i));
+export async function moveJob(input: In<"moveJob">): Out<"moveJob"> {
+  return moveAction(input);
+}
+
+export async function rerouteOptions(input: In<"rerouteOptions">): Out<"rerouteOptions"> {
+  return runAction("produce reroute options", reader, job, (i) => serverProduce().rerouteOptions(i), input);
+}
+
+const rerouteAction = action("produce reroute", job.extend({ option: z.string().min(1).max(200), token: token.optional(), ceilingUsd }), (i) => serverProduce().reroute(i));
+export async function reroute(input: In<"reroute">): Out<"reroute"> {
+  return rerouteAction(input);
+}
+
+const ackAction = action("produce ack lane", z.object({ lane: z.enum(RESOURCE_LANES) }), (i) => serverProduce().ackLane(i));
+export async function ackLane(input: In<"ackLane">): Out<"ackLane"> {
+  return ackAction(input);
+}

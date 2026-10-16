@@ -26,7 +26,7 @@ const floor: Binding[] = [
   { mode: "floor", keys: ["C"], verb: "calendar", does: "calendar" },
   { mode: "floor", keys: ["B"], verb: "board", does: "board" },
   { mode: "floor", keys: ["Esc"], verb: "unfocus", does: "all lanes", when: "lane-focused" },
-  { mode: "floor", keys: ["⏎"], verb: "launch", does: "launch", field: "composer" },
+  { mode: "floor", keys: ["⏎"], verb: "launch", does: "launch", field: "composer", onControl: true },
   { mode: "floor", keys: ["Esc"], verb: "leave-field", does: "leave", field: "*" },
 ];
 
@@ -97,15 +97,33 @@ const projects: Binding[] = [
   { mode: "projects", keys: ["T"], verb: "retry", does: "retry", when: "job" },
   { mode: "projects", keys: ["[", "]"], verb: "move", does: "earlier · later", when: "job" },
   { mode: "projects", keys: ["Esc"], verb: "deselect", does: "deselect", when: "job" },
-  { mode: "projects", keys: ["⏎"], verb: "rename", does: "rename", field: "title" },
+  { mode: "projects", keys: ["⏎"], verb: "rename", does: "rename", field: "title", onControl: true },
   { mode: "projects", keys: ["Esc"], verb: "leave-field", does: "leave", field: "*" },
   // In Runs with a job selected, lower-case P pauses or resumes it; ⇧P (and P
   // anywhere else) opens Plan. Ruled §8.7: the selection is the context.
   { mode: "projects.runs", keys: ["P"], verb: "pause", does: "pause · resume", when: "job", shadows: true },
+  // Phase 4 (L28). The prototype re-routed by mouse only (projects.js Inspector `.alt`); O
+  // ("options") moves focus to the selected job's first alternative, whose ⏎ opens its receipt.
+  // A lane HOLD (COMMON decision 6) is lifted only by an operator's look: A acknowledges it.
+  { mode: "projects.runs", keys: ["O"], verb: "reroute", does: "re-route", when: "reroutable" },
+  { mode: "projects.runs", keys: ["A"], verb: "ack-lane", does: "acknowledge hold", when: "hold" },
 ];
 
 const compose: Binding[] = [
   { mode: "compose", keys: ["1", "2", "3"], verb: "recipe", does: "recipe" },
+];
+
+// THE RECEIPT (Phase 4, COMMON decision 3): every launch is read before it is confirmed. The
+// receipt is a sheet layer with this mode; ⏎ confirms from the sheet and from its ceiling field
+// alike (a dollar typed and ⏎ is the natural end of the act). Escape is the layer router's - it
+// closes the sheet and launches nothing - so it is not a row (see the header).
+//
+// A field's ⏎ row says `onControl` (L28): a text field is a CONTROL to the target reader (v1's
+// enterBelongsToTarget), so without it the composer's ⏎, the title's ⏎ and the ceiling's ⏎ were
+// rows that could never fire - the composer's had been in the table since Phase 1 unanswered.
+const receipt: Binding[] = [
+  { mode: "receipt", keys: ["⏎"], verb: "confirm", does: "confirm" },
+  { mode: "receipt", keys: ["⏎"], verb: "confirm", does: "confirm", field: "ceiling", onControl: true },
 ];
 
 const library: Binding[] = [
@@ -133,7 +151,7 @@ const ledger: Binding[] = [
   { mode: "ledger", keys: ["↓"], alias: ["⏎"], verb: "to-rows", does: "events", field: "search" },
 ];
 
-export const BINDINGS: readonly Binding[] = [...floor, ...calendar, ...board, ...projects, ...compose, ...library, ...ledger];
+export const BINDINGS: readonly Binding[] = [...floor, ...calendar, ...board, ...projects, ...compose, ...receipt, ...library, ...ledger];
 
 /** The app's one compiled keymap. */
 export const KEYMAP = compile(BINDINGS);

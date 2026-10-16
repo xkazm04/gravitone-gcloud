@@ -7,11 +7,14 @@
 // link can carry them (`/floor?lane=audio`, `/floor?cal=1&day=2026-10-15`), and the island keeps
 // them there afterwards without asking the server again.
 //
-// READ-ONLY in this phase (COMMON decision 11): no composer and no Launch are drawn; a pile is a
-// door to its packet's Board, which is where a decision is made.
+// Phase 4 (L28): the Foundry cells carry the composers, over the produce port (../projects/_port);
+// their choices are read here with the rest. A pile is still a door to its packet's Board, which
+// is where a decision is made.
 
 import type { Metadata } from "next";
 
+import { serverProduce } from "../projects/_port/port.ts";
+import { PRODUCE_PORT } from "../projects/_port/wire.ts";
 import { Floor } from "./_floor/Floor.tsx";
 import { loadFloor } from "./_floor/load.ts";
 import { parseFloorUrl } from "./_floor/model.ts";
@@ -22,5 +25,6 @@ type Search = Promise<Readonly<Record<string, string | string[] | undefined>>>;
 
 export default async function FloorPage({ searchParams }: { readonly searchParams: Search }) {
   const [q, data] = await Promise.all([searchParams, loadFloor()]);
-  return <Floor data={data} initial={parseFloorUrl(q)} />;
+  const choices = serverProduce().composerChoices();
+  return <Floor data={data} initial={parseFloorUrl(q)} produce={PRODUCE_PORT} choices={choices.ok ? choices : { ok: false, error: choices.error.message }} />;
 }

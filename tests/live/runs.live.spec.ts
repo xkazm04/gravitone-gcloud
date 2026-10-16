@@ -131,13 +131,3 @@ test("a zoom is in the URL and on the axis corner; R brings NOW back into view",
   await expect.poll(() => scroller.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
 });
 
-test("the write verbs are not drawn and not answered: no pause, retry, re-route or compose", async ({ page }) => {
-  // The prototype's own labels (projects.js Inspector, renderList, ResourceSummary), anchored:
-  // a v1 record may well be called "video-compose".
-  for (const name of [/^pause/i, /^resume/i, /^retry/i, /^re-route/i, /^\+ ?compose/i, /^launch plan/i, /^earlier/i, /^later/i]) {
-    await expect(page.getByRole("button", { name })).toHaveCount(0);
-  }
-  await page.locator('[data-component="RunsDayline"] [role="group"]').focus();
-  await page.keyboard.press("n");
-  await expect(page.getByRole("dialog")).toHaveCount(0);
-});

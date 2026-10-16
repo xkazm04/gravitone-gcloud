@@ -102,6 +102,22 @@
     "channel": {
       "winner": ".chan.youtube",
       "port": "[data-role=\"channel\"] > *"
+    },
+    "composer": {
+      "winner": "[data-component=IdeaComposer][data-lane=image]",
+      "port": "[data-role=\"composer@floor\"] > *"
+    },
+    "comp-sel": {
+      "winner": "[data-component=IdeaComposer][data-lane=article] .comp-sel",
+      "port": "[data-role=\"composer-article@floor\"] select"
+    },
+    "comp-text": {
+      "winner": "[data-component=IdeaComposer][data-lane=image] .comp-text",
+      "port": "[data-role=\"composer@floor\"] textarea"
+    },
+    "estimate": {
+      "winner": "#est-image",
+      "port": "[data-role=\"composer@floor\"] [data-component=Estimate]"
     }
   }
 }

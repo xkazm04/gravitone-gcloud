@@ -37,6 +37,8 @@ export type DaylineRow = {
   readonly kind: RowKind;
   /** How much of the resource is held now, 0..1, with its spoken form. Absent on Weir and Calendar. */
   readonly held?: { readonly share: number; readonly name: string };
+  /** The lane is on HOLD (COMMON decision 6): an interrupted paid job waits on the operator's look. */
+  readonly hold?: { readonly name: string };
 };
 
 export type DaylineBar = {
@@ -236,6 +238,11 @@ function RowLabel({ row, over, open, onToggle }: { readonly row: DaylineRow; rea
         <RowMark kind={row.kind} />
         {row.label}
         {row.cap > 1 && <span className={s.cap}>×{row.cap}</span>}
+        {row.hold !== undefined && (
+          <span className={s.hold} role="img" aria-label={row.hold.name}>
+            hold
+          </span>
+        )}
         {over > 0 && (
           <button type="button" className={cx(s.ovf, open && s.on)} aria-expanded={open} aria-label={`${over} more on ${row.label}, ${open ? "collapse" : "show"}`} onClick={onToggle}>
             {open ? "−" : "+"}

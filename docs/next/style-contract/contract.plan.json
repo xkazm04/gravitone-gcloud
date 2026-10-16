@@ -550,5 +550,29 @@
     "paddingLeft": "0px",
     "paddingRight": "0px",
     "maxWidth": "none"
+  },
+  "dep-done": {
+    "width": 70,
+    "selector": ".plan-t .dep.ratified",
+    "vpos": 0.47,
+    "fontSize": "12px",
+    "fontWeight": "600",
+    "lineHeight": "12px",
+    "letterSpacing": "normal",
+    "textTransform": "none",
+    "fontFamily": "\"JetBrains Mono\", \"Cascadia Mono\", Consolas, ui-monospace, monospace",
+    "color": "rgb(167, 243, 208)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "backgroundImage": "none",
+    "borderTopWidth": "1px",
+    "borderLeftWidth": "1px",
+    "borderLeftColor": "rgba(110, 231, 183, 0.3)",
+    "borderTopLeftRadius": "5px",
+    "borderTopRightRadius": "5px",
+    "boxShadow": "none",
+    "paddingTop": "3px",
+    "paddingLeft": "6px",
+    "paddingRight": "6px",
+    "maxWidth": "none"
   }
 }

@@ -12,6 +12,7 @@ import { kernel } from "../../../../lib/kernelStore.ts";
 import type { LiveJob, WeirItem } from "../../../../lib/ledger/v1/types.ts";
 import { freshLedger } from "../../../../lib/ledger/v1/sync.ts";
 import { liveRead } from "../../_shell/live.ts";
+import { SIDE, serverProduce } from "../../projects/_port/port.ts";
 import { publishedSlots, railSlot } from "./model.ts";
 import { readShelf, type Shelf } from "./shelf.ts";
 
@@ -29,6 +30,11 @@ import { readShelf, type Shelf } from "./shelf.ts";
 // v1 to be caught up with the kernel's committed decisions (lib/decision/v1/applier.ts
 // reconcileApplies). A decided packet whose outcome v1 has not taken yet is read from the
 // kernel and drawn on its lane (`unapplied`): a stuck one with v1's sentence, verbatim.
+//
+// Phase 4 (L28): the runs the Floor composers launched come from the produce port
+// (../../projects/_port/port.ts) and join v1's live work in their lane's Foundry column, each a
+// door to its job in Runs. While the port answers from its fixture side they are fixture runs,
+// and the page says so (`produce`).
 
 export const PUBLISHED_CAP = 40;
 
@@ -37,6 +43,8 @@ export type FloorData = {
   readonly head: number;
   readonly universe: "real" | "fixture";
   readonly jobs: readonly LiveJob[];
+  /** Which side the produce port answers from (its runs are among `jobs`, source `produce`). */
+  readonly produce: "fixture" | "real";
   readonly weir: readonly WeirItem[];
   readonly slots: readonly RailSlot[];
   readonly shelf: Shelf;
@@ -83,5 +91,15 @@ export async function loadFloor(now: number = Date.now()): Promise<FloorData> {
     }
   }
 
-  return { now, head, universe: FIXTURE_MODE ? "fixture" : "real", jobs: live.jobs, weir: live.weir, slots, shelf, unapplied, problems };
+  const runs = serverProduce().listJobs();
+  if (!runs.ok) problems.push({ source: "produce", error: runs.error.message });
+  const produced: LiveJob[] = runs.ok
+    ? runs.value.flatMap((j) =>
+        j.media === undefined || j.projectId !== undefined || j.state === "done" || j.state === "cancelled"
+          ? []
+          : [{ source: "produce", id: j.id, title: j.title, lane: j.lane, media: j.media, state: j.state, ...(j.state === "running" ? { startedAt: new Date(j.s).toISOString() } : {}), attempt: j.attempt, ...(j.error === undefined ? {} : { error: j.error }), href: `/projects/runs?job=${encodeURIComponent(`kernel:${j.id}`)}` }],
+      )
+    : [];
+
+  return { now, head, universe: FIXTURE_MODE ? "fixture" : "real", produce: SIDE, jobs: [...live.jobs, ...produced], weir: live.weir, slots, shelf, unapplied, problems };
 }

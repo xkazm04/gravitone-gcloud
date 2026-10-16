@@ -29,10 +29,13 @@ export type LevelSheetProps = {
   readonly full?: boolean;
   /** A /kit specimen: drawn open, never on the stack. */
   readonly specimen?: boolean;
+  /** Hug the content: the sheet rises from the bottom edge only as tall as its body (a receipt),
+   *  up to the full sheet's height. Still the same layer, scrim, keys and Escape. */
+  readonly fit?: boolean;
   readonly children: ReactNode;
 };
 
-export function LevelSheet({ trail, here, mode, back, onClose, full = false, specimen = false, children }: LevelSheetProps) {
+export function LevelSheet({ trail, here, mode, back, onClose, full = false, specimen = false, fit = false, children }: LevelSheetProps) {
   const panel = useRef<HTMLElement | null>(null);
   const [risen, setRisen] = useState(full || specimen);
   useLayer(!specimen, { kind: "sheet", mode, panelRef: panel, onClose });
@@ -52,7 +55,7 @@ export function LevelSheet({ trail, here, mode, back, onClose, full = false, spe
       {!full && !specimen && <div className={s.scrim} aria-hidden="true" />}
       <section
         ref={panel}
-        className={cx(s.sheet, full && s.full, specimen && s.specimen, risen && s.open)}
+        className={cx(s.sheet, full && s.full, specimen && s.specimen, fit && !full && !specimen && s.fit, risen && s.open)}
         role={full ? "region" : "dialog"}
         aria-modal={full ? undefined : true}
         aria-label={name}

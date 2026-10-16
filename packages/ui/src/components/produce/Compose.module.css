@@ -1,0 +1,27 @@
+/* projects.css .compose-pop, .cp, .cp-h, .cp-recipes, .recipe (.ri, b, .mono), .cp-src. The pop's
+   440px is a detail panel and a pile wide less a step; its drop is a button and a step under the
+   header; the shadow is the prototype's 0 24px 60px in steps. On the pop's raised ground (--ink-4)
+   the faint of a caption reads under 4.5:1, so captions here are muted. */
+.pop{position:fixed;z-index:var(--z-popover);top:calc(var(--hdr-h) + var(--h-control) + var(--sp-3));left:var(--sp-5);width:min(calc(var(--w-detail) + var(--w-pile) - var(--sp-5)),calc(100vw - var(--sp-7)));max-height:calc(100vh - var(--hdr-h) - var(--h-control) - var(--sp-7));padding:var(--sp-5);border-radius:var(--r-arm);background:var(--ink-4);border:1px solid var(--hair-3);box-shadow:0 var(--sp-7) var(--sp-page-end) var(--shadow);display:flex;flex-direction:column;gap:var(--sp-4);animation:up var(--dur) var(--ease)}
+.inPlace{position:relative;width:100%;padding:var(--sp-5);border-radius:var(--r-arm);background:var(--ink-4);border:1px solid var(--hair-3);display:flex;flex-direction:column;gap:var(--sp-4)}
+@keyframes up{from{opacity:0;transform:translateY(var(--sp-2))}}
+@media (prefers-reduced-motion:reduce){.pop{animation:none}}
+.head{display:flex;align-items:center;justify-content:space-between}
+.head h3{color:var(--muted)}
+.recipes{display:flex;flex-direction:column;gap:var(--sp-2);min-height:0;overflow:auto}
+.recipe{display:grid;grid-template-columns:calc(var(--sp-7) + var(--sp-2)) minmax(0,1fr) auto;gap:var(--sp-4);align-items:center;padding:var(--sp-4);border-radius:var(--r-tile);border:1px solid var(--hair-2);text-align:left;color:inherit;background:none;font:inherit;cursor:pointer}
+.recipe:hover,.recipe:focus-visible,.more:hover,.more:focus-visible{border-color:color-mix(in srgb,var(--cyan) 60%,transparent);background:var(--cyan-a);outline:none}
+.more{display:block;padding:var(--sp-2) var(--sp-4);border-radius:var(--r-sm);border:1px solid var(--hair);text-align:left;color:inherit;background:none;font:inherit;cursor:pointer}
+.ri{color:var(--cyan);display:grid;place-items:center}
+.ri svg{width:calc(var(--size-glyph-btn) + var(--sp-nudge));height:calc(var(--size-glyph-btn) + var(--sp-nudge))}
+.rt{display:flex;flex-direction:column;gap:var(--sp-nudge);min-width:0}
+.rt b{color:var(--ink-bright);font-size:var(--fs-body);font-weight:600}
+.more .rt{flex-direction:row;align-items:baseline;gap:var(--sp-3);white-space:nowrap;overflow:hidden}
+.more .sub{overflow:hidden;text-overflow:ellipsis}
+.more .rt b{font-size:var(--fs-ui)}
+.sub{font:500 var(--fs-micro)/1.2 var(--mono);color:var(--muted)}
+.srcs{display:grid;gap:var(--sp-2)}
+.src{display:grid;grid-template-columns:calc(var(--w-thumb)) minmax(0,1fr);align-items:center;gap:var(--sp-3);font:500 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+.field{height:var(--h-field);padding:0 var(--sp-3);border-radius:var(--r-sm);border:1px solid var(--hair-2);background:var(--ink-2);font-size:var(--fs-ui);color:var(--ink-bright);min-width:0}
+.field option{background:var(--ink-2)}
+.field:focus{outline:none;border-color:var(--focus-line)}

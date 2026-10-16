@@ -32,6 +32,7 @@ import type { JobState } from "@gt/domain/job.machine";
 import { RESOURCE_LANES, type MediaLane, type ResourceLane } from "@gt/domain/lane";
 
 import type { LiveHold, LiveJob, LiveSlot, WeirItem } from "../../../../../lib/ledger/v1/types.ts";
+import type { ProduceJob } from "../../_port/contract.ts";
 
 /** Days of past and future the day-line spans around NOW. */
 export const PAST_MS = 4.5 * 86_400_000;
@@ -65,6 +66,8 @@ export type RunsInput = {
   readonly live: LiveReadInput;
   readonly kernel: readonly KernelJobInput[];
   readonly ledger: readonly Event[];
+  /** The produce port's jobs (Phase 4): kernel jobs with their schedule and their acts. */
+  readonly produce?: readonly ProduceJob[];
 };
 
 export type RunJob = {
@@ -91,6 +94,8 @@ export type RunJob = {
   /** Keys of the jobs this one waits for, as v1 recorded them. */
   readonly after: readonly string[];
   readonly from: "live" | "kernel" | "ledger";
+  /** The port's view of a produce job: what the inspector's acts read (route, queue, cost). */
+  readonly act?: ProduceJob;
 };
 
 /** A pile on the Weir now (from `live`), or a pile committed inside the window (from the ledger). */
@@ -185,6 +190,34 @@ function fromKernel(j: KernelJobInput, now: number): RunJob {
   };
 }
 
+/**
+ * A produce job (Phase 4): a kernel job with a SCHEDULE, so a queued one is drawn where the
+ * queue places it rather than at NOW. A placed time that is not a recorded one is ≈ (approx).
+ */
+function fromProduce(j: ProduceJob): RunJob {
+  const recorded = j.state === "running" || j.state === "done" || j.state === "failed" || j.state === "interrupted";
+  return {
+    key: keyOf("kernel", j.id),
+    source: "kernel",
+    id: j.id,
+    title: j.title,
+    lane: j.lane,
+    ...(j.media === undefined ? {} : { media: j.media }),
+    state: j.state,
+    s: j.s,
+    e: j.e,
+    open: j.state === "running",
+    approx: !recorded,
+    attempt: j.attempt,
+    ...(j.error === undefined ? {} : { error: j.error }),
+    href: `/ledger?q=${encodeURIComponent(j.id)}`,
+    ...(j.projectId === undefined ? {} : { projectId: j.projectId }),
+    after: j.after.map((a) => keyOf("kernel", a)),
+    from: "kernel",
+    act: j,
+  };
+}
+
 /** The ledger's ended runs and commits in the window, minus what is live now. */
 function fromLedger(events: readonly Event[], live: ReadonlySet<string>, span: RunsModel["span"]): { jobs: RunJob[]; weir: RunWeir[]; unplaced: number } {
   const starts = new Map<string, Event>();
@@ -241,7 +274,9 @@ export function buildRuns(input: RunsInput): RunsModel {
   const { now } = input;
   const span = spanAround(now);
   const live = input.live.jobs.map((j) => fromLive(j, now));
-  const kernel = input.kernel.map((j) => fromKernel(j, now));
+  const produced = (input.produce ?? []).map(fromProduce);
+  const owned = new Set(produced.map((j) => j.id));
+  const kernel = [...produced, ...input.kernel.filter((j) => !owned.has(j.id)).map((j) => fromKernel(j, now))];
   const past = fromLedger(input.ledger, new Set(live.map((j) => j.key)), span);
   const weir: RunWeir[] = input.live.weir.map((w) => {
     const since = ms(w.since);

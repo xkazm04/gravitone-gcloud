@@ -29,7 +29,7 @@ import { AppError } from "@gt/domain/errors";
 import { ensureDispatcher } from "@gt/ui/keymap/dispatch";
 import { identityFlip } from "@gt/ui/storage/identity";
 import { createStore, type Store } from "@gt/ui/storage/store";
-import { Toast } from "@gt/ui/components/toast/Toast.tsx";
+import { Toast, type ToastLedger } from "@gt/ui/components/toast/Toast.tsx";
 import { useAuth } from "@/lib/useAuth";
 
 import { KEYS, LAST_IDENTITY } from "./keys.ts";
@@ -44,7 +44,8 @@ const store: Store = made.value;
 
 type Shell = {
   readonly store: Store;
-  readonly toast: (message: string) => void;
+  /** One line; an act the ledger records passes its door too (a chip on the toast). */
+  readonly toast: (message: string, ledger?: ToastLedger) => void;
   readonly signOut: () => Promise<void>;
 };
 
@@ -114,7 +115,7 @@ export function Providers({ identity, children }: { readonly identity: string | 
   return (
     <ShellContext.Provider value={shell}>
       {children}
-      <Toast message={note.message} open={note.open} />
+      <Toast message={note.message} open={note.open} ledger={note.ledger} />
     </ShellContext.Provider>
   );
 }

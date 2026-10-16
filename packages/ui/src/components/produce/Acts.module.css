@@ -1,0 +1,20 @@
+/* projects.css .alts, .alt (.cur .am .ad .d .good .bad); the hold is the inspector's .err block
+   given a lane. The current route's dash is the Ghost's faint-at-80% (a hair-2 dash under an
+   opacity read under the 3:1 mark floor on /kit). */
+.alts{display:flex;flex-direction:column;gap:var(--sp-tight)}
+.alt{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:var(--sp-2) var(--sp-3);align-items:center;padding:var(--sp-3) var(--sp-control);border-radius:var(--r-control);border:1px solid var(--hair-2);text-align:left;color:inherit;background:none;font:inherit;cursor:pointer;transition:border-color var(--dur-fast),background var(--dur-fast)}
+button.alt:hover,button.alt:focus-visible{border-color:color-mix(in srgb,var(--cyan) 55%,transparent);background:var(--cyan-a);outline:none}
+button.alt[aria-disabled=true]{cursor:progress;opacity:.6}
+.cur{border-style:dashed;border-color:color-mix(in srgb,var(--faint) 80%,transparent);cursor:default}
+.am{font-size:var(--fs-ui);color:var(--ink-bright);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ad{grid-column:1/-1;display:flex;gap:var(--sp-3);flex-wrap:wrap;align-items:center}
+.mono{font:500 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+.d{font:700 var(--fs-micro)/1 var(--mono);padding:var(--sp-hair) var(--sp-2);border-radius:var(--r-xs);border:1px solid var(--hair-2);color:var(--muted)}
+.good{color:var(--emerald);border-color:color-mix(in srgb,var(--emerald) 40%,transparent);background:var(--emerald-a)}
+.bad{color:var(--rose);border-color:color-mix(in srgb,var(--rose) 40%,transparent);background:var(--rose-a)}
+
+.hold{display:flex;flex-direction:column;align-items:flex-start;gap:var(--sp-2);padding:var(--sp-4);border-radius:var(--r-control);border:1px solid color-mix(in srgb,var(--rose) 40%,transparent);background:color-mix(in srgb,var(--rose) 6%,transparent)}
+.holdH{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap}
+.holdJob{display:flex;flex-direction:column;gap:var(--sp-1);font-size:var(--fs-ui);color:var(--ink-bright)}
+.holdJob a{color:inherit;text-decoration:underline;text-decoration-color:var(--hair-3)}
+.unpriced{display:inline-flex;align-items:center;gap:var(--sp-1);white-space:nowrap;vertical-align:middle}

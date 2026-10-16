@@ -3,7 +3,10 @@
 // A store outside React, so a receipt can come from anywhere that learns an outcome - an
 // effect syncing storage, a Firebase callback, a button - and the region subscribes to it.
 
-export type Receipt = { readonly message: string; readonly open: boolean };
+import type { ToastLedger } from "@gt/ui/components/toast/Toast.tsx";
+
+/** An act's receipt, and - for an act the ledger records - the door to that record. */
+export type Receipt = { readonly message: string; readonly open: boolean; readonly ledger?: ToastLedger };
 
 /** How long a receipt stays up (shell.js `toast`). */
 export const TOAST_MS = 3400;
@@ -18,9 +21,9 @@ function set(next: Receipt): void {
   for (const l of listeners) l();
 }
 
-export function showToast(message: string): void {
+export function showToast(message: string, ledger?: ToastLedger): void {
   if (timer !== null) clearTimeout(timer);
-  set({ message, open: true });
+  set({ message, open: true, ...(ledger === undefined ? {} : { ledger }) });
   timer = setTimeout(() => {
     timer = null;
     set({ message: current.message, open: false });

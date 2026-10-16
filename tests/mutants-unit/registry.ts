@@ -1189,4 +1189,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "  \"gpu.local\": true,",
     why: "A crash on the free GPU lane holds it until acknowledged, stalling every forge and Dojo job behind a lane that spends nothing.",
   },
+  {
+    id: "produce-ceiling-ignores-the-band",
+    test: "packages/ui/test/components/produce.test.ts",
+    file: "packages/ui/src/components/produce/produce.ts",
+    find: "const top = r.totals.usdRange?.[1] ?? r.totals.usd;",
+    replace: "const top = r.totals.usd;",
+    why: "A banded cost ($47-92) is held against the ceiling at its midpoint, so a confirm that may spend $92 passes a $80 ceiling.",
+  },
+  {
+    id: "composer-enter-never-fires",
+    test: "packages/ui/test/components/produce.test.ts",
+    file: "packages/ui/src/keymap/bindings.ts",
+    find: "field: \"composer\", onControl: true }",
+    replace: "field: \"composer\" }",
+    why: "The key router treats a text field as a control, so a composer's Enter never launches and the Floor's one keyboard path to a run is dead.",
+  },
 ];

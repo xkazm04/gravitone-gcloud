@@ -1,4 +1,5 @@
-// /projects/runs - Runs, the day-line across every resource (plan §2.1; Phase 2, read-only).
+// /projects/runs - Runs, the day-line across every resource (plan §2.1; Phase 2), and its acts
+// over the produce port (Phase 4, ../_port).
 //
 // BESIDE v1's /projects. v1 owns `app/projects/page.tsx` (and `/projects/new`) until Phase 4;
 // this route lives in the (studio) group at `projects/runs`, a sibling segment the two route
@@ -12,6 +13,7 @@ import type { Metadata } from "next";
 
 import { DEFAULT_ZOOM, isZoom } from "@gt/ui/components/runs/dayline.ts";
 
+import { PRODUCE_PORT } from "../_port/wire.ts";
 import { loadRuns } from "./_runs/load.ts";
 import { Runs } from "./_runs/Runs.tsx";
 
@@ -27,5 +29,5 @@ export default async function RunsPage({ searchParams }: { readonly searchParams
   };
   const zoom = one("zoom");
   const data = await loadRuns();
-  return <Runs data={data} initial={{ job: one("job"), project: one("project"), zoom: isZoom(zoom) ? zoom : DEFAULT_ZOOM }} />;
+  return <Runs data={data} port={PRODUCE_PORT} initial={{ job: one("job"), project: one("project"), zoom: isZoom(zoom) ? zoom : DEFAULT_ZOOM }} />;
 }

@@ -8,6 +8,10 @@ import { list } from "@gt/kernel/job";
 import { FIXTURE_MODE } from "../../../../../lib/fixtures/mode.ts";
 import { kernel } from "../../../../../lib/kernelStore.ts";
 import { freshLedger, liveNow } from "../../../../../lib/ledger/v1/sync.ts";
+import type { ProjectList } from "@gt/domain/produce";
+
+import type { ComposeChoices, LaneHoldView, ProduceJob } from "../../_port/contract.ts";
+import { SIDE, serverProduce } from "../../_port/port.ts";
 import { buildRuns, spanAround, type KernelJobInput, type RunsModel } from "./model.ts";
 
 // RUNS' ONE READ, at render time and server-side only (Server Component data, plan §9.2).
@@ -23,6 +27,11 @@ import { buildRuns, spanAround, type KernelJobInput, type RunsModel } from "./mo
 // It also asks for a fresh ledger (freshLedger: a non-blocking sync under the store's claim,
 // at most every 30 s), so watching Runs is what keeps the ledger's past current - and the
 // events that sync appends reach this page through the SSE stream as a refresh.
+//
+// Phase 4 (L28): the produce port (../../_port/port.ts) adds its jobs (scheduled, with their
+// acts), its held lanes, its project list and Compose's choices. While the port answers from its
+// fixture side, those are fixture records beside the real v1 reading, and the page says so
+// (`produce`).
 
 export const LEDGER_CAP = 1000;
 export const KERNEL_CAP = 500;
@@ -33,6 +42,11 @@ export type RunsData = {
   /** The ledger's newest seq at render: the SSE stream continues from here. */
   readonly head: number;
   readonly universe: "real" | "fixture";
+  /** Which side the produce port answers from. */
+  readonly produce: "fixture" | "real";
+  readonly holds: readonly LaneHoldView[];
+  readonly projects: ProjectList;
+  readonly choices: ComposeChoices | null;
   /** The ledger or the kernel could not be read; the live half still renders. */
   readonly problems: readonly { readonly source: string; readonly error: string }[];
 };
@@ -84,10 +98,25 @@ export async function loadRuns(now: number = Date.now()): Promise<RunsData> {
     else jobs.push(...kj.value.slice(-KERNEL_CAP).map(kernelInput));
   }
 
+  const port = serverProduce();
+  const produced: ProduceJob[] = [];
+  const pj = port.listJobs();
+  if (pj.ok) produced.push(...pj.value);
+  else problems.push({ source: "produce", error: pj.error.message });
+  const holds = port.listHolds();
+  if (!holds.ok) problems.push({ source: "produce holds", error: holds.error.message });
+  const plist = port.listProjects();
+  if (!plist.ok) problems.push({ source: "produce projects", error: plist.error.message });
+  const choices = port.composeChoices();
+
   return {
-    model: buildRuns({ now, live, kernel: jobs, ledger }),
+    model: buildRuns({ now, live, kernel: jobs, ledger, produce: produced }),
     head,
     universe: FIXTURE_MODE ? "fixture" : "real",
+    produce: SIDE,
+    holds: holds.ok ? holds.value : [],
+    projects: plist.ok ? plist.value : { projects: [], truncated: false },
+    choices: choices.ok ? choices.value : null,
     problems,
   };
 }
