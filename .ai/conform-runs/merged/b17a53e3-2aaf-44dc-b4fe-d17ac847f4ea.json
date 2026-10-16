@@ -1,0 +1,179 @@
+{
+ "schema": "conform-run/1",
+ "worker": "b17a53e3-2aaf-44dc-b4fe-d17ac847f4ea",
+ "subject": "native-shell-integration",
+ "evaluatedAt": "2026-10-16T00:34:02.953059+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "app-infrastructure",
+   "subject": "native-shell-integration",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/_dev-inspector/DevInspector.tsx:206 Context and repository searches found no BrowserWindow, globalShortcut, SendInput, AXUIElement or UIAutomation; the inspector overlays its own browser document, so the native-shell precondition does not hold.",
+   "techniques": [
+    {
+     "technique": "capability-presence-contract",
+     "verdict": "not-applicable",
+     "evidence": "lib/capabilities.ts:248 This declares hosted deployment availability, not capabilities of a native presentation host."
+    },
+    {
+     "technique": "layout-resolved-input-synthesis",
+     "verdict": "not-applicable",
+     "evidence": "app/_dev-inspector/DevInspector.tsx:126 The inspector receives browser keyboard events; it does not synthesize chords into foreign applications."
+    },
+    {
+     "technique": "native-owned-stream",
+     "verdict": "not-applicable",
+     "evidence": "lib/jobs.tsx:817 Job updates use polling, not a long-lived connection requiring native ownership."
+    },
+    {
+     "technique": "native-side-owns-the-target-set",
+     "verdict": "not-applicable",
+     "evidence": "lib/projects.ts:643 Project deletion operates in browser IndexedDB, not across a privileged native command boundary."
+    },
+    {
+     "technique": "non-stealing-overlay",
+     "verdict": "not-applicable",
+     "evidence": "app/_dev-inspector/DevInspector.tsx:192 This is a document element, not a native window placed over another application."
+    },
+    {
+     "technique": "observer-perturbation",
+     "verdict": "not-applicable",
+     "evidence": "app/_dev-inspector/devLocate.ts:61 Inspection walks the product's own DOM ancestors, not another application's structural provider."
+    },
+    {
+     "technique": "permission-gate-vector",
+     "verdict": "not-applicable",
+     "evidence": "lib/useAuth.tsx:187 This is Firebase account authentication, not a feature gated by several independent OS grants."
+    },
+    {
+     "technique": "query-transparent-overlay",
+     "verdict": "not-applicable",
+     "evidence": "app/_dev-inspector/devLocate.ts:56 The picker resolves DOM attributes within its own application, not global accessibility queries beneath a native overlay."
+    },
+    {
+     "technique": "unexported-capability-ladder",
+     "verdict": "not-applicable",
+     "evidence": "app/_dev-inspector/DevInspector.tsx:200 Source mapping uses the public document API; no unexported host entry point is involved."
+    }
+   ],
+   "absenceTerms": [
+    "BrowserWindow",
+    "globalShortcut",
+    "SendInput",
+    "AXUIElement",
+    "UIAutomation"
+   ]
+  },
+  {
+   "context": "studio-design-system",
+   "subject": "native-shell-integration",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "components/ui/Modal.tsx:286 Context and repository searches found no BrowserWindow, globalShortcut, SendInput, AXUIElement or UIAutomation; the design system constructs document overlays rather than native surfaces over foreign applications.",
+   "techniques": [
+    {
+     "technique": "capability-presence-contract",
+     "verdict": "not-applicable",
+     "evidence": "components/ui/StudioFrame.tsx:81 The shell's presentation variants are visual themes, not native host implementations with differing OS capabilities."
+    },
+    {
+     "technique": "layout-resolved-input-synthesis",
+     "verdict": "not-applicable",
+     "evidence": "components/ui/Modal.tsx:229 Keyboard handling traps navigation inside the product's dialog; it does not inject input into another application."
+    },
+    {
+     "technique": "native-owned-stream",
+     "verdict": "not-applicable",
+     "evidence": "components/ui/NotificationBell.tsx:99 The notification surface consumes application context and owns no persistent network stream."
+    },
+    {
+     "technique": "native-side-owns-the-target-set",
+     "verdict": "not-applicable",
+     "evidence": "components/ui/HarnessBridge.tsx:131 Harness reset delegates to browser identity-storage eviction, not an OS filesystem or process command."
+    },
+    {
+     "technique": "non-stealing-overlay",
+     "verdict": "not-applicable",
+     "evidence": "components/ui/Modal.tsx:244 This interactive in-document dialog intentionally receives focus, an explicit exclusion in the technique."
+    },
+    {
+     "technique": "observer-perturbation",
+     "verdict": "not-applicable",
+     "evidence": "components/ui/Equalizer.tsx:29 IntersectionObserver measures the component's own element visibility, not a foreign application's structure."
+    },
+    {
+     "technique": "permission-gate-vector",
+     "verdict": "not-applicable",
+     "evidence": "components/ui/AuthGate.tsx:29 The gate checks account authentication and redirects routes; it does not reconcile independent OS permissions."
+    },
+    {
+     "technique": "query-transparent-overlay",
+     "verdict": "not-applicable",
+     "evidence": "components/ui/Modal.tsx:105 The structural query is scoped to the dialog's own DOM panel, so global native overlay exclusion is unnecessary."
+    },
+    {
+     "technique": "unexported-capability-ladder",
+     "verdict": "not-applicable",
+     "evidence": "components/ui/HarnessBridge.tsx:144 The harness explicitly publishes its own browser control object; it does not resolve private OS entry points."
+    }
+   ],
+   "absenceTerms": [
+    "BrowserWindow",
+    "globalShortcut",
+    "SendInput",
+    "AXUIElement",
+    "UIAutomation"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-16T00:34:02.953059+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "native-shell-integration"
+   ],
+   "techniques": [
+    "capability-presence-contract",
+    "layout-resolved-input-synthesis",
+    "native-owned-stream",
+    "native-side-owns-the-target-set",
+    "non-stealing-overlay",
+    "observer-perturbation",
+    "permission-gate-vector",
+    "query-transparent-overlay",
+    "unexported-capability-ladder"
+   ],
+   "deviations": 0,
+   "context": "app-infrastructure",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-16T00:34:02.953059+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "native-shell-integration"
+   ],
+   "techniques": [
+    "capability-presence-contract",
+    "layout-resolved-input-synthesis",
+    "native-owned-stream",
+    "native-side-owns-the-target-set",
+    "non-stealing-overlay",
+    "observer-perturbation",
+    "permission-gate-vector",
+    "query-transparent-overlay",
+    "unexported-capability-ladder"
+   ],
+   "deviations": 0,
+   "context": "studio-design-system",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

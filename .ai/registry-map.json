@@ -535,7 +535,11 @@
           "revision": 4,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_dev-inspector/DevInspector.tsx:206 Context and repository searches found no BrowserWindow, globalShortcut, SendInput, AXUIElement or UIAutomation; the inspector overlays its own browser document, so the native-shell precondition does not hold.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:0ab230f2977430e7",
+          "evaluatedRevision": 4
         },
         {
           "subject": "agent-cli-transport",
@@ -5164,7 +5168,11 @@
           "revision": 4,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "components/ui/Modal.tsx:286 Context and repository searches found no BrowserWindow, globalShortcut, SendInput, AXUIElement or UIAutomation; the design system constructs document overlays rather than native surfaces over foreign applications.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:0ab230f2977430e7",
+          "evaluatedRevision": 4
         }
       ],
       "governance": "governed"
