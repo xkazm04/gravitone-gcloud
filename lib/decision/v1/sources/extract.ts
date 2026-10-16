@@ -190,6 +190,8 @@ function refusal(run: ExtractManifest): string | undefined {
   // v1's own sentences (lib/foundry/extract/store.ts commitExtractRun).
   if (run.status === "committed") return "This run is already committed.";
   if (!EXTRACT_COMMITTABLE.includes(run.status)) return "The extract is still running this run.";
+  // Since L29 the writer marks a run whose vendor calls were stand-ins; v1's commit refuses it.
+  if (run.dry === true) return "This run was dry: its images are stand-ins, and a dry run is never committed.";
   return undefined;
 }
 

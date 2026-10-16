@@ -3,6 +3,8 @@ import type { ProducerName } from "@gt/domain/run";
 import type { Producer } from "@gt/kernel/job-core";
 import { producerSet, type Bound } from "@gt/producers/set";
 
+import { extractProducer } from "./extract.ts";
+
 // THE PRODUCERS THIS CHECKOUT CAN RUN (Phase 4, plan §4). One list, read by every
 // process that drives a job - the worker (workers/runner.mts), a producer's CLI, a
 // route - so "which producers exist" has one answer and the worker can never be
@@ -17,7 +19,9 @@ import { producerSet, type Bound } from "@gt/producers/set";
 // A head job naming a producer that is absent here is reported by `workLoop`
 // (`unknown`) and left queued: a missing binding parks work, it does not fail it.
 
-export const BOUND: readonly Bound[] = [];
+export const BOUND: readonly Bound[] = [
+  { name: "extract", producer: extractProducer() },
+];
 
 /** The map a worker hands kernel `workLoop`, keyed by the job's `producer`. */
 export function producers(): Result<ReadonlyMap<ProducerName, Producer>> {

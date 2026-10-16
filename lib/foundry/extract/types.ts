@@ -269,13 +269,19 @@ export interface ExtractManifest {
   styles: ExtractedStyle[];
   /** Which engines served, by capability, once known. */
   engines: { vision?: string; generator?: string; reasoner?: string };
-  /** WHO IS DRIVING. The app (`app`) and the CLI (`cli`) are separate
-   *  processes writing the same manifest, and a manifest has no merge: two
-   *  drivers on one run would each append their own round and the last
-   *  writer would win. So every save stamps the driver, and a driver refuses
-   *  to step over another's fresh stamp (engine.ts::activeLease). Cleared on
-   *  finish. */
+  /** WHO WAS DRIVING, on a run started before Phase 4. The app and the CLI
+   *  stamped every save and refused each other's fresh stamp (lease.ts). Since
+   *  L29 a run is driven by its kernel JOB (`job` below), whose slot lease is
+   *  fenced; nothing writes this any more, and the ledger reads it only for a
+   *  run that has no job. */
   lease?: { owner: string; at: string };
+  /** The kernel job driving this run (`job:run:<id>`, or a later job of a
+   *  re-run). The job record is the truth for RUNNING state; this manifest is
+   *  the truth for what was produced (plan §5.4). */
+  job?: string;
+  /** A DRY run: every vendor call was answered by a stand-in, so its pixels and
+   *  readbacks are placeholders. It runs end to end and is never committed. */
+  dry?: true;
   /** Consecutive vendor failures. The engine's circuit breaker: at
    *  `BREAKER_LIMIT` the run stops as `failed` instead of walking every
    *  remaining unit into the same wall (measured 2026-08-27: a 400 on every

@@ -442,7 +442,12 @@ export function validateSynthesis(
 
 /** Is a critique's `recipe_fix` worth adopting? It has to be a recipe, not a
  *  shrug — and not the same recipe again, which would spend a round to learn
- *  nothing. */
+ *  nothing.
+ *
+ *  THE JOB'S PLAN READS THE SAME RULE from packages/producers/src/extract/units.ts
+ *  (it settles a replica's loop there). This copy stays because this module is in
+ *  the browser bundle (app/foundry/styleArt.ts) and the producers workspace is
+ *  not; tests/next-server/producer-extract.test.ts holds the two equal. */
 export function usableFix(c: Critique | null, current: string): string | null {
   const fix = c?.recipe_fix?.trim();
   if (!fix || fix.length < 40) return null;

@@ -5,7 +5,7 @@
 
 import type { EngineIO } from "./engine";
 import { log } from "./journal";
-import { msg, setStage } from "./performCommon";
+import { msg, passDeath, setStage } from "./performCommon";
 import { synthesisPrompt } from "./prompts";
 import { SYNTHESIS_SCHEMA, deriveFamily, fallbackStyle, partition, slugify, validateSynthesis } from "./vocabulary";
 import { book } from "./spend";
@@ -60,6 +60,7 @@ export async function performGroup(m: ExtractManifest, io: EngineIO): Promise<vo
       log(m, io, `the engine's grouping was unusable (${v.error}); the partition stands`);
     }
   } catch (e) {
+    passDeath(e);
     log(m, io, `synthesis failed (${msg(e)}); the partition stands`);
   }
   if (!styles) {

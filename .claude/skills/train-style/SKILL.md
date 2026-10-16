@@ -15,11 +15,12 @@ model (rung 1 of the text ladder). `--singletons` is the diagnostic mode: best p
 overfit their one image; use it when grouping keeps failing or to build merge evidence for a cull, not as the
 default.
 
-One logical layer serves two postures. In the hosted app the browser drives
-`lib/foundry/extract/engine.ts` one unit per request; here the CLI
-`pipeline/foundry/extract.mts` drives the same engine in-process. Nothing in
-this skill re-implements a stage — if a stage needs to change, change the
-engine, and both postures get it.
+A run is a kernel JOB (Phase 4: `lib/producers/extract.ts`, lane `cloud.google`). The CLI
+`pipeline/foundry/extract.mts` enqueues it and drives it in-process; the app's `/step` route kicks the same
+job; the worker (`workers/runner.mts`) drives it when the CLI is given `--detach`. Every path runs the same
+engine (`lib/foundry/extract/engine.ts`), one unit at a time, and the job's slot lease means two drivers can
+never step one run. Nothing in this skill re-implements a stage — if a stage needs to change, change the
+engine, and every posture gets it.
 
 What the run produces, under `foundry-out/extract/<run-id>/`:
 
@@ -33,14 +34,20 @@ styles/<style>/transfer-1.jpg       the recipe on a scene the gallery never show
 ## Step 0 — preflight (no spend)
 
 1. Confirm the folder exists and count the images: `Get-ChildItem "<folder>" | Measure-Object`.
-2. Dry run — prints the count, the worst-case cost, the budget window and which keys are set:
+2. Dry run — prints the receipt (the count, the worst-case cost, the queue position) and which keys are set,
+   then runs the whole job on stand-ins: no vendor is called and nothing is spent, but a run directory IS
+   created, marked `dry`, and it can never be committed (the Board shows no pile for it). Add `--json` for one
+   machine-readable document:
    ```
    npx tsx pipeline/foundry/extract.mts "<folder>" --slug <slug> --dry
    ```
    - `GOOGLE_AI_API_KEY` must be set (pixels, and eyes on the hosted plan). `QWEN_API_KEY` is the dev-posture eye; without it recognition falls to Google — fine.
    - Words (the one `style-synthesis` turn) go through the text ladder: the local `claude` binary first, Gemini behind it. No key needed for rung 1.
    - The imaging budget window defaults to **$5 per hour**. A gallery of ~35 that groups into ~6–8 styles at 2×2 rounds + 1 transfer is ≈ $2. Over the window the run STOPS with an `over-budget` sentence; `--resume` continues when the window has moved. Raise `IMAGING_BUDGET_USD_PER_WINDOW` in `.env.local` only if the user says so.
-3. Say what it will cost and how long (≈ 5 s per read, ≈ 25 s per generate+read; 35 sources → ~3 min reads + ~15–20 min per 8 styles). Do not start a spend without the user having seen the number at least once in the session.
+3. A live run takes `--budget-usd <n>`: the job's own ceiling. The job stops before the unit that would cross
+   it (the receipt refuses a launch whose WORST case is already over it — use a ceiling above the printed worst
+   case, or fewer sources). `--resume <run-id> --budget-usd <higher>` continues a run stopped by it.
+4. Say what it will cost and how long (≈ 5 s per read, ≈ 25 s per generate+read; 35 sources → ~3 min reads + ~15–20 min per 8 styles). Do not start a spend without the user having seen the number at least once in the session.
 
 ## Step 1 — run it, detached
 
@@ -51,13 +58,20 @@ $log = "pipeline/foundry/logs/extract-<slug>.log"
 Start-Process -FilePath "npx" -ArgumentList 'tsx','pipeline/foundry/extract.mts','"<folder>"','--slug','<slug>' -RedirectStandardOutput $log -RedirectStandardError "$log.err" -NoNewWindow
 ```
 
-Then poll with Monitor (or `Get-Content $log -Tail 5`) until the summary table prints. The run id is the first line (`created <id>`). If the process dies or the budget trips, resume:
+Then poll with Monitor (or `Get-Content $log -Tail 5`) until the summary table prints. The run id is on the
+`launched <run-id> as job:run:<run-id>` line. If the budget trips or a vendor wall stops it (the job is `failed`),
+resume — this is the operator's retry of the job: failed units are pruned and taken again, finished ones never
+re-spent:
 
 ```
 npx tsx pipeline/foundry/extract.mts --resume <run-id>
 ```
 
-`--status <run-id>` prints the summary table at any time; it is also what the manifest's `progress` shows in the app.
+If the PROCESS died mid-unit the job is `interrupted` and its lane (`cloud.google`) is HELD: a step may have
+been paid for. Look at the run first (`--status`), then acknowledge the lane on Runs (or the kernel's
+`ackLane`) and `--resume`. Exit codes: 0 done · 1 failed, stopped or held · 2 usage.
+
+`--status <run-id>` prints the job's state and the summary table at any time.
 
 ## Step 2 — read it back with your own eyes
 

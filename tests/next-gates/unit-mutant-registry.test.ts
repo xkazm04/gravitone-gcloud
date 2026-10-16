@@ -41,7 +41,7 @@ function problems(mutants: readonly UnitMutant[], read: (file: string) => string
     }
     if (m.find === m.replace) out.push(`${m.id}: replace equals find`);
     if (!m.why.trim()) out.push(`${m.id}: no why`);
-    if (!testFiles.includes(m.test)) out.push(`${m.id}: ${m.test} is not a packages/*/test/**/*.test.ts file on disk`);
+    if (!testFiles.includes(m.test)) out.push(`${m.id}: ${m.test} is not a unit-rung test file on disk`);
   }
   return out;
 }
@@ -50,6 +50,20 @@ const unguarded = (testFiles: readonly string[], mutants: readonly UnitMutant[])
   const guarded = new Set(mutants.map((m) => m.test));
   return testFiles.filter((f) => !guarded.has(f)).sort();
 };
+
+/** Every *.test.ts under `dir`, repo-relative with forward slashes. */
+function walkDir(dir: string): string[] {
+  const out: string[] = [];
+  const walk = (d: string) => {
+    for (const name of readdirSync(d)) {
+      const p = path.join(d, name);
+      if (statSync(p).isDirectory()) walk(p);
+      else if (name.endsWith(".test.ts")) out.push(path.relative(ROOT, p).split(path.sep).join("/"));
+    }
+  };
+  if (existsSync(dir)) walk(dir);
+  return out.sort();
+}
 
 /** Every packages/<pkg>/test/**\/*.test.ts, repo-relative with forward slashes. */
 function walkTests(packagesDir: string): string[] {
@@ -68,11 +82,17 @@ function walkTests(packagesDir: string): string[] {
   return out.sort();
 }
 
+// Line endings normalised: with core.autocrlf a checkout writes CRLF where an agent
+// wrote LF, and a multi-line `find` (written with a bare LF) must not read as stale on one
+// machine and live on another. pipeline/unit-mutants.mts applies the same rule.
 const readRepo = (file: string) => {
   const p = path.join(ROOT, file);
-  return existsSync(p) ? readFileSync(p, "utf8") : null;
+  return existsSync(p) ? readFileSync(p, "utf8").replaceAll("\r\n", "\n") : null;
 };
+// The budget is per PACKAGE test file; an entry may also name a tests/next-server
+// file, which the unit rung collects too (vitest.config.mts) and the runner can drive.
 const testFiles = walkTests(PACKAGES);
+const collected = [...testFiles, ...walkDir(path.join(ROOT, "tests", "next-server"))];
 
 describe("the unit mutant registry", () => {
   test("the walk saw the package suites (an empty population is not a clean one)", () => {
@@ -81,7 +101,7 @@ describe("the unit mutant registry", () => {
   });
 
   test("every entry is live: find exactly once, unique id, a real test file", () => {
-    const found = problems(MUTANTS, readRepo, testFiles);
+    const found = problems(MUTANTS, readRepo, collected);
     expect(found, `registry problems:\n  ${found.join("\n  ")}`).toEqual([]);
   });
 
@@ -122,7 +142,7 @@ describe("the registry check is not vacuous", () => {
     expect(problems([mk("mute", "beta", { why: " " })], read, files)).toEqual(["mute: no why"]);
     expect(problems([mk("d", "beta"), mk("d", "beta")], read, files)).toEqual(["d: duplicate id"]);
     expect(problems([mk("lost", "beta", { test: "packages/x/test/gone.test.ts" })], read, files)).toEqual([
-      "lost: packages/x/test/gone.test.ts is not a packages/*/test/**/*.test.ts file on disk",
+      "lost: packages/x/test/gone.test.ts is not a unit-rung test file on disk",
     ]);
   });
 

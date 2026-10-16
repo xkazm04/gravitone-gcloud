@@ -28,6 +28,14 @@ export function logOffVocabulary(m: ExtractManifest, io: EngineIO, label: string
 
 export const msg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
+/** A unit records a VENDOR's failure on its element and moves on; a throw that
+ *  is not an Error is not a vendor's - it is the process ending (the kernel's
+ *  crash harness, packages/kernel/src/crash.ts) - and passes through untouched,
+ *  so a job interrupted mid-unit reads as interrupted, not as a refused frame. */
+export function passDeath(e: unknown): void {
+  if (!(e instanceof Error)) throw e;
+}
+
 export function setStage(m: ExtractManifest, stage: ExtractManifest["status"]) {
   m.status = stage;
   m.progress = { stage, done: doneUnits(m), total: totalUnits(m) };

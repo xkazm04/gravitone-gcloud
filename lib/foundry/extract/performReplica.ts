@@ -7,7 +7,7 @@ import type { EngineIO } from "./engine";
 import { tripped } from "./breaker";
 import { log } from "./journal";
 import { bestRound, hash, scoreOf } from "./helpers";
-import { isReadback, logOffVocabulary, msg, setStage } from "./performCommon";
+import { isReadback, logOffVocabulary, msg, passDeath, setStage } from "./performCommon";
 import { critiqueInstruction, replicaPrompt } from "./prompts";
 import { CRITIQUE_SCHEMA, styleScore, usableFix } from "./vocabulary";
 import { book, isOverBudget, stopFor } from "./spend";
@@ -52,6 +52,7 @@ export async function performReplica(m: ExtractManifest, io: EngineIO, unit: Ext
     round.generator = g.model;
     m.engines.generator = g.model;
   } catch (e) {
+    passDeath(e);
     if (isOverBudget(e)) {
       // Nothing was drawn and nothing billed: the round is withdrawn, not
       // left behind as an errored one for a retry to prune.
@@ -84,6 +85,7 @@ export async function performReplica(m: ExtractManifest, io: EngineIO, unit: Ext
     log(m, io, `${unitLabel(unit)}: ${Math.round((round.score ?? 0) * 100)}%${round.critique.has_text ? " TEXT" : ""}${round.critique.critique ? ` — ${round.critique.critique.slice(0, 90)}` : ""}`);
     m.fail_streak = 0;
   } catch (e) {
+    passDeath(e);
     round.error = `critique: ${msg(e)}`;
     log(m, io, `${unitLabel(unit)} — ${round.error}`);
     // The pixels exist and are kept; a refused critique stops, not trips.

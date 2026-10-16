@@ -38,6 +38,8 @@ import type { IngestEvent, LiveJob, ProjectCtx, Projection, Skipped, Source, Wei
 //   after its vendor call was paid                                 -> interrupted;
 //   mid-run with no stamp at all (a manifest older than the lease) -> paused.
 // The Extract tab shows all four as "live"; Runs shows them, honestly worded.
+// A run with a `job` (Phase 4, L29) is not drawn here at all: Runs reads its
+// kernel job, which holds a fenced lease where the manifest held a stamp.
 
 const EXTRACT_STATUSES = ["created", "reading", "grouping", "replicating", "transferring", "done", "failed", "committed"] as const;
 type ExtractStatus = (typeof EXTRACT_STATUSES)[number];
@@ -52,6 +54,8 @@ const manifestSchema = z.object({
   styles: z.array(z.object({ id: z.string().min(1), name: z.string() })),
   engines: z.object({ vision: z.string().optional(), generator: z.string().optional(), reasoner: z.string().optional() }),
   lease: z.object({ owner: z.string(), at: z.string() }).optional(),
+  job: z.string().min(1).optional(),
+  dry: z.literal(true).optional(),
   fail_streak: z.number().optional(),
   spend: z.object({ usd: z.number(), basis: z.enum(["reported", "estimate"]) }).optional(),
   stopped: z.object({ by: z.enum(["run-ceiling", "period-ceiling"]), spentUsd: z.number(), ceilingUsd: z.number().optional(), at: z.string() }).optional(),
@@ -179,6 +183,10 @@ function tallyOf(runs: readonly ExtractRun[]): Projection["tally"] {
 
 function liveOf({ run }: ExtractRun, nowMs: number): LiveJob | null {
   if (!EXTRACT_LIVE.includes(run.status)) return null;
+  // A run driven by a kernel job (L29, `run.job`) is live on Runs as THAT job -
+  // the job record is the truth for running state (plan §5.4) - so it is not
+  // drawn a second time from its manifest, which no longer carries a lease.
+  if (run.job !== undefined) return null;
   const startedAt = instant(run.created);
   return {
     source: "extract",
@@ -195,7 +203,8 @@ function liveOf({ run }: ExtractRun, nowMs: number): LiveJob | null {
 }
 
 function weirOf({ run, verdicts }: ExtractRun): WeirItem | null {
-  if (!EXTRACT_COMMITTABLE.includes(run.status) || run.styles.length === 0) return null;
+  // A dry run's images are stand-ins: nothing to cull, and v1's commit refuses it.
+  if (!EXTRACT_COMMITTABLE.includes(run.status) || run.styles.length === 0 || run.dry === true) return null;
   const judged = new Set(verdicts.map((v) => v.key));
   const decided = run.styles.filter((s) => judged.has(s.id)).length;
   const since = instant(run.finished);

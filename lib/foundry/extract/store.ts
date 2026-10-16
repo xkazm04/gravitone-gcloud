@@ -18,6 +18,7 @@
 // eyes and pixels, lib/text for the one reasoning turn. Nothing here names a
 // vendor. Which one served is on the manifest's `engines` block.
 
+import { readFileSync } from "node:fs";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -38,7 +39,7 @@ import {
 } from "../runStore";
 import { outPath } from "../../fixtures/roots";
 import type { Exemplar, StyleDef } from "../types";
-import { DEFAULT_CALL_ESTIMATE_USD, clampCeiling, foreignLease, newManifest, pruneFailures, settleReason, step } from "./engine";
+import { DEFAULT_CALL_ESTIMATE_USD, newManifest, settleReason } from "./engine";
 import type { EngineIO } from "./engine";
 import { imageDims, nearestAspect } from "./imageDims";
 import { withCatalogue } from "../catalogue";
@@ -55,7 +56,6 @@ import type {
   ExtractUpload,
   ExtractVerdictRecord,
   ExtractVerdicts,
-  StepResult,
 } from "./types";
 import {
   patchVerdictMap,
@@ -68,7 +68,9 @@ import {
   type VerdictState,
 } from "../verdictLog";
 
-export const EXTRACT_ROOT = outPath("extract");
+/** EXTRACT_STORE_DIR redirects the run root, the way ARTICLES_STORE_DIR and the
+ *  other `*_DIR` roots do, so a test or a probe cell never writes the checkout. */
+export const EXTRACT_ROOT = process.env["EXTRACT_STORE_DIR"]?.trim() || outPath("extract");
 
 const EXT: Record<ExtractUpload["mime"], string> = { "image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp" };
 
@@ -92,6 +94,31 @@ async function readManifest(id: string): Promise<ExtractManifest> {
   if (!m) throw new FoundryError(`No extract run called ${id}.`, 404);
   return m;
 }
+
+/**
+ * The manifest, read SYNCHRONOUSLY: the job's plan reads it inside the kernel's
+ * store transaction, which cannot await (lib/producers/extract.ts). Same
+ * sentences as `readManifest` for an absent and an unreadable file.
+ */
+export function readManifestNow(id: string): ExtractManifest {
+  const file = path.join(runDir(id), "run.json");
+  let text: string;
+  try {
+    text = readFileSync(file, "utf8");
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") throw new FoundryError(`No extract run called ${id}.`, 404);
+    throw e;
+  }
+  try {
+    return JSON.parse(text) as ExtractManifest;
+  } catch (e) {
+    if (!(e instanceof SyntaxError)) throw e;
+    throw new FoundryError(`The manifest of extract run ${id} is unreadable — inspect foundry-out/extract/${id}/run.json.`, 503);
+  }
+}
+
+/** Write the manifest back (tmp + rename). The job's port presents its fence first. */
+export const saveManifest = (m: ExtractManifest): Promise<void> => writeJsonAtomic(path.join(runDir(m.id), "run.json"), m);
 
 const readVerdicts = (id: string) => readJson<ExtractVerdicts>(path.join(runDir(id), "verdicts.json"), {});
 
@@ -214,24 +241,21 @@ export async function extractFileStat(id: string, rel: string): Promise<{ abs: s
 
 const MIME_OF: Record<string, ImageRef["mime"]> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp" };
 
-/** Who is driving, for the lease. The app is one owner however many browser
- *  tabs are open — the in-process lock below serialises those. */
-export type DriverOwner = "app" | "cli";
-
 /** Test seam: wraps the live IO for one run, so a probe can swap the vendor
- *  calls and keep the real disk. Null restores the live IO. */
+ *  calls and keep the real disk. Null restores the live IO. Under a job the
+ *  wrapped calls are still metered and still answered by stand-ins when dry
+ *  (lib/producers/extract.ts), so this only ever replaces the VENDOR. */
 let __ioOverride: ((id: string, live: EngineIO) => EngineIO) | null = null;
 export function __setExtractIO(f: ((id: string, live: EngineIO) => EngineIO) | null): void {
   __ioOverride = f;
 }
 
-export function liveIO(id: string, owner: DriverOwner): EngineIO {
-  const base = liveIOBase(id, owner);
+export function liveIO(id: string): EngineIO {
+  const base = liveIOBase(id);
   return __ioOverride ? __ioOverride(id, base) : base;
 }
 
-function liveIOBase(id: string, owner: DriverOwner): EngineIO {
-  const dir = runDir(id);
+function liveIOBase(id: string): EngineIO {
   return {
     async readImage(rel) {
       const abs = resolveInExtract(id, rel);
@@ -259,87 +283,15 @@ function liveIOBase(id: string, owner: DriverOwner): EngineIO {
     // errs high on purpose); vision and reasoning turns have no declared
     // per-call rate, so they take the engine's defaults.
     estimateUsd: (kind) => (kind === "generate" ? (estimatePerImage().usd ?? DEFAULT_CALL_ESTIMATE_USD.generate) : DEFAULT_CALL_ESTIMATE_USD[kind]),
+    // No lease stamp any more: the run's kernel job holds a fenced slot lease
+    // (lib/producers/extract.ts), which replaced v1's six-minute manifest stamp
+    // and the in-process promise chain that serialised /step calls.
     save: (m) => {
-      const terminal = m.status === "done" || m.status === "failed" || m.status === "committed";
-      if (terminal) delete m.lease;
-      else m.lease = { owner, at: new Date().toISOString() };
-      return writeJsonAtomic(path.join(dir, "run.json"), m);
+      delete m.lease;
+      return saveManifest(m);
     },
     now: () => new Date().toISOString(),
   };
-}
-
-/* ── Step: one unit, or several ───────────────────────────────────────────── */
-
-/** In-process lock per run, so two overlapping /step calls from one browser
- *  (a retry racing a slow round) cannot both append the same round. A second
- *  caller waits for the first and then takes its own unit.
- *
- *  IT HAS TO EMPTY AGAIN. A guard that is never released is a leak with a
- *  respectable name: one entry per run id, held for the life of the process,
- *  in a server that may see thousands. The release below compares against the
- *  promise that was actually STORED - see the note there, because the obvious
- *  way to write it does not work. */
-const locks = new Map<string, Promise<unknown>>();
-
-/** Test hook - how many run ids currently hold a step chain. Every caller
- *  having settled must leave this at zero; a residue IS the leak. Exported so
- *  a probe reads the real map rather than a copy of the rule. */
-export function __liveStepLocks(): number {
-  return locks.size;
-}
-
-/** `ceilingUsd` sets (or raises) the run's own spend ceiling; it is applied
- *  with a retry, which is also what clears a money stop. */
-export type StepRunOptions = { ceilingUsd?: number };
-
-export async function stepRun(id: string, units = 1, retry = false, opts: StepRunOptions = {}): Promise<StepResult> {
-  const prev = locks.get(id) ?? Promise.resolve();
-  const mine = prev.then(async () => {
-    const m = await readManifest(id);
-    if (m.status === "committed") throw new FoundryError("This run is committed.", 409);
-    const other = foreignLease(m, "app", Date.now());
-    if (other) throw new FoundryError(`This run is being driven by the ${other.owner} right now; wait for it, or for its lease to lapse.`, 409);
-    const io = liveIO(id, "app");
-    // A retry prunes every failed element and puts the run back in a live
-    // stage; the loop below then takes them again. On a run with nothing
-    // failed it is a no-op.
-    if (retry) {
-      const ceiling = clampCeiling(opts.ceilingUsd);
-      if (ceiling !== undefined) {
-        m.options.ceilingUsd = ceiling;
-        m.log.push({ at: io.now(), msg: `ceiling set to $${ceiling.toFixed(2)}` });
-      }
-      const n = pruneFailures(m);
-      m.log.push({ at: io.now(), msg: `retry: ${n} failed unit(s) pruned` });
-      await io.save(m);
-    }
-    let last: StepResult = { unit: null, status: m.status, progress: m.progress };
-    for (let i = 0; i < Math.max(1, units); i++) {
-      last = await step(m, io);
-      if (last.unit === null || last.unit === "finish") break;
-    }
-    return last;
-  });
-  // What the NEXT caller waits on is `mine` with its rejection swallowed: a
-  // step that failed must not poison every later call for this run.
-  //
-  // THAT SWALLOWED COPY IS A DIFFERENT PROMISE, and the release has to name it.
-  // This used to store `mine.catch(...)` and then compare `locks.get(id) ===
-  // mine`, which is false always - `.catch()` returns a new promise - so the
-  // entry was NEVER deleted and the map grew one row per run id for the life of
-  // the process. Nothing failed and nothing looked wrong; the guard kept working
-  // and only its memory was the defect. Hold the reference, compare against it.
-  const chained = mine.catch(() => undefined);
-  locks.set(id, chained);
-  try {
-    return await mine;
-  } finally {
-    // Only if we are still the newest chain: a caller that arrived while ours
-    // was running owns the entry now, and deleting it would let a third caller
-    // run alongside them.
-    if (locks.get(id) === chained) locks.delete(id);
-  }
 }
 
 /* ── Verdicts and commit ──────────────────────────────────────────────────── */
@@ -426,6 +378,9 @@ export async function commitExtractRun(
     const fs = foundryFs();
     const run = await readManifest(id);
     if (run.status === "committed") throw new FoundryError("This run is already committed.", 409);
+    // A dry run's pixels and readbacks are stand-ins (lib/producers/extract.ts):
+    // writing them into the catalogue would make placeholders evidence.
+    if (run.dry) throw new FoundryError("This run was dry: its images are stand-ins, and a dry run is never committed.", 409);
     // `failed` is committable, as the forge's is: a breaker or budget stop leaves
     // finished styles the operator can judge, and exemplars carry `settled`.
     // Keep this array and EXTRACT_COMMITTABLE in app/foundry/parts.tsx identical.

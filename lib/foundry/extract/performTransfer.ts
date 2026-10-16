@@ -7,7 +7,7 @@ import type { EngineIO } from "./engine";
 import { tripped } from "./breaker";
 import { log } from "./journal";
 import { hash } from "./helpers";
-import { isReadback, logOffVocabulary, msg, setStage } from "./performCommon";
+import { isReadback, logOffVocabulary, msg, passDeath, setStage } from "./performCommon";
 import { TRANSFER_SCENES, readbackInstruction, transferPrompt } from "./prompts";
 import { READBACK_SCHEMA, styleScore } from "./vocabulary";
 import { book, isOverBudget, stopFor } from "./spend";
@@ -31,6 +31,7 @@ export async function performTransfer(m: ExtractManifest, io: EngineIO, unit: Ex
     t.file = file;
     t.generator = g.model;
   } catch (e) {
+    passDeath(e);
     if (isOverBudget(e)) {
       st.transfers.pop();
       stopFor(m, io, "period-ceiling", `The spend window refused ${unitLabel(unit)}: ${msg(e)}`);
@@ -55,6 +56,7 @@ export async function performTransfer(m: ExtractManifest, io: EngineIO, unit: Ex
     log(m, io, `${unitLabel(unit)}: ${Math.round((t.score ?? 0) * 100)}%${t.readback.has_text ? " TEXT" : ""}`);
     m.fail_streak = 0;
   } catch (e) {
+    passDeath(e);
     t.error = `readback: ${msg(e)}`;
     log(m, io, `${unitLabel(unit)} — ${t.error}`);
     if (isOverBudget(e)) stopFor(m, io, "period-ceiling", `The spend window refused the readback of ${unitLabel(unit)}: ${msg(e)}`);

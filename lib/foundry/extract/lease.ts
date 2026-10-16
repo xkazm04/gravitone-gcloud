@@ -1,4 +1,9 @@
-// THE DRIVER LEASE — which driver may act on a run right now.
+// THE DRIVER LEASE — which driver could act on a run, BEFORE PHASE 4.
+//
+// Since L29 a run is driven by its kernel job, whose slot lease is fenced
+// (lib/producers/extract.ts), and nothing stamps `m.lease` any more. These
+// functions remain for the manifests stamped before that: the ledger's v1
+// reader (lib/ledger/v1/sources/extract.ts) reads a run with no `job` by them.
 //
 // Its own file so the expiry rule is readable on its own. The client reads the
 // same pure functions (see the comment on activeLease), which is why they take

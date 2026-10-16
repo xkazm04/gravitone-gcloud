@@ -1,56 +1,102 @@
-// POST /api/foundry/extract/<id>/step — perform ONE unit of the run (or a
-// few: `{ units: n }`, capped), and return where it stands. `{ retry: true }`
-// first prunes every failed element (a tripped breaker, a refused frame) so
-// the loop takes it again. `{ retry: true, ceilingUsd: n }` also sets or
-// raises the run's own spend ceiling — the way a run stopped by it resumes.
+// POST /api/foundry/extract/<id>/step — ENQUEUE THE RUN'S JOB AND KICK IT.
 //
-// This is the whole reason the engine is a step machine: on a managed
-// platform a handler has a duration ceiling and nothing survives the
-// response, so the browser drives the run one bounded unit at a time and the
-// manifest on disk is the only state. A unit is at most one generation plus
-// one recognition — well inside `maxDuration` — and a dropped connection
-// costs the unit in flight, never the run.
+//   {}                              the receipt for driving this run (dry unless `mode: "live"`)
+//   { mode, token, ceilingUsd? }    confirm that receipt: the job is enqueued (once per run) and kicked
+//   { retry: true, ceilingUsd? }    the operator's retry of a failed or interrupted job, then a kick
 //
-// Money route: every unit may spend on a vendor. Full guard.
+// v1 was the browser's PUMP: each request performed one unit under a manifest
+// lease and an in-process lock, because nothing survives a response on a managed
+// platform. Since Phase 4 (L29) the run is a kernel job (lib/producers/extract.ts)
+// - the same job the CLI drives and the worker claims - and this route only
+// enqueues it and KICKS it: a drive that admits units for one second, so at most
+// one unit (a generate <= 180 s plus a recognise <= 120 s) runs inside
+// `maxDuration`, then the job yields back to the queue at its next boundary. A
+// dropped connection costs nothing: the job is on the store, not in this request.
+// `units` is no longer read; the kick takes what one second admits.
+//
+// Money route: a confirmed live receipt arms the job to spend. Full guard.
+// GRAVITONE_DRY_ONLY=1 refuses a live arm whatever the body says.
+
+import { httpStatus, AppError } from "@gt/domain/errors";
+import { jobIdSchema } from "@gt/domain/ids";
+import { dryOnlyFrom } from "@gt/kernel/dryrun";
+import { retry } from "@gt/kernel/job";
 
 import { guardRequest } from "@/lib/apiAuth";
+import { getExtractRun } from "@/lib/foundry/extract/store";
 import { FoundryError } from "@/lib/foundry/store";
-import { stepRun } from "@/lib/foundry/extract/store";
-import { ImagingError, statusFor as imagingStatus } from "@/lib/imaging/errors";
-import { scrub } from "@/lib/imaging/log";
-import { TextError, statusFor as textStatus } from "@/lib/text/errors";
+import { kernel, storeLocation } from "@/lib/kernelStore";
+import { driveExtract, launchExtract } from "@/lib/producers/extract";
 
 export const runtime = "nodejs";
 /** One generate (≤180s) + one recognise (≤120s), with room. */
 export const maxDuration = 300;
 
-const MAX_UNITS = 4;
+/** How long a kick admits new units: the first, and none after it. */
+export const KICK_ADMIT_MS = 1000;
+
+const OPERATOR = { kind: "operator", id: "app" } as const;
+
+const fail = (status: number, detail: string, extra: Record<string, unknown> = {}) => Response.json({ detail, ...extra }, { status });
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const denied = await guardRequest(req);
   if (denied) return denied;
   const { id } = await params;
-  let units = 1;
-  let retry = false;
-  let ceilingUsd: number | undefined;
+  let body: Record<string, unknown> = {};
   try {
-    const body = await req.json();
-    if (typeof body?.units === "number") units = Math.min(MAX_UNITS, Math.max(1, Math.round(body.units)));
-    retry = body?.retry === true;
-    if (typeof body?.ceilingUsd === "number") ceilingUsd = body.ceilingUsd;
+    const raw: unknown = await req.json();
+    if (raw && typeof raw === "object") body = raw as Record<string, unknown>;
   } catch {
-    /* an empty body is one unit */
+    /* an empty body asks for the receipt */
   }
+  const mode = body.mode === "live" ? "live" : "dry";
+  const token = typeof body.token === "string" ? body.token : undefined;
+  const ceilingUsd = typeof body.ceilingUsd === "number" ? body.ceilingUsd : undefined;
+  const dryOnly = dryOnlyFrom(process.env);
+
+  const k = kernel();
+  if (!k.ok) return fail(httpStatus(k.error.code), k.error.message);
+  const store = k.value.store;
+  const location = storeLocation();
+
   try {
-    return Response.json(await stepRun(id, units, retry, { ceilingUsd }));
+    let jobId: string;
+    if (body.retry === true) {
+      const { run } = await getExtractRun(id);
+      if (run.job === undefined) return fail(409, "This run has no job to retry; confirm its receipt first.");
+      const jid = jobIdSchema.safeParse(run.job);
+      if (!jid.success) return fail(500, `run ${id} names a malformed job id`);
+      const r = retry(store, jid.data, OPERATOR, ceilingUsd === undefined ? {} : { ceilingUsd });
+      if (!r.ok) return fail(httpStatus(r.error.code), r.error.message);
+      jobId = r.value.id;
+    } else {
+      const launched = await launchExtract(store, { kind: "run", runId: id }, { mode, actor: OPERATOR, dryOnly, ...(token === undefined ? {} : { token }), ...(ceilingUsd === undefined ? {} : { ceilingUsd }) });
+      if (!launched.ok) return fail(httpStatus(launched.error.code), launched.error.message, { code: launched.error.code });
+      const l = launched.value;
+      if (l.kind === "receipt") return Response.json({ receipt: l.receipt });
+      if (l.kind === "stale") return fail(409, "What this launch would do changed since its receipt; read the fresh receipt.", { code: "stale-receipt", fresh: l.fresh });
+      if (l.kind === "existing" && l.state !== "queued") {
+        return Response.json({ runId: l.runId, jobId: l.jobId, state: l.state, kicked: false });
+      }
+      jobId = l.jobId;
+    }
+    const r = await driveExtract(store, location, jobId, { deadlineMs: Date.now() + KICK_ADMIT_MS, dryOnly });
+    if (!r.ok) return fail(httpStatus(r.error.code), r.error.message, { jobId });
+    const { run } = await getExtractRun(id);
+    return Response.json({
+      runId: id,
+      jobId,
+      outcome: r.value.outcome,
+      state: r.value.job?.state ?? null,
+      kicked: true,
+      ...(r.value.reason === undefined ? {} : { reason: r.value.reason }),
+      status: run.status,
+      progress: run.progress,
+    });
   } catch (e) {
-    if (e instanceof FoundryError) return Response.json({ detail: e.message }, { status: e.status });
-    // A vendor failure inside a unit is recorded on the element by the engine
-    // and does not reach here; what does is a failure BEFORE any unit could
-    // start — a missing key, a refusal outside any unit — and those carry their
-    // own status and a sentence already written for a person.
-    if (e instanceof ImagingError) return Response.json({ detail: scrub(e.message), code: e.kind }, { status: imagingStatus(e.kind) });
-    if (e instanceof TextError) return Response.json({ detail: scrub(e.message), code: e.kind }, { status: textStatus(e.kind) });
+    if (e instanceof FoundryError) return fail(e.status, e.message);
+    if (e instanceof AppError) return fail(httpStatus(e.code), e.message, { code: e.code });
     throw e;
   }
 }

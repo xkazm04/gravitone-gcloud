@@ -9,9 +9,12 @@
 // is no Python on Cloud Run, so the equivalent here is: the manifest on disk
 // says what has been done, `next()` says what the next unit is, `perform()`
 // does exactly one — one readback, one synthesis turn, one generate+critique
-// round, one transfer — and writes the manifest back. The browser calls
-// /step until `unit` is null; the CLI calls step() in a loop. Same code, same
-// order, same files, and a run killed halfway resumes at its next unit.
+// round, one transfer — and writes the manifest back. Since Phase 4 (L29) the
+// caller is a kernel JOB (lib/producers/extract.ts): its plan names the unit
+// `next()` names, its drive calls step() once per unit under a fenced slot
+// lease, and the CLI, the /step route's kick and the worker are three ways to
+// drive the same job. Same code, same order, same files, and a run killed
+// halfway resumes at its next unit.
 //
 // WHAT CROSSES OVER IS WORDS. A replica is generated from the recipe plus the
 // source's `depiction` — never with the source as a reference image. A
@@ -33,6 +36,7 @@
 import type { Aspect, CostBasis, ImageRef } from "@/lib/imaging/types";
 import { NO_TEXT } from "./prompts";
 import type { ExtractManifest, ExtractOptions } from "./types";
+import type { CallKind } from "@gt/producers/extract/units";
 
 /* ── The IO the engine needs, and nothing more ────────────────────────────── */
 
@@ -47,12 +51,12 @@ export interface Served<T> {
   basis?: CostBasis;
 }
 
-/** The three vendor calls a unit can make, priced separately. */
-export type CallKind = "recognize" | "generate" | "reason";
-
-/** Pre-call estimates when the IO declares none: what the ceiling compares
- *  against before a unit starts, and what an unpriced call is booked at. */
-export const DEFAULT_CALL_ESTIMATE_USD: Readonly<Record<CallKind, number>> = { recognize: 0.002, generate: 0.04, reason: 0.01 };
+/** The three vendor calls a unit can make, priced separately, and the pre-call
+ *  estimates used when the IO declares none: what the ceiling compares against
+ *  before a unit starts, and what an unpriced call is booked at. One table with
+ *  the job's plan (packages/producers/src/extract/units.ts). */
+export type { CallKind } from "@gt/producers/extract/units";
+export { DEFAULT_CALL_ESTIMATE_USD } from "@gt/producers/extract/units";
 
 /** Largest per-run ceiling accepted; anything above is clamped to it. */
 export const MAX_CEILING_USD = 10_000;

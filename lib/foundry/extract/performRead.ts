@@ -5,7 +5,7 @@
 import type { EngineIO } from "./engine";
 import { tripped } from "./breaker";
 import { log } from "./journal";
-import { isReadback, logOffVocabulary, msg, setStage } from "./performCommon";
+import { isReadback, logOffVocabulary, msg, passDeath, setStage } from "./performCommon";
 import { readbackInstruction, singletonInstruction } from "./prompts";
 import { READBACK_SCHEMA, SINGLETON_SCHEMA } from "./vocabulary";
 import { book, isOverBudget, stopFor } from "./spend";
@@ -27,6 +27,7 @@ export async function performRead(m: ExtractManifest, io: EngineIO, unit: Extrac
     logOffVocabulary(m, io, `read ${s.id}`, s.readback);
     log(m, io, `read ${s.id} (${s.name}): ${s.readback.render_mode}, ${s.readback.palette_strategy}`);
   } catch (e) {
+    passDeath(e);
     if (isOverBudget(e)) {
       stopFor(m, io, "period-ceiling", `The spend window refused ${unitLabel(unit)}: ${msg(e)}`);
       return;

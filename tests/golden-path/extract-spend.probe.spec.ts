@@ -16,15 +16,18 @@
 // (clear `stopped`, raise the ceiling) is built with it.
 //
 // Driven through the REAL engine with a priced fake IO (the style-extract
-// probe's pattern), and the REAL stepRun on a run dir under EXTRACT_ROOT with
-// only the vendor calls swapped through the store's IO seam.
+// probe's pattern). Case 4 used to drive v1's `stepRun` (the browser pump);
+// since Phase 4 (L29) a run is a kernel job and its resume is the job's retry
+// with a raised ceiling - that case moved to
+// tests/next-server/producer-extract-job.test.ts ("a run stopped by its
+// ceiling resumes under a raised one, one unit, nothing re-spent").
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { test, expect } from "@playwright/test";
 
 import { newManifest, next, runToEnd, step, type CallKind, type EngineIO } from "@/lib/foundry/extract/engine";
-import { EXTRACT_ROOT, __setExtractIO, commitExtractRun, listExtractRuns, stepRun } from "@/lib/foundry/extract/store";
+import { EXTRACT_ROOT, commitExtractRun, listExtractRuns } from "@/lib/foundry/extract/store";
 import { OBSERVABLE_FIELDS } from "@/lib/foundry/extract/types";
 import type { ExtractManifest, ExtractSource, Observables, Readback } from "@/lib/foundry/extract/types";
 import { CRITIQUE_SCHEMA } from "@/lib/foundry/extract/vocabulary";
@@ -195,39 +198,13 @@ test("3. over-budget: a refusal inside a unit stops the run as period-ceiling, w
   expect(l.calls.filter((c) => c === "generate")).toHaveLength(0);
 });
 
-/* ── 4. the run-ceiling stop resumes ──────────────────────────────────────── */
+/* ── 4. the run-ceiling stop resumes: moved to the job (see the header) ──── */
 
 const made: string[] = [];
 test.afterEach(() => {
-  __setExtractIO(null);
   for (const d of made.splice(0)) rmSync(d, { recursive: true, force: true });
 });
 const uid = (p: string) => `probe-spend-${p}-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`;
-
-test("4. resume: a run stopped by its ceiling, with nothing failed, takes a raised ceiling and continues one unit", async () => {
-  const id = uid("resume");
-  const dir = path.join(EXTRACT_ROOT, id);
-  made.push(dir);
-  mkdirSync(dir, { recursive: true });
-  const m = manifest({ ceilingUsd: 0.1 }, id);
-  const l = ledger();
-  await runToEnd(m, fakeIO(m, {}, l));
-  expect(m.stopped?.by).toBe("run-ceiling");
-  writeFileSync(path.join(dir, "run.json"), JSON.stringify(m), "utf8");
-
-  const vendor = fakeIO(m, {}, l);
-  __setExtractIO((_id, live) => ({ ...live, recognize: vendor.recognize, generate: vendor.generate, reason: vendor.reason, readImage: vendor.readImage, writeImage: vendor.writeImage, estimateUsd: vendor.estimateUsd }));
-  const before = l.calls.length;
-  const r = await stepRun(id, 1, true, { ceilingUsd: 0.5 });
-  const disk = JSON.parse(readFileSync(path.join(dir, "run.json"), "utf8")) as ExtractManifest;
-  console.log(`[extract-spend] resumed: ${r.unit} -> ${disk.status}, $${disk.spend?.usd} of $${disk.options.ceilingUsd}`);
-  expect(r.unit).toMatch(/^replicate painted-haze on s02/);
-  expect(["replicating", "transferring"]).toContain(disk.status);
-  expect(disk.stopped).toBeUndefined();
-  expect(disk.options.ceilingUsd).toBe(0.5);
-  expect(l.calls.length - before).toBe(2); // one generate + one critique
-  expect(disk.spend!.usd).toBeCloseTo(0.142, 9);
-});
 
 /* ── 5. an unpriced call is booked at its estimate ────────────────────────── */
 
@@ -307,11 +284,12 @@ test("7. [guard] without ceilingUsd: same unit order, no ceiling key, no stop �
 
 /* ── wiring ───────────────────────────────────────────────────────────────── */
 
-test("wiring: liveIO passes every call's provenance cost through, and /step hands ceilingUsd to stepRun", () => {
+// The /step half of this case (it handed ceilingUsd to stepRun) moved with the
+// pump: the route now hands it to the job's launch and retry, held by
+// tests/next-server/producer-extract-entry.test.ts.
+test("wiring: liveIO passes every call's provenance cost through", () => {
   const store = stripComments(readFileSync(path.join(process.cwd(), "lib/foundry/extract/store.ts"), "utf8"));
-  const live = store.slice(store.indexOf("export function liveIO"), store.indexOf("export async function stepRun"));
+  const live = store.slice(store.indexOf("export function liveIO"), store.indexOf("/* ── Verdicts and commit"));
   expect(live.match(/costUsd:\s*\w+\.provenance\.costUsd/g) ?? [], "liveIO drops a call's costUsd").toHaveLength(3);
   expect(store).toMatch(/__ioOverride\s*\?\s*__ioOverride\(id,\s*base\)/);
-  const route = stripComments(readFileSync(path.join(process.cwd(), "app/api/foundry/extract/[id]/step/route.ts"), "utf8"));
-  expect(route).toMatch(/stepRun\(id,\s*units,\s*retry,\s*\{\s*ceilingUsd\s*\}\)/);
 });

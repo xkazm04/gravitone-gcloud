@@ -9,6 +9,7 @@ import { DEFAULT_CALL_ESTIMATE_USD, MAX_CEILING_USD, type CallKind, type EngineI
 import { log } from "./journal";
 import type { ExtractManifest, ExtractStop, SpendStage } from "./types";
 import type { Unit } from "./units";
+import { unitEstimate as estimateOf } from "@gt/producers/extract/units";
 
 /* ── Spend ────────────────────────────────────────────────────────────────── */
 
@@ -20,19 +21,12 @@ function callEstimate(io: EngineIO, kind: CallKind): number {
   return typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : DEFAULT_CALL_ESTIMATE_USD[kind];
 }
 
-/** What a unit is expected to cost before it starts: the calls it makes. */
+/** What a unit is expected to cost before it starts: the calls it makes. The
+ *  rule is the job's (packages/producers/src/extract/units.ts `unitEstimate`),
+ *  read here at this IO's rates, so v1's ceiling and the kernel's agree. */
 export function unitEstimate(m: ExtractManifest, u: Unit, io: EngineIO): number {
-  switch (u.kind) {
-    case "read":
-      return callEstimate(io, "recognize");
-    case "group":
-      return m.options.grouping === "none" ? 0 : callEstimate(io, "reason");
-    case "replica":
-    case "transfer":
-      return usd6(callEstimate(io, "generate") + callEstimate(io, "recognize"));
-    case "finish":
-      return 0;
-  }
+  const est = { recognize: callEstimate(io, "recognize"), generate: callEstimate(io, "generate"), reason: callEstimate(io, "reason") };
+  return estimateOf(u, m.options.grouping, est).usd ?? 0;
 }
 
 /** Book one SERVED call under its stage. A call with no cost books its
