@@ -6,11 +6,17 @@
 // package stays what a human can paste from by hand, plus the figure PNGs.
 //
 //   medium/story.html   clean HTML from post/post.md — no scripts, no styles,
-//                       no classes; figures as <img> of PNGs
+//                       no classes; figures as <img> of PNGs, tables as <table>
 //   medium/figures/     one PNG per post/figures/*.svg, rendered by Playwright,
 //                       and one per Markdown table (table-NN.png): Medium's
 //                       editor has no table element, so a table pastes as a
 //                       paragraph of pipes unless it travels as a picture
+//
+// TWO FORMS OF A TABLE. story.html is copied into the registry, which is
+// text-only: its publications lane fails any image that is not the render of a
+// listed SVG figure (measured 2026-10-16, the 429 landing). So story.html keeps
+// each table as text, and only the draft the driver pastes (`storyBody`) swaps
+// it for its picture. The table PNGs stay in the run.
 //   medium/tags.txt     up to five tags, one per line
 //   medium/README.md    the paste steps
 //
@@ -61,9 +67,11 @@ const cellsOf = (row: string) =>
     .map((c) => inline(c.trim().replace(/\\\|/g, "|")));
 const plain = (html: string) => html.replace(/<[^>]+>/g, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&amp;/g, "&");
 
-/** A deliberately small Markdown-to-HTML converter: the subset Medium keeps,
- *  with each table swapped for a figure of its PNG (see `renderTablePngs`). */
-export function markdownToStory(md: string): { html: string; tables: StoryTable[] } {
+/** A deliberately small Markdown-to-HTML converter: the subset Medium keeps.
+ *  A table is a `<table>` (`tables: "html"`, the registry's text form) or a
+ *  figure of its PNG (`"figures"`, the form a Medium draft can hold). */
+export function markdownToStory(md: string, opts: { tables?: "html" | "figures" } = {}): { html: string; tables: StoryTable[] } {
+  const asFigures = (opts.tables ?? "figures") === "figures";
   const lines = md.replace(/\r\n/g, "\n").split("\n");
   const out: string[] = [];
   const tables: StoryTable[] = [];
@@ -116,7 +124,11 @@ export function markdownToStory(md: string): { html: string; tables: StoryTable[
       i--;
       const name = `table-${String(tables.length + 1).padStart(2, "0")}.png`;
       tables.push({ name, head, rows });
-      out.push(`<figure><img src="figures/${name}" alt="${esc(`Table: ${head.map(plain).join(", ")}`)}"></figure>`);
+      out.push(
+        asFigures
+          ? `<figure><img src="figures/${name}" alt="${esc(`Table: ${head.map(plain).join(", ")}`)}"></figure>`
+          : `<table><thead><tr>${head.map((c) => `<th>${c}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`,
+      );
       continue;
     }
     const quote = /^>\s?(.*)$/.exec(line);
@@ -160,7 +172,7 @@ export const markdownToStoryHtml = (md: string): string => markdownToStory(md).h
  *  reference is rewritten to its PNG so the story never embeds an SVG. */
 const toPngRefs = (md: string) => md.replace(/(\]\(\s*(?:\.\/)?figures\/[^)\s]+?)\.svg(\s*\))/g, "$1.png$2");
 
-/** The story's body: the post's Markdown as the HTML Medium's editor takes on a paste. */
+/** The story's body as the Medium draft takes it on a paste: tables as pictures. */
 export const storyBody = (md: string): string => markdownToStoryHtml(toPngRefs(md));
 
 /** The figure files the story shows, in the order it shows them (`figures/NN.png`, `figures/table-NN.png`). */
@@ -181,7 +193,7 @@ export function readmeText(meta: PostMeta, figures: string[]): string {
     "1. Open `story.html` in a browser (it has no scripts and needs no network).",
     "2. Select everything in the page and copy it.",
     "3. In Medium, start a new story and paste. The title and subtitle land as the first two lines; check that Medium styled them as Title and Subtitle.",
-    "4. A paste cannot upload local image files. Where a figure belongs, drag in its PNG from `figures/` in this order, and check its caption from `story.html` sits under it. Tables travel as pictures (`table-NN.png`) because Medium has no table element:",
+    "4. A paste cannot upload local image files. Where a figure belongs, drag in its PNG from `figures/` in this order, and check its caption from `story.html` sits under it. Medium has no table element, so a table pastes as text: replace each with its picture, `table-NN.png` (in the run only; the registry copy has the table as text):",
     ...figures.map((f) => `   - \`figures/${f}\``),
     "5. Code blocks: Medium keeps the block but not its colours. Leave them as plain code blocks.",
     "6. Before publishing, add the tags from `tags.txt` (Medium accepts at most five).",
@@ -304,9 +316,9 @@ export async function buildMediumPackage(runDir: string, meta: PostMeta): Promis
   await mkdir(medium, { recursive: true });
   const md = await readFile(path.join(postDir, "post.md"), "utf8");
   const pngs = await renderFigurePngs(path.join(postDir, "figures"), path.join(medium, "figures"));
-  const { html, tables } = markdownToStory(toPngRefs(md));
+  const { html, tables } = markdownToStory(toPngRefs(md), { tables: "figures" });
   const tablePngs = await renderTablePngs(tables, path.join(medium, "figures"));
-  const story = storyDocument(meta.title, html);
+  const story = storyDocument(meta.title, markdownToStory(toPngRefs(md), { tables: "html" }).html);
   const tags = meta.tags.map((t) => t.trim()).filter(Boolean).slice(0, 5);
   await writeFile(path.join(medium, "story.html"), story, "utf8");
   await writeFile(path.join(medium, "tags.txt"), `${tags.join("\n")}\n`, "utf8");

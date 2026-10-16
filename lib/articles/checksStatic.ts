@@ -10,7 +10,7 @@ import path from "node:path";
 import { THRESHOLDS } from "./checks";
 import { absent, item } from "./checksItems";
 import { citedNumbers, decode, firstPersonHits, htmlProse, ISO_DATE, mdProse, postWords, STATED_READ_TIME, wordCount } from "./checksText";
-import { closingListItemWords, proseRuns, proseStats, sourceListProblems, wordsBeforeFirstSection } from "./checksProse";
+import { closingListItemWords, proseRuns, proseStats, skimSpine, sourceListProblems, wordsBeforeFirstSection } from "./checksProse";
 import type { CheckItem, Claim, Source } from "./types";
 
 /* ── the static items ──────────────────────────────────────────────────────── */
@@ -119,6 +119,20 @@ export function staticItems(input: StaticInput): CheckItem[] {
     const numberingOk = !lp.gaps.length && !lp.repeats.length && !srcGaps.length;
     items.push(item("truth", "source-numbering", "Sources are numbered without gaps", numberingOk, { value: numberingOk ? `${lp.listed} listed` : `gaps in the list: ${lp.gaps.join(", ") || "none"}; repeats: ${lp.repeats.join(", ") || "none"}; gaps in sources.json: ${srcGaps.join(", ") || "none"}`, expected: "post.md's Sources list and sources.json numbered 1 to N with no number missing or repeated (renumber the citations when a source is dropped)" }));
     items.push(item("structure", "length-ceiling", "The post stays under its word ceiling", words <= THRESHOLDS.maxWords, { value: `${words} words`, expected: `≤ ${THRESHOLDS.maxWords} words (replacement, not addition: cut or tighten before adding)` }));
+    const skim = skimSpine(md);
+    // The page carries the same spans: every post.md span, as text, inside some <strong>.
+    const norm = (s: string) => decode(s.replace(/<[^>]+>/g, "").replace(/`/g, "")).replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/\s+/g, " ").trim();
+    const strong = html ? [...html.matchAll(/<strong\b[^>]*>([\s\S]*?)<\/strong>/gi)].map((m) => norm(m[1])) : [];
+    const offPage = html ? skim.spans.filter((s) => !strong.some((t) => t === norm(s))) : [];
+    const share = skim.proseWords ? skim.boldWords / skim.proseWords : 0;
+    const skimOk = !skim.missing.length && !skim.doubled.length && !skim.badSpans.length && !offPage.length && share <= THRESHOLDS.skimMaxShare;
+    items.push(
+      item("structure", "skim-spine", "The bold spans alone carry the argument", skimOk, {
+        value: `${skim.spans.length} spans, ${Math.round(share * 100)} percent of the prose; ${skim.missing.length} long paragraphs without one, ${skim.doubled.length} with two, ${skim.badSpans.length} off-length, ${offPage.length} missing from index.html`,
+        expected: `one bold span per prose paragraph over ${THRESHOLDS.skimMinParagraphWords} words, ${THRESHOLDS.skimSpanWords[0]} to ${THRESHOLDS.skimSpanWords[1]} words, no citation inside, bold ≤ ${Math.round(THRESHOLDS.skimMaxShare * 100)} percent of the prose, the same spans as <strong> in index.html`,
+        ...(skimOk ? {} : { detail: [...skim.missing, ...skim.doubled, ...skim.badSpans, ...offPage.map((s) => `not bold in index.html: "${s.slice(0, 80)}"`), ...(share > THRESHOLDS.skimMaxShare ? [`bold is ${Math.round(share * 100)} percent of the prose`] : [])] }),
+      }),
+    );
     items.push(item("structure", "closing-table", "The close carries a summary table", hasTable, { value: hasTable ? "table present" : "none", expected: "a Markdown table in the last section before Sources (skim readers read the opening and the ending)" }));
   }
 

@@ -121,6 +121,10 @@ test("a Markdown table travels as a picture, in story order, and its cells keep 
   expect(storyFigures(html)).toEqual(["figures/01-a.png", "figures/table-01.png", "figures/02-b.png"]);
   // the driver turns every figure, captioned or not, into one marker in that same order
   expect(splitFigures(html).captions).toEqual(["Fig one [1]", "", "Fig two"]);
+  // the registry's text form keeps the table as a table: its lane fails an image that is not a listed SVG's render
+  const text = markdownToStory(md, { tables: "html" }).html;
+  expect(storyFigures(text)).toEqual(["figures/01-a.png", "figures/02-b.png"]);
+  expect(text).toContain("<table><thead><tr><th>A</th><th>B <code>c</code></th></tr></thead><tbody><tr><td>x | y</td><td>[2]</td></tr>");
 });
 
 test("a figure PNG is the drawing, not the drawing in the corner of a blank canvas", async () => {

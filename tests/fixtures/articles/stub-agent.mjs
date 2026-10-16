@@ -235,6 +235,10 @@ function writePost(sources, note, defect) {
     );
   }
   const cite = (s) => s.replace(/\[(\d+)\]/g, '<a href="#src-$1">[$1]</a>');
+  // The skim spine (lib/articles/checksProse.ts skimSpine): one bold span per long paragraph,
+  // the same words in both files. Five words keeps the stub near one word in ten.
+  const spine = (p) => p.replace(/^(\S+(?: \S+){4})/, "**$1**");
+  const strong = (p) => p.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>A stub post about tokens</title>
 <style>
@@ -253,7 +257,7 @@ pre { overflow-x: auto; font-size: 15px; }
 <h1>A stub post about tokens</h1>
 <p class="byline">Staff writer · 2026-10-05</p>
 <nav data-role="content-preview"><p>What follows, in four parts:</p><ol>${SECTIONS.map((s) => `<li>${s}</li>`).join("")}</ol><p>After reading, a budget can be set per language.</p></nav>
-${body.map((s, k) => `<h2>${s.title}</h2>\n${s.paras.map((p) => `<p>${cite(p)}</p>`).join("\n")}\n<figure><img src="figures/${figures[k].file}" alt="${figures[k].caption}"><figcaption>${cite(figures[k].caption)}</figcaption></figure>`).join("\n")}
+${body.map((s, k) => `<h2>${s.title}</h2>\n${s.paras.map((p) => `<p>${strong(cite(spine(p)))}</p>`).join("\n")}\n<figure><img src="figures/${figures[k].file}" alt="${figures[k].caption}"><figcaption>${cite(figures[k].caption)}</figcaption></figure>`).join("\n")}
 <figure><img src="figures/${figures[4].file}" alt="${figures[4].caption}"><figcaption>${cite(figures[4].caption)}</figcaption></figure>
 <pre><code class="language-js"><span class="tok-kw">const</span> pieces = tokenize(text);</code></pre>
 <h2>Sources</h2>
@@ -262,7 +266,7 @@ ${body.map((s, k) => `<h2>${s.title}</h2>\n${s.paras.map((p) => `<p>${cite(p)}</
 `;
   write("post/index.html", html);
   const md = `# A stub post about tokens\n\n*The unit of text decides the bill.*\n\n> Four parts: ${SECTIONS.join(", ")}.\n\n${body
-    .map((s, k) => `## ${s.title}\n\n${s.paras.join("\n\n")}\n\n![${figures[k].caption}](figures/${figures[k].file.replace(/\.svg$/, ".png")})\n${figures[k].caption}`)
+    .map((s, k) => `## ${s.title}\n\n${s.paras.map(spine).join("\n\n")}\n\n![${figures[k].caption}](figures/${figures[k].file.replace(/\.svg$/, ".png")})\n${figures[k].caption}`)
     .join("\n\n")}\n\n![${figures[4].caption}](figures/${figures[4].file.replace(/\.svg$/, ".png")})\n${figures[4].caption}\n\n\`\`\`js\nconst pieces = tokenize(text);\n\`\`\`\n\n| Part | Message |\n|---|---|\n| one | tokens decide the bill |\n\n## Sources\n\n${sources.map((s) => `${s.n}. [${s.title}](${s.url}), ${s.publisher}, ${s.date}`).join("\n")}\n`;
   write("post/post.md", md);
   write("post/meta.json", JSON.stringify({ title: "A stub post about tokens", subtitle: "The unit of text decides the bill", tags: ["tokens", "llm", "localization", "cost", "engineering", "extra"] }, null, 2));

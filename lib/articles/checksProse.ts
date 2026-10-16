@@ -105,6 +105,45 @@ export function proseStats(md: string): { longestRunWords: number; runExcerpt: s
   return { longestRunWords, runExcerpt, paragraphs, oneLiners, share: paragraphs ? oneLiners / paragraphs : 0 };
 }
 
+/** THE SKIM SPINE, read from post.md: every prose paragraph over `skimMinParagraphWords`
+ *  carries exactly one `**…**` span of `skimSpanWords` words with no citation inside it, and
+ *  bold stays under `skimMaxShare` of the prose words. Callouts, captions, lists, headings and
+ *  tables are not prose here (proseBlocks), so a callout's bold label is never counted. */
+export function skimSpine(md: string): {
+  spans: string[];
+  missing: string[];
+  doubled: string[];
+  badSpans: string[];
+  boldWords: number;
+  proseWords: number;
+} {
+  const [minSpan, maxSpan] = THRESHOLDS.skimSpanWords;
+  const spans: string[] = [];
+  const missing: string[] = [];
+  const doubled: string[] = [];
+  const badSpans: string[] = [];
+  let boldWords = 0;
+  let proseWords = 0;
+  // From the first section on: the opening and the content preview are held by their own rules.
+  const at = md.search(/^## /m);
+  for (const b of proseBlocks(at < 0 ? md : md.slice(at))) {
+    if (b.kind !== "prose") continue;
+    const words = plainWords(b.text);
+    proseWords += words;
+    const found = [...b.text.matchAll(/\*\*([^*]+?)\*\*/g)].map((m) => m[1].trim());
+    spans.push(...found);
+    for (const s of found) {
+      const n = wordCount(s.replace(/`/g, ""));
+      boldWords += n;
+      if (n < minSpan || n > maxSpan) badSpans.push(`${n} words: "${s.slice(0, 80)}"`);
+      else if (/\[\d{1,3}\]/.test(s)) badSpans.push(`a citation inside the span: "${s.slice(0, 80)}"`);
+    }
+    if (found.length > 1) doubled.push(`${found.length} spans in: "${b.text.slice(0, 70)}"`);
+    else if (!found.length && words > THRESHOLDS.skimMinParagraphWords) missing.push(`${words} words, no bold span: "${b.text.slice(0, 70)}"`);
+  }
+  return { spans, missing, doubled, badSpans, boldWords, proseWords };
+}
+
 /** Words before the first `## ` section: the opening and the content preview. The title, the
  *  italic subtitle or byline and the rules that fence a preview do not count. */
 export function wordsBeforeFirstSection(md: string): number {

@@ -11,7 +11,7 @@ import path from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { citedNumbers, closingListItemWords, firstPersonHits, htmlProse, proseRuns, proseStats, runCheck, sourceListProblems, staticItems, summarize, THRESHOLDS, wordsBeforeFirstSection } from "@/lib/articles/checks";
+import { citedNumbers, closingListItemWords, firstPersonHits, htmlProse, proseRuns, proseStats, runCheck, skimSpine, sourceListProblems, staticItems, summarize, THRESHOLDS, wordsBeforeFirstSection } from "@/lib/articles/checks";
 import type { CheckItem, Source } from "@/lib/articles/types";
 
 const SOURCES: Source[] = Array.from({ length: 8 }, (_, i) => ({
@@ -257,4 +257,49 @@ test("static: the cheap measures fail their own items and the stated limits are 
   // the thresholds the prompts quote are the ones the checks use
   expect(THRESHOLDS.maxWordsBeforeFirstSection).toBe(450);
   expect(THRESHOLDS.maxProseRunWords).toBe(300);
+});
+
+test("skim spine: one bold span per long section paragraph, in range, no citation inside, the same spans on the page", () => {
+  const long = (lead: string) => `${lead} ${"filler words keep this paragraph well past the threshold for a span".repeat(5)} [1].`;
+  const md = [
+    "# T",
+    "",
+    long("An opening paragraph before any section is not counted, bold or not."),
+    "",
+    "## One",
+    "",
+    long("**A limit names what it counts against** and the rest follows."),
+    "",
+    long("No span at all in this one."),
+    "",
+    long("**First claim here is fine** and **a second claim is one too many**."),
+    "",
+    long("**Too short** a span."),
+    "",
+    long("**The span keeps its citation inside [2]** which is wrong."),
+    "",
+    "> **INFERENCE.** A callout label is not a paragraph span.",
+    "",
+    "Short paragraph, no span needed.",
+    "",
+    "## Sources",
+    "",
+    "1. A source",
+  ].join("\n");
+  const r = skimSpine(md);
+  expect(r.missing).toHaveLength(1);
+  expect(r.missing[0]).toContain("No span at all");
+  expect(r.doubled).toHaveLength(1);
+  expect(r.badSpans.map((b) => b.split(":")[0])).toEqual(["2 words", "a citation inside the span"]);
+  expect(r.spans).toContain("A limit names what it counts against");
+  expect(r.spans).not.toContain("INFERENCE.");
+
+  const good = ["# T", "", "## One", "", long("**A limit names what it counts against** and the rest follows."), "", "## Sources", "", "1. A source"].join("\n");
+  const item = (html: string) => staticItems({ html, md: good, sources: [], claims: [], figures: [], postFiles: new Set() }).find((i) => i.id === "skim-spine")!;
+  // the share is held too: a lone five-word span in a ~65-word paragraph is under the ceiling
+  expect(skimSpine(good).boldWords / skimSpine(good).proseWords).toBeLessThanOrEqual(THRESHOLDS.skimMaxShare);
+  expect(item("<p><strong>A limit names what it counts against</strong> and the rest</p>").status).toBe("pass");
+  const off = item("<p>A limit names what it counts against, not bold on the page</p>");
+  expect(off.status).toBe("fail");
+  expect(off.detail?.[0]).toContain("not bold in index.html");
 });
