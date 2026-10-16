@@ -6033,6 +6033,43 @@
           "evidence": "app/foundry/pipeline/buildLayout.ts:99 Layout places entries by workflow lane and stage without deriving a centrality ranking over corpus references."
         }
       ]
+    },
+    "a41c19e2-bf74-499c-a70f-96f78a55defd/sound-effect-generation": {
+      "context": "sound-lab-modules",
+      "subject": "sound-effect-generation",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T01:20:20.180Z",
+      "worker": "b3c4ccea-5bb7-4cc2-ac9b-103b41a01c9f",
+      "techniques": [
+        {
+          "technique": "envelope-first-briefing",
+          "verdict": "conformant",
+          "evidence": "app/playground/triage/model.ts:377 Briefs effects envelope-first by formatting event, material, and space, supported by explicit duration and prompt influence controls."
+        },
+        {
+          "technique": "layered-element-assembly",
+          "verdict": "deviation",
+          "evidence": "app/playground/hunt/Audition.tsx:91 Hunt auditions and crowns single winner takes rather than providing tools to stack, align, and mix separate frequency/transient layers into a composite."
+        },
+        {
+          "technique": "loop-seam-acceptance",
+          "verdict": "deviation",
+          "evidence": "app/playground/triage/Judge.tsx:644 Triage scores loop_seam on loop takes but leaves loop unmeasured and halts playback on take end rather than playing across the seam twice through."
+        },
+        {
+          "technique": "picture-as-timing-brief",
+          "verdict": "not-applicable",
+          "evidence": "app/playground/triage/Batch.tsx:190 Precondition does not hold: the sound lab operates on standalone audio generation without video input, clip framing, or picture synchronization."
+        },
+        {
+          "technique": "trailer-punctuation-grammar",
+          "verdict": "not-applicable",
+          "evidence": "app/playground/triage/model.ts:344 Precondition does not hold: modules triage and hunt isolated effects rather than constructing an effects pass structured against picture cuts."
+        }
+      ],
+      "registryProposal": "Consider defining explicit playback transport expectations for loop acceptance (e.g. requiring continuous two-pass joint audition in audio players) so interfaces can be mechanically verified against the seam listening standard."
     }
   }
 }
