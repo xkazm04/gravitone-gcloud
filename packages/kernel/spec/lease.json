@@ -123,6 +123,19 @@
         { "t": 5, "op": "claim", "as": "C", "ticket": "c1", "wait": false, "expect": { "granted": 2 } },
         { "t": 5, "op": "events", "expect": ["lease.claimed", "lease.queued", "lease.left", "lease.released", "lease.claimed"] }
       ]
+    },
+    {
+      "name": "a lane SLOT is its lane's row: `gpu.local#1` events carry lane gpu.local, and the slot is a lease of its own",
+      "resource": "gpu.local#1",
+      "steps": [
+        { "t": 0, "op": "claim", "as": "A", "ticket": "a1", "wait": false, "expect": { "granted": 1 } },
+        { "t": 1, "op": "claim", "as": "B", "ticket": "b1", "wait": false, "expect": { "busy": "A", "ahead": 0 } },
+        { "t": 2, "op": "kill", "as": "A" },
+        { "t": 3, "op": "claim", "as": "B", "ticket": "b1", "wait": false, "expect": { "granted": 2 } },
+        { "t": 4, "op": "fence", "fence": 1, "expect": "conflict" },
+        { "t": 5, "op": "release", "as": "B", "fence": 2, "expect": "released" },
+        { "t": 5, "op": "events", "expect": ["lease.claimed@gpu.local", "lease.reclaimed@gpu.local", "lease.claimed@gpu.local", "lease.released@gpu.local"] }
+      ]
     }
   ]
 }

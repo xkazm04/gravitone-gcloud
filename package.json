@@ -13,6 +13,7 @@
     "test:unit": "vitest run",
     "test:unit-mutants": "node pipeline/unit-mutants.mts",
     "style-contract": "node pipeline/style-contract.mts",
+    "worker": "node workers/runner.mts",
     "typecheck:next": "tsc -b packages/catalog packages/domain packages/kernel packages/producers packages/ui",
     "next-structure": "node pipeline/next-gates.mts",
     "tokens:gen": "node pipeline/gen-tokens.mts",

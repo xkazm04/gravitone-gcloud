@@ -37,8 +37,10 @@ import time
 import uuid
 from datetime import datetime, timedelta, timezone
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from verify_events import canonical, chain_hash, GENESIS  # noqa: E402
+_HERE = os.path.dirname(os.path.abspath(__file__))
+if _HERE not in sys.path:
+    sys.path.append(_HERE)  # behind the caller's entries: to a GPU tenant `lease` is pipeline/gpu's
+from kernel_ledger import append, machine  # noqa: E402
 from lease_pid import pid_alive  # noqa: E402
 
 DEFAULT_TTL_S = 120
@@ -46,6 +48,14 @@ BUSY_TIMEOUT_S = 10.0
 # @gt/domain/lane RESOURCE_LANES: a lease on one of these carries it as the event's lane.
 RESOURCE_LANES = ("gpu.local", "box.render", "box.chrome", "seat.text",
                   "cloud.google", "cloud.elevenlabs", "cloud.leonardo", "cloud.qwen")
+
+
+def lane_of(resource):
+    """@gt/domain/lane `laneOfSlot`: a lane slot (`seat.text#2`) is its lane's row on the
+    Runs day-line, as the bare lane is; any other resource carries no lane."""
+    hash_at = resource.rfind("#")
+    lane = resource if hash_at < 0 else resource[:hash_at]
+    return lane if lane in RESOURCE_LANES else None
 
 
 class LeaseError(RuntimeError):
@@ -210,19 +220,9 @@ def read_waiters(t, resource):
 
 
 def append_event(t, by, resource, typ, data):
-    """events.ts `append`, byte for byte: the same body, canonical form and chain."""
-    head = t.get("SELECT seq, hash FROM events ORDER BY seq DESC LIMIT 1")
-    prev_seq, prev_hash = (head[0], head[1]) if head else (0, GENESIS)
-    data = dict({"resource": resource}, **data)
-    lane = resource if resource in RESOURCE_LANES else None
-    body = {"seq": prev_seq + 1, "at": t.at, "actor": {"kind": "machine", "id": "%s/%s" % (by["host"], by["pid"])},
-            "type": typ, "subject": {"kind": "lease", "id": resource}, "data": data, "prevHash": prev_hash}
-    if lane is not None:
-        body["lane"] = lane
-    t.run("INSERT INTO events (seq, at, actor_kind, actor_id, type, subject_kind, subject_id, lane, cost_usd, cost_src, "
-          "data, prev_hash, hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?)",
-          body["seq"], body["at"], "machine", body["actor"]["id"], typ, "lease", resource, lane,
-          canonical(data), prev_hash, chain_hash(prev_hash, body))
+    """lease.ts `event`: the lease's acts on the ledger, through the one Python append."""
+    append(t, machine(by), typ, {"kind": "lease", "id": resource}, lane=lane_of(resource),
+           data=dict({"resource": resource}, **data))
 
 
 def holder_data(h):

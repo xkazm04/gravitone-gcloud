@@ -64,6 +64,8 @@ process.env.SPEND_STORE = "memory";
 // off the local eye by a tenant that is not part of the test. gpu-lease.probe
 // points it at its own temp directories per case.
 process.env.GPU_LEASE_DIR ??= mkdtempSync(path.join(tmpdir(), "gpu-lease-pw-"));
+// The GPU lease is the kernel's (Phase 4 L27): its store does what GPU_LEASE_DIR used to.
+process.env.GRAVITONE_STORE_PATH ??= path.join(mkdtempSync(path.join(tmpdir(), "gt-store-pw-")), "gravitone.sqlite");
 
 const NATIVE_ESM = [
   "**/imaging-auth.probe.spec.ts",
@@ -71,6 +73,7 @@ const NATIVE_ESM = [
   "**/principal.probe.spec.ts",
   "**/runs-live.probe.spec.ts",
   "**/server-seam.probe.spec.ts",
+  "**/gpu-lease.probe.spec.ts",
 ];
 
 export default defineConfig({

@@ -4,14 +4,19 @@
 
 No GPU, no ComfyUI, no real process is stopped: tenancy is played by Brokers with
 injected pids and clocks, process control is a recording stub, and ComfyUI is a
-fake urlopen. Case 4 (Node <-> Python interop) spawns `tsx pipeline/gpu/interop.mts`
-and is skipped with a loud line, not silently, where tsx is not installed.
+fake urlopen. Since Phase 4 (L27) the broker is a shim over the kernel lease on
+gpu.local#1, so every case runs on a kernel store of its own: one is migrated by
+the Node worker (`node workers/runner.mts --migrate`) and copied per case. Case 4
+(Node <-> Python interop) spawns `tsx pipeline/gpu/interop.mts` against the same
+store file and is skipped with a loud line, not silently, where tsx is not installed.
 
 Exit status is the verdict (0 all green, 1 any failure).
 """
 
 import json
+import os
 import shutil
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -26,8 +31,24 @@ ROOT = HERE.parents[1]
 sys.path.insert(0, str(HERE))
 import comfy  # noqa: E402
 import lease  # noqa: E402
+from kernel_store import ensure_store  # noqa: E402  (on sys.path through lease)
 
 FAILED = []
+_TEMPLATE = []
+
+
+def store_in(d):
+    """A migrated kernel store inside `d`: the template, migrated once by Node, copied."""
+    if not _TEMPLATE:
+        tdir = Path(tempfile.mkdtemp(prefix="gpu-lease-tpl-"))
+        _TEMPLATE.append(ensure_store(str(tdir / "gravitone.sqlite")))
+    path = str(Path(d) / "gravitone.sqlite")
+    shutil.copyfile(_TEMPLATE[0], path)
+    return path
+
+
+def broker(d, **kw):
+    return lease.Broker(d, store=store_in(d) if not (Path(d) / "gravitone.sqlite").exists() else str(Path(d) / "gravitone.sqlite"), **kw)
 
 
 def check(name, got, want):
@@ -50,8 +71,8 @@ def test_recycle_is_the_holders_alone():
     d = tmpdir()
     stopped = []
     stub = lambda: stopped.append("Stop-Process") or True  # noqa: E731
-    a = lease.Broker(d, pid=1001, host="h", alive=alive_set(1001, 1002))
-    b = lease.Broker(d, pid=1002, host="h", alive=alive_set(1001, 1002))
+    a = broker(d, pid=1001, host="h", alive=alive_set(1001, 1002))
+    b = broker(d, pid=1002, host="h", alive=alive_set(1001, 1002))
     held = a.acquire("tenant-a", "comfy", 20, job_prefix="aaa-")
     try:
         b.recycle("comfy", holder=None, stop=stub)
@@ -77,21 +98,24 @@ def test_stale_lease_is_reclaimed():
     d = tmpdir()
     clock = [1_000_000]
     now = lambda: clock[0]  # noqa: E731
-    a = lease.Broker(d, pid=2001, host="h", alive=alive_set(2002), now=now)  # 2001 is dead
-    b = lease.Broker(d, pid=2002, host="h", alive=alive_set(2002), now=now)
+    a = broker(d, pid=2001, host="h", alive=alive_set(2002), now=now)  # 2001 is dead
+    b = broker(d, pid=2002, host="h", alive=alive_set(2002), now=now)
     a.acquire("tenant-a", "comfy", 20, ttl_s=60)
     clock[0] += 61_000  # past ttl as well as dead
     got = b.acquire("tenant-b", "comfy", 20)
     check("2. a dead, expired holder is reclaimed by the next acquire", got.rec["tenant"], "tenant-b")
-    check("2. the reclaim is counted in queue.jsonl", b.status()["reclaims"], 1)
-    events = [json.loads(l) for l in (d / "queue.jsonl").read_text(encoding="utf-8").splitlines()]
-    check("2. ...as a logged reclaim event naming the old holder",
-          [(e["ev"], e.get("tenant"), e.get("reason")) for e in events if e["ev"] == "reclaim"],
-          [("reclaim", "tenant-a", "pid-dead")])
+    check("2. the reclaim is counted on the slot", b.status()["reclaims"], 1)
+    db = sqlite3.connect(str(d / "gravitone.sqlite"))
+    try:
+        events = db.execute("SELECT json_extract(data, '$.holder.pid'), json_extract(data, '$.reason') FROM events "
+                            "WHERE type = 'lease.reclaimed' ORDER BY seq").fetchall()
+    finally:
+        db.close()
+    check("2. ...as a ledger event naming the old holder", events, [(2001, "holder-gone")])
     got.release()
 
     # heartbeat expiry alone (pid alive) reclaims too; a fresh heartbeat does not
-    c = lease.Broker(d, pid=2002, host="h", alive=alive_set(2002), now=now)
+    c = broker(d, pid=2002, host="h", alive=alive_set(2002), now=now)
     held = c.acquire("tenant-c", "comfy", 20, ttl_s=60)
     clock[0] += 30_000
     held.heartbeat()
@@ -112,7 +136,7 @@ def test_stale_lease_is_reclaimed():
 def test_fifo_and_bounded_wait():
     d = tmpdir()
     pids = (3001, 3002, 3003, 3004)
-    mk = lambda pid: lease.Broker(d, pid=pid, host="h", alive=alive_set(*pids), poll_s=0.02)  # noqa: E731
+    mk = lambda pid: broker(d, pid=pid, host="h", alive=alive_set(*pids), poll_s=0.02)  # noqa: E731
     a, b, c, late = (mk(p) for p in pids)
     held = a.acquire("tenant-a", "comfy", 20)
     order = []
@@ -173,7 +197,8 @@ def test_node_python_interop():
         print("SKIP  4. npx is not on PATH; the node half of the interop was not exercised")
         return
     d = tmpdir()
-    env = {**__import__("os").environ, "GPU_LEASE_DIR": str(d)}
+    store = store_in(d)
+    env = {**os.environ, "GPU_LEASE_DIR": str(d), "GRAVITONE_STORE_PATH": store}
     script = str(HERE / "interop.mts")
 
     # a Node holder blocks a Python acquire
@@ -181,7 +206,7 @@ def test_node_python_interop():
                             stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
     line = node.stdout.readline().strip()
     check("4. the node holder reports it holds", line, "held")
-    py = lease.Broker(d)
+    py = lease.Broker(d, store=store)
     try:
         py.acquire("py-tenant", "comfy", 20)
         got = "granted"
@@ -273,7 +298,7 @@ def test_comfy_vanishes_mid_poll():
 def test_poll_heartbeats_the_held_lease():
     d = tmpdir()
     clock = [5_000_000]
-    b = lease.Broker(d, pid=9001, host="h", alive=alive_set(9001), now=lambda: clock[0])
+    b = broker(d, pid=9001, host="h", alive=alive_set(9001), now=lambda: clock[0])
     held = b.acquire("tenant-h", "comfy", 20, ttl_s=60)
     done = {"p1": {"outputs": {"13": {"images": [{"filename": "y.png", "subfolder": ""}]}}}}
 

@@ -5,8 +5,9 @@ vi.mock("server-only", () => ({}));
 import { linesOf, projectGpu, type GpuSnapshot } from "../../lib/ledger/v1/sources/gpu.ts";
 import type { IngestEvent, ProjectCtx } from "../../lib/ledger/v1/types.ts";
 
-// The GPU lease queue (lib/gpu/lease.ts, pipeline/gpu/lease.py): the one
-// append-only v1 log, every line a fact.
+// The GPU lease queue (v1's lib/gpu/lease.ts, pipeline/gpu/lease.py): the one
+// append-only v1 log, every line a fact - frozen history since L27 moved the
+// lease onto the kernel slot gpu.local#1, and still projected as before.
 
 const ctx = (iso = "2026-10-15T12:00:00.000Z"): ProjectCtx => ({ now: new Date(iso), universe: "real" });
 const T = Date.parse("2026-10-15T11:00:00.000Z");
@@ -56,5 +57,12 @@ describe("gpu projection", () => {
     ]);
     const stale = projectGpu(snap(LOG, { holder, stale: "heartbeat-expired", queue: [] }), ctx()).live[0];
     expect(stale).toMatchObject({ state: "interrupted", error: "lease is stale (heartbeat-expired); the next acquire reclaims it", startedAt: "2026-10-15T11:00:00.000Z" });
+  });
+
+  it("a kernel job holding the slot is not drawn again: Runs has the job from the kernel's own list", () => {
+    const job = { tenant: "forge job job:run:f1", engine: "job", pid: 4, host: "box", jobPrefix: "", acquiredAt: T, heartbeatAt: T, ttlS: 120, ticket: "t9" };
+    const p = projectGpu(snap(LOG, { holder: job, stale: null, queue: [{ tenant: "eye", engine: "ollama", pid: 5 }] }), ctx());
+    expect(p.live.map((j) => j.id)).toEqual(["wait:eye:5"]);
+    expect(p.tally.records).toEqual({ "lease.waiting": 1 });
   });
 });

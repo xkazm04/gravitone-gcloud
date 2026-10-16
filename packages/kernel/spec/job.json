@@ -1,0 +1,191 @@
+{
+  "about": "The job protocol across two languages, as a table. Run by packages/kernel/test/job.python.test.ts: each scenario's jobs are enqueued by Node (in order, dry unless `mode` says live, queued unless `state` says planned), then its steps run in order on ONE store file - a `by: node` step through the Node kernel (runJob with a producer the step drives, the operator's acts, recover, loadJob), a `by: py` step through packages/kernel/py/job.py (py/job_spec.py serves them). Times are seconds after `base` on both clocks. Outcomes - py claim: granted | busy | {notQueued: state} | {held: jobId} | {refused: true}; py start/book/fail/failStep/finish/park/heartbeat: ok | conflict | {stopped: state} | {refused: true}; node drive/perform: {blocked: step} while a step is in flight, else {outcome} as runJob reported it, or {error: code}; node state: the record as Node's door reads it (state, attempt, outputs by step, stage, slot, error code) after checking its spend reconciles to the meter; kill marks an actor's pid dead on both sides; verify: both chain verifiers.",
+  "base": "2026-10-16T00:00:00.000Z",
+  "ttlS": 60,
+  "actors": {
+    "N": { "bootId": "boot-n", "pid": 101, "host": "h1" },
+    "P": { "bootId": "boot-p", "pid": 102, "host": "h1" },
+    "Q": { "bootId": "boot-q", "pid": 103, "host": "h1" }
+  },
+  "scenarios": [
+    {
+      "name": "Python drives a job end to end, and Node's door reads every record it wrote",
+      "jobs": { "g1": { "lane": "gpu.local", "producer": "forge" } },
+      "steps": [
+        { "t": 0, "by": "py", "op": "claim", "as": "P", "job": "g1", "expect": "granted" },
+        { "t": 0, "by": "node", "op": "state", "job": "g1", "expect": { "state": "running", "attempt": 1, "outputs": [], "slot": "gpu.local#1" } },
+        { "t": 1, "by": "py", "op": "start", "as": "P", "job": "g1", "step": "annotate", "expect": "ok" },
+        { "t": 1, "by": "node", "op": "state", "job": "g1", "expect": { "state": "running", "attempt": 1, "outputs": [], "slot": "gpu.local#1", "stage": "annotate" } },
+        { "t": 2, "by": "py", "op": "book", "as": "P", "job": "g1", "step": "annotate", "expect": "ok" },
+        { "t": 3, "by": "py", "op": "start", "as": "P", "job": "g1", "step": "generate", "expect": "ok" },
+        { "t": 4, "by": "py", "op": "book", "as": "P", "job": "g1", "step": "generate", "expect": "ok" },
+        { "t": 5, "by": "py", "op": "finish", "as": "P", "job": "g1", "expect": "ok" },
+        { "t": 5, "by": "node", "op": "state", "job": "g1", "expect": { "state": "done", "attempt": 1, "outputs": ["annotate", "generate"] } },
+        { "t": 5, "by": "node", "op": "events", "job": "g1", "expect": ["job.enqueued", "job.claimed", "job.step-started", "job.step-done", "job.step-started", "job.step-done", "job.done"] },
+        { "t": 5, "by": "node", "op": "verify", "expect": "intact" }
+      ]
+    },
+    {
+      "name": "Node and Python cannot hold the same slot: gpu.local has one, and either holder makes the other busy",
+      "jobs": { "g1": { "lane": "gpu.local", "producer": "forge" }, "g2": { "lane": "gpu.local", "producer": "dojo" }, "g3": { "lane": "gpu.local", "producer": "forge" } },
+      "steps": [
+        { "t": 0, "by": "node", "op": "drive", "as": "N", "job": "g1", "steps": ["a"], "expect": { "blocked": "a" } },
+        { "t": 1, "by": "py", "op": "claim", "as": "P", "job": "g2", "expect": "busy" },
+        { "t": 2, "by": "node", "op": "perform", "job": "g1", "expect": { "outcome": "done" } },
+        { "t": 3, "by": "py", "op": "claim", "as": "P", "job": "g2", "expect": "granted" },
+        { "t": 4, "by": "node", "op": "drive", "as": "N", "job": "g3", "steps": ["a"], "expect": { "outcome": "busy" } },
+        { "t": 5, "by": "py", "op": "finish", "as": "P", "job": "g2", "expect": "ok" },
+        { "t": 6, "by": "node", "op": "drive", "as": "N", "job": "g3", "steps": ["a"], "expect": { "blocked": "a" } },
+        { "t": 7, "by": "node", "op": "perform", "job": "g3", "expect": { "outcome": "done" } },
+        { "t": 7, "by": "node", "op": "verify", "expect": "intact" }
+      ]
+    },
+    {
+      "name": "a lane with four slots: Python takes the next one Node left free",
+      "jobs": { "t1": { "lane": "seat.text", "producer": "article" }, "t2": { "lane": "seat.text", "producer": "article" } },
+      "steps": [
+        { "t": 0, "by": "node", "op": "drive", "as": "N", "job": "t1", "steps": ["a"], "expect": { "blocked": "a" } },
+        { "t": 1, "by": "py", "op": "claim", "as": "P", "job": "t2", "expect": "granted" },
+        { "t": 1, "by": "node", "op": "state", "job": "t2", "expect": { "state": "running", "attempt": 1, "outputs": [], "slot": "seat.text#2" } },
+        { "t": 2, "by": "py", "op": "start", "as": "P", "job": "t2", "step": "a", "expect": "ok" },
+        { "t": 3, "by": "py", "op": "book", "as": "P", "job": "t2", "step": "a", "expect": "ok" },
+        { "t": 4, "by": "py", "op": "finish", "as": "P", "job": "t2", "expect": "ok" },
+        { "t": 5, "by": "node", "op": "perform", "job": "t1", "expect": { "outcome": "done" } },
+        { "t": 5, "by": "node", "op": "verify", "expect": "intact" }
+      ]
+    },
+    {
+      "name": "a Python zombie's late book is refused by the fence; Node's take-over named its job interrupted",
+      "jobs": { "g1": { "lane": "gpu.local", "producer": "forge" }, "g2": { "lane": "gpu.local", "producer": "forge" } },
+      "steps": [
+        { "t": 0, "by": "py", "op": "claim", "as": "P", "job": "g1", "expect": "granted" },
+        { "t": 1, "by": "py", "op": "start", "as": "P", "job": "g1", "step": "generate", "expect": "ok" },
+        { "t": 100, "by": "node", "op": "drive", "as": "N", "job": "g2", "steps": ["a"], "expect": { "blocked": "a" } },
+        { "t": 100, "by": "node", "op": "state", "job": "g1", "expect": { "state": "interrupted", "attempt": 1, "outputs": [], "stage": "generate" } },
+        { "t": 101, "by": "py", "op": "book", "as": "P", "job": "g1", "step": "generate", "expect": "conflict" },
+        { "t": 101, "by": "py", "op": "heartbeat", "as": "P", "job": "g1", "expect": "conflict" },
+        { "t": 101, "by": "node", "op": "state", "job": "g1", "expect": { "state": "interrupted", "attempt": 1, "outputs": [], "stage": "generate" } },
+        { "t": 102, "by": "node", "op": "perform", "job": "g2", "expect": { "outcome": "done" } },
+        { "t": 102, "by": "node", "op": "verify", "expect": "intact" }
+      ]
+    },
+    {
+      "name": "a Node zombie's late book is refused by the fence when Python takes the slot",
+      "jobs": { "g1": { "lane": "gpu.local", "producer": "forge" }, "g2": { "lane": "gpu.local", "producer": "dojo" } },
+      "steps": [
+        { "t": 0, "by": "node", "op": "drive", "as": "N", "job": "g1", "steps": ["a"], "expect": { "blocked": "a" } },
+        { "t": 100, "by": "py", "op": "claim", "as": "P", "job": "g2", "expect": "granted" },
+        { "t": 100, "by": "node", "op": "state", "job": "g1", "expect": { "state": "interrupted", "attempt": 1, "outputs": [], "stage": "a" } },
+        { "t": 101, "by": "node", "op": "perform", "job": "g1", "expect": { "error": "conflict" } },
+        { "t": 101, "by": "node", "op": "state", "job": "g1", "expect": { "state": "interrupted", "attempt": 1, "outputs": [], "stage": "a" } },
+        { "t": 102, "by": "py", "op": "finish", "as": "P", "job": "g2", "expect": "ok" },
+        { "t": 102, "by": "node", "op": "verify", "expect": "intact" }
+      ]
+    },
+    {
+      "name": "a crash on a paid lane holds it for Node and Python alike until an operator acknowledges",
+      "jobs": { "q1": { "lane": "cloud.qwen", "producer": "extract" }, "q2": { "lane": "cloud.qwen", "producer": "extract" }, "q3": { "lane": "cloud.qwen", "producer": "extract" } },
+      "steps": [
+        { "t": 0, "by": "py", "op": "claim", "as": "P", "job": "q1", "expect": "granted" },
+        { "t": 1, "by": "py", "op": "start", "as": "P", "job": "q1", "step": "read", "expect": "ok" },
+        { "t": 100, "by": "node", "op": "drive", "as": "N", "job": "q2", "steps": ["a"], "expect": { "outcome": "held" } },
+        { "t": 100, "by": "node", "op": "state", "job": "q1", "expect": { "state": "interrupted", "attempt": 1, "outputs": [], "stage": "read" } },
+        { "t": 101, "by": "py", "op": "claim", "as": "Q", "job": "q2", "expect": { "held": "q1" } },
+        { "t": 102, "by": "node", "op": "drive", "as": "N", "job": "q3", "steps": ["a"], "expect": { "outcome": "held" } },
+        { "t": 103, "by": "node", "op": "ack", "lane": "cloud.qwen", "expect": 1 },
+        { "t": 104, "by": "py", "op": "claim", "as": "Q", "job": "q2", "expect": "granted" },
+        { "t": 105, "by": "py", "op": "finish", "as": "Q", "job": "q2", "expect": "ok" },
+        { "t": 105, "by": "node", "op": "verify", "expect": "intact" }
+      ]
+    },
+    {
+      "name": "Python's take-over of a dead Node holder on a paid lane holds the lane, as Node's own would",
+      "jobs": { "q1": { "lane": "cloud.qwen", "producer": "extract" }, "q2": { "lane": "cloud.qwen", "producer": "extract" } },
+      "steps": [
+        { "t": 0, "by": "node", "op": "drive", "as": "N", "job": "q1", "steps": ["a"], "expect": { "blocked": "a" } },
+        { "t": 1, "by": "py", "op": "kill", "as": "N", "expect": "ok" },
+        { "t": 2, "by": "py", "op": "claim", "as": "P", "job": "q2", "expect": { "held": "q1" } },
+        { "t": 2, "by": "node", "op": "state", "job": "q1", "expect": { "state": "interrupted", "attempt": 1, "outputs": [], "stage": "a" } },
+        { "t": 3, "by": "node", "op": "perform", "job": "q1", "expect": { "error": "conflict" } },
+        { "t": 4, "by": "py", "op": "claim", "as": "P", "job": "q2", "expect": { "held": "q1" } },
+        { "t": 5, "by": "node", "op": "ack", "lane": "cloud.qwen", "expect": 1 },
+        { "t": 6, "by": "py", "op": "claim", "as": "P", "job": "q2", "expect": "granted" },
+        { "t": 7, "by": "py", "op": "finish", "as": "P", "job": "q2", "expect": "ok" },
+        { "t": 7, "by": "node", "op": "verify", "expect": "intact" }
+      ]
+    },
+    {
+      "name": "a planned job waits for its release in both languages",
+      "jobs": { "p1": { "lane": "gpu.local", "producer": "forge", "state": "planned" } },
+      "steps": [
+        { "t": 0, "by": "py", "op": "claim", "as": "P", "job": "p1", "expect": { "notQueued": "planned" } },
+        { "t": 1, "by": "node", "op": "drive", "as": "N", "job": "p1", "steps": ["a"], "expect": { "outcome": "not-queued" } },
+        { "t": 2, "by": "node", "op": "release", "job": "p1", "expect": "queued" },
+        { "t": 3, "by": "py", "op": "claim", "as": "P", "job": "p1", "expect": "granted" },
+        { "t": 4, "by": "py", "op": "finish", "as": "P", "job": "p1", "expect": "ok" },
+        { "t": 4, "by": "node", "op": "state", "job": "p1", "expect": { "state": "done", "attempt": 1, "outputs": [] } }
+      ]
+    },
+    {
+      "name": "a dead Python holder is recovered by Node, and the retry re-runs only the step that was in flight",
+      "jobs": { "g1": { "lane": "gpu.local", "producer": "forge" } },
+      "steps": [
+        { "t": 0, "by": "py", "op": "claim", "as": "P", "job": "g1", "expect": "granted" },
+        { "t": 1, "by": "py", "op": "start", "as": "P", "job": "g1", "step": "s1", "expect": "ok" },
+        { "t": 2, "by": "py", "op": "book", "as": "P", "job": "g1", "step": "s1", "expect": "ok" },
+        { "t": 3, "by": "py", "op": "start", "as": "P", "job": "g1", "step": "s2", "expect": "ok" },
+        { "t": 4, "by": "node", "op": "kill", "as": "P", "expect": "ok" },
+        { "t": 5, "by": "node", "op": "recover", "as": "N", "expect": ["g1"] },
+        { "t": 5, "by": "node", "op": "state", "job": "g1", "expect": { "state": "interrupted", "attempt": 1, "outputs": ["s1"], "stage": "s2" } },
+        { "t": 6, "by": "node", "op": "retry", "job": "g1", "expect": "queued" },
+        { "t": 7, "by": "node", "op": "drive", "as": "N", "job": "g1", "steps": ["s1", "s2"], "expect": { "blocked": "s2" } },
+        { "t": 8, "by": "node", "op": "perform", "job": "g1", "expect": { "outcome": "done" } },
+        { "t": 8, "by": "node", "op": "state", "job": "g1", "expect": { "state": "done", "attempt": 2, "outputs": ["s1", "s2"] } },
+        { "t": 8, "by": "node", "op": "verify", "expect": "intact" }
+      ]
+    },
+    {
+      "name": "Python's failures speak Node's taxonomy: a fatal step, and the breaker after three vendor failures",
+      "jobs": { "g1": { "lane": "gpu.local", "producer": "forge" }, "g2": { "lane": "gpu.local", "producer": "forge" } },
+      "steps": [
+        { "t": 0, "by": "py", "op": "claim", "as": "P", "job": "g1", "expect": "granted" },
+        { "t": 1, "by": "py", "op": "start", "as": "P", "job": "g1", "step": "s1", "expect": "ok" },
+        { "t": 2, "by": "py", "op": "fail", "as": "P", "job": "g1", "code": "invalid", "message": "the plate is unreadable", "expect": "ok" },
+        { "t": 2, "by": "node", "op": "state", "job": "g1", "expect": { "state": "failed", "attempt": 1, "outputs": [], "error": "invalid" } },
+        { "t": 3, "by": "py", "op": "claim", "as": "P", "job": "g2", "expect": "granted" },
+        { "t": 4, "by": "py", "op": "start", "as": "P", "job": "g2", "step": "s1", "expect": "ok" },
+        { "t": 5, "by": "py", "op": "failStep", "as": "P", "job": "g2", "step": "s1", "message": "comfyui refused the prompt", "expect": "ok" },
+        { "t": 6, "by": "py", "op": "start", "as": "P", "job": "g2", "step": "s1", "expect": "ok" },
+        { "t": 7, "by": "py", "op": "failStep", "as": "P", "job": "g2", "step": "s1", "message": "comfyui refused the prompt", "expect": "ok" },
+        { "t": 8, "by": "py", "op": "start", "as": "P", "job": "g2", "step": "s1", "expect": "ok" },
+        { "t": 9, "by": "py", "op": "failStep", "as": "P", "job": "g2", "step": "s1", "message": "comfyui refused the prompt", "expect": "ok" },
+        { "t": 9, "by": "node", "op": "state", "job": "g2", "expect": { "state": "failed", "attempt": 1, "outputs": [], "error": "unavailable" } },
+        { "t": 10, "by": "node", "op": "drive", "as": "N", "job": "g1", "steps": ["a"], "expect": { "outcome": "not-queued" } },
+        { "t": 10, "by": "node", "op": "verify", "expect": "intact" }
+      ]
+    },
+    {
+      "name": "an operator's pause mid-step keeps the booked output, and the next start gives the slot back",
+      "jobs": { "g1": { "lane": "gpu.local", "producer": "forge" }, "g2": { "lane": "gpu.local", "producer": "forge" } },
+      "steps": [
+        { "t": 0, "by": "py", "op": "claim", "as": "P", "job": "g1", "expect": "granted" },
+        { "t": 1, "by": "py", "op": "start", "as": "P", "job": "g1", "step": "s1", "expect": "ok" },
+        { "t": 2, "by": "node", "op": "pause", "job": "g1", "expect": "paused" },
+        { "t": 3, "by": "py", "op": "book", "as": "P", "job": "g1", "step": "s1", "expect": "ok" },
+        { "t": 4, "by": "py", "op": "start", "as": "P", "job": "g1", "step": "s2", "expect": { "stopped": "paused" } },
+        { "t": 4, "by": "node", "op": "state", "job": "g1", "expect": { "state": "paused", "attempt": 1, "outputs": ["s1"] } },
+        { "t": 5, "by": "node", "op": "drive", "as": "N", "job": "g2", "steps": ["a"], "expect": { "blocked": "a" } },
+        { "t": 6, "by": "node", "op": "perform", "job": "g2", "expect": { "outcome": "done" } }
+      ]
+    },
+    {
+      "name": "a live job is refused before anything is claimed in a dry-only process, in both languages",
+      "jobs": { "l1": { "lane": "gpu.local", "producer": "forge", "mode": "live" } },
+      "steps": [
+        { "t": 0, "by": "py", "op": "claim", "as": "P", "job": "l1", "dryOnly": true, "expect": { "refused": true } },
+        { "t": 1, "by": "node", "op": "drive", "as": "N", "job": "l1", "steps": ["a"], "dryOnly": true, "expect": { "error": "refused" } },
+        { "t": 1, "by": "node", "op": "state", "job": "l1", "expect": { "state": "queued", "attempt": 1, "outputs": [] } }
+      ]
+    }
+  ]
+}

@@ -89,7 +89,8 @@ const SOURCES: Record<string, (() => string[]) | null> = {
   publish: null,
   turns: liveInFiles("turns", "id", (s) => [...TURN_LIVE].some((x) => x === s)),
   spend: null,
-  gpu: liveInDoc("gpu/lease.json", (d) => [String(d["ticket"])]),
+  // The card's holder is the kernel lease now (Phase 4 L27); lease.json is history.
+  gpu: null,
   clips: liveInFiles("clips", "clipId", (s) => s === "queued" || s === "rendering"),
 };
 

@@ -1,38 +1,33 @@
-"""GPU tenancy lease: one cross-process turn broker for the one card.
+"""GPU tenancy lease: v1's broker API, now a thin shim over the KERNEL lease on the card's
+one slot, `gpu.local#1` (Phase 4, L27).
 
     python pipeline/gpu/lease.py --status
 
-This box has ONE 24 GB card and at least four kinds of tenant: the
-consistency / motion lanes, foundry forge and dojo, the preset-clip renderer,
-and the Next server's resident Ollama eye. Until this module they coordinated
-by guessing tenancy from output filename prefixes (guard.MY_PREFIXES) and by
-`Stop-Process -Force` -- see CONSISTENCY-FINDINGS.md "This box is not ours
-alone". A look-then-kill cannot be correct: the job it did not see, or the one
-that started between the look and the kill, dies silently.
+This box has ONE 24 GB card and several kinds of tenant: the consistency / motion lanes,
+foundry forge and Dojo, the preset-clip renderer, the Next server's resident Ollama eye -
+and, since Phase 4, kernel jobs. v1 coordinated the first four through files under
+foundry-out/gpu (a lock, lease.json, a queue.jsonl replayed as the FIFO); the kernel's jobs
+claim `gpu.local#1` in the store. Two leases do not exclude each other, so this module and
+lib/gpu/lease.ts now speak the kernel lease (packages/kernel/py/lease.py, held to the same
+spec as the Node one): every tenant, in either language, claims the same row under the same
+write lock.
 
-The rule this encodes: **the card has one holder at a time, the holder is
-written on disk, and only the holder may recycle an engine.**
+The rule this encodes is v1's, unchanged: **the card has one holder at a time, the holder is
+written down, and only the holder may recycle an engine.** What the kernel lease adds: no
+stale lock file to break (the store's lock dies with its process), a reused pid told apart
+by bootId, a fence that never goes back, and every grant, reclaim and release on the ledger.
+The tenant's own words (tenant, engine, vramGb, jobPrefix) ride on a `gpu.tenant` event in
+the granting transaction, so a refusal still names "forge-comfy holds comfy"; a kernel JOB
+holding the slot is named by its producer and id, engine "job".
 
-THE PROTOCOL is shared with lib/gpu/lease.ts, because the Next server and the
-pipeline are different processes in different languages:
+The store is the kernel's (packages/kernel/py/kernel_store.py: GRAVITONE_STORE_PATH, else
+<repo>/<foundry-out|fixtures-out>/gravitone.sqlite), brought up to date by the Node worker's
+`--migrate` if it is not. v1's directory (GPU_LEASE_DIR, else foundry-out/gpu) holds only
+history now and a MIGRATED marker, left by whichever tenant opens the store first.
 
-    <root>/lock        exclusive-create file {pid, at}; ms-long; a lock older
-                       than LOCK_STALE_S has no living owner (lib/sound/store.ts
-                       acquireLock, the same idiom)
-    <root>/lease.json  the current holder, or absent
-                       {tenant, engine, vramGb, pid, host, jobPrefix,
-                        acquiredAt, heartbeatAt, ttlS, ticket}   (times: epoch ms)
-    <root>/queue.jsonl append-only event log; the FIFO queue is its replay:
-                       a `wait` event is a waiter until a `grant` or `leave`
-                       for the same ticket; `reclaim` events carry a running
-                       `reclaims` count
-
-<root> is foundry-out/gpu (gitignored); GPU_LEASE_DIR moves it.
-
-A lease is STALE -- reclaimable, and the reclaim is logged -- when its pid is
-dead (judged only for a pid on THIS host) or its heartbeat is older than ttlS.
-A waiter whose pid is dead is skipped, so a crashed waiter cannot wedge the
-queue head.
+A forge or Dojo JOB that holds gpu.local#1 through packages/kernel/py/job.py is a holder
+already; `hold_for_job` gives it a handle here, so guard.recycle_comfy and comfy.generate
+treat it as the card's tenant without a second claim.
 """
 
 import argparse
@@ -40,16 +35,26 @@ import contextlib
 import json
 import os
 import socket
+import sqlite3
 import sys
+import threading
 import time
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT / "packages" / "kernel" / "py") not in sys.path:
+    sys.path.append(str(ROOT / "packages" / "kernel" / "py"))  # behind: `lease` here is THIS module
+from kernel_ledger import append as _append  # noqa: E402
+from kernel_store import ensure_store, kernel_lease, store_location  # noqa: E402
+
+# packages/kernel/py/lease.py, by path: this module IS `lease` to every GPU tenant, so the kernel's is loaded under its own name.
+_klease = kernel_lease()
+
 DEFAULT_TTL_S = 120.0
-LOCK_STALE_S = 30.0
-LOCK_WAIT_S = 10.0
 ENGINES = ("comfy", "ollama")
+SLOT = "gpu.local#1"  # @gt/domain/lane laneSlots("gpu.local")[0]
 
 
 class LeaseError(RuntimeError):
@@ -78,47 +83,40 @@ class LeaseLost(LeaseError):
 
 
 def lease_dir():
+    """v1's lease directory: history and the MIGRATED marker now."""
     env = os.environ.get("GPU_LEASE_DIR", "").strip()
     return Path(env).resolve() if env else ROOT / "foundry-out" / "gpu"
 
 
-def pid_alive(pid):
-    """Is `pid` a live process on this host?
+pid_alive = _klease.pid_alive
 
-    NOT os.kill(pid, 0): on Windows os.kill with any other signal calls
-    TerminateProcess, so the "probe" would end the process it asks about.
-    """
-    if not isinstance(pid, int) or pid <= 0:
-        return False
-    if os.name == "nt":
-        import ctypes
-        k32 = ctypes.WinDLL("kernel32", use_last_error=True)
-        k32.OpenProcess.restype = ctypes.c_void_p
-        handle = k32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
-        if not handle:
-            return ctypes.get_last_error() == 5  # access denied: it exists
-        try:
-            code = ctypes.c_ulong()
-            if not k32.GetExitCodeProcess(ctypes.c_void_p(handle), ctypes.byref(code)):
-                return True
-            return code.value == 259  # STILL_ACTIVE
-        finally:
-            k32.CloseHandle(ctypes.c_void_p(handle))
-    try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
-    return True
+MIGRATED_TEXT = (
+    "MIGRATED 2026-10-16 (Phase 4, L27). The GPU lease is the kernel lease on gpu.local#1 in the store\n"
+    "(GRAVITONE_STORE_PATH, else <foundry-out|fixtures-out>/gravitone.sqlite): lib/gpu/lease.ts and pipeline/gpu/lease.py.\n"
+    "lease.json and lock here are no longer read or written; queue.jsonl is frozen history the ledger's gpu source projects.\n")
+
+
+def mark_migrated(root):
+    """lib/gpu/lease.ts `markMigrated`: once, by whichever tenant opens the store first."""
+    root = Path(root)
+    if not root.is_dir():
+        return
+    with contextlib.suppress(FileExistsError):
+        with open(root / "MIGRATED", "x", encoding="utf-8", newline="\n") as f:
+            f.write(MIGRATED_TEXT)
+
+
+def _ms(at):
+    return _klease.ms(at)
 
 
 class Broker:
-    """One view of the lease directory. Every argument after `root` exists so a
-    selftest can play two tenants (and a dead pid, and a clock) in one process."""
+    """One view of the card's slot. Every argument after `root` exists so a selftest can
+    play two tenants (and a dead pid, and a clock) in one process; `store` names the kernel
+    store (default: store.py's location rule)."""
 
     def __init__(self, root=None, pid=None, host=None, alive=None, now=None,
-                 sleep=None, poll_s=0.25):
+                 sleep=None, poll_s=0.25, store=None):
         self.root = Path(root) if root else lease_dir()
         self.pid = os.getpid() if pid is None else pid
         self.host = host or socket.gethostname()
@@ -126,130 +124,60 @@ class Broker:
         self._now = now or (lambda: int(time.time() * 1000))
         self._sleep = sleep or time.sleep
         self.poll_s = poll_s
+        self.store = ensure_store(store or store_location())
+        mark_migrated(self.root)
+        # One connection per thread: a sqlite3 connection belongs to the thread that opened it,
+        # and a tenant may wait for the card on one thread while another heartbeats.
+        self._local = threading.local()
+        self._conns = []
+        # The process's bootId, under the pid this broker plays: brokers in one process are one holder's.
+        self.holder_id = {"bootId": _klease.BOOT_ID, "pid": self.pid, "host": self.host}
 
-    # -- files ---------------------------------------------------------------
-    @property
-    def _lease_file(self):
-        return self.root / "lease.json"
+    def _tx(self):
+        conn = getattr(self._local, "conn", None)
+        if conn is None:
+            conn = self._local.conn = _klease.connect(self.store)
+            self._conns.append(conn)
+        return _klease.Tx(conn, lambda: datetime.fromtimestamp(self._now() / 1000, timezone.utc))
 
-    @property
-    def _queue_file(self):
-        return self.root / "queue.jsonl"
+    def close(self):
+        """Close this broker's connections. Each belongs to the thread that opened it, so a
+        connection another thread still uses is left for that thread's exit."""
+        for conn in self._conns:
+            with contextlib.suppress(sqlite3.ProgrammingError):
+                conn.close()
+        self._conns = []
 
-    @contextlib.contextmanager
-    def _locked(self):
-        self.root.mkdir(parents=True, exist_ok=True)
-        lock = self.root / "lock"
-        started = time.time()
-        while True:
-            try:
-                fd = os.open(str(lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-            except (FileExistsError, PermissionError):
-                # Windows answers a create that races the holder's DELETE with
-                # PermissionError (a pending-delete file), not FileExistsError.
-                try:
-                    age = time.time() - lock.stat().st_mtime
-                except OSError:
-                    age = 0.0  # released between the failed create and the stat
-                if age > LOCK_STALE_S:
-                    with contextlib.suppress(OSError):
-                        lock.unlink()
-                    continue
-                if time.time() - started > LOCK_WAIT_S:
-                    raise LeaseError(f"the gpu lease lock {lock} is held and did not release in {LOCK_WAIT_S:.0f}s")
-                time.sleep(0.02)
-                continue
-            try:
-                os.write(fd, json.dumps({"pid": self.pid, "at": self._now()}).encode())
-            finally:
-                os.close(fd)
-            break
-        try:
-            yield
-        finally:
-            with contextlib.suppress(OSError):
-                lock.unlink()
+    def _event(self, t, typ, data):
+        _append(t, {"kind": "machine", "id": "%s/%s" % (self.host, self.pid)}, typ,
+                {"kind": "lease", "id": SLOT}, lane="gpu.local", data=data)
 
-    def _read_lease(self):
-        try:
-            return json.loads(self._lease_file.read_text(encoding="utf-8"))
-        except FileNotFoundError:
-            return None
-        except (ValueError, OSError):
-            return None  # writes are atomic, so a half-visible file is a race, not corruption
-
-    def _write_lease(self, rec):
-        tmp = self.root / f"lease.json.{self.pid}.tmp"
-        tmp.write_text(json.dumps(rec), encoding="utf-8")
-        os.replace(tmp, self._lease_file)
-
-    def _drop_lease(self):
-        with contextlib.suppress(FileNotFoundError):
-            self._lease_file.unlink()
-
-    def _events(self):
-        try:
-            text = self._queue_file.read_text(encoding="utf-8")
-        except FileNotFoundError:
-            return []
-        out = []
-        for line in text.splitlines():
-            try:
-                out.append(json.loads(line))
-            except ValueError:
-                continue  # a torn final line is skipped, never fatal
-        return out
-
-    def _append(self, ev):
-        ev = {"at": self._now(), **ev}
-        with open(self._queue_file, "a", encoding="utf-8") as f:
-            f.write(json.dumps(ev) + "\n")
-
-    # -- judgement -----------------------------------------------------------
-    def _pid_dead(self, rec):
-        # A pid from another host says nothing about this host's process table.
-        return rec.get("host") == self.host and not self._alive(rec.get("pid"))
-
-    def _stale_reason(self, lease):
-        if self._pid_dead(lease):
-            return "pid-dead"
-        if self._now() - lease.get("heartbeatAt", 0) > lease.get("ttlS", DEFAULT_TTL_S) * 1000:
-            return "heartbeat-expired"
-        return None
-
-    def _live_waiters(self, events):
-        waiting = {}
-        for e in events:
-            if e.get("ev") == "wait":
-                waiting[e["ticket"]] = e
-            elif e.get("ev") in ("grant", "leave"):
-                waiting.pop(e.get("ticket"), None)
-        return [w for w in waiting.values() if not self._pid_dead(w)]
-
-    @staticmethod
-    def _reclaims(events):
-        n = 0
-        for e in events:
-            if e.get("ev") == "reclaim":
-                n = e.get("reclaims", n + 1)
-        return n
-
-    def _reclaim_if_stale(self):
-        """Under the lock. Returns the live lease (None once a stale one is gone)."""
-        lease = self._read_lease()
-        if not lease:
-            return None
-        why = self._stale_reason(lease)
-        if not why:
-            return lease
-        n = self._reclaims(self._events()) + 1
-        self._append({"ev": "reclaim", "reclaims": n, "reason": why, "by": self.pid,
-                      "tenant": lease.get("tenant"), "engine": lease.get("engine"),
-                      "pid": lease.get("pid"), "ticket": lease.get("ticket")})
-        self._drop_lease()
-        print(f"  lease: reclaimed {lease.get('engine')} from {lease.get('tenant')} "
-              f"(pid {lease.get('pid')}, {why}); reclaims={n}", file=sys.stderr)
-        return None
+    def _holder_in(self, t):
+        """The slot's holder as v1 named it, and v1's stale word for it."""
+        st = _klease.status_in(t, SLOT, self.holder_id, self._alive)
+        h = st["holder"]
+        if h is None:
+            return None, None, st
+        row = t.get("SELECT json_extract(data, '$.tenant'), json_extract(data, '$.engine'), json_extract(data, '$.vramGb'), "
+                    "json_extract(data, '$.jobPrefix') FROM events WHERE subject_id = ? AND type = 'gpu.tenant' "
+                    "AND json_extract(data, '$.fence') = ? ORDER BY seq DESC LIMIT 1", SLOT, h["fence"])
+        job = None if row else t.get("SELECT id, json_extract(record, '$.producer') FROM jobs WHERE state = 'running' "
+                                     "AND json_extract(record, '$.slot') = ? AND json_extract(record, '$.lease.fence') = ?",
+                                     SLOT, h["fence"])
+        ticket = t.get("SELECT json_extract(data, '$.ticket') FROM events WHERE subject_id = ? AND type = 'lease.claimed' "
+                       "AND json_extract(data, '$.fence') = ? ORDER BY seq DESC LIMIT 1", SLOT, h["fence"])
+        who = h["holder"]
+        if row:
+            tenant, engine, vram, prefix = row
+        elif job:
+            tenant, engine, vram, prefix = "%s job %s" % (job[1], job[0]), "job", 0, ""
+        else:
+            tenant, engine, vram, prefix = "%s/%s" % (who["host"], who["pid"]), "job", 0, ""
+        rec = {"tenant": tenant, "engine": engine, "vramGb": vram, "pid": who["pid"], "host": who["host"],
+               "jobPrefix": prefix or "", "acquiredAt": _ms(h["acquiredAt"]), "heartbeatAt": _ms(h["heartbeatAt"]),
+               "ttlS": h["ttlS"], "ticket": (ticket[0] if ticket and ticket[0] else "fence-%d" % h["fence"]), "fence": h["fence"]}
+        stale = st["stale"]
+        return rec, ("pid-dead" if stale == "holder-gone" else stale), st
 
     # -- the API -------------------------------------------------------------
     def acquire(self, tenant, engine, vram_gb, wait=0.0, ttl_s=DEFAULT_TTL_S, job_prefix=""):
@@ -259,87 +187,96 @@ class Broker:
         if engine not in ENGINES:
             raise LeaseError(f"unknown engine {engine!r}; expected one of {ENGINES}")
         ticket = uuid.uuid4().hex[:12]
-        enqueued = False
+        ttl = int(round(ttl_s))
         deadline = self._now() + wait * 1000
+        announced = False
         while True:
-            with self._locked():
-                lease = self._reclaim_if_stale()
-                waiters = self._live_waiters(self._events())
-                head = (bool(waiters) and waiters[0]["ticket"] == ticket) if enqueued else not waiters
-                if lease is None and head:
-                    now = self._now()
-                    rec = {"tenant": tenant, "engine": engine, "vramGb": vram_gb, "pid": self.pid,
-                           "host": self.host, "jobPrefix": job_prefix, "acquiredAt": now,
-                           "heartbeatAt": now, "ttlS": ttl_s, "ticket": ticket}
-                    self._write_lease(rec)
-                    self._append({"ev": "grant", "ticket": ticket, "tenant": tenant, "engine": engine,
-                                  "pid": self.pid, "host": self.host})
-                    return Lease(self, rec)
-                if wait <= 0:
-                    raise LeaseTimeout(self._busy_message(tenant, engine, lease, waiters), lease)
-                if not enqueued:
-                    self._append({"ev": "wait", "ticket": ticket, "tenant": tenant, "engine": engine,
-                                  "vramGb": vram_gb, "pid": self.pid, "host": self.host})
-                    enqueued = True
-                if self._now() >= deadline:
-                    self._append({"ev": "leave", "ticket": ticket, "tenant": tenant, "reason": "timeout"})
-                    raise LeaseTimeout(self._busy_message(tenant, engine, lease, waiters), lease)
+            try:
+                with self._tx() as t:
+                    o = _klease.claim_in(t, SLOT, self.holder_id, ticket, ttl, wait > 0, self._alive)
+                    if o["kind"] == "granted":
+                        fence = o["lease"]["fence"]
+                        self._event(t, "gpu.tenant", {"fence": fence, "ticket": ticket, "tenant": tenant, "engine": engine,
+                                                      "vramGb": vram_gb, "jobPrefix": job_prefix})
+                        rec = {"tenant": tenant, "engine": engine, "vramGb": vram_gb, "pid": self.pid, "host": self.host,
+                               "jobPrefix": job_prefix, "acquiredAt": _ms(o["lease"]["acquiredAt"]),
+                               "heartbeatAt": _ms(o["lease"]["heartbeatAt"]), "ttlS": ttl, "ticket": ticket, "fence": fence}
+                        return Lease(self, rec)
+                    if o["kind"] == "queued" and not announced:
+                        self._event(t, "gpu.waiting", {"ticket": ticket, "tenant": tenant, "engine": engine, "vramGb": vram_gb})
+                    holder, _, st = self._holder_in(t)
+                    waiters = len(st["queue"])
+            except sqlite3.OperationalError as e:
+                # Busy past the connection timeout is contention: poll again while the wait has time left.
+                if ("locked" not in str(e) and "busy" not in str(e)) or self._now() >= deadline:
+                    raise LeaseError(f"the gpu lease's store {self.store} is busy: {e}") from e
+                self._sleep(self.poll_s)
+                continue
+            if o["kind"] == "queued":
+                announced = True
+            if wait <= 0 or self._now() >= deadline:
+                if o["kind"] == "queued":
+                    with self._tx() as t:
+                        _klease.leave_in(t, SLOT, ticket)
+                raise LeaseTimeout(self._busy_message(tenant, engine, holder, waiters), holder)
             self._sleep(self.poll_s)
 
     @staticmethod
     def _busy_message(tenant, engine, lease, waiters):
         who = (f"{lease['tenant']} holds {lease['engine']} (pid {lease['pid']})" if lease
-               else f"{len(waiters)} waiter(s) are ahead")
+               else f"{waiters} waiter(s) are ahead")
         return f"{tenant} could not get the gpu for {engine}: {who}"
 
     def holder(self):
         """The current lease record, or None. Does not reclaim; see status()."""
-        return self._read_lease()
+        with self._tx() as t:
+            return self._holder_in(t)[0]
 
     def status(self):
-        lease = self._read_lease()
-        events = self._events()
-        return {"holder": lease,
-                "stale": self._stale_reason(lease) if lease else None,
-                "queue": [{"tenant": w.get("tenant"), "engine": w.get("engine"), "pid": w.get("pid")}
-                          for w in self._live_waiters(events)],
-                "reclaims": self._reclaims(events)}
+        with self._tx() as t:
+            holder, stale, st = self._holder_in(t)
+            queue = []
+            for w in st["queue"]:
+                row = t.get("SELECT json_extract(data, '$.tenant'), json_extract(data, '$.engine') FROM events "
+                            "WHERE subject_id = ? AND type = 'gpu.waiting' AND json_extract(data, '$.ticket') = ? "
+                            "ORDER BY seq DESC LIMIT 1", SLOT, w["ticket"])
+                queue.append({"tenant": row[0] if row else None, "engine": row[1] if row else None, "pid": w["holder"]["pid"]})
+        return {"holder": holder, "stale": stale, "queue": queue, "reclaims": st["reclaims"]}
 
     def recycle(self, engine, holder=None, stop=None):
-        """Run `stop` (the process kill / restart) ONLY if `holder` is the live
-        lease holder for `engine`. Anyone else gets LeaseHeld naming who does."""
-        with self._locked():
-            lease = self._reclaim_if_stale()
-            if lease is None:
-                raise LeaseHeld(f"refusing to recycle {engine}: you hold no lease (acquire one first)", None)
-            if holder is None or holder.ticket != lease.get("ticket"):
-                raise LeaseHeld(f"refusing to recycle {engine}: {lease['tenant']} holds the gpu "
-                                f"({lease['engine']}, pid {lease['pid']}). Recycling would kill its work.",
-                                lease)
-            if lease["engine"] != engine:
-                raise LeaseHeld(f"your lease is for {lease['engine']}, not {engine}", lease)
+        """Run `stop` (the process kill / restart) ONLY if `holder` is the live lease holder
+        for `engine`. Anyone else gets LeaseHeld naming who does."""
+        with self._tx() as t:
+            lease, stale, _ = self._holder_in(t)
+        if lease is None or stale is not None:
+            raise LeaseHeld(f"refusing to recycle {engine}: you hold no lease (acquire one first)", None)
+        if holder is None or holder.fence != lease["fence"]:
+            raise LeaseHeld(f"refusing to recycle {engine}: {lease['tenant']} holds the gpu "
+                            f"({lease['engine']}, pid {lease['pid']}). Recycling would kill its work.", lease)
+        if lease["engine"] != engine:
+            raise LeaseHeld(f"your lease is for {lease['engine']}, not {engine}", lease)
         return stop() if stop else None
 
 
 class Lease:
     """A held lease. Use as a context manager; heartbeat() while working."""
 
-    def __init__(self, broker, rec):
+    def __init__(self, broker, rec, owned=True):
         self.broker = broker
         self.rec = rec
         self.ticket = rec["ticket"]
+        self.fence = rec["fence"]
         self.released = False
+        self._owned = owned
         _HELD.append(self)
 
     def heartbeat(self):
-        b = self.broker
-        with b._locked():
-            cur = b._read_lease()
-            if not cur or cur.get("ticket") != self.ticket:
-                raise LeaseLost(f"the {self.rec['engine']} lease of {self.rec['tenant']} was reclaimed")
-            cur["heartbeatAt"] = b._now()
-            b._write_lease(cur)
-            self.rec = cur
+        try:
+            with self.broker._tx() as t:
+                _klease.heartbeat_in(t, SLOT, self.fence)
+                self.rec = dict(self.rec, heartbeatAt=_ms(t.at))
+        except _klease.LeaseLost as e:
+            raise LeaseLost(f"the {self.rec['engine']} lease of {self.rec['tenant']} was reclaimed ({e})") from e
 
     def recycle(self, engine, stop=None):
         return self.broker.recycle(engine, holder=self, stop=stop)
@@ -350,12 +287,9 @@ class Lease:
         self.released = True
         with contextlib.suppress(ValueError):
             _HELD.remove(self)
-        b = self.broker
-        with b._locked():
-            cur = b._read_lease()
-            if cur and cur.get("ticket") == self.ticket:
-                b._drop_lease()
-                b._append({"ev": "release", "ticket": self.ticket, "tenant": self.rec["tenant"]})
+        if self._owned:
+            with self.broker._tx() as t:
+                _klease.release_in(t, SLOT, self.fence)
 
     def __enter__(self):
         return self
@@ -377,13 +311,37 @@ def acquire(tenant, engine, vram_gb, wait=0.0, ttl_s=DEFAULT_TTL_S, job_prefix="
     return Broker().acquire(tenant, engine, vram_gb, wait=wait, ttl_s=ttl_s, job_prefix=job_prefix)
 
 
+def hold_for_job(run, tenant, engine, vram_gb, job_prefix="", broker=None):
+    """A handle over the slot a kernel job (packages/kernel/py/job.py JobRun on gpu.local)
+    already holds: names the tenant on the ledger under the run's fence, and lets guard and
+    comfy treat the job as the card's holder. Releasing it gives nothing back - the job's
+    finish or park releases the slot."""
+    if run.slot != SLOT:
+        raise LeaseError(f"job {run.job_id} holds {run.slot}, not the card's {SLOT}")
+    b = broker or Broker()
+    with b._tx() as t:
+        _klease.assert_fence(t, SLOT, run.fence)
+        b._event(t, "gpu.tenant", {"fence": run.fence, "ticket": "job:%s" % run.job_id, "tenant": tenant,
+                                   "engine": engine, "vramGb": vram_gb, "jobPrefix": job_prefix})
+        lease, _, _ = b._holder_in(t)
+    return Lease(b, lease, owned=False)
+
+
 def holder_elsewhere():
     """The live lease record held by ANOTHER process, or None (for guard)."""
     b = Broker()
-    rec = b.holder()
-    if rec and not b._stale_reason(rec) and not (rec.get("pid") == b.pid and rec.get("host") == b.host):
-        return rec
-    return None
+    try:
+        rec, stale = b.holder(), None
+        if rec:
+            with b._tx() as t:
+                stale = b._holder_in(t)[1]
+        mine = current_handle()
+        if rec and not stale and not (mine is not None and mine.fence == rec["fence"]) \
+                and not (rec["pid"] == b.pid and rec["host"] == b.host):
+            return rec
+        return None
+    finally:
+        b.close()
 
 
 def format_status(st):
@@ -404,8 +362,10 @@ def format_status(st):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--status", action="store_true")
-    ap.parse_args()
-    print(format_status(Broker().status()))
+    ap.add_argument("--json", action="store_true")
+    a = ap.parse_args()
+    st = Broker().status()
+    print(json.dumps(st) if a.json else format_status(st))
 
 
 if __name__ == "__main__":

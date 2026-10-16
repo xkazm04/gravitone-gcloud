@@ -25,7 +25,6 @@ import { expect, test } from "@playwright/test";
 
 import { WORKING } from "@/app/articles/runModel";
 import { EXTRACT_LIVE, LIVE, cycleKind } from "@/app/foundry/parts";
-import { GpuBroker } from "@/lib/gpu/lease";
 import * as mv from "@/lib/sound/mv/store";
 import * as suno from "@/lib/sound/suno/store";
 import { LIVE as TURN_LIVE } from "@/lib/turns/ledger";
@@ -93,11 +92,8 @@ function predicates(): Record<string, (() => string[] | Promise<string[]>) | nul
     turns: () => records("turns").filter((r) => [...TURN_LIVE].some((x) => x === r["status"])).map((r) => str(r["id"])),
     // lib/imaging/video: a clip renders while queued or rendering (the clip runner's own two).
     clips: () => records("clips").filter((r) => r["status"] === "queued" || r["status"] === "rendering").map((r) => str(r["clipId"])),
-    // The card's holder and its live waiters, by v1's broker read (lib/gpu/lease.ts status()).
-    gpu: async () => {
-      const st = await new GpuBroker({ root: join(OUT, "gpu") }).status();
-      return [...(st.holder === null ? [] : [st.holder.ticket]), ...st.queue.map((w) => `wait:${w.tenant ?? "?"}:${w.pid ?? "?"}`)];
-    },
+    // The card's holder is the kernel lease now (Phase 4 L27): it is not a v1 store.
+    gpu: null,
     publish: null,
     spend: null,
     // The sound shelf (Phase 3): a take is made whole by one call, so nothing runs.

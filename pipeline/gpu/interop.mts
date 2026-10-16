@@ -4,7 +4,8 @@
 //   tsx pipeline/gpu/interop.mts crash <tenant> <engine>  acquire, print "held", then die WITHOUT releasing
 //   tsx pipeline/gpu/interop.mts try  <tenant> <engine>   one try; print "granted" or "blocked <holder>"
 //
-// GPU_LEASE_DIR names the shared directory. Not part of the app: a test fixture.
+// GRAVITONE_STORE_PATH names the shared kernel store (the lease is gpu.local#1 there since
+// Phase 4, L27). Not part of the app: a test fixture.
 import { createInterface } from "node:readline";
 
 import { GpuBroker, LeaseTimeout, type GpuEngine } from "../../lib/gpu/lease";
