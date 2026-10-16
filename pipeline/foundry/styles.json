@@ -1,10 +1,15 @@
 {
   "_purpose": "The art-style catalogue the foundry forges against. Each style is TWO halves: `observables` are the measurable half (the style.py vocabulary a vision model can read back off any image, so adherence is a comparison of enums rather than an opinion) and `recipe` is the generator-facing half (what to tell an image model, concrete visual instructions, no proper nouns). A style enters as `candidate`; it becomes `proven` only through the cull, when a human keeps its renders across more than one craft problem. `evidence` is appended by /foundry commits and is the durable index the knowledge write-up reads.",
+  "_source": "EXPORTED from the kernel store's `styles` table (packages/kernel/src/styles/export.ts); `_rev` is the store's catalogue revision. Do not edit by hand and expect it to stick: edit, then run `node pipeline/import/styles.mts --yes`, which carries name/family/recipe/negative/observables edits into the store.",
   "_origin_kinds": {
     "readback": "acquired from a best-in-class source by style.py multi-frame readback (style-onboarding-from-sample), then edited by hand -- the source frames never become references",
     "authored": "written from the attribute grammar directly",
-    "extracted": "Read off a gallery by the Extract tab / pipeline/foundry/extract.mts: sources read back one by one, grouped by look, the recipe replicated from words alone with self-critique rounds and transferred onto a neutral scene, then KEPT by a human. Arrives with `exemplars` (source / replica / transfer files under foundry-out/extract/<run>/) and `origin.source` = the extract run id. Candidate until the forge's cull proves it."
+    "extracted": "Read off a gallery by the Extract tab / pipeline/foundry/extract.mts: sources read back one by one, grouped by look, the recipe replicated from words alone with self-critique rounds and transferred onto a neutral scene, then KEPT by a human. Arrives with `exemplars` (source / replica / transfer files under foundry-out/extract/<run>/, each with its blob digest) and `origin.source` = the extract run id. Candidate until the forge's cull proves it.",
+    "preset": "a v1 Library theme started from one of the six presets",
+    "plate": "a v1 Library theme forked off a plate already on the shelf",
+    "foundry": "a v1 Library theme adopted from a proven Foundry style"
   },
+  "_rev": 27,
   "styles": [
     {
       "id": "painted-3d",
@@ -878,67 +883,78 @@
           "kind": "extract",
           "run": "2026-08-27-artstyle-train",
           "file": "sources/s01.png",
-          "role": "source"
+          "role": "source",
+          "sha256": "ace082faab7e50141c00c201d8ee5f15dc6f73c8b443da3fd69b659709917589"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train",
           "file": "sources/s02.png",
-          "role": "source"
+          "role": "source",
+          "sha256": "5c719b459955ca19b88378579b6bc976c4e3b62e979ca3e8c26d33d092ef2d5c"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train",
           "file": "sources/s05.jpg",
-          "role": "source"
+          "role": "source",
+          "sha256": "f341b1b5dc897036d4a2a4c7fcf8f843fdf240147d039e9253085738b325a75d"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train",
           "file": "sources/s11.jpg",
-          "role": "source"
+          "role": "source",
+          "sha256": "fde790711c5366b744a181292a01673e40cd6d59572810d7f585d0bf9070180a"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train",
           "file": "sources/s12.jpg",
-          "role": "source"
+          "role": "source",
+          "sha256": "cdd66786c069b940b8feea377f3546af5b8a5530cdd590743a536c51458553c7"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train",
           "file": "sources/s15.jpg",
-          "role": "source"
+          "role": "source",
+          "sha256": "56de57c37429072f272add48e5eef5b66f1116b633882f2922912a797d4a97ad"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train",
           "file": "sources/s30.jpg",
-          "role": "source"
+          "role": "source",
+          "sha256": "2d20b08e27d9cd7597fb420c266e6563886ac0320e3348c498be944429c82ea4"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train",
           "file": "sources/s31.jpg",
-          "role": "source"
+          "role": "source",
+          "sha256": "b506c6f78470c012d21fe8ae42c4df01d69e1552b21abf39359b55af6bda3b2e"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train",
           "file": "styles/ember-lit-realism/replica-s01-r1.jpg",
-          "role": "replica"
+          "role": "replica",
+          "sha256": "68ef04a6f110f8ac42330b7f38ba87a31e0d7fdd615de673cd0a9e8e2cbe8f3e"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train",
           "file": "styles/ember-lit-realism/replica-s02-r1.jpg",
-          "role": "replica"
+          "role": "replica",
+          "sha256": "a567cf4b0c0f297649c239abdc65c0b3153e8d0d2e2b0accdd13c2ac5c5ed027"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train",
           "file": "styles/ember-lit-realism/transfer-1.jpg",
-          "role": "transfer"
+          "role": "transfer",
+          "sha256": "3e00775601e73a3ace164a2522d0231239cf22f10f4e27659ead1bfbde0646e2"
         }
       ]
     },
@@ -973,43 +989,50 @@
           "kind": "extract",
           "run": "2026-08-27-artstyle-train",
           "file": "sources/s08.jpg",
-          "role": "source"
+          "role": "source",
+          "sha256": "3f357b5e6fb00fb3ba787bd23bad9bdccf8ce79045a513291d7fb916b07ac461"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train",
           "file": "sources/s24.jpg",
-          "role": "source"
+          "role": "source",
+          "sha256": "dad13e7266e38d26e745a661572d4eea677ae19cb28d7edde0e2d44e1afc98ee"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train",
           "file": "sources/s25.png",
-          "role": "source"
+          "role": "source",
+          "sha256": "92f17c9f2962db2653132e779401099754a9d21f98bf2d811c7263ece11769db"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train",
           "file": "sources/s33.jpg",
-          "role": "source"
+          "role": "source",
+          "sha256": "9fd046f7c4d382328b109982c323dc5a00daa1d4193a5c3983b3795ee739fe09"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train",
           "file": "styles/neon-wet-noir/replica-s08-r1.jpg",
-          "role": "replica"
+          "role": "replica",
+          "sha256": "33ee4f12e9bd5f59a64470745a07d683ff2fd9effad2e646bf06daf7c37db411"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train",
           "file": "styles/neon-wet-noir/replica-s24-r1.jpg",
-          "role": "replica"
+          "role": "replica",
+          "sha256": "8cb51816d15e2129cbb95da6424844dff9e3654e047a595236fc51906a6823a4"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train",
           "file": "styles/neon-wet-noir/transfer-1.jpg",
-          "role": "transfer"
+          "role": "transfer",
+          "sha256": "de2f50f91bb94fc6bb4ad29fbb9d00b011cef6abf77e851842f542f6144c8d88"
         }
       ]
     },
@@ -1044,19 +1067,22 @@
           "kind": "extract",
           "run": "2026-08-27-artstyle-train",
           "file": "sources/s27.jpg",
-          "role": "source"
+          "role": "source",
+          "sha256": "8ed04058377462800446f433dda0a99bc48f3855baac9c6f3833749cef5ff539"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train",
           "file": "styles/soft-backlit-bokeh/replica-s27-r2.jpg",
-          "role": "replica"
+          "role": "replica",
+          "sha256": "8ae98ad3acbc6ca4f9f64a4350fc0c6e1d4898f3b07d7882c80d7c5088d91a90"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train",
           "file": "styles/soft-backlit-bokeh/transfer-1.jpg",
-          "role": "transfer"
+          "role": "transfer",
+          "sha256": "118bdde42374678adfb155383e1f9598c8487f0ce505ce3808f498a5c3349532"
         }
       ]
     },
@@ -1091,19 +1117,22 @@
           "kind": "extract",
           "run": "2026-08-27-artstyle-train",
           "file": "sources/s17.jpg",
-          "role": "source"
+          "role": "source",
+          "sha256": "9426ec1d773abd5ed8c6d8969228f0fdf63c83e1f383f248964737d868de3dfa"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train",
           "file": "styles/brushed-rim-painting/replica-s17-r1.jpg",
-          "role": "replica"
+          "role": "replica",
+          "sha256": "569f65fd0f76ada1ac8e1171098113e6712e96edc5979128b37738025a4c5a57"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train",
           "file": "styles/brushed-rim-painting/transfer-1.jpg",
-          "role": "transfer"
+          "role": "transfer",
+          "sha256": "fb48b18674226c9cdcfaddbdb64c97139a765de01fb041d4f6600bbd1b465509"
         }
       ]
     },
@@ -1138,19 +1167,22 @@
           "kind": "extract",
           "run": "2026-08-27-artstyle-train",
           "file": "sources/s16.jpg",
-          "role": "source"
+          "role": "source",
+          "sha256": "ba083b827e84cef7afae7630645cbcdd0d582eabd8ee70abdbb3367a64a4a906"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train",
           "file": "styles/crimson-flare-photography/replica-s16-r1.jpg",
-          "role": "replica"
+          "role": "replica",
+          "sha256": "9634dbf498e8a839ae2eb815b3908985b5c11765d241cd389353a970927dfb2a"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train",
           "file": "styles/crimson-flare-photography/transfer-1.jpg",
-          "role": "transfer"
+          "role": "transfer",
+          "sha256": "8586c40d5b492b7195032d9471d2bd2b4c8b8dd2c31caadffb728bdd2f7f5c1a"
         }
       ]
     },
@@ -1189,31 +1221,36 @@
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-2",
           "file": "sources/s18.jpg",
-          "role": "source"
+          "role": "source",
+          "sha256": "9847a94304e6bd79d594576cbce6da85f75ed04866e6557c1d8e94ab14c218d5"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-2",
           "file": "sources/s20.jpg",
-          "role": "source"
+          "role": "source",
+          "sha256": "855608252ca68cd134cc9af1e966d4a2e7086899197d15b7c71e71fa40dffeaf"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-2",
           "file": "styles/brush-textured-3d/replica-s18-r1.jpg",
-          "role": "replica"
+          "role": "replica",
+          "sha256": "c058ec1c2a780785de1b03bfe28c831f249aab1c0b1e74ccd2e88f50c025d8d0"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-2",
           "file": "styles/brush-textured-3d/replica-s20-r1.jpg",
-          "role": "replica"
+          "role": "replica",
+          "sha256": "0b1d1bfe22460c04b2582ee456a4fb1f7a7444dab8aa645eccd32c4586d4e9fa"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-2",
           "file": "styles/brush-textured-3d/transfer-1.jpg",
-          "role": "transfer"
+          "role": "transfer",
+          "sha256": "b2f4536358e5af18e16d312ecec4812d8b9220c0f48ee57a144ff72a454f9968"
         }
       ]
     },
@@ -1252,19 +1289,22 @@
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-2",
           "file": "sources/s13.jpg",
-          "role": "source"
+          "role": "source",
+          "sha256": "1798c4531502471bbf6eb0c23f692dff3804f70360cc850f5117c198e0c93dea"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-2",
           "file": "styles/volumetric-shaft-keyart/replica-s13-r1.jpg",
-          "role": "replica"
+          "role": "replica",
+          "sha256": "29cd8c441f4ad87ddaeb42a5dc644358d25404b24dbbd2af27ba536f9033c0f3"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-2",
           "file": "styles/volumetric-shaft-keyart/transfer-1.jpg",
-          "role": "transfer"
+          "role": "transfer",
+          "sha256": "9168a21d2b4d698ddd3cefcfab7320ec29fd6c4097bd2b1d9268ee14c788c688"
         }
       ]
     },
@@ -1302,19 +1342,22 @@
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "sources/s01.png",
-          "role": "source"
+          "role": "source",
+          "sha256": "ace082faab7e50141c00c201d8ee5f15dc6f73c8b443da3fd69b659709917589"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "styles/crimson-ember-dark-render/replica-s01-r1.jpg",
-          "role": "replica"
+          "role": "replica",
+          "sha256": "429a238943acc492769a394cde0b73aa85c28afa4534f65ff681fe0db98cc343"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "styles/crimson-ember-dark-render/transfer-1.jpg",
-          "role": "transfer"
+          "role": "transfer",
+          "sha256": "521ceaf9e2055c74626a5463dc5589824df48c0d8b46fa16ab01b74efd71fad4"
         }
       ]
     },
@@ -1352,19 +1395,22 @@
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "sources/s05.jpg",
-          "role": "source"
+          "role": "source",
+          "sha256": "f341b1b5dc897036d4a2a4c7fcf8f843fdf240147d039e9253085738b325a75d"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "styles/cinematic-game-realism/replica-s05-r1.jpg",
-          "role": "replica"
+          "role": "replica",
+          "sha256": "a3425c123980198ba4071a9907220a92bc1040e6928f89517461709be7e98f93"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "styles/cinematic-game-realism/transfer-1.jpg",
-          "role": "transfer"
+          "role": "transfer",
+          "sha256": "e6fbc9c8139f1100921a570678718c3708a1f322c952c466bc2324dd7c381548"
         }
       ]
     },
@@ -1402,19 +1448,22 @@
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "sources/s06.jpg",
-          "role": "source"
+          "role": "source",
+          "sha256": "cee8fdeef6692ae3fd528cc80b488b1b2c1a2516de73b04cea113fc3b84fa9dc"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "styles/cinematic-dark-fantasy-cg/replica-s06-r1.jpg",
-          "role": "replica"
+          "role": "replica",
+          "sha256": "5305764d22f47376df50486c13d0e627c7a2cb35281a9c8459ccbfe377ae4adf"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "styles/cinematic-dark-fantasy-cg/transfer-1.jpg",
-          "role": "transfer"
+          "role": "transfer",
+          "sha256": "413c12546a2360777cac51a0d72d5f0ab3592c162b597cc055f7a51a9786cadb"
         }
       ]
     },
@@ -1452,19 +1501,22 @@
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "sources/s07.jpg",
-          "role": "source"
+          "role": "source",
+          "sha256": "263be463dd251bdc6416ca894fb9a30346625eb154ecf322416b672084ba272c"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "styles/atmospheric-candlelight-portraiture/replica-s07-r1.jpg",
-          "role": "replica"
+          "role": "replica",
+          "sha256": "55aa7a568d19d5907cf40a6f85febcb26ab7e998fc56d66620b66f7acf92acea"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "styles/atmospheric-candlelight-portraiture/transfer-1.jpg",
-          "role": "transfer"
+          "role": "transfer",
+          "sha256": "346ec3044da9fae7fdffd8834c119e50d9a86637aae7fb9fedd20bfa419ba194"
         }
       ]
     },
@@ -1502,19 +1554,22 @@
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "sources/s08.jpg",
-          "role": "source"
+          "role": "source",
+          "sha256": "3f357b5e6fb00fb3ba787bd23bad9bdccf8ce79045a513291d7fb916b07ac461"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "styles/neon-noir-cyberpunk/replica-s08-r1.jpg",
-          "role": "replica"
+          "role": "replica",
+          "sha256": "3004c90ae0d601e8aa2877ca86c4b165fadb7425eee54e68297186f2fb0f26c8"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "styles/neon-noir-cyberpunk/transfer-1.jpg",
-          "role": "transfer"
+          "role": "transfer",
+          "sha256": "4882e682038ce09cba94da3df81817959c3d8a3d8dbea9bd0b7c47eae2981e8e"
         }
       ]
     },
@@ -1552,19 +1607,22 @@
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "sources/s09.jpg",
-          "role": "source"
+          "role": "source",
+          "sha256": "b7fefa53d96ca395dc2d82889b575b372fdd670db901c17b23a78500a0649a74"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "styles/cinematic-emissive-cyberpunk-render/replica-s09-r1.jpg",
-          "role": "replica"
+          "role": "replica",
+          "sha256": "417e8a0c7d0fa95dfed0fb1738b6fce641f478365110c7274d90efa9e7b47049"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "styles/cinematic-emissive-cyberpunk-render/transfer-1.jpg",
-          "role": "transfer"
+          "role": "transfer",
+          "sha256": "ea898349369bd57f70f757ecbe81b84fadb25f13acf6e80fabfb5c724d32bb7d"
         }
       ]
     },
@@ -1602,19 +1660,22 @@
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "sources/s10.jpg",
-          "role": "source"
+          "role": "source",
+          "sha256": "c9e594f80f7b4c26bd4141e71f955ee541000924e513a28943bc11ce185e8aa7"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "styles/cinematic-macro-portrait/replica-s10-r1.jpg",
-          "role": "replica"
+          "role": "replica",
+          "sha256": "4c8bec0047970bab8cf08f88a039a8df60b0e1c8f0dde00e3e8a528624e1ea64"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "styles/cinematic-macro-portrait/transfer-1.jpg",
-          "role": "transfer"
+          "role": "transfer",
+          "sha256": "850cefd836f10415ef7ae5ee1b5d2df4a59676b5d4e17b6f184273853c4f5a33"
         }
       ]
     },
@@ -1652,19 +1713,22 @@
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "sources/s23.jpg",
-          "role": "source"
+          "role": "source",
+          "sha256": "6d1f538bd9b656bbe9157ad8fbf68b2623c642e4647cfdb19d473e1ad86f5e49"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "styles/graphite-concept-sketch/replica-s23-r1.jpg",
-          "role": "replica"
+          "role": "replica",
+          "sha256": "a75a7e22b5f0627d0b49bbb7af83be435cc9d33dc08891b482181afdbd837dae"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "styles/graphite-concept-sketch/transfer-1.jpg",
-          "role": "transfer"
+          "role": "transfer",
+          "sha256": "154f064865775dbca1acba41c5b286ab81e538fc0f83381bd9742adbd761445d"
         }
       ]
     },
@@ -1702,19 +1766,22 @@
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "sources/s25.png",
-          "role": "source"
+          "role": "source",
+          "sha256": "92f17c9f2962db2653132e779401099754a9d21f98bf2d811c7263ece11769db"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "styles/gritty-cyber-noir/replica-s25-r1.jpg",
-          "role": "replica"
+          "role": "replica",
+          "sha256": "5f1f522d9674cd31ef2eff03e0c1b92908f3df46ac04d6beb28ba89e15f6ab39"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "styles/gritty-cyber-noir/transfer-1.jpg",
-          "role": "transfer"
+          "role": "transfer",
+          "sha256": "c6ffa632442be339e3b2b1ed20d6189c536baf8aaa632b2788cd198cce0c3cb2"
         }
       ]
     },
@@ -1752,19 +1819,22 @@
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "sources/s27.jpg",
-          "role": "source"
+          "role": "source",
+          "sha256": "8ed04058377462800446f433dda0a99bc48f3855baac9c6f3833749cef5ff539"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "styles/soft-backlit-photorealism/replica-s27-r1.jpg",
-          "role": "replica"
+          "role": "replica",
+          "sha256": "8d52fdefb491f829871061bdd0411eee89c524b37322d5e251a64189b9ee1881"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "styles/soft-backlit-photorealism/transfer-1.jpg",
-          "role": "transfer"
+          "role": "transfer",
+          "sha256": "20ec8cbc30f6d8e12ab68ace4132e74570a7ab02e4ba84ab3b641341c3afd42c"
         }
       ]
     },
@@ -1802,19 +1872,22 @@
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "sources/s33.jpg",
-          "role": "source"
+          "role": "source",
+          "sha256": "9fd046f7c4d382328b109982c323dc5a00daa1d4193a5c3983b3795ee739fe09"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "styles/cyberpunk-neon-realism/replica-s33-r1.jpg",
-          "role": "replica"
+          "role": "replica",
+          "sha256": "04f9f13df2ec5dbd7aa33f4e3877a321d44bea545aa768a0376dd68b57fdbb03"
         },
         {
           "kind": "extract",
           "run": "2026-08-27-artstyle-train-3",
           "file": "styles/cyberpunk-neon-realism/transfer-1.jpg",
-          "role": "transfer"
+          "role": "transfer",
+          "sha256": "11d666414ee329f9260b645de4586d8beed1481cb4cc276804de509ced8719a8"
         }
       ]
     }
