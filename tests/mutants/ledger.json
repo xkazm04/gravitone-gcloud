@@ -1,6 +1,6 @@
 {
-  "commit": "7b088459a2aba9982fa4d37930e3fbab36ce0b1b",
-  "totalDurationMs": 200913,
+  "commit": "15fd570c1676e99555f12e81ae5ce22229a0480e",
+  "totalDurationMs": 273062,
   "killed": 48,
   "survived": 0,
   "stale": 0,
@@ -11,289 +11,289 @@
       "id": "session-cross-origin-sets-cookie",
       "probe": "server-seam.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 6506
+      "durationMs": 8654
     },
     {
       "id": "network-seal-lets-real-hosts-through",
       "probe": "network-seal.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 3133
+      "durationMs": 5318
     },
     {
       "id": "landing-takes-the-signal-barrel",
       "probe": "landing-isolation.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 2917
+      "durationMs": 5974
     },
     {
       "id": "ad-overlay-fit-ignores-width",
       "probe": "ad-overlay-fit.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 3006
+      "durationMs": 6699
     },
     {
       "id": "poll-freshness-failure-never-restores",
       "probe": "poll-freshness.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 2742
+      "durationMs": 4680
     },
     {
       "id": "repair-no-shrink-guard-off",
       "probe": "repair-turn.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 3107
+      "durationMs": 6174
     },
     {
       "id": "repair-unchanged-elsewhere-off",
       "probe": "repair-turn.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 2405
+      "durationMs": 5288
     },
     {
       "id": "gpu-busy-eye-not-reroutable",
       "probe": "gpu-lease.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 2794
+      "durationMs": 5437
     },
     {
       "id": "eviction-skip-upload-delete",
       "probe": "identity-eviction-idb.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 2984
+      "durationMs": 4942
     },
     {
       "id": "recalibrate-drops-chain-breaks",
       "probe": "chain-break-reaches-the-reviewer.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 2943
+      "durationMs": 6494
     },
     {
       "id": "spine-tail-first",
       "probe": "spine-rank-total.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 2991
+      "durationMs": 5261
     },
     {
       "id": "spine-ordinal-ignored",
       "probe": "spine-rank-total.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 1562
+      "durationMs": 2010
     },
     {
       "id": "alt-last-one-removable",
       "probe": "alt-last-one-stays.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 2597
+      "durationMs": 3038
     },
     {
       "id": "exit-drops-stderr-tail",
       "probe": "cli-exit-classification.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 2859
+      "durationMs": 4746
     },
     {
       "id": "exit-login-not-detected",
       "probe": "cli-exit-classification.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 1578
+      "durationMs": 2243
     },
     {
       "id": "forbid-only-ignores-gate-switch",
       "probe": "forbid-only-gate.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 6851
+      "durationMs": 9010
     },
     {
       "id": "palette-keeps-zero-count-decisions",
       "probe": "shell-palette.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 2902
+      "durationMs": 4290
     },
     {
       "id": "ast-switchcase-wrong-label",
       "probe": "_ast.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 3724
+      "durationMs": 5487
     },
     {
       "id": "job-noun-raw-kind",
       "probe": "job-noun.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 2324
+      "durationMs": 3330
     },
     {
       "id": "pip-hollow-too-faint",
       "probe": "pip-contrast.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 2327
+      "durationMs": 5346
     },
     {
       "id": "bandtrack-bounds-too-faint",
       "probe": "bandtrack-contrast.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 2301
+      "durationMs": 3089
     },
     {
       "id": "signed-out-chip",
       "probe": "session-ended-reason.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 2418
+      "durationMs": 3259
     },
     {
       "id": "upstream-here-name-faint",
       "probe": "upstream-break-contrast.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 2338
+      "durationMs": 3057
     },
     {
       "id": "tally-key-opacity-low",
       "probe": "chip-key-contrast.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 2652
+      "durationMs": 3670
     },
     {
       "id": "deck-hint-faint",
       "probe": "deck-text-contrast.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 2339
+      "durationMs": 3123
     },
     {
       "id": "source-mojibake",
       "probe": "source-encoding.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 2372
+      "durationMs": 2673
     },
     {
       "id": "studio-prefer-only-off",
       "probe": "imaging-studio.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 9927
+      "durationMs": 12096
     },
     {
       "id": "mv-focal-deaf-to-the-beat",
       "probe": "mv-render.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 9449
+      "durationMs": 10396
     },
     {
       "id": "lib-imports-app-stepstore",
       "probe": "no-app-imports.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 2790
+      "durationMs": 2906
     },
     {
       "id": "shared-secret-cli-door-open",
       "probe": "imaging-auth.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 7409
+      "durationMs": 7890
     },
     {
       "id": "cli-token-never-judged",
       "probe": "imaging-auth.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 9824
+      "durationMs": 9721
     },
     {
       "id": "cli-token-scope-unchecked",
       "probe": "imaging-auth.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 4482
+      "durationMs": 4752
     },
     {
       "id": "cli-token-accepted-from-url",
       "probe": "imaging-auth.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 4418
+      "durationMs": 4608
     },
     {
       "id": "cli-token-shares-ip-bucket",
       "probe": "principal.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 4306
+      "durationMs": 4235
     },
     {
       "id": "route-read-token-reads-as-unauthenticated",
       "probe": "server-seam.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 3619
+      "durationMs": 3779
     },
     {
       "id": "ledger-forge-drops-the-commit",
       "probe": "ledger-reconcile.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 10750
+      "durationMs": 11429
     },
     {
       "id": "ledger-strips-drops-the-commit",
       "probe": "ledger-reconcile.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 4185
+      "durationMs": 3990
     },
     {
       "id": "ledger-articles-drops-the-landing",
       "probe": "ledger-reconcile.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 3973
+      "durationMs": 4240
     },
     {
       "id": "ledger-suno-hides-the-interruption",
       "probe": "ledger-reconcile.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 3754
+      "durationMs": 6315
     },
     {
       "id": "ledger-mv-drops-the-attempt-start",
       "probe": "ledger-reconcile.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 3818
+      "durationMs": 6343
     },
     {
       "id": "ledger-publish-forgets-a-reschedule",
       "probe": "ledger-reconcile.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 3788
+      "durationMs": 4580
     },
     {
       "id": "ledger-turns-drops-the-end",
       "probe": "ledger-reconcile.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 5616
+      "durationMs": 6452
     },
     {
       "id": "ledger-spend-drops-the-counters",
       "probe": "ledger-reconcile.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 3752
+      "durationMs": 4263
     },
     {
       "id": "ledger-gpu-drops-the-waits",
       "probe": "ledger-reconcile.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 3734
+      "durationMs": 6104
     },
     {
       "id": "ledger-clips-drops-the-end",
       "probe": "ledger-reconcile.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 3806
+      "durationMs": 6974
     },
     {
       "id": "runs-model-hides-paused-work",
       "probe": "runs-live.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 9606
+      "durationMs": 14350
     },
     {
       "id": "bell-cleared-still-shown",
       "probe": "bell-doors.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 3658
+      "durationMs": 4623
     },
     {
       "id": "mv-enqueue-not-idempotent",
       "probe": "mv-queue.probe.spec.ts",
       "verdict": "killed",
-      "durationMs": 7574
+      "durationMs": 9722
     }
   ]
 }

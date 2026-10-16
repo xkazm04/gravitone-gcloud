@@ -557,6 +557,53 @@ lots) inside the phase.
 - Retire Foundry Styles plus Library theme tabs, `lib/themes.ts` and `lib/assets.ts` (IndexedDB).
 - **Exit:** the 50k probe meets the budget, and adopting a style to locked is driven end to end.
 
+> **Done 2026-10-16** (`ce2b7cee`..`15fd570c`, two waves, 9 builder lots). What landed:
+> - **One Style table** (`@gt/domain/style` + `style.ratchet` + `styleView`, kernel `styles`): the catalogue's
+>   StyleDef and the v1 theme's look in one record, status derived by one pure function; candidate -> proven
+>   (operator keeps in >= 2 cells) -> locked (an explicit act, admitted only when proven, nothing pending and three
+>   trial problems approved under the current block digest), both one-way - the domain machine's `locked -> proven`
+>   edge is gone and the store refuses a demotion by trigger. `pipeline/foundry/styles.json` is now an export
+>   (`_rev`, re-written after each change) for the Python readers; `acquire.py` writes through the Python door
+>   `packages/kernel/py/styles.py`; the catalogue fence keeps guarding the other indices. 27 styles imported into the
+>   operator's store; every v1 theme comes in through the importer (`v1-theme:<id>`; a theme v1 had locked arrives
+>   locked and `grandfathered`, frozen; the rest meet the new gate).
+> - **The Library as a server index** (kernel `library`): a hot items table, facets with counts kept by triggers,
+>   FTS5 (diacritics folded, prefix indexes, one quoted door for user text), OR within a group and AND across, each
+>   group counted with its own filter left out; feeds over every v1 source plus Suno clips, video clips, publish
+>   exports and kernel blobs (idempotent, never pruned on a failed read). **Media facts at ingest**: a free local
+>   `media-facts` job (ffprobe/ffmpeg) writes decodability, poster, duration, size and mean luma per blob; the
+>   attention facet and cover choice are queries (measured on the real corpus: 37 of 396 images near-black; the hand
+>   list and the boot-time mp4 probe are gone).
+> - **Screens**: `/library` (rail, grid/list over useWindow, detail with lineage, attention, keys, URL state, pin and
+>   use-in-project as events; v1's `?style=` handoff kept), `/library/style/[id]` (the atelier: the document, the lock
+>   gate's blockers in the work's words, the proof sheet with stale-under-a-new-digest marked, the trial matrix,
+>   Adopt and proof generation as priced `style` jobs through the receipt, Lock, Duplicate), `/audio` (owner ruling
+>   2026-10-17: the Recipe Book's composing tools rebuilt - terms, composer, drafts, variations, references, and a Suno
+>   proposal from a sentence, so the Floor's audio confirm launches a music job; its keep/reject is the Board's).
+>   Frames draw in the project's Style (approved proofs as references, a named default with its reason on the
+>   receipt); the Board's proof pile reads the Style table.
+> - **Retired**: the Foundry Styles tab (`/api/foundry/styles*` answer 410 with the new address), v1 `app/library/**`
+>   and `app/_library/*`, `lib/themes.ts`, `lib/assets.ts`, `lib/useThemes.ts`, `lib/useAssets.ts`, the v1 Board proof
+>   source, the `assets-tree` gate; IndexedDB `themes`/`assets`/`uploads` are read only by the importer.
+> - **Exit evidence**: the 50k probe (`pipeline/library-corpus.mts`, n=200 per query after 5 discarded, 2026-10-16,
+>   Ryzen 7 7800X3D, node 24.14, shared machine): search p95 2.1-48.2 ms, the 3-group facet query the worst at
+>   45-48 ms, under the 50 ms budget; `style-exit.live` drives adopt -> generate (dry, through the receipt) -> judge
+>   three trial problems -> lock on the real side, with the refusal before coverage. Verify: static gates,
+>   `test:unit` 1813/1813, node lane 1887 passed (bar `sound-store`, the sibling session's ledger), live lane 171 passed / 0 failed on assertions (one
+>   teardown error - `taskkill` on an exited server in `proof-frames.live` - fixed, that spec 2/2 rerun);
+>   unit mutants 448/448 killed (433 in the full run; 15 read baseline-red there and each is
+>   killed run alone), probe mutants 48/48 killed.
+> - **Decided in the Director's seat**: no delete op for styles; the lock gate does not require the subject slot;
+>   the media-facts and style jobs carry no Run row (free/local, or atelier-owned) and a failed media-facts job
+>   blocks a fresh one until it is retried on Runs (it is listed there); `lib/kernelProcess.ts` holds the kernel
+>   handle without `server-only` so the operator's CLIs load the v1 foundry modules; a non-kit route may baseline
+>   disabled controls only.
+> - **Carried forward**: the 3-group facet query sits within 5 ms of its budget on a shared box; `pipeline/direct-
+>   frames.mts` still hard-codes `PRESETS[0]` for its standalone CLI; fixture-mode video clips are never read (v1's
+>   clip store ignores the fixture switch); a live style act's landing is not polled (the atelier shows the plates
+>   on its next load); a promoted asset's block snapshot and cost are not copied onto its Library item (the style's
+>   proof keeps them); folder move/rename is gone (folders survive as pin collections).
+
 ### Phase 6: Calendar and cutover (M)
 - Calendar: the Floor rail ⇄ month page (channel toggles, failures verbatim), with publish `tick`
   on the worker scheduler.

@@ -85,8 +85,14 @@ test.beforeAll(async () => {
 
 test.afterAll(() => {
   if (server?.pid !== undefined) {
-    if (process.platform === "win32") execFileSync("taskkill", ["/PID", String(server.pid), "/T", "/F"], { stdio: "ignore" });
-    else server.kill("SIGTERM");
+    // taskkill exits non-zero when the tree is already gone; teardown is not the test.
+    if (process.platform === "win32") {
+      try {
+        execFileSync("taskkill", ["/PID", String(server.pid), "/T", "/F"], { stdio: "ignore" });
+      } catch {
+        /* already exited */
+      }
+    } else server.kill("SIGTERM");
   }
   rmSync(U, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 });
 });
