@@ -5,7 +5,9 @@ import path from "node:path";
 
 import { test } from "@playwright/test";
 
-export { keepEnv, stripComments } from "./_pure";
+import { keepEnv, stripComments } from "./_pure";
+
+export { keepEnv, stripComments };
 
 import { cliArgs, probeClaude, USES_SHELL } from "@/lib/claudeCli";
 import { retrieveArgs } from "@/lib/text/providers/claudeCliRetrieve";
