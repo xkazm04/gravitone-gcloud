@@ -45,6 +45,14 @@ THE READER. Two at once: an engineer who has shipped the thing the post is about
 
 THE VOICE. Third person, impersonal, about the topic and the results. Never "I", "my", "me", "we", "our" or "us" in prose — not "we found", not "I measured". The post reports: "the measurement shows", "a tokenizer trained mostly on English splits…". A measurement the post itself reports is stated impersonally with the command that produced it in the sources. Sentences vary in length. NO EM DASH AND NO EN DASH (U+2014, U+2013) anywhere: not in prose, headings, captions, code comments, figure text or alt text; use a period, comma, colon or parentheses, and write ranges with "to". No throat-clearing openers, no stacked hedges, no "in today's fast-paced world", no "delve", no closing "in conclusion".
 
+THE SKIM SPINE. The paragraphs run long, and a fast reader follows the post by its bold type alone, so the bold type has to carry the argument. Every body paragraph of more than about 45 words gets exactly one bold span (`**…**` in post.md, the same words in `<strong>` in index.html); no paragraph gets two.
+- The span is the paragraph's point, in the paragraph's own words: its claim, its consequence or its instruction. Prefer a whole short sentence; otherwise the clause that carries the claim. Between 4 and 25 words, most under 15. Write the paragraph so that such a sentence exists rather than bolding a weaker one.
+- Read in order, the spans alone tell the post: the incident, what it reveals, each section's finding, and the change asked for. So each span stands out of context: no "this", "it" or "that" pointing back to an unbolded sentence, and no span that only announces what comes next.
+- Bold a claim, never its decoration: not a lone keyword, a term being defined, a bare number, a source name or a citation marker. A span ends before its `[n]`.
+- Never in the title, subtitle, headings, captions, figure text, tables, code, callouts (a callout's label is already bold) or Sources. In the content preview, only each line's head and the one sentence that states what the post sets out.
+- Bold stays near 5 to 10 percent of the prose words. Past that it stops guiding the eye.
+- Example, from a paragraph on a status code's history: "**Two of the three things a caller needs, the key and the counting rule, are left to the implementer**; the third, the wait, is a MAY. [3]"
+
 HOUSE RULES the owner set after the first full run (each is checked by code):
 - The post never states its reading time, its word count or a words-per-minute figure. The platform shows its own.
 - THE OPENING IS ONE CONCRETE INCIDENT: something that happened, with its date, told in two short paragraphs at most, before any statistic. Never open on a run of numbers; the reason to care comes first and the numbers follow it. Any sequence of events is a timeline figure, never a clock-by-clock chronicle of one experience.
@@ -126,13 +134,14 @@ Write the post as files under `out/post/`:
    - A content preview before the first `<h2>`, with no heading of its own above it: one element carrying `data-role="content-preview"` that lists the sections and says what the reader gains. It states no read time and no word count.
    - Figures as `<figure><img src="figures/NN-short-name.svg" alt="…"><figcaption>…</figcaption></figure>`. Every caption names its source numbers as `[n]`.
    - Code, if any, as `<pre><code class="language-…">` with the highlighting already in the markup as `<span class="tok-…">` elements, coloured for light and dark. No highlighter script.
+   - The skim spine as `<strong>`, the same spans as post.md's `**…**`, word for word.
    - Citations inline as `<a href="#src-N">[N]</a>`. The page ends with `<ol id="sources">` holding one `<li id="src-N">` per source: title, publisher, date and URL.
    - A closing section that restates what was established, numbers included, carries a summary or comparison table of the body's comparison, returns to the opening, and says what to do differently.
    - Visual cadence: no more than two consecutive prose paragraphs without a figure, table, code block, diagram strip or callout.
    - Code labels and inline code never below {{MIN_CHROME}} px.
    - No placeholders: no lorem ipsum, no "[insert …]", no "TODO".
 
-3. `out/post/post.md` — the same post as Medium-ready Markdown: `# ` title, the subtitle as an italic line, the content preview (no read time), the sections, figures as `![caption](figures/NN-short-name.png)` with the caption (source numbers included) on the line below, code in fenced blocks with a language, citations as `[N]`, and a final `## Sources` numbered list in the same order as `inputs/sources.json`.
+3. `out/post/post.md` — the same post as Medium-ready Markdown: `# ` title, the subtitle as an italic line, the skim spine as `**…**`, the content preview (no read time), the sections, figures as `![caption](figures/NN-short-name.png)` with the caption (source numbers included) on the line below, code in fenced blocks with a language, citations as `[N]`, and a final `## Sources` numbered list in the same order as `inputs/sources.json`.
 
 4. `out/post/meta.json` — `{"title": "…", "subtitle": "…", "tags": ["…"]}` with at most five tags.
 
@@ -202,7 +211,7 @@ Then reply with one line: how many sources were added and how many claims change
 <!-- section: revise -->
 YOUR PHASE: CRITIQUE REWRITE, after round {{ROUND}} of at most {{MAX_ROUNDS}}. You decided to rewrite the post. `inputs/decision.json` says why; `inputs/dispositions.json` lists every finding with your disposition, and each `accepted` one carries the `action` you committed to. The current post is in `inputs/post/`, the outline in `inputs/outline.md`, the research in `inputs/sources.json` and `inputs/claims.json` (updated if you researched again). Do not search the web.
 
-The shared rules bind this rewrite exactly as they bound the draft, and these are the ones that break first (each costs a fix turn when it does): visual cadence counted in paragraphs AND in words (recount every run), the opening as one short incident, the words before the first section, the closing table and its list items, font sizes in the page CSS (body text at least {{MIN_BODY_1440}} px at 1440 wide and {{MIN_BODY_390}} px at 390; captions, code labels and page chrome at least {{MIN_CHROME}} px), and source numbering (renumber the citations if a source was dropped).
+The shared rules bind this rewrite exactly as they bound the draft, and these are the ones that break first (each costs a fix turn when it does): visual cadence counted in paragraphs AND in words (recount every run), the skim spine (one bold span per long paragraph, the same spans in both files, re-read in order after the rewrite), the opening as one short incident, the words before the first section, the closing table and its list items, font sizes in the page CSS (body text at least {{MIN_BODY_1440}} px at 1440 wide and {{MIN_BODY_390}} px at 390; captions, code labels and page chrome at least {{MIN_CHROME}} px), and source numbering (renumber the citations if a source was dropped).
 
 Rewrite the post so that every accepted finding's action is carried out and nothing rejected or deferred is changed because of its finding. Keep everything that was right. The finished post is no longer than the post you were given. Every number still comes from a claim in `inputs/claims.json` and is cited with that claim's source number.
 
