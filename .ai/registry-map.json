@@ -3834,7 +3834,11 @@
           "revision": 1,
           "changedAt": "2026-09-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/foundry/pipeline/PipelineCanvas.tsx:79 PipelineCanvas delegates card mounting to React component mappings over culled item placements rather than executing an incremental render-mount pipeline with a unit blueprint, reference counting, and recycling pools.",
+          "evaluatedAt": "2026-10-16",
+          "evaluatedAgainst": "sha256-b2:df020f172eb32893",
+          "evaluatedRevision": 1
         },
         {
           "subject": "canvas-graph",

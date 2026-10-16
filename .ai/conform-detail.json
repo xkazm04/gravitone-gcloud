@@ -6307,6 +6307,47 @@
         "at": "2026-10-16T22:02:56.822441+00:00",
         "reason": "reviewer (sonnet): The evidence anchor (schema.ts:16) says state is derived at read with no stored rollup, which is conformant evidence rather than a deviation, and the technique anchors (projects/page.tsx, Runs.tsx, Plan.tsx, real.ts, read.ts) describe the (studio)/projects wall, not the files listed for studio-navig"
       }
+    },
+    "74bcf0a3-bbe6-4401-9a9d-aaef4695de80/render-mount-pipeline": {
+      "context": "pipeline-board-surface",
+      "subject": "render-mount-pipeline",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T22:17:48.100Z",
+      "worker": "a4e777e6-6874-4085-9115-7b4cdf425de6",
+      "techniques": [
+        {
+          "technique": "blueprint-then-mount",
+          "verdict": "deviation",
+          "evidence": "app/foundry/pipeline/Card.tsx:134 Each card mounts nested arranging host DOM elements rather than collapsing layout into a flat blueprint of render units where non-promoted arranging containers vanish."
+        },
+        {
+          "technique": "mount-binders-versus-attach-binders",
+          "verdict": "deviation",
+          "evidence": "app/foundry/pipeline/Card.tsx:80 Cards handle updating via component-level memoization comparing props rather than separating mount-clock content binders and attach-clock event binders with undo lifecycles."
+        },
+        {
+          "technique": "mount-references-across-features",
+          "verdict": "deviation",
+          "evidence": "app/foundry/pipeline/Card.tsx:64 In-flight and dragged items rely on a boolean flag to dim the home slot instead of holding per-unit reference counts across competing features."
+        },
+        {
+          "technique": "edge-sorted-incremental-mount",
+          "verdict": "deviation",
+          "evidence": "app/foundry/pipeline/CellLayer.tsx:99 Visible cells are iterated and mounted across lane slices on layout updates rather than using two edge-sorted boundary indices and cursors to bound mounting work to boundary crossings."
+        },
+        {
+          "technique": "recycle-by-content-type",
+          "verdict": "deviation",
+          "evidence": "app/foundry/pipeline/CellLayer.tsx:98 Host cell elements are allocated directly into an array on each render instead of being acquired from and returned to a recycling pool keyed by content type."
+        },
+        {
+          "technique": "preempt-and-continue-shared-computation",
+          "verdict": "deviation",
+          "evidence": "app/foundry/pipeline/PipelineCanvas.tsx:68 Layout computation is consumed synchronously on the main thread without supporting shared, continuable layout execution across different waiter classes."
+        }
+      ]
     }
   }
 }
