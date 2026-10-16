@@ -8,11 +8,12 @@
 //
 // What a COMMIT is, precisely: the rejected candidates' files are deleted,
 // the kept ones are left byte-identical, and the judgement is written to the
-// two VERSIONED indices in pipeline/foundry/ — ledger.json (one row per
-// decided candidate, keyed by every axis) and styles.json (evidence appended
-// to each style, status promoted to `proven` when a human kept it on more
-// than one scene). Those two files are the finding; the images are only the
-// evidence behind it, which is why foundry-out/ is gitignored and they are not.
+// style store (evidence on each style, `proven` derived when a human kept it on
+// more than one scene - packages/kernel/src/styles, one transaction) and to
+// ledger.json (one row per decided candidate, keyed by every axis), then
+// pipeline/foundry/styles.json is re-exported from the store. The store and the
+// two git-tracked files are the finding; the images are only the evidence
+// behind it, which is why foundry-out/ is gitignored and they are not.
 //
 // Path safety: every run-relative path is resolved and checked to stay inside
 // its run directory before it is read or unlinked. `run` ids are validated
@@ -45,13 +46,14 @@ import type {
   RunDetail,
   RunManifest,
   RunSummary,
-  StyleDef,
   Verdict,
   VerdictRecord,
   Verdicts,
 } from "./types";
-import { withCatalogue } from "./catalogue";
-import { humanKeep, planForgeCommit } from "./commitPlan";
+import { recordForgeEvidenceIn } from "@gt/kernel/styles/writers";
+
+import { exportStyles, OPERATOR, readStyleDefs, styleStore, withCatalogue } from "./catalogue";
+import { planForgeCommit } from "./commitPlan";
 import { graderCalibrationText, graderStamp } from "./calibration";
 import {
   patchVerdictMap,
@@ -113,14 +115,13 @@ export async function getRun(id: string): Promise<RunDetail> {
 }
 
 export async function getCatalogue(): Promise<Catalogue> {
-  const fs = foundryFs();
   const [styles, ledger] = await Promise.all([
-    fs.readJson<{ styles: StyleDef[]; _rev?: number }>(foundryFile("styles.json"), { styles: [] }),
-    fs.readJson<{ rows: LedgerRow[] }>(foundryFile("ledger.json"), { rows: [] }),
+    readStyleDefs(),
+    foundryFs().readJson<{ rows: LedgerRow[] }>(foundryFile("ledger.json"), { rows: [] }),
   ]);
-  // `_rev` is the catalogue revision (catalogue.ts); 0 for a catalogue that
-  // predates it, so a client comparing revisions never compares to undefined.
-  return { styles: styles.styles, ledger: ledger.rows, _rev: styles._rev ?? 0 };
+  // `_rev` is the style store's catalogue revision (packages/kernel/src/styles):
+  // it only grows, so a client comparing revisions never sees it go back.
+  return { styles: styles.styles, ledger: ledger.rows, _rev: styles.rev };
 }
 
 export async function fileStat(id: string, rel: string): Promise<{ abs: string; size: number }> {
@@ -259,9 +260,9 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave" = "r
     // Read once, inside the lock: the plan, the token and the writes below all
     // see these same bytes.
     const ledger = await tx.read("ledger.json");
-    const stylesDoc = await tx.read("styles.json");
+    const catalogue = await readStyleDefs();
 
-    const plan = planForgeCommit(run, verdicts, { styles: stylesDoc.styles, ledger: ledger.rows }, undecidedAs);
+    const plan = planForgeCommit(run, verdicts, { styles: catalogue.styles, ledger: ledger.rows }, undecidedAs);
     if (token !== undefined && token !== plan.token) {
       throw new FoundryError("The run state changed since the preview was generated.", 409);
     }
@@ -277,12 +278,25 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave" = "r
     const decided = withFile.filter((c) => verdicts[c.id]);
     const undecided = withFile.length - decided.length;
 
-    // The versioned indices. A run's rows are REPLACED, not appended.
-    //
-    // Indices are written FIRST, before any files are unlinked. If writing
-    // ledger or styles fails (e.g. disk full or styles.json is a directory),
-    // no files have been deleted yet, keeping the banner "The commit failed
-    // and nothing was deleted" honest. The journal line leads them both.
+    // The style store FIRST, in one transaction: a run's evidence rows are
+    // REPLACED, not appended (a retry writes the same rows), and `proven` is
+    // derived from operator keeps - a keep by:"model" is evidence, not a vote.
+    // It refuses a style the store does not hold and any write that would
+    // demote one, before anything below is touched; then styles.json is
+    // re-exported for the Python readers.
+    const styles = await styleStore();
+    const rows = decided.map((c) => {
+      const by = verdicts[c.id].by;
+      return { style: c.style, scene: c.scene, mechanism: c.mechanism, verdict: verdicts[c.id].verdict as Verdict, ...(by ? { by } : {}) };
+    });
+    const written = styles.tx((t) => recordForgeEvidenceIn(t, id, at, rows, OPERATOR));
+    if (!written.ok) throw new FoundryError(`The commit failed and nothing was deleted: ${written.error.message}`, written.error.code === "refused" ? 409 : 503);
+    exportStyles(styles);
+
+    // Then ledger.json. A run's rows are REPLACED, not appended. Indices are
+    // written before any file is unlinked, so a failure here leaves the banner
+    // "The commit failed and nothing was deleted" honest; the retry rewrites
+    // the same store rows (no change) and this file.
     await tx.begin([...new Set(decided.map((c) => c.style))]);
     ledger.rows = ledger.rows.filter((r) => r.run !== id);
     for (const c of decided) {
@@ -305,22 +319,6 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave" = "r
     // follows it directly: a crash between the two leaves a stale derived file
     // that the retry (same ledger, same bytes) rewrites.
     await fs.writeFile(foundryFile("grader-calibration.json"), graderCalibrationText(ledger.rows));
-
-    for (const s of stylesDoc.styles) {
-      // Same rule for the evidence list, and it matters more: `keptScenes`
-      // below dedupes by run/scene, so doubled evidence promotes nothing and
-      // shows up only as a list twice its true length that no reader can
-      // explain.
-      s.evidence = s.evidence.filter((e) => e.run !== id);
-      for (const c of decided.filter((c) => c.style === s.id)) {
-        const by = verdicts[c.id].by;
-        s.evidence.push({ run: id, scene: c.scene, mechanism: c.mechanism, verdict: verdicts[c.id].verdict as Verdict, at, ...(by ? { by } : {}) });
-      }
-      // `proven` is a human's claim: a keep by:"model" is evidence, not a vote.
-      const keptScenes = new Set(s.evidence.filter(humanKeep).map((e) => `${e.run}/${e.scene}`));
-      if (keptScenes.size >= 2) s.status = "proven";
-    }
-    await tx.write("styles.json");
 
     // File deletions happen SECOND.
     let deleted = 0;

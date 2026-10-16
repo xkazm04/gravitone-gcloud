@@ -1,22 +1,24 @@
-// LANE — THE FOUNDRY CATALOGUE HAS ONE WRITE PATH (dynamic + one source ratchet).
+// LANE — THE FOUNDRY CATALOGUE'S WRITERS DO NOT LOSE EACH OTHER'S WORK (dynamic + one source ratchet).
 //
-// foundry-engine-A. Five writers update pipeline/foundry/styles.json and its
-// two sibling ledgers (the forge, extract and Dojo commits in the app;
-// acquire.py and `intake --acquire` in Python). Before this card each did a
-// bare read-modify-write: two that overlapped lost one write with a 200 on
-// both, and the commit-plan token was compared before the writes with nothing
-// held between. lib/foundry/catalogue.ts `withCatalogue` is the one fence:
-// an exclusive-create lock file BOTH languages honour
-// (pipeline/foundry/catalogue_lock.py speaks the same protocol), the plan and
-// its token check computed inside it, a catalogue revision `_rev` on
-// styles.json, and an append-only catalogue-journal.jsonl.
-//
-// foundry-commit-race.probe.spec.ts drives forge×extract and cycle×cycle
-// through the effect-log interleaver (acceptance 2 lives there); this lane
-// adds extract×extract, the lock's two failure modes, the journal/revision
-// contract, a real Python holder, and the one defect the crash harness's
-// builder reported: commitCycle retried after a crash between its unlinks and
-// cycle.json reported 0 files deleted.
+// foundry-engine-A, re-founded in Phase 5. The style catalogue moved from
+// pipeline/foundry/styles.json into the kernel store's `styles` table (the file
+// is now its export): every style write is ONE SQLite transaction, which is the
+// fence lib/foundry/catalogue.ts `withCatalogue` used to build around the file
+// with a lock and a write-ahead journal. What remains here, and where each old
+// assertion went:
+//   - extract × extract keeping both runs' styles (case 1) - now a true race on
+//     the store, no interleaver window left to hold open;
+//   - the lock's two failure modes (cases 3a/3b) - the lock still fences
+//     ledger.json and the other indices, so the forge commit meets it now;
+//   - "one journal line and one `_rev` per commit" (case 4) - the journal
+//     stopped; `_rev` is the store's op-log revision, and the Dojo commit (which
+//     writes no style) no longer moves it;
+//   - a real Python writer (case 5) - acquire.py writes through
+//     packages/kernel/py/styles.py; the store's write lock, not catalogue_lock.py,
+//     serialises it with a TS commit (cross-language row/event equality:
+//     packages/kernel/test/styles.python.test.ts);
+//   - the per-write ratchet, revision and crash rules: packages/kernel/test/styles.test.ts.
+// Cases 6 and 7 (one lock kernel; commitCycle crash convergence) are unchanged.
 
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
@@ -25,17 +27,17 @@ import path from "node:path";
 import { test, expect } from "@playwright/test";
 
 import { GET as stylesGET } from "@/app/api/foundry/styles/route";
-import { CATALOGUE_JOURNAL, CATALOGUE_LOCK, __setCatalogueLockTiming, type JournalLine } from "@/lib/foundry/catalogue";
+import { CATALOGUE_JOURNAL, CATALOGUE_LOCK, __setCatalogueLockTiming } from "@/lib/foundry/catalogue";
 import { EXTRACT_ROOT, commitExtractRun } from "@/lib/foundry/extract/store";
 import { OBSERVABLE_FIELDS } from "@/lib/foundry/extract/types";
 import type { ExtractManifest, Observables } from "@/lib/foundry/extract/types";
 import { __setFoundryFsPort } from "@/lib/foundry/fsPort";
-import { FoundryError, OUT_ROOT, commitRun, foundryFile, getCatalogue } from "@/lib/foundry/store";
+import { FoundryError, OUT_ROOT, commitRun, getCatalogue } from "@/lib/foundry/store";
 import { commitCycle } from "@/lib/foundry/training/store";
 import type { CycleManifest, TrainingCommitResult, TrainingLedgerRow, TrainingVerdicts } from "@/lib/foundry/training/types";
 import type { Candidate, RunManifest, StyleDef } from "@/lib/foundry/types";
 
-import { CrashAt, Interleaver, RecordingPort, stripAt, type Outcome } from "./_effects";
+import { CrashAt, RecordingPort, stripAt } from "./_effects";
 import { keepEnv, probeFoundryDir, stripComments } from "./_helpers";
 
 const foundryDir = probeFoundryDir();
@@ -185,154 +187,117 @@ function cycle(id: string): string {
 
 const readJsonFile = <T>(file: string, fallback: T): T => (existsSync(file) ? (JSON.parse(readFileSync(file, "utf8")) as T) : fallback);
 const readStyles = () => readJsonFile<{ _rev?: number; styles: StyleDef[] }>(path.join(foundryDir(), "styles.json"), { styles: [] });
-const journal = (): JournalLine[] => {
-  const f = path.join(foundryDir(), CATALOGUE_JOURNAL);
-  return existsSync(f)
-    ? readFileSync(f, "utf8")
-        .split("\n")
-        .filter((l) => l.trim())
-        .map((l) => JSON.parse(l) as JournalLine)
-    : [];
-};
 
-function settled<T>(o: Outcome<T>, who: string): T {
-  if (!o.ok) throw new Error(`${who} commit threw: ${(o.error as Error)?.message ?? String(o.error)}`);
-  return o.value;
-}
 
-/* ── 1. extract × extract, both orders ────────────────────────────────────── */
+/* ── 1. extract × extract ─────────────────────────────────────────────────── */
 
-const isStylesIo = (e: { op: string; file: string }) =>
-  (e.op === "readJson" || e.op === "writeJsonAtomic") && path.resolve(e.file) === path.resolve(foundryFile("styles.json"));
-
-for (const first of ["e1", "e2"] as const) {
-  test(`case 1 (${first} writes first): two extract commits on different runs, overlapping on styles.json, keep BOTH runs' styles`, async () => {
-    seedStyles("haze");
-    const e1 = extractRun(`probe-tx-e1-${process.pid}`, "ink");
-    const e2 = extractRun(`probe-tx-e2-${process.pid}`, "wash");
-    const il = new Interleaver(isStylesIo);
-    __setFoundryFsPort(new RecordingPort({ gate: il.gate }));
-    const p1 = il.start("e1", () => commitExtractRun(e1));
-    const p2 = il.start("e2", () => commitExtractRun(e2));
-    const writesStyles = (e: { op: string }) => e.op === "writeJsonAtomic";
-    const s1 = await il.advanceTo("e1", writesStyles);
-    const s2 = await il.advanceTo("e2", writesStyles);
-    await il.drain(first, ["e1", "e2"]);
-    const [o1, o2] = await Promise.all([p1, p2]);
-    settled(o1, "e1");
-    settled(o2, "e2");
-    const seen = il.released.map((e) => `${e.actor}:${e.op === "readJson" ? "read" : "write"}`);
-    console.log(`[catalogue-tx] extract×extract, ${first} first — window ${s1}/${s2}: ${seen.join(" ")}`);
-
-    expect(seen, "e1's styles.json write went through the port").toContain("e1:write");
-    expect(seen, "e2's styles.json write went through the port").toContain("e2:write");
-    const ids = readStyles().styles.map((s) => s.id).sort();
-    expect(ids, "both extract runs' styles are in the catalogue").toEqual(["haze", "ink", "wash"]);
-  });
-}
+// Phase 5: the style half is the kernel store's `styles` table, each commit ONE transaction under
+// SQLite's write lock (packages/kernel/src/styles/driver.ts) - the fence withCatalogue used to
+// build around styles.json by hand. No port window exists to interleave, so the two commits run
+// truly concurrently and the guarantee is held directly: both runs' styles are kept.
+test("case 1: two extract commits on different runs, racing on the style catalogue, keep BOTH runs' styles", async () => {
+  seedStyles("haze");
+  const e1 = extractRun(`probe-tx-e1-${process.pid}`, "ink");
+  const e2 = extractRun(`probe-tx-e2-${process.pid}`, "wash");
+  const [o1, o2] = await Promise.allSettled([commitExtractRun(e1), commitExtractRun(e2)]);
+  expect(o1.status, o1.status === "rejected" ? String(o1.reason) : "").toBe("fulfilled");
+  expect(o2.status, o2.status === "rejected" ? String(o2.reason) : "").toBe("fulfilled");
+  const ids = readStyles().styles.map((s) => s.id).sort();
+  expect(ids, "both extract runs' styles are in the catalogue").toEqual(["haze", "ink", "wash"]);
+});
 
 /* ── 3. the lock's two failure modes ──────────────────────────────────────── */
 
+// The lock now fences the indices the store did not absorb (ledger.json, training-ledger.json,
+// motion-styles.json, strips-ledger.json), so the forge commit - which writes ledger.json - is the
+// one that meets it. The extract commit writes only the store and takes no lock.
 test("case 3a: a .catalogue.lock older than the staleness bound is broken and the commit proceeds", async () => {
   seedStyles("haze");
-  const ex = extractRun(`probe-tx-stale-${process.pid}`);
+  const runId = forgeRun(`probe-tx-stale-${process.pid}`);
   const lock = path.join(foundryDir(), CATALOGUE_LOCK);
   writeFileSync(lock, JSON.stringify({ pid: 999999, at: "2026-01-01T00:00:00.000Z", by: "probe" }), "utf8");
   const old = new Date(Date.now() - 120_000);
   utimesSync(lock, old, old);
   __setCatalogueLockTiming({ staleMs: 30_000, waitMs: 2_000 });
 
-  const r = await commitExtractRun(ex);
-  expect(r.written).toEqual(["ink"]);
-  expect(readStyles().styles.map((s) => s.id)).toEqual(["haze", "ink"]);
+  const r = await commitRun(runId, "leave");
+  expect(r.kept).toBe(2);
+  expect(readJsonFile<{ rows: unknown[] }>(path.join(foundryDir(), "ledger.json"), { rows: [] }).rows).toHaveLength(2);
   expect(existsSync(lock), "the commit released the lock it took over").toBe(false);
 });
 
 test("case 3b: a FRESH lock held past the wait bound is a 503 that names the lock file, and nothing is written", async () => {
   seedStyles("haze");
-  const ex = extractRun(`probe-tx-held-${process.pid}`);
+  const runId = forgeRun(`probe-tx-held-${process.pid}`);
   const lock = path.join(foundryDir(), CATALOGUE_LOCK);
   writeFileSync(lock, JSON.stringify({ pid: 999999, at: new Date().toISOString(), by: "probe" }), "utf8");
   __setCatalogueLockTiming({ staleMs: 30_000, waitMs: 250 });
 
   let caught: unknown;
   try {
-    await commitExtractRun(ex);
+    await commitRun(runId, "leave");
   } catch (e) {
     caught = e;
   }
   expect(caught, "the commit refused").toBeInstanceOf(FoundryError);
   expect((caught as FoundryError).status).toBe(503);
   expect((caught as FoundryError).message, "the refusal names the lock file").toContain(lock);
-  expect(readStyles().styles.map((s) => s.id), "styles.json untouched").toEqual(["haze"]);
-  expect(readJsonFile<ExtractManifest>(path.join(EXTRACT_ROOT, ex, "run.json"), null as unknown as ExtractManifest).status, "the run is not committed").toBe("done");
+  expect(existsSync(path.join(foundryDir(), "ledger.json")), "ledger.json untouched").toBe(false);
+  expect(readStyles().styles.find((s) => s.id === "haze")?.evidence ?? [], "no evidence reached the style catalogue").toEqual([]);
+  expect(readJsonFile<RunManifest>(path.join(OUT_ROOT, runId, "run.json"), null as unknown as RunManifest).status, "the run is not committed").toBe("done");
   expect(existsSync(lock), "a refused commit never removes a lock it does not hold").toBe(true);
   rmSync(lock, { force: true });
 });
 
-/* ── 4. one journal line and one revision per commit ──────────────────────── */
+/* ── 4. one revision per style change; no journal ─────────────────────────── */
 
-test("case 4: forge, extract and Dojo commits each append exactly one journal line and bump styles.json _rev by 1; GET /api/foundry/styles returns _rev", async () => {
+// The journal stopped (Phase 5 decision 3): the store's append-only `style_ops` log is the
+// catalogue's history and `_rev` is its newest seq, which only grows. A commit that changes no
+// style (the Dojo's) leaves the revision where it was.
+test("case 4: forge and extract commits each move styles.json _rev forward; the Dojo commit does not; no journal is written; GET /api/foundry/styles returns _rev", async () => {
   seedStyles("haze");
   expect(readStyles()._rev, "a catalogue that never had a revision reads as none").toBeUndefined();
 
   const runId = forgeRun(`probe-tx-forge-${process.pid}`);
   await commitRun(runId, "leave");
-  expect(readStyles()._rev).toBe(1);
-  expect(journal().length).toBe(1);
+  const r1 = readStyles()._rev ?? 0;
+  expect(r1, "the import and the forge evidence are revisions").toBeGreaterThan(0);
 
   const exId = extractRun(`probe-tx-ex-${process.pid}`);
   await commitExtractRun(exId);
-  expect(readStyles()._rev).toBe(2);
-  expect(journal().length).toBe(2);
+  const r2 = readStyles()._rev ?? 0;
+  expect(r2).toBe(r1 + 1);
 
   const cyId = cycle(`probe-tx-cy-${process.pid}`);
   await commitCycle(cyId);
-  expect(readStyles()._rev).toBe(3);
-
-  const lines = journal();
-  console.log(`[catalogue-tx] journal:\n  ${lines.map((l) => JSON.stringify(l)).join("\n  ")}`);
-  expect(lines.map((l) => [l.rev, l.op, l.run])).toEqual([
-    [1, "forge-commit", runId],
-    [2, "extract-commit", exId],
-    [3, "dojo-commit", cyId],
-  ]);
-  for (const l of lines) {
-    expect(typeof l.at, "every line is timestamped").toBe("string");
-    expect(l.by, "every line names its writer").toBeTruthy();
-    expect(Array.isArray(l.ids) && l.ids.length > 0, `line ${l.rev} names what it touched`).toBe(true);
-  }
-  expect(lines[1].ids).toEqual(["ink"]);
+  expect(readStyles()._rev, "the Dojo writes no style").toBe(r2);
+  expect(existsSync(path.join(foundryDir(), CATALOGUE_JOURNAL)), "no journal line is written any more").toBe(false);
 
   // The read side: a client can tell the catalogue moved.
-  expect((await getCatalogue())._rev).toBe(3);
+  expect((await getCatalogue())._rev).toBe(r2);
   process.env.IMAGING_ACCESS_SECRET = "probe-secret";
   const res = await stylesGET(new Request("http://studio.local/api/foundry/styles", { headers: { authorization: "Bearer probe-secret" } }));
   expect(res.status).toBe(200);
-  expect(((await res.json()) as { _rev?: number })._rev).toBe(3);
+  expect(((await res.json()) as { _rev?: number })._rev).toBe(r2);
 });
 
-/* ── 5. a real Python holder ──────────────────────────────────────────────── */
+/* ── 5. a real Python writer ──────────────────────────────────────────────── */
 
-const PY_HOLDER = `
-import json, sys, time
-from pathlib import Path
-sys.path.insert(0, "pipeline/foundry")
-import acquire
-root = Path(sys.argv[1])
-acquire.STYLES = root / "styles.json"
-acquire.READBACKS = root / "readbacks.jsonl"
-real = acquire.save_catalogue
-def slow(cat, *a, **kw):
-    print("HOLDING", flush=True)
-    time.sleep(1.5)
-    return real(cat, *a, **kw)
-acquire.save_catalogue = slow
-sys.argv = ["acquire.py", "--source", "probe-src", "--id", "py-acq", "--name", "Py", "--model", "probe-model"]
-acquire.main()
-`;
+// acquire.py writes through the store's Python door (packages/kernel/py/styles.py) and re-exports
+// through Node's exporter; the same SQLite write lock serialises it with a TS commit. Both land.
+const PY_ACQUIRE = [
+  "import sys",
+  "from pathlib import Path",
+  "sys.path.insert(0, 'pipeline/foundry')",
+  "import acquire",
+  "root = Path(sys.argv[1])",
+  "acquire.STYLES = root / 'styles.json'",
+  "acquire.READBACKS = root / 'readbacks.jsonl'",
+  "sys.argv = ['acquire.py', '--source', 'probe-src', '--id', 'py-acq', '--name', 'Py', '--model', 'probe-model']",
+  "acquire.main()",
+].join("\n");
 
-test("case 5: a Python acquire holding the catalogue lock makes a TS commit wait, and the commit lands on the Python result", async () => {
+test("case 5: a Python acquire and a TS commit racing on the style store both land, and the export holds both", async () => {
   seedStyles("haze");
   writeFileSync(
     path.join(foundryDir(), "readbacks.jsonl"),
@@ -340,35 +305,21 @@ test("case 5: a Python acquire holding the catalogue lock makes a TS commit wait
     "utf8",
   );
   const ex = extractRun(`probe-tx-py-${process.pid}`);
+  // First touch imports the seeded catalogue, so the Python door meets a store that holds it.
+  await getCatalogue();
 
-  const py = spawn("python", ["-c", PY_HOLDER, foundryDir()], { cwd: process.cwd(), stdio: ["ignore", "pipe", "pipe"] });
+  const py = spawn("python", ["-c", PY_ACQUIRE, foundryDir()], { cwd: process.cwd(), stdio: ["ignore", "pipe", "pipe"], env: process.env });
   let out = "";
-  let err = "";
-  py.stderr.on("data", (d) => (err += String(d)));
-  const holding = new Promise<void>((resolve, reject) => {
-    py.stdout.on("data", (d) => {
-      out += String(d);
-      if (out.includes("HOLDING")) resolve();
-    });
-    py.on("exit", (code) => reject(new Error(`python exited ${code} before holding the lock: ${err || out}`)));
-  });
+  py.stdout.on("data", (d) => (out += String(d)));
+  py.stderr.on("data", (d) => (out += String(d)));
   const exited = new Promise<number | null>((resolve) => py.on("exit", (code) => resolve(code)));
-  await holding;
-
-  const t0 = Date.now();
   const r = await commitExtractRun(ex);
-  const waited = Date.now() - t0;
   const code = await exited;
-  console.log(`[catalogue-tx] TS commit waited ${waited} ms behind the Python holder; python exit ${code}\n${out.trim()}`);
+  console.log(`[catalogue-tx] python acquire exit ${code}\n${out.trim()}`);
 
-  expect(code, `python acquire failed: ${err}`).toBe(0);
+  expect(code, `python acquire failed: ${out}`).toBe(0);
   expect(r.written).toEqual(["ink"]);
-  expect(readStyles().styles.map((s) => s.id), "the TS commit landed ON the Python write, not over it").toEqual(["haze", "py-acq", "ink"]);
-  expect(readStyles()._rev).toBe(2);
-  expect(journal().map((l) => [l.rev, l.op, l.by])).toEqual([
-    [1, "acquire", "acquire.py"],
-    [2, "extract-commit", "app"],
-  ]);
+  expect(readStyles().styles.map((s) => s.id).sort(), "neither writer landed over the other").toEqual(["haze", "ink", "py-acq"]);
 });
 
 /* ── 6. one lock kernel ───────────────────────────────────────────────────── */
@@ -424,7 +375,7 @@ function cycleSnapshot(result: TrainingCommitResult) {
     cycle: readJsonFile<CycleManifest | null>(path.join(cyDir(), "cycle.json"), null),
     files: filesUnder(cyDir()),
     thumbs: filesUnder(path.join(foundryDir(), "training", "thumbs")),
-    journal: journal().map((l) => [l.rev, l.op, l.run]),
+    // (the journal it also compared stopped in Phase 5; no commit writes one)
   });
 }
 

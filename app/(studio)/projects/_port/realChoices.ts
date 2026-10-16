@@ -9,14 +9,17 @@ import { RECIPES } from "@gt/catalog/recipes";
 import { parseJsonAt, type Parsed } from "@gt/domain/door";
 import type { MediaLane } from "@gt/domain/lane";
 
+import { listStylesIn } from "@gt/kernel/styles/driver";
+
 import { RegistryUnreachableError, resolveRegistryDir } from "../../../../lib/articles/registryRead.ts";
+import { kernel } from "../../../../lib/kernelStore.ts";
 import { foundryFile } from "../../../../lib/foundry/runStore.ts";
 import { loadApproaches } from "../../../../lib/foundry/strips/cards.ts";
 import { storeRoot } from "../../../../lib/sound/store.ts";
 import type { Choice, ComposeChoices, ComposerChoices } from "./contract.ts";
 
 // WHAT THE COMPOSERS AND COMPOSE OFFER, read from where each list lives today - the forge's
-// style catalogue (styles.json, proven and candidate), the registry's subjects (an article topic
+// style catalogue (the style store, proven and candidate), the registry's subjects (an article topic
 // is `bundle/slug`, the address lib/articles resolves a subject by), the strips approaches (a
 // subject is a case: every approach card written for it), and the Library's kept takes. The
 // fixture held hand lists of each (./fixtureData.ts); the screens never did.
@@ -47,9 +50,17 @@ function readDoc<S extends z.ZodType>(file: string, schema: S): Parsed<z.output<
 
 type Style = { readonly id: string; readonly name: string; readonly proven: boolean };
 
+/** The style store (Phase 5: the truth), read synchronously. A store that cannot open or holds
+ *  no style yet - its first touch imports the catalogue, and this read never waits for one - is
+ *  answered from styles.json, which is the store's export or, before the first import, v1's
+ *  catalogue itself: either is a real list, where an empty select would be a lie. A locked
+ *  style is proven to a composer (the lock only narrows what may change). */
 function styles(): readonly Style[] {
+  const k = kernel();
+  const rows = k.ok ? k.value.store.read(listStylesIn) : null;
+  if (rows?.ok && rows.value.length > 0) return rows.value.map(({ style: s }) => ({ id: s.id, name: s.name, proven: s.status !== "candidate" }));
   const doc = readDoc(foundryFile("styles.json"), stylesDoc);
-  return (doc?.styles ?? []).map((s) => ({ id: s.id, name: s.name, proven: s.status === "proven" }));
+  return (doc?.styles ?? []).map((s) => ({ id: s.id, name: s.name, proven: s.status === "proven" || s.status === "locked" }));
 }
 
 /** The forge's own sweep (pipeline/foundry/plans/sweep-01.json): how many styles a sweep runs. */

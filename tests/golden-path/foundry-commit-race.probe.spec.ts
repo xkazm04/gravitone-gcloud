@@ -215,39 +215,37 @@ function settled<T>(o: Outcome<T>, who: string): T {
   return o.value;
 }
 
-/* ── 4. forge × extract on styles.json ────────────────────────────────────── */
+/* ── 4. forge × extract on the style catalogue ────────────────────────────── */
 
-for (const first of ["forge", "extract"] as const) {
-  test(`case 4 (${first} writes first): a forge commit and an extract commit that both read styles.json keep BOTH changes (I4)`, async () => {
-    writeFileSync(path.join(foundryDir(), "styles.json"), JSON.stringify({ styles: [styleDef("haze")] }), "utf8");
-    const runId = forgeRun(`probe-race-forge-${process.pid}`);
-    const exId = extractRun(`probe-race-ex-${process.pid}`);
-    try {
-      const r = await race("styles.json", ["forge", () => commitRun(runId, "leave")], ["extract", () => commitExtractRun(exId)], first);
-      settled(r.oa, "forge");
-      settled(r.ob, "extract");
+// Phase 5: styles.json is no longer a read-modify-write on the port - both commits write the
+// kernel store's `styles` table, each in ONE BEGIN IMMEDIATE transaction that reads and writes
+// under SQLite's write lock (packages/kernel/src/styles/driver.ts), then re-export the file under
+// that same lock. There is no window for the interleaver to hold open, so the case runs the two
+// commits truly concurrently and keeps the guarantee itself: neither erases the other (I4).
+test("case 4: a forge commit and an extract commit racing on the style catalogue keep BOTH changes (I4)", async () => {
+  writeFileSync(path.join(foundryDir(), "styles.json"), JSON.stringify({ styles: [styleDef("haze")] }), "utf8");
+  const runId = forgeRun(`probe-race-forge-${process.pid}`);
+  const exId = extractRun(`probe-race-ex-${process.pid}`);
+  try {
+    const [f, e] = await Promise.allSettled([commitRun(runId, "leave"), commitExtractRun(exId)]);
+    expect(f.status, f.status === "rejected" ? String(f.reason) : "").toBe("fulfilled");
+    expect(e.status, e.status === "rejected" ? String(e.reason) : "").toBe("fulfilled");
 
-      // The interleaver saw both commits at the index — a probe that gated
-      // nothing proves nothing.
-      expect(r.boundaries.some((x) => x === "forge:write styles.json"), "forge's styles.json write went through the port").toBe(true);
-      expect(r.boundaries.some((x) => x === "extract:write styles.json"), "extract's styles.json write went through the port").toBe(true);
+    const styles = readIndex<{ styles: StyleDef[] }>("styles.json").styles;
+    const haze = styles.find((s) => s.id === "haze");
+    const forgeEvidence = haze?.evidence.filter((x) => x.run === runId).length ?? 0;
+    const extracted = styles.filter((s) => s.origin?.kind === "extracted" && s.origin.source === exId).map((s) => s.id);
+    const ledgerRows = readIndex<{ rows: LedgerRow[] }>("ledger.json").rows.filter((x) => x.run === runId).length;
+    console.log(`[race] forge evidence ${forgeEvidence}/2, extract styles [${extracted.join(",")}], forge ledger rows ${ledgerRows}/2`);
 
-      const styles = readIndex<{ styles: StyleDef[] }>("styles.json").styles;
-      const haze = styles.find((s) => s.id === "haze");
-      const forgeEvidence = haze?.evidence.filter((e) => e.run === runId).length ?? 0;
-      const extracted = styles.filter((s) => s.origin?.kind === "extracted" && s.origin.source === exId).map((s) => s.id);
-      const ledgerRows = readIndex<{ rows: LedgerRow[] }>("ledger.json").rows.filter((x) => x.run === runId).length;
-      console.log(`[race] window=${r.window} → forge evidence ${forgeEvidence}/2, extract styles [${extracted.join(",")}], forge ledger rows ${ledgerRows}/2`);
-
-      expect(ledgerRows, "the forge's ledger rows").toBe(2);
-      expect(forgeEvidence, "the forge's evidence on haze survives the extract commit").toBe(2);
-      expect(extracted, "the extract's style survives the forge commit").toEqual(["ink"]);
-    } finally {
-      rmSync(path.join(OUT_ROOT, runId), { recursive: true, force: true });
-      rmSync(path.join(EXTRACT_ROOT, exId), { recursive: true, force: true });
-    }
-  });
-}
+    expect(ledgerRows, "the forge's ledger rows").toBe(2);
+    expect(forgeEvidence, "the forge's evidence on haze survives the extract commit").toBe(2);
+    expect(extracted, "the extract's style survives the forge commit").toEqual(["ink"]);
+  } finally {
+    rmSync(path.join(OUT_ROOT, runId), { recursive: true, force: true });
+    rmSync(path.join(EXTRACT_ROOT, exId), { recursive: true, force: true });
+  }
+});
 
 /* ── 5. commitCycle × commitCycle on training-ledger.json ─────────────────── */
 

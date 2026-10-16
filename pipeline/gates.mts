@@ -137,7 +137,7 @@ export const GATES: readonly Gate[] = [
     npmScript: "check:style-refs",
     class: "blocking",
     outcomes: "01",
-    rationale: "Pure function over lib/themes: the founding proof must survive a full sheet in the reference window.",
+    rationale: "Pure function over @gt/domain/style.ratchet: the founding proof must survive a full sheet in the reference window.",
   },
   {
     id: "assets-tree",

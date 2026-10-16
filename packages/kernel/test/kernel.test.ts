@@ -14,6 +14,8 @@ import { receiptsMigrations } from "../src/pricing/receipts.ts";
 import { partsMigrations } from "../src/parts/schema.ts";
 import { recordsMigrations } from "../src/records/schema.ts";
 import { spendMigrations } from "../src/spend/ledger.ts";
+import { stylesMigrations } from "../src/styles/schema.ts";
+import { libraryMigrations } from "../src/library/schema.ts";
 import { tokenMigrations } from "../src/token.ts";
 
 const tmp = scratch("kernel");
@@ -60,7 +62,7 @@ describe("openKernel", () => {
   });
 
   it("a fresh store reaches the union of every per-module fixture's schema, and nothing else", () => {
-    const fixtures: readonly (readonly ModuleMigrations[])[] = [JOB_FIXTURE, DECISION_FIXTURE, [eventsMigrations, ingestMigrations, receiptsMigrations, spendMigrations, tokenMigrations, recordsMigrations, partsMigrations]];
+    const fixtures: readonly (readonly ModuleMigrations[])[] = [JOB_FIXTURE, DECISION_FIXTURE, [eventsMigrations, ingestMigrations, receiptsMigrations, spendMigrations, tokenMigrations, recordsMigrations, partsMigrations, stylesMigrations, libraryMigrations]];
     const union = new Set<string>();
     for (const mods of fixtures) {
       const s = must(openStore(file()));

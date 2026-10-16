@@ -46,6 +46,7 @@ import { makeRealBoard } from "../../app/(studio)/board/_port/real.ts";
 import { applier, drainNow, reconcileApplies } from "../../lib/decision/v1/applier.ts";
 import { V1_SOURCES } from "../../lib/ledger/v1/sources.ts";
 import { liveJobs, v1Ctx } from "../../lib/ledger/v1/sync.ts";
+import { closeKernel } from "../../lib/kernelStore.ts";
 
 generateFoundry();
 generateWork();
@@ -67,6 +68,9 @@ if (!k.ok) throw k.error;
 const store: Store = k.value.store;
 afterAll(() => {
   k.value.close();
+  // The forge commit writes the style store through the app's own kernel (Phase 5), which holds
+  // the fixture universe's gravitone.sqlite open; Windows refuses to delete it while it is.
+  closeKernel();
   rmSync(ROOT, { recursive: true, force: true });
 });
 

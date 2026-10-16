@@ -1,46 +1,45 @@
-// THE FOUNDRY CATALOGUE'S ONE WRITE PATH — server only.
+// THE FOUNDRY CATALOGUE — server only. Two things live here since Phase 5:
 //
-// pipeline/foundry/ holds git-tracked indices — styles.json, ledger.json,
-// training-ledger.json, and the Strips commit's motion-styles.json and
-// strips-ledger.json — and SIX writers: the forge, extract, Dojo and Strips commits
-// here, acquire.py and `intake --acquire` (which shells out to acquire.py) in
-// Python. Each used to read-modify-write with nothing held between the read
-// and the write, so two that overlapped lost one write with a 200 on both, and
-// the commit-plan token (commitPlan.ts) was compared before the writes with no
-// fence around either. Measured 2026-10-05 by
-// tests/golden-path/foundry-commit-race.probe.spec.ts: four lost updates in
-// four schedules.
+// (1) THE STYLE STORE'S DOOR FOR V1 (Phase 5 decision 3). Styles are no longer a file: they are
+//     rows in the kernel store (packages/kernel/src/styles), each write one transaction with its
+//     event, the ratchet enforced at the write. pipeline/foundry/styles.json is an EXPORT of that
+//     table, re-written after every change for the Python readers (forge.py prepare, grade.py).
+//     The v1 readers in this tree still speak `StyleDef`, so `readStyleDefs` hands them the store
+//     in that shape; the v1 writers (forge and extract commits, adopt) write through the kernel
+//     and call `exportStyles` after. A store that holds no style yet takes the catalogue the repo
+//     carries on first touch (`ensureStyles`) - a fixture universe, a new machine - instead of
+//     reading as empty and then exporting an empty file over the real one.
 //
-// `withCatalogue(meta, fn)` is the fence:
-//
-//   · EXCLUSION. lib/diskTx.ts's in-process queue plus an exclusive-create
-//     lock at pipeline/foundry/.catalogue.lock, which
-//     pipeline/foundry/catalogue_lock.py takes by the same protocol. A commit
-//     computes its plan, checks its token and writes INSIDE `fn`, so the
-//     check and the writes sit behind one fence.
-//   · REVISION. styles.json carries `_rev`, the catalogue revision: one per
-//     transaction that writes any index, whichever index it wrote. GET
-//     /api/foundry/styles returns it, so a client can tell the catalogue moved.
-//   · JOURNAL. catalogue-journal.jsonl gets one line per transaction,
-//     `{rev, at, op, run, ids, by}`, appended BEFORE the first index write
-//     (write-ahead). A retry after a crash finds its own line as the newest
-//     one and REUSES that revision instead of minting another, which is what
-//     lets a retried commit converge on the uninterrupted result
-//     (concurrency-guards#idempotency-by-design; the crash prefixes are
-//     enumerated in tests/golden-path/foundry-catalogue-tx.probe.spec.ts).
-//     Revisions are minted as max(styles._rev, newest journal rev) + 1, so a
-//     line whose commit never landed is never handed out twice.
-//
-// THE INDICES STAY ON THE PORT. Every index read and write goes through
-// lib/foundry/fsPort.ts, which is how the effect-log harness enumerates crash
-// points and interleavings. The lock file and the journal do not: they are
-// the fence and its record, not the state being fenced, and putting them on
-// the port would let a probe "crash" a lock acquisition — which a real crash
-// cannot do — and renumber every mutation the crash lane pins.
+// (2) THE FENCE FOR THE OTHER INDICES. ledger.json, training-ledger.json, motion-styles.json and
+//     strips-ledger.json keep their v1 writers this phase (only styles moved), and still need what
+//     `withCatalogue` gave them: one writer at a time across the forge, Dojo and Strips commits,
+//     measured necessary 2026-10-05 (tests/golden-path/foundry-commit-race.probe.spec.ts: four
+//     lost updates in four schedules). The lock is lib/diskTx.ts's queue plus an exclusive-create
+//     lock at pipeline/foundry/.catalogue.lock (catalogue_lock.py takes it by the same protocol).
+//     DROPPED: catalogue-journal.jsonl and styles.json's `_rev` stamping. The journal existed so a
+//     crashed multi-file write could recover its revision; the style half is now a transaction,
+//     and the remaining indices are each replaced per run (a retry converges without a journal).
+//     A transaction's revision is now motion-styles.json's own counter + 1, which only the Strips
+//     commit reads.
 
-import { appendFile, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+
+import type { BlobRef } from "@gt/domain/blob";
+import type { Result } from "@gt/domain/errors";
+import type { Actor } from "@gt/domain/event";
+import type { Style } from "@gt/domain/style";
+import { blobStore } from "@gt/kernel/blob";
+import type { Store } from "@gt/kernel/store";
+import type { StyleOpOutcome, StyleOpRequest } from "@gt/domain/styleView";
+import { applyStyleOp, catalogueRevIn, listStylesIn } from "@gt/kernel/styles/driver";
+import { writeStylesExport, type ExportReport } from "@gt/kernel/styles/export";
+import { draftFromV1, importV1In, planImportV1In, readV1Catalogue, type ImportOutcome } from "@gt/kernel/styles/v1";
 
 import { DEFAULT_LOCK_TIMING, exclusiveSection, type LockTiming } from "../diskTx";
+import { outPath } from "../fixtures/roots";
+import { kernel } from "../kernelStore";
+import { blobRootOf } from "../parts/gates";
 import { foundryFs } from "./fsPort";
 import { FoundryError, foundryFile } from "./runStore";
 import type { MotionStylesDoc, StripsLedgerDoc } from "./strips/triage";
@@ -48,38 +47,173 @@ import type { TrainingLedgerRow } from "./training/types";
 import type { LedgerRow, StyleDef } from "./types";
 
 export const CATALOGUE_LOCK = ".catalogue.lock";
+export const STYLES_FILE = "styles.json";
+
+/** RETIRED with the journal (Phase 5 decision 3): nothing writes this file any more. Exported
+ *  only so v1's journal probe (tests/golden-path/foundry-catalogue-tx.probe.spec.ts) still
+ *  typechecks until it retires with v1's Foundry in wave B; its journal assertions now fail. */
 export const CATALOGUE_JOURNAL = "catalogue-journal.jsonl";
-
-/** The app's four commits; acquire.py journals as "acquire". */
-export type CatalogueOp = "forge-commit" | "extract-commit" | "dojo-commit" | "strip-commit";
-
+/** RETIRED with CATALOGUE_JOURNAL: the shape v1's journal lines had. */
 export interface JournalLine {
   rev: number;
   at: string;
   op: string;
-  /** The run, extract run, cycle or readback source the transaction committed. */
   run: string;
-  /** What it touched: style ids, written catalogue ids, improvement ids. */
   ids: string[];
-  /** "app" for this module, "acquire.py" for Python. */
   by: string;
 }
 
+/** Where extract runs live (the exemplars' files): EXTRACT_STORE_DIR, else <out>/extract. */
+export const extractRoot = (): string => process.env["EXTRACT_STORE_DIR"]?.trim() || outPath("extract");
+
+/** The actor a v1 commit route writes as: the operator who pressed commit (v1 has no principal here). */
+export const OPERATOR: Actor = { kind: "operator", id: "operator" };
+
+/* ── (1) the style store ──────────────────────────────────────────────────── */
+
+function store(): Store {
+  const k = kernel();
+  if (!k.ok) throw new FoundryError(`The style store cannot be opened: ${k.error.message}`, 503);
+  return k.value.store;
+}
+
+function unwrap<T>(r: Result<T>, what: string): T {
+  if (r.ok) return r.value;
+  const status = r.error.code === "refused" || r.error.code === "conflict" ? 409 : r.error.code === "not-found" ? 404 : r.error.code === "invalid" ? 400 : 503;
+  throw new FoundryError(`${what}: ${r.error.message}`, status);
+}
+
+/** Read an exemplar's file into the blob store; undefined when it is not on this machine. */
+async function exemplarBlob(blobs: ReturnType<typeof blobStore>, run: string, file: string): Promise<BlobRef | undefined> {
+  const abs = path.resolve(extractRoot(), run, file);
+  if (!abs.startsWith(path.resolve(extractRoot()) + path.sep)) return undefined;
+  let bytes: Uint8Array;
+  try {
+    bytes = await readFile(abs);
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw e;
+  }
+  const ext = path.extname(file).toLowerCase();
+  const mime = ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : "image/jpeg";
+  return unwrap(await blobs.put(bytes, mime), `exemplar ${run}/${file}`);
+}
+
+export type V1ImportPlan = { readonly outcomes: readonly ImportOutcome[]; readonly refused: readonly { index: number; message: string }[] };
+
+/**
+ * styles.json's text into the store: exemplar files become blobs first (async, idempotent by
+ * content), then one transaction imports every entry. `dry` plans the same outcomes and rolls
+ * the transaction back. Shared by the one-time CLI (pipeline/import/styles.mts) and `ensureStyles`.
+ */
+export async function importStylesText(s: Store, text: string, opts: { readonly dry: boolean; readonly by: Actor }): Promise<V1ImportPlan> {
+  const cat = unwrap(readV1Catalogue(text), STYLES_FILE);
+  const blobs = blobStore(blobRootOf(s));
+  const media = new Map<string, BlobRef>();
+  for (const v of cat.styles)
+    for (const x of v.exemplars ?? []) {
+      // A dry plan only asks whether the file is here; it copies nothing, so it stands in a
+      // well-formed ref that the plan's door check reads and nothing ever stores.
+      const ref = opts.dry
+        ? await readFile(path.resolve(extractRoot(), x.run, x.file)).then(() => ({ sha256: "0".repeat(64), bytes: 0, mime: "image/png" }), () => undefined)
+        : await exemplarBlob(blobs, x.run, x.file);
+      if (ref !== undefined) media.set(`${x.run}/${x.file}`, ref);
+    }
+  const at = new Date().toISOString();
+  const reports = cat.styles.map((v) => draftFromV1(v, (run, file) => media.get(`${run}/${file}`), at));
+  const outcomes = opts.dry ? unwrap(s.read((r) => planImportV1In(r, reports)), "import") : unwrap(s.tx((t) => importV1In(t, reports, opts.by)), "import");
+  return { outcomes, refused: cat.refused };
+}
+
+/** First touch of a store with no style: import the catalogue the repo carries. One indexed
+ *  probe per call, no process cache - a test or a CLI that replaces the store file under the
+ *  same path must be seen as empty again. */
+export async function ensureStyles(s: Store): Promise<void> {
+  const any = unwrap(s.read((r) => r.get("SELECT EXISTS (SELECT 1 FROM styles) AS n")?.["n"]), "the style store");
+  if (any === 1) return;
+  let text: string | null = null;
+  try {
+    text = await readFile(foundryFile(STYLES_FILE), "utf8");
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+  }
+  if (text !== null) await importStylesText(s, text, { dry: false, by: { kind: "machine", id: "styles/first-touch" } });
+}
+
+/** The store, with the repo's catalogue in it. */
+export async function styleStore(): Promise<Store> {
+  const s = store();
+  await ensureStyles(s);
+  return s;
+}
+
+/** A store style in v1's `StyleDef` shape, for the v1 readers until they retire. */
+export function styleDefOf(s: Style): StyleDef {
+  return {
+    id: s.id,
+    name: s.name,
+    family: s.family,
+    // A locked style is a proven one to every v1 reader (none of them knows the lock).
+    status: s.status === "candidate" ? "candidate" : "proven",
+    origin: { kind: s.origin.kind === "readback" || s.origin.kind === "extracted" ? s.origin.kind : "authored", ...(s.origin.source === undefined ? {} : { source: s.origin.source }), ...(s.origin.models === undefined ? {} : { models: s.origin.models }) },
+    observables: Object.fromEntries(Object.entries(s.observables).filter((e): e is [string, string] => e[1] !== undefined)),
+    recipe: s.recipe,
+    negative: s.negative,
+    evidence: s.evidence.map((e) => ({ run: e.run, scene: e.scene, mechanism: e.mechanism, verdict: e.verdict, at: e.at, ...(e.by === "agent" ? { by: "model" as const } : {}) })),
+    ...(s.exemplars.length
+      ? { exemplars: s.exemplars.flatMap((x) => (x.file === undefined ? [] : [{ kind: "extract" as const, run: x.run, file: x.file, role: x.role, ...(x.settled === undefined ? {} : { settled: x.settled }) }])) }
+      : {}),
+  };
+}
+
+/** Every style as v1's readers want it, and the catalogue revision. */
+export async function readStyleDefs(): Promise<{ styles: StyleDef[]; rev: number }> {
+  const s = await styleStore();
+  return unwrap(
+    s.read((r) => ({ styles: listStylesIn(r).map((row) => styleDefOf(row.style)), rev: catalogueRevIn(r) })),
+    "the style store",
+  );
+}
+
+/** Re-export pipeline/foundry/styles.json after a change. Loud on failure: the store holds the
+ *  change, and a stale export is exactly what the Python readers would forge against. */
+export function exportStyles(s: Store): ExportReport {
+  return unwrap(writeStylesExport(s, foundryFile(STYLES_FILE)), `the store holds the change, but ${STYLES_FILE} was not re-exported`);
+}
+
+/** Run a style write in one store transaction, then re-export. */
+export async function writeStyles<T>(what: string, fn: (s: Store) => Result<T>): Promise<T> {
+  const s = await styleStore();
+  const out = unwrap(fn(s), what);
+  exportStyles(s);
+  return out;
+}
+
+/** An operator's op on one style (the atelier's acts): applied in one store transaction, then
+ *  styles.json re-exported when it changed anything. A refusal or a stale base writes nothing. */
+export async function styleOp(req: StyleOpRequest, by: Actor): Promise<StyleOpOutcome> {
+  const s = await styleStore();
+  const out = unwrap(applyStyleOp(s, req, by), `style ${req.styleId}`);
+  if (out.kind === "applied") exportStyles(s);
+  return out;
+}
+
+/* ── (2) the fence for the other indices ──────────────────────────────────── */
+
+/** The app's commits that write an index here. */
+export type CatalogueOp = "forge-commit" | "extract-commit" | "dojo-commit" | "strip-commit";
+
 export interface CatalogueDocs {
-  "styles.json": { styles: StyleDef[]; _rev?: number } & Record<string, unknown>;
   "ledger.json": { rows: LedgerRow[] } & Record<string, unknown>;
   "training-ledger.json": { rows: TrainingLedgerRow[] } & Record<string, unknown>;
-  // The Strips commit's two indices (lib/foundry/strips/store.ts). A code
-  // style is a module, not a prompt, so it is not a StyleDef and does not
-  // join styles.json — but it shares this lock and this journal, so there is
-  // still one revision history.
+  // The Strips commit's two indices (lib/foundry/strips/store.ts). A code style is a module, not
+  // a prompt, so it is not a Style (Phase 5 decision 4) and never enters the style store.
   "motion-styles.json": MotionStylesDoc & Record<string, unknown>;
   "strips-ledger.json": StripsLedgerDoc & Record<string, unknown>;
 }
 export type CatalogueIndex = keyof CatalogueDocs;
 
 const EMPTY: { [K in CatalogueIndex]: () => CatalogueDocs[K] } = {
-  "styles.json": () => ({ styles: [] }),
   "ledger.json": () => ({ rows: [] }),
   "training-ledger.json": () => ({ rows: [] }),
   "motion-styles.json": () => ({
@@ -108,37 +242,15 @@ const exclusive = exclusiveSection(
     by: "app",
     onTimeout: (lock, waitMs) =>
       new FoundryError(
-        `The style catalogue is locked (${lock}) and the holder did not release it in ${waitMs} ms. Another commit or acquire.py is writing it; try again, and if nothing is running, delete the lock file.`,
+        `The Foundry indices are locked (${lock}) and the holder did not release it in ${waitMs} ms. Another commit or acquire.py is writing them; try again, and if nothing is running, delete the lock file.`,
         503,
       ),
   }),
 );
 
-async function newestJournalLine(): Promise<JournalLine | null> {
-  let raw: string;
-  try {
-    raw = await readFile(foundryFile(CATALOGUE_JOURNAL), "utf8");
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return null;
-    throw e;
-  }
-  const lines = raw.split("\n").filter((l) => l.trim());
-  for (let i = lines.length - 1; i >= 0; i--) {
-    try {
-      return JSON.parse(lines[i]) as JournalLine;
-    } catch {
-      // A torn tail (a writer killed mid-append) is skipped, never fatal.
-    }
-  }
-  return null;
-}
-
 export class CatalogueTx {
   private loaded: { [K in CatalogueIndex]?: CatalogueDocs[K] } = {};
   private rev: number | null = null;
-  private stamped = false;
-
-  constructor(private readonly meta: { op: CatalogueOp; run: string }) {}
 
   /** The revision this transaction writes under; null until `begin`. */
   get revision(): number | null {
@@ -154,55 +266,32 @@ export class CatalogueTx {
     return doc;
   }
 
-  /** Mint (or, on a retry, recover) the revision and journal it — before any
-   *  index is written. Call once, after the plan and its token check. */
+  /** Mark the plan checked and mint the revision. Call once, after the token check, before
+   *  the first write (a write before it is refused: the check must lead the writes). */
   async begin(ids: string[]): Promise<number> {
+    void ids;
     if (this.rev !== null) return this.rev;
-    const current = (await this.read("styles.json"))._rev ?? 0;
-    const last = await newestJournalLine();
-    if (last && last.op === this.meta.op && last.run === this.meta.run && last.rev >= current) {
-      // The newest line is this very commit's, written by an attempt that
-      // died after journaling: same revision, no second line.
-      this.rev = last.rev;
-      return this.rev;
-    }
-    this.rev = Math.max(current, last?.rev ?? 0) + 1;
-    const line: JournalLine = { rev: this.rev, at: new Date().toISOString(), op: this.meta.op, run: this.meta.run, ids, by: "app" };
-    await appendFile(foundryFile(CATALOGUE_JOURNAL), `${JSON.stringify(line)}\n`, "utf8");
+    this.rev = ((await this.read("motion-styles.json"))._rev ?? 0) + 1;
     return this.rev;
   }
 
-  /** Write a loaded index through the port. styles.json is stamped with the
-   *  transaction's revision. */
+  /** Write a loaded index through the port. */
   async write(name: CatalogueIndex): Promise<void> {
-    if (this.rev === null) throw new Error(`catalogue: ${name} written before begin() — the journal must lead the write`);
+    if (this.rev === null) throw new Error(`catalogue: ${name} written before begin() — the plan check must lead the write`);
     const doc = this.loaded[name];
     if (!doc) throw new Error(`catalogue: ${name} written without being read in this transaction`);
-    if (name === "styles.json") {
-      (doc as CatalogueDocs["styles.json"])._rev = this.rev;
-      this.stamped = true;
-    }
     await foundryFs().writeJsonAtomic(foundryFile(name), doc);
   }
 
-  /** Carry the revision onto styles.json when the commit wrote only another
-   *  index (the Dojo commit). A no-op once styles.json was written. */
-  async stamp(): Promise<void> {
-    if (this.stamped || this.rev === null) return;
-    await this.read("styles.json");
-    await this.write("styles.json");
-  }
+  /** v1 carried the revision onto styles.json here; styles.json is now the store's export,
+   *  stamped with the store's revision, so there is nothing left to carry. Kept for the Dojo
+   *  and Strips commits, which call it. */
+  async stamp(): Promise<void> {}
 }
 
-/** Run one catalogue transaction under the lock. Everything that reads an
- *  index to decide what to write — plan, token check, the writes — belongs
- *  inside `fn`. */
+/** Run one transaction over the other indices under the lock. Everything that reads an index to
+ *  decide what to write — plan, token check, the writes — belongs inside `fn`. */
 export function withCatalogue<T>(meta: { op: CatalogueOp; run: string }, fn: (tx: CatalogueTx) => Promise<T>): Promise<T> {
-  return exclusive(async () => {
-    const tx = new CatalogueTx(meta);
-    const out = await fn(tx);
-    // A transaction that journaled always lands its revision.
-    await tx.stamp();
-    return out;
-  });
+  void meta;
+  return exclusive(() => fn(new CatalogueTx()));
 }

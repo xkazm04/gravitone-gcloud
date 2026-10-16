@@ -10,14 +10,18 @@ import { defineMachine } from "./transitions.ts";
  * THE RATCHET. v1 promotes `candidate -> proven` inside the commit, and only
  * on an operator's keeps in two distinct run/scene cells (lib/foundry/store.ts:
  * "`proven` is a human's claim: a keep by:"model" is evidence, not a vote").
- * Nothing in v1 ever demotes. `locked` is new: the operator pins a proven
- * recipe so a later commit cannot rewrite what projects already render with
- * (the prototype shows proven styles on the shelf as "locked"); unlocking
- * returns it to proven, never below.
+ * Nothing in v1 ever demotes. `locked` is the theme's lock (lib/themes.ts
+ * `ratchetBlocker`: "a lock is one-way"), now on the same record: the operator
+ * pins a proven look so a later write cannot change what projects render with.
+ * BOTH edges are one-way (Phase 5 decision 2). The `locked -> proven` edge this
+ * table carried until Phase 5 contradicted the plan's "the proven and locked
+ * ratchets are kept" and v1's own lock; it is gone, so `locked` has no way out
+ * and changing a locked look is a duplicate (./style.ratchet.ts says where the
+ * write enforces it).
  */
 export const styleMachine = defineMachine({
   candidate: ["proven"],
   proven: ["locked"],
-  locked: ["proven"],
+  locked: [],
 });
 export type StyleStatus = (typeof styleMachine.states)[number];

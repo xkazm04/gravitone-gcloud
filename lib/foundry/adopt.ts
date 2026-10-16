@@ -16,9 +16,17 @@
 // fetch client, so the plate path is computed here (and held equal to keptPath
 // by foundry-adopt.probe).
 
+import type { Actor } from "@gt/domain/event";
+import type { StyleProof } from "@gt/domain/style";
+import { styleView, type StyleView } from "@gt/domain/styleView";
+import { blobStore } from "@gt/kernel/blob";
+import { adoptStyleIn } from "@gt/kernel/styles/writers";
+
 import type { ImageRef } from "@/lib/imaging/types";
+import { blobRootOf } from "@/lib/parts/gates";
 import type { ColorRole, PaletteColor, Proof, StyleBlock } from "@/lib/themes";
 
+import { exportStyles, OPERATOR, styleStore } from "./catalogue";
 import { FoundryError } from "./runStore";
 import type { LedgerRow, StyleDef } from "./types";
 
@@ -241,4 +249,33 @@ export async function adoptionDraft(style: StyleDef, ledger: LedgerRow[], io: Ad
     proofs: seeded.proofs,
     ...(seeded.leftOut ? { proofsLeftOut: seeded.leftOut } : {}),
   };
+}
+
+/**
+ * ADOPT, IN PLACE (Phase 5: one record is the catalogue entry AND the look). The draft above is
+ * computed exactly as before - the palette read off the first kept plate by the recognizer, the
+ * recipe as slots, up to SEED_CAP kept text-lane plates as PENDING proofs - and then written onto
+ * the proven style itself in one store transaction, and styles.json re-exported. v1 minted a
+ * second record (a theme in the browser's IndexedDB) joined back by `foundryStyleId`.
+ *
+ * NO PALETTE, NO LOOK: a `paletteMissing` draft writes nothing and is refused with its reason.
+ * The seeded plates carry no block digest - they were rendered by the forge, not under this
+ * block - so the sheet starts on v1's legacy gate, exactly as v1's adopted themes did.
+ */
+export async function adoptInStore(style: StyleDef, ledger: LedgerRow[], io: AdoptIO, by: Actor = OPERATOR): Promise<{ view: StyleView; draft: AdoptionDraft }> {
+  const draft = await adoptionDraft(style, ledger, io);
+  if (draft.paletteMissing) throw new FoundryError(`${style.name} was not adopted: ${draft.reason ?? "no palette could be read"}`, 409);
+  const s = await styleStore();
+  const blobs = blobStore(blobRootOf(s));
+  const at = new Date().toISOString();
+  const proofs: StyleProof[] = [];
+  for (const p of draft.proofs) {
+    const put = await blobs.put(Buffer.from(p.base64, "base64"), p.mime);
+    if (!put.ok) throw new FoundryError(`${p.id}: ${put.error.message}`, 503);
+    proofs.push({ id: p.id, label: p.label, media: put.value, state: "pending", ...(p.note ? { note: p.note } : {}), ...(p.model ? { model: p.model } : {}), source: p.id, at });
+  }
+  const r = s.tx((t) => adoptStyleIn(t, style.id, { block: draft.block, palette: draft.block.palette, proofs }, by));
+  if (!r.ok) throw new FoundryError(r.error.message, r.error.code === "not-found" ? 404 : r.error.code === "refused" ? 409 : 503);
+  exportStyles(s);
+  return { view: styleView(r.value.style, r.value.rev, r.value.updatedAt), draft };
 }

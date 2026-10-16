@@ -142,7 +142,9 @@ export function openStore(location: string, opts: StoreOptions = {}): Result<Sto
     // call goes out (lib/spend's reserve -> settle). A reservation lost after its
     // call was made is a re-spend on resume. FULL costs one fsync of the WAL per
     // commit; the write rate here is human- and job-paced, so that is cheap.
-    db.exec("PRAGMA synchronous = FULL; PRAGMA foreign_keys = ON;");
+    // 64 MB page cache: SQLite's 2 MB default made every Library search row an OS
+    // read - 45 ms for 6,115 candidate rows at 2 MB, 21 ms at 256 MB (2026-10-16).
+    db.exec("PRAGMA synchronous = FULL; PRAGMA foreign_keys = ON; PRAGMA cache_size = -65536;");
   } catch (e) {
     db.close();
     return err(isCorruption(errcodeOf(e)) ? "internal" : "unavailable", `store: cannot configure ${location}`, { cause: e });

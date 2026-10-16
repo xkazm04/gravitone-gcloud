@@ -11,6 +11,7 @@ export { keepEnv, stripComments };
 
 import { cliArgs, probeClaude, USES_SHELL } from "@/lib/claudeCli";
 import { retrieveArgs } from "@/lib/text/providers/claudeCliRetrieve";
+import { closeKernel } from "@/lib/kernelStore";
 import { PHASES, type PhaseKey, type PhaseState, type Project } from "@/lib/projects";
 
 import { fingerprintOf, sha256 } from "../_engine/marker.mjs";
@@ -83,17 +84,33 @@ export const noopProps = {
  * the same reason the doc above it gives.
  */
 export function probeFoundryDir(): () => string {
-  keepEnv(["FOUNDRY_DIR"]);
+  keepEnv(["FOUNDRY_DIR", "GRAVITONE_STORE_PATH"]);
   let dir = "";
   test.beforeEach(() => {
     dir = mkdtempSync(path.join(tmpdir(), "foundry-probe-"));
     process.env.FOUNDRY_DIR = dir;
+    // Since Phase 5 the catalogue's truth is the kernel store's `styles` table and styles.json its
+    // export (lib/foundry/catalogue.ts). Each probe's catalogue gets its OWN store beside it, so
+    // the styles.json a probe seeds is what that store imports on first touch - one store shared
+    // by the lane would answer every later probe with the first probe's catalogue.
+    process.env.GRAVITONE_STORE_PATH = path.join(dir, "store", "gravitone.sqlite");
   });
   test.afterEach(() => {
+    // Close the process's store before deleting it: Windows refuses to remove an open file.
+    closeKernel();
     if (dir) rmSync(dir, { recursive: true, force: true });
     dir = "";
   });
   return () => dir;
+}
+
+/** Throw the probe's style store away (closed first: Windows will not delete an open file), so the
+ *  styles.json the probe seeds next is what the store imports on its next first touch. For a probe
+ *  that re-seeds INSIDE one test (a crash-prefix walk); `probeFoundryDir` already does it per test. */
+export function resetStyleStore(): void {
+  closeKernel();
+  const at = process.env.GRAVITONE_STORE_PATH;
+  if (at) rmSync(path.dirname(at), { recursive: true, force: true });
 }
 
 /* ── the engine stand-in lane (CIP-A) ────────────────────────────────────── */

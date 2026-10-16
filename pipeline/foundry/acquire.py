@@ -7,8 +7,10 @@
 This is the registry's style-onboarding-from-sample, made into a command. A
 multi-frame readback (../vlm-probe/style.py) has already described each
 corpus source in the observable vocabulary and written an `imitable_recipe`;
-this turns one such readback into a `candidate` entry in styles.json -- the
-observables become the measurable half, the recipe the generator-facing half.
+this turns one such readback into a `candidate` style in the kernel store -- the
+observables become the measurable half, the recipe the generator-facing half --
+and re-exports pipeline/foundry/styles.json from the store (Phase 5: the store
+is the catalogue's truth, the file its export for the Python readers).
 
 Two rules carried over from the technique:
 
@@ -31,52 +33,18 @@ import json
 import sys
 from pathlib import Path
 
-from atomic import replace_with_retry
-from catalogue_lock import LOCK_NAME, CatalogueLocked, catalogue_lock, holds_lock, journal_intent
-
 HERE = Path(__file__).parent
 STYLES = HERE / "styles.json"
+# The kernel's Python doors (packages/kernel/py), appended BEHIND this folder's own modules.
+sys.path.append(str(HERE.parent.parent / "packages" / "kernel" / "py"))
+from kernel_store import StoreError, store_location  # noqa: E402
+from styles import StyleRefused, Styles, ensure_styles  # noqa: E402
 READBACKS = HERE.parent.parent / "vlm-probe-out" / "style" / "style.jsonl"
 
 OBSERVABLE_FIELDS = ["render_mode", "detail_density", "surface_realism", "atmospherics",
                      "palette_strategy", "black_handling", "edge_treatment"]
 
 DEFAULT_NEGATIVE = "text, watermark, logo, caption, border"
-
-
-def save_catalogue(cat, source, ids):
-    """Journal, revision and write the catalogue -- with the catalogue lock held.
-
-    The lock (catalogue_lock.py) is the caller's: it has to cover the READ the
-    new catalogue was computed from, not only this write. What this adds is
-    the transaction's record: one catalogue-journal.jsonl line, written ahead
-    of the file, and styles.json `_rev` set to its revision -- the same
-    sequence the app's commits advance, so GET /api/foundry/styles sees an
-    acquire as the catalogue moving.
-
-    Then the write itself, ATOMICALLY, the way forge.py writes a run manifest.
-
-    styles.json is polled, not just read: the /foundry page fetches it through
-    GET /api/foundry/styles on every load and on its own interval, and forge.py
-    reads it at the top of every run. A plain write_text on a 30 KB file is not
-    one operation -- a reader that lands mid-write gets a truncated document,
-    and on the page side that is a JSON.parse throw in a route handler with no
-    catch around it, so the whole catalogue surface answers 500.
-
-    forge.py's `save()` has carried the fix and the reason since it was written
-    ("Atomic: the page polls this file while the forge writes it"). This is the
-    same file, the same repo, the same hazard, on the one path that ADDS to the
-    thing being polled. Write beside it, then rename: os.replace is atomic, so
-    a reader sees the old catalogue or the new one and never half of either.
-    """
-    if not holds_lock(STYLES.parent):
-        raise RuntimeError(f"save_catalogue called without the catalogue lock ({STYLES.parent / LOCK_NAME}); "
-                           "wrap the read and the save in catalogue_lock()")
-    cat["_rev"] = journal_intent(STYLES.parent, cat, "acquire", source, ids, by="acquire.py")
-    tmp = STYLES.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(cat, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    # Retried on Windows PermissionError; see atomic.py for the measurement.
-    replace_with_retry(tmp, STYLES)
 
 
 def cell(parsed, field, width):
@@ -134,47 +102,36 @@ def main():
         sys.exit(f"the {args.model} readback of {args.source} carries no `imitable_recipe` -- "
                  "re-read the source with ../vlm-probe/style.py before acquiring it")
 
-    # THE READ AND THE WRITE SIT INSIDE ONE LOCK. The app's three commits
-    # read-modify-write this same file under pipeline/foundry/.catalogue.lock
-    # (lib/foundry/catalogue.ts); reading outside it would let a commit land
-    # between our read and our save and be erased by it. sys.exit inside the
-    # `with` still releases the lock (the context manager's finally).
+    # THE WRITE GOES THROUGH THE STORE'S DOOR (packages/kernel/py/styles.py): one transaction
+    # holds the read of the existing entry, the refusal rules and the write, under SQLite's
+    # write lock - the fence catalogue_lock.py used to build around styles.json by hand. Then
+    # the export, so forge.py's next `prepare` reads the style this just added.
     try:
-        with catalogue_lock(STYLES.parent, by="acquire.py"):
-            entry = acquire_entry(args, p)
-    except CatalogueLocked as e:
+        store = Styles(ensure_styles(store_location()))
+        entry = acquire_entry(args, p, store)
+        store.export(STYLES)
+    except (StyleRefused, StoreError) as e:
         sys.exit(str(e))
     print(f"acquired {args.id} from {args.source} ({args.model}) as candidate")
     print(f"  observables: {entry['observables']}")
     print(f"  recipe: {entry['recipe']}")
-    print("  edit the recipe in styles.json before forging -- the readback is a hypothesis")
+    print("  edit the recipe in styles.json, then `node pipeline/import/styles.mts --yes`, before forging -- the readback is a hypothesis")
 
 
-def acquire_entry(args, p):
-    """Read, decide and save the catalogue. Call with the catalogue lock held."""
-    cat = json.loads(STYLES.read_text(encoding="utf-8"))
-    existing = next((s for s in cat["styles"] if s["id"] == args.id), None)
-    if existing:
-        if existing.get("evidence"):
-            sys.exit(f"{args.id} already has {len(existing['evidence'])} evidence row(s); refusing to overwrite a judged style")
-        if not args.force:
-            sys.exit(f"{args.id} exists (no evidence yet); pass --force to replace it")
-        cat["styles"] = [s for s in cat["styles"] if s["id"] != args.id]
-
+def acquire_entry(args, p, store):
+    """Build the entry and land it through the door. The door refuses a judged style always and
+    an unjudged one without --force, in the words this command always used."""
     entry = {
         "id": args.id,
         "name": args.name,
         "family": args.family,
-        "status": "candidate",
         "origin": {"kind": "readback", "source": args.source, "models": [args.model],
                    "signature": p.get("signature", "")},
-        "observables": {f: p[f] for f in OBSERVABLE_FIELDS if f in p},
+        "observables": {f: p[f] for f in OBSERVABLE_FIELDS if p.get(f)},
         "recipe": p["imitable_recipe"].strip(),
         "negative": args.negative or DEFAULT_NEGATIVE,
-        "evidence": [],
     }
-    cat["styles"].append(entry)
-    save_catalogue(cat, args.source, [args.id])
+    store.put_readback(entry, force=args.force, by="acquire.py")
     return entry
 
 

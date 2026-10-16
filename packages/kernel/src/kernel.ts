@@ -5,11 +5,13 @@ import { eventsMigrations } from "./events.ts";
 import { ingestMigrations } from "./ingest.ts";
 import { jobMigrations } from "./job.ts";
 import { leaseMigrations } from "./lease.ts";
+import { libraryMigrations } from "./library/schema.ts";
 import { migrate, type MigrateOptions, type MigrateReport, type ModuleMigrations } from "./migrate.ts";
 import { receiptsMigrations } from "./pricing/receipts.ts";
 import { partsMigrations } from "./parts/schema.ts";
 import { recordsMigrations } from "./records/schema.ts";
 import { spendMigrations } from "./spend/ledger.ts";
+import { stylesMigrations } from "./styles/schema.ts";
 import { openStore, type Store, type StoreOptions } from "./store.ts";
 import { tokenMigrations } from "./token.ts";
 
@@ -45,10 +47,12 @@ const DECLARED: readonly Entry[] = [
   { migrations: jobMigrations, after: ["events", "lease", "spend"] },
   { migrations: recordsMigrations, after: ["events", "job"] },
   { migrations: partsMigrations, after: ["events", "records"] },
+  { migrations: stylesMigrations, after: ["events"] },
   { migrations: receiptsMigrations, after: ["events"] },
   { migrations: decisionMigrations, after: ["events"] },
   { migrations: calibrationMigrations, after: ["events", "decision"] },
   { migrations: tokenMigrations, after: ["events"] },
+  { migrations: libraryMigrations, after: ["events"] },
 ];
 
 /** The pure check: `entries` in an order where every module follows what it names. */

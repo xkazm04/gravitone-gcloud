@@ -16,6 +16,8 @@ const ROOT = vi.hoisted(() => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "gt-dv1-extract-"));
   vi.spyOn(process, "cwd").mockReturnValue(dir);
   process.env["FOUNDRY_DIR"] = path.join(dir, "catalogue");
+  // The style store (Phase 5): its own directory, so a seed can close and replace it.
+  process.env["GRAVITONE_STORE_PATH"] = path.join(dir, "style-store", "gravitone.sqlite");
   delete process.env["NEXT_PUBLIC_GRAVITONE_DATA"];
   return dir;
 });
@@ -26,6 +28,7 @@ import path from "node:path";
 import type { Decision } from "@gt/domain/decision";
 
 import { __setFoundryFsPort } from "../../lib/foundry/fsPort.ts";
+import { closeKernel } from "../../lib/kernelStore.ts";
 import { OBSERVABLE_FIELDS, type ExtractManifest, type ExtractVerdicts, type ExtractedStyle, type Observables } from "../../lib/foundry/extract/types.ts";
 import type { StyleDef } from "../../lib/foundry/types.ts";
 import { extractAdapter, importVerdict, lookDecision, type ExtractV1 } from "../../lib/decision/v1/sources/extract.ts";
@@ -38,7 +41,10 @@ const catDir = path.join(ROOT, "catalogue");
 const blobDir = path.join(ROOT, "blobs");
 
 afterEach(() => __setFoundryFsPort(null));
-afterAll(() => rmSync(ROOT, { recursive: true, force: true }));
+afterAll(() => {
+  closeKernel();
+  rmSync(ROOT, { recursive: true, force: true });
+});
 
 const obs = (over: Partial<Observables> = {}): Observables => ({ ...(Object.fromEntries(OBSERVABLE_FIELDS.map((f) => [f, "x"])) as Observables), ...over });
 const round = (n: number, file: string | null, score: number | null) => ({ n, file, score, per_field: {}, recipe: "r", prompt: `p${n}`, critique: null, generator: "g", vision: "v", error: file ? null : "generation failed" });
@@ -86,6 +92,10 @@ const manifest = (over: Partial<ExtractManifest> = {}): ExtractManifest => ({
 const VERDICTS: ExtractVerdicts = { grain: { verdict: "reject", at: "2026-10-14T11:00:00.000Z", reasons: ["muddy", "Style"], note: "too dark", by: "human" } };
 
 function seed(): void {
+  // The style store is v1's catalogue now (Phase 5): closed and replaced with the rest, so the
+  // seeded styles.json is what its first touch imports.
+  closeKernel();
+  rmSync(path.join(ROOT, "style-store"), { recursive: true, force: true });
   rmSync(path.join(ROOT, "foundry-out"), { recursive: true, force: true });
   rmSync(catDir, { recursive: true, force: true });
   mkdirSync(catDir, { recursive: true });

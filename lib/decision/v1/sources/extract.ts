@@ -15,9 +15,8 @@ import type { ItemWords, RowWords } from "@gt/ui/board/port";
 import { planExtractCommit } from "../../../foundry/commitPlan.ts";
 import { commitExtractRun, EXTRACT_ROOT, getExtractRun, patchExtractVerdicts, previewExtractCommit, resolveInExtract } from "../../../foundry/extract/store.ts";
 import type { ExtractManifest, ExtractVerdictRecord, ExtractVerdicts, ExtractedStyle } from "../../../foundry/extract/types.ts";
-import { foundryFs } from "../../../foundry/fsPort.ts";
+import { readStyleDefs } from "../../../foundry/catalogue.ts";
 import { EXTRACT_COMMITTABLE } from "../../../foundry/plant.ts";
-import { foundryFile } from "../../../foundry/runStore.ts";
 import type { StyleDef } from "../../../foundry/types.ts";
 import { packetIdOf } from "../../../ledger/v1/packet.ts";
 import {
@@ -124,7 +123,8 @@ async function read(ref: AdapterRef): Promise<Result<ExtractV1>> {
   const id = ref.runId;
   const detail = await v1Call(() => getExtractRun(id));
   if (!detail.ok) return detail;
-  const catalogue = await v1Call(() => foundryFs().readJson<{ styles: StyleDef[] }>(foundryFile("styles.json"), { styles: [] }));
+  // The style store (Phase 5), in v1's StyleDef shape: the catalogue a commit writes into.
+  const catalogue = await v1Call(() => readStyleDefs());
   if (!catalogue.ok) return catalogue;
   const { run, verdicts, rev } = detail.value;
   const files: { key: string; abs: string }[] = [];

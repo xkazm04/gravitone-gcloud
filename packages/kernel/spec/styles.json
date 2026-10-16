@@ -1,0 +1,58 @@
+{
+  "about": "The style store's Python door (py/styles.py) against the Node kernel (src/styles), as a table. Run by packages/kernel/test/styles.python.test.ts: each scenario starts from a fresh migrated store file; a `py` step runs through py/styles_spec.py, a `node` step through the Node driver. A `put` lands a readback (acquire.py's entry) and answers {result: created|replaced} or {refused: <fragment>}; `forge` is Node's forge commit (writers.ts recordForgeEvidenceIn) with the listed kept scenes; `read` is Node's door over the row; `export` is the door's re-export, held byte-equal to Node's exportStylesJson; `events` lists every style event so far.",
+  "entry": {
+    "id": "acq-a",
+    "name": "Acquired A",
+    "family": "cinematic",
+    "origin": { "kind": "readback", "source": "src-a", "models": ["gemini-3.7-flash"], "signature": "warm sepia epic" },
+    "observables": { "render_mode": "photoreal-film", "palette_strategy": "warm-cool-split" },
+    "recipe": "Warm sepia-graded 35mm epic cinematography.",
+    "negative": "text, watermark"
+  },
+  "scenarios": [
+    {
+      "name": "a readback lands as a candidate that Node's door reads, and its event chains with Node's",
+      "steps": [
+        { "by": "py", "op": "put", "expect": { "result": "created" } },
+        { "by": "node", "op": "read", "expect": { "status": "candidate", "rev": 1, "origin": { "kind": "readback", "source": "src-a", "signature": "warm sepia epic" } } },
+        { "by": "node", "op": "events", "expect": ["style.created"] }
+      ]
+    },
+    {
+      "name": "an unjudged style is replaced only with force",
+      "steps": [
+        { "by": "py", "op": "put", "expect": { "result": "created" } },
+        { "by": "py", "op": "put", "expect": { "refused": "exists (no evidence yet); pass --force to replace it" } },
+        { "by": "py", "op": "put", "force": true, "recipe": "A second reading.", "expect": { "result": "replaced" } },
+        { "by": "node", "op": "read", "expect": { "status": "candidate", "rev": 2, "recipe": "A second reading." } },
+        { "by": "node", "op": "events", "expect": ["style.created", "style.replaced"] }
+      ]
+    },
+    {
+      "name": "a style Node's forge commit judged is never overwritten, force or not",
+      "steps": [
+        { "by": "py", "op": "put", "expect": { "result": "created" } },
+        { "by": "node", "op": "forge", "kept": ["x", "y"], "expect": { "promoted": ["acq-a"] } },
+        { "by": "py", "op": "put", "force": true, "expect": { "refused": "already has 2 evidence row(s); refusing to overwrite a judged style" } },
+        { "by": "node", "op": "read", "expect": { "status": "proven", "rev": 2 } },
+        { "by": "node", "op": "events", "expect": ["style.created", "style.evidence"] }
+      ]
+    },
+    {
+      "name": "Node's door rules are refused before the write, so no row a Node read would choke on exists",
+      "steps": [
+        { "by": "py", "op": "put", "observables": { "render_mode": "" }, "expect": { "refused": "observable render_mode has no value" } },
+        { "by": "py", "op": "put", "observables": { "Render Mode": "x" }, "expect": { "refused": "is not a [a-z][a-z0-9_]* key" } },
+        { "by": "py", "op": "put", "recipe": "   ", "expect": { "refused": "needs a non-empty recipe" } },
+        { "by": "node", "op": "events", "expect": [] }
+      ]
+    },
+    {
+      "name": "the export a Python write triggers is Node's exporter, byte for byte",
+      "steps": [
+        { "by": "py", "op": "put", "expect": { "result": "created" } },
+        { "by": "py", "op": "export", "expect": "node-bytes" }
+      ]
+    }
+  ]
+}

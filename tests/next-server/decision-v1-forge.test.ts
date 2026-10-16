@@ -19,6 +19,8 @@ const ROOT = vi.hoisted(() => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "gt-dv1-forge-"));
   vi.spyOn(process, "cwd").mockReturnValue(dir);
   process.env["FOUNDRY_DIR"] = path.join(dir, "catalogue");
+  // The style store (Phase 5): its own directory, so a seed can close and replace it.
+  process.env["GRAVITONE_STORE_PATH"] = path.join(dir, "style-store", "gravitone.sqlite");
   delete process.env["NEXT_PUBLIC_GRAVITONE_DATA"];
   return dir;
 });
@@ -28,6 +30,7 @@ import path from "node:path";
 
 import { CALIBRATION_METHOD, type GraderCalibrationFile } from "../../lib/foundry/calibration.ts";
 import { __setFoundryFsPort } from "../../lib/foundry/fsPort.ts";
+import { closeKernel, kernel } from "../../lib/kernelStore.ts";
 import type { Candidate, RunManifest, StyleDef, Verdicts } from "../../lib/foundry/types.ts";
 import { forgeAdapter, gradesOf, importVerdict, type ForgeV1 } from "../../lib/decision/v1/sources/forge.ts";
 import { RecordingPort } from "../golden-path/_effects.ts";
@@ -40,7 +43,10 @@ const SHA = "a".repeat(64);
 const blobDir = path.join(ROOT, "blobs");
 
 afterEach(() => __setFoundryFsPort(null));
-afterAll(() => rmSync(ROOT, { recursive: true, force: true }));
+afterAll(() => {
+  closeKernel();
+  rmSync(ROOT, { recursive: true, force: true });
+});
 
 const style = (id: string, evidence: StyleDef["evidence"] = []): StyleDef => ({ id, name: `Haze ${id}`, family: "f", status: "candidate", origin: { kind: "authored" }, observables: {}, recipe: "r", negative: "n", evidence });
 
@@ -91,6 +97,10 @@ const manifest = (over: Partial<RunManifest> = {}): RunManifest => ({
 
 /** The v1 store from nothing: run dir, plates, verdicts, the catalogue. Every call starts from the same bytes. */
 function seed(verdicts: Verdicts = VERDICTS): void {
+  // The style store is v1's catalogue now (Phase 5): closed and replaced with the rest, so the
+  // seeded styles.json is what its first touch imports.
+  closeKernel();
+  rmSync(path.join(ROOT, "style-store"), { recursive: true, force: true });
   rmSync(path.join(ROOT, "foundry-out"), { recursive: true, force: true });
   rmSync(catDir, { recursive: true, force: true });
   mkdirSync(catDir, { recursive: true });
@@ -213,6 +223,15 @@ describe("forge adapter - the consequence (pure + planForgeCommit)", () => {
   });
 });
 
+/** Rows in the style store's append-only op log. */
+function styleOps(): number {
+  const k = kernel();
+  if (!k.ok) throw k.error;
+  const r = k.value.store.read((x) => x.get("SELECT count(*) AS n FROM style_ops")?.["n"]);
+  if (!r.ok) throw r.error;
+  return Number(r.value);
+}
+
 /** The v1 end state a commit leaves, without its instants (each run stamps its own `at`). */
 function endState(): unknown {
   const read = (f: string) => JSON.parse(readFileSync(f, "utf8")) as Record<string, unknown>;
@@ -258,10 +277,11 @@ describe("forge adapter - the apply (v1's own writers, through the kernel's outb
     const claim = flow.claim();
     must(await forgeAdapter.apply(claim));
     const before = endState();
-    const journal = readFileSync(path.join(catDir, "catalogue-journal.jsonl"), "utf8");
+    const ops = styleOps();
     must(await forgeAdapter.apply(claim));
     expect(endState()).toEqual(before);
-    expect(readFileSync(path.join(catDir, "catalogue-journal.jsonl"), "utf8")).toBe(journal);
+    // The style store's op log is the catalogue's history now (the journal stopped): no new row.
+    expect(styleOps()).toBe(ops);
     // Someone flips a committed verdict in v1's file: the kernel's outcome is no longer v1's.
     const v = JSON.parse(readFileSync(path.join(runDir, "verdicts.json"), "utf8")) as Verdicts;
     writeFileSync(path.join(runDir, "verdicts.json"), JSON.stringify({ ...v, "sc0/haze--ref--s0": { verdict: "reject", at: "2026-10-14T13:00:00.000Z" } }));

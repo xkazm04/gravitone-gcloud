@@ -2,6 +2,11 @@ import { z } from "zod";
 
 import { blobRefSchema } from "./blob.ts";
 import { libraryItemIdSchema, styleIdSchema } from "./ids.ts";
+import { LIBRARY_KINDS, LIBRARY_ORIGINS, LIBRARY_SOURCES, LIBRARY_STATES, type LibraryDetail } from "./library.ts";
+
+// The closed sets live in ./library.ts (zod-free, so the Library route holds them);
+// re-exported here for the readers that already import them from the record.
+export { LIBRARY_KINDS, LIBRARY_ORIGINS, LIBRARY_SOURCES, LIBRARY_STATES };
 
 // A LIBRARY ITEM: a reference or a ratified thing, of any medium, at thousands
 // of items (plan §2.1 `/library`, §2.2). The vocabulary is the spine: Kind,
@@ -74,18 +79,6 @@ const docVocabulary = z.object({
   techniques: z.number().int().nonnegative(),
 });
 
-/** The Library's shared state facet (library-data.js `STATES`). */
-export const LIBRARY_STATES = ["reference", "candidate", "ratified", "rejected", "unjudged"] as const;
-
-/** `real` came from the studio's own runs; `fixture` from the fixture universe
- *  (plan §3.2, a store namespace of its own); `derived` was made from another
- *  item and must say which. The prototype's `illustrative` is not a source a
- *  stored record may have: illustration lives in the prototype, not the store. */
-export const LIBRARY_SOURCES = ["real", "fixture", "derived"] as const;
-
-/** Which mill or door an item came through. */
-export const LIBRARY_ORIGINS = ["forge", "extract", "dojo", "strips", "suno", "elevenlabs", "studio", "registry", "import", "agent"] as const;
-
 /** What the operator may do with it. A screenshot of somebody's game read for
  *  its look is `reference-only`: it may teach a style, never ship in a cut. */
 export const rightsSchema = z.object({
@@ -115,8 +108,6 @@ const shared = {
   at: z.iso.datetime().optional(),
 };
 
-export const LIBRARY_KINDS = ["image", "plate", "style", "motion", "audio", "video", "doc"] as const;
-
 export const libraryItemSchema = z
   .discriminatedUnion("kind", [
     z.object({ kind: z.literal("image"), vocabulary: imageVocabulary, ...shared }),
@@ -134,4 +125,8 @@ export const libraryItemSchema = z
     if (it.lineage.some((l) => l.kind === "library-item" && l.id === it.id)) issue("lineage", "an item is not its own ancestor");
   });
 export type LibraryItem = z.output<typeof libraryItemSchema>;
+/** The Library's detail of one item (./library.ts LibraryDetail), with its record. */
+export type LibraryItemDetail = LibraryDetail<LibraryItem>;
+/** What a source hands the door: the same record, ids not yet branded. */
+export type LibraryItemInput = z.input<typeof libraryItemSchema>;
 export type LibraryKind = LibraryItem["kind"];

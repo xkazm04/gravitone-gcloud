@@ -1,4 +1,14 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+
 import { defineConfig, devices } from "@playwright/test";
+
+// THE LANE NEVER OPENS THE OPERATOR'S KERNEL STORE. Every (studio) page's header reads the
+// kernel, so a lane server with no store path opened foundry-out/gravitone.sqlite and wrote test
+// activity into it (found 2026-10-16, Phase 5). One temp store per lane run; a spec that needs its
+// own universe still sets its own.
+const LANE_STORE = path.join(mkdtempSync(path.join(tmpdir(), "gt-live-store-")), "gravitone.sqlite");
 
 // ==============================================================================
 // THE LIVE LANE — the assembled product, in a real browser.
@@ -130,6 +140,7 @@ export default defineConfig({
       NEXT_PUBLIC_DEV_AUTH: "1",
       NEXT_DIST_DIR: DIST,
       // The fixture universe (produce + part ports): produce.live and part-*.live seed into it; L35 made real the default.
+      GRAVITONE_STORE_PATH: process.env["GRAVITONE_STORE_PATH"] ?? LANE_STORE,
       GRAVITONE_PRODUCE_SIDE: "fixture",
       GRAVITONE_DRY_ONLY: "1",
     },

@@ -90,10 +90,13 @@ describe("the transitions v1 relied on", () => {
     expect(runMachine.can("awaiting_gate", "running")).toBe(true);
     expect(runMachine.next("ratified")).toEqual([]);
   });
-  it("style: the ratchet never demotes below proven", () => {
+  it("style: both ratchets are one-way - nothing demotes, and a lock has no way out (Phase 5 decision 2)", () => {
+    expect(styleMachine.can("candidate", "proven")).toBe(true);
+    expect(styleMachine.can("proven", "locked")).toBe(true);
     expect(styleMachine.can("proven", "candidate")).toBe(false);
     expect(styleMachine.can("locked", "candidate")).toBe(false);
-    expect(styleMachine.can("locked", "proven")).toBe(true);
+    expect(styleMachine.can("locked", "proven")).toBe(false);
+    expect(styleMachine.next("locked")).toEqual([]);
   });
 });
 

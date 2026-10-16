@@ -284,14 +284,17 @@ test("3. extract: a reject keeps its reasons and note, and the log line carries 
 /* ── 4. the race against the commit, both orders ──────────────────────────── */
 
 const isVerdictWrite = (e: { actor: string; op: string; file: string }) => e.op === "writeJsonAtomic" && path.basename(e.file) === "verdicts.json";
-const isStylesWrite = (e: { op: string; file: string }) => e.op === "writeJsonAtomic" && path.basename(e.file) === "styles.json";
+// The commit's last word is its manifest: run.json flips to `committed` there. (Phase 5: its
+// catalogue write is a kernel store transaction, off the fs port, so the race parks the commit
+// at the manifest instead - still inside the run lock a racing patch must wait behind.)
+const isManifestWrite = (e: { op: string; file: string }) => e.op === "writeJsonAtomic" && path.basename(e.file) === "run.json";
 
 for (const first of ["patch", "commit"] as const) {
   test(`4. RACE (${first} first): a patch and commitExtractRun never disagree about what was kept`, async () => {
     writeFileSync(path.join(foundryDir(), "styles.json"), JSON.stringify({ styles: [] }), "utf8");
     const id = extractRun({ styleA: { verdict: "keep", at: new Date().toISOString() } });
     const dir = path.join(EXTRACT_ROOT, id);
-    const il = new Interleaver((e) => (e.actor === "patch" && isVerdictWrite(e)) || (e.actor === "commit" && isStylesWrite(e)));
+    const il = new Interleaver((e) => (e.actor === "patch" && isVerdictWrite(e)) || (e.actor === "commit" && isManifestWrite(e)));
     __setFoundryFsPort(interleavedPort(il));
 
     const patch = () => patchExtractVerdicts(id, { set: { styleB: { verdict: "keep" } }, baseRev: 0, by: "human", surface: "probe" });
@@ -303,7 +306,7 @@ for (const first of ["patch", "commit"] as const) {
       pc = il.start("commit", commit);
     } else {
       pc = il.start("commit", commit);
-      expect(await il.advanceTo("commit", isStylesWrite)).toBe("parked");
+      expect(await il.advanceTo("commit", isManifestWrite)).toBe("parked");
       pp = il.start("patch", patch);
     }
     await il.drain(first, ["patch", "commit"]);
@@ -393,7 +396,10 @@ for (const [label, byOf1, expected] of [
     console.log(`[verdicts] ${label}: promotions=${plan.promotions.join(",") || "none"} status=${haze.status}`);
     expect(haze.status).toBe(expected);
     expect(plan.promotions).toEqual(expected === "proven" ? ["haze"] : []);
-    expect(stripAt(haze.evidence.filter((e) => e.run === id))).toEqual(stripAt(plan.evidence.haze));
+    // The export speaks v1's words: an operator's row carries no `by` (absent always meant a
+    // human's), so the plan's explicit "human" is compared as that absence.
+    const human = (rows: { by?: string }[]) => rows.map(({ by, ...r }) => (by === "human" ? r : { ...r, by }));
+    expect(stripAt(haze.evidence.filter((e) => e.run === id))).toEqual(stripAt(human(plan.evidence.haze)));
   });
 }
 
@@ -457,7 +463,10 @@ test("9. wiring: every verdict route exports PATCH, and every store writes verdi
     const s = src(store);
     expect(s, store).toMatch(/patchVerdictMap\(/);
     expect(s, store).toMatch(/replaceVerdictMap\(/);
-    expect(s, store).toMatch(/withRunLock\([^)]*\)?[\s\S]*withCatalogue\(/);
+    // The forge, Dojo and Strips commits write indices the catalogue lock still fences; the
+    // extract commit writes only the style store, whose transaction is its fence (Phase 5).
+    if (store === "lib/foundry/extract/store.ts") expect(s, store).toMatch(/withRunLock\([^)]*\)?[\s\S]*commitExtractStylesIn\(/);
+    else expect(s, store).toMatch(/withRunLock\([^)]*\)?[\s\S]*withCatalogue\(/);
     // No whole-map write of verdicts.json survives outside the commit.
     const writes = s.match(/writeJsonAtomic\([^)]*"verdicts\.json"/g) ?? [];
     expect(writes.length, `${store}: verdicts.json written outside the kernel`).toBeLessThanOrEqual(1);

@@ -41,6 +41,20 @@ sys.path.insert(0, str(HERE))
 
 FAILURES = []
 
+# THE SELFTEST NEVER WRITES THE REAL STORE. Several cases reach the kernel's Python protocol
+# (the GPU lease shim, job.py, the style door acquire.py writes through), and kernel_store.py's
+# default is <repo>/foundry-out/gravitone.sqlite - the operator's store. Measured 2026-10-16: one
+# full run added a style and three lease events to it. So the whole process is pointed at a
+# throwaway store HERE, at import, before any case can run (a case imported and called alone is
+# covered too), whatever the caller's environment said; it is deleted at exit.
+import atexit  # noqa: E402
+import os  # noqa: E402
+import shutil  # noqa: E402
+
+_STORE_DIR = tempfile.mkdtemp(prefix="gt-selftest-store-")
+os.environ["GRAVITONE_STORE_PATH"] = str(Path(_STORE_DIR) / "gravitone.sqlite")
+atexit.register(shutil.rmtree, _STORE_DIR, True)
+
 
 def check(name, got, want):
     ok = got == want
@@ -314,40 +328,42 @@ def test_catalogue_lock_speaks_the_apps_protocol():
     check("catalogue lock: a lock older than the staleness bound is broken", took, True)
 
 
-def test_acquire_journals_and_revisions_under_the_lock():
-    """An acquire is a catalogue transaction like any app commit: one journal
-    line ahead of the write, styles.json `_rev` advanced from the newest of
-    the file and the journal, and no save at all without the lock."""
+def test_acquire_writes_through_the_store_door():
+    """An acquire is a style-store write (Phase 5 decision 3): the readback lands as a
+    candidate row through packages/kernel/py/styles.py, one transaction with its event,
+    and styles.json is re-exported from the store. The store is this test's own file:
+    GRAVITONE_STORE_PATH is set BEFORE acquire runs - without it the door writes the
+    real foundry-out store (it did, once, on 2026-10-16)."""
     A = load("acquire")
     root = Path(tempfile.mkdtemp())
-    (root / "styles.json").write_text(json.dumps({"_rev": 4, "styles": []}), encoding="utf-8")
-    (root / "catalogue-journal.jsonl").write_text(json.dumps({"rev": 6, "op": "extract-commit", "run": "r"}) + "\n",
-                                                  encoding="utf-8")
+    (root / "styles.json").write_text(json.dumps({"styles": []}), encoding="utf-8")
     rb = root / "style.jsonl"
     rb.write_text(json.dumps(readback_row("src-a")) + "\n", encoding="utf-8")
     A.STYLES, A.READBACKS = root / "styles.json", rb
-    argv, sys.argv = sys.argv, ["acquire.py", "--source", "src-a", "--id", "acq-a", "--name", "A"]
+    prev = os.environ.get("GRAVITONE_STORE_PATH")
+    os.environ["GRAVITONE_STORE_PATH"] = str(root / "store.sqlite")
+    argv = sys.argv
+    outcomes = []
     try:
-        with contextlib.redirect_stdout(io.StringIO()):
-            A.main()
+        for extra in ([], []):
+            sys.argv = ["acquire.py", "--source", "src-a", "--id", "acq-a", "--name", "A", *extra]
+            try:
+                with contextlib.redirect_stdout(io.StringIO()):
+                    A.main()
+                outcomes.append("acquired")
+            except SystemExit as e:
+                outcomes.append(str(e))
     finally:
         sys.argv = argv
+        if prev is None:
+            os.environ.pop("GRAVITONE_STORE_PATH", None)
+        else:
+            os.environ["GRAVITONE_STORE_PATH"] = prev
     cat = json.loads((root / "styles.json").read_text(encoding="utf-8"))
-    lines = [json.loads(l) for l in (root / "catalogue-journal.jsonl").read_text(encoding="utf-8").splitlines() if l.strip()]
-    check("acquire: the style lands", [s["id"] for s in cat["styles"]], ["acq-a"])
-    check("acquire: _rev is minted past the newest journal line", cat["_rev"], 7)
-    check("acquire: exactly one journal line, naming the transaction",
-          [(l["rev"], l["op"], l["run"], l["ids"], l["by"]) for l in lines[1:]], [(7, "acquire", "src-a", ["acq-a"], "acquire.py")])
-    check("acquire: the lock is released", (root / ".catalogue.lock").exists(), False)
-    try:
-        A.save_catalogue({"styles": []}, "src-b", ["b"])
-        outcome = "saved without the lock"
-    except RuntimeError:
-        outcome = "refused"
-    check("acquire: save_catalogue refuses to run outside the lock", outcome, "refused")
-
-
-# ── intake: the paid readback ───────────────────────────────────────────────
+    check("acquire: the style lands, and the export carries it", [s["id"] for s in cat["styles"]], ["acq-a"])
+    check("acquire: it lands as a candidate", cat["styles"][0]["status"], "candidate")
+    check("acquire: the export carries the store's revision", cat["_rev"], 1)
+    check("acquire: an unjudged style is replaced only with --force", outcomes[1], "acq-a exists (no evidence yet); pass --force to replace it")
 
 def test_an_unparseable_readback_is_kept_on_disk():
     """The readback is a paid vendor call over N frames. When the answer does
@@ -885,7 +901,10 @@ def test_every_third_party_import_is_declared_in_requirements():
     pipeline_local |= {Path(f).parent.name for f in files if f.startswith("pipeline/") and Path(f).stem == "__init__"}
     # the kernel's Python protocol (packages/kernel/py: job, kernel_store, kernel_ledger),
     # which the GPU lease and the foundry worker put on sys.path by its path (Phase 4)
-    pipeline_local |= {Path(f).stem for f in files if f.startswith("packages/kernel/py/")}
+    # Read off the DIRECTORY, not the git index: that folder is put on sys.path by its path, so
+    # what is importable from it is what is in it - a door added this session (styles.py, Phase 5)
+    # is importable before it is committed, and the guard must not call its importer undeclared.
+    pipeline_local |= {p.stem for p in (root / "packages" / "kernel" / "py").glob("*.py")}
 
     def undeclared(declared):
         out = set()
@@ -1498,7 +1517,7 @@ TESTS = [
     test_a_grade_names_the_grader_version_not_just_the_model,
     test_list_survives_a_row_from_another_schema,
     test_catalogue_lock_speaks_the_apps_protocol,
-    test_acquire_journals_and_revisions_under_the_lock,
+    test_acquire_writes_through_the_store_door,
     test_an_unparseable_readback_is_kept_on_disk,
     test_frame_manifest_v2_schema_write_and_read_v1_normalization,
     test_shot_index_and_beat_of_mapping,

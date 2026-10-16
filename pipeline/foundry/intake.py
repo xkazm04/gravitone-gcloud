@@ -179,7 +179,7 @@ def main():
     ap.add_argument("--model", default="gemini-3.7-flash",
                     help="readback model; gemini runs over HTTP and does not touch the GPU")
     ap.add_argument("--no-readback", action="store_true", help="publish frames only")
-    ap.add_argument("--acquire", action="store_true", help="also add the readback to styles.json as a candidate")
+    ap.add_argument("--acquire", action="store_true", help="also add the readback to the style store as a candidate")
     ap.add_argument("--name", help="catalogue display name (with --acquire)")
     ap.add_argument("--family", default="game")
     ap.add_argument("--plan", action="store_true", help="also write plans/<slug>.json")
@@ -201,13 +201,11 @@ def main():
     if args.acquire:
         if args.no_readback:
             sys.exit("--acquire needs the readback")
-        # The catalogue write goes through acquire.py, which takes
-        # pipeline/foundry/.catalogue.lock (catalogue_lock.py) around its read
-        # AND its save, journals the change and bumps styles.json `_rev` -- the
-        # same fence the app's commits hold. intake must NOT take the lock
-        # itself around this call: the lock is not re-entrant across
-        # processes, so the child would wait on its parent until the bound and
-        # fail. One writer, one path.
+        # The catalogue write goes through acquire.py, which writes the style
+        # through the kernel store's Python door (packages/kernel/py/styles.py:
+        # one transaction, the store's write lock its fence) and re-exports
+        # styles.json, so the plan below reads the style it just added. intake
+        # must not write the style itself: one writer, one path.
         cmd = [sys.executable, str(HERE / "acquire.py"), "--source", args.slug,
                "--id", args.slug, "--name", args.name or args.slug,
                "--family", args.family, "--model", args.model]

@@ -30,7 +30,7 @@ import { OUT_ROOT, commitRun } from "@/lib/foundry/store";
 import type { Candidate, LedgerRow, RunManifest, StyleDef, Verdicts } from "@/lib/foundry/types";
 
 import { CrashAt, RecordingPort, label, stripAt } from "./_effects";
-import { probeFoundryDir } from "./_helpers";
+import { probeFoundryDir, resetStyleStore } from "./_helpers";
 
 const foundryDir = probeFoundryDir();
 
@@ -59,6 +59,8 @@ const styleDef = (id: string): StyleDef => ({
 function seed(): void {
   rmSync(runDir(), { recursive: true, force: true });
   rmSync(path.join(foundryDir(), "ledger.json"), { force: true });
+  // The style store is part of the durable state now (Phase 5): every k starts from the same one.
+  resetStyleStore();
   writeFileSync(path.join(foundryDir(), "styles.json"), JSON.stringify({ styles: [styleDef("haze")] }), "utf8");
   const candidates: Candidate[] = [0, 1, 2].map((i) => {
     const cid = `sc${i}/haze--ref--s${i}`;
@@ -159,17 +161,20 @@ test.afterAll(() => rmSync(runDir(), { recursive: true, force: true }));
 
 /* ── 1. The documented order, read off the effect log ─────────────────────── */
 
-test("case 1: commitRun's effects land in the documented order — ledger, styles, unlinks, then run.json", async () => {
+test("case 1: commitRun's effects land in the documented order — styles (the store), ledger, unlinks, then run.json", async () => {
   const { port } = await reference();
   const mutations = port.mutationLog().map(label);
   console.log(`[effects] commitRun, 3 candidates: ${port.log.length} call(s), K=${mutations.length} mutation(s)\n  ${mutations.join("\n  ")}`);
 
   // The walk saw something: a port the store never called reads as an empty log.
   expect(mutations.length, "the store made no call through lib/foundry/fsPort — the seam is not threaded").toBeGreaterThan(0);
+  // Phase 5: the style half is no longer a file on this port - it is ONE kernel transaction
+  // (evidence + promotion, then the styles.json export), made BEFORE the first effect below, so
+  // it leads the ledger exactly as the styles.json write used to sit beside it. Its own crash and
+  // ratchet guarantees live in packages/kernel/test/styles.test.ts.
   expect(mutations).toEqual([
     "writeJsonAtomic ledger.json",
     "writeFile grader-calibration.json",
-    "writeJsonAtomic styles.json",
     "unlink haze--ref--s1.png",
     "unlink haze--ref--s1.json",
     "unlink haze--ref--s2.png",
@@ -178,16 +183,18 @@ test("case 1: commitRun's effects land in the documented order — ledger, style
     "writeJsonAtomic verdicts.json",
     "writeJsonAtomic run.json",
   ]);
+  // ...and that transaction did land before the first port effect: the export already carries
+  // this run's evidence (promotion included) when the ledger is written.
+  const styles = readJsonFile<{ styles: StyleDef[] }>(path.join(foundryDir(), "styles.json"), { styles: [] }).styles;
+  expect(styles.find((x) => x.id === "haze")?.evidence.filter((e) => e.run === RUN).length).toBe(3);
 
-  // Each index is READ before it is written — a read-modify-write, which is
+  // The ledger is READ before it is written — a read-modify-write, which is
   // exactly the shape foundry-commit-race.probe.spec.ts interleaves.
   const seqOf = (l: string) => port.log.filter((e) => label(e) === l).map((e) => e.seq);
-  for (const idx of ["ledger.json", "styles.json"]) {
-    const reads = seqOf(`readJson ${idx}`);
-    const [write] = seqOf(`writeJsonAtomic ${idx}`);
-    expect(reads.length, `${idx} is read through the port`).toBeGreaterThan(0);
-    expect(Math.max(...reads)).toBeLessThan(write);
-  }
+  const reads = seqOf("readJson ledger.json");
+  const [write] = seqOf("writeJsonAtomic ledger.json");
+  expect(reads.length, "ledger.json is read through the port").toBeGreaterThan(0);
+  expect(Math.max(...reads)).toBeLessThan(write);
 });
 
 /* ── 2. Every prefix, retried, converges ──────────────────────────────────── */

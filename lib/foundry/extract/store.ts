@@ -30,19 +30,21 @@ import { reason } from "@/lib/text/router";
 import {
   FoundryError,
   containedIn,
-  foundryFile,
   listManifests,
   readJson,
   readManifestFile,
   runRoot,
   writeJsonAtomic,
 } from "../runStore";
-import { outPath } from "../../fixtures/roots";
-import type { Exemplar, StyleDef } from "../types";
+import { blobStore } from "@gt/kernel/blob";
+import type { StyleDraft } from "@gt/kernel/styles/core";
+import { commitExtractStylesIn } from "@gt/kernel/styles/writers";
+import { blobRootOf } from "../../parts/gates";
+import type { BlobRef } from "@gt/domain/blob";
 import { DEFAULT_CALL_ESTIMATE_USD, newManifest, settleReason } from "./engine";
 import type { EngineIO } from "./engine";
 import { imageDims, nearestAspect } from "./imageDims";
-import { withCatalogue } from "../catalogue";
+import { exportStyles, extractRoot, OPERATOR, readStyleDefs, styleStore } from "../catalogue";
 import { planExtractCommit } from "../commitPlan";
 import { foundryFs } from "../fsPort";
 import type {
@@ -70,7 +72,7 @@ import {
 
 /** EXTRACT_STORE_DIR redirects the run root, the way ARTICLES_STORE_DIR and the
  *  other `*_DIR` roots do, so a test or a probe cell never writes the checkout. */
-export const EXTRACT_ROOT = process.env["EXTRACT_STORE_DIR"]?.trim() || outPath("extract");
+export const EXTRACT_ROOT = extractRoot();
 
 const EXT: Record<ExtractUpload["mime"], string> = { "image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp" };
 
@@ -335,7 +337,7 @@ export async function previewExtractCommit(id: string): Promise<ExtractCommitPla
   const [run, verdicts, catalogue] = await Promise.all([
     readManifest(id),
     readVerdicts(id),
-    foundryFs().readJson<{ styles: StyleDef[] }>(foundryFile("styles.json"), { styles: [] }),
+    readStyleDefs(),
   ]);
   return planExtractCommit(run, verdicts, catalogue);
 }
@@ -365,15 +367,13 @@ export async function commitExtractRun(
   }
   if (tokenArg) token = tokenArg;
 
-  // One catalogue transaction (lib/foundry/catalogue.ts): the status check,
-  // the plan, its token comparison and the styles.json write share one lock,
-  // so a forge commit or a second extract commit cannot land in between.
-  //
-  // The run lock (verdictLog.ts) is taken FIRST, then the catalogue: a verdict
-  // write that arrives while this decides waits, then sees `committed`. Inline
-  // verdicts are written under the lock already held, never re-taking it.
+  // The run lock (verdictLog.ts) is taken FIRST: a verdict write that arrives
+  // while this decides waits, then sees `committed`. Inline verdicts are
+  // written under the lock already held, never re-taking it. The catalogue
+  // half is ONE style-store transaction (packages/kernel/src/styles), which is
+  // the fence v1's withCatalogue built by hand around styles.json.
   const dir = runDir(id);
-  return withRunLock(dir, () => withCatalogue({ op: "extract-commit", run: id }, async (tx) => {
+  return withRunLock(dir, async () => {
     // Every disk effect below goes through the port (lib/foundry/fsPort.ts).
     const fs = foundryFs();
     const run = await readManifest(id);
@@ -388,8 +388,7 @@ export async function commitExtractRun(
     if (verdictsIn) await replaceVerdictMapHeld(verdictSpec(id), run, verdictsIn, "commit");
     const verdicts = await readVerdicts(id);
 
-    const catalogue = await tx.read("styles.json");
-    const plan = planExtractCommit(run, verdicts, catalogue);
+    const plan = planExtractCommit(run, verdicts, await readStyleDefs());
     if (token !== undefined && token !== plan.token) {
       throw new FoundryError("The run state changed since the preview was generated.", 409);
     }
@@ -400,46 +399,39 @@ export async function commitExtractRun(
     const rejected = run.styles.filter((s) => verdicts[s.id]?.verdict === "reject");
     if (!kept.length) throw new FoundryError("Keep at least one style first.", 400);
 
-    // Replace styles where origin.source === id on retry rather than colliding with own suffix
-    catalogue.styles = catalogue.styles.filter((s) => s.origin?.source !== id);
-    const taken = new Set(catalogue.styles.map((s) => s.id));
-    const written: string[] = [];
     const models = [run.engines.vision, run.engines.reasoner, run.engines.generator].filter((x): x is string => !!x);
-
+    const styles = await styleStore();
+    const blobs = blobStore(blobRootOf(styles));
+    // The exemplar FILES become blobs before the transaction (content-addressed,
+    // so a retry re-puts nothing). A file that is gone is left out, never guessed.
+    type Ex = StyleDraft["exemplars"][number];
+    const exemplarOf = async (file: string, role: Ex["role"], settled?: Ex["settled"] | null): Promise<Ex[]> => {
+      const ref = await exemplarBlob(blobs, id, file);
+      return ref === undefined ? [] : [{ role, media: ref, run: id, file, ...(settled ? { settled } : {}) }];
+    };
+    const drafts: StyleDraft[] = [];
     for (const s of kept) {
-      let cid = s.id;
-      for (let i = 2; taken.has(cid); i++) cid = `${s.id}-${i}`;
-      taken.add(cid);
-      const exemplars: Exemplar[] = [];
+      const exemplars: Ex[] = [];
       for (const mid of s.members) {
         const src = run.sources.find((x) => x.id === mid);
-        if (src) exemplars.push({ kind: "extract", run: id, file: src.file, role: "source" });
+        if (src) exemplars.push(...(await exemplarOf(src.file, "source")));
       }
       for (const r of s.replicas) {
         const best = [...r.rounds].filter((x) => x.file).sort((a, b) => (b.score ?? -1) - (a.score ?? -1))[0];
         // The settle reason travels with the exemplar. Without it a replica the
         // loop GAVE UP on enters the catalogue as evidence the recipe works,
         // indistinguishable from one that hit the target.
-        if (best?.file) exemplars.push({ kind: "extract", run: id, file: best.file, role: "replica", settled: settleReason(run, r.rounds) ?? undefined });
+        if (best?.file) exemplars.push(...(await exemplarOf(best.file, "replica", settleReason(run, r.rounds))));
       }
-      for (const t of s.transfers) if (t.file) exemplars.push({ kind: "extract", run: id, file: t.file, role: "transfer" });
-
-      catalogue.styles.push({
-        id: cid,
-        name: s.name,
-        family: s.family,
-        status: "candidate",
-        origin: { kind: "extracted", source: id, models },
-        observables: { ...s.observables },
-        recipe: s.recipe,
-        negative: s.negative,
-        evidence: [],
-        exemplars,
-      });
-      written.push(cid);
+      for (const t of s.transfers) if (t.file) exemplars.push(...(await exemplarOf(t.file, "transfer")));
+      drafts.push({ id: s.id, name: s.name, family: s.family, origin: { kind: "extracted" as const, source: id, models }, observables: { ...s.observables }, recipe: s.recipe, negative: s.negative, elements: [], evidence: [], exemplars, proofs: [] });
     }
-    await tx.begin(written);
-    await tx.write("styles.json");
+    // Ids: a look's own, or `-2`, `-3` past every id another run holds; a retry
+    // replaces this run's own unjudged entries rather than colliding with them.
+    const committedStyles = styles.tx((t) => commitExtractStylesIn(t, id, drafts, OPERATOR));
+    if (!committedStyles.ok) throw new FoundryError(`The commit failed: ${committedStyles.error.message}`, committedStyles.error.code === "refused" || committedStyles.error.code === "conflict" ? 409 : 503);
+    const written = committedStyles.value;
+    exportStyles(styles);
 
     run.status = "committed";
     // Cost per usable: what the whole run spent over what survived the cull.
@@ -454,5 +446,21 @@ export async function commitExtractRun(
     run.log.push({ at, msg: `committed: ${written.join(", ")} → styles.json` });
     await fs.writeJsonAtomic(path.join(dir, "run.json"), run);
     return { kept: kept.map((s) => s.id), rejected: rejected.map((s) => s.id), written };
-  }));
+  });
+}
+
+const IMAGE_MIME: Readonly<Record<string, string>> = { ".png": "image/png", ".webp": "image/webp", ".jpg": "image/jpeg", ".jpeg": "image/jpeg" };
+
+/** A run-relative file as a blob, or undefined when the file is not on disk. */
+async function exemplarBlob(blobs: ReturnType<typeof blobStore>, id: string, rel: string): Promise<BlobRef | undefined> {
+  let bytes: Uint8Array;
+  try {
+    bytes = await readFile(resolveInExtract(id, rel));
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw e;
+  }
+  const put = await blobs.put(bytes, IMAGE_MIME[path.extname(rel).toLowerCase()] ?? "image/jpeg");
+  if (!put.ok) throw new FoundryError(`exemplar ${id}/${rel}: ${put.error.message}`, 503);
+  return put.value;
 }

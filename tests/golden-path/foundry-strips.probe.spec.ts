@@ -278,7 +278,10 @@ test("commit: kept into motion-styles, rejected media gone, a ledger row per dec
   // Final: verdicts and a second commit are refused.
   expect((await put({ verdicts: {} })).status).toBe(409);
   expect((await post(plan.token)).status).toBe(409);
-  // The journal names the op.
-  const journal = readFileSync(path.join(fdir, "catalogue-journal.jsonl"), "utf8");
-  expect(journal).toContain('"op":"strip-commit"');
+  // The commit's revision lands on the index it wrote (Phase 5: the catalogue journal that also
+  // named the op stopped; the style catalogue's history is the kernel store's op log, and the
+  // Strips commit writes no style).
+  const motion = JSON.parse(readFileSync(path.join(fdir, "motion-styles.json"), "utf8")) as { _rev?: number };
+  expect(motion._rev ?? 0).toBeGreaterThanOrEqual(1);
+  expect(existsSync(path.join(fdir, "catalogue-journal.jsonl")), "no journal is written any more").toBe(false);
 });
