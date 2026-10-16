@@ -3,29 +3,39 @@ import { parseAt } from "@gt/domain/door";
 import { AppError, ok, type Result } from "@gt/domain/errors";
 import { eventDataSchema } from "@gt/domain/event";
 import type { Holder, Job } from "@gt/domain/job";
+import { laneSlots } from "@gt/domain/lane";
 import { canonical } from "./canonical.ts";
+import { DRY, kernelCall, withDryRun, type WouldCall } from "./dryrun.ts";
 import type { Effects } from "./effects.ts";
 import { BREAKER_LIMIT, book, claimed, failed, interrupted, move, next, started, stopped, type MissingStep, type Outputs, type Producer, type StepOutcome } from "./job-core.ts";
+import { holdLaneIn, laneHold } from "./job-queue.ts";
 import { jobEvent, loadJob, loadOutputs, putJob } from "./job.ts";
 import { DEFAULT_TTL_S, fenceLoss, gone, type Alive } from "./lease-core.ts";
 import type { SpendClass } from "./spend/core.ts";
 import { lapseOwner } from "./spend/ledger.ts";
+import { lapseOpen, stepMeter } from "./spend/meter.ts";
+import { chargeOutcome, meterOf } from "./spend/projection.ts";
 import { actorOf, assertFence, claimIn, heartbeatIn, pidAlive, processHolder, releaseIn, snapshotOf } from "./lease.ts";
 import type { Tx } from "./store.ts";
 
-// THE JOB DRIVER - the one place a job meets the world. It claims the job's
-// LANE through kernel/lease, then loops: decide (job-core `next`) and mark the
-// step in flight in one transaction, perform it through `fx.call`, book the
-// outcome in the next transaction. Every transaction presents the lane fence
-// (`assertFence`), so a driver that woke after a take-over writes nothing.
+// THE JOB DRIVER - the one place a job meets the world. It claims a SLOT of
+// the job's lane through kernel/lease, then loops: decide (job-core `next`) and
+// mark the step in flight in one transaction, perform it through `fx.call`,
+// book the outcome in the next transaction. Every transaction presents the
+// slot's fence (`assertFence`), so a driver that woke after a take-over writes
+// nothing.
 //
 // Absorbed from v1's extract step machine (lib/foundry/extract/perform.ts
 // `step`: one unit, ceiling first, then save) and the MV worker's lease
 // (lib/sound/mv/queue.ts: "taken BEFORE crash recovery: recovery would
 // otherwise requeue the job the other process is rendering"). Kept: the claim
 // comes first, and the sweep it does in the same transaction can only touch
-// running jobs on this lane holding an OLDER fence - provably not anyone's
-// live work, because the lane is now ours.
+// running jobs on this slot holding an OLDER fence - provably not anyone's
+// live work, because the slot is now ours.
+//
+// A LANE HAS SLOTS (decision 5): `<lane>#<i>`, LANE_CAPACITY of them, each a
+// lease of its own; a claim takes the first free one. Two text turns share the
+// seat; the one GPU still runs one thing.
 //
 // A LANE IS DECLARED, NEVER INFERRED (plan §3.1, v1 dojo_run's stack purity):
 // a producer whose lane is not the job's is refused at the claim, before any
@@ -33,14 +43,28 @@ import type { Tx } from "./store.ts";
 //
 // A CRASH IS AN INTERRUPTION, AND AN OPERATOR LOOKS. Nothing here resumes an
 // interrupted job; `recover` only names it, and job.ts `retry` is the
-// operator's door. The step that was in flight is named in `interruption.stage`.
+// operator's door. The step that was in flight is named in `interruption.stage`,
+// and on a paid lane the lane HOLDS until `ackLane` (job-queue.ts).
+//
+// DRY IS THE JOB'S MODE, NOT THE CALLER'S PORT (G-dry). The driver's own calls
+// (`health`, `perform:<step>`) are kernel calls and pass any dry port; the
+// producer's vendor calls go through `ctx.fx`, which is the dry port unless
+// the job was armed live. So a dry job runs end to end, books would-calls and
+// finishes. A live job in a process that may only run dry is refused before
+// anything is claimed (decision 4: GRAVITONE_DRY_ONLY, read by the caller).
+//
+// A THROW NEVER LEAVES A JOB RUNNING. A drive that dies by an exception (not a
+// process death) records it: `failed` with the error while its fence holds,
+// `interrupted` when the fence was lost - in which case its outcome is as
+// unknown as a crash's. Only a throw that is not an Error passes untouched:
+// that is the crash harness ending the process, which no real code can catch.
 //
 // THE DEADLINE ADMITS, IT DOES NOT BOUND (job-coordination:
 // no-wall-clock-in-the-advance-contract). It is checked between steps only; a
 // step admitted before it runs to its own end, and the producer, which owns
 // the call, is told the deadline to bound it. A drive that reaches it yields:
 // the job goes back to the queue (running -> paused -> queued, one
-// transaction) and the lane is released, so the next drive claims it fresh,
+// transaction) and the slot is released, so the next drive claims it fresh,
 // with a new fence.
 
 export type RunOptions = {
@@ -54,14 +78,18 @@ export type RunOptions = {
   readonly sleep?: (ms: number) => Promise<void>;
   /** Wait before re-performing a step after a vendor failure, by streak. */
   readonly backoffMs?: (streak: number) => number;
-  /** Lane heartbeat cadence; default a third of the TTL (job-coordination: lease-renewal). */
+  /** Slot heartbeat cadence; default a third of the TTL (job-coordination: lease-renewal). */
   readonly heartbeatMs?: number;
+  /** `dryOnlyFrom(env)`: this process may not run a live job. */
+  readonly dryOnly?: boolean;
 };
 
 export type RunReport = {
-  readonly outcome: "done" | "failed" | "stopped" | "yielded" | "busy" | "not-queued" | "unhealthy";
+  readonly outcome: "done" | "failed" | "stopped" | "yielded" | "busy" | "held" | "not-queued" | "unhealthy";
   readonly job?: Job;
   readonly reason?: string;
+  /** What a dry drive would have called, in order: the receipts a dry launch shows. */
+  readonly wouldCalls?: readonly WouldCall[];
 };
 
 /** Exponential with full jitter on its upper half, capped (retry-backoff: backoff-design). */
@@ -73,18 +101,27 @@ export const spendOwner = (h: Holder): string => `${h.host}/${h.pid}/${h.bootId}
 
 const sleepMs = (n: number): Promise<void> => new Promise((r) => setTimeout(r, n));
 
-/** Interrupt one orphaned running job, naming its holder and the step in flight. */
+/** Interrupt one orphaned running job, naming its holder and the step in flight; a paid lane holds. */
 function interrupt(t: Tx, job: Job, by: Holder, why: string): Job {
   const holder = job.lease?.holder ?? by;
-  const out = interrupted(job, holder, t.at);
+  // The record is re-projected from the meter: a step that settled and then
+  // died before its booking still shows its spend on the interrupted job.
+  const out = { ...interrupted(job, holder, t.at), spend: meterOf(t, job.id) };
   putJob(t, out);
   jobEvent(t, actorOf(by), out, "job.interrupted", { why, holder: { bootId: holder.bootId, pid: holder.pid, host: holder.host }, ...(out.interruption?.stage === undefined ? {} : { stage: out.interruption.stage }) });
+  holdLaneIn(t, out, actorOf(by));
   return out;
 }
 
-function runningOn(t: Tx, lane: string): Job[] {
-  return t.all("SELECT id FROM jobs WHERE state = 'running' AND lane = ? ORDER BY n", lane).map((r) => loadJob(t, String(r["id"])).job);
+/** The running jobs recorded on one slot of a lane. */
+function runningOn(t: Tx, lane: string, slot: string): Job[] {
+  return t
+    .all("SELECT id FROM jobs WHERE state = 'running' AND lane = ? ORDER BY n", lane)
+    .map((r) => loadJob(t, String(r["id"])).job)
+    .filter((j) => j.slot === slot);
 }
+
+type Claim = { kind: "granted"; fence: number; slot: string; job: Job } | { kind: "report"; report: RunReport };
 
 export async function runJob(fx: Effects, producer: Producer, jobId: string, opts: RunOptions = {}): Promise<Result<RunReport>> {
   const holder = opts.holder ?? processHolder();
@@ -98,27 +135,47 @@ export async function runJob(fx: Effects, producer: Producer, jobId: string, opt
 
   if (producer.health !== undefined) {
     const check = producer.health;
-    const h = await fx.call("health", () => check());
+    const h = await fx.call("health", kernelCall(() => check()));
     if (!h.ok) return ok({ outcome: "unhealthy", reason: h.reason });
   }
 
-  const claim = fx.tx("claim", (t): { kind: "granted"; fence: number; lane: string } | { kind: "report"; report: RunReport } => {
+  const claim = fx.tx("claim", (t): Claim => {
     const { job } = loadJob(t, jobId);
     if (job.lane !== producer.lane) throw new AppError("refused", `job ${job.id} is declared on ${job.lane}; a ${producer.lane} producer may not run it`);
     if (job.state !== "queued") return { kind: "report", report: { outcome: "not-queued", job } };
-    const c = claimIn(t, { resource: job.lane, holder, ticket: opts.ticket ?? randomUUID(), ttlS, wait: false }, alive);
-    if (c.kind !== "granted") return { kind: "report", report: { outcome: "busy", job, ...(c.holder === undefined ? {} : { reason: `${c.holder.host}/${c.holder.pid} holds ${job.lane}` }) } };
-    for (const orphan of runningOn(t, job.lane)) {
-      if ((orphan.lease?.fence ?? 0) < c.lease.fence) interrupt(t, orphan, holder, "lane-taken-over");
+    if (job.mode.kind === "live" && opts.dryOnly === true) throw new AppError("refused", `job ${job.id} is armed live and this process may only run dry (GRAVITONE_DRY_ONLY=1); nothing was claimed`, { detail: "dry-only" });
+    const held = laneHold(t, job.lane);
+    if (held !== undefined) return { kind: "report", report: { outcome: "held", job, reason: `${job.lane} is held by job ${held.jobId}${held.stage === undefined ? "" : ` at ${held.stage}`}: credits may be spent - look first` } };
+    const ticket = opts.ticket ?? randomUUID();
+    const holders: string[] = [];
+    for (const slot of laneSlots(job.lane)) {
+      const c = claimIn(t, { resource: slot, holder, ticket, ttlS, wait: false }, alive);
+      if (c.kind !== "granted") {
+        if (c.holder !== undefined) holders.push(`${c.holder.host}/${c.holder.pid}`);
+        continue;
+      }
+      let heldNow = false;
+      for (const orphan of runningOn(t, job.lane, slot)) {
+        if ((orphan.lease?.fence ?? 0) < c.lease.fence) heldNow = interrupt(t, orphan, holder, "lane-taken-over").state === "interrupted" && laneHold(t, job.lane) !== undefined;
+      }
+      if (heldNow) {
+        // The take-over found a paid step that died unbooked: the lane holds, and this claim gives the slot back.
+        releaseIn(t, slot, c.lease.fence);
+        return { kind: "report", report: { outcome: "held", job, reason: `${job.lane} is held: a job on ${slot} was found interrupted - look first` } };
+      }
+      const run = claimed(job, c.lease, slot);
+      putJob(t, run);
+      jobEvent(t, actor, run, "job.claimed", { fence: c.lease.fence, slot });
+      return { kind: "granted", fence: c.lease.fence, slot, job: run };
     }
-    const run = claimed(job, c.lease);
-    putJob(t, run);
-    jobEvent(t, actor, run, "job.claimed", { fence: c.lease.fence });
-    return { kind: "granted", fence: c.lease.fence, lane: job.lane };
+    return { kind: "report", report: { outcome: "busy", job, ...(holders.length === 0 ? {} : { reason: `every ${job.lane} slot is held (${holders.join(", ")})` }) } };
   });
   if (!claim.ok) return claim;
   if (claim.value.kind === "report") return ok(claim.value.report);
-  const { fence, lane } = claim.value;
+  const { fence, slot } = claim.value;
+  const mode = claim.value.job.mode;
+  const port = withDryRun(fx, mode.kind === "live" ? mode : DRY, actor);
+  const withCalls = (r: RunReport): RunReport => (port.wouldCalls.length === 0 ? r : { ...r, wouldCalls: [...port.wouldCalls] });
 
   // The heartbeat runs on a timer, never per unit: the unit that takes an hour
   // is exactly when the lease matters. A heartbeat that fails is carried to the
@@ -126,7 +183,7 @@ export async function runJob(fx: Effects, producer: Producer, jobId: string, opt
   let lost: unknown;
   const beat = setInterval(() => {
     try {
-      const r = fx.tx("heartbeat", (t) => void heartbeatIn(t, lane, fence));
+      const r = fx.tx("heartbeat", (t) => void heartbeatIn(t, slot, fence));
       if (!r.ok) lost = r.error;
     } catch (e) {
       lost = e;
@@ -134,32 +191,48 @@ export async function runJob(fx: Effects, producer: Producer, jobId: string, opt
   }, opts.heartbeatMs ?? Math.max(1000, Math.floor((ttlS * 1000) / 3)));
   // The heartbeat never keeps a process alive on its own: a process with nothing else to do has stopped working.
   beat.unref();
-  // A lost lease stops the drive at its next boundary; a crash is rethrown as it is.
-  const halt = (): Result<RunReport> | undefined => {
-    if (lost === undefined) return undefined;
-    if (lost instanceof AppError) return { ok: false, error: lost };
-    throw lost;
+  // Read through a function: the timer writes `lost`, which flow analysis cannot see.
+  const lostNow = (): unknown => lost;
+
+  /** A drive that ended in an error: the job leaves `running` before the error is returned. */
+  const settleError = (e: AppError): Result<RunReport> => {
+    const r = fx.tx("abandon", (t): Job | undefined => {
+      const { job } = loadJob(t, jobId);
+      if (job.state !== "running" || job.lease?.fence !== fence || job.slot !== slot) return undefined;
+      const loss = fenceLoss(snapshotOf(t, slot).row, fence, Date.parse(t.at));
+      if (loss !== undefined) return interrupt(t, job, holder, `fence-lost: ${loss}`);
+      const out = failed(job, e.code, e.message);
+      putJob(t, out);
+      jobEvent(t, actor, out, "job.failed", { code: e.code, message: e.message });
+      releaseIn(t, slot, fence);
+      return out;
+    });
+    if (!r.ok) return { ok: false, error: e };
+    return { ok: false, error: e };
   };
 
   try {
     for (;;) {
-      const stop = halt();
-      if (stop !== undefined) return stop;
+      const gone_ = lostNow();
+      if (gone_ !== undefined) {
+        if (gone_ instanceof AppError) return settleError(gone_);
+        throw gone_;
+      }
       if (opts.deadlineMs !== undefined && now() >= opts.deadlineMs) {
         return fx.tx("yield", (t): RunReport => {
-          assertFence(t, lane, fence);
+          assertFence(t, slot, fence);
           const { job } = loadJob(t, jobId);
-          releaseIn(t, lane, fence);
-          if (job.state !== "running") return { outcome: "stopped", job };
+          releaseIn(t, slot, fence);
+          if (job.state !== "running") return withCalls({ outcome: "stopped", job });
           const back = move(move(job, "paused"), "queued");
           putJob(t, back);
           jobEvent(t, actor, back, "job.yielded", { fence });
-          return { outcome: "yielded", job: back };
+          return withCalls({ outcome: "yielded", job: back });
         });
       }
 
       const decided = fx.tx("next", (t): { kind: "perform"; step: MissingStep; job: Job; outputs: Outputs } | { kind: "end"; report: RunReport } => {
-        assertFence(t, lane, fence);
+        assertFence(t, slot, fence);
         const { job, terms } = loadJob(t, jobId);
         const outputs = loadOutputs(t, jobId);
         const missing = producer.plan(job, outputs);
@@ -167,12 +240,12 @@ export async function runJob(fx: Effects, producer: Producer, jobId: string, opt
         const finish = (j: Job, type: string, outcome: RunReport["outcome"], data: Record<string, unknown> = {}): { kind: "end"; report: RunReport } => {
           putJob(t, j);
           jobEvent(t, actor, j, type, data);
-          releaseIn(t, lane, fence);
-          return { kind: "end", report: { outcome, job: j } };
+          releaseIn(t, slot, fence);
+          return { kind: "end", report: withCalls({ outcome, job: j }) };
         };
         switch (d.kind) {
           case "perform": {
-            heartbeatIn(t, lane, fence);
+            heartbeatIn(t, slot, fence);
             const flying = started(job, d.step.name, outputs.size, outputs.size + missing.length, t.at);
             putJob(t, flying);
             jobEvent(t, actor, flying, "job.step-started", { step: d.step.name, estimateUsd: d.step.estimate.usd });
@@ -183,37 +256,48 @@ export async function runJob(fx: Effects, producer: Producer, jobId: string, opt
           case "trip":
             return finish(failed(job, "unavailable", d.message), "job.failed", "failed", { code: "unavailable", message: d.message });
           case "finish":
-            return finish(move(job, "done"), "job.done", "done", { spendUsd: job.spend.usd });
+            return finish(move(job, "done"), "job.done", "done", { spendUsd: job.spend.usd, ...(port.wouldCalls.length === 0 ? {} : { wouldCalls: port.wouldCalls.length }) });
           case "claim":
           case "idle":
-            releaseIn(t, lane, fence);
-            return { kind: "end", report: { outcome: "stopped", job } };
+            releaseIn(t, slot, fence);
+            return { kind: "end", report: withCalls({ outcome: "stopped", job }) };
         }
       });
-      if (!decided.ok) return decided;
+      if (!decided.ok) return settleError(decided.error);
       if (decided.value.kind === "end") return ok(decided.value.report);
       const { step, job, outputs } = decided.value;
-      const ctx = { job, outputs, key: `${jobId}/${step.name}`, owner: spendOwner(holder), deadlineMs: opts.deadlineMs ?? Number.POSITIVE_INFINITY };
+      const owner = spendOwner(holder);
+      const meter = stepMeter(port.effects, job, step.name, owner);
+      const ctx = { job, outputs, key: `${jobId}/${step.name}`, owner, deadlineMs: opts.deadlineMs ?? Number.POSITIVE_INFINITY, fx: port.effects, meter };
       // The try is INSIDE the call: a producer's throw becomes its outcome, and
       // anything the effect port itself throws (a crash) passes through untouched.
-      const outcome = await fx.call(`perform:${step.name}`, async (): Promise<StepOutcome> => {
-        try {
-          const o = await producer.perform(step, ctx);
-          if (o.kind !== "produced") return o;
-          // An output is stored and hashed as plain JSON; one that is not is the producer's defect.
-          const p = parseAt(`output of ${step.name}`, eventDataSchema, o.output);
-          return p.ok ? { ...o, output: p.value } : { kind: "fatal", code: "invalid", message: p.error.message };
-        } catch (e) {
-          return { kind: "fatal", code: e instanceof AppError ? e.code : "internal", message: e instanceof Error ? e.message : String(e) };
-        }
-      });
+      const outcome = await fx.call(
+        `perform:${step.name}`,
+        kernelCall(async (): Promise<StepOutcome> => {
+          try {
+            const o = await producer.perform(step, ctx);
+            if (o.kind !== "produced") return o;
+            // An output is stored and hashed as plain JSON; one that is not is the producer's defect.
+            const p = parseAt(`output of ${step.name}`, eventDataSchema, o.output);
+            return p.ok ? { ...o, output: p.value } : { kind: "fatal", code: "invalid", message: p.error.message };
+          } catch (e) {
+            // A process death is not a producer's outcome (the crash harness's sentinel is not an Error).
+            if (!(e instanceof Error)) throw e;
+            return { kind: "fatal", code: e instanceof AppError ? e.code : "internal", message: e.message };
+          }
+        }),
+      );
       // A lost heartbeat does not discard what was made: the booking's fence decides.
-      if (lost !== undefined && !(lost instanceof AppError)) throw lost;
+      const dead = lostNow();
+      if (dead !== undefined && !(dead instanceof AppError)) throw dead;
 
       const booked = fx.tx(`book:${step.name}`, (t): { ended: boolean; streak: number; job: Job } => {
-        assertFence(t, lane, fence);
+        assertFence(t, slot, fence);
         const { job: cur } = loadJob(t, jobId);
-        const b = book(cur, step, outcome, t.at, limit);
+        lapseOpen(t, meter.open());
+        // A producer that metered its own calls is the meter's already; one that did not is booked for here.
+        if (!meter.used() && cur.mode.kind === "live") chargeOutcome(t, cur, step, outcome, owner);
+        const b = book(cur, step, outcome, t.at, limit, meterOf(t, jobId));
         if (b.output !== undefined) {
           t.run("INSERT INTO job_outputs (job_id, step, output, fence, at) VALUES (?, ?, ?, ?, ?)", jobId, step.name, canonical(b.output), fence, t.at);
         }
@@ -222,14 +306,18 @@ export async function runJob(fx: Effects, producer: Producer, jobId: string, opt
         jobEvent(t, actor, b.job, outcome.kind === "produced" ? "job.step-done" : "job.step-failed", data, b.cost);
         if (b.ended !== undefined) {
           jobEvent(t, actor, b.job, outcome.kind === "money-stop" ? "job.stopped" : "job.failed", { code: b.job.error?.code ?? "internal", message: b.job.error?.message ?? "" });
-          releaseIn(t, lane, fence);
+          releaseIn(t, slot, fence);
         }
         return { ended: b.ended !== undefined, streak: b.job.failStreak, job: b.job };
       });
-      if (!booked.ok) return booked;
-      if (booked.value.ended) return ok({ outcome: "failed", job: booked.value.job });
+      if (!booked.ok) return settleError(booked.error);
+      if (booked.value.ended) return ok(withCalls({ outcome: "failed", job: booked.value.job }));
       if (outcome.kind === "vendor-failure") await sleep(backoff(booked.value.streak));
     }
+  } catch (e) {
+    // A process death (the crash harness's sentinel) is not an Error and is not ours to record.
+    if (!(e instanceof Error)) throw e;
+    return settleError(e instanceof AppError ? e : new AppError("internal", e.message, { cause: e }));
   } finally {
     clearInterval(beat);
   }
@@ -238,10 +326,11 @@ export async function runJob(fx: Effects, producer: Producer, jobId: string, opt
 /**
  * The recovery sweep (v1 turns' orphan sweep, MV's first-start recovery): every
  * running job whose holder is provably gone becomes `interrupted`, naming the
- * holder and the step in flight. Gone means its lane fence no longer holds
+ * holder and the step in flight. Gone means its slot fence no longer holds
  * (released, taken over, or past its TTL) or its holder is a dead process on
  * this host. A holder on another host inside its TTL is alive as far as
- * anyone here can know, and its job is left alone. Nothing is resumed.
+ * anyone here can know, and its job is left alone. Nothing is resumed; a paid
+ * lane holds.
  */
 export function recover(fx: Effects, opts: { holder?: Holder; alive?: Alive; spendClasses?: readonly SpendClass[] } = {}): Result<Job[]> {
   const me = opts.holder ?? processHolder();
@@ -251,13 +340,13 @@ export function recover(fx: Effects, opts: { holder?: Holder; alive?: Alive; spe
     for (const r of t.all("SELECT id FROM jobs WHERE state = 'running' ORDER BY n")) {
       const { job } = loadJob(t, String(r["id"]));
       const lease = job.lease;
-      if (lease === undefined) throw new AppError("internal", `job ${job.id} is running without a lease`);
-      const loss = fenceLoss(snapshotOf(t, job.lane).row, lease.fence, Date.parse(t.at));
+      if (lease === undefined || job.slot === undefined) throw new AppError("internal", `job ${job.id} is running without a lease`);
+      const loss = fenceLoss(snapshotOf(t, job.slot).row, lease.fence, Date.parse(t.at));
       const why = loss ?? (gone(lease.holder, me, alive) ? "holder-gone" : undefined);
       if (why === undefined) continue;
-      out.push(interrupt(t, job, me, why));
       // The dead drive's holds: the vendor may have been paid, so they keep counting.
       for (const cls of opts.spendClasses ?? []) lapseOwner(t, cls, spendOwner(lease.holder));
+      out.push(interrupt(t, job, me, why));
     }
     return out;
   });

@@ -1,0 +1,137 @@
+import { AppError, ok, type Result } from "@gt/domain/errors";
+import type { Holder } from "@gt/domain/job";
+import { LANE_CAPACITY, RESOURCE_LANES, type ResourceLane } from "@gt/domain/lane";
+import type { Effects } from "./effects.ts";
+import type { Producer } from "./job-core.ts";
+import { pickWork, type LaneLook, type Pick } from "./job-queue-core.ts";
+import { laneHold, nextClaimable } from "./job-queue.ts";
+import { recover, runJob, type RunOptions, type RunReport } from "./job-run.ts";
+import type { Alive } from "./lease-core.ts";
+import { processHolder } from "./lease.ts";
+import type { SpendClass } from "./spend/core.ts";
+
+// THE WORKER LOOP - the driver over job-queue-core's decision: look at every
+// lane, start a drive for each pick, repeat; stop when told.
+//
+// v1 had one loop per producer, each with its own idea of a queue (lib/sound/
+// mv/queue.ts's worker, the Suno queue, extract's `--loop`), each recovering
+// its own crashes at start. Kept: RECOVERY FIRST (background-jobs:
+// startup-sweeps - "the first act after a gap reconciles what was running"),
+// so a job a dead process left `running` is named interrupted before anything
+// is claimed beside it; and ONE DRIVE PER JOB at a time. Upgraded: one loop
+// for every lane, with the lane's capacity, its hold and its order read from
+// the store on every look, so the operator's `[`/`]`, a re-route and an
+// acknowledgement take effect on the next look with nothing to restart.
+//
+// STOPPING PARKS, IT DOES NOT ABANDON (admission-queue: drain-and-shutdown).
+// When the signal fires no new job is picked, and every drive in flight
+// reaches its next step boundary and yields - its job goes back to the queue,
+// its step finished and booked - before the loop returns. The step itself is
+// never cut: the drive's deadline admits, it does not bound (job-run.ts).
+//
+// A drive's outcome is reported, never thrown at the loop: one producer's
+// failure is its job's verdict (tick-isolation), and the loop keeps looking.
+
+export type WorkOptions = {
+  readonly signal: AbortSignal;
+  readonly holder?: Holder;
+  readonly alive?: Alive;
+  /** Lapsed for a dead drive's open holds at recovery. */
+  readonly spendClasses?: readonly SpendClass[];
+  /** Passed to every drive (dry-only, TTL, heartbeat, backoff). The deadline is the loop's. */
+  readonly run?: Omit<RunOptions, "holder" | "alive" | "deadlineMs" | "now">;
+  /** How long an idle look waits before looking again; a finished drive wakes it sooner. */
+  readonly idleMs?: number;
+  readonly now?: () => number;
+  /** Called with every drive's outcome, as it lands. */
+  readonly onReport?: (pick: Pick, report: Result<RunReport>) => void;
+};
+
+export type WorkSummary = {
+  readonly looks: number;
+  readonly started: number;
+  readonly recovered: number;
+  readonly reports: readonly { readonly pick: Pick; readonly report: Result<RunReport> }[];
+  /** Heads that waited because no producer here makes them, by job id, as last seen. */
+  readonly orphans: readonly Pick[];
+};
+
+function look(fx: Effects): Result<LaneLook[]> {
+  return fx.tx("worker.look", (t) =>
+    RESOURCE_LANES.map((lane: ResourceLane): LaneLook => {
+      const v = t.get("SELECT count(*) AS c FROM jobs WHERE lane = ? AND state = 'running'", lane)?.["c"];
+      const head = nextClaimable(t, lane);
+      const base = { lane, capacity: LANE_CAPACITY[lane], running: typeof v === "number" ? v : 0, held: laneHold(t, lane) !== undefined };
+      return head === undefined ? base : { ...base, head: { id: head.id, producer: head.producer } };
+    }),
+  );
+}
+
+export async function workLoop(fx: Effects, producers: ReadonlyMap<string, Producer>, opts: WorkOptions): Promise<Result<WorkSummary>> {
+  const holder = opts.holder ?? processHolder();
+  const alive = opts.alive;
+  const idleMs = opts.idleMs ?? 1000;
+  const clock = opts.now ?? Date.now;
+  const swept = recover(fx, { holder, ...(alive === undefined ? {} : { alive }), ...(opts.spendClasses === undefined ? {} : { spendClasses: opts.spendClasses }) });
+  if (!swept.ok) return swept;
+
+  const inFlight = new Map<string, { pick: Pick; done: Promise<void> }>();
+  const reports: { pick: Pick; report: Result<RunReport> }[] = [];
+  let orphans: readonly Pick[] = [];
+  let looks = 0;
+  let started = 0;
+  // A drive yields at its next boundary once the loop is told to stop.
+  const runOpts: RunOptions = {
+    ...opts.run,
+    holder,
+    ...(alive === undefined ? {} : { alive }),
+    deadlineMs: Number.MAX_SAFE_INTEGER,
+    now: () => (opts.signal.aborted ? Number.POSITIVE_INFINITY : clock()),
+  };
+
+  while (!opts.signal.aborted) {
+    const seen = look(fx);
+    if (!seen.ok) return seen;
+    looks++;
+    const mine = new Map<ResourceLane, string[]>();
+    for (const { pick } of inFlight.values()) mine.set(pick.lane, [...(mine.get(pick.lane) ?? []), pick.jobId]);
+    const decided = pickWork(seen.value, (name) => producers.has(name), mine);
+    orphans = decided.orphans;
+    for (const pick of decided.picks) {
+      const producer = producers.get(pick.producer);
+      if (producer === undefined) continue;
+      started++;
+      const done = runJob(fx, producer, pick.jobId, runOpts).then(
+        (report) => {
+          reports.push({ pick, report });
+          opts.onReport?.(pick, report);
+        },
+        (e: unknown) => {
+          // A drive that threw past runJob's own recording is a process-level fault: carried as the drive's error, never lost.
+          const report: Result<RunReport> = { ok: false, error: e instanceof AppError ? e : new AppError("internal", e instanceof Error ? e.message : String(e), { cause: e }) };
+          reports.push({ pick, report });
+          opts.onReport?.(pick, report);
+        },
+      ).finally(() => inFlight.delete(pick.jobId));
+      inFlight.set(pick.jobId, { pick, done });
+    }
+    if (decided.picks.length > 0) continue;
+    await idle(idleMs, opts.signal, [...inFlight.values()].map((f) => f.done));
+  }
+  await Promise.all([...inFlight.values()].map((f) => f.done));
+  return ok({ looks, started, recovered: swept.value.length, reports, orphans });
+}
+
+/** Wait until `ms` pass, the signal fires, or any drive finishes - whichever is first. */
+function idle(ms: number, signal: AbortSignal, drives: readonly Promise<void>[]): Promise<void> {
+  return new Promise((resolve) => {
+    const done = (): void => {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", done);
+      resolve();
+    };
+    const timer = setTimeout(done, ms);
+    signal.addEventListener("abort", done, { once: true });
+    for (const d of drives) void d.then(done, done);
+  });
+}

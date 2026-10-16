@@ -42,3 +42,57 @@ export const RESOURCE_LANES = [
 ] as const;
 export const resourceLaneSchema = z.enum(RESOURCE_LANES);
 export type ResourceLane = z.output<typeof resourceLaneSchema>;
+
+/**
+ * HOW MANY JOBS A RESOURCE RUNS AT ONCE (Director's decision 5, Phase 4). The
+ * kernel leases a SLOT, `<lane>#<i>`, not the whole lane, so two article turns
+ * share the text seat while the one GPU still runs one thing. v1 had this as
+ * four separate habits (lib/gpu/lease.ts one holder; the Suno and MV queues one
+ * worker each; the turn ledger's concurrent CLI sessions; the imaging router's
+ * per-vendor rate) and the Runs view drew a fifth copy as UI data
+ * (@gt/ui runs/lanes.ts LANE_SPECS `cap`). The table lives here so the lease
+ * and the view read one number.
+ */
+export const LANE_CAPACITY: { readonly [L in ResourceLane]: number } = {
+  "gpu.local": 1,
+  "box.render": 1,
+  "box.chrome": 1,
+  "seat.text": 4,
+  "cloud.google": 3,
+  "cloud.elevenlabs": 2,
+  "cloud.leonardo": 2,
+  "cloud.qwen": 1,
+};
+
+/** The slot resources of a lane, in the order a claim tries them. */
+export function laneSlots(lane: ResourceLane): readonly string[] {
+  return Array.from({ length: LANE_CAPACITY[lane] }, (_, i) => `${lane}#${i + 1}`);
+}
+
+/** The lane a slot resource belongs to, or undefined for any other resource. */
+export function laneOfSlot(resource: string): ResourceLane | undefined {
+  const hash = resource.lastIndexOf("#");
+  const lane = resourceLaneSchema.safeParse(hash < 0 ? resource : resource.slice(0, hash));
+  return lane.success ? lane.data : undefined;
+}
+
+/**
+ * WHERE A CRASH COSTS MONEY (owner ruling 2026-10-16). A job interrupted on a
+ * PAID lane may already have spent - Suno credits, a Leonardo studio still, a
+ * seat's turn, a cloud call - so its lane HOLDS until an operator has looked
+ * (v1 MV/Suno switched the whole queue off: "credits may be spent - look
+ * first"). The free local lanes carry on: a crashed render is re-rendered for
+ * the price of electricity. Two lists, exhaustive by the mapped type.
+ */
+export const LANE_PAYS: { readonly [L in ResourceLane]: boolean } = {
+  "gpu.local": false,
+  "box.render": false,
+  "box.chrome": true,
+  "seat.text": true,
+  "cloud.google": true,
+  "cloud.elevenlabs": true,
+  "cloud.leonardo": true,
+  "cloud.qwen": true,
+};
+export const PAID_LANES: readonly ResourceLane[] = RESOURCE_LANES.filter((l) => LANE_PAYS[l]);
+export const FREE_LANES: readonly ResourceLane[] = RESOURCE_LANES.filter((l) => !LANE_PAYS[l]);

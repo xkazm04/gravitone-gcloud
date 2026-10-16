@@ -29,35 +29,33 @@ export const HOLDER = { bootId: "b-mgq3k2-1a2b3c4d", pid: 4412, host: "render-bo
 export const PRICED = { seconds: 96, usd: 0 };
 export const UNPRICED = { seconds: 240, usd: null, unpricedReason: "Suno credits are not priced per prompt" };
 
-/** Glass Harbor — trailer (studio.js): everything ran overnight; the cut waits at the Weir. */
+/** Glass Harbor — trailer (studio.js), as the records store holds it: a head and its plan rows. */
 export function glassHarborTrailer() {
-  const part = (id: string, kind: string, lane: string, model: string, units: number, after: string[], state: string, gate?: boolean) => ({
-    id,
-    kind,
-    model,
-    lane,
-    units,
-    estimate: PRICED,
-    after,
-    ...(gate ? { gate: "verdict" } : {}),
-    state,
-  });
+  const w = (id: string, kind: string, option: string, units: number, after: string[]) => ({ id, kind, option, units, after });
+  const g = (judges: string, verdict: string) => ({ id: `gate:${judges}`, kind: "gate", judges, verdict, after: [judges] });
   return {
-    id: "seed-glass-harbor-trailer",
-    title: "Glass Harbor — trailer",
-    recipe: "film/trailer",
-    styleId: "painted-3d",
-    runtimeS: 120,
-    rev: 3,
+    project: {
+      id: "seed-glass-harbor-trailer",
+      title: "Glass Harbor — trailer",
+      recipe: "film/trailer",
+      styleId: "painted-3d",
+      runtimeS: 120,
+      rev: 3,
+      createdAt: "2026-10-13T16:30:00Z",
+      launchedAt: "2026-10-13T16:40:00Z",
+    },
     parts: [
-      part("p-research", "research", "seat.text", "text CLI · research turn", 1, [], "ratified"),
-      part("p-script", "script", "seat.text", "text CLI · 2 turns", 1, ["p-research"], "ratified"),
-      part("p-frames", "frames", "gpu.local", "Flux 2 dev fp8 · ComfyUI", 24, ["p-script"], "ratified", true),
-      part("p-motion", "motion", "gpu.local", "Wan 2.2 · i2v", 10, ["p-frames"], "ratified"),
-      part("p-score", "score", "box.chrome", "Suno v6 · serial", 2, ["p-script"], "ratified", true),
-      part("p-cut", "cut", "box.render", "ffmpeg · compositor", 1, ["p-motion", "p-score"], "awaiting_gate", true),
+      w("research", "research", "research/claude-cli/claude-opus-5", 1, []),
+      w("script", "script", "script/claude-cli/claude-opus-5", 1, ["research"]),
+      w("frames", "frames", "frames/comfy/flux-2-dev-fp8", 24, ["script"]),
+      g("frames", "matrix-cull"),
+      w("motion", "motion", "motion/wan/wan2.2-ti2v-5B", 10, ["gate:frames"]),
+      w("score", "score", "score/suno/v6", 2, ["script"]),
+      g("score", "pick"),
+      w("cut", "cut", "cut/ffmpeg/ffmpeg-compositor", 1, ["motion", "gate:score"]),
+      g("cut", "packet-review"),
+      { id: "slot", kind: "slot", after: ["gate:cut"] },
     ],
-    state: "awaiting_gate",
   };
 }
 

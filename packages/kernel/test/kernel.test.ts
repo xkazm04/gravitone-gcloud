@@ -11,6 +11,7 @@ import { MODULES as DECISION_FIXTURE } from "./decision.fixtures.ts";
 import { must, scratch, steppingClock } from "./helpers.ts";
 import { KERNEL as JOB_FIXTURE } from "./job-fixture.ts";
 import { receiptsMigrations } from "../src/pricing/receipts.ts";
+import { recordsMigrations } from "../src/records/schema.ts";
 import { spendMigrations } from "../src/spend/ledger.ts";
 import { tokenMigrations } from "../src/token.ts";
 
@@ -58,7 +59,7 @@ describe("openKernel", () => {
   });
 
   it("a fresh store reaches the union of every per-module fixture's schema, and nothing else", () => {
-    const fixtures: readonly (readonly ModuleMigrations[])[] = [JOB_FIXTURE, DECISION_FIXTURE, [eventsMigrations, ingestMigrations, receiptsMigrations, spendMigrations, tokenMigrations]];
+    const fixtures: readonly (readonly ModuleMigrations[])[] = [JOB_FIXTURE, DECISION_FIXTURE, [eventsMigrations, ingestMigrations, receiptsMigrations, spendMigrations, tokenMigrations, recordsMigrations]];
     const union = new Set<string>();
     for (const mods of fixtures) {
       const s = must(openStore(file()));

@@ -5,7 +5,7 @@ import { parseAt } from "@gt/domain/door";
 import { AppError, err, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import { holderSchema, type Holder, type Lease } from "@gt/domain/job";
-import { RESOURCE_LANES } from "@gt/domain/lane";
+import { laneOfSlot, RESOURCE_LANES } from "@gt/domain/lane";
 import type { Effects } from "./effects.ts";
 import { append } from "./events.ts";
 import {
@@ -159,7 +159,9 @@ const LANES: ReadonlySet<string> = new Set(RESOURCE_LANES);
 const holderData = (h: Holder) => ({ bootId: h.bootId, pid: h.pid, host: h.host });
 
 function event(t: Tx, by: Holder, resource: string, type: string, data: Record<string, unknown>): void {
-  append(t, { actor: actorOf(by), type, subject: { kind: "lease", id: resource }, ...(LANES.has(resource) ? { lane: resource } : {}), data: { resource, ...data } });
+  // A lane slot (`seat.text#2`) is the lane's row on the Runs day-line, as the bare lane is.
+  const lane = LANES.has(resource) ? resource : laneOfSlot(resource);
+  append(t, { actor: actorOf(by), type, subject: { kind: "lease", id: resource }, ...(lane === undefined ? {} : { lane }), data: { resource, ...data } });
 }
 
 function apply(t: Tx, resource: string, by: Holder, w: Write): void {

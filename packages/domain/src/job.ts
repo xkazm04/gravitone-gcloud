@@ -2,7 +2,8 @@ import { z } from "zod";
 
 import { usdSchema } from "./estimate.ts";
 import type { AppErrorCode } from "./errors.ts";
-import { jobIdSchema, partIdSchema, runIdSchema } from "./ids.ts";
+import { actorSchema } from "./event.ts";
+import { jobIdSchema, partIdSchema, projectIdSchema, runIdSchema } from "./ids.ts";
 import { resourceLaneSchema } from "./lane.ts";
 import { jobMachine } from "./job.machine.ts";
 
@@ -75,6 +76,30 @@ export const jobSpendSchema = z.object({
   basis: z.enum(["reported", "estimate"]),
 });
 
+/**
+ * HOW A JOB MAY SPEND (plan §3.2, Director's decision 4). Dry is the default
+ * and needs nothing; live carries its arm - who, when, why - so every live
+ * spend names its authority. Kernel dryrun.ts is the mechanism; the schema
+ * lives here because the job RECORD carries it (a Run's receipt says `mode`,
+ * and a retry must not silently change it).
+ */
+export const liveArmSchema = z.object({ by: actorSchema, at: z.iso.datetime(), reason: z.string().trim().min(1) });
+export type LiveArm = z.output<typeof liveArmSchema>;
+export const runModeSchema = z.discriminatedUnion("kind", [z.object({ kind: z.literal("dry") }), z.object({ kind: z.literal("live"), arm: liveArmSchema })]);
+export type RunMode = z.output<typeof runModeSchema>;
+
+/**
+ * The operator's re-route, as the router reads it (kernel router/types.ts
+ * `Steer`, held equal by a kernel test): a preference within the plan, never an
+ * exemption from it. The router stays the judge of what it does.
+ */
+export const steerSchema = z.object({
+  pin: z.string().min(1).optional(),
+  prefer: z.string().min(1).optional(),
+  exclude: z.array(z.string().min(1)).optional(),
+});
+export type Steer = z.output<typeof steerSchema>;
+
 export const jobSchema = z
   .object({
     id: jobIdSchema,
@@ -82,9 +107,19 @@ export const jobSchema = z
       z.object({ kind: z.literal("part"), id: partIdSchema }),
       z.object({ kind: z.literal("run"), id: runIdSchema }),
     ]),
+    /** Who makes it (`of` says what it serves): the worker looks the producer up by this name. */
+    producer: z.string().min(1),
     lane: resourceLaneSchema,
     state: jobStateSchema,
+    mode: runModeSchema,
+    /** The job's own USD ceiling, frozen at enqueue and raised only by the operator's retry. */
+    ceilingUsd: z.number().positive().optional(),
+    steer: steerSchema.optional(),
+    /** What the job's events are about, so the ledger's project_id/run_id columns fill. */
+    correlation: z.object({ projectId: projectIdSchema.optional(), runId: runIdSchema.optional() }).optional(),
     lease: leaseSchema.optional(),
+    /** The lane slot (`<lane>#<i>`) the lease is on; present exactly with the lease. */
+    slot: z.string().min(1).optional(),
     /** 1 on the first run; a retry or re-route adds one. */
     attempt: z.number().int().positive(),
     progress: z.object({
@@ -115,6 +150,8 @@ export const jobSchema = z
   .superRefine((j, ctx) => {
     const issue = (path: string, message: string) => ctx.addIssue({ code: "custom", path: [path], message });
     if ((j.state === "running") !== (j.lease !== undefined)) issue("lease", "a job holds a lease exactly while it is running");
+    if ((j.lease !== undefined) !== (j.slot !== undefined)) issue("slot", "a lease is on a lane slot, and a slot is held only under a lease");
+    if (j.slot !== undefined && !j.slot.startsWith(`${j.lane}#`)) issue("slot", "a job holds a slot of its own lane");
     if ((j.state === "failed") !== (j.error !== undefined)) issue("error", "a job carries an error exactly while it is failed");
     if ((j.state === "interrupted") !== (j.interruption !== undefined))
       issue("interruption", "a job names what was running exactly while it is interrupted");

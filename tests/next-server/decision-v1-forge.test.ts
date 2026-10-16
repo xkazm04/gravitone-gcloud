@@ -303,5 +303,5 @@ describe("forge adapter - the apply (v1's own writers, through the kernel's outb
       must(await forgeAdapter.apply(claim));
       expect(endState(), `retry after a crash at mutation ${k}`).toEqual(want);
     }
-  });
+  }, 30_000); // every crash prefix replays a commit: slow under a full parallel run
 });

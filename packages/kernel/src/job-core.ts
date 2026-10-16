@@ -3,6 +3,8 @@ import type { Estimate } from "@gt/domain/estimate";
 import type { EventData } from "@gt/domain/event";
 import { jobMachine, type Holder, type Job, type JobState, type Lease } from "@gt/domain/job";
 import type { ResourceLane } from "@gt/domain/lane";
+import type { Effects } from "./effects.ts";
+import type { StepMeter } from "./spend/meter.ts";
 
 // THE JOB, PURE - what a job does next, and what each outcome does to its
 // record, as functions of the record, the facts and an instant. job-run.ts is
@@ -35,7 +37,19 @@ export type Outputs = ReadonlyMap<string, Output>;
 
 /** A step the plan says is still missing. Its estimate is what the ceiling
  *  is checked against before it runs. */
-export type MissingStep = { readonly name: string; readonly estimate: Estimate };
+export type MissingStep = {
+  readonly name: string;
+  readonly estimate: Estimate;
+  /**
+   * The step is paid in CREDITS, not dollars (Suno's subscription, Leonardo
+   * studio credits, a seat that reports nothing): why, in a sentence. Such a
+   * step cannot cross a USD ceiling, so it is admitted under one and booked
+   * unpriced with this reason (decision 7). A step with no price and NO credit
+   * under a ceiling still stops: a price nobody can see is a ceiling nobody
+   * can keep.
+   */
+  readonly credit?: string;
+};
 
 /**
  * What one bounded `perform` reports. A cost is what the vendor charged; an
@@ -53,6 +67,14 @@ export type StepOutcome =
 
 export type StepContext = {
   readonly job: Job;
+  /**
+   * The port the producer's OWN external calls go through: dry or live by the
+   * job's `mode`. A paid vendor call is declared (`paid`, or `meter.paid`) so
+   * that under dry it is answered by its stand-in and booked as a would-call.
+   */
+  readonly fx: Effects;
+  /** The step-scoped meter: every priced call reserves and settles here (decision 7). */
+  readonly meter: StepMeter;
   readonly outputs: Outputs;
   /** Stable across retries and attempts: a vendor that dedupes can key on it. */
   readonly key: string;
@@ -111,11 +133,11 @@ export function next(job: Job, facts: Facts): Decision {
   const ceiling = facts.ceilingUsd;
   if (ceiling !== undefined) {
     const spent = job.spend.usd;
-    if (step.estimate.usd === null) {
+    if (step.estimate.usd === null && step.credit === undefined) {
       // Fail closed: a ceiling cannot be honoured over a step with no price.
       return { kind: "stop", step: step.name, ceilingUsd: ceiling, message: `Run ceiling of $${ceiling.toFixed(2)} cannot be checked: ${step.name} has no price (${step.estimate.unpricedReason ?? "unpriced"}).` };
     }
-    const est = step.estimate.usd;
+    const est = step.estimate.usd ?? 0;
     if (est > 0 && usd6(spent + est) > ceiling) {
       return { kind: "stop", step: step.name, ceilingUsd: ceiling, message: `Run ceiling reached: $${spent.toFixed(4)} of $${ceiling.toFixed(2)} spent, and ${step.name} is estimated at $${est.toFixed(4)}. Raise the ceiling and retry to continue.` };
     }
@@ -129,13 +151,14 @@ export function next(job: Job, facts: Facts): Decision {
 export function move(job: Job, to: JobState): Job {
   const r = jobMachine.assert(job.state, to);
   if (!r.ok) throw new AppError("refused", `job ${job.id}: ${r.error.message}`);
-  const { lease: _lease, error: _error, stop: _stop, interruption: _interruption, ...rest } = job;
+  const { lease: _lease, slot: _slot, error: _error, stop: _stop, interruption: _interruption, ...rest } = job;
   return { ...rest, state: to };
 }
 
-export function claimed(job: Job, lease: Lease): Job {
+/** Running under `lease` on `slot` (`<lane>#<i>`): the slot is where its fence is checked. */
+export function claimed(job: Job, lease: Lease, slot: string): Job {
   const { stage: _stage, ...progress } = job.progress;
-  return { ...move(job, "running"), lease, progress };
+  return { ...move(job, "running"), lease, slot, progress };
 }
 
 /** Dispatch: the step is in flight from this record on. */
@@ -179,14 +202,29 @@ export type Booked = {
  * or cancel) keeps the output and the spend, and changes no state: the step
  * in flight finishes and the job holds what it made (v1 MV's Stop).
  */
-export function book(job: Job, step: MissingStep, o: StepOutcome, at: string, breakerLimit: number): Booked {
+/**
+ * `metered`, when given, is the job's spend as the meter has it AFTER this
+ * step was booked there (spend/meter.ts `meterOf`), and it replaces the
+ * arithmetic below: the record is the meter's projection (decision 7). The
+ * arithmetic stays as the pure statement of what each outcome costs, which the
+ * meter's own booking (`chargeOutcome`) follows.
+ */
+export function book(job: Job, step: MissingStep, o: StepOutcome, at: string, breakerLimit: number, metered?: Job["spend"]): Booked {
+  const b = bookPure(job, step, o, at, breakerLimit);
+  if (metered === undefined) return b;
+  const usd = usd6(metered.usd - job.spend.usd);
+  const { cost: _cost, ...rest } = b;
+  return { ...rest, job: { ...b.job, spend: metered }, ...(usd > 0 ? { cost: { usd, src: metered.basis === "estimate" && b.cost?.src !== "real" ? "model" : "real" } } : {}) };
+}
+
+function bookPure(job: Job, step: MissingStep, o: StepOutcome, at: string, breakerLimit: number): Booked {
   const { stage: _stage, ...progress } = job.progress;
   const base: Job = { ...job, progress };
   const running = job.state === "running";
   switch (o.kind) {
     case "produced": {
       const priced = o.costUsd !== undefined;
-      const usd = o.costUsd ?? step.estimate.usd ?? 0;
+      const usd = o.costUsd ?? (step.credit === undefined ? (step.estimate.usd ?? 0) : 0);
       const spend = priced
         ? { ...job.spend, usd: usd6(job.spend.usd + usd) }
         : { usd: usd6(job.spend.usd + usd), unpriced: job.spend.unpriced + 1, basis: "estimate" as const };

@@ -15,10 +15,10 @@ const holder = { bootId: "boot-1", pid: 4242, host: "box" };
 const lease = { holder, fence: 3, acquiredAt: AT, heartbeatAt: AT, ttlS: 120 };
 
 function job(over: Partial<Job> = {}): Job {
-  const base = { id: "job-1", of: { kind: "run", id: "run-1" }, lane: "gpu.local", state: "queued", attempt: 1, progress: { done: 0, total: 0 }, spend: { usd: 0, unpriced: 0, basis: "reported" }, failStreak: 0 };
+  const base = { id: "job-1", of: { kind: "run", id: "run-1" }, producer: "test", lane: "gpu.local", state: "queued", mode: { kind: "dry" }, attempt: 1, progress: { done: 0, total: 0 }, spend: { usd: 0, unpriced: 0, basis: "reported" }, failStreak: 0 };
   return must(parseAt("job", jobSchema, { ...base, ...over }));
 }
-const running = (over: Partial<Job> = {}): Job => job({ state: "running", lease, ...over });
+const running = (over: Partial<Job> = {}): Job => job({ state: "running", lease, slot: "gpu.local#1", ...over });
 const valid = (j: Job): Job => must(parseAt("job", jobSchema, j));
 
 const step = (name: string, usd: number | null = 0.01): MissingStep => ({ name, estimate: usd === null ? { seconds: 1, usd: null, unpricedReason: "local render" } : { seconds: 1, usd } });
@@ -59,7 +59,7 @@ describe("next", () => {
 
 describe("transitions keep the record valid", () => {
   it("claim, dispatch, stop, interrupt and retry each produce a record the door accepts", () => {
-    const run = valid(claimed(job(), lease));
+    const run = valid(claimed(job(), lease, "gpu.local#1"));
     expect(run).toMatchObject({ state: "running", lease });
     const flying = valid(started(run, "a", 0, 2, "2026-10-15T12:00:05.000Z"));
     expect(flying.progress).toEqual({ done: 0, total: 2, stage: "a" });

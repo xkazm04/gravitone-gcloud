@@ -7,7 +7,7 @@ import { claimIn, statusIn } from "../src/lease.ts";
 import type { SpendClass } from "../src/spend/core.ts";
 import { reservationOf, reserve } from "../src/spend/ledger.ts";
 import { must, scratch } from "./helpers.ts";
-import { agent, count, eventTypes, hostA, hostB, jobId, openWorld, operator, producer, type World } from "./job-fixture.ts";
+import { agent, count, eventTypes, hostA, hostB, jobId, LIVE, openWorld, operator, producer, type World } from "./job-fixture.ts";
 
 const tmp = scratch("job");
 afterAll(() => tmp.dispose());
@@ -17,7 +17,7 @@ const opts: RunOptions = { holder: hostA, alive: () => true, sleep: async () => 
 const J = jobId("job-1");
 
 function queued(w: World, ceilingUsd?: number): void {
-  must(enqueue(w.store, { id: "job-1", of: { kind: "run", id: "run-1" }, lane: "gpu.local", ...(ceilingUsd === undefined ? {} : { ceilingUsd }) }, operator));
+  must(enqueue(w.store, { id: "job-1", of: { kind: "run", id: "run-1" }, producer: "test", lane: "gpu.local", mode: LIVE, ...(ceilingUsd === undefined ? {} : { ceilingUsd }) }, operator));
 }
 
 describe("enqueue and the operator's acts", () => {
@@ -29,20 +29,20 @@ describe("enqueue and the operator's acts", () => {
     expect(must(get(w.store, J)).job).toMatchObject({ state: "queued", attempt: 1, spend: { usd: 0 } });
     expect(calls.size).toBe(0);
     expect(eventTypes(w.store, "job-1")).toEqual(["job.enqueued"]);
-    expect(enqueue(w.store, { id: "job-1", of: { kind: "run", id: "run-1" }, lane: "gpu.local" }, operator)).toMatchObject({ ok: false, error: { code: "conflict" } });
+    expect(enqueue(w.store, { id: "job-1", of: { kind: "run", id: "run-1" }, producer: "test", lane: "gpu.local" }, operator)).toMatchObject({ ok: false, error: { code: "conflict" } });
     w.store.close();
   });
 
   it("refuses a ceiling it would have to clamp", () => {
     const w = world();
-    expect(enqueue(w.store, { id: "x", of: { kind: "run", id: "r" }, lane: "gpu.local", ceilingUsd: 20_000 }, operator)).toMatchObject({ ok: false, error: { code: "invalid" } });
-    expect(enqueue(w.store, { id: "x", of: { kind: "run", id: "r" }, lane: "gpu.local", ceilingUsd: 0 }, operator)).toMatchObject({ ok: false, error: { code: "invalid" } });
+    expect(enqueue(w.store, { id: "x", of: { kind: "run", id: "r" }, producer: "test", lane: "gpu.local", ceilingUsd: 20_000 }, operator)).toMatchObject({ ok: false, error: { code: "invalid" } });
+    expect(enqueue(w.store, { id: "x", of: { kind: "run", id: "r" }, producer: "test", lane: "gpu.local", ceilingUsd: 0 }, operator)).toMatchObject({ ok: false, error: { code: "invalid" } });
     w.store.close();
   });
 
   it("lists by lane and state in enqueue order; pause, resume and cancel go through the machine", () => {
     const w = world();
-    for (const [id, lane] of [["j1", "gpu.local"], ["j2", "seat.text"], ["j3", "gpu.local"]] as const) must(enqueue(w.store, { id, of: { kind: "run", id: "r" }, lane }, operator));
+    for (const [id, lane] of [["j1", "gpu.local"], ["j2", "seat.text"], ["j3", "gpu.local"]] as const) must(enqueue(w.store, { id, of: { kind: "run", id: "r" }, producer: "test", lane }, operator));
     expect(must(list(w.store, { lane: "gpu.local" })).map((j) => j.id)).toEqual(["j1", "j3"]);
     must(pause(w.store, jobId("j1"), operator));
     expect(must(list(w.store, { state: "paused" })).map((j) => j.id)).toEqual(["j1"]);
@@ -65,7 +65,7 @@ describe("runJob", () => {
     expect([...calls]).toEqual([["a", 1], ["b", 1]]);
     expect(count(w.store, "SELECT count(*) AS n FROM job_outputs")).toBe(2);
     expect(eventTypes(w.store, "job-1")).toEqual(["job.enqueued", "job.claimed", "job.step-started", "job.step-done", "job.step-started", "job.step-done", "job.done"]);
-    const lane = must(w.store.read((t) => statusIn(t, "gpu.local", hostA, () => true)));
+    const lane = must(w.store.read((t) => statusIn(t, "gpu.local#1", hostA, () => true)));
     expect(lane.holder).toBeUndefined();
     expect(must(verify(w.store)).state).toBe("intact");
     w.store.close();
@@ -94,7 +94,7 @@ describe("runJob", () => {
   it("a busy lane leaves the job queued", async () => {
     const w = world();
     queued(w);
-    must(w.store.tx((t) => claimIn(t, { resource: "gpu.local", holder: hostB, ticket: "t", ttlS: 120, wait: false }, () => true)));
+    must(w.store.tx((t) => claimIn(t, { resource: "gpu.local#1", holder: hostB, ticket: "t", ttlS: 120, wait: false }, () => true)));
     const { p, calls } = producer("gpu.local", ["a"]);
     expect(must(await runJob(w.fx, p, "job-1", opts)).outcome).toBe("busy");
     expect(calls.size).toBe(0);
@@ -161,7 +161,7 @@ describe("runJob", () => {
     expect(r.outcome).toBe("stopped");
     expect(r.job).toMatchObject({ state: "paused", progress: { done: 1 }, spend: { usd: 0.01 } });
     expect(calls.get("b")).toBeUndefined();
-    expect(must(w.store.read((t) => statusIn(t, "gpu.local", hostA, () => true))).holder).toBeUndefined();
+    expect(must(w.store.read((t) => statusIn(t, "gpu.local#1", hostA, () => true))).holder).toBeUndefined();
     must(resume(w.store, J, operator));
     expect(must(await runJob(w.fx, p, "job-1", opts)).outcome).toBe("done");
     expect([...calls]).toEqual([["a", 1], ["b", 1]]);

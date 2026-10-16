@@ -1,8 +1,8 @@
-import { z } from "zod";
 import { parseAt } from "@gt/domain/door";
-import { AppError, ok, type Result } from "@gt/domain/errors";
+import { AppError, err, ok, type Result } from "@gt/domain/errors";
 import type { Estimate } from "@gt/domain/estimate";
-import { actorSchema, type Actor, type Subject } from "@gt/domain/event";
+import type { Actor, Subject } from "@gt/domain/event";
+import { runModeSchema, type RunMode } from "@gt/domain/job";
 import { canonical, sha256Hex } from "./canonical.ts";
 import type { Effects } from "./effects.ts";
 import { append } from "./events.ts";
@@ -46,11 +46,8 @@ import type { Quote, Usage } from "./pricing/quote.ts";
 // spend carries its authority. A request that states no mode is dry; one that
 // states a malformed mode is refused, never guessed in either direction.
 
-export const liveArmSchema = z.object({ by: actorSchema, at: z.iso.datetime(), reason: z.string().trim().min(1) });
-export type LiveArm = z.output<typeof liveArmSchema>;
-
-export const runModeSchema = z.discriminatedUnion("kind", [z.object({ kind: z.literal("dry") }), z.object({ kind: z.literal("live"), arm: liveArmSchema })]);
-export type RunMode = z.output<typeof runModeSchema>;
+// The schemas live on the job record (@gt/domain/job), which carries its mode.
+export { liveArmSchema, runModeSchema, type LiveArm, type RunMode } from "@gt/domain/job";
 
 export const DRY: RunMode = Object.freeze({ kind: "dry" });
 
@@ -60,8 +57,16 @@ export function runModeFrom(input: unknown): Result<RunMode> {
   return parseAt("run mode", runModeSchema, input);
 }
 
-/** The one way out of dry: an explicit, attributed act. */
-export function armLive(by: Actor, at: string, reason: string): Result<RunMode> {
+/**
+ * `GRAVITONE_DRY_ONLY=1` (every test lane, the fixture universe): nothing may
+ * arm live, whatever the caller says. Read from an env the CALLER hands in,
+ * never from process.env here, so a test sets it without touching the process.
+ */
+export const dryOnlyFrom = (env: Readonly<Record<string, string | undefined>>): boolean => env["GRAVITONE_DRY_ONLY"] === "1";
+
+/** The one way out of dry: an explicit, attributed act - refused outright under dry-only. */
+export function armLive(by: Actor, at: string, reason: string, opts: { readonly dryOnly?: boolean } = {}): Result<RunMode> {
+  if (opts.dryOnly === true) return err("refused", "live is refused: GRAVITONE_DRY_ONLY=1 - this process may only run dry", { detail: "dry-only" });
   return parseAt("live arm", runModeSchema, { kind: "live", arm: { by, at, reason } });
 }
 
@@ -125,6 +130,25 @@ export function paid<T>(intent: CallIntent<T>, live: () => Promise<T>): () => Pr
   return fn;
 }
 
+/** The kernel's own calls through a port (a driver's health probe, a step's
+ *  perform): not vendor calls, so the dry port passes them through. */
+const kernelCalls = new WeakSet<object>();
+
+/**
+ * Mark a call as the KERNEL'S, not a vendor's (G-dry). A job driver's
+ * `health` and `perform:<step>` go through the effect port so a crash can be
+ * enumerated after them, but they are not what dry mode is about: what a step
+ * pays for is what the producer declares with `paid` inside it. Unmarked and
+ * undeclared, a call is still refused in dry - the fail-closed rule holds.
+ */
+export function kernelCall<T>(fn: () => Promise<T>): () => Promise<T> {
+  kernelCalls.add(fn);
+  return fn;
+}
+
+/** A dry port's receipts, by its effects: wrapping a dry port again returns it, never a second booking. */
+const dryPorts = new WeakMap<Effects, WouldCall[]>();
+
 export type DryRunPort = {
   readonly effects: Effects;
   readonly mode: RunMode;
@@ -134,12 +158,15 @@ export type DryRunPort = {
 
 /** Wrap a port so that, unless `mode` is live, no external call is made. */
 export function withDryRun(inner: Effects, mode: RunMode, actor: Actor): DryRunPort {
-  if (mode.kind === "live") return { effects: inner, mode, wouldCalls: [] };
+  if (mode.kind === "live") return { effects: inner, mode, wouldCalls: dryPorts.get(inner) ?? [] };
+  const already = dryPorts.get(inner);
+  if (already !== undefined) return { effects: inner, mode, wouldCalls: already };
   const wouldCalls: WouldCall[] = [];
   const effects: Effects = {
     tx: (name, fn) => inner.tx(name, fn),
     blob: (bytes, mime) => inner.blob(bytes, mime),
     async call(name, fn) {
+      if (kernelCalls.has(fn)) return inner.call(name, fn);
       const d = declared.get(fn);
       if (d === undefined) {
         throw new AppError("refused", `dry run: "${name}" is an external call with no declared intent; it was not made`, { detail: DRY_STOP });
@@ -171,5 +198,6 @@ export function withDryRun(inner: Effects, mode: RunMode, actor: Actor): DryRunP
       }
     },
   };
+  dryPorts.set(effects, wouldCalls);
   return { effects, mode, wouldCalls };
 }

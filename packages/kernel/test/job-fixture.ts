@@ -58,3 +58,6 @@ export function count(s: Store, sql: string, ...params: string[]): number {
 export function eventTypes(s: Store, subject: string): string[] {
   return must(s.read((r) => r.all("SELECT type FROM events WHERE subject_id = ? ORDER BY seq", subject).map((e) => String(e["type"]))));
 }
+
+/** A live arm for tests that are about spend: dry is the default and books nothing. */
+export const LIVE = { kind: "live", arm: { by: operator, at: "2026-10-15T12:00:00.000Z", reason: "test: spend semantics" } } as const;

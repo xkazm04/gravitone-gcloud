@@ -75,6 +75,41 @@ CREATE TABLE spend_counters (
   PRIMARY KEY (class, name)
 ) WITHOUT ROWID;`,
     },
+    {
+      // Phase 4 (L25, decision 7): spend is the METER'S, and a job's spend is a
+      // projection of it. So a row says which job and step it was for, and what
+      // it was in dollars (a seconds-denominated class has no dollar figure
+      // unless the caller knows one); and an UNPRICED call - Suno credits, a
+      // studio credit, a seat that reports nothing - leaves a row WITH its
+      // reason, not only a counter, so a job's unpriced count is a query. The
+      // append-only trigger is re-made to cover the new columns.
+      version: 2,
+      sql: `
+ALTER TABLE spend_reservations ADD COLUMN step TEXT;
+ALTER TABLE spend_rows ADD COLUMN job_id TEXT;
+ALTER TABLE spend_rows ADD COLUMN step TEXT;
+ALTER TABLE spend_rows ADD COLUMN usd REAL CHECK (usd IS NULL OR usd >= 0);
+CREATE INDEX spend_rows_job ON spend_rows (job_id) WHERE job_id IS NOT NULL;
+CREATE INDEX spend_reservations_job ON spend_reservations (job_id) WHERE job_id IS NOT NULL;
+DROP TRIGGER spend_rows_only_evict;
+CREATE TRIGGER spend_rows_only_evict BEFORE UPDATE ON spend_rows
+  WHEN OLD.evicted_ms IS NOT NULL OR NEW.class IS NOT OLD.class OR NEW.at_ms IS NOT OLD.at_ms OR NEW.amount IS NOT OLD.amount
+    OR NEW.outcome IS NOT OLD.outcome OR NEW.basis IS NOT OLD.basis OR NEW.axes IS NOT OLD.axes OR NEW.reservation_id IS NOT OLD.reservation_id
+    OR NEW.job_id IS NOT OLD.job_id OR NEW.step IS NOT OLD.step OR NEW.usd IS NOT OLD.usd
+  BEGIN SELECT RAISE(ABORT, 'spend rows are append-only; only the eviction mark may be set, once'); END;
+CREATE TABLE spend_unpriced (
+  seq INTEGER PRIMARY KEY,
+  class TEXT NOT NULL,
+  at_ms INTEGER NOT NULL,
+  reason TEXT NOT NULL CHECK (length(reason) > 0),
+  job_id TEXT,
+  step TEXT,
+  reservation_id TEXT REFERENCES spend_reservations (id)
+);
+CREATE INDEX spend_unpriced_job ON spend_unpriced (job_id) WHERE job_id IS NOT NULL;
+CREATE TRIGGER spend_unpriced_no_change BEFORE UPDATE ON spend_unpriced BEGIN SELECT RAISE(ABORT, 'unpriced rows are append-only'); END;
+CREATE TRIGGER spend_unpriced_no_delete BEFORE DELETE ON spend_unpriced BEGIN SELECT RAISE(ABORT, 'unpriced rows are append-only'); END;`,
+    },
   ],
 };
 
@@ -85,6 +120,7 @@ export type Reservation = {
   readonly reservedMs: number;
   readonly owner: string;
   readonly jobId?: string;
+  readonly step?: string;
   readonly state: ReservationState;
 };
 
@@ -98,7 +134,14 @@ export type SettleEntry = {
   /** Where the figure came from, in the class's words ("vendor", "estimate"). */
   readonly basis: string;
   readonly axes: Readonly<Record<string, string>>;
+  /** The dollar figure, for a class not denominated in dollars (audio seconds); a usd class's amount is its dollars. */
+  readonly usd?: number;
+  /** Why an unpriced entry has no figure ("Suno credits", "seat reports nothing"); kept on its row. */
+  readonly reason?: string;
 };
+
+/** Which job and step a booking serves - the run axis of attribution (cost-metering: spend-attribution). */
+export type JobAxis = { readonly jobId?: string; readonly step?: string };
 
 const nowOf = (t: Reader): number => Date.parse(t.at);
 
@@ -109,17 +152,18 @@ const reservationRow = z.object({
   reserved_ms: z.number().int(),
   owner: z.string(),
   job_id: z.string().nullable(),
+  step: z.string().nullable(),
   state: z.enum(reservationMachine.states),
 });
 
 function readReservation(r: Reader, id: string): Reservation | undefined {
-  const row = r.get("SELECT id, class, amount, reserved_ms, owner, job_id, state FROM spend_reservations WHERE id = ?", id);
+  const row = r.get("SELECT id, class, amount, reserved_ms, owner, job_id, step, state FROM spend_reservations WHERE id = ?", id);
   if (row === undefined) return undefined;
   const p = parseAt("spend reservation", reservationRow, row);
   if (!p.ok) throw p.error;
   const v = p.value;
   const base = { id: v.id, cls: v.class, amount: v.amount, reservedMs: v.reserved_ms, owner: v.owner, state: v.state };
-  return v.job_id === null ? base : { ...base, jobId: v.job_id };
+  return { ...base, ...(v.job_id === null ? {} : { jobId: v.job_id }), ...(v.step === null ? {} : { step: v.step }) };
 }
 
 export function bump(t: Tx, cls: string, name: string, by: number): void {
@@ -144,7 +188,7 @@ const usage = (cls: SpendClass) => ({ class: cls.id, unit: cls.unit });
  * the caller and is the idempotency key: a retried reserve (its first commit
  * landed, its caller never heard) gets the same reservation back.
  */
-export function reserve(t: Tx, cls: SpendClass, input: { readonly id: string; readonly amount: number; readonly owner: string; readonly jobId?: JobId }): ReserveOutcome {
+export function reserve(t: Tx, cls: SpendClass, input: { readonly id: string; readonly amount: number; readonly owner: string; readonly jobId?: JobId; readonly step?: string }): ReserveOutcome {
   const c = checkClass(cls);
   if (!c.ok) return c;
   if (input.id.length === 0 || input.owner.length === 0) return err("invalid", "spend: a reservation names its id and its owner");
@@ -165,15 +209,18 @@ export function reserve(t: Tx, cls: SpendClass, input: { readonly id: string; re
     append(t, { actor: { kind: "machine", id: input.owner }, type: "spend.refused", subject: { kind: "reservation", id: input.id }, data: { ...usage(cls), ...refusal } });
     return { ok: false, error: new AppError("budget", refusalSentence(cls, refusal)), refusal };
   }
-  t.run("INSERT INTO spend_reservations (id, class, amount, reserved_ms, owner, job_id, state, closed_ms) VALUES (?, ?, ?, ?, ?, ?, 'held', NULL)", input.id, cls.id, input.amount, now, input.owner, input.jobId ?? null);
+  t.run(
+    "INSERT INTO spend_reservations (id, class, amount, reserved_ms, owner, job_id, step, state, closed_ms) VALUES (?, ?, ?, ?, ?, ?, ?, 'held', NULL)",
+    input.id, cls.id, input.amount, now, input.owner, input.jobId ?? null, input.step ?? null,
+  );
   append(t, {
     actor: { kind: "machine", id: input.owner },
     type: "spend.reserved",
     subject: { kind: "reservation", id: input.id },
-    data: { ...usage(cls), amount: input.amount, ...(input.jobId === undefined ? {} : { jobId: input.jobId }) },
+    data: { ...usage(cls), amount: input.amount, ...(input.jobId === undefined ? {} : { jobId: input.jobId }), ...(input.step === undefined ? {} : { step: input.step }) },
   });
   const base: Reservation = { id: input.id, cls: cls.id, amount: input.amount, reservedMs: now, owner: input.owner, state: "held" };
-  return ok(input.jobId === undefined ? base : { ...base, jobId: input.jobId });
+  return ok({ ...base, ...(input.jobId === undefined ? {} : { jobId: input.jobId }), ...(input.step === undefined ? {} : { step: input.step }) });
 }
 
 function close(t: Tx, cls: SpendClass, id: string, to: ReservationState): Result<Reservation> {
@@ -187,18 +234,25 @@ function close(t: Tx, cls: SpendClass, id: string, to: ReservationState): Result
 }
 
 /** Book rows (no reservation): the counters and rows `settle` and `book` share. */
-function bookIn(t: Tx, cls: SpendClass, entries: readonly SettleEntry[], reservationId: string | null): { booked: number; unpriced: number; total: number; estimated: boolean } {
+function bookIn(t: Tx, cls: SpendClass, entries: readonly SettleEntry[], reservationId: string | null, axis: JobAxis = {}): { booked: number; unpriced: number; total: number; estimated: boolean } {
   const now = nowOf(t);
   let booked = 0;
   let unpriced = 0;
   let total = 0;
   let estimated = false;
+  const jobId = axis.jobId ?? null;
+  const step = axis.step ?? null;
   for (const e of entries) {
     if (!priced(e.amount)) {
       unpriced++;
+      t.run("INSERT INTO spend_unpriced (class, at_ms, reason, job_id, step, reservation_id) VALUES (?, ?, ?, ?, ?, ?)", cls.id, now, e.reason ?? `unpriced (${e.basis})`, jobId, step, reservationId);
       continue;
     }
-    t.run("INSERT INTO spend_rows (class, at_ms, amount, outcome, basis, axes, reservation_id) VALUES (?, ?, ?, ?, ?, ?, ?)", cls.id, now, e.amount, e.outcome, e.basis, canonical(e.axes), reservationId);
+    const usd = cls.unit === "usd" ? e.amount : priced(e.usd) ? e.usd : null;
+    t.run(
+      "INSERT INTO spend_rows (class, at_ms, amount, outcome, basis, axes, reservation_id, job_id, step, usd) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      cls.id, now, e.amount, e.outcome, e.basis, canonical(e.axes), reservationId, jobId, step, usd,
+    );
     booked++;
     total += e.amount;
     if (e.basis === "estimate") estimated = true;
@@ -226,7 +280,8 @@ export function settle(t: Tx, cls: SpendClass, input: { readonly id: string; rea
   if (prior?.state === "settled" && prior.cls === cls.id) return ok({ reservation: prior, booked: 0, unpriced: 0, already: true });
   const closed = close(t, cls, input.id, "settled");
   if (!closed.ok) return closed;
-  const b = bookIn(t, cls, input.entries, input.id);
+  const r0 = closed.value;
+  const b = bookIn(t, cls, input.entries, input.id, { ...(r0.jobId === undefined ? {} : { jobId: r0.jobId }), ...(r0.step === undefined ? {} : { step: r0.step }) });
   const late = prior?.state === "lapsed";
   append(t, {
     actor: { kind: "machine", id: closed.value.owner },
@@ -246,28 +301,34 @@ export function release(t: Tx, cls: SpendClass, input: { readonly id: string; re
   return r;
 }
 
+/** One hold whose outcome is unknown (its step ended without settling it): it lapses, still counted. */
+export function lapse(t: Tx, cls: SpendClass, id: string): Result<Reservation> {
+  const r = close(t, cls, id, "lapsed");
+  if (!r.ok) return r;
+  bump(t, cls.id, "lapsed", 1);
+  bump(t, cls.id, "lapsedAmount", r.value.amount);
+  append(t, { actor: { kind: "machine", id: r.value.owner }, type: "spend.lapsed", subject: { kind: "reservation", id }, data: { ...usage(cls), amount: r.value.amount } });
+  return r;
+}
+
 /** The owner is gone with the outcome unknown: every hold it had keeps
  *  counting at its estimate, aged from now. Returns how many lapsed. */
 export function lapseOwner(t: Tx, cls: SpendClass, owner: string): number {
   const ids = t.all("SELECT id FROM spend_reservations WHERE class = ? AND owner = ? AND state = 'held' ORDER BY reserved_ms, id", cls.id, owner);
   let n = 0;
   for (const row of ids) {
-    const id = String(row["id"]);
-    const r = close(t, cls, id, "lapsed");
+    const r = lapse(t, cls, String(row["id"]));
     if (!r.ok) throw r.error;
-    bump(t, cls.id, "lapsed", 1);
-    bump(t, cls.id, "lapsedAmount", r.value.amount);
-    append(t, { actor: { kind: "machine", id: owner }, type: "spend.lapsed", subject: { kind: "reservation", id }, data: { ...usage(cls), amount: r.value.amount } });
     n++;
   }
   return n;
 }
 
 /** Book a call that held nothing (a count-only class; v1 `meter.book`). */
-export function book(t: Tx, cls: SpendClass, entry: SettleEntry, who: string): void {
+export function book(t: Tx, cls: SpendClass, entry: SettleEntry, who: string, axis: JobAxis = {}): void {
   const c = checkClass(cls);
   if (!c.ok) throw c.error;
-  const b = bookIn(t, cls, [entry], null);
+  const b = bookIn(t, cls, [entry], null, axis);
   append(t, {
     actor: { kind: "machine", id: who },
     type: "spend.booked",

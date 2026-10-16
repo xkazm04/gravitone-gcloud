@@ -7,8 +7,9 @@ import type { Producer } from "../src/job-core.ts";
 import { recover, runJob } from "../src/job-run.ts";
 import { enqueue, get, retry } from "../src/job.ts";
 import { assertFence } from "../src/lease.ts";
+import { reconcileJobSpend } from "../src/spend/projection.ts";
 import { must, scratch } from "./helpers.ts";
-import { count, hostA, hostB, jobId, openWorld, operator, producer, type World } from "./job-fixture.ts";
+import { count, hostA, hostB, jobId, LIVE, openWorld, operator, producer, type World } from "./job-fixture.ts";
 
 // Crash-prefix enumeration over the job driver (plan §6 Phase 1 exit). The
 // driver's effects are enumerated from a recording, so a step that gains a
@@ -57,6 +58,10 @@ function invariant(w: CW, phase: Phase): string | undefined {
     if (calls === 2 && !named.has(step)) return `step ${step} performed twice though no interruption named it in flight`;
   }
   if (w.zombie === "accepted") return "the old holder's write landed after the take-over";
+  // Decision 7: the driver books a non-metering producer's spend in the same
+  // transaction as the record, so the record equals its meter at EVERY prefix.
+  const rec = must(w.store.read((r) => reconcileJobSpend(r, "job-1")));
+  if (rec.drift !== undefined) return `job spend drifted from the meter: ${JSON.stringify(rec)}`;
   if (phase === "crashed") return undefined;
   const { job } = must(get(w.store, J));
   if (job.state !== "done") return `recovery left the job ${job.state}`;
@@ -87,7 +92,7 @@ function spec(variant: "restart" | "takeover"): CrashSpec<CW> {
   return {
     open: () => {
       const w = open(path.join(tmp.dir, `c-${++n}.sqlite`));
-      must(enqueue(w.store, { id: "job-1", of: { kind: "part", id: "part-1" }, lane: "gpu.local" }, operator));
+      must(enqueue(w.store, { id: "job-1", of: { kind: "part", id: "part-1" }, producer: "test", lane: "gpu.local", mode: LIVE }, operator));
       return w;
     },
     reopen: (w) => {
@@ -109,7 +114,7 @@ function spec(variant: "restart" | "takeover"): CrashSpec<CW> {
         if (old !== undefined) {
           // The old holder wakes and books the step it had in flight.
           const r = w.store.tx((t) => {
-            assertFence(t, "gpu.local", old);
+            assertFence(t, "gpu.local#1", old);
             t.run("INSERT OR REPLACE INTO job_outputs (job_id, step, output, fence, at) VALUES ('job-1', 'b', '{}', ?, ?)", old, t.at);
           });
           w.zombie = r.ok ? "accepted" : r.error.code === "conflict" ? "refused" : "accepted";

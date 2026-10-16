@@ -14,6 +14,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { ArrowUpRight } from "lucide-react";
+import Link from "next/link";
 
 import Modal from "@/components/ui/Modal";
 import { Eyebrow, Button } from "@/components/ui/Primitives";
@@ -300,14 +301,14 @@ export default function ProjectDialog({
               // The discipline is not named here: the Segmented control
               // directly above has it selected and highlighted, so "fits WHAT"
               // is answered two inches up. Naming it made the pill wrap.
-              <a
+              <Link
                 href="/projects/new"
                 aria-label={`No style fits ${DISCIPLINE_LABEL[discipline].toLowerCase()} — pick a preset in the guided create`}
                 className="font-jetbrains mb-2 inline-flex items-center gap-2 rounded-full border border-dashed border-amber-300/40 px-3 py-1.5 text-label whitespace-nowrap text-amber-200/90 transition hover:bg-amber-300/10"
               >
                 <StyleSwatch />
                 No style fits — pick a preset →
-              </a>
+              </Link>
             )}
             <div className="flex flex-wrap gap-1.5">
               {fittingThemes.map((t) => (
