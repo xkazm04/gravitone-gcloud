@@ -45,3 +45,17 @@
 @media (max-width:1500px){ .nav a{padding:var(--sp-3) var(--sp-snug);font-size:var(--fs-ui)} .header{gap:var(--sp-5)}  }
 @media (max-width:1340px){ .slotSpend{display:none} }
 @media (max-width:1180px){ .brand span{display:none} .sep{display:none} .nav a{padding:var(--sp-3) var(--sp-2)} .kitLink{display:none} }
+/* A phone (seen at 390 px by L35, L38, L42): the nav's links overprinted the dev-auth chip and NEXT,
+   because `.nav` shrank (min-width:0) without clipping what no longer fit. The header stays ONE row
+   at --hdr-h (the sheets and Compose hang from that height), so the nav scrolls inside its own box,
+   the brand keeps only its mark, and the ledger delta and the kit link give way; NEXT stays, the
+   one number that names what needs the operator, without its keycap (a phone has no N key). */
+@media (max-width:760px){
+  .header{gap:var(--sp-3);padding:0 var(--sp-wide)}
+  .nav{flex:1 1 0;overflow-x:auto;scrollbar-width:none;overscroll-behavior-x:contain}
+  .nav::-webkit-scrollbar{display:none}
+  .right{flex:0 1 auto;min-width:0;margin-left:0;gap:var(--sp-2)}
+  .slotNext{flex:0 1 auto;overflow:hidden}
+  .slotNext kbd{display:none}
+  .slotLedger{display:none}
+}

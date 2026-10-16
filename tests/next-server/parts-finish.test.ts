@@ -120,12 +120,21 @@ describe("score and cut over the kernel", () => {
     expect(again.ok ? "" : again.error.message).toBe("u2 is on its mark");
   });
 
-  it("reads an album part with no step records and refuses its ops with the reason", async () => {
+  // L43 closed the records gap L40 reported: an album's words and an explainer's voice are their
+  // own step records, so their editors write on the real side, undo by append, survive a reload.
+  it("writes an album's words on the real side, and undo walks them back", async () => {
     const { port } = universe("album-video", "a1");
     const w = await must(port.loadPart({ projectId: "a1", key: "words" }));
     expect(w).toMatchObject({ kind: "words", rev: 1, data: { face: "words", title: "" }, verdict: { state: "empty" } });
-    const r = await port.opPart({ projectId: "a1", key: "words", baseRev: 1, op: { op: "words-field", field: "title", value: "Salt lines" } });
-    expect(r.ok ? "" : r.error.message).toBe("part a1/words is a words; it holds no step records");
+    const t = await applied(port.opPart({ projectId: "a1", key: "words", baseRev: 1, op: { op: "words-field", field: "title", value: "Salt lines" } }));
+    expect(t).toMatchObject({ rev: 2, data: { title: "Salt lines" }, verdict: { state: "working" } });
+    const again = await must(port.loadPart({ projectId: "a1", key: "words" }));
+    expect(again).toMatchObject({ rev: 2, data: { title: "Salt lines" } });
+    const back = await applied(port.undoPart({ projectId: "a1", key: "words", baseRev: 2 }));
+    expect(back).toMatchObject({ data: { title: "" } });
+    const r = await must(port.loadPart({ projectId: "a1", key: "render" }));
+    const res = await applied(port.opPart({ projectId: "a1", key: "render", baseRev: r.rev, op: { op: "render-res", res: "2160p" } }));
+    expect(res).toMatchObject({ kind: "render", data: { res: "2160p" } });
   });
 });
 

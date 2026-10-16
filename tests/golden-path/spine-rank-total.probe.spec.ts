@@ -18,9 +18,9 @@
 //     the cold open.
 import { test, expect } from "@playwright/test";
 
-import { composeCut } from "@/app/_phases/script/trailer/cut";
-import { SPINE_ORDER, SPINE_RANK, type Movement, type MovementRole } from "@/app/_phases/script/trailer/types";
-import type { BeatSlot } from "@/app/_phases/research/beats/beats";
+import { composeCut } from "@/lib/script/trailer/cut";
+import { SPINE_ORDER, SPINE_RANK, type Movement, type MovementRole } from "@/lib/script/trailer/types";
+import type { BeatSlot } from "@/lib/research/beats";
 
 /** The union, written out. A role added to MovementRole and not here fails
  *  typecheck on this very line — which is the point: the list of roles this

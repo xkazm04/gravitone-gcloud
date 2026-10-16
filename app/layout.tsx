@@ -9,6 +9,7 @@ import GravitoneTokens from "@/components/ui/GravitoneTokens";
 import GlobalErrorBridge from "@/lib/GlobalErrorBridge";
 import { AuthProvider } from "@/lib/useAuth";
 import { JobsProvider } from "@/lib/jobs";
+import { readBellJobs } from "./(studio)/_shell/bellJobs";
 import { AnnouncerProvider } from "@/lib/announcer";
 import HarnessBridge from "@/components/ui/HarnessBridge";
 import DevInspector from "@/app/_dev-inspector/DevInspector";
@@ -54,7 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             messages in the same breath cannot race and drop one. */}
         <AnnouncerProvider>
           <AuthProvider>
-            <JobsProvider>
+            <JobsProvider read={readBellJobs}>
               {/* The live-app harness's control surface, installed on `window`
                   ONLY in a non-production build with NEXT_PUBLIC_DEV_AUTH=1.
                   It sits inside both providers because the two things it has to

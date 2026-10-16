@@ -1,13 +1,13 @@
 import { z } from "zod";
 import { parseAt, parseJsonAt } from "@gt/domain/door";
-import { AppError, type Result } from "@gt/domain/errors";
+import { AppError, type AppErrorCode, type Result } from "@gt/domain/errors";
 import { eventDataSchema, type Actor } from "@gt/domain/event";
 import { jobIdSchema, type JobId } from "@gt/domain/ids";
 import { jobSchema, runModeSchema, steerSchema, type Job, type JobState, type Steer } from "@gt/domain/job";
 import { resourceLaneSchema, type ResourceLane } from "@gt/domain/lane";
 import { canonical } from "./canonical.ts";
 import { append } from "./events.ts";
-import { move, retried, type Output } from "./job-core.ts";
+import { failed, move, retried, type Output } from "./job-core.ts";
 import type { ModuleMigrations } from "./migrate.ts";
 import type { RouteOutcome, Steer as RouterSteer } from "./router/types.ts";
 import type { Reader, Store, Tx } from "./store.ts";
@@ -204,6 +204,38 @@ export function enqueueIn(t: Tx, input: EnqueueInput, actor: Actor): Job {
 
 export function enqueue(store: Store, input: EnqueueInput, actor: Actor): Result<Job> {
   return store.tx((t) => enqueueIn(t, input, actor));
+}
+
+/** What an imported job stands for: the work, done elsewhere, and how much of it. */
+export type ImportedJobInput = Omit<EnqueueInput, "state" | "mode" | "order" | "ceilingUsd" | "steer"> & {
+  /** The units the work came to (a done job's progress reads `units / units`, stage `imported`). */
+  readonly units: number;
+  /** How it ended where it ran: done, or failed with the sentence that place recorded. */
+  readonly ending?: { readonly state: "done" } | { readonly state: "failed"; readonly code: AppErrorCode; readonly message: string };
+  /** What the import says about where the work was done (v1's project id, ...), on the event. */
+  readonly data?: Record<string, unknown>;
+};
+
+/**
+ * A TERMINAL JOB FOR WORK DONE ELSEWHERE (L43; v1 projects and runs, plan §6 Phase 4 "Import"),
+ * written THROUGH the machine, not around it. L42 enqueued `planned` and then stored the record as
+ * `done` - a planned -> done edge the machine does not have, invisible because nothing asked it.
+ * Here the record is enqueued `queued` and walked queued -> running -> done (or failed, as the
+ * place it ran recorded) through the machine's own moves, so a
+ * future change to the machine that closes that road refuses an import instead of silently
+ * minting a state history no driver could have produced. Only the terminal record is stored (a
+ * running record must hold a lease; an imported one never claimed a lane), and its one
+ * `job.imported` event names the path walked. Nothing ran and nothing spent: spend is 0, booked
+ * nowhere, and reconciles to an empty meter.
+ */
+export function recordImportedJobIn(t: Tx, input: ImportedJobInput, actor: Actor): Job {
+  const units = must(parseAt("imported units", z.number().int().nonnegative(), input.units));
+  const { units: _units, ending = { state: "done" }, data, ...enq } = input;
+  const running = move(enqueueIn(t, { ...enq, state: "queued" }, actor), "running");
+  const out: Job = ending.state === "done" ? { ...move(running, "done"), progress: { done: units, total: units, stage: "imported" } } : failed(running, ending.code, ending.message);
+  putJob(t, out);
+  jobEvent(t, actor, out, "job.imported", { imported: true, path: ["queued", "running", out.state], ...data });
+  return out;
 }
 
 /**

@@ -11,7 +11,7 @@ import { consequenceToken } from "@gt/kernel/decision/consequence";
 import { openPacket, type Author } from "@gt/kernel/decision/driver";
 import { currentDecisions } from "@gt/kernel/decision/read";
 import { append } from "@gt/kernel/events";
-import { enqueueIn, jobEvent, loadJob, putJob } from "@gt/kernel/job";
+import { recordImportedJobIn } from "@gt/kernel/job";
 import { digestOf } from "@gt/kernel/parts/core";
 import { projectRecords, writePartIn } from "@gt/kernel/parts/driver";
 import { stepPacketId } from "@gt/kernel/parts/gates";
@@ -121,12 +121,9 @@ function land(t: Tx, location: string, s: StagedProject, put: Put, actor: Actor)
     const picked = launchOf(part.kind, part.option, day) ?? launchOf(part.kind, modelOptions(part.kind, day)[0]?.key ?? "", day);
     if (picked === undefined) throw new AppError("internal", `import: a ${part.kind} part has no option`);
     const jobId = `job:part:${part.id}`;
-    const job = enqueueIn(t, { id: jobId, of: { kind: "part", id: part.id }, producer: picked.producer, lane: picked.option.lane, state: "planned", correlation: { projectId: p.id } }, IMPORT_ACTOR);
-    // A terminal job written as such, not driven: the work it stands for was done in v1. The
+    // A terminal job for work v1 did, through the job machine (kernel `recordImportedJobIn`): the
     // `job.imported` event says so; nothing claimed a lane or spent (spend reconciles at 0).
-    const done = { ...loadJob(t, job.id).job, state: "done" as const, progress: { done: part.units, total: part.units, stage: "imported" } };
-    putJob(t, done);
-    jobEvent(t, IMPORT_ACTOR, done, "job.imported", { imported: true, from: "v1", v1Project: p.v1Id });
+    recordImportedJobIn(t, { id: jobId, of: { kind: "part", id: part.id }, producer: picked.producer, lane: picked.option.lane, correlation: { projectId: p.id }, units: part.units, data: { from: "v1", v1Project: p.v1Id } }, IMPORT_ACTOR);
     putPart(t, p.id, { ...row, jobId });
   }
   const byOwner = new Map<string, Record<string, unknown>>();

@@ -13,10 +13,7 @@
 //     delegate to after `guardRequest`) answer a typed AdIdeasResponse /
 //     AdScenariosResponse with a FAKE `reason`, a 502 with findings on a
 //     malformed answer, a 422 on a question, a 400 on a bad brief;
-//   · staleness: a brief edit makes ideas stale, a different picked idea makes
-//     scenarios stale;
-//   · picking an idea writes `research.researched` — Script's gate — through
-//     the real record store over fake-indexeddb.
+//   · the brief digest ignores order and whitespace and moves with content.
 //
 // NO VENDOR, NO SPAWN, NO SPEND: every `reason` here is a function in this file.
 
@@ -37,17 +34,10 @@ import {
   type AdIdea,
   type AdIdeasResponse,
   type AdScenariosResponse,
-  type AdsIdeasData,
-  type AdsScenariosData,
 } from "@/lib/ads/types";
 import { TEMPLATES } from "@/lib/projects";
 import { TextError } from "@/lib/text/errors";
 import type { TextRequest, TextResult } from "@/lib/text/types";
-import { ADS_IDEAS } from "@/app/_phases/_shared/records/ads";
-import { readRecord } from "@/app/_phases/_shared/records/registry";
-import { patchRecord } from "@/app/_phases/_shared/records/patch";
-import { RESEARCH } from "@/app/_phases/research/records";
-import { ideasStale, pickIdea, scenariosStale } from "@/app/_phases/research/ads/pick";
 
 /* ── fixtures ─────────────────────────────────────────────────────────────── */
 
@@ -365,39 +355,13 @@ test("route: the real prompt files are on disk and read per call", async () => {
   expect(fake.calls[0].prompt).toContain("This is the thirty-second template");
 });
 
-/* ── staleness ────────────────────────────────────────────────────────────── */
+/* ── the brief digest ─────────────────────────────────────────────────── */
 
-test("stale: a brief edit after generation marks the ideas stale; the digest ignores order and whitespace", () => {
-  const data: AdsIdeasData = { briefDigest: digestBrief(BRIEF), options: [{ ...IDEA }], pickedId: null, engine: null };
-  expect(ideasStale(data, digestBrief(BRIEF))).toBe(false);
-  expect(ideasStale(data, digestBrief({ ...BRIEF, mustInclude: [...BRIEF.mustInclude].reverse(), cta: ` ${BRIEF.cta} ` }))).toBe(false);
-  expect(ideasStale(data, digestBrief({ ...BRIEF, proposition: "This jacket weighs nothing." }))).toBe(true);
-  expect(ideasStale({ ...data, options: [] }, "anything")).toBe(false);
-});
-
-test("stale: scenarios for a different picked idea are stale", () => {
-  const data: AdsScenariosData = { ideaId: "idea-a", options: parseScenarios(scenariosAnswer(), { brief: BRIEF, template: "ad-social-15", idea: { ...IDEA, id: "idea-a" } }), pickedId: null, engine: null };
-  expect(scenariosStale(data, "idea-a")).toBe(false);
-  expect(scenariosStale(data, "idea-b")).toBe(true);
-  expect(scenariosStale(data, null)).toBe(true);
-});
-
-/* ── the pick writes the research gate ────────────────────────────────────── */
-
-test("pick: choosing an idea records the pick AND marks the project researched", async () => {
-  const pid = `ads-probe-${Date.now()}`;
-  const options = parseIdeas(ideasAnswer(), { brief: BRIEF, template: "ad-social-15" });
-  await patchRecord(ADS_IDEAS, pid, () => ({ briefDigest: digestBrief(BRIEF), options, pickedId: null, engine: null, savedAt: 1 }));
-  await patchRecord(RESEARCH, pid, () => ({ topic: "kept", researched: false }));
-
-  const out = await pickIdea(pid, options[2].id, 99);
-  expect(out.ok).toBe(true);
-
-  const ideas = await readRecord(ADS_IDEAS, pid);
-  expect(ideas.ok && ideas.data?.pickedId).toBe(options[2].id);
-  expect(ideas.ok && ideas.data?.options).toHaveLength(AD_IDEA_COUNT);
-  const research = await readRecord(RESEARCH, pid);
-  expect(research.ok && research.data?.researched).toBe(true);
-  // A merge: the topic another writer left is kept.
-  expect(research.ok && research.data?.topic).toBe("kept");
+// The digest is what a later brief is compared against (the research record's
+// `briefDigest`). v1's ideasStale/scenariosStale and the pick that wrote
+// Script's gate retired with the v1 studio (Phase 4 wave D); the pick is the
+// research part's `pick-idea` op now (tests/next-server/producer-step-research.test.ts).
+test("digest: order and whitespace do not move it; a changed proposition does", () => {
+  expect(digestBrief({ ...BRIEF, mustInclude: [...BRIEF.mustInclude].reverse(), cta: ` ${BRIEF.cta} ` })).toBe(digestBrief(BRIEF));
+  expect(digestBrief({ ...BRIEF, proposition: "This jacket weighs nothing." })).not.toBe(digestBrief(BRIEF));
 });

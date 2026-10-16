@@ -28,7 +28,7 @@ import { reason } from "@/lib/text/router";
 import type { TextRequest } from "@/lib/text/types";
 import { FRAMES_SPEC, type FramesResult } from "@/lib/turns/kinds/frames";
 
-import { activeSourceOf, adTemplateOf, asData, engineView, field, meteredText, must, partFacts, priceOf, recOf, TEXT_SEAT, text, textFailure, written, type DriveHooks, type PartFacts, type UnitsFn, withRecords } from "./research.ts";
+import { activeSourceOf, adTemplateOf, asData, engineView, field, meteredText, must, partFacts, priceOf, recOf, TEXT_SEAT, text, textFailure, written, type DriveHooks, type PartFacts, type UnitsFn, withRecords, preflightFrom } from "./research.ts";
 
 // THE FRAMES PRODUCER, BOUND (Phase 4 wave C, L37) - packages/producers/src/frames's ports over
 // v1's engines: the imaging router (`generate`: a plate, an alternative, an ads take), the
@@ -276,6 +276,8 @@ function landFrames(plan: ActPlan, made: ReadonlyMap<string, EventData>, s: Part
 
 export function framesProducer(lane: ResourceLane = "cloud.google", hooks: DriveHooks = {}, engines: ImagingEngines = LIVE_IMAGING): Producer {
   return defineFrames(lane, {
+    // Held at the release, not failed by the worker, while its act waits on a human act (L45).
+    preflight: preflightFrom(framesUnits),
     async plan(_job, ask, ctx) {
       const s = partSnapshot(ctx);
       if (!s.ok) return s;

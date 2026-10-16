@@ -1,6 +1,6 @@
-import { AppError } from "@gt/domain/errors";
+import { isAppError } from "@gt/domain/errors";
 import type { Job } from "@gt/domain/job";
-import type { MissingStep, Outputs, Producer, StepContext, StepOutcome } from "@gt/kernel/job-core";
+import { vendorHealth, type Health, type MissingStep, type Outputs, type Producer, type StepContext, type StepOutcome } from "@gt/kernel/job-core";
 import { fenceLost } from "../mv/producer.ts";
 
 // THE SUNO PRODUCER - one proposal's render on both models as one kernel job on
@@ -38,7 +38,7 @@ export type SunoPorts = {
   land(job: Job, ctx: StepContext): Promise<void>;
   /** The record (and its proposal) wear the failure, verbatim. */
   fail(job: Job, message: string, ctx: StepContext): Promise<void>;
-  health?(): Promise<{ readonly ok: true } | { readonly ok: false; readonly reason: string }>;
+  health?(job?: Job): Promise<Health>;
 };
 
 /** The catalog's words (packages/catalog partOptions SUNO_CREDITS). */
@@ -79,10 +79,10 @@ export function defineSuno(ports: SunoPorts): Producer {
           () => message,
           (w: unknown) => `${message} (and suno.json could not record it: ${w instanceof Error ? w.message : String(w)})`,
         );
-        if (e instanceof AppError && e.code === "budget") return { kind: "money-stop", message: worn };
-        return { kind: "fatal", code: e instanceof AppError ? e.code : "internal", message: worn };
+        if (isAppError(e) && e.code === "budget") return { kind: "money-stop", message: worn };
+        return { kind: "fatal", code: isAppError(e) ? e.code : "internal", message: worn };
       }
     },
-    ...(ports.health === undefined ? {} : { health: ports.health }),
+    ...(ports.health === undefined ? {} : { health: vendorHealth(ports.health) }),
   };
 }

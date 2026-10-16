@@ -162,7 +162,9 @@ test("keys: EVERY module that writes localStorage is on one of the owner's two l
   // writer must reference the identifier AND the owner must bind that identifier
   // to exactly the key the table declares.
   const table: Record<string, { evicted?: string; exempt?: string; symbol?: string }> = {
-    "lib/useProjects.ts": { evicted: `gravitone.seeded.${uid}` },
+    // lib/useProjects.ts (`gravitone.seeded.<uid>`, the shelf's seed-once flag) retired with the
+    // v1 /projects shelf in Phase 4 wave D; the eviction still names its key so a browser that
+    // holds one from before loses it with the account.
     "lib/useAssets.ts": { evicted: `gravitone.assets.seeded.${uid}` },
     "app/library/audio/soundMigration.ts": { evicted: `gravitone.sound-migrated.v1.${uid}` },
     "app/library/audio/bookStore.ts": { evicted: `gravitone.audio-book.${uid}` },

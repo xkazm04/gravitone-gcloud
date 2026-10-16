@@ -17,7 +17,7 @@
 // Money route: a confirmed live receipt arms the job to spend. Full guard.
 // GRAVITONE_DRY_ONLY=1 refuses a live arm whatever the body says.
 
-import { httpStatus, AppError } from "@gt/domain/errors";
+import { httpStatus, isAppError } from "@gt/domain/errors";
 import { jobIdSchema } from "@gt/domain/ids";
 import { dryOnlyFrom } from "@gt/kernel/dryrun";
 import { retry } from "@gt/kernel/job";
@@ -96,7 +96,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     });
   } catch (e) {
     if (e instanceof FoundryError) return fail(e.status, e.message);
-    if (e instanceof AppError) return fail(httpStatus(e.code), e.message, { code: e.code });
+    if (isAppError(e)) return fail(httpStatus(e.code), e.message, { code: e.code });
     throw e;
   }
 }

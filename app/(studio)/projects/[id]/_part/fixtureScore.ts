@@ -294,6 +294,5 @@ export const SCORE_KIND: KindModule<"score"> = {
   actLabel: (act) => ACT_LABELS[act] ?? act,
   fromRecords: (recs) => scoreFromRecords(recs),
   toRecords: scoreToRecords,
-  stored: true,
 };
 

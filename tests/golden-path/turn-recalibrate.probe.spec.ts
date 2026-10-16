@@ -29,7 +29,6 @@ import { GET as turnGET } from "@/app/api/turns/[id]/route";
 import { POST as cancelPOST } from "@/app/api/turns/[id]/cancel/route";
 import { RENDERS } from "@/app/_phases/script/renders";
 import type { EditPlan } from "@/app/_phases/script/editPlan";
-import { pollTurns, trackTurn, turnEventsOf, turnJobsOf, turnsToPoll, EMPTY_TURNS, type TurnState } from "@/lib/jobs";
 import { cancelTurn, getTurn, listTurns, resumeTurn, startRecalibrate, type TurnRecord } from "@/lib/turns/client";
 import { whenIdle } from "@/lib/turns/runner";
 
@@ -236,7 +235,9 @@ test("a second POST for the same project while one runs is a 409 naming the hold
   });
 });
 
-test("cancel mid-run: the record says cancelled, the engine's process tree is dead, and the bell stays quiet", async () => {
+// "and the bell stays quiet" retired with the bell's turn tracking (Phase 4 wave D: the bell is a
+// view of kernel Jobs, lib/jobs.tsx); the server half of the case stays.
+test("cancel mid-run: the record says cancelled and the engine's process tree is dead", async () => {
   await withEngine(slow(20_000), async (engine) => {
     const out = await startRecalibrate("p-recal-3", BODY);
     const turnId = (out as { turnId: string }).turnId;
@@ -251,54 +252,13 @@ test("cancel mid-run: the record says cancelled, the engine's process tree is de
     const final = await until(turnId, ["cancelled", "done", "failed"]);
     expect(final.status).toBe("cancelled");
     expect(final.result).toBeUndefined();
-
-    // The provider reads it as a stopped job and announces nothing: the
-    // creator pressed stop, and a bell telling them so is noise.
-    let state: TurnState = trackTurn(EMPTY_TURNS, { turnId, projectId: "p-recal-3", kind: "recalibrate", label: "1 note", startedAt: Date.now() });
-    state = await pollTurns(state);
-    expect(turnJobsOf(state).find((j) => j.id === turnId)?.status).toBe("failed");
-    expect(turnEventsOf(state)).toEqual([]);
     everyRequestCarriedTheHeader();
   });
 });
 
-/* ── 6. settled with no tab mounted → exactly one bell event ──────────────── */
-
-test("case 6: a turn that settled while no tab was mounted produces exactly one bell event on the first poll, deduped by turn id", async () => {
-  await withEngine(slow(600), async () => {
-    const out = await startRecalibrate("p-recal-6", BODY);
-    const turnId = (out as { turnId: string }).turnId;
-    // The tab that started it records the turn, persists, and goes away.
-    const started = trackTurn(EMPTY_TURNS, { turnId, projectId: "p-recal-6", kind: "recalibrate", label: "1 note", startedAt: Date.now() });
-    const persisted = JSON.parse(JSON.stringify(started.flags)) as TurnState["flags"];
-    expect(Object.keys(persisted)).toEqual([turnId]);
-
-    // ...and the turn settles with nobody watching.
-    await until(turnId, ["done"]);
-
-    // A fresh mount: only the flags came back from storage.
-    let state: TurnState = { flags: persisted, records: {} };
-    expect(turnsToPoll(state), "a mount with an unsettled flag must poll its project").toEqual(["p-recal-6"]);
-    expect(turnEventsOf(state)).toEqual([]);
-
-    state = await pollTurns(state);
-    const events = turnEventsOf(state);
-    console.log(`[turn-recal] first poll -> ${JSON.stringify(events.map((e) => [e.id, e.title, e.read]))}`);
-    expect(events).toHaveLength(1);
-    expect(events[0]!.id).toBe(`e-${turnId}`);
-    expect(events[0]!.jobId).toBe(turnId);
-    expect(events[0]!.ok).toBe(true);
-    expect(events[0]!.read).toBe(false);
-    expect(events[0]!.title).toBe("Recalibration returned");
-
-    // A second poll, and a list that repeats the record, add nothing.
-    state = await pollTurns(state);
-    expect(turnEventsOf(state)).toHaveLength(1);
-    expect(turnsToPoll(state), "polling continues after the turn settled").toEqual([]);
-    expect(turnJobsOf(state).filter((j) => j.id === turnId)).toHaveLength(1);
-    expect(turnJobsOf(state)[0]!.status).toBe("done");
-  });
-});
+/* ── 6. retired: the bell's turn tracking (Phase 4 wave D). The bell reads kernel Jobs, and an
+   ending reaches it once per ending: tests/next-server/bell-jobs.test.ts ("a retried job that
+   ends again is news again", and the watermark case beside it). ─────────────────────────── */
 
 /* ── 7. unmount mid-run does not cancel; remount stages once ─────────────── */
 
@@ -329,14 +289,6 @@ test("case 7: leaving the Script step mid-run leaves the turn running; a remount
     expect((await listTurns("p-recal-7", "recalibrate")).map((t) => t.id)).toEqual([turnId]);
     everyRequestCarriedTheHeader();
   });
-});
-
-test("case 7: useVersions has no unmount path that aborts or cancels the run, and resumes from the ledger", () => {
-  const src = stripComments(readFileSync(join(process.cwd(), "app/_phases/script/useVersions.ts"), "utf8"));
-  expect(src.length).toBeGreaterThan(1000);
-  expect(src, "useVersions still aborts a request").not.toMatch(/\.abort\(/);
-  expect(src, "useVersions still settles a run `interrupted`").not.toMatch(/["']interrupted["']/);
-  expect(src, "useVersions does not ask the ledger on mount").toMatch(/\bresumeTurn\(/);
 });
 
 /* ── 8, scoped to turns: one client door ──────────────────────────────────── */
@@ -371,10 +323,11 @@ test("acceptance 8: no raw fetch of /api/recalibrate, /api/research or /api/turn
     }
   }
   console.log(`[turn-recal] walked ${files.length} files; ${inDoor} turn fetches in the door, ${hits.length} outside`);
-  // The walk must have read the tree, the Research step's run directory among
-  // it, and the matcher must see the door's own calls, research among them.
+  // The walk must have read the tree, the research producer among it (the v1
+  // Research step's run directory retired with the studio, Phase 4 wave D), and
+  // the matcher must see the door's own calls, research among them.
   expect(files.length).toBeGreaterThan(200);
-  expect(walked, "the walk never reached app/_phases/research/run/").toContain("app/_phases/research/run/live.ts");
+  expect(walked, "the walk never reached the research producer").toContain("lib/producers/research.ts");
   expect([...doorRoutes].sort()).toEqual(expect.arrayContaining(["/api/recalibrate", "/api/research", "/api/turns"]));
   expect(inDoor, "the matcher found none of the door's own fetches - it is blind").toBeGreaterThanOrEqual(4);
   expect(hits).toEqual([]);

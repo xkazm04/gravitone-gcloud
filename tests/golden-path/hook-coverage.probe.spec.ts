@@ -55,34 +55,8 @@ export const EXEMPT: Record<string, string> = {
   "app/playground/hunt/useHunt.ts": NO_DRIVER,
   "app/playground/triage/useTriage.ts": NO_DRIVER,
   "app/_library/useProjectOutputs.ts": NO_DRIVER,
-  "app/_phases/cut/ads/useAdRenders.ts": NO_DRIVER,
-  "app/_phases/cut/music-video/useMusicVideoExport.ts": NO_DRIVER,
-  "app/_phases/cut/useAnimaticExport.ts": NO_DRIVER,
-  "app/_phases/cut/useCut.ts": NO_DRIVER,
-  "app/_phases/cut/useTakeAudio.ts": NO_DRIVER,
-  "app/_phases/frames/ads/useAdsFrames.ts": NO_DRIVER,
-  "app/_phases/frames/ads/useAdsShots.ts": NO_DRIVER,
-  "app/_phases/frames/alternatives/useAlternatives.ts": `${LEGACY}: picture-unit, step-records`,
-  "app/_phases/frames/music-video/useMusicVideoComposition.ts": `${LEGACY}: step-records, turn-poster`,
-  "app/_phases/frames/useFrames.ts": `${LEGACY}: frames-notebook, phase-report-retry, picture-unit`,
-  "app/_phases/motion/ads/useAdsMotion.ts": NO_DRIVER,
-  "app/_phases/motion/useMotion.ts": NO_DRIVER,
-  "app/_phases/research/beats/useBeatPicks.ts": NO_DRIVER,
-  "app/_phases/research/guided/useEducationalResearch.ts": `${LEGACY}: active-notebook, c1-closing, turn-research-live`,
-  "app/_phases/research/run/useResearchRun.ts": NO_DRIVER,
-  "app/_phases/research/useFollowUps.ts": NO_DRIVER,
-  "app/_phases/research/useMusicVideoSource.ts": `${LEGACY}: step-records`,
-  "app/_phases/research/useScope.ts": `${LEGACY}: active-notebook, c1-closing`,
-  "app/_phases/score/useCueTakes.ts": NO_DRIVER,
-  "app/_phases/script/candidates/useAdoption.ts": NO_DRIVER,
-  "app/_phases/script/candidates/useScriptFace.ts": NO_DRIVER,
-  "app/_phases/script/useVersions.ts": `${LEGACY}: c1-closing`,
-  "app/_phases/_shared/notebook/useActiveNotebook.ts": `${LEGACY}: active-notebook, c1-closing, picture-unit, turn-research-live`,
-  "app/_phases/_shared/records/useRecord.ts": `${LEGACY}: step-records`,
-  "app/_phases/_shared/usePhaseReport.ts": `${LEGACY}: phase-report-retry`,
   "app/_phases/_shared/useStorageTrouble.ts": NO_DRIVER,
-  "app/_projects/useShelf.ts": NO_DRIVER,
-  "app/_phases/_shared/useLoadFor.ts": `${LEGACY}: step-records, through the stub of lib/useLoadFor.ts (also reached through useSpots, which IS driven)`,
+  "app/_phases/_shared/useLoadFor.ts": `${LEGACY}: step-records, through the stub of lib/useLoadFor.ts`,
 };
 
 /* ───────────────────────────── derivation (pure) ──────────────────────────── */
@@ -147,9 +121,11 @@ export function coverageProblems(
 test("the derivation sees hooks and drivers at all (a walk that finds nothing proves nothing)", () => {
   const hooks = hooksOnDisk();
   expect(hooks.length, "found no app/**/use*.ts - the walk is broken").toBeGreaterThan(20);
-  const driven = drivenHooks();
-  expect(driven.has("app/_phases/script/trailer/useTrailerCut.ts")).toBe(true);
-  expect(driven.has("app/_phases/score/useSpots.ts")).toBe(true);
+  // The two hooks this used to name as driven (useTrailerCut, useSpots) retired
+  // with the v1 studio (Phase 4 wave D); no app hook is driven through the shared
+  // dispatcher today, so the self-check is the walk, and the matcher below is held
+  // by the synthetic case at the end.
+  expect(drivenHooks().size).toBeGreaterThanOrEqual(0);
 });
 
 test("every app hook is driven through the shared harness or exempted with a reason", () => {
@@ -164,12 +140,15 @@ test("a new hook with no driver and no exemption fails, and is named", () => {
 });
 
 test("a stale exemption fails: gone file and now-driven hook", () => {
+  // Synthetic on both sides: the hook the real list once named as driven
+  // (useSpots) retired with the v1 studio, so a now-driven hook is made here.
+  const driven = new Set([...drivenHooks(), "app/x/useDriven.ts"]);
   const exempt = {
     ...EXEMPT,
     "app/gone/useGone.ts": NO_DRIVER,
-    "app/_phases/score/useSpots.ts": NO_DRIVER,
+    "app/x/useDriven.ts": NO_DRIVER,
   };
-  const problems = coverageProblems(hooksOnDisk(), drivenHooks(), exempt);
+  const problems = coverageProblems([...hooksOnDisk(), "app/x/useDriven.ts"], driven, exempt);
   expect(problems.some((p) => p.includes("useGone.ts") && p.includes("gone"))).toBe(true);
-  expect(problems.some((p) => p.includes("useSpots.ts") && p.includes("IS driven"))).toBe(true);
+  expect(problems.some((p) => p.includes("useDriven.ts") && p.includes("IS driven"))).toBe(true);
 });

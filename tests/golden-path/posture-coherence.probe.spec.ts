@@ -130,16 +130,8 @@ test("keyless cell: spending section edits is off, and takes already stored are 
   delete process.env[MUSIC_KEY_VAR];
   process.env.NEXT_PUBLIC_CAP_MUSIC_SECTION_EDIT = "0";
   expect(soundStoreListed(), "flag off, no store").toBe(false);
-
-  // And the three surfaces that LIST takes decide it from soundStoreListed(),
-  // never from the fact-backed capability. Comment-stripped source.
-  const LISTERS = ["app/_phases/score/ScoreSpotting.tsx", "app/_phases/score/ads/AdsScore.tsx", "app/_phases/cut/useCut.ts"];
-  for (const f of LISTERS) {
-    const src = stripComments(readFileSync(path.join(ROOT, f), "utf8"));
-    expect(src, `${f} no longer reads soundStoreListed()`).toMatch(/\bsoundStoreListed\s*\(\s*\)/);
-    expect(src, `${f} lists takes behind the fact-backed capability`).not.toMatch(/useCueTakes\(\s*caps\./);
-    expect(src, `${f} decides the store from the fact-backed capability`).not.toMatch(/storeBacked\s*=\s*[^;]*caps\./);
-  }
+  // The three v1 surfaces that LISTED takes from it (ScoreSpotting, AdsScore, useCut) retired with
+  // the studio (Phase 4 wave D); the score part reads its takes from the kernel's part records.
 });
 
 test("absenceReason(): names the missing fact when that is the cause, the flag's reason otherwise; fact sentences fit a Hint", () => {
@@ -305,5 +297,7 @@ test("source: no file computes the matrix itself - the server passes facts, the 
   for (const f of Object.keys(ALLOWED)) expect(callers, `${f} is allowed and no longer calls it - remove it from ALLOWED`).toContain(f);
   const readers = files.filter((f) => /\buseCapabilities\s*\(/.test(stripComments(readFileSync(path.join(ROOT, f), "utf8"))));
   console.log(`[posture] ${files.length} files walked; capabilities() callers: ${callers.length}; useCapabilities() readers: ${readers.join(", ")}`);
-  expect(readers.length).toBeGreaterThanOrEqual(5);
+  // A liveness floor for the matcher, not a quota: five readers until the v1 studio's step
+  // surfaces retired (Phase 4 wave D); the two left are the shell's.
+  expect(readers.length).toBeGreaterThanOrEqual(2);
 });

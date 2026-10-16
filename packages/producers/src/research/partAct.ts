@@ -5,7 +5,8 @@ import { estimateSchema, type Estimate } from "@gt/domain/estimate";
 import type { EventData } from "@gt/domain/event";
 import type { Job } from "@gt/domain/job";
 import type { ResourceLane } from "@gt/domain/lane";
-import type { Ending, MissingStep, Outputs, Producer, StepContext, StepOutcome } from "@gt/kernel/job-core";
+import type { Reader } from "@gt/kernel/store";
+import { vendorHealth, type Ending, type Health, type MissingStep, type Outputs, type Producer, type StepContext, type StepOutcome } from "@gt/kernel/job-core";
 
 // A STUDIO PART'S ACT AS ONE KERNEL JOB (Phase 4 wave C, L37) - the shape every studio step
 // producer shares (research, script, frames, motion, score, cut, still, words, voice). It lives
@@ -95,7 +96,9 @@ export type PartActPorts = {
   land(job: Job, plan: ActPlan, made: ReadonlyMap<string, EventData>, ctx: StepContext): Promise<Result<{ readonly rev: number; readonly unchanged: boolean }>>;
   /** After the job ended (kernel settle hook): open what the moved verdict now allows. */
   settled?(job: Job, ending: Ending): Promise<void>;
-  health?(): Promise<{ readonly ok: true } | { readonly ok: false; readonly reason: string }>;
+  health?(job?: Job): Promise<Health>;
+  /** The act's refusal on the records as they stand, read in the release (facts.ts `preflightFrom`). */
+  preflight?(job: Job, r: Reader): string | undefined;
 };
 
 const free = (seconds: number): Estimate => ({ seconds, usd: 0 });
@@ -167,7 +170,8 @@ export function definePartAct(lane: ResourceLane, ports: PartActPorts, opts: { r
       return ports.perform(ctx.job, plan, unit, ctx);
     },
     ...(ports.settled === undefined ? {} : { settle: ports.settled }),
-    ...(ports.health === undefined ? {} : { health: ports.health }),
+    ...(ports.health === undefined ? {} : { health: vendorHealth(ports.health) }),
+    ...(ports.preflight === undefined ? {} : { preflight: ports.preflight }),
   };
 }
 

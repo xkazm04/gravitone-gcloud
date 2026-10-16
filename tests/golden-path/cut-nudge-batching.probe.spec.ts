@@ -17,8 +17,8 @@
 // distinguish them.
 import { test, expect } from "@playwright/test";
 
-import { nudgeOffsets, offsetFrom, type Offsets } from "@/app/_phases/cut/CutTimeline";
-import type { TimelineClip } from "@/app/_studio/projectTypes";
+import { nudgeOffsets, offsetFrom, type Offsets } from "@/lib/cut/offsets";
+import type { TimelineClip } from "@/lib/studio/projectTypes";
 
 const clean: TimelineClip = { id: "t-x", track: "music", label: "x", startS: 4, durS: 3, status: "ok" };
 /** A clip the CUT already records as drifting - the base is the fixture's own

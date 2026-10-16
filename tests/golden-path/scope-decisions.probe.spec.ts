@@ -21,7 +21,7 @@
 import { test, expect } from "@playwright/test";
 
 import { buildCards, type Card } from "@/app/_phases/_shared/notebook/cards";
-import { DIMENSIONS } from "@/app/_phases/_shared/notebook/dimensions";
+import { DIMENSIONS } from "@/lib/notebook/dimensions";
 import {
   OPT_IN_IDS,
   scopeDiffs,

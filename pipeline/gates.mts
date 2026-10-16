@@ -81,7 +81,7 @@ export const GATES: readonly Gate[] = [
     npmScript: "check:notebook",
     class: "blocking",
     outcomes: "01",
-    rationale: "The notebook graph under app/_phases/_shared/notebook/ - string ids spent twice, dangling, or untagged. No network.",
+    rationale: "The notebook graph under lib/notebook/ - string ids spent twice, dangling, or untagged. No network.",
   },
   {
     id: "type-scale",

@@ -34,6 +34,32 @@ export class AppError extends Error {
   }
 }
 
+/**
+ * The class's brand, registered in the runtime-wide symbol registry so every copy of this
+ * module answers to the same key. `instanceof` is identity of ONE constructor, and a process
+ * routinely holds two: a Next route graph beside the page graph that opened the cached kernel
+ * store (lib/kernelStore.ts), a tsx CLI's static graph beside the one pipeline/lib-hooks.mts
+ * loads the producers through. An AppError thrown by one copy failed the other's `instanceof`,
+ * and kernel/store `classify` re-labelled `not-found` as `internal` - three same-job proofs red
+ * (L44, tests/next-server/exit-store-classify.test.ts). The brand lives on the prototype, so no
+ * instance grows a field and equality of two errors is unchanged.
+ */
+const BRAND: unique symbol = Symbol.for("gt.AppError");
+Object.defineProperty(AppError.prototype, BRAND, { value: true });
+
+/**
+ * Is this an AppError from ANY copy of this module? The only test the codebase uses in place of
+ * `instanceof AppError`: a branded Error whose `code` is in the taxonomy. A look-alike without the
+ * brand (an Error that merely carries a `code`) is not one - a Node `ENOENT` is not `not-found`.
+ */
+export function isAppError(e: unknown): e is AppError {
+  if (e instanceof AppError) return true;
+  if (!(e instanceof Error) || Reflect.get(e, BRAND) !== true) return false;
+  const code: unknown = Reflect.get(e, "code");
+  // STATUS is the exhaustive record over the taxonomy, so a new code is recognised here for free.
+  return typeof code === "string" && Object.hasOwn(STATUS, code);
+}
+
 export type Result<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: AppError };
 
 export function ok<T>(value: T): Result<T> {

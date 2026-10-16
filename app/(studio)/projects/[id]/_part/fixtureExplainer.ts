@@ -7,7 +7,7 @@ import { albumOpLabel, type ArticleData, type EngineView, type PartActView, type
 import type { CutClip, CutScene, DerivedCut } from "@/lib/cut/deriveTimeline";
 
 import { engineOf, held, takeView, type TakeRec } from "./fixtureScoreRecs.ts";
-import type { KCtx, KindModule } from "./kinds.ts";
+import { asObj, type KCtx, type KindModule } from "./kinds.ts";
 
 // THE EXPLAINER'S ARTICLE, STRIPS AND VOICE PARTS (L40; STEPS-DESIGN §2 "explainer parts"), and
 // the cut it lays them on. The article is the article producer's run (lib/articles: research,
@@ -16,10 +16,11 @@ import type { KCtx, KindModule } from "./kinds.ts";
 // card. The cut part reads these through `explainerCut` and the finish line judges it like a
 // film's, without the music rows: an explainer plans no score.
 //
-// THE RECORDS GAP: @gt/domain/steps declares no record for article, strips or voice, so on the
-// real side these parts are read-only and their ops refuse (`stored: false`) - the producers book
-// their outputs on their jobs (L37) until records are declared. On the fixture side each dry act
-// lands a stand-in that says what it is by its engine (`mode: "dry"`), never a borrowed project's.
+// THE RECORDS (L43): each part keeps its working record as its own step record (`article`,
+// `strips`, `voice` in @gt/domain/steps); the voice editor's ops write it on the real side. The
+// article and strips producers still book their outputs on their jobs (L37) - nothing lands those
+// two records yet but an import. On the fixture side each dry act lands a stand-in that says what
+// it is by its engine (`mode: "dry"`), never a borrowed project's.
 
 export type ArticleSection = { readonly id: string; readonly heading: string; readonly body: string };
 export type ArticleRec = { readonly title: string | null; readonly sections: readonly ArticleSection[]; readonly engine?: EngineView };
@@ -74,9 +75,9 @@ export const ARTICLE_KIND: KindModule<"article"> = {
   },
   data: articleData,
   actLabel: () => "article run",
-  fromRecords: () => ({ title: null, sections: [] }),
-  toRecords: () => ({}),
-  stored: false,
+  // Each written by its `toRecords` through the record's door; read back as written.
+  fromRecords: (recs) => ({ title: null, sections: [], ...(recs.get("article") as Partial<ArticleRec> | undefined) }),
+  toRecords: (a) => ({ article: asObj(a) }),
 };
 
 /* ── strips ───────────────────────────────────────────────────────────────── */
@@ -125,9 +126,8 @@ export const STRIPS_KIND: KindModule<"strips"> = {
     ...(s.engine === undefined ? {} : { engine: s.engine }),
   }),
   actLabel: () => "strips run",
-  fromRecords: () => ({ cards: [] }),
-  toRecords: () => ({}),
-  stored: false,
+  fromRecords: (recs) => ({ cards: [], ...(recs.get("strips") as Partial<StripsRec> | undefined) }),
+  toRecords: (x) => ({ strips: asObj(x) }),
 };
 
 /* ── voice ────────────────────────────────────────────────────────────────── */
@@ -200,9 +200,8 @@ export const VOICE_KIND: KindModule<"voice"> = {
     }),
   }),
   actLabel: () => "line take",
-  fromRecords: () => ({ text: {}, takes: {}, byLine: {} }),
-  toRecords: () => ({}),
-  stored: false,
+  fromRecords: (recs) => ({ text: {}, takes: {}, byLine: {}, ...(recs.get("voice") as Partial<VoiceRec> | undefined) }),
+  toRecords: (v) => ({ voice: asObj(v) }),
 };
 
 /* ── the explainer's cut ──────────────────────────────────────────────────── */

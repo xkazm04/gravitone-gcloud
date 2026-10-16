@@ -41,6 +41,7 @@ import { useCompose } from "../../_plan/compose.tsx";
 import { outcomeOf, useReceipt } from "../../_plan/receipt.tsx";
 import type { RunsData } from "./load.ts";
 import { canMove, canPause, canRetry } from "./Acts.tsx";
+import { DojoDoors, dojoSpec, type DojoPort } from "./DojoDoors.tsx";
 import { Inspector, type InspectorActs } from "./Inspector.tsx";
 import { BACKSTOP_MS, openFeed } from "./liveFeed.ts";
 import { barsOf, blockedOf, depsOf, heldMoney, litOf, pinsOf, projectsOf, rowsOf, step, totalsOf, walkPool } from "./view.ts";
@@ -68,7 +69,7 @@ function urlOf(sel: Selection): string {
 
 const runsHref = (id: string): string => `/projects/runs?project=${encodeURIComponent(id)}`;
 
-export function Runs({ data, initial, port }: { readonly data: RunsData; readonly initial: Selection; readonly port: ProducePort }) {
+export function Runs({ data, initial, port, dojo }: { readonly data: RunsData; readonly initial: Selection; readonly port: ProducePort; readonly dojo: DojoPort }) {
   const m = data.model;
   const router = useRouter();
   const { toast } = useShell();
@@ -320,6 +321,23 @@ export function Runs({ data, initial, port }: { readonly data: RunsData; readonl
               <SourceTag kind={data.universe} />
               {data.produce === "fixture" && <Chip label="produce · fixture" casing="lower" />}
             </div>
+            <DojoDoors
+              cycles={data.cycles}
+              busy={flow.reading}
+              onStart={(id) =>
+                void flow.open(
+                  dojoSpec(
+                    dojo,
+                    id,
+                    (note, ledger) => {
+                      toast(note, ledger);
+                      router.refresh();
+                    },
+                    (msg) => toast(msg),
+                  ),
+                )
+              }
+            />
             {[...m.failures, ...data.problems].map((f) => (
               <div key={f.source} className={s.fail}>
                 <ErrorLine message={`${f.source}: ${f.error}`} />

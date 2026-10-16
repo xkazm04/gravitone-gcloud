@@ -4,7 +4,7 @@ import type { Actor } from "@gt/domain/event";
 import type { ProducerRunInput } from "@gt/domain/produce";
 import { runSchema } from "@gt/domain/run";
 import { append } from "@gt/kernel/events";
-import { enqueueIn, jobEvent, loadJob, putJob } from "@gt/kernel/job";
+import { recordImportedJobIn } from "@gt/kernel/job";
 import { readRunIn, runJobId } from "@gt/kernel/records/launch";
 import { priceLine } from "@gt/kernel/records/receipt";
 import { insertRun } from "@gt/kernel/records/schema";
@@ -86,14 +86,9 @@ function land(t: Tx, run: V1Run, now: number): void {
   if (!rec.ok) throw rec.error;
   const jobId = runJobId(run.runId);
   insertRun(t, rec.value, jobId);
-  const job = enqueueIn(t, { id: jobId, of: { kind: "run", id: run.runId }, producer: run.input.producer, lane: option.lane, state: "planned", correlation: { runId: run.runId } }, IMPORT_RUN_ACTOR);
-  const base = loadJob(t, job.id).job;
-  const end =
-    run.state === "done"
-      ? { ...base, state: "done" as const, progress: { done: read.plan.units, total: read.plan.units, stage: "imported" } }
-      : { ...base, state: "failed" as const, error: { code: "unavailable" as const, message: run.error ?? `failed in v1 (${run.source} recorded no sentence)` } };
-  putJob(t, end);
-  jobEvent(t, IMPORT_RUN_ACTOR, end, "job.imported", { imported: true, from: "v1", source: run.source });
+  // Through the job machine (kernel `recordImportedJobIn`), ending as v1 recorded it.
+  const ending = run.state === "done" ? { state: "done" as const } : { state: "failed" as const, code: "unavailable" as const, message: run.error ?? `failed in v1 (${run.source} recorded no sentence)` };
+  recordImportedJobIn(t, { id: jobId, of: { kind: "run", id: run.runId }, producer: run.input.producer, lane: option.lane, correlation: { runId: run.runId }, units: read.plan.units, ending, data: { from: "v1", source: run.source } }, IMPORT_RUN_ACTOR);
   append(t, {
     actor: IMPORT_RUN_ACTOR,
     type: "run.imported",

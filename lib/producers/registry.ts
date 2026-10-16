@@ -4,6 +4,7 @@ import type { Job } from "@gt/domain/job";
 import type { ResourceLane } from "@gt/domain/lane";
 import type { ProducerName } from "@gt/domain/run";
 import type { Producer } from "@gt/kernel/job-core";
+import type { Reader } from "@gt/kernel/store";
 import type { ProducerKey } from "@gt/kernel/job-queue-core";
 import { launchOf, modelOptions } from "@gt/kernel/records/options";
 import { producerSet, type Bound } from "@gt/producers/set";
@@ -110,4 +111,13 @@ export const BOUND: readonly Bound[] = [
 /** The map a worker hands kernel `workLoop`, keyed by the job's `<producer>@<lane>`. */
 export function producers(): Result<ReadonlyMap<ProducerKey, Producer>> {
   return producerSet(BOUND);
+}
+
+/**
+ * Every bound producer's preflight, by the job it would run (kernel ReadContext / RunOptions
+ * `preflightOf`, L45): what a launch or a release outside the worker hands the kernel so a part
+ * whose act waits on a human act is held `planned`, named, instead of released into a failure.
+ */
+export function preflightOf(job: Job, r: Reader): string | undefined {
+  return BOUND.find((b) => b.name === job.producer && b.producer.lane === job.lane)?.producer.preflight?.(job, r);
 }

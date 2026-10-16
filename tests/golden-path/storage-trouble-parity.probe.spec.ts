@@ -13,7 +13,8 @@ import { test, expect } from "@playwright/test";
 import { stripComments } from "./_helpers";
 
 const ROOT = join(__dirname, "..", "..");
-const HOOKS = ["lib/useProjects.ts", "lib/useThemes.ts", "lib/useAssets.ts"];
+// lib/useProjects.ts retired with the v1 /projects shelf (Phase 4 wave D).
+const HOOKS = ["lib/useThemes.ts", "lib/useAssets.ts"];
 
 /** Bodies of every `catch (e) { ... }`, by brace matching. */
 function catchBodies(src: string): string[] {

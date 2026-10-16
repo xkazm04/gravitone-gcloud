@@ -1,5 +1,5 @@
 import { parseAt } from "@gt/domain/door";
-import { AppError, err, ok, type Result } from "@gt/domain/errors";
+import { AppError, err, isAppError, ok, type Result } from "@gt/domain/errors";
 import type { Estimate } from "@gt/domain/estimate";
 import type { Actor, Subject } from "@gt/domain/event";
 import { runModeSchema, type RunMode } from "@gt/domain/job";
@@ -108,7 +108,7 @@ const dryEntry = new WeakSet<object>();
 const DRY_STOP = "dry-run";
 
 export function isDryStop(e: unknown): boolean {
-  return e instanceof AppError && e.code === "refused" && e.detail === DRY_STOP;
+  return isAppError(e) && e.code === "refused" && e.detail === DRY_STOP;
 }
 
 /**

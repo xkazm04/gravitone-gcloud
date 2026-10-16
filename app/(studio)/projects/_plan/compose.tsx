@@ -16,9 +16,10 @@ import type { ComposeChoices, ProducePort } from "../_port/contract.ts";
 
 export type ComposeHost = { readonly open: () => void; readonly dialog: ReactNode };
 
-export function useCompose(port: ProducePort, choices: ComposeChoices | null): ComposeHost {
+/** `initiallyOpen`: arrived at `/projects?compose=1` (v1's `/projects/new` redirects there). */
+export function useCompose(port: ProducePort, choices: ComposeChoices | null, initiallyOpen = false): ComposeHost {
   const router = useRouter();
-  const [isOpen, setOpen] = useState(false);
+  const [isOpen, setOpen] = useState(initiallyOpen);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
   const inflight = useRef(false);

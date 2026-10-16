@@ -29,7 +29,7 @@ import { pictureFromUnits } from "@/lib/score/picture";
 import type { ScoreSpot } from "@/lib/score/spots";
 import { getTake } from "@/lib/sound/takes";
 
-import { asData, field, must, partFacts, priceOf, recOf, text, withRecords, written, type DriveHooks, type PartFacts, type UnitsFn } from "./research.ts";
+import { asData, field, must, partFacts, priceOf, recOf, text, withRecords, written, type DriveHooks, type PartFacts, type UnitsFn, preflightFrom } from "./research.ts";
 import { pickedScenario } from "./score.ts";
 
 // THE CUT PRODUCER, BOUND (Phase 4 wave C, L37) - packages/producers/src/cut's ports over v1's
@@ -217,6 +217,8 @@ function landCut(job: { readonly id: string }, plan: ActPlan, made: ReadonlyMap<
 export function cutProducer(lane: ResourceLane = "box.render", hooks: DriveHooks = {}, engines: Partial<CutEngines> & { readonly adDeps?: AdRenderDeps } = {}): Producer {
   const eng: CutEngines = { ...LIVE, ...(engines.adDeps === undefined ? {} : { renderAd: adDeps(engines.adDeps) }), ...engines };
   return defineCut(lane, {
+    // Held at the release, not failed by the worker, while its act waits on a human act (L45).
+    preflight: preflightFrom(cutUnits),
     async plan(_job, ask, ctx) {
       const s = partSnapshot(ctx);
       if (!s.ok) return s;

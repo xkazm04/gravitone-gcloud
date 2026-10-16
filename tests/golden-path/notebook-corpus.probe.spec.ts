@@ -26,7 +26,6 @@ import { test, expect } from "@playwright/test";
 
 import { buildCards, notebookIssues } from "@/app/_phases/_shared/notebook/cards";
 import { NOTEBOOK } from "@/app/_phases/_shared/notebook/notebook";
-import { railFor } from "@/app/_phases/_shared/notebook/NotebookBody";
 import { sourceOf } from "@/app/_phases/_shared/notebook/source";
 import {
   adaptMember,
@@ -142,7 +141,6 @@ test("notebook-corpus: no consumer throws on any accepted member", () => {
     accepted++;
     expect(() => notebookIssues(nb), `${p}: notebookIssues`).not.toThrow();
     expect(() => buildCards(nb), `${p}: buildCards`).not.toThrow();
-    expect(() => railFor(nb), `${p}: railFor`).not.toThrow();
     expect(() => sourceOf(nb).byId, `${p}: indexNotebook`).not.toThrow();
   }
   console.log(`[corpus] consumers walked ${accepted} accepted member(s)`);

@@ -18,8 +18,8 @@
 //   4. `AND THEN` trips — the one rule this repo already held in prose
 //      (`app/_phases/script/types.ts:24`) and could not execute.
 import { test, expect } from "@playwright/test";
-import { runStructureCheck } from "@/app/_phases/script/trailer/structure";
-import type { TrailerBeat, TrailerCut } from "@/app/_phases/script/trailer/types";
+import { runStructureCheck } from "@/lib/script/trailer/structure";
+import type { TrailerBeat, TrailerCut } from "@/lib/script/trailer/types";
 
 /** The smallest cut that is well-formed: escalation → reset → peak. Deliberately
  *  minimal — a probe that needs a large fixture is testing the fixture. */

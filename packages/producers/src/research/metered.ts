@@ -1,4 +1,4 @@
-import { AppError } from "@gt/domain/errors";
+import { isAppError } from "@gt/domain/errors";
 import type { Estimate } from "@gt/domain/estimate";
 import type { CallIntent } from "@gt/kernel/dryrun";
 import type { StepContext, StepOutcome } from "@gt/kernel/job-core";
@@ -62,7 +62,7 @@ export async function meteredCall<T>(ctx: StepContext, c: PaidCall<T>): Promise<
  *  may answer next time feeds the breaker, anything else is the job's sentence verbatim. */
 export function failureOf(e: unknown, vendor: (e: Error) => "retry" | "fatal" | "money" | undefined = () => undefined): StepOutcome {
   if (!(e instanceof Error)) throw e;
-  if (e instanceof AppError) {
+  if (isAppError(e)) {
     if (e.code === "budget") return { kind: "money-stop", message: e.message };
     // A fence lost mid-unit is not the unit's failure: the job is the new holder's.
     if (e.code === "conflict" && (e.detail === "taken-over" || e.detail === "released" || e.detail === "expired")) throw e;

@@ -6,9 +6,9 @@
 // fixture (the same composed cut the lifecycle probe seeds).
 import { test, expect } from "@playwright/test";
 
-import { slotsFor } from "@/app/_phases/research/beats/beats";
-import { GLASS_HARBOR_BUDGET, GLASS_HARBOR_CUE } from "@/app/_studio/trailerFixtures";
-import { composeCut, addPromise, withBeat, withPromisePayer, withAllowance } from "@/app/_phases/script/trailer/cut";
+import { slotsFor } from "@/lib/research/beats";
+import { GLASS_HARBOR_BUDGET, GLASS_HARBOR_CUE } from "@/lib/studio/trailerFixtures";
+import { composeCut, addPromise, withBeat, withPromisePayer, withAllowance } from "@/lib/script/trailer/cut";
 import {
   canRedo,
   canUndo,
@@ -27,7 +27,7 @@ import {
   resetBeat,
   undo,
   type CutLog,
-} from "@/app/_phases/script/trailer/ops";
+} from "@/lib/script/trailer/ops";
 
 const slots = slotsFor("trailer");
 const picks = Object.fromEntries(slots.map((s) => [s.id, s.variants[0].id]));

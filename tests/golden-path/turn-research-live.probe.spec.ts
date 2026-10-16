@@ -9,14 +9,18 @@
 // one client door (lib/turns/client.ts): a stand-in `fetch` hands each request
 // to the REAL exported route handler, which starts the REAL runner over the
 // REAL `reason()`, and `withFakeEngine` puts the stand-in `claude` first on
-// PATH with 4a's cassettes. run/live.ts is driven as the step drives it, over a
-// real IndexedDB engine (`fake-indexeddb`, imported first through the C1
-// harness), and the board's answer is read through useActiveNotebook itself.
+// PATH with 4a's cassettes.
+//
+// RETIRED WITH THE v1 STUDIO (Phase 4 wave D): the step-side cases (4-6 and the
+// wiring case) drove run/live.ts and useActiveNotebook, which are gone. A research
+// run is a part act now - a kernel job that lands the project's own notebook once,
+// survives the tab, and is swept, acknowledged and retried without re-buying a
+// booked turn (tests/next-server/producer-step-research.test.ts,
+// producer-step-crash.test.ts). The route cases stay.
 //
 // OPERATOR DECISION 2026-10-06 (recalibrate and scene direction), extended to
 // research: leaving the step does not cancel; a reload re-attaches; an explicit
 // stop kills the engine; a settled notebook is written exactly once.
-import "./_c1-harness";
 
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -28,16 +32,11 @@ import { POST as researchPOST, GET as researchGET } from "@/app/api/research/rou
 import { GET as listGET } from "@/app/api/turns/route";
 import { GET as turnGET } from "@/app/api/turns/[id]/route";
 import { POST as cancelPOST } from "@/app/api/turns/[id]/cancel/route";
-import { fixtureSource } from "@/app/_phases/_shared/notebook/source";
-import { LIVE_NOTEBOOK_PHASE, readActiveNotebook, useActiveNotebook } from "@/app/_phases/_shared/notebook/useActiveNotebook";
-import { onSaveIssued, readStep, type ResearchNotebookStepData } from "@/app/_phases/_shared/stepStore";
-import { __forgetLive, resetLive, resumeLive, startLive, stopLive, useLiveResearch } from "@/app/_phases/research/run/live";
 import { MAX_TOPIC_CHARS } from "@/lib/turns/assemble/research";
 import { getTurn, type TurnRecord } from "@/lib/turns/client";
 import { whenIdle } from "@/lib/turns/runner";
 
-import { harness } from "./_c1-harness";
-import { FAKE_ENGINE_ENV, keepEnv, loadCassette, stripComments, withFakeEngine, type Cassette, type FakeCall } from "./_helpers";
+import { FAKE_ENGINE_ENV, keepEnv, loadCassette, withFakeEngine, type Cassette, type FakeCall } from "./_helpers";
 
 keepEnv([
   ...FAKE_ENGINE_ENV,
@@ -67,7 +66,6 @@ test.beforeEach(() => {
   delete process.env.TEXT_RETRIEVE;
 });
 test.afterEach(() => {
-  __forgetLive();
   if (dir) rmSync(dir, { recursive: true, force: true });
   dir = "";
 });
@@ -134,39 +132,6 @@ async function until(id: string, statuses: string[], ms = 20_000): Promise<TurnR
   throw new Error(`turn ${id} never reached ${statuses.join("|")}; last: ${JSON.stringify(last).slice(0, 300)}`);
 }
 
-async function eventually(what: string, ok: () => boolean, ms = 20_000) {
-  const t0 = Date.now();
-  while (Date.now() - t0 < ms) {
-    if (ok()) return;
-    await wait(50);
-  }
-  throw new Error(`never: ${what}`);
-}
-
-const alive = (pid: number): boolean => {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
-};
-async function stillAliveAfterKill(pid: number): Promise<boolean> {
-  for (let i = 0; i < 60; i++) {
-    if (!alive(pid)) return false;
-    await wait(50);
-  }
-  return alive(pid);
-}
-async function enginePid(engine: { turns: () => FakeCall[] }): Promise<number> {
-  for (let i = 0; i < 200; i++) {
-    const t = engine.turns();
-    if (t.length && typeof t[0]!.pid === "number") return t[0]!.pid!;
-    await wait(25);
-  }
-  throw new Error("the stand-in never recorded a turn - the engine was not reached");
-}
-
 const slowOf = (name: string, ms: number): Cassette => {
   const c = loadCassette(name);
   return { ...c, name: `${c.name}-slow-${ms}`, turns: c.turns.map((t) => ({ ...t, mode: "slow" as const, slowMs: ms })) };
@@ -181,27 +146,6 @@ function withEngine<T>(cassette: string | Cassette, fn: (engine: { turns: () => 
       await whenIdle();
     }
   });
-}
-
-/** Every `research-notebook` save issued for one project, as issued. */
-function spy(projectId: string) {
-  const writes: ResearchNotebookStepData[] = [];
-  const off = onSaveIssued((p, phase, data) => {
-    if (p === projectId && phase === LIVE_NOTEBOOK_PHASE) writes.push(data as ResearchNotebookStepData);
-  });
-  return { writes, landed: () => writes.filter((w) => w.notebook !== null), off };
-}
-
-async function saved(projectId: string): Promise<ResearchNotebookStepData | undefined> {
-  const r = await readStep<ResearchNotebookStepData>(projectId, LIVE_NOTEBOOK_PHASE);
-  expect(r.ok, "the record could not be read").toBe(true);
-  return r.ok ? r.data : undefined;
-}
-
-function everyRequestCarriedTheHeader() {
-  expect(sent.length, "the door sent nothing").toBeGreaterThan(0);
-  const bare = sent.filter((s) => s.auth !== `Bearer ${SECRET}`).map((s) => `${s.method} ${s.url}`);
-  expect(bare, "a research request went out without accessHeader()").toEqual([]);
 }
 
 /* ── 1-3: the route ───────────────────────────────────────────────────────── */
@@ -264,145 +208,4 @@ test("3: no projectId is 400; an over-long topic is 400 with no record; a second
     expect(String(second.json.detail)).toContain(first.json.turnId as string);
     await until(first.json.turnId as string, ["done", "failed"]);
   });
-});
-
-/* ── 4-6: the step watches ────────────────────────────────────────────────── */
-
-test("4: a reload before the turn settles loses nothing - the remount watches, lands, and writes the notebook exactly once", async () => {
-  const P = "p-rl-4";
-  const s = spy(P);
-  try {
-    await withEngine(slowOf("research-ok", 1_500), async (engine) => {
-      const turnId = await startLive(P, TOPIC);
-      expect(turnId, "startLive did not start a turn").toMatch(/^tn-/);
-
-      // THE RELOAD: everything this module held is gone; the ledger and the
-      // step store are not.
-      __forgetLive();
-      expect((await getTurn(turnId!))!.status, "the turn did not outlive the page").not.toBe("cancelled");
-
-      const remount = await resumeLive(P, await saved(P), TOPIC);
-      expect(remount?.id, "the remount did not watch the live turn").toBe(turnId);
-
-      await eventually("the remount landed the notebook", () => s.landed().length > 0);
-      expect(s.landed()).toHaveLength(1);
-      expect(s.landed()[0]!.turn).toBe(turnId);
-
-      // A second remount (a second reload, or a mount after the landing) finds
-      // the turn taken.
-      __forgetLive();
-      expect(await resumeLive(P, await saved(P), TOPIC)).toBeNull();
-      await wait(2_000);
-      expect(s.landed(), "the notebook was written twice").toHaveLength(1);
-      expect(engine.turns()).toHaveLength(1);
-
-      expect((await readActiveNotebook(P))!.kind).toBe("reasoned");
-      const h = harness(() => useActiveNotebook(P));
-      const board = await h.settleUp();
-      expect(board.hydrated).toBe(true);
-      expect(board.source.kind).toBe("reasoned");
-      expect(board.source.notebook.topic).toBe(TOPIC);
-      h.unmount();
-    });
-  } finally {
-    s.off();
-  }
-  everyRequestCarriedTheHeader();
-});
-
-test("4b: a turn that lands while the step is mounted is written once, and a later mount does not write it again", async () => {
-  const P = "p-rl-4b";
-  const s = spy(P);
-  try {
-    await withEngine("research-ok", async () => {
-      const turnId = await startLive(P, TOPIC);
-      await eventually("the watcher landed the notebook", () => s.landed().length > 0);
-      const live = harness(() => useLiveResearch(P));
-      expect((await live.settleUp()).state.status).toBe("done");
-      live.unmount();
-
-      __forgetLive();
-      expect(await resumeLive(P, await saved(P))).toBeNull();
-      await wait(500);
-      expect(s.landed()).toHaveLength(1);
-      expect(s.landed()[0]!.turn).toBe(turnId);
-    });
-  } finally {
-    s.off();
-  }
-});
-
-test("5: after resetLive, a turn that was already taken is never landed again: no write, and the board deals the replay", async () => {
-  const P = "p-rl-5";
-  const s = spy(P);
-  try {
-    await withEngine("research-ok", async () => {
-      const turnId = await startLive(P, TOPIC);
-      await eventually("the watcher landed the notebook", () => s.landed().length > 0);
-
-      resetLive(P);
-      // The clear is on the board in the same tick, and it carries the id it saw.
-      expect(s.writes.at(-1)!.notebook).toBeNull();
-      expect(s.writes.at(-1)!.turn).toBe(turnId);
-      await expect.poll(async () => (await readActiveNotebook(P))?.kind).toBe("replay");
-
-      // In this page, and after a reload.
-      expect(await resumeLive(P, await saved(P))).toBeNull();
-      __forgetLive();
-      expect(await resumeLive(P, await saved(P))).toBeNull();
-      await wait(500);
-      expect(s.landed(), "a consumed turn re-wrote a cleared notebook").toHaveLength(1);
-      expect(await readActiveNotebook(P)).toBe(fixtureSource());
-    });
-  } finally {
-    s.off();
-  }
-});
-
-test("6: stopLive ends the record cancelled, kills the engine's process tree, and writes no notebook", async () => {
-  const P = "p-rl-6";
-  const s = spy(P);
-  try {
-    await withEngine(slowOf("research-ok", 20_000), async (engine) => {
-      const turnId = await startLive(P, TOPIC);
-      await until(turnId!, ["running"]);
-      const pid = await enginePid(engine);
-      expect(alive(pid)).toBe(true);
-
-      const turn = await stopLive(P);
-      expect(turn?.status).toBe("cancelled");
-      expect(await stillAliveAfterKill(pid), "stop left the engine running").toBe(false);
-      expect((await until(turnId!, ["cancelled", "done", "failed"])).status).toBe("cancelled");
-
-      __forgetLive();
-      expect(await resumeLive(P, await saved(P))).toBeNull();
-      expect(s.writes, "a stopped run wrote to the notebook record").toEqual([]);
-    });
-  } finally {
-    s.off();
-  }
-});
-
-/* ── wiring ───────────────────────────────────────────────────────────────── */
-
-test("the step starts, stops and resumes through the turn, and has no path that aborts or cancels on unmount", () => {
-  const live = stripComments(readFileSync(join(process.cwd(), "app/_phases/research/run/live.ts"), "utf8"));
-  expect(live, "live.ts still aborts a request").not.toMatch(/\.abort\(/);
-  expect(live).toMatch(/\bstartResearch\(/);
-  expect(live).toMatch(/\bresumeTurn\(/);
-  expect(live).toMatch(/\bcancelTurn\(/);
-
-  const hook = stripComments(readFileSync(join(process.cwd(), "app/_phases/research/guided/useEducationalResearch.ts"), "utf8"));
-  expect(hook).toMatch(/\bresumeLive\(/);
-  expect(hook).toMatch(/\btrack\(\{ turnId/);
-  // The replay keeps its local job: start, settle, cancel.
-  expect(hook).toMatch(/jobs\.start\("research"/);
-  expect(hook).toMatch(/\bsettle\(j\.id, "done"/);
-  // Nothing on unmount reaches the turn.
-  expect(hook, "the hook cancels on unmount").not.toMatch(/return \(\) => [^\n]*(stop|cancel)/);
-
-  // ResearchNotebookStepData moved to stepDataResearch.ts when stepStore.ts was
-  // split into a door and its owners. Same shape, same assertion.
-  const stepData = readFileSync(join(process.cwd(), "lib/steps/stepDataResearch.ts"), "utf8");
-  expect(stepData, "the notebook record does not carry the consumed turn id").toMatch(/\bturn\?:\s*string/);
 });

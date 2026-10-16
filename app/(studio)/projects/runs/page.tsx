@@ -14,6 +14,7 @@ import type { Metadata } from "next";
 import { DEFAULT_ZOOM, isZoom } from "@gt/ui/components/runs/dayline.ts";
 
 import { PRODUCE_PORT } from "../_port/wire.ts";
+import { dojoReceipt, startDojo } from "./_runs/dojo.ts";
 import { loadRuns } from "./_runs/load.ts";
 import { Runs } from "./_runs/Runs.tsx";
 
@@ -29,5 +30,5 @@ export default async function RunsPage({ searchParams }: { readonly searchParams
   };
   const zoom = one("zoom");
   const data = await loadRuns();
-  return <Runs data={data} port={PRODUCE_PORT} initial={{ job: one("job"), project: one("project"), zoom: isZoom(zoom) ? zoom : DEFAULT_ZOOM }} />;
+  return <Runs data={data} port={PRODUCE_PORT} dojo={{ receipt: dojoReceipt, start: startDojo }} initial={{ job: one("job"), project: one("project"), zoom: isZoom(zoom) ? zoom : DEFAULT_ZOOM }} />;
 }

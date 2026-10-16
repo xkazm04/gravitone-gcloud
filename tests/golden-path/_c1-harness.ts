@@ -1,19 +1,18 @@
 // SHARED HARNESS for the C1 closing-stage probes (critic-2026-10-07-script-chain,
-// Part 1): the minimal hook dispatcher active-notebook.probe.spec.ts uses (no DOM
-// in this lane), and the reasoned-notebook fixture. A copy rather than an import,
-// because production-script-probes-B migrates active-notebook.probe.spec.ts and
-// this stage must not touch it.
+// Part 1): a minimal hook dispatcher (no DOM in this lane) and the
+// reasoned-notebook fixture. (active-notebook.probe.spec.ts, whose dispatcher
+// this copied, retired with the v1 studio's hooks in Phase 4 wave D.)
 import "fake-indexeddb/auto";
 
 import { expect } from "@playwright/test";
 import * as React from "react";
 
-import { LIVE_NOTEBOOK_PHASE } from "@/app/_phases/_shared/notebook/useActiveNotebook";
-import type { Dimension } from "@/app/_phases/_shared/notebook/dimensions";
-import type { Conclusion } from "@/app/_phases/_shared/notebook/conclusions";
-import type { Notebook } from "@/app/_phases/_shared/notebook/types";
-import { saveStep } from "@/app/_phases/_shared/stepStore";
-import type { EngineReceipt } from "@/app/_phases/research/run/live";
+import { LIVE_NOTEBOOK_PHASE } from "@/lib/notebook/active";
+import type { Dimension } from "@/lib/notebook/dimensions";
+import type { Conclusion } from "@/lib/notebook/conclusions";
+import type { Notebook } from "@/lib/notebook/types";
+import { saveStep } from "@/lib/steps";
+import type { EngineReceipt } from "@/lib/notebook/engineReceipt";
 import { parseNotebook } from "@/lib/notebook/validate";
 
 import { loadCassette, type CassetteTurn } from "./_helpers";

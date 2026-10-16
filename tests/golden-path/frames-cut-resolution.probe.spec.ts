@@ -30,9 +30,9 @@ import {
   trailerRender,
 } from "@/app/_phases/frames/frames";
 import { isTrailerFormat, shotsFromRender } from "@/app/_phases/frames/shots";
-import { composeCut } from "@/app/_phases/script/trailer/cut";
-import { slotsFor } from "@/app/_phases/research/beats/beats";
-import { GLASS_HARBOR_CUE } from "@/app/_studio/trailerFixtures";
+import { composeCut } from "@/lib/script/trailer/cut";
+import { slotsFor } from "@/lib/research/beats";
+import { GLASS_HARBOR_CUE } from "@/lib/studio/trailerFixtures";
 import { RENDERS } from "@/app/_phases/script/renders";
 import { DISCIPLINES, TEMPLATE_FAMILY, type Discipline, type TemplateId } from "@/lib/projects";
 

@@ -18,7 +18,7 @@ import { test, expect } from "@playwright/test";
 
 import { keepEnv } from "./_helpers";
 import { POST as cutExportPOST } from "@/app/api/cut/export/route";
-import { compileCut, cutDocumentHash, cutDocumentJson } from "@/app/_phases/cut/cutDocument";
+import { compileCut, cutDocumentHash, cutDocumentJson } from "@/lib/cut/cutDocument";
 import { ACCESS_SECRET_VAR } from "@/lib/apiAuth";
 import { cutExportArgs, cutSidecar, runCutExport, CUT_FPS } from "@/lib/cutExport";
 import { describePosture } from "@/lib/deployment";

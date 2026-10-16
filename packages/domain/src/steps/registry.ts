@@ -4,7 +4,8 @@ import type { Result } from "../errors.ts";
 import { err } from "../errors.ts";
 import { ADS_SHOTS, FRAMES, FRAMES_ALTS } from "./frames.ts";
 import { ADS_FINISH, ADS_SCORE, CUT, MOTION_DIRECTION, SCORE } from "./finish.ts";
-import { decodeStep, encodeStep, type StepOwner, type StepRecordDef } from "./record.ts";
+import { ARTICLE, RENDER, STRIPS, VOICE, WORDS } from "./parts.ts";
+import { decodeStep, encodeStep, STEP_OWNERS, type StepOwner, type StepRecordDef } from "./record.ts";
 import { ADS_BRIEF, ADS_IDEAS, MUSIC_VIDEO_SOURCE, RESEARCH, RESEARCH_BEATS, RESEARCH_MODE, RESEARCH_NOTEBOOK, RESEARCH_SCOPE } from "./research.ts";
 import { ADS_SCENARIOS, SCRIPT_ADOPTED, SCRIPT_TRAILER, SCRIPT_VERSIONS } from "./script.ts";
 import { STILL } from "./still.ts";
@@ -41,6 +42,11 @@ export const STEP_RECORDS = {
   "ads-score": ADS_SCORE,
   cut: CUT,
   "ads-finish": ADS_FINISH,
+  words: WORDS,
+  render: RENDER,
+  article: ARTICLE,
+  strips: STRIPS,
+  voice: VOICE,
 } as const;
 
 export type StepKey = keyof typeof STEP_RECORDS;
@@ -54,7 +60,7 @@ export function isStepKey(key: string): key is StepKey {
   return Object.hasOwn(STEP_RECORDS, key);
 }
 
-/** The part kinds that hold step records (the studio's six, and the album still). */
+/** The part kinds that hold step records (STEP_OWNERS). */
 export type StepKind = StepOwner;
 
 /** What each kind may write besides what it owns (v1's cross-writes, INVENTORY §0). */
@@ -66,6 +72,11 @@ const GROWS: { readonly [K in StepKind]: readonly StepKey[] } = {
   score: [],
   cut: [],
   still: [],
+  words: [],
+  render: [],
+  article: [],
+  strips: [],
+  voice: [],
 };
 
 export function ownedBy(kind: StepKind): StepKey[] {
@@ -77,7 +88,7 @@ export function writableBy(kind: StepKind): ReadonlySet<StepKey> {
 }
 
 export function isStepKind(kind: string): kind is StepKind {
-  return kind === "research" || kind === "script" || kind === "frames" || kind === "motion" || kind === "score" || kind === "cut" || kind === "still";
+  return (STEP_OWNERS as readonly string[]).includes(kind);
 }
 
 type AnyDef = StepRecordDef<string, z.ZodType>;

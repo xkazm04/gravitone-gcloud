@@ -3,23 +3,18 @@
 // Demonstrates that human sign-off ("locking" a step) is an explicit milestone
 // on the project record, distinct from what an automated step reporter reports.
 // Derived reporting cannot undo human sign-off, but blocker news ("blocked")
-// always beats the lock. The projects race sheet (app/_projects) and Stepper must
-// derive their gates and step counts from stateOf(p, phase) / phaseStates(p)
-// rather than raw progress.
+// always beats the lock. The race sheet and Stepper that drew these gates retired
+// with the v1 shelf and studio (Phase 4 wave D); a sign-off is now a gate part
+// ratified by its Board packet (tests/next-server/parts-gates.test.ts), and an
+// imported v1 sign-off lands as that ratification (import-roundtrip.test.ts).
+// What stays here is lib/projects' own record logic, which the importer reads.
 
 import "fake-indexeddb/auto";
 
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-
 import { test, expect } from "@playwright/test";
 
-import { Lane } from "@/app/_projects/RaceSheet";
-import { facetCounts, lockedRun, nextAction, queryFromParams } from "@/app/_projects/shelf";
 import {
   PHASES,
-  PHASE_STATE_WORD,
-  PHASE_TITLE,
   doneCount,
   getProject,
   isBlocked,
@@ -37,7 +32,7 @@ import {
 } from "@/lib/projects";
 import { openDb, PROJECTS_STORE, runTx } from "@/lib/studioDb";
 
-import { mkProject, noopProps, stripComments } from "./_helpers";
+import { mkProject } from "./_helpers";
 
 async function clearProjectsStore() {
   const db = await openDb();
@@ -53,18 +48,6 @@ async function clearProjectsStore() {
 test.beforeEach(async () => {
   await clearProjectsStore();
 });
-
-interface TestElementNode {
-  type?: unknown;
-  key?: string;
-  props?: {
-    "data-testid"?: string;
-    children?: unknown;
-    title?: string;
-    "aria-label"?: string;
-    className?: string;
-  };
-}
 
 test("case 1: project with progress.frames 'review'; signOff(id,'frames') -> stored record has signedOff.frames, progress.frames still 'review', stateOf 'done', doneCount +1", async () => {
   const p0 = await putProject(
@@ -272,74 +255,4 @@ test("case 8 (guard): parkAt on a signed-off project leaves signedOff and update
   expect(after.phase).toBe("cut");
   expect(after.signedOff?.frames).toBe(1728000000000);
   expect(after.updatedAt).toBe(beforeUpdated);
-});
-
-// ProjectsMatrix, which this case was first written against, lost the round-1
-// bake-off and was deleted (platform-consolidation round 2); the race sheet
-// replaced it. The contract carries over unchanged: a signed-off step must read
-// as locked on the shelf's gate for that step, the Step dropdown's per-step
-// counts (the matrix footer's job now) must count it, and neither file may read
-// raw `p.progress[` for what it shows.
-test("case 9 (critic revision): the race sheet renders a signed-off gate as locked and the step counts include it; source ratchet has no p.progress[", () => {
-  const proj = {
-    ...mkProject("p-matrix-1", Date.now(), { frames: "review" }),
-    signedOff: { frames: Date.now() },
-  };
-  const tree = (Lane as unknown as (p: unknown) => unknown)({
-    p: proj,
-    active: false,
-    tabbable: false,
-    onFocus: () => {},
-    ...noopProps,
-  });
-
-  const gate = findElementByAriaLabelPrefix(tree, `Open ${proj.title} at ${PHASE_TITLE.frames} (`);
-  expect(gate).not.toBeNull();
-  expect(gate?.props?.["aria-label"]).toContain(`(${PHASE_STATE_WORD.done})`);
-
-  // The step counts the Step dropdown prints: frames is locked for this project.
-  const counts = facetCounts([proj], queryFromParams(new URLSearchParams()));
-  expect(counts.steps.frames.done).toBe(1);
-  expect(counts.steps.frames.review).toBe(0);
-  expect(counts.steps.frames.started).toBe(1);
-
-  // And the trail runs through a locked run that includes the signed-off step.
-  const allSigned = {
-    ...mkProject("p-matrix-2", Date.now(), { research: "working", script: "review" }),
-    signedOff: { research: Date.now(), script: Date.now() },
-  };
-  expect(lockedRun(allSigned)).toBe(1);
-  expect(nextAction(allSigned).step).toBe("frames");
-
-  for (const rel of ["app/_projects/RaceSheet.tsx", "app/_projects/shelf.ts"]) {
-    const code = stripComments(readFileSync(resolve(process.cwd(), rel), "utf-8"));
-    expect(code, rel).not.toContain("p.progress[");
-  }
-});
-
-function findElementByAriaLabelPrefix(node: unknown, prefix: string): TestElementNode | null {
-  if (node == null || typeof node !== "object") return null;
-  if (Array.isArray(node)) {
-    for (const c of node) {
-      const found = findElementByAriaLabelPrefix(c, prefix);
-      if (found) return found;
-    }
-    return null;
-  }
-  const el = node as TestElementNode;
-  if (el.props?.["aria-label"]?.startsWith(prefix)) return el;
-  return findElementByAriaLabelPrefix(el.props?.children, prefix);
-}
-
-// A disabled button is skipped by Tab and Firefox shows no title tooltip on it,
-// so the blocker reason must travel by aria-describedby on a focusable control.
-test("case 10: the Lock step button keeps focus and describes its blocker (no disabled= on the sign-off control)", () => {
-  const code = stripComments(readFileSync(resolve(process.cwd(), "app/studio/[projectId]/StudioView.tsx"), "utf-8"));
-  const at = code.indexOf('data-testid="studio-step-signoff"');
-  expect(at, "the sign-off button was not found").toBeGreaterThan(0);
-  const open = code.slice(code.lastIndexOf("<button", at), code.indexOf(">", code.indexOf("onClick", at)));
-  expect(open, "disabled= takes the button out of the tab order").not.toMatch(/[^-\w]disabled=/);
-  expect(open).toMatch(/aria-disabled=/);
-  expect(open).toMatch(/aria-describedby=\{[^}]*\}/);
-  expect(code, "the described element must render the blocker").toMatch(/id="studio-signoff-blocker"[^>]*>\s*\{blocker\}/);
 });

@@ -207,26 +207,9 @@ test("case 6 (guard): parkAt / reportPhase / editProject on absent id resolve wi
   expect(await getProject(missingId)).toBeUndefined();
 });
 
-test("case 7 (critic revision): source ratchet - no whole-record putProject in update, parkAt, reportPhase", () => {
-  const useProjectsRaw = readFileSync(resolve(process.cwd(), "lib/useProjects.ts"), "utf-8");
-  const useProjectsCode = stripComments(useProjectsRaw);
-
-  const createStart = useProjectsCode.indexOf("const create =");
-  const updateStart = useProjectsCode.indexOf("const update =");
-  const removeStart = useProjectsCode.indexOf("const remove =");
-
-  expect(createStart).toBeGreaterThan(-1);
-  expect(updateStart).toBeGreaterThan(createStart);
-  expect(removeStart).toBeGreaterThan(updateStart);
-
-  const createBody = useProjectsCode.slice(createStart, updateStart);
-  const updateBody = useProjectsCode.slice(updateStart, removeStart);
-
-  expect(updateBody).not.toContain("putProject(");
-  expect(updateBody).toContain("editProject(");
-  expect(createBody).toContain("putProject(");
-  expect(createBody).toContain("newProject(");
-
+// The useProjects half (create puts a whole record, update edits through editProject) retired with
+// lib/useProjects.ts and the v1 shelf (Phase 4 wave D); the lib/projects.ts half stays.
+test("case 7 (critic revision): source ratchet - no whole-record putProject in parkAt, reportPhase", () => {
   const projectsRaw = readFileSync(resolve(process.cwd(), "lib/projects.ts"), "utf-8");
   const projectsCode = stripComments(projectsRaw);
 

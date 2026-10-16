@@ -1,4 +1,4 @@
-import { AppError, type Result } from "@gt/domain/errors";
+import { AppError, isAppError, type Result } from "@gt/domain/errors";
 import type { Job } from "@gt/domain/job";
 import type { CallIntent } from "@gt/kernel/dryrun";
 import type { MissingStep, Producer, StepContext, StepOutcome } from "@gt/kernel/job-core";
@@ -60,7 +60,7 @@ function stillHeld(ctx: StepContext): void {
 
 /** A thrown call, as the breaker and the ceiling read it: money is never a vendor failure (v1 extract breaker.ts). */
 function failureOf(e: unknown): StepOutcome {
-  if (e instanceof AppError && e.code === "budget") return { kind: "money-stop", message: e.message };
+  if (isAppError(e) && e.code === "budget") return { kind: "money-stop", message: e.message };
   if (e instanceof Error) return { kind: "vendor-failure", message: e.message };
   throw e; // not an Error: a process death (the crash harness's sentinel), never a producer outcome
 }

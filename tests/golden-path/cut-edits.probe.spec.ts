@@ -9,7 +9,7 @@ import { test, expect } from "@playwright/test";
 
 import { editPoints, musicGaps, nextEdit, nextGap, snapTo } from "@/app/_phases/cut/edits";
 import { gapRuns } from "@/app/_phases/score/gaps";
-import type { Scene } from "@/app/_studio/projectTypes";
+import type { Scene } from "@/lib/studio/projectTypes";
 
 type Clip = Parameters<typeof editPoints>[0]["clips"][number];
 

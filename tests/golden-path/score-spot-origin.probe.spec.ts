@@ -28,31 +28,18 @@
 // frames→trailer seam WILL produce, and the surface says so honestly for every
 // project that has one half and not the other.
 //
-// The import below has a SIDE EFFECT and must come first — it installs the
-// storage engine on globalThis before any module under test reads `indexedDB`.
-import "fake-indexeddb/auto";
 import { test, expect } from "@playwright/test";
-import { assertHarnessInstalled, harness } from "./_studio/hooks";
 
-import { PROJECT, SCENES } from "@/app/_studio/scenes";
-import { SPOTS, cuesFrom, pictureFor } from "@/app/_studio/score";
-import { GLASS_HARBOR_CUE } from "@/app/_studio/trailerFixtures";
-import { composeCut } from "@/app/_phases/script/trailer/cut";
-import { slotsFor } from "@/app/_phases/research/beats/beats";
-import { atSeconds, type TrailerCut } from "@/app/_phases/script/trailer/types";
+import { PROJECT, SCENES } from "@/lib/studio/scenes";
+import { SPOTS, cuesFrom, pictureFor } from "@/lib/studio/score";
+import { GLASS_HARBOR_CUE } from "@/lib/studio/trailerFixtures";
+import { composeCut } from "@/lib/script/trailer/cut";
+import { slotsFor } from "@/lib/research/beats";
+import { atSeconds, type TrailerCut } from "@/lib/script/trailer/types";
 import { emptyClip, type Frame } from "@/app/_phases/frames/frames";
-import { pictureFromFrames } from "@/app/_phases/score/picture";
+import { pictureFromFrames } from "@/lib/score/picture";
 import { proposeSpots, toCueSpots } from "@/app/_phases/score/spots";
-import { useScoreSpots } from "@/app/_phases/score/useSpots";
-import {
-  readStep,
-  saveStep,
-  __resetSaveSlots,
-  type ScoreStepData,
-  type TrailerCutStepData,
-} from "@/app/_phases/_shared/stepStore";
 import { cueToPlan } from "@/lib/music/plan";
-import { openDb, runTx, STEPS_STORE } from "@/lib/studioDb";
 
 /* ────────────────────────────── the fixtures ─────────────────────────────── */
 
@@ -263,139 +250,7 @@ test("the fixture path is unchanged — a caller that passes no project still ge
   expect(a!.logline).toBe(PROJECT.logline);
 });
 
-/* ────────────────────────── the hook, driven for real ───────────────────────
-   The harness is the lane's shared one (_studio/hooks.ts). `useScoreSpots`
-   settles on "stable": `useLoadFor` syncs its refs in a DEP-LESS effect that
-   re-queues every render. Nothing else is implemented, so a
-   hook the subject starts using is a TypeError naming it rather than a silent
-   stub. What is NOT covered is React's scheduling; that is the renderer's, and
-   this lane has no DOM. */
-
-async function clearSteps() {
-  const db = await openDb();
-  await runTx(db, STEPS_STORE, "readwrite", (store) => {
-    store.clear();
-  });
-  db.close();
-}
-
-/** Past the hook's 600ms save debounce, with room for the write to land. */
-const afterSave = () => new Promise((r) => setTimeout(r, 1100));
-
-test.beforeEach(async () => {
-  __resetSaveSlots();
-  await clearSteps();
-});
-
-test("the harness is installed on the dispatcher React actually reads", () => {
-  expect(() => assertHarnessInstalled()).not.toThrow();
-});
-
-test("a project with a cut opens PROPOSED, and the session survives a reload as its own", async () => {
-  const cut = wholeCut("p-live");
-  await saveStep<TrailerCutStepData>("p-live", "script-trailer", {
-    cut,
-    budget: { campaignId: "c", assets: [] },
-  });
-  const scenes = pictureOf(cut, cut.beats.length, 120).scenes;
-
-  const first = harness(() => useScoreSpots("p-live", scenes), { settleWhen: "stable" });
-  const opened = await first.settleUp();
-  console.log(`[spot] first open -> ${opened.origin?.kind}, ${opened.spots?.length} spots`);
-  expect(opened.origin?.kind).toBe("proposed");
-  expect(opened.spots?.length).toBe(cut.movements.length);
-  expect(opened.spots?.every((s) => s.proposed)).toBe(true);
-
-  await afterSave();
-  const stored = await readStep<ScoreStepData>("p-live", "score");
-  expect(stored.ok && stored.data?.spots.length, "the seed must reach the record").toBe(
-    cut.movements.length,
-  );
-  // TAKES ARE NOT PERSISTED, and the record has no field for one. A `blob:` URL
-  // stored here is dead on the next load; stepStore.ts:127-133 is the decision.
-  expect(JSON.stringify(stored.ok ? stored.data : {})).not.toContain("blob:");
-  first.unmount();
-
-  // RELOAD. The stored session is the creator's and is never re-proposed over.
-  const second = harness(() => useScoreSpots("p-live", scenes), { settleWhen: "stable" });
-  const reopened = await second.settleUp();
-  console.log(`[spot] reopened -> ${reopened.origin?.kind}, ${reopened.spots?.length} spots`);
-  expect(reopened.origin?.kind).toBe("authored");
-  expect(reopened.spots?.length).toBe(cut.movements.length);
-  second.unmount();
-});
-
-test("editing a spot makes it the creator's — it stops calling itself a proposal", async () => {
-  const cut = wholeCut("p-edit");
-  await saveStep<TrailerCutStepData>("p-edit", "script-trailer", {
-    cut,
-    budget: { campaignId: "c", assets: [] },
-  });
-  const scenes = pictureOf(cut, cut.beats.length, 120).scenes;
-
-  const h = harness(() => useScoreSpots("p-edit", scenes), { settleWhen: "stable" });
-  const api = await h.settleUp();
-  const target = api.spots![0].id;
-
-  api.patchSpot(target, { title: "Low tide, held", bpm: 96 });
-  const after = await h.settleUp();
-  const edited = after.spots!.find((s) => s.id === target)!;
-  console.log(`[spot] edited -> "${edited.title}" ${edited.bpm}bpm proposed=${edited.proposed}`);
-  expect(edited.title).toBe("Low tide, held");
-  expect(edited.bpm).toBe(96);
-  expect(edited.proposed, "a row a human has had an opinion about is not a proposal").toBe(false);
-  // Its neighbours are untouched — an edit is local, not a re-derivation.
-  expect(after.spots!.filter((s) => s.proposed).length).toBe(cut.movements.length - 1);
-
-  await afterSave();
-  const stored = await readStep<ScoreStepData>("p-edit", "score");
-  expect(stored.ok && stored.data?.spots.find((s) => s.id === target)?.bpm).toBe(96);
-  h.unmount();
-});
-
-test("a spot can be deleted and one can be added, and both survive to the record", async () => {
-  const cut = wholeCut("p-add");
-  await saveStep<TrailerCutStepData>("p-add", "script-trailer", {
-    cut,
-    budget: { campaignId: "c", assets: [] },
-  });
-  const scenes = pictureOf(cut, cut.beats.length, 120).scenes;
-
-  const h = harness(() => useScoreSpots("p-add", scenes), { settleWhen: "stable" });
-  const api = await h.settleUp();
-  const doomed = api.spots![0].id;
-
-  api.removeSpot(doomed);
-  api.addSpot([scenes[1].id, scenes[2].id]);
-  const after = await h.settleUp();
-  console.log(`[spot] after delete+add -> ${after.spots!.length} spots`);
-  expect(after.spots!.some((s) => s.id === doomed)).toBe(false);
-  expect(after.spots!.length).toBe(cut.movements.length);
-  const added = after.spots![after.spots!.length - 1];
-  // A hand-added spot is nobody's proposal and carries no tempo either.
-  expect(added.proposed).toBeUndefined();
-  expect(added.bpm).toBeUndefined();
-  expect(added.sceneIds).toEqual([scenes[1].id, scenes[2].id]);
-
-  await afterSave();
-  const stored = await readStep<ScoreStepData>("p-add", "score");
-  expect(stored.ok && stored.data?.spots.some((s) => s.id === doomed)).toBe(false);
-  h.unmount();
-});
-
-test("a project with NO cut proposes nothing and writes nothing — the key stays absent", async () => {
-  const scenes = pictureOf(wholeCut(), 4, 60).scenes;
-  const h = harness(() => useScoreSpots("p-nocut", scenes), { settleWhen: "stable" });
-  const api = await h.settleUp();
-  console.log(`[spot] no cut -> origin=${api.origin?.kind}, ${api.spots?.length} spots`);
-  expect(api.origin?.kind).toBe("no-cut");
-  expect(api.spots).toEqual([]);
-
-  await afterSave();
-  const stored = await readStep<ScoreStepData>("p-nocut", "score");
-  // AN EMPTY SEED IS NOT A DECISION. Writing `[]` here would read back as
-  // "authored, and emptied" forever, and the proposal would never run again for
-  // a project that later composes a spine.
-  expect(stored.ok && stored.data, "an unseeded project must not be written").toBeUndefined();
-  h.unmount();
-});
+// The hook half (useScoreSpots opening PROPOSED, an edit making a spot the creator's, add and
+// delete surviving to the record, no cut writing nothing) retired with the v1 studio (Phase 4
+// wave D); the score part spots its own picture over the kernel (tests/next-server/
+// parts-finish.test.ts "spots a cue on this project's picture...").

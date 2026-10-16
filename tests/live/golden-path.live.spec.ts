@@ -2,60 +2,35 @@
 //
 // Registry: test-harness / live-app-harness.
 //
-// ─────────────────────────────────────────────────────────────────────────────
-// WHAT THIS RUNG IS FOR, AND WHAT IT REFUSES TO CARRY.
+// This rung runs the assembled product - Next's own dev server, a real Chromium, Chrome's own
+// IndexedDB, hydration, the client router - and carries only claims nothing cheaper can witness.
 //
-// `tests/golden-path/` exercises this repo's modules AS THE TEST IMPORTS THEM:
-// Node context, no browser, `fake-indexeddb` standing in for the storage engine.
-// That rung is cheap and it is where almost everything belongs. This one runs the
-// assembled product — Next's own dev server, a real Chromium, Chrome's own
-// IndexedDB, hydration, the client router — and it may therefore only carry
-// claims nothing cheaper can witness:
+// PHASE 4 WAVE D (L43): THE v1 JOURNEYS RETIRED WITH THE SURFACES THEY WALKED. Six of this file's
+// seven journeys walked the v1 shelf (/projects, seeded by lib/useProjects.ts) into the studio
+// (/studio/<id>); both retired and redirect to the Project. Where each guarantee went:
+//   · the app serves and hydrates with no page error   -> studio-routes.live.spec.ts (every
+//     (studio) route, page errors asserted) and kit.live.spec.ts
+//   · a first-time account bootstraps its own shelf     -> none: nothing seeds browser projects
+//     now; /projects is the server's composition list (produce.live.spec.ts composes into it)
+//   · a project opens at its own URL                   -> produce.live.spec.ts (compose lands on
+//     /projects/<id>) and import.live.spec.ts (an imported project opens as its Plan)
+//   · studio work survives a hard reload               -> none at this rung: part records live
+//     in the kernel store (tests/next-server/parts-real.test.ts reads them back across a fresh
+//     store handle); the browser holds no step record to lose
+//   · a dispatched background run lands                -> produce-real.live.spec.ts (the worker
+//     drives the launched job to done) and exit-same-job.live.spec.ts (L44)
+//   · a dialog whose opener was removed; deleting a project hands focus to the landmark -> none:
+//     the Research step's Clear dialog and the shelf's Delete retired; components/ui/Modal.tsx's
+//     restore rule is unchanged but has no journey at this rung until a new surface removes an
+//     opener under a dialog
+// The journey that stays is /library's, which is not retired (Phase 5).
 //
-//   · that the app SERVES and hydrates at all, with no page error
-//   · that a first-time account bootstraps its own shelf through the product's
-//     seeding path, in the browser, and renders it
-//   · that a project OPENS from the shelf into the studio at its own URL
-//   · that work written by the studio survives a HARD RELOAD in the real
-//     storage engine — the one thing fake-indexeddb explicitly cannot answer
-//     (see the header of dal-real-engine.probe.spec.ts, which says so)
-//   · that a background run dispatched and forgotten actually LANDS, read back
-//     from the product's own job store rather than inferred from "no error"
-//
-// It does NOT re-verify logic the probes can see, does not enumerate inputs, and
-// runs ONE representative journey per flow. Anything here that could be phrased
-// as a claim about a module belongs one rung down.
-//
-// SEED DATA comes from the app's own bootstrapping and from nowhere else:
-// `lib/useProjects.ts` hands a first-time account the demo shelf
-// (app/_studio/projectSeed.ts) the moment it reads an empty store. The harness
-// does not write fixtures into the database; it EMPTIES the account and lets the
-// product seed itself, which is the same path a real first sign-in takes.
-//
-// AUTH is the repo's pre-existing dev bypass (lib/devAuth.ts): non-production
-// builds only, explicit NEXT_PUBLIC_DEV_AUTH=1 opt-in, and a permanent banner so
-// a bypassed session can never be mistaken for a real one. This lane asserts the
-// banner before it asserts anything else — a run that reached the gated surface
-// without the bypass would mean the gate was open to everyone.
-// ─────────────────────────────────────────────────────────────────────────────
+// AUTH is the repo's dev bypass (lib/devAuth.ts): non-production builds only, explicit
+// NEXT_PUBLIC_DEV_AUTH=1 opt-in, and a permanent banner.
 
 import { expect, test, type Page } from "@playwright/test";
 
-import { connect, Control } from "./_control";
-
-/** The seeded production the rest of app/_studio actually describes. Addressed
- *  by its stable id, never by list position: `projectSeed.ts` is free to grow a
- *  sixth row and `.first()` would then silently test a different project. */
-const PROJECT = "seed-glass-harbor";
-const PROJECT_TITLE = "Glass Harbor";
-
-/** A project whose research is genuinely undecided — `projectSeed.ts` gives it
- *  `emptyProgress()`, so `ResearchStep.tsx`'s `decided` is false and the step
- *  opens on the GUIDED face at stage 1 by default, where `run-research` lives.
- *  `PROJECT` cannot stand in for this: its research is already `"done"`, which
- *  freezes the step open on the EXPERT (triage-only) face instead — the face
- *  that starting a fresh run belongs on. */
-const FRESH_PROJECT = "seed-untitled";
+import { connect } from "./_control";
 
 /** Every page error seen during a test, asserted at the end of each one. A React
  *  error boundary can swallow a throw and still render something plausible, so
@@ -67,217 +42,25 @@ function watchErrors(page: Page): string[] {
 }
 
 /**
- * Land on the shelf with the account emptied, and let the product re-seed it.
- *
- * State reset between tests is how independence is bought in a lane that cannot
- * be parallel (see playwright.config.ts for why this product is a singleton).
- * The reset runs through the control surface, which delegates to the product's
- * own `evictIdentity` — so the teardown cannot drift from what signing out does.
+ * Land on /library with the account emptied, and let the product re-seed its shelf. The reset
+ * runs through the control surface, which delegates to the product's own `evictIdentity`, so the
+ * teardown cannot drift from what signing out does. (It used to land on the v1 /projects shelf,
+ * which seeded the account's projects; the shelf retired, and the library seeds its own assets.)
  */
-async function freshShelf(page: Page): Promise<Control> {
-  await page.goto("/projects", { waitUntil: "domcontentloaded" });
+async function freshAccount(page: Page): Promise<void> {
+  await page.goto("/library", { waitUntil: "domcontentloaded" });
   const control = await connect(page);
-  // Wait for the gate to resolve before resetting: a reset with a null uid has
-  // no account to empty and would report `failed`, which the assertion catches
-  // rather than silently proceeding against a half-seeded shelf.
   await control.until((s) => s.uid !== null, "the auth gate resolves");
   const wiped = await control.reset();
   expect(wiped.failed, "the control surface could not empty the account").toBe(false);
-
-  // A hard reload is what makes the product re-run its own bootstrapping.
   await page.reload({ waitUntil: "domcontentloaded" });
-  const reconnected = await connect(page);
-  await reconnected.until((s) => s.projects.length > 0, "the shelf seeds itself");
-  return reconnected;
+  await (await connect(page)).until((s) => s.uid !== null, "the auth gate resolves again");
 }
 
-test.describe("the assembled studio", () => {
-  test("a first-time account bootstraps its own shelf and renders it", async ({ page }) => {
-    const errors = watchErrors(page);
-    const control = await freshShelf(page);
-
-    // THE BYPASS IS LOUD. If this is ever absent while the gated surface is
-    // reachable, the gate is open to everyone and nothing below matters.
-    await expect(page.getByTestId("dev-auth-banner")).toBeVisible();
-
-    const snapshot = await control.snapshot();
-    expect(snapshot.uid, "the bypass account signs in").toBe("dev-automation-user");
-    expect(snapshot.projects.length, "the demo shelf is seeded").toBeGreaterThan(0);
-
-    // THE PRODUCT'S OWN STATE AND WHAT IT DREW MUST AGREE. Asserting only the
-    // DOM would pass on a shelf rendered from stale React state; asserting only
-    // the snapshot would pass on a store that renders nothing. The disagreement
-    // is the finding.
-    for (const row of snapshot.projects) {
-      await expect(
-        page.getByTestId(`cell-${row.id}-research`),
-        `the shelf renders a row for ${row.id}`,
-      ).toBeVisible();
-    }
-
-    expect(errors, "page errors during the shelf journey").toEqual([]);
-  });
-
-  test("a project opens from the shelf into the studio at its own URL", async ({ page }) => {
-    const errors = watchErrors(page);
-    await freshShelf(page);
-
-    // Product-level, not pixel-level: click the cell a user clicks.
-    await page.getByTestId(`cell-${PROJECT}-research`).click();
-
-    // The project is the RESOURCE and holds the path; the step is a VIEW and
-    // holds the query. Both halves are the contract app/studio/[projectId] was
-    // moved to, and a regression on either breaks every shared link.
-    await page.waitForURL(/\/studio\/[^?]+\?step=research/);
-    expect(new URL(page.url()).pathname).toBe(`/studio/${PROJECT}`);
-
-    const headline = page.getByTestId("studio-headline");
-    await expect(headline).toHaveAttribute("data-door", "open");
-    await expect(headline).toHaveText(PROJECT_TITLE);
-
-    // The rail resolves to the deep-linked step rather than the project's parked
-    // one — the whole reason `?step=` exists.
-    await expect(page.getByTestId("step-research")).toHaveAttribute("aria-current", "step");
-
-    expect(errors, "page errors while opening the studio").toEqual([]);
-  });
-
-  test("a notebook written in the studio survives a hard reload of the browser", async ({
-    page,
-  }) => {
-    const errors = watchErrors(page);
-    const control = await freshShelf(page);
-
-    // Nothing is on disk for this project yet — the shelf row exists, its body
-    // of work does not. Asserting the BEFORE state is what stops this test from
-    // passing on a database that was never emptied.
-    const before = await control.project(PROJECT);
-    expect(before.found, "the seeded project is on the shelf").toBe(true);
-    expect(before.steps, "a freshly seeded project has written nothing").toBe(0);
-
-    await page.getByTestId(`cell-${PROJECT}-research`).click();
-    await page.waitForURL(/\/studio\//);
-
-    // There is no button to press for this any more. `seed-glass-harbor` ships
-    // with `progress.research: "done"` (projectSeed.ts), so hydration itself
-    // calls `run.load()` and lands the finished notebook without a click — see
-    // that function's header in useResearchRun.ts, which records that the
-    // "load saved run" control this replaced was deleted 2026-09-08 along with
-    // the rest of the development panel. A decided step also freezes the
-    // EXPERT face open (ResearchStep.tsx's `decided`), so `open-notebook` —
-    // drawn by ArtifactPills in both faces once `ready` is true — is the
-    // signal that survives the face choice; `run-status` only exists on the
-    // guided face's own run log.
-    await expect(page.getByTestId("open-notebook")).toBeVisible();
-
-    // The step save is fire-and-forget from the click's point of view, so this
-    // polls the store rather than sleeping on a guess.
-    //
-    // It polls for the PHASE, not for a record count. Measured while proving
-    // this test can go red: with the research write disabled the project still
-    // reported one persisted record — `research-scope`, written by the scope
-    // hook on the same surface — so `steps > 0` was green against a notebook
-    // that was never saved. The phase is the claim; the count is a side effect.
-    await expect
-      .poll(async () => (await control.project(PROJECT)).phases, {
-        message: "the research step never persisted its notebook",
-      })
-      .toContain("research");
-    const after = await control.project(PROJECT);
-    expect(after.steps, "and the store agrees it holds records").toBeGreaterThan(0);
-
-    // ── THE CLAIM ONLY THIS RUNG CAN MAKE ──────────────────────────────────
-    // A HARD reload: the React tree is destroyed, every in-memory store with
-    // it, and the notebook has to come back out of Chrome's own IndexedDB. The
-    // Node probes run against fake-indexeddb and say in their own header that
-    // Chrome's storage is out of their reach.
-    await page.reload({ waitUntil: "domcontentloaded" });
-    const reconnected = await connect(page);
-
-    await expect(page.getByTestId("studio-headline")).toHaveAttribute("data-door", "open");
-    const survived = await reconnected.project(PROJECT);
-    expect(survived.steps, "the notebook survived a hard reload").toBe(after.steps);
-    expect(survived.phases).toContain("research");
-
-    // And the surface reads it back, not just the store: the board is
-    // reachable, which it is not for a project with no notebook.
-    //
-    // `tab-board` NO LONGER EXISTS. The Topic/Board tab pair this used to check
-    // (a locked <TabRail> tab, per the comment this replaced) was deleted
-    // 2026-09-08 with the rest of the Topic tab — the expert face renders the
-    // triage board directly now (ResearchStep.tsx, "THE EXPERT FACE IS TRIAGE
-    // ONLY"), with no lock state left to assert: a project with no notebook
-    // gets `expert-board-empty` instead of a disabled tab. `column-conclusions`
-    // is a column of the board's own fixture (notebook/dimensions.ts) and is
-    // only drawn once `ready` lets the board itself render.
-    await expect(page.getByTestId("column-conclusions")).toBeVisible();
-
-    expect(errors, "page errors across the reload").toEqual([]);
-  });
-
-  test("a background run dispatched and forgotten actually lands", async ({ page }) => {
-    const errors = watchErrors(page);
-    const control = await freshShelf(page);
-
-    // FRESH_PROJECT, not PROJECT: starting a run is a guided-face action, and
-    // PROJECT's research is already decided (see FRESH_PROJECT's own comment).
-    await page.getByTestId(`cell-${FRESH_PROJECT}-research`).click();
-    await page.waitForURL(/\/studio\//);
-
-    await page.getByLabel("Topic").fill("a background-run smoke test");
-    await page.getByTestId("run-research").click();
-    await expect(page.getByTestId("running-note")).toBeVisible();
-
-    // Navigate away through the CLIENT router, the way a user does. The job
-    // store lives above the route, so the work must not die with the step.
-    await page.getByRole("link", { name: /projects/i }).first().click();
-    await page.waitForURL(/\/projects$/);
-
-    // READBACK WITH A DEADLINE, not "no error means it worked". The run reports
-    // through the product's own job store; `until` distinguishes "reached the
-    // state", "ran and never reached it" (the deadline, with the last snapshot
-    // attached) and "the surface stopped answering" (a harness failure).
-    const running = await control.until(
-      (s) => s.jobs.running >= 1,
-      "the research job is running after navigating away",
-    );
-    expect(running.jobs.total).toBeGreaterThan(0);
-
-    // The mocked run is a local clock at SPEED× (useResearchRun.ts) — no network,
-    // no vendor, nothing outside this process decides when it lands.
-    // 45s against a run that settles in about seven. Generous enough that a slow
-    // CI runner is not a finding, short enough that the deadline lands INSIDE
-    // this lane's own test timeout — measured: at 90s the injected
-    // never-settling run blew the test timeout first, and the readback's
-    // message (which carries the last snapshot) arrived after the browser had
-    // already been torn down.
-    const landed = await control.until(
-      (s) => s.jobs.running === 0,
-      "the research job settles",
-      45_000,
-    );
-    expect(landed.jobs.total, "the finished run is still in the tray").toBeGreaterThan(0);
-
-    // The tray is where a user finds it, so the tray is where it is asserted.
-    await page.getByTestId("bell").click();
-    await expect(page.getByTestId("bell-panel")).toContainText(/returned|failed|no tension/i);
-
-    expect(errors, "page errors during the background run").toEqual([]);
-  });
-  // ── FOCUS SURVIVES A DESTRUCTIVE KEYPRESS ────────────────────────────────
-  //
-  // Belongs on this rung and could not sit one below it: the claim is about
-  // where the browser's focus lands after React unmounts the focused node, and
-  // tests/golden-path/ runs in Node with no DOM and no focus at all.
-  //
-  // The rule is the repo's own, stated in app/library/ContextMenu.tsx: leaving
-  // focus on <body> "strands a keyboard user at the top of the document". The
-  // asset tile's Delete path broke it - the tile a keyboard user just removed IS
-  // the focused node, so focus fell to <body> with no way back into the grid.
+test.describe("the assembled app", () => {
   test("removing a focused asset moves focus on, never to the document body", async ({ page }) => {
     const errors = watchErrors(page);
-    await freshShelf(page);
-    await page.goto("/library", { waitUntil: "domcontentloaded" });
+    await freshAccount(page);
     // /library opens on Styles; the tiles live in the Assets module. Reached the
     // way a user reaches it, so the journey breaks if the tab does.
     // `role="tab"`, and the name carries the count — the module rail became a
@@ -319,125 +102,5 @@ test.describe("the assembled studio", () => {
     await expect(tiles).toHaveCount(after);
 
     expect(errors, "page errors during the library journey").toEqual([]);
-  });
-
-  // ── A DIALOG WHOSE OPENER DID NOT SURVIVE IT ─────────────────────────────
-  //
-  // The journey above is the same rule from the other side: there, the focused
-  // node was removed with nothing over it; here a modal is on top, and the
-  // control it was opened FROM is what disappears underneath. Modal.tsx restored
-  // focus to that control unconditionally, and focusing a detached node is a
-  // silent no-op — so the dialog closed onto <body>, which ContextMenu.tsx calls
-  // stranding "a keyboard user at the top of the document".
-  //
-  // This rung, not the probes: tests/golden-path/ runs in Node with no DOM, so
-  // there is no document.activeElement there to be wrong.
-  //
-  // The Research step's Clear is the flow where the ordering is not a race.
-  // `doClear` (ResearchStep.tsx) resets the run and closes the dialog in ONE
-  // commit, so `ready` goes false and the Clear button unmounts at the same
-  // moment the modal does — the opener is provably gone before focus is handed
-  // back. /projects' per-row Delete was the same defect with a race on top; its
-  // ordering is now deterministic too and it has its own journey below.
-  test("closing a dialog whose opener was removed moves focus on, never to the document body", async ({
-    page,
-  }) => {
-    const errors = watchErrors(page);
-    await freshShelf(page);
-
-    await page.getByTestId(`cell-${PROJECT}-research`).click();
-    await page.waitForURL(/\/studio\//);
-
-    // Hydration lands the finished notebook on its own (see the hard-reload
-    // journey above for why no click is involved, and why `open-notebook` is
-    // the face-agnostic signal for it). A notebook is what puts Clear on the
-    // surface at all, so it is also what makes this journey possible.
-    await expect(page.getByTestId("open-notebook")).toBeVisible();
-
-    // BY KEYBOARD, because the claim is about a keyboard user: the opener is
-    // focused and activated with Enter, which is what makes where focus lands
-    // afterwards the whole of the user's position on the page.
-    const clear = page.getByTestId("clear-research");
-    await clear.focus();
-    await expect(clear).toBeFocused();
-    await page.keyboard.press("Enter");
-
-    const dialog = page.getByRole("dialog", { name: /clear this research/i });
-    await expect(dialog).toBeVisible();
-
-    await page.getByTestId("confirm-clear").click();
-
-    // Both halves of the premise, asserted rather than assumed: the dialog is
-    // gone AND its opener went with it. A journey that stopped at the first
-    // would also pass against a Clear button that never unmounted, which is not
-    // the situation this test exists for.
-    await expect(dialog).toHaveCount(0);
-    await expect(clear).toHaveCount(0);
-
-    // Polled, not read once: the restore runs in React's passive-effect flush,
-    // which lands a tick after the commit the expectations above observed.
-    await expect
-      .poll(async () => page.evaluate(() => document.activeElement?.tagName ?? null), {
-        message: "focus was stranded on the document body after the dialog closed",
-      })
-      .not.toBe("BODY");
-
-    // THE FINDING IS THE BODY (same reasoning as the journey above), but the
-    // positive is named too — "not BODY" would also be satisfied by focus stuck
-    // inside a dialog that failed to unmount, and <main> is the anchor the fix
-    // actually chose.
-    const landedOn = await page.evaluate(() => document.activeElement?.tagName ?? null);
-    expect(landedOn, "focus landed on the surface's own <main> landmark").toBe("MAIN");
-
-    expect(errors, "page errors during the clear-research journey").toEqual([]);
-  });
-  // The SECOND ordering, and the one that was still broken after the Modal fix.
-  //
-  // Deleting a project used to fire `remove()` and close the dialog in the same
-  // commit, while `useProjects.remove` awaits its IndexedDB transaction BEFORE
-  // `setProjects`. So the row was still mounted when the modal tore down: focus
-  // was restored onto a delete button that unmounted a tick later, and landed on
-  // <body>. Modal cannot see this — from inside the dialog the opener is
-  // genuinely still connected — so the fix is at the call site, and the claim is
-  // therefore about ORDER rather than about the dialog.
-  test("deleting a project hands focus to the landmark, not to the row that vanished", async ({
-    page,
-  }) => {
-    const errors = watchErrors(page);
-    const control = await freshShelf(page);
-    const before = (await control.snapshot()).projects.length;
-    expect(before, "the journey needs a seeded shelf to delete from").toBeGreaterThan(0);
-
-    // Addressed by its ACCESSIBLE NAME rather than a testid: the control already
-    // carries one, and a journey whose whole subject is a keyboard user should
-    // reach the button the way assistive technology reaches it. Driven by
-    // keyboard for the same reason.
-    // `exact`, because the seeded shelf carries both "Glass Harbor" and
-    // "Glass Harbor — trailer" and a substring match resolves to two buttons.
-    const opener = page.getByRole("button", { name: `Delete ${PROJECT_TITLE}`, exact: true });
-    await expect(opener).toBeVisible();
-    await opener.focus();
-    await expect(opener).toBeFocused();
-    await page.keyboard.press("Enter");
-
-    const confirm = page.getByTestId("confirm-delete");
-    await expect(confirm).toBeEnabled({ timeout: 10_000 });
-    await confirm.click();
-
-    // BOTH halves of the premise, or the assertion below proves nothing: the
-    // dialog must be gone AND the opener must be gone. A journey that only
-    // checked focus would pass on a delete that silently did nothing.
-    await expect(confirm).toBeHidden();
-    await expect(opener, "the row survived the delete - the premise does not hold").toHaveCount(0);
-
-    await expect
-      .poll(async () => page.evaluate(() => document.activeElement?.tagName ?? null), {
-        message: "focus was stranded on the document body after the project was deleted",
-      })
-      .not.toBe("BODY");
-    const landedOn = await page.evaluate(() => document.activeElement?.tagName ?? null);
-    expect(landedOn, "focus landed on the shelf's own <main> landmark").toBe("MAIN");
-
-    expect(errors, "page errors during the delete journey").toEqual([]);
   });
 });

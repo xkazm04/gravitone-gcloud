@@ -3,7 +3,7 @@
 import { defineRecord, isPlainObject, malformed } from "../_shared/records/registry";
 import type { AltsStepData } from "./alternatives/alts";
 import { framesV1ToV2, parseFramesRecord } from "./picture/migrate";
-import type { FramesStepData } from "./useFrames";
+import type { FramesStepData } from "@/lib/frames/stepData";
 
 /** The cut itself: picture units (v2) with a `frames` shadow for the readers
  *  that have not moved to units. v1 is the positional frame list, walked up at

@@ -11,11 +11,8 @@ import { stripComments } from "./_helpers";
 const dir = join(process.cwd(), "app/_phases/frames");
 const read = (f: string) => stripComments(readFileSync(join(dir, f), "utf8"));
 
-test("frame count is only drawn for a cut that has a frame layer", () => {
-  const src = read("FramesStep.tsx");
-  expect(src.length).toBeGreaterThan(0);
-  expect(src).toMatch(/!promotionalCut\s*&&[\s\S]{0,200}ctl\.frames\.length/);
-});
+// "frame count is only drawn for a cut that has a frame layer" retired with FramesStep.tsx (the v1
+// studio, Phase 4 wave D); no probe holds the frames part editor to the same rule yet.
 
 test("engineLabel strings carry no app-subject clause", () => {
   const src = read("frames.ts");

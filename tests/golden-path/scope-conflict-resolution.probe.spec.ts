@@ -5,8 +5,6 @@
 // are detected, can be staged for resolution in a single action, and report
 // their before/after delta when recalibrated.
 
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
@@ -19,7 +17,6 @@ import {
 } from "@/app/_phases/script/scopeConflicts";
 import { recalibrate } from "@/app/_phases/script/recalibrate";
 import { BASELINE, type Note } from "@/app/_phases/script/versions";
-import { stripComments } from "./_helpers";
 
 test("case 1: scope{f-ath: descoped, f-sbr: descoped} -> conflictsIn(BASELINE, cards, scope) returns exactly ['f-ath', 'f-sbr']", () => {
   const cards = buildCards();
@@ -127,16 +124,4 @@ test("case 7 (declared GUARD): conflictsIn(BASELINE, cards, {}) -> [] (every con
   const cards = buildCards();
   const conflicts = conflictsIn(BASELINE, cards, {});
   expect(conflicts).toEqual([]);
-});
-
-test("case 8 (source ratchet): _matrix/shared.tsx renders data-testid=\"resolve-scope-conflicts\" and calls resolutionPlan; ScriptStep.tsx's coverage tally reads conflictsIn rather than an inline stillSpoken filter", () => {
-  const sharedRaw = readFileSync(resolve(process.cwd(), "app/_phases/script/_matrix/shared.tsx"), "utf-8");
-  const sharedCode = stripComments(sharedRaw);
-  expect(sharedCode).toContain('data-testid="resolve-scope-conflicts"');
-  expect(sharedCode).toContain("resolutionPlan(");
-
-  const stepRaw = readFileSync(resolve(process.cwd(), "app/_phases/script/ScriptStep.tsx"), "utf-8");
-  const stepCode = stripComments(stepRaw);
-  expect(stepCode).toContain("conflictsIn(");
-  expect(stepCode).not.toContain("stillSpoken");
 });

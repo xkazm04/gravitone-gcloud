@@ -1,35 +1,23 @@
-// Linking background work and notifications to studio workspace steps.
+// The bell tray's model: which cards it draws, with which doors, and which empty it is.
 //
-// The bell tray reports work, but without doors into the steps, creators are
-// left navigating manually to inspect their results or restart interrupted work.
-// This module provides the mapping from JobKind to PhaseKey, standard deep-links
-// into the studio stepper, and a pure trayModel projection for the notification UI.
+// The doors used to be studio deep-links (`/studio/<project>?step=<step>`, by a JobKind -> step
+// table). The studio retired (Phase 4 wave D) and the bell's jobs are the server's: each carries
+// its own door, its row in Runs (`Job.href`, app/(studio)/_shell/bell.ts), so the table went too.
 
-import type { Job, JobEvent, JobKind } from "@/lib/jobs";
+import type { Job, JobEvent } from "@/lib/jobs";
 import type { PhaseKey } from "@/lib/projects";
 
-export const KIND_STEP: Record<JobKind, PhaseKey> = {
-  research: "research",
-  followup: "research",
-  recalibrate: "script",
-  "poster-generate": "frames",
-  "video-export": "cut",
-  "ad-ideas": "research",
-  "ad-scenarios": "script",
-  "video-clip": "motion",
-  "ad-render": "cut",
-  frames: "frames",
-};
-
+/** A v1 production's address, for rows read from the browser's v1 store (the palette, a storage
+ *  failure's card). The client cannot know the kernel id such a row became, so it links the old
+ *  address and the server's redirect resolves it: the imported Project's part, or the one-click
+ *  import when the row has not been imported yet (app/studio/[projectId]/redirect.ts). */
 export function studioHref(projectId: string, step: PhaseKey): string {
-  return `/studio/${projectId}?step=${step}`;
+  return `/studio/${encodeURIComponent(projectId)}?step=${step}`;
 }
 
-export function jobHref(item: { projectId?: string; kind: JobKind }): string | null {
-  if (!item.projectId) return null;
-  const step = KIND_STEP[item.kind];
-  if (!step) return null;
-  return studioHref(item.projectId, step);
+/** The door a card opens: the job's (or the event's job's) row in Runs. */
+export function jobHref(item: { readonly href?: string }): string | null {
+  return item.href === undefined || item.href === "" ? null : item.href;
 }
 
 export type CardAction =

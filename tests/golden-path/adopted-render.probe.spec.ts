@@ -26,7 +26,7 @@ import { test, expect } from "@playwright/test";
 import {
   ADOPTION_PHASE,
   resolveExplainerRender,
-} from "@/app/_phases/script/candidates/adoption";
+} from "@/lib/script/adoption";
 import { explainerRender, framesFor, framesFromRender } from "@/app/_phases/frames/frames";
 import { RENDERS, RENDER_BY_ID } from "@/app/_phases/script/renders";
 import {

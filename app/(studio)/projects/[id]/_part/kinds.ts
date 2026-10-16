@@ -28,8 +28,8 @@ import { ARTICLE_KIND, STRIPS_KIND, VOICE_KIND, type ArticleRec, type StripsRec,
 //
 // `toRecords` may name keys another kind owns (motion grows `frames`, the step registry's GROWS):
 // the real side writes whatever changed and the kernel's `planWrites` refuses what the part may
-// not write. A kind whose records the step registry does not declare (the album and explainer
-// parts) returns `{}` from `toRecords`: it is read on the real side and its ops refuse there.
+// not write. Every kind's records are declared in @gt/domain/steps (L43 added the album's and the
+// explainer's; ./realScene.ts `sceneOf` does not compile for an editor kind without them).
 
 export type Obj = Readonly<Record<string, unknown>>;
 /** A typed record (an interface has no index signature) as the store's plain object. */
@@ -83,10 +83,6 @@ export type KindModule<K extends LaterKind> = {
   readonly fromRecords: (recs: Recs, ctx: Ctx) => RecOf[K];
   /** Real side: the working record -> the step records it is stored as, by key. */
   readonly toRecords: (rec: RecOf[K]) => Record<string, Obj>;
-  /** Does the step registry (@gt/domain/steps) declare this kind's records? When false the real
-   *  side reads the kind (from other kinds' records and its producer's outputs) and refuses its
-   *  ops: the kernel holds no record for it to write. */
-  readonly stored: boolean;
 };
 
 /** The registry: one line per kind. */
@@ -123,8 +119,6 @@ export type Erased = {
   readonly actLabel: (act: PartActKind) => string;
   /** Real side: the step records `next` changes against the record as it is now. */
   readonly writes: (ctx: KCtx, next: unknown) => Record<string, Obj>;
-  /** Real side: does this kind hold step records the kernel stores? */
-  readonly stored: boolean;
   /** The kind's working record as step records (fixture `records()`). */
   readonly records: (ctx: KCtx) => Record<string, Obj>;
 };
@@ -157,7 +151,6 @@ function erase<K extends LaterKind>(kind: K, m: KindModule<K>): Erased {
       const after = m.toRecords(back(next));
       return Object.fromEntries(Object.entries(after).filter(([k, v]) => before[k] === undefined || JSON.stringify(before[k]) !== JSON.stringify(v)));
     },
-    stored: m.stored,
     records: (ctx) => m.toRecords(own(ctx)),
   };
 }

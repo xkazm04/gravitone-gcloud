@@ -32,6 +32,9 @@ export type ReadContext = {
   /** Read inside the SAME snapshot as the plan (`r`): a store read cannot nest another. */
   readonly packetOf?: (partId: string, r: Reader) => PacketFact | undefined;
   readonly slottedOf?: (partId: string) => boolean;
+  /** A producer's preflight over the records as they stand (L45): a planned job whose upstream is
+   *  ratified stays planned while this answers a reason (an act that waits on a human act). */
+  readonly preflightOf?: (job: Job, r: Reader) => string | undefined;
 };
 
 const capOf = (ctx: ReadContext): Readonly<Record<ResourceLane, number>> => ctx.capacity ?? LANE_CAPACITY;
@@ -107,7 +110,34 @@ export type ProjectModel = {
   readonly options: ReadonlyMap<string, readonly ModelOption[]>;
   readonly lines: readonly PlanLine[];
   readonly state: ProjectState;
+  /** Work parts with no job in a LAUNCHED project - an imported one's parts v1 never worked
+   *  (L43). They read `draft`, and a Plan launch enqueues exactly these. */
+  readonly unlaunched: ReadonlySet<string>;
 };
+
+/**
+ * An imported project is launched (its v1 work is done jobs), but the parts v1 never worked have
+ * NO job: the import never queues work (L42, COMMON decision 3). The domain's walk reads a jobless
+ * part of a launched plan as `queued` - true of a launch, which enqueues every part at once, and a
+ * lie here: nothing is queued for it. Such a part, and every gate or slot waiting on one, reads
+ * `draft` until a Plan launch enqueues it.
+ */
+function unlaunchedOf(rows: readonly PartRow[], states: Map<string, PartState>, launched: boolean): Set<string> {
+  const out = new Set<string>();
+  if (!launched) return out;
+  for (const row of rows) if (isWork(row.part) && row.jobId === null) out.add(row.part.id);
+  if (out.size === 0) return out;
+  const byId = new Map<string, Part>(rows.map((r) => [r.part.id, r.part]));
+  const waits = (id: string, seen: Set<string>): boolean => {
+    if (out.has(id)) return true;
+    const p = byId.get(id);
+    if (p === undefined || isWork(p) || seen.has(id)) return false;
+    seen.add(id);
+    return p.after.some((up) => waits(up, seen));
+  };
+  for (const row of rows) if (out.has(row.part.id) || waits(row.part.id, new Set())) states.set(row.part.id, "draft");
+  return out;
+}
 
 /** The chosen option, or - when the catalog dropped it - the first, so the plan still prices. */
 export function chosenOf(options: readonly ModelOption[], key: string): ModelOption | undefined {
@@ -137,12 +167,13 @@ export function projectModel(r: Reader, id: string, ctx: ReadContext): ProjectMo
   }
   const launched = project.launchedAt !== undefined;
   const states = partStatesOf(rows.map((x) => x.part), facts, launched);
+  const unlaunched = unlaunchedOf(rows, states, launched);
   const options = new Map<string, readonly ModelOption[]>();
   const lines = rows.map((row): PlanLine => {
     const p = row.part;
     const state = states.get(p.id) ?? "draft";
     const job = jobs.get(p.id);
-    const status = launched ? statusOf(state) : "pending";
+    const status = launched && state !== "draft" ? statusOf(state) : "pending";
     const ran = job !== undefined && (status === "done" || status === "running") ? ranAt(r, job.id) : {};
     const started = ms(job?.lease?.acquiredAt) ?? ran.start;
     const timing = { ...(started === undefined ? {} : { startedAt: started }), ...(ran.end === undefined ? {} : { endedAt: ran.end }) };
@@ -153,7 +184,7 @@ export function projectModel(r: Reader, id: string, ctx: ReadContext): ProjectMo
     const order = job === undefined ? 1e9 + row.ord : orderOf(r, job.id);
     return { key: p.id, label: p.kind, lane: option?.lane ?? null, units: p.units, ...(option === undefined ? {} : { option }), after: p.after, order, status, ...timing };
   });
-  return { project, rows, states, jobs, options, lines, state: projectStateOf([...states.values()].map((state) => ({ state }))) };
+  return { project, rows, states, jobs, options, lines, state: projectStateOf([...states.values()].map((state) => ({ state }))), unlaunched };
 }
 
 const groupOf = (s: ProjectState): ProjectGroup =>
@@ -163,7 +194,9 @@ const iso = (n: number | null): string | null => (n === null ? null : new Date(n
 
 function view(m: ProjectModel, queue: QueueRead, ctx: ReadContext): PlanView {
   const placed = placePlan(m.lines, queue, capOf(ctx), ctx.now);
-  const launched = m.project.launchedAt !== undefined;
+  // A plan with parts still to launch (an import's unworked parts) is offered a launch: the Plan
+  // draws its receipt and pickers for exactly those (launch.ts, write.ts `setPart`).
+  const launched = m.project.launchedAt !== undefined && m.unlaunched.size === 0;
   const estimates: PlanEstimate[] = [];
   const lanes = new Map<ResourceLane, { jobs: number; seconds: number; usd: number; unpriced: number; queuePos: number | null }>();
   let spent = 0;

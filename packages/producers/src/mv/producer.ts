@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { parseAt } from "@gt/domain/door";
-import { AppError } from "@gt/domain/errors";
+import { isAppError } from "@gt/domain/errors";
 import type { Estimate } from "@gt/domain/estimate";
 import type { Job } from "@gt/domain/job";
-import type { MissingStep, Outputs, Producer, StepContext, StepOutcome } from "@gt/kernel/job-core";
+import { vendorHealth, type Health, type MissingStep, type Outputs, type Producer, type StepContext, type StepOutcome } from "@gt/kernel/job-core";
 import { isMvStep, STEP_ORDER, type MvStep } from "./plan.ts";
 
 // THE MUSIC-VIDEO PRODUCER - one track's video as one kernel job on `box.render`.
@@ -56,7 +56,7 @@ export type MvPorts = {
   land(job: Job, ctx: StepContext): Promise<void>;
   /** The record wears the failure, verbatim. */
   fail(job: Job, message: string, ctx: StepContext): Promise<void>;
-  health?(): Promise<{ readonly ok: true } | { readonly ok: false; readonly reason: string }>;
+  health?(job?: Job): Promise<Health>;
 };
 
 /** The catalog's words for a studio still (packages/catalog partOptions STUDIO_CREDITS). */
@@ -105,7 +105,7 @@ export function mvPlan(outputs: Outputs): MissingStep[] {
  * failure is not written to the record; it passes up and the job is the new
  * holder's.
  */
-export const fenceLost = (e: unknown): boolean => e instanceof AppError && e.code === "conflict" && (e.detail === "taken-over" || e.detail === "released" || e.detail === "expired");
+export const fenceLost = (e: unknown): boolean => isAppError(e) && e.code === "conflict" && (e.detail === "taken-over" || e.detail === "released" || e.detail === "expired");
 
 export function defineMv(ports: MvPorts): Producer {
   const fail = async (e: Error, ctx: StepContext): Promise<StepOutcome> => {
@@ -117,8 +117,8 @@ export function defineMv(ports: MvPorts): Producer {
       () => message,
       (w: unknown) => `${message} (and mv.json could not record it: ${w instanceof Error ? w.message : String(w)})`,
     );
-    if (e instanceof AppError && e.code === "budget") return { kind: "money-stop", message: worn };
-    return { kind: "fatal", code: e instanceof AppError ? e.code : "internal", message: worn };
+    if (isAppError(e) && e.code === "budget") return { kind: "money-stop", message: worn };
+    return { kind: "fatal", code: isAppError(e) ? e.code : "internal", message: worn };
   };
   return {
     lane: "box.render",
@@ -146,6 +146,6 @@ export function defineMv(ports: MvPorts): Producer {
         return fail(e, ctx);
       }
     },
-    ...(ports.health === undefined ? {} : { health: ports.health }),
+    ...(ports.health === undefined ? {} : { health: vendorHealth(ports.health) }),
   };
 }

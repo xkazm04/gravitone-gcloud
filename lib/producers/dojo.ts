@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -62,6 +62,44 @@ import { launchTarget, newestJob } from "./forge.ts";
 export function trainingRoot(env: Readonly<Record<string, string | undefined>> = process.env, cwd: string = process.cwd()): string {
   const v = env["FOUNDRY_TRAINING_DIR"]?.trim();
   return v !== undefined && v !== "" ? path.resolve(cwd, v) : path.join(cwd, OUT_DIRNAME, "training");
+}
+
+/* ── The cycles a start-cycle door offers (L45) ───────────────────────────── */
+
+const cycleStatus = z.object({ status: z.string() }).loose();
+
+/** A cycle the door can start: `planning`, with a gen-spec its runner accepts - or the spec's refusal, verbatim. */
+export type StartableCycle = { readonly id: string; readonly pairs: number; readonly runner: Runner } | { readonly id: string; readonly refused: string };
+
+/** How many cycles a door lists (bounded-enumeration): a training root holds a few dozen. */
+export const CYCLE_CAP = 50;
+
+/**
+ * Every cycle under the training root that is `planning` and carries a gen-spec - the cycles whose
+ * renders the dojo skill has specified and nobody has launched. A cycle past `planning` is the
+ * job's (its Run row says so in Runs); one with no gen-spec has nothing to render yet. Newest
+ * first by id (cycle ids lead with their date), at most CYCLE_CAP.
+ */
+export function startableCycles(root: string = trainingRoot()): Result<StartableCycle[]> {
+  if (!existsSync(root)) return ok([]);
+  const out: StartableCycle[] = [];
+  const ids = readdirSync(root, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name).sort().reverse();
+  for (const id of ids) {
+    if (out.length >= CYCLE_CAP) break;
+    const cycle = path.join(root, id, "cycle.json");
+    if (!existsSync(cycle) || !existsSync(path.join(root, id, "gen-spec.json"))) continue;
+    const c = parseJsonAt(`dojo cycle ${id}`, cycleStatus, readFileSync(cycle, "utf8"));
+    if (!c.ok) return c;
+    if (c.value.status !== "planning") continue;
+    const spec = readSpec(id, root);
+    if (!spec.ok) {
+      out.push({ id, refused: spec.error.message });
+      continue;
+    }
+    const runner = runnerOf(spec.value);
+    out.push(runner.ok ? { id, pairs: spec.value.pairs?.length ?? 0, runner: runner.value } : { id, refused: runner.error.message });
+  }
+  return ok(out);
 }
 
 const armSchema = z.object({ prompt: z.string().optional(), engine: z.string().optional() }).loose();

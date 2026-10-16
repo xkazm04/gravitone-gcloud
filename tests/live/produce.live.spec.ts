@@ -20,6 +20,11 @@
 // LEGIBILITY. /projects/[id] is a dynamic segment the route walk skips (studio-routes spec), so
 // the Plan, the receipt sheet and Compose are measured here with the lane's own measurer and the
 // legibility spec's settling rule: zero findings.
+//
+// THE UNIVERSE'S SIDE. The lane's shared server runs GRAVITONE_PRODUCE_SIDE=fixture (and
+// GRAVITONE_DRY_ONLY=1) in playwright.live.config.ts, which every spec on that server reads -
+// this one and the part-editor specs. L35 flipped the port's default to the real side; without
+// the line in the config this spec read a universe its seeds are not in.
 
 import { expect, test, type Page } from "@playwright/test";
 

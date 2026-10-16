@@ -6,7 +6,7 @@ import { defineStill, stillPlan } from "@gt/producers/still/define";
 import { NEGATIVE_PROMPT, compilePrompt } from "@/lib/stylePrompt";
 
 import { fallbackBlock, imageFailure, LIVE_IMAGING, meteredImages, putImage, type ImagingEngines } from "./frames.ts";
-import { asData, partFacts, priceOf, type DriveHooks, type PartFacts, type UnitsFn } from "./research.ts";
+import { asData, partFacts, priceOf, type DriveHooks, type PartFacts, type UnitsFn, preflightFrom } from "./research.ts";
 import { madeFree, madePaid } from "@gt/producers/research/partAct";
 import { ImagingError } from "@/lib/imaging/errors";
 
@@ -28,6 +28,8 @@ export const stillUnits: UnitsFn = (_s, f, ask) => stillPlan(stillView(f), { act
 
 export function stillProducer(lane: ResourceLane = "box.chrome", hooks: DriveHooks = {}, engines: ImagingEngines = LIVE_IMAGING): Producer {
   return defineStill(lane, {
+    // Held at the release, not failed by the worker, while its act waits on a human act (L45).
+    preflight: preflightFrom(stillUnits),
     async plan(_job, ask, ctx) {
       const f = partFacts(ctx);
       return f.ok ? stillUnits(null, f.value, ask) : f;

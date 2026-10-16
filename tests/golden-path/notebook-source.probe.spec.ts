@@ -21,7 +21,7 @@ import { test, expect } from "@playwright/test";
 
 import { buildCards, untaggedIds } from "@/app/_phases/_shared/notebook/cards";
 import { CONCLUSIONS } from "@/app/_phases/_shared/notebook/conclusions";
-import { DIMENSIONS, UNTAGGED_DIMENSION_ID, type Dimension } from "@/app/_phases/_shared/notebook/dimensions";
+import { DIMENSIONS, UNTAGGED_DIMENSION_ID, type Dimension } from "@/lib/notebook/dimensions";
 import { FACT_BY_ID, NOTEBOOK, UNKNOWN_BY_ID } from "@/app/_phases/_shared/notebook/notebook";
 import { fixtureSource, sourceOf } from "@/app/_phases/_shared/notebook/source";
 import { OPT_IN_IDS, optInIds, scopeSummary, stateOf } from "@/app/_phases/research/scope";
@@ -414,10 +414,10 @@ const NOTEBOOK_MODULE_FILES = new Set(
     (n) => `lib/notebook/${n}.ts`,
   ),
 );
-const PINNED_CONSTANT_IMPORTERS = 4;
+// 3 since Phase 4 wave D: app/_phases/research/guided/RunStage.tsx retired with the v1 studio.
+const PINNED_CONSTANT_IMPORTERS = 3;
 const EXPECTED_IMPORTERS = [
   "app/_phases/research/followup.ts",
-  "app/_phases/research/guided/RunStage.tsx",
   "lib/notebook/graph.ts",
   "lib/script/constraints.ts",
 ];

@@ -16,12 +16,9 @@
 //
 // The whole `alternatives/` directory had no probe of any kind before this file.
 
-import { readFileSync } from "node:fs";
-
 import { test, expect } from "@playwright/test";
 
-import { canRemoveAlt, isSynthetic, SYNTH_MARK } from "@/app/_phases/frames/alternatives/alts";
-import { stripComments } from "./_helpers";
+import { canRemoveAlt, isSynthetic, SYNTH_MARK } from "@/lib/frames/alternatives/alts";
 
 test("the last kept alternative of a real scene stays", () => {
   expect(canRemoveAlt("frame-3", 1), "one kept picture, and the cut is using it").toBe(false);
@@ -41,27 +38,4 @@ test("synthetic columns are exempt, because a clone has no frame to disagree wit
   expect(isSynthetic(clone), "the fixture id must actually read as synthetic").toBe(true);
   expect(canRemoveAlt(clone, 1), "a stress clone's last alternative may go").toBe(true);
   expect(canRemoveAlt(clone, 0)).toBe(true);
-});
-
-test("both the hook and the view ask the same function — one rule, one home", () => {
-  // This is the case that matters. The three above pass against a hook that
-  // hard-codes `alts.length <= 1` and a card that hard-codes `> 1`, which is two
-  // copies of one invariant that must agree — the exact shape that produced the
-  // defect being guarded here. Stripped source, because both files explain the
-  // rule in prose directly above the code that implements it.
-  const strip = (p: string) => stripComments(readFileSync(p, "utf8"));
-
-  const hook = strip("app/_phases/frames/alternatives/useAlternatives.ts");
-  const sheet = strip("app/_phases/frames/alternatives/VariantContactSheet.tsx");
-
-  expect(hook, "useAlternatives.remove must ask canRemoveAlt").toContain("canRemoveAlt(");
-  expect(sheet, "the contact sheet's card must ask canRemoveAlt").toContain("canRemoveAlt(");
-
-  // And neither may carry a second, private copy of the threshold.
-  for (const [name, src] of [["useAlternatives", hook], ["VariantContactSheet", sheet]] as const) {
-    expect(
-      /alts\.length\s*(<=|>)\s*1/.test(src),
-      `${name} compares an alternative count against 1 directly — that is the rule stated a second time`,
-    ).toBe(false);
-  }
 });

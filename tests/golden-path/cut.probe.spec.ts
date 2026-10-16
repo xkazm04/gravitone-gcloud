@@ -1,37 +1,25 @@
-// LANE — THE CUT IS DERIVED, ITS CLOCK IS ARITHMETIC, ITS FINISH LINE COUNTS (dynamic).
+// LANE — THE CUT IS DERIVED, ITS FINISH LINE COUNTS (dynamic).
 //
 // The Cut step drew the Glass Harbor fixture under every project until the
-// sequencer round (2026-10-05). Three pure seams replaced it and each is held
-// here on synthetic step data, with no browser and no frame loop:
+// sequencer round (2026-10-05). Pure seams replaced it and the two that outlived
+// the v1 studio are held here on synthetic step data, with no browser:
 //
 //   deriveTimeline  frames + spots → lanes; honest `missing`; the fixture for
 //                   seed-glass-harbor ONLY, and only while it has no frames.
-//   clock           advance / shuttle / step / timecode, and a clock driven by
-//                   a fake scheduler — the authority the needle and the takes
-//                   follow.
 //   finishLine      value / target / verdict rows, with `unmeasured` kept
 //                   apart from `pass`.
 //
-// Plus `audioAction`, the decision that keeps a take's <audio> on the playhead.
+// v1's transport (the clock, J/K/L, a take's <audio> held on the playhead, the
+// waveform peaks) retired with the Cut step in Phase 4 wave D: the cut editor
+// draws one ruler and plays nothing.
 import { test, expect } from "@playwright/test";
 
-import {
-  INITIAL,
-  advance,
-  createClock,
-  nextRate,
-  stepBy,
-  timecode,
-  type ClockDeps,
-} from "@/app/_phases/cut/clock";
-import { FIXTURE_PROJECT_ID, deriveTimeline, sceneIndexAt, turnOf } from "@/app/_phases/cut/deriveTimeline";
-import { coveredS, finishLine } from "@/app/_phases/cut/finishLine";
-import { nudgeOffsets } from "@/app/_phases/cut/offsets";
-import { audioAction, SLACK_S } from "@/app/_phases/cut/useTakeAudio";
-import { peaksOf } from "@/app/_phases/cut/useCut";
-import { emptyClip, type Frame } from "@/app/_phases/frames/frames";
-import type { ScoreSpot } from "@/app/_phases/score/spots";
-import { TIMELINE } from "@/app/_studio/score";
+import { FIXTURE_PROJECT_ID, deriveTimeline, sceneIndexAt, turnOf } from "@/lib/cut/deriveTimeline";
+import { coveredS, finishLine } from "@/lib/cut/finishLine";
+import { nudgeOffsets } from "@/lib/cut/offsets";
+import { emptyClip, type Frame } from "@/lib/frames/frames";
+import type { ScoreSpot } from "@/lib/score/spots";
+import { TIMELINE } from "@/lib/studio/score";
 
 /* ── synthetic step data ─────────────────────────────────────────────────── */
 
@@ -143,83 +131,6 @@ test("the scene under the playhead, and the turn", () => {
   expect(turnOf(cut.scenes)).toEqual({ atS: 6, label: "shot f2" });
 });
 
-/* ── clock arithmetic ────────────────────────────────────────────────────── */
-
-test("advance: forward, reverse, and a stop at either end rather than a wrap", () => {
-  const s = { ...INITIAL, duration: 10, t: 2, playing: true, rate: 1 };
-  expect(advance(s, 500).t).toBeCloseTo(2.5);
-  expect(advance({ ...s, rate: 2 }, 500).t).toBeCloseTo(3);
-  expect(advance({ ...s, rate: -1 }, 500).t).toBeCloseTo(1.5);
-  const end = advance({ ...s, t: 9.9 }, 1000);
-  expect([end.t, end.playing]).toEqual([10, false]);
-  const head = advance({ ...s, t: 0.2, rate: -4 }, 1000);
-  expect([head.t, head.playing]).toEqual([0, false]);
-  expect(advance({ ...s, playing: false }, 1000)).toEqual({ ...s, playing: false });
-});
-
-test("J/K/L climbs the ladder, holds at the top, and K keeps the direction", () => {
-  let s = { playing: false, rate: 1 };
-  const seq: number[] = [];
-  for (const k of ["l", "l", "l", "l"] as const) {
-    s = nextRate(s, k);
-    seq.push(s.rate);
-  }
-  expect(seq).toEqual([1, 2, 4, 4]);
-  s = nextRate(s, "j");
-  expect(s).toEqual({ playing: true, rate: -1 });
-  s = nextRate(s, "j");
-  expect(s.rate).toBe(-2);
-  s = nextRate(s, "k");
-  expect(s).toEqual({ playing: false, rate: -2 });
-});
-
-test("frame steps land on the grid; timecode counts frames", () => {
-  expect(stepBy(1.013, 1, 10)).toBeCloseTo(1.04);
-  expect(stepBy(0, -1, 10)).toBe(0);
-  expect(stepBy(9.99, 5, 10)).toBe(10);
-  expect(timecode(0)).toBe("0:00:00");
-  expect(timecode(61.52)).toBe("1:01:13");
-  expect(timecode(3600)).toBe("1:00:00:00");
-});
-
-test("a clock on a fake scheduler: play advances, a seek is a discontinuity, the end stops it", () => {
-  let now = 0;
-  const queue: (() => void)[] = [];
-  const deps: ClockDeps = {
-    now: () => now,
-    schedule: (cb) => queue.push(cb),
-    cancel: () => void queue.splice(0),
-  };
-  const tick = (ms: number) => {
-    now += ms;
-    const cb = queue.shift();
-    cb?.();
-  };
-  const clock = createClock(deps);
-  let notified = 0;
-  clock.subscribe(() => notified++);
-
-  clock.play();
-  expect(clock.get().playing).toBe(false); // nothing on the clock: play is refused
-  clock.setDuration(3);
-  clock.play();
-  tick(1000);
-  expect(clock.get().t).toBeCloseTo(1);
-
-  const seq = clock.get().seq;
-  clock.seek(2.5);
-  expect(clock.get().seq).toBe(seq + 1);
-  tick(1000);
-  expect([clock.get().t, clock.get().playing]).toEqual([3, false]);
-  expect(queue.length).toBe(0); // the loop stopped itself
-
-  clock.play(); // from the end: back to the head
-  expect(clock.get().t).toBe(0);
-  clock.pause();
-  expect(notified).toBeGreaterThan(4);
-  clock.destroy();
-});
-
 /* ── the finish line ─────────────────────────────────────────────────────── */
 
 test("coverage is a union — two cues over the same seconds are not counted twice", () => {
@@ -258,24 +169,3 @@ test("runtime against target, and a drift the bench snapped back is no longer dr
   expect(finishLine(fx, snapped).find((r) => r.id === "drift")!.verdict).toBe("pass");
 });
 
-/* ── a take follows the playhead ─────────────────────────────────────────── */
-
-test("audioAction: play inside the span, re-seek past the slack or on a jump, silence outside or in reverse", () => {
-  const span = { startS: 10, durS: 5 };
-  const on = { t: 11, playing: true, rate: 1 };
-  expect(audioAction(on, span, { time: 0, paused: true }, false)).toEqual({ kind: "play", at: 1, rate: 1 });
-  expect(audioAction(on, span, { time: 1 + SLACK_S / 2, paused: false }, false)).toEqual({ kind: "none" });
-  expect(audioAction(on, span, { time: 1.5, paused: false }, false)).toEqual({ kind: "seek", at: 1 });
-  expect(audioAction(on, span, { time: 1, paused: false }, true)).toEqual({ kind: "seek", at: 1 });
-  expect(audioAction({ ...on, t: 16 }, span, { time: 5, paused: false }, false)).toEqual({ kind: "pause" });
-  expect(audioAction({ ...on, rate: -1 }, span, { time: 1, paused: false }, false)).toEqual({ kind: "pause" });
-  // Stopped inside the span: parked at the playhead, ready to sound in sync.
-  expect(audioAction({ ...on, playing: false }, span, { time: 4, paused: true }, false)).toEqual({ kind: "seek", at: 1 });
-});
-
-test("peaks are normalised magnitudes", () => {
-  const samples = new Float32Array([0, 0.5, -1, 0.25, 0, 0, 0.1, -0.2]);
-  const got = peaksOf(samples, 4);
-  [0.5, 1, 0, 0.2].forEach((v, i) => expect(got[i]).toBeCloseTo(v, 5));
-  expect(peaksOf(new Float32Array(0), 4)).toEqual([]);
-});

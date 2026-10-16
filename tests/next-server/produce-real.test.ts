@@ -7,7 +7,9 @@
 //   · a Floor launch is a receipt, then a confirm: a stale token launches nothing; an article
 //     launch is one Run row and one DRY job under the article producer; a strips launch names
 //     its run in the receipt and launches under that same name, its manifest naming the job;
-//     an audio or image launch is priced and refused with the door that does launch it;
+//     an audio launch is priced and refused with the door that does launch it; an image launch
+//     (L45) is a forge sweep - priced statically, run.json prepared by forge.py on the confirm, one
+//     dry gpu.local job the Python worker claims;
 //   · a live receipt is refused where only dry may run (GRAVITONE_DRY_ONLY=1);
 //   · a plan whose revision moved under its receipt answers the fresh receipt at the new revision;
 //   · the Runs acts are the kernel's, and a lane a crash holds refuses the retry of its job until
@@ -29,6 +31,7 @@ const ROOT = vi.hoisted(() => {
   process.env["STRIPS_STORE_DIR"] = path.join(dir, "strips");
   process.env["FOUNDRY_DIR"] = path.join(dir, "catalogue");
   process.env["SOUND_STORE_DIR"] = path.join(dir, "sound");
+  process.env["FOUNDRY_RUNS_DIR"] = path.join(dir, "runs");
   return dir;
 });
 
@@ -178,19 +181,39 @@ describe("the real produce port", () => {
     expect((await refusal(port.launchRun({ input, token: receipt.token }, who))).code).toBe("conflict");
   });
 
-  it("prices an audio and an image launch and refuses them at confirm, naming the door that launches them", async () => {
+  it("prices an audio launch and refuses it at confirm, naming the door that launches it", async () => {
     const before = jobs().length;
     for (const input of [
       { lane: "audio", text: "Low brass bed.", kind: "music" },
       { lane: "audio", text: "Whoosh.", kind: "sfx" },
-      { lane: "image", text: "A harbor at night.", mechanisms: ["text"], styleId: "ink-graphic-novel" },
     ] satisfies ComposerInput[]) {
       const r: Receipt = await v(port.composerReceipt({ input }, who));
       const no = await refusal(port.launchRun({ input, token: r.token }, who));
       expect(no.code).toBe("unavailable");
-      expect(no.message).toMatch(/launchSuno|sfx producer|plan file/);
+      expect(no.message).toMatch(/launchSuno|sfx producer/);
     }
     expect(jobs()).toHaveLength(before);
+  });
+
+  it("launches an image sweep as a forge run: priced without writing, prepared on the confirm, one dry gpu.local job", async () => {
+    // The style and the stock scene plan are the checkout's (pipeline/foundry/styles.json, plans/dry-run.json).
+    const input: ComposerInput = { lane: "image", text: "A harbor at night.", mechanisms: ["text", "ref-early"], styleId: "ink-graphic-novel" };
+    const receipt = await v(port.composerReceipt({ input }, who));
+    const runId = receipt.token.slice(0, receipt.token.lastIndexOf(":"));
+    expect(runId).toMatch(/^floor-ink-graphic-novel-t\d+$/);
+    expect(receipt.lines[0]).toMatchObject({ lane: "gpu.local", usd: 0 });
+    expect(existsSync(path.join(ROOT, "runs", runId)), "a receipt writes nothing").toBe(false);
+    const before = jobs().length;
+    const stale = await v(port.launchRun({ input, token: `${runId}:${"0".repeat(16)}` }, who));
+    expect(stale.kind).toBe("stale");
+    expect(jobs()).toHaveLength(before);
+    const l = await v(port.launchRun({ input, token: receipt.token }, who));
+    if (l.kind !== "launched") throw new Error(`expected launched, got ${l.kind}`);
+    expect(l.runId).toBe(`forge:${runId}`);
+    const run = JSON.parse(readFileSync(path.join(ROOT, "runs", runId, "run.json"), "utf8")) as { candidates: unknown[]; plan: { id: string } };
+    // One stock scene x one style x two mechanisms x one seed: what the receipt priced.
+    expect([run.plan.id, run.candidates.length]).toEqual([runId, 2]);
+    expect(jobs().find((x) => x.id === l.jobId)).toMatchObject({ producer: "forge", lane: "gpu.local", state: "queued", mode: { kind: "dry" } });
   });
 });
 

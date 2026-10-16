@@ -36,7 +36,7 @@ import { IMPACT, ATTRIBUTION } from "@/app/_phases/script/impact";
 import { RENDERS, RENDER_BY_ID } from "@/app/_phases/script/renders";
 import { EDIT_PLAN_SCHEMA, editPlanSchema, parseEditPlan, PlanError } from "@/app/_phases/script/editPlan";
 import { runGate, PROBES, probesFor, type Verdict } from "@/app/_phases/script/gate";
-import { CONSTRAINT_LEDGER, ledgerFor } from "@/app/_phases/script/constraints";
+import { CONSTRAINT_LEDGER, ledgerFor } from "@/lib/script/constraints";
 import { NOTEBOOK } from "@/app/_phases/_shared/notebook/notebook";
 import { fixtureSource, sourceOf } from "@/app/_phases/_shared/notebook/source";
 import type { Unknown } from "@/app/_phases/_shared/notebook/types";

@@ -4,6 +4,7 @@ import type { EventData } from "@gt/domain/event";
 import { jobMachine, type Holder, type Job, type JobState, type Lease } from "@gt/domain/job";
 import type { ResourceLane } from "@gt/domain/lane";
 import type { Effects } from "./effects.ts";
+import type { Reader } from "./store.ts";
 import type { StepMeter } from "./spend/meter.ts";
 
 // THE JOB, PURE - what a job does next, and what each outcome does to its
@@ -108,8 +109,22 @@ export type Producer = {
   readonly breakerLimit?: number;
   plan(job: Job, outputs: Outputs): readonly MissingStep[];
   perform(step: MissingStep, ctx: StepContext): Promise<StepOutcome>;
-  /** v1 MV/Suno driver health: asked before a claim; unhealthy claims nothing. */
-  health?(): Promise<{ readonly ok: true } | { readonly ok: false; readonly reason: string }>;
+  /**
+   * v1 MV/Suno driver health: asked before a claim; unhealthy claims nothing. The driver passes
+   * the job it is about to claim, so a DRY job answers for its stand-in (healthy unless the
+   * stand-in itself is broken) and never waits on a live vendor it will not call. Absent only
+   * when someone asks with no job in hand (an operator's look at the lane), which answers as a
+   * live job would - the reading that cannot start a paid call by mistake.
+   */
+  health?(job?: Job): Promise<Health>;
+  /**
+   * Can this job's act run on the records as they stand? A reason when it cannot because it waits
+   * on a HUMAN act (a composed spine, a confirmed scope) - the same refusal its plan step would
+   * fail the job with. Read synchronously inside the release transaction (records/write.ts
+   * `releaseHeldIn`, through RunOptions/ReadContext `preflightOf`): such a part stays `planned`,
+   * named, instead of being released into a red part no operator can prevent (L44 exit-roundtrip).
+   */
+  preflight?(job: Job, r: Reader): string | undefined;
   /**
    * Told the job's ending, after the drive that ended it (job-run.ts `runJob`): done, failed
    * (its own outcome, the breaker, a ceiling stop, a thrown drive), interrupted (a lost fence),
@@ -123,6 +138,18 @@ export type Producer = {
    */
   settle?(job: Job, ending: Ending): Promise<void>;
 };
+
+export type Health = { readonly ok: true } | { readonly ok: false; readonly reason: string };
+
+/**
+ * A live vendor's probe as a producer's `health`: a DRY job's vendor is its stand-in, so it is
+ * healthy without asking the vendor (the stand-in is in process; nothing to probe), and only a
+ * live job - or a question with no job in hand - waits on the probe. The one rule every producer
+ * with a vendor probe wraps its probe in, so no producer re-decides it.
+ */
+export function vendorHealth(probe: (job?: Job) => Promise<Health>): (job?: Job) => Promise<Health> {
+  return async (job) => (job?.mode.kind === "dry" ? { ok: true } : probe(job));
+}
 
 /** How a drive left its job, as `settle` is told it. */
 export type Ending = "done" | "failed" | "interrupted" | "stopped";

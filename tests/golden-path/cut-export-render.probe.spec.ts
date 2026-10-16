@@ -20,7 +20,7 @@ import { join } from "node:path";
 import { test, expect } from "@playwright/test";
 
 import { keepEnv } from "./_helpers";
-import { compileCut, cutDocumentHash, type CutDocument } from "@/app/_phases/cut/cutDocument";
+import { compileCut, cutDocumentHash, type CutDocument } from "@/lib/cut/cutDocument";
 import type { CutClip, CutScene, DerivedCut } from "@/app/_phases/cut/deriveTimeline";
 import { emptyClip, type Frame } from "@/app/_phases/frames/frames";
 import { CUT_FPS, runCutExport } from "@/lib/cutExport";

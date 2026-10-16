@@ -276,8 +276,8 @@ function land(ctx: KCtx, c: CutRec, act: PartActKind, at: number, jobId: string,
 
 /** The cut's verdict: lib/parts/verdict's rule (READY when the finish line holds nothing; a film
  *  plans no voice part, so its voice row is reported and does not hold), over THIS derived cut -
- *  its cutVerdict hands deriveTimeline a store listing, which reaches a client-only URL builder
- *  on the server (see `derivedOf`); the ads face reads ads-finish and stays lib's. */
+ *  the explainer's is its own (strips and voice), which lib's cutVerdict does not derive; the ads
+ *  face reads ads-finish and stays lib's. */
 function verdict(ctx: KCtx, c: CutRec): PartVerdict {
   if (face(ctx) === "finish") return verdictFor(ctx, "cut", heldTakes(ctx.rec("score")));
   const cut = derivedOf(ctx);
@@ -330,5 +330,4 @@ export const CUT_KIND: KindModule<"cut"> = {
   actLabel: (act) => ACT_LABELS[act] ?? act,
   fromRecords: (recs) => fromRecords(recs),
   toRecords,
-  stored: true,
 };

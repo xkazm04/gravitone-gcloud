@@ -11,9 +11,14 @@
 .rail{min-height:0;min-width:0;display:flex;flex-direction:column;border-right:1px solid var(--hair)}
 .primary{min-height:0;min-width:0;overflow:auto;padding:var(--sp-5) var(--sp-wide)}
 .inspector{min-height:0;min-width:0;overflow:auto;padding:var(--sp-5);border-left:1px solid var(--hair);background:color-mix(in srgb,var(--ink-1) 60%,transparent)}
-.foot{display:flex;align-items:center;flex-wrap:wrap;gap:var(--sp-3) var(--sp-5);padding:var(--sp-2) var(--sp-wide);border-top:1px solid var(--hair)}
-.keys{display:flex;flex-wrap:wrap;gap:var(--sp-2) var(--sp-5);margin-left:auto}
-.break{min-width:0}
+/* The foot is two rows by construction: the part tabs with the upstream break at their end, then
+   the key legend. It was one wrapping flex row, and a long legend (the cut's) wrapped into
+   whatever space was left - under the break, beside the tabs - so where the keys sat depended on
+   the editor (seen by L40 on the cut). A keymap is a table; it gets its own row. */
+.foot{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"tabs break" "keys keys";align-items:center;gap:var(--sp-2) var(--sp-5);padding:var(--sp-2) var(--sp-wide);border-top:1px solid var(--hair)}
+.foot > .tabs{grid-area:tabs;justify-self:start;max-width:100%}
+.keys{grid-area:keys;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:var(--sp-2) var(--sp-5)}
+.break{grid-area:break;min-width:0}
 
 /* the verdict chip */
 .verdict{display:inline-flex;align-items:center;gap:var(--sp-2);min-height:var(--h-chip);padding:0 var(--sp-3);border-radius:var(--r-chip);border:1px solid var(--hair-2);font:500 var(--fs-meta)/1.2 var(--mono);color:var(--muted);max-width:100%}
@@ -62,6 +67,6 @@
   .rail{border-right:0;border-bottom:1px solid var(--hair);height:40vh;overflow:auto}
   .primary{overflow:visible;padding:var(--sp-4)}
   .inspector{overflow:visible;border-left:0;border-top:1px solid var(--hair)}
-  .foot{padding:var(--sp-2) var(--sp-4)}
+  .foot{padding:var(--sp-2) var(--sp-4);grid-template-columns:minmax(0,1fr);grid-template-areas:"tabs" "break" "keys"}
   .keys{display:none}
 }

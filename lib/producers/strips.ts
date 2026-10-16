@@ -4,7 +4,7 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { parseAt } from "@gt/domain/door";
-import { AppError, err, ok, type Result } from "@gt/domain/errors";
+import { AppError, err, isAppError, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import { jobIdSchema } from "@gt/domain/ids";
 import type { Job } from "@gt/domain/job";
@@ -95,7 +95,7 @@ export function stripsPorts(b: StripsBinding = {}): StripsPorts<StripTurn, Agent
       try {
         return ok(viewOf(readStripRunNow(runId)));
       } catch (e) {
-        if (e instanceof AppError) return err(e.code, e.message);
+        if (isAppError(e)) return err(e.code, e.message);
         if (e instanceof FoundryError) return err(e.status === 404 ? "not-found" : "unavailable", e.message);
         throw e;
       }

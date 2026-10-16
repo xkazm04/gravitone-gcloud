@@ -21,7 +21,7 @@ import { readClip, startClip } from "@/lib/imaging/video/clips";
 import { clipPath } from "@/lib/imaging/video/store";
 
 import { adsShotsFor, imageFailure, LIVE_IMAGING, pickedScenario, unitsOf, type ImagingEngines } from "./frames.ts";
-import { adTemplateOf, asData, blobRootOf, field, must, partFacts, priceOf, stepKernel, text, written, type DriveHooks, type PartFacts, type UnitsFn, withRecords } from "./research.ts";
+import { adTemplateOf, asData, blobRootOf, field, must, partFacts, priceOf, stepKernel, text, written, type DriveHooks, type PartFacts, type UnitsFn, withRecords, preflightFrom } from "./research.ts";
 
 // THE MOTION PRODUCER, BOUND (Phase 4 wave C, L37) - packages/producers/src/motion's ports over
 // v1's engines: the two recognize passes of app/_phases/motion/direction.ts `directMotion` (READ,
@@ -224,6 +224,8 @@ function landMotion(plan: ActPlan, made: ReadonlyMap<string, EventData>, s: Part
 export function motionProducer(lane: ResourceLane = "gpu.local", hooks: DriveHooks = {}, engines: MotionEngines = LIVE_MOTION, blobs?: BlobStore): Producer {
   const store = (): BlobStore => blobs ?? blobStore(blobRootOf(stepKernel().store));
   return defineMotion(lane, {
+    // Held at the release, not failed by the worker, while its act waits on a human act (L45).
+    preflight: preflightFrom(motionUnits),
     async plan(_job, ask, ctx) {
       const s = partSnapshot(ctx);
       if (!s.ok) return s;

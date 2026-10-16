@@ -179,12 +179,20 @@ function cutVerdict(i: VerdictInput): PartVerdict {
   );
   const spotList = spots === null ? null : narrow(spots, isSpot);
   if (units === null || (spots !== null && spotList === null)) return v("blocked", c("unreadable", "a picture unit or cue the timeline cannot read"));
+  // The held takes go in as `takes` (cue -> its take), NEVER as `storeTakeIds`: handed a store
+  // listing, deriveTimeline builds each take's URL with lib/sound/client `takeFileUrl`, a "use
+  // client" export - on the server a client reference, and calling it there is a 500 (L40 hit it
+  // and routed around it in the part's own module; this is the source). A verdict needs only
+  // whether the cue's pointed take is in hand, never where its bytes are served.
+  const takes: Record<string, string> = {};
+  for (const s of spotList ?? []) if (s.activeTakeId !== undefined && i.takeIds?.has(s.activeTakeId) === true) takes[s.id] = `take:${s.activeTakeId}`;
   const cut = deriveTimeline({
     projectId: i.projectId,
     project: i.targetS === null ? null : { title: i.title, logline: "", targetS: i.targetS },
     units,
     spots: spotList,
-    storeTakeIds: i.takeIds ?? null,
+    takes,
+    storeTakeIds: null,
   });
   const offsets = rec(i, "cut", (r) => decodeStep(CUT, r))?.offsets ?? {};
   const checks = finishLine(cut, offsets);

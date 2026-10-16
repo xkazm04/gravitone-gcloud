@@ -18,22 +18,15 @@
 //
 // This probe tests the DATA path, matching this lane's own idiom for a Node
 // test with no DOM: assert what `buildCards()` actually carries, not how a
-// component paints it. The one exception is the last test below, which reads
-// `CardTile.tsx` as TEXT — because a data-path probe alone can pass against a
-// component that receives `card.sources` and still ignores it, which is
-// exactly the shape of the bug being fixed one layer up. Proving the field
-// survives the flatten is necessary; proving the one consumer that draws cards
-// for a human actually reads it is why this file exists rather than being a
-// paragraph added to the source-ladder probe.
-
-import { readFileSync } from "node:fs";
+// component paints it. Its fourth case read the triage board's `CardTile.tsx`
+// as text (the consumer that drew cards for a human); that board retired with
+// the v1 studio (Phase 4 wave D) and the case went with it.
 
 import { test, expect } from "@playwright/test";
 
-import { buildCards } from "@/app/_phases/_shared/notebook/cards";
-import { FACTS } from "@/app/_phases/_shared/notebook/facts";
-import { NOTEBOOK } from "@/app/_phases/_shared/notebook/notebook";
-import { stripComments } from "./_helpers";
+import { buildCards } from "@/lib/notebook/cards";
+import { FACTS } from "@/lib/notebook/facts";
+import { NOTEBOOK } from "@/lib/notebook/notebook";
 
 const LADDER = ["primary", "secondary", "aggregator", "vendor", "self-published", "protected"];
 
@@ -74,16 +67,4 @@ test("only fact cards ever carry sources — mechanisms, reversals and conclusio
     if (c.kind === "fact") continue;
     expect(c.sources, `${c.id} (${c.kind}) carries a \`sources\` array — buildCards must not invent one for a card kind with no source field on its notebook type`).toBeUndefined();
   }
-});
-
-test("the call site reads card.sources, not just card.source — a data-path probe alone cannot catch a component that ignores the field", () => {
-  const raw = readFileSync("app/_phases/research/_parts/CardTile.tsx", "utf-8");
-  // Comment-stripped so a mention inside a comment (this very fix, described
-  // in prose) cannot satisfy the assertion in place of the real read. This is
-  // the exact trap the finding names: the render path already existed one
-  // layer up in FactRow.tsx, so it is easy for a file to TALK about
-  // `card.sources` — in a comment explaining why it now matters — without ever
-  // reading it in code that runs.
-  const stripped = stripComments(raw);
-  expect(stripped, "no comment-stripped occurrence of `card.sources` in CardTile.tsx — the component still only reads the flattened `card.source` string, which is precisely the bug this whole probe exists to catch one layer up from the data path").toMatch(/card\.sources/);
 });

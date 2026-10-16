@@ -33,7 +33,7 @@ import {
 } from "@/lib/imaging/receipts";
 import { POST as generatePOST } from "@/app/api/imaging/generate/route";
 import { generateImage, ImagingRequestError } from "@/lib/imagingClient";
-import { pendingReceipt, type Plate } from "@/app/_phases/frames/frames";
+import { pendingReceipt, type Plate } from "@/lib/frames/frames";
 
 const realFetch = globalThis.fetch;
 
@@ -336,7 +336,7 @@ test("9b. a coded server failure is not retried by the client (it was billed; a 
   expect(posts).toBe(1);
 });
 
-test("10. wiring: the routes run through the receipt seam; the client sends the key; the frames hook persists and reuses it", () => {
+test("10. wiring: the routes run through the receipt seam; the client sends the key", () => {
   const read = (p: string) => stripComments(readFileSync(join(process.cwd(), p), "utf8"));
   // The handler bodies (and so the receipt seam call) live in lib/imaging/handlers.ts;
   // each route.ts must still delegate to its handler after its auth door.
@@ -349,10 +349,7 @@ test("10. wiring: the routes run through the receipt seam; the client sends the 
   const client = read("lib/imagingClient.ts");
   expect(client).toMatch(/"idempotency-key"/);
   expect(client).toMatch(/randomUUID/);
-  const frames = read("app/_phases/frames/useFrames.ts");
-  // the key is read back from the stored plate, persisted on the generating
-  // plate, and handed to the client
-  expect(frames).toMatch(/pendingReceipt\(frame\.plate\)/);
-  expect(frames).toMatch(/state:\s*"generating",\s*subject,\s*receipt/);
-  expect(frames).toMatch(/generateImage\([\s\S]*?\{\s*key\s*\}\s*\)/);
+  // The v1 Frames hook that persisted the key on its generating plate retired
+  // with the studio (Phase 4 wave D): a plate is bought once by the frames
+  // producer's job step now (tests/next-server/producer-step-frames.test.ts).
 });

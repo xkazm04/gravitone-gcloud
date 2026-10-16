@@ -2,7 +2,7 @@ import "server-only";
 
 import { recipeById } from "@gt/catalog/recipes";
 import { parseAt, parseJsonAt } from "@gt/domain/door";
-import { AppError, err, ok, type Result } from "@gt/domain/errors";
+import { AppError, err, isAppError, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import { jobIdSchema, type JobId } from "@gt/domain/ids";
 import type { Job } from "@gt/domain/job";
@@ -16,6 +16,8 @@ import { launchProject, planReceipt, rerouteOptions } from "@gt/kernel/records/l
 import { listProjects, readProject, type ReadContext } from "@gt/kernel/records/read";
 import { compose, discard, rename, setPart } from "@gt/kernel/records/write";
 import { gateFacts } from "@gt/kernel/parts/gates";
+
+import { preflightOf } from "@/lib/producers/registry";
 import type { Store } from "@gt/kernel/store";
 
 import type { Confirmed } from "./contract.ts";
@@ -65,7 +67,7 @@ function guard<T>(fn: () => Result<T>): Result<T> {
   try {
     return fn();
   } catch (e) {
-    if (e instanceof AppError) return { ok: false, error: e };
+    if (isAppError(e)) return { ok: false, error: e };
     throw e;
   }
 }
@@ -181,7 +183,9 @@ export function makeRealProduce(deps: RealDeps): ServerProduce {
         const m = modeOf(mode);
         if (!m.ok) return m;
         const opts = { mode: m.value, ...(ceilingUsd === undefined ? {} : { ceilingUsd }) };
-        const l = launchProject(s, { id, baseRev: rev, token, ...opts }, actorOf(who), { ...ctx(), dryOnly: dryOnly() });
+        // The producers' preflight holds a part that cannot run yet (a trailer script with no composed
+        // spine) as planned, instead of enqueuing it for the worker to fail (L44 defect D, L45).
+        const l = launchProject(s, { id, baseRev: rev, token, ...opts }, actorOf(who), { ...ctx(), dryOnly: dryOnly(), preflightOf });
         if (l.ok) return ok({ kind: "launched", ...l.value });
         if (l.fresh !== undefined) return ok({ kind: "stale", fresh: l.fresh });
         // The plan moved under the receipt (another tab changed a part): the fresh receipt is read

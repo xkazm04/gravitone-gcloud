@@ -21,7 +21,8 @@ locale_count: 1
 
 One production walked through six steps (Research - Script - Frames - Motion - Score - Cut) over a Library
 that knows every asset's lineage. `lib/projects.ts`'s `PHASES` is the ONE source of that order;
-`app/studio/[projectId]/` is the composition root.
+the composition root is the Plan, `app/(studio)/projects/[id]/`, each step a Part with its editor at
+`app/(studio)/projects/[id]/[part]/` (`/studio/<id>` redirects there since Phase 4 wave D).
 
 - **Motion is a step again.** Motion was retired on 2026-08-14 and reinstated as the sixth step on 2026-10-06 (`1c90240`); `RETIRED_PHASES` is empty. The whole step set is
   being rebuilt as composition parts (`docs/next/migration-plan.md`); a v1 direction on a step must

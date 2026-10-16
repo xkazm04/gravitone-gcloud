@@ -1,5 +1,5 @@
 import { DatabaseSync, type SQLInputValue, type SQLOutputValue, type StatementSync } from "node:sqlite";
-import { AppError, err, ok, type Result } from "@gt/domain/errors";
+import { AppError, err, isAppError, ok, type Result } from "@gt/domain/errors";
 
 // THE STORE - the one transactional port every kernel module writes through.
 //
@@ -104,7 +104,7 @@ const isCorruption = (code: number | undefined): boolean => code === SQLITE_CORR
 
 /** Classify any throw from a transaction into the one taxonomy. */
 function classify(e: unknown, busyMs: number): AppError {
-  if (e instanceof AppError) return e;
+  if (isAppError(e)) return e;
   const code = errcodeOf(e);
   const msg = e instanceof Error ? e.message : String(e);
   if (code === SQLITE_BUSY || code === SQLITE_LOCKED) {

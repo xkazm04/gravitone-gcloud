@@ -22,7 +22,7 @@ import { createTake, getTake } from "@/lib/sound/takes";
 import type { GenerateRequest, SoundTake } from "@/lib/sound/types";
 import { cuesFrom, type SpottingCue } from "@/lib/studio/score";
 
-import { asData, field, must, partFacts, priceOf, recOf, text, withRecords, written, type DriveHooks, type PartFacts, type UnitsFn } from "./research.ts";
+import { asData, field, must, partFacts, priceOf, recOf, text, withRecords, written, type DriveHooks, type PartFacts, type UnitsFn, preflightFrom } from "./research.ts";
 
 // THE SCORE PRODUCER, BOUND (Phase 4 wave C, L37) - packages/producers/src/score's ports over
 // v1's cue render: the spot -> cue brief (lib/studio/score.ts `cuesFrom`, over the picture the
@@ -191,6 +191,8 @@ function landScore(plan: ActPlan, made: ReadonlyMap<string, EventData>, s: PartS
 export function scoreProducer(lane: ResourceLane = "cloud.elevenlabs", hooks: DriveHooks = {}, engines: Partial<ScoreEngines> = {}): Producer {
   const eng: ScoreEngines = { ...LIVE, ...engines };
   return defineScore(lane, {
+    // Held at the release, not failed by the worker, while its act waits on a human act (L45).
+    preflight: preflightFrom(scoreUnits),
     async plan(_job, ask, ctx) {
       const s = partSnapshot(ctx);
       if (!s.ok) return s;

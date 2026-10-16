@@ -15,7 +15,9 @@ stops_per_session: 3
 
 One production walked through six steps — **Research · Script · Frames · Motion · Score · Cut** — over a
 Library that knows where every asset came from. `lib/projects.ts`'s `PHASES` is the ONE source of
-that order; `app/studio/[projectId]/` is the composition root.
+that order. Since Phase 4 wave D a production is a kernel Project and each step a Part: the composition
+root is `app/(studio)/projects/[id]/` (the Plan) and each step's editor `app/(studio)/projects/[id]/[part]/`;
+`/studio/<id>` and `/projects/new` redirect there (`app/studio/[projectId]/redirect.ts`).
 
 The user is a **solo creator making a short film or trailer**, not a team and not an operator. They
 arrive with an idea and a deadline, and the product's promise is that the six steps carry the idea
@@ -46,19 +48,19 @@ source-a-look - a creator who needs a visual identity before anything can render
 | id | surface | how to reach it |
 |---|---|---|
 | `landing` | app | `/` — the door; the only CTA is sign-in. No frame, no auth gate. |
-| `projects` | app | `/projects` — the shelf: the matrix of productions with per-step heat |
-| `projects-empty` | app | `/projects` with storage cleared — the first-run state |
-| `wizard-discipline` | app | `/projects/new` — stage 1 of a 4-stage deck |
-| `wizard-template` | app | `/projects/new`, one pick in |
-| `wizard-style` | app | `/projects/new`, two picks in — the stage that can dead-end (no locked style ⇒ `EmptyStyleDeck`) |
-| `wizard-name` | app | `/projects/new`, three picks in — the only stage that types |
-| `studio-research` | app | `/studio/<id>?step=research` |
-| `studio-script` | app | `/studio/<id>?step=script` |
-| `studio-frames` | app | `/studio/<id>?step=frames` |
-| `studio-motion` | app | `/studio/<id>?step=motion` (reached via frames) |
-| `studio-score` | app | `/studio/<id>?step=score` |
-| `studio-cut` | app | `/studio/<id>?step=cut` |
-| `studio-outputs` | app | `/studio/<id>?step=cut`, Outputs opened |
+| `projects` | app | `/projects` — the composition list, opened on its first project's Plan |
+| `projects-empty` | app | `/projects/import` — what an account with only v1 browser projects opens (the v1 empty shelf retired) |
+| `wizard-discipline` | app | `/projects?compose=1` — Compose (the four wizard stages retired into one dialog; v1's `/projects/new` redirects here) |
+| `wizard-template` | app | `/projects?compose=1` |
+| `wizard-style` | app | `/projects?compose=1` |
+| `wizard-name` | app | `/projects?compose=1` |
+| `studio-research` | app | `/projects/why-bitcoin/research` (fixture side) |
+| `studio-script` | app | `/projects/why-bitcoin/script` |
+| `studio-frames` | app | `/projects/<id>/frames` (`CX_PROJECT`, default `glass-harbor-trailer`) |
+| `studio-motion` | app | `/projects/why-bitcoin/motion` |
+| `studio-score` | app | `/projects/<id>/score` |
+| `studio-cut` | app | `/projects/<id>/cut` |
+| `studio-outputs` | app | `/projects/<id>` — the Plan: a project's parts are its outputs |
 | `library-styles` | app | `/library` — Styles tab (default) |
 | `library-assets` | app | `/library` → Assets tab |
 | `library-animations` | app | `/library` → Animations tab (`ComingSoon`) |
@@ -202,6 +204,8 @@ source; read them before filing a finding against a decision somebody already ma
   debounced 600ms and the Score step reads it, so a capture that deep-links to `?step=score`
   photographs the honest empty state. `pipeline/cx-capture.mjs` walks the upstream steps
   (`via`) and warms `/projects` first, because the seeded project is minted on that visit.
+  (Retired 2026-10-16 with the v1 studio: part records live on the server, so the `studio-*` ids
+  reach their part editor directly; the Projects screens need GRAVITONE_PRODUCE_SIDE=fixture.)
   It refuses to write a PNG when it lands on the studio's not-found screen — that error screen
   renders at full size and produced a ~1MB file that looked like a successful capture twice.
 - 2026-09-08 · **Scout the step's craft knowledge before writing an executor brief.**

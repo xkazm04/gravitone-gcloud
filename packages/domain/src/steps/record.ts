@@ -19,7 +19,9 @@ import { err, ok, type Result } from "../errors.ts";
 // drops a field a sibling writer added"): the door checks what readers rely on and carries the
 // rest through.
 
-export const STEP_OWNERS = ["research", "script", "frames", "motion", "score", "cut", "still"] as const;
+/** The part kinds that hold step records: the studio's six, the album's still · words · render
+ *  and the explainer's article · strips · voice (L43 closed the records gap L40 left). */
+export const STEP_OWNERS = ["research", "script", "frames", "motion", "score", "cut", "still", "words", "render", "article", "strips", "voice"] as const;
 export type StepOwner = (typeof STEP_OWNERS)[number];
 
 /** One pure vN -> vN+1 step over the stored object. */

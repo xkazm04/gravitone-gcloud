@@ -48,23 +48,3 @@ test("useElapsed ticks via usePolling, enabled only while the job is running", (
   expect(m![0]).toMatch(/usePolling\([^]*?,\s*1000,\s*j\.status === "running"\)/);
   expect(m![0]).not.toMatch(/setInterval/);
 });
-
-test("no consumer prints the clockless elapsed(), and none puts the count in a live region", () => {
-  const files = [
-    "components/ui/NotificationBell.tsx",
-    "app/_phases/cut/music-video/MusicVideoExport.tsx",
-    "app/_phases/frames/music-video/MusicVideoFrames.tsx",
-  ];
-  for (const f of files) {
-    const s = read(f);
-    expect(s.length).toBeGreaterThan(0);
-    expect(s, `${f} clockless elapsed(`).not.toMatch(/(?<![\w.])elapsed\(/);
-    expect(s, `${f} uses the ticking hook`).toMatch(/useElapsed|JobElapsed/);
-  }
-  for (const f of files.slice(1)) {
-    const s = read(f);
-    // the live element closes before the clock span opens
-    expect(s).toMatch(/<span role="status">[^<]*<\/span>[^]*?<span aria-hidden="true">\{clock\} elapsed/);
-    expect(s).not.toMatch(/<p[^>]*role="status"/);
-  }
-});

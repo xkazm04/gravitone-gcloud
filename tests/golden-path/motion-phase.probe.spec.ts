@@ -18,15 +18,14 @@
 //   4. A record whose bookmark says `phase: "motion"` opens on Motion — the
 //      retired-step rename that sent it to Frames must not survive the step
 //      coming back.
-//   5. The shelf counts six: a lane draws a Motion gate, and a project whose
-//      five original steps are locked is not "delivered" while Motion is empty.
+//   5. A project whose five original steps are locked is not "delivered" while
+//      Motion is empty. (The shelf lane's Motion gate retired with the v1 shelf,
+//      Phase 4 wave D.)
 
 import "fake-indexeddb/auto";
 
 import { test, expect } from "@playwright/test";
 
-import { Lane } from "@/app/_projects/RaceSheet";
-import { nextAction } from "@/app/_projects/shelf";
 import {
   PHASES,
   PHASE_TITLE,
@@ -39,8 +38,6 @@ import {
   type Project,
 } from "@/lib/projects";
 import { getRecord, openDb, PROJECTS_STORE, runTx } from "@/lib/studioDb";
-
-import { noopProps } from "./_helpers";
 
 /** A record exactly as a five-step build stored it: no `motion` key at all. */
 function fiveStepRecord(id: string, over: Partial<Record<string, unknown>> = {}): Project {
@@ -137,32 +134,9 @@ test("case 4: a bookmark on motion opens Motion, and a stored motion word is Mot
   expect(p.progress.frames).toBe("done");
 });
 
-test("case 5: the shelf counts six — a Motion gate on the lane, and five locked steps are not delivered", () => {
+test("case 5: five locked steps are not delivered while Motion is empty", () => {
   const p = fiveStepRecord("legacy-d", {
     progress: { research: "done", script: "done", frames: "done", motion: "empty", score: "done", cut: "done" },
   });
   expect(projectState(p)).not.toBe("delivered");
-  expect(nextAction(p).step).toBe("motion");
-  expect(nextAction(p).verb).toBe("Start Motion");
-
-  const tree = (Lane as unknown as (props: unknown) => unknown)({
-    p,
-    active: false,
-    tabbable: false,
-    onFocus: () => {},
-    ...noopProps,
-  });
-  const labels: string[] = [];
-  const walk = (n: unknown) => {
-    if (n == null || typeof n !== "object") return;
-    if (Array.isArray(n)) return n.forEach(walk);
-    const el = n as { props?: Record<string, unknown> };
-    const label = el.props?.["aria-label"];
-    if (typeof label === "string" && label.startsWith(`Open ${p.title} at `)) labels.push(label);
-    walk(el.props?.children);
-  };
-  walk(tree);
-  expect(labels.length, "the lane rendered no gates — the walk is reading the wrong tree").toBeGreaterThan(0);
-  expect(labels).toHaveLength(PHASES.length);
-  expect(labels.some((l) => l.startsWith(`Open ${p.title} at Motion (`))).toBe(true);
 });

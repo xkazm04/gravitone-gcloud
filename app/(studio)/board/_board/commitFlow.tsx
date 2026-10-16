@@ -7,7 +7,7 @@
 import { useCallback, useState, useSyncExternalStore } from "react";
 
 import type { Consequence } from "@gt/domain/board";
-import { AppError } from "@gt/domain/errors";
+import { isAppError } from "@gt/domain/errors";
 import type { BoardPacket, CommitReceipt } from "@gt/ui/board/port";
 import type { BoardVerdict } from "@gt/ui/board/boardGate";
 import type { Gate } from "@gt/ui/board/gate";
@@ -64,7 +64,7 @@ export function useCommitFlow(gate: BoardGateT, opts: { readonly onDone: () => v
       },
       (e: unknown) => {
         setCommitting(false);
-        if (e instanceof AppError && isStalePreview({ error: e.message, code: e.code, ...(e.detail === undefined ? {} : { detail: e.detail }) })) {
+        if (isAppError(e) && isStalePreview({ error: e.message, code: e.code, ...(e.detail === undefined ? {} : { detail: e.detail }) })) {
           setRefreshed(true);
           void gate.prepareCommit();
           return;

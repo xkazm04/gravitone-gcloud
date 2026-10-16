@@ -3,7 +3,7 @@
 import { test, expect } from "@playwright/test";
 import { reviewSceneSpecs } from "@/app/_phases/frames/sceneSpec";
 import type { Frame } from "@/app/_phases/frames/frames";
-import { FACTS } from "@/app/_phases/_shared/notebook/facts";
+import { FACTS } from "@/lib/notebook/facts";
 
 const frames = [{ at: "0:04" }] as unknown as Frame[];
 const ids = new Set(FACTS.map((f) => f.id));

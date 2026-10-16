@@ -16,32 +16,21 @@
 //
 // The truth was already in hand and unread: `MusicProvenance` comes back from
 // every render carrying the vendor, the model id, the milliseconds requested and
-// the plan. This probe drives the REAL fixture and the REAL decision function
-// that now reads it, and pins:
+// the plan. This probe drives the REAL fixture and pins:
 //
 //   · a cue carries no model at all — a model is a property of a TAKE;
-//   · with a take in hand, the vendor and model shown are the take's, verbatim;
-//   · with no take, NOTHING is claimed — no default, no dash standing in;
 //   · the refused cue names the real vendor and a failure kind the adapter can
 //     genuinely return;
 //   · no cue note asserts behaviour this build does not perform.
+//
+// The v1 Score step's `engineCredit` (which drew the take's vendor and model, and
+// nothing without a take) retired with the studio in Phase 4 wave D; the Score
+// editor's takes draw <Provenance> from the take's own engine record.
 import { test, expect } from "@playwright/test";
 
-import { CUES } from "@/app/_studio/score";
-import { engineCredit, type Take } from "@/app/_phases/score/ScoreSpotting";
+import { CUES } from "@/lib/studio/score";
 import { statusFor, type MusicErrorKind } from "@/lib/music/errors";
-import type { MusicProvenance } from "@/lib/music/types";
 
-/** Exactly what lib/music/elevenlabs.ts builds on a successful compose. */
-const PROVENANCE: MusicProvenance = {
-  vendor: "elevenlabs",
-  modelId: "music_v2",
-  requestedMs: 13_000,
-  plan: { positiveGlobalStyles: [], negativeGlobalStyles: [], sections: [] },
-  generatedAt: "2026-08-29T00:00:00.000Z",
-};
-
-const rendered = CUES.find((c) => c.status === "rendered")!;
 const failed = CUES.find((c) => c.status === "failed")!;
 
 // ── A cue is a request; a model is a property of a take ─────────────────────
@@ -52,39 +41,6 @@ test("no cue carries a model field at all", () => {
     expect(Object.keys(c), `${c.id} still declares a model`).not.toContain("model");
   }
   console.log(`[music] ${CUES.length} cues, 0 declared models`);
-});
-
-test("with a take in hand the credit is the TAKE's vendor and model, verbatim", () => {
-  const take: Take = { state: "done", url: "blob:x", provenance: PROVENANCE };
-  const credit = engineCredit(rendered, take);
-  console.log(`[music] credit with take -> ${credit.text}`);
-  expect(credit.text).toContain("elevenlabs");
-  expect(credit.text).toContain("music_v2");
-  // The vendor that never served this app must not appear anywhere.
-  expect(credit.text.toLowerCase()).not.toContain("lyria");
-});
-
-test("a cue that has never been rendered claims NO model — absence reads as absence", () => {
-  const credit = engineCredit(failed, undefined);
-  console.log(`[music] credit for never-rendered -> "${credit.text}"`);
-  // Not "unknown", not "—", not a default model id: nothing at all. A dash in
-  // this slot is still a slot, and a slot invites a fallback value to fill it.
-  expect(credit.text).toBe("");
-});
-
-test("a fixture-rendered cue with no take says the RECORD is absent, never a model", () => {
-  const credit = engineCredit(rendered, undefined);
-  console.log(`[music] credit for fixture-rendered, no take -> ${credit.text}`);
-  expect(credit.text).toBe("model not recorded");
-  expect(credit.why).toContain("no provenance");
-  // "we hold no provenance" and "it was made by X" are different sentences and
-  // this one must never drift into the other.
-  expect(credit.text.toLowerCase()).not.toContain("lyria");
-  expect(credit.text.toLowerCase()).not.toContain("elevenlabs");
-});
-
-test("a working take claims nothing yet either", () => {
-  expect(engineCredit(failed, { state: "working" }).text).toBe("");
 });
 
 // ── The refusal names the real vendor and a reason the code can produce ─────

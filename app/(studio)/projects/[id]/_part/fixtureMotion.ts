@@ -254,5 +254,4 @@ export const MOTION_KIND: KindModule<"motion"> = {
   actLabel: (act) => (act === "direct-motion" ? "motion direction" : act === "render-clip" ? "clip render" : act),
   fromRecords,
   toRecords,
-  stored: true,
 };

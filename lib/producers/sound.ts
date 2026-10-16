@@ -2,7 +2,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { parseAt } from "@gt/domain/door";
-import { AppError, type Result } from "@gt/domain/errors";
+import { AppError, isAppError, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import { jobIdSchema, type JobId } from "@gt/domain/ids";
 import { LANE_CAPACITY, type MediaLane, type ResourceLane } from "@gt/domain/lane";
@@ -198,7 +198,7 @@ export function launchNow(spec: LaunchSpec, o: Omit<LaunchOptions, "token">): Ex
 
 /** A kernel refusal as an HTTP status, for the v1 routes that now launch and act on jobs. */
 export function statusOf(e: unknown): number | undefined {
-  if (!(e instanceof AppError)) return undefined;
+  if (!isAppError(e)) return undefined;
   const by: Readonly<Record<AppError["code"], number>> = { invalid: 400, "not-found": 404, conflict: 409, refused: 409, unauthenticated: 401, budget: 402, unavailable: 503, internal: 500 };
   return by[e.code];
 }

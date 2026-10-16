@@ -546,7 +546,9 @@ export default function NotificationBell({ defaultOpen = false }: { defaultOpen?
                   </div>
                   <p className={al ? "k-tcard__t k-tcard__t--one" : "mt-1 truncate text-content text-slate-300"}>{j.label}</p>
                   <p className={al ? "k-tcard__m" : "font-jetbrains mt-1 text-content leading-snug text-white/45"}>
-                    The page reloaded while it was running — start it again.
+                    {/* The kernel's interruption, in v1's words (decision 6): the outcome is unknown and
+                        the vendor may have been paid, so the act is a look, in Runs, before a retry. */}
+                    credits may be spent — look first
                   </p>
                 </div>
               ))}

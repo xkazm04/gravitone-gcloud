@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { parseAt } from "@gt/domain/door";
-import { AppError, ok, type Result } from "@gt/domain/errors";
+import { AppError, isAppError, ok, type Result } from "@gt/domain/errors";
 import { eventDataSchema } from "@gt/domain/event";
 import type { Holder, Job } from "@gt/domain/job";
 import { laneSlots } from "@gt/domain/lane";
@@ -19,7 +19,7 @@ import { lapseOwner } from "./spend/ledger.ts";
 import { lapseOpen, stepMeter } from "./spend/meter.ts";
 import { chargeOutcome, meterOf } from "./spend/projection.ts";
 import { actorOf, assertFence, claimIn, heartbeatIn, pidAlive, processHolder, releaseIn, snapshotOf } from "./lease.ts";
-import type { Tx } from "./store.ts";
+import type { Reader, Tx } from "./store.ts";
 
 // THE JOB DRIVER - the one place a job meets the world. It claims a SLOT of
 // the job's lane through kernel/lease, then loops: decide (job-core `next`) and
@@ -85,6 +85,9 @@ export type RunOptions = {
   readonly heartbeatMs?: number;
   /** `dryOnlyFrom(env)`: this process may not run a live job. */
   readonly dryOnly?: boolean;
+  /** The producers' preflights, by job (the worker's map): a part whose act waits on a human act
+   *  stays planned at the release instead of being released into a certain failure (L45). */
+  readonly preflightOf?: (job: Job, r: Reader) => string | undefined;
 };
 
 export type RunReport = {
@@ -149,7 +152,12 @@ async function drive(fx: Effects, producer: Producer, jobId: string, opts: RunOp
 
   if (producer.health !== undefined) {
     const check = producer.health;
-    const h = await fx.call("health", kernelCall(() => check()));
+    // The job is read first because health is the JOB's question, not the lane's: a dry job's
+    // vendor is its stand-in, so a live vendor that is down must not hold it (L44: dry mv and
+    // Suno jobs sat queued forever behind a closed studio browser). The claim re-reads it.
+    const seen = fx.tx("health:job", (t) => loadJob(t, jobId).job);
+    if (!seen.ok) return seen;
+    const h = await fx.call("health", kernelCall(() => check(seen.value)));
     if (!h.ok) return ok({ outcome: "unhealthy", reason: h.reason });
   }
 
@@ -229,7 +237,7 @@ async function drive(fx: Effects, producer: Producer, jobId: string, opts: RunOp
     for (;;) {
       const gone_ = lostNow();
       if (gone_ !== undefined) {
-        if (gone_ instanceof AppError) return settleError(gone_);
+        if (isAppError(gone_)) return settleError(gone_);
         throw gone_;
       }
       if (opts.deadlineMs !== undefined && now() >= opts.deadlineMs) {
@@ -275,7 +283,8 @@ async function drive(fx: Effects, producer: Producer, jobId: string, opts: RunOp
             // transaction (records/write.ts `releaseHeldIn`), so no crash can leave it parked.
             // Only a part a plan launched (it names its project) - a bare part job has no plan to move.
             const projectId = job.of.kind === "part" ? job.correlation?.projectId : undefined;
-            if (projectId !== undefined) releaseHeldIn(t, projectId, actor, gateContext(t, Date.parse(t.at)));
+            const pre = opts.preflightOf;
+            if (projectId !== undefined) releaseHeldIn(t, projectId, actor, { ...gateContext(t, Date.parse(t.at)), ...(pre === undefined ? {} : { preflightOf: pre }) });
             return end;
           }
           case "claim":
@@ -304,13 +313,13 @@ async function drive(fx: Effects, producer: Producer, jobId: string, opts: RunOp
           } catch (e) {
             // A process death is not a producer's outcome (the crash harness's sentinel is not an Error).
             if (!(e instanceof Error)) throw e;
-            return { kind: "fatal", code: e instanceof AppError ? e.code : "internal", message: e.message };
+            return { kind: "fatal", code: isAppError(e) ? e.code : "internal", message: e.message };
           }
         }),
       );
       // A lost heartbeat does not discard what was made: the booking's fence decides.
       const dead = lostNow();
-      if (dead !== undefined && !(dead instanceof AppError)) throw dead;
+      if (dead !== undefined && !isAppError(dead)) throw dead;
 
       const booked = fx.tx(`book:${step.name}`, (t): { ended: boolean; streak: number; job: Job } => {
         assertFence(t, slot, fence);
@@ -338,7 +347,7 @@ async function drive(fx: Effects, producer: Producer, jobId: string, opts: RunOp
   } catch (e) {
     // A process death (the crash harness's sentinel) is not an Error and is not ours to record.
     if (!(e instanceof Error)) throw e;
-    return settleError(e instanceof AppError ? e : new AppError("internal", e.message, { cause: e }));
+    return settleError(isAppError(e) ? e : new AppError("internal", e.message, { cause: e }));
   } finally {
     clearInterval(beat);
   }

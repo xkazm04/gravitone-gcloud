@@ -59,7 +59,7 @@ import {
 } from "@/app/_phases/score/takes";
 import { readStep, saveStep, __resetSaveSlots, type ScoreStepData } from "@/app/_phases/_shared/stepStore";
 import { openDb, runTx, STEPS_STORE } from "@/lib/studioDb";
-import { MUSIC_STYLE_BLOCK, type SpottingCue } from "@/app/_studio/score";
+import { MUSIC_STYLE_BLOCK, type SpottingCue } from "@/lib/studio/score";
 
 import { keepEnv } from "./_helpers";
 

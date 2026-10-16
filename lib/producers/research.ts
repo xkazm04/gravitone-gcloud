@@ -53,9 +53,9 @@ import { RESEARCH_SPEC, type ResearchResult } from "@/lib/turns/kinds/research";
 
 /* ── shared by every step binding ─────────────────────────────────────────── */
 
-import { partFacts, priceOf, shortDigest, type PartFacts } from "@gt/producers/research/facts";
+import { partFacts, preflightFrom, priceOf, shortDigest, withRecords, type PartFacts } from "@gt/producers/research/facts";
 export { followUpPrompt, parseFollowUp } from "@gt/producers/research/followUp";
-export { actReceiptIn, disciplineFor, launchPartAct, partActReceipt, partFacts, partFactsIn, priceOf, shortDigest, TEXT_SEAT, withRecords } from "@gt/producers/research/facts";
+export { actReceiptIn, disciplineFor, launchPartAct, partActReceipt, partFacts, partFactsIn, preflightFrom, priceOf, shortDigest, TEXT_SEAT, withRecords } from "@gt/producers/research/facts";
 export type { ActLaunched, PartActRef, PartFacts, ReceiptOptions, StepReceipt, UnitsFn } from "@gt/producers/research/facts";
 
 export type StepKernel = { readonly store: Store; readonly fx: Effects };
@@ -368,6 +368,8 @@ function landResearch(plan: ActPlan, made: ReadonlyMap<string, EventData>, s: Pa
 export function researchProducer(lane: ResourceLane = "seat.text", hooks: DriveHooks = {}): Producer {
   const engine = enginesOf(hooks);
   return defineResearch(lane, {
+    // Held at the release, not failed by the worker, while its act waits on a human act (L45).
+    preflight: preflightFrom(withRecords(researchUnits)),
     async plan(_job, ask, ctx) {
       const s = partSnapshot(ctx);
       if (!s.ok) return s;

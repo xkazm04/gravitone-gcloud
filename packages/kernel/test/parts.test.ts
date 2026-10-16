@@ -63,6 +63,42 @@ describe("the step record doors (v1 registry rules)", () => {
   });
 });
 
+describe("the album and explainer parts hold their own records (L43)", () => {
+  const composed = (recipe: string, id: string): Store => {
+    const k = must(openKernel(":memory:", { clock: steppingClock("2026-10-16T08:00:00.000Z") }));
+    open.push(k);
+    const c = compose(k.store, { recipe }, OP, { id });
+    if (!c.ok) throw c.error;
+    return k.store;
+  };
+
+  it("writes an album's words through their door, and refuses words written by the render part", () => {
+    const s = composed("album-video", "a1");
+    const words = { projectId: "a1", partId: "a1/words" };
+    expect(must(readPart(s, words))).toMatchObject({ kind: "words", rev: 1 });
+    must(writePart(s, { ...words, baseRev: 1, act: "op", op: {}, label: "title", by: OP, next: set({ words: { title: "Tidewater" } }) }));
+    expect(must(readPart(s, words)).records.get("words")).toMatchObject({ v: 1, title: "Tidewater", description: "", tags: [], written: null });
+    const render = { projectId: "a1", partId: "a1/render" };
+    const reach = writePart(s, { ...render, baseRev: 1, act: "op", op: {}, label: "title", by: OP, next: set({ words: { title: "x" } }) });
+    expect(reach.ok).toBe(false);
+    must(writePart(s, { ...render, baseRev: 1, act: "op", op: {}, label: "res", by: OP, next: set({ render: { res: "2160p" } }) }));
+    expect(must(readPart(s, render)).records.get("render")).toMatchObject({ res: "2160p", exports: [] });
+    expect(decodeRecord("render", { res: "480p" }).ok).toBe(false);
+  });
+
+  it("holds an explainer's voice takes, and refuses a line naming a take it does not hold", () => {
+    const s = composed("explainer", "e1");
+    const voice = { projectId: "e1", partId: "e1/voice" };
+    const take = { id: "t1", label: "take 1", at: 1, seconds: 2, mark: null, sections: [] };
+    must(writePart(s, { ...voice, baseRev: 1, act: "op", op: {}, label: "use", by: OP, next: set({ voice: { takes: { t1: take }, byLine: { "line-a": { takeIds: ["t1"], active: "t1" } } } }) }));
+    expect(must(readPart(s, voice)).records.get("voice")).toMatchObject({ byLine: { "line-a": { active: "t1" } } });
+    const dangling = decodeRecord("voice", { takes: {}, byLine: { "line-a": { takeIds: ["t9"], active: "t9" } } });
+    expect(dangling.ok ? "" : dangling.error.message).toMatch(/does not hold/);
+    expect(must(decodeRecord("article", {}))).toMatchObject({ title: null, sections: [] });
+    expect(decodeRecord("strips", { cards: [{ id: "c1", section: "s", title: "t", caption: "c", state: "inked" }] }).ok).toBe(false);
+  });
+});
+
 describe("ops and undo over the part log", () => {
   it("applies an op at its rev, answers a stale base with the current rev and writes nothing", () => {
     const s = film();

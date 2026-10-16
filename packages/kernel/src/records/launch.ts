@@ -13,10 +13,11 @@ import { append } from "../events.ts";
 import { enqueueIn } from "../job.ts";
 import type { Reader, Store, Tx } from "../store.ts";
 import { launchOf, modelOptions } from "./options.ts";
-import { projectModel, readQueue, type ReadContext } from "./read.ts";
+import { projectModel, readQueue, type ProjectModel, type ReadContext } from "./read.ts";
 import { priceLine, receiptFor, rerouteDelta, type PlanLine } from "./receipt.ts";
 import { runPlanOf, type RunPlan } from "./runplan.ts";
 import { insertRun, loadParts, loadRun, putPart, putProject, putRun } from "./schema.ts";
+import { releaseHeldIn } from "./write.ts";
 
 // LAUNCH IS A RECEIPT, THEN A CONFIRM (COMMON decision 3). `*Receipt` reads; `launch*` takes the
 // receipt's token back and, in ONE transaction, recomputes the receipt from what it reads now,
@@ -50,11 +51,11 @@ function ceilingOf(opts: LaunchOptions): number | undefined {
 
 function planReceiptIn(r: Reader, id: string, opts: LaunchOptions, ctx: ReadContext): Receipt {
   const m = projectModel(r, id, ctx);
-  if (m.project.launchedAt !== undefined) throw new AppError("refused", `project ${id} was launched at ${m.project.launchedAt}`);
+  if (m.project.launchedAt !== undefined && m.unlaunched.size === 0) throw new AppError("refused", `project ${id} was launched at ${m.project.launchedAt}`);
   const ceilingUsd = ceilingOf(opts);
   return receiptFor({
     subject: { kind: "project", id, rev: m.project.rev },
-    lines: m.lines.filter((l) => l.lane !== null && l.option !== undefined),
+    lines: m.lines.filter((l) => l.lane !== null && l.option !== undefined && toLaunch(m, l.key)),
     plan: m.lines,
     queue: readQueue(r),
     capacity: capOf(ctx),
@@ -63,6 +64,10 @@ function planReceiptIn(r: Reader, id: string, opts: LaunchOptions, ctx: ReadCont
     ...(ceilingUsd === undefined ? {} : { ceilingUsd }),
   });
 }
+
+/** A draft launches every work part; a launched plan (an import) only the parts with no job yet -
+ *  a part whose v1 work arrived as a done job is never bought again. */
+const toLaunch = (m: ProjectModel, partId: string): boolean => m.project.launchedAt === undefined || m.unlaunched.has(partId);
 
 export function planReceipt(store: Store, id: string, opts: LaunchOptions, ctx: ReadContext): Result<Receipt> {
   return store.read((r) => planReceiptIn(r, id, opts, ctx));
@@ -109,7 +114,7 @@ export function launchProject(store: Store, input: { id: string; baseRev: number
     const jobIds: string[] = [];
     for (const row of loadParts(t, input.id)) {
       const p = row.part;
-      if (!isWork(p)) continue;
+      if (!isWork(p) || !toLaunch(m, p.id)) continue;
       const picked = launchOf(p.kind, p.option, day) ?? fallbackLaunch(p.kind, day);
       const est = priceLine(p.units, picked.option);
       const jobId = `job:part:${p.id}`;
@@ -120,7 +125,9 @@ export function launchProject(store: Store, input: { id: string; baseRev: number
           of: { kind: "part", id: p.id },
           // Waiting for upstream is `planned`, not `paused`: the worker never claims it and no
           // operator resume can start it early; `releaseHeld` queues it (L25 `releaseIn`).
-          state: p.after.length === 0 ? "queued" : "planned",
+          // A caller that knows the producers' preflights (L45) enqueues even a root part `planned`:
+          // the release below queues it in this same transaction unless its act waits on a human act.
+          state: p.after.length === 0 && ctx.preflightOf === undefined ? "queued" : "planned",
           producer: picked.producer,
           lane: picked.option.lane,
           mode,
@@ -133,8 +140,11 @@ export function launchProject(store: Store, input: { id: string; baseRev: number
       putPart(t, input.id, { ...row, jobId, part: { ...p, quoted: { seconds: est.seconds, usd: est.usd } } });
       jobIds.push(jobId);
     }
-    const project = { ...m.project, rev: m.project.rev + 1, launchedAt: t.at };
+    const project = { ...m.project, rev: m.project.rev + 1, launchedAt: m.project.launchedAt ?? t.at };
     putProject(t, project, m.project.rev);
+    // A part enqueued `planned` behind upstream that is ALREADY ratified (an import's done parts
+    // and signed-off gates) has no settle coming to release it: release it now, in this commit.
+    releaseHeldIn(t, project.id, actor, ctx);
     append(t, {
       actor,
       type: "project.launched",

@@ -447,12 +447,12 @@ header, and they are worth repeating here:
 So when you delete a paragraph, look at what is left:
 
 ```bash
-NEXT_PUBLIC_DEV_AUTH=1 NEXT_DIST_DIR=.next-cx npx next dev -p 3007      # then, per screen:
+GRAVITONE_PRODUCE_SIDE=fixture NEXT_PUBLIC_DEV_AUTH=1 NEXT_DIST_DIR=.next-cx npx next dev -p 3007      # then, per screen:
 CX_BASE=http://localhost:3007 node pipeline/cx-capture.mjs <screen-id> out.png --width 1920
 ```
 
-`pipeline/cx-capture.mjs` resolves the 17 named screens (`landing`, `projects`, `wizard-*`,
-`studio-*`, `library-*`, `playground`, `foundry`). **Open the PNG.** A deleted paragraph must leave a
+`pipeline/cx-capture.mjs` resolves the 35 named screens (`landing`, `projects`, `wizard-*`,
+`studio-*`, `part-*`, `library-*`, `kit*`, `playground`, `foundry`). **Open the PNG.** A deleted paragraph must leave a
 shape, not a gap.
 
 ### Accessibility is not narration

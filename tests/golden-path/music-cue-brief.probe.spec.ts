@@ -23,9 +23,9 @@
 //   · `cueToPlan` is pure: no I/O, and the same input gives the same plan.
 import { test, expect } from "@playwright/test";
 
-import { CUES, SPOTS, UNSPOTTABLE, cuesFrom, pictureFor, sceneClock } from "@/app/_studio/score";
-import { MUSIC_STYLE_BLOCK } from "@/app/_studio/score";
-import { SCENES } from "@/app/_studio/scenes";
+import { CUES, SPOTS, UNSPOTTABLE, cuesFrom, pictureFor, sceneClock } from "@/lib/studio/score";
+import { MUSIC_STYLE_BLOCK } from "@/lib/studio/score";
+import { SCENES } from "@/lib/studio/scenes";
 import { barsFit, cueDurationS, cueStartS, cueToPlan } from "@/lib/music/plan";
 import { MusicError } from "@/lib/music/errors";
 import type { CueBrief, CuePicture } from "@/lib/music/types";

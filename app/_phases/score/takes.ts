@@ -28,7 +28,7 @@
 //                    alone — the others ride as audio references to the stored
 //                    song, byte-for-byte (lib/sound/editPlan.ts).
 
-import { MUSIC_STYLE_BLOCK, type SpottingCue } from "../../_studio/score";
+import { MUSIC_STYLE_BLOCK, type SpottingCue } from "@/lib/studio/score";
 import { asWirePlan, isGenChunk } from "@/lib/sound/editPlan";
 import type { GenerateRequest, SoundTake } from "@/lib/sound/types";
 import type { WireGenerationChunk } from "@/lib/music/types";

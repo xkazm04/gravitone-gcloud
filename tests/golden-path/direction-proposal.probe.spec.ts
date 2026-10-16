@@ -10,9 +10,8 @@ import {
   revertPass,
   revertRow,
 } from "@/app/_phases/frames/direction/plan";
-import { planRender } from "@/app/_phases/frames/renderPlan";
-import { isStalePlate, type Frame } from "@/app/_phases/frames/frames";
-import type { SceneSpec } from "@/app/_phases/frames/sceneSpec";
+import { isStalePlate, type Frame } from "@/lib/frames/frames";
+import type { SceneSpec } from "@/lib/frames/sceneSpec";
 
 const frame = (n: number, over: Partial<Frame> = {}): Frame =>
   ({
@@ -91,7 +90,7 @@ test("direction-proposal: revert last pass restores the pre-accept cut exactly; 
   expect(JSON.parse(one)[0].rationale).toBe("new");
 });
 
-test("direction-proposal: a re-subjected plate is stale, and the quote counts it apart from missing", () => {
+test("direction-proposal: a re-subjected plate is stale", () => {
   const fs = cut();
   const p = planFromSpecs(fs, [spec(1)]);
   const out = acceptProposal(fs, p, "all").frames[0];
@@ -99,8 +98,4 @@ test("direction-proposal: a re-subjected plate is stale, and the quote counts it
   expect(out.plate.subject).toBe("B: a wide field of small blocks drifting");
   expect(isStalePlate(out)).toBe(true);
   expect(isStalePlate(fs[1])).toBe(false);
-  const plan = planRender({ missing: 0, stale: 1 });
-  expect(plan.stale).toBe(1);
-  expect(plan.count).toBe(0);
-  expect(planRender({ missing: 2, stale: 1 }).count).toBe(2);
 });

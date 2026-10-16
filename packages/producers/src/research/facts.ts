@@ -15,7 +15,8 @@ import { launchOf } from "@gt/kernel/records/options";
 import { planViewIn, readQueue } from "@gt/kernel/records/read";
 import { receiptFor, type PlanLine } from "@gt/kernel/records/receipt";
 import type { Reader, Store } from "@gt/kernel/store";
-import type { ActAsk, ActPlan, UnitPrice } from "./partAct.ts";
+import type { Job } from "@gt/domain/job";
+import { askOf, type ActAsk, type ActPlan, type UnitPrice } from "./partAct.ts";
 import { enqueueActIn, projectOf } from "./partJob.ts";
 
 // A PART ACT'S FACTS AND ITS RECEIPT (Phase 4 wave C, L37) - what every studio step binding
@@ -74,6 +75,33 @@ export function priceOf(option: ModelOption, opts: { readonly text?: boolean; re
 
 /** An act's units for its receipt AND its job's plan step: one pure function of the records. */
 export type UnitsFn = (s: PartSnapshot | null, f: PartFacts, ask: Pick<ActAsk, "act" | "target">) => Result<ActPlan>;
+
+/**
+ * A step producer's preflight (kernel job-core `Producer.preflight`) from its units function: the
+ * part job's act planned statically over the records as they stand, and its REFUSAL - the work's
+ * own sentence, the one the job's plan step would fail it with ("compose cut needs a composed
+ * spine") - as the reason the part is held. Only `refused` holds: any other code is a defect, and
+ * holding it would hide it, so the part is released and its drive names it. The same for a read
+ * that throws here: it runs inside the release transaction, and a preflight that cannot read is
+ * no reason to roll back the booking of the job that finished.
+ */
+export function preflightFrom(units: UnitsFn, now: () => number = Date.now): (job: Job, r: Reader) => string | undefined {
+  return (job, r) => {
+    const ask = askOf(job);
+    if (!ask.ok) return undefined;
+    let plan: Result<ActPlan>;
+    try {
+      const f = partFactsIn(r, projectOf(job), ask.value.partId, now());
+      const s = isStepKind(f.part.kind) ? readPartIn(r, { projectId: f.plan.project.id, partId: ask.value.partId }) : null;
+      plan = units(s, f, { act: ask.value.act, ...(ask.value.target === undefined ? {} : { target: ask.value.target }) });
+    } catch (e) {
+      // Deliberately released: the drive reads the same records and fails with the defect named.
+      void e;
+      return undefined;
+    }
+    return !plan.ok && plan.error.code === "refused" ? plan.error.message : undefined;
+  };
+}
 
 /** A part kind with step records reads them; still, words and voice have none (null). */
 export const withRecords =

@@ -8,8 +8,10 @@ import { ok } from "@gt/domain/errors";
 import { blobStore, type BlobStore } from "@gt/kernel/blob";
 import { openKernel, type Kernel } from "@gt/kernel/kernel";
 import { readPartIn, writePart } from "@gt/kernel/parts/driver";
-import { gateContext } from "@gt/kernel/parts/gates";
+import { gateContext, gateFacts } from "@gt/kernel/parts/gates";
+import { launchProject, planReceipt } from "@gt/kernel/records/launch";
 import { planViewIn } from "@gt/kernel/records/read";
+import { setPart } from "@gt/kernel/records/write";
 import type { Store } from "@gt/kernel/store";
 
 import { inspectArchive } from "../../lib/studioArchive.ts";
@@ -140,14 +142,15 @@ describe("the Plan the import opens", () => {
     const { store } = await imported(seed);
     const id = kernelIdOf(seed.film.id);
     const v = plan(store, id);
-    expect(v.project).toMatchObject({ title: "Glass harbor", recipe: "film/short-educational-video", launched: true, runtimeS: 90, styleId: `v1-theme:${seed.theme.id}` });
+    // Launched by its v1 work, yet a part still waits to be bought: the Plan offers a launch (L43).
+    expect(v.project).toMatchObject({ title: "Glass harbor", recipe: "film/short-educational-video", launched: false, launchedAt: expect.any(String), runtimeS: 90, styleId: `v1-theme:${seed.theme.id}` });
     const s = stateOf(store, id);
     expect(Object.fromEntries(s)).toEqual({
       research: "ratified",
       script: "ratified",
       frames: "ratified",
       "gate:frames": "ratified", // v1's sign-off, as a committed packet
-      motion: "queued", // no v1 work, no job: the import queues nothing
+      motion: "draft", // no v1 work, no job: the import queues nothing, and it reads unlaunched (L43)
       score: "ratified",
       "gate:score": "awaiting_gate", // done, never signed off
       cut: "ratified",
@@ -162,6 +165,30 @@ describe("the Plan the import opens", () => {
     // The imported done jobs spent nothing and claimed nothing.
     const jobs = store.read((r) => r.all("SELECT state, json_extract(record, '$.spend.usd') AS usd FROM jobs WHERE json_extract(record, '$.correlation.projectId') = ?", id));
     expect(jobs.ok && jobs.value.every((j) => j["state"] === "done" && j["usd"] === 0)).toBe(true);
+  });
+
+  it("launches only the parts v1 never worked, through a receipt, released behind its ratified upstream (L43)", async () => {
+    const seed = await seedV1("uid-a");
+    const { store } = await imported(seed);
+    const id = kernelIdOf(seed.film.id);
+    const ctx = { ...gateFacts(NOW), dryOnly: true };
+    const rec = planReceipt(store, id, { mode: "dry" }, ctx);
+    if (!rec.ok) throw rec.error;
+    expect(rec.value.lines.map((l) => l.key)).toEqual([`${id}/motion`]);
+    const launched = launchProject(store, { id, baseRev: plan(store, id).project.rev, token: rec.value.token, mode: "dry" }, OP, ctx);
+    if (!launched.ok) throw launched.error;
+    expect(launched.value.jobIds).toEqual([`job:part:${id}/motion`]);
+    // motion waits on gate:frames, which the import ratified: no settle will come, so it is queued now.
+    expect(store.read((r) => r.get("SELECT state FROM jobs WHERE id = ?", `job:part:${id}/motion`)?.["state"])).toEqual(ok("queued"));
+    expect(plan(store, id).project.launched).toBe(true);
+    expect(stateOf(store, id).get("research")).toBe("ratified");
+    // Nothing left to launch: a second receipt is refused, and a finished part's model is not changed.
+    expect(planReceipt(store, id, { mode: "dry" }, ctx).ok).toBe(false);
+    const research = plan(store, id).parts.find((p) => p.id === `${id}/research`);
+    const other = research !== undefined && "options" in research ? research.options.find((o) => o.key !== research.chosen) : undefined;
+    if (other === undefined) throw new Error("research offers one option; the refusal below would not be about launch");
+    const moved = setPart(store, { id, baseRev: plan(store, id).project.rev, partId: `${id}/research`, patch: { option: other.key } }, OP);
+    expect(moved.ok ? "" : moved.error.code).toBe("refused");
   });
 
   it("lands every record through its door, plates as blobs the store serves", async () => {

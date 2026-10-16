@@ -306,8 +306,9 @@ test("case 8: a ready shot unit is an image, an empty shot unit is neither an ou
 
 /* ───────────────────────────────── case 9 ─────────────────────────────────── */
 
-test("case 9: StudioView and LibraryShelves no longer import the fixture assets", () => {
-  for (const rel of ["app/studio/[projectId]/StudioView.tsx", "app/_library/LibraryShelves.tsx"]) {
+// StudioView retired with the v1 studio (Phase 4 wave D), and app/_studio/assets.ts with it.
+test("case 9: LibraryShelves no longer imports the fixture assets", () => {
+  for (const rel of ["app/_library/LibraryShelves.tsx"]) {
     const src = stripComments(readFileSync(path.join(ROOT, rel), "utf8"));
     expect(src.length, rel).toBeGreaterThan(0);
     expect(src, rel).not.toMatch(/from\s*["'][^"']*_studio\/assets["']/);

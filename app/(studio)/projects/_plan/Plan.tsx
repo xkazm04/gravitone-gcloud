@@ -47,11 +47,13 @@ export type PlanProps = {
   readonly floorRuns: number;
   /** Arrived straight from Compose: the title field takes focus (projects.js `composeRecipe`). */
   readonly composed: boolean;
+  /** Arrived asking to compose (`/projects?compose=1`): the dialog opens over the plan. */
+  readonly composing?: boolean;
 };
 
 const runtime = (s: number): string => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
 
-export function Plan({ view: first, list, choices, port, nowMs, floorRuns, composed }: PlanProps) {
+export function Plan({ view: first, list, choices, port, nowMs, floorRuns, composed, composing = false }: PlanProps) {
   const router = useRouter();
   const { toast } = useShell();
   const [view, setView] = useState(first);
@@ -65,7 +67,7 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
   const [sel, setSel] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const flow = useReceipt(nowMs);
-  const compose = useCompose(port, choices);
+  const compose = useCompose(port, choices, composing);
   const titleRef = useRef<HTMLInputElement | null>(null);
   const p = view.project;
   const draft = !p.launched;
@@ -120,7 +122,7 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
   const launch = (): void | false => {
     if (!draft || flow.reading) return false;
     void flow.open({
-      trail: [{ label: "Projects", href: "/projects/runs" }],
+      trail: [{ label: "Projects", href: "/projects" }],
       here: `${p.title} · launch plan`,
       read: (mode) => port.planReceipt({ id: p.id, mode }),
       armable: true,
@@ -206,7 +208,7 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
         <div className={s.ptop}>
           <div className={s.row}>
             <div className={s.crumbs}>
-              <Crumbs trail={[{ label: "Projects", href: "/projects/runs" }]} here={p.title} />
+              <Crumbs trail={[{ label: "Projects", href: "/projects" }]} here={p.title} />
             </div>
             <Chip label={p.recipeLabel} casing="lower" />
             <TabRail

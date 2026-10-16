@@ -19,7 +19,7 @@ import { fingerprintOf, sha256 } from "../_engine/marker.mjs";
 const allEmpty = (): Record<PhaseKey, PhaseState> =>
   Object.fromEntries(PHASES.map((p) => [p, "empty"])) as Record<PhaseKey, PhaseState>;
 
-/** A valid Project with the fields the projects shelf (app/_projects/shelf.ts, RaceSheet.tsx) actually reads. */
+/** A valid v1 Project row (the fields the retired shelf read; lib/projects still reads them). */
 export function mkProject(
   id: string,
   updatedAt: number,

@@ -1,15 +1,7 @@
-import AuthGate from "@/components/ui/AuthGate";
+// /projects/new - v1's creation wizard, retired in Phase 4 wave D. A project is composed from a
+// recipe now (Compose, over the composition list); the old address opens it there.
+import { redirect } from "next/navigation";
 
-import CreateWizard from "../../_projects/wizard/CreateWizard";
-
-export const metadata = {
-  title: "New project | Gravitone",
-};
-
-export default function Page() {
-  return (
-    <AuthGate>
-      <CreateWizard />
-    </AuthGate>
-  );
+export default function V1NewProject() {
+  redirect("/projects?compose=1");
 }

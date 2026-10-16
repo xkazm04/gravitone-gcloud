@@ -377,5 +377,4 @@ export const FRAMES_KIND: KindModule<"frames"> = {
   actLabel: (act) => LABELS[act] ?? act,
   fromRecords,
   toRecords,
-  stored: true,
 };

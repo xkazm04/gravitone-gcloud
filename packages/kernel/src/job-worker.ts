@@ -1,4 +1,4 @@
-import { AppError, ok, type Result } from "@gt/domain/errors";
+import { AppError, isAppError, ok, type Result } from "@gt/domain/errors";
 import type { Holder } from "@gt/domain/job";
 import { LANE_CAPACITY, RESOURCE_LANES, type ResourceLane } from "@gt/domain/lane";
 import type { Effects } from "./effects.ts";
@@ -99,7 +99,11 @@ export async function workLoop(fx: Effects, producers: ReadonlyMap<ProducerKey, 
   let looks = 0;
   let started = 0;
   // A drive yields at its next boundary once the loop is told to stop.
+  // The release after a part's job reads EVERY carried producer's preflight, not only the one that
+  // drove: the part it releases is another producer's.
+  const preflightOf: NonNullable<RunOptions["preflightOf"]> = (job, r) => producers.get(producerKey(job.producer, job.lane))?.preflight?.(job, r);
   const runOpts: RunOptions = {
+    preflightOf,
     ...opts.run,
     holder,
     ...(alive === undefined ? {} : { alive }),
@@ -131,7 +135,7 @@ export async function workLoop(fx: Effects, producers: ReadonlyMap<ProducerKey, 
         },
         (e: unknown) => {
           // A drive that threw past runJob's own recording is a process-level fault: carried as the drive's error, never lost.
-          const report: Result<RunReport> = { ok: false, error: e instanceof AppError ? e : new AppError("internal", e instanceof Error ? e.message : String(e), { cause: e }) };
+          const report: Result<RunReport> = { ok: false, error: isAppError(e) ? e : new AppError("internal", e instanceof Error ? e.message : String(e), { cause: e }) };
           reports.push({ pick, report });
           opts.onReport?.(pick, report);
         },

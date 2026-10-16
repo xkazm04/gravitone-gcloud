@@ -37,7 +37,7 @@ export type Mutant = {
  * unguarded probe lowers the live count and the same probe asks for this number
  * to be lowered to match, so the gain is kept.
  */
-export const UNGUARDED_PROBE_BUDGET = 237;
+export const UNGUARDED_PROBE_BUDGET = 205;
 
 export const MUTANTS: Mutant[] = [
   {
@@ -105,36 +105,12 @@ export const MUTANTS: Mutant[] = [
     why: "A busy card fails the recognition outright instead of falling to the cloud eye.",
   },
   {
-    id: "shelf-no-tiebreak",
-    probe: "sort-stability.probe.spec.ts",
-    file: "app/_projects/shelf.ts",
-    find: "updated: (a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id),",
-    replace: "updated: (a, b) => b.updatedAt - a.updatedAt,",
-    why: "Two projects touched in the same millisecond swap places with the order the data arrived in.",
-  },
-  {
-    id: "needs-you-no-tiebreak",
-    probe: "sort-stability.probe.spec.ts",
-    file: "app/_projects/shelf.ts",
-    find: "    a.id.localeCompare(b.id)",
-    replace: "    0",
-    why: "The Rundown order stops being a total order; tied rows render in arrival order.",
-  },
-  {
     id: "eviction-skip-upload-delete",
     probe: "identity-eviction-idb.probe.spec.ts",
     file: "lib/identityEviction.ts",
     find: "if (!dry) uploads.delete(uploadId);",
     replace: "if (!dry) void uploadId;",
     why: "Sign-out leaves the previous account's upload bytes on the shared machine, unreachable by any later wipe.",
-  },
-  {
-    id: "research-clear-keeps-followups",
-    probe: "step-clear-completeness.probe.spec.ts",
-    file: "app/_phases/research/ResearchStep.tsx",
-    find: "resetFollowUps(projectId);",
-    replace: "void projectId;",
-    why: "Clearing research leaves the old follow-up thread attached to the fresh run.",
   },
   {
     id: "recalibrate-drops-chain-breaks",
@@ -167,22 +143,6 @@ export const MUTANTS: Mutant[] = [
     find: "isSynthetic(frameId) || keptCount > 1;",
     replace: "isSynthetic(frameId) || keptCount > 0;",
     why: "The last kept alternative can be removed, leaving a frame with nothing to show.",
-  },
-  {
-    id: "cancel-settled-job",
-    probe: "cancel-settled-job.probe.spec.ts",
-    file: "lib/jobs.tsx",
-    find: 'j.id === jobId && j.status === "running"',
-    replace: "j.id === jobId",
-    why: "Cancelling a job that already finished rewrites its settled result as 'Stopped by you'.",
-  },
-  {
-    id: "clear-any-job",
-    probe: "bell-doors.probe.spec.ts",
-    file: "lib/jobs.tsx",
-    find: '!target || target.status !== "interrupted" || target.clearedAt != null',
-    replace: "!target || target.clearedAt != null",
-    why: "Clear works on running and finished jobs, not only interrupted ones.",
   },
   {
     id: "exit-drops-stderr-tail",
@@ -225,19 +185,11 @@ export const MUTANTS: Mutant[] = [
     why: "A source probe asking for the Enter case is handed every other case, so a guard it demands is checked on the wrong branch.",
   },
   {
-    id: "phase-heading-faded",
-    probe: "run-trace-phase-rank.probe.spec.ts",
-    file: "app/_phases/research/run/RunTrace.tsx",
-    find: "tracking-[0.16em] text-white/60 uppercase first:mt-0",
-    replace: "tracking-[0.16em] text-white/30 uppercase first:mt-0",
-    why: "The research trace's phase headings fall back to near-invisible text and the reader loses the run's outline.",
-  },
-  {
     id: "job-noun-raw-kind",
     probe: "job-noun.probe.spec.ts",
     file: "lib/jobs.tsx",
-    find: "return JOB_NOUN[kind];",
-    replace: "return kind as string;",
+    find: "return NOUN[kind] ?? kind;",
+    replace: "return kind;",
     why: "The bell names a job by its raw internal id instead of a word the creator knows.",
   },
   {
@@ -287,38 +239,6 @@ export const MUTANTS: Mutant[] = [
     find: "\"font-jetbrains text-label text-white/60\"",
     replace: "\"font-jetbrains text-label text-white/35\"",
     why: "The Deck's hint text becomes the low-contrast grey the kit forbids.",
-  },
-  {
-    id: "energy-curve-unnamed",
-    probe: "energy-curve-type-floor.probe.spec.ts",
-    file: "app/_phases/script/trailer/EnergyCurve.tsx",
-    find: "role=\"img\"",
-    replace: "role=\"presentation\"",
-    why: "The energy curve loses its accessible name and a screen reader skips the figure.",
-  },
-  {
-    id: "unmeasured-check-reads-ok",
-    probe: "checklist-unmeasured-loud.probe.spec.ts",
-    file: "app/_phases/script/_parts/Meters.tsx",
-    find: "label: \"not checked\"",
-    replace: "label: \"ok\"",
-    why: "A gate that never measured reads as passed.",
-  },
-  {
-    id: "frame-count-on-explainer",
-    probe: "frames-header-honesty.probe.spec.ts",
-    file: "app/_phases/frames/FramesStep.tsx",
-    find: "{!promotionalCut && <>{ctl.frames.length} frames derived from </>}",
-    replace: "{true && <>{ctl.frames.length} frames derived from </>}",
-    why: "A promotional cut claims a frame count for a frame layer it does not have.",
-  },
-  {
-    id: "live-result-points-below",
-    probe: "live-notebook-pointer.probe.spec.ts",
-    file: "app/_phases/research/run/LiveResult.tsx",
-    find: "<p className=\"font-jetbrains text-label text-white/35\">",
-    replace: "<p className=\"font-jetbrains text-label text-white/35\">triage board below ",
-    why: "The live result points at a board that is not below it.",
   },
   {
     id: "source-mojibake",
@@ -495,5 +415,13 @@ export const MUTANTS: Mutant[] = [
     find: "  const live = input.live.jobs.map((j) => fromLive(j, now));",
     replace: "  const live = input.live.jobs.filter((j) => j.state !== \"paused\").map((j) => fromLive(j, now));",
     why: "Runs stops drawing paused v1 work: a Suno job held between steps (credits possibly spent) is on v1's queue page and nowhere on the day-line, so the operator who reads Runs as \"every live job\" never looks at it.",
+  },
+  {
+    id: "bell-cleared-still-shown",
+    probe: "bell-doors.probe.spec.ts",
+    file: "lib/jobLinks.ts",
+    find: "const interruptedJobs = jobs.filter((j) => j.status === \"interrupted\" && !j.clearedAt);",
+    replace: "const interruptedJobs = jobs.filter((j) => j.status === \"interrupted\");",
+    why: "A cleared interrupted job keeps its card and the bell keeps pulsing.",
   },
 ];

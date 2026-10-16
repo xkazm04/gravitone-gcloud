@@ -9,18 +9,19 @@
 // sibling probe. The machinery was built, explained, and tested into a test.
 //
 // This is the case that probe cannot make: it asserts the finding is COMPUTED,
-// and every one of its five cases passes while the result is discarded.
+// and every one of its five cases passes while the result is discarded. (The v1
+// studio's DeclinedList panel that drew the finding retired in Phase 4 wave D;
+// what stays is that the finding reaches the Version.)
 
 import { readFileSync } from "node:fs";
 
 import { test, expect } from "@playwright/test";
 
-import { RENDERS } from "@/app/_phases/script/renders";
+import { RENDERS } from "@/lib/script/renders";
 import { recalibrateFromPlan } from "@/app/_phases/script/recalibrate";
-import { declinedCount } from "@/app/_phases/script/_notes/DeclinedList";
-import { buildCards } from "@/app/_phases/_shared/notebook/cards";
-import { BASELINE } from "@/app/_phases/script/versions";
-import type { EditPlan } from "@/app/_phases/script/editPlan";
+import { buildCards } from "@/lib/notebook/cards";
+import { BASELINE } from "@/lib/script/versions";
+import type { EditPlan } from "@/lib/script/editPlan";
 import { stripComments } from "./_helpers";
 
 const RENDER = "reversal-chain";
@@ -57,10 +58,6 @@ test("a cut that orphans a connector arrives on the version, located by render a
   expect(b!.at, "and its mark, so there is somewhere to look").toBeTruthy();
   expect(b!.connector).toBe("BUT");
   expect(b!.why, "the why must name the beat that went").toContain("0:12");
-
-  // And it counts toward the heading, or a version whose only finding is a seam
-  // renders no panel at all.
-  expect(declinedCount(v), "a seam-only version still has a finding").toBeGreaterThan(0);
 });
 
 test("an empty plan breaks no seam — the check does not cry wolf on the version either", () => {
@@ -75,21 +72,16 @@ test("an empty plan breaks no seam — the check does not cry wolf on the versio
   expect(clean.chainBreaks ?? []).toHaveLength(0);
 });
 
-test("the version carries the field and the panel reads it — the wiring, asserted", () => {
-  // The cases above prove the finding TRAVELS; this one names the four joints
+test("the version carries the field — the wiring, asserted", () => {
+  // The cases above prove the finding TRAVELS; this one names the joints
   // it travels through, so a future refactor that drops one gets told which.
   // The sibling probe's five cases all pass against a recalibrateFromPlan that
   // throws chainBreaks away, which is exactly what it did.
   const strip = (p: string) => stripComments(readFileSync(p, "utf8"));
 
   const recal = strip("app/_phases/script/recalibrate.ts");
-  const list = strip("app/_phases/script/_notes/DeclinedList.tsx");
   const versions = strip("lib/script/versions.ts");
 
   expect(versions, "Version has no chainBreaks field").toContain("chainBreaks?:");
   expect(recal, "recalibrateFromPlan does not carry chainBreaks onto the version").toContain("chainBreaks:");
-  expect(list, "DeclinedList does not read chainBreaks").toContain("chainBreaks");
-  expect(list, "declinedCount ignores chainBreaks, so a seam-only version renders no heading").toContain(
-    "v.chainBreaks?.length",
-  );
 });

@@ -27,9 +27,9 @@
   "measuredAt": "2026-10-15",
   "filesFloor": 150,
   "warnings": {
-    "react-hooks/set-state-in-effect": 10,
+    "react-hooks/set-state-in-effect": 5,
     "react-hooks/exhaustive-deps": 0,
-    "react-hooks/refs": 1,
+    "react-hooks/refs": 0,
     "@typescript-eslint/no-floating-promises": 2
   }
 }

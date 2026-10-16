@@ -8,6 +8,7 @@ import { list } from "@gt/kernel/job";
 import { FIXTURE_MODE } from "../../../../../lib/fixtures/mode.ts";
 import { kernel } from "../../../../../lib/kernelStore.ts";
 import { freshLedger, liveNow } from "../../../../../lib/ledger/v1/sync.ts";
+import { startableCycles, type StartableCycle } from "../../../../../lib/producers/dojo.ts";
 import type { ProjectList } from "@gt/domain/produce";
 
 import type { ComposeChoices, LaneHoldView, ProduceJob } from "../../_port/contract.ts";
@@ -47,6 +48,8 @@ export type RunsData = {
   readonly holds: readonly LaneHoldView[];
   readonly projects: ProjectList;
   readonly choices: ComposeChoices | null;
+  /** Dojo cycles the skill left `planning` with a gen-spec: the start-cycle door's list (L45). */
+  readonly cycles: readonly StartableCycle[];
   /** The ledger or the kernel could not be read; the live half still renders. */
   readonly problems: readonly { readonly source: string; readonly error: string }[];
 };
@@ -108,6 +111,8 @@ export async function loadRuns(now: number = Date.now()): Promise<RunsData> {
   const plist = port.listProjects();
   if (!plist.ok) problems.push({ source: "produce projects", error: plist.error.message });
   const choices = port.composeChoices();
+  const cycles = startableCycles();
+  if (!cycles.ok) problems.push({ source: "dojo cycles", error: cycles.error.message });
 
   return {
     model: buildRuns({ now, live, kernel: jobs, ledger, produce: produced }),
@@ -117,6 +122,7 @@ export async function loadRuns(now: number = Date.now()): Promise<RunsData> {
     holds: holds.ok ? holds.value : [],
     projects: plist.ok ? plist.value : { projects: [], truncated: false },
     choices: choices.ok ? choices.value : null,
+    cycles: cycles.ok ? cycles.value : [],
     problems,
   };
 }

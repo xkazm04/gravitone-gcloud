@@ -8,8 +8,10 @@ import type { ComposerInput, LaunchedRun, Receipt, ReceiptMode } from "@gt/domai
 import type { Effects } from "@gt/kernel/effects";
 import { launchRun, runReceipt } from "@gt/kernel/records/launch";
 import type { Store } from "@gt/kernel/store";
+import { forgeRunOf } from "@gt/producers/forge/plan";
 
 import { DEFAULT_OPTIONS, DEFAULT_SELECTION, type CardSelection } from "../../../../lib/foundry/strips/cards.ts";
+import { launchFloorForge, type FloorSweep } from "../../../../lib/producers/forge.ts";
 import { launchStrips } from "../../../../lib/producers/strips.ts";
 import type { Confirmed } from "./contract.ts";
 import { stripCases } from "./realChoices.ts";
@@ -24,10 +26,11 @@ import { stripCases } from "./realChoices.ts";
 //   video    L33 `launchStrips` (lib/producers/strips.ts): a strips run is a manifest first, so
 //            its own door writes run.json naming the job, then the Run and the job in one
 //            transaction, priced at the producer's measured worst case on the text seat;
-//   audio, image  the receipt is the records' (the catalog's option, its lane, its queue), and
-//            the confirm is REFUSED with the door that does launch them. A Suno take launches
-//            from a proposal in the Suno queue (lib/producers/suno.ts `launchSuno` takes queue
-//            ids); a forge sweep from a plan file of candidates (pipeline/foundry/launch.mts); an
+//   image    L45 `launchFloorForge` (lib/producers/forge.ts): a sweep planned from the chosen
+//            style(s) over the stock scenes, priced statically, prepared and enqueued on confirm;
+//   audio    the receipt is the records' (the catalog's option, its lane, its queue), and the
+//            confirm is REFUSED with the door that does launch it. A Suno take launches from a
+//            proposal in the Suno queue (lib/producers/suno.ts `launchSuno` takes queue ids); an
 //            sfx clip has no producer bound in this checkout (lib/producers/registry.ts). A job
 //            enqueued for them here would sit claimed by nobody or fail at its first step, and
 //            a receipt that launches what cannot run is the defect a receipt exists to prevent.
@@ -166,6 +169,52 @@ const audio: LaneDoor = {
     ).launch(c, input, token, o, actor),
 };
 
-const image = refused("a forge sweep launches from a plan file of candidates (pipeline/foundry/launch.mts, plans/<plan>.json); a Floor style names no plan yet");
+/* ── image: a forge sweep, planned from the chosen style(s) over the stock scenes ── */
+//
+// L45: the Floor sweep is the forge's own launch (lib/producers/forge.ts `launchFloorForge`): the
+// receipt prices the candidates the plan will cross without writing anything, the confirm prepares
+// run.json and enqueues the gpu.local job Python's worker claims. The run id travels in the token,
+// as strips' does: the receipt names the run its quote is keyed by.
+
+function sweepOf(input: ComposerInput, runId: string): Result<FloorSweep> {
+  if (input.lane !== "image") return err("internal", `forge door handed a ${input.lane} input`);
+  return ok({ runId, styles: input.sweep === true ? "sweep" : [input.styleId], mechanisms: input.mechanisms });
+}
+
+function imageReceipt(c: LaunchContext, input: ComposerInput, o: Opts): Result<Receipt> {
+  const runId = `floor-${slug(input.lane === "image" && input.sweep !== true ? input.styleId : "sweep", 40)}-${c.mint()}`;
+  const sweep = sweepOf(input, runId);
+  if (!sweep.ok) return sweep;
+  const r = launchFloorForge(c.store, sweep.value, { mode: o.mode, ...ceilingOf(o), actor: { kind: "operator", id: "receipt" }, dryOnly: c.dryOnly, now: c.now });
+  if (!r.ok) return r;
+  return r.value.kind === "receipt" ? ok(wrap(runId, r.value.receipt)) : err("internal", `a forge receipt read answered ${r.value.kind}`);
+}
+
+const image: LaneDoor = {
+  receipt: imageReceipt,
+  launch(c, input, token, o, actor) {
+    const t = unwrap(token);
+    if (t === undefined) {
+      const fresh = imageReceipt(c, input, o);
+      return fresh.ok ? ok({ kind: "stale", fresh: fresh.value }) : fresh;
+    }
+    const sweep = sweepOf(input, t.runId);
+    if (!sweep.ok) return sweep;
+    const r = launchFloorForge(c.store, sweep.value, { mode: o.mode, ...ceilingOf(o), actor, token: t.inner, dryOnly: c.dryOnly, now: c.now });
+    if (!r.ok) return r;
+    const out = r.value;
+    switch (out.kind) {
+      case "launched":
+      case "retried":
+        return ok({ kind: "launched", runId: forgeRunOf(out.runId), jobId: out.jobId });
+      case "stale":
+        return ok({ kind: "stale", fresh: wrap(t.runId, out.fresh) });
+      case "existing":
+        return err("conflict", `forge run ${out.runId} is served by job ${out.jobId} (${out.state}); one job serves a run at a time`);
+      case "receipt":
+        return err("internal", "a forge confirm answered a receipt");
+    }
+  },
+};
 
 export const LANE_DOORS: Readonly<Record<ComposerInput["lane"], LaneDoor>> = { article, video, audio, image };

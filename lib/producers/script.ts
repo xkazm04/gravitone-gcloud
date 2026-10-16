@@ -32,7 +32,7 @@ import type { TextProvenance, TextRequest } from "@/lib/text/types";
 import { recalibrateRefusal, type RecalibrateInput } from "@/lib/turns/assemble/recalibrate";
 import { RECALIBRATE_SPEC, type RecalibrateResult } from "@/lib/turns/kinds/recalibrate";
 
-import { activeSourceOf, adTemplateOf, asData, briefOf, disciplineFor, engineView, field, meteredText, must, partFacts, priceOf, recOf, shortDigest, text, textFailure, written, enginesOf, type DriveHooks, type Engines, type PartFacts } from "./research.ts";
+import { activeSourceOf, adTemplateOf, asData, briefOf, disciplineFor, engineView, field, meteredText, must, partFacts, priceOf, recOf, shortDigest, text, textFailure, written, enginesOf, type DriveHooks, type Engines, type PartFacts, preflightFrom, withRecords } from "./research.ts";
 
 // THE SCRIPT PRODUCER, BOUND (Phase 4 wave C, L37) - packages/producers/src/script's ports over
 // v1's turns: the COMPOSE turn (lib/script/compose.ts, lifted out of app/api/script/route.ts for
@@ -232,6 +232,8 @@ function landScript(job: { readonly id: string }, plan: ActPlan, made: ReadonlyM
 export function scriptProducer(lane: ResourceLane = "seat.text", hooks: DriveHooks = {}): Producer {
   const engine = enginesOf(hooks);
   return defineScript(lane, {
+    // Held at the release, not failed by the worker, while its act waits on a human act (L45).
+    preflight: preflightFrom(withRecords(scriptUnits)),
     async plan(_job, ask, ctx) {
       const s = partSnapshot(ctx);
       if (!s.ok) return s;

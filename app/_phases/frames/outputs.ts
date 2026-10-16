@@ -14,7 +14,7 @@
 import type { Output } from "../../_library/projectOutputs";
 import { isSynthetic, type AltsStepData } from "./alternatives/alts";
 import type { PictureUnit } from "./picture/unit";
-import type { FramesStepData } from "./useFrames";
+import type { FramesStepData } from "@/lib/frames/stepData";
 
 const titleOf = (u: PictureUnit): string => {
   switch (u.kind) {

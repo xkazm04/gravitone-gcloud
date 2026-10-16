@@ -33,7 +33,7 @@ import { GET as turnGET } from "@/app/api/turns/[id]/route";
 import { POST as cancelPOST } from "@/app/api/turns/[id]/cancel/route";
 import { SCENE_SCHEMA } from "@/app/_phases/frames/sceneSpec";
 import { RENDERS } from "@/app/_phases/script/renders";
-import { jobCounts, pollTurns, trackTurn, turnEventsOf, turnJobsOf, EMPTY_TURNS, type Job, type TurnState } from "@/lib/jobs";
+import { jobCounts, type Job } from "@/lib/jobs";
 import { cancelTurn, getTurn, listTurns, resumeTurn, startFrames, type TurnRecord } from "@/lib/turns/client";
 import { whenIdle } from "@/lib/turns/runner";
 
@@ -264,7 +264,9 @@ test("a second frames turn for the same project while one runs is a 409 naming t
   });
 });
 
-test("cancel mid-run: the record says cancelled, the engine's process tree is dead, and the bell stays quiet", async () => {
+// "and the bell stays quiet" retired with the bell's turn tracking (Phase 4 wave D: the bell is a
+// view of kernel Jobs, lib/jobs.tsx); the server half of the case stays.
+test("cancel mid-run: the record says cancelled and the engine's process tree is dead", async () => {
   await withEngine(slow(20_000), async (engine) => {
     const out = await startFrames("p-frames-3", RUN);
     const turnId = (out as { turnId: string }).turnId;
@@ -278,37 +280,16 @@ test("cancel mid-run: the record says cancelled, the engine's process tree is de
     const final = await until(turnId, ["cancelled", "done", "failed"]);
     expect(final.status).toBe("cancelled");
     expect(final.result).toBeUndefined();
-
-    let state: TurnState = trackTurn(EMPTY_TURNS, { turnId, projectId: "p-frames-3", kind: "frames", label: "scene direction", startedAt: Date.now() });
-    state = await pollTurns(state);
-    expect(turnJobsOf(state).find((j) => j.id === turnId)?.status).toBe("failed");
-    expect(turnEventsOf(state)).toEqual([]);
     everyRequestCarriedTheHeader();
   });
 });
 
 /* ── the bell, and leaving the step ───────────────────────────────────────── */
 
-test("a direction that settled while no tab was mounted reaches the bell once, as scene direction", async () => {
-  await withEngine(slow(500), async () => {
-    const out = await startFrames("p-frames-6", RUN);
-    const turnId = (out as { turnId: string }).turnId;
-    const started = trackTurn(EMPTY_TURNS, { turnId, projectId: "p-frames-6", kind: "frames", label: "scene direction", startedAt: Date.now() });
-    const persisted = JSON.parse(JSON.stringify(started.flags)) as TurnState["flags"];
-    await until(turnId, ["done"]);
-
-    let state: TurnState = { flags: persisted, records: {} };
-    state = await pollTurns(state);
-    const events = turnEventsOf(state);
-    console.log(`[turn-frames] first poll -> ${JSON.stringify(events.map((e) => [e.id, e.title]))}`);
-    expect(events).toHaveLength(1);
-    expect(events[0]!.id).toBe(`e-${turnId}`);
-    expect(events[0]!.ok).toBe(true);
-    expect(events[0]!.title).toBe("Scene direction returned");
-    state = await pollTurns(state);
-    expect(turnEventsOf(state)).toHaveLength(1);
-  });
-});
+// "a direction that settled while no tab was mounted reaches the bell once" retired with the bell's
+// turn tracking: the bell reads kernel Jobs, and an ending reaches it once per ending
+// (tests/next-server/bell-jobs.test.ts "a retried job that ends again is news again", and the
+// watermark case beside it).
 
 test("leaving the Frames step mid-run leaves the turn running; a remount takes the done direction exactly once", async () => {
   await withEngine(slow(1_000), async (engine) => {
@@ -333,20 +314,6 @@ test("leaving the Frames step mid-run leaves the turn running; a remount takes t
     expect(later.action, "a consumed direction was staged a second time").toBe("none");
     everyRequestCarriedTheHeader();
   });
-});
-
-test("useFrames has no unmount path that aborts the pass, resumes from the ledger, and persists the turn it took", () => {
-  // The record's type moved to lib/frames/stepData.ts; the hook still owns the rest.
-  const hook = stripComments(
-    readFileSync(join(process.cwd(), "app/_phases/frames/useFrames.ts"), "utf8") +
-      readFileSync(join(process.cwd(), "lib/frames/stepData.ts"), "utf8"),
-  );
-  expect(hook.length).toBeGreaterThan(1000);
-  expect(hook, "useFrames still aborts a request").not.toMatch(/\.abort\(/);
-  expect(hook, "useFrames does not ask the ledger on mount").toMatch(/\bresumeTurn\(/);
-  expect(hook, "useFrames does not start the pass through the door").toMatch(/\bstartFrames\(/);
-  // "Exactly once" survives a reload only if the consumed id is on the record.
-  expect(hook, "the frames record does not carry the consumed turn id").toMatch(/\bturn\?:\s*string/);
 });
 
 /* ── one client door, frames included ─────────────────────────────────────── */
@@ -392,16 +359,14 @@ test("the harness's job count comes from the ledger: a turn no tab is tracking i
     const ledger = await listTurns("p-frames-h");
     expect(jobCounts([], ledger)).toEqual({ running: 1, total: 1 });
 
-    // This tab's own view of the same turn is not a second job, and a local
-    // (non-turn) job is still counted beside it.
-    const tracked = turnJobsOf(trackTurn(EMPTY_TURNS, { turnId, projectId: "p-frames-h", kind: "frames", label: "scene direction", startedAt: Date.now() }));
-    const research: Job = { id: "j-local", projectId: "p-frames-h", kind: "research", label: "r", status: "done", startedAt: 1, progress: 1, measured: true };
-    expect(jobCounts([...tracked, research], ledger)).toEqual({ running: 1, total: 2 });
+    // A server job the bell holds is counted beside the turn, not instead of it.
+    const kernelJob: Job = { id: "job:run:local", projectId: "p-frames-h", kind: "image", label: "r", status: "done", startedAt: 1, endedAt: 2, href: "/projects/runs?job=job%3Arun%3Alocal", progress: 0, measured: false };
+    expect(jobCounts([kernelJob], ledger)).toEqual({ running: 1, total: 2 });
 
     expect((await cancelTurn(turnId)).ok).toBe(true);
     await until(turnId, ["cancelled"]);
-    // The tab still thinks it runs (it has not polled); the ledger says it does not.
-    expect(jobCounts(tracked, await listTurns("p-frames-h"))).toEqual({ running: 0, total: 1 });
+    // The ledger says it no longer runs.
+    expect(jobCounts([], await listTurns("p-frames-h"))).toEqual({ running: 0, total: 1 });
   });
 });
 

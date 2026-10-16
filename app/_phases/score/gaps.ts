@@ -10,7 +10,7 @@
 // Pure, beside the step, so the Cut's own gap arithmetic (cut/edits.ts, over
 // seconds) and this one (over scenes) can each be read for what it measures.
 
-import type { Scene } from "../../_studio/projectTypes";
+import type { Scene } from "@/lib/studio/projectTypes";
 
 /** Contiguous runs of uncovered scenes, each as its scene ids in order. */
 export function gapRuns(scenes: readonly Scene[], covered: ReadonlySet<string>): string[][] {

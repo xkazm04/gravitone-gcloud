@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { parseAt, parseJsonAt } from "@gt/domain/door";
@@ -69,8 +70,8 @@ export function readForgeRun(runId: string, root: string = forgeRunsRoot()): Res
  * `python forge.py <plan> --prepare --json` - one copy of those rules, in the
  * language that runs the run. The launch for a UI that starts from a plan.
  */
-export function prepareForgeRun(planPath: string, runId: string, opts: { readonly python?: string; readonly resume?: boolean } = {}): Result<{ readonly runId: string; readonly candidates: number }> {
-  const script = path.resolve("pipeline", "foundry", "forge.py");
+export function prepareForgeRun(planPath: string, runId: string, opts: { readonly python?: string; readonly resume?: boolean; readonly code?: string } = {}): Result<{ readonly runId: string; readonly candidates: number }> {
+  const script = path.join(opts.code ?? path.resolve("."), "pipeline", "foundry", "forge.py");
   const argv = [script, planPath, "--run-id", runId, "--prepare", "--json", ...(opts.resume === true ? ["--resume"] : [])];
   const r = spawnSync(opts.python ?? (process.platform === "win32" ? "python" : "python3"), argv, { encoding: "utf8", timeout: 120_000 });
   const last = (r.stdout ?? "").trim().split("\n").at(-1) ?? "";
@@ -191,4 +192,104 @@ export function launchForge(store: Store, runId: string, opts: LaunchForgeOption
     return err(l.error.code, l.error.message);
   }
   return ok({ kind: "launched", runId, jobId: l.value.jobId, receipt: receipt.value });
+}
+
+/* ── The Floor's door: a sweep built from the chosen style(s) over the stock scenes ───── */
+//
+// L45 (L44's live forge-UI row): the Floor image composer priced a sweep and REFUSED its confirm,
+// because a sweep launched only from a plan file. A Floor sweep is now a plan built here - the
+// chosen style (or the whole sweep's styles), the chosen mechanisms, the stock scenes and seeds of
+// pipeline/foundry/plans/dry-run.json - priced STATICALLY from the candidates it will cross
+// (forge.py `build_manifest`'s product: scene x style x mechanism x seed, every one pending, no
+// scene annotated, no plate on disk), so the receipt performs nothing. Only the confirm writes:
+// forge.py `--prepare` (its validation, its run.json - one copy of those rules), then
+// `launchForge` with the receipt's token, which re-reads run.json and so refuses a run that came
+// out different from what was priced.
+
+const planDoc = z.object({
+  scenes: z.array(z.object({ id: z.string().min(1), frame: z.string().min(1), note: z.string().optional() }).loose()).min(1),
+  styles: z.array(z.string().min(1)),
+  mechanisms: z.array(z.object({ id: z.string().min(1) }).loose()).min(1),
+  seeds: z.array(z.number().int()).optional(),
+  steps: z.number().int().optional(),
+});
+
+/**
+ * The checkout this process runs from: the cwd when it holds the forge, else the nearest ancestor
+ * of the entry script that does. A server may run with its cwd in a data universe (a test lane, a
+ * second store) while the forge and its stock plans are part of the CODE, not of the data.
+ */
+export function codeRoot(cwd: string = process.cwd(), entry: string | undefined = process.argv[1]): string {
+  const holds = (d: string): boolean => existsSync(path.join(d, "pipeline", "foundry", "forge.py"));
+  if (holds(cwd)) return cwd;
+  for (let d = entry === undefined ? cwd : path.dirname(path.resolve(entry)); ; d = path.dirname(d)) {
+    if (holds(d)) return d;
+    if (path.dirname(d) === d) return cwd;
+  }
+}
+
+/** forge.py `frames_dir`: FOUNDRY_FRAMES_DIR, else the checkout's pipeline/vlm-probe/frames. */
+export function framesDir(code: string, env: Readonly<Record<string, string | undefined>> = process.env): string {
+  const v = env["FOUNDRY_FRAMES_DIR"]?.trim();
+  return v !== undefined && v !== "" ? path.resolve(v) : path.join(code, "pipeline", "vlm-probe", "frames");
+}
+
+export type FloorSweep = { readonly runId: string; readonly styles: readonly string[] | "sweep"; readonly mechanisms: readonly string[] };
+
+/** The plan a Floor sweep runs, as forge.py reads a plan file. Its id is the run's, so the receipt is keyed by the run. */
+export function floorPlan(sweep: FloorSweep, code: string): Result<Record<string, unknown>> {
+  const read = (name: string) => parseJsonAt(`plans/${name}.json`, planDoc, readFileSync(path.join(code, "pipeline", "foundry", "plans", `${name}.json`), "utf8"));
+  const stock = read("dry-run");
+  if (!stock.ok) return stock;
+  let styles: readonly string[];
+  if (sweep.styles === "sweep") {
+    const all = read("sweep-01");
+    if (!all.ok) return all;
+    styles = all.value.styles;
+  } else styles = sweep.styles;
+  // A scene whose frame is not on this machine is a run that fails at its first plate (forge.py
+  // "frame not found"): the receipt can see it, so it is left out here, and a sweep with no scene
+  // left is refused before anything is priced (the receipt holds a precondition, L45 item D).
+  const frames = framesDir(code);
+  const scenes = stock.value.scenes.filter((sc) => typeof sc.frame === "string" && (/^(frame|lane):/.test(sc.frame) || existsSync(path.join(frames, sc.frame))));
+  if (scenes.length === 0) return err("refused", `no stock scene's frame is on this machine (looked in ${frames})`);
+  const mechanisms = stock.value.mechanisms.filter((m) => typeof m.id === "string" && sweep.mechanisms.includes(m.id));
+  if (mechanisms.length === 0) return err("invalid", `no stock mechanism among ${sweep.mechanisms.join(", ")}`);
+  if (styles.length === 0) return err("invalid", "a sweep needs a style");
+  return ok({ id: sweep.runId, scenes, styles: [...styles], mechanisms, seeds: stock.value.seeds ?? [20260826], ...(stock.value.steps === undefined ? {} : { steps: stock.value.steps }) });
+}
+
+/** The run a plan WILL be, read without writing it (forge.py `build_manifest`'s candidates). */
+export function plannedRun(runId: string, plan: Record<string, unknown>): Result<ForgeRun> {
+  const p = planDoc.safeParse(plan);
+  if (!p.success) return err("invalid", `floor plan: ${p.error.message}`);
+  const seeds = p.data.seeds ?? [20260826];
+  const candidates: ForgeCandidateView[] = p.data.scenes.flatMap((sc) => p.data.styles.flatMap((st) => p.data.mechanisms.flatMap((m) => seeds.map((seed) => ({ id: `${sc.id}/${st}--${m.id}--s${seed}`, scene: sc.id, status: "pending" as const, plate: false })))));
+  return ok({ id: runId, plan: runId, view: { scenes: p.data.scenes.map((sc) => ({ id: sc.id, annotated: false })), candidates }, skipGrade: false });
+}
+
+/** The Floor sweep's receipt (no token) or its confirm: prepare run.json, then the forge's own launch. */
+export function launchFloorForge(store: Store, sweep: FloorSweep, opts: LaunchForgeOptions & { readonly code?: string }): Result<ForgeLaunch> {
+  const code = opts.code ?? codeRoot();
+  const plan = floorPlan(sweep, code);
+  if (!plan.ok) return plan;
+  const now = opts.now ?? Date.now();
+  if (opts.token === undefined) {
+    const run = plannedRun(sweep.runId, plan.value);
+    if (!run.ok) return run;
+    const r = forgeReceipt(store, run.value, { mode: opts.mode, now, ...(opts.ceilingUsd === undefined ? {} : { ceilingUsd: opts.ceilingUsd }) });
+    return r.ok ? ok({ kind: "receipt", receipt: r.value }) : r;
+  }
+  const root = opts.root ?? forgeRunsRoot();
+  const tmp = mkdtempSync(path.join(tmpdir(), "gt-floor-plan-"));
+  try {
+    const file = path.join(tmp, `${sweep.runId}.json`);
+    writeFileSync(file, JSON.stringify(plan.value));
+    // A second confirm of the same receipt (a stale answer, a double click) finds its run.json: resume it, never refuse it.
+    const prepared = prepareForgeRun(file, sweep.runId, { code, resume: existsSync(path.join(root, sweep.runId, "run.json")) });
+    if (!prepared.ok) return prepared;
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+  return launchForge(store, sweep.runId, { ...opts, now, root });
 }

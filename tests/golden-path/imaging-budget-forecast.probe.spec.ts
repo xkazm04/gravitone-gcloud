@@ -11,8 +11,9 @@
 // 6. errorResponse(new ImagingError('budget', ...)) has HTTP status 402, JSON body carrying code: 'over-budget', retryAt: number, and header Retry-After: string.
 // 7. imagingClient with globalThis.fetch stubbed: a 402 body {detail, code:'over-budget', retryAt:123} -> generateImage rejects with ImagingRequestError {code:'over-budget', status:402, retryAt:123}; a 422 body {code:'refused', provider:'google'} -> the error's provider is 'google' (today both fields are dropped).
 // 8. (Critic revision):
-//   - renderPlan.planRender({missing:16, quote:{verdict:'partial', affordableImages:4, estimateUsd:0.72, resumeAt:T}}) -> {count:4, label containing '4 of 16', resumeAt:T}; with quote verdict 'unknown' (no per-image rate) -> {count:16} and a label with no '$' figure, never '$0.00'.
-//   - renderPlan.afterOutcome('over-budget', retryAt:T) -> {action:'pause-until', until:T}, distinct from afterOutcome('failed') -> {action:'stop'}.
+//   - (renderPlan's planRender/afterOutcome halves retired with the v1 Frames step,
+//     Phase 4 wave D; the batch cap is the frames producer's `capBatch` now -
+//     packages/producers/test/steps-frames.test.ts.)
 //   - GET handler of app/api/imaging/budget/route.ts uses guardAccessOnly (from lib/apiAuth.ts) instead of guardRequest (apiAuth.ts:422-433: budget check doesn't spend rate limit). Without access header -> 401; with it -> returns 200 with {ceilingUsd, spentUsd, remainingUsd, windowMs, perImageUsd, quote}. 40 authorised GETs in a row leave rateLimit(clientIp) unconsumed so following POST /api/imaging/generate is not 429.
 
 import { test, expect } from "@playwright/test";
@@ -27,7 +28,6 @@ import { budgetQuote } from "@/lib/imaging/budgetForecast";
 import { ImagingError } from "@/lib/imaging/errors";
 import { errorResponse } from "@/lib/imaging/api";
 import { generateImage, ImagingRequestError } from "@/lib/imagingClient";
-import { planRender, afterOutcome } from "@/app/_phases/frames/renderPlan";
 import { GET as budgetGET } from "@/app/api/imaging/budget/route";
 import { POST as generatePOST } from "@/app/api/imaging/generate/route";
 import { ACCESS_SECRET_VAR, __resetRateLimit } from "@/lib/apiAuth";
@@ -192,32 +192,7 @@ test("7. imagingClient attaches retryAt and provider to ImagingRequestError", as
   expect((err2 as ImagingRequestError).provider).toBe("google");
 });
 
-test("8. renderPlan and GET /api/imaging/budget route rate-limit isolation", async () => {
-  const T = 1_000_000;
-  // Part 1: renderPlan.planRender
-  const planPartial = planRender({
-    missing: 16,
-    quote: { verdict: "partial", affordableImages: 4, estimateUsd: 0.72, resumeAt: T },
-  });
-  expect(planPartial.count).toBe(4);
-  expect(planPartial.label).toContain("4 of 16");
-  expect(planPartial.resumeAt).toBe(T);
-
-  const planUnknown = planRender({
-    missing: 16,
-    quote: { verdict: "unknown", affordableImages: 16, estimateUsd: null, resumeAt: null },
-  });
-  expect(planUnknown.count).toBe(16);
-  expect(planUnknown.label).not.toContain("$");
-  expect(planUnknown.label).not.toContain("$0.00");
-
-  // Part 2: renderPlan.afterOutcome
-  const outcomeBudget = afterOutcome("over-budget", T);
-  expect(outcomeBudget).toEqual({ action: "pause-until", until: T });
-  const outcomeFailed = afterOutcome("failed");
-  expect(outcomeFailed).toEqual({ action: "stop" });
-
-  // Part 3: GET /api/imaging/budget route
+test("8. GET /api/imaging/budget route rate-limit isolation", async () => {
   // Without access header -> 401
   const unauthedReq = new Request("http://localhost/api/imaging/budget", { method: "GET" });
   const resUnauth = await budgetGET(unauthedReq);

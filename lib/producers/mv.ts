@@ -206,7 +206,7 @@ export function mvProducer(binding: { readonly engines?: Partial<MvEngines> } = 
         ctx,
       );
     },
-    async health() {
+    async health(asked) {
       const { store } = soundKernel();
       const stuck = stuckAtStill(store);
       if (stuck !== undefined) {
@@ -215,7 +215,8 @@ export function mvProducer(binding: { readonly engines?: Partial<MvEngines> } = 
         const what = j === undefined ? `job ${stuck.id}` : `"${cleanTitle(j.source.title)}"`;
         return { ok: false, reason: `${what} was interrupted at its still; a still may have been spent in the Leonardo studio - check it, then retry or cancel that job` };
       }
-      const head = must(store.read((r) => nextClaimable(r, "box.render")));
+      // The job the driver is about to claim; with none in hand, the lane's head (an operator's look).
+      const head = asked ?? must(store.read((r) => nextClaimable(r, "box.render")));
       if (head === undefined || head.producer !== MV_PRODUCER) return { ok: true };
       const f = await readMv();
       const j = f.jobs.find((x) => mvKernelId(x) === head.id);

@@ -105,14 +105,17 @@ function draftAt(t: Tx, id: string, baseRev: number): { project: Project } | { s
   return { project };
 }
 
-/** Change a draft part's option and/or units (the Plan's picker and units field). */
+/** Change a part's option and/or units (the Plan's picker and units field) before it launches: a
+ *  draft's part, or a launched plan's part with no job yet (an import's unworked part, L43). */
 export function setPart(store: Store, input: { id: string; baseRev: number; partId: string; patch: PartPatch }, actor: Actor): Outcome<{ rev: number }> {
   return guarded(store, (t) => {
     const patch = must(parseAt("part change", partPatchSchema, input.patch));
-    const d = draftAt(t, input.id, input.baseRev);
-    if ("staleRev" in d) return stale(input.id, d.staleRev);
+    const cur = loadProject(t, input.id);
+    if (cur.rev !== input.baseRev) return stale(input.id, cur.rev);
     const row = loadParts(t, input.id).find((x) => x.part.id === input.partId);
     if (row === undefined) throw new AppError("not-found", `project ${input.id} has no part ${input.partId}`);
+    if (cur.launchedAt !== undefined && row.jobId !== null) throw new AppError("refused", `project ${input.id} is launched; a launched plan changes by re-routing its jobs`);
+    const d = { project: cur };
     const part = row.part;
     if (!isWork(part)) throw new AppError("refused", `part ${part.id} is a ${part.kind}; it has no model or units`);
     let next = part;
@@ -179,8 +182,12 @@ export function releaseHeldIn(t: Tx, projectId: string, actor: Actor, ctx: ReadC
   const m = projectModel(t, projectId, ctx);
   const released: string[] = [];
   for (const row of m.rows) {
-    if (row.jobId === null || m.jobs.get(row.part.id)?.state !== "planned") continue;
+    const job = m.jobs.get(row.part.id);
+    if (row.jobId === null || job?.state !== "planned") continue;
     if (!row.part.after.every((dep) => m.states.get(dep) === "ratified")) continue;
+    // A producer's preflight (L45): a part whose act waits on a human act stays planned, named,
+    // instead of being released into a failure its receipt could already see.
+    if (ctx.preflightOf?.(job, t) !== undefined) continue;
     releaseIn(t, row.jobId, actor);
     released.push(row.jobId);
   }

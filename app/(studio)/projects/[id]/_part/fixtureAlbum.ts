@@ -7,7 +7,7 @@ import { KEPT_TAKES } from "../../_port/fixtureData.ts";
 import type { Ctx } from "./fixture.ts";
 import { engineOf } from "./fixtureScoreRecs.ts";
 import type { ExportRec } from "./fixtureCut.ts";
-import type { KCtx, KindModule } from "./kinds.ts";
+import { asObj, type KCtx, type KindModule } from "./kinds.ts";
 
 // THE ALBUM VIDEO'S WORDS AND RENDER PARTS (L40; STEPS-DESIGN §2 "album parts"). An album video
 // is still · words · render: the still is the take grid the still gate picks from (L39), the
@@ -19,9 +19,9 @@ import type { KCtx, KindModule } from "./kinds.ts";
 // export as base64 JSON with elapsed time for progress (MusicVideoExport.tsx). Neither part is
 // in the album recipe now, and the render is a job with a receipt.
 //
-// THE RECORDS GAP: @gt/domain/steps declares no record for words or render (STEP_OWNERS is the
-// studio's six), so the real side reads these parts and refuses their ops (`stored: false`)
-// until a record is declared - reported, not worked around.
+// THE RECORDS (L43): each part keeps its working record as its own step record (`words`,
+// `render` in @gt/domain/steps), written through the door like the studio's six - L40 drew these
+// editors over a records gap, read-only on the real side.
 
 export type WordsRec = {
   readonly title: string;
@@ -104,9 +104,9 @@ export const WORDS_KIND: KindModule<"words"> = {
   land: (ctx, w, act) => (act === "write-words" ? wordsLand(ctx, w) : no(`${act} is not a words act`)),
   data: wordsData,
   actLabel: () => "metadata turn",
-  fromRecords: () => ({ title: "", description: "", tags: [], written: null }),
-  toRecords: () => ({}),
-  stored: false,
+  // Written by `toRecords` through the words door; read back as written (a fresh part: the seed).
+  fromRecords: (recs) => ({ title: "", description: "", tags: [], written: null, ...(recs.get("words") as Partial<WordsRec> | undefined) }),
+  toRecords: (w) => ({ words: asObj(w) }),
 };
 
 /* ── render ───────────────────────────────────────────────────────────────── */
@@ -160,7 +160,6 @@ export const RENDER_KIND: KindModule<"render"> = {
   },
   data: renderData,
   actLabel: () => "music-video render",
-  fromRecords: () => ({ res: "1080p", exports: [] }),
-  toRecords: () => ({}),
-  stored: false,
+  fromRecords: (recs) => ({ res: "1080p", exports: [], ...(recs.get("render") as Partial<RenderRec> | undefined) }),
+  toRecords: (r) => ({ render: asObj(r) }),
 };

@@ -42,7 +42,7 @@ import { RENDER_BY_ID } from "../../script/renders";
 import type { ScriptRender } from "../../script/types";
 import { isPlainObject, malformed, type RecordRefusal } from "../../_shared/records/registry";
 import { emptyClip, type Frame } from "../frames";
-import type { FramesStepData } from "../useFrames";
+import type { FramesStepData } from "@/lib/frames/stepData";
 import { framesFromUnits, unitsFromFrames, type PictureUnit } from "./unit";
 
 /** The length of the chain a stored `renderId` names, when it names a shipped

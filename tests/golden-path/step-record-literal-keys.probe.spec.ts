@@ -30,14 +30,10 @@ const EXEMPT = (rel: string) =>
 
 const CALL = /\b(?:saveStep|readStep|loadStep|patchStep)\b(?:<[^()]*?>)?\(\s*[^,()]+,\s*["'`]|\buseStepFor\b(?:<[^()]*?>)?\(\s*[^,()]+,\s*["'`]/g;
 
-/** file -> literal-key calls still outside the defs. Shrink-only. */
-const BASELINE: Readonly<Record<string, number>> = {
-  "app/_phases/cut/music-video/MusicVideoExport.tsx": 1,
-  "app/_phases/frames/music-video/MusicVideoFrames.tsx": 1,
-  "app/_phases/research/guided/useEducationalResearch.ts": 1, // research-notebook: no def yet
-  "app/_phases/research/ResearchStep.tsx": 2, // research-mode (+ notebook): no def yet
-  "app/_phases/script/ScriptStep.tsx": 3, // research gate readers: need a refusal surface first
-};
+/** file -> literal-key calls still outside the defs. Shrink-only. Empty since Phase 4 wave D:
+ *  the five v1 step surfaces that held the last literal keys (ResearchStep, ScriptStep,
+ *  useEducationalResearch, MusicVideoFrames, MusicVideoExport) retired with app/_phases. */
+const BASELINE: Readonly<Record<string, number>> = {};
 
 function walk(dir: string, out: string[]) {
   for (const name of readdirSync(dir)) {

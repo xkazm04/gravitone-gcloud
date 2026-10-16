@@ -2,8 +2,11 @@
 // that are not Frames (those are in frames-notebook.probe.spec.ts) and not the
 // widened ratchet (notebook-source.probe.spec.ts).
 //
-// Driven on fake-indexeddb, over the real step store, with the hook harness
-// active-notebook.probe.spec.ts uses (tests/golden-path/_c1-harness.ts).
+// Driven on fake-indexeddb, over the real step store and the notebook fixtures in
+// tests/golden-path/_c1-harness.ts. The cases that read the v1 studio's Script
+// and Research surfaces (ScriptStep's skeleton gate, the matrix readers, the
+// dispatch strip, ScopeBar's StaleBadge, the useActiveNotebook hook) retired with
+// them in Phase 4 wave D; the pure halves they rested on stay pinned here.
 import "fake-indexeddb/auto";
 
 import { readFileSync } from "node:fs";
@@ -11,25 +14,23 @@ import path from "node:path";
 
 import { expect, test } from "@playwright/test";
 
-import { buildCards } from "@/app/_phases/_shared/notebook/cards";
-import { fixtureSource } from "@/app/_phases/_shared/notebook/source";
-import { CONCLUSIONS } from "@/app/_phases/_shared/notebook/conclusions";
-import { dispatchToggles } from "@/app/_phases/script/dispatchToggles";
-import { RENDERS } from "@/app/_phases/script/renders";
-import type { PreviewOutcome } from "@/lib/turns/client";
+import { buildCards } from "@/lib/notebook/cards";
+import { fixtureSource } from "@/lib/notebook/source";
+import { CONCLUSIONS } from "@/lib/notebook/conclusions";
+import { RENDERS } from "@/lib/script/renders";
 import { assembleRecalibrate } from "@/lib/turns/assemble/recalibrate";
 import { CANNED, resultFor } from "@/app/_phases/research/followup";
-import { optInIds } from "@/app/_phases/research/scope";
+import { optInIds } from "@/lib/research/scope";
 import { recalibrate } from "@/app/_phases/script/recalibrate";
 import { outWord } from "@/app/_phases/script/scopeConflicts";
-import { BASELINE, type Note } from "@/app/_phases/script/versions";
-import { readActiveNotebook, refusalOf, useActiveNotebook } from "@/app/_phases/_shared/notebook/useActiveNotebook";
-import { readStep, saveStep, type ScopeStepData } from "@/app/_phases/_shared/stepStore";
+import { BASELINE, type Note } from "@/lib/script/versions";
+import { readActiveNotebook, refusalOf } from "@/lib/notebook/active";
+import { readStep, saveStep, type ScopeStepData } from "@/lib/steps";
 import { makeTriageSource } from "@/lib/board/sources/triage";
 import { addProjects } from "@/lib/projects";
 
 import { stripComments } from "./_helpers";
-import { harness, landLive, liveNotebook, OWN_CONCLUSION, RECEIPT } from "./_c1-harness";
+import { landLive, liveNotebook, OWN_CONCLUSION, RECEIPT } from "./_c1-harness";
 
 const code = (rel: string) => stripComments(readFileSync(path.join(process.cwd(), rel), "utf8"));
 
@@ -127,18 +128,6 @@ test("case 9: a project with no record still deals the fixture board and writes 
   expect((await scopeOf(pid))?.digest).toBe(fixtureSource().digest);
 });
 
-/* ───────────────────── case 10: Script waits for the active notebook ─────────── */
-// No DOM in this lane, so this is read off the source: ScriptStep's skeleton
-// gate is `ready`, and the gate has to name the active notebook's `hydrated`.
-
-test("case 10: ScriptStep's ready waits for the active notebook, and the skeleton hangs on ready", () => {
-  const src = code("app/_phases/script/ScriptStep.tsx");
-  expect(src).toMatch(/const active = useActiveNotebook\(projectId\)/);
-  const ready = /const ready = ([^;]+);/.exec(src)?.[1] ?? "";
-  expect(ready, "ready does not wait for the active notebook").toContain("active.hydrated");
-  expect(src).toMatch(/\{!ready \? \(\s*<Skeleton \/>/);
-});
-
 /* ───────────────────────── case 8: Step 2 reads the source's opt-in ──────────── */
 
 test("case 8: an undecided live conclusion is not-taken in Step 2, and the recalibrate guard treats it as out", async () => {
@@ -160,17 +149,6 @@ test("case 8: an undecided live conclusion is not-taken in Step 2, and the recal
   expect(unthreaded.refusals).toEqual([]);
 });
 
-test("case 8: the matrix and the conflict readers take the set from useScope().optIn", () => {
-  for (const f of ["_matrix/MatrixSpend.tsx", "_matrix/MatrixTracks.tsx", "_matrix/MatrixCoverage.tsx", "_matrix/shared.tsx"]) {
-    const src = code(`app/_phases/script/${f}`);
-    expect(src, f).toContain("api.optIn");
-    expect(src, f).not.toMatch(/stateOf\(api\.scope, card\.id\)|outWord\(card, api\.scope\)/);
-  }
-  const step = code("app/_phases/script/ScriptStep.tsx");
-  expect(step).toMatch(/useVersions\(projectId, \{[^}]*optIn: scope\.optIn/);
-  expect(step).toContain("conflictsIn(weighed, scope.cards, scope.scope, scope.optIn)");
-});
-
 /* ───────────────────────── case 7: recalibrate holds the source's conclusions ── */
 
 test("case 7: a reasoned notebook's conclusions reach the prompt beside the notebook, and the fixture's never do", () => {
@@ -190,16 +168,9 @@ test("case 7: a reasoned notebook's conclusions reach the prompt beside the note
   const bare = assembleRecalibrate({ ...body, conclusions: undefined, notebook: {} }, "SYSTEM");
   expect(bare.manifest.conclusions).toEqual({ whole: [], held: [] });
   expect(bare.prompt).not.toContain(CONCLUSIONS[0]!.id);
-
-  // The strip lists a held c-x, in the source's own order.
-  const outcome = { ok: true, preview: { manifest } } as unknown as PreviewOutcome;
-  expect(dispatchToggles(outcome, [], [], nb.conclusions ?? []).filter((t) => t.group === "conclusions").map((t) => t.id)).toEqual([
-    OWN_CONCLUSION.id,
-  ]);
 });
 
-test("case 7: useVersions sends the source's conclusions, and the size check counts them", () => {
-  expect(code("app/_phases/script/useVersions.ts")).toContain("conclusions: ctx.source.conclusions");
+test("case 7: the size check counts the source's conclusions", () => {
   const src = code("lib/turns/assemble/recalibrate.ts");
   expect(src).not.toMatch(/import \{ CONCLUSIONS \}/);
   expect(src).toMatch(/NOTEBOOK_DROP = \[[^\]]*"conclusions"/);
@@ -218,40 +189,27 @@ test("case 11: a canned transcript answers only on the replay source", async () 
   expect(resultFor({ kind: "deepen-card", cardId: Object.keys(CANNED).find((k) => k !== "q-whales")!, prompt: "" }, reasoned)).toBeUndefined();
   // What the sentence says is still true: it no longer claims one static document.
   expect(code("app/_phases/research/followup.ts")).not.toContain("one static document shared by every project");
-  expect(code("app/_phases/research/_parts/FollowUpQueue.tsx")).toContain("resultFor(r, api.source)");
 });
 
 /* ───────────── case 13: a malformed record is the replay, and never silent ───── */
 
-test("case 13: a record that fails dealable resolves to the replay AND sets a trouble; the board draws a StaleBadge", async () => {
+test("case 13: a record that fails dealable resolves to the replay, and says why", async () => {
   const pid = "c1-malformed";
-  const out = await saveStep(pid, "research-notebook", { topic: "harbour", notebook: { facts: "nope" }, engine: RECEIPT, savedAt: 1 });
+  const bad = { topic: "harbour", notebook: { facts: "nope" }, engine: RECEIPT, savedAt: 1 };
+  const out = await saveStep(pid, "research-notebook", bad);
   expect(out.ok).toBe(true);
-  const h = harness(() => useActiveNotebook(pid));
-  const active = await h.settleUp();
-  expect(active.hydrated).toBe(true);
-  expect(active.source, "a malformed record must resolve to the replay").toBe(fixtureSource());
-  expect(active.trouble, "a malformed record was resolved silently").toMatch(/not a notebook/);
-  h.unmount();
+  expect(await readActiveNotebook(pid), "a malformed record must resolve to the replay").toBe(fixtureSource());
+  expect(refusalOf(bad as never), "a malformed record was resolved silently").toMatch(/not a notebook/);
 
   // A receipt-less notebook is refused for its own reason.
   const nb = liveNotebook();
-  await saveStep("c1-no-receipt", "research-notebook", { topic: "harbour", notebook: nb, engine: null, savedAt: 1 });
-  const h2 = harness(() => useActiveNotebook("c1-no-receipt"));
-  const second = await h2.settleUp();
-  expect(second.source).toBe(fixtureSource());
-  expect(second.trouble).toMatch(/receipt/);
-  h2.unmount();
+  const bare = { topic: "harbour", notebook: nb, engine: null, savedAt: 1 };
+  await saveStep("c1-no-receipt", "research-notebook", bare);
+  expect(await readActiveNotebook("c1-no-receipt")).toBe(fixtureSource());
+  expect(refusalOf(bare)).toMatch(/receipt/);
 
   // The three that are NOT trouble: no record, a cleared record, a good record.
   expect(refusalOf(undefined)).toBeNull();
   expect(refusalOf({ topic: "", notebook: null, engine: null })).toBeNull();
   expect(refusalOf({ topic: "harbour", notebook: nb, engine: RECEIPT })).toBeNull();
-
-  // The board draws it.
-  const bar = code("app/_phases/research/_parts/ScopeBar.tsx");
-  expect(bar).toMatch(/\{trouble && \(\s*<span data-testid="notebook-refused">\s*<StaleBadge/);
-  expect(code("app/_phases/research/ResearchTriageBoard.tsx")).toMatch(/<ScopeBar api=\{api\} trouble=\{trouble\}[\s/>]/);
-  expect(code("app/_phases/research/guided/GuidedResearch.tsx")).toContain("trouble={research.trouble}");
-  expect(code("app/_phases/research/guided/useEducationalResearch.ts")).toContain("trouble: active.trouble");
 });

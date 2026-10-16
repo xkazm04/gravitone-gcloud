@@ -129,6 +129,9 @@ export default defineConfig({
       // is the opt-in half, and `next dev` is the non-production half.
       NEXT_PUBLIC_DEV_AUTH: "1",
       NEXT_DIST_DIR: DIST,
+      // The fixture universe (produce + part ports): produce.live and part-*.live seed into it; L35 made real the default.
+      GRAVITONE_PRODUCE_SIDE: "fixture",
+      GRAVITONE_DRY_ONLY: "1",
     },
   },
 });

@@ -34,7 +34,7 @@
 
 import { test, expect } from "@playwright/test";
 
-import { FACTS } from "@/app/_phases/_shared/notebook/facts";
+import { FACTS } from "@/lib/notebook/facts";
 import type { Fact } from "@/app/_phases/_shared/notebook/types";
 
 /** The rows still on the singular deprecated `source`, BY ID rather than by

@@ -6,7 +6,7 @@ import { blobStore } from "@gt/kernel/blob";
 import { dryOnlyFrom } from "@gt/kernel/dryrun";
 import { liveEffects, type Effects } from "@gt/kernel/effects";
 import type { Producer } from "@gt/kernel/job-core";
-import { nextClaimable } from "@gt/kernel/job-queue";
+import { laneHold, nextClaimable } from "@gt/kernel/job-queue";
 import { producerKey, type Pick, type ProducerKey } from "@gt/kernel/job-queue-core";
 import type { RunReport } from "@gt/kernel/job-run";
 import { workLoop } from "@gt/kernel/job-worker";
@@ -112,6 +112,28 @@ function unboundHeads(store: Store, lanes: readonly ResourceLane[], carries: Car
   return r.ok ? r.value : [];
 }
 
+/** A held lane as the end of a run names it: the hold, and the head that waits behind it. */
+type HeldLane = { readonly lane: ResourceLane; readonly jobId: string; readonly stage?: string; readonly behind?: string };
+
+/**
+ * The lanes of this worker that HOLD (decision 6: an interrupted paid job holds its lane until the
+ * operator acknowledges it), each with the job that holds it and the head waiting behind. Read at
+ * the end of every run for the reason `unboundHeads` is: a --once drain that found nothing to start
+ * never looks, and L44 measured it exiting 0 over a held lane with a queued job and saying nothing.
+ */
+function heldLanes(store: Store, lanes: readonly ResourceLane[]): HeldLane[] {
+  const r = store.read((rd) =>
+    lanes.flatMap((lane): HeldLane[] => {
+      const hold = laneHold(rd, lane);
+      if (hold === undefined) return [];
+      // Not `nextClaimable`: a held lane has no claimable head by definition; this is the line's head.
+      const head = rd.get("SELECT id FROM jobs WHERE lane = ? AND state = 'queued' ORDER BY ord, n LIMIT 1", lane)?.["id"];
+      return [{ lane, jobId: hold.jobId, ...(hold.stage === undefined ? {} : { stage: hold.stage }), ...(typeof head === "string" ? { behind: head } : {}) }];
+    }),
+  );
+  return r.ok ? r.value : [];
+}
+
 /** A job's outcome as one line: what a cron, a skill or a test reads. */
 function line(pick: Pick, report: Result<RunReport>): Record<string, unknown> {
   const base = { jobId: pick.jobId, lane: pick.lane, producer: pick.producer };
@@ -188,9 +210,9 @@ export async function runWorker(argv: readonly string[], bound: Result<ReadonlyM
         key,
         {
           ...p,
-          health: async () => {
+          health: async (job) => {
             if (cooling.delete(key)) await pause(idleMs);
-            return p.health === undefined ? { ok: true as const } : p.health();
+            return p.health === undefined ? { ok: true as const } : p.health(job);
           },
         },
       ]),
@@ -249,6 +271,11 @@ export async function runWorker(argv: readonly string[], bound: Result<ReadonlyM
     const named = new Map<string, Pick>();
     for (const o of [...s.orphans.filter((o) => lanes.includes(o.lane)), ...unboundHeads(store, lanes, carries)]) named.set(o.jobId, o);
     for (const o of named.values()) io.err(`[worker] ${o.jobId} heads ${o.lane} for producer ${o.producer}, which this worker does not carry`);
+    for (const h of heldLanes(store, lanes)) {
+      const at = h.stage === undefined ? "" : ` at ${h.stage}`;
+      const behind = h.behind === undefined ? "nothing waits behind it" : `${h.behind} waits behind it`;
+      io.err(`[worker] ${h.lane} is held by job ${h.jobId}${at}: credits may be spent - look first, then acknowledge it; ${behind}`);
+    }
     io.err(`[worker] ${s.started} drive(s), ${s.recovered} recovered as interrupted, ${failures} failed`);
     return failures > 0 ? 1 : 0;
   } finally {

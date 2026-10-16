@@ -277,23 +277,13 @@ test("wiring: the dialog previews with a dry run, offers the archive, and is the
   expect(dlg, "the archive must not be sent anywhere").not.toMatch(/\bfetch\(/);
 });
 
-test("wiring: /projects imports with skip as the default and shows the result as counts", () => {
-  const view = src("app/projects/ProjectsView.tsx");
-  expect(view.length, "read nothing from ProjectsView.tsx").toBeGreaterThan(2000);
-  expect(view).toMatch(/importArchive\([^)]*onCollision:\s*"skip"/);
-  expect(view).toMatch(/\bimportTallies\(/);
-  expect(view).toMatch(/\berrorText\(/);
-  expect(view).toContain("Import archive");
-});
-
-test("wiring: the three surfaces speak through the announcer, not live regions of their own", () => {
+test("wiring: the two surfaces speak through the announcer, not live regions of their own", () => {
   // lib/announcer.tsx rule 2 (one writer); live-region-budget.probe holds the
   // app-wide ceiling, this holds the files this lane wrote.
-  for (const rel of ["components/ui/UserMenu.tsx", "components/ui/SignOutDialog.tsx", "app/projects/ProjectsView.tsx"]) {
+  for (const rel of ["components/ui/UserMenu.tsx", "components/ui/SignOutDialog.tsx"]) {
     const s = src(rel);
     expect(s.length, `read nothing from ${rel}`).toBeGreaterThan(1000);
     expect(s, rel).not.toMatch(/aria-live=|role="(?:status|alert)"/);
   }
   expect(src("components/ui/SignOutDialog.tsx")).toMatch(/\buseAnnounce\(\)/);
-  expect(src("app/projects/ProjectsView.tsx")).toMatch(/\buseAnnounce\(\)/);
 });

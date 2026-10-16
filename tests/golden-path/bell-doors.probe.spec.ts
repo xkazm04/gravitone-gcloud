@@ -1,187 +1,71 @@
-// LANE — UI SHELL: Notification Bell Deep-Links and Sticky Clear (dynamic probe).
+// LANE — UI SHELL: Notification Bell doors and clear (dynamic probe).
 //
-// Demonstrates that notification cards act as doors: every card for a running or
-// interrupted job or an unread event links directly to the studio phase where the
-// work lives, and interrupted jobs can be cleared via an additive sticky tombstone.
+// Every card for a running or interrupted job or an unread event is a door to where the work is
+// read in full. Since Phase 4 wave D the bell's jobs are the server's (lib/jobs.tsx) and each
+// carries its own door, its row in Runs; the v1 doors into studio steps (a JobKind -> step table)
+// retired with the studio. Cases 5 and 8 (applyClear's tombstone and mergeJobs' cross-tab merge)
+// retired with the browser job record they guarded: the server's list is the one truth, and
+// clearing a card is local to the tray (case 6 holds that it still empties the pulse).
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { KIND_STEP, jobHref, studioHref, trayModel } from "@/lib/jobLinks";
-import { applyClear, mergeJobs, type Job, type JobEvent, type JobKind } from "@/lib/jobs";
-import { PHASES } from "@/lib/projects";
+import { jobHref, studioHref, trayModel } from "@/lib/jobLinks";
+import type { Job, JobEvent } from "@/lib/jobs";
 
 import { stripComments } from "./_helpers";
 
-test("case 1: every JobKind maps to a PhaseKey in KIND_STEP; jobHref returns correct studio URL", () => {
-  const allJobKinds: JobKind[] = [
-    "research",
-    "followup",
-    "recalibrate",
-    "poster-generate",
-    "video-export",
-    "ad-ideas",
-    "ad-scenarios",
-    "video-clip",
-    "ad-render",
-    "frames",
-  ];
-  for (const kind of allJobKinds) {
-    expect(KIND_STEP[kind]).toBeDefined();
-    expect(PHASES).toContain(KIND_STEP[kind]);
-  }
-  expect(Object.keys(KIND_STEP).sort()).toEqual([...allJobKinds].sort());
+const RUNS = (id: string) => `/projects/runs?job=${encodeURIComponent(id)}`;
+const job = (id: string, status: Job["status"], more: Partial<Job> = {}): Job => ({ id, kind: "image", label: id, status, startedAt: 1000, href: RUNS(id), progress: 0, measured: false, ...more });
+
+test("case 1: a card's door is its job's own; the v1 studio address is encoded and left to the redirect", () => {
+  expect(jobHref({ href: RUNS("job:run:r1") })).toBe("/projects/runs?job=job%3Arun%3Ar1");
+  expect(jobHref({ href: "" })).toBeNull();
+  expect(jobHref({})).toBeNull();
   expect(studioHref("p1", "script")).toBe("/studio/p1?step=script");
-  expect(jobHref({ projectId: "p1", kind: "recalibrate" })).toBe("/studio/p1?step=script");
-  expect(jobHref({ projectId: "p1", kind: "research" })).toBe("/studio/p1?step=research");
-  expect(jobHref({ projectId: "p1", kind: "followup" })).toBe("/studio/p1?step=research");
-  expect(jobHref({ projectId: "p1", kind: "poster-generate" })).toBe("/studio/p1?step=frames");
-  // Scene direction (AIO-A stage 3) opens the step it directs.
-  expect(jobHref({ projectId: "p1", kind: "frames" })).toBe("/studio/p1?step=frames");
-  expect(jobHref({ projectId: "p1", kind: "video-export" })).toBe("/studio/p1?step=cut");
-  expect(jobHref({ projectId: "p1", kind: "ad-scenarios" })).toBe("/studio/p1?step=script");
-  // Clips are animated in Motion (ads split, 2026-10-06): images in Frames, clips in Motion.
-  expect(jobHref({ projectId: "p1", kind: "video-clip" })).toBe("/studio/p1?step=motion");
-  expect(jobHref({ kind: "recalibrate" })).toBeNull();
-  expect(jobHref({ projectId: "", kind: "recalibrate" })).toBeNull();
+  expect(studioHref("p 1/x", "cut")).toBe("/studio/p%201%2Fx?step=cut");
 });
 
 test("case 2: trayModel with an interrupted job -> actions are open and clear", () => {
-  const interruptedJob: Job = {
-    id: "j-int-1",
-    projectId: "p1",
-    kind: "recalibrate",
-    label: "Recalibrate script",
-    status: "interrupted",
-    startedAt: 1000,
-    progress: 0,
-    measured: false,
-  };
-  const model = trayModel({ jobs: [interruptedJob], unread: [], trouble: null });
+  const model = trayModel({ jobs: [job("j-int-1", "interrupted")], unread: [], trouble: null });
   expect(model.interruptedCards.length).toBe(1);
-  const card = model.interruptedCards[0];
-  expect(card.actions).toEqual([
-    { kind: "open", href: "/studio/p1?step=script" },
+  expect(model.interruptedCards[0]?.actions).toEqual([
+    { kind: "open", href: RUNS("j-int-1") },
     { kind: "clear", jobId: "j-int-1" },
   ]);
 });
 
 test("case 3: trayModel with an unread event -> actions are open (with marksRead) and dismiss", () => {
-  const unreadEvent: JobEvent = {
-    id: "e1",
-    jobId: "j1",
-    projectId: "p2",
-    kind: "poster-generate",
-    ok: true,
-    title: "Poster generated",
-    detail: "Ready",
-    at: 2000,
-    read: false,
-  };
+  const unreadEvent: JobEvent = { id: "e1", jobId: "j1", projectId: "p2", kind: "part", ok: true, title: "Part finished", detail: "Ready", at: 2000, href: RUNS("j1"), read: false };
   const model = trayModel({ jobs: [], unread: [unreadEvent], trouble: null });
   expect(model.eventCards.length).toBe(1);
-  const card = model.eventCards[0];
-  expect(card.actions).toEqual([
-    { kind: "open", href: "/studio/p2?step=frames", marksRead: "e1" },
+  expect(model.eventCards[0]?.actions).toEqual([
+    { kind: "open", href: RUNS("j1"), marksRead: "e1" },
     { kind: "dismiss", eventId: "e1" },
   ]);
 });
 
 test("case 4 (guard): running job actions are exactly [{kind:'open', href}] - no stop action is offered", () => {
-  const runningJob: Job = {
-    id: "j-run-1",
-    projectId: "p3",
-    kind: "research",
-    label: "Background inquiry",
-    status: "running",
-    startedAt: 3000,
-    progress: 0,
-    measured: false,
-  };
-  const model = trayModel({ jobs: [runningJob], unread: [], trouble: null });
+  const model = trayModel({ jobs: [job("j-run-1", "running")], unread: [], trouble: null });
   expect(model.runningCards.length).toBe(1);
   const card = model.runningCards[0];
-  expect(card.actions).toEqual([
-    { kind: "open", href: "/studio/p3?step=research" },
-  ]);
-  expect(card.actions.some((a) => (a as { kind: string }).kind === "stop")).toBe(false);
+  expect(card?.actions).toEqual([{ kind: "open", href: RUNS("j-run-1") }]);
+  expect(card?.actions.some((a) => (a as { kind: string }).kind === "stop")).toBe(false);
 });
 
-test("case 5: applyClear sets additive clearedAt on interrupted job; returns same array reference on running or done job", () => {
-  const t0 = Date.now();
-  const j1: Job = {
-    id: "j1",
-    projectId: "p1",
-    kind: "followup",
-    label: "Followup",
-    status: "interrupted",
-    startedAt: t0 - 1000,
-    progress: 0,
-    measured: false,
-  };
-  const jRunning: Job = {
-    id: "j2",
-    projectId: "p1",
-    kind: "research",
-    label: "Research",
-    status: "running",
-    startedAt: t0 - 500,
-    progress: 0,
-    measured: false,
-  };
-  const jDone: Job = {
-    id: "j3",
-    projectId: "p1",
-    kind: "recalibrate",
-    label: "Recalibrate",
-    status: "done",
-    startedAt: t0 - 2000,
-    endedAt: t0 - 1000,
-    progress: 1,
-    measured: true,
-  };
-  const initial = [j1, jRunning, jDone];
+test("case 6: an interrupted job pulses; a cleared one has pulse: false and no cards", () => {
+  const before = trayModel({ jobs: [job("j-int-1", "interrupted")], unread: [], trouble: null });
+  expect(before.badge).toBe(0);
+  expect(before.pulse).toBe(true);
+  expect(before.interruptedCards.length).toBe(1);
 
-  const cleared = applyClear(initial, "j1");
-  expect(cleared).not.toBe(initial);
-  const clearedJ1 = cleared.find((j) => j.id === "j1");
-  expect(clearedJ1?.clearedAt).toBeDefined();
-  expect(typeof clearedJ1?.clearedAt).toBe("number");
-  expect(clearedJ1!.clearedAt).toBeGreaterThanOrEqual(t0);
-
-  // applyClear on a running or done job id -> returns the SAME array reference (===)
-  expect(applyClear(initial, "j2")).toBe(initial);
-  expect(applyClear(initial, "j3")).toBe(initial);
-  expect(applyClear(initial, "nonexistent")).toBe(initial);
-
-  // Idempotent: applyClear on already cleared job returns the SAME array reference (===)
-  expect(applyClear(cleared, "j1")).toBe(cleared);
-});
-
-test("case 6: trayModel interrupted job pulses, but cleared job has pulse: false and cards: []", () => {
-  const interruptedJob: Job = {
-    id: "j-int-1",
-    projectId: "p1",
-    kind: "poster-generate",
-    label: "Poster generate",
-    status: "interrupted",
-    startedAt: 1000,
-    progress: 0,
-    measured: false,
-  };
-  const beforeClear = trayModel({ jobs: [interruptedJob], unread: [], trouble: null });
-  expect(beforeClear.badge).toBe(0);
-  expect(beforeClear.pulse).toBe(true);
-  expect(beforeClear.interruptedCards.length).toBe(1);
-
-  const clearedJobs = applyClear([interruptedJob], "j-int-1");
-  const afterClear = trayModel({ jobs: clearedJobs, unread: [], trouble: null });
-  expect(afterClear.badge).toBe(0);
-  expect(afterClear.pulse).toBe(false);
-  expect(afterClear.cards).toEqual([]);
-  expect(afterClear.interruptedCards).toEqual([]);
+  const after = trayModel({ jobs: [job("j-int-1", "interrupted", { clearedAt: 1500 })], unread: [], trouble: null });
+  expect(after.badge).toBe(0);
+  expect(after.pulse).toBe(false);
+  expect(after.cards).toEqual([]);
+  expect(after.interruptedCards).toEqual([]);
 });
 
 test("case 7 (source ratchet): NotificationBell contains no '/studio/' literal, imports from '@/lib/jobLinks', and renders 'bell-open' and 'bell-interrupted-clear'", () => {
@@ -192,41 +76,4 @@ test("case 7 (source ratchet): NotificationBell contains no '/studio/' literal, 
   expect(bellClean).toMatch(/from\s+["']@\/lib\/jobLinks["']/);
   expect(bellClean).toContain("bell-open");
   expect(bellClean).toContain("bell-interrupted-clear");
-});
-
-test("case 8 (critic revision): mergeJobs preserves clearedAt in both merge directions; trayModel over merged result has pulse:false and no interrupted card", () => {
-  const j1Raw: Job = {
-    id: "j1",
-    projectId: "p1",
-    kind: "video-export",
-    label: "Export cut",
-    status: "interrupted",
-    startedAt: 1000,
-    progress: 0,
-    measured: false,
-  };
-  const j1Cleared: Job = {
-    ...j1Raw,
-    clearedAt: 1500,
-  };
-
-  const mergedForward = mergeJobs([j1Raw], [j1Cleared]);
-  expect(mergedForward.length).toBe(1);
-  expect(mergedForward[0].id).toBe("j1");
-  expect(mergedForward[0].clearedAt).toBe(1500);
-
-  const mergedBackward = mergeJobs([j1Cleared], [j1Raw]);
-  expect(mergedBackward.length).toBe(1);
-  expect(mergedBackward[0].id).toBe("j1");
-  expect(mergedBackward[0].clearedAt).toBe(1500);
-
-  const modelForward = trayModel({ jobs: mergedForward, unread: [], trouble: null });
-  expect(modelForward.pulse).toBe(false);
-  expect(modelForward.interruptedCards).toEqual([]);
-  expect(modelForward.cards).toEqual([]);
-
-  const modelBackward = trayModel({ jobs: mergedBackward, unread: [], trouble: null });
-  expect(modelBackward.pulse).toBe(false);
-  expect(modelBackward.interruptedCards).toEqual([]);
-  expect(modelBackward.cards).toEqual([]);
 });
