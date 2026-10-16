@@ -1,5 +1,3 @@
-"use client";
-
 // The shot-list review — what a derived cut can be checked for, and what it
 // cannot.
 //
