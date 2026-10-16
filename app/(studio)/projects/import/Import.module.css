@@ -1,0 +1,23 @@
+/* The import receipt: the route frame, one section per archive, a row per project with its
+   counts and its losses, and the confirm footer. Drawn from the Plan's frame (../_plan/Plan.module.css). */
+.page{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:var(--sp-5);padding:var(--sp-5) var(--sp-wide) var(--sp-page-end)}
+.top{display:flex;align-items:center;gap:var(--sp-5);flex-wrap:wrap;border-bottom:1px solid var(--hair);padding-bottom:var(--sp-4)}
+.title{font:600 var(--fs-title)/1.15 var(--serif);color:var(--ink-bright);letter-spacing:-.01em;margin:0}
+.doors{display:flex;gap:var(--sp-3);margin-left:auto;flex-wrap:wrap}
+.file{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.quiet{color:var(--faint);font:500 var(--fs-meta)/1.4 var(--mono);margin:0}
+.mono{font:500 var(--fs-meta)/1.3 var(--mono);color:var(--muted);overflow-wrap:anywhere}
+.refused{display:flex;align-items:center;gap:var(--sp-4);flex-wrap:wrap}
+.source{display:flex;flex-direction:column;gap:var(--sp-3)}
+.sourceHead{display:flex;align-items:center;gap:var(--sp-4);flex-wrap:wrap;margin:0;font:inherit}
+.rows{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--sp-2)}
+.row{display:flex;align-items:center;gap:var(--sp-4);flex-wrap:wrap;padding:var(--sp-3) var(--sp-4);border:1px solid var(--hair);border-radius:var(--r-control);background:color-mix(in srgb,var(--wash) 60%,transparent)}
+.row[data-outcome=refuse],.row[data-outcome=refused]{border-color:color-mix(in srgb,var(--rose) 35%,transparent)}
+.name{font-size:var(--fs-ui);color:var(--ink-bright);min-width:0;overflow-wrap:anywhere}
+.tallies{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap}
+.reason{font:500 var(--fs-meta)/1.4 var(--mono);color:var(--text);min-width:0;overflow-wrap:anywhere}
+.losses{list-style:none;margin:0;padding:0;flex-basis:100%;display:flex;flex-direction:column;gap:var(--sp-1)}
+.loss{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap}
+.confirm{position:sticky;bottom:0;display:flex;align-items:center;justify-content:flex-end;gap:var(--sp-4);flex-wrap:wrap;padding:var(--sp-4) 0;border-top:1px solid var(--hair);background:var(--ink-1)}
+
+@media (max-width:700px){.page{padding:var(--sp-4)}.doors{margin-left:0}}

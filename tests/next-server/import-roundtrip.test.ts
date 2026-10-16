@@ -1,0 +1,227 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+
+import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
+
+import { ok } from "@gt/domain/errors";
+import { blobStore, type BlobStore } from "@gt/kernel/blob";
+import { openKernel, type Kernel } from "@gt/kernel/kernel";
+import { readPartIn, writePart } from "@gt/kernel/parts/driver";
+import { gateContext } from "@gt/kernel/parts/gates";
+import { planViewIn } from "@gt/kernel/records/read";
+import type { Store } from "@gt/kernel/store";
+
+import { inspectArchive } from "../../lib/studioArchive.ts";
+import { readArchive, rowLine, type Archive } from "../../lib/import/archive.ts";
+import { commitImport } from "../../lib/import/commit.ts";
+import { exportProjects } from "../../lib/import/export.ts";
+import { kernelIdOf, planImport } from "../../lib/import/project.ts";
+import { putProject } from "../../lib/projects.ts";
+import { clearV1, dataUrl, putStep, seedV1, v1Archive, type Seeded } from "./import-harness.ts";
+
+// THE IMPORT, END TO END (Phase 4 wave D, L42): an archive v1 wrote (its own exportAccount over
+// its own IndexedDB) -> the preview -> the confirm -> kernel Projects whose Plan opens with the
+// recipe's parts in the states v1's work implies, whose records read through their doors with
+// plates as blobs, and whose re-export v1 reads back - byte for byte on every step row nobody
+// edited, in v1's shape on every row somebody did.
+
+const dirs: string[] = [];
+let open: Kernel[] = [];
+afterAll(() => {
+  for (const d of dirs) rmSync(d, { recursive: true, force: true });
+});
+afterEach(() => {
+  for (const k of open) k.close();
+  open = [];
+});
+beforeEach(async () => {
+  await clearV1();
+});
+
+const OP = { kind: "operator", id: "op" } as const;
+const NOW = Date.parse("2026-10-16T09:00:00Z");
+
+function universe(): { store: Store; blobs: BlobStore } {
+  const dir = mkdtempSync(path.join(tmpdir(), "gt-import-"));
+  dirs.push(dir);
+  const k = openKernel(path.join(dir, "k.sqlite"));
+  if (!k.ok) throw k.error;
+  open.push(k.value);
+  return { store: k.value.store, blobs: blobStore(path.join(dir, "blobs")) };
+}
+
+function read(bytes: Uint8Array): Archive {
+  const a = readArchive(bytes);
+  if (!a.ok) throw a.error;
+  return a.value;
+}
+
+async function imported(seed: Seeded) {
+  const u = universe();
+  const archive = read(await v1Archive(seed.uid));
+  const plan = u.store.read((r) => planImport(r, archive));
+  if (!plan.ok) throw plan.error;
+  const done = await commitImport({ ...u, actor: OP }, archive, plan.value.token);
+  if (!done.ok) throw done.error;
+  return { ...u, archive, plan: plan.value, done: done.value };
+}
+
+const plan = (store: Store, id: string) => {
+  const v = store.read((r) => planViewIn(r, id, gateContext(r, NOW)));
+  if (!v.ok) throw v.error;
+  return v.value;
+};
+const stateOf = (store: Store, id: string) => new Map(plan(store, id).parts.map((p) => [p.id.slice(id.length + 1), p.state]));
+
+describe("preview, then confirm", () => {
+  it("previews every project with its outcome, counts and losses, and writes nothing", async () => {
+    const seed = await seedV1("uid-a");
+    const u = universe();
+    const archive = read(await v1Archive(seed.uid));
+    const p = u.store.read((r) => planImport(r, archive));
+    if (!p.ok) throw p.error;
+    const film = p.value.projects.find((x) => x.preview.v1Id === seed.film.id)?.preview;
+    expect(film).toMatchObject({ id: kernelIdOf(seed.film.id), recipe: "film/short-educational-video", outcome: "import", launched: true, done: ["research", "script", "frames", "score", "cut"], ratified: ["gate:frames"] });
+    // research-scope, script-adopted, frames, frames-alts, research, score, cut held; script-mode carried.
+    expect(film?.held).toBe(7);
+    expect(film?.losses.map((l) => [l.entity, l.grade])).toEqual(expect.arrayContaining([["script-mode", "data-only"], ["theme", "approximate"], ["sign-off research", "approximate"]]));
+    // u1, u2 plates (each once though v1 stored them twice), the alternative, the theme proof.
+    expect(film?.blobs).toBe(4);
+    const album = p.value.projects.find((x) => x.preview.v1Id === seed.album.id)?.preview;
+    expect(album).toMatchObject({ recipe: "album-video", launched: false, held: 0 });
+    expect(album?.losses[0]).toMatchObject({ entity: "music-video-source", grade: "data-only" });
+    const empty = p.value.projects.find((x) => x.preview.v1Id === seed.empty.id)?.preview;
+    expect(empty).toMatchObject({ recipe: "film/teaser", launched: false, held: 0 });
+    expect(u.store.read((r) => r.get("SELECT count(*) AS n FROM projects")?.["n"])).toEqual(ok(0));
+  });
+
+  it("refuses a confirm on a stale preview with the fresh one, nothing written", async () => {
+    const seed = await seedV1("uid-a");
+    const u = universe();
+    const archive = read(await v1Archive(seed.uid));
+    const r = await commitImport({ ...u, actor: OP }, archive, "not-the-token");
+    expect(r.ok && r.value.kind).toBe("stale");
+    expect(u.store.read((x) => x.get("SELECT count(*) AS n FROM projects")?.["n"])).toEqual(ok(0));
+  });
+
+  it("imports each project once; a re-import skips every one, reported", async () => {
+    const seed = await seedV1("uid-a");
+    const first = await imported(seed);
+    expect(first.done.kind === "done" && first.done.outcomes.map((o) => o.outcome)).toEqual(["imported", "imported", "imported", "imported"]);
+    const again = first.store.read((r) => planImport(r, first.archive));
+    if (!again.ok) throw again.error;
+    const second = await commitImport({ store: first.store, blobs: first.blobs, actor: OP }, first.archive, again.value.token);
+    const outcomes = second.ok && second.value.kind === "done" ? second.value.outcomes.map((o) => [o.outcome, o.reason]).sort() : [];
+    expect(outcomes).toEqual([seed.film, seed.ad, seed.album, seed.empty].map((p) => ["skipped", `already imported as ${kernelIdOf(p.id)}`]).sort());
+  });
+});
+
+describe("what the import will not take, and says so", () => {
+  it("carries a newer build's record as data only, never writes it, and refuses an unknown template", async () => {
+    const seed = await seedV1("uid-a");
+    await putStep(seed.film.id, "cut", { v: 9, offsets: {} });
+    await putProject({ ...seed.empty, template: "hologram" as never });
+    const { store, done, plan: p } = await imported(seed);
+    const film = p.projects.find((x) => x.preview.v1Id === seed.film.id)?.preview;
+    expect(film?.losses).toEqual(expect.arrayContaining([{ entity: "cut", grade: "data-only", reason: "cut was written as v9 by a newer build; this build reads up to v1" }]));
+    expect(film?.done).not.toContain("cut");
+    const id = kernelIdOf(seed.film.id);
+    expect(store.read((r) => r.get("SELECT 1 AS x FROM part_records WHERE project_id = ? AND key = 'cut'", id))).toEqual(ok(undefined));
+    const outcome = done.kind === "done" ? done.outcomes.find((o) => o.v1Id === seed.empty.id) : undefined;
+    expect(outcome).toMatchObject({ outcome: "refused", reason: "template hologram is not in the catalogue" });
+    expect(store.read((r) => r.get("SELECT 1 AS x FROM projects WHERE id = ?", kernelIdOf(seed.empty.id)))).toEqual(ok(undefined));
+  });
+});
+
+describe("the Plan the import opens", () => {
+  it("draws the recipe's parts in the states v1's work implies", async () => {
+    const seed = await seedV1("uid-a");
+    const { store } = await imported(seed);
+    const id = kernelIdOf(seed.film.id);
+    const v = plan(store, id);
+    expect(v.project).toMatchObject({ title: "Glass harbor", recipe: "film/short-educational-video", launched: true, runtimeS: 90, styleId: `v1-theme:${seed.theme.id}` });
+    const s = stateOf(store, id);
+    expect(Object.fromEntries(s)).toEqual({
+      research: "ratified",
+      script: "ratified",
+      frames: "ratified",
+      "gate:frames": "ratified", // v1's sign-off, as a committed packet
+      motion: "queued", // no v1 work, no job: the import queues nothing
+      score: "ratified",
+      "gate:score": "awaiting_gate", // done, never signed off
+      cut: "ratified",
+      "gate:cut": "awaiting_gate",
+      slot: "queued",
+    });
+    // The ratifying decision says where it came from.
+    const note = store.read((r) => r.get("SELECT note FROM decisions WHERE packet_id = ?", `pkt:step:${id}/gate:frames`)?.["note"]);
+    expect(note).toEqual(ok(`imported sign-off, v1 at ${new Date(seed.signedAt).toISOString()}`));
+    // An empty v1 project is a draft that launches through a receipt like any composed one.
+    expect(plan(store, kernelIdOf(seed.empty.id)).project.launched).toBe(false);
+    // The imported done jobs spent nothing and claimed nothing.
+    const jobs = store.read((r) => r.all("SELECT state, json_extract(record, '$.spend.usd') AS usd FROM jobs WHERE json_extract(record, '$.correlation.projectId') = ?", id));
+    expect(jobs.ok && jobs.value.every((j) => j["state"] === "done" && j["usd"] === 0)).toBe(true);
+  });
+
+  it("lands every record through its door, plates as blobs the store serves", async () => {
+    const seed = await seedV1("uid-a");
+    const { store, blobs } = await imported(seed);
+    const id = kernelIdOf(seed.film.id);
+    const snap = store.read((r) => readPartIn(r, { projectId: id, partId: `${id}/frames` }));
+    if (!snap.ok) throw snap.error;
+    expect(snap.value.refused).toEqual([]);
+    const frames = snap.value.records.get("frames");
+    expect(frames?.["v"]).toBe(3);
+    expect("frames" in (frames ?? {})).toBe(false);
+    const units = frames?.["units"] as { plate: { blob?: { sha256: string; bytes: number; mime: string }; src?: string } }[];
+    expect(units.every((x) => x.plate.src === undefined && x.plate.blob !== undefined)).toBe(true);
+    const bytes = await blobs.read(units[0]!.plate.blob!);
+    expect(bytes.ok && `data:image/png;base64,${Buffer.from(bytes.value).toString("base64")}`).toBe(dataUrl(1));
+    expect([...snap.value.records.keys()].sort()).toEqual(["cut", "frames", "frames-alts", "research", "research-scope", "score", "script-adopted"]);
+    const ad = kernelIdOf(seed.ad.id);
+    const adSnap = store.read((r) => readPartIn(r, { projectId: ad, partId: `${ad}/frames` }));
+    expect(adSnap.ok && adSnap.value.records.get("ads-shots")?.["scenarioId"]).toBe("sc1");
+  });
+});
+
+describe("the re-export", () => {
+  it("writes every step row nobody edited back byte for byte, and v1 reads the archive", async () => {
+    const seed = await seedV1("uid-a");
+    const { store, blobs, archive } = await imported(seed);
+    const out = await exportProjects(store, blobs, { ids: [kernelIdOf(seed.film.id), kernelIdOf(seed.ad.id), kernelIdOf(seed.album.id)], uid: seed.uid, now: NOW });
+    if (!out.ok) throw out.error;
+    const back = read(out.value);
+    const lines = (a: Archive, s: "steps" | "projects" | "themes" | "uploads") => new Map(a.rows[s].map((r) => [String(r["id"]), rowLine(s, r)]));
+    const was = lines(archive, "steps");
+    const now = lines(back, "steps");
+    expect([...now.keys()].sort()).toEqual([...was.keys()].filter((k) => !k.startsWith(seed.empty.id)).sort());
+    for (const [id, line] of now) expect(line, id).toBe(was.get(id));
+    for (const s of ["projects", "themes", "uploads"] as const) for (const [id, line] of lines(back, s)) expect(line, id).toBe(lines(archive, s).get(id));
+    // v1's own reader takes it (its digests, its closure rules).
+    const v1 = await inspectArchive(new Blob([Buffer.from(out.value)]));
+    expect(v1.manifest.counts).toMatchObject({ projects: 3, themes: 1, uploads: 1 });
+  });
+
+  it("writes an edited record in v1's shape: plates inlined, the frames shadow rebuilt, v2", async () => {
+    const seed = await seedV1("uid-a");
+    const { store, blobs, archive } = await imported(seed);
+    const id = kernelIdOf(seed.film.id);
+    const snap = store.read((r) => readPartIn(r, { projectId: id, partId: `${id}/frames` }));
+    if (!snap.ok) throw snap.error;
+    const frames = snap.value.records.get("frames") ?? {};
+    const w = writePart(store, { projectId: id, partId: `${id}/frames`, baseRev: snap.value.rev, act: "op", op: { turn: "edited" }, label: "turn", by: OP, next: () => ok({ frames: { ...frames, turn: "edited" } }) });
+    expect(w.ok).toBe(true);
+    const out = await exportProjects(store, blobs, { ids: [id], uid: seed.uid, now: NOW });
+    if (!out.ok) throw out.error;
+    const row = read(out.value).rows.steps.find((r) => r["id"] === `${seed.film.id}:frames`);
+    const data = row?.["data"] as { v: number; turn: string; units: { plate: { src: string; blob?: unknown } }[]; frames: unknown[] };
+    expect(data).toMatchObject({ v: 2, turn: "edited" });
+    expect(data.units.map((x) => x.plate.src)).toEqual([dataUrl(1), dataUrl(2)]);
+    expect(data.units.every((x) => x.plate.blob === undefined)).toBe(true);
+    expect(data.frames).toHaveLength(2);
+    // The rest still byte for byte.
+    const cut = (a: Archive) => a.rows.steps.find((r) => r["id"] === `${seed.film.id}:cut`);
+    expect(rowLine("steps", cut(read(out.value)) ?? {})).toBe(rowLine("steps", cut(archive) ?? {}));
+  });
+});
