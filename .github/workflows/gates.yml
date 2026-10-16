@@ -451,8 +451,25 @@ jobs:
       # it drives through (lib/devAuth.ts) does not use Firebase, and a green run
       # with an empty environment is the proof that the bypass — not a real
       # credential that leaked into CI — is what opened the gate.
+      # THE STORE. The Floor, Board and Ledger journeys compare the page to v1's
+      # Weir and the ledger store, and refuse to pass over an empty one ("seed
+      # fixtures, or this proves nothing"). A runner has no foundry-out, so the
+      # lane seeds the committed fixture universe into a temp store first and
+      # points the app at it. Local files only: no network, no vendor, and still
+      # no Firebase configuration.
+      - name: seed fixture store
+        run: |
+          node pipeline/ledger-sync.mts seed-fixtures
+          node pipeline/ledger-sync.mts sync --fixtures --store "$GRAVITONE_STORE_PATH" --json
+        env:
+          GRAVITONE_STORE_PATH: ${{ runner.temp }}/ledger.sqlite
+          NEXT_PUBLIC_GRAVITONE_DATA: fixtures
+
       - name: live (golden path, real browser)
         run: npm run test:live
+        env:
+          GRAVITONE_STORE_PATH: ${{ runner.temp }}/ledger.sqlite
+          NEXT_PUBLIC_GRAVITONE_DATA: fixtures
 
       # The traces and screenshots the lane keeps ONLY for failures. Uploaded
       # only when something failed, because a slow lane whose failures cannot be
