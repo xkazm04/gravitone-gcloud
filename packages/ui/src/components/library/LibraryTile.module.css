@@ -4,7 +4,7 @@
 .tile{position:relative;display:flex;flex-direction:column;height:100%;border-radius:var(--r);border:1px solid var(--hair);background:var(--ink-2);overflow:hidden;cursor:pointer;min-width:0;transition:border-color var(--dur-fast),box-shadow var(--dur-fast),background var(--dur-fast);contain:layout paint}
 .tile:hover{border-color:var(--hair-3);background:var(--ink-3)}
 .on,.on:hover{border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan),0 var(--sp-3) calc(var(--sp-7) - var(--sp-nudge)) var(--shadow)}
-.slot{cursor:default;background:linear-gradient(180deg,var(--ink-2),var(--ink-1));border-style:dashed;border-color:var(--hair)}
+.slot{cursor:default;background:linear-gradient(180deg,var(--ink-2),var(--ink-1));border-style:dashed;border-color:color-mix(in srgb,var(--faint) 80%,transparent)}
 
 .thumb{position:relative;flex:none;height:var(--thumb,calc(var(--w-lib-tile-m) * .625));overflow:hidden;background:var(--ink-1)}
 .tile:hover .thumb img{filter:brightness(1.06)}

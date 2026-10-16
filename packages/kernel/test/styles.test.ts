@@ -203,6 +203,19 @@ describe("the lock gate (v1 canLock / lockBlocker), refused at the write", () =>
     // ...and taking the approval back does not demote: the keep was given.
     expect(op(s, "atelier", { kind: "judge-proof", proofId: "q1", state: "rejected" }).view.status).toBe("proven");
   });
+  it("only an undecided plate leaves the sheet: a rejection stays, an approval is undecided first", () => {
+    const s = store();
+    adopted(s, "p", 3);
+    op(s, "p", { kind: "judge-proof", proofId: "p0", state: "rejected", note: "the fall reads as a cliff" });
+    op(s, "p", { kind: "judge-proof", proofId: "p1", state: "approved" });
+    const rejected = op(s, "p", { kind: "remove-proof", proofId: "p0" });
+    expect(rejected.kind === "refused" ? rejected.reason : rejected.kind).toContain("a rejection stays on the sheet");
+    const approved = op(s, "p", { kind: "remove-proof", proofId: "p1" });
+    expect(approved.kind === "refused" ? approved.reason : approved.kind).toContain("undecide the approval first");
+    const gone = op(s, "p", { kind: "remove-proof", proofId: "p2" });
+    expect(gone.kind).toBe("applied");
+    expect(gone.view.proofs.map((p) => p.id)).toEqual(["p0", "p1"]);
+  });
   it("refuses proofs rendered under an earlier block", () => {
     const s = store();
     adopted(s, "p", 1);

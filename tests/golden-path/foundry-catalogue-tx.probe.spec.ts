@@ -26,7 +26,6 @@ import path from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { GET as stylesGET } from "@/app/api/foundry/styles/route";
 import { CATALOGUE_JOURNAL, CATALOGUE_LOCK, __setCatalogueLockTiming } from "@/lib/foundry/catalogue";
 import { EXTRACT_ROOT, commitExtractRun } from "@/lib/foundry/extract/store";
 import { OBSERVABLE_FIELDS } from "@/lib/foundry/extract/types";
@@ -254,7 +253,7 @@ test("case 3b: a FRESH lock held past the wait bound is a 503 that names the loc
 // The journal stopped (Phase 5 decision 3): the store's append-only `style_ops` log is the
 // catalogue's history and `_rev` is its newest seq, which only grows. A commit that changes no
 // style (the Dojo's) leaves the revision where it was.
-test("case 4: forge and extract commits each move styles.json _rev forward; the Dojo commit does not; no journal is written; GET /api/foundry/styles returns _rev", async () => {
+test("case 4: forge and extract commits each move styles.json _rev forward; the Dojo commit does not; no journal is written; the catalogue read returns _rev", async () => {
   seedStyles("haze");
   expect(readStyles()._rev, "a catalogue that never had a revision reads as none").toBeUndefined();
 
@@ -273,12 +272,9 @@ test("case 4: forge and extract commits each move styles.json _rev forward; the 
   expect(readStyles()._rev, "the Dojo writes no style").toBe(r2);
   expect(existsSync(path.join(foundryDir(), CATALOGUE_JOURNAL)), "no journal line is written any more").toBe(false);
 
-  // The read side: a client can tell the catalogue moved.
+  // The read side: a reader can tell the catalogue moved. (GET /api/foundry/styles, which served
+  // this to the v1 shelf, retired with it in Phase 5 wave B - a 410 naming the Library now.)
   expect((await getCatalogue())._rev).toBe(r2);
-  process.env.IMAGING_ACCESS_SECRET = "probe-secret";
-  const res = await stylesGET(new Request("http://studio.local/api/foundry/styles", { headers: { authorization: "Bearer probe-secret" } }));
-  expect(res.status).toBe(200);
-  expect(((await res.json()) as { _rev?: number })._rev).toBe(r2);
 });
 
 /* ── 5. a real Python writer ──────────────────────────────────────────────── */

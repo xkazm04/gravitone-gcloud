@@ -17,10 +17,11 @@
 // "something over there wants you" is the one fact you cannot get without
 // leaving where you are.
 //
-// FOUR STATIONS ARE DOORS NOW (Phase 3): the cull, Extract, the Dojo and Strips
-// decide on the Board, so each is drawn as a link to the lane where its piles
-// wait, keeping its status dot - "something over there wants you" is still the
-// one fact this row exists to carry.
+// FIVE STATIONS ARE DOORS NOW: the cull, Extract, the Dojo and Strips decide on
+// the Board (Phase 3), and Styles is worked in the Library's style atelier
+// (Phase 5), so each is drawn as a link to where its work waits, keeping its
+// status dot - "something over there wants you" is still the one fact this row
+// exists to carry.
 //
 // THE MEDIA SWITCH RIDES HERE TOO, and only while the Pipeline is open. It is
 // the same kind of choice as the station — which body of work am I looking at —
@@ -104,7 +105,7 @@ export default function FoundrySubnav<T extends string>({
   /** Rendered only when the station that owns it is open. */
   media?: SubnavMedia<T>;
 }) {
-  const tabs: readonly Tab[] = ["styles", "pipeline"];
+  const tabs: readonly Tab[] = ["pipeline"];
   const doors = Object.keys(DECIDED_ON) as Exclude<Station, Tab>[];
   return (
     <div className="font-jetbrains flex w-full items-center gap-6 overflow-x-auto pb-1.5 text-label whitespace-nowrap md:gap-7">
@@ -118,7 +119,7 @@ export default function FoundrySubnav<T extends string>({
           );
         })}
       </div>
-      <nav aria-label="decided on the Board" className="flex items-center gap-6 md:gap-7">
+      <nav aria-label="worked elsewhere in the studio" className="flex items-center gap-6 md:gap-7">
         {doors.map((d) => {
           const l = lines[d] ?? null;
           return (

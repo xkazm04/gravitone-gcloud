@@ -92,7 +92,7 @@ import {
   UPLOADS_STORE,
   openDb,
 } from "@/lib/studioDb";
-// The uploads store is the one place this shelf OWNS bytes (lib/assets.ts): an
+// The uploads store is the one place this shelf OWNS bytes (lib/shelfPointers.ts): an
 // asset row keeps an `upload:<id>` pointer and the picture lives under that id,
 // with NO uid on it — the account scoping is on the row that points here. So
 // the bytes are found the way `deleteAsset` finds them, through the pointer, and
@@ -102,7 +102,7 @@ import {
 // of whatever they were working on — stayed resident under an id nothing could
 // name again, still spending the quota and still readable by anything that
 // opened the store.
-import { readUploadPointer } from "@/lib/assets";
+import { readUploadPointer } from "@/lib/shelfPointers";
 import { reportStorageTrouble } from "@/lib/steps";
 // The job store, like every other store this file clears, is imported BY it and
 // does not import it. See the eviction door in lib/jobs.tsx: removing
@@ -186,12 +186,12 @@ export const FIXTURE_SEED_KEY = "gravitone.fixtures.seed";
 export function userScopedLocalKeys(uid: string): string[] {
   return [
     `gravitone.seeded.${uid}`, // lib/useProjects.ts — "this account's shelf was seeded"
-    `gravitone.assets.seeded.${uid}`, // lib/useAssets.ts — same, for the library
+    `gravitone.assets.seeded.${uid}`, // the v1 Library's shelf seed mark — no longer written since that shelf retired (Phase 5), still evicted where a machine holds it
     `gravitone.audio-seeded.v2.${uid}`, // the audio module's IndexedDB seed mark — no longer written since the sound store (2026-10-05), still evicted where a machine holds it
-    `gravitone.audio-book.${uid}`, // app/library/audio/bookStore.ts — the audio vocabulary's stances and the drafts sent out
+    `gravitone.audio-book.${uid}`, // the v1 Library audio vocabulary's stances and drafts — no longer written since that module retired (Phase 5), still evicted where a machine holds it
     `gravitone.audio-seeded.${uid}`, // the audio module's first seed mark — no longer written, still evicted where a machine holds it
-    `gravitone.sound-migrated.v1.${uid}`, // app/library/audio/soundMigration.ts — "this account's audio rows moved to the sound store"
-    `gravitone.audio-annex.${uid}`, // the Library's old per-browser annex — no longer written since its facts became SoundTake fields (r4 closeout); read once and removed by app/library/audio/soundMigration.ts#migrateAnnex, still evicted where a machine holds it
+    `gravitone.sound-migrated.v1.${uid}`, // the v1 Library's sound migration mark — no longer written since that module retired (Phase 5), still evicted where a machine holds it
+    `gravitone.audio-annex.${uid}`, // the Library's old per-browser annex — no longer written since its facts became SoundTake fields (r4 closeout); read once and removed by the v1 Library's sound migration (retired Phase 5), still evicted where a machine holds it
     `gravitone.palette.recents.${uid}`, // components/ui/shell/palette.ts — the shell palette's recent destinations, per account
     JOBS_KEY, // lib/jobs.tsx — profile-wide, cleared wholesale (see above)
     REMEMBERED_KEY, // lib/useRemembered.ts — open folds, last tabs; profile-wide, cleared wholesale: a remembered key can name a project id
@@ -380,7 +380,7 @@ export async function evictIdentity(
       // Assets are read as RECORDS, not keys, because the row is the only thing
       // that knows whether bytes live behind it. The uploads store has no uid
       // index on purpose (studioDb) — the scoping is on the pointer — so the
-      // pointer is followed here exactly as lib/assets.ts#deleteAsset follows it,
+      // pointer is followed here exactly as v1 lib/assets.ts#deleteAsset followed it,
       // inside the same transaction, so a row can never outlive its bytes and
       // bytes can never outlive the account that owned them.
       const assets = tx.objectStore(ASSETS_STORE);

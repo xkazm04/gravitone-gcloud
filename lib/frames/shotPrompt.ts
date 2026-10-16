@@ -70,7 +70,7 @@
 // picture half of that.
 
 import { PROMPT_CHAR_LIMIT, compilePrompt, compileStyleBlock, NO_TEXT_CLAUSE } from "@/lib/stylePrompt";
-import type { StyleBlock } from "@/lib/themes";
+import type { StyleBlock } from "@gt/catalog/style";
 
 import type { Shot, ShotSize, TrailerRole } from "@/lib/frames/shots";
 

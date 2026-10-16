@@ -10,8 +10,9 @@
 //      live, Suno is a manual round trip and Local is declared-not-installed —
 //      and a withheld capability keeps its reason, verbatim.
 //   2. THE MAPPING. What a render handed back plus what the lab asked for
-//      becomes AudioMeta that `takeFromAsset` reads back field for field —
-//      through a real write and a fresh list, which is what a reload does.
+//      becomes AudioMeta with nothing written as undefined. (Its round trip
+//      through v1's IndexedDB shelf retired with that shelf in Phase 5; the lab
+//      files into the sound store, lib/sound/client.ts.)
 //   3. THE EDIT. Kept sections are references at the source's measured ranges;
 //      regenerated ones carry the conditioning the mode asked for; only the
 //      regenerated seconds are counted as spend.
@@ -22,27 +23,12 @@
 //   5. THE HUNT, READ BACK. Knockouts are rejections, the crown is a keep, the
 //      lanes are found again from the takes alone.
 
-import "fake-indexeddb/auto";
-
 import { test, expect } from "@playwright/test";
 
-import { seedAudioAssets } from "@/app/library/audio/audioSeed";
-import {
-  compose,
-  newDraft,
-  peaksOf,
-  returnMeta,
-  seedOf,
-  takeFromAsset,
-  variations,
-  variationsOfSeed,
-  vocabulary,
-  type Facet,
-  type Seed,
-  type Take,
-  type TermEntry,
-  type Variation,
-} from "@/app/library/audio/book";
+import { compose, seedOf, type Seed } from "@/lib/sound/audio/prompts";
+import type { Take } from "@/lib/sound/audio/take";
+import { variations, variationsOfSeed, type Variation } from "@/lib/sound/audio/variations";
+import { vocabulary, type Facet, type TermEntry } from "@/lib/sound/audio/vocabulary";
 import { can, engineRegistry } from "@/app/playground/engines";
 import {
   buildEditPlan,
@@ -58,9 +44,12 @@ import {
   sunoDraftText,
   sunoFields,
 } from "@/app/playground/labModel";
-import { assetFromUpload, listAssets, putUploads, type Asset } from "@/lib/assets";
 import { ABSENCE_REASON } from "@/lib/capabilities";
+import type { V1Asset as Asset } from "@/lib/fixtures/browserBundle";
 import type { WireAudioRefChunk, WireGenerationChunk, WirePlan } from "@/lib/music/types";
+
+import { seedAudioAssets } from "./_v1audio/audioSeed";
+import { takeFromAsset } from "./_v1audio/takeFromAsset";
 
 const UID = "uid-sound-lab-probe";
 
@@ -114,58 +103,17 @@ test("registry: ElevenLabs api, Suno manual, Local declared — and a withheld o
   expect(off.withheld.map((w) => w.op)).toEqual(["compose", "plan", "section-edit", "sfx"]);
 });
 
-/* ── 2 · the mapping, through a real write ───────────────────────────── */
+/* ── 2 · the mapping ─────────────────────────────────────────────────── */
 
-test("mapping: a render's meta survives a write and a fresh read as the same take", async () => {
+test("mapping: a render's meta names what the lab asked for, and writes nothing undefined", () => {
   const parent = takeFromAsset(seedAudioAssets(UID)[0]);
-  const meta = {
-    ...renderMeta(
-      { songId: "song_x1", plan: PLAN },
-      {
-        op: "plan",
-        seed: SEED,
-        prompt: compose(SEED, "elevenlabs", {}),
-        parent,
-        variation: { axis: "tempo", diff: ["+6 BPM"] },
-        huntId: "hunt-abc",
-      },
-    ),
-    peaks: [0.1, 0.5, 1, 0.4],
-    measured: { tempo_bpm: 117.5, key: "A minor", energy: "high" as const, method: "onset autocorr · goertzel chroma" },
-    duration_s: 30,
-    verdict: "unjudged" as const,
-  };
-  // Nothing undefined is written: an absent field stays absent.
+  const meta = renderMeta(
+    { songId: "song_x1", plan: PLAN },
+    { op: "plan", seed: SEED, prompt: compose(SEED, "elevenlabs", {}), parent, variation: { axis: "tempo", diff: ["+6 BPM"] }, huntId: "hunt-abc" },
+  );
   for (const [k, v] of Object.entries(meta)) expect(v, `${k} written as undefined`).not.toBeUndefined();
-
-  const title = labTitle(SEED, "plan", 4);
-  expect(title).toBe("Synthwave plan take 4");
-  const file = new File([new Uint8Array([1, 2, 3, 4])], `${title}.mp3`, { type: "audio/mpeg" });
-  const pair = assetFromUpload(UID, file, ["audio"], "audio");
-  pair.asset.meta = { ...(pair.asset.meta ?? {}), ...meta };
-  await putUploads([pair]);
-
-  const back = (await listAssets(UID)).find((a) => a.id === pair.asset.id)!;
-  const t = takeFromAsset(back);
-  console.log(`[lab] filed ${t.title} op=${t.lab_op} song=${t.song_id} sections=${t.plan?.chunks.length} parent=${t.parent_id}`);
-  expect(t.title).toBe(title);
-  expect(t.kind).toBe("track");
-  expect(t.vendor).toBe("elevenlabs");
-  expect(t.lab_op).toBe("plan");
-  expect(t.song_id).toBe("song_x1");
-  expect(t.plan).toEqual(PLAN);
-  expect(t.parent_id).toBe(parent.id);
-  expect(t.genre_tags).toEqual(SEED.genres);
-  expect(t.instrumentation).toEqual(SEED.instruments);
-  expect(t.tempo_bpm).toBe(118);
-  expect(t.measured?.tempo_bpm).toBe(117.5);
-  expect(t.variation).toEqual({ axis: "tempo", diff: ["+6 BPM"] });
-  expect(t.hunt_id).toBe("hunt-abc");
-  expect(t.upload_id).toBeTruthy();
-  expect(isEditable(t)).toBe(true);
-  // The Library draws the MEASURED waveform for it, not the id-seeded sketch.
-  expect(peaksOf(t, 4)).toEqual([0.1, 0.5, 1, 0.4]);
-  expect(peaksOf(t, 2)).toEqual([0.5, 1]);
+  expect(meta).toMatchObject({ vendor: "elevenlabs", lab_op: "plan", song_id: "song_x1", plan: PLAN, parent_id: parent.id, genre_tags: SEED.genres, instrumentation: SEED.instruments, tempo_bpm: 118, variation: { axis: "tempo", diff: ["+6 BPM"] }, hunt_id: "hunt-abc" });
+  expect(labTitle(SEED, "plan", 4)).toBe("Synthwave plan take 4");
 
   // An effect carries its category and no recipe terms; a fixture row has no lab fields at all.
   const fx = renderMeta({ songId: null, plan: null }, { op: "sfx", seed: SEED, prompt: "hit", sfx: { category: "impact", loop: false } });
@@ -175,6 +123,7 @@ test("mapping: a render's meta survives a write and a fresh read as the same tak
   expect("tempo_bpm" in fx).toBe(false);
   const fixture = takeFromAsset(seedAudioAssets(UID)[1]);
   expect([fixture.lab_op, fixture.song_id, fixture.plan, fixture.peaks, fixture.hunt_id]).toEqual([null, null, null, null, null]);
+  expect(isEditable({ ...fixture, kind: "track", song_id: "song_x1", plan: PLAN })).toBe(true);
 });
 
 /* ── 3 · the edit ────────────────────────────────────────────────────── */
@@ -198,7 +147,9 @@ test("edit: kept sections reference the source's ranges; regenerated ones carry 
 
 /* ── Suno, by hand ───────────────────────────────────────────────────── */
 
-test("suno: the style line is the book's, the tags follow the plan, and a return files against its draft", () => {
+// The return-against-a-draft half retired with v1's Library drafts (Phase 5); the Audio lane's
+// composer (app/(studio)/audio) owns drafts now.
+test("suno: the style line is the book's, and the tags follow the plan", () => {
   const f = sunoFields({ ...SEED, avoid: ["vocals"] }, {}, PLAN);
   const book = compose({ ...SEED, avoid: ["vocals"] }, "suno", {}).split("\n")[0];
   expect(`Style: ${f.style}`).toBe(book);
@@ -207,17 +158,7 @@ test("suno: the style line is the book's, the tags follow the plan, and a return
   const noPlan = sunoFields(SEED, {}, null);
   expect(noPlan.lyrics.split("\n")[1]).toBe("[Intro]");
 
-  const d = { ...newDraft(SEED, "suno", sunoDraftText(f), null, null, 1), hunt_id: "hunt-abc", variation: { axis: "mood", diff: ["−dark", "+warm"] } };
-  const m = returnMeta(d, undefined);
-  expect(m.vendor).toBe("suno");
-  expect(m.draft_id).toBe(d.id);
-  expect(m.prompt_text?.startsWith("Style: ")).toBe(true);
-  expect(m.hunt_id).toBe("hunt-abc");
-  expect(m.variation).toEqual({ axis: "mood", diff: ["−dark", "+warm"] });
-  // A Library draft carries neither, and neither is written.
-  const plain = returnMeta(newDraft(SEED, "suno", "x", null, null, 1), undefined);
-  expect("hunt_id" in plain).toBe(false);
-  expect("variation" in plain).toBe(false);
+  expect(sunoDraftText(f).startsWith("Style: ")).toBe(true);
 });
 
 /* ── 4 · the fan-out, and the lift it rests on ───────────────────────── */

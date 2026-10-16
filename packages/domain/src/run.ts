@@ -38,6 +38,8 @@ export const PRODUCERS = [
   "voice",
   "words",
   "sfx",
+  "media-facts",
+  "style",
 ] as const;
 export const producerNameSchema = z.enum(PRODUCERS);
 export type ProducerName = z.output<typeof producerNameSchema>;

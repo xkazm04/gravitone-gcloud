@@ -4,6 +4,7 @@ import { keyOf, projectRead, type ProjectRead } from "@/lib/parts/context";
 import { partTrail, readPartIn, type PartSnapshot } from "@gt/kernel/parts/driver";
 import type { StepKind } from "@gt/domain/steps/registry";
 import type { Reader } from "@gt/kernel/store";
+import { projectLookIn } from "@gt/producers/frames/look";
 import { runningActs } from "@gt/producers/research/partJob";
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
@@ -40,7 +41,7 @@ export function sceneOf(r: Reader, projectId: string, key: string, now: number):
   const snap = readPartIn(r, { projectId, partId: part.id });
   const p = read.plan.project;
   const project: PartProject = { id: p.id, title: p.title, recipe: p.recipe, recipeLabel: p.recipeLabel, discipline: read.discipline, targetS: read.targetS };
-  const base: Ctx = { project, plan: read.plan, now, research: () => researchOf(project, snap.records) };
+  const base: Ctx = { project, plan: read.plan, now, research: () => researchOf(project, snap.records), look: projectLookIn(r, p.styleId) };
   const ctx: KCtx = { ...base, rec: recReader({ research: base.research, script: () => scriptOf(snap.records), later: (k) => later(k).fromRecords(snap.records, base) }), records: () => snap.records };
   return ok({ read, ctx, part, kind, snap });
 }

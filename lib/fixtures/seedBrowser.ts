@@ -15,10 +15,24 @@ import { saveStep } from "@/lib/steps";
 import { FIXTURE_SEED_KEY } from "@/lib/identityEviction";
 import { accessHeader } from "@/lib/imagingClient";
 
-import { putAssets, putUploads, readUploadPointer, type UploadRecord } from "../assets";
 import { addProjects } from "../projects";
-import { putTheme } from "../themes";
+import { readUploadPointer } from "../shelfPointers";
+import { ASSETS_STORE, THEMES_STORE, UPLOADS_STORE, openDb, runTx } from "../studioDb";
 import { UID_TOKEN, type BrowserBundle } from "./browserBundle";
+
+/** Rows into one v1 store, `put` (overwrite, never duplicate). v1's writers retired in Phase 5;
+ *  the rows are what an account that used v1 still holds, for the import to read. */
+async function putRows(store: string, rows: readonly object[]): Promise<void> {
+  if (rows.length === 0) return;
+  const db = await openDb();
+  try {
+    await runTx(db, store, "readwrite", (s) => {
+      for (const r of rows) s.put(r);
+    });
+  } finally {
+    db.close();
+  }
+}
 
 /** The locked styles of browser.ts, assigned to the demo shelf so projects
  *  stand on a style the way a real one does. */
@@ -80,23 +94,21 @@ export async function ensureBrowserFixtures(uid: string): Promise<void> {
   const bundle = (await res.json()) as BrowserBundle;
   if (stamp() === `${uid}:${bundle.seedId}`) return;
 
-  for (const t of bundle.themes) await putTheme({ ...t, uid });
+  await putRows(THEMES_STORE, bundle.themes.map((t) => ({ ...t, uid })));
 
   const uploads = new Map(bundle.uploads.map((u) => [u.id, u]));
-  const pairs: { asset: BrowserBundle["assets"][number]; upload: UploadRecord }[] = [];
-  const plain: BrowserBundle["assets"] = [];
+  const bytes: { id: string; blob: Blob; mime: string; bytes: number }[] = [];
   for (const a of bundle.assets) {
-    const asset = { ...a, uid: a.uid === UID_TOKEN ? uid : a.uid };
     const id = readUploadPointer(a.src);
     const up = id ? uploads.get(id) : undefined;
     if (id && up) {
       const blob = blobOf(up.base64, up.mime);
-      pairs.push({ asset, upload: { id, blob, mime: up.mime, bytes: blob.size } });
+      bytes.push({ id, blob, mime: up.mime, bytes: blob.size });
     }
-    else plain.push(asset);
   }
-  if (plain.length) await putAssets(plain);
-  if (pairs.length) await putUploads(pairs);
+  // Bytes before the rows that point at them: a row is never written ahead of its bytes.
+  await putRows(UPLOADS_STORE, bytes);
+  await putRows(ASSETS_STORE, bundle.assets.map((a) => ({ ...a, uid: a.uid === UID_TOKEN ? uid : a.uid })));
 
   for (const s of bundle.steps) {
     const out = await saveStep(s.projectId, s.phase, s.data, s.v === undefined ? undefined : { v: s.v });

@@ -8,15 +8,21 @@
 // through the second door (a `.gravitone` file) and is read as already imported; a damaged file
 // is refused by v1's own reader with v1's code before anything is uploaded.
 //
+// THE SHELF (Phase 5, L55): the same read takes the account's themes into the Style store and its
+// shelf assets into the Library index, counted on the preview and on the outcome; an unnamed
+// theme is named from its preset. Landing a style re-exports styles.json, so the server's
+// FOUNDRY_DIR is a temp copy of the catalogue - the repo's file is never written.
+//
 // ITS OWN SERVER (tests/live/produce-real.live.spec.ts's shape): `next dev` on IMPORT_PORT (3218)
 // with NEXT_DIST_DIR .next-l42, the kernel store a temp GRAVITONE_STORE_PATH (blobs beside it),
-// GRAVITONE_DRY_ONLY=1. Nothing real is read or written.
+// FOUNDRY_DIR a temp copy of pipeline/foundry/styles.json, GRAVITONE_DRY_ONLY=1. Nothing real is
+// read or written.
 //
 // Run: npx playwright test -c playwright.live.config.ts tests/live/import.live.spec.ts
 //   IMPORT_SHOTS=<dir> saves the screens it walks (1440 and 390 wide).
 
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
-import { appendFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -53,7 +59,10 @@ test.beforeAll(async () => {
   U = mkdtempSync(path.join(tmpdir(), "gt-import-live-"));
   const env: NodeJS.ProcessEnv = { ...process.env };
   for (const v of ["GRAVITONE_STORE_PATH", "GRAVITONE_PRODUCE_SIDE", "NEXT_PUBLIC_GRAVITONE_DATA"]) delete env[v];
-  Object.assign(env, { NEXT_PUBLIC_DEV_AUTH: "1", NEXT_DIST_DIR: DIST, GRAVITONE_STORE_PATH: path.join(U, "store.sqlite"), GRAVITONE_DRY_ONLY: "1" });
+  const foundry = path.join(U, "foundry");
+  mkdirSync(foundry, { recursive: true });
+  copyFileSync(path.join(ROOT, "pipeline", "foundry", "styles.json"), path.join(foundry, "styles.json"));
+  Object.assign(env, { NEXT_PUBLIC_DEV_AUTH: "1", NEXT_DIST_DIR: DIST, GRAVITONE_STORE_PATH: path.join(U, "store.sqlite"), FOUNDRY_DIR: foundry, GRAVITONE_DRY_ONLY: "1" });
   const child = spawn(process.execPath, [path.join(ROOT, "node_modules", "next", "dist", "bin", "next"), "dev", ROOT, "-p", String(PORT)], { cwd: ROOT, env, stdio: ["ignore", "pipe", "pipe"] });
   server = child;
   const log = path.join(U, "next-dev.log");
@@ -86,6 +95,7 @@ const png = (seed: number) => `data:image/png;base64,${Buffer.from([137, 80, 78,
 const T = Date.parse("2026-09-01T10:00:00Z");
 const progress = { research: "done", script: "done", frames: "review", motion: "empty", score: "working", cut: "empty" };
 const unit = (id: string, at: number, seed: number) => ({ id, kind: "beat", sourceId: "r-glass", beatRef: { at }, startS: at * 5, endS: at * 5 + 5, plate: { state: "ready", src: png(seed), model: "gpt-image-2.5", costUsd: 0.04 }, clip: { status: "not-started", motion: "" }, elements: [], texts: [] });
+const BLOCK = { technique: "ink wash", subject: "a harbor of glass", palette: [{ name: "ink", hex: "#101418", role: "ground" }, { name: "bone", hex: "#e8e2d4", role: "objects" }, { name: "signal", hex: "#e0542e", role: "accent" }], finish: "matte" };
 const ROWS = {
   projects: [
     { id: "p-live-film", uid: UID, title: "Glass harbor", logline: "", template: "short-educational-video", discipline: "educational", themeId: "th-live", targetS: 90, createdAt: T, updatedAt: T, phase: "frames", progress, signedOff: { frames: T + 1000 } },
@@ -99,7 +109,12 @@ const ROWS = {
     { id: "p-live-film:script-mode", projectId: "p-live-film", phase: "script-mode", data: { mode: "expert" } },
     { id: "p-live-ad:ads-brief", projectId: "p-live-ad", phase: "ads-brief", data: { brief: { product: "Rainshell", audience: "", proposition: "", tone: "", mustInclude: [], cta: "", platform: "" } } },
   ],
-  themes: [{ id: "th-live", uid: UID, name: "Ledger ink", origin: "scratch", block: { medium: "ink" }, elements: [], proofs: [{ id: "pr-1", label: "first", base64: Buffer.from("proof").toString("base64"), mime: "image/png", state: "approved", createdAt: 1 }], createdAt: T, updatedAt: T }],
+  themes: [
+    { id: "th-live", uid: UID, name: "Ledger ink", origin: "scratch", block: BLOCK, elements: [], proofs: [{ id: "pr-1", label: "first", base64: Buffer.from("proof").toString("base64"), mime: "image/png", state: "approved", createdAt: 1 }], createdAt: T, updatedAt: T },
+    { id: "th-live-unnamed", uid: UID, name: "", origin: "preset", presetId: "blueprint", block: BLOCK, elements: [], proofs: [], createdAt: T, updatedAt: T },
+  ],
+  assets: [{ id: "as-live-harbor", uid: UID, path: ["refs", "harbors"], name: "harbor", src: "upload:up-live-harbor", kind: "image", createdAt: T }],
+  uploads: [{ id: "up-live-harbor", bytes: [137, 80, 78, 71, 9, 9, 0, 255, 13, 10], mime: "image/png" }],
 };
 
 /** v1's rows into this origin's v1 database (the page opened it at its version, with its stores). */
@@ -111,10 +126,15 @@ async function seedBrowser(page: Page): Promise<void> {
       r.onerror = () => reject(r.error);
     });
     await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction(["projects", "steps", "themes"], "readwrite");
+      const tx = db.transaction(["projects", "steps", "themes", "assets", "uploads"], "readwrite");
       for (const p of rows.projects) tx.objectStore("projects").put(p);
       for (const s of rows.steps) tx.objectStore("steps").put(s);
       for (const t of rows.themes) tx.objectStore("themes").put(t);
+      for (const a of rows.assets) tx.objectStore("assets").put(a);
+      for (const u of rows.uploads) {
+        const blob = new Blob([new Uint8Array(u.bytes)], { type: u.mime });
+        tx.objectStore("uploads").put({ id: u.id, blob, mime: u.mime, bytes: blob.size });
+      }
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });
@@ -138,11 +158,17 @@ test("one click: this browser's v1 projects previewed, imported, and opened as P
   await expect(row(page, "Glass harbor")).toContainText("film/short-educational-video");
   await expect(row(page, "Glass harbor").getByLabel("losses")).toContainText("script-mode");
   await expect(row(page, "Not yet")).toContainText("draft");
+  // The shelf: both themes as styles (one named from its preset), the one asset as a Library item.
+  const shelf = page.getByRole("region", { name: "shelf" });
+  await expect(shelf).toContainText("2/2");
+  await expect(shelf).toContainText("1/1");
+  await expect(shelf.getByLabel("refused")).toHaveCount(0);
   await shot(page, "import-preview-1440");
 
-  await page.getByRole("button", { name: "Import 3" }).click();
+  await page.getByRole("button", { name: "Import 6" }).click();
   await expect(view(page)).toHaveAttribute("data-phase", "done");
   await expect(page.locator("li[data-outcome=imported]")).toHaveCount(3);
+  await expect(page.getByRole("region", { name: "shelf outcomes" })).toContainText("2/2");
   await shot(page, "import-done-1440");
 
   await row(page, "Glass harbor").getByRole("link", { name: "Plan" }).click();

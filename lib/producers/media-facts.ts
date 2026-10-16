@@ -1,7 +1,13 @@
 import { execFile } from "node:child_process";
+import path from "node:path";
 
 import { err, ok } from "@gt/domain/errors";
-import type { MediaProbe } from "@gt/producers/media-facts/run";
+import { blobStore } from "@gt/kernel/blob";
+import type { Producer } from "@gt/kernel/job-core";
+import { processKernel, storeLocation } from "@gt/kernel/process";
+import { factsPlan, MEDIA_FACTS_LANE, mediaFactsProducer, type MediaProbe } from "@gt/producers/media-facts/run";
+
+import { OUT_DIRNAME } from "../fixtures/mode.ts";
 
 // THE MEDIA-FACTS PORT, BOUND TO THIS BOX (Phase 5): ffprobe for what a blob is,
 // ffmpeg for a video's keyframe and for the 1x1 average that is its mean luma.
@@ -49,6 +55,30 @@ export function ffmpegProbe(): MediaProbe {
       // `area` scaling to one pixel is the mean; the default bicubic is a sample.
       const r = await run(ffmpeg(), ["-v", "error", "-i", file, "-vf", "scale=1:1:flags=area,format=gray", "-frames:v", "1", "-f", "rawvideo", "pipe:1"]);
       return r.ok ? ok(new Uint8Array(r.out)) : err("unavailable", `ffmpeg luma: ${r.error}`);
+    },
+  };
+}
+
+/**
+ * The producer as the worker binds it (lib/producers/registry.ts BOUND): the store and the blob
+ * directory are the PROCESS's (the worker's GRAVITONE_STORE_PATH, as lib/producers/strips.ts
+ * `stripsKernel`), opened when a step runs rather than when the registry is imported, so a CLI
+ * that imports the registry for another producer never opens a store for this one.
+ */
+export function mediaFactsBound(limit?: number): Producer {
+  const lazy = (): Producer | { readonly error: string } => {
+    const location = storeLocation(OUT_DIRNAME);
+    const k = processKernel(location);
+    if (!k.ok) return { error: k.error.message };
+    const blobs = blobStore(location === ":memory:" ? path.resolve(OUT_DIRNAME, "blobs") : path.join(path.dirname(location), "blobs"));
+    return mediaFactsProducer({ store: k.value.store, blobs, probe: ffmpegProbe(), ...(limit === undefined ? {} : { limit }) });
+  };
+  return {
+    lane: MEDIA_FACTS_LANE,
+    plan: factsPlan,
+    async perform(step, ctx) {
+      const p = lazy();
+      return "error" in p ? { kind: "fatal", code: "unavailable", message: `media-facts: the store would not open: ${p.error}` } : p.perform(step, ctx);
     },
   };
 }

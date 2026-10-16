@@ -53,24 +53,6 @@
   "landing": [
     "text div.pc.fraunces_ebe4314e-module__R0SMlq__variable.dm_sans_be5b2ca0-module__yoVGkW__variable > div > div.pc-enter-wrap > a.pc-enter"
   ],
-  "library-assets": [
-    "text button[data-testid=module-animations]",
-    "text div.grid.grid-cols-2.gap-3 > figure.group.cursor-zoom-in.overflow-hidden > figcaption.px-2.5.py-2 > span.font-jetbrains.block.truncate",
-    "text nav.space-y-0.5 > div.flex.items-center.gap-1 > button.flex.min-w-0.flex-1 > span.font-jetbrains.ml-auto.shrink-0",
-    "text section > div.mb-3.flex.flex-wrap > p.font-jetbrains.text-content.text-white/50 > span.text-white/30",
-    "text section.mt-6 > div.grid.gap-5.lg:grid-cols-[240px_1fr] > aside > p.font-jetbrains.mb-2.text-content"
-  ],
-  "library-styles": [
-    "mark div.mx-auto.flex.max-w-sm > div.relative.min-w-0.flex-1 > div.flex.flex-col.gap-2 > div.border.border-dashed.border-white/45",
-    "mark div.space-y-2 > div.relative > div.flex.flex-col.gap-2 > div.border.border-dashed.border-white/45",
-    "mark section.mt-6 > div.grid.gap-5.lg:grid-cols-[240px_1fr_300px] > section.space-y-4 > div.rounded-2xl.border.border-dashed",
-    "text aside.space-y-4 > ol.font-jetbrains.space-y-0.text-label > li.flex.items-start.gap-2.5 > span.text-white/25",
-    "text button[data-testid=module-animations]",
-    "text div.grid.gap-5.lg:grid-cols-[240px_1fr_300px] > aside > p.font-jetbrains.mb-2.text-content > span.tracking-normal.text-white/30",
-    "text div.grid.gap-5.lg:grid-cols-[240px_1fr_300px] > aside.space-y-4 > div.flex.items-center.justify-between > p.font-jetbrains.text-content.tracking-[0.18em]",
-    "text section.mt-6 > div.grid.gap-5.lg:grid-cols-[240px_1fr_300px] > aside > p.font-jetbrains.mb-2.text-content",
-    "text span.flex.flex-wrap.items-center > span.flex.items-center.gap-1.5 > span.font-jetbrains.text-label.text-white/55 > span.text-white/30"
-  ],
   "part-cut-timeline": [],
   "part-explainer-strips": [],
   "part-explainer-voice": [],
@@ -96,6 +78,10 @@
   ],
   "projects": [],
   "projects-empty": [],
+  "route:/audio": [
+    "mark main.audio-module__sKegKG__main > section.Composer-module__lWpjGq__composer > div.Composer-module__lWpjGq__acts > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
+    "text main.audio-module__sKegKG__main > section.Composer-module__lWpjGq__composer > div.Composer-module__lWpjGq__acts > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]"
+  ],
   "studio-cut": [],
   "studio-frames": [],
   "studio-motion": [],

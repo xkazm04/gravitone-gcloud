@@ -10,7 +10,6 @@
 import type { VerdictRecord } from "@/lib/foundry/types";
 import type { ExtractVerdictRecord } from "@/lib/foundry/extract/types";
 import type { TrainingVerdict } from "@/lib/foundry/training/types";
-import type { ProofState } from "@/lib/themes";
 import type { SlotStatus } from "@/lib/publish/types";
 import type { ArticleStatus } from "@/lib/articles/types";
 
@@ -83,15 +82,10 @@ export { decodeNote, encodeNote } from "@/lib/decision/v1/note";
 export const fromTraining = (v: TrainingVerdict | null | undefined): BoardVerdict => (v === "approve" || v === "reject" ? v : null);
 export const toTraining = (v: BoardVerdict): TrainingVerdict | null => v;
 
-/* ── proof: pending | approved | rejected ────────────────────────────────── */
-// lib/themes.ts:47. Pending is a stored word here, not an absence.
-
-export function fromProof(s: ProofState): BoardVerdict {
-  return s === "approved" ? "approve" : s === "rejected" ? "reject" : null;
-}
-export function toProof(v: BoardVerdict): ProofState {
-  return v === "approve" ? "approved" : v === "reject" ? "rejected" : "pending";
-}
+/* ── proof: retired (Phase 5, L56) ───────────────────────────────────────── */
+// A proof's verdict is the kernel's now: the new Board's proof source maps keep -> approved and
+// reject -> rejected onto the Style table's `judge-proof` op (lib/decision/v1/sources/proof.ts),
+// and an undecided candidate writes nothing - pending stays pending.
 
 /* ── adoption: one pointer among N renders ───────────────────────────────── */
 // app/_phases/script/candidates/adoption.ts — `renderId` is a pointer, `""` is

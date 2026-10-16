@@ -18,7 +18,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { analyzeFile } from "@/app/library/audio/analysis";
+import { analyzeFile } from "./analysis";
 import { accessHeader } from "@/lib/imagingClient";
 import { patchTake, takeFileUrl } from "@/lib/sound/client";
 import type { MeasuredSound, SoundTake } from "@/lib/sound/types";

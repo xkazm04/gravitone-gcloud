@@ -1,4 +1,4 @@
-// THE STYLE ATELIER'S FIXTURE SIDE (Phase 5, L51) - the port the atelier draws from, driven the
+// THE STYLE ATELIER'S FIXTURE SIDE (Phase 5, L51; over the kernel's op core since L54) - driven the
 // way the screen drives it: views read, ops at a rev, acts as receipt-then-confirm. The rules it
 // holds are the kernel's (COMMON decisions 1-2) through the same door and ratchet
 // (@gt/domain/style, @gt/domain/style.ratchet), so these tests are about the WIRING: that the
@@ -17,9 +17,9 @@ import { ok, type Result } from "@gt/domain/errors";
 import { STYLE_TRIALS } from "@gt/domain/style.ratchet";
 import type { StyleAct, StyleOp, StyleOpOutcome, StyleView } from "@gt/domain/styleView";
 
-import { loadStyle, opStyle, resetStyles, type Media } from "../../app/(studio)/library-next/style/_port/fixture.ts";
-import { actReceipt, confirmAct } from "../../app/(studio)/library-next/style/_port/fixtureActs.ts";
-import { ADOPT_SEEDS, DRY_GRID, SEEDS } from "../../app/(studio)/library-next/style/_port/fixtureData.ts";
+import { loadStyle, opStyle, resetStyles, type Media } from "../../app/(studio)/library/style/_port/fixture.ts";
+import { actReceipt, confirmAct } from "../../app/(studio)/library/style/_port/fixtureActs.ts";
+import { ADOPT_SEEDS, DRY_GRID, SEEDS } from "../../app/(studio)/library/style/_port/fixtureData.ts";
 
 const media: Media = async (file): Promise<Result<BlobRef>> => ok({ sha256: createHash("sha256").update(file).digest("hex"), bytes: file.length, mime: "image/jpeg" });
 const NOW = Date.parse("2026-10-16T12:00:00.000Z");
@@ -94,7 +94,7 @@ describe("an op at a rev", () => {
   it("refuses a lock with the gate's sentence and writes nothing", async () => {
     const before = await view("newsprint-cutout");
     const out = await op("newsprint-cutout", { kind: "lock" });
-    expect(out).toMatchObject({ kind: "refused", reason: "1 proof still undecided" });
+    expect(out).toMatchObject({ kind: "refused", reason: "cannot lock: 1 proof still undecided" });
     expect((await view("newsprint-cutout")).rev).toBe(before.rev);
   });
 

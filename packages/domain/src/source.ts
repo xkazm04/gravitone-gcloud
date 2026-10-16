@@ -22,7 +22,7 @@ import { err, ok, type Result } from "./errors.ts";
  *  carried to Phase 4). The first domain also had `triage`; nothing opened a
  *  packet under it, and the word was ambiguous between audio triage (`audio`)
  *  and v1's explainer research scope (not a Weir surface), so it is gone. */
-export const PACKET_SOURCES = ["forge", "extract", "dojo", "strips", "article", "audio", "suno", "mv", "trials", "step"] as const;
+export const PACKET_SOURCES = ["forge", "extract", "dojo", "strips", "article", "audio", "suno", "mv", "trials", "step", "proof"] as const;
 export type PacketSource = (typeof PACKET_SOURCES)[number];
 
 export const PACKET_MODES = ["matrix-cull", "blind-pair", "packet-review"] as const;
@@ -86,6 +86,10 @@ export const SOURCES = {
   // (lib/parts/gates.ts). Cut, article and strips stay packet reviews. No reasons: what a plate
   // or a take is rejected FOR is the note's, v1 had no vocabulary for either.
   step: { modes: ["packet-review", "matrix-cull"], reasons: [], maxReasons: 0, noteMax: NOTE_LONG },
+  // A style's pending proofs (Phase 5, L56; v1 lib/board/sources/proof.ts `reasonAxes: []`): a
+  // matrix cull with a row per trial problem. v1 had no reason list for a proof - only its note,
+  // which the atelier shows beside the plate - so a reject is one thing here too.
+  proof: { modes: ["matrix-cull"], reasons: [], maxReasons: 0, noteMax: NOTE_SHORT },
 } as const satisfies { readonly [S in PacketSource]: SourceSpec };
 
 /** The keys a reason list is bound to, in order (plan §8: the Board's 1-4 grew to eleven for audio). */

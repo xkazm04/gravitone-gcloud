@@ -53,7 +53,7 @@ import {
   type Shot,
   type TrailerRole,
 } from "./shots";
-import type { StyleBlock } from "@/lib/themes";
+import type { StyleBlock } from "@gt/catalog/style";
 
 /* ── The report ───────────────────────────────────────────────────────────── */
 

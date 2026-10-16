@@ -24,6 +24,8 @@ import { voiceProducer } from "./voice.ts";
 import { mvProducer } from "./mv.ts";
 import { stripsProducer } from "./strips.ts";
 import { sunoProducer } from "./suno.ts";
+import { mediaFactsBound } from "./media-facts.ts";
+import { styleJobProducer } from "./style.ts";
 import { sunoDriver } from "../sound/suno/drivers.ts";
 
 // THE PRODUCERS THIS CHECKOUT CAN RUN (Phase 4, plan §4). One list, read by every
@@ -105,6 +107,8 @@ export const BOUND: readonly Bound[] = [
   // Dojo's GOOGLE stack (cloud.google, metered in Node). Its local stacks are gpu.local and Python's
   // (pipeline/foundry/worker.py): this Node worker names such a head an orphan and leaves it queued.
   { name: "dojo", producer: dojoProducer() },
+  { name: "media-facts", producer: mediaFactsBound() },
+  { name: "style", producer: styleJobProducer() },
   ...stepsBound(),
 ];
 

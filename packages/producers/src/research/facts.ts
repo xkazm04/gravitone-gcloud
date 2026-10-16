@@ -16,6 +16,7 @@ import { planViewIn, readQueue } from "@gt/kernel/records/read";
 import { receiptFor, type PlanLine } from "@gt/kernel/records/receipt";
 import type { Reader, Store } from "@gt/kernel/store";
 import type { Job } from "@gt/domain/job";
+import { projectLookIn, type ProjectLook } from "../frames/look.ts";
 import { askOf, type ActAsk, type ActPlan, type UnitPrice } from "./partAct.ts";
 import { enqueueActIn, projectOf } from "./partJob.ts";
 
@@ -36,6 +37,8 @@ export type PartFacts = {
   /** Every step record of the project, decoded - what a part with no records of its own (still,
    *  words, voice) reads of its upstream. */
   readonly records: PartSnapshot["records"];
+  /** The project's look through the Style store (../frames/look.ts): what an image act draws in. */
+  readonly look: ProjectLook;
 };
 
 export function disciplineFor(recipeId: string): Discipline {
@@ -53,7 +56,7 @@ export function partFactsIn(r: Reader, projectId: string, partId: string, now: n
   if (option === undefined) throw new AppError("internal", `part ${partId} has no model option`);
   const recipe = recipeById(plan.project.recipe);
   const targetS = plan.project.runtimeS ?? (recipe?.template === undefined ? null : templateOf(recipe.template).defaultS);
-  return { plan, part, option, discipline: disciplineFor(plan.project.recipe), targetS, records: projectRecords(r, projectId).records };
+  return { plan, part, option, discipline: disciplineFor(plan.project.recipe), targetS, records: projectRecords(r, projectId).records, look: projectLookIn(r, plan.project.styleId) };
 }
 
 export function partFacts(ctx: StepContext): Result<PartFacts> {
@@ -136,11 +139,12 @@ export function actReceiptIn(r: Reader, ref: PartActRef, units: UnitsFn, o: Rece
   if (!plan.ok) return plan;
   const option = actOption(plan.value, f.option);
   const n = plan.value.units.length;
-  const line: PlanLine = { key: `${ref.partId}:${ref.act}`, label: `${ref.act}${ref.target === undefined ? "" : ` ${ref.target}`} · ${n} unit${n === 1 ? "" : "s"}`, lane: option.lane, units: 1, option, after: [], order: Number.MAX_SAFE_INTEGER, status: "pending" };
+  const about = plan.value.about === undefined ? "" : ` · ${plan.value.about}`;
+  const line: PlanLine = { key: `${ref.partId}:${ref.act}`, label: `${ref.act}${ref.target === undefined ? "" : ` ${ref.target}`} · ${n} unit${n === 1 ? "" : "s"}${about}`, lane: option.lane, units: 1, option, after: [], order: Number.MAX_SAFE_INTEGER, status: "pending" };
   const rc = receiptFor({ subject: { kind: "project", id: ref.projectId, rev: s?.rev ?? 1 }, lines: [line], plan: [line], queue: readQueue(r), capacity: LANE_CAPACITY, now: o.now, mode: o.mode, ...(o.ceilingUsd === undefined ? {} : { ceilingUsd: o.ceilingUsd }) });
   const subject = { kind: "part" as const, projectId: ref.projectId, partId: ref.partId, rev: s?.rev ?? 1, act: ref.act, ...(ref.target === undefined ? {} : { target: ref.target }) };
   // The act and its unit are in the token: a receipt for one plate cannot confirm another.
-  return ok({ ...rc, subject, token: shortDigest({ t: rc.token, act: ref.act, target: ref.target ?? null, units: plan.value.units.map((u) => u.name) }) });
+  return ok({ ...rc, subject, token: shortDigest({ t: rc.token, act: ref.act, target: ref.target ?? null, units: plan.value.units.map((u) => u.name), ...(plan.value.about === undefined ? {} : { about: plan.value.about }) }) });
 }
 
 export function partActReceipt(store: Store, ref: PartActRef, units: UnitsFn, o: ReceiptOptions): Result<StepReceipt> {

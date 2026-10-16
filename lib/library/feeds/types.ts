@@ -1,6 +1,7 @@
 import type { LibraryItemInput } from "@gt/domain/libraryItem";
 import type { LibraryExtras } from "@gt/domain/library";
 import type { StyleFacets } from "@gt/kernel/library/core";
+import type { Store } from "@gt/kernel/store";
 
 // THE LIBRARY PROJECTION'S CONTRACT (Phase 5, COMMON decision 5) - what each
 // feed under lib/library/feeds/ hands the sync (lib/library/project.ts).
@@ -12,8 +13,9 @@ import type { StyleFacets } from "@gt/kernel/library/core";
 // read: the sync ingests it into a blob (content-addressed, so a second sync
 // writes nothing) and points the item at it.
 
-/** Which universe the sync projects (lib/fixtures/mode.ts): every item says it. */
-export type FeedCtx = { readonly universe: "real" | "fixture" };
+/** Which universe the sync projects (lib/fixtures/mode.ts): every item says it. `store` is the
+ *  kernel the sync writes, for the one feed whose source IS the kernel (./kernel.ts). */
+export type FeedCtx = { readonly universe: "real" | "fixture"; readonly store?: Store };
 
 export type FeedItem = {
   readonly item: LibraryItemInput;

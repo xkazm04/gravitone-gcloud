@@ -42,7 +42,7 @@
 .x{width:var(--size-glyph-btn);height:var(--size-glyph-btn);border:0;border-radius:var(--r-xs);background:none;color:var(--muted);cursor:pointer;font-size:var(--fs-ui);line-height:1}
 .x:hover{color:var(--ink-bright);background:var(--wash-hi)}
 .addForm{display:inline-flex}
-.add{width:calc(var(--w-tile) / 1.5);height:var(--h-chip);padding:0 var(--sp-2);border-radius:var(--r-chip);border:1px dashed var(--hair-3);background:none;font:500 var(--fs-micro)/1 var(--mono);color:var(--text)}
+.add{width:calc(var(--w-tile) / 1.5);height:var(--h-chip);padding:0 var(--sp-2);border-radius:var(--r-chip);border:1px dashed color-mix(in srgb,var(--faint) 80%,transparent);background:none;font:500 var(--fs-micro)/1 var(--mono);color:var(--text)}
 .add::placeholder{color:var(--faint)}
 .add:focus{outline:none;border-color:var(--focus-line);border-style:solid}
 .tk{display:flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center}

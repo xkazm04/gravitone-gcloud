@@ -3,13 +3,15 @@ import type { Actor } from "@gt/domain/event";
 import { blobStore, type BlobStore } from "@gt/kernel/blob";
 import type { Store } from "@gt/kernel/store";
 
+import { ensureStyles, exportStyles } from "@/lib/foundry/catalogue";
 import { kernel } from "@/lib/kernelStore";
 import { blobRootOf, LIVE_GATES, openReadyGates } from "@/lib/parts/gates";
 
 import { readArchive, type Archive, type ArchiveCaps, ARCHIVE_CAPS } from "./archive.ts";
-import { commitImport, type Committed } from "./commit.ts";
+import { commitImport, type CommitDeps, type Committed } from "./commit.ts";
 import { exportProjects } from "./export.ts";
 import { planImport, type ProjectPreview } from "./project.ts";
+import type { ItemPreview, ThemePreview } from "./shelf.ts";
 import type { Loss } from "./steps.ts";
 
 // THE IMPORT'S SERVER VERBS (Phase 4 wave D, L42) - what POST/GET /api/import answer, over the
@@ -24,6 +26,8 @@ export type Preview = {
   readonly counts: Readonly<Record<string, number>>;
   readonly bytes: number;
   readonly projects: readonly ProjectPreview[];
+  readonly themes: readonly ThemePreview[];
+  readonly items: readonly ItemPreview[];
   readonly losses: readonly Loss[];
 };
 
@@ -43,6 +47,8 @@ function previewOf(u: Universe, a: Archive): Result<Preview> {
     counts: a.manifest.counts,
     bytes: a.bytes,
     projects: p.value.projects.map((x) => x.preview),
+    themes: p.value.themes.map((x) => x.preview),
+    items: p.value.items.map((x) => x.preview),
     losses: p.value.losses,
   });
 }
@@ -57,25 +63,33 @@ export function previewImport(u: Universe, bytes: Uint8Array, caps: ArchiveCaps 
  * Confirm the preview whose token is `token`. A stale token answers the fresh preview with
  * `conflict` (detail `stale-preview`), the receipt's 409 shape (COMMON decision 3).
  */
-export async function confirmImport(
-  u: Universe,
-  bytes: Uint8Array,
-  token: string,
-  actor: Actor,
-  afterLanded?: (projectId: string) => Promise<void>,
-): Promise<Result<Committed>> {
+export async function confirmImport(u: Universe, bytes: Uint8Array, token: string, actor: Actor, hooks: Pick<CommitDeps, "afterLanded" | "afterStyles"> = {}): Promise<Result<Committed>> {
   const a = readArchive(bytes);
   if (!a.ok) return a;
-  return commitImport({ ...u, actor, ...(afterLanded === undefined ? {} : { afterLanded }) }, a.value, token);
+  return commitImport({ ...u, actor, ...hooks }, a.value, token);
 }
 
-export function previewLive(bytes: Uint8Array): Result<Preview> {
+/** The live universe, its style table holding the repo's catalogue first: `ensureStyles`
+ *  (lib/foundry/catalogue.ts) imports styles.json into an EMPTY table only, so a theme landed
+ *  first would make the catalogue look imported when it never was. */
+async function liveWithStyles(): Promise<Result<Universe>> {
   const u = liveUniverse();
+  if (!u.ok) return u;
+  try {
+    await ensureStyles(u.value.store);
+  } catch (e) {
+    return err("unavailable", `the style store could not take the catalogue first: ${e instanceof Error ? e.message : String(e)}`);
+  }
+  return u;
+}
+
+export async function previewLive(bytes: Uint8Array): Promise<Result<Preview>> {
+  const u = await liveWithStyles();
   return u.ok ? previewImport(u.value, bytes) : u;
 }
 
 export async function confirmLive(bytes: Uint8Array, token: string, actor: Actor): Promise<Result<Committed>> {
-  const u = liveUniverse();
+  const u = await liveWithStyles();
   if (!u.ok) return u;
   // A launched import's READY parts owe their gates' packets now, as an editor write would open
   // them (lib/parts/gates.ts openReadyGates; idempotent, re-kicked on the next part write).
@@ -83,7 +97,16 @@ export async function confirmLive(bytes: Uint8Array, token: string, actor: Actor
     const o = await openReadyGates(LIVE_GATES, projectId, { by: "operator", surface: "import", who: actor.id });
     if (!o.ok) console.log(`[import] ${projectId}: its gates did not open now (${o.error.message}); the next part write opens them`);
   };
-  return confirmImport(u.value, bytes, token, actor, gates);
+  // styles.json is the store's export (Phase 5 decision 3): a landed theme is a style change.
+  const store = u.value.store;
+  const afterStyles = (): Result<unknown> => {
+    try {
+      return ok(exportStyles(store));
+    } catch (e) {
+      return err("unavailable", e instanceof Error ? e.message : String(e));
+    }
+  };
+  return confirmImport(u.value, bytes, token, actor, { afterLanded: gates, afterStyles });
 }
 
 export async function exportLive(ids: readonly string[], uid: string): Promise<Result<Uint8Array>> {

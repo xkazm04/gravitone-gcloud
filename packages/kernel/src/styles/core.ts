@@ -93,6 +93,12 @@ export function planOp(s: Style, op: StyleOp, ctx: OpContext): Result<StylePlan>
     case "remove-proof": {
       const p = proofOf(s, op.proofId);
       if (!p.ok) return p;
+      // Only an undecided plate leaves the sheet (L51's rule, held here so the atelier's fixture
+      // and the store refuse alike). A rejection is the record of what the style is not and was
+      // paid for (visual-style-locking: rejections-as-negative-evidence); an approval is undecided
+      // first, so removing one is two acts the log can tell apart.
+      if (p.value.state === "rejected") return err("refused", "a rejection stays on the sheet — it is the record of what this style is not");
+      if (p.value.state === "approved") return err("refused", "undecide the approval first — an approval is evidence the style was proven on");
       return plan(s, { ...s, proofs: s.proofs.filter((x) => x.id !== op.proofId) }, "style.proof-removed", { proofId: op.proofId, state: p.value.state });
     }
     case "promote-proof": {

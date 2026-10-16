@@ -4,7 +4,8 @@
 .label{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .count{font:600 var(--fs-micro)/1 var(--mono);color:var(--muted);flex:none}
 .rail .count{font-variant-numeric:tabular-nums}
-.zero{opacity:.42}
+/* a zero count is drawn in the faint ink (5:1 on the ground), not by opacity, which took the label under 4.5 */
+.zero,.zero *{color:var(--faint)}
 .row[aria-pressed=true]{color:var(--ink-bright)}
 
 .check{min-height:var(--h-row);padding:0 var(--sp-3) 0 var(--sp-4)}

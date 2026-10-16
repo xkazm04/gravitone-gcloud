@@ -39,7 +39,7 @@ import {
 import { blobStore } from "@gt/kernel/blob";
 import type { StyleDraft } from "@gt/kernel/styles/core";
 import { commitExtractStylesIn } from "@gt/kernel/styles/writers";
-import { blobRootOf } from "../../parts/gates";
+import { blobRootOf } from "../../kernelProcess.ts";
 import type { BlobRef } from "@gt/domain/blob";
 import { DEFAULT_CALL_ESTIMATE_USD, newManifest, settleReason } from "./engine";
 import type { EngineIO } from "./engine";

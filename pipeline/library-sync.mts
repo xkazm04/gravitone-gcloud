@@ -1,11 +1,11 @@
 // LIBRARY-SYNC - the Library projection, on demand (Phase 5, L49).
 //
-//   node pipeline/library-sync.mts [--fixtures] (--store <file> | --real) [--no-probe] [--probe-limit N] [--json]
+//   node pipeline/library-sync.mts [--fixtures] (--store <file> | --real) [--inline | --no-probe] [--probe-limit N] [--json]
 //
 // Reads every feed (lib/library/fresh.ts LIBRARY_FEEDS) through v1's own readers,
 // ingests file media into blobs beside the store, upserts the Library index, prunes
-// what a feed no longer holds, and probes new media for its facts (ffprobe/ffmpeg),
-// then prints the per-feed table.
+// what a feed no longer holds, and queues one `media-facts` job for the new media's
+// facts (the worker probes it on box.render, L53), then prints the per-feed table.
 //
 // THE STORE MUST BE NAMED. --store <file> (or GRAVITONE_STORE_PATH) for any store;
 // --real to sync the app's own (<cwd>/<foundry-out|fixtures-out>/gravitone.sqlite).
@@ -13,7 +13,9 @@
 // the real store from a run that never meant to open it (RULES.md, Director).
 //
 //   --fixtures   NEXT_PUBLIC_GRAVITONE_DATA=fixtures: read fixtures-out/
-//   --no-probe   skip the media-facts probe (index only)
+//   --inline     probe the new media HERE (ffprobe/ffmpeg, bounded by --probe-limit)
+//                instead of queueing the job: a seeded store with its facts in one go
+//   --no-probe   neither probe nor queue (index only)
 //   Exit 0 ok · 1 a feed failed · 2 usage or could not run.
 //
 // PLAIN `node`, as pipeline/ledger-sync.mts: lib-hooks gives this process what
@@ -30,11 +32,11 @@ const value = (name: string): string | undefined => {
 };
 const flag = (name: string): boolean => args.includes(name);
 const json = flag("--json");
-const known = new Set(["--fixtures", "--store", "--real", "--no-probe", "--probe-limit", "--json"]);
+const known = new Set(["--fixtures", "--store", "--real", "--inline", "--no-probe", "--probe-limit", "--json"]);
 const unknown = args.filter((a, i) => !known.has(a) && !["--store", "--probe-limit"].includes(args[i - 1] ?? ""));
 const limit = Number(value("--probe-limit") ?? "200");
-if (unknown.length > 0 || (flag("--store") && value("--store") === undefined) || !Number.isInteger(limit) || limit < 0) {
-  console.error(`usage: node pipeline/library-sync.mts [--fixtures] (--store <file> | --real) [--no-probe] [--probe-limit N] [--json]  (unknown: ${unknown.join(" ")})`);
+if (unknown.length > 0 || (flag("--store") && value("--store") === undefined) || !Number.isInteger(limit) || limit < 0 || (flag("--inline") && flag("--no-probe"))) {
+  console.error(`usage: node pipeline/library-sync.mts [--fixtures] (--store <file> | --real) [--inline | --no-probe] [--probe-limit N] [--json]  (unknown: ${unknown.join(" ")})`);
   process.exit(2);
 }
 if (flag("--fixtures")) process.env["NEXT_PUBLIC_GRAVITONE_DATA"] = "fixtures";
@@ -48,7 +50,7 @@ if (process.env["GRAVITONE_STORE_PATH"] === undefined && !flag("--real")) {
 const { openKernel } = await import("../packages/kernel/src/kernel.ts");
 const { blobStore } = await import("../packages/kernel/src/blob.ts");
 const { storeLocation } = await import("../lib/kernelStore.ts");
-const { LIBRARY_FEEDS, blobRootFor, libraryCtx } = await import("../lib/library/fresh.ts");
+const { LIBRARY_FEEDS, blobRootFor, libraryCtx, queueLibraryFacts } = await import("../lib/library/fresh.ts");
 const { syncLibrary } = await import("../lib/library/project.ts");
 const { ffmpegProbe } = await import("../lib/producers/media-facts.ts");
 
@@ -58,7 +60,8 @@ if (!k.ok) {
   console.error(`library-sync: cannot open ${location}: ${k.error.message}`);
   process.exit(2);
 }
-const report = await syncLibrary(k.value.store, blobStore(blobRootFor(location)), LIBRARY_FEEDS, libraryCtx(), flag("--no-probe") ? {} : { probe: ffmpegProbe(), probeLimit: limit });
+const facts = flag("--no-probe") ? {} : flag("--inline") ? { probe: ffmpegProbe(), probeLimit: limit } : { queue: queueLibraryFacts };
+const report = await syncLibrary(k.value.store, blobStore(blobRootFor(location)), LIBRARY_FEEDS, libraryCtx(k.value.store), facts);
 k.value.close();
 if (!report.ok) {
   console.error(`library-sync: ${report.error.message}`);
@@ -74,7 +77,10 @@ else {
       `  ${f.feed.padEnd(10)} ${String(f.items).padStart(6)} ${String(f.inserted).padStart(5)} ${String(f.updated).padStart(5)} ${String(f.unchanged).padStart(6)} ${String(f.pruned).padStart(6)} ${String(f.ingested).padStart(6)} ${String(f.missingFiles).padStart(7)}  ${f.failed ?? (f.skipped.length > 0 ? `${f.skipped.length} skipped` : "")}`,
     );
   }
-  const facts = report.value.facts;
-  if (facts !== undefined) console.log(`  media facts: ${"error" in facts ? `FAILED ${facts.error}` : `${facts.probed} probed, ${facts.undecodable} undecodable, ${facts.failed.length} unreadable paths`}`);
+  const f = report.value.facts;
+  if (f !== undefined)
+    console.log(
+      `  media facts: ${"error" in f ? `FAILED ${f.error}` : "queue" in f ? (f.queue.kind === "none-missing" ? "none missing" : f.queue.kind === "open" ? `job ${f.queue.jobId} already ${f.queue.state}` : `queued ${f.queue.jobId}`) : `${f.probed} probed, ${f.undecodable} undecodable, ${f.failed.length} unreadable paths`}`,
+    );
 }
 process.exit(failed.length === 0 ? 0 : 1);

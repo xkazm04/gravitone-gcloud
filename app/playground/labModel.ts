@@ -5,32 +5,24 @@
 // The lab exists to close one loop the codebase had split in two. Generation
 // lived here, on a bench whose renders were session-only blob URLs that
 // vanished on reload; judging lived in the Library's audio module
-// (app/library/audio), the only place a take persisted and earned a verdict.
+// (app/library/audio, retired in Phase 5), the only place a take persisted and earned a verdict.
 // So nothing generated was ever judged, and nothing judged had been generated
 // by the studio. This file is the join: every render, and every file returned
 // from Suno, maps to the SAME AudioMeta the Library reads — vendor, recipe
 // terms, prompt text, parent, plan, stored-song id — and goes into the same
-// store (lib/assets#putUploads, via app/library/audio/useAudioShelf.ts).
+// store (v1 lib/assets#putUploads; since the sound store, lib/sound/*).
 //
-// The recipe vocabulary is the Library's too (./book.ts: Seed, compose,
+// The recipe vocabulary is the Library's too (lib/sound/audio: Seed, compose,
 // variations). A lab take carries its seed's genre / mood / instrument terms,
 // so judging it moves those terms' keep-rates, and the next recipe the lab
 // suggests reads them. That is the loop.
 
-import {
-  blankSeed,
-  compose,
-  score,
-  seedOf,
-  variationsOfSeed,
-  verdict,
-  type Hand,
-  type Seed,
-  type Take,
-  type TermEntry,
-  type Variation,
-} from "@/app/library/audio/book";
-import type { AudioMeta, LabEditMode, LabOp } from "@/lib/assets";
+import { verdict, score } from "@/lib/sound/audio/derived";
+import type { AudioMeta, LabEditMode, LabOp } from "@/lib/sound/audio/meta";
+import { blankSeed, compose, seedOf, type Seed } from "@/lib/sound/audio/prompts";
+import type { Take } from "@/lib/sound/audio/take";
+import { variationsOfSeed, type Variation } from "@/lib/sound/audio/variations";
+import type { Hand, TermEntry } from "@/lib/sound/audio/vocabulary";
 import type {
   DetailedMusicResult,
   MusicAudio,

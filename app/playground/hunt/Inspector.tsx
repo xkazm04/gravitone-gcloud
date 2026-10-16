@@ -10,7 +10,7 @@ import { useRef, useState } from "react";
 import { Check, Copy, Crown, Lock, Repeat, Upload, X } from "lucide-react";
 
 import { PipRow } from "@/components/ui/signal";
-import { copyText } from "@/app/library/audio/clipboard";
+import { copyText } from "../shared/clipboard";
 import type { DefectCode, Hunt, HuntNode, SoundTake } from "@/lib/sound/types";
 
 import { engineById } from "../engines";

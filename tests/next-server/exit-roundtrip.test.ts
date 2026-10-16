@@ -14,6 +14,7 @@ import { gateFacts } from "@gt/kernel/parts/gates";
 import { launchProject, planReceipt } from "@gt/kernel/records/launch";
 import { readProject } from "@gt/kernel/records/read";
 import { reconcileJobSpend } from "@gt/kernel/spend/projection";
+import { readStyle } from "@gt/kernel/styles/driver";
 
 import { readArchive, rowLine, type Archive } from "../../lib/import/archive.ts";
 import { commitImport } from "../../lib/import/commit.ts";
@@ -151,6 +152,11 @@ describe("an imported film round-trips with its plan (Phase 4 exit)", () => {
       const motion = parts.get("motion");
       expect(motion && "jobId" in motion ? motion.jobId : undefined, "motion has no job yet").toBeUndefined();
       expect(motion?.state, "motion has no v1 work and no job: it must not read queued").not.toBe("queued");
+      // Phase 5 (L55): the style the Plan names is a Style in the store, not a dangling ref.
+      const styleId = planOf(w, id).project.styleId;
+      expect(styleId).toBe(`v1-theme:${seed.theme.id}`);
+      const style = readStyle(w.k.store, styleId ?? "");
+      expect(style.ok && style.value.style.name).toBe("Ledger ink");
     } finally {
       w.k.close();
     }

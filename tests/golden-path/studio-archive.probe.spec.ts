@@ -27,7 +27,6 @@ import "fake-indexeddb/auto";
 
 import { test, expect } from "@playwright/test";
 
-import { assetFromUpload, putAssets, putUploads } from "@/lib/assets";
 import { evictIdentity, userScopedLocalKeys } from "@/lib/identityEviction";
 import { onIdentityEvicted } from "@/lib/jobs";
 import { newProject, putProject, type Project } from "@/lib/projects";
@@ -47,7 +46,10 @@ import {
   openDb,
   runTx,
 } from "@/lib/studioDb";
-import { newTheme, putTheme, type Theme } from "@/lib/themes";
+import type { V1Theme as Theme } from "@/lib/fixtures/browserBundle";
+
+// v1's theme and shelf writers retired in Phase 5; their rows are written in their shapes.
+import { putV1Assets as putAssets, putV1Themes, putV1Uploads as putUploads, v1Theme, v1Upload as assetFromUpload } from "./_v1rows";
 
 const STORES = [PROJECTS_STORE, STEPS_STORE, THEMES_STORE, ASSETS_STORE, UPLOADS_STORE] as const;
 
@@ -115,12 +117,12 @@ async function putStep(projectId: string, phase: string, data: unknown) {
  *  one pointer-only asset. Returns the ids the cases assert against. */
 async function seedAccount(uid: string) {
   const theme: Theme = {
-    ...newTheme(uid, { name: "Ledger ink", origin: "scratch", block: { medium: "ink" } as never, elements: ["grid"] }),
+    ...v1Theme(uid, "Ledger ink", { elements: ["grid"] }),
     proofs: [
       { id: "pr-1", label: "first", base64: "aGVsbG8=", mime: "image/png", state: "approved", createdAt: 1 },
     ],
   };
-  await putTheme(theme);
+  await putV1Themes([theme]);
   const p1 = await putProject(newProject(uid, draft("Glass harbor", theme.id)));
   const p2 = await putProject(newProject(uid, draft("Second cut", theme.id)));
   await putStep(p1.id, "research", { notes: ["a", "b"], plate: "data:image/png;base64,AAAA" });

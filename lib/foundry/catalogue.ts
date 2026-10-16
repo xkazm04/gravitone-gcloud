@@ -38,8 +38,7 @@ import { draftFromV1, importV1In, planImportV1In, readV1Catalogue, type ImportOu
 
 import { DEFAULT_LOCK_TIMING, exclusiveSection, type LockTiming } from "../diskTx";
 import { outPath } from "../fixtures/roots";
-import { kernel } from "../kernelStore";
-import { blobRootOf } from "../parts/gates";
+import { blobRootOf, kernel } from "../kernelProcess.ts";
 import { foundryFs } from "./fsPort";
 import { FoundryError, foundryFile } from "./runStore";
 import type { MotionStylesDoc, StripsLedgerDoc } from "./strips/triage";

@@ -33,7 +33,7 @@ import { actionFor, promptsForShots } from "@/app/_phases/frames/shotPrompt";
 import { framesFromRender } from "@/app/_phases/frames/frames";
 import { RENDERS } from "@/app/_phases/script/renders";
 import { compileStyleBlock, NO_TEXT_CLAUSE, PROMPT_CHAR_LIMIT } from "@/lib/stylePrompt";
-import type { StyleBlock } from "@/lib/themes";
+import type { StyleBlock } from "@gt/catalog/style";
 
 const beat = (at: string, role: TrailerRole | undefined, label: string): ShotSourceBeat => ({
   at,

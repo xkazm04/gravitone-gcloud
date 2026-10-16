@@ -27,10 +27,10 @@ import { useEffect, useMemo, useState } from "react";
 import type { ExtractSummary } from "@/lib/foundry/extract/types";
 import type { StripRunSummary } from "@/lib/foundry/strips/triage";
 import type { TrainingCycleSummary } from "@/lib/foundry/training/types";
-import type { Catalogue, RunSummary } from "@/lib/foundry/types";
+import type { RunSummary } from "@/lib/foundry/types";
 
 import { extractFileUrl, fetchExtractRun, fetchExtractRuns } from "./extractClient";
-import { fetchCatalogue, fetchRun, fetchStripRun, fetchStripRuns, fetchTrainingCycle, fetchTrainingCycles, fileUrl } from "./foundryClient";
+import { fetchRun, fetchStripRun, fetchStripRuns, fetchTrainingCycle, fetchTrainingCycles, fileUrl } from "./foundryClient";
 import { EXTRACT_LIVE, LIVE, STATUS_WORD, runKind } from "./parts";
 import type { Tone } from "./ui";
 
@@ -41,14 +41,17 @@ import type { Tone } from "./ui";
 // the Dojo gate, the Strips triage - and their decisions are kernel packets now,
 // opened from the Floor's Weir and decided on the Board. Those four are no longer
 // tabs here: each is a door to the lane where its piles wait (`DECIDED_ON`).
-// What stays a tab is what is not a decision: the Styles shelf and the Pipeline.
+// What stays a tab is what is not a decision: the Pipeline. The Styles shelf left in Phase 5
+// (wave B, L54): a style is one record with its look now, worked in the Library's style atelier
+// (/library/style/<id>), so its station is a door there like the four above.
 export type Station = "cull" | "extract" | "styles" | "dojo" | "pipeline" | "strips";
-export type Tab = Extract<Station, "styles" | "pipeline">;
+export type Tab = Extract<Station, "pipeline">;
 
-/** Where a retired station's decisions are made now: its media lane's Weir on the Floor. */
+/** Where a retired station's work is done now: its media lane's Weir on the Floor, or the Library. */
 export const DECIDED_ON: Record<Exclude<Station, Tab>, string> = {
   cull: "/floor?lane=image",
   extract: "/floor?lane=image",
+  styles: "/library?kind=style",
   dojo: "/floor?lane=image",
   strips: "/floor?lane=video",
 };
@@ -57,12 +60,11 @@ export const DECIDED_ON: Record<Exclude<Station, Tab>, string> = {
 
 export interface Plant {
   extract?: ExtractSummary[];
-  catalogue?: Catalogue;
   cycles?: TrainingCycleSummary[];
   strips?: StripRunSummary[];
   /** The list reads that were refused: their stations draw no figure, which is
    *  not the same as the ellipsis a read still in flight draws. */
-  failed?: Partial<Record<"extract" | "catalogue" | "cycles" | "strips", true>>;
+  failed?: Partial<Record<"extract" | "cycles" | "strips", true>>;
   /** The newest extract run's pictures, the newest cycle's challengers, the
    *  newest strip run's posters. */
   extractArt: string[];
@@ -70,7 +72,7 @@ export interface Plant {
   stripArt: string[];
 }
 
-/** The three lists the header cannot derive from the cull's own state.
+/** The lists the header cannot derive from the cull's own state.
  *
  *  Each tab's view loads its own list when it opens; this asks for the same
  *  three lists once, at mount, so the header is honest before anything is
@@ -91,7 +93,7 @@ export function usePlant(): Plant {
     // so its station draws no figure rather than a loading ellipsis for the life of
     // the page.
     const drop = () => undefined;
-    const fail = (k: "extract" | "catalogue" | "cycles" | "strips") => () => setP((c) => ({ ...c, failed: { ...c.failed, [k]: true } }));
+    const fail = (k: "extract" | "cycles" | "strips") => () => setP((c) => ({ ...c, failed: { ...c.failed, [k]: true } }));
     fetchExtractRuns().then((r) => {
       put({ extract: r });
       // The newest run's pictures, for the station that shows "what Extract
@@ -103,7 +105,6 @@ export function usePlant(): Plant {
           put({ extractArt: files.slice(0, 3).map((f) => extractFileUrl(d.run.id, f)) });
         }, drop);
     }, fail("extract"));
-    fetchCatalogue().then((c) => put({ catalogue: c }), fail("catalogue"));
     fetchTrainingCycles().then((c) => {
       put({ cycles: c });
       const newest = c[0];
@@ -195,12 +196,6 @@ function extractLine(runs: ExtractSummary[] | undefined): EngineLine | null {
   return { tone: "neutral", text: runs.length ? `${runs.length} run${runs.length === 1 ? "" : "s"}` : "no extractions yet" };
 }
 
-function stylesLine(cat: Catalogue | undefined): EngineLine | null {
-  if (!cat) return null;
-  const proven = cat.styles.filter((s) => s.status === "proven").length;
-  return { tone: proven ? "emerald" : "neutral", text: `${cat.styles.length} styles · ${proven} proven` };
-}
-
 function dojoLine(cycles: TrainingCycleSummary[] | undefined): EngineLine | null {
   if (!cycles) return null;
   const parked = cycles.filter((c) => c.status === "awaiting-gate").length;
@@ -245,12 +240,14 @@ export function engineLines(runs: RunSummary[] | null, plant: Plant): Record<Sta
   // refused one both produced no line and therefore no dot. So a refusal gets a
   // line of its own, in the one tone nothing else here uses. `unreadable` is the
   // work's word, not the app's: the list was asked for and the answer was no.
-  const refused = (t: "extract" | "catalogue" | "cycles"): EngineLine | null =>
+  const refused = (t: "extract" | "cycles"): EngineLine | null =>
     plant.failed?.[t] ? { tone: "rose", text: "unreadable" } : null;
   return {
     cull: forgeLine(runs),
     extract: refused("extract") ?? extractLine(plant.extract),
-    styles: refused("catalogue") ?? stylesLine(plant.catalogue),
+    // The style count left with GET /api/foundry/styles: the Library's style kind carries it, with
+    // each style's place on the ratchet, where the work on them is done.
+    styles: null,
     dojo: refused("cycles") ?? dojoLine(plant.cycles),
     strips: stripsLine(plant.strips),
     pipeline: null,

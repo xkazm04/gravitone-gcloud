@@ -5,7 +5,7 @@
 // fetched, a media problem), the list row with its column head, the detail panel's parts and the
 // set summary. A client island because each part takes callbacks and does what it shows: a facet
 // presses, a fold folds, a tile selects. The words are the fixture library's
-// (app/(studio)/library-next/_port/fixtureData.ts), so a specimen has the length of real work.
+// (app/(studio)/library/_port/fixtureData.ts), so a specimen has the length of real work.
 // The `data-role` wrappers are the style contract's hooks (docs/next/style-contract/roles.library.json).
 
 import { useState } from "react";

@@ -15,7 +15,7 @@
 .kind:hover{background:var(--wash);color:var(--ink-bright)}
 .kind[aria-current=true]{background:var(--cyan-a);color:var(--ink-bright);box-shadow:inset var(--stroke-mark) 0 0 var(--cyan)}
 .kind[aria-current=true] .kindMark{color:var(--cyan)}
-.zero{opacity:.45}
+.zero,.zero *{color:var(--faint)}
 
 .rows{display:flex;flex-direction:column;padding:0 0 var(--sp-2) var(--sp-nudge)}
 .more{margin:var(--sp-nudge) 0 0 var(--sp-4);align-self:flex-start;font:600 var(--fs-micro)/1 var(--mono);color:var(--muted);padding:var(--sp-tight) var(--sp-2);border-radius:var(--r-xs)}

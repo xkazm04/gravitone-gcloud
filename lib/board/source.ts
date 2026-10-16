@@ -82,7 +82,7 @@ export interface BoardSourceExt extends BoardSource {
   loadEntries(): Promise<BoardEntry[]>;
 }
 
-export const SOURCE_ORDER: BoardSourceId[] = ["cull", "extract", "dojo", "proof", "adoption", "alternative", "triage", "publish", "articles"];
+export const SOURCE_ORDER: BoardSourceId[] = ["cull", "extract", "dojo", "adoption", "alternative", "triage", "publish", "articles"];
 
 /** Build the `${source}:${key}` id the wire type promises, and take it apart. */
 export const itemId = (source: BoardSourceId, key: string): string => `${source}:${key}`;

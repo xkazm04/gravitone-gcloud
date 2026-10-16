@@ -8,7 +8,7 @@
 // that is accepted or discarded by op, and reverted to its checkpoint by op - so ⌫ covers it.
 import { useMemo, useState } from "react";
 
-import type { FramesBoard, LayerView, PartView, UnitView } from "@gt/domain/partView";
+import { LOOK_MISS_WORDS, type FramesBoard, type LayerView, type PartView, type UnitView } from "@gt/domain/partView";
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
 import { Empty } from "@gt/ui/components/empty/Empty.tsx";
@@ -184,7 +184,18 @@ function FramesBoardEditor({ view, frame, send, busy, error, act, data: d }: Edi
               <span className={s.cell}>
                 motion <Tally value={t.clips} of={t.total} />
               </span>
-              <Chip label="style" value={d.style.name} tone={d.style.fallback ? "amber" : "neutral"} casing="lower" name={`style ${d.style.name}${d.style.fallback ? " (fallback)" : ""}`} />
+              <Chip
+                label={d.style.fallback ? "default style" : "style"}
+                value={d.style.name}
+                tone={d.style.fallback ? "amber" : "neutral"}
+                casing="lower"
+                name={d.style.miss === undefined ? `style ${d.style.name}, ${d.style.refs} references sent` : `default style ${d.style.name}: ${LOOK_MISS_WORDS[d.style.miss]}`}
+              />
+              {!d.style.fallback && (
+                <span className={s.cell}>
+                  refs <Tally value={d.style.refs} />
+                </span>
+              )}
               {d.direction.runs > 0 && <Chip label="direction" value={d.direction.unpriced > 0 ? `${d.direction.runs} · ${d.direction.unpriced} unpriced` : `$${d.direction.usd.toFixed(2)}`} casing="lower" />}
               {d.sourceMoved && <Button label="rederive" size="sm" tone="amber" badge={{ label: "cut moved", tone: "amber" }} onPress={() => send({ op: "rederive" })} />}
             </div>

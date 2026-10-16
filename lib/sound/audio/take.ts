@@ -2,7 +2,7 @@
 // scored on. Split out of book.ts: the type declarations and the rubric are one
 // unit, read without the readers that derive from them (./derived.ts) or the
 // reader that fills a Take from an Asset (./takeFromAsset.ts). Moved verbatim.
-import type { LabEditMode, LabOp, MeasuredAudio } from "@/lib/assets";
+import type { LabEditMode, LabOp, MeasuredAudio } from "./meta";
 import type { WirePlan } from "@/lib/music/types";
 
 /* ── the take ─────────────────────────────────────────────────────────── */

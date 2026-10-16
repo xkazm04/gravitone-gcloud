@@ -22,13 +22,16 @@
 //     `border-rose-400/30`. Those are names resolved from Tailwind's own
 //     palette, not literals, and they are the rendered form of the accents
 //     declared below. Nearly all of this app's colour is spelled that way.
-//  2. STYLE-PRESET DATA — the 21 hexes in `app/library/presets.ts` and
-//     `app/library/LibraryAtelier.tsx`. Those describe what a GENERATED IMAGE
-//     should look like: they are prompt input, and they are shown to the user
-//     as the palette a style draws in. They are CONTENT, not chrome. Editing
-//     one changes a picture the model makes, not a pixel of this app's
-//     furniture, and each belongs beside the preset it describes. This file
-//     must never absorb them.
+//  2. STYLE PALETTE DATA — the presets' hexes (`packages/catalog/src/presets.ts`,
+//     outside this walk) and the fixture and specimen styles' palettes in
+//     `LibraryKit.tsx`, `StyleKit.tsx`, the Library's `fixtureCorpus.ts` and
+//     `fixtureData.ts`, and the atelier's `fixtureData.ts` (Phase 5; the v1
+//     `app/library` presets and atelier they replace are gone). Those describe
+//     what a GENERATED IMAGE should look like: they are prompt input, and they
+//     are shown to the user as the palette a style draws in. They are CONTENT,
+//     not chrome. Editing one changes a picture the model makes, not a pixel of
+//     this app's furniture, and each belongs beside the style it describes.
+//     This file must never absorb them.
 //  3. PROSE. A comment that records a measurement ("#67e8f9 on #080a10 is
 //     ~13.7:1") has to name the values it measured, or the measurement cannot
 //     be rechecked.

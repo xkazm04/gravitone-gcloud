@@ -1,4 +1,4 @@
-// LANE - THE LIVE APP: /library-next OVER THE FIXTURE LIBRARY (Phase 5, wave A, L50).
+// LANE - THE LIVE APP: /library OVER THE FIXTURE LIBRARY (Phase 5, wave A, L50).
 //
 // WHY THIS RUNG. The rules are one rung down (packages/ui/test/components/library.test.ts: the
 // geometry, the fold, the keys; tests/next-server/library-route.test.ts: the fixture index's
@@ -8,8 +8,10 @@
 // scroll, that the keys drive it, that an act lands, that the drawers open below 1360 and 1280,
 // that a phone does not scroll sideways - and that what is drawn is legible.
 //
-// The page answers from the fixture side (app/(studio)/library-next/_port/port.ts SIDE): one
-// in-memory universe for the server process. The one test that writes (pin) undoes itself.
+// The page answers from the fixture side: the lane runs GRAVITONE_PRODUCE_SIDE=fixture, which
+// app/(studio)/library/_port/port.ts SIDE reads - one in-memory universe for the server process.
+// The real side has its own lane (./library-real.live.spec.ts). The one test that writes (pin)
+// undoes itself.
 
 import { expect, test, type Page } from "@playwright/test";
 
@@ -18,7 +20,7 @@ import { DEFAULT_GROUND, findingKey, measurerSource, type Finding } from "./_leg
 test.use({ viewport: { width: 1600, height: 900 } });
 
 async function open(page: Page, search = ""): Promise<void> {
-  await page.goto(`/library-next${search}`, { waitUntil: "domcontentloaded" });
+  await page.goto(`/library${search}`, { waitUntil: "domcontentloaded" });
   await expect(page.locator('[data-component="Library"][data-ready="true"]')).toBeVisible({ timeout: 120_000 });
 }
 

@@ -2,18 +2,20 @@
 // a BrowserBundle (lib/fixtures/browserBundle.ts) that lib/fixtures/seedBrowser.ts
 // pours into IndexedDB. It feeds:
 //
-//   Library › Styles     nine themes across draft / proofing / locked, every origin
-//   Library › Assets     promoted proofs, uploaded references, the trial grid
-//   Board › Proofs       the proofs of every theme that is not locked
+//   /projects/import     an account that used v1: nine themes across draft /
+//                        proofing / locked, every origin, and a shelf of promoted
+//                        proofs, uploaded references and the trial grid - v1's
+//                        Library rows, which the import takes into the Style store
+//                        and the Library index (v1's Library retired in Phase 5)
 //   Board › Adoption     explainer projects that carry research, one adoption each
 //   Board › Alternatives scenes holding 2-4 kept plates with an active one
 //   Board › Triage       research-scope records of mixed verdicts
 //
 // WHAT IT IMPORTS FROM THE APP is pure data and pure derivation only: the
 // shipped renders (so frames carry the real beats), the unit derivation (so the
-// frames record is the v2 shape the step itself would write), and the asset id
-// helpers (so a promoted proof's id and pointer are the ones hydrateProofSrcs
-// resolves). Nothing here opens a database.
+// frames record is the v2 shape the step itself would write), and the shelf's
+// pointer helpers (so a promoted proof's id and pointer are the ones v1 wrote).
+// Nothing here opens a database.
 //
 // NOT SEEDED: audio-kind assets. The Library's Audio tab reads the server
 // sound store now (pipeline/fixtures/sound.ts owns that), so a shelf row of
@@ -30,10 +32,9 @@ import path from "node:path";
 import { explainerRender } from "@/lib/frames/frames";
 import { framesFromUnits, unitsFromRender } from "@/lib/frames/picture/unit";
 import { RENDER_BY_ID } from "@/lib/script/renders";
-import { assetFromProof, uploadPointer, type Asset } from "@/lib/assets";
-import type { Proof, ProofState, Theme } from "@/lib/themes";
+import { promotedId, proofPointer, uploadPointer } from "@/lib/shelfPointers";
 
-import { UID_TOKEN, type BrowserBundle, type BundleStep, type BundleUpload } from "../../lib/fixtures/browserBundle";
+import { UID_TOKEN, type BrowserBundle, type BundleStep, type BundleUpload, type V1Asset as Asset, type V1Proof as Proof, type V1ProofState as ProofState, type V1Theme as Theme } from "../../lib/fixtures/browserBundle";
 import { DAY, HOUR, ago, hash, outFile, plate, rng, toDataUri, writeJson } from "./kit";
 
 /* ── Styles ───────────────────────────────────────────────────────────────── */
@@ -312,6 +313,21 @@ const PRESET_DISCIPLINE: Record<string, string> = {
   "paper-relief": "educational",
   "data-neon": "educational",
 };
+
+/** v1 lib/assets.ts `assetFromProof`: the shelf row v1 wrote when a proof was promoted. */
+function assetFromProof(uid: string, theme: Theme, proof: Proof): Asset {
+  const folder = theme.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || theme.id;
+  return {
+    id: promotedId(theme.id, proof.id),
+    uid,
+    path: [theme.discipline ?? "shared", "styles", "proofs", folder],
+    name: proof.label || proof.id,
+    src: proofPointer(theme.id, proof.id),
+    kind: "image",
+    meta: { provenance: { source: "generated", model: proof.model, parentIds: [theme.id] }, styleName: theme.name, themeId: theme.id, proofId: proof.id, block: theme.block, provider: proof.provider, costUsd: proof.costUsd, promotedAt: proof.createdAt },
+    createdAt: proof.createdAt,
+  };
+}
 
 function buildAssets(themes: Theme[]): { assets: Asset[]; uploads: BundleUpload[] } {
   const assets: Asset[] = [];

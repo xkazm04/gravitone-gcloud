@@ -18,7 +18,7 @@
 //     architecture, not a preference, which is why it is welded into the
 //     compiler rather than left to each caller to remember.
 
-import type { ColorRole, StyleBlock } from "./themes";
+import type { ColorRole, StyleBlock } from "@gt/catalog/style";
 
 const ROLE_PHRASE: Record<ColorRole, string> = {
   ground: "as the dominant background",

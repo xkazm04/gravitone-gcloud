@@ -16,7 +16,7 @@ import { __resetMusicBudget } from "@/lib/music/budget";
 import { fromSeed } from "@/lib/sound/fromSeed";
 import { readTakes } from "@/lib/sound/store";
 import type { SoundTake } from "@/lib/sound/types";
-import { blankSeed, type Seed } from "@/app/library/audio/prompts";
+import { blankSeed, type Seed } from "@/lib/sound/audio/prompts";
 import { POST as generatePOST } from "@/app/api/sound/generate/route";
 
 import { keepEnv } from "./_helpers";

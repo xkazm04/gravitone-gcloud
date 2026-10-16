@@ -29,14 +29,23 @@ import { stripComments } from "./_helpers";
  *  is a claim somebody defends in review — the same shape as
  *  object-url-ownership's KNOWN_LEAKS, and for the same reason: a silent
  *  exclusion list is how a gate stops meaning anything. */
+const STYLE_PALETTE =
+  "STYLE PALETTE DATA - fixture/specimen styles' palettes (content a generated image wears, drawn as swatches and designed faces), not this app's chrome.";
+
 const EXEMPT: Record<string, string> = {
   "components/ui/tokens.ts":
     "The declaring file. This is where chrome colour is allowed to be spelled.",
   // The style presets' palette hex (what a GENERATED IMAGE looks like — content, not chrome)
   // moved to packages/catalog/src/presets.ts; this walk reads app/ and components/ only, so
-  // the file needs no entry, and app/library/presets.ts is now a hex-free stub.
-  "app/library/LibraryAtelier.tsx":
-    "The same preset data, beside the presets it describes.",
+  // the file needs no entry. app/library (LibraryAtelier.tsx, presets.ts) retired in Phase 5.
+  // A style's palette is what its GENERATED IMAGES look like - content drawn as a swatch or a
+  // designed face, the same distinction as the presets' palette. These hold fixture and
+  // specimen styles; the real side reads palettes from the Style store.
+  "app/(studio)/kit/LibraryKit.tsx": STYLE_PALETTE,
+  "app/(studio)/kit/StyleKit.tsx": STYLE_PALETTE,
+  "app/(studio)/library/_port/fixtureCorpus.ts": STYLE_PALETTE,
+  "app/(studio)/library/_port/fixtureData.ts": STYLE_PALETTE,
+  "app/(studio)/library/style/_port/fixtureData.ts": STYLE_PALETTE,
   "app/_dev-inspector/devInspectorUi.tsx":
     "DEVTOOLS SKIN - dev-only chrome for the inspect overlay, deliberately fixed so that debugging the theme cannot be broken BY the theme. Never in a production bundle. Its own header also claims it renders where <GravitoneTokens> does not; that half is wrong (it mounts inside the root layout) and the exemption stands on debug-independence alone.",
   "app/global-error.tsx":

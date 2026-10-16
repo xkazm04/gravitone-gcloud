@@ -5,9 +5,9 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { fixtureAct, fixtureDetail, fixtureEverything, fixtureQuery, resetLibraryFixture } from "../../app/(studio)/library-next/_port/fixture.ts";
-import { cardOf, gotoFor, lineageOf, type Media } from "../../app/(studio)/library-next/_port/present.ts";
-import { hrefOf, identity, parseUrl, toggled, withKind, DEFAULT_URL } from "../../app/(studio)/library-next/_library/url.ts";
+import { fixtureAct, fixtureDetail, fixtureEverything, fixtureQuery, resetLibraryFixture } from "../../app/(studio)/library/_port/fixture.ts";
+import { cardOf, gotoFor, lineageOf, type Media } from "../../app/(studio)/library/_port/present.ts";
+import { hrefOf, identity, parseUrl, toggled, withKind, DEFAULT_URL } from "../../app/(studio)/library/_library/url.ts";
 import type { LibraryPage, LibraryRow } from "@gt/domain/library";
 
 const page = (r: ReturnType<typeof fixtureQuery>): LibraryPage => {
@@ -120,7 +120,7 @@ describe("one presentation for both sides", () => {
 
 describe("the address", () => {
   test("defaults are omitted; a facet the kind cannot show is dropped; the window does not change identity", () => {
-    expect(hrefOf(DEFAULT_URL)).toBe("/library-next");
+    expect(hrefOf(DEFAULT_URL)).toBe("/library");
     const u = parseUrl({ kind: "audio", f: ["mood:tense", "station:forge", "state:ratified"], view: "list", sel: "audio-1" });
     expect(u.f).toEqual({ mood: ["tense"], state: ["ratified"] });
     expect(parseUrl(Object.fromEntries(new URLSearchParams(hrefOf(u).split("?")[1]))).kind).toBe("audio");

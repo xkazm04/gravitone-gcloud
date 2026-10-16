@@ -157,7 +157,8 @@ export interface Project {
    */
   discipline?: Discipline;
   /**
-   * The locked visual identity this project is built on — see lib/themes.ts.
+   * The locked visual identity this project is built on: a v1 theme, imported as the Style
+   * `v1-theme:<themeId>` (lib/import/shelf.ts).
    *
    * Optional on the TYPE, required by the create path. That split is
    * deliberate: projects created before /library existed have no theme, and

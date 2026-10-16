@@ -48,13 +48,24 @@ import { jobCounts, useJobs } from "@/lib/jobs";
 import { listTurns } from "@/lib/turns/client";
 import { evictIdentity } from "@/lib/identityEviction";
 import { listProjects, projectContents } from "@/lib/projects";
-import { listThemes } from "@/lib/themes";
+import { BY_UID, THEMES_STORE, getKeysByIndex, openDb } from "@/lib/studioDb";
 import type {
   AccountSnapshot,
   HarnessControl,
   ProjectReadback,
   ResetOutcome,
 } from "@/lib/harness/protocol";
+
+/** The account's v1 theme rows, keys only: the writer (lib/themes.ts) retired in Phase 5 and the
+ *  rows wait in the store for the import, so the snapshot still counts what a reset would clear. */
+async function themeKeys(uid: string): Promise<IDBValidKey[]> {
+  const db = await openDb();
+  try {
+    return await getKeysByIndex(db, THEMES_STORE, BY_UID, uid);
+  } finally {
+    db.close();
+  }
+}
 
 export default function HarnessBridge() {
   const { user } = useAuth();
@@ -77,7 +88,7 @@ export default function HarnessBridge() {
         // A null uid is reported, never papered over: the harness must wait for
         // the gate rather than assert against an account that does not exist yet.
         const rows = uid ? await listProjects(uid) : [];
-        const themes = uid ? await listThemes(uid) : [];
+        const themes = uid ? await themeKeys(uid) : [];
         // TURN-BACKED WORK IS READ FROM THE LEDGER (AIO-A stage 3). This tab's
         // list knows only the turns it watches, and only as of its last poll;
         // the server knows every turn this account's projects have, started

@@ -140,13 +140,6 @@ export const GATES: readonly Gate[] = [
     rationale: "Pure function over @gt/domain/style.ratchet: the founding proof must survive a full sheet in the reference window.",
   },
   {
-    id: "assets-tree",
-    npmScript: "check:assets-tree",
-    class: "blocking",
-    outcomes: "01",
-    rationale: "Pure function over lib/assets.ts: a parent folder totals and shows its whole subtree. Unwired from 2026-08 until gate liveness found it.",
-  },
-  {
     id: "vocab",
     npmScript: "check:vocab",
     class: "blocking",

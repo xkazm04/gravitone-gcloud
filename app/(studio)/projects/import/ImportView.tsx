@@ -12,7 +12,9 @@
 // The confirm sends the same bytes with the preview's token; a stale token answers the fresh
 // preview, which replaces the old one on screen.
 //
-// v1's rows are never written: the browser keeps them until the shelf is retired.
+// THE SHELF COMES TOO (Phase 5, L55): the account's themes land as Styles and its shelf assets as
+// Library items, counted beside the projects; one the store refuses is listed with the door's
+// words. v1's rows are never written: this import is their last reader.
 
 import { useEffect, useRef, useState } from "react";
 import { unknown } from "zod/mini";
@@ -25,9 +27,10 @@ import type { Tone } from "@gt/ui/components/chip/tone.ts";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { Tally } from "@gt/ui/components/tally/Tally.tsx";
 
-import type { ImportOutcome } from "@/lib/import/commit";
+import type { ImportOutcome, ShelfOutcome } from "@/lib/import/commit";
 import type { ProjectPreview } from "@/lib/import/project";
 import type { Preview } from "@/lib/import/serve";
+import type { ItemPreview, ThemePreview } from "@/lib/import/shelf";
 import { ArchiveRefused, exportAccount, inspectArchive } from "@/lib/studioArchive";
 import { BY_UID, PROJECTS_STORE, openDb } from "@/lib/studioDb";
 
@@ -39,7 +42,7 @@ type Phase =
   | { readonly kind: "refused"; readonly name: string; readonly code: string; readonly message: string }
   | { readonly kind: "preview"; readonly sources: readonly Source[] }
   | { readonly kind: "committing"; readonly sources: readonly Source[] }
-  | { readonly kind: "done"; readonly outcomes: readonly ImportOutcome[] }
+  | { readonly kind: "done"; readonly outcomes: readonly ImportOutcome[]; readonly styles: readonly ShelfOutcome[]; readonly items: readonly ShelfOutcome[] }
   | { readonly kind: "error"; readonly message: string };
 
 type Envelope = { readonly error?: string; readonly code?: string; readonly detail?: string };
@@ -146,23 +149,29 @@ export function ImportView() {
   const confirm = async (sources: readonly Source[]) => {
     setPhase({ kind: "committing", sources });
     const outcomes: ImportOutcome[] = [];
+    const styles: ShelfOutcome[] = [];
+    const items: ShelfOutcome[] = [];
     const fresh: Source[] = [];
     for (const src of sources) {
       const r = await post(`/api/import?act=commit&token=${src.preview.token}`, src.bytes);
       if (r.status === 409) {
-        const f = (r.json as { fresh?: { fresh: readonly ProjectPreview[]; token: string } }).fresh;
-        if (f !== undefined) fresh.push({ ...src, preview: { ...src.preview, projects: f.fresh, token: f.token } });
+        const f = (r.json as { fresh?: { fresh: readonly ProjectPreview[]; themes: readonly ThemePreview[]; items: readonly ItemPreview[]; token: string } }).fresh;
+        if (f !== undefined) fresh.push({ ...src, preview: { ...src.preview, projects: f.fresh, themes: f.themes, items: f.items, token: f.token } });
         continue;
       }
       if (r.status !== 200) return setPhase({ kind: "error", message: envelopeOf(r.json).error ?? `the import answered ${r.status}` });
-      outcomes.push(...(r.json as { outcomes: readonly ImportOutcome[] }).outcomes);
+      const done = r.json as { outcomes: readonly ImportOutcome[]; styles: readonly ShelfOutcome[]; items: readonly ShelfOutcome[] };
+      outcomes.push(...done.outcomes);
+      styles.push(...done.styles);
+      items.push(...done.items);
     }
-    setPhase(fresh.length > 0 ? { kind: "preview", sources: fresh } : { kind: "done", outcomes });
+    setPhase(fresh.length > 0 ? { kind: "preview", sources: fresh } : { kind: "done", outcomes, styles, items });
   };
 
   const sources = phase.kind === "preview" || phase.kind === "committing" ? phase.sources : [];
   const going = sources.flatMap((x) => x.preview.projects).filter((p) => p.outcome === "import");
   const bytes = going.reduce((n, p) => n + p.bytes, 0);
+  const shelfGoing = sources.reduce((n, x) => n + x.preview.themes.filter((t) => t.outcome === "import").length + x.preview.items.filter((i) => i.outcome === "import").length, 0);
 
   return (
     <main className={s.page} data-component="Import" data-phase={phase.kind}>
@@ -216,17 +225,26 @@ export function ImportView() {
                 ))}
               </ul>
               {src.preview.losses.length > 0 && <Losses losses={src.preview.losses} />}
+              <Shelf themes={src.preview.themes} items={src.preview.items} />
             </section>
           ))}
           <footer className={s.confirm}>
             <Tally value={going.length} label="to import" />
             <Tally value={going.reduce((n, p) => n + p.held, 0)} label="records" />
             {bytes > 0 && <Tally value={mb(bytes)} label="blobs" />}
-            <Button label={phase.kind === "committing" ? "Importing…" : `Import ${going.length}`} tone="emerald" disabled={going.length === 0 || phase.kind === "committing"} onPress={() => void confirm(sources)} />
+            {shelfGoing > 0 && <Tally value={shelfGoing} label="shelf" />}
+            <Button label={phase.kind === "committing" ? "Importing…" : `Import ${going.length + shelfGoing}`} tone="emerald" disabled={going.length + shelfGoing === 0 || phase.kind === "committing"} onPress={() => void confirm(sources)} />
           </footer>
         </>
       )}
 
+      {phase.kind === "done" && (phase.styles.length > 0 || phase.items.length > 0) && (
+        <section className={s.tallies} aria-label="shelf outcomes">
+          <Tally value={phase.styles.filter((x) => x.outcome === "imported").length} of={phase.styles.length} label="styles" />
+          <Tally value={phase.items.filter((x) => x.outcome === "imported").length} of={phase.items.length} label="library items" />
+          <Button label="Library" size="sm" href="/library" glyphAfter="chevR" />
+        </section>
+      )}
       {phase.kind === "done" && (
         <ul className={s.rows} aria-label="outcomes">
           {phase.outcomes.map((o) => (
@@ -263,6 +281,34 @@ function ProjectRow({ p }: { readonly p: ProjectPreview }) {
       )}
       {p.outcome === "import" && p.losses.length > 0 && <Losses losses={p.losses} />}
     </li>
+  );
+}
+
+/** The account's themes and shelf assets: counts, and each one the store refuses with its reason. */
+function Shelf({ themes, items }: { readonly themes: readonly ThemePreview[]; readonly items: readonly ItemPreview[] }) {
+  if (themes.length + items.length === 0) return null;
+  const going = (xs: readonly { readonly outcome: string }[]) => xs.filter((x) => x.outcome === "import").length;
+  const named = themes.filter((t) => t.named && t.outcome === "import").length;
+  const refused = [...themes.map((t) => ({ key: `t:${t.v1Id}`, name: t.name, reason: t.reason, outcome: t.outcome })), ...items.map((i) => ({ key: `a:${i.v1Id}`, name: i.title, reason: i.reason, outcome: i.outcome }))].filter((x) => x.outcome === "refuse");
+  return (
+    <section aria-label="shelf">
+      <span className={s.tallies}>
+        <Tally value={going(themes)} of={themes.length} label="styles" />
+        {named > 0 && <Tally value={named} label="named" />}
+        <Tally value={going(items)} of={items.length} label="library items" />
+      </span>
+      {refused.length > 0 && (
+        <ul className={s.losses} aria-label="refused">
+          {refused.map((r) => (
+            <li key={r.key} className={s.loss} data-shelf="refuse">
+              <span className={s.mono}>{r.name}</span>
+              <Chip label="refused" tone="rose" casing="lower" />
+              <span className={s.reason}>{r.reason}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

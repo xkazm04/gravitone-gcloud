@@ -15,11 +15,19 @@ const DB_NAME = STUDIO_DB_NAME;
 export const PROJECTS_STORE = "projects";
 /** Per-project step content — see app/_phases/_shared/stepStore.ts. */
 export const STEPS_STORE = "steps";
-/** Visual identities — see lib/themes.ts. Account-scoped like projects, and
- *  read by /library and by the gate on project creation. */
+/** v1's visual identities (the retired lib/themes.ts `Theme`). Account-scoped.
+ *
+ *  KEPT, READ-ONLY IN PRACTICE, NOT DROPPED (Phase 5, L55). Nothing in the
+ *  studio writes a theme, an asset or an upload any more - Styles live in the
+ *  kernel's style store and the shelf in the Library index - but a browser that
+ *  used v1 still holds its rows HERE and nowhere else. The import (/projects/
+ *  import, through lib/studioArchive.ts `exportAccount`) is their last reader,
+ *  and the sign-out eviction still clears them. A DB_VERSION bump that deleted
+ *  these stores would delete that work before anyone imported it, so the
+ *  version stays at 5 and the three stores stay. */
 export const THEMES_STORE = "themes";
-/** Reusable shelf entries — see lib/assets.ts. Pointers to bytes that live
- *  elsewhere, so this store stays small however many plates it indexes. */
+/** v1's shelf entries (the retired lib/assets.ts `Asset`): pointers to bytes that
+ *  live elsewhere (lib/shelfPointers.ts). Kept for the import - see THEMES_STORE. */
 export const ASSETS_STORE = "assets";
 /**
  * The bytes of UPLOADED references, one Blob per row, keyed by upload id.

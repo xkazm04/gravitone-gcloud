@@ -113,6 +113,20 @@ export type ShotReviewView = {
   readonly notChecked: readonly string[];
 };
 
+/** Why the named default is drawn instead of the project's own style (v1 lib/themes.ts
+ *  `StyleMiss`; `deleted` became `missing` - a style is never deleted from the store - and
+ *  `no-block` is new: a catalogue style nobody adopted has no look to draw). */
+export type LookMiss = "unset" | "missing" | "no-block";
+
+/** Each miss in the work's words, written to follow the default's name (v1 `STYLE_MISS_WORD`).
+ *  Here, beside the view, so the receipt (server) and the chip's accessible name (client) say one
+ *  thing. */
+export const LOOK_MISS_WORDS: { readonly [M in LookMiss]: string } = {
+  unset: "the project has no style of its own",
+  missing: "its style is not in the style store",
+  "no-block": "its style has no block yet",
+};
+
 export type FramesBoard = {
   readonly face: "assembly" | "shots";
   /** The chain the units came from; null when the script has adopted none. */
@@ -121,8 +135,10 @@ export type FramesBoard = {
   readonly sourceMoved: boolean;
   readonly units: readonly UnitView[];
   readonly tally: FramesTally;
-  /** The style the plates are prompted in; `fallback` when the project chose none. */
-  readonly style: { readonly name: string; readonly fallback: boolean };
+  /** The style the plates are drawn in (@gt/producers/frames/look): its name, how many approved
+   *  proofs ride along as references, and - when the named default stands in - which miss it
+   *  covers (`unset`, `missing`, `no-block`). `fallback` is `miss !== undefined`. */
+  readonly style: { readonly name: string; readonly fallback: boolean; readonly refs: number; readonly miss?: LookMiss };
   readonly facts: readonly FactOption[];
   readonly proposal: { readonly rows: number; readonly conflicts: number; readonly rejected: number; readonly missing: readonly string[] } | null;
   /** A pass was accepted and can be reverted. */

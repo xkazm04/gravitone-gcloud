@@ -7,7 +7,8 @@ export type BoardSourceId =
   | "cull"
   | "extract"
   | "dojo"
-  | "proof"
+  // `proof` retired in Phase 5 (L56): a style's pending proofs are a packet of the new Board
+  // (lib/decision/v1/sources/proof.ts), read from the Style table, not IndexedDB.
   | "adoption"
   | "alternative"
   | "triage"

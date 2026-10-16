@@ -1,0 +1,80 @@
+/* library.css, the route's own layout around the @gt/ui library parts: rail | results | detail,
+   the results' head and toolbar, and the two narrowing steps (1360px: the detail is a drawer;
+   1280px: the rail is too). Below 640px (not in the prototype) the toolbar wraps. */
+.lib{position:relative;flex:1;min-height:0;display:grid;grid-template-columns:var(--w-lib-nav) minmax(0,1fr) var(--w-lib-detail);transition:grid-template-columns var(--dur) var(--ease)}
+.lib[data-detail=false]{grid-template-columns:var(--w-lib-nav) minmax(0,1fr) 0}
+.nav{min-height:0;display:flex;flex-direction:column;border-right:1px solid var(--hair);overflow:auto;scrollbar-gutter:stable}
+.nav>section{flex:1}
+.center{min-width:0;min-height:0;display:flex;flex-direction:column;position:relative}
+.det{min-width:0;min-height:0;overflow:hidden;border-left:1px solid var(--hair);background:linear-gradient(180deg,color-mix(in srgb,var(--ink-2) 70%,transparent),color-mix(in srgb,var(--ink-1) 70%,transparent))}
+.det[hidden]{display:none}
+.scrim{display:none}
+
+/* ── the results' head ── */
+.lhead{flex:none;display:flex;align-items:center;gap:var(--sp-4);height:var(--head-h);padding:0 var(--sp-5);border-bottom:1px solid var(--hair);min-width:0}
+.crumbs{min-width:0;overflow:hidden;font-size:var(--fs-ui)}
+.q{font:600 var(--fs-micro)/1 var(--mono);color:var(--cyan);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:30ch}
+.sp{flex:1}
+.total,.rendered{flex:none}
+
+/* ── toolbar ── */
+.tool{flex:none;display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3) var(--sp-5);border-bottom:1px solid var(--hair);min-width:0}
+.search{flex:1 1 calc(var(--w-lib-tile-s) * 1.5);min-width:var(--w-lib-tile-s);max-width:calc(var(--w-lib-detail) * 1.4)}
+.sort select{height:var(--h-control-sm);width:auto;padding:0 var(--sp-2)}
+.detTog{margin-left:auto}
+.railToggle{display:none}
+.fchips{flex:none;display:flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center;padding:var(--sp-snug) var(--sp-5);border-bottom:1px solid var(--hair);max-height:calc(var(--h-chip) * 4.4);overflow:auto}
+.clear{font:600 var(--fs-micro)/1 var(--mono);color:var(--muted);padding:var(--sp-2) var(--sp-3);border-radius:var(--r-chip)}
+.clear:hover{color:var(--ink-bright);background:var(--wash)}
+
+/* ── the listbox ── */
+.vp{--row-h:var(--h-lib-row-m);flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;position:relative;outline:none}
+.vp:focus-visible{box-shadow:inset 0 0 0 var(--stroke-mark) color-mix(in srgb,var(--cyan) 35%,transparent)}
+.vp[aria-busy=true]{opacity:.72;transition:opacity var(--dur-fast)}
+.slotRow{height:var(--row-h,var(--h-lib-row-m));border-bottom:1px solid var(--hair);background:linear-gradient(90deg,var(--wash),transparent)}
+.blockErr{flex:none;padding:var(--sp-3) var(--sp-5);font:500 var(--fs-error)/1.4 var(--mono);color:var(--error-text);border-top:1px solid var(--hair)}
+
+/* ── detail body parts the route composes ── */
+.reading{font:500 var(--fs-micro)/1.4 var(--mono);color:var(--muted)}
+/* A decoder's sentence carries the file it read: a path with no break point wraps instead of running off the panel. */
+.mediaErr{margin-top:var(--sp-2);min-width:0;overflow-wrap:anywhere}
+.ev{display:flex;gap:var(--sp-2);align-items:center;flex-wrap:wrap;margin-bottom:var(--sp-3)}
+.evBar{flex:1 1 100%;margin-top:var(--sp-1)}
+.evt{width:100%;border-collapse:collapse;font-size:var(--fs-control-sm);margin-top:var(--sp-2)}
+.evt td{padding:var(--sp-1) var(--sp-2) var(--sp-1) 0;border-bottom:1px solid var(--hair);color:var(--text)}
+.evt td.m{font:500 var(--fs-micro)/1.3 var(--mono);color:var(--muted)}
+.vKeep{color:var(--emerald)}
+.vReject{color:var(--rose)}
+.recipe{font:var(--fs-h3)/1.6 var(--serif);color:var(--reading)}
+.neg{margin-top:var(--sp-3);font:500 var(--fs-meta)/1.5 var(--mono);color:var(--muted)}
+.neg b{color:var(--rose);font-weight:600}
+.acts{display:flex;flex-direction:column;gap:var(--sp-3)}
+.actRow{display:flex;gap:var(--sp-3);align-items:center;flex-wrap:wrap}
+.useSel{flex:1;min-width:0}
+.useSel select{height:var(--h-control);width:100%}
+
+/* ── below 1360px: the detail is a drawer over the results ── */
+@media (max-width:1359px){
+  .lib,.lib[data-detail=false]{grid-template-columns:var(--w-lib-nav) minmax(0,1fr)}
+  .det,.det[hidden]{display:block;position:absolute;right:0;top:0;bottom:0;width:min(var(--w-lib-detail),calc(100% - var(--sp-7) - var(--sp-wide)));z-index:var(--z-docked);box-shadow:calc(-1 * var(--sp-7)) 0 calc(var(--sp-7) * 2.5) var(--shadow);background:var(--sheet-ground);transition:transform var(--dur) var(--ease),visibility var(--dur)}
+  .lib[data-detail=false] .det{transform:translateX(102%);visibility:hidden}
+  .lib[data-detail=true] .scrim{display:block;position:absolute;inset:0;z-index:calc(var(--z-docked) - 1);background:color-mix(in srgb,var(--ink) 58%,transparent)}
+}
+/* ── below 1280px: the rail is a drawer too, behind the vocabulary toggle ── */
+@media (max-width:1279px){
+  .lib,.lib[data-detail=false]{grid-template-columns:minmax(0,1fr)}
+  .nav{position:absolute;left:0;top:0;bottom:0;width:min(var(--w-lib-nav),calc(100% - var(--sp-7) * 2));z-index:calc(var(--z-docked) + 1);background:var(--ink-1);box-shadow:var(--sp-7) 0 calc(var(--sp-7) * 2.5) var(--shadow);transition:transform var(--dur) var(--ease),visibility var(--dur)}
+  .lib:not([data-rail=true]) .nav{transform:translateX(-102%);visibility:hidden}
+  .lib[data-rail=true] .scrim{display:block;position:absolute;inset:0;z-index:var(--z-docked);background:color-mix(in srgb,var(--ink) 58%,transparent)}
+  .railToggle{display:inline-flex}
+}
+@media (max-width:1099px){
+  .sort{display:none}
+}
+/* ── phone: the toolbar wraps, search on its own line ── */
+@media (max-width:639px){
+  .tool{flex-wrap:wrap}
+  .search{order:-1;flex-basis:100%;max-width:none}
+  .lhead{padding:0 var(--sp-3)}
+  .rendered{display:none}
+}

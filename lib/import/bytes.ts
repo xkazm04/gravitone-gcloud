@@ -34,7 +34,8 @@ const DATA_URL = /^data:([^,;]*)((?:;[^,;]*)*);base64,/i;
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
-function stage(sink: Sink, bytes: Uint8Array, mime: string): BlobRef {
+/** Bytes into the sink by digest (once), as a ref. */
+export function stage(sink: Sink, bytes: Uint8Array, mime: string): BlobRef {
   const ref: BlobRef = { sha256: createHash("sha256").update(bytes).digest("hex"), bytes: bytes.byteLength, mime: mimeSchema.safeParse(mime).success ? mime : "application/octet-stream" };
   if (!sink.has(ref.sha256)) sink.set(ref.sha256, { ref, bytes });
   return ref;

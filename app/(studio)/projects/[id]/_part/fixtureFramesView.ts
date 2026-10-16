@@ -1,6 +1,5 @@
 import "server-only";
 
-import { PRESETS } from "@gt/catalog/presets";
 import type { BlobRef } from "@gt/domain/blob";
 import type { AdShotTakes, FactOption, FramesData, LayerView, PartVerdict, PlateView, ProposalRow, ShotReviewView, UnitView } from "@gt/domain/partView";
 import { STEP_RECORDS } from "@gt/domain/steps/registry";
@@ -161,8 +160,8 @@ function shotReview(ctx: KCtx): ShotReviewView | undefined {
   if (s.cut === null) return undefined;
   const template = recipeById(ctx.project.recipe)?.template ?? "trailer";
   const shots: Shot[] = shotsFromRender(trailerRender(derive(s.cut).cut, { template, durationS: ctx.project.targetS ?? 120 }));
-  const block = PRESETS[0]?.block;
-  const report = reviewShotList(shots, block === undefined ? undefined : promptsForShots(shots, block), block);
+  const block = ctx.look.block;
+  const report = reviewShotList(shots, promptsForShots(shots, block), block);
   const findings = report.checks.map((c) => ({ rule: c.rule, subject: c.shots.length === 0 ? "cut" : c.shots.slice(0, 3).join(", "), verdict: c.verdict, detail: c.detail }));
   const count = (v: string) => report.checks.filter((c) => c.verdict === v).length;
   return { checks: report.checks.length, violations: count("violation"), unmeasured: count("unmeasured"), notEngaged: count("not-engaged"), findings, notChecked: NOT_CHECKED };
@@ -198,7 +197,6 @@ export function framesData(ctx: KCtx, f: FramesRec): FramesData {
   const accepted = ctx.rec("motion").accepted;
   const units = all.map((u) => unitView(ctx, f, u, accepted[u.id]));
   const trailer = chain?.lane === "trailer" || all.some((u) => u.kind === "shot");
-  const style = PRESETS[0];
   const review = trailer ? shotReview(ctx) : undefined;
   return {
     face: trailer ? "shots" : "assembly",
@@ -213,9 +211,9 @@ export function framesData(ctx: KCtx, f: FramesRec): FramesData {
       unsourced: units.reduce((n, u) => n + u.pips.unsourced, 0),
       clips: units.filter((u) => u.clip.motion.trim() !== "").length,
     },
-    // A project chooses no style yet (the recipe carries none): the plates are prompted in the
-    // first preset, and the chip says it is a fallback (v1's sentence goes; the state stays).
-    style: { name: style?.name ?? "—", fallback: true },
+    // The project's look (the frames producer draws in the same one): its style and the
+    // references it sends, or the named default and the miss it covers.
+    style: { name: ctx.look.name, fallback: ctx.look.miss !== undefined, refs: ctx.look.refs.length, ...(ctx.look.miss === undefined ? {} : { miss: ctx.look.miss }) },
     facts: facts(ctx),
     proposal:
       f.proposal === null

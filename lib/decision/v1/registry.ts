@@ -10,6 +10,7 @@ import { stripsAdapter } from "./sources/strips.ts";
 import { articleAdapter } from "./sources/article.ts";
 import { audioAdapter } from "./sources/audio.ts";
 import { mvAdapter } from "./sources/mv.ts";
+import { proofAdapter } from "./sources/proof.ts";
 import { sunoAdapter } from "./sources/suno.ts";
 import type { DecisionAdapter } from "./types.ts";
 import { stepAdapter } from "@/lib/parts/gates";
@@ -46,6 +47,8 @@ export const DECISION_ADAPTERS = {
   // No v1 surface
   trials: notDecidable("the prototype's mechanism trials have no v1 store; nothing opens a trials packet from v1"),
   step: adapter(stepAdapter),
+  // Phase 5 (L56): a style's pending proofs, from the Style table
+  proof: adapter(proofAdapter),
 } as const satisfies { readonly [S in PacketSource]: AdapterEntry };
 
 /** The adapter that decides `source`, or `refused` with the reason none does. */

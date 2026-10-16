@@ -348,12 +348,6 @@ jobs:
       - name: style refs
         run: npm run check:style-refs
 
-      # BLOCKING, and new here on 2026-10-05. Pure function over lib/assets.ts: a
-      # parent folder totals and shows its whole subtree. It passed for weeks and
-      # ran nowhere; the registry's liveness check is what found it.
-      - name: assets tree
-        run: npm run check:assets-tree
-
       # BLOCKING, new with the cinematography vocabulary. One versioned vocab file
       # feeds schema.py, style.py, the foundry vocabulary, the cull grid and the
       # dojo study; this fails any enum literal re-declared outside it, any enum

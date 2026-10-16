@@ -36,14 +36,14 @@ import {
   wipeTallies,
   type ArchivePrep,
 } from "@/components/ui/archiveSummary";
-import { assetFromUpload, putUploads } from "@/lib/assets";
 import { evictIdentity, type EvictionReport } from "@/lib/identityEviction";
 import { newProject, putProject } from "@/lib/projects";
 import { ArchiveRefused, exportAccount, importArchive } from "@/lib/studioArchive";
 import { ASSETS_STORE, PROJECTS_STORE, STEPS_STORE, THEMES_STORE, UPLOADS_STORE, openDb, runTx } from "@/lib/studioDb";
-import { newTheme, putTheme } from "@/lib/themes";
 
 import { stripComments } from "./_helpers";
+// v1's theme and shelf writers retired in Phase 5; their rows are written in their shapes.
+import { putV1Themes, putV1Uploads, v1Theme, v1Upload } from "./_v1rows";
 
 const ROOT = process.cwd();
 const src = (rel: string) => stripComments(readFileSync(path.join(ROOT, rel), "utf8"));
@@ -218,15 +218,15 @@ async function clearAll() {
 test("dialog + import on fake-indexeddb: the dry run's counts are the dialog's, and re-importing over the shelf under skip changes nothing", async () => {
   await clearAll();
   const uid = "uid-signout";
-  const theme = newTheme(uid, { name: "Ink", origin: "scratch", block: { medium: "ink" } as never, elements: [] });
-  await putTheme(theme);
+  const theme = v1Theme(uid, "Ink");
+  await putV1Themes([theme]);
   for (const title of ["One", "Two"]) {
     await putProject(
       newProject(uid, { title, logline: "", template: "short-educational-video", discipline: "educational", targetS: 60, themeId: theme.id }),
     );
   }
-  const up = assetFromUpload(uid, new File([new Uint8Array([1, 2, 3])], "r.png", { type: "image/png" }), []);
-  await putUploads([up]);
+  const up = v1Upload(uid, new File([new Uint8Array([1, 2, 3])], "r.png", { type: "image/png" }), []);
+  await putV1Uploads([up]);
 
   const dry = await evictIdentity(uid, "signed-out", { dryRun: true });
   const shown = wipeTallies(dry);

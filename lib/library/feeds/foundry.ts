@@ -15,6 +15,9 @@ import { getStripRun, listStripRuns, stripRunDir } from "../../foundry/strips/st
 import { getCycle, listCycles, resolveInCycle } from "../../foundry/training/store.ts";
 import { dayOf, isoOf, mimeOf, words, type Feed, type FeedCtx, type FeedItem, type FeedRead } from "./types.ts";
 
+/** The origins a v1 Library theme arrives with; the importer brought it, not the forge. */
+const V1_THEME_ORIGINS: ReadonlySet<string> = new Set(["preset", "plate", "foundry"]);
+
 // THE FOUNDRY, AS LIBRARY ITEMS - the catalogue's styles, the forge's plates and
 // source frames, Extract's sources, replicas and transfers, the Dojo's lesson
 // thumbnails, and Strips' posters and clips (scout-library.md §3), each read
@@ -67,7 +70,7 @@ export const stylesFeed: Feed = {
           title: s.name,
           state: status === "candidate" ? "candidate" : "ratified",
           collections: [],
-          origin: s.origin.kind === "extracted" ? "extract" : "forge",
+          origin: s.origin.kind === "extracted" ? "extract" : V1_THEME_ORIGINS.has(s.origin.kind) ? "import" : "forge",
           rights: { use: "publishable" },
           source: src(ctx),
           lineage: [],

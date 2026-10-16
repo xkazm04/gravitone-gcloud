@@ -70,7 +70,7 @@
 // not `put`, so an id that somehow exists after all aborts the transaction
 // instead of overwriting a row nobody decided about.
 
-import { promotedId, proofPointer, readProofPointer, readUploadPointer, uploadPointer } from "@/lib/assets";
+import { promotedId, proofPointer, readProofPointer, readUploadPointer, uploadPointer } from "@/lib/shelfPointers";
 import {
   ASSETS_STORE,
   BY_PROJECT,
@@ -852,7 +852,7 @@ function writeArchive(
           if (meta && meta.uploadId === up) meta.uploadId = target;
         }
         // A replaced row that pointed at OTHER bytes leaves them unreachable;
-        // they go with it, as lib/assets#deleteAsset would take them.
+        // they go with it, as v1 lib/assets#deleteAsset took them.
         if (d === "replace" && resident) {
           const old = readUploadPointer(String(resident.src));
           if (old && old !== readUploadPointer(String(row.src))) store.uploads.delete(old);

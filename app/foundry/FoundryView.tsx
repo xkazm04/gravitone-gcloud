@@ -1,7 +1,7 @@
 "use client";
 
-// /foundry — the plant: what each engine of the foundry is doing, the Styles
-// shelf, and the Pipeline board.
+// /foundry — the plant: what each engine of the foundry is doing, and the
+// Pipeline board.
 //
 // WHAT LEFT IN PHASE 3 (decision 10). This page used to own the forge cull's
 // whole state - the run strip, the grid, the lightbox, the commit dialog - and
@@ -13,13 +13,16 @@
 // (./FoundrySubnav.tsx, ./plant.tsx DECIDED_ON) and their views are gone.
 //
 // What stays is what is not a decision: the plant overview (the station row's
-// status dots, read by ./plant.tsx usePlant and the forge's run list), the
-// Styles shelf, and the Pipeline canvas. The forge's runs are still polled -
+// status dots, read by ./plant.tsx usePlant and the forge's run list) and the
+// Pipeline canvas. The Styles shelf left in Phase 5 (wave B, L54): a style is
+// one record with its look, worked in the Library's style atelier, and its
+// station is a door there (./plant.tsx DECIDED_ON). v1's shelf adopted a proven
+// style into a SECOND record (an IndexedDB theme); the atelier adopts in place. The forge's runs are still polled -
 // only for the cull station's dot ("1 to cull", "rendering") - and through
 // `usePolling`, which pauses while the tab is hidden.
 //
 // THE STATION IS REMEMBERED (lib/useRemembered.ts). A value from an older build
-// that named a retired tab ("cull", "dojo") reads as the Pipeline.
+// that named a retired tab ("cull", "dojo", "styles") reads as the Pipeline.
 
 import { useCallback, useEffect, useState } from "react";
 
@@ -37,12 +40,11 @@ import { LIVE } from "./parts";
 import { MEDIA, type MediaId } from "./pipeline/media";
 import { engineLines, usePlant, type Tab } from "./plant";
 
-const StylesShelf = dynamic(() => import("./StylesShelf").then((m) => m.StylesShelf), { loading: pendingPanel });
 // The pipeline board is the heaviest graph here; it loads when its tab opens.
 const PipelineTab = dynamic(() => import("./PipelineTab"), { loading: pendingPanel });
 
 /** Every tab, exhaustive by construction: the next member of `Tab` fails to compile here. */
-const TAB_SET: Record<Tab, true> = { pipeline: true, styles: true };
+const TAB_SET: Record<Tab, true> = { pipeline: true };
 const TABS = Object.keys(TAB_SET) as readonly Tab[];
 
 export default function FoundryView() {
@@ -84,7 +86,7 @@ export default function FoundryView() {
           )}
         </header>
         <section role="tabpanel" aria-label={tab} className="mt-4">
-          {tab === "styles" ? <StylesShelf /> : <PipelineTab media={media} />}
+          <PipelineTab media={media} />
         </section>
       </main>
     </StudioFrame>

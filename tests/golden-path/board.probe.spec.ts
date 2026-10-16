@@ -29,14 +29,12 @@ import {
   fromAdoption,
   fromAlternative,
   fromKeep,
-  fromProof,
   fromSlot,
   fromTraining,
   fromTriage,
   rescheduleAt,
   toAdoption,
   toKeep,
-  toProof,
   toTraining,
   toTriage,
   withCullVerdict,
@@ -95,14 +93,9 @@ test("board: dojo — the training writer's words ARE the Board's", () => {
   expect(toTraining(null)).toBe(null);
 });
 
-test("board: proof — pending is a stored word, not an absence", () => {
-  expect(fromProof("approved")).toBe("approve");
-  expect(fromProof("rejected")).toBe("reject");
-  expect(fromProof("pending")).toBe(null);
-  expect(toProof("approve")).toBe("approved");
-  expect(toProof("reject")).toBe("rejected");
-  expect(toProof(null)).toBe("pending");
-});
+// board: proof - RETIRED with lib/board/sources/proof.ts (Phase 5, L56). The mapping it held
+// (approve <-> approved, reject <-> rejected, undecided = pending) is the new proof source's, and
+// tests/next-server/decision-v1-proof.test.ts holds it over the Style table.
 
 test("board: adoption — one pointer; approve writes the id, clearing the adopted one writes \"\", the others write nothing", () => {
   expect(fromAdoption("adjudication", "adjudication")).toBe("approve");

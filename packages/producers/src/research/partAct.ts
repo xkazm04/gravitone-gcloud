@@ -46,7 +46,10 @@ export type ActUnit = {
   readonly input: EventData;
 };
 
-export type ActPlan = { readonly act: string; readonly units: readonly ActUnit[] };
+/** `about`: what the act's units are drawn under, in the work's words (a frames act names the
+ *  project's style and its reference count). The receipt prints it on the act's line and folds it
+ *  into the token, so a confirm after the look moved (a new approval, a new block) is stale. */
+export type ActPlan = { readonly act: string; readonly units: readonly ActUnit[]; readonly about?: string };
 
 /** What a part job is asked to do, read off its id (`partJobId`). `act: null` is the part's own
  *  plan job (launched from Plan): the binding resolves the kind's default act from its records. */

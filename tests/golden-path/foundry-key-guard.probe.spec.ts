@@ -41,7 +41,7 @@ test("a plain press is the surface's, Shift included (K and k both keep)", () =>
 
 test("every window keydown handler under app/foundry consults refusedKey before reading the key", () => {
   const dir = resolve(__dirname, "../../app/foundry");
-  const files = readdirSync(dir).filter((f) => /\.tsx$/.test(f));
+  const files = (readdirSync(dir, { recursive: true }) as string[]).filter((f) => /\.tsx?$/.test(f));
   expect(files.length, "the app/foundry walk found nothing — wrong tree").toBeGreaterThan(3);
   const handlers: string[] = [];
   const unguarded: string[] = [];
@@ -50,11 +50,13 @@ test("every window keydown handler under app/foundry consults refusedKey before 
     if (!/window\.addEventListener\("keydown"/.test(src)) continue;
     handlers.push(f);
     const guard = src.search(/\brefusedKey\(\s*e\s*\)/);
-    const firstRead = src.search(/switch\s*\(\s*e\.key\s*\)|e\.key\s*===/);
+    const firstRead = src.search(/switch\s*\(\s*e\.key\s*\)|e\.key\s*[!=]==/);
     if (guard < 0 || firstRead < 0 || guard > firstRead) unguarded.push(f);
   }
   // Five until Phase 3, when the Cull, Extract, Dojo and Strips views retired to the
-  // Board (whose keys run through the @gt/ui keymap); what is left must still be found.
+  // Board (whose keys run through the @gt/ui keymap). The last top-level one went with
+  // the Styles shelf in Phase 5, so the walk now descends into pipeline/ - the canvas's
+  // context menu, gestures and full-screen bind window keys too, and each is held to it.
   expect(handlers.length, "no window keydown handler found — the walk read nothing").toBeGreaterThanOrEqual(1);
   expect(unguarded).toEqual([]);
 });

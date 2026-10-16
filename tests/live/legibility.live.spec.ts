@@ -154,10 +154,7 @@ test("a disabled control's finding is keyed as disabled; the same control enable
 
 // Screens the lane cannot currently reach, each with its measured reason. A skip is listed
 // here, in the open, rather than silently narrowing the walk.
-const UNREACHABLE: Record<string, string> = {
-  "library-animations":
-    "MEASURED 2026-10-12: opening the Animations tab freezes the page under headless Chromium (waitForTimeout never returns; 120s test timeout, reproduced twice). A product finding in its own right.",
-};
+const UNREACHABLE: Record<string, string> = {};
 
 for (const id of Object.keys(TABLE)) {
   if (ONLY && !ONLY.includes(id)) continue;

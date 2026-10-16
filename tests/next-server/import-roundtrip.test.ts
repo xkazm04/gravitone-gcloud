@@ -87,7 +87,9 @@ describe("preview, then confirm", () => {
     expect(film).toMatchObject({ id: kernelIdOf(seed.film.id), recipe: "film/short-educational-video", outcome: "import", launched: true, done: ["research", "script", "frames", "score", "cut"], ratified: ["gate:frames"] });
     // research-scope, script-adopted, frames, frames-alts, research, score, cut held; script-mode carried.
     expect(film?.held).toBe(7);
-    expect(film?.losses.map((l) => [l.entity, l.grade])).toEqual(expect.arrayContaining([["script-mode", "data-only"], ["theme", "approximate"], ["sign-off research", "approximate"]]));
+    expect(film?.losses.map((l) => [l.entity, l.grade])).toEqual(expect.arrayContaining([["script-mode", "data-only"], ["sign-off research", "approximate"]]));
+    // The theme is a Style the import lands (./import-shelf.test.ts), not a loss.
+    expect(film?.losses.some((l) => l.entity === "theme")).toBe(false);
     // u1, u2 plates (each once though v1 stored them twice), the alternative, the theme proof.
     expect(film?.blobs).toBe(4);
     const album = p.value.projects.find((x) => x.preview.v1Id === seed.album.id)?.preview;

@@ -7,7 +7,7 @@ import { finishClaim, takeClaim } from "@gt/kernel/ingest";
 import type { IndexContext, LibraryEntry, StyleFacets } from "@gt/kernel/library/core";
 import { ingested, pruneFeed, rememberIngest, upsertItems, type IngestMemo } from "@gt/kernel/library/write";
 import type { Store } from "@gt/kernel/store";
-import { probeMissing, type MediaProbe } from "@gt/producers/media-facts/run";
+import { probeMissing, type FactsQueued, type MediaProbe } from "@gt/producers/media-facts/run";
 
 import type { Feed, FeedCtx, FeedItem, FeedRead } from "./feeds/types.ts";
 
@@ -25,12 +25,11 @@ import type { Feed, FeedCtx, FeedItem, FeedRead } from "./feeds/types.ts";
 // `freshLibrary()` (./fresh.ts) takes the store's `library-sync` claim (kernel
 // ingest: one conditional write, a TTL) and starts a sync without awaiting it.
 //
-// MEDIA FACTS are probed in process after the upserts (the free local ffprobe/
-// ffmpeg port, lib/producers/media-facts.ts), bounded per sync. The same work is
-// a `media-facts` producer for the job queue (packages/producers/src/media-facts/
-// run.ts); routing it through a queued job waits on its producer name and recipe
-// (the Director's lines), and the bound keeps a first sync over 700 files from
-// holding a render request.
+// MEDIA FACTS are a queued job (L53): after the upserts the sync asks `queue`
+// (packages/producers/src/media-facts/run.ts `queueFacts`) to enqueue one
+// `media-facts` job when an item's blob has no facts and none is open; the worker
+// probes on box.render. A render request never runs ffprobe. `probe` - the same
+// work in process, bounded per sync - is the CLI's `--inline` and the tests'.
 
 export const LIBRARY_CLAIM = "library-sync";
 export const LIBRARY_SYNC_INTERVAL_MS = 60_000;
@@ -55,11 +54,14 @@ export type LibrarySyncReport = {
   readonly at: string;
   readonly universe: FeedCtx["universe"];
   readonly feeds: readonly FeedReport[];
-  readonly facts?: { readonly probed: number; readonly undecodable: number; readonly failed: readonly string[] } | { readonly error: string };
+  readonly facts?: { readonly probed: number; readonly undecodable: number; readonly failed: readonly string[] } | { readonly queue: FactsQueued } | { readonly error: string };
 };
 
 export type SyncOptions = {
+  /** Probe in process (the CLI's `--inline`); wins over `queue`. */
   readonly probe?: MediaProbe;
+  /** Queue the probe as a job for the worker (the app's sync). */
+  readonly queue?: (store: Store) => Result<FactsQueued>;
   /** Most blobs probed per sync. */
   readonly probeLimit?: number;
   readonly now?: () => Date;
@@ -176,6 +178,9 @@ export async function syncLibrary(store: Store, blobs: BlobStore, feeds: readonl
   if (opts.probe !== undefined) {
     const p = await probeMissing(store, blobs, opts.probe, { limit: opts.probeLimit ?? 200, now });
     facts = p.ok ? p.value : { error: p.error.message };
+  } else if (opts.queue !== undefined) {
+    const q = opts.queue(store);
+    facts = q.ok ? { queue: q.value } : { error: q.error.message };
   }
   return ok({ at: now().toISOString(), universe: ctx.universe, feeds: reports, ...(facts === undefined ? {} : { facts }) });
 }

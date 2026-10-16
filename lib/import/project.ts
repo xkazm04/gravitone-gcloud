@@ -6,6 +6,7 @@ import type { Reader } from "@gt/kernel/store";
 
 import { uploadOf, type Archive, type Row } from "./archive.ts";
 import { markOriginal, type Sink, type StagedBlob } from "./bytes.ts";
+import { publicFile, stageItems, stageThemes, type ItemPreview, type PublicFile, type StagedItem, type StagedTheme, type ThemePreview } from "./shelf.ts";
 import { stageStep, type Loss, type StagedStep } from "./steps.ts";
 
 // A v1 PROJECT, STAGED (Phase 4 wave D, L42) - what importing it WOULD create, read before
@@ -31,11 +32,14 @@ import { stageStep, type Loss, type StagedStep } from "./steps.ts";
 //                 judged part holds records: the gate is ratified by a committed packet whose one
 //                 decision says "imported sign-off, v1 at <ts>". A sign-off with no gate to carry
 //                 it (research, script, motion) is the done job itself, and is reported.
-//   theme         a style ref on the project (`v1-theme:<id>`); the theme row is kept in the
-//                 import record (proofs as blobs) - themes become Library items in Phase 5.
+//   theme         a style ref on the project (`v1-theme:<id>`), the Style ./shelf.ts imports the
+//                 theme as (Phase 5); the theme row is also kept in the import record (proofs as
+//                 blobs) for the byte-exact re-export. A theme the Style door refuses leaves the
+//                 project with no style, and says why.
 //   assets        the shelf rows the project's records name (an ad's image takes, a poster, a
-//                 logo), with their uploaded bytes as blobs, in the import record. The rest of
-//                 the account's shelf is not a project's and is reported once per archive.
+//                 logo), with their uploaded bytes as blobs, in the import record; every shelf
+//                 row, named or not, also becomes a Library item (./shelf.ts) whose `project`
+//                 collection is each imported project that names it.
 // IDEMPOTENT BY v1 ID: the kernel id is `v1-<v1 id>`, so a re-import finds the row and SKIPS.
 
 export const IMPORT_VERSION = 1;
@@ -87,7 +91,13 @@ export type StagedProject = {
   readonly signed: ReadonlyMap<string, string>;
 };
 
-export type ImportPlan = { readonly projects: readonly StagedProject[]; readonly losses: readonly Loss[]; readonly token: string };
+export type ImportPlan = {
+  readonly projects: readonly StagedProject[];
+  readonly themes: readonly StagedTheme[];
+  readonly items: readonly StagedItem[];
+  readonly losses: readonly Loss[];
+  readonly token: string;
+};
 
 const V1_ID = /^[A-Za-z0-9._-]{1,120}$/;
 export const kernelIdOf = (v1Id: string): string => `v1-${v1Id}`;
@@ -112,7 +122,7 @@ function refused(row: Row, reason: string): StagedProject {
   return { preview, row, steps: [], record: { kind: "gravitone-v1-import", v: IMPORT_VERSION, from: "", exportedAt: 0, project: row, steps: [], assets: [], uploads: [] }, blobs: [], units: {}, parts: [], runtimeS: 0, signed: new Map() };
 }
 
-function stageProject(archive: Archive, row: Row, exists: (id: string) => boolean): StagedProject {
+function stageProject(archive: Archive, row: Row, exists: (id: string) => boolean, themes: ReadonlyMap<string, ThemePreview>): StagedProject {
   const v1Id = String(row["id"]);
   if (!V1_ID.test(v1Id)) return refused(row, `project id ${v1Id.slice(0, 40)} is not a v1 id`);
   const template = row["template"];
@@ -128,7 +138,9 @@ function stageProject(archive: Archive, row: Row, exists: (id: string) => boolea
   const themeId = typeof row["themeId"] === "string" ? row["themeId"] : undefined;
   const themeRow = themeId === undefined ? undefined : archive.rows.themes.find((t) => t["id"] === themeId);
   if (themeId !== undefined && themeRow === undefined) losses.push({ entity: "theme", grade: "dropped", reason: `theme ${themeId} is not in the archive` });
-  if (themeRow !== undefined) losses.push({ entity: "theme", grade: "approximate", reason: "kept as the project's style ref; themes become Library items in Phase 5" });
+  const theme = themeId === undefined ? undefined : themes.get(themeId);
+  const styled = themeRow !== undefined && theme !== undefined && theme.outcome !== "refuse";
+  if (theme?.outcome === "refuse") losses.push({ entity: "theme", grade: "dropped", reason: `theme ${theme.name} is not a style the store takes: ${theme.reason ?? "refused"}` });
 
   const named = strings([row, mine], new Set());
   const assets = archive.rows.assets.filter((a) => named.has(String(a["id"])));
@@ -166,7 +178,7 @@ function stageProject(archive: Archive, row: Row, exists: (id: string) => boolea
   }
   const blobs = [...sink.values()];
   const id = kernelIdOf(v1Id);
-  const styleId = themeRow === undefined ? undefined : `v1-theme:${String(themeRow["id"])}`;
+  const styleId = styled ? theme.id : undefined;
   const preview: ProjectPreview = {
     v1Id,
     id,
@@ -186,20 +198,37 @@ function stageProject(archive: Archive, row: Row, exists: (id: string) => boolea
   return { preview, row, steps, record, blobs, units, parts, ...(styleId === undefined ? {} : { styleId }), runtimeS: targetS, signed };
 }
 
-/** The preview a token binds: what each project would become, and the archive's digest. */
-export const previewToken = (digest: string, projects: readonly ProjectPreview[]): string => sha256Hex(canonical({ digest, projects }));
+/** The preview a token binds: what each project, theme and shelf item would become, and the archive's digest. */
+export const previewToken = (digest: string, projects: readonly ProjectPreview[], themes: readonly ThemePreview[], items: readonly ItemPreview[]): string =>
+  sha256Hex(canonical({ digest, projects, themes, items }));
 
 /**
- * Stage every project of an archive against the store as it is now (`r`: which kernel ids
- * already exist). Pure apart from that one read; nothing is written.
+ * Stage every project, theme and shelf asset of an archive against the store as it is now (`r`:
+ * which ids already exist; `pub`: the studio's served files a seeded asset points at). Nothing
+ * is written.
  */
-export function planImport(r: Reader, archive: Archive): ImportPlan {
+export function planImport(r: Reader, archive: Archive, pub: PublicFile = publicFile): ImportPlan {
   const exists = (id: string) => r.get("SELECT 1 AS x FROM projects WHERE id = ?", id) !== undefined;
-  const projects = archive.rows.projects.map((p) => stageProject(archive, p, exists));
-  const named = new Set(projects.flatMap((p) => p.record.assets.map((a) => (isObj(a) ? String(a["id"]) : ""))));
-  const shelf = archive.rows.assets.filter((a) => !named.has(String(a["id"]))).length;
-  const losses: Loss[] = shelf === 0 ? [] : [{ entity: "asset shelf", grade: "dropped", reason: `${shelf} shelf item(s) no project names stay in this browser; the Library takes the shelf in Phase 5` }];
-  const themes = archive.rows.themes.filter((t) => !projects.some((p) => p.styleId === `v1-theme:${String(t["id"])}`)).length;
-  if (themes > 0) losses.push({ entity: "themes", grade: "dropped", reason: `${themes} theme(s) no project is built on stay in this browser` });
-  return { projects, losses, token: previewToken(archive.digest, projects.map((p) => p.preview)) };
+  const themes = stageThemes(r, archive);
+  const byTheme = new Map(themes.map((t) => [t.preview.v1Id, t.preview]));
+  const projects = archive.rows.projects.map((p) => stageProject(archive, p, exists, byTheme));
+  // An asset's project collections: every project that lands or is already landed and names it.
+  const named = new Map<string, string[]>();
+  for (const p of projects) {
+    if (p.preview.outcome === "refuse") continue;
+    for (const a of p.record.assets) if (isObj(a)) named.set(String(a["id"]), [...(named.get(String(a["id"])) ?? []), p.preview.id]);
+  }
+  const items = stageItems(r, archive, named, pub);
+  return {
+    projects,
+    themes,
+    items,
+    losses: [],
+    token: previewToken(
+      archive.digest,
+      projects.map((p) => p.preview),
+      themes.map((t) => t.preview),
+      items.map((i) => i.preview),
+    ),
+  };
 }

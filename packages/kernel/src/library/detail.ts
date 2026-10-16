@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { parseAt, parseJsonAt } from "@gt/domain/door";
-import { AppError, type Result } from "@gt/domain/errors";
-import { DEFAULT_PIN, groupLabel, railGroups, type LibraryActName, type LineageNode, type MediaFacts } from "@gt/domain/library";
+import { AppError, ok, type Result } from "@gt/domain/errors";
+import { DEFAULT_PIN, groupLabel, railGroups, type LibraryActName, type LibraryCover, type LineageNode, type MediaFacts } from "@gt/domain/library";
 import { libraryItemSchema, type LibraryItem, type LibraryItemDetail } from "@gt/domain/libraryItem";
 import type { Reader, Row, Store } from "../store.ts";
 import { extrasSchema } from "./extras.ts";
@@ -165,4 +165,41 @@ export function chooseCover(store: Store, itemIds: readonly string[]): Result<st
     }
     return fallback;
   });
+}
+
+/** How many of a style's plates its cover is chosen from (the newest kept first). */
+export const STYLE_COVER_POOL = 12;
+
+/**
+ * A style's cover: the plate `chooseCover` picks from its newest plates, kept ones first - a
+ * style is drawn by what it made, and never by a near-black render while a bright one exists
+ * (the Floor's hand-kept DARK_COVER list, measured instead). A style with no plate that decodes
+ * has none, and its tile keeps its swatch.
+ */
+export function styleCovers(store: Store, styleIds: readonly string[]): Result<ReadonlyMap<string, LibraryCover>> {
+  const pools = store.read((r) =>
+    styleIds.map((styleId) => ({
+      styleId,
+      ids: r
+        .all(
+          `SELECT d.id FROM library_facets f JOIN library_items i ON i.seq = f.item_seq JOIN library_docs d ON d.seq = f.item_seq
+            WHERE f.grp = 'style' AND f.value = ? AND f.kind = 'plate' ORDER BY i.state = 'ratified' DESC, i.at DESC, i.seq DESC LIMIT ?`,
+          styleId,
+          STYLE_COVER_POOL,
+        )
+        .map((x) => String(x["id"])),
+    })),
+  );
+  if (!pools.ok) return pools;
+  const out = new Map<string, LibraryCover>();
+  for (const p of pools.value) {
+    const pick = chooseCover(store, p.ids);
+    if (!pick.ok) return pick;
+    if (pick.value === null) continue;
+    const id = pick.value;
+    const row = store.read((r) => r.get(`${ROW_SELECT} WHERE d.id = ?`, id));
+    if (!row.ok) return row;
+    if (row.value !== undefined) out.set(p.styleId, rowOf(row.value, []).cover);
+  }
+  return ok(out);
 }

@@ -17,11 +17,17 @@ import { projectRecords, writePartIn } from "@gt/kernel/parts/driver";
 import { stepPacketId } from "@gt/kernel/parts/gates";
 import { launchOf, modelOptions } from "@gt/kernel/records/options";
 import { loadParts, loadProject, putPart, putProject } from "@gt/kernel/records/schema";
+import type { StyleFacets } from "@gt/kernel/library/core";
+import { upsertItems } from "@gt/kernel/library/write";
 import { compose } from "@gt/kernel/records/write";
 import type { NotPromise, Store, Tx } from "@gt/kernel/store";
+import { listStylesIn } from "@gt/kernel/styles/driver";
+import { importV1ThemeIn } from "@gt/kernel/styles/v1theme";
 
 import type { Archive } from "./archive.ts";
-import { planImport, type ProjectPreview, type StagedProject } from "./project.ts";
+import type { StagedBlob } from "./bytes.ts";
+import { planImport, type ImportPlan, type ProjectPreview, type StagedProject } from "./project.ts";
+import type { ItemPreview, PublicFile, ThemePreview } from "./shelf.ts";
 
 // THE IMPORT, COMMITTED (Phase 4 wave D, L42) - a staged v1 project (./project.ts) written as a
 // kernel Project in ONE transaction: the plan through the creation door every composed project
@@ -40,7 +46,12 @@ import { planImport, type ProjectPreview, type StagedProject } from "./project.t
 // transaction cannot await; bytes written for a project whose transaction then rolls back are
 // unreferenced files a re-import writes to the same names - never a reference to nothing.
 //
-// The v1 rows are never written: the browser keeps them until wave D retires the shelf.
+// THE SHELF FIRST (Phase 5, L55): the archive's themes land as Styles, one transaction each (a
+// theme the store refuses takes no other with it), BEFORE the projects that name them; then
+// every shelf asset as a Library item, in one upsert. A style or an item already in the store is
+// skipped - the store's copy is the truth from its first import.
+//
+// The v1 rows are never written: the browser keeps them; the import is their last reader.
 
 export const IMPORT_ACTOR: Actor = { kind: "machine", id: "v1-import" };
 
@@ -54,7 +65,19 @@ export type ImportOutcome = {
   readonly ratified: readonly string[];
 };
 
-export type Committed = { readonly kind: "stale"; readonly fresh: readonly ProjectPreview[]; readonly token: string } | { readonly kind: "done"; readonly outcomes: readonly ImportOutcome[] };
+/** What happened to one theme or shelf asset. */
+export type ShelfOutcome = { readonly v1Id: string; readonly id: string; readonly title: string; readonly outcome: "imported" | "skipped" | "refused"; readonly reason?: string };
+
+export type Committed =
+  | { readonly kind: "stale"; readonly fresh: readonly ProjectPreview[]; readonly themes: readonly ThemePreview[]; readonly items: readonly ItemPreview[]; readonly token: string }
+  | {
+      readonly kind: "done";
+      readonly outcomes: readonly ImportOutcome[];
+      readonly styles: readonly ShelfOutcome[];
+      readonly items: readonly ShelfOutcome[];
+      /** The styles landed but styles.json was not re-exported: why. */
+      readonly styleExport?: string;
+    };
 
 export type CommitDeps = {
   readonly store: Store;
@@ -63,6 +86,10 @@ export type CommitDeps = {
   readonly actor: Actor;
   /** After a launched project lands: open the gates its READY parts now owe (lib/parts/gates.ts). */
   readonly afterLanded?: (projectId: string) => Promise<void>;
+  /** After any style landed: re-export styles.json (lib/foundry/catalogue.ts `exportStyles`). */
+  readonly afterStyles?: () => Result<unknown>;
+  /** The studio's served files a seeded shelf asset points at (default: ./shelf.ts `publicFile`). */
+  readonly publicFile?: PublicFile;
 };
 
 /** A store whose transactions are the caller's: the creation door runs inside the import's one tx. */
@@ -158,16 +185,77 @@ function land(t: Tx, location: string, s: StagedProject, put: Put, actor: Actor)
   });
 }
 
+async function putAll(blobs: BlobStore, staged: readonly StagedBlob[]): Promise<Result<void>> {
+  for (const b of staged) {
+    const r = await blobs.put(b.bytes, b.ref.mime);
+    if (!r.ok) return r;
+    if (r.value.sha256 !== b.ref.sha256) return err("internal", `blob ${b.ref.sha256} landed as ${r.value.sha256}`);
+  }
+  return ok(undefined);
+}
+
+const skipOrRefuse = (o: "skip" | "refuse" | "import"): ShelfOutcome["outcome"] => (o === "skip" ? "skipped" : "refused");
+
+/** The themes, as Styles: blobs first, then one transaction per theme. */
+async function landThemes(deps: CommitDeps, plan: ImportPlan): Promise<ShelfOutcome[]> {
+  const out: ShelfOutcome[] = [];
+  for (const s of plan.themes) {
+    const p = s.preview;
+    const base = { v1Id: p.v1Id, id: p.id, title: p.name };
+    if (p.outcome !== "import" || s.draft === undefined) {
+      out.push({ ...base, outcome: skipOrRefuse(p.outcome), ...(p.reason === undefined ? {} : { reason: p.reason }) });
+      continue;
+    }
+    const draft = s.draft;
+    const put = await putAll(deps.blobs, s.blobs);
+    const w = put.ok ? deps.store.tx((t) => importV1ThemeIn(t, draft, deps.actor)) : put;
+    if (!w.ok) out.push({ ...base, outcome: "refused", reason: w.error.message });
+    else out.push({ ...base, outcome: w.value === "created" ? "imported" : "skipped", ...(w.value === "same" ? { reason: `already in the store as ${p.id}` } : {}) });
+  }
+  return out;
+}
+
+/** The shelf, as Library items: blobs first, then one upsert (the index's own transaction). */
+async function landItems(deps: CommitDeps, plan: ImportPlan): Promise<ShelfOutcome[]> {
+  const going = plan.items.filter((s) => s.preview.outcome === "import" && s.entry !== undefined);
+  const rest = plan.items
+    .filter((s) => !going.includes(s))
+    .map((s): ShelfOutcome => ({ v1Id: s.preview.v1Id, id: s.preview.id, title: s.preview.title, outcome: skipOrRefuse(s.preview.outcome), ...(s.preview.reason === undefined ? {} : { reason: s.preview.reason }) }));
+  if (going.length === 0) return rest;
+  const fail = (reason: string) => [...going.map((s): ShelfOutcome => ({ v1Id: s.preview.v1Id, id: s.preview.id, title: s.preview.title, outcome: "refused", reason })), ...rest];
+  const put = await putAll(deps.blobs, going.flatMap((s) => s.blobs));
+  if (!put.ok) return fail(put.error.message);
+  const styles = deps.store.read(
+    (r) =>
+      new Map<string, StyleFacets>(
+        listStylesIn(r).map((x) => [x.style.id, { name: x.style.name, family: x.style.family, observables: Object.fromEntries(Object.entries(x.style.observables).filter((e): e is [string, string] => e[1] !== undefined)) }]),
+      ),
+  );
+  if (!styles.ok) return fail(styles.error.message);
+  const titles = new Map(plan.projects.map((p) => [p.preview.id, p.preview.title]));
+  const up = upsertItems(
+    deps.store,
+    going.flatMap((s) => (s.entry === undefined ? [] : [s.entry])),
+    { styleOf: (id) => styles.value.get(id), projectTitle: (id) => titles.get(id) },
+  );
+  if (!up.ok) return fail(up.error.message);
+  return [...going.map((s): ShelfOutcome => ({ v1Id: s.preview.v1Id, id: s.preview.id, title: s.preview.title, outcome: "imported" })), ...rest];
+}
+
 /**
  * Commit an archive's import on the preview's token. Each project is its own transaction (one
  * that fails does not take the others with it - each outcome says what happened to it).
  */
 export async function commitImport(deps: CommitDeps, archive: Archive, token: string): Promise<Result<Committed>> {
-  const planned = deps.store.read((r) => planImport(r, archive));
+  const planned = deps.store.read((r) => planImport(r, archive, deps.publicFile));
   if (!planned.ok) return planned;
-  if (planned.value.token !== token) return ok({ kind: "stale", fresh: planned.value.projects.map((p) => p.preview), token: planned.value.token });
+  const plan = planned.value;
+  if (planned.value.token !== token) return ok({ kind: "stale", fresh: plan.projects.map((p) => p.preview), themes: plan.themes.map((t) => t.preview), items: plan.items.map((i) => i.preview), token: plan.token });
+  const styles = await landThemes(deps, plan);
+  // The styles landed whatever the export does; a failed export is said, never a failed import.
+  const exported = styles.some((s) => s.outcome === "imported") ? deps.afterStyles?.() : undefined;
   const outcomes: ImportOutcome[] = [];
-  for (const s of planned.value.projects) {
+  for (const s of plan.projects) {
     const p = s.preview;
     const base = { v1Id: p.v1Id, id: p.id, title: p.title, launched: false, ratified: [] };
     if (p.outcome !== "import") {
@@ -189,5 +277,7 @@ export async function commitImport(deps: CommitDeps, archive: Archive, token: st
     if (p.launched && deps.afterLanded !== undefined) await deps.afterLanded(p.id);
     outcomes.push({ ...base, outcome: "imported", launched: p.launched, ratified: p.ratified });
   }
-  return ok({ kind: "done", outcomes });
+  // Items after the projects: an item's `project` collection names a project that now exists.
+  const items = await landItems(deps, plan);
+  return ok({ kind: "done", outcomes, styles, items, ...(exported === undefined || exported.ok ? {} : { styleExport: exported.error.message }) });
 }

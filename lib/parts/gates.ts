@@ -1,7 +1,5 @@
 import "server-only";
 
-import path from "node:path";
-
 import { blobRefSchema, type BlobRef } from "@gt/domain/blob";
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
@@ -18,8 +16,7 @@ import { readPartIn, writePart } from "@gt/kernel/parts/driver";
 import { releaseAfterGate, stepPacketId } from "@gt/kernel/parts/gates";
 import type { Reader, Store } from "@gt/kernel/store";
 
-import { kernel } from "@/lib/kernelStore";
-import { OUT_DIRNAME } from "@/lib/fixtures/mode";
+import { blobRootOf, kernel } from "@/lib/kernelStore";
 import { buildConsequence, committedOutcome, decisionMap, mintPacket, v1DigestOf, type DecisionAdapter, type OpenPlan } from "@/lib/decision/v1/types";
 
 import { projectRead, verdictInput } from "./context.ts";
@@ -46,8 +43,7 @@ import { isGateKind, partVerdict, type GateKind } from "./verdict.ts";
 
 export type GateDeps = { readonly store: () => Result<Store>; readonly blobs: (store: Store) => BlobStore; readonly now: () => number };
 
-/** Where a store's blobs live: beside its file (an in-memory store uses the fixtures' out dir). */
-export const blobRootOf = (store: Store): string => (store.location === ":memory:" ? path.resolve(OUT_DIRNAME, "blobs") : path.join(path.dirname(store.location), "blobs"));
+export { blobRootOf };
 
 export const LIVE_GATES: GateDeps = {
   store: () => {

@@ -32,7 +32,7 @@ test("each project yields one project-step entry per PHASE, linked by studioHref
 });
 
 test("board counts: one decision entry per non-zero source, count as a Tally fact", () => {
-  const dec = paletteIndex({ ...base, boardCounts: { cull: 4, proof: 0, dojo: null } }).filter(
+  const dec = paletteIndex({ ...base, boardCounts: { cull: 4, extract: 0, dojo: null } }).filter(
     (e) => e.kind === "decision",
   );
   expect(dec).toHaveLength(1);

@@ -37,11 +37,8 @@ export const SCREENS = {
   "studio-score": { url: `/projects/${PROJECT}/score` },
   "studio-cut": { url: `/projects/${PROJECT}/cut` },
   "studio-outputs": { url: `/projects/${PROJECT}` },
-  "library-styles": { url: "/library" },
-  "library-assets": { url: "/library", tab: "Assets" },
-  "library-next": { url: "/library-next" },
-  "library-next-detail": { url: "/library-next?kind=style&sel=style-0006" },
-  "library-animations": { url: "/library", tab: "Animations" },
+  "library": { url: "/library" },
+  "library-detail": { url: "/library?kind=style&sel=style-0006" },
   playground: { url: "/playground" },
   foundry: { url: "/foundry" },
   // The new world's kit (app/(studio)/kit, 2026-10-15). v1's Almanac kit had Law, Parts and

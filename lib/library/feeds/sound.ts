@@ -10,6 +10,8 @@ import type { LibraryState } from "@gt/domain/library";
 
 import { resolveRegistryDir } from "../../articles/registryRead.ts";
 import { mvFileOf, readMv } from "../../sound/mv/store.ts";
+import { readSuno } from "../../sound/suno/store.ts";
+import { sunoModelLabel } from "../../suno/types.ts";
 import { filePathAbs } from "../../sound/store.ts";
 import { listTakes } from "../../sound/takes.ts";
 import { isoOf, words, type Feed, type FeedItem, type FeedRead } from "./types.ts";
@@ -81,6 +83,66 @@ export const takesFeed: Feed = {
       });
     }
     return { items, skipped: [] };
+  },
+};
+
+// SUNO CLIPS THAT NEVER CAME BACK AS TAKES (L53). Suno renders two clips a prompt and the
+// operator returns the ones worth keeping as takes (origin `suno-return`, carrying the clip's
+// songId); the rest stayed visible only on v1's Suno shelf. Each is an audio item over Suno's own
+// reference - Suno keeps the bytes, so there is no file to ingest and the preview plays Suno's
+// address. A clip with no length yet (Suno still rendering) is skipped and said, never invented.
+export const sunoFeed: Feed = {
+  id: "suno",
+  async read(ctx): Promise<FeedRead> {
+    const suno = await readSuno();
+    const returned = new Set((await listTakes({ fixtures: true })).flatMap((t) => (t.songId === null ? [] : [t.songId])));
+    const laneOf = new Map(suno.jobs.map((j) => [j.id, j.lane] as const));
+    const items: FeedItem[] = [];
+    const skipped: { id: string; reason: string }[] = [];
+    for (const c of suno.clips) {
+      if (returned.has(c.songId)) continue;
+      if (c.durationS === null || c.durationS <= 0) {
+        skipped.push({ id: c.id, reason: "Suno has not reported its length yet" });
+        continue;
+      }
+      const lane = c.lane ?? (c.jobId === null ? undefined : laneOf.get(c.jobId));
+      const style = c.prompt?.style ?? "";
+      items.push({
+        item: {
+          kind: "audio",
+          id: `audio:suno:${c.id}`,
+          title: c.title.trim() === "" ? c.songId : c.title,
+          state: c.verdict === "keep" ? "ratified" : c.verdict === "drop" ? "rejected" : "unjudged",
+          collections: [],
+          origin: "suno",
+          rights: { use: "publishable" },
+          source: ctx.universe,
+          lineage: [],
+          vocabulary: {
+            type: "music",
+            genre: lane?.axis === "genre" ? [lane.value] : [],
+            mood: [],
+            instrument: [],
+            provider: "suno",
+            durationS: c.durationS,
+            ...(lane === undefined || lane.axis === "genre" ? {} : { group: lane.value }),
+          },
+          at: new Date(c.createdAt).toISOString(),
+        },
+        meta: `${sunoModelLabel(String(c.model))} · ${Math.round(c.durationS)} s · not returned`,
+        extras: {
+          audio: {
+            prompt: style === "" ? (c.prompt?.title ?? c.title) : style,
+            ...(c.prompt?.exclude === undefined || c.prompt.exclude === "" ? {} : { negative: c.prompt.exclude }),
+            reasons: [],
+            facts: { asked: { tempoBpm: null, key: null, durationS: null }, measured: null },
+            peaks: [],
+            src: c.audioUrl,
+          },
+        },
+      });
+    }
+    return { items, skipped };
   },
 };
 

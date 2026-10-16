@@ -1,29 +1,33 @@
-// LANE — A PROVEN FOUNDRY STYLE BECOMES A DRAFT LIBRARY THEME (dynamic).
+// LANE — A PROVEN FOUNDRY STYLE'S LOOK, READ OFF ITS KEPT PLATE (dynamic).
 //
-// foundry-forge-B stage 1. The catalogue holds no palette and a theme needs
+// foundry-forge-B stage 1. The catalogue holds no palette and a look needs
 // three coloured roles, so the draft READS one off the first kept plate through
 // an injected recognizer. This file holds the rules that keep that honest:
 //   · only a proven style is adopted, and a candidate costs no recognizer call;
 //   · the plate read is the kept ledger row's path and no other file;
-//   · no palette, no theme — a recognizer failure, a missing plate or a reply
+//   · no palette, no look — a recognizer failure, a missing plate or a reply
 //     that is not exactly one entry per role is `paletteMissing`, never a guess;
 //   · the recipe's palette sentences do not reach `finish`; `subject` is empty.
 // A stub port stands in for the disk and the vendor: nothing here is paid.
-import "fake-indexeddb/auto";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-
+//
+// RETIRED HERE IN PHASE 5 (wave B, L54), each with where its rule lives now:
+//   · 5 / 5b, the IndexedDB theme round-trip: adopt lands IN PLACE on the style
+//     in the kernel store - tests/next-server/style-adopt.test.ts (adoptInStore)
+//     and tests/next-server/style-real.test.ts (the atelier's adopt job);
+//   · 7 / 11, the Foundry shelf's adopt button and its putTheme call: the shelf
+//     is gone; the atelier offers adopt only for a proven style with no look and
+//     the server refuses anything else (lib/producers/styleLaunch.ts actRefusal);
+//   · 6, the route's 401/404/409: the route answers 410 with the atelier's
+//     address now, behind the same door (test 6 below).
 import { test, expect } from "@playwright/test";
 
-import { keptPath, keptRows } from "@/app/foundry/styleArt";
 import { ACCESS_SECRET_VAR, __resetRateLimit } from "@/lib/apiAuth";
 import * as adoptRoute from "@/app/api/foundry/styles/[id]/adopt/route";
-import { SEED_BYTE_CAP, SEED_CAP, adoptionDraft, isPaletteSentence, plateRel, recipeSlots, type AdoptIO } from "@/lib/foundry/adopt";
+import { SEED_BYTE_CAP, SEED_CAP, adoptionDraft, isPaletteSentence, palettePlate, plateRel, recipeSlots, type AdoptIO } from "@/lib/foundry/adopt";
 import { FoundryError } from "@/lib/foundry/store";
-import type { Catalogue, LedgerRow, StyleDef } from "@/lib/foundry/types";
-import { ORIGIN_WORD, getTheme, listThemes, newTheme, putTheme, statusOf, styleFits } from "@/lib/themes";
+import type { LedgerRow, StyleDef } from "@/lib/foundry/types";
 
-import { keepEnv, stripComments } from "./_helpers";
+import { keepEnv } from "./_helpers";
 
 keepEnv([ACCESS_SECRET_VAR, "NEXT_PUBLIC_DEV_AUTH"]);
 
@@ -155,36 +159,6 @@ test("4 · a throwing recognizer, a throwing reader or an absent plate is palett
   expect(none.seen.calls).toBe(0);
 });
 
-test("5 · a foundry theme round-trips with the seeded text-lane proofs pending, model set, status proofing", async () => {
-  const d = await adoptionDraft(style(), LEDGER, port(GOOD).io);
-  const made = await putTheme({
-    ...newTheme("uid-1", { name: d.name, origin: "foundry", foundryStyleId: d.styleId, block: d.block, elements: [] }),
-    proofs: d.proofs,
-  });
-  const back = await getTheme(made.id);
-  expect((await listThemes("uid-1")).map((t) => t.id)).toContain(made.id);
-  expect(back?.origin).toBe("foundry");
-  expect(back?.foundryStyleId).toBe("cold-photoreal-cg");
-  expect(back?.proofs.map((p) => p.state)).toEqual(["pending", "pending"]);
-  expect(back?.proofs.map((p) => p.model)).toEqual([MODEL, MODEL]);
-  expect(back?.proofs.map((p) => p.label)).toEqual([`rooftop · seed 2 · ${MODEL}`, `harbour · seed 3 · ${MODEL}`]);
-  expect(back?.proofs.every((p) => p.provider === undefined && p.costUsd === undefined)).toBe(true);
-  expect(back && statusOf(back)).toBe("proofing");
-  expect(back?.discipline).toBeUndefined();
-  expect(back?.block.palette).toHaveLength(3);
-  expect(styleFits(back!, "educational")).toBe(true);
-  expect(ORIGIN_WORD.foundry).toBe("from the Foundry");
-});
-
-test("5b · a style with no text-lane plate round-trips with proofs [] and status draft", async () => {
-  const d = await adoptionDraft(style(), LEDGER, port(GOOD, true, () => sidecar(true)).io);
-  expect(d.proofs).toEqual([]);
-  const made = await putTheme({ ...newTheme("uid-1", { name: d.name, origin: "foundry", foundryStyleId: d.styleId, block: d.block, elements: [] }), proofs: d.proofs });
-  const back = await getTheme(made.id);
-  expect(back?.proofs).toEqual([]);
-  expect(back && statusOf(back)).toBe("draft");
-});
-
 test("5c · a kept ref-early plate (reference true) is never seeded; a text-lane one beside it is", async () => {
   const d = await adoptionDraft(style(), LEDGER, port(GOOD, true, (rel) => sidecar(rel.includes("--s2.") ? true : false)).io);
   expect(d.proofs.map((p) => p.label)).toEqual([`harbour · seed 3 · ${MODEL}`]);
@@ -269,38 +243,28 @@ const post = (id: string, auth = true) =>
   });
 const ctx = (id: string) => ({ params: Promise.resolve({ id }) });
 
-test("6 · the route: 401 without the secret, 404 unknown, 409 candidate, no GET export", async () => {
+test("6 · the retired route: 401 without the secret, else 410 naming the style's atelier, no GET export", async () => {
   process.env[ACCESS_SECRET_VAR] = "right-secret";
   delete process.env.NEXT_PUBLIC_DEV_AUTH;
   __resetRateLimit();
   expect((await adoptRoute.POST(post("cold-photoreal-cg", false), ctx("cold-photoreal-cg"))).status).toBe(401);
-  expect((await adoptRoute.POST(post("no-such-style"), ctx("no-such-style"))).status).toBe(404);
-  // oil-concept-art is a candidate in the shipped catalogue; the refusal comes
-  // before any recognizer call, so nothing is spent.
-  const res = await adoptRoute.POST(post("oil-concept-art"), ctx("oil-concept-art"));
-  expect(res.status).toBe(409);
+  const res = await adoptRoute.POST(post("cold-photoreal-cg"), ctx("cold-photoreal-cg"));
+  expect(res.status).toBe(410);
+  expect(((await res.json()) as { moved?: string }).moved).toBe("/library/style/cold-photoreal-cg");
   expect("GET" in adoptRoute, "no GET export — Next answers 405").toBe(false);
-});
-
-test("7 · the adopt action renders only for a proven style", () => {
-  const src = stripComments(readFileSync(join(process.cwd(), "app/foundry/StylesShelf.tsx"), "utf8"));
-  const at = src.indexOf("adopt into Library");
-  expect(at).toBeGreaterThan(0);
-  const guard = src.lastIndexOf('style?.status === "proven" &&', at);
-  expect(guard, "the adopt button must sit inside a proven-only guard").toBeGreaterThan(0);
-  expect(at - guard, "the guard must open the button, not an earlier block").toBeLessThan(700);
 });
 
 /* ── Beyond the spec: the one plate, the finish, the reply shape ──────────── */
 
-test("8 · the plate adopt chooses is keptPath(keptRows(cat, style)[0])", async () => {
+test("8 · the plate adopt chooses is the first KEPT row of this style, at the forge's candidate path", async () => {
   const s = style();
-  const cat = { styles: [s], ledger: LEDGER } as unknown as Catalogue;
-  const want = keptRows(cat, s)[0];
-  expect(plateRel(want)).toBe(keptPath(want));
+  const want = palettePlate(LEDGER, s.id);
+  expect(want).toEqual(LEDGER[1]);
+  if (want === undefined) throw new Error("the ledger keeps a plate of this style");
+  expect(plateRel(want)).toBe("scenes/rooftop/candidates/cold-photoreal-cg--text--s2.png");
   const { io, seen } = port(GOOD);
   await adoptionDraft(s, LEDGER, io);
-  expect(seen.plates[0]).toEqual({ run: want.run, rel: keptPath(want) });
+  expect(seen.plates[0]).toEqual({ run: want.run, rel: plateRel(want) });
 });
 
 test("9 · finish holds no hex and no palette sentence, and subject is empty", async () => {
@@ -332,13 +296,4 @@ test("10 · a reply that is not exactly one entry per role is paletteMissing, wi
     expect(d.paletteMissing, JSON.stringify(reply)).toBe(true);
     expect(d.block.palette).toEqual([]);
   }
-});
-
-test("11 · the shelf saves the theme it makes with draft.proofs", () => {
-  const src = stripComments(readFileSync(join(process.cwd(), "app/foundry/StylesShelf.tsx"), "utf8"));
-  const at = src.indexOf("putTheme(");
-  expect(at).toBeGreaterThan(0);
-  const call = src.slice(at, src.indexOf("router.push", at));
-  expect(call).toMatch(/newTheme\(/);
-  expect(call).toMatch(/proofs:\s*draft\.proofs/);
 });

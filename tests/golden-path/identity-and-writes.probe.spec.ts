@@ -165,9 +165,10 @@ test("keys: EVERY module that writes localStorage is on one of the owner's two l
     // lib/useProjects.ts (`gravitone.seeded.<uid>`, the shelf's seed-once flag) retired with the
     // v1 /projects shelf in Phase 4 wave D; the eviction still names its key so a browser that
     // holds one from before loses it with the account.
-    "lib/useAssets.ts": { evicted: `gravitone.assets.seeded.${uid}` },
-    "app/library/audio/soundMigration.ts": { evicted: `gravitone.sound-migrated.v1.${uid}` },
-    "app/library/audio/bookStore.ts": { evicted: `gravitone.audio-book.${uid}` },
+    // lib/useAssets.ts (`gravitone.assets.seeded.<uid>`) and the v1 Library audio module's
+    // soundMigration.ts / bookStore.ts (`gravitone.sound-migrated.v1.<uid>`,
+    // `gravitone.audio-book.<uid>`) retired with the v1 Library in Phase 5; the eviction keeps
+    // naming their keys for the same reason.
     "lib/jobs.tsx": { evicted: "gravitone.jobs.v1" },
     "lib/useRemembered.ts": { evicted: "gravitone.ui.v1" },
     // The pipeline board's LIVE/STUB arm: evicted, not exempt, so an arm left

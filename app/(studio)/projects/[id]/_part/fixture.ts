@@ -4,6 +4,7 @@ import { disciplineOf, templateOf, type Discipline } from "@gt/catalog/projects"
 import { recipeById } from "@gt/catalog/recipes";
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { PlanView, WorkPlanPart } from "@gt/domain/produce";
+import { lookOf, type ProjectLook } from "@gt/producers/frames/look";
 import {
   OPS_SHOWN,
   isEditorKind,
@@ -92,6 +93,9 @@ export type Ctx = {
   readonly now: number;
   /** This project's research record (Script reads its scope, spine or idea). */
   readonly research: () => ResearchRec;
+  /** What the project's pictures are drawn in (@gt/producers/frames/look): the real side reads
+   *  the Style store; the fixture universe has none, so a bound style reads as `missing`. */
+  readonly look: ProjectLook;
 };
 
 function disciplineFor(plan: PlanView): Discipline {
@@ -114,7 +118,7 @@ function contextOf(projectId: string, now: number): Result<Ctx> {
     discipline: disciplineFor(plan.value),
     targetS,
   };
-  const ctx: Ctx = { project, plan: plan.value, now, research: () => recOf(ctx, "research").data };
+  const ctx: Ctx = { project, plan: plan.value, now, research: () => recOf(ctx, "research").data, look: lookOf(plan.value.project.styleId, undefined) };
   return ok(ctx);
 }
 

@@ -28,9 +28,11 @@ import "fake-indexeddb/auto";
 
 import { test, expect } from "@playwright/test";
 
-import { assetFromUpload, getUploadBlobs, listAssets, putUploads } from "@/lib/assets";
 import { evictIdentity } from "@/lib/identityEviction";
 import { listProjects, newProject, putProject } from "@/lib/projects";
+
+// v1's shelf writers retired in Phase 5; its rows are written in their shapes (./_v1rows.ts).
+import { listV1Assets as listAssets, putV1Assets, putV1Uploads as putUploads, v1Upload as assetFromUpload, v1UploadBlobs as getUploadBlobs } from "./_v1rows";
 
 const png = (name: string) => new File([new Uint8Array([137, 80, 78, 71, 1, 2, 3])], name, { type: "image/png" });
 
@@ -81,8 +83,7 @@ test("eviction: an asset that only POINTS at bytes elsewhere counts as a row, no
   // say so rather than count every row as bytes it did not touch.
   const u = assetFromUpload("uid-c", png("one.png"), []);
   await putUploads([u]);
-  const { putAssets } = await import("@/lib/assets");
-  await putAssets([
+  await putV1Assets([
     { ...u.asset, id: "as-pointer-only", src: "/frames/plate.png", meta: {} },
   ]);
 

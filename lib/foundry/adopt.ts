@@ -12,9 +12,9 @@
 // with `paletteMissing` and the reason, never a guessed colour (an empty
 // palette compiles to "Strict three-colour palette: ." in stylePrompt.ts).
 //
-// This file imports no browser module: app/foundry/styleArt.ts pulls in the
-// fetch client, so the plate path is computed here (and held equal to keptPath
-// by foundry-adopt.probe).
+// This file imports no browser module, so the server's style producer
+// (lib/producers/style.ts) runs it as the adopt job's palette step; the plate
+// path is computed here (`plateRel`, the forge's own candidate path).
 
 import type { Actor } from "@gt/domain/event";
 import type { StyleProof } from "@gt/domain/style";
@@ -23,12 +23,25 @@ import { blobStore } from "@gt/kernel/blob";
 import { adoptStyleIn } from "@gt/kernel/styles/writers";
 
 import type { ImageRef } from "@/lib/imaging/types";
-import { blobRootOf } from "@/lib/parts/gates";
-import type { ColorRole, PaletteColor, Proof, StyleBlock } from "@/lib/themes";
+import { blobRootOf } from "@/lib/kernelProcess";
+import type { ColorRole, PaletteColor, StyleBlock } from "@gt/catalog/style";
 
 import { exportStyles, OPERATOR, styleStore } from "./catalogue";
 import { FoundryError } from "./runStore";
 import type { LedgerRow, StyleDef } from "./types";
+
+/** A kept forge plate as an UNDECIDED proof, before it is a blob (v1 lib/themes.ts `Proof`'s
+ *  fields that seeding fills; the theme record it belonged to retired in Phase 5). */
+export interface SeedProof {
+  id: string;
+  label: string;
+  base64: string;
+  mime: string;
+  state: "pending";
+  note?: string;
+  model?: string;
+  createdAt: number;
+}
 
 export interface AdoptionDraft {
   styleId: string;
@@ -40,7 +53,7 @@ export interface AdoptionDraft {
   reason?: string;
   /** The style's kept text-lane forge plates, as pending proofs. Empty when no
    *  theme is made (`paletteMissing`) or no plate qualifies. */
-  proofs: Proof[];
+  proofs: SeedProof[];
   /** Eligible plates the caps kept out, with the reason; absent when none. */
   proofsLeftOut?: { count: number; reason: string };
 }
@@ -57,8 +70,8 @@ export interface AdoptIO {
 
 const ROLES: ColorRole[] = ["ground", "objects", "accent"];
 
-/** The path a kept candidate sits at inside its run — the same shape as
- *  app/foundry/styleArt.ts keptPath. */
+/** The path a kept candidate sits at inside its run (forge.py's candidate path;
+ *  v1's shelf held the same rule as app/foundry/styleArt.ts keptPath, retired). */
 export function plateRel(r: LedgerRow): string {
   return `scenes/${r.scene}/candidates/${r.style}--${r.mechanism}--s${r.seed}.png`;
 }
@@ -91,9 +104,9 @@ export async function seedProofs(
   styleId: string,
   io: AdoptIO,
   now: number,
-): Promise<{ proofs: Proof[]; leftOut?: { count: number; reason: string } }> {
+): Promise<{ proofs: SeedProof[]; leftOut?: { count: number; reason: string } }> {
   const seen = new Set<string>();
-  const eligible: Proof[] = [];
+  const eligible: SeedProof[] = [];
   for (const r of ledger) {
     if (r.style !== styleId || r.verdict !== "keep") continue;
     const rel = plateRel(r);
@@ -119,7 +132,7 @@ export async function seedProofs(
       continue;
     }
   }
-  const proofs: Proof[] = [];
+  const proofs: SeedProof[] = [];
   let bytes = 0;
   let byteHit = false;
   for (const p of eligible) {

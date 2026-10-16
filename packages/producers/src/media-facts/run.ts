@@ -2,7 +2,9 @@ import { ok, type Result } from "@gt/domain/errors";
 import type { Estimate } from "@gt/domain/estimate";
 import type { Job } from "@gt/domain/job";
 import type { MediaFacts } from "@gt/domain/library";
+import type { Actor } from "@gt/domain/event";
 import type { BlobStore } from "@gt/kernel/blob";
+import { enqueueIn } from "@gt/kernel/job";
 import type { Producer } from "@gt/kernel/job-core";
 import { factsMissing, putMediaFacts } from "@gt/kernel/library/write";
 import type { Store } from "@gt/kernel/store";
@@ -78,16 +80,59 @@ export async function probeMissing(store: Store, blobs: BlobStore, probe: MediaP
 
 const FREE: Estimate = { seconds: 1, usd: 0 };
 
+/** One step, `probe`, until it has an output. */
+export const factsPlan: Producer["plan"] = (_job: Job, outputs) => (outputs.has("probe") ? [] : [{ name: "probe", estimate: FREE }]);
+
+/** The producer's name, as `PRODUCERS` (@gt/domain/run) and the worker's table know it. */
+export const MEDIA_FACTS = "media-facts";
+/** Free and local: ffprobe/ffmpeg on this box. */
+export const MEDIA_FACTS_LANE = "box.render";
+
+/** A job that is still the operator's to see through: not done, not cancelled. A failed one
+ *  waits for its retry on Runs instead of being shadowed by a fresh copy every sync. */
+const OPEN = ["planned", "queued", "running", "paused", "failed", "interrupted"] as const;
+
+export type FactsQueued =
+  /** Every blob an item points at has its facts. */
+  | { readonly kind: "none-missing" }
+  /** A media-facts job is already open; it drains whatever is missing when it runs. */
+  | { readonly kind: "open"; readonly jobId: string; readonly state: string }
+  | { readonly kind: "queued"; readonly jobId: string };
+
+/**
+ * Queue the probe as a job when some item's blob has no facts and no media-facts job is open
+ * (L53: the projection no longer probes inside a render request). The check and the enqueue
+ * are ONE transaction, so two processes syncing at once queue one job, not two. The job runs
+ * DRY: it calls no vendor, so dry and live are the same act for it, and a dry-only process
+ * (every test lane) can drive it.
+ */
+export function queueFacts(store: Store, actor: Actor, now: () => Date): Result<FactsQueued> {
+  return store.tx((t): FactsQueued => {
+    const missing = t.get("SELECT 1 AS x FROM library_docs d WHERE d.media_sha IS NOT NULL AND NOT EXISTS (SELECT 1 FROM media_facts f WHERE f.sha = d.media_sha) LIMIT 1");
+    if (missing === undefined) return { kind: "none-missing" };
+    const open = t.get(
+      `SELECT id, state FROM jobs WHERE lane = ? AND state IN (${OPEN.map(() => "?").join(", ")}) AND json_extract(record, '$.producer') = ? ORDER BY ord LIMIT 1`,
+      MEDIA_FACTS_LANE,
+      ...OPEN,
+      MEDIA_FACTS,
+    );
+    if (open !== undefined) return { kind: "open", jobId: String(open["id"]), state: String(open["state"]) };
+    const run = `library-facts-${now().toISOString().replace(/[^0-9]/g, "").slice(0, 17)}`;
+    const job = enqueueIn(t, { id: `job:run:${run}`, of: { kind: "run", id: run }, producer: MEDIA_FACTS, lane: MEDIA_FACTS_LANE }, actor);
+    return { kind: "queued", jobId: job.id };
+  });
+}
+
 /**
  * The same work as a job (plan §4): one step, `probe`, that drains up to `limit`
- * blobs on the free render lane. Registered by lib/producers/registry.ts once
- * `media-facts` is a producer name the domain knows (the Director has the lines);
- * until then the Library sync calls `probeMissing` itself, in process.
+ * blobs on the free render lane. Bound by lib/producers/registry.ts (`media-facts`
+ * in BOUND) and queued by the projection (`queueFacts`); `probeMissing` in process
+ * is left to the CLI's `--inline` and to tests.
  */
 export function mediaFactsProducer(deps: { readonly store: Store; readonly blobs: BlobStore; readonly probe: MediaProbe; readonly limit?: number }): Producer {
   return {
-    lane: "box.render",
-    plan: (_job: Job, outputs) => (outputs.has("probe") ? [] : [{ name: "probe", estimate: FREE }]),
+    lane: MEDIA_FACTS_LANE,
+    plan: factsPlan,
     async perform() {
       const r = await probeMissing(deps.store, deps.blobs, deps.probe, { limit: deps.limit ?? 500, now: () => new Date() });
       if (!r.ok) return { kind: "fatal", code: r.error.code, message: r.error.message };

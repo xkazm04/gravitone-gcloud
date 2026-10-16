@@ -11,8 +11,10 @@ import { stripComments } from "./_helpers";
 
 const src = stripComments(readFileSync(resolve(__dirname, "../../app/foundry/plant.tsx"), "utf8"));
 
-test("plant: each of the three list reads records its failure", () => {
-  for (const call of ["fetchExtractRuns()", "fetchCatalogue()", "fetchTrainingCycles()"]) {
+// Two lists since Phase 5: the catalogue read left with the Styles shelf (styles are the
+// Library's now, read from the kernel's Style table on the server).
+test("plant: each list read records its failure", () => {
+  for (const call of ["fetchExtractRuns()", "fetchTrainingCycles()"]) {
     const at = src.indexOf(call);
     expect(at, `${call} not found`).toBeGreaterThan(-1);
     const block = src.slice(at, src.indexOf("\n    fetch", at + 1) > -1 ? src.indexOf("\n    fetch", at + 1) : src.indexOf("}, []);", at));
@@ -41,7 +43,7 @@ test("plant: a station whose list was refused is told apart from one still loadi
   // ...and it produces a LINE, so the dot is drawn — absence is what "loading" means.
   expect(body, "a refused list no longer produces a line of its own").toMatch(/tone: "rose"/);
   // and every list usePlant can refuse is actually asked about here.
-  for (const k of ["extract", "catalogue", "cycles"]) {
+  for (const k of ["extract", "cycles"]) {
     expect(body, `engineLines never asks whether ${k} was refused`).toContain(`refused("${k}")`);
   }
 });

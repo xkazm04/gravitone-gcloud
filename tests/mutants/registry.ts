@@ -37,7 +37,7 @@ export type Mutant = {
  * unguarded probe lowers the live count and the same probe asks for this number
  * to be lowered to match, so the gain is kept.
  */
-export const UNGUARDED_PROBE_BUDGET = 205;
+export const UNGUARDED_PROBE_BUDGET = 190;
 
 export const MUTANTS: Mutant[] = [
   {
@@ -267,7 +267,7 @@ export const MUTANTS: Mutant[] = [
   {
     id: "lib-imports-app-stepstore",
     probe: "no-app-imports.probe.spec.ts",
-    file: "lib/useThemes.ts",
+    file: "lib/identityEviction.ts",
     find: 'import { reportStorageTrouble } from "@/lib/steps";',
     replace: 'import { reportStorageTrouble } from "@/app/_phases/_shared/stepStore";',
     why: "A library module names app/ again: the CLI and library lanes can no longer load it outside Next, and the stub at the old path can turn the edge into a cycle that evaluates empty.",

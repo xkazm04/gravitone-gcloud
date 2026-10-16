@@ -1,12 +1,14 @@
 import { ok } from "@gt/domain/errors";
+import type { BlobStore } from "@gt/kernel/blob";
 import type { ResourceLane } from "@gt/domain/lane";
 import type { Producer } from "@gt/kernel/job-core";
+import { lookWords } from "@gt/producers/frames/look";
 import { defineStill, stillPlan } from "@gt/producers/still/define";
 
 import { NEGATIVE_PROMPT, compilePrompt } from "@/lib/stylePrompt";
 
-import { fallbackBlock, imageFailure, LIVE_IMAGING, meteredImages, putImage, type ImagingEngines } from "./frames.ts";
-import { asData, partFacts, priceOf, type DriveHooks, type PartFacts, type UnitsFn, preflightFrom } from "./research.ts";
+import { imageFailure, kernelBlobs, LIVE_IMAGING, lookImages, meteredImages, putImage, type ImagingEngines } from "./frames.ts";
+import { asData, must, partFacts, priceOf, type DriveHooks, type PartFacts, type UnitsFn, preflightFrom } from "./research.ts";
 import { madeFree, madePaid } from "@gt/producers/research/partAct";
 import { ImagingError } from "@/lib/imaging/errors";
 
@@ -18,15 +20,21 @@ import { ImagingError } from "@/lib/imaging/errors";
 // film kinds; the parts driver refuses any other), so this job's `land` writes nothing and the
 // takes are the job's booked outputs - `{ n, blob, model, costUsd? }` per `unit:take:<n>` - until a
 // `still` record exists (L39 is defining its shape). The project title is the prompt's subject
-// (the album recipe has no research part to write one), in the fallback preset's style.
+// (the album recipe has no research part to write one), drawn under the project's look the way a
+// frames plate is (./frames.ts, Phase 5 L56): its style's block and references, or the named
+// default with its miss on the receipt - an album project carries no style today, so that is
+// the default, said.
 
 export const stillView = (f: PartFacts): { prompt: string } => ({ prompt: f.plan.project.title });
 
 /** The still act's units (receipt and plan step): a still part has no records, so the snapshot is
  *  null by construction (lib/producers/research.ts `actReceiptIn`). */
-export const stillUnits: UnitsFn = (_s, f, ask) => stillPlan(stillView(f), { act: ask.act }, priceOf(f.option));
+export const stillUnits: UnitsFn = (_s, f, ask) => {
+  const plan = stillPlan(stillView(f), { act: ask.act }, priceOf(f.option));
+  return plan.ok ? ok({ ...plan.value, about: lookWords(f.look) }) : plan;
+};
 
-export function stillProducer(lane: ResourceLane = "box.chrome", hooks: DriveHooks = {}, engines: ImagingEngines = LIVE_IMAGING): Producer {
+export function stillProducer(lane: ResourceLane = "box.chrome", hooks: DriveHooks = {}, engines: ImagingEngines = LIVE_IMAGING, blobs: () => BlobStore = kernelBlobs): Producer {
   return defineStill(lane, {
     // Held at the release, not failed by the worker, while its act waits on a human act (L45).
     preflight: preflightFrom(stillUnits),
@@ -36,8 +44,10 @@ export function stillProducer(lane: ResourceLane = "box.chrome", hooks: DriveHoo
     },
     async perform(_job, _plan, unit, ctx) {
       try {
-        const prompt = compilePrompt(fallbackBlock(), String(unit.input["prompt"] ?? ""));
-        const got = await meteredImages(ctx, unit, { prompt, negativePrompt: NEGATIVE_PROMPT, aspect: "16:9", count: 1 }, engines);
+        const { look } = must(partFacts(ctx));
+        const prompt = compilePrompt(look.block, String(unit.input["prompt"] ?? ""));
+        const references = await lookImages(look, blobs);
+        const got = await meteredImages(ctx, unit, { prompt, negativePrompt: NEGATIVE_PROMPT, aspect: "16:9", count: 1, ...(references.length === 0 ? {} : { references }) }, engines, look.refs);
         const img = got.images[0];
         if (img === undefined) return { kind: "vendor-failure", message: "the imaging router answered with no image" };
         const blob = await putImage(ctx, img);

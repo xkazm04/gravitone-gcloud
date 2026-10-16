@@ -8,7 +8,7 @@
 // against a rev another tab already moved answers with the style as it is now and writes
 // nothing; and the atelier measures legible at 1440 and 390.
 //
-// THE UNIVERSE. The style port answers from its FIXTURE side (app/(studio)/library-next/style/
+// THE UNIVERSE. The style port answers from its FIXTURE side (app/(studio)/library/style/
 // _port/port.ts): painted-3d (proven, no look), newsprint-cutout (mid-proofing), blueprint
 // (locked), chalk-argument (words, no sheet), soft-backlit-bokeh (an extracted candidate). The
 // journey mutates painted-3d, so it runs once per server; the server is fresh per run.
@@ -17,7 +17,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { DEFAULT_GROUND, findingKey, measurerSource, type Finding } from "./_legibility";
 
-const at = (id: string): string => `/library-next/style/${id}`;
+const at = (id: string): string => `/library/style/${id}`;
 const atelier = (page: Page) => page.locator('[data-component="Atelier"]');
 const gate = (page: Page) => page.locator('[data-component="LockGate"]');
 const receipt = (page: Page) => page.locator('[data-component="Receipt"]');
@@ -139,7 +139,7 @@ test("a locked look is changed only by duplicating it", async ({ page }) => {
   await expect(gate(page)).toHaveAttribute("data-status", "locked");
   await expect(page.locator('[data-component="StyleSlots"] textarea')).toHaveCount(0);
   await page.getByRole("button", { name: "duplicate" }).click();
-  await expect(page).toHaveURL(/\/library-next\/style\/blueprint-copy$/);
+  await expect(page).toHaveURL(/\/library\/style\/blueprint-copy$/);
   await expect(gate(page)).toHaveAttribute("data-status", "candidate");
   await expect(page.locator('[data-component="StyleSlots"] textarea')).toHaveCount(3);
 });

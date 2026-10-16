@@ -54,11 +54,18 @@ function studioRoutes(): Route[] {
   return out.sort((a, b) => a.url.localeCompare(b.url));
 }
 
-/** Lot 9's findings on /kit, the only route allowed to start above zero (plan §3.5). */
+/** Lot 9's findings on /kit, the only route allowed to start above zero (plan §3.5). Any other
+ *  route may baseline ONLY disabled controls (`route:<url>`): they keep the prototype's dimming
+ *  under WCAG 1.4.3's exemption (owner ruling 2026-10-15, plan §8 decision 7), and the key says
+ *  so, so the same control enabled is still a finding. */
 function allowedFindings(url: string): string[] | null {
-  if (url !== "/kit") return null;
   const base = JSON.parse(readFileSync(join(ROOT, "tests", "live", "legibility-baseline.json"), "utf8")) as Record<string, string[]>;
-  return base["kit"] ?? [];
+  if (url === "/kit") return base["kit"] ?? [];
+  const own = base[`route:${url}`];
+  if (own === undefined) return null;
+  const notDisabled = own.filter((k) => !k.includes("[aria-disabled=true]"));
+  if (notDisabled.length > 0) throw new Error(`legibility-baseline.json["route:${url}"] may hold disabled controls only: ${notDisabled.join("; ")}`);
+  return own;
 }
 
 /** Visible text in the new world under the floor. sr-only text (a 1 px box) is the non-visual channel, not type. */

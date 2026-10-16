@@ -6,6 +6,10 @@
 // DRY BY DEFAULT: the preview - per project what it would become, its counts and its losses -
 // and nothing written. `--yes` is the confirm: it commits on the preview it just read, so the
 // token binds exactly what was printed. Idempotent by v1 project id: a re-run skips.
+// THE SHELF COMES TOO (Phase 5, L55): the archive's themes land as Styles and its shelf assets as
+// Library items (lib/import/shelf.ts), counted on the same preview; a theme or an item the store
+// refuses is printed with its reason and does not fail the run (a project does). Landing a style
+// re-exports styles.json where FOUNDRY_DIR points (the repo's pipeline/foundry by default).
 // Exit 0 every project imported or skipped, 1 the archive or a project was refused, 2 usage.
 
 import "../lib-hooks.mts";
@@ -51,10 +55,17 @@ const { confirmLive, previewLive } = await import("../../lib/import/serve.ts");
 
 // The process's kernel and its blob root, as the route's (lib/import/serve.ts `*Live`): the
 // confirm also opens the gates a launched import's READY parts owe, as the page's does.
-const preview = previewLive(bytes);
+const preview = await previewLive(bytes);
 if (!preview.ok) fail(preview.error.message, preview.error.detail);
 const p = preview.value;
-const lines = p.projects.map((x) => `${x.outcome.padEnd(7)} ${x.id.padEnd(28)} ${x.recipe.padEnd(28)} ${x.outcome === "import" ? `${x.done.length}/${x.parts} done, ${x.held} records, ${x.blobs} blobs${x.launched ? "" : ", draft"}${x.losses.length === 0 ? "" : `, ${x.losses.length} loss(es)`}` : (x.reason ?? "")}  ${x.title}`);
+const going = (xs: readonly { readonly outcome: string }[]) => xs.filter((x) => x.outcome === "import").length;
+const lines = [
+  ...p.projects.map((x) => `${x.outcome.padEnd(7)} ${x.id.padEnd(28)} ${x.recipe.padEnd(28)} ${x.outcome === "import" ? `${x.done.length}/${x.parts} done, ${x.held} records, ${x.blobs} blobs${x.launched ? "" : ", draft"}${x.losses.length === 0 ? "" : `, ${x.losses.length} loss(es)`}` : (x.reason ?? "")}  ${x.title}`),
+  `shelf: ${going(p.themes)}/${p.themes.length} styles, ${going(p.items)}/${p.items.length} library items to import`,
+  ...[...p.themes.map((t) => ({ id: t.id, name: t.name, outcome: t.outcome, reason: t.reason })), ...p.items.map((i) => ({ id: i.id, name: i.title, outcome: i.outcome, reason: i.reason }))]
+    .filter((x) => x.outcome === "refuse")
+    .map((x) => `refuse  ${x.id.padEnd(28)} ${x.reason ?? ""}  ${x.name}`),
+];
 if (!flag("--yes")) {
   out({ dry: true, store: storeLocation(), preview: p }, [...lines, `${p.projects.filter((x) => x.outcome === "import").length} would be imported (dry - nothing written; --yes imports) - ${storeLocation()}`]);
   closeKernel();
@@ -65,9 +76,12 @@ const done = await confirmLive(bytes, p.token, actor);
 closeKernel();
 if (!done.ok) fail(done.error.message, done.error.detail);
 if (done.value.kind === "stale") fail("the store changed between the preview and the confirm; run again");
-const outcomes = done.value.outcomes;
-out({ dry: false, store: storeLocation(), outcomes }, [
+const { outcomes, styles, items } = done.value;
+const tally = (xs: readonly { readonly outcome: string }[]) => `${xs.filter((x) => x.outcome === "imported").length} imported, ${xs.filter((x) => x.outcome === "skipped").length} skipped, ${xs.filter((x) => x.outcome === "refused").length} refused`;
+out({ dry: false, store: storeLocation(), outcomes, styles, items }, [
   ...outcomes.map((o) => `${o.outcome.padEnd(8)} ${o.id.padEnd(28)} ${o.reason ?? (o.launched ? `launched${o.ratified.length > 0 ? `, ${o.ratified.join(" ")} ratified` : ""}` : "draft")}  ${o.title}`),
+  `styles: ${tally(styles)}; library items: ${tally(items)}`,
+  ...(done.value.styleExport === undefined ? [] : [`styles.json was not re-exported: ${done.value.styleExport}`]),
   `${outcomes.filter((o) => o.outcome === "imported").length} imported, ${outcomes.filter((o) => o.outcome === "skipped").length} skipped, ${outcomes.filter((o) => o.outcome === "refused").length} refused - ${storeLocation()}`,
 ]);
 process.exit(outcomes.some((o) => o.outcome === "refused") ? 1 : 0);
