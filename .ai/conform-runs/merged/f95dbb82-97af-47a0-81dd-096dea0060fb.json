@@ -1,0 +1,17 @@
+{
+ "schema": "conform-run/1",
+ "worker": "f95dbb82-97af-47a0-81dd-096dea0060fb",
+ "subject": "repository-landing-document",
+ "evaluatedAt": "2026-10-16T23:07:58.744748+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "repository-landing-document",
+   "context": "studio-navigation",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": []
+}
