@@ -471,10 +471,10 @@ jobs:
       # split by file: the store-reading specs with the fixture env, everything
       # else - including any spec added later - without it.
       - name: live (golden path, real browser)
-        run: npm run test:live -- "tests/live/(?!(board|floor|ledger)\.live)"
+        run: npm run test:live -- "tests/live/(?!(board|floor|ledger|runs)\.live)"
 
-      - name: live (the Floor, Board and Ledger over the fixture store)
-        run: npm run test:live -- "tests/live/(board|floor|ledger)\.live"
+      - name: live (the Floor, Board, Ledger and Runs over the fixture store)
+        run: npm run test:live -- "tests/live/(board|floor|ledger|runs)\.live"
         env:
           GRAVITONE_STORE_PATH: ${{ runner.temp }}/ledger.sqlite
           NEXT_PUBLIC_GRAVITONE_DATA: fixtures
