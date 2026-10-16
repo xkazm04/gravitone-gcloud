@@ -6126,6 +6126,58 @@
           "evidence": "app/library/audio/Ledger.tsx:156 Absent-value ties use array indices; populated-value ties likewise lack the mandatory immutable identity tiebreaker."
         }
       ]
+    },
+    "455f8eda-795e-4030-afb2-07f940f1543b/trailer-structure": {
+      "context": "trailer-script",
+      "subject": "trailer-structure",
+      "bundle": "media-generation",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-16",
+      "evaluatedTs": "2026-10-16T02:19:36.983Z",
+      "techniques": [
+        {
+          "technique": "concealment-and-its-tells",
+          "verdict": "deviation",
+          "evidence": "lib/script/trailer/report.ts:70 Standing unmeasured stub only. No concealment mode, no shot subtraction, no feel-of-use field. StructurePanel RULE_ORDER never lists this rule, so the stub is not drawn."
+        },
+        {
+          "technique": "cue-first-assembly",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/rules/cue.ts:64 A cue with no breath before the peak is a violation. Movements point at cue sections; a missing cue is unmeasured, not a pass against beat timecodes. composeCut takes the cue as a required argument."
+        },
+        {
+          "technique": "dynamic-reset",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/rules/reset.ts:38 Same function also fails three or more resets, requires the reset immediately before the single peak, one resetHolds value, and a cue boundary. moodLed and a declared ladder drop are not-engaged. Sweetened stop and shot-length spike are not in this beat layer."
+        },
+        {
+          "technique": "escalation-without-mechanism",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/rules/escalation.ts:44 raises is an array so two variables can be recorded and are a violation; a consecutive repeat is a violation. RaisesChips shows the same defects. AND THEN is a connector violation. moodLed is not-engaged. The ten-second rung floor is left unencoded as a hedge."
+        },
+        {
+          "technique": "length-ladder",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/rules/ladder.ts:69 DROP_ORDER is introduction, dialogue-lines, middle-rungs, reset, cold-open. A shorter rung with no drops is unmeasured, not passed as a trim. Part counts per rung are explicitly unmeasured. dialogue-lines and middle-rungs are order tokens only; no checker removes them."
+        },
+        {
+          "technique": "promise-ledger",
+          "verdict": "conformant",
+          "evidence": "app/_phases/script/trailer/PromiseLedger.tsx:83 A promise with no payer is shown incomplete and is not a disabled gate. params advisoryRules is promise and efficacy, so the row does not make malformed true. Extraction completeness and register promises are a separate unmeasured finding."
+        },
+        {
+          "technique": "withholding-budget",
+          "verdict": "conformant",
+          "evidence": "app/_phases/script/trailer/WithholdingPanel.tsx:62 WorkAssetKind is turn, reveal, resolution, best-moment, novum, each spend, imply, or hold. A spend of a held or imply-only asset is a violation. The budget carries campaignId and is kept when the cut is recomposed. Cross-cut drift is reported unmeasured because the checker sees one cut."
+        }
+      ],
+      "registryProposal": "concealment-and-its-tells has no in-a-tool rule, unlike cue-first-assembly, escalation-without-mechanism, and promise-ledger. Its tell forbids inventing a duration that separates hiding from style, so an honest unmeasured stub and a missing technique look the same. The standard should name the record a checker must keep: a concealment mode, a feel-of-use signal, or an explicit unmeasured row.",
+      "withdrawn": {
+        "worker": "63eaf899-b22c-4f62-a61e-9a3c764446ef",
+        "state": "deviation",
+        "at": "2026-10-16T02:21:30.775995+00:00",
+        "reason": "reviewer (sonnet): The anchor (report.ts:62-72) is a deliberate unmeasured row that names the gap and routes the other modes to the `promise` and `withholding` rules, which is the prescribed handling. The 'can be called well-formed' claim is contradicted by the always-on efficacy row, and the cue.ts, reset.ts and esca"
+      }
     }
   }
 }
