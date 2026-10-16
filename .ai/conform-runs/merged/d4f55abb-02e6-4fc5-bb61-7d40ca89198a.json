@@ -1,0 +1,17 @@
+{
+ "schema": "conform-run/1",
+ "worker": "d4f55abb-02e6-4fc5-bb61-7d40ca89198a",
+ "subject": "session-continuation",
+ "evaluatedAt": "2026-10-16T22:43:40.365095+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "session-continuation",
+   "context": "sound-lab-modules",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": []
+}
