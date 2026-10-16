@@ -495,6 +495,51 @@ lots) inside the phase.
   - Spend reconciles to the meter.
   - An imported project round-trips with its plan.
 
+> **Done 2026-10-16** (`9cb1b4b`..`7b088459`, four waves, 23 builder lots). What landed:
+> - **Jobs on the kernel** (`packages/kernel`): dry jobs run end to end through one DryRun port (STUB/LIVE,
+>   `SUNO_DRIVER=fake`, `__setMvEngines` and the article stub bins retired as the dry switch); spend is the meter's
+>   (every priced call reserves and settles with its job and step; `Job.spend` is a projection reconciled to
+>   `spend_rows`; credit-priced work is booked unpriced with its reason); lanes have slots (`LANE_CAPACITY`); an
+>   operator-movable queue with computed position; re-route through the router's judgement as one verb; a crash on a
+>   paid lane HOLDS it until acknowledged (owner ruling 2026-10-16); a settle hook and same-transaction release of
+>   waiting parts; the worker (`npm run worker`, `npm run worker:gpu`) picks by (producer, lane); a Python job protocol
+>   spec-tested against Node; ONE GPU lease (v1's file lease is a shim over the kernel's `gpu.local#1`; forge holds the
+>   card for the first time).
+> - **Every producer on `kernel/job`**, each CLI keeping its verbs and gaining `--json`, 0/1/2, `--budget-usd`,
+>   `--dry`, `--detach`: extract, article, mv, Suno (its first queue CLI), strips, forge, Dojo, and the studio steps
+>   (research, script, frames, motion, score, cut, still, words, voice). Never-re-spend holds across kills in each.
+> - **Records** (`@gt/catalog` recipes, `@gt/domain` run/project/part, kernel `records` and `parts`): recipes as data
+>   (9 films, album video, explainer, single-producer recipes), priced model options with their source
+>   (real/model/illustrative), part/project state derived on read, receipts whose token a confirm must carry (a
+>   ceiling is a stop point, not a launch gate), part records for all v1 step keys with media as blobs, one
+>   server-side undo, verdicts (ads and motion included), gate parts as Board packets that ratify and release.
+> - **Screens**: the Floor composers, `/projects` (composition list) and `/projects/[id]` Plan, Compose, Runs acts
+>   (pause, retry, earlier/later, re-route, lane hold + acknowledge), the receipt; the part editors rebuilt in the kit
+>   (owner ruling 2026-10-16) on one workspace frame - research (notebook scope board, beats board, ads brief),
+>   script (document + render gate, trailer cut + structure check, ads scenarios), frames (canvas, direction
+>   proposals wired, shots that render), motion (clips), score (spotting timeline), cut (finish line, animatic),
+>   album and explainer parts; `/projects/import` (one click from the browser's v1 data, `.gravitone` for another
+>   machine; v1 run history imported as Run rows).
+> - **Retired**: v1 `/projects` shelf, `/projects/new`, `/studio/[projectId]` (redirects to the Project or the
+>   import), IndexedDB `projects`/`steps` as a store (read only by the importer), `lib/jobs.tsx` serialisation (the bell
+>   is a view of server jobs); 217 files after a reachability check.
+> - **Exit evidence**: the same job from the UI and the CLI for every producer (`exit-same-job.live`, 15/15); a
+>   process-level KILL test for the Node and the Python worker; spend reconciled across a faked-live multi-producer run
+>   ($1.33 on every ledger); an imported project round-trips with its plan (`exit-roundtrip`). Verify: static gates,
+>   `test:unit` 1612/1612, node lane 1976 passed (bar `sound-store`, the sibling session's ledger), live lane 143
+>   passed / 0 failed; unit mutants 390/390 killed (388 in the full run; the two read baseline-red there from a
+>   teardown flake in `parts-real.test.ts` under load, and each is killed run alone), probe mutants 48/48 killed.
+> - **Decided in the Director's seat** (recorded in the lot commits): one job per Run or Part, gates are packets;
+>   `@gt/producers` holds pure definitions over ports, `lib/producers` binds v1's engines; dry is a job property and
+>   `GRAVITONE_DRY_ONLY` refuses live; part ids `<projectId>/<key>`; a rejected plate owes a re-render and a returned
+>   review reopens as `<gate>#<attempt>`; strips on `seat.text` (the turns are the cost); forge/Dojo run on a Python
+>   worker; disabled controls keep their dimming in the legibility baseline (plan §8 decision 7).
+> - **Carried forward**: strips steps one card at a time (v1 ran three); voice and Wan clips are dry-only (no engine/app
+>   path); style themes still live in IndexedDB (plates use a preset until Phase 5); the receipt has no field for a
+>   part held by preflight; a project ceiling is copied per job, not pooled; `forge.py` 788 lines and
+>   `lib/foundry/strips/store.ts` 492 (the 400 cap gates packages only); the Floor video composer asks a receipt with an
+>   empty subject when no strips approach exists; v1 asset ids inside imported records resolve nowhere yet (Phase 5).
+
 ### Phase 5: Library and Styles (M)
 - One `Style` table merges `styles.json` and Library themes. The `proven` and `locked` ratchets are
   kept; the git export of `styles.json` stays for the Python writers until they are moved onto the

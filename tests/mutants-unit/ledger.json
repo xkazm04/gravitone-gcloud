@@ -1,17 +1,17 @@
 {
-  "commit": "26820a6dc92830b29ff1dd92f57f851b503e862f",
-  "totalDurationMs": 186609,
-  "killed": 144,
+  "commit": "7b088459a2aba9982fa4d37930e3fbab36ce0b1b",
+  "totalDurationMs": 1040094,
+  "killed": 388,
   "survived": 0,
   "stale": 0,
   "broken": 0,
-  "baselineRed": 0,
+  "baselineRed": 2,
   "mutants": [
     {
       "id": "door-keeps-explicit-undefined",
       "test": "packages/domain/test/door.test.ts",
       "verdict": "killed",
-      "durationMs": 1281,
+      "durationMs": 907,
       "caughtBy": [
         "door drops an explicit undefined so the type does not lie"
       ]
@@ -20,7 +20,7 @@
       "id": "door-refusal-loses-the-path",
       "test": "packages/domain/test/door.test.ts",
       "verdict": "killed",
-      "durationMs": 669,
+      "durationMs": 484,
       "caughtBy": [
         "door refuses bad input, keeping door name, path and message"
       ]
@@ -30,7 +30,7 @@
       "test": "packages/domain/test/door.test.ts",
       "typecheck": true,
       "verdict": "killed",
-      "durationMs": 3887,
+      "durationMs": 5066,
       "caughtBy": [
         "packages/domain/test/door.test.ts(56,11): error TS2322: Type 'Flat<{ [iterator]: Flat<{} & {}>; [$brand]: Flat<{ ProjectId: true; } & {}>; includes: Flat<{} & {}>; charAt: Flat<{} & {}>; charCodeAt: Flat<...>; ... 44 more ...; valueOf: Flat<...>; } & { ...; }>' is not assignable to type 'string & $brand<\"ProjectId\">'."
       ]
@@ -39,7 +39,7 @@
       "id": "envelope-writes-absent-detail",
       "test": "packages/domain/test/errors.test.ts",
       "verdict": "killed",
-      "durationMs": 1281,
+      "durationMs": 1374,
       "caughtBy": [
         "errors envelope omits an absent detail (negative control: no detail key)"
       ]
@@ -48,7 +48,7 @@
       "id": "id-schema-accepts-empty",
       "test": "packages/domain/test/ids.test.ts",
       "verdict": "killed",
-      "durationMs": 1289,
+      "durationMs": 1534,
       "caughtBy": [
         "ids refuses an empty id"
       ]
@@ -57,7 +57,7 @@
       "id": "machine-allows-every-transition",
       "test": "packages/domain/test/transitions.test.ts",
       "verdict": "killed",
-      "durationMs": 1314,
+      "durationMs": 1277,
       "caughtBy": [
         "transitions refuses an undeclared transition, naming from -> to"
       ]
@@ -66,7 +66,7 @@
       "id": "estimate-null-usd-without-reason",
       "test": "packages/domain/test/estimate.test.ts",
       "verdict": "killed",
-      "durationMs": 1257,
+      "durationMs": 1353,
       "caughtBy": [
         "estimate — never invent a price refuses an unpriced estimate with no reason — null must not read as free"
       ]
@@ -75,7 +75,7 @@
       "id": "estimate-band-ignores-upper-bound",
       "test": "packages/domain/test/estimate.test.ts",
       "verdict": "killed",
-      "durationMs": 553,
+      "durationMs": 666,
       "caughtBy": [
         "estimate — never invent a price a band holds its point figure, and needs one (articles: $47–92 per run)"
       ]
@@ -84,7 +84,7 @@
       "id": "event-data-accepts-non-finite",
       "test": "packages/domain/test/event.test.ts",
       "verdict": "killed",
-      "durationMs": 1216,
+      "durationMs": 1334,
       "caughtBy": [
         "event data is a JSON object: no bare scalar, no non-finite number, no class instance"
       ]
@@ -93,7 +93,7 @@
       "id": "event-cost-without-source",
       "test": "packages/domain/test/event.test.ts",
       "verdict": "killed",
-      "durationMs": 578,
+      "durationMs": 691,
       "caughtBy": [
         "event a cost never travels without the word for where it came from"
       ]
@@ -102,7 +102,7 @@
       "id": "job-lease-outside-running",
       "test": "packages/domain/test/job.test.ts",
       "verdict": "killed",
-      "durationMs": 1217,
+      "durationMs": 1249,
       "caughtBy": [
         "job holds a lease exactly while running"
       ]
@@ -111,7 +111,7 @@
       "id": "job-budget-error-without-stop",
       "test": "packages/domain/test/job.test.ts",
       "verdict": "killed",
-      "durationMs": 665,
+      "durationMs": 668,
       "caughtBy": [
         "job a money stop is failed + budget + stop, never a vendor failure"
       ]
@@ -120,7 +120,7 @@
       "id": "job-interrupted-resumes-directly",
       "test": "packages/domain/test/machines.test.ts",
       "verdict": "killed",
-      "durationMs": 1264,
+      "durationMs": 1306,
       "caughtBy": [
         "the transitions v1 relied on job: a crash-stop is its own state, and it never resumes without the queue"
       ]
@@ -129,7 +129,7 @@
       "id": "slot-claimed-goes-back-to-scheduled",
       "test": "packages/domain/test/machines.test.ts",
       "verdict": "killed",
-      "durationMs": 613,
+      "durationMs": 743,
       "caughtBy": [
         "the transitions v1 relied on slot: at-most-once — a claimed slot never goes back to scheduled"
       ]
@@ -138,7 +138,7 @@
       "id": "library-item-own-ancestor",
       "test": "packages/domain/test/library.test.ts",
       "verdict": "killed",
-      "durationMs": 1141,
+      "durationMs": 1447,
       "caughtBy": [
         "library item a derived item names the item it came from, and never itself"
       ]
@@ -147,7 +147,7 @@
       "id": "style-proven-counts-mechanisms",
       "test": "packages/domain/test/library.test.ts",
       "verdict": "killed",
-      "durationMs": 541,
+      "durationMs": 745,
       "caughtBy": [
         "style proven needs operator keeps in two distinct run/scene cells — two mechanisms on one cell are one",
         "style an agent's keep is evidence, not a vote"
@@ -157,7 +157,7 @@
       "id": "shown-grades-include-inverted",
       "test": "packages/domain/test/packet.test.ts",
       "verdict": "killed",
-      "durationMs": 1141,
+      "durationMs": 1363,
       "caughtBy": [
         "candidate and grade only calibrated grades are shown — v1's inverted craft score is not"
       ]
@@ -166,7 +166,7 @@
       "id": "blind-pair-accepts-one-arm",
       "test": "packages/domain/test/packet.test.ts",
       "verdict": "killed",
-      "durationMs": 760,
+      "durationMs": 629,
       "caughtBy": [
         "packet a blind pair is exactly two arms per pair"
       ]
@@ -175,7 +175,7 @@
       "id": "source-reasons-past-the-max",
       "test": "packages/domain/test/source.test.ts",
       "verdict": "killed",
-      "durationMs": 1185,
+      "durationMs": 1279,
       "caughtBy": [
         "checkVerdict - the source half of the verdict door refuses another source's word, a repeat, more than the max, and reasons on a keep"
       ]
@@ -184,7 +184,7 @@
       "id": "source-reasons-any-word",
       "test": "packages/domain/test/source.test.ts",
       "verdict": "killed",
-      "durationMs": 567,
+      "durationMs": 641,
       "caughtBy": [
         "checkVerdict - the source half of the verdict door refuses another source's word, a repeat, more than the max, and reasons on a keep"
       ]
@@ -193,7 +193,7 @@
       "id": "project-cycle-undetected",
       "test": "packages/domain/test/project.test.ts",
       "verdict": "killed",
-      "durationMs": 1131,
+      "durationMs": 1250,
       "caughtBy": [
         "project refuses a plan with a cycle"
       ]
@@ -202,7 +202,7 @@
       "id": "project-state-running-beats-gate",
       "test": "packages/domain/test/project.test.ts",
       "verdict": "killed",
-      "durationMs": 715,
+      "durationMs": 662,
       "caughtBy": [
         "project derives its state with the prototype's precedence"
       ]
@@ -211,7 +211,7 @@
       "id": "template-fallback-shifts",
       "test": "packages/catalog/test/catalog.test.ts",
       "verdict": "killed",
-      "durationMs": 1000,
+      "durationMs": 1253,
       "caughtBy": [
         "projects catalogue falls back positionally to short-educational-video"
       ]
@@ -220,7 +220,7 @@
       "id": "blob-read-skips-hash-check",
       "test": "packages/kernel/test/blob.test.ts",
       "verdict": "killed",
-      "durationMs": 1448,
+      "durationMs": 1278,
       "caughtBy": [
         "blob store refuses to return damaged bytes"
       ]
@@ -229,7 +229,7 @@
       "id": "canonical-keys-unsorted",
       "test": "packages/kernel/test/canonical.test.ts",
       "verdict": "killed",
-      "durationMs": 1065,
+      "durationMs": 1003,
       "caughtBy": [
         "canonical JSON (RFC 8785) sorts keys, recursively, with no whitespace",
         "canonical JSON (RFC 8785) sorts keys by UTF-16 code unit, which differs from code point order past U+FFFF"
@@ -239,7 +239,7 @@
       "id": "crash-harness-accepts-swallowed-crash",
       "test": "packages/kernel/test/crash.test.ts",
       "verdict": "killed",
-      "durationMs": 1619,
+      "durationMs": 1474,
       "caughtBy": [
         "crash-prefix enumeration reports a scenario that swallows the crash and carries on"
       ]
@@ -248,7 +248,7 @@
       "id": "cull-order-counts-uncalibrated-grades",
       "test": "packages/kernel/test/calibration.test.ts",
       "verdict": "killed",
-      "durationMs": 1616,
+      "durationMs": 1631,
       "caughtBy": [
         "kernel/calibration - cullOrder ranks by calibrated grades only an inverted grade contributes nothing; an ungraded candidate keeps its place after the scored ones"
       ]
@@ -257,7 +257,7 @@
       "id": "calibration-labels-include-agent-verdicts",
       "test": "packages/kernel/test/calibration.test.ts",
       "verdict": "killed",
-      "durationMs": 711,
+      "durationMs": 795,
       "caughtBy": [
         "kernel/calibration - the registered series labels are the OPERATOR's newest verdicts; an agent's verdict and an undecided key are not labels"
       ]
@@ -266,7 +266,7 @@
       "id": "blind-pick-revealed-before-operator",
       "test": "packages/kernel/test/decision.blind.test.ts",
       "verdict": "killed",
-      "durationMs": 1400,
+      "durationMs": 1670,
       "caughtBy": [
         "kernel/decision - blind-first reveal before the operator's verdict, no read path can tell two opposite picks (or a pick-first order) apart",
         "kernel/decision - blind-first reveal reveals a pair's pick, and its grades, only once the OPERATOR has judged that pair",
@@ -277,7 +277,7 @@
       "id": "decision-stale-base-accepted",
       "test": "packages/kernel/test/decision.test.ts",
       "verdict": "killed",
-      "durationMs": 1750,
+      "durationMs": 1867,
       "caughtBy": [
         "kernel/decision - patches refuses a stale base with the 409 body: the named keys' current decisions and the revision"
       ]
@@ -286,7 +286,7 @@
       "id": "commit-retry-ignores-ticket",
       "test": "packages/kernel/test/decision.crash.test.ts",
       "verdict": "killed",
-      "durationMs": 1744,
+      "durationMs": 1659,
       "caughtBy": [
         "kernel/decision - crash prefixes of score -> decide -> commit -> apply to v1 a commit and its outbox row are all or nothing at every prefix, and a retried ticket plus a drain converge"
       ]
@@ -295,7 +295,7 @@
       "id": "commit-writes-no-apply-row",
       "test": "packages/kernel/test/decision.crash.test.ts",
       "verdict": "killed",
-      "durationMs": 681,
+      "durationMs": 914,
       "caughtBy": [
         "kernel/decision - crash prefixes of score -> decide -> commit -> apply to v1 a commit and its outbox row are all or nothing at every prefix, and a retried ticket plus a drain converge"
       ]
@@ -304,7 +304,7 @@
       "id": "commit-ignores-stale-preview",
       "test": "packages/kernel/test/decision.test.ts",
       "verdict": "killed",
-      "durationMs": 791,
+      "durationMs": 962,
       "caughtBy": [
         "kernel/decision - commit refuses a stale preview: the decisions moved, or v1 moved under unchanged decisions"
       ]
@@ -313,7 +313,7 @@
       "id": "commit-sweeps-undecided-by-default",
       "test": "packages/kernel/test/decision.test.ts",
       "verdict": "killed",
-      "durationMs": 778,
+      "durationMs": 875,
       "caughtBy": [
         "kernel/decision - commit refuses while anything is undecided, in every mode, naming the undecided keys"
       ]
@@ -322,7 +322,7 @@
       "id": "verdict-reasons-not-checked-against-source",
       "test": "packages/kernel/test/decision.test.ts",
       "verdict": "killed",
-      "durationMs": 840,
+      "durationMs": 883,
       "caughtBy": [
         "kernel/decision - patches reasons are the source's: a forge reject takes the forge's words, in list order, and refuses another source's",
         "kernel/decision - patches refuses the whole write when one key is foreign, named twice, or carries a reason without a reject"
@@ -332,7 +332,7 @@
       "id": "undo-skips-blind-picks",
       "test": "packages/kernel/test/decision.pick.test.ts",
       "verdict": "killed",
-      "durationMs": 1463,
+      "durationMs": 1466,
       "caughtBy": [
         "kernel/decision - blind picks one undo takes the whole pick back - both arms and the outcome"
       ]
@@ -341,7 +341,7 @@
       "id": "tie-counted-as-no-answer",
       "test": "packages/kernel/test/decision.pick.test.ts",
       "verdict": "killed",
-      "durationMs": 765,
+      "durationMs": 646,
       "caughtBy": [
         "kernel/decision - blind picks agreement is computed at reveal: the chosen arm against the machine's, a tie or both-bad disagreeing"
       ]
@@ -350,7 +350,7 @@
       "id": "reopen-overwrites-different-content",
       "test": "packages/kernel/test/decision.open.test.ts",
       "verdict": "killed",
-      "durationMs": 1580,
+      "durationMs": 1163,
       "caughtBy": [
         "kernel/decision - open from v1 re-opening the same content is a no-op; other content under the id is a conflict"
       ]
@@ -359,7 +359,7 @@
       "id": "v2-migration-drops-old-reasons",
       "test": "packages/kernel/test/decision.open.test.ts",
       "verdict": "killed",
-      "durationMs": 773,
+      "durationMs": 597,
       "caughtBy": [
         "kernel/decision - v2 upgrades a store written by v1 of the kernel old rows read back as reasons: [reason], the triggers hold, and the schema matches a fresh store"
       ]
@@ -368,7 +368,7 @@
       "id": "apply-retries-forever",
       "test": "packages/kernel/test/decision.apply.test.ts",
       "verdict": "killed",
-      "durationMs": 1587,
+      "durationMs": 1206,
       "caughtBy": [
         "kernel/decision - the apply core (pure) a finish counts only for the holder; failures back off along the ladder and stop at the ceiling",
         "kernel/decision - the apply outbox is bounded: at the ceiling the row moves to stuck, and only a redrive brings it back"
@@ -378,7 +378,7 @@
       "id": "apply-claim-ignores-lease",
       "test": "packages/kernel/test/decision.apply.test.ts",
       "verdict": "killed",
-      "durationMs": 899,
+      "durationMs": 624,
       "caughtBy": [
         "kernel/decision - the apply core (pure) a held claim is skipped until its lease runs out, then retaken as the next attempt"
       ]
@@ -387,7 +387,7 @@
       "id": "apply-finish-ignores-holder",
       "test": "packages/kernel/test/decision.apply.test.ts",
       "verdict": "killed",
-      "durationMs": 797,
+      "durationMs": 604,
       "caughtBy": [
         "kernel/decision - the apply core (pure) a finish counts only for the holder; failures back off along the ladder and stop at the ceiling",
         "kernel/decision - the apply outbox a claim is held until its lease runs out; then it is retaken as a counted attempt, and the slow holder loses politely"
@@ -397,7 +397,7 @@
       "id": "dry-port-calls-the-vendor",
       "test": "packages/kernel/test/dryrun.test.ts",
       "verdict": "killed",
-      "durationMs": 1516,
+      "durationMs": 1112,
       "caughtBy": [
         "the dry port never enters the vendor function, books a would-call as model cost, and continues on the stand-in",
         "the dry port stops the driver at a call with no stand-in, still without calling",
@@ -409,7 +409,7 @@
       "id": "dry-port-makes-undeclared-calls",
       "test": "packages/kernel/test/dryrun.test.ts",
       "verdict": "killed",
-      "durationMs": 750,
+      "durationMs": 569,
       "caughtBy": [
         "the dry port refuses an undeclared external call instead of making it"
       ]
@@ -418,7 +418,7 @@
       "id": "events-verify-skips-hash-compare",
       "test": "packages/kernel/test/events.test.ts",
       "verdict": "killed",
-      "durationMs": 1292,
+      "durationMs": 1054,
       "caughtBy": [
         "events verify names the first row whose data was tampered with raw SQL"
       ]
@@ -427,7 +427,7 @@
       "id": "events-verify-skips-gap-check",
       "test": "packages/kernel/test/events.test.ts",
       "verdict": "killed",
-      "durationMs": 712,
+      "durationMs": 532,
       "caughtBy": [
         "events verify sees a deleted middle row at the gap, and a cut tail only against an anchor"
       ]
@@ -436,7 +436,7 @@
       "id": "python-verifier-sorts-by-code-point",
       "test": "packages/kernel/test/events.python.test.ts",
       "verdict": "killed",
-      "durationMs": 2420,
+      "durationMs": 1633,
       "caughtBy": [
         "events verified by Python re-derives every hash Node wrote, including non-integer and exponent numbers",
         "events verified by Python re-derives the projection's fields (occurredAt, atSrc, key) and sees an edit to them"
@@ -446,7 +446,7 @@
       "id": "python-verifier-small-exponent-boundary",
       "test": "packages/kernel/test/events.python.test.ts",
       "verdict": "killed",
-      "durationMs": 1340,
+      "durationMs": 791,
       "caughtBy": [
         "events verified by Python re-derives every hash Node wrote, including non-integer and exponent numbers",
         "events verified by Python re-derives the projection's fields (occurredAt, atSrc, key) and sees an edit to them"
@@ -456,7 +456,7 @@
       "id": "events-page-repeats-boundary",
       "test": "packages/kernel/test/events.query.test.ts",
       "verdict": "killed",
-      "durationMs": 12601,
+      "durationMs": 8264,
       "caughtBy": [
         "ledger query at 50000 events pages with `next` visit every match exactly once, in order"
       ]
@@ -465,7 +465,7 @@
       "id": "job-ceiling-checked-after-unit",
       "test": "packages/kernel/test/job.core.test.ts",
       "verdict": "killed",
-      "durationMs": 1392,
+      "durationMs": 978,
       "caughtBy": [
         "next checks the ceiling BEFORE the unit: a step that would cross it is not taken"
       ]
@@ -474,7 +474,7 @@
       "id": "job-money-stop-feeds-breaker",
       "test": "packages/kernel/test/job.core.test.ts",
       "verdict": "killed",
-      "durationMs": 700,
+      "durationMs": 500,
       "caughtBy": [
         "book a money stop is never a vendor failure: the streak stands where it was"
       ]
@@ -483,7 +483,7 @@
       "id": "job-step-not-marked-in-flight",
       "test": "packages/kernel/test/job.crash.test.ts",
       "verdict": "killed",
-      "durationMs": 2299,
+      "durationMs": 2078,
       "caughtBy": [
         "job driver under crash-prefix enumeration (a) crashed at every prefix, swept, retried by the operator: done, no booked step re-performed",
         "job driver under crash-prefix enumeration (b) a take-over after TTL while the old holder resumes: its write is refused by the fence"
@@ -493,7 +493,7 @@
       "id": "lease-fence-not-checked",
       "test": "packages/kernel/test/job.crash.test.ts",
       "verdict": "killed",
-      "durationMs": 1215,
+      "durationMs": 1044,
       "caughtBy": [
         "job driver under crash-prefix enumeration (b) a take-over after TTL while the old holder resumes: its write is refused by the fence"
       ]
@@ -502,7 +502,7 @@
       "id": "job-lane-inferred-not-declared",
       "test": "packages/kernel/test/job.test.ts",
       "verdict": "killed",
-      "durationMs": 2123,
+      "durationMs": 1707,
       "caughtBy": [
         "runJob refuses a producer whose lane is not the job's declared lane, before taking any lease"
       ]
@@ -511,7 +511,7 @@
       "id": "lease-python-grants-while-held",
       "test": "packages/kernel/test/lease.mixed.test.ts",
       "verdict": "killed",
-      "durationMs": 4886,
+      "durationMs": 8395,
       "caughtBy": [
         "Node and Python contend for one lease exactly one holds at any instant, and fences strictly increase",
         "a Python waiter while Node holds is not granted, and times out with the holder named"
@@ -521,7 +521,7 @@
       "id": "lease-newcomer-jumps-the-queue",
       "test": "packages/kernel/test/lease.spec.test.ts",
       "verdict": "killed",
-      "durationMs": 1725,
+      "durationMs": 1473,
       "caughtBy": [
         "spec/lease.json against the Node implementation FIFO: waiters are served in the order they asked, and a newcomer never jumps the line",
         "spec/lease.json against the Node implementation a dead waiter is skipped at once; an unseen waiter on another host is dropped after its TTL"
@@ -531,7 +531,7 @@
       "id": "lease-expiry-is-not-loss",
       "test": "packages/kernel/test/lease.spec.test.ts",
       "verdict": "killed",
-      "durationMs": 893,
+      "durationMs": 749,
       "caughtBy": [
         "spec/lease.json against the Node implementation a heartbeat keeps a live lease; past its TTL the lease is lost even before anyone takes it"
       ]
@@ -540,7 +540,7 @@
       "id": "lease-fence-check-only-on-expiry",
       "test": "packages/kernel/test/lease.test.ts",
       "verdict": "killed",
-      "durationMs": 1323,
+      "durationMs": 1052,
       "caughtBy": [
         "the fence is checked inside the writer's transaction: a refused fence takes the write down with it"
       ]
@@ -549,7 +549,7 @@
       "id": "lease-acquire-aborts-on-store-busy",
       "test": "packages/kernel/test/lease.test.ts",
       "verdict": "killed",
-      "durationMs": 605,
+      "durationMs": 542,
       "caughtBy": [
         "acquire a store busy past its timeout is contention while the wait has time left"
       ]
@@ -558,7 +558,7 @@
       "id": "lease-acquire-timeout-stays-queued",
       "test": "packages/kernel/test/lease.test.ts",
       "verdict": "killed",
-      "durationMs": 721,
+      "durationMs": 545,
       "caughtBy": [
         "acquire runs out without hanging, leaves the queue and names the holder"
       ]
@@ -567,7 +567,7 @@
       "id": "migrate-edited-step-not-refused",
       "test": "packages/kernel/test/migrate.test.ts",
       "verdict": "killed",
-      "durationMs": 1579,
+      "durationMs": 1165,
       "caughtBy": [
         "migrations refuses a past step that was edited after it ran, and runs nothing"
       ]
@@ -576,7 +576,7 @@
       "id": "migrate-failed-step-bumps-ledger",
       "test": "packages/kernel/test/migrate.test.ts",
       "verdict": "killed",
-      "durationMs": 739,
+      "durationMs": 589,
       "caughtBy": [
         "migrations a failed step leaves no trace of itself, marks the failure, and blocks every run until cleared"
       ]
@@ -585,7 +585,7 @@
       "id": "price-vendor-zero-is-free",
       "test": "packages/kernel/test/pricing.test.ts",
       "verdict": "killed",
-      "durationMs": 1213,
+      "durationMs": 945,
       "caughtBy": [
         "quote (lib/imaging/pricing.ts priceCall + lib/text/pricing.ts priceTurn) a vendor's own figure wins over the table; a zero or negative one is missing, not free"
       ]
@@ -594,7 +594,7 @@
       "id": "price-ignores-measured-size",
       "test": "packages/kernel/test/pricing.test.ts",
       "verdict": "killed",
-      "durationMs": 708,
+      "durationMs": 491,
       "caughtBy": [
         "quote (lib/imaging/pricing.ts priceCall + lib/text/pricing.ts priceTurn) prices only the size a figure was measured at"
       ]
@@ -603,7 +603,7 @@
       "id": "receipt-interrupted-claims-afresh",
       "test": "packages/kernel/test/receipts.test.ts",
       "verdict": "killed",
-      "durationMs": 1357,
+      "durationMs": 1030,
       "caughtBy": [
         "receipts (lib/imaging/receipts.ts, made durable) a claim whose owner died is interrupted, named, and refused until an operator releases it"
       ]
@@ -612,7 +612,7 @@
       "id": "receipt-dry-cost-reads-real",
       "test": "packages/kernel/test/receipts.test.ts",
       "verdict": "killed",
-      "durationMs": 733,
+      "durationMs": 532,
       "caughtBy": [
         "receipts (lib/imaging/receipts.ts, made durable) a dry claim and a live claim on one key are separate rows"
       ]
@@ -621,7 +621,7 @@
       "id": "router-recovery-deletes-inflight-claims",
       "test": "packages/kernel/test/router.crash.test.ts",
       "verdict": "killed",
-      "durationMs": 1972,
+      "durationMs": 1278,
       "caughtBy": [
         "route, reserve and call under a crash every prefix keeps decision and claim together, and recovery never calls the vendor twice"
       ]
@@ -630,7 +630,7 @@
       "id": "posture-local-binaries-off-ignored",
       "test": "packages/kernel/test/router.posture.test.ts",
       "verdict": "killed",
-      "durationMs": 1379,
+      "durationMs": 895,
       "caughtBy": [
         "posture (lib/deployment.ts, lib/imaging/env.ts, lib/text/env.ts) LOCAL_BINARIES is honoured in both directions, and the explicit envs win"
       ]
@@ -639,7 +639,7 @@
       "id": "posture-malformed-env-falls-back",
       "test": "packages/kernel/test/router.posture.test.ts",
       "verdict": "killed",
-      "durationMs": 732,
+      "durationMs": 416,
       "caughtBy": [
         "posture (lib/deployment.ts, lib/imaging/env.ts, lib/text/env.ts) absent degrades; a malformed value fails instead of reaching a fallback"
       ]
@@ -648,7 +648,7 @@
       "id": "route-timeout-walks-the-chain",
       "test": "packages/kernel/test/router.route.test.ts",
       "verdict": "killed",
-      "durationMs": 1303,
+      "durationMs": 930,
       "caughtBy": [
         "image routing (lib/imaging/router.ts, kept) a refusal walks to the next provider; a timeout stops the request"
       ]
@@ -657,7 +657,7 @@
       "id": "route-references-ignored",
       "test": "packages/kernel/test/router.route.test.ts",
       "verdict": "killed",
-      "durationMs": 1008,
+      "durationMs": 477,
       "caughtBy": [
         "image routing (lib/imaging/router.ts, kept) a request carrying references never lands on a provider that ignores them"
       ]
@@ -666,7 +666,7 @@
       "id": "spend-crash-lapse-releases",
       "test": "packages/kernel/test/spend.crash.test.ts",
       "verdict": "killed",
-      "durationMs": 1402,
+      "durationMs": 1145,
       "caughtBy": [
         "kernel/spend - crash prefixes of reserve -> call -> settle never under-counts money that may have been spent, at any prefix, crashed or recovered"
       ]
@@ -675,7 +675,7 @@
       "id": "spend-ceiling-ignores-holds",
       "test": "packages/kernel/test/spend.test.ts",
       "verdict": "killed",
-      "durationMs": 1412,
+      "durationMs": 1068,
       "caughtBy": [
         "kernel/spend - reserve -> settle -> book the call that would cross is refused with `budget` and the numbers, and the refusal COMMITS its count"
       ]
@@ -684,7 +684,7 @@
       "id": "spend-zero-is-priced",
       "test": "packages/kernel/test/spend.test.ts",
       "verdict": "killed",
-      "durationMs": 655,
+      "durationMs": 556,
       "caughtBy": [
         "kernel/spend - reserve -> settle -> book unpriced is not free and not zero: absent, zero, negative or NaN books nothing and is counted"
       ]
@@ -693,7 +693,7 @@
       "id": "spend-v1port-reclaims-live-owner",
       "test": "packages/kernel/test/spend.v1port.test.ts",
       "verdict": "killed",
-      "durationMs": 2482,
+      "durationMs": 1432,
       "caughtBy": [
         "v1 behaviour cases - the kernel port's file-store edges a hold this process owns is never reclaimed, however old"
       ]
@@ -702,7 +702,7 @@
       "id": "store-deferred-begin",
       "test": "packages/kernel/test/store.file.test.ts",
       "verdict": "killed",
-      "durationMs": 2107,
+      "durationMs": 1625,
       "caughtBy": [
         "file store two real processes incrementing one counter lose no update"
       ]
@@ -711,7 +711,7 @@
       "id": "store-synchronous-normal",
       "test": "packages/kernel/test/store.file.test.ts",
       "verdict": "killed",
-      "durationMs": 1063,
+      "durationMs": 674,
       "caughtBy": [
         "file store runs in WAL with synchronous FULL, and names sidecars by appending (a store with no extension)"
       ]
@@ -720,7 +720,7 @@
       "id": "store-promise-body-commits",
       "test": "packages/kernel/test/store.contract.test.ts",
       "verdict": "killed",
-      "durationMs": 2565,
+      "durationMs": 1055,
       "caughtBy": [
         "store contract (file) refuses and rolls back a body that returns a promise",
         "store contract (memory) refuses and rolls back a body that returns a promise"
@@ -730,7 +730,7 @@
       "id": "store-read-can-write",
       "test": "packages/kernel/test/store.contract.test.ts",
       "verdict": "killed",
-      "durationMs": 602,
+      "durationMs": 545,
       "caughtBy": [
         "store contract (file) a read transaction cannot write, and the store still writes afterwards",
         "store contract (memory) a read transaction cannot write, and the store still writes afterwards"
@@ -740,7 +740,7 @@
       "id": "kernel-forgets-a-module",
       "test": "packages/kernel/test/kernel.test.ts",
       "verdict": "killed",
-      "durationMs": 1786,
+      "durationMs": 1505,
       "caughtBy": [
         "openKernel carries every module that exports migrations - forgetting one fails here",
         "openKernel a fresh store reaches the union of every per-module fixture's schema, and nothing else"
@@ -750,7 +750,7 @@
       "id": "ui-freshness-late-value-rolls-back",
       "test": "packages/ui/test/freshness.test.ts",
       "verdict": "killed",
-      "durationMs": 1102,
+      "durationMs": 810,
       "caughtBy": [
         "value + age + edge health a late value never rolls the held one back (an SSE replay, a slow poll after a fast one)"
       ]
@@ -759,7 +759,7 @@
       "id": "ui-freshness-success-never-restores",
       "test": "packages/ui/test/freshness.test.ts",
       "verdict": "killed",
-      "durationMs": 459,
+      "durationMs": 420,
       "caughtBy": [
         "value + age + edge health only a success newer than the failure restores health"
       ]
@@ -768,7 +768,7 @@
       "id": "ui-window-grid-holds-from-zero",
       "test": "packages/ui/test/window.test.ts",
       "verdict": "killed",
-      "durationMs": 1151,
+      "durationMs": 884,
       "caughtBy": [
         "a uniform list holds the rows in view plus overscan each side, half-open",
         "§9.5: the Library at 50,000 items never holds more than a viewport plus overscan grid over 1,000 scroll positions",
@@ -779,7 +779,7 @@
       "id": "ui-window-rowat-off-by-one",
       "test": "packages/ui/test/window.test.ts",
       "verdict": "killed",
-      "durationMs": 1091,
+      "durationMs": 465,
       "caughtBy": [
         "measured rows (v1 shelf.ts) rowAt finds the row whose box holds y"
       ]
@@ -788,7 +788,7 @@
       "id": "ui-keymap-shadow-overlap-not-a-conflict",
       "test": "packages/ui/test/keymap.test.ts",
       "verdict": "killed",
-      "durationMs": 1183,
+      "durationMs": 883,
       "caughtBy": [
         "conflicts() sees a collision an inner row over an outer chord without `shadows`"
       ]
@@ -797,7 +797,7 @@
       "id": "ui-keymap-held-key-repeats",
       "test": "packages/ui/test/keymap.test.ts",
       "verdict": "killed",
-      "durationMs": 604,
+      "durationMs": 454,
       "caughtBy": [
         "resolve: guards a held K decides ONE item; a held arrow walks",
         "resolve: guards a refused repeat does not fall through to an outer row"
@@ -807,7 +807,7 @@
       "id": "ui-layers-leaving-entry-owns-input",
       "test": "packages/ui/test/layers.test.ts",
       "verdict": "killed",
-      "durationMs": 1375,
+      "durationMs": 865,
       "caughtBy": [
         "the stack holds entries by identity closing a layer with layers above it closes them first, top-down, once each",
         "Escape closes one thing a URL layer that is leaving owns no input: a second Escape does not navigate back twice",
@@ -820,7 +820,7 @@
       "id": "ui-layers-scroll-lock-toggled",
       "test": "packages/ui/test/layers.test.ts",
       "verdict": "killed",
-      "durationMs": 618,
+      "durationMs": 444,
       "caughtBy": [
         "the scroll lock is counted, not toggled (v1) the first holder locks, the last one out restores, in any order"
       ]
@@ -829,7 +829,7 @@
       "id": "ui-storage-unregistered-twin-writes",
       "test": "packages/ui/test/storage.test.ts",
       "verdict": "killed",
-      "durationMs": 1265,
+      "durationMs": 909,
       "caughtBy": [
         "registration is the eviction list an unregistered key cannot be written, even with the same name"
       ]
@@ -838,7 +838,7 @@
       "id": "ui-storage-refresh-is-a-flip",
       "test": "packages/ui/test/storage.test.ts",
       "verdict": "killed",
-      "durationMs": 590,
+      "durationMs": 477,
       "caughtBy": [
         "identityFlip: the trigger table (v1 transitionFor) credential refresh: the bearer changed, the user did not"
       ]
@@ -847,7 +847,7 @@
       "id": "ui-tokenlint-unknown-var-passes",
       "test": "packages/ui/test/tokenLint.test.ts",
       "verdict": "killed",
-      "durationMs": 1032,
+      "durationMs": 808,
       "caughtBy": [
         "lintCss flags a var() that names no token and reports its line (negative control)",
         "lintCss accepts a var() naming a custom property declared in the same file"
@@ -857,7 +857,7 @@
       "id": "ui-tokenlint-rgba-not-a-colour",
       "test": "packages/ui/test/tokenLint.test.ts",
       "verdict": "killed",
-      "durationMs": 795,
+      "durationMs": 417,
       "caughtBy": [
         "lintCss flags a raw colour in every spelling (negative control)"
       ]
@@ -866,7 +866,7 @@
       "id": "ui-tokenlint-one-off-reuse-passes",
       "test": "packages/ui/test/tokenLint.test.ts",
       "verdict": "killed",
-      "durationMs": 598,
+      "durationMs": 417,
       "caughtBy": [
         "lintCss never admits a colour through the hatch, nor one name declared twice (negative control)"
       ]
@@ -875,7 +875,7 @@
       "id": "ui-tokenrender-value-spacing-drifts",
       "test": "packages/ui/test/tokenRender.test.ts",
       "verdict": "killed",
-      "durationMs": 1181,
+      "durationMs": 972,
       "caughtBy": [
         "renderCss carries every prototype :root value unchanged",
         "renderCss stops carrying the prototype when a value is changed (negative control)"
@@ -885,7 +885,7 @@
       "id": "ui-tokensource-duplicate-name-admitted",
       "test": "packages/ui/test/tokenSource.test.ts",
       "verdict": "killed",
-      "durationMs": 1424,
+      "durationMs": 895,
       "caughtBy": [
         "tokenSource refuses a duplicate token name (negative control)"
       ]
@@ -894,7 +894,7 @@
       "id": "ui-checktokens-drift-ignored",
       "test": "packages/ui/test/checkTokens.test.ts",
       "verdict": "killed",
-      "durationMs": 3800,
+      "durationMs": 2837,
       "caughtBy": [
         "tokens:check exits 1 on drifted outputs and prints the regeneration command; the in-date twin is green"
       ]
@@ -903,7 +903,7 @@
       "id": "ui-checktokens-unreached-scss-passes",
       "test": "packages/ui/test/checkTokens.test.ts",
       "verdict": "killed",
-      "durationMs": 1755,
+      "durationMs": 1666,
       "caughtBy": [
         "tokens:check exits 2 when a module stylesheet exists that the walk does not read"
       ]
@@ -912,7 +912,7 @@
       "id": "ui-controls-disabled-link-navigates",
       "test": "packages/ui/test/components/controls.test.ts",
       "verdict": "killed",
-      "durationMs": 1186,
+      "durationMs": 1015,
       "caughtBy": [
         "Button disabled stays a focusable button that says so and takes no press; a disabled link is a button"
       ]
@@ -921,7 +921,7 @@
       "id": "ui-controls-seg-presses-every-option",
       "test": "packages/ui/test/components/controls.test.ts",
       "verdict": "killed",
-      "durationMs": 653,
+      "durationMs": 525,
       "caughtBy": [
         "pressed controls Seg presses exactly its value and names the group"
       ]
@@ -930,7 +930,7 @@
       "id": "ui-keycaps-facts-dropped",
       "test": "packages/ui/test/components/keycaps.test.ts",
       "verdict": "killed",
-      "durationMs": 1196,
+      "durationMs": 919,
       "caughtBy": [
         "Keycaps renders the keymap's rows for a mode facts change the rows exactly as the keymap says (an audio packet draws play)"
       ]
@@ -939,7 +939,7 @@
       "id": "ui-law-word-counter-counts-spaces",
       "test": "packages/ui/test/components/law.test.ts",
       "verdict": "killed",
-      "durationMs": 1392,
+      "durationMs": 952,
       "caughtBy": [
         "the twelve-word rule the runtime counter agrees with the type at the boundary"
       ]
@@ -949,7 +949,7 @@
       "test": "packages/ui/test/components/law.test.ts",
       "typecheck": true,
       "verdict": "killed",
-      "durationMs": 5790,
+      "durationMs": 5874,
       "caughtBy": [
         "packages/ui/test/components/law.test.ts(66,63): error TS2344: Type 'true' does not satisfy the constraint '\"Expected: literal boolean: true, Actual: literal boolean: false\"'.",
         "packages/ui/test/components/law.test.ts(69,5): error TS2578: Unused '@ts-expect-error' directive.",
@@ -960,7 +960,7 @@
       "id": "ui-status-job-table-drops-interrupted",
       "test": "packages/ui/test/components/status.test.ts",
       "verdict": "killed",
-      "durationMs": 1239,
+      "durationMs": 1031,
       "caughtBy": [
         "the status table is exhaustive over each machine job: the table's keys are exactly the machine's states"
       ]
@@ -969,7 +969,7 @@
       "id": "ui-status-wire-reads-prototype-keys",
       "test": "packages/ui/test/components/status.test.ts",
       "verdict": "killed",
-      "durationMs": 739,
+      "durationMs": 543,
       "caughtBy": [
         "an unknown wire token a known token is not a miss, and a prototype key like `constructor` is not a state"
       ]
@@ -979,8 +979,10 @@
       "test": "packages/ui/test/components/status.test.ts",
       "typecheck": true,
       "verdict": "killed",
-      "durationMs": 6416,
+      "durationMs": 5659,
       "caughtBy": [
+        "packages/ui/src/components/produce/PlanTable.tsx(106,38): error TS2532: Object is possibly 'undefined'.",
+        "packages/ui/src/components/produce/PlanTable.tsx(141,72): error TS2532: Object is possibly 'undefined'.",
         "packages/ui/src/components/status/status.ts(142,3): error TS2322: Type 'StatusEntry | undefined' is not assignable to type 'StatusEntry'.",
         "packages/ui/test/components/status.test.ts(58,5): error TS2578: Unused '@ts-expect-error' directive."
       ]
@@ -989,7 +991,7 @@
       "id": "ui-signal-break-node-drawn-done",
       "test": "packages/ui/test/components/signal.test.ts",
       "verdict": "killed",
-      "durationMs": 1129,
+      "durationMs": 942,
       "caughtBy": [
         "UpstreamBreak nodes before the break are done, the break is drawn, the rest unreached"
       ]
@@ -998,7 +1000,7 @@
       "id": "ui-signal-tally-numerals-spoken",
       "test": "packages/ui/test/components/signal.test.ts",
       "verdict": "killed",
-      "durationMs": 572,
+      "durationMs": 495,
       "caughtBy": [
         "Tally the numerals and label are hidden and a sentence is spoken (12/36 is not 'twelve slash')"
       ]
@@ -1007,7 +1009,7 @@
       "id": "token-revocation-ignored",
       "test": "packages/kernel/test/token.test.ts",
       "verdict": "killed",
-      "durationMs": 1555,
+      "durationMs": 1081,
       "caughtBy": [
         "token verify a revoked token is refused at once, whatever its expiry",
         "token verify judge is pure over the stored record, the secret and the clock"
@@ -1017,7 +1019,7 @@
       "id": "token-expiry-off-by-one",
       "test": "packages/kernel/test/token.test.ts",
       "verdict": "killed",
-      "durationMs": 646,
+      "durationMs": 549,
       "caughtBy": [
         "token verify expires at expiresAt exactly, not a millisecond later"
       ]
@@ -1026,7 +1028,7 @@
       "id": "token-read-scope-spends",
       "test": "packages/kernel/test/token.test.ts",
       "verdict": "killed",
-      "durationMs": 870,
+      "durationMs": 572,
       "caughtBy": [
         "token verify a read token admits a read door only; a money token admits both"
       ]
@@ -1035,7 +1037,7 @@
       "id": "token-ttl-unbounded",
       "test": "packages/kernel/test/token.test.ts",
       "verdict": "killed",
-      "durationMs": 804,
+      "durationMs": 556,
       "caughtBy": [
         "token mint refuses a life past the bound, or under an hour, rather than clamping it"
       ]
@@ -1044,7 +1046,7 @@
       "id": "token-unknown-id-confirms-half",
       "test": "packages/kernel/test/token.test.ts",
       "verdict": "killed",
-      "durationMs": 705,
+      "durationMs": 544,
       "caughtBy": [
         "token verify an unknown id, a wrong secret and a malformed string are one refusal: no half is confirmed"
       ]
@@ -1053,7 +1055,7 @@
       "id": "token-mint-event-carries-hash",
       "test": "packages/kernel/test/token.test.ts",
       "verdict": "killed",
-      "durationMs": 711,
+      "durationMs": 563,
       "caughtBy": [
         "token mint prints gt_<id>_<secret> once; the store keeps the hash, the ledger keeps neither"
       ]
@@ -1062,7 +1064,7 @@
       "id": "ingest-append-once-skips-the-key-check",
       "test": "packages/kernel/test/events.ingest.test.ts",
       "verdict": "killed",
-      "durationMs": 1667,
+      "durationMs": 1581,
       "caughtBy": [
         "appendOnce appends a key once; the second call returns the stored event and writes nothing",
         "appendOnce reports a key whose content moved, except a derived instant, which is the sync's own clock",
@@ -1073,7 +1075,7 @@
       "id": "events-key-not-unique",
       "test": "packages/kernel/test/events.ingest.test.ts",
       "verdict": "killed",
-      "durationMs": 1260,
+      "durationMs": 819,
       "caughtBy": [
         "appendOnce the uniqueness is the store's: a writer that skips the check is refused, not doubled"
       ]
@@ -1082,7 +1084,7 @@
       "id": "events-hash-leaves-out-occurred-at",
       "test": "packages/kernel/test/events.ingest.test.ts",
       "verdict": "killed",
-      "durationMs": 860,
+      "durationMs": 810,
       "caughtBy": [
         "events v3: the second clock and the key a v3 field edited after the fact breaks the chain - the new fields are covered by the hash"
       ]
@@ -1091,7 +1093,7 @@
       "id": "ingest-claim-ignores-the-holder",
       "test": "packages/kernel/test/events.ingest.test.ts",
       "verdict": "killed",
-      "durationMs": 909,
+      "durationMs": 830,
       "caughtBy": [
         "the sync claim one claimant at a time, then none until the interval after the finish has passed",
         "the sync claim a claimant that died is replaced after its TTL, and its late finish changes nothing"
@@ -1101,7 +1103,7 @@
       "id": "ledger-window-on-the-recorded-clock",
       "test": "packages/kernel/test/events.time.test.ts",
       "verdict": "killed",
-      "durationMs": 1390,
+      "durationMs": 1105,
       "caughtBy": [
         "the ledger by time windows by when it happened: an August fact recorded in October is in August"
       ]
@@ -1110,7 +1112,7 @@
       "id": "ledger-time-cursor-repeats-the-boundary",
       "test": "packages/kernel/test/events.time.test.ts",
       "verdict": "killed",
-      "durationMs": 742,
+      "durationMs": 564,
       "caughtBy": [
         "the ledger by time a desc time cursor visits every match exactly once across tied instants",
         "the ledger by time a asc time cursor visits every match exactly once across tied instants"
@@ -1120,7 +1122,7 @@
       "id": "facet-counted-under-its-own-filter",
       "test": "packages/kernel/test/events.time.test.ts",
       "verdict": "killed",
-      "durationMs": 940,
+      "durationMs": 561,
       "caughtBy": [
         "countEvents counts the whole match, and each facet with its own filter left out"
       ]
@@ -1129,7 +1131,7 @@
       "id": "runs-pack-ignores-the-selection",
       "test": "packages/ui/test/components/runs.test.ts",
       "verdict": "killed",
-      "durationMs": 1226,
+      "durationMs": 1027,
       "caughtBy": [
         "pack the selection packs first, so it is never the bar hidden behind +N",
         "an overflowed bar is counted, not drawn selecting the overflowed job (J/K walks onto it) packs it into a drawn track; another takes the +1"
@@ -1139,7 +1141,7 @@
       "id": "runs-pack-in-time-not-screen",
       "test": "packages/ui/test/components/runs.test.ts",
       "verdict": "killed",
-      "durationMs": 671,
+      "durationMs": 531,
       "caughtBy": [
         "pack footprints are in SCREEN space: a 1-minute bar still occupies its minimum width plus the gap"
       ]
@@ -1148,7 +1150,7 @@
       "id": "runs-thread-swaps-up-and-down",
       "test": "packages/ui/test/components/runs.test.ts",
       "verdict": "killed",
-      "durationMs": 665,
+      "durationMs": 519,
       "caughtBy": [
         "what a selection lights selecting a job lights its chains: upstream edges cyan, downstream amber, the rest of the world dims"
       ]
@@ -1157,7 +1159,7 @@
       "id": "runs-overflow-drawn-underneath",
       "test": "packages/ui/test/components/runs.test.ts",
       "verdict": "killed",
-      "durationMs": 644,
+      "durationMs": 553,
       "caughtBy": [
         "RunsDayline markup a third job on a one-at-a-time lane goes behind a +1 that names what it hides",
         "an overflowed bar is counted, not drawn cap 1: exactly two bars in the DOM and a +1 naming the third",
@@ -1168,7 +1170,7 @@
       "id": "runs-labels-seated-across-rows",
       "test": "packages/ui/test/components/runs.test.ts",
       "verdict": "killed",
-      "durationMs": 665,
+      "durationMs": 520,
       "caughtBy": [
         "labels are seated per row: a bar on the next lane does not crowd this lane's label"
       ]
@@ -1177,7 +1179,7 @@
       "id": "strip-bars-linear",
       "test": "packages/ui/test/components/ledger.test.ts",
       "verdict": "killed",
-      "durationMs": 1109,
+      "durationMs": 1009,
       "caughtBy": [
         "time strip geometry a bar is √n of the busiest day's height, and a day with one act is never shorter than MIN_BAR"
       ]
@@ -1186,7 +1188,7 @@
       "id": "strip-one-act-rounds-to-nothing",
       "test": "packages/ui/test/components/ledger.test.ts",
       "verdict": "killed",
-      "durationMs": 628,
+      "durationMs": 515,
       "caughtBy": [
         "time strip geometry a bar is √n of the busiest day's height, and a day with one act is never shorter than MIN_BAR"
       ]
@@ -1195,7 +1197,7 @@
       "id": "strip-click-never-clears",
       "test": "packages/ui/test/components/ledger.test.ts",
       "verdict": "killed",
-      "durationMs": 587,
+      "durationMs": 502,
       "caughtBy": [
         "time strip geometry a drag sets the range between its ends; a click on the whole range clears it"
       ]
@@ -1204,7 +1206,7 @@
       "id": "json-runs-drop-the-colon",
       "test": "packages/ui/test/components/ledger.test.ts",
       "verdict": "killed",
-      "durationMs": 671,
+      "durationMs": 511,
       "caughtBy": [
         "JSON runs every character lands in exactly one run, so the runs re-joined are the input"
       ]
@@ -1213,7 +1215,7 @@
       "id": "stale-badge-shows-when-live",
       "test": "packages/ui/test/components/ledger.test.ts",
       "verdict": "killed",
-      "durationMs": 627,
+      "durationMs": 533,
       "caughtBy": [
         "StaleBadge live draws nothing; stale and down draw the word and the coarse age"
       ]
@@ -1222,7 +1224,7 @@
       "id": "month-starts-on-sunday",
       "test": "packages/ui/test/components/floor.test.ts",
       "verdict": "killed",
-      "durationMs": 1238,
+      "durationMs": 1091,
       "caughtBy": [
         "calendar arithmetic (UTC) a month is whole weeks, Monday first, with the days outside it marked"
       ]
@@ -1231,7 +1233,7 @@
       "id": "rail-now-before-overdue",
       "test": "packages/ui/test/components/floor.test.ts",
       "verdict": "killed",
-      "durationMs": 758,
+      "durationMs": 555,
       "caughtBy": [
         "the rail a scheduled slot past its hour stays in Next, before the NOW line"
       ]
@@ -1240,7 +1242,7 @@
       "id": "every-gate-opens-blind-pairs",
       "test": "packages/ui/test/components/floor.test.ts",
       "verdict": "killed",
-      "durationMs": 851,
+      "durationMs": 578,
       "caughtBy": [
         "lanes a cull opens the matrix; a gate opens packet review for an article and blind pairs otherwise"
       ]
@@ -1249,7 +1251,7 @@
       "id": "ledger-delta-negative-after-reset",
       "test": "packages/ui/test/components/floor.test.ts",
       "verdict": "killed",
-      "durationMs": 718,
+      "durationMs": 562,
       "caughtBy": [
         "header numbers the ledger delta counts after the mark; no mark counts nothing; a mark past the head is another ledger"
       ]
@@ -1258,7 +1260,7 @@
       "id": "modelled-spend-reads-as-real",
       "test": "packages/ui/test/components/floor.test.ts",
       "verdict": "killed",
-      "durationMs": 686,
+      "durationMs": 556,
       "caughtBy": [
         "header numbers spend parts: nothing beside an all-real total, every source when any is not real"
       ]
@@ -1267,7 +1269,7 @@
       "id": "slot-error-swallowed",
       "test": "packages/ui/test/components/floor.test.ts",
       "verdict": "killed",
-      "durationMs": 700,
+      "durationMs": 571,
       "caughtBy": [
         "components a failed slot shows its error verbatim; an unknown channel speaks its id"
       ]
@@ -1276,16 +1278,25 @@
       "id": "board-acts-merge-in-window",
       "test": "packages/ui/test/board-gate.test.ts",
       "verdict": "killed",
-      "durationMs": 1554,
+      "durationMs": 1417,
       "caughtBy": [
         "one decide is one act two decides inside the window go out as two writes, each naming only its key"
+      ]
+    },
+    {
+      "id": "decision-reopen-compares-incoming",
+      "test": "packages/kernel/test/decision.open.test.ts",
+      "verdict": "killed",
+      "durationMs": 600,
+      "caughtBy": [
+        "kernel/decision - open from v1 re-opening the same content is a no-op; other content under the id is a conflict"
       ]
     },
     {
       "id": "board-stale-base-not-reread",
       "test": "packages/ui/test/board-gate.test.ts",
       "verdict": "killed",
-      "durationMs": 900,
+      "durationMs": 693,
       "caughtBy": [
         "the revision a stale base is re-read once and the SAME keys sent again; the other writer's key survives"
       ]
@@ -1294,7 +1305,7 @@
       "id": "board-commit-new-ticket-per-retry",
       "test": "packages/ui/test/board-gate.test.ts",
       "verdict": "killed",
-      "durationMs": 857,
+      "durationMs": 701,
       "caughtBy": [
         "the commit it carries the preview's revision and token, and a retry reuses its ticket"
       ]
@@ -1303,7 +1314,7 @@
       "id": "board-minus-key-unbound",
       "test": "packages/ui/test/board-desk.test.ts",
       "verdict": "killed",
-      "durationMs": 1114,
+      "durationMs": 927,
       "caughtBy": [
         "reason keys follow the source's list in order 1-9, 0 and − are the eleven slots; the minus sign is the hyphen",
         "reason keys follow the source's list in order audio's eleven defects: 0 is the tenth, − the eleventh"
@@ -1313,7 +1324,7 @@
       "id": "board-reason-over-cap",
       "test": "packages/ui/test/board-desk.test.ts",
       "verdict": "killed",
-      "durationMs": 644,
+      "durationMs": 488,
       "caughtBy": [
         "reason keys follow the source's list in order past the source's cap the key is refused, never silently dropped"
       ]
@@ -1322,7 +1333,7 @@
       "id": "board-outward-act-not-verbatim",
       "test": "packages/ui/test/board-render.test.ts",
       "verdict": "killed",
-      "durationMs": 1418,
+      "durationMs": 1102,
       "caughtBy": [
         "the consequence panel every outward act verbatim, every delete by path, and the token it commits with"
       ]
@@ -1331,7 +1342,7 @@
       "id": "board-commit-button-hides-open",
       "test": "packages/ui/test/board-render.test.ts",
       "verdict": "killed",
-      "durationMs": 707,
+      "durationMs": 575,
       "caughtBy": [
         "the matrix cull a decided tile says its verdict and reasons aloud; the commit button names what is open"
       ]
@@ -1340,9 +1351,2326 @@
       "id": "board-legend-draws-every-reason-key",
       "test": "packages/ui/test/board-render.test.ts",
       "verdict": "killed",
-      "durationMs": 675,
+      "durationMs": 561,
       "caughtBy": [
         "the matrix cull the key legend draws only the reason keys this source binds: four for a forge plate, none for Suno"
+      ]
+    },
+    {
+      "id": "records-launch-accepts-stale-receipt",
+      "test": "packages/kernel/test/records.test.ts",
+      "verdict": "killed",
+      "durationMs": 1289,
+      "caughtBy": [
+        "launch: a receipt, then a confirm refuses a stale token with the fresh receipt, and writes nothing",
+        "Floor runs prices a composer launch, and launches the Run and its one Job together"
+      ]
+    },
+    {
+      "id": "records-launch-queues-everything",
+      "test": "packages/kernel/test/records.test.ts",
+      "verdict": "killed",
+      "durationMs": 659,
+      "caughtBy": [
+        "launch: a receipt, then a confirm launches on a fresh token: one job per work part, in one transaction, downstream planned",
+        "launch: a receipt, then a confirm derives part and project state from the jobs, and releases a planned job once its upstream is ratified"
+      ]
+    },
+    {
+      "id": "records-release-ignores-upstream",
+      "test": "packages/kernel/test/records.test.ts",
+      "verdict": "killed",
+      "durationMs": 670,
+      "caughtBy": [
+        "launch: a receipt, then a confirm launches on a fresh token: one job per work part, in one transaction, downstream planned",
+        "launch: a receipt, then a confirm derives part and project state from the jobs, and releases a planned job once its upstream is ratified"
+      ]
+    },
+    {
+      "id": "records-discard-launched",
+      "test": "packages/kernel/test/records.test.ts",
+      "verdict": "killed",
+      "durationMs": 693,
+      "caughtBy": [
+        "launch: a receipt, then a confirm refuses to change, discard or re-launch a launched plan"
+      ]
+    },
+    {
+      "id": "records-options-placeholder-price",
+      "test": "packages/kernel/test/records.options.test.ts",
+      "verdict": "killed",
+      "durationMs": 980,
+      "caughtBy": [
+        "model options never presents a placeholder price: a cloud text turn is unpriced with the table's reason"
+      ]
+    },
+    {
+      "id": "records-ceiling-ignores-band-top",
+      "test": "packages/kernel/test/records.options.test.ts",
+      "verdict": "killed",
+      "durationMs": 488,
+      "caughtBy": [
+        "receipt is over its ceiling against the top of a band, not its middle"
+      ]
+    },
+    {
+      "id": "records-token-ignores-mode",
+      "test": "packages/kernel/test/records.options.test.ts",
+      "verdict": "killed",
+      "durationMs": 492,
+      "caughtBy": [
+        "receipt changes its token with the quote, the queue, the ceiling or the mode - never with the clock"
+      ]
+    },
+    {
+      "id": "records-schedule-one-slot-per-lane",
+      "test": "packages/kernel/test/records.options.test.ts",
+      "verdict": "killed",
+      "durationMs": 486,
+      "caughtBy": [
+        "schedule runs as many jobs at once as the lane has slots, and queues the rest"
+      ]
+    },
+    {
+      "id": "plan-gate-opens-early",
+      "test": "packages/domain/test/plan.test.ts",
+      "verdict": "killed",
+      "durationMs": 930,
+      "caughtBy": [
+        "partStatesOf opens a gate at the Weir only once the part it judges is ratified, and ratifies it on commit"
+      ]
+    },
+    {
+      "id": "plan-planned-ignores-stuck-upstream",
+      "test": "packages/domain/test/plan.test.ts",
+      "verdict": "killed",
+      "durationMs": 483,
+      "caughtBy": [
+        "partStatesOf reads a planned job as waiting, and as blocked behind a failed upstream",
+        "partStatesOf reads interrupted and cancelled jobs as failed: both need the operator"
+      ]
+    },
+    {
+      "id": "recipes-film-units-off-template",
+      "test": "packages/catalog/test/recipes.test.ts",
+      "verdict": "killed",
+      "durationMs": 818,
+      "caughtBy": [
+        "recipes draws the prototype's trailer from a 120 s template exactly (24 plates, 8 shots, 2 prompts)"
+      ]
+    },
+    {
+      "id": "job-claim-one-slot",
+      "test": "packages/kernel/test/job.queue.test.ts",
+      "verdict": "killed",
+      "durationMs": 1847,
+      "caughtBy": [
+        "lane slots (decision 5) two cloud.elevenlabs jobs run at once on two slots; a third is busy and stays queued",
+        "crash policy: a paid lane holds (decision 6) an interruption on seat.text holds the lane: nothing is claimed until an operator acknowledges"
+      ]
+    },
+    {
+      "id": "job-dry-refuses-kernel-call",
+      "test": "packages/kernel/test/job.dry.test.ts",
+      "verdict": "killed",
+      "durationMs": 1419,
+      "caughtBy": [
+        "a dry job runs end to end works when the caller already hands it a dry port (the G-dry refusal), booking each would-call once"
+      ]
+    },
+    {
+      "id": "job-spend-not-projected",
+      "test": "packages/kernel/test/job.spend.test.ts",
+      "verdict": "killed",
+      "durationMs": 2556,
+      "caughtBy": [
+        "the job's spend is the meter's projection metered calls: the job's usd is the sum of its settled rows, and each row names its job and step",
+        "the job's spend is the meter's projection the period ceiling refusing a hold is a money stop; the job's spend is what settled before it",
+        "a metered job under crash-prefix enumeration after any crash, recovery, the operator's retry and a second drive, the record equals its meter"
+      ]
+    },
+    {
+      "id": "job-interrupt-never-holds",
+      "test": "packages/kernel/test/job.kill.test.ts",
+      "verdict": "killed",
+      "durationMs": 1656,
+      "caughtBy": [
+        "a job whose process is killed mid-step is interrupted with its stage, holds its paid lane until acknowledged, and a retry finishes without re-performing a booked step"
+      ]
+    },
+    {
+      "id": "worker-ignores-capacity",
+      "test": "packages/kernel/test/job.worker.test.ts",
+      "verdict": "killed",
+      "durationMs": 2685,
+      "caughtBy": [
+        "pickWork one pick per lane with a free slot, its head; a held or full lane takes nothing",
+        "pickWork counts this worker's unclaimed starts against the slots, and never picks a head it already started",
+        "workLoop fills each lane to its capacity in queue order, runs every job to done, and names a head it cannot make"
+      ]
+    },
+    {
+      "id": "lane-free-gpu-pays",
+      "test": "packages/domain/test/lane.test.ts",
+      "verdict": "killed",
+      "durationMs": 908,
+      "caughtBy": [
+        "paid and free lanes the local GPU and render box are free; Chrome, the seat and every cloud pay"
+      ]
+    },
+    {
+      "id": "produce-ceiling-ignores-the-band",
+      "test": "packages/ui/test/components/produce.test.ts",
+      "verdict": "killed",
+      "durationMs": 1092,
+      "caughtBy": [
+        "the ceiling a band may stop at the ceiling on its top end (the worst case); unpriced work never does",
+        "markup a ceiling under the worst case is a stop point: the confirm stays armed and the receipt says may stop"
+      ]
+    },
+    {
+      "id": "composer-enter-never-fires",
+      "test": "packages/ui/test/components/produce.test.ts",
+      "verdict": "killed",
+      "durationMs": 534,
+      "caughtBy": [
+        "the keys the produce surfaces add ⏎ inside a named field reaches its row: the composer launches, the title renames, the ceiling confirms"
+      ]
+    },
+    {
+      "id": "job-python-ignores-lane-hold",
+      "test": "packages/kernel/test/job.python.test.ts",
+      "verdict": "killed",
+      "durationMs": 4877,
+      "caughtBy": [
+        "spec/job.json: Node and Python drive jobs on one store a crash on a paid lane holds it for Node and Python alike until an operator acknowledges",
+        "spec/job.json: Node and Python drive jobs on one store Python's take-over of a dead Node holder on a paid lane holds the lane, as Node's own would"
+      ]
+    },
+    {
+      "id": "job-python-one-slot",
+      "test": "packages/kernel/test/job.python.test.ts",
+      "verdict": "killed",
+      "durationMs": 2463,
+      "caughtBy": [
+        "spec/job.json: Node and Python drive jobs on one store a lane with four slots: Python takes the next one Node left free"
+      ]
+    },
+    {
+      "id": "job-python-no-takeover-sweep",
+      "test": "packages/kernel/test/job.python.test.ts",
+      "verdict": "killed",
+      "durationMs": 2451,
+      "caughtBy": [
+        "spec/job.json: Node and Python drive jobs on one store a Node zombie's late book is refused by the fence when Python takes the slot",
+        "spec/job.json: Node and Python drive jobs on one store Python's take-over of a dead Node holder on a paid lane holds the lane, as Node's own would",
+        "spec/job.json: Node and Python drive jobs on one store A claim that takes over a dead holder's slot settles the job it interrupted, once"
+      ]
+    },
+    {
+      "id": "gpu-recycle-any-caller",
+      "test": "tests/next-server/gpu-lease.test.ts",
+      "verdict": "killed",
+      "durationMs": 2397,
+      "caughtBy": [
+        "the shim keeps v1's broker contract 1. a non-holder's recycle raises LeaseHeld naming the holder, and nothing is stopped"
+      ]
+    },
+    {
+      "id": "extract-money-stop-counts-as-vendor-failure",
+      "test": "packages/producers/test/extract.test.ts",
+      "verdict": "killed",
+      "durationMs": 1005,
+      "caughtBy": [
+        "classify: what a performed unit did a NEW stop on run.json is a money stop, never a vendor failure"
+      ]
+    },
+    {
+      "id": "extract-critique-failure-booked-as-produced",
+      "test": "packages/producers/test/extract.test.ts",
+      "verdict": "killed",
+      "durationMs": 518,
+      "caughtBy": [
+        "classify: what a performed unit did an image with a failed critique is a vendor failure (the breaker counts it); the pixels stay on run.json"
+      ]
+    },
+    {
+      "id": "extract-unpriced-call-booked-free",
+      "test": "packages/producers/test/extract.test.ts",
+      "verdict": "killed",
+      "durationMs": 514,
+      "caughtBy": [
+        "entriesOf: what one served call books on the job a reported figure as itself; an absent one at its estimate AND counted unpriced (v1 spend.ts `book`)"
+      ]
+    },
+    {
+      "id": "extract-retry-never-revives",
+      "test": "packages/producers/test/extract.test.ts",
+      "verdict": "killed",
+      "durationMs": 519,
+      "caughtBy": [
+        "planOf: one step, named by the unit revives a failed run first on each attempt, and halts - never reads done - if it fails again within it"
+      ]
+    },
+    {
+      "id": "extract-failed-again-reads-done",
+      "test": "packages/producers/test/extract.test.ts",
+      "verdict": "killed",
+      "durationMs": 511,
+      "caughtBy": [
+        "planOf: one step, named by the unit revives a failed run first on each attempt, and halts - never reads done - if it fails again within it"
+      ]
+    },
+    {
+      "id": "extract-step-name-unstable",
+      "test": "packages/producers/test/extract.test.ts",
+      "verdict": "killed",
+      "durationMs": 532,
+      "caughtBy": [
+        "the unit order the job's plan follows (v1 units.ts `next`) reads every source, groups once, replicates each style's members round by round, transfers, finishes",
+        "planOf: one step, named by the unit names the next unit with the estimate the ceiling is checked against"
+      ]
+    },
+    {
+      "id": "extract-settle-burns-rounds-on-a-refusal",
+      "test": "packages/producers/test/extract.test.ts",
+      "verdict": "killed",
+      "durationMs": 514,
+      "caughtBy": [
+        "settleReason: why a critique loop ended is null while open, then names each of the four endings"
+      ]
+    },
+    {
+      "id": "extract-round-estimate-skips-the-readback",
+      "test": "packages/producers/test/extract.test.ts",
+      "verdict": "killed",
+      "durationMs": 519,
+      "caughtBy": [
+        "planOf: one step, named by the unit names the next unit with the estimate the ceiling is checked against",
+        "planOf: one step, named by the unit estimates each unit as v1 did: a read one recognise, a round a generate and a recognise, an ungrouped run no turn"
+      ]
+    },
+    {
+      "id": "extract-zero-cost-unit-counted-unpriced",
+      "test": "tests/next-server/producer-extract-job.test.ts",
+      "verdict": "killed",
+      "durationMs": 6710,
+      "caughtBy": [
+        "a live job spends through the meter an unpriced call is booked at its estimate AND counted, on the job as on run.json"
+      ]
+    },
+    {
+      "id": "extract-booked-unit-performed-again",
+      "test": "tests/next-server/producer-extract-job.test.ts",
+      "verdict": "killed",
+      "durationMs": 3270,
+      "caughtBy": [
+        "the ceiling, the breaker and the money stop a unit booked on the job but missing from run.json is refused, never performed again"
+      ]
+    },
+    {
+      "id": "extract-save-ignores-a-lost-lease",
+      "test": "tests/next-server/producer-extract-job.test.ts",
+      "verdict": "killed",
+      "durationMs": 3111,
+      "caughtBy": [
+        "the fence: one driver per job a drive whose lease lapsed mid-unit writes nothing to run.json and is interrupted"
+      ]
+    },
+    {
+      "id": "extract-kernel-stop-never-reaches-run-json",
+      "test": "tests/next-server/producer-extract-job.test.ts",
+      "verdict": "killed",
+      "durationMs": 3423,
+      "caughtBy": [
+        "the ceiling, the breaker and the money stop stops before the unit that would cross the job's ceiling, tells run.json, and resumes under a raised one without re-spending"
+      ]
+    },
+    {
+      "id": "extract-crash-swallowed-as-refused-frame",
+      "test": "tests/next-server/producer-extract-job.test.ts",
+      "verdict": "killed",
+      "durationMs": 3402,
+      "caughtBy": [
+        "a crash at every effect boundary is interrupted, holds its lane, and an operator's retry finishes it without re-performing a booked unit"
+      ]
+    },
+    {
+      "id": "extract-dry-run-committed",
+      "test": "tests/next-server/producer-extract-job.test.ts",
+      "verdict": "killed",
+      "durationMs": 3401,
+      "caughtBy": [
+        "a dry job runs end to end on stand-ins finishes, lists its would-calls, spends nothing, never calls the vendor, and is never committed"
+      ]
+    },
+    {
+      "id": "extract-dry-job-calls-the-vendor",
+      "test": "tests/next-server/producer-extract-job.test.ts",
+      "verdict": "killed",
+      "durationMs": 2610,
+      "caughtBy": [
+        "a dry job runs end to end on stand-ins finishes, lists its would-calls, spends nothing, never calls the vendor, and is never committed",
+        "a live job spends through the meter books every vendor call against its job and step, reconciles, and v1's m.spend reads the same figure",
+        "a live job spends through the meter an unpriced call is booked at its estimate AND counted, on the job as on run.json",
+        "the ceiling, the breaker and the money stop a unit booked on the job but missing from run.json is refused, never performed again",
+        "the ceiling, the breaker and the money stop stops before the unit that would cross the job's ceiling, tells run.json, and resumes under a raised one without re-spending"
+      ]
+    },
+    {
+      "id": "extract-job-run-drawn-twice-on-runs",
+      "test": "tests/next-server/producer-extract-job.test.ts",
+      "verdict": "killed",
+      "durationMs": 3395,
+      "caughtBy": [
+        "v1's readers after the move the ledger draws a job's run as the job (not twice), puts a finished live run on the Weir, and keeps a dry run off it"
+      ]
+    },
+    {
+      "id": "extract-second-launch-second-job",
+      "test": "tests/next-server/producer-extract-entry.test.ts",
+      "verdict": "killed",
+      "durationMs": 1836,
+      "caughtBy": [
+        "the CLI and the route act on the same job the CLI enqueues a dry job and leaves it (--detach); the route kicks THAT job, and a second kick finds the same one",
+        "the CLI and the route act on the same job the route alone: an empty body is the receipt, a stale token is 409 with the fresh one, the fresh one enqueues and kicks"
+      ]
+    },
+    {
+      "id": "extract-route-launches-without-a-confirm",
+      "test": "tests/next-server/producer-extract-entry.test.ts",
+      "verdict": "killed",
+      "durationMs": 952,
+      "caughtBy": [
+        "the CLI and the route act on the same job the route alone: an empty body is the receipt, a stale token is 409 with the fresh one, the fresh one enqueues and kicks"
+      ]
+    },
+    {
+      "id": "article-dry-turn-enters-the-seat",
+      "test": "packages/producers/test/article.test.ts",
+      "verdict": "killed",
+      "durationMs": 1549,
+      "caughtBy": [
+        "a dry article job never enters the live port: every turn is a would-call answered by the stand-in, nothing is booked"
+      ]
+    },
+    {
+      "id": "article-unpriced-turn-loses-its-reason",
+      "test": "packages/producers/test/article.test.ts",
+      "verdict": "killed",
+      "durationMs": 776,
+      "caughtBy": [
+        "a live article job books each turn against its step: a seat's cost as a row, an engine that reports none unpriced with the reason; it reconciles"
+      ]
+    },
+    {
+      "id": "article-ceiling-not-held-inside-a-step",
+      "test": "packages/producers/test/article.test.ts",
+      "verdict": "killed",
+      "durationMs": 771,
+      "caughtBy": [
+        "a live article job holds the ceiling INSIDE a step: a turn past it is refused before it starts, the writer is capped at what is left, the job fails `budget`"
+      ]
+    },
+    {
+      "id": "article-turnless-step-booked-at-estimate",
+      "test": "packages/producers/test/article.test.ts",
+      "verdict": "killed",
+      "durationMs": 800,
+      "caughtBy": [
+        "a live article job books each turn against its step: a seat's cost as a row, an engine that reports none unpriced with the reason; it reconciles"
+      ]
+    },
+    {
+      "id": "article-failed-step-retried-by-the-breaker",
+      "test": "packages/producers/test/article.test.ts",
+      "verdict": "killed",
+      "durationMs": 845,
+      "caughtBy": [
+        "a live article job a failed step fails the job and is never performed again on its own (v1: the run waits for a resume)"
+      ]
+    },
+    {
+      "id": "article-landing-undeclared",
+      "test": "packages/producers/test/article.test.ts",
+      "verdict": "killed",
+      "durationMs": 797,
+      "caughtBy": [
+        "a dry article job a dry landing pushes nothing: the outward call is a would-call and the run is left approved"
+      ]
+    },
+    {
+      "id": "article-plan-ignores-booked-outputs",
+      "test": "packages/producers/test/article.test.ts",
+      "verdict": "killed",
+      "durationMs": 747,
+      "caughtBy": [
+        "the plan is the missing outputs, in v1's step order, per act",
+        "a dry article job never enters the live port: every turn is a would-call answered by the stand-in, nothing is booked",
+        "a dry article job a dry landing pushes nothing: the outward call is a would-call and the run is left approved",
+        "a live article job books each turn against its step: a seat's cost as a row, an engine that reports none unpriced with the reason; it reconciles",
+        "a live article job a live landing runs the write-back once",
+        "a live article job holds the ceiling INSIDE a step: a turn past it is refused before it starts, the writer is capped at what is left, the job fails `budget`",
+        "a live article job a failed step fails the job and is never performed again on its own (v1: the run waits for a resume)"
+      ]
+    },
+    {
+      "id": "article-walk-re-runs-a-done-step",
+      "test": "tests/next-server/producer-article-crash.test.ts",
+      "verdict": "killed",
+      "durationMs": 15854,
+      "caughtBy": [
+        "an article job killed at every step boundary dies after outline: interrupted naming outline, the lane held; resumed, it reaches the gate with no turn re-spent"
+      ]
+    },
+    {
+      "id": "article-resume-leaves-its-own-hold",
+      "test": "tests/next-server/producer-article-crash.test.ts",
+      "verdict": "killed",
+      "durationMs": 1955,
+      "caughtBy": [
+        "an article job killed at every step boundary dies before create: interrupted naming create, the lane held; resumed, it reaches the gate with no turn re-spent",
+        "an article job killed at every step boundary dies after create: interrupted naming create, the lane held; resumed, it reaches the gate with no turn re-spent",
+        "an article job killed at every step boundary dies before research: interrupted naming research, the lane held; resumed, it reaches the gate with no turn re-spent",
+        "an article job killed at every step boundary dies after research: interrupted naming research, the lane held; resumed, it reaches the gate with no turn re-spent",
+        "an article job killed at every step boundary dies before outline: interrupted naming outline, the lane held; resumed, it reaches the gate with no turn re-spent",
+        "an article job killed at every step boundary dies after outline: interrupted naming outline, the lane held; resumed, it reaches the gate with no turn re-spent",
+        "an article job killed at every step boundary dies before draft: interrupted naming draft, the lane held; resumed, it reaches the gate with no turn re-spent",
+        "an article job killed at every step boundary dies after draft: interrupted naming draft, the lane held; resumed, it reaches the gate with no turn re-spent",
+        "an article job killed at every step boundary dies before critique: interrupted naming critique, the lane held; resumed, it reaches the gate with no turn re-spent",
+        "an article job killed at every step boundary dies after critique: interrupted naming critique, the lane held; resumed, it reaches the gate with no turn re-spent",
+        "an article job killed at every step boundary dies before check: interrupted naming check, the lane held; resumed, it reaches the gate with no turn re-spent",
+        "an article job killed at every step boundary dies after check: interrupted naming check, the lane held; resumed, it reaches the gate with no turn re-spent"
+      ]
+    },
+    {
+      "id": "article-resume-refuses-a-job-at-the-gate",
+      "test": "tests/next-server/producer-article-crash.test.ts",
+      "verdict": "killed",
+      "durationMs": 7599,
+      "caughtBy": [
+        "an article job killed at every step boundary dies after check: interrupted naming check, the lane held; resumed, it reaches the gate with no turn re-spent"
+      ]
+    },
+    {
+      "id": "article-dry-run-lands-live",
+      "test": "tests/next-server/producer-article.test.ts",
+      "verdict": "killed",
+      "durationMs": 21405,
+      "caughtBy": [
+        "the human gate stays outside the job a DRY run's approval lands nothing: its landing job is dry whatever the approver asked, the run stays approved",
+        "the human gate stays outside the job rework is its own job; a second rework while it waits is refused busy"
+      ]
+    },
+    {
+      "id": "article-rework-while-driven",
+      "test": "tests/next-server/producer-article.test.ts",
+      "verdict": "killed",
+      "durationMs": 9943,
+      "caughtBy": [
+        "the human gate stays outside the job rework is its own job; a second rework while it waits is refused busy"
+      ]
+    },
+    {
+      "id": "article-ledger-queued-job-reads-stalled",
+      "test": "tests/next-server/producer-article.test.ts",
+      "verdict": "killed",
+      "durationMs": 6080,
+      "caughtBy": [
+        "the route and the CLI act on the same job POST /api/articles enqueues job:run:<id>; `article.mts resume <id>` drives that very job to the gate"
+      ]
+    },
+    {
+      "id": "mv-producer-respends-a-landed-step",
+      "test": "tests/next-server/producer-mv-crash.test.ts",
+      "verdict": "killed",
+      "durationMs": 11646,
+      "caughtBy": [
+        "the music-video producer under crashes (a) dies after every effect, is swept and retried: no output mv.json holds is bought again, spend equals the meter, the job finishes"
+      ]
+    },
+    {
+      "id": "mv-zombie-lands-over-the-new-holder",
+      "test": "tests/next-server/producer-mv-crash.test.ts",
+      "verdict": "killed",
+      "durationMs": 5662,
+      "caughtBy": [
+        "two drivers on one job (b) a second driver takes neither the running job nor the slot; a driver taken over writes nothing when it wakes"
+      ]
+    },
+    {
+      "id": "mv-dry-still-reaches-the-studio",
+      "test": "tests/next-server/producer-mv.test.ts",
+      "verdict": "killed",
+      "durationMs": 3199,
+      "caughtBy": [
+        "the music-video producer on the kernel a dry job: a receipt first, then the job runs end to end on stand-ins, lists its would-calls and spends nothing",
+        "the music-video producer on the kernel a live job through a fake vendor: credits and a silent seat unpriced with their reasons, a reported turn priced, spend equals the meter"
+      ]
+    },
+    {
+      "id": "mv-plan-not-booked-first",
+      "test": "tests/next-server/producer-mv.test.ts",
+      "verdict": "killed",
+      "durationMs": 1242,
+      "caughtBy": [
+        "the music-video plan, pure books its step list first, then runs it and lands; a bought still is credit-priced",
+        "the music-video producer on the kernel a dry job: a receipt first, then the job runs end to end on stand-ins, lists its would-calls and spends nothing",
+        "the music-video producer on the kernel a live job through a fake vendor: credits and a silent seat unpriced with their reasons, a reported turn priced, spend equals the meter",
+        "the music-video producer on the kernel a regenerate is a new job that runs only its part; the progress ledger skips a redo step that already landed",
+        "the music-video producer on the kernel the route and the CLI's drive act on one job id: Start launches it, the drive runs it, a GET reads it done and starts nothing",
+        "the music-video producer on the kernel a crash at the still: the job is interrupted, the board reads its sentence, no mv job is claimed until the operator's Start retries it",
+        "the music-video producer on the kernel the v1 readers keep reading mv.json: the ledger projects its clocks and leaves its live row to the job store"
+      ]
+    },
+    {
+      "id": "mv-redo-reruns-everything",
+      "test": "tests/next-server/producer-mv.test.ts",
+      "verdict": "killed",
+      "durationMs": 1623,
+      "caughtBy": [
+        "the music-video plan, pure a regenerate runs only its part; the progress ledger skips what landed; a motion redo with no treatment is a treat",
+        "the music-video producer on the kernel a regenerate is a new job that runs only its part; the progress ledger skips a redo step that already landed"
+      ]
+    },
+    {
+      "id": "mv-progress-ledger-ignored",
+      "test": "tests/next-server/producer-mv.test.ts",
+      "verdict": "killed",
+      "durationMs": 1620,
+      "caughtBy": [
+        "the music-video plan, pure a regenerate runs only its part; the progress ledger skips what landed; a motion redo with no treatment is a treat",
+        "the music-video producer on the kernel a regenerate is a new job that runs only its part; the progress ledger skips a redo step that already landed"
+      ]
+    },
+    {
+      "id": "mv-still-not-credit-priced",
+      "test": "tests/next-server/producer-mv.test.ts",
+      "verdict": "killed",
+      "durationMs": 1605,
+      "caughtBy": [
+        "the music-video plan, pure books its step list first, then runs it and lands; a bought still is credit-priced"
+      ]
+    },
+    {
+      "id": "mv-stale-receipt-launches",
+      "test": "tests/next-server/producer-mv.test.ts",
+      "verdict": "killed",
+      "durationMs": 1544,
+      "caughtBy": [
+        "the music-video producer on the kernel a stale token launches nothing and returns the fresh receipt; a dry-only process refuses live",
+        "the music-video producer on the kernel the route and the CLI's drive act on one job id: Start launches it, the drive runs it, a GET reads it done and starts nothing"
+      ]
+    },
+    {
+      "id": "mv-snapshot-overlay-off",
+      "test": "tests/next-server/producer-mv.test.ts",
+      "verdict": "killed",
+      "durationMs": 1555,
+      "caughtBy": [
+        "the music-video producer on the kernel a crash at the still: the job is interrupted, the board reads its sentence, no mv job is claimed until the operator's Start retries it"
+      ]
+    },
+    {
+      "id": "mv-ledger-draws-kernel-jobs-twice",
+      "test": "tests/next-server/producer-mv.test.ts",
+      "verdict": "killed",
+      "durationMs": 1544,
+      "caughtBy": [
+        "the music-video producer on the kernel the v1 readers keep reading mv.json: the ledger projects its clocks and leaves its live row to the job store"
+      ]
+    },
+    {
+      "id": "mv-crash-at-still-claims-on",
+      "test": "tests/next-server/producer-mv.test.ts",
+      "verdict": "killed",
+      "durationMs": 1545,
+      "caughtBy": [
+        "the music-video producer on the kernel a crash at the still: the job is interrupted, the board reads its sentence, no mv job is claimed until the operator's Start retries it"
+      ]
+    },
+    {
+      "id": "suno-recreates-a-model-with-clips",
+      "test": "tests/next-server/producer-suno-crash.test.ts",
+      "verdict": "killed",
+      "durationMs": 6207,
+      "caughtBy": [
+        "the Suno producer under crashes dies after every effect; the operator looks, acknowledges the hold and retries: no model with clips is created again"
+      ]
+    },
+    {
+      "id": "suno-phase-write-swallows-the-crash",
+      "test": "tests/next-server/producer-suno-crash.test.ts",
+      "verdict": "killed",
+      "durationMs": 2868,
+      "caughtBy": [
+        "the Suno producer under crashes dies after every effect; the operator looks, acknowledges the hold and retries: no model with clips is created again"
+      ]
+    },
+    {
+      "id": "suno-dry-create-reaches-the-browser",
+      "test": "tests/next-server/producer-suno.test.ts",
+      "verdict": "killed",
+      "durationMs": 2589,
+      "caughtBy": [
+        "the Suno producer on the kernel a dry job: a receipt on box.chrome, both creates answered by stand-ins, the driver never reached, nothing spent",
+        "the Suno producer on the kernel a live job through the fake driver: each create booked unpriced with Suno's reason, spend equals the meter"
+      ]
+    },
+    {
+      "id": "suno-create-not-credit-priced",
+      "test": "tests/next-server/producer-suno.test.ts",
+      "verdict": "killed",
+      "durationMs": 1250,
+      "caughtBy": [
+        "the Suno plan, pure one credit-priced create per model, in order, then land"
+      ]
+    },
+    {
+      "id": "suno-cancel-while-creating",
+      "test": "tests/next-server/producer-suno.test.ts",
+      "verdict": "killed",
+      "durationMs": 1068,
+      "caughtBy": [
+        "the Suno producer on the kernel cancel is refused while a create is in flight; Stop lets it finish, and Start creates only the missing model",
+        "the Suno producer on the kernel a crash mid-create: the job is interrupted and box.chrome HELD; the column says check the library; Start acknowledges and retries",
+        "the Suno producer on the kernel a failure fails the job with the driver's sentence verbatim, and the proposal wears it"
+      ]
+    },
+    {
+      "id": "suno-done-proposal-rerenders",
+      "test": "tests/next-server/producer-suno.test.ts",
+      "verdict": "killed",
+      "durationMs": 1282,
+      "caughtBy": [
+        "the Suno producer on the kernel enqueue never spends, is idempotent while live, and refuses a proposal that has rendered"
+      ]
+    },
+    {
+      "id": "suno-failure-not-worn",
+      "test": "tests/next-server/producer-suno.test.ts",
+      "verdict": "killed",
+      "durationMs": 1269,
+      "caughtBy": [
+        "the Suno producer on the kernel a failure fails the job with the driver's sentence verbatim, and the proposal wears it"
+      ]
+    },
+    {
+      "id": "suno-start-does-not-resume",
+      "test": "tests/next-server/producer-suno.test.ts",
+      "verdict": "killed",
+      "durationMs": 1256,
+      "caughtBy": [
+        "the Suno producer on the kernel cancel is refused while a create is in flight; Stop lets it finish, and Start creates only the missing model"
+      ]
+    },
+    {
+      "id": "suno-start-leaves-the-hold",
+      "test": "tests/next-server/producer-suno.test.ts",
+      "verdict": "killed",
+      "durationMs": 1085,
+      "caughtBy": [
+        "the Suno producer on the kernel a crash mid-create: the job is interrupted and box.chrome HELD; the column says check the library; Start acknowledges and retries",
+        "the Suno producer on the kernel a failure fails the job with the driver's sentence verbatim, and the proposal wears it",
+        "the Suno producer on the kernel the CLI and the routes act on one job id; the ledger leaves its live row to the job store"
+      ]
+    },
+    {
+      "id": "suno-crash-does-not-hold",
+      "test": "tests/next-server/producer-suno.test.ts",
+      "verdict": "killed",
+      "durationMs": 5937,
+      "caughtBy": [
+        "the Suno producer on the kernel enqueue never spends, is idempotent while live, and refuses a proposal that has rendered",
+        "the Suno producer on the kernel a dry job: a receipt on box.chrome, both creates answered by stand-ins, the driver never reached, nothing spent",
+        "the Suno producer on the kernel a live job through the fake driver: each create booked unpriced with Suno's reason, spend equals the meter",
+        "the Suno producer on the kernel cancel is refused while a create is in flight; Stop lets it finish, and Start creates only the missing model",
+        "the Suno producer on the kernel a crash mid-create: the job is interrupted and box.chrome HELD; the column says check the library; Start acknowledges and retries",
+        "the Suno producer on the kernel a failure fails the job with the driver's sentence verbatim, and the proposal wears it",
+        "the Suno producer on the kernel the CLI and the routes act on one job id; the ledger leaves its live row to the job store"
+      ]
+    },
+    {
+      "id": "suno-ledger-draws-kernel-jobs-twice",
+      "test": "tests/next-server/producer-suno.test.ts",
+      "verdict": "killed",
+      "durationMs": 1243,
+      "caughtBy": [
+        "the Suno producer on the kernel the CLI and the routes act on one job id; the ledger leaves its live row to the job store"
+      ]
+    },
+    {
+      "id": "suno-cli-enqueue-launches",
+      "test": "tests/next-server/producer-suno.test.ts",
+      "verdict": "killed",
+      "durationMs": 1198,
+      "caughtBy": [
+        "the Suno producer on the kernel the CLI and the routes act on one job id; the ledger leaves its live row to the job store"
+      ]
+    },
+    {
+      "id": "records-run-native-row-missing",
+      "test": "packages/kernel/test/records.runs.test.ts",
+      "verdict": "killed",
+      "durationMs": 1193,
+      "caughtBy": [
+        "a producer's own launch writes the Run beside its job: the producer's terms verbatim, its own quote, its units",
+        "a producer's own launch runs under the launching producer: Suno's track is quoted and re-routed only among Suno's options",
+        "a producer's own launch maps every producer's own launch to the recipe whose work part it makes",
+        "a producer's own launch keeps one row per run: a second launch waits for the first job, then moves the row to its own",
+        "a producer's own launch lets a batch launcher record each run inside its own transaction"
+      ]
+    },
+    {
+      "id": "records-run-reroute-other-producer",
+      "test": "packages/kernel/test/records.runs.test.ts",
+      "verdict": "killed",
+      "durationMs": 605,
+      "caughtBy": [
+        "a producer's own launch runs under the launching producer: Suno's track is quoted and re-routed only among Suno's options"
+      ]
+    },
+    {
+      "id": "records-run-quote-any-lane",
+      "test": "packages/kernel/test/records.runs.test.ts",
+      "verdict": "killed",
+      "durationMs": 606,
+      "caughtBy": [
+        "a producer's own launch refuses a quote on a lane the producer does not make that kind on"
+      ]
+    },
+    {
+      "id": "records-run-two-jobs-one-run",
+      "test": "packages/kernel/test/records.runs.test.ts",
+      "verdict": "killed",
+      "durationMs": 610,
+      "caughtBy": [
+        "a producer's own launch keeps one row per run: a second launch waits for the first job, then moves the row to its own"
+      ]
+    },
+    {
+      "id": "records-over-ceiling-refused",
+      "test": "packages/kernel/test/records.test.ts",
+      "verdict": "killed",
+      "durationMs": 653,
+      "caughtBy": [
+        "launch: a receipt, then a confirm launches a receipt over its ceiling - a stop point, not a refusal - with the ceiling on the job"
+      ]
+    },
+    {
+      "id": "job-core-money-stop-always-window",
+      "test": "packages/kernel/test/job.core.test.ts",
+      "verdict": "killed",
+      "durationMs": 493,
+      "caughtBy": [
+        "book a money stop says whose limit it met: the job's own ceiling is recorded as the run's, with its figure"
+      ]
+    },
+    {
+      "id": "job-queue-cooling-ignored",
+      "test": "packages/kernel/test/job.worker.test.ts",
+      "verdict": "killed",
+      "durationMs": 1339,
+      "caughtBy": [
+        "pickWork per lane (L41) an unhealthy producer cools on its own lane only",
+        "pickWork cooling a cooling lane or producer takes nothing, and its head is waited for, not named an orphan",
+        "workLoop cools a producer that answers unhealthy for one idle period instead of asking it again at once",
+        "workLoop cools a lane whose every slot another holder keeps (busy) instead of re-claiming in a tight loop"
+      ]
+    },
+    {
+      "id": "job-run-settle-never-called",
+      "test": "packages/kernel/test/job.settle.test.ts",
+      "verdict": "killed",
+      "durationMs": 1352,
+      "caughtBy": [
+        "settle is told done once the job is done",
+        "settle is told a ceiling stop the kernel made between steps, where no step of the producer ran to say so",
+        "settle is told an operator's pause that landed mid-step, and never a yield",
+        "settle a settle that throws is reported on the drive and in the ledger, and the ending stands"
+      ]
+    },
+    {
+      "id": "job-run-settle-told-yield",
+      "test": "packages/kernel/test/job.settle.test.ts",
+      "verdict": "killed",
+      "durationMs": 701,
+      "caughtBy": [
+        "settle is told an operator's pause that landed mid-step, and never a yield"
+      ]
+    },
+    {
+      "id": "job-run-release-forgotten",
+      "test": "packages/kernel/test/job.settle.test.ts",
+      "verdict": "killed",
+      "durationMs": 688,
+      "caughtBy": [
+        "a part's job done releases what waited for it in the transaction that books it done: the next part is queued before the drive returns"
+      ]
+    },
+    {
+      "id": "ui-lanes-own-capacity",
+      "test": "packages/ui/test/components/runs.test.ts",
+      "verdict": "killed",
+      "durationMs": 513,
+      "caughtBy": [
+        "every resource lane of the domain has a row: label, capacity and engines"
+      ]
+    },
+    {
+      "id": "domain-run-producer-contradicts-input",
+      "test": "packages/domain/test/project.test.ts",
+      "verdict": "killed",
+      "durationMs": 502,
+      "caughtBy": [
+        "run holds the record to what launched it: a composer's lane, a producer's own name"
+      ]
+    },
+    {
+      "id": "domain-article-subject-unchecked",
+      "test": "packages/domain/test/plan.test.ts",
+      "verdict": "killed",
+      "durationMs": 478,
+      "caughtBy": [
+        "produce doors accepts each producer's own launch in its own terms, and refuses a mixed or unknown shape"
+      ]
+    },
+    {
+      "id": "router-strips-on-render-box",
+      "test": "packages/kernel/test/router.route.test.ts",
+      "verdict": "killed",
+      "durationMs": 500,
+      "caughtBy": [
+        "audio and video (the prototype's providers, v1's capabilities) a strips card-round routes on the text seat, its paid lane, at its measured pace"
+      ]
+    },
+    {
+      "id": "strips-landed-turn-rebought",
+      "test": "packages/producers/test/strips.test.ts",
+      "verdict": "killed",
+      "durationMs": 804,
+      "caughtBy": [
+        "never re-spend a fix that landed unbooked (its round on run.json) is adopted, not bought again"
+      ]
+    },
+    {
+      "id": "strips-page-on-disk-reauthored",
+      "test": "packages/producers/test/strips.test.ts",
+      "verdict": "killed",
+      "durationMs": 406,
+      "caughtBy": [
+        "never re-spend a page on disk with no booked author is adopted at the round run.json records, never re-authored"
+      ]
+    },
+    {
+      "id": "strips-control-reviewed",
+      "test": "packages/producers/test/strips.test.ts",
+      "verdict": "killed",
+      "durationMs": 396,
+      "caughtBy": [
+        "the card loop a control, or a run without review, settles on a passing round 0"
+      ]
+    },
+    {
+      "id": "strips-unchanged-fix-loops",
+      "test": "packages/producers/test/strips.test.ts",
+      "verdict": "killed",
+      "durationMs": 404,
+      "caughtBy": [
+        "the card loop a turn that did not complete settles the card; a fix or review that changed nothing keeps the render"
+      ]
+    },
+    {
+      "id": "strips-absent-seat-fails-every-card",
+      "test": "tests/next-server/producer-strips.test.ts",
+      "verdict": "killed",
+      "durationMs": 2819,
+      "caughtBy": [
+        "a seat's outcome, classified where it is known a seat that never served is a vendor failure: the breaker stops the job, and no card is marked failed"
+      ]
+    },
+    {
+      "id": "strips-seat-limit-feeds-breaker",
+      "test": "tests/next-server/producer-strips.test.ts",
+      "verdict": "killed",
+      "durationMs": 1463,
+      "caughtBy": [
+        "a seat's outcome, classified where it is known a spent seat window is a money stop, never a breaker count"
+      ]
+    },
+    {
+      "id": "strips-turn-uncapped",
+      "test": "tests/next-server/producer-strips.test.ts",
+      "verdict": "killed",
+      "durationMs": 1423,
+      "caughtBy": [
+        "a live job spends through the meter caps every writer turn at what the job has left of its ceiling"
+      ]
+    },
+    {
+      "id": "strips-dry-run-committed",
+      "test": "tests/next-server/producer-strips.test.ts",
+      "verdict": "killed",
+      "durationMs": 1446,
+      "caughtBy": [
+        "a dry job runs end to end on stand-ins finishes, lists its would-calls, never enters the seat or the image router, spends nothing, and is never committed"
+      ]
+    },
+    {
+      "id": "strips-job-run-drawn-twice",
+      "test": "tests/next-server/producer-strips.test.ts",
+      "verdict": "killed",
+      "durationMs": 1472,
+      "caughtBy": [
+        "v1's readers after the move the ledger leaves a job's running run to Runs, puts a live run on the Weir, keeps a dry one off it"
+      ]
+    },
+    {
+      "id": "strips-stop-leaves-running",
+      "test": "tests/next-server/producer-strips.test.ts",
+      "verdict": "killed",
+      "durationMs": 1413,
+      "caughtBy": [
+        "the ceiling, and the resume that never re-spends stops before the turn that would cross it, hands the run to triage, and a retry under a raised ceiling buys no turn twice"
+      ]
+    },
+    {
+      "id": "strips-gate-fail-not-fixed",
+      "test": "tests/next-server/producer-strips.test.ts",
+      "verdict": "killed",
+      "durationMs": 1433,
+      "caughtBy": [
+        "a live job spends through the meter books every seat turn and the image against its job, reconciles, and the cards keep v1's sums"
+      ]
+    },
+    {
+      "id": "forge-plan-replans-a-booked-step",
+      "test": "tests/next-server/producer-forge.test.ts",
+      "verdict": "killed",
+      "durationMs": 78143,
+      "caughtBy": [
+        "the forge plan is one function in two languages Python's forge_job.plan gives the same answers"
+      ]
+    },
+    {
+      "id": "forge-plate-on-disk-drawn-again",
+      "test": "tests/next-server/producer-forge.test.ts",
+      "verdict": "killed",
+      "durationMs": 39216,
+      "caughtBy": [
+        "the forge plan is one function in two languages Python's forge_job.plan gives the same answers"
+      ]
+    },
+    {
+      "id": "forge-unmeasured-never-regraded",
+      "test": "tests/next-server/producer-forge.test.ts",
+      "verdict": "killed",
+      "durationMs": 71963,
+      "caughtBy": [
+        "the forge plan is one function in two languages Python's forge_job.plan gives the same answers",
+        "a dry forge job end to end forge.py --dry --json prepares the run, enqueues it through the launcher's receipt and drives it to done on the card's slot, $0 and reconciled",
+        "vendor failures, the breaker and an abandoned pass a plate that fails is skipped for the drive (v1 moved on); the run is incomplete and the job fails naming it; a retry draws only that plate"
+      ]
+    },
+    {
+      "id": "forge-incomplete-run-reads-done",
+      "test": "tests/next-server/producer-forge.test.ts",
+      "verdict": "killed",
+      "durationMs": 40101,
+      "caughtBy": [
+        "vendor failures, the breaker and an abandoned pass a plate that fails is skipped for the drive (v1 moved on); the run is incomplete and the job fails naming it; a retry draws only that plate"
+      ]
+    },
+    {
+      "id": "worker-failed-step-retaken-in-drive",
+      "test": "tests/next-server/producer-forge.test.ts",
+      "verdict": "killed",
+      "durationMs": 39159,
+      "caughtBy": [
+        "vendor failures, the breaker and an abandoned pass a plate that fails is skipped for the drive (v1 moved on); the run is incomplete and the job fails naming it; a retry draws only that plate"
+      ]
+    },
+    {
+      "id": "worker-stop-abandons-the-boundary",
+      "test": "tests/next-server/producer-forge.test.ts",
+      "verdict": "killed",
+      "durationMs": 38822,
+      "caughtBy": [
+        "a stop signal parks at a step boundary the step in flight finishes and is booked, then the job goes back to the queue with its slot given back; the next drive takes the rest"
+      ]
+    },
+    {
+      "id": "dojo-empty-readback-cached",
+      "test": "tests/next-server/producer-dojo.test.ts",
+      "verdict": "killed",
+      "durationMs": 15856,
+      "caughtBy": [
+        "a local cycle as a dry job a readback that read nothing is not cached: the job fails counting it, and a retry reads only that unit"
+      ]
+    },
+    {
+      "id": "dojo-stack-guessed-local",
+      "test": "tests/next-server/producer-dojo.test.ts",
+      "verdict": "killed",
+      "durationMs": 8141,
+      "caughtBy": [
+        "stack purity: a cycle names its bill, or nothing runs a spec with no stack is refused in v1's words - by runnerOf, by the launcher before any receipt, by dojo_run.py with exit 1"
+      ]
+    },
+    {
+      "id": "dojo-node-stack-guessed",
+      "test": "tests/next-server/producer-dojo.test.ts",
+      "verdict": "killed",
+      "durationMs": 7708,
+      "caughtBy": [
+        "stack purity: a cycle names its bill, or nothing runs a spec with no stack is refused in v1's words - by runnerOf, by the launcher before any receipt, by dojo_run.py with exit 1"
+      ]
+    },
+    {
+      "id": "dojo-google-money-feeds-breaker",
+      "test": "tests/next-server/producer-dojo.test.ts",
+      "verdict": "killed",
+      "durationMs": 10535,
+      "caughtBy": [
+        "a google cycle as a job, every call metered a refusal for money is a money stop, never a breaker count"
+      ]
+    },
+    {
+      "id": "dojo-google-whole-arm-rebilled",
+      "test": "packages/producers/test/forge-dojo.test.ts",
+      "verdict": "killed",
+      "durationMs": 804,
+      "caughtBy": [
+        "the Dojo plans google: one generate per arm for all its repeats, then its readbacks; a whole arm is never billed again"
+      ]
+    },
+    {
+      "id": "forge-receipt-counts-only-the-next-drive",
+      "test": "packages/producers/test/forge-dojo.test.ts",
+      "verdict": "killed",
+      "durationMs": 420,
+      "caughtBy": [
+        "the forge receipt counts the whole run a fresh run: every plate, its annotation and every grade - although the next drive plans only the annotation",
+        "the forge receipt counts the whole run a half-done run: a graded plate costs nothing more; an unmeasured one is owed a grade; a plate on disk is not drawn again"
+      ]
+    },
+    {
+      "id": "forge-node-plan-replans-a-booked-step",
+      "test": "tests/next-server/producer-forge.test.ts",
+      "verdict": "killed",
+      "durationMs": 39053,
+      "caughtBy": [
+        "the forge plan is one function in two languages Node's forgeSteps gives every case's answer"
+      ]
+    },
+    {
+      "id": "forge-launch-doubles-an-unfinished-job",
+      "test": "tests/next-server/producer-forge.test.ts",
+      "verdict": "killed",
+      "durationMs": 39641,
+      "caughtBy": [
+        "the CLI, the launcher and the worker act on one job forge.py --detach enqueues; the Node launcher and launchForge find that job, never a second; worker.py --once drives it"
+      ]
+    },
+    {
+      "id": "article-money-stop-unlabelled",
+      "test": "packages/producers/test/article.test.ts",
+      "verdict": "killed",
+      "durationMs": 1424,
+      "caughtBy": [
+        "a live article job holds the ceiling INSIDE a step: a turn past it is refused before it starts, the writer is capped at what is left, the job fails `budget`"
+      ]
+    },
+    {
+      "id": "parts-ops-log-editable",
+      "test": "packages/kernel/test/parts.test.ts",
+      "verdict": "killed",
+      "durationMs": 1373,
+      "caughtBy": [
+        "ops and undo over the part log holds the log append-only at the store (the trigger, not a convention)"
+      ]
+    },
+    {
+      "id": "parts-stale-base-overwrites",
+      "test": "packages/kernel/test/parts.test.ts",
+      "verdict": "killed",
+      "durationMs": 652,
+      "caughtBy": [
+        "ops and undo over the part log applies an op at its rev, answers a stale base with the current rev and writes nothing"
+      ]
+    },
+    {
+      "id": "parts-undo-erases-job",
+      "test": "packages/kernel/test/parts.test.ts",
+      "verdict": "killed",
+      "durationMs": 698,
+      "caughtBy": [
+        "ops and undo over the part log refuses to undo a human edit over a job's later landing, and names the job",
+        "ops and undo over the part log lets motion grow the frames record while frames keeps owning it"
+      ]
+    },
+    {
+      "id": "parts-undo-loops",
+      "test": "packages/kernel/test/parts.test.ts",
+      "verdict": "killed",
+      "durationMs": 672,
+      "caughtBy": [
+        "ops and undo over the part log undo appends the inverse - restoring the prior value, absent included - and the log only grows",
+        "ops and undo over the part log is linear: an op after an undo starts the history again, and undo walks back past it"
+      ]
+    },
+    {
+      "id": "parts-cross-write",
+      "test": "packages/kernel/test/parts.test.ts",
+      "verdict": "killed",
+      "durationMs": 644,
+      "caughtBy": [
+        "the album and explainer parts hold their own records (L43) writes an album's words through their door, and refuses words written by the render part",
+        "ops and undo over the part log refuses a record the part neither owns nor grows, a malformed value, and a no-op"
+      ]
+    },
+    {
+      "id": "steps-future-downgraded",
+      "test": "packages/kernel/test/parts.test.ts",
+      "verdict": "killed",
+      "durationMs": 630,
+      "caughtBy": [
+        "the step record doors (v1 registry rules) reads an absent v as v1, refuses a future v, refuses a malformed shape"
+      ]
+    },
+    {
+      "id": "steps-frames-base64-kept",
+      "test": "packages/kernel/test/parts.test.ts",
+      "verdict": "killed",
+      "durationMs": 636,
+      "caughtBy": [
+        "the step record doors (v1 registry rules) walks frames v2 up to v3: drops the shadow, refuses base64 plates (the importer's act)"
+      ]
+    },
+    {
+      "id": "parts-gate-opens-unready",
+      "test": "tests/next-server/parts-gates.test.ts",
+      "verdict": "killed",
+      "durationMs": 2949,
+      "caughtBy": [
+        "the frames gate as a step packet opens nothing while frames is not READY, and the adapter says why in the verdict's words",
+        "the frames gate as a step packet opens on READY, refuses a commit over records that moved since the preview, ratifies on commit and releases motion"
+      ]
+    },
+    {
+      "id": "parts-gate-commit-unbound",
+      "test": "tests/next-server/parts-gates.test.ts",
+      "verdict": "killed",
+      "durationMs": 1486,
+      "caughtBy": [
+        "the frames gate as a step packet opens on READY, refuses a commit over records that moved since the preview, ratifies on commit and releases motion"
+      ]
+    },
+    {
+      "id": "parts-gate-release-forgotten",
+      "test": "tests/next-server/parts-gates.test.ts",
+      "verdict": "killed",
+      "durationMs": 1491,
+      "caughtBy": [
+        "the frames gate as a step packet opens on READY, refuses a commit over records that moved since the preview, ratifies on commit and releases motion"
+      ]
+    },
+    {
+      "id": "parts-gate-fact-lost",
+      "test": "tests/next-server/parts-gates.test.ts",
+      "verdict": "killed",
+      "durationMs": 1585,
+      "caughtBy": [
+        "the frames gate as a step packet opens on READY, refuses a commit over records that moved since the preview, ratifies on commit and releases motion"
+      ]
+    },
+    {
+      "id": "parts-frames-stale-ready",
+      "test": "tests/next-server/parts-verdict.test.ts",
+      "verdict": "killed",
+      "durationMs": 1021,
+      "caughtBy": [
+        "frames is READY only with every plate composed, none stale, no figure unsourced"
+      ]
+    },
+    {
+      "id": "parts-motion-decline-stale",
+      "test": "tests/next-server/parts-verdict.test.ts",
+      "verdict": "killed",
+      "durationMs": 526,
+      "caughtBy": [
+        "motion (v1 had no verdict) is READY when every plate moves or is declined on the plate it was directed from"
+      ]
+    },
+    {
+      "id": "parts-ads-score-wrong-scenario",
+      "test": "tests/next-server/parts-verdict.test.ts",
+      "verdict": "killed",
+      "durationMs": 530,
+      "caughtBy": [
+        "score reads ads-score, not score, against the picked scenario (v1 read the wrong record)"
+      ]
+    },
+    {
+      "id": "parts-cut-voice-holds",
+      "test": "tests/next-server/parts-verdict.test.ts",
+      "verdict": "killed",
+      "durationMs": 525,
+      "caughtBy": [
+        "cut is READY when the finish line holds, and an unplanned voice lane does not hold it"
+      ]
+    },
+    {
+      "id": "parts-notebook-digest-recomputed",
+      "test": "tests/next-server/parts-real.test.ts",
+      "verdict": "baseline-red",
+      "durationMs": 2131
+    },
+    {
+      "id": "parts-real-ignores-base",
+      "test": "tests/next-server/parts-real.test.ts",
+      "verdict": "baseline-red",
+      "durationMs": 0
+    },
+    {
+      "id": "partview-free-choice-ignored",
+      "test": "packages/domain/test/partView.test.ts",
+      "verdict": "killed",
+      "durationMs": 802,
+      "caughtBy": [
+        "faces a free project's choice moves both faces together; no other discipline listens to it"
+      ]
+    },
+    {
+      "id": "partview-oplabel-drops-un",
+      "test": "packages/domain/test/partView.test.ts",
+      "verdict": "killed",
+      "durationMs": 412,
+      "caughtBy": [
+        "op labels every op has words, and two different edits never read the same in the trail",
+        "op labels the trail names what the op touched"
+      ]
+    },
+    {
+      "id": "part-unknown-verdict-reads-ready",
+      "test": "packages/ui/test/components/part.test.ts",
+      "verdict": "killed",
+      "durationMs": 1104,
+      "caughtBy": [
+        "verdicts and tabs each verdict state has one look; an unknown state reads as blocked, never as ready"
+      ]
+    },
+    {
+      "id": "part-walk-by-index",
+      "test": "packages/ui/test/components/part.test.ts",
+      "verdict": "killed",
+      "durationMs": 480,
+      "caughtBy": [
+        "the keyboard walk moves by identity and wraps"
+      ]
+    },
+    {
+      "id": "part-rail-holds-every-row",
+      "test": "packages/ui/test/components/part.test.ts",
+      "verdict": "killed",
+      "durationMs": 477,
+      "caughtBy": [
+        "markup a rail of 500 rows holds a window of them, not 500"
+      ]
+    },
+    {
+      "id": "part-descope-without-a-card",
+      "test": "packages/ui/test/components/part.test.ts",
+      "verdict": "killed",
+      "durationMs": 468,
+      "caughtBy": [
+        "the part keymap card verbs need a card; ⌫ inside a text field is the field's"
+      ]
+    },
+    {
+      "id": "produce-strips-run-renamed-at-confirm",
+      "test": "tests/next-server/produce-real.test.ts",
+      "verdict": "killed",
+      "durationMs": 3767,
+      "caughtBy": [
+        "the real produce port names a strips run in its receipt and launches under that name"
+      ]
+    },
+    {
+      "id": "produce-live-receipt-under-dry-only",
+      "test": "tests/next-server/produce-real.test.ts",
+      "verdict": "killed",
+      "durationMs": 1800,
+      "caughtBy": [
+        "the real produce port refuses a live receipt where only dry may run, and reads one where live is allowed"
+      ]
+    },
+    {
+      "id": "produce-plan-moved-is-an-error",
+      "test": "tests/next-server/produce-real.test.ts",
+      "verdict": "killed",
+      "durationMs": 1759,
+      "caughtBy": [
+        "a plan, launched, and the Runs acts answers a plan that moved under its receipt with the fresh receipt at the new revision",
+        "a plan, launched, and the Runs acts pauses, resumes and moves through the kernel's verbs, in the words the toast says",
+        "a plan, launched, and the Runs acts holds a paid lane a crash left, refusing the retry of its job until an operator acknowledges it",
+        "a plan, launched, and the Runs acts re-routes a part to another lane in one transaction: cancelled, its successor on the new lane, the part moved",
+        "a plan, launched, and the Runs acts answers a re-route whose queue moved under its receipt with the fresh receipt, and moves nothing"
+      ]
+    },
+    {
+      "id": "produce-retry-ignores-hold",
+      "test": "tests/next-server/produce-real.test.ts",
+      "verdict": "killed",
+      "durationMs": 1843,
+      "caughtBy": [
+        "a plan, launched, and the Runs acts holds a paid lane a crash left, refusing the retry of its job until an operator acknowledges it",
+        "a plan, launched, and the Runs acts answers a re-route whose queue moved under its receipt with the fresh receipt, and moves nothing"
+      ]
+    },
+    {
+      "id": "produce-reroute-part-row-left-behind",
+      "test": "packages/kernel/test/records.reroute.test.ts",
+      "verdict": "killed",
+      "durationMs": 1188,
+      "caughtBy": [
+        "relaunchIn - another lane cancels the job naming its successor, enqueues it in the same queue place on the target's lane, and moves the part row to it"
+      ]
+    },
+    {
+      "id": "produce-reroute-same-lane-relaunched",
+      "test": "tests/next-server/produce-real.test.ts",
+      "verdict": "killed",
+      "durationMs": 1765,
+      "caughtBy": [
+        "a plan, launched, and the Runs acts re-routes on the same lane and producer through the kernel's steer, keeping the job"
+      ]
+    },
+    {
+      "id": "produce-reroute-token-unchecked",
+      "test": "tests/next-server/produce-real.test.ts",
+      "verdict": "killed",
+      "durationMs": 1801,
+      "caughtBy": [
+        "a plan, launched, and the Runs acts answers a re-route whose queue moved under its receipt with the fresh receipt, and moves nothing"
+      ]
+    },
+    {
+      "id": "produce-run-launch-stale-launches",
+      "test": "tests/next-server/produce-real.test.ts",
+      "verdict": "killed",
+      "durationMs": 1763,
+      "caughtBy": [
+        "the real produce port launches a Floor article as one Run and one dry job, and a stale token launches nothing",
+        "a plan, launched, and the Runs acts holds a paid lane a crash left, refusing the retry of its job until an operator acknowledges it",
+        "a plan, launched, and the Runs acts answers a re-route whose queue moved under its receipt with the fresh receipt, and moves nothing"
+      ]
+    },
+    {
+      "id": "produce-audio-launches-unrunnable-job",
+      "test": "tests/next-server/produce-real.test.ts",
+      "verdict": "killed",
+      "durationMs": 1755,
+      "caughtBy": [
+        "the real produce port prices an audio launch and refuses it at confirm, naming the door that launches it"
+      ]
+    },
+    {
+      "id": "produce-choices-rejected-takes",
+      "test": "tests/next-server/produce-real.test.ts",
+      "verdict": "killed",
+      "durationMs": 1761,
+      "caughtBy": [
+        "the real produce port offers what the stores hold"
+      ]
+    },
+    {
+      "id": "produce-estimate-needs-a-sentence",
+      "test": "tests/next-server/produce-real.test.ts",
+      "verdict": "killed",
+      "durationMs": 1738,
+      "caughtBy": [
+        "the real produce port launches a Floor article as one Run and one dry job, and a stale token launches nothing",
+        "a plan, launched, and the Runs acts holds a paid lane a crash left, refusing the retry of its job until an operator acknowledges it",
+        "a plan, launched, and the Runs acts answers a re-route whose queue moved under its receipt with the fresh receipt, and moves nothing"
+      ]
+    },
+    {
+      "id": "produce-compose-keeps-every-pick",
+      "test": "tests/next-server/produce-real.test.ts",
+      "verdict": "killed",
+      "durationMs": 1742,
+      "caughtBy": [
+        "a plan, launched, and the Runs acts answers a plan that moved under its receipt with the fresh receipt at the new revision",
+        "a plan, launched, and the Runs acts pauses, resumes and moves through the kernel's verbs, in the words the toast says",
+        "a plan, launched, and the Runs acts holds a paid lane a crash left, refusing the retry of its job until an operator acknowledges it",
+        "a plan, launched, and the Runs acts re-routes a part to another lane in one transaction: cancelled, its successor on the new lane, the part moved",
+        "a plan, launched, and the Runs acts answers a re-route whose queue moved under its receipt with the fresh receipt, and moves nothing"
+      ]
+    },
+    {
+      "id": "produce-hold-named-by-id",
+      "test": "tests/next-server/produce-real.test.ts",
+      "verdict": "killed",
+      "durationMs": 1794,
+      "caughtBy": [
+        "a plan, launched, and the Runs acts holds a paid lane a crash left, refusing the retry of its job until an operator acknowledges it",
+        "a plan, launched, and the Runs acts answers a re-route whose queue moved under its receipt with the fresh receipt, and moves nothing"
+      ]
+    },
+    {
+      "id": "step-act-never-respend",
+      "test": "packages/producers/test/steps.test.ts",
+      "verdict": "killed",
+      "durationMs": 953,
+      "caughtBy": [
+        "the act's steps are its missing outputs plan first; then every unit not booked, in plan order; then land"
+      ]
+    },
+    {
+      "id": "step-act-one-purchase",
+      "test": "tests/next-server/producer-step-crash.test.ts",
+      "verdict": "killed",
+      "durationMs": 5176,
+      "caughtBy": [
+        "a part act under crashes a second confirm of the same act is the same job (one purchase); a stale token writes nothing"
+      ]
+    },
+    {
+      "id": "step-followup-allowlist",
+      "test": "tests/next-server/producer-step-followup.test.ts",
+      "verdict": "killed",
+      "durationMs": 1323,
+      "caughtBy": [
+        "a follow-up answer through its door refuses an effect on an id the notebook does not hold, and a fact added twice - naming them"
+      ]
+    },
+    {
+      "id": "step-ideas-digest-at-ask",
+      "test": "tests/next-server/producer-step-research.test.ts",
+      "verdict": "killed",
+      "durationMs": 3953,
+      "caughtBy": [
+        "research acts are jobs with receipts an ads ideas round: the job runs dry on the part's lane, lands the validated ideas as the job, and a pick makes it READY"
+      ]
+    },
+    {
+      "id": "step-recalibrate-needs-note",
+      "test": "packages/producers/test/steps.test.ts",
+      "verdict": "killed",
+      "durationMs": 482,
+      "caughtBy": [
+        "script acts recalibrate's guards refuse before the plan: no note, a staged version undecided, the notes' own refusal"
+      ]
+    },
+    {
+      "id": "score-cue-needs-tempo",
+      "test": "packages/producers/test/steps-score-cut.test.ts",
+      "verdict": "killed",
+      "durationMs": 958,
+      "caughtBy": [
+        "score acts one cue is one unit, named by the cue; a cue without a tempo or a picture is refused in its own words",
+        "score acts the plan job renders every untaken cue and skips none silently: one refusal refuses the act"
+      ]
+    },
+    {
+      "id": "cut-no-picture-refused",
+      "test": "packages/producers/test/steps-score-cut.test.ts",
+      "verdict": "killed",
+      "durationMs": 473,
+      "caughtBy": [
+        "cut acts an animatic is one unit; no picture is refused"
+      ]
+    },
+    {
+      "id": "score-suno-routing-refused",
+      "test": "tests/next-server/producer-step-score.test.ts",
+      "verdict": "killed",
+      "durationMs": 1878,
+      "caughtBy": [
+        "score acts are jobs with receipts a cue with no tempo is refused on its receipt, in the work's words; nothing is enqueued; a part routed to Suno renders no cue"
+      ]
+    },
+    {
+      "id": "cut-ads-clip-check-blocks",
+      "test": "tests/next-server/producer-step-cut.test.ts",
+      "verdict": "killed",
+      "durationMs": 2110,
+      "caughtBy": [
+        "cut acts are jobs with receipts an ads aspect: refused while a shot has no clip; rendered dry once every shot has one; the verdict reads it"
+      ]
+    },
+    {
+      "id": "frames-rebuys-plate-in-flight",
+      "test": "packages/producers/test/steps-frames.test.ts",
+      "verdict": "killed",
+      "durationMs": 910,
+      "caughtBy": [
+        "frames acts render-plates buys exactly the missing, refused and stale plates - never a ready one, never one in flight",
+        "frames acts direct-cut is one credit-priced turn over the whole cut; the plan job renders plates",
+        "frames acts the budget caps a batch to what the window affords, and a blocked window is a sentence naming when it frees"
+      ]
+    },
+    {
+      "id": "frames-budget-cap-ignored",
+      "test": "packages/producers/test/steps-frames.test.ts",
+      "verdict": "killed",
+      "durationMs": 478,
+      "caughtBy": [
+        "frames acts the budget caps a batch to what the window affords, and a blocked window is a sentence naming when it frees"
+      ]
+    },
+    {
+      "id": "motion-clip-without-motion",
+      "test": "packages/producers/test/steps-frames.test.ts",
+      "verdict": "killed",
+      "durationMs": 491,
+      "caughtBy": [
+        "motion acts render-clip animates only a plate with accepted motion"
+      ]
+    },
+    {
+      "id": "still-takes-unbounded",
+      "test": "packages/producers/test/steps-frames.test.ts",
+      "verdict": "killed",
+      "durationMs": 482,
+      "caughtBy": [
+        "still takes the batch is bounded: twelve takes plan, thirteen (or none, or a fraction) buy nothing"
+      ]
+    },
+    {
+      "id": "import-archive-section-digest",
+      "test": "tests/next-server/import-archive.test.ts",
+      "verdict": "killed",
+      "durationMs": 1033,
+      "caughtBy": [
+        "refusals, named as v1 names them agrees with v1 on a whole archive and on every damaged one"
+      ]
+    },
+    {
+      "id": "import-archive-truncated",
+      "test": "tests/next-server/import-archive.test.ts",
+      "verdict": "killed",
+      "durationMs": 510,
+      "caughtBy": [
+        "refusals, named as v1 names them agrees with v1 on a whole archive and on every damaged one"
+      ]
+    },
+    {
+      "id": "import-archive-inflate-cap",
+      "test": "tests/next-server/import-archive.test.ts",
+      "verdict": "killed",
+      "durationMs": 523,
+      "caughtBy": [
+        "refusals, named as v1 names them caps an untrusted parse before it runs: the body, the inflated text, the line count"
+      ]
+    },
+    {
+      "id": "import-idempotent-by-v1-id",
+      "test": "tests/next-server/import-roundtrip.test.ts",
+      "verdict": "killed",
+      "durationMs": 2285,
+      "caughtBy": [
+        "preview, then confirm imports each project once; a re-import skips every one, reported"
+      ]
+    },
+    {
+      "id": "import-queues-no-work",
+      "test": "tests/next-server/import-roundtrip.test.ts",
+      "verdict": "killed",
+      "durationMs": 1131,
+      "caughtBy": [
+        "the Plan the import opens draws the recipe's parts in the states v1's work implies",
+        "the Plan the import opens launches only the parts v1 never worked, through a receipt, released behind its ratified upstream (L43)"
+      ]
+    },
+    {
+      "id": "import-signoff-ratifies-gate",
+      "test": "tests/next-server/import-roundtrip.test.ts",
+      "verdict": "killed",
+      "durationMs": 1091,
+      "caughtBy": [
+        "the Plan the import opens draws the recipe's parts in the states v1's work implies",
+        "the Plan the import opens launches only the parts v1 never worked, through a receipt, released behind its ratified upstream (L43)"
+      ]
+    },
+    {
+      "id": "import-empty-is-draft",
+      "test": "tests/next-server/import-roundtrip.test.ts",
+      "verdict": "killed",
+      "durationMs": 1125,
+      "caughtBy": [
+        "preview, then confirm previews every project with its outcome, counts and losses, and writes nothing"
+      ]
+    },
+    {
+      "id": "import-plates-as-blobs",
+      "test": "tests/next-server/import-roundtrip.test.ts",
+      "verdict": "killed",
+      "durationMs": 1127,
+      "caughtBy": [
+        "preview, then confirm previews every project with its outcome, counts and losses, and writes nothing",
+        "the Plan the import opens lands every record through its door, plates as blobs the store serves",
+        "the re-export writes an edited record in v1's shape: plates inlined, the frames shadow rebuilt, v2"
+      ]
+    },
+    {
+      "id": "import-byte-exact-reexport",
+      "test": "tests/next-server/import-roundtrip.test.ts",
+      "verdict": "killed",
+      "durationMs": 1147,
+      "caughtBy": [
+        "the re-export writes every step row nobody edited back byte for byte, and v1 reads the archive",
+        "the re-export writes an edited record in v1's shape: plates inlined, the frames shadow rebuilt, v2"
+      ]
+    },
+    {
+      "id": "import-edited-frames-v1-shape",
+      "test": "tests/next-server/import-roundtrip.test.ts",
+      "verdict": "killed",
+      "durationMs": 1127,
+      "caughtBy": [
+        "the re-export writes an edited record in v1's shape: plates inlined, the frames shadow rebuilt, v2"
+      ]
+    },
+    {
+      "id": "import-future-record-data-only",
+      "test": "tests/next-server/import-roundtrip.test.ts",
+      "verdict": "killed",
+      "durationMs": 1112,
+      "caughtBy": [
+        "what the import will not take, and says so carries a newer build's record as data only, never writes it, and refuses an unknown template"
+      ]
+    },
+    {
+      "id": "import-token-stale",
+      "test": "tests/next-server/import-roundtrip.test.ts",
+      "verdict": "killed",
+      "durationMs": 1148,
+      "caughtBy": [
+        "preview, then confirm refuses a confirm on a stale preview with the fresh one, nothing written"
+      ]
+    },
+    {
+      "id": "import-runs-skip-live",
+      "test": "tests/next-server/import-runs.test.ts",
+      "verdict": "killed",
+      "durationMs": 11075,
+      "caughtBy": [
+        "v1 runs as Run rows with a terminal job imports done and failed as v1 recorded them; skips a working run and one already on a job",
+        "v1 runs as Run rows with a terminal job writes nothing dry, and nothing twice"
+      ]
+    },
+    {
+      "id": "import-runs-failed-as-recorded",
+      "test": "tests/next-server/import-runs.test.ts",
+      "verdict": "killed",
+      "durationMs": 5351,
+      "caughtBy": [
+        "v1 runs as Run rows with a terminal job imports done and failed as v1 recorded them; skips a working run and one already on a job"
+      ]
+    },
+    {
+      "id": "import-runs-dry",
+      "test": "tests/next-server/import-runs.test.ts",
+      "verdict": "killed",
+      "durationMs": 4584,
+      "caughtBy": [
+        "v1 runs as Run rows with a terminal job writes nothing dry, and nothing twice",
+        "pipeline/import/runs.mts over the fixture universe is dry by default, writes with --yes, is idempotent, and refuses a bad flag with 2"
+      ]
+    },
+    {
+      "id": "worker-carries-per-lane",
+      "test": "packages/kernel/test/job.worker.test.ts",
+      "verdict": "killed",
+      "durationMs": 1373,
+      "caughtBy": [
+        "workLoop drives one name on two lanes with the producer bound for each lane, and leaves a lane it has no binding for queued"
+      ]
+    },
+    {
+      "id": "worker-cools-producer-per-lane",
+      "test": "packages/kernel/test/job.worker.test.ts",
+      "verdict": "killed",
+      "durationMs": 1351,
+      "caughtBy": [
+        "pickWork per lane (L41) an unhealthy producer cools on its own lane only"
+      ]
+    },
+    {
+      "id": "producer-set-keys-by-lane",
+      "test": "tests/next-server/worker-lanes.test.ts",
+      "verdict": "killed",
+      "durationMs": 8489,
+      "caughtBy": [
+        "producerSet per lane binds one name on two lanes as two keys, and refuses the same name twice on one lane",
+        "the registry binds every studio step on each lane its part options reach, and Dojo's google stack on cloud.google only",
+        "the --once drain names what it does not carry a head no binding reaches is named on stderr even when nothing could start, and left queued",
+        "the --once drain names what it does not carry a head on a lane outside --lanes is not this worker's to report",
+        "a worker-driven part job opens its ready gate frames plates rendered by the worker (dry) leave the frames gate's packet open"
+      ]
+    },
+    {
+      "id": "registry-binds-every-option-lane",
+      "test": "tests/next-server/worker-lanes.test.ts",
+      "verdict": "killed",
+      "durationMs": 4503,
+      "caughtBy": [
+        "the registry binds every studio step on each lane its part options reach, and Dojo's google stack on cloud.google only"
+      ]
+    },
+    {
+      "id": "worker-step-settle-opens-gate",
+      "test": "tests/next-server/worker-lanes.test.ts",
+      "verdict": "killed",
+      "durationMs": 4464,
+      "caughtBy": [
+        "a worker-driven part job opens its ready gate frames plates rendered by the worker (dry) leave the frames gate's packet open"
+      ]
+    },
+    {
+      "id": "worker-once-names-unbound-head",
+      "test": "tests/next-server/worker-lanes.test.ts",
+      "verdict": "killed",
+      "durationMs": 4445,
+      "caughtBy": [
+        "the --once drain names what it does not carry a head no binding reaches is named on stderr even when nothing could start, and left queued"
+      ]
+    },
+    {
+      "id": "reroute-relaunch-keeps-queue-place",
+      "test": "packages/kernel/test/records.reroute.test.ts",
+      "verdict": "killed",
+      "durationMs": 615,
+      "caughtBy": [
+        "relaunchIn - another lane cancels the job naming its successor, enqueues it in the same queue place on the target's lane, and moves the part row to it"
+      ]
+    },
+    {
+      "id": "reroute-steer-moves-the-row",
+      "test": "packages/kernel/test/records.reroute.test.ts",
+      "verdict": "killed",
+      "durationMs": 651,
+      "caughtBy": [
+        "rerouteIn - the same lane steers the job in place and moves the row's option, in the caller's transaction: a rollback leaves neither"
+      ]
+    },
+    {
+      "id": "py-finish-releases-held-parts",
+      "test": "packages/kernel/test/job.python.test.ts",
+      "verdict": "killed",
+      "durationMs": 2475,
+      "caughtBy": [
+        "spec/job.json: Node and Python drive jobs on one store A Python finish releases the part waiting on it, in the finishing transaction, as Node's does"
+      ]
+    },
+    {
+      "id": "py-release-waits-for-every-upstream",
+      "test": "packages/kernel/test/job.python.test.ts",
+      "verdict": "killed",
+      "durationMs": 2462,
+      "caughtBy": [
+        "spec/job.json: Node and Python drive jobs on one store A Python finish releases the part waiting on it, in the finishing transaction, as Node's does"
+      ]
+    },
+    {
+      "id": "py-settle-once-per-ending",
+      "test": "packages/kernel/test/job.python.test.ts",
+      "verdict": "killed",
+      "durationMs": 2452,
+      "caughtBy": [
+        "spec/job.json: Node and Python drive jobs on one store Every ending made in Python is told to its producer once: done, and a dead holder's job interrupted by the next claim",
+        "spec/job.json: Node and Python drive jobs on one store A claim that takes over a dead holder's slot settles the job it interrupted, once",
+        "spec/job.json: Node and Python drive jobs on one store An ending a NODE recovery made is settled by the next Python sweep, once; a settle that raises is recorded and the ending stands"
+      ]
+    },
+    {
+      "id": "py-recover-settles-node-endings",
+      "test": "packages/kernel/test/job.python.test.ts",
+      "verdict": "killed",
+      "durationMs": 2513,
+      "caughtBy": [
+        "spec/job.json: Node and Python drive jobs on one store Every ending made in Python is told to its producer once: done, and a dead holder's job interrupted by the next claim",
+        "spec/job.json: Node and Python drive jobs on one store An ending a NODE recovery made is settled by the next Python sweep, once; a settle that raises is recorded and the ending stands"
+      ]
+    },
+    {
+      "id": "py-settle-failure-recorded",
+      "test": "packages/kernel/test/job.python.test.ts",
+      "verdict": "killed",
+      "durationMs": 2473,
+      "caughtBy": [
+        "spec/job.json: Node and Python drive jobs on one store An ending a NODE recovery made is settled by the next Python sweep, once; a settle that raises is recorded and the ending stands"
+      ]
+    },
+    {
+      "id": "dojo-judge-call-metered",
+      "test": "tests/next-server/dojo-judge-meter.test.ts",
+      "verdict": "killed",
+      "durationMs": 2333,
+      "caughtBy": [
+        "dojo_judge.py's Gemini call, metered books each answered call to the cycle's job at its estimate, and the job's spend reconciles to the meter",
+        "dojo_judge.py's Gemini call, metered calls nothing and books nothing for a dry job, or in a dry-only process",
+        "dojo_judge.py's Gemini call, metered refuses the call that would cross the job's ceiling before making it",
+        "dojo_judge.py's Gemini call, metered a cycle with no job still books to the meter: never an unmetered call"
+      ]
+    },
+    {
+      "id": "py-meter-dry-calls-nothing",
+      "test": "tests/next-server/dojo-judge-meter.test.ts",
+      "verdict": "killed",
+      "durationMs": 1196,
+      "caughtBy": [
+        "dojo_judge.py's Gemini call, metered calls nothing and books nothing for a dry job, or in a dry-only process"
+      ]
+    },
+    {
+      "id": "py-meter-ceiling-before-call",
+      "test": "tests/next-server/dojo-judge-meter.test.ts",
+      "verdict": "killed",
+      "durationMs": 1268,
+      "caughtBy": [
+        "dojo_judge.py's Gemini call, metered refuses the call that would cross the job's ceiling before making it"
+      ]
+    },
+    {
+      "id": "py-meter-reprojects-job-spend",
+      "test": "tests/next-server/dojo-judge-meter.test.ts",
+      "verdict": "killed",
+      "durationMs": 1264,
+      "caughtBy": [
+        "dojo_judge.py's Gemini call, metered books each answered call to the cycle's job at its estimate, and the job's spend reconciles to the meter"
+      ]
+    },
+    {
+      "id": "gpu-worker-recovers-each-look",
+      "test": "tests/next-server/foundry-settle.test.ts",
+      "verdict": "killed",
+      "durationMs": 2359,
+      "caughtBy": [
+        "a SIGKILLed GPU job's artefact is settled by the next worker look forge: run.json stops reading `generating` - the job is interrupted and the run failed with ending interrupted",
+        "a SIGKILLed GPU job's artefact is settled by the next worker look dojo: cycle.json stops reading `generating`"
+      ]
+    },
+    {
+      "id": "forge-settle-writes-ending",
+      "test": "tests/next-server/foundry-settle.test.ts",
+      "verdict": "killed",
+      "durationMs": 1100,
+      "caughtBy": [
+        "a SIGKILLed GPU job's artefact is settled by the next worker look forge: run.json stops reading `generating` - the job is interrupted and the run failed with ending interrupted"
+      ]
+    },
+    {
+      "id": "dojo-settle-writes-ending",
+      "test": "tests/next-server/foundry-settle.test.ts",
+      "verdict": "killed",
+      "durationMs": 1227,
+      "caughtBy": [
+        "a SIGKILLed GPU job's artefact is settled by the next worker look dojo: cycle.json stops reading `generating`"
+      ]
+    },
+    {
+      "id": "py-takeover-settles-interrupted",
+      "test": "packages/kernel/test/job.python.test.ts",
+      "verdict": "killed",
+      "durationMs": 2516,
+      "caughtBy": [
+        "spec/job.json: Node and Python drive jobs on one store A claim that takes over a dead holder's slot settles the job it interrupted, once"
+      ]
+    },
+    {
+      "id": "blob-route-serves-a-page",
+      "test": "tests/next-server/blob-route.test.ts",
+      "verdict": "killed",
+      "durationMs": 1358,
+      "caughtBy": [
+        "the blob route never serves a blob as a page: a non-media type answers as an octet stream"
+      ]
+    },
+    {
+      "id": "gate-cull-with-a-reject-ratifies",
+      "test": "tests/next-server/parts-gates-cull.test.ts",
+      "verdict": "killed",
+      "durationMs": 3660,
+      "caughtBy": [
+        "the frames gate is a cull of its plates a rejected plate is marked rejected, READY is left, nothing is released; the next READY opens attempt 2, which ratifies"
+      ]
+    },
+    {
+      "id": "gate-rejected-plate-left-in-the-cut",
+      "test": "tests/next-server/parts-gates-cull.test.ts",
+      "verdict": "killed",
+      "durationMs": 1748,
+      "caughtBy": [
+        "the frames gate is a cull of its plates a rejected plate is marked rejected, READY is left, nothing is released; the next READY opens attempt 2, which ratifies"
+      ]
+    },
+    {
+      "id": "gate-pick-keeps-two-takes",
+      "test": "tests/next-server/parts-gates-cull.test.ts",
+      "verdict": "killed",
+      "durationMs": 1743,
+      "caughtBy": [
+        "the score gate is a pick rows are cues, candidates their takes; two keeps in one cue are refused, one keep becomes the take in use"
+      ]
+    },
+    {
+      "id": "gate-failed-attempt-never-reopens",
+      "test": "tests/next-server/parts-gates-cull.test.ts",
+      "verdict": "killed",
+      "durationMs": 1487,
+      "caughtBy": [
+        "the frames gate is a cull of its plates a rejected plate is marked rejected, READY is left, nothing is released; the next READY opens attempt 2, which ratifies"
+      ]
+    },
+    {
+      "id": "gate-failed-cull-releases",
+      "test": "tests/next-server/parts-gates-cull.test.ts",
+      "verdict": "killed",
+      "durationMs": 1597,
+      "caughtBy": [
+        "the frames gate is a cull of its plates a rejected plate is marked rejected, READY is left, nothing is released; the next READY opens attempt 2, which ratifies"
+      ]
+    },
+    {
+      "id": "frames-fixture-fallback-chain",
+      "test": "tests/next-server/parts-frames.test.ts",
+      "verdict": "killed",
+      "durationMs": 3641,
+      "caughtBy": [
+        "frames over the kernel draws nothing until Script adopts a chain - no fixture fallback - then derives its units"
+      ]
+    },
+    {
+      "id": "frames-layer-leaves-the-frame",
+      "test": "tests/next-server/parts-frames.test.ts",
+      "verdict": "killed",
+      "durationMs": 1831,
+      "caughtBy": [
+        "frames over the kernel moves a layer as one op at its rev, answers a stale base with the part as it is, and ⌫ restores it"
+      ]
+    },
+    {
+      "id": "frames-binds-a-fact-the-notebook-lacks",
+      "test": "tests/next-server/parts-frames.test.ts",
+      "verdict": "killed",
+      "durationMs": 1830,
+      "caughtBy": [
+        "frames over the kernel binds a figure only to a fact this notebook holds, and refuses an unknown one"
+      ]
+    },
+    {
+      "id": "frames-stale-plate-reads-current",
+      "test": "tests/next-server/parts-frames.test.ts",
+      "verdict": "killed",
+      "durationMs": 1829,
+      "caughtBy": [
+        "frames over the kernel reads a ready plate whose subject moved since it was rendered as stale, and holds READY back"
+      ]
+    },
+    {
+      "id": "motion-accepts-a-blank-line",
+      "test": "tests/next-server/parts-frames.test.ts",
+      "verdict": "killed",
+      "durationMs": 1825,
+      "caughtBy": [
+        "motion over the kernel refuses to accept where there is nothing to accept (a blank line is not a motion)"
+      ]
+    },
+    {
+      "id": "motion-line-not-on-the-units",
+      "test": "tests/next-server/parts-frames.test.ts",
+      "verdict": "killed",
+      "durationMs": 1849,
+      "caughtBy": [
+        "motion over the kernel writes an accepted line onto the frames record's unit, and ⌫ takes it back off"
+      ]
+    },
+    {
+      "id": "l40-score-render-steals-active",
+      "test": "tests/next-server/parts-finish.test.ts",
+      "verdict": "killed",
+      "durationMs": 3651,
+      "caughtBy": [
+        "the trailer's score and cut on the fixture side proposes the cut's movements on the frames record's picture, keeps them on the first edit, and never lets a second render steal the take in use"
+      ]
+    },
+    {
+      "id": "l40-score-edit-keeps-proposed",
+      "test": "tests/next-server/parts-finish.test.ts",
+      "verdict": "killed",
+      "durationMs": 1912,
+      "caughtBy": [
+        "the trailer's score and cut on the fixture side proposes the cut's movements on the frames record's picture, keeps them on the first edit, and never lets a second render steal the take in use"
+      ]
+    },
+    {
+      "id": "l40-act-token-ignores-target",
+      "test": "tests/next-server/parts-finish.test.ts",
+      "verdict": "killed",
+      "durationMs": 1794,
+      "caughtBy": [
+        "the explainer on the fixture side writes, draws, records - and the cut over strips and voice reaches READY with no music rows"
+      ]
+    },
+    {
+      "id": "l40-cut-nudge-from-zero",
+      "test": "tests/next-server/parts-finish.test.ts",
+      "verdict": "killed",
+      "durationMs": 1799,
+      "caughtBy": [
+        "score and cut over the kernel lays the cut on the same clock, nudges a block on the part's log, and holds the finish line's deny sentences"
+      ]
+    },
+    {
+      "id": "l40-cut-snap-on-mark-written",
+      "test": "tests/next-server/parts-finish.test.ts",
+      "verdict": "killed",
+      "durationMs": 1849,
+      "caughtBy": [
+        "score and cut over the kernel lays the cut on the same clock, nudges a block on the part's log, and holds the finish line's deny sentences"
+      ]
+    },
+    {
+      "id": "l40-score-tempo-unbounded",
+      "test": "tests/next-server/parts-finish.test.ts",
+      "verdict": "killed",
+      "durationMs": 1843,
+      "caughtBy": [
+        "score and cut over the kernel spots a cue on this project's picture, trims it to a scene, refuses a stale base, and undoes by append"
+      ]
+    },
+    {
+      "id": "l40-explainer-cut-music-rows",
+      "test": "tests/next-server/parts-finish.test.ts",
+      "verdict": "killed",
+      "durationMs": 1867,
+      "caughtBy": [
+        "the explainer on the fixture side writes, draws, records - and the cut over strips and voice reaches READY with no music rows"
+      ]
+    },
+    {
+      "id": "l40-fixture-records-skip-door",
+      "test": "tests/next-server/parts-finish.test.ts",
+      "verdict": "killed",
+      "durationMs": 1847,
+      "caughtBy": [
+        "the trailer's score and cut on the fixture side proposes the cut's movements on the frames record's picture, keeps them on the first edit, and never lets a second render steal the take in use"
+      ]
+    },
+    {
+      "id": "l40-words-title-limit",
+      "test": "tests/next-server/parts-finish.test.ts",
+      "verdict": "killed",
+      "durationMs": 1839,
+      "caughtBy": [
+        "the trailer's score and cut on the fixture side holds the album's words to the platform's limits"
+      ]
+    },
+    {
+      "id": "l43-studio-unimported-to-list",
+      "test": "tests/next-server/retire-redirects.test.ts",
+      "verdict": "killed",
+      "durationMs": 1046,
+      "caughtBy": [
+        "a v1 studio address a project that is not imported yet goes to the one-click import, whatever its step"
+      ]
+    },
+    {
+      "id": "l43-studio-step-any-part",
+      "test": "tests/next-server/retire-redirects.test.ts",
+      "verdict": "killed",
+      "durationMs": 536,
+      "caughtBy": [
+        "a v1 studio address an imported project's step opens that part's editor",
+        "a v1 studio address no step, an unknown step, a gate, or a step the recipe lacks opens the Plan"
+      ]
+    },
+    {
+      "id": "l43-bell-holds-queue",
+      "test": "tests/next-server/bell-jobs.test.ts",
+      "verdict": "killed",
+      "durationMs": 840,
+      "caughtBy": [
+        "the bell's job list holds what runs and what ended; the queue is Runs'"
+      ]
+    },
+    {
+      "id": "l43-bell-ending-not-identity",
+      "test": "tests/next-server/bell-jobs.test.ts",
+      "verdict": "killed",
+      "durationMs": 470,
+      "caughtBy": [
+        "what the viewer has not seen an ending after the watermark is unread; a read mark or an earlier ending is read",
+        "what the viewer has not seen a retried job that ends again is news again"
+      ]
+    },
+    {
+      "id": "l43-imported-job-around-machine",
+      "test": "packages/kernel/test/job.imported.test.ts",
+      "verdict": "killed",
+      "durationMs": 1103,
+      "caughtBy": [
+        "an imported job is done through the machine: its progress is its units, no lease, no spend, one import event naming the road",
+        "an imported job ends failed with the sentence its place recorded, and an operator retries it like any failed job",
+        "an imported job is refused over an existing job and for units that are not a count, writing nothing"
+      ]
+    },
+    {
+      "id": "l43-voice-dangling-take",
+      "test": "packages/kernel/test/parts.test.ts",
+      "verdict": "killed",
+      "durationMs": 664,
+      "caughtBy": [
+        "the album and explainer parts hold their own records (L43) holds an explainer's voice takes, and refuses a line naming a take it does not hold"
+      ]
+    },
+    {
+      "id": "l43-unlaunched-reads-queued",
+      "test": "tests/next-server/import-roundtrip.test.ts",
+      "verdict": "killed",
+      "durationMs": 1160,
+      "caughtBy": [
+        "the Plan the import opens draws the recipe's parts in the states v1's work implies"
+      ]
+    },
+    {
+      "id": "l43-launch-rebuys-done-parts",
+      "test": "tests/next-server/import-roundtrip.test.ts",
+      "verdict": "killed",
+      "durationMs": 1158,
+      "caughtBy": [
+        "the Plan the import opens launches only the parts v1 never worked, through a receipt, released behind its ratified upstream (L43)"
+      ]
+    },
+    {
+      "id": "l43-launch-no-release",
+      "test": "tests/next-server/import-roundtrip.test.ts",
+      "verdict": "killed",
+      "durationMs": 1198,
+      "caughtBy": [
+        "the Plan the import opens launches only the parts v1 never worked, through a receipt, released behind its ratified upstream (L43)"
+      ]
+    },
+    {
+      "id": "l43-setpart-on-finished-part",
+      "test": "tests/next-server/import-roundtrip.test.ts",
+      "verdict": "killed",
+      "durationMs": 1175,
+      "caughtBy": [
+        "the Plan the import opens launches only the parts v1 never worked, through a receipt, released behind its ratified upstream (L43)"
+      ]
+    },
+    {
+      "id": "l43-words-not-stored",
+      "test": "tests/next-server/parts-finish.test.ts",
+      "verdict": "killed",
+      "durationMs": 1795,
+      "caughtBy": [
+        "score and cut over the kernel writes an album's words on the real side, and undo walks them back"
+      ]
+    },
+    {
+      "id": "l43-cut-verdict-client-url",
+      "test": "tests/next-server/parts-verdict-server.test.ts",
+      "verdict": "killed",
+      "durationMs": 1006,
+      "caughtBy": [
+        "the cut verdict on the server reads a held take without building its client-only URL, and a take not held stays missing"
+      ]
+    },
+    {
+      "id": "l45-store-classify-instanceof",
+      "test": "tests/next-server/exit-store-classify.test.ts",
+      "verdict": "killed",
+      "durationMs": 852,
+      "caughtBy": [
+        "a store's error classification across module instances an AppError from ANOTHER copy of @gt/domain/errors keeps its code (not-found stays not-found)"
+      ]
+    },
+    {
+      "id": "l45-apperror-unbranded",
+      "test": "tests/next-server/exit-store-classify.test.ts",
+      "verdict": "killed",
+      "durationMs": 426,
+      "caughtBy": [
+        "a store's error classification across module instances an AppError from ANOTHER copy of @gt/domain/errors keeps its code (not-found stays not-found)"
+      ]
+    },
+    {
+      "id": "l45-health-without-job",
+      "test": "packages/kernel/test/job.health.test.ts",
+      "verdict": "killed",
+      "durationMs": 1257,
+      "caughtBy": [
+        "a producer's health is asked about the job it is about to claim the driver passes the job, as it stands, to health",
+        "a producer's health is asked about the job it is about to claim a DRY job behind a vendor that is down runs to done; the probe is never asked",
+        "a producer's health is asked about the job it is about to claim a LIVE job behind the same vendor claims nothing and fails nothing: it waits, named"
+      ]
+    },
+    {
+      "id": "l45-dry-health-asks-vendor",
+      "test": "packages/kernel/test/job.health.test.ts",
+      "verdict": "killed",
+      "durationMs": 658,
+      "caughtBy": [
+        "a producer's health is asked about the job it is about to claim a DRY job behind a vendor that is down runs to done; the probe is never asked"
+      ]
+    },
+    {
+      "id": "l45-release-ignores-preflight",
+      "test": "tests/next-server/exit-roundtrip.test.ts",
+      "verdict": "killed",
+      "durationMs": 5963,
+      "caughtBy": [
+        "an imported draft launches like a composed one and leaves its neighbours' rows alone a plan launch's dry drain fails no part: a part whose act waits on a human act is not driven into failed"
+      ]
+    },
+    {
+      "id": "l45-worker-no-preflight-map",
+      "test": "tests/next-server/exit-roundtrip.test.ts",
+      "verdict": "killed",
+      "durationMs": 3015,
+      "caughtBy": [
+        "an imported draft launches like a composed one and leaves its neighbours' rows alone a plan launch's dry drain fails no part: a part whose act waits on a human act is not driven into failed"
+      ]
+    },
+    {
+      "id": "l45-preflight-never-holds",
+      "test": "tests/next-server/exit-roundtrip.test.ts",
+      "verdict": "killed",
+      "durationMs": 2995,
+      "caughtBy": [
+        "an imported draft launches like a composed one and leaves its neighbours' rows alone a plan launch's dry drain fails no part: a part whose act waits on a human act is not driven into failed"
+      ]
+    },
+    {
+      "id": "l45-launch-root-skips-preflight",
+      "test": "packages/kernel/test/records.preflight.test.ts",
+      "verdict": "killed",
+      "durationMs": 1184,
+      "caughtBy": [
+        "a producer's preflight holds a part that waits on a human act at the launch: a root part whose act waits is enqueued planned and not released; the others queue as before"
+      ]
+    },
+    {
+      "id": "l45-worker-silent-on-held-lane",
+      "test": "tests/next-server/worker-held.test.ts",
+      "verdict": "killed",
+      "durationMs": 1555,
+      "caughtBy": [
+        "the --once drain names a held lane names the job that holds it, at its stage, and the head waiting behind; nothing is claimed"
+      ]
+    },
+    {
+      "id": "l45-floor-forge-priced-wrong",
+      "test": "tests/next-server/produce-real.test.ts",
+      "verdict": "killed",
+      "durationMs": 1889,
+      "caughtBy": [
+        "the real produce port launches an image sweep as a forge run: priced without writing, prepared on the confirm, one dry gpu.local job"
       ]
     }
   ]
