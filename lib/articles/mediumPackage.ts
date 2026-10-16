@@ -67,12 +67,39 @@ const cellsOf = (row: string) =>
     .map((c) => inline(c.trim().replace(/\\\|/g, "|")));
 const plain = (html: string) => html.replace(/<[^>]+>/g, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&amp;/g, "&");
 
+/** In-page anchors, which a Medium story cannot hold: a citation written as a link to its
+ *  source (`[[3]](#src-3)`) becomes `[3]`, an empty `<a id="…"></a>` target goes, a link
+ *  to a `#…` target keeps its text, and a reference definition aimed at one (`[3]: #src-3`)
+ *  is dropped. Some writers spell post.md this way (5 of the runs at the
+ *  gate on 2026-10-16); the converter escapes raw HTML, so all three reached the draft as
+ *  literal text. Fenced code is left alone. */
+export function withoutPageAnchors(md: string): string {
+  let fence = false;
+  return md
+    .split("\n")
+    .map((line) => {
+      if (/^\s*(```|~~~)/.test(line)) {
+        fence = !fence;
+        return line;
+      }
+      if (fence) return line;
+      // a reference definition aimed at an in-page target (`[1]: #src-1`) defines nothing Medium can follow
+      if (/^\s{0,3}\[[^\]]+\]:\s*#\S*\s*$/.test(line)) return null;
+      return line
+        .replace(/\[\[(\d{1,3})\]\]\(#[^)\s]*\)/g, "[$1]")
+        .replace(/<a\s+id=["'][^"']*["']\s*>\s*<\/a>\s*/gi, "")
+        .replace(/(?<!!)\[([^\]]+)\]\(#[^)\s]*\)/g, "$1");
+    })
+    .filter((line) => line !== null)
+    .join("\n");
+}
+
 /** A deliberately small Markdown-to-HTML converter: the subset Medium keeps.
  *  A table is a `<table>` (`tables: "html"`, the registry's text form) or a
  *  figure of its PNG (`"figures"`, the form a Medium draft can hold). */
 export function markdownToStory(md: string, opts: { tables?: "html" | "figures" } = {}): { html: string; tables: StoryTable[] } {
   const asFigures = (opts.tables ?? "figures") === "figures";
-  const lines = md.replace(/\r\n/g, "\n").split("\n");
+  const lines = withoutPageAnchors(md.replace(/\r\n/g, "\n")).split("\n");
   const out: string[] = [];
   const tables: StoryTable[] = [];
   let para: string[] = [];

@@ -18,7 +18,7 @@ import { test, expect } from "@playwright/test";
 
 import { createRun, defaultDeps, driveRun, ensureMediumDraft, reworkRun } from "@/lib/articles/engine";
 import { ArticleError, runDir } from "@/lib/articles/store";
-import { markdownToStory, renderFigurePngs, renderTablePngs, storyFigures, svgSize } from "@/lib/articles/mediumPackage";
+import { markdownToStory, renderFigurePngs, renderTablePngs, storyBody, storyFigures, svgSize } from "@/lib/articles/mediumPackage";
 import { splitFigures } from "@/lib/medium/driver";
 import { FAKE_MEDIUM, fakeMediumDriver, resetFakeMedium } from "@/lib/medium/fake";
 
@@ -142,4 +142,30 @@ test("a figure PNG is the drawing, not the drawing in the corner of a blank canv
   const t = await renderTablePngs([{ name: "table-01.png", head: ["A", "B"], rows: [["1", "2"]] }], out);
   expect(t.written).toEqual(["table-01.png"]);
   expect(readFileSync(path.join(out, "table-01.png")).readUInt32BE(16)).toBe(2800);
+});
+
+test("in-page anchors leave the story: [[n]](#src-n) reads [n], <a id> targets, #-links and #-definitions go, code keeps them", () => {
+  const md = [
+    "# T",
+    "",
+    'A claim [[1]](#src-1), [[2]](#src-2) and a [section link](#close) and [a real link](https://x.org).',
+    "",
+    "```html",
+    '<a id="kept"></a> [[9]](#src-9)',
+    "```",
+    "",
+    "[1]: #src-1",
+    "[2]: #src-2",
+    "",
+    '<a id="close"></a>',
+    "## Sources",
+    "",
+    '1. <a id="src-1"></a>A source, 2026. https://x.org/1',
+  ].join("\n");
+  const html = storyBody(md);
+  expect(html).toContain("<p>A claim [1], [2] and a section link and <a href=\"https://x.org\">a real link</a>.</p>");
+  expect(html).toContain("<li>A source, 2026. https://x.org/1</li>");
+  expect(html.replace(/<pre>[\s\S]*?<\/pre>/g, "")).not.toMatch(/#src-|#close|&lt;a id=/);
+  // fenced code is the post's own example, not an anchor
+  expect(html).toContain("&lt;a id=&quot;kept&quot;&gt;&lt;/a&gt; [[9]](#src-9)");
 });
