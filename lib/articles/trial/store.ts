@@ -280,6 +280,27 @@ async function techniquesOf(dir: string, rec: TrialRecord): Promise<string[]> {
   return (await mdFiles(path.join(dir, TRIAL_FILES.brief, "techniques"))).map((f) => f.replace(/\.md$/, ""));
 }
 
+/** The registry's closed default set of application stacks (check-bundles.mjs `STACKS`). */
+const DEFAULT_STACKS = ["react", "rust", "sql", "node", "process"];
+
+/** The application stacks the subject's bundle accepts: the default set plus its `index.md`
+ *  frontmatter `stacks: [...]`, exactly as the registry's bundle gate builds it. `undefined` when
+ *  the registry cannot be read: then nothing here can say, and landing's gate still will.
+ *  Checked at framing because a stack the bundle does not declare passes every trial verb and
+ *  fails only at landing, hours and one article later (found while building, 2026-10-18). */
+async function stacksOf(rec: TrialRecord): Promise<string[] | undefined> {
+  try {
+    const registry = resolveRegistryDir();
+    const md = (await readFile(path.join(registry.dir, "knowledge", rec.subject.bundle, "index.md"), "utf8")).replace(/\r\n/g, "\n");
+    const fm = /^---\n([\s\S]*?)\n---/.exec(md)?.[1] ?? "";
+    const line = /^stacks:\s*\[(.*)\]\s*$/m.exec(fm)?.[1] ?? "";
+    const declared = line.split(",").map((s) => s.trim().replace(/^["']|["']$/g, "")).filter((s) => SLUG_RE.test(s));
+    return [...new Set([...DEFAULT_STACKS, ...declared])];
+  } catch {
+    return undefined;
+  }
+}
+
 /** prereg.json and validity.json as a framed trial must hold them; one 400 naming every problem. */
 async function readFraming(dir: string, rec: TrialRecord): Promise<{ prereg: TrialPrereg; validity: TrialValidity; bytes: Buffer }> {
   const { raw, bytes } = await readAgentJson(dir, TRIAL_FILES.prereg, "bad-prereg");
@@ -292,6 +313,10 @@ async function readFraming(dir: string, rec: TrialRecord): Promise<{ prereg: Tri
   if (typeof p.technique === "string" && SLUG_RE.test(p.technique)) {
     const known = await techniquesOf(dir, rec);
     if (!known.includes(p.technique)) problems.push(`technique "${p.technique}" is not one of the subject's techniques (${known.join(", ") || "none listed"})`);
+  }
+  if (typeof p.stack === "string" && SLUG_RE.test(p.stack)) {
+    const stacks = await stacksOf(rec);
+    if (stacks && !stacks.includes(p.stack)) problems.push(`stack "${p.stack}" is not one the registry's ${rec.subject.bundle} bundle accepts for an application (${stacks.join(", ")})`);
   }
   if (problems.length) throw new ArticleError(`prereg.json has ${problems.length} problem${problems.length === 1 ? "" : "s"}: ${problems.join("; ")}`, 400, "bad-prereg");
   const v = await readAgentJson(dir, TRIAL_FILES.validity, "bad-validity");

@@ -30,12 +30,16 @@ export async function diffFiles(original: string, proposal: string, target: stri
     const diff = await new Promise<string>((resolve, reject) => {
       execFile(
         "git",
-        ["-c", "core.autocrlf=false", "-c", "core.safecrlf=false", "diff", "--no-index", "--no-color", "--no-prefix", "--", left, `b/${target}`],
+        ["-c", "core.autocrlf=false", "-c", "core.safecrlf=false", "-c", "core.longpaths=true", "diff", "--no-index", "--no-color", "--no-prefix", "--", left, `b/${target}`],
         { cwd: tmp, env: cwdBoundGitEnv(), maxBuffer: 16 * 1024 * 1024, windowsHide: true },
         (err, stdout, stderr) => {
-          // exit 1 = "there are differences", which is the point
+          // exit 1 = "there are differences", which is the point. But git also exits 1 when it
+          // could not read a side ("Could not access", a path past 260 characters on Windows),
+          // with stderr and no diff: read as "identical", that silently refused a real patch
+          // (found by the trial-gate builder, 2026-10-18). No diff plus stderr is a failure.
           const code = err ? (err as unknown as { code?: number }).code : 0;
-          if (code === 0 || code === 1) resolve(String(stdout));
+          if (code === 1 && !String(stdout).trim() && String(stderr).trim()) reject(new Error(`git diff failed: ${String(stderr).trim().slice(0, 300)}`));
+          else if (code === 0 || code === 1) resolve(String(stdout));
           else reject(new Error(`git diff failed: ${String(stderr).trim().slice(0, 300)}`));
         },
       );

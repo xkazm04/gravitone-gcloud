@@ -270,6 +270,19 @@ test("the validators name every problem in one error", () => {
   expect(validateResults(results(five(1), five(2)), prereg())).toEqual(results(five(1), five(2)));
 });
 
+test("check refuses a stack the subject's bundle does not accept for an application", async () => {
+  // The registry's bundle gate accepts react|rust|sql|node|process plus the bundle's index.md
+  // `stacks:`; anything else fails only at landing, so framing refuses it first.
+  writeFileSync(path.join(box.registry, "knowledge", "software-engineering", "index.md"), "---\nokf_version: 1\nstacks: [python, claude-code]\n---\n\n# Software engineering\n");
+  const { id, dir } = await framedTrial(prereg({ stack: "cobol", environment: "cobol@85" }));
+  const e = await refusal(checkTrial(id));
+  expect(e.code).toBe("bad-prereg");
+  expect(e.message).toContain('stack "cobol"');
+  expect(e.message).toContain("claude-code");
+  writeFileSync(path.join(dir, "prereg.json"), `${JSON.stringify(prereg({ stack: "python", environment: "python@3.14" }), null, 2)}\n`);
+  expect((await checkTrial(id)).record.status, "a declared stack passes").toBe("framed");
+});
+
 /* ── the seal and the exec ─────────────────────────────────────────────────── */
 
 test("a prereg edited after the seal: close and a measured exec refuse with prereg-changed", async () => {

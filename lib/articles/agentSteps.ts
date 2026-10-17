@@ -97,7 +97,7 @@ export async function agentStep(id: string, name: WriterStep, deps: EngineDeps):
     try {
       if (name === "research") await ingestResearch(ws, dir, trial ? await readExperimentSource(dir) : undefined);
       else if (name === "outline") await ingestOutline(ws, dir);
-      else await ingestDraft(ws, dir);
+      else await ingestDraft(ws, dir, registry);
     } catch (e) {
       await keepOut(ws, dir, name);
       throw new StepError((e as Error).message, result.costUsd);

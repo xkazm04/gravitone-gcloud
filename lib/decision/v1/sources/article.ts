@@ -171,7 +171,9 @@ function packet(v1: ArticleV1): Result<OpenPlan> {
   const postRef = v1.media.get(POST);
   if (postRef === undefined) return err("not-found", `run ${run.id} has no post/index.html to review`);
   const losses: Loss[] = [];
-  const judged = patches.filter((p) => {
+  // Only patches the human chooses are items: a trial run's required record (t1) lands with the
+  // post whatever the approval names, so it is never a decision of this packet.
+  const judged = patches.filter((p) => !p.required).filter((p) => {
     if (v1.media.has(patchCandidate(p.id))) return true;
     losses.push({ candidate: patchCandidate(p.id), grade: "dropped", reason: `${p.patchFile} is not on disk; patch ${p.id} cannot be approved here and lands with nothing` });
     return false;
@@ -250,7 +252,7 @@ export function reworkNote(plan: EditPlan): Result<string> {
 function consequence(v1: ArticleV1, at: DecisionsAt): Result<Preview> {
   const { run, meta, patches } = v1.detail;
   if (run.status !== "awaiting-approval") return err("conflict", `run ${run.id} is ${run.status} now; it was decided on its page`);
-  const byPatch = new Map(patches.filter((p) => v1.media.has(patchCandidate(p.id))).map((p) => [patchCandidate(p.id), p]));
+  const byPatch = new Map(patches.filter((p) => !p.required && v1.media.has(patchCandidate(p.id))).map((p) => [patchCandidate(p.id), p]));
   const items = [POST, ...byPatch.keys()];
   const decided = decisionMap(at.decisions);
   for (const id of decided.keys()) if (!items.includes(id)) return err("conflict", `${id} is no longer a patch of run ${run.id}`);
@@ -370,7 +372,10 @@ export function makeArticleAdapter(deps: ArticleAdapterDeps = {}): DecisionAdapt
     const { approval, rejection, status } = run.value;
     if (post?.verdict === "keep") {
       const patches = [...decided].filter(([c, d]) => c.startsWith(PATCH) && d.verdict === "keep").map(([c]) => c.slice(PATCH.length));
-      if (approval !== undefined && !sameSet(approval.patches, patches)) return refused(`run ${id.value} was approved on its page with patches [${approval.patches.join(", ")}]; this packet approves [${patches.join(", ")}]`);
+      // approveRun records a trial run's required patch beside the chosen ones; it is not this packet's to name.
+      const required = await v1Call(async () => (approval === undefined ? [] : (await getRunDetail(id.value)).patches.filter((p) => p.required).map((p) => p.id)));
+      if (!required.ok) return required;
+      if (approval !== undefined && !sameSet(approval.patches.filter((p) => !required.value.includes(p)), patches)) return refused(`run ${id.value} was approved on its page with patches [${approval.patches.join(", ")}]; this packet approves [${patches.join(", ")}]`);
       if (rejection !== undefined) return refused(`run ${id.value} was rejected on its page; this packet approves it`);
       const slot = await slotFor(run.value, post.note, claim);
       if (!slot.ok) return slot;
