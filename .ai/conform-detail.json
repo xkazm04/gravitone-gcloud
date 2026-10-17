@@ -6390,6 +6390,83 @@
         "at": "2026-10-17T21:22:07.592786+00:00",
         "reason": "reviewer (sonnet): The claim that no question-stack artifact is generated before prose is contradicted by pipeline/NOTEBOOK-SCHEMA.md, where the research step produces `candidate_questions` as 'step 3 — the question stack' and the creator triages the kept cards before SCRIPT-PROMPT composes. Line 65 only shows the out"
       }
+    },
+    "a41c19e2-bf74-499c-a70f-96f78a55defd/structured-output": {
+      "context": "sound-lab-modules",
+      "subject": "structured-output",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T22:12:45.232Z",
+      "techniques": [
+        {
+          "technique": "answer-coverage-gating",
+          "verdict": "not-applicable",
+          "evidence": "lib/sound/hunt.ts:330 Hunt drafting takes an open-ended idea prompt without enumerated discrete units to answer."
+        },
+        {
+          "technique": "artifact-lifecycle",
+          "verdict": "deviation",
+          "evidence": "lib/sound/huntDesk.ts:62 Drafting lacks a state machine or single-flight execution lock, allowing concurrent runs to race."
+        },
+        {
+          "technique": "constrained-decoding-is-a-shared-budget",
+          "verdict": "not-applicable",
+          "evidence": "lib/sound/hunt.ts:127 Calls carry a single static schema with no independently authored contributions sharing a constraint budget."
+        },
+        {
+          "technique": "constraint-and-tool-channel-exclusion",
+          "verdict": "not-applicable",
+          "evidence": "lib/sound/hunt.ts:334 The reasoning turn carries only a schema and invokes reason() with no tool definitions."
+        },
+        {
+          "technique": "display-vs-machine-channels",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/audio/hunt.ts:321 Downstream execution regex-parses machine fields like loop out of prompt display prose."
+        },
+        {
+          "technique": "enumerable-domain-decoding",
+          "verdict": "deviation",
+          "evidence": "lib/sound/hunt.ts:148 Closed enumerable domains are typed as unconstrained bare strings in the schema and filtered post hoc."
+        },
+        {
+          "technique": "extraction-observability",
+          "verdict": "deviation",
+          "evidence": "lib/sound/lessons.ts:131 Extraction failures are caught and returned as ok hand proposals without tracking failure taxonomy."
+        },
+        {
+          "technique": "extraction-strategies",
+          "verdict": "deviation",
+          "evidence": "lib/text/json.ts:44 Extraction jumps straight to unanchored brace scanning without attempting whole-text parse or code fences."
+        },
+        {
+          "technique": "graded-span-grounding",
+          "verdict": "not-applicable",
+          "evidence": "lib/sound/hunt.ts:459 The model drafts synthetic natural-language claims rather than returning quotes or text spans from source files."
+        },
+        {
+          "technique": "op-grammar-allowlisting",
+          "verdict": "not-applicable",
+          "evidence": "lib/sound/hunt.ts:131 The output is creative suggestion data for human review rather than executable system operations."
+        },
+        {
+          "technique": "output-budget-signal",
+          "verdict": "deviation",
+          "evidence": "lib/sound/hunt.ts:263 Artifact growth is silently truncated with slice() rather than measuring output against model ceilings."
+        },
+        {
+          "technique": "schema-validation-and-repair",
+          "verdict": "deviation",
+          "evidence": "lib/sound/hunt.ts:291 Invalid durations and unrecognized items are silently clamped and dropped with no model-assisted repair loop."
+        }
+      ],
+      "registryProposal": "Creative drafting pipelines often intentionally drop unrenderable variants rather than paying for model-assisted repair turns, which the strict schema-validation-and-repair standard currently treats as a defect.",
+      "withdrawn": {
+        "worker": "334a45d0-d7fa-4051-901e-c671559e2def",
+        "state": "deviation",
+        "at": "2026-10-17T22:13:01.950054+00:00",
+        "reason": "reviewer (sonnet): The anchors in lib/sound/hunt.ts and lib/sound/huntDesk.ts are not among this context's listed files (app/playground/triage and app/playground/arrange), and app/playground does not exist in the repo, so I could not tie the verdict to this context's code."
+      }
     }
   }
 }

@@ -1,0 +1,43 @@
+{
+  "schema": "conform-run/1",
+  "worker": "334a45d0-d7fa-4051-901e-c671559e2def",
+  "subject": "structured-output",
+  "evaluatedAt": "2026-10-17T22:12:45.232756+00:00",
+  "provider": "agy",
+  "model": "gemini-3.8-flash-high",
+  "pairs": [],
+  "declined": [
+    {
+      "subject": "structured-output",
+      "context": "sound-lab-modules",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchors in lib/sound/hunt.ts and lib/sound/huntDesk.ts are not among this context's listed files (app/playground/triage and app/playground/arrange), and app/playground does not exist in the repo, so I could not tie the verdict to this context's code."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-17T22:12:45.232756+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "structured-output"
+      ],
+      "techniques": [
+        "answer-coverage-gating",
+        "artifact-lifecycle",
+        "constrained-decoding-is-a-shared-budget",
+        "constraint-and-tool-channel-exclusion",
+        "display-vs-machine-channels",
+        "enumerable-domain-decoding",
+        "extraction-observability",
+        "extraction-strategies",
+        "graded-span-grounding",
+        "op-grammar-allowlisting",
+        "output-budget-signal",
+        "schema-validation-and-repair"
+      ],
+      "deviations": 1,
+      "context": "sound-lab-modules",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
+}
