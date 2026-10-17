@@ -621,6 +621,75 @@ lots) inside the phase.
 - **Exit:** v1 code under `app/` other than the landing is gone, `npm run verify` is green on the
   new gate set, and cx-capture covers every new screen.
 
+> **Done 2026-10-18** (`8f972e0f`, `13a72f6a`, `ed151a11`; three waves, 16 builder lots). Owner rulings 2026-10-17:
+> the Sound lab rebuilt in `/audio`, the music-video acts rebuilt as new-world acts, slots in the kernel store, a
+> `blog` channel. What landed:
+> - **The Calendar, real.** Kernel `slots` (slots / publications / metric_snapshots, every write one tx + a `slot.*`
+>   event): v1 `lib/publish/schedule.ts`'s machine absorbed - the claim is a kernel lease (two processes sweeping 40
+>   due slots make 40 claims), a slot overdue past 60 min is missed and never published late, drift annotates and
+>   clears itself, a dead claimant's slot fails "interrupted", one publication per item x channel x MODE (a dry
+>   rehearsal never blocks the live upload), reads never sweep. The Floor rail and month read it; the slot level
+>   (`/floor?slot=<id>`: player or the blog PR, the error verbatim on scheduled -> auth -> upload -> live, metrics with
+>   null as "—"), move / cancel / publish-now at the slot's rev, the schedule sheet (v1 Composer), channel readiness
+>   with standing and the worker timer's last tick. A one-time importer (`pipeline/import/slots.mts`, dry by default,
+>   MIGRATED marker) never refuses a v1 row: duplicates import cancelled with the reason.
+> - **Publish `tick` on the worker.** A timer roster in `workers/` (`publish-tick`, `metrics-refresh` as kernel leases,
+>   tick-isolated, observable, downtime measured from the timer's own heartbeat and recorded on `slot.miss`); the
+>   publish producer DRY through the kernel's dry-run port (the plan is the receipt's blob, zero network); YouTube
+>   session addresses guarded. `pipeline/publish.mts` keeps its verbs, `--json` keys and exit codes.
+> - **Board Approve -> calendar** for articles (a `blog` slot landed by the PR when the article lands); music-video
+>   Regenerate (receipt first; v1 launched live with none) and Send to Calendar on the Runs inspector; the Library's
+>   Schedule act on video exports.
+> - **The Sound lab folded into `/audio`**: Arrange (stages x groups, finalize gated on a library label, the Suno
+>   round trip as a stack's next version), Hunt (leaves priced in audio-seconds, side-by-side audition with one
+>   playhead, crown = keep, a Run the worker carries), Lessons (saved only on the operator's confirm, "because" and
+>   n >= 3 required), strengths per provider (no figure under three takes), rubric 1-10, brief vs measured (also on the
+>   Board's audio tile), the operator batch through a receipt, effects as the `sfx` producer (also from the Floor);
+>   waveform peaks, tempo and key measured at ingest (`audio_measures`). `/playground` redirects to `/audio`.
+> - **v1 retired.** `app/{foundry,playground,articles,calendar,_phases (but the compositor),_projects,_studio,board,
+>   studio,projects}`, 92 `app/api` routes, `StudioFrame` (MODULES -> the (studio) shell's `SECTIONS`), the Almanac kit
+>   (`components/kit`), `components/ui/{deck,shell,Modal,...}`, `lib/board`, `lib/publish/{publisher,http,metrics}`.
+>   Every v1 address redirects (§5.7). The Dojo gate runs headless through `pipeline/decide.mts` (the Board's packet,
+>   `--by` required). The four file doors the screens still call are on `route({ guard: "access" })`, `?k=` gone.
+> - **Exit evidence.** Under `app/` outside `(studio)` and the landing only the recorded exemptions remain:
+>   `app/_server` (the server seam), `app/_dev-inspector`, the sibling session's
+>   `app/_phases/frames/music-video/compositor.ts`, nine API routes the screens and agents call, the root layout and
+>   error boundaries. Verify: static gates clean (typecheck, typecheck:next, next-structure, lint:ratchet, tokens,
+>   narration - now over `@gt/ui` - type-scale), `test:unit` 2125/2125, probes 1440 passed (bar `sound-store`, the
+>   sibling's ledger), the full live lane 210 passed with its 13 failures fixed and rerun green, unit mutants killed
+>   per wave (A 37/37, B 69/69, C 32/32), probe mutants 2/2 + 1/2 (the survivor retired: the probe runner
+>   cannot see a mutation in `packages/**`; its unit twin kills it). cx covers every screen: 53 ids in
+>   `pipeline/cx-screens.mjs` (floor, floor-calendar, floor-slot, floor-schedule, board, board-sheet, ledger, runs,
+>   library-style, 12 audio ids), walked by the legibility lane. **Not run:** `npm run build` + `check:bundle` (the OS
+>   stopped the build for memory on a shared machine); `pipeline/bundle-budget.json` read a stale build's route list.
+> - **After cutover.** `CLAUDE.md` rewritten (494 -> 172 lines; generated block and git policy byte-identical); the
+>   context-map process moved whole to `docs/context-map.md` (its gate now sees `packages/` and `workers/`); every
+>   `.claude/*/config.md` overlay and the prototype / train-style skills repointed. The context-map rescan and the
+>   `.ai/registry-map.json` regeneration belong to the machine that owns the map (project `91d8170c`): logged in
+>   `.vault/map-drift.md`.
+> - **Decided in the Director's seat**: an error stays on a slot cancelled after failing (drawn dim); drift and missed
+>   are fields, never error text; the claim is a kernel lease; ElevenLabs is the desk's effects maker while the
+>   capability is on; the `sfx` producer is bound (album effect parts are refused with a sentence, not parked);
+>   `/articles/<runId>` -> the Board, the Ledger and shelf link a run's history instead.
+> - **Incident**: the Director's live-lane runs on 2026-10-17 migrated the operator's store three times (specs that open
+>   the kernel themselves fell back to `foundry-out/gravitone.sqlite`); no data written, restored from its 21:09
+>   pre-migrate snapshot (chain intact, 1438). The lane now hands its temp store to the specs; `ledger.live` refuses.
+> - **Carried forward**:
+>   - waiting on the sibling session: move the compositor to `lib/` (empties the `no-app-imports` allowlist), delete
+>     `lib/publish/{schedule,store,types}.ts` (read only by the orphaned `lib/sound/mv/calendar.ts`), fold `mvActs`'s
+>     copy of v1 `regenerateMv` back into the queue;
+>   - `npm run build` + `check:bundle` on a quiet machine, and `bundle-budget.json` rebaselined from it;
+>   - orphans to sweep: the rest of `components/ui/signal/*`, `lib/jobs.tsx` (`JobsProvider`, `useJobs`, `jobNoun`),
+>     `lib/frames/{alternatives/alts,records}.ts`, `lib/usePollFreshness.ts`, the landing's almanac `EnterButton`,
+>     `lib/apiAuth.ts`'s guards (read only by `lib/imaging/handlers.ts` for `pipeline/integration-imaging.mts`);
+>   - `/articles/<runId>` lands on a Board refusal for a run not at its gate (route by the run's state);
+>   - the schedule form's default item still treats a dry-published slot as holding its item; `slottedIn` counts a
+>     dry-published slot as placed (does a rehearsal ratify a slot part?);
+>   - `/api/script`'s request-size bound left with the route: compose has no size bound in `lib`;
+>   - the rubric is written on `/audio` after the Board verdict (a Board decision has no score field);
+>   - `board-exit.live`'s mv/strips undo is a timing flake (4/4 on repeat);
+>   - wave C's L68 edited the slots v2 migration wave B had added (unpushed; no store outside the lanes ran it).
+
 ---
 
 ## 7. Risks and what we measure
