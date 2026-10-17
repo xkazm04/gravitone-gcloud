@@ -1,5 +1,10 @@
 # Subject delta: what a run's research is worth to the registry
 
+**Classic runs only** (no `run.trial`: `/techwriter`, `run --subject` or `run --topic`). A trial
+run carries its own registry record, the application `t1` that lands with the post plus any
+technique amendment and the leads its trial filed, so there is nothing for this brief to extract
+from it (SKILL.md, "Registry yield").
+
 A read-only brief for one subagent per gated run. It measures, skeptically, whether the run's
 claims would change the registry's own knowledge of the subject. It exists because the article
 is not the vehicle: 2026-10-14, eight runs, the research step cost $4 to $6 of a $51 to $67 run
