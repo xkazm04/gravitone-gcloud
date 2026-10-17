@@ -127,6 +127,23 @@ describe("a dry publish", () => {
     k.close();
   });
 
+  it("one per item x channel x mode (v1 publisher.ts): a rehearsal does not block the live upload, a second rehearsal fails in v1's words before it plans", async () => {
+    const calls = { plan: 0, upload: 0 };
+    const { k, deps } = world(stub({}, calls));
+    slot(k);
+    const first = await publishTick(deps, new Date(NOW));
+    const pubId = first.ok && first.value.outcomes[0]?.kind === "published" ? first.value.outcomes[0].publication.id : "";
+    const again = slot(k);
+    const r = await publishTick(deps, new Date(NOW));
+    expect(r.ok && r.value.outcomes).toEqual([{ kind: "failed", slotId: again, error: `export 0b1c2d3e-4f50-4617-8a9b-cafe0000aaaa is already published on youtube (publication ${pubId}, dry)` }]);
+    expect(calls).toEqual({ plan: 1, upload: 0 });
+    const liveSlot = slot(k);
+    const l = await publishTick({ ...deps, mode: live() }, new Date(NOW));
+    expect(l.ok && l.value.outcomes.map((o) => [o.slotId, o.kind])).toEqual([[liveSlot, "published"]]);
+    expect(calls).toEqual({ plan: 2, upload: 1 });
+    k.close();
+  });
+
   it("names the publication in the plan it keeps, so the receipt and the record join", async () => {
     const { k, deps } = world(stub());
     slot(k);

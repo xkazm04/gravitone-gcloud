@@ -87,8 +87,8 @@ export const GATES: readonly Gate[] = [
     id: "type-scale",
     npmScript: "check:type",
     class: "blocking",
-    outcomes: "01",
-    rationale: "app/**/*.tsx and components/**/*.tsx for a font size under the readable floor. Filesystem only.",
+    outcomes: "012",
+    rationale: "The Tailwind surfaces (landing, root layout/page/error/global-error, dev inspector, components/) for a font size under the readable floor; the (studio) world is held by tokens:check. Filesystem only; exits 2 when the scope reads under 10 files.",
   },
   {
     id: "narration",

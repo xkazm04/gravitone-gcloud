@@ -103,22 +103,12 @@ export const ACCENT = {
   cyan: "#67e8f9",
   violet: "#a78bfa",
   emerald: "#6ee7b7",
-  /** Reserved/avoid semantic (the Library Audio Workbench's "ant"/exclude
-   *  chips) — Tailwind's rose-400, spelled here rather than left as a
-   *  `border-rose-400/30` utility class because the Obsidian remap in
-   *  app/library/audio/audio-workbench.css needs it as a raw CSS custom
-   *  property, not a class on an element. */
-  rose: "#fb7185",
 } as const;
 
-/** Page ink — the studio background. */
-export const INK = "#080a10";
-
-/** Bright ink — readable text/foreground on the dark studio background.
- *  Reader: app/library/audio/audio-workbench.css's Obsidian token remap
- *  (`--gt-ink-bright`), the kit's first real Obsidian consumer; Almanac's
- *  own `--al-white` is its equivalent for that world. */
-export const INK_BRIGHT = "#f3f6fb";
+// (ACCENT.rose, INK and INK_BRIGHT - `--gt-accent-rose`, `--gt-ink`, `--gt-ink-bright` -
+// went in Phase 6 wave C with their last readers: the Library audio workbench's Obsidian
+// remap, the v1 StudioFrame's page ground and the Almanac kit's Obsidian skin. The ink is
+// still #080a10 in prose below because the measurements that name it were taken on it.)
 
 /**
  * The canonical glass surface, as a class list. The one export of this file
@@ -162,9 +152,6 @@ export const CSS_TOKENS: Record<string, string> = {
   "--gt-accent-cyan": ACCENT.cyan,
   "--gt-accent-violet": ACCENT.violet,
   "--gt-accent-emerald": ACCENT.emerald,
-  "--gt-accent-rose": ACCENT.rose,
-  "--gt-ink": INK,
-  "--gt-ink-bright": INK_BRIGHT,
 
   // glass surface (.glass-panel / SURFACE)
   "--gt-surface-top": "rgba(255,255,255,0.05)",
@@ -209,15 +196,8 @@ export const CSS_TOKENS: Record<string, string> = {
   "--gt-scroll-thumb": "rgba(103,232,249,0.25)",
   "--gt-scroll-thumb-hover": "rgba(103,232,249,0.45)",
 
-  // storyboard element marks (app/_phases/frames/parts.tsx). SVG `stroke` takes
-  // a paint value, not a Tailwind class, so the non-accent mark needs a var.
-  "--gt-frame-mark": "rgba(255,255,255,0.85)",
-
-  // "there is nothing here yet" — the diagonal wash behind an ungenerated
-  // plate. A var rather than Tailwind's gradient utilities because those
-  // interpolate `in oklab`; this one fades to `transparent` in sRGB and is
-  // staying exactly as it renders today.
-  "--gt-wash": "rgba(255,255,255,0.04)",
+  // (--gt-frame-mark and --gt-wash went with the v1 storyboard marks and plate
+  // wash, Phase 4-6; the new world draws both from @gt/ui's tokens.)
 
   // motion
   "--gt-ease": EASE_CSS,
@@ -225,88 +205,10 @@ export const CSS_TOKENS: Record<string, string> = {
   "--gt-aurora-period": "22s",
 };
 
-/**
- * THE ALMANAC WORLD (v2), scoped. Chosen 2026-09-29 from contest
- * landing-nextgen-brand-r2, variant A/2: the studio as a star atlas. A route
- * opts in with `data-world="almanac"` on its root; everything else stays
- * Obsidian until it is migrated, so the redesign can land one surface at a time.
- *
- * Roles, not hues: `gold` is the line of the cut and the ring of focus,
- * `ald` (Aldebaran) is the single red that means "a person kept this",
- * `ant` (Antares) is errors and what a commit deletes and appears on working
- * surfaces only. Sizes and families are Tailwind/@theme business (globals.css).
- *
- * TEXT HAS TWO LEVELS, `white` and `vellum`, and nothing else: both clear 11:1 on
- * night and deep. `ash` is NOT a text colour (6.1:1 on night, read as grey on this
- * ground); it draws rings, rules and the rejected disc. A hue used as text is
- * lightened toward white by mixing, never dimmed with opacity: `--al-ald-t` and
- * `--al-ant-t` are the text spellings of the two reds (>= 7:1 on night, deep and
- * field), and a constellation tint as text is `color-mix(in srgb, <tint> 70%,
- * var(--al-white))`. Values that are a colour-mix over other tokens stay here so
- * /kit can resolve and measure them.
- */
-export const WORLD_ALMANAC: Record<string, string> = {
-  "--al-night": "#0A1230",
-  "--al-deep": "#060A1C",
-  "--al-field": "#121C44",
-  "--al-gold": "#D9B26A",
-  "--al-white": "#F3EEDF",
-  "--al-vellum": "#D6D0BE",
-  "--al-ash": "#8C93B3",
-  "--al-ald": "#E2704F",
-  "--al-ant": "#EE6A8C",
-  "--al-ald-t": "color-mix(in srgb, var(--al-ald) 65%, var(--al-white))",
-  "--al-ant-t": "color-mix(in srgb, var(--al-ant) 70%, var(--al-white))",
-  // the four constellations' own hues (door tints, chosen with the design)
-  "--al-tint-templates": "#9A86F0",
-  "--al-tint-bracket": "#E8C27A",
-  "--al-tint-disciplines": "#6FA8E8",
-  "--al-tint-engines": "#6FD3A2",
-  "--al-line": "rgba(217,178,106,0.2)",
-  "--al-line-strong": "rgba(217,178,106,0.42)",
-  "--al-sky":
-    "radial-gradient(120% 70% at 50% -12%, #16225A 0%, #0E1738 30%, #0A1230 55%, #070C23 100%)",
-  "--al-ease": "cubic-bezier(0.2, 0.7, 0.1, 1)",
-};
-
-/**
- * The SAME `--al-*`/`--k-*` names the kit's CSS (components/kit/kit.css,
- * workbench.css) already reads, redefined for Obsidian rather than Almanac —
- * what lets a route render the kit's components (Table, Pager, PageHead, Dock,
- * SideList, StatusStrip, Doc, Sheet, ...) in this app's ORIGINAL palette
- * instead of the Almanac one. Emitted under `[data-world="obsidian"]`
- * (`tokensCss` below), the explicit value `WorldRoot`'s `world` prop sets when
- * a route opts in — never the ABSENCE of `data-world="almanac"`, which would
- * silently re-skin anything the attribute selector matched by coincidence.
- *
- * NO NEW LITERAL. Every value here is a `var(--gt-*)` reference into this
- * file's own existing Obsidian tokens, reused by name — `--al-gold` IS
- * `--gt-accent-cyan`, not a second cyan that could drift from it. `--al-white`
- * reads `--gt-ink-bright` (declared above, for this exact purpose — "the
- * kit's first real Obsidian consumer"). `--al-ald`/`--al-ant` map onto the
- * emerald/rose accents by the same positive/negative role Almanac's own
- * warm-orange/rose pair carries in the kit's CSS (kept vs. avoided, proven vs.
- * rejected). `--al-sky` has no Obsidian starfield to recreate — Foundry's
- * "legacy palette" has no sky, so `.k-world`'s `background: var(--al-sky)
- * fixed` resolves to a flat ink instead of a gradient.
- */
-export const WORLD_OBSIDIAN_KIT: Record<string, string> = {
-  "--al-night": "var(--gt-ink)",
-  "--al-deep": "var(--gt-ink)",
-  "--al-field": "color-mix(in srgb, white 7%, transparent)",
-  "--al-gold": "var(--gt-accent-cyan)",
-  "--al-white": "var(--gt-ink-bright)",
-  "--al-vellum": "color-mix(in srgb, var(--gt-ink-bright) 72%, transparent)",
-  "--al-ash": "color-mix(in srgb, var(--gt-ink-bright) 45%, transparent)",
-  "--al-ald": "var(--gt-accent-emerald)",
-  "--al-ant": "var(--gt-accent-rose)",
-  "--al-ald-t": "color-mix(in srgb, var(--al-ald) 65%, var(--al-white))",
-  "--al-ant-t": "color-mix(in srgb, var(--al-ant) 70%, var(--al-white))",
-  "--al-line": "color-mix(in srgb, var(--gt-accent-cyan) 20%, transparent)",
-  "--al-line-strong": "color-mix(in srgb, var(--gt-accent-cyan) 42%, transparent)",
-  "--al-sky": "var(--gt-ink)",
-  "--al-ease": "var(--gt-ease)",
-};
+// THE ALMANAC WORLD (`WORLD_ALMANAC`, `[data-world="almanac"]`) and the kit's Obsidian
+// skin (`WORLD_OBSIDIAN_KIT`, `[data-world="obsidian"]`) retired with the Almanac kit
+// (components/kit) and the v1 StudioFrame in Phase 6 wave C: nothing left in the tree drew
+// under either attribute. The design reference stays at docs/design/almanac-v2/.
 
 /**
  * Signal Layer channel defaults (contract C4). Declared on :root so every
@@ -423,16 +325,10 @@ export function tokensCss(): string {
   ]
     .map(([k, v]) => `${k}:${v};`)
     .join("");
-  const world = Object.entries(WORLD_ALMANAC)
-    .map(([k, v]) => `${k}:${v};`)
-    .join("");
-  const obsidianKit = Object.entries(WORLD_OBSIDIAN_KIT)
-    .map(([k, v]) => `${k}:${v};`)
-    .join("");
   const paperCosmos = Object.entries(WORLD_PAPER_COSMOS)
     .map(([k, v]) => `${k}:${v};`)
     .join("");
-  return `:root{${decls}}[data-world="almanac"]{${world}}[data-world="obsidian"]{${obsidianKit}}[data-world="paper-cosmos"]{${paperCosmos}}`;
+  return `:root{${decls}}[data-world="paper-cosmos"]{${paperCosmos}}`;
 }
 
 // ── TYPE SCALE, BY REFERENCE ────────────────────────────────────────────────

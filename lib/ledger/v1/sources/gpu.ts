@@ -65,7 +65,9 @@ type Line = Parsed<z.output<typeof lineSchema>>;
 export type GpuSnapshot = { readonly lines: readonly Line[]; readonly status: Parsed<z.output<typeof statusSchema>>; readonly skipped: readonly Skipped[] };
 
 const BROKER = { kind: "machine", id: "gpu-broker" } as const;
-const HREF = "/foundry";
+// Where the card's work is seen now: the Floor's image lane (v1's /foundry page retired in Phase 6
+// wave C and redirects; a redirect is not a link to keep).
+const HREF = "/floor?lane=image";
 
 /** Every line of a queue log through the door; a line that does not parse is skipped by number. */
 export function linesOf(text: string): { lines: Line[]; skipped: Skipped[] } {

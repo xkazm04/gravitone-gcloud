@@ -12,12 +12,20 @@
 // The door is `withAccess(url)` beside `accessHeader()`, and this lane pins:
 //   · what it appends for each bundle shape (legacy secret · verified token ·
 //     fixture / local / signed out: nothing);
-//   · the server half: a verified READ door admits a valid `?k=` token and
-//     refuses an expired one; the MONEY door never reads a query credential;
-//     legacy `?k=<secret>` answers exactly as before, on exactly the routes that
-//     read `k` today;
+//   · the server half: the read door admits a valid header token and refuses an
+//     expired one by name; the MONEY door never reads a query credential;
 //   · the source: nothing but the door reads the bundle secret, and nothing
 //     but the door builds a `k=` credential query.
+//
+// Phase 6 wave C (L70): NO ROUTE READS `k` ANY MORE. The last v1 page that sent it
+// is gone; the four kept file routes are on route()'s `access` guard, where the
+// studio's session cookie rides an element's request by itself. So the server
+// half now pins the opposite of what it pinned: a credential in the query is no
+// credential (401 with nothing else presented), and the set of routes that read
+// `k` is empty. withAccess() stays until the clients that call it retire (their
+// URLs still work: the query is ignored and the cookie decides). RETIRED with
+// their routes: the video clip file route's cases and the generate route's
+// money-door case (guardRequest itself is still driven).
 //
 // NEVER REAL NETWORK. The JWKS fetcher is injected (a test RSA key minted
 // here) and `globalThis.fetch` throws for every case.
@@ -34,8 +42,6 @@ import { ACCESS_QUERY_PARAM, accessHeader, accessQuery, withAccess } from "@/lib
 import { DEV_USER } from "@/lib/devAuth";
 import { LOCAL_USER } from "@/lib/localMode";
 import { GET as foundryFileGET } from "@/app/api/foundry/file/route";
-import { GET as clipFileGET } from "@/app/api/video/clips/[id]/file/route";
-import { POST as generatePOST } from "@/app/api/imaging/generate/route";
 
 const PROJECT = "gravitone-probe";
 const SECRET = "probe-shared-secret";
@@ -123,7 +129,7 @@ test("door: a legacy bundle puts its secret in k= exactly as the hand-built URLs
   process.env.NEXT_PUBLIC_IMAGING_ACCESS_SECRET = ` ${SECRET} `;
   expect(ACCESS_QUERY_PARAM).toBe("k");
   expect(accessQuery()).toBe(SECRET);
-  expect(withAccess("/api/video/clips/c1/file")).toBe(`/api/video/clips/c1/file?k=${SECRET}`);
+  expect(withAccess("/api/sound/takes/c1/file")).toBe(`/api/sound/takes/c1/file?k=${SECRET}`);
   expect(withAccess("/api/music-video/export/file?id=abc")).toBe(`/api/music-video/export/file?id=abc&k=${SECRET}`);
   // A value with characters a query must escape is escaped, once.
   process.env.NEXT_PUBLIC_IMAGING_ACCESS_SECRET = "s e&c=r?t";
@@ -165,34 +171,32 @@ test("door: a fragment stays last", async () => {
   expect(withAccess("/api/articles/r1/file/post/index.html#src-1")).toBe(`/api/articles/r1/file/post/index.html?k=${SECRET}#src-1`);
 });
 
-/* ── The server: verified read door, money door, legacy unchanged ─────────── */
+/* ── The server: the read door, the money door, and `k` read by nobody ───── */
 
-const fileReq = (k?: string) => new Request(`http://studio.local/api/foundry/file?run=r&path=x.png${k ? `&k=${encodeURIComponent(k)}` : ""}`);
-const clipReq = (k?: string) => new Request(`http://studio.local/api/video/clips/not-a-clip/file${k ? `?k=${encodeURIComponent(k)}` : ""}`);
-const clipCtx = { params: Promise.resolve({ id: "not-a-clip" }) };
+const fileReq = (opts: { k?: string; bearer?: string } = {}) =>
+  new Request(`http://studio.local/api/foundry/file?run=r&path=x.png${opts.k ? `&k=${encodeURIComponent(opts.k)}` : ""}`, opts.bearer ? { headers: { authorization: `Bearer ${opts.bearer}` } } : {});
+type Envelope = { error: string; code: string; detail?: string };
 
-test("verified READ door: a valid ?k= token is admitted, an expired one is refused by name", async () => {
+test("verified READ door: a valid header token is admitted, an expired one is refused by name, a token in k= is no credential", async () => {
   process.env[PRINCIPAL_MODE_VAR] = "verified";
   const good = await mint();
   const expired = await mint({ iat: nowS() - 7200, exp: nowS() - 10, auth_time: nowS() - 7200 });
 
-  for (const [route, call] of [
-    ["foundry file", (k?: string) => foundryFileGET(fileReq(k))],
-    ["video clip file", (k?: string) => clipFileGET(clipReq(k), clipCtx)],
-  ] as const) {
-    const ok = await call(good);
-    console.log(`[door] verified ${route} ?k=<token> -> ${ok.status}`);
-    expect(ok.status, `${route}: a valid token in k= is past the gate (the route's own 4xx, not 401)`).not.toBe(401);
+  const ok = await foundryFileGET(fileReq({ bearer: good }));
+  console.log(`[door] verified foundry file Bearer <token> -> ${ok.status}`);
+  expect(ok.status, "a valid token is past the gate (the route's own 4xx, not 401)").not.toBe(401);
 
-    const old = await call(expired);
-    expect(old.status, `${route}: expired`).toBe(401);
-    expect(((await old.json()) as { refusal: string }).refusal).toBe("expired");
+  const old = await foundryFileGET(fileReq({ bearer: expired }));
+  expect(old.status).toBe(401);
+  expect(((await old.json()) as Envelope).detail).toBe("expired");
 
-    // The legacy secret in k= is not a token, and the verified door is shut to it.
-    const secret = await call(SECRET);
-    expect(secret.status, `${route}: secret in k=`).toBe(401);
-    expect(((await secret.json()) as { refusal: string }).refusal).toBe("shared-secret-closed");
-  }
+  // The legacy secret is not a token, and the verified door is shut to it.
+  const secret = await foundryFileGET(fileReq({ bearer: SECRET }));
+  expect(secret.status).toBe(401);
+  expect(((await secret.json()) as Envelope).detail).toBe("shared-secret-closed");
+
+  // A good token in the query alone: the route no longer reads it.
+  expect((await foundryFileGET(fileReq({ k: good }))).status).toBe(401);
 });
 
 test("verified MONEY door: a ?k= token with no header is refused - the query is never read", async () => {
@@ -205,33 +209,25 @@ test("verified MONEY door: a ?k= token with no header is refused - the query is 
   expect(direct?.status).toBe(401);
   expect(((await direct!.json()) as { refusal: string }).refusal).toBe("missing-token");
 
-  const route = await generatePOST(post());
-  expect(route.status, "the generate route spent on a query credential").toBe(401);
-
   // Control: the same token in the header passes the same door.
   expect(await guardRequest(new Request(url, { method: "POST", headers: { authorization: `Bearer ${token}` } }))).toBeNull();
-  // And guardAccessOnly does not read the query either: the k= is a route's
-  // explicit choice, made on the media routes only (pinned below).
+  // And guardAccessOnly does not read the query either.
   expect((await guardAccessOnly(post()))?.status).toBe(401);
 });
 
-test("legacy: ?k=<secret> answers exactly as before on the media routes", async () => {
+test("legacy: the secret is admitted as a header and nowhere else; refusals say which", async () => {
   expect(process.env[PRINCIPAL_MODE_VAR]).toBeUndefined();
-  for (const [route, call] of [
-    ["foundry file", (k?: string) => foundryFileGET(fileReq(k))],
-    ["video clip file", (k?: string) => clipFileGET(clipReq(k), clipCtx)],
-  ] as const) {
-    expect((await call(SECRET)).status, `${route}: right secret`).not.toBe(401);
-    const wrong = await call("nope");
-    expect(wrong.status).toBe(401);
-    expect(await wrong.json()).toEqual({ detail: "The access credentials were not accepted.", code: "unauthorized" });
-    const missing = await call();
-    expect(missing.status).toBe(401);
-    expect(await missing.json()).toEqual({
-      detail: "This route requires access credentials. Send `Authorization: Bearer <secret>`.",
-      code: "unauthorized",
-    });
-  }
+  expect((await foundryFileGET(fileReq({ bearer: SECRET }))).status, "right secret").not.toBe(401);
+  const wrong = await foundryFileGET(fileReq({ bearer: "nope" }));
+  expect(wrong.status).toBe(401);
+  expect(((await wrong.json()) as Envelope).error).toBe("The access credentials were not accepted.");
+  const missing = await foundryFileGET(fileReq());
+  expect(missing.status).toBe(401);
+  expect(((await missing.json()) as Envelope).error).toBe("This route requires access credentials. Send `Authorization: Bearer <secret>`.");
+  // The right secret as k=, with nothing else presented: refused as if nothing was.
+  const viaK = await foundryFileGET(fileReq({ k: SECRET }));
+  expect(viaK.status).toBe(401);
+  expect(((await viaK.json()) as Envelope).error).toMatch(/requires access credentials/);
 });
 
 /* ── Source contracts ───────────────────────────────────────────────────── */
@@ -306,34 +302,21 @@ test("source: nothing outside the door hand-builds a k= credential query", () =>
   for (const l of before) expect(K_QUERY.some(([, re]) => re.test(l)), `no pattern catches: ${l}`).toBe(true);
 });
 
-test("source: exactly the media routes read a query credential, and only through the read door", () => {
+test("source: no route reads a query credential; the kept file routes are on route()'s access guard", () => {
   const routes = walk().filter((f) => f.startsWith("app/api/") && /route\.tsx?$/.test(f));
-  expect(routes.length).toBeGreaterThan(40);
+  expect(routes.length).toBeGreaterThan(0);
+  // A token in a URL reaches access logs. The last v1 page that needed one is gone
+  // (Phase 6 wave C); growing this set again is a decision, not a convenience.
   const readsK = routes.filter((f) => /searchParams\.get\(\s*["'`]k["'`]\s*\)/.test(code(f))).sort();
-  // The set as it stood when the door landed (2026-10-06). Growing it is a
-  // decision: a token in a URL reaches access logs, which is acceptable for a
-  // short-lived token on a read-only byte serve and for nothing else.
-  expect(readsK).toEqual(
-    [
-      "app/api/ads/render/[id]/file/route.ts",
-      "app/api/articles/[runId]/file/[...path]/route.ts",
-      "app/api/cut/export/file/route.ts",
-      "app/api/foundry/file/route.ts",
-      // 2026-10-06: a strip's authored page, for an <iframe sandbox> — which,
-      // like an <img>, cannot carry the header. GET only, a read-only byte serve.
-      "app/api/foundry/strips/[id]/page/route.ts",
-      "app/api/music-video/export/file/route.ts",
-      "app/api/sound/takes/[id]/file/route.ts",
-      // 2026-10-12: a music video's mp4/still/thumb for <video>/<img> in the
-      // pipeline canvas's card detail. GET only, a read-only byte serve.
-      "app/api/sound/mv/jobs/[id]/file/route.ts",
-      "app/api/video/clips/[id]/file/route.ts",
-    ].sort(),
-  );
-  for (const f of readsK) {
+  expect(readsK).toEqual([]);
+  for (const f of [
+    "app/api/articles/[runId]/file/[...path]/route.ts",
+    "app/api/foundry/file/route.ts",
+    "app/api/sound/takes/[id]/file/route.ts",
+    "app/api/sound/mv/jobs/[id]/file/route.ts",
+  ]) {
     const c = code(f);
-    expect(c, `${f} reads k= and calls the MONEY door`).not.toMatch(/\bguardRequest\s*\(/);
-    expect(c, `${f} reads k= but never calls the read door`).toMatch(/\bguardAccessOnly\s*\(/);
-    expect(c, `${f} serves something other than GET`).not.toMatch(/export\s+(?:async\s+)?function\s+(?:POST|PUT|PATCH|DELETE)\b/);
+    expect(c, `${f} is not on route()'s access guard`).toMatch(/\broute\(\s*\{\s*guard:\s*"access"/);
+    expect(c, `${f} serves something other than GET`).not.toMatch(/export\s+const\s+(?:POST|PUT|PATCH|DELETE)\b/);
   }
 });

@@ -23,8 +23,23 @@ import { spawnSync } from "node:child_process";
 import { canSpawnLocalBinaries } from "../deployment";
 
 import { YOUTUBE_ENV_VARS } from "./oauth";
-import type { ChannelId, ChannelReadiness } from "./types";
 import type { PublishMode } from "./youtube";
+
+/** The upload channels (v1's wire ids); `blog` is an act's channel, not one of these. */
+export type ChannelId = "youtube" | "tiktok" | "instagram";
+export type ChannelStatus = "live" | "dry" | "not_wired";
+
+export interface ChannelReadiness {
+  id: ChannelId;
+  name: string;
+  status: ChannelStatus;
+  /** Names only — a value never leaves the server. */
+  env: { name: string; present: boolean }[];
+  /** `forbidden`: this deployment may not spawn a local binary at all
+   *  (lib/deployment.ts), so PATH was not probed and nothing renders here. */
+  cli: { name: string; present: boolean; forbidden?: true }[];
+  note?: string;
+}
 
 export const PUBLISH_MODE_VAR = "PUBLISH_MODE";
 export const PUBLISH_MISSED_MIN_VAR = "PUBLISH_MISSED_MIN";

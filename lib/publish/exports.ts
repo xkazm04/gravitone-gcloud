@@ -31,7 +31,14 @@ import path from "node:path";
 import { adExportRoot } from "@/lib/adExports";
 
 import { outPath } from "../fixtures/roots";
-import type { ExportRef } from "./types";
+
+export interface ExportRef {
+  id: string;
+  projectId: string | null;
+  path: string;
+  bytes: number;
+  createdAt: string;
+}
 
 export function exportsRoot(): string {
   const env = process.env.PUBLISH_EXPORTS_DIR?.trim();

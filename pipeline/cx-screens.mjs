@@ -39,8 +39,9 @@ export const SCREENS = {
   "studio-outputs": { url: `/projects/${PROJECT}` },
   "library": { url: "/library" },
   "library-detail": { url: "/library?kind=style&sel=style-0006" },
-  playground: { url: "/playground" },
-  foundry: { url: "/foundry" },
+  // `playground` and `foundry` retired in Phase 6 wave C with their pages: each URL is a redirect
+  // now (`/playground` -> `/audio`, `/foundry` -> `/floor`), and a screen id that photographs a
+  // redirect would only duplicate `audio` and `floor` below.
   // The new world's kit (app/(studio)/kit, 2026-10-15). v1's Almanac kit had Law, Parts and
   // Migration tabs; it retired whole, and the ids were kept (plan §5.7: ids are re-mapped
   // here, the vocabulary stays) as anchors of the nearest section of the one page: the

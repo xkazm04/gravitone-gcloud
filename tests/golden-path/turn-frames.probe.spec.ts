@@ -1,4 +1,4 @@
-// LANE — SCENE DIRECTION RUNS ON THE TURN LEDGER, AND THE FRAMES STEP ONLY WATCHES IT (dynamic, AIO-A stage 3).
+// LANE — SCENE DIRECTION RUNS ON THE TURN LEDGER (dynamic, AIO-A stage 3).
 //
 // WHAT WAS WRONG. Step 3's direction pass — the second-dearest turn in the app —
 // was a plain `fetch("/api/frames")` held open inside useFrames. It never called
@@ -6,58 +6,40 @@
 // and the `claude` process behind it ran on to its ceiling for an answer nobody
 // would receive.
 //
-// WHAT THIS PROBE DRIVES. The same shape as turn-recalibrate: the client door
-// (lib/turns/client.ts) is called as the browser calls it, a stand-in `fetch`
-// hands each request to the REAL exported route handler, the handlers dispatch
-// through the real runner and the real `reason()`, and `withFakeEngine` (CIP-A)
-// puts the stand-in `claude` first on PATH. Nothing in the app is mocked.
-//
-// OPERATOR DECISION 2026-10-06 (the recalibrate one, applied to frames):
-// leaving the step does not cancel; a reload re-attaches; an explicit stop
-// kills the engine; a done direction is staged exactly once.
-//
-// ALSO HERE, because they are the same seam seen from two other sides: the
-// harness's job count read from the ledger rather than one tab's memory, and
-// the generic /api/turns door answering a kind's own refusal status (a
-// too-large recalibrate is 413 there, as it is on /api/recalibrate).
+// WHAT THIS PROBE DRIVES. The `frames` turn kind (lib/turns/kinds/frames.ts) on the
+// real runner (startTurn / readTurn / cancelTurn), the real `reason()`, and
+// `withFakeEngine` (CIP-A) putting the stand-in `claude` first on PATH. Nothing in
+// the app is mocked. Until Phase 6 L70 it went through the browser's client door
+// (lib/turns/client.ts) and the HTTP routes (/api/frames, /api/turns, its cancel);
+// those retired with the v1 pages, and the frames producer (lib/producers/frames.ts)
+// runs the kind in process. DROPPED with them: the `?wait=1` body, the 202/409
+// statuses, the access header on every request, the client's re-attach
+// (`resumeTurn`) and HarnessBridge's ledger read (the bridge counts kernel Jobs
+// now). KEPT: the record, the receipt, one live turn per project, a cancel that
+// kills the tree, the kinds' refusal status (413 too large, 400 nothing to
+// direct), the ledger count, and a walk that no fetch of a retired route is left.
 import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { POST as framesPOST } from "@/app/api/frames/route";
-import { POST as recalibratePOST } from "@/app/api/recalibrate/route";
-import { GET as listGET, POST as turnsPOST } from "@/app/api/turns/route";
-import { GET as turnGET } from "@/app/api/turns/[id]/route";
-import { POST as cancelPOST } from "@/app/api/turns/[id]/cancel/route";
 import { SCENE_SCHEMA } from "@/lib/frames/sceneSpec";
 import { RENDERS } from "@/lib/script/renders";
 import { jobCounts, type Job } from "@/lib/jobs";
-import { cancelTurn, getTurn, listTurns, resumeTurn, startFrames, type TurnRecord } from "@/lib/turns/client";
-import { whenIdle } from "@/lib/turns/runner";
+import { FRAMES_SPEC } from "@/lib/turns/kinds/frames";
+import { RECALIBRATE_SPEC } from "@/lib/turns/kinds/recalibrate";
+import { listTurns, readTurn, type TurnRecord } from "@/lib/turns/ledger";
+import { cancelTurn, startTurn, TurnInputError, whenIdle, type TurnSpec } from "@/lib/turns/runner";
 
 import { FAKE_ENGINE_ENV, keepEnv, loadCassette, stripComments, withFakeEngine, type Cassette, type FakeCall } from "./_helpers";
 
-keepEnv([
-  ...FAKE_ENGINE_ENV,
-  "TEXT_TURN_DIR",
-  "TEXT_ENV",
-  "LOCAL_BINARIES",
-  "GOOGLE_AI_API_KEY",
-  "NEXT_PUBLIC_DEV_AUTH",
-  "NEXT_PUBLIC_IMAGING_ACCESS_SECRET",
-  "LIGHTTRACK_DISABLE",
-]);
-
-const SECRET = "probe-turn-frames-secret";
+keepEnv([...FAKE_ENGINE_ENV, "TEXT_TURN_DIR", "TEXT_ENV", "LOCAL_BINARIES", "GOOGLE_AI_API_KEY", "LIGHTTRACK_DISABLE"]);
 
 let dir = "";
 test.beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "gravitone-turn-frames-"));
   process.env.TEXT_TURN_DIR = dir;
-  process.env.NEXT_PUBLIC_DEV_AUTH = "1";
-  process.env.NEXT_PUBLIC_IMAGING_ACCESS_SECRET = SECRET;
   process.env.TEXT_ENV = "local";
   process.env.LOCAL_BINARIES = "on";
   delete process.env.GOOGLE_AI_API_KEY;
@@ -66,41 +48,6 @@ test.beforeEach(() => {
 test.afterEach(() => {
   if (dir) rmSync(dir, { recursive: true, force: true });
   dir = "";
-});
-
-/* ── the browser's fetch, answered by the real handlers ───────────────────── */
-
-const sent: { method: string; url: string; auth: string | null }[] = [];
-let ip = 0;
-
-async function route(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const raw = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-  if (!raw.startsWith("/api/")) throw new Error(`the door fetched a non-relative URL: ${raw}`);
-  const url = new URL(raw, "http://localhost");
-  const headers = new Headers(init?.headers);
-  headers.set("x-forwarded-for", `10.92.0.${(++ip % 250) + 1}`);
-  const method = (init?.method ?? "GET").toUpperCase();
-  sent.push({ method, url: url.pathname + url.search, auth: headers.get("authorization") });
-  const req = new Request(url, { method, headers, body: init?.body ?? undefined });
-  const p = url.pathname;
-  let m: RegExpMatchArray | null;
-  if (p === "/api/frames" && method === "POST") return framesPOST(req);
-  if (p === "/api/turns" && method === "POST") return turnsPOST(req);
-  if (p === "/api/turns" && method === "GET") return listGET(req);
-  if ((m = p.match(/^\/api\/turns\/([^/]+)\/cancel$/)) && method === "POST")
-    return cancelPOST(req, { params: Promise.resolve({ id: decodeURIComponent(m[1]!) }) });
-  if ((m = p.match(/^\/api\/turns\/([^/]+)$/)) && method === "GET")
-    return turnGET(req, { params: Promise.resolve({ id: decodeURIComponent(m[1]!) }) });
-  throw new Error(`no handler for ${method} ${p}`);
-}
-
-const realFetch = globalThis.fetch;
-test.beforeEach(() => {
-  sent.length = 0;
-  globalThis.fetch = route as typeof fetch;
-});
-test.afterEach(() => {
-  globalThis.fetch = realFetch;
 });
 
 /* ── helpers ──────────────────────────────────────────────────────────────── */
@@ -154,7 +101,7 @@ async function until(id: string, statuses: string[], ms = 15_000): Promise<TurnR
   const t0 = Date.now();
   let last: TurnRecord | null = null;
   while (Date.now() - t0 < ms) {
-    last = await getTurn(id);
+    last = await readTurn(id);
     if (last && statuses.includes(last.status)) return last;
     await wait(50);
   }
@@ -170,22 +117,38 @@ async function enginePid(engine: { turns: () => FakeCall[] }): Promise<number> {
   throw new Error("the stand-in never recorded a turn - the engine was not reached");
 }
 
-function everyRequestCarriedTheHeader() {
-  expect(sent.length, "the door sent nothing").toBeGreaterThan(0);
-  const bare = sent.filter((s) => s.auth !== `Bearer ${SECRET}`).map((s) => `${s.method} ${s.url}`);
-  expect(bare, "a turn request went out without accessHeader()").toEqual([]);
+/** The runner's answer to a start: a turn under way, the slot's holder, or the kind's
+ *  refusal (thrown before any record exists), with its status and code. */
+type Started =
+  | { outcome: "started"; turnId: string }
+  | { outcome: "busy"; holder: string }
+  | { outcome: "refused"; status: number; code: string; detail: string };
+
+async function start(spec: TurnSpec, projectId: string, input: unknown): Promise<Started> {
+  try {
+    const out = await startTurn(spec, projectId, input);
+    return out.ok ? { outcome: "started", turnId: out.turnId } : { outcome: "busy", holder: out.holder.id };
+  } catch (e) {
+    if (e instanceof TurnInputError) return { outcome: "refused", status: e.status, code: e.code, detail: e.message };
+    throw e;
+  }
 }
 
-/* ── start → 202 → done, through the door ─────────────────────────────────── */
+async function startFrames(projectId: string, input: unknown = RUN): Promise<string> {
+  const out = await start(FRAMES_SPEC as TurnSpec, projectId, input);
+  if (out.outcome !== "started") throw new Error(`the turn did not start: ${JSON.stringify(out)}`);
+  return out.turnId;
+}
 
-test("POST /api/frames answers 202 {turnId}; the turn reaches done with raw, manifest and the receipt", async () => {
+const ofProject = async (projectId: string) => (await listTurns()).filter((t) => t.projectId === projectId);
+
+/* ── start → done ─────────────────────────────────────────────────────────── */
+
+test("a frames turn starts; it reaches done with raw, manifest and the receipt", async () => {
   const cassette = slow(800);
   const turn0 = cassette.turns[0]!;
   await withEngine(cassette, async (engine) => {
-    const out = await startFrames("p-frames-1", RUN);
-    console.log(`[turn-frames] start -> ${JSON.stringify(out)}`);
-    expect(out.ok, JSON.stringify(out)).toBe(true);
-    const turnId = (out as { turnId: string }).turnId;
+    const turnId = await startFrames("p-frames-1");
     expect(turnId).toMatch(/^tn-[0-9a-f]{12}$/);
 
     const done = await until(turnId, ["done", "failed"]);
@@ -195,130 +158,54 @@ test("POST /api/frames answers 202 {turnId}; the turn reaches done with raw, man
     expect(done.turn).toBe("scene-direction");
     expect(done.projectId).toBe("p-frames-1");
     const result = done.result as { raw: string; manifest: { totalChars: number }; engine: Record<string, unknown> };
-    // `raw` is the engine's text, untouched: the client owns the parse.
+    // `raw` is the engine's text, untouched: the caller owns the parse.
     expect(JSON.parse(result.raw)).toEqual(turn0.resultJson);
     expect(result.manifest.totalChars).toBe(done.promptChars);
-    // The synchronous body's receipt, kept on the record.
+    // The engine's receipt, kept on the record and in the result.
     expect(result.engine.kind).toBe("local-claude-code");
     expect(result.engine.costUsd).toBe(turn0.envelope!.total_cost_usd);
     expect(result.engine.durationMs).toBe(turn0.envelope!.duration_ms);
     expect(done.receipt?.costUsd).toBe(turn0.envelope!.total_cost_usd);
     expect(engine.turns(), "one prompt reached the engine").toHaveLength(1);
-    expect(engine.turns()[0]!.schemaSha256, "the kind handed the router a schema the route never did").toBeNull();
-    everyRequestCarriedTheHeader();
+    expect(engine.turns()[0]!.schemaSha256, "the kind handed the router a schema").toBeNull();
   });
 });
 
-test("?wait=1 keeps the synchronous body for scripts", async () => {
-  await withEngine("frames-ok", async () => {
-    const res = await framesPOST(
-      new Request("http://localhost/api/frames?wait=1", {
-        method: "POST",
-        headers: { "content-type": "application/json", "x-forwarded-for": "10.92.1.1" },
-        body: JSON.stringify({ ...RUN, projectId: "p-frames-wait" }),
-      }),
-    );
-    const json = (await res.json()) as Record<string, unknown>;
-    expect(res.status, String(json.detail)).toBe(200);
-    expect(typeof json.raw).toBe("string");
-    expect((json.engine as Record<string, unknown>).kind).toBe("local-claude-code");
-  });
-});
-
-test("the generic door starts a frames turn too", async () => {
-  await withEngine("frames-ok", async () => {
-    const res = await turnsPOST(
-      new Request("http://localhost/api/turns?wait=1", {
-        method: "POST",
-        headers: { "content-type": "application/json", "x-forwarded-for": "10.92.1.2" },
-        body: JSON.stringify({ kind: "frames", projectId: "p-frames-generic", input: RUN }),
-      }),
-    );
-    const json = (await res.json()) as { turn?: TurnRecord; detail?: string };
-    expect(res.status, String(json.detail)).toBe(200);
-    expect(json.turn?.status).toBe("done");
-    expect(typeof (json.turn?.result as { raw?: unknown }).raw).toBe("string");
-  });
-});
-
-test("a second frames turn for the same project while one runs is a 409 naming the holder", async () => {
+test("a second frames turn for the same project while one runs is refused, naming the holder", async () => {
   await withEngine(slow(20_000), async (engine) => {
-    const first = await startFrames("p-frames-2", RUN);
-    expect(first.ok).toBe(true);
-    const holder = (first as { turnId: string }).turnId;
+    const holder = await startFrames("p-frames-2");
     await until(holder, ["running"]);
 
-    const second = await startFrames("p-frames-2", RUN);
-    console.log(`[turn-frames] second -> ${JSON.stringify(second)}`);
-    expect(second.ok).toBe(false);
-    expect((second as { status: number }).status).toBe(409);
-    expect((second as { holder?: string }).holder).toBe(holder);
-    expect((second as { detail: string }).detail).toContain(holder);
+    expect(await start(FRAMES_SPEC as TurnSpec, "p-frames-2", RUN)).toEqual({ outcome: "busy", holder });
 
     const pid = await enginePid(engine);
     expect((await cancelTurn(holder)).ok).toBe(true);
     await until(holder, ["cancelled"]);
     expect(await stillAliveAfterKill(pid)).toBe(false);
     expect(engine.turns(), "one engine for one slot").toHaveLength(1);
-    everyRequestCarriedTheHeader();
   });
 });
 
-// "and the bell stays quiet" retired with the bell's turn tracking (Phase 4 wave D: the bell is a
-// view of kernel Jobs, lib/jobs.tsx); the server half of the case stays.
 test("cancel mid-run: the record says cancelled and the engine's process tree is dead", async () => {
   await withEngine(slow(20_000), async (engine) => {
-    const out = await startFrames("p-frames-3", RUN);
-    const turnId = (out as { turnId: string }).turnId;
+    const turnId = await startFrames("p-frames-3");
     await until(turnId, ["running"]);
     const pid = await enginePid(engine);
     expect(alive(pid)).toBe(true);
 
-    const c = await cancelTurn(turnId);
-    expect(c.ok).toBe(true);
+    expect((await cancelTurn(turnId)).ok).toBe(true);
     expect(await stillAliveAfterKill(pid), "cancel left the engine running").toBe(false);
     const final = await until(turnId, ["cancelled", "done", "failed"]);
     expect(final.status).toBe("cancelled");
     expect(final.result).toBeUndefined();
-    everyRequestCarriedTheHeader();
   });
 });
 
-/* ── the bell, and leaving the step ───────────────────────────────────────── */
+/* ── nothing fetches a retired turn route ─────────────────────────────────── */
 
-// "a direction that settled while no tab was mounted reaches the bell once" retired with the bell's
-// turn tracking: the bell reads kernel Jobs, and an ending reaches it once per ending
-// (tests/next-server/bell-jobs.test.ts "a retried job that ends again is news again", and the
-// watermark case beside it).
-
-test("leaving the Frames step mid-run leaves the turn running; a remount takes the done direction exactly once", async () => {
-  await withEngine(slow(1_000), async (engine) => {
-    const out = await startFrames("p-frames-7", RUN);
-    const turnId = (out as { turnId: string }).turnId;
-
-    const first = await resumeTurn("p-frames-7", "frames", null);
-    expect(first.action).toBe("watch");
-    expect(first.turn?.id).toBe(turnId);
-
-    // Unmounted: nothing is called, and the turn runs on.
-    const done = await until(turnId, ["done", "cancelled", "failed"]);
-    expect(done.status, "the turn did not survive the step being left").toBe("done");
-    expect(engine.turns()).toHaveLength(1);
-
-    const again = await resumeTurn("p-frames-7", "frames", null);
-    expect(again.action).toBe("land");
-    expect(again.turn?.id).toBe(turnId);
-    expect(typeof ((again.turn as TurnRecord).result as { raw?: unknown }).raw).toBe("string");
-
-    const later = await resumeTurn("p-frames-7", "frames", turnId);
-    expect(later.action, "a consumed direction was staged a second time").toBe("none");
-    everyRequestCarriedTheHeader();
-  });
-});
-
-/* ── one client door, frames included ─────────────────────────────────────── */
-
-test("no raw fetch of /api/frames, /api/recalibrate or /api/turns outside lib/turns/client.ts", () => {
+test("no fetch of /api/frames, /api/recalibrate or /api/turns is left in app/, components/ or lib/", () => {
+  // The routes retired (Phase 6 L70); a fetch left behind would 404 at runtime with every
+  // gate green. The matcher is the one that guarded the single client door.
   const ROOT = process.cwd();
   const files: string[] = [];
   const walk = (d: string) => {
@@ -331,32 +218,25 @@ test("no raw fetch of /api/frames, /api/recalibrate or /api/turns outside lib/tu
   for (const top of ["app", "components", "lib"]) walk(join(ROOT, top));
   const RAW = /\bfetch\(\s*[`"'](\/api\/(?:frames|recalibrate|turns)\b[^`"']*)/g;
   const hits: string[] = [];
-  const door = new Set<string>();
   for (const f of files) {
     const rel = relative(ROOT, f).split("\\").join("/");
     const src = stripComments(readFileSync(f, "utf8"));
-    for (const m of src.matchAll(RAW)) {
-      if (rel === "lib/turns/client.ts") door.add(m[1]!.split(/[?$]/)[0]!);
-      else hits.push(`${rel}:${src.slice(0, m.index).split("\n").length} ${m[1]}`);
-    }
+    for (const m of src.matchAll(RAW)) hits.push(`${rel}:${src.slice(0, m.index).split("\n").length} ${m[1]}`);
   }
-  console.log(`[turn-frames] walked ${files.length} files; door routes ${[...door].sort().join(", ")}; ${hits.length} outside`);
   expect(files.length).toBeGreaterThan(200);
-  // The matcher must see the door's own calls, frames among them, or it is blind.
-  expect([...door].sort()).toEqual(expect.arrayContaining(["/api/frames", "/api/recalibrate", "/api/turns"]));
+  // The matcher still sees the shape it is for, or it is blind.
+  expect([...'fetch("/api/turns?x=1")'.matchAll(RAW)].map((m) => m[1])).toEqual(["/api/turns?x=1"]);
   expect(hits).toEqual([]);
 });
 
 /* ── the harness reads the ledger ─────────────────────────────────────────── */
 
-test("the harness's job count comes from the ledger: a turn no tab is tracking is counted, once", async () => {
+test("the job count over the ledger: a turn no tab is tracking is counted, once", async () => {
   await withEngine(slow(20_000), async () => {
-    // Started by "another tab": this one tracks nothing.
-    const out = await startFrames("p-frames-h", RUN);
-    const turnId = (out as { turnId: string }).turnId;
+    const turnId = await startFrames("p-frames-h");
     await until(turnId, ["running"]);
 
-    const ledger = await listTurns("p-frames-h");
+    const ledger = await ofProject("p-frames-h");
     expect(jobCounts([], ledger)).toEqual({ running: 1, total: 1 });
 
     // A server job the bell holds is counted beside the turn, not instead of it.
@@ -366,62 +246,27 @@ test("the harness's job count comes from the ledger: a turn no tab is tracking i
     expect((await cancelTurn(turnId)).ok).toBe(true);
     await until(turnId, ["cancelled"]);
     // The ledger says it no longer runs.
-    expect(jobCounts([], await listTurns("p-frames-h"))).toEqual({ running: 0, total: 1 });
+    expect(jobCounts([], await ofProject("p-frames-h"))).toEqual({ running: 0, total: 1 });
   });
 });
 
-test("HarnessBridge counts jobs through the ledger, not the tab's list alone", () => {
-  const bridge = stripComments(readFileSync(join(process.cwd(), "components/ui/HarnessBridge.tsx"), "utf8"));
-  expect(bridge.length).toBeGreaterThan(500);
-  expect(bridge).toMatch(/\bjobCounts\(/);
-  expect(bridge).toMatch(/\blistTurns\(/);
-  expect(bridge, "the snapshot still counts the tab's list by hand").not.toMatch(/jobs\.filter\(\(j\) => j\.status === "running"\)/);
-});
+/* ── a kind's refusal keeps its status ────────────────────────────────────── */
 
-/* ── a kind's refusal keeps its status through the generic door ───────────── */
-
-async function viaTurns(kind: string, input: unknown): Promise<{ status: number; json: Record<string, unknown> }> {
-  const res = await turnsPOST(
-    new Request("http://localhost/api/turns", {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-forwarded-for": `10.92.2.${(++ip % 250) + 1}` },
-      body: JSON.stringify({ kind, projectId: "p-refusal", input }),
-    }),
-  );
-  return { status: res.status, json: (await res.json()) as Record<string, unknown> };
-}
-
-test("/api/turns answers a too-large run 413, as the kind's own route does; a 400 stays 400", async () => {
+test("a too-large run is refused 413 `too-large` by both kinds; an input error that is not a size stays 400", async () => {
   await withEngine("frames-ok", async (engine) => {
-    // Recalibrate: material past the route's character ceiling.
+    // Recalibrate: material past the character ceiling.
     const notes = [{ kind: "less-focus", cardId: "f-macro-cause", text: "x".repeat(1_100_000) }];
-    const big = { notebook: {}, renders: RENDERS, scope: {}, notes };
-    const direct = await recalibratePOST(
-      new Request("http://localhost/api/recalibrate", {
-        method: "POST",
-        headers: { "content-type": "application/json", "x-forwarded-for": "10.92.3.1" },
-        body: JSON.stringify({ ...big, projectId: "p-refusal" }),
-      }),
-    );
-    const directJson = (await direct.json()) as Record<string, unknown>;
-    const generic = await viaTurns("recalibrate", big);
-    console.log(`[turn-frames] too-large recalibrate -> route ${direct.status}, /api/turns ${generic.status}`);
-    expect(direct.status).toBe(413);
-    expect(generic.status, String(generic.json.detail)).toBe(413);
-    expect(generic.json.code).toBe("too-large");
-    expect(generic.json.detail).toBe(directJson.detail);
+    const big = await start(RECALIBRATE_SPEC as TurnSpec, "p-refusal", { notebook: {}, renders: RENDERS, scope: {}, notes });
+    expect(big).toMatchObject({ outcome: "refused", status: 413, code: "too-large" });
 
     // Frames: 401 beats.
     const beats = Array.from({ length: 401 }, (_, i) => ({ at: `${i}`, text: `beat ${i}` }));
-    const framesBig = await viaTurns("frames", { ...RUN, beats });
-    expect(framesBig.status).toBe(413);
-    expect(framesBig.json.code).toBe("too-large");
+    expect(await start(FRAMES_SPEC as TurnSpec, "p-refusal", { ...RUN, beats })).toMatchObject({ outcome: "refused", status: 413, code: "too-large" });
 
     // And an input error that is not a size is still the 400 it always was.
-    const empty = await viaTurns("recalibrate", { notebook: {}, renders: RENDERS, scope: {}, notes: [] });
-    expect(empty.status).toBe(400);
-    const noStyle = await viaTurns("frames", { ...RUN, style: undefined });
-    expect(noStyle.status).toBe(400);
+    expect(await start(RECALIBRATE_SPEC as TurnSpec, "p-refusal", { notebook: {}, renders: RENDERS, scope: {}, notes: [] })).toMatchObject({ outcome: "refused", status: 400 });
+    expect(await start(FRAMES_SPEC as TurnSpec, "p-refusal", { ...RUN, style: undefined })).toMatchObject({ outcome: "refused", status: 400 });
     expect(engine.turns(), "a refused run reached the engine").toHaveLength(0);
+    expect(readdirSync(dir), "a refused run wrote a record").toEqual([]);
   });
 });

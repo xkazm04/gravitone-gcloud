@@ -38,6 +38,8 @@ export const PRODUCERS = [
   "voice",
   "words",
   "sfx",
+  // A hunt's picked leaves rendered on ElevenLabs as one Run (Phase 6 L72; lib/sound/huntRender.ts).
+  "hunt",
   "media-facts",
   "style",
 ] as const;

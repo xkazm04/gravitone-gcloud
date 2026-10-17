@@ -17,19 +17,14 @@
 //   · 7 / 11, the Foundry shelf's adopt button and its putTheme call: the shelf
 //     is gone; the atelier offers adopt only for a proven style with no look and
 //     the server refuses anything else (lib/producers/styleLaunch.ts actRefusal);
-//   · 6, the route's 401/404/409: the route answers 410 with the atelier's
-//     address now, behind the same door (test 6 below).
+//   · 6, the route's 401/404/409: the route answered 410 with the atelier's
+//     address until Phase 6 wave C (L70) deleted the tombstone itself - its
+//     stale clients were gone; the atelier's adopt job is the only door.
 import { test, expect } from "@playwright/test";
 
-import { ACCESS_SECRET_VAR, __resetRateLimit } from "@/lib/apiAuth";
-import * as adoptRoute from "@/app/api/foundry/styles/[id]/adopt/route";
 import { SEED_BYTE_CAP, SEED_CAP, adoptionDraft, isPaletteSentence, palettePlate, plateRel, recipeSlots, type AdoptIO } from "@/lib/foundry/adopt";
 import { FoundryError } from "@/lib/foundry/store";
 import type { LedgerRow, StyleDef } from "@/lib/foundry/types";
-
-import { keepEnv } from "./_helpers";
-
-keepEnv([ACCESS_SECRET_VAR, "NEXT_PUBLIC_DEV_AUTH"]);
 
 const RECIPE =
   "High-end pre-rendered cinematic 3D, physically convincing materials. " +
@@ -229,29 +224,6 @@ test("5g · a paletteMissing draft carries proofs []", async () => {
   const d = await adoptionDraft(style(), LEDGER, port(new Error("nope")).io);
   expect(d.paletteMissing).toBe(true);
   expect(d.proofs).toEqual([]);
-});
-
-/* ── The route, called as a function ───────────────────────────────────────── */
-
-const post = (id: string, auth = true) =>
-  new Request(`http://studio.local/api/foundry/styles/${id}/adopt`, {
-    method: "POST",
-    headers: {
-      ...(auth ? { authorization: "Bearer right-secret" } : {}),
-      "x-forwarded-for": `10.8.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`,
-    },
-  });
-const ctx = (id: string) => ({ params: Promise.resolve({ id }) });
-
-test("6 · the retired route: 401 without the secret, else 410 naming the style's atelier, no GET export", async () => {
-  process.env[ACCESS_SECRET_VAR] = "right-secret";
-  delete process.env.NEXT_PUBLIC_DEV_AUTH;
-  __resetRateLimit();
-  expect((await adoptRoute.POST(post("cold-photoreal-cg", false), ctx("cold-photoreal-cg"))).status).toBe(401);
-  const res = await adoptRoute.POST(post("cold-photoreal-cg"), ctx("cold-photoreal-cg"));
-  expect(res.status).toBe(410);
-  expect(((await res.json()) as { moved?: string }).moved).toBe("/library/style/cold-photoreal-cg");
-  expect("GET" in adoptRoute, "no GET export — Next answers 405").toBe(false);
 });
 
 /* ── Beyond the spec: the one plate, the finish, the reply shape ──────────── */

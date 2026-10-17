@@ -1,5 +1,6 @@
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { MetricSnapshot, Publication } from "@gt/domain/publication";
+import type { Channel } from "@gt/domain/slot";
 import type { SlotState } from "@gt/domain/slot.machine";
 import type { Reader, Store } from "../store.ts";
 import { readPublicationRow, readSlotRow, readSnapshotRow, SLOT_COLUMNS, type SlotRow } from "./schema.ts";
@@ -60,6 +61,16 @@ export function publicationOfIn(r: Reader, slotId: string): Publication | undefi
 
 export function readPublicationIn(r: Reader, id: string): Publication | undefined {
   const row = r.get("SELECT record FROM publications WHERE id = ?", id);
+  return row === undefined ? undefined : readPublicationRow(row);
+}
+
+/** The publication already made of `item` on `channel` in this mode, if any - v1 publisher.ts's
+ *  lookup before an upload (one per item x channel x mode; `slots_one_publication` backs it). */
+export function priorPublicationIn(r: Reader, item: string, channel: Channel, dry: boolean): Publication | undefined {
+  const row = r.get(
+    "SELECT p.record FROM publications p JOIN slots s ON s.id = p.slot_id WHERE s.item = ? AND s.channel = ? AND json_extract(p.record, '$.dry') = ? LIMIT 1",
+    item, channel, dry ? 1 : 0,
+  );
   return row === undefined ? undefined : readPublicationRow(row);
 }
 

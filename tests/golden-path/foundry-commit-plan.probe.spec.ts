@@ -6,8 +6,11 @@
 // 3. previewExtractCommit(<done extract run keeping style 'haze'>) against a FOUNDRY_DIR catalogue already holding id 'haze' -> plan.written deep-equals [{from:'haze', to:'haze-2'}] and styles.json is byte-identical after the preview call.
 // 4. previewExtractCommit where the kept style's observables equal an existing catalogue style 'old-haze' on every field -> plan.similar['haze'] contains 'old-haze' (uses nearDuplicates from lib/foundry/extract/vocabulary.ts).
 // 5. commitExtractRun succeeds; run.json's status is reset to 'done' (crash after catalogue write) and commitExtractRun is called again -> styles.json holds exactly one entry with origin.source === <run id>, not 'haze' plus 'haze-2' (replace by origin on retry).
-// 6. GET handler of app/api/foundry/runs/[id]/commit/route.ts with a valid access header -> 200 and a JSON body carrying promotions, delete, counts, and token; POST behaviour unchanged.
-// 7. GET handler of app/api/foundry/extract/[id]/commit/route.ts with a valid access header -> 200 and a JSON body carrying written, similar, and token.
+// 6. previewCommit (what v1's GET app/api/foundry/runs/[id]/commit answered) carries promotions, delete, counts and token; commitRun without a token still commits.
+// 7. previewExtractCommit (v1's GET app/api/foundry/extract/[id]/commit) carries written, similar and token.
+//    Phase 6 wave C (L70): both routes retired with the v1 Foundry; the forge and extract commits
+//    are the Board packet's acts over the same store doors, so 6 and 7 drive those doors. The
+//    routes' access-header half retired with them.
 // 8. GUARD (declared, green before): commitRun(id, 'leave') still leaves undecided candidates' files on disk and out of ledger.json.
 // 9. (Critic revision): Bind confirm to preview via token: token = (await previewCommit(run)).token (or previewExtractCommit); if verdicts/manifest change before commit, e.g. putVerdicts flips one keep to reject, calling commitRun(run, 'reject', token) rejects with FoundryError 409 and candidate files, ledger.json and styles.json remain byte-identical.
 
@@ -22,8 +25,6 @@ import { OBSERVABLE_FIELDS } from "@/lib/foundry/extract/types";
 import type { ExtractManifest, ExtractedStyle, Observables } from "@/lib/foundry/extract/types";
 import { OUT_ROOT, resolveInRun, FoundryError, commitRun, previewCommit, putVerdicts } from "@/lib/foundry/store";
 import type { Candidate, RunManifest, StyleDef, Verdicts } from "@/lib/foundry/types";
-import { GET as runCommitGET, POST as runCommitPOST } from "@/app/api/foundry/runs/[id]/commit/route";
-import { GET as extractCommitGET } from "@/app/api/foundry/extract/[id]/commit/route";
 
 import { keepEnv, probeFoundryDir } from "./_helpers";
 
@@ -330,9 +331,7 @@ test("Case 5: commitExtractRun succeeds; run.json's status reset to 'done' and c
   }
 });
 
-test("Case 6: GET handler of app/api/foundry/runs/[id]/commit/route.ts with a valid access header -> 200 and a JSON body carrying promotions, delete, counts, and token; POST behaviour unchanged", async () => {
-  process.env[ACCESS_SECRET_VAR] = "test-secret";
-
+test("Case 6: previewCommit carries promotions, delete, counts and token; commitRun without a token still commits", async () => {
   writeFileSync(path.join(foundryDir(), "styles.json"), JSON.stringify({ styles: [styleDef("haze")] }), "utf8");
   writeFileSync(path.join(foundryDir(), "ledger.json"), JSON.stringify({ rows: [] }), "utf8");
 
@@ -343,44 +342,21 @@ test("Case 6: GET handler of app/api/foundry/runs/[id]/commit/route.ts with a va
   ]);
 
   try {
-    expect(typeof runCommitGET, "GET handler must be exported in runs/[id]/commit/route.ts").toBe("function");
+    const plan = await previewCommit(runId);
+    expect(Array.isArray(plan.promotions)).toBe(true);
+    expect(Array.isArray(plan.delete)).toBe(true);
+    expect(typeof plan.counts).toBe("object");
+    expect(typeof plan.token).toBe("string");
 
-    const req = new Request(`http://studio.local/api/foundry/runs/${runId}/commit`, {
-      method: "GET",
-      headers: { authorization: "Bearer test-secret" },
-    });
-    const res = await runCommitGET(req, { params: Promise.resolve({ id: runId }) });
-    expect(res.status).toBe(200);
-
-    const body = await res.json();
-    expect(body).toHaveProperty("promotions");
-    expect(body).toHaveProperty("delete");
-    expect(body).toHaveProperty("counts");
-    expect(body).toHaveProperty("token");
-    expect(Array.isArray(body.promotions)).toBe(true);
-    expect(Array.isArray(body.delete)).toBe(true);
-    expect(typeof body.counts).toBe("object");
-    expect(typeof body.token).toBe("string");
-
-    // POST behaviour unchanged (no token provided)
-    const postReq = new Request(`http://studio.local/api/foundry/runs/${runId}/commit`, {
-      method: "POST",
-      headers: { authorization: "Bearer test-secret", "content-type": "application/json" },
-      body: JSON.stringify({ undecidedAs: "reject" }),
-    });
-    const postRes = await runCommitPOST(postReq, { params: Promise.resolve({ id: runId }) });
-    expect(postRes.status).toBe(200);
-    const postBody = await postRes.json();
-    expect(postBody).toHaveProperty("kept");
-    expect(postBody).toHaveProperty("deleted");
+    const done = await commitRun(runId, "reject");
+    expect(done).toHaveProperty("kept");
+    expect(done).toHaveProperty("deleted");
   } finally {
     cleanupRun(runId);
   }
 });
 
-test("Case 7: GET handler of app/api/foundry/extract/[id]/commit/route.ts with a valid access header -> 200 and a JSON body carrying written, similar, and token", async () => {
-  process.env[ACCESS_SECRET_VAR] = "test-secret";
-
+test("Case 7: previewExtractCommit carries written, similar and token", async () => {
   writeFileSync(path.join(foundryDir(), "styles.json"), JSON.stringify({ styles: [] }), "utf8");
 
   const exRunId = `probe-case7-${Date.now().toString(36)}`;
@@ -392,22 +368,10 @@ test("Case 7: GET handler of app/api/foundry/extract/[id]/commit/route.ts with a
   );
 
   try {
-    expect(typeof extractCommitGET, "GET handler must be exported in extract/[id]/commit/route.ts").toBe("function");
-
-    const req = new Request(`http://studio.local/api/foundry/extract/${exRunId}/commit`, {
-      method: "GET",
-      headers: { authorization: "Bearer test-secret" },
-    });
-    const res = await extractCommitGET(req, { params: Promise.resolve({ id: exRunId }) });
-    expect(res.status).toBe(200);
-
-    const body = await res.json();
-    expect(body).toHaveProperty("written");
-    expect(body).toHaveProperty("similar");
-    expect(body).toHaveProperty("token");
-    expect(Array.isArray(body.written)).toBe(true);
-    expect(typeof body.similar).toBe("object");
-    expect(typeof body.token).toBe("string");
+    const plan = await previewExtractCommit(exRunId);
+    expect(Array.isArray(plan.written)).toBe(true);
+    expect(typeof plan.similar).toBe("object");
+    expect(typeof plan.token).toBe("string");
   } finally {
     cleanupExtract(exRunId);
   }

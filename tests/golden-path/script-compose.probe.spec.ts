@@ -9,9 +9,17 @@
 // every candidate before anything is returned.
 //
 // Every model answer here is HAND-RECORDED (tests/_engine/cassettes/compose-*.json)
-// and nothing is mocked inside the app: the route cases put the stand-in
+// and nothing is mocked inside the app: the end-to-end cases put the stand-in
 // `claude` first on PATH, so the real prompt, the real ladder and the real spawn
 // door run, and no vendor is reached.
+//
+// THE ROUTE RETIRED (Phase 6 L70). `/api/script` was the compose turn's v1 door;
+// the script producer (lib/producers/script.ts composeUnit) runs the same chain in
+// process now - admitCompose, composePrompt, reason("compose"), parseDraft - and
+// the end-to-end cases drive that chain (`compose` below) with gateDraft, the
+// server-side gate the route ran on every candidate. What the route alone did is
+// dropped: its JSON statuses (200/400/500/502 become the chain's own outcomes and
+// typed throws) and its request-size ceiling.
 //
 // The acceptance cases, by number:
 //   1 · an attributed id the creator descoped is refused, naming render, mark and card
@@ -26,11 +34,11 @@ import { join } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { POST } from "@/app/api/script/route";
 import { NOTEBOOK } from "@/lib/notebook/notebook";
 import { fixtureSource, sourceOf } from "@/lib/notebook/source";
 import type { Notebook } from "@/lib/notebook/types";
-import { checkConnectors, runGate, type GateReport } from "@/lib/script/gate";
+import { admitCompose, ComposePromptUnavailable, composePrompt, type ComposeBody } from "@/lib/script/compose";
+import { checkConnectors, gateDraft, runGate, type GateReport } from "@/lib/script/gate";
 import { draftOf, type DraftRender } from "@/lib/script/draft";
 import { editPlanSchema, parseEditPlan, PlanError } from "@/lib/script/editPlan";
 import { TEMPLATES } from "@/lib/projects";
@@ -44,14 +52,15 @@ import {
   templateBand,
   type ComposeContext,
 } from "@/lib/script/validate";
+import { reason } from "@/lib/text/router";
 
 import { FAKE_ENGINE_ENV, keepEnv, loadCassette, schemaSha256, withFakeEngine } from "./_helpers";
 
-keepEnv([...FAKE_ENGINE_ENV, "TEXT_ENV", "LOCAL_BINARIES", "GOOGLE_AI_API_KEY", "NEXT_PUBLIC_DEV_AUTH", "LIGHTTRACK_DISABLE"]);
+keepEnv([...FAKE_ENGINE_ENV, "TEXT_ENV", "LOCAL_BINARIES", "GOOGLE_AI_API_KEY", "LIGHTTRACK_DISABLE"]);
 
 test.beforeEach(() => {
-  process.env.NEXT_PUBLIC_DEV_AUTH = "1";
   process.env.TEXT_ENV = "local";
+
   process.env.LOCAL_BINARIES = "on";
   // No cloud key: if the local rung failed, the ladder has nowhere metered to go.
   delete process.env.GOOGLE_AI_API_KEY;
@@ -78,35 +87,45 @@ const noFitNotebook = (): Notebook => ({
   engineFit: NOTEBOOK.engineFit.map((e) => ({ ...e, fit: "poor" as const })),
 });
 
-let ip = 0;
-async function compose(body: Record<string, unknown>): Promise<{ status: number; json: Record<string, unknown> }> {
-  const res = await POST(
-    new Request("http://localhost/api/script", {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-forwarded-for": `10.78.0.${++ip}` },
-      body: JSON.stringify({ notebook: NOTEBOOK, scope: {}, template: TEMPLATE, targetS: TARGET_S, projectId: "p-compose", ...body }),
-    }),
-  );
-  return { status: res.status, json: (await res.json()) as Record<string, unknown> };
+/** What the compose chain answers, as the script producer runs it: refused before or by the
+ *  engine, a 400-shaped `bad` admission, or a gated draft. A refused ANSWER throws DraftError
+ *  and a missing prompt throws ComposePromptUnavailable - both before a draft exists. */
+type Composed =
+  | { kind: "bad"; detail: string }
+  | { kind: "refused"; refused: string; why: string }
+  | { kind: "drafted"; draft: ReturnType<typeof draftOf>; gate: ReturnType<typeof gateDraft>; engine: { rung: string; costUsd: number | undefined } };
+
+async function compose(body: Record<string, unknown>): Promise<Composed> {
+  const admitted = admitCompose({ notebook: NOTEBOOK, scope: {}, template: TEMPLATE, targetS: TARGET_S, ...body } as ComposeBody);
+  if (admitted.kind === "bad") return { kind: "bad", detail: admitted.detail };
+  if (admitted.kind === "refused") return { kind: "refused", refused: "no-engine-fits", why: admitted.why };
+  const { source, scope, template, targetS, engines, schema } = admitted.run;
+  const { prompt, turnBand } = await composePrompt(admitted.run);
+  const run = await reason({ prompt, turn: "compose", schema });
+  const outcome = parseDraft(run.text, { source, scope, template, targetS, engines, turnBand });
+  if (outcome.kind === "refused") return { kind: "refused", refused: outcome.refused, why: outcome.why };
+  const draft = draftOf(outcome.renders, { projectId: "p-compose", source });
+  return { kind: "drafted", draft, gate: gateDraft(draft.renders, source, draft), engine: { rung: run.provenance.rung, costUsd: run.provenance.costUsd } };
 }
 
-// FIRST IN THE FILE ON PURPOSE, as in recalibrate-route-e2e: the route caches
-// its prompt once read, so this is the one moment "missing" is observable.
-test("compose e2e: a missing prompt file is a 500 that says the engine never started", async () => {
+// FIRST IN THE FILE ON PURPOSE, as in recalibrate-route-e2e: the prompt is cached
+// once read, so this is the one moment "missing" is observable.
+test("compose e2e: a missing prompt file refuses before the engine is started", async () => {
   const cwd = process.cwd();
   const empty = mkdtempSync(join(tmpdir(), "gravitone-noprompt-"));
   try {
     await withFakeEngine("compose-ok", async (engine) => {
       process.chdir(empty);
-      let out: Awaited<ReturnType<typeof compose>>;
+      let thrown: unknown;
       try {
-        out = await compose({});
+        thrown = await compose({}).then(
+          () => null,
+          (e: unknown) => e,
+        );
       } finally {
         process.chdir(cwd);
       }
-      console.log(`[compose] no prompt -> ${out.status} ${String(out.json.detail).slice(0, 120)}`);
-      expect(out.status, "200 means SCRIPT-PROMPT.md was already cached by an earlier probe").toBe(500);
-      expect(String(out.json.detail)).toMatch(/never started/);
+      expect(thrown, "no throw means SCRIPT-PROMPT.md was already cached by an earlier probe").toBeInstanceOf(ComposePromptUnavailable);
       expect(engine.turns(), "the engine was reached although the prompt could not be built").toHaveLength(0);
     });
   } finally {
@@ -236,14 +255,12 @@ test("case 2b: words declared into an impossible clock, or past the render's own
 
 /* ───────────────────────────── 3 · no engine fits ───────────────────────── */
 
-test("case 3: a notebook with no engine at good or better is a 200 refusal, no turn, no draft", async () => {
+test("case 3: a notebook with no engine at good or better is a refusal, no turn, no draft", async () => {
   expect(qualifyingEngines(noFitNotebook())).toEqual([]);
   await withFakeEngine("compose-ok", async (engine) => {
-    const { status, json } = await compose({ notebook: noFitNotebook() });
-    console.log(`[compose] no fit -> ${status} ${JSON.stringify(json).slice(0, 140)}`);
-    expect(status).toBe(200);
-    expect(json.refused).toBe("no-engine-fits");
-    expect(json.draft, "a refusal must not carry a draft to be written").toBeUndefined();
+    const out = await compose({ notebook: noFitNotebook() });
+    expect(out.kind, "a refusal must not carry a draft to be written").toBe("refused");
+    expect(out.kind === "refused" && out.refused).toBe("no-engine-fits");
     expect(engine.turns(), "the engine was paid to say what the notebook already said").toHaveLength(0);
   });
 });
@@ -252,11 +269,11 @@ test("case 3b: the engine's own no-engine-fits answer is a valid refusal, not a 
   const out = parseDraft(answerOf("compose-refused"), ctx());
   expect(out.kind).toBe("refused");
   await withFakeEngine("compose-refused", async (engine) => {
-    const { status, json } = await compose({});
-    expect(status, String(json.detail)).toBe(200);
-    expect(json.refused).toBe("no-engine-fits");
-    expect(String(json.why).length).toBeGreaterThan(0);
-    expect(json.draft).toBeUndefined();
+    const out = await compose({});
+    expect(out.kind).toBe("refused");
+    if (out.kind !== "refused") return;
+    expect(out.refused).toBe("no-engine-fits");
+    expect(out.why.length).toBeGreaterThan(0);
     expect(engine.turns()).toHaveLength(1);
   });
 });
@@ -316,13 +333,12 @@ test("case 4: a valid answer gives two renders inside the template band, and no 
   expect((err as DraftError).findings.filter((f) => f.rule === "duration").map((f) => f.renderId)).toEqual(["adj-own-clock"]);
 });
 
-test("case 4b: a target outside the template's range is a 400 before any engine is reached", async () => {
+test("case 4b: a target outside the template's range is refused as bad input before any engine is reached", async () => {
   expect(templateBand(TEMPLATE, 30)).toBeNull();
   await withFakeEngine("compose-ok", async (engine) => {
-    const { status } = await compose({ targetS: 30 });
-    expect(status).toBe(400);
+    expect((await compose({ targetS: 30 })).kind).toBe("bad");
     const trailer = await compose({ template: "trailer", targetS: 120 });
-    expect(trailer.status, "compose writes explainers; a trailer is a TrailerCut").toBe(400);
+    expect(trailer.kind, "compose writes explainers; a trailer is a TrailerCut").toBe("bad");
     expect(engine.turns()).toHaveLength(0);
   });
 });
@@ -332,10 +348,10 @@ test("case 4b: a target outside the template's range is a 400 before any engine 
 test("case 5: each returned render carries a GateReport with an enforced figure", async () => {
   const cassette = loadCassette("compose-ok");
   await withFakeEngine(cassette, async (engine) => {
-    const { status, json } = await compose({});
-    expect(status, String(json.detail)).toBe(200);
-    const draft = json.draft as { renders: DraftRender[]; notebookDigest: string; projectId: string };
-    const gate = json.gate as { byRender: Record<string, GateReport>; enforced: number };
+    const out = await compose({});
+    if (out.kind !== "drafted") throw new Error(`no draft: ${JSON.stringify(out)}`);
+    const draft = out.draft as { renders: DraftRender[]; notebookDigest: string; projectId: string };
+    const gate = out.gate as { byRender: Record<string, GateReport>; enforced: number };
     console.log(
       `[compose] gate -> ${Object.values(gate.byRender).map((g) => `${g.renderId} enforced=${g.enforced}% blocked=${g.blocked}`).join(", ")}`,
     );
@@ -350,7 +366,7 @@ test("case 5: each returned render carries a GateReport with an enforced figure"
       // The connector law ran server-side as part of the gate.
       expect(g!.findings.some((f) => f.rule === "connector")).toBe(true);
     }
-    const e = json.engine as Record<string, unknown>;
+    const e = out.engine;
     expect(e.rung).toBe("preferred");
     expect(e.costUsd).toBe(cassette.turns[0]!.envelope!.total_cost_usd);
     expect(engine.turns()).toHaveLength(1);
@@ -358,15 +374,18 @@ test("case 5: each returned render carries a GateReport with an enforced figure"
   });
 });
 
-test("case 5b: a descoped card in the answer is a 502 naming it, and no draft travels back", async () => {
+test("case 5b: a descoped card in the answer is refused naming it, and no draft comes back", async () => {
   await withFakeEngine("compose-ok", async (engine) => {
-    const { status, json } = await compose({ scope: { "f-mstr-sold": { descoped: true } } });
-    console.log(`[compose] descoped e2e -> ${status} ${String(json.detail).slice(0, 160)}`);
-    expect(status).toBe(502);
-    expect(String(json.detail)).toContain("f-mstr-sold");
-    expect(String(json.detail)).toContain("rc-own-clock");
-    expect(json.draft).toBeUndefined();
+    const thrown = await compose({ scope: { "f-mstr-sold": { descoped: true } } }).then(
+      () => null,
+      (e: unknown) => e,
+    );
+    console.log(`[compose] descoped e2e -> ${String((thrown as Error | null)?.message).slice(0, 160)}`);
+    expect(thrown, "a draft came back resting on a descoped card").toBeInstanceOf(DraftError);
+    expect((thrown as DraftError).message).toContain("f-mstr-sold");
+    expect((thrown as DraftError).message).toContain("rc-own-clock");
     expect(engine.turns()).toHaveLength(1);
+
   });
 });
 

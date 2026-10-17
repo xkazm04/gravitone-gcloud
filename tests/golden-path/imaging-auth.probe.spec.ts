@@ -1,17 +1,22 @@
 // LANE — UNAUTHENTICATED-SPENDING-ROUTE (dynamic).
 //
-// Every route that spends a real vendor balance or local Claude-CLI compute —
-// eleven when this sentence was last checked, and DERIVED below rather than
-// counted here, because it was "four" when this file was written and the count
-// went stale twice. Before this gate, none checked WHO was calling — a request
-// at the origin billed the operator's keys. This probe drives the ACTUAL exported route handlers (Node
-// context, no server) and the ACTUAL guard, and pins the contract:
+// Every route under app/api either gates or is named public with its reason —
+// DERIVED below from the filesystem, because the hand-kept count went stale
+// twice. Before this gate, no route checked WHO was calling — a request at the
+// origin billed the operator's keys. This probe pins:
 //
-//   · every route returns 401 to an unauthenticated caller (FAILS against the
-//     pre-fix routes — that is the point: it proves they did not block);
-//   · a valid secret passes the guard (the route then 4xx's on the bad body,
-//     never 401 — proving the guard let it through WITHOUT spending);
-//   · the rate limiter refuses past its capacity with 429.
+//   · every route on disk calls a gate door, or is an exemption with a reason;
+//   · the doors themselves: the shared secret's compare, the rate limiter, and
+//     the CLI token as route()'s guard (app/_server/route.ts guardOf) judges it.
+//
+// PHASE 6 L70. The v1 money routes this file used to drive one by one (imaging,
+// frames, recalibrate, script, research, music, ads, video, sound, suno, mv,
+// articles, strips, turns, motion: 41 handlers) were deleted with the v1 pages:
+// producers run in-process behind Server Actions now, and no money route is left
+// under app/api. Their 401-without-spending cases went with them; the derived
+// check below still demands a driven case for any money route that appears. The
+// token cases, which drove /api/imaging/generate, now drive the live door every
+// remaining route goes through (route()'s guardOf), not v1's guardRequest.
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
@@ -21,10 +26,8 @@ import { test, expect } from "@playwright/test";
 import { keepEnv, stripComments } from "./_pure";
 import {
   checkAccess,
-  guardAccessOnly,
   resolvePrincipal,
   SHARED_SECRET_CALLERS_VAR,
-  guardRequest,
   rateLimit,
   rateStats,
   __reapNow,
@@ -34,41 +37,6 @@ import {
   RATE_KEY_CAP_VAR,
   RATE_WINDOW_SEC_VAR,
 } from "@/lib/apiAuth";
-import { POST as generatePOST } from "@/app/api/imaging/generate/route";
-import { POST as editPOST } from "@/app/api/imaging/edit/route";
-import { POST as recognizePOST } from "@/app/api/imaging/recognize/route";
-import { POST as framesPOST } from "@/app/api/frames/route";
-import { POST as recalibratePOST } from "@/app/api/recalibrate/route";
-import { POST as scriptPOST } from "@/app/api/script/route";
-import { POST as researchPOST } from "@/app/api/research/route";
-import { POST as musicPlanPOST } from "@/app/api/music/plan/route";
-import { POST as musicComposePOST } from "@/app/api/music/compose/route";
-import { POST as musicGeneratePOST } from "@/app/api/music/generate/route";
-import { POST as musicSfxPOST } from "@/app/api/music/sfx/route";
-import { POST as foundryAdoptPOST } from "@/app/api/foundry/styles/[id]/adopt/route";
-import { POST as musicVideoExportPOST } from "@/app/api/music-video/export/route";
-import { POST as cutExportPOST } from "@/app/api/cut/export/route";
-import { POST as adIdeasPOST } from "@/app/api/ads/ideas/route";
-import { POST as adScenariosPOST } from "@/app/api/ads/scenarios/route";
-import { POST as adRenderPOST } from "@/app/api/ads/render/route";
-import { GET as adRenderRecordGET } from "@/app/api/ads/render/[id]/route";
-import { GET as adRenderFileGET } from "@/app/api/ads/render/[id]/file/route";
-import { GET as videoCapabilityGET, POST as videoClipsPOST } from "@/app/api/video/clips/route";
-import { GET as videoClipGET } from "@/app/api/video/clips/[id]/route";
-import { GET as videoClipFileGET } from "@/app/api/video/clips/[id]/file/route";
-import { POST as soundGeneratePOST } from "@/app/api/sound/generate/route";
-import { POST as soundHuntsPOST } from "@/app/api/sound/hunts/route";
-import { POST as soundHuntLessonPOST } from "@/app/api/sound/hunts/[id]/lesson/route";
-import { POST as sunoProposalsPOST } from "@/app/api/sound/suno/proposals/route";
-import { DELETE as sunoProposalDELETE } from "@/app/api/sound/suno/proposals/[id]/route";
-import { POST as sunoProposePOST } from "@/app/api/sound/suno/propose/route";
-import { PATCH as sunoClipPATCH } from "@/app/api/sound/suno/clips/[id]/route";
-import { POST as sunoLibraryPOST } from "@/app/api/sound/suno/library/route";
-import { POST as mvImportPOST } from "@/app/api/sound/mv/import/route";
-import { POST as mvCalendarPOST } from "@/app/api/sound/mv/jobs/[id]/calendar/route";
-import { POST as turnsPOST } from "@/app/api/turns/route";
-import { POST as turnCancelPOST } from "@/app/api/turns/[id]/cancel/route";
-import { POST as motionDirectPOST } from "@/app/api/motion/direct/route";
 
 const SECRET = "probe-secret-value";
 
@@ -87,226 +55,9 @@ function req(path: string, opts: { bearer?: string; ip: string; body?: unknown }
   });
 }
 
-// THE PRODUCER ROUTES LOAD NATIVELY. Since Phase 4 (L29-L31) the extract step, the
-// article and the Suno and music-video queue routes reach the kernel
-// (lib/producers/*), whose workspace packages are
-// `type: module`: required here statically they would be evaluated by this
-// lane's CommonJS transform, and the next native `import("@gt/...")` in this
-// worker - the token door below, ledger-reconcile after it - finds the wrong
-// copy ("exports is not defined in ES module scope"). So they are imported the
-// way the token door is: dynamically, once, before the table is driven.
-type Handler = (r: Request, c: { params: Promise<Record<string, string>> }) => Promise<Response>;
-const native = (load: () => Promise<Record<string, unknown>>, method: string) => async (r: Request, c?: { params: Promise<Record<string, string>> }): Promise<Response> => {
-  const fn = (await load())[method] as Handler;
-  return fn(r, c ?? { params: Promise.resolve({}) });
-};
-const sunoQueuePOST = native(() => import("../../app/api/sound/suno/queue/route.ts"), "POST");
-const sunoQueueDELETE = native(() => import("../../app/api/sound/suno/queue/[id]/route.ts"), "DELETE");
-const sunoRunPOST = native(() => import("../../app/api/sound/suno/run/route.ts"), "POST");
-const sunoClearPOST = native(() => import("../../app/api/sound/suno/clear/route.ts"), "POST");
-const mvPOST = native(() => import("../../app/api/sound/mv/route.ts"), "POST");
-const mvRunPOST = native(() => import("../../app/api/sound/mv/run/route.ts"), "POST");
-const mvJobPOST = native(() => import("../../app/api/sound/mv/jobs/[id]/route.ts"), "POST");
-const foundryExtractPOST = native(() => import("../../app/api/foundry/extract/route.ts"), "POST");
-const foundryStepPOST = native(() => import("../../app/api/foundry/extract/[id]/step/route.ts"), "POST");
-const articlesCreatePOST = native(() => import("../../app/api/articles/route.ts"), "POST");
-const articlesApprovePOST = native(() => import("../../app/api/articles/[runId]/approve/route.ts"), "POST");
-const articlesResumePOST = native(() => import("../../app/api/articles/[runId]/resume/route.ts"), "POST");
-const articlesReworkPOST = native(() => import("../../app/api/articles/[runId]/rework/route.ts"), "POST");
-const stripsPOST = native(() => import("../../app/api/foundry/strips/route.ts"), "POST");
-
-const ROUTES: [string, string, (r: Request) => Promise<Response>][] = [
-  ["generate", "/api/imaging/generate", generatePOST],
-  ["edit", "/api/imaging/edit", editPOST],
-  ["recognize", "/api/imaging/recognize", recognizePOST],
-  ["frames", "/api/frames", framesPOST],
-  ["recalibrate", "/api/recalibrate", recalibratePOST],
-  // Step 2's compose turn (script-phase-B). An empty body is a 400 from the
-  // notebook check, before any engine is reached or any prompt file is read.
-  ["script", "/api/script", scriptPOST],
-  // Step 1's research turn. Its GET (the pre-flight) gates too, and
-  // deliberately: unlike /api/imaging/pricing it DOES disclose which engines are
-  // reachable and why the others are not, which is key-and-posture state. The
-  // POST is what is driven here because it is the one that spends; an empty body
-  // is a 400 from the topic check, well before any engine is reached.
-  ["research", "/api/research", researchPOST],
-  ["music/plan", "/api/music/plan", musicPlanPOST],
-  ["music/compose", "/api/music/compose", musicComposePOST],
-  ["music/generate", "/api/music/generate", musicGeneratePOST],
-  ["music/sfx", "/api/music/sfx", musicSfxPOST],
-  ["foundry/extract", "/api/foundry/extract", foundryExtractPOST],
-  // The strips launch (Phase 4, L33): a kernel job behind a receipt. Every field of its body is
-  // optional, so the empty body `req()` sends is a VALID launch request - it would answer with a
-  // receipt (dry, nothing spent, but a 2xx, not the refusal this case asserts). The authed case
-  // therefore carries a key the strict schema refuses, so the 4xx is the body check's, reached
-  // only through the guard, before a receipt is computed or a job enqueued.
-  [
-    "foundry/strips",
-    "/api/foundry/strips",
-    (r: Request) => stripsPOST(new Request(r, { body: JSON.stringify({ notAField: true }) })),
-  ],
-  // A dynamic segment: the handler takes the route context as its second
-  // argument, so it is adapted to the one-argument shape the cases below drive.
-  // The id names no run on disk, which is what keeps the authenticated case a
-  // 404 from the store rather than a real stepping run that would spend.
-  [
-    "foundry/extract/step",
-    "/api/foundry/extract/[id]/step",
-    (r: Request) => foundryStepPOST(r, { params: Promise.resolve({ id: "no-such-run" }) }),
-  ],
-  [
-    "foundry/styles/adopt",
-    "/api/foundry/styles/[id]/adopt",
-    (r: Request) => foundryAdoptPOST(r, { params: Promise.resolve({ id: "no-such-style" }) }),
-  ],
-  // WP5's export route. The empty default body (`req()`'s own fallback) is
-  // missing every required field, so an authed call 400s from
-  // `asResolution`/`asBase64` well before a headless Chromium or ffmpeg is
-  // ever spawned — same "4xx, never 401, nothing spent" shape as every route
-  // above.
-  ["music-video/export", "/api/music-video/export", musicVideoExportPOST],
-  // The Cut's animatic (frames-score-cut-B). An empty body has no `document`,
-  // so an authed call is the shape check's 400 before ffmpeg is spawned.
-  ["cut/export", "/api/cut/export", cutExportPOST],
-  // The ads concept rounds (WP2): a reasoning turn each ("ad-ideas",
-  // "ad-scenarios"). An empty body is a 400 from lib/ads/concepts.ts's brief
-  // reader (`brief`) before the prompt is read or lib/text is reached.
-  ["ads/ideas", "/api/ads/ideas", adIdeasPOST],
-  ["ads/scenarios", "/api/ads/scenarios", adScenariosPOST],
-  // The ads Finish render (WP4). An empty body is a 400 from
-  // parseAdRenderRequest (`projectId`) before any clip is looked up or any
-  // ffmpeg / Chromium is spawned. Its two GETs gate through guardAccessOnly (a
-  // poll and a download, never rate-counted) and are driven anyway: the id is
-  // not an export id, so the authed case is a 400, read-only.
-  ["ads/render", "/api/ads/render", adRenderPOST],
-  [
-    "ads/render/record",
-    "/api/ads/render/[id]",
-    (r: Request) => adRenderRecordGET(r, { params: Promise.resolve({ id: "no-such-export" }) }),
-  ],
-  [
-    "ads/render/file",
-    "/api/ads/render/[id]/file",
-    (r: Request) => adRenderFileGET(r, { params: Promise.resolve({ id: "no-such-export" }) }),
-  ],
-  // The image-to-video hop (ads WP3). POST spends a hosted clip: an empty body
-  // is a 400 from parseClipRequest (`projectId`) before the key check, the
-  // spend hold or the adapter. Its GET (capability) discloses whether a vendor
-  // key is configured, so it gates too; the poll and the mp4 gate through
-  // guardAccessOnly. All four are driven: the id is not a clip id, so the authed
-  // GETs are a 404, read-only, and the capability GET is a read of constants
-  // and key presence — the one authed case here that answers 200, which is why
-  // it is driven as a 401 only (below the table), not in the 4xx case.
-  ["video/clips", "/api/video/clips", videoClipsPOST],
-  [
-    "video/clips/record",
-    "/api/video/clips/[id]",
-    (r: Request) => videoClipGET(r, { params: Promise.resolve({ id: "no-such-clip" }) }),
-  ],
-  [
-    "video/clips/file",
-    "/api/video/clips/[id]/file",
-    (r: Request) => videoClipFileGET(r, { params: Promise.resolve({ id: "no-such-clip" }) }),
-  ],
-  // The Sound lab's three spending routes (round 4). An empty body is a 400
-  // from each one's own validation — `kind` for generate and hunts — before
-  // lib/music or lib/text is reached; the lesson route's id names no hunt, so
-  // the authed case is the store's 404, never a model turn.
-  ["sound/generate", "/api/sound/generate", soundGeneratePOST],
-  ["sound/hunts", "/api/sound/hunts", soundHuntsPOST],
-  [
-    "sound/hunts/lesson",
-    "/api/sound/hunts/[id]/lesson",
-    (r: Request) => soundHuntLessonPOST(r, { params: Promise.resolve({ id: "no-such-hunt" }) }),
-  ],
-  // The Suno queue (spark audio-queue-suno). Queue spends Suno credits once the
-  // worker reaches a job; propose spends a text turn; the other four write the
-  // queue's store. An empty body is a 400 from each one's own validation before
-  // the store or an engine is reached; the two DELETEs name no record, so the
-  // authed case is a 404 read BEFORE the store's lock (nothing is created).
-  ["sound/suno/proposals", "/api/sound/suno/proposals", sunoProposalsPOST],
-  [
-    "sound/suno/proposals/discard",
-    "/api/sound/suno/proposals/[id]",
-    (r: Request) => sunoProposalDELETE(r, { params: Promise.resolve({ id: "sp-0000000000" }) }),
-  ],
-  ["sound/suno/propose", "/api/sound/suno/propose", sunoProposePOST],
-  ["sound/suno/queue", "/api/sound/suno/queue", sunoQueuePOST],
-  [
-    "sound/suno/queue/cancel",
-    "/api/sound/suno/queue/[id]",
-    (r: Request) => sunoQueueDELETE(r, { params: Promise.resolve({ id: "sj-0000000000" }) }),
-  ],
-  [
-    "sound/suno/clips/verdict",
-    "/api/sound/suno/clips/[id]",
-    (r: Request) => sunoClipPATCH(r, { params: Promise.resolve({ id: "sc-0000000000" }) }),
-  ],
-  // The library import drives the operator's signed-in Suno Chrome (free, read
-  // only) and writes the store: an empty body is a 400 ("all" must be true)
-  // before the browser or the store is reached.
-  ["sound/suno/library", "/api/sound/suno/library", sunoLibraryPOST],
-  ["sound/suno/run", "/api/sound/suno/run", sunoRunPOST],
-  ["sound/suno/clear", "/api/sound/suno/clear", sunoClearPOST],
-  // The music-video queue (spark audio-music-video-queue). Enqueue and Start
-  // spend two text turns and a Leonardo studio still per job once the worker
-  // reaches it; Regenerate re-queues a part; import reads the studio's disk;
-  // calendar copies a render and writes the publish store. An empty body is a
-  // 400 from each one's own validation (sources / running / dir / part /
-  // publishAt) before any store, engine or file is reached. The jobs/[id]
-  // PATCH and DELETE share the POST's file and its door.
-  ["sound/mv", "/api/sound/mv", mvPOST],
-  ["sound/mv/run", "/api/sound/mv/run", mvRunPOST],
-  ["sound/mv/import", "/api/sound/mv/import", mvImportPOST],
-  [
-    "sound/mv/jobs/regenerate",
-    "/api/sound/mv/jobs/[id]",
-    (r: Request) => mvJobPOST(r, { params: Promise.resolve({ id: "mj-0000000000" }) }),
-  ],
-  [
-    "sound/mv/jobs/calendar",
-    "/api/sound/mv/jobs/[id]/calendar",
-    (r: Request) => mvCalendarPOST(r, { params: Promise.resolve({ id: "mj-0000000000" }) }),
-  ],
-  // The article pipeline (WP4). Create spends a research turn on the operator's
-  // Claude seat; approve pushes a branch and opens a PR in ai-registry; resume
-  // re-runs a step. An empty body is a 400 from create's topic check; the run
-  // id names no run, so approve and resume are the store's 404 — read-only,
-  // checked BEFORE the store's write lock, which would create the directory.
-  ["articles/create", "/api/articles", articlesCreatePOST],
-  [
-    "articles/approve",
-    "/api/articles/[runId]/approve",
-    (r: Request) => articlesApprovePOST(r, { params: Promise.resolve({ runId: "2026-10-05-no-such-run" }) }),
-  ],
-  [
-    "articles/resume",
-    "/api/articles/[runId]/resume",
-    (r: Request) => articlesResumePOST(r, { params: Promise.resolve({ runId: "2026-10-05-no-such-run" }) }),
-  ],
-  // Rework restarts the drive, so it spends the seat the same way resume does.
-  [
-    "articles/rework",
-    "/api/articles/[runId]/rework",
-    (r: Request) => articlesReworkPOST(r, { params: Promise.resolve({ runId: "2026-10-05-no-such-run" }) }),
-  ],
-  // The turn ledger (AIO-A). Starting a turn spends the seat or a metered key;
-  // an empty body is a 400 from the `kind` check before any kind's prompt is
-  // built or any record written. Cancel spends nothing (guardAccessOnly — a
-  // "stop" is never rate-refused) but discloses and ends a paid run, so it is
-  // driven too: the id names no turn, so the authed case is the ledger's 404,
-  // read-only.
-  ["turns", "/api/turns", turnsPOST],
-  [
-    "turns/cancel",
-    "/api/turns/[id]/cancel",
-    (r: Request) => turnCancelPOST(r, { params: Promise.resolve({ id: "tn-000000000000" }) }),
-  ],
-  // The Motion step's direction turn (video-clip-pipeline-B): two recognize
-  // passes per call. An empty body is a 400 from the plate check before
-  // lib/imaging is reached.
-  ["motion/direct", "/api/motion/direct", motionDirectPOST],
-];
+/** The money routes driven for 401-without-spending: none since Phase 6 L70 (see the header).
+ *  A route that calls a money door and is not listed here fails the derived check below. */
+const ROUTES: [string, string, (r: Request) => Promise<Response>][] = [];
 
 /**
  * Routes that are PUBLIC on purpose, each with the reason it is.
@@ -315,12 +66,10 @@ const ROUTES: [string, string, (r: Request) => Promise<Response>][] = [
  * a route may be excluded from it, and an entry here is a claim somebody has to
  * defend in review rather than an omission nobody sees.
  */
-const DELIBERATELY_PUBLIC: Record<string, string> = {
-  "app/api/imaging/pricing/route.ts":
-    "the price table, audited line by line in its own header: module constants only, no key, no environment, no key state, nothing per-request",
-  "app/api/music/pricing/route.ts":
-    "the music price table, same shape and same audit as its imaging twin. Verified on admission rather than asserted: lib/music/pricing.ts has ZERO imports, reads no process.env, never calls isMusicConfigured() and never touches lib/music/budget.ts, so the response is byte-identical on a box with a key and a box without one — a caller cannot learn whether this deployment can reach ElevenLabs, nor what ceiling an operator set. priceTable() projects named fields rather than spreading a row, which is the second of the two ways the route's own header says this audit could quietly stop being true",
-};
+// Both entries - /api/imaging/pricing and /api/music/pricing, the price tables - retired
+// with the v1 pages in Phase 6 L70; the next public route is admitted here with its reason,
+// and the transitive no-environment walk below then runs over it again.
+const DELIBERATELY_PUBLIC: Record<string, string> = {};
 
 /**
  * Routes that are public because they ARE the door a credential is made at.
@@ -519,6 +268,7 @@ function runtimeImports(rel: string): string[] {
  * whole graph today (two files each); the assertion is what keeps that true.
  */
 test("every deliberately-public route reads no environment, transitively", () => {
+  test.skip(Object.keys(DELIBERATELY_PUBLIC).length === 0, "no deliberately-public route exists since Phase 6 L70 - the walk has nothing to walk");
   for (const [route, why] of Object.entries(DELIBERATELY_PUBLIC)) {
     const seen = new Set<string>();
     const queue = [route];
@@ -608,7 +358,8 @@ test("guard: FAILS CLOSED when no secret is configured", async () => {
   delete process.env[ACCESS_SECRET_VAR];
   // Even a caller presenting *something* is denied — there is nothing to match.
   expect(checkAccess(req("/x", { ip: "1.1.1.1", bearer: "anything" }))).toBe("no-config");
-  const denied = await guardRequest(req("/x", { ip: "9.9.9.9", bearer: "anything" }));
+  // ...and the live door every route goes through says the same.
+  const denied = await gate(req("/x", { ip: "9.9.9.9", bearer: "anything" }), "money");
   expect(denied?.status).toBe(401);
 });
 
@@ -620,7 +371,7 @@ test("guard: the x-imaging-access-secret header is also accepted", () => {
   expect(checkAccess(r)).toBe("ok");
 });
 
-// ── The rate limiter: refuses past capacity, then 429 through guardRequest ──
+// ── The rate limiter: refuses past capacity, then through route()'s money guard ──
 
 test("rate limit: refuses once the per-IP bucket is drained", () => {
   process.env.IMAGING_RATE_CAPACITY = "5";
@@ -640,17 +391,19 @@ test("rate limit: refuses once the per-IP bucket is drained", () => {
   delete process.env.IMAGING_RATE_WINDOW_SEC;
 });
 
-test("rate limit: guardRequest answers 429 past capacity (before it even checks auth)", async () => {
+test("rate limit: the money guard refuses a flood past capacity (before it even checks auth)", async () => {
   process.env.IMAGING_RATE_CAPACITY = "3";
   const ip = "10.0.0.9";
-  const statuses: number[] = [];
+  const verdicts: string[] = [];
   for (let i = 0; i < 5; i++) {
-    // no bearer at all — proves 429 outranks the 401 for a flood
-    const res = await guardRequest(req("/api/imaging/generate", { ip }));
-    statuses.push(res ? res.status : 200);
+    // No bearer at all - proves the limit outranks the 401 for a flood. route() has no 429:
+    // the limit is `unavailable` (503) with Retry-After and `detail: rate-limited`.
+    const res = await gate(req("/api/x-money", { ip }), "money");
+    verdicts.push(res === null ? "admitted" : `${res.status}:${(await bodyOf(res))?.detail ?? ""}`);
   }
-  console.log(`[auth] flood statuses = ${statuses.join(",")}`);
-  expect(statuses.filter((s) => s === 429).length).toBeGreaterThanOrEqual(1);
+  console.log(`[auth] flood verdicts = ${verdicts.join(",")}`);
+  expect(verdicts[0]).toMatch(/^401:/);
+  expect(verdicts.filter((v) => v === "503:rate-limited").length).toBeGreaterThanOrEqual(1);
   delete process.env.IMAGING_RATE_CAPACITY;
 });
 
@@ -840,46 +593,15 @@ test("limiter counters: the meter reads, it does not decide", () => {
   delete process.env[RATE_WINDOW_SEC_VAR];
 });
 
-// ── The real routes: 401 without auth (the fail-before), pass with it ──
-
-for (const [name, path, handler] of ROUTES) {
-  test(`route ${name}: 401 without auth, and NO vendor call is made`, async () => {
-    const res = await handler(req(path, { ip: `172.16.0.${ROUTES.findIndex((x) => x[0] === name) + 1}` }));
-    console.log(`[auth] ${name} unauthenticated -> ${res.status}`);
-    expect(res.status).toBe(401);
-  });
-
-  test(`route ${name}: a valid secret PASSES the guard (4xx on bad body, never 401)`, async () => {
-    // Valid auth + deliberately invalid body: the guard must let it through, and
-    // the route rejects the body BEFORE spending. So: not 401, and not a 5xx
-    // vendor error either — a clean client 4xx.
-    const res = await handler(req(path, { ip: `172.16.1.${ROUTES.findIndex((x) => x[0] === name) + 1}`, bearer: SECRET, body: {} }));
-    console.log(`[auth] ${name} authed+bad-body -> ${res.status}`);
-    expect(res.status).not.toBe(401);
-    expect(res.status).toBeGreaterThanOrEqual(400);
-    expect(res.status).toBeLessThan(500);
-  });
-}
-
-// The video capability GET: closed to a stranger (it says whether this server
-// holds a vendor key), open to the secret. Not in ROUTES because its authed
-// answer is a 200 by design — there is no body to be bad.
-test("route video/clips GET: 401 without auth, 200 with it", async () => {
-  const anon = await videoCapabilityGET(new Request("http://localhost/api/video/clips", { headers: { "x-forwarded-for": "172.16.2.1" } }));
-  expect(anon.status).toBe(401);
-  const authed = await videoCapabilityGET(
-    new Request("http://localhost/api/video/clips", { headers: { authorization: `Bearer ${SECRET}`, "x-forwarded-for": "172.16.2.2" } }),
-  );
-  expect(authed.status).toBe(200);
-});
-
 // ── CLI tokens (Phase 2, lot 17): one credential per caller, in place of the secret ──
 //
-// The v1 door (resolvePrincipal, so every guardRequest/guardAccessOnly route)
-// against a REAL kernel store in a temp file, opened through the app's own
-// accessor (lib/kernelStore.ts), so the token minted here is the token the
-// door reads. The shared secret stays configured throughout: a token must be
-// judged as a token even on a server where the secret would have passed.
+// Judged by route()'s guard (app/_server/route.ts guardOf - v1's resolvePrincipal and
+// rateLimit, answered as the one envelope `{error, code, detail}` with v1's refusal name in
+// `detail`) against a REAL kernel store in a temp file, opened through the app's own accessor
+// (lib/kernelStore.ts), so the token minted here is the token the door reads. The shared secret
+// stays configured throughout: a token must be judged as a token even on a server where the
+// secret would have passed. (Phase 6 L70: these drove v1's guardRequest/guardAccessOnly and
+// /api/imaging/generate; no route calls either door now.)
 
 // LOADED THE WAY THE DOOR LOADS THEM. lib/principal.ts reaches the kernel by a
 // dynamic import (only when a token is presented), so this file does too: in
@@ -887,19 +609,28 @@ test("route video/clips GET: 401 without auth, 200 with it", async () => {
 // by the other is evaluated twice, once in the wrong module system.
 type TokenMod = typeof import("@gt/kernel/token");
 type KernelMod = typeof import("@/lib/kernelStore");
+type GuardOf = (typeof import("../../app/_server/route.ts"))["guardOf"];
 let tk: TokenMod;
 let km: KernelMod;
+let guardOf: GuardOf;
 const tokenDir = mkdtempSync(join(tmpdir(), "gt-l17-auth-"));
 const OPERATOR = { kind: "operator", id: "probe" } as const;
 keepEnv(["GRAVITONE_STORE_PATH", SHARED_SECRET_CALLERS_VAR, RATE_CAPACITY_VAR, "PRINCIPAL_MODE"]);
 test.beforeAll(async () => {
   tk = await import("@gt/kernel/token");
   km = await import("../../lib/kernelStore.ts");
+  guardOf = (await import("../../app/_server/route.ts")).guardOf;
 });
 test.afterAll(() => {
   km?.closeKernel();
   rmSync(tokenDir, { recursive: true, force: true });
 });
+
+/** route()'s guard as a door: the refusal it would answer, or null when it admits. */
+async function gate(r: Request, guard: "money" | "access"): Promise<Response | null> {
+  const g = await guardOf(r, guard);
+  return "refusal" in g ? g.refusal : null;
+}
 
 function store() {
   process.env.GRAVITONE_STORE_PATH = join(tokenDir, "auth.sqlite");
@@ -912,69 +643,70 @@ function mint(scope: "money" | "read" = "money"): { id: string; token: string } 
   if (!r.ok) throw new Error(r.error.message);
   return { id: r.value.record.id, token: r.value.token };
 }
-const [, GEN_PATH, generate] = ROUTES[0]!;
+const MONEY_PATH = "/api/x-money";
 let tokenIp = 0;
 const nextIp = () => `172.20.0.${++tokenIp}`;
-const bodyOf = async (r: Response | null) => (r === null ? null : ((await r.json()) as { code?: string; refusal?: string; detail?: string }));
+const bodyOf = async (r: Response | null) => (r === null ? null : ((await r.json()) as { error?: string; code?: string; detail?: string }));
 
-test("token: a minted money token passes a money route (4xx on the bad body, never 401/403)", async () => {
+test("token: a minted money token passes the money guard as itself", async () => {
   const { token } = mint("money");
-  const res = await generate(req(GEN_PATH, { ip: nextIp(), bearer: token, body: {} }));
-  expect(res.status).toBeGreaterThanOrEqual(400);
-  expect(res.status).toBeLessThan(500);
-  expect([401, 403]).not.toContain(res.status);
-  const who = await resolvePrincipal(req(GEN_PATH, { ip: nextIp(), bearer: token }), { use: "money" });
+  expect(await gate(req(MONEY_PATH, { ip: nextIp(), bearer: token }), "money")).toBeNull();
+  const who = await resolvePrincipal(req(MONEY_PATH, { ip: nextIp(), bearer: token }), { use: "money" });
   expect(who).toMatchObject({ kind: "cli-token", name: "probe-money", scope: "money" });
 });
 
 test("token: a read token is 403 on a money route and admitted on a read route", async () => {
   const { token } = mint("read");
-  const money = await guardRequest(req(GEN_PATH, { ip: nextIp(), bearer: token }));
+  const money = await gate(req(MONEY_PATH, { ip: nextIp(), bearer: token }), "money");
   expect(money?.status).toBe(403);
-  expect(await bodyOf(money)).toMatchObject({ code: "forbidden", refusal: "token-scope" });
-  expect(await guardAccessOnly(req("/api/foundry/runs", { ip: nextIp(), bearer: token }))).toBeNull();
+  expect(await bodyOf(money)).toMatchObject({ code: "refused", detail: "token-scope" });
+  expect(await gate(req("/api/ledger", { ip: nextIp(), bearer: token }), "access")).toBeNull();
 });
 
 test("token: revoked, expired and unknown are 401, each naming the fix", async () => {
   const { id, token } = mint("money");
   const unknown = token.replace(/_[^_]+$/, `_${"A".repeat(43)}`);
-  const u = await guardRequest(req(GEN_PATH, { ip: nextIp(), bearer: unknown }));
+  const u = await gate(req(MONEY_PATH, { ip: nextIp(), bearer: unknown }), "money");
   expect(u?.status).toBe(401);
-  expect(await bodyOf(u)).toMatchObject({ refusal: "token-unknown", detail: expect.stringContaining("pipeline/token.mts mint") });
+  expect(await bodyOf(u)).toMatchObject({ detail: "token-unknown", error: expect.stringContaining("pipeline/token.mts mint") });
   const later = Date.now() + 31 * 24 * 3_600_000;
-  expect(await resolvePrincipal(req(GEN_PATH, { ip: nextIp(), bearer: token }), { use: "money", now: later })).toMatchObject({ status: 401, code: "token-expired" });
+  expect(await resolvePrincipal(req(MONEY_PATH, { ip: nextIp(), bearer: token }), { use: "money", now: later })).toMatchObject({ status: 401, code: "token-expired" });
   const r = store().tx((t) => tk.revokeToken(t, id, OPERATOR));
   expect(r.ok).toBe(true);
-  const gone = await guardRequest(req(GEN_PATH, { ip: nextIp(), bearer: token }));
+  const gone = await gate(req(MONEY_PATH, { ip: nextIp(), bearer: token }), "money");
   expect(gone?.status).toBe(401);
-  expect(await bodyOf(gone)).toMatchObject({ refusal: "token-revoked" });
+  expect(await bodyOf(gone)).toMatchObject({ detail: "token-revoked" });
 });
 
 test("token: judged in verified mode too, and a bad one never falls through to the secret", async () => {
   const { token } = mint("money");
   process.env.PRINCIPAL_MODE = "verified";
-  expect(await resolvePrincipal(req(GEN_PATH, { ip: nextIp(), bearer: token }), { use: "money" })).toMatchObject({ kind: "cli-token" });
+  expect(await resolvePrincipal(req(MONEY_PATH, { ip: nextIp(), bearer: token }), { use: "money" })).toMatchObject({ kind: "cli-token" });
   delete process.env.PRINCIPAL_MODE;
   // Legacy, secret configured, and the bad token is still refused for itself.
   const bad = `gt_ffffffffffff_${"B".repeat(43)}`;
-  const r = new Request(`http://localhost${GEN_PATH}`, { method: "POST", headers: { authorization: `Bearer ${bad}`, "x-imaging-access-secret": SECRET, "x-forwarded-for": nextIp() } });
-  expect((await guardRequest(r))?.status).toBe(401);
+  const r = new Request(`http://localhost${MONEY_PATH}`, { method: "POST", headers: { authorization: `Bearer ${bad}`, "x-imaging-access-secret": SECRET, "x-forwarded-for": nextIp() } });
+  expect((await gate(r, "money"))?.status).toBe(401);
 });
 
 test("token: the money bucket keys on the token id, whatever address it arrives from", async () => {
   const { token } = mint("money");
   process.env[RATE_CAPACITY_VAR] = "2";
   const statuses: number[] = [];
-  for (let i = 0; i < 3; i++) statuses.push((await guardRequest(req(GEN_PATH, { ip: nextIp(), bearer: token })))?.status ?? 200);
-  expect(statuses).toEqual([200, 200, 429]);
+  for (let i = 0; i < 3; i++) statuses.push((await gate(req(MONEY_PATH, { ip: nextIp(), bearer: token }), "money"))?.status ?? 200);
+  // route() has no 429: the limit is `unavailable`, a retry.
+  expect(statuses).toEqual([200, 200, 503]);
 });
 
-test("token: never accepted from a URL (the byte-serves' ?k= rebuild is recognised)", async () => {
+test("token: never accepted from a URL", async () => {
+  // v1's byte-serves rebuilt `?k=` into an Authorization header; the door still recognises a
+  // token that arrives both ways and refuses it, rather than admit a month-long credential that
+  // has been through an access log.
   const { token } = mint("money");
   const viaK = new Request(`http://localhost/api/foundry/file?k=${encodeURIComponent(token)}`, { headers: { authorization: `Bearer ${token}` } });
-  const res = await guardAccessOnly(viaK);
+  const res = await gate(viaK, "access");
   expect(res?.status).toBe(401);
-  expect(await bodyOf(res)).toMatchObject({ refusal: "token-in-url" });
+  expect(await bodyOf(res)).toMatchObject({ detail: "token-in-url" });
 });
 
 test("token: no store, no token - fails closed with 503, never open", async () => {
@@ -982,23 +714,23 @@ test("token: no store, no token - fails closed with 503, never open", async () =
   const blocker = join(tokenDir, "not-a-dir");
   writeFileSync(blocker, "x");
   process.env.GRAVITONE_STORE_PATH = join(blocker, "store.sqlite");
-  const res = await guardRequest(req(GEN_PATH, { ip: nextIp(), bearer: token }));
+  const res = await gate(req(MONEY_PATH, { ip: nextIp(), bearer: token }), "money");
   expect(res?.status).toBe(503);
-  expect(await bodyOf(res)).toMatchObject({ refusal: "token-store-unavailable" });
+  expect(await bodyOf(res)).toMatchObject({ detail: "token-store-unavailable" });
 });
 
 test("shared secret: SHARED_SECRET_CALLERS=browser refuses it on a money route from a CLI, admits a browser's fetch", async () => {
   // Unset: today's gate, unchanged.
-  expect(await guardRequest(req(GEN_PATH, { ip: nextIp(), bearer: SECRET }))).toBeNull();
+  expect(await gate(req(MONEY_PATH, { ip: nextIp(), bearer: SECRET }), "money")).toBeNull();
   process.env[SHARED_SECRET_CALLERS_VAR] = "browser";
-  const cli = await guardRequest(req(GEN_PATH, { ip: nextIp(), bearer: SECRET }));
+  const cli = await gate(req(MONEY_PATH, { ip: nextIp(), bearer: SECRET }), "money");
   expect(cli?.status).toBe(401);
-  expect(await bodyOf(cli)).toMatchObject({ refusal: "shared-secret-cli", detail: expect.stringContaining("GRAVITONE_CLI_TOKEN") });
-  const browser = new Request(`http://localhost${GEN_PATH}`, { method: "POST", headers: { authorization: `Bearer ${SECRET}`, "sec-fetch-site": "same-origin", "x-forwarded-for": nextIp() } });
-  expect(await guardRequest(browser)).toBeNull();
+  expect(await bodyOf(cli)).toMatchObject({ detail: "shared-secret-cli", error: expect.stringContaining("GRAVITONE_CLI_TOKEN") });
+  const browser = new Request(`http://localhost${MONEY_PATH}`, { method: "POST", headers: { authorization: `Bearer ${SECRET}`, "sec-fetch-site": "same-origin", "x-forwarded-for": nextIp() } });
+  expect(await gate(browser, "money")).toBeNull();
   // A read route keeps the secret: it spends nothing.
-  expect(await guardAccessOnly(req("/api/foundry/runs", { ip: nextIp(), bearer: SECRET }))).toBeNull();
+  expect(await gate(req("/api/ledger", { ip: nextIp(), bearer: SECRET }), "access")).toBeNull();
   // A typo is the closed posture, not the open one.
   process.env[SHARED_SECRET_CALLERS_VAR] = "browsr";
-  expect((await guardRequest(req(GEN_PATH, { ip: nextIp(), bearer: SECRET })))?.status).toBe(401);
+  expect((await gate(req(MONEY_PATH, { ip: nextIp(), bearer: SECRET }), "money"))?.status).toBe(401);
 });

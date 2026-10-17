@@ -9,8 +9,11 @@
 //
 // Asserted without a browser: the pure queries over a stack, the key router's
 // hand-off to the window-level guards (preventDefault on dismiss), the
-// reference-counted scroll lock over a style seam, and source ratchets that
-// the three surfaces are wired to the stack rather than to `document`.
+// reference-counted scroll lock over a style seam, and a source ratchet that the
+// stack owns one listener of each kind. The three surfaces (Modal, the bell tray,
+// the account panel) and the v1 Board retired in Phase 6 wave C; their wiring
+// ratchets went with them, and the Board's keymap is a fixture below. The new
+// world's stack is @gt/ui/layers (packages/ui/test/layers.test.ts).
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -27,11 +30,31 @@ import {
   trapOwner,
   type LayerEntry,
 } from "@/components/ui/layers";
-import { boardKeyAction, LOUPE_MARK, overlayOpen, type KeyLike } from "@/lib/board/keys";
+import { defineKeymap, LOUPE_MARK, overlayOpen, resolveKey, type KeyLike } from "@/components/ui/signal/keymap";
 
 import { stripComments } from "./_helpers";
 
 const src = (p: string) => stripComments(readFileSync(join(process.cwd(), p), "utf8"));
+
+/** The retired lib/board/keys.ts BOARD_KEYMAP, verbatim: the v1 Board's whole keymap, a
+ *  fixture of the resolver now (the v1 Board retired in Phase 6 wave C; the new Board binds
+ *  through @gt/ui/keymap, held by packages/ui/test/keymap.test.ts). */
+const BOARD_KEYMAP = defineKeymap<"approve" | "reject" | "clear" | "next" | "prev" | "loupe" | "close" | "undo">({
+  id: "board",
+  bindings: [
+    { keys: ["A"], does: "approve", action: "approve" },
+    { keys: ["X"], does: "reject", action: "reject" },
+    { keys: ["U"], does: "clear", action: "clear" },
+    { keys: ["J"], does: "next", action: "next", repeat: true },
+    { keys: ["K"], does: "previous", action: "prev", repeat: true },
+    { keys: ["Enter"], does: "loupe", action: "loupe" },
+    { keys: ["Esc"], does: "close", action: "close", repeat: true },
+    { keys: ["Z"], does: "undo", action: "undo" },
+  ],
+});
+
+/** lib/board/keys.ts boardKeyAction, verbatim: the Board's guard over the resolver. */
+const boardKeyAction = (e: KeyLike, overlay: boolean, layers?: readonly LayerEntry[]) => resolveKey(BOARD_KEYMAP, e, { overlay, layers });
 
 const press = (key: string, over: Partial<KeyLike> = {}): KeyLike => ({ key, ctrlKey: false, metaKey: false, altKey: false, repeat: false, target: null, ...over });
 const dialog = (loupe: boolean) => ({
@@ -183,24 +206,14 @@ test("7 [guard] · a handled Escape (Hint inside a Modal) closes nothing; the lo
   expect(overlayOpen(root([dialog(true)]), [])).toBe(false);
 });
 
-test("8 · source ratchet: the three surfaces own no document listener; the stack owns one of each", () => {
-  for (const f of ["components/ui/Modal.tsx", "components/ui/NotificationBell.tsx", "components/ui/UserMenu.tsx"]) {
-    const s = src(f);
-    expect(s.length, f).toBeGreaterThan(0);
-    expect(s, f).not.toMatch(/document\.addEventListener\(\s*["'](keydown|mousedown|pointerdown)["']/);
-  }
+test("8 · source ratchet: the stack owns one listener of each kind", () => {
   const ls = src("components/ui/layers.ts");
   expect(ls.match(/addEventListener\(\s*["']keydown["']/g)?.length ?? 0).toBe(1);
   expect(ls.match(/addEventListener\(\s*["']pointerdown["']/g)?.length ?? 0).toBe(1);
   expect(ls).not.toMatch(/addEventListener\(\s*["']mousedown["']/);
 });
 
-test("9 · wiring: the live surfaces push onto the stack, and the key guard reads it", () => {
-  expect(src("components/ui/Modal.tsx")).toMatch(/useLayer\(\s*open && mounted\s*,\s*\{[^]*kind:\s*"modal"/);
-  expect(src("components/ui/NotificationBell.tsx")).toMatch(/useLayer\(\s*open\s*,\s*\{[^]*kind:\s*"tray"/);
-  expect(src("components/ui/UserMenu.tsx")).toMatch(/useLayer\(\s*open\s*,\s*\{[^]*kind:\s*"tray"/);
-  // The guard moved with the keymap kernel (components/ui/signal/keymap.ts); the Board
-  // is a definition over it.
+test("9 · wiring: the key guard reads the stack", () => {
   const keys = src("components/ui/signal/keymap.ts");
   expect(keys).toMatch(/export function overlayOpen\([^)]*layers[^)]*=\s*openLayers\(\)/);
   expect(keys).toMatch(/opts\.layers \?\? openLayers\(\)/);

@@ -5,15 +5,17 @@ host-first rule, descoped-reopenable, the commit ritual) is generic; this file i
 
 ## Product and stage
 
-Gravitone Studio - a UI-first Next.js 16 / React 19 / Tailwind v4 prototype of a content-production
-studio (five phases + an asset library) running entirely on mocked fixtures in `app/_studio/`.
+Gravitone Studio - a Next.js 16 / React 19 content-production studio (projects of parts, a Floor of
+media lanes, a Board, a Library, an audio desk, a Ledger) over `packages/*` libraries and a SQLite
+kernel store; each `app/(studio)/` screen reads a `_port` that is fixture or real by
+`GRAVITONE_PRODUCE_SIDE`.
 
-**The stage matters for triage.** There is no backend, no auth and no third-party service here yet,
-and that is deliberate. A source's idea about model providers, pipelines, queues or hosting is not out
-of scope - it lands as a **Reference** (a decision to make when the backend is designed), not as code
-to write today. Ideas about the *interface* to that future backend - what a surface must be able to
-show, what a fixture must be able to say - are the highest-value findings this skill can produce,
-because they are cheap now and expensive later.
+**The stage matters for triage.** The backend is one operator's machine: the kernel store, bound
+producers (`lib/producers/`) and vendor seams under `lib/<domain>/`, dry by default. A source's idea
+about a NEW provider, queue or hosting lands as a **Reference** (a decision for the operator), not
+as code to write today. Ideas about the *interface* between a screen and its port - what a surface
+must be able to show, what a fixture must be able to say - are the highest-value findings this skill
+can produce, because they are cheap now and expensive later.
 
 ## Vault
 
@@ -81,13 +83,14 @@ in the teardown's first line and mark compressed timings INFERRED.
 
 - `context-map.json` (repo root) - always loaded; the relevance-scoring surface. **A Personas app
   export** (project `gravitone`, id `91d8170c-...`), export-only, never hand-edited: the next scan
-  overwrites it from the DB. 4 groups / 4 contexts / 28 files; the `keywords` arrays score better than
-  the prose. Five files are unmapped as a known baseline (`README.md`, `AGENTS.md`, `CLAUDE.md`,
+  overwrites it from the DB. Read its size from the file (31 contexts / 8 groups on 2026-10-17, from
+  before the Phase 6 deletions); the `keywords` arrays score better than the prose. Five files are unmapped as a known baseline (`README.md`, `AGENTS.md`, `CLAUDE.md`,
   `package.json`, `tsconfig.json`). If it is missing, stop and ask for a scan - never write one.
 - `README.md` - always loaded; the product, the mocked seam, the design language's rules.
-- `components/ui/tokens.ts` - load whenever a finding touches visuals; the only file allowed a colour
-  literal.
-- `app/_studio/types.ts` + `projectTypes.ts` - load whenever a finding touches what the product knows.
+- `packages/ui/tokens/source.json` - load whenever a finding touches visuals; the only place a design
+  value is declared (generated `tokens.css` / `tokens.ts` are never hand-edited).
+- `packages/domain/src/` (`part.ts`, `project.ts`, `library.ts` ...) + `packages/catalog/src/recipes.ts`
+  - load whenever a finding touches what the product knows.
 - `knowledge/CRAFT-BASELINE.md`, `knowledge/ENGINES.md`, `knowledge/TONE.md`, `knowledge/README.md` -
   read before any craft run.
 - `.vault/Perfect/directions/` - read before presenting a Direction finding.
@@ -97,23 +100,25 @@ in the teardown's first line and mark compressed timings INFERRED.
 ## Triage traps specific to this repo
 
 - **Fixture vs product.** Before scoring any finding that criticises what the studio "does" - render
-  time, take count, cost, failure rate - check whether the number comes from fixture data in
-  `app/_studio/` or from product logic. Almost always the former, which makes it "the mock is
+  time, take count, cost, failure rate - check whether the number comes from fixture data (a route's
+  `_port/fixture*.ts`, or `fixtures-out/` from `npm run fixtures`) or from product logic. Almost always the former, which makes it "the mock is
   unrealistic", not an architecture finding. If a finding's premise is "the app computes X badly" and
   X is a literal in a fixture file, the finding is wrong as framed.
-- **Now vs when-the-backend-lands.** "Could this ship today with no new dependency and no new
-  service?" If no -> Reference, not code.
-- **Design impact.** A code finding touching `app/**/*.tsx` or `components/**/*.tsx` states whether it
+- **Now vs a new service.** "Could this ship today with no new dependency and no new service?" If
+  no -> Reference, not code.
+- **Design impact.** A code finding touching `app/(studio)/**` or `packages/ui/**` states whether it
   needs a colour, motion or type treatment the design system does not have - `design: needs a new
   token`, and name it.
 
 ## Gates
 
-- Any change -> `npx tsc --noEmit`
-- Routing / layout / server-rendered change -> `npm run build`
-- A visibly rendered change -> drive it: `npm run dev -p 3177` (**never 3000**), look, then say what
-  you saw. Kill the server you started; never kill one you did not start.
-- **There is no linter and no test suite.** Do not run or claim `npm run lint` / `npm test`.
+- Any change -> `npm run typecheck` and `npm run lint:ratchet` (+ `typecheck:next`, `test:unit` when
+  `packages/` changed; `tokens:check` when a module CSS or `source.json` changed)
+- Routing / layout / server-rendered change -> `npm run build`; a rendered change -> `npm test`
+- A visibly rendered change -> drive it: `GRAVITONE_PRODUCE_SIDE=fixture NEXT_PUBLIC_DEV_AUTH=1
+  GRAVITONE_STORE_PATH=<temp file> npx next dev -p 3177` (**never 3000**), look, then say what you
+  saw. Kill the server you started; never kill one you did not start.
+- The whole set is `npm run verify` (`pipeline/gates.mts`).
 
 ## Commit scope
 
@@ -132,5 +137,5 @@ note for it.
 
 - Does the Code / Direction / Reference bucketing hold, or does "Direction" swallow everything while
   the product is still a prototype? Revisit after 3 runs.
-- Is `context-map.json` (4 broad contexts) a fine enough scoring surface? If it keeps hurting, the fix
+- Is `context-map.json` (broad contexts) a fine enough scoring surface? If it keeps hurting, the fix
   is a Context Ledger split + pin in the Personas app, not a private map.

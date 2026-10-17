@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { parseAt } from "@gt/domain/door";
-import { AppError, err, type Result } from "@gt/domain/errors";
+import { AppError, err, ok, type Result } from "@gt/domain/errors";
 import type { Actor, EventData, Subject } from "@gt/domain/event";
 import { slotSchema, type Channel, type Slot, type SlotDrift } from "@gt/domain/slot";
 import { append } from "../events.ts";
@@ -30,11 +30,12 @@ export type SlotEvent = {
 
 /**
  * Write one slot inside the caller's transaction: `before` is the row planned against (null =
- * new), `fence` the claim's while it publishes (null otherwise). The record goes through its
+ * new), `fence` the claim's while it publishes (null otherwise), `dry` true only for a slot
+ * published by a dry run (./schema.ts steps 2-4: it holds nothing). The record goes through its
  * door first; the one-holder index backs the clash check, and its constraint error is the
  * `conflict` the store already classifies it as.
  */
-export function putSlotIn(t: Tx, before: SlotRow | null, draft: Slot, fence: number | null, e: SlotEvent): SlotRow {
+export function putSlotIn(t: Tx, before: SlotRow | null, draft: Slot, fence: number | null, e: SlotEvent, dry = false): SlotRow {
   const admitted = parseAt("slot", slotSchema, draft);
   if (!admitted.ok) throw admitted.error;
   const slot = admitted.value;
@@ -42,14 +43,14 @@ export function putSlotIn(t: Tx, before: SlotRow | null, draft: Slot, fence: num
   const rev = before === null ? 1 : before.rev + 1;
   if (before === null) {
     t.run(
-      "INSERT INTO slots (id, item, channel, at, state, part_id, rev, fence, record, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)",
-      slot.id, slot.libraryItemId, slot.channel, slot.at, slot.state, slot.partId ?? null, fence, record, t.at, t.at,
+      "INSERT INTO slots (id, item, channel, at, state, part_id, rev, fence, dry, record, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)",
+      slot.id, slot.libraryItemId, slot.channel, slot.at, slot.state, slot.partId ?? null, fence, dry ? 1 : 0, record, t.at, t.at,
     );
   } else {
     if (before.slot.id !== slot.id) throw new AppError("internal", `a write planned on ${before.slot.id} produced ${slot.id}`);
     const n = t.run(
-      "UPDATE slots SET at = ?, state = ?, part_id = ?, rev = ?, fence = ?, record = ?, updated_at = ? WHERE id = ? AND rev = ?",
-      slot.at, slot.state, slot.partId ?? null, rev, fence, record, t.at, slot.id, before.rev,
+      "UPDATE slots SET at = ?, state = ?, part_id = ?, rev = ?, fence = ?, dry = ?, record = ?, updated_at = ? WHERE id = ? AND rev = ?",
+      slot.at, slot.state, slot.partId ?? null, rev, fence, dry ? 1 : 0, record, t.at, slot.id, before.rev,
     ).changes;
     if (n !== 1) throw new AppError("conflict", `slot ${slot.id} moved past rev ${before.rev} inside this transaction`);
   }
@@ -65,7 +66,7 @@ export function putSlotIn(t: Tx, before: SlotRow | null, draft: Slot, fence: num
 }
 
 function guardClash(t: Tx, s: Slot): void {
-  const c = clashOf(listSlotsIn(t, { states: ["scheduled", "publishing", "published"] }).map((r) => r.slot), s.libraryItemId, s.channel, s.id);
+  const c = clashOf(listSlotsIn(t, { states: ["scheduled", "publishing", "published"] }), s.libraryItemId, s.channel, s.id);
   if (c !== undefined) throw new AppError("conflict", clashText(s.libraryItemId, s.channel, c));
 }
 
@@ -141,11 +142,33 @@ export function cancelSlot(store: Store, id: string, by: Actor, opts: VerbOption
   });
 }
 
+/**
+ * Asked BEFORE the write opens (L63's finding): `itemExists` is the caller's, and a caller that
+ * answers it from this same store (the Library index) cannot read inside a write transaction -
+ * asked there, its read fails, every item reads missing and every publish-now is refused as
+ * `export_missing`. The answer is taken once, in a read, for the one item the slot names (a
+ * slot's item never changes, so the write cannot meet a different one).
+ */
+function readinessFor(store: Store, id: string, ready: Readiness): Result<Readiness> {
+  const row = store.read((r) => readSlotIn(r, id));
+  if (!row.ok) return row;
+  if (row.value === undefined) return err("not-found", `no slot ${id}`);
+  const item = row.value.slot.libraryItemId;
+  const exists = ready.itemExists(item);
+  return ok({ wired: ready.wired, itemExists: (x) => x === item && exists });
+}
+
 /** Publish now: due at `now`, window overridden, never a claim (./core.ts planPublishNow). */
 export function publishNow(store: Store, id: string, by: Actor, when: { readonly now: number; readonly ready?: Readiness }, opts: VerbOptions = {}): Result<SlotRow> {
   const at = new Date(when.now).toISOString();
+  let ready: Readiness | undefined;
+  if (when.ready !== undefined) {
+    const r = readinessFor(store, id, when.ready);
+    if (!r.ok) return r;
+    ready = r.value;
+  }
   return verb(store, id, opts, (t, row) => {
-    const drift: SlotDrift | undefined = when.ready === undefined ? row.slot.drift : driftOf({ ...row.slot, state: "scheduled" }, when.ready);
+    const drift: SlotDrift | undefined = ready === undefined ? row.slot.drift : driftOf({ ...row.slot, state: "scheduled" }, ready);
     const next = unwrap(planPublishNow(row.slot, at, drift));
     guardClash(t, next);
     return putSlotIn(t, row, next, null, { by, type: "slot.publish-now", data: { from: row.slot.at, was: row.slot.state } });

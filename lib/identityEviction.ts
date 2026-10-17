@@ -192,7 +192,7 @@ export function userScopedLocalKeys(uid: string): string[] {
     `gravitone.audio-seeded.${uid}`, // the audio module's first seed mark — no longer written, still evicted where a machine holds it
     `gravitone.sound-migrated.v1.${uid}`, // the v1 Library's sound migration mark — no longer written since that module retired (Phase 5), still evicted where a machine holds it
     `gravitone.audio-annex.${uid}`, // the Library's old per-browser annex — no longer written since its facts became SoundTake fields (r4 closeout); read once and removed by the v1 Library's sound migration (retired Phase 5), still evicted where a machine holds it
-    `gravitone.palette.recents.${uid}`, // components/ui/shell/palette.ts — the shell palette's recent destinations, per account
+    `gravitone.palette.recents.${uid}`, // the v1 shell palette's recent destinations, per account (palette retired Phase 6; a browser may still hold it)
     JOBS_KEY, // lib/jobs.tsx — profile-wide, cleared wholesale (see above)
     REMEMBERED_KEY, // lib/useRemembered.ts — open folds, last tabs; profile-wide, cleared wholesale: a remembered key can name a project id
     PIPELINE_ARM_KEY, // app/foundry/PipelineTab.tsx — evicted ON PURPOSE, and it is the

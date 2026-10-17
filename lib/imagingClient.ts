@@ -1,76 +1,19 @@
 "use client";
 
-// The browser's half of lib/imaging — typed fetches to /api/imaging/*.
+// The browser's credential door: the headers and the media-URL credential a v1
+// client presented to the gated routes (lib/apiAuth.ts).
 //
-// A separate module from lib/imaging/* on purpose: those files read API keys
-// and must never be reachable from a component. This one holds no secret and
-// knows no vendor; it posts JSON to our own origin and unwraps the answer.
+// WHAT IS LEFT, AND WHY (Phase 6 L70). This module was the browser's half of
+// lib/imaging - typed fetches to /api/imaging/{generate,edit,recognize,budget}
+// with an idempotency key and one same-key retry on a lost gateway. Those routes
+// were deleted with the v1 pages that called them: the producers render
+// in-process, and the receipt the client key earned (lib/imaging/receipts.ts) is
+// the server's, keyed by the producer's own step. What stays is the credential
+// door the remaining v1 clients still build their requests through, until they
+// retire with their lots; nothing in the studio imports it (the studio's
+// requests ride the session cookie).
 
 import { ID_TOKEN_HEADER, currentIdToken } from "./sessionToken";
-
-export interface ClientImage {
-  base64: string;
-  mime: string;
-  width?: number;
-  height?: number;
-}
-
-/**
- * A vendor steer, carried by all three calls.
- *
- * `avoid` is the one the craft library asks for: a safety refusal is cleared by
- * a different model for one hop, so a surface that has just been refused can
- * re-send with `avoid: provenance.provider` (or with the `provider` the error
- * response carried) instead of offering a retry that cannot succeed.
- *
- * Typed as `string`, not as a union of vendor names, ON PURPOSE — this module
- * knows no vendor, and the roster is the server's to hold. The ids come back
- * from the server in `provenance.provider`; an id the server does not know is
- * a 400, never a silent fall back to default routing. A `no-alternative` code
- * (409) means the avoidance left nowhere to go — in production that is the
- * normal answer, because each capability runs on one vendor.
- */
-export interface ClientSteer {
-  prefer?: string;
-  avoid?: string;
-}
-
-/** Who made this image, on what, at what cost. Worth STORING alongside the
- *  pixels rather than reading once: after the fact none of it is re-derivable
- *  from the image. `reroutedFrom` is present only when the first vendor did not
- *  serve — its presence is the re-route, and the reason it lost is in `why`. */
-export interface ClientProvenance {
-  provider: string;
-  model: string;
-  costUsd?: number;
-  /** How to read `costUsd`: a vendor receipt, our own arithmetic, or nothing.
-   *  A client that prints a dollar sign without checking this is guessing. */
-  costBasis?: "vendor-reported" | "estimated" | "unpriced";
-  durationMs: number;
-  cleanup?: "deleted" | "failed" | "not-applicable";
-  reroutedFrom?: { provider: string; why: string }[];
-}
-
-export interface GenerateResult {
-  images: ClientImage[];
-  provenance: ClientProvenance;
-}
-
-/** A failed imaging call, with the server's own words kept intact. `code` is
- *  the ImagingError kind — `refused` is the one worth branching on, because it
- *  means "change the prompt", never "try again". */
-export class ImagingRequestError extends Error {
-  constructor(
-    message: string,
-    readonly code: string,
-    readonly status: number,
-    readonly retryAt?: number,
-    readonly provider?: string,
-  ) {
-    super(message);
-    this.name = "ImagingRequestError";
-  }
-}
 
 /**
  * The access headers the gated routes require (lib/apiAuth.ts). Synchronous:
@@ -143,8 +86,11 @@ export function accessQuery(): string | undefined {
 }
 
 /** `url` with the query credential appended (`?k=` or `&k=`, before any
- *  `#fragment`), or `url` unchanged when there is none. Build every media URL
- *  through this — never by reading the bundle secret or `accessHeader()`. */
+ *  `#fragment`), or `url` unchanged when there is none. INERT SINCE PHASE 6 L70:
+ *  no route reads `k` any more (the four file doors are route()'s `access`
+ *  guard, which reads headers and the session cookie), so the `k` this appends
+ *  is ignored and the request is judged by its cookie. Kept only so the v1
+ *  clients that still call it compile until they retire. */
 export function withAccess(url: string): string {
   const k = accessQuery();
   if (!k) return url;
@@ -153,122 +99,3 @@ export function withAccess(url: string): string {
   const sep = path.includes("?") ? "&" : "?";
   return `${path}${sep}${ACCESS_QUERY_PARAM}=${encodeURIComponent(k)}${frag}`;
 }
-
-export interface BudgetQuoteResult {
-  ceilingUsd: number;
-  spentUsd: number;
-  remainingUsd: number;
-  windowMs: number;
-  perImageUsd: number | null;
-  quote: {
-    remainingUsd: number;
-    estimateUsd: number | null;
-    affordableImages: number;
-    verdict: "fits" | "partial" | "blocked" | "unknown";
-    resumeAt: number | null;
-  };
-}
-
-export async function quoteBudget(images?: number): Promise<BudgetQuoteResult> {
-  const url = typeof images === "number" && images > 0 ? `/api/imaging/budget?images=${images}` : "/api/imaging/budget";
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      method: "GET",
-      headers: { ...accessHeader() },
-    });
-  } catch {
-    throw new ImagingRequestError("The studio could not be reached.", "offline", 0);
-  }
-
-  const json = await res.json().catch(() => ({}) as Record<string, unknown>);
-  if (!res.ok) {
-    const detail = typeof json.detail === "string" ? json.detail : "The imaging call failed.";
-    const code = typeof json.code === "string" ? json.code : "failed";
-    const retryAt = typeof json.retryAt === "number" ? json.retryAt : undefined;
-    const provider = typeof json.provider === "string" ? json.provider : undefined;
-    throw new ImagingRequestError(detail, code, res.status, retryAt, provider);
-  }
-  return json as BudgetQuoteResult;
-}
-
-/** The header a paid call carries its idempotency key in. The server keeps the
- *  result as a short-lived receipt under it (lib/imaging/receipts.ts), so a
- *  duplicate joins the call in flight or replays it instead of paying again. */
-export const IDEMPOTENCY_HEADER = "idempotency-key";
-
-/** Options for the two paid calls. `key` names ONE logical render: a surface
- *  that persists it beside its job can re-issue after a reload and be handed
- *  the pixels it already paid for. Omitted, one is minted per call. */
-export interface PaidCallOptions {
-  key?: string;
-}
-
-/** A 502/504 with no JSON `code` is a proxy or gateway, not our server: the
- *  render may still be running, and the same key will join or replay it. A
- *  CODED failure came from the router, was billed, and is never re-sent. */
-const gatewayLost = (status: number, code: unknown) => (status === 502 || status === 504) && typeof code !== "string";
-
-async function post<T>(path: string, body: unknown, key?: string): Promise<T> {
-  const headers: Record<string, string> = { "content-type": "application/json", ...accessHeader() };
-  if (key) headers[IDEMPOTENCY_HEADER] = key;
-  const payload = JSON.stringify(body);
-  // A keyed call gets ONE more go with the same key and the same bytes; an
-  // unkeyed one (recognize) has no receipt to land on, so it gets none.
-  const tries = key ? 2 : 1;
-
-  for (let attempt = 1; ; attempt++) {
-    let res: Response;
-    try {
-      res = await fetch(path, { method: "POST", headers, body: payload });
-    } catch {
-      if (attempt < tries) continue;
-      throw new ImagingRequestError("The studio could not be reached.", "offline", 0);
-    }
-
-    const json = await res.json().catch(() => ({}) as Record<string, unknown>);
-    if (!res.ok) {
-      if (attempt < tries && gatewayLost(res.status, json.code)) continue;
-      const detail = typeof json.detail === "string" ? json.detail : "The imaging call failed.";
-      const code = typeof json.code === "string" ? json.code : "failed";
-      const retryAt = typeof json.retryAt === "number" ? json.retryAt : undefined;
-      const provider = typeof json.provider === "string" ? json.provider : undefined;
-      throw new ImagingRequestError(detail, code, res.status, retryAt, provider);
-    }
-    return json as T;
-  }
-}
-
-/** One key per logical call. `randomUUID` exists only in a secure context, and
- *  a dev server opened over a LAN address is not one. */
-export const mintKey = (): string =>
-  globalThis.crypto?.randomUUID?.() ?? `k-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-
-export const generateImage = (
-  body: ClientSteer & {
-    prompt: string;
-    negativePrompt?: string;
-    aspect: "16:9" | "9:16" | "1:1" | "4:5";
-    count?: number;
-    references?: ClientImage[];
-  },
-  opts: PaidCallOptions = {},
-) => post<GenerateResult>("/api/imaging/generate", body, opts.key ?? mintKey());
-
-export const editImage = (
-  body: ClientSteer & {
-    image: ClientImage;
-    instruction: string;
-    references?: ClientImage[];
-  },
-  opts: PaidCallOptions = {},
-) => post<GenerateResult>("/api/imaging/edit", body, opts.key ?? mintKey());
-
-export const recognizeImage = (body: ClientSteer & {
-  image: ClientImage;
-  instruction: string;
-  schema?: Record<string, unknown>;
-}) => post<{ text: string; json?: unknown; provenance: ClientProvenance }>("/api/imaging/recognize", body);
-
-/** `data:` URL for an <img src>. */
-export const imgSrc = (i: { base64: string; mime: string }) => `data:${i.mime};base64,${i.base64}`;

@@ -1,4 +1,4 @@
-// LANE - THE AUDIO DESK'S HUNT AND LESSONS, DRIVEN IN A BROWSER (Phase 6, L65).
+// LANE - THE AUDIO DESK'S HUNT AND LESSONS, DRIVEN IN A BROWSER (Phase 6, L65; the render a Run, L72).
 //
 // Owner ruling 2026-10-17: the Sound lab's Hunt and Lessons are rebuilt in /audio. Driven here,
 // against the real sound store in a seeded fixture universe, a kernel store beside it, the text
@@ -192,13 +192,19 @@ test("picked leaves are a receipt that writes nothing; ⏎ renders them dry as o
   await page.getByRole("group", { name: "render the selection" }).getByRole("button", { name: "Render" }).click();
   await expect(page.getByRole("region", { name: "receipt, 2 lines, dry" })).toBeVisible();
   expect(takes()).toHaveLength(takesBefore);
-  expect(rows("SELECT id FROM jobs WHERE id LIKE ?", `job:hunt:${drafted}:%`)).toHaveLength(0);
+  expect(rows("SELECT id FROM jobs WHERE substr(id, 1, ?) = ?", String(`job:run:hunt.${drafted}.`.length), `job:run:hunt.${drafted}.`)).toHaveLength(0);
   await shot(page, "audio-hunt-receipt");
   await page.keyboard.press("Enter");
   await expect(page.getByText(/hunt · 2 leaves · done/)).toBeVisible({ timeout: 60_000 });
-  const jobs = rows("SELECT id, lane, state, record FROM jobs WHERE id LIKE ?", `job:hunt:${drafted}:%`);
+  const jobs = rows("SELECT id, lane, state, record FROM jobs WHERE substr(id, 1, ?) = ?", String(`job:run:hunt.${drafted}.`.length), `job:run:hunt.${drafted}.`);
   expect(jobs).toHaveLength(1);
   expect(jobs[0]).toMatchObject({ lane: "cloud.elevenlabs", state: "done" });
+  // A Run like every launch (L72): its row names the hunt producer and the leaves it rendered.
+  const run = rows("SELECT record FROM runs WHERE job_id = ?", String(jobs[0]?.["id"]));
+  expect(run).toHaveLength(1);
+  const record = JSON.parse(String(run[0]?.["record"])) as { input: { leaves: string[] } };
+  expect(record).toMatchObject({ producer: "hunt", lane: "audio", recipe: "track/music", input: { producer: "hunt", hunt: drafted } });
+  expect([...record.input.leaves].sort()).toEqual(el.map((n) => n.id).sort());
   expect(String(jobs[0]?.["record"])).toContain('"kind":"dry"');
   const filed = takes().filter((t) => t.huntId === drafted);
   expect(filed.map((t) => t.nodeId).sort()).toEqual(el.map((n) => n.id).sort());

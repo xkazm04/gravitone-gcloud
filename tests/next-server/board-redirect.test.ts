@@ -15,7 +15,7 @@ describe("a v1 Board address", () => {
 
   it("a source alone opens its lane; the research triage and the unknown open the Floor", () => {
     expect(v1BoardTarget({ src: "articles" })).toBe("/floor?lane=article");
-    expect(v1BoardTarget({ src: "publish" })).toBe("/calendar");
+    expect(v1BoardTarget({ src: "publish" })).toBe("/floor?cal=1");
     expect(v1BoardTarget({ src: "triage", i: "triage:scope::x" })).toBe("/floor");
     expect(v1BoardTarget({ i: "cull:no-separator" })).toBe("/floor");
     expect(v1BoardTarget({})).toBe("/floor");

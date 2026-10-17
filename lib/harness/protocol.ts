@@ -38,8 +38,14 @@ import type { PhaseKey, PhaseState } from "@/lib/projects";
 
 /** Bumped when a command changes shape. The client asserts it on connect, so a
  *  harness running against an older build fails with "protocol 1, expected 2"
- *  rather than with a mystery `undefined is not a function`. */
-export type HarnessProtocol = 1;
+ *  rather than with a mystery `undefined is not a function`.
+ *
+ *  2 (Phase 6 wave C, 2026-10-17): `snapshot().jobs` is the server's jobs as the
+ *  bell reads them (running and ended, newest 40), asked at the moment of the
+ *  snapshot; protocol 1 counted the root JobsProvider's list plus the v1 turn
+ *  ledger, and both retired with the v1 shell. A refused read now throws rather
+ *  than counting zero. */
+export type HarnessProtocol = 2;
 
 /** One project as the SHELF knows it — the same fields /projects renders from,
  *  so a disagreement between this readback and the DOM is a real finding. */
@@ -62,15 +68,12 @@ export interface AccountSnapshot {
   projects: ProjectRow[];
   /** Visual identities on the shelf; the create-a-project gate reads this. */
   themes: number;
-  /** THE READ-BACK FOR FIRE-AND-FORGET. Research and follow-up runs dispatch
-   *  into the job store and land asynchronously (lib/jobs.tsx). The harness
-   *  polls this rather than treating "no error" as success.
-   *
-   *  TURN-BACKED WORK (recalibrate, scene direction) IS COUNTED FROM THE SERVER
-   *  LEDGER for the account's projects (`jobCounts` in lib/jobs.tsx), not from
-   *  the tab's list: a turn started in another tab or device is counted, a turn
-   *  that ended before this tab polled is not running, and one turn is one job.
-   *  The other kinds are still this tab's own. */
+  /** THE READ-BACK FOR FIRE-AND-FORGET. Every producer run is a kernel job that
+   *  lands asynchronously; the harness polls this rather than treating "no
+   *  error" as success. Counted from the server's jobs (the bell's read,
+   *  app/(studio)/_shell/bellJobs.ts), so work started in another tab, device or
+   *  CLI is counted too. Running and ended jobs only (queued work is Runs'), the
+   *  newest 40. */
   jobs: { running: number; total: number };
 }
 

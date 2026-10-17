@@ -96,7 +96,11 @@ test("cull keys: the rule is WIRED into every Enter case, not merely exported", 
   // `enterCaseBody` that a guard clause's own `break;` once defeated is gone:
   // a case clause's statements are a list, not a slice of characters.
   const listeners = callsTo("addEventListener", ["app", "components"]).filter((c) => c.arg0 === "keydown");
-  expect(listeners.length, "no keydown listeners found under app/ and components/ - the walk is reading the wrong tree").toBeGreaterThan(5);
+  // The floor was five while v1's surfaces bound window keys; /foundry and /playground took seven
+  // of them in Phase 6 wave C, and the new world binds through the @gt/ui keymap's one dispatcher.
+  // What still listens (the dev inspector among it, which every lot keeps) proves the walk read
+  // the tree; a walk that found none would be reading the wrong one.
+  expect(listeners.length, "no keydown listeners found under app/ and components/ - the walk is reading the wrong tree").toBeGreaterThan(0);
 
   const handlers: string[] = [];
   for (const f of [...new Set(listeners.map((c) => c.file))].sort()) {

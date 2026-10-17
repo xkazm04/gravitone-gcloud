@@ -32,13 +32,7 @@ import {
   withAcceptedMotion,
   type MotionOutcome,
 } from "@/lib/motion/direction";
-import { POST as directPOST } from "@/app/api/motion/direct/route";
-import { ACCESS_SECRET_VAR, __resetRateLimit } from "@/lib/apiAuth";
 import type { Recognition, RecognizeRequest } from "@/lib/imaging/types";
-
-import { keepEnv } from "./_helpers";
-
-keepEnv([ACCESS_SECRET_VAR]);
 
 const PLATE = { base64: "iVBORw0KGgo=", mime: "image/png" as const };
 
@@ -202,21 +196,5 @@ test("the step's own word: nothing directed -> nothing to report; anything autho
   ).toBe("working");
 });
 
-test("route: /api/motion/direct is gated, and an authed call with no plate is a 400 before any read", async () => {
-  __resetRateLimit();
-  process.env[ACCESS_SECRET_VAR] = "probe-secret-motion";
-  const mk = (bearer?: string, body: unknown = {}) =>
-    new Request("http://localhost/api/motion/direct", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-forwarded-for": `10.9.${Math.floor(Math.random() * 200)}.1`,
-        ...(bearer ? { authorization: `Bearer ${bearer}` } : {}),
-      },
-      body: JSON.stringify(body),
-    });
-  expect((await directPOST(mk())).status).toBe(401);
-  const bad = await directPOST(mk("probe-secret-motion"));
-  expect(bad.status).toBe(400);
-  expect((await bad.json()).code).toBe("bad-request");
-});
+// The route case (`/api/motion/direct` gated, a bodiless call a 400) retired with the route in
+// Phase 6 L70: the turn above is what the motion producer runs, in process.

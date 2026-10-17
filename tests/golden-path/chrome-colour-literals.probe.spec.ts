@@ -17,7 +17,7 @@
 // components/, 4 exempt, 0 chrome colour literals outside tokens.ts. The
 // codebase is compliant — this pins that, rather than repairing anything.
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { extname } from "node:path";
 
@@ -95,9 +95,11 @@ function code(src: string, css: boolean): string {
  *  context-map gate documents at length. */
 function chromeSources(): string[] {
   const tracked = execFileSync("git", ["ls-files"], { encoding: "utf8" }).split(/\r?\n/);
+  // `existsSync`: a file deleted in the working tree and not yet staged is still in the
+  // index; it is not a source any more, and reading it would fail the walk, not the rule.
   return tracked.filter(
     (p) =>
-      /^(app|components)\//.test(p) && [".ts", ".tsx", ".css"].includes(extname(p)),
+      /^(app|components)\//.test(p) && [".ts", ".tsx", ".css"].includes(extname(p)) && existsSync(p),
   );
 }
 

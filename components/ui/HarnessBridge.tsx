@@ -43,9 +43,9 @@
 
 import { useEffect } from "react";
 
+import { readBellJobs } from "@/app/(studio)/_shell/bellJobs";
 import { useAuth } from "@/lib/useAuth";
-import { jobCounts, useJobs } from "@/lib/jobs";
-import { listTurns } from "@/lib/turns/client";
+import { jobCounts } from "@/lib/jobs";
 import { evictIdentity } from "@/lib/identityEviction";
 import { listProjects, projectContents } from "@/lib/projects";
 import { BY_UID, THEMES_STORE, getKeysByIndex, openDb } from "@/lib/studioDb";
@@ -69,7 +69,6 @@ async function themeKeys(uid: string): Promise<IDBValidKey[]> {
 
 export default function HarnessBridge() {
   const { user } = useAuth();
-  const { jobs } = useJobs();
 
   useEffect(() => {
     // GUARD 1 — build-time. Folds to `if (true) return;` in a production bundle;
@@ -82,21 +81,25 @@ export default function HarnessBridge() {
     const uid = user?.uid ?? null;
 
     const control: HarnessControl = {
-      protocol: 1,
+      protocol: 2,
 
       async snapshot(): Promise<AccountSnapshot> {
         // A null uid is reported, never papered over: the harness must wait for
         // the gate rather than assert against an account that does not exist yet.
         const rows = uid ? await listProjects(uid) : [];
         const themes = uid ? await themeKeys(uid) : [];
-        // TURN-BACKED WORK IS READ FROM THE LEDGER (AIO-A stage 3). This tab's
-        // list knows only the turns it watches, and only as of its last poll;
-        // the server knows every turn this account's projects have, started
-        // from any tab or device. A project whose list cannot be read leaves
-        // that project's watched turns at the tab's view rather than at zero.
-        const ledger = (await Promise.all(rows.map((p) => listTurns(p.id).catch(() => [])))).flat();
+        // THE SERVER'S JOBS, ASKED AT THE MOMENT OF THE SNAPSHOT (protocol 2). Protocol 1
+        // counted the root JobsProvider's list plus the v1 turn ledger (`listTurns` over
+        // /api/turns); both retired in Phase 6 wave C - every producer is a kernel job now,
+        // and the bell's own read is the one answer to "what runs" (the rows Runs draws,
+        // ../../app/(studio)/_shell/bell.ts). Asked here rather than held in a provider, so
+        // the root layout carries no job stream for a harness nobody may be driving. A
+        // refused read (signed out, the kernel down) throws: a count of zero would read as
+        // "nothing runs" and let a journey assert past work it never saw settle.
+        const read = await readBellJobs();
+        if (!read.ok) throw new Error(`harness snapshot: jobs unreadable - ${read.error.error}`);
         return {
-          protocol: 1,
+          protocol: 2,
           uid,
           projects: rows.map((p) => ({
             id: p.id,
@@ -105,7 +108,7 @@ export default function HarnessBridge() {
             progress: p.progress,
           })),
           themes: themes.length,
-          jobs: jobCounts(jobs, ledger),
+          jobs: jobCounts(read.value.jobs, []),
         };
       },
 
@@ -156,15 +159,15 @@ export default function HarnessBridge() {
     // The banner is the fingerprint check-bundle hunts, and it is also the one
     // line in the console that tells a developer who opened dev tools why there
     // is an object on `window`.
-    console.info("[harness] gravitone control surface installed — protocol 1");
+    console.info("[harness] gravitone control surface installed — protocol 2");
 
     return () => {
       delete window.__gravitoneHarness;
     };
-    // Re-installed when the account or the job list changes, because both are
-    // captured by value above: a control surface holding last render's uid would
-    // read the previous account's shelf and report it as this one's.
-  }, [user, jobs]);
+    // Re-installed when the account changes, because the uid is captured by value
+    // above: a control surface holding last render's uid would read the previous
+    // account's shelf and report it as this one's.
+  }, [user]);
 
   return null;
 }

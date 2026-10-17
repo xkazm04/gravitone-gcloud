@@ -2,12 +2,14 @@
 
 // THE AUDITION - every heard leaf side by side, so the comparison is the layout (v1
 // app/playground/hunt/Audition.tsx). One transport plays one take at a time (the island's
-// useTransport); ← and → step through the row in board order, so two briefs are heard back to
-// back. The crown is here too: the verdict is given where the takes are heard.
+// useTransport); Previous and Next step through the row in board order, so two briefs are heard
+// back to back. The crown is here too: the verdict is given where the takes are heard.
 //
-// Dropped from v1: the linked playhead (stepping carried the second the last take was at). The
-// desk's one transport (app/(studio)/audio/_audio/useTransport.ts) exposes no position; carrying
-// it needs that seam, raised with the Director rather than a second <audio> here.
+// ONE PLAYHEAD (v1's, returned in L72 once the transport exposed its position): with it on, a step
+// starts the next take at the second the last one was at - the same moment of two briefs, the only
+// fair way to hear a variant against its sibling (media-generation generated-music-acceptance:
+// judge against the brief, not against which take happened to be at its chorus). Off, each take
+// starts from its top.
 import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
 import { cx } from "../cx.ts";
@@ -36,6 +38,12 @@ export function stepTake(heard: readonly HuntLeafView[], playing: string | null,
   const at = playing === null ? -1 : ids.indexOf(playing);
   if (at === -1) return by === 1 ? ids[0] : ids[ids.length - 1];
   return ids[(at + by + ids.length) % ids.length];
+}
+
+/** The second a step starts `next` at: the playing take's, carried, only while linked and only
+ *  from ANOTHER take that is playing - a fresh play, or the same take again, starts at its top. */
+export function carryFrom(linked: boolean, playing: string | null, next: string, at: number): number {
+  return linked && playing !== null && playing !== next && Number.isFinite(at) && at > 0 ? at : 0;
 }
 
 export function HuntAudition({ heard, takes, playing, crowning, onPlay, onCrown }: HuntAuditionProps) {

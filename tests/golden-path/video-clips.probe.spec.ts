@@ -11,6 +11,13 @@
 //     words kept);
 //   · walk queued → rendering → done without a playable mp4 at the end.
 //
+// Phase 6 wave C (L70): the /api/video/clips routes retired with the v1 pages - a
+// clip is the motion producer's (lib/producers/motion.ts calls startClip/readClip
+// in-process). The cases that drove the routes now drive those lib doors with the
+// same answers (videoErrorResponse is the status mapping the routes used). DROPPED
+// with the file route: its range serving and its `?k=` door - no route serves a
+// clip's mp4 any more (serveFile.test.ts pins ranges for the routes that remain).
+//
 // NO NETWORK, NO KEY, NO MONEY. Every clip runs through a fake adapter handed in
 // through `setVideoAdapterForTests`; the one block that drives the REAL Leonardo
 // adapter does it against a stubbed global fetch and a resolver that never asks
@@ -23,12 +30,9 @@ import { join } from "node:path";
 import { test, expect } from "@playwright/test";
 
 import { keepEnv } from "./_helpers";
-import { ACCESS_SECRET_VAR, __resetRateLimit } from "@/lib/apiAuth";
-import { GET as capabilityGET, POST as clipsPOST } from "@/app/api/video/clips/route";
-import { GET as clipGET } from "@/app/api/video/clips/[id]/route";
-import { GET as clipFileGET } from "@/app/api/video/clips/[id]/file/route";
 import { VIDEO_BUDGET_VAR, __resetVideoBudget, videoBudgetStats } from "@/lib/imaging/video/budget";
-import { readClip, setVideoAdapterForTests, startClip } from "@/lib/imaging/video/clips";
+import { parseClipRequest, readClip, setVideoAdapterForTests, startClip, videoCapability } from "@/lib/imaging/video/clips";
+import { videoErrorResponse } from "@/lib/imaging/video/errors";
 import { leonardoVideoAdapter, type VideoAdapter, type VideoOutcome } from "@/lib/imaging/video/leonardo";
 import { clipPriceTable, costFromVendor, gateHoldUsd } from "@/lib/imaging/video/pricing";
 import {
@@ -45,7 +49,6 @@ import {
 } from "@/lib/imaging/video/store";
 import { CLIP_DURATIONS, VIDEO_MODELS, type ClipRecord, type VideoClipRequest } from "@/lib/imaging/video/types";
 
-const SECRET = "probe-video-secret";
 /** Four bytes of PNG signature — the adapter is fake, it only has to be base64. */
 const IMAGE = Buffer.from([0x89, 0x50, 0x4e, 0x47]).toString("base64");
 /** Stand-in mp4 bytes: an ftyp box header and padding. Never decoded here. */
@@ -53,16 +56,13 @@ const MP4 = new Uint8Array([0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0
 
 let dir = "";
 
-keepEnv(["CLIP_STORE_DIR", ACCESS_SECRET_VAR, "NEXT_PUBLIC_DEV_AUTH", VIDEO_BUDGET_VAR, "LEONARDO_API_KEY"]);
+keepEnv(["CLIP_STORE_DIR", VIDEO_BUDGET_VAR, "LEONARDO_API_KEY"]);
 
 test.beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "video-clips-"));
   process.env.CLIP_STORE_DIR = dir;
-  process.env[ACCESS_SECRET_VAR] = SECRET;
-  delete process.env.NEXT_PUBLIC_DEV_AUTH;
   delete process.env[VIDEO_BUDGET_VAR];
   __resetVideoBudget();
-  __resetRateLimit();
 });
 
 test.afterEach(() => {
@@ -81,17 +81,16 @@ const body = (over: Partial<VideoClipRequest> = {}): VideoClipRequest => ({
   ...over,
 });
 
-const post = (b: unknown, ip = "10.9.0.1") =>
-  clipsPOST(
-    new Request("http://localhost/api/video/clips", {
-      method: "POST",
-      headers: { "content-type": "application/json", authorization: `Bearer ${SECRET}`, "x-forwarded-for": ip },
-      body: JSON.stringify(b),
-    }),
-  );
-
-const get = (path: string, headers: Record<string, string> = {}) =>
-  new Request(`http://localhost${path}`, { headers: { authorization: `Bearer ${SECRET}`, ...headers } });
+/** What the retired POST did, through the same lib doors: parse, start, answer 202 or the
+ *  mapped refusal. The run itself goes on in the background, as under `after()`. */
+const post = async (b: unknown): Promise<Response> => {
+  try {
+    const started = await startClip(parseClipRequest(b));
+    return Response.json({ clipId: started.clipId }, { status: 202 });
+  } catch (e) {
+    return videoErrorResponse(e);
+  }
+};
 
 /** A fake adapter whose run is held open until the probe releases it, so the
  *  intermediate states can be READ rather than assumed. */
@@ -175,11 +174,7 @@ test("store: an id the store did not mint names no path", async () => {
     expect(isClipId(bad), String(bad)).toBe(false);
   expect(() => clipPath("../escape")).toThrow(/not a clip id/);
   expect(() => clipRecordPath("clip-../../x")).toThrow(/not a clip id/);
-
-  const r = await clipGET(get("/api/video/clips/x"), { params: Promise.resolve({ id: "..%2F..%2Fsecrets" }) });
-  expect(r.status).toBe(404);
-  const f = await clipFileGET(get("/api/video/clips/x/file"), { params: Promise.resolve({ id: "../x" }) });
-  expect(f.status).toBe(404);
+  expect(await clipFileStat("../x").catch(() => "refused")).toBe("refused");
 });
 
 /* ── pricing ───────────────────────────────────────────────────────────── */
@@ -208,9 +203,9 @@ test("pricing: total over every model × duration; unpriced is null, never 0; th
   expect(costFromVendor({ amount: 0, unit: "USD" })).toEqual({ usd: null, basis: "unpriced" });
 });
 
-/* ── the route, through the fake adapter ───────────────────────────────── */
+/* ── the start door, through the fake adapter ──────────────────────────── */
 
-test("POST: 202 with a clip id; the record walks queued → rendering → done and the mp4 is served", async () => {
+test("start: 202 with a clip id; the record walks queued → rendering → done and the mp4 is stored", async () => {
   const held = heldAdapter({ kind: "done", bytes: MP4 });
   setVideoAdapterForTests(held.adapter);
 
@@ -232,9 +227,8 @@ test("POST: 202 with a clip id; the record walks queued → rendering → done a
   expect(mid?.vendorJobId).toBe("gen-fake-1");
   expect(mid?.costUsd).toBe(1.2);
   expect((await videoBudgetStats()).held).toBeGreaterThan(0);
-  // The poll route reports the live run as live, not as interrupted.
-  const polled = (await (await clipGET(get(`/api/video/clips/${clipId}`), { params: Promise.resolve({ id: clipId }) })).json()) as ClipRecord;
-  expect(polled.status).toBe("rendering");
+  // The poll door reports the live run as live, not as interrupted.
+  expect((await readClip(clipId))?.status).toBe("rendering");
 
   held.release();
   const done = await settled(clipId);
@@ -247,25 +241,9 @@ test("POST: 202 with a clip id; the record walks queued → rendering → done a
   expect(s.held).toBe(0);
   expect(s.spent).toBe(1.2);
 
-  // The file route: whole, then one range (k= rides the query for a <video>).
-  const whole = await clipFileGET(new Request(`http://localhost/api/video/clips/${clipId}/file?k=${SECRET}`), {
-    params: Promise.resolve({ id: clipId }),
-  });
-  expect(whole.status).toBe(200);
-  expect(whole.headers.get("content-type")).toBe("video/mp4");
-  expect(new Uint8Array(await whole.arrayBuffer())).toEqual(MP4);
-  const part = await clipFileGET(get(`/api/video/clips/${clipId}/file`, { range: "bytes=4-7" }), {
-    params: Promise.resolve({ id: clipId }),
-  });
-  expect(part.status).toBe(206);
-  expect(part.headers.get("content-range")).toBe(`bytes 4-7/${MP4.length}`);
-  expect(Buffer.from(await part.arrayBuffer()).toString("latin1")).toBe("ftyp");
-  // Without the secret, the file is closed.
-  const anon = await clipFileGET(new Request(`http://localhost/api/video/clips/${clipId}/file`), {
-    params: Promise.resolve({ id: clipId }),
-  });
-  expect(anon.status).toBe(401);
-  console.log(`[video] done path: ${clipId} queued→rendering→done, ${MP4.length}B served, spent $${s.spent}`);
+  // The mp4 is on disk under the minted id, whole.
+  expect((await clipFileStat(clipId))?.size).toBe(MP4.length);
+  console.log(`[video] done path: ${clipId} queued→rendering→done, ${MP4.length}B stored, spent $${s.spent}`);
 });
 
 test("failed and refused are distinct terminal states, each with the vendor's words", async () => {
@@ -340,9 +318,9 @@ test("over the ceiling: refused 402 BEFORE the adapter is called, nothing writte
 
   // And a ceiling with room for one hold admits one and refuses the next.
   process.env[VIDEO_BUDGET_VAR] = String(gateHoldUsd("kling-2-5", 5) + 0.01);
-  const admitted = await post(body(), "10.9.0.2");
+  const admitted = await post(body());
   expect(admitted.status).toBe(202);
-  expect((await post(body(), "10.9.0.3")).status).toBe(402);
+  expect((await post(body())).status).toBe(402);
   held.release();
   const { clipId } = (await admitted.json()) as { clipId: string };
   expect((await settled(clipId)).status).toBe("done");
@@ -351,7 +329,7 @@ test("over the ceiling: refused 402 BEFORE the adapter is called, nothing writte
 
 test("no key: the capability says so, and a POST is refused before anything is held", async () => {
   setVideoAdapterForTests({ id: "fake", configured: () => false, render: async () => ({ kind: "done", bytes: MP4 }) });
-  const cap = await (await capabilityGET(get("/api/video/clips"))).json();
+  const cap = videoCapability();
   expect(cap.configured).toBe(false);
   expect(cap.models).toEqual([]);
   expect(Object.keys(cap.priceUsd).sort()).toEqual([...VIDEO_MODELS].sort());

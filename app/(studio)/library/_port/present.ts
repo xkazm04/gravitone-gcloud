@@ -14,15 +14,24 @@
 //                switches kind when the facet is not the current kind's (a style's "plates in
 //                this style" lands on Plates); a run also links its Ledger events; a node that
 //                names neither is drawn as text, a library-item that is gone as a ghost.
+//   schedule     an export (`video:export:<id>`, the item a slot names - @gt/domain/slot
+//                slotItemId) opens the Calendar's schedule sheet on itself (L63's carry: v1's
+//                Composer was reached from the Calendar only; the export's own page is where a
+//                person decides to put it out).
 
 import { isSharedGroup, VOCAB_GROUPS, type LibraryKindName, type LibraryRow, type LineageNode as Node } from "@gt/domain/library";
 import type { LibraryItemDetail } from "@gt/domain/libraryItem";
+import { exportIdOf } from "@gt/domain/slot";
 import type { Face, Palette } from "@gt/ui/components/library/Face.tsx";
 import type { LineageNode, LineageRef } from "@gt/ui/components/library/Lineage.tsx";
 import type { LibraryCard } from "@gt/ui/components/library/LibraryTile.tsx";
 import { kindShort } from "@gt/ui/components/library/LibraryGlyph.tsx";
 
+import { scheduleHref } from "../../floor/_floor/model.ts";
 import type { Choice, ShownDetail } from "./contract.ts";
+
+/** The schedule sheet's door for an item a slot can publish - an export - and nothing else. */
+export const scheduleOf = (id: string): string | undefined => (exportIdOf(id) === undefined ? undefined : scheduleHref(id));
 
 /** What a side knows beyond the row: where a blob is served, and the look the row does not carry. */
 export type Media = {
@@ -99,6 +108,7 @@ export function detailOf(d: LibraryItemDetail, m: Media, held: Readonly<Record<s
   const video = look.video !== undefined && decodes && d.row.attention === undefined ? { src: look.video, ...(look.poster === undefined ? {} : { poster: look.poster }), loop: d.row.kind === "motion" } : undefined;
   const usedBy = (d.vocabulary.find((v) => v.key === "project")?.values ?? []).map((v) => ({ value: v.value, label: v.label }));
   const styleId = d.item.kind === "style" ? d.item.vocabulary.styleId : null;
+  const schedule = scheduleOf(d.row.id);
   return {
     card,
     origin: d.row.origin,
@@ -112,5 +122,6 @@ export function detailOf(d: LibraryItemDetail, m: Media, held: Readonly<Record<s
     projects,
     usedBy,
     ...(styleId !== null && atelier !== undefined ? { atelier: atelier(styleId) } : {}),
+    ...(schedule === undefined ? {} : { schedule }),
   };
 }

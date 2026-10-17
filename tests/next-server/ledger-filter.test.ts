@@ -93,13 +93,17 @@ describe("matchesPost", () => {
 });
 
 describe("subjectLink", () => {
-  it("v1 foundry records open /foundry, named by their own id inside the run", () => {
-    expect(subjectLink(e())).toEqual({ label: "2026-08-26-sweep-01", href: "/foundry" });
-    expect(subjectLink(e({ subject: { kind: "candidate", id: "2026-08-26-sweep-01/s03" } }))).toEqual({ label: "s03", href: "/foundry" });
+  // v1's /foundry and /articles pages retired in Phase 6 wave C: a v1 run's acts open the run's
+  // history, never a redirect to a page that is gone or a Board that would refuse an old run.
+  it("v1 foundry records open their run's history, named by their own id inside the run", () => {
+    expect(subjectLink(e())).toEqual({ label: "2026-08-26-sweep-01", href: "/ledger?q=2026-08-26-sweep-01" });
+    expect(subjectLink(e({ subject: { kind: "candidate", id: "2026-08-26-sweep-01/s03" } }))).toEqual({ label: "s03", href: "/ledger?q=2026-08-26-sweep-01" });
+    // An act that carries no run id is about the run it names.
+    expect(subjectLink(e({ data: {} })).href).toBe("/ledger?q=2026-08-26-sweep-01");
   });
 
-  it("an article opens its v1 run page; publish facts the calendar; a sync source its own events", () => {
-    expect(subjectLink(e({ key: "articles:run_1:step.0", subject: { kind: "step", id: "run_1/research" }, data: { runId: "run_1" } })).href).toBe("/articles/run_1");
+  it("an article step opens its run's history; publish facts the calendar; a sync source its own events", () => {
+    expect(subjectLink(e({ key: "articles:run_1:step.0", subject: { kind: "step", id: "run_1/research" }, data: { runId: "run_1" } }))).toEqual({ label: "research", href: "/ledger?q=run_1" });
     expect(subjectLink(e({ key: "publish:s1:slot.scheduled", subject: { kind: "slot", id: "s1" } })).href).toBe("/floor?cal=1&slot=s1");
     expect(subjectLink(e({ key: "ingest:forge:fail.read.x", subject: { kind: "source", id: "forge" } })).href).toBe("/ledger?src=forge");
   });

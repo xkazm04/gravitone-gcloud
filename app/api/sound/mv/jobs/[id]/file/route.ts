@@ -8,31 +8,27 @@
 // same name, so the per-call cache stays "revalidate", never the session hold a take gets -
 // and serveFile's ETag now makes that revalidation a 304-sized question, not a re-download.
 //
-// THE DOOR IS v1's, plus the session (the takes file route says why, in full): `k=` for the
-// v1 pages until wave C, and the session cookie through route()'s guard for the studio,
-// which sends no `k`. Access-checked, not rate-bucketed: seeking issues a burst of ranges.
+// THE DOOR IS route()'s `access` guard (Phase 6 L70; the takes file route says why `?k=`
+// went, in full): the session cookie for the studio, a header for a CLI. Access-checked,
+// not rate-bucketed: seeking issues a burst of ranges.
 
-import { guardAccessOnly } from "@/lib/apiAuth";
-import { asContractDenial, errorResponse, toErrorResponse } from "@/lib/sound/http";
-import { mvFileOf } from "@/lib/sound/mv/store";
+import { err } from "@gt/domain/errors";
 
-import { guardOf } from "../../../../../../_server/route.ts";
+import { toErrorResponse } from "../../../../../../../lib/sound/http.ts";
+import { mvFileOf } from "../../../../../../../lib/sound/mv/store.ts";
+import { route } from "../../../../../../_server/route.ts";
 import { serveFile } from "../../../../../../_server/serveFile.ts";
 
 export const runtime = "nodejs";
 
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const url = new URL(req.url);
-  const k = url.searchParams.get("k");
-  const probe = k ? new Request(req.url, { headers: { authorization: `Bearer ${k}` } }) : req;
-  const refused = await guardAccessOnly(probe);
-  if (refused !== null && !("who" in (await guardOf(probe, "access")))) return (await asContractDenial(refused)) ?? refused;
+export const GET = route({ guard: "access", bodyCap: 0 }, async ({ req, params }) => {
+  const id = (await params)["id"];
+  if (typeof id !== "string" || id === "") return err("invalid", "a music-video job is addressed by its id");
   try {
-    const { id } = await params;
-    const { abs, mime } = await mvFileOf(id, url.searchParams.get("kind"));
+    const { abs, mime } = await mvFileOf(id, new URL(req.url).searchParams.get("kind"));
     const res = await serveFile(req, abs, { mime, cache: "private, no-cache" });
-    return res.status === 404 ? errorResponse(`job ${id}'s file is missing from the store`, 404) : res;
+    return res.status === 404 ? err("not-found", `job ${id}'s file is missing from the store`) : res;
   } catch (e) {
     return toErrorResponse(e);
   }
-}
+});

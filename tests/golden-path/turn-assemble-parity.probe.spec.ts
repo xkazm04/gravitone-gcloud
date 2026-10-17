@@ -20,9 +20,13 @@
 // stale rather than the assembly wrong, and the failure says so by name.
 //
 // TWO HALVES, BOTH THROUGH REAL CODE:
-//   · through the ROUTE: the fixture is POSTed, `withFakeEngine` (CIP-A) puts
-//     the cassette stand-in on PATH, and the sha256 of what reached its stdin is
-//     compared with system + tail (+ the router's schema line). Nothing mocked.
+//   · through the TURN: the fixture is started as the real turn kind on the real
+//     runner (lib/turns/runner.ts startTurn, as the script and frames producers
+//     run it; it was POSTed to /api/recalibrate and /api/frames until those
+//     retired in Phase 6 L70 - the goldens' `route` field records where they were
+//     captured), `withFakeEngine` (CIP-A) puts the cassette stand-in on PATH, and
+//     the sha256 of what reached its stdin is compared with system + tail (+ the
+//     router's schema line). Nothing mocked.
 //   · the ASSEMBLER, called directly (added with the extraction): its prompt
 //     must equal system + tail exactly, and its manifest must account for every
 //     character of it.
@@ -33,8 +37,6 @@ import { join } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { POST as recalibratePOST } from "@/app/api/recalibrate/route";
-import { POST as framesPOST } from "@/app/api/frames/route";
 import { CONCLUSIONS } from "@/lib/notebook/conclusions";
 import { ATTRIBUTION } from "@/lib/script/impact";
 import { EDIT_PLAN_SCHEMA } from "@/lib/script/editPlan";
@@ -42,13 +44,16 @@ import { compileFormatBrief } from "@/lib/formatBrief";
 import { schemaInstruction } from "@/lib/text/json";
 import { assembleFrames } from "@/lib/turns/assemble/frames";
 import { assembleRecalibrate } from "@/lib/turns/assemble/recalibrate";
+import { FRAMES_SPEC } from "@/lib/turns/kinds/frames";
+import { RECALIBRATE_SPEC } from "@/lib/turns/kinds/recalibrate";
+import { startTurn, whenIdle, type TurnSpec } from "@/lib/turns/runner";
 
 import { FAKE_ENGINE_ENV, keepEnv, loadCassette, withFakeEngine, type Cassette } from "./_helpers";
 
-keepEnv([...FAKE_ENGINE_ENV, "TEXT_TURN_DIR", "TEXT_ENV", "LOCAL_BINARIES", "GOOGLE_AI_API_KEY", "NEXT_PUBLIC_DEV_AUTH", "LIGHTTRACK_DISABLE"]);
+keepEnv([...FAKE_ENGINE_ENV, "TEXT_TURN_DIR", "TEXT_ENV", "LOCAL_BINARIES", "GOOGLE_AI_API_KEY", "LIGHTTRACK_DISABLE"]);
 
-// /api/recalibrate runs as a ledger turn since AIO-A stage 2; its records go to
-// a temp directory of this file's own, never foundry-out/.
+// Both kinds run as ledger turns; their records go to a temp directory of this
+// file's own, never foundry-out/.
 let turnDir = "";
 test.beforeAll(() => {
   turnDir = mkdtempSync(join(tmpdir(), "gravitone-parity-turns-"));
@@ -59,7 +64,6 @@ test.afterAll(() => {
 
 test.beforeEach(() => {
   process.env.TEXT_TURN_DIR = turnDir;
-  process.env.NEXT_PUBLIC_DEV_AUTH = "1";
   process.env.TEXT_ENV = "local";
   process.env.LOCAL_BINARIES = "on";
   delete process.env.GOOGLE_AI_API_KEY;
@@ -152,7 +156,7 @@ test("goldens: the population is derived, covers both routes, and each one is in
   }
 });
 
-/** A cassette for /api/frames: one unconditional turn answering an empty scene
+/** A cassette for the frames turn: one unconditional turn answering an empty scene
  *  list. Frames has no cassette of its own in this tree (CIP-A's lane), and the
  *  answer is irrelevant here — only the stdin is read. Door metadata is borrowed
  *  from a live cassette so the staleness checks apply unchanged. */
@@ -165,29 +169,25 @@ function framesCassette(): Cassette {
   };
 }
 
-let ip = 0;
+let project = 0;
 for (const g of GOLDENS) {
-  test(`route parity: ${g.name} reaches the engine byte-identical to the golden`, async () => {
+  test(`turn parity: ${g.name} reaches the engine byte-identical to the golden`, async () => {
     const kind = KIND(g);
     const system = systemFor(kind);
     const prompt = system + g.tail;
     const stdin = kind === "recalibrate" ? `${prompt}\n${schemaInstruction(EDIT_PLAN_SCHEMA)}` : prompt;
-    const POST = kind === "recalibrate" ? recalibratePOST : framesPOST;
+    const spec = (kind === "recalibrate" ? RECALIBRATE_SPEC : FRAMES_SPEC) as TurnSpec;
     await withFakeEngine(kind === "recalibrate" ? "recalibrate-ok" : framesCassette(), async (engine) => {
-      const res = await POST(
-        // `?wait=1` and a projectId: recalibrate answers 202 by default since
-        // AIO-A stage 2, and frames since stage 3. Neither reaches the prompt —
-        // the assembler reads only the keys it names — which is exactly what
-        // this case pins.
-        new Request(`http://localhost/api/${kind}?wait=1`, {
-          method: "POST",
-          headers: { "content-type": "application/json", "x-forwarded-for": `10.79.0.${++ip}` },
-          body: JSON.stringify({ ...g.body, ...(KIND(g) === "recalibrate" ? { conclusions: CONCLUSIONS } : {}), projectId: "p-parity" }),
-        }),
-      );
+      // The body exactly as the golden holds it; the kind's assembler reads only
+      // the keys it names, which is what this case pins.
+      const out = await startTurn(spec, `p-parity-${++project}`, { ...g.body, ...(kind === "recalibrate" ? { conclusions: CONCLUSIONS } : {}) });
+      if (!out.ok) throw new Error(`slot held by ${out.holder.id}`);
+      const rec = await out.done;
+      await whenIdle();
       const turns = engine.turns();
-      console.log(`[parity] ${g.name} -> ${res.status}, ${turns[0]?.promptChars ?? 0} chars reached the engine`);
-      expect(turns, `${g.name}: no prompt reached the engine (status ${res.status})`).toHaveLength(1);
+      console.log(`[parity] ${g.name} -> ${rec.status}, ${turns[0]?.promptChars ?? 0} chars reached the engine`);
+      expect(turns, `${g.name}: no prompt reached the engine (${rec.status})`).toHaveLength(1);
+
       expect(turns[0]!.promptChars, `${g.name}: the prompt's LENGTH moved`).toBe(stdin.length);
       expect(turns[0]!.promptSha256, `${g.name}: same length, different bytes`).toBe(sha(stdin));
     });

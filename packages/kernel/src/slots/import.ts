@@ -7,8 +7,8 @@ import { INTERRUPTED_TEXT, slotItemId, slotSchema, type Slot, type SlotDrift } f
 import { SLOT_HOLDS } from "@gt/domain/slot.machine";
 import { append } from "../events.ts";
 import type { Reader, Store, Tx } from "../store.ts";
-import { clashOf } from "./core.ts";
-import { listSlotsIn, publicationOfIn, readPublicationIn, readSlotIn, snapshotsIn } from "./read.ts";
+import { clashOf, clashText, publishedText, toCancelled, type Holding } from "./core.ts";
+import { listSlotsIn, priorPublicationIn, publicationOfIn, readPublicationIn, readSlotIn, snapshotsIn } from "./read.ts";
 import { putSlotIn } from "./write.ts";
 
 // THE ONE-TIME IMPORT of v1's calendar (owner ruling 3; plan §5.3) - schedule.json,
@@ -26,6 +26,15 @@ import { putSlotIn } from "./write.ts";
 //                               a process of the old world, so the slot lands `failed` with v1's
 //                               INTERRUPTED_TEXT - exactly what v1's own next sweep would have
 //                               concluded once that process was gone - and is reported as such.
+//   drift on a cancelled slot   v1 cancelSlot kept `error` as it stood, so a slot cancelled while
+//                               drifted carries the drift sentence; it never becomes `error` (drift
+//                               is a field, and only a waiting slot's) - it rides the import event.
+//   several holders             v1 let more than one active slot hold an export on a channel; the
+//                               store does not. Never refused for it (the L63 ruling): the earliest
+//                               holds - a live publication before any waiting slot, because it went
+//                               out - and the rest land `cancelled`, the holder and the reason on
+//                               their import event, never in `error`. A slot published DRY holds
+//                               nothing (the L62 ruling), so it is no one's rival.
 //   projectId                   not a slot field in the new record; kept on the import event.
 // HISTORY IS NOT RE-EMITTED. v1's calendar facts are already in the ledger through the Phase 2
 // projection (lib/ledger/v1/sources/publish.ts: slot.create, slot.schedule, slot.status, publish,
@@ -88,17 +97,33 @@ const iso = (s: string): string | undefined => {
   return Number.isNaN(t) ? undefined : new Date(t).toISOString();
 };
 
-/** A v1 slot as the new record, or the reason it cannot be one. `note` names a lossy step. */
-export function slotFromV1(s: z.output<typeof v1Slot>): { slot: Slot; note?: string } | { refused: string } {
+type V1Slot = z.output<typeof v1Slot>;
+type V1Publication = z.output<typeof v1Publication>;
+
+/** v1's three record shapes as its files held them, for what still WRITES a v1 calendar (the
+ *  fixture writer, pipeline/fixtures/publish.ts) once lib/publish/types.ts is gone. */
+export type V1SlotRecord = z.input<typeof v1Slot>;
+export type V1SlotStatus = V1SlotRecord["status"];
+export type V1PublicationRecord = z.input<typeof v1Publication>;
+export type V1SnapshotRecord = z.input<typeof v1Snapshot>;
+
+/** A v1 slot as the new record, or the reason it cannot be one. `note` names a lossy step;
+ *  `v1Drift` is a drift sentence v1 left in `error` that the record does not carry. */
+export function slotFromV1(s: V1Slot): { slot: Slot; note?: string; v1Drift?: SlotDrift } | { refused: string } {
   const at = iso(s.publishAt);
   if (at === undefined) return { refused: `publishAt is not a date: ${s.publishAt}` };
   const waiting = s.status === "scheduled" || s.status === "missed";
-  const drift = waiting && s.error !== null ? V1_DRIFT_TEXT[s.error] : undefined;
+  // v1 cancelSlot kept whatever `error` held, so a slot cancelled while drifted carries the drift
+  // sentence; a drift is a field (and only of a waiting slot), never an `error` (the L63 ruling).
+  const v1Drift = s.error === null ? undefined : V1_DRIFT_TEXT[s.error];
+  const drift = waiting ? v1Drift : undefined;
   let note: string | undefined;
   const state = s.status === "publishing" ? "failed" : s.status;
-  const error = s.status === "publishing" ? INTERRUPTED_TEXT : state === "failed" || state === "cancelled" ? (s.error ?? undefined) : undefined;
+  const kept = s.error === null || v1Drift !== undefined ? undefined : s.error;
+  const error = s.status === "publishing" ? INTERRUPTED_TEXT : state === "failed" || state === "cancelled" ? kept : undefined;
   if (s.status === "publishing") note = "claimed by a v1 process; imported as interrupted";
   else if (waiting && s.error !== null && drift === undefined) note = `a stale reason on a ${s.status} slot was dropped: ${s.error}`;
+  else if (!waiting && v1Drift !== undefined) note = `the drift it was ${s.status} under (${v1Drift}) is on the import event, not the record`;
   const missedAt = s.status === "missed" ? (iso(s.missedAt ?? "") ?? at) : undefined;
   const draft = {
     id: s.id,
@@ -116,56 +141,66 @@ export function slotFromV1(s: z.output<typeof v1Slot>): { slot: Slot; note?: str
   };
   const p = parseAt(`v1 slot ${s.id}`, slotSchema, draft);
   if (!p.ok) return { refused: p.error.message };
-  return note === undefined ? { slot: p.value } : { slot: p.value, note };
+  return { slot: p.value, ...(note === undefined ? {} : { note }), ...(!waiting && v1Drift !== undefined ? { v1Drift } : {}) };
 }
 
-function publicationFromV1(p: z.output<typeof v1Publication>): Result<Publication> {
+function publicationFromV1(p: V1Publication): Result<Publication> {
   const { platformVideoId, channelId, publishedAt, ...rest } = p;
   return parseAt(`v1 publication ${p.id}`, publicationSchema, { ...rest, channel: channelId, platformId: platformVideoId, publishedAt: iso(publishedAt) ?? publishedAt });
 }
 
 const sameReading = (a: MetricSnapshot, b: MetricSnapshot): boolean => a.publicationId === b.publicationId && a.at === b.at && METRIC_KEYS.every((k) => a[k] === b[k]);
 
+type Mapped = { readonly v1: V1Slot; readonly slot: Slot; readonly note?: string; readonly v1Drift?: SlotDrift; readonly dry: boolean };
+
+/**
+ * The order the slots are written in, which IS the one-holder rule's tie-break (the L63 ruling:
+ * v1 allowed several active slots per export x channel, and the import must not refuse them).
+ * Published slots first - a publication is a fact, and a dry one must be marked before a waiting
+ * slot for the same item lands - then by time, so the EARLIEST waiting slot is the one that holds
+ * and the later ones are imported `cancelled`, the reason on their import event.
+ */
+const writeOrder = (a: Mapped, b: Mapped): number =>
+  Number(b.slot.state === "published") - Number(a.slot.state === "published") || a.slot.at.localeCompare(b.slot.at) || a.slot.id.localeCompare(b.slot.id);
+
 /** Decide, and when `t` is a write transaction, write. A read snapshot decides for a dry run. */
 function run(r: Reader, t: Tx | null, v1: V1Calendar): ImportOutcome[] {
   const out: ImportOutcome[] = [];
   const done = t === null ? "would-import" : "imported";
-  const imported = new Set<string>();
-  const holding = listSlotsIn(r, { states: ["scheduled", "publishing", "published"] }).map((x) => x.slot);
+  const imported = new Map<string, Slot>();
+  const holding: Holding[] = listSlotsIn(r, { states: ["scheduled", "publishing", "published"] });
   const projectOf = new Map(v1.schedule.slots.map((s) => [s.id, s.projectId]));
-  for (const s of v1.schedule.slots) {
-    if (readSlotIn(r, s.id) !== undefined) {
-      out.push({ kind: "slot", id: s.id, outcome: "skipped", reason: "already in the store" });
-      continue;
-    }
-    const m = slotFromV1(s);
-    if ("refused" in m) {
-      out.push({ kind: "slot", id: s.id, outcome: "refused", reason: m.refused });
-      continue;
-    }
-    const clash = clashOf(holding, m.slot.libraryItemId, m.slot.channel, m.slot.id);
-    if (clash !== undefined && SLOT_HOLDS.includes(m.slot.state)) {
-      out.push({ kind: "slot", id: s.id, outcome: "refused", reason: `${m.slot.libraryItemId} is already held on ${m.slot.channel} by ${clash.id}` });
-      continue;
-    }
-    if (t !== null) putSlotIn(t, null, m.slot, null, { by: IMPORT_SLOTS_ACTOR, type: "slot.import", data: { v1State: s.status, projectId: s.projectId, createdAt: s.createdAt } });
-    if (SLOT_HOLDS.includes(m.slot.state)) holding.push(m.slot);
-    imported.add(s.id);
-    out.push({ kind: "slot", id: s.id, outcome: done, ...(m.note === undefined ? {} : { reason: m.note }) });
-  }
+  const pubsOf = new Map<string, V1Publication[]>();
+  for (const p of v1.publications.publications) pubsOf.set(p.slotId, [...(pubsOf.get(p.slotId) ?? []), p]);
   const pubs = new Set<string>();
-  for (const p of v1.publications.publications) {
+  const madeInMode = new Map<string, string>();
+  const handled = new Set<string>();
+
+  const importPublication = (p: V1Publication): void => {
+    handled.add(p.id);
     if (readPublicationIn(r, p.id) !== undefined) {
       pubs.add(p.id);
       out.push({ kind: "publication", id: p.id, outcome: "skipped", reason: "already in the store" });
-      continue;
+      return;
     }
-    const slotThere = imported.has(p.slotId) || readSlotIn(r, p.slotId) !== undefined;
+    const slot = imported.get(p.slotId) ?? readSlotIn(r, p.slotId)?.slot;
     const pub = publicationFromV1(p);
-    const reason = !slotThere ? `its slot ${p.slotId} is not in the store` : !pub.ok ? pub.error.message : publicationOfIn(r, p.slotId) !== undefined ? `slot ${p.slotId} already has a publication` : undefined;
+    const key = slot === undefined ? "" : JSON.stringify([slot.libraryItemId, slot.channel, p.dry]);
+    // This run's own first (so a dry run and the write it rehearses name the same publication), then the store's.
+    const prior = slot === undefined ? undefined : (madeInMode.get(key) ?? priorPublicationIn(r, slot.libraryItemId, slot.channel, p.dry)?.id);
+    const reason =
+      slot === undefined
+        ? `its slot ${p.slotId} is not in the store`
+        : !pub.ok
+          ? pub.error.message
+          : publicationOfIn(r, p.slotId) !== undefined
+            ? `slot ${p.slotId} already has a publication`
+            : prior !== undefined
+              ? publishedText(slot.libraryItemId, slot.channel, prior, p.dry)
+              : undefined;
     if (reason !== undefined || !pub.ok) {
       out.push({ kind: "publication", id: p.id, outcome: "refused", reason: reason ?? "unreadable" });
-      continue;
+      return;
     }
     if (t !== null) {
       t.run("INSERT INTO publications (id, slot_id, record, published_at) VALUES (?, ?, ?, ?)", pub.value.id, pub.value.slotId, JSON.stringify(pub.value), pub.value.publishedAt);
@@ -173,8 +208,50 @@ function run(r: Reader, t: Tx | null, v1: V1Calendar): ImportOutcome[] {
       append(t, { actor: IMPORT_SLOTS_ACTOR, type: "publication.import", subject: { kind: "publication", id: p.id }, data: { slotId: p.slotId, dry: p.dry, ...(projectId === undefined ? {} : { projectId }) } });
     }
     pubs.add(p.id);
+    madeInMode.set(key, p.id);
     out.push({ kind: "publication", id: p.id, outcome: done });
+  };
+
+  const mapped: Mapped[] = [];
+  for (const s of v1.schedule.slots) {
+    if (readSlotIn(r, s.id) !== undefined) {
+      out.push({ kind: "slot", id: s.id, outcome: "skipped", reason: "already in the store" });
+      continue;
+    }
+    const m = slotFromV1(s);
+    if ("refused" in m) out.push({ kind: "slot", id: s.id, outcome: "refused", reason: m.refused });
+    else mapped.push({ v1: s, ...m, dry: m.slot.state === "published" && pubsOf.get(s.id)?.find((p) => p.id === s.publicationId)?.dry === true });
   }
+  for (const m of mapped.sort(writeOrder)) {
+    let slot = m.slot;
+    const clash = m.dry ? undefined : clashOf(holding, slot.libraryItemId, slot.channel, slot.id);
+    if (clash !== undefined && slot.state === "published") {
+      // Two live publications of one item on one channel: v1's publisher refused the second, so
+      // this calendar was edited by hand. Not a one-holder question; said, and left out.
+      out.push({ kind: "slot", id: slot.id, outcome: "refused", reason: `a second live publication: ${clashText(slot.libraryItemId, slot.channel, clash)}` });
+      continue;
+    }
+    let cancelled: string | undefined;
+    if (clash !== undefined && SLOT_HOLDS.includes(slot.state)) {
+      cancelled = `cancelled on import: ${clashText(slot.libraryItemId, slot.channel, clash)}`;
+      slot = toCancelled(slot);
+    }
+    const data = {
+      v1State: m.v1.status,
+      projectId: m.v1.projectId,
+      createdAt: m.v1.createdAt,
+      // A typed token beside the sentence (delivery-guarantees: non-delivery-ledgers), so "how
+      // many slots did the import set aside, and for what" is a query, not string forensics.
+      ...(cancelled === undefined || clash === undefined ? {} : { cancelledFor: "one-holder", heldBy: clash.id, reason: cancelled }),
+      ...(m.v1Drift === undefined ? {} : { v1Drift: m.v1Drift }),
+    };
+    if (t !== null) putSlotIn(t, null, slot, null, { by: IMPORT_SLOTS_ACTOR, type: "slot.import", data }, m.dry);
+    imported.set(slot.id, slot);
+    out.push({ kind: "slot", id: slot.id, outcome: done, ...(cancelled !== undefined ? { reason: cancelled } : m.note === undefined ? {} : { reason: m.note }) });
+    for (const p of pubsOf.get(slot.id) ?? []) importPublication(p);
+    if (SLOT_HOLDS.includes(slot.state)) holding.push(m.dry ? { slot, dry: true } : { slot });
+  }
+  for (const p of v1.publications.publications) if (!handled.has(p.id)) importPublication(p);
   const byPub = new Map<string, { readings: MetricSnapshot[]; unreadable: string[] }>();
   for (const m of v1.metrics.snapshots) {
     const g = byPub.get(m.publicationId) ?? { readings: [], unreadable: [] };

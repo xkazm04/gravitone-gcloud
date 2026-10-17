@@ -26,30 +26,8 @@ const NEEDS_DOM =
 
 /** hook path -> why it is not driven through _studio/hooks.ts. Shrink-only. */
 export const EXEMPT: Record<string, string> = {
-  "app/articles/useArticles.ts": NO_DRIVER,
-  "app/calendar/useCalendar.ts": NO_DRIVER,
-  "app/calendar/useDrag.ts": NEEDS_DOM,
-  "app/foundry/pipeline/useAudition.ts": NO_DRIVER,
-  "app/foundry/pipeline/useBoardCull.ts": NO_DRIVER,
-  "app/foundry/pipeline/useBoardEngine.ts": NO_DRIVER,
-  "app/foundry/pipeline/useBoardKeys.ts": NEEDS_DOM,
-  "app/foundry/pipeline/useBoardMoves.ts": NO_DRIVER,
-  "app/foundry/pipeline/useBoardVerbs.ts": NO_DRIVER,
-  "app/foundry/pipeline/useCanvasHandle.ts": NEEDS_DOM,
-  "app/foundry/pipeline/useCardDrag.ts": NEEDS_DOM,
-  "app/foundry/pipeline/useCards.tsx": NO_DRIVER,
-  "app/foundry/pipeline/useCullRect.ts": NEEDS_DOM,
-  "app/foundry/pipeline/useFullScreen.ts": NEEDS_DOM,
-  "app/foundry/pipeline/useGhostFlight.ts": NEEDS_DOM,
-  "app/foundry/pipeline/useOffers.ts": NO_DRIVER,
-  "app/foundry/pipeline/usePipelineData.ts": NO_DRIVER,
-  "app/foundry/pipeline/usePointerVerbs.ts": NEEDS_DOM,
-  "app/foundry/pipeline/useSelection.ts": NO_DRIVER,
-  "app/foundry/pipeline/useViewport.ts": NEEDS_DOM,
-  "app/foundry/pipeline/useViewportEvents.ts": NEEDS_DOM,
-  "app/playground/arrange/useArrange.ts": NO_DRIVER,
-  "app/playground/hunt/useHunt.ts": NO_DRIVER,
-  "app/playground/triage/useTriage.ts": NO_DRIVER,
+  // v1's Foundry, Sound lab, Articles and Calendar hooks (24 exemptions) went with their pages in
+  // Phase 6 wave C; what is left is the new world's own (studio) hooks.
   "app/(studio)/library/_library/useNarrow.ts": NEEDS_DOM,
   "app/(studio)/audio/_audio/useCardDrag.ts": NEEDS_DOM,
   "app/(studio)/audio/_audio/useTransport.ts": NEEDS_DOM,
@@ -116,7 +94,10 @@ export function coverageProblems(
 
 test("the derivation sees hooks and drivers at all (a walk that finds nothing proves nothing)", () => {
   const hooks = hooksOnDisk();
-  expect(hooks.length, "found no app/**/use*.ts - the walk is broken").toBeGreaterThan(20);
+  // Over twenty while v1's pages kept their hooks under app/; Phase 6 wave C retired those pages,
+  // and the new world keeps its hooks in packages/ui (driven by Vitest there), so three (studio)
+  // hooks are what app/ holds. Any is proof the walk read the tree.
+  expect(hooks.length, "found no app/**/use*.ts - the walk is broken").toBeGreaterThan(0);
   // The two hooks this used to name as driven (useTrailerCut, useSpots) retired
   // with the v1 studio (Phase 4 wave D); no app hook is driven through the shared
   // dispatcher today, so the self-check is the walk, and the matcher below is held

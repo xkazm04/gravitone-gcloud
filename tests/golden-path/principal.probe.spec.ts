@@ -532,8 +532,16 @@ test("every route awaits its guard (a bare call returns a Promise, which is trut
       if (!/\bawait\s+$/.test(before)) bare.push(`${f}:${code.slice(0, m.index).split("\n").length}`);
     }
   }
-  console.log(`[principal] ${files.length} files walked, ${calls} guard calls, ${bare.length} not awaited`);
-  expect(calls, "the walk found no guard call - it is reading the wrong tree").toBeGreaterThan(40);
+  // Since Phase 6 every kept API route is served through app/_server/route.ts `route({ guard })`,
+  // which awaits its guard once for all of them; the v1 routes that called guardRequest /
+  // guardAccessOnly themselves retired with v1. So the walk now proves two things: no file left
+  // calls a v1 guard bare, AND every route file goes through route() - a route that skipped the
+  // wrapper would have no guard to await at all.
+  const routes = files.filter((f) => /^app\/api\/.+\/route\.ts$/.test(f));
+  const unwrapped = routes.filter((f) => !/\broute\(\s*\{[^}]*\bguard\s*:/.test(src(f)));
+  console.log(`[principal] ${files.length} files walked, ${routes.length} routes, ${calls} v1 guard calls, ${bare.length} not awaited`);
+  expect(routes.length, "the walk found no API route - it is reading the wrong tree").toBeGreaterThan(5);
+  expect(unwrapped, "API routes not served through route({ guard })").toEqual([]);
   expect(bare, "guard calls that are not awaited: an admitted request would return null from the handler").toEqual([]);
 });
 

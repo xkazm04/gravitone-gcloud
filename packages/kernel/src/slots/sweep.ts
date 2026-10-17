@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { AppError, type Result } from "@gt/domain/errors";
+import { AppError, ok, type Result } from "@gt/domain/errors";
+import type { EventData } from "@gt/domain/event";
 import type { Holder } from "@gt/domain/job";
 import { INTERRUPTED_TEXT, type Slot } from "@gt/domain/slot";
 import { actorOf, claimIn, pidAlive, processHolder, releaseIn, snapshotOf } from "../lease.ts";
@@ -52,6 +53,13 @@ export type SweepRun = {
   readonly holder?: Holder;
   readonly alive?: Alive;
   readonly ttlS?: number;
+  /**
+   * What the caller knows about a slot this pass marks missed, merged into its `slot.miss` event
+   * - the worker's downtime gap (@gt/producers/publish/tick), so "missed because nothing was
+   * awake" is on the same event, in the same commit, as the miss itself. Pure: called inside the
+   * write, so it must not touch the store.
+   */
+  readonly missData?: (slot: Slot) => EventData | undefined;
 };
 
 function claimStateIn(t: Tx, slotId: string, me: Holder, alive: Alive): ClaimState {
@@ -69,6 +77,20 @@ function fenceOut(t: Tx, slotId: string, me: Holder, alive: Alive, ttlS: number)
   releaseIn(t, resource, o.lease.fence);
 }
 
+/**
+ * Which items the waiting slots name exist, asked BEFORE the write opens (L63's finding, as
+ * ./write.ts readinessFor): `itemExists` is the caller's, and one that reads this store cannot
+ * read inside the sweep's transaction - asked there, every item would read missing and every
+ * waiting slot drift `export_missing`. A slot created between this read and the write is not in
+ * the answer; the write leaves it for the next pass rather than guess.
+ */
+function existenceOf(store: Store, facts: SweepFacts): Result<{ readonly facts: SweepFacts; readonly asked: ReadonlySet<string> }> {
+  const items = store.read((r) => new Set<string>(listSlotsIn(r, { states: ["scheduled", "missed"] }).map((x) => x.slot.libraryItemId)));
+  if (!items.ok) return items;
+  const exists = new Set<string>([...items.value].filter((item) => facts.itemExists(item)));
+  return ok({ facts: { ...facts, itemExists: (item) => exists.has(item) }, asked: items.value });
+}
+
 /** One pass over the calendar: interrupt dead claims, annotate drift, mark missed, and - for a
  *  tick - claim what is due. Everything it decides commits together or not at all. */
 export function sweep(store: Store, facts: SweepFacts, run: SweepRun): Result<SweepReport> {
@@ -76,9 +98,13 @@ export function sweep(store: Store, facts: SweepFacts, run: SweepRun): Result<Sw
   const alive = run.alive ?? pidAlive;
   const ttlS = run.ttlS ?? CLAIM_TTL_S;
   const by = actorOf(me);
+  const pre = existenceOf(store, facts);
+  if (!pre.ok) return pre;
+  const { facts: known, asked } = pre.value;
   return store.tx((t): SweepReport => {
     const rows = new Map<string, SlotRow>(listSlotsIn(t, { states: ["scheduled", "missed", "publishing"] }).map((r) => [r.slot.id, r]));
-    const decisions = planSweep([...rows.values()].map((r) => r.slot), facts, {
+    const judged = [...rows.values()].filter((r) => r.slot.state === "publishing" || asked.has(r.slot.libraryItemId));
+    const decisions = planSweep(judged.map((r) => r.slot), known, {
       claim: run.claim,
       claimState: (id) => claimStateIn(t, id, me, alive),
       ...(run.only === undefined ? {} : { only: run.only }),
@@ -104,7 +130,8 @@ export function sweep(store: Store, facts: SweepFacts, run: SweepRun): Result<Sw
           break;
         case "miss": {
           const missedAt = new Date(facts.now).toISOString();
-          next = putSlotIn(t, row, toMissed(row.slot, missedAt), null, { by, type: "slot.miss", data: { missedAt, overdueMin: Math.floor(d.overdueMs / 60_000) } });
+          const more = run.missData?.(row.slot) ?? {};
+          next = putSlotIn(t, row, toMissed(row.slot, missedAt), null, { by, type: "slot.miss", data: { ...more, missedAt, overdueMin: Math.floor(d.overdueMs / 60_000) } });
           out.missed.push(d.id);
           break;
         }

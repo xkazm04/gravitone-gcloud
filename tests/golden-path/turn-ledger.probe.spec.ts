@@ -7,8 +7,10 @@
 // passed none and `reason()` had none to pass, so the `claude` process ran on
 // to its 600s ceiling, on the operator's seat, for an answer nobody received.
 //
-// WHAT THIS PROBE DRIVES. Nothing inside the app is mocked. The routes are the
-// real exported handlers, the runner calls the real `reason()`, the router walks
+// WHAT THIS PROBE DRIVES. Nothing inside the app is mocked. The runner is driven
+// directly (startTurn / readTurn / cancelTurn): the HTTP doors over it
+// (/api/turns, /api/turns/[id], .../cancel) retired with the v1 pages in Phase 6
+// L70, and their status codes with them. The runner calls the real `reason()`, the router walks
 // its real ladder and lib/claudeCli.ts spawns "claude" through its real shell
 // setting — which `withFakeEngine` (CIP-A) resolves to a stand-in that replays a
 // cassette. The stand-in records its own pid, which is how a cancel is checked
@@ -17,7 +19,7 @@
 //
 // THE TURN KIND IS THE PROBE'S OWN. Stage 1 is the kernel; no production kind is
 // registered on it until /api/recalibrate hands its assembly over (stage 2). So
-// this file registers one: an edit-plan turn whose prompt opens with the
+// this file defines one: an edit-plan turn whose prompt opens with the
 // heading the recalibrate cassettes are keyed to, and whose settle hook is the
 // real `parseEditPlan`. What it proves is the kernel's lifecycle, not
 // recalibrate's prompt — that is recalibrate-route-e2e's job.
@@ -33,11 +35,8 @@ import { TextError } from "@/lib/text/errors";
 import { reason } from "@/lib/text/router";
 import { EDIT_PLAN_SCHEMA, parseEditPlan, type EditPlan } from "@/lib/script/editPlan";
 import { RENDERS } from "@/lib/script/renders";
-import { currentBootId, readTurn, sweepTurns, writeTurn, type TurnRecord } from "@/lib/turns/ledger";
-import { registerTurnKind, TurnInputError, whenIdle, type TurnSpec } from "@/lib/turns/runner";
-import { POST as startPOST } from "@/app/api/turns/route";
-import { GET as turnGET } from "@/app/api/turns/[id]/route";
-import { POST as cancelPOST } from "@/app/api/turns/[id]/cancel/route";
+import { currentBootId, readTurn, sweepTurns, TurnIdError, writeTurn, type TurnRecord } from "@/lib/turns/ledger";
+import { cancelTurn, startTurn, TurnInputError, whenIdle, type TurnSpec } from "@/lib/turns/runner";
 
 import { FAKE_ENGINE_ENV, keepEnv, loadCassette, withFakeEngine, type Cassette, type FakeCall } from "./_helpers";
 
@@ -47,7 +46,6 @@ keepEnv([
   "TEXT_ENV",
   "LOCAL_BINARIES",
   "GOOGLE_AI_API_KEY",
-  "NEXT_PUBLIC_DEV_AUTH",
   "LIGHTTRACK_DISABLE",
 ]);
 
@@ -55,7 +53,6 @@ let dir = "";
 test.beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "gravitone-turns-"));
   process.env.TEXT_TURN_DIR = dir;
-  process.env.NEXT_PUBLIC_DEV_AUTH = "1";
   process.env.TEXT_ENV = "local";
   process.env.LOCAL_BINARIES = "on";
   // No cloud key: a cancelled local turn must not "descend" to a metered rung.
@@ -96,13 +93,6 @@ const SPEC: TurnSpec<{ note: string }, EditPlan> = {
   },
 };
 
-let unregister: (() => void) | null = null;
-test.beforeAll(() => {
-  unregister = registerTurnKind(SPEC as TurnSpec);
-});
-test.afterAll(() => {
-  unregister?.();
-});
 
 /* ── helpers ──────────────────────────────────────────────────────────────── */
 
@@ -139,27 +129,29 @@ function slowDoor(ms: number): Cassette {
   return { ...c, name: `engine-door-slow-${ms}`, turns: [{ ...ok, match: { heading: "# DOOR slow" }, mode: "slow", slowMs: ms }] };
 }
 
-let ip = 0;
-const headers = () => ({ "content-type": "application/json", "x-forwarded-for": `10.88.0.${(++ip % 250) + 1}` });
+/** The runner's answer to a start on the probe's kind: a turn under way, the slot's holder,
+ *  or the kind's refusal (thrown before any record exists). */
+type Started =
+  | { outcome: "started"; turnId: string }
+  | { outcome: "busy"; holder: string }
+  | { outcome: "refused"; status: number; detail: string };
 
-async function start(body: unknown): Promise<{ status: number; json: Record<string, unknown> }> {
-  const res = await startPOST(new Request("http://localhost/api/turns", { method: "POST", headers: headers(), body: JSON.stringify(body) }));
-  return { status: res.status, json: (await res.json()) as Record<string, unknown> };
+async function start(projectId: string, input: unknown): Promise<Started> {
+  try {
+    const out = await startTurn(SPEC as TurnSpec, projectId, input);
+    return out.ok ? { outcome: "started", turnId: out.turnId } : { outcome: "busy", holder: out.holder.id };
+  } catch (e) {
+    if (e instanceof TurnInputError) return { outcome: "refused", status: e.status, detail: e.message };
+    throw e;
+  }
 }
 
-async function get(id: string): Promise<{ status: number; json: Record<string, unknown> }> {
-  const res = await turnGET(new Request(`http://localhost/api/turns/${id}`, { headers: headers() }), {
-    params: Promise.resolve({ id }),
-  });
-  return { status: res.status, json: (await res.json()) as Record<string, unknown> };
+function idOf(s: Started): string {
+  if (s.outcome !== "started") throw new Error(`the turn did not start: ${JSON.stringify(s)}`);
+  return s.turnId;
 }
 
-async function cancel(id: string): Promise<{ status: number; json: Record<string, unknown> }> {
-  const res = await cancelPOST(new Request(`http://localhost/api/turns/${id}/cancel`, { method: "POST", headers: headers() }), {
-    params: Promise.resolve({ id }),
-  });
-  return { status: res.status, json: (await res.json()) as Record<string, unknown> };
-}
+const cancel = (id: string) => cancelTurn(id);
 
 /** `withFakeEngine`, and no run of this process outlives it: a turn still in
  *  flight when PATH is restored would spawn whatever `claude` resolves to next
@@ -177,14 +169,13 @@ function withEngine<T>(
   });
 }
 
-/** Poll the GET route until the record reaches one of `statuses`. */
-async function until(id: string, statuses: string[], ms = 15_000): Promise<Record<string, unknown>> {
+/** Poll the ledger until the record reaches one of `statuses`. */
+async function until(id: string, statuses: string[], ms = 15_000): Promise<TurnRecord> {
   const t0 = Date.now();
-  let last: Record<string, unknown> = {};
+  let last: TurnRecord | null = null;
   while (Date.now() - t0 < ms) {
-    const r = await get(id);
-    last = r.json;
-    if (r.status === 200 && statuses.includes(String((r.json.turn as TurnRecord | undefined)?.status))) return r.json.turn as Record<string, unknown>;
+    last = await readTurn(id);
+    if (last && statuses.includes(last.status)) return last;
     await wait(50);
   }
   throw new Error(`turn ${id} never reached ${statuses.join("|")}; last: ${JSON.stringify(last).slice(0, 300)}`);
@@ -271,14 +262,11 @@ test("reason(): a cancelled turn is `cancelled`, and it does not descend the lad
 
 /* ── 1. accept, run, settle — the record is the result ────────────────────── */
 
-test("POST /api/turns: 202 {turnId}; GET reads running, then done with the plan and the receipt", async () => {
+test("start: a turn id; the record reads running, then done with the plan and the receipt", async () => {
   const cassette = slow(1_500);
   const paid = cassette.turns[0]!.envelope!.total_cost_usd;
   await withEngine(cassette, async (engine) => {
-    const out = await start({ kind: KIND, projectId: "p-ledger-1", input: { note: SENTINEL } });
-    console.log(`[turns] start -> ${out.status} ${JSON.stringify(out.json)}`);
-    expect(out.status, String(out.json.detail)).toBe(202);
-    const turnId = String(out.json.turnId);
+    const turnId = idOf(await start("p-ledger-1", { note: SENTINEL }));
     expect(turnId).toMatch(/^tn-[0-9a-f]{12}$/);
 
     const running = await until(turnId, ["running"]);
@@ -286,7 +274,7 @@ test("POST /api/turns: 202 {turnId}; GET reads running, then done with the plan 
     expect(running.projectId).toBe("p-ledger-1");
     expect(running.bootId).toBe(currentBootId());
 
-    const done = (await until(turnId, ["done", "failed"])) as unknown as TurnRecord;
+    const done = await until(turnId, ["done", "failed"]);
     console.log(`[turns] settled -> ${done.status} cost=${done.receipt?.costUsd} rung=${done.receipt?.rung}`);
     expect(done.status, JSON.stringify(done.error)).toBe("done");
     expect((done.result as EditPlan).edits).toHaveLength(1);
@@ -310,40 +298,30 @@ test("POST /api/turns: 202 {turnId}; GET reads running, then done with the plan 
   });
 });
 
-test("POST /api/turns: a bad body is refused before anything is written", async () => {
-  const noKind = await start({});
-  expect(noKind.status).toBe(400);
-  const unknownKind = await start({ kind: "no-such-kind", projectId: "p-x", input: {} });
-  expect(unknownKind.status).toBe(400);
-  expect(String(unknownKind.json.detail)).toMatch(/no-such-kind/);
-  const badInput = await start({ kind: KIND, projectId: "p-x", input: {} });
-  expect(badInput.status).toBe(400);
-  expect(String(badInput.json.detail)).toMatch(/input\.note/);
+test("start: a bad input is refused before anything is written", async () => {
+  const badInput = await start("p-x", {});
+  expect(badInput).toMatchObject({ outcome: "refused", status: 400 });
+  expect(badInput.outcome === "refused" ? badInput.detail : "").toMatch(/input\.note/);
+  expect(await start("p-x", null)).toMatchObject({ outcome: "refused", status: 400 });
   expect(readdirSync(dir), "a refused request left a record behind").toEqual([]);
 });
 
 /* ── 2. one serialised turn per project and kind ──────────────────────────── */
 
-test("POST /api/turns: a second turn for the same project and serialised kind is a 409 naming the holder", async () => {
+test("start: a second turn for the same project and serialised kind is refused, naming the holder", async () => {
   await withEngine(slow(20_000), async (engine) => {
-    const first = await start({ kind: KIND, projectId: "p-ledger-2", input: { note: "first" } });
-    expect(first.status).toBe(202);
-    const holder = String(first.json.turnId);
+    const holder = idOf(await start("p-ledger-2", { note: "first" }));
     await until(holder, ["running"]);
 
-    const second = await start({ kind: KIND, projectId: "p-ledger-2", input: { note: "second" } });
-    console.log(`[turns] second -> ${second.status} ${JSON.stringify(second.json)}`);
-    expect(second.status).toBe(409);
-    expect(second.json.holder).toBe(holder);
+    expect(await start("p-ledger-2", { note: "second" })).toEqual({ outcome: "busy", holder });
 
     // Another project is a different slot.
-    const other = await start({ kind: KIND, projectId: "p-ledger-2b", input: { note: "other" } });
-    expect(other.status).toBe(202);
+    const other = idOf(await start("p-ledger-2b", { note: "other" }));
     // Both engines are up — two slots, two processes — before either is stopped.
     await enginePid(engine, 2);
 
-    for (const id of [holder, String(other.json.turnId)]) {
-      expect((await cancel(id)).status).toBe(200);
+    for (const id of [holder, other]) {
+      expect((await cancel(id)).ok).toBe(true);
       await until(id, ["cancelled"]);
     }
     await whenIdle();
@@ -353,30 +331,26 @@ test("POST /api/turns: a second turn for the same project and serialised kind is
 
 /* ── 3. cancel kills the tree, and a late resolve cannot overwrite it ──────── */
 
-test("POST /api/turns/[id]/cancel: the engine's process tree is dead and the record says cancelled", async () => {
+test("cancel: the engine's process tree is dead and the record says cancelled", async () => {
   await withEngine(slow(20_000), async (engine) => {
-    const out = await start({ kind: KIND, projectId: "p-ledger-3", input: { note: "cancel me" } });
-    expect(out.status).toBe(202);
-    const id = String(out.json.turnId);
+    const id = idOf(await start("p-ledger-3", { note: "cancel me" }));
     await until(id, ["running"]);
     const pid = await enginePid(engine);
     expect(alive(pid)).toBe(true);
 
     const c = await cancel(id);
-    console.log(`[turns] cancel -> ${c.status} ${JSON.stringify(c.json).slice(0, 200)}`);
-    expect(c.status).toBe(200);
-    expect((c.json.turn as TurnRecord).status).toBe("cancelled");
+    expect(c.ok).toBe(true);
+    expect(c.ok && c.record.status).toBe("cancelled");
     expect(await stillAliveAfterKill(pid), "cancel left the engine running").toBe(false);
 
-    const final = (await until(id, ["cancelled", "done", "failed"])) as unknown as TurnRecord;
+    const final = await until(id, ["cancelled", "done", "failed"]);
     expect(final.status).toBe("cancelled");
     expect(final.result).toBeUndefined();
 
     // The slot is free again once the turn is over.
-    const again = await start({ kind: KIND, projectId: "p-ledger-3", input: { note: "again" } });
-    expect(again.status).toBe(202);
-    expect((await cancel(String(again.json.turnId))).status).toBe(200);
-    await until(String(again.json.turnId), ["cancelled"]);
+    const again = idOf(await start("p-ledger-3", { note: "again" }));
+    expect((await cancel(again)).ok).toBe(true);
+    await until(again, ["cancelled"]);
   });
 });
 
@@ -387,17 +361,15 @@ test("cancel: an engine answer that lands after the cancel does not overwrite it
   settleGate = { entered, release: new Promise<void>((r) => (release = r)) };
   try {
     await withEngine("recalibrate-ok", async () => {
-      const out = await start({ kind: KIND, projectId: "p-ledger-4", input: { note: "late" } });
-      expect(out.status).toBe(202);
-      const id = String(out.json.turnId);
+      const id = idOf(await start("p-ledger-4", { note: "late" }));
       // The engine has ANSWERED: the run is inside its settle hook.
       await inSettle;
       const c = await cancel(id);
-      expect(c.status).toBe(200);
+      expect(c.ok).toBe(true);
       release();
       // Give the settle every chance to write over the cancel.
       await wait(300);
-      const final = (await until(id, ["cancelled", "done", "failed"])) as unknown as TurnRecord;
+      const final = await until(id, ["cancelled", "done", "failed"]);
       console.log(`[turns] late resolve -> ${final.status}`);
       expect(final.status, "a late resolve overwrote the cancel").toBe("cancelled");
       expect(final.result).toBeUndefined();
@@ -407,16 +379,16 @@ test("cancel: an engine answer that lands after the cancel does not overwrite it
   }
 });
 
-test("cancel: an unknown id is a 404 and a settled turn is a 409", async () => {
-  expect((await cancel("tn-000000000000")).status).toBe(404);
-  expect((await cancel("../../etc")).status).toBe(400);
+test("cancel: an unknown id is not-found, a malformed one is refused, and a settled turn stays as it is", async () => {
+  expect(await cancel("tn-000000000000")).toEqual({ ok: false, why: "not-found" });
+  await expect(cancel("../../etc")).rejects.toBeInstanceOf(TurnIdError);
   await withEngine("recalibrate-ok", async () => {
-    const out = await start({ kind: KIND, projectId: "p-ledger-5", input: { note: "quick" } });
-    const id = String(out.json.turnId);
+    const id = idOf(await start("p-ledger-5", { note: "quick" }));
     await until(id, ["done"]);
     const c = await cancel(id);
-    expect(c.status).toBe(409);
-    expect((c.json.turn as TurnRecord).status).toBe("done");
+    expect(c.ok).toBe(false);
+    expect(!c.ok && c.why).toBe("settled");
+    expect("record" in c ? c.record.status : null).toBe("done");
   });
 });
 
@@ -463,9 +435,7 @@ test("sweep: a running record from a foreign boot whose server is gone becomes o
   expect(rec?.error?.kind).toBe("orphaned");
 
   await withEngine("recalibrate-ok", async () => {
-    const out = await start({ kind: KIND, projectId: "p-ledger-6", input: { note: "after the sweep" } });
-    expect(out.status, JSON.stringify(out.json)).toBe(202);
-    await until(String(out.json.turnId), ["done"]);
+    await until(idOf(await start("p-ledger-6", { note: "after the sweep" })), ["done"]);
   });
 });
 
@@ -477,22 +447,23 @@ test("sweep: a foreign boot whose server is STILL ALIVE on this host keeps its t
   const swept = await sweepTurns();
   expect(swept.orphaned).toEqual([]);
   expect((await readTurn("tn-0000000000b2"))?.status).toBe("running");
-  const blocked = await start({ kind: KIND, projectId: "p-ledger-7", input: { note: "blocked" } });
-  expect(blocked.status).toBe(409);
-  expect(blocked.json.holder).toBe("tn-0000000000b2");
+  expect(await start("p-ledger-7", { note: "blocked" })).toEqual({ outcome: "busy", holder: "tn-0000000000b2" });
   // And it cannot be cancelled from here: this process holds no handle on it.
-  expect((await cancel("tn-0000000000b2")).status).toBe(409);
+  const c = await cancel("tn-0000000000b2");
+  expect(!c.ok && c.why).toBe("not-here");
 });
 
-test("sweep: the routes run it on first touch of a turn directory", async () => {
+test("sweep: the runner runs it on first touch of a turn directory", async () => {
   const dead = await deadPid();
   await writeTurn({ ...foreign("tn-0000000000c3", "p-ledger-8", dead), host: undefined });
-  const r = await get("tn-0000000000c3");
-  expect(r.status).toBe(200);
-  expect((r.json.turn as TurnRecord).status).toBe("orphaned");
+  // A cancel is a touch: the sweep settles the record before the cancel reads it.
+  const c = await cancel("tn-0000000000c3");
+  expect(!c.ok && c.why).toBe("settled");
+  expect((await readTurn("tn-0000000000c3"))?.status).toBe("orphaned");
 });
 
-test("GET /api/turns/[id]: an unknown id is a 404, a malformed one a 400", async () => {
-  expect((await get("tn-ffffffffffff")).status).toBe(404);
-  expect((await get("..%2F..%2Fsecret")).status).toBe(400);
+test("readTurn: an unknown id is null, a malformed one is refused before any path is built", async () => {
+  expect(await readTurn("tn-ffffffffffff")).toBeNull();
+  await expect(readTurn("../../secret")).rejects.toBeInstanceOf(TurnIdError);
 });
+

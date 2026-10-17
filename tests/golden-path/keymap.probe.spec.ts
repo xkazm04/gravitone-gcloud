@@ -4,14 +4,30 @@
 // behind its own guard, so the drawing and the behaviour drifted: Ctrl+K stamped
 // a keep on the cull, and Enter on a checkbox was the grid's. components/ui/
 // signal/keymap.ts declares bindings once and derives the resolver, the window
-// binding and the rows. Asserted here over the pure resolver, with the v1 Board's
-// keymap and, as a fixture, the forge cull's - its grid retired in Phase 3 (the
-// cull is a Board packet now), but its seven bindings are still the sharpest test
-// of the resolver every remaining v1 surface binds through.
+// binding and the rows. Asserted here over the pure resolver, with two retired
+// keymaps as fixtures: the forge cull's (its grid retired in Phase 3) and the v1
+// Board's (retired with lib/board in Phase 6 wave C). Their bindings are still the
+// sharpest test of the resolver.
 import { test, expect } from "@playwright/test";
 
-import { BOARD_KEYMAP } from "@/lib/board/keys";
 import { activeKeymaps, defineKeymap, keycapsRows, resolveKey } from "@/components/ui/signal/keymap";
+
+/** The retired lib/board/keys.ts BOARD_KEYMAP, verbatim: the v1 Board's whole keymap, a
+ *  fixture of the resolver now (the v1 Board retired in Phase 6 wave C; the new Board binds
+ *  through @gt/ui/keymap, held by packages/ui/test/keymap.test.ts). */
+const BOARD_KEYMAP = defineKeymap<"approve" | "reject" | "clear" | "next" | "prev" | "loupe" | "close" | "undo">({
+  id: "board",
+  bindings: [
+    { keys: ["A"], does: "approve", action: "approve" },
+    { keys: ["X"], does: "reject", action: "reject" },
+    { keys: ["U"], does: "clear", action: "clear" },
+    { keys: ["J"], does: "next", action: "next", repeat: true },
+    { keys: ["K"], does: "previous", action: "prev", repeat: true },
+    { keys: ["Enter"], does: "loupe", action: "loupe" },
+    { keys: ["Esc"], does: "close", action: "close", repeat: true },
+    { keys: ["Z"], does: "undo", action: "undo" },
+  ],
+});
 
 /** The retired app/foundry/cullKeymap.ts, verbatim: a fixture of the resolver now. */
 const CULL = defineKeymap<"move" | "keep" | "reject" | "clear" | "undo" | "next-undecided" | "compare">({

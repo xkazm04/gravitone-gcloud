@@ -48,6 +48,8 @@ export type ShownDetail = {
   readonly usedBy: readonly Choice[];
   /** A style's own page (the atelier), when the item is a style. */
   readonly atelier?: string;
+  /** The Calendar's schedule sheet for this item, when it is an export a slot can publish. */
+  readonly schedule?: string;
 };
 
 export type ActOutcome = { readonly detail: ShownDetail; readonly said: string };

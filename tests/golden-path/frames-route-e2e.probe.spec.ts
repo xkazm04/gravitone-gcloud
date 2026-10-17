@@ -1,4 +1,13 @@
-// LANE — /api/frames END TO END, THROUGH THE REAL SPAWN DOOR (dynamic, CIP-A).
+// LANE — THE FRAMES TURN END TO END, THROUGH THE REAL SPAWN DOOR (dynamic, CIP-A).
+//
+// THE ROUTE RETIRED (Phase 6 L70). /api/frames was the direction pass's v1 door;
+// its refusals and dispatch moved into the `frames` turn kind (AIO-A stage 3,
+// lib/turns/kinds/frames.ts), which the frames producer runs in process. These
+// cases drive that kind on the real runner and read the settled record - the
+// same `raw`, receipt and failure kinds the route's synchronous body carried.
+// DROPPED with the route: the access gate (route()'s guard is pinned for the
+// routes that remain), the unreadable-JSON 400, and the "Nothing was changed."
+// sentence the route appended to an engine failure (lib/turns/answer.ts).
 //
 // Step 3's direction pass is the second-dearest turn in the app, and until this
 // file `npm test` had only ever seen it refuse: frames-run-bounded proves the
@@ -20,12 +29,8 @@
 // otherwise be served, so "nothing was spawned" is a measurement of the side
 // log, not an inference from how fast the answer came back.
 //
-// WHAT THESE CASES PIN IS BEHAVIOUR — status, body fields, spawn or no spawn.
-// The route's prompt assembly moved into a pure assembler (AIO-B) and its
-// dispatch onto the server's turn ledger (AIO-A stage 3). The second DID change
-// the route's default answer — 202 `{ turnId }` — so every case here asks with
-// `?wait=1` and a `projectId`, which keeps the synchronous body these cases
-// were written against. Nothing they assert about that body moved.
+// WHAT THESE CASES PIN IS BEHAVIOUR — the refusal's status, the record's fields,
+// spawn or no spawn.
 //
 // The cassettes are keyed by the sha256 of the prompt's first heading, not the
 // heading itself: that line is the opening of FRAMES-SCENE-PROMPT.md, and the
@@ -38,9 +43,10 @@ import { join } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { POST } from "@/app/api/frames/route";
 import { SCENE_SCHEMA } from "@/lib/frames/sceneSpec";
-import { __resetRateLimit, ACCESS_SECRET_VAR } from "@/lib/apiAuth";
+import { FRAMES_SPEC } from "@/lib/turns/kinds/frames";
+import type { TurnRecord } from "@/lib/turns/ledger";
+import { startTurn, TurnInputError, whenIdle, type TurnSpec } from "@/lib/turns/runner";
 
 import { markerOf, sha256 } from "../_engine/marker.mjs";
 
@@ -48,23 +54,18 @@ import { FAKE_ENGINE_ENV, keepEnv, loadCassette, withFakeEngine } from "./_helpe
 
 keepEnv([
   ...FAKE_ENGINE_ENV,
-  ACCESS_SECRET_VAR,
   "TEXT_ENV",
   "LOCAL_BINARIES",
   "GOOGLE_AI_API_KEY",
-  "NEXT_PUBLIC_DEV_AUTH",
   "LIGHTTRACK_DISABLE",
   "TEXT_TURN_DIR",
 ]);
 
 let turnDir = "";
 test.beforeEach(() => {
-  // The turn ledger the route writes, per case, never the checkout's own.
+  // The turn ledger the runner writes, per case, never the checkout's own.
   turnDir = mkdtempSync(join(tmpdir(), "gravitone-frames-e2e-"));
   process.env.TEXT_TURN_DIR = turnDir;
-  __resetRateLimit();
-  process.env.NEXT_PUBLIC_DEV_AUTH = "1";
-  delete process.env[ACCESS_SECRET_VAR];
   process.env.TEXT_ENV = "local";
   process.env.LOCAL_BINARIES = "on";
   // No cloud key unless a case adds one: a failed local rung has nowhere metered to go.
@@ -86,22 +87,33 @@ const FACTS = [
   { id: "f-halving-2024", claim: "The 2024 halving cut issuance to 3.125 BTC per block." },
 ];
 const STYLE = { technique: "layered paper collage", palette: ["#0e1116", "#e8d9b0"], grain: "light" };
-const RUN = { title: "The cycle that broke", schema: SCENE_SCHEMA, beats: BEATS, facts: FACTS, style: STYLE, projectId: "p-frames-e2e" };
+const RUN = { title: "The cycle that broke", schema: SCENE_SCHEMA, beats: BEATS, facts: FACTS, style: STYLE };
 
-let ip = 0;
-async function frames(
-  body: unknown,
-  headers: Record<string, string> = {},
-): Promise<{ status: number; json: Record<string, unknown> }> {
-  const res = await POST(
-    new Request("http://localhost/api/frames?wait=1", {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-forwarded-for": `10.78.0.${++ip}`, ...headers },
-      body: typeof body === "string" ? body : JSON.stringify(body),
-    }),
-  );
-  return { status: res.status, json: (await res.json()) as Record<string, unknown> };
+/** One frames turn: refused before any record (the kind's status and sentence), or run to
+ *  its end on the real runner (the settled record). One project per call. */
+type Framed =
+  | { outcome: "settled"; rec: TurnRecord }
+  | { outcome: "refused"; status: number; code: string; detail: string };
+
+let project = 0;
+async function frames(body: unknown): Promise<Framed> {
+  try {
+    const out = await startTurn(FRAMES_SPEC as TurnSpec, `p-frames-e2e-${++project}`, body);
+    if (!out.ok) throw new Error(`slot held by ${out.holder.id}`);
+    const rec = await out.done;
+    await whenIdle();
+    return { outcome: "settled", rec };
+  } catch (e) {
+    if (e instanceof TurnInputError) return { outcome: "refused", status: e.status, code: e.code, detail: e.message };
+    throw e;
+  }
 }
+
+function settled(f: Framed): TurnRecord {
+  if (f.outcome !== "settled") throw new Error(`refused: ${f.status} ${f.detail}`);
+  return f.rec;
+}
+type Directed = { raw: string; engine: Record<string, unknown> };
 
 /** A `fetch` that answers like Google's generateContent and counts the calls,
  *  restored by the caller's `finally`. */
@@ -144,11 +156,11 @@ test("frames e2e: a heading hash that does not match is a loud 're-record', neve
   const c = loadCassette("frames-ok");
   const wrong = { ...c, turns: [{ ...c.turns[0]!, match: { headingSha256: sha256("# some other prompt"), schemaSha256: null } }] };
   await withFakeEngine(wrong, async (engine) => {
-    const { status, json } = await frames(RUN);
-    console.log(`[frames] wrong heading hash -> ${status} ${String(json.detail).slice(0, 120)}`);
-    expect(status).toBe(502);
-    expect(String(json.detail)).toMatch(/re-record/);
-    expect(json.raw).toBeUndefined();
+    const rec = settled(await frames(RUN));
+    console.log(`[frames] wrong heading hash -> ${rec.status} ${String(rec.error?.message).slice(0, 120)}`);
+    expect(rec.status).toBe("failed");
+    expect(String(rec.error?.message)).toMatch(/re-record/);
+    expect(rec.result).toBeUndefined();
     expect(engine.turns()).toHaveLength(1);
     expect(engine.turns()[0]!.turn, "a turn was served although its marker did not match").toBeNull();
   });
@@ -156,14 +168,15 @@ test("frames e2e: a heading hash that does not match is a loud 're-record', neve
 
 /* ── served ───────────────────────────────────────────────────────────────── */
 
-test("frames e2e: a served direction is a 200 with `raw` and the receipt the envelope paid for", async () => {
+test("frames e2e: a served direction is done with `raw` and the receipt the envelope paid for", async () => {
   const cassette = loadCassette("frames-ok");
   const turn = cassette.turns[0]!;
   await withFakeEngine(cassette, async (engine) => {
-    const { status, json } = await frames(RUN);
-    const e = json.engine as Record<string, unknown>;
-    console.log(`[frames] ok -> ${status} kind=${e?.kind} rung=${e?.rung} cost=${e?.costUsd} raw=${String(json.raw).length}ch`);
-    expect(status, String(json.detail)).toBe(200);
+    const rec = settled(await frames(RUN));
+    expect(rec.status, JSON.stringify(rec.error)).toBe("done");
+    const json = rec.result as Directed;
+    const e = json.engine;
+    console.log(`[frames] ok -> kind=${e?.kind} rung=${e?.rung} cost=${e?.costUsd} raw=${String(json.raw).length}ch`);
 
     // `raw` is the engine's text, untouched: the client owns the parse.
     expect(typeof json.raw).toBe("string");
@@ -197,10 +210,11 @@ test("frames e2e: with no `claude` on PATH the cloud serves, and the receipt say
   const saved = process.env.PATH;
   try {
     process.env.PATH = "";
-    const { status, json } = await frames(RUN);
-    const e = json.engine as Record<string, unknown>;
-    console.log(`[frames] no claude -> ${status} kind=${e?.kind} rung=${e?.rung} reroutedFrom=${JSON.stringify(e?.reroutedFrom)}`);
-    expect(status, String(json.detail)).toBe(200);
+    const rec = settled(await frames(RUN));
+    expect(rec.status, JSON.stringify(rec.error)).toBe("done");
+    const json = rec.result as Directed;
+    const e = json.engine;
+    console.log(`[frames] no claude -> kind=${e?.kind} rung=${e?.rung} reroutedFrom=${JSON.stringify(e?.reroutedFrom)}`);
     expect(json.raw).toBe(raw);
     // A prompt that crossed the network must never render like a local one.
     expect(e.kind).toBe("cloud-api");
@@ -216,18 +230,16 @@ test("frames e2e: with no `claude` on PATH the cloud serves, and the receipt say
 
 /* ── engine failures ──────────────────────────────────────────────────────── */
 
-test("frames e2e: an `is_error` envelope is a 502 with its code, and the cloud rung is not tried", async () => {
+test("frames e2e: an `is_error` envelope fails the turn with its kind, and the cloud rung is not tried", async () => {
   process.env.GOOGLE_AI_API_KEY = "probe-google-key-0123456789";
   const google = stubGoogle(JSON.stringify({ scenes: [] }));
   try {
     await withFakeEngine("frames-is-error", async (engine) => {
-      const { status, json } = await frames(RUN);
-      console.log(`[frames] is_error -> ${status} ${json.code} ${String(json.detail).slice(0, 120)}`);
-      expect(status).toBe(502);
-      expect(json.code).toBe("failed");
-      expect(String(json.detail)).toMatch(/Nothing was changed\.$/);
-      expect(json.raw).toBeUndefined();
-      expect(json.engine).toBeUndefined();
+      const rec = settled(await frames(RUN));
+      console.log(`[frames] is_error -> ${rec.status} ${rec.error?.kind} ${String(rec.error?.message).slice(0, 120)}`);
+      expect(rec.status).toBe("failed");
+      expect(rec.error?.kind).toBe("failed");
+      expect(rec.result, "a failed direction carries a result").toBeUndefined();
       expect(engine.turns(), "the dispatched turn was retried locally").toHaveLength(1);
     });
     expect(google.calls(), "a dispatched-and-failed turn was re-sent to the metered rung").toBe(0);
@@ -236,16 +248,15 @@ test("frames e2e: an `is_error` envelope is a 502 with its code, and the cloud r
   }
 });
 
-test("frames e2e: no engine anywhere is a 503 naming the availability kind, and nothing is dispatched", async () => {
+test("frames e2e: no engine anywhere fails the turn naming the availability kind, and nothing is dispatched", async () => {
   const saved = process.env.PATH;
   try {
     process.env.PATH = "";
-    const { status, json } = await frames(RUN);
-    console.log(`[frames] no engine -> ${status} ${json.code} ${String(json.detail).slice(0, 120)}`);
-    expect(status).toBe(503);
-    expect(json.code).toBe("not-installed");
-    expect(String(json.detail)).toMatch(/Nothing was changed\.$/);
-    expect(json.raw).toBeUndefined();
+    const rec = settled(await frames(RUN));
+    console.log(`[frames] no engine -> ${rec.status} ${rec.error?.kind} ${String(rec.error?.message).slice(0, 120)}`);
+    expect(rec.status).toBe("failed");
+    expect(rec.error?.kind).toBe("not-installed");
+    expect(rec.result).toBeUndefined();
   } finally {
     process.env.PATH = saved;
   }
@@ -253,71 +264,44 @@ test("frames e2e: no engine anywhere is a 503 naming the availability kind, and 
 
 /* ── refusals before any spawn ────────────────────────────────────────────── */
 
-test("frames e2e: the access gate refuses before anything is spawned", async () => {
-  delete process.env.NEXT_PUBLIC_DEV_AUTH;
-  await withFakeEngine("frames-ok", async (engine) => {
-    // Unconfigured: the gate fails closed.
-    const closed = await frames(RUN);
-    expect(closed.status).toBe(401);
-    expect(closed.json.code).toBe("unauthorized");
-
-    // Configured, and nothing presented.
-    process.env[ACCESS_SECRET_VAR] = "probe-frames-secret";
-    const anonymous = await frames(RUN);
-    expect(anonymous.status).toBe(401);
-    expect(engine.turns(), "an unauthenticated caller reached the engine").toHaveLength(0);
-
-    // The control: the same body, with the secret, is served — so the two
-    // refusals above were the gate's and not the body's.
-    const authed = await frames(RUN, { authorization: "Bearer probe-frames-secret" });
-    console.log(`[frames] gate -> ${closed.status}/${anonymous.status}, authed ${authed.status}`);
-    expect(authed.status, String(authed.json.detail)).toBe(200);
-    expect(engine.turns()).toHaveLength(1);
-  });
-});
-
-test("frames e2e: an oversized run is a 413 and the stand-in's side log stays empty", async () => {
+test("frames e2e: an oversized run is refused 413 and the stand-in's side log stays empty", async () => {
   await withFakeEngine("frames-ok", async (engine) => {
     const beats = Array.from({ length: 401 }, (_, i) => ({ at: `${Math.floor(i / 60)}:${String(i % 60).padStart(2, "0")}`, text: `beat ${i}` }));
-    const { status, json } = await frames({ ...RUN, beats });
-    console.log(`[frames] 401 beats -> ${status} ${json.code}`);
-    expect(status).toBe(413);
-    expect(json.code).toBe("too-large");
+    expect(await frames({ ...RUN, beats })).toMatchObject({ outcome: "refused", status: 413, code: "too-large" });
     expect(engine.turns(), "an oversized run reached the engine").toHaveLength(0);
   });
 });
 
-test("frames e2e: a run under the material ceiling whose ASSEMBLED prompt is over it is a 413, unspawned", async () => {
+test("frames e2e: a run under the material ceiling whose ASSEMBLED prompt is over it is refused 413, unspawned", async () => {
   // The second ceiling. The caller's material is measured compact; the prompt
   // pretty-prints it, and carries the system prompt and the format brief on
   // top. A deeply nested beat is small on the wire and large on stdin.
   const body = { ...RUN, beats: [{ at: "0:00", text: "one", marks: Array.from({ length: 200_000 }, () => 0) }] };
   expect(JSON.stringify(body).length, "the fixture no longer slips under the material ceiling").toBeLessThan(1_000_000);
   await withFakeEngine("frames-ok", async (engine) => {
-    const { status, json } = await frames(body);
-    console.log(`[frames] assembled -> ${status} ${String(json.detail).slice(0, 120)}`);
-    expect(status).toBe(413);
-    expect(json.code).toBe("too-large");
-    expect(String(json.detail)).toMatch(/assembled run/);
-    expect(String(json.detail)).toMatch(/Nothing was dispatched/);
+    const out = await frames(body);
+    expect(out).toMatchObject({ outcome: "refused", status: 413, code: "too-large" });
+    const detail = out.outcome === "refused" ? out.detail : "";
+    expect(detail).toMatch(/assembled run/);
+    expect(detail).toMatch(/Nothing was dispatched/);
     expect(engine.turns(), "an oversized assembled prompt reached the engine").toHaveLength(0);
   });
 });
 
-test("frames e2e: an unreadable body, no beats, or no style is a 400 naming what is missing, unspawned", async () => {
+test("frames e2e: no beats, or no style, is refused 400 naming what is missing, unspawned", async () => {
   await withFakeEngine("frames-ok", async (engine) => {
     const cases: [string, unknown, RegExp][] = [
-      ["not json", "{beats:", /not valid JSON/],
+      ["no input", null, /No beats were sent/],
       ["no beats", { ...RUN, beats: [] }, /No beats were sent/],
       ["beats not a list", { ...RUN, beats: "0:00 hook" }, /No beats were sent/],
       ["no style", { ...RUN, style: undefined }, /No visual style was sent/],
     ];
     for (const [label, body, detail] of cases) {
-      const { status, json } = await frames(body);
-      console.log(`[frames] ${label} -> ${status} ${String(json.detail).slice(0, 80)}`);
-      expect(status, label).toBe(400);
-      expect(String(json.detail), label).toMatch(detail);
+      const out = await frames(body);
+      expect(out, label).toMatchObject({ outcome: "refused", status: 400 });
+      expect(out.outcome === "refused" ? out.detail : "", label).toMatch(detail);
     }
+
     expect(engine.turns(), "a malformed run reached the engine").toHaveLength(0);
   });
 });

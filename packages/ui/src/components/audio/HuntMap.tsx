@@ -8,7 +8,10 @@
 // ./hunt.ts clickSelect) and a column's pill takes or releases its whole branch. The card shows
 // what the leaf asks for (provider, length, techniques, tempo and key, the prompt), its state, and
 // - once heard - its take on the wave ground with the one transport's play and the crown. A leaf
-// that failed carries the engine's words verbatim; a Suno leaf goes by hand, its prompt copyable.
+// that failed carries the engine's words verbatim; a Suno leaf goes by hand, its prompt copyable
+// and its file dropped back on the card (v1 Board's "awaiting the Suno return", L72).
+import { useState } from "react";
+
 import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
 import { cx } from "../cx.ts";
@@ -33,7 +36,47 @@ export type HuntMapProps = {
   readonly onPlay: (take: AuditionTake) => void;
   readonly onCrown: (leaf: HuntLeafView, takeId: string, on: boolean) => void;
   readonly onCopy: (prompt: string) => void;
+  /** Leaves whose returned file is uploading. */
+  readonly returning: ReadonlySet<string>;
+  /** A Suno leaf's file, back from Suno. */
+  readonly onReturn: (leaf: HuntLeafView, file: File) => void;
 };
+
+/** A native FILE drop (from the desktop) or a pick: the leaf's take, back from Suno. */
+function ReturnDrop({ leaf, busy, onFile }: { readonly leaf: HuntLeafView; readonly busy: boolean; readonly onFile: (f: File) => void }) {
+  const [over, setOver] = useState(false);
+  return (
+    <label
+      className={cx(s.drop, over && s.dropOver, busy && s.dropBusy)}
+      onDragOver={(e) => {
+        if (!e.dataTransfer.types.includes("Files")) return;
+        e.preventDefault();
+        setOver(true);
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setOver(false);
+        const f = e.dataTransfer.files[0];
+        if (f !== undefined && !busy) onFile(f);
+      }}
+    >
+      {busy ? "filing…" : "↩ file"}
+      <input
+        type="file"
+        accept="audio/*"
+        className={s.dropInput}
+        aria-label={`return the Suno file for ${leaf.label}`}
+        disabled={busy}
+        onChange={(e) => {
+          const f = e.currentTarget.files?.[0];
+          e.currentTarget.value = "";
+          if (f !== undefined) onFile(f);
+        }}
+      />
+    </label>
+  );
+}
 
 const STATE_WORD: Readonly<Record<HuntLeafView["state"], { readonly label: string; readonly tone: "neutral" | "cyan" | "violet" | "amber" | "rose" }>> = {
   idea: { label: "idea", tone: "neutral" },
@@ -92,9 +135,10 @@ function Leaf({ leaf, p }: { readonly leaf: HuntLeafView; readonly p: HuntMapPro
           {take.stage !== null && take.stage !== "pending" && <Chip label={take.stage} casing="lower" />}
         </div>
       )}
-      {hand && leaf.state !== "rendered" && (
+      {hand && (
         <div className={s.leafActs}>
-          <Button label="Copy prompt" size="sm" tone="amber" onPress={() => p.onCopy(leaf.prompt)} />
+          {leaf.state !== "rendered" && <Button label="Copy prompt" size="sm" tone="amber" onPress={() => p.onCopy(leaf.prompt)} />}
+          <ReturnDrop leaf={leaf} busy={p.returning.has(leaf.id)} onFile={(f) => p.onReturn(leaf, f)} />
         </div>
       )}
       {leaf.error !== null && <ErrorLine message={leaf.error} />}

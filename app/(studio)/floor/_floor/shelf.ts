@@ -4,6 +4,7 @@ import { getCatalogue } from "../../../../lib/foundry/store.ts";
 import { articlesRoot, readArticles } from "../../../../lib/ledger/v1/sources/articles.ts";
 import { FIXTURE_MODE } from "../../../../lib/fixtures/mode.ts";
 import { listTakes } from "../../../../lib/sound/takes.ts";
+import { ledgerFor } from "../../_shell/links.ts";
 
 // THE LIBRARY / PROJECTS COLUMN - what each lane has ratified that the SERVER can read today,
 // through v1's own readers (nothing here writes):
@@ -73,7 +74,9 @@ async function posts(): Promise<Shelf["posts"]> {
     .map((run) => ({
       id: run.id,
       title: run.topic.subject ?? run.topic.text ?? run.id,
-      href: `/articles/${encodeURIComponent(run.id)}`,
+      // The run's history: v1's run page retired (Phase 6 wave C), and a run landed before the
+      // Board would be refused as a packet. The PR rides beside it as the row's trail.
+      href: ledgerFor(run.id),
       ...(run.landing?.prUrl === undefined ? {} : { pr: run.landing.prUrl }),
     }));
   return { ok: true, value: landed };

@@ -75,7 +75,7 @@ describe("articles projection", () => {
   it("a run awaiting approval is a gate pile since its last step ended", () => {
     const gate = run({ status: "awaiting-approval", steps: [step("research", "2026-10-14T10:00:00.000Z", "2026-10-14T10:09:00.000Z"), step("check", "2026-10-14T11:00:00.000Z", "2026-10-14T11:01:00+00:00")] });
     expect(projectArticles(snap([{ run: gate, driving: false }]), ctx()).weir).toEqual([
-      { source: "articles", id: "2026-10-14-two-clock-records", title: "article two-clock-records", media: "article", kind: "gate", since: "2026-10-14T11:01:00.000Z", decided: 0, pending: 1, href: "/articles" },
+      { source: "articles", id: "2026-10-14-two-clock-records", title: "article two-clock-records", media: "article", kind: "gate", since: "2026-10-14T11:01:00.000Z", decided: 0, pending: 1, href: "/floor?lane=article" },
     ]);
   });
 });

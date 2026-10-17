@@ -1,33 +1,19 @@
-// The sound routes' shared moves: the error shape and the gate re-spoken in it.
-// Server-only. lib/publish/http.ts's twin, for its reason:
+// What a sound file route answers when the store throws. Server-only.
 //
-// ONE ERROR SHAPE. The round-4 contract says errors are `{ error }` (and the
-// browser client, lib/sound/client.ts, reads exactly `json.error`). apiAuth's
-// denial is `{ detail, code }`, so it is re-spoken here rather than reaching a
-// client that would show "HTTP 401" instead of the gate's own sentence.
-//
-// Each route calls its lib/apiAuth door ITSELF and hands the result here —
-// tests/golden-path/imaging-auth.probe.spec.ts reads every route FILE for a
-// door call, and a wrapper that called it on the route's behalf would hide it.
+// ONE ERROR SHAPE for the sound store's own refusals: `{ error }`, the store's
+// sentence verbatim with its status. Since Phase 6 L70 only the two kept file
+// doors call it (app/api/sound/{takes/[id],mv/jobs/[id]}/file): their access
+// refusal is route()'s envelope (app/_server/route.ts), so v1's re-speaking of
+// apiAuth's `{ detail, code }` denial (`asContractDenial`) and the JSON body
+// reader went with the JSON routes that used them.
 
 import { MusicError, statusFor as musicStatus } from "@/lib/music/errors";
 import { TextError, statusFor as textStatus } from "@/lib/text/errors";
 
 import { SoundError } from "./store";
 
-export function errorResponse(message: string, status: number, code?: string): Response {
+function errorResponse(message: string, status: number, code?: string): Response {
   return Response.json(code ? { error: message, code } : { error: message }, { status });
-}
-
-/** Re-speak a gate denial as `{ error, code }`, keeping its status and its
- *  retry-after; null (proceed) passes through. */
-export async function asContractDenial(denied: Response | null): Promise<Response | null> {
-  if (!denied) return null;
-  const body = (await denied.json().catch(() => ({}))) as { detail?: string; code?: string };
-  const headers: Record<string, string> = {};
-  const retry = denied.headers.get("retry-after");
-  if (retry) headers["retry-after"] = retry;
-  return Response.json({ error: body.detail ?? "unauthorized", code: body.code ?? "unauthorized" }, { status: denied.status, headers });
 }
 
 /** Map anything a sound route can throw to `{ error }` with its status. A
@@ -41,12 +27,4 @@ export function toErrorResponse(e: unknown): Response {
   const msg = e instanceof Error ? e.message : String(e);
   console.error(`[sound] ${msg}`);
   return errorResponse(msg, 500);
-}
-
-export async function readJson(req: Request): Promise<unknown> {
-  try {
-    return await req.json();
-  } catch {
-    throw new SoundError("body is not valid JSON", 400);
-  }
 }

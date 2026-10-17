@@ -9,12 +9,12 @@
 // 4. Same call with $0.10 spent on 1 row: affordableImages is 16, verdict is 'fits', resumeAt is null.
 // 5. With no priced providers configured: verdict is 'unknown', estimateUsd is null, affordableImages is 16.
 // 6. errorResponse(new ImagingError('budget', ...)) has HTTP status 402, JSON body carrying code: 'over-budget', retryAt: number, and header Retry-After: string.
-// 7. imagingClient with globalThis.fetch stubbed: a 402 body {detail, code:'over-budget', retryAt:123} -> generateImage rejects with ImagingRequestError {code:'over-budget', status:402, retryAt:123}; a 422 body {code:'refused', provider:'google'} -> the error's provider is 'google' (today both fields are dropped).
-// 8. (Critic revision):
-//   - (renderPlan's planRender/afterOutcome halves retired with the v1 Frames step,
-//     Phase 4 wave D; the batch cap is the frames producer's `capBatch` now -
-//     packages/producers/test/steps-frames.test.ts.)
-//   - GET handler of app/api/imaging/budget/route.ts uses guardAccessOnly (from lib/apiAuth.ts) instead of guardRequest (apiAuth.ts:422-433: budget check doesn't spend rate limit). Without access header -> 401; with it -> returns 200 with {ceilingUsd, spentUsd, remainingUsd, windowMs, perImageUsd, quote}. 40 authorised GETs in a row leave rateLimit(clientIp) unconsumed so following POST /api/imaging/generate is not 429.
+// 7. RETIRED (Phase 6 wave C, L70): the browser's imagingClient generateImage /
+//    ImagingRequestError died with /api/imaging/generate (0 non-test callers).
+// 8. The budget body lib/imaging/handlers.ts budgetHandler serves (the v1 GET route
+//    is gone; the handler is kept for pipeline/integration-imaging.mts): it answers
+//    {ceilingUsd, spentUsd, remainingUsd, windowMs, perImageUsd, quote}, and asking it
+//    forty times spends nothing. The route's door and rate-limit isolation retired with it.
 
 import { test, expect } from "@playwright/test";
 import { keepEnv } from "./_helpers";
@@ -27,12 +27,8 @@ import {
 import { budgetQuote } from "@/lib/imaging/budgetForecast";
 import { ImagingError } from "@/lib/imaging/errors";
 import { errorResponse } from "@/lib/imaging/api";
-import { generateImage, ImagingRequestError } from "@/lib/imagingClient";
-import { GET as budgetGET } from "@/app/api/imaging/budget/route";
-import { POST as generatePOST } from "@/app/api/imaging/generate/route";
-import { ACCESS_SECRET_VAR, __resetRateLimit } from "@/lib/apiAuth";
-
-const realFetch = globalThis.fetch;
+import { budgetHandler } from "@/lib/imaging/handlers";
+import { ACCESS_SECRET_VAR } from "@/lib/apiAuth";
 
 keepEnv([
   BUDGET_VAR,
@@ -45,7 +41,6 @@ keepEnv([
 
 test.beforeEach(() => {
   __resetBudget();
-  __resetRateLimit();
   delete process.env[BUDGET_VAR];
   delete process.env[WINDOW_VAR];
   delete process.env[ACCESS_SECRET_VAR];
@@ -54,9 +49,6 @@ test.beforeEach(() => {
   process.env.GOOGLE_AI_API_KEY = "probe-google-key";
 });
 
-test.afterEach(() => {
-  globalThis.fetch = realFetch;
-});
 
 const book = async (usd: number, at: number) =>
   await recordSpend({
@@ -152,90 +144,13 @@ test("6. errorResponse(new ImagingError('budget', ...)) has HTTP status 402, cod
   expect(Number(res.headers.get("retry-after"))).toBeGreaterThan(0);
 });
 
-test("7. imagingClient attaches retryAt and provider to ImagingRequestError", async () => {
-  // a 402 body {detail, code:'over-budget', retryAt:123} -> generateImage rejects with ImagingRequestError {code:'over-budget', status:402, retryAt:123}
-  globalThis.fetch = (async () => {
-    return new Response(
-      JSON.stringify({ detail: "Over budget limit", code: "over-budget", retryAt: 123 }),
-      { status: 402, headers: { "content-type": "application/json" } },
-    );
-  }) as typeof fetch;
-
-  let err1: unknown;
-  try {
-    await generateImage({ prompt: "test", aspect: "16:9" });
-  } catch (e) {
-    err1 = e;
-  }
-  expect(err1).toBeInstanceOf(ImagingRequestError);
-  expect((err1 as ImagingRequestError).code).toBe("over-budget");
-  expect((err1 as ImagingRequestError).status).toBe(402);
-  expect((err1 as ImagingRequestError).retryAt).toBe(123);
-
-  // a 422 body {code:'refused', provider:'google'} -> the error's provider is 'google'
-  globalThis.fetch = (async () => {
-    return new Response(
-      JSON.stringify({ detail: "Safety policy refused prompt", code: "refused", provider: "google" }),
-      { status: 422, headers: { "content-type": "application/json" } },
-    );
-  }) as typeof fetch;
-
-  let err2: unknown;
-  try {
-    await generateImage({ prompt: "test", aspect: "16:9" });
-  } catch (e) {
-    err2 = e;
-  }
-  expect(err2).toBeInstanceOf(ImagingRequestError);
-  expect((err2 as ImagingRequestError).code).toBe("refused");
-  expect((err2 as ImagingRequestError).status).toBe(422);
-  expect((err2 as ImagingRequestError).provider).toBe("google");
-});
-
-test("8. GET /api/imaging/budget route rate-limit isolation", async () => {
-  // Without access header -> 401
-  const unauthedReq = new Request("http://localhost/api/imaging/budget", { method: "GET" });
-  const resUnauth = await budgetGET(unauthedReq);
-  expect(resUnauth.status).toBe(401);
-
-  // With access header -> 200 with {ceilingUsd, spentUsd, remainingUsd, windowMs, perImageUsd, quote}
-  process.env[ACCESS_SECRET_VAR] = "probe-secret";
-  const authedReq = new Request("http://localhost/api/imaging/budget?images=16", {
-    method: "GET",
-    headers: { authorization: "Bearer probe-secret", "x-forwarded-for": "198.51.100.1" },
-  });
-  const resAuth = await budgetGET(authedReq);
-  expect(resAuth.status).toBe(200);
-  const jsonAuth = await resAuth.json();
-  expect(jsonAuth).toHaveProperty("ceilingUsd");
-  expect(jsonAuth).toHaveProperty("spentUsd");
-  expect(jsonAuth).toHaveProperty("remainingUsd");
-  expect(jsonAuth).toHaveProperty("windowMs");
-  expect(jsonAuth).toHaveProperty("perImageUsd");
-  expect(jsonAuth).toHaveProperty("quote");
-
-  // 40 authorised GETs in a row leave rateLimit(clientIp) unconsumed so following POST /api/imaging/generate is not 429
-  const ip = "198.51.100.2";
-  for (let i = 0; i < 40; i++) {
-    const r = new Request("http://localhost/api/imaging/budget", {
-      method: "GET",
-      headers: { authorization: "Bearer probe-secret", "x-forwarded-for": ip },
-    });
-    const res = await budgetGET(r);
-    expect(res.status).toBe(200);
-  }
-
-  // Follow with POST /api/imaging/generate from same IP
-  const postReq = new Request("http://localhost/api/imaging/generate", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: "Bearer probe-secret",
-      "x-forwarded-for": ip,
-    },
-    body: JSON.stringify({}),
-  });
-  const postRes = await generatePOST(postReq);
-  expect(postRes.status).not.toBe(429);
-  expect(postRes.status).toBe(400);
+test("8. budgetHandler answers the window and the quote, and asking it spends nothing", async () => {
+  const res = await budgetHandler(new Request("http://localhost/api/imaging/budget?images=16"));
+  expect(res.status).toBe(200);
+  const json = (await res.json()) as Record<string, unknown>;
+  for (const k of ["ceilingUsd", "spentUsd", "remainingUsd", "windowMs", "perImageUsd", "quote"]) expect(json).toHaveProperty(k);
+  const before = json["spentUsd"];
+  for (let i = 0; i < 40; i++) expect((await budgetHandler(new Request("http://localhost/api/imaging/budget"))).status).toBe(200);
+  const after = (await (await budgetHandler(new Request("http://localhost/api/imaging/budget"))).json()) as Record<string, unknown>;
+  expect(after["spentUsd"]).toBe(before);
 });

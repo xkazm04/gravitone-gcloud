@@ -240,8 +240,17 @@ assertFingerprintsAtSource(SERVER_MODULE_FINGERPRINTS, "server-module");
 assertFingerprintsAtSource(TEST_ONLY_FINGERPRINTS, "test-only");
 
 /** Something we KNOW is in browser output. If this is not found, the gate is not
- *  reading the browser bundle and every clean verdict below is manufactured. */
-const POSITIVE_CONTROL = "--gt-"; // the design tokens, published by GravitoneTokens
+ *  reading the browser bundle and every clean verdict below is manufactured.
+ *
+ *  It was "--gt-" (the v1 design tokens) until Phase 6 wave C, and that string was
+ *  only ever in a CHUNK because v1 client components spelled `var(--gt-*)` in their
+ *  class names - <GravitoneTokens> itself is a server component and ships in the
+ *  HTML, not in a chunk. With StudioFrame and the kit gone nothing guarantees it. The
+ *  control is now a sentence the (studio) shell's client root must carry to every
+ *  signed-in page; it is held at source like the fingerprints above, so a rewording
+ *  is a loud exit 2 rather than a control that silently stopped controlling. */
+const POSITIVE_CONTROL = "useShell outside the (studio) shell";
+assertFingerprintsAtSource([{ text: POSITIVE_CONTROL, from: "app/(studio)/_shell/Providers.tsx" }], "positive-control");
 
 if (!existsSync(STATIC))
   die(2, "COULD NOT RUN: there is no build to inspect.", [
@@ -328,8 +337,8 @@ for (const file of files) {
 if (!controlSeen)
   die(2, "COULD NOT RUN: the positive control was not found in any browser chunk.", [
     `looked for ${JSON.stringify(POSITIVE_CONTROL)} across ${files.length} file(s), ${bytes} bytes`,
-    "That string is published by components/ui/GravitoneTokens and must be in the",
-    "client bundle. Its absence means this gate is reading the wrong files, so a",
+    "That string is app/(studio)/_shell/Providers.tsx's, and the (studio) shell ships",
+    "it to every signed-in page. Its absence means this gate is reading the wrong files, so a",
     "clean result would be manufactured rather than earned. Do not treat this as a",
     "pass. If the tokens genuinely moved, update POSITIVE_CONTROL — deliberately.",
   ]);
@@ -341,8 +350,12 @@ if (!controlSeen)
 // tags, 2026-10-15). Polyfills are `nomodule` and skipped. COUNTED: gzip level 9 bytes
 // (transfer), deterministic per Node zlib. Absent, stale or reshaped numbers exit 2, never
 // pass (page-load-pipeline/field-measured-load-budget: a byte gate must see the build it
-// judges; a new route enters with a ceiling). v1's root segments are REPORTED, not gated:
-// that debt retires at the Phase 6 cutover.
+// judges; a new route enters with a ceiling). The ROOT segments (app/layout.tsx: fonts,
+// Firebase's auth provider the landing and the shell's handoff both read, the announcer, the
+// dev harness) are REPORTED, not gated. Until Phase 6 wave C they were v1's root and the
+// debt this line promised would retire; the cutover slimmed them to what both worlds share
+// (no JobsProvider stream, no Almanac tokens, no unhandled-rejection bridge), so the number
+// is now the shared root's cost, still reported so a regression in it is visible.
 const STUDIO = "(studio)";
 const readJson = (at, what) => existsSync(at) ? JSON.parse(readFileSync(at, "utf8")) : die(2, `COULD NOT RUN: ${what} is missing (${at}).`, ["The per-route budget reads it; without it there is no number to judge, and that is not a pass."]);
 const gzBytes = new Map();
@@ -365,22 +378,22 @@ for (const [entry, route] of Object.entries(readJson(join(DIST, "app-path-routes
   if (!segs[`[project]/app/${STUDIO}/layout`])
     die(2, `COULD NOT RUN: ${route}'s client manifest names no ${STUDIO} layout entry.`, ["The manifest shape moved under this reader; a sum over it would be manufactured."]);
   const first = new Set(rootMain);
-  const v1 = new Set();
+  const root = new Set();
   for (const [seg, list] of Object.entries(segs))
     for (const f of list) {
       first.add(f);
-      if (!seg.startsWith(`[project]/app/${STUDIO}/`) && !rootMain.includes(f)) v1.add(f);
+      if (!seg.startsWith(`[project]/app/${STUDIO}/`) && !rootMain.includes(f)) root.add(f);
     }
-  routes.push({ route, bytes: sum(first), v1: sum(v1) });
+  routes.push({ route, bytes: sum(first), root: sum(root) });
 }
 if (!routes.length) die(2, `COULD NOT RUN: the build lists no ${STUDIO} page.`, ["/kit at least must exist; an empty walk is a moved manifest, not a smaller app."]);
 const budget = readJson(join(ROOT, "pipeline", "bundle-budget.json"), "pipeline/bundle-budget.json");
 if (typeof budget.routes !== "object" || typeof budget.slackPct !== "number") die(2, "COULD NOT RUN: pipeline/bundle-budget.json lacks `routes` or `slackPct`.");
 const over = [];
-for (const { route, bytes, v1 } of routes.sort((a, b) => a.route.localeCompare(b.route))) {
+for (const { route, bytes, root } of routes.sort((a, b) => a.route.localeCompare(b.route))) {
   const cap = budget.routes[route];
   const note = cap === undefined ? "NO BUDGET" : `budget ${cap} (${bytes - cap >= 0 ? "+" : ""}${bytes - cap})`;
-  console.log(`first-load ${route}: ${bytes} B gzip, ${note}; of which v1 root segments ${v1} B (reported, retires at Phase 6)`);
+  console.log(`first-load ${route}: ${bytes} B gzip, ${note}; of which root-layout segments ${root} B (reported)`);
   if (cap === undefined) over.push(`${route} has no entry in pipeline/bundle-budget.json (measured ${bytes} B); a new route enters with a ceiling`);
   else if (bytes > cap * (1 + budget.slackPct / 100)) over.push(`${route}: ${bytes} B is over its ${cap} B budget by more than ${budget.slackPct}%`);
   else if (bytes < cap * (1 - budget.slackPct / 100)) console.log(`  ${route} sits ${cap - bytes} B under its budget: lower the entry to lock the win in.`);

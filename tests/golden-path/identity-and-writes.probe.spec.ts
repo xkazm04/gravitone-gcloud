@@ -171,24 +171,20 @@ test("keys: EVERY module that writes localStorage is on one of the owner's two l
     // naming their keys for the same reason.
     "lib/jobs.tsx": { evicted: "gravitone.jobs.v1" },
     "lib/useRemembered.ts": { evicted: "gravitone.ui.v1" },
-    // The pipeline board's LIVE/STUB arm: evicted, not exempt, so an arm left
-    // on LIVE cannot be inherited by the next account on the same browser.
-    // (Moved out of PipelineTab.tsx into pipeline/arm.ts by cb01fd4.)
-    "app/foundry/pipeline/arm.ts": { evicted: "gravitone.pipeline.arm", symbol: "PIPELINE_ARM_KEY" },
-    // Which fixture bundle this browser holds. Evicted, and through the owner's
-    // binding rather than a literal of its own: the key it replaced was
-    // assembled from an imported constant, and a key assembled at runtime is one
-    // `evictIdentity` cannot name.
-    "lib/fixtures/seedBrowser.ts": { evicted: "gravitone.fixtures.seed", symbol: "FIXTURE_SEED_KEY" },
+    // The pipeline board's LIVE/STUB arm (app/foundry/pipeline/arm.ts) retired with v1's /foundry
+    // in Phase 6 wave C; the eviction keeps naming PIPELINE_ARM_KEY so a browser that still holds
+    // an arm left on LIVE loses it with the account.
+    // The fixture-bundle seed (lib/fixtures/seedBrowser.ts) retired with v1's IndexedDB seed in
+    // Phase 6 wave C; its key stays evicted for the same reason.
     // Which performance tier the landing's cosmos settled on for THIS machine —
     // a measurement of the GPU in front of it, true of the device and not of
     // whoever is signed in. The one exempt key, and the header above says the
     // list being empty was itself once the accident, so it is named here with
     // its reason rather than left to look like an oversight.
     "app/_landing/cosmos/engine/perf.ts": { exempt: "gravitone.cosmos-tier.v1" },
-    // Recent palette destinations: per account and evicted with the rest, so a
-    // stranger on the same browser does not inherit where the last one went.
-    "components/ui/shell/palette.ts": { evicted: `gravitone.palette.recents.${uid}` },
+    // The shell palette (components/ui/shell/palette.ts, its per-account recent destinations)
+    // retired with StudioFrame in Phase 6 wave C; the eviction keeps naming its key so a browser
+    // that still holds one loses it with the account.
   };
 
   const writers = localStorageWriters();

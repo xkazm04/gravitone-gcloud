@@ -8,7 +8,7 @@
 //     launch is one Run row and one DRY job under the article producer; a strips launch names
 //     its run in the receipt and launches under that same name, its manifest naming the job;
 //     an audio launch from a sentence is a dry Suno job drafted on the confirm (L52), an sfx one is
-//     priced and refused; an image launch
+//     one dry sfx Run of the receipt's clips (L72); an image launch
 //     (L45) is a forge sweep - priced statically, run.json prepared by forge.py on the confirm, one
 //     dry gpu.local job the Python worker claims;
 //   · a live receipt is refused where only dry may run (GRAVITONE_DRY_ONLY=1);
@@ -245,14 +245,21 @@ describe("the real produce port", () => {
     expect((await v(port.launchRun({ input, token: stale.fresh.token }, who))).kind).toBe("launched");
   });
 
-  it("prices an sfx launch and refuses it at confirm: no sfx producer is bound", async () => {
+  it("launches an sfx sentence as ONE dry sfx Run of the receipt's clips; a stale token launches nothing (L72)", async () => {
     const before = jobs().length;
     const input: ComposerInput = { lane: "audio", text: "Whoosh.", kind: "sfx" };
     const r: Receipt = await v(port.composerReceipt({ input }, who));
-    const no = await refusal(port.launchRun({ input, token: r.token }, who));
-    expect(no.code).toBe("unavailable");
-    expect(no.message).toMatch(/sfx producer/);
+    const stale = await v(port.launchRun({ input, token: "0".repeat(16) }, who));
+    expect(stale.kind).toBe("stale");
     expect(jobs()).toHaveLength(before);
+    const l = await v(port.launchRun({ input, token: r.token }, who));
+    if (l.kind !== "launched") throw new Error(`expected launched, got ${l.kind}`);
+    // The run id carries the receipt's clip count (the catalog's track/sfx default, 2): the
+    // producer's plan reads the job alone (lib/sound/sfxJob.ts clipsOf).
+    expect(l.runId).toMatch(/^sfx\.floor-t\d+\.2$/);
+    const job = jobs().find((x) => x.id === l.jobId);
+    expect(job).toMatchObject({ producer: "sfx", lane: "cloud.elevenlabs", state: "queued", mode: { kind: "dry" } });
+    expect(jobs()).toHaveLength(before + 1);
   });
 
   it("launches an image sweep as a forge run: priced without writing, prepared on the confirm, one dry gpu.local job", async () => {

@@ -28,6 +28,7 @@ import { mediaFactsBound } from "./media-facts.ts";
 import { styleJobProducer } from "./style.ts";
 import { sunoDriver } from "../sound/suno/drivers.ts";
 import { sfxProducer } from "../sound/sfxJob.ts";
+import { huntProducer } from "../sound/huntRender.ts";
 
 // THE PRODUCERS THIS CHECKOUT CAN RUN (Phase 4, plan §4). One list, read by every
 // process that drives a job - the worker (workers/runner.mts), a producer's CLI, a
@@ -112,6 +113,9 @@ export const BOUND: readonly Bound[] = [
   { name: "style", producer: styleJobProducer() },
   // The desk's effect batch (Phase 6, L66): one run of N clips through the metered call.
   ...lanesOf("sfx").map((lane): Bound => ({ name: "sfx", producer: sfxProducer(lane) })),
+  // A hunt's picked leaves (Phase 6, L72): one Run, a step per leaf, on ElevenLabs only - the leaf's
+  // engine is the map's, never a router's choice, so it is bound on that one lane.
+  { name: "hunt", producer: huntProducer() },
   ...stepsBound(),
 ];
 

@@ -1,6 +1,7 @@
 // LANE — A BLOB URL HAS AN OWNER, AND THE OWNER RELEASES IT (dynamic).
 //
-// lib/musicClient.ts's `blobUrl` carries the contract in its own docstring:
+// lib/musicClient.ts's `blobUrl` carried the contract in its own docstring (the module retired with
+// the Sound lab in Phase 6 wave C; the ratchet stays for the next object-URL minter):
 // "Caller revokes when done." Measured 2026-08-27: `URL.revokeObjectURL`
 // appeared NOWHERE in this repository. A written contract with zero adherence is
 // worse than an unwritten one, because the reader of the docstring believes it.
@@ -106,12 +107,13 @@ test("every caller that MINTS an object URL releases at least as many as it mint
 
   // The probe is pointless if the matcher cannot see a mint. It used to prove that by requiring a
   // CALLER, which held while the v1 studio (ScoreSpotting, the playground) minted take urls; that
-  // studio retired in Phase 4 (L43) and the factory has no caller left, so a population of zero is
-  // now the truth, not a broken matcher. The positive control is the factory file itself:
-  // lib/musicClient.ts's `audioUrl` mints through `blobUrl(`, so the matcher must see that call there.
-  // If the factory moves or is renamed, this fails and the matcher is pointed at the new name.
-  const factory = code(readFileSync(join(process.cwd(), "lib/musicClient.ts"), "utf8"));
-  expect(urlSites(factory).mints, "the matcher sees no mint even in the factory - it is broken").toBeGreaterThan(0);
+  // studio retired in Phase 4 (L43), and the factory itself (lib/musicClient.ts `blobUrl` /
+  // `audioUrl`) went with the Sound lab in Phase 6 wave C, its last reader. A population of zero
+  // is the truth now, so the positive control is the factory's own shape, run through the same
+  // comment stripper and counter the walk uses: a revived factory that a caller mints through
+  // must still be seen.
+  const factory = code(["// blobUrl( in prose is not a call", "export const audioUrl = (a) => blobUrl(a.bytes, a.mime);"].join("\n"));
+  expect(urlSites(factory).mints, "the matcher sees no mint even in the factory's shape - it is broken").toBe(1);
 
   const unexplained = leaking.filter((f) => !KNOWN_LEAKS[f]);
   expect(unexplained, "these mint an object URL and never revoke it").toEqual([]);

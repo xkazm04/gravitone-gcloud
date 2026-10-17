@@ -1,4 +1,4 @@
-// LANE — THE MUSIC-VIDEO QUEUE (lib/sound/mv, app/api/sound/mv/*), offline,
+// LANE — THE MUSIC-VIDEO QUEUE (lib/sound/mv, the kept mv file route), offline,
 // on FAKE engines and a temp store.
 //
 // Since Phase 4 (L31) a queued track is a KERNEL JOB on box.render
@@ -10,8 +10,11 @@
 // vendor, no credits. One case drives the still through the REAL router with
 // LEONARDO_STUDIO_DRIVER=fake, the studio package's own stand-in.
 // SOUND_STORE_DIR, SOUND_LEDGER_PATH, GRAVITONE_STORE_PATH and the publish
-// roots point at a fresh temp dir per test. What is pinned, through the real
-// route handlers wherever a route exists:
+// roots point at a fresh temp dir per test. What is pinned, through the REAL
+// lib functions the retired /api/sound/mv/* JSON routes called (Phase 6 L70: they
+// went with the v1 Pipeline canvas; a refusal's status is read off the store's own
+// error, lib/sound/http.ts toErrorResponse, as those routes did), and the kept
+// file route:
 //
 //   · the switch: an enqueue never launches; Start launches and the drive runs
 //     FIFO, one job at a time, through every phase, persisting the phase while
@@ -34,8 +37,10 @@
 //     and copies <track>.mp4 + <track> - youtube.txt beside each source; a
 //     failed job retried from its failed step;
 //   · import: N added, a re-import adds 0, a missing dir is a 400; Drop
-//     deletes the files and keeps the record; Calendar creates a slot with the
-//     metadata; the file route answers a range with 206.
+//     deletes the files and keeps the record; the file route answers a range
+//     with 206 and takes no `k=`. (v1's Send-to-Calendar, lib/sound/mv/calendar.ts
+//     over lib/publish's JSON schedule, retired with its route: a slot is the
+//     kernel's now, made by the Calendar's schedule door - its own tests.)
 
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -47,7 +52,6 @@ import { test, expect } from "@playwright/test";
 import { ACCESS_SECRET_VAR, __resetRateLimit } from "@/lib/apiAuth";
 import { __resetBudget } from "@/lib/imaging/budget";
 import { FAKE_LEONARDO_STUDIO, resetFakeLeonardoStudio } from "@/lib/imaging/providers/leonardoStudio";
-import { readSchedule } from "@/lib/publish/store";
 import { snippetProblem } from "@/lib/publish/youtube";
 import { chaptersOf, fitMetadata } from "@/lib/sound/mv/metadata";
 import { CREDITS_PER_STILL, planBatch, runBatch } from "@/lib/sound/mv/batch";
@@ -59,12 +63,10 @@ import { cleanTitle, readMv, trackTitle, type MvFile } from "@/lib/sound/mv/stor
 import { NO_TEXT_CLAUSE, parseTreatment, treatmentInput } from "@/lib/sound/mv/treatment";
 import type { MvAnalysis, MvImportResult, MvJob, MvSnapshot } from "@/lib/sound/mv/types";
 import type { TextRequest, TextResult } from "@/lib/text/types";
-import { GET as mvGET, POST as mvPOST } from "@/app/api/sound/mv/route";
-import { POST as runPOST } from "@/app/api/sound/mv/run/route";
-import { POST as importPOST } from "@/app/api/sound/mv/import/route";
-import { DELETE as jobDELETE, PATCH as jobPATCH, POST as jobPOST } from "@/app/api/sound/mv/jobs/[id]/route";
 import { GET as fileGET } from "@/app/api/sound/mv/jobs/[id]/file/route";
-import { POST as calendarPOST } from "@/app/api/sound/mv/jobs/[id]/calendar/route";
+import { toErrorResponse } from "@/lib/sound/http";
+import { importFolder, parseImportDir } from "@/lib/sound/mv/importFolder";
+import { deleteMv, enqueueMv, mvSnapshot, parseEnqueue, parsePatch, parseRegenerate, patchMv, regenerateMv, setMvQueue } from "@/lib/sound/mv/queue";
 
 import { keepEnv } from "./_helpers";
 
@@ -222,6 +224,40 @@ function rq(pathname: string, method = "GET", json?: unknown, extra: Record<stri
   return new Request(`http://localhost${pathname}`, { method, headers, body: json !== undefined ? JSON.stringify(json) : undefined });
 }
 const read = async <T>(res: Response): Promise<T> => (await res.json()) as T;
+
+/** One lib call answered as the retired route answered it (toErrorResponse for a refusal). */
+async function answer(status: number, run: () => Promise<unknown>): Promise<Response> {
+  try {
+    return Response.json(await run(), { status });
+  } catch (e) {
+    return toErrorResponse(e);
+  }
+}
+const bodyOf = async (req: Request): Promise<unknown> => req.json().catch(() => null);
+const idOf = async (c: { params: Promise<{ id: string }> }) => (await c.params).id;
+const mvGET = (_req: Request) => answer(200, () => mvSnapshot());
+const mvPOST = async (req: Request) => {
+  const b = await bodyOf(req);
+  return answer(201, async () => ({ jobs: await enqueueMv(parseEnqueue(b)) }));
+};
+/** The Settled column's Start and Stop, without a receipt token: the switch alone. */
+const runPOST = async (req: Request) => {
+  const b = (await bodyOf(req)) as { running?: unknown } | null;
+  return answer(200, async () => ({ queue: await setMvQueue(b?.running === true) }));
+};
+const importPOST = async (req: Request) => {
+  const b = await bodyOf(req);
+  return answer(200, () => importFolder(parseImportDir(b)));
+};
+const jobPOST = async (req: Request, c: { params: Promise<{ id: string }> }) => {
+  const b = await bodyOf(req);
+  return answer(200, async () => ({ job: await regenerateMv(await idOf(c), parseRegenerate(b)) }));
+};
+const jobPATCH = async (req: Request, c: { params: Promise<{ id: string }> }) => {
+  const b = await bodyOf(req);
+  return answer(200, async () => ({ job: await patchMv(await idOf(c), parsePatch(b)) }));
+};
+const jobDELETE = async (_req: Request, c: { params: Promise<{ id: string }> }) => answer(200, async () => (await deleteMv(await idOf(c)), { ok: true }));
 const sha = (abs: string) => createHash("sha256").update(readFileSync(abs)).digest("hex");
 const abs = (rel: string) => path.join(process.env.SOUND_STORE_DIR!, rel);
 
@@ -556,7 +592,7 @@ test("metadata: trimmed to snippetProblem by code, chapters only from >= 3 secti
 
 /* ── 6. import, verdict, calendar, file route, delete ─────────────────────── */
 
-test("import adds N, a re-import adds 0, a missing dir is a 400; drop deletes files and keeps the record; calendar makes a slot; the file route serves a range", async () => {
+test("import adds N, a re-import adds 0, a missing dir is a 400; drop deletes files and keeps the record; the file route serves a range", async () => {
   const dir = audioDir(["01_Walls Unwind (main).mp3", "01_Walls Unwind (instrumental).mp3", "notes.txt", "06_One Long Note.wav"]);
   const first = await importDir(dir);
   expect([first.added, first.skipped, first.takeIds.length]).toEqual([3, 0, 3]);
@@ -572,11 +608,6 @@ test("import adds N, a re-import adds 0, a missing dir is a 400; drop deletes fi
   expect(takes.takes.find((t) => t.id === first.takeIds[0])).toMatchObject({ label: "Walls Unwind (instrumental)", title: "Walls Unwind (instrumental)", verdict: "kept", stage: "finalized", origin: "import" });
   // the main and the instrumental are two names, not one twice
   expect(takes.takes.filter((t) => first.takeIds.includes(t.id)).map((t) => t.label).sort()).toEqual(["One Long Note", "Walls Unwind", "Walls Unwind (instrumental)"]);
-  // a managed platform refuses after the body is read
-  process.env.LOCAL_BINARIES = "off";
-  const forbidden = await importPOST(rq("/api/sound/mv/import", "POST", { dir }));
-  expect([forbidden.status, (await read<{ code: string }>(forbidden)).code]).toEqual([503, "local-binaries-forbidden"]);
-  delete process.env.LOCAL_BINARIES;
 
   const [job] = await enqueueTakes([first.takeIds[0]], ["01_Walls Unwind (main)"]);
   await start();
@@ -591,23 +622,11 @@ test("import adds N, a re-import adds 0, a missing dir is a 400; drop deletes fi
   expect(part.status).toBe(206);
   expect(part.headers.get("content-range")).toBe(`bytes 0-4/${size}`);
   expect(await part.text()).toBe("video");
-  // the access key as k= (a <video src> cannot send a header)
-  const byKey = await fileGET(new Request(`http://localhost/api/sound/mv/jobs/${job.id}/file?kind=still&k=${SECRET}`), ctx(job.id));
-  expect([byKey.status, byKey.headers.get("content-type")]).toEqual([200, "image/jpeg"]);
+  // the still, behind the header; v1's `?k=` is no credential since L70 (the studio's <video> rides its cookie)
+  const still = await fileGET(rq(`/api/sound/mv/jobs/${job.id}/file?kind=still`), ctx(job.id));
+  expect([still.status, still.headers.get("content-type")]).toEqual([200, "image/jpeg"]);
+  expect((await fileGET(new Request(`http://localhost/api/sound/mv/jobs/${job.id}/file?kind=still&k=${SECRET}`), ctx(job.id))).status).toBe(401);
   expect((await fileGET(rq(`/api/sound/mv/jobs/${job.id}/file?kind=lyrics`), ctx(job.id))).status).toBe(400);
-
-  // calendar: a slot carrying the metadata, the export copied with its sidecar
-  const publishAt = new Date(Date.now() + 86_400_000).toISOString();
-  const cal = await calendarPOST(rq(`/api/sound/mv/jobs/${job.id}/calendar`, "POST", { publishAt }), ctx(job.id));
-  expect(cal.status).toBe(200);
-  const { slotId, job: sent } = await read<{ slotId: string; job: MvJob }>(cal);
-  expect(sent.slotId).toBe(slotId);
-  const slot = (await readSchedule()).slots.find((s) => s.id === slotId)!;
-  expect(slot).toMatchObject({ projectId: "audio-mv", exportId: `mv-${job.id}`, channelId: "youtube", status: "scheduled", title: done.metadata!.title, description: done.metadata!.description, tags: done.metadata!.tags });
-  expect(sha(path.join(process.env.PUBLISH_EXPORTS_DIR!, `mv-${job.id}.mp4`))).toBe(sha(abs(done.files.video!)));
-  expect(JSON.parse(readFileSync(path.join(process.env.PUBLISH_EXPORTS_DIR!, `mv-${job.id}.json`), "utf8"))).toEqual({ projectId: "audio-mv" });
-  // twice is a 409 before anything is copied
-  expect((await calendarPOST(rq(`/api/sound/mv/jobs/${job.id}/calendar`, "POST", { publishAt }), ctx(job.id))).status).toBe(409);
 
   // drop: the render files go, the record stays
   const dropped = await jobPATCH(rq(`/api/sound/mv/jobs/${job.id}`, "PATCH", { verdict: "drop" }), ctx(job.id));

@@ -1,4 +1,4 @@
-// LANE — ADS FINISH RENDER (lib/adRender.ts, /api/ads/render).
+// LANE — ADS FINISH RENDER (lib/adRender.ts; the v1 /api/ads/render routes retired in Phase 6 L70).
 //
 // Four things, cheapest first:
 //   · the request is refused at the field that is wrong — a clip id the store
@@ -7,7 +7,9 @@
 //   · the filter graph is a pure function and is held to its arithmetic — each
 //     super enabled over exactly its shot, the concat in shot order with the
 //     end-card last, loudnorm present only when there is a music bed;
-//   · the route refuses with a readable reason when the posture forbids spawning;
+//   · a render record is read by its minted id only (the route's posture refusal,
+//     LOCAL_BINARIES=off answered 503 before queueing, was the route's own check
+//     and retired with it; the cut producer owns the posture now);
 //   · and, when ffmpeg is on PATH, a REAL render from `testsrc` clips: pixel size
 //     per aspect, duration = Σ trims + hold, an AAC stream only with music, and
 //     the end-card in the last second (a frame is extracted and its brightness
@@ -26,24 +28,23 @@ import { test, expect } from "@playwright/test";
 
 import { keepEnv } from "./_helpers";
 import {
+  AD_EXPORT_ID_RE,
   AD_RENDER_PX,
   AdRenderError,
   REAL_AD_RENDER_DEPS,
   buildAdRenderGraph,
   parseAdRenderRequest,
   parseEbur128,
+  readAdRenderRecord,
   resolveAdInputs,
   startAdRender,
   type AdRenderDeps,
 } from "@/lib/adRender";
-import { ACCESS_SECRET_VAR, __resetRateLimit } from "@/lib/apiAuth";
-import { POST as renderPOST } from "@/app/api/ads/render/route";
 import { adFinishChecks, adRenderRequest, seedFinish, shotRows } from "@/lib/cut/ads/finish";
-import { GET as recordGET } from "@/app/api/ads/render/[id]/route";
 import type { AdRenderRequest } from "@/lib/ads/types";
 import type { Aspect } from "@/lib/imaging/types";
 
-keepEnv(["CLIP_STORE_DIR", "AD_EXPORT_DIR", "LOCAL_BINARIES", ACCESS_SECRET_VAR, "NEXT_PUBLIC_DEV_AUTH"]);
+keepEnv(["CLIP_STORE_DIR", "AD_EXPORT_DIR", "LOCAL_BINARIES"]);
 
 const CLIP_A = "clip-probe-aaaa01";
 const CLIP_B = "clip-probe-bbbb02";
@@ -200,37 +201,15 @@ test("ebur128 summary parses to integrated loudness and true peak", () => {
   expect(parseEbur128("nothing here")).toBeNull();
 });
 
-/* ── 3. the route's posture refusal ────────────────────────────────────── */
+/* ── 3. the record is read by a minted id only ──────────────────────────── */
 
-test("route: LOCAL_BINARIES=off is refused with a readable reason, before anything is queued", async () => {
-  __resetRateLimit();
-  process.env[ACCESS_SECRET_VAR] = "probe-secret";
-  delete process.env.NEXT_PUBLIC_DEV_AUTH;
-  process.env.LOCAL_BINARIES = "off";
+test("record: one that does not exist reads as none; a malformed id is not an export id", async () => {
   process.env.AD_EXPORT_DIR = tmp("ad-exports-");
-  const res = await renderPOST(
-    new Request("http://localhost/api/ads/render", {
-      method: "POST",
-      headers: { "content-type": "application/json", authorization: "Bearer probe-secret", "x-forwarded-for": "10.9.0.1" },
-      body: JSON.stringify(body()),
-    }),
-  );
-  expect(res.status).toBe(503);
-  const b = (await res.json()) as { error: string; message: string };
-  expect(b.error).toBe("local-binaries-forbidden");
-  expect(b.message).toContain("LOCAL_BINARIES=off");
+  expect(AD_EXPORT_ID_RE.test("00000000-0000-4000-8000-000000000000")).toBe(true);
+  expect(await readAdRenderRecord("00000000-0000-4000-8000-000000000000")).toBeNull();
+  for (const bad of ["../../secrets", "..%2F..%2Fsecrets", ""]) expect(AD_EXPORT_ID_RE.test(bad), bad).toBe(false);
 });
 
-test("route: a record that does not exist is a 404, a malformed id a 400", async () => {
-  process.env[ACCESS_SECRET_VAR] = "probe-secret";
-  process.env.AD_EXPORT_DIR = tmp("ad-exports-");
-  const get = (id: string) =>
-    recordGET(new Request(`http://localhost/api/ads/render/${id}`, { headers: { authorization: "Bearer probe-secret" } }), {
-      params: Promise.resolve({ id }),
-    });
-  expect((await get("00000000-0000-4000-8000-000000000000")).status).toBe(404);
-  expect((await get("..%2F..%2Fsecrets")).status).toBe(400);
-});
 
 /* ── 4. a real render, when ffmpeg is here ─────────────────────────────── */
 

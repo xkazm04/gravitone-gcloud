@@ -38,12 +38,11 @@ import { ACCESS_SECRET_VAR, __resetRateLimit } from "@/lib/apiAuth";
 import { __resetMusicBudget } from "@/lib/music/budget";
 import { readLedger } from "@/lib/sound/store";
 import { createTake } from "@/lib/sound/takes";
-import { takeFileUrl } from "@/lib/sound/client";
 import type { SoundTake } from "@/lib/sound/types";
 import type { CuePicture } from "@/lib/music/types";
-import { GET as takesGET } from "@/app/api/sound/takes/route";
-import { PATCH as takePATCH } from "@/app/api/sound/takes/[id]/route";
-import { POST as generatePOST } from "@/app/api/sound/generate/route";
+import { generateTake, parseGenerateRequest } from "@/lib/sound/generate";
+import { toErrorResponse } from "@/lib/sound/http";
+import { listTakes, parseTakeFilter, parseTakePatch, patchTake } from "@/lib/sound/takes";
 import { deriveTimeline } from "@/lib/cut/deriveTimeline";
 import { emptyClip, type Frame } from "@/lib/frames/frames";
 import type { ScoreSpot } from "@/lib/score/spots";
@@ -122,6 +121,27 @@ test.afterEach(() => {
 });
 
 /* ── fixtures ─────────────────────────────────────────────────────────────── */
+
+/** The lib calls the retired /api/sound/{generate,takes} routes made (Phase 6 L70), answered
+ *  as those routes answered them: the value, or the store's own status (toErrorResponse). */
+async function answer(status: number, run: () => Promise<unknown>): Promise<Response> {
+  try {
+    return Response.json(await run(), { status });
+  } catch (e) {
+    return toErrorResponse(e);
+  }
+}
+const generatePOST = async (req: Request) => {
+  const raw: unknown = await req.json();
+  return answer(201, async () => ({ take: await generateTake(parseGenerateRequest(raw)) }));
+};
+const takesGET = (req: Request) => answer(200, async () => ({ takes: await listTakes(parseTakeFilter(new URL(req.url).searchParams)) }));
+const takePATCH = async (req: Request, c: { params: Promise<{ id: string }> }) => {
+  const raw: unknown = await req.json();
+  return answer(200, async () => ({ take: await patchTake((await c.params).id, parseTakePatch(raw)) }));
+};
+/** The take file route's address, as the cut timeline builds it (no `k=` in a bundle with no public secret). */
+const takeFileUrl = (id: string) => `/api/sound/takes/${encodeURIComponent(id)}/file`;
 
 let ipN = 0;
 function rq(pathname: string, init: { method?: string; json?: unknown } = {}): Request {

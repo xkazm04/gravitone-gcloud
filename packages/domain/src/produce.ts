@@ -323,7 +323,12 @@ export type ProducerRunInput =
   /** A forge plan (its file under pipeline/foundry/plans, by name). */
   | { readonly producer: "forge"; readonly plan: string }
   /** A Dojo cycle (its directory under foundry-out/training, by id). */
-  | { readonly producer: "dojo"; readonly cycle: string };
+  | { readonly producer: "dojo"; readonly cycle: string }
+  /**
+   * A hunt's render: the hunt (its id in the sound store), its kind, and the leaves the receipt
+   * priced and the token confirmed - by id, never their prompts (those stay on the hunt's map).
+   */
+  | { readonly producer: "hunt"; readonly hunt: string; readonly kind: "music" | "sfx"; readonly leaves: readonly string[] };
 
 export type NativeProducer = ProducerRunInput["producer"];
 

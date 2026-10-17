@@ -114,7 +114,7 @@ describe("forge projection", () => {
       ]),
       ctx("2026-10-15T12:00:00.000Z"),
     );
-    expect(p.weir).toEqual([{ source: "forge", id: "2026-08-26-sweep-01", title: "forge 2026-08-26-sweep-01", media: "image", kind: "cull", since: "2026-08-27T07:13:00.000Z", decided: 2, pending: 0, href: "/foundry" }]);
+    expect(p.weir).toEqual([{ source: "forge", id: "2026-08-26-sweep-01", title: "forge 2026-08-26-sweep-01", media: "image", kind: "cull", since: "2026-08-27T07:13:00.000Z", decided: 2, pending: 0, href: "/floor?lane=image" }]);
   });
 
   it("an instant with no zone is never read as local time: it is observed, with the raw text kept", () => {

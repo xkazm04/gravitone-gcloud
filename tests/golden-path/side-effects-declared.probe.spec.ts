@@ -4,8 +4,9 @@
 // re-exports nobody uses (next.config.ts has the measurement: the kit barrel was
 // shipping the deck and `motion` to routes that draw neither). The price of that
 // declaration is that a module imported ONLY for what it does on import —
-// `import "@/lib/turns/kinds/poster"`, which registers a turn kind — is dropped
-// unless the list names it, and nothing fails: the registration just never runs.
+// `import "./globals.css"`, or a module that registers itself on import (the turn
+// kinds were, until their routes retired in Phase 6 L70) — is dropped unless the list
+// names it, and nothing fails: the side effect just never runs.
 //
 // So this walks every bare import under app/, components/ and lib/ and demands
 // each one resolve to a path the list covers. A new self-registering module is
@@ -75,8 +76,9 @@ test("every bare import of a repo module is covered by package.json sideEffects"
       if (target) bare.push({ file: relative(ROOT, file).replace(/\\/g, "/"), target });
     }
   }
-  // The walk found the imports it exists for. Zero would pass everything below.
-  expect(bare.some((b) => b.target.startsWith("lib/turns/kinds/")), "found no bare import of a turn kind").toBe(true);
+  // The walk found the imports it exists for. Zero would pass everything below. Since the
+  // turn routes retired (Phase 6 L70) no .ts module is imported bare; the root stylesheet is.
+  expect(bare.some((b) => b.target === "app/globals.css"), "found no bare import of the root stylesheet").toBe(true);
 
   const uncovered = bare.filter((b) => !globs.some((re) => re.test(b.target)));
   expect(

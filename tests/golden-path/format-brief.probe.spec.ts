@@ -29,7 +29,7 @@
 //     label. The ONE exception is the rendered runtime, which is not a claim
 //     about craft — it is the number the director typed into the create dialog.
 //
-// THE ROUTE'S PROMPT IS READ, NOT ITS SOURCE. `app/api/frames/route.ts` used to
+// THE PROMPT IS READ, NOT ITS SOURCE. v1's `app/api/frames/route.ts` used to
 // build its prompt inline, so whether it sent the block could only be asserted
 // against the source text. Since AIO-B the prompt comes from
 // lib/turns/assemble/frames.ts, a pure function, and the last case below reads
@@ -47,7 +47,9 @@ const ROOT = resolve(__dirname, "../..");
 const read = (rel: string) => readFileSync(resolve(ROOT, rel), "utf8");
 
 const PROMPT_MD = "pipeline/FRAMES-SCENE-PROMPT.md";
-const ROUTE_TS = "app/api/frames/route.ts";
+// The frames producer: the one caller of the `frames` turn kind since the v1
+// route retired (Phase 6 L70).
+const CALLER_TS = "lib/producers/frames.ts";
 
 /** The labels knowledge/README.md's evidence contract defines, plus the two
  *  lower-case forms the library itself uses in prose ("measured", "n=3"). */
@@ -173,18 +175,18 @@ test("the prompt's `## The format` section sits between the motion rules and the
 });
 
 // BEHAVIOURAL NOW (AIO-B). The prompt is built by lib/turns/assemble/frames.ts,
-// a pure function the route calls, so the block can be read out of the very
-// prompt the route sends instead of out of its source. The one source-level
-// line left proves the route still asks that assembler.
-test("the frames route compiles the format block into THE RUN", () => {
+// a pure function the frames turn calls, so the block can be read out of the very
+// prompt the turn sends instead of out of its source. The one source-level
+// line left proves the frames producer still asks that assembler.
+test("the frames turn compiles the format block into THE RUN", () => {
   const body = { beats: [{ at: "0:00", kind: "hook", text: "x" }], style: "ink", template: "mid-educational-video", targetS: 300 };
   const { prompt } = assembleFrames(body, "SYSTEM");
   const block = compileFormatBrief(body.template, body.targetS);
   expect(prompt).toContain(block);
   // Ahead of the script: the kind of piece frames how every beat after it reads.
   expect(prompt.indexOf(block)).toBeLessThan(prompt.indexOf("## THE SCRIPT"));
-  // Since AIO-A stage 3 the route hands the run to the `frames` turn kind, and
-  // the kind is what asks the assembler: follow the call one hop.
-  expect(read(ROUTE_TS)).toMatch(/\bFRAMES_SPEC\b/);
+  // The producer hands the run to the `frames` turn kind, and the kind is what
+  // asks the assembler: follow the call one hop.
+  expect(read(CALLER_TS)).toMatch(/\bFRAMES_SPEC\.prepare\(/);
   expect(read("lib/turns/kinds/frames.ts")).toMatch(/assembleFrames\(body,/);
 });

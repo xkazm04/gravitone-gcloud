@@ -19,13 +19,13 @@ Defaults in force: vault `<repo>/.kit`, subdir `Kit`.
 
 **Corrected 2026-10-15 (Phase 1 wave 3).** This overlay pointed at v1's Almanac kit (`components/kit`,
 `/kit` as its specimen sheet, `WORLD_ALMANAC` in `components/ui/tokens.ts`). That kit retired: owner decision 5
-(`docs/next/migration-plan.md` §8) replaced it at `/kit` with the rebuild's design system. What is left of
-`components/kit` is only what a v1 route still imports, and it shrinks as each v1 surface is retired.
+(`docs/next/migration-plan.md` §8) replaced it at `/kit` with the rebuild's design system. `components/kit`
+was deleted in Phase 6 (2026-10-17).
 
 The world is now **the Watershed** (contest `foundry-next-design-r4`, winner A/1), extracted from the approved
 prototype `docs/next/prototype/app/` (its own kit page is `kit.html` + `kit.js` + `kit.css`). It is scoped:
-`[data-world="next"]` is the root element of the `(studio)` route group (`app/(studio)/layout.tsx`); v1 routes
-keep their worlds untouched until their phase cuts them over.
+`[data-world="next"]` is the root element of the `(studio)` route group (`app/(studio)/layout.tsx`); outside it
+only the landing (`app/page.tsx` + `app/_landing/`) keeps its own Tailwind world.
 
 - Tokens: `packages/ui/tokens/source.json` (primitives -> roles, admission in `tokens/ADMISSION.md`) ->
   `npm run tokens:gen` -> `packages/ui/src/tokens.css` + `tokens.ts`. Never edit the generated files.
@@ -63,7 +63,8 @@ Commit on the current branch; never push. `--no-verify` is denied.
 
 ## Visibility order
 
-/kit, then each rebuild route as its phase ships it: /ledger, /floor, /projects, /library
+/kit, then /floor (and its calendar, `?cal=1`), /board, /projects, /projects/runs, /library, /library/style/[id],
+/audio, /ledger
 
 ## Taste
 

@@ -31,6 +31,9 @@ const NATIVE: { readonly [P in NativeProducer]: Native } = {
   strips: { media: "video", recipe: (i) => ("producer" in i && i.producer === "strips" && i.lane === "stat" ? "strips/stat" : "strips/edu") },
   forge: { media: "image", recipe: () => "style/forge-sweep" },
   dojo: { media: "image", recipe: () => "style/dojo-cycle" },
+  // A hunt renders a track's work part one leaf at a time: music leaves are `track/music`'s, effect
+  // leaves `track/sfx`'s (the composer's two audio recipes, COMPOSER_RECIPE.audio).
+  hunt: { media: "audio", recipe: (i) => ("producer" in i && i.producer === "hunt" && i.kind === "sfx" ? "track/sfx" : "track/music") },
 };
 
 /** The kind of a recipe's work part: the native recipe's own, or (album-video) the producer's. */

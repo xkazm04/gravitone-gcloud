@@ -160,7 +160,7 @@ grepped for):
 | --- | --- |
 | Scene/frame prompt rules | `pipeline/FRAMES-SCENE-PROMPT.md` |
 | Brief direction lines | `lib/formatBrief.ts` (`direction[]`) |
-| Shot prompt assembly | `app/_phases/frames/shotPrompt.ts` |
+| Shot prompt assembly | `lib/frames/shotPrompt.ts` |
 | Style extraction prompts | `lib/foundry/extract/prompts.ts` |
 | Music plan briefs | `lib/music/plan.ts` |
 

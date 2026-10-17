@@ -2,7 +2,7 @@
 name: prototype
 memory: none
 category: Development
-description: Iteratively prototype a Gravitone Studio surface through directional variants behind a tab switcher, then consolidate and refactor the winner. Grounded in the Obsidian design language (components/ui/tokens.ts) and the mocked fixture seam. Use when the user wants to improve a component they consider a pillar of the app (visual appeal, creativity, UX clarity).
+description: Iteratively prototype a Gravitone Studio surface through directional variants behind a tab switcher, then consolidate and refactor the winner. Grounded in the Watershed design system (@gt/ui; tokens in packages/ui/tokens/source.json) and the fixture side of each route's _port. Use when the user wants to improve a component they consider a pillar of the app (visual appeal, creativity, UX clarity).
 argument-hint: "[component path]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
 ---
@@ -62,7 +62,7 @@ Every CLI session sharing this checkout must:
 
 The skill takes no arguments. When invoked, immediately ask the user **one short question** and wait for their reply before doing anything else:
 
-> "Which component should I prototype on? Paste the path (e.g. `app/_phases/motion/MotionShotLab.tsx`)."
+> "Which component should I prototype on? Paste the path (e.g. `packages/ui/src/components/floor/MonthCalendar.tsx` or `app/(studio)/library/_library/Library.tsx`)."
 
 Do not attempt to guess the file from conversation context unless the user has already named a specific path in the same turn. If their reply isn't a concrete path (e.g. they describe the component by purpose), ask a clarifying follow-up rather than guessing — picking the wrong file wastes whole rounds of work.
 
@@ -117,46 +117,40 @@ Do these four things, in order, every time:
    variant that ignores an existing PATTERNS.md is a round wasted — and if there is no entry for the
    step, say so in the round summary, because that gap is why prototypes come out shallow.
 
-1. **Read the shared primitives before building ANY widget.** In this repo they are
-   `components/ui/Primitives.tsx` (`Eyebrow`, `Panel`, `Button`, `Waveform`, `Wordmark`, and the
-   exported `EYEBROW_CLASS`), `components/ui/Equalizer.tsx` (`EqBars` + `usePauseOffscreen`), and
-   `components/ui/StudioFrame.tsx` (the shell). The catalog is small enough to read in one pass —
-   **so read it, and do not hand-roll a panel, pill, button or bar field that already exists.** The
-   repo is young: if a variant genuinely needs a widget that does not exist (a select, a slider, a
-   modal), build it *as a new primitive in `components/ui/`* with the tokens, and say in the round
-   summary that you added it. A raw `<select>` renders OS-styled options against a near-black studio
-   and will read as broken — never ship one into a variant.
+1. **Read the shared components before building ANY widget.** In this repo they are `@gt/ui`:
+   `packages/ui/src/components/<dir>/<File>.tsx` + a co-located `*.module.css`, catalogued in
+   `packages/ui/src/components/INVENTORY.md` and shown in every state at `/kit`. The shell is
+   `app/(studio)/_shell/` (sections in `nav.ts` `SECTIONS`). **Read the inventory, and do not
+   hand-roll a panel, chip, button, field or glyph that already exists** (`button/`, `chip/`,
+   `panel/`, `field/` with its `Select`, `glyph/`, `tally/`, `hint/` ...). If a variant genuinely
+   needs a component that does not exist, build it *as a new `@gt/ui` component in
+   `packages/ui/src/components/<dir>/`* over token variables, and say in the round summary that you
+   added it. A raw `<select>` renders OS-styled options against a near-black studio and will read as
+   broken — never ship one into a variant.
 
-2. **Read the design system.** `README.md § The design language` is the map;
-   `components/ui/tokens.ts` is the territory and the **single source of truth** — it is the only
-   file in this repo allowed to contain a colour literal. Everything else consumes the `--gt-*`
-   custom properties it publishes (`--gt-ink`, `--gt-accent-cyan/violet/emerald`, `--gt-surface-*`,
-   `--gt-hairline`, `--gt-ease`) or its exported TS constants (`SURFACE`, `HAIRLINE`, `TEXT`,
-   `EASE`). The composed classes live in `app/globals.css`: `.aurora`, `.grain`, `.glass-panel`,
-   `.text-aurora`, `.cta-glow`, `.eq-bar`, `.scroll-y`. Three type families, no others:
-   `font-instrument` (display serif), `font-hanken` (body), `font-jetbrains` (mono labels, uppercase,
-   tracked).
+2. **Read the design system.** `packages/ui/tokens/source.json` is the **single source of truth**
+   (primitives → roles; each admitted role and what it measured in `packages/ui/tokens/ADMISSION.md`).
+   `npm run tokens:gen` generates `packages/ui/src/tokens.css` + `tokens.ts`, which are never
+   hand-edited. A module consumes `var(--x)` roles only: the `ink` grounds, `text`/`muted`/`faint`,
+   the `hair` lines, the signal hues (cyan, amber, emerald, rose — each one state), `--ease`. Two
+   type families, no others: `--sans` (Inter) and `--mono` (JetBrains Mono).
 
    **Token compliance is a disqualification gate, not a style preference.** Before presenting a round,
-   self-audit every variant: grep your new files for hex literals, `rgb(`/`rgba(`, and raw palette
-   classes used as accents. Tailwind's cyan/violet/emerald scales appear in existing code as the
-   *rendered* form of the accents — matching that is fine; inventing a fourth accent hue is not. A
-   variant that fails the audit does not go in front of the user. They should only ever be choosing
-   between *directions*, never spending a round on "use the tokens".
+   run `npm run tokens:check` and grep your new files for hex literals, `rgb(`/`rgba(` and raw px. A
+   variant that fails does not go in front of the user. They should only ever be choosing between
+   *directions*, never spending a round on "use the tokens".
 
 3. **Find one or two sibling surfaces in the same repo that exemplify the quality bar.** Every
    surface here is already a prototype-round winner, so the bar is visible in-tree. Strong references:
-   `app/_library/LibraryShelves.tsx` (the densest surface — captioned assets, filed and traceable),
-   `app/_phases/motion/MotionShotLab.tsx` (state-per-item done honestly: on film / rejected / rendering /
-   blocked) and `app/_phases/cut/CutTimeline.tsx` (a timeline that shows its own gaps). **If the user
-   names inspiration folders, treat that as authoritative** — including surfaces in the parent
-   project `../arm/gravitone/web`, which is where this design language was built.
+   `app/(studio)/library/` over `@gt/ui`'s `library/` (the densest surface — every item filed with its
+   lineage), the Floor's `floor/` lanes and piles (state per item, shown honestly) and `cull/MatrixCull.tsx`
+   (a decision surface). The approved prototype the design was extracted from is
+   `docs/next/prototype/app/`. **If the user names inspiration folders, treat that as authoritative.**
 
 4. **Extract three things from each reference:** (a) *layout shape* — e.g. eyebrow + serif headline +
-   mono meta rail + panel grid; (b) *motion language* — entrance-only, still-aware, and note that
-   `globals.css` kills all animation under `prefers-reduced-motion`, so anything JS-driven must opt
-   out itself; (c) *typography + data patterns* — what earns `font-instrument`, where the
-   uppercase-tracked `font-jetbrains` labels sit, how a state string is rendered next to its subject.
+   mono meta rail + panel grid; (b) *motion language* — entrance-only, still-aware, and anything
+   JS-driven must opt out of `prefers-reduced-motion` itself; (c) *typography + data patterns* — where
+   the `--mono` labels sit, how a state is rendered next to its subject (a `<Tally>`, a mark, a shape).
 
 Skip this and your first round of variants will get thrown away wholesale. Spend the tool calls.
 
@@ -179,10 +173,10 @@ Each variant should earn its name by carrying a **single central metaphor** thro
 - Copy voice (if applicable)
 
 Deliverables per variant:
-- File: `{Name}{Variant}.tsx` in the same folder.
+- File: `{Name}{Variant}.tsx` (+ its `*.module.css`) in the same folder.
 - Short header comment describing the metaphor + why it's different from baseline.
-- Reuse shared primitives (`Primitives.tsx`, `EqBars`, the `_studio/*Parts.tsx` render fragments,
-  lucide icons) — don't reinvent panels, pills, spinners or tooltips. Built entirely on the design
+- Reuse `@gt/ui` components (and `glyph/` for icons; `@gt/ui` does not use lucide) — don't reinvent
+  panels, chips, spinners or tooltips. Built entirely on the design
   tokens (see 3a.2's disqualification gate).
 - Degrade gracefully for edge cases the baseline handles (blocked credentials, dynamic options, etc.).
 - **Prefer data-concrete symbols over abstract markers.** A brand logo or parsed channel chip beats a coloured presence dot. The user evaluates variants partly on "does this encode *real* template data the user already cares about, or is it an abstract diagram?" When the metaphor allows, pull from the live data model (connector names, event types, cron strings) over stylised shapes.
@@ -191,12 +185,12 @@ Deliverables per variant:
   assets, and the affordance for picking one must show the facts a director would actually decide on.
   Name-only chips with a decorative icon are a round-1 failure mode. For a shot: duration, the
   direction that produced it, its state and why. For an asset: what made it, when, from which scene,
-  and whether anything downstream uses it. Derive these from the real types — read
-  `app/_studio/types.ts` and `projectTypes.ts` and surface the non-obvious fields rather than
-  inventing new ones.
+  and whether anything downstream uses it. Derive these from the real types — read the route's
+  `_port/contract.ts` and the `@gt/domain` types it names (`packages/domain/src/`) and surface the
+  non-obvious fields rather than inventing new ones.
 
 - **Fixtures may be extended, but not flattered.** A variant needing richer data may add entries to
-  `app/_studio/*` — that is normal prototyping. What it may not do is invent a state the product
+  the route's fixture side (`app/(studio)/<route>/_port/fixtureData.ts`) — that is normal prototyping. What it may not do is invent a state the product
   could never reach (instant renders, zero failures, a cost of nothing). The honest states are the
   interesting design problem; a variant that designs them away has dodged the round.
 - **Answer "what did I gain?" in round 1 for output-producing surfaces.** Every phase here produces
@@ -249,11 +243,13 @@ Transition keywords that trigger this phase: "I think we have it", "this is the 
 3. **No switcher survives the session.** Leftover A/B switchers have historically lingered in this codebase for weeks (four were consolidated in a single ship-loop milestone). If the user defers the winner decision ("let me live with both for a few days"), that's allowed — but record a dated follow-up before ending the session: a `TODO(prototype, <YYYY-MM-DD>): consolidate <Component> switcher` comment at the switcher plus a line in the active-runs ledger entry (`handoff: switcher pending user decision`). A deferred decision with no dated trace is the failure mode.
 4. **LOC cap (standing user directive):** if the consolidated winner exceeds ~200 LOC, extract named sub-components in the same consolidation step — this is not "premature refactor", it's a standing user directive (never ship 200+ LOC components). Anything already hoisted during Phase 4 makes this cheap. Deeper restructuring (subfolder, barrel, hooks split) stays in Phase 6 on explicit request.
 5. **Fold the winner's data back into the fixtures.** If a variant grew richer data inline, move it
-   into `app/_studio/` behind the existing types before consolidating — a winner that carries its own
-   private mock is a seam the backend will not fit. If it added a design token, add it to
-   `components/ui/tokens.ts` (the only file allowed a colour literal) in the same commit.
-6. Run `npx tsc --noEmit`, then `npm run build` — the build is the only check that catches an App
-   Router mistake, and it is cheap here.
+   into the route's `_port/fixture*.ts` behind the port contract before consolidating — a winner
+   that carries its own private mock is a seam the real side will not fit. If it added a design
+   token, admit it in `packages/ui/tokens/source.json` (with its role in `ADMISSION.md`) and run
+   `npm run tokens:gen` in the same commit.
+6. Run `npm run typecheck` (+ `typecheck:next` and `test:unit` if `packages/` changed),
+   `npm run tokens:check`, `npm run lint:ratchet`, then `npm run build` — the build is the only check
+   that catches an App Router mistake.
 
 Exit this phase with: one component, zero variant files, zero switcher, typecheck + build clean, the
 user can reload and see the winner as the live render.
@@ -296,9 +292,9 @@ A sharp correction in the source session was "did you stash or throw any changes
 
 ### Typography is a recurring quality axis
 
-Small type (under `text-sm` / 14px) is a frequent correction target. Lean toward `text-base` for body content and readable copy. Reserve `text-xs` for uppercase tracking-wide labels only. Never use pixel-valued arbitrary sizes (`text-[10px]`) in shipped variants — that's a prototype-grade shortcut, not a design decision.
+Small type is a frequent correction target. Body content takes the body size role; the floor is 12px and only for short mono labels. Never type a px size into a module — sizes are token roles.
 
-**Brighter, not muted.** When promoting a piece of copy (use-case subtitle, card description), don't just bump the font size — also remove opacity muting. `text-foreground/90` → `text-foreground`, `font-normal` → `font-medium`. "Promote" means "make more present", not just "make slightly larger". The user will often correct both axes in the same sentence.
+**Brighter, not muted.** When promoting a piece of copy (use-case subtitle, card description), don't just bump the font size — also remove the muting. `var(--muted)` → `var(--text)`, a lighter weight → a heavier one. "Promote" means "make more present", not just "make slightly larger". The user will often correct both axes in the same sentence.
 
 ### Animation austerity
 
@@ -379,13 +375,13 @@ Red flags → slow down and reset direction:
 At the end of the workflow, confirm:
 - [ ] Winner variant is the sole rendered component — **switcher removed** (or, if the user deferred, a dated `TODO(prototype, …)` + ledger handoff line exist).
 - [ ] All non-winner variants deleted from disk, imports, and tab configs.
-- [ ] Winner uses the design tokens only — no hex/`rgb()` literal outside `components/ui/tokens.ts`, no invented accent hue — and the shared primitives.
+- [ ] Winner uses the design tokens only — `npm run tokens:check` green, no hex/`rgb()`/px in a module, no invented accent hue — and the `@gt/ui` components.
 - [ ] Winner ≤ ~200 LOC per file, or sub-components extracted.
-- [ ] Any new mock data lives in `app/_studio/` behind the existing types — no private fixture inside the component.
-- [ ] `npx tsc --noEmit` clean, and `npm run build` green. (There is no linter and no test suite in this repo — don't claim a command you didn't run.)
+- [ ] Any new mock data lives in the route's `_port/fixture*.ts` behind the port contract — no private fixture inside the component.
+- [ ] `npm run typecheck`, `npm run tokens:check`, `npm run lint:ratchet` and `npm run build` green (`npm test` if a probe covers the surface). Don't claim a command you didn't run.
 - [ ] Every state the winner can render is one the product could actually reach.
 - [ ] Consumer import paths still resolve (grep for old filename confirms zero references).
-- [ ] If refactored: new subfolder exists under `app/_phases/` or `components/ui/`, imports updated, max file size within budget.
+- [ ] If refactored: new subfolder exists under `app/(studio)/<route>/` or `packages/ui/src/components/`, imports updated, within the 400-line hard cap (`next-structure`) and the ~200 LOC directive.
 - [ ] If the consolidation added, moved or deleted a file, the user is told the context map needs a
       Personas rescan — `context-map.json` is a generated export and must not be hand-edited.
 

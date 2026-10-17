@@ -15,18 +15,22 @@
 // And the seam that makes the browser honest: no client file computes the
 // matrix itself — it asks the server through useCapabilities().
 //
-// No network, no process: spawnSync is replaced for the channel cases, and the
-// route cases are refused by the posture before a body is read.
+// No network, no process: spawnSync is replaced for the channel cases.
+//
+// Phase 6 wave C (L70): the three refusing routes (cut/export, music-video/export,
+// ads/render) and GET /api/capabilities retired with the v1 pages. What stays
+// pinned: localRender is a function of the posture, CAPABILITY_ROUTES still names
+// every route that refuses local-binaries-forbidden (none now - a new one must be
+// covered), the server's facts and matrix, and no file computes the matrix itself.
 
 import childProcess from "node:child_process";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 import path from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { GET as capabilitiesGET } from "@/app/api/capabilities/route";
-import { ACCESS_SECRET_VAR, __resetRateLimit } from "@/lib/apiAuth";
+import { ACCESS_SECRET_VAR } from "@/lib/apiAuth";
 import {
   absenceReason,
   ABSENCE_REASON,
@@ -36,7 +40,6 @@ import {
   FACT_ABSENT,
   PENDING_FACTS,
   soundStoreListed,
-  type CapabilitiesAnswer,
   type DeploymentFacts,
 } from "@/lib/capabilities";
 import { MANAGED_MARKERS } from "@/lib/deployment";
@@ -146,7 +149,7 @@ test("absenceReason(): names the missing fact when that is the cause, the flag's
 
 /* ── (b) one status, one code, one capability ─────────────────────────────── */
 
-test("localRender covers exactly the routes that refuse local-binaries-forbidden, and each refuses 503 in both forbidding postures", async () => {
+test("localRender covers exactly the routes that refuse local-binaries-forbidden, and is off in both forbidding postures", () => {
   // DERIVED: every route whose source refuses with the code, comment-stripped.
   const routes: string[] = [];
   const walk = (d: string) => {
@@ -157,40 +160,18 @@ test("localRender covers exactly the routes that refuse local-binaries-forbidden
     }
   };
   walk(path.join(ROOT, "app", "api"));
-  expect(routes.length, "the route walk read nothing").toBeGreaterThan(40);
+  expect(routes.length, "the route walk read nothing").toBeGreaterThan(0);
   const refusing = routes.filter((r) => /["']local-binaries-forbidden["']/.test(stripComments(readFileSync(path.join(ROOT, r), "utf8"))));
   expect([...refusing].sort(), "a route refuses local-binaries-forbidden and localRender does not cover it").toEqual([...CAPABILITY_ROUTES.localRender].sort());
+  for (const rel of CAPABILITY_ROUTES.localRender) expect(existsSync(path.join(ROOT, rel)), `CAPABILITY_ROUTES names a route that is gone: ${rel}`).toBe(true);
 
-  laptop();
-  delete process.env.NEXT_PUBLIC_DEV_AUTH;
-  delete process.env.NEXT_PUBLIC_LOCAL_MODE;
-  delete process.env[PRINCIPAL_MODE_VAR];
-  process.env[ACCESS_SECRET_VAR] = "posture-probe-secret";
-  let ip = 0;
-  const seen: string[] = [];
   for (const posture of [{ LOCAL_BINARIES: "off" }, { K_SERVICE: "gravitone" }]) {
     laptop();
     Object.assign(process.env, posture);
     expect(serverCapabilities().localRender, JSON.stringify(posture)).toBe(false);
-    for (const rel of CAPABILITY_ROUTES.localRender) {
-      __resetRateLimit();
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { POST } = require(path.join(ROOT, rel)) as { POST: (r: Request) => Promise<Response> };
-      const res = await POST(
-        new Request("http://localhost/x", {
-          method: "POST",
-          headers: { "content-type": "application/json", authorization: "Bearer posture-probe-secret", "x-forwarded-for": `10.77.0.${++ip}` },
-          body: "{}",
-        }),
-      );
-      const body = (await res.json()) as { code?: string; error?: string };
-      const line = `${JSON.stringify(posture)} ${rel} -> ${res.status} ${body.code ?? body.error}`;
-      seen.push(line);
-      expect(res.status, line).toBe(503);
-      expect(body.code ?? body.error, line).toBe("local-binaries-forbidden");
-    }
   }
-  console.log(`[posture] ${seen.length} refusals:\n  ${seen.join("\n  ")}`);
+  laptop();
+  expect(serverCapabilities().localRender, "the positive control: a laptop may render").toBe(true);
 });
 
 /* ── (a) channel readiness answers from the posture ───────────────────────── */
@@ -252,34 +233,25 @@ test("channel readiness: a forbidding posture wins over a PATH answer cached whi
 
 /* ── the seam: the browser asks the server ────────────────────────────────── */
 
-test("GET /api/capabilities: anonymous is refused; authorised gets the server's matrix and the facts behind it", async () => {
+test("the server's answer: the facts behind the matrix, read from their owners", () => {
   laptop();
-  delete process.env.NEXT_PUBLIC_DEV_AUTH;
-  delete process.env.NEXT_PUBLIC_LOCAL_MODE;
-  delete process.env[PRINCIPAL_MODE_VAR];
-  process.env[ACCESS_SECRET_VAR] = "posture-probe-secret";
   process.env.LOCAL_BINARIES = "off";
-  const anon = await capabilitiesGET(new Request("http://localhost/api/capabilities", { headers: { "x-forwarded-for": "10.78.0.1" } }));
-  expect(anon.status).toBe(401);
-  const res = await capabilitiesGET(
-    new Request("http://localhost/api/capabilities", { headers: { authorization: "Bearer posture-probe-secret", "x-forwarded-for": "10.78.0.2" } }),
-  );
-  expect(res.status).toBe(200);
-  expect(res.headers.get("cache-control")).toBe("no-store");
-  const a = (await res.json()) as CapabilitiesAnswer;
-  expect(a.facts).toEqual({ musicKey: false, localBinaries: false });
-  expect(a.capabilities).toEqual(serverCapabilities());
-  expect([a.capabilities.musicGenerate, a.capabilities.localRender]).toEqual([false, false]);
+  const facts = deploymentFacts();
+  expect(facts).toEqual({ musicKey: false, localBinaries: false });
+  const caps = serverCapabilities();
+  expect(caps).toEqual(capabilities(facts));
+  expect([caps.musicGenerate, caps.localRender]).toEqual([false, false]);
 });
 
 test("source: no file computes the matrix itself - the server passes facts, the browser asks useCapabilities()", () => {
-  // The four places allowed to call capabilities(facts) directly, each with
-  // its reason. Everything else would be guessing at a key it cannot see.
+  // The places allowed to call capabilities(facts) directly, each with its
+  // reason. Everything else would be guessing at a key it cannot see.
+  // lib/useCapabilities.ts retires with the v1 pages that read it (Phase 6 wave C);
+  // until its file is gone it keeps its place.
   const ALLOWED: Record<string, string> = {
     "lib/capabilities.ts": "the definition",
     "lib/serverCapabilities.ts": "the server's facts, handed in",
-    "lib/useCapabilities.ts": "the browser's pending and unanswered views",
-    "app/api/capabilities/route.ts": "serves the server's answer",
+    ...(existsSync(path.join(ROOT, "lib/useCapabilities.ts")) ? { "lib/useCapabilities.ts": "the browser's pending and unanswered views" } : {}),
   };
   const files: string[] = [];
   const walk = (d: string) => {
@@ -297,7 +269,7 @@ test("source: no file computes the matrix itself - the server passes facts, the 
   for (const f of Object.keys(ALLOWED)) expect(callers, `${f} is allowed and no longer calls it - remove it from ALLOWED`).toContain(f);
   const readers = files.filter((f) => /\buseCapabilities\s*\(/.test(stripComments(readFileSync(path.join(ROOT, f), "utf8"))));
   console.log(`[posture] ${files.length} files walked; capabilities() callers: ${callers.length}; useCapabilities() readers: ${readers.join(", ")}`);
-  // A liveness floor for the matcher, not a quota: five readers until the v1 studio's step
-  // surfaces retired (Phase 4 wave D); the two left are the shell's.
-  expect(readers.length).toBeGreaterThanOrEqual(2);
+  // The client hook retires with the v1 pages (Phase 6 wave C): while it exists something
+  // still reads it; once it is gone nothing may.
+  if (!existsSync(path.join(ROOT, "lib/useCapabilities.ts"))) expect(readers, "useCapabilities() is gone and still read").toEqual([]);
 });

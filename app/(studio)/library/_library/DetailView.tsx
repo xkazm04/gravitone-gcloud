@@ -169,6 +169,7 @@ export function DetailView({ d, busy, onFacet, onItem, onPin, onUse }: DetailVie
           <div className={s.actRow}>
             <Button label={d.pinned ? "Unpin" : "Pin to collection"} disabled={busy} onPress={() => onPin(!d.pinned)} />
             {d.atelier !== undefined && <Button label="Open style" href={d.atelier} glyphAfter="chevR" />}
+            {d.schedule !== undefined && <Button label="Schedule" tone="cyan" href={d.schedule} glyphAfter="chevR" />}
             <LedgerLink href={ledgerFor(c.id)} subject={c.title} />
           </div>
           {d.acts.includes("use-in-project") && d.projects.length > 0 && (

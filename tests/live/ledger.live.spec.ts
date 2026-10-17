@@ -27,7 +27,10 @@ import { expect, test, type Page } from "@playwright/test";
 
 const ROOT = process.cwd();
 const FIXTURES = process.env["NEXT_PUBLIC_GRAVITONE_DATA"] === "fixtures";
-const STORE = process.env["GRAVITONE_STORE_PATH"] ?? join(ROOT, FIXTURES ? "fixtures-out" : "foundry-out", "gravitone.sqlite");
+// Never the operator's store: with no path set this spec refuses rather than fall back to
+// foundry-out/gravitone.sqlite (it did, 2026-10-17, and migrated the real store mid-run).
+const STORE = process.env["GRAVITONE_STORE_PATH"] ?? join(ROOT, "fixtures-out", "gravitone.sqlite");
+if (!FIXTURES && process.env["GRAVITONE_STORE_PATH"] === undefined) throw new Error("ledger.live needs GRAVITONE_STORE_PATH (the lane sets it); it never opens foundry-out/gravitone.sqlite");
 
 type Counts = { total: number; head: number; facets: { facet: string; values: { value: string; n: number }[] }[] };
 

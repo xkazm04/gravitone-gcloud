@@ -1,6 +1,6 @@
 ---
 product: "Gravitone Studio"
-stack: "Next.js 16 (App Router, Turbopack) + React 19 + TypeScript + Tailwind v4. No database — the studio's data is browser IndexedDB. Server-only vendor seams: lib/imaging, lib/music, lib/text, lib/foundry."
+stack: "Next.js 16 (App Router, Turbopack) + React 19 + TypeScript + Tailwind v4. The studio's data is the kernel's local SQLite store (foundry-out/gravitone.sqlite; GRAVITONE_STORE_PATH moves it). Server-only vendor seams: lib/imaging, lib/music, lib/text, lib/foundry, run as kernel producers."
 runtime_floor: "node 20+ (next 16). Measured working on node 24."
 preflight: "npx tsx pipeline/preflight.mts"
 preflight_json: "npx tsx pipeline/preflight.mts --json"
@@ -38,10 +38,11 @@ come out as rows, because the loop walks `capabilities()` rather than a list ins
 
 **`NEXT_PUBLIC_LOCAL_MODE=1` gives a fully working studio with zero credentials and zero accounts.**
 
-Projects, steps, themes, assets and all five phase surfaces (Research · Script · Frames · Score ·
-Cut), on this machine, right now. The data layer never needed a server: `lib/studioDb.ts` is raw
-IndexedDB with no dependency and no Firestore. Firebase was only ever the doorman, and local mode
-satisfies the gate with a stable local identity instead of dropping it.
+Projects and their parts, the Floor, the Board, the Library, the audio desk and the Ledger, on this
+machine, right now. The data layer never needed a cloud: the kernel store is a SQLite file on this
+disk (`foundry-out/gravitone.sqlite`, created on first touch), with no Firestore. Firebase was only
+ever the doorman, and local mode satisfies the gate with a stable local identity instead of dropping
+it. (v1 kept projects in browser IndexedDB, `lib/studioDb.ts`; `/projects/import` brings them over.)
 
 It is documented at `.env.example:18-31` — **below** a Firebase block the reader does not need,
 which is exactly why nobody finds it. Lead with it.
@@ -142,8 +143,10 @@ it cannot come to disagree with them.
 - `.env.local` beyond **backup + append** of values the user pasted in this session
 - `.env.example` — if it disagrees with `lib/`, that is a **finding**, reported with both locations
 - `lint-baseline.json` — a measurement, and re-baselining is a human diff whose commit names the cause
-- `package.json` / `package-lock.json`, `context-map.json`, `components/ui/tokens.ts`,
-  `app/globals.css` — Director-only in this repo (see `.claude/perfect/config.md` `## Class C`)
+- `package.json` / `package-lock.json`, `context-map.json`, `packages/ui/tokens/source.json` —
+  Director-only in this repo (see `.claude/perfect/config.md` `## Class C`)
+- `foundry-out/gravitone.sqlite` — the operator's store; a probe or rehearsal sets
+  `GRAVITONE_STORE_PATH` to a temp file and never opens it
 - `lib/**` — onboarding reads predicates; it never edits them to make a report nicer
 
 ## Known findings on this repo (2026-08-29)
@@ -154,10 +157,11 @@ Carry these forward rather than rediscovering them:
   calls `vram()` which shells straight to `nvidia-smi`, unguarded, so you get a `FileNotFoundError`
   traceback instead of a reading. The preflight probes `nvidia-smi` first and skips the guard rather
   than reproducing the crash. Not fixed — reported.
-- **`.env.example`'s access-gate block names only `app/api/imaging/{generate,edit,recognize}` and
-  `app/api/frames` as gated.** `app/api/music/*`, `app/api/recalibrate` and `app/api/foundry/*` are
-  gated too (`app/api/recalibrate/route.ts:296-304` records that recalibrate was the one omission,
-  since fixed). Newcomers reading only `.env.example` will under-estimate what the gate controls.
+- **The v1 money routes are gone (Phase 6 wave C, 2026-10-17).** `app/api/{imaging,music,frames,
+  recalibrate,foundry/*}` no longer exist: producers spend in-process under the kernel's spend meter,
+  and every route left under `app/api` goes through `app/_server/route.ts` (`guard: "access"` for
+  the file and ledger doors). A capability probe that curls one of the old routes gets a 404, not a
+  refusal - probe the producer (`pipeline/*.mts --dry`) instead.
 - **`lib/localMode.ts` exports the predicate `LOCAL_MODE` but not the variable name behind it**, so
   the preflight is the one place that spells `NEXT_PUBLIC_LOCAL_MODE` out. It cross-checks the name
   against `.env.example` and reports a discrepancy if it stops appearing there, so a rename

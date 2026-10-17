@@ -12,7 +12,6 @@ import Link from "next/link";
 
 import { StackBar, Tally, type TabDef } from "@/components/ui/signal";
 import { readCountFilter, writeCountFilter } from "@/components/ui/signal/useCountFilter";
-import { matchesDoor } from "@/app/calendar/view";
 
 type Node = unknown;
 interface El {
@@ -118,10 +117,6 @@ test("5. a TabRail tally cannot carry a select door", () => {
   expect(bad.id).toBe("a");
 });
 
-test("6. filtered to missed, exactly the missed slots match (2 of 9)", () => {
-  const status = ["missed", "failed", "scheduled", "scheduled", "publishing", "published", "published", "scheduled", "cancelled"] as const;
-  const slots = status.map((s) => ({ status: s }));
-  expect(slots.filter((s) => matchesDoor(s, "missed"))).toHaveLength(2);
-  expect(slots.filter((s) => matchesDoor(s, "booked"))).toHaveLength(4);
-  expect(slots.filter((s) => matchesDoor(s, "aired"))).toHaveLength(2);
-});
+// Case 6 (the v1 Calendar's `matchesDoor`: missed / booked / aired over a slot list) retired
+// with app/calendar in Phase 6 wave C. The Calendar's door counts are the kernel slots' now,
+// held by packages/ui/test/components/floor-slot.test.ts and tests/live/calendar.live.spec.ts.

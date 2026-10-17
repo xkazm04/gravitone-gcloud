@@ -1,6 +1,6 @@
 ---
 product: "Gravitone Studio"
-stack: "Next.js 16 (App Router, Turbopack) + React 19 + TypeScript + Tailwind v4. IndexedDB project records; fixtures in app/_studio; governed imaging chokepoint in lib/imaging."
+stack: "Next.js 16 (App Router, Turbopack) + React 19 + TypeScript. packages/{catalog,domain,kernel,producers,ui} (@gt/*); a SQLite kernel store (GRAVITONE_STORE_PATH; never open foundry-out/gravitone.sqlite); screens in app/(studio)/ reading a _port (fixture side: _port/fixture*.ts); governed vendor seams in lib/<domain>/ run as kernel producers."
 vault: [".vault"]
 vault_subdir: Spark
 context_map: context-map.json
@@ -19,18 +19,20 @@ Repo law are the same ones `.claude/perfect/config.md` carries - read that file'
 ## Gates
 
 - `always:` `npm run typecheck` (`tsc --noEmit`), `npm run lint` (eslint - ratcheted, see
-  `npm run lint:ratchet`), and `npm run check:type` (readable-floor check: nothing under
-  `text-label`/1rem in `app/` or `components/`). Missing from this list until 2026-10-04 - the
-  pre-push hook caught a real `text-xs` violation this list would have caught earlier.
-- `when app/_phases/script/** or the notebook schema changed:` `npm run check:notebook`,
+  `npm run lint:ratchet`), and `npm run check:type` (the readable floor on the Tailwind leftovers:
+  landing, root layout, dev inspector, `components/`; the (studio) world's 12px floor is held by
+  `tokens:check` and the live probes). Missing from this list until 2026-10-04 - the pre-push hook
+  caught a real `text-xs` violation this list would have caught earlier.
+- `when lib/notebook/**, lib/script/** or the notebook schema changed:` `npm run check:notebook`,
   `npm run check:trailer-structure`.
+- `the whole set:` `npm run verify` - declared once in `pipeline/gates.mts`.
 - `when routing/layout/server code changed:` `npm run build` - once per spark, on the spark branch.
 - `test:` `npm test` (Playwright golden-path probes; offline, no vendor billed) - run the FULL
   suite before any push, not a single spec. `npm run test:live` starts its own `next dev` on 3187 -
   never port 3000. 2026-10-04: a Director ran only `kit-catalog.probe.spec.ts` at each work package
   and before merge; the pre-push hook's full run caught a chrome-colour-literals failure
-  (`app/library/audio/audio-workbench.css` spelling hex/rgba instead of declaring tokens in
-  `components/ui/tokens.ts`) that a full local run would have caught the same day it was written,
+  (v1's `app/library/audio/audio-workbench.css` spelling hex/rgba instead of declaring tokens in
+  v1's `components/ui/tokens.ts`; the CSS is deleted, and that tokens file now serves only the landing) that a full local run would have caught the same day it was written,
   not at push time two fix-commits later.
 - `builder:` `npm run typecheck` AND `npm run lint:ratchet` (repo-wide: errors are held at 0; promoted 2026-10-14 after a `no-empty-object-type` error passed three builders' green reports and surfaced only at the Director's run - the second time a builder-scoped gate list missed a repo-wide check). For anything under `packages/`, also `npm run next-structure`, `npm run typecheck:next`, `npm run test:unit` and `npm run tokens:check`; a builder that changed a rendered surface must also drive it on a
   dev server of its own (`next dev -p 31xx`) and report what it saw. Builders NEVER stage and NEVER stash - only the
@@ -49,7 +51,7 @@ Repo law are the same ones `.claude/perfect/config.md` carries - read that file'
   ("Symlink [project]/node_modules is invalid, it points out of the filesystem root"), for `next dev`
   AND `next build`. Builders run `next dev --webpack`. The Director's build is NOT `next build
   --webpack`: webpack's route-export typecheck is stricter and fails on untouched pre-existing routes
-  (`api/foundry/extract`, `api/frames`). Build with Turbopack after a TEMPORARY, never-committed line
+  (measured on v1's `api/foundry/extract` and `api/frames`, both deleted in Phase 6 wave C). Build with Turbopack after a TEMPORARY, never-committed line
   in next.config.ts: `nextConfig.turbopack = { ...nextConfig.turbopack, root: "<main checkout>" }`,
   then `npm run check:bundle`, then restore the file (copy it aside first). Measured 2026-10-05.
 
@@ -63,8 +65,8 @@ Repo law are the same ones `.claude/perfect/config.md` carries - read that file'
   checking only the "behind" direction found real work (a whole theme system) sitting on the wrong
   side of a worktree cut, discovered only after two scouts ran against it and one had to
   self-correct mid-report.
-- Phase 5: if files under `app/` or `components/` were added/moved/deleted, refresh the context map
-  per CLAUDE.md (bridge probe 17400..17410; else append to `.vault/map-drift.md`).
+- Phase 5: if source files were added/moved/deleted, run the map gate in `docs/context-map.md`; only
+  the machine that owns the map scans (else append to `.vault/map-drift.md`).
 - Phase 6: move the ledger entry to `## Recently completed` with the SHA and declared/not-touched
   paths.
 
@@ -73,22 +75,22 @@ Repo law are the same ones `.claude/perfect/config.md` carries - read that file'
 See `.claude/perfect/config.md` `## Repo law` verbatim, plus:
 - A step surface MUST be scouted against `knowledge/templates/<template>/steps/<step>/PATTERNS.md`
   and `params.json` before it is designed. "Commission the craft research" is a valid answer.
-- `lib/projects.ts` `PHASES` and `TEMPLATES` are append-only registries (positional fallback).
+- `WORK_KINDS` and `RECIPES` in `packages/catalog/src/recipes.ts` are append-only registries
+  (v1's `PHASES`/`TEMPLATES` in `lib/projects.ts` survive only for `lib/` readers).
 - **Tree-wide probes judge files a builder never opens — name them in every brief.** An API route
-  calls a `lib/apiAuth.ts` door (`guardRequest` / `guardAccessOnly` / `checkAccess`) IN ITS OWN FILE;
-  a wrapper hides it from `imaging-auth.probe.spec.ts`. A hand-rolled `let alive = true` guard needs
-  `useLoadFor`/`useStepFor` or a reasoned `OWN_LOAD_GUARD` entry. NO client-reachable module may
+  goes through `app/_server/route.ts` (`route()` and its `guard`), or is a reasoned public exemption
+  in `imaging-auth.probe.spec.ts`; the probe derives the route list from disk. NO client-reachable module may
   spell a server-only env var NAME, not even in a dev fixture or a label (`check:bundle`; a dynamic
   import behind an inline NODE_ENV test did NOT keep the chunk out). All three surfaced only at the
   Director's verify on 2026-10-05, after six builders reported green.
-- **A new Obsidian surface is built in the Projects/Library idiom, NOT from `components/kit`.** The kit is
-  the Almanac print idiom (square corners, dashed absence, flat fields) remapped to obsidian colours;
-  round 1 of platform-consolidation briefed six builders to "reuse components/kit" and the operator's
-  verdict on every kit-built page was "like looking at wireframes" (2026-10-05). Reuse targets:
-  `components/ui/{Primitives,Select,tokens}`, `components/ui/signal/*`, and the baseline pages
-  `app/_projects/*`, `app/library/*`. Dropdowns are `components/ui/Select`, never a native `<select>`.
-- Prompts live in `pipeline/*-PROMPT.md` and are read by the code (`app/_phases/**/run/*`); a prompt
-  change is a code change and its regression control (`pipeline/*-regression.mts`) runs.
+- **A new surface is built in the Watershed from `@gt/ui`** (`packages/ui/src/components/<dir>/`,
+  `INVENTORY.md`; specimens at `/kit`), inside `app/(studio)/<route>/` with its `_port`. Dropdowns are
+  `@gt/ui`'s `field/Field.tsx` `Select`, never a native `<select>`. (History: v1's Almanac
+  `components/kit`, briefed as a reuse target on 2026-10-05, drew "like looking at wireframes"; it
+  was deleted in Phase 6.)
+- Prompts live in `pipeline/*-PROMPT.md` and are read by the code (`lib/<domain>/`, run by
+  `lib/producers/`); a prompt change is a code change and its regression control
+  (`pipeline/*-regression.mts`) runs.
 
 ## Wave defaults
 

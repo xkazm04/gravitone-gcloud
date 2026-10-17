@@ -1,12 +1,12 @@
 // LANE - THE SPEND INVARIANTS HOLD UNDER GENERATED TRAFFIC (dynamic).
 //
-// Every spend probe in this lane asserts one example per route: imaging-auth
-// drives each money route once, music-budget stubs its own fetch, frames-run-
-// bounded times a 413. Each proves its example and none can say whether the
-// FOUR properties this context exists for hold for traffic nobody wrote down:
+// Every spend probe in this lane asserts one example: music-budget stubs its own
+// fetch, imaging-budget-forecast quotes one window. Each proves its example and none
+// can say whether the properties this context exists for hold for traffic nobody
+// wrote down:
 //
-//   I1  no dispatch without authority - every 401 / 413 / 402 / limiter-429 is
-//       answered with ZERO vendor dispatches;
+//   I1  no dispatch without authority - every budget refusal (402) is answered
+//       with ZERO vendor dispatches;
 //   I2  booked spend within the ceiling - the window ledger total is at most the
 //       ceiling plus one maximum estimate;
 //   I3  ledger/log parity - every dispatch the vendor BILLS has exactly one
@@ -15,31 +15,33 @@
 //   I4  one settle line per request that reached the router;
 //   I5  no line (log or response body) contains a configured secret.
 //
-// The traffic is a seeded sequence over the DERIVED set of money routes
-// (_routes.ts - a new route that calls guardRequest joins it by existing), with
-// auth variants, body sizes, concurrent bursts and vendor outcomes. Everything
-// that could spend is counted at ONE boundary (_vendor.ts). A failing seed
-// prints `SPEND_SEED=<n>`; `SPEND_SEED=<n> npx playwright test spend-invariants`
-// replays that exact sequence.
+// The traffic is a seeded sequence of serial generates and concurrent bursts with
+// vendor outcomes, driven through the imaging generate handler
+// (lib/imaging/handlers.ts generateHandler - the body of v1's /api/imaging/generate,
+// still the chain pipeline/integration-imaging.mts drives). Everything that could
+// spend is counted at ONE boundary (_vendor.ts). A failing seed prints
+// `SPEND_SEED=<n>`; `SPEND_SEED=<n> npx playwright test spend-invariants` replays
+// that exact sequence.
+//
+// PHASE 6 L70 - NARROWED WITH THE ROUTES. This probe used to walk the derived set
+// of money routes under app/api (tests/golden-path/_routes.ts: every route calling
+// guardRequest, 11+) and mix unauthenticated, wrong-secret, empty-body and
+// oversized-frames steps into the sequence, I1 holding for each. Those routes were
+// deleted with the v1 pages and no money route is left under app/api, so the
+// auth/limiter/413 steps and the "derived population" tests retired with them; a
+// money route that reappears is held by imaging-auth's derived check (a money door
+// with no driven case is a named failure). What is kept is the spend chain itself:
+// router -> hold -> adapter -> ledger -> settle line, the ceiling, and the secrets.
 //
 // NARROWED FROM THE TICKET, honestly:
 //   · a mid-body stall is not generated: the adapters wait 180 s on one, and a
 //     probe that sleeps three minutes per case is not a lane anyone runs;
-//   · the vendor-outcome table is driven through imaging/generate only. It is the
-//     one route whose whole chain (guard -> router -> hold -> adapter -> ledger
-//     -> settle line) is observable end to end; the other money routes are
-//     driven with auth and size variants, where I1 is the claim;
 //   · "music hold has not landed" no longer holds: lib/music/budget.ts reserves
 //     on the shared kernel (music-budget-holds), so acceptance 3 is a plain
 //     passing case, not a test.fail.
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-
 import { test, expect } from "@playwright/test";
 
 import { FAKE_ENGINE_ENV, keepEnv } from "./_helpers";
-import { concretePath, loadMoneyRoutes, moneyRouteFiles, routeContext, type MoneyRoute } from "./_routes";
 import { withVendor, type Vendor } from "./_vendor";
 import {
   ACCESS_SECRET_VAR,
@@ -50,6 +52,7 @@ import {
 } from "@/lib/apiAuth";
 import { BUDGET_VAR, WINDOW_VAR, __resetBudget, estimatePendingUsd, spendRows } from "@/lib/imaging/budget";
 import { KEY_VAR } from "@/lib/imaging/env";
+import { generateHandler } from "@/lib/imaging/handlers";
 import { MUSIC_BUDGET_VAR, MUSIC_WINDOW_VAR, __resetMusicBudget, musicSpendRows } from "@/lib/music/budget";
 import { MusicError } from "@/lib/music/errors";
 import { MUSIC_KEY_VAR, composeMusic } from "@/lib/music/elevenlabs";
@@ -118,17 +121,10 @@ function prng(seed: number): () => number {
 }
 
 type Outcome = 200 | 429 | 451 | 500;
-type Step =
-  | { t: "unauth"; route: number; method: number; ip: string; wrong: boolean }
-  | { t: "authed-empty"; route: number; method: number; ip: string }
-  | { t: "generate"; ip: string; outcome: Outcome; pad: number }
-  | { t: "burst"; ip: string; outcomes: Outcome[] }
-  | { t: "frames-oversize"; ip: string; mode: "beats" | "bytes" };
+type Step = { t: "generate"; ip: string; outcome: Outcome; pad: number } | { t: "burst"; ip: string; outcomes: Outcome[] };
 
 interface Plan {
   seed: number;
-  /** The limiter's capacity for this sequence. */
-  capacity: number;
   steps: Step[];
 }
 
@@ -136,8 +132,8 @@ interface Plan {
 // one costs this probe about 1.2 s of wall clock.
 const OUTCOMES: Outcome[] = [200, 200, 200, 200, 500, 500, 451, 429];
 
-/** Pure in (seed, routeCount, methodCounts): the same seed is the same traffic. */
-function makePlan(seed: number, routes: readonly MoneyRoute[], length: number): Plan {
+/** Pure in seed: the same seed is the same traffic. */
+function makePlan(seed: number, length: number): Plan {
   const rnd = prng(seed);
   const pick = <T>(xs: readonly T[]): T => xs[Math.floor(rnd() * xs.length)];
   const ips = ["10.20.0.1", "10.20.0.2", "10.20.0.3"];
@@ -145,14 +141,10 @@ function makePlan(seed: number, routes: readonly MoneyRoute[], length: number): 
   for (let i = 0; i < length; i++) {
     const r = rnd();
     const ip = pick(ips);
-    if (r < 0.34) steps.push({ t: "unauth", route: Math.floor(rnd() * routes.length), method: rnd(), ip, wrong: rnd() < 0.5 });
-    else if (r < 0.5) steps.push({ t: "authed-empty", route: Math.floor(rnd() * routes.length), method: rnd(), ip });
-    else if (r < 0.78) steps.push({ t: "generate", ip, outcome: pick(OUTCOMES), pad: Math.floor(rnd() * 1500) });
-    else if (r < 0.92)
-      steps.push({ t: "burst", ip, outcomes: Array.from({ length: 3 + Math.floor(rnd() * 3) }, () => pick(OUTCOMES)) });
-    else steps.push({ t: "frames-oversize", ip, mode: rnd() < 0.5 ? "beats" : "bytes" });
+    if (r < 0.7) steps.push({ t: "generate", ip, outcome: pick(OUTCOMES), pad: Math.floor(rnd() * 1500) });
+    else steps.push({ t: "burst", ip, outcomes: Array.from({ length: 3 + Math.floor(rnd() * 3) }, () => pick(OUTCOMES)) });
   }
-  return { seed, capacity: 4 + Math.floor(rnd() * 26), steps };
+  return { seed, steps };
 }
 
 /* -- the world one sequence runs in ---------------------------------------- */
@@ -201,10 +193,8 @@ const generateReq = (ip: string, outcome: Outcome, pad = 0): Request =>
     body: JSON.stringify({ prompt: `a harbour at dusk outcome:${outcome} ${"x".repeat(pad)}`, aspect: "16:9" }),
   });
 
-/** A limiter refusal: the guard's own 429 carries Retry-After, and a vendor 429
- *  relayed by the router does not. */
-const isLimiter429 = (res: Response): boolean => res.status === 429 && res.headers.get("retry-after") !== null;
-const isRefusal = (res: Response): boolean => res.status === 401 || res.status === 413 || res.status === 402 || isLimiter429(res);
+/** The chain's own refusal before any vendor is asked: the window ceiling. */
+const isRefusal = (res: Response): boolean => res.status === 402;
 
 interface Verdict {
   seed: number;
@@ -213,12 +203,11 @@ interface Verdict {
   tally: Record<string, number>;
 }
 
-async function runSequence(plan: Plan, routes: readonly MoneyRoute[], v: Vendor): Promise<Verdict> {
+async function runSequence(plan: Plan, v: Vendor): Promise<Verdict> {
   __resetRateLimit();
   __resetBudget();
   v.clear();
   scriptGoogle(v);
-  process.env[RATE_CAPACITY_VAR] = String(plan.capacity);
 
   const cap = captureConsole();
   const bodies: string[] = [];
@@ -226,14 +215,12 @@ async function runSequence(plan: Plan, routes: readonly MoneyRoute[], v: Vendor)
   const tally = { requests: 0, refused: 0, generates: 0, admittedGenerates: 0 };
   const note = (s: string) => violations.push(s);
 
-  const invoke = async (route: MoneyRoute, method: string, req: Request): Promise<Response> => {
-    const res = await route.handlers[method](req, routeContext(route));
+  const invoke = async (req: Request): Promise<Response> => {
+    const res = await generateHandler(req);
     bodies.push(await res.clone().text());
     tally.requests++;
     return res;
   };
-  const generate = routes.find((r) => r.path === "/api/imaging/generate")!;
-  const frames = routes.find((r) => r.path === "/api/frames")!;
 
   /** I1 on one serial request. */
   const refusedMeansZero = (what: string, res: Response, before: number): void => {
@@ -246,45 +233,20 @@ async function runSequence(plan: Plan, routes: readonly MoneyRoute[], v: Vendor)
   try {
     for (const [i, s] of plan.steps.entries()) {
       const before = v.dispatches().length;
-      if (s.t === "unauth") {
-        const route = routes[s.route];
-        const methods = Object.keys(route.handlers);
-        const method = methods[Math.floor(s.method * methods.length)];
-        const res = await invoke(route, method, post(concretePath(route), s.ip, { method, bearer: s.wrong ? "not-the-secret" : undefined }));
-        // An unauthenticated caller is NEVER admitted: 401, or the limiter's 429 ahead of it.
-        if (res.status !== 401 && !isLimiter429(res)) note(`I1: step ${i} unauthenticated ${method} ${route.path} answered ${res.status}, not 401/429`);
-        refusedMeansZero(`step ${i} unauthenticated ${method} ${route.path}`, res, before);
-      } else if (s.t === "authed-empty") {
-        const route = routes[s.route];
-        const methods = Object.keys(route.handlers).filter((m) => m !== "GET");
-        if (!methods.length) continue;
-        const method = methods[Math.floor(s.method * methods.length)];
-        const res = await invoke(route, method, post(concretePath(route), s.ip, { method, bearer: SECRET }));
-        if (res.status === 401) note(`I1/auth: step ${i} a VALID secret was refused 401 at ${method} ${route.path}`);
-        refusedMeansZero(`step ${i} authed-empty ${method} ${route.path}`, res, before);
-      } else if (s.t === "generate") {
+      if (s.t === "generate") {
         tally.generates++;
-        const res = await invoke(generate, "POST", generateReq(s.ip, s.outcome, s.pad));
-        if (!isLimiter429(res)) tally.admittedGenerates++;
+        const res = await invoke(generateReq(s.ip, s.outcome, s.pad));
+        tally.admittedGenerates++;
         refusedMeansZero(`step ${i} generate`, res, before);
-      } else if (s.t === "burst") {
+      } else {
         tally.generates += s.outcomes.length;
-        const results = await Promise.all(s.outcomes.map((o) => invoke(generate, "POST", generateReq(s.ip, o))));
-        tally.admittedGenerates += results.filter((r) => !isLimiter429(r)).length;
+        const results = await Promise.all(s.outcomes.map((o) => invoke(generateReq(s.ip, o))));
+        tally.admittedGenerates += results.length;
         tally.refused += results.filter(isRefusal).length;
         // Attribution inside a burst is not per request; the weaker claim that
         // still binds: a burst answered ENTIRELY by refusals dispatched nothing.
         if (results.every(isRefusal) && v.dispatches().length - before)
           note(`I1: step ${i} burst of ${results.length} was refused outright yet dispatched ${v.dispatches().length - before}`);
-      } else {
-        const beats =
-          s.mode === "beats"
-            ? Array.from({ length: 5_000 }, (_, k) => ({ at: `0:${k % 60}`, text: `beat ${k}` }))
-            : [{ at: "0:00", text: "x".repeat(1_100_000) }];
-        const res = await invoke(frames, "POST", post("/api/frames", s.ip, { bearer: SECRET, body: JSON.stringify({ beats, style: { technique: "flat vector", palette: [] } }) }));
-        // An oversized run is a 413 - or the limiter's 429 ahead of it - and either way nothing ran.
-        if (res.status !== 413 && !isLimiter429(res)) note(`I1: step ${i} oversized frames run answered ${res.status}, not 413/429`);
-        refusedMeansZero(`step ${i} frames-oversize(${s.mode})`, res, before);
       }
     }
   } finally {
@@ -312,7 +274,7 @@ async function runSequence(plan: Plan, routes: readonly MoneyRoute[], v: Vendor)
   if (rows.filter((r) => r.outcome === "served").length !== served)
     note(`I3: ${served} served dispatch(es) but ${rows.filter((r) => r.outcome === "served").length} served row(s)`);
 
-  // I4 - one settle line per request that reached the router (the limiter's refusals never did).
+  // I4 - one settle line per request that reached the router.
   const settle = lines.filter((l) => /^\[imaging\] generate (ok|err)\b/.test(l));
   if (settle.length !== tally.admittedGenerates)
     note(`I4: ${tally.admittedGenerates} generate request(s) reached the router but ${settle.length} settle line(s) were written`);
@@ -331,47 +293,12 @@ async function runSequence(plan: Plan, routes: readonly MoneyRoute[], v: Vendor)
   };
 }
 
-/* -- the population ---------------------------------------------------------- */
-
-let ROUTES: MoneyRoute[] = [];
-test.beforeAll(async () => {
-  ROUTES = await loadMoneyRoutes();
-});
-
-test("the money population is derived: every guardRequest route, and no list to edit", () => {
-  const paths = ROUTES.map((r) => r.path);
-  console.log(`[spend] ${ROUTES.length} money route(s): ${paths.join(" ")}`);
-  // Anchors, so a walk that quietly found a different tree cannot pass as "derived".
-  for (const known of ["/api/imaging/generate", "/api/frames", "/api/music/generate"]) expect(paths).toContain(known);
-  expect(ROUTES.length).toBeGreaterThanOrEqual(11);
-});
-
-test("a new route that calls guardRequest joins the population with no list edit", () => {
-  const root = mkdtempSync(join(tmpdir(), "spend-routes-"));
-  try {
-    const put = (rel: string, src: string) => {
-      const dir = join(root, "app", "api", rel);
-      mkdirSync(dir, { recursive: true });
-      writeFileSync(join(dir, "route.ts"), src);
-    };
-    for (let i = 0; i < 8; i++) put(`filler${i}`, "export async function GET() { return new Response(); }\n");
-    put("x", 'import { guardRequest } from "@/lib/apiAuth";\nexport async function POST(req: Request) { const d = await guardRequest(req); if (d) return d; return new Response(); }\n');
-    // A route that only TALKS about the door is not a money route.
-    put("chatty", "// we should call guardRequest( here some day\nexport async function POST() { return new Response(); }\n");
-    const found = moneyRouteFiles(root);
-    expect(found).toEqual(["app/api/x/route.ts"]);
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
-});
-
 /* -- the boundary counts what it claims to -------------------------------- */
 
 test("control: the boundary sees a real admitted dispatch, and an unlisted host is a dispatch too", async () => {
   await withVendor(async (v) => {
     scriptGoogle(v);
-    const generate = ROUTES.find((r) => r.path === "/api/imaging/generate")!;
-    const res = await generate.handlers.POST(generateReq("10.30.0.1", 200));
+    const res = await generateHandler(generateReq("10.30.0.1", 200));
     expect(res.status).toBe(200);
     // The control sequence: if this reads 0, "0 dispatches" below means nothing.
     expect(v.dispatches().map((d) => d.host)).toEqual(["google"]);
@@ -379,46 +306,6 @@ test("control: the boundary sees a real admitted dispatch, and an unlisted host 
     await fetch("https://not-a-listed-vendor.example/v1/anything");
     expect(v.dispatches().at(-1)?.host).toBe("unknown:not-a-listed-vendor.example");
   });
-});
-
-/* -- acceptance 1: I1 over every derived route ------------------------------- */
-
-test("I1: 20 unauthenticated POSTs spread over every derived money route dispatch nothing", async () => {
-  await withVendor(async (v) => {
-    scriptGoogle(v);
-    // Capacity high enough that the 401 is what answers, not the limiter in front of it.
-    process.env[RATE_CAPACITY_VAR] = "1000";
-    const posters = ROUTES.filter((r) => r.handlers.POST);
-    const n = Math.max(20, posters.length);
-    const statuses: number[] = [];
-    for (let i = 0; i < n; i++) {
-      const route = posters[i % posters.length];
-      const res = await route.handlers.POST(post(concretePath(route), `10.31.${i % 250}.1`), routeContext(route));
-      statuses.push(res.status);
-    }
-    console.log(`[spend] ${n} unauthenticated POSTs over ${posters.length} route(s): ${[...new Set(statuses)].join(",")}`);
-    expect(statuses.every((s) => s === 401)).toBe(true);
-    expect(v.dispatches(), "an unauthenticated request reached a vendor").toEqual([]);
-  });
-});
-
-/* -- acceptance 2: the frames 413 is a dispatch count, not a stopwatch -------- */
-
-test("I1: an oversized frames run is a 413 with zero dispatches - fetch and claude alike", async () => {
-  await withVendor(
-    async (v) => {
-      const frames = ROUTES.find((r) => r.path === "/api/frames")!;
-      const beats = Array.from({ length: 5_000 }, (_, i) => ({ at: `0:${i % 60}`, text: `beat ${i}` }));
-      const res = await frames.handlers.POST(
-        post("/api/frames", "10.32.0.1", { bearer: SECRET, body: JSON.stringify({ beats, style: { technique: "flat vector", palette: [] } }) }),
-      );
-      expect(res.status).toBe(413);
-      expect(v.dispatches()).toEqual([]);
-    },
-    // Binaries ON so a `claude` spawn would be possible - and counted - rather than
-    // impossible by posture. The 413 must be what stops it.
-    { localBinaries: "on" },
-  );
 });
 
 /* -- acceptance 3: concurrent music renders against one ceiling --------------- */
@@ -459,11 +346,10 @@ test("I2: two concurrent music renders at 60% of the ceiling cannot book past it
 test("I3/I4: an imaging generate answered 500 books exactly one failed row and writes one settle line", async () => {
   await withVendor(async (v) => {
     scriptGoogle(v);
-    const generate = ROUTES.find((r) => r.path === "/api/imaging/generate")!;
     const cap = captureConsole();
     let res: Response;
     try {
-      res = await generate.handlers.POST(generateReq("10.33.0.1", 500));
+      res = await generateHandler(generateReq("10.33.0.1", 500));
     } finally {
       cap.restore();
     }
@@ -486,9 +372,9 @@ for (const seed of SEEDS) {
   test(`I1-I5 hold for seed ${seed}`, async () => {
     expect(Number.isInteger(seed), `SPEND_SEED must be an integer, got ${process.env.SPEND_SEED}`).toBe(true);
     await withVendor(async (v) => {
-      const plan = makePlan(seed, ROUTES, LENGTH);
-      const verdict = await runSequence(plan, ROUTES, v);
-      console.log(`[spend] SPEND_SEED=${seed} capacity=${plan.capacity} ${JSON.stringify(verdict.tally)} violations=${verdict.violations.length}`);
+      const plan = makePlan(seed, LENGTH);
+      const verdict = await runSequence(plan, v);
+      console.log(`[spend] SPEND_SEED=${seed} ${JSON.stringify(verdict.tally)} violations=${verdict.violations.length}`);
       if (verdict.violations.length) console.log(`[spend] FAILED SPEND_SEED=${seed}\n  ${verdict.violations.join("\n  ")}`);
       expect(verdict.violations, `replay with SPEND_SEED=${seed}`).toEqual([]);
       // A sequence that dispatched nothing proved nothing about I3/I4.
@@ -498,14 +384,14 @@ for (const seed of SEEDS) {
 }
 
 test("the same SPEND_SEED reproduces the same sequence and the same verdict", async () => {
-  const a = makePlan(31, ROUTES, LENGTH);
-  const b = makePlan(31, ROUTES, LENGTH);
+  const a = makePlan(31, LENGTH);
+  const b = makePlan(31, LENGTH);
   expect(JSON.stringify(b)).toBe(JSON.stringify(a));
-  expect(JSON.stringify(makePlan(32, ROUTES, LENGTH)), "two seeds made the same traffic").not.toBe(JSON.stringify(a));
+  expect(JSON.stringify(makePlan(32, LENGTH)), "two seeds made the same traffic").not.toBe(JSON.stringify(a));
 
   await withVendor(async (v) => {
-    const first = await runSequence(a, ROUTES, v);
-    const second = await runSequence(b, ROUTES, v);
+    const first = await runSequence(a, v);
+    const second = await runSequence(b, v);
     expect(second.violations).toEqual(first.violations);
     expect(second.tally.generates).toBe(first.tally.generates);
     expect(second.tally.requests).toBe(first.tally.requests);

@@ -58,11 +58,12 @@ test("conclusions: the one consumer that serialises the notebook for a model sen
     /\bconclusions\b/.test(route),
     "the recalibrate assembler no longer names conclusions in its payload",
   ).toBe(true);
-  // Since AIO-A stage 2 the route hands the run to the `recalibrate` turn kind,
-  // whose prepare step is where the assembler is called.
+  // The script producer (lib/producers/script.ts, the recalibrate turn's one caller
+  // since the v1 route retired in Phase 6 L70) hands the run to the `recalibrate`
+  // turn kind, whose prepare step is where the assembler is called.
   expect(
-    /\bRECALIBRATE_SPEC\b/.test(stripComments(readFileSync(join(ROOT, "app/api/recalibrate/route.ts"), "utf8"))),
-    "the recalibrate route no longer runs the recalibrate turn kind",
+    /\bRECALIBRATE_SPEC\.prepare\(/.test(stripComments(readFileSync(join(ROOT, "lib/producers/script.ts"), "utf8"))),
+    "the script producer no longer runs the recalibrate turn kind",
   ).toBe(true);
   expect(
     /\bassembleRecalibrate\(/.test(stripComments(readFileSync(join(ROOT, "lib/turns/kinds/recalibrate.ts"), "utf8"))),
@@ -106,75 +107,13 @@ test("cards: the steel-man is the only card the board may not descope", () => {
   }
 });
 
-/* ── 2 · the load-side race guard: every hand-rolled site is named ──────────── */
-
-/**
- * Call sites that keep their own `let alive = true` guard instead of
- * `useLoadFor`, each with the reason it does.
+/* ── 2 · the load-side race guard - retired ──────────────────────────────────
  *
- * `useLoadFor.ts`'s header names three of them and says why: "A primitive whose
- * adoption has to be argued site by site is doing its job." The argument is
- * right and the LIST was not — measured 2026-09-06, eight files carry the shape
- * and the header named three. The five it did not name are the ones where the
- * reasoning was, in that header's own words, "rediscovered and retyped", which
- * is the failure the file exists to stop.
- *
- * An entry here is a claim somebody defends in review. A NEW file carrying the
- * shape and no entry is the finding.
- */
-// Eight exemptions retired with the v1 studio and shelf (Phase 4 wave D): useTrailerCut,
-// useVersions, useFrames, ResearchStep, ScriptStep, ProjectDialog, StudioView, MusicVideoFrames.
-const OWN_LOAD_GUARD: Record<string, string> = {
-  "components/ui/shell/ShellPalette.tsx":
-    "a fan-out on dialog open, not a keyed load: the project list and eight independent board counts each settle into their own slot of local state, and a failed source simply contributes no entry. The guard is the dialog being mounted, as in useBoard.ts.",
-};
-
-/** Files carrying a hand-rolled `let alive = true` guard, walked off the tree. */
-function ownGuardSites(): string[] {
-  const out: string[] = [];
-  const walk = (dir: string) => {
-    for (const e of readdirSync(dir, { withFileTypes: true })) {
-      const full = join(dir, e.name);
-      if (e.isDirectory()) {
-        if (e.name === "node_modules" || e.name.startsWith(".")) continue;
-        walk(full);
-      } else if (/\.(ts|tsx)$/.test(e.name) && !/\.(spec|test)\./.test(e.name)) {
-        const src = stripComments(readFileSync(full, "utf8"));
-        if (/let alive = true/.test(src)) out.push(relative(ROOT, full).split("\\").join("/"));
-      }
-    }
-  };
-  for (const top of ["app", "lib", "components"]) walk(join(ROOT, top));
-  return out.sort();
-}
-
-test("load guard: every hand-rolled `alive` site is the primitive itself or a named exemption", () => {
-  const sites = ownGuardSites();
-  // A walk that reads nothing reports "all adopted" in a voice
-  // indistinguishable from success.
-  // Four or more until the v1 studio retired (Phase 4 wave D); the primitive itself is the
-  // one site that must always be seen, and the check below holds it.
-  expect(sites.length, "the source walk found nothing - it is reading the wrong tree").toBeGreaterThanOrEqual(2);
-
-  const PRIMITIVE = "lib/useLoadFor.ts";
-  const unexplained = sites.filter((f) => f !== PRIMITIVE && !OWN_LOAD_GUARD[f]);
-  console.log(`[load] ${sites.length} file(s) carry the shape; ${Object.keys(OWN_LOAD_GUARD).length} named exemptions`);
-  expect(
-    unexplained,
-    "these keep their own load guard and no entry says why — adopt useLoadFor/useStepFor, or add the argument to OWN_LOAD_GUARD",
-  ).toEqual([]);
-  // The primitive is where the shape belongs, so its absence means the walk
-  // stopped seeing the shape at all.
-  expect(sites, "useLoadFor.ts no longer implements the guard - this matcher is dead").toContain(PRIMITIVE);
-});
-
-test("load guard: every exemption still names a file that carries the shape", () => {
-  const sites = new Set(ownGuardSites());
-  for (const [file, why] of Object.entries(OWN_LOAD_GUARD)) {
-    expect(why.length, `${file} is exempted with no reason`).toBeGreaterThan(40);
-    expect(sites.has(file), `${file} no longer keeps its own guard - drop the exemption`).toBe(true);
-  }
-});
+ * It held every hand-rolled `let alive = true` site to `lib/useLoadFor.ts` or a named
+ * exemption. Phase 6 wave C deleted the primitive and its last exemption
+ * (components/ui/shell/ShellPalette.tsx) with the v1 shell and Sound lab, which were its
+ * only callers; the new world loads on the server (Server Components, server actions), so
+ * the client race the primitive closed has no site left to guard. */
 
 /* ── 3 · the connection this store owns is the connection it closes ─────────── */
 

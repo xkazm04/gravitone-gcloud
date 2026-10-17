@@ -24,7 +24,7 @@ const LANE_OF: Readonly<Record<string, string>> = {
   alternative: "/floor?lane=image",
   articles: "/floor?lane=article",
   audio: "/floor?lane=audio",
-  publish: "/calendar",
+  publish: "/floor?cal=1",
 };
 
 const SEP = "::";

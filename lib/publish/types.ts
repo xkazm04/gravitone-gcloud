@@ -1,24 +1,17 @@
-// Wire types for the publishing seam (platform-consolidation spark, 2026-10-04).
-// Shared by lib/publish (engine + store), app/api/publish (routes),
-// pipeline/publish.mts (the headless CLI) and app/calendar (the UI).
+// Wire types for the publishing seam (platform-consolidation spark, 2026-10-04): v1's calendar
+// files as ./store.ts wrote them. The calendar is the kernel's slot tables now
+// (@gt/kernel/slots; the importer reads these shapes through its own schema), so what is left
+// here serves only the v1 code still standing - ./schedule.ts and ./store.ts, which the sibling
+// session's lib/sound/mv/calendar.ts keeps alive, and pipeline/fixtures/publish.ts, which writes
+// a v1 calendar for the importer to take in. Delete with them (Phase 6 wave C, L68 report).
 //
 // Absent-value convention: `null` means unmeasured / unknown — never 0, never an
 // omitted key. A metric that was not read is not a metric that read zero.
 
-export type ChannelId = "youtube" | "tiktok" | "instagram";
-export type ChannelStatus = "live" | "dry" | "not_wired";
+import type { ChannelId } from "./channels";
 
-export interface ChannelReadiness {
-  id: ChannelId;
-  name: string;
-  status: ChannelStatus;
-  /** Names only — a value never leaves the server. */
-  env: { name: string; present: boolean }[];
-  /** `forbidden`: this deployment may not spawn a local binary at all
-   *  (lib/deployment.ts), so PATH was not probed and nothing renders here. */
-  cli: { name: string; present: boolean; forbidden?: true }[];
-  note?: string;
-}
+export type { ChannelId, ChannelReadiness, ChannelStatus } from "./channels";
+export type { ExportRef } from "./exports";
 
 export type SlotStatus = "scheduled" | "publishing" | "published" | "failed" | "missed" | "cancelled";
 
@@ -59,12 +52,4 @@ export interface MetricSnapshot {
   comments: number | null;
   shares: number | null;
   subsDelta: number | null;
-}
-
-export interface ExportRef {
-  id: string;
-  projectId: string | null;
-  path: string;
-  bytes: number;
-  createdAt: string;
 }

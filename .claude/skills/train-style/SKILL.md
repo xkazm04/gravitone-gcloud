@@ -2,7 +2,7 @@
 name: train-style
 memory: none
 category: Development
-description: Extract art styles from a folder of screenshots/images on the LOCAL stack - run the foundry's Extract engine over a gallery (read back → group → replicate from words with self-critique → transfer onto a neutral scene), read the results back with Claude's own eyes, then cull row by row and write the kept styles into pipeline/foundry/styles.json. Same engine the /foundry Extract tab drives in the browser; this is the operator's path when the gallery is a folder on disk. Invoke with /train-style <folder> [--slug name] [--rounds n] [--replicas n] [--transfers n] [--max n].
+description: Extract art styles from a folder of screenshots/images on the LOCAL stack - run the foundry's Extract engine over a gallery (read back → group → replicate from words with self-critique → transfer onto a neutral scene), read the results back with Claude's own eyes, then cull row by row and commit the kept styles into the kernel's style store (pipeline/foundry/styles.json is re-exported from it). Same engine as the kernel's extract producer (the browser Extract tab retired with /foundry); this is the operator's path when the gallery is a folder on disk. Invoke with /train-style <folder> [--slug name] [--rounds n] [--replicas n] [--transfers n] [--max n].
 argument-hint: "<folder with images> [--slug name]"
 allowed-tools: Read, Write, Edit, Bash, PowerShell, Glob, Grep, Monitor
 ---
@@ -16,8 +16,7 @@ overfit their one image; use it when grouping keeps failing or to build merge ev
 default.
 
 A run is a kernel JOB (Phase 4: `lib/producers/extract.ts`, lane `cloud.google`). The CLI
-`pipeline/foundry/extract.mts` enqueues it and drives it in-process; the app's `/step` route kicks the same
-job; the worker (`workers/runner.mts`) drives it when the CLI is given `--detach`. Every path runs the same
+`pipeline/foundry/extract.mts` enqueues it and drives it in-process; the worker (`workers/runner.mts`) drives it when the CLI is given `--detach`. Every path runs the same
 engine (`lib/foundry/extract/engine.ts`), one unit at a time, and the job's slot lease means two drivers can
 never step one run. Nothing in this skill re-implements a stage — if a stage needs to change, change the
 engine, and every posture gets it.
@@ -84,7 +83,7 @@ The engine's scores are a grader's — a pre-filter, never a verdict. Before the
 
 ## Step 3 — the cull
 
-Prefer the Board: the run is a pile in the Floor's image lane (`/floor?lane=image`), and it opens as `/board/pkt:extract:<run-id>`. A row is a look, a tile a cell: **K** keep, **X** reject, **1-4** the reasons (style, subject, text, craft), **U** clear, **Z** the lens, **⌫** undo, **⏎** shows what the commit will write (the looks kept into `styles.json`, the rest deleted) before it is committed. A look is kept if any of its cells is. The Board refuses to commit while a cell is undecided, so decide them all (⇧K / ⇧X do a row). The kernel records the decision and delivers it to v1's own commit.
+Prefer the Board: the run is a pile in the Floor's image lane (`/floor?lane=image`), and it opens as `/board/pkt:extract:<run-id>`. A row is a look, a tile a cell: **K** keep, **X** reject, **1-4** the reasons (style, subject, text, craft), **U** clear, **Z** the lens, **⌫** undo, **⏎** shows what the commit will write (the looks kept into the style store, the rest deleted) before it is committed. A look is kept if any of its cells is. The Board refuses to commit while a cell is undecided, so decide them all (⇧K / ⇧X do a row). The kernel records the decision and delivers it to v1's own commit.
 
 Headless, when the user has decided from your read:
 
@@ -92,14 +91,14 @@ Headless, when the user has decided from your read:
 npx tsx pipeline/foundry/extract.mts --commit <run-id> --keep <id,id> --reject <id>
 ```
 
-Either way the kept styles land in `pipeline/foundry/styles.json` as `candidate` entries with `origin.kind: "extracted"` and `exemplars`, and appear on `/foundry` → Styles. Undecided counts as rejected. Nothing is deleted.
+Either way the commit (`lib/foundry/extract/store.ts`) writes the kept styles into the kernel store's `styles` table through `commitExtractStylesIn` (`packages/kernel/src/styles/writers.ts`): one transaction per commit, each style a row with its `style_ops` entry and ledger event, `candidate` with `origin.kind: "extracted"` and its exemplars as blobs. `pipeline/foundry/styles.json` is then re-exported from the store (`exportStyles`) for the Python readers; it is an EXPORT, never the record. The styles appear in the Library (`/library?kind=style`). Undecided counts as rejected. Nothing is deleted.
 
 ## Step 4 — harden
 
-Append to `.claude/skills/train-style/LESSONS.md` (create it) one dated block per run: gallery, n, styles found, what the eye disagreed with the score on, any prompt/vocabulary change this argues for. A lesson that names a file in `lib/foundry/extract/` (`prompts.ts`, `vocabulary.ts`) is actionable; "the model was weird" is not. When a change is made, say which posture it also affects — every prompt edit ships to the hosted Extract tab too.
+Append to `.claude/skills/train-style/LESSONS.md` (create it) one dated block per run: gallery, n, styles found, what the eye disagreed with the score on, any prompt/vocabulary change this argues for. A lesson that names a file in `lib/foundry/extract/` (`prompts.ts`, `vocabulary.ts`) is actionable; "the model was weird" is not. When a change is made, say which posture it also affects — every prompt edit ships to every extract run the kernel's producer drives too.
 
 ## What NOT to do
 
 - Do not pass sources as reference images to the generator. The whole measurement is whether the RECIPE carries the look; a reference lets the pixels carry it and proves nothing.
-- Do not raise the budget ceiling, change model ids, or edit `styles.json` by hand to "fix" a result. The catalogue is written by commits.
+- Do not raise the budget ceiling, change model ids, or edit `styles.json` by hand to "fix" a result. The catalogue is the store, written by commits; the next export overwrites a hand edit.
 - Do not run two extractions concurrently on one key — they share the budget window and one will trip it.

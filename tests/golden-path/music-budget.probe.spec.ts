@@ -47,7 +47,6 @@ import { MUSIC_PRICES, estimatePerSecond, priceCall, priceTable } from "@/lib/mu
 import { MusicError, statusFor } from "@/lib/music/errors";
 import { BILLED_ON_FAILURE, MUSIC_KEY_VAR, composeMusic } from "@/lib/music/elevenlabs";
 import type { MusicPlan } from "@/lib/music/types";
-import { costLabel } from "@/lib/musicClient";
 
 /** 13 seconds — Glass Harbor's cue-1, and a plan the adapter's pre-flight
  *  accepts, so every case reaches the meter rather than dying before it. */
@@ -318,69 +317,12 @@ test("the ledger answers by axis, in the same vocabulary the log line uses", asy
   expect((await musicSpendRows(now)).every((r) => r.usd === undefined)).toBe(true);
 });
 
-// ── What the SURFACE may say about the cost, before and after the click ─────
+// ── What the SURFACE may say about the cost (retired) ───────────────────────
 //
-// The Score step spends on one click and used to say nothing about it, ever.
-// `costLabel` is the whole decision about what may be claimed; it lives in
-// lib/musicClient.ts rather than inside the component precisely so it can be
-// driven here, and every branch below has the same duty: NEVER print $0.00 for
-// a price nobody measured.
-
-test("surface: an unpriced quote shows the SECONDS and the word unpriced", () => {
-  const label = costLabel(priceCall({ op: "generate", model: "music_v2", seconds: 13 }), 13);
-  console.log(`[music-budget] pre-click label -> ${label.text}`);
-  expect(label.text).toBe("13s of audio · unpriced");
-  expect(label.text).not.toContain("$");
-  // The reason travels with it, so a user who hovers learns why rather than
-  // being told a number is missing.
-  expect(label.title.toLowerCase()).toContain("credit");
-});
-
-test("surface: the three ways of not knowing stay apart, and none is a zero", () => {
-  expect(costLabel(null, 13).text).toContain("checking");
-  expect(costLabel("unknown", 13).text).toContain("price unknown");
-  // Even with the route unreachable the seconds are exact — they are the length
-  // of picture this cue covers, and they do not depend on any vendor.
-  expect(costLabel("unknown", 13).text).toContain("13s");
-  for (const p of [null, "unknown" as const])
-    expect(costLabel(p, 13).text).not.toContain("$0.00");
-});
-
-test("surface: a DECLARED-free call says free; credits print as credits", () => {
-  expect(costLabel(priceCall({ op: "plan", model: "music_v2", seconds: 0 }), 0).text).toBe("free");
-  const withRate = costLabel(
-    { seconds: 1, credits: 2, basis: "estimated", note: "hypothetical rate" },
-    13,
-  );
-  console.log(`[music-budget] credit label -> ${withRate.text}`);
-  expect(withRate.text).toBe("est. 26.0 credits");
-  // A credit is not a dollar and is never quietly turned into one.
-  expect(withRate.text).not.toContain("$");
-  expect(withRate.title).toContain("no USD conversion is declared");
-});
-
-// ── A cost tooltip states the price facts of THIS render ────────────────────
-//
-// `price.note` is written for agents reading /api/music/pricing (it names
-// lib/music/pricing.ts and instructs an operator how to measure a rate), and it
-// quotes ONE second. Forwarded as a native title it read "1s of audio..." under
-// a label reading 13s, and ran 121 words. check:narration cannot see a runtime
-// title, so this walks every branch.
-test("surface: every cost title is short, states this render's seconds, and addresses no operator", () => {
-  const fixtures: Array<[string, Parameters<typeof costLabel>[0]]> = [
-    ["checking", null],
-    ["unknown", "unknown"],
-    ["unpriced", priceCall({ op: "generate", model: "music_v2", seconds: 13 })],
-    ["free", priceCall({ op: "plan", model: "music_v2", seconds: 0 })],
-    ["credits", { seconds: 1, credits: 2, basis: "estimated", note: "hypothetical rate" }],
-    ["usd", { seconds: 1, usd: 0.01, basis: "estimated", note: "hypothetical rate" }],
-  ];
-  for (const [name, q] of fixtures) {
-    const { title } = costLabel(q, 13);
-    const words = title.trim().split(/\s+/).filter(Boolean).length;
-    console.log(`[music-budget] title(${name}) ${words}w -> ${title}`);
-    expect(words, `${name}: ${title}`).toBeLessThanOrEqual(25);
-    expect(title, name).not.toMatch(/\/api\/|lib\/|this repo|do not/i);
-    for (const m of title.matchAll(/(\d+(?:\.\d+)?)s\b/g)) expect(Number(m[1]), name).toBe(13);
-  }
-});
+// Four `costLabel` cases stood here: the browser label the Score step and the Sound lab printed
+// beside a render button (lib/musicClient.ts) - never $0.00 for a price nobody measured, the three
+// ways of not knowing kept apart, credits never turned into dollars, a title that states this
+// render's seconds and addresses no operator. The label and its module retired with the Sound lab
+// in Phase 6 wave C, its last reader. The rule did not: a new-world surface prices a render
+// through a receipt whose estimate is `usd: null` with an `unpricedReason` - never a zero - and
+// packages/domain/test/estimate.test.ts refuses an unpriced estimate that does not say why.

@@ -7,8 +7,7 @@
 // VIDEO, FOR STRIPS ONLY. `kind=strips` also serves .mp4 and .webm, with a
 // Range honoured as a 206 — what a <video> asks for to start and to seek. Every
 // other kind keeps runStore's SERVABLE_EXTENSIONS, images and json only. A
-// strip's strip.html is never served here: it is code, and goes out only
-// through /api/foundry/strips/<id>/page under a sandbox CSP.
+// strip's strip.html is never served here: it is code.
 //
 // KEPT PAST PHASE 6: the Board's forge, extract, strips and Dojo packets draw
 // their candidates from here (lib/decision/v1/types.ts foundryFileUrl). THE
@@ -19,26 +18,24 @@
 // ETag. Ranges stay video-only, as before - an <img> never seeks.
 //
 // foundry-out/ sits outside public/ on purpose (third-party reference frames,
-// never to be published), so the page reaches images through this seam. An
-// <img> cannot carry an Authorization header, so the access secret may also
-// arrive as `k=` — it is the same PUBLIC bundle value lib/apiAuth.ts already
-// documents, and a query string here bounds nothing the header did not. The
-// studio's Board sends no `k`: it holds the session cookie, which v1's door
-// never read, so a refusal with nothing presented is asked again through
-// route()'s guard (app/_server/route.ts guardOf), the cookie consulted only
-// when no credential of its own was presented. `k` goes with the last v1 page.
-// Access-checked but NOT rate-limited: a gallery of fifty tiles is fifty
+// never to be published), so the page reaches images through this seam. THE
+// DOOR IS route()'s `access` guard (Phase 6 L70): v1's `?k=` went with the last
+// v1 page (the takes file route says why); the Board's <img> rides the session
+// cookie. Access-checked but NOT rate-limited: a gallery of fifty tiles is fifty
 // requests in one second, and the money-route bucket would refuse the tail.
+// The refusal is route()'s envelope, which names the verdict - the reason v1's
+// door stopped answering a bare "Access denied." (a server with no secret
+// configured fails closed, and says so, rather than blaming the caller's key).
 
 import path from "node:path";
 
-import { guardAccessOnly } from "@/lib/apiAuth";
-import { FoundryError, fileStat } from "@/lib/foundry/store";
-import { extractFileStat } from "@/lib/foundry/extract/store";
-import { stripFileStat } from "@/lib/foundry/strips/store";
-import { trainingFileStat } from "@/lib/foundry/training/store";
+import { err, type AppErrorCode } from "@gt/domain/errors";
 
-import { guardOf } from "../../../_server/route.ts";
+import { FoundryError, fileStat } from "../../../../lib/foundry/store.ts";
+import { extractFileStat } from "../../../../lib/foundry/extract/store.ts";
+import { stripFileStat } from "../../../../lib/foundry/strips/store.ts";
+import { trainingFileStat } from "../../../../lib/foundry/training/store.ts";
+import { route } from "../../../_server/route.ts";
 import { serveFile } from "../../../_server/serveFile.ts";
 
 export const runtime = "nodejs";
@@ -55,22 +52,15 @@ const MIME: Record<string, string> = {
 
 const VIDEO = new Set([".mp4", ".webm"]);
 
-export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const k = url.searchParams.get("k");
-  const probe = k ? new Request(req.url, { headers: { authorization: `Bearer ${k}` } }) : req;
-  // THE SAME THREE SENTENCES EVERY OTHER GATED ROUTE GIVES. This used to answer
-  // a bare "Access denied." for all three verdicts, so a deployment with no
-  // IMAGING_ACCESS_SECRET configured — the fail-closed default — showed a
-  // gallery of broken tiles whose only word was one that sends a reader to
-  // check the key they presented, not the one the server never had.
-  const denied = await guardAccessOnly(probe);
-  if (denied !== null && !("who" in (await guardOf(probe, "access")))) return denied;
+/** A FoundryError's status as the envelope's code, so the answer keeps the store's status. */
+const CODE: Readonly<Record<number, AppErrorCode>> = { 400: "invalid", 404: "not-found", 409: "conflict", 503: "unavailable" };
 
+export const GET = route({ guard: "access", bodyCap: 0 }, async ({ req }) => {
+  const url = new URL(req.url);
   const run = url.searchParams.get("run") ?? "";
   const rel = url.searchParams.get("path") ?? "";
+  const kind = url.searchParams.get("kind");
   try {
-    const kind = url.searchParams.get("kind");
     const { abs } =
       kind === "extract" ? await extractFileStat(run, rel)
       : kind === "training" ? await trainingFileStat(run, rel)
@@ -81,7 +71,7 @@ export async function GET(req: Request) {
     // run), so the browser may hold them for the session: serveFile's default.
     return await serveFile(req, abs, { mime: MIME[ext] ?? "application/octet-stream", ranges: kind === "strips" && VIDEO.has(ext) });
   } catch (e) {
-    if (e instanceof FoundryError) return Response.json({ detail: e.message }, { status: e.status });
+    if (e instanceof FoundryError) return err(CODE[e.status] ?? "internal", e.message);
     throw e;
   }
-}
+});

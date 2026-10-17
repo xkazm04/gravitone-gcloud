@@ -1,4 +1,4 @@
-// LANE — /api/recalibrate END TO END, THROUGH THE REAL SPAWN DOOR (dynamic, CIP-A).
+// LANE — THE RECALIBRATE TURN END TO END, THROUGH THE REAL SPAWN DOOR (dynamic, CIP-A).
 //
 // The dearest route in the app had never run in `npm test`. Its two refusals —
 // a plan that edits a render the run did not send ("stray"), and a plan whose
@@ -17,27 +17,32 @@
 // `derived-short` go out as RENDERS NOT SENT, and with an empty scope every
 // conclusion is out and unnamed — so each one is held back by name.
 //
-// `?wait=1` SINCE AIO-A STAGE 2 (2026-10-06). The route now answers 202 with a
-// turn id by default and runs the turn on the server's ledger; `?wait=1` holds
-// the request and answers the synchronous body this probe has always read. The
-// contract under test — statuses, sentences, the receipt — is that body, so
-// the probe asks for it explicitly, names a project (the ledger's slot is per
-// project), and points the ledger at a temp directory of its own.
+// THE TURN, NOT THE ROUTE (Phase 6 L70). Since AIO-A stage 2 the route ran the
+// `recalibrate` turn kind on the server's ledger; the route retired with the v1
+// pages and the script producer runs the kind in process. So the probe starts
+// the REAL kind on the REAL runner, one project per run (the ledger's slot is per
+// project), over a temp ledger directory of its own, and reads the settled
+// record: the same plan, receipt and refusal sentences the route's synchronous
+// body carried. The route's statuses (500/502) became the record's `failed` and
+// the prepare step's typed throw.
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { POST } from "@/app/api/recalibrate/route";
 import { RENDERS } from "@/lib/script/renders";
 import { CONCLUSIONS } from "@/lib/notebook/conclusions";
 import { rendersInScope } from "@/lib/script/chainBase";
 import { EDIT_PLAN_SCHEMA } from "@/lib/script/editPlan";
+import { PromptUnavailable } from "@/lib/turns/assemble/recalibrate";
+import { RECALIBRATE_SPEC } from "@/lib/turns/kinds/recalibrate";
+import type { TurnRecord } from "@/lib/turns/ledger";
+import { startTurn, whenIdle, type TurnSpec } from "@/lib/turns/runner";
 
 import { FAKE_ENGINE_ENV, keepEnv, loadCassette, schemaSha256, withFakeEngine } from "./_helpers";
 
-keepEnv([...FAKE_ENGINE_ENV, "TEXT_TURN_DIR", "TEXT_ENV", "LOCAL_BINARIES", "GOOGLE_AI_API_KEY", "NEXT_PUBLIC_DEV_AUTH", "LIGHTTRACK_DISABLE"]);
+keepEnv([...FAKE_ENGINE_ENV, "TEXT_TURN_DIR", "TEXT_ENV", "LOCAL_BINARIES", "GOOGLE_AI_API_KEY", "LIGHTTRACK_DISABLE"]);
 
 let turnDir = "";
 test.beforeAll(() => {
@@ -49,7 +54,6 @@ test.afterAll(() => {
 
 test.beforeEach(() => {
   process.env.TEXT_TURN_DIR = turnDir;
-  process.env.NEXT_PUBLIC_DEV_AUTH = "1";
   process.env.TEXT_ENV = "local";
   process.env.LOCAL_BINARIES = "on";
   // No cloud key: if the local rung failed, the ladder has nowhere metered to go.
@@ -60,38 +64,37 @@ test.beforeEach(() => {
 const NOTE = { kind: "less-focus", cardId: "f-macro-cause" };
 const HELD = "c-one-time-rerating";
 
-let ip = 0;
-async function recalibrate(): Promise<{ status: number; json: Record<string, unknown> }> {
-  const res = await POST(
-    new Request("http://localhost/api/recalibrate?wait=1", {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-forwarded-for": `10.77.0.${++ip}` },
-      body: JSON.stringify({ projectId: "p-recal-e2e", notebook: {}, conclusions: CONCLUSIONS, renders: RENDERS, scope: {}, notes: [NOTE] }),
-    }),
-  );
-  return { status: res.status, json: (await res.json()) as Record<string, unknown> };
+/** One recalibrate turn to its end on the real runner; the settled record. */
+let project = 0;
+async function recalibrate(): Promise<TurnRecord> {
+  const out = await startTurn(RECALIBRATE_SPEC as TurnSpec, `p-recal-e2e-${++project}`, { notebook: {}, conclusions: CONCLUSIONS, renders: RENDERS, scope: {}, notes: [NOTE] });
+  if (!out.ok) throw new Error(`slot held by ${out.holder.id}`);
+  const rec = await out.done;
+  await whenIdle();
+  return rec;
 }
 
-// FIRST IN THE FILE ON PURPOSE. The route caches the prompt file in a module
-// variable once read, and every probe file before this one stops at a 400/401
+// FIRST IN THE FILE ON PURPOSE. The kind caches the prompt file in a module
+// variable once read, and every probe file before this one stops at a refusal
 // before reading it — so this is the one moment in the process when "missing"
-// is observable. If an earlier probe ever loads it, this goes red with a 200,
-// and the message below says why.
-test("recalibrate e2e: a missing prompt file is a 500 that says the engine never started", async () => {
+// is observable. If an earlier probe ever loads it, this goes red with a
+// served turn, and the message below says why.
+test("recalibrate e2e: a missing prompt file refuses before the engine is started", async () => {
   const cwd = process.cwd();
   const empty = mkdtempSync(join(tmpdir(), "gravitone-noprompt-"));
   try {
     await withFakeEngine("recalibrate-ok", async (engine) => {
       process.chdir(empty);
-      let out: Awaited<ReturnType<typeof recalibrate>>;
+      let thrown: unknown;
       try {
-        out = await recalibrate();
+        thrown = await recalibrate().then(
+          () => null,
+          (e: unknown) => e,
+        );
       } finally {
         process.chdir(cwd);
       }
-      console.log(`[recal] no prompt -> ${out.status} ${String(out.json.detail).slice(0, 120)}`);
-      expect(out.status, "200 means RECALIBRATE-PROMPT.md was already cached by an earlier probe").toBe(500);
-      expect(String(out.json.detail)).toMatch(/never started/);
+      expect(thrown, "no throw means RECALIBRATE-PROMPT.md was already cached by an earlier probe").toBeInstanceOf(PromptUnavailable);
       expect(engine.turns(), "the engine was reached although the prompt could not be built").toHaveLength(0);
     });
   } finally {
@@ -114,14 +117,15 @@ test("recalibrate e2e: the fixture note reaches one render and holds the conclus
     );
 });
 
-test("recalibrate e2e: a served plan is a 200 with the receipt the envelope paid for", async () => {
+test("recalibrate e2e: a served plan is done with the receipt the envelope paid for", async () => {
   const cassette = loadCassette("recalibrate-ok");
   const paid = cassette.turns[0]!.envelope!.total_cost_usd;
   await withFakeEngine(cassette, async (engine) => {
-    const { status, json } = await recalibrate();
-    const e = json.engine as Record<string, unknown>;
-    console.log(`[recal] ok -> ${status} rung=${e?.rung} transport=${e?.transport} cost=${e?.costUsd}`);
-    expect(status, String(json.detail)).toBe(200);
+    const rec = await recalibrate();
+    expect(rec.status, JSON.stringify(rec.error)).toBe("done");
+    const json = rec.result as { plan: { edits: unknown[] }; engine: Record<string, unknown> };
+    const e = json.engine;
+    console.log(`[recal] ok -> rung=${e?.rung} transport=${e?.transport} cost=${e?.costUsd}`);
     expect(e.rung).toBe("preferred");
     expect(e.transport).toBe("local-subprocess");
     expect(e.kind).toBe("local-claude-code");
@@ -130,7 +134,7 @@ test("recalibrate e2e: a served plan is a 200 with the receipt the envelope paid
     expect(e.schemaEnforcement).toBe("prompted");
     expect(e.reroutedFrom).toBeUndefined();
     expect(e.sessionId).toBe(cassette.turns[0]!.envelope!.session_id);
-    expect((json.plan as { edits: unknown[] }).edits).toHaveLength(1);
+    expect(json.plan.edits).toHaveLength(1);
 
     const turns = engine.turns();
     expect(turns, "one prompt reached the engine").toHaveLength(1);
@@ -139,29 +143,33 @@ test("recalibrate e2e: a served plan is a 200 with the receipt the envelope paid
   });
 });
 
-test("recalibrate e2e: a plan editing a render that was not sent is a 502 naming it, and nothing is staged", async () => {
+test("recalibrate e2e: a plan editing a render that was not sent fails the turn naming it, and nothing is staged", async () => {
   await withFakeEngine("recalibrate-stray", async (engine) => {
-    const { status, json } = await recalibrate();
-    console.log(`[recal] stray -> ${status} ${String(json.detail).slice(0, 140)}`);
-    expect(status).toBe(502);
-    expect(String(json.detail)).toContain("reversal-chain");
-    expect(String(json.detail)).toMatch(/renders it was not given/);
-    expect(String(json.detail)).not.toContain("adjudication");
-    expect(json.plan, "a refused plan must not travel back to be staged").toBeUndefined();
+    const rec = await recalibrate();
+    const detail = String(rec.error?.message);
+    console.log(`[recal] stray -> ${rec.status} ${detail.slice(0, 140)}`);
+    expect(rec.status).toBe("failed");
+    expect(rec.error?.kind).toBe("bad-response");
+    expect(detail).toContain("reversal-chain");
+    expect(detail).toMatch(/renders it was not given/);
+    expect(detail).not.toContain("adjudication");
+    expect(rec.result, "a refused plan must not travel back to be staged").toBeUndefined();
     expect(engine.turns()).toHaveLength(1);
   });
 });
 
-test("recalibrate e2e: a plan resting on a withheld conclusion is a 502 naming it, and nothing is staged", async () => {
+test("recalibrate e2e: a plan resting on a withheld conclusion fails the turn naming it, and nothing is staged", async () => {
   await withFakeEngine("recalibrate-blind", async (engine) => {
-    const { status, json } = await recalibrate();
-    console.log(`[recal] blind -> ${status} ${String(json.detail).slice(0, 140)}`);
-    expect(status).toBe(502);
-    expect(String(json.detail)).toContain(HELD);
-    expect(String(json.detail)).toMatch(/whose text it was not sent/);
+    const rec = await recalibrate();
+    const detail = String(rec.error?.message);
+    console.log(`[recal] blind -> ${rec.status} ${detail.slice(0, 140)}`);
+    expect(rec.status).toBe("failed");
+    expect(detail).toContain(HELD);
+    expect(detail).toMatch(/whose text it was not sent/);
     // The other card on that edit was sent; naming it would blur which one broke the rule.
-    expect(String(json.detail)).not.toContain("f-macro-cause");
-    expect(json.plan).toBeUndefined();
+    expect(detail).not.toContain("f-macro-cause");
+    expect(rec.result).toBeUndefined();
+
     expect(engine.turns()).toHaveLength(1);
   });
 });

@@ -48,7 +48,8 @@ type Props = {
 };
 
 const ledgerHref = (q: string): string => `/ledger?q=${encodeURIComponent(q)}`;
-/** The v1 page an href leads to, named by its first segment: `/foundry` -> `foundry`. */
+/** The page an href leads to, named by its first segment: `/floor?lane=image` -> `floor` (a v1
+ *  job's href is its Floor lane since v1's /foundry and /articles retired, Phase 6 wave C). */
 const placeOf = (href: string): string => href.split(/[/?#]/).find((x) => x !== "") ?? "page";
 
 export function Inspector({ acts, projectTitle, m, job, project, deps, blocked, onSelect }: Props) {

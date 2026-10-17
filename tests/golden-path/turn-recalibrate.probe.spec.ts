@@ -1,4 +1,4 @@
-// LANE — RECALIBRATE RUNS ON THE TURN LEDGER, AND THE TAB ONLY WATCHES IT (dynamic, AIO-A stage 2).
+// LANE — RECALIBRATE RUNS ON THE TURN LEDGER (dynamic, AIO-A stage 2).
 //
 // WHAT WAS WRONG. A recalibration was one held-open `fetch` inside the Script
 // step's hook. Leaving the step aborted it — and the abort stopped at the
@@ -6,55 +6,39 @@
 // listener would receive. A reload lost the run outright, and the bell's only
 // record was one tab's localStorage row.
 //
-// WHAT THIS PROBE DRIVES. The client door (lib/turns/client.ts) is called as
-// the browser calls it — relative URLs, accessHeader() on every request — and a
-// stand-in `fetch` hands each request to the REAL exported route handler. The
-// handlers dispatch through the real runner and the real `reason()`, and
-// `withFakeEngine` (CIP-A) puts the stand-in `claude` first on PATH. Nothing in
-// the app is mocked.
-//
-// OPERATOR DECISION 2026-10-06 (binding): leaving the Script step no longer
-// cancels the turn. Cases 6 and 7 below are that decision as measurements: the
-// turn settles with nobody watching, the first poll after a mount produces ONE
-// bell event, and a remount stages the done plan ONCE.
+// WHAT THIS PROBE DRIVES. The `recalibrate` turn kind (lib/turns/kinds/
+// recalibrate.ts) on the real runner (startTurn / readTurn / cancelTurn) and the
+// real `reason()`; `withFakeEngine` (CIP-A) puts the stand-in `claude` first on
+// PATH. Nothing in the app is mocked. Until Phase 6 L70 it went through the
+// browser's client door (lib/turns/client.ts) and the HTTP routes
+// (/api/recalibrate, /api/turns, its cancel); those retired with the v1 pages, and
+// the script producer (lib/producers/script.ts) runs the kind in process. DROPPED
+// with them: the `?wait=1` body, the 202/409 statuses, the access header on every
+// request and the client's re-attach (`resumeTurn`, case 7). KEPT: the plan and
+// the receipt on the record, one live turn per project, a cancel that kills the
+// tree, a turn that settles with nobody watching (the operator decision of
+// 2026-10-06: leaving the step does not cancel), and the walk that no fetch of a
+// retired route is left (acceptance 8, now with no door to exempt).
 import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { POST as recalibratePOST } from "@/app/api/recalibrate/route";
-import { GET as listGET, POST as turnsPOST } from "@/app/api/turns/route";
-import { GET as turnGET } from "@/app/api/turns/[id]/route";
-import { POST as cancelPOST } from "@/app/api/turns/[id]/cancel/route";
 import { RENDERS } from "@/lib/script/renders";
 import type { EditPlan } from "@/lib/script/editPlan";
-import { cancelTurn, getTurn, listTurns, resumeTurn, startRecalibrate, type TurnRecord } from "@/lib/turns/client";
-import { whenIdle } from "@/lib/turns/runner";
+import { RECALIBRATE_SPEC } from "@/lib/turns/kinds/recalibrate";
+import { listTurns, readTurn, type TurnRecord } from "@/lib/turns/ledger";
+import { cancelTurn, startTurn, whenIdle, type TurnSpec } from "@/lib/turns/runner";
 
 import { FAKE_ENGINE_ENV, keepEnv, loadCassette, stripComments, withFakeEngine, type Cassette, type FakeCall } from "./_helpers";
 
-keepEnv([
-  ...FAKE_ENGINE_ENV,
-  "TEXT_TURN_DIR",
-  "TEXT_ENV",
-  "LOCAL_BINARIES",
-  "GOOGLE_AI_API_KEY",
-  "NEXT_PUBLIC_DEV_AUTH",
-  "NEXT_PUBLIC_IMAGING_ACCESS_SECRET",
-  "LIGHTTRACK_DISABLE",
-]);
-
-const SECRET = "probe-turn-door-secret";
+keepEnv([...FAKE_ENGINE_ENV, "TEXT_TURN_DIR", "TEXT_ENV", "LOCAL_BINARIES", "GOOGLE_AI_API_KEY", "LIGHTTRACK_DISABLE"]);
 
 let dir = "";
 test.beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "gravitone-turn-recal-"));
   process.env.TEXT_TURN_DIR = dir;
-  process.env.NEXT_PUBLIC_DEV_AUTH = "1";
-  // What the BROWSER bundle would carry. The server side passes on the dev
-  // fixture; this is here so every request the door sends can be checked for it.
-  process.env.NEXT_PUBLIC_IMAGING_ACCESS_SECRET = SECRET;
   process.env.TEXT_ENV = "local";
   process.env.LOCAL_BINARIES = "on";
   delete process.env.GOOGLE_AI_API_KEY;
@@ -63,41 +47,6 @@ test.beforeEach(() => {
 test.afterEach(() => {
   if (dir) rmSync(dir, { recursive: true, force: true });
   dir = "";
-});
-
-/* ── the browser's fetch, answered by the real handlers ───────────────────── */
-
-const sent: { method: string; url: string; auth: string | null }[] = [];
-let ip = 0;
-
-async function route(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const raw = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-  if (!raw.startsWith("/api/")) throw new Error(`the door fetched a non-relative URL: ${raw}`);
-  const url = new URL(raw, "http://localhost");
-  const headers = new Headers(init?.headers);
-  headers.set("x-forwarded-for", `10.91.0.${(++ip % 250) + 1}`);
-  const method = (init?.method ?? "GET").toUpperCase();
-  sent.push({ method, url: url.pathname + url.search, auth: headers.get("authorization") });
-  const req = new Request(url, { method, headers, body: init?.body ?? undefined });
-  const p = url.pathname;
-  let m: RegExpMatchArray | null;
-  if (p === "/api/recalibrate" && method === "POST") return recalibratePOST(req);
-  if (p === "/api/turns" && method === "POST") return turnsPOST(req);
-  if (p === "/api/turns" && method === "GET") return listGET(req);
-  if ((m = p.match(/^\/api\/turns\/([^/]+)\/cancel$/)) && method === "POST")
-    return cancelPOST(req, { params: Promise.resolve({ id: decodeURIComponent(m[1]!) }) });
-  if ((m = p.match(/^\/api\/turns\/([^/]+)$/)) && method === "GET")
-    return turnGET(req, { params: Promise.resolve({ id: decodeURIComponent(m[1]!) }) });
-  throw new Error(`no handler for ${method} ${p}`);
-}
-
-const realFetch = globalThis.fetch;
-test.beforeEach(() => {
-  sent.length = 0;
-  globalThis.fetch = route as typeof fetch;
-});
-test.afterEach(() => {
-  globalThis.fetch = realFetch;
 });
 
 /* ── helpers ──────────────────────────────────────────────────────────────── */
@@ -142,7 +91,7 @@ async function until(id: string, statuses: string[], ms = 15_000): Promise<TurnR
   const t0 = Date.now();
   let last: TurnRecord | null = null;
   while (Date.now() - t0 < ms) {
-    last = await getTurn(id);
+    last = await readTurn(id);
     if (last && statuses.includes(last.status)) return last;
     await wait(50);
   }
@@ -158,22 +107,27 @@ async function enginePid(engine: { turns: () => FakeCall[] }): Promise<number> {
   throw new Error("the stand-in never recorded a turn - the engine was not reached");
 }
 
-function everyRequestCarriedTheHeader() {
-  expect(sent.length, "the door sent nothing").toBeGreaterThan(0);
-  const bare = sent.filter((s) => s.auth !== `Bearer ${SECRET}`).map((s) => `${s.method} ${s.url}`);
-  expect(bare, "a turn request went out without accessHeader()").toEqual([]);
+type Started = { outcome: "started"; turnId: string } | { outcome: "busy"; holder: string };
+
+/** The runner's answer to a start of the recalibrate kind. */
+async function start(projectId: string): Promise<Started> {
+  const out = await startTurn(RECALIBRATE_SPEC as TurnSpec, projectId, BODY);
+  return out.ok ? { outcome: "started", turnId: out.turnId } : { outcome: "busy", holder: out.holder.id };
 }
 
-/* ── start → 202 → done, through the door ─────────────────────────────────── */
+async function startRecalibrate(projectId: string): Promise<string> {
+  const out = await start(projectId);
+  if (out.outcome !== "started") throw new Error(`the turn did not start: ${JSON.stringify(out)}`);
+  return out.turnId;
+}
 
-test("POST /api/recalibrate answers 202 {turnId}; the turn reaches done with the plan and the receipt", async () => {
+/* ── start → done ─────────────────────────────────────────────────────────── */
+
+test("a recalibrate turn starts; it reaches done with the plan and the receipt", async () => {
   const cassette = slow(800);
   const paid = cassette.turns[0]!.envelope!.total_cost_usd;
   await withEngine(cassette, async (engine) => {
-    const out = await startRecalibrate("p-recal-1", BODY);
-    console.log(`[turn-recal] start -> ${JSON.stringify(out)}`);
-    expect(out.ok, JSON.stringify(out)).toBe(true);
-    const turnId = (out as { turnId: string }).turnId;
+    const turnId = await startRecalibrate("p-recal-1");
     expect(turnId).toMatch(/^tn-[0-9a-f]{12}$/);
 
     const done = await until(turnId, ["done", "failed"]);
@@ -184,46 +138,21 @@ test("POST /api/recalibrate answers 202 {turnId}; the turn reaches done with the
     const result = done.result as { plan: EditPlan; manifest: { renders?: { sent: string[] } }; engine: Record<string, unknown> };
     expect(result.plan.edits).toHaveLength(1);
     expect(result.manifest.renders?.sent).toEqual(["adjudication"]);
-    // The synchronous body's `engine` block, kept on the record so a client
-    // stages the same receipt it always has.
+    // The `engine` block, kept on the record so a caller stages the same receipt.
     expect(result.engine.kind).toBe("local-claude-code");
     expect(result.engine.costUsd).toBe(paid);
     expect(done.receipt?.costUsd).toBe(paid);
     expect(done.receipt?.rung).toBe("preferred");
     expect(engine.turns(), "one prompt reached the engine").toHaveLength(1);
-    everyRequestCarriedTheHeader();
   });
 });
 
-test("?wait=1 keeps the synchronous body for scripts", async () => {
-  await withEngine("recalibrate-ok", async () => {
-    const res = await recalibratePOST(
-      new Request("http://localhost/api/recalibrate?wait=1", {
-        method: "POST",
-        headers: { "content-type": "application/json", "x-forwarded-for": "10.91.1.1" },
-        body: JSON.stringify({ ...BODY, projectId: "p-recal-wait" }),
-      }),
-    );
-    const json = (await res.json()) as Record<string, unknown>;
-    expect(res.status, String(json.detail)).toBe(200);
-    expect((json.plan as EditPlan).edits).toHaveLength(1);
-    expect((json.engine as Record<string, unknown>).kind).toBe("local-claude-code");
-  });
-});
-
-test("a second POST for the same project while one runs is a 409 naming the holder", async () => {
+test("a second start for the same project while one runs is refused, naming the holder", async () => {
   await withEngine(slow(20_000), async (engine) => {
-    const first = await startRecalibrate("p-recal-2", BODY);
-    expect(first.ok).toBe(true);
-    const holder = (first as { turnId: string }).turnId;
+    const holder = await startRecalibrate("p-recal-2");
     await until(holder, ["running"]);
 
-    const second = await startRecalibrate("p-recal-2", BODY);
-    console.log(`[turn-recal] second -> ${JSON.stringify(second)}`);
-    expect(second.ok).toBe(false);
-    expect((second as { status: number }).status).toBe(409);
-    expect((second as { holder?: string }).holder).toBe(holder);
-    expect((second as { detail: string }).detail).toContain(holder);
+    expect(await start("p-recal-2")).toEqual({ outcome: "busy", holder });
     expect(engine.turns().length, "the refused second run reached the engine").toBeLessThanOrEqual(1);
 
     const pid = await enginePid(engine);
@@ -231,71 +160,42 @@ test("a second POST for the same project while one runs is a 409 naming the hold
     await until(holder, ["cancelled"]);
     expect(await stillAliveAfterKill(pid)).toBe(false);
     expect(engine.turns(), "one engine for one slot").toHaveLength(1);
-    everyRequestCarriedTheHeader();
   });
 });
 
-// "and the bell stays quiet" retired with the bell's turn tracking (Phase 4 wave D: the bell is a
-// view of kernel Jobs, lib/jobs.tsx); the server half of the case stays.
 test("cancel mid-run: the record says cancelled and the engine's process tree is dead", async () => {
   await withEngine(slow(20_000), async (engine) => {
-    const out = await startRecalibrate("p-recal-3", BODY);
-    const turnId = (out as { turnId: string }).turnId;
+    const turnId = await startRecalibrate("p-recal-3");
     await until(turnId, ["running"]);
     const pid = await enginePid(engine);
     expect(alive(pid)).toBe(true);
 
     const c = await cancelTurn(turnId);
-    console.log(`[turn-recal] cancel -> ${JSON.stringify(c).slice(0, 160)}`);
     expect(c.ok).toBe(true);
     expect(await stillAliveAfterKill(pid), "cancel left the engine running").toBe(false);
     const final = await until(turnId, ["cancelled", "done", "failed"]);
     expect(final.status).toBe("cancelled");
     expect(final.result).toBeUndefined();
-    everyRequestCarriedTheHeader();
   });
 });
 
-/* ── 6. retired: the bell's turn tracking (Phase 4 wave D). The bell reads kernel Jobs, and an
-   ending reaches it once per ending: tests/next-server/bell-jobs.test.ts ("a retried job that
-   ends again is news again", and the watermark case beside it). ─────────────────────────── */
+/* ── 7. nobody watching: the turn settles, once, on the ledger ────────────── */
 
-/* ── 7. unmount mid-run does not cancel; remount stages once ─────────────── */
-
-test("case 7: leaving the Script step mid-run leaves the turn running; a remount takes the done plan exactly once", async () => {
+test("case 7: a turn nobody watches runs on to done; the ledger holds the plan once", async () => {
   await withEngine(slow(1_200), async (engine) => {
-    const out = await startRecalibrate("p-recal-7", BODY);
-    const turnId = (out as { turnId: string }).turnId;
-
-    // Mounted while it runs: watch it.
-    const first = await resumeTurn("p-recal-7", "recalibrate", null);
-    expect(first.action).toBe("watch");
-    expect(first.turn?.id).toBe(turnId);
-
-    // Unmounted. Nothing is called — that is the decision — and the turn runs on.
+    const turnId = await startRecalibrate("p-recal-7");
+    // Nothing is called while it runs - that is the decision - and the turn runs on.
     const done = await until(turnId, ["done", "cancelled", "failed"]);
-    expect(done.status, "the turn did not survive the step being left").toBe("done");
+    expect(done.status, "the turn did not survive nobody watching").toBe("done");
     expect(engine.turns()).toHaveLength(1);
-
-    // Remounted: the plan lands, once.
-    const again = await resumeTurn("p-recal-7", "recalibrate", null);
-    expect(again.action).toBe("land");
-    const landed = again.turn as TurnRecord;
-    expect(landed.id).toBe(turnId);
-    expect(((landed.result as { plan: EditPlan }).plan).edits).toHaveLength(1);
-
-    const later = await resumeTurn("p-recal-7", "recalibrate", turnId);
-    expect(later.action, "a consumed turn was staged a second time").toBe("none");
-    expect((await listTurns("p-recal-7", "recalibrate")).map((t) => t.id)).toEqual([turnId]);
-    everyRequestCarriedTheHeader();
+    expect(((done.result as { plan: EditPlan }).plan).edits).toHaveLength(1);
+    expect((await listTurns()).filter((t) => t.projectId === "p-recal-7").map((t) => t.id)).toEqual([turnId]);
   });
 });
 
-/* ── 8, scoped to turns: one client door ──────────────────────────────────── */
+/* ── 8, scoped to turns: no fetch of a retired route ──────────────────────── */
 
-// Research joined the door in AIO-A stage 4b: its POST and its gated pre-flight
-// GET were the last raw gated fetches in app/_phases/research/run/.
-test("acceptance 8: no raw fetch of /api/recalibrate, /api/research or /api/turns outside lib/turns/client.ts", () => {
+test("acceptance 8: no fetch of /api/recalibrate, /api/research or /api/turns is left in app/, components/ or lib/", () => {
   const ROOT = process.cwd();
   const files: string[] = [];
   const walk = (d: string) => {
@@ -308,27 +208,18 @@ test("acceptance 8: no raw fetch of /api/recalibrate, /api/research or /api/turn
   for (const top of ["app", "components", "lib"]) walk(join(ROOT, top));
   const RAW = /\bfetch\(\s*[`"'](\/api\/(?:recalibrate|research|turns)\b[^`"']*)/g;
   const hits: string[] = [];
-  let inDoor = 0;
-  const doorRoutes = new Set<string>();
   const walked: string[] = [];
   for (const f of files) {
     const rel = relative(ROOT, f).split("\\").join("/");
     walked.push(rel);
     const src = stripComments(readFileSync(f, "utf8"));
-    for (const m of src.matchAll(RAW)) {
-      if (rel === "lib/turns/client.ts") {
-        inDoor++;
-        doorRoutes.add(m[1]!.split(/[?$]/)[0]!);
-      } else hits.push(`${rel}:${src.slice(0, m.index).split("\n").length} ${m[1]}`);
-    }
+    for (const m of src.matchAll(RAW)) hits.push(`${rel}:${src.slice(0, m.index).split("\n").length} ${m[1]}`);
   }
-  console.log(`[turn-recal] walked ${files.length} files; ${inDoor} turn fetches in the door, ${hits.length} outside`);
-  // The walk must have read the tree, the research producer among it (the v1
-  // Research step's run directory retired with the studio, Phase 4 wave D), and
-  // the matcher must see the door's own calls, research among them.
+  console.log(`[turn-recal] walked ${files.length} files; ${hits.length} fetches of a retired turn route`);
+  // The walk must have read the tree, the research producer among it, and the
+  // matcher must still see the shape it is for.
   expect(files.length).toBeGreaterThan(200);
   expect(walked, "the walk never reached the research producer").toContain("lib/producers/research.ts");
-  expect([...doorRoutes].sort()).toEqual(expect.arrayContaining(["/api/recalibrate", "/api/research", "/api/turns"]));
-  expect(inDoor, "the matcher found none of the door's own fetches - it is blind").toBeGreaterThanOrEqual(4);
+  expect([...'await fetch(`/api/research?x=${y}`)'.matchAll(RAW)].map((m) => m[1]!.split(/[?$]/)[0])).toEqual(["/api/research"]);
   expect(hits).toEqual([]);
 });

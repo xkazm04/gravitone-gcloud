@@ -1,5 +1,6 @@
 import { err, ok, type Result } from "@gt/domain/errors";
-import { append } from "@gt/kernel/events";
+import type { EventData } from "@gt/domain/event";
+import type { Slot } from "@gt/domain/slot";
 import { actorOf } from "@gt/kernel/lease";
 import { listSlotsIn } from "@gt/kernel/slots/read";
 import { sweep, type ClaimedSlot } from "@gt/kernel/slots/sweep";
@@ -18,9 +19,10 @@ import { abandonClaimed, publishClaimed, type PublishDeps, type PublishOutcome }
 // upload go out?" had no answer but inference. The timer hands this tick the gap it measured
 // from its own last heartbeat; a slot this sweep marks missed whose time fell inside that gap
 // (due after the last tick the worker ran) was missed BECAUSE nothing was awake, and its
-// history says so: `slot.miss-downtime`, beside the kernel's `slot.miss`, with the gap's two ends.
-// It is a second event, not a field on the first, because the sweep's events are the kernel's
-// (@gt/kernel/slots/sweep); see the report for the one-line kernel option that would fold it in.
+// history says so: the kernel's own `slot.miss` carries `downtime: {from, to}`, the gap's two
+// ends, in the same commit as the miss (the sweep's `missData`). Wave B wrote a second event,
+// `slot.miss-downtime`, in a transaction of its own after the sweep's - a crash between the two
+// left a miss that never said why; one event cannot be half-written.
 
 export type TickDeps = PublishDeps & {
   /** The sweep's facts at `now` (epoch ms): the window, the wired channels, which items exist. */
@@ -49,36 +51,31 @@ export type TickReport = {
   readonly next?: string;
 };
 
-function markDowntime(deps: TickDeps, missed: readonly string[], gap: Gap): Result<string[]> {
-  if (missed.length === 0) return ok([]);
-  const ids = new Set(missed);
+/** The sweep's `missData` for a gap: a slot due inside it was missed because nothing was awake. */
+function downtimeOf(gap: Gap, hit: string[]): (slot: Slot) => EventData | undefined {
   const from = Date.parse(gap.from);
-  const by = actorOf(deps.holder);
-  return deps.store.tx((t) => {
-    const hit = listSlotsIn(t, { states: ["missed"] }).filter((r) => ids.has(r.slot.id) && Date.parse(r.slot.at) > from);
-    for (const r of hit) append(t, { actor: by, type: "slot.miss-downtime", subject: { kind: "slot", id: r.slot.id }, data: { from: gap.from, to: gap.to, at: r.slot.at, channel: r.slot.channel } });
-    return hit.map((r) => r.slot.id);
-  });
+  return (slot) => {
+    if (!(Date.parse(slot.at) > from)) return undefined;
+    hit.push(slot.id);
+    return { downtime: { from: gap.from, to: gap.to } };
+  };
 }
 
 /** One tick at `now`. An error is the sweep's (the store, the facts); a slot's failure is an outcome. */
 export async function publishTick(deps: TickDeps, now: Date, opts: TickOptions = {}): Promise<Result<TickReport>> {
   const facts = await deps.facts(now.getTime());
   if (!facts.ok) return facts;
+  const hit: string[] = [];
   const swept = sweep(deps.store, facts.value, {
     claim: true,
     holder: deps.holder,
     ...(deps.alive === undefined ? {} : { alive: deps.alive }),
     ...(opts.only === undefined ? {} : { only: opts.only }),
+    ...(opts.gap === undefined ? {} : { missData: downtimeOf(opts.gap, hit) }),
   });
   if (!swept.ok) return swept;
   const s = swept.value;
-  let downtime: TickReport["downtime"];
-  if (opts.gap !== undefined) {
-    const marked = markDowntime(deps, s.missed, opts.gap);
-    if (!marked.ok) return marked;
-    downtime = { ...opts.gap, missed: marked.value };
-  }
+  const downtime: TickReport["downtime"] = opts.gap === undefined ? undefined : { ...opts.gap, missed: hit };
   const outcomes: PublishOutcome[] = [];
   const pending: ClaimedSlot[] = [...s.claimed];
   while (pending.length > 0) {

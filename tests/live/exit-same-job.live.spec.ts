@@ -4,8 +4,8 @@
 // from the UI and from its CLI on the same job". Every producer lot proved its own half in process
 // (tests/next-server/producer-*-entry/-mv/-suno/-article: the route handler and the CLI's verbs over
 // one store). This lane proves it ASSEMBLED, across real processes over one store file:
-//   · UI -> CLI: a launch through the running server's port (the route the screen calls, or the
-//     screen itself) and the producer's CLI `status --json`, a separate process, names THAT job id;
+//   · UI -> CLI: a launch through the screen itself (the Floor's composer, Runs' doors, a part's
+//     act) and the producer's CLI, a separate process, names or drives THAT job id;
 //   · CLI -> UI: the CLI launches with `--detach`, and Runs - the screen, in a browser - draws the
 //     job it enqueued;
 //   · the worker: `node workers/runner.mts --once` (and `python pipeline/foundry/worker.py --once`
@@ -17,6 +17,16 @@
 // NEXT_DIST_DIR=.next-l44, cwd in the universe, every store the producers write named by an
 // environment variable both the server and the CLIs read, so the two sides cannot resolve two
 // different files.
+//
+// PHASE 6 L70. The UI halves for article, strips, extract, mv and Suno drove the v1 routes the
+// retired screens called (POST /api/articles, /api/foundry/strips, /api/foundry/extract{,/<id>/step},
+// /api/sound/mv{,/import,/run}, /api/sound/suno/{proposals,queue,run}); those routes were deleted
+// with the pages. Their new doors are the Floor's composers and Runs' acts, server actions over the
+// same lib launchers, and each is proven on the same job as its CLI in process by
+// tests/next-server/producer-{article,strips-entry,extract-entry,mv,suno}.test.ts (L67). Here, across
+// processes: the image composer (forge, below) proves the Floor's receipt -> confirm -> enqueue
+// path through a real server, and the Suno case now starts at the Floor's audio composer, since a
+// prompt had no door but the deleted proposals route. The CLI -> UI halves are unchanged.
 //
 // Run: npx playwright test -c playwright.live.config.ts tests/live/exit-same-job.live.spec.ts
 
@@ -194,24 +204,6 @@ function worker(lanes: string): Ran & { lines: Record<string, unknown>[] } {
   return { ...r, lines };
 }
 
-/** A route the screens call, through the server's port, with the access secret. */
-let ip = 0;
-async function api(p: string, method = "GET", body?: unknown): Promise<{ status: number; json: Record<string, unknown> }> {
-  const r = await fetch(`${BASE}${p}`, {
-    method,
-    headers: { authorization: `Bearer ${SECRET}`, "x-forwarded-for": `10.44.${++ip % 250}.1`, ...(body === undefined ? {} : { "content-type": "application/json" }) },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-  });
-  const text = await r.text();
-  let json: Record<string, unknown> = {};
-  try {
-    json = JSON.parse(text) as Record<string, unknown>;
-  } catch {
-    json = { text };
-  }
-  return { status: r.status, json };
-}
-
 /** Runs, opened on one job: the screen draws its bar. */
 async function drawn(page: Page, jobId: string): Promise<void> {
   await page.goto(`/projects/runs?job=${encodeURIComponent(`kernel:${jobId}`)}`, { waitUntil: "domcontentloaded" });
@@ -248,62 +240,17 @@ async function cliHalf(page: Page, producer: string, launch: () => Ran, drive: (
 
 /* ── article (seat.text) ────────────────────────────────────────────────────── */
 
-test("article · UI -> CLI: POST /api/articles enqueues the job `article.mts status --json` names", async () => {
-  const ui = await api("/api/articles", "POST", { topic: { kind: "free", text: "Budgets are counted in tokens." }, mode: "dry" });
-  expect(ui.status, JSON.stringify(ui.json)).toBe(201);
-  const runId = String((ui.json["run"] as Record<string, unknown>)["id"]);
-  const uiJob = String(ui.json["jobId"]);
-  expect(jobRow(uiJob)).toMatchObject({ producer: "article", mode: "dry", state: "queued" });
-  const status = tsx(path.join("pipeline", "article.mts"), ["status", runId, "--json"]);
-  expect(status.code, status.err).toBe(0);
-  expect((doc(status)["jobs"] as { id: string }[]).map((j) => j.id)).toContain(uiJob);
-  UI_JOB.set("article", uiJob);
-});
-
 test("article · CLI -> UI: `article.mts run --dry --detach` is drawn in Runs; the worker drives both jobs to done", async ({ page }) => {
   await cliHalf(page, "article", () => tsx(path.join("pipeline", "article.mts"), ["run", "--topic", "A ceiling is a stop point.", "--dry", "--detach", "--json"]), () => worker("seat.text"));
 });
 
 /* ── strips (seat.text) ─────────────────────────────────────────────────────── */
 
-test("strips · UI -> CLI: the route's receipt, confirmed by its token, enqueues the job `run.mts --status --json` names", async () => {
-  const body = { run: "l44-ui", only: ["E01"], controls: true };
-  const r0 = await api("/api/foundry/strips", "POST", body);
-  expect(r0.status, JSON.stringify(r0.json)).toBe(200);
-  const token = String((r0.json["receipt"] as Record<string, unknown>)["token"]);
-  const r1 = await api("/api/foundry/strips", "POST", { ...body, token });
-  expect(r1.status, `the confirm of a NEW strip run, in the running server: ${JSON.stringify(r1.json)}`).toBe(202);
-  const uiJob = String(r1.json["jobId"]);
-  const status = tsx(path.join("pipeline", "strips", "run.mts"), ["--status", "l44-ui", "--json"]);
-  expect(status.code, status.err).toBe(0);
-  expect(doc(status)["jobId"]).toBe(uiJob);
-  UI_JOB.set("strips", uiJob);
-});
-
 test("strips · CLI -> UI: `run.mts --dry --detach` is drawn in Runs; the worker drives both jobs to done", async ({ page }) => {
   await cliHalf(page, "strips", () => tsx(path.join("pipeline", "strips", "run.mts"), ["--run", "l44-cli", "--only", "E02", "--controls", "--dry", "--detach", "--json"]), () => worker("seat.text"));
 });
 
 /* ── extract (cloud.google) ─────────────────────────────────────────────────── */
-
-test("extract · UI -> CLI: the step route's receipt, confirmed, kicks the job `extract.mts --status --json` names", async () => {
-  const images = [1, 2].map((n) => ({ name: `tile-${n}.png`, mime: "image/png", base64: PNG.toString("base64") }));
-  const created = await api("/api/foundry/extract", "POST", { slug: "l44-ui", images });
-  expect(created.status, JSON.stringify(created.json)).toBeLessThan(300);
-  const runId = String((created.json["run"] as Record<string, unknown>)["id"]);
-  const step = `/api/foundry/extract/${encodeURIComponent(runId)}/step`;
-  const rec = await api(step, "POST", {});
-  expect(rec.status, JSON.stringify(rec.json)).toBe(200);
-  const token = String((rec.json["receipt"] as Record<string, unknown>)["token"]);
-  const kicked = await api(step, "POST", { mode: "dry", token });
-  expect(kicked.status, JSON.stringify(kicked.json)).toBe(200);
-  const uiJob = String(kicked.json["jobId"]);
-  expect(jobRow(uiJob)).toMatchObject({ producer: "extract", mode: "dry" });
-  const status = tsx(path.join("pipeline", "foundry", "extract.mts"), ["--status", runId, "--json"]);
-  expect(status.code, status.err).toBe(0);
-  expect(doc(status)["jobId"]).toBe(uiJob);
-  UI_JOB.set("extract", uiJob);
-});
 
 test("extract · CLI -> UI: `extract.mts <folder> --dry --detach` is drawn in Runs; the worker drives both jobs to done", async ({ page }) => {
   const gallery = path.join(U, "gallery");
@@ -347,67 +294,42 @@ function tracks(name: string, titles: readonly string[]): string {
   return dir;
 }
 
-test("mv · UI -> CLI: the Settled column's import, add and Start (receipt, then its token) launch the job `music-video.mts status --json` names", async () => {
-  const imported = await api("/api/sound/mv/import", "POST", { dir: tracks("ui", ["06_Night Ferry"]) });
-  expect(imported.status, JSON.stringify(imported.json)).toBeLessThan(300);
-  const takeId = String((imported.json["takeIds"] as string[])[0]);
-  const posted = await api("/api/sound/mv", "POST", { sources: [{ kind: "take", id: takeId, title: "06_Night Ferry" }] });
-  expect(posted.status, JSON.stringify(posted.json)).toBe(201);
-  const before = idsOf("mv");
-  const receipt = await api("/api/sound/mv/run");
-  expect(receipt.status, JSON.stringify(receipt.json)).toBe(200);
-  const token = String((receipt.json["receipt"] as Record<string, unknown>)["token"]);
-  const started = await api("/api/sound/mv/run", "POST", { running: true, token });
-  expect(started.status, JSON.stringify(started.json)).toBe(200);
-  const [uiJob] = added("mv", before);
-  expect(uiJob, "Start launched one mv job").toBeDefined();
-  expect(jobRow(uiJob ?? "")).toMatchObject({ producer: "mv", mode: "dry" });
-  const status = tsx(path.join("pipeline", "music-video.mts"), ["status", "--json"]);
-  expect(status.code, status.err).toBe(0);
-  expect((doc(status)["jobs"] as { job?: string }[]).map((j) => j.job)).toContain(uiJob);
-  // The column stays ON, as the operator leaves it: switching it off pauses the job it launched.
-  UI_JOB.set("mv", uiJob ?? "");
-});
-
 test("mv · CLI -> UI: `music-video.mts run <dir> --dry --detach` is drawn in Runs; the worker drives both jobs to done", async ({ page }) => {
   await cliHalf(page, "mv", () => tsx(path.join("pipeline", "music-video.mts"), ["run", tracks("cli", ["07_Salt Lines"]), "--dry", "--detach", "--json"]), () => worker("box.render"));
 });
 
 /* ── Suno (box.chrome) ──────────────────────────────────────────────────────── */
 
-async function proposal(title: string): Promise<string> {
-  const p = await api("/api/sound/suno/proposals", "POST", { fields: { title, style: "warm synthwave, analog pads" }, lane: { axis: "group", value: "ungrouped" } });
-  expect(p.status, JSON.stringify(p.json)).toBe(201);
-  return String((p.json["proposal"] as Record<string, unknown>)["id"]);
+/** The Floor's audio composer, through its receipt: one prompt, and the job that renders it. */
+async function floorAudio(page: Page, text: string): Promise<string> {
+  const before = idsOf("suno");
+  await page.goto("/floor?lane=audio", { waitUntil: "domcontentloaded" });
+  await expect(page.locator('[data-component="Floor"][data-hydrated]')).toBeVisible();
+  const form = page.locator('form[data-component="IdeaComposer"][data-composer="audio"]');
+  await expect(form).toBeVisible();
+  const box = form.getByRole("textbox").first();
+  await box.fill(text);
+  await box.press("Enter");
+  const receipt = page.locator('[data-component="Receipt"]');
+  await expect(receipt).toBeVisible();
+  await expect(receipt).toHaveAttribute("data-mode", "dry");
+  await receipt.getByRole("button", { name: /Confirm/ }).click();
+  await expect(receipt).toHaveCount(0);
+  const mine = added("suno", before);
+  expect(mine, "the confirmed audio receipt enqueued one suno job").toHaveLength(1);
+  return mine[0] ?? "";
 }
 
-test("suno · UI -> CLI: the Queue column's queue and Start (receipt, then its token) launch the job `suno.mts status --json` names", async () => {
-  const pid = await proposal("L44 UI");
-  const queued = await api("/api/sound/suno/queue", "POST", { proposalIds: [pid] });
-  expect(queued.status, JSON.stringify(queued.json)).toBe(201);
-  const before = idsOf("suno");
-  const receipt = await api("/api/sound/suno/run");
-  expect(receipt.status, JSON.stringify(receipt.json)).toBe(200);
-  const token = String((receipt.json["receipt"] as Record<string, unknown>)["token"]);
-  const started = await api("/api/sound/suno/run", "POST", { running: true, token });
-  expect(started.status, JSON.stringify(started.json)).toBe(200);
-  const [uiJob] = added("suno", before);
-  expect(uiJob, "Start launched one suno job").toBeDefined();
-  expect(jobRow(uiJob ?? "")).toMatchObject({ producer: "suno", mode: "dry" });
+test("suno · UI -> CLI: the Floor's audio composer enqueues the job `suno.mts status --json` names; Runs draws it; the worker drives it to done", async ({ page }) => {
+  const uiJob = await floorAudio(page, "a slow tide under tape hiss");
+  expect(jobRow(uiJob)).toMatchObject({ producer: "suno", mode: "dry", state: "queued" });
   const status = tsx(path.join("pipeline", "suno.mts"), ["status", "--json"]);
   expect(status.code, status.err).toBe(0);
   expect((doc(status)["jobs"] as { job?: string }[]).map((j) => j.job)).toContain(uiJob);
-  // The column stays ON, as the operator leaves it: switching it off pauses every job it launched,
-  // and a CLI `start` does not resume a column somebody else stopped. The CLI's own `enqueue` never
-  // launches (whatever the switch says), so its `start` below launches only its own prompt.
-  UI_JOB.set("suno", uiJob ?? "");
-});
-
-test("suno · CLI -> UI: `suno.mts enqueue` + `start --dry --detach` is drawn in Runs; the worker drives both jobs to done", async ({ page }) => {
-  const pid = await proposal("L44 CLI");
-  const enq = tsx(path.join("pipeline", "suno.mts"), ["enqueue", pid, "--json"]);
-  expect(enq.code, `${enq.out}\n${enq.err}`).toBe(0);
-  await cliHalf(page, "suno", () => tsx(path.join("pipeline", "suno.mts"), ["start", "--dry", "--detach", "--json"]), () => worker("box.chrome"));
+  await drawn(page, uiJob);
+  const w = worker("box.chrome");
+  expect(w.code, `${w.out}\n${w.err}`).toBe(0);
+  expect(jobRow(uiJob)?.state, `${uiJob} after the worker\n${w.out}\n${w.err}`).toBe("done");
 });
 
 /* ── forge and Dojo (gpu.local, Python's worker) ────────────────────────────── */

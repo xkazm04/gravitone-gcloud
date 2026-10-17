@@ -141,6 +141,8 @@ boundaries:
 # posture on the two routes with no abstraction. lib/text/ is now the chokepoint and it walks a
 # fallback ladder — local CLI, then a metered Gemini key, then honest refusal. Recorded here because
 # ONE OF THE TWO RUNGS IS UNVERIFIED and that is not something to leave for someone to discover.
+# (2026-10-17, Phase 6: both routes are deleted; the script and frames producers reach the same
+# chokepoint in-process.)
 engines:
   text:
     chokepoint: lib/text/router.ts

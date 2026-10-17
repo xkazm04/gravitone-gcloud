@@ -6,11 +6,23 @@
 // media-playback rules it keeps: a play that never reaches `playing` within the watchdog is a
 // failure in words (transport-contract), the element's own error code is the message, and
 // unmounting pauses and releases the source (media-resource-lifecycle).
+//
+// THE PLAYHEAD IS READABLE (L72): `position()` is the element's own second, and a play may start
+// `from` a second - the hunt's audition carries the second the last take was at onto the next, the
+// same moment of two briefs back to back (v1 app/playground/shared/transport.ts `play(id, from)`).
+// A second the next take does not have starts it from its top rather than at its silent end.
 import { useEffect, useRef, useState } from "react";
 
 import { mediaErrorWords, PLAY_WATCHDOG_MS } from "@gt/ui/components/audio/AudioPreview.tsx";
 
-export function useTransport(onFail: (words: string) => void): { readonly playing: string | null; readonly toggle: (id: string, src: string) => void } {
+export type Transport = {
+  readonly playing: string | null;
+  readonly toggle: (id: string, src: string, from?: number) => void;
+  /** The playing take's second, or 0 when nothing plays. */
+  readonly position: () => number;
+};
+
+export function useTransport(onFail: (words: string) => void): Transport {
   const el = useRef<HTMLAudioElement | null>(null);
   const dog = useRef<ReturnType<typeof setTimeout> | null>(null);
   // A play is in flight: the `pause` the switch itself raises is not the listener's stop.
@@ -57,7 +69,7 @@ export function useTransport(onFail: (words: string) => void): { readonly playin
     };
   }, []);
 
-  const toggle = (id: string, src: string): void => {
+  const toggle = (id: string, src: string, from = 0): void => {
     const a = el.current;
     if (a === null) return;
     if (playing === id && !a.paused) {
@@ -68,6 +80,12 @@ export function useTransport(onFail: (words: string) => void): { readonly playin
     asked.current = true;
     a.pause();
     a.src = src;
+    if (from > 0) {
+      const at = (): void => {
+        if (mine === gen.current) a.currentTime = Number.isFinite(a.duration) && from >= a.duration - 0.05 ? 0 : from;
+      };
+      a.addEventListener("loadedmetadata", at, { once: true });
+    }
     setPlaying(id);
     if (dog.current !== null) clearTimeout(dog.current);
     dog.current = setTimeout(() => {
@@ -84,5 +102,10 @@ export function useTransport(onFail: (words: string) => void): { readonly playin
     });
   };
 
-  return { playing, toggle };
+  const position = (): number => {
+    const a = el.current;
+    return a === null || playing === null ? 0 : a.currentTime;
+  };
+
+  return { playing, toggle, position };
 }

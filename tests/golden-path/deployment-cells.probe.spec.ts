@@ -17,8 +17,16 @@
 //   4. a route file with no cell expectation fails the lane, naming the file;
 //   5. .env.example's hosted block equals HOSTED_CAPS, variable by variable;
 //   7. after the lane, `process.env` deep-equals what it was before.
-//   6. engineStatus("edit-plan").serving is null iff POST /api/recalibrate with
-//      a VALID body answers the no-engine status (503 + an availability code).
+//
+// PHASE 6 L70. The v1 API routes were deleted with the v1 pages: 9 route files
+// remain (the five new-world routes and the four kept file routes), all on
+// app/_server/route.ts route(). With them went the routes invariants 1 and 6
+// were driven through - every CAPABILITY_ROUTES list is empty (the capability
+// surfaces are Server Actions and producers now) and /api/recalibrate is gone,
+// so the "a capability that is on has a ready route" drive, its two seeded
+// controls and the engineStatus-vs-recalibrate agreement retired. Invariant 1
+// still binds over the sweep: a remaining route that answers "not ready" in a
+// cell is a failure, since no capability covers any route.
 //
 // EACH CELL IS A FRESH DEPLOYMENT. Before a cell runs, every app/ and lib/
 // module is dropped from the require cache and the routes are loaded again,
@@ -48,8 +56,6 @@ import path from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { RENDERS } from "@/lib/script/renders";
-import { CONCLUSIONS } from "@/lib/notebook/conclusions";
 import { ACCESS_SECRET_VAR } from "@/lib/apiAuth";
 import { CAPABILITY_ROUTES, HOSTED_CAPS, type Capabilities } from "@/lib/capabilities";
 import { resolveRegistryDir } from "@/lib/articles/registryRead";
@@ -71,7 +77,7 @@ import {
 import { cliArgsFingerprint, FAKE_ENGINE_ENV, keepEnv, stripComments, withFakeEngine, type Cassette } from "./_helpers";
 
 const ROOT = process.cwd();
-const METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
+const METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"] as const;
 type Method = (typeof METHODS)[number];
 
 keepEnv([...new Set([...cellAxes(), ...storeRootVars(), ...FAKE_ENGINE_ENV, "SUNO_DRIVER"])]);
@@ -187,132 +193,26 @@ const REGISTRY_PRESENT = (() => {
 })();
 
 const EXPECT: Record<string, Expectation> = {
-  "app/api/ads/ideas/route.ts": { door: "money", ok: { GET: "2xx", POST: "4xx" } },
-  "app/api/ads/render/[id]/file/route.ts": { door: "access", ok: { GET: "4xx" } },
-  "app/api/ads/render/[id]/route.ts": { door: "access", ok: { GET: "4xx" } },
-  "app/api/ads/render/route.ts": { door: "money", ok: { POST: "4xx" }, local: ["POST"] },
-  "app/api/ads/scenarios/route.ts": { door: "money", ok: { GET: "2xx", POST: "4xx" } },
-  "app/api/blob/[sha]/route.ts": { door: "access", ok: { GET: "4xx" } },
-  "app/api/articles/[runId]/approve/route.ts": { door: "money", ok: { POST: "4xx" } },
+  // A run file. No run is named, so an admitted caller meets the store's 404.
   "app/api/articles/[runId]/file/[...path]/route.ts": { door: "access", ok: { GET: "4xx" } },
-  "app/api/articles/[runId]/reject/route.ts": { door: "access", ok: { POST: "4xx" } },
-  "app/api/articles/[runId]/resume/route.ts": { door: "money", ok: { POST: "4xx" } },
-  // Rework restarts the drive, so it spends the seat the way resume does.
-  "app/api/articles/[runId]/rework/route.ts": { door: "money", ok: { POST: "4xx" } },
-  "app/api/articles/[runId]/route.ts": { door: "access", ok: { GET: "4xx" } },
-  "app/api/articles/route.ts": { door: "money", ok: { GET: "2xx", POST: "4xx" } },
-  "app/api/articles/topics/route.ts": { door: "access", ok: { GET: "2xx" }, registry: ["GET"] },
-  "app/api/capabilities/route.ts": { door: "access", ok: { GET: "2xx" } },
-  "app/api/cut/export/file/route.ts": { door: "access", ok: { GET: "4xx" } },
-  "app/api/cut/export/route.ts": { door: "money", ok: { POST: "4xx" }, local: ["POST"] },
+  // `no-such-sha` is not a sha256: the address is refused before the store is opened.
+  "app/api/blob/[sha]/route.ts": { door: "access", ok: { GET: "4xx", HEAD: "4xx" } },
   // The ledger as Server-Sent Events (app/_server/sse.ts): a 200 stream that
   // never ends by itself, so drive() cancels its body rather than reading it.
   "app/api/events/stream/route.ts": { door: "access", ok: { GET: "2xx" } },
+  // A run file with no run and no path: the store refuses the address.
+  "app/api/foundry/file/route.ts": { door: "access", ok: { GET: "4xx" } },
+  "app/api/import/route.ts": { door: "access", ok: { GET: "4xx", POST: "4xx" } },
   // The ledger as JSON Lines for agents (app/api/ledger/route.ts). `format=jsonl` is required,
   // and drive() sends no query, so an admitted caller meets the input door's 400.
   "app/api/ledger/route.ts": { door: "access", ok: { GET: "4xx" } },
-  // The fixture bundle. Behind the read door, then 404 unless
-  // NEXT_PUBLIC_GRAVITONE_DATA=fixtures was set at build time - which no cell
-  // here sets, so every cell drives the 404 branch and not the read.
-  "app/api/fixtures/browser/route.ts": { door: "access", ok: { GET: "4xx" } },
-  "app/api/foundry/extract/[id]/commit/route.ts": { door: "access", ok: { GET: "4xx", POST: "4xx" } },
-  "app/api/foundry/extract/[id]/route.ts": { door: "access", ok: { GET: "4xx" } },
-  "app/api/foundry/extract/[id]/step/route.ts": { door: "money", ok: { POST: "4xx" } },
-  "app/api/foundry/extract/[id]/verdicts/route.ts": { door: "access", ok: { PUT: "4xx", PATCH: "4xx" } },
-  "app/api/foundry/extract/route.ts": { door: "money", ok: { GET: "2xx", POST: "4xx" } },
-  "app/api/foundry/file/route.ts": { door: "access", ok: { GET: "4xx" } },
-  "app/api/foundry/runs/[id]/commit/route.ts": { door: "access", ok: { GET: "4xx", POST: "4xx" } },
-  "app/api/foundry/runs/[id]/route.ts": { door: "access", ok: { GET: "4xx" } },
-  "app/api/foundry/runs/[id]/verdicts/route.ts": { door: "access", ok: { PUT: "4xx", PATCH: "4xx" } },
-  "app/api/foundry/runs/route.ts": { door: "access", ok: { GET: "2xx" } },
-  "app/api/foundry/styles/[id]/adopt/route.ts": { door: "money", ok: { POST: "4xx" } },
-  // Retired (Phase 5, L54): a 410 naming /library?kind=style, behind the access door.
-  "app/api/foundry/styles/route.ts": { door: "access", ok: { GET: "4xx" } },
-  "app/api/foundry/strips/[id]/commit/route.ts": { door: "access", ok: { GET: "4xx", POST: "4xx" } },
-  "app/api/foundry/strips/[id]/page/route.ts": { door: "access", ok: { GET: "4xx" } },
-  "app/api/foundry/strips/[id]/route.ts": { door: "access", ok: { GET: "4xx" } },
-  "app/api/foundry/strips/[id]/verdicts/route.ts": { door: "access", ok: { PUT: "4xx", PATCH: "4xx" } },
-  // POST with no token is a launch RECEIPT (COMMON decision 3): every body field is optional, so the
-  // empty body is a valid dry request and answers 2xx with the receipt; nothing is enqueued or spent.
-  "app/api/foundry/strips/route.ts": { door: "money", ok: { GET: "2xx", POST: "2xx" } },
-  "app/api/foundry/training/[id]/blind/route.ts": { door: "access", ok: { PATCH: "4xx" } },
-  "app/api/foundry/training/[id]/commit/route.ts": { door: "access", ok: { POST: "4xx" } },
-  "app/api/foundry/training/[id]/route.ts": { door: "access", ok: { GET: "4xx" } },
-  "app/api/foundry/training/[id]/verdicts/route.ts": { door: "access", ok: { PUT: "4xx", PATCH: "4xx" } },
-  "app/api/foundry/training/route.ts": { door: "access", ok: { GET: "2xx" } },
-  "app/api/frames/route.ts": { door: "money", ok: { POST: "4xx" } },
-  "app/api/import/route.ts": { door: "access", ok: { GET: "4xx", POST: "4xx" } },
-  "app/api/imaging/budget/route.ts": { door: "access", ok: { GET: "2xx" } },
-  "app/api/imaging/edit/route.ts": { door: "money", ok: { POST: "4xx" } },
-  "app/api/imaging/generate/route.ts": { door: "money", ok: { POST: "4xx" } },
-  "app/api/imaging/pricing/route.ts": { door: "public", ok: { GET: "2xx" } },
-  "app/api/imaging/recognize/route.ts": { door: "money", ok: { POST: "4xx" } },
-  "app/api/motion/direct/route.ts": { door: "money", ok: { POST: "4xx" } },
-  "app/api/music-video/export/file/route.ts": { door: "access", ok: { GET: "4xx" } },
-  "app/api/music-video/export/route.ts": { door: "money", ok: { POST: "4xx" }, local: ["POST"] },
-  "app/api/music/compose/route.ts": { door: "money", ok: { POST: "4xx" } },
-  "app/api/music/generate/route.ts": { door: "money", ok: { POST: "4xx" } },
-  "app/api/music/plan/route.ts": { door: "money", ok: { POST: "4xx" } },
-  "app/api/music/pricing/route.ts": { door: "public", ok: { GET: "2xx" } },
-  "app/api/music/sfx/route.ts": { door: "money", ok: { POST: "4xx" } },
-  "app/api/publish/channels/route.ts": { door: "access", ok: { GET: "2xx" } },
-  "app/api/publish/exports/route.ts": { door: "access", ok: { GET: "2xx" } },
-  "app/api/publish/metrics/refresh/route.ts": { door: "access", ok: { POST: "2xx" } },
-  "app/api/publish/metrics/route.ts": { door: "access", ok: { GET: "2xx" } },
-  "app/api/publish/schedule/[id]/route.ts": { door: "access", ok: { PATCH: "4xx", DELETE: "4xx" } },
-  "app/api/publish/schedule/route.ts": { door: "access", ok: { GET: "2xx", POST: "4xx" } },
-  "app/api/recalibrate/route.ts": { door: "money", ok: { POST: "4xx" } },
-  "app/api/research/route.ts": { door: "money", ok: { GET: "2xx", POST: "4xx" } },
-  "app/api/script/route.ts": { door: "money", ok: { POST: "4xx" } },
   // The door a session is made at: public by necessity, so it guards itself.
   // GET answers {kind: "none"} with no cookie, DELETE clears one either way,
   // and POST refuses an empty body as `invalid` before any token is judged.
   "app/api/session/route.ts": { door: "public", ok: { GET: "2xx", POST: "4xx", DELETE: "2xx" } },
-  "app/api/sound/generate/route.ts": { door: "money", ok: { POST: "4xx" } },
-  "app/api/sound/groups/route.ts": { door: "access", ok: { GET: "2xx", PUT: "4xx" } },
-  "app/api/sound/hunts/[id]/lesson/route.ts": { door: "money", ok: { POST: "4xx" } },
-  "app/api/sound/hunts/[id]/route.ts": { door: "access", ok: { PATCH: "4xx" } },
-  "app/api/sound/hunts/route.ts": { door: "money", ok: { GET: "2xx", POST: "4xx" } },
-  "app/api/sound/insights/route.ts": { door: "access", ok: { GET: "2xx" } },
-  "app/api/sound/lessons/route.ts": { door: "access", ok: { GET: "2xx", POST: "4xx" } },
-  // The Suno queue (spark audio-queue-suno). The snapshot GET reads the store
-  // and asks the driver whether a signed-in Suno answers (never launches one);
-  // every write is guardRequest and refuses an empty body or an id that names
-  // nothing before the store, the browser or a model is reached.
-  "app/api/sound/suno/route.ts": { door: "access", ok: { GET: "2xx" } },
-  "app/api/sound/suno/clips/[id]/route.ts": { door: "money", ok: { PATCH: "4xx" } },
-  "app/api/sound/suno/library/route.ts": { door: "money", ok: { POST: "4xx" } },
-  "app/api/sound/suno/run/route.ts": { door: "money", ok: { GET: "2xx", POST: "4xx" } },
-  "app/api/sound/suno/clear/route.ts": { door: "money", ok: { POST: "4xx" } },
-  "app/api/sound/suno/proposals/[id]/route.ts": { door: "money", ok: { DELETE: "4xx" } },
-  "app/api/sound/suno/proposals/route.ts": { door: "money", ok: { POST: "4xx" } },
-  "app/api/sound/suno/propose/route.ts": { door: "money", ok: { POST: "4xx" } },
-  "app/api/sound/suno/queue/[id]/route.ts": { door: "money", ok: { DELETE: "4xx" } },
-  "app/api/sound/suno/queue/route.ts": { door: "money", ok: { POST: "4xx" } },
-  // The music-video queue (spark audio-music-video-queue). The snapshot GET
-  // reads the store and asks the Leonardo studio whether it answers (no
-  // LEONARDO_STUDIO_CDP in a cell: the health check answers from config, no
-  // fetch). Every write refuses an empty body or an id that names nothing
-  // before a store, an engine or a file is reached; the import's
-  // local-binaries refusal comes AFTER its body check, so an empty body is
-  // the same 400 in every cell.
-  "app/api/sound/mv/route.ts": { door: "money", ok: { GET: "2xx", POST: "4xx" } },
-  "app/api/sound/mv/run/route.ts": { door: "money", ok: { GET: "2xx", POST: "4xx" } },
-  "app/api/sound/mv/import/route.ts": { door: "money", ok: { POST: "4xx" }, local: ["POST"] },
-  "app/api/sound/mv/jobs/[id]/route.ts": { door: "money", ok: { POST: "4xx", PATCH: "4xx", DELETE: "4xx" } },
   "app/api/sound/mv/jobs/[id]/file/route.ts": { door: "access", ok: { GET: "4xx" } },
-  "app/api/sound/mv/jobs/[id]/calendar/route.ts": { door: "money", ok: { POST: "4xx" } },
   "app/api/sound/takes/[id]/file/route.ts": { door: "access", ok: { GET: "4xx" } },
-  "app/api/sound/takes/[id]/route.ts": { door: "access", ok: { PATCH: "4xx" } },
-  "app/api/sound/takes/route.ts": { door: "access", ok: { GET: "2xx", POST: "4xx", DELETE: "4xx" } },
-  "app/api/spend/route.ts": { door: "access", ok: { GET: "2xx" } },
-  "app/api/turns/[id]/cancel/route.ts": { door: "access", ok: { POST: "4xx" } },
-  "app/api/turns/[id]/route.ts": { door: "access", ok: { GET: "4xx" } },
-  "app/api/turns/preview/route.ts": { door: "access", ok: { POST: "4xx" } },
-  "app/api/turns/route.ts": { door: "money", ok: { GET: "4xx", POST: "4xx" } },
-  "app/api/video/clips/[id]/file/route.ts": { door: "access", ok: { GET: "4xx" } },
-  "app/api/video/clips/[id]/route.ts": { door: "access", ok: { GET: "4xx" } },
-  "app/api/video/clips/route.ts": { door: "money", ok: { GET: "2xx", POST: "4xx" } },
+
 };
 
 /** Answer codes that mean "this deployment cannot do it", as opposed to "your
@@ -345,21 +245,6 @@ const KNOWN_UNHIDDEN_REFUSALS: Record<string, string> = {};
 
 /** Spawns a managed cell is known to make, by the route that makes them. */
 const KNOWN_MANAGED_SPAWNS: Record<string, { pattern: RegExp; why: string }> = {};
-
-/** Bodies that get each capability route PAST validation, so a "not ready"
- *  answer is observable (an empty body is refused before the key is read).
- *  The key is a sentinel and `fetch` refuses, so "past validation" is as far
- *  as any of them gets. */
-const READY_BODIES: Record<string, unknown> = {
-  "app/api/music/generate/route.ts": {
-    title: "Cell probe cue",
-    intent: "a calm bed under a single scene",
-    bpm: 90,
-    picture: { projectTitle: "Cell probe", scenes: [{ index: 0, slug: "one", mood: "calm", startS: 0, durS: 5 }] },
-  },
-  "app/api/music/compose/route.ts": { prompt: "a calm piano bed", lengthMs: 5000 },
-  "app/api/music/sfx/route.ts": { text: "a door closes softly", durationSeconds: 2 },
-};
 
 /* ── the instruments ─────────────────────────────────────────────────────── */
 
@@ -529,7 +414,7 @@ async function drive(
   const headers: Record<string, string> = { "x-forwarded-for": nextIp() };
   if (bearer) headers.authorization = `Bearer ${bearer}`;
   const init: RequestInit = { method, headers };
-  if (method !== "GET") {
+  if (method !== "GET" && method !== "HEAD") {
     headers["content-type"] = "application/json";
     init.body = JSON.stringify(body);
   }
@@ -566,27 +451,6 @@ const classOf = (s: number): "2xx" | "4xx" | "5xx" | "none" =>
 function unhidden(rel: string, a: Answer, caps: Capabilities): boolean {
   if (!NOT_READY.has(a.code)) return false;
   return !(Object.keys(CAPABILITY_ROUTES) as (keyof Capabilities)[]).some((c) => !caps[c] && CAPABILITY_ROUTES[c].includes(rel));
-}
-
-/** Acceptance 6: a body the route accepts (the shape recalibrate-route-e2e
- *  drives), so the answer is the ENGINE's and not a refusal of the body. */
-const VALID_RECALIBRATE_BODY = {
-  projectId: "p-cells-engine",
-  notebook: {},
-  conclusions: CONCLUSIONS,
-  renders: RENDERS,
-  scope: {},
-  notes: [{ kind: "less-focus", cardId: "f-macro-cause" }],
-};
-/** `TextError` kinds that mean "no engine can serve this turn here": the
- *  availability kinds lib/text/errors.ts answers 503 for. */
-const NO_ENGINE_CODES = new Set(["no-key", "not-installed", "not-logged-in", "policy-forbidden", "managed-platform"]);
-
-/** Invariant 6 as a function so the control below can run it on seeded answers:
- *  "no engine serves" and "the route answers the no-engine status" are one fact. */
-function engineAgreement(serving: string | null, a: Answer): string {
-  const noEngine = a.status === 503 && NO_ENGINE_CODES.has(a.code);
-  return (serving === null) === noEngine ? "ok" : `engineStatus serves ${serving}, and a valid body answered ${a.status} ${a.code || "-"}`;
 }
 
 /* ── one cell ────────────────────────────────────────────────────────────── */
@@ -692,30 +556,6 @@ async function runCell(
             sweepFetches = fetchesBeforeReady();
           }
 
-          // ── invariant 1: a capability that is on has a route that is ready ──
-          if (caller !== "anonymous") {
-            const bearer = caller === "secret" ? CELL_SECRET : null;
-            for (const [cap, routes] of Object.entries(CAPABILITY_ROUTES) as [keyof Capabilities, readonly string[]][])
-              for (const f of routes) {
-                if (!(f in READY_BODIES)) continue;
-                const a = await drive(f, "POST", handlersOf(f).find(([m]) => m === "POST")![1], bearer, READY_BODIES[f]);
-                const verdict = !unhidden(f, a, caps)
-                  ? "ok"
-                  : `capabilities().${cap} is ${caps[cap]} and the route answers ${a.status} ${a.code}`;
-                say("ready", "POST", f, a, verdict);
-              }
-            lib.musicBudget.__resetMusicBudget();
-          }
-
-          // ── invariant 6: engineStatus and /api/recalibrate agree on "no engine" ──
-          if (caller !== "anonymous") {
-            const bearer = caller === "secret" ? CELL_SECRET : null;
-            const post = handlersOf("app/api/recalibrate/route.ts").find(([m]) => m === "POST")![1];
-            const a = await drive("app/api/recalibrate/route.ts", "POST", post, bearer, VALID_RECALIBRATE_BODY, "?wait=1");
-            const verdict = engineAgreement(status.serving, a);
-            say("engine", "POST", "app/api/recalibrate/route.ts", a, verdict);
-          }
-
           // ── invariant 2: a managed cell starts no process ──
           const engineCalls = engine.calls().slice(engineBaseline);
           if (posture === "managed-platform") {
@@ -795,7 +635,7 @@ test("cells: each declared cell is its own nearest cell, exactly — the line pi
 
 test("routes: every route file on disk has a cell expectation, and every expectation names one (acceptance 4)", () => {
   const files = routeFiles();
-  expect(files.length, "the route walk found nothing - it is reading the wrong tree").toBeGreaterThanOrEqual(40);
+  expect(files.length, "the route walk found nothing - it is reading the wrong tree").toBeGreaterThanOrEqual(8);
   const unexpected = files.filter((f) => !EXPECT[f]);
   expect(
     unexpected,
@@ -830,7 +670,6 @@ test("capabilities: CAPABILITY_ROUTES covers every capability and names only rou
   );
   expect(bad, "CAPABILITY_ROUTES names a route file that is not on disk").toEqual([]);
   expect(Object.keys(CAPABILITY_ROUTES).sort()).toEqual(Object.keys(serverCapabilities()).sort());
-  for (const f of Object.keys(READY_BODIES)) expect(Object.values(CAPABILITY_ROUTES).flat(), `${f} has a ready body and no capability`).toContain(f);
   for (const f of [...Object.keys(KNOWN_UNHIDDEN_REFUSALS), ...Object.keys(KNOWN_MANAGED_SPAWNS)])
     expect(files, `a known finding names ${f}, which is not on disk`).toContain(f);
 });
@@ -887,40 +726,11 @@ for (const cell of CELLS) {
   });
 }
 
-// THE POSITIVE CONTROLS for invariant 1. A green lane over the declared cells
-// says nothing unless the same check goes red where the disagreement is real.
-// Until 2026-10-06 a real cell supplied that: a fresh clone showed the music
-// capabilities with no key, and the check named it. That disagreement is fixed
-// (the declared `laptop-fresh-clone` cell above is green), so each control now
-// SEEDS the old fault back — the matrix as it was computed before the fix — and
-// requires the check to name the cell and every route. If one ever stops doing
-// so, the "ok" verdicts above stopped meaning anything.
-const freshClone = (): Cell => CELLS.find((c) => c.name === "laptop-fresh-clone")!;
-
-test("invariant 1 control: seeded - music capabilities on with no key - is named, with every music route", async () => {
-  const run = await runCell(freshClone(), {
-    sweep: false,
-    seed: (c) => ({ ...c, musicGenerate: true, musicSectionEdit: true, musicSfx: true }),
-  });
-  console.log(run.summary);
-  for (const l of run.lines) console.log(l);
-  for (const f of Object.keys(READY_BODIES))
-    expect(
-      run.failures.some((x) => x.startsWith("laptop-fresh-clone:") && x.includes(f) && /answers 503 no-key/.test(x)),
-      `invariant 1 did not flag ${f} in a cell where its capability is on and its key is absent`,
-    ).toBe(true);
-});
-
-test("invariant 1 control: seeded - localRender on where spawning is forbidden - names each export", async () => {
-  const cell = CELLS.find((c) => c.name === "cloud-run-saas")!;
-  const run = await runCell(cell, { sweep: true, seed: (c) => ({ ...c, localRender: true }) });
-  console.log(run.summary);
-  for (const f of CAPABILITY_ROUTES.localRender)
-    expect(
-      run.failures.some((x) => x.startsWith("cloud-run-saas:") && x.includes(f) && /503 local-binaries-forbidden and no capability/.test(x)),
-      `invariant 1 did not flag ${f} with localRender seeded on in a managed cell`,
-    ).toBe(true);
-});
+// THE POSITIVE CONTROL for invariant 1 retired with its routes (Phase 6 L70): both
+// seeded faults - the music capabilities on with no key, localRender on where spawning
+// is forbidden - were driven through routes that no longer exist, and with every
+// CAPABILITY_ROUTES list empty the seed has nothing to flag. The sweep's half of the
+// invariant (a not-ready answer must be hidden) still runs in every cell above.
 
 /** Variables the TEST RUNNER writes, not the app. Playwright's TypeScript hook
  *  sets BROWSERSLIST_IGNORE_OLD_DATA=true the first time it compiles a file
@@ -930,13 +740,6 @@ test("invariant 1 control: seeded - localRender on where spawning is forbidden -
  *  inside the lane. Measured 2026-10-06: red on the first full run after a
  *  commit rewrote line endings, green on the next. */
 const RUNNER_OWNED = new Set(["BROWSERSLIST_IGNORE_OLD_DATA"]);
-
-test("invariant 6 control: seeded - an engine that serves but the route says no-key, and the reverse - is named", () => {
-  expect(engineAgreement("google", { status: 503, code: "no-key" })).toMatch(/engineStatus serves google.*503 no-key/);
-  expect(engineAgreement(null, { status: 502, code: "failed" })).toMatch(/engineStatus serves null.*502 failed/);
-  expect(engineAgreement(null, { status: 503, code: "no-key" })).toBe("ok");
-  expect(engineAgreement("claude-cli", { status: 502, code: "failed" })).toBe("ok");
-});
 
 test("the lane leaves process.env exactly as it found it (acceptance 7)", () => {
   const now = { ...process.env };

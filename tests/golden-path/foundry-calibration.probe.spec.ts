@@ -25,16 +25,14 @@
 // before unlink) live in lib/foundry/store.ts's commit and wait for the
 // foundry-engine-A write lock; they are not asserted here.
 //
-// And the cull itself: an inverted or chance field is drawn as a <Ghost> meter
-// (signal vocabulary) with its accessible reading kept.
+// The cull's meters (an inverted or chance field drawn as a <Ghost>) retired with v1's /foundry
+// in Phase 6 wave C; see the note where that case stood.
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { ScoreMeters, ScorePill } from "@/app/foundry/ui";
-import { Ghost } from "@/components/ui/signal";
 import {
   CALIBRATION_METHOD,
   calibrate,
@@ -59,28 +57,6 @@ function rows(nKeep: number, nReject: number, opts: { craftKeep?: (i: number) =>
     out.push({ mechanism: opts.mechanism ?? "text", verdict: "reject", craft: opts.craftReject?.(i) ?? 0.2 + i * 0.001, style_score: 0.5, has_text: false, grader: "g", grader_digest: opts.digest ?? null });
   return out;
 }
-
-/** Every element in a React element tree, function components left unexpanded. */
-function elements(node: unknown, acc: { type: unknown; props: Record<string, unknown> }[] = []) {
-  if (node == null || typeof node !== "object") return acc;
-  if (Array.isArray(node)) {
-    for (const c of node) elements(c, acc);
-    return acc;
-  }
-  const el = node as { type?: unknown; props?: Record<string, unknown> };
-  if (el.type !== undefined && el.props !== undefined) {
-    acc.push({ type: el.type, props: el.props });
-    elements(el.props.children, acc);
-  }
-  return acc;
-}
-const textOf = (node: unknown): string => {
-  if (node == null || typeof node === "boolean") return "";
-  if (typeof node === "string" || typeof node === "number") return String(node);
-  if (Array.isArray(node)) return node.map(textOf).join("");
-  const el = node as { props?: { children?: unknown } };
-  return el.props ? textOf(el.props.children) : "";
-};
 
 /* ── 1. the real ledger ───────────────────────────────────────────────────── */
 
@@ -222,32 +198,14 @@ test("the real ledger: no field steers the cull today", () => {
   }
 });
 
-/* ── the meters ───────────────────────────────────────────────────────────── */
+/* ── the meters (retired) ─────────────────────────────────────────────────── */
 
-test("an inverted or chance field is drawn as a Ghost, its accessible reading kept", () => {
-  const tree = ScoreMeters({
-    rows: [
-      { label: "craft", value: 0.64, status: "inverted" },
-      { label: "style", value: 0.5, status: "chance" },
-      { label: "veto", value: 0.9, status: "calibrated" },
-    ],
-  });
-  const all = elements(tree);
-  const ghosts = all.filter((e) => e.type === Ghost);
-  expect(ghosts.map((g) => g.props.label)).toEqual(["craft grader inverted", "style grader chance"]);
-  // The screen-reader reading of the score stays whole.
-  const sr = all.filter((e) => e.props.className === "sr-only").map((e) => textOf(e.props.children));
-  expect(sr).toContain("craft 64%, partly held");
-  expect(sr).toContain("veto 90%, held");
-
-  // Without a status (or calibrated / insufficient) the meter is the meter.
-  expect(elements(ScoreMeters({ rows: [{ label: "craft", value: 0.64 }] })).some((e) => e.type === Ghost)).toBe(false);
-  expect(elements(ScoreMeters({ rows: [{ label: "craft", value: 0.64, status: "insufficient" }] })).some((e) => e.type === Ghost)).toBe(false);
-
-  const pill = elements(ScorePill({ label: "craft", value: 0.64, status: "inverted" }));
-  expect(pill.filter((e) => e.type === Ghost).map((g) => g.props.label)).toEqual(["craft grader inverted"]);
-  expect(pill.filter((e) => e.props.className === "sr-only").map((e) => textOf(e.props.children))).toContain("craft 64%, partly held");
-});
+// The Ghost-meter case retired with v1's /foundry (Phase 6 wave C): app/foundry/ui.tsx's ScoreMeters
+// and ScorePill drew the grades under every cull tile, and an inverted or chance field had to be
+// drawn as a Ghost so it could not steer the curator. The Board draws no grade meter at all - a
+// grade reaches it only as a calibration chip, and the cull order reads kernel calibration
+// (packages/kernel/test/calibration.test.ts holds `cullOrder` to calibrated grades only) - so the
+// failure the meters case guarded has no surface left to happen on.
 
 /* ── 6. the commit stamps the row ─────────────────────────────────────────── */
 

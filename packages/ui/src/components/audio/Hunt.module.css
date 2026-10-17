@@ -69,3 +69,11 @@
 .takeHead{display:flex;align-items:center;gap:var(--sp-2);min-width:0}
 .takeTitle{flex:1;min-width:0;font:600 var(--fs-meta)/1.3 var(--sans);color:var(--ink-bright);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .takeAxis{font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+
+/* A Suno leaf's file coming back: a native file drop in the hand leaf's amber (Arrange's round-trip
+   drop, at leaf scale). */
+.drop{position:relative;flex:1;display:grid;place-items:center;height:var(--h-control-sm);border-radius:var(--r-control);border:1px dashed color-mix(in srgb,var(--faint) 80%,transparent);font:600 var(--fs-micro)/1 var(--mono);color:var(--muted);cursor:pointer;transition:border-color var(--dur-fast) var(--ease),background var(--dur-fast) var(--ease)}
+.drop:hover,.drop:focus-within{border-color:color-mix(in srgb,var(--amber) 55%,transparent);color:var(--ink-bright)}
+.dropOver{border-style:solid;border-color:var(--amber);background:color-mix(in srgb,var(--amber) 12%,transparent);color:var(--ink-bright)}
+.dropBusy{opacity:.6;cursor:wait}
+.dropInput{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:inherit}

@@ -68,9 +68,12 @@ test("callsTo('addEventListener') with a \"keydown\" first argument is derived a
   );
   console.log(`[ast] keydown population: ${Date.now() - t0}ms, ${files.size} files`);
   expect(projectFiles().length, "the file list is empty - wrong root set").toBeGreaterThan(100);
-  // The foundry surfaces cull-keys used to hand-list (ExtractBoard, StripGrid) retired
-  // in Phase 3; the population is still derived, and still not small.
-  expect(files.size).toBeGreaterThan(3);
+  // The population is derived, never listed. Phase 6 retired v1's last raw keydown listeners
+  // (the foundry canvas, the sound lab, the deck): what is left is the keymap's one dispatcher
+  // and the few overlays that own a key outside it - still more than none, so a walk that reads
+  // nothing cannot pass for one that found nothing.
+  expect(files.size).toBeGreaterThan(0);
+  expect([...files].some((f) => f.endsWith("dispatch.ts") || f.startsWith("components/") || f.startsWith("app/"))).toBe(true);
 });
 
 test("switchCase() returns the Enter case of EVERY switch in a handler, not the first", () => {

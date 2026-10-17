@@ -6,8 +6,7 @@
     "packages/*"
   ],
   "sideEffects": [
-    "*.css",
-    "./lib/turns/kinds/*.ts"
+    "*.css"
   ],
   "scripts": {
     "test:unit": "vitest run",

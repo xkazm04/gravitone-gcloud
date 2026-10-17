@@ -20,10 +20,13 @@
 // in the CLI's stream-json shape (tests/_engine/cassettes/research-retrieve.json),
 // replayed by the stand-in `claude` withFakeEngine puts first on PATH.
 //
-// SINCE AIO-A STAGE 4b the POST starts a server-owned `research` turn and
-// answers 202. The route cases here ask it with `?wait=1` and a `projectId`,
-// over a temp TEXT_TURN_DIR, and assert the SAME bodies they always did: the
-// synchronous answer is the route's contract for scripts and probes.
+// SINCE AIO-A STAGE 4b a research run is a server-owned `research` turn. The
+// route (/api/research, its POST and its pre-flight GET) retired with the v1
+// pages in Phase 6 L70; the research producer runs the kind in process. The
+// end-to-end cases start the REAL kind on the REAL runner over a temp
+// TEXT_TURN_DIR and read the settled record - the same notebook, engine block and
+// findings the route's synchronous body carried - and the pre-flight is the
+// router's own `engineStatus("research")`, which the GET served.
 import { createHash } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -31,14 +34,15 @@ import { join } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { GET, POST } from "@/app/api/research/route";
 import { CliError } from "@/lib/claudeCli";
 import { crossCheckRetrieval, NotebookError, parseNotebook } from "@/lib/notebook/validate";
 import { retrievalEnabled } from "@/lib/text/env";
 import { TextError } from "@/lib/text/errors";
 import { parseRetrieveStream, runClaudeRetrieve } from "@/lib/text/providers/claudeCliRetrieve";
-import { retrieve } from "@/lib/text/router";
-import { whenIdle } from "@/lib/turns/runner";
+import { engineStatus, retrieve } from "@/lib/text/router";
+import { RESEARCH_SPEC } from "@/lib/turns/kinds/research";
+import type { TurnRecord } from "@/lib/turns/ledger";
+import { startTurn, whenIdle, type TurnSpec } from "@/lib/turns/runner";
 import type { Notebook } from "@/lib/notebook/types";
 
 import {
@@ -56,7 +60,6 @@ keepEnv([
   "TEXT_ENV",
   "LOCAL_BINARIES",
   "GOOGLE_AI_API_KEY",
-  "NEXT_PUBLIC_DEV_AUTH",
   "LIGHTTRACK_DISABLE",
   "TEXT_RETRIEVE",
   "TEXT_TURN_DIR",
@@ -66,7 +69,6 @@ let dir = "";
 test.beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "gravitone-research-retrieve-"));
   process.env.TEXT_TURN_DIR = dir;
-  process.env.NEXT_PUBLIC_DEV_AUTH = "1";
   process.env.TEXT_ENV = "local";
   process.env.LOCAL_BINARIES = "on";
   // No cloud key: a local rung that failed has nowhere metered to go.
@@ -104,18 +106,16 @@ function retrieveCassette(stream: Record<string, unknown>[], resultJson: unknown
 const INIT = TURN.stream[0]!;
 const RESULT = TURN.stream[TURN.stream.length - 1]!;
 
-let ip = 0;
-const req = (method: "GET" | "POST", body?: unknown) =>
-  new Request(`http://localhost/api/research${method === "POST" ? "?wait=1" : ""}`, {
-    method,
-    headers: { "content-type": "application/json", "x-forwarded-for": `10.88.0.${++ip}` },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-  });
-
-async function research(topic = "harbour dredging costs") {
-  const res = await POST(req("POST", { topic, projectId: "p-research-retrieve" }));
-  return { status: res.status, json: (await res.json()) as Record<string, unknown> };
+/** One research turn to its end on the real runner; the settled record. */
+let project = 0;
+async function research(topic = "harbour dredging costs"): Promise<TurnRecord> {
+  const out = await startTurn(RESEARCH_SPEC as TurnSpec, `p-research-retrieve-${++project}`, { topic });
+  if (!out.ok) throw new Error(`slot held by ${out.holder.id}`);
+  const rec = await out.done;
+  await whenIdle();
+  return rec;
 }
+type Researched = { notebook: Notebook; engine: Record<string, unknown> };
 
 /* ── case 2: the stream becomes receipts ─────────────────────────────────── */
 
@@ -244,38 +244,38 @@ test("retrieve cross-check: zero receipts still requires researchGaps[0] to name
   expect(findings.every((f) => /cited, not fetched/.test(f))).toBe(true);
 });
 
-test("retrieve route (flag on): a run with zero tool calls is searched:false, and an unconfessed one is refused", async () => {
+test("retrieve turn (flag on): a run with zero tool calls is searched:false, and an unconfessed one is refused", async () => {
   process.env.TEXT_RETRIEVE = "1";
   const quiet = [INIT, RESULT];
 
   const honest = { ...NOTEBOOK, researchGaps: ["No search was run: the session made no tool call", "Earlier seasons were not read"] };
   await withFakeEngine(retrieveCassette(quiet, honest), async () => {
-    const { status, json } = await research();
-    const e = json.engine as Record<string, unknown>;
-    expect(status, String(json.detail)).toBe(200);
+    const rec = await research();
+    expect(rec.status, JSON.stringify(rec.error)).toBe("done");
+    const e = (rec.result as Researched).engine;
     expect(e.provider).toBe("claude-cli-retrieve");
     expect(e.searched).toBe(false);
     expect(e.sources).toEqual([]);
   });
 
   await withFakeEngine(retrieveCassette(quiet, NOTEBOOK), async () => {
-    const { status, json } = await research();
-    console.log(`[retrieve] unconfessed -> ${status} ${String(json.detail).slice(0, 160)}`);
-    expect(status).toBe(502);
-    expect(json.code).toBe("bad-response");
-    expect((json.findings as string[]).join(" ")).toMatch(/researchGaps\[0\]/);
+    const rec = await research();
+    console.log(`[retrieve] unconfessed -> ${rec.status} ${String(rec.error?.message).slice(0, 160)}`);
+    expect(rec.status).toBe("failed");
+    expect(rec.error?.kind).toBe("bad-response");
+    expect((rec.error?.findings ?? []).join(" ")).toMatch(/researchGaps\[0\]/);
   });
 });
 
-/* ── cases 2 + 3 through the real route and the real door ────────────────── */
+/* ── cases 2 + 3 through the real turn and the real door ─────────────────── */
 
-test("retrieve route (flag on): the retrieval door serves, searched is derived from three receipts, the unfetched fact is downgraded", async () => {
+test("retrieve turn (flag on): the retrieval door serves, searched is derived from three receipts, the unfetched fact is downgraded", async () => {
   process.env.TEXT_RETRIEVE = "1";
   await withFakeEngine(RECORDED, async (engine) => {
-    const { status, json } = await research();
-    const e = json.engine as Record<string, unknown>;
-    console.log(`[retrieve] route -> ${status} provider=${e?.provider} searched=${e?.searched} sources=${(e?.sources as unknown[])?.length}`);
-    expect(status, String(json.detail)).toBe(200);
+    const rec = await research();
+    expect(rec.status, JSON.stringify(rec.error)).toBe("done");
+    const { engine: e, notebook: nb } = rec.result as Researched;
+    console.log(`[retrieve] turn -> provider=${e?.provider} searched=${e?.searched} sources=${(e?.sources as unknown[])?.length}`);
     expect(e.provider).toBe("claude-cli-retrieve");
     expect(e.kind).toBe("local-claude-code");
     expect(e.transport).toBe("local-subprocess");
@@ -285,7 +285,6 @@ test("retrieve route (flag on): the retrieval door serves, searched is derived f
     expect(e.costBasis).toBe("vendor-reported");
     expect((e.crossCheck as string[]).join(" ")).toMatch(/cited, not fetched/);
 
-    const nb = json.notebook as Notebook;
     expect(nb.facts.find((f) => f.id === "f-recalled")!.confidence).toBe("medium");
     expect(nb.facts.find((f) => f.id === "f-volume")!.confidence).toBe("high");
 
@@ -336,16 +335,14 @@ test("retrieve flag: only an explicit 1/on/true turns retrieval on", () => {
 
 test("retrieve flag off: the pre-flight names the retrieval candidate as policy-forbidden, and retrieve() refuses", async () => {
   await withFakeEngine(RECORDED, async (engine) => {
-    const res = await GET(req("GET"));
-    const pf = (await res.json()) as { serving: string | null; searched: boolean; candidates: { provider: string; ok: boolean; detail: string }[] };
+    const pf = await engineStatus("research");
     console.log(`[retrieve] preflight off -> serving=${pf.serving} candidates=${JSON.stringify(pf.candidates.map((c) => [c.provider, c.ok]))}`);
-    expect(res.status).toBe(200);
     const r = pf.candidates.find((c) => c.provider === "claude-cli-retrieve");
     expect(r, "the retrieval candidate is missing from the pre-flight").toBeTruthy();
     expect(r!.ok).toBe(false);
     expect(r!.detail).toMatch(/TEXT_RETRIEVE/);
+    // The reasoning rung serves, so the run cannot search.
     expect(pf.serving).toBe("claude-cli");
-    expect(pf.searched).toBe(false);
 
     const err = await retrieve({ prompt: "# RETRIEVE off\n", turn: "research" }).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(TextError);
@@ -354,7 +351,7 @@ test("retrieve flag off: the pre-flight names the retrieval candidate as policy-
   });
 });
 
-test("retrieve flag off: the POST is today's run — the reasoning door, searched:false, no receipt fields", async () => {
+test("retrieve flag off: the run is today's run — the reasoning door, searched:false, no receipt fields", async () => {
   const reasoned: Cassette = {
     name: "research-reasoned-inline",
     source: "hand-written",
@@ -379,16 +376,16 @@ test("retrieve flag off: the POST is today's run — the reasoning door, searche
     ],
   };
   await withFakeEngine(reasoned, async (engine) => {
-    const { status, json } = await research();
-    const e = json.engine as Record<string, unknown>;
-    expect(status, String(json.detail)).toBe(200);
+    const rec = await research();
+    expect(rec.status, JSON.stringify(rec.error)).toBe("done");
+    const { engine: e, notebook: nb } = rec.result as Researched;
     expect(e.provider).toBe("claude-cli");
     expect(e.searched).toBe(false);
     expect(Object.keys(e)).not.toContain("sources");
     expect(Object.keys(e)).not.toContain("crossCheck");
     // Not cross-checked: the reasoning path's notebook is exactly what it was.
-    const nb = json.notebook as Notebook;
-    expect(nb.facts.find((f) => f.id === "f-recalled")!.confidence).toBe("high");
+    expect
+(nb.facts.find((f) => f.id === "f-recalled")!.confidence).toBe("high");
 
     const turns = engine.turns();
     expect(turns).toHaveLength(1);

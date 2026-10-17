@@ -1,6 +1,6 @@
 ---
 product: "Gravitone Studio"
-stack: "Next.js 16 (App Router, Turbopack) + React 19 + TypeScript + Tailwind v4. No database. Server-side vendor seams DO exist now: lib/imaging (Leonardo/OpenAI), lib/music (ElevenLabs), lib/text (reasoning chokepoint), lib/foundry (Extract engine)."
+stack: "Next.js 16 (App Router, Turbopack) + React 19 + TypeScript. Libraries in packages/{catalog,domain,kernel,producers,ui} (@gt/*); the store is the kernel's SQLite (node:sqlite + Python sqlite3; GRAVITONE_STORE_PATH). Screens in app/(studio)/ over @gt/ui CSS Modules; Tailwind v4 only on the landing. Server-side vendor seams: lib/imaging (Leonardo/OpenAI), lib/music, lib/text (reasoning chokepoint), lib/foundry (Extract engine), run as kernel producers (lib/producers/)."
 vault: [".vault"]
 vault_subdir: Perfect
 base_branch: main
@@ -20,21 +20,22 @@ locale_count: 1
 ## Product brief
 
 One production walked through six steps (Research - Script - Frames - Motion - Score - Cut) over a Library
-that knows every asset's lineage. `lib/projects.ts`'s `PHASES` is the ONE source of that order;
+that knows every asset's lineage. Part kinds and recipes are `packages/catalog/src/recipes.ts`;
 the composition root is the Plan, `app/(studio)/projects/[id]/`, each step a Part with its editor at
 `app/(studio)/projects/[id]/[part]/` (`/studio/<id>` redirects there since Phase 4 wave D).
 
 - **Motion is a step again.** Motion was retired on 2026-08-14 and reinstated as the sixth step on 2026-10-06 (`1c90240`); `RETIRED_PHASES` is empty. The whole step set is
   being rebuilt as composition parts (`docs/next/migration-plan.md`); a v1 direction on a step must
   check that plan's phases first.
-- **`app/_studio/*` holds the mocked fixtures every surface reads** — still true, and still the
-  design seam. **But the "no live model" half of this rule expired.** As of 2026-08-29 three vendor
+- **Each (studio) route reads through its `_port`** (`app/(studio)/<route>/_port/`), fixture or real
+  by `GRAVITONE_PRODUCE_SIDE`; the fixture side (`_port/fixture*.ts`) is the design seam. v1's
+  `app/_studio/` fixtures are gone. **The "no live model" half of the old rule expired.** As of 2026-08-29 three vendor
   domains bill real money behind server-only seams: `lib/imaging` (Leonardo · OpenAI),
   `lib/music` (ElevenLabs, `e427bd1` — the Score step's cues render for real) and `lib/text` (the
   reasoning chokepoint + fallback ladder, `4d446c3`), plus `lib/foundry`'s Extract engine
   (`1e4c8e2`). So: a direction that DEEPENS one of those engines is in season and is the highest-
-  value work here; a direction that wires a *new* vendor, adds auth, or introduces a database is
-  still out of scope. The seam contract is the law — **no vendor import escapes `lib/<domain>/`**.
+  value work here; a direction that wires a *new* vendor, adds auth, or introduces a second store
+  beside the kernel's SQLite is still out of scope. The seam contract is the law — **no vendor import escapes `lib/<domain>/`**.
 - **The craft knowledge lives in `knowledge/`** - per project template, per production step, with
   evidence labels and sample sizes (`knowledge/README.md`). A direction that touches a step's surface
   MUST be scouted against that step's `PATTERNS.md` and `params.json`. Where a step has no entry yet,
@@ -54,7 +55,9 @@ believing it would make a builder skip real gates. Measured against `package.jso
   as fatal as a rise, because a drop can also mean the matcher broke. So a builder that legitimately
   removes a warning must SAY SO and leave the re-baseline to the Director — never edit
   `lint-baseline.json` itself (it is Class C, see below). Errors are held at zero unconditionally.
-- `always:` `npm run check:manifest` — imaging style bundle manifests.
+- `always:` `npm run check:manifest` — `.ai/manifest.yaml` against `.ai/SPEC.md` and the paths it names.
+- `when packages/** or a (studio) surface changed:` `npm run next-structure`, `npm run typecheck:next`,
+  `npm run test:unit`, `npm run tokens:check`.
 - `when a rendered surface or route changed:` `npm test` (Playwright, `tests/golden-path`, the
   `node` project — NOT a browser matrix, it is fast).
 - `when routing/layout/server-rendered code changed:` `npm run build` — **Director only, at
@@ -64,8 +67,9 @@ believing it would make a builder skip real gates. Measured against `package.jso
 - `when the notebook/verifier changed:` `npm run check:notebook`.
 - `when the trailer structure model changed:` `npm run check:trailer-structure`.
 - `when the text engine changed:` `npm run verify:text`.
-- `the whole chain` is `npm run verify` — typecheck → lint:ratchet → check:manifest → test → build →
-  check:bundle. That is the Director's integration gate; a builder runs the subset above.
+- `the whole chain` is `npm run verify` — the ordered set declared once in `pipeline/gates.mts`
+  (`node pipeline/run-gates.mts --list`). That is the Director's integration gate; a builder runs the
+  subset above.
 - `builder:` a builder that changed a rendered surface must ALSO drive it —
   `npm run dev -- -p 31<lot number>`, never port 3000 (the user holds it) — and report what it
   actually saw. `NEXT_DIST_DIR=.next-31<lot> NEXT_PUBLIC_DEV_AUTH=1` sidesteps Next 16's
@@ -78,15 +82,20 @@ believing it would make a builder skip real gates. Measured against `package.jso
 
 Append-only registries a builder may edit by anchored insert (re-read immediately before writing):
 
-- the `MODULES` list in `components/ui/StudioFrame.tsx`
-- the `PHASES` array in `lib/projects.ts` (historically `app/page.tsx`)
+- the `SECTIONS` list in `app/(studio)/_shell/nav.ts` (v1's `MODULES` in `StudioFrame.tsx` retired in Phase 6)
+- `WORK_KINDS` / `RECIPES` in `packages/catalog/src/recipes.ts` (v1's `PHASES` in `lib/projects.ts`
+  survives only for `lib/` readers)
+- `packages/ui/src/components/INVENTORY.md`
 - `README.md`
 
 ## Class C
 
 Director-only. Builders REPORT what they need; the Director applies it once.
 
-- `components/ui/tokens.ts` and `app/globals.css` - the design system's single source of truth
+- `packages/ui/tokens/source.json` and `tokens/ADMISSION.md` - the design system's single source of
+  truth. The generated `packages/ui/src/tokens.css` / `tokens.ts` are never hand-edited by anyone
+  (`npm run tokens:gen`; `tokens:check` holds them)
+- the kernel's schema (`packages/kernel/src/migrate.ts`) and `pipeline/bundle-budget.json`
 - `package.json` / `package-lock.json` - dependency changes are a user call
 - `context-map.json` - a Personas export, see `## Context sources`
 - `lint-baseline.json` — a measurement, not a config. Re-baselining is a human diff whose commit
@@ -95,20 +104,23 @@ Director-only. Builders REPORT what they need; the Director applies it once.
 
 ## Repo law
 
-- **No colour literal leaves `components/ui/tokens.ts`.** Consume the `--gt-*` vars or the exported
-  constants (`SURFACE`, `TEXT`, `EASE`). Needing a new token is fine - it is a Class C request, not a
-  "just this once" hard-code. `README.md` section "The design language" is the short form; the long
-  form is `DESIGN.md` in the parent project `gravitone/web` (read-only from here).
-- **Reuse `components/ui/Primitives.tsx` and `StudioFrame.tsx`.** A new shared atom belongs in
-  `components/ui/`, not inlined in a phase surface.
-- **Keep the fixture seam:** surfaces read the types in `app/_studio/`, never an ad-hoc inline shape.
+- **No design value outside the tokens.** A `*.module.css` consumes token variables only; a raw
+  colour or px fails `tokens:check`. Needing a new token is fine - it is a Class C request, not a
+  "just this once" hard-code.
+- **Reuse `@gt/ui`** (`packages/ui/src/components/<dir>/`, the shell in `app/(studio)/_shell/`). A new
+  shared component belongs in `packages/ui/src/components/<dir>/` with its `*.module.css`, not
+  inlined in a route.
+- **Keep the port seam:** a route reads its `_port` contract (`app/(studio)/<route>/_port/`) and the
+  `@gt/domain` types, never an ad-hoc inline shape.
+- **The store:** a builder, test or dev server never opens `foundry-out/gravitone.sqlite`; set
+  `GRAVITONE_STORE_PATH` to a temp file.
 - **Represent absence honestly.** In this product absence is the story (an unpicked scene, a refused
   cue, a cut with gaps). A surface that can only render the happy path is a defect.
 - `"use client"` only where interactivity actually needs it.
-- Motion is entrance-only and reduced-motion-safe; `globals.css` disables animation under
-  `prefers-reduced-motion`, so a JS-driven animation must opt out itself.
-- The three font families are `font-instrument`, `font-hanken`, `font-jetbrains` and nothing else.
-- **Out-of-scope wall:** "add auth", "add a database", "wire a NEW vendor" is never a direction to
+- Motion is entrance-only and reduced-motion-safe (one curve, the `--ease` token); a JS-driven
+  animation must opt out of `prefers-reduced-motion` itself.
+- The two font families are `--sans` (Inter) and `--mono` (JetBrains Mono) and nothing else.
+- **Out-of-scope wall:** "add auth", "add a second database", "wire a NEW vendor" is never a direction to
   build. The mocked seam is the design. Deepening an EXISTING engine (imaging · music · text ·
   foundry) is not on this wall — see the product brief.
 
@@ -128,15 +140,17 @@ EXPORTS this file, plus the managed `<!-- personas:context-map -->` block in `CL
 - Personas' scan enforces a 10-30-files-per-context band, so contexts here are broad on purpose.
 - The map's `contexts[].name` values ARE the matching set for the memory outbox: same machine, one
   scan. Confirm through the bridge when it is up rather than trusting a remembered name.
-- Repo is Personas-managed (`.personas/` exists; project `gravitone`, id
-  `91d8170c-2be4-45ac-b509-256bfa7726f1`).
+- Repo is Personas-managed (`.personas/` exists). The map belongs to the machine whose project id is
+  in `context-map.json`'s `project.id` (`91d8170c`, the mkdol checkout, since 2026-10-11); the kazda
+  checkout is `d57f858b` and must not scan it (`docs/context-map.md`).
 - A wave that added or moved files leaves the map stale by design - say so and ask for a rescan;
   never patch it.
 
 ## Smoke
 
 - `npm run build` (a green production build is the floor, and it typechecks), then
-  `npx next start -p 3177` and walk every phase and the library - clicking, not reading.
+  `GRAVITONE_STORE_PATH=<temp file> npx next start -p 3177` and walk /floor (and its calendar),
+  /board, /projects and a project's parts, /projects/runs, /library, /audio, /ledger - clicking, not reading.
 - **Never port 3000** - the user or a sibling session may hold it. Kill the server you started;
   never kill one you did not start.
 - Because everything is fixture-driven, **the diagnostic is the fixture**: when a surface looks
@@ -146,7 +160,9 @@ EXPORTS this file, plus the managed `<!-- personas:context-map -->` block in `CL
 
 ## Vetoes
 
-- "Add auth / a database / a NEW third-party vendor" - a deliberate deferral, not a gap.
+- "Add auth / a second database / a NEW third-party vendor" - a deliberate deferral, not a gap.
+  (Superseded by owner decision 1 of `docs/next/migration-plan.md`: the kernel's SQLite store is the
+  one database; another is still vetoed.)
   (Superseded 2026-08-29: "a model call" is no longer a veto — imaging, music and text all make
   real ones. Deepening those is in season; a fourth vendor is not.)
   (Superseded 2026-10-04 by the operator, platform-consolidation spark: PUBLISHING vendors are

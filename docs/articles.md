@@ -545,6 +545,6 @@ write-back. `articles-checkloop` seeds one defect with `STUB_POST_DEFECT` (an em
 a revision or the fix itself) and pins the between-turn check: the failure reaches the fix prompt
 and file, the fix replaces the post, the bound of two holds, a failed fix is recorded, a revised
 post is checked before the next review round, resume is idempotent, plus agy's early 503 and the
-shorter agy timeout. `articles-ui` calls the routes as functions and covers every state seeded by
-`tests/fixtures/articles/runStates.ts`: running, partial, quorum, keep and rewrite critiques
-among them. The three `guardRequest` routes are driven in `imaging-auth.probe.spec.ts`.
+shorter agy timeout. The v1 `/articles` pages, their routes and `articles-ui` retired in Phase 6: an article is
+launched from the Floor's article lane and approved on the Board (`/board/pkt:article:<runId>`);
+`article-file.test.ts` holds the one kept route, the draft's file door.

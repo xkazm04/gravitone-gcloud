@@ -155,8 +155,8 @@ accepted only when every source lands in exactly one style. Otherwise the
 partition stands and the row says `grouped by partition`.
 
 **It runs as a step machine**, one bounded unit per call, because a hosted
-handler has a duration ceiling: the browser (`/foundry` → Extract) loops
-`/api/foundry/extract/<id>/step` until done, the CLI loops in-process. Same
+handler has a duration ceiling: the extract producer's worker job (Floor ->
+image lane) advances one unit per step, the CLI loops in-process. Same
 code, same order, same files under `foundry-out/extract/<id>/`; a run killed
 halfway resumes at its next unit.
 

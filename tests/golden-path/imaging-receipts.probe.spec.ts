@@ -16,13 +16,19 @@
 //
 // The critic's revision is part of the card: the frames step persists each
 // plate job's key on the plate itself, so a reload re-issues with the SAME key
-// (case 9), and a source check proves the hook really does it (case 10).
+// (case 9), and a source check proves the handlers run through the seam (case 10).
+//
+// Phase 6 wave C (L70): /api/imaging/generate and the browser's imagingClient
+// (generateImage, its same-key transport retry) retired - 0 non-test callers.
+// The receipt seam lives on in lib/imaging/handlers.ts (pipeline/integration-
+// imaging.mts), so cases 1-6 and 8 drive generateHandler directly. RETIRED with
+// the client: case 7 (the same-key retry), 9's client re-issue and 9b (a coded
+// failure not retried); 9 keeps the plate-key persistence half (pendingReceipt).
 
 import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { keepEnv, stripComments } from "./_helpers";
-import { __resetRateLimit } from "@/lib/apiAuth";
 import { spendRows, heldUsd, __resetBudget, BUDGET_VAR, WINDOW_VAR, FLOOR_VAR } from "@/lib/imaging/budget";
 import {
   withReceipt,
@@ -31,8 +37,7 @@ import {
   __setReceiptClock,
   __setReceiptLimits,
 } from "@/lib/imaging/receipts";
-import { POST as generatePOST } from "@/app/api/imaging/generate/route";
-import { generateImage, ImagingRequestError } from "@/lib/imagingClient";
+import { generateHandler as generatePOST } from "@/lib/imaging/handlers";
 import { pendingReceipt, type Plate } from "@/lib/frames/frames";
 
 const realFetch = globalThis.fetch;
@@ -101,7 +106,6 @@ async function until(cond: () => boolean, ms = 5000) {
 test.beforeEach(() => {
   __resetBudget();
   __resetReceipts();
-  __resetRateLimit();
   delete process.env[BUDGET_VAR];
   delete process.env[WINDOW_VAR];
   delete process.env[FLOOR_VAR];
@@ -245,51 +249,6 @@ test("6. past the TTL, or over the byte cap -> evicted oldest first, the next ca
   expect(receiptStats().bytes).toBeLessThanOrEqual(10);
 });
 
-/** A browser-side fetch that forwards our own /api/imaging/generate to the real
- *  handler, and the google host to the vendor stub. */
-function stubBrowser(opts: { dropFirst?: boolean } = {}) {
-  const posts: { key: string | null; body: string; receipt: string | null }[] = [];
-  let dropped = false;
-  vendorCalls = 0;
-  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-    if (url.includes(INTERACTIONS)) {
-      vendorCalls += 1;
-      return googleImage(vendorCalls);
-    }
-    if (url === "/api/imaging/generate") {
-      const headers = new Headers(init?.headers);
-      const body = String(init?.body);
-      headers.set("x-forwarded-for", "10.0.0.9");
-      const entry = { key: headers.get(KEY_HEADER), body, receipt: null as string | null };
-      posts.push(entry);
-      const res = await generatePOST(new Request(`http://localhost${url}`, { method: "POST", headers, body }));
-      entry.receipt = res.headers.get(RECEIPT_HEADER);
-      if (opts.dropFirst && !dropped) {
-        // The server finished and billed; the connection died on the way back.
-        dropped = true;
-        throw new TypeError("Failed to fetch");
-      }
-      return res;
-    }
-    throw new Error(`unexpected fetch ${url}`);
-  }) as typeof fetch;
-  return posts;
-}
-
-test("7. the client retries a transport failure once with the SAME key and body, and resolves", async () => {
-  const posts = stubBrowser({ dropFirst: true });
-  const out = await generateImage({ prompt: "a lighthouse at dusk", aspect: "16:9", count: 1 });
-  expect(out.images).toHaveLength(1);
-  expect(posts).toHaveLength(2);
-  expect(posts[0].key).toBeTruthy();
-  expect(posts[1].key).toBe(posts[0].key);
-  expect(posts[1].body).toBe(posts[0].body);
-  expect(posts[1].receipt).toBe("replayed");
-  expect(vendorCalls).toBe(1);
-  expect(await spendRows()).toHaveLength(1);
-});
-
 test("8. [guard] no idempotency-key header -> today's path: dispatched, booked, nothing retained", async () => {
   stubVendor((n) => googleImage(n));
   const a = await generatePOST(genReq(BODY));
@@ -302,54 +261,28 @@ test("8. [guard] no idempotency-key header -> today's path: dispatched, booked, 
   expect(receiptStats().entries).toBe(0);
 });
 
-test("9. reload: a persisted plate key re-issued by a fresh client call within the TTL -> replayed, 0 dispatches, 0 rows", async () => {
-  const posts = stubBrowser();
-  // Before the reload: the plate job's key is minted and stored on the plate.
+test("9. reload: a generating plate keeps its job key, so a re-issue replays; a settled plate holds none", async () => {
+  stubVendor((n) => googleImage(n));
   const key = "plate-job-7f3a";
   const stored: Plate = { state: "generating", subject: "a lighthouse at dusk", receipt: key };
-  await generateImage({ prompt: "a lighthouse at dusk", aspect: "16:9", count: 1 }, { key });
+  await generatePOST(genReq(BODY, { key }));
   expect(vendorCalls).toBe(1);
   const rows = (await spendRows()).length;
-
-  // After it: nothing in memory but the stored record.
+  // After a reload: nothing in memory but the stored record.
   const persisted = pendingReceipt(stored);
   expect(persisted).toBe(key);
-  const out = await generateImage({ prompt: "a lighthouse at dusk", aspect: "16:9", count: 1 }, { key: persisted });
-  expect(out.images).toHaveLength(1);
-  expect(posts.at(-1)!.key).toBe(key);
-  expect(posts.at(-1)!.receipt).toBe("replayed");
+  const again = await generatePOST(genReq(BODY, { key: persisted! }));
+  expect(again.headers.get(RECEIPT_HEADER)).toBe("replayed");
   expect(vendorCalls).toBe(1);
   expect((await spendRows()).length).toBe(rows);
-
   // A settled plate holds no key: a deliberate re-render is a new paid call.
   expect(pendingReceipt({ state: "ready", receipt: key })).toBeUndefined();
 });
 
-test("9b. a coded server failure is not retried by the client (it was billed; a retry would bill again)", async () => {
-  vendorCalls = 0;
-  let posts = 0;
-  globalThis.fetch = (async () => {
-    posts += 1;
-    return json({ detail: "The imaging call failed.", code: "failed" }, 502);
-  }) as typeof fetch;
-  await expect(generateImage({ prompt: "x", aspect: "16:9" })).rejects.toBeInstanceOf(ImagingRequestError);
-  expect(posts).toBe(1);
-});
-
-test("10. wiring: the routes run through the receipt seam; the client sends the key", () => {
+test("10. wiring: the handlers run through the receipt seam", () => {
   const read = (p: string) => stripComments(readFileSync(join(process.cwd(), p), "utf8"));
-  // The handler bodies (and so the receipt seam call) live in lib/imaging/handlers.ts;
-  // each route.ts must still delegate to its handler after its auth door.
   const handlers = read("lib/imaging/handlers.ts");
   expect(handlers).toMatch(/respondKeyed\(req, "generate"/);
   expect(handlers).toMatch(/respondKeyed\(req, "edit"/);
-  for (const [route, fn] of [["generate", "generateHandler"], ["edit", "editHandler"]])
-    expect(read(`app/api/imaging/${route}/route.ts`), route).toMatch(new RegExp(`\\b${fn}\\(req\\)`));
   expect(read("lib/imaging/api.ts")).toMatch(/withReceipt\(/);
-  const client = read("lib/imagingClient.ts");
-  expect(client).toMatch(/"idempotency-key"/);
-  expect(client).toMatch(/randomUUID/);
-  // The v1 Frames hook that persisted the key on its generating plate retired
-  // with the studio (Phase 4 wave D): a plate is bought once by the frames
-  // producer's job step now (tests/next-server/producer-step-frames.test.ts).
 });

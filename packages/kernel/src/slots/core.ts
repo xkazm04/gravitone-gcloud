@@ -1,7 +1,7 @@
 import { AppError, err, ok, type Result } from "@gt/domain/errors";
 import type { Holder } from "@gt/domain/job";
 import { SLOT_HOLDS, SLOT_MOVABLE, slotMachine, type SlotState } from "@gt/domain/slot.machine";
-import type { Channel, Slot, SlotDrift } from "@gt/domain/slot";
+import { exportIdOf, type Channel, type Slot, type SlotDrift } from "@gt/domain/slot";
 
 // THE SLOT VERBS, PURE - every state change a slot can take, as a function from the record
 // (and the instant, passed in) to the next record. The driver (./write.ts, ./sweep.ts) reads,
@@ -71,13 +71,26 @@ export function withDrift(s: Slot, drift: SlotDrift | undefined): Slot {
   return drift === undefined ? rest : { ...rest, drift };
 }
 
-/** Another slot already holding `item` on `channel` (v1 schedule.ts clashOf). */
-export function clashOf(slots: readonly Slot[], item: string, channel: Channel, exceptId?: string): Slot | undefined {
-  return slots.find((s) => s.id !== exceptId && s.libraryItemId === item && s.channel === channel && SLOT_HOLDS.includes(s.state));
+/** A slot as the clash check weighs it: `dry` when it was published by a dry run. */
+export type Holding = { readonly slot: Slot; readonly dry?: true };
+
+/**
+ * Another slot already holding `item` on `channel` (v1 schedule.ts clashOf). A slot published
+ * DRY holds nothing (the Director's ruling on L62): a rehearsal sent nothing, and v1's publisher
+ * let the live upload follow it - one upload per item x channel x mode, not per item x channel.
+ */
+export function clashOf(held: readonly Holding[], item: string, channel: Channel, exceptId?: string): Slot | undefined {
+  return held.find(({ slot: s, dry }) => s.id !== exceptId && s.libraryItemId === item && s.channel === channel && SLOT_HOLDS.includes(s.state) && !(dry === true && s.state === "published"))?.slot;
 }
 
 export const clashText = (item: string, channel: Channel, c: Slot): string =>
   `${item} is already on ${channel} (slot ${c.id}, ${c.state} for ${c.at})`;
+
+/** v1 publisher.ts's refusal of a second upload in one mode, word for word for an export. */
+export function publishedText(item: string, channel: Channel, publicationId: string, dry: boolean): string {
+  const exportId = exportIdOf(item);
+  return `${exportId === undefined ? item : `export ${exportId}`} is already published on ${channel} (publication ${publicationId}${dry ? ", dry" : ""})`;
+}
 
 const movable = (s: Slot, verb: string): Result<Slot> =>
   SLOT_MOVABLE.includes(s.state) ? ok(s) : err("conflict", `a ${s.state} slot cannot be ${verb}`);

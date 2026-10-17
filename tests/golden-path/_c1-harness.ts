@@ -4,14 +4,11 @@
 // this copied, retired with the v1 studio's hooks in Phase 4 wave D.)
 import "fake-indexeddb/auto";
 
-import { expect } from "@playwright/test";
 import * as React from "react";
 
-import { LIVE_NOTEBOOK_PHASE } from "@/lib/notebook/active";
 import type { Dimension } from "@/lib/notebook/dimensions";
 import type { Conclusion } from "@/lib/notebook/conclusions";
 import type { Notebook } from "@/lib/notebook/types";
-import { saveStep } from "@/lib/steps";
 import type { EngineReceipt } from "@/lib/notebook/engineReceipt";
 import { parseNotebook } from "@/lib/notebook/validate";
 
@@ -192,10 +189,6 @@ export const RECEIPT: EngineReceipt = {
   searched: false,
 };
 
-/** What `startLive` writes when a run lands — through the same `saveStep`. */
-export async function landLive(projectId: string, receipt: EngineReceipt = RECEIPT): Promise<Notebook> {
-  const notebook = liveNotebook();
-  const out = await saveStep(projectId, LIVE_NOTEBOOK_PHASE, { topic: "harbour dredging costs", notebook, engine: receipt, savedAt: 1 });
-  expect(out.ok, "the live record was not written - nothing below proves anything").toBe(true);
-  return notebook;
-}
+// (`landLive`, which wrote the live record through v1's step store for lib/notebook/active.ts
+// to read back, retired with that reader in Phase 6 wave C; its readers build the reasoned
+// source directly with `sourceOf(liveNotebook(), { kind: "reasoned", receipt: RECEIPT })`.)

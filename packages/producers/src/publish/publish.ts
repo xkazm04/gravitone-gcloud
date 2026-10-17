@@ -10,7 +10,9 @@ import type { Effects } from "@gt/kernel/effects";
 import { actorOf } from "@gt/kernel/lease";
 import type { Alive } from "@gt/kernel/lease-core";
 import type { Quote } from "@gt/kernel/pricing/quote";
+import { publishedText } from "@gt/kernel/slots/core";
 import { heartbeatClaim, recordFailure, recordPublication, type PublicationDraft } from "@gt/kernel/slots/outcome";
+import { priorPublicationIn } from "@gt/kernel/slots/read";
 import type { ClaimedSlot } from "@gt/kernel/slots/sweep";
 import type { Store } from "@gt/kernel/store";
 import { adapterFor, type Adapters, type ChannelAdapter, type Delivered } from "./adapter.ts";
@@ -39,9 +41,9 @@ import { adapterFor, type Adapters, type ChannelAdapter, type Delivered } from "
 //     past its TTL and hand it to another sweep as "interrupted" before a byte of it was sent.
 //   A LOST CLAIM STOPS THE SENDER: the heartbeat throws, the adapter's upload ends, and nothing
 //     more goes out under a fence that no longer holds.
-//   ONE PUBLICATION PER ITEM x CHANNEL is the slot table's constraint now, not v1's lookup over
-//     publications.json; the lookup is gone (see the report: v1's "a dry run does not block the
-//     live upload that follows it" does not survive the constraint).
+//   ONE PUBLICATION PER ITEM x CHANNEL x MODE (v1's lookup over publications.json: "a dry run does
+//     not block the live upload that follows it") is asked of the store before anything is
+//     planned, in v1's words, and is a constraint behind that (@gt/kernel/slots/schema step 4).
 
 /** YouTube's Data API charges nothing for an upload; what it spends is quota, said in words. */
 const UPLOAD_QUOTE: Quote = { usd: 0, basis: "estimated", note: "a platform upload is not billed; videos.insert spends 1600 of the project's daily quota units" };
@@ -103,6 +105,10 @@ export async function publishClaimed(deps: PublishDeps, claimed: ClaimedSlot, pe
     const r = recordFailure(deps.store, slot.id, claimed.fence, error, by);
     return r.ok ? { kind: "failed", slotId: slot.id, error } : { kind: "lost", slotId: slot.id, error: `${error} (not recorded: ${r.error.message})` };
   };
+  const dry = deps.mode.kind !== "live";
+  const prior = deps.store.read((r) => priorPublicationIn(r, slot.libraryItemId, slot.channel, dry));
+  if (!prior.ok) return fail(prior.error.message);
+  if (prior.value !== undefined) return fail(publishedText(slot.libraryItemId, slot.channel, prior.value.id, dry));
   const adapter = adapterFor(deps.adapters, slot.channel);
   if (!adapter.ok) return fail(adapter.error.message);
   const a = adapter.value;

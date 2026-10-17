@@ -7,7 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
 import { admitCrown, buildTree, headTake, INTERRUPTED, reconcile, renderPlan, type AuditionTake, type HuntLeafView } from "../../src/components/audio/hunt.ts";
-import { stepTake } from "../../src/components/audio/HuntAudition.tsx";
+import { carryFrom, stepTake } from "../../src/components/audio/HuntAudition.tsx";
 import { HuntMap } from "../../src/components/audio/HuntMap.tsx";
 import { HuntShelf } from "../../src/components/audio/HuntShelf.tsx";
 import { HuntRenderBar } from "../../src/components/audio/HuntRenderBar.tsx";
@@ -113,6 +113,16 @@ describe("the audition", () => {
   });
 });
 
+describe("one playhead (L72)", () => {
+  test("a step carries the playing take's second only while linked and only onto another take", () => {
+    expect(carryFrom(true, "t-a", "t-b", 12.5)).toBe(12.5);
+    expect(carryFrom(false, "t-a", "t-b", 12.5)).toBe(0);
+    expect(carryFrom(true, null, "t-b", 12.5)).toBe(0);
+    expect(carryFrom(true, "t-b", "t-b", 12.5)).toBe(0);
+    expect(carryFrom(true, "t-a", "t-b", Number.NaN)).toBe(0);
+  });
+});
+
 describe("drawn", () => {
   const props = {
     nodes: MAP,
@@ -126,6 +136,8 @@ describe("drawn", () => {
     onPlay: () => undefined,
     onCrown: () => undefined,
     onCopy: () => undefined,
+    returning: new Set<string>(),
+    onReturn: () => undefined,
   };
 
   test("the map draws a heard leaf's play and crown, a failure's words, a Suno leaf's copy", () => {
@@ -135,6 +147,9 @@ describe("drawn", () => {
     expect(html).toContain(">Crown<");
     expect(html).toContain("elevenlabs 422: section durations sum to 71 s, expected 60 s");
     expect(html).toContain(">Copy prompt<");
+    // A Suno leaf takes its file back on its own card (L72); an ElevenLabs leaf never does.
+    expect(html).toContain('aria-label="return the Suno file for c"');
+    expect(html.match(/return the Suno file for/g)).toHaveLength(1);
     expect(html).toMatch(/aria-pressed="true"[^>]*><span[^>]*><\/span><span[^>]*>d</);
   });
 

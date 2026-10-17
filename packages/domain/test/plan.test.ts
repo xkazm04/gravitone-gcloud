@@ -114,6 +114,7 @@ describe("produce doors", () => {
       { producer: "strips", lane: "all", only: ["E05", "S06"] },
       { producer: "forge", plan: "sweep-01" },
       { producer: "dojo", cycle: "2026-10-16-c1" },
+      { producer: "hunt", hunt: "hn-a1b2c3", kind: "music", leaves: ["n-calm", "n-tense"] },
     ];
     for (const i of own) expect(accept(producerRunInputSchema, i)).toEqual(i);
     // One door for a Run's input: a composer's and a producer's both pass, nothing else does.
@@ -124,6 +125,9 @@ describe("produce doors", () => {
     refuse(producerRunInputSchema, { producer: "extract", slug: "Harbour Night", sources: 3 }, "lower-case");
     refuse(producerRunInputSchema, { producer: "mv", track: "t", bytes: "..." }, "bytes");
     refuse(runInputSchema, { producer: "cut", cut: "c1" }, "Invalid");
+    // A hunt run names the leaves it renders, never none and never a path.
+    refuse(producerRunInputSchema, { producer: "hunt", hunt: "hn-a1b2c3", kind: "music", leaves: [] }, "Too small");
+    refuse(producerRunInputSchema, { producer: "hunt", hunt: "../hunts", kind: "sfx", leaves: ["n1"] }, "sound-store id");
     // Every native producer is a producer the domain names, and each has its branch.
     for (const p of NATIVE_PRODUCERS) expect(PRODUCERS).toContain(p);
     expect(new Set(own.map((i) => i.producer))).toEqual(new Set(NATIVE_PRODUCERS));

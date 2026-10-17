@@ -21,41 +21,17 @@
 // properties therefore fall back to a source check, and they are exactly the two
 // that fail SILENTLY while looking perfect in review: that both regions MOUNT
 // EMPTY, and that the provider encloses the whole tree rather than sitting beside
-// the news. The bell's own announce-on-transition effects need a DOM and are not
-// covered here either; what IS covered is the copy they hand over.
+// the news.
 import { test, expect } from "@playwright/test";
 import { createAnnouncerQueue, politenessFor, type Announcement } from "@/lib/announcer";
-import { troubleAnnouncement } from "@/components/ui/NotificationBell";
-import type { StorageFailure } from "@/lib/steps";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { stripComments } from "./_helpers";
 
-/** The union, written out as a TOTAL record rather than an array. An array typed
- *  `StorageFailure[]` checks every entry and says nothing about the entries
- *  that are missing: a sixth failure kind added to stepStore.ts would have
- *  compiled, shipped with whatever `troubleAnnouncement` says for it, and left
- *  the "five distinct sentences" assertion below green over five of six. A
- *  key missing here fails typecheck on this very line — the same shape
- *  spine-rank-total uses for MovementRole. */
-const ALL_KINDS: Record<StorageFailure, true> = {
-  quota: true,
-  blocked: true,
-  unavailable: true,
-  "missing-store": true,
-  failed: true,
-  "non-storage": true,
-};
-const KINDS = Object.keys(ALL_KINDS) as StorageFailure[];
-
-/** The kinds that are actually about STORAGE. `non-storage` shares the channel
- *  and the vocabulary but not the claim: it is a failure that merely arrived
- *  here, and "Not saved" would be a false statement about the user's work. Its
- *  own copy is driven by unhandled-rejection-route.probe.spec.ts, which owns the
- *  route that produces it; what this file asserts is that the storage sentences
- *  did not change shape when it was added. */
-const STORAGE_KINDS = KINDS.filter((k) => k !== "non-storage");
+// (The storage-failure copy - `troubleAnnouncement` over the total StorageFailure record -
+// retired with components/ui/NotificationBell.tsx in Phase 6 wave C: the bell was its only
+// speaker. The queue and the regions below are the channel app/error.tsx still speaks through.)
 
 /** A queue over a fake clock and a recording sink, so the POLICY is driven
  *  without a DOM, a renderer or real time. Every `tick()` runs whatever the
@@ -307,34 +283,6 @@ test("politeness: derives from severity, and only blocking news interrupts", () 
   expect(politenessFor("ok")).toBe(false);
   expect(politenessFor("failure")).toBe(false);
   expect(politenessFor("blocking")).toBe(true);
-});
-
-test("copy: every storage failure has a self-contained spoken form", () => {
-  for (const kind of STORAGE_KINDS) {
-    const text = troubleAnnouncement(kind, "script");
-    console.log(`[a11y] ${kind} -> ${text}`);
-    // It arrives with no card, no heading and no phase line beside it, so it
-    // carries its own subject...
-    expect(text.startsWith("Not saved:")).toBe(true);
-    // ...names WHERE it happened...
-    expect(text).toContain("script");
-    // ...and points at the tray, which is the operable backstop holding whatever
-    // could not be caught in flight.
-    expect(text).toContain("notifications");
-    // Short enough to be read into the middle of someone's work. A paragraph
-    // announced aloud is worse than silence.
-    expect(text.length).toBeLessThan(180);
-  }
-  // Five kinds, five distinct sentences — a taxonomy that collapses in the
-  // spoken channel is a taxonomy the assistive user does not have.
-  expect(new Set(STORAGE_KINDS.map((k) => troubleAnnouncement(k, "script"))).size).toBe(
-    STORAGE_KINDS.length,
-  );
-  // And the sixth is outside that set rather than a sixth member of it: it must
-  // not borrow a storage sentence, and it must not claim the work was lost.
-  const notStorage = troubleAnnouncement("non-storage", "script", "Failed to fetch");
-  expect(STORAGE_KINDS.map((k) => troubleAnnouncement(k, "script"))).not.toContain(notStorage);
-  expect(notStorage.startsWith("Not saved:")).toBe(false);
 });
 
 /* ── The error boundaries: a screen that failed to render must SAY so ───────── */

@@ -1,8 +1,11 @@
-// LANE — THE SOUND STORE (lib/sound, app/api/sound/*, pipeline/sound.mts),
+// LANE — THE SOUND STORE (lib/sound, pipeline/sound.mts, the kept take file route),
 // offline and against a temp store.
 //
-// What is pinned is the round-4 contract (lib/sound/types.ts and the brief's
-// HTTP section), driven through the REAL route handlers and the REAL engine:
+// What is pinned is the round-4 contract (lib/sound/types.ts), driven through the
+// REAL lib functions and the REAL engine. The v1 JSON routes (/api/sound/{takes,
+// generate,insights,lessons,groups,hunts}) retired in Phase 6 L70; the probe calls
+// what they called, and reads a refusal's status off the store's own error
+// (lib/sound/http.ts toErrorResponse, the mapping those routes used):
 //
 //   · the take rules — kept enters pending, finalized needs a label (409) and
 //     stamps finalizedAt, a verdict change stamps judgedAt, leaving kept takes
@@ -12,7 +15,7 @@
 //     fixture never reaches it, un-judging removes the row;
 //   · the strengths map and the knowledge doc — the counts, the rubric means,
 //     the top defect, and NOTHING below n=3 claimed;
-//   · the file route's content-type and byte ranges;
+//   · the kept file route's content-type, byte ranges and door (no `k=` since L70);
 //   · generate through lib/music, and the hunt map / lesson draft through
 //     lib/text's real router, with `globalThis.fetch` REPLACED: the vendor and
 //     the model are canned responses, and any other URL fails the test. No
@@ -39,16 +42,13 @@ import { huntPrompt, parseHuntMap, sectionsOf } from "@/lib/sound/hunt";
 import { readHunts, readLedger, readTakes } from "@/lib/sound/store";
 import { createTake } from "@/lib/sound/takes";
 import type { Hunt, SoundTake } from "@/lib/sound/types";
-import { GET as takesGET, POST as takesPOST, DELETE as takesDELETE } from "@/app/api/sound/takes/route";
-import { PATCH as takePATCH } from "@/app/api/sound/takes/[id]/route";
 import { GET as fileGET } from "@/app/api/sound/takes/[id]/file/route";
-import { POST as generatePOST } from "@/app/api/sound/generate/route";
-import { GET as insightsGET } from "@/app/api/sound/insights/route";
-import { GET as lessonsGET, POST as lessonsPOST } from "@/app/api/sound/lessons/route";
-import { GET as groupsGET, PUT as groupsPUT } from "@/app/api/sound/groups/route";
-import { GET as huntsGET, POST as huntsPOST } from "@/app/api/sound/hunts/route";
-import { PATCH as huntPATCH } from "@/app/api/sound/hunts/[id]/route";
-import { POST as huntLessonPOST } from "@/app/api/sound/hunts/[id]/lesson/route";
+import { generateTake, parseGenerateRequest } from "@/lib/sound/generate";
+import { toErrorResponse } from "@/lib/sound/http";
+import { draftHunt, draftHuntLesson, listHunts, patchHunt } from "@/lib/sound/hunt";
+import { appendLesson, parseLessonInput } from "@/lib/sound/ledger";
+import { readGroups, withStore } from "@/lib/sound/store";
+import { listTakes, parseTakeFilter, parseTakePatch, patchTake, removeFixtures } from "@/lib/sound/takes";
 
 import { keepEnv } from "./_helpers";
 
@@ -127,6 +127,64 @@ function rq(pathname: string, init: { method?: string; json?: unknown; form?: Fo
     body: init.form ?? (init.json !== undefined ? JSON.stringify(init.json) : undefined),
   });
 }
+/** One lib call answered as the retired route answered it: the value with `status`, or the
+ *  store's own error status and sentence (toErrorResponse). Nothing here is a door: the door
+ *  went with the routes, and the kept file route's is pinned by file-doors.test.ts. */
+async function answer(status: number, run: () => Promise<unknown>): Promise<Response> {
+  try {
+    return Response.json(await run(), { status });
+  } catch (e) {
+    return toErrorResponse(e);
+  }
+}
+const kindOf = (req: Request): "music" | "sfx" | null => {
+  const k = new URL(req.url).searchParams.get("kind");
+  return k === "music" || k === "sfx" ? k : null;
+};
+const takesGET = (req: Request) => answer(200, async () => ({ takes: await listTakes(parseTakeFilter(new URL(req.url).searchParams)) }));
+async function takesPOST(req: Request): Promise<Response> {
+  try {
+    const form = await req.formData();
+    const rawMeta = form.get("meta");
+    const meta = (typeof rawMeta === "string" && rawMeta.trim() ? JSON.parse(rawMeta) : {}) as Partial<SoundTake>;
+    const f = form.get("file");
+    const file = f instanceof Blob ? { bytes: new Uint8Array(await f.arrayBuffer()), mime: f.type, name: f instanceof File ? f.name : "" } : null;
+    const { take, created } = await createTake(meta, file);
+    return Response.json({ take }, { status: created ? 201 : 200 });
+  } catch (e) {
+    return toErrorResponse(e);
+  }
+}
+const takePATCH = async (req: Request, c: { params: Promise<{ id: string }> }) => {
+  const raw: unknown = await req.json();
+  return answer(200, async () => ({ take: await patchTake((await c.params).id, parseTakePatch(raw)) }));
+};
+const generatePOST = async (req: Request) => {
+  const raw: unknown = await req.json();
+  return answer(201, async () => ({ take: await generateTake(parseGenerateRequest(raw)) }));
+};
+const insightsGET = (req: Request) =>
+  answer(200, async () => {
+    const kind = kindOf(req) ?? undefined;
+    const ledger = await readLedger();
+    const { cells, judged } = computeInsights(ledger.verdicts, kind);
+    return { cells, lessons: ledger.lessons.filter((l) => !kind || l.kind === kind), judged };
+  });
+const lessonsGET = (req: Request) => answer(200, async () => ({ lessons: (await readLedger()).lessons.filter((l) => kindOf(req) === null || l.kind === kindOf(req)) }));
+const lessonsPOST = async (req: Request) => {
+  const raw: unknown = await req.json();
+  return answer(201, async () => ({ lesson: await withStore((tx) => appendLesson(tx, parseLessonInput(raw))) }));
+};
+const huntsGET = (req: Request) => answer(200, async () => ({ hunts: await listHunts(kindOf(req)) }));
+const huntsPOST = async (req: Request) => {
+  const b = (await req.json()) as { kind: "music" | "sfx"; idea: string };
+  return answer(201, async () => ({ hunt: await draftHunt(b.kind, b.idea) }));
+};
+const huntPATCH = async (req: Request, c: { params: Promise<{ id: string }> }) => {
+  const raw: unknown = await req.json();
+  return answer(200, async () => ({ hunt: await patchHunt((await c.params).id, raw) }));
+};
+const huntLessonPOST = async (_req: Request, c: { params: Promise<{ id: string }> }) => answer(200, async () => ({ draft: await draftHuntLesson((await c.params).id) }));
 async function body<T = Record<string, unknown>>(res: Response): Promise<T> {
   return (await res.json()) as T;
 }
@@ -334,7 +392,7 @@ test("knowledge: empty is an honest absence; nothing below n=3 is claimed; lesso
   expect(renderPatterns(ledger), "deterministic").toBe(md);
 });
 
-test("insights route: fixtures and other kinds excluded; lessons filtered by kind", async () => {
+test("insights: fixtures and other kinds excluded; lessons filtered by kind", async () => {
   const fx = await upload({ origin: "fixture", title: "sample" }, null);
   await patch(fx.take.id, { verdict: "kept" });
   const a = await upload({ origin: "agent", provider: "elevenlabs", terms: { genre: ["ambient"], mood: [], instrument: [], sfxCategory: null } });
@@ -342,12 +400,11 @@ test("insights route: fixtures and other kinds excluded; lessons filtered by kin
   const b = await body<{ cells: unknown[]; judged: number; lessons: unknown[] }>(await insightsGET(rq("/api/sound/insights?kind=music")));
   expect(b.judged).toBe(1);
   expect(b.cells).toEqual([expect.objectContaining({ provider: "elevenlabs", facet: "genre", value: "ambient", n: 1, kept: 1, meanScore: 9 })]);
-  expect((await insightsGET(rq("/api/sound/insights?kind=jazz"))).status).toBe(400);
 });
 
 /* ── file, groups, lessons, clear ────────────────────────────────────────── */
 
-test("file: served with its content-type, and byte ranges answer 206; k= is accepted for an <audio src>", async () => {
+test("file: served with its content-type, and byte ranges answer 206; the door takes a header, never `k=`", async () => {
   const { take } = await upload({ origin: "import" });
   const full = await fileGET(rq(`/api/sound/takes/${take.id}/file`), ctx(take.id));
   expect(full.status).toBe(200);
@@ -362,26 +419,22 @@ test("file: served with its content-type, and byte ranges answer 206; k= is acce
   const bad = await fileGET(rq(`/api/sound/takes/${take.id}/file`, { headers: { range: "bytes=99999-" } }), ctx(take.id));
   expect(bad.status).toBe(416);
 
-  const viaK = await fileGET(
-    new Request(`http://localhost/api/sound/takes/${take.id}/file?k=${SECRET}`, { headers: { "x-forwarded-for": "10.1.1.1" } }),
-    ctx(take.id),
-  );
-  expect(viaK.status).toBe(200);
+  // v1's `?k=` retired with the last v1 page (L70): the secret in the URL alone is no credential.
+  const viaK = await fileGET(new Request(`http://localhost/api/sound/takes/${take.id}/file?k=${SECRET}`), ctx(take.id));
+  expect(viaK.status).toBe(401);
   const denied = await fileGET(new Request(`http://localhost/api/sound/takes/${take.id}/file`), ctx(take.id));
   expect(denied.status).toBe(401);
-  expect(await body(denied), "a denial speaks the contract's { error }").toEqual(expect.objectContaining({ error: expect.any(String) }));
 
   const fx = await upload({ origin: "fixture" }, null);
   expect((await fileGET(rq(`/api/sound/takes/${fx.take.id}/file`), ctx(fx.take.id))).status).toBe(404);
 });
 
-test("groups: defaults, PUT replaces in order, duplicates refused", async () => {
-  const g = await body<{ groups: { music: string[]; sfx: string[] } }>(await groupsGET(rq("/api/sound/groups")));
-  expect(g.groups.music.length).toBeGreaterThan(0);
-  const put = await groupsPUT(rq("/api/sound/groups", { method: "PUT", json: { groups: { music: ["lo-fi", "drill"], sfx: ["impacts"] } } }));
-  expect(put.status).toBe(200);
-  expect((await body<{ groups: unknown }>(await groupsGET(rq("/api/sound/groups")))).groups).toEqual({ music: ["lo-fi", "drill"], sfx: ["impacts"] });
-  expect((await groupsPUT(rq("/api/sound/groups", { method: "PUT", json: { groups: { music: ["a", "A"], sfx: [] } } }))).status).toBe(400);
+test("groups: an untouched store reads the default rows", async () => {
+  // Edits (rename, reorder, carry) are lib/sound/arrange.ts editGroups', pinned by the audio
+  // desk's tests; v1's PUT that replaced the lists whole retired with /api/sound/groups (L70).
+  const { groups } = await readGroups();
+  expect(groups.music.length).toBeGreaterThan(0);
+  expect(Array.isArray(groups.sfx)).toBe(true);
 });
 
 test("lessons: a claim is required; a confirmed lesson is appended to the ledger and listed by kind", async () => {
@@ -400,13 +453,11 @@ test("lessons: a claim is required; a confirmed lesson is appended to the ledger
   expect((await body<{ lessons: unknown[] }>(await lessonsGET(rq("/api/sound/lessons?kind=sfx")))).lessons.length).toBe(1);
 });
 
-test("clear the examples: fixtures only; any other origin is refused", async () => {
+test("clear the examples: fixtures only, by construction", async () => {
   await upload({ origin: "fixture" }, null);
   await upload({ origin: "fixture" }, null);
   await upload({ origin: "import" });
-  expect((await takesDELETE(rq("/api/sound/takes?origin=import", { method: "DELETE" }))).status).toBe(400);
-  const res = await takesDELETE(rq("/api/sound/takes?origin=fixture", { method: "DELETE" }));
-  expect(await body(res)).toEqual({ removed: 2 });
+  expect(await removeFixtures()).toBe(2);
   expect((await readTakes()).takes.map((t) => t.origin)).toEqual(["import"]);
 });
 

@@ -82,7 +82,9 @@ const COMMIT_LINE = "committed:";
 const LOOP: Actor = { kind: "agent", id: "dojo" };
 const JUDGE: Actor = { kind: "agent", id: "dojo-judge" };
 const OPERATOR: Actor = { kind: "operator", id: "operator" };
-const HREF = "/foundry";
+// Where a cycle is seen now: the Floor lane of its own medium - its cells the running cycle, its
+// Weir the gate (v1's /foundry page retired in Phase 6 wave C and redirects).
+const hrefOf = (media: string): string => `/floor?lane=${media}`;
 
 async function read(): Promise<Result<TrainingSnapshot>> {
   let ids: string[];
@@ -173,7 +175,7 @@ function liveOf({ cycle }: Cycle): LiveJob | null {
     media: cycle.media,
     state,
     ...(startedAt === null ? {} : { startedAt }),
-    href: HREF,
+    href: hrefOf(cycle.media),
   };
 }
 
@@ -181,7 +183,7 @@ function weirOf({ cycle, verdicts }: Cycle): WeirItem | null {
   if (!GATEABLE.includes(cycle.status) || cycle.improvements.length === 0) return null;
   const decided = new Set(verdicts.map((v) => v.key));
   const n = cycle.improvements.filter((i) => decided.has(i.id)).length;
-  return { source: "dojo", id: cycle.id, title: `dojo ${cycle.subject} · ${cycle.id}`, media: cycle.media, kind: "gate", decided: n, pending: cycle.improvements.length - n, href: HREF };
+  return { source: "dojo", id: cycle.id, title: `dojo ${cycle.subject} · ${cycle.id}`, media: cycle.media, kind: "gate", decided: n, pending: cycle.improvements.length - n, href: hrefOf(cycle.media) };
 }
 
 export function projectTraining(s: TrainingSnapshot, ctx: ProjectCtx): Projection {

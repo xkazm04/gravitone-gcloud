@@ -37,7 +37,7 @@ export type Mutant = {
  * unguarded probe lowers the live count and the same probe asks for this number
  * to be lowered to match, so the gain is kept.
  */
-export const UNGUARDED_PROBE_BUDGET = 188;
+export const UNGUARDED_PROBE_BUDGET = 164;
 
 export const MUTANTS: Mutant[] = [
   {
@@ -169,28 +169,12 @@ export const MUTANTS: Mutant[] = [
     why: "A committed test.only reduces the pre-push gate to one test and exits 0.",
   },
   {
-    id: "palette-keeps-zero-count-decisions",
-    probe: "shell-palette.probe.spec.ts",
-    file: "components/ui/shell/palette.ts",
-    find: "if (n <= 0) continue;",
-    replace: "if (n < 0) continue;",
-    why: "The palette lists a Board source with nothing waiting as a destination worth a keystroke.",
-  },
-  {
     id: "ast-switchcase-wrong-label",
     probe: "_ast.probe.spec.ts",
     file: "tests/golden-path/_ast.ts",
     find: "ts.isStringLiteralLike(n.expression) && n.expression.text === label",
     replace: "ts.isStringLiteralLike(n.expression) && n.expression.text !== label",
     why: "A source probe asking for the Enter case is handed every other case, so a guard it demands is checked on the wrong branch.",
-  },
-  {
-    id: "job-noun-raw-kind",
-    probe: "job-noun.probe.spec.ts",
-    file: "lib/jobs.tsx",
-    find: "return NOUN[kind] ?? kind;",
-    replace: "return kind;",
-    why: "The bell names a job by its raw internal id instead of a word the creator knows.",
   },
   {
     id: "pip-hollow-too-faint",
@@ -231,14 +215,6 @@ export const MUTANTS: Mutant[] = [
     find: "\"uppercase opacity-80\"",
     replace: "\"uppercase opacity-20\"",
     why: "A Tally's key label drops below readable contrast.",
-  },
-  {
-    id: "deck-hint-faint",
-    probe: "deck-text-contrast.probe.spec.ts",
-    file: "components/ui/deck/Deck.tsx",
-    find: "\"font-jetbrains text-label text-white/60\"",
-    replace: "\"font-jetbrains text-label text-white/35\"",
-    why: "The Deck's hint text becomes the low-contrast grey the kit forbids.",
   },
   {
     id: "source-mojibake",
@@ -409,14 +385,6 @@ export const MUTANTS: Mutant[] = [
     why: "Runs stops drawing paused v1 work: a Suno job held between steps (credits possibly spent) is on v1's queue page and nowhere on the day-line, so the operator who reads Runs as \"every live job\" never looks at it.",
   },
   {
-    id: "bell-cleared-still-shown",
-    probe: "bell-doors.probe.spec.ts",
-    file: "lib/jobLinks.ts",
-    find: "const interruptedJobs = jobs.filter((j) => j.status === \"interrupted\" && !j.clearedAt);",
-    replace: "const interruptedJobs = jobs.filter((j) => j.status === \"interrupted\");",
-    why: "A cleared interrupted job keeps its card and the bell keeps pulsing.",
-  },
-  {
     id: "mv-enqueue-not-idempotent",
     probe: "mv-queue.probe.spec.ts",
     file: "lib/sound/mv/queue.ts",
@@ -431,14 +399,6 @@ export const MUTANTS: Mutant[] = [
     find: "engineLabel: \"no spine composed yet\",",
     replace: "engineLabel: \"0 frames derived - see the shots view\",",
     why: "A trailer with no spine tells the creator its cut has zero frames and narrates the app instead of naming the work.",
-  },
-  {
-    id: "l66-probe-strength-floor",
-    probe: "sound-triage.probe.spec.ts",
-    file: "packages/ui/src/components/audio/strengths.ts",
-    find: "if (c.n < MIN_N) return { state: \"insufficient\", n: c.n, need: MIN_N - c.n };",
-    replace: "if (false) return { state: \"insufficient\", n: c.n, need: MIN_N - c.n };",
-    why: "A strengths cell over one or two takes prints a keep rate and a mean, and a lesson is drafted from a 100% that two takes made.",
   },
   {
     id: "l66-probe-queue-agents-first",

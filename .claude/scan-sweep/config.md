@@ -38,7 +38,7 @@ before matching, the population walked off the filesystem rather than listed, an
   if the finding headroom is under ~4, say so to the operator up front rather than
   discovering it at emit time with the analysis already paid for.
 - **2026-08-29 — three files have been DRIFT since before the map ledger began, and a
-  delta scan has already failed to pick them up.** `app/_phases/_shared/useLoadFor.ts`,
+  delta scan has already failed to pick them up.** `app/_phases/_shared/useLoadFor.ts` (deleted in Phase 6),
   `lib/devAuth.ts` and `lib/usePolling.ts` are unmapped under directories the map covers
   comprehensively (app 99.4%, lib 96.9%). The one ledger line
   (`.claude/scan-history/context-map.jsonl`, 2026-08-29T10:03, delta) post-dates all three
@@ -220,7 +220,8 @@ before matching, the population walked off the filesystem rather than listed, an
   break needs `\r?\n`; check probes for it at review, not at integration. Also: kit `census.json`
   is a generated surface that EVERY UI merge moves — tell workers not to regenerate it and
   regenerate once on the combined tree after the merges (`npx tsx pipeline/kit-census.mts`, no
-  `--raise`), or two branches' refreshes auto-merge into a stale file.
+  `--raise`), or two branches' refreshes auto-merge into a stale file. (History: the census and
+  `pipeline/kit-census.mts` retired with owner decision 5; the lesson about generated files stands.)
 - **2026-10-08 — `pipeline/foundry/selftest.py` is red when run the way its own docstring says.**
   From `pipeline/foundry` it exits 1 (`test_lane_record_reads_all_8_tracked_lanes` reads
   cwd-relative paths); from the repo root, which is where CI's `python` job runs it, it is
@@ -237,3 +238,4 @@ before matching, the population walked off the filesystem rather than listed, an
   Also: `pipeline/kit-census.mts` walks `git ls-files` but reads WORKING-TREE content, so a builder that
   regenerates `app/kit/census.json` bakes a concurrent session's uncommitted edits into a commit. Keep the
   census coordinator-owned and regenerate it once per wave, only when `git status -- app components` is clean.
+  (History: census retired with decision 5. The same trap holds for any generator that reads the working tree.)

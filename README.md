@@ -65,7 +65,7 @@ used to read "no model, backend or third-party service is called anywhere in
 this app". That was true when it was written and is not true now:
 
 - **A reasoning engine**, reached only through one chokepoint
-  (`lib/text/router.ts`) by `/api/recalibrate` and `/api/frames`. On a machine
+  (`lib/text/router.ts`) by the script and frames producers (`lib/producers/`). On a machine
   with a Claude login that is a **local `claude` CLI process**
   (`lib/claudeCli.ts`) authenticating with the logged-in subscription — no API
   key to hold or leak, and a recalibration is a minutes-long Opus 5 turn billed
@@ -83,7 +83,7 @@ this app". That was true when it was written and is not true now:
   chokepoint (`lib/imaging/router.ts`), each behind its own key
   (`lib/imaging/env.ts`) and billed per call (`lib/imaging/pricing.ts`). A plate
   is generated for money; a fully composed sixteen-frame cut is sixteen of them.
-- **A music vendor** — ElevenLabs, reached only through `/api/music/generate`
+- **A music vendor** — ElevenLabs, reached only through the score and audio producers
   (`lib/music/`), behind `ELEVENLABS_API_KEY`. The Score phase's cues render
   through it: the cue row (title, intent, bpm, exact duration) is translated
   server-side into a section plan, so the browser never speaks the vendor's

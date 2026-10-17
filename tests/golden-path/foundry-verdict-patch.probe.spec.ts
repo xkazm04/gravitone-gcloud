@@ -18,7 +18,12 @@
 //   6. a Dojo clear is logged as op 'clear'; a strips chip outside STRIP_CHIPS writes nothing
 //   7. a model keep never promotes a forge style to proven, in preview or commit
 //   8. [guard] PUT still takes a whole map through the kernel; identical map logs nothing
-//   9. wiring: the four routes export PATCH and the four stores write through the kernel
+//   9. wiring: the four Board packet sources patch through the kernel and the four stores write through it
+//
+// Phase 6 wave C (L70): the v1 /api/foundry/{runs,extract,training,strips}/[id]/verdicts routes
+// retired with the v1 Foundry; the Board's packet sources (lib/decision/v1/sources/*) are the
+// kernel's callers now. Case 8's route half drives the same store doors the PUT/PATCH did
+// (putVerdicts, then parseVerdictPatch -> patchVerdicts), and 9 reads the sources for the call.
 
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -26,7 +31,6 @@ import path from "node:path";
 import { test, expect } from "@playwright/test";
 
 import { ACCESS_SECRET_VAR } from "@/lib/apiAuth";
-import { PATCH as runsPATCH, PUT as runsPUT } from "@/app/api/foundry/runs/[id]/verdicts/route";
 import { EXTRACT_ROOT, commitExtractRun, getExtractRun, patchExtractVerdicts, putExtractVerdicts } from "@/lib/foundry/extract/store";
 import { OBSERVABLE_FIELDS } from "@/lib/foundry/extract/types";
 import type { ExtractManifest, Observables } from "@/lib/foundry/extract/types";
@@ -38,7 +42,7 @@ import type { StripCard, StripRun } from "@/lib/foundry/strips/types";
 import { getCycle, patchTrainingVerdicts, putTrainingVerdicts } from "@/lib/foundry/training/store";
 import type { CycleManifest } from "@/lib/foundry/training/types";
 import type { Candidate, RunManifest, StyleDef } from "@/lib/foundry/types";
-import { VERDICT_LOG, VerdictRevConflict } from "@/lib/foundry/verdictLog";
+import { VERDICT_LOG, VerdictRevConflict, parseVerdictPatch } from "@/lib/foundry/verdictLog";
 
 import { Interleaver, interleavedPort, stripAt } from "./_effects";
 import { keepEnv, probeFoundryDir, stripComments } from "./_helpers";
@@ -431,33 +435,36 @@ test("8. [guard] PUT on all four gates writes through the kernel: rev bumps, one
     expect(logOf(dir), name).toHaveLength(2);
   }
 
-  // The route: PUT still answers 200 on a whole map; PATCH answers 409 with the rev.
-  const auth = { authorization: `Bearer ${SECRET}`, "content-type": "application/json" };
-  const ctx = { params: Promise.resolve({ id: f }) };
-  const put = await runsPUT(new Request(`http://studio.local/api/foundry/runs/${f}/verdicts`, { method: "PUT", headers: auth, body: JSON.stringify({ verdicts: { [cid(0)]: { verdict: "keep", at } } }) }), ctx);
-  expect(put.status).toBe(200);
+  // What the retired PUT/PATCH did, through the same doors: a whole map replaces; a parsed
+  // patch against a stale base is a 409 carrying the current rev; against the right base it lands.
+  await putVerdicts(f, { [cid(0)]: { verdict: "keep", at } } as never);
   expect(logOf(path.join(OUT_ROOT, f)).at(-1)).toMatchObject({ op: "clear", key: cid(1), rev: 2 });
-  const stale = await runsPATCH(new Request(`http://studio.local/api/foundry/runs/${f}/verdicts`, { method: "PATCH", headers: auth, body: JSON.stringify({ set: { [cid(1)]: { verdict: "keep" } }, baseRev: 0 }) }), ctx);
-  expect(stale.status).toBe(409);
-  expect(((await stale.json()) as { rev: number }).rev).toBe(2);
-  const ok = await runsPATCH(new Request(`http://studio.local/api/foundry/runs/${f}/verdicts`, { method: "PATCH", headers: auth, body: JSON.stringify({ set: { [cid(1)]: { verdict: "keep" } }, baseRev: 2, surface: "board" }) }), ctx);
-  expect(ok.status).toBe(200);
-  expect(((await ok.json()) as { rev: number }).rev).toBe(3);
+  const parse = (body: unknown) => {
+    const p = parseVerdictPatch(body);
+    if (typeof p === "string") throw new Error(p);
+    return p;
+  };
+  const stale = await patchVerdicts(f, parse({ set: { [cid(1)]: { verdict: "keep" } }, baseRev: 0 })).catch((e: unknown) => e);
+  expect(stale).toBeInstanceOf(VerdictRevConflict);
+  expect((stale as VerdictRevConflict).status).toBe(409);
+  expect((stale as VerdictRevConflict).currentRev).toBe(2);
+  const ok = await patchVerdicts(f, parse({ set: { [cid(1)]: { verdict: "keep" } }, baseRev: 2, surface: "board" }));
+  expect(ok.rev).toBe(3);
 });
 
 /* ── 9. wiring ────────────────────────────────────────────────────────────── */
 
-test("9. wiring: every verdict route exports PATCH, and every store writes verdicts and commits through the kernel's lock", () => {
+test("9. wiring: every Board verdict source patches through the kernel, and every store writes verdicts and commits through the kernel's lock", () => {
   const src = (rel: string) => stripComments(readFileSync(path.join(process.cwd(), rel), "utf8"));
-  for (const [route, fn] of [
-    ["app/api/foundry/runs/[id]/verdicts/route.ts", "patchVerdicts("],
-    ["app/api/foundry/extract/[id]/verdicts/route.ts", "patchExtractVerdicts("],
-    ["app/api/foundry/training/[id]/verdicts/route.ts", "patchTrainingVerdicts("],
-    ["app/api/foundry/strips/[id]/verdicts/route.ts", "patchStripVerdicts("],
+  for (const [source, fn] of [
+    ["lib/decision/v1/sources/forge.ts", "patchVerdicts("],
+    ["lib/decision/v1/sources/extract.ts", "patchExtractVerdicts("],
+    ["lib/decision/v1/sources/dojo.ts", "patchTrainingVerdicts("],
+    ["lib/decision/v1/sources/strips.ts", "patchStripVerdicts("],
   ]) {
-    const s = src(route);
-    expect(s, route).toContain("export async function PATCH");
-    expect(s, route).toContain(fn);
+    const s = src(source);
+    expect(s, source).toContain(fn);
+    expect(s, `${source} patches against a revision`).toMatch(/baseRev:/);
   }
   for (const store of ["lib/foundry/store.ts", "lib/foundry/extract/store.ts", "lib/foundry/training/store.ts", "lib/foundry/strips/store.ts"]) {
     const s = src(store);

@@ -3,7 +3,7 @@ product: "Gravitone Studio"
 surfaces: ["app"]
 vault: [".vault", "C:/Users/mkdol/dolla/gravitone-gcloud/.vault"]
 vault_subdir: Cx
-design_doc: components/ui/tokens.ts
+design_doc: packages/ui/tokens/source.json
 screens_source: .claude/cx/config.md
 executor: opus
 stops_per_session: 3
@@ -14,10 +14,10 @@ stops_per_session: 3
 ## Product brief
 
 One production walked through six steps — **Research · Script · Frames · Motion · Score · Cut** — over a
-Library that knows where every asset came from. `lib/projects.ts`'s `PHASES` is the ONE source of
-that order. Since Phase 4 wave D a production is a kernel Project and each step a Part: the composition
-root is `app/(studio)/projects/[id]/` (the Plan) and each step's editor `app/(studio)/projects/[id]/[part]/`;
-`/studio/<id>` and `/projects/new` redirect there (`app/studio/[projectId]/redirect.ts`).
+Library that knows where every asset came from. A production is a kernel Project and each step a Part
+(kinds and recipes: `packages/catalog/src/recipes.ts`; the Part: `packages/domain/src/part.ts`). The
+composition root is `app/(studio)/projects/[id]/` (the Plan) and each step's editor
+`app/(studio)/projects/[id]/[part]/`; `/studio/<id>` and `/projects/new` redirect there.
 
 The user is a **solo creator making a short film or trailer**, not a team and not an operator. They
 arrive with an idea and a deadline, and the product's promise is that the six steps carry the idea
@@ -25,10 +25,10 @@ to a cut without losing the thread between them. Every read should be taken from
 seat.
 
 **Two surfaces in this repo are NOT the customer journey** and are out of scope for a stop unless
-the user asks: `/foundry` (an operator's mass-production bench that runs for hours on a local GPU;
-its culls are decided on the Board since Phase 3) and `/playground` (a temporary bench for exercising the music vendor's newest features
-before the Score step absorbs them). Both are named in `## Screens` so the map can see them; both
-are marked `operator`.
+the user asks: `/floor` (the operator's mass-production hub: four media lanes, the Weir piles decided
+on the Board, the Calendar rail) and `/audio` (the sound desk: Arrange, Hunt, Lessons, Strengths,
+Rubric, Batch). v1's `/foundry` and `/playground` retired into them in Phase 6. Both are named in
+`## Screens` so the map can see them; both are marked `operator`.
 
 > **Note on the vault path.** `vault:` lists the repo-relative `.vault` FIRST and the absolute
 > `C:/Users/mkdol/...` path second. The sibling overlays (`.claude/perfect/config.md`,
@@ -64,8 +64,6 @@ source-a-look - a creator who needs a visual identity before anything can render
 | `library` | app | `/library` — the shelf (fixture side) |
 | `library-detail` | app | `/library?kind=style&sel=style-0006` — one style selected on the shelf |
 | `library-style` | app | `/library/style/painted-3d` — that style's atelier (fixture side's seeded style) |
-| `playground` | app · **operator** | `/playground` — retires in Phase 6 wave C (`/playground` → `/audio`) |
-| `foundry` | app · **operator** | `/foundry` — retires in Phase 6 wave C (`/foundry` → `/floor`) |
 | `kit` | app | `/kit` |
 | `kit-law` | app | `/kit#colour` — the token law |
 | `kit-parts` | app | `/kit#signal` — the component specimens |
@@ -82,34 +80,44 @@ source-a-look - a creator who needs a visual identity before anything can render
 | `part-cut-timeline` | app | `/projects/glass-harbor-trailer/cut` |
 | `part-explainer-strips` | app | `/projects/provider-routing-explainer/strips` |
 | `part-explainer-voice` | app | `/projects/provider-routing-explainer/voice` |
-| `floor` | app | `/floor` — four lanes, Foundry → Weir → shelf, the Calendar rail |
-| `floor-calendar` | app | `/floor?cal=1` — the rail opened into the month |
+| `floor` | app · **operator** | `/floor` — four lanes, Foundry → Weir → shelf, the Calendar rail |
+| `floor-calendar` | app · **operator** | `/floor?cal=1` — the rail opened into the month |
+| `floor-slot` | app · **operator** | `/floor?cal=1&slot=sl-chokepoint-quota` — one slot open |
+| `floor-schedule` | app · **operator** | `/floor?cal=1&new=1&day=2030-01-14` — scheduling a new slot |
 | `board` | app | `/floor` → the first pile's `/board/<packet>`, loaded as a full page |
 | `board-sheet` | app | `/floor` → the first pile, clicked: the Board as a sheet over the Floor (soft navigation only) |
 | `ledger` | app | `/ledger` |
 | `runs` | app | `/projects/runs` |
-| `audio` | app | `/audio` |
+| `audio` | app · **operator** | `/audio` |
+| `audio-arrange` · `audio-arrange-sfx` | app · **operator** | `/audio?s=arrange` (`&kind=sfx`) |
+| `audio-effects` | app · **operator** | `/audio?kind=sfx` |
+| `audio-hunt` · `audio-hunt-open` · `audio-hunt-sfx` | app · **operator** | `/audio?s=hunt` (`&h=<hunt>`, `&kind=sfx`) |
+| `audio-lessons` · `audio-strengths` · `audio-rubric` | app · **operator** | `/audio?s=lessons` · `?s=strengths` · `?s=rubric` |
+| `audio-batch` · `audio-batch-sfx` | app · **operator** | `/audio?s=batch` (`&kind=sfx`) |
 
-Steps deep-link by query string. **Clicking the step tabs from Playwright silently does not change
-the step** (measured 2026-09-08) — always navigate by URL.
+`pipeline/cx-screens.mjs` is the source (53 ids on 2026-10-17); when it and this table disagree, it wins.
+
+Parts deep-link by path (`/projects/<id>/<part>`), sections by query string (`/audio?s=`,
+`/floor?cal=1`). Always navigate by URL: clicking tabs from Playwright silently failed to switch the
+v1 step (measured 2026-09-08).
 
 ## Run
 
 ```bash
-# 1. Start it. The bypass is mandatory: every screen but `landing` is behind <AuthGate>.
-NEXT_PUBLIC_DEV_AUTH=1 npx next dev -p 3007
+# 1. Start it. The auth bypass is mandatory (every screen but `landing` is behind the (studio)
+#    layout's auth), the fixture side seeds the screens, and the store is a temp file, never
+#    foundry-out/gravitone.sqlite (CLAUDE.md, "Where things live").
+GRAVITONE_PRODUCE_SIDE=fixture NEXT_PUBLIC_DEV_AUTH=1 NEXT_DIST_DIR=.next-cx GRAVITONE_STORE_PATH=<temp file> npx next dev -p 3007
 
 # 2. Capture one screen by its id from the table above.
-node pipeline/cx-capture.mjs studio-frames .vault/Cx/stops/S7-before.png --width 1920
+CX_BASE=http://localhost:3007 node pipeline/cx-capture.mjs studio-frames .vault/Cx/stops/S7-before.png --width 1920
 ```
 
 **Do not assume a port.** On this machine :3000, :3001 and :3002 are held by other projects, and
 :3001 in particular served a *different app* while a note still claimed it was this one. Confirm
 with `curl -s http://localhost:<p>/ | grep -o '<title>[^<]*</title>'` before believing a capture.
 
-Capture at `--width 1920` by default: the shell is `max-w-shell` (1760px), so a narrower viewport
-photographs a layout the target user does not have. Re-shoot at 1440 when a proposal is about
-density.
+Capture at `--width 1920` by default; re-shoot at 1440 when a proposal is about density.
 
 **Generated imagery** (an illustration, an empty-state picture, an icon) is not a placeholder job —
 dispatch `/leonardo` for stills and `/motionize` for an icon or loading state that should move, and
@@ -117,50 +125,47 @@ name the skill in the executor's brief.
 
 ## Gates
 
-Ordered; a change is not landed until they pass. Measured against `package.json`, 2026-09-08.
+Ordered; a change is not landed until they pass. The set is declared once in `pipeline/gates.mts`
+(`node pipeline/run-gates.mts --list` prints it); these are the ones a stop touches.
 
-- `always:` `npm run typecheck` — `tsc --noEmit`.
+- `always:` `npm run typecheck` and `npm run typecheck:next` (the packages, strictest flags).
 - `always:` `npm run lint:ratchet` — **fails in EITHER direction**; a warning count that drops is as
   fatal as one that rises, because a drop can also mean the matcher broke. An executor that
   legitimately removes a warning says so and leaves `lint-baseline.json` alone.
-- `always:` `npm run check:type` — the type-scale floor (`pipeline/check-type-scale.mjs`).
-- `when a rendered surface changed:` `npm test` — Playwright, `tests/golden-path`, fast (~10s, 481
-  tests as of 2026-09-08).
+- `when a (studio) surface or @gt/ui changed:` `npm run tokens:check` (no raw colour or px in a
+  `*.module.css`) and `npm run check:narration`.
+- `when a rendered surface changed:` `npm test` — Playwright, `tests/golden-path`.
 - `when routing/layout/server-rendered code changed:` `npm run build`, then `npm run check:bundle`.
-- `npm run verify` runs the whole ordered gate and is the safe closing move for a stop.
+- `npm run verify` runs the whole ordered set and is the safe closing move for a stop.
 
 ## Repo law
 
 Quote these into every executor brief; they are not negotiable and an executor that breaks one has
 not landed the item.
 
-1. **The type scale is two rungs and nothing below them.** `text-content` (1.125rem / 18px) for
-   anything the user reads; `text-label` (1rem / 16px) for short secondary labels. `text-xs` and any
-   size under 16px fail `npm run check:type`. If a design "needs" smaller text, the content is
-   secondary enough to move into a tooltip, a zoom, or a modal.
-2. **Chrome colour is declared once**, in `components/ui/tokens.ts`, emitted as `--gt-*` by
-   `<GravitoneTokens>`. Tailwind palette utilities (`text-cyan-300`, `bg-white/5`) are the rendered
-   form of those accents and are fine. A new hex literal in a component is a violation; the five
-   documented exemptions are listed in that file's header.
-3. **The shell is `max-w-shell px-2`** (1760px, 8px gutters) from `--container-shell` in
-   `app/globals.css`. Anything `fixed inset-x-0` that must align with content restates it from the
-   same token — never a fresh `max-w-[...]`.
-4. **Motion is entrance-only.** One curve (`--gt-ease`), one shape (`gt-rise`). The only loops
-   allowed are the three exempt classes named in `app/globals.css`: ambient atmosphere, busy
-   indicators whose lifetime is the work's lifetime, and the indeterminate sweep. A new infinite
-   animation needs a reason written next to it.
-5. **`focus:outline-none` appears nowhere** in `app/` or `components/` and must not reappear. Tint a
-   border as well by all means — never instead.
+1. **Type floor 12px, through tokens.** The (studio) world's sizes are token roles; nothing renders
+   under 12px (`tests/live/kit.live.spec.ts`, `studio-routes.live`). `npm run check:type` holds only
+   the Tailwind leftovers (landing, root layout, dev inspector, `components/`).
+2. **Every design value is declared once**, in `packages/ui/tokens/source.json` (primitives → roles,
+   admission in `packages/ui/tokens/ADMISSION.md`), generated by `npm run tokens:gen` into
+   `packages/ui/src/tokens.css` + `tokens.ts`, which are never hand-edited. `npm run tokens:check`
+   refuses a raw colour or px in a `*.module.css`. A new value is admitted with its role.
+3. **Components come from `@gt/ui`** (`packages/ui/src/components/<dir>/`, inventory in its
+   `INVENTORY.md`); a screen does not hand-roll a second spelling of one that exists.
+4. **Motion is entrance-only.** One curve (`--ease`, a token). A new infinite animation needs a
+   reason written next to it.
+5. **Focus is never removed** (no `outline: none` / `focus:outline-none`) in `app/`, `components/`
+   or `packages/ui`. Tint a border as well by all means — never instead.
 6. **No vendor import escapes `lib/<domain>/`.** `lib/imaging`, `lib/music`, `lib/text`,
    `lib/foundry` are server-only seams that bill real money.
-7. **`app/_studio/*` holds the mocked fixtures** every studio surface reads. A screen drawing
+7. **Each (studio) route reads through its `_port`**, whose side is `GRAVITONE_PRODUCE_SIDE`;
+   the fixture side (`app/(studio)/<route>/_port/fixture*.ts`) is mocked data. A screen drawing
    fixture data must not imply the work is real — see the `fixture honesty` heuristic below.
-8. **`PHASES` in `lib/projects.ts` is the one source of step order.** Motion was retired on 2026-08-14 and reinstated as the sixth step on 2026-10-06 (`1c90240`); `RETIRED_PHASES` is empty. Read
-   `PHASES`, never a list remembered here; the step set is being rebuilt as composition parts
-   (`docs/next/migration-plan.md`).
-9. **Fixed `rem` widths do not follow the type scale.** Three grids broke when the scale moved 2px
-   on 2026-09-08 (`ProjectsMatrix`'s phase tracks, the score/cut `LANE_GUTTER`, `ASSEMBLY_GRID`'s
-   breakdown column). A track cut to fit a label must carry a comment saying what it measured.
+8. **The part kinds and recipes are read, never remembered**: `packages/catalog/src/recipes.ts`
+   and `packages/domain/src/part.ts`.
+9. **A fixed width or height is a token** admitted with what it measured (the `h-lane-*` rows in
+   `ADMISSION.md` are the model). v1 learned why on 2026-09-08: three grids cut to fit a label broke
+   when the type scale moved 2px.
 10. Read `CLAUDE.md` and `AGENTS.md` before writing code. **This is not the Next.js in your training
     data** — check `node_modules/next/dist/docs/` for anything routing- or API-shaped.
 
@@ -214,7 +219,7 @@ source; read them before filing a finding against a decision somebody already ma
 
 <!-- dated one-liners; what the next /cx session in THIS repo needs to know -->
 
-- 2026-09-08 · **`framesFor` gates the whole back half of the spine.**
+- 2026-09-08 · (v1 studio, deleted in Phase 6) **`framesFor` gates the whole back half of the spine.**
   `app/_phases/frames/frames.ts:399` returns `[]` unless `source.origin === "explainer-fixture"`,
   so `seed-glass-harbor` (educational) has a picture but no movements, and
   `seed-glass-harbor-trailer` has movements but no picture. **No project can currently exercise
@@ -231,7 +236,7 @@ source; read them before filing a finding against a decision somebody already ma
   `knowledge/templates/<template>/steps/<nn>-<step>/{PATTERNS,OPEN-QUESTIONS}.md` decided the
   design of a whole commit here. `03-score` declares itself **n=0 for the craft**, so no brief
   touching Score may let an executor state a bpm or LUFS as fact.
-- 2026-09-08 · **Read the code's own comments before proposing.** `stepStore.ts:127-133` had
+- 2026-09-08 · **Read the code's own comments before proposing.** v1's `stepStore.ts:127-133` had
   already decided why Score persists nothing (a take is a `blob:` URL no reload survives) and
   narrowed a proposal before any code was written.
 - 2026-09-08 · Parallel sessions are real here — one landed a git policy mid-run

@@ -1,4 +1,4 @@
-// LANE — THE SUNO QUEUE (lib/sound/suno, app/api/sound/suno/*), offline,
+// LANE — THE SUNO QUEUE (lib/sound/suno), offline,
 // against the FAKE driver and a temp store.
 //
 // SUNO_DRIVER=fake selects lib/sound/suno/fakeDriver.ts: no browser, no
@@ -7,7 +7,9 @@
 // a KERNEL JOB on box.chrome (lib/producers/suno.ts), launched by Start and
 // driven here by `drain` - the same driveSuno pipeline/suno.mts runs; v1's
 // in-process worker and its kick are gone. What is pinned, through the REAL
-// route handlers where a route exists:
+// lib functions the retired /api/sound/suno/* routes called (Phase 6 L70: the
+// routes went with the v1 Pipeline canvas; a refusal's status is read off the
+// store's own error, lib/sound/http.ts toErrorResponse, as those routes did):
 //
 //   · the switch: an enqueue never launches; Start launches and the drive runs
 //     it, Stop lets the create in flight finish and returns its job holding
@@ -32,9 +34,10 @@
 //   · the library import: every listed song becomes a clip (origin "library",
 //     no job, no verdict, no lane) carrying its Suno URL, title, model and
 //     prompt; a second run adds 0, and a song our queue already rendered is
-//     skipped; through the AUDIO ADAPTER over the real routes, a library clip
-//     lands ungrouped in triage under every axis, a lane move persists, and
-//     keep / drop work as they do on a queue clip.
+//     skipped; a library clip takes a lane and a verdict as a queue clip does,
+//     and clearing its record never deletes the song (the next import brings it
+//     back). The v1 Board adapter over it (lib/board/sources/audio.ts) retired with
+//     lib/board (L71); the new Board's audio packet has its own tests.
 
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -53,17 +56,11 @@ import { readSuno, STYLE_MAX, type SunoFile } from "@/lib/sound/suno/store";
 import type { Hunt, HuntNode } from "@/lib/sound/types";
 import type { SunoClip, SunoImportResult, SunoJob, SunoProposal, SunoSnapshot } from "@/lib/suno/types";
 import type { TextRequest, TextResult } from "@/lib/text/types";
-import { GET as sunoGET } from "@/app/api/sound/suno/route";
-import { POST as proposalsPOST } from "@/app/api/sound/suno/proposals/route";
-import { DELETE as proposalDELETE } from "@/app/api/sound/suno/proposals/[id]/route";
-import { POST as queuePOST } from "@/app/api/sound/suno/queue/route";
-import { DELETE as queueDELETE } from "@/app/api/sound/suno/queue/[id]/route";
-import { PATCH as clipPATCH } from "@/app/api/sound/suno/clips/[id]/route";
-import { POST as libraryPOST } from "@/app/api/sound/suno/library/route";
-import { POST as runPOST } from "@/app/api/sound/suno/run/route";
-import { POST as clearPOST } from "@/app/api/sound/suno/clear/route";
-import { UNGROUPED_LANE } from "@/lib/board/pipeline";
-import { makeAudioSource } from "@/lib/board/sources/audio";
+import { toErrorResponse } from "@/lib/sound/http";
+import { importSunoLibrary } from "@/lib/sound/suno/library";
+import { cancelJob, clearSunoQueue, enqueueHuntLeaves, enqueueProposals, setSunoQueue, sunoSnapshot } from "@/lib/sound/suno/queue";
+import { addProposals, deleteProposal, parseFields, parseLane, patchClip, type ClipPatch } from "@/lib/sound/suno/store";
+import type { SunoClearRequest } from "@/lib/suno/types";
 
 import { keepEnv } from "./_helpers";
 
@@ -104,6 +101,47 @@ function rq(pathname: string, method = "GET", json?: unknown): Request {
 }
 const read = async <T>(res: Response): Promise<T> => (await res.json()) as T;
 
+/** One lib call answered as the retired route answered it (toErrorResponse for a refusal). */
+async function answer(status: number, run: () => Promise<unknown>): Promise<Response> {
+  try {
+    return Response.json(await run(), { status });
+  } catch (e) {
+    return toErrorResponse(e);
+  }
+}
+const bodyOf = async (req: Request): Promise<Record<string, unknown>> => ((await req.json().catch(() => null)) ?? {}) as Record<string, unknown>;
+const idOf = async (c: { params: Promise<{ id: string }> }) => (await c.params).id;
+const sunoGET = (_req: Request) => answer(200, () => sunoSnapshot());
+const proposalsPOST = async (req: Request) => {
+  const b = await bodyOf(req);
+  return answer(201, async () => ({ proposal: (await addProposals([{ fields: parseFields(b.fields), lane: parseLane(b.lane), origin: "custom" }]))[0] }));
+};
+const proposalDELETE = async (_req: Request, c: { params: Promise<{ id: string }> }) => answer(200, async () => (await deleteProposal(await idOf(c)), { ok: true }));
+const queuePOST = async (req: Request) => {
+  const b = await bodyOf(req);
+  const ids = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
+  if (ids(b.proposalIds).length) return answer(201, async () => ({ jobs: await enqueueProposals(ids(b.proposalIds)) }));
+  return answer(201, async () => ({ jobs: await enqueueHuntLeaves(ids(b.huntNodeIds), b.lane === undefined ? null : parseLane(b.lane)) }));
+};
+const queueDELETE = async (_req: Request, c: { params: Promise<{ id: string }> }) => answer(200, async () => ({ job: await cancelJob(await idOf(c)) }));
+const clipPATCH = async (req: Request, c: { params: Promise<{ id: string }> }) => {
+  const b = await bodyOf(req);
+  const patch: ClipPatch = {};
+  if (b.verdict === "keep" || b.verdict === "drop" || b.verdict === null) patch.verdict = b.verdict;
+  if ("lane" in b) patch.lane = b.lane === null ? null : parseLane(b.lane);
+  return answer(200, async () => ({ clip: await patchClip(await idOf(c), patch) }));
+};
+const libraryPOST = (_req: Request) => answer(200, () => importSunoLibrary());
+/** The Queue column's Start and Stop, without a receipt token: the switch alone. */
+const runPOST = async (req: Request) => {
+  const b = await bodyOf(req);
+  return answer(200, async () => ({ queue: await setSunoQueue(b.running === true) }));
+};
+const clearPOST = async (req: Request) => {
+  const b = (await bodyOf(req)) as SunoClearRequest;
+  return answer(200, () => clearSunoQueue(b));
+};
+
 async function propose(style: string, title?: string): Promise<SunoProposal> {
   const res = await proposalsPOST(rq("/api/sound/suno/proposals", "POST", { fields: { style, ...(title ? { title } : {}), lyrics: "[Instrumental]" }, lane: { axis: "group", value: "electronic" } }));
   expect(res.status).toBe(201);
@@ -127,7 +165,7 @@ async function drain(): Promise<Drive> {
   return last;
 }
 
-/** The Queue column's Start, through the real route, then the drive. */
+/** The Queue column's Start, through the queue's own switch, then the drive. */
 async function start(): Promise<Drive> {
   const res = await runPOST(rq("/api/sound/suno/run", "POST", { running: true }));
   expect(res.status).toBe(200);
@@ -214,7 +252,6 @@ test("FIFO, both models, 4 clips per job, persisted to suno.json", async () => {
   const clipId = f.clips[0].id;
   const kept = await clipPATCH(rq(`/api/sound/suno/clips/${clipId}`, "PATCH", { verdict: "keep" }), ctx(clipId));
   expect((await read<{ clip: { verdict: string } }>(kept)).clip.verdict).toBe("keep");
-  expect((await clipPATCH(rq(`/api/sound/suno/clips/${clipId}`, "PATCH", { verdict: "maybe" }), ctx(clipId))).status).toBe(400);
 });
 
 test("the active phase and model are persisted while the driver works", async () => {
@@ -360,7 +397,6 @@ test("stop: the create in flight finishes, its job goes back to the queue holdin
     { style: "cumbia, accordion", model: "v6-wild" },
   ]);
   // a switch without a boolean is refused before the store is read
-  expect((await runPOST(rq("/api/sound/suno/run", "POST", { running: "yes" }))).status).toBe(400);
 });
 
 test("clear: prompts and clip records removed, queued jobs cancelled; a running job and a queued prompt are skipped", async () => {
@@ -433,7 +469,6 @@ test("a hunt leaf becomes ONE Suno proposal, a style line from its terms, instru
   expect(p2.fields.lyrics).toBeUndefined(); // vocal: Suno writes to the style, no "[Instrumental]"
   expect(p2.fields.style).toBe("soulful female vocals over a pad");
   // an empty body names nothing: 400 before the store
-  expect((await queuePOST(rq("/api/sound/suno/queue", "POST", {}))).status).toBe(400);
 });
 
 /* ── the propose turn ─────────────────────────────────────────────────────── */
@@ -489,10 +524,6 @@ test("library import: every song becomes an ungrouped, unjudged library clip; a 
   await start();
   expect((await readSuno()).clips.map((c) => c.songId)).toContain("fake-0001");
 
-  // an empty body names nothing: 400 before the driver is asked
-  expect((await libraryPOST(rq("/api/sound/suno/library", "POST", {}))).status).toBe(400);
-  expect(FAKE_SUNO.libraryReads).toBe(0);
-
   const first = await importLibrary();
   console.log(`\nSUNO library import #1 ${JSON.stringify(first)}`);
   expect(first).toEqual({ added: 2, skipped: 1, total: 3 });
@@ -521,101 +552,18 @@ test("library import: every song becomes an ungrouped, unjudged library clip; a 
   expect(FAKE_SUNO.libraryReads).toBe(2);
 });
 
-/** fetch, routed to the REAL handlers: the audio adapter reads and writes the
- *  temp store through the routes it uses in the browser. The Sound lab's three
- *  reads answer empty - this probe is about the Suno half. */
-function routeFetchToHandlers() {
-  const real = globalThis.fetch;
-  const writes: { method: string; path: string; body: unknown }[] = [];
-  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = new URL(String(input), "http://localhost");
-    const method = init?.method ?? "GET";
-    const body = typeof init?.body === "string" ? (JSON.parse(init.body) as unknown) : undefined;
-    if (method !== "GET") writes.push({ method, path: url.pathname, body });
-    if (url.pathname === "/api/sound/takes") return Response.json({ takes: [] });
-    if (url.pathname === "/api/sound/hunts") return Response.json({ hunts: [] });
-    if (url.pathname === "/api/sound/groups") return Response.json({ groups: { music: ["ambient", "electronic"], sfx: [] } });
-    if (url.pathname === "/api/sound/suno" && method === "GET") return sunoGET(rq(url.pathname));
-    if (url.pathname === "/api/sound/suno/library" && method === "POST") return libraryPOST(rq(url.pathname, "POST", body));
-    if (url.pathname === "/api/sound/suno/clear" && method === "POST") return clearPOST(rq(url.pathname, "POST", body));
-    const clip = /^\/api\/sound\/suno\/clips\/([^/]+)$/.exec(url.pathname);
-    if (clip && method === "PATCH") return clipPATCH(rq(url.pathname, "PATCH", body), ctx(decodeURIComponent(clip[1])));
-    return Response.json({ error: `unrouted in the probe: ${method} ${url.pathname}` }, { status: 404 });
-  }) as typeof fetch;
-  return { writes, restore: () => void (globalThis.fetch = real) };
-}
-
-test("library clips through the audio adapter: ungrouped in triage under every axis, a lane move persists, keep and drop", async () => {
-  const net = routeFetchToHandlers();
-  try {
-    const src = makeAudioSource();
-    await src.loadPipeline();
-
-    // the import is a triage cell verb, free (no `spends`), and announces its counts
-    const cell = { axis: "group", lane: UNGROUPED_LANE, stage: "gate" as const, band: "triage" };
-    // and no "Delete all" while the tile holds no clip
-    expect(src.cellVerbs!(cell)).toEqual([{ id: "suno.import-library", label: "Import Suno library" }]);
-    expect(src.cellVerbs!({ ...cell, band: "pending" })).toEqual([]);
-    expect(await src.runVerb!("suno.import-library", cell)).toEqual({ ok: true, announce: "Suno library: added 3, skipped 0" });
-    expect(await src.runVerb!("suno.import-library", cell)).toEqual({ ok: true, announce: "Suno library: added 0, skipped 3" });
-
-    const entries = await src.loadPipeline();
-    const lib = entries.filter((e) => e.item.id.startsWith("audio:suno:clip:"));
-    expect(lib).toHaveLength(3);
-    for (const e of lib) {
-      expect(e.placement).toEqual({ stage: "gate", band: "triage", lane: UNGROUPED_LANE });
-      for (const axis of src.groupAxes) expect(axis.of(e.item), `${e.item.title} under ${axis.id}`).toBe(UNGROUPED_LANE);
-      expect(e.href).toMatch(/^https:\/\/suno\.com\/song\//);
-    }
-    const shape = lib.find((e) => e.item.title === "The Shape of Leaving")!;
-    expect(shape.facts[0]).toEqual({ name: "model", value: "v6" });
-    expect(shape.facts).toEqual(
-      expect.arrayContaining([
-        { name: "origin", value: "suno library" },
-        { name: "style", value: "trip-hop, grunge, cello, male vocal" },
-        { name: "lyrics", value: "written" },
-      ]),
-    );
-    // the lyrics whole, line breaks kept, for the detail pane (the style is a fact)
-    expect(shape.item.media.flatMap((m) => (m.kind === "text" ? [m.text] : []))).toEqual(["[Verse 1]\nYou left the kettle cold again"]);
-
-    // a lane move under the row axis persists, and survives a fresh read
-    const moved = await src.move({ itemId: shape.item.id, to: "gate", band: "triage", lane: "ambient", axis: "group" });
-    expect(moved.ok).toBe(true);
-    if (moved.ok) expect(moved.item.placement).toEqual({ stage: "gate", band: "triage", lane: "ambient" });
-    expect(net.writes.at(-1)).toMatchObject({ method: "PATCH", body: { lane: { axis: "group", value: "ambient" } } });
-    const clipId = shape.item.id.replace("audio:suno:clip:", "");
-    expect((await readSuno()).clips.find((c) => c.id === clipId)!.lane).toEqual({ axis: "group", value: "ambient" });
-    const fresh = makeAudioSource();
-    const again = (await fresh.loadPipeline()).find((e) => e.item.id === shape.item.id)!;
-    expect(again.placement.lane).toBe("ambient");
-    // under another axis it is still ungrouped: the lane was written under the row axis
-    expect(fresh.groupAxes.find((a) => a.id === "genre")!.of(again.item)).toBe(UNGROUPED_LANE);
-
-    // a lane move under genre together with a keep: one PATCH, both written
-    const kept = await fresh.move({ itemId: again.item.id, to: "gate", band: "pending", lane: "trip-hop", axis: "genre" });
-    expect(kept.ok).toBe(true);
-    expect(net.writes.at(-1)!.body).toEqual({ verdict: "keep", lane: { axis: "genre", value: "trip-hop" } });
-    expect((await readSuno()).clips.find((c) => c.id === clipId)!).toMatchObject({ verdict: "keep", lane: { axis: "genre", value: "trip-hop" } });
-
-    // keep / drop verbs on another library clip, the same as on a queue clip
-    const other = lib.find((e) => e.item.id !== shape.item.id)!;
-    const otherId = other.item.id.replace("audio:suno:clip:", "");
-    expect(fresh.cardVerbs!(other.item.id).map((v) => v.id)).toEqual(["suno.keep", "suno.drop", "suno.delete"]);
-    expect((await fresh.runVerb!("suno.keep", { axis: "group", itemId: other.item.id })).ok).toBe(true);
-    expect((await readSuno()).clips.find((c) => c.id === otherId)!.verdict).toBe("keep");
-    expect((await fresh.runVerb!("suno.drop", { axis: "group", itemId: other.item.id })).ok).toBe(true);
-    const last = await fresh.loadPipeline();
-    expect(last.map((e) => e.item.id)).not.toContain(other.item.id);
-    expect(fresh.lastLoad().hidden).toEqual([{ stage: "gate", count: 1, why: "Suno clips dropped" }]);
-    // kept, and under the row axis back in ungrouped: its lane now belongs to genre
-    expect(last.find((e) => e.item.id === shape.item.id)!.placement).toEqual({ stage: "gate", band: "pending", lane: UNGROUPED_LANE });
-
-    // delete removes the record, never the song: the next import brings it back
-    expect(await fresh.runVerb!("suno.delete", { axis: "group", itemId: shape.item.id })).toMatchObject({ ok: true });
-    expect((await readSuno()).clips.map((c) => c.id)).not.toContain(shape.item.id.replace("audio:suno:clip:", ""));
-    expect(await fresh.runVerb!("suno.import-library", cell)).toEqual({ ok: true, announce: "Suno library: added 1, skipped 2" });
-  } finally {
-    net.restore();
-  }
+test("library clips take a lane and a verdict as a queue clip does; clearing a record never deletes the song", async () => {
+  expect(await importLibrary()).toEqual({ added: 3, skipped: 0, total: 3 });
+  const lib = (await readSuno()).clips.filter((c) => c.origin === "library");
+  const shape = lib.find((c) => c.title === "The Shape of Leaving")!;
+  const moved = await clipPATCH(rq(`/api/sound/suno/clips/${shape.id}`, "PATCH", { lane: { axis: "group", value: "ambient" } }), ctx(shape.id));
+  expect(moved.status).toBe(200);
+  expect((await readSuno()).clips.find((c) => c.id === shape.id)!.lane).toEqual({ axis: "group", value: "ambient" });
+  // a lane under another axis together with a keep: one write, both kept
+  await clipPATCH(rq(`/api/sound/suno/clips/${shape.id}`, "PATCH", { verdict: "keep", lane: { axis: "genre", value: "trip-hop" } }), ctx(shape.id));
+  expect((await readSuno()).clips.find((c) => c.id === shape.id)!).toMatchObject({ verdict: "keep", lane: { axis: "genre", value: "trip-hop" } });
+  // the record goes, the song stays at Suno: the next import brings it back
+  expect((await clearPOST(rq("/api/sound/suno/clear", "POST", { clipIds: [shape.id] }))).status).toBe(200);
+  expect((await readSuno()).clips.map((c) => c.id)).not.toContain(shape.id);
+  expect(await importLibrary()).toEqual({ added: 1, skipped: 2, total: 3 });
 });

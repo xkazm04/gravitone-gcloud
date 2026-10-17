@@ -5,9 +5,10 @@ repo's. Read at the start of a run; the sweep works without it, on the lane's de
 
 ## Product
 
-Gravitone Studio - a UI-first Next.js 16 / React 19 / Tailwind v4 prototype of a content-production
-studio, running entirely on mocked fixtures in `app/_studio/`. Pairs with `/research` (external
-sources) and `/perfect` (the directional build loop).
+Gravitone Studio - a Next.js 16 / React 19 content-production studio: libraries in
+`packages/{catalog,domain,kernel,producers,ui}`, a SQLite kernel store, screens in `app/(studio)/`
+each reading a `_port` that is fixture or real by `GRAVITONE_PRODUCE_SIDE`. Pairs with `/research`
+(external sources) and `/perfect` (the directional build loop).
 
 ## Vault
 
@@ -20,19 +21,12 @@ everything under `Explorer/` is this sweep's alone.
 
 ## Area taxonomy
 
-`context-map.json` at the repo root, not `.claude/codebase-context.md`. Today it holds 4 groups /
-4 contexts / 28 files:
+`context-map.json` at the repo root, not `.claude/codebase-context.md`. Read its groups and contexts
+from the file (31 contexts / 8 groups on 2026-10-17, mapped before the Phase 6 deletions; it lags the
+rebuild until the owning machine rescans - `docs/context-map.md`). Build the menu from it.
 
-| menu | context | group |
-|---|---|---|
-| phases | `production-phases` | Production Lifecycle |
-| library | `asset-library` | Asset Management |
-| design | `studio-design-system` | Design System |
-| infrastructure | `app-infrastructure` | Application Infrastructure |
-
-A context here is **broad** (Personas' scan targets 10-30 files each), so a full sweep of
-`production-phases` covers all five phases at once; when the user names one phase, scope to it inside
-that context and say you did.
+A context here is **broad** (Personas' scan targets 10-30 files each); when the user names one
+route or step, scope to it inside its context and say you did.
 
 **`context-map.json` is generated and owned by the Personas app** (project `gravitone`, id
 `91d8170c-...`) - export-only, no import path.
@@ -52,46 +46,49 @@ that context and say you did.
 
 1. `context-map.json` - the area taxonomy. Small enough to read whole.
 2. `README.md` - what the product is, what is deliberately mocked, and the design language's rules.
-3. `components/ui/tokens.ts` - the design system itself; every `ui`/`design` item is judged against it.
+3. `packages/ui/tokens/source.json` (+ `tokens/ADMISSION.md`, `src/components/INVENTORY.md`) - the
+   design system itself; every `ui`/`design` item is judged against it.
 4. `AGENTS.md` - this is Next 16; the docs in `node_modules/next/dist/docs/` outrank training data.
 
 ## Categories
 
 `quality | dx | ui | design | fixture | perf | bug | a11y`
 
-- `design` - a design-language violation: a colour literal outside `components/ui/tokens.ts`, a
-  re-rolled Primitive, a `--gt-*` var read that `tokens.ts` does not define, motion that is not
-  entrance-only or that ignores `prefers-reduced-motion`, a font outside `font-instrument` /
-  `font-hanken` / `font-jetbrains`.
+- `design` - a design-language violation: a raw colour or px in a `*.module.css`, a re-rolled
+  `@gt/ui` component, a `var(--x)` that `source.json` does not define, motion that is not
+  entrance-only or that ignores `prefers-reduced-motion`, a font outside `--sans` (Inter) / `--mono`
+  (JetBrains Mono).
 - `fixture` - the mocked data misrepresents, contradicts itself, or is shaped so a real backend
   could not produce it. Also: a fixture that flatters (every generation succeeds, no cost, no wait),
   or ids derived from array position.
-- **No `i18n`** - this repo ships English only. **No `sec`** - no server, no routes, no auth, no
-  secrets. Two security items still qualify as `bug` at `critical`: a secret committed to the repo,
-  and `dangerouslySetInnerHTML` fed anything but the token stylesheet `GravitoneTokens.tsx` generates.
+- **No `i18n`** - this repo ships English only. Security items file as `bug`: the server seam
+  (`app/_server/`, the API routes and file doors, the CLI tokens) is real now. At `critical`: a secret
+  committed to the repo, a route that skips `app/_server/route.ts`'s guard, and
+  `dangerouslySetInnerHTML` fed anything but a generated token stylesheet.
 
 ## What "worth fixing" means here
 
-There is no backend, no test suite and no user in production, so the usual severity ladder skews.
+There is no user in production and real data lives on one operator's machine, so the usual
+severity ladder skews.
 
 - **Rank up:** design-language violations, fixtures that lie about what the product can do, a surface
   that cannot represent absence or failure, dead props/state, accessibility.
 - **Rank down:** hardening against inputs no code path can produce yet; performance work on a fixture
   array of 20 items. Be sceptical of `perf` generally - most "perf" here is really `quality`. Real
   perf items: work that scales with a *real* library, `useEffect` cascades, animations that never
-  pause (`usePauseOffscreen` in `Equalizer.tsx` exists for this), client components that could be
-  server components.
-- **Hard exclusion - "wire it to a backend".** Never surface "call a real API here", "persist this",
-  "add auth". The seam is the design, and changing it is a `/perfect` direction the user gates. Items
-  about the *shape* of that seam (a component reaching into a fixture instead of taking props, a type
-  a server could never satisfy) are in scope and are usually the most valuable things a sweep finds.
+  pause, client components that could be server components.
+- **Hard exclusion - a new backend.** Never surface "add a second store", "add auth", "wire a new
+  vendor". The port seam is the design, and changing it is a `/perfect` direction the user gates.
+  Items about the *shape* of that seam (a component reaching into a fixture instead of its `_port`, a
+  fixture side the real side could never satisfy) are in scope and are usually the most valuable
+  things a sweep finds.
 
 ## Item schema deltas
 
 Replace the lane's `i18n_impact` field with:
 
 ```yaml
-design_impact: "<none | consumes an existing token | NEEDS A NEW TOKEN (tokens.ts is owner-only - say which and why)>"
+design_impact: "<none | consumes an existing token | NEEDS A NEW TOKEN (source.json is owner-only - say which and why)>"
 ```
 
 Clustering: same fixture file -> one commit (two hand-merges of a fixture array is how entries get
@@ -100,27 +97,31 @@ dropped). Execution order for 2+ items: `bug` before `fixture` before `design` b
 
 ## Gates
 
-This repo has exactly one gate, so run it every time:
+The full set is `npm run verify` (declared once in `pipeline/gates.mts`). Per item:
 
-- `npx tsc --noEmit` - fast; no shared build output, safe alongside another session.
-- `npm run build` when the item touched routing, layout, or anything server-rendered - the only check
-  that catches an App Router mistake a typecheck cannot see.
-- **There is no linter and no test suite.** Do not invent `npm run lint` / `npm test`; a run that
-  "passes" a command this repo does not have is reporting fabricated evidence.
+- `npm run typecheck` (and `npm run typecheck:next` when `packages/` changed) - fast, safe alongside
+  another session.
+- `npm run lint:ratchet` - fails in EITHER direction; a fall is reported, never re-baselined by you.
+- `npm run tokens:check` when a `*.module.css` or `source.json` changed.
+- `npm test` when a rendered surface changed; `npm run test:unit` when `packages/` changed.
+- `npm run build` when the item touched routing, layout, or anything server-rendered.
+- A test, selftest or dev server sets `GRAVITONE_STORE_PATH` to a temp file; never open
+  `foundry-out/gravitone.sqlite`.
 
-## Frontend rules (non-negotiable when touching `app/**/*.tsx` or `components/**/*.tsx`)
+## Frontend rules (non-negotiable when touching `app/(studio)/**` or `packages/ui/**`)
 
-- No colour literal leaves `components/ui/tokens.ts`. Consume the `--gt-*` vars or the exported
-  constants (`SURFACE`, `TEXT`, `EASE`). Adding a token is fine - do it in `tokens.ts` in the same
-  commit and say so.
-- Reuse `Primitives.tsx` and `StudioFrame.tsx`; a new shared atom belongs in `components/ui/`.
-- New data goes through the types in `app/_studio/`, never an ad-hoc inline shape.
+- Design values only through tokens: `packages/ui/tokens/source.json` -> `npm run tokens:gen`; the
+  generated `tokens.css` / `tokens.ts` are never hand-edited. Adding a token is fine - admit it in
+  `source.json` with its role in the same commit and say so.
+- Reuse `@gt/ui` (`packages/ui/src/components/<dir>/`); a new shared component belongs there.
+- New data goes through the route's `_port` contract and `@gt/domain` types, never an ad-hoc inline shape.
 - Represent absence honestly. `"use client"` only where interactivity actually needs it.
 
 ## Visual verification
 
-Either start the dev server on a free port (`npm run dev -p 3177` - **never 3000**, which the user or
-a sibling session may hold) and exercise the affected surface, or state explicitly that you have NOT
+Either start the dev server on a free port (`GRAVITONE_PRODUCE_SIDE=fixture NEXT_PUBLIC_DEV_AUTH=1
+GRAVITONE_STORE_PATH=<temp file> npx next dev -p 3177` - **never 3000**, which the user or a sibling
+session may hold) and exercise the affected surface, or state explicitly that you have NOT
 visually verified. Kill the server when done, and never kill one you did not start.
 
 ## Memory outbox

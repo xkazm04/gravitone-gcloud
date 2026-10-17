@@ -12,7 +12,14 @@
 // rung, by definition. It is derived from ONE constant below — if the scale
 // moves again, move FLOOR_PX and nothing else here.
 //
-// Fails on, in app/**/*.tsx and components/**/*.tsx:
+// NARROWED IN PHASE 6 WAVE C to the surfaces still drawn in Tailwind: the landing
+// (app/_landing, app/page.tsx), the root files (layout, error, global-error), the dev
+// inspector, and what is left of components/. The (studio) world sizes type through
+// CSS modules over @gt/ui's tokens, where `npm run tokens:check` refuses a literal size
+// and tests/live/studio-routes.live measures what renders; walking it here would read
+// .tsx files that carry no size classes and report a pass that was never in question.
+//
+// Fails on, in those .tsx files:
 //   · text-xs, or any arbitrary text-[Npx] with N < 16   (className floor)
 //   · an inline style fontSize below 16px / 1rem          (global-error.tsx
 //     brings its own styles by design, so it is checked too, not exempted)
@@ -46,9 +53,18 @@ const CLASS_XS = /\btext-xs\b/;
 const CLASS_ARBITRARY = /\btext-\[(\d+(?:\.\d+)?)px\]/g;
 const INLINE_PX = /fontSize:\s*["'](\d+(?:\.\d+)?)px["']/g;
 const INLINE_REM = /fontSize:\s*["'](\d+(?:\.\d+)?)rem["']/g;
+/** The Tailwind surfaces: directories walked whole, and root files read one by one. */
+const TSX_DIRS = ["app/_landing", "app/_dev-inspector", "components"];
+const TSX_FILES = ["app/page.tsx", "app/layout.tsx", "app/error.tsx", "app/global-error.tsx"];
+function* tsxScope() {
+  for (const d of TSX_DIRS) if (fs.existsSync(path.join(ROOT, d))) yield* walk(path.join(ROOT, d));
+  for (const f of TSX_FILES) if (fs.existsSync(path.join(ROOT, f))) yield path.join(ROOT, f);
+}
 const findings = [];
-for (const dir of ["app", "components"]) {
-  for (const file of walk(path.join(ROOT, dir))) {
+let read = 0;
+{
+  for (const file of tsxScope()) {
+    read++;
     const rel = path.relative(ROOT, file).replaceAll("\\", "/");
     const lines = fs.readFileSync(file, "utf8").split("\n");
     lines.forEach((line, i) => {
@@ -67,15 +83,16 @@ for (const dir of ["app", "components"]) {
   }
 }
 
-// SCOPED FLOOR FOR THE ALMANAC WORLD'S STYLESHEETS (2026-09-29, owner: "lets scope
-// the check"). The tsx floor above cannot see a .css file, so the door's chart
+// SCOPED FLOOR FOR THE WORLD STYLESHEETS (2026-09-29, owner: "lets scope the check").
+// The Almanac kit (components/kit) and the v1 Foundry retired in Phase 6 wave C, so the
+// landing's Paper Cosmos stylesheet is the one world CSS left to read. The tsx floor above cannot see a .css file, so the door's chart
 // labels and the kit's caps labels were unchecked, not compliant. World CSS is
 // now read, at its OWN floor: 14px, the smallest a chart label or caps label may
 // be. Body and content sizes are 16px and up by their tokens; this floor exists
 // so a stylesheet cannot slip a 12px label in beside them. Numbers inside var()
 // are tokens and are checked where they are declared.
 const WORLD_CSS_FLOOR_PX = 14;
-const WORLD_CSS_DIRS = ["components/kit", "app/kit", "app/foundry", "app/_landing"];
+const WORLD_CSS_DIRS = ["app/_landing"];
 const FONT_SIZE_DECL = /(?:^|[\s{;])(font-size|--k-fs[\w-]*)\s*:\s*([^;}]+)/g;
 function* walkCss(dir) {
   if (!fs.existsSync(dir)) return;
@@ -100,10 +117,16 @@ for (const d of WORLD_CSS_DIRS) {
   }
 }
 
+// A walk that reads nothing reports compliance in a voice indistinguishable from success.
+if (read < 10) {
+  console.error(`type-scale check COULD NOT RUN — read ${read} .tsx file(s); the scope above names moved directories.`);
+  process.exit(2);
+}
+
 if (findings.length) {
   console.error(`type-scale check FAILED — ${findings.length} size(s) below the readable floor:`);
   for (const f of findings) console.error("  " + f);
   console.error("Use text-content (readable content) or text-label (secondary short labels) — see app/globals.css.");
   process.exit(1);
 }
-console.log(`type scale OK — nothing below text-label (${FLOOR_REM}rem) in app/ or components/; world CSS at its ${WORLD_CSS_FLOOR_PX}px floor.`);
+console.log(`type scale OK — ${read} Tailwind surface file(s), nothing below text-label (${FLOOR_REM}rem); world CSS at its ${WORLD_CSS_FLOOR_PX}px floor.`);

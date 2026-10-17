@@ -1,18 +1,19 @@
-// THE FOUR KEPT v1 FILE ROUTES, AT THEIR DOOR (Phase 6 L67).
+// THE FOUR KEPT v1 FILE ROUTES, AT THEIR DOOR (Phase 6 L67, L70).
 //
 // /api/sound/takes/[id]/file, /api/articles/[runId]/file/[...path], /api/sound/mv/jobs/[id]/file
 // and /api/foundry/file outlive the v1 pages: the studio's Board, audio desk and Library point
-// an <img>/<audio>/<video>/<iframe> at them. Such an element sends no header, and the studio
-// sends no `k=` either - it holds the session cookie, which v1's door (lib/apiAuth.ts
-// guardAccessOnly) never read. So each route now asks route()'s guard again when v1's refused
-// and nothing was presented. Pinned, per route:
-//   - nothing presented, no cookie: 401 (the door still fails closed);
+// an <img>/<audio>/<video>/<iframe> at them. Such an element sends no header; the studio holds
+// the session cookie. Wave C put each route on route()'s `access` guard and dropped v1's `?k=`
+// (the access secret in the URL, which the v1 pages sent). Pinned, per route:
+//   - nothing presented, no cookie: 401 (the door fails closed);
 //   - the session cookie alone: past the door (the store's own 404 for an id that is not there);
-//   - a WRONG `k` beside a good cookie: 401 - a presented credential is judged alone and never
-//     falls through to the cookie (route()'s rule, which the fallback must not loosen);
-//   - the right `k`: past the door, as the v1 pages still send it until wave C.
+//   - the access secret as a header (a CLI, an agent): past the door;
+//   - the secret as `k=` and nothing else: 401 - a URL credential is no credential now;
+//   - a `k` beside a good cookie: the cookie decides, the query is not read;
+//   - a WRONG header beside a good cookie: 401 - a presented credential is judged alone and
+//     never falls through to the cookie (route()'s rule).
 // The bytes (ranges, 416, ETag) are serveFile()'s, pinned by serveFile.test.ts and, per route,
-// by the sound-store, mv-queue, foundry-strips and articles-ui probes.
+// by the sound-store, mv-queue and foundry-strips probes.
 
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -96,9 +97,16 @@ describe.each(DOORS)("$name", ({ call }) => {
     expect([400, 404]).toContain(r.status);
   });
 
-  it("judges a presented `k` alone: a wrong one never falls through to a good cookie", async () => {
+  it("admits the access secret presented as a header", async () => {
     process.env[ACCESS_SECRET_VAR] = "right";
-    const r = await call("k=wrong", { cookie: `${SESSION_COOKIE}=${await signer.sign()}` });
+    const r = await call("", { authorization: "Bearer right" });
+    expect(r.status).not.toBe(401);
+    expect([400, 404]).toContain(r.status);
+  });
+
+  it("judges a presented header alone: a wrong one never falls through to a good cookie", async () => {
+    process.env[ACCESS_SECRET_VAR] = "right";
+    const r = await call("", { authorization: "Bearer wrong", cookie: `${SESSION_COOKIE}=${await signer.sign()}` });
     expect(r.status).toBe(401);
   });
 
@@ -108,9 +116,14 @@ describe.each(DOORS)("$name", ({ call }) => {
     expect(r.status).toBe(401);
   });
 
-  it("still admits the right `k`, which the v1 pages send until wave C", async () => {
+  it("no longer reads `k`: the right secret in the URL alone is refused", async () => {
     process.env[ACCESS_SECRET_VAR] = "right";
-    const r = await call("k=right", {});
-    expect(r.status).not.toBe(401);
+    expect((await call("k=right", {})).status).toBe(401);
+  });
+
+  it("a stale `k` beside a good cookie is ignored, not judged: the cookie admits", async () => {
+    process.env[ACCESS_SECRET_VAR] = "right";
+    const r = await call("k=wrong", { cookie: `${SESSION_COOKIE}=${await signer.sign()}` });
+    expect([400, 404]).toContain(r.status);
   });
 });

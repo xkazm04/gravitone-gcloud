@@ -17,9 +17,9 @@ import { test, expect } from "@playwright/test";
 // applied. Driven both ways: `../../lib/jobs` and `@/lib/jobs` both failed
 // dynamically, the static form passed.
 //
-// That particular import is gone — lib/turns/client.ts now reaches imagingClient
-// relatively (3b59052, from the CI lane, which fixed the same defect at the source
-// while this file fixed it at the reader). The shape is kept anyway: the next `@/`
+// That particular import is gone — lib/turns/client.ts reached imagingClient
+// relatively from 3b59052, and retired with the turn routes in Phase 6 L70. The
+// shape is kept anyway: the next `@/`
 // import added anywhere under lib/jobs would bring the failure straight back, and
 // the assertion is stronger static, because a missing export now fails `tsc` too.
 import { formatElapsed } from "@/lib/jobs";

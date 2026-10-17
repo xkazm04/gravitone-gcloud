@@ -17,11 +17,8 @@ import { join } from "node:path";
 import { test, expect } from "@playwright/test";
 
 import { keepEnv } from "./_helpers";
-import { POST as cutExportPOST } from "@/app/api/cut/export/route";
 import { compileCut, cutDocumentHash, cutDocumentJson } from "@/lib/cut/cutDocument";
-import { ACCESS_SECRET_VAR } from "@/lib/apiAuth";
-import { cutExportArgs, cutSidecar, runCutExport, CUT_FPS } from "@/lib/cutExport";
-import { describePosture } from "@/lib/deployment";
+import { checkCutDocument, cutExportArgs, cutSidecar, runCutExport, CUT_FPS, type CutExportRequest } from "@/lib/cutExport";
 import { ExportError, landExport, partialPath } from "@/lib/export/headless";
 import { listExports } from "@/lib/publish/exports";
 import { deriveTimeline } from "@/lib/cut/deriveTimeline";
@@ -155,9 +152,8 @@ test("case 3 · same inputs twice give identical JSON and an equal hash, whateve
 
 /* ── the export: posture, sidecar, the ffmpeg plan (no ffmpeg runs here) ─── */
 
-keepEnv([ACCESS_SECRET_VAR, "NEXT_PUBLIC_DEV_AUTH", "LOCAL_BINARIES", "PUBLISH_EXPORTS_DIR"]);
+keepEnv(["LOCAL_BINARIES", "PUBLISH_EXPORTS_DIR"]);
 
-const SECRET = "cut-export-probe-secret";
 let shelf = "";
 
 test.beforeEach(() => {
@@ -165,53 +161,34 @@ test.beforeEach(() => {
   // A shelf directory that does not exist yet: "no file lands" then also
   // means the export never so much as created its directory.
   process.env.PUBLISH_EXPORTS_DIR = join(shelf, "exports");
-  process.env[ACCESS_SECRET_VAR] = SECRET;
-  delete process.env.NEXT_PUBLIC_DEV_AUTH;
 });
 test.afterEach(() => {
   rmSync(shelf, { recursive: true, force: true });
 });
 
-const post = (body: unknown, ip: string) =>
-  cutExportPOST(
-    new Request("http://localhost/api/cut/export", {
-      method: "POST",
-      headers: { "content-type": "application/json", authorization: `Bearer ${SECRET}`, "x-forwarded-for": ip },
-      body: JSON.stringify(body),
-    }),
-  );
-
-// 503, not the 403 this route answered until 2026-10-06: the three exports
-// behind `localRender` refuse with one status and one code (the route's header).
-test("case 4 · a posture that forbids local binaries refuses with 503 naming it, and no file lands", async () => {
+// The v1 route (/api/cut/export) in front of this module retired in Phase 6 L70, and
+// with it its 503/400 envelope; the module's own refusals are the door now.
+test("case 4 · a posture that forbids local binaries refuses naming it, and no file lands", async () => {
   process.env.LOCAL_BINARIES = "off";
   const document = compileCut(derive(), { "mus-a": 250 }, POINTERS);
-
-  const res = await post({ document, projectId: "p-doc" }, "10.9.0.1");
-  expect(res.status).toBe(503);
-  const body = (await res.json()) as { detail: string; code: string };
-  expect(body.code).toBe("local-binaries-forbidden");
-  expect(body.detail).toContain(describePosture("policy-forbidden"));
-  expect(existsSync(process.env.PUBLISH_EXPORTS_DIR!)).toBe(false);
-
-  // The module refuses on its own too, before it touches the disk: the route's
-  // gate is defence in depth, not the only door.
+  // The module refuses before it touches the disk.
   await expect(runCutExport({ document, projectId: "p-doc" })).rejects.toMatchObject({
     code: "local-binaries-forbidden",
   });
   expect(existsSync(process.env.PUBLISH_EXPORTS_DIR!)).toBe(false);
 });
 
-test("the route refuses a body that is not a compiled cut, before anything spawns", async () => {
+test("a document that is not a compiled cut is refused as bad-request, before anything spawns", async () => {
   process.env.LOCAL_BINARIES = "on";
   const empty = { ...compileCut(derive(), {}, POINTERS), totalS: 0, picture: [] };
-  const bodies: unknown[] = [{}, { document: { v: 2 } }, { document: empty }];
-  for (const [i, body] of bodies.entries()) {
-    const res = await post(body, `10.9.1.${i}`);
-    expect(res.status, JSON.stringify(body).slice(0, 80)).toBe(400);
+  for (const document of [undefined, { v: 2 }, empty] as unknown[]) {
+    expect(typeof checkCutDocument(document), JSON.stringify(document ?? null).slice(0, 80)).toBe("string");
+    // A caller that skipped the type: the module's own check is what refuses it.
+    await expect(runCutExport({ document: document as CutExportRequest["document"], projectId: "p-doc" })).rejects.toMatchObject({ code: "bad-request" });
   }
   expect(existsSync(process.env.PUBLISH_EXPORTS_DIR!)).toBe(false);
 });
+
 
 test("case 6 · the sidecar carries the projectId and the finish-line verdicts, and the shelf reads it", async () => {
   const document = compileCut(derive(), { "mus-a": 250 }, POINTERS);

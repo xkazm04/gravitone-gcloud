@@ -2,11 +2,15 @@
 // that are not Frames (those are in frames-notebook.probe.spec.ts) and not the
 // widened ratchet (notebook-source.probe.spec.ts).
 //
-// Driven on fake-indexeddb, over the real step store and the notebook fixtures in
-// tests/golden-path/_c1-harness.ts. The cases that read the v1 studio's Script
+// Driven over the notebook fixtures in tests/golden-path/_c1-harness.ts. The cases that read the v1 studio's Script
 // and Research surfaces (ScriptStep's skeleton gate, the matrix readers, the
 // dispatch strip, ScopeBar's StaleBadge, the useActiveNotebook hook) retired with
-// them in Phase 4 wave D; the pure halves they rested on stay pinned here.
+// them in Phase 4 wave D; the pure halves they rested on stay pinned here. Phase 6
+// wave C retired two more with the code they drove: case 9 (the v1 Board's triage
+// adapter, lib/board/sources/triage.ts - the new Board's research packet is
+// lib/decision/v1, held by tests/next-server/decision-v1-*) and case 13 (the v1
+// active-notebook reader, lib/notebook/active.ts, which only v1 surfaces called).
+// Cases 8 and 11 now build the reasoned source directly instead of reading it back.
 import "fake-indexeddb/auto";
 
 import { readFileSync } from "node:fs";
@@ -15,7 +19,7 @@ import path from "node:path";
 import { expect, test } from "@playwright/test";
 
 import { buildCards } from "@/lib/notebook/cards";
-import { fixtureSource } from "@/lib/notebook/source";
+import { fixtureSource, sourceOf } from "@/lib/notebook/source";
 import { CONCLUSIONS } from "@/lib/notebook/conclusions";
 import { RENDERS } from "@/lib/script/renders";
 import { assembleRecalibrate } from "@/lib/turns/assemble/recalibrate";
@@ -24,115 +28,19 @@ import { optInIds } from "@/lib/research/scope";
 import { recalibrate } from "@/lib/script/recalibrate";
 import { outWord } from "@/lib/script/scopeConflicts";
 import { BASELINE, type Note } from "@/lib/script/versions";
-import { readActiveNotebook, refusalOf } from "@/lib/notebook/active";
-import { readStep, saveStep, type ScopeStepData } from "@/lib/steps";
-import { makeTriageSource } from "@/lib/board/sources/triage";
-import { addProjects } from "@/lib/projects";
 
 import { stripComments } from "./_helpers";
-import { landLive, liveNotebook, OWN_CONCLUSION, RECEIPT } from "./_c1-harness";
+import { liveNotebook, OWN_CONCLUSION, RECEIPT } from "./_c1-harness";
 
 const code = (rel: string) => stripComments(readFileSync(path.join(process.cwd(), rel), "utf8"));
 
-async function explainerProject(uid: string, id: string) {
-  const now = Date.now();
-  await addProjects([
-    {
-      id,
-      uid,
-      title: `Project ${id}`,
-      logline: "",
-      template: "mid-educational-video",
-      discipline: "educational",
-      targetS: 300,
-      createdAt: now,
-      updatedAt: now,
-      phase: "research",
-      progress: { research: "done", script: "empty", frames: "empty", score: "empty", cut: "empty" },
-    } as never,
-  ]);
-}
-
-const scopeOf = async (id: string) => {
-  const r = await readStep<ScopeStepData>(id, "research-scope");
-  expect(r.ok).toBe(true);
-  return r.ok ? r.data : undefined;
-};
-
-/* ───────────────────────── case 9: the Board deals P's own cards ────────────── */
-
-test("case 9: a /board verdict keeps the stored digest and the Board deals the project's own cards", async () => {
-  const uid = "c1-board-uid";
-  const pid = "c1-board-own";
-  await explainerProject(uid, pid);
-  await landLive(pid);
-  const src = (await readActiveNotebook(pid))!;
-  expect(src.kind).toBe("reasoned");
-  // The scope the project's own Research step wrote: stamped with its digest.
-  await saveStep<ScopeStepData>(pid, "research-scope", { scope: {}, confirmed: null, digest: src.digest });
-
-  const triage = makeTriageSource({ uid });
-  const rows = (await triage.loadEntries()).filter((r) => r.item.projectId === pid);
-  const own = buildCards(src).map((c) => c.id).sort();
-  expect(rows.map((r) => r.item.id.split("::")[1]).sort(), "the Board is dealing another notebook's cards").toEqual(own);
-  // The own conclusion is opt-in: not taken, and not a decision.
-  const concl = rows.find((r) => r.item.id.endsWith(`::${OWN_CONCLUSION.id}`));
-  expect(concl, "the notebook's own conclusion is not on the Board").toBeTruthy();
-  expect(concl!.item.verdict).toBe(null);
-
-  const cuttable = rows.find((r) => !r.refuse.reject && !r.item.id.endsWith(`::${OWN_CONCLUSION.id}`))!;
-  await triage.decide(cuttable.item.id, "reject");
-  const after = await scopeOf(pid);
-  expect(after?.digest, "the verdict dropped the digest - the scope is now the fixture's").toBe(src.digest);
-  expect(Object.keys(after!.scope)).toEqual([cuttable.item.id.split("::")[1]]);
-
-  // Taking the opt-in conclusion writes against ITS default, not the fixture's.
-  await triage.decide(concl!.item.id, "approve");
-  const taken = await scopeOf(pid);
-  expect(taken!.scope[OWN_CONCLUSION.id]?.descoped).toBe(false);
-  expect(taken!.digest).toBe(src.digest);
-});
-
-test("case 9: a verdict over an orphaned scope is refused, and nothing is written", async () => {
-  const uid = "c1-board-uid";
-  const pid = "c1-board-orphan";
-  await explainerProject(uid, pid);
-  await landLive(pid);
-  const orphan: ScopeStepData = {
-    scope: { "f-ath": { descoped: true, liked: false, deepen: false } },
-    confirmed: null,
-    digest: fixtureSource().digest,
-  };
-  await saveStep<ScopeStepData>(pid, "research-scope", orphan);
-
-  const triage = makeTriageSource({ uid });
-  const rows = (await triage.loadEntries()).filter((r) => r.item.projectId === pid);
-  expect(rows.every((r) => r.item.verdict === null), "an orphaned scope's verdicts were applied").toBe(true);
-  const row = rows.find((r) => !r.refuse.reject)!;
-  await expect(triage.decide(row.item.id, "reject")).rejects.toMatchObject({ name: "VerdictRefused" });
-  const after = await scopeOf(pid);
-  expect(after?.digest).toBe(orphan.digest);
-  expect(after?.scope).toEqual(orphan.scope);
-});
-
-test("case 9: a project with no record still deals the fixture board and writes the fixture digest", async () => {
-  const uid = "c1-board-uid";
-  const pid = "c1-board-replay";
-  await explainerProject(uid, pid);
-  await saveStep(pid, "research", { topic: "bitcoin", researched: true });
-  const triage = makeTriageSource({ uid });
-  const rows = (await triage.loadEntries()).filter((r) => r.item.projectId === pid);
-  expect(rows.map((r) => r.item.id.split("::")[1]).sort()).toEqual(buildCards(fixtureSource()).map((c) => c.id).sort());
-  const row = rows.find((r) => !r.refuse.reject)!;
-  await triage.decide(row.item.id, "reject");
-  expect((await scopeOf(pid))?.digest).toBe(fixtureSource().digest);
-});
+/** The reasoned source a landed live run is dealt as (what lib/notebook/active.ts read back). */
+const reasoned = () => sourceOf(liveNotebook(), { kind: "reasoned", receipt: RECEIPT });
 
 /* ───────────────────────── case 8: Step 2 reads the source's opt-in ──────────── */
 
 test("case 8: an undecided live conclusion is not-taken in Step 2, and the recalibrate guard treats it as out", async () => {
-  await landLive("c1-optin");
-  const src = (await readActiveNotebook("c1-optin"))!;
+  const src = reasoned();
   const cards = buildCards(src);
   const optIn = optInIds(src);
   const card = cards.find((c) => c.id === OWN_CONCLUSION.id)!;
@@ -180,36 +88,12 @@ test("case 7: the size check counts the source's conclusions", () => {
 /* ───────────────────────── case 11: follow-ups answer only on the replay ─────── */
 
 test("case 11: a canned transcript answers only on the replay source", async () => {
-  await landLive("c1-followup");
-  const reasoned = (await readActiveNotebook("c1-followup"))!;
+  const live = reasoned();
   const ask = { kind: "question" as const, prompt: "whale holders" };
-  expect(resultFor(ask, reasoned)).toBeUndefined();
+  expect(resultFor(ask, live)).toBeUndefined();
   expect(resultFor(ask, fixtureSource())).toBe(CANNED["q-whales"]);
   expect(resultFor(ask)).toBe(CANNED["q-whales"]);
-  expect(resultFor({ kind: "deepen-card", cardId: Object.keys(CANNED).find((k) => k !== "q-whales")!, prompt: "" }, reasoned)).toBeUndefined();
+  expect(resultFor({ kind: "deepen-card", cardId: Object.keys(CANNED).find((k) => k !== "q-whales")!, prompt: "" }, live)).toBeUndefined();
   // What the sentence says is still true: it no longer claims one static document.
   expect(code("lib/research/followup.ts")).not.toContain("one static document shared by every project");
-});
-
-/* ───────────── case 13: a malformed record is the replay, and never silent ───── */
-
-test("case 13: a record that fails dealable resolves to the replay, and says why", async () => {
-  const pid = "c1-malformed";
-  const bad = { topic: "harbour", notebook: { facts: "nope" }, engine: RECEIPT, savedAt: 1 };
-  const out = await saveStep(pid, "research-notebook", bad);
-  expect(out.ok).toBe(true);
-  expect(await readActiveNotebook(pid), "a malformed record must resolve to the replay").toBe(fixtureSource());
-  expect(refusalOf(bad as never), "a malformed record was resolved silently").toMatch(/not a notebook/);
-
-  // A receipt-less notebook is refused for its own reason.
-  const nb = liveNotebook();
-  const bare = { topic: "harbour", notebook: nb, engine: null, savedAt: 1 };
-  await saveStep("c1-no-receipt", "research-notebook", bare);
-  expect(await readActiveNotebook("c1-no-receipt")).toBe(fixtureSource());
-  expect(refusalOf(bare)).toMatch(/receipt/);
-
-  // The three that are NOT trouble: no record, a cleared record, a good record.
-  expect(refusalOf(undefined)).toBeNull();
-  expect(refusalOf({ topic: "", notebook: null, engine: null })).toBeNull();
-  expect(refusalOf({ topic: "harbour", notebook: nb, engine: RECEIPT })).toBeNull();
 });

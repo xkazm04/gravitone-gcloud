@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 import { fixtureAct, fixtureDetail, fixtureEverything, fixtureQuery, resetLibraryFixture } from "../../app/(studio)/library/_port/fixture.ts";
-import { cardOf, gotoFor, lineageOf, type Media } from "../../app/(studio)/library/_port/present.ts";
+import { cardOf, gotoFor, lineageOf, scheduleOf, type Media } from "../../app/(studio)/library/_port/present.ts";
 import { hrefOf, identity, parseUrl, toggled, withKind, DEFAULT_URL } from "../../app/(studio)/library/_library/url.ts";
 import type { LibraryPage, LibraryRow } from "@gt/domain/library";
 
@@ -115,6 +115,11 @@ describe("one presentation for both sides", () => {
     ]);
     expect(gotoFor("style", "plates", "style")).toBe("plate");
     expect(gotoFor("project", "used by", "style")).toBeUndefined();
+  });
+
+  test("an export opens the Calendar's schedule sheet on itself; nothing else is schedulable", () => {
+    expect(scheduleOf("video:export:mv-0042")).toBe("/floor?cal=1&new=1&item=video%3Aexport%3Amv-0042");
+    for (const id of ["video:export:", "video:clip-3", "audio:take-1", "article:run-9"]) expect(scheduleOf(id), id).toBeUndefined();
   });
 });
 

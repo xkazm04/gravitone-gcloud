@@ -109,8 +109,8 @@ export interface Capabilities {
   publish: boolean;
 
   /** Renders and exports that run ffmpeg / headless Chromium in this process:
-   *  the Cut's animatic (/api/cut/export), the music-video export and the ads
-   *  Finish render.
+   *  the Cut's animatic, the music-video export and the ads Finish render (the
+   *  cut and mv producers since Phase 6; v1 fronted each with a route).
    *
    *  NOT A FLAG. It is `canSpawnLocalBinaries()` (lib/deployment.ts) and
    *  nothing else, because the posture is the whole answer: a flag could only
@@ -128,8 +128,9 @@ export interface Capabilities {
  * A flag is inlined into the bundle; a key and a posture are not, and must not
  * be (a browser chunk that names a server-only variable fails
  * `npm run check:bundle`). So this module never reads them itself: the server
- * hands them in (lib/serverCapabilities.ts), and the browser receives the
- * server's answer from GET /api/capabilities (lib/useCapabilities.ts).
+ * hands them in (lib/serverCapabilities.ts), and a server-rendered page passes
+ * the answer down (the audio desk's engine registry, app/(studio)/audio). v1's
+ * browser asked GET /api/capabilities; that route went with its pages (Phase 6).
  */
 export interface DeploymentFacts {
   /** lib/music/elevenlabs.ts `isMusicConfigured()`. */
@@ -153,8 +154,8 @@ export const CAPABILITY_FACT: Readonly<Partial<Record<keyof Capabilities, keyof 
   localRender: "localBinaries",
 };
 
-/** What GET /api/capabilities answers: the matrix and the facts behind it, so a
- *  surface can say WHICH thing is missing (absenceReason below). */
+/** The matrix and the facts behind it, so a surface can say WHICH thing is
+ *  missing (absenceReason below). */
 export interface CapabilitiesAnswer {
   capabilities: Capabilities;
   facts: DeploymentFacts;
@@ -255,37 +256,28 @@ export const HOSTED_CAPS: readonly { cap: keyof Capabilities; variable: string; 
  *
  * A capability that is ON must not have a route that answers "not configured"
  * — that is the disagreement the deployment-cell lane looks for, per cell.
- * A capability with no route here is one whose work never crosses this app's
- * API: `localVideoRender` runs on the GPU rig through pipeline/vlm-probe (the
- * hosted clip hop at /api/video/clips is a vendor, not the rig), and
- * `desktopTooling` hands off to the operator's own machine. An empty list is a
- * claim, and the lane checks every listed file exists.
+ * An empty list is a claim, and the lane checks every listed file exists.
+ *
+ * EVERY LIST IS EMPTY SINCE PHASE 6 WAVE C (2026-10-17), and that is the claim:
+ * the routes this table named (`app/api/music/{generate,compose,sfx}`,
+ * `cut/export`, `music-video/export`, `ads/render`, `sound/mv/import` and the
+ * six `publish/*`) were v1's, and were deleted with the pages that called them.
+ * The work they fronted runs in the producers now (lib/producers/*, the
+ * worker), whose refusals the kernel's runs carry - no HTTP door answers
+ * "not configured" for a capability any more. The table stays, keyed by every
+ * capability, so a route that fronts one again is listed here or the lane says so.
  *
  * Paths, not imports: this module is read in the browser, and a route module
  * there would pull a server's worth of code into the client bundle.
  */
 export const CAPABILITY_ROUTES: Readonly<Record<keyof Capabilities, readonly string[]>> = {
-  musicGenerate: ["app/api/music/generate/route.ts"],
-  musicSectionEdit: ["app/api/music/compose/route.ts"],
-  musicSfx: ["app/api/music/sfx/route.ts"],
+  musicGenerate: [],
+  musicSectionEdit: [],
+  musicSfx: [],
   localVideoRender: [],
   desktopTooling: [],
-  localRender: [
-    "app/api/cut/export/route.ts",
-    "app/api/music-video/export/route.ts",
-    "app/api/ads/render/route.ts",
-    // Reads a folder on the studio machine's own disk (the Settled column's
-    // "Import audio folder"); answers local-binaries-forbidden elsewhere.
-    "app/api/sound/mv/import/route.ts",
-  ],
-  publish: [
-    "app/api/publish/channels/route.ts",
-    "app/api/publish/exports/route.ts",
-    "app/api/publish/metrics/route.ts",
-    "app/api/publish/metrics/refresh/route.ts",
-    "app/api/publish/schedule/route.ts",
-    "app/api/publish/schedule/[id]/route.ts",
-  ],
+  localRender: [],
+  publish: [],
 };
 
 /**

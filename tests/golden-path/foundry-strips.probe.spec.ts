@@ -1,7 +1,14 @@
-// LANE — THE /foundry STRIPS SEAMS, called as functions against the real disk (dynamic).
+// LANE — THE STRIPS SEAMS, called as functions against the real disk (dynamic).
 //
-// The Strips tab triages code-rendered strips (lib/foundry/strips/store.ts),
-// and three of its seams carry a promise a source match cannot prove:
+// Code-rendered strips are triaged through lib/foundry/strips/store.ts (the Board's
+// strips packet since Phase 3), and its seams carry a promise a source match cannot
+// prove. Phase 6 wave C (L70): the v1 /api/foundry/strips/[id]/{verdicts,commit,page}
+// routes retired with the Strips tab, so 1, 4 and the commit drive the store's own
+// doors (putStripVerdicts, previewStripCommit, commitStripRun) and read their
+// refusal's status, which is what the routes answered. 2 still drives the kept
+// /api/foundry/file route, now behind route()'s access guard. 3 is RETIRED with the
+// page route: no surface serves strip.html any more, so there is no page to sandbox;
+// stripPageFile's containment (a card id is not a path) is still pinned in 4.
 //
 //   1. The verdicts PUT refuses a map it cannot fully read — a chip outside
 //      STRIP_CHIPS, an unknown card, a note over the limit — with a 400,
@@ -25,9 +32,8 @@ import { test, expect } from "@playwright/test";
 
 import { ACCESS_SECRET_VAR } from "@/lib/apiAuth";
 import { GET as fileGET } from "@/app/api/foundry/file/route";
-import { GET as commitGET, POST as commitPOST } from "@/app/api/foundry/strips/[id]/commit/route";
-import { GET as pageGET } from "@/app/api/foundry/strips/[id]/page/route";
-import { PUT as verdictsPUT } from "@/app/api/foundry/strips/[id]/verdicts/route";
+import { commitStripRun, previewStripCommit, putStripVerdicts, stripPageFile } from "@/lib/foundry/strips/store";
+import { verdictErrorResponse } from "@/lib/foundry/verdictLog";
 import type { MotionStylesDoc, StripCommitPlan, StripCommitResult, StripsLedgerDoc } from "@/lib/foundry/strips/triage";
 import type { StripCard, StripRun } from "@/lib/foundry/strips/types";
 
@@ -39,7 +45,19 @@ const foundryDir = probeFoundryDir();
 const SECRET = "strips-probe-secret";
 const ROOT = path.join(process.cwd(), "foundry-out", "strips");
 const AUTH = { authorization: `Bearer ${SECRET}` };
-const ctx = (id: string) => ({ params: Promise.resolve({ id }) });
+
+/** A store door's answer as the retired route spoke it: 200 and the value, or the
+ *  refusal's status and sentence (verdictErrorResponse is the mapping the routes used). */
+type Answer<T> = { readonly status: number; readonly value?: T; readonly detail?: string };
+async function answer<T>(run: () => Promise<T>): Promise<Answer<T>> {
+  try {
+    return { status: 200, value: await run() };
+  } catch (e) {
+    const res = verdictErrorResponse(e);
+    if (res === null) throw e;
+    return { status: res.status, detail: ((await res.json()) as { detail: string }).detail };
+  }
+}
 
 let runId = "";
 /** 1000 bytes, each its own index mod 251, so a range is checkable by value. */
@@ -95,20 +113,22 @@ test.afterEach(() => {
   if (runId) rmSync(path.join(ROOT, runId), { recursive: true, force: true });
 });
 
-const put = (body: unknown, id = runId) =>
-  verdictsPUT(new Request(`http://studio.local/api/foundry/strips/${id}/verdicts`, { method: "PUT", headers: { ...AUTH, "content-type": "application/json" }, body: JSON.stringify(body) }), ctx(id));
+/** The retired PUT's own check came first: no verdicts object is a 400. */
+const put = (body: { verdicts?: unknown }, id = runId): Promise<Answer<unknown>> =>
+  body.verdicts && typeof body.verdicts === "object" && !Array.isArray(body.verdicts)
+    ? answer(() => putStripVerdicts(id, body.verdicts))
+    : Promise.resolve({ status: 400, detail: "No verdicts were sent." });
 const file = (q: Record<string, string>, headers: Record<string, string> = {}) =>
   fileGET(new Request(`http://studio.local/api/foundry/file?${new URLSearchParams(q).toString()}`, { headers: { ...AUTH, ...headers } }));
-const page = (card: string, id = runId) => pageGET(new Request(`http://studio.local/api/foundry/strips/${id}/page?${new URLSearchParams({ card }).toString()}`, { headers: AUTH }), ctx(id));
+const page = (card: string, id = runId) => answer(() => stripPageFile(id, card));
 
 /* ── 1. verdicts ──────────────────────────────────────────────────────────── */
 
 test("verdicts PUT: a chip outside STRIP_CHIPS is refused whole with 400, and nothing is written", async () => {
   const res = await put({ verdicts: { "edu-edu-01--E01": { verdict: "keep", at: "t", chips: ["concept", "vibes"] } } });
-  const body = (await res.json()) as { detail: string };
-  console.log(`[strips] bad chip -> ${res.status} ${body.detail.slice(0, 80)}`);
+  console.log(`[strips] bad chip -> ${res.status} ${(res.detail ?? "").slice(0, 80)}`);
   expect(res.status).toBe(400);
-  expect(body.detail).toContain("vibes");
+  expect(res.detail).toContain("vibes");
   expect(existsSync(path.join(ROOT, runId, "verdicts.json"))).toBe(false);
 });
 
@@ -176,25 +196,16 @@ test("file route: every other kind still refuses video, and strips never serve t
   expect(html.status).toBe(400);
 });
 
-/* ── 3. the page, sandboxed ───────────────────────────────────────────────── */
+/* ── 3. the page, sandboxed: RETIRED with the page route (see the header) ── */
 
-test("page route: strip.html goes out under the sandbox CSP and nosniff", async () => {
-  const res = await page("edu-edu-01--E01");
-  expect(res.status).toBe(200);
-  const csp = res.headers.get("content-security-policy") ?? "";
-  console.log(`[strips] page CSP -> ${csp}`);
-  expect(csp).toBe("default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob: 'self'; font-src data:; sandbox allow-scripts");
-  expect(csp).not.toContain("allow-same-origin");
-  expect(res.headers.get("x-content-type-options")).toBe("nosniff");
-  expect(res.headers.get("content-type")).toContain("text/html");
-  expect(await res.text()).toContain("renderFrameAt");
-});
-
-test("page route: the access guard holds — no credential, no page", async () => {
-  const res = await pageGET(new Request(`http://studio.local/api/foundry/strips/${runId}/page?card=edu-edu-01--E01`), ctx(runId));
-  expect(res.status).toBe(401);
-  const viaK = await pageGET(new Request(`http://studio.local/api/foundry/strips/${runId}/page?card=edu-edu-01--E01&k=${SECRET}`), ctx(runId));
-  expect(viaK.status).toBe(200);
+test("the file route never serves a strip's page, and refuses with nothing presented", async () => {
+  const html = await file({ run: runId, path: "edu-edu-01--E01/strip.html", kind: "strips" });
+  expect(html.status).toBe(400);
+  const anon = await fileGET(new Request(`http://studio.local/api/foundry/file?${new URLSearchParams({ run: runId, path: "edu-edu-01--E01/strip.webm", kind: "strips" }).toString()}`));
+  expect(anon.status).toBe(401);
+  const viaK = await fileGET(new Request(`http://studio.local/api/foundry/file?${new URLSearchParams({ run: runId, path: "edu-edu-01--E01/strip.webm", kind: "strips", k: SECRET }).toString()}`));
+  expect(viaK.status, "the secret in the URL is no credential since wave C").toBe(401);
+  expect((await page("edu-edu-01--E01")).status, "the authored page is still on disk for the store").toBe(200);
 });
 
 /* ── 4. containment ───────────────────────────────────────────────────────── */
@@ -229,17 +240,15 @@ test("commit: kept into motion-styles, rejected media gone, a ledger row per dec
     ).status,
   ).toBe(200);
 
-  const planRes = await commitGET(new Request(`http://studio.local/api/foundry/strips/${runId}/commit`, { headers: AUTH }), ctx(runId));
-  const plan = (await planRes.json()) as StripCommitPlan;
+  const plan: StripCommitPlan = await previewStripCommit(runId);
   expect(plan.counts).toEqual({ kept: 1, rejected: 1, undecided: 2 });
   expect(plan.styles).toEqual([`${runId}--stat-stat-01--S01`]);
 
-  const post = (token: string) =>
-    commitPOST(new Request(`http://studio.local/api/foundry/strips/${runId}/commit`, { method: "POST", headers: { ...AUTH, "content-type": "application/json" }, body: JSON.stringify({ token }) }), ctx(runId));
+  const post = (token: string): Promise<Answer<StripCommitResult>> => answer(() => commitStripRun(runId, token));
   expect((await post("stale-token")).status).toBe(409);
 
   const res = await post(plan.token);
-  const result = (await res.json()) as StripCommitResult;
+  const result = res.value as StripCommitResult;
   console.log(`[strips] commit -> ${res.status} kept ${result.kept} rejected ${result.rejected} deleted ${result.deleted}`);
   expect(res.status).toBe(200);
   expect(result.deleted).toBe(4);

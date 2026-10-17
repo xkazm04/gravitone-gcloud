@@ -1,4 +1,6 @@
 import { afterAll, afterEach, describe, expect, it } from "vitest";
+import { z } from "zod";
+import { parseJsonAt } from "@gt/domain/door";
 import { INTERRUPTED_TEXT } from "@gt/domain/slot";
 import { importV1Calendar } from "../src/slots/import.ts";
 import { getSlot, listPublicationsIn, listSlots, snapshotsIn } from "../src/slots/read.ts";
@@ -115,6 +117,53 @@ describe("the v1 calendar import", () => {
     must(importV1Calendar(w.k.store, calendar(), { dry: false }));
     const r = must(sweep(w.k.store, facts({ now: Date.parse("2026-10-06T12:05:00.000Z"), missing: ["video:export:exp-sl-c"] }), { claim: true, holder: ME, alive: () => true }));
     expect(r.claimed.map((c) => c.slot.id)).toEqual(["sl-a"]);
+  });
+
+  it("never refuses v1's several holders: the earliest holds, a live publication before any, the rest land cancelled with the reason on their event", () => {
+    const w = fresh();
+    const pub = (id: string, slotId: string, dry: boolean) => ({ id, slotId, channelId: "youtube", platformVideoId: dry ? null : `yt-${id}`, visibility: "private", dry, publishedAt: "2026-10-02T12:00:05.000Z" });
+    const v1 = {
+      schedule: {
+        slots: [
+          v1Slot("sl-late", { exportId: "x", publishAt: "2026-10-07T12:00:00.000Z" }),
+          v1Slot("sl-early", { exportId: "x", publishAt: "2026-10-06T09:00:00.000Z" }),
+          v1Slot("sl-insta", { exportId: "x", channelId: "instagram", publishAt: "2026-10-07T12:00:00.000Z" }),
+          v1Slot("sl-after-live", { exportId: "y", publishAt: "2026-10-01T08:00:00.000Z" }),
+          v1Slot("sl-live", { exportId: "y", status: "published", publicationId: "pub-live", publishAt: "2026-10-02T12:00:00.000Z" }),
+          v1Slot("sl-after-dry", { exportId: "z" }),
+          v1Slot("sl-dry", { exportId: "z", status: "published", publicationId: "pub-dry", publishAt: "2026-10-02T12:00:00.000Z" }),
+        ],
+      },
+      publications: { publications: [pub("pub-live", "sl-live", false), pub("pub-dry", "sl-dry", true)] },
+      metrics: { snapshots: [] },
+    };
+    const dry = must(importV1Calendar(w.k.store, v1, { dry: true }));
+    const out = must(importV1Calendar(w.k.store, v1, { dry: false }));
+    expect(out.filter((o) => o.outcome === "refused")).toEqual([]);
+    expect(dry.map((o) => [o.kind, o.id, o.reason])).toEqual(out.map((o) => [o.kind, o.id, o.reason]));
+    const get = (id: string) => must(getSlot(w.k.store, id));
+    expect(get("sl-early").slot.state).toBe("scheduled");
+    expect(get("sl-insta").slot.state).toBe("scheduled");
+    expect(get("sl-late").slot.state).toBe("cancelled");
+    expect("error" in get("sl-late").slot).toBe(false);
+    expect(out.find((o) => o.id === "sl-late")?.reason).toContain("sl-early");
+    expect(get("sl-after-live").slot.state).toBe("cancelled");
+    expect(get("sl-live").slot.state).toBe("published");
+    expect(get("sl-dry")).toMatchObject({ slot: { state: "published" }, dry: true });
+    expect(get("sl-after-dry").slot.state).toBe("scheduled");
+    const late = must(w.k.store.read((r) => r.get("SELECT data FROM events WHERE type = 'slot.import' AND subject_id = 'sl-late'")))?.["data"];
+    expect(must(parseJsonAt("slot.import", z.record(z.string(), z.unknown()), String(late)))).toMatchObject({ cancelledFor: "one-holder", heldBy: "sl-early", v1State: "scheduled" });
+  });
+
+  it("a slot v1 cancelled while drifted keeps no drift sentence in `error`; the drift rides the import event", () => {
+    const w = fresh();
+    const v1 = { schedule: { slots: [v1Slot("sl-cx", { status: "cancelled", error: "this channel is not wired" })] }, publications: { publications: [] }, metrics: { snapshots: [] } };
+    const out = must(importV1Calendar(w.k.store, v1, { dry: false }));
+    expect(out).toMatchObject([{ id: "sl-cx", outcome: "imported" }]);
+    const s = must(getSlot(w.k.store, "sl-cx")).slot;
+    expect(s.state).toBe("cancelled");
+    expect("error" in s || "drift" in s).toBe(false);
+    expect(String(must(w.k.store.read((r) => r.get("SELECT data FROM events WHERE subject_id = 'sl-cx'")))?.["data"])).toContain('"v1Drift":"channel_not_wired"');
   });
 
   it("refuses a calendar that is not v1's shape, writing nothing", () => {

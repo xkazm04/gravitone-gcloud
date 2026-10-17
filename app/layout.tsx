@@ -6,10 +6,7 @@ import {
 } from "next/font/google";
 import "./globals.css";
 import GravitoneTokens from "@/components/ui/GravitoneTokens";
-import GlobalErrorBridge from "@/lib/GlobalErrorBridge";
 import { AuthProvider } from "@/lib/useAuth";
-import { JobsProvider } from "@/lib/jobs";
-import { readBellJobs } from "./(studio)/_shell/bellJobs";
 import { AnnouncerProvider } from "@/lib/announcer";
 import HarnessBridge from "@/components/ui/HarnessBridge";
 import DevInspector from "@/app/_dev-inspector/DevInspector";
@@ -24,57 +21,52 @@ export const metadata: Metadata = {
     "A content creation studio: one production walked through six steps (research, script, frames, motion, score, cut) over a library that knows where every asset came from.",
 };
 
+// THE ROOT, AS BOTH WORLDS SHARE IT (Phase 6 wave C). Until the cutover this was v1's root:
+// it also mounted the unhandled-rejection bridge (lib/GlobalErrorBridge.tsx, whose only
+// listener was the v1 bell's storage card), the bell's JobsProvider (an /api/events/stream
+// subscription on every page, the landing's included, for a bell only StudioFrame drew), and
+// the Almanac world's tokens. What stays is what the landing and the (studio) shell both
+// read: the fonts, globals.css and its tokens, Firebase's auth context, the announcer the
+// route error boundary speaks through, and the two dev-only seams.
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className={[instrument.variable, hanken.variable, jetbrains.variable].join(" ")}>
         {/* Design tokens straight from components/ui/tokens.ts, server-rendered
             as the first thing in the document so every --gt-* var globals.css
-            reads resolves on the first paint. (A <style> element here rather
-            than a manual <head> — the App Router owns <head> through the
-            Metadata API.) */}
+            reads, and the landing's --pc-* world, resolve on the first paint. (A
+            <style> element here rather than a manual <head> - the App Router owns
+            <head> through the Metadata API.) */}
         <GravitoneTokens />
-        {/* Routes unhandled promise rejections to the storage-trouble bell so a
-            fire-and-forget save that fails reaches the operator, not just the
-            console. Render throws are caught by error.tsx / global-error.tsx. */}
-        <GlobalErrorBridge />
-        {/* One auth context for the whole app. Mounted at the root — not per
-            route — because the landing page reads it too (its only CTA is
-            sign-in), and because a provider remounted on navigation would
-            re-run onAuthStateChanged and flash every gate. */}
-        {/* Background work outlives the step that started it, so the provider
-            sits at the root: navigating away from the studio must not cancel a
-            research run, and the bell must keep counting while you are on the
-            shelf. */}
-        {/* The screen-reader announcement channel. It sits ABOVE JobsProvider
-            because its two live regions must be mounted and EMPTY before any
-            news exists — assistive technology announces mutations inside a
-            region it is already observing, so a region that arrives carrying its
-            text announces nowhere. Wrapping the tree also makes it the one
-            writer: no component owns an aria-live node of its own, so two
-            messages in the same breath cannot race and drop one. */}
+        {/* The screen-reader announcement channel. Its two live regions must be
+            mounted and EMPTY before any news exists - assistive technology
+            announces mutations inside a region it is already observing, so a
+            region that arrives carrying its text announces nowhere. It sits at the
+            root because app/error.tsx, which renders within this layout, speaks
+            through it when a screen fails to render. */}
         <AnnouncerProvider>
+          {/* One auth context for both worlds. Mounted at the root - not per
+              route - because the landing's sign-in reads it and the (studio)
+              shell's handoff and sign-out read it too; a provider remounted on
+              navigation would re-run onAuthStateChanged and flash every gate. */}
           <AuthProvider>
-            <JobsProvider read={readBellJobs}>
-              {/* The live-app harness's control surface, installed on `window`
-                  ONLY in a non-production build with NEXT_PUBLIC_DEV_AUTH=1.
-                  It sits inside both providers because the two things it has to
-                  report — which account the app thinks is signed in, and what
-                  background work is outstanding — are theirs to answer. In any
-                  production bundle this component's effect body is unreachable
-                  and is dropped; see components/ui/HarnessBridge.tsx and the
-                  gate in pipeline/check-bundle.mjs. */}
-              <HarnessBridge />
-              {children}
-              {/* Click a component, copy its source path — `;` then `i`, then
-                  right-click. Dev-only twice over: this condition is a literal
-                  Next inlines, so the import is dead code in any production
-                  build, and the overlay does nothing until the DEV_INSPECT
-                  loader has stamped the DOM (`npm run dev:inspect`). It reads
-                  nothing from the providers above it; it sits inside them only
-                  so it is the last thing painted. See app/_dev-inspector/. */}
-              {process.env.NODE_ENV === "development" && <DevInspector />}
-            </JobsProvider>
+            {/* The live-app harness's control surface, installed on `window`
+                ONLY in a non-production build with NEXT_PUBLIC_DEV_AUTH=1. It
+                sits inside the auth provider because which account the app thinks
+                is signed in is that provider's to answer. In any production
+                bundle this component's effect body is unreachable and is dropped;
+                see components/ui/HarnessBridge.tsx and the gate in
+                pipeline/check-bundle.mjs. */}
+            <HarnessBridge />
+            {children}
+            {/* Click a component, copy its source path - `;` then `i`, then
+                right-click. Dev-only twice over: this condition is a literal
+                Next inlines, so the import is dead code in any production
+                build, and the overlay does nothing until the DEV_INSPECT
+                loader has stamped the DOM (`npm run dev:inspect`). It reads
+                nothing from the providers above it; it sits inside them only
+                so it is the last thing painted. See app/_dev-inspector/. */}
+            {process.env.NODE_ENV === "development" && <DevInspector />}
           </AuthProvider>
         </AnnouncerProvider>
       </body>

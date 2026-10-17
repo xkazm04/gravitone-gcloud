@@ -86,7 +86,7 @@ describe("extract liveness", () => {
   it("a finished run is not live; a done one is a cull pile counting its undecided styles", () => {
     const p = projectExtract(one(run({ status: "done", lease: undefined, finished: "2026-10-15T11:58:00.000Z" }), [{ key: "smoke", verdict: "reject", at: NOW }]), ctx);
     expect(p.live).toEqual([]);
-    expect(p.weir).toEqual([{ source: "extract", id: "2026-10-15-railyard", title: "extract railyard", media: "image", kind: "cull", since: "2026-10-15T11:58:00.000Z", decided: 1, pending: 1, href: "/foundry" }]);
+    expect(p.weir).toEqual([{ source: "extract", id: "2026-10-15-railyard", title: "extract railyard", media: "image", kind: "cull", since: "2026-10-15T11:58:00.000Z", decided: 1, pending: 1, href: "/floor?lane=image" }]);
   });
 
   it("draws the lane of the engine the stage runs, and says so when v1's engine has no lane", () => {

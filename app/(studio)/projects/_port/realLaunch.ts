@@ -2,11 +2,14 @@ import "server-only";
 
 import { randomBytes } from "node:crypto";
 
+import { parseAt } from "@gt/domain/door";
 import { err, isAppError, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import type { ComposerInput, LaunchedRun, Receipt, ReceiptMode } from "@gt/domain/produce";
+import { runInputSchema } from "@gt/domain/produce.schema";
 import type { Effects } from "@gt/kernel/effects";
 import { launchRun, runReceipt } from "@gt/kernel/records/launch";
+import { runPlanOf } from "@gt/kernel/records/runplan";
 import type { Store } from "@gt/kernel/store";
 import { forgeRunOf } from "@gt/producers/forge/plan";
 
@@ -14,6 +17,10 @@ import { DEFAULT_OPTIONS, DEFAULT_SELECTION, type CardSelection } from "../../..
 import { launchFloorForge, type FloorSweep } from "../../../../lib/producers/forge.ts";
 import { launchStrips } from "../../../../lib/producers/strips.ts";
 import { launchSunoDraft, sunoKernelId, sunoRunId } from "../../../../lib/producers/suno.ts";
+import { deploymentFacts, serverCapabilities } from "../../../../lib/serverCapabilities.ts";
+import { batchEngine } from "../../../../lib/sound/batch.ts";
+import { engineRegistry } from "../../../../lib/sound/engines.ts";
+import { clipsOf, sfxRunId } from "../../../../lib/sound/sfxJob.ts";
 import { SoundError } from "../../../../lib/sound/store.ts";
 import { TextError } from "../../../../lib/text/errors.ts";
 import { draftJobId } from "../../../../lib/sound/suno/draft.ts";
@@ -39,10 +46,12 @@ import { stripCases } from "./realChoices.ts";
 //            enqueues the box.chrome job the worker drives, the same job `pipeline/suno.mts`
 //            launches. Until Phase 5 this confirm was refused: a Suno take launched only from a
 //            proposal already in the queue, and nothing turned a sentence into one.
-//            sfx: the records' receipt, and the confirm REFUSED - no sfx producer is bound in
-//            this checkout (lib/producers/registry.ts); a job enqueued for it would sit claimed
-//            by nobody, and a receipt that launches what cannot run is the defect a receipt
-//            exists to prevent.
+//            sfx: the records' receipt, and the confirm launches ONE Run of the receipt's clips
+//            under the `sfx` producer (lib/sound/sfxJob.ts, bound since L66), its id carrying the
+//            count (`sfx.<floor-…>.<n>`) because a worker's plan reads the job alone. No brief is
+//            filed: the producer renders the composer's sentence at the effect defaults. Until
+//            L72 this confirm was refused (NO_SFX) - the producer did not exist, and a receipt
+//            that launches what cannot run is the defect a receipt exists to prevent.
 //
 // THE STRIPS RUN ID TRAVELS IN THE TOKEN. A strips receipt prices a NAMED run (its quote key
 // digests the run id with its cards), so the receipt mints the id and the confirm must launch
@@ -161,14 +170,30 @@ const video: LaneDoor = {
   },
 };
 
-/* ── audio: a Suno take from the sentence; sfx priced and refused ──────────── */
+/* ── audio: a Suno take from the sentence; effects as one sfx Run ──────────── */
 
-const refused = (why: string): LaneDoor => ({
-  receipt: recordsReceipt,
-  launch: () => err("unavailable", why),
-});
-
-const NO_SFX = "no sfx producer is bound in this checkout (lib/producers/registry.ts); an sfx clip cannot run as a job yet";
+/**
+ * An effect sentence's confirm: the run id carries the clip count the receipt priced (the plan's
+ * own units, `runPlanOf` - the same call the receipt made), and the records' door launches it. A
+ * LIVE launch asks the engine registry first, as the desk's batch does (lib/sound/batch.ts): a
+ * deployment with no ElevenLabs effects is refused with the registry's own reason, never enqueued
+ * to fail at the vendor. A dry one asks no vendor and is never blocked.
+ */
+function launchSfx(c: LaunchContext, input: ComposerInput, token: string, o: Opts, actor: Actor): Result<Confirmed<LaunchedRun>> {
+  if (o.mode === "live") {
+    const engine = batchEngine(engineRegistry(serverCapabilities(), deploymentFacts()), "sfx");
+    if (!engine.ok) return engine;
+  }
+  const parsed = parseAt("effect run input", runInputSchema, input);
+  if (!parsed.ok) return parsed;
+  const n = runPlanOf(parsed.value, undefined).units;
+  const id = sfxRunId(`floor-${c.mint()}`, n);
+  if (clipsOf(id) === null) return err("invalid", `an effect run renders 1 to 9 clips; the receipt priced ${n}`);
+  const l = launchRun(c.store, { input, token, mode: o.mode, ...ceilingOf(o) }, actor, { now: c.now, dryOnly: c.dryOnly, id });
+  if (l.ok) return ok({ kind: "launched", runId: l.value.runId, jobId: l.value.jobId });
+  if (l.fresh !== undefined) return ok({ kind: "stale", fresh: l.fresh });
+  return { ok: false, error: l.error };
+}
 
 async function sunoDoor(c: LaunchContext, input: ComposerInput, o: Opts, actor: Actor, given?: { readonly jobId: string; readonly token: string }) {
   if (input.lane !== "audio") return err("internal", `audio door handed a ${input.lane} input`);
@@ -201,7 +226,7 @@ const audio: LaneDoor = {
           return out.kind === "receipt" ? ok(wrap(r.value.jobId, out.receipt)) : err("internal", `a Suno receipt read answered ${out.kind}`);
         }),
   launch: (c, input, token, o, actor) => {
-    if (input.lane === "audio" && input.kind === "sfx") return refused(NO_SFX).launch(c, input, token, o, actor);
+    if (input.lane === "audio" && input.kind === "sfx") return launchSfx(c, input, token, o, actor);
     return guarded(async (): Promise<Result<Confirmed<LaunchedRun>>> => {
       const t = unwrap(token);
       if (t === undefined) {

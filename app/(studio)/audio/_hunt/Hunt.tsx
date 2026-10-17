@@ -15,7 +15,7 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
-import { HuntAudition, stepTake } from "@gt/ui/components/audio/HuntAudition.tsx";
+import { carryFrom, HuntAudition, stepTake } from "@gt/ui/components/audio/HuntAudition.tsx";
 import { HuntMap, type PickMods } from "@gt/ui/components/audio/HuntMap.tsx";
 import { HuntRenderBar } from "@gt/ui/components/audio/HuntRenderBar.tsx";
 import { HuntIdea, HuntShelf } from "@gt/ui/components/audio/HuntShelf.tsx";
@@ -24,6 +24,7 @@ import { evidenceOf, huntLessonBlock, type LessonProposal } from "@gt/ui/compone
 import { LessonForm } from "@gt/ui/components/audio/LessonForm.tsx";
 import { LessonList } from "@gt/ui/components/audio/LessonList.tsx";
 import { Button } from "@gt/ui/components/button/Button.tsx";
+import { Chip } from "@gt/ui/components/chip/Chip.tsx";
 import { CapsHeading } from "@gt/ui/components/heading/CapsHeading.tsx";
 import { Empty } from "@gt/ui/components/empty/Empty.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
@@ -34,6 +35,7 @@ import { useTransport } from "../_audio/useTransport.ts";
 import type { confirmLessonAct } from "../_lessons/acts.ts";
 import type { crownTake, draftHuntLesson, draftHuntMap, renderLeaves } from "./acts.ts";
 import type { HuntDeskView } from "./read.ts";
+import { uploadLeafReturn } from "./returnClient.ts";
 import { huntHref } from "./url.ts";
 import s from "./hunt.module.css";
 
@@ -54,6 +56,8 @@ function OpenHunt({ hunt, view, acts, nowMs }: { readonly hunt: HuntOpenView; re
   const { toast } = useShell();
   const [sel, setSel] = useState<Selection>(EMPTY_SELECTION);
   const [crowning, setCrowning] = useState<ReadonlySet<string>>(new Set());
+  const [returning, setReturning] = useState<ReadonlySet<string>>(new Set());
+  const [linked, setLinked] = useState(true);
   const [refusal, setRefusal] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [asking, setAsking] = useState(false);
@@ -75,7 +79,26 @@ function OpenHunt({ hunt, view, acts, nowMs }: { readonly hunt: HuntOpenView; re
   const step = (by: -1 | 1): void => {
     const id = stepTake(heard, transport.playing, by);
     const t = id === undefined ? undefined : hunt.takes[id];
-    if (t !== undefined) play(t);
+    if (t !== undefined && t.src !== null) transport.toggle(t.id, t.src, carryFrom(linked, transport.playing, t.id, transport.position()));
+  };
+
+  const fileBack = (leaf: HuntLeafView, file: File): void => {
+    if (returning.has(leaf.id)) return;
+    setReturning((c) => new Set(c).add(leaf.id));
+    void uploadLeafReturn({ hunt: hunt.id, node: leaf.id, file, op: opId() }).then((r) => {
+      setReturning((c) => {
+        const n = new Set(c);
+        n.delete(leaf.id);
+        return n;
+      });
+      if (!r.ok) {
+        setRefusal(`${leaf.label} · ${r.error}`);
+        return;
+      }
+      setRefusal(null);
+      toast(`${leaf.label} · returned${r.value.created ? "" : " · already filed"}`);
+      router.refresh();
+    });
   };
 
   const render = (): void => {
@@ -166,6 +189,8 @@ function OpenHunt({ hunt, view, acts, nowMs }: { readonly hunt: HuntOpenView; re
         onBranch={(ids) => setSel((cur) => toggleGroup(cur, order, ids))}
         onPlay={play}
         onCrown={crown}
+        returning={returning}
+        onReturn={fileBack}
         onCopy={(text) => void navigator.clipboard.writeText(text).then(() => toast("prompt copied"), (e: unknown) => toast(`clipboard refused: ${e instanceof Error ? e.message : String(e)}`))}
       />
       <HuntRenderBar plan={plan} picked={sel.ids.length} busy={flow.reading || hunt.inFlight} liveBlock={view.liveBlock} onRender={render} onClear={() => setSel(EMPTY_SELECTION)} />
@@ -175,6 +200,7 @@ function OpenHunt({ hunt, view, acts, nowMs }: { readonly hunt: HuntOpenView; re
             <CapsHeading text="audition" tally={{ value: heard.length, label: "heard" }} level={3} />
             <Button label="Previous" size="sm" onPress={() => step(-1)} />
             <Button label="Next" size="sm" onPress={() => step(1)} />
+            <Chip label="one playhead" pressed={linked} onPress={() => setLinked((v) => !v)} />
           </div>
           <HuntAudition heard={heard} takes={hunt.takes} playing={transport.playing} crowning={crowning} onPlay={play} onCrown={crown} />
         </section>

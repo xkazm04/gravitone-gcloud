@@ -2,9 +2,6 @@
 // usePolling skips a tick while the previous call's promise is pending, and
 // abandons a call that has been pending past IN_FLIGHT_CAP_MS so a request that
 // never settles cannot stall the poll forever.
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-
 import { test, expect } from "@playwright/test";
 
 import { IN_FLIGHT_CAP_MS, mayTick } from "@/lib/usePolling";
@@ -22,10 +19,7 @@ test("a call pending past the cap is abandoned: the tick runs", () => {
   expect(mayTick(1_000, 1_000 + IN_FLIGHT_CAP_MS)).toBe(true);
 });
 
-test("the foundry's one poll hands the hook its promise", () => {
-  // Phase 3 retired the three detail views that polled beside it; the forge's run
-  // list is what is left, polled for the plant's cull dot.
-  const src = readFileSync(join(process.cwd(), "app/foundry/FoundryView.tsx"), "utf8");
-  expect(src).toMatch(/usePolling\(loadRuns,/);
-  expect(src).toMatch(/\(\) =>\s*fetchRuns\(\)\.then\(/);
-});
+// "The foundry's one poll hands the hook its promise" retired with v1's /foundry (Phase 6 wave C):
+// its FoundryView polled the forge's run list for the plant's cull dot, and the Floor that replaced
+// it reads its lanes on the server per render, so no poller is left there to hand anything. The
+// rule itself (`mayTick`) is held above, and lib/jobs.tsx still polls through it.

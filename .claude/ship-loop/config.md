@@ -2,10 +2,13 @@
 
 ## Stack
 
-Next.js 16 (App Router, Turbopack) + React 19 + TypeScript + Tailwind v4. **No backend, no
-persistence, no auth, no third-party service and no deploy target** - every surface renders mocked
-fixtures from `app/_studio/`. Not a hosted SaaS: auth and billing dimensions have no referent here.
-No test runner and no linter are configured.
+Next.js 16 (App Router, Turbopack) + React 19 + TypeScript; libraries in
+`packages/{catalog,domain,kernel,producers,ui}`, a SQLite kernel store (`GRAVITONE_STORE_PATH`;
+never open the operator's `foundry-out/gravitone.sqlite`), vendor seams under `lib/<domain>/` run as
+kernel producers, dry by default. Each `app/(studio)/` screen reads a `_port`, fixture or real by
+`GRAVITONE_PRODUCE_SIDE`. **One operator's machine, no deploy target**: not a hosted SaaS, so
+billing has no referent here. Playwright (`tests/golden-path`, `tests/live`), Vitest
+(`packages/*/test`) and a lint ratchet are configured.
 
 ## Cadence
 
@@ -13,14 +16,14 @@ milestone
 
 ## Ship bar (default answer at CP0 - force the question, do not assume)
 
-This repo renders mocked fixtures on purpose, so the bar is NOT "production SaaS" by default. The
+This repo runs on one operator's machine, so the bar is NOT "production SaaS" by default. The
 realistic bars, in order of ambition:
 
 1. **Shareable prototype** - deployed somewhere the user can send a link, honest that it is a
    prototype, fast and correct on a phone and a laptop.
 2. **Design-partner demo** - the above + every state a real production reaches is representable and
    legible, plus a `/uat` roster that passes L2.
-3. **Product v1** - the above + a real backend behind the fixture seam. **This is a different
+3. **Product v1** - the above, hosted for users other than the operator. **This is a different
    project**, not a milestone: it needs its own architecture decision, and the loop should say so
    rather than accumulating backlog items toward it.
 
@@ -31,14 +34,12 @@ CP0 and record it, because the ops dimension is meaningless until the target is 
 
 | step | command | ratchet | when / notes |
 |---|---|---|---|
-| typecheck | `npx tsc --noEmit` | 0 errors | always; cheap, no shared build output |
-| build | `npm run build` | exits 0 | always; runs TS again and is the only check that catches an App Router mistake |
+| verify | `npm run verify` | every gate green | the ordered set declared once in `pipeline/gates.mts` (`node pipeline/run-gates.mts --list`): typecheck, lint ratchet, manifest, narration, the packages' structure/typecheck/unit/tokens gates, probes (`npm test`), build, bundle and the content gates |
 | audit | `npm audit` | record, escalate real advisories | Boot and periodically; scored under dim 1 |
-| browser | `npm run dev -p 3177`, walk every phase and the library | no blockers | UI touched; LAST |
-| unit | `npm run test -- --run` | 0 failed | **only once a suite exists**; serialize before the browser pass |
+| browser | `GRAVITONE_PRODUCE_SIDE=fixture NEXT_PUBLIC_DEV_AUTH=1 GRAVITONE_STORE_PATH=<temp file> npx next dev -p 3177`, walk /floor, /board, /projects, /library, /audio, /ledger | no blockers | UI touched; LAST |
 
-**Never invent a gate command.** There is no `npm run lint` and no `npm test` in this repo today. A
-journal line claiming one is fabricated evidence, and it is the easiest lie in this loop.
+**Never invent a gate command.** Run what `pipeline/gates.mts` declares. A journal line claiming a
+command the registry does not hold is fabricated evidence, and it is the easiest lie in this loop.
 
 Browser pass: **never port 3000** - the user or a sibling session may hold it. Check the three
 conditions that are cheap and always break - a 768px viewport, keyboard traversal with a visible
@@ -49,23 +50,24 @@ started; never kill one you did not start.
 
 | # | name | what it means in this product |
 |---|---|---|
-| 3 | Tests | **Starts red and stays honest.** No suite, no linter. The first test is a real decision (Vitest + Testing Library, matching the parent project) and belongs in a milestone, not in a gate that pretends it already exists. Until then "gates green" means types + build + a driven browser, and every journal line says exactly that. |
-| 5 | Design-language fidelity | Replaces the engine's packaging/security dimension, which has no referent here. Scores: no colour literal outside `components/ui/tokens.ts`; primitives reused rather than re-rolled; motion entrance-only and reduced-motion-safe; every surface able to render the states its types admit. The thing most likely to rot silently while the product looks fine. |
+| 3 | Tests | **Stays honest.** "Gates green" means `npm run verify` green plus a driven browser, and every journal line names which gates ran. A gate that could not run (exit 2 on a `012` gate) is not a pass. |
+| 5 | Design-language fidelity | Replaces the engine's packaging/security dimension. Scores: every design value from `packages/ui/tokens/source.json` (`tokens:check` green, generated files untouched); `@gt/ui` components reused rather than re-rolled; motion entrance-only and reduced-motion-safe; every surface able to render the states its types admit. The thing most likely to rot silently while the product looks fine. |
 | 7 | Ops (hosting/CI/deploy) | Meaningless until the deploy target is named at CP0. Today: no target at all. |
 
-Security is not absent, it is *narrow*: no secrets in the repo, no `dangerouslySetInnerHTML` beyond
-the token stylesheet, and dependency advisories (`npm audit`). Score those under dimension 1 and
+Security is *narrow*: no secrets in the repo, every API route through `app/_server/route.ts`'s guard,
+no `dangerouslySetInnerHTML` beyond a generated token stylesheet, and dependency advisories (`npm audit`). Score those under dimension 1 and
 escalate anything real to a blocker immediately.
 
 ## Conventions
 
-- **Single-owner files** - `components/ui/tokens.ts`, `app/globals.css` and `package.json`. Never
-  hand two parallel agents write access to them.
-- **Fixture seam is repo law.** Surfaces read the types in `app/_studio/`; no ad-hoc inline shapes.
-  Reuse `components/ui/Primitives.tsx` and `StudioFrame.tsx`.
+- **Single-owner files** - `packages/ui/tokens/source.json`, `lint-baseline.json` and `package.json`.
+  Never hand two parallel agents write access to them. The generated `tokens.css` / `tokens.ts` are
+  written only by `npm run tokens:gen`.
+- **Port seam is repo law.** A screen reads its route's `_port` contract and `@gt/domain` types; no
+  ad-hoc inline shapes. Reuse `@gt/ui` (`packages/ui/src/components/<dir>/`).
 - **Premise-check before executing, with the local twist:** is the thing you are about to fix a
-  product defect or a fixture value? Rewriting a component to fix a number that lives in
-  `app/_studio/scenes.ts` is the characteristic wasted milestone here.
+  product defect or a fixture value? Rewriting a component to fix a number that lives in a route's
+  `_port/fixtureData.ts` is the characteristic wasted milestone here.
 - **Parallel-session ledger:** `.vault/active-runs.md` (create if absent). Register on resume and name
   any dev-server port you take.
 - **State dir:** the loop's state lives under `.vault/ShipLoop/`, which is gitignored (`/.vault/`).
@@ -78,14 +80,15 @@ escalate anything real to a blocker immediately.
 
 ## Lenses (extra / re-pointed)
 
-- **design-language fidelity** -> dim 5: grep for hex / `rgb(` outside `tokens.ts`, hand-rolled
-  primitives, JS-driven motion that escapes the reduced-motion rule.
+- **design-language fidelity** -> dim 5: `npm run tokens:check`, then grep for hex / `rgb(` / px in
+  `app/(studio)` and `packages/ui` outside the generated files, hand-rolled components, JS-driven
+  motion that escapes the reduced-motion rule.
 - **functionality honesty** -> dim 2: does `README.md` claim anything the app does not do? Does any
   surface imply capability the fixtures cannot back? Dimension 2 scores what the *interface* can do -
   it goes green when a Character can complete the journey through the studio's screens, not when a
   fixture happens to contain a finished film.
 - **ops/deploy path** -> dim 7: is there ANY deploy target? (Today: no.) What would the smallest be?
-- scope: 4 contexts in `context-map.json`; use it to target files.
+- scope: the contexts in `context-map.json` (it lags the Phase 6 deletions until rescanned); use it to target files.
 
 ## Feed the loop
 

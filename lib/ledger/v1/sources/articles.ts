@@ -81,8 +81,12 @@ export type ArticlesSnapshot = { readonly runs: readonly Article[]; readonly ski
 export const ARTICLES_READ_CAP = 500;
 const ENGINE: Actor = { kind: "agent", id: "article-engine" };
 const OPERATOR: Actor = { kind: "operator", id: "operator" };
-const HREF = "/articles";
-const STALLED = "stalled: no live driver holds this run (a restarted server or a killed CLI); /articles offers Resume";
+// Where the work is seen now: the Floor's article lane - its cells the running work, its Weir the
+// pile (v1's /articles page retired in Phase 6 wave C and redirects; a redirect is not a link to keep).
+const HREF = "/floor?lane=article";
+// v1's page offered Resume here; it retired (Phase 6 wave C), and the run's kernel job is resumed
+// from Runs or by `pipeline/article.mts resume <runId>`, which retries the same job.
+const STALLED = "stalled: no live driver holds this run (a restarted server or a killed CLI); resume it from Runs or with pipeline/article.mts resume";
 
 export const articlesRoot = (): string => universeRoot("articles", storeRoot, "ARTICLES_STORE_DIR");
 

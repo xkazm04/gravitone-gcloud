@@ -8,9 +8,9 @@
 //
 // A RENDER IS A RECEIPT, THEN A CONFIRM (the flow every launch on the desk uses,
 // ../../projects/_plan/receipt.tsx): no token returns the receipt in seconds of audio and writes
-// nothing; the token confirms exactly what was priced, enqueues the job and drives it on this
-// process (lib/sound/huntRender.ts says why the worker does not carry it yet). DRY unless the
-// operator arms it on the receipt.
+// nothing; the token confirms exactly what was priced, writes the Run and its job, and kicks one
+// drive on this process; the worker carries whatever that drive did not finish
+// (lib/sound/huntRender.ts). DRY unless the operator arms it on the receipt.
 import { z } from "zod";
 
 import { err, ok, type Result } from "@gt/domain/errors";
@@ -43,7 +43,7 @@ export type Drafted = { readonly id: string; readonly leaves: number; readonly a
 export type Rendered =
   | { readonly kind: "receipt"; readonly receipt: Receipt }
   | { readonly kind: "stale"; readonly fresh: Receipt }
-  | { readonly kind: "launched"; readonly jobId: string; readonly leaves: number; readonly outcome: string; readonly reason?: string };
+  | { readonly kind: "launched"; readonly runId: string; readonly jobId: string; readonly leaves: number; readonly outcome: string; readonly reason?: string };
 
 const draftAction = action("audio hunt draft", draftInput, async (i, who): Promise<Result<Drafted>> => {
   const k = kernel();
@@ -61,7 +61,7 @@ const renderAction = action("audio hunt render", renderInput, async (i, who): Pr
   if (r.value.kind !== "launched") return ok(r.value);
   const d = await driveHuntRender(store, r.value.jobId);
   if (!d.ok) return err(d.error.code, `the render is queued (${r.value.jobId}) and did not drive: ${d.error.message}`);
-  return ok({ kind: "launched", jobId: r.value.jobId, leaves: r.value.leaves.length, outcome: d.value.outcome, ...(d.value.reason === undefined ? {} : { reason: d.value.reason }) });
+  return ok({ kind: "launched", runId: r.value.runId, jobId: r.value.jobId, leaves: r.value.leaves.length, outcome: d.value.outcome, ...(d.value.reason === undefined ? {} : { reason: d.value.reason }) });
 });
 
 const crownAction = action("audio hunt crown", crownInput, async (i, who): Promise<Result<Crowned>> => {

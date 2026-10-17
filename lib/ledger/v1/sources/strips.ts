@@ -82,7 +82,9 @@ export type StripsSnapshot = { readonly runs: readonly StripRun[]; readonly skip
 
 const PIPELINE: Actor = { kind: "machine", id: "strips" };
 const OPERATOR: Actor = { kind: "operator", id: "operator" };
-const HREF = "/foundry";
+// Where the work is seen now: the Floor's video lane - its cells the running work, its Weir the
+// pile (v1's /foundry page retired in Phase 6 wave C and redirects; a redirect is not a link to keep).
+const HREF = "/floor?lane=video";
 const LANE_FROM = "v1 records no per-card phase; a strip run is mostly authoring turns on the text seat, with short headless captures";
 
 /** v1's strips root in this universe: store.ts `stripsRoot`, which honours the fixture switch itself. */

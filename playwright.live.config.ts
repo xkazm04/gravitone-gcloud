@@ -9,6 +9,13 @@ import { defineConfig, devices } from "@playwright/test";
 // activity into it (found 2026-10-16, Phase 5). One temp store per lane run; a spec that needs its
 // own universe still sets its own.
 const LANE_STORE = path.join(mkdtempSync(path.join(tmpdir(), "gt-live-store-")), "gravitone.sqlite");
+// ...and the SPECS share it. The server half above was not enough: a spec that opens the kernel
+// itself (ledger.live reads and writes events) fell back to foundry-out/gravitone.sqlite whenever
+// the shell that started the lane had no GRAVITONE_STORE_PATH, and migrated the operator's store
+// three times on 2026-10-17 (Phase 6; restored from its pre-migrate snapshot). Set here, in the
+// runner process, the value is inherited by every worker, whose own evaluation of this file then
+// keeps it (`??=`) rather than minting a second temp dir.
+process.env["GRAVITONE_STORE_PATH"] ??= LANE_STORE;
 
 // ==============================================================================
 // THE LIVE LANE — the assembled product, in a real browser.

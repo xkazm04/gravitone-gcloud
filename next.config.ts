@@ -20,22 +20,19 @@ const nextConfig: NextConfig = {
   transpilePackages: ["@gt/catalog", "@gt/domain", "@gt/kernel", "@gt/ui"],
 };
 
-// ── package.json `sideEffects` — why the kit barrel stopped shipping the deck ──
+// ── package.json `sideEffects` — why a barrel re-export stops shipping its neighbours ──
 //
-// package.json declares `"sideEffects": ["*.css", "./lib/turns/kinds/*.ts"]`.
-// JSON holds no comments, so the reason lives here. Without it Turbopack had to
-// assume any module might do something on import, so a barrel re-export nobody
-// used still came along: `import { useToast } from "@/components/kit"` in
-// lib/board pulled the kit's Deck, and the Deck pulled `motion` (~116 KB raw)
-// into /board, /kit and /library, which draw no deck. Measured 2026-10-08:
-// /board 942 -> 743 KB and /kit 940 -> 736 KB first-load JS, every other route
-// 8-14 KB lighter.
+// package.json declares `"sideEffects": ["*.css"]`. JSON holds no comments, so the reason
+// lives here. Without it Turbopack had to assume any module might do something on import,
+// so a barrel re-export nobody used still came along. Measured 2026-10-08, when v1's kit
+// barrel pulled its Deck (and `motion`, ~116 KB raw) into routes that drew no deck: the
+// declaration took /board 942 -> 743 KB and /kit 940 -> 736 KB first-load JS.
 //
 // THE COST OF THE DECLARATION: a module imported ONLY for what it does on import
-// (`import "./registers-itself"`) is now dropped unless it is listed. Today
-// that is exactly lib/turns/kinds/* (app/api/turns/route.ts imports each one
-// bare so it calls registerTurnKind) and the stylesheets. A new bare import of a
-// .ts/.tsx module must be added to that list, or it silently stops running.
+// (`import "./registers-itself"`) is dropped unless it is listed. Today that is the
+// stylesheets alone: lib/turns/kinds/* were imported bare by v1's app/api/turns/route.ts
+// (deleted Phase 6) and are now imported by name (lib/producers/{frames,research,script}.ts).
+// A new bare import of a .ts/.tsx module must be added to that list, or it silently stops running.
 
 // ── DevInspector — keeping the overlay out of what ships ────────────────────
 //

@@ -12,37 +12,33 @@
 // ignored and the whole take served (RFC 9110 14.2), where this copy answered 416 for a
 // range it never parsed.
 //
-// THE DOOR IS v1's, plus the session. An <audio src> cannot carry an Authorization header,
-// so the access secret may still arrive as `k=` - the PUBLIC bundle value lib/apiAuth.ts
-// documents - until the last v1 page that sends it is gone (wave C). The studio sends no
-// `k`: it holds the session cookie, which v1's door never read, so a refusal with nothing
-// presented is asked again through route()'s guard (app/_server/route.ts guardOf), which
-// consults the cookie only when no credential of its own was presented. Access-checked,
-// not rate-bucketed: a Triage queue of thirty takes is thirty of these at once.
+// THE DOOR IS route()'s `access` guard (Phase 6 L70). v1's `?k=` - the access secret in the
+// URL, for an <audio> that cannot send a header - went with the last v1 page: the studio
+// holds the session cookie, which rides an element's request by itself, and a CLI presents
+// its header. A stale URL that still carries `k` is read as carrying nothing, so it is
+// judged by its cookie, never by the secret in its query. Access-checked, not
+// rate-bucketed: a Triage queue of thirty takes is thirty of these at once.
 
-import { guardAccessOnly } from "@/lib/apiAuth";
-import { asContractDenial, errorResponse, toErrorResponse } from "@/lib/sound/http";
-import { filePathAbs } from "@/lib/sound/store";
-import { getTake } from "@/lib/sound/takes";
+import { err } from "@gt/domain/errors";
 
-import { guardOf } from "../../../../../_server/route.ts";
+import { toErrorResponse } from "../../../../../../lib/sound/http.ts";
+import { filePathAbs } from "../../../../../../lib/sound/store.ts";
+import { getTake } from "../../../../../../lib/sound/takes.ts";
+import { route } from "../../../../../_server/route.ts";
 import { serveFile } from "../../../../../_server/serveFile.ts";
 
 export const runtime = "nodejs";
 
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const k = new URL(req.url).searchParams.get("k");
-  const probe = k ? new Request(req.url, { headers: { authorization: `Bearer ${k}` } }) : req;
-  const refused = await guardAccessOnly(probe);
-  if (refused !== null && !("who" in (await guardOf(probe, "access")))) return (await asContractDenial(refused)) ?? refused;
+export const GET = route({ guard: "access", bodyCap: 0 }, async ({ req, params }) => {
+  const id = (await params)["id"];
+  if (typeof id !== "string" || id === "") return err("invalid", "a take is addressed by its id");
   try {
-    const { id } = await params;
     const take = await getTake(id);
-    if (!take.file) return errorResponse(`take ${id} has no audio — it is an example row with no bytes`, 404);
+    if (!take.file) return err("not-found", `take ${id} has no audio — it is an example row with no bytes`);
     const res = await serveFile(req, filePathAbs(take.file.path), { mime: take.file.mime });
     // serveFile's not-found names no take; the sound store's own sentence does.
-    return res.status === 404 ? errorResponse(`take ${id}'s file is missing from the store (${take.file.path})`, 404) : res;
+    return res.status === 404 ? err("not-found", `take ${id}'s file is missing from the store (${take.file.path})`) : res;
   } catch (e) {
     return toErrorResponse(e);
   }
-}
+});

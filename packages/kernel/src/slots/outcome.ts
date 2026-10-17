@@ -7,8 +7,8 @@ import type { Lease } from "@gt/domain/job";
 import { append } from "../events.ts";
 import { assertFence, heartbeatIn, processHolder, releaseIn } from "../lease.ts";
 import type { Store, Tx } from "../store.ts";
-import { toFailed, toPublished, toPublishing } from "./core.ts";
-import { publicationOfIn, readPublicationIn, readSlotIn } from "./read.ts";
+import { publishedText, toFailed, toPublished, toPublishing } from "./core.ts";
+import { priorPublicationIn, publicationOfIn, readPublicationIn, readSlotIn } from "./read.ts";
 import { claimResource, type SlotRow } from "./schema.ts";
 import { ACT_CHANNELS } from "./sweep-core.ts";
 import { putSlotIn } from "./write.ts";
@@ -20,9 +20,12 @@ import { putSlotIn } from "./write.ts";
 // and the sweep's verdict stands (delivery-guarantees: atomic-claiming, "complete with the same
 // conditionality"). The lease is released in the same commit as the verdict.
 //
-// ONE PUBLICATION PER SLOT is the table's UNIQUE (slot_id), and one slot holds an item on a
-// channel at a time, so v1's "one upload per export x channel x mode" (publisher.ts) is a
-// constraint here, not a lookup the publisher must remember to make.
+// ONE PUBLICATION PER SLOT is the table's UNIQUE (slot_id); ONE PER ITEM x CHANNEL x MODE is v1's
+// rule (publisher.ts: "a dry run does not block the live upload that follows it"), checked here
+// in words and backed by `slots_one_publication`. A dry-published slot holds nothing (./core.ts
+// clashOf), so the live slot that follows a rehearsal can be made at all; a second rehearsal of
+// the same item is refused at its landing, and the publisher asks first (priorPublicationIn) so
+// it says so before it plans.
 
 function claimedIn(t: Tx, slotId: string, fence: number): SlotRow {
   const row = readSlotIn(t, slotId);
@@ -40,15 +43,19 @@ function admitPublication(row: SlotRow, draft: PublicationDraft): Publication {
   return p.value;
 }
 
+/** The slot, marked dry when its publication is (./schema.ts steps 2-4), and its publication. */
 function landIn(t: Tx, row: SlotRow, pub: Publication, by: Actor): SlotRow {
   if (publicationOfIn(t, row.slot.id) !== undefined) throw new AppError("conflict", `slot ${row.slot.id} already has a publication`);
-  t.run("INSERT INTO publications (id, slot_id, record, published_at) VALUES (?, ?, ?, ?)", pub.id, pub.slotId, JSON.stringify(pub), pub.publishedAt);
-  return putSlotIn(t, row, toPublished(row.slot, pub.id), null, {
+  const prior = priorPublicationIn(t, row.slot.libraryItemId, row.slot.channel, pub.dry);
+  if (prior !== undefined) throw new AppError("conflict", publishedText(row.slot.libraryItemId, row.slot.channel, prior.id, pub.dry));
+  const slot = putSlotIn(t, row, toPublished(row.slot, pub.id), null, {
     by,
     type: "publish",
     subject: { kind: "publication", id: pub.id },
     data: { dry: pub.dry, platformId: pub.platformId, ...(pub.url === undefined ? {} : { url: pub.url }) },
-  });
+  }, pub.dry);
+  t.run("INSERT INTO publications (id, slot_id, record, published_at) VALUES (?, ?, ?, ?)", pub.id, pub.slotId, JSON.stringify(pub), pub.publishedAt);
+  return slot;
 }
 
 /** The claimant's success: the publication and `published`, in one commit, lease released. */

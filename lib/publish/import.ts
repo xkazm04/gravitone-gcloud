@@ -1,15 +1,15 @@
 // THE CALENDAR'S ONE-TIME IMPORT, the disk half (owner ruling 3, plan §5.3): read v1's three
-// files under the publish root (PUBLISH_STORE_DIR, else <out>/publish - ./store.ts storeRoot),
+// files under the publish root (PUBLISH_STORE_DIR, else <out>/publish - ./sessions.ts publishRoot),
 // hand them to the kernel (@gt/kernel/slots/import decides and writes), list what plans/ and
 // sessions/ hold, and - after a real import that refused nothing - leave the MIGRATED marker
 // that says where the calendar went.
 //
-// THE FILES ARE READ AS THEY STAND, never through ./schedule.ts listSlots, which sweeps first
-// and would write schedule.json on the way (the ledger projection's same refusal,
-// lib/ledger/v1/sources/publish.ts). A corrupt file is an error, as ./store.ts made it: an
+// THE FILES ARE READ AS THEY STAND, never through v1's listSlots (lib/publish/schedule.ts), which
+// swept first and would write schedule.json on the way (the ledger projection's same refusal,
+// lib/ledger/v1/sources/publish.ts). A corrupt file is an error, as v1's store made it: an
 // importer that read a broken calendar as empty would import nothing and then mark it migrated.
 //
-// plans/ AND sessions/ STAY WHERE THEY ARE. Both are keyed by slot id (./store.ts planPath,
+// plans/ AND sessions/ STAY WHERE THEY ARE. Both are keyed by slot id (v1 store.ts planPath,
 // sessionPath), and the import keeps every v1 slot id, so a dry plan still names its slot and a
 // live resumable session can still be found by the publisher that resumes it (wave B). The
 // report lists each with whether its slot was imported - a session for a slot that never

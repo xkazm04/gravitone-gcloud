@@ -46,7 +46,13 @@ function studioRoutes(): Route[] {
         const segs = relative(STUDIO, dir).split(sep).filter((s) => s !== "" && !/^\(.*\)$/.test(s));
         const url = `/${segs.join("/")}`;
         const odd = segs.find((s) => s.startsWith("[") || s.startsWith("@") || s.startsWith("(."));
-        out.push(odd === undefined ? { url } : { url, skip: `segment "${odd}" needs a real record to address; its static parents are walked` });
+        // A retired v1 address kept as a redirect (Phase 6: /foundry, /playground, /articles, /calendar,
+        // /board, ...) renders nothing of its own; walking it measures its TARGET under the old name.
+        // A page that redirects and draws no JSX of its own (no closing or self-closing tag).
+        const code = readFileSync(join(dir, e.name), "utf8");
+        const redirectOnly = /\bredirect\(/.test(code) && !/<\/|\/>/.test(code);
+        if (redirectOnly) out.push({ url, skip: "a redirect to a page walked under its own address" });
+        else out.push(odd === undefined ? { url } : { url, skip: `segment "${odd}" needs a real record to address; its static parents are walked` });
       }
     }
   };

@@ -39,7 +39,8 @@ import { createHash } from "node:crypto";
 import { rmSync, utimesSync } from "node:fs";
 import path from "node:path";
 
-import type { ChannelId, MetricSnapshot, Publication, ScheduleSlot, SlotStatus } from "../../lib/publish/types";
+import type { V1PublicationRecord as Publication, V1SlotRecord as ScheduleSlot, V1SlotStatus as SlotStatus, V1SnapshotRecord as MetricSnapshot } from "@gt/kernel/slots/import";
+import type { ChannelId } from "../../lib/publish/channels";
 import { DAY, HOUR, iso, MIN, NOW, outFile, rng, writeBytes, writeJson } from "./kit";
 
 /* ── the exports ─────────────────────────────────────────────────────────── */

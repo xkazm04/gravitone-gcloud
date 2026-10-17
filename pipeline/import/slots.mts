@@ -41,10 +41,10 @@ function out(doc: unknown, lines: readonly string[]): void {
 }
 
 const { kernel, closeKernel, storeLocation } = await import("../../lib/kernelStore.ts");
-const { storeRoot } = await import("../../lib/publish/store.ts");
+const { publishRoot } = await import("../../lib/publish/sessions.ts");
 const { importCalendar } = await import("../../lib/publish/import.ts");
 
-const root = storeRoot();
+const root = publishRoot();
 const k = kernel();
 if (!k.ok) {
   out({ error: k.error.message }, [`import slots: cannot open the kernel store at ${storeLocation()}: ${k.error.message}`]);

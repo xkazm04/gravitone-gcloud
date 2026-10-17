@@ -235,9 +235,11 @@ describe("a worker that was down past the window", () => {
     expect(read<unknown[]>(k, (r) => listPublicationsIn(r))).toEqual([]);
     expect(lines[0]?.gap).toEqual({ from: new Date(NOW).toISOString(), to: new Date(NOW + 3 * 3_600_000).toISOString() });
     expect(ev("timer.gap").map((e) => e.subject)).toEqual(["timer:publish-tick"]);
-    const marked = ev("slot.miss-downtime");
+    // The miss itself says the worker was down - one event, one commit, nothing beside it.
+    const marked = ev("slot.miss");
     expect(marked.map((e) => e.subject)).toEqual([id]);
-    expect(marked[0]?.data).toContain(`"from":"${new Date(NOW).toISOString()}"`);
+    expect(marked[0]?.data).toContain(`"downtime":{"from":"${new Date(NOW).toISOString()}","to":"${new Date(NOW + 3 * 3_600_000).toISOString()}"}`);
+    expect(ev("slot.miss-downtime")).toEqual([]);
     expect(fetches).toBe(0);
     k.close();
   });
@@ -246,7 +248,7 @@ describe("a worker that was down past the window", () => {
     const { id, s, ev, k } = await downFor(true);
     expect(s.map((x) => [x.slot.id, x.slot.state])).toEqual([[id, "missed"]]);
     expect(ev("lease.reclaimed").map((e) => e.subject)).toContain("timer:publish-tick");
-    expect(ev("slot.miss-downtime").map((e) => e.subject)).toEqual([id]);
+    expect(ev("slot.miss").filter((e) => e.data.includes('"downtime"')).map((e) => e.subject)).toEqual([id]);
     k.close();
   });
 
@@ -262,6 +264,9 @@ describe("a worker that was down past the window", () => {
     expect(r.ok && r.value.outcomes.map((o) => [o.slotId, o.kind])).toEqual([[id, "published"]]);
     expect(r.ok && r.value.missed).toEqual([before]);
     expect(r.ok && r.value.downtime?.missed).toEqual([]);
+    const misses = read<string[]>(k, (rd) => rd.all("SELECT data FROM events WHERE type = 'slot.miss'").map((x) => String(x["data"])));
+    expect(misses).toHaveLength(1);
+    expect(misses[0]).not.toContain("downtime");
     k.close();
   });
 });

@@ -293,6 +293,8 @@ function HuntSpecimen() {
           onPlay={play}
           onCrown={crown}
           onCopy={inert}
+          returning={NO_CROWNS}
+          onReturn={inert}
         />
       </Spec>
       <Spec names={["HuntAudition"]} source="audio/HuntAudition.tsx · v1 hunt/Audition.tsx" wide>

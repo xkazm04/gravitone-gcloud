@@ -77,7 +77,9 @@ export const EXTRACT_READ_CAP = 500;
 const ENGINE: Actor = { kind: "machine", id: "extract" };
 const OPERATOR: Actor = { kind: "operator", id: "operator" };
 const CULL_MODEL: Actor = { kind: "agent", id: "extract-cull-model" };
-const HREF = "/foundry";
+// Where the work is seen now: the Floor's image lane - its cells the running work, its Weir the
+// pile (v1's /foundry page retired in Phase 6 wave C and redirects; a redirect is not a link to keep).
+const HREF = "/floor?lane=image";
 
 async function read(): Promise<Result<ExtractSnapshot>> {
   let ids: string[];
