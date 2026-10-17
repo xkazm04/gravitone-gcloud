@@ -1,0 +1,10 @@
+/* One row per channel, in the month agenda's vocabulary (MonthCalendar.module.css .side). */
+.list{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:var(--sp-3)}
+.row{display:flex;flex-direction:column;gap:var(--sp-2);padding:var(--sp-3);border-radius:var(--r-control);border:1px solid color-mix(in srgb,var(--faint) 80%,transparent);background:var(--ink-2);min-width:0}
+.row[data-state=not_wired]{border-color:var(--rose)}
+.head{display:flex;align-items:center;gap:var(--sp-2)}
+.name{font:600 var(--fs-meta)/1 var(--sans);color:var(--ink-bright);margin-right:auto}
+.env,.standing{display:flex;flex-wrap:wrap;gap:var(--sp-1)}
+.standing:empty{display:none}
+.note{font-size:var(--fs-meta);line-height:1.4;color:var(--text);overflow-wrap:anywhere}
+.cmd{font:500 var(--fs-micro)/1.4 var(--mono);color:var(--code-text);background:var(--code-ground);padding:var(--sp-1) var(--sp-2);border-radius:var(--r-xs);overflow-wrap:anywhere}

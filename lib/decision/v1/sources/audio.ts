@@ -6,12 +6,16 @@ import type { BlobRef } from "@gt/domain/blob";
 import type { Decision } from "@gt/domain/decision";
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { ApplyClaim } from "@gt/kernel/decision/apply";
+import { readMeasure } from "@gt/kernel/library/measures";
+import { briefCheck, briefWords, type BriefMeasured } from "@gt/ui/components/audio/brief.ts";
 import type { ItemWords, RowWords } from "@gt/ui/board/port";
 
+import { kernel } from "../../../kernelStore.ts";
 import { packetIdOf } from "../../../ledger/v1/packet.ts";
 import { verdictRow } from "../../../sound/ledger.ts";
 import { filePathAbs, ledgerPath, readTakes, SoundError, withStore } from "../../../sound/store.ts";
 import { patchTakeTx } from "../../../sound/takes.ts";
+import { judgingOrder } from "../../../sound/triageOrder.ts";
 import { DEFECTS, type DefectCode, type SoundTake, type TakePatch } from "../../../sound/types.ts";
 import {
   buildConsequence,
@@ -52,8 +56,18 @@ import {
 //   · v1 holding a DIFFERENT verdict on a take (the Library judged it since) is
 //     refused, never overwritten (hitl-approval resume-after-decision).
 // Dropped: the rubric (ratings). v1's Judge scored melody/sound per key; the
-//   Board's cull has no rubric, so a take judged here enters the ledger with
-//   the ratings v1 already holds (usually none). Phase 4's audio desk may add it.
+//   Board's cull has no rubric (a decision carries verdict, reasons and note -
+//   @gt/domain decision.ts), so a take judged here enters the ledger with the
+//   ratings v1 already holds. Phase 6 (L66) scores it on the audio desk after the
+//   verdict (/audio?s=rubric, lib/sound/rubric.ts), on the same ledger row.
+//
+// BRIEF VS MEASURED (Phase 6, L66; v1 Judge.tsx's right column). Each tile says
+// what its take missed of its brief - tempo, key, length, @gt/ui brief.ts - from
+// the ingest measure of the SAME bytes the tile plays (kernel audio_measures by
+// the media's sha, lib/sound/measureRun.ts), else what v1 measured on the take.
+// A verdict made with the miss in view is evidence about the prompt, not only
+// about taste. A measure store that will not open is a disclosed loss, never a
+// packet that will not open.
 //
 // THE PILE IS AN AGGREGATE, so its id carries a generation. v1 has no run here:
 // the Floor's pile is `audio/triage`, and a packet id that never changes cannot
@@ -97,14 +111,19 @@ export type AudioV1 = {
   readonly media: ReadonlyMap<string, BlobRef>;
   /** Where syncVerdict writes, as the operator recognises it. */
   readonly ledger: string;
+  /** What each pile take's bytes measured, by take id: the ingest measure, else v1's on the take. */
+  readonly measures: ReadonlyMap<string, BriefMeasured>;
+  /** Why the ingest measures could not be read, when they could not. */
+  readonly measureError?: string;
 };
 
 const createdMs = (t: Pick<SoundTake, "createdAt">): number => Date.parse(t.createdAt);
 const pending = (t: SoundTake): boolean => t.verdict === "unjudged" && t.origin !== "fixture";
 
-/** The pile at a cutoff: v1's judging queue (app/playground/triage/model.ts), bounded by the generation. */
+/** The pile at a cutoff: v1's judging queue (lib/sound/triageOrder.ts - agents first, then oldest),
+ *  bounded by the generation. */
 function pileOf(v1: Pick<AudioV1, "takes" | "cutoff">): SoundTake[] {
-  return v1.takes.filter((t) => pending(t) && createdMs(t) <= v1.cutoff).sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
+  return judgingOrder(v1.takes.filter((t) => createdMs(t) <= v1.cutoff));
 }
 
 /** The ledger as the operator knows it: repo-relative (pipeline/sound/ledger.json), else the path itself. */
@@ -129,17 +148,40 @@ async function read(ref: AdapterRef): Promise<Result<AudioV1>> {
   }
   const media = await mediaRefs(files);
   if (!media.ok) return media;
-  return ok({ runId: pileRunId(AUDIO_PILE, cutoff), cutoff, takes, media: media.value, ledger: ledgerName(ledgerPath()) });
+  const measured = measuresOf(pileOf({ takes, cutoff }), media.value);
+  return ok({ runId: pileRunId(AUDIO_PILE, cutoff), cutoff, takes, media: media.value, ledger: ledgerName(ledgerPath()), ...measured });
+}
+
+/** The pile's measures: the kernel's row for the bytes, else the take's own `measured`. */
+function measuresOf(pile: readonly SoundTake[], media: ReadonlyMap<string, BlobRef>): Pick<AudioV1, "measures" | "measureError"> {
+  const own = (t: SoundTake): BriefMeasured | null => (t.measured === null ? null : { tempoBpm: t.measured.tempoBpm, key: t.measured.key, durationS: t.measured.durationS });
+  const k = kernel();
+  const rows = k.ok
+    ? k.value.store.read((r) => new Map(pile.flatMap((t) => {
+        const sha = media.get(t.id)?.sha256;
+        const m = sha === undefined ? null : readMeasure(r, sha);
+        return m === null || m.error !== null ? [] : [[t.id, m] as const];
+      })))
+    : k;
+  const out = new Map<string, BriefMeasured>();
+  for (const t of pile) {
+    const m = rows.ok ? rows.value.get(t.id) : undefined;
+    const base = own(t);
+    const v = m === undefined ? base : { tempoBpm: m.tempoBpm ?? base?.tempoBpm ?? null, key: m.key ?? base?.key ?? null, durationS: m.durationS ?? base?.durationS ?? null };
+    if (v !== null) out.set(t.id, v);
+  }
+  return rows.ok ? { measures: out } : { measures: out, measureError: rows.error.message };
 }
 
 /* ── packet ────────────────────────────────────────────────────────────────── */
 
 const seconds = (s: number | null): string => (s === null ? "" : ` · ${Math.round(s)} s`);
 
-function words(t: SoundTake): ItemWords {
+function words(t: SoundTake, measured: BriefMeasured | undefined): ItemWords {
+  const missed = briefWords(briefCheck(t.kind, { tempoBpm: t.tempoBpm, key: t.key, durationS: t.durationS }, measured ?? null));
   return {
     label: t.title,
-    meta: `${t.provider} · ${t.op}${seconds(t.measured?.durationS ?? t.durationS)}`,
+    meta: `${t.provider} · ${t.op}${seconds(measured?.durationS ?? t.durationS)}${missed === null ? "" : ` · ${missed}`}`,
     ...(t.prompt === "" ? {} : { prompt: t.prompt }),
     ...(t.peaks === null ? {} : { peaks: t.peaks }),
     music: t.kind === "music",
@@ -154,6 +196,7 @@ function packet(v1: AudioV1): Result<OpenPlan> {
     else losses.push({ candidate: t.id, grade: "dropped", reason: t.file === null ? "the take has no file to listen to; it stays unjudged in the Sound lab" : `${t.file.path} is not on disk; the take stays unjudged in the Sound lab` });
   }
   if (judgeable.length === 0) return err("not-found", `no unjudged take with a file is waiting at or before ${new Date(v1.cutoff).toISOString()}`);
+  if (v1.measureError !== undefined) losses.push({ grade: "approximate", reason: `brief vs measured reads the takes' own measures only: ${v1.measureError}` });
   const minted = mintPacket({
     id: packetIdOf("audio", v1.runId),
     lane: "audio",
@@ -172,7 +215,7 @@ function packet(v1: AudioV1): Result<OpenPlan> {
     packet: minted.value,
     // The pile is the UNJUDGED takes: v1 holds no verdict on any of them to import.
     initial: [],
-    present: { items: Object.fromEntries(judgeable.map((t) => [t.id, words(t)])), rows, meta: "Sound lab triage" },
+    present: { items: Object.fromEntries(judgeable.map((t) => [t.id, words(t, v1.measures.get(t.id))])), rows, meta: "Sound lab triage" },
     urls: Object.fromEntries(judgeable.map((t) => [t.id, `/api/sound/takes/${encodeURIComponent(t.id)}/file`])),
     losses,
   });

@@ -11,6 +11,13 @@
 // (CHECK_DIMENSIONS for an article) from the chips in the side panel. The edit plan is the
 // prototype's EditNote list, sent as the structured plan (decision 8); the adapter renders it
 // to v1's rework note.
+//
+// APPROVE -> CALENDAR (prototype :659, :842-850; Phase 6): a source whose kept subject is
+// publishable (./schedule.ts SCHEDULE_CHANNELS - an article, by its blog pull request) shows the
+// calendar control beside the oracle, proposed at the prototype's next-day 08:00 UTC, and Approve
+// carries the schedule as the verdict's note. The applier makes the slot from that note in the
+// commit's own apply; nothing is scheduled before the commit, and a schedule changed after the
+// preview is a stale preview like any other decision.
 import { useEffect, useState } from "react";
 
 import type { EditDirective, EditNote as Note } from "@gt/domain/board";
@@ -25,7 +32,9 @@ import { DeskFrame, OracleStrip } from "../desk/Desk.tsx";
 import { CapsHeading } from "../heading/CapsHeading.tsx";
 import { Keycaps } from "../keycaps/Keycaps.tsx";
 import { PipRow } from "../piprow/PipRow.tsx";
+import { ApproveSchedule } from "./ApproveSchedule.tsx";
 import { ArticlePage, EditNote } from "./ArticlePage.tsx";
+import { encodeSchedule, proposeAt, scheduleChannels, type ScheduleIntent } from "./schedule.ts";
 import s from "./Review.module.css";
 
 export type PacketReviewProps = {
@@ -37,9 +46,11 @@ export type PacketReviewProps = {
   readonly busy?: boolean;
   readonly announce?: (message: string) => void;
   readonly keys?: boolean;
+  /** The proposal's clock (the kit pins it); absent, the browser's. */
+  readonly nowMs?: number;
 };
 
-export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, busy = false, announce = () => undefined, keys = true }: PacketReviewProps) {
+export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, busy = false, announce = () => undefined, keys = true, nowMs }: PacketReviewProps) {
   const { view, present } = packet;
   const doc = present.review;
   const item = view.items[0];
@@ -50,6 +61,11 @@ export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, b
   const [text, setText] = useState("");
   const [plan, setPlan] = useState<readonly Note[]>([]);
   const [reasons, setReasons] = useState<readonly string[]>(() => (item === undefined ? [] : (verdicts[item.id]?.reasons ?? [])));
+  const channels = scheduleChannels(view.source);
+  const [schedule, setSchedule] = useState<ScheduleIntent | null>(() => {
+    const first = channels[0];
+    return first === undefined ? null : { channel: first, publishAt: proposeAt(nowMs ?? Date.now()) };
+  });
 
   useEffect(() => {
     document.querySelector(`[data-sec="${focus}"]`)?.scrollIntoView({ block: "nearest" });
@@ -70,8 +86,14 @@ export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, b
   const verdict = (v: "keep" | "reject") => {
     // A second press while a write or a preview is in flight is the same act again, not a new one.
     if (item === undefined || busy) return;
-    decide([item.id], v === "keep" ? { verdict: "keep", reasons: [] } : { verdict: "reject", reasons }, view.title ?? view.id);
+    decide([item.id], v === "keep" ? keepVerdict() : { verdict: "reject", reasons }, view.title ?? view.id);
     onCommit();
+  };
+  // The attached notes ride with the approve, as the prototype's decide({notes}) kept them.
+  const keepVerdict = () => {
+    if (schedule === null) return { verdict: "keep" as const, reasons: [] };
+    const notes = plan.map((p) => `§${sectionNo(p.section)} ${p.directive}: ${p.text}`).join("\n");
+    return { verdict: "keep" as const, reasons: [], note: encodeSchedule({ ...schedule, ...(notes === "" ? {} : { notes }) }).slice(0, view.reasons.noteMax) };
   };
   const send = () => {
     if (plan.length === 0) {
@@ -112,7 +134,7 @@ export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, b
           <div className={s.ends}>
             <Button label="Reject" tone="rose" shortcut={{ mode: "board.review", verb: "reject" }} onPress={() => verdict("reject")} />
             <Button label={`Edit plan · ${plan.length}`} tone="amber" shortcut={{ mode: "board.review", verb: "send-edit-plan" }} onPress={send} />
-            <Button label="Approve" tone="emerald" shortcut={{ mode: "board.review", verb: "approve" }} onPress={() => verdict("keep")} />
+            <Button label={schedule === null ? "Approve" : "Approve → calendar"} tone="emerald" shortcut={{ mode: "board.review", verb: "approve" }} onPress={() => verdict("keep")} />
           </div>
         </>
       }
@@ -139,6 +161,7 @@ export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, b
           )}
         </div>
         <aside className={s.side}>
+          {schedule !== null && <ApproveSchedule channels={channels} value={schedule} onChange={setSchedule} />}
           <CapsHeading text="oracle · before gate" />
           {(doc?.checks ?? []).map((c) => (
             <div key={c.name} className={s.checkrow}>

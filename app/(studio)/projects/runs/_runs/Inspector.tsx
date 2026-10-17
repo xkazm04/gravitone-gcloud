@@ -21,6 +21,7 @@ import { STATUS } from "@gt/ui/components/status/status.ts";
 
 import type { LaneHoldView } from "../../_port/contract.ts";
 import { Holds, JobActs, type JobActsProps } from "./Acts.tsx";
+import { MvActs, mvTrackOf, type MvChannel, type MvPart } from "./MvActs.tsx";
 import type { RunJob, RunWeir, RunsModel } from "./model.ts";
 import { RUNS_KEYS } from "./readKeys.ts";
 import { holdingOf, membersOf, when } from "./view.ts";
@@ -30,6 +31,8 @@ import s from "./Runs.module.css";
 export type InspectorActs = Omit<JobActsProps, "job"> & {
   readonly holds: readonly LaneHoldView[];
   readonly onAck: (lane: LaneHoldView["lane"]) => void;
+  /** A music video's Regenerate and Send to Calendar (./MvActs.tsx), when the page hands its port. */
+  readonly mv?: { readonly onRegenerate: (track: string, part: MvPart) => void; readonly onSchedule: (track: string, channel: MvChannel, publishAt: string) => void };
 };
 
 type Props = {
@@ -84,6 +87,8 @@ function JobView({ j, m, deps, blocked, onSelect, acts }: { readonly j: RunJob; 
   const after = deps.filter((d) => d.to === j.key).flatMap((d) => byKey.get(d.from) ?? []);
   const blocks = deps.filter((d) => d.from === j.key).flatMap((d) => byKey.get(d.to) ?? []);
   const block = blocked.get(j.key);
+  const track = j.from === "kernel" && (j.state === "done" || j.state === "failed") ? mvTrackOf(j.id) : null;
+  const mv = acts.mv;
   const facts: Fact[] = [
     { term: "source", value: j.source },
     ...(j.laneFrom === undefined ? [] : [{ term: "lane from", value: j.laneFrom }]),
@@ -108,6 +113,9 @@ function JobView({ j, m, deps, blocked, onSelect, acts }: { readonly j: RunJob; 
       {j.act !== undefined && <JobActs job={j.act} {...acts} />}
       {j.error !== undefined && <ErrorLine message={j.error} />}
       {block !== undefined && <ErrorLine message={`blocked by ${byKey.get(block)?.title ?? block}`} />}
+      {track !== null && mv !== undefined && (
+        <MvActs key={j.key} track={track} finished={j.state === "done"} nowMs={m.now} busy={acts.busy} onRegenerate={(part) => mv.onRegenerate(track, part)} onSchedule={(channel, at) => mv.onSchedule(track, channel, at)} />
+      )}
       {j.act !== undefined && <Holds holds={acts.holds.filter((h) => h.lane === j.lane)} nowMs={m.now} busy={acts.busy} onAck={acts.onAck} />}
       {after.length > 0 && <Section title="after" n={after.length}>{after.map((d) => <DepRow key={d.key} j={d} m={m} at={d.e} onSelect={onSelect} />)}</Section>}
       {blocks.length > 0 && <Section title="blocks" n={blocks.length}>{blocks.map((d) => <DepRow key={d.key} j={d} m={m} at={d.s} onSelect={onSelect} />)}</Section>}

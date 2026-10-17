@@ -63,3 +63,4 @@
 .ceilIn{width:calc(var(--w-thumb) + var(--sp-4));height:var(--h-control-sm);padding:0 var(--sp-2);border-radius:var(--r-sm);border:1px solid var(--hair-2);background:var(--ink-2);font:600 var(--fs-meta)/1 var(--mono);color:var(--ink-bright)}
 .ceilIn:focus{outline:none;border-color:var(--focus-line)}
 .ceilIn[aria-invalid=true]{border-color:var(--rose)}
+.mvWhen{width:auto}

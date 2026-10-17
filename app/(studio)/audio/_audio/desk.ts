@@ -11,6 +11,11 @@
 export const SECTIONS = [
   { id: "compose", label: "compose" },
   { id: "arrange", label: "arrange" },
+  { id: "hunt", label: "hunt" },
+  { id: "lessons", label: "lessons" },
+  { id: "strengths", label: "strengths" },
+  { id: "rubric", label: "rubric" },
+  { id: "batch", label: "batch" },
 ] as const;
 export type Section = (typeof SECTIONS)[number]["id"];
 

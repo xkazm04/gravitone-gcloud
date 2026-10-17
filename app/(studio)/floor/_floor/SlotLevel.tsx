@@ -11,7 +11,9 @@
 // lands before the re-render cannot send a second act (async-ui-states action-busy-states).
 // What a verb answers is the slot as it now is; the level redraws from it, the Floor re-reads
 // (router.refresh) so the rail and the month agree, and the toast carries the ledger's door.
-// A refusal is drawn verbatim and changes nothing.
+// A refusal is drawn verbatim and changes nothing. Every verb carries the revision the level
+// was drawn from (`baseRev`): a slot the tick claimed or another tab moved meanwhile is refused
+// as `conflict`, and the level re-reads the record, so the operator decides again on what is.
 
 import { useEffect, useRef, useState } from "react";
 
@@ -76,6 +78,8 @@ export function SlotLevel({ id, port, nowMs, initial, cal, onClose, onFloor, onL
       setBusy(null);
       if (!r.ok) {
         setError(r.error.error);
+        // Moved under the operator: draw the slot as it now is, the refusal beside it.
+        if (r.error.code === "conflict") void port.detail({ id }).then((fresh) => (fresh.ok ? setRead({ id, r: fresh }) : undefined));
         return;
       }
       setRead({ id, r });
@@ -89,6 +93,7 @@ export function SlotLevel({ id, port, nowMs, initial, cal, onClose, onFloor, onL
     setAsked((a) => ({ verb, n: (a?.n ?? 0) + 1 }));
   };
   const slot = view?.slot;
+  const rev = view?.rev === undefined ? {} : { baseRev: view.rev };
   const facts = slot === undefined ? [] : [...(canMove(slot) ? ["movable"] : []), ...(canCancel(slot) ? ["cancellable"] : []), ...(canPublishNow(slot) ? ["publishable"] : [])];
   useKeys(
     "slot",
@@ -110,9 +115,9 @@ export function SlotLevel({ id, port, nowMs, initial, cal, onClose, onFloor, onL
           busy={busy}
           {...(error === undefined ? {} : { error })}
           {...(asked === undefined ? {} : { asked })}
-          onMove={(at) => run("move", () => port.move({ id, at }))}
-          onCancel={() => run("cancel", () => port.cancel({ id }))}
-          onPublishNow={() => run("publish-now", () => port.publishNow({ id }))}
+          onMove={(at) => run("move", () => port.move({ id, at, ...rev }))}
+          onCancel={() => run("cancel", () => port.cancel({ id, ...rev }))}
+          onPublishNow={() => run("publish-now", () => port.publishNow({ id, ...rev }))}
         />
       ) : (
         <div className={s.slotWait} aria-busy={read === null || read.id !== id ? true : undefined}>

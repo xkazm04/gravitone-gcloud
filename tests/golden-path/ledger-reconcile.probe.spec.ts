@@ -27,9 +27,22 @@ import { join } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { WORKING } from "@/app/articles/runModel";
-import { EXTRACT_LIVE, LIVE, cycleKind } from "@/app/foundry/parts";
 import { LIVE as TURN_LIVE } from "@/lib/turns/ledger";
+
+// THE v1 UIs' LIVE SETS, FROZEN HERE (Phase 6 L67). They were imported from the pages that drew
+// them (app/foundry/parts.tsx, app/articles/runModel.ts), which wave C deletes. Each page only
+// re-exported lib's set (lib/foundry/plant.ts LIVE, EXTRACT_LIVE, cycleKind; lib/articles/types.ts
+// WORKING) - the SAME sets the adapters read - so an import from lib would make this probe agree
+// with the adapters by construction. Spelled out, a status the adapters stop reading as live
+// (or a new one they read and v1 never drew) is a red probe, not a quiet agreement.
+/** lib/foundry/plant.ts LIVE: a forge run is working while it is being made. */
+const FORGE_LIVE = ["created", "annotating", "generating", "grading"];
+/** lib/foundry/plant.ts EXTRACT_LIVE. */
+const EXTRACT_LIVE = ["created", "reading", "grouping", "replicating", "transferring"];
+/** lib/foundry/plant.ts cycleKind(s) === "live": every cycle status but the gate and the two ends. */
+const CYCLE_LIVE = ["planning", "generating", "judging"];
+/** lib/articles/types.ts WORKING: a run is live until the gate, and again while it lands. */
+const ARTICLE_WORKING = ["queued", "researching", "drafting", "critiquing", "checking", "approved", "landing"];
 
 const ROOT = process.cwd();
 const CLI = join(ROOT, "pipeline", "ledger-sync.mts");
@@ -61,7 +74,6 @@ const liveIn = (sub: string, file: string, live: (status: string) => boolean) =>
     .filter((m) => live(String(m["status"])))
     .map((m) => String(m["id"]));
 };
-const isCycleStatus = (s: string): s is Parameters<typeof cycleKind>[0] => ["planning", "generating", "judging", "awaiting-gate", "committed", "failed"].includes(s);
 /** The ids in one fixtures-out/<rel> JSON document that `pick` reads as live. */
 const liveInDoc = (rel: string, pick: (doc: Json) => string[]) => (): string[] => pick(JSON.parse(readFileSync(join(dir, "fixtures-out", rel), "utf8")) as Json);
 /** Records stored one file per id (fixtures-out/<sub>/<id>.json) whose status `live` accepts. */
@@ -77,11 +89,11 @@ const rows = (doc: Json, key: string): Json[] => (Array.isArray(doc[key]) ? (doc
 const QUEUE_LIVE = ["queued", "active"];
 
 const SOURCES: Record<string, (() => string[]) | null> = {
-  forge: liveIn("runs", "run.json", (s) => LIVE.some((x) => x === s)),
-  extract: liveIn("extract", "run.json", (s) => EXTRACT_LIVE.some((x) => x === s)),
-  dojo: liveIn("training", "cycle.json", (s) => isCycleStatus(s) && cycleKind(s) === "live"),
+  forge: liveIn("runs", "run.json", (s) => FORGE_LIVE.includes(s)),
+  extract: liveIn("extract", "run.json", (s) => EXTRACT_LIVE.includes(s)),
+  dojo: liveIn("training", "cycle.json", (s) => CYCLE_LIVE.includes(s)),
   strips: liveIn("strips", "run.json", (s) => s === "running"),
-  articles: liveIn("articles", "run.json", (s) => WORKING.some((x) => x === s)),
+  articles: liveIn("articles", "run.json", (s) => ARTICLE_WORKING.includes(s)),
   suno: liveInDoc("sound/suno.json", (d) => rows(d, "jobs").filter((j) => QUEUE_LIVE.includes(String(j["state"]))).map((j) => String(j["id"]))),
   // A take is made whole by one call (lib/sound/takes.ts): the shelf has no live work.
   sound: null,

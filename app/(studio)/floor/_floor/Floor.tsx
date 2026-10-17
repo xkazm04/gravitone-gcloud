@@ -11,7 +11,8 @@
 // Keys, by verb (keymap/bindings.ts `floor`): 1-4 open a lane's first pile, ⇧1-4 focus a lane
 // (again to show all), ⏎ the NEXT pile, C the month, B the Board (the NEXT packet), Esc shows
 // all lanes. A slot - on the rail or in the month - opens its record as a level over the Floor
-// (./SlotLevel.tsx, Phase 6), at `?slot=<id>` in the same URL state. Opening a pile is a client navigation to /board/<packet>, which the Board sheet
+// (./SlotLevel.tsx, Phase 6), at `?slot=<id>` in the same URL state; the month's Schedule opens
+// the schedule sheet (./ScheduleLevel.tsx, `?new=1`). Opening a pile is a client navigation to /board/<packet>, which the Board sheet
 // intercepts over the Floor (COMMON decision 10); a modified click on a pile keeps the
 // browser's own meaning.
 //
@@ -49,6 +50,7 @@ import type { FloorData } from "./load.ts";
 import { Foundry, ShelfFor, Weir, pileHref, shelfCount } from "./LaneCells.tsx";
 import { Month } from "./Month.tsx";
 import { byLane, floorSearch, slotHref, type FloorUrl } from "./model.ts";
+import { ScheduleLevel } from "./ScheduleLevel.tsx";
 import { SlotLevel, type SlotRead } from "./SlotLevel.tsx";
 import s from "./Floor.module.css";
 
@@ -156,7 +158,7 @@ export function Floor({ data, initial, produce, calendar, slot, choices }: Floor
       unfocus: () => focus(null),
       launch: () => (active === null ? false : launch(active)),
     },
-    { facts: url.lane === null ? [] : ["lane-focused"], enabled: !url.cal && url.slot === null },
+    { facts: url.lane === null ? [] : ["lane-focused"], enabled: !url.cal && url.slot === null && url.schedule === null },
   );
 
   const rows = laneRows(url.lane, (l) => (shelfCount(l, data.shelf) ?? 0) > 0);
@@ -253,6 +255,23 @@ export function Floor({ data, initial, produce, calendar, slot, choices }: Floor
           off={url.off}
           onOff={(off) => setUrl((u) => ({ ...u, off: [...off].sort() }))}
           onOpenSlot={openSlot}
+          {...(data.calendar === null ? {} : { channels: data.calendar.channels, mode: data.calendar.mode, ...(data.calendar.tick === undefined ? {} : { tick: data.calendar.tick }), onSchedule: () => setUrl((u) => ({ ...u, schedule: { item: null } })) })}
+        />
+      )}
+      {url.schedule !== null && data.calendar !== null && (
+        <ScheduleLevel
+          port={calendar}
+          facts={data.calendar}
+          slots={data.slots}
+          nowMs={data.now}
+          day={url.day}
+          item={url.schedule.item}
+          onClose={() => setUrl((u) => ({ ...u, schedule: null }))}
+          onFloor={() => setUrl((u) => ({ ...u, schedule: null, cal: false, day: null }))}
+          onMade={(id) => {
+            setUrl((u) => ({ ...u, schedule: null, slot: id }));
+            router.refresh();
+          }}
         />
       )}
       {url.slot !== null && (

@@ -10,10 +10,16 @@ import "../pipeline/lib-hooks.mts";
 import { processSignals, runWorker } from "./worker.ts";
 
 const { producers } = await import("../lib/producers/registry.ts");
+const { publishDeps, publishTimers } = await import("../lib/producers/publish.ts");
 
 process.exitCode = await runWorker(process.argv.slice(2), producers(), {
   out: (line) => void process.stdout.write(`${line}\n`),
   err: (line) => void process.stderr.write(`${line}\n`),
   env: process.env,
   onSignal: processSignals,
+  // The publish tick and the metrics refresh (Phase 6, L62), over the store the worker opened.
+  timers: (store) => {
+    const deps = publishDeps({ store });
+    return deps.ok ? { ok: true, value: publishTimers(deps.value) } : deps;
+  },
 });

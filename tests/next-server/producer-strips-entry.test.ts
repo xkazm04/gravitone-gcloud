@@ -5,24 +5,25 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import { z } from "zod";
 
 vi.mock("server-only", () => ({}));
-// The guard is not what is under test here (tests/next-server/route.test.ts is); the route behind it is.
-vi.mock("../../lib/apiAuth.ts", () => ({ guardRequest: async () => null, guardAccessOnly: async () => null }));
 
 import { parseAt } from "@gt/domain/door";
+import type { Result } from "@gt/domain/errors";
 import { jobIdSchema } from "@gt/domain/ids";
+import type { ComposerInput } from "@gt/domain/produce";
 import { get } from "@gt/kernel/job";
 import { loadRun } from "@gt/kernel/records/schema";
 
-import { POST } from "../../app/api/foundry/strips/route.ts";
+import { makeRealProduce } from "../../app/(studio)/projects/_port/real.ts";
 import { DEFAULT_OPTIONS, DEFAULT_SELECTION } from "../../lib/foundry/strips/cards.ts";
 import { readStripRunNow } from "../../lib/foundry/strips/store.ts";
-import { closeKernel } from "../../lib/kernelStore.ts";
-import { driveStrips, launchStrips, type StripsTarget } from "../../lib/producers/strips.ts";
+import { closeKernel, kernel } from "../../lib/kernelStore.ts";
+import { driveStrips, launchStrips, stripsKernel, type StripsTarget } from "../../lib/producers/strips.ts";
 import { runCli } from "../../pipeline/strips/run.mts";
 
 // A strip run's launch is a receipt, then a confirm (COMMON decision 3), and every door -
-// launchStrips, the CLI, POST /api/foundry/strips - writes a `runs` row and acts on THE SAME
-// job. The CLI keeps its flags and gains --json (one document), exit 0/1/2, --budget-usd,
+// launchStrips, the CLI, the Floor's video composer and the Runs acts - writes a `runs` row
+// and acts on THE SAME job. (Phase 6 L67: the third door was POST /api/foundry/strips, the
+// v1 Strips tab's route, which wave C deletes; the Floor and Runs are the screens now.) The CLI keeps its flags and gains --json (one document), exit 0/1/2, --budget-usd,
 // --dry (a dry JOB) and --detach. Every store is a temp file, and GRAVITONE_DRY_ONLY=1
 // stands for the test lane: nothing here may arm live.
 
@@ -58,8 +59,25 @@ async function cli(argv: string[]): Promise<{ code: number; out: string; err: st
 }
 const docSchema = z.object({ ok: z.boolean(), runId: z.string().optional(), jobId: z.string().optional(), outcome: z.string().optional(), job: z.object({ state: z.string(), mode: z.string() }).nullable().optional(), run: z.object({ status: z.string(), dry: z.boolean() }).optional() }).loose();
 const parseDoc = (s: string) => docSchema.parse(JSON.parse(s));
-const post = (body: unknown) => POST(new Request("http://127.0.0.1:3211/api/foundry/strips", { method: "POST", body: JSON.stringify(body), headers: { "content-type": "application/json" } }));
-const bodyOf = async (r: Response) => z.record(z.string(), z.unknown()).parse(await r.json());
+
+// The Floor's and Runs' server side (app/(studio)/projects/_port/real.ts) over THIS process's
+// kernel - the one the CLI below opens from GRAVITONE_STORE_PATH - exactly as the app binds it.
+const floor = makeRealProduce({
+  store: () => {
+    const k = kernel();
+    return k.ok ? { ok: true, value: k.value.store } : k;
+  },
+  strips: () => stripsKernel(),
+  env: () => ({ ...process.env, ...ENV }),
+  now: () => Date.now(),
+  mint: () => `t${++n}`,
+});
+const who = { who: "kazda" };
+async function v<T>(r: Result<T> | Promise<Result<T>>): Promise<T> {
+  const x = await r;
+  if (!x.ok) throw new Error(`${x.error.code}: ${x.error.message}`);
+  return x.value;
+}
 
 let n = 0;
 const target = (sel: Partial<typeof DEFAULT_SELECTION> = { only: ["E01"] }): StripsTarget => ({ kind: "new", runId: `entry-${++n}`, selection: { ...DEFAULT_SELECTION, ...sel }, options: DEFAULT_OPTIONS });
@@ -107,34 +125,48 @@ describe("launch: a receipt, then a confirm", () => {
   });
 });
 
-describe("the CLI and the route act on the same job", () => {
-  it("the CLI enqueues a dry job (--detach); the route's resume finds THAT job; --resume drives it; --status reads it", async () => {
+describe("the CLI, the Floor and Runs act on the same job", () => {
+  it("the CLI enqueues a dry job (--detach); Runs draws THAT job and pauses and resumes it; --resume drives it; --status reads it", async () => {
     const r = await cli(["--run", "entry-cli", "--only", "E01", "--controls", "--dry", "--detach", "--json"]);
     expect(r.code, r.err).toBe(0);
     const d = parseDoc(r.out);
     expect([d.jobId, d.job?.state, d.job?.mode]).toEqual(["job:run:entry-cli", "queued", "dry"]);
 
-    const res = await post({ run: "entry-cli", resume: true });
-    expect(res.status).toBe(200);
-    const b = await bodyOf(res);
-    expect([b["jobId"], b["existing"]]).toEqual(["job:run:entry-cli", true]);
+    // Runs reads the job the CLI enqueued, and its acts land on that job - not on a second one.
+    const drawn = (await v(floor.listJobs())).filter((j) => j.id === "job:run:entry-cli");
+    expect(drawn.map((j) => j.state)).toEqual(["queued"]);
+    await v(floor.pauseJob({ jobId: "job:run:entry-cli" }, who));
+    expect((await cli(["--status", "entry-cli", "--json"])).out).toMatch(/"state":\s*"paused"/);
+    await v(floor.resumeJob({ jobId: "job:run:entry-cli" }, who));
 
     const go = await cli(["--resume", "--run", "entry-cli", "--json"]);
     expect(go.code, go.err).toBe(0);
     expect(parseDoc(go.out)).toMatchObject({ jobId: "job:run:entry-cli", outcome: "done", run: { status: "awaiting-triage", dry: true } });
     const s = await cli(["--status", "entry-cli", "--json"]);
     expect([s.code, parseDoc(s.out).job?.state]).toEqual([0, "done"]);
+    expect((await v(floor.listJobs())).filter((j) => j.id === "job:run:entry-cli").map((j) => j.state)).toEqual(["done"]);
   });
 
-  it("the route answers a receipt, then enqueues on its token (202); a stale token is a 409 with the fresh receipt", async () => {
-    const body = { run: "entry-route", only: ["E02"] };
-    const r0 = await post(body);
-    expect(r0.status).toBe(200);
-    const receipt = z.object({ token: z.string() }).loose().parse((await bodyOf(r0))["receipt"]);
-    expect((await post({ ...body, token: "f".repeat(64) })).status).toBe(409);
-    const r1 = await post({ ...body, token: receipt.token });
-    expect(r1.status).toBe(202);
-    expect((await bodyOf(r1))["jobId"]).toBe("job:run:entry-route");
+  it("the Floor's video composer answers a receipt, then enqueues on its token; a stale token returns the fresh receipt; the CLI reads that job", async () => {
+    const input: ComposerInput = { lane: "video", text: "the rate hike, counted", subject: "edu-rate-hike" };
+    const receipt = await v(floor.composerReceipt({ input, mode: "dry" }, who));
+    // The run id travels in the token (realLaunch.ts): a forged inner token is stale, never a launch.
+    const runOf = receipt.token.slice(0, receipt.token.lastIndexOf(":"));
+    const stale = await v(floor.launchRun({ input, token: `${runOf}:${"f".repeat(64)}`, mode: "dry" }, who));
+    expect(stale.kind).toBe("stale");
+    if (stale.kind !== "stale") return;
+    expect(stale.fresh.token).toBe(receipt.token);
+    const go = await v(floor.launchRun({ input, token: receipt.token, mode: "dry" }, who));
+    expect(go.kind).toBe("launched");
+    if (go.kind !== "launched") return;
+    expect(go.jobId).toBe(`job:run:${runOf}`);
+    // The CLI, by the run id the Floor minted, names the same job.
+    const s = await cli(["--status", runOf, "--json"]);
+    expect(s.code, s.err).toBe(0);
+    expect([parseDoc(s.out).jobId, parseDoc(s.out).job?.state, parseDoc(s.out).job?.mode]).toEqual([go.jobId, "queued", "dry"]);
+    // Confirming the same receipt again launches nothing new: one job serves a run at a time.
+    const again = await floor.launchRun({ input, token: receipt.token, mode: "dry" }, who);
+    expect(again.ok ? again.value.kind : again.error.code).toBe("conflict");
   });
 
   it("exit codes: 2 for usage, 1 for a live launch this process may not arm", async () => {

@@ -1,0 +1,21 @@
+/* The lesson: the evidence it stands on (counts, the axes that won, the techniques against the
+   losers), the sentence the operator signs, and the list of signed ones. Violet is the lesson's
+   hue (a belief the next hunt is briefed with), emerald what won. */
+.sign{display:grid;gap:var(--sp-3);max-width:calc(var(--w-detail) * 2);padding:var(--sp-3);border-radius:var(--r-tile);border:1px solid color-mix(in srgb,var(--violet) 40%,transparent);background:var(--wash)}
+.evidence{display:flex;gap:var(--sp-2);align-items:center;flex-wrap:wrap}
+.techs{border-collapse:separate;border-spacing:var(--sp-3) var(--sp-1);margin:0 calc(var(--sp-3) * -1);font:500 var(--fs-micro)/1.3 var(--mono);color:var(--muted)}
+.techs th{font-weight:700;text-align:left;text-transform:uppercase;letter-spacing:.1em}
+.techs td{color:var(--text)}
+.won{color:var(--emerald)}
+.claim{min-height:var(--h-wavebox);padding:var(--sp-2) var(--sp-3);border-radius:var(--r-control);border:1px solid var(--hair-2);background:var(--ink-2);font:500 var(--fs-ui)/1.45 var(--sans);color:var(--text);resize:vertical}
+.claim::placeholder{color:var(--faint)}
+.claim:focus-visible{outline:var(--stroke-mark) solid var(--violet);outline-offset:1px}
+.pick{display:flex;gap:var(--sp-1);flex-wrap:wrap}
+.acts{display:flex;gap:var(--sp-2);align-items:center;flex-wrap:wrap}
+.by{font:500 var(--fs-micro)/1.3 var(--mono);color:var(--muted)}
+
+.list{list-style:none;margin:0;padding:0;display:grid;gap:var(--sp-2)}
+.row{display:grid;gap:var(--sp-2);padding:var(--sp-2) var(--sp-3);border-radius:var(--r-tile);border:1px solid var(--hair-2);border-left:var(--stroke-bar) solid var(--violet);background:var(--ink-1)}
+.said{margin:0;font:500 var(--fs-read)/1.5 var(--serif);color:var(--ink-bright)}
+.meta{display:flex;gap:var(--sp-2);align-items:center;flex-wrap:wrap;font:500 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+.meta a{color:var(--cyan)}

@@ -3,16 +3,43 @@
     "mark main.audio-module__sKegKG__main > section.Composer-module__lWpjGq__composer > div.Composer-module__lWpjGq__acts > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
     "text main.audio-module__sKegKG__main > section.Composer-module__lWpjGq__composer > div.Composer-module__lWpjGq__acts > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]"
   ],
+  "audio-batch": [
+    "mark section.insight-module__tVeNWa__batch > section.BatchForm-module__ARvEMa__form > div.BatchForm-module__ARvEMa__acts > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
+    "text section.BatchForm-module__ARvEMa__form > div.BatchForm-module__ARvEMa__acts > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true] > span.Chip-module__v4DkZW__chip.Chip-module__v4DkZW__amber",
+    "text section.insight-module__tVeNWa__batch > section.BatchForm-module__ARvEMa__form > div.BatchForm-module__ARvEMa__acts > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]"
+  ],
+  "audio-batch-sfx": [
+    "mark section.insight-module__tVeNWa__batch > section.BatchForm-module__ARvEMa__form > div.BatchForm-module__ARvEMa__acts > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
+    "text section.BatchForm-module__ARvEMa__form > div.BatchForm-module__ARvEMa__acts > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true] > span.Chip-module__v4DkZW__chip.Chip-module__v4DkZW__amber",
+    "text section.insight-module__tVeNWa__batch > section.BatchForm-module__ARvEMa__form > div.BatchForm-module__ARvEMa__acts > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]"
+  ],
+  "audio-hunt": [
+    "mark div.hunt-module__Q0VyqW__section > form.Hunt-module__64SjFq__idea > div.Hunt-module__64SjFq__ideaActs > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
+    "text div.hunt-module__Q0VyqW__section > form.Hunt-module__64SjFq__idea > div.Hunt-module__64SjFq__ideaActs > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]"
+  ],
+  "audio-hunt-open": [
+    "mark div.hunt-module__Q0VyqW__section > form.Hunt-module__64SjFq__idea > div.Hunt-module__64SjFq__ideaActs > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
+    "text div.hunt-module__Q0VyqW__section > form.Hunt-module__64SjFq__idea > div.Hunt-module__64SjFq__ideaActs > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]"
+  ],
+  "audio-hunt-sfx": [
+    "mark div.hunt-module__Q0VyqW__section > form.Hunt-module__64SjFq__idea > div.Hunt-module__64SjFq__ideaActs > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
+    "text div.hunt-module__Q0VyqW__section > form.Hunt-module__64SjFq__idea > div.Hunt-module__64SjFq__ideaActs > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]"
+  ],
   "foundry": [],
   "kit": [
     "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
     "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn[aria-disabled=true]",
+    "mark div.kit-module__1C-Zxa__spec > form.Hunt-module__64SjFq__idea > div.Hunt-module__64SjFq__ideaActs > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
+    "mark div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > section.BatchForm-module__ARvEMa__form > div.BatchForm-module__ARvEMa__acts > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
     "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
     "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn[aria-disabled=true]",
     "text div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > nav.TabRail-module__BgjLea__rail > a.TabRail-module__BgjLea__tab[aria-disabled=true]",
     "text div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn[aria-disabled=true] > span.Chip-module__v4DkZW__chip > b.Chip-module__v4DkZW__value",
+    "text div.kit-module__1C-Zxa__spec > form.Hunt-module__64SjFq__idea > div.Hunt-module__64SjFq__ideaActs > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
     "text div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn[aria-disabled=true] > span.Chip-module__v4DkZW__chip",
-    "text div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > nav.TabRail-module__BgjLea__rail > a.TabRail-module__BgjLea__tab[aria-disabled=true] > kbd.Keycaps-module__pYObGq__cap.Keycaps-module__pYObGq__sm"
+    "text div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > nav.TabRail-module__BgjLea__rail > a.TabRail-module__BgjLea__tab[aria-disabled=true] > kbd.Keycaps-module__pYObGq__cap.Keycaps-module__pYObGq__sm",
+    "text div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > section.BatchForm-module__ARvEMa__form > div.BatchForm-module__ARvEMa__acts > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
+    "text section.BatchForm-module__ARvEMa__form > div.BatchForm-module__ARvEMa__acts > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true] > span.Chip-module__v4DkZW__chip.Chip-module__v4DkZW__amber"
   ],
   "kit-law": [
     "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",

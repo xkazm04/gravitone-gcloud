@@ -39,3 +39,7 @@
 .reasons{display:flex;flex-wrap:wrap;gap:var(--sp-tight)}
 .ends{margin-left:auto;display:flex;gap:var(--sp-3)}
 @media (prefers-reduced-motion: reduce){.sec,.secTools{transition:none}}
+/* ApproveSchedule: the prototype's channel toggles and proposed time (index.html :848-850). */
+.calendar{display:flex;flex-direction:column;gap:var(--sp-3)}
+.when{display:flex;align-items:center;gap:var(--sp-3)}
+.utc{font:600 var(--fs-micro)/1 var(--mono);color:var(--muted)}

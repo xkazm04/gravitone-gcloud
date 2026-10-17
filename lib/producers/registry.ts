@@ -27,6 +27,7 @@ import { sunoProducer } from "./suno.ts";
 import { mediaFactsBound } from "./media-facts.ts";
 import { styleJobProducer } from "./style.ts";
 import { sunoDriver } from "../sound/suno/drivers.ts";
+import { sfxProducer } from "../sound/sfxJob.ts";
 
 // THE PRODUCERS THIS CHECKOUT CAN RUN (Phase 4, plan §4). One list, read by every
 // process that drives a job - the worker (workers/runner.mts), a producer's CLI, a
@@ -109,6 +110,8 @@ export const BOUND: readonly Bound[] = [
   { name: "dojo", producer: dojoProducer() },
   { name: "media-facts", producer: mediaFactsBound() },
   { name: "style", producer: styleJobProducer() },
+  // The desk's effect batch (Phase 6, L66): one run of N clips through the metered call.
+  ...lanesOf("sfx").map((lane): Bound => ({ name: "sfx", producer: sfxProducer(lane) })),
   ...stepsBound(),
 ];
 

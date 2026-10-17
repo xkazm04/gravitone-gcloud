@@ -34,6 +34,7 @@ const calendar: Binding[] = [
   { mode: "calendar", keys: ["←", "→"], verb: "day", does: "day", repeat: true },
   { mode: "calendar", keys: ["↑", "↓"], verb: "week", does: "week", repeat: true },
   { mode: "calendar", keys: ["[", "]"], verb: "month", does: "month" },
+  { mode: "calendar", keys: ["N"], verb: "schedule", does: "schedule" },
   { mode: "calendar", keys: ["⏎"], verb: "open-day", does: "open", when: "day" },
   { mode: "calendar", keys: ["Esc"], verb: "clear-day", does: "month", when: "day" },
   { mode: "calendar", keys: ["C"], verb: "rail", does: "rail" },
@@ -77,7 +78,7 @@ const board: Binding[] = [
   { mode: "board.review", keys: ["↓"], alias: ["J"], verb: "next-section", does: "section", repeat: true },
   { mode: "board.review", keys: ["E"], verb: "note", does: "note", when: "draft" },
   { mode: "board.review", keys: ["⇧E"], verb: "send-edit-plan", does: "send edit plan" },
-  { mode: "board.review", keys: ["A"], verb: "approve", does: "approve" },
+  { mode: "board.review", keys: ["A"], verb: "approve", does: "approve → calendar" },
   { mode: "board.review", keys: ["R"], verb: "reject", does: "reject" },
   { mode: "board.review", keys: ["Tab"], alias: ["⇧Tab"], verb: "directive", does: "directive", field: "note" },
   { mode: "board.review", keys: ["⏎"], verb: "attach", does: "attach", field: "note", onControl: true },
@@ -272,6 +273,13 @@ const audio: Binding[] = [
   { mode: "audio.arrange", keys: ["F"], verb: "finalize", does: "finalize", when: "card" },
   { mode: "audio.arrange", keys: ["V"], verb: "versions", does: "versions", when: "card" },
   { mode: "audio.arrange", keys: ["Esc"], verb: "leave-field", does: "leave", field: "*" },
+  // L66 - the rubric desk: N/P walk the judged takes, arrows the dimensions, a digit scores it (0 = 10).
+  { mode: "audio.rubric", keys: ["N"], verb: "next", does: "take", repeat: true },
+  { mode: "audio.rubric", keys: ["P"], verb: "prev", does: "take", repeat: true },
+  { mode: "audio.rubric", keys: ["↑", "↓"], verb: "dim", does: "dimension", when: "take", repeat: true },
+  { mode: "audio.rubric", keys: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"], verb: "score", does: "score", when: "take" },
+  { mode: "audio.rubric", keys: ["U"], verb: "clear", does: "clear", when: "take" },
+  { mode: "audio.rubric", keys: ["Space"], verb: "play", does: "play", when: "take" },
 ];
 
 export const BINDINGS: readonly Binding[] = [...floor, ...calendar,

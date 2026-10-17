@@ -43,6 +43,7 @@ import type { RunsData } from "./load.ts";
 import { canMove, canPause, canRetry } from "./Acts.tsx";
 import { DojoDoors, dojoSpec, type DojoPort } from "./DojoDoors.tsx";
 import { Inspector, type InspectorActs } from "./Inspector.tsx";
+import { mvRegenerateSpec, type MvPort } from "./MvActs.tsx";
 import { BACKSTOP_MS, openFeed } from "./liveFeed.ts";
 import { barsOf, blockedOf, depsOf, heldMoney, litOf, pinsOf, projectsOf, rowsOf, step, totalsOf, walkPool } from "./view.ts";
 import s from "./Runs.module.css";
@@ -69,7 +70,7 @@ function urlOf(sel: Selection): string {
 
 const runsHref = (id: string): string => `/projects/runs?project=${encodeURIComponent(id)}`;
 
-export function Runs({ data, initial, port, dojo }: { readonly data: RunsData; readonly initial: Selection; readonly port: ProducePort; readonly dojo: DojoPort }) {
+export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsData; readonly initial: Selection; readonly port: ProducePort; readonly dojo: DojoPort; readonly mv?: MvPort }) {
   const m = data.model;
   const router = useRouter();
   const { toast } = useShell();
@@ -196,6 +197,32 @@ export function Runs({ data, initial, port, dojo }: { readonly data: RunsData; r
     onAck: (lane) => {
       run(() => port.ackLane({ lane }));
     },
+    ...(mv === undefined
+      ? {}
+      : {
+          mv: {
+            onRegenerate: (track, part) =>
+              void flow.open(
+                mvRegenerateSpec(
+                  mv,
+                  track,
+                  part,
+                  (note, ledger) => {
+                    toast(note, ledger);
+                    router.refresh();
+                  },
+                  (msg) => toast(msg),
+                ),
+              ),
+            // A send answers with the slot's own level, not a job's ledger.
+            onSchedule: (track, channel, publishAt) =>
+              void mv.schedule({ track, channel, publishAt }).then((r) => {
+                if (!r.ok) return toast(r.error.error);
+                toast(`${track} · ${channel} · ${r.value.at.slice(0, 16).replace("T", " ")} UTC`, { href: `/floor?slot=${encodeURIComponent(r.value.slotId)}`, subject: r.value.slotId });
+                router.refresh();
+              }),
+          },
+        }),
   };
   // Hover lights a thread only where there is one to light (projects.js mouseover lit a project).
   const hoverLit = hover !== null && deps.some((d) => d.from === hover || d.to === hover) ? hover : null;

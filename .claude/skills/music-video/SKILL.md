@@ -2,7 +2,7 @@
 name: music-video
 memory: none
 category: Content
-description: Turn a folder of finished tracks (an album) into music videos, unattended, on the render box - one Leonardo still per track (GPT Image 2.5 Sunburst through the studio's credit pool), particles and low-band edge light over it, a 1080p mp4 plus a paste-ready YouTube title/description/tags written BESIDE each source file. Wraps pipeline/music-video.mts (plan / run / collect / status); each track is the same kernel job the /foundry Settled column launches. Invoke with /music-video <folder> [--versions all|main|instrumental] [--prompt "..."] [--limit N] [--again] [--dry] [--budget-usd X] [--detach], or /music-video status | collect <folder>.
+description: Turn a folder of finished tracks (an album) into music videos, unattended, on the render box - one Leonardo still per track (GPT Image 2.5 Sunburst through the studio's credit pool), particles and low-band edge light over it, a 1080p mp4 plus a paste-ready YouTube title/description/tags written BESIDE each source file. Wraps pipeline/music-video.mts (plan / run / collect / status); each track is the same kernel job Runs (/projects/runs) shows and acts on. Invoke with /music-video <folder> [--versions all|main|instrumental] [--prompt "..."] [--limit N] [--again] [--dry] [--budget-usd X] [--detach], or /music-video status | collect <folder>.
 argument-hint: "<folder> [--versions all|main|instrumental] [--prompt \"...\"] [--limit N] [--again] [--dry] [--budget-usd X] [--detach] | status | collect <folder>"
 allowed-tools: Read, Bash, PowerShell, Glob, Grep
 ---
@@ -38,8 +38,9 @@ own message already asked for the run with that scope. Never raise the scope pas
 to; `--again` in particular queues a SECOND video for every finished track.
 
 Never use this skill to delete, Drop, Keep, regenerate or publish. Those are the operator's acts:
-Keep / Drop on the Board (`/board/pkt:mv:mv/settled`), the rest in /foundry → Pipeline → Audio →
-Settled. Never close the operator's Chrome.
+Keep / Drop on the Board (`/board/pkt:mv:mv/settled`); Regenerate and Send to Calendar on the
+video's job in Runs (`/projects/runs?job=kernel:job:run:mv.<id>.<stamp>`); the slot then lives on
+the Floor's calendar (`/floor?slot=<id>`). Never close the operator's Chrome.
 
 ## Before the first run on a machine (check, then say what is missing)
 
@@ -107,8 +108,9 @@ Beside each source file `<track>.mp3`, the run writes:
 These two names are the batch's own output and are replaced on a re-run. There is no thumbnail:
 the operator takes one from a frame of the video. Keep / Drop is the operator's verdict on the
 Board: the settled videos are one pile in the Floor's video lane (`/board/pkt:mv:mv/settled`).
-Every job also stays in /foundry → Pipeline → Audio → Settled → Videos, where Regenerate and Send
-to Calendar live.
+Every job also stays in Runs (`/projects/runs`): select the video's job, and its inspector holds
+Regenerate (one part, through a receipt) and Send to Calendar (a channel and a UTC hour). Name that
+place in the report; do not act there for the operator.
 
 ## Report
 

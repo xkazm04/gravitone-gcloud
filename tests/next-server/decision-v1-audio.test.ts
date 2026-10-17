@@ -20,6 +20,8 @@ const ROOT = vi.hoisted(() => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "gt-dv1-audio-"));
   process.env["SOUND_STORE_DIR"] = path.join(dir, "sound");
   process.env["SOUND_LEDGER_PATH"] = path.join(dir, "ledger.json");
+  // The adapter reads the ingest measures from the process kernel (brief vs measured): a temp one.
+  process.env["GRAVITONE_STORE_PATH"] = path.join(dir, "kernel.sqlite");
   return dir;
 });
 
@@ -27,7 +29,10 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+import { putAudioMeasures } from "@gt/kernel/library/measures";
+
 import { audioAdapter, parsePile, type AudioV1 } from "../../lib/decision/v1/sources/audio.ts";
+import { closeKernel, kernel } from "../../lib/kernelStore.ts";
 import type { SoundTake } from "../../lib/sound/types.ts";
 import { must, openFlow } from "./decision-v1-harness.ts";
 
@@ -37,7 +42,10 @@ const blobDir = path.join(ROOT, "blobs");
 const TRACKED = path.resolve("pipeline/sound/ledger.json");
 const trackedBefore = existsSync(TRACKED) ? createHash("sha256").update(readFileSync(TRACKED)).digest("hex") : null;
 
-afterAll(() => rmSync(ROOT, { recursive: true, force: true }));
+afterAll(() => {
+  closeKernel();
+  rmSync(ROOT, { recursive: true, force: true });
+});
 
 const T0 = "2026-10-15T09:00:00.000Z";
 const take = (id: string, over: Partial<SoundTake> = {}): SoundTake => ({
@@ -140,10 +148,58 @@ describe("packet (pure)", () => {
     expect(plan.urls["st-b"]).toBe("/api/sound/takes/st-b/file");
   });
 
+  it("an agent's batch is heard first, then the lab, then returns and imports - oldest first within each", async () => {
+    seed([
+      take("lab-old", { createdAt: "2026-10-15T08:00:00.000Z" }),
+      take("import", { origin: "import", createdAt: "2026-10-14T00:00:00.000Z" }),
+      take("agent-new", { origin: "agent", createdAt: "2026-10-15T08:30:00.000Z" }),
+      take("return", { origin: "suno-return", provider: "suno", createdAt: "2026-10-14T00:00:00.000Z" }),
+      take("agent-old", { origin: "agent", createdAt: "2026-10-15T08:10:00.000Z" }),
+    ]);
+    const plan = must(audioAdapter.packet(must(await audioAdapter.read({ runId: "audio/triage" }))));
+    expect(plan.packet.items.map((c) => c.id)).toEqual(["agent-old", "agent-new", "lab-old", "return", "import"]);
+  });
+
   it("an empty pile is not a packet", () => {
-    const v1: AudioV1 = { runId: RUN, cutoff: CUTOFF, takes: [take("st-x", { verdict: "rejected" })], media: new Map(), ledger: "ledger.json" };
+    const v1: AudioV1 = { runId: RUN, cutoff: CUTOFF, takes: [take("st-x", { verdict: "rejected" })], media: new Map(), ledger: "ledger.json", measures: new Map() };
     const r = audioAdapter.packet(v1);
     expect(r.ok ? "ok" : r.error.code).toBe("not-found");
+  });
+});
+
+describe("brief vs measured on the tile", () => {
+  const measured = { tempoBpm: null, key: null, durationS: null, lufs: null, truePeakDb: null, energy: null };
+
+  it("names what a take missed of its brief, from the take's own measure, and nothing when it held", async () => {
+    seed([
+      take("st-off", { tempoBpm: 120, key: "A minor", durationS: 30, measured: { ...measured, tempoBpm: 96, key: "a minor", durationS: 30.4 } }),
+      take("st-half", { tempoBpm: 120, measured: { ...measured, tempoBpm: 60 }, createdAt: "2026-10-15T09:01:00.000Z" }),
+      take("st-fx", { kind: "sfx", op: "sfx", durationS: 2, measured: { ...measured, durationS: 4.5 }, createdAt: "2026-10-15T09:02:00.000Z" }),
+    ]);
+    const plan = must(audioAdapter.packet(must(await audioAdapter.read({ runId: RUN }))));
+    expect(plan.present.items["st-off"]?.meta).toBe("elevenlabs · compose · 30 s · tempo 120 bpm → 96 bpm −24 bpm");
+    // A clean half is the tracker's octave, said, never a miss.
+    expect(plan.present.items["st-half"]?.meta).toBe("elevenlabs · compose · 30 s · tempo 120 bpm → 60 bpm octave");
+    expect(plan.present.items["st-fx"]?.meta).toBe("elevenlabs · sfx · 5 s · length 2s → 4.5s +2.5s");
+    expect(plan.losses).toEqual([]);
+  });
+
+  it("the ingest measure of the tile's own bytes wins over what v1 measured on the take", async () => {
+    seed([take("st-a", { tempoBpm: 120, measured: { ...measured, tempoBpm: 120 } })]);
+    const sha = createHash("sha256").update("RIFFst-a").digest("hex");
+    const k = kernel();
+    if (!k.ok) throw k.error;
+    must(putAudioMeasures(k.value.store, [{ sha, peaks: [0.1], energy: 0.1, durationS: 31, tempoBpm: 90, key: null, measuredAt: T0, error: null }]));
+    const plan = must(audioAdapter.packet(must(await audioAdapter.read({ runId: RUN }))));
+    expect(plan.present.items["st-a"]?.meta).toBe("elevenlabs · compose · 31 s · tempo 120 bpm → 90 bpm −30 bpm");
+  });
+
+  it("a measure store that will not open is a disclosed loss, never a packet that will not open", async () => {
+    seed([take("st-a")]);
+    const v1 = must(await audioAdapter.read({ runId: RUN }));
+    const plan = must(audioAdapter.packet({ ...v1, measureError: "database is locked" }));
+    expect(plan.packet.items.map((c) => c.id)).toEqual(["st-a"]);
+    expect(plan.losses).toEqual([{ grade: "approximate", reason: "brief vs measured reads the takes' own measures only: database is locked" }]);
   });
 });
 

@@ -1,18 +1,35 @@
 import "server-only";
 
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+
 import { z } from "zod";
 
-import { parseAt, type Parsed } from "@gt/domain/door";
-import { err, type Result } from "@gt/domain/errors";
+import { parseAt, parseJsonAt, type Parsed } from "@gt/domain/door";
+import { err, ok, type Result } from "@gt/domain/errors";
 import type { Actor, EventData } from "@gt/domain/event";
+import { listSlots } from "@gt/kernel/slots/read";
+import type { Store } from "@gt/kernel/store";
 
-import { readMetrics, readPublications, readSchedule } from "../../../../lib/publish/store.ts";
+import { outPath } from "../../../../lib/fixtures/roots.ts";
+import { storeLocation } from "../../../../lib/kernelStore.ts";
 import { bump, facts, words } from "../facts.ts";
 import type { IngestEvent, LiveSlot, ProjectCtx, Projection, Source } from "../types.ts";
 
 // THE CALENDAR, PROJECTED - <publish store>/schedule.json, publications.json
-// and metrics.json (lib/publish/store.ts), read through its unlocked snapshot
-// readers `readSchedule`, `readPublications`, `readMetrics`.
+// and metrics.json (v1 lib/publish/store.ts's three files), read as they stand.
+//
+// PHASE 6 (L63): THE CALENDAR IS THE KERNEL'S. Once the importer has taken v1's
+// files in (pipeline/import/slots.mts, MIGRATED beside them) they are frozen
+// history, and this adapter keeps projecting them only so the ledger's v1 facts
+// stay reconcilable. The LIVE slots - what Runs pins on its calendar row - are
+// the kernel's own rows (@gt/kernel/slots), read from the process's open kernel
+// (a reader never opens a store: ./articles.ts heldByJobs says why). A process
+// with no kernel open (a test over its own files) falls back to v1's unsettled
+// slots, as before. Every slot links to its record on the Floor
+// (`/floor?cal=1&slot=<id>`), which replaced v1's /calendar. The files are read
+// here with fs, not through lib/publish/store.ts: that module is v1's writer and
+// retires with the publish producer (L62).
 //
 // NOT through `listSlots`, which the brief names: it SWEEPS first
 // (lib/publish/schedule.ts sweep, claim: false) - marking overdue slots
@@ -73,24 +90,79 @@ const snapshotSchema = z.object({
   }),
 });
 
-export type PublishSnapshot = Parsed<z.output<typeof snapshotSchema>>;
+/** v1's files, and - when this process holds the kernel open - the kernel's unsettled slots. */
+export type PublishSnapshot = Parsed<z.output<typeof snapshotSchema>> & { readonly kernel?: readonly LiveSlot[] };
 type Slot = PublishSnapshot["schedule"]["slots"][number];
 
 const CALENDAR: Actor = { kind: "machine", id: "calendar" };
 const OPERATOR: Actor = { kind: "operator", id: "operator" };
 const PUBLISHER: Actor = { kind: "machine", id: "publisher" };
-const HREF = "/calendar";
+/** A slot's own record, over the month (app/(studio)/_shell/links.ts calendarFor's address). */
+const hrefOf = (slotId: string): string => `/floor?cal=1&slot=${encodeURIComponent(slotId)}`;
 const UNSETTLED: readonly Slot["status"][] = ["scheduled", "publishing", "missed", "failed"];
 
-async function read(): Promise<Result<PublishSnapshot>> {
-  let raw: unknown;
+/** v1's publish root: PUBLISH_STORE_DIR, else <out>/publish (v1 lib/publish/store.ts storeRoot). */
+export function publishRoot(): string {
+  const env = process.env["PUBLISH_STORE_DIR"]?.trim();
+  return env !== undefined && env !== "" ? path.resolve(env) : outPath("publish");
+}
+
+const anyObject = z.record(z.string(), z.unknown());
+const EMPTY = { "schedule.json": { slots: [] }, "publications.json": { publications: [] }, "metrics.json": { snapshots: [] } } as const;
+
+/** One file as it stands; absent is the empty calendar, unreadable or corrupt is an error (never reset). */
+async function readOne(name: keyof typeof EMPTY): Promise<Result<unknown>> {
+  const file = path.join(publishRoot(), name);
+  let text: string;
   try {
-    const [schedule, publications, metrics] = await Promise.all([readSchedule(), readPublications(), readMetrics()]);
-    raw = { schedule, publications, metrics };
+    text = await readFile(file, "utf8");
   } catch (e) {
-    return err("unavailable", `publish: reading the store failed: ${words(e)}`, { cause: e });
+    if (e instanceof Error && "code" in e && e.code === "ENOENT") return ok(EMPTY[name]);
+    return err("unavailable", `publish: reading ${file} failed: ${words(e)}`, { cause: e });
   }
-  return parseAt("publish store", snapshotSchema, raw);
+  return parseJsonAt(file, anyObject, text);
+}
+
+const UNSETTLED_STATES = ["scheduled", "publishing", "missed", "failed"] as const;
+
+/** The kernel's unsettled slots, when this process holds the kernel open; undefined otherwise. */
+export function kernelSlots(store: Store | undefined): Result<LiveSlot[] | undefined> {
+  if (store === undefined) return ok(undefined);
+  const rows = listSlots(store, { states: [...UNSETTLED_STATES] });
+  if (!rows.ok) return rows;
+  const parts = [...new Set(rows.value.flatMap((r) => (r.slot.partId === undefined ? [] : [r.slot.partId])))];
+  const projects = parts.length === 0 ? ok(new Map<string, string>()) : store.read((r) => new Map(r.all(`SELECT part_id, project_id FROM parts WHERE part_id IN (${parts.map(() => "?").join(", ")})`, ...parts).map((x) => [String(x["part_id"]), String(x["project_id"])] as const)));
+  if (!projects.ok) return projects;
+  return ok(
+    rows.value.map(({ slot: s }) => ({
+      source: "publish",
+      id: s.id,
+      title: s.title,
+      channel: s.channel,
+      projectId: (s.partId === undefined ? undefined : projects.value.get(s.partId)) ?? "",
+      publishAt: s.at,
+      status: s.state === "scheduled" || s.state === "publishing" || s.state === "missed" ? s.state : "failed",
+      ...(s.error === undefined ? {} : { error: s.error }),
+      href: hrefOf(s.id),
+    })),
+  );
+}
+
+function openStore(): Store | undefined {
+  const open = globalThis.__gravitoneKernel;
+  return open === undefined || open.location !== storeLocation() ? undefined : open.kernel.store;
+}
+
+async function read(): Promise<Result<PublishSnapshot>> {
+  const [schedule, publications, metrics] = await Promise.all([readOne("schedule.json"), readOne("publications.json"), readOne("metrics.json")]);
+  if (!schedule.ok) return schedule;
+  if (!publications.ok) return publications;
+  if (!metrics.ok) return metrics;
+  const files = parseAt("publish store", snapshotSchema, { schedule: schedule.value, publications: publications.value, metrics: metrics.value });
+  if (!files.ok) return files;
+  const kernel = kernelSlots(openStore());
+  if (!kernel.ok) return err(kernel.error.code, `publish: reading the kernel's slots failed: ${kernel.error.message}`, { cause: kernel.error });
+  return ok(kernel.value === undefined ? files.value : { ...files.value, kernel: kernel.value });
 }
 
 function eventsOf(s: PublishSnapshot, ctx: ProjectCtx): IngestEvent[] {
@@ -151,12 +223,12 @@ function slotsOf(s: PublishSnapshot): LiveSlot[] {
       // The filter above holds exactly these four; the cast-free narrowing is the guard below.
       status: slot.status === "scheduled" || slot.status === "publishing" || slot.status === "missed" ? slot.status : "failed",
       ...(slot.error === null ? {} : { error: slot.error }),
-      href: HREF,
+      href: hrefOf(slot.id),
     }));
 }
 
 export function projectPublish(s: PublishSnapshot, ctx: ProjectCtx): Projection {
-  return { events: eventsOf(s, ctx), live: [], weir: [], slots: slotsOf(s), tally: tallyOf(s), skipped: [] };
+  return { events: eventsOf(s, ctx), live: [], weir: [], slots: s.kernel ?? slotsOf(s), tally: tallyOf(s), skipped: [] };
 }
 
 export const publishSource: Source<PublishSnapshot> = { id: "publish", read, project: projectPublish };

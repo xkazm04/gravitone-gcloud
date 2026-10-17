@@ -54,10 +54,10 @@ export function sectionsOf(md: string): Record<string, string> {
   return out;
 }
 
-const fill = (tpl: string, slots: Record<string, string>) =>
+export const fill = (tpl: string, slots: Record<string, string>) =>
   tpl.replace(/\{\{([A-Z_]+)\}\}/g, (all, k: string) => (k in slots ? slots[k] : all));
 
-async function promptFile(name: string): Promise<Record<string, string>> {
+export async function promptFile(name: string): Promise<Record<string, string>> {
   const at = path.join(process.cwd(), "pipeline", name);
   let md: string;
   try {
@@ -324,14 +324,16 @@ export function parseHuntMap(json: unknown, kind: SoundKind, idea: string, mint:
  *  board shows which engine drew it (lib/text/types.ts TextProvenance). */
 const draftedBy = (r: TextResult) => `${r.provenance.provider} · ${r.provenance.model} · ${r.provenance.rung}`;
 
-export async function draftHunt(kind: SoundKind, idea: string, reason: ReasonFn = routerReason, now = new Date()): Promise<Hunt> {
+/** `id`: the caller's own (the desk derives it from its op id, so a retried draft finds the hunt
+ *  it made instead of drafting a second); absent, one is minted. */
+export async function draftHunt(kind: SoundKind, idea: string, reason: ReasonFn = routerReason, now = new Date(), id: string = mintId("hn")): Promise<Hunt> {
   const text = idea.trim();
   if (!text) throw new SoundError("a hunt needs an idea: the problem to solve, in your words", 400);
   if (text.length > 2000) throw new SoundError("an idea is at most 2000 characters", 400);
   const [sections, params, ledger] = await Promise.all([promptFile("SOUND-HUNT-PROMPT.md"), readAudioParams(), readLedger()]);
   const out = await reason({ turn: "sound-hunt", prompt: huntPrompt(sections, kind, text, params, ledger.lessons), schema: HUNT_SCHEMA });
   const hunt: Hunt = {
-    id: mintId("hn"),
+    id,
     kind,
     idea: text,
     createdAt: now.toISOString(),

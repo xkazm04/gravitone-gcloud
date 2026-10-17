@@ -1,13 +1,12 @@
 // THE FLOOR'S PURE RULES over what the server read: which lane a run and a pile belong to, the
-// order a lane draws its piles in, the calendar's slots from v1's live slots and the ledger's
-// publications, and the page's URL state. Client-safe: types only from lib/ and @gt/domain.
+// order a lane draws its piles in, and the page's URL state. Client-safe: types only from lib/
+// and @gt/domain. (The calendar's slots are the kernel's own rows since Phase 6 wave B: the v1
+// live read and the ledger's `publish` acts the rail once joined are no longer read here.)
 
-import type { Event } from "@gt/domain/event";
 import type { MediaLane } from "@gt/domain/lane";
-import type { RailSlot } from "@gt/ui/components/floor/calendar.ts";
 import { FLOOR_LANES, isFloorLane } from "@gt/ui/components/floor/floor.ts";
 
-import type { LiveJob, LiveSlot, WeirItem } from "../../../../lib/ledger/v1/types.ts";
+import type { LiveJob, WeirItem } from "../../../../lib/ledger/v1/types.ts";
 import { pileOrder } from "../../_shell/facts.ts";
 
 export type LaneWork = { readonly jobs: readonly LiveJob[]; readonly piles: readonly WeirItem[] };
@@ -27,31 +26,6 @@ export function byLane(jobs: readonly LiveJob[], weir: readonly WeirItem[]): Rea
   return out;
 }
 
-/** v1's unsettled slots as the rail draws them. */
-export function railSlot(s: LiveSlot): RailSlot {
-  return { id: s.id, title: s.title, channel: s.channel, publishAt: s.publishAt, status: s.status, ...(s.error === undefined ? {} : { error: s.error }) };
-}
-
-const text = (v: unknown): string | null => (typeof v === "string" && v !== "" ? v : null);
-
-/**
- * Published slots from the ledger: v1's live read drops a slot once it has published (it is
- * history, lib/ledger/v1 LiveSlot), and the ledger's `publish` act is that history. The title is
- * the slot's own, from its `slot.create` act; a publication whose slot the ledger never saw keeps
- * its slot id as the title rather than a guessed one.
- */
-export function publishedSlots(publishes: readonly Event[], creates: readonly Event[]): RailSlot[] {
-  const titles = new Map<string, string>();
-  for (const c of creates) {
-    const t = text(c.data["title"]);
-    if (t !== null) titles.set(c.subject.id, t);
-  }
-  return publishes.map((p) => {
-    const slotId = text(p.data["slotId"]) ?? p.subject.id;
-    return { id: p.subject.id, title: titles.get(slotId) ?? slotId, channel: text(p.data["channel"]) ?? "unknown", publishAt: p.occurredAt ?? p.at, status: "published" };
-  });
-}
-
 export type FloorUrl = {
   readonly lane: MediaLane | null;
   readonly cal: boolean;
@@ -60,6 +34,8 @@ export type FloorUrl = {
   readonly off: readonly string[];
   /** The slot whose record is open over the Floor (`?slot=<id>`), with or without the month. */
   readonly slot: string | null;
+  /** The schedule sheet (`?new=1`), with the Library item it was asked for (`&item=<id>`). */
+  readonly schedule: { readonly item: string | null } | null;
 };
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -75,8 +51,9 @@ export function parseFloorUrl(q: Readonly<Record<string, string | string[] | und
   const lane = one("lane");
   const day = one("day");
   const slot = one("slot");
+  const item = one("item");
   const off = [...new Set((one("off") ?? "").split(",").filter((c) => CHANNEL.test(c)))].sort();
-  return { lane: isFloorLane(lane) ? lane : null, cal: one("cal") === "1", day: day !== null && DAY.test(day) ? day : null, off, slot: slot !== null && SLOT.test(slot) ? slot : null };
+  return { lane: isFloorLane(lane) ? lane : null, cal: one("cal") === "1", day: day !== null && DAY.test(day) ? day : null, off, slot: slot !== null && SLOT.test(slot) ? slot : null, schedule: one("new") === "1" ? { item: item !== null && SLOT.test(item) ? item : null } : null };
 }
 
 export function floorSearch(u: FloorUrl): string {
@@ -86,9 +63,14 @@ export function floorSearch(u: FloorUrl): string {
   if (u.cal && u.day !== null) q.set("day", u.day);
   if (u.cal && u.off.length > 0) q.set("off", [...u.off].sort().join(","));
   if (u.slot !== null) q.set("slot", u.slot);
+  if (u.schedule !== null) q.set("new", "1");
+  if (u.schedule !== null && u.schedule.item !== null) q.set("item", u.schedule.item);
   const s = q.toString();
   return s === "" ? "" : `?${s.replace(/%2C/g, ",")}`;
 }
 
 /** The slot level's address: the month stays open beneath it when it was. */
 export const slotHref = (id: string, cal = true): string => `/floor?${cal ? "cal=1&" : ""}slot=${encodeURIComponent(id)}`;
+
+/** The schedule sheet's address, over the month: a Library item's Schedule act links here. */
+export const scheduleHref = (item?: string): string => `/floor?cal=1&new=1${item === undefined ? "" : `&item=${encodeURIComponent(item)}`}`;

@@ -13,6 +13,7 @@ import type { LiveJob, WeirItem } from "../../../../lib/ledger/v1/types.ts";
 import { freshLedger } from "../../../../lib/ledger/v1/sync.ts";
 import { liveRead } from "../../_shell/live.ts";
 import { SIDE, serverProduce } from "../../projects/_port/port.ts";
+import type { CalendarFacts } from "../_calendar/contract.ts";
 import { serverCalendar } from "../_calendar/port.ts";
 import { readShelf, type Shelf } from "./shelf.ts";
 
@@ -22,7 +23,8 @@ import { readShelf, type Shelf } from "./shelf.ts";
 //               v1's running jobs (the Foundry column) and its Weir piles;
 //   ratified    the Library/Projects column through v1's readers (./shelf.ts);
 //   slots       the calendar port (../_calendar/port.ts, Phase 6): the fixture's table, or on
-//               the real side v1's unsettled slots and the ledger's publications;
+//               the real side the kernel's slot store - with each channel's readiness and the
+//               publish mode the month draws beside them;
 //   head        the ledger's newest seq, where the live feed continues from.
 //
 // It also asks for a fresh ledger (freshLedger: non-blocking, claim-guarded, at most every
@@ -45,6 +47,8 @@ export type FloorData = {
   readonly produce: "fixture" | "real";
   readonly weir: readonly WeirItem[];
   readonly slots: readonly RailSlot[];
+  /** Channel readiness, publish mode, last scheduled channel; null when the side could not say. */
+  readonly calendar: CalendarFacts | null;
   readonly shelf: Shelf;
   /** Decided packets whose v1 apply has not landed (pending after a failure, or stuck). */
   readonly unapplied: readonly Unapplied[];
@@ -94,5 +98,5 @@ export async function loadFloor(now: number = Date.now()): Promise<FloorData> {
       )
     : [];
 
-  return { now, head, universe: FIXTURE_MODE ? "fixture" : "real", produce: SIDE, jobs: [...live.jobs, ...produced], weir: live.weir, slots, shelf, unapplied, problems };
+  return { now, head, universe: FIXTURE_MODE ? "fixture" : "real", produce: SIDE, jobs: [...live.jobs, ...produced], weir: live.weir, slots, calendar: cal.facts ?? null, shelf, unapplied, problems };
 }

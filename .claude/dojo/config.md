@@ -175,15 +175,22 @@ tracking the human better, and record the decision here):
 
 ## Skill improvement log
 
-- 2026-08-30 — gate rehearsal without the browser: when the Chrome extension is
-  not connected, the Foundry → Dojo gate can be exercised through the app's own
-  routes (`PUT /api/foundry/training/<id>/verdicts`, `POST .../commit`) with
-  `Authorization: Bearer $GRAVITONE_CLI_TOKEN` (2026-10-15: the shared secret is
-  the browser's; mint this skill its own once with
-  `node pipeline/token.mts mint --name dojo-skill --scope read` - these two
-  routes spend nothing) — same code path the tab drives. Reflect must SKIP rows whose cycle id is a fixture:
-  revert `training-ledger.json` and delete `thumbs/fixture-*` instead of
-  editing prompt surfaces.
+- 2026-08-30 — gate rehearsal without the browser (repointed 2026-10-17, Phase 6
+  L67): the gate is the Board's dojo packet (`/board/pkt:dojo:<cycle>`,
+  lib/decision/v1/sources/dojo.ts); v1's training routes are gone. Headless, the
+  same packet is driven by `node pipeline/decide.mts` - no browser, no server,
+  no token - through the kernel's decision driver and the dojo adapter, the
+  path the Board takes: `show pkt:dojo:<cycle> --json` (blind: an unjudged
+  pair's arms carry no words), `pick pkt:dojo:<cycle> <imp>/<pair> a|b|tie|both-bad
+  --by agent` per pair, `preview` for the token, `commit --token <t> --by agent`
+  (the apply writes cycle.json and the ledger through commitCycle; exit 1 on a
+  stale token or an apply that did not land). `--by agent` is required and is
+  the truth for a rehearsal: the ledger then shows the skill decided, never the
+  operator. Rehearse on the fixture universe (`--fixtures` in a scratch cwd
+  seeded by `node pipeline/ledger-sync.mts seed-fixtures`, or `--store
+  <scratch>.sqlite`), never on the operator's store. Reflect must SKIP rows whose
+  cycle id is a fixture: revert `training-ledger.json` and delete
+  `thumbs/fixture-*` instead of editing prompt surfaces.
 - 2026-08-30 — first live window (2 cycles, 24 candidates, ~1h40 GPU): the
   forge takes ONE style id per plan, so an A/B is run by pre-building
   `run.json` with both arms and launching with `--resume` (the plan file is

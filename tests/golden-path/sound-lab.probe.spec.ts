@@ -90,16 +90,16 @@ test("registry: Suno composes through the browser job, ElevenLabs is copy-only w
   expect(can(suno, "file-return")).toBe(true);
   expect(can(suno, "sfx")).toBe(false);
   expect(el?.transport).toBe("api");
-  expect(el?.ops).toEqual(["prompt-copy"]);
-  expect(el === undefined ? null : engineState(el)).toBe("copy-only");
-  expect(el?.withheld).toEqual(["compose", "plan", "section-edit", "sfx"].map((op) => ({ op, reason: NO_DESK_PRODUCER })));
+  expect(el?.ops).toEqual(["prompt-copy", "sfx"]);
+  expect(el === undefined ? null : engineState(el)).toBe("live");
+  expect(el?.withheld).toEqual(["compose", "plan", "section-edit"].map((op) => ({ op, reason: NO_DESK_PRODUCER })));
   expect(local?.transport).toBe("none");
   expect(local === undefined ? null : engineState(local)).toBe("not-installed");
   expect(local?.ops).toEqual([]);
   expect(local?.needs?.length).toBeGreaterThan(0);
-  // Who makes what on the desk: Suno songs; nobody effects.
+  // Who makes what on the desk: Suno songs; ElevenLabs effects, as the sfx producer's batch (L66).
   expect(makersOf(on, "music").map((e) => e.id)).toEqual(["suno"]);
-  expect(makersOf(on, "sfx")).toEqual([]);
+  expect(makersOf(on, "sfx").map((e) => e.id)).toEqual(["elevenlabs"]);
 
   // A capability switched off: the op keeps its place, now with the deployment's reason verbatim.
   const noSfx = engineById(engineRegistry({ musicSectionEdit: true, musicSfx: false }), "elevenlabs");

@@ -20,10 +20,15 @@ import { capsFor } from "../keycaps/caps.ts";
 import keycap from "../keycaps/Keycaps.module.css";
 import { EntryPill } from "../status/StatusPill.tsx";
 import { statusOf } from "../status/status.ts";
+import { Chip } from "../chip/Chip.tsx";
+import { ErrorLine } from "../errorline/ErrorLine.tsx";
+import { SrOnly } from "../a11y/SrOnly.tsx";
 import { Tally } from "../tally/Tally.tsx";
 import { BADGE_CHANNELS } from "../channel/ChannelBadge.tsx";
 import { vars } from "../vars.ts";
 import { MONTHS, WEEK, byDay, clock, dayKey, dayLabel, isBad, monthCells, needsDecision, type RailSlot, type YearMonth } from "./calendar.ts";
+import { ChannelReadiness, STATE_WORDS } from "./ChannelReadiness.tsx";
+import type { ChannelReady, PublishTick } from "./schedule.ts";
 import { SlotMark, SlotRow } from "./SlotRow.tsx";
 import s from "./MonthCalendar.module.css";
 
@@ -46,10 +51,27 @@ export type MonthCalendarProps = {
   readonly slotHref?: (id: string) => string;
   readonly onOpenSlot?: (id: string) => void;
   readonly panelRef?: Ref<HTMLElement>;
+  /** Each channel's readiness (Phase 6): drawn in the agenda, and its state word on the toggle. */
+  readonly channels?: readonly ChannelReady[];
+  /** How a publish goes out here: a plan written (dry) or an upload (live). */
+  readonly mode?: "dry" | "live";
+  /** Open the schedule form, on the selected day when there is one. */
+  readonly onSchedule?: (day: string | null) => void;
+  /** The worker's publish timer; absent when the side cannot say. */
+  readonly tick?: PublishTick;
 };
 
+/** The timer as one chip: its last tick while it runs, else that nothing ticks. */
+function TickChip({ tick }: { readonly tick: PublishTick }) {
+  const last = tick.lastRunAt === null ? null : clock(Date.parse(tick.lastRunAt));
+  if (tick.failing !== undefined) return <Chip label={`tick failing · since ${clock(Date.parse(tick.failing.since))}`} tone="rose" casing="lower" />;
+  if (!tick.running) return <Chip label={last === null ? "tick · never ran" : `tick stopped · ${last}`} tone="rose" casing="lower" />;
+  return <Chip label={`tick · ${last ?? "—"}`} tone="cyan" casing="lower" />;
+}
+
 export function MonthCalendar(p: MonthCalendarProps) {
-  const { slots, nowMs, month, day, channelsOff, onMonth, onToday, onDay, onChannel, onClose, slotHref, onOpenSlot, panelRef } = p;
+  const { slots, nowMs, month, day, channelsOff, onMonth, onToday, onDay, onChannel, onClose, slotHref, onOpenSlot, panelRef, channels, mode, onSchedule, tick } = p;
+  const stateOf = (c: string) => channels?.find((x) => x.channel === c)?.state;
   const shown = slots.filter((x) => !channelsOff.has(x.channel));
   const days = byDay(shown);
   const { weeks, cells } = monthCells(month);
@@ -75,13 +97,20 @@ export function MonthCalendar(p: MonthCalendarProps) {
           <Button label="›" size="sm" onPress={() => onMonth(1)} />
         </div>
         <div className={s.group} role="group" aria-label="channels">
-          {chans.map((c) => (
-            <button key={c} type="button" className={s.chan} aria-pressed={!channelsOff.has(c)} onClick={() => onChannel(c)}>
-              <SlotMark channel={c} />
-              <span aria-hidden="true">{slots.filter((x) => x.channel === c).length}</span>
-            </button>
-          ))}
+          {chans.map((c) => {
+            const st = stateOf(c);
+            // Only a channel nothing can publish on says so on its toggle; the rest speak their state.
+            return (
+              <button key={c} type="button" className={s.chan} aria-pressed={!channelsOff.has(c)} data-state={st} onClick={() => onChannel(c)}>
+                <SlotMark channel={c} />
+                <span aria-hidden="true">{slots.filter((x) => x.channel === c).length}</span>
+                {st === "not_wired" ? <span className={s.chanState}>{STATE_WORDS[st]}</span> : st !== undefined && <SrOnly text={STATE_WORDS[st]} />}
+              </button>
+            );
+          })}
         </div>
+        {mode !== undefined && <Chip label={mode === "dry" ? "dry run" : "live"} tone={mode === "dry" ? "amber" : "emerald"} casing="lower" />}
+        {tick !== undefined && <TickChip tick={tick} />}
         <div className={s.tallies}>
           {STATES.map((st) => {
             const n = inMonth.filter((x) => x.status === st).length;
@@ -94,6 +123,7 @@ export function MonthCalendar(p: MonthCalendarProps) {
           })}
         </div>
         <div className={s.close}>
+          {onSchedule !== undefined && <Button label="Schedule" tone="violet" size="sm" onPress={() => onSchedule(day)} />}
           {close !== undefined && <kbd className={keycap.cap}>{close}</kbd>}
           <Button label="rail" size="sm" onPress={onClose} />
         </div>
@@ -151,6 +181,11 @@ export function MonthCalendar(p: MonthCalendarProps) {
             <>
               <div className={s.sideHead}>
                 {dayLabel(day)} <Tally value={selected.length} label="slots" />
+                {onSchedule !== undefined && (
+                  <span className={s.push}>
+                    <Button label="Schedule" tone="violet" size="sm" onPress={() => onSchedule(day)} />
+                  </span>
+                )}
               </div>
               {selected.map((x) => (
                 <SlotRow key={x.id} slot={x} {...href(x.id)} />
@@ -170,6 +205,15 @@ export function MonthCalendar(p: MonthCalendarProps) {
               {upcoming.map((x) => (
                 <SlotRow key={x.id} slot={x} showError={false} {...href(x.id)} />
               ))}
+              {channels !== undefined && channels.length > 0 && (
+                <>
+                  <div className={cx(s.sideHead, s.chans)}>
+                    channels <Tally value={channels.filter((c) => c.state === "not_wired").length} label="not wired" />
+                  </div>
+                  {tick?.failing !== undefined && <ErrorLine message={tick.failing.error} />}
+                  <ChannelReadiness channels={channels} />
+                </>
+              )}
             </>
           )}
         </aside>

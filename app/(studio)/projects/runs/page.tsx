@@ -17,6 +17,7 @@ import { PRODUCE_PORT } from "../_port/wire.ts";
 import { dojoReceipt, startDojo } from "./_runs/dojo.ts";
 import { loadRuns } from "./_runs/load.ts";
 import { Runs } from "./_runs/Runs.tsx";
+import { mvRegenerate, mvRegenerateReceipt, mvSchedule } from "./_runs/mvActs.ts";
 
 export const metadata: Metadata = { title: "Gravitone · Runs" };
 
@@ -30,5 +31,5 @@ export default async function RunsPage({ searchParams }: { readonly searchParams
   };
   const zoom = one("zoom");
   const data = await loadRuns();
-  return <Runs data={data} port={PRODUCE_PORT} dojo={{ receipt: dojoReceipt, start: startDojo }} initial={{ job: one("job"), project: one("project"), zoom: isZoom(zoom) ? zoom : DEFAULT_ZOOM }} />;
+  return <Runs data={data} port={PRODUCE_PORT} dojo={{ receipt: dojoReceipt, start: startDojo }} mv={{ receipt: mvRegenerateReceipt, regenerate: mvRegenerate, schedule: mvSchedule }} initial={{ job: one("job"), project: one("project"), zoom: isZoom(zoom) ? zoom : DEFAULT_ZOOM }} />;
 }

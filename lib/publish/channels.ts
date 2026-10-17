@@ -42,6 +42,11 @@ export const PUBLISH_ENV_VARS: readonly string[] = [
 
 export const CHANNEL_IDS: readonly ChannelId[] = ["youtube", "tiktok", "instagram"];
 
+/** The channels a slot may fire on: the ones with an adapter (lib/producers/publish.ts), which
+ *  are exactly the rows below whose status is never `not_wired`. Read by the tick's sweep without
+ *  the CLI probe, so a thirty-second timer never forks a `where` to learn a constant. */
+export const WIRED_CHANNELS: readonly ChannelId[] = ["youtube"];
+
 export class PublishConfigError extends Error {
   constructor(message: string) {
     super(message);
@@ -60,7 +65,7 @@ export function publishModeFromEnv(env: NodeJS.ProcessEnv = process.env): Publis
 /** Minutes past `publishAt` after which a slot is MISSED rather than published
  *  late (StatReel calendar.ts: "a stale private upload after downtime is worse
  *  than none"). Unset or not a positive number = 60. */
-export function missedWindowMs(env: NodeJS.ProcessEnv = process.env): number {
+export function missedWindowMs(env: Readonly<Record<string, string | undefined>> = process.env): number {
   const m = Number(env[PUBLISH_MISSED_MIN_VAR]);
   return Number.isFinite(m) && m > 0 ? m * 60_000 : 60 * 60_000;
 }

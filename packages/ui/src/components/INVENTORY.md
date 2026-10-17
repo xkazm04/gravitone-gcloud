@@ -142,6 +142,8 @@ Where this port moved from the prototype:
 | `MonthCalendar` | index.html `renderMonth`, `MonthSlot`; `#month`, `.mday`, `.mslot`, `.m-side` | F | Monday-first whole weeks; out/past/today/selected/has-fail days; slot rule per look; +N past MAX_PER_DAY; channel toggles; month state counts; day or month agenda |
 | `SlotDetail` | index.html slot level (`openLevel({kind:"slot"})`) | F | the slot record: player or blog PR card, description verbatim, error on the `UpstreamBreak` chain scheduled → auth → upload → live, metrics as Tallies (null —, lower bound ≥ N), verbs |
 | `SlotConfirm` | `consequence/` vocabulary | F | cancel / publish-now confirm naming the slot and the consequence |
+| `ScheduleForm` (+ `schedule.ts`) | v1 app/calendar/Composer.tsx | F | export x channel x UTC hour x title/description/tags; warns a past hour, a same-minute clash, an export already on the channel; engine refusal verbatim; blog never offered |
+| `ChannelReadiness` | v1 app/calendar/ChannelsTab.tsx | F | per channel live / dry / not wired (env NAMES only) / act (blog); standing failure with its count in a row; the CLI command to wire it |
 | `slot.ts` | index.html slot verbs; v1 app/calendar/calendarModel.ts | F | verb rules (movable, cancellable, publishable; blog never uploads), UTC move field from the next full hour, `breakOf`, `figure` |
 | `NextButton`, `SpendChip`, `LedgerDelta` | shell.js `header()` `.next-btn`, `.hdr-spend`, `#hdr-ses` | all | NEXT with title, size, ⏎ / weir clear; spend total with each non-real source's share, `+` when the read was capped; ledger +N (cyan when new) |
 | `FloorGlyph` | shell.js `I.image/article/audio/video`, `I.cull/pair/review`, `I.lock/expand/collapse/chevL/chevR` | F | the Floor's own marks, beside the Floor rather than in `Glyph` |
@@ -179,6 +181,7 @@ Where this port moved from the prototype:
 | `Plate` | every `<img>` a desk draws | F | lazy or eager; the one exemption from next/image (a candidate is judged as its own bytes) |
 | `BlindPair` | index.html `BlindPair`; `.pair-q`, `.pair-arms`, `.arm` (+ `.picked .dropped .bad`), `.armcap`, `.masked`, `.agree-banner` | F | masked arms / revealed for a beat (agrees, differs, not comparable) / summary with agreement tally |
 | `PacketReview`, `ArticlePage`, `EditNote` | index.html `ArticleReview`, `EditNote`; `.page-wrap`, `.sec` (+ `.focus .noted .sec-tools`), `.directives`, `.note-chip`, `.review-side`, `.rev`, `.checkrow` | F | illustrative / stand-in draft; section focus and notes; the five directives; reviewers' quorum pips; edit plan; reject reasons from the source |
+| `ApproveSchedule` (+ `review/schedule.ts`) | index.html `Approve → calendar` :659, :848-850 | F | the calendar half of Approve: channel + UTC hour, proposed next day 08:00 UTC; a malformed `calendar:` line refused, never read as none |
 | `CutReview` | index.html `CutReview`; `.player`, `.beats`, `.beat` (+ `.focus .noted`) | F | player, caption beats with seek, a note per beat; approve / reject |
 | `ConsequencePanel` | none (decision 6 is new) | F | reading / shown with counts, outward acts verbatim, deletes, promotions, writes, renames, near-duplicates, token / moved (stale preview replaced) / the failure verbatim |
 
@@ -235,3 +238,5 @@ Where this port moved from the prototype:
 | Kit name | Replaces (v1) | Pages | States / variants |
 | --- | --- | --- | --- |
 | `ArrangeBoard`, `TakeCard`, `RowHead`/`RowFoot`, `LabelPrompt`, `RoundTrip`, `EngineList` (+ `arrange.ts`, `arrangeGroups.ts`) | app/playground/arrange/*, engines.ts | /audio | card provisional/pending, vN versions open, finalized label; cell lit on drag; withheld op with reason |
+| `StrengthTable`/`StrengthHead`, `RubricCard`, `BriefDelta`, `BatchForm` (+ `strengths.ts`, `rubric.ts`, `brief.ts`, `batch.ts`) | app/playground/triage/{Strengths,Judge,Batch}.tsx, shared/Rubric.tsx | /audio, Board audio tile | cell measured/waiting/empty, heat ±2; dim scored/unscored/busy, proven; axis held/missed/octave/unmeasured; batch music/sfx, problem badge |
+| `HuntShelf`/`HuntIdea`, `HuntMap`, `HuntRenderBar`, `HuntAudition`, `LessonForm`, `LessonList` (+ `hunt.ts`, `lesson.ts`) | app/playground/hunt/*, hunt/Lesson.tsx | /audio | idea / drafting / map; leaf idle-selected-rendering-rendered-crowned; render bar priced in audio-seconds; audition side by side; lesson draft / hand / signed, refused without "because" or under three takes |

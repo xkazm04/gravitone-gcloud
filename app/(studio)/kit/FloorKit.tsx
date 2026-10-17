@@ -8,11 +8,14 @@
 import { useState } from "react";
 
 import { CalendarColumn } from "@gt/ui/components/floor/CalendarColumn.tsx";
+import { ChannelReadiness } from "@gt/ui/components/floor/ChannelReadiness.tsx";
 import { FloorGlyph } from "@gt/ui/components/floor/FloorGlyph.tsx";
 import { Lane, LaneSummary } from "@gt/ui/components/floor/Lane.tsx";
 import { MonthCalendar } from "@gt/ui/components/floor/MonthCalendar.tsx";
 import { Pile } from "@gt/ui/components/floor/Pile.tsx";
 import { RunRow } from "@gt/ui/components/floor/RunRow.tsx";
+import { ScheduleForm } from "@gt/ui/components/floor/ScheduleForm.tsx";
+import type { ChannelReady, ScheduleItem } from "@gt/ui/components/floor/schedule.ts";
 import { ShelfCell, ShelfGrid, ShelfList, ShelfRow, ShelfStyle } from "@gt/ui/components/floor/ShelfCell.tsx";
 import { SlotConfirm } from "@gt/ui/components/floor/SlotConfirm.tsx";
 import { SlotDetail, type SlotView } from "@gt/ui/components/floor/SlotDetail.tsx";
@@ -43,6 +46,18 @@ const SLOTS: readonly RailSlot[] = [
   slot("s7", "Edu radar · long", "2026-10-10T15:00:00.000Z", "published"),
   { ...slot("s8", "Signal Room · square", "2026-10-16T13:00:00.000Z", "scheduled", "instagram"), drift: "channel_not_wired" },
   slot("s9", "The quiet tariff · square", "2026-10-14T08:00:00.000Z", "cancelled", "instagram", "upload: 400 invalid_container - The video container is not supported; re-export as MP4 (H.264)."),
+];
+
+const CHANNELS: readonly ChannelReady[] = [
+  { channel: "youtube", state: "dry", env: [{ name: "YT_CLIENT", present: true }, { name: "YT_REFRESH", present: false }], note: "dry: publishing writes a request plan, no upload", command: "npx tsx pipeline/publish.mts channels --json", lastOut: "2026-10-10T15:00:04.000Z", lastFailure: { at: "2026-10-13T18:00:05.000Z", error: "upload: 403 quotaExceeded - the channel's daily upload quota is spent", inARow: 2 } },
+  { channel: "instagram", state: "not_wired", env: [{ name: "IG_TOKEN", present: false }], note: "Graph API adapter not built", command: "npx tsx pipeline/publish.mts channels --json" },
+  { channel: "blog", state: "act", env: [], command: "node pipeline/article.mts status" },
+];
+
+const ITEMS: readonly ScheduleItem[] = [
+  { id: "video:export:chokepoint", title: "Chokepoint explainer", meta: "film · 63.5 MB", poster: "/clips/presets/blueprint.jpg" },
+  { id: "video:export:quiet-tariff", title: "The quiet tariff", meta: "ad · 9.1 MB", poster: "/clips/presets/chalk-argument.jpg" },
+  { id: "video:export:river-steps", title: "Two hundred days of rain", meta: "music-video · 54.0 MB" },
 ];
 
 const FAILED: SlotView = {
@@ -184,6 +199,14 @@ export function FloorSection() {
         <SlotConfirm verb="Cancel slot" object="Chokepoint explainer · youtube · Tue 13 Oct · 18:00 UTC" consequences={["cancelled · stays in the calendar, struck", "final · it never publishes"]} tone="rose" busy={false} onConfirm={() => undefined} onCancel={() => undefined} specimen />
       </Spec>
 
+      <Spec names={["ScheduleForm"]} source="floor/ScheduleForm.tsx · v1 app/calendar/Composer.tsx" wide>
+        <ScheduleForm items={{ kind: "read", items: ITEMS }} channels={CHANNELS} slots={SLOTS} nowMs={NOW} day="2026-10-16" item={null} lastChannel="youtube" busy={false} refusal="video:export:chokepoint is already on youtube (slot s5, scheduled for 2026-10-16T12:00:00.000Z)" onSchedule={() => undefined} />
+      </Spec>
+
+      <Spec names={["ChannelReadiness"]} source="floor/ChannelReadiness.tsx · v1 app/calendar/ChannelsTab.tsx">
+        <ChannelReadiness channels={CHANNELS} />
+      </Spec>
+
       <Spec names={["MonthCalendar"]} source="floor/MonthCalendar.tsx · index.html renderMonth" wide>
         <div className={k.month}>
           <MonthCalendar
@@ -204,6 +227,10 @@ export function FloorSection() {
               })
             }
             onClose={() => setDay(null)}
+            channels={CHANNELS}
+            mode="dry"
+            tick={{ running: true, lastRunAt: "2026-10-15T09:11:30.000Z", nextDueAt: "2026-10-15T09:12:00.000Z" }}
+            onSchedule={() => undefined}
           />
         </div>
       </Spec>

@@ -37,7 +37,7 @@ export type Mutant = {
  * unguarded probe lowers the live count and the same probe asks for this number
  * to be lowered to match, so the gain is kept.
  */
-export const UNGUARDED_PROBE_BUDGET = 189;
+export const UNGUARDED_PROBE_BUDGET = 188;
 
 export const MUTANTS: Mutant[] = [
   {
@@ -431,5 +431,21 @@ export const MUTANTS: Mutant[] = [
     find: "engineLabel: \"no spine composed yet\",",
     replace: "engineLabel: \"0 frames derived - see the shots view\",",
     why: "A trailer with no spine tells the creator its cut has zero frames and narrates the app instead of naming the work.",
+  },
+  {
+    id: "l66-probe-strength-floor",
+    probe: "sound-triage.probe.spec.ts",
+    file: "packages/ui/src/components/audio/strengths.ts",
+    find: "if (c.n < MIN_N) return { state: \"insufficient\", n: c.n, need: MIN_N - c.n };",
+    replace: "if (false) return { state: \"insufficient\", n: c.n, need: MIN_N - c.n };",
+    why: "A strengths cell over one or two takes prints a keep rate and a mean, and a lesson is drafted from a 100% that two takes made.",
+  },
+  {
+    id: "l66-probe-queue-agents-first",
+    probe: "sound-triage.probe.spec.ts",
+    file: "lib/sound/triageOrder.ts",
+    find: "ORIGIN_RANK[a.origin] - ORIGIN_RANK[b.origin] || ",
+    replace: "",
+    why: "The judging queue hears imports and returns before the agent batch somebody is waiting on.",
   },
 ];

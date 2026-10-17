@@ -74,6 +74,9 @@ export interface UploadVideoOptions {
   onSession?: (sessionUri: string) => void | Promise<void>;
   /** refuse before any request when the file's streamed sha256 differs */
   expectedSha256?: string;
+  /** fires after every chunk the server accepted (live only): the caller's heartbeat. A throw
+   *  ends the upload - a publisher that lost its claim must stop sending (Phase 6, L62). */
+  onProgress?: (sentBytes: number, totalBytes: number) => void | Promise<void>;
 }
 
 export interface UploadVideoResult {
@@ -128,6 +131,15 @@ const MIME: Record<string, string> = {
   ".srt": "application/octet-stream",
   ".vtt": "application/octet-stream",
 };
+
+/** The only place a resumable upload session may point: https on a Google API host
+ *  (outbound-notifications: destination-guard-integrity). Held against the Location header the
+ *  session comes from and against a session read back from disk (./sessions.ts). */
+export function sessionUriAllowed(uri: string): boolean {
+  if (!URL.canParse(uri)) return false;
+  const u = new URL(uri);
+  return u.protocol === "https:" && u.username === "" && u.password === "" && (u.hostname === "www.googleapis.com" || u.hostname.endsWith(".googleapis.com"));
+}
 
 /** Streamed: an export is hundreds of MB and is never held whole in memory. */
 export async function sha256File(file: string): Promise<string> {
@@ -285,7 +297,8 @@ export class YouTubeClient {
       return { id: dryVideoId(ref.sha256, req.title), privacyStatus: "private", mode: "dry", file: ref };
     }
 
-    let resume = options.resumeSessionUri;
+    // A persisted session is a destination from disk; resumed only when it is the platform's shape.
+    let resume = options.resumeSessionUri !== undefined && sessionUriAllowed(options.resumeSessionUri) ? options.resumeSessionUri : undefined;
     let video: YouTubeVideo | undefined;
     for (let restarts = 0; !video; restarts++) {
       try {
@@ -300,7 +313,7 @@ export class YouTubeClient {
           session = await this.createSession(initUrl, initHeaders, bodyText);
           await options.onSession?.(session);
         }
-        video = (done ?? (await this.uploadChunks(session, req.file, ref, offset))) as YouTubeVideo;
+        video = (done ?? (await this.uploadChunks(session, req.file, ref, offset, options.onProgress))) as YouTubeVideo;
       } catch (err) {
         // a forgotten session restarts with a fresh one, ONCE; anything else is the caller's
         if (!(err instanceof SessionGoneError) || restarts >= 1) throw err;
@@ -331,11 +344,13 @@ export class YouTubeClient {
       await this.ensureOk(res, "videos.insert (init)");
       const session = res.headers.get("location");
       if (!session) throw new YouTubeApiError("resumable session URI missing (no Location header)", res.status);
+      // Every hop is a new decision: the bytes and the bearer token go wherever this says.
+      if (!sessionUriAllowed(session)) throw new YouTubeApiError(`resumable session URI refused: ${session.slice(0, 120)} is not an https googleapis.com address`, res.status);
       return session;
     }
   }
 
-  private async uploadChunks(session: string, filePath: string, ref: FileRef, startOffset = 0): Promise<unknown> {
+  private async uploadChunks(session: string, filePath: string, ref: FileRef, startOffset = 0, onProgress?: UploadVideoOptions["onProgress"]): Promise<unknown> {
     const fh = await open(filePath, "r");
     try {
       let offset = startOffset;
@@ -365,6 +380,7 @@ export class YouTubeClient {
           if (next > offset) {
             offset = next;
             attempt = 0;
+            await onProgress?.(offset, ref.bytes);
             continue;
           }
           // the server kept nothing of this chunk: a stall spends the retry budget, never resets it
@@ -515,6 +531,9 @@ export class YouTubeClient {
     return this.fetchImpl(url, {
       method,
       headers: h,
+      // A 3xx is answered, never followed: a Location from the wire is a destination nobody
+      // validated, and following it would re-send the bytes and the token there.
+      redirect: "manual",
       body: body === undefined ? undefined : new Uint8Array(typeof body === "string" ? Buffer.from(body) : body),
     });
   }

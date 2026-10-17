@@ -21,13 +21,24 @@
 // public bundle value lib/apiAuth.ts documents. A post served with `k` has its
 // relative src/href rewritten to carry it, or every figure inside the frame
 // would be refused. Access-checked, not rate-limited: a post is a dozen files.
+//
+// KEPT PAST PHASE 6: the Board's article packet (lib/decision/v1/sources/article.ts)
+// frames the post from here. The studio sends no `k` - it holds the session cookie,
+// which v1's door never read - so a refusal with nothing presented is asked again
+// through route()'s guard (app/_server/route.ts guardOf), the cookie consulted only
+// when no credential of its own was presented; a post framed that way needs no
+// rewrite, its figures ride the same cookie. `k` goes with the last v1 page.
+// THE BYTES ARE serveFile()'s (app/_server/serveFile.ts, Phase 6 L67), streamed with
+// an ETag, except the one body this route must rewrite (a post served with `k`).
 
-import { readFile, stat } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { guardAccessOnly } from "@/lib/apiAuth";
 import { inRun } from "@/lib/articles/store";
 
+import { guardOf } from "../../../../../_server/route.ts";
+import { serveFile } from "../../../../../_server/serveFile.ts";
 import { carryKey, failure } from "../../../_lib/respond";
 
 export const runtime = "nodejs";
@@ -50,7 +61,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ runId: s
   const k = url.searchParams.get("k");
   const probe = k ? new Request(req.url, { headers: { authorization: `Bearer ${k}` } }) : req;
   const denied = await guardAccessOnly(probe);
-  if (denied) return denied;
+  if (denied !== null && !("who" in (await guardOf(probe, "access")))) return denied;
 
   const { runId, path: parts } = await params;
   const rel = parts.join("/");
@@ -61,14 +72,20 @@ export async function GET(req: Request, { params }: { params: Promise<{ runId: s
   }
   try {
     const abs = inRun(runId, rel);
-    const s = await stat(abs).catch(() => null);
-    if (!s?.isFile()) return Response.json({ error: `run ${runId} has no ${rel}`, code: "not-found" }, { status: 404 });
     const ext = path.extname(abs).toLowerCase();
+    const extra: Record<string, string> = { "x-content-type-options": "nosniff" };
+    if (ext === ".html" || ext === ".svg") extra["content-security-policy"] = UNTRUSTED_CSP;
     const type = MIME[ext] ?? "application/octet-stream";
-    const headers: Record<string, string> = { "content-type": type, "cache-control": "no-store", "x-content-type-options": "nosniff" };
-    if (ext === ".html" || ext === ".svg") headers["content-security-policy"] = UNTRUSTED_CSP;
-    if (ext === ".html" && k) return new Response(carryKey(await readFile(abs, "utf8"), k), { headers });
-    return new Response(new Uint8Array(await readFile(abs)), { headers });
+    if (ext === ".html" && k) {
+      const html = await readFile(abs, "utf8").catch(() => null);
+      if (html === null) return Response.json({ error: `run ${runId} has no ${rel}`, code: "not-found" }, { status: 404 });
+      return new Response(carryKey(html, k), { headers: { "content-type": type, "cache-control": "no-store", ...extra } });
+    }
+    // A draft is rewritten in place while the run works: never held, never seeked.
+    const res = await serveFile(req, abs, { mime: type, cache: "no-store", ranges: false });
+    if (res.status === 404) return Response.json({ error: `run ${runId} has no ${rel}`, code: "not-found" }, { status: 404 });
+    for (const [h, v] of Object.entries(extra)) res.headers.set(h, v);
+    return res;
   } catch (e) {
     return failure(e);
   }

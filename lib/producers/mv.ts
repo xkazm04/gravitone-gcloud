@@ -277,7 +277,8 @@ async function nameJobs(jobIds: readonly string[]): Promise<void> {
   });
 }
 
-async function mvSpec(ids: readonly string[]): Promise<LaunchSpec> {
+/** The launch of records `ids` as they stand in mv.json (./mvActs.ts prices a Regenerate with it). */
+export async function mvSpec(ids: readonly string[]): Promise<LaunchSpec> {
   const f = await readMv();
   const lines = ids.map((id) => {
     const j = f.jobs.find((x) => x.id === id);

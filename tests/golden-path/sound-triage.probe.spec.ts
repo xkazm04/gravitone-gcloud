@@ -1,92 +1,43 @@
 // LANE — TRIAGE JUDGES IN THE RIGHT ORDER, ON THE RIGHT KEYS, AND NEVER CLAIMS
 // WHAT THREE TAKES HAVE NOT EARNED (static, pure).
 //
-// The Sound lab's triage module (app/playground/triage, round 4,
-// 2026-10-05) turns listening into prompt knowledge. Four things decide
-// whether it does, and each is pure and tested here:
+// The Sound lab's triage (app/playground/triage, round 4, 2026-10-05) turned
+// listening into prompt knowledge. Since Phase 3 the verdict is the Board's
+// audio packet and since Phase 6 (L66) the rest is the audio desk's; the four
+// things that decide whether it still works are pure and tested here, against
+// the modules that hold them now:
 //
-//   1. THE QUEUE. Agents' takes first (they are the main inflow, via
-//      pipeline/sound.mts generate), oldest first within an origin; judged
-//      takes and fixture rows never wait in it.
-//   2. THE KEYS. One table (resolveKey) drives the handler AND the legend. K
-//      keeps, so next/prev cannot be J/K; the legend may not name a key the
-//      table does not bind.
-//   3. THE CELL. A strengths cell under n=3 carries no rate and no mean —
-//      not a rounded one, not a zero — and a missing number sorts below every
-//      real one in either direction, because absent is not low.
-//   4. THE BATCH. N identical briefs, origin "lab", effects briefed
-//      envelope-first; the technique tags are the kind's own vocabulary.
+//   1. THE QUEUE (lib/sound/triageOrder.ts, the Board pile's order). Agents'
+//      takes first (the main inflow, via pipeline/sound.mts generate), oldest
+//      first within an origin; judged takes and fixture rows never wait in it.
+//   2. THE KEYS (@gt/ui keymap, mode board.cull). K keeps and X rejects, the
+//      number row names the audio defects in their order (1-9, 0, -), and the
+//      legend may not name a key the table does not bind. v1's judge-only keys
+//      (N/P to walk, 1-0 to score) are the desk's rubric now.
+//   3. THE CELL (@gt/ui audio/strengths.ts). A strengths cell under n=3 carries
+//      no rate and no mean — not a rounded one, not a zero — and a missing
+//      number sorts below every real one in either direction.
+//   4. THE BATCH (@gt/ui audio/batch.ts, lib/sound/sfxJob.ts). N identical
+//      briefs, effects briefed envelope-first; the technique tags are the
+//      kind's own vocabulary.
 
 import { test, expect } from "@playwright/test";
 
-import {
-  KEYMAP,
-  MIN_N,
-  batchProblem,
-  batchRequests,
-  blankBatch,
-  cellView,
-  claimDraft,
-  composeSfxPrompt,
-  evidenceFor,
-  nextAfter,
-  pivot,
-  queueOrder,
-  resolveKey,
-  sortRows,
-  step,
-} from "@/app/playground/triage/model";
-import { dimsFor, lengthWord, meanScore, readVerdict, takeSeconds, tempoOff } from "@/app/playground/shared/format";
-import { priceSeconds } from "@/app/playground/shared/price";
-import { costLabel } from "@/lib/musicClient";
-import type { InsightCell, SoundTake } from "@/lib/sound/types";
+import { reasonForKey, SOURCES } from "@gt/domain/source";
+import { batchBrief, batchProblem, blankBatch, composeSfxPrompt, priceSeconds } from "@gt/ui/components/audio/batch.ts";
+import { briefCheck } from "@gt/ui/components/audio/brief.ts";
+import { dimsFor, isProven, rubricMean } from "@gt/ui/components/audio/rubric.ts";
+import { cellView, claimDraft, evidenceFor, MIN_N, pivot, sortRows, type EvidenceTake, type StrengthCell } from "@gt/ui/components/audio/strengths.ts";
+import { KEYMAP } from "@gt/ui/keymap/bindings";
 
-function take(p: Partial<SoundTake> & { id: string }): SoundTake {
-  return {
-    kind: "music",
-    title: p.id,
-    provider: "elevenlabs",
-    op: "compose",
-    origin: "agent",
-    technique: [],
-    prompt: "",
-    negative: null,
-    terms: { genre: [], mood: [], instrument: [], sfxCategory: null },
-    tempoBpm: null,
-    key: null,
-    durationS: 30,
-    loop: null,
-    file: { path: `files/${p.id}.wav`, mime: "audio/wav", bytes: 1 },
-    peaks: null,
-    measured: null,
-    ratings: {},
-    verdict: "unjudged",
-    reasons: [],
-    note: null,
-    stage: null,
-    group: null,
-    label: null,
-    parentId: null,
-    huntId: null,
-    nodeId: null,
-    songId: null,
-    plan: null,
-    referenceTrackId: null,
-    promptRound: null,
-    draftId: null,
-    variation: null,
-    editModes: null,
-    fileName: null,
-    projectId: null,
-    cueId: null,
-    createdAt: "2026-10-05T10:00:00.000Z",
-    judgedAt: null,
-    finalizedAt: null,
-    ...p,
-  };
-}
+import { clipRequest } from "@/lib/sound/sfxJob";
+import { judgingOrder } from "@/lib/sound/triageOrder";
+import type { SoundTake } from "@/lib/sound/types";
 
-function cell(p: Partial<InsightCell>): InsightCell {
+type QueueTake = Pick<SoundTake, "id" | "origin" | "verdict" | "createdAt" | "kind">;
+const q = (id: string, p: Partial<QueueTake> = {}): QueueTake => ({ id, origin: "agent", verdict: "unjudged", createdAt: "2026-10-05T10:00:00.000Z", kind: "music", ...p });
+
+function cell(p: Partial<StrengthCell>): StrengthCell {
   return { kind: "music", provider: "elevenlabs", facet: "genre", value: "synthwave", n: 0, kept: 0, rejected: 0, meanScore: null, topDefect: null, ...p };
 }
 
@@ -94,75 +45,33 @@ function cell(p: Partial<InsightCell>): InsightCell {
 
 test("queue: agents first, oldest first within an origin, judged and fixture rows never wait", () => {
   const ts = [
-    take({ id: "lab-old", origin: "lab", createdAt: "2026-10-05T08:00:00.000Z" }),
-    take({ id: "agent-new", origin: "agent", createdAt: "2026-10-05T12:00:00.000Z" }),
-    take({ id: "agent-old", origin: "agent", createdAt: "2026-10-05T09:00:00.000Z" }),
-    take({ id: "import", origin: "import", createdAt: "2026-10-04T00:00:00.000Z" }),
-    take({ id: "suno", origin: "suno-return", createdAt: "2026-10-04T00:00:00.000Z" }),
-    take({ id: "hunt", origin: "hunt", createdAt: "2026-10-05T11:00:00.000Z" }),
-    take({ id: "fixture", origin: "fixture", createdAt: "2026-10-01T00:00:00.000Z" }),
-    take({ id: "kept", origin: "agent", verdict: "kept", createdAt: "2026-10-01T00:00:00.000Z" }),
-    take({ id: "sfx", origin: "agent", kind: "sfx", createdAt: "2026-10-01T00:00:00.000Z" }),
+    q("lab-old", { origin: "lab", createdAt: "2026-10-05T08:00:00.000Z" }),
+    q("agent-new", { createdAt: "2026-10-05T12:00:00.000Z" }),
+    q("agent-old", { createdAt: "2026-10-05T09:00:00.000Z" }),
+    q("import", { origin: "import", createdAt: "2026-10-04T00:00:00.000Z" }),
+    q("suno", { origin: "suno-return", createdAt: "2026-10-04T00:00:00.000Z" }),
+    q("hunt", { origin: "hunt", createdAt: "2026-10-05T11:00:00.000Z" }),
+    q("fixture", { origin: "fixture", createdAt: "2026-10-01T00:00:00.000Z" }),
+    q("kept", { verdict: "kept", createdAt: "2026-10-01T00:00:00.000Z" }),
   ];
-  expect(queueOrder(ts, "music").map((t) => t.id)).toEqual(["agent-old", "agent-new", "lab-old", "hunt", "suno", "import"]);
-  expect(queueOrder(ts, "sfx").map((t) => t.id)).toEqual(["sfx"]);
-});
-
-test("queue: after a verdict the judge lands on the take that followed, else the one before", () => {
-  const q = [{ id: "a" }, { id: "b" }, { id: "c" }];
-  expect(nextAfter(q, "a")).toBe("b");
-  expect(nextAfter(q, "c")).toBe("b");
-  expect(nextAfter([{ id: "a" }], "a")).toBeNull();
-  expect(step(["a", "b", "c"], "c", 1)).toBe("c");
-  expect(step(["a", "b", "c"], "a", -1)).toBe("a");
-  expect(step(["a", "b"], null, 1)).toBe("a");
-  expect(step([], "a", 1)).toBeNull();
+  expect(judgingOrder(ts).map((t) => t.id)).toEqual(["agent-old", "agent-new", "lab-old", "hunt", "suno", "import"]);
 });
 
 /* ── 2 · the keys ─────────────────────────────────────────────────────── */
 
-test("keys: the judge table", () => {
-  expect(resolveKey(" ", "judge")).toEqual({ type: "play" });
-  expect(resolveKey("ArrowLeft", "judge")).toEqual({ type: "seek", by: -5 });
-  expect(resolveKey("ArrowRight", "judge", true)).toEqual({ type: "seek", by: 15 });
-  for (let d = 1; d <= 9; d++) expect(resolveKey(String(d), "judge")).toEqual({ type: "score", value: d });
-  expect(resolveKey("0", "judge")).toEqual({ type: "score", value: 10 });
-  expect(resolveKey("ArrowDown", "judge")).toEqual({ type: "dim", by: 1 });
-  expect(resolveKey("Tab", "judge")).toEqual({ type: "dim", by: 1 });
-  expect(resolveKey("Tab", "judge", true)).toEqual({ type: "dim", by: -1 });
-  expect(resolveKey("ArrowUp", "judge")).toEqual({ type: "dim", by: -1 });
-  expect(resolveKey("k", "judge")).toEqual({ type: "keep" });
-  expect(resolveKey("K", "judge")).toEqual({ type: "keep" });
-  expect(resolveKey("x", "judge")).toEqual({ type: "reject" });
-  expect(resolveKey("n", "judge")).toEqual({ type: "next" });
-  expect(resolveKey("p", "judge")).toEqual({ type: "prev" });
-  expect(resolveKey("u", "judge")).toEqual({ type: "clear" });
-  // J is NOT next: K is keep, so the J/K pair would put "next" beside a verdict.
-  expect(resolveKey("j", "judge")).toBeNull();
-  expect(resolveKey("Enter", "judge")).toBeNull();
-});
+const cull = (verb: string) => KEYMAP.rows.filter((r) => r.binding.mode === "board.cull" && r.binding.verb === verb);
 
-test("keys: in defects mode the number row toggles defects, never scores", () => {
-  for (let i = 0; i < 9; i++) expect(resolveKey(String(i + 1), "defects")).toEqual({ type: "defect", index: i });
-  expect(resolveKey("0", "defects")).toEqual({ type: "defect", index: 9 });
-  expect(resolveKey("-", "defects")).toEqual({ type: "defect", index: 10 });
-  expect(resolveKey("Enter", "defects")).toEqual({ type: "confirm" });
-  expect(resolveKey("Escape", "defects")).toEqual({ type: "cancel" });
-  expect(resolveKey("k", "defects")).toBeNull();
-  expect(resolveKey(" ", "defects")).toEqual({ type: "play" });
-});
-
-test("keys: every key the legend shows is bound in its mode", () => {
-  const NAME: Record<string, string> = { Space: " ", "←": "ArrowLeft", "→": "ArrowRight", "↑": "ArrowUp", "↓": "ArrowDown", Esc: "Escape", "−": "-" };
-  for (const mode of ["judge", "defects"] as const) {
-    for (const row of KEYMAP[mode]) {
-      for (const k of row.keys) {
-        if (k === "…") continue;
-        const key = NAME[k] ?? (k.length === 1 ? k.toLowerCase() : k);
-        expect(resolveKey(key, mode), `${mode}: legend shows ${k} (${row.does}) but nothing is bound`).not.toBeNull();
-      }
-    }
-  }
+test("keys: K keeps, X rejects, U undecides on the Board's cull, and the number row names the audio defects in order", () => {
+  expect(cull("keep").flatMap((r) => r.caps)).toEqual(["K"]);
+  expect(cull("reject").flatMap((r) => r.caps)).toEqual(["X"]);
+  expect(cull("undecide").flatMap((r) => r.caps)).toEqual(["U"]);
+  expect(cull("reason").flatMap((r) => r.caps)).toEqual(["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-"]);
+  // Eleven defects, eleven keys: every audio reason is reachable, in v1's order.
+  expect(SOURCES.audio.reasons).toHaveLength(11);
+  expect(reasonForKey("audio", "1")).toBe("smeared-transients");
+  expect(reasonForKey("audio", "-")).toBe("wrong-event");
+  expect(cull("play").map((r) => [r.caps, r.binding.when])).toEqual([[["Space"], "audio"]]);
+  expect(KEYMAP.problems).toEqual([]);
 });
 
 /* ── 3 · the cell ─────────────────────────────────────────────────────── */
@@ -197,56 +106,57 @@ test("cell: a missing rate sorts below every real one, in both directions", () =
   expect(asc.slice(0, 2)).toEqual(["a", "c"]);
   expect(desc.slice(2).sort()).toEqual(["b", "d"]);
   expect(asc.slice(2).sort()).toEqual(["b", "d"]);
-  expect(sortRows(rows, { key: "n", provider: null, dir: "desc" })[0].value).toBe("c");
+  expect(sortRows(rows, { key: "n", provider: null, dir: "desc" })[0]?.value).toBe("c");
   expect(sortRows(rows, { key: "value", provider: null, dir: "asc" }).map((r) => r.value)).toEqual(["a", "b", "c", "d"]);
 });
 
 test("cell: a lesson's evidence is computed from the takes behind the cell, and the draft states it", () => {
+  const terms = { genre: ["lo-fi"], mood: [], instrument: [], sfxCategory: null };
+  const ev = (id: string, p: Partial<EvidenceTake> = {}): EvidenceTake => ({ id, provider: "suno", verdict: "kept", origin: "agent", technique: [], terms, mean: null, ...p });
   const ts = [
-    take({ id: "k1", verdict: "kept", terms: { genre: ["lo-fi"], mood: [], instrument: [], sfxCategory: null }, provider: "suno", ratings: { melody: 8, instrument_choice: 8, instrument_quality: 8 } }),
-    take({ id: "k2", verdict: "kept", terms: { genre: ["lo-fi"], mood: [], instrument: [], sfxCategory: null }, provider: "suno", ratings: { melody: 7 } }),
-    take({ id: "r1", verdict: "rejected", terms: { genre: ["lo-fi"], mood: [], instrument: [], sfxCategory: null }, provider: "suno" }),
-    take({ id: "other", verdict: "kept", terms: { genre: ["lo-fi"], mood: [], instrument: [], sfxCategory: null }, provider: "elevenlabs" }),
-    take({ id: "open", terms: { genre: ["lo-fi"], mood: [], instrument: [], sfxCategory: null }, provider: "suno" }),
-    take({ id: "demo", origin: "fixture", verdict: "kept", terms: { genre: ["lo-fi"], mood: [], instrument: [], sfxCategory: null }, provider: "suno" }),
+    ev("k1", { mean: rubricMean("music", { melody: 8, instrument_choice: 8, instrument_quality: 8 }) }),
+    ev("k2", { mean: rubricMean("music", { melody: 7 }) }),
+    ev("r1", { verdict: "rejected" }),
+    ev("other", { provider: "elevenlabs" }),
+    ev("open", { verdict: "unjudged" }),
+    ev("demo", { origin: "fixture" }),
   ];
   const c = cell({ provider: "suno", value: "lo-fi", n: 3, kept: 2, rejected: 1, meanScore: 7.5 });
   expect(evidenceFor(ts, c)).toEqual({ n: 3, keepRate: 0.667, meanScore: 7.5, takeIds: ["k1", "k2", "r1"] });
-  const draft = claimDraft(c, "music");
+  const draft = claimDraft(c);
   expect(draft).toContain("Suno");
   expect(draft).toContain("kept 2 of 3");
   expect(draft.startsWith("When ")).toBe(true);
-  expect(claimDraft(cell({ facet: "technique", value: "tag-list", n: 4, kept: 1, topDefect: "smeared-transients" }), "music")).toMatch(
-    /avoid the tag-list technique.*smeared transients/,
-  );
+  expect(claimDraft(cell({ facet: "technique", value: "tag-list", n: 4, kept: 1, topDefect: "smeared-transients" }))).toMatch(/avoid the tag-list technique.*smeared transients/);
 });
 
 /* ── 4 · the batch ────────────────────────────────────────────────────── */
 
 test("batch: N identical lab briefs, effects briefed envelope-first", () => {
   const f = { ...blankBatch("music"), prompt: "slow synthwave", technique: ["tag-list", "not-a-technique"], genre: "synthwave, retro", count: 3 };
-  const reqs = batchRequests("music", f);
-  expect(reqs).toHaveLength(3);
-  expect(new Set(reqs.map((r) => JSON.stringify(r))).size).toBe(1);
-  expect(reqs[0]).toMatchObject({ kind: "music", op: "compose", origin: "lab", provider: "elevenlabs", technique: ["tag-list"], loop: null });
-  expect(reqs[0].terms.genre).toEqual(["synthwave", "retro"]);
+  const b = batchBrief("music", f);
+  expect(b).toMatchObject({ kind: "music", technique: ["tag-list"], loop: null });
+  expect(b.terms.genre).toEqual(["synthwave", "retro"]);
 
   const s = { ...blankBatch("sfx"), event: "door slam", material: "oak", space: "stone hall", loop: true, sfxCategory: "impact" };
   expect(composeSfxPrompt(s)).toBe("door slam, oak, stone hall. seamless loop");
-  const sr = batchRequests("sfx", s)[0];
-  expect(sr).toMatchObject({ kind: "sfx", op: "sfx", loop: true, tempoBpm: null, key: null, technique: ["envelope-first-briefing"] });
-  expect(sr.terms).toEqual({ genre: [], mood: [], instrument: [], sfxCategory: "impact" });
+  const sb = batchBrief("sfx", s);
+  // Every clip of the batch is the one brief: they differ by their title alone.
+  const reqs = [1, 2, 3].map((i) => clipRequest(sb, i, 3));
+  expect(new Set(reqs.map((r) => JSON.stringify({ ...r, title: null }))).size).toBe(1);
+  expect(reqs[0]).toMatchObject({ kind: "sfx", op: "sfx", origin: "lab", provider: "elevenlabs", loop: true, tempoBpm: null, key: null, technique: ["envelope-first-briefing"] });
+  expect(reqs[0]?.terms).toEqual({ genre: [], mood: [], instrument: [], sfxCategory: "impact" });
 
-  expect(batchProblem("music", blankBatch("music"))).toBe("write a prompt");
-  expect(batchProblem("sfx", blankBatch("sfx"))).toBe("name the event");
+  expect(batchProblem("music", blankBatch("music"))).toBe("no prompt");
+  expect(batchProblem("sfx", blankBatch("sfx"))).toBe("no event");
   expect(batchProblem("sfx", { ...s, durationS: 31 })).toBe("length 0.5–30s");
   expect(batchProblem("music", { ...f, count: 7 })).toBe("1–6 takes");
 
   // Prompt influence (r4 closeout): an effect batch sends it, null is the
   // vendor's default, music never carries it, and out of range is refused.
-  expect(sr.promptInfluence, "blank form = vendor default").toBe(null);
-  expect(batchRequests("sfx", { ...s, promptInfluence: 0.7 })[0].promptInfluence).toBe(0.7);
-  expect(batchRequests("music", { ...f, promptInfluence: 0.7 })[0].promptInfluence).toBe(null);
+  expect(sb.promptInfluence, "blank form = vendor default").toBe(null);
+  expect(batchBrief("sfx", { ...s, promptInfluence: 0.7 }).promptInfluence).toBe(0.7);
+  expect(batchBrief("music", { ...f, promptInfluence: 0.7 }).promptInfluence).toBe(null);
   expect(batchProblem("sfx", { ...s, promptInfluence: 1.4 })).toBe("influence 0–1");
 });
 
@@ -255,8 +165,6 @@ test("price: a sub-10s effect is priced at its tenth (1.5s, not 2s); longer leng
   expect(priceSeconds(0.04 + 0.5)).toBe(0.5);
   expect(priceSeconds(9.96)).toBe(10);
   expect(priceSeconds(12.4)).toBe(12);
-  expect(costLabel({ seconds: 1, basis: "unpriced", note: "n" }, priceSeconds(1.5)).text).toBe("1.5s of audio · unpriced");
-  expect(costLabel({ seconds: 1, basis: "unpriced", note: "n" }, priceSeconds(30.4)).text).toBe("30s of audio · unpriced");
 });
 
 /* ── readings shared with arrange and hunt ────────────────────────────── */
@@ -265,25 +173,24 @@ test("readings: a one-shot effect is not scored on a seam; proven is a kept mean
   expect(dimsFor({ kind: "sfx", loop: false })).toEqual(["event_match", "sound_quality"]);
   expect(dimsFor({ kind: "sfx", loop: true })).toEqual(["event_match", "sound_quality", "loop_seam"]);
   expect(dimsFor({ kind: "music", loop: null })).toEqual(["melody", "instrument_choice", "instrument_quality"]);
-  expect(meanScore({ ratings: {} })).toBeNull();
-  expect(meanScore({ ratings: { a: 6, b: null, c: 8 } })).toBe(7);
-  expect(readVerdict({ verdict: "kept", ratings: { a: 7 } })).toBe("proven");
-  expect(readVerdict({ verdict: "kept", ratings: { a: 6 } })).toBe("kept");
-  expect(readVerdict({ verdict: "kept", ratings: {} })).toBe("kept");
-  expect(readVerdict({ verdict: "rejected", ratings: { a: 9 } })).toBe("rejected");
+  expect(rubricMean("music", {})).toBeNull();
+  expect(rubricMean("music", { melody: 6, instrument_choice: null, instrument_quality: 8 })).toBe(7);
+  expect(isProven({ kind: "music", verdict: "kept", ratings: { melody: 7 } })).toBe(true);
+  expect(isProven({ kind: "music", verdict: "kept", ratings: { melody: 6 } })).toBe(false);
+  expect(isProven({ kind: "music", verdict: "kept", ratings: {} })).toBe(false);
+  expect(isProven({ kind: "music", verdict: "rejected", ratings: { melody: 9 } })).toBe(false);
   // the onset tracker's octave error is not the provider's miss
-  expect(tempoOff(120, 60)).toBe(false);
-  expect(tempoOff(120, 121)).toBe(false);
-  expect(tempoOff(120, 98.5)).toBe(true);
-  expect(tempoOff(null, 98.5)).toBe(false);
+  const tempo = (asked: number | null, measured: number | null) => briefCheck("music", { tempoBpm: asked, key: null, durationS: null }, { tempoBpm: measured, key: null, durationS: null }).axes[0]?.verdict;
+  expect(tempo(120, 60)).toBe("octave");
+  expect(tempo(120, 121)).toBe("held");
+  expect(tempo(120, 98.5)).toBe("missed");
+  expect(tempo(null, 98.5)).toBe("unasked");
 });
 
-test("length: a measured take shows the length its bytes are; a Suno return with no ask shows its measured length, never a dash", () => {
-  const m = { tempoBpm: null, key: null, energy: 0.12, durationS: 154.3, lufs: null, truePeakDb: null };
-  expect(takeSeconds({ durationS: 150, measured: m })).toBe(154.3);
-  expect(takeSeconds({ durationS: null, measured: m })).toBe(154.3);
-  expect(takeSeconds({ durationS: 30, measured: null })).toBe(30);
-  expect(takeSeconds({ durationS: null, measured: { ...m, durationS: null } })).toBe(null);
-  expect(lengthWord("music", takeSeconds({ durationS: null, measured: m }))).toBe("2:34");
-  expect(lengthWord("sfx", takeSeconds({ durationS: null, measured: { ...m, durationS: 1.48 } }))).toBe("1.5s");
+test("length: a measured take reads the length its bytes are; a Suno return with no ask reads its measured length, never a dash", () => {
+  const len = (asked: number | null, measured: number | null, kind: "music" | "sfx" = "music") => briefCheck(kind, { tempoBpm: null, key: null, durationS: asked }, { tempoBpm: null, key: null, durationS: measured }).axes.find((a) => a.axis === "length");
+  expect(len(150, 154.3)).toMatchObject({ verdict: "held", measured: "2:34" });
+  expect(len(null, 154.3)).toMatchObject({ verdict: "unasked", measured: "2:34" });
+  expect(len(30, null)).toMatchObject({ verdict: "unmeasured", asked: "0:30" });
+  expect(len(null, 1.48, "sfx")).toMatchObject({ measured: "1.5s" });
 });

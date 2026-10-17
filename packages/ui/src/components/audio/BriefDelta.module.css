@@ -1,0 +1,16 @@
+/* Brief vs measured: one chip-like row per axis, in the hue its verdict means - rose a miss,
+   amber an octave read (the tracker's, not the provider's), quiet when held, dashed when the
+   bytes could not be measured. */
+.brief{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:var(--sp-1) var(--sp-2)}
+.axis{display:inline-flex;align-items:center;gap:var(--sp-tight);height:var(--h-chip);padding:0 var(--sp-2);border-radius:var(--r-chip);border:1px solid var(--hair);background:var(--wash);font:500 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+.name{text-transform:uppercase;letter-spacing:.08em;color:var(--faint)}
+.figures{color:var(--text)}
+.delta{font-weight:700}
+.held .figures{color:var(--muted)}
+.missed{border-color:color-mix(in srgb,var(--rose) 40%,transparent);background:var(--rose-a)}
+.missed .figures,.missed .delta{color:var(--rose)}
+.octave{border-color:color-mix(in srgb,var(--amber) 40%,transparent);background:var(--amber-a)}
+.octave .delta{color:var(--amber)}
+.unmeasured{border-style:dashed;border-color:color-mix(in srgb,var(--faint) 80%,transparent);background:none}
+.unmeasured .figures{color:var(--faint)}
+.unasked{display:none}

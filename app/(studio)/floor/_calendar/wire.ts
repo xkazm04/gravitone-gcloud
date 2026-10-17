@@ -5,6 +5,6 @@ import "server-only";
 // the Library's and the Board's shape.
 import type { CalendarPort } from "./contract.ts";
 
-import { cancel, detail, move, publishNow } from "./actions.ts";
+import { cancel, detail, items, move, publishNow, schedule } from "./actions.ts";
 
-export const CALENDAR_PORT: CalendarPort = { detail, move, cancel, publishNow };
+export const CALENDAR_PORT: CalendarPort = { detail, move, cancel, publishNow, schedule, items };

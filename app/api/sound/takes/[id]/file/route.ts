@@ -1,82 +1,47 @@
 // GET /api/sound/takes/[id]/file -> the take's bytes, its own content-type,
 // and byte ranges (206) so an <audio> element can seek without downloading the
-// whole file first.
+// whole file first. Kept past Phase 6: the audio desk (app/(studio)/audio/_audio/read.ts),
+// the Board's audio packet, the Library feed and the cut timeline (`takeFileUrl`) all
+// point an <audio src> here.
 //
-// An <audio src> cannot carry an Authorization header, so the access secret
-// may also arrive as `k=` — the same PUBLIC bundle value lib/apiAuth.ts
-// documents, accepted the same way /api/foundry/file accepts it for an <img>.
-// Access-checked, not rate-bucketed: a Triage queue of thirty takes is thirty
-// of these at once, and seeking issues more.
-
-import { createReadStream } from "node:fs";
-import { stat } from "node:fs/promises";
-import { Readable } from "node:stream";
+// THE BYTES ARE serveFile()'s (app/_server/serveFile.ts, Phase 6 L67). This route used to
+// carry its own copy of the range parser, the copy serveFile lists as the one it absorbed.
+// Kept from it: `bytes=a-b`, `a-`, `-n`, the first range of a multi-range, 416 past the end,
+// and a take held for the session (a new version is a new take). Gained: If-Range, an ETag
+// and streamed reads (Next answers HEAD from GET). Changed on purpose: a malformed Range is
+// ignored and the whole take served (RFC 9110 14.2), where this copy answered 416 for a
+// range it never parsed.
+//
+// THE DOOR IS v1's, plus the session. An <audio src> cannot carry an Authorization header,
+// so the access secret may still arrive as `k=` - the PUBLIC bundle value lib/apiAuth.ts
+// documents - until the last v1 page that sends it is gone (wave C). The studio sends no
+// `k`: it holds the session cookie, which v1's door never read, so a refusal with nothing
+// presented is asked again through route()'s guard (app/_server/route.ts guardOf), which
+// consults the cookie only when no credential of its own was presented. Access-checked,
+// not rate-bucketed: a Triage queue of thirty takes is thirty of these at once.
 
 import { guardAccessOnly } from "@/lib/apiAuth";
 import { asContractDenial, errorResponse, toErrorResponse } from "@/lib/sound/http";
 import { filePathAbs } from "@/lib/sound/store";
 import { getTake } from "@/lib/sound/takes";
 
-export const runtime = "nodejs";
+import { guardOf } from "../../../../../_server/route.ts";
+import { serveFile } from "../../../../../_server/serveFile.ts";
 
-/** `bytes=a-b`, `bytes=a-`, `bytes=-n` against a file of `size` bytes, or
- *  "bad" for a range this file cannot satisfy. Multi-range is answered with
- *  the first range — an <audio> element never asks for more than one. */
-function parseRange(h: string | null, size: number): { start: number; end: number } | null | "bad" {
-  if (!h) return null;
-  const m = /^bytes=(\d*)-(\d*)/.exec(h.trim());
-  if (!m || (m[1] === "" && m[2] === "")) return "bad";
-  let start: number;
-  let end: number;
-  if (m[1] === "") {
-    const n = Number(m[2]);
-    start = Math.max(0, size - n);
-    end = size - 1;
-  } else {
-    start = Number(m[1]);
-    end = m[2] === "" ? size - 1 : Math.min(Number(m[2]), size - 1);
-  }
-  if (!Number.isFinite(start) || !Number.isFinite(end) || start > end || start >= size) return "bad";
-  return { start, end };
-}
+export const runtime = "nodejs";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const k = new URL(req.url).searchParams.get("k");
   const probe = k ? new Request(req.url, { headers: { authorization: `Bearer ${k}` } }) : req;
-  const denied = await asContractDenial(await guardAccessOnly(probe));
-  if (denied) return denied;
+  const refused = await guardAccessOnly(probe);
+  if (refused !== null && !("who" in (await guardOf(probe, "access")))) return (await asContractDenial(refused)) ?? refused;
   try {
     const { id } = await params;
     const take = await getTake(id);
     if (!take.file) return errorResponse(`take ${id} has no audio — it is an example row with no bytes`, 404);
-    const abs = filePathAbs(take.file.path);
-    const size = await stat(abs).then(
-      (s) => s.size,
-      () => null,
-    );
-    if (size === null) return errorResponse(`take ${id}'s file is missing from the store (${take.file.path})`, 404);
-    const base = {
-      "content-type": take.file.mime,
-      "accept-ranges": "bytes",
-      // A take's bytes never change (a new version is a new take), so the
-      // browser may keep them for the session.
-      "cache-control": "private, max-age=3600",
-    };
-    const range = parseRange(req.headers.get("range"), size);
-    if (range === "bad") return new Response(null, { status: 416, headers: { "content-range": `bytes */${size}` } });
-    if (!range) {
-      const body = Readable.toWeb(createReadStream(abs)) as ReadableStream<Uint8Array>;
-      return new Response(body, { status: 200, headers: { ...base, "content-length": String(size) } });
-    }
-    const body = Readable.toWeb(createReadStream(abs, { start: range.start, end: range.end })) as ReadableStream<Uint8Array>;
-    return new Response(body, {
-      status: 206,
-      headers: {
-        ...base,
-        "content-range": `bytes ${range.start}-${range.end}/${size}`,
-        "content-length": String(range.end - range.start + 1),
-      },
-    });
+    const res = await serveFile(req, filePathAbs(take.file.path), { mime: take.file.mime });
+    // serveFile's not-found names no take; the sound store's own sentence does.
+    return res.status === 404 ? errorResponse(`take ${id}'s file is missing from the store (${take.file.path})`, 404) : res;
   } catch (e) {
     return toErrorResponse(e);
   }

@@ -51,13 +51,14 @@ export type FixtureSlot = {
 };
 
 /** The Library items the slots publish: a preset clip and its poster, or an article run's post. */
-export const ITEMS: Readonly<Record<string, { readonly video: string; readonly poster: string } | { readonly pr?: string }>> = {
-  "video:export:glass-harbor-trailer": { video: "/clips/presets/paper-relief.webm", poster: "/clips/presets/paper-relief.jpg" },
-  "video:export:glass-harbor-teaser": { video: "/clips/presets/newsprint-cutout.webm", poster: "/clips/presets/newsprint-cutout.jpg" },
-  "video:export:why-bitcoin": { video: "/clips/presets/data-neon.webm", poster: "/clips/presets/data-neon.jpg" },
-  "video:export:chokepoint": { video: "/clips/presets/blueprint.webm", poster: "/clips/presets/blueprint.jpg" },
-  "video:export:quiet-tariff": { video: "/clips/presets/chalk-argument.webm", poster: "/clips/presets/chalk-argument.jpg" },
-  "video:export:signal-room": { video: "/clips/presets/signal-ledger.webm", poster: "/clips/presets/signal-ledger.jpg" },
+export const ITEMS: Readonly<Record<string, { readonly video: string; readonly poster: string; readonly title: string; readonly meta: string } | { readonly pr?: string }>> = {
+  "video:export:glass-harbor-trailer": { video: "/clips/presets/paper-relief.webm", poster: "/clips/presets/paper-relief.jpg", title: "Glass Harbor — trailer", meta: "film · 41.2 MB" },
+  "video:export:glass-harbor-teaser": { video: "/clips/presets/newsprint-cutout.webm", poster: "/clips/presets/newsprint-cutout.jpg", title: "Glass Harbor · teaser", meta: "film · 12.8 MB" },
+  "video:export:why-bitcoin": { video: "/clips/presets/data-neon.webm", poster: "/clips/presets/data-neon.jpg", title: "Why the Bitcoin price does not rise", meta: "film · 88.0 MB" },
+  "video:export:chokepoint": { video: "/clips/presets/blueprint.webm", poster: "/clips/presets/blueprint.jpg", title: "Chokepoint explainer", meta: "film · 63.5 MB" },
+  "video:export:quiet-tariff": { video: "/clips/presets/chalk-argument.webm", poster: "/clips/presets/chalk-argument.jpg", title: "The quiet tariff", meta: "ad · 9.1 MB" },
+  "video:export:signal-room": { video: "/clips/presets/signal-ledger.webm", poster: "/clips/presets/signal-ledger.jpg", title: "Signal Room · ad", meta: "ad · 7.4 MB" },
+  "video:export:river-steps": { video: "/clips/presets/paper-relief.webm", poster: "/clips/presets/paper-relief.jpg", title: "Two hundred days of rain", meta: "music-video · 54.0 MB" },
   "article:run:art-2026-10-14-faceting": { pr: "https://github.com/xkazm04/ai-registry/pull/41" },
   "article:run:art-2026-10-11-search": { pr: "https://github.com/xkazm04/ai-registry/pull/37" },
   "article:run:art-2026-10-16-routing": {},
@@ -100,3 +101,17 @@ export const SLOTS: readonly FixtureSlot[] = [
 
 /** The id the failed-slot screen photographs (cx `floor-slot`). */
 export const FIXTURE_FAILED_SLOT = "sl-chokepoint-quota";
+
+/**
+ * What each channel can do in the fixture universe - the readiness v1's seam reports with nothing
+ * set (lib/publish/channels.ts): YouTube runs dry (PUBLISH_MODE unset), Instagram has no adapter
+ * (the drifted `sl-signal-ig-drift` says so on its slot), TikTok runs dry like YouTube here so its
+ * slots have somewhere to go, and blog goes out by the article approve.
+ */
+export const CHANNEL_SEED: readonly { readonly channel: "youtube" | "tiktok" | "instagram" | "blog"; readonly state: "live" | "dry" | "not_wired" | "act"; readonly env: readonly string[]; readonly note?: string }[] = [
+  { channel: "youtube", state: "dry", env: ["YOUTUBE_CLIENT_ID", "YOUTUBE_CLIENT_SECRET", "YOUTUBE_REFRESH_TOKEN"], note: "PUBLISH_MODE=dry: publishing writes a request plan, no upload" },
+  { channel: "tiktok", state: "dry", env: ["TIKTOK_ACCESS_TOKEN"], note: "PUBLISH_MODE=dry: publishing writes a request plan, no upload" },
+  { channel: "instagram", state: "not_wired", env: ["INSTAGRAM_ACCESS_TOKEN", "INSTAGRAM_USER_ID"], note: "Graph API adapter not built" },
+  { channel: "blog", state: "act", env: [] },
+];
+

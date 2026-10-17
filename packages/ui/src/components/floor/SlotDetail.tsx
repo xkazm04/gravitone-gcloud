@@ -53,6 +53,9 @@ export type SlotMetrics = {
 
 export type SlotView = {
   readonly slot: RailSlot;
+  /** The record's revision as read: a verb carries it back, and a slot that moved since is
+   *  refused rather than overwritten (the store's 409 shape). */
+  readonly rev?: number;
   readonly libraryItemId: string;
   readonly description: string;
   readonly tags: readonly string[];
@@ -206,7 +209,7 @@ export function SlotDetail({ view, nowMs, busy, error, asked, onMove, onCancel, 
               <CapsHeading text="project" variant="section" level={4} />
               <a className={s.project} href={view.project.href}>
                 <span className={s.projectTitle}>{view.project.title}</span>
-                <PipRow looks={view.project.steps} label="steps" />
+                {view.project.steps.length > 0 && <PipRow looks={view.project.steps} label="steps" />}
               </a>
             </section>
           )}

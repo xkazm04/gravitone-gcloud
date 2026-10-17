@@ -1,0 +1,71 @@
+/* The hunt (v1 app/playground/hunt re-expressed on the kit's tokens): the idea box, the shelf of
+   past hunts as mini-maps, the map as one column per axis with leaf cards, the render bar, the
+   audition row. A selected leaf is ringed cyan, a heard one sits on the wave ground, a crowned one
+   is emerald, a failed one carries its words in rose, a Suno leaf goes by hand in amber. Below
+   900px the map scrolls sideways inside its own box rather than the page. */
+.hunt{display:grid;gap:var(--sp-4);min-width:0}
+.idea{display:grid;gap:var(--sp-2);max-width:var(--w-detail)}
+.ideaField{min-height:var(--h-wavebox);padding:var(--sp-2) var(--sp-3);border-radius:var(--r-control);border:1px solid var(--hair-2);background:var(--ink-2);font:500 var(--fs-ui)/1.4 var(--sans);color:var(--text);resize:vertical}
+.ideaField::placeholder{color:var(--faint)}
+.ideaField:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}
+.ideaActs{display:flex;gap:var(--sp-2);align-items:center;flex-wrap:wrap}
+
+.shelf{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--w-tile-audio),1fr));gap:var(--sp-2)}
+.card{display:grid;gap:var(--sp-2);padding:var(--sp-2) var(--sp-3);border-radius:var(--r-tile);border:1px solid var(--hair-2);background:var(--wash);color:var(--text);text-decoration:none;min-width:0}
+.card:hover{background:var(--wash-hi)}
+.card:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}
+.cardOn{border-color:var(--cyan)}
+.cardIdea{font:600 var(--fs-meta)/1.35 var(--sans);color:var(--ink-bright);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.cardMeta{display:flex;gap:var(--sp-2);align-items:center;flex-wrap:wrap;font:500 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+.mini{display:flex;gap:var(--sp-2);align-items:flex-end;min-height:var(--h-chip)}
+.miniCol{display:grid;gap:var(--sp-hair)}
+.pip{width:var(--size-pip);height:var(--size-pip);border-radius:50%;background:var(--ink-4)}
+.pip_rendered{background:var(--cyan)}
+.pip_rendering{background:var(--violet)}
+.pip_failed{background:var(--rose)}
+.pip_awaiting-return{background:var(--amber)}
+.pipWin{background:var(--emerald);box-shadow:0 0 0 1px var(--emerald)}
+
+.map{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(var(--w-tile-audio),1fr);gap:var(--sp-3);overflow-x:auto;padding-bottom:var(--sp-2);min-width:0}
+.col{display:grid;gap:var(--sp-2);align-content:start;min-width:0}
+.colHead{display:grid;gap:var(--sp-1);padding-bottom:var(--sp-2);border-bottom:1px solid var(--hair)}
+.colAxis{font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.colLabel{font:600 var(--fs-ui)/1.3 var(--sans);color:var(--ink-bright)}
+.colWhy{font:500 var(--fs-meta)/1.4 var(--sans);color:var(--muted)}
+.group{font:600 var(--fs-meta)/1.3 var(--sans);color:var(--text);padding-top:var(--sp-1)}
+.d1{padding-left:var(--sp-3)}
+.d2{padding-left:var(--sp-5)}
+.d3{padding-left:var(--sp-7)}
+
+.leaf{display:grid;gap:var(--sp-1);padding:var(--sp-2) var(--sp-3);border-radius:var(--r-tile);border:1px solid var(--hair-2);background:var(--ink-1);min-width:0}
+.leaf_rendered{background:var(--wave-ground)}
+.leaf_awaiting-return{border-style:dashed;border-color:color-mix(in srgb,var(--amber) 55%,transparent)}
+.leaf_rendering{border-style:dashed;border-color:color-mix(in srgb,var(--violet) 60%,transparent)}
+.picked{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}
+.won{border-color:var(--emerald);box-shadow:inset 0 0 0 1px var(--emerald)}
+.leafHead{display:flex;align-items:center;gap:var(--sp-2);min-width:0}
+.pick{flex:1;min-width:0;display:flex;align-items:center;gap:var(--sp-2);padding:0;border:0;background:none;color:var(--ink-bright);font:600 var(--fs-meta)/1.3 var(--sans);text-align:left;cursor:pointer}
+.pick:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}
+.box{flex:none;width:var(--size-glyph-xs);height:var(--size-glyph-xs);border-radius:var(--r-xs);border:1px solid var(--hair-3)}
+.boxOn{background:var(--cyan);border-color:var(--cyan)}
+.leafTitle{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.leafMeta{display:flex;align-items:center;gap:var(--sp-1);flex-wrap:wrap}
+.prompt{margin:0;font:500 var(--fs-micro)/1.45 var(--mono);color:var(--muted);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.why{margin:0;font:500 var(--fs-meta)/1.4 var(--sans);color:var(--text)}
+.wave{flex:1;min-width:0;height:var(--h-strip)}
+.wave svg{width:100%;height:100%}
+.leafActs{display:flex;gap:var(--sp-1);align-items:center;flex-wrap:wrap}
+.play{flex:none;width:var(--h-chip);height:var(--h-chip);border-radius:50%;display:grid;place-items:center;border:1px solid color-mix(in srgb,var(--cyan) 45%,transparent);background:color-mix(in srgb,var(--cyan) 14%,transparent);color:var(--cyan);cursor:pointer}
+.play:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}
+.playOn{background:var(--cyan);color:var(--ink)}
+.playMark{width:var(--size-glyph-xs);height:var(--size-glyph-xs);fill:currentColor}
+
+.bar{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;padding:var(--sp-2) var(--sp-3);border-radius:var(--r-tile);border:1px solid var(--hair-2);background:var(--ink-1);position:sticky;bottom:0;z-index:var(--z-docked)}
+.barGrow{flex:1}
+
+.audition{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--w-tile-audio),1fr));gap:var(--sp-2)}
+.take{display:grid;gap:var(--sp-1);padding:var(--sp-2) var(--sp-3);border-radius:var(--r-tile);border:1px solid var(--hair-2);background:var(--wave-ground);min-width:0}
+.takeOn{border-color:var(--cyan)}
+.takeHead{display:flex;align-items:center;gap:var(--sp-2);min-width:0}
+.takeTitle{flex:1;min-width:0;font:600 var(--fs-meta)/1.3 var(--sans);color:var(--ink-bright);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.takeAxis{font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}

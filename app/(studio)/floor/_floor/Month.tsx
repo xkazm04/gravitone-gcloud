@@ -14,6 +14,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { MonthCalendar } from "@gt/ui/components/floor/MonthCalendar.tsx";
 import { byDay, dayKey, monthOf, monthOfKey, moveDay, shiftMonth, type RailSlot, type YearMonth } from "@gt/ui/components/floor/calendar.ts";
+import type { ChannelReady, PublishTick } from "@gt/ui/components/floor/schedule.ts";
 import { useKeys } from "@gt/ui/keymap/dispatch";
 import { useLayer } from "@gt/ui/layers/useLayer";
 
@@ -30,9 +31,15 @@ export type MonthProps = {
   readonly off: readonly string[];
   readonly onOff: (off: readonly string[]) => void;
   readonly onOpenSlot: (id: string) => void;
+  /** Each channel's readiness and the publish mode, when the calendar's side could say. */
+  readonly channels?: readonly ChannelReady[];
+  readonly mode?: "dry" | "live";
+  readonly tick?: PublishTick;
+  /** Open the schedule sheet (on the selected day, which the URL already holds). */
+  readonly onSchedule?: () => void;
 };
 
-export function Month({ slots, nowMs, day, onDay, onClose, onBoard, off: offList, onOff, onOpenSlot }: MonthProps) {
+export function Month({ slots, nowMs, day, onDay, onClose, onBoard, off: offList, onOff, onOpenSlot, channels, mode, tick, onSchedule }: MonthProps) {
   const panel = useRef<HTMLElement | null>(null);
   // The page turned to with [ ] or the arrows; a selected day carries its own month, so a day
   // walked past the edge turns the page without a second piece of state to keep in step.
@@ -67,6 +74,7 @@ export function Month({ slots, nowMs, day, onDay, onClose, onBoard, off: offList
       "clear-day": () => onDay(null),
       rail: () => onClose(),
       board: () => onBoard(),
+      schedule: () => (onSchedule === undefined ? false : onSchedule()),
     },
     { facts: day === null ? [] : ["day"] },
   );
@@ -89,6 +97,10 @@ export function Month({ slots, nowMs, day, onDay, onClose, onBoard, off: offList
       slotHref={(id) => slotHref(id)}
       onOpenSlot={onOpenSlot}
       panelRef={panel}
+      {...(channels === undefined ? {} : { channels })}
+      {...(mode === undefined ? {} : { mode })}
+      {...(tick === undefined ? {} : { tick })}
+      {...(onSchedule === undefined ? {} : { onSchedule: () => onSchedule() })}
     />
   );
 }

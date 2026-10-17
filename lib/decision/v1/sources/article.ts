@@ -4,6 +4,8 @@ import type { BlobRef } from "@gt/domain/blob";
 import type { EditPlan } from "@gt/domain/board";
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { ApplyClaim } from "@gt/kernel/decision/apply";
+import type { Store } from "@gt/kernel/store";
+import { decodeSchedule, scheduleWords } from "@gt/ui/components/review/schedule.ts";
 import type { ItemWords, ReviewCheck, ReviewDoc, ReviewSection, Reviewer, RowWords } from "@gt/ui/board/port";
 
 import { approveRun, rejectRun } from "../../../articles/humanActs.ts";
@@ -13,7 +15,9 @@ import { defaultDeps, type EngineDeps } from "../../../articles/engine.ts";
 import { inRun, readRun, readTextFile, slugify } from "../../../articles/store.ts";
 import { continueArticle } from "../../../producers/article.ts";
 import { NOTE_MAX_CHARS, type ArticleRun, type ArticleRunDetail, type ArticleStatus } from "../../../articles/types.ts";
+import { kernel } from "../../../kernelStore.ts";
 import { encodeNote } from "../note.ts";
+import { blogScheduleOf, ensureBlogSlot, landBlogSlot } from "./articleSlot.ts";
 import { packetIdOf } from "../../../ledger/v1/packet.ts";
 import {
   buildConsequence,
@@ -62,6 +66,12 @@ import {
 // still waits on it (approved, or reworking): the job id is the act's, so a job
 // that exists is found, not doubled. v1 holding ANOTHER outcome is refused,
 // never overwritten.
+//
+// APPROVE -> CALENDAR (Phase 6, owner ruling 4): a kept post also puts the run's blog slot on the
+// kernel calendar, in the same apply and BEFORE v1's approve (./articleSlot.ts says why the order);
+// the preview names the slot with the schedule the operator set on the desk. A redelivery after the
+// landing publishes that slot with the pull request, so the calendar ends in "went out", not
+// "approved".
 
 const POST = "post";
 const PATCH = "patch/";
@@ -82,6 +92,8 @@ export type ArticleAdapterDeps = {
   /** What starts the act's job after an approve or a rework: lib/producers/article.ts `continueArticle`,
    *  idempotent by job id (the probes inject an in-process drive). */
   readonly launch?: (runId: string) => void | Promise<Result<unknown>>;
+  /** The kernel the blog slot is written to; the process's (lib/kernelStore.ts) when absent. */
+  readonly store?: () => Result<Store>;
 };
 
 /* ── read ──────────────────────────────────────────────────────────────────── */
@@ -249,8 +261,12 @@ function consequence(v1: ArticleV1, at: DecisionsAt): Result<Preview> {
     const title = meta?.title ?? run.topic.text;
     const slug = slugify(title, 60) || slugify(run.topic.text, 60) || run.id;
     const ids = kept.map((p) => p.id);
+    const when = decodeSchedule(post.note);
+    if (when.kind === "invalid") return err("invalid", when.error);
+    if (when.kind === "schedule" && when.schedule.channel !== "blog") return err("invalid", `an article goes out by its pull request on blog, not on ${when.schedule.channel}`);
     parts = {
       writes: [
+        { kind: "index-row", target: `calendar · ${when.kind === "schedule" ? scheduleWords(when.schedule) : "blog · the day after the commit, 08:00 UTC"}`, candidate: POST, detail: `slot article:${run.id}, out with the pull request` },
         { kind: "index-row", target: `run.json ${run.id} approval`, candidate: POST, detail: ids.length === 0 ? "the post alone" : `the post and patch ${ids.join(", ")}` },
         { kind: "file", target: `ai-registry publications/${slug}/`, candidate: POST, detail: "post.html, SOURCES.md, publication.json, medium/" },
         ...kept.map((p) => ({ kind: "file" as const, target: `ai-registry ${p.target}`, candidate: patchCandidate(p.id), detail: `${p.kind} patch: ${p.rationale}` })),
@@ -283,8 +299,14 @@ const OPERATOR_ACT = { kind: "operator", id: "board" } as const;
 const REWORKING: readonly ArticleStatus[] = ["drafting", "critiquing", "checking"];
 const sameSet = (a: readonly string[], b: readonly string[]): boolean => a.length === b.length && [...a].sort().join("\n") === [...b].sort().join("\n");
 
+const processStore = (): Result<Store> => {
+  const k = kernel();
+  return k.ok ? ok(k.value.store) : k;
+};
+
 export function makeArticleAdapter(deps: ArticleAdapterDeps = {}): DecisionAdapter<ArticleV1> {
   const engine = deps.engine ?? (() => defaultDeps());
+  const storeOf = deps.store ?? processStore;
   const enqueue = async (id: string): Promise<Result<unknown>> => {
     const run = await v1Call(() => readRun(id));
     return run.ok ? continueArticle(run.value, { actor: OPERATOR_ACT, mode: "live" }) : run;
@@ -313,6 +335,30 @@ export function makeArticleAdapter(deps: ArticleAdapterDeps = {}): DecisionAdapt
     return launch(id);
   }
 
+  /** The blog slot a kept post puts on the calendar (./articleSlot.ts), from the run's own words. */
+  async function slotFor(run: ArticleRun, note: string | undefined, claim: ApplyClaim): Promise<Result<void>> {
+    if (claim.outcome.act !== "commit") return ok(undefined);
+    const schedule = blogScheduleOf(note, claim.outcome.result.at);
+    if (!schedule.ok) return schedule;
+    const store = storeOf();
+    if (!store.ok) return store;
+    const detail = await v1Call(() => getRunDetail(run.id));
+    const title = (detail.ok ? detail.value.meta?.title : undefined) ?? run.topic.text;
+    const subject = run.topic.kind === "subject" && run.topic.bundle !== undefined && run.topic.subject !== undefined ? `${run.topic.bundle}/${run.topic.subject}` : "free topic";
+    const made = ensureBlogSlot(store.value, { runId: run.id, title, description: `ai-registry PR · ${subject}`, tags: run.topic.kind === "subject" && run.topic.bundle !== undefined ? [run.topic.bundle] : [], schedule: schedule.value }, { kind: "machine", id: claim.holder });
+    return made.ok ? ok(undefined) : made;
+  }
+
+  /** A redelivery that finds the run landed publishes its slot with the pull request. */
+  async function landed(id: string, claim: ApplyClaim): Promise<Result<void>> {
+    const run = await v1Call(() => readRun(id));
+    if (!run.ok) return run;
+    const store = storeOf();
+    if (!store.ok) return store;
+    const r = landBlogSlot(store.value, run.value, { kind: "machine", id: claim.holder }, Date.now());
+    return r.ok ? ok(undefined) : r;
+  }
+
   async function apply(claim: ApplyClaim): Promise<Result<void>> {
     const id = runIdOf(claim);
     if (!id.ok) return id;
@@ -324,8 +370,14 @@ export function makeArticleAdapter(deps: ArticleAdapterDeps = {}): DecisionAdapt
     const { approval, rejection, status } = run.value;
     if (post?.verdict === "keep") {
       const patches = [...decided].filter(([c, d]) => c.startsWith(PATCH) && d.verdict === "keep").map(([c]) => c.slice(PATCH.length));
-      if (approval !== undefined) return sameSet(approval.patches, patches) ? relaunch(run.value, ["approved"]) : refused(`run ${id.value} was approved on its page with patches [${approval.patches.join(", ")}]; this packet approves [${patches.join(", ")}]`);
+      if (approval !== undefined && !sameSet(approval.patches, patches)) return refused(`run ${id.value} was approved on its page with patches [${approval.patches.join(", ")}]; this packet approves [${patches.join(", ")}]`);
       if (rejection !== undefined) return refused(`run ${id.value} was rejected on its page; this packet approves it`);
+      const slot = await slotFor(run.value, post.note, claim);
+      if (!slot.ok) return slot;
+      if (approval !== undefined) {
+        const again = await relaunch(run.value, ["approved"]);
+        return again.ok ? landed(id.value, claim) : again;
+      }
       const r = await v1Call(() => approveRun(id.value, patches, engine()));
       if (!r.ok) return r;
       return launch(id.value);

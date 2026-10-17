@@ -1,0 +1,18 @@
+/* The batch form: a grid of labelled fields (the label a mono caps line over its field, as the
+   composer's facets), the length / count / influence knobs, the technique chips, the composed
+   prompt in the composer's mono well, and the price act. */
+.form{display:grid;gap:var(--sp-5);align-content:start;min-width:0}
+.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--w-tile-audio),1fr));gap:var(--sp-3) var(--sp-4)}
+.wide{grid-column:1 / -1;display:grid;gap:var(--sp-1)}
+.text{display:grid;gap:var(--sp-1);min-width:0}
+.num{display:grid;gap:var(--sp-1)}
+.label{font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.area{min-height:var(--h-wavebox);padding:var(--sp-3) var(--sp-4);border-radius:var(--r-sm);border:1px solid var(--hair-2);background:var(--ink-2);font:500 var(--fs-ui)/1.5 var(--sans);color:var(--ink-bright);resize:vertical}
+.area:focus{outline:none;border-color:var(--focus-line)}
+.numField{width:var(--w-pile);height:var(--h-field);padding:0 var(--sp-3);border-radius:var(--r-sm);border:1px solid var(--hair-2);background:var(--ink-2);font:500 var(--fs-ui)/1 var(--mono);color:var(--ink-bright)}
+.numField:focus{outline:none;border-color:var(--focus-line)}
+.knobs{display:flex;flex-wrap:wrap;align-items:end;gap:var(--sp-4)}
+.techniques{display:flex;flex-wrap:wrap;gap:var(--sp-2)}
+.prompt{margin:0;padding:var(--sp-3) var(--sp-4);border-radius:var(--r-sm);border:1px solid var(--hair);background:var(--code-ground);font:500 var(--fs-meta)/1.5 var(--mono);color:var(--code-text);white-space:pre-wrap;overflow-wrap:anywhere}
+.acts{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap}
+.grow{flex:1}

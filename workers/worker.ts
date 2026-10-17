@@ -10,12 +10,14 @@ import { laneHold, nextClaimable } from "@gt/kernel/job-queue";
 import { producerKey, type Pick, type ProducerKey } from "@gt/kernel/job-queue-core";
 import type { RunReport } from "@gt/kernel/job-run";
 import { workLoop } from "@gt/kernel/job-worker";
-import { processHolder } from "@gt/kernel/lease";
+import { pidAlive, processHolder } from "@gt/kernel/lease";
 import { closeProcessKernel, processKernel, storeLocation } from "@gt/kernel/process";
 import { JOB_USD } from "@gt/kernel/spend/meter";
 import type { Store } from "@gt/kernel/store";
 
 import { OUT_DIRNAME } from "../lib/fixtures/mode.ts";
+import { isFailing } from "./timers-core.ts";
+import { timerRoster, type TimerEntry, type TimerLine } from "./timers.ts";
 
 // THE WORKER - the process that drives queued jobs (Phase 4, plan §4). Kernel
 // `workLoop` is the loop; this is its host: it opens the app's store (the same
@@ -40,11 +42,18 @@ import { OUT_DIRNAME } from "../lib/fixtures/mode.ts";
 // unhealthy is waiting on something outside this process (another holder, an
 // operator's look, a vendor) and does not keep a drain alive; it is reported.
 //
+// THE TIMERS (Phase 6, L62; COMMON decision 3): beside the job loop the worker runs a roster of
+// recurring work (./timers.ts) - the publish tick and the metrics refresh - registered through
+// `io.timers`, each held as a lease on the store so two workers run each once. `--once` runs
+// every timer ONE tick before the drain (its line on stderr; a failing tick makes the exit 1);
+// `--no-timers` leaves them to another worker. A stop
+// parks the job loop AND stops the roster (bounded grace, the abandoned named, leases released).
+//
 // `--migrate` opens the store and exits: the one door a Python worker uses to
 // bring a store up to date (packages/kernel/py/kernel_store.py), because Python never
 // carries a second copy of the schema.
 
-export const USAGE = "usage: node workers/runner.mts [--lanes gpu.local,seat.text] [--once] [--json] [--idle-ms N] | --migrate [--json]";
+export const USAGE = "usage: node workers/runner.mts [--lanes gpu.local,seat.text] [--once] [--json] [--idle-ms N] [--no-timers] | --migrate [--json]";
 
 export type WorkerIo = {
   readonly out: (line: string) => void;
@@ -52,16 +61,21 @@ export type WorkerIo = {
   readonly env: Readonly<Record<string, string | undefined>>;
   /** Install the stop signals; returns their removal. */
   readonly onSignal?: (stop: (hard: boolean) => void) => () => void;
+  /** The recurring work this worker hosts, built over its store (workers/runner.mts binds publish's). */
+  readonly timers?: (store: Store) => Result<readonly TimerEntry[]>;
 };
 
-type Args = { readonly lanes: readonly ResourceLane[]; readonly once: boolean; readonly json: boolean; readonly migrate: boolean; readonly idleMs: number };
+/** How long a stop waits for a tick in flight before naming it abandoned. */
+const TIMER_GRACE_MS = 15_000;
+
+type Args = { readonly lanes: readonly ResourceLane[]; readonly once: boolean; readonly json: boolean; readonly migrate: boolean; readonly idleMs: number; readonly timers: boolean };
 
 function parse(argv: readonly string[]): Result<Args> {
   let v;
   try {
     v = parseArgs({
       args: [...argv],
-      options: { lanes: { type: "string" }, once: { type: "boolean" }, json: { type: "boolean" }, migrate: { type: "boolean" }, "idle-ms": { type: "string" } },
+      options: { lanes: { type: "string" }, once: { type: "boolean" }, json: { type: "boolean" }, migrate: { type: "boolean" }, "idle-ms": { type: "string" }, "no-timers": { type: "boolean" } },
       strict: true,
       allowPositionals: false,
     }).values;
@@ -77,7 +91,7 @@ function parse(argv: readonly string[]): Result<Args> {
   if (lanes.length === 0) return { ok: false, error: new AppError("invalid", "--lanes names no lane") };
   const idleMs = v["idle-ms"] === undefined ? 1000 : Number(v["idle-ms"]);
   if (!Number.isInteger(idleMs) || idleMs < 10) return { ok: false, error: new AppError("invalid", `--idle-ms ${String(v["idle-ms"])} is not a whole number of ms >= 10`) };
-  return { ok: true, value: { lanes, once: v.once === true, json: v.json === true, migrate: v.migrate === true, idleMs } };
+  return { ok: true, value: { lanes, once: v.once === true, json: v.json === true, migrate: v.migrate === true, idleMs, timers: v["no-timers"] !== true } };
 }
 
 /** The outcomes a --once drain stops waiting on: the head waits on something this process cannot change. */
@@ -158,7 +172,7 @@ export async function runWorker(argv: readonly string[], bound: Result<ReadonlyM
     io.err(`[worker] ${args.error.message}\n${USAGE}`);
     return 2;
   }
-  const { lanes, once, json, migrate, idleMs } = args.value;
+  const { lanes, once, json, migrate, idleMs, timers } = args.value;
   const say = (human: string, doc: Record<string, unknown>): void => (json ? io.out(JSON.stringify(doc)) : io.out(human));
 
   const location = storeLocation(OUT_DIRNAME, io.env["GRAVITONE_STORE_PATH"]);
@@ -177,13 +191,33 @@ export async function runWorker(argv: readonly string[], bound: Result<ReadonlyM
       io.err(`[worker] the producer set is refused: ${bound.error.message}`);
       return 2;
     }
+    const entries = timers && io.timers !== undefined ? io.timers(store) : { ok: true as const, value: [] };
+    if (!entries.ok) {
+      io.err(`[worker] the timers are refused: ${entries.error.message}`);
+      return 2;
+    }
+    let failures = 0;
+    const roster = timerRoster(entries.value, {
+      store,
+      holder: processHolder(),
+      alive: pidAlive,
+      clock: () => new Date(),
+      // Timer lines go to stderr in both modes: stdout's `--json` is one line per JOB outcome (§5.1),
+      // and a reader of it must not meet a second shape. The store keeps the timers' own record.
+      say: (l: TimerLine) => {
+        if (isFailing(l.outcome)) failures++;
+        const tail = l.error ?? l.what ?? "";
+        io.err(`[worker] timer ${l.timer}: ${l.outcome}${tail === "" ? "" : ` - ${tail}`} (${l.ms} ms)`);
+      },
+    });
+    if (once) await roster.once();
+    else roster.start();
     // A producer serves only the lanes this worker was given: a head on any other lane is not ours to take.
     const mine = new Map([...bound.value].filter(([, p]) => lanes.includes(p.lane)));
     if (mine.size === 0) io.err(`[worker] no producer is bound for ${lanes.join(", ")}: nothing here can run (lib/producers/registry.ts BOUND)`);
     const fx: Effects = liveEffects(store, blobStore(location === ":memory:" ? path.resolve("foundry-out", "blobs") : path.join(path.dirname(location), "blobs")));
 
     const ac = new AbortController();
-    let failures = 0;
     const waiting = new Set<string>();
     const said = new Map<string, string>();
     // A DRIVE THAT FOUND ITS LANE TAKEN COOLS FOR ONE IDLE PERIOD. Kernel `workLoop`
@@ -261,6 +295,8 @@ export async function runWorker(argv: readonly string[], bound: Result<ReadonlyM
       },
     });
     if (drain !== undefined) clearInterval(drain);
+    const abandoned = await roster.stop(once ? 0 : TIMER_GRACE_MS);
+    for (const name of abandoned) io.err(`[worker] timer ${name} was still running at the stop; its claims are left for the next sweep to judge`);
     uninstall?.();
     if (!summary.ok) {
       io.err(`[worker] the loop stopped on a store fault: ${summary.error.message}`);

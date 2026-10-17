@@ -1,0 +1,7 @@
+/* The hunt section's frame on the desk: the open hunt above its shelf, each part (map, audition,
+   lesson) under its own heading. The parts' own looks are @gt/ui audio/Hunt.module.css. */
+.section{flex:1;min-height:0;overflow:auto;padding:var(--sp-5) var(--sp-loose) var(--sp-page-end);display:grid;grid-auto-rows:max-content;gap:var(--sp-6);align-content:start;min-width:0}
+.hunt{display:grid;gap:var(--sp-5);min-width:0}
+.huntPart{display:grid;gap:var(--sp-3);min-width:0}
+.huntHead{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap}
+.wait{margin:0;font:500 var(--fs-meta)/1.4 var(--sans);color:var(--muted)}

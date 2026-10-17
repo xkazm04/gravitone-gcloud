@@ -31,6 +31,7 @@ import type { LoopDriver } from "@/lib/articles/loop";
 import { createRun } from "@/lib/articles/runCreate";
 import { ArticleError, legacyDriverAlive, readRun, updateRun } from "@/lib/articles/store";
 import { cappedTurn, depsThrough, describeTurn, liveTurn, refusedTurn, standInTurn, type ArticleTurn } from "@/lib/articles/turns";
+import { landBlogOnKernel } from "@/lib/decision/v1/sources/articleSlot";
 import { WORKING, type ArticleRun, type ArticleTopic, type CreateRunInput } from "@/lib/articles/types";
 import { OUT_DIRNAME } from "@/lib/fixtures/mode";
 
@@ -69,9 +70,7 @@ export function articleKernel(): Result<ArticleKernel> {
   return ok({ store: k.value.store, fx: liveEffects(k.value.store, blobs) });
 }
 
-function kernelOf(b: ArticleBinding): Result<ArticleKernel> {
-  return b.kernel === undefined ? articleKernel() : ok(b.kernel);
-}
+const kernelOf = (b: ArticleBinding): Result<ArticleKernel> => (b.kernel === undefined ? articleKernel() : ok(b.kernel));
 
 const BY_STATUS: Readonly<Record<number, AppErrorCode>> = { 400: "invalid", 402: "budget", 403: "refused", 404: "not-found", 409: "conflict" };
 
@@ -107,6 +106,7 @@ export function articlePorts(b: ArticleBinding = {}): ArticlePorts<ArticleTurn, 
     },
     async land(runId) {
       const r = await walk(runId, base(), "land");
+      if (r.ok && r.run.status === "landed") landBlogOnKernel(kernelOf(b), r.run); // the PR is the blog slot's publication
       return r.ok ? { ok: true, status: r.run.status, skipped: r.skipped } : { ok: false, message: r.message };
     },
     registry: () => {

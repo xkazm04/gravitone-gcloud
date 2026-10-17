@@ -6,7 +6,9 @@
 // to one client island. The focused lane and the open month arrive in the search params, so a
 // link can carry them (`/floor?lane=audio`, `/floor?cal=1&day=2026-10-15`), and the island keeps
 // them there afterwards without asking the server again. So does an open slot's record
-// (`/floor?cal=1&slot=<id>`, Phase 6): the level over the Floor that the rail and the month open.
+// (`/floor?cal=1&slot=<id>`, Phase 6): the level over the Floor that the rail and the month open;
+// and the schedule sheet (`/floor?cal=1&new=1[&item=<id>]`, wave B), which reads its exports when
+// it opens. On the real side every slot is the kernel's (./_calendar/real.ts).
 //
 // Phase 4 (L28): the Foundry cells carry the composers, over the produce port (../projects/_port);
 // their choices are read here with the rest. A pile is still a door to its packet's Board, which

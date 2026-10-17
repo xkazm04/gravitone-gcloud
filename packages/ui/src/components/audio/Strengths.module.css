@@ -1,0 +1,35 @@
+/* The strengths table (v1 triage/Strengths.tsx's heat table, re-expressed on the kit's tokens):
+   a value column, one column per provider (--cols, the count the table is OF), and n. Heat is a
+   tint behind the figure in the signal hues - emerald above a coin toss, rose below - and a cell
+   under the floor has no tint at all, only its pips. */
+.table{display:grid;gap:var(--sp-4);min-width:0}
+.bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--sp-3)}
+.grid{display:grid;gap:var(--sp-1);min-width:0;overflow-x:auto}
+.row{--cols:2;display:grid;grid-template-columns:minmax(var(--w-cull-label),.7fr) repeat(var(--cols),minmax(var(--w-thumb),1fr)) var(--w-thumb);gap:var(--sp-1);align-items:stretch;min-width:min-content}
+.head{display:flex;align-items:end;padding:0 var(--sp-2) var(--sp-1);font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.sort{background:none;border:0;padding:var(--sp-1) 0;font:inherit;letter-spacing:inherit;text-transform:inherit;color:var(--muted);cursor:pointer}
+.sort:hover{color:var(--text)}
+.sort:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}
+.sortOn{color:var(--cyan)}
+.value{display:flex;align-items:center;padding:0 var(--sp-2);font:600 var(--fs-ui)/1.3 var(--sans);color:var(--ink-bright);overflow-wrap:anywhere;min-width:0}
+.n{display:flex;align-items:center;justify-content:flex-end;padding:0 var(--sp-2);font:500 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+.cellWrap{display:grid;min-width:0}
+.cell{display:grid;gap:var(--sp-hair);align-content:center;justify-items:start;min-height:var(--h-pile-face);padding:var(--sp-2) var(--sp-3);border-radius:var(--r-tile);border:1px solid var(--hair);background:var(--wash);color:var(--text);text-align:left;cursor:pointer;min-width:0}
+.cell:hover{border-color:var(--hair-3)}
+.cell:focus-visible,.on{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}
+.cell[data-heat="2"]{background:color-mix(in srgb,var(--emerald) 18%,transparent);border-color:color-mix(in srgb,var(--emerald) 35%,transparent)}
+.cell[data-heat="1"]{background:color-mix(in srgb,var(--emerald) 9%,transparent);border-color:color-mix(in srgb,var(--emerald) 18%,transparent)}
+.cell[data-heat="-1"]{background:color-mix(in srgb,var(--rose) 8%,transparent);border-color:color-mix(in srgb,var(--rose) 18%,transparent)}
+.cell[data-heat="-2"]{background:color-mix(in srgb,var(--rose) 16%,transparent);border-color:color-mix(in srgb,var(--rose) 35%,transparent)}
+.rate{font:700 var(--fs-h2)/1 var(--mono);color:var(--ink-bright)}
+.sub{font:500 var(--fs-micro)/1.2 var(--mono);color:var(--muted)}
+.defect{font:500 var(--fs-micro)/1.2 var(--mono);color:var(--rose);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.waiting{justify-items:center;background:var(--hatch-future);border-style:dashed;border-color:color-mix(in srgb,var(--faint) 80%,transparent)}
+.wait{font:600 var(--fs-micro)/1 var(--mono);letter-spacing:.06em;color:var(--faint)}
+.empty{display:grid;place-items:center;min-height:var(--h-pile-face);border-radius:var(--r-tile);border:1px solid var(--hair)}
+.dot{width:var(--size-dot);height:var(--size-dot);border-radius:50%;background:var(--hair-2)}
+.ghostName{align-self:center;height:var(--sp-3);margin:0 var(--sp-2);border-radius:var(--r-chip);background:var(--wash-hi)}
+.ghostCell{min-height:var(--h-pile-face);border-radius:var(--r-tile);border:1px dashed color-mix(in srgb,var(--faint) 80%,transparent);background:var(--hatch-future)}
+.detailHead{display:grid;gap:var(--sp-2)}
+.detailValue{font:600 var(--fs-h2)/1.2 var(--sans);color:var(--ink-bright);overflow-wrap:anywhere}
+.figures{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2)}

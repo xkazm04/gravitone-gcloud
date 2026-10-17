@@ -10,19 +10,17 @@ await vi.hoisted(async () => {
   process.env["GRAVITONE_STORE_PATH"] = join(mkdtempSync(join(tmpdir(), "floor-test-")), "store.sqlite");
 });
 
-import type { Event } from "@gt/domain/event";
-
 import { nextPile, pileOrder, spendOf } from "../../app/(studio)/_shell/facts.ts";
 import { SLOTS } from "../../app/(studio)/floor/_calendar/fixtureData.ts";
-import { applyCancel, applyMove, applyPublishNow, seedRow, viewOf, type FixtureRow } from "../../app/(studio)/floor/_calendar/fixture.ts";
-import { driftOf } from "../../app/(studio)/floor/_calendar/real.ts";
-import { byLane, floorSearch, parseFloorUrl, publishedSlots, railSlot, slotHref } from "../../app/(studio)/floor/_floor/model.ts";
+import { applyCancel, applyMove, applyPublishNow, fixtureAct, fixtureFacts, fixtureItems, fixtureSchedule, seedRow, viewOf, type FixtureRow } from "../../app/(studio)/floor/_calendar/fixture.ts";
+import { byLane, floorSearch, parseFloorUrl, scheduleHref, slotHref } from "../../app/(studio)/floor/_floor/model.ts";
 import { downsample } from "../../app/(studio)/floor/_floor/shelf.ts";
 import type { LiveJob, WeirItem } from "../../lib/ledger/v1/types.ts";
 
 // The Floor's pure rules: which pile is NEXT (the header and the Floor share it), how runs and
-// piles fall into lanes, what the last 24 hours cost, the calendar's published history from the
-// ledger, the page's URL, and the bounded waveform a kept take carries to the page.
+// piles fall into lanes, what the last 24 hours cost, the page's URL, the fixture calendar (the
+// domain's records and machine, and the engine's refusals for a new slot), and the bounded
+// waveform a kept take carries to the page. The real side is ./floor-real.test.ts.
 
 const pile = (source: string, id: string, media: WeirItem["media"], since: string | undefined, pending = 3, decided = 0): WeirItem => ({
   source,
@@ -37,19 +35,6 @@ const pile = (source: string, id: string, media: WeirItem["media"], since: strin
 });
 
 const job = (id: string, media: LiveJob["media"]): LiveJob => ({ source: "forge", id, title: id, lane: "gpu.local", media, state: "running", href: "/foundry" });
-
-const ev = (over: Partial<Event>): Event => ({
-  seq: 1,
-  at: "2026-10-15T10:00:00.000Z",
-  atSrc: "recorded",
-  actor: { kind: "machine", id: "publisher" },
-  type: "publish",
-  subject: { kind: "publication", id: "pub-1" },
-  data: {},
-  prevHash: "0".repeat(64),
-  hash: "1".repeat(64),
-  ...over,
-});
 
 describe("NEXT", () => {
   it("is the oldest pile with anything pending", () => {
@@ -98,43 +83,31 @@ describe("spend", () => {
   });
 });
 
-describe("published history", () => {
-  it("titles a publication by its slot's own create act, and keeps the slot id when the ledger never saw one", () => {
-    const pubs = [
-      ev({ subject: { kind: "publication", id: "pub-1" }, occurredAt: "2026-10-12T06:00:00.000Z", data: { slotId: "slot-a", channel: "youtube" } }),
-      ev({ subject: { kind: "publication", id: "pub-2" }, data: { slotId: "slot-b", channel: "tiktok" } }),
-    ];
-    const creates = [ev({ type: "slot.create", subject: { kind: "slot", id: "slot-a" }, data: { title: "Radar sweep" } })];
-    expect(publishedSlots(pubs, creates)).toEqual([
-      { id: "pub-1", title: "Radar sweep", channel: "youtube", publishAt: "2026-10-12T06:00:00.000Z", status: "published" },
-      { id: "pub-2", title: "slot-b", channel: "tiktok", publishAt: "2026-10-15T10:00:00.000Z", status: "published" },
-    ]);
-  });
-
-  it("keeps a live slot's error and omits an absent one", () => {
-    const base = { source: "publish", id: "s", title: "t", channel: "youtube", projectId: "p", publishAt: "2026-10-15T10:00:00Z", href: "/calendar" } as const;
-    expect(railSlot({ ...base, status: "failed", error: "drift: export_missing" })).toEqual({ id: "s", title: "t", channel: "youtube", publishAt: "2026-10-15T10:00:00Z", status: "failed", error: "drift: export_missing" });
-    expect("error" in railSlot({ ...base, status: "scheduled" })).toBe(false);
-  });
-});
-
 describe("the URL", () => {
   it("round-trips the focused lane, the month, its day, the hidden channels and the open slot", () => {
     const u = parseFloorUrl({ lane: "audio", cal: "1", day: "2026-10-15", off: "tiktok,blog", slot: "sl-chokepoint-quota" });
-    expect(u).toEqual({ lane: "audio", cal: true, day: "2026-10-15", off: ["blog", "tiktok"], slot: "sl-chokepoint-quota" });
+    expect(u).toEqual({ lane: "audio", cal: true, day: "2026-10-15", off: ["blog", "tiktok"], slot: "sl-chokepoint-quota", schedule: null });
     expect(floorSearch(u)).toBe("?lane=audio&cal=1&day=2026-10-15&off=blog,tiktok&slot=sl-chokepoint-quota");
     expect(parseFloorUrl(Object.fromEntries(new URLSearchParams(floorSearch(u))))).toEqual(u);
   });
 
   it("drops what it does not know rather than guessing, and a day or channels without the month", () => {
-    expect(parseFloorUrl({ lane: "gpu.local", cal: "yes", day: "tomorrow", off: "Tik Tok", slot: "a b" })).toEqual({ lane: null, cal: false, day: null, off: [], slot: null });
-    expect(floorSearch({ lane: null, cal: false, day: "2026-10-15", off: ["tiktok"], slot: null })).toBe("");
+    expect(parseFloorUrl({ lane: "gpu.local", cal: "yes", day: "tomorrow", off: "Tik Tok", slot: "a b", new: "yes", item: "x" })).toEqual({ lane: null, cal: false, day: null, off: [], slot: null, schedule: null });
+    expect(floorSearch({ lane: null, cal: false, day: "2026-10-15", off: ["tiktok"], slot: null, schedule: null })).toBe("");
   });
 
   it("opens a slot with or without the month beneath it", () => {
-    expect(floorSearch({ lane: null, cal: false, day: null, off: [], slot: "sl-a" })).toBe("?slot=sl-a");
+    expect(floorSearch({ lane: null, cal: false, day: null, off: [], slot: "sl-a", schedule: null })).toBe("?slot=sl-a");
     expect(slotHref("sl-a")).toBe("/floor?cal=1&slot=sl-a");
     expect(slotHref("sl-a", false)).toBe("/floor?slot=sl-a");
+  });
+
+  it("carries the schedule sheet and the item a Library act asked for; a link lands on the same sheet", () => {
+    const u = parseFloorUrl(Object.fromEntries(new URL(scheduleHref("video:export:chokepoint"), "http://x").searchParams));
+    expect(u.schedule).toEqual({ item: "video:export:chokepoint" });
+    expect(u.cal).toBe(true);
+    expect(floorSearch(u)).toBe("?cal=1&new=1&item=video%3Aexport%3Achokepoint");
+    expect(parseFloorUrl({ new: "1" }).schedule).toEqual({ item: null });
   });
 });
 
@@ -203,12 +176,36 @@ describe("the fixture calendar", () => {
   });
 });
 
-describe("v1's drift on the real side", () => {
-  it("reads v1's drift sentence back into the drift field and keeps any other error verbatim", () => {
-    const base = { id: "s", title: "t", channel: "youtube", publishAt: "2026-10-15T10:00:00Z", status: "scheduled" } as const;
-    expect(driftOf({ ...base, error: "the export this slot publishes no longer exists" })).toEqual({ ...base, drift: "export_missing" });
-    expect(driftOf({ ...base, error: "this channel is not wired" })).toEqual({ ...base, drift: "channel_not_wired" });
-    expect(driftOf({ ...base, status: "failed", error: "upload: 403 quotaExceeded" })).toEqual({ ...base, status: "failed", error: "upload: 403 quotaExceeded" });
+describe("the fixture calendar's engine refusals", () => {
+  const draft = { item: "video:export:river-steps", channel: "youtube", at: "2026-10-20T12:00:00.000Z", title: "Two hundred days of rain", description: "", tags: ["rain"] };
+
+  it("schedules a free export and answers the slot as the engine would hold it", () => {
+    const v = must(fixtureSchedule(draft, NOW));
+    expect([v.slot.status, v.slot.item, v.rev, v.source]).toEqual(["scheduled", "video:export:river-steps", 1, "fixture"]);
+    expect(fixtureItems().some((i) => i.id === "video:export:river-steps" && i.poster !== undefined)).toBe(true);
+  });
+
+  it("refuses an item already on that channel, an unwired channel, an unknown item and a blog slot - each in words", () => {
+    const words = (r: { ok: boolean; error?: { message: string } }) => (r.ok ? null : (r.error?.message ?? ""));
+    expect(words(fixtureSchedule({ ...draft, item: "video:export:why-bitcoin" }, NOW))).toMatch(/^video:export:why-bitcoin is already on youtube \(slot sl-bitcoin-yt, scheduled for /);
+    expect(words(fixtureSchedule({ ...draft, channel: "instagram" }, NOW))).toBe("instagram is not wired");
+    expect(words(fixtureSchedule({ ...draft, item: "video:export:nowhere" }, NOW))).toBe("unknown item video:export:nowhere");
+    expect(words(fixtureSchedule({ ...draft, channel: "blog" }, NOW))).toMatch(/approve on the Board/);
+  });
+
+  it("refuses a verb sent on a revision the slot has moved past, and writes nothing", () => {
+    const first = must(fixtureAct("sl-tariff-yt-later", NOW, (r) => applyMove(r, "2026-10-28T10:00:00.000Z", NOW), 1));
+    expect(first.rev).toBe(2);
+    const stale = fixtureAct("sl-tariff-yt-later", NOW, applyCancel, 1);
+    expect(stale.ok ? null : [stale.error.code, stale.error.message]).toEqual(["conflict", "The quiet tariff: it changed since it was opened - now scheduled for 2026-10-28T10:00:00.000Z"]);
+    expect(must(fixtureAct("sl-tariff-yt-later", NOW, (r) => ({ ok: true, value: r }))).slot.status).toBe("scheduled");
+  });
+
+  it("says what each channel can do: YouTube dry, Instagram not wired, blog by its approve; names only", () => {
+    const f = must(fixtureFacts(NOW));
+    expect(f.channels.map((c) => [c.channel, c.state])).toEqual([["youtube", "dry"], ["tiktok", "dry"], ["instagram", "not_wired"], ["blog", "act"]]);
+    expect(f.channels.flatMap((c) => c.env.map((e) => e.present))).not.toContain(true);
+    expect(f.channels.find((c) => c.channel === "youtube")?.lastFailure?.error).toBe("upload: 403 quotaExceeded - The request cannot be completed because you have exceeded your quota.");
   });
 });
 

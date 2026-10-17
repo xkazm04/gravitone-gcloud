@@ -16,8 +16,11 @@
 //     what is missing ("stop: the create in flight finishes");
 //   · a failure fails the job verbatim and the proposal wears it ("a failure
 //     fails its job verbatim");
-//   · the CLI (lib/sound/suno/cli.ts, what pipeline/suno.mts runs) and the
-//     routes act on ONE job id; the ledger leaves its live row to the job store.
+//   · the CLI (lib/sound/suno/cli.ts, what pipeline/suno.mts runs), the Floor's
+//     audio composer and Runs act on ONE job id; the ledger leaves its live row to
+//     the job store. (Phase 6 L67: the second door was /api/sound/suno{,/queue,
+//     /queue/[id]}, the v1 Sound lab's routes, which wave C deletes; their bodies
+//     were lib's enqueueProposals / sunoSnapshot / cancelJob, called here.)
 
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -47,7 +50,6 @@ import { closeProcessKernel } from "@gt/kernel/process";
 import { assertReconciled } from "@gt/kernel/spend/projection";
 import { SUNO_CREDITS, sunoPlan } from "@gt/producers/suno/producer";
 
-import { __resetRateLimit } from "../../lib/apiAuth.ts";
 import { projectSuno, sunoSource } from "../../lib/ledger/v1/sources/suno.ts";
 import { must, OPERATOR, soundKernel } from "../../lib/producers/sound.ts";
 import { driveSuno, launchSuno, sunoKernelId, sunoKernelJobs } from "../../lib/producers/suno.ts";
@@ -56,9 +58,8 @@ import { FAKE_SUNO, resetFakeSuno } from "../../lib/sound/suno/fakeDriver.ts";
 import { cancelJob, enqueueProposals, FAKE_SUNO_DRIVER, setSunoQueue, sunoSnapshot, type SunoDriver } from "../../lib/sound/suno/queue.ts";
 import { addProposals, readSuno } from "../../lib/sound/suno/store.ts";
 import type { SunoJob, SunoSnapshot } from "../../lib/suno/types.ts";
-import { GET as sunoGET } from "../../app/api/sound/suno/route.ts";
-import { POST as queuePOST } from "../../app/api/sound/suno/queue/route.ts";
-import { DELETE as queueDELETE } from "../../app/api/sound/suno/queue/[id]/route.ts";
+import { makeRealProduce } from "../../app/(studio)/projects/_port/real.ts";
+import { stripsKernel } from "../../lib/producers/strips.ts";
 
 afterAll(() => {
   closeProcessKernel();
@@ -202,11 +203,7 @@ describe("the Suno producer on the kernel", () => {
     expect(f.proposals.find((p) => p.id === job.proposalId)?.error).toBe("Suno says: out of credits for v6-wild");
   });
 
-  it("the CLI and the routes act on one job id; the ledger leaves its live row to the job store", async () => {
-    __resetRateLimit();
-    let ip = 0;
-    const rq = (p: string, method = "GET", json?: unknown): Request =>
-      new Request(`http://localhost${p}`, { method, headers: { authorization: "Bearer producer-suno-secret", "x-forwarded-for": `10.32.${++ip}.1`, ...(json === undefined ? {} : { "content-type": "application/json" }) }, ...(json === undefined ? {} : { body: JSON.stringify(json) }) });
+  it("the CLI, the Floor and Runs act on one job id; the ledger leaves its live row to the job store", async () => {
     const pid = await proposal();
     // The CLI enqueues and never spends - not even with the column's switch on ...
     await setSunoQueue(true);
@@ -215,22 +212,41 @@ describe("the Suno producer on the kernel", () => {
     const [job] = (enq.doc as { jobs: SunoJob[] }).jobs;
     expect(sunoKernelJobs().has(sunoKernelId(job!))).toBe(false);
     await setSunoQueue(false);
-    // ... the route queues the same proposal and gets the same record back ...
-    const posted = await queuePOST(rq("/api/sound/suno/queue", "POST", { proposalIds: [pid] }));
-    expect(posted.status).toBe(201);
-    expect(((await posted.json()) as { jobs: SunoJob[] }).jobs[0]?.id).toBe(job!.id);
+    // ... queuing the same proposal again gets the same record back ...
+    expect((await enqueueProposals([pid]))[0]?.id).toBe(job!.id);
     // ... the CLI launches and drives it, dry ...
     expect((await runSunoCli(["start"])).code).toBe(2);
     const started = await runSunoCli(["start", "--dry", "--json"]);
     expect(started.code).toBe(0);
     const kid = sunoKernelId(job!);
     expect((started.doc as { jobs: SunoJob[] }).jobs.map((j) => j.job)).toEqual([kid]);
-    // ... and the route reads that job done; cancelling it now is refused (it ended).
-    const snap = (await (await sunoGET(rq("/api/sound/suno"))).json()) as SunoSnapshot;
-    expect(snap.jobs.find((j) => j.id === job!.id)).toMatchObject({ state: "done", job: kid });
-    expect((await queueDELETE(rq(`/api/sound/suno/queue/${job!.id}`, "DELETE"), { params: Promise.resolve({ id: job!.id }) })).status).toBe(409);
+    // ... the desk's read sees that job done; cancelling it now is refused (it ended).
+    expect((await sunoSnapshot()).jobs.find((j) => j.id === job!.id)).toMatchObject({ state: "done", job: kid });
+    await expect(cancelJob(job!.id)).rejects.toMatchObject({ status: 409 });
     const status = await runSunoCli(["status", "--json"]);
     expect((status.doc as SunoSnapshot).jobs.find((j) => j.id === job!.id)?.job).toBe(kid);
+
+    // The other way: the Floor's audio composer launches a take from a sentence, Runs pauses and
+    // resumes that job, and the CLI's Start drives the very job the Floor enqueued.
+    const floor = makeRealProduce({ store: () => ({ ok: true, value: soundKernel().store }), strips: () => stripsKernel(), env: () => process.env, now: () => Date.now() });
+    const input = { lane: "audio", kind: "music", text: "a slow tide under tape hiss" } as const;
+    const receipt = await floor.composerReceipt({ input, mode: "dry" }, { who: "op-test" });
+    if (!receipt.ok) throw receipt.error;
+    const go = await floor.launchRun({ input, token: receipt.value.token, mode: "dry" }, { who: "op-test" });
+    if (!go.ok) throw go.error;
+    if (go.value.kind !== "launched") throw new Error(`expected a launch, got ${go.value.kind}`);
+    const floorJob = go.value.jobId;
+    expect(sunoKernelJobs().get(floorJob)?.state).toBe("queued");
+    const drawn = floor.listJobs();
+    if (!drawn.ok) throw drawn.error;
+    expect(drawn.value.filter((j) => j.id === floorJob).map((j) => j.state)).toEqual(["queued"]);
+    expect(floor.pauseJob({ jobId: floorJob }, { who: "op-test" }).ok).toBe(true);
+    expect(sunoKernelJobs().get(floorJob)?.state).toBe("paused");
+    expect(floor.resumeJob({ jobId: floorJob }, { who: "op-test" }).ok).toBe(true);
+    const drove = await runSunoCli(["start", "--dry", "--json"]);
+    expect(drove.code).toBe(0);
+    expect((drove.doc as { jobs: SunoJob[] }).jobs.map((j) => j.job)).toEqual([floorJob]);
+    expect(sunoKernelJobs().get(floorJob)?.state).toBe("done");
 
     const live = await queued();
     await launched(live.id, "dry");

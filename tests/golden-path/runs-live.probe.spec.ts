@@ -7,7 +7,7 @@
 // and compares the bars it would draw, source by source, with what each v1 UI's own live
 // predicate selects from the same files on disk. Two readings that share no code: the
 // adapters' zod doors and projections on one side; the raw files and v1's exported state sets
-// (app/foundry/parts LIVE, EXTRACT_LIVE, cycleKind; app/articles/runModel WORKING; lib/sound
+// (lib/foundry/plant LIVE, EXTRACT_LIVE, cycleKind; lib/articles WORKING, frozen below; lib/sound
 // isLiveJob; lib/turns LIVE; ...) on the other. A job the adapter drops, or one Runs' model or
 // view filters out, is a missing id named by its source.
 //
@@ -23,11 +23,23 @@ import { join } from "node:path";
 
 import { expect, test } from "@playwright/test";
 
-import { WORKING } from "@/app/articles/runModel";
-import { EXTRACT_LIVE, LIVE, cycleKind } from "@/app/foundry/parts";
 import * as mv from "@/lib/sound/mv/store";
 import * as suno from "@/lib/sound/suno/store";
 import { LIVE as TURN_LIVE } from "@/lib/turns/ledger";
+
+// THE v1 UIs' LIVE SETS, FROZEN HERE (Phase 6 L67). They were imported from the pages that drew
+// them (app/foundry/parts.tsx, app/articles/runModel.ts), which wave C deletes. Each page only
+// re-exported lib's set (lib/foundry/plant.ts, lib/articles/types.ts) - the same sets the
+// adapters read - so importing lib would make the two readings above share code. Spelled out,
+// they stay the second reading: what v1 drew as live, against what the adapters now say.
+/** lib/foundry/plant.ts LIVE. */
+const FORGE_LIVE = ["created", "annotating", "generating", "grading"];
+/** lib/foundry/plant.ts EXTRACT_LIVE. */
+const EXTRACT_LIVE = ["created", "reading", "grouping", "replicating", "transferring"];
+/** lib/foundry/plant.ts cycleKind(s) === "live": every cycle status but the gate and the two ends. */
+const CYCLE_LIVE = ["planning", "generating", "judging"];
+/** lib/articles/types.ts WORKING. */
+const ARTICLE_WORKING = ["queued", "researching", "drafting", "critiquing", "checking", "approved", "landing"];
 
 const ROOT = process.cwd();
 const CLI = join(ROOT, "pipeline", "ledger-sync.mts");
@@ -78,14 +90,13 @@ async function withSoundDir<T>(read: () => Promise<T>): Promise<T> {
  * live jobs by construction (its live work is slots or money, compared below or not at all).
  */
 function predicates(): Record<string, (() => string[] | Promise<string[]>) | null> {
-  const cycleLive = (s: string): boolean => ["planning", "generating", "judging", "awaiting-gate", "committed", "failed"].includes(s) && cycleKind(s as Parameters<typeof cycleKind>[0]) === "live";
   return {
-    forge: () => manifests("runs", "run.json").filter((m) => LIVE.some((x) => x === m["status"])).map((m) => str(m["id"])),
-    extract: () => manifests("extract", "run.json").filter((m) => EXTRACT_LIVE.some((x) => x === m["status"])).map((m) => str(m["id"])),
-    dojo: () => manifests("training", "cycle.json").filter((m) => cycleLive(str(m["status"]))).map((m) => str(m["id"])),
+    forge: () => manifests("runs", "run.json").filter((m) => FORGE_LIVE.includes(str(m["status"]))).map((m) => str(m["id"])),
+    extract: () => manifests("extract", "run.json").filter((m) => EXTRACT_LIVE.includes(str(m["status"]))).map((m) => str(m["id"])),
+    dojo: () => manifests("training", "cycle.json").filter((m) => CYCLE_LIVE.includes(str(m["status"]))).map((m) => str(m["id"])),
     // app/foundry/StripsView.tsx: a strip run is live while `status === "running"`.
     strips: () => manifests("strips", "run.json").filter((m) => m["status"] === "running").map((m) => str(m["id"])),
-    articles: () => manifests("articles", "run.json").filter((m) => WORKING.some((x) => x === m["status"])).map((m) => str(m["id"])),
+    articles: () => manifests("articles", "run.json").filter((m) => ARTICLE_WORKING.includes(str(m["status"]))).map((m) => str(m["id"])),
     // v1's own readers (SOUND_STORE_DIR is read per call, lib/sound/store.ts) and live rules.
     suno: async () => withSoundDir(async () => (await suno.readSuno()).jobs.filter(suno.isLiveJob).map((j) => j.id)),
     mv: async () => withSoundDir(async () => (await mv.readMv()).jobs.filter(mv.isLiveJob).map((j) => j.id)),

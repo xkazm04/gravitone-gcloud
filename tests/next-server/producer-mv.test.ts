@@ -13,7 +13,9 @@
 //   · a LIVE job through a fake vendor: studio credits and a seat that reports
 //     nothing are booked unpriced with their reasons, a reported turn priced,
 //     and the job's spend equals the meter;
-//   · the route and the CLI's drive act on ONE job id; a read starts nothing;
+//   · Start, Runs' acts and the CLI's drive act on ONE job id; a read starts nothing
+//     (Phase 6 L67: Start was POST /api/sound/mv/run, the v1 Settled column's route, which
+//     wave C deletes; its body was lib's mvStartReceipt / startMvWith, called here);
 //   · the v1 readers keep reading mv.json.
 
 import { afterAll, describe, expect, it, vi } from "vitest";
@@ -45,16 +47,15 @@ import { assertReconciled } from "@gt/kernel/spend/projection";
 import { mvPlan, STUDIO_CREDITS } from "@gt/producers/mv/producer";
 import { planOf } from "@gt/producers/mv/plan";
 
-import { __resetRateLimit } from "../../lib/apiAuth.ts";
 import { mvSource, projectMv } from "../../lib/ledger/v1/sources/mv.ts";
 import { driveMv, launchMv, mvKernelId, mvKernelJobs, mvProducer } from "../../lib/producers/mv.ts";
 import { must, OPERATOR, soundKernel } from "../../lib/producers/sound.ts";
 import { importFolder } from "../../lib/sound/mv/importFolder.ts";
-import { enqueueMv, mvSnapshot, regenerateMv, setMvQueue } from "../../lib/sound/mv/queue.ts";
+import { enqueueMv, mvSnapshot, mvStartReceipt, regenerateMv, setMvQueue, startMvWith } from "../../lib/sound/mv/queue.ts";
 import { readMv, withMv } from "../../lib/sound/mv/store.ts";
-import type { MvJob, MvSnapshot } from "../../lib/sound/mv/types.ts";
-import { GET as mvGET, POST as mvPOST } from "../../app/api/sound/mv/route.ts";
-import { GET as runGET, POST as runPOST } from "../../app/api/sound/mv/run/route.ts";
+import type { MvJob } from "../../lib/sound/mv/types.ts";
+import { makeRealProduce } from "../../app/(studio)/projects/_port/real.ts";
+import { stripsKernel } from "../../lib/producers/strips.ts";
 import { audioDir, mvFakes, TREAT_USD } from "./producer-mv-fakes.ts";
 
 afterAll(() => {
@@ -191,35 +192,44 @@ describe("the music-video producer on the kernel", () => {
     expect([done.state, done.redo, (await readMv()).progress[job.id]]).toEqual(["done", undefined, undefined]);
   });
 
-  it("the route and the CLI's drive act on one job id: Start launches it, the drive runs it, a GET reads it done and starts nothing", async () => {
-    __resetRateLimit();
-    let ip = 0;
-    const rq = (p: string, method = "GET", json?: unknown): Request =>
-      new Request(`http://localhost${p}`, { method, headers: { authorization: "Bearer producer-mv-secret", "x-forwarded-for": `10.31.${++ip}.1`, ...(json === undefined ? {} : { "content-type": "application/json" }) }, ...(json === undefined ? {} : { body: JSON.stringify(json) }) });
+  it("Start, Runs and the CLI's drive act on one job id: Start launches it, Runs pauses and resumes it, the drive runs it, a read starts nothing", async () => {
+    // Runs' server side (app/(studio)/projects/_port/real.ts) over the kernel the producer launches on.
+    const runs = makeRealProduce({ store: () => ({ ok: true, value: soundKernel().store }), strips: () => stripsKernel(), env: () => process.env, now: () => Date.now() });
     const { takeIds } = await importFolder(audioDir(ROOT, ["06_Night Ferry.mp3"]));
-    const posted = await mvPOST(rq("/api/sound/mv", "POST", { sources: [{ kind: "take", id: takeIds[0], title: "06_Night Ferry" }] }));
-    expect(posted.status).toBe(201);
-    const [job] = ((await posted.json()) as { jobs: MvJob[] }).jobs;
-    // The receipt Start would confirm, then Start with its token, as the new UI does.
-    const receipt = ((await (await runGET(rq("/api/sound/mv/run"))).json()) as { receipt: { token: string; lines: { key: string }[] } }).receipt;
+    const [job] = await enqueueMv([{ kind: "take", id: takeIds[0]!, title: "06_Night Ferry" }]);
+    // The receipt Start would confirm, then Start with its token.
+    const receipt = await mvStartReceipt();
     expect(receipt.lines.map((l) => l.key)).toContain(mvKernelId(job!));
-    expect((await runPOST(rq("/api/sound/mv/run", "POST", { running: true, token: "stale" }))).status).toBe(409);
-    process.env["GRAVITONE_DRY_ONLY"] = "1"; // the column launches dry in a dry-only process
-    const fresh = ((await (await runGET(rq("/api/sound/mv/run"))).json()) as { receipt: { token: string } }).receipt.token;
-    expect((await runPOST(rq("/api/sound/mv/run", "POST", { running: true, token: fresh }))).status).toBe(200);
-    delete process.env["GRAVITONE_DRY_ONLY"];
+    expect("stale" in (await startMvWith("stale"))).toBe(true);
+    process.env["GRAVITONE_DRY_ONLY"] = "1"; // Start launches dry in a dry-only process
+    try {
+      const started = await startMvWith((await mvStartReceipt()).token);
+      expect("stale" in started).toBe(false);
+    } finally {
+      delete process.env["GRAVITONE_DRY_ONLY"];
+    }
     const kid = mvKernelId(job!);
     const k = mvKernelJobs().get(kid)!;
     expect([k.state, k.mode.kind]).toEqual(["queued", "dry"]);
-    // A read is a read: the snapshot starts nothing.
-    const snap = (await (await mvGET(rq("/api/sound/mv"))).json()) as MvSnapshot;
+    // Runs draws that job, and its acts land on it.
+    const drawn = (() => {
+      const l = runs.listJobs();
+      if (!l.ok) throw l.error;
+      return l.value.filter((j) => j.id === kid).map((j) => j.state);
+    })();
+    expect(drawn).toEqual(["queued"]);
+    expect(runs.pauseJob({ jobId: kid }, { who: "op-test" }).ok).toBe(true);
+    expect(mvKernelJobs().get(kid)?.state).toBe("paused");
+    expect(runs.resumeJob({ jobId: kid }, { who: "op-test" }).ok).toBe(true);
+    // A read is a read: the snapshot starts nothing, and draws the job's state, not mv.json's mirror.
+    const snap = await mvSnapshot();
     expect(snap.jobs.find((j) => j.id === job!.id)).toMatchObject({ state: "queued", job: kid });
     expect(mvKernelJobs().get(kid)?.state).toBe("queued");
     // The CLI drives the same job id (pipeline/music-video.mts run -> lib/producers/mv.ts driveMv).
     await driveMv([kid], { engines: mvFakes().engines, dryOnly: true });
-    const after = (await (await mvGET(rq("/api/sound/mv"))).json()) as MvSnapshot;
+    const after = await mvSnapshot();
     expect(after.jobs.find((j) => j.id === job!.id)).toMatchObject({ state: "done", job: kid });
-    expect((await runPOST(rq("/api/sound/mv/run", "POST", { running: false }))).status).toBe(200);
+    await setMvQueue(false);
   });
 
   it("a crash at the still: the job is interrupted, the board reads its sentence, no mv job is claimed until the operator's Start retries it", async () => {

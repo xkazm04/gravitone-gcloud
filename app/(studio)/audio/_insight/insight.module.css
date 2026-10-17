@@ -1,0 +1,23 @@
+/* The insight sections' layout around the @gt/ui parts: strengths is the table with the cell
+   and its lessons docked beside it (the detail panel's width); rubric is a column of judged
+   takes; batch is one form. Below 1100px the strengths' side drops under the table. */
+.split{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) var(--w-detail)}
+.main,.side{min-height:0;overflow:auto;padding:var(--sp-5) var(--sp-loose) var(--sp-page-end);display:grid;gap:var(--sp-4);align-content:start;min-width:0}
+.side{border-left:1px solid var(--hair);background:var(--panel-ground)}
+.detail{display:grid;gap:var(--sp-3)}
+.figs{display:flex;flex-wrap:wrap;gap:var(--sp-2)}
+.claim{min-height:var(--h-wavebox);padding:var(--sp-3);border-radius:var(--r-sm);border:1px solid var(--hair-2);background:var(--ink-2);font:500 var(--fs-ui)/1.5 var(--sans);color:var(--ink-bright);resize:vertical}
+.claim:focus{outline:none;border-color:var(--focus-line)}
+.lessons{display:grid;gap:var(--sp-3);padding-top:var(--sp-4);border-top:1px solid var(--hair)}
+.lessonList{list-style:none;margin:0;padding:0;display:grid;gap:var(--sp-2)}
+.lesson{display:grid;gap:var(--sp-1);padding:var(--sp-3);border-radius:var(--r-tile);border:1px solid var(--hair)}
+.lessonClaim{margin:0;font:500 var(--fs-ui)/1.45 var(--sans);color:var(--text)}
+.lessonMeta{font:500 var(--fs-micro)/1.3 var(--mono);color:var(--faint)}
+.pile,.batch{flex:1;min-height:0;overflow:auto;padding:var(--sp-5) var(--sp-loose) var(--sp-page-end);display:grid;grid-auto-rows:max-content;gap:var(--sp-4);align-content:start;min-width:0}
+.batch{max-width:calc(var(--w-detail) * 3)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(calc(var(--w-tile-audio) * 1.6),1fr));gap:var(--sp-3)}
+@media (max-width:1100px){
+  .split{display:flex;flex-direction:column;overflow:auto}
+  .main,.side{overflow:visible;flex:none}
+  .side{border-left:0;border-top:1px solid var(--hair)}
+}

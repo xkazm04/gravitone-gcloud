@@ -71,7 +71,8 @@ export function engineRegistry(caps: Pick<Capabilities, "musicSectionEdit" | "mu
   };
   return [
     { id: "suno", name: "Suno", transport: "browser", ops: ["compose", "prompt-copy", "file-return"], withheld: [] },
-    { id: "elevenlabs", name: "ElevenLabs", transport: "api", ops: ["prompt-copy"], withheld: RENDER_OPS.map(el) },
+    // Effects run on the desk as the `sfx` producer's batch (L66) whenever the capability is on.
+    { id: "elevenlabs", name: "ElevenLabs", transport: "api", ops: caps.musicSfx ? ["prompt-copy", "sfx"] : ["prompt-copy"], withheld: RENDER_OPS.filter((op) => !(op === "sfx" && caps.musicSfx)).map(el) },
     {
       id: "local",
       name: "Local",

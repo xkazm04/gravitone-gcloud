@@ -89,9 +89,9 @@ export function BoardSection({ data }: { readonly data: BoardKitData }) {
           <BlindPair packet={PAIR} onPick={noop} undo={noop} onCommit={noop} keys={false} />
         </div>
       </Spec>
-      <Spec names={["PacketReview", "ArticlePage", "EditNote"]} source="index.html :625-682 · § sections · edit plan" wide>
+      <Spec names={["PacketReview", "ArticlePage", "EditNote", "ApproveSchedule"]} source="index.html :625-682 · § sections · edit plan" wide>
         <div className={b.desk}>
-          <PacketReview packet={REVIEW} verdicts={{}} decide={noop} onCommit={noop} onSendPlan={noop} keys={false} />
+          <PacketReview packet={REVIEW} verdicts={{}} decide={noop} onCommit={noop} onSendPlan={noop} keys={false} nowMs={Date.parse("2026-10-17T12:00:00Z")} />
         </div>
         <Row label="note">
           <div className={b.note}>

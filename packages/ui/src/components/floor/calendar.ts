@@ -16,6 +16,8 @@ export type RailSlot = {
   readonly drift?: "export_missing" | "channel_not_wired";
   /** When the window closed on a missed slot. */
   readonly missedAt?: string;
+  /** The Library item it publishes: the schedule form warns when that item is already on a channel. */
+  readonly item?: string;
 };
 
 const DAY_MS = 86_400_000;

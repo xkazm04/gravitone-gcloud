@@ -91,6 +91,8 @@ export const SCREENS = {
   "floor-calendar": { url: "/floor?cal=1" },
   // the slot record over the month: a failed YouTube upload (quota), fixture side
   "floor-slot": { url: "/floor?cal=1&slot=sl-chokepoint-quota" },
+  // the schedule sheet over the month (v1 Composer absorbed), on a future day
+  "floor-schedule": { url: "/floor?cal=1&new=1&day=2030-01-14" },
   board: { url: "/floor", follow: { selector: "a[href^='/board/']", nav: "goto" } },
   "board-sheet": { url: "/floor", follow: { selector: "a[href^='/board/']", nav: "click" } },
   ledger: { url: "/ledger" },
@@ -100,4 +102,12 @@ export const SCREENS = {
   "audio-arrange": { url: "/audio?s=arrange" },
   "audio-arrange-sfx": { url: "/audio?s=arrange&kind=sfx" },
   "audio-effects": { url: "/audio?kind=sfx" },
+  "audio-hunt": { url: "/audio?s=hunt" },
+  "audio-hunt-open": { url: "/audio?s=hunt&h=hn-c24d408353" },
+  "audio-hunt-sfx": { url: "/audio?s=hunt&kind=sfx&h=hn-efdbee99ac" },
+  "audio-lessons": { url: "/audio?s=lessons" },
+  "audio-strengths": { url: "/audio?s=strengths" },
+  "audio-rubric": { url: "/audio?s=rubric" },
+  "audio-batch": { url: "/audio?s=batch" },
+  "audio-batch-sfx": { url: "/audio?s=batch&kind=sfx" },
 };

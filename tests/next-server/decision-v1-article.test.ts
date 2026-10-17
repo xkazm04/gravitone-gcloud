@@ -111,7 +111,8 @@ describe("a run at the gate", () => {
     const c = must(flow.preview()).consequence;
     expect(c.outward.map((o) => o.kind)).toEqual(["push", "pull-request"]);
     expect(c.outward[0]?.sentence).toMatch(/^push branch article\/[a-z0-9-]+ to ai-registry's origin/);
-    expect(c.writes.map((w) => w.candidate)).toEqual(["post", "post", "patch/p1"]);
+    // The blog slot first (Phase 6: articleSlot.ts), then v1's approval, the post and the kept patch.
+    expect(c.writes.map((w) => w.candidate)).toEqual(["post", "post", "post", "patch/p1"]);
     must(flow.commit());
     const before = launched.length;
     const claim = flow.claim();

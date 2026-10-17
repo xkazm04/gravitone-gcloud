@@ -25,6 +25,22 @@ import { SeedComposer } from "@gt/ui/components/audio/SeedComposer.tsx";
 import { TermRail } from "@gt/ui/components/audio/TermRail.tsx";
 import { VariationList } from "@gt/ui/components/audio/VariationList.tsx";
 import { variationsOfSeed } from "@gt/ui/components/audio/variations.ts";
+import { batchProblem, blankBatch, TECHNIQUES, type BatchForm as BatchFormState } from "@gt/ui/components/audio/batch.ts";
+import { BatchForm } from "@gt/ui/components/audio/BatchForm.tsx";
+import { briefCheck } from "@gt/ui/components/audio/brief.ts";
+import { BriefDelta } from "@gt/ui/components/audio/BriefDelta.tsx";
+import { buildTree, clickSelect, countsOf, EMPTY_SELECTION, renderPlan, toggleGroup, type AuditionTake, type HuntCardView, type HuntLeafView, type Reach, type Selection } from "@gt/ui/components/audio/hunt.ts";
+import { HuntAudition } from "@gt/ui/components/audio/HuntAudition.tsx";
+import { HuntMap } from "@gt/ui/components/audio/HuntMap.tsx";
+import { HuntRenderBar } from "@gt/ui/components/audio/HuntRenderBar.tsx";
+import { HuntIdea, HuntShelf } from "@gt/ui/components/audio/HuntShelf.tsx";
+import { evidenceOf, handLesson } from "@gt/ui/components/audio/lesson.ts";
+import { LessonForm } from "@gt/ui/components/audio/LessonForm.tsx";
+import { LessonList, type LessonRow } from "@gt/ui/components/audio/LessonList.tsx";
+import { readRubric, type Ratings } from "@gt/ui/components/audio/rubric.ts";
+import { RubricCard } from "@gt/ui/components/audio/Rubric.tsx";
+import { cellKey, type Facet, type Sort, type StrengthCell } from "@gt/ui/components/audio/strengths.ts";
+import { StrengthHead, StrengthTable } from "@gt/ui/components/audio/Strengths.tsx";
 
 import { inert } from "./ContractHooks.tsx";
 import { Row, Section, Spec } from "./Spec.tsx";
@@ -191,6 +207,245 @@ function ComposerSpecimen() {
   );
 }
 
+/* ── the hunt, the rubric, the strengths, the lessons, the batch (Phase 6, L65-L66) ──────── */
+
+const leaf = (id: string, parentId: string | null, axis: string, label: string, over: Partial<HuntLeafView> = {}): HuntLeafView => ({
+  id,
+  parentId,
+  axis,
+  label,
+  rationale: "",
+  provider: "elevenlabs",
+  technique: [],
+  prompt: "",
+  durationS: 30,
+  state: "idea",
+  takeIds: [],
+  winner: false,
+  error: null,
+  negative: null,
+  tempoBpm: null,
+  key: null,
+  loop: null,
+  ...over,
+});
+
+const HUNT_NODES: readonly HuntLeafView[] = [
+  leaf("h-root", null, "idea", "a tense but hopeful underscore for a 60s explainer about inflation"),
+  leaf("b-tempo", "h-root", "tempo", "which pulse carries the voice-over?", { rationale: "a narrator reads at ~150 wpm; the pulse must sit under it, not race it" }),
+  leaf("l-90", "b-tempo", "tempo", "90 bpm, pizzicato pulse", { tempoBpm: 90, key: "D minor", technique: ["duration-and-tempo-locking"], prompt: "Tense but hopeful pizzicato underscore, 90 BPM, D minor, no drums.", state: "rendered", takeIds: ["ht-1"], winner: true, rationale: "slow enough to leave the words room" }),
+  leaf("l-120", "b-tempo", "tempo", "120 bpm, driving strings", { tempoBpm: 120, key: "D minor", technique: ["duration-and-tempo-locking", "tag-list"], prompt: "driving strings, tense, hopeful, 120 bpm, D minor", state: "rendered", takeIds: ["ht-2"] }),
+  leaf("l-70", "b-tempo", "tempo", "70 bpm, held pads", { tempoBpm: 70, technique: ["single-sentence"], prompt: "Held string pads that lift in the last ten seconds, 70 BPM.", state: "failed", error: "ElevenLabs 422: duration_seconds must be between 10 and 300" }),
+  leaf("b-tex", "h-root", "texture", "what carries the hope?", { rationale: "the turn from tense to hopeful has to be audible without a key change" }),
+  leaf("l-suno", "b-tex", "texture", "felt piano enters at 0:40", { provider: "suno", technique: ["section-plan-as-the-brief"], prompt: "[0:00] low cello ostinato [0:40] felt piano enters, major lift", state: "awaiting-return", durationS: 60 }),
+  leaf("l-glock", "b-tex", "texture", "glockenspiel motif over cello", { technique: ["sonic-style-vocabulary"], prompt: "Cello ostinato, a four-note glockenspiel motif answering it, hopeful.", durationS: 45 }),
+];
+
+const HUNT_TAKES: Readonly<Record<string, AuditionTake>> = {
+  "ht-1": { id: "ht-1", title: "90 bpm, pizzicato pulse", src: SILENCE, peaks: PEAKS, lengthS: 31.2, verdict: "kept", stage: "pending" },
+  "ht-2": { id: "ht-2", title: "120 bpm, driving strings", src: SILENCE, peaks: PEAKS.slice(8), lengthS: 29.8, verdict: "unjudged", stage: null },
+};
+
+const HUNT_REACH: Readonly<Record<string, Reach>> = { elevenlabs: "render", suno: "hand" };
+
+const miniOf = (nodes: readonly HuntLeafView[]): HuntCardView["mini"] =>
+  buildTree(nodes).columns.map((c) => ({ axis: c.axis, leaves: c.rows.flatMap((r) => (r.kind === "leaf" ? [{ state: r.node.state, winner: r.node.winner }] : [])) }));
+
+const SFX_NODES: readonly HuntLeafView[] = [
+  leaf("s-1", null, "attack", "soft click", { state: "rendered", takeIds: ["st-1"], durationS: 0.6 }),
+  leaf("s-2", null, "attack", "glass tick", { state: "rendered", takeIds: ["st-2"], durationS: 0.6, winner: true }),
+  leaf("s-3", null, "tail", "short room", { state: "failed", durationS: 1 }),
+];
+
+const HUNTS: readonly HuntCardView[] = [
+  { id: "hunt-a", idea: "a tense but hopeful underscore for a 60s explainer about inflation", createdAt: "2026-10-16T09:30:00.000Z", counts: countsOf(HUNT_NODES), lessonId: null, mini: miniOf(HUNT_NODES) },
+  { id: "hunt-b", idea: "a satisfying UI confirm sound", createdAt: "2026-10-14T15:02:00.000Z", counts: countsOf(SFX_NODES), lessonId: "lesson-2", mini: miniOf(SFX_NODES) },
+];
+
+const NO_CROWNS: ReadonlySet<string> = new Set();
+
+function HuntSpecimen() {
+  const [nodes, setNodes] = useState<readonly HuntLeafView[]>(HUNT_NODES);
+  const order = useMemo(() => buildTree(nodes).leaves.map((l) => l.id), [nodes]);
+  const [sel, setSel] = useState<Selection>(() => clickSelect(clickSelect(EMPTY_SELECTION, order, "l-suno"), order, "l-glock", { toggle: true }));
+  const [playing, setPlaying] = useState<string | null>(null);
+  const plan = renderPlan(nodes, sel.ids, (p) => HUNT_REACH[p] ?? "none");
+  const heard = buildTree(nodes).leaves.filter((l) => l.state === "rendered");
+  const crown = (l: HuntLeafView, _take: string, on: boolean): void => setNodes((ns) => ns.map((n) => (n.id === l.id ? { ...n, winner: on } : n)));
+  const play = (t: AuditionTake): void => setPlaying((p) => (p === t.id ? null : t.id));
+  return (
+    <>
+      <Spec names={["HuntIdea", "HuntShelf"]} source="audio/HuntShelf.tsx · hunt.ts · v1 app/playground/hunt/Start.tsx">
+        <HuntIdea kind="music" busy={false} error={null} onDraft={inert} />
+        <HuntShelf hunts={HUNTS} open="hunt-a" hrefOf={(id) => `#${id}`} />
+      </Spec>
+      <Spec names={["HuntMap", "HuntRenderBar"]} source="audio/HuntMap.tsx · HuntRenderBar.tsx · v1 hunt/{Board,Inspector}.tsx" wide>
+        <HuntRenderBar plan={plan} picked={sel.ids.length} busy={false} liveBlock="GRAVITONE_DRY_ONLY" onRender={inert} onClear={() => setSel(EMPTY_SELECTION)} />
+        <HuntMap
+          nodes={nodes}
+          takes={HUNT_TAKES}
+          selection={sel}
+          reach={HUNT_REACH}
+          playing={playing}
+          crowning={NO_CROWNS}
+          onPick={(id, m) => setSel((cur) => clickSelect(cur, order, id, m))}
+          onBranch={(ids) => setSel((cur) => toggleGroup(cur, order, ids))}
+          onPlay={play}
+          onCrown={crown}
+          onCopy={inert}
+        />
+      </Spec>
+      <Spec names={["HuntAudition"]} source="audio/HuntAudition.tsx · v1 hunt/Audition.tsx" wide>
+        <HuntAudition heard={heard} takes={HUNT_TAKES} playing={playing} crowning={NO_CROWNS} onPlay={play} onCrown={crown} />
+      </Spec>
+    </>
+  );
+}
+
+const HUNT_EVIDENCE = evidenceOf(HUNT_NODES);
+const PROPOSAL = {
+  ...handLesson({ id: "hunt-a", kind: "music", nodes: HUNT_NODES }, 7.5),
+  claim: "When an underscore sits under a narrator, brief the tempo at 90 bpm or below, because the 120 bpm take crowded the words.",
+};
+
+const LESSONS: readonly LessonRow[] = [
+  { id: "lesson-1", claim: "When the brief's genre is lo-fi, send it to Suno, because it kept 7 of 9 (mean 7.4).", source: "triage", provider: "suno", technique: ["tag-list"], n: 9, keepRate: 0.78, meanScore: 7.4, confirmedAt: "2026-10-15T11:20:00.000Z" },
+  {
+    id: "lesson-2",
+    claim: "When a UI confirm must feel physical, brief the material before the event, because the glass tick won over the soft click.",
+    source: "hunt",
+    provider: "elevenlabs",
+    technique: ["envelope-first-briefing"],
+    n: 2,
+    keepRate: 0.5,
+    meanScore: null,
+    confirmedAt: "2026-10-14T16:00:00.000Z",
+    hunt: { id: "hunt-b", idea: "a satisfying UI confirm sound" },
+  },
+];
+
+function LessonSpecimen() {
+  const [round, setRound] = useState(0);
+  return (
+    <Spec names={["LessonForm", "LessonList"]} source="audio/LessonForm.tsx · LessonList.tsx · lesson.ts · v1 hunt/Lesson.tsx">
+      <LessonForm
+        key={round}
+        proposal={PROPOSAL}
+        axes={HUNT_EVIDENCE.axes}
+        techniques={HUNT_EVIDENCE.techniques}
+        known={TECHNIQUES.music}
+        draftedBy="claude-haiku"
+        engineError={null}
+        busy={false}
+        error={null}
+        onSign={inert}
+        onDiscard={() => setRound((k) => k + 1)}
+      />
+      <LessonList lessons={LESSONS} huntHref={(id) => `#${id}`} />
+    </Spec>
+  );
+}
+
+const BRIEF_MUSIC = briefCheck("music", { tempoBpm: 108, key: "G major", durationS: 45 }, { tempoBpm: 54.2, key: "E minor", durationS: 44.6 });
+const BRIEF_MISSED = briefCheck("music", { tempoBpm: 120, key: "D minor", durationS: 60 }, { tempoBpm: 96, key: "D minor", durationS: 74 });
+const BRIEF_SFX = briefCheck("sfx", { tempoBpm: null, key: null, durationS: 2.5 }, null);
+const SFX_RUBRIC = readRubric({ kind: "sfx", loop: true, verdict: "rejected", ratings: { event_match: 4 } });
+const NO_DIMS: readonly string[] = [];
+const BUSY_DIMS: readonly string[] = ["event_match"];
+
+function RubricSpecimen() {
+  const [ratings, setRatings] = useState<Ratings>({ melody: 8, instrument_choice: 7, instrument_quality: null });
+  const [focused, setFocused] = useState(false);
+  const rubric = readRubric({ kind: "music", loop: null, verdict: "kept", ratings });
+  return (
+    <Spec names={["RubricCard"]} source="audio/Rubric.tsx · rubric.ts · v1 app/playground/shared/Rubric.tsx" wide>
+      <RubricCard
+        take={{ id: "rt-1", title: "Whisper network", provider: "elevenlabs", verdict: "kept", src: SILENCE, rubric, brief: BRIEF_MUSIC }}
+        focused={focused}
+        dim={2}
+        playing={false}
+        busy={NO_DIMS}
+        onFocus={() => setFocused(true)}
+        onPlay={inert}
+        onScore={(d, v) => setRatings((r) => ({ ...r, [d]: v }))}
+      />
+      <RubricCard
+        take={{ id: "rt-2", title: "Door slam loop", provider: "elevenlabs", verdict: "rejected", src: null, rubric: SFX_RUBRIC, brief: BRIEF_SFX }}
+        focused={false}
+        dim={0}
+        playing={false}
+        busy={BUSY_DIMS}
+        onFocus={inert}
+        onPlay={inert}
+        onScore={inert}
+      />
+    </Spec>
+  );
+}
+
+const cell = (provider: StrengthCell["provider"], facet: Facet, value: string, n: number, kept: number, meanScore: number | null, topDefect: string | null = null): StrengthCell => ({
+  kind: "music",
+  provider,
+  facet,
+  value,
+  n,
+  kept,
+  rejected: n - kept,
+  meanScore,
+  topDefect,
+});
+
+const LOFI_SUNO = cell("suno", "genre", "lo-fi", 9, 7, 7.4, "tempo-instability");
+const CHAMBER_SUNO = cell("suno", "genre", "chamber", 2, 1, null);
+const CELLS: readonly StrengthCell[] = [
+  cell("elevenlabs", "genre", "chamber", 6, 5, 7.6),
+  CHAMBER_SUNO,
+  cell("elevenlabs", "genre", "lo-fi", 4, 1, 4.2, "broken-ending"),
+  LOFI_SUNO,
+  cell("elevenlabs", "genre", "ambient", 1, 1, null),
+  cell("elevenlabs", "mood", "tense", 3, 2, 6.8),
+  cell("suno", "instrument", "pizzicato", 5, 2, 5.1, "thin-mix"),
+  cell("elevenlabs", "technique", "tag-list", 7, 3, 5.9, "ignored-exclude"),
+];
+
+function StrengthSpecimen() {
+  const [facet, setFacet] = useState<Facet>("genre");
+  const [sort, setSort] = useState<Sort>({ key: "value", provider: null, dir: "asc" });
+  const [picked, setPicked] = useState<StrengthCell>(LOFI_SUNO);
+  return (
+    <Spec names={["StrengthTable", "StrengthHead"]} source="audio/Strengths.tsx · strengths.ts · v1 app/playground/triage/Strengths.tsx" wide>
+      <StrengthTable kind="music" cells={CELLS} facet={facet} sort={sort} picked={cellKey(picked)} onFacet={setFacet} onSort={setSort} onPick={setPicked} />
+      <Row label="measured">
+        <StrengthHead cell={picked} />
+      </Row>
+      <Row label="waiting">
+        <StrengthHead cell={CHAMBER_SUNO} />
+      </Row>
+    </Spec>
+  );
+}
+
+function BatchSpecimen() {
+  const [music, setMusic] = useState<BatchFormState>(() => ({
+    ...blankBatch("music"),
+    prompt: "Playful conspiratorial pizzicato, a caper in miniature.",
+    genre: "chamber",
+    mood: "tense",
+    instrument: "pizzicato",
+    negative: "vocals",
+    tempoBpm: 108,
+    key: "G major",
+    technique: ["duration-and-tempo-locking"],
+  }));
+  const [sfx, setSfx] = useState<BatchFormState>(() => blankBatch("sfx"));
+  return (
+    <Spec names={["BatchForm"]} source="audio/BatchForm.tsx · batch.ts · v1 shared/price.tsx" wide>
+      <BatchForm kind="music" form={music} onForm={setMusic} problem={batchProblem("music", music)} engine="elevenlabs" busy={false} onPrice={inert} />
+      <BatchForm kind="sfx" form={sfx} onForm={setSfx} problem={batchProblem("sfx", sfx)} engine="elevenlabs" busy={false} onPrice={inert} />
+    </Spec>
+  );
+}
+
 export function AudioSection() {
   return (
     <Section id="audio">
@@ -215,6 +470,22 @@ export function AudioSection() {
         <ReferenceList refs={REFS} onSeed={inert} />
       </Spec>
       <ArrangeSpecimen />
+      <BatchSpecimen />
+      <Spec names={["BriefDelta"]} source="audio/BriefDelta.tsx · brief.ts">
+        <Row label="octave · missed · held">
+          <BriefDelta check={BRIEF_MUSIC} label="Whisper network brief" />
+        </Row>
+        <Row label="missed">
+          <BriefDelta check={BRIEF_MISSED} label="Harbor glass brief" />
+        </Row>
+        <Row label="unmeasured">
+          <BriefDelta check={BRIEF_SFX} label="Door slam brief" />
+        </Row>
+      </Spec>
+      <RubricSpecimen />
+      <StrengthSpecimen />
+      <HuntSpecimen />
+      <LessonSpecimen />
     </Section>
   );
 }

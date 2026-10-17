@@ -10,8 +10,10 @@
 //   - a LIVE job with a fake vendor (the stub reporting a seat cost) books every turn on
 //     the meter, reconciles, and the codex/agy turns are unpriced rows with their reason;
 //   - one driver per job: a second drive of the same job is refused at the claim;
-//   - the route and the CLI act on the same job id (POST /api/articles enqueues; the CLI's
-//     `resume` drives that very job);
+//   - the CLI, the Floor and Runs act on the same job id: the CLI enqueues and Runs pauses and
+//     resumes that job before the CLI's `resume` drives it; the Floor's article composer
+//     enqueues and the CLI reads the job it made (Phase 6 L67: the UI door was POST
+//     /api/articles, the v1 /articles page's route, which wave C deletes);
 //   - the v1 reader (lib/ledger/v1/sources/articles.ts) still reads the run, and reads a
 //     run whose job is queued as held, not stalled.
 // The crash-at-every-boundary proof is producer-article-crash.test.ts.
@@ -32,7 +34,9 @@ import { assertReconciled } from "@gt/kernel/spend/projection";
 import { defaultDeps } from "../../lib/articles/engine.ts";
 import { readRun } from "../../lib/articles/store.ts";
 import { heldByJobs, readArticles } from "../../lib/ledger/v1/sources/articles.ts";
-import { approveArticle, articleKernel, articleProducer, continueArticle, launchArticle, reworkArticle, type ArticleBinding } from "../../lib/producers/article.ts";
+import { approveArticle, articleKernel, articleProducer, continueArticle, driveArticle, launchArticle, reworkArticle, type ArticleBinding } from "../../lib/producers/article.ts";
+import { stripsKernel } from "../../lib/producers/strips.ts";
+import { makeRealProduce } from "../../app/(studio)/projects/_port/real.ts";
 import { ARTICLE_ENV, articleSandbox, ROOT, STUB_AGENT, STUB_ENGINE_BINS, type ArticleSandbox } from "../golden-path/_articles.ts";
 
 const saved = new Map([...ARTICLE_ENV, "NEXT_PUBLIC_DEV_AUTH"].map((k) => [k, process.env[k]]));
@@ -141,31 +145,64 @@ describe("one driver per job", () => {
   });
 });
 
-describe("the route and the CLI act on the same job", () => {
-  it("POST /api/articles enqueues job:run:<id>; `article.mts resume <id>` drives that very job to the gate", { timeout: 240_000 }, async () => {
-    withStubVendor();
-    process.env["NEXT_PUBLIC_DEV_AUTH"] = "1";
-    const { POST } = await import("../../app/api/articles/route.ts");
-    const res = await POST(new Request("http://studio.local/api/articles", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": "10.88.1.2" }, body: JSON.stringify({ topic: { kind: "free", text: "the shared tax" }, mode: "dry" }) }));
-    expect(res.status).toBe(201);
-    const body = (await res.json()) as { run: { id: string; status: string }; jobId: string };
-    expect(body.jobId).toBe(`job:run:${body.run.id}`);
-    // The route enqueued and returned: nothing drove it.
-    expect(must(get(binding().kernel!.store, body.jobId as never)).job.state).toBe("queued");
-    const held = await readArticles(box.store, heldByJobs);
-    expect(must(held).runs.find((r) => r.run.id === body.run.id)?.driving).toBe(true);
-
+describe("the CLI, the Floor and Runs act on the same job", () => {
+  // The Floor's and Runs' server side (app/(studio)/projects/_port/real.ts) over the store the CLI opens.
+  const floor = () => makeRealProduce({ store: () => ok(binding().kernel!.store), strips: () => stripsKernel(), env: () => process.env, now: () => Date.now() });
+  const ok = <T,>(value: T) => ({ ok: true as const, value });
+  const cliEnv = () => {
     const env = { ...process.env, TMP: path.join(box.dir, "tmp"), TEMP: path.join(box.dir, "tmp") };
     mkdirSync(env.TMP, { recursive: true });
-    // The CLI exactly as the operator and the /article-run skill run it (`npx tsx`), in its own process.
-    const out = execSync(`npx --no-install tsx pipeline/article.mts resume ${body.run.id} --json`, { cwd: ROOT, env, encoding: "utf8" });
-    const doc = JSON.parse(out.trim().split("\n").at(-1) ?? "{}") as { runId: string; status: string; jobId: string; job: string; mode: string };
-    expect(doc).toMatchObject({ runId: body.run.id, status: "awaiting-approval", jobId: body.jobId, job: "done", mode: "dry" });
-    expect(must(get(binding().kernel!.store, body.jobId as never)).job).toMatchObject({ state: "done", attempt: 1 });
+    return env;
+  };
+  // The CLI exactly as the operator and the /article-run skill run it (`npx tsx`), in its own process.
+  // `status` prints one pretty document; every other verb ends with its one-line document.
+  const cli = (argv: string, whole = false): Record<string, unknown> => {
+    const out = execSync(`npx --no-install tsx pipeline/article.mts ${argv} --json`, { cwd: ROOT, env: cliEnv(), encoding: "utf8" });
+    return JSON.parse(whole ? out : out.trim().split("\n").at(-1) ?? "{}") as Record<string, unknown>;
+  };
+
+  it("`article.mts run --detach` enqueues job:run:<id>; Runs draws and pauses and resumes THAT job; `resume <id>` drives it to the gate", { timeout: 240_000 }, async () => {
+    withStubVendor();
+    const made = cli(`run --topic "the shared tax" --dry --detach`);
+    const runId = String(made["runId"]);
+    const jobId = String(made["jobId"]);
+    expect(jobId).toBe(`job:run:${runId}`);
+    // The CLI enqueued and returned: nothing drove it.
+    expect(must(get(binding().kernel!.store, jobId as never)).job.state).toBe("queued");
+    const held = await readArticles(box.store, heldByJobs);
+    expect(must(held).runs.find((r) => r.run.id === runId)?.driving).toBe(true);
+
+    // Runs draws the CLI's job, and its acts land on it.
+    const runs = floor();
+    expect(must(runs.listJobs()).filter((j) => j.id === jobId).map((j) => j.state)).toEqual(["queued"]);
+    must(runs.pauseJob({ jobId }, { who: "op-test" }));
+    expect(must(get(binding().kernel!.store, jobId as never)).job.state).toBe("paused");
+    must(runs.resumeJob({ jobId }, { who: "op-test" }));
+
+    const doc = cli(`resume ${runId}`);
+    expect(doc).toMatchObject({ runId, status: "awaiting-approval", jobId, job: "done", mode: "dry" });
+    expect(must(get(binding().kernel!.store, jobId as never)).job).toMatchObject({ state: "done", attempt: 1 });
 
     // The v1 reader reads the result at the gate as a gate pile.
     const read = must(await readArticles(box.store));
-    expect(read.runs.find((r) => r.run.id === body.run.id)?.run.status).toBe("awaiting-approval");
+    expect(read.runs.find((r) => r.run.id === runId)?.run.status).toBe("awaiting-approval");
+  });
+
+  it("the Floor's article composer enqueues a job the CLI's drive takes to the gate, and `status <id>` names that job", { timeout: 240_000 }, async () => {
+    withStubVendor();
+    const runs = floor();
+    const input = { lane: "article", text: "A ceiling is a stop point, not a refusal.", topic: "the stop-point tax" } as const;
+    const receipt = must(await runs.composerReceipt({ input, mode: "dry" }, { who: "op-test" }));
+    const go = must(await runs.launchRun({ input, token: receipt.token, mode: "dry" }, { who: "op-test" }));
+    if (go.kind !== "launched") throw new Error(`expected a launch, got ${go.kind}`);
+    expect(go.jobId).toBe(`job:run:${go.runId}`);
+    expect(must(get(binding().kernel!.store, go.jobId as never)).job).toMatchObject({ state: "queued", mode: { kind: "dry" } });
+    // The CLI's own drive (what `run` and `resume` call) writes run.json from the Run and runs to the gate.
+    const rep = must(await driveArticle(go.jobId, { binding: binding(), env: process.env }));
+    expect(rep.outcome, rep.job?.error?.message).toBe("done");
+    const doc = cli(`status ${go.runId}`, true);
+    expect(doc).toMatchObject({ id: go.runId, status: "awaiting-approval" });
+    expect(doc["jobs"]).toEqual([expect.objectContaining({ id: go.jobId, state: "done", mode: "dry" })]);
   });
 });
 

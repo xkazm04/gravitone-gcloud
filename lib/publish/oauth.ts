@@ -56,7 +56,7 @@ export class RefreshTokenProvider implements TokenProvider {
   }
 
   /** null when any of the three variables is unset — absence, not failure. */
-  static fromEnv(env: NodeJS.ProcessEnv = process.env, fetchImpl?: typeof fetch): RefreshTokenProvider | null {
+  static fromEnv(env: Readonly<Record<string, string | undefined>> = process.env, fetchImpl?: typeof fetch): RefreshTokenProvider | null {
     const [id, secret, refresh] = YOUTUBE_ENV_VARS.map((k) => env[k]?.trim());
     if (!id || !secret || !refresh) return null;
     return new RefreshTokenProvider({ clientId: id, clientSecret: secret, refreshToken: refresh, fetch: fetchImpl });
