@@ -33,3 +33,6 @@
    step, the rail and a hair more) beside the run track. */
 .foundryCell{display:grid;grid-template-columns:minmax(calc(var(--w-lane) - var(--sp-6)),calc(var(--w-rail) + var(--sp-1))) minmax(0,1fr);height:100%;min-height:0}
 @media (max-width:700px){.foundryCell{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}}
+
+/* The slot level before its record arrives, or when it was refused: the id, or the refusal. */
+.slotWait{flex:1;display:flex;align-items:flex-start;padding:var(--sp-6) var(--sp-page)}

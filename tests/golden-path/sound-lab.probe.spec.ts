@@ -6,9 +6,10 @@
 // break that, and each is a test here, run against fake-indexeddb so the
 // store is the real code:
 //
-//   1. THE ENGINE SEAM. The registry is the only place that knows ElevenLabs is
-//      live, Suno is a manual round trip and Local is declared-not-installed —
-//      and a withheld capability keeps its reason, verbatim.
+//   1. THE ENGINE SEAM. The registry (lib/sound/engines.ts since Phase 6) is the
+//      only place that knows Suno composes through its browser job and takes a
+//      round trip, ElevenLabs is copy-only on the desk and Local is declared-not-
+//      installed — and a withheld operation keeps its reason, verbatim.
 //   2. THE MAPPING. What a render handed back plus what the lab asked for
 //      becomes AudioMeta with nothing written as undefined. (Its round trip
 //      through v1's IndexedDB shelf retired with that shelf in Phase 5; the lab
@@ -29,7 +30,9 @@ import { compose, seedOf, type Seed } from "@/lib/sound/audio/prompts";
 import type { Take } from "@/lib/sound/audio/take";
 import { variations, variationsOfSeed, type Variation } from "@/lib/sound/audio/variations";
 import { vocabulary, type Facet, type TermEntry } from "@/lib/sound/audio/vocabulary";
-import { can, engineRegistry } from "@/app/playground/engines";
+import { can, engineById, engineRegistry, engineState, makersOf, NO_DESK_PRODUCER } from "@/lib/sound/engines";
+// The v1 lab's registry, which labModel's hunt pricing still reads; it moves with Hunt (wave B).
+import { engineRegistry as labRegistry } from "@/app/playground/engines";
 import {
   buildEditPlan,
   editSeconds,
@@ -73,34 +76,36 @@ const SEED: Seed = {
 
 /* ── 1 · the engine seam ─────────────────────────────────────────────── */
 
-test("registry: ElevenLabs api, Suno manual, Local declared — and a withheld op keeps its reason", () => {
+test("registry: Suno composes through the browser job, ElevenLabs is copy-only with its reasons, Local declared", () => {
+  // The desk's registry (lib/sound/engines.ts, Phase 6 L60). Suno's row flipped when its automation
+  // landed (a seed is a box.chrome job); ElevenLabs renders nothing from the desk, and each render
+  // op keeps its place in `withheld` with the reason.
   const on = engineRegistry({ musicSectionEdit: true, musicSfx: true });
-  console.log(`[lab] engines ${on.map((e) => `${e.id}:${e.transport}:${e.status.state}:${e.ops.join("+")}`).join(" ")}`);
-  const [el, suno, local] = on;
-  expect(el.id).toBe("elevenlabs");
-  expect(el.transport).toBe("api");
-  expect(el.status.state).toBe("live");
-  expect(el.ops).toEqual(["compose", "plan", "section-edit", "sfx"]);
-  expect(suno.transport).toBe("manual");
-  expect(suno.ops).toEqual(["prompt-copy", "file-return"]);
-  // Suno renders nothing over an API today: the seam a future automation flips.
-  expect(can(suno, "compose")).toBe(false);
-  expect(local.transport).toBe("none");
-  expect(local.status.state).toBe("not-installed");
-  expect(local.ops).toEqual([]);
-  expect(local.needs?.length).toBeGreaterThan(0);
+  console.log(`[lab] engines ${on.map((e) => `${e.id}:${e.transport}:${engineState(e)}:${e.ops.join("+")}`).join(" ")}`);
+  const suno = engineById(on, "suno");
+  const el = engineById(on, "elevenlabs");
+  const local = engineById(on, "local");
+  expect(suno?.transport).toBe("browser");
+  expect(can(suno, "compose")).toBe(true);
+  expect(can(suno, "file-return")).toBe(true);
+  expect(can(suno, "sfx")).toBe(false);
+  expect(el?.transport).toBe("api");
+  expect(el?.ops).toEqual(["prompt-copy"]);
+  expect(el === undefined ? null : engineState(el)).toBe("copy-only");
+  expect(el?.withheld).toEqual(["compose", "plan", "section-edit", "sfx"].map((op) => ({ op, reason: NO_DESK_PRODUCER })));
+  expect(local?.transport).toBe("none");
+  expect(local === undefined ? null : engineState(local)).toBe("not-installed");
+  expect(local?.ops).toEqual([]);
+  expect(local?.needs?.length).toBeGreaterThan(0);
+  // Who makes what on the desk: Suno songs; nobody effects.
+  expect(makersOf(on, "music").map((e) => e.id)).toEqual(["suno"]);
+  expect(makersOf(on, "sfx")).toEqual([]);
 
-  // SFX off: the op moves to `withheld` WITH the capability's reason, verbatim.
-  const noSfx = engineRegistry({ musicSectionEdit: true, musicSfx: false })[0];
-  expect(can(noSfx, "sfx")).toBe(false);
-  expect(noSfx.withheld).toEqual([{ op: "sfx", reason: ABSENCE_REASON.musicSfx }]);
-  expect(noSfx.status.state).toBe("live");
-
-  // Everything off: ElevenLabs is off here, and says why.
-  const off = engineRegistry({ musicSectionEdit: false, musicSfx: false })[0];
-  expect(off.ops).toEqual([]);
-  expect(off.status).toEqual({ state: "off", reason: ABSENCE_REASON.musicSectionEdit });
-  expect(off.withheld.map((w) => w.op)).toEqual(["compose", "plan", "section-edit", "sfx"]);
+  // A capability switched off: the op keeps its place, now with the deployment's reason verbatim.
+  const noSfx = engineById(engineRegistry({ musicSectionEdit: true, musicSfx: false }), "elevenlabs");
+  expect(noSfx?.withheld.find((w) => w.op === "sfx")).toEqual({ op: "sfx", reason: ABSENCE_REASON.musicSfx });
+  const off = engineById(engineRegistry({ musicSectionEdit: false, musicSfx: false }), "elevenlabs");
+  expect(off?.withheld.find((w) => w.op === "compose")).toEqual({ op: "compose", reason: ABSENCE_REASON.musicSectionEdit });
 });
 
 /* ── 2 · the mapping ─────────────────────────────────────────────────── */
@@ -247,10 +252,10 @@ test("fan-out: the control first, then one lane per change, priced per rendering
     );
     expect(changed, `${l.id} changed ${changed.join(",")}`).toHaveLength(1);
   }
-  const reg = engineRegistry({ musicSectionEdit: true, musicSfx: true });
+  const reg = labRegistry({ musicSectionEdit: true, musicSfx: true });
   // Only ElevenLabs renders over an API: Suno drafts and the declared lane cost nothing here.
   expect(fanOutSeconds(lanes, reg, 20)).toBe(lanes.length * 20);
-  expect(fanOutSeconds(lanes, engineRegistry({ musicSectionEdit: false, musicSfx: false }), 20)).toBe(0);
+  expect(fanOutSeconds(lanes, labRegistry({ musicSectionEdit: false, musicSfx: false }), 20)).toBe(0);
 });
 
 /* ── 5 · the hunt, read back ─────────────────────────────────────────── */

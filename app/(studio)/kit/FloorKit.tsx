@@ -14,6 +14,8 @@ import { MonthCalendar } from "@gt/ui/components/floor/MonthCalendar.tsx";
 import { Pile } from "@gt/ui/components/floor/Pile.tsx";
 import { RunRow } from "@gt/ui/components/floor/RunRow.tsx";
 import { ShelfCell, ShelfGrid, ShelfList, ShelfRow, ShelfStyle } from "@gt/ui/components/floor/ShelfCell.tsx";
+import { SlotConfirm } from "@gt/ui/components/floor/SlotConfirm.tsx";
+import { SlotDetail, type SlotView } from "@gt/ui/components/floor/SlotDetail.tsx";
 import { SlotMark, SlotRow } from "@gt/ui/components/floor/SlotRow.tsx";
 import { railOf, type RailSlot } from "@gt/ui/components/floor/calendar.ts";
 import { FLOOR_LANES, type FloorLane } from "@gt/ui/components/floor/floor.ts";
@@ -39,7 +41,34 @@ const SLOTS: readonly RailSlot[] = [
   slot("s5", "Chokepoint explainer", "2026-10-13T18:00:00.000Z", "failed", "youtube", "upload: 403 quotaExceeded - the channel's daily upload quota is spent"),
   slot("s6", "Radar sweep · teaser", "2026-10-12T18:00:00.000Z", "missed", "tiktok", "missed: the window closed at 18:15 with the export still rendering"),
   slot("s7", "Edu radar · long", "2026-10-10T15:00:00.000Z", "published"),
+  { ...slot("s8", "Signal Room · square", "2026-10-16T13:00:00.000Z", "scheduled", "instagram"), drift: "channel_not_wired" },
+  slot("s9", "The quiet tariff · square", "2026-10-14T08:00:00.000Z", "cancelled", "instagram", "upload: 400 invalid_container - The video container is not supported; re-export as MP4 (H.264)."),
 ];
+
+const FAILED: SlotView = {
+  slot: SLOTS[4] ?? slot("s5", "Chokepoint explainer", "2026-10-13T18:00:00.000Z", "failed"),
+  libraryItemId: "video:export:chokepoint",
+  description: "Every shipping lane has one strait it cannot route around.",
+  tags: ["geography", "trade"],
+  media: { kind: "video", src: "/clips/presets/blueprint.webm", poster: "/clips/presets/blueprint.jpg" },
+  project: { title: "The quiet tariff", href: "#floor", runs: "#floor", steps: ["done", "done", "failed", "idle", "done", "idle"] },
+  ledger: "#floor",
+  source: "fixture",
+  mode: "dry",
+};
+
+const POST: SlotView = {
+  slot: { ...slot("s10", "Faceting without a second index", "2026-10-13T03:00:00.000Z", "published", "blog") },
+  libraryItemId: "article:run:art-2026-10-14-faceting",
+  description: "",
+  tags: ["software-engineering"],
+  publicationId: "pub-sl-faceting-blog-out",
+  media: { kind: "post", pr: "https://github.com/xkazm04/ai-registry/pull/41" },
+  metrics: { at: "2026-10-15T00:00:00.000Z", views: { value: 52000, floor: true }, likes: { value: 3100 }, comments: { value: null }, shares: { value: null }, avgViewDurationS: null, subsDelta: null },
+  ledger: "#floor",
+  source: "fixture",
+  mode: "dry",
+};
 
 export function FloorSection() {
   const [focus, setFocus] = useState(false);
@@ -142,6 +171,17 @@ export function FloorSection() {
           ))}
         </Row>
         <SlotRow slot={slot("x", "Chokepoint explainer", "2026-10-13T18:00:00.000Z", "cancelled")} />
+      </Spec>
+
+      <Spec names={["SlotDetail"]} source="floor/SlotDetail.tsx · index.html SlotDetail" wide>
+        <div className={k.stack}>
+          <SlotDetail view={FAILED} nowMs={NOW} busy={null} onMove={() => undefined} onCancel={() => undefined} onPublishNow={() => undefined} specimen />
+          <SlotDetail view={POST} nowMs={NOW} busy={null} onMove={() => undefined} onCancel={() => undefined} onPublishNow={() => undefined} specimen />
+        </div>
+      </Spec>
+
+      <Spec names={["SlotConfirm"]} source="floor/SlotConfirm.tsx · consequence vocabulary">
+        <SlotConfirm verb="Cancel slot" object="Chokepoint explainer · youtube · Tue 13 Oct · 18:00 UTC" consequences={["cancelled · stays in the calendar, struck", "final · it never publishes"]} tone="rose" busy={false} onConfirm={() => undefined} onCancel={() => undefined} specimen />
       </Spec>
 
       <Spec names={["MonthCalendar"]} source="floor/MonthCalendar.tsx · index.html renderMonth" wide>

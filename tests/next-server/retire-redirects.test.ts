@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { IMPORT_HREF, v1StudioTarget, type ImportedPlan } from "../../app/studio/[projectId]/redirect.ts";
+import { IMPORT_HREF, v1StudioTarget, type ImportedPlan } from "../../app/(studio)/studio/[projectId]/redirect.ts";
 import { kernelIdOf } from "../../lib/import/project.ts";
 
 // v1's studio addresses (`/studio/<v1 id>?step=<step>`, parked by studioNav.ts so a bookmark

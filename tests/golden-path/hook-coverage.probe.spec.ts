@@ -20,8 +20,6 @@ const PROBES = join(ROOT, "tests", "golden-path");
 
 /* ───────────────────────────── the exemption list ─────────────────────────── */
 
-const LEGACY =
-  "driven today by a private dispatcher copy in the named probe(s), not _studio/hooks.ts - migrate it onto the shared harness";
 const NO_DRIVER = "no probe drives this hook through a dispatcher yet";
 const NEEDS_DOM =
   "reads pointer/keyboard/layout events (or a ref'd element) that this DOM-less lane cannot produce";
@@ -52,9 +50,9 @@ export const EXEMPT: Record<string, string> = {
   "app/playground/arrange/useArrange.ts": NO_DRIVER,
   "app/playground/hunt/useHunt.ts": NO_DRIVER,
   "app/playground/triage/useTriage.ts": NO_DRIVER,
-  "app/_phases/_shared/useStorageTrouble.ts": NO_DRIVER,
   "app/(studio)/library/_library/useNarrow.ts": NEEDS_DOM,
-  "app/_phases/_shared/useLoadFor.ts": `${LEGACY}: step-records, through the stub of lib/useLoadFor.ts`,
+  "app/(studio)/audio/_audio/useCardDrag.ts": NEEDS_DOM,
+  "app/(studio)/audio/_audio/useTransport.ts": NEEDS_DOM,
 };
 
 /* ───────────────────────────── derivation (pure) ──────────────────────────── */

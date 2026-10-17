@@ -26,7 +26,7 @@
 import { test, expect } from "@playwright/test";
 import { createAnnouncerQueue, politenessFor, type Announcement } from "@/lib/announcer";
 import { troubleAnnouncement } from "@/components/ui/NotificationBell";
-import type { StorageFailure } from "@/app/_phases/_shared/stepStore";
+import type { StorageFailure } from "@/lib/steps";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 

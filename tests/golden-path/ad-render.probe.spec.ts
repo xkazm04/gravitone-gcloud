@@ -38,7 +38,7 @@ import {
 } from "@/lib/adRender";
 import { ACCESS_SECRET_VAR, __resetRateLimit } from "@/lib/apiAuth";
 import { POST as renderPOST } from "@/app/api/ads/render/route";
-import { adFinishChecks, adRenderRequest, seedFinish, shotRows } from "@/app/_phases/cut/ads/finish";
+import { adFinishChecks, adRenderRequest, seedFinish, shotRows } from "@/lib/cut/ads/finish";
 import { GET as recordGET } from "@/app/api/ads/render/[id]/route";
 import type { AdRenderRequest } from "@/lib/ads/types";
 import type { Aspect } from "@/lib/imaging/types";

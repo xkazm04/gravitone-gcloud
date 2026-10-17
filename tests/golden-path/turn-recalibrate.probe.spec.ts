@@ -27,8 +27,8 @@ import { POST as recalibratePOST } from "@/app/api/recalibrate/route";
 import { GET as listGET, POST as turnsPOST } from "@/app/api/turns/route";
 import { GET as turnGET } from "@/app/api/turns/[id]/route";
 import { POST as cancelPOST } from "@/app/api/turns/[id]/cancel/route";
-import { RENDERS } from "@/app/_phases/script/renders";
-import type { EditPlan } from "@/app/_phases/script/editPlan";
+import { RENDERS } from "@/lib/script/renders";
+import type { EditPlan } from "@/lib/script/editPlan";
 import { cancelTurn, getTurn, listTurns, resumeTurn, startRecalibrate, type TurnRecord } from "@/lib/turns/client";
 import { whenIdle } from "@/lib/turns/runner";
 

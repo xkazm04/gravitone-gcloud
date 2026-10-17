@@ -39,7 +39,7 @@ import { join } from "node:path";
 import { test, expect } from "@playwright/test";
 
 import { POST } from "@/app/api/frames/route";
-import { SCENE_SCHEMA } from "@/app/_phases/frames/sceneSpec";
+import { SCENE_SCHEMA } from "@/lib/frames/sceneSpec";
 import { __resetRateLimit, ACCESS_SECRET_VAR } from "@/lib/apiAuth";
 
 import { markerOf, sha256 } from "../_engine/marker.mjs";

@@ -18,7 +18,7 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 
-import { useLoadFor } from "@/app/_phases/_shared/useLoadFor";
+import { useLoadFor } from "@/lib/useLoadFor";
 import {
   addLesson,
   draftHunt,

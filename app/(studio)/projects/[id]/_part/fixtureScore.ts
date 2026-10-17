@@ -7,9 +7,9 @@ import { coveredS } from "@/lib/cut/finishLine";
 import { proposeSpots, toCueSpots, type ScoreSpot } from "@/lib/score/spots";
 import { derive } from "@/lib/script/trailer/ops";
 import { cuesFrom } from "@/lib/studio/score";
-import { activateTake, adoptTake, bindTake } from "@/app/_phases/score/takes";
-import { gapRuns } from "@/app/_phases/score/gaps";
-import { BPM_RANGE, DEFAULT_HOLD_S, bedRuntimeS } from "@/app/_phases/score/ads/bed";
+import { activateTake, adoptTake, bindTake } from "@/lib/score/takes";
+import { gapRuns } from "@/lib/score/gaps";
+import { BPM_RANGE, DEFAULT_HOLD_S, bedRuntimeS } from "@/lib/score/ads/bed";
 
 import type { Ctx } from "./fixture.ts";
 import { engineOf, heldTakes, pictureOf, scoreFromRecords, scoreToRecords, takeView, verdictFor, type BedRec, type Picture, type ScoreRec, type TakeRec } from "./fixtureScoreRecs.ts";

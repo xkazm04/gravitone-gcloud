@@ -7,8 +7,8 @@
 // a number, not as a playhead that sticks.
 import { test, expect } from "@playwright/test";
 
-import { editPoints, musicGaps, nextEdit, nextGap, snapTo } from "@/app/_phases/cut/edits";
-import { gapRuns } from "@/app/_phases/score/gaps";
+import { editPoints, musicGaps, nextEdit, nextGap, snapTo } from "@/lib/cut/edits";
+import { gapRuns } from "@/lib/score/gaps";
 import type { Scene } from "@/lib/studio/projectTypes";
 
 type Clip = Parameters<typeof editPoints>[0]["clips"][number];

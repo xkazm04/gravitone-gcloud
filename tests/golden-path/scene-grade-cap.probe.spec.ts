@@ -14,8 +14,8 @@
 // drawn as an exact value, with a valid citation, indistinguishable on the
 // plate from a `high` fact.
 import { test, expect } from "@playwright/test";
-import { reviewSceneSpecs } from "@/app/_phases/frames/sceneSpec";
-import type { Frame } from "@/app/_phases/frames/frames";
+import { reviewSceneSpecs } from "@/lib/frames/sceneSpec";
+import type { Frame } from "@/lib/frames/frames";
 import { FACTS } from "@/lib/notebook/facts";
 
 // reviewSceneSpecs reads exactly one property off a frame — `at` — to key the

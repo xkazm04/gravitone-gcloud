@@ -18,7 +18,7 @@ import { asImage, asSteer, errorResponse, readJson } from "@/lib/imaging/api";
 import { recognize } from "@/lib/imaging/router";
 import { guardRequest } from "@/lib/apiAuth";
 
-import { directMotion } from "@/app/_phases/motion/direction";
+import { directMotion } from "@/lib/motion/direction";
 
 export const runtime = "nodejs";
 /** Two vision passes on a local annotator are tens of seconds each. */

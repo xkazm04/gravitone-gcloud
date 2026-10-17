@@ -15,11 +15,11 @@
 // These probes pin the parity rather than the fix, so a future rewrite of either
 // engine has to keep it.
 import { test, expect } from "@playwright/test";
-import { recalibrate, recalibrateFromPlan } from "@/app/_phases/script/recalibrate";
-import { BASELINE } from "@/app/_phases/script/versions";
-import { RENDERS } from "@/app/_phases/script/renders";
-import { buildCards } from "@/app/_phases/_shared/notebook/cards";
-import type { EditPlan } from "@/app/_phases/script/editPlan";
+import { recalibrate, recalibrateFromPlan } from "@/lib/script/recalibrate";
+import { BASELINE } from "@/lib/script/versions";
+import { RENDERS } from "@/lib/script/renders";
+import { buildCards } from "@/lib/notebook/cards";
+import type { EditPlan } from "@/lib/script/editPlan";
 
 const ctx = () => ({ cards: buildCards(), scope: {} });
 const emptyPlan = (): EditPlan => ({ edits: [], refusals: [], summary: "no edits" });

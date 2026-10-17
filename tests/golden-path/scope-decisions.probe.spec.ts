@@ -20,7 +20,7 @@
 
 import { test, expect } from "@playwright/test";
 
-import { buildCards, type Card } from "@/app/_phases/_shared/notebook/cards";
+import { buildCards, type Card } from "@/lib/notebook/cards";
 import { DIMENSIONS } from "@/lib/notebook/dimensions";
 import {
   OPT_IN_IDS,
@@ -29,7 +29,7 @@ import {
   stateOf,
   woundsOf,
   type Scope,
-} from "@/app/_phases/research/scope";
+} from "@/lib/research/scope";
 
 const DIM = DIMENSIONS[0].id;
 

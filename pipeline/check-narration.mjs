@@ -27,7 +27,7 @@
 // `title` is not banned — a filename, a timestamp, a verb is exactly what it is
 // for. What is banned is it growing back into a prose channel.
 //
-// If you need a real disclosure, use <Hint> (components/ui/signal): it opens on
+// If you need a real disclosure, use <Hint> (@gt/ui components/hint): it opens on
 // hover, focus AND tap, is keyboard reachable, and is wired by
 // aria-describedby. That is the door. This gate is the wall beside it.
 //
@@ -45,6 +45,18 @@
 // not pretend to. It catches the case that actually happens: a developer with a
 // paragraph in hand, looking for somewhere to put it.
 //
+// TWO WORLDS, ONE WALL (Phase 6, 2026-10-17). The new world's vocabulary is
+// @gt/ui (packages/ui/src), and its <Hint> takes its words as a PROP,
+// `<Hint text="..." name="..." />`, where v1's took children. A gate that only
+// read children and only walked app/ + components/ saw neither the package the
+// new screens are built from nor the spelling they use, so it called the new
+// world clean by never looking at it. Both spellings are read now, across
+// app/ (which holds app/(studio)), components/ and packages/ui/src. The twelve
+// is no longer this file's number either: it is HINT_WORDS in
+// packages/ui/src/components/hint/words.ts, the constant whose type makes a
+// literal over twelve words a compile error at the call site. Two copies of a
+// rule are two rules; the type and the gate now read one.
+//
 // WHAT THIS GATE CANNOT DO, stated plainly so nobody mistakes green for good:
 // it cannot tell whether a sentence's subject is the app or the work. That
 // judgement is human, it is the whole law, and no regex will ever hold it. This
@@ -53,8 +65,15 @@
 
 import fs from "node:fs";
 import path from "node:path";
+// Erasable TypeScript, loaded by Node's own type stripping: the gate and the
+// `TwelveWords` type count with the same constant and the same counter.
+import { HINT_WORDS, hintWords } from "../packages/ui/src/components/hint/words.ts";
 
-const ROOT = path.resolve(import.meta.dirname, "..");
+// `--root <dir>` points the gate at another tree. It exists for one reason: a
+// gate's red has to be provable without planting a paragraph in the product,
+// so a fixture tree in a temp dir is where its failures are demonstrated.
+const rootArg = process.argv.indexOf("--root");
+const ROOT = rootArg >= 0 ? path.resolve(process.argv[rootArg + 1]) : path.resolve(import.meta.dirname, "..");
 
 /** Native `title=` at or over this many characters counts as prose, not a label. */
 const TITLE_PROSE_CHARS = 45;
@@ -64,8 +83,14 @@ const TITLE_PROSE_CHARS = 45;
  * refactor. LOWER IT when you remove one; never raise it without saying, in the
  * commit message, which sentence earned the exemption and why <Hint> was wrong
  * for it.
+ *
+ * REBASELINED 2026-10-17 (Phase 6, L61) to the measured count over all three
+ * trees, app/ + components/ + packages/ui/src: 0. All three budgets below
+ * read 0 on that day, and the debt they held (4, 5, 7) had been paid down
+ * without anyone lowering them - a ratchet with slack is a ratchet that lets
+ * that much back in. Zero is now the wall.
  */
-const TITLE_BUDGET = 4;
+const TITLE_BUDGET = 0;
 
 /**
  * The same ratchet for the EXPRESSION spelling, `title={...}`. The literal
@@ -76,7 +101,7 @@ const TITLE_BUDGET = 4;
  * the commit that added it: 8 sites, 6 after Chips.tsx moved to <Hint> (the
  * 6 are frozen, not blessed). LOWER, never raise.
  */
-const TITLE_EXPR_BUDGET = 5;
+const TITLE_EXPR_BUDGET = 0;
 
 /**
  * Words allowed inside a <Hint>. The README's number.
@@ -99,14 +124,15 @@ const TITLE_EXPR_BUDGET = 5;
  * the one move this file exists to prevent — that is how the type-scale floor
  * would have died too.
  */
-const HINT_MAX_WORDS = 12;
+const HINT_MAX_WORDS = HINT_WORDS;
 
 /**
  * How many <Hint> bodies currently exceed HINT_MAX_WORDS. Measured 2026-09-08.
  * LOWER IT when you tighten one. Raising it needs a sentence in the commit
  * message saying which disclosure earned the room and why deleting it was worse.
+ * Rebaselined 2026-10-17 to the measured 0 (see TITLE_BUDGET).
  */
-const HINT_OVER_BUDGET = 7;
+const HINT_OVER_BUDGET = 0;
 
 /**
  * The wall, as opposed to the ratchet. Past this a disclosure is not a long
@@ -119,10 +145,16 @@ const HINT_HARD_CAP = 25;
  * A named exemption is a decision somebody made; an unnamed one is drift.
  */
 const HINT_EXEMPT = [
-  // <Keycaps> renders its rows inside a Hint. A keymap is a table, not prose:
-  // every row is a key and a verb, there is nothing in it to delete, and its
-  // length is a function of how many keys the surface binds. The README names
-  // this as the one deliberate exemption.
+  // v1's <Keycaps> renders its rows inside a Hint. A keymap is a table, not
+  // prose: every row is a key and a verb, there is nothing in it to delete, and
+  // its length is a function of how many keys the surface binds. The README
+  // names this as the one deliberate exemption. It leaves with the v1 kit in
+  // Phase 6 wave C, and the staleness check below fails the day it does.
+  //
+  // @gt/ui's Keycaps (packages/ui/src/components/keycaps/Keycaps.tsx) needs no
+  // entry: it draws its legend in the open, derived from the keymap, and holds
+  // no <Hint> at all. An exemption there would exempt nothing, which is the
+  // kind of line that outlives its reason.
   "components/ui/signal/Keycaps.tsx",
 ];
 
@@ -134,8 +166,13 @@ const HINT_EXEMPT = [
  * Returns the LONGEST fragment, since a ternary shows one branch at a time.
  */
 function exprTitles(src) {
+  return exprFragments(src, /(?<![\w-])title=\{/g).filter((f) => f.length >= TITLE_PROSE_CHARS);
+}
+
+/** The longest static fragment of every `attr={...}` that `re` finds (see above). */
+function exprFragments(src, re) {
   const out = [];
-  for (const m of src.matchAll(/(?<![\w-])title=\{/g)) {
+  for (const m of src.matchAll(re)) {
     let i = m.index + m[0].length;
     let depth = 1;
     const frags = [];
@@ -167,9 +204,39 @@ function exprTitles(src) {
     }
     if (i >= src.length) continue;
     const best = frags.map((f) => f.replace(/\s+/g, " ").trim()).sort((a, b) => b.length - a.length)[0];
-    if (best && best.length >= TITLE_PROSE_CHARS) out.push(best);
+    if (best) out.push(best);
   }
   return out;
+}
+
+/**
+ * Every literal <Hint> body in `src`, in both spellings:
+ *   v1      <Hint ...>words</Hint>             children; a `{expr}` or element
+ *                                             child stops the match (header).
+ *   @gt/ui  <Hint text="words" ... />          the prop, literal or braced; a
+ *           <Hint text={a ? "x" : `y`} ... />  braced one yields its longest
+ *                                             static fragment, as title={} does.
+ * The prop spelling matters most: a literal there is already a compile error
+ * past twelve words (hint/words.ts), so what can reach this gate is the
+ * ternary and the template, which the type cannot count.
+ */
+function hintBodies(src) {
+  const out = [];
+  for (const m of src.matchAll(/<Hint\b[^>]*>([^<>{}]+)<\/Hint>/g)) out.push(m[1]);
+  for (const m of src.matchAll(/<Hint\b/g)) {
+    // The opening tag, up to the first `>` outside braces (an arrow in a prop is not its end).
+    let i = m.index + m[0].length;
+    let depth = 0;
+    while (i < src.length && !(depth === 0 && src[i] === ">")) {
+      if (src[i] === "{") depth++;
+      else if (src[i] === "}") depth--;
+      i++;
+    }
+    const tag = src.slice(m.index, i);
+    for (const t of tag.matchAll(/(?<![\w-])text="([^"]*)"/g)) out.push(t[1]);
+    out.push(...exprFragments(tag, /(?<![\w-])text=\{/g));
+  }
+  return out.map((t) => t.replace(/\s+/g, " ").trim());
 }
 
 function* walk(dir) {
@@ -188,8 +255,12 @@ const LINE = /^[ \t]*\/\/.*$/gm;
  *  that as the defect still shipping. */
 const strip = (s) => s.replace(BLOCK, " ").replace(LINE, " ");
 
+/** v1's two trees, and @gt/ui: the package every (studio) screen is built from.
+ *  app/ already holds app/(studio). */
+const SCAN = ["app", "components", "packages/ui/src"];
+
 const files = [];
-for (const dir of ["app", "components"]) {
+for (const dir of SCAN) {
   const d = path.join(ROOT, dir);
   if (fs.existsSync(d)) files.push(...walk(d));
 }
@@ -210,16 +281,30 @@ for (const abs of files) {
   for (const text of exprTitles(src)) exprs.push({ rel, text });
 
   if (HINT_EXEMPT.includes(rel)) continue;
-  // Literal-only children, single line or wrapped. A `{expr}` child stops the
-  // match, which is intended — see the header.
-  for (const m of src.matchAll(/<Hint\b[^>]*>([^<>{}]+)<\/Hint>/g)) {
-    const text = m[1].replace(/\s+/g, " ").trim();
-    const words = text ? text.split(" ").length : 0;
+  for (const text of hintBodies(src)) {
+    const words = hintWords(text);
     if (words > HINT_MAX_WORDS) hints.push({ rel, text, words });
   }
 }
 
 let failed = false;
+
+// An exemption is a decision about a FILE. When the file is gone, or no longer
+// holds a <Hint>, the decision has nothing left to decide and the line is drift
+// that reads like policy. Checked against the real tree only: a fixture root
+// has no reason to carry the product's exemptions.
+if (rootArg < 0) {
+  const stale = HINT_EXEMPT.filter((rel) => {
+    const abs = path.join(ROOT, rel);
+    return !fs.existsSync(abs) || !/<Hint\b/.test(strip(fs.readFileSync(abs, "utf8")));
+  });
+  if (stale.length) {
+    failed = true;
+    console.error(`\nnarration: HINT_EXEMPT names ${stale.length} file(s) holding no <Hint> any more.`);
+    console.error("Delete the line: an exemption that exempts nothing outlives its reason.\n");
+    for (const rel of stale) console.error(`  ${rel}`);
+  }
+}
 
 if (titles.length > TITLE_BUDGET) {
   failed = true;
@@ -229,7 +314,7 @@ if (titles.length > TITLE_BUDGET) {
   console.error(
     "A paragraph moved into a tooltip is a paragraph that survived. Use <Hint>",
   );
-  console.error("(components/ui/signal) for a real disclosure, or delete it.\n");
+  console.error("(@gt/ui components/hint) for a real disclosure, or delete it.\n");
   for (const t of titles) console.error(`  ${t.rel}\n      ${t.text.slice(0, 110)}`);
 } else if (titles.length < TITLE_BUDGET) {
   console.log(

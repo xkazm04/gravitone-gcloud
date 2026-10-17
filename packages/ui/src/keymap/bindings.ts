@@ -40,6 +40,12 @@ const calendar: Binding[] = [
   { mode: "calendar", keys: ["B"], verb: "board", does: "board" },
 ];
 
+const slot: Binding[] = [
+  { mode: "slot", keys: ["M"], verb: "move", does: "move", when: "movable" },
+  { mode: "slot", keys: ["P"], verb: "publish-now", does: "publish now", when: "publishable" },
+  { mode: "slot", keys: ["X"], verb: "cancel", does: "cancel", when: "cancellable" },
+];
+
 const board: Binding[] = [
   { mode: "board", keys: ["[", "]"], verb: "packet", does: "packet" },
   { mode: "board", keys: ["⏎"], verb: "open-next", does: "next packet", when: "!desk" },
@@ -257,7 +263,19 @@ const style: Binding[] = [
   { mode: "style", keys: ["Esc"], verb: "leave-field", does: "leave", field: "*" },
 ];
 
-export const BINDINGS: readonly Binding[] = [...floor, ...calendar, ...board, ...projects, ...compose, ...receipt, ...library, ...ledger, ...part, ...partL40, ...style];
+// L60 - THE AUDIO DESK'S ARRANGE BOARD (Phase 6). v1 app/playground/arrange/Board.tsx bound these on the card by a raw
+// onKeyDown: arrows walk to the nearest card, ⇧arrows move the focused card one cell (a write the store may refuse), F
+// finalizes (the label prompt opens first), V opens the versions. Esc in the label or row field leaves it.
+const audio: Binding[] = [
+  { mode: "audio.arrange", keys: ["←", "→", "↑", "↓"], verb: "walk", does: "card", when: "card", repeat: true },
+  { mode: "audio.arrange", keys: ["⇧←", "⇧→", "⇧↑", "⇧↓"], verb: "move", does: "move card", when: "card" },
+  { mode: "audio.arrange", keys: ["F"], verb: "finalize", does: "finalize", when: "card" },
+  { mode: "audio.arrange", keys: ["V"], verb: "versions", does: "versions", when: "card" },
+  { mode: "audio.arrange", keys: ["Esc"], verb: "leave-field", does: "leave", field: "*" },
+];
+
+export const BINDINGS: readonly Binding[] = [...floor, ...calendar,
+  ...slot, ...board, ...projects, ...compose, ...receipt, ...library, ...ledger, ...part, ...partL40, ...style, ...audio];
 
 /** The app's one compiled keymap. */
 export const KEYMAP = compile(BINDINGS);

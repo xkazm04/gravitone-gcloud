@@ -37,7 +37,7 @@ export type Mutant = {
  * unguarded probe lowers the live count and the same probe asks for this number
  * to be lowered to match, so the gain is kept.
  */
-export const UNGUARDED_PROBE_BUDGET = 190;
+export const UNGUARDED_PROBE_BUDGET = 189;
 
 export const MUTANTS: Mutant[] = [
   {
@@ -269,7 +269,7 @@ export const MUTANTS: Mutant[] = [
     probe: "no-app-imports.probe.spec.ts",
     file: "lib/identityEviction.ts",
     find: 'import { reportStorageTrouble } from "@/lib/steps";',
-    replace: 'import { reportStorageTrouble } from "@/app/_phases/_shared/stepStore";',
+    replace: 'import { reportStorageTrouble } from "@/app/_server/http";',
     why: "A library module names app/ again: the CLI and library lanes can no longer load it outside Next, and the stub at the old path can turn the edge into a cycle that evaluates empty.",
   },
   {
@@ -423,5 +423,13 @@ export const MUTANTS: Mutant[] = [
     find: "const live = f.jobs.find((j) => sameSource(j.source, s) && isLiveJob(j));",
     replace: "const live = f.jobs.find(() => false);",
     why: "A track already queued or rendering is queued again: a re-import doubles the queue and each copy buys its own still.",
+  },
+  {
+    id: "frames-label-false-zero",
+    probe: "frames-header-honesty.probe.spec.ts",
+    file: "lib/frames/frames.ts",
+    find: "engineLabel: \"no spine composed yet\",",
+    replace: "engineLabel: \"0 frames derived - see the shots view\",",
+    why: "A trailer with no spine tells the creator its cut has zero frames and narrates the app instead of naming the work.",
   },
 ];

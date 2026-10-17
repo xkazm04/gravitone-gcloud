@@ -26,7 +26,7 @@ import {
   reportTaskTrouble,
   type StorageFailure,
   type StorageTrouble,
-} from "@/app/_phases/_shared/stepStore";
+} from "@/lib/steps";
 import { troubleAnnouncement } from "@/components/ui/NotificationBell";
 import {
   CLEAR_TROUBLE,

@@ -1,14 +1,14 @@
 // A publish channel's mark (tokens.css `.chan`): two letters, in the channel's colour, with
-// the channel's name spoken. The slot machine's channels are the domain's (`@gt/domain/slot`);
-// `blog` is the prototype's fourth mark (amber "PR"): a landed article is published as a pull
-// request to ai-registry, not through a slot, but the Floor's calendar and the Library draw it
-// beside the video channels, so it has a badge without being a channel the slot machine owns.
+// the channel's name spoken. The channels are the domain's (`@gt/domain/slot`). `blog` is the
+// prototype's fourth mark (amber "PR"): since Phase 6 (owner ruling 2026-10-17) it is a slot
+// channel like the others, whose slot "publishes" as the article approve's pull request to
+// ai-registry rather than an upload.
 import type { Channel } from "@gt/domain/slot";
 import { SrOnly } from "../a11y/SrOnly.tsx";
 import { cx } from "../cx.ts";
 import s from "./ChannelBadge.module.css";
 
-export type BadgeChannel = Channel | "blog";
+export type BadgeChannel = Channel;
 
 const MARK: { readonly [C in BadgeChannel]: string } = { youtube: "YT", tiktok: "TT", instagram: "IG", blog: "PR" };
 

@@ -18,7 +18,7 @@ import { readFileSync } from "node:fs";
 import { test, expect } from "@playwright/test";
 
 import { RENDERS } from "@/lib/script/renders";
-import { recalibrateFromPlan } from "@/app/_phases/script/recalibrate";
+import { recalibrateFromPlan } from "@/lib/script/recalibrate";
 import { buildCards } from "@/lib/notebook/cards";
 import { BASELINE } from "@/lib/script/versions";
 import type { EditPlan } from "@/lib/script/editPlan";

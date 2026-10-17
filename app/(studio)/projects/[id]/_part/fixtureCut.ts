@@ -10,8 +10,8 @@ import { deriveTimeline, turnOf, type CutClip, type DerivedCut, type OwnerStep }
 import { finishLine } from "@/lib/cut/finishLine";
 import { drawnStart, nudgeOffsets, offsetFrom, shownStatus, type Offsets } from "@/lib/cut/offsets";
 import { AD_RUNTIME_RANGE, type AdsFinishData, type AdsShotsData } from "@/lib/ads/types";
-import { editPoints, musicGaps } from "@/app/_phases/cut/edits";
-import { AD_ASPECTS, AD_ASPECT_PX, adFinishChecks, seedFinish, shotRows, superFor } from "@/app/_phases/cut/ads/finish";
+import { editPoints, musicGaps } from "@/lib/cut/edits";
+import { AD_ASPECTS, AD_ASPECT_PX, adFinishChecks, seedFinish, shotRows, superFor } from "@/lib/cut/ads/finish";
 
 import type { Ctx } from "./fixture.ts";
 import { engineOf, heldTakes, unitsOf, verdictFor, type ScoreRec } from "./fixtureScoreRecs.ts";

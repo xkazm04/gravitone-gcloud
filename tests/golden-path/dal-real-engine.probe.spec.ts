@@ -48,7 +48,7 @@ import {
   SCHEMA_VERSION,
   saveStep,
   __resetSaveSlots,
-} from "@/app/_phases/_shared/stepStore";
+} from "@/lib/steps";
 import { evictIdentity } from "@/lib/identityEviction";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";

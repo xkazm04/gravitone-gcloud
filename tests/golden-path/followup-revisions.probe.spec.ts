@@ -27,8 +27,8 @@
 // correction lands rather than whenever somebody next reads the surface.
 import { test, expect } from "@playwright/test";
 
-import { FACT_BY_ID } from "@/app/_phases/_shared/notebook/notebook";
-import { CANNED, revisionsOf } from "@/app/_phases/research/followup";
+import { FACT_BY_ID } from "@/lib/notebook/notebook";
+import { CANNED, revisionsOf } from "@/lib/research/followup";
 
 /** Facts whose transcript and notebook rows differ with NO `confidenceNote`, so
  *  `revisionsOf` cannot report them — each with the reason it is acceptable.

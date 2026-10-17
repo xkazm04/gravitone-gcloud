@@ -29,3 +29,13 @@ export const slotMachine = defineMachine({
   cancelled: [],
 });
 export type SlotState = (typeof slotMachine.states)[number];
+
+/**
+ * The states that HOLD an item on a channel (v1 schedule.ts `ACTIVE`): one such slot per
+ * item x channel, so the same export never goes up twice on one channel. A published slot
+ * still holds it; a missed, failed or cancelled one does not - the item can be slotted
+ * again, and the stale slot reschedules only if nothing else took its place.
+ */
+export const SLOT_HOLDS: readonly SlotState[] = ["scheduled", "publishing", "published"];
+/** What a person may move or publish now (v1 RESCHEDULABLE), and cancel (v1 CANCELLABLE). */
+export const SLOT_MOVABLE: readonly SlotState[] = ["scheduled", "missed", "failed"];

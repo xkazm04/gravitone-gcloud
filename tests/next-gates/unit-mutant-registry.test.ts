@@ -89,10 +89,11 @@ const readRepo = (file: string) => {
   const p = path.join(ROOT, file);
   return existsSync(p) ? readFileSync(p, "utf8").replaceAll("\r\n", "\n") : null;
 };
-// The budget is per PACKAGE test file; an entry may also name a tests/next-server
-// file, which the unit rung collects too (vitest.config.mts) and the runner can drive.
+// The budget is per PACKAGE test file; an entry may also name a tests/next-server or a
+// tests/next-gates file, which the unit rung collects too (vitest.config.mts) and the runner
+// can drive (a gate's own proof-of-red test is where a mutant of the gate is killed).
 const testFiles = walkTests(PACKAGES);
-const collected = [...testFiles, ...walkDir(path.join(ROOT, "tests", "next-server"))];
+const collected = [...testFiles, ...walkDir(path.join(ROOT, "tests", "next-server")), ...walkDir(path.join(ROOT, "tests", "next-gates"))];
 
 describe("the unit mutant registry", () => {
   test("the walk saw the package suites (an empty population is not a clean one)", () => {

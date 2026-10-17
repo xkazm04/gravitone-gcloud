@@ -18,8 +18,8 @@
 // not the same as it being causal". This is the explainer half catching up.
 // Reject-don't-repair, the parser's own rule: a default is a forced THEREFORE.
 import { test, expect } from "@playwright/test";
-import { applyEdits, parseEditPlan, PlanError, type Edit } from "@/app/_phases/script/editPlan";
-import { RENDERS } from "@/app/_phases/script/renders";
+import { applyEdits, parseEditPlan, PlanError, type Edit } from "@/lib/script/editPlan";
+import { RENDERS } from "@/lib/script/renders";
 
 const RID = "reversal-chain";
 const render = RENDERS.find((r) => r.id === RID)!;

@@ -29,7 +29,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import dynamic from "next/dynamic";
 
-import { useLoadFor } from "@/app/_phases/_shared/useLoadFor";
+import { useLoadFor } from "@/lib/useLoadFor";
 import { pendingPanel } from "@/components/ui/Pending";
 import { TabRail, type TabDef } from "@/components/ui/signal";
 import { listHunts, listTakes } from "@/lib/sound/client";

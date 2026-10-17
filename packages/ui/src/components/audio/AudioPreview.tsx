@@ -54,14 +54,15 @@ export function mediaErrorWords(code: number | undefined, src: string): string {
 const W = 300;
 const H = 80;
 
-function PlayMark({ on }: { readonly on: boolean }) {
+/** The play / pause mark, shared with the Arrange card's transport button. */
+export function PlayMark({ on, className = s.mark }: { readonly on: boolean; readonly className?: string | undefined }) {
   return on ? (
-    <svg viewBox="0 0 10 10" className={s.mark} aria-hidden="true">
+    <svg viewBox="0 0 10 10" className={className} aria-hidden="true">
       <rect x="2" y="1" width="2.2" height="8" />
       <rect x="5.8" y="1" width="2.2" height="8" />
     </svg>
   ) : (
-    <svg viewBox="0 0 10 10" className={s.mark} aria-hidden="true">
+    <svg viewBox="0 0 10 10" className={className} aria-hidden="true">
       <path d="M2 1l7 4-7 4z" />
     </svg>
   );

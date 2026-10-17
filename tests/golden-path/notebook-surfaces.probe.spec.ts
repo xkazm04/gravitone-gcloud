@@ -24,8 +24,8 @@ import "fake-indexeddb/auto";
 import { expect, test } from "@playwright/test";
 
 import { countsOf } from "@/lib/notebook/counts";
-import { NOTEBOOK, NOTEBOOK_COUNTS } from "@/app/_phases/_shared/notebook/notebook";
-import { sourceOf } from "@/app/_phases/_shared/notebook/source";
+import { NOTEBOOK, NOTEBOOK_COUNTS } from "@/lib/notebook/notebook";
+import { sourceOf } from "@/lib/notebook/source";
 
 import { liveNotebook, RECEIPT } from "./_c1-harness";
 

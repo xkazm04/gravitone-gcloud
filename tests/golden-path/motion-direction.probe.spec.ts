@@ -23,7 +23,7 @@
 
 import { test, expect } from "@playwright/test";
 
-import { emptyClip, type Frame } from "@/app/_phases/frames/frames";
+import { emptyClip, type Frame } from "@/lib/frames/frames";
 import {
   acceptIntoFramesRecord,
   clipAfter,
@@ -31,7 +31,7 @@ import {
   motionReport,
   withAcceptedMotion,
   type MotionOutcome,
-} from "@/app/_phases/motion/direction";
+} from "@/lib/motion/direction";
 import { POST as directPOST } from "@/app/api/motion/direct/route";
 import { ACCESS_SECRET_VAR, __resetRateLimit } from "@/lib/apiAuth";
 import type { Recognition, RecognizeRequest } from "@/lib/imaging/types";

@@ -22,6 +22,7 @@ import { AudioMeasures } from "@gt/ui/components/audio/AudioMeasures.tsx";
 import { AudioPreview } from "@gt/ui/components/audio/AudioPreview.tsx";
 import { AudioPrompt } from "@gt/ui/components/audio/AudioPrompt.tsx";
 import { DraftList } from "@gt/ui/components/audio/DraftList.tsx";
+import { EngineList, type EngineRow } from "@gt/ui/components/audio/EngineList.tsx";
 import { ReferenceList } from "@gt/ui/components/audio/ReferenceList.tsx";
 import { BLANK_SEED, FACET_OF, addTo, handsOf, sunoFieldsOf, type Hand, type Seed, type SeedList, type Term } from "@gt/ui/components/audio/recipe.ts";
 import { SeedComposer } from "@gt/ui/components/audio/SeedComposer.tsx";
@@ -45,7 +46,8 @@ export type AudioActs = { readonly setHand: typeof setHand; readonly sunoReceipt
 const LIST_OF: Readonly<Record<string, SeedList>> = { genre: "genres", mood: "moods", instrument: "instruments" };
 const BLANK = "__blank";
 
-export function AudioLane({ view, nowMs, acts }: { readonly view: AudioView; readonly nowMs: number; readonly acts: AudioActs }) {
+/** `engines`: the desk's registry rows (lib/sound/engines.ts); `canSend`: the registry says Suno composes here. */
+export function AudioLane({ view, nowMs, acts, engines, canSend }: { readonly view: AudioView; readonly nowMs: number; readonly acts: AudioActs; readonly engines: readonly EngineRow[]; readonly canSend: boolean }) {
   const { setHand, sunoReceipt, sunoConfirm } = acts;
   const router = useRouter();
   const { toast } = useShell();
@@ -143,13 +145,13 @@ export function AudioLane({ view, nowMs, acts }: { readonly view: AudioView; rea
             setSeed(next);
             if (next === BLANK_SEED || (next.genres.length === 0 && next.moods.length === 0 && next.instruments.length === 0 && next.avoid.length === 0 && next.bpm === null && next.key === null)) setLoaded("blank");
           }}
-          busy={flow.reading}
+          busy={flow.reading || !canSend}
           onSend={() => send(seed, fromLabel)}
           onCopy={copy}
         />
         <VariationList
           list={variations}
-          busy={flow.reading}
+          busy={flow.reading || !canSend}
           onLoad={(v) => {
             setSeed(v.seed);
             setLoaded(`${fromLabel} · ${v.axis}`);
@@ -158,6 +160,7 @@ export function AudioLane({ view, nowMs, acts }: { readonly view: AudioView; rea
         />
       </main>
       <aside className={s.side} aria-label="take, drafts and references">
+        <EngineList engines={engines} label="engines" />
         {take !== undefined && (
           <section className={s.take} aria-label="seed take">
             <CapsHeading text={take.title} variant="section" />

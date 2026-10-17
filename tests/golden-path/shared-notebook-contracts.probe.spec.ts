@@ -17,8 +17,8 @@ import { test, expect } from "@playwright/test";
 
 import { stripComments } from "./_helpers";
 
-import { buildCards } from "@/app/_phases/_shared/notebook/cards";
-import { NOTEBOOK } from "@/app/_phases/_shared/notebook/notebook";
+import { buildCards } from "@/lib/notebook/cards";
+import { NOTEBOOK } from "@/lib/notebook/notebook";
 
 const ROOT = resolve(__dirname, "../..");
 

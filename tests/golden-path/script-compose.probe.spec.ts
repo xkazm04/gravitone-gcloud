@@ -27,12 +27,12 @@ import { join } from "node:path";
 import { test, expect } from "@playwright/test";
 
 import { POST } from "@/app/api/script/route";
-import { NOTEBOOK } from "@/app/_phases/_shared/notebook/notebook";
-import { fixtureSource, sourceOf } from "@/app/_phases/_shared/notebook/source";
-import type { Notebook } from "@/app/_phases/_shared/notebook/types";
-import { checkConnectors, runGate, type GateReport } from "@/app/_phases/script/gate";
-import { draftOf, type DraftRender } from "@/app/_phases/script/draft";
-import { editPlanSchema, parseEditPlan, PlanError } from "@/app/_phases/script/editPlan";
+import { NOTEBOOK } from "@/lib/notebook/notebook";
+import { fixtureSource, sourceOf } from "@/lib/notebook/source";
+import type { Notebook } from "@/lib/notebook/types";
+import { checkConnectors, runGate, type GateReport } from "@/lib/script/gate";
+import { draftOf, type DraftRender } from "@/lib/script/draft";
+import { editPlanSchema, parseEditPlan, PlanError } from "@/lib/script/editPlan";
 import { TEMPLATES } from "@/lib/projects";
 import {
   COMPOSE_TEMPLATE_RANGES,

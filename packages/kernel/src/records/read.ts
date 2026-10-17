@@ -31,7 +31,8 @@ export type ReadContext = {
   readonly capacity?: Readonly<Record<ResourceLane, number>>;
   /** Read inside the SAME snapshot as the plan (`r`): a store read cannot nest another. */
   readonly packetOf?: (partId: string, r: Reader) => PacketFact | undefined;
-  readonly slottedOf?: (partId: string) => boolean;
+  /** Is the slot part on the calendar? Read in the plan's snapshot, as `packetOf` is. */
+  readonly slottedOf?: (partId: string, r: Reader) => boolean;
   /** A producer's preflight over the records as they stand (L45): a planned job whose upstream is
    *  ratified stays planned while this answers a reason (an act that waits on a human act). */
   readonly preflightOf?: (job: Job, r: Reader) => string | undefined;
@@ -162,7 +163,7 @@ export function projectModel(r: Reader, id: string, ctx: ReadContext): ProjectMo
       const packet = ctx.packetOf?.(p.id, r);
       if (packet !== undefined) facts.set(p.id, { packet });
     } else if (p.kind === "slot") {
-      facts.set(p.id, { slotted: ctx.slottedOf?.(p.id) === true });
+      facts.set(p.id, { slotted: ctx.slottedOf?.(p.id, r) === true });
     }
   }
   const launched = project.launchedAt !== undefined;

@@ -35,7 +35,7 @@
 import { test, expect } from "@playwright/test";
 
 import { FACTS } from "@/lib/notebook/facts";
-import type { Fact } from "@/app/_phases/_shared/notebook/types";
+import type { Fact } from "@/lib/notebook/types";
 
 /** The rows still on the singular deprecated `source`, BY ID rather than by
  *  count. Frozen 2026-08-29 at 20 of 21.

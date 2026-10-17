@@ -126,6 +126,27 @@ if (spec.tab) {
   await page.waitForTimeout(1600);
 }
 
+// A screen reached THROUGH another (cx-screens.mjs `follow`): the Board as a sheet exists only
+// after a soft navigation from the Floor, so its id names the Floor and the element to leave by.
+// No match is a refusal, not a capture: the Floor's own empty Weir is a real screen and would be
+// photographed under the Board's name.
+if (spec.follow) {
+  const link = page.locator(spec.follow.selector).first();
+  if ((await link.count()) === 0) {
+    console.error(`REFUSED: ${id} follows "${spec.follow.selector}" from ${spec.url}, and nothing matched.`);
+    console.error(`Nothing was written to ${target}.`);
+    await browser.close();
+    process.exit(4);
+  }
+  if (spec.follow.nav === "goto") {
+    const href = await link.getAttribute("href");
+    await page.goto(new URL(href ?? "/", BASE).href, { waitUntil: "domcontentloaded" });
+  } else {
+    await link.click();
+  }
+  await page.waitForTimeout(3200);
+}
+
 // The wizard is one deck: each stage is reached by committing the stage before
 // it, so "the style stage" means "two picks in". Picking IS the Next click
 // (app/_projects/wizard/CreateWizard.tsx), so a click on the first card of the

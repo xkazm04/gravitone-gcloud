@@ -24,10 +24,10 @@ import { cutExportArgs, cutSidecar, runCutExport, CUT_FPS } from "@/lib/cutExpor
 import { describePosture } from "@/lib/deployment";
 import { ExportError, landExport, partialPath } from "@/lib/export/headless";
 import { listExports } from "@/lib/publish/exports";
-import { deriveTimeline } from "@/app/_phases/cut/deriveTimeline";
-import { finishLine } from "@/app/_phases/cut/finishLine";
-import { emptyClip, type Frame } from "@/app/_phases/frames/frames";
-import type { ScoreSpot } from "@/app/_phases/score/spots";
+import { deriveTimeline } from "@/lib/cut/deriveTimeline";
+import { finishLine } from "@/lib/cut/finishLine";
+import { emptyClip, type Frame } from "@/lib/frames/frames";
+import type { ScoreSpot } from "@/lib/score/spots";
 
 /* ── synthetic step data ─────────────────────────────────────────────────── */
 

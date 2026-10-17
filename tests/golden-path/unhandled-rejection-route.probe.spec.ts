@@ -33,7 +33,7 @@
 import { test, expect } from "@playwright/test";
 
 import { routeUnhandledRejection } from "@/lib/GlobalErrorBridge";
-import { clearStorageTrouble, lastStorageTrouble } from "@/app/_phases/_shared/stepStore";
+import { clearStorageTrouble, lastStorageTrouble } from "@/lib/steps";
 import { troubleAnnouncement } from "@/components/ui/NotificationBell";
 
 /** The four rejection shapes the finding walked, as REJECTIONS rather than as

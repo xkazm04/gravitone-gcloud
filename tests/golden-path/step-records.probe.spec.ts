@@ -51,8 +51,8 @@ test.beforeEach(async () => {
 });
 
 test("case 1: a record the def cannot parse → refused \"malformed\"", async () => {
-  const { readRecord } = await import("@/app/_phases/_shared/records/registry");
-  const { FRAMES_ALTS } = await import("@/app/_phases/frames/records");
+  const { readRecord } = await import("@/lib/steps/recordRegistry");
+  const { FRAMES_ALTS } = await import("@/lib/frames/records");
   await putRaw("p-bad", "frames-alts", { byFrame: "not a map", v: 1 });
   const r = await readRecord(FRAMES_ALTS, "p-bad");
   expect(!r.ok && "refused" in r && r.refused).toBe("malformed");

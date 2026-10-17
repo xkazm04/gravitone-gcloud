@@ -9,7 +9,7 @@ import { trailerRender } from "@/lib/frames/frames";
 import { recipeById } from "@gt/catalog/recipes";
 import { derive } from "@/lib/script/trailer/ops";
 import type { AdScenario } from "@/lib/ads/types";
-import { NOT_CHECKED, reviewShotList } from "@/app/_phases/frames/shotReview";
+import { NOT_CHECKED, reviewShotList } from "@/lib/frames/shotReview";
 import { blobRouteUrl } from "@/lib/parts/gates";
 import { partVerdict } from "@/lib/parts/verdict";
 

@@ -36,7 +36,8 @@ import { PROJECT, SCREENS } from "../../pipeline/cx-screens.mjs";
 
 import { DEFAULT_GROUND, findingKey, measurerSource, type Finding } from "./_legibility";
 
-type Reach = { url: string; via?: string[]; tab?: string; picks?: number; open?: string; wipe?: boolean };
+type Follow = { selector: string; nav: "goto" | "click" };
+type Reach = { url: string; via?: string[]; tab?: string; follow?: Follow; picks?: number; open?: string; wipe?: boolean };
 const TABLE = SCREENS as Record<string, Reach>;
 const PROJECT_ID = PROJECT as string;
 
@@ -101,6 +102,15 @@ async function reach(page: Page, spec: Reach) {
       .or(page.getByRole("button", { name: spec.tab, exact: true }));
     await tab.first().click().catch(() => {});
     await page.waitForTimeout(1600);
+  }
+  if (spec.follow) {
+    // The same step cx-capture takes (pipeline/cx-capture.mjs): a screen reached THROUGH another.
+    // No match fails the screen - measuring the Floor under the Board's id would baseline a lie.
+    const link = page.locator(spec.follow.selector).first();
+    await expect(link, `nothing matched ${spec.follow.selector} on ${spec.url}`).toHaveCount(1);
+    if (spec.follow.nav === "goto") await page.goto((await link.getAttribute("href")) ?? "/", { waitUntil: "domcontentloaded" });
+    else await link.click();
+    await page.waitForTimeout(3200);
   }
   for (let i = 0; i < (spec.picks ?? 0); i++) {
     const card = page.locator("[data-testid^='deck-card']").first();

@@ -19,7 +19,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { useLoadFor } from "@/app/_phases/_shared/useLoadFor";
+import { useLoadFor } from "@/lib/useLoadFor";
 
 import { getRun, listRuns, type Fetched, type RunDetail, type RunList } from "./articlesClient";
 import { WORKING } from "./runModel";

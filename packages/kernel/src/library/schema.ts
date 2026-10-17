@@ -1,4 +1,5 @@
 import type { ModuleMigrations } from "../migrate.ts";
+import { MEASURES_DDL } from "./measures.ts";
 
 // THE LIBRARY INDEX'S TABLES (Phase 5, COMMON decisions 5 and 6).
 //
@@ -50,6 +51,8 @@ import type { ModuleMigrations } from "../migrate.ts";
 //                   the same transaction as the fact: the attention facet and the
 //                   sort that sinks broken media are queries over the facts, and a
 //                   writer that forgets to update the item cannot exist.
+//   audio_measures  one row per audio blob sha beside its facts: peaks, decoded
+//                   length, energy, tempo and key (v2, ./measures.ts).
 //   library_ingest  the projection's memo of files it has hashed into blobs.
 //   library_marks   pins and project uses, the operator's acts.
 
@@ -196,5 +199,10 @@ CREATE TABLE library_marks (
 
 export const libraryMigrations: ModuleMigrations = {
   module: "library",
-  steps: [{ version: 1, sql: ITEMS }],
+  // v2 (Phase 6, L60): audio measures beside the media facts (./measures.ts says why it clears
+  // the audio facts it sits beside).
+  steps: [
+    { version: 1, sql: ITEMS },
+    { version: 2, sql: MEASURES_DDL },
+  ],
 };

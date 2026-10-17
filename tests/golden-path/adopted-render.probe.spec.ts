@@ -27,14 +27,14 @@ import {
   ADOPTION_PHASE,
   resolveExplainerRender,
 } from "@/lib/script/adoption";
-import { explainerRender, framesFor, framesFromRender } from "@/app/_phases/frames/frames";
-import { RENDERS, RENDER_BY_ID } from "@/app/_phases/script/renders";
+import { explainerRender, framesFor, framesFromRender } from "@/lib/frames/frames";
+import { RENDERS, RENDER_BY_ID } from "@/lib/script/renders";
 import {
   readStep,
   saveStep,
   __resetSaveSlots,
   type ScriptAdoptionStepData,
-} from "@/app/_phases/_shared/stepStore";
+} from "@/lib/steps";
 
 test.beforeEach(() => __resetSaveSlots());
 

@@ -61,15 +61,34 @@ source-a-look - a creator who needs a visual identity before anything can render
 | `studio-score` | app | `/projects/<id>/score` |
 | `studio-cut` | app | `/projects/<id>/cut` |
 | `studio-outputs` | app | `/projects/<id>` — the Plan: a project's parts are its outputs |
-| `library-styles` | app | `/library` — Styles tab (default) |
-| `library-assets` | app | `/library` → Assets tab |
-| `library-animations` | app | `/library` → Animations tab (`ComingSoon`) |
-| `playground` | app · **operator** | `/playground` — music vendor bench, temporary by design |
-| `foundry` | app · **operator** | `/foundry` — Pipeline / Styles (Cull, Extract, Dojo, Strips decide on the Board) |
+| `library` | app | `/library` — the shelf (fixture side) |
+| `library-detail` | app | `/library?kind=style&sel=style-0006` — one style selected on the shelf |
+| `library-style` | app | `/library/style/painted-3d` — that style's atelier (fixture side's seeded style) |
+| `playground` | app · **operator** | `/playground` — retires in Phase 6 wave C (`/playground` → `/audio`) |
+| `foundry` | app · **operator** | `/foundry` — retires in Phase 6 wave C (`/foundry` → `/floor`) |
 | `kit` | app | `/kit` |
-| `kit-law` | app | `/kit` → Law tab |
-| `kit-parts` | app | `/kit` → Parts tab |
-| `kit-migration` | app | `/kit` → Migration tab |
+| `kit-law` | app | `/kit#colour` — the token law |
+| `kit-parts` | app | `/kit#signal` — the component specimens |
+| `kit-migration` | app | `/kit#status` — the status table |
+| `kit-part` | app | `/kit#part` |
+| `part-research-notebook` | app | `/projects/why-bitcoin/research` |
+| `part-script-document` | app | `/projects/why-bitcoin/script` |
+| `part-research-beats` | app | `/projects/glass-harbor-trailer/research` |
+| `part-script-trailer` | app | `/projects/glass-harbor-trailer/script` |
+| `part-frames-shots` | app | `/projects/glass-harbor-trailer/frames` |
+| `part-frames-assembly` | app | `/projects/why-bitcoin/frames` |
+| `part-motion-plates` | app | `/projects/why-bitcoin/motion` |
+| `part-score-spotting` | app | `/projects/glass-harbor-trailer/score` |
+| `part-cut-timeline` | app | `/projects/glass-harbor-trailer/cut` |
+| `part-explainer-strips` | app | `/projects/provider-routing-explainer/strips` |
+| `part-explainer-voice` | app | `/projects/provider-routing-explainer/voice` |
+| `floor` | app | `/floor` — four lanes, Foundry → Weir → shelf, the Calendar rail |
+| `floor-calendar` | app | `/floor?cal=1` — the rail opened into the month |
+| `board` | app | `/floor` → the first pile's `/board/<packet>`, loaded as a full page |
+| `board-sheet` | app | `/floor` → the first pile, clicked: the Board as a sheet over the Floor (soft navigation only) |
+| `ledger` | app | `/ledger` |
+| `runs` | app | `/projects/runs` |
+| `audio` | app | `/audio` |
 
 Steps deep-link by query string. **Clicking the step tabs from Playwright silently does not change
 the step** (measured 2026-09-08) — always navigate by URL.

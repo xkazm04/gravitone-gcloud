@@ -31,15 +31,15 @@
 import { test, expect } from "@playwright/test";
 import { createHash } from "node:crypto";
 
-import { fixtureDraft, draftOf, impactOf, type DraftRender, type ScriptDraft } from "@/app/_phases/script/draft";
-import { IMPACT, ATTRIBUTION } from "@/app/_phases/script/impact";
-import { RENDERS, RENDER_BY_ID } from "@/app/_phases/script/renders";
-import { EDIT_PLAN_SCHEMA, editPlanSchema, parseEditPlan, PlanError } from "@/app/_phases/script/editPlan";
-import { runGate, PROBES, probesFor, type Verdict } from "@/app/_phases/script/gate";
+import { fixtureDraft, draftOf, impactOf, type DraftRender, type ScriptDraft } from "@/lib/script/draft";
+import { IMPACT, ATTRIBUTION } from "@/lib/script/impact";
+import { RENDERS, RENDER_BY_ID } from "@/lib/script/renders";
+import { EDIT_PLAN_SCHEMA, editPlanSchema, parseEditPlan, PlanError } from "@/lib/script/editPlan";
+import { runGate, PROBES, probesFor, type Verdict } from "@/lib/script/gate";
 import { CONSTRAINT_LEDGER, ledgerFor } from "@/lib/script/constraints";
-import { NOTEBOOK } from "@/app/_phases/_shared/notebook/notebook";
-import { fixtureSource, sourceOf } from "@/app/_phases/_shared/notebook/source";
-import type { Unknown } from "@/app/_phases/_shared/notebook/types";
+import { NOTEBOOK } from "@/lib/notebook/notebook";
+import { fixtureSource, sourceOf } from "@/lib/notebook/source";
+import type { Unknown } from "@/lib/notebook/types";
 
 const sha256 = (s: string) => createHash("sha256").update(s).digest("hex");
 

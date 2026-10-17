@@ -10,7 +10,12 @@ export type RailSlot = {
   readonly channel: string;
   readonly publishAt: string;
   readonly status: "scheduled" | "publishing" | "published" | "missed" | "failed" | "cancelled";
+  /** The channel's sentence, verbatim: on a failed slot, and kept on one cancelled after failing. */
   readonly error?: string;
+  /** Why a waiting slot will not fire (@gt/domain/slot SLOT_DRIFTS); it clears itself. */
+  readonly drift?: "export_missing" | "channel_not_wired";
+  /** When the window closed on a missed slot. */
+  readonly missedAt?: string;
 };
 
 const DAY_MS = 86_400_000;
@@ -37,15 +42,20 @@ export function dayLabel(key: string): string {
 
 export const isBad = (s: Pick<RailSlot, "status">): boolean => s.status === "failed" || s.status === "missed";
 
+/** What a person owes a slot (v1 calendarModel needsDecision): failed, missed, or a scheduled
+ *  slot that drifted - it will not fire, so it is the operator's, not the tick's. */
+export const needsDecision = (s: Pick<RailSlot, "status" | "drift">): boolean => isBad(s) || (s.status === "scheduled" && s.drift !== undefined);
+
 export type DayGroup = { readonly day: string; readonly slots: readonly RailSlot[] };
 
 export type Rail = {
-  /** Scheduled and publishing slots, earliest first, grouped by UTC day. */
+  /** Scheduled and publishing slots that will fire, earliest first, grouped by UTC day, with
+   *  the cancelled ones still ahead drawn among them (struck, not counted). */
   readonly next: readonly DayGroup[];
   readonly nextCount: number;
   /** How many of `next`, in order, are already past their hour: NOW is drawn after them. */
   readonly overdue: number;
-  /** Failed and missed, newest first: their errors are drawn verbatim. */
+  /** What needs a decision (failed, missed, drifted), newest first: errors drawn verbatim. */
   readonly failed: readonly RailSlot[];
   /** Published, newest first. */
   readonly published: readonly RailSlot[];
@@ -55,12 +65,16 @@ export type Rail = {
  * The rail's three sections (prototype CalendarColumn). The prototype's Next held only slots
  * after NOW; a scheduled slot whose hour has passed without v1 settling it (the publish tick did
  * not run - plan §3.1 "nothing in-app calls tick") would then be in no section at all, so it
- * stays under Next, before the NOW line, until v1 calls it missed.
+ * stays under Next, before the NOW line, until v1 calls it missed. A DRIFTED slot is not
+ * next - it will not fire - and sits with the failures, which are what the operator owes.
  */
 export function railOf(slots: readonly RailSlot[], nowMs: number): Rail {
-  const upcoming = slots.filter((s) => s.status === "scheduled" || s.status === "publishing").sort((a, b) => atOf(a) - atOf(b));
+  const upcoming = slots.filter((s) => (s.status === "scheduled" || s.status === "publishing") && !needsDecision(s)).sort((a, b) => atOf(a) - atOf(b));
+  // A cancelled slot still ahead is drawn in its day, struck, and counted nowhere: the hour
+  // it held is visible, and nothing will fire in it.
+  const struck = slots.filter((s) => s.status === "cancelled" && atOf(s) >= nowMs);
   const next: { day: string; slots: RailSlot[] }[] = [];
-  for (const s of upcoming) {
+  for (const s of [...upcoming, ...struck].sort((a, b) => atOf(a) - atOf(b))) {
     const day = dayKey(atOf(s));
     const last = next.at(-1);
     if (last !== undefined && last.day === day) last.slots.push(s);
@@ -71,7 +85,7 @@ export function railOf(slots: readonly RailSlot[], nowMs: number): Rail {
     next,
     nextCount: upcoming.length,
     overdue: upcoming.filter((s) => atOf(s) < nowMs).length,
-    failed: slots.filter(isBad).sort(newest),
+    failed: slots.filter(needsDecision).sort(newest),
     published: slots.filter((s) => s.status === "published").sort(newest),
   };
 }

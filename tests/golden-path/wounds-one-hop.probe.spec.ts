@@ -28,7 +28,7 @@
 // rather than a constraint the code depends on.
 import { test, expect } from "@playwright/test";
 
-import { buildCards, woundsOf, type Card, type Scope } from "@/app/_phases/research/scope";
+import { buildCards, woundsOf, type Card, type Scope } from "@/lib/research/scope";
 
 /** Longest dependsOn chain above each card, cycle-guarded. */
 function depths(cards: Card[]): Map<string, number> {

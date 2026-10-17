@@ -28,12 +28,12 @@ import {
   framesFromRender,
   framesLane,
   trailerRender,
-} from "@/app/_phases/frames/frames";
-import { isTrailerFormat, shotsFromRender } from "@/app/_phases/frames/shots";
+} from "@/lib/frames/frames";
+import { isTrailerFormat, shotsFromRender } from "@/lib/frames/shots";
 import { composeCut } from "@/lib/script/trailer/cut";
 import { slotsFor } from "@/lib/research/beats";
 import { GLASS_HARBOR_CUE } from "@/lib/studio/trailerFixtures";
-import { RENDERS } from "@/app/_phases/script/renders";
+import { RENDERS } from "@/lib/script/renders";
 import { DISCIPLINES, TEMPLATE_FAMILY, type Discipline, type TemplateId } from "@/lib/projects";
 
 /** A whole spine, composed the way Step 1 → Step 2 composes one: every slot's

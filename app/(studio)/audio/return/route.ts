@@ -1,0 +1,58 @@
+// POST /audio/return - a Suno return's bytes, filed as the card's next version (Phase 6, L60).
+// multipart: `file` (the audio), `head` (the take it answers), `stage` (where it lands: the
+// head's stage or one on), `label` (to land it finalized), `op` (the client's op id: a retried
+// upload finds the take it filed). The judgement and the write are lib/sound/arrange.ts
+// `fileReturn`'s; this door holds the bytes to v1's cap and the engine registry's seam.
+//
+// A route, not a Server Action: a returned WAV is tens of MB and an action's body is capped far
+// below that (plan §9.2: route handlers are for CLIs, agents and FILES). Access-gated, not
+// money: nothing here spends (v1 POST /api/sound/takes, the same reasoning).
+import { z } from "zod";
+
+import { parseAt } from "@gt/domain/door";
+import { err, ok, type Result } from "@gt/domain/errors";
+import { STAGES } from "@gt/ui/components/audio/arrange.ts";
+
+import { route } from "../../../_server/route.ts";
+import { kernel } from "../../../../lib/kernelStore.ts";
+import { fileReturn, OP_ID_RE } from "../../../../lib/sound/arrange.ts";
+import { can, engineById } from "../../../../lib/sound/engines.ts";
+import { MAX_UPLOAD_BYTES } from "../../../../lib/sound/takes.ts";
+import { deskEngines } from "../_audio/arrangeRead.ts";
+
+export const maxDuration = 60;
+
+const fields = z.object({
+  head: z.string().regex(/^[A-Za-z0-9_-]{1,80}$/),
+  stage: z.enum(STAGES),
+  label: z.string().max(120).optional(),
+  op: z.string().regex(OP_ID_RE),
+});
+
+const field = (form: FormData, k: string): string | undefined => {
+  const v = form.get(k);
+  return typeof v === "string" && v !== "" ? v : undefined;
+};
+
+export const POST = route({ guard: "access", bodyCap: MAX_UPLOAD_BYTES + 1_000_000, maxDuration }, async ({ req, who }): Promise<Result<{ readonly id: string; readonly version: number; readonly created: boolean }>> => {
+  if (!can(engineById(deskEngines(), "suno"), "file-return")) return err("refused", "the desk takes no Suno return here: the engine registry withholds file-return");
+  const declared = Number(req.headers.get("content-length") ?? 0);
+  if (declared > MAX_UPLOAD_BYTES + 1_000_000) return err("invalid", `the upload is over ${MAX_UPLOAD_BYTES / 1048576} MB`);
+  let form: FormData;
+  try {
+    form = await req.formData();
+  } catch (e) {
+    return err("invalid", `expected multipart/form-data with file, head, stage and op: ${e instanceof Error ? e.message : String(e)}`);
+  }
+  const label = field(form, "label");
+  const p = parseAt("audio return", fields, { head: field(form, "head"), stage: field(form, "stage"), op: field(form, "op"), ...(label === undefined ? {} : { label }) });
+  if (!p.ok) return p;
+  const f = form.get("file");
+  if (!(f instanceof File) || f.size === 0) return err("invalid", "a return needs its audio file (multipart field `file`)");
+  const k = kernel();
+  if (!k.ok) return k;
+  const file = { bytes: new Uint8Array(await f.arrayBuffer()), mime: f.type, name: f.name };
+  const r = await fileReturn(k.value.store, { headId: p.value.head, stage: p.value.stage, opId: p.value.op, file, ...(p.value.label === undefined ? {} : { label: p.value.label }) }, { kind: "operator", id: who !== null && "uid" in who ? who.uid : "operator" }, new Date());
+  if (!r.ok) return r;
+  return ok({ id: r.value.take.id, version: r.value.version, created: r.value.created });
+});

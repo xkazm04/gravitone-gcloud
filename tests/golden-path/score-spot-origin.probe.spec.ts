@@ -36,9 +36,9 @@ import { GLASS_HARBOR_CUE } from "@/lib/studio/trailerFixtures";
 import { composeCut } from "@/lib/script/trailer/cut";
 import { slotsFor } from "@/lib/research/beats";
 import { atSeconds, type TrailerCut } from "@/lib/script/trailer/types";
-import { emptyClip, type Frame } from "@/app/_phases/frames/frames";
+import { emptyClip, type Frame } from "@/lib/frames/frames";
 import { pictureFromFrames } from "@/lib/score/picture";
-import { proposeSpots, toCueSpots } from "@/app/_phases/score/spots";
+import { proposeSpots, toCueSpots } from "@/lib/score/spots";
 import { cueToPlan } from "@/lib/music/plan";
 
 /* ────────────────────────────── the fixtures ─────────────────────────────── */

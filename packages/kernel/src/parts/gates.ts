@@ -4,6 +4,7 @@ import type { PacketFact } from "@gt/domain/plan";
 import { committedResult } from "../decision/commit.ts";
 import type { ReadContext } from "../records/read.ts";
 import { releaseHeldIn } from "../records/write.ts";
+import { slottedIn } from "../slots/read.ts";
 import type { Reader, Store } from "../store.ts";
 
 // A GATE PART'S FACT - its Board packet (COMMON decision 10). A gate is not a job: the part is
@@ -53,13 +54,15 @@ function cullRatifies(r: Reader, packetId: string): boolean {
 }
 
 /**
- * The read context with the gate facts wired. The lookup reads through the reader the plan is
+ * The read context with the gate facts wired - a gate's packet, and a slot part's slot (the
+ * calendar's table, ../slots/read.ts `slottedIn`: until Phase 6 nothing answered it, so every
+ * project's slot part read "awaiting gate" forever). The lookup reads through the reader the plan is
  * being read with, so a context can be built once, outside any transaction, and handed to every
  * plan read (the produce port does): before, a caller without a reader in hand built `{ now }`
  * alone and every committed gate read "at the Weir" on the Plan.
  */
 export function gateFacts(now: number): ReadContext {
-  return { now, packetOf: (partId, r) => gatePacketFact(r, partId) };
+  return { now, packetOf: (partId, r) => gatePacketFact(r, partId), slottedOf: (partId, r) => slottedIn(r, partId) };
 }
 
 /** `gateFacts` for a caller already inside a snapshot; the reader comes with each lookup. */

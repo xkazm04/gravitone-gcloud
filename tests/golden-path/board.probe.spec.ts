@@ -45,9 +45,9 @@ import { countEntries, itemId, keyOf, keyOfItem } from "@/lib/board/source";
 import { makeCullSource } from "@/lib/board/sources/cull";
 import { ADOPTION_REJECT_REFUSAL, makeAdoptionSource } from "@/lib/board/sources/adoption";
 import { makeTriageSource } from "@/lib/board/sources/triage";
-import { __resetSaveSlots, readStep, saveStep } from "@/app/_phases/_shared/stepStore";
+import { __resetSaveSlots, readStep, saveStep } from "@/lib/steps";
 import { addProjects } from "@/lib/projects";
-import { RENDERS } from "@/app/_phases/script/renders";
+import { RENDERS } from "@/lib/script/renders";
 
 /* ── verdict mapping, per adapter ─────────────────────────────────────────── */
 

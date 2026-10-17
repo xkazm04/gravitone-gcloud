@@ -15,7 +15,7 @@
 // These import the real modules. Nothing here re-implements a rule it checks.
 import { test, expect } from "@playwright/test";
 
-import { reviewShotList } from "@/app/_phases/frames/shotReview";
+import { reviewShotList } from "@/lib/frames/shotReview";
 import {
   ROLE_HINTS,
   beatSeconds,
@@ -28,10 +28,10 @@ import {
   type Shot,
   type ShotSourceBeat,
   type TrailerRole,
-} from "@/app/_phases/frames/shots";
-import { actionFor, promptsForShots } from "@/app/_phases/frames/shotPrompt";
-import { framesFromRender } from "@/app/_phases/frames/frames";
-import { RENDERS } from "@/app/_phases/script/renders";
+} from "@/lib/frames/shots";
+import { actionFor, promptsForShots } from "@/lib/frames/shotPrompt";
+import { framesFromRender } from "@/lib/frames/frames";
+import { RENDERS } from "@/lib/script/renders";
 import { compileStyleBlock, NO_TEXT_CLAUSE, PROMPT_CHAR_LIMIT } from "@/lib/stylePrompt";
 import type { StyleBlock } from "@gt/catalog/style";
 

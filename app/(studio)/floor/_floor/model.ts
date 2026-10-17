@@ -52,11 +52,21 @@ export function publishedSlots(publishes: readonly Event[], creates: readonly Ev
   });
 }
 
-export type FloorUrl = { readonly lane: MediaLane | null; readonly cal: boolean; readonly day: string | null };
+export type FloorUrl = {
+  readonly lane: MediaLane | null;
+  readonly cal: boolean;
+  readonly day: string | null;
+  /** Channels the month hides (`?off=tiktok,blog`), sorted, so one view has one URL. */
+  readonly off: readonly string[];
+  /** The slot whose record is open over the Floor (`?slot=<id>`), with or without the month. */
+  readonly slot: string | null;
+};
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
+const CHANNEL = /^[a-z][a-z0-9-]{0,31}$/;
+const SLOT = /^[^\s/?#&]{1,400}$/;
 
-/** `?lane=image&cal=1&day=2026-10-15`; anything unknown is dropped, never guessed. */
+/** `?lane=image&cal=1&day=2026-10-15&off=tiktok&slot=sl-x`; anything unknown is dropped, never guessed. */
 export function parseFloorUrl(q: Readonly<Record<string, string | string[] | undefined>>): FloorUrl {
   const one = (k: string): string | null => {
     const v = q[k];
@@ -64,7 +74,9 @@ export function parseFloorUrl(q: Readonly<Record<string, string | string[] | und
   };
   const lane = one("lane");
   const day = one("day");
-  return { lane: isFloorLane(lane) ? lane : null, cal: one("cal") === "1", day: day !== null && DAY.test(day) ? day : null };
+  const slot = one("slot");
+  const off = [...new Set((one("off") ?? "").split(",").filter((c) => CHANNEL.test(c)))].sort();
+  return { lane: isFloorLane(lane) ? lane : null, cal: one("cal") === "1", day: day !== null && DAY.test(day) ? day : null, off, slot: slot !== null && SLOT.test(slot) ? slot : null };
 }
 
 export function floorSearch(u: FloorUrl): string {
@@ -72,6 +84,11 @@ export function floorSearch(u: FloorUrl): string {
   if (u.lane !== null) q.set("lane", u.lane);
   if (u.cal) q.set("cal", "1");
   if (u.cal && u.day !== null) q.set("day", u.day);
+  if (u.cal && u.off.length > 0) q.set("off", [...u.off].sort().join(","));
+  if (u.slot !== null) q.set("slot", u.slot);
   const s = q.toString();
-  return s === "" ? "" : `?${s}`;
+  return s === "" ? "" : `?${s.replace(/%2C/g, ",")}`;
 }
+
+/** The slot level's address: the month stays open beneath it when it was. */
+export const slotHref = (id: string, cal = true): string => `/floor?${cal ? "cal=1&" : ""}slot=${encodeURIComponent(id)}`;

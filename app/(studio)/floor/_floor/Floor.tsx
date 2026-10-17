@@ -10,7 +10,8 @@
 //
 // Keys, by verb (keymap/bindings.ts `floor`): 1-4 open a lane's first pile, ⇧1-4 focus a lane
 // (again to show all), ⏎ the NEXT pile, C the month, B the Board (the NEXT packet), Esc shows
-// all lanes. Opening a pile is a client navigation to /board/<packet>, which the Board sheet
+// all lanes. A slot - on the rail or in the month - opens its record as a level over the Floor
+// (./SlotLevel.tsx, Phase 6), at `?slot=<id>` in the same URL state. Opening a pile is a client navigation to /board/<packet>, which the Board sheet
 // intercepts over the Floor (COMMON decision 10); a modified click on a pile keeps the
 // browser's own meaning.
 //
@@ -38,6 +39,7 @@ import { useKeys } from "@gt/ui/keymap/dispatch";
 import { vars } from "@gt/ui/components/vars.ts";
 
 import type { ComposerChoices, ProducePort } from "../../projects/_port/contract.ts";
+import type { CalendarPort } from "../_calendar/contract.ts";
 import { outcomeOf, useReceipt } from "../../projects/_plan/receipt.tsx";
 import { nextPile } from "../../_shell/facts.ts";
 import { BACKSTOP_MS, openFeed } from "../../_shell/liveFeed.ts";
@@ -46,7 +48,8 @@ import { FoundryComposer, initialDrafts, inputOf, type LaneDraft } from "./Compo
 import type { FloorData } from "./load.ts";
 import { Foundry, ShelfFor, Weir, pileHref, shelfCount } from "./LaneCells.tsx";
 import { Month } from "./Month.tsx";
-import { byLane, floorSearch, type FloorUrl } from "./model.ts";
+import { byLane, floorSearch, slotHref, type FloorUrl } from "./model.ts";
+import { SlotLevel, type SlotRead } from "./SlotLevel.tsx";
 import s from "./Floor.module.css";
 
 const never = (): (() => void) => () => undefined;
@@ -55,11 +58,14 @@ export type FloorProps = {
   readonly data: FloorData;
   readonly initial: FloorUrl;
   readonly produce: ProducePort;
+  readonly calendar: CalendarPort;
+  /** The open slot's record as the server read it with the page (`?slot=`), else null. */
+  readonly slot: SlotRead | null;
   /** What the composers offer; null when the port could not say (drawn as its error). */
   readonly choices: { readonly ok: true; readonly value: ComposerChoices } | { readonly ok: false; readonly error: string };
 };
 
-export function Floor({ data, initial, produce, choices }: FloorProps) {
+export function Floor({ data, initial, produce, calendar, slot, choices }: FloorProps) {
   const router = useRouter();
   // true only once hydrated (the server snapshot is false): the keys are bound from then on, and
   // the live lane waits for it rather than for a timer.
@@ -124,6 +130,7 @@ export function Floor({ data, initial, produce, choices }: FloorProps) {
   const setCal = (on: boolean): void => {
     setUrl((u) => ({ ...u, cal: on, day: on ? u.day : null }));
   };
+  const openSlot = (id: string): void => setUrl((u) => ({ ...u, slot: id }));
 
   useKeys(
     "floor",
@@ -149,7 +156,7 @@ export function Floor({ data, initial, produce, choices }: FloorProps) {
       unfocus: () => focus(null),
       launch: () => (active === null ? false : launch(active)),
     },
-    { facts: url.lane === null ? [] : ["lane-focused"], enabled: !url.cal },
+    { facts: url.lane === null ? [] : ["lane-focused"], enabled: !url.cal && url.slot === null },
   );
 
   const rows = laneRows(url.lane, (l) => (shelfCount(l, data.shelf) ?? 0) > 0);
@@ -230,7 +237,7 @@ export function Floor({ data, initial, produce, choices }: FloorProps) {
           </div>
         )}
       </div>
-      <CalendarColumn rail={rail} nowMs={data.now} open={url.cal} onOpen={() => setCal(!url.cal)} slotHref="/calendar" />
+      <CalendarColumn rail={rail} nowMs={data.now} open={url.cal} onOpen={() => setCal(!url.cal)} slotHref={(id) => slotHref(id, false)} onOpenSlot={openSlot} />
       {flow.sheet}
       {url.cal && (
         <Month
@@ -243,7 +250,22 @@ export function Floor({ data, initial, produce, choices }: FloorProps) {
             setCal(false);
             return openNext();
           }}
-          onOpenSlot={(href) => router.push(href)}
+          off={url.off}
+          onOff={(off) => setUrl((u) => ({ ...u, off: [...off].sort() }))}
+          onOpenSlot={openSlot}
+        />
+      )}
+      {url.slot !== null && (
+        <SlotLevel
+          key={url.slot}
+          id={url.slot}
+          port={calendar}
+          nowMs={data.now}
+          initial={slot}
+          cal={url.cal}
+          onClose={() => setUrl((u) => ({ ...u, slot: null }))}
+          onFloor={() => setUrl((u) => ({ ...u, slot: null, cal: false, day: null }))}
+          onLanded={() => router.refresh()}
         />
       )}
     </div>

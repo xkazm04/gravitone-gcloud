@@ -19,8 +19,8 @@
 // which is what makes a SIXTH kind covered by existing.
 import { test, expect } from "@playwright/test";
 
-import { buildCards } from "@/app/_phases/_shared/notebook/cards";
-import { standingOf, type Effect } from "@/app/_phases/research/followup";
+import { buildCards } from "@/lib/notebook/cards";
+import { standingOf, type Effect } from "@/lib/research/followup";
 
 const cardIds = new Set(buildCards().map((c) => c.id));
 const ABSENT = "f-no-such-id-anywhere";

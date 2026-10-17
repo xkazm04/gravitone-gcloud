@@ -16,9 +16,9 @@
 // matched and cleared; when there are no digits, a `not-engaged` (which is not
 // in the enforced denominator) rather than a vacuous `pass`.
 import { test, expect } from "@playwright/test";
-import { checkTraceability, type GateSubject } from "@/app/_phases/script/gate";
-import type { Beat } from "@/app/_phases/script/types";
-import type { Fact } from "@/app/_phases/_shared/notebook/types";
+import { checkTraceability, type GateSubject } from "@/lib/script/gate";
+import type { Beat } from "@/lib/script/types";
+import type { Fact } from "@/lib/notebook/types";
 
 const beat = (text: string): Beat => ({
   at: "0:04",

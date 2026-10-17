@@ -42,13 +42,18 @@ const FOUNDRY_SOURCES: ReadonlySet<string> = new Set(["forge", "extract", "dojo"
 /** `data.runId` when the act carries one (every v1 projection's acts do). */
 const runOf = (e: Pick<Event, "data">): string | null => (typeof e.data["runId"] === "string" ? e.data["runId"] : null);
 
+/** The Calendar, or one slot's record over it (the Floor's slot level, Phase 6). */
+export function calendarFor(slotId: string | null): string {
+  return slotId === null ? "/floor?cal=1" : `/floor?cal=1&slot=${encodeURIComponent(slotId)}`;
+}
+
 export function subjectLink(e: Pick<Event, "subject" | "key" | "data">): SubjectLink {
   const { kind, id } = e.subject;
   const source = sourceOf(e);
   // An article run has its own v1 page (app/articles/[runId]); every act about it opens it.
   if (source === "articles") return { label: kind === "run" ? id : item(id), href: `/articles/${encodeURIComponent(runOf(e) ?? id)}` };
   // Slots, publications and metrics are the calendar's.
-  if (source === "publish") return { label: id, href: "/calendar" };
+  if (source === "publish") return { label: id, href: calendarFor(kind === "slot" ? id : typeof e.data["slotId"] === "string" ? e.data["slotId"] : null) };
   if (source !== null && FOUNDRY_SOURCES.has(source)) {
     // A run is named by its id; an item inside a run (candidate, style, pair, improvement)
     // by its own name, the run being one click away in the row's run field.
@@ -59,7 +64,7 @@ export function subjectLink(e: Pick<Event, "subject" | "key" | "data">): Subject
     case "source":
       return { label: id, href: `/ledger?src=${encodeURIComponent(id)}` };
     case "slot":
-      return { label: id, href: "/calendar" };
+      return { label: id, href: calendarFor(id) };
     // A decision packet (Phase 3) is its Board, open or decided.
     case "packet":
       return { label: id, href: boardFor(id) };

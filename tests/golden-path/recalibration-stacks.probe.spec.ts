@@ -5,13 +5,13 @@
 // the static fixtures.
 
 import { test, expect } from "@playwright/test";
-import { recalibrate, recalibrateFromPlan } from "@/app/_phases/script/recalibrate";
-import { parseEditPlan, PlanError, type EditPlan } from "@/app/_phases/script/editPlan";
-import { BASELINE } from "@/app/_phases/script/versions";
-import { RENDERS } from "@/app/_phases/script/renders";
-import { ATTRIBUTION } from "@/app/_phases/script/impact";
-import { buildCards } from "@/app/_phases/_shared/notebook/cards";
-import { chainOf, attributionOf, renderPayloadFor, rendersInScope } from "@/app/_phases/script/chainBase";
+import { recalibrate, recalibrateFromPlan } from "@/lib/script/recalibrate";
+import { parseEditPlan, PlanError, type EditPlan } from "@/lib/script/editPlan";
+import { BASELINE } from "@/lib/script/versions";
+import { RENDERS } from "@/lib/script/renders";
+import { ATTRIBUTION } from "@/lib/script/impact";
+import { buildCards } from "@/lib/notebook/cards";
+import { chainOf, attributionOf, renderPayloadFor, rendersInScope } from "@/lib/script/chainBase";
 
 const ctx = () => ({ cards: buildCards(), scope: {} });
 const emptyPlan: EditPlan = { edits: [], refusals: [], summary: "empty plan" };

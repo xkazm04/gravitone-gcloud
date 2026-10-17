@@ -12,7 +12,7 @@ import { energyPoints } from "@/lib/script/trailer/cut";
 import { derive, edited } from "@/lib/script/trailer/ops";
 import { runStructureCheck, ADVISORY_RULES } from "@/lib/script/trailer/structure";
 import { atSeconds } from "@/lib/script/trailer/types";
-import { conflictsIn, stillSpoken } from "@/app/_phases/script/scopeConflicts";
+import { conflictsIn, stillSpoken } from "@/lib/script/scopeConflicts";
 import type { Candidate, Connector, Finding, GateView, ScriptData, ScriptFace, VersionView } from "@gt/domain/partView";
 
 import type { Ctx } from "./fixture.ts";

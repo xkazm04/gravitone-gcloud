@@ -44,9 +44,9 @@ import type { CuePicture } from "@/lib/music/types";
 import { GET as takesGET } from "@/app/api/sound/takes/route";
 import { PATCH as takePATCH } from "@/app/api/sound/takes/[id]/route";
 import { POST as generatePOST } from "@/app/api/sound/generate/route";
-import { deriveTimeline } from "@/app/_phases/cut/deriveTimeline";
-import { emptyClip, type Frame } from "@/app/_phases/frames/frames";
-import type { ScoreSpot } from "@/app/_phases/score/spots";
+import { deriveTimeline } from "@/lib/cut/deriveTimeline";
+import { emptyClip, type Frame } from "@/lib/frames/frames";
+import type { ScoreSpot } from "@/lib/score/spots";
 import {
   activateTake,
   adoptTake,
@@ -56,8 +56,8 @@ import {
   cueTakes,
   revisionRequest,
   sectionsOf,
-} from "@/app/_phases/score/takes";
-import { readStep, saveStep, __resetSaveSlots, type ScoreStepData } from "@/app/_phases/_shared/stepStore";
+} from "@/lib/score/takes";
+import { readStep, saveStep, __resetSaveSlots, type ScoreStepData } from "@/lib/steps";
 import { openDb, runTx, STEPS_STORE } from "@/lib/studioDb";
 import { MUSIC_STYLE_BLOCK, type SpottingCue } from "@/lib/studio/score";
 

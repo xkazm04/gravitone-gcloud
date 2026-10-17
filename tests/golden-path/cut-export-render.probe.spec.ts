@@ -21,8 +21,8 @@ import { test, expect } from "@playwright/test";
 
 import { keepEnv } from "./_helpers";
 import { compileCut, cutDocumentHash, type CutDocument } from "@/lib/cut/cutDocument";
-import type { CutClip, CutScene, DerivedCut } from "@/app/_phases/cut/deriveTimeline";
-import { emptyClip, type Frame } from "@/app/_phases/frames/frames";
+import type { CutClip, CutScene, DerivedCut } from "@/lib/cut/deriveTimeline";
+import { emptyClip, type Frame } from "@/lib/frames/frames";
 import { CUT_FPS, runCutExport } from "@/lib/cutExport";
 import { createTake } from "@/lib/sound/takes";
 

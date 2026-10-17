@@ -1,8 +1,9 @@
 // The Calendar rail grown into a month (prototype index.html `renderMonth`, `MonthSlot`,
 // floor.css `#month`, `.m-bar`, `.mday`, `.mslot`, `.m-side`): a Monday-first grid of whole
 // weeks, each day's slots with their hour, channel and - when it failed or was missed - its
-// error verbatim; channel toggles; the month's state counts; beside it, the selected day's
-// agenda, or the month's failures and what is next.
+// error verbatim (a cancelled slot's old error dim, prototype `.merr.dim`); channel toggles;
+// the month's state counts; beside it, the selected day's agenda, or what needs a decision
+// (failed, missed, drifted) and what is next.
 //
 // The page owns the state (month, selected day, channels off) and the keys (calendar mode:
 // ←→ day, ↑↓ week, [ ] month, ⏎ open, Esc clears the day then closes, C back to the rail);
@@ -22,7 +23,7 @@ import { statusOf } from "../status/status.ts";
 import { Tally } from "../tally/Tally.tsx";
 import { BADGE_CHANNELS } from "../channel/ChannelBadge.tsx";
 import { vars } from "../vars.ts";
-import { MONTHS, WEEK, byDay, clock, dayKey, dayLabel, isBad, monthCells, type RailSlot, type YearMonth } from "./calendar.ts";
+import { MONTHS, WEEK, byDay, clock, dayKey, dayLabel, isBad, monthCells, needsDecision, type RailSlot, type YearMonth } from "./calendar.ts";
 import { SlotMark, SlotRow } from "./SlotRow.tsx";
 import s from "./MonthCalendar.module.css";
 
@@ -41,12 +42,14 @@ export type MonthCalendarProps = {
   readonly onDay: (key: string | null) => void;
   readonly onChannel: (channel: string) => void;
   readonly onClose: () => void;
-  readonly slotHref?: string;
+  /** Where a slot's own record lives; with `onOpenSlot`, a plain click opens it in place. */
+  readonly slotHref?: (id: string) => string;
+  readonly onOpenSlot?: (id: string) => void;
   readonly panelRef?: Ref<HTMLElement>;
 };
 
 export function MonthCalendar(p: MonthCalendarProps) {
-  const { slots, nowMs, month, day, channelsOff, onMonth, onToday, onDay, onChannel, onClose, slotHref, panelRef } = p;
+  const { slots, nowMs, month, day, channelsOff, onMonth, onToday, onDay, onChannel, onClose, slotHref, onOpenSlot, panelRef } = p;
   const shown = slots.filter((x) => !channelsOff.has(x.channel));
   const days = byDay(shown);
   const { weeks, cells } = monthCells(month);
@@ -56,11 +59,11 @@ export function MonthCalendar(p: MonthCalendarProps) {
     return d.getUTCFullYear() === month.y && d.getUTCMonth() === month.m;
   });
   const chans = [...BADGE_CHANNELS, ...new Set(slots.map((x) => x.channel))].filter((c, i, all) => all.indexOf(c) === i && slots.some((x) => x.channel === c));
-  const href = slotHref === undefined ? {} : { href: slotHref };
+  const href = (id: string) => (slotHref === undefined ? {} : { href: slotHref(id), ...(onOpenSlot === undefined ? {} : { onOpen: onOpenSlot }) });
   const title = `${MONTHS[month.m] ?? ""} ${month.y}`;
   const selected = day === null ? null : (days.get(day) ?? []);
-  const failed = inMonth.filter(isBad).sort((a, b) => b.publishAt.localeCompare(a.publishAt));
-  const upcoming = shown.filter((x) => Date.parse(x.publishAt) >= nowMs && (x.status === "scheduled" || x.status === "publishing")).slice(0, 8);
+  const failed = inMonth.filter(needsDecision).sort((a, b) => b.publishAt.localeCompare(a.publishAt));
+  const upcoming = shown.filter((x) => Date.parse(x.publishAt) >= nowMs && (x.status === "scheduled" || x.status === "publishing") && !needsDecision(x)).slice(0, 8);
   const close = capsFor("calendar", "rail")[0];
   return (
     <section className={s.month} data-component="MonthCalendar" aria-label={`Calendar, ${title}`} ref={panelRef} tabIndex={-1}>
@@ -133,6 +136,7 @@ export function MonthCalendar(p: MonthCalendarProps) {
                           <span className={s.t}>{x.title}</span>
                         </span>
                         {isBad(x) && x.error !== undefined && <span className={s.err}>{x.error}</span>}
+                        {x.status === "cancelled" && x.error !== undefined && <span className={cx(s.err, s.dim)}>{x.error}</span>}
                       </span>
                     ))}
                   </span>
@@ -149,22 +153,22 @@ export function MonthCalendar(p: MonthCalendarProps) {
                 {dayLabel(day)} <Tally value={selected.length} label="slots" />
               </div>
               {selected.map((x) => (
-                <SlotRow key={x.id} slot={x} {...href} />
+                <SlotRow key={x.id} slot={x} {...href(x.id)} />
               ))}
             </>
           ) : (
             <>
               <div className={cx(s.sideHead, s.bad)}>
-                failed · missed <Tally value={failed.length} />
+                failed · missed · drift <Tally value={failed.length} />
               </div>
               {failed.map((x) => (
-                <SlotRow key={x.id} slot={x} {...href} />
+                <SlotRow key={x.id} slot={x} {...href(x.id)} />
               ))}
               <div className={cx(s.sideHead, s.next)}>
                 next <Tally value={upcoming.length} />
               </div>
               {upcoming.map((x) => (
-                <SlotRow key={x.id} slot={x} showError={false} {...href} />
+                <SlotRow key={x.id} slot={x} showError={false} {...href(x.id)} />
               ))}
             </>
           )}

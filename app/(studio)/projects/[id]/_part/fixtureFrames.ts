@@ -9,7 +9,7 @@ import { frameOfUnit, framesFromUnits, unitsFromRender, type PictureUnit } from 
 import { reviewSceneSpecs } from "@/lib/frames/sceneSpec";
 import { RENDERS } from "@/lib/script/renders";
 import { derive } from "@/lib/script/trailer/ops";
-import { acceptProposal, planFromSpecs, revertPass, revertRow, type Checkpoint, type DirectionProposal } from "@/app/_phases/frames/direction/plan";
+import { acceptProposal, planFromSpecs, revertPass, revertRow, type Checkpoint, type DirectionProposal } from "@/lib/frames/directionPlan";
 
 import { cardsOf } from "./fixtureResearch.ts";
 import type { Ctx } from "./fixture.ts";

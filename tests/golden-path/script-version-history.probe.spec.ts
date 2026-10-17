@@ -17,13 +17,13 @@
 
 import { test, expect } from "@playwright/test";
 
-import { acceptInto, restoreAs, resumeStaged, stagedOf } from "@/app/_phases/script/history";
-import { BASELINE, engineRunWith, receiptOf, type Note, type Version } from "@/app/_phases/script/versions";
-import { IMPACT } from "@/app/_phases/script/impact";
-import { recalibrate, recalibrateFromPlan } from "@/app/_phases/script/recalibrate";
-import { chainOf } from "@/app/_phases/script/chainBase";
-import { buildCards } from "@/app/_phases/_shared/notebook/cards";
-import type { EditPlan } from "@/app/_phases/script/editPlan";
+import { acceptInto, restoreAs, resumeStaged, stagedOf } from "@/lib/script/history";
+import { BASELINE, engineRunWith, receiptOf, type Note, type Version } from "@/lib/script/versions";
+import { IMPACT } from "@/lib/script/impact";
+import { recalibrate, recalibrateFromPlan } from "@/lib/script/recalibrate";
+import { chainOf } from "@/lib/script/chainBase";
+import { buildCards } from "@/lib/notebook/cards";
+import type { EditPlan } from "@/lib/script/editPlan";
 
 const ctx = () => ({ cards: buildCards(), scope: {} });
 const note = (cardId: string, kind: Note["kind"], at: number): Note => ({ id: `n-${cardId}-${kind}-${at}`, cardId, kind, at });

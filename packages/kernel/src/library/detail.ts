@@ -5,6 +5,7 @@ import { DEFAULT_PIN, groupLabel, railGroups, type LibraryActName, type LibraryC
 import { libraryItemSchema, type LibraryItem, type LibraryItemDetail } from "@gt/domain/libraryItem";
 import type { Reader, Row, Store } from "../store.ts";
 import { extrasSchema } from "./extras.ts";
+import { readMeasure, withMeasure } from "./measures.ts";
 import { ROW_SELECT, rowOf } from "./query.ts";
 
 // ONE ITEM, WHOLE - the detail panel's read: the record, every facet labelled in
@@ -139,7 +140,8 @@ export function libraryDetail(store: Store, id: string): Result<LibraryItemDetai
       row: rowOf(row, chips),
       vocabulary,
       lineage: lineageOf(r, item),
-      extras: rec.value.extras,
+      // An audio item's panel reads the ingest measure of its bytes (./measures.ts).
+      extras: rec.value.extras.audio === undefined || item.media === undefined ? rec.value.extras : { ...rec.value.extras, audio: withMeasure(rec.value.extras.audio, readMeasure(r, item.media.sha256)) },
       media: item.media === undefined ? null : readFacts(r, item.media.sha256),
       acts,
     };

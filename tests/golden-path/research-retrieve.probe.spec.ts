@@ -39,7 +39,7 @@ import { TextError } from "@/lib/text/errors";
 import { parseRetrieveStream, runClaudeRetrieve } from "@/lib/text/providers/claudeCliRetrieve";
 import { retrieve } from "@/lib/text/router";
 import { whenIdle } from "@/lib/turns/runner";
-import type { Notebook } from "@/app/_phases/_shared/notebook/types";
+import type { Notebook } from "@/lib/notebook/types";
 
 import {
   cliArgsFingerprint,

@@ -12,19 +12,19 @@
 // are later stages and are not exercised here.
 import { test, expect } from "@playwright/test";
 
-import { buildCards, notebookIssues } from "@/app/_phases/_shared/notebook/cards";
-import { NOTEBOOK } from "@/app/_phases/_shared/notebook/notebook";
-import { fixtureSource, sourceOf } from "@/app/_phases/_shared/notebook/source";
-import type { Notebook } from "@/app/_phases/_shared/notebook/types";
-import type { Effect } from "@/app/_phases/research/followup";
+import { buildCards, notebookIssues } from "@/lib/notebook/cards";
+import { NOTEBOOK } from "@/lib/notebook/notebook";
+import { fixtureSource, sourceOf } from "@/lib/notebook/source";
+import type { Notebook } from "@/lib/notebook/types";
+import type { Effect } from "@/lib/research/followup";
 import {
   applyRevisions,
   decide,
   reviseNotebook,
   undoRevision,
   type NotebookRevision,
-} from "@/app/_phases/research/revisions";
-import { woundsOf, scopeSummary } from "@/app/_phases/research/scope";
+} from "@/lib/research/revisions";
+import { woundsOf, scopeSummary } from "@/lib/research/scope";
 
 const AT = "2026-10-11T12:00:00.000Z";
 

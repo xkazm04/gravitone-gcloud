@@ -34,8 +34,8 @@ import { TextError, statusFor } from "@/lib/text/errors";
 import { reason } from "@/lib/text/router";
 import { admitCompose, ComposePromptUnavailable, composePrompt } from "@/lib/script/compose";
 import { DraftError, parseDraft } from "@/lib/script/validate";
-import { draftOf } from "@/app/_phases/script/draft";
-import { gateDraft } from "@/app/_phases/script/gate";
+import { draftOf } from "@/lib/script/draft";
+import { gateDraft } from "@/lib/script/gate";
 
 export const runtime = "nodejs";
 /** Up to three whole beat chains is the largest answer any turn writes. */

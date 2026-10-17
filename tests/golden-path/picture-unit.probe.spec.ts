@@ -41,11 +41,11 @@ import {
   explainerRender,
   framesFromRender,
   type FramesRender,
-} from "@/app/_phases/frames/frames";
-import { shotsFromBeats, type ShotSourceBeat } from "@/app/_phases/frames/shots";
+} from "@/lib/frames/frames";
+import { shotsFromBeats, type ShotSourceBeat } from "@/lib/frames/shots";
 import { pictureFromFrames } from "@/lib/score/picture";
-import { __resetSaveSlots } from "@/app/_phases/_shared/stepStore";
-import { RENDERS } from "@/app/_phases/script/renders";
+import { __resetSaveSlots } from "@/lib/steps";
+import { RENDERS } from "@/lib/script/renders";
 import { getRecord, openDb, runTx, STEPS_STORE } from "@/lib/studioDb";
 
 /* ──────────────────────────────── the store ───────────────────────────────── */
@@ -230,8 +230,8 @@ function v1Record() {
 }
 
 test("case 3: the frames def reads a v1 record as v2 units — plates kept, emptyClip filled — and writes nothing", async () => {
-  const { readRecord } = await import("@/app/_phases/_shared/records/registry");
-  const { FRAMES_RECORD } = await import("@/app/_phases/frames/records");
+  const { readRecord } = await import("@/lib/steps/recordRegistry");
+  const { FRAMES_RECORD } = await import("@/lib/frames/records");
   expect(FRAMES_RECORD.version).toBe(2);
 
   await putRaw("p-v1", "frames", v1Record());

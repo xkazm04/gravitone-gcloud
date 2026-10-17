@@ -29,7 +29,7 @@
 // changing nothing anyone notices.
 import { test, expect } from "@playwright/test";
 
-import { NOTEBOOK, NOTEBOOK_COUNTS } from "@/app/_phases/_shared/notebook/notebook";
+import { NOTEBOOK, NOTEBOOK_COUNTS } from "@/lib/notebook/notebook";
 
 // Frozen baselines for the SHIPPED run-1 fixture, defended by the measurement
 // in the finding this probe was written for: 11 vs 20. If either number ever

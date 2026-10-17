@@ -100,7 +100,7 @@ describe("subjectLink", () => {
 
   it("an article opens its v1 run page; publish facts the calendar; a sync source its own events", () => {
     expect(subjectLink(e({ key: "articles:run_1:step.0", subject: { kind: "step", id: "run_1/research" }, data: { runId: "run_1" } })).href).toBe("/articles/run_1");
-    expect(subjectLink(e({ key: "publish:s1:slot.scheduled", subject: { kind: "slot", id: "s1" } })).href).toBe("/calendar");
+    expect(subjectLink(e({ key: "publish:s1:slot.scheduled", subject: { kind: "slot", id: "s1" } })).href).toBe("/floor?cal=1&slot=s1");
     expect(subjectLink(e({ key: "ingest:forge:fail.read.x", subject: { kind: "source", id: "forge" } })).href).toBe("/ledger?src=forge");
   });
 

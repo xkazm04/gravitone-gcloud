@@ -23,7 +23,7 @@ import { useMemo, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { ArrowDown, ArrowRight, ArrowUp, BookOpen, Check, X } from "lucide-react";
 
-import { useLoadFor } from "@/app/_phases/_shared/useLoadFor";
+import { useLoadFor } from "@/lib/useLoadFor";
 import { Panel } from "@/components/ui/Primitives";
 import { Select } from "@/components/ui/Select";
 import { Ghost, Hint, PipRow, Tally } from "@/components/ui/signal";

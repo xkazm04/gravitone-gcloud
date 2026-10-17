@@ -46,6 +46,7 @@
 .t{font-size:var(--fs-meta);color:var(--ink-bright);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cancelled .t{text-decoration:line-through;color:var(--faint)}
 .err{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:var(--sp-nudge);font:500 var(--fs-micro)/1.35 var(--mono);color:var(--error-text)}
+.dim{opacity:.6}
 .more{position:absolute;right:var(--sp-tight);bottom:var(--sp-1);padding:var(--sp-hair) var(--sp-2);border-radius:var(--r-xs);background:var(--ink-4);border:1px solid var(--hair-3);font:700 var(--fs-micro)/1 var(--mono);color:var(--ink-bright)}
 
 .side{border-left:1px solid var(--hair);overflow:auto;padding:var(--sp-loose) var(--sp-loose) var(--sp-7);display:flex;flex-direction:column;gap:var(--sp-3);background:var(--panel-ground)}
@@ -55,3 +56,18 @@
 
 @media (max-width:1440px){.tallies{display:none}}
 @media (max-height:860px){.err{-webkit-line-clamp:1}}
+/* A phone: the bar wraps, the grid keeps its seven columns as a day picker (number, count, a
+   rose rim on a failed day) and the agenda - which carries every slot's words - follows it. */
+@media (max-width:700px){
+  .month{overflow:auto}
+  .bar{flex-wrap:wrap;height:auto;gap:var(--sp-3);padding:var(--sp-3) var(--sp-4)}
+  .body{display:flex;flex-direction:column;flex:none;min-height:auto}
+  .grid{padding:var(--sp-2) var(--sp-3)}
+  .dow span{padding-left:0;text-align:center;letter-spacing:0}
+  .weeks{flex:none;grid-template-rows:repeat(var(--weeks),var(--h-control))}
+  .day{padding:var(--sp-1);align-items:center}
+  .list,.fail,.more{display:none}
+  .count{margin-left:0}
+  .dayHead{flex-direction:column;gap:var(--sp-hair)}
+  .side{border-left:0;border-top:1px solid var(--hair);overflow:visible}
+}

@@ -21,9 +21,9 @@
 // itself detected. A green check over a checker that cannot fail is the failure
 // mode this probe exists for.
 import { test, expect } from "@playwright/test";
-import { notebookIssues } from "@/app/_phases/_shared/notebook/cards";
-import { NOTEBOOK } from "@/app/_phases/_shared/notebook/notebook";
-import type { Notebook } from "@/app/_phases/_shared/notebook/types";
+import { notebookIssues } from "@/lib/notebook/cards";
+import { NOTEBOOK } from "@/lib/notebook/notebook";
+import type { Notebook } from "@/lib/notebook/types";
 
 /** A structural clone, so a mutation in one case cannot reach the next. */
 const clone = (): Notebook => structuredClone(NOTEBOOK);

@@ -8,15 +8,15 @@
 
 import { test, expect } from "@playwright/test";
 
-import { buildCards } from "@/app/_phases/_shared/notebook/cards";
-import type { Scope } from "@/app/_phases/research/scope";
+import { buildCards } from "@/lib/notebook/cards";
+import type { Scope } from "@/lib/research/scope";
 import {
   conflictsIn,
   resolutionPlan,
   conflictDelta,
-} from "@/app/_phases/script/scopeConflicts";
-import { recalibrate } from "@/app/_phases/script/recalibrate";
-import { BASELINE, type Note } from "@/app/_phases/script/versions";
+} from "@/lib/script/scopeConflicts";
+import { recalibrate } from "@/lib/script/recalibrate";
+import { BASELINE, type Note } from "@/lib/script/versions";
 
 test("case 1: scope{f-ath: descoped, f-sbr: descoped} -> conflictsIn(BASELINE, cards, scope) returns exactly ['f-ath', 'f-sbr']", () => {
   const cards = buildCards();

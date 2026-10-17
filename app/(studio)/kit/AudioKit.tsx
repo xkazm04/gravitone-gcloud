@@ -9,8 +9,15 @@
 import { useMemo, useState } from "react";
 
 import { AudioMeasures } from "@gt/ui/components/audio/AudioMeasures.tsx";
-import { AudioPreview } from "@gt/ui/components/audio/AudioPreview.tsx";
+import { AudioPreview, PlayMark } from "@gt/ui/components/audio/AudioPreview.tsx";
 import { AudioPrompt } from "@gt/ui/components/audio/AudioPrompt.tsx";
+import { rowsFor, stackVersions, type Stack } from "@gt/ui/components/audio/arrange.ts";
+import { ArrangeBoard } from "@gt/ui/components/audio/ArrangeBoard.tsx";
+import { EngineList, type EngineRow } from "@gt/ui/components/audio/EngineList.tsx";
+import { LabelPrompt } from "@gt/ui/components/audio/LabelPrompt.tsx";
+import { RoundTrip } from "@gt/ui/components/audio/RoundTrip.tsx";
+import { RowFoot, RowHead } from "@gt/ui/components/audio/RowHead.tsx";
+import { TakeCard, type CardTake } from "@gt/ui/components/audio/TakeCard.tsx";
 import { DraftList, type DraftRow } from "@gt/ui/components/audio/DraftList.tsx";
 import { ReferenceList, type ReferenceRow } from "@gt/ui/components/audio/ReferenceList.tsx";
 import { handsOf, termId, type Hand, type Seed, type Term } from "@gt/ui/components/audio/recipe.ts";
@@ -100,6 +107,71 @@ const REFS: readonly ReferenceRow[] = [
   },
 ];
 
+const card = (id: string, title: string, stage: CardTake["stage"], group: string | null, over: Partial<CardTake> = {}): CardTake => ({
+  id,
+  title,
+  kind: "music",
+  stage,
+  group,
+  label: null,
+  parentId: null,
+  createdAt: "2026-10-16T09:00:00.000Z",
+  loop: null,
+  terms: { genre: ["chamber"], mood: ["tense"], instrument: ["pizzicato"], sfxCategory: null },
+  verdict: "kept",
+  src: SILENCE,
+  peaks: PEAKS,
+  lengthS: 45,
+  prompt: "Playful conspiratorial pizzicato, a caper in miniature.",
+  origin: "lab",
+  fileName: null,
+  ...over,
+});
+const CARDS: readonly CardTake[] = [
+  card("k1", "Whisper network", "pending", "chamber"),
+  card("k2", "Harbor glass", "remaster", "chamber"),
+  card("k3", "Harbor glass", "edit", "chamber", { parentId: "k2", origin: "suno-return", fileName: "harbor-glass-remaster.wav", createdAt: "2026-10-16T10:00:00.000Z" }),
+  card("k4", "Breakwater", "finalized", null, { label: "Dub · night · melodica", peaks: [] }),
+];
+const STACKS = stackVersions(CARDS);
+const ROWS = rowsFor(["chamber"], STACKS);
+const ENGINES: readonly EngineRow[] = [
+  { id: "suno", name: "Suno", transport: "browser", state: "live", ops: ["compose", "prompt-copy", "file-return"], withheld: [] },
+  { id: "elevenlabs", name: "ElevenLabs", transport: "api", state: "copy-only", ops: ["prompt-copy"], withheld: ["compose", "plan", "section-edit", "sfx"].map((op) => ({ op, reason: "no desk producer: renders run as Score cues or sound.mts generate" })) },
+  { id: "local", name: "Local", transport: "none", state: "not-installed", ops: [], withheld: [], needs: ["a GPU runner on this machine", "a licence decision per model"] },
+];
+
+function ArrangeSpecimen() {
+  const [open, setOpen] = useState(false);
+  const one = (s: Stack<CardTake>) => (
+    <TakeCard stack={s} focused={false} pending={false} playing={null} open={open && s.versions.length > 1} onFocus={inert} onPointerDown={inert} onPlay={inert} onVersions={() => setOpen((o) => !o)} />
+  );
+  const edit = STACKS.find((s) => s.head.stage === "edit");
+  return (
+    <>
+      <Spec names={["ArrangeBoard", "TakeCard", "RowHead", "RowFoot", "PlayMark"]} source="audio/ArrangeBoard.tsx · TakeCard.tsx · RowHead.tsx · v1 app/playground/arrange" wide>
+        <ArrangeBoard stacks={STACKS} rows={ROWS} over={null} renderCard={one} renderRowHead={(row, held) => <RowHead row={row} held={held} first last onEdit={inert} />} />
+        <RowFoot suggestions={[{ name: "dub", n: 1 }]} busy={false} onEdit={inert} />
+        <Row label="play mark">
+          <PlayMark on={false} />
+          <PlayMark on />
+        </Row>
+      </Spec>
+      <Spec names={["RoundTrip", "LabelPrompt"]} source="audio/RoundTrip.tsx · LabelPrompt.tsx · v1 arrange/RoundTrip.tsx, LabelPrompt.tsx">
+        {edit !== undefined && (
+          <TakeCard stack={edit} focused={false} pending={false} playing={null} open={false} onFocus={inert} onPointerDown={inert} onPlay={inert} onVersions={inert}>
+            <RoundTrip kind="music" title={edit.head.title} stage="edit" next="finalized" download={{ href: SILENCE, name: "harbor-glass.wav" }} busy={false} onCopyPrompt={inert} onFile={inert} />
+          </TakeCard>
+        )}
+        <LabelPrompt title="Harbor glass → finalized" initial="Chamber · tense · pizzicato" busy={false} onConfirm={inert} onCancel={inert} />
+      </Spec>
+      <Spec names={["EngineList"]} source="audio/EngineList.tsx · lib/sound/engines.ts · v1 app/playground/engines.ts">
+        <EngineList engines={ENGINES} label="engines" />
+      </Spec>
+    </>
+  );
+}
+
 function ComposerSpecimen() {
   const [seed, setSeed] = useState<Seed>(SEED);
   const [hands, setHands] = useState<Readonly<Record<string, Hand>>>(() => handsOf(TERMS));
@@ -142,6 +214,7 @@ export function AudioSection() {
       <Spec names={["ReferenceList"]} source="audio/ReferenceList.tsx · v1 References.tsx">
         <ReferenceList refs={REFS} onSeed={inert} />
       </Spec>
+      <ArrangeSpecimen />
     </Section>
   );
 }

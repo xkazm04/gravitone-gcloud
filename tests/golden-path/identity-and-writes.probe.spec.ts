@@ -26,7 +26,7 @@
 // tests/golden-path/identity-eviction-idb.probe.spec.ts (2026-09-05); before
 // that file existed this paragraph named it as the open gap.
 import { test, expect } from "@playwright/test";
-import { claimSaveSlot, __resetSaveSlots } from "@/app/_phases/_shared/stepStore";
+import { claimSaveSlot, __resetSaveSlots } from "@/lib/steps";
 import {
   IDENTITY_INDEPENDENT_LOCAL_KEYS,
   evictIdentity,

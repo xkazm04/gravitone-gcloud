@@ -4,7 +4,7 @@ import type { NotebookSource } from "@/lib/notebook/source";
 import type { Card, scopeSummary } from "@/lib/research/scope";
 import { optInIds, stateOf } from "@/lib/research/scope";
 import type { Cue } from "@/lib/script/trailer/types";
-import { reviseNotebook } from "@/app/_phases/research/revisions";
+import { reviseNotebook } from "@/lib/research/revisions";
 import type { AdBriefField, Connector, FollowUpView, ResearchCard, ResearchData, ResearchFace } from "@gt/domain/partView";
 
 import type { ResearchRec } from "./fixtureResearch.ts";

@@ -24,9 +24,9 @@ import { join, resolve } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { buildCards, notebookIssues } from "@/app/_phases/_shared/notebook/cards";
-import { NOTEBOOK } from "@/app/_phases/_shared/notebook/notebook";
-import { sourceOf } from "@/app/_phases/_shared/notebook/source";
+import { buildCards, notebookIssues } from "@/lib/notebook/cards";
+import { NOTEBOOK } from "@/lib/notebook/notebook";
+import { sourceOf } from "@/lib/notebook/source";
 import {
   adaptMember,
   approveSnapshot,

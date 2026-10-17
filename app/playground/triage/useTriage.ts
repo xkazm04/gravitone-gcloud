@@ -15,7 +15,7 @@
 
 import { useCallback, useRef, useState } from "react";
 
-import { useLoadFor } from "@/app/_phases/_shared/useLoadFor";
+import { useLoadFor } from "@/lib/useLoadFor";
 import { listTakes, patchTake } from "@/lib/sound/client";
 import type { SoundKind, SoundTake, TakePatch } from "@/lib/sound/types";
 

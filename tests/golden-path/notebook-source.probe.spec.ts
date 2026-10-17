@@ -19,12 +19,12 @@
 
 import { test, expect } from "@playwright/test";
 
-import { buildCards, untaggedIds } from "@/app/_phases/_shared/notebook/cards";
-import { CONCLUSIONS } from "@/app/_phases/_shared/notebook/conclusions";
+import { buildCards, untaggedIds } from "@/lib/notebook/cards";
+import { CONCLUSIONS } from "@/lib/notebook/conclusions";
 import { DIMENSIONS, UNTAGGED_DIMENSION_ID, type Dimension } from "@/lib/notebook/dimensions";
-import { FACT_BY_ID, NOTEBOOK, UNKNOWN_BY_ID } from "@/app/_phases/_shared/notebook/notebook";
-import { fixtureSource, sourceOf } from "@/app/_phases/_shared/notebook/source";
-import { OPT_IN_IDS, optInIds, scopeSummary, stateOf } from "@/app/_phases/research/scope";
+import { FACT_BY_ID, NOTEBOOK, UNKNOWN_BY_ID } from "@/lib/notebook/notebook";
+import { fixtureSource, sourceOf } from "@/lib/notebook/source";
+import { OPT_IN_IDS, optInIds, scopeSummary, stateOf } from "@/lib/research/scope";
 
 /** Today's board, 2026-10-05: [id, kind, dimension, dependsOn, optIn, required].
  *  Written out, not derived. The card that proposed this stage said 39 cards;
@@ -164,9 +164,9 @@ test("two different notebooks do not share a digest", () => {
 // only ones there were.
 // ═══════════════════════════════════════════════════════════════════════════
 
-import { notebookIssues } from "@/app/_phases/_shared/notebook/cards";
-import type { Conclusion } from "@/app/_phases/_shared/notebook/conclusions";
-import type { Notebook } from "@/app/_phases/_shared/notebook/types";
+import { notebookIssues } from "@/lib/notebook/cards";
+import type { Conclusion } from "@/lib/notebook/conclusions";
+import type { Notebook } from "@/lib/notebook/types";
 import { NotebookError, parseNotebook } from "@/lib/notebook/validate";
 
 import { loadCassette, type CassetteTurn } from "./_helpers";
@@ -328,8 +328,8 @@ test("stage 2 (e): the fixture declares neither field, so it keeps its own table
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
-import { gateChains, runGate } from "@/app/_phases/script/gate";
-import { RENDERS } from "@/app/_phases/script/renders";
+import { gateChains, runGate } from "@/lib/script/gate";
+import { RENDERS } from "@/lib/script/renders";
 
 test("stage 4 (case 6): runGate over a live source never reads NOTEBOOK.facts, scaleConversions or unknowns", () => {
   const live = sourceOf(raw() as unknown as Notebook, { kind: "reasoned" });
@@ -433,7 +433,6 @@ function constantImporters(): string[] {
       if (statSync(p).isDirectory()) walk(p);
       else if (/\.(ts|tsx)$/.test(name)) {
         const rel = relative(root, p).split(sep).join("/");
-        if (rel.startsWith("app/_phases/_shared/notebook/")) continue;
         if (NOTEBOOK_MODULE_FILES.has(rel)) continue;
         const src = readFileSync(p, "utf8");
         const imports =

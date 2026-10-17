@@ -2,7 +2,7 @@
 // A/B for delivery-rate-budgeting at lib/script/validate.ts::parseDraft.
 // Same constructed answers through parseDraft; the verdict is accept/refuse + findings.
 import { readFileSync } from "node:fs";
-import { fixtureSource } from "@/app/_phases/_shared/notebook/source";
+import { fixtureSource } from "@/lib/notebook/source";
 import { parseDraft, DraftError } from "@/lib/script/validate";
 
 const base = JSON.parse(readFileSync("tests/_engine/cassettes/compose-ok.json", "utf8")).turns[0].resultJson;

@@ -1,8 +1,8 @@
 // An arrow or loop asserts a relation the way a sentence does. Elements may
 // cite a fact (optional, back-compatible); an id the notebook lacks is refused.
 import { test, expect } from "@playwright/test";
-import { reviewSceneSpecs } from "@/app/_phases/frames/sceneSpec";
-import type { Frame } from "@/app/_phases/frames/frames";
+import { reviewSceneSpecs } from "@/lib/frames/sceneSpec";
+import type { Frame } from "@/lib/frames/frames";
 import { FACTS } from "@/lib/notebook/facts";
 
 const frames = [{ at: "0:04" }] as unknown as Frame[];

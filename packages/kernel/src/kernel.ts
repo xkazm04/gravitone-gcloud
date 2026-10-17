@@ -10,6 +10,7 @@ import { migrate, type MigrateOptions, type MigrateReport, type ModuleMigrations
 import { receiptsMigrations } from "./pricing/receipts.ts";
 import { partsMigrations } from "./parts/schema.ts";
 import { recordsMigrations } from "./records/schema.ts";
+import { slotsMigrations } from "./slots/schema.ts";
 import { spendMigrations } from "./spend/ledger.ts";
 import { stylesMigrations } from "./styles/schema.ts";
 import { openStore, type Store, type StoreOptions } from "./store.ts";
@@ -53,6 +54,8 @@ const DECLARED: readonly Entry[] = [
   { migrations: calibrationMigrations, after: ["events", "decision"] },
   { migrations: tokenMigrations, after: ["events"] },
   { migrations: libraryMigrations, after: ["events"] },
+  // The calendar claims through leases and appends its slot.* events in the same transactions.
+  { migrations: slotsMigrations, after: ["events", "lease"] },
 ];
 
 /** The pure check: `entries` in an order where every module follows what it names. */

@@ -30,10 +30,10 @@ import { join } from "node:path";
 import { test, expect } from "@playwright/test";
 
 import { POST } from "@/app/api/recalibrate/route";
-import { RENDERS } from "@/app/_phases/script/renders";
-import { CONCLUSIONS } from "@/app/_phases/_shared/notebook/conclusions";
-import { rendersInScope } from "@/app/_phases/script/chainBase";
-import { EDIT_PLAN_SCHEMA } from "@/app/_phases/script/editPlan";
+import { RENDERS } from "@/lib/script/renders";
+import { CONCLUSIONS } from "@/lib/notebook/conclusions";
+import { rendersInScope } from "@/lib/script/chainBase";
+import { EDIT_PLAN_SCHEMA } from "@/lib/script/editPlan";
 
 import { FAKE_ENGINE_ENV, keepEnv, loadCassette, schemaSha256, withFakeEngine } from "./_helpers";
 

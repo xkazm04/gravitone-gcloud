@@ -9,8 +9,8 @@ import { BASELINE, overrideFrom, type Note, type Version } from "@/lib/script/ve
 import { composeCut } from "@/lib/script/trailer/cut";
 import { derive, editBeat, newLog, rebase, resetBeat, type CutLog } from "@/lib/script/trailer/ops";
 import { GLASS_HARBOR_BUDGET, GLASS_HARBOR_CUE } from "@/lib/studio/trailerFixtures";
-import { recalibrate } from "@/app/_phases/script/recalibrate";
-import { acceptInto, restoreAs } from "@/app/_phases/script/history";
+import { recalibrate } from "@/lib/script/recalibrate";
+import { acceptInto, restoreAs } from "@/lib/script/history";
 import { err, ok, type Result } from "@gt/domain/errors";
 import { scriptFaceOf, type EngineView, type PartActKind, type PartActView, type PartVerdict, type ScriptData, type ScriptOp } from "@gt/domain/partView";
 

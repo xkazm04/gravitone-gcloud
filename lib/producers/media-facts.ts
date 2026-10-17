@@ -8,6 +8,7 @@ import { processKernel, storeLocation } from "@gt/kernel/process";
 import { factsPlan, MEDIA_FACTS_LANE, mediaFactsProducer, type MediaProbe } from "@gt/producers/media-facts/run";
 
 import { OUT_DIRNAME } from "../fixtures/mode.ts";
+import { ffmpegDecode, measureMissing, type Decode } from "../sound/measureRun.ts";
 
 // THE MEDIA-FACTS PORT, BOUND TO THIS BOX (Phase 5): ffprobe for what a blob is,
 // ffmpeg for a video's keyframe and for the 1x1 average that is its mean luma.
@@ -64,21 +65,35 @@ export function ffmpegProbe(): MediaProbe {
  * directory are the PROCESS's (the worker's GRAVITONE_STORE_PATH, as lib/producers/strips.ts
  * `stripsKernel`), opened when a step runs rather than when the registry is imported, so a CLI
  * that imports the registry for another producer never opens a store for this one.
+ *
+ * ONE STEP, TWO PASSES (Phase 6, L60): the probe writes each blob's facts, then the measure pass
+ * (lib/sound/measureRun.ts) decodes the audio blobs those facts call decodable and writes their
+ * peaks, length, energy, tempo and key beside them - so the job that learns a take decodes is the
+ * job that measures it. The measure pass's own failures are the step's output, not its failure:
+ * the facts already landed and stand.
  */
-export function mediaFactsBound(limit?: number): Producer {
-  const lazy = (): Producer | { readonly error: string } => {
+export function mediaFactsBound(limit?: number, decode: Decode = ffmpegDecode()): Producer {
+  const lazy = (): { readonly producer: Producer; readonly measure: () => ReturnType<typeof measureMissing> } | { readonly error: string } => {
     const location = storeLocation(OUT_DIRNAME);
     const k = processKernel(location);
     if (!k.ok) return { error: k.error.message };
     const blobs = blobStore(location === ":memory:" ? path.resolve(OUT_DIRNAME, "blobs") : path.join(path.dirname(location), "blobs"));
-    return mediaFactsProducer({ store: k.value.store, blobs, probe: ffmpegProbe(), ...(limit === undefined ? {} : { limit }) });
+    return {
+      producer: mediaFactsProducer({ store: k.value.store, blobs, probe: ffmpegProbe(), ...(limit === undefined ? {} : { limit }) }),
+      measure: () => measureMissing(k.value.store, blobs, decode, { limit: limit ?? 500, now: () => new Date() }),
+    };
   };
   return {
     lane: MEDIA_FACTS_LANE,
     plan: factsPlan,
     async perform(step, ctx) {
       const p = lazy();
-      return "error" in p ? { kind: "fatal", code: "unavailable", message: `media-facts: the store would not open: ${p.error}` } : p.perform(step, ctx);
+      if ("error" in p) return { kind: "fatal", code: "unavailable", message: `media-facts: the store would not open: ${p.error}` };
+      const facts = await p.producer.perform(step, ctx);
+      if (facts.kind !== "produced") return facts;
+      const m = await p.measure();
+      const measures = m.ok ? { measured: m.value.measured, measureFailed: [...m.value.failed] } : { measured: 0, measureFailed: [m.error.message] };
+      return { ...facts, output: { ...facts.output, ...measures } };
     },
   };
 }

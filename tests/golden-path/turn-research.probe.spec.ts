@@ -21,7 +21,7 @@ import { test, expect } from "@playwright/test";
 import { POST as turnsPOST } from "@/app/api/turns/route";
 import { GET as turnGET } from "@/app/api/turns/[id]/route";
 import { POST as cancelPOST } from "@/app/api/turns/[id]/cancel/route";
-import type { Notebook } from "@/app/_phases/_shared/notebook/types";
+import type { Notebook } from "@/lib/notebook/types";
 import { RETRIEVE_NOTEBOOK_SCHEMA } from "@/lib/notebook/validate";
 import { syncBody } from "@/lib/turns/answer";
 import { reasonPrompt, retrievePrompt } from "@/lib/turns/assemble/research";

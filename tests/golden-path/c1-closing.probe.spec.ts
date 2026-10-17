@@ -19,10 +19,10 @@ import { fixtureSource } from "@/lib/notebook/source";
 import { CONCLUSIONS } from "@/lib/notebook/conclusions";
 import { RENDERS } from "@/lib/script/renders";
 import { assembleRecalibrate } from "@/lib/turns/assemble/recalibrate";
-import { CANNED, resultFor } from "@/app/_phases/research/followup";
+import { CANNED, resultFor } from "@/lib/research/followup";
 import { optInIds } from "@/lib/research/scope";
-import { recalibrate } from "@/app/_phases/script/recalibrate";
-import { outWord } from "@/app/_phases/script/scopeConflicts";
+import { recalibrate } from "@/lib/script/recalibrate";
+import { outWord } from "@/lib/script/scopeConflicts";
 import { BASELINE, type Note } from "@/lib/script/versions";
 import { readActiveNotebook, refusalOf } from "@/lib/notebook/active";
 import { readStep, saveStep, type ScopeStepData } from "@/lib/steps";
@@ -188,7 +188,7 @@ test("case 11: a canned transcript answers only on the replay source", async () 
   expect(resultFor(ask)).toBe(CANNED["q-whales"]);
   expect(resultFor({ kind: "deepen-card", cardId: Object.keys(CANNED).find((k) => k !== "q-whales")!, prompt: "" }, reasoned)).toBeUndefined();
   // What the sentence says is still true: it no longer claims one static document.
-  expect(code("app/_phases/research/followup.ts")).not.toContain("one static document shared by every project");
+  expect(code("lib/research/followup.ts")).not.toContain("one static document shared by every project");
 });
 
 /* ───────────── case 13: a malformed record is the replay, and never silent ───── */

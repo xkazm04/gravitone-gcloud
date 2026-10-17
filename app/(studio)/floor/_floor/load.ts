@@ -13,16 +13,16 @@ import type { LiveJob, WeirItem } from "../../../../lib/ledger/v1/types.ts";
 import { freshLedger } from "../../../../lib/ledger/v1/sync.ts";
 import { liveRead } from "../../_shell/live.ts";
 import { SIDE, serverProduce } from "../../projects/_port/port.ts";
-import { publishedSlots, railSlot } from "./model.ts";
+import { serverCalendar } from "../_calendar/port.ts";
 import { readShelf, type Shelf } from "./shelf.ts";
 
 // THE FLOOR'S ONE READ, at render time and server-side only (plan §9.2), each part bounded:
 //
 //   live work   the request's one liveNow() (../../_shell/live.ts, shared with the header):
-//               v1's running jobs (the Foundry column), its Weir piles, its unsettled slots;
+//               v1's running jobs (the Foundry column) and its Weir piles;
 //   ratified    the Library/Projects column through v1's readers (./shelf.ts);
-//   published   the ledger's newest PUBLISHED_CAP `publish` acts and their slots' `slot.create`
-//               (one query each), because v1's live read drops a slot once it is history;
+//   slots       the calendar port (../_calendar/port.ts, Phase 6): the fixture's table, or on
+//               the real side v1's unsettled slots and the ledger's publications;
 //   head        the ledger's newest seq, where the live feed continues from.
 //
 // It also asks for a fresh ledger (freshLedger: non-blocking, claim-guarded, at most every
@@ -35,8 +35,6 @@ import { readShelf, type Shelf } from "./shelf.ts";
 // (../../projects/_port/port.ts) and join v1's live work in their lane's Foundry column, each a
 // door to its job in Runs. While the port answers from its fixture side they are fixture runs,
 // and the page says so (`produce`).
-
-export const PUBLISHED_CAP = 40;
 
 export type FloorData = {
   readonly now: number;
@@ -64,10 +62,10 @@ export async function loadFloor(now: number = Date.now()): Promise<FloorData> {
   const sync = freshLedger();
   if (!sync.ok) problems.push({ source: "ledger-sync", error: sync.error.message });
 
-  const [live, shelf] = await Promise.all([liveRead(), readShelf()]);
-  problems.push(...live.failures);
+  const [live, shelf, cal] = await Promise.all([liveRead(), readShelf(), serverCalendar().slots(now)]);
+  problems.push(...live.failures, ...cal.problems);
 
-  const slots: RailSlot[] = live.slots.map(railSlot);
+  const slots: readonly RailSlot[] = cal.slots;
   let head = 0;
   const unapplied: Unapplied[] = [];
   const k = kernel();
@@ -80,15 +78,10 @@ export async function loadFloor(now: number = Date.now()): Promise<FloorData> {
       if (!decided.ok) problems.push({ source: "kernel", error: decided.error.message });
       else for (const p of decided.value.packets) if (p.apply !== undefined && (p.apply.state === "stuck" || p.apply.lastError !== undefined)) unapplied.push({ packetId: p.id, lane: p.lane, title: p.title ?? p.id, apply: p.apply });
     }
-    const pubs = queryEvents(k.value.store, { type: ["publish"], by: "time", order: "desc", limit: PUBLISHED_CAP });
-    if (!pubs.ok) problems.push({ source: "ledger", error: pubs.error.message });
-    else {
-      head = pubs.value.head;
-      const ids = [...new Set(pubs.value.events.map((e) => (typeof e.data["slotId"] === "string" ? e.data["slotId"] : e.subject.id)))];
-      const creates = ids.length === 0 ? null : queryEvents(k.value.store, { type: ["slot.create"], subject: { ids }, limit: PUBLISHED_CAP });
-      if (creates !== null && !creates.ok) problems.push({ source: "ledger", error: creates.error.message });
-      slots.push(...publishedSlots(pubs.value.events, creates?.ok === true ? creates.value.events : []));
-    }
+    // The head only: the newest seq, whatever its type (events-query `head`).
+    const tip = queryEvents(k.value.store, { by: "time", order: "desc", limit: 1 });
+    if (!tip.ok) problems.push({ source: "ledger", error: tip.error.message });
+    else head = tip.value.head;
   }
 
   const runs = serverProduce().listJobs();

@@ -35,9 +35,9 @@ import { test, expect } from "@playwright/test";
 
 import { POST as recalibratePOST } from "@/app/api/recalibrate/route";
 import { POST as framesPOST } from "@/app/api/frames/route";
-import { CONCLUSIONS } from "@/app/_phases/_shared/notebook/conclusions";
-import { ATTRIBUTION } from "@/app/_phases/script/impact";
-import { EDIT_PLAN_SCHEMA } from "@/app/_phases/script/editPlan";
+import { CONCLUSIONS } from "@/lib/notebook/conclusions";
+import { ATTRIBUTION } from "@/lib/script/impact";
+import { EDIT_PLAN_SCHEMA } from "@/lib/script/editPlan";
 import { compileFormatBrief } from "@/lib/formatBrief";
 import { schemaInstruction } from "@/lib/text/json";
 import { assembleFrames } from "@/lib/turns/assemble/frames";

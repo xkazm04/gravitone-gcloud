@@ -6,8 +6,9 @@
 //
 // Keys, by verb (keymap/bindings.ts `calendar`): ←/→ a day, ↑/↓ a week, [ ] a month, ⏎ the
 // selected day's first slot, Esc clears the day (then, through the layer, closes the month),
-// C back to the rail, B the Board. The month and the selected day live in the Floor's URL
-// (`?cal=1&day=`); channel toggles are this view's own state.
+// C back to the rail, B the Board. The month, the selected day and the channels it hides live
+// in the Floor's URL (`?cal=1&day=&off=`), so a link carries the view; a slot opens its own
+// level over the month (`&slot=`, ./SlotLevel.tsx).
 
 import { useEffect, useRef, useState } from "react";
 
@@ -16,8 +17,7 @@ import { byDay, dayKey, monthOf, monthOfKey, moveDay, shiftMonth, type RailSlot,
 import { useKeys } from "@gt/ui/keymap/dispatch";
 import { useLayer } from "@gt/ui/layers/useLayer";
 
-/** Where a slot's record lives until the Calendar is rebuilt (Phase 6): v1's page. */
-export const SLOT_HREF = "/calendar";
+import { slotHref } from "./model.ts";
 
 export type MonthProps = {
   readonly slots: readonly RailSlot[];
@@ -26,16 +26,19 @@ export type MonthProps = {
   readonly onDay: (day: string | null) => void;
   readonly onClose: () => void;
   readonly onBoard: () => void | false;
-  readonly onOpenSlot: (href: string) => void;
+  /** Channels hidden, from the URL. */
+  readonly off: readonly string[];
+  readonly onOff: (off: readonly string[]) => void;
+  readonly onOpenSlot: (id: string) => void;
 };
 
-export function Month({ slots, nowMs, day, onDay, onClose, onBoard, onOpenSlot }: MonthProps) {
+export function Month({ slots, nowMs, day, onDay, onClose, onBoard, off: offList, onOff, onOpenSlot }: MonthProps) {
   const panel = useRef<HTMLElement | null>(null);
   // The page turned to with [ ] or the arrows; a selected day carries its own month, so a day
   // walked past the edge turns the page without a second piece of state to keep in step.
   const [turned, setMonth] = useState<YearMonth>(() => (day === null ? monthOf(nowMs) : monthOfKey(day)));
   const month = day === null ? turned : monthOfKey(day);
-  const [off, setOff] = useState<ReadonlySet<string>>(() => new Set());
+  const off: ReadonlySet<string> = new Set(offList);
   useLayer(true, { kind: "sheet", mode: "calendar", panelRef: panel, onClose });
 
   // Focus lands in the month so its keys are the ones that answer.
@@ -59,7 +62,7 @@ export function Month({ slots, nowMs, day, onDay, onClose, onBoard, onOpenSlot }
       "open-day": () => {
         const first = day === null ? undefined : byDay(slots.filter((x) => !off.has(x.channel))).get(day)?.[0];
         if (first === undefined) return false;
-        onOpenSlot(SLOT_HREF);
+        onOpenSlot(first.id);
       },
       "clear-day": () => onDay(null),
       rail: () => onClose(),
@@ -81,16 +84,10 @@ export function Month({ slots, nowMs, day, onDay, onClose, onBoard, onOpenSlot }
         onDay(dayKey(nowMs));
       }}
       onDay={onDay}
-      onChannel={(c) =>
-        setOff((cur) => {
-          const nx = new Set(cur);
-          if (nx.has(c)) nx.delete(c);
-          else nx.add(c);
-          return nx;
-        })
-      }
+      onChannel={(c) => onOff(off.has(c) ? offList.filter((x) => x !== c) : [...offList, c])}
       onClose={onClose}
-      slotHref={SLOT_HREF}
+      slotHref={(id) => slotHref(id)}
+      onOpenSlot={onOpenSlot}
       panelRef={panel}
     />
   );

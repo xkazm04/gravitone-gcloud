@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { v1BoardTarget } from "../../app/board/redirect.ts";
+import { v1BoardTarget } from "../../app/(studio)/board/redirect.ts";
 
 // v1's Board addresses (lib/board/url.ts `?src=&st=&i=`) go where their work is now: an item
 // to the packet its run became, a source to its lane on the Floor, anything else to the Floor.

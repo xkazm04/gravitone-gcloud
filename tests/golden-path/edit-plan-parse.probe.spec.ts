@@ -6,7 +6,7 @@
 // fields / prose, and NEVER silently patch a malformed plan into a valid-looking
 // one. Also exercises the imaging json extractor (brace-balanced, string-aware).
 import { test, expect } from "@playwright/test";
-import { parseEditPlan, PlanError } from "@/app/_phases/script/editPlan";
+import { parseEditPlan, PlanError } from "@/lib/script/editPlan";
 import { extractJsonObject, parseAgainstSchema } from "@/lib/imaging/json";
 import { ImagingError } from "@/lib/imaging/errors";
 

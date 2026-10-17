@@ -9,7 +9,7 @@ import {
   planFromSpecs,
   revertPass,
   revertRow,
-} from "@/app/_phases/frames/direction/plan";
+} from "@/lib/frames/directionPlan";
 import { isStalePlate, type Frame } from "@/lib/frames/frames";
 import type { SceneSpec } from "@/lib/frames/sceneSpec";
 

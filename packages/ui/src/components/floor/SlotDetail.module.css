@@ -1,0 +1,27 @@
+/* tokens.css .detail, .detail-grid, .detail h1, .detail h4; floor.css .player, .desc, .kv,
+   .proj-row; tokens.css .ghost-card (the blog post / no-export card). The prototype's 320px
+   floor on the right column is --w-detail less the page gutter; under 900px the two columns
+   stack. */
+.detail{flex:1;min-width:0;overflow:auto;padding:var(--sp-6) var(--sp-page) var(--sp-page-end)}
+.grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(min(100%,calc(var(--w-detail) - var(--sp-5))),1fr);gap:var(--sp-page)}
+.col{min-width:0}
+/* Stacked, the record's facts (title, state, error, verbs) come before the player. */
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}.col:last-child{order:-1}}
+
+.player{border-radius:var(--r-lg);overflow:hidden;background:var(--letterbox);border:1px solid var(--hair-2)}
+.video{width:100%;aspect-ratio:16/9;max-height:58vh;display:block;background:var(--letterbox)}
+.ghost{aspect-ratio:16/9;display:flex;flex-direction:column;gap:var(--sp-3);align-items:center;justify-content:center;border:var(--stroke-mark) dashed color-mix(in srgb,var(--faint) 80%,transparent);border-radius:var(--r-lg);font:600 var(--fs-meta)/1 var(--mono);color:var(--muted)}
+
+.title{font:600 var(--fs-h1)/1.15 var(--serif);color:var(--ink-bright);letter-spacing:-.01em;margin:var(--sp-3) 0 var(--sp-4);overflow-wrap:anywhere}
+.section{margin-top:var(--sp-page-gap);display:flex;flex-direction:column;gap:var(--sp-3)}
+.desc{margin:0;white-space:pre-wrap;font-size:var(--fs-body);line-height:1.55;color:var(--text);padding:var(--sp-4) var(--sp-5);border-radius:var(--r-control);border:1px solid var(--hair);background:var(--ink-2);overflow-wrap:anywhere}
+.kv{display:flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center;margin:var(--sp-3) 0}
+
+.project{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--sp-3);align-items:center;padding:var(--sp-2) var(--sp-3);border-radius:var(--r-sm);border:1px solid var(--hair);color:inherit}
+.project:hover{background:var(--wash)}
+.project:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}
+.projectTitle{color:var(--ink-bright);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.verbs{display:flex;flex-wrap:wrap;gap:var(--sp-3)}
+.move{display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center}
+.utc{font:600 var(--fs-micro)/1 var(--mono);color:var(--muted)}

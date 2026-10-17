@@ -6,8 +6,8 @@ import { fixtureSource, sourceOf, type NotebookSource } from "@/lib/notebook/sou
 import { spineComplete, type BeatSlot } from "@/lib/research/beats";
 import { buildCards, optInIds, scopeDiffs, scopeSummary, stateOf, type Card, type Scope } from "@/lib/research/scope";
 import { GLASS_HARBOR_CUE, GLASS_HARBOR_SLOTS } from "@/lib/studio/trailerFixtures";
-import { resultFor, suggestedReason, type FollowUpResult } from "@/app/_phases/research/followup";
-import { decide, reviseNotebook, type NotebookRevision } from "@/app/_phases/research/revisions";
+import { resultFor, suggestedReason, type FollowUpResult } from "@/lib/research/followup";
+import { decide, reviseNotebook, type NotebookRevision } from "@/lib/research/revisions";
 import { err, ok, type Result } from "@gt/domain/errors";
 import { researchFaceOf, type AdBriefField, type EngineView, type PartActKind, type PartActView, type PartVerdict, type ResearchData, type ResearchOp } from "@gt/domain/partView";
 

@@ -1,9 +1,9 @@
 // LANE — THE ARRANGEMENT BOARD'S RULES, WITHOUT A BROWSER (static).
 //
-// The Sound lab's Arrangement (app/playground/arrange, round 4) places kept
-// takes on a board — stages across, groups down — and every rule that decides
-// where a card sits and whether it may move lives in app/playground/arrange/
-// model.ts as plain functions. A wrong one would pass every screenshot and
+// The Sound lab's Arrangement (round 4; on the Audio desk since Phase 6, L60)
+// places kept takes on a board — stages across, groups down — and every rule
+// that decides where a card sits and whether it may move lives in @gt/ui
+// components/audio/arrange.ts (+ arrangeGroups.ts) as plain functions. A wrong one would pass every screenshot and
 // still finalize a take with no label, drop a Suno return's history, or file a
 // card into a row nobody can see. So:
 //
@@ -23,25 +23,20 @@
 import { test, expect } from "@playwright/test";
 
 import {
-  addGroup,
   agentLine,
   buildBoard,
   cellKey,
   cellOf,
   checkMove,
-  deleteGroup,
-  matchesSuggestion,
-  moveGroup,
-  renameGroup,
   rowsFor,
-  seedSuggestions,
   stackVersions,
   stageCounts,
   step,
   suggestLabel,
   versionNumber,
   UNGROUPED_KEY,
-} from "@/app/playground/arrange/model";
+} from "@gt/ui/components/audio/arrange.ts";
+import { addGroup, deleteGroup, matchesSuggestion, moveGroup, renameGroup, seedSuggestions } from "@gt/ui/components/audio/arrangeGroups.ts";
 import type { SoundTake } from "@/lib/sound/types";
 
 let n = 0;
@@ -247,7 +242,8 @@ test("group edits: add / rename refuse blanks and case-folded duplicates; delete
   expect(deleteGroup(g, "music", "ambient", stacks)).toEqual({ ok: false, error: "“ambient” holds 1 card" });
   expect(deleteGroup(g, "music", "synthwave", stacks)).toEqual({ ok: true, groups: { music: ["ambient"], sfx: ["impacts"] } });
   // the other kind is never touched
-  expect(addGroup(g, "sfx", "ui").ok && (addGroup(g, "sfx", "ui") as { groups: typeof g }).groups.music).toEqual(g.music);
+  const sfxAdd = addGroup(g, "sfx", "ui");
+  expect(sfxAdd.ok ? sfxAdd.groups.music : null).toEqual(g.music);
 });
 
 test("agent line: quotes the group and escapes what a shell would expand", () => {

@@ -14,8 +14,8 @@
 // Reported, never repaired: rewriting a connector to fit its new neighbour is an
 // edit nobody asked for, made by the code least qualified to judge the argument.
 import { test, expect } from "@playwright/test";
-import { applyEdits, type Edit } from "@/app/_phases/script/editPlan";
-import { RENDERS } from "@/app/_phases/script/renders";
+import { applyEdits, type Edit } from "@/lib/script/editPlan";
+import { RENDERS } from "@/lib/script/renders";
 
 const render = RENDERS.find((r) => r.id === "reversal-chain")!;
 const base: Record<string, string[]> = {};

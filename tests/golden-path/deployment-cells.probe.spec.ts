@@ -48,8 +48,8 @@ import path from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { RENDERS } from "@/app/_phases/script/renders";
-import { CONCLUSIONS } from "@/app/_phases/_shared/notebook/conclusions";
+import { RENDERS } from "@/lib/script/renders";
+import { CONCLUSIONS } from "@/lib/notebook/conclusions";
 import { ACCESS_SECRET_VAR } from "@/lib/apiAuth";
 import { CAPABILITY_ROUTES, HOSTED_CAPS, type Capabilities } from "@/lib/capabilities";
 import { resolveRegistryDir } from "@/lib/articles/registryRead";

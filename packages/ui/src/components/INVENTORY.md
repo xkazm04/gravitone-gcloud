@@ -140,6 +140,9 @@ Where this port moved from the prototype:
 | `CalendarColumn` | index.html `CalendarColumn`, `.cal-head`, `.cal-sec`, `.cal-day`, `.now-line` | F | Next by UTC day with NOW after the overdue; Failed · missed with errors; Published (first 6); expand control with its C cap |
 | `SlotRow`, `SlotMark` | index.html `SlotRow`, `.chan` | F | STATUS.slot; error verbatim when failed/missed; cancelled struck; unknown channel id spoken behind a neutral mark |
 | `MonthCalendar` | index.html `renderMonth`, `MonthSlot`; `#month`, `.mday`, `.mslot`, `.m-side` | F | Monday-first whole weeks; out/past/today/selected/has-fail days; slot rule per look; +N past MAX_PER_DAY; channel toggles; month state counts; day or month agenda |
+| `SlotDetail` | index.html slot level (`openLevel({kind:"slot"})`) | F | the slot record: player or blog PR card, description verbatim, error on the `UpstreamBreak` chain scheduled → auth → upload → live, metrics as Tallies (null —, lower bound ≥ N), verbs |
+| `SlotConfirm` | `consequence/` vocabulary | F | cancel / publish-now confirm naming the slot and the consequence |
+| `slot.ts` | index.html slot verbs; v1 app/calendar/calendarModel.ts | F | verb rules (movable, cancellable, publishable; blog never uploads), UTC move field from the next full hour, `breakOf`, `figure` |
 | `NextButton`, `SpendChip`, `LedgerDelta` | shell.js `header()` `.next-btn`, `.hdr-spend`, `#hdr-ses` | all | NEXT with title, size, ⏎ / weir clear; spend total with each non-real source's share, `+` when the read was capped; ledger +N (cyan when new) |
 | `FloorGlyph` | shell.js `I.image/article/audio/video`, `I.cull/pair/review`, `I.lock/expand/collapse/chevL/chevR` | F | the Floor's own marks, beside the Floor rather than in `Glyph` |
 
@@ -226,3 +229,9 @@ Where this port moved from the prototype:
   under 4.5:1 on `--ink-2`); the detail head's left inset 12px as the panel head's; the lineage
   thumbnail 30 x 18.75 (16:10) where it wrote 30 x 19; the kind bar's columns are multiples of
   `--sp-7` (22 · 1fr · 44 · 70 became 22 · 1fr · 44.4 · 69.6).
+
+## Audio desk (Phase 6, lot 60)
+
+| Kit name | Replaces (v1) | Pages | States / variants |
+| --- | --- | --- | --- |
+| `ArrangeBoard`, `TakeCard`, `RowHead`/`RowFoot`, `LabelPrompt`, `RoundTrip`, `EngineList` (+ `arrange.ts`, `arrangeGroups.ts`) | app/playground/arrange/*, engines.ts | /audio | card provisional/pending, vN versions open, finalized label; cell lit on drag; withheld op with reason |

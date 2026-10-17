@@ -3,7 +3,7 @@ import "server-only";
 import { blobRefSchema, type BlobRef } from "@gt/domain/blob";
 import { err, ok, type Result } from "@gt/domain/errors";
 import { framesOpLabel, type UnitClipView, type MotionData, type MotionOp, type MotionUnitView, type PartActKind, type PartActView, type PartVerdict } from "@gt/domain/partView";
-import { MOTION_MAX_CHARS, type MotionOutcome } from "@/app/_phases/motion/direction";
+import { MOTION_MAX_CHARS, type MotionOutcome } from "@/lib/motion/direction";
 import { partVerdict, plateSigOf } from "@/lib/parts/verdict";
 
 import type { Ctx } from "./fixture.ts";

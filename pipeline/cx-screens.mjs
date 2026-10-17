@@ -8,8 +8,8 @@
  */
 export const PROJECT = process.env.CX_PROJECT ?? "glass-harbor-trailer";
 
-/** id -> how to reach it. `go` may navigate, click, and settle; it receives the
- *  page and must leave it on the screen the id names. */
+/** id -> how to reach it: a `url`, then the optional `open`, `tab`, `follow` and `picks` steps
+ *  each lane applies in that order to leave the page on the screen the id names. */
 export const SCREENS = {
   landing: { url: "/" },
   // PHASE 4 WAVE D (L43): v1's shelf, wizard and studio retired and redirect to the Project; the
@@ -70,4 +70,34 @@ export const SCREENS = {
   "part-explainer-strips": { url: "/projects/provider-routing-explainer/strips" },
   "part-explainer-voice": { url: "/projects/provider-routing-explainer/voice" },
   "kit-part": { url: "/kit#part" },
+  // PHASE 6 (L61): the new world's own screens, which had no id - the legibility lane walked them
+  // by route (studio-routes.live) and nothing photographed them.
+  //   floor           the hub: four lanes, Foundry -> Weir -> shelf, the Calendar rail
+  //   floor-calendar  the rail opened into the month (`?cal=1`, a link can carry it)
+  //   board           a packet's Board as a reload or a pasted link opens it: full page
+  //   board-sheet     the same Board as a sheet over the Floor. Only a SOFT navigation is
+  //                   intercepted by @sheet/(.)board, so the URL alone cannot reach it: it is
+  //                   the Floor's first pile, clicked
+  //   ledger, runs    the event log, and the runs a project's parts were made by
+  //   library-style   one style's atelier, on the fixture side's seeded style
+  //   audio           the Audio lane's desk
+  // `follow` is data, not a function, so both lanes can read it: after `url` settles, take the
+  // first element matching `selector`; `nav: "goto"` loads its href (a hard load, as a pasted
+  // link is), `nav: "click"` clicks it (a soft navigation, as the operator's own click is). The
+  // board's packet is whichever pile the Floor shows first, rather than a fixed id, because the
+  // Board answers from the real side (board/_port/port.ts SIDE) and a hard-coded packet would be a
+  // claim about one machine's stores.
+  floor: { url: "/floor" },
+  "floor-calendar": { url: "/floor?cal=1" },
+  // the slot record over the month: a failed YouTube upload (quota), fixture side
+  "floor-slot": { url: "/floor?cal=1&slot=sl-chokepoint-quota" },
+  board: { url: "/floor", follow: { selector: "a[href^='/board/']", nav: "goto" } },
+  "board-sheet": { url: "/floor", follow: { selector: "a[href^='/board/']", nav: "click" } },
+  ledger: { url: "/ledger" },
+  runs: { url: "/projects/runs" },
+  "library-style": { url: "/library/style/painted-3d" },
+  audio: { url: "/audio" },
+  "audio-arrange": { url: "/audio?s=arrange" },
+  "audio-arrange-sfx": { url: "/audio?s=arrange&kind=sfx" },
+  "audio-effects": { url: "/audio?kind=sfx" },
 };

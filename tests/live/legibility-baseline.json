@@ -1,4 +1,8 @@
 {
+  "audio": [
+    "mark main.audio-module__sKegKG__main > section.Composer-module__lWpjGq__composer > div.Composer-module__lWpjGq__acts > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
+    "text main.audio-module__sKegKG__main > section.Composer-module__lWpjGq__composer > div.Composer-module__lWpjGq__acts > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]"
+  ],
   "foundry": [],
   "kit": [
     "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",

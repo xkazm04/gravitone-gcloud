@@ -1,12 +1,12 @@
 // LANE — NO NEW STRING-LITERAL STEP KEY OUTSIDE THE RECORD DEFS (source ratchet).
 //
-// A step record's key belongs to its def (app/_phases/<step>/records.ts), which
+// A step record's key belongs to its def (lib/<step>/records.ts), which
 // carries the owner, the version and the parser. A call that retypes the key as
 // a literal — `readStep(id, "research")`, `useStepFor(id, "frames", …)` — skips
 // all three: the read is an unchecked cast, the version stamp is never read,
 // and a failed or refused read can flatten into `{}` that the next save writes
 // over the record. That is the data-loss class the registry
-// (app/_phases/_shared/records/registry.ts) was introduced to close.
+// (lib/steps/recordRegistry.ts) was introduced to close.
 //
 // This ratchet counts, per file, the calls that still pass a literal key and
 // fails when a count RISES or a new file appears. It also fails when a count
@@ -23,10 +23,9 @@ import { test, expect } from "@playwright/test";
 import { stripComments } from "./_helpers";
 
 const ROOT = process.cwd();
-/** The store itself and the registry are where keys are allowed to be handled. */
-const EXEMPT = (rel: string) =>
-  rel.startsWith("app/_phases/_shared/records/") ||
-  /^app\/_phases\/_shared\/(stepStore|readStep|saveStep|patchStep|useLoadFor|withStore)\.ts$/.test(rel);
+// No exemption since Phase 6 (L59). The store and the registry were exempt while they lived in
+// app/_phases/_shared; in lib/steps they take the key as a parameter, never a literal, and a
+// literal appearing there now is the same defect as anywhere else.
 
 const CALL = /\b(?:saveStep|readStep|loadStep|patchStep)\b(?:<[^()]*?>)?\(\s*[^,()]+,\s*["'`]|\buseStepFor\b(?:<[^()]*?>)?\(\s*[^,()]+,\s*["'`]/g;
 
@@ -57,7 +56,6 @@ function measure(): Record<string, number> {
   const found: Record<string, number> = {};
   for (const f of files) {
     const rel = relative(ROOT, f).split(sep).join("/");
-    if (EXEMPT(rel)) continue;
     const n = stripComments(readFileSync(f, "utf8")).match(CALL)?.length ?? 0;
     if (n) found[rel] = n;
   }
