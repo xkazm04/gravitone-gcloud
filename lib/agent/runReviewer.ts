@@ -23,7 +23,8 @@ import { formatAgentLine } from "./runAgent";
  * Run one reviewer to completion. Like runAgent, it never throws for an
  * outcome — a missing CLI is `unavailable`, a 402 is `unavailable`, a usage
  * limit is `seat-limit` — and throws only for a caller error (a workspace that
- * holds anything but REVIEW_WORKSPACE).
+ * holds anything but REVIEW_WORKSPACE: the post, its sources, REVIEW.md and,
+ * on a trial run, the text-only `experiment/`).
  */
 export function runReviewer(call: ReviewerCall): Promise<AgentResult> {
   assertIsolatedWorkspace(call.cwd, REVIEW_WORKSPACE);

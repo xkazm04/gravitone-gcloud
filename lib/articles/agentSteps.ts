@@ -1,23 +1,25 @@
 // The writer's three agent steps (research, outline, draft): each one's workspace, prompt,
 // turn and ingest, and the reviewer workspace the critique uses. Its own file because each
 // step has the same shape: stage inputs, run one agent turn, ingest what it wrote to out/.
+// Also what a trial run's turns read of its experiment (`runTrial`, `copyExperimentText`,
+// `stageExperimentInputs`): the critique's writer turns and reviewers stage it from here too.
 
-import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, lstat, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import type { AgentTool, AgentTurnClass } from "@/lib/agent/cliSeam";
 
-import { copyDir } from "./files";
+import { copyDir, fileExists } from "./files";
 import { ingestDraft } from "./ingestDraft";
-import { ingestOutline, ingestResearch } from "./ingestSources";
-import { buildPrompt, loadPromptFile, PROMPT_FILE, type PromptPhase } from "./prompt";
+import { EXPERIMENT_DIR, EXPERIMENT_SOURCE_FILE, ingestOutline, ingestResearch, readExperimentSource } from "./ingestSources";
+import { buildPrompt, loadPromptFile, PROMPT_FILE, type PromptPhase, type PromptTrial, trialTechniquePath } from "./prompt";
 import { reworkSection } from "./rework";
 import { type RegistryLocation, type ResolvedStandard, resolveRegistryDir, resolveStandard, resolveTopicSubject, standardText } from "./registryRead";
-import { readRun, runDir, updateRun, writeFileAtomic, writeJsonAtomic } from "./store";
+import { readJsonFile, readRun, runDir, updateRun, writeFileAtomic, writeJsonAtomic } from "./store";
 import { StepError } from "./stepFailure";
 import { uniqueDir } from "./tempDir";
-import type { ArticleRun, StepName } from "./types";
+import type { ArticleRun, StepName, TrialPrereg, TrialResults, TrialVerdict } from "./types";
 import type { EngineDeps } from "./engine";
 
 type WriterStep = Exclude<StepName, "check" | "critique">;
@@ -57,6 +59,7 @@ export async function agentStep(id: string, name: WriterStep, deps: EngineDeps):
   const material = run.topic.kind === "subject" && run.topic.bundle && run.topic.subject
     ? await resolveTopicSubject(`${run.topic.bundle}/${run.topic.subject}`, registry)
     : undefined;
+  const trial = await runTrial(run, dir);
 
   const now = deps.now();
   const ws = await makeWorkspace(id, name, now);
@@ -70,6 +73,7 @@ export async function agentStep(id: string, name: WriterStep, deps: EngineDeps):
       standard: standardText(std),
       standardAddress: `recipes/index.json#${std.recipe.slug}@${std.recipe.version}, knowledge/${std.standard.bundle}/index.json ${std.standard.bundleHash}`,
       today: now.toISOString().slice(0, 10),
+      ...(trial ? { trial } : {}),
     });
     // A reworked run's draft turn carries the operator's instruction as its own section.
     const prompt = name === "draft" && run.rework ? `${base}${reworkSection(run.rework)}` : base;
@@ -91,7 +95,7 @@ export async function agentStep(id: string, name: WriterStep, deps: EngineDeps):
       throw new StepError(`the agent ${result.outcome}${result.errors.length ? `: ${result.errors.join("; ")}` : ""}`, result.costUsd);
     }
     try {
-      if (name === "research") await ingestResearch(ws, dir);
+      if (name === "research") await ingestResearch(ws, dir, trial ? await readExperimentSource(dir) : undefined);
       else if (name === "outline") await ingestOutline(ws, dir);
       else await ingestDraft(ws, dir);
     } catch (e) {
@@ -127,6 +131,7 @@ async function stageInputs(
     ...(material ? ["", `## Registry subject ${run.topic.bundle}/${run.topic.subject} (${material.file})`, "", material.text] : []),
   ].join("\n");
   await writeFile(path.join(inputs, "topic.md"), `${topic}\n`, "utf8");
+  if (run.trial) await stageExperimentInputs(ws, dir);
   if (name === "outline" || name === "draft") {
     await copyFile(path.join(dir, "sources.json"), path.join(inputs, "sources.json"));
     await copyFile(path.join(dir, "claims.json"), path.join(inputs, "claims.json"));
@@ -135,14 +140,114 @@ async function stageInputs(
     await copyFile(path.join(dir, "outline.md"), path.join(inputs, "outline.md"));
     // A rework's draft reads the post it is replacing (still in post/ until this turn is ingested).
     if (run.rework) await copyDir(path.join(dir, "post"), path.join(inputs, "previous-post"));
-    // Read-only reference copies of the standard's files, at their registry
-    // paths, so a proposed patch names the file it changes. Copies: the agent
-    // can never write the registry itself.
-    for (const rel of std.files) {
+    // Read-only reference copies of the registry files a proposal may change, at their registry
+    // paths, so a proposed patch names the file it changes. Copies: the agent can never write the
+    // registry itself. A classic run gets the writing standard's files. A trial run gets the
+    // subject instead (its golden path, the technique under test, its application record when the
+    // registry has one): a trial never patches the writing standard (14 proposals against it in
+    // 17 runs, none adopted), only the technique it measured.
+    if (run.trial && !material) throw new Error(`a trial run's topic is its registry subject; this one has ${JSON.stringify(run.topic.text)}`);
+    const files = run.trial && material
+      ? [material.file, ...(await presentIn(registry.dir, [trialTechniquePath(run.trial), run.trial.applicationPath]))]
+      : std.files;
+    for (const rel of files) {
       const to = path.join(inputs, "registry", ...rel.split("/"));
       await mkdir(path.dirname(to), { recursive: true });
       const text = (await readFile(path.join(registry.dir, ...rel.split("/")), "utf8")).replace(/\r\n/g, "\n");
       await writeFile(to, text, "utf8");
     }
   }
+}
+
+/** The registry-relative paths that exist in the registry. */
+async function presentIn(registryDir: string, rels: string[]): Promise<string[]> {
+  const out: string[] = [];
+  for (const rel of rels) if (await fileExists(path.join(registryDir, ...rel.split("/")))) out.push(rel);
+  return out;
+}
+
+/* ── the trial: what a writer and a reviewer read of the experiment ────────── */
+
+/** The trial a run is written around, as its prompts carry it: `run.trial` and the three files
+ *  under `experiment/` the verdict was computed from. Undefined for a classic run. A trial run
+ *  whose experiment is missing a file fails the turn by name rather than write a post about a
+ *  measurement nobody can read. */
+export async function runTrial(run: ArticleRun, dir: string): Promise<PromptTrial | undefined> {
+  if (!run.trial) return undefined;
+  const at = (f: string) => path.join(dir, EXPERIMENT_DIR, f);
+  const prereg = await readJsonFile<TrialPrereg | null>(at("prereg.json"), null);
+  const verdict = await readJsonFile<TrialVerdict | null>(at("verdict.json"), null);
+  const results = await readJsonFile<TrialResults | null>(at("results.json"), null);
+  const missing = [!prereg && "prereg.json", !verdict && "verdict.json", !results && "results.json"].filter(Boolean);
+  if (!prereg || !verdict || !results) throw new Error(`the run is written around trial ${run.trial.id} but ${EXPERIMENT_DIR}/ has no ${missing.join(", ")}`);
+  return { ref: run.trial, prereg, verdict, results };
+}
+
+/** Text a reader of the experiment can open: data, notes, the exec logs and the harness's
+ *  source. A binary is left out (the run's own copy keeps it). */
+export const EXPERIMENT_TEXT_FILE = /\.(json|jsonl|md|txt|log|csv|tsv|py|ipynb|js|mjs|cjs|ts|mts|cts|tsx|jsx|sh|bash|ps1|rs|go|java|kt|rb|php|lua|r|jl|c|h|cc|cpp|hpp|cs|swift|sql|toml|ya?ml|ini|cfg|html|css)$|(^|\/)(Makefile|Dockerfile|requirements[\w.-]*)$/i;
+
+/** At most this much experiment text goes into one workspace, so a harness that logged its
+ *  observations to a large file cannot crowd a reviewer's context out of the post. */
+export const EXPERIMENT_TEXT_BUDGET = 2 * 1024 * 1024;
+
+/** The trial's own records first, in the order a reader needs them; the rest after, by path. */
+const EXPERIMENT_FIRST = ["prereg.json", "verdict.json", "results.json", "validity.json", "REPORT.md", "exec.jsonl", "trial.json", "seal.json", "frame.md", "SKIPPED.txt"];
+
+/** The files a writer turn reads: the records, the report, the exec log and the harness. */
+const WRITER_EXPERIMENT = (rel: string) => ["prereg.json", "results.json", "verdict.json", "validity.json", "REPORT.md", "exec.jsonl"].includes(rel) || rel.startsWith("harness/");
+
+async function listTree(root: string, rel = ""): Promise<{ rel: string; size: number }[]> {
+  let names: string[];
+  try {
+    names = await readdir(path.join(root, rel));
+  } catch {
+    return [];
+  }
+  const out: { rel: string; size: number }[] = [];
+  for (const name of names.sort()) {
+    const child = rel ? `${rel}/${name}` : name;
+    const s = await lstat(path.join(root, child)).catch(() => null);
+    if (!s || s.isSymbolicLink()) continue;
+    if (s.isDirectory()) out.push(...(await listTree(root, child)));
+    else if (s.isFile()) out.push({ rel: child, size: s.size });
+  }
+  return out;
+}
+
+/**
+ * Copy the run's `experiment/` into `to`: text files only, the trial's records first, at most
+ * EXPERIMENT_TEXT_BUDGET in total. What was left out is named in `to/OMITTED.txt` (absent when
+ * nothing was), so a reader can tell a file that does not exist from one it was not given.
+ */
+export async function copyExperimentText(dir: string, to: string, keep: (rel: string) => boolean = () => true): Promise<{ copied: string[]; omitted: string[] }> {
+  const from = path.join(dir, EXPERIMENT_DIR);
+  const rank = (rel: string) => (EXPERIMENT_FIRST.includes(rel) ? EXPERIMENT_FIRST.indexOf(rel) : EXPERIMENT_FIRST.length);
+  const files = (await listTree(from)).filter((f) => keep(f.rel)).sort((a, b) => rank(a.rel) - rank(b.rel) || a.rel.localeCompare(b.rel));
+  const copied: string[] = [];
+  const omitted: string[] = [];
+  let total = 0;
+  for (const f of files) {
+    if (!EXPERIMENT_TEXT_FILE.test(f.rel)) omitted.push(`${f.rel} (not text)`);
+    else if (total + f.size > EXPERIMENT_TEXT_BUDGET) omitted.push(`${f.rel} (${f.size} bytes, past the ${EXPERIMENT_TEXT_BUDGET} byte text budget)`);
+    else {
+      total += f.size;
+      const dest = path.join(to, ...f.rel.split("/"));
+      await mkdir(path.dirname(dest), { recursive: true });
+      await copyFile(path.join(from, ...f.rel.split("/")), dest);
+      copied.push(f.rel);
+    }
+  }
+  await mkdir(to, { recursive: true });
+  if (omitted.length) await writeFile(path.join(to, "OMITTED.txt"), `${omitted.slice(0, 200).join("\n")}${omitted.length > 200 ? `\n... and ${omitted.length - 200} more` : ""}\n`, "utf8");
+  return { copied, omitted };
+}
+
+/** A trial run's writer turn (every phase, the critique's and the fix's included) reads the
+ *  experiment at `inputs/experiment/` and its record at `inputs/experiment-source.json`. */
+export async function stageExperimentInputs(ws: string, dir: string): Promise<void> {
+  const inputs = path.join(ws, "inputs");
+  if (!(await fileExists(path.join(dir, EXPERIMENT_SOURCE_FILE)))) throw new Error(`the run is written around a trial but holds no ${EXPERIMENT_SOURCE_FILE}`);
+  await copyExperimentText(dir, path.join(inputs, EXPERIMENT_DIR), WRITER_EXPERIMENT);
+  await copyFile(path.join(dir, EXPERIMENT_SOURCE_FILE), path.join(inputs, EXPERIMENT_SOURCE_FILE));
 }

@@ -9,8 +9,8 @@ import { roundDir, type ReviewerPanel, validateDecision, validateDispositions } 
 import { copyDir, fileExists } from "./files";
 import { critiqueTurn } from "./critiqueTurn";
 import { ingestPost } from "./ingestDraft";
-import { readOutJson, validateClaims, validateSources } from "./ingestSources";
-import { readJsonFile, runDir, writeJsonAtomic } from "./store";
+import { assertTrialSource, readExperimentSource, readOutJson, validateClaims, validateSources } from "./ingestSources";
+import { readJsonFile, readRun, runDir, writeJsonAtomic } from "./store";
 import { StepError, sumCost } from "./stepFailure";
 import type { CritiqueDecisionRecord, Review, Source } from "./types";
 import type { EngineDeps } from "./engine";
@@ -80,10 +80,14 @@ export async function revise(id: string, round: number, panel: ReviewerPanel, de
   let cost: number | undefined;
   try {
     if (research && !(await fileExists(path.join(rd, "researched.json")))) {
+      // A trial run's re-research keeps row 1 the trial's record, field for field, as its first
+      // research had to: the number-and-url check below would let a reworded title through.
+      const trialSource = (await readRun(id)).trial ? await readExperimentSource(dir) : undefined;
       const stage = (ws: string) => stageCritiqueInputs(ws, dir, round, reviews, ["answers"]);
       const ingest = async (ws: string) => {
         const before = await readJsonFile<Source[]>(path.join(dir, "sources.json"), []);
         const sources = validateSources(await readOutJson(path.join(ws, "out", "sources.json"), "out/sources.json"));
+        if (trialSource) assertTrialSource(sources, trialSource);
         assertSourcesStable(before, sources);
         const claims = validateClaims(await readOutJson(path.join(ws, "out", "claims.json"), "out/claims.json"), sources);
         await writeJsonAtomic(path.join(dir, "sources.json"), sources);

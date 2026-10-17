@@ -16,6 +16,13 @@ writer receives it. A copy pasted here would be a second standard that drifts.
 
 The output contract below is the schema lib/articles/critique.ts validateReview
 holds a review to; change one, change both.
+
+`trial-review` (2026-10-18) is appended after `review` for a run written around
+a trial, and only then: the METHOD lens over the experiment, whose text files
+the engine copies into the workspace as experiment/. A method finding keeps the
+closed kind set (the registry's critique gate accepts no other kind): it is
+`factual`, and its `location` starts `METHOD:`. {{TRIAL}} is the summary code
+renders from the experiment's prereg.json, verdict.json and results.json.
 -->
 
 <!-- section: review -->
@@ -71,3 +78,21 @@ OUTPUT. Your whole final message is ONE JSON object and nothing else — no prea
 {"verdict": "publish" | "revise" | "rework", "summary": "one paragraph: the post's state and the findings that matter most", "findings": [{"id": "f1", "kind": "factual" | "format" | "engagement" | "insight" | "voice", "severity": "blocker" | "major" | "minor", "location": "where in the post: section and paragraph, figure number, or citation", "claim": "what is wrong or missing, specifically", "evidence": ["https://the-page-you-opened"], "suggestion": "what the writer should do instead"}]}
 
 `verdict`: `publish` when nothing is a blocker or major, `revise` when findings need changes the current research supports, `rework` when the post needs new research or a new structure. Finding ids are `f1`, `f2`, … and unique. `location` names a place in the post, never a file path. `findings` is `[]` when there is honestly nothing to find. Order findings by severity, blockers first.
+
+<!-- section: trial-review -->
+LENS: METHOD. This post reports a trial: before the post existed, the claim below was measured first-hand against an alternative under a sealed preregistration, and the verdict was computed by code from the numbers. The experiment's text files are in `experiment/` in your working directory (`prereg.json`, `results.json`, `verdict.json`, `validity.json`, `exec.jsonl`, `REPORT.md`, the harness's code); read them. They are read-only like everything else here.
+
+{{TRIAL}}
+
+A trial post opens on the trial's own measured number, not on an incident, and its preview states the verdict and the per-arm n citing [1]: for this post that is the rule, not a finding. Source [1] is the trial's record: its link resolves only after the post lands, so check the numbers it carries against `experiment/` instead.
+
+Judge the measurement, not only the prose:
+- CONFOUNDS: anything other than the practice under test that differs between the arms (load, model, cache, data, order, version).
+- ARM FAIRNESS: is the alternative a real practice at its best, configured as its own current documentation recommends, or a strawman? Is the golden arm the rule as written?
+- CONTROLS: did each control hold, and does its recorded evidence show it?
+- n AGAINST THE FLOOR: is n per arm enough for what the post claims from it?
+- THE BAND: was the declared smallest difference a reasonable choice for this metric?
+- THE VERDICT: does it follow from the numbers in `verdict.json` and `results.json` under the rule stated above?
+- OVERCLAIM: does the post say more than the trial measured (another workload, version or scale; a null read as a tie or a win)?
+
+A METHOD finding is reported with `kind: "factual"` and a `location` that starts `METHOD:` followed by the place in the post (`"METHOD: setup section, the alternative arm"`). Its `claim` names the file and field in `experiment/` that shows the problem; `evidence` still holds only http(s) URLs you opened. The writer cannot measure again: a method finding is answered by a limit stated in the post or by a reason. It is a `blocker` only when the post's verdict does not follow from the numbers. The OUTPUT above is unchanged.

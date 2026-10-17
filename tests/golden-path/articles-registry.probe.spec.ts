@@ -7,7 +7,10 @@
 // is read at the registry's own addresses and recorded with its version and a
 // bundle hash that moves when the bundle does; and THE UNREACHABLE CASE — a
 // run created with no registry fails with the named error and holds no stale
-// standard. All against a throwaway registry clone.
+// standard. All against a throwaway registry clone. Also the trial sections of
+// the writer's prompt (appended after the classic prompt for a trial run only,
+// every slot filled, required by the loader) and `registry.remote`, which a
+// trial run's source 1 cites.
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -15,12 +18,14 @@ import path from "node:path";
 import { test, expect } from "@playwright/test";
 
 import { createRun, driveRun } from "@/lib/articles/engine";
-import { buildPrompt, loadPromptFile } from "@/lib/articles/prompt";
+import { buildPrompt, loadPromptFile, loadReviewPromptFile, PROMPT_PHASES, type PromptTrial, TRIAL_SECTIONS } from "@/lib/articles/prompt";
 import {
   listTopicSubjects,
   manifestRegistryLocal,
+  manifestRegistryRemote,
   RegistryUnreachableError,
   resolveRegistryDir,
+  resolveRegistryRemote,
   resolveStandard,
   resolveTopicSubject,
   standardText,
@@ -152,4 +157,101 @@ test("prompt: every phase fills every slot, carries its phase line, and inlines 
   for (const contract of ["out/post/index.html", "out/post/post.md", "out/post/meta.json", "out/patches.json", 'data-role="content-preview"', 'id="sources"']) {
     expect(draft).toContain(contract);
   }
+});
+
+/* ── the trial sections (2026-10-18) ──────────────────────────────────────── */
+
+const TRIAL: PromptTrial = {
+  ref: { id: "t-slots", verdict: "challenged", technique: "count-before-send", alternative: "character estimate", metric: "overflow rate", n: 30, sourceN: 1, applicationPath: "knowledge/software-engineering/llm-agent/token-budgeting/applications/node--count-before-send.md" },
+  prereg: {
+    schema: "article-trial-prereg/1",
+    subject: { bundle: "software-engineering", slug: "token-budgeting" },
+    technique: "count-before-send",
+    claim: "Count before send.",
+    alternative: { name: "character estimate", description: "Characters over four.", source: { url: "https://example.org/e", title: "E", date: "2026-05-01" } },
+    prior: "Counting wins.",
+    question: "Does counting beat estimating?",
+    arms: [
+      { id: "golden", label: "counted", description: "Count." },
+      { id: "alternative", label: "estimate", description: "Estimate." },
+    ],
+    metric: { id: "p50_ms", label: "median latency", unit: "ms", direction: "lower" },
+    minEffect: { kind: "absolute", value: 5 },
+    thresholds: [{ metric: "overflows", op: "<=", value: 0, label: "no overflow" }],
+    n: 30,
+    controls: [],
+    stack: "node",
+    environment: "node@24.12.0",
+    budget: { wallMin: 20, modelCalls: 0 },
+  },
+  verdict: { schema: "article-trial-verdict/1", verdict: "challenged", reason: "The estimate is faster by 12 ms and clears every guard.", arms: [{ id: "golden", n: 30, mean: 40, sd: 3, guardsCleared: true }, { id: "alternative", n: 30, mean: 28, sd: 2.5, guardsCleared: true }], delta: 12, band: 5, deltaCi95: [10.6, 13.4], at: "2026-10-17T10:00:00.000Z" },
+  results: {
+    schema: "article-trial-results/1",
+    arms: [
+      { id: "golden", observations: Array.from({ length: 30 }, () => 40), guards: { overflows: 0 } },
+      { id: "alternative", observations: Array.from({ length: 30 }, () => 28), guards: { overflows: 0 } },
+    ],
+    controls: [],
+    modelCalls: 0,
+  },
+};
+
+test("prompt, trial: each phase's trial section is appended after the classic prompt, every slot filled", async () => {
+  const file = await loadPromptFile(ROOT);
+  const ctx = { topic: { kind: "subject" as const, bundle: "software-engineering", subject: "token-budgeting", text: "Token budgeting" }, standard: "S", standardAddress: "A", today: "2026-10-18", round: 1, maxRounds: 2, checkFailures: "- x" };
+  const marks: Record<string, string> = {
+    research: "SOURCE 1 IS THE TRIAL.",
+    outline: "THE OPENING IS THE TRIAL'S OWN MEASURED NUMBER",
+    draft: "REGISTRY PATCHES, for this post, replace the draft phase's rule above.",
+    critique: "METHOD FINDINGS",
+    "revise-research": "METHOD FINDINGS",
+    revise: "METHOD FINDINGS",
+    fix: "METHOD FINDINGS",
+  };
+  for (const phase of PROMPT_PHASES) {
+    const classic = buildPrompt(file, phase, ctx);
+    const trial = buildPrompt(file, phase, { ...ctx, trial: TRIAL });
+    expect(classic, `${phase}: a classic prompt carries trial text`).not.toMatch(/THIS POST IS WRITTEN AROUND A TRIAL|\{\{TRIAL/);
+    expect(trial.startsWith(classic), `${phase}: the trial section is appended, the classic prompt untouched`).toBe(true);
+    expect(trial, `${phase}: an unfilled slot`).not.toMatch(/\{\{[A-Z_0-9]+\}\}/);
+    expect(trial).toContain(marks[phase]);
+    expect(trial).toContain("THE TRIAL t-slots, measured first-hand before this run existed.");
+    expect(trial).toContain("- Verdict: CHALLENGED. The estimate is faster by 12 ms and clears every guard.");
+    expect(trial).toContain("Bootstrap 95 percent interval (reported, never decisive): 10.6 to 13.4 ms.");
+    expect(trial).toContain("- Guards each arm must clear to win: no overflow (overflows <= 0).");
+    expect(trial).toContain("  - none declared");
+    expect(trial.slice(classic.length), `${phase}: a dash in the trial section`).not.toMatch(/[—–]/);
+  }
+  const draft = buildPrompt(file, "draft", { ...ctx, trial: TRIAL });
+  expect(draft).toContain("`n=30 per arm`");
+  expect(draft).toContain("only to `knowledge/software-engineering/llm-agent/token-budgeting/techniques/count-before-send.md`");
+  expect(draft).toContain("This trial's verdict is challenged.");
+  expect(draft).toContain(TRIAL.ref.applicationPath);
+});
+
+test("prompt, trial: a prompt file without a trial section is malformed, by name", async () => {
+  const root = mkdtempSync(path.join(tmpdir(), "articles-prompts-"));
+  try {
+    mkdirSync(path.join(root, "pipeline"));
+    const post = readFileSync(path.join(ROOT, "pipeline", "ARTICLE-POST-PROMPT.md"), "utf8");
+    writeFileSync(path.join(root, "pipeline", "ARTICLE-POST-PROMPT.md"), post.replace("<!-- section: trial-draft -->", "<!-- removed -->"));
+    await expect(loadPromptFile(root)).rejects.toMatchObject({ code: "prompt-malformed", message: expect.stringContaining('no "trial-draft" section') });
+    const review = readFileSync(path.join(ROOT, "pipeline", "ARTICLE-REVIEW-PROMPT.md"), "utf8");
+    writeFileSync(path.join(root, "pipeline", "ARTICLE-REVIEW-PROMPT.md"), review.replace("<!-- section: trial-review -->", "<!-- removed -->"));
+    await expect(loadReviewPromptFile(root)).rejects.toMatchObject({ code: "prompt-malformed", message: expect.stringContaining('no "trial-review" section') });
+    expect(TRIAL_SECTIONS).toEqual(["trial-research", "trial-outline", "trial-draft", "trial-writer"]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("manifest: registry.remote is read out of the registry block; ARTICLES_REGISTRY_REMOTE wins", () => {
+  const yaml = "repo:\n  remote: wrong\nregistry:\n  remote: github:x/ai-registry  # origin\n  local: ../ai-registry\n";
+  expect(manifestRegistryRemote(yaml)).toBe("github:x/ai-registry");
+  expect(manifestRegistryRemote("registry:\n  local: ../r\n")).toBeUndefined();
+  expect(resolveRegistryRemote({}, "/repo", () => yaml)).toBe("github:x/ai-registry");
+  expect(resolveRegistryRemote({ ARTICLES_REGISTRY_REMOTE: "https://github.com/y/z" }, "/repo", () => yaml)).toBe("https://github.com/y/z");
+  expect(resolveRegistryRemote({}, "/repo", () => undefined)).toBeUndefined();
+  // this repo's own manifest names one
+  expect(resolveRegistryRemote({}, ROOT)).toMatch(/^github:[\w.-]+\/[\w.-]+$/);
 });

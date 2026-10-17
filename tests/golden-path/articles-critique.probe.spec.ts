@@ -20,6 +20,8 @@
 //   · the `critique` check item; the registry write-back of the block and
 //     critique/{reviews,dispositions}.json against the throwaway registry
 //   · the review prompt's lenses and contract, the writer's critique phases
+//   · a trial run's METHOD lens and trial summary (appended for a trial only), the
+//     reviewer workspace's `experiment/` (allowed by the seam, text only, 2 MB)
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -28,6 +30,7 @@ import { test, expect } from "@playwright/test";
 
 import {
   agentArgs,
+  assertIsolatedWorkspace,
   classifyOutcome,
   parseAgyEnvelope,
   parseCodexEvents,
@@ -35,10 +38,12 @@ import {
   parseEnvelope,
   resolveEngineBin,
   REVIEW_POINTER,
+  REVIEW_WORKSPACE,
   reviewerCommand,
   reviewerEnv,
   runReviewer,
 } from "@/lib/agent/cliSeam";
+import { copyExperimentText, EXPERIMENT_TEXT_BUDGET } from "@/lib/articles/agentSteps";
 import {
   critiqueCheckItem,
   extractJsonObject,
@@ -52,7 +57,7 @@ import {
   validateReview,
 } from "@/lib/articles/critique";
 import { approveRun, createRun, defaultDeps, driveRun, getRunDetail, resumeRun } from "@/lib/articles/engine";
-import { buildPrompt, buildReviewPrompt, loadPromptFile, loadReviewPromptFile } from "@/lib/articles/prompt";
+import { buildPrompt, buildReviewPrompt, loadPromptFile, loadReviewPromptFile, type PromptTrial } from "@/lib/articles/prompt";
 import { runDir } from "@/lib/articles/store";
 import type { CritiqueDetail, Review } from "@/lib/articles/types";
 
@@ -569,4 +574,121 @@ test("prompts: the review prompt's lenses and contract; the writer's critique ph
   expect(last).toContain("this is the LAST round");
   expect(last).not.toContain('"keep", "rewrite" or "research"');
   expect(buildPrompt(writer, "revise-research", { ...ctx, round: 1 })).toContain("KEEPS ITS NUMBER and its URL");
+});
+
+/* ── a post written around a trial: the METHOD lens (2026-10-18) ──────────── */
+
+const TRIAL: PromptTrial = {
+  ref: { id: "t-probe", verdict: "null", technique: "count-before-send", alternative: "character estimate", metric: "overflow rate", n: 12, sourceN: 1, applicationPath: "knowledge/se/llm/token-budgeting/applications/node--count-before-send.md" },
+  prereg: {
+    schema: "article-trial-prereg/1",
+    subject: { bundle: "software-engineering", slug: "token-budgeting" },
+    technique: "count-before-send",
+    claim: "Count the request's tokens before sending it.",
+    alternative: { name: "character estimate", description: "Characters over four.", source: { url: "https://example.org/estimate", title: "Estimating tokens", date: "2026-05-01" } },
+    prior: "The count wins.",
+    question: "Does counting beat estimating?",
+    arms: [
+      { id: "golden", label: "counted", description: "Count, then send." },
+      { id: "alternative", label: "estimate", description: "Estimate, then send." },
+    ],
+    metric: { id: "overflow_rate", label: "overflow rate", unit: "percent", direction: "lower" },
+    minEffect: { kind: "relative", value: 0.1 },
+    thresholds: [],
+    n: 12,
+    controls: [{ id: "same-model", statement: "One model for both arms." }],
+    stack: "node",
+    environment: "node@24.12.0",
+    budget: { wallMin: 20, modelCalls: 40 },
+  },
+  verdict: { schema: "article-trial-verdict/1", verdict: "null", reason: "No difference beyond the band.", arms: [{ id: "golden", n: 12, mean: 4.1, sd: 0.3, guardsCleared: true }, { id: "alternative", n: 12, mean: 4.2, sd: 0.4, guardsCleared: true }], delta: -0.1, band: 0.41, at: "2026-10-17T10:00:00.000Z" },
+  results: {
+    schema: "article-trial-results/1",
+    arms: [
+      { id: "golden", observations: Array.from({ length: 12 }, () => 4.1), guards: {} },
+      { id: "alternative", observations: Array.from({ length: 12 }, () => 4.2), guards: {} },
+    ],
+    controls: [{ id: "same-model", held: true, evidence: "one model id in both logs" }],
+    modelCalls: 24,
+  },
+};
+
+test("trial prompts: the review carries the METHOD lens and the trial summary, appended to the classic review only for a trial", async () => {
+  const file = await loadReviewPromptFile(ROOT);
+  const ctx = { reviewer: "gpt", model: "gpt-6-astra", effort: "high", round: 1, maxRounds: 2, topic: { kind: "free" as const, text: "t" }, standard: "S", standardAddress: "A", today: "2026-10-18", postMd: "# P", sourcesJson: "[]" };
+  const classic = buildReviewPrompt(file, ctx);
+  const trial = buildReviewPrompt(file, { ...ctx, trial: TRIAL });
+  expect(classic).not.toContain("LENS: METHOD");
+  expect(trial.startsWith(classic), "the trial review is the classic review plus its section").toBe(true);
+  expect(trial, "an unfilled slot").not.toMatch(/\{\{[A-Z_0-9]+\}\}/);
+  for (const required of [
+    "LENS: METHOD.",
+    "`experiment/`",
+    "CONFOUNDS",
+    "ARM FAIRNESS",
+    "n AGAINST THE FLOOR",
+    "THE BAND",
+    "OVERCLAIM",
+    '`kind: "factual"`',
+    "starts `METHOD:`",
+    "THE TRIAL t-probe, measured first-hand",
+    "- Verdict: NULL. No difference beyond the band.",
+    "- Band, the smallest difference that counts: 10 percent of the golden arm's mean, resolved to 0.41 percent.",
+    "| alternative (estimate) | 12 | 4.2 | 0.4 | cleared: none |",
+    "Bootstrap 95 percent interval (reported, never decisive): none.",
+    "- Model calls the harness made: 24 of 40 budgeted.",
+    "  - same-model: One model for both arms. (held: one model id in both logs)",
+  ]) {
+    expect(trial, required).toContain(required);
+  }
+
+  // every writer phase of the critique and the check carries the trial-writer section
+  const writer = await loadPromptFile(ROOT);
+  for (const phase of ["critique", "revise-research", "revise", "fix"] as const) {
+    const w = buildPrompt(writer, phase, { topic: { kind: "free", text: "t" }, standard: "S", standardAddress: "A", today: "2026-10-18", round: 1, maxRounds: 2, checkFailures: "- x", trial: TRIAL });
+    expect(w, `${phase}: an unfilled slot`).not.toMatch(/\{\{[A-Z_0-9]+\}\}/);
+    expect(w).toContain("METHOD FINDINGS");
+    expect(w).toContain("`n=12 per arm`");
+  }
+});
+
+test("trial seam: a reviewer workspace may hold experiment/, and anything else is still refused", () => {
+  expect(REVIEW_WORKSPACE).toEqual(["post", "sources.json", "REVIEW.md", "experiment"]);
+  const ws = path.join(box.dir, "review-ws");
+  mkdirSync(path.join(ws, "post"), { recursive: true });
+  mkdirSync(path.join(ws, "experiment"));
+  writeFileSync(path.join(ws, "sources.json"), "[]");
+  writeFileSync(path.join(ws, "REVIEW.md"), "ARTICLE-REVIEW");
+  expect(() => assertIsolatedWorkspace(ws, REVIEW_WORKSPACE)).not.toThrow();
+  writeFileSync(path.join(ws, "notes.txt"), "x");
+  expect(() => assertIsolatedWorkspace(ws, REVIEW_WORKSPACE)).toThrow(/found: notes\.txt/);
+});
+
+test("trial seam: the experiment a workspace gets is text only, records first, at most 2 MB, and says what it left out", async () => {
+  const dir = path.join(box.dir, "run");
+  const put = (rel: string, data: string | Buffer) => {
+    mkdirSync(path.dirname(path.join(dir, "experiment", rel)), { recursive: true });
+    writeFileSync(path.join(dir, "experiment", rel), data);
+  };
+  put("prereg.json", "{}");
+  put("verdict.json", "{}");
+  put("REPORT.md", "# R\n");
+  put("exec-logs/1.log", "ok\n");
+  put("harness/a.csv", "x".repeat(900 * 1024));
+  put("harness/b.csv", "x".repeat(900 * 1024));
+  put("harness/c.csv", "x".repeat(900 * 1024));
+  put("harness/model.bin", Buffer.alloc(16, 1));
+  const to = path.join(box.dir, "ws", "experiment");
+  const r = await copyExperimentText(dir, to);
+  expect(r.copied.slice(0, 3)).toEqual(["prereg.json", "verdict.json", "REPORT.md"]);
+  expect(r.copied).toEqual(expect.arrayContaining(["exec-logs/1.log", "harness/a.csv", "harness/b.csv"]));
+  expect(r.copied).not.toContain("harness/c.csv");
+  expect(r.omitted).toEqual(["harness/c.csv (921600 bytes, past the 2097152 byte text budget)", "harness/model.bin (not text)"]);
+  expect(readFileSync(path.join(to, "OMITTED.txt"), "utf8")).toContain("harness/model.bin (not text)");
+  expect(existsSync(path.join(to, "harness", "model.bin"))).toBe(false);
+  expect(EXPERIMENT_TEXT_BUDGET).toBe(2 * 1024 * 1024);
+  // nothing left out, no OMITTED.txt
+  const clean = path.join(box.dir, "ws2", "experiment");
+  await copyExperimentText(dir, clean, (rel) => rel.endsWith(".json"));
+  expect(existsSync(path.join(clean, "OMITTED.txt"))).toBe(false);
 });

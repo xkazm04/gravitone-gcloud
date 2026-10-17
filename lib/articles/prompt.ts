@@ -13,7 +13,7 @@ import path from "node:path";
 
 import { ArticleError } from "./store";
 import { THRESHOLDS } from "./checks";
-import type { ArticleTopic } from "./types";
+import type { ArticleTopic, ArticleTrialRef, TrialPrereg, TrialResults, TrialVerdict } from "./types";
 
 export const PROMPT_FILE = "pipeline/ARTICLE-POST-PROMPT.md" as const;
 /** The writer's phases. `critique` (dispositions + decision), `revise-research`
@@ -24,9 +24,27 @@ export type PromptPhase = "research" | "outline" | "draft" | "critique" | "revis
 export const PROMPT_PHASES: readonly PromptPhase[] = ["research", "outline", "draft", "critique", "revise-research", "revise", "fix"];
 export const MAX_PATCHES = 3;
 
+/** THE TRIAL SECTIONS. A run written around a trial (`run.trial`) gets one more section after
+ *  its phase's: the experiment is the post's spine and the research its supplement (17 of 17
+ *  classic posts disclaimed any first-hand measurement in their preview). A classic run never
+ *  gets one, so what a classic prompt sends is byte for byte what it sent before trials. */
+export const TRIAL_SECTIONS = ["trial-research", "trial-outline", "trial-draft", "trial-writer"] as const;
+export type TrialSection = (typeof TRIAL_SECTIONS)[number];
+export const TRIAL_SECTION_OF: Record<PromptPhase, TrialSection> = {
+  research: "trial-research",
+  outline: "trial-outline",
+  draft: "trial-draft",
+  critique: "trial-writer",
+  "revise-research": "trial-writer",
+  revise: "trial-writer",
+  fix: "trial-writer",
+};
+
 /** The reviewers' prompt — one section, `review`, read per call like the
- *  writer's. It inlines the same standard by address. */
+ *  writer's. It inlines the same standard by address. A trial run's reviewers
+ *  also get `trial-review`, the METHOD lens. */
 export const REVIEW_PROMPT_FILE = "pipeline/ARTICLE-REVIEW-PROMPT.md" as const;
+export const REVIEW_TRIAL_SECTION = "trial-review" as const;
 
 /** Split on `<!-- section: name -->` markers (the lib/sound/hunt.ts shape).
  *  Text before the first marker is the file's own header and is never sent. */
@@ -55,7 +73,7 @@ export async function loadPromptFile(root: string = process.cwd()): Promise<Prom
   }
   md = md.replace(/\r\n/g, "\n");
   const sections = sectionsOf(md);
-  for (const s of ["shared", ...PROMPT_PHASES]) {
+  for (const s of ["shared", ...PROMPT_PHASES, ...TRIAL_SECTIONS]) {
     if (!sections[s]) throw new ArticleError(`${PROMPT_FILE} has no "${s}" section`, 500, "prompt-malformed");
   }
   return { sha: createHash("sha256").update(md).digest("hex"), sections };
@@ -70,8 +88,85 @@ export async function loadReviewPromptFile(root: string = process.cwd()): Promis
   }
   md = md.replace(/\r\n/g, "\n");
   const sections = sectionsOf(md);
-  if (!sections.review) throw new ArticleError(`${REVIEW_PROMPT_FILE} has no "review" section`, 500, "prompt-malformed");
+  for (const s of ["review", REVIEW_TRIAL_SECTION]) {
+    if (!sections[s]) throw new ArticleError(`${REVIEW_PROMPT_FILE} has no "${s}" section`, 500, "prompt-malformed");
+  }
   return { sha: createHash("sha256").update(md).digest("hex"), sections };
+}
+
+/* ── the trial, as prompt text ─────────────────────────────────────────────── */
+
+/** What a prompt needs of the run's trial: the reference on the run and the three files under
+ *  `<run>/experiment/` the verdict was computed from. */
+export interface PromptTrial {
+  ref: ArticleTrialRef;
+  prereg: TrialPrereg;
+  verdict: TrialVerdict;
+  results: TrialResults;
+}
+
+/** `<subject dir>/techniques/<technique>.md`, from the application path the run carries (both sit
+ *  beside the subject's golden path, the registry's own layout). */
+export function trialTechniquePath(ref: Pick<ArticleTrialRef, "applicationPath" | "technique">): string {
+  const subjectDir = ref.applicationPath.replace(/\/applications\/[^/]+$/, "");
+  return `${subjectDir}/techniques/${ref.technique}.md`;
+}
+
+/** A number as the files hold it, without float noise (0.30000000000000004 -> 0.3). */
+const num = (x: number) => (Number.isInteger(x) ? String(x) : String(Number(x.toPrecision(6))));
+
+/** THE TRIAL SUMMARY the `{{TRIAL}}` slot carries: rendered by code from prereg.json,
+ *  verdict.json and results.json, so the writer and the reviewers read the measurement as the
+ *  files hold it rather than as a model retold it. Pure. */
+export function trialSummary(t: PromptTrial): string {
+  const { ref, prereg: p, verdict: v, results: r } = t;
+  const unit = p.metric.unit ? ` ${p.metric.unit}` : "";
+  const band = p.minEffect.kind === "absolute" ? `${num(p.minEffect.value)}${unit}` : `${num(p.minEffect.value * 100)} percent of the golden arm's mean`;
+  const arm = (id: string) => p.arms.find((a) => a.id === id);
+  const control = (c: { id: string; statement: string }) => {
+    const held = r.controls.find((x) => x.id === c.id);
+    return `  - ${c.id}: ${c.statement} (${held ? `${held.held ? "held" : "NOT held"}: ${held.evidence}` : "no result recorded"})`;
+  };
+  const guards = (id: string) => {
+    const g = r.arms.find((a) => a.id === id)?.guards ?? {};
+    const kv = Object.entries(g).map(([k, x]) => `${k} ${num(x)}`);
+    return kv.length ? kv.join(", ") : "none";
+  };
+  const rows = v.arms.map((a) => `| ${a.id} (${arm(a.id)?.label ?? a.id}) | ${a.n} | ${num(a.mean)} | ${num(a.sd)} | ${a.guardsCleared ? "cleared" : "NOT cleared"}: ${guards(a.id)} |`);
+  return [
+    `THE TRIAL ${ref.id}, measured first-hand before this run existed. Everything below is rendered by code from its prereg.json, results.json and verdict.json; its record is source [1].`,
+    `- Subject: ${p.subject.bundle}/${p.subject.slug}. Technique under test: ${p.technique} (${trialTechniquePath(ref)}). The measurement's application record: ${ref.applicationPath}.`,
+    `- Claim under test: "${p.claim}"`,
+    `- Alternative: ${p.alternative.name}: ${p.alternative.description} (source: ${p.alternative.source.title}, ${p.alternative.source.date}, ${p.alternative.source.url})`,
+    `- Prior, declared before the first search: ${p.prior}`,
+    `- Question: ${p.question}`,
+    ...p.arms.map((a) => `- Arm ${a.id}: ${a.label}: ${a.description}`),
+    `- Metric, the one optimized: ${p.metric.label} (${p.metric.id}${unit ? `, in${unit}` : ""}); ${p.metric.direction} is better.`,
+    `- Band, the smallest difference that counts: ${band}, resolved to ${num(v.band)}${unit}.`,
+    `- Guards each arm must clear to win: ${p.thresholds.length ? p.thresholds.map((g) => `${g.label} (${g.metric} ${g.op} ${num(g.value)})`).join("; ") : "none"}.`,
+    `- n per arm, also the floor: ${p.n}.`,
+    `- Controls, held across both arms:`,
+    ...(p.controls.length ? p.controls.map(control) : ["  - none declared"]),
+    `- Verdict: ${v.verdict.toUpperCase()}. ${v.reason}`,
+    `- Delta, alternative mean minus golden mean, signed so that above 0 favours the alternative: ${num(v.delta)}${unit}. Bootstrap 95 percent interval (reported, never decisive): ${v.deltaCi95 ? `${num(v.deltaCi95[0])} to ${num(v.deltaCi95[1])}${unit}` : "none"}.`,
+    `- Model calls the harness made: ${r.modelCalls} of ${p.budget.modelCalls} budgeted.`,
+    "",
+    `| arm | n | mean | sd | guards |`,
+    `|---|---|---|---|---|`,
+    ...rows,
+  ].join("\n");
+}
+
+/** The slots only a trial section reads. Empty for a classic run, whose sections name none. */
+function trialSlots(t: PromptTrial | undefined): Record<string, string> {
+  if (!t) return { TRIAL: "", TRIAL_N: "", TRIAL_VERDICT: "", TRIAL_TECHNIQUE_PATH: "", TRIAL_APPLICATION_PATH: "" };
+  return {
+    TRIAL: trialSummary(t),
+    TRIAL_N: String(t.ref.n),
+    TRIAL_VERDICT: t.verdict.verdict,
+    TRIAL_TECHNIQUE_PATH: trialTechniquePath(t.ref),
+    TRIAL_APPLICATION_PATH: t.ref.applicationPath,
+  };
 }
 
 export interface PromptContext {
@@ -87,6 +182,8 @@ export interface PromptContext {
   maxRounds?: number;
   /** The check's failures as prompt text (fix phase). */
   checkFailures?: string;
+  /** The run's trial; absent on a classic run, whose prompt then carries no trial section. */
+  trial?: PromptTrial;
 }
 
 /** Fill `{{SLOT}}`s; an unknown slot is left standing so a probe can see it. */
@@ -134,13 +231,16 @@ export function promptSlots(phase: PromptPhase, ctx: PromptContext): Record<stri
       (ctx.round ?? 1) >= (ctx.maxRounds ?? 2)
         ? '"keep" or "rewrite" — this is the LAST round: a rewrite now is final and is not reviewed again, and "research" is not available'
         : '"keep", "rewrite" or "research" — a rewrite or a research is reviewed again in the next round',
+    ...trialSlots(ctx.trial),
   };
 }
 
-/** The whole prompt for one phase. Pure over its inputs. */
+/** The whole prompt for one phase. Pure over its inputs. A trial run's prompt is the classic
+ *  prompt with the phase's trial section appended, so the trial rules come last and win. */
 export function buildPrompt(file: PromptFile, phase: PromptPhase, ctx: PromptContext): string {
   const slots = promptSlots(phase, ctx);
-  return `${fill(file.sections.shared, slots)}\n\n${fill(file.sections[phase], slots)}\n`;
+  const base = `${fill(file.sections.shared, slots)}\n\n${fill(file.sections[phase], slots)}\n`;
+  return ctx.trial ? `${base}\n${fill(file.sections[TRIAL_SECTION_OF[phase]], slots)}\n` : base;
 }
 
 export interface ReviewPromptContext {
@@ -157,6 +257,8 @@ export interface ReviewPromptContext {
   postMd: string;
   /** sources.json, verbatim. */
   sourcesJson: string;
+  /** The run's trial: the review then also carries the METHOD lens. */
+  trial?: PromptTrial;
 }
 
 /** One reviewer's prompt. Pure over its inputs. */
@@ -179,6 +281,8 @@ export function buildReviewPrompt(file: PromptFile, ctx: ReviewPromptContext): s
     MAX_PRE_WORDS: String(THRESHOLDS.maxWordsBeforeFirstSection),
     MAX_RUN_WORDS: String(THRESHOLDS.maxProseRunWords),
     MAX_CLOSING_ITEM_WORDS: String(THRESHOLDS.maxClosingListItemWords),
+    ...trialSlots(ctx.trial),
   };
-  return `${fill(file.sections.review, slots)}\n`;
+  const base = `${fill(file.sections.review, slots)}\n`;
+  return ctx.trial ? `${base}\n${fill(file.sections[REVIEW_TRIAL_SECTION], slots)}\n` : base;
 }

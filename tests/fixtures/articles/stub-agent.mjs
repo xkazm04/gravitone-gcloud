@@ -41,8 +41,20 @@
 // STUB_RESEARCH=badurl — a critique re-research whose first attempt has a source with no url and
 //   whose retry (its own files seeded into out/) corrects it.
 // STUB_AGENT_ARGV_LOG=<file> appends the engine, argv, cwd, the workspace's
-//   entries and whether a metered key or any credential-named variable
-//   reached this process.
+//   entries (and its inputs/ entries, for a writer turn) and whether a metered
+//   key or any credential-named variable reached this process.
+//
+// TRIAL MODE (a run written around a trial). A writer turn whose workspace holds
+// inputs/experiment/ answers as a trial run must: research writes row 1 of
+// sources.json as inputs/experiment-source.json verbatim (rows 2 to 8 are the
+// canned sources), the post's preview cites [1] and states "n=<n> per arm" (n read
+// from inputs/experiment/prereg.json), figure 1's caption cites [1], and the draft
+// proposes NO patches (the engine's ingest refuses trial patches outside the
+// subject; the probes that need an amendment seed their own). A reviewer whose
+// workspace holds experiment/ adds one METHOD finding in round 1 (kind factual,
+// location "METHOD: ...").
+// STUB_TRIAL_SOURCE=reworded — trial research rewords source 1's title (the
+//   engine refuses it by name).
 
 import fs from "node:fs";
 import path from "node:path";
@@ -55,11 +67,19 @@ const args = argvAll.filter((a) => a !== asArg);
 const mode = process.env.STUB_AGENT_MODE || "ok";
 const cost = process.env.STUB_AGENT_COST ? Number(process.env.STUB_AGENT_COST) : undefined;
 if (process.env.STUB_AGENT_ARGV_LOG) {
+  const tree = (root, rel = "") =>
+    fs.readdirSync(path.join(root, rel), { withFileTypes: true }).flatMap((e) => {
+      const r = rel ? `${rel}/${e.name}` : e.name;
+      return e.isDirectory() ? tree(root, r) : [r];
+    });
   const seen = {
     engine,
     argv: args,
     cwd: process.cwd(),
     entries: fs.readdirSync(process.cwd()).sort(),
+    ...(fs.existsSync("inputs") ? { inputs: fs.readdirSync("inputs").sort() } : {}),
+    ...(fs.existsSync(path.join("inputs", "registry")) ? { registry: tree(path.join("inputs", "registry")).sort() } : {}),
+    ...(fs.existsSync("experiment") ? { experiment: tree("experiment").sort() } : {}),
     meteredKeyVisible: "ANTHROPIC_API_KEY" in process.env,
     credentialVars: Object.keys(process.env).filter((k) => /(API_?KEY|SECRET|TOKEN|PASSWORD|PASSWD|CREDENTIAL|PRIVATE_?KEY|AUTH)/i.test(k)),
   };
@@ -138,6 +158,10 @@ if (/^ARTICLE-REVIEW\b/m.test(prompt)) {
   if (rmode === "garbage" || (rmode === "garbage-once" && !retry)) ok("I reviewed the post and it looks fine overall, nice work!");
   if (rmode === "write") fs.writeFileSync("notes.txt", "a reviewer wrote this\n");
 
+  // a reviewer of a trial run reads the experiment, and finds one thing in the method
+  const method = fs.existsSync("experiment") && fs.existsSync(path.join("experiment", "prereg.json"))
+    ? [{ id: "f3", kind: "factual", severity: "major", location: "METHOD: setup section, the alternative arm", claim: `experiment/prereg.json controls do not name the cache state between arms (${reviewer}).`, evidence: [], suggestion: "State the cache state as a limit of the trial." }]
+    : [];
   const findings =
     round === 1
       ? [
@@ -151,6 +175,7 @@ if (/^ARTICLE-REVIEW\b/m.test(prompt)) {
             suggestion: "Use the current price from the pricing page and date it.",
           },
           { id: "f2", kind: "format", severity: "minor", location: "Figure 3", claim: "The caption repeats the paragraph above it.", evidence: [], suggestion: "Shorten the caption to what the figure shows." },
+          ...method,
         ]
       : [{ id: "f1", kind: "engagement", severity: "minor", location: "Closing section", claim: "The closing restates the numbers but not the opening question.", evidence: [], suggestion: "Return to the opening question in one sentence." }];
   const review = { reviewer: "ignored-by-the-engine", verdict: round === 1 ? "revise" : "publish", summary: `Stub review by ${reviewer}, round ${round}.`, findings };
@@ -186,13 +211,29 @@ const SOURCES = [
   { n: 8, url: "https://example.org/essay/fairness", title: "Who pays for the corpus", publisher: "Example Review", date: "2026-04-18", primary: false, counter: false, took: "the fairness framing" },
 ];
 
+// TRIAL MODE: the writer's workspace holds the experiment. Source 1 is its record, verbatim.
+const TRIAL = fs.existsSync(path.resolve("inputs", "experiment"))
+  ? {
+      prereg: JSON.parse(fs.readFileSync(path.resolve("inputs", "experiment", "prereg.json"), "utf8")),
+      verdict: JSON.parse(fs.readFileSync(path.resolve("inputs", "experiment", "verdict.json"), "utf8")),
+      source: JSON.parse(fs.readFileSync(path.resolve("inputs", "experiment-source.json"), "utf8")),
+    }
+  : undefined;
+const researchSources = () => {
+  if (!TRIAL) return SOURCES;
+  const one = process.env.STUB_TRIAL_SOURCE === "reworded" ? { ...TRIAL.source, title: `${TRIAL.source.title}, retold` } : TRIAL.source;
+  return [one, ...SOURCES.slice(1)];
+};
+
 if (phase === "research") {
   if (mode === "garbage") {
     write("sources.json", "[{\"n\": \"one\"}]");
     write("claims.json", "[]");
   } else {
-    write("sources.json", JSON.stringify(SOURCES, null, 2));
-    write("claims.json", JSON.stringify(SOURCES.map((s) => ({ text: `A sourced fact from ${s.title}.`, source: s.n })), null, 2));
+    const sources = researchSources();
+    write("sources.json", JSON.stringify(sources, null, 2));
+    const trialClaims = TRIAL ? TRIAL.verdict.arms.map((a) => ({ text: `The ${a.id} arm: mean ${a.mean}, sd ${a.sd}, n=${a.n}.`, source: 1 })) : [];
+    write("claims.json", JSON.stringify([...trialClaims, ...sources.map((s) => ({ text: `A sourced fact from ${s.title}.`, source: s.n }))], null, 2));
   }
   console.log(claudeEnvelope("8 sources, 3 primary, 1 counter"));
   process.exit(0);
@@ -239,6 +280,8 @@ function writePost(sources, note, defect) {
   // the same words in both files. Five words keeps the stub near one word in ten.
   const spine = (p) => p.replace(/^(\S+(?: \S+){4})/, "**$1**");
   const strong = (p) => p.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  // a trial post's preview rests on its own measurement: [1] and the per-arm n
+  const trialLine = TRIAL ? `Measured first-hand for this post: n=${TRIAL.prereg.n} per arm, verdict ${TRIAL.verdict.verdict} [1].` : "";
   const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>A stub post about tokens</title>
 <style>
@@ -256,7 +299,7 @@ pre { overflow-x: auto; font-size: 15px; }
 <body><main>
 <h1>A stub post about tokens</h1>
 <p class="byline">Staff writer · 2026-10-05</p>
-<nav data-role="content-preview"><p>What follows, in four parts:</p><ol>${SECTIONS.map((s) => `<li>${s}</li>`).join("")}</ol><p>After reading, a budget can be set per language.</p></nav>
+<nav data-role="content-preview"><p>What follows, in four parts:</p><ol>${SECTIONS.map((s) => `<li>${s}</li>`).join("")}</ol><p>After reading, a budget can be set per language.</p>${trialLine ? `<p>${cite(trialLine)}</p>` : ""}</nav>
 ${body.map((s, k) => `<h2>${s.title}</h2>\n${s.paras.map((p) => `<p>${strong(cite(spine(p)))}</p>`).join("\n")}\n<figure><img src="figures/${figures[k].file}" alt="${figures[k].caption}"><figcaption>${cite(figures[k].caption)}</figcaption></figure>`).join("\n")}
 <figure><img src="figures/${figures[4].file}" alt="${figures[4].caption}"><figcaption>${cite(figures[4].caption)}</figcaption></figure>
 <pre><code class="language-js"><span class="tok-kw">const</span> pieces = tokenize(text);</code></pre>
@@ -265,7 +308,7 @@ ${body.map((s, k) => `<h2>${s.title}</h2>\n${s.paras.map((p) => `<p>${strong(cit
 </main></body></html>
 `;
   write("post/index.html", html);
-  const md = `# A stub post about tokens\n\n*The unit of text decides the bill.*\n\n> Four parts: ${SECTIONS.join(", ")}.\n\n${body
+  const md = `# A stub post about tokens\n\n*The unit of text decides the bill.*\n\n> Four parts: ${SECTIONS.join(", ")}.${trialLine ? ` ${trialLine}` : ""}\n\n${body
     .map((s, k) => `## ${s.title}\n\n${s.paras.map(spine).join("\n\n")}\n\n![${figures[k].caption}](figures/${figures[k].file.replace(/\.svg$/, ".png")})\n${figures[k].caption}`)
     .join("\n\n")}\n\n![${figures[4].caption}](figures/${figures[4].file.replace(/\.svg$/, ".png")})\n${figures[4].caption}\n\n\`\`\`js\nconst pieces = tokenize(text);\n\`\`\`\n\n| Part | Message |\n|---|---|\n| one | tokens decide the bill |\n\n## Sources\n\n${sources.map((s) => `${s.n}. [${s.title}](${s.url}), ${s.publisher}, ${s.date}`).join("\n")}\n`;
   write("post/post.md", md);
@@ -291,7 +334,9 @@ if (phase === "draft") {
   if (fs.existsSync(reg)) walk(reg, "");
   existing.sort();
   const patches = [];
-  if (existing.length) {
+  // a trial run proposes nothing: its only legal target is the technique, and only after a
+  // challenged or null verdict (the probes that need one seed it themselves)
+  if (existing.length && !TRIAL) {
     const target = existing[0];
     const orig = fs.readFileSync(path.join(reg, ...target.split("/")), "utf8");
     write(`proposals/p1/${target}`, `${orig.trimEnd()}\n\nA content preview states the read time it can honour [5].\n`);

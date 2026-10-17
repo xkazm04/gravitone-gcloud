@@ -12,6 +12,19 @@ Structure: the code sends the `shared` section, then the section for the phase
 Everything outside a section marker (this comment included) is never sent.
 The REVIEWERS' prompt is a separate file, pipeline/ARTICLE-REVIEW-PROMPT.md.
 
+THE TRIAL SECTIONS (2026-10-18). A run written around a trial (run.trial: a
+registry subject's claim measured first-hand against its strongest current
+alternative before the run existed) gets ONE more section after its phase's:
+`trial-research`, `trial-outline`, `trial-draft`, or `trial-writer` for every
+writer turn of the critique and the check (critique, revise-research, revise,
+fix). They come last so that where they differ from the rules above, they win.
+A classic run never receives one, so a classic prompt is unchanged byte for
+byte. {{TRIAL}} is a summary rendered by code from the experiment's
+prereg.json, verdict.json and results.json (lib/articles/prompt.ts
+trialSummary). The evidence: 17 of 17 posts before trials disclaimed any
+first-hand measurement in their preview, and 88 to 94 percent of their prose
+sat in cited paragraphs.
+
 THE STANDARD IS NOT IN THIS FILE. Tone, structure and the output contract live
 here; the post standard is registry content — the technical-blog-post-authoring
 recipe and the technical-writing bundle — and arrives in {{STANDARD}}, resolved
@@ -242,3 +255,65 @@ How to fix, by kind:
 The post is no longer than the post you were given unless a failure is the missing piece itself. `out/post/` must end up complete to the draft phase's contract (`out/post/figures/NN-short-name.svg`, `out/post/index.html`, `out/post/post.md` with a final `## Sources` list in source order, `out/post/meta.json`); the seeded copy already is, so only the edited files change. The same rules hold: no em or en dash, no stated reading time, the content preview before the first `<h2>`, the closing carries its summary table. Do not search the web and do not write registry patches in this phase. The failures are also in `inputs/check-failures.json`.
 
 Then reply with one line: the title and how many failures you met.
+
+<!-- section: trial-research -->
+THIS POST IS WRITTEN AROUND A TRIAL. Before this run existed, the claim below was measured first-hand against its strongest current alternative: both arms run under one sealed preregistration, and the verdict computed by code from the numbers. The experiment is DONE. It is the post's spine; this phase does not re-measure it, re-judge it or replace it. Its files are in `inputs/experiment/` (`prereg.json`, `results.json`, `verdict.json`, `validity.json`, `REPORT.md`, `exec.jsonl`, and the harness's text files under `harness/`). Where the rules above and these differ, these win.
+
+{{TRIAL}}
+
+THE RESEARCH IS SUPPLEMENTARY: it surrounds the measurement and does not compete with it. Search for, and open:
+- prior published measurements of the same comparison (the same two practices, the same or a nearby metric), each with its population and date. One that disagrees with this trial is the most valuable page this phase can find.
+- each practice's current documentation: the golden path's practice and the alternative, at the versions in use today.
+- counter-evidence to the result: the conditions under which the verdict above would not hold (another workload, version or scale), stated as such.
+- the state of each practice today: who uses the alternative, and whether either practice has changed since the sources the trial was framed on (`inputs/experiment/validity.json`).
+
+SOURCE 1 IS THE TRIAL. Row 1 of `out/sources.json` is `inputs/experiment-source.json` copied VERBATIM, every field and every character; code compares it field for field and rejects the research when it differs. Your own sources are numbered from 2. Every bar above still holds for the whole list ({{MIN_SOURCES}} sources, {{MIN_PRIMARY}} primary, {{MIN_COUNTER}} counter), and the trial counts once.
+
+THE TRIAL'S NUMBERS ARE CLAIMS OF SOURCE 1. Write into `out/claims.json`, each carried by source 1, every number the post may state about the arms: the per-arm n, mean and sd of the metric, the delta and its interval, each guard's value, each control and whether it held, the verdict and its reason. Copy them from `inputs/experiment/verdict.json` and `inputs/experiment/results.json`; never round one into a stronger claim, and never add a number about the arms that those files do not hold.
+
+<!-- section: trial-outline -->
+THIS POST IS WRITTEN AROUND A TRIAL, measured first-hand before this run existed; its files are in `inputs/experiment/` and its record is source [1]. The story is built around the result, and the research supplements it. Where the rules above and these differ, these win.
+
+{{TRIAL}}
+
+THE OPENING IS THE TRIAL'S OWN MEASURED NUMBER, not a third-party incident: one sentence a reader could repeat (the metric, both arms, the gap, n). The outline's sections, in this order unless the result asks otherwise:
+- `## Opening`: that number in a line, and the preview sentence: the verdict ({{TRIAL_VERDICT}}), `n={{TRIAL_N}} per arm`, and that the measurement was made first-hand for this post, citing [1].
+- A SETUP section: the two arms, the metric and its direction, the guards, the controls, what was held constant, n per arm.
+- A RESULT section with at least one figure drawn from `inputs/experiment/results.json` (the per-arm values with their n, the delta against the band), its caption citing [1].
+- A MECHANISM section: why the result came out as it did, with the research for what the trial cannot show by itself.
+- WHAT IT CHANGES FOR THE GOLDEN PATH, in plain words: upheld, challenged or null.
+- WHAT THE TRIAL CANNOT SAY: its limits, the band, n, the environment, the workloads it did not cover.
+
+A `null` verdict is planned as "no difference beyond the band at n={{TRIAL_N}}", never as a tie or a win. No number about the arms goes in the outline unless a claim of source 1 holds it.
+
+<!-- section: trial-draft -->
+THIS POST IS WRITTEN AROUND A TRIAL, measured first-hand before this run existed; its files are in `inputs/experiment/`, its record is source [1] (`inputs/experiment-source.json`), and the outline already places the result. Where the rules above and these differ, these win.
+
+{{TRIAL}}
+
+- THE OPENING is the trial's own measured number (the metric, both arms, the gap, n), not a third-party incident.
+- THE CONTENT PREVIEW states the verdict, the per-arm n written as `n={{TRIAL_N}} per arm`, and that the measurement is first-hand, citing [1]. Code checks the text before the first section (the first `<h2>` of `index.html`, the first `## ` of `post.md`) for `[1]` and for n, in both files.
+- A SETUP section: the arms, the metric and its direction, the guards, the controls, what was held constant.
+- THE RESULT carries at least one figure drawn from `inputs/experiment/results.json`: the per-arm values with their n, and the delta against the band. Its caption cites [1]. Code checks that at least one figure caption cites [1].
+- THE MECHANISM: why the result came out as it did.
+- WHAT IT CHANGES FOR THE GOLDEN PATH, in plain words: upheld (the rule held against its strongest current alternative, under the conditions measured), challenged (the alternative won by more than the band) or null.
+- WHAT THE TRIAL CANNOT SAY: its limits, the band, n, the environment, what it did not cover.
+- EVERY NUMBER ABOUT THE ARMS comes from `inputs/experiment/verdict.json` or `results.json`, through a claim of [1]. A number those files do not hold is never stated, never rounded into a stronger one and never extrapolated.
+- A `null` verdict is reported as "no difference beyond <band> at n=<n>", never as a tie, a draw or a win for either arm.
+
+REGISTRY PATCHES, for this post, replace the draft phase's rule above. `inputs/registry/` holds the subject's golden path, the technique under test (`{{TRIAL_TECHNIQUE_PATH}}`) and, when the registry already has one, the application record (`{{TRIAL_APPLICATION_PATH}}`). The measurement's own record is written by code from the experiment's files and lands with the post: do not propose it.
+- When the verdict is `challenged` or `null`: at most ONE proposal, and only to `{{TRIAL_TECHNIQUE_PATH}}`: a short dated section (`## Amendment <date>: <the condition>`) stating the condition under which the rule did not hold, citing [1]. The measurement's numbers stay out of it; they belong in the application record. Never golden-path text, never the writing standard.
+- When the verdict is `upheld`: no proposal. Write `out/patches.json` as `[]`.
+
+This trial's verdict is {{TRIAL_VERDICT}}.
+
+<!-- section: trial-writer -->
+THIS POST IS WRITTEN AROUND A TRIAL, measured first-hand before this run existed. Its files are in `inputs/experiment/`; its record, source [1], is `inputs/experiment-source.json`. Where the rules above and these differ, these win.
+
+{{TRIAL}}
+
+- METHOD FINDINGS (a finding whose `location` starts `METHOD:`: a confound, an unfair arm, a control, n against the floor, the band, whether the verdict follows) cannot be answered by measuring again: there is no shell here and the experiment is closed. Answer one by stating the limit in the post (accepted, its `action` naming the sentence the limits section gains) or reject it with the reason the experiment's files give (naming the file and the field).
+- NEVER CHANGE A NUMBER ABOUT THE ARMS. Each one is a claim of [1] copied from `verdict.json` or `results.json`; a finding that asks for a different number is answered from those files.
+- Source 1 stays exactly `inputs/experiment-source.json`: the same number, the same url, every field unchanged.
+- A `null` verdict stays "no difference beyond <band> at n=<n>", never a tie or a win.
+- The trial's two check items: `trial-preview` (the text before the first `<h2>`, in both files, cites [1] and states `n={{TRIAL_N}} per arm`) and `trial-figure` (at least one figure caption cites [1]). A fix for either adds the missing words or citation and changes nothing else.

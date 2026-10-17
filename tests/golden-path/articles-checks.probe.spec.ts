@@ -11,7 +11,7 @@ import path from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { citedNumbers, closingListItemWords, firstPersonHits, htmlProse, proseRuns, proseStats, runCheck, skimSpine, sourceListProblems, staticItems, summarize, THRESHOLDS, wordsBeforeFirstSection } from "@/lib/articles/checks";
+import { citedNumbers, closingListItemWords, firstPersonHits, htmlProse, proseRuns, proseStats, runCheck, skimSpine, sourceListProblems, statesTrialN, staticItems, summarize, THRESHOLDS, trialItems, wordsBeforeFirstSection } from "@/lib/articles/checks";
 import type { CheckItem, Source } from "@/lib/articles/types";
 
 const SOURCES: Source[] = Array.from({ length: 8 }, (_, i) => ({
@@ -302,4 +302,58 @@ test("skim spine: one bold span per long section paragraph, in range, no citatio
   const off = item("<p>A limit names what it counts against, not bold on the page</p>");
   expect(off.status).toBe("fail");
   expect(off.detail?.[0]).toContain("not bold in index.html");
+});
+
+/* ── a run written around a trial (2026-10-18) ─────────────────────────────── */
+
+const TRIAL_LINE = "Measured first-hand for this post: n=20 per arm, the golden path upheld [1].";
+const trialPage = (line = TRIAL_LINE, opts: { firstCaption?: string } = {}) => {
+  const html = page().replace("<p>What follows</p>", `<p>What follows</p><p>${line.replace(/\[(\d+)\]/g, '<a href="#src-$1">[$1]</a>')}</p>`);
+  return opts.firstCaption === undefined ? html : html.replace("Figure 1 shows a step [1]", opts.firstCaption);
+};
+const trialMd = (line = TRIAL_LINE) => md.replace("*Sub*\n\n", `*Sub*\n\n> ${line}\n\n## Body\n\n`);
+
+test("trial items: the preview cites [1] and states n in both files, a caption cites [1]; a classic post has neither item", () => {
+  const classic = staticItems({ html: page(), md, sources: SOURCES, claims: [], figures: figures(), postFiles: files() });
+  expect(classic.some((i) => i.id.startsWith("trial-")), "a classic post was given a trial item").toBe(false);
+
+  const ok = trialItems({ html: trialPage(), md: trialMd(), n: 20 });
+  expect(ok.map((i) => `${i.id}:${i.dimension}:${i.status}`)).toEqual(["trial-preview:truth:pass", "trial-figure:truth:pass"]);
+  expect(byId(ok, "trial-preview").value).toBe("[1] and n=20 in index.html and post.md");
+  expect(byId(ok, "trial-figure")).toMatchObject({ value: "1 of 5 captions", expected: "≥ 1 figure caption cites [1]" });
+
+  // each half of the preview rule fails on its own, per file, and names what is missing
+  const noCite = trialItems({ html: trialPage(), md: trialMd("Measured first-hand for this post: n=20 per arm."), n: 20 });
+  expect(byId(noCite, "trial-preview")).toMatchObject({ status: "fail", detail: ["post.md: no [1] before the first section"] });
+  const noN = trialItems({ html: trialPage("Measured first-hand on 2026-10-20 [1]."), md: trialMd(), n: 20 });
+  expect(byId(noN, "trial-preview")).toMatchObject({ status: "fail", detail: ["index.html: n=20 is not stated before the first section"] });
+  // a caption that no longer cites [1]
+  const noFig = trialItems({ html: trialPage(TRIAL_LINE, { firstCaption: "Figure 1 shows a step [2]" }), md: trialMd(), n: 20 });
+  expect(byId(noFig, "trial-figure")).toMatchObject({ status: "fail", value: "0 of 5 captions" });
+  // no post at all is not measured, never passed
+  expect(trialItems({ n: 20 }).map((i) => i.status)).toEqual(["not-measured", "not-measured"]);
+});
+
+test("trial items: the per-arm n is read as n=N or N per arm, never as a bare number", () => {
+  for (const yes of ["n=20", "n = 20 per arm", "(n=20).", "20 per arm", "20 runs per arm", "N=20"]) expect(statesTrialN(yes, 20), yes).toBe(true);
+  for (const no of ["2026-10-20", "20", "n=200", "n=20.5", "120 per arm", "200 runs per arm"]) expect(statesTrialN(no, 20), no).toBe(false);
+});
+
+test("trial items: runCheck measures them when run.json carries a trial, and only then", async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "articles-check-trial-"));
+  try {
+    mkdirSync(path.join(dir, "post", "figures"), { recursive: true });
+    writeFileSync(path.join(dir, "post", "index.html"), trialPage());
+    writeFileSync(path.join(dir, "post", "post.md"), trialMd());
+    writeFileSync(path.join(dir, "sources.json"), JSON.stringify(SOURCES));
+    writeFileSync(path.join(dir, "claims.json"), "[]");
+    const ids = async () => (await runCheck(dir, { render: false })).items.map((i) => i.id).filter((id) => id.startsWith("trial-"));
+    expect(await ids(), "no run.json: a classic check").toEqual([]);
+    writeFileSync(path.join(dir, "run.json"), JSON.stringify({ id: "r", status: "checking" }));
+    expect(await ids(), "a run without a trial").toEqual([]);
+    writeFileSync(path.join(dir, "run.json"), JSON.stringify({ id: "r", status: "checking", trial: { id: "t", n: 20 } }));
+    expect((await ids()).sort()).toEqual(["trial-figure", "trial-preview"]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

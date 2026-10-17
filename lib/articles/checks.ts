@@ -11,6 +11,11 @@
 // critique's files: at least the quorum of reviewers completed every round, and
 // every blocker factual finding has a disposition with a reason.
 //
+// The `trial-preview` and `trial-figure` items (dimension truth,
+// checksStatic.ts trialItems) are measured for a run written around a trial and
+// for no other: the opening cites the trial's record [1] and states its per-arm
+// n, and a figure caption cites [1].
+//
 // A failed item does not stop the run. The report is shown at the human gate,
 // failures first, and the human decides. (The registry's own publications gate
 // re-checks the mechanical rules at landing, and that one does block.)
@@ -72,6 +77,6 @@ export const THRESHOLDS = {
 // they now live, so every importer keeps the same path and the same names.
 export { citedNumbers, firstPersonHits, htmlProse, mdProse, MD_IMAGE, postWords, STATED_READ_TIME, wordCount } from "./checksText";
 export { closingListItemWords, proseRuns, proseStats, skimSpine, sourceListProblems, wordsBeforeFirstSection } from "./checksProse";
-export { staticItems, type StaticInput } from "./checksStatic";
+export { staticItems, statesTrialN, trialItems, type StaticInput } from "./checksStatic";
 export { renderedItems } from "./checksRendered";
 export { runCheck, summarize } from "./checksReport";

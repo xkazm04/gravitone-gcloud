@@ -8,7 +8,7 @@ import path from "node:path";
 import type { AgentTool, AgentTurnClass } from "@/lib/agent/cliSeam";
 
 import type { ReviewerPanel } from "./critique";
-import { makeWorkspace, keepOut } from "./agentSteps";
+import { makeWorkspace, keepOut, runTrial, stageExperimentInputs } from "./agentSteps";
 import { copyDir } from "./files";
 import { buildPrompt, loadPromptFile } from "./prompt";
 import { resolveRegistryDir, resolveStandard, standardText } from "./registryRead";
@@ -55,6 +55,10 @@ export async function critiqueTurn(
   const run = await readRun(id);
   const std = await standardForPrompt(id, deps);
   const file = await loadPromptFile(deps.root);
+  // A trial run's every writer turn here (the answer, the re-research, the rewrite, the fix)
+  // reads the experiment and carries the trial-writer section: a method finding is answered
+  // from the experiment's files, never by changing a number about the arms.
+  const trial = await runTrial(run, dir);
   const base = buildPrompt(file, phase, {
     topic: run.topic,
     standard: std.text,
@@ -63,6 +67,7 @@ export async function critiqueTurn(
     round,
     maxRounds: panel.maxCritiqueRounds,
     ...(opts.checkFailures !== undefined ? { checkFailures: opts.checkFailures } : {}),
+    ...(trial ? { trial } : {}),
   });
   const name = opts.name ?? `critique-r${round}-${plan.label}`;
   const who = opts.name ?? `round ${round} ${plan.label}`;
@@ -80,6 +85,7 @@ export async function critiqueTurn(
     const ws = await makeWorkspace(id, `${name}-${attempt}`, deps.now());
     try {
       await stage(ws);
+      if (trial) await stageExperimentInputs(ws, dir);
       if (seed) await copyDir(seed, path.join(ws, "out"));
       const result = await deps.runAgent({ cwd: ws, prompt: base + note, model: run.model, effort: run.effort, tools: plan.tools, timeoutMin: plan.timeoutMin, turn: plan.turn });
       cost = sumCost(cost, result.costUsd);
