@@ -6348,6 +6348,48 @@
           "evidence": "app/foundry/pipeline/PipelineCanvas.tsx:68 Layout computation is consumed synchronously on the main thread without supporting shared, continuable layout execution across different waiter classes."
         }
       ]
+    },
+    "99a9ac98-40f7-4f99-bac6-2888372c9de6/short-form-narrative-structure": {
+      "context": "script-step",
+      "subject": "short-form-narrative-structure",
+      "bundle": "media-generation",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-17",
+      "evaluatedTs": "2026-10-17T21:21:29.101Z",
+      "techniques": [
+        {
+          "technique": "but-therefore-beat-linking",
+          "verdict": "conformant",
+          "evidence": "lib/script/editPlan.ts:403 Enforces that inserted beats explicitly declare a causal connector of BUT or THEREFORE to the previous beat, refusing undeclared or sequential connectors."
+        },
+        {
+          "technique": "scqa-opening",
+          "verdict": "conformant",
+          "evidence": "lib/script/renders.ts:30 Explainer candidate renders open with a formal Situation-Complication-Question-Answer sequence stating the core thesis early."
+        },
+        {
+          "technique": "reframe-close",
+          "verdict": "conformant",
+          "evidence": "lib/script/renders.ts:45 Candidate renders close with a portable reframe that re-describes the core argument rather than a passive summary recap."
+        },
+        {
+          "technique": "reversal-anatomy",
+          "verdict": "conformant",
+          "evidence": "pipeline/RECALIBRATE-PROMPT.md:130 Rule 5 prevents unearned reversals by prohibiting edits that sever a turn from its underlying causal evidence."
+        },
+        {
+          "technique": "question-stack-architecture",
+          "verdict": "deviation",
+          "evidence": "pipeline/SCRIPT-PROMPT.md:65 The generator drafts prose candidates directly without an approved question stack artifact, and renders substitute a list of topics for act questions."
+        }
+      ],
+      "registryProposal": "The standard expects question-stack-architecture to serve as an editable skeleton for generation pipelines before prose drafting; in production pipelines adopting multi-engine candidate duels (e.g. Adjudication or Reversal Chain), engines may legitimately vary between question stacks, candidate ruling sets, or topic promises. The standard should clarify whether alternative promise forms are conformant engine variants or strictly deviations.",
+      "withdrawn": {
+        "worker": "b624dc51-5926-4429-8a3b-79952933facd",
+        "state": "deviation",
+        "at": "2026-10-17T21:22:07.592786+00:00",
+        "reason": "reviewer (sonnet): The claim that no question-stack artifact is generated before prose is contradicted by pipeline/NOTEBOOK-SCHEMA.md, where the research step produces `candidate_questions` as 'step 3 — the question stack' and the creator triages the kept cards before SCRIPT-PROMPT composes. Line 65 only shows the out"
+      }
     }
   }
 }
