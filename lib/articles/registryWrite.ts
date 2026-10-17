@@ -23,6 +23,14 @@
 //
 // CREDENTIALS come from the operator's existing git and gh logins. None are
 // read, stored or passed here.
+//
+// A TRIAL RUN lands its measurement with the post: the application record is
+// patch `t1` (lib/articles/ingestDraft.ts, `required`), SOURCES.md gains the
+// publication's own `## Experiments` (the-token-tax's convention, the one
+// measured post the registry holds), and the PR body carries a Trial block that
+// names the verdict, the record, the contexts it governs in the consuming
+// project, and the converge command that queues the changed subject in every
+// consuming project once the PR merges.
 
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -37,6 +45,8 @@ import { readCritiqueDetail, registryCritique, type RegistryCritique } from "./c
 import { resolveRegistryDir, type RegistryLocation } from "./registryRead";
 import { ArticleError, slugify } from "./store";
 import { uniqueDir } from "./tempDir";
+import { experimentsMarkdown, trialPrBlock } from "./trial/registryRecord";
+import { readTrialDetail } from "./trial/store";
 import type { ArticleLanding, ArticleRun, CheckReport, Claim, PostMeta, RegistryPatch, Source } from "./types";
 
 export class LandingError extends ArticleError {
@@ -263,6 +273,11 @@ export async function landRun(input: LandInput): Promise<ArticleLanding> {
   const claims = await readJson<Claim[]>(path.join(runDir, "claims.json"));
   const check = existsSync(path.join(runDir, "check.json")) ? await readJson<CheckReport>(path.join(runDir, "check.json")) : undefined;
   const critique = registryCritique(await readCritiqueDetail(runDir));
+  // A trial run lands its measurement or nothing: the post cites it as source 1.
+  const trial = art.trial ? await readTrialDetail(path.join(runDir, "experiment")) : undefined;
+  if (art.trial && !trial) {
+    throw new LandingError(`trial ${art.trial.id}: experiment/verdict.json is missing; the post's source 1 would cite a record that does not exist`, "no-trial-record", { slug: "", branch: "", gates: [] });
+  }
 
   // Patch safety BEFORE anything touches the registry.
   const diffs: { patch: RegistryPatch; diff: string }[] = [];
@@ -318,7 +333,11 @@ export async function landRun(input: LandInput): Promise<ArticleLanding> {
   }
   await writeFile(path.join(pubDir, "post.html"), html.replace(/\r\n/g, "\n"), "utf8");
   await writeFile(path.join(pubDir, "post.md"), md.replace(/\r\n/g, "\n"), "utf8");
-  await writeFile(path.join(pubDir, "SOURCES.md"), sourcesMarkdown(meta.title, sources), "utf8");
+  const experiments =
+    art.trial && trial
+      ? `\n${experimentsMarkdown({ prereg: trial.prereg, verdict: trial.verdict, results: trial.results, execs: trial.execs, trialId: art.trial.id, applicationPath: art.trial.applicationPath })}`
+      : "";
+  await writeFile(path.join(pubDir, "SOURCES.md"), `${sourcesMarkdown(meta.title, sources)}${experiments}`, "utf8");
   await copyTree(path.join(runDir, "post", "figures"), path.join(pubDir, "figures"));
   // The registry is a text-only repository (its .gitattributes says so), so the
   // medium/ record there is the three text files; the PNGs stay in the run.
@@ -369,6 +388,7 @@ export async function landRun(input: LandInput): Promise<ArticleLanding> {
     "",
     `Article run ${art.id} (${art.model}, effort ${art.effort}), approved ${art.approval?.at ?? date}.`,
     `Standard: ${art.standard.recipe} ${art.standard.version ?? "(unresolved)"}, bundle ${art.standard.bundle}.`,
+    ...(art.trial && trial ? [`Trial ${art.trial.id}: ${trial.verdict.verdict}, ${art.trial.metric}, n=${art.trial.n} per arm; record ${art.trial.applicationPath}.`] : []),
     ...(patchLines.length ? ["", "Approved registry patches:", ...patchLines] : []),
   ].join("\n");
   const committed = await run(["git", "commit", "-m", message], worktree);
@@ -395,6 +415,7 @@ export async function landRun(input: LandInput): Promise<ArticleLanding> {
     "",
     ...(checkRows.length ? ["| dimension | deterministic check |", "|---|---|", ...checkRows, ""] : []),
     ...(check?.notMeasured.length ? [`Not measured by the check (the human's judgement): ${check.notMeasured.join(", ")}.`, ""] : []),
+    ...(art.trial && trial ? trialPrBlock({ ref: art.trial, prereg: trial.prereg, verdict: trial.verdict, governsHere: trial.governsHere }) : []),
     ...(patchLines.length ? ["Approved registry patches:", ...patchLines, ""] : []),
     `Gates run: ${landing.gates.map((g) => `${g.lane}${g.mode === "write" ? " --write" : ""}`).join(", ")}.`,
   ].join("\n");
