@@ -12,7 +12,7 @@
 //   - a retried commit with the same token is the same act (exit 0, one commit), never a second.
 
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -21,8 +21,11 @@ import { z } from "zod";
 
 const ROOT = process.cwd();
 const CLI = path.join(ROOT, "pipeline", "decide.mts");
-const CYCLE = "2026-10-16-wet-surface-cues";
-const PACKET = `pkt:dojo:${CYCLE}`;
+// The fixture universe dates its cycles from the clock (pipeline/fixtures/foundry.ts `dayOf`), so the
+// cycle is found by its slug in the seeded directory, not by a date the suite once ran on.
+const SLUG = "wet-surface-cues";
+let CYCLE = "";
+let PACKET = "";
 let dir = "";
 let env: NodeJS.ProcessEnv = { ...process.env };
 
@@ -31,6 +34,8 @@ beforeAll(() => {
   env = { ...process.env, GRAVITONE_STORE_PATH: path.join(dir, "kernel.sqlite") };
   for (const k of ["SOUND_STORE_DIR", "SOUND_LEDGER_PATH", "PUBLISH_STORE_DIR", "ARTICLES_STORE_DIR", "STRIPS_STORE_DIR", "FOUNDRY_DIR"]) delete env[k];
   execFileSync(process.execPath, [path.join(ROOT, "pipeline", "ledger-sync.mts"), "seed-fixtures"], { cwd: dir, env, encoding: "utf8" });
+  CYCLE = readdirSync(path.join(dir, "fixtures-out", "training")).find((d) => d.endsWith(`-${SLUG}`)) ?? "";
+  PACKET = `pkt:dojo:${CYCLE}`;
 }, 120_000);
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
