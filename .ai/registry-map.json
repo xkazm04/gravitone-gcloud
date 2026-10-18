@@ -5780,7 +5780,11 @@
           "revision": 17,
           "changedAt": "2026-10-06",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/kernel/src/job.ts:17 Job mutations, transitions through the state machine, and ledger events are durably recorded in one atomic transaction so the durable record always precedes process execution.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:68f09609d1498e88",
+          "evaluatedRevision": 17
         },
         {
           "subject": "fleet-orchestration",
@@ -6074,7 +6078,11 @@
           "revision": 17,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/kernel/py/job.py:27 The Python implementation replicates the Node kernel job driver and lease coordination rules across the shared SQLite store.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:68f09609d1498e88",
+          "evaluatedRevision": 17
         },
         {
           "subject": "dynamic-secret-lifecycle",

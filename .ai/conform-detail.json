@@ -7046,6 +7046,159 @@
           "evidence": "lib/foundry/catalogue.ts:132 ensureStyles probes whether the store already contains styles before running import, making repeated initialization idempotent."
         }
       ]
+    },
+    "0c02b354-237b-44cb-9283-518ed620e846/job-coordination": {
+      "context": "job-queue-and-leases",
+      "subject": "job-coordination",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T23:04:37.188Z",
+      "worker": "99e8ef43-be2f-440f-a820-ae80ff481c55",
+      "techniques": [
+        {
+          "technique": "in-flight-is-a-position",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/job-core.ts:219 Records the in-flight step name in progress.stage before dispatch so recovery can distinguish dispatched from unstarted steps."
+        },
+        {
+          "technique": "lease-renewal",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/job-run.ts:209 Heartbeat loop runs every ttl/3 on a timer and reads its own result so a lost lease immediately halts execution."
+        },
+        {
+          "technique": "liveness-proof-reclaim",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/lease-core.ts:106 Probes liveness on the host and pairs PID with bootId to distinguish live holders from recycled process handles."
+        },
+        {
+          "technique": "no-wall-clock-in-the-advance-contract",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/job-run.ts:243 Deadlines are only evaluated between steps to decide admission, yielding the job back to the queue rather than cutting execution mid-step."
+        },
+        {
+          "technique": "terms-travel-permission-does-not",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/job.ts:89 Money terms travel in the durable job record rather than being re-derived from volatile ambient settings while the queue drains."
+        },
+        {
+          "technique": "job-state-machines",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/job-core.ts:204 Enforces all state transitions through a single transition door guarded by jobMachine."
+        },
+        {
+          "technique": "step-position-and-resumability",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/job-run.ts:260 Resumes by comparing loaded step outputs against the plan to execute only missing steps instead of restarting from scratch."
+        },
+        {
+          "technique": "no-unrestorable-state-at-a-suspension-point",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/crash.ts:86 Instruments and halts execution at every effect point to verify that storage state across suspension points remains restorable."
+        },
+        {
+          "technique": "terminal-state-recovery",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/job-run.ts:375 Recovery sweep examines running jobs and marks orphaned jobs as interrupted with reasons, leaving live sibling jobs undisturbed."
+        },
+        {
+          "technique": "job-observability",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/job-queue.ts:64 Calculates live queue positions, ahead counts, and holds purely from the durable store without querying running processes."
+        }
+      ]
+    },
+    "f770abb6-6609-4c9f-959f-a31407dc501f/job-coordination": {
+      "context": "domain-run-job-steps",
+      "subject": "job-coordination",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T23:04:37.188Z",
+      "techniques": [
+        {
+          "technique": "job-state-machines",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/transitions.ts:26 Enforces that state machine transitions are declared and validates transitions through an assert method."
+        },
+        {
+          "technique": "in-flight-is-a-position",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/job.ts:157 Enforces that an interrupted job record must name the running stage and holder so recovery knows what effect was in flight."
+        },
+        {
+          "technique": "lease-renewal",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/job.ts:152 Guarantees that a job holds a lease with monotonic fence and heartbeat TTL timestamps if and only if it is in running state."
+        },
+        {
+          "technique": "step-position-and-resumability",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/steps/record.ts:30 Step outputs are defined with versioned schemas, migration functions, and stable keys to allow explicit step-by-step resumption and migration."
+        },
+        {
+          "technique": "terms-travel-permission-does-not",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/job.ts:116 The job's USD ceiling is explicitly modeled on the job record as frozen terms that travel with the job rather than being looked up live."
+        },
+        {
+          "technique": "terminal-state-recovery",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/job.machine.ts:38 Terminal states have an empty transition set so no subsequent transition or retry sweep can rewrite a final verdict."
+        }
+      ],
+      "withdrawn": {
+        "worker": "99e8ef43-be2f-440f-a820-ae80ff481c55",
+        "state": "conformant",
+        "at": "2026-10-18T23:06:10.368361+00:00",
+        "reason": "reviewer (sonnet): The technique at packages/domain/src/job.ts:157 only requires an `interruption` record (holder and time) while the job is interrupted, and `interruption.stage` is optional. `interrupted()` in job-core.ts:237 builds the record without a stage when none was in flight. So the claim that the record must"
+      }
+    },
+    "3eb496e8-52aa-446d-bf75-07dc7c891b16/job-coordination": {
+      "context": "kernel-python-protocol",
+      "subject": "job-coordination",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T23:04:37.188Z",
+      "worker": "99e8ef43-be2f-440f-a820-ae80ff481c55",
+      "techniques": [
+        {
+          "technique": "in-flight-is-a-position",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/job.py:241 Sets progress.stage in the job record before dispatching the step so recovery can identify which step was in flight."
+        },
+        {
+          "technique": "lease-renewal",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/job.py:184 Renews slot leases on a background thread at one-third of the TTL, ensuring renewals run on a timer rather than per unit of work."
+        },
+        {
+          "technique": "liveness-proof-reclaim",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/lease.py:95 Pairs PID with bootId on the local host to distinguish surviving holders from reused process IDs."
+        },
+        {
+          "technique": "job-state-machines",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/job_record.py:99 Validates every state change against the declared transition machine, raising Refused on undeclared transitions."
+        },
+        {
+          "technique": "step-position-and-resumability",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/job.py:15 Resumes multi-step work by skipping already-booked step outputs and executing only missing steps."
+        },
+        {
+          "technique": "terminal-state-recovery",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/job_settle.py:49 Performs recovery on startup by marking dead jobs as interrupted and settling unnotified endings with producers."
+        },
+        {
+          "technique": "terms-travel-permission-does-not",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/job_record.py:92 Preserves ceilingUsd frozen on the job record across all updates, ensuring terms travel with the job."
+        }
+      ]
     }
   }
 }

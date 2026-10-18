@@ -1,0 +1,189 @@
+{
+  "schema": "conform-run/1",
+  "worker": "99e8ef43-be2f-440f-a820-ae80ff481c55",
+  "subject": "job-coordination",
+  "evaluatedAt": "2026-10-18T23:04:37.188865+00:00",
+  "provider": "agy",
+  "model": "gemini-3.8-flash-high",
+  "pairs": [
+    {
+      "context": "job-queue-and-leases",
+      "subject": "job-coordination",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evidence": "packages/kernel/src/job.ts:17 Job mutations, transitions through the state machine, and ledger events are durably recorded in one atomic transaction so the durable record always precedes process execution.",
+      "techniques": [
+        {
+          "technique": "in-flight-is-a-position",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/job-core.ts:219 Records the in-flight step name in progress.stage before dispatch so recovery can distinguish dispatched from unstarted steps."
+        },
+        {
+          "technique": "lease-renewal",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/job-run.ts:209 Heartbeat loop runs every ttl/3 on a timer and reads its own result so a lost lease immediately halts execution."
+        },
+        {
+          "technique": "liveness-proof-reclaim",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/lease-core.ts:106 Probes liveness on the host and pairs PID with bootId to distinguish live holders from recycled process handles."
+        },
+        {
+          "technique": "no-wall-clock-in-the-advance-contract",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/job-run.ts:243 Deadlines are only evaluated between steps to decide admission, yielding the job back to the queue rather than cutting execution mid-step."
+        },
+        {
+          "technique": "terms-travel-permission-does-not",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/job.ts:89 Money terms travel in the durable job record rather than being re-derived from volatile ambient settings while the queue drains."
+        },
+        {
+          "technique": "job-state-machines",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/job-core.ts:204 Enforces all state transitions through a single transition door guarded by jobMachine."
+        },
+        {
+          "technique": "step-position-and-resumability",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/job-run.ts:260 Resumes by comparing loaded step outputs against the plan to execute only missing steps instead of restarting from scratch."
+        },
+        {
+          "technique": "no-unrestorable-state-at-a-suspension-point",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/crash.ts:86 Instruments and halts execution at every effect point to verify that storage state across suspension points remains restorable."
+        },
+        {
+          "technique": "terminal-state-recovery",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/job-run.ts:375 Recovery sweep examines running jobs and marks orphaned jobs as interrupted with reasons, leaving live sibling jobs undisturbed."
+        },
+        {
+          "technique": "job-observability",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/job-queue.ts:64 Calculates live queue positions, ahead counts, and holds purely from the durable store without querying running processes."
+        }
+      ]
+    },
+    {
+      "context": "kernel-python-protocol",
+      "subject": "job-coordination",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evidence": "packages/kernel/py/job.py:27 The Python implementation replicates the Node kernel job driver and lease coordination rules across the shared SQLite store.",
+      "techniques": [
+        {
+          "technique": "in-flight-is-a-position",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/job.py:241 Sets progress.stage in the job record before dispatching the step so recovery can identify which step was in flight."
+        },
+        {
+          "technique": "lease-renewal",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/job.py:184 Renews slot leases on a background thread at one-third of the TTL, ensuring renewals run on a timer rather than per unit of work."
+        },
+        {
+          "technique": "liveness-proof-reclaim",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/lease.py:95 Pairs PID with bootId on the local host to distinguish surviving holders from reused process IDs."
+        },
+        {
+          "technique": "job-state-machines",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/job_record.py:99 Validates every state change against the declared transition machine, raising Refused on undeclared transitions."
+        },
+        {
+          "technique": "step-position-and-resumability",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/job.py:15 Resumes multi-step work by skipping already-booked step outputs and executing only missing steps."
+        },
+        {
+          "technique": "terminal-state-recovery",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/job_settle.py:49 Performs recovery on startup by marking dead jobs as interrupted and settling unnotified endings with producers."
+        },
+        {
+          "technique": "terms-travel-permission-does-not",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/job_record.py:92 Preserves ceilingUsd frozen on the job record across all updates, ensuring terms travel with the job."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "job-coordination",
+      "context": "board-decision-desk",
+      "reason": "The Board decision desk is a human review and triage UI surface for decision packets (patches, picks, commits, losses) under the decision protocol, containing no background job execution, worker loop, lease renewal, or job coordination machinery."
+    },
+    {
+      "subject": "job-coordination",
+      "context": "domain-run-job-steps",
+      "reason": "withdrawn after review: reviewer (sonnet): The technique at packages/domain/src/job.ts:157 only requires an `interruption` record (holder and time) while the job is interrupted, and `interruption.stage` is optional. `interrupted()` in job-core.ts:237 builds the record without a stage when none was in flight. So the claim that the record must"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-18T23:04:37.188865+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "job-coordination"
+      ],
+      "techniques": [
+        "in-flight-is-a-position",
+        "job-observability",
+        "job-state-machines",
+        "lease-renewal",
+        "liveness-proof-reclaim",
+        "no-unrestorable-state-at-a-suspension-point",
+        "no-wall-clock-in-the-advance-contract",
+        "step-position-and-resumability",
+        "terminal-state-recovery",
+        "terms-travel-permission-does-not"
+      ],
+      "deviations": 0,
+      "context": "job-queue-and-leases",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-18T23:04:37.188865+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "job-coordination"
+      ],
+      "techniques": [
+        "in-flight-is-a-position",
+        "job-state-machines",
+        "lease-renewal",
+        "step-position-and-resumability",
+        "terminal-state-recovery",
+        "terms-travel-permission-does-not"
+      ],
+      "deviations": 0,
+      "context": "domain-run-job-steps",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-18T23:04:37.188865+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "job-coordination"
+      ],
+      "techniques": [
+        "in-flight-is-a-position",
+        "job-state-machines",
+        "lease-renewal",
+        "liveness-proof-reclaim",
+        "step-position-and-resumability",
+        "terminal-state-recovery",
+        "terms-travel-permission-does-not"
+      ],
+      "deviations": 0,
+      "context": "kernel-python-protocol",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
+}
