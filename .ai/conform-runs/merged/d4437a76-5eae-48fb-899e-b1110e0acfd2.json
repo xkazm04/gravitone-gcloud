@@ -1,0 +1,231 @@
+{
+ "schema": "conform-run/1",
+ "worker": "d4437a76-5eae-48fb-899e-b1110e0acfd2",
+ "subject": "generated-speech-acceptance",
+ "evaluatedAt": "2026-10-18T21:29:51.799311+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "audio-text-producers",
+   "subject": "generated-speech-acceptance",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "packages/producers/src/voice/define.ts:19 Context-directory and repository searches found no intelligibility, wordErrorRate or speakerSimilarity matches, while the voice producer explicitly refuses live speech generation and supplies silent dry takes.",
+   "techniques": [
+    {
+     "technique": "hard-slice-stratification",
+     "verdict": "not-applicable",
+     "evidence": "packages/producers/src/voice/define.ts:24 Live speech rendering is refused, so there is no synthesized-text workload to stratify."
+    },
+    {
+     "technique": "instruction-following-judged-on-audio",
+     "verdict": "not-applicable",
+     "evidence": "lib/producers/voice.ts:75 The producer binding cannot produce live speech for an audio instruction judge."
+    },
+    {
+     "technique": "listening-board",
+     "verdict": "not-applicable",
+     "evidence": "packages/producers/src/voice/define.ts:19 There are no operational speech generators or rendered voices to choose between."
+    },
+    {
+     "technique": "normalize-before-you-compare",
+     "verdict": "not-applicable",
+     "evidence": "lib/producers/voice.ts:74 The implemented voice output is silence, with no speech transcript comparison."
+    },
+    {
+     "technique": "published-number-comparability",
+     "verdict": "not-applicable",
+     "evidence": "packages/producers/src/voice/define.ts:27 This plans production units per line; no reproduced-versus-published speech score was found."
+    },
+    {
+     "technique": "round-trip-intelligibility",
+     "verdict": "not-applicable",
+     "evidence": "packages/producers/src/voice/define.ts:10 Silent stand-ins are not synthesized speech whose spoken content can be checked."
+    },
+    {
+     "technique": "three-axes-beside-intelligibility",
+     "verdict": "not-applicable",
+     "evidence": "lib/producers/voice.ts:53 No bound speech engine produces requested or cloned voices for acceptance scoring."
+    }
+   ],
+   "absenceTerms": [
+    "intelligibility",
+    "wordErrorRate",
+    "speakerSimilarity"
+   ]
+  },
+  {
+   "context": "audio-hunt-arrange",
+   "subject": "generated-speech-acceptance",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/audio/arrange.ts:29 Context-directory and repository searches found no intelligibility, wordErrorRate or speakerSimilarity matches, and the inspected hunt and arrangement models restrict their audio kinds to music and sound effects.",
+   "techniques": [
+    {
+     "technique": "hard-slice-stratification",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/audio/hunt.ts:177 The hunt briefs musical underscore rather than spoken-text benchmark slices."
+    },
+    {
+     "technique": "instruction-following-judged-on-audio",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/audio/hunt.ts:298 The non-music briefing vocabulary describes sound effects, not speech emotion or roles."
+    },
+    {
+     "technique": "listening-board",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/audio/HuntAudition.tsx:10 The audition comparison explicitly serves generated-music acceptance."
+    },
+    {
+     "technique": "normalize-before-you-compare",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/audio/arrangeGroups.ts:75 Grouping compares genres and effect categories, not recognizer transcripts."
+    },
+    {
+     "technique": "published-number-comparability",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/audio/HuntRenderBar.tsx:4 The render bar describes production workload; no published speech benchmark comparison was found."
+    },
+    {
+     "technique": "round-trip-intelligibility",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/audio/RoundTrip.tsx:4 RoundTrip is a manual Suno editing workflow, not speech recognition followed by text comparison."
+    },
+    {
+     "technique": "three-axes-beside-intelligibility",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/audio/hunt.ts:61 The hunt's closed kind vocabulary contains no requested or cloned speech voice."
+    }
+   ],
+   "absenceTerms": [
+    "intelligibility",
+    "wordErrorRate",
+    "speakerSimilarity"
+   ]
+  },
+  {
+   "context": "audio-lessons-measures",
+   "subject": "generated-speech-acceptance",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/audio/rubric.ts:16 Context-directory and repository searches found no intelligibility, wordErrorRate or speakerSimilarity matches, and these scoring and learning models explicitly cover music and sound effects.",
+   "techniques": [
+    {
+     "technique": "hard-slice-stratification",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/audio/lesson.ts:19 Lessons concern music and effects rather than difficult spoken-text slices."
+    },
+    {
+     "technique": "instruction-following-judged-on-audio",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/audio/Rubric.tsx:75 The inspected rubric records operator-entered music/SFX ratings, not model judgments of speech instructions."
+    },
+    {
+     "technique": "listening-board",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/audio/strengths.ts:41 Provider comparisons use musical facets rather than candidate speech voices."
+    },
+    {
+     "technique": "normalize-before-you-compare",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/audio/audio.ts:74 This normalization compares musical keys, not reference and recognized speech text."
+    },
+    {
+     "technique": "published-number-comparability",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/audio/strengths.ts:175 The reported rate comes from locally judged takes; no reproduced-versus-published speech number was found."
+    },
+    {
+     "technique": "round-trip-intelligibility",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/audio/audio.ts:21 The exposed measures describe musical and signal properties, not spoken-content error."
+    },
+    {
+     "technique": "three-axes-beside-intelligibility",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/audio/rubric.ts:20 The music rubric does not score a requested speech voice, so its composite is outside this subject."
+    }
+   ],
+   "absenceTerms": [
+    "intelligibility",
+    "wordErrorRate",
+    "speakerSimilarity"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "generated-speech-acceptance",
+   "context": "board-decision-desk",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "generated-speech-acceptance",
+   "context": "board-decision-adapters",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-18T21:29:51.799311+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generated-speech-acceptance"
+   ],
+   "techniques": [
+    "hard-slice-stratification",
+    "instruction-following-judged-on-audio",
+    "listening-board",
+    "normalize-before-you-compare",
+    "published-number-comparability",
+    "round-trip-intelligibility",
+    "three-axes-beside-intelligibility"
+   ],
+   "deviations": 0,
+   "context": "audio-text-producers",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-18T21:29:51.799311+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generated-speech-acceptance"
+   ],
+   "techniques": [
+    "hard-slice-stratification",
+    "instruction-following-judged-on-audio",
+    "listening-board",
+    "normalize-before-you-compare",
+    "published-number-comparability",
+    "round-trip-intelligibility",
+    "three-axes-beside-intelligibility"
+   ],
+   "deviations": 0,
+   "context": "audio-hunt-arrange",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-18T21:29:51.799311+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generated-speech-acceptance"
+   ],
+   "techniques": [
+    "hard-slice-stratification",
+    "instruction-following-judged-on-audio",
+    "listening-board",
+    "normalize-before-you-compare",
+    "published-number-comparability",
+    "round-trip-intelligibility",
+    "three-axes-beside-intelligibility"
+   ],
+   "deviations": 0,
+   "context": "audio-lessons-measures",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

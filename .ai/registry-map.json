@@ -2290,7 +2290,11 @@
           "revision": 2,
           "changedAt": "2026-09-30",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/arrange.ts:29 Context-directory and repository searches found no intelligibility, wordErrorRate or speakerSimilarity matches, and the inspected hunt and arrangement models restrict their audio kinds to music and sound effects.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:944f40c9b53212c0",
+          "evaluatedRevision": 2
         },
         {
           "subject": "structured-output",
@@ -2540,7 +2544,11 @@
           "revision": 2,
           "changedAt": "2026-09-30",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/rubric.ts:16 Context-directory and repository searches found no intelligibility, wordErrorRate or speakerSimilarity matches, and these scoring and learning models explicitly cover music and sound effects.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:944f40c9b53212c0",
+          "evaluatedRevision": 2
         },
         {
           "subject": "scoring-rubrics",
@@ -2689,7 +2697,11 @@
           "revision": 2,
           "changedAt": "2026-09-30",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/producers/src/voice/define.ts:19 Context-directory and repository searches found no intelligibility, wordErrorRate or speakerSimilarity matches, while the voice producer explicitly refuses live speech generation and supplies silent dry takes.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:944f40c9b53212c0",
+          "evaluatedRevision": 2
         },
         {
           "subject": "test-harness",
