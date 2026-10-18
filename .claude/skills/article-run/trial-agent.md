@@ -42,7 +42,10 @@ Trial dir: `<TRIAL_DIR>`. `trial.json` names the subject; `brief/` holds the sub
 has it today. Do not edit either.
 
 Run every pipeline command in the Bash tool (POSIX syntax) from the repository root (your starting
-directory), always with the trials root set to the trial dir's parent, exactly like this:
+directory, unless the parent names another one: then `cd` there at the start of every command,
+because the shell's directory can reset between calls), always with the trials root set to the
+trial dir's parent, exactly like this (add `AI_REGISTRY_DIR=<path>` beside it when the parent gives
+one):
 
     ARTICLES_TRIALS_DIR="<TRIAL_DIR>/.." npx tsx pipeline/article.mts trial <verb> <TRIAL_ID> --json
 
@@ -164,7 +167,15 @@ STEPS
    arguments, started without a shell: a pipe, `&&` or a redirect goes through `bash -c "..."` or a
    script inside `harness/`, and on Windows a `.cmd` shim (`npx`, `npm`) through `cmd /c ...`.
    Pilots are recorded and never count. Use them to see that both arms run and to measure each
-   arm's spread for step 5. Keep pilot model calls to a handful.
+   arm's spread for step 5. Pilot model calls: at most 10 unless a pilot exposed a harness defect
+   (then say which, and how many more it cost, in the design card); the first trials ran 13 and 22
+   pilot sessions where "a handful" was the only bar. On Windows, a native Python cannot open a
+   `/c/...` path: hand it `C:/...` paths.
+
+   A PILOT AT THE CEILING predicts a null. When both arms score the metric's best possible value in
+   every pilot (8 of 8 checks, 100 percent), the trial can only end `null`: harden the task until
+   the pilots leave room on both sides, or say in frame.md that a null is the expected and
+   intended result and why it is still worth measuring.
 
    Make the harness record everything results.json will need: every observation of the metric per
    arm, each guard metric per arm, the evidence for each control (versions, model ids, input
@@ -214,7 +225,10 @@ reasoning and how failures are scored), `validity.json`, `prereg.json` (the desi
 (the code and the pilots).
 
 Run every pipeline command in the Bash tool (POSIX syntax) from the repository root (your starting
-directory), always with the trials root set to the trial dir's parent, exactly like this:
+directory, unless the parent names another one: then `cd` there at the start of every command,
+because the shell's directory can reset between calls), always with the trials root set to the
+trial dir's parent, exactly like this (add `AI_REGISTRY_DIR=<path>` beside it when the parent gives
+one):
 
     ARTICLES_TRIALS_DIR="<TRIAL_DIR>/.." npx tsx pipeline/article.mts trial <verb> <TRIAL_ID> --json
 
@@ -283,11 +297,16 @@ STEPS
    - `modelCalls`: the model calls the measured execs made. Over `budget.modelCalls` voids the
      trial.
 
-5. Write `<TRIAL_DIR>/REPORT.md`: what ran (the measured commands and their durations, from
-   exec.jsonl), the versions of everything that mattered, every anomaly (a timeout, a crashed
-   observation and how it was scored, a harness change after the seal), what surprised you, and the
-   result read against `## Prior` in frame.md: a discovery (the evidence moved you) or a mirror
-   (you found what you expected). A mirror is not a failure; an unexamined one is.
+5. Compose the trial's REPORT (do NOT write the file: the agent harness refuses a subagent's
+   report file, "Subagents should return findings as text", measured 2 of 2 trials on 2026-10-18;
+   the orchestrator saves your text as `<TRIAL_DIR>/REPORT.md`). It holds: what ran (the measured
+   commands and their durations, from exec.jsonl), the versions of everything that mattered, every
+   anomaly (a timeout, a crashed observation and how it was scored, a harness change after the
+   seal, a grading rule that scored a right answer wrong), what surprised you, and the result read
+   against `## Prior` in frame.md: a discovery (the evidence moved you) or a mirror (you found what
+   you expected). A mirror is not a failure; an unexamined one is. Put it in your reply (step 7)
+   as markdown under a line that reads exactly `=== REPORT.md ===`, starting with
+   `# Report: <TRIAL_ID>`.
 
 6. Close:
 
@@ -297,7 +316,7 @@ STEPS
    with `bad-results`, it names every problem: fix how results.json reports what was recorded, never
    an observation. A `void` verdict is a result too (the close files its registry lead): report it.
 
-7. Reply with this card and STOP.
+7. Reply with this card, then the `=== REPORT.md ===` line and the report (step 5), and STOP.
 
    ```
    TRIAL <TRIAL_ID>   verdict <upheld|challenged|null|void>: <reason, from verdict.json>

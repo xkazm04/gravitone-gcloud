@@ -167,6 +167,14 @@ npx tsx pipeline/article.mts trial check <id> --json
 - **n or the band cannot separate the arms**: the verdict compares the mean difference with the
   band and runs no significance test, so as a rough bar the band should exceed
   `2 x sd x sqrt(2 / n)` with the pilot's sd (measurement-honesty/noise-band-and-hysteresis);
+- **both arms piloted at the metric's ceiling** (an sd of 0 is not low noise, it is no room): the
+  trial can only end `null`. Keep it only when frame.md says the null is the intended result and
+  why it teaches something; otherwise send it back once to harden the task (2026-10-18:
+  agent-instruction-files piloted 8 of 8 in both arms and was kept as a deliberate null);
+- **a guard the winning arm can clear only by its grader's leniency or miss only by its grader's
+  strictness**: read the grading rule in the harness against a few pilot answers (2026-10-18:
+  prompt-assembly's whole-token key scored "Foxglove" wrong against "Team Foxglove", and the
+  alternative met its 0.9 accuracy guard with no margin);
 - **the golden arm is not the rule as written** (measurement-honesty/the-baseline-is-the-untouched-path),
   or the design keeps a best of several runs (eval-harness/selection-over-noise);
 - **validity is `stale` or `untestable`**, or `trial check` fails.
@@ -206,9 +214,12 @@ fresh `Agent` (`general-purpose`, `model: "sonnet"`) with the same RUN text: it 
 from the trial dir. A trial needing exclusive hardware gets its RUN alone, before or after the
 others, never beside them.
 
-Each agent seals, measures every command through `trial exec`, writes `results.json` and
-`REPORT.md`, runs `trial close` and replies with its verdict card. Confirm from the store, not the
-card:
+Each agent seals, measures every command through `trial exec`, writes `results.json`, runs
+`trial close` and replies with its verdict card followed by a `=== REPORT.md ===` line and the
+report. **Save that report yourself** as `<trialDir>/REPORT.md`, verbatim, under a one-line note
+that you transcribed it: the agent harness refuses a subagent's report file ("Subagents should
+return findings as text"; 2 of 2 trials on 2026-10-18), and the writer and the reviewers read
+`REPORT.md`, so it must exist before step 7. Confirm the verdict from the store, not the card:
 
 ```bash
 npx tsx pipeline/article.mts trial status <id> --json

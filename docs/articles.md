@@ -96,7 +96,7 @@ collision. The types are in `lib/articles/types.ts` ("the trial"), the store in
 | `exec.jsonl`, `exec-logs/<k>.log` | `trial exec` | one `TrialExecRecord` per command (pilot or measured, exit code, duration, timed out) and its output |
 | `results.json` | the agent's harness | `TrialResults`: per arm the observations and one value per guard; each control held or not, with its evidence; the model calls made |
 | `verdict.json` | `trial close` | `TrialVerdict`, computed by code, never by a model |
-| `REPORT.md` | agent | what ran, the versions, the anomalies, the result read against the prior |
+| `REPORT.md` | orchestrator, from the agent's reply | what ran, the versions, the anomalies, the result read against the prior. The agent returns it as text: the agent harness refuses a subagent's report file |
 | `drop.json` | `trial drop` | `{reason, at}` of a trial closed without a verdict |
 
 ### The verbs
