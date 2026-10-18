@@ -142,6 +142,14 @@ async function prepareTrial(trialId: string, topic: ArticleTopic, deps: EngineDe
   const { prereg, verdict } = detail;
   if (verdict.verdict !== rec.verdict) throw new ArticleError(`trial ${trialId}: trial.json says ${rec.verdict}, verdict.json says ${verdict.verdict}`, 500, "trial-incomplete");
   if (`${prereg.subject.bundle}/${prereg.subject.slug}` !== subject) throw new ArticleError(`trial ${trialId}: trial.json is on ${subject}, prereg.json on ${prereg.subject.bundle}/${prereg.subject.slug}`, 500, "trial-incomplete");
+  // The agent's account of the experiment is the writer's and the reviewers' only view of what
+  // happened beyond the numbers (anomalies, grading artifacts, the prior). The agent harness
+  // refuses a subagent's report file, so the ORCHESTRATOR saves it from the agent's reply; a rule
+  // that must always hold is a gate, not a line in the skill (agent-instruction-files/
+  // enforcement-demotion). Measured: 2 of 2 trials on 2026-10-18 reached here without one.
+  if (!detail.report?.trim()) {
+    throw new ArticleError(`trial ${trialId} has no REPORT.md: save the RUN agent's report (the text after its "=== REPORT.md ===" line) into the trial directory first`, 409, "trial-no-report");
+  }
 
   const ref: ArticleTrialRef = {
     id: rec.id,

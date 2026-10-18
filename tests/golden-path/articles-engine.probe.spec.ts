@@ -20,7 +20,7 @@
 //     every writer turn and reviewer reads the experiment, the trial prompt
 //     sections and the two trial check items; a void, unclosed, dropped, taken,
 //     missing or mismatched trial creates nothing
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 
@@ -454,6 +454,11 @@ test("trial: a void, an unclosed, a dropped, a taken, a missing or a mismatched 
   await expect(create(seedTrial({ id: "t-sealed", status: "sealed" }))).rejects.toMatchObject({ status: 409, code: "trial-not-closed" });
   await expect(create(seedTrial({ id: "t-dropped", verdict: "none" }))).rejects.toMatchObject({ status: 400, code: "trial-void" });
   await expect(create("t-nowhere")).rejects.toMatchObject({ status: 404, code: "no-trial" });
+  // The agent harness refuses a subagent's REPORT.md; the orchestrator must save it, and a
+  // trial without one is refused rather than written up blind to its anomalies.
+  const unreported = seedTrial({ id: "t-unreported" });
+  rmSync(path.join(process.env.ARTICLES_TRIALS_DIR!, unreported, "REPORT.md"));
+  await expect(create(unreported)).rejects.toMatchObject({ status: 409, code: "trial-no-report" });
   const ok = seedTrial();
   await expect(create(ok, { kind: "free", text: "token budgets" })).rejects.toMatchObject({ status: 400, code: "trial-mismatch" });
   await expect(create(ok, { kind: "subject", bundle: "technical-writing", subject: "article-structure", text: "" })).rejects.toMatchObject({ status: 400, code: "trial-mismatch" });

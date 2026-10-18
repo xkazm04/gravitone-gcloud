@@ -245,7 +245,8 @@ done
 Each run's id is linked into its trial within seconds of creation:
 `python -c "import json,sys;print(json.load(open(sys.argv[1]+'/trial.json')).get('runId','-'))" <trialDir>`.
 A trial that never gets one and whose `.out` holds `{error, code}` was refused before anything was
-created (`trial-not-closed`, `trial-void`, `trial-taken`, `trial-mismatch`, `no-trial`): report
+created (`trial-not-closed`, `trial-void`, `trial-taken`, `trial-mismatch`, `no-trial`,
+`trial-no-report` when step 6's REPORT.md was not saved): report
 the code.
 
 Four parallel `run` processes are fine (separate run dirs, nothing shared but the seats); measured

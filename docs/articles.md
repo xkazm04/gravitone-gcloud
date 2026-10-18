@@ -180,7 +180,7 @@ npx tsx pipeline/article.mts run --trial <id> [--json]
 
 `createRun({topic, trial})` (`lib/articles/runCreate.ts`) validates before it creates anything:
 404 `no-trial`, 409 `trial-not-closed`, 400 `trial-void` (a void verdict, or a dropped trial that
-has none), 409 `trial-taken` (another run holds the trial), 400 `trial-mismatch` (a topic that is
+has none), 409 `trial-taken` (another run holds the trial), 409 `trial-no-report` (no `REPORT.md`: the orchestrator has not yet saved the RUN agent's report, which the agent harness will not let the agent write itself), 400 `trial-mismatch` (a topic that is
 not the trial's subject). The topic is the trial's subject and the angle its prereg's `question`.
 The run then gets:
 
