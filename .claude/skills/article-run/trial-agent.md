@@ -142,6 +142,12 @@ STEPS
      pair when the spread clears one SD"; the reviewers' METHOD lens called the verdict a test of a
      reading the rule never made.) `arms[1]` is the alternative at its best, as its own documentation
      describes it.
+   - THE WORKLOAD MEETS THE CLAIM'S OWN CONDITIONS. A rule for material that is "rarely needed"
+     is tested on requests that mostly do not need it; a rule "above N items" is tested above N.
+     Name in frame.md the one setting the verdict hinges on (a price, a cache lifetime, a size) and
+     why that value is the realistic one. (2026-10-18: prompt-assembly's every question needed the
+     "rarely needed" material, and its verdict turned on a 1-hour cache-write rate the harness had
+     chosen; both came back as METHOD findings.)
    - ONE optimized metric, `direction` `higher` or `lower`. Everything else that matters
      (correctness, failures, cost) is a guard in `thresholds` (`op` `>=` or `<=`, a finite value,
      each `metric` id once). An arm that misses any guard cannot win.
