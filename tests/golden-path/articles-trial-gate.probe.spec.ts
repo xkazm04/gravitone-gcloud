@@ -68,6 +68,11 @@ const TECHNIQUE_FILE = `${SUBJECT}/techniques/count-before-send.md`;
 
 /* ── the record, pure ─────────────────────────────────────────────────── */
 
+// Home-directory paths the record must scrub, built at runtime so that this file itself holds no
+// literal machine home path (no-machine-paths.probe.spec.ts reads every tracked file).
+const HOME_WIN = (rest: string) => ["C:", "Users", "someone", rest].join("\\");
+const HOME_NIX = (rest: string) => ["", "home", "someone", rest].join("/");
+
 test("record: an application in the registry's experiment convention, with no machine path and no pilot", async () => {
   const dir = path.join(box.dir, "exp-run");
   mkdirSync(dir, { recursive: true });
@@ -75,7 +80,7 @@ test("record: an application in the registry's experiment convention, with no ma
   const t = (await readTrialDetail(path.join(dir, "experiment")))!;
   const execs: TrialExecRecord[] = [
     ...t.execs,
-    { at: "2026-10-16T15:20:00.000Z", cmd: ["C:\\Users\\someone\\nodejs\\node.exe", "replay.mjs", "--out=C:\\Users\\someone\\t\\x.json", "--log=/home/someone/t/log.txt", "--url=https://example.org/a/b"], pilot: false, exitCode: 0, durationMs: 900, timedOut: false },
+    { at: "2026-10-16T15:20:00.000Z", cmd: [HOME_WIN("nodejs\\node.exe"), "replay.mjs", `--out=${HOME_WIN("t\\x.json")}`, `--log=${HOME_NIX("t/log.txt")}`, "--url=https://example.org/a/b"], pilot: false, exitCode: 0, durationMs: 900, timedOut: false },
   ];
   const input = { prereg: t.prereg, verdict: t.verdict, results: t.results, execs, trialId: seeded.ref.id };
   const md = applicationMarkdown(input);

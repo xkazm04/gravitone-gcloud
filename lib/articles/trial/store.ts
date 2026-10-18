@@ -24,10 +24,11 @@
 import { execFile, spawn, type ChildProcess } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createWriteStream } from "node:fs";
-import { appendFile, mkdir, open, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { stripCredentials } from "@/lib/agent/reviewerEnv";
+import { acquireLock } from "@/lib/diskTx";
 import { killTree, seatOnlyEnv } from "@/lib/claudeCli";
 import { cwdBoundGitEnv } from "@/lib/gitEnv";
 
@@ -157,8 +158,6 @@ export async function readTrialDetail(dir: string, root: string = process.cwd())
 
 /* ── locks ─────────────────────────────────────────────────────────────────── */
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
 function pidAlive(pid: number): boolean {
   try {
     process.kill(pid, 0);
@@ -168,36 +167,18 @@ function pidAlive(pid: number): boolean {
   }
 }
 
-const LOCK_STALE_MS = 30_000;
-const LOCK_WAIT_MS = 10_000;
-
-/** Exclusive-create lock around a few milliseconds of JSON: the same shape as the run lock in
- *  lib/articles/store.ts, for the same reason (the CLI is not the only process; an orchestrator
- *  drives several trial agents, each with its own shell, at once). */
+/** The trial's short JSON lock, from the repo's one lock kernel (lib/diskTx): the same shape as the
+ *  run lock in lib/articles/store.ts, for the same reason (the CLI is not the only process; an
+ *  orchestrator drives several trial agents, each with its own shell, at once). */
 async function withLock<T>(lock: string, fn: () => Promise<T>): Promise<T> {
-  await mkdir(path.dirname(lock), { recursive: true });
-  const started = Date.now();
-  for (;;) {
-    try {
-      const fh = await open(lock, "wx");
-      await fh.writeFile(JSON.stringify({ pid: process.pid, at: new Date().toISOString() }));
-      await fh.close();
-      break;
-    } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
-      const age = await stat(lock).then((s) => Date.now() - s.mtimeMs).catch(() => 0);
-      if (age > LOCK_STALE_MS) {
-        await rm(lock, { force: true });
-        continue;
-      }
-      if (Date.now() - started > LOCK_WAIT_MS) throw new ArticleError(`${lock} is held and was not released in ${LOCK_WAIT_MS} ms`, 409, "locked");
-      await sleep(20 + Math.random() * 30);
-    }
-  }
+  const release = await acquireLock(lock, {
+    by: "trial",
+    onTimeout: (file, waitMs) => new ArticleError(`${file} is held and was not released in ${waitMs} ms`, 409, "locked"),
+  });
   try {
     return await fn();
   } finally {
-    await rm(lock, { force: true });
+    await release();
   }
 }
 
@@ -212,19 +193,15 @@ const withTrialLock = <T>(dir: string, fn: () => Promise<T>) => withLock(path.jo
  */
 async function acquireExecLease(dir: string): Promise<() => Promise<void>> {
   const file = path.join(dir, ".exec");
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const fh = await open(file, "wx");
-      await fh.writeFile(JSON.stringify({ pid: process.pid, at: new Date().toISOString() }));
-      await fh.close();
-      return () => rm(file, { force: true });
-    } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
-      if (await execRunning(dir)) break;
-      await rm(file, { force: true });
-    }
-  }
-  throw new ArticleError(`trial ${path.basename(dir)} is running another exec`, 409, "exec-busy");
+  // Liveness is by pid, not by age: a measured exec may hold the lease for the whole wall budget.
+  // A lease whose pid is gone is a killed CLI and is broken here; the exclusive create itself is
+  // lib/diskTx's, with no age-based breaking and no waiting (a second exec is refused, not queued).
+  if (!(await execRunning(dir))) await rm(file, { force: true });
+  return acquireLock(file, {
+    by: "trial exec",
+    timing: { staleMs: Number.MAX_SAFE_INTEGER, waitMs: 0 },
+    onTimeout: () => new ArticleError(`trial ${path.basename(dir)} is running another exec`, 409, "exec-busy"),
+  });
 }
 
 async function execRunning(dir: string): Promise<boolean> {

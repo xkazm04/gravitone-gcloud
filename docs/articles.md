@@ -122,8 +122,10 @@ npx tsx pipeline/article.mts trial status [<id>] [--json]
 - `open` resolves the subject through the registry index (404 `no-subject`) and refuses one that
   an unclosed trial holds (409 `trial-claimed`).
 - `check` validates prereg.json and validity.json, checks that the prereg names the trial's subject
-  and one of its techniques (the registry index's, else `brief/techniques/`), and marks the trial
-  `framed`. Every problem in a file is named at once (400 `bad-prereg`, 400 `bad-validity`). It is
+  and one of its techniques (the registry index's, else `brief/techniques/`) and a `stack` the
+  subject's bundle accepts for an application (react, rust, sql, node, process, plus the bundle
+  `index.md`'s `stacks:`: the registry's bundle gate would otherwise fail it only at landing), and
+  marks the trial `framed`. Every problem in a file is named at once (400 `bad-prereg`, 400 `bad-validity`). It is
   the design the orchestrator vets before any money is spent.
 - `seal` validates again and writes `seal.json`. Re-sealing the same bytes is a no-op; different
   bytes are 409 `already-sealed`.

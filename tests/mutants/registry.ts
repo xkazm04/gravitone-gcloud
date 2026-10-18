@@ -368,4 +368,20 @@ export const MUTANTS: Mutant[] = [
     replace: "",
     why: "The judging queue hears imports and returns before the agent batch somebody is waiting on.",
   },
+  {
+    id: "trial-verdict-band-ignored",
+    probe: "articles-trial.probe.spec.ts",
+    file: "lib/articles/trial/verdict.ts",
+    find: "  } else if (A.guardsCleared && delta > band) {",
+    replace: "  } else if (A.guardsCleared && delta > -band) {",
+    why: "A trial whose arms differ by less than the sealed band is published as `challenged`: a null result becomes a registry amendment and an article claiming the golden path lost, on noise.",
+  },
+  {
+    id: "trial-record-always-better",
+    probe: "articles-trial-gate.probe.spec.ts",
+    file: "lib/articles/trial/registryRecord.ts",
+    find: "  return v === \"upheld\" ? \"better\" : \"not-better\";",
+    replace: "  return \"better\";",
+    why: "A challenged trial lands in the registry as `ab_verdict: better`: the measurement that beat the golden path is recorded as proof for it, and the registry's two-not-better demotion rule can never fire.",
+  },
 ];
