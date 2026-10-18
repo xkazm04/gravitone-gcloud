@@ -7477,7 +7477,11 @@
           "revision": 10,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/ledger/v1/facts.ts:72 Replacing missing effective times with the sync execution timestamp conflates recorded time with event time and prevents the ledger from recording genuine timestamp absence.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:154304c5d9578971",
+          "evaluatedRevision": 10
         },
         {
           "subject": "mcp-tools",
@@ -7595,7 +7599,11 @@
           "revision": 10,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/ledger/v1/sources/sound.ts:68 Passing nullable effective timestamps into f.recorded causes missing times to default to the sync clock, misattributing historical decisions to the time of projection.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:154304c5d9578971",
+          "evaluatedRevision": 10
         },
         {
           "subject": "mcp-tools",
@@ -12900,7 +12908,11 @@
           "revision": 10,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:26 Providing only a single formatted time string property prevents UI consumers from inspecting and contrasting effective time against recorded time.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:154304c5d9578971",
+          "evaluatedRevision": 10
         },
         {
           "subject": "long-form-reading-surface",

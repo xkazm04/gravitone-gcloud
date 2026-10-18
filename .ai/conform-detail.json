@@ -6605,6 +6605,145 @@
           "evidence": "packages/ui/src/components/audio/rubric.ts:20 The music rubric does not score a requested speech voice, so its composite is outside this subject."
         }
       ]
+    },
+    "86dbb3bb-044c-4ed3-810a-93d088bcad64/audit-logging": {
+      "context": "ledger-v1-sources",
+      "subject": "audit-logging",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T21:47:20.645Z",
+      "worker": "c8fd5e99-17a1-4fcd-b394-ad0723cd1421",
+      "techniques": [
+        {
+          "technique": "two-clock-records",
+          "verdict": "deviation",
+          "evidence": "lib/ledger/v1/sources/sound.ts:68 Nullable verdict timestamp t.judgedAt is passed to f.recorded, which replaces null with the sync execution timestamp."
+        },
+        {
+          "technique": "decision-records",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sources/forge.ts:136 Candidate cull verdicts record human and model judgment acts keyed by candidate identity and judgment timestamp."
+        },
+        {
+          "technique": "best-effort-with-accounting",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sources/spend.ts:46 The spend adapter accounts for rows evicted after the 1-hour window by projecting cumulative unevicted counters."
+        },
+        {
+          "technique": "append-only-design",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sources/articles.ts:141 Source adapters project v1 records purely into immutable append-only events without mutating source or ledger history."
+        },
+        {
+          "technique": "write-path-sanitization",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sources/articles.ts:139 Event payloads store normalized references and identifiers rather than embedding large unscrubbed bodies."
+        }
+      ]
+    },
+    "fe524e46-e5d6-4aba-b475-fe39c41f3819/audit-logging": {
+      "context": "run-records-and-slots",
+      "subject": "audit-logging",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T21:47:20.645Z",
+      "techniques": [
+        {
+          "technique": "append-only-design",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/records/schema.ts:93 Project, part, and run entities expose in-place UPDATE mutations rather than maintaining immutable history via append-only revisions."
+        },
+        {
+          "technique": "best-effort-with-accounting",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/slots/outcome.ts:57 Publication records act as fail-closed control records participating directly in the publishing transaction."
+        },
+        {
+          "technique": "write-chokepoint",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/records/write.ts:47 All plan mutation actions route ledger event writes through the single projectEvent helper within the mutation transaction."
+        },
+        {
+          "technique": "record-axis-predicate",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/slots/read.ts:43 Slot reads query current mutable rows without implementing a held_at(T) record-axis predicate to rewind to historical state."
+        },
+        {
+          "technique": "tamper-evidence",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/records/receipt.ts:112 Static launch receipts generate canonical SHA-256 tokens binding input lines and queue state to prove integrity at confirmation."
+        }
+      ],
+      "withdrawn": {
+        "worker": "c8fd5e99-17a1-4fcd-b394-ad0723cd1421",
+        "state": "deviation",
+        "at": "2026-10-18T21:48:30.149534+00:00",
+        "reason": "reviewer (sonnet): schema.ts:93 is a compare-and-set UPDATE on the mutable projects table, which is operational state and not the audit log. write.ts shows each mutation appending a ledger event in the same transaction, so 'destroys prior state with no append-only record' is not supported. I also could not confirm the"
+      }
+    },
+    "2e702395-189e-4eb9-910c-dc4b76ff6e9a/audit-logging": {
+      "context": "ui-ledger-timeline",
+      "subject": "audit-logging",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T21:47:20.645Z",
+      "worker": "c8fd5e99-17a1-4fcd-b394-ad0723cd1421",
+      "techniques": [
+        {
+          "technique": "audit-querying",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/ledgerlink/LedgerLink.tsx:7 LedgerLink meets the reader where the subject lives by providing in-context navigation to the subject's audit trail."
+        },
+        {
+          "technique": "two-clock-records",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:26 The event row renders a single time column with an approximate marker for derived time rather than displaying both clocks."
+        },
+        {
+          "technique": "tamper-evidence",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:49 The event row does not render or indicate an integrity verification verdict (verified, tampered, unsigned, unverifiable)."
+        }
+      ]
+    },
+    "bd05d347-c5c6-4eb4-8de2-b68a6102ac01/audit-logging": {
+      "context": "ledger-v1-projection-core",
+      "subject": "audit-logging",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T21:47:20.645Z",
+      "worker": "c8fd5e99-17a1-4fcd-b394-ad0723cd1421",
+      "techniques": [
+        {
+          "technique": "two-clock-records",
+          "verdict": "deviation",
+          "evidence": "lib/ledger/v1/facts.ts:72 Defaulting missing rawAt timestamps to now violates the requirement that unknown effective time remain stored and queried as unknown."
+        },
+        {
+          "technique": "retention-and-partitioning",
+          "verdict": "deviation",
+          "evidence": "lib/ledger/v1/sync.ts:130 The projection sync appends batches without evaluating or enforcing any retention horizon at the insertion point."
+        },
+        {
+          "technique": "best-effort-with-accounting",
+          "verdict": "deviation",
+          "evidence": "lib/ledger/v1/sync.ts:167 Source failure accounting is recorded directly into the ledger SQLite store, sharing fate with the ledger being monitored."
+        },
+        {
+          "technique": "write-chokepoint",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sync.ts:151 syncV1 acts as the single door for projecting v1 sources, routing all events through appendAll and recording outcomes uniformly."
+        },
+        {
+          "technique": "append-only-design",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sync.ts:133 The projection sync only appends events using appendOnce and never performs updates or deletions."
+        }
+      ]
     }
   }
 }

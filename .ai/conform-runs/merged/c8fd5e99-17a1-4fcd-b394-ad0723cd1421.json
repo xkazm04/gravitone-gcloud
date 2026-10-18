@@ -1,0 +1,227 @@
+{
+  "schema": "conform-run/1",
+  "worker": "c8fd5e99-17a1-4fcd-b394-ad0723cd1421",
+  "subject": "audit-logging",
+  "evaluatedAt": "2026-10-18T21:47:20.645255+00:00",
+  "provider": "agy",
+  "model": "gemini-3.8-flash-high",
+  "pairs": [
+    {
+      "context": "ledger-screen",
+      "subject": "audit-logging",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "app/(studio)/ledger/_ledger/vocab.ts:39 Conflating effective and recorded time by defaulting null occurredAt to recorded time prevents queries and the studio UI from distinguishing when an event occurred from when it was ingested.",
+      "techniques": [
+        {
+          "technique": "audit-querying",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/read.ts:15 Keyset pagination, facet exclusion counts, and scan budgets provide bounded querying with explicit feedback."
+        },
+        {
+          "technique": "two-clock-records",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/ledger/_ledger/vocab.ts:39 Defaulting null effective time to recorded time conflates the two clocks and neither filter nor export names which clock it ranges over."
+        },
+        {
+          "technique": "tamper-evidence",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/ledger/_ledger/read.ts:87 Reads do not verify row hash chains on read or compute an integrity verdict for rendered records."
+        },
+        {
+          "technique": "append-only-design",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/actions.ts:28 Studio ledger server actions expose only read operations and no mutation or deletion surface."
+        }
+      ]
+    },
+    {
+      "context": "ledger-v1-sources",
+      "subject": "audit-logging",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "lib/ledger/v1/sources/sound.ts:68 Passing nullable effective timestamps into f.recorded causes missing times to default to the sync clock, misattributing historical decisions to the time of projection.",
+      "techniques": [
+        {
+          "technique": "two-clock-records",
+          "verdict": "deviation",
+          "evidence": "lib/ledger/v1/sources/sound.ts:68 Nullable verdict timestamp t.judgedAt is passed to f.recorded, which replaces null with the sync execution timestamp."
+        },
+        {
+          "technique": "decision-records",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sources/forge.ts:136 Candidate cull verdicts record human and model judgment acts keyed by candidate identity and judgment timestamp."
+        },
+        {
+          "technique": "best-effort-with-accounting",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sources/spend.ts:46 The spend adapter accounts for rows evicted after the 1-hour window by projecting cumulative unevicted counters."
+        },
+        {
+          "technique": "append-only-design",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sources/articles.ts:141 Source adapters project v1 records purely into immutable append-only events without mutating source or ledger history."
+        },
+        {
+          "technique": "write-path-sanitization",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sources/articles.ts:139 Event payloads store normalized references and identifiers rather than embedding large unscrubbed bodies."
+        }
+      ]
+    },
+    {
+      "context": "ui-ledger-timeline",
+      "subject": "audit-logging",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:26 Providing only a single formatted time string property prevents UI consumers from inspecting and contrasting effective time against recorded time.",
+      "techniques": [
+        {
+          "technique": "audit-querying",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/ledgerlink/LedgerLink.tsx:7 LedgerLink meets the reader where the subject lives by providing in-context navigation to the subject's audit trail."
+        },
+        {
+          "technique": "two-clock-records",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:26 The event row renders a single time column with an approximate marker for derived time rather than displaying both clocks."
+        },
+        {
+          "technique": "tamper-evidence",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:49 The event row does not render or indicate an integrity verification verdict (verified, tampered, unsigned, unverifiable)."
+        }
+      ]
+    },
+    {
+      "context": "ledger-v1-projection-core",
+      "subject": "audit-logging",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "lib/ledger/v1/facts.ts:72 Replacing missing effective times with the sync execution timestamp conflates recorded time with event time and prevents the ledger from recording genuine timestamp absence.",
+      "techniques": [
+        {
+          "technique": "two-clock-records",
+          "verdict": "deviation",
+          "evidence": "lib/ledger/v1/facts.ts:72 Defaulting missing rawAt timestamps to now violates the requirement that unknown effective time remain stored and queried as unknown."
+        },
+        {
+          "technique": "retention-and-partitioning",
+          "verdict": "deviation",
+          "evidence": "lib/ledger/v1/sync.ts:130 The projection sync appends batches without evaluating or enforcing any retention horizon at the insertion point."
+        },
+        {
+          "technique": "best-effort-with-accounting",
+          "verdict": "deviation",
+          "evidence": "lib/ledger/v1/sync.ts:167 Source failure accounting is recorded directly into the ledger SQLite store, sharing fate with the ledger being monitored."
+        },
+        {
+          "technique": "write-chokepoint",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sync.ts:151 syncV1 acts as the single door for projecting v1 sources, routing all events through appendAll and recording outcomes uniformly."
+        },
+        {
+          "technique": "append-only-design",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sync.ts:133 The projection sync only appends events using appendOnce and never performs updates or deletions."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "audit-logging",
+      "context": "run-records-and-slots",
+      "reason": "withdrawn after review: reviewer (sonnet): schema.ts:93 is a compare-and-set UPDATE on the mutable projects table, which is operational state and not the audit log. write.ts shows each mutation appending a ledger event in the same transaction, so 'destroys prior state with no append-only record' is not supported. I also could not confirm the"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-18T21:47:20.645255+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "audit-logging"
+      ],
+      "techniques": [
+        "append-only-design",
+        "audit-querying",
+        "tamper-evidence",
+        "two-clock-records"
+      ],
+      "deviations": 1,
+      "context": "ledger-screen",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-18T21:47:20.645255+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "audit-logging"
+      ],
+      "techniques": [
+        "append-only-design",
+        "best-effort-with-accounting",
+        "decision-records",
+        "two-clock-records",
+        "write-path-sanitization"
+      ],
+      "deviations": 1,
+      "context": "ledger-v1-sources",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-18T21:47:20.645255+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "audit-logging"
+      ],
+      "techniques": [
+        "append-only-design",
+        "best-effort-with-accounting",
+        "record-axis-predicate",
+        "tamper-evidence",
+        "write-chokepoint"
+      ],
+      "deviations": 1,
+      "context": "run-records-and-slots",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-18T21:47:20.645255+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "audit-logging"
+      ],
+      "techniques": [
+        "audit-querying",
+        "tamper-evidence",
+        "two-clock-records"
+      ],
+      "deviations": 1,
+      "context": "ui-ledger-timeline",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-18T21:47:20.645255+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "audit-logging"
+      ],
+      "techniques": [
+        "append-only-design",
+        "best-effort-with-accounting",
+        "retention-and-partitioning",
+        "two-clock-records",
+        "write-chokepoint"
+      ],
+      "deviations": 1,
+      "context": "ledger-v1-projection-core",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
+}
