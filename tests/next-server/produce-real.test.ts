@@ -262,7 +262,10 @@ describe("the real produce port", () => {
     expect(jobs()).toHaveLength(before + 1);
   });
 
-  it("launches an image sweep as a forge run: priced without writing, prepared on the confirm, one dry gpu.local job", async () => {
+  // The one case here that starts a process: the confirm runs `python forge.py --prepare`
+  // (lib/producers/forge.ts prepareForgeRun), and that interpreter's start alone measured
+  // 1.3-5.5 s on this box - the 5 s default was a budget for no process at all.
+  it("launches an image sweep as a forge run: priced without writing, prepared on the confirm, one dry gpu.local job", { timeout: 60_000 }, async () => {
     // The style and the stock scene plan are the checkout's (pipeline/foundry/styles.json, plans/dry-run.json);
     // the plan's frame is the temp one the hoisted block wrote (FOUNDRY_FRAMES_DIR).
     const input: ComposerInput = { lane: "image", text: "A harbor at night.", mechanisms: ["text", "ref-early"], styleId: "ink-graphic-novel" };
