@@ -107,7 +107,7 @@ const { ArticleError, readRun, runDir } = await import("../lib/articles/store");
 const { approveArticle, articleJobsOf, articleKernel, driveArticle, launchArticle, loopDriver, resumeArticle, reworkArticle } = await import("../lib/producers/article");
 const { closeProcessKernel } = await import("@gt/kernel/process");
 type AppError = import("@gt/domain/errors").AppError;
-const { EFFORT_LEVELS } = await import("../lib/articles/types");
+const { EFFORT_LEVELS, WORKING } = await import("../lib/articles/types");
 const { checkTrial, closeTrial, describeTrial, dropTrial, execTrial, openTrial, readTrial, scanTrials, sealTrial } = await import("../lib/articles/trial/store");
 const { rankTrialCandidates } = await import("../lib/articles/trial/candidates");
 const { leadsFile } = await import("../lib/articles/trial/leads");
@@ -312,7 +312,15 @@ async function main() {
         return;
       }
       const { runs, damaged } = await listArticleRuns();
-      if (JSON_OUT) return emit(JSON.stringify({ runs: runs.map(brief), damaged }, null, 2));
+      // `driving`: the working runs a kernel job is running (the claim, not a pid file), so an
+      // orchestrator sizing its batch does not re-implement the read.
+      const driving: string[] = [];
+      const kernel = articleKernel();
+      if (kernel.ok) for (const r of runs) if (WORKING.includes(r.status)) {
+        const jobs = articleJobsOf(r.id, kernel.value.store);
+        if (jobs.ok && jobs.value.some((j) => j.state === "running")) driving.push(r.id);
+      }
+      if (JSON_OUT) return emit(JSON.stringify({ runs: runs.map(brief), damaged, driving }, null, 2));
       if (!runs.length) console.log("  (no runs)");
       for (const r of runs) console.log(`  ${r.id.padEnd(56)} ${r.status.padEnd(18)} ${r.topic.text.slice(0, 50)}`);
       if (damaged.length) console.log(`  damaged: ${damaged.join(", ")}`);

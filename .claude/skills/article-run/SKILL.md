@@ -107,10 +107,10 @@ N = the smallest of:
 - 3 minus the article runs already driving.
 
 A run is driving when its status is a working one (`queued`, `researching`, `drafting`,
-`critiquing`, `checking`, `approved`, `landing`) and one of its jobs is `running`: `status <runId>
---json` carries `jobs` (the kernel's claim, not a pid file; `lib/producers/article.ts`). Read that for
-every working run in `status --json`. The same store pass lists runs that failed on `seat-limit` in
-the last 24 hours:
+`critiquing`, `checking`, `approved`, `landing`) and one of its jobs is `running` (the kernel's claim,
+not a pid file; `lib/producers/article.ts`). `npx tsx pipeline/article.mts status --json` carries that
+list as `driving`. Runs that failed on `seat-limit` in the last 24 hours come from this pass over the
+store:
 
 ```bash
 node -e '
