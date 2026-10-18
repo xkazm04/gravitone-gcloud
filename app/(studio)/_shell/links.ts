@@ -51,8 +51,8 @@ export function calendarFor(slotId: string | null): string {
 export function subjectLink(e: Pick<Event, "subject" | "key" | "data">): SubjectLink {
   const { kind, id } = e.subject;
   const source = sourceOf(e);
-  // An article run's v1 page is gone too (/articles/<runId> redirects to its Board packet, which
-  // opens only while the run waits at the gate - a run still drafting, or one landed before the
+  // An article run's v1 page is gone too (/articles/<runId> redirects by the run's state: its Board
+  // packet only while the run waits at the gate - a run still drafting, or one landed before the
   // Board, would be refused there), so every act about the run opens the run's history.
   if (source === "articles") return { label: kind === "run" ? id : item(id), href: ledgerFor(runOf(e) ?? id) };
   // Slots, publications and metrics are the calendar's.

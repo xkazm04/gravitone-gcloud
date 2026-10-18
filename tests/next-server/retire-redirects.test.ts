@@ -1,8 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { IMPORT_HREF, v1StudioTarget, type ImportedPlan } from "../../app/(studio)/studio/[projectId]/redirect.ts";
 import { kernelIdOf } from "../../lib/import/project.ts";
-import { ARTICLE_LANE, articleRunTarget } from "../../app/(studio)/articles/redirect.ts";
+import { ARTICLE_LANE, articleRunAddress, articleRunTarget } from "../../app/(studio)/articles/redirect.ts";
 import { FOUNDRY_TARGET } from "../../app/(studio)/foundry/redirect.ts";
 import { playgroundTarget } from "../../app/(studio)/playground/redirect.ts";
 
@@ -86,13 +90,58 @@ describe("a v1 Articles address", () => {
     expect(ARTICLE_LANE).toBe("/floor?lane=article");
   });
 
-  it("a run's page opens its Board packet - the address the skills print", () => {
-    expect(articleRunTarget("2026-10-14-two-clock-records")).toBe("/board/pkt%3Aarticle%3A2026-10-14-two-clock-records");
+  it("a run at its gate opens its Board packet - the address the skills print", () => {
+    expect(articleRunTarget("2026-10-14-two-clock-records", "awaiting-approval")).toBe("/board/pkt%3Aarticle%3A2026-10-14-two-clock-records");
+  });
+
+  it("a run in any other state opens its history in the Ledger, never a Board refusal", () => {
+    for (const status of ["drafting", "landed", "failed", "rejected", "approved"] as const) {
+      expect(articleRunTarget("2026-10-14-two-clock-records", status)).toBe("/ledger?q=2026-10-14-two-clock-records");
+    }
+    expect(articleRunTarget("2026-10-14-two-clock-records", null)).toBe("/ledger?q=2026-10-14-two-clock-records");
   });
 
   it("an id that cannot be a run id names no run, and lands on the lane", () => {
-    expect(articleRunTarget("Not A Run")).toBe(ARTICLE_LANE);
-    expect(articleRunTarget("")).toBe(ARTICLE_LANE);
-    expect(articleRunTarget("../x")).toBe(ARTICLE_LANE);
+    expect(articleRunTarget("Not A Run", "awaiting-approval")).toBe(ARTICLE_LANE);
+    expect(articleRunTarget("", null)).toBe(ARTICLE_LANE);
+    expect(articleRunTarget("../x", "awaiting-approval")).toBe(ARTICLE_LANE);
+  });
+});
+
+// The reader: the status comes from the run's own run.json in the article store.
+describe("a v1 Articles address, read from the store", () => {
+  let dir = "";
+  const prev = process.env["ARTICLES_STORE_DIR"];
+  const run = (id: string, body: string): void => {
+    mkdirSync(path.join(dir, id), { recursive: true });
+    writeFileSync(path.join(dir, id, "run.json"), body);
+  };
+  beforeAll(() => {
+    dir = mkdtempSync(path.join(tmpdir(), "l74-articles-"));
+    process.env["ARTICLES_STORE_DIR"] = dir;
+    run("at-gate", JSON.stringify({ id: "at-gate", status: "awaiting-approval" }));
+    run("still-drafting", JSON.stringify({ id: "still-drafting", status: "drafting" }));
+    run("went-out", JSON.stringify({ id: "went-out", status: "landed" }));
+    run("torn", "{ not json");
+  });
+  afterAll(() => {
+    if (prev === undefined) delete process.env["ARTICLES_STORE_DIR"];
+    else process.env["ARTICLES_STORE_DIR"] = prev;
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("routes by the status run.json holds", async () => {
+    expect(await articleRunAddress("at-gate")).toBe("/board/pkt%3Aarticle%3Aat-gate");
+    expect(await articleRunAddress("still-drafting")).toBe("/ledger?q=still-drafting");
+    expect(await articleRunAddress("went-out")).toBe("/ledger?q=went-out");
+  });
+
+  it("a run the store has never seen, or cannot read, opens the Ledger", async () => {
+    expect(await articleRunAddress("never-ran")).toBe("/ledger?q=never-ran");
+    expect(await articleRunAddress("torn")).toBe("/ledger?q=torn");
+  });
+
+  it("a junk id lands on the lane without touching the store", async () => {
+    expect(await articleRunAddress("../at-gate")).toBe(ARTICLE_LANE);
   });
 });

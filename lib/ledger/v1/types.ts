@@ -49,7 +49,9 @@ export type LiveJob = {
   readonly progress?: { readonly done: number; readonly total: number; readonly stage?: string };
   readonly attempt?: number;
   readonly error?: string;
-  /** Where v1 shows it. v1's foundry has no per-record URL; the page is the link. */
+  /** Where the job's work is seen now: the Floor lane, the Board or the calendar slot that holds it
+   *  (each adapter's HREF). v1's pages, the foundry's included, retired at the Phase 6 cutover, so
+   *  an adapter points at a route that renders, never at one of them. */
   readonly href: string;
 };
 

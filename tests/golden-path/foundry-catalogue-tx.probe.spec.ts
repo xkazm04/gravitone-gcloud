@@ -334,7 +334,9 @@ test("case 6: no store under lib/ grows its own exclusive-create lock loop — p
   // this card's write set. Neither list may grow.
   const PENDING = ["lib/articles/store.ts", "lib/sound/store.ts"];
   expect(own.filter((f) => f !== "lib/diskTx.ts" && !PENDING.includes(f)), "a new copy of the lock loop").toEqual([]);
-  for (const f of ["lib/publish/store.ts", "lib/foundry/catalogue.ts"]) {
+  // lib/publish/store.ts was the other reader here; it went at L75 with the v1 calendar writer
+  // (the calendar is the kernel's slot tables), so only the catalogue is left to take the lock.
+  for (const f of ["lib/foundry/catalogue.ts"]) {
     const src = stripComments(readFileSync(path.join(process.cwd(), f), "utf8"));
     expect(src, `${f} takes its lock from lib/diskTx`).toMatch(/from "@\/lib\/diskTx"|from "\.\.\/diskTx"/);
   }

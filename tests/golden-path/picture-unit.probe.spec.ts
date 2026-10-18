@@ -30,9 +30,6 @@
 // (tests/next-server/parts-frames.test.ts), and Score/Cut lay the trailer's shots
 // on one clock (tests/next-server/parts-finish.test.ts).
 //
-// The import below has a SIDE EFFECT and must come first.
-import "fake-indexeddb/auto";
-
 import { test, expect } from "@playwright/test";
 
 import {
@@ -43,59 +40,9 @@ import {
   type FramesRender,
 } from "@/lib/frames/frames";
 import { shotsFromBeats, type ShotSourceBeat } from "@/lib/frames/shots";
+import { framesV1ToV2, parseFramesRecord } from "@/lib/frames/picture/migrate";
 import { pictureFromFrames } from "@/lib/score/picture";
-import { __resetSaveSlots } from "@/lib/steps";
 import { RENDERS } from "@/lib/script/renders";
-import { getRecord, openDb, runTx, STEPS_STORE } from "@/lib/studioDb";
-
-/* ──────────────────────────────── the store ───────────────────────────────── */
-
-async function clearSteps() {
-  const db = await openDb();
-  try {
-    await runTx(db, STEPS_STORE, "readwrite", (s) => {
-      s.clear();
-    });
-  } finally {
-    db.close();
-  }
-}
-
-/** Write a record exactly as an older build left it — bypassing every seam. */
-async function putRaw(projectId: string, phase: string, data: Record<string, unknown>) {
-  const db = await openDb();
-  try {
-    await runTx(db, STEPS_STORE, "readwrite", (s) => {
-      s.put({ id: `${projectId}:${phase}`, projectId, phase, data });
-    });
-  } finally {
-    db.close();
-  }
-}
-
-async function getRaw<T = Record<string, unknown>>(projectId: string, phase: string): Promise<T | undefined> {
-  const db = await openDb();
-  try {
-    const row = await getRecord<{ data: T }>(db, STEPS_STORE, `${projectId}:${phase}`);
-    return row?.data;
-  } finally {
-    db.close();
-  }
-}
-
-/** Every `put` into the steps store, by key, counted at the engine. */
-let puts: string[] = [];
-const realPut = IDBObjectStore.prototype.put;
-IDBObjectStore.prototype.put = function (this: IDBObjectStore, ...args: Parameters<IDBObjectStore["put"]>) {
-  if (this.name === STEPS_STORE) puts.push(String((args[0] as { id?: unknown })?.id));
-  return realPut.apply(this, args);
-};
-
-test.beforeEach(async () => {
-  __resetSaveSlots();
-  await clearSteps();
-  puts = [];
-});
 
 /* ──────────────────────────────── fixtures ────────────────────────────────── */
 
@@ -229,17 +176,16 @@ function v1Record() {
   return { frames, renderId: r.id, savedAt: 1 } as Record<string, unknown>;
 }
 
-test("case 3: the frames def reads a v1 record as v2 units — plates kept, emptyClip filled — and writes nothing", async () => {
-  const { readRecord } = await import("@/lib/steps/recordRegistry");
-  const { FRAMES_RECORD } = await import("@/lib/frames/records");
-  expect(FRAMES_RECORD.version).toBe(2);
-
-  await putRaw("p-v1", "frames", v1Record());
-  puts = [];
-  const r = await readRecord(FRAMES_RECORD, "p-v1");
-  expect(r.ok, "a v1 record is readable").toBe(true);
-  if (!r.ok || !r.data) throw new Error("no record");
-  const { units } = r.data;
+test("case 3: a v1 record walks up to v2 units - plates kept, emptyClip filled, ids unchanged", () => {
+  // Retargeted at L74: the v1 browser read seam this case drove (lib/frames/records.ts
+  // FRAMES_RECORD over lib/steps/recordRegistry) retired with the v1 step store's last frames
+  // reader; the walk itself is what the archive importer runs (lib/import/steps.ts calls
+  // framesV1ToV2, then the v2 door), so the walk and the door are what is held here. The
+  // read-is-not-a-write half went with the seam: the importer writes the kernel's record, never
+  // the v1 one.
+  const r = parseFramesRecord(framesV1ToV2(v1Record()));
+  if ("refused" in r) throw new Error(`refused: ${r.refused}`);
+  const { units } = r;
   expect(units).toHaveLength(RENDERS[0].beats.length);
   expect(units[0].plate.src, "the paid plate survives the migration").toBe("data:image/png;base64,UEFJRA==");
   expect(units[0].plate.costUsd).toBe(0.04);
@@ -249,11 +195,6 @@ test("case 3: the frames def reads a v1 record as v2 units — plates kept, empt
   // the render it was derived from.
   expect(units.map((u) => u.id)).toEqual(RENDERS[0].beats.map((_, i) => `fr-${i}`));
   expect(units[3].holdS).toBe(durationOf(framesFromRender(RENDERS[0]), 3, RENDERS[0].durationS));
-
-  expect(puts, "a read is not a write").toEqual([]);
-  const raw = await getRaw("p-v1", "frames");
-  expect(raw?.v, "disk still holds the v1 record").toBeUndefined();
-  expect(raw?.units).toBeUndefined();
 });
 
 /* ── stage 2 · 4 · the explainer does not move ───────────────────────────────────────── */

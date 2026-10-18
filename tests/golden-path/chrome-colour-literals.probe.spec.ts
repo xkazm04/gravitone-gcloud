@@ -50,8 +50,9 @@ const EXEMPT: Record<string, string> = {
     "DEVTOOLS SKIN - dev-only chrome for the inspect overlay, deliberately fixed so that debugging the theme cannot be broken BY the theme. Never in a production bundle. Its own header also claims it renders where <GravitoneTokens> does not; that half is wrong (it mounts inside the root layout) and the exemption stands on debug-independence alone.",
   "app/global-error.tsx":
     "The App Router boundary that REPLACES the root layout, so <GravitoneTokens> never renders and a var(--gt-ink) there resolves to nothing. The one file that must not read tokens.ts.",
-  "app/_phases/frames/music-video/compositor.ts":
-    "The music-video effects studio's particle/bloom colours — what a GENERATED VIDEO's overlay effects look like, not this app's own chrome. Same distinction as the style-preset exemption above, for video instead of a still image; deliberately not drawn from ACCENT.cyan so the rendered output never shifts if this app's own brand accent does.",
+  // The music-video compositor's particle/bloom colours (a generated video's overlay, not
+  // chrome) had an entry here until L75 moved it to lib/sound/mv/compositor.ts; this walk
+  // reads app/ and components/ only, so the file needs no entry - as with the presets above.
   "app/_landing/cosmos/engine/inks.ts":
     "The colours of the drawn paper artwork on the Paper Cosmos landing's canvases (the dusk horizon, the galaxy's sheets, the lamp, the reams' paper stock and latches, the grain, a sheet's lit edge and cast shadow) — illustration content painted into pixels, not this app's chrome. The landing's chrome reads --pc-* tokens; every engine module takes its paint from this one file so the exemption stays one file wide.",
 };

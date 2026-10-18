@@ -26,7 +26,7 @@
 //   EXIT_BASE=http://localhost:3206 EXIT_UNIVERSE=<dir>  reuse a server already started over
 //   <dir> (seeded as below) instead of starting one - a debugging convenience.
 
-import { execFileSync, spawn, type ChildProcess } from "node:child_process";
+import { execFileSync, spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { appendFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -152,12 +152,29 @@ test.beforeAll(async () => {
   await ready(`${BASE}/floor`, 240_000);
 });
 
+/** Is a process still running? `kill(pid, 0)` sends nothing; ESRCH is the answer "no". */
+function alive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ESRCH") return false;
+    throw e;
+  }
+}
+
 test.afterAll(() => {
   if (REUSE) return;
   // By PID, the tree this spec spawned and nothing else (never by image name).
   if (server?.pid !== undefined) {
-    if (process.platform === "win32") execFileSync("taskkill", ["/PID", String(server.pid), "/T", "/F"], { stdio: "ignore" });
-    else server.kill("SIGTERM");
+    if (process.platform === "win32") {
+      // taskkill /T exits non-zero when a child of the tree ended on its own between the walk and
+      // the kill (measured L74: two of three --repeat-each teardowns, the next repeat's server
+      // then binding the port cleanly). The tree being gone is the outcome wanted; a server still
+      // alive after the kill is the failure, and is thrown with taskkill's own words.
+      const r = spawnSync("taskkill", ["/PID", String(server.pid), "/T", "/F"], { encoding: "utf8" });
+      if (r.status !== 0 && alive(server.pid)) throw new Error(`the dev server ${server.pid} outlived taskkill: ${r.stdout}${r.stderr}`);
+    } else server.kill("SIGTERM");
   }
   rmSync(U, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 });
 });
@@ -276,6 +293,16 @@ async function decidedEverywhere(page: Page, id: string): Promise<void> {
   expect(q<{ n: number }>("SELECT count(*) AS n FROM packet_commits WHERE packet_id = ?", id)[0]?.n).toBe(1);
 }
 
+/** Keeps and rejects as the desk's tiles draw them, and as the kernel's newest verdicts hold them. */
+async function drawnCounts(page: Page): Promise<{ keep: number; reject: number }> {
+  const labels = await tiles(page).evaluateAll((els) => els.map((e) => e.getAttribute("aria-label") ?? ""));
+  return { keep: labels.filter((l) => /, keep$/.test(l)).length, reject: labels.filter((l) => /, reject/.test(l)).length };
+}
+function storedCounts(id: string): { keep: number; reject: number } {
+  const v = [...finalVerdicts(id).values()];
+  return { keep: v.filter((x) => x === "keep").length, reject: v.filter((x) => x === "reject").length };
+}
+
 /**
  * A matrix cull: reject the first tile with a reason (when the source has any), keep the rest,
  * take the last act back, decide it again, preview, commit.
@@ -295,6 +322,16 @@ async function cull(page: Page, withReason: boolean): Promise<number> {
     await page.keyboard.press("k");
   }
   await landed(page);
+  // ⌫ MUST TAKE BACK A RECORDED ACT (L74; the mv/strips flake, 4/4 on repeat). The gate takes an
+  // act that has not left the tab back in the tab (packages/ui/src/board/gate.ts `undo`: "the
+  // server never hears of it"), so a ⌫ pressed while the last key still sat in its 400 ms window
+  // writes no `decision.undone`, and decidedEverywhere's (a) failed on a dev server slow enough
+  // that `landed`'s fixed wait closed first. So the undo waits for the store to hold what the
+  // desk draws - as many keeps and rejects in the kernel's newest verdicts as on the tiles -
+  // and then for the undo's own event, rather than for a clock.
+  const id = decodeURIComponent(new URL(page.url()).pathname.slice("/board/".length));
+  await expect.poll(async () => JSON.stringify(await drawnCounts(page)) === JSON.stringify(storedCounts(id)), { timeout: 20_000, message: `${id}: the desk's acts never reached the store` }).toBe(true);
+  const undone = eventsOf(id).filter((t) => t === "decision.undone").length;
   // ⌫ takes back the newest act - what one gate window wrote, which may be several keys - so
   // every tile it touched is decided again. An undo RESTORES what the tile held before, which is
   // not always "undecided": the fixture seeds v1 verdicts for most of a forge sweep from an rng
@@ -303,6 +340,7 @@ async function cull(page: Page, withReason: boolean): Promise<number> {
   // seq 14 reject (v1) -> 24 keep -> 25 reject (the undo)). The cull's intent is "the first
   // rejected, the rest kept", so every tile not holding its intended verdict is decided again.
   await page.keyboard.press("Backspace");
+  await expect.poll(() => eventsOf(id).filter((t) => t === "decision.undone").length, { timeout: 20_000, message: `${id}: the undo was never recorded` }).toBeGreaterThan(undone);
   await landed(page);
   for (let i = 0; i < n; i++) {
     const label = (await tiles(page).nth(i).getAttribute("aria-label")) ?? "";

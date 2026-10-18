@@ -169,7 +169,8 @@ test("keys: EVERY module that writes localStorage is on one of the owner's two l
     // soundMigration.ts / bookStore.ts (`gravitone.sound-migrated.v1.<uid>`,
     // `gravitone.audio-book.<uid>`) retired with the v1 Library in Phase 5; the eviction keeps
     // naming their keys for the same reason.
-    "lib/jobs.tsx": { evicted: "gravitone.jobs.v1" },
+    // lib/jobs.tsx's bell read marks (`gravitone.jobs.v1`, the retired job store's key) retired
+    // with JobsProvider at L74; the eviction keeps naming the key for the same reason.
     "lib/useRemembered.ts": { evicted: "gravitone.ui.v1" },
     // The pipeline board's LIVE/STUB arm (app/foundry/pipeline/arm.ts) retired with v1's /foundry
     // in Phase 6 wave C; the eviction keeps naming PIPELINE_ARM_KEY so a browser that still holds
@@ -190,8 +191,9 @@ test("keys: EVERY module that writes localStorage is on one of the owner's two l
   const writers = localStorageWriters();
   console.log(`[identity] localStorage writers walked: ${writers.length} — ${writers.join(", ")}`);
   // The walk read something. A walk that finds nothing would pass every
-  // assertion below in a voice indistinguishable from success.
-  expect(writers.length).toBeGreaterThanOrEqual(3);
+  // assertion below in a voice indistinguishable from success. (Two since L74: lib/jobs.tsx's
+  // read marks, the third writer, retired with JobsProvider.)
+  expect(writers.length).toBeGreaterThanOrEqual(2);
 
   for (const file of writers) {
     const row = table[file];
@@ -299,59 +301,11 @@ test("eviction: the identity layer subscribes to auth STATE, not to the token", 
   expect(/^\s*onIdTokenChanged,\s*$/m.test(src)).toBe(false);
 });
 
-// ── 3. The eviction's SECOND copy: the job tray held in memory ───────────────
-
-test("eviction: the in-memory job tray is evicted too, not just its stored copy", async () => {
-  // THE PAIR THIS PINS. `gravitone.jobs.v1` exists in TWO places at once: the
-  // localStorage record (asserted above) and `JobsProvider`'s React state, which
-  // is a live copy of the same jobs and the same notification events. The
-  // eviction cleared the first and not the second — and the provider is mounted
-  // at the app root, so it does not unmount on an account switch. The previous
-  // account's job labels, which are what that person typed as a research topic,
-  // stayed on the bell for the next account to read, and the next state change
-  // wrote them straight back into the key the eviction had just removed.
-  //
-  // The store cannot be reached from a Node probe (it is React state), so the
-  // seam it is reached THROUGH is what is driven here: eviction announces, the
-  // provider listens. A provider that stops listening breaks its own effect;
-  // an eviction that stops announcing breaks this.
-  const { onIdentityEvicted } = await import("@/lib/jobs");
-
-  const store = new Map<string, string>();
-  const stub = {
-    getItem: (k: string) => (store.has(k) ? store.get(k)! : null),
-    setItem: (k: string, v: string) => void store.set(k, v),
-    removeItem: (k: string) => void store.delete(k),
-  };
-  const g = globalThis as { localStorage?: unknown };
-  const had = "localStorage" in g;
-  g.localStorage = stub;
-
-  let cleared = 0;
-  const unsubscribe = onIdentityEvicted(() => void cleared++);
-  try {
-    store.set("gravitone.jobs.v1", '{"jobs":[],"events":[{"id":"e-1","title":"Research returned"}]}');
-    await evictIdentity("uid-a", "account-switched");
-    console.log(`[identity] in-memory trays cleared=${cleared}`);
-    expect(cleared, "evictIdentity did not tell the job store to drop its in-memory copy").toBe(1);
-    // And the stored half is still gone — the announcement is in ADDITION to it.
-    expect(store.has("gravitone.jobs.v1")).toBe(false);
-  } finally {
-    unsubscribe();
-    if (had) g.localStorage = undefined;
-    delete g.localStorage;
-  }
-});
-
-test("eviction: unsubscribing really detaches — a dead provider is not announced to", async () => {
-  // `creation-names-reaper`: the subscription is registered by a mounted
-  // provider and must be released when it unmounts, or a second mount announces
-  // into a closure that sets state on a component that is gone.
-  const { onIdentityEvicted, __announceIdentityEvicted } = await import("@/lib/jobs");
-  let n = 0;
-  const off = onIdentityEvicted(() => void n++);
-  expect(__announceIdentityEvicted()).toBe(1);
-  off();
-  expect(__announceIdentityEvicted()).toBe(0);
-  expect(n).toBe(1);
-});
+// ── 3. The eviction's SECOND copy: retired at L74 ──────────────────────────────
+// Two cases stood here: the in-memory job tray was told to drop its copy on an
+// eviction, and an unsubscribed provider was not told. Both drove the eviction
+// door in lib/jobs.tsx that JobsProvider listened on. The provider retired (Phase
+// 6 wave C unmounted it; L74 deleted it and the door), so no browser holds a copy
+// of anyone's jobs to evict: the bell's jobs are read from the server per viewer.
+// The STORED half - `gravitone.jobs.v1` removed with the account - is still held
+// by the eviction cases above.

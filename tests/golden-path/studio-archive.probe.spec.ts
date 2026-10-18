@@ -28,7 +28,6 @@ import "fake-indexeddb/auto";
 import { test, expect } from "@playwright/test";
 
 import { evictIdentity, userScopedLocalKeys } from "@/lib/identityEviction";
-import { onIdentityEvicted } from "@/lib/jobs";
 import { newProject, putProject, type Project } from "@/lib/projects";
 import {
   ArchiveRefused,
@@ -227,8 +226,6 @@ test("eviction dry run: reports exactly what the real eviction then does, and de
     setItem: (k: string, v: string) => void store.set(k, v),
     removeItem: (k: string) => void store.delete(k),
   };
-  let told = 0;
-  const off = onIdentityEvicted(() => void told++);
   try {
     const keys = userScopedLocalKeys("uid-a").slice(0, 3);
     for (const k of keys) store.set(k, "1");
@@ -238,15 +235,12 @@ test("eviction dry run: reports exactly what the real eviction then does, and de
     console.log(`[archive] dry run -> ${JSON.stringify(preview)}`);
     expect(await snapshot(), "the dry run deleted rows").toEqual(before);
     expect([...store.keys()].sort(), "the dry run removed localStorage keys").toEqual([...keys].sort());
-    expect(told, "the dry run emptied a mounted job tray").toBe(0);
 
     const real = await evictIdentity("uid-a", "signed-out");
-    expect(told).toBe(1);
     expect(preview).toEqual(real);
     // Not vacuous: the two agree on a wipe that actually took something.
-    expect(real).toMatchObject({ projects: 2, steps: 3, themes: 1, assets: 3, uploads: 2, local: 3, trays: 1 });
+    expect(real).toMatchObject({ projects: 2, steps: 3, themes: 1, assets: 3, uploads: 2, local: 3 });
   } finally {
-    off();
     delete g.localStorage;
   }
 });

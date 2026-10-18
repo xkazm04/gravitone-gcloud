@@ -61,8 +61,9 @@ const store = (): Result<Store> => {
   return k.ok ? ok(k.value.store) : k;
 };
 
-/** A slot as the rail and the month draw it. */
-export function railOfSlot(s: Slot): RailSlot {
+/** A slot as the rail and the month draw it; `dry` from the row, which mirrors its publication. */
+export function railOfSlot(row: Pick<SlotRow, "slot" | "dry">): RailSlot {
+  const s = row.slot;
   return {
     id: s.id,
     title: s.title,
@@ -73,6 +74,7 @@ export function railOfSlot(s: Slot): RailSlot {
     ...(s.error === undefined ? {} : { error: s.error }),
     ...(s.drift === undefined ? {} : { drift: s.drift }),
     ...(s.missedAt === undefined ? {} : { missedAt: s.missedAt }),
+    ...(row.dry === true ? { dry: true } : {}),
   };
 }
 
@@ -95,7 +97,7 @@ export async function realSlots(): Promise<{ readonly slots: readonly RailSlot[]
   const problems = pending === null ? [] : [pending];
   if (!c.ok) return { slots: [], problems: [...problems, { source: "calendar", error: c.error.message }] };
   const { channels, mode, lastChannel, tick } = c.value.ready;
-  return { slots: c.value.rows.map((x) => railOfSlot(x.slot)), problems, facts: { channels, mode, lastChannel, ...(tick === undefined ? {} : { tick }) } };
+  return { slots: c.value.rows.map(railOfSlot), problems, facts: { channels, mode, lastChannel, ...(tick === undefined ? {} : { tick }) } };
 }
 
 /* ── one slot, whole ──────────────────────────────────────────────────────── */
@@ -145,7 +147,7 @@ export function viewOfRow(store: Store, row: SlotRow, mode: "dry" | "live"): Res
   const project = projectOf(store, s.partId);
   if (!project.ok) return project;
   return ok({
-    slot: railOfSlot(s),
+    slot: railOfSlot(row),
     rev: row.rev,
     libraryItemId: s.libraryItemId,
     description: s.description,
@@ -189,15 +191,22 @@ function ctx(): Result<Ctx> {
 }
 
 /**
- * Facts the engine checks creation and publish-now against (@gt/kernel/slots/write Readiness),
- * for the items named. They are read HERE, before the verb's transaction opens: the engine asks
- * `itemExists` from inside its write (publishNow's drift check), where a second read of the same
- * store cannot run - asked there, every item would read as missing and every publish-now refused
- * as `export_missing`. An item not named reads as missing, which is the refusal it deserves.
+ * Facts the engine checks creation and publish-now against (@gt/kernel/slots/write Readiness).
+ * `itemExists` is answered from this same store's Library index, which is safe only because the
+ * engine asks it BEFORE its write opens (createSlot's drift check, publishNow's readinessFor -
+ * L63's finding, now the kernel's own order): a read cannot run inside a write on one store.
+ * Until then this side pre-read the named items in a read of its own; the kernel owns that order
+ * now, so the answer is read where it is asked. A read that fails is the store's failure, not a
+ * missing item: it throws, and the action core classifies it, rather than refusing the slot as
+ * `export_missing`.
  */
-function engineReady(c: Ctx, items: readonly string[]): Result<Ready> {
-  const held = c.store.read((x) => new Set(items.filter((id) => x.get("SELECT 1 AS y FROM library_docs WHERE id = ?", id) !== undefined)));
-  return held.ok ? ok({ wired: c.ready.wired, itemExists: (id: string) => held.value.has(id) }) : held;
+function engineReady(c: Ctx): Ready {
+  const itemExists = (id: string): boolean => {
+    const r = c.store.read((x) => x.get("SELECT 1 AS y FROM library_docs WHERE id = ?", id) !== undefined);
+    if (!r.ok) throw r.error;
+    return r.value;
+  };
+  return { wired: c.ready.wired, itemExists };
 }
 
 export function realDetail(id: string): Result<SlotView> {
@@ -236,9 +245,7 @@ export function realPublishNow(v: VerbIn): Result<SlotView> {
   if (!canPublishNow({ status: s.state, channel: s.channel, ...(s.drift === undefined ? {} : { drift: s.drift }) })) {
     return err("refused", `publish ${s.title}: a ${s.drift ?? s.state} ${s.channel} slot is not published from here`);
   }
-  const facts = engineReady(c.value, [s.libraryItemId]);
-  if (!facts.ok) return facts;
-  return answer(st, ready, "publish", publishNow(st, v.id, actorOf(v.who), { now: v.nowMs, ready: facts.value }, opts(v)), v.id);
+  return answer(st, ready, "publish", publishNow(st, v.id, actorOf(v.who), { now: v.nowMs, ready: engineReady(c.value) }, opts(v)), v.id);
 }
 
 export function realSchedule(d: ScheduleDraft, who: Who): Result<SlotView> {
@@ -248,9 +255,7 @@ export function realSchedule(d: ScheduleDraft, who: Who): Result<SlotView> {
   const channel = channelSchema.safeParse(d.channel);
   if (!channel.success) return err("invalid", `${d.channel} is not a channel`);
   if (channel.data === "blog") return err("refused", "a blog slot is made by its article's approve on the Board, not here");
-  const facts = engineReady(c.value, [d.item]);
-  if (!facts.ok) return facts;
-  const made = createSlot(st, { libraryItemId: d.item, channel: channel.data, at: d.at, title: d.title, description: d.description, tags: d.tags }, actorOf(who), facts.value);
+  const made = createSlot(st, { libraryItemId: d.item, channel: channel.data, at: d.at, title: d.title, description: d.description, tags: d.tags }, actorOf(who), engineReady(c.value));
   return made.ok ? viewOfRow(st, made.value, modeFor(ready, channel.data)) : made;
 }
 

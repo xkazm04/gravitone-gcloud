@@ -2,7 +2,7 @@
 
 // ALBUM · RENDER (STEPS-DESIGN §2 "album parts"; v1 MusicVideoFrames' EffectsStudio and
 // MusicVideoExport). PRIMARY: the poster preview - the kept still animated by the sibling-owned
-// compositor (app/_phases/frames/music-video/compositor.ts, CALLED here and never edited) - and
+// compositor (lib/sound/mv/compositor.ts, CALLED here and never edited) - and
 // the resolution. RAIL: the renders, each an mp4 blob. INSPECTOR: what the render waits on (the
 // track, the kept still, the title). The render is the mv job behind its receipt; its progress
 // is the view's running job, not v1's elapsed clock over one opaque request.
@@ -17,7 +17,7 @@ import { PartWorkspace } from "@gt/ui/components/part/PartWorkspace.tsx";
 import { clock } from "@gt/ui/components/part/part.ts";
 import { Seg } from "@gt/ui/components/seg/Seg.tsx";
 
-import { DEFAULT_EFFECT_PARAMS, buildBloomTexture, computeEdgeMask, limitFlashRate, renderFrame } from "@/app/_phases/frames/music-video/compositor";
+import { DEFAULT_EFFECT_PARAMS, buildBloomTexture, computeEdgeMask, limitFlashRate, renderFrame } from "@/lib/sound/mv/compositor";
 
 import type { EditorProps } from "./PartEditor.tsx";
 import s from "./Cut.module.css";

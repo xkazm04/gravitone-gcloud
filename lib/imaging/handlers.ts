@@ -1,11 +1,15 @@
 // The imaging routes' handler bodies, lifted out of app/api/imaging/*/route.ts so
 // a CLI or probe can drive them without importing a Next route module.
 //
-// THE AUTH DOOR IS NOT HERE. Every route.ts keeps its own `guardRequest` /
-// `guardAccessOnly` call and invokes one of these only after it passed, because
-// tests/golden-path/imaging-auth.probe.spec.ts checks the door per route file.
-// `export const runtime` / `maxDuration` stay in the route files too: Next reads
-// them from there.
+// THE ROUTES RETIRED AT THE PHASE 6 CUTOVER; THE BODIES STAY (L74's decision). No
+// HTTP door serves them now - the studio's imaging runs as kernel jobs through
+// lib/imaging/router.ts - and no auth door wraps them either (there is no route to
+// carry one). What still calls them is the imaging lane's wire-level proof:
+// pipeline/integration-imaging.mts's offline half (request validation -> router
+// -> real adapter over canned vendor bodies, fetch sealed) and the receipt and
+// budget probes (imaging-receipts, imaging-budget-forecast, spend-invariants).
+// They are the one place api.ts's validation meets the router end to end, so
+// they go when those proofs are retargeted onto the producers, not before.
 
 import {
   asAspect,

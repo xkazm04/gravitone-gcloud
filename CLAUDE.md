@@ -38,9 +38,8 @@ End every session that touched the tree with one line: `map: N contexts, M ungro
   `kit`), each reading through a `_port` whose side is `GRAVITONE_PRODUCE_SIDE` (fixture | real).
   `app/_server/` is the server seam (route, action, session, sse, serveFile). The landing is
   `app/page.tsx` + `app/_landing/`; `app/_dev-inspector/` is dev tooling. Nothing else lives in `app/`
-  but the compositor another session owns (`app/_phases/frames/music-video/compositor.ts`) and the API
-  routes agents and the screens still call (`/api/{blob,events/stream,session,import,ledger}` and four
-  file doors).
+  but the API routes agents and the screens still call (`/api/{blob,events/stream,session,import,ledger}`
+  and four file doors). The music-video compositor is `lib/sound/mv/compositor.ts`.
 - `lib/` - adapters over v1 stores and vendors, the bound producers (`lib/producers/`), the Board's
   sources (`lib/decision/v1/sources/`), the Ledger's (`lib/ledger/v1/sources/`), the Library's feeds.
 - `workers/` - the job worker and its timers (publish tick, metrics). `pipeline/` - CLIs and gates.

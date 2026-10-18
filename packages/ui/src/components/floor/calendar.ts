@@ -18,6 +18,9 @@ export type RailSlot = {
   readonly missedAt?: string;
   /** The Library item it publishes: the schedule form warns when that item is already on a channel. */
   readonly item?: string;
+  /** A published slot whose publication was a dry run: nothing went out, so it holds nothing
+   *  (@gt/kernel/slots/schema.ts `dry`, the holder index's own exception). */
+  readonly dry?: true;
 };
 
 const DAY_MS = 86_400_000;

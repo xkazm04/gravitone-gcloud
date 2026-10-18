@@ -57,17 +57,7 @@
 //     does not. That half is wrong - it mounts inside the root layout, which
 //     the error boundary REPLACES, so it never renders there. The exemption
 //     stands on debug-independence alone.)
-//  6. app/_phases/frames/music-video/compositor.ts — the music-video effects
-//     studio's particle/bloom colours (a fixed white particle fill, a
-//     cyan-white bloom tint). These describe what the GENERATED VIDEO's
-//     overlay effects look like — the frame-by-frame pixels a user's track
-//     renders into — not a pixel of this app's own furniture, the same
-//     distinction item 2 draws for a generated image's style palette. They
-//     are deliberately NOT drawn from ACCENT.cyan/etc.: the compositor's
-//     output must stay stable even if this app's own brand accent changes,
-//     since re-tinting a shipped video's bloom color is not a side effect
-//     this file's accents should ever have.
-//  7. app/_landing/cosmos/engine/inks.ts - the Paper Cosmos landing's CANVAS
+//  6. app/_landing/cosmos/engine/inks.ts - the Paper Cosmos landing's CANVAS
 //     paint: the colours of the drawn paper artwork (the dusk horizon, the
 //     galaxy's seven sheets, the lamp's petals, the reams' paper stock and
 //     latches, the grain, a sheet's lit edge and cast shadow). Illustration,
@@ -75,9 +65,15 @@
 //     --pc-* tokens below. Every engine module takes its paint from that one
 //     file so the exemption stays one file wide.
 //
+// (The music-video compositor's particle and bloom colours - a GENERATED
+// VIDEO's overlay, content like item 2's palettes - were item 6 until L75 moved
+// the compositor to lib/sound/mv/compositor.ts, outside this walk, as the
+// presets' hexes went to packages/catalog. Still deliberately not ACCENT.cyan:
+// a shipped video's bloom must not re-tint when this app's accent does.)
+//
 // Everything that actually draws chrome obeys. The inventory above is meant to
 // be RECHECKABLE, so it is worth saying how: grep app/ and components/ for hex
-// and rgb() literals, subtract this file and the seven classes above, and the
+// and rgb() literals, subtract this file and the six classes above, and the
 // remainder should be empty. It was NOT, from 2026-08-14 until this line was
 // written — the list said "three things" and named globals.css prose plus the
 // preset data, while global-error.tsx had seven, which made the rule read as
@@ -110,27 +106,9 @@ export const ACCENT = {
 // remap, the v1 StudioFrame's page ground and the Almanac kit's Obsidian skin. The ink is
 // still #080a10 in prose below because the measurements that name it were taken on it.)
 
-/**
- * The canonical glass surface, as a class list. The one export of this file
- * that components read directly (Primitives.tsx); `.glass-panel` in globals.css
- * is the same surface drawn off the `--gt-*` vars for the callers that want a
- * class rather than an import.
- *
- * `HAIRLINE` and `TEXT` used to sit beside it. Both were exported and NEITHER
- * had a reader: the only two imports of this file anywhere are `tokensCss`
- * (GravitoneTokens.tsx) and `SURFACE` (Primitives.tsx), and `HAIRLINE` /
- * `TEXT.hero|body|label|meta` appeared in no other file in the repo. They go
- * for the same stated reason `--gt-chart-*` and `--gt-hue` went — EVERY TOKEN
- * HERE HAS A READER — and the drift they were meant to prevent had already
- * happened around them: `HAIRLINE` was a third spelling of the hairline that
- * `SURFACE` inlines and `--gt-hairline` publishes, and `TEXT.meta` named a
- * text colour that 43 places in app/ spell by hand without ever importing it.
- *
- * Reviving one is a commit that brings back the constant AND converts the call
- * sites that should read it; `git log` this file for the values.
- */
-export const SURFACE =
-  "border border-white/8 bg-gradient-to-b from-white/[0.05] to-white/[0.015] backdrop-blur-[14px]";
+// (SURFACE - the glass class list Primitives.tsx's `Panel` read - went at L74 with `Panel`, its
+// last reader; before it, HAIRLINE and TEXT went for having none. `.glass-panel` in globals.css
+// is the same surface drawn off the `--gt-*` vars. `git log` this file for the values.)
 
 /**
  * Design tokens as CSS custom properties. Emitted verbatim by
@@ -242,7 +220,7 @@ export const SIGNAL_DEFAULTS: Record<string, string> = {
  * The CANVAS paint of the paper artwork (sheet colours, the dusk horizon, ream
  * tones) is illustration content, not chrome, and lives with the drawing code
  * in app/_landing/cosmos/engine/inks.ts, exempted by name in the colour-literal
- * probe (item 7 above).
+ * probe (item 6 above).
  * Alpha variants are written at the use site as color-mix over these tokens.
  */
 export const WORLD_PAPER_COSMOS: Record<string, string> = {

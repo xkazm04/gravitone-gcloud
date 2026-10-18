@@ -13,7 +13,9 @@
 //   · a failed read arms no save -> a part write needs the rev it read; a stale or absent
 //     base writes nothing (tests/next-server/parts-real.test.ts, parts-frames.test.ts).
 // The v1 registry itself stays while score/ads/record.ts reads through it
-// (lib/producers/score.ts), so its refusal of a malformed record is still pinned here.
+// (lib/producers/score.ts), so its refusal of a malformed record is still pinned here - on that
+// def since L74 (it was pinned on frames-alts, whose def, lib/frames/records.ts, retired with
+// nothing left reading it).
 //
 // The import below has a SIDE EFFECT and must come first.
 import "fake-indexeddb/auto";
@@ -52,8 +54,8 @@ test.beforeEach(async () => {
 
 test("case 1: a record the def cannot parse → refused \"malformed\"", async () => {
   const { readRecord } = await import("@/lib/steps/recordRegistry");
-  const { FRAMES_ALTS } = await import("@/lib/frames/records");
-  await putRaw("p-bad", "frames-alts", { byFrame: "not a map", v: 1 });
-  const r = await readRecord(FRAMES_ALTS, "p-bad");
+  const { ADS_SCORE } = await import("@/lib/score/ads/record");
+  await putRaw("p-bad", "ads-score", { takeIds: "not a list", v: 1 });
+  const r = await readRecord(ADS_SCORE, "p-bad");
   expect(!r.ok && "refused" in r && r.refused).toBe("malformed");
 });

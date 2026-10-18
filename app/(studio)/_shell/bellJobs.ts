@@ -1,8 +1,9 @@
 "use server";
 
-// The bell's read (lib/jobs.tsx `JobsProvider`'s `read`): the server's jobs as the bell draws them
-// (./bell.ts) and the ledger seq they were read at, so the provider's event stream resumes from
-// exactly there. Read-guarded through the one action core, as every produce read is.
+// The bell's read: the server's jobs as the bell draws them (./bell.ts) and the ledger seq they
+// were read at (a stream that follows the read resumes from exactly there). Its caller since the
+// JobsProvider retired is the live harness's snapshot (components/ui/HarnessBridge.tsx, handed it
+// by app/layout.tsx). Read-guarded through the one action core, as every produce read is.
 import { z } from "zod";
 
 import { ok } from "@gt/domain/errors";

@@ -1,6 +1,6 @@
 // THE ARTICLE RUN STORE — JSON and text files on this machine's disk. Server only.
 //
-// Same shape as lib/publish/store.ts and lib/foundry/extract/store.ts, for the
+// Same shape as v1 lib/publish/store.ts (gone at L75) and lib/foundry/extract/store.ts, for the
 // same reasons: no database (the repo's out-of-scope wall), state as JSON under
 // `foundry-out/` (gitignored), every write tmp + rename so a reader never sees
 // half a file, and an exclusive-create lock file because TWO PROCESSES write a

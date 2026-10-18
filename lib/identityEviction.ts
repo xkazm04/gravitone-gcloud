@@ -104,12 +104,12 @@ import {
 // opened the store.
 import { readUploadPointer } from "@/lib/shelfPointers";
 import { reportStorageTrouble } from "@/lib/steps";
-// The job store, like every other store this file clears, is imported BY it and
-// does not import it. See the eviction door in lib/jobs.tsx: removing
-// `gravitone.jobs.v1` from localStorage evicts the record on disk and leaves the
-// root-mounted provider's live copy of it untouched, which is the half a user of
-// the next account can actually read.
-import { __announceIdentityEvicted, __identityEvictionListenerCount } from "@/lib/jobs";
+// The job tray's IN-MEMORY copy had a door here too (lib/jobs.tsx's
+// `__announceIdentityEvicted`, counted as `trays`): removing `gravitone.jobs.v1`
+// left the root-mounted JobsProvider's live copy untouched, the half the next
+// account could read. That provider retired (Phase 6 wave C unmounted it, L74
+// deleted it), so no browser holds anyone's jobs - the bell reads the server -
+// and the door and its count went with it. The stored key is still removed below.
 // Remembered UI choices (which fold was open, which tab was last): one record,
 // cleared wholesale like the job tray, and its in-memory copy with it.
 import { REMEMBERED_KEY, forgetRemembered } from "@/lib/useRemembered";
@@ -141,11 +141,6 @@ export interface EvictionReport {
   uploads: number;
   /** localStorage keys removed. */
   local: number;
-  /** Mounted job stores told to drop their in-memory copy of the tray. Zero is
-   *  legitimate — no provider is mounted (a Node probe, a server render) — and
-   *  is counted rather than assumed, so "nobody was listening" and "nobody was
-   *  told" are distinguishable in the line below. */
-  trays: number;
   /** True when the wipe could not be completed. The identity transition still
    *  proceeds — see `evictIdentity` — but the caller may say so. */
   failed: boolean;
@@ -286,7 +281,6 @@ export async function evictIdentity(
     assets: 0,
     uploads: 0,
     local: 0,
-    trays: 0,
     failed: false,
   };
   if (!uid) return report;
@@ -308,14 +302,6 @@ export async function evictIdentity(
     reportStorageTrouble(dry ? "read" : "write", uid, "sign-out", e);
   }
 
-  // The IN-MEMORY half of the job tray, announced immediately after the stored
-  // half is gone. Synchronous, and outside the try above on purpose: it touches
-  // no storage, so a localStorage failure must not be the reason the bell keeps
-  // showing the previous account's work. Counted into the report beside the
-  // keys, because a wipe that told nobody and a wipe with nobody to tell are
-  // different facts and the log has to be able to say which.
-  // A dry run counts the listeners instead: announcing IS the wipe of that copy.
-  report.trays = dry ? __identityEvictionListenerCount() : __announceIdentityEvicted();
   // A tab whose storage write failed holds its remembered choices in memory
   // only; the key removal above cannot reach that copy, this does.
   if (!dry) forgetRemembered();
@@ -413,8 +399,7 @@ export async function evictIdentity(
   console.log(
     `[identity] ${dry ? "would evict" : "evicted"} uid=${uid.slice(0, 6)}… reason=${reason} projects=${report.projects} ` +
       `steps=${report.steps} themes=${report.themes} assets=${report.assets} uploads=${report.uploads} ` +
-      `local=${report.local} ` +
-      `trays=${report.trays}` +
+      `local=${report.local}` +
       (report.failed ? " FAILED" : ""),
   );
   return report;

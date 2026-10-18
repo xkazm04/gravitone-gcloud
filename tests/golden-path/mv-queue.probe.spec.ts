@@ -39,7 +39,8 @@
 //   · import: N added, a re-import adds 0, a missing dir is a 400; Drop
 //     deletes the files and keeps the record; the file route answers a range
 //     with 206 and takes no `k=`. (v1's Send-to-Calendar, lib/sound/mv/calendar.ts
-//     over lib/publish's JSON schedule, retired with its route: a slot is the
+//     over lib/publish's JSON schedule, retired with its route and both were
+//     deleted at L75: a slot is the
 //     kernel's now, made by the Calendar's schedule door - its own tests.)
 
 import { createHash } from "node:crypto";

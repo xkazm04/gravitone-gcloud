@@ -4,7 +4,7 @@
 // sessions/ hold, and - after a real import that refused nothing - leave the MIGRATED marker
 // that says where the calendar went.
 //
-// THE FILES ARE READ AS THEY STAND, never through v1's listSlots (lib/publish/schedule.ts), which
+// THE FILES ARE READ AS THEY STAND, never through v1's listSlots (lib/publish/schedule.ts, gone at L75), which
 // swept first and would write schedule.json on the way (the ledger projection's same refusal,
 // lib/ledger/v1/sources/publish.ts). A corrupt file is an error, as v1's store made it: an
 // importer that read a broken calendar as empty would import nothing and then mark it migrated.

@@ -1,11 +1,13 @@
 // LOCAL MODE — the self-hosted, single-user posture the README promised.
 //
-// The studio's DATA has always been local: projects, steps, themes and assets
-// live in the browser's IndexedDB (lib/studioDb.ts — raw IDB, no dependency,
-// no server, no Firestore). The ONLY thing Firebase does in this app is
-// authentication, so the only thing standing between an unconfigured checkout
-// and a working studio is the auth gate failing closed. Local mode satisfies
-// the gate with a fixed local identity instead of dropping it.
+// The studio's DATA is local: projects, parts, jobs and the Library live in the
+// kernel store on this machine (foundry-out/gravitone.sqlite, lib/kernelStore.ts
+// - no Firestore). v1 kept them in the browser's IndexedDB (lib/studioDb.ts),
+// which is read now only by the archive import that moves a v1 shelf into the
+// kernel. The ONLY thing Firebase does in this app is authentication, so the
+// only thing standing between an unconfigured checkout and a working studio is
+// the auth gate failing closed. Local mode satisfies the gate with a fixed local
+// identity instead of dropping it.
 //
 // HOW THIS DIFFERS FROM lib/devAuth.ts, which looks similar and is not:
 //
@@ -16,15 +18,16 @@
 //     purpose — "my machine, my studio" is a legitimate way to run this app —
 //     and it wears a quiet badge, because it is not a warning, it is a mode.
 //
-// WHAT IT DOES NOT DO. It does not turn off the money-route gate: the
-// /api/music/* and /api/imaging/* seams still require IMAGING_ACCESS_SECRET
-// (+ the NEXT_PUBLIC_ twin) and still fail closed without it — being local
-// changes who you are, not what spending requires. (That secret is the
-// BROWSER's: a script on the same machine presents its own CLI token,
-// pipeline/token.mts, and under SHARED_SECRET_CALLERS=browser the secret is
-// refused to it - lib/apiAuth.ts.) And it does not sync
-// anything anywhere: a local studio's work lives in this browser profile and
-// nowhere else, which is the point, and also the caveat.
+// WHAT IT DOES NOT DO. It does not turn off the money door: a spending act -
+// a Server Action through `principal("money")` (app/_server/principal.ts), a
+// guarded route through app/_server/route.ts - still requires
+// IMAGING_ACCESS_SECRET (+ the NEXT_PUBLIC_ twin) and still fails closed
+// without it — being local changes who you are, not what spending requires.
+// (That secret is the BROWSER's: a script on the same machine presents its own
+// CLI token, pipeline/token.mts, and under SHARED_SECRET_CALLERS=browser the
+// secret is refused to it - lib/apiAuth.ts.) And it does not sync anything
+// anywhere: a local studio's work lives on this machine and nowhere else,
+// which is the point, and also the caveat.
 //
 // The uid is STABLE across sessions — projects are scoped by uid, and a local
 // owner must find yesterday's shelf. It is also distinct from devAuth's uid,

@@ -92,7 +92,40 @@ export type ComposeRun = {
  *  its 400; `refused` is its 200 "no engine fits" answer (said before any engine is paid). */
 export type ComposeAdmit = { readonly kind: "run"; readonly run: ComposeRun } | { readonly kind: "bad"; readonly detail: string } | { readonly kind: "refused"; readonly why: string; readonly considered: { engine: string; fit: string }[] };
 
+/** The most material one compose turn is sent, in serialised characters: roughly a quarter of a
+ *  million tokens, far past any real notebook and far short of an 800-second Opus run nobody
+ *  authorised. v1's /api/script held it at its HTTP door (a 413 before any engine, 619f88ec); the
+ *  route retired at the cutover and took the bound with it, so it lives HERE now - the one door
+ *  the script producer's receipt (scriptUnits) and its unit (composeUnit) both pass - and a run
+ *  too large is refused on the receipt, before anything is priced or paid. */
+export const MAX_COMPOSE_CHARS = 1_000_000;
+
+const MATERIAL = ["notebook", "conclusions", "scope", "engines"] as const;
+
+/** One field's serialised size. A value JSON cannot hold (a cycle, a BigInt) has no size a turn
+ *  could be sent, so it counts as past any ceiling - refused, never sent. */
+function jsonSize(v: unknown): number {
+  if (v === undefined || v === null) return 0;
+  try {
+    return JSON.stringify(v)?.length ?? 0;
+  } catch {
+    return Number.POSITIVE_INFINITY;
+  }
+}
+
+/** Why this run's material is too large to compose from, in the work's words, or `null`. */
+export function composeTooLarge(body: ComposeBody): string | null {
+  const sizes = MATERIAL.map((k) => [k, jsonSize(body[k])] as const);
+  const total = sizes.reduce((n, [, size]) => n + size, 0);
+  if (total <= MAX_COMPOSE_CHARS) return null;
+  const biggest = [...sizes].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "notebook";
+  const shown = Number.isFinite(total) ? `${Math.round(total / 1000)}k characters` : "not serialisable";
+  return `The run's material is ${shown} (largest: ${biggest}); the ceiling is ${MAX_COMPOSE_CHARS / 1000}k. Nothing was composed.`;
+}
+
 export function admitCompose(body: ComposeBody): ComposeAdmit {
+  const oversized = composeTooLarge(body);
+  if (oversized !== null) return { kind: "bad", detail: oversized };
   const notebook = asNotebook(body.notebook);
   if (!notebook) return { kind: "bad", detail: "No readable notebook was sent, so there is nothing to compose from." };
   const template = typeof body.template === "string" ? body.template : "";

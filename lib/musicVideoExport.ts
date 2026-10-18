@@ -2,7 +2,7 @@
 //
 // WHAT THIS DOES, IN ONE SENTENCE: launch a headless Chromium page, make it run
 // the EXACT SAME `renderFrame` function the live preview uses
-// (`app/_phases/frames/music-video/compositor.ts`), walk it frame-by-frame at
+// (`lib/sound/mv/compositor.ts`), walk it frame-by-frame at
 // an explicit index (never real-time — the determinism law), write each frame
 // to disk, then mux the sequence with the original mp3 via ffmpeg.
 //
@@ -64,7 +64,7 @@ import {
 } from "./export/headless";
 import type { AudioEnvelope } from "./audioEnvelope";
 import { outPath as fixtureOutPath } from "./fixtures/roots";
-import type { EffectParams, FocalInput, SceneFx } from "@/app/_phases/frames/music-video/compositor";
+import type { EffectParams, FocalInput, SceneFx } from "@/lib/sound/mv/compositor";
 
 // The browser launch, scratch dir, encoder fallback, atomic landing and sidecar
 // live in the shared kernel (lib/export/headless.ts) since the Cut's animatic
@@ -148,7 +148,7 @@ export function exportFilePath(id: string): string {
  *  never a copy cached across a long-running Node process that might be
  *  serving a hot-reloaded dev build. */
 function bundleCompositorScript(): string {
-  return bundlePageModule(["app", "_phases", "frames", "music-video", "compositor.ts"], "__Compositor", "compositor-transpile-failed");
+  return bundlePageModule(["lib", "sound", "mv", "compositor.ts"], "__Compositor", "compositor-transpile-failed");
 }
 
 /** The same isolation transpile for any zero-import module the render page

@@ -12,9 +12,9 @@ import type { Store } from "@gt/kernel/store";
 import { channelReadiness } from "@/lib/publish/channels";
 import { exportsRoot } from "@/lib/publish/exports";
 import { snippetProblem } from "@/lib/publish/youtube";
-import { parseRegenerate } from "@/lib/sound/mv/queue";
+import { parseRegenerate, regeneratedRecord } from "@/lib/sound/mv/queue";
 import { readMv, withMv } from "@/lib/sound/mv/store";
-import type { MvJob, MvPart } from "@/lib/sound/mv/types";
+import type { MvJob } from "@/lib/sound/mv/types";
 import { filePathAbs, safeId } from "@/lib/sound/store";
 
 import { cancelMvJob, mvJobOf, mvLine, mvSpec, MV_PRODUCER } from "./mv.ts";
@@ -22,7 +22,7 @@ import { launchJobs, soundKernel, type LaunchOptions, type LaunchResult } from "
 
 // THE PIPELINE CANVAS'S TWO ACTS, IN THE NEW WORLD (owner ruling 2) - v1's Regenerate
 // (lib/sound/mv/queue.ts regenerateMv) and Send to Calendar (lib/sound/mv/calendar.ts
-// sendMvToCalendar) had one UI, the v1 Foundry's Pipeline canvas, which Phase 6 deletes. Both
+// sendMvToCalendar, gone at L75) had one UI, the v1 Foundry's Pipeline canvas, which Phase 6 deletes. Both
 // are kernel acts now, answered from the Runs inspector of an mv job.
 //
 // REGENERATE IS A RECEIPT FIRST. v1's regenerateMv re-queued the record and, while the column's
@@ -31,9 +31,9 @@ import { launchJobs, soundKernel, type LaunchOptions, type LaunchResult } from "
 // read prices the attempt the regenerate WILL make (its stamp is fixed by the read and carried
 // back with the token, so the receipt and the confirm name one kernel job), and only the confirm
 // writes: the record's redo, then the job through the same `launchJobs` every launch takes. The
-// record edit is regenerateMv's own, field for field; it is made here rather than through
-// regenerateMv because that function's receipt-less launch is the defect (the sibling session
-// owns queue.ts; its regenerateMv can delegate to this once it lands).
+// record edit is queue.ts's `regeneratedRecord`, the one pure edit regenerateMv also writes (L75
+// folded the copy this file carried back into it); the act calls the edit, not regenerateMv,
+// because that function's receipt-less launch is the defect.
 // IDEMPOTENT ON THE STAMP: a confirm that finds the record already at its stamp skips the edit
 // and adopts the job; a record restamped since by someone else is a conflict, never a second
 // re-roll.
@@ -51,7 +51,6 @@ import { launchJobs, soundKernel, type LaunchOptions, type LaunchResult } from "
 export const MV_PROJECT_ID = "audio-mv";
 export const mvExportId = (id: string): string => `mv-${id}`;
 
-export type RegenerateAsk = { readonly part: MvPart; readonly note?: string; readonly prompt?: string };
 export type RegenerateResult = LaunchResult & { readonly at: number };
 
 const SETTLED = new Set(["done", "failed", "cancelled"]);
@@ -71,12 +70,6 @@ function regenerable(j: MvJob, store: Store): void {
   }
 }
 
-/** regenerateMv's record edit, field for field, at the stamp the receipt priced. */
-function redone(j: MvJob, ask: RegenerateAsk, at: number): MvJob {
-  const { note: _n, prompt: _p, job: _j, error: _e, phase: _ph, endedAt: _end, ...rest } = j;
-  return { ...rest, state: "queued", redo: [ask.part], verdict: null, enqueuedAt: at, ...(ask.note ? { note: ask.note } : {}), ...(ask.prompt && ask.part === "image" ? { prompt: ask.prompt } : {}) };
-}
-
 /**
  * Regenerate one part of a finished or failed video. Without `token`: the receipt of the attempt
  * it would make, and that attempt's stamp `at`. With `token` and that `at`: the record is
@@ -89,7 +82,7 @@ export async function regenerateMvAct(id: string, body: unknown, o: LaunchOption
   if (o.token === undefined) {
     regenerable(j, store);
     const at = Math.max(o.now ?? Date.now(), j.enqueuedAt + 1);
-    return { ...launchJobs({ producer: MV_PRODUCER, media: "video", lines: [mvLine(redone(j, ask, at), [])] }, { ...o, store }), at };
+    return { ...launchJobs({ producer: MV_PRODUCER, media: "video", lines: [mvLine(regeneratedRecord(j, ask, at), [])] }, { ...o, store }), at };
   }
   const at = o.at;
   if (at === undefined) throw new AppError("invalid", "a regenerate confirm carries the stamp its receipt was read at");
@@ -104,7 +97,7 @@ export async function regenerateMvAct(id: string, body: unknown, o: LaunchOption
       const cur = f.jobs[i];
       if (cur === undefined) throw new AppError("not-found", `no music-video job ${id}`);
       if (cur.enqueuedAt !== j.enqueuedAt) throw new AppError("conflict", `video ${id} was re-queued while this one was confirmed`);
-      f.jobs[i] = redone(cur, ask, at);
+      f.jobs[i] = regeneratedRecord(cur, ask, at);
       delete f.progress[id];
     });
   }

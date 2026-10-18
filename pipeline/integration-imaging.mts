@@ -27,8 +27,11 @@
 // proves nothing is worse than a red one, because it is the report you would
 // trust. And it bypassed the HTTP seam entirely: it calls the provider objects
 // and the router directly, so app/api/imaging/*/route.ts and api.ts's
-// validation layer — the code every real caller actually reaches — had no
-// coverage at all.
+// validation layer — the code every real caller actually reached — had no
+// coverage at all. (Those routes retired at the Phase 6 cutover; their bodies
+// stay in lib/imaging/handlers.ts, whose header says why, and the offline half
+// still drives them. The live half never went through a route: it proves the
+// vendors through the router the producers call, which is why the CLI stays.)
 //
 // The OFFLINE half closes both for nothing. It replaces `globalThis.fetch`
 // before a line of the engine is loaded and THROWS on any request it was not

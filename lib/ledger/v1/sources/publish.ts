@@ -28,8 +28,8 @@ import type { IngestEvent, LiveSlot, ProjectCtx, Projection, Source } from "../t
 // with no kernel open (a test over its own files) falls back to v1's unsettled
 // slots, as before. Every slot links to its record on the Floor
 // (`/floor?cal=1&slot=<id>`), which replaced v1's /calendar. The files are read
-// here with fs, not through lib/publish/store.ts: that module is v1's writer and
-// retires with the publish producer (L62).
+// here with fs, not through v1's writer (lib/publish/store.ts, which went at L75
+// with the rest of the v1 calendar code).
 //
 // NOT through `listSlots`, which the brief names: it SWEEPS first
 // (lib/publish/schedule.ts sweep, claim: false) - marking overdue slots

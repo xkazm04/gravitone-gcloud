@@ -107,6 +107,13 @@ describe("the rail and the month read the slot table", () => {
     expect(by.get("sl-blog")?.channel).toBe("blog");
   });
 
+  it("marks a slot published by a dry run, so the schedule form does not read it as holding its item", async () => {
+    const r = await realSlots();
+    const by = new Map(r.slots.map((s) => [s.id, s]));
+    expect(by.get("sl-dry")).toMatchObject({ status: "published", dry: true });
+    expect(by.get("sl-out")).not.toHaveProperty("dry");
+  });
+
   it("says a v1 calendar the importer has not taken in, and stops saying it once MIGRATED is beside it", () => {
     const root = path.join(W.dir, "v1");
     mkdirSync(root, { recursive: true });

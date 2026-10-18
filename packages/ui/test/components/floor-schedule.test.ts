@@ -42,6 +42,14 @@ describe("where the form opens", () => {
     expect(itemDefault(items, [], null, "youtube")).toBe("a");
     expect(itemDefault(items, [...held, slot("t", "2026-10-16T10:00:00.000Z", "published", { item: "b" })], null, "youtube")).toBe("a");
   });
+
+  test("a slot published DRY holds nothing: its item is still the first the form offers on that channel", () => {
+    const items = [{ id: "a", title: "A" }, { id: "b", title: "B" }];
+    const rehearsed = [slot("d", "2026-10-14T10:00:00.000Z", "published", { item: "a", dry: true })];
+    expect(itemDefault(items, rehearsed, null, "youtube")).toBe("a");
+    // The same slot published live holds its item, and the form opens on the next.
+    expect(itemDefault(items, [slot("l", "2026-10-14T10:00:00.000Z", "published", { item: "a" })], null, "youtube")).toBe("b");
+  });
 });
 
 describe("what blocks a send", () => {
@@ -72,6 +80,21 @@ describe("what the engine or the tick will decide", () => {
   test("a cancelled or failed slot holds nothing and clashes with nothing; another channel neither", () => {
     const slots = [slot("c", "2026-10-16T12:00:00.000Z", "cancelled", { item: "video:export:a" }), slot("f", "2026-10-16T12:00:00.000Z", "failed", { item: "video:export:a" }), slot("tt", "2026-10-16T12:00:00.000Z", "scheduled", { channel: "tiktok", item: "video:export:a" })];
     expect(scheduleWarnings(form(), slots, NOW)).toEqual([]);
+  });
+
+  test("an item published DRY on the channel is not warned as held - the engine lets the live slot be made", () => {
+    expect(scheduleWarnings(form(), [slot("d", "2026-10-14T10:00:00.000Z", "published", { item: "video:export:a", dry: true })], NOW)).toEqual([]);
+  });
+
+  test("the sheet's item list marks a live-published item as on the channel, and a dry-published one not", () => {
+    const items = [{ id: "video:export:a", title: "Rehearsed", meta: "m-a" }, { id: "video:export:b", title: "Went out", meta: "m-b" }];
+    const slots = [slot("d", "2026-10-14T10:00:00.000Z", "published", { item: "video:export:a", dry: true }), slot("l", "2026-10-14T11:00:00.000Z", "published", { item: "video:export:b" })];
+    const html = renderToStaticMarkup(h(ScheduleForm, { items: { kind: "read", items }, channels: CHANNELS, slots, nowMs: NOW, day: null, item: null, lastChannel: "youtube", busy: false, onSchedule: () => undefined }));
+    const button = (id: string): string => html.match(new RegExp(`data-item="${id}">(.*?)</button>`))?.[1] ?? "";
+    expect(button("video:export:a")).not.toContain("· published");
+    expect(button("video:export:b")).toContain("· published");
+    // The form opens on the rehearsed item, not past it.
+    expect(html).toMatch(/aria-checked="true"[^>]*data-item="video:export:a"/);
   });
 
   test("tags split on commas only", () => {

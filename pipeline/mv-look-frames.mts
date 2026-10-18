@@ -26,7 +26,7 @@ const { analyseTrack } = await import("../lib/sound/mv/render");
 const { MV_LOOKS, isLookId } = await import("../lib/sound/mv/looks");
 const { launchHeadless, makeWorkDir } = await import("../lib/export/headless");
 const { setUpRenderPage } = await import("../lib/musicVideoExport");
-const { DEFAULT_EFFECT_PARAMS } = await import("../app/_phases/frames/music-video/compositor");
+const { DEFAULT_EFFECT_PARAMS } = await import("../lib/sound/mv/compositor");
 
 if (!isLookId(lookArg)) throw new Error(`unknown look ${lookArg}`);
 const out = path.resolve(outArg);

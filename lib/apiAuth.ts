@@ -551,6 +551,17 @@ async function guard(req: Request, use: KeyUse): Promise<Response | null> {
   return isRefusal(who) ? refusalResponse(who) : null;
 }
 
+// THE TWO v1 DOORS BELOW HAVE NO ROUTE CALLER (L74's decision: kept, and why). Since
+// Phase 6 L70 every route goes through app/_server/route.ts `route({ guard })`, which
+// composes the same parts this file exports - resolvePrincipal, rateLimit, clientIp,
+// presentedSecret - in the same order (the rate bucket before the refusal, so a flood
+// meets 429 before its 401) and answers in the one AppError envelope. guardRequest and
+// guardAccessOnly are kept as that order's executable statement in v1's own bodies:
+// the principal, credential-door, imaging-auth and deployment-cells probes pin the
+// legacy refusal ladder word for word, the money/read split under a JWKS outage, and
+// "the query credential lives only behind the read door" through them. Retiring them
+// is retargeting those probes onto route(); until then they are test-only, not dead.
+
 /**
  * Guard a money/compute request. Resolves to a `Response` to return
  * IMMEDIATELY (401, 429, or 503 when Google's keys cannot be confirmed), or

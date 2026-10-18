@@ -192,31 +192,39 @@ export function parseRegenerate(body: unknown): { part: MvPart; note?: string; p
   return { part, ...(note ? { note } : {}), ...(prompt ? { prompt } : {}) };
 }
 
-/** Re-queue one part of a done or failed record, as a new attempt. */
-export async function regenerateMv(id: string, req: { part: MvPart; note?: string; prompt?: string }, now = Date.now()): Promise<MvJob> {
+export type RegenerateAsk = { readonly part: MvPart; readonly note?: string; readonly prompt?: string };
+
+/**
+ * THE REGENERATE RECORD EDIT, ONCE: a done or failed record as its next attempt, stamped `at`.
+ * Pure, so the receipt can price exactly the record the confirm will write - the new-world act
+ * (lib/producers/mvActs.ts regenerateMvAct) prices it on the read and writes it on the confirm;
+ * `regenerateMv` below writes it at once. It used to be written twice, field for field, and two
+ * copies of "which fields a new attempt clears" are two that can disagree. A new attempt is a new
+ * job: the old one's id, error, phase and end go; the note and the still's own prompt are this
+ * ask's or nothing (a later regenerate without a prompt forgets it); the verdict is unjudged.
+ */
+export function regeneratedRecord(j: MvJob, ask: RegenerateAsk, at: number): MvJob {
+  const { note: _n, prompt: _p, job: _j, error: _e, phase: _ph, endedAt: _end, ...rest } = j;
+  return { ...rest, state: "queued", redo: [ask.part], verdict: null, enqueuedAt: at, ...(ask.note ? { note: ask.note } : {}), ...(ask.prompt && ask.part === "image" ? { prompt: ask.prompt } : {}) };
+}
+
+/** Re-queue one part of a done or failed record, as a new attempt - v1's receipt-less act, kept
+ *  for the probe lane's v1 route harness and the CLI drive tests; the Runs inspector's Regenerate
+ *  is regenerateMvAct, which never launches without a receipt. */
+export async function regenerateMv(id: string, req: RegenerateAsk, now = Date.now()): Promise<MvJob> {
   await existing(id);
   const { j: live, k } = await liveState(id);
   if (live.state !== "done" && live.state !== "failed") throw new SoundError(`this job is ${live.state}; only a finished or failed video can be regenerated`, 409);
   // The failed attempt's job is closed, so nobody retries it into a record that has moved on.
   if (k !== undefined && k.state === "failed") cancelMvJob(k.id, OPERATOR);
   const job = await withMv((f) => {
-    const j = find(f, id);
-    j.state = "queued";
-    j.redo = [req.part];
-    if (req.note) j.note = req.note;
-    else delete j.note;
-    if (req.prompt && req.part === "image") j.prompt = req.prompt;
-    else delete j.prompt;
-    j.verdict = null;
-    j.enqueuedAt = Math.max(now, j.enqueuedAt + 1);
-    // A new attempt: a new job, launched by Start (or at once while the switch is on).
-    delete j.job;
-    delete j.error;
-    delete j.phase;
-    delete j.endedAt;
+    const cur = find(f, id);
+    const next = regeneratedRecord(cur, req, Math.max(now, cur.enqueuedAt + 1));
+    f.jobs[f.jobs.indexOf(cur)] = next;
     delete f.progress[id];
-    return { ...j };
+    return { ...next };
   });
+  // A new attempt: a new job, launched by Start (or at once while the switch is on).
   await launchIfRunning([job.id]);
   return job;
 }

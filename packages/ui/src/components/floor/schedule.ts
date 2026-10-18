@@ -134,8 +134,15 @@ export function itemDefault(items: readonly ScheduleItem[], slots: readonly Rail
   return items.find((i) => !held.has(i.id))?.id ?? items[0]?.id ?? null;
 }
 
-/** A slot that holds its item on its channel (@gt/domain/slot.machine SLOT_HOLDS). */
-const holds = (s: RailSlot): boolean => s.status === "scheduled" || s.status === "publishing" || s.status === "published";
+/**
+ * A slot that holds its item on its channel (@gt/domain/slot.machine SLOT_HOLDS), less a slot
+ * published DRY: a rehearsal sent nothing, and the engine lets the live slot that follows it be
+ * made (@gt/kernel/slots/core.ts clashOf, the `slots_one_holder` index) - so the form neither
+ * skips past that item when it picks a default nor warns it is held. (A dry-published slot part
+ * still counts as placed on its Plan, @gt/kernel/slots/read.ts slottedIn: that is the part's gate,
+ * not the item's channel.)
+ */
+export const holds = (s: Pick<RailSlot, "status" | "dry">): boolean => s.status === "scheduled" || s.status === "publishing" || (s.status === "published" && s.dry !== true);
 
 /** The UTC instant a `datetime-local` text names, or null. */
 function instantOf(when: string): string | null {

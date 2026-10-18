@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import { BELL_CAP, bellJobs } from "../../app/(studio)/_shell/bell.ts";
 import type { ProduceJob } from "../../app/(studio)/projects/_port/contract.ts";
-import { eventsOf, jobCounts, parseMarks, type Job } from "../../lib/jobs.tsx";
+import { jobCounts, type Job } from "../../lib/jobs.tsx";
 
 // The bell is a view of the server's Jobs (lib/jobs.tsx); nothing about a job is kept in the
-// browser but the viewer's read marks.
+// browser. (The viewer's read marks and the settled-job news, `eventsOf`/`parseMarks`, retired at
+// L74 with the provider that drew them: nothing mounted it after the Phase 6 cutover.)
 
 const job = (id: string, state: ProduceJob["state"], s: number, e: number, more: Partial<ProduceJob> = {}): ProduceJob => ({
   id,
@@ -64,30 +65,7 @@ describe("the bell's job list", () => {
 
 const settled = (id: string, status: Job["status"], endedAt: number): Job => ({ id, kind: "image", label: id, status, startedAt: 0, endedAt, href: `/projects/runs?job=${id}`, measured: false, progress: 0 });
 
-describe("what the viewer has not seen", () => {
-  it("an ending after the watermark is unread; a read mark or an earlier ending is read", () => {
-    const ev = eventsOf([settled("a", "done", 100), settled("b", "failed", 200), settled("c", "done", 50), settled("i", "interrupted", 300)], { seenAt: 60, read: ["a@100"] });
-    expect(ev.map((e) => [e.jobId, e.read, e.ok])).toEqual([
-      ["b", false, false],
-      ["a", true, true],
-      ["c", true, true],
-    ]);
-  });
-
-  it("a retried job that ends again is news again", () => {
-    const [first] = eventsOf([settled("a", "done", 100)], { seenAt: 0, read: [] });
-    const [again] = eventsOf([settled("a", "done", 900)], { seenAt: 0, read: [first?.id ?? ""] });
-    expect(again?.read).toBe(false);
-  });
-
-  it("the retired job store's record, a torn value or nothing at all starts the watermark now", () => {
-    const now = 5_000;
-    expect(parseMarks(null, now)).toEqual({ seenAt: now, read: [] });
-    expect(parseMarks(JSON.stringify({ jobs: [{ id: "x" }], events: [] }), now)).toEqual({ seenAt: now, read: [] });
-    expect(parseMarks("{torn", now)).toEqual({ seenAt: now, read: [] });
-    expect(parseMarks(JSON.stringify({ v: 2, seenAt: 42, read: ["a@1"] }), now)).toEqual({ seenAt: 42, read: ["a@1"] });
-  });
-
+describe("the harness's count", () => {
   it("the harness counts each job once, the server's list and the turn ledger together", () => {
     const running: Job = { id: "b", kind: "image", label: "b", status: "running", startedAt: 0, href: "/projects/runs?job=b", measured: false, progress: 0 };
     const local = [settled("a", "done", 1), running];

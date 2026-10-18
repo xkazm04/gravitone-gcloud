@@ -1,6 +1,6 @@
 // LANE — THE MUSIC-VIDEO QUEUE'S RENDER, ON THIS MACHINE (node + headless
 // Chromium + ffmpeg). lib/sound/mv/render.ts and the focal element it added to
-// app/_phases/frames/music-video/compositor.ts. The queue no longer passes the
+// lib/sound/mv/compositor.ts (app/_phases/frames/music-video/ until L75). The queue no longer passes the
 // focal element (descoped 2026-10-12) and draws no thumbnail; cases 3-5 hold
 // the compositor's own contract, which stays for a later return.
 //
@@ -47,7 +47,7 @@ import {
   DEFAULT_EFFECT_PARAMS,
   focalPulseTrack,
   limitFlashRate,
-} from "@/app/_phases/frames/music-video/compositor";
+} from "@/lib/sound/mv/compositor";
 
 keepEnv(["LOCAL_BINARIES"]);
 
@@ -55,7 +55,9 @@ keepEnv(["LOCAL_BINARIES"]);
  *  frame" that case 5 compares against. Read with `git show`, so it needs the
  *  history (not a shallow clone). */
 const PRE_FOCAL_COMMIT = "0b8e858";
-const COMPOSITOR = "app/_phases/frames/music-video/compositor.ts";
+/** Where the compositor lived AT `PRE_FOCAL_COMMIT` - `git show` reads history, so
+ *  this stays the old app/ path; today's file is lib/sound/mv/compositor.ts. */
+const COMPOSITOR_AT_PRE_FOCAL = "app/_phases/frames/music-video/compositor.ts";
 
 function hasCommit(sha: string): boolean {
   try {
@@ -164,7 +166,7 @@ const regionLuma = (page: Page, i: number, cx: number, cy: number, half: number)
 /** The compositor at `PRE_FOCAL_COMMIT`, transpiled the way the export page
  *  transpiles today's, set up with the export page's own recipe. */
 async function setUpPreFocalPage(page: Page, posterDataUrl: string, envelope: AudioEnvelope, seed: number, width: number, height: number) {
-  const source = execFileSync("git", ["show", `${PRE_FOCAL_COMMIT}:${COMPOSITOR}`], { encoding: "utf8" });
+  const source = execFileSync("git", ["show", `${PRE_FOCAL_COMMIT}:${COMPOSITOR_AT_PRE_FOCAL}`], { encoding: "utf8" });
   const { outputText } = ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
   });

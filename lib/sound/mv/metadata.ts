@@ -10,9 +10,9 @@
 // at least ten seconds long; fewer is no chapter list at all rather than a
 // list YouTube ignores.
 //
-// HELD TO lib/publish/youtube.ts snippetProblem - the same validator the
-// scheduler (lib/publish/schedule.ts parseScheduleInput) and the uploader
-// apply, so a proposal that passes here cannot be refused at 3 a.m. by the
+// HELD TO lib/publish/youtube.ts snippetProblem - the same validator Send to
+// Calendar (lib/producers/mvActs.ts; v1's was lib/publish/schedule.ts
+// parseScheduleInput, gone at L75) and the uploader apply, so a proposal that passes here cannot be refused at 3 a.m. by the
 // slot it was sent to. A model's answer that overruns is TRIMMED by code
 // first (the title at a word, the description body before the chapters, tags
 // from the end); one that still fails - an empty title is the case trimming

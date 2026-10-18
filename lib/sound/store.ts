@@ -10,9 +10,9 @@
 // <root> is foundry-out/sound/ (gitignored, like every other foundry output);
 // SOUND_STORE_DIR moves it, SOUND_LEDGER_PATH moves the ledger, both read
 // lazily per call so a probe or the CLI can point them at a temp directory
-// after this module was imported (lib/publish/store.ts:62, same reason).
+// after this module was imported (v1 lib/publish/store.ts did the same; gone at L75).
 //
-// THE SHAPE IS lib/publish/store.ts's, ON PURPOSE AND FOR ITS REASON. Two
+// THE SHAPE WAS v1 lib/publish/store.ts's (gone at L75), ON PURPOSE AND FOR ITS REASON. Two
 // processes write these files: the Next server (the Sound lab, the Library)
 // and pipeline/sound.mts (an agent generating into Triage, judging from a
 // terminal). An in-process queue orders writes inside one process; the
@@ -242,7 +242,7 @@ export async function removeFile(rel: string): Promise<void> {
   await rm(filePathAbs(rel), { force: true });
 }
 
-// ── locking (lib/publish/store.ts:126, the same two-writer reasoning) ─────────
+// ── locking (v1 lib/publish/store.ts's, the same two-writer reasoning) ──────
 
 const LOCK_STALE_MS = 30_000;
 const LOCK_WAIT_MS = 10_000;

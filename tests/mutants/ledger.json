@@ -1,7 +1,7 @@
 {
   "commit": "15fd570c1676e99555f12e81ae5ce22229a0480e",
-  "totalDurationMs": 255594,
-  "killed": 44,
+  "totalDurationMs": 252556,
+  "killed": 43,
   "survived": 0,
   "stale": 0,
   "broken": 0,
@@ -72,12 +72,6 @@
       "probe": "spine-rank-total.probe.spec.ts",
       "verdict": "killed",
       "durationMs": 2010
-    },
-    {
-      "id": "alt-last-one-removable",
-      "probe": "alt-last-one-stays.probe.spec.ts",
-      "verdict": "killed",
-      "durationMs": 3038
     },
     {
       "id": "exit-drops-stderr-tail",

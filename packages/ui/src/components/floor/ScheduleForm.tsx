@@ -27,7 +27,7 @@ import fieldCss from "../field/Field.module.css";
 import { Ghost } from "../ghost/Ghost.tsx";
 import { CapsHeading } from "../heading/CapsHeading.tsx";
 import { clock, dayKey, dayLabel, type RailSlot } from "./calendar.ts";
-import { canSchedule, channelDefault, checkSchedule, itemDefault, scheduleWarnings, splitTags, whenDefault, DESCRIPTION_MAX, TITLE_MAX, type ChannelReady, type ScheduleDraft, type ScheduleItem, type ScheduleWarning } from "./schedule.ts";
+import { canSchedule, channelDefault, checkSchedule, holds, itemDefault, scheduleWarnings, splitTags, whenDefault, DESCRIPTION_MAX, TITLE_MAX, type ChannelReady, type ScheduleDraft, type ScheduleItem, type ScheduleWarning } from "./schedule.ts";
 import { SlotMark } from "./SlotRow.tsx";
 import { STATE_WORDS } from "./ChannelReadiness.tsx";
 import s from "./ScheduleForm.module.css";
@@ -91,7 +91,7 @@ export function ScheduleForm({ items, channels, slots, nowMs, day, item: asked, 
   const { blocked, draft } = checkSchedule(form, channels);
   const warnings = draft === null ? [] : scheduleWarnings(form, slots, nowMs);
   const tagList = splitTags(tags);
-  const heldBy = (itemId: string): RailSlot | undefined => slots.find((x) => x.item === itemId && x.channel === channel && (x.status === "scheduled" || x.status === "publishing" || x.status === "published"));
+  const heldBy = (itemId: string): RailSlot | undefined => slots.find((x) => x.item === itemId && x.channel === channel && holds(x));
 
   return (
     <form

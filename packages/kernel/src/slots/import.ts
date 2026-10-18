@@ -101,7 +101,7 @@ type V1Slot = z.output<typeof v1Slot>;
 type V1Publication = z.output<typeof v1Publication>;
 
 /** v1's three record shapes as its files held them, for what still WRITES a v1 calendar (the
- *  fixture writer, pipeline/fixtures/publish.ts) once lib/publish/types.ts is gone. */
+ *  fixture writer, pipeline/fixtures/publish.ts) now that lib/publish/types.ts is gone (L75). */
 export type V1SlotRecord = z.input<typeof v1Slot>;
 export type V1SlotStatus = V1SlotRecord["status"];
 export type V1PublicationRecord = z.input<typeof v1Publication>;

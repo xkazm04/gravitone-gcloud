@@ -46,7 +46,7 @@ import {
   muxFrameSequence,
   setUpRenderPage,
 } from "@/lib/musicVideoExport";
-import { DEFAULT_EFFECT_PARAMS, type EffectParams } from "@/app/_phases/frames/music-video/compositor";
+import { DEFAULT_EFFECT_PARAMS, type EffectParams } from "@/lib/sound/mv/compositor";
 
 import { MV_LOOKS, type MvLookId } from "./looks";
 import { detectSections, energyShape } from "./sections";

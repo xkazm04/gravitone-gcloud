@@ -1,5 +1,5 @@
 // THE BELL'S JOB LIST, projected from the produce port's job view (the same rows Runs draws), so
-// the bell and Runs cannot disagree about a job (lib/jobs.tsx is the bell's provider).
+// the bell and Runs cannot disagree about a job (lib/jobs.tsx holds the shape).
 //
 // The bell answers two questions and no others: what is running now, and what ended. So a queued,
 // paused, planned or cancelled job is not in it (Runs owns the queue), and the list is the newest

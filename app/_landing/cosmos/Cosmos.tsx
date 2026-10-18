@@ -96,7 +96,7 @@ export default function Cosmos() {
         <button className="icobtn" id="searchBtn" type="button" aria-label="Search">
           {SEARCH_ICON}
         </button>
-        <EnterButton appearance="paper" />
+        <EnterButton />
       </div>
       <nav id="depth" aria-label="Depth" />
       <div id="search" role="dialog" aria-label="Search">

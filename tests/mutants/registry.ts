@@ -37,7 +37,7 @@ export type Mutant = {
  * unguarded probe lowers the live count and the same probe asks for this number
  * to be lowered to match, so the gain is kept.
  */
-export const UNGUARDED_PROBE_BUDGET = 162;
+export const UNGUARDED_PROBE_BUDGET = 159;
 
 export const MUTANTS: Mutant[] = [
   {
@@ -129,14 +129,6 @@ export const MUTANTS: Mutant[] = [
     why: "Two movements of the same role keep arrival order instead of their own ordinal.",
   },
   {
-    id: "alt-last-one-removable",
-    probe: "alt-last-one-stays.probe.spec.ts",
-    file: "lib/frames/alternatives/alts.ts",
-    find: "isSynthetic(frameId) || keptCount > 1;",
-    replace: "isSynthetic(frameId) || keptCount > 0;",
-    why: "The last kept alternative can be removed, leaving a frame with nothing to show.",
-  },
-  {
     id: "exit-drops-stderr-tail",
     probe: "cli-exit-classification.probe.spec.ts",
     file: "lib/claudeCli.ts",
@@ -203,7 +195,7 @@ export const MUTANTS: Mutant[] = [
   {
     id: "mv-focal-deaf-to-the-beat",
     probe: "mv-render.probe.spec.ts",
-    file: "app/_phases/frames/music-video/compositor.ts",
+    file: "lib/sound/mv/compositor.ts",
     find: "const level = clamp01(breath + clamp01(f.pulseStrength) * (f.pulse[frameIndex] ?? 0));",
     replace: "const level = clamp01(breath);",
     why: "The music video's pulsing element only breathes on a timer and never answers the kick it was placed to pulse with.",

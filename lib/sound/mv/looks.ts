@@ -7,7 +7,7 @@
 // reuses its cover for every track (`--still`) reuses the look; a generated
 // still per track would need the positions found again.
 
-import type { SceneFx } from "@/app/_phases/frames/music-video/compositor";
+import type { SceneFx } from "./compositor";
 
 export type MvLookId = "siren-rain" | "garage-red";
 
