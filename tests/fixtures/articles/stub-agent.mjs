@@ -368,6 +368,22 @@ if (phase === "critique") {
       else dispositions.push({ reviewer: r.reviewer, findingId: f.id, disposition: "deferred", reason: "Out of scope for this post." });
     }
   }
+  if (process.env.STUB_DISPOSITIONS === "dropone") {
+    // 2026-10-18's failure: the first answer leaves out one whole reviewer. A retry that finds
+    // its own previous answer seeded in out/ keeps it and adds only what is missing; one that is
+    // not seeded starts over and drops the same reviewer again.
+    const seeded = path.resolve("out", "dispositions.json");
+    if (fs.existsSync(seeded)) {
+      const prev = JSON.parse(fs.readFileSync(seeded, "utf8"));
+      const have = new Set(prev.map((d) => `${d.reviewer}/${d.findingId}`));
+      const add = dispositions.filter((d) => !have.has(`${d.reviewer}/${d.findingId}`));
+      dispositions.length = 0;
+      dispositions.push(...prev, ...add);
+    } else if (reviews.length) {
+      const last = reviews[reviews.length - 1].reviewer;
+      for (let i = dispositions.length - 1; i >= 0; i--) if (dispositions[i].reviewer === last) dispositions.splice(i, 1);
+    }
+  }
   if (process.env.STUB_DISPOSITIONS === "bad" && dispositions.length) {
     dispositions.pop();
     dispositions[0].reason = "";

@@ -23,7 +23,7 @@
 //   · a trial run's METHOD lens and trial summary (appended for a trial only), the
 //     reviewer workspace's `experiment/` (allowed by the seam, text only, 2 MB)
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { test, expect } from "@playwright/test";
@@ -412,6 +412,23 @@ test("resume inside the critique: a reviewer whose review exists never runs agai
   expect(done.critique?.reviewers.every((r) => r.outcome === "completed")).toBe(true);
   // the research, outline and draft were not re-run either
   expect(argvLog().filter((l) => l.entries.includes("inputs"))).toHaveLength(3 + 1);
+});
+
+test("a writer answer that drops one reviewer whole is completed on its retry, from its own seeded files", async () => {
+  // 2026-10-18, eval-harness: the writer answered opus, gpt and gemini and none of gemini4's 12
+  // findings, twice, starting over each time. The prompt now lists every review's finding ids,
+  // counted by code, and the retry starts from the previous answer.
+  process.env.STUB_DISPOSITIONS = "dropone";
+  const run = await toGate();
+  delete process.env.STUB_DISPOSITIONS;
+  expect(run.status, run.error).toBe("awaiting-approval");
+  expect(json(run.id, "agent/critique-r1-writer.json")).toMatchObject({ attempts: 2 });
+  const prompt = readFileSync(at(run.id, "agent/critique-r1-writer-prompt.md"), "utf8");
+  expect(prompt).toContain("THE FINDINGS TO ANSWER, counted by code from inputs/reviews/");
+  const reviewers = readdirSync(at(run.id, "critique/round-1/reviews")).map((f) => f.replace(/\.json$/, ""));
+  for (const r of reviewers) expect(prompt, `the list names ${r}`).toContain(`\`${r}\` (inputs/reviews/${r}.json)`);
+  const answered = new Set(json<{ reviewer: string }[]>(run.id, "critique/round-1/dispositions.json").map((d) => d.reviewer));
+  expect([...answered].sort(), "every reviewer answered after the retry").toEqual([...reviewers].sort());
 });
 
 test("resume inside the critique: an invalid writer answer is retried once, then fails; resume reruns no reviewer", async () => {
