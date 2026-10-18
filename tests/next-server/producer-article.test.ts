@@ -42,12 +42,15 @@ import { ARTICLE_ENV, articleSandbox, ROOT, STUB_AGENT, STUB_ENGINE_BINS, type A
 const saved = new Map([...ARTICLE_ENV, "NEXT_PUBLIC_DEV_AUTH"].map((k) => [k, process.env[k]]));
 let box: ArticleSandbox;
 let tripwire: string;
+// The sandbox is a throwaway registry a subprocess builds with fourteen git calls
+// (tests/fixtures/articles/registry-fixture.mjs): 1.2-2.6 s on a quiet box, 51 s measured on a
+// loaded one. The 10 s hook default was a budget for no process at all.
 beforeAll(() => {
   box = articleSandbox();
   // The live seam's binaries, pointed at a script that leaves a mark: a dry job must never reach it.
   tripwire = path.join(box.dir, "tripwire.mjs");
   writeFileSync(tripwire, `import fs from "node:fs"; fs.appendFileSync(${JSON.stringify(path.join(box.dir, "tripped.log"))}, "live seam entered\\n"); process.exit(3);\n`);
-});
+}, 120_000);
 afterAll(() => {
   box.cleanup();
   for (const [k, v] of saved) {
