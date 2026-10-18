@@ -3,8 +3,8 @@
 //   npx tsx pipeline/article.mts run (--subject <bundle/slug> | --topic "<text>" | --trial <id>) [--angle "<text>"] [--model <id>] [--effort <level>] [--reviewers <file>] [--budget-usd X]
 //   npx tsx pipeline/article.mts status [<runId>]          # one run, or the list
 //   npx tsx pipeline/article.mts approve <runId> [--patches p1,p2]
-//   npx tsx pipeline/article.mts reject <runId> --note "<text>"
-//   npx tsx pipeline/article.mts rework <runId> --note "<text>"
+//   npx tsx pipeline/article.mts reject <runId> (--note "<text>" | --note-file <path>)
+//   npx tsx pipeline/article.mts rework <runId> (--note "<text>" | --note-file <path>)
 //   npx tsx pipeline/article.mts resume <runId> [--reviewers <file>] [--budget-usd X]
 //   npx tsx pipeline/article.mts topics [--limit N] [--include-bundle <bundle>]
 //   npx tsx pipeline/article.mts loop (--target N | --add N) --budget-usd X [--concurrency 3] [--max-failures 3]
@@ -52,6 +52,9 @@
 //                   under that is refused at the receipt, before anything is created; one
 //                   above it is held between steps and between the turns inside a step.
 //   GRAVITONE_DRY_ONLY=1 refuses every live job (decision 4).
+// --note-file reads the note from a UTF-8 file. A multi-line --note does not survive Windows:
+// npx is a .cmd shim and cmd.exe ends an argument at its first newline, so a rework sent with
+// a paragraph-per-change note recorded only its first sentence (2026-10-18).
 //
 // `rework` is the third act at the gate: it sends the draft back with the note,
 // keeps the research and outline, and drives draft, critique and check again to
@@ -142,7 +145,7 @@ function usage(msg?: string): never {
     console.error(
       "usage: npx tsx pipeline/article.mts <run|status|approve|reject|rework|resume|topics|loop|trial> [--json]\n" +
         '  run (--subject <bundle/slug> | --topic "<text>" | --trial <id>) [--angle "<text>"] [--model <id>] [--effort low|medium|high|xhigh|max] [--reviewers <file>] [--budget-usd X]\n' +
-        "  status [<runId>]   approve <runId> [--patches p1,p2]   reject <runId> --note \"<text>\"   rework <runId> --note \"<text>\"   resume <runId> [--reviewers <file>] [--budget-usd X]\n" +
+        "  status [<runId>]   approve <runId> [--patches p1,p2]   reject <runId> --note \"<text>\"|--note-file <path>   rework <runId> --note \"<text>\"|--note-file <path>   resume <runId> [--reviewers <file>] [--budget-usd X]\n" +
         "  run, approve, rework, resume, loop also take --dry (a dry job: the stub answers, nothing spends) and --detach (enqueue; the worker drives)\n" +
         "  topics [--limit N] [--include-bundle <bundle>]\n" +
         "  loop (--target N | --add N) --budget-usd X [--concurrency 3] [--max-failures 3] [--max-resumes 2] [--run-usd 120] [--turn-usd 30] [--run-turns 45] [--est-run-usd 70] [--topics auto|<file>]\n" +
@@ -159,6 +162,19 @@ function flag(name: string): string | undefined {
   const v = args[i + 1];
   if (v === undefined || v.startsWith("--")) usage(`--${name} needs a value`);
   return v;
+}
+
+/** The operator's note: `--note-file <path>` (read whole, any number of lines) or `--note`. */
+function noteFlag(verb: string): string {
+  const file = flag("note-file");
+  if (file !== undefined) {
+    try {
+      return fs.readFileSync(file, "utf8");
+    } catch (e) {
+      return usage(`--note-file ${file}: ${(e as Error).message}`);
+    }
+  }
+  return flag("note") ?? usage(`${verb} needs --note "<text>" or --note-file <path>`);
 }
 
 /** A positive number flag, or undefined when absent. */
@@ -337,12 +353,12 @@ async function main() {
     }
     case "reject": {
       const id = positional();
-      const note = flag("note") ?? usage("reject needs --note \"<text>\"");
+      const note = noteFlag("reject");
       return finish(await rejectRun(id, note), ["rejected"]);
     }
     case "rework": {
       const id = positional();
-      const note = flag("note") ?? usage("rework needs --note \"<text>\"");
+      const note = noteFlag("rework");
       const r = await reworkArticle(id, note, acts());
       if (!r.ok) return refused(r.error);
       if (!JSON_OUT) console.error(`article: ${id} sent back (rework ${r.value.run.rework?.count}); job ${r.value.jobId} re-drafts from the kept research…`);

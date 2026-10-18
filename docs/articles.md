@@ -603,7 +603,7 @@ terminal: a reject throws the piece away, a rework is one piece of work with one
   `awaiting-approval`. A rework that fails goes `failed` like any run and `resume` goes back to
   `drafting`; the note stays on the run until the draft is done.
 
-`rework <runId> --note "<text>"` is the CLI form: it calls the verb and then drives the run to the
+`rework <runId> --note "<text>"` (or `--note-file <path>`, which a multi-line note needs on Windows: `npx` is a `.cmd` shim and cmd.exe ends an argument at its first newline) is the CLI form: it calls the verb and then drives the run to the
 gate again. Spending the operator's seat, it is the operator's act, as `resume` is.
 
 ## `landedAt`
@@ -681,7 +681,7 @@ npx tsx pipeline/article.mts run --trial <id> [--json]
 npx tsx pipeline/article.mts status [<runId>] [--json]
 npx tsx pipeline/article.mts approve <runId> [--patches p1,p2] [--json]
 npx tsx pipeline/article.mts reject <runId> --note "<text>" [--json]
-npx tsx pipeline/article.mts rework <runId> --note "<text>" [--json]
+npx tsx pipeline/article.mts rework <runId> (--note "<text>" | --note-file <path>) [--json]
 npx tsx pipeline/article.mts resume <runId> [--reviewers <file>] [--json]
 ```
 
