@@ -50,7 +50,9 @@ export function experimentSource(
   return {
     n: 1,
     url: `https://github.com/${repo}/blob/${branch}/${ref.applicationPath}`,
-    title: `Trial ${ref.id}: ${ref.metric}, ${prereg.arms[0].label} against ${ref.alternative} (n=${ref.n} per arm)`,
+    // No trial id: the title is printed in the post's Sources, and an id is the pipeline's word,
+    // not the reader's (owner's review, 2026-10-18). The id stays in the record the URL opens.
+    title: `${prereg.arms[0].label} vs ${ref.alternative}: ${ref.metric}, measured for this post (n=${ref.n} per arm)`,
     publisher: "Gravitone article trial",
     date: verdict.at.slice(0, 10),
     primary: true,

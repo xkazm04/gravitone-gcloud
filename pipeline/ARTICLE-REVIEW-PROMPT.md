@@ -84,7 +84,12 @@ LENS: METHOD. This post reports a trial: before the post existed, the claim belo
 
 {{TRIAL}}
 
-A trial post opens on the trial's own measured number, not on an incident, and its preview states the verdict and the per-arm n citing [1]: for this post that is the rule, not a finding. Source [1] is the trial's record: its link resolves only after the post lands, so check the numbers it carries against `experiment/` instead.
+A trial post opens on the reader's situation and what the measurement found, not on a third-party incident or a dated run, and its preview states the verdict and the per-arm n citing [1]: for this post that is the rule, not a finding. Source [1] is the trial's record: its link resolves only after the post lands, so check the numbers it carries against `experiment/` instead.
+
+Judge the story as well as the numbers:
+- THE WHY (`engagement`): at every section a reader should know why they are reading it. Flag a section that opens on numbers before the question it answers, a design choice (the setting, the metric, a floor, the smallest difference that counts) stated without its reason, and any stretch that reads as a laboratory log (a run's timestamps, durations, exit codes, seeds, versions, pilot counts). The suggestion names the reason the reader is missing.
+- INTERNAL IDENTIFIERS (`voice`): flag each observation, evaluation, run, trial, row or seed number or id, hash, harness file or command name, and pipeline label ("Table A", "Strip", "golden arm") printed in the post, and say how to describe that case by what it was.
+- THE TITLE AND SUBTITLE (`engagement`): the title is `<practice> vs <practice>: <the stake>`; the subtitle says in words what was measured and why it matters. Flag one that is not that shape or that carries a number, a percentage or n.
 
 Judge the measurement, not only the prose:
 - THE AMENDMENT: when `experiment/proposed-amendments/` holds a diff, it is the text this post proposes to add to the engineering standard, and it lands if the operator approves it. Judge it as strictly as the post: every mechanism it states must agree with the trial's own numbers, and it must claim no more than the trial measured. A finding on it uses a `location` starting `METHOD: amendment <id>`.

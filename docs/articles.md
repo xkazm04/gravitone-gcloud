@@ -202,12 +202,16 @@ change.
   current documentation, counter-evidence to the result. Row 1 of `sources.json` must equal
   `experiment-source.json` field for field, or the step fails with `source 1 must be the trial's
   record (experiment-source.json)`. Numbering continues from 2, and every bar on sources holds.
-- **The post is built around the result.** It opens on the trial's own measured number; the
-  preview states the verdict, the per-arm n and that the measurement is first-hand, citing [1];
-  then a setup section, at least one figure drawn from `results.json` whose caption cites [1], the
-  mechanism, what the result changes for the golden path, and what the trial cannot say. A `null`
-  is "no difference beyond <band> at n=<n>", never a tie or a win. No number about the arms that
-  `results.json` or `verdict.json` does not hold.
+- **The post is built around the result, told as the story of a question.** It opens on the
+  reader's situation and what the measurement found; the preview states the verdict, the per-arm n
+  and that the measurement is first-hand, citing [1]; then why the rule is recommended and why it
+  was doubted, how it was tested (every choice with its reason), at least one figure drawn from
+  `results.json` whose caption cites [1], the mechanism, what the result changes for the golden
+  path, and what the trial cannot say. The title is `<practice> vs <practice>: <the stake>`, and
+  neither it nor the subtitle carries a number. No internal identifier (observation, run, trial or
+  seed numbers, hashes, harness names) is printed; source 1's title carries none either (owner's
+  review, 2026-10-18). A `null` is "no difference beyond <band> at n=<n>", never a tie or a win.
+  No number about the arms that `results.json` or `verdict.json` does not hold.
 - **Patches.** The draft is staged the subject's golden path, the technique under test and its
   application file (when one exists) in place of the writing standard's files. A `challenged` or
   `null` trial may propose at most one amendment to the technique under test, stating the

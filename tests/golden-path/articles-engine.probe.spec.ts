@@ -421,7 +421,7 @@ test("trial: a closed upheld trial becomes a run that reaches the gate on its ow
   expect(draft).toContain(TRIAL_TECHNIQUE);
   expect(draft).not.toMatch(/\{\{[A-Z_0-9]+\}\}/);
   expect(readFileSync(path.join(dir, "agent", "research-prompt.md"), "utf8")).toContain("SOURCE 1 IS THE TRIAL.");
-  expect(readFileSync(path.join(dir, "agent", "outline-prompt.md"), "utf8")).toContain("THE OPENING IS THE TRIAL'S OWN MEASURED NUMBER");
+  expect(readFileSync(path.join(dir, "agent", "outline-prompt.md"), "utf8")).toContain("THE POST IS A STORY OF A QUESTION, NOT A LAB REPORT");
   expect(readFileSync(path.join(dir, "agent", "critique-r1-writer-prompt.md"), "utf8")).toContain("METHOD FINDINGS");
   const review = readFileSync(path.join(dir, "critique", "round-1", "prompts", "gpt.md"), "utf8");
   expect(review).toContain("LENS: METHOD.");

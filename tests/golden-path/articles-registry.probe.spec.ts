@@ -201,7 +201,7 @@ test("prompt, trial: each phase's trial section is appended after the classic pr
   const ctx = { topic: { kind: "subject" as const, bundle: "software-engineering", subject: "token-budgeting", text: "Token budgeting" }, standard: "S", standardAddress: "A", today: "2026-10-18", round: 1, maxRounds: 2, checkFailures: "- x" };
   const marks: Record<string, string> = {
     research: "SOURCE 1 IS THE TRIAL.",
-    outline: "THE OPENING IS THE TRIAL'S OWN MEASURED NUMBER",
+    outline: "THE POST IS A STORY OF A QUESTION, NOT A LAB REPORT",
     draft: "REGISTRY PATCHES, for this post, replace the draft phase's rule above.",
     critique: "METHOD FINDINGS",
     "revise-research": "METHOD FINDINGS",
