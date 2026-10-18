@@ -28,6 +28,7 @@ import { test, expect } from "@playwright/test";
 import { FAKE_ENGINE_ENV, keepEnv, loadCassette, withFakeEngine, type Cassette } from "./_helpers";
 import { meterConformance } from "./_meterKit";
 import { MANAGED_MARKERS } from "@/lib/deployment";
+import { closeKernel } from "@/lib/kernelStore";
 import { BUDGET_VAR, budgetStats } from "@/lib/imaging/budget";
 import { videoBudgetStats } from "@/lib/imaging/video/budget";
 import { musicBudgetStats } from "@/lib/music/budget";
@@ -53,6 +54,8 @@ function scratch(): string {
   return d;
 }
 test.afterEach(() => {
+  // text-usd's store is the kernel's: closed first, as Windows will not delete an open file.
+  closeKernel();
   for (const d of made.splice(0)) rmSync(d, { recursive: true, force: true });
 });
 
@@ -252,13 +255,17 @@ function costing(usd: number): Cassette {
   return { ...base, turns: [{ ...ok, match: { heading: "# SPEND" }, envelope: { ...ok.envelope!, total_cost_usd: usd } }] };
 }
 
-test.describe("case 4: text on the file store", () => {
-  keepEnv([...FAKE_ENGINE_ENV, "TEXT_ENV", "GOOGLE_AI_API_KEY", "LIGHTTRACK_DISABLE"]);
+// text-usd is on the kernel store since F2 (operator 2026-10-18, "text-usd
+// only"; lib/spend/select.ts), so the other process meets this one in the
+// SQLite file both name, not in SPEND_STORE_DIR.
+test.describe("case 4: text on the machine's durable store", () => {
+  keepEnv([...FAKE_ENGINE_ENV, "TEXT_ENV", "GOOGLE_AI_API_KEY", "LIGHTTRACK_DISABLE", "GRAVITONE_STORE_PATH"]);
 
   test("a claude-cli turn reporting $0.31 books one vendor row; a google turn is counted unpriced with no $0 row", async () => {
     const dir = scratch();
     process.env.SPEND_STORE = "file";
     process.env.SPEND_STORE_DIR = dir;
+    process.env.GRAVITONE_STORE_PATH = path.join(scratch(), "gravitone.sqlite");
     for (const m of MANAGED_MARKERS) delete process.env[m];
     process.env.TEXT_ENV = "local";
     process.env.LOCAL_BINARIES = "on";
@@ -298,7 +305,7 @@ out({ rows: await textSpendRows(), unpriced: s.counters.unpriced, booked: s.coun
     );
     console.log(`[spend-ledger] case 4 -> ${JSON.stringify(read.result)}`);
     const rows = read.result.rows as MeterRow[];
-    expect(read.result.store).toBe("file");
+    expect(read.result.store).toBe("sqlite");
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ amount: 0.31, basis: "vendor", outcome: "served" });
     expect(rows[0].axes.provider).toBe("claude-cli");
@@ -564,17 +571,21 @@ test.describe("the file store", () => {
     await expect(budgetStats()).rejects.toThrow(/SPEND_STORE=gcs is not a spend store/);
   });
 
-  test("on this machine, with no pin, every class is on the file store", async () => {
+  test("on this machine, with no pin, every enforcing class is on the file store and text-usd on the kernel store", async () => {
     const dir = scratch();
     process.env.SPEND_STORE_DIR = dir;
     delete process.env.SPEND_STORE;
     for (const m of MANAGED_MARKERS) delete process.env[m];
-    for (const s of [await budgetStats(), await musicBudgetStats(), await videoBudgetStats(), await textSpendStats()]) {
+    for (const s of [await budgetStats(), await musicBudgetStats(), await videoBudgetStats()]) {
       expect(s.store).toBe("file");
       expect(s.storeReason).toBeUndefined();
     }
-    for (const cls of ["imaging-usd", "music-audio-s", "video-usd", "text-usd"])
+    const text = await textSpendStats();
+    expect(text.store).toBe("sqlite");
+    expect(text.storeReason).toBeUndefined();
+    for (const cls of ["imaging-usd", "music-audio-s", "video-usd"])
       expect(existsSync(path.join(dir, `${cls}.json`)), cls).toBe(true);
+    expect(existsSync(path.join(dir, "text-usd.json")), "text-usd writes no file").toBe(false);
   });
 
   test("latency: 200 reserve+settle round trips on the file store", async () => {

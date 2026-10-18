@@ -5,13 +5,16 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { parseJsonAt, type Parsed } from "@gt/domain/door";
+import { parseAt, parseJsonAt, type Parsed } from "@gt/domain/door";
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { CostSource, EventData } from "@gt/domain/event";
 import { zeroCounters, type Hold, type MeterCounters, type V1Row } from "@gt/kernel/spend/v1Port";
+import type { Store } from "@gt/kernel/store";
 
 import { SPEND_CLASSES, type SpendClass } from "../../../../lib/spend/classes.ts";
 import { spendStoreDir } from "../../../../lib/spend/fileStore.ts";
+import { SQLITE_CLASSES } from "../../../../lib/spend/select.ts";
+import { storeLocation } from "../../../../lib/kernelStore.ts";
 import { pidAlive } from "../../../../lib/gpu/lease.ts";
 import { bump, digest, facts, instant, laneOfEngine, words } from "../facts.ts";
 import type { IngestEvent, LiveHold, ProjectCtx, Projection, Skipped, Source } from "../types.ts";
@@ -51,6 +54,14 @@ import { universeRoot } from "./roots.ts";
 // projection, never jobs and never events - a hold is settled into a row or
 // released, and only the row is a fact. Owner `gone` is a hold fileStore's
 // next transaction reclaims once SPEND_HOLD_TTL_MS has passed.
+//
+// A CLASS ON THE KERNEL STORE (lib/spend/select.ts SQLITE_CLASSES: text-usd,
+// operator 2026-10-18) is read from the tables packages/kernel/src/spend/v1Port.ts
+// writes - live `spend_rows`, `held` reservations, `spend_counters` - in one read
+// transaction, into the same three shapes, from the process's open kernel: a
+// reader never opens a store (./publish.ts says why), and a read transaction
+// cannot prune, reclaim or bump. With no kernel open in this process its file
+// is read as before: the history from before the switch.
 
 const rowSchema = z.object({
   at: z.number(),
@@ -93,10 +104,52 @@ function countersOf(raw: Parsed<z.output<typeof fileSchema>>["counters"]): Meter
   return c;
 }
 
-export async function readSpend(root: string): Promise<Result<SpendSnapshot>> {
+function openStore(): Store | undefined {
+  const open = globalThis.__gravitoneKernel;
+  return open === undefined || open.location !== storeLocation() ? undefined : open.kernel.store;
+}
+
+const kernelRow = z.object({ at_ms: z.number(), amount: z.number(), outcome: z.enum(["served", "failed"]), basis: z.string(), axes: z.string() });
+const kernelHold = z.object({ id: z.string(), amount: z.number(), reserved_ms: z.number(), owner: z.string() });
+const kernelCounter = z.object({ name: z.string(), value: z.number() });
+
+/** One class's window on the kernel store, as the v1 port loads it (v1Port.ts load), read-only. */
+function readKernelClass(store: Store, cls: SpendClass): Result<Omit<ClassState, "cls" | "unit">> {
+  const read = store.read((r) => ({
+    rows: r.all("SELECT at_ms, amount, outcome, basis, axes FROM spend_rows WHERE class = ? AND evicted_ms IS NULL ORDER BY seq", cls),
+    holds: r.all("SELECT id, amount, reserved_ms, owner FROM spend_reservations WHERE class = ? AND state = 'held' ORDER BY reserved_ms, id", cls),
+    counters: r.all("SELECT name, value FROM spend_counters WHERE class = ?", cls),
+  }));
+  if (!read.ok) return read;
+  const p = parseAt(`spend ${cls} (kernel)`, z.object({ rows: z.array(kernelRow), holds: z.array(kernelHold), counters: z.array(kernelCounter) }), read.value);
+  if (!p.ok) return p;
+  const rows: V1Row[] = [];
+  for (const r of p.value.rows) {
+    const axes = parseJsonAt(`spend ${cls} row axes`, z.record(z.string(), z.string()), r.axes);
+    if (!axes.ok) return axes;
+    rows.push({ at: r.at_ms, amount: r.amount, outcome: r.outcome, basis: r.basis, axes: { ...axes.value } });
+  }
+  // The port records a hold's owner as `pid:<n>`, or `v1` for one taken with no pid.
+  const holds: Hold[] = p.value.holds.map((h) => (/^pid:\d+$/.test(h.owner) ? { id: h.id, amount: h.amount, createdAt: h.reserved_ms, pid: Number(h.owner.slice(4)) } : { id: h.id, amount: h.amount, createdAt: h.reserved_ms }));
+  const raw: Record<string, number> = {};
+  for (const c of p.value.counters) raw[c.name] = c.value;
+  return ok({ rows, holds: withAlive(holds), counters: countersOf(raw) });
+}
+
+const withAlive = (holds: readonly Hold[]): ClassState["holds"] => holds.map((h) => ({ ...h, alive: h.pid === undefined ? null : pidAlive(h.pid) }));
+
+export async function readSpend(root: string, kernel: Store | undefined = openStore()): Promise<Result<SpendSnapshot>> {
   const classes: ClassState[] = [];
   const skipped: Skipped[] = [];
   for (const cls of Object.keys(SPEND_CLASSES) as SpendClass[]) {
+    if (kernel !== undefined && SQLITE_CLASSES.has(cls)) {
+      const k = readKernelClass(kernel, cls);
+      if (!k.ok) return err(k.error.code, `spend: reading ${cls} from the kernel store failed: ${k.error.message}`, { cause: k.error });
+      // A class that never booked has no file under fileStore; here it has no row, hold or counter.
+      if (k.value.rows.length > 0 || k.value.holds.length > 0 || Object.values(k.value.counters).some((v) => v !== 0 && v !== null))
+        classes.push({ cls, unit: SPEND_CLASSES[cls].unit, ...k.value });
+      continue;
+    }
     const file = path.join(root, `${cls}.json`);
     let text: string;
     try {
@@ -111,8 +164,7 @@ export async function readSpend(root: string): Promise<Result<SpendSnapshot>> {
       continue;
     }
     const rows: V1Row[] = p.value.rows.map((r) => ({ at: r.at, amount: r.amount, outcome: r.outcome, basis: r.basis, axes: { ...r.axes } }));
-    const holds = p.value.holds.map((h) => ({ ...h, alive: h.pid === undefined ? null : pidAlive(h.pid) }));
-    classes.push({ cls, unit: SPEND_CLASSES[cls].unit, rows, holds, counters: countersOf(p.value.counters) });
+    classes.push({ cls, unit: SPEND_CLASSES[cls].unit, rows, holds: withAlive(p.value.holds), counters: countersOf(p.value.counters) });
   }
   return ok({ classes, skipped });
 }

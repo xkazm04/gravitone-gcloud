@@ -98,9 +98,10 @@ export interface SpendState<R> {
   counters: MeterCounters;
 }
 
-/** The kinds of store there are. The hosted adapter (a shared ledger for the
- *  managed posture, where instances share no disk) is the next kind. */
-export type SpendStoreKind = "memory" | "file";
+/** The kinds of store there are: "sqlite" is the kernel store through its v1
+ *  port (./sqliteStore.ts). The hosted adapter (a shared ledger for the managed
+ *  posture, where instances share no disk) is the next kind. */
+export type SpendStoreKind = "memory" | "file" | "sqlite";
 
 export interface SpendStore<R> {
   /** Which adapter this is, for a stats surface to say where its numbers live. */

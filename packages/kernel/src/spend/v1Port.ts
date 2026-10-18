@@ -23,7 +23,9 @@ import { bump } from "./ledger.ts";
 // conformance kit pins that. Both conditions, as v1: older than the TTL AND
 // its pid is not alive - a long render in a live process outlives any TTL.
 //
-// WHAT THE SWITCH WOULD TAKE (not done here; a later phase's cutover):
+// WHAT THE SWITCH TAKES. Done for `text-usd` only (operator 2026-10-18: "text-usd
+// only"; count-only, so a mistake there refuses nothing); every enforcing class
+// is still on fileStore, and moving one is the operator's call, not a builder's:
 //   1. lib/spend/select.ts picks `v1SpendStore(openStore(...), cls, {busy:
 //      (s, ms) => new SpendStoreBusy(s, ms), managedMarker: managedMarker(),
 //      decode})` where it picks fileStore today, and SpendStoreKind gains

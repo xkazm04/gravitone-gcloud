@@ -13,6 +13,14 @@
 //                               no disk, and the hosted store is not built.
 //   · otherwise               → the file store (./fileStore.ts): one window per
 //                               class per machine, and a restart forgets nothing.
+//                               EXCEPT `text-usd`, which is on the kernel store
+//                               (./sqliteStore.ts) - F2 of docs/next/architecture-
+//                               review-2026-10-18.md, operator 2026-10-18: "text-usd
+//                               only". It is count-only, so the move refuses
+//                               nothing; every enforcing class stays on the file
+//                               until the operator moves it. SPEND_STORE=file asks
+//                               for "the machine's durable store", which for it is
+//                               this one.
 //
 // SPEND_STORE=file on the managed posture is a contradiction and is refused
 // loudly (HostedSpendStoreNotBuilt) rather than quietly downgraded: whoever set
@@ -25,9 +33,13 @@
 // class for the life of the process, so switching away and back loses nothing.
 
 import { fileStore, HOSTED_NOT_BUILT, HostedSpendStoreNotBuilt, managedMarker } from "./fileStore";
+import { sqliteStore } from "./sqliteStore";
 import { memoryStore, type SpendState, type SpendStore, type SpendStoreKind } from "./store";
 
 export const SPEND_STORE_VAR = "SPEND_STORE";
+
+/** The classes on the kernel store. One, until the operator moves another. */
+export const SQLITE_CLASSES: ReadonlySet<string> = new Set(["text-usd"]);
 
 interface Pick<R> {
   store: SpendStore<R>;
@@ -39,7 +51,7 @@ interface Pick<R> {
  *  one this machine would otherwise get. */
 export function spendStoreFor<R>(cls: string): SpendStore<R> {
   const memory = memoryStore<R>();
-  let file: SpendStore<R> | null = null;
+  let durable: SpendStore<R> | null = null;
   let last: SpendStore<R> = memory;
 
   function pick(): Pick<R> {
@@ -53,8 +65,8 @@ export function spendStoreFor<R>(cls: string): SpendStore<R> {
       return { store: memory, reason: HOSTED_NOT_BUILT };
     }
     // Built once, lazily: constructing it is what refuses the managed posture,
-    // and its directory is resolved per call inside it.
-    return { store: (file ??= fileStore<R>(cls)) };
+    // and its directory (or kernel store) is resolved per call inside it.
+    return { store: (durable ??= SQLITE_CLASSES.has(cls) ? sqliteStore<R>(cls) : fileStore<R>(cls)) };
   }
 
   return {
