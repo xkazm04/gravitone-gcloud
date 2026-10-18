@@ -147,16 +147,53 @@ async function stageInputs(
     // registry has one): a trial never patches the writing standard (14 proposals against it in
     // 17 runs, none adopted), only the technique it measured.
     if (run.trial && !material) throw new Error(`a trial run's topic is its registry subject; this one has ${JSON.stringify(run.topic.text)}`);
-    const files = run.trial && material
-      ? [material.file, ...(await presentIn(registry.dir, [trialTechniquePath(run.trial), run.trial.applicationPath]))]
-      : std.files;
-    for (const rel of files) {
-      const to = path.join(inputs, "registry", ...rel.split("/"));
-      await mkdir(path.dirname(to), { recursive: true });
-      const text = (await readFile(path.join(registry.dir, ...rel.split("/")), "utf8")).replace(/\r\n/g, "\n");
-      await writeFile(to, text, "utf8");
-    }
+    const files = run.trial && material ? await trialRegistryFiles(run, material.file, registry) : std.files;
+    await stageRegistryFiles(ws, files, registry);
   }
+}
+
+/** The registry files a trial run may amend, as the draft and a revision both read them: the
+ *  subject's golden path, the technique under test, and its application record when it exists. */
+async function trialRegistryFiles(run: ArticleRun, subjectFile: string, registry: RegistryLocation): Promise<string[]> {
+  if (!run.trial) return [];
+  return [subjectFile, ...(await presentIn(registry.dir, [trialTechniquePath(run.trial), run.trial.applicationPath]))];
+}
+
+/** Read-only copies of registry files at their registry paths under `inputs/registry/`. Copies:
+ *  the agent can never write the registry itself. */
+async function stageRegistryFiles(ws: string, files: string[], registry: RegistryLocation): Promise<void> {
+  for (const rel of files) {
+    const to = path.join(ws, "inputs", "registry", ...rel.split("/"));
+    await mkdir(path.dirname(to), { recursive: true });
+    const text = (await readFile(path.join(registry.dir, ...rel.split("/")), "utf8")).replace(/\r\n/g, "\n");
+    await writeFile(to, text, "utf8");
+  }
+}
+
+/** A trial run's revision may correct the amendment it proposed (2026-10-18: the critique caught a
+ *  reversed mechanism in the post, and the draft's amendment, never reviewed, kept it). It gets the
+ *  registry files the draft had, and the amendments as they stand (`inputs/amendments/<id>.patch`). */
+export async function stageTrialAmendmentInputs(ws: string, dir: string, run: ArticleRun, registry: RegistryLocation): Promise<void> {
+  if (!run.trial || !run.topic.bundle || !run.topic.subject) return;
+  const material = await resolveTopicSubject(`${run.topic.bundle}/${run.topic.subject}`, registry);
+  await stageRegistryFiles(ws, await trialRegistryFiles(run, material.file, registry), registry);
+  await copyAmendments(dir, path.join(ws, "inputs", "amendments"));
+}
+
+/** The run's proposed amendments (every patch but a required one), as diffs, into `to`. Returns
+ *  the ids copied. Reviewers read them too: they are the text that would land in the standard. */
+export async function copyAmendments(dir: string, to: string): Promise<string[]> {
+  const patches = await readJsonFile<{ id: string; required?: true; patchFile: string }[]>(path.join(dir, "patches.json"), []);
+  const ids: string[] = [];
+  for (const p of patches) {
+    if (p.required) continue;
+    const diff = await readFile(path.join(dir, ...p.patchFile.split("/")), "utf8").catch(() => undefined);
+    if (diff === undefined) continue;
+    await mkdir(to, { recursive: true });
+    await writeFile(path.join(to, `${p.id}.patch`), diff, "utf8");
+    ids.push(p.id);
+  }
+  return ids;
 }
 
 /** The registry-relative paths that exist in the registry. */

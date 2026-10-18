@@ -8,7 +8,9 @@ import path from "node:path";
 import { roundDir, type ReviewerPanel, validateDecision, validateDispositions } from "./critique";
 import { copyDir, fileExists } from "./files";
 import { critiqueTurn } from "./critiqueTurn";
-import { ingestPost } from "./ingestDraft";
+import { stageTrialAmendmentInputs } from "./agentSteps";
+import { ingestPatches, ingestPost } from "./ingestDraft";
+import { resolveRegistryDir } from "./registryRead";
 import { assertTrialSource, readExperimentSource, readOutJson, validateClaims, validateSources } from "./ingestSources";
 import { readJsonFile, readRun, runDir, writeJsonAtomic } from "./store";
 import { StepError, sumCost } from "./stepFailure";
@@ -96,9 +98,18 @@ export async function revise(id: string, round: number, panel: ReviewerPanel, de
       };
       cost = sumCost(cost, await critiqueTurn(id, round, "revise-research", panel, deps, stage, ingest));
     }
-    const stage = (ws: string) => stageCritiqueInputs(ws, dir, round, reviews, ["outline", "answers"]);
+    // A trial run's revision may also rewrite the amendment its draft proposed: the critique reads
+    // the amendment (critiqueReviews.ts), and a finding against it can only be met here. Without
+    // an out/patches.json the draft's patches stand, exactly as before.
+    const isTrial = !!(await readRun(id)).trial;
+    const registry = deps.registry ?? resolveRegistryDir();
+    const stage = async (ws: string) => {
+      await stageCritiqueInputs(ws, dir, round, reviews, ["outline", "answers"]);
+      if (isTrial) await stageTrialAmendmentInputs(ws, dir, await readRun(id), registry);
+    };
     const ingest = async (ws: string) => {
       await ingestPost(ws, dir);
+      if (isTrial && (await fileExists(path.join(ws, "out", "patches.json")))) await ingestPatches(ws, dir, registry);
       await writeJsonAtomic(path.join(rd, "revised.json"), { at: deps.now().toISOString(), research });
     };
     cost = sumCost(cost, await critiqueTurn(id, round, "revise", panel, deps, stage, ingest));

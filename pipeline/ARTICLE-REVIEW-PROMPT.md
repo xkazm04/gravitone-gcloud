@@ -87,6 +87,7 @@ LENS: METHOD. This post reports a trial: before the post existed, the claim belo
 A trial post opens on the trial's own measured number, not on an incident, and its preview states the verdict and the per-arm n citing [1]: for this post that is the rule, not a finding. Source [1] is the trial's record: its link resolves only after the post lands, so check the numbers it carries against `experiment/` instead.
 
 Judge the measurement, not only the prose:
+- THE AMENDMENT: when `experiment/proposed-amendments/` holds a diff, it is the text this post proposes to add to the engineering standard, and it lands if the operator approves it. Judge it as strictly as the post: every mechanism it states must agree with the trial's own numbers, and it must claim no more than the trial measured. A finding on it uses a `location` starting `METHOD: amendment <id>`.
 - CONFOUNDS: anything other than the practice under test that differs between the arms (load, model, cache, data, order, version).
 - ARM FAIRNESS: is the alternative a real practice at its best, configured as its own current documentation recommends, or a strawman? Is the golden arm the rule as written?
 - CONTROLS: did each control hold, and does its recorded evidence show it?

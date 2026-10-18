@@ -11,7 +11,7 @@ import { REVIEW_EXPERIMENT_DIR } from "@/lib/agent/reviewerEngines";
 import { readCritiqueDetail, roundDir, summarizeCritique, type ReviewerPanel, validateReview } from "./critique";
 import { copyDir, fileExists } from "./files";
 import { standardForPrompt } from "./critiqueTurn";
-import { copyExperimentText, makeReviewerWorkspace, runTrial } from "./agentSteps";
+import { copyAmendments, copyExperimentText, makeReviewerWorkspace, runTrial } from "./agentSteps";
 import { buildReviewPrompt, loadReviewPromptFile } from "./prompt";
 import { readJsonFile, readRun, readTextFile, runDir, updateRun, writeFileAtomic, writeJsonAtomic } from "./store";
 import { StepError, sumCost } from "./stepFailure";
@@ -128,7 +128,13 @@ async function reviewOnce(id: string, round: number, spec: ReviewerSpec, deps: E
       ws = await makeReviewerWorkspace(id, round, spec.id, attempt, deps.now());
       await copyDir(path.join(dir, "post"), path.join(ws, "post"));
       await copyFile(path.join(dir, "sources.json"), path.join(ws, "sources.json"));
-      if (experiment) await copyExperimentText(dir, path.join(ws, REVIEW_EXPERIMENT_DIR));
+      if (experiment) {
+        await copyExperimentText(dir, path.join(ws, REVIEW_EXPERIMENT_DIR));
+        // The amendment the post proposes to the standard is reviewed like the post: it is the
+        // text that lands (2026-10-18: a reversed mechanism the reviewers caught in the post stood,
+        // unreviewed, in the amendment).
+        await copyAmendments(dir, path.join(ws, REVIEW_EXPERIMENT_DIR, "proposed-amendments"));
+      }
       await writeFile(path.join(ws, REVIEW_MD), text, "utf8");
       const before = await snapshotTree(ws);
       const result = await deps.runReviewer({ engine: spec.engine, cwd: ws, prompt: text, model: spec.model, effort: spec.effort, timeoutMin: spec.timeoutMin });

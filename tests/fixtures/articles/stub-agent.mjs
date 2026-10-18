@@ -336,6 +336,19 @@ if (phase === "draft") {
   const patches = [];
   // a trial run proposes nothing: its only legal target is the technique, and only after a
   // challenged or null verdict (the probes that need one seed it themselves)
+  if (TRIAL && process.env.STUB_TRIAL_AMENDMENT === "1") {
+    // STUB_TRIAL_AMENDMENT=1: a trial draft proposes an amendment to the technique under test that
+    // states the mechanism backwards; a revision that finds it in inputs/amendments/ corrects it.
+    const technique = existing.find((r) => r.includes("/techniques/"));
+    if (technique) {
+      const orig = fs.readFileSync(path.join(reg, ...technique.split("/")), "utf8");
+      write(`proposals/p1/${technique}`, `${orig.trimEnd()}
+
+## Amendment: the check loosens as runs are added [1]
+`);
+      patches.push({ id: "p1", target: technique, kind: "technique", rationale: "The trial measured the rule failing.", sources: [1] });
+    }
+  }
   if (existing.length && !TRIAL) {
     const target = existing[0];
     const orig = fs.readFileSync(path.join(reg, ...target.split("/")), "utf8");
@@ -430,6 +443,18 @@ if (phase === "revise-research") {
 
 if (phase === "revise") {
   const words = writePost(currentSources(), `The price was revised after review round ${round} [2].`, defectIn("revise"));
+  const amendments = path.resolve("inputs", "amendments");
+  if (process.env.STUB_TRIAL_AMENDMENT === "1" && fs.existsSync(path.join(amendments, "p1.patch"))) {
+    const target = /^\+\+\+ b\/(\S+)$/m.exec(fs.readFileSync(path.join(amendments, "p1.patch"), "utf8"))?.[1];
+    if (target) {
+      const orig = fs.readFileSync(path.resolve("inputs", "registry", ...target.split("/")), "utf8");
+      write(`proposals/p1/${target}`, `${orig.trimEnd()}
+
+## Amendment: the check tightens as runs are added [1]
+`);
+      write("patches.json", JSON.stringify([{ id: "p1", target, kind: "technique", rationale: "Corrected after the critique.", sources: [1] }], null, 2));
+    }
+  }
   console.log(claudeEnvelope(`A stub post about tokens, ${words} words, 5 figures`));
   process.exit(0);
 }

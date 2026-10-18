@@ -272,7 +272,7 @@ test("medium story: the Markdown subset, figures as PNG with captions", () => {
 // The fixture's numbers follow the verdict rule (metric lower-is-better, band 2 absolute,
 // delta -10 with the golden arm eligible: upheld).
 
-keepEnv(["ARTICLES_TRIALS_DIR", "ARTICLES_REGISTRY_REMOTE", "ARTICLES_LEADS_FILE", "STUB_TRIAL_SOURCE"]);
+keepEnv(["ARTICLES_TRIALS_DIR", "ARTICLES_REGISTRY_REMOTE", "ARTICLES_LEADS_FILE", "STUB_TRIAL_SOURCE", "STUB_TRIAL_AMENDMENT", "STUB_CRITIQUE_DECISIONS"]);
 
 const TRIAL_SUBJECT_FILE = "knowledge/software-engineering/llm-agent/token-budgeting/token-budgeting.md";
 const TRIAL_TECHNIQUE = "knowledge/software-engineering/llm-agent/token-budgeting/techniques/count-before-send.md";
@@ -478,6 +478,30 @@ test("trial: a research answer whose source 1 is not the trial's record fails th
   expect(run.status).toBe("failed");
   expect(run.error).toMatch(/^research: source 1 must be the trial's record \(experiment-source\.json\); its title differ/);
   expect(existsSync(path.join(runDir(created.id), "sources.json")), "a refused research wrote sources.json").toBe(false);
+});
+
+test("trial: the reviewers read the proposed amendment, and a revision that rewrites it replaces the patch", async () => {
+  // 2026-10-18, eval-harness: the critique caught a reversed mechanism in the post, but the draft's
+  // amendment to the technique repeated it and nobody reviewed it. Now the reviewers get it in
+  // experiment/proposed-amendments/ and the revise turn may write it again.
+  trialEnv();
+  process.env.STUB_AGENT_ARGV_LOG = path.join(box.dir, "argv.log");
+  process.env.STUB_TRIAL_AMENDMENT = "1";
+  process.env.STUB_CRITIQUE_DECISIONS = "rewrite,keep";
+  const created = await createRun({ topic: SUBJECT_TOPIC, trial: seedTrial({ verdict: "challenged" }) }, deps());
+  const run = await driveRun(created.id, deps());
+  expect(run.status, run.error).toBe("awaiting-approval");
+  const reviewers = argvLines().filter((l) => l.entries.includes("experiment"));
+  expect(reviewers.length, "trial reviewers ran").toBeGreaterThan(0);
+  for (const r of reviewers) expect(r.experiment, "the reviewer saw the amendment").toContain("proposed-amendments/p1.patch");
+  const revise = argvLines().find((l) => l.inputs?.includes("amendments"));
+  expect(revise, "the revision was handed the amendment").toBeDefined();
+  const patches = JSON.parse(readFileSync(path.join(runDir(run.id), "patches.json"), "utf8")) as { id: string; required?: true }[];
+  expect(patches.map((p) => p.id).sort()).toEqual(["p1", "t1"]);
+  expect(patches.find((p) => p.id === "t1")?.required, "the trial record still lands with the post").toBe(true);
+  const p1 = readFileSync(path.join(runDir(run.id), "patches", "p1.patch"), "utf8");
+  expect(p1).toContain("the check tightens as runs are added");
+  expect(p1).not.toContain("loosens");
 });
 
 test("trial: the fix turn of a trial run reads the experiment and carries the trial-writer section", async () => {

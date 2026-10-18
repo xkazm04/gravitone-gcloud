@@ -59,10 +59,18 @@ export async function ingestPost(ws: string, dir: string): Promise<void> {
 /** `registry` is where the trial record's current text is read from; resolved like every
  *  other registry read when the caller does not pass the one it already holds. */
 export async function ingestDraft(ws: string, dir: string, registry?: RegistryLocation): Promise<void> {
-  const out = path.join(ws, "out");
-  const trial = (await readJsonFile<ArticleRun | null>(path.join(dir, "run.json"), null))?.trial;
   // A redraft replaces the previous post and its patches wholesale.
   await ingestPost(ws, dir);
+  await ingestPatches(ws, dir, registry);
+}
+
+/** The proposals in `out/patches.json` (+ `out/proposals/`) become the run's patches, diffs by
+ *  code; a trial run's record (`t1`) is rebuilt beside them. Replaces the previous patches
+ *  wholesale. The draft calls it, and a trial run's revision calls it when it rewrote its
+ *  amendment (critiqueWriter.ts `revise`). */
+export async function ingestPatches(ws: string, dir: string, registry?: RegistryLocation): Promise<void> {
+  const out = path.join(ws, "out");
+  const trial = (await readJsonFile<ArticleRun | null>(path.join(dir, "run.json"), null))?.trial;
   await rm(path.join(dir, "patches"), { recursive: true, force: true });
 
   // Patches: proposals in, diffs out — computed here, never typed by the model.
