@@ -179,9 +179,9 @@ export const MUTANTS: Mutant[] = [
   {
     id: "tally-key-opacity-low",
     probe: "chip-key-contrast.probe.spec.ts",
-    file: "components/ui/signal/Tally.tsx",
-    find: "\"uppercase opacity-80\"",
-    replace: "\"uppercase opacity-20\"",
+    file: "packages/ui/src/components/tally/Tally.module.css",
+    find: "font-weight:500;color:var(--muted)",
+    replace: "font-weight:500;color:var(--ink-3)",
     why: "A Tally's key label drops below readable contrast.",
   },
   {
