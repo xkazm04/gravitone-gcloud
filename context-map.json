@@ -2270,6 +2270,56 @@
     },
     {
       "api_surface": "",
+      "business_feature": "Music Video Production",
+      "category": "lib",
+      "cross_refs": [
+        "sound-generation-engine"
+      ],
+      "db_tables": [],
+      "description": "Turns finished tracks into music videos: imports folders, fetches audio, plans sections and treatments, picks looks, composites and renders, and writes YouTube metadata. Steps, queue and store track each track's job; the compositor is the render core.",
+      "entry_points": [
+        "lib/sound/mv/steps.ts",
+        "lib/sound/mv/compositor.ts",
+        "lib/sound/mv/types.ts"
+      ],
+      "file_paths": [
+        "lib/sound/mv/batch.ts",
+        "lib/sound/mv/compositor.ts",
+        "lib/sound/mv/fetchAudio.ts",
+        "lib/sound/mv/importFolder.ts",
+        "lib/sound/mv/looks.ts",
+        "lib/sound/mv/metadata.ts",
+        "lib/sound/mv/queue.ts",
+        "lib/sound/mv/render.ts",
+        "lib/sound/mv/sections.ts",
+        "lib/sound/mv/standIns.ts",
+        "lib/sound/mv/steps.ts",
+        "lib/sound/mv/store.ts",
+        "lib/sound/mv/treatment.ts",
+        "lib/sound/mv/types.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
+      "id": "30a879d3-b06e-4530-a9fa-051ee66769dd",
+      "keywords": [
+        "music-video",
+        "compositor",
+        "render",
+        "treatment",
+        "sections",
+        "looks",
+        "metadata",
+        "queue"
+      ],
+      "last_written_at": "2026-10-18T18:33:44.516956700+00:00",
+      "name": "music-video-pipeline",
+      "pinned": false,
+      "tech_stack": [
+        "TypeScript"
+      ]
+    },
+    {
+      "api_surface": "",
       "business_feature": "Research Notebook Content",
       "category": "lib",
       "cross_refs": [
@@ -3151,15 +3201,16 @@
       ]
     },
     {
-      "api_surface": "Vendor sound-generation HTTP clients; CLI entry in cli.ts",
+      "api_surface": "Vendor audio-generation HTTP clients; sound CLI",
       "business_feature": "Sound Generation",
       "category": "lib",
       "cross_refs": [
         "sound-hunt-and-measure",
-        "sound-suno-automation"
+        "suno-driver-queue",
+        "music-video-pipeline"
       ],
       "db_tables": [],
-      "description": "Generates music and sound effects through the sound engines: client and HTTP access, engine selection, take storage, arrangement, edit plans and batch runs. It is driven by the CLI and by the SFX job. Output is stored as takes, and vendor spend is priced through receipts first.",
+      "description": "Generates music and sound-effect takes through vendor engines, arranges and edits them, and persists takes with spend booked on the ledger. A CLI, HTTP client and batch runner drive engine adapters; takes land in the sound store with typed records. Depends on the kernel spend ledger and vendor APIs.",
       "entry_points": [
         "lib/sound/generate.ts",
         "lib/sound/engines.ts",
@@ -3175,6 +3226,7 @@
         "lib/sound/generate.ts",
         "lib/sound/hands.ts",
         "lib/sound/http.ts",
+        "lib/sound/ledger.ts",
         "lib/sound/sfxJob.ts",
         "lib/sound/store.ts",
         "lib/sound/takes.ts",
@@ -3182,24 +3234,24 @@
       ],
       "group": "Production Pipeline",
       "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "64b8159b-a390-4d5b-ad02-b3d2ddfb7cf1",
+      "id": "f6a26c60-230a-4e2d-811f-4ecef7a2cad1",
       "keywords": [
-        "sound",
         "music",
         "sfx",
-        "generation",
         "takes",
-        "engine",
+        "engines",
         "arrange",
         "edit-plan",
-        "batch"
+        "batch",
+        "ledger",
+        "spend"
       ],
-      "last_written_at": "2026-10-18T17:57:52.846310400+00:00",
-      "name": "sound-generation-core",
+      "last_written_at": "2026-10-18T18:33:44.514037200+00:00",
+      "name": "sound-generation-engine",
       "pinned": false,
       "tech_stack": [
-        "TypeScript",
-        "Node.js"
+        "Next.js 16",
+        "TypeScript"
       ]
     },
     {
@@ -3207,13 +3259,12 @@
       "business_feature": "Sound Hunt and Measurement",
       "category": "lib",
       "cross_refs": [
-        "sound-generation-core",
-        "sound-suno-automation"
+        "sound-generation-engine"
       ],
       "db_tables": [],
-      "description": "Hunts for acceptable generated sound and measures it against a rubric. The hunt engine, desk and render drive a search loop. Measurement runs, the ledger, lessons, insights and triage ordering record what worked, and a shared vocabulary and knowledge base back them. It keeps acceptance evidence for generated music.",
+      "description": "Hunts for acceptable sound takes and measures them against a rubric, turning outcomes into lessons, insights and triage order. Hunt engine and desk drive candidate searches; measure runs score audio; knowledge and vocabulary carry the accumulated music-prompt learning.",
       "entry_points": [
-        "lib/sound/hunt.ts",
+        "lib/sound/huntEngine.ts",
         "lib/sound/measure.ts",
         "lib/sound/rubric.ts"
       ],
@@ -3224,7 +3275,6 @@
         "lib/sound/huntRender.ts",
         "lib/sound/insights.ts",
         "lib/sound/knowledge.ts",
-        "lib/sound/ledger.ts",
         "lib/sound/lessons.ts",
         "lib/sound/measure.ts",
         "lib/sound/measureRun.ts",
@@ -3234,120 +3284,22 @@
       ],
       "group": "Production Pipeline",
       "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "52b91545-533e-450e-ae18-de43fa7d0779",
+      "id": "3f11be96-c51f-4098-8472-341c42362e6d",
       "keywords": [
         "hunt",
         "measure",
         "rubric",
-        "ledger",
         "lessons",
         "insights",
         "triage",
         "vocabulary",
         "acceptance"
       ],
-      "last_written_at": "2026-10-18T17:57:46.276412200+00:00",
+      "last_written_at": "2026-10-18T18:33:44.514743900+00:00",
       "name": "sound-hunt-and-measure",
       "pinned": false,
       "tech_stack": [
-        "TypeScript",
-        "Node.js"
-      ]
-    },
-    {
-      "api_surface": "",
-      "business_feature": "Music Video Batch",
-      "category": "lib",
-      "cross_refs": [
-        "sound-generation-core"
-      ],
-      "db_tables": [],
-      "description": "Turns a folder of finished tracks into music videos: imports the folder, fetches audio, builds sections, a treatment and looks, then renders. It queues each track as a step, keeps stand-ins, calendar slots and metadata (title, description, tags) per track, and persists them in an mv store.",
-      "entry_points": [
-        "lib/sound/mv/batch.ts",
-        "lib/sound/mv/render.ts",
-        "lib/sound/mv/types.ts"
-      ],
-      "file_paths": [
-        "lib/sound/mv/batch.ts",
-        "lib/sound/mv/calendar.ts",
-        "lib/sound/mv/fetchAudio.ts",
-        "lib/sound/mv/importFolder.ts",
-        "lib/sound/mv/looks.ts",
-        "lib/sound/mv/metadata.ts",
-        "lib/sound/mv/queue.ts",
-        "lib/sound/mv/render.ts",
-        "lib/sound/mv/sections.ts",
-        "lib/sound/mv/standIns.ts",
-        "lib/sound/mv/steps.ts",
-        "lib/sound/mv/store.ts",
-        "lib/sound/mv/treatment.ts",
-        "lib/sound/mv/types.ts"
-      ],
-      "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "e037f84b-427f-4cf9-a33b-5a8d77cb6d3f",
-      "keywords": [
-        "music-video",
-        "album",
-        "render",
-        "treatment",
-        "sections",
-        "metadata",
-        "calendar",
-        "queue",
-        "looks"
-      ],
-      "last_written_at": "2026-10-18T17:57:46.391830900+00:00",
-      "name": "sound-music-video-batch",
-      "pinned": false,
-      "tech_stack": [
-        "TypeScript",
-        "Node.js"
-      ]
-    },
-    {
-      "api_surface": "Suno driver interface; CLI",
-      "business_feature": "Suno Automation",
-      "category": "lib",
-      "cross_refs": [
-        "sound-generation-core",
-        "sound-hunt-and-measure"
-      ],
-      "db_tables": [],
-      "description": "Automates Suno music creation: proposes and drafts prompts, queues them, and drives the Suno library through pluggable drivers. A fake driver allows rehearsal without spend. State lives in its own store and a CLI exposes it.",
-      "entry_points": [
-        "lib/sound/suno/queue.ts",
-        "lib/sound/suno/drivers.ts"
-      ],
-      "file_paths": [
-        "lib/sound/suno/cli.ts",
-        "lib/sound/suno/draft.ts",
-        "lib/sound/suno/drivers.ts",
-        "lib/sound/suno/fakeDriver.ts",
-        "lib/sound/suno/library.ts",
-        "lib/sound/suno/propose.ts",
-        "lib/sound/suno/queue.ts",
-        "lib/sound/suno/store.ts"
-      ],
-      "group": "Production Pipeline",
-      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
-      "id": "2a987358-a331-4032-b5b4-0b2ffd973c55",
-      "keywords": [
-        "suno",
-        "driver",
-        "queue",
-        "propose",
-        "draft",
-        "library",
-        "music"
-      ],
-      "last_written_at": "2026-10-18T17:57:46.391365600+00:00",
-      "name": "sound-suno-automation",
-      "pinned": false,
-      "tech_stack": [
-        "TypeScript",
-        "Node.js"
+        "TypeScript"
       ]
     },
     {
@@ -3601,6 +3553,47 @@
         "React",
         "TypeScript",
         "CSS Modules"
+      ]
+    },
+    {
+      "api_surface": "Suno vendor driver",
+      "business_feature": "Suno Song Generation",
+      "category": "lib",
+      "cross_refs": [
+        "sound-generation-engine"
+      ],
+      "db_tables": [],
+      "description": "Drives Suno song generation through pluggable drivers (real and fake), with proposal drafting, a job queue, a library of results and a store. A CLI runs the flow unattended.",
+      "entry_points": [
+        "lib/sound/suno/drivers.ts",
+        "lib/sound/suno/queue.ts"
+      ],
+      "file_paths": [
+        "lib/sound/suno/cli.ts",
+        "lib/sound/suno/draft.ts",
+        "lib/sound/suno/drivers.ts",
+        "lib/sound/suno/fakeDriver.ts",
+        "lib/sound/suno/library.ts",
+        "lib/sound/suno/propose.ts",
+        "lib/sound/suno/queue.ts",
+        "lib/sound/suno/store.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "88f8f784-077d-4c21-8191-b6c5d68394c4",
+      "id": "ab872012-f902-4f43-b9c7-f13137e36f24",
+      "keywords": [
+        "suno",
+        "driver",
+        "queue",
+        "proposal",
+        "library",
+        "draft"
+      ],
+      "last_written_at": "2026-10-18T18:33:44.516259800+00:00",
+      "name": "suno-driver-queue",
+      "pinned": false,
+      "tech_stack": [
+        "TypeScript"
       ]
     },
     {
@@ -4133,7 +4126,7 @@
       ]
     }
   ],
-  "generated_at": "2026-10-18T18:14:13.466841+00:00",
+  "generated_at": "2026-10-18T18:34:32.150354600+00:00",
   "generator": "personas-context-scan",
   "groups": [
     {
@@ -4154,11 +4147,11 @@
   "project": {
     "id": "d57f858b-b917-4fd7-b5f4-ee7df0f989a0",
     "name": "gravitone-gcloud",
-    "root": "C:/Users/kazda/kiro/gravitone-gcloud"
+    "root": "C:\\Users\\kazda\\kiro\\gravitone-gcloud"
   },
   "provenance": {
-    "git_commit": "ca636fd2a6b967c36e641691455e54389bf211a4",
-    "git_commit_count": 1513
+    "git_commit": "f437d981c2a1b408c5de9b0326202c70d8791a08",
+    "git_commit_count": 1515
   },
   "stats": {
     "contexts": 80,
