@@ -22,6 +22,7 @@
 //     A transaction's revision is now motion-styles.json's own counter + 1, which only the Strips
 //     commit reads.
 
+import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -130,9 +131,16 @@ export async function importStylesText(s: Store, text: string, opts: { readonly 
 export async function ensureStyles(s: Store): Promise<void> {
   const any = unwrap(s.read((r) => r.get("SELECT EXISTS (SELECT 1 FROM styles) AS n")?.["n"]), "the style store");
   if (any === 1) return;
+  // SYNCHRONOUS on purpose. Two commits racing on a fresh store both reach this read, and an
+  // async read holds styles.json open across an await. The other commit's export replaces the file
+  // by rename, and on Windows that rename fails EPERM while any handle is open; its retry
+  // (packages/kernel/src/styles/export.ts `renameRetrying`) blocks this very thread, so the async
+  // read could never finish and release the handle, and the export failed after every retry
+  // (foundry-catalogue-tx.probe case 1, measured 3-4 in 40 before this). A sync read closes the
+  // file before anything else in the process can run.
   let text: string | null = null;
   try {
-    text = await readFile(foundryFile(STYLES_FILE), "utf8");
+    text = readFileSync(foundryFile(STYLES_FILE), "utf8");
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
   }
