@@ -39,48 +39,12 @@ the surface binds.
 
 ## The twelve
 
-### `<Hint>` — a real disclosure, not `title=`
+### `<Hint>` and `<Tally>` — moved to `@gt/ui`
 
-Native `title` waits about a second, does not exist on touch, cannot be styled,
-is exposed inconsistently by screen readers, and — worst — is unbounded, so it
-invites keeping the paragraph. Opens on hover, focus and tap; closes on Escape,
-blur and outside pointer-down; `role="tooltip"` wired by `aria-describedby`, and
-the content stays in the DOM `sr-only` when closed so a screen reader hears it on
-focus without having to discover there is something to open.
-
-```tsx
-<Hint>a bar is 4 beats at the cue's tempo</Hint>
-<Hint variant="lock" tone="amber">locked sheets take no new proofs</Hint>
-```
-
-Replaces, among others:
-
-| where | what is there now |
-| --- | --- |
-| `app/foundry/ExtractView.tsx:609` | a three-sentence `title=` on a checkbox |
-| `app/_phases/score/ScoreSpotting.tsx:77-81` | `NO_TEMPO_WHY` — four sentences, written once because it is used as a tooltip three times |
-| `app/_phases/script/_matrix/shared.tsx:143-147` | a three-sentence methodology footnote printed under three tabs |
-
-`useHint` / `<HintPopover>` are exported for the one case a glyph cannot serve:
-`<TabRail>` hangs the same disclosure on the tab itself, because a button inside
-a `role="tab"` button is invalid HTML.
-
-### `<Tally>` — a count or a ratio, as a chip
-
-```tsx
-<Tally value={12} of={36} label="kept" tone="emerald" />   // KEPT 12/36
-```
-
-Replaces `app/library/LibraryView.tsx:26-29` ("Visual identities. A locked one is
-required before any project." — a rule the tab cannot enforce, where the reader
-wants `2/5`), `app/_phases/script/ScriptStep.tsx:74-79` (four captions restating
-numbers the tabs already hold), and
-`app/_phases/research/ResearchTriageBoard.tsx:62-67` (a paragraph whose own
-comment records that the count was wrong for as long as it was prose).
-
-The numerals are `aria-hidden` with a spoken equivalent beside them — `12/36`
-announces as "twelve slash thirty six" otherwise. `CHIP_CLASS` is the one chip
-spelling; `StaleBadge` and `Provenance` read it rather than re-deriving it.
+The v1 files are deleted. The live ones are `packages/ui/src/components/hint/Hint.tsx` (pinned by
+`tests/golden-path/hint-tap.probe.spec.ts`) and `packages/ui/src/components/tally/Tally.tsx` (key
+contrast pinned by `chip-key-contrast.probe.spec.ts` and the `tally-key-opacity-low` mutant).
+Only `StaleBadge.tsx` remains in this directory, for `app/_landing/parts.tsx`.
 
 ### `<PipRow>` — discrete state, drawn
 

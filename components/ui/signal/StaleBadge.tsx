@@ -31,33 +31,27 @@
 
 import { History, Hourglass } from "lucide-react";
 
-import { Hint } from "./Hint";
-import { CHIP_CLASS, TALLY_TONE } from "./Tally";
+// The chip spelling and amber tone were v1 Tally's; Tally and Hint moved to @gt/ui and the
+// only caller (app/_landing/parts.tsx) passes neither a tone nor a reason, so they live here.
+const CHIP_AMBER =
+  "font-jetbrains inline-flex items-center gap-1.5 rounded border px-1.5 py-0.5 text-label tracking-[0.12em] whitespace-nowrap border-amber-400/30 bg-amber-400/[0.08] text-amber-200/90";
 
 export function StaleBadge({
   words = "not re-run",
-  why,
   glyph = "hourglass",
   className = "",
 }: {
   /** One or two words — "not re-run", "unmeasured", "hand-written". */
   words?: string;
-  /** ONE sentence saying against what. Not the pipeline's biography. */
-  why?: React.ReactNode;
   /** `hourglass` = waiting on a measurement; `history` = measured, but before. */
   glyph?: "hourglass" | "history";
   className?: string;
 }) {
   const Glyph = glyph === "history" ? History : Hourglass;
   return (
-    <span className={`${CHIP_CLASS} ${TALLY_TONE.amber} ${className}`}>
+    <span className={`${CHIP_AMBER} ${className}`}>
       <Glyph className="h-3.5 w-3.5 shrink-0" aria-hidden />
       {words}
-      {why && (
-        <Hint tone="amber" label={`Why: ${words}`}>
-          {why}
-        </Hint>
-      )}
     </span>
   );
 }
