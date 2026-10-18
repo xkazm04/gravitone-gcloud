@@ -15,6 +15,10 @@ const W = await vi.hoisted(async () => {
   process.env["GRAVITONE_STORE_PATH"] = join(dir, "store.sqlite");
   process.env["PUBLISH_STORE_DIR"] = join(dir, "publish");
   for (const v of ["PUBLISH_MODE", "PUBLISH_MISSED_MIN", "YOUTUBE_CLIENT_ID", "YOUTUBE_CLIENT_SECRET", "YOUTUBE_REFRESH_TOKEN", "TIKTOK_ACCESS_TOKEN", "INSTAGRAM_ACCESS_TOKEN", "INSTAGRAM_USER_ID", "GRAVITONE_DRY_ONLY", "GRAVITONE_PRODUCE_SIDE"]) delete process.env[v];
+  // Nor the machine's PATH: the readiness probes ffmpeg and ffprobe through a shell (`where`, lib/
+  // publish/channels.ts onPath) unless the posture forbids spawning. No case here reads that row,
+  // and on a loaded box the two shells alone ran the first realSlots() past its 5 s (6.8 s measured).
+  process.env["LOCAL_BINARIES"] = "off";
   return { dir };
 });
 
