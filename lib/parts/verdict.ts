@@ -6,8 +6,10 @@ import { decodeStep } from "@gt/domain/steps/record";
 import { ADS_SCENARIOS } from "@gt/domain/steps/script";
 import { ADS_SHOTS, FRAMES } from "@gt/domain/steps/frames";
 import { ADS_FINISH, ADS_SCORE, CUT, MOTION_DIRECTION, SCORE } from "@gt/domain/steps/finish";
+import { STRIPS, VOICE } from "@gt/domain/steps/parts";
 
 import { deriveTimeline } from "@/lib/cut/deriveTimeline";
+import { EXPLAINER_SKIPS, explainerCut } from "@/lib/cut/explainer";
 import { finishLine } from "@/lib/cut/finishLine";
 import type { PictureUnit } from "@/lib/frames/picture/unit";
 import type { ScoreSpot } from "@/lib/score/spots";
@@ -167,6 +169,10 @@ function cutVerdict(i: VerdictInput): PartVerdict {
     if (f.exports.length === 0) codes.push(c("no-export", "no aspect rendered"));
     return codes.length === 0 ? v("ready", c("exported", `${plural(f.exports.length, "aspect", "aspects")} rendered`)) : v("working", ...codes);
   }
+  // An explainer plans strips and voice, never frames: its cut is derived from them as the editor's
+  // is (lib/cut/explainer.ts), not read from a frames record it cannot hold.
+  const strips = rec(i, "strips", (r) => decodeStep(STRIPS, r));
+  if (strips !== undefined) return finishVerdict(i, explainerCut({ cards: strips.cards, voice: rec(i, "voice", (r) => decodeStep(VOICE, r)) ?? { text: {}, takes: {}, byLine: {} }, targetS: i.targetS }), true);
   const fr = frames(i);
   const spots = rec(i, "score", (r) => decodeStep(SCORE, r))?.spots ?? null;
   if (fr === undefined || fr.units.length === 0) return v("empty", c("no-picture", "no picture to cut"));
@@ -194,8 +200,14 @@ function cutVerdict(i: VerdictInput): PartVerdict {
     takes,
     storeTakeIds: null,
   });
+  return finishVerdict(i, cut, false);
+}
+
+/** The finish line over a derived cut. An explainer's has no music rows: it plans no score. */
+function finishVerdict(i: VerdictInput, cut: Parameters<typeof finishLine>[0], explainer: boolean): PartVerdict {
+  if (explainer && cut.scenes.length === 0) return v("empty", c("no-picture", "no picture to cut"));
   const offsets = rec(i, "cut", (r) => decodeStep(CUT, r))?.offsets ?? {};
-  const checks = finishLine(cut, offsets);
+  const checks = finishLine(cut, offsets).filter((x) => !explainer || !EXPLAINER_SKIPS.has(x.id));
   const holds = checks.filter((x) => x.verdict === "fail" && (x.id !== "voice" || i.plansVoice));
   const codes = checks.filter((x) => x.verdict === "fail").map((x) => c(`finish-${x.id}`, x.deny ?? `${x.label} ${x.value} vs ${x.target}`));
   if (holds.length === 0) return v("ready", c("finish-line", `${checks.filter((x) => x.verdict === "pass").length} of ${checks.length} checks pass`), ...codes);

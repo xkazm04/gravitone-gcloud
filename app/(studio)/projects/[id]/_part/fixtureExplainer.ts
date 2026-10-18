@@ -4,7 +4,8 @@ import type { BlobRef } from "@gt/domain/blob";
 import { err, ok, type Result } from "@gt/domain/errors";
 import { albumOpLabel, type ArticleData, type EngineView, type PartActView, type PartVerdict, type StripsData, type VoiceData } from "@gt/domain/partView";
 
-import type { CutClip, CutScene, DerivedCut } from "@/lib/cut/deriveTimeline";
+import type { DerivedCut } from "@/lib/cut/deriveTimeline";
+import { explainerCut as deriveExplainerCut, linesOf as cardLines, spokenS, words } from "@/lib/cut/explainer";
 
 import { engineOf, held, takeView, type TakeRec } from "./fixtureScoreRecs.ts";
 import { asObj, type KCtx, type KindModule } from "./kinds.ts";
@@ -36,7 +37,6 @@ export type VoiceRec = {
 };
 
 const no = (m: string): Result<never> => err("invalid", m);
-const words = (s: string): number => s.split(/\s+/).filter((x) => x !== "").length;
 const topicOf = (ctx: KCtx): string => ctx.project.title;
 
 /* ── article ──────────────────────────────────────────────────────────────── */
@@ -132,8 +132,7 @@ export const STRIPS_KIND: KindModule<"strips"> = {
 
 /* ── voice ────────────────────────────────────────────────────────────────── */
 
-type Line = { readonly id: string; readonly text: string; readonly card: string };
-const linesOf = (ctx: KCtx, v: VoiceRec): Line[] => ctx.rec("strips").cards.map((c) => ({ id: `line-${c.id}`, text: v.text[`line-${c.id}`] ?? c.caption, card: c.id }));
+const linesOf = (ctx: KCtx, v: VoiceRec) => cardLines(ctx.rec("strips").cards, v);
 const activeOf = (v: VoiceRec, lineId: string): TakeRec | undefined => {
   const a = v.byLine[lineId]?.active;
   return a === null || a === undefined ? undefined : v.takes[a];
@@ -167,9 +166,6 @@ function voiceApply(ctx: KCtx, v: VoiceRec, op: Parameters<KindModule<"voice">["
 /** Recording is per line: the editor offers it for the selected line (with its target), so the
  *  part-level act bar carries nothing a confirm without a line could only refuse. */
 const voiceActs = (_ctx: KCtx, _v: VoiceRec): PartActView[] => [];
-
-/** A spoken line's length at the pace v1's research measured for narration (2.5 words a second). */
-const spokenS = (text: string): number => Math.max(1, Math.round((words(text) / 2.5) * 10) / 10);
 
 export const VOICE_KIND: KindModule<"voice"> = {
   ops: ["voice-use", "voice-mark", "voice-line"],
@@ -206,27 +202,6 @@ export const VOICE_KIND: KindModule<"voice"> = {
 
 /* ── the explainer's cut ──────────────────────────────────────────────────── */
 
-/** Strips as picture, voice as the vo lane, one card per scene held for its line's take (else
- *  the line's spoken length): the DerivedCut lib/cut's finish line and edit maths read. */
-export function explainerCut(ctx: KCtx): DerivedCut {
-  const cards = ctx.rec("strips").cards;
-  const v = ctx.rec("voice");
-  const lines = linesOf(ctx, v);
-  const scenes: CutScene[] = [];
-  const clips: CutClip[] = [];
-  let at = 0;
-  cards.forEach((c, i) => {
-    const line = lines.find((l) => l.card === c.id);
-    const take = line === undefined ? undefined : activeOf(v, line.id);
-    const durS = take?.seconds ?? spokenS(line?.text ?? c.caption);
-    scenes.push({ id: c.id, index: i + 1, label: c.title, mood: c.section, startS: at, durS });
-    const drawn = c.state === "drawn";
-    clips.push({ id: `pic-${c.id}`, track: "video", label: c.title, startS: at, durS, status: drawn ? "ok" : "missing", ref: c.id, owner: "frames", note: c.caption, ...(c.blob === undefined ? {} : { src: `sha256:${c.blob.sha256}` }), ...(drawn ? {} : { why: c.why ?? "card not drawn" }) });
-    if (line !== undefined) {
-      const ok_ = held(take);
-      clips.push({ id: `vo-${c.id}`, track: "vo", label: line.text, startS: at, durS, status: ok_ ? "ok" : "missing", ref: line.id, owner: "script", note: line.text, ...(ok_ ? {} : { why: "written, not recorded" }), ...(take?.blob === undefined ? {} : { src: `sha256:${take.blob.sha256}` }) });
-    }
-    at += durS;
-  });
-  return { origin: cards.length === 0 ? "empty" : "project", totalS: at, targetS: ctx.project.targetS, scenes, clips, unplaced: [], frames: {} };
-}
+/** Strips as picture, voice as the vo lane: the DerivedCut lib/cut's finish line and edit maths
+ *  read. The derivation is lib/cut/explainer.ts, which the cut gate's verdict reads too. */
+export const explainerCut = (ctx: KCtx): DerivedCut => deriveExplainerCut({ cards: ctx.rec("strips").cards, voice: ctx.rec("voice"), targetS: ctx.project.targetS });
