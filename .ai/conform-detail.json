@@ -7199,6 +7199,27 @@
           "evidence": "packages/kernel/py/job_record.py:92 Preserves ceilingUsd frozen on the job record across all updates, ensuring terms travel with the job."
         }
       ]
+    },
+    "e5f8b2b5-3ac7-422b-9950-c7431117591a/app-shell": {
+      "context": "landing-cosmos-shell",
+      "subject": "app-shell",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T23:12:37.924Z",
+      "worker": "c2516f48-321d-4399-8801-6afb814ec32e",
+      "techniques": [
+        {
+          "technique": "navigation-model",
+          "verdict": "deviation",
+          "evidence": "app/_landing/cosmos/engine/nav.ts:196 Cosmos maintains a private back-navigation function and HUD button that modifies internal state without updating browser history or listening to popstate, violating the rule that within a browser tab the host's back gesture must consult the shell's history."
+        },
+        {
+          "technique": "nav-hierarchy",
+          "verdict": "deviation",
+          "evidence": "app/_landing/cosmos/engine/nav.ts:16 Cosmos implements a 3-level shell navigation hierarchy (Overview, Type/Family, Template/Category) rendered in the HUD depth indicator, violating the prohibition against a third shell navigation level."
+        }
+      ]
     }
   }
 }

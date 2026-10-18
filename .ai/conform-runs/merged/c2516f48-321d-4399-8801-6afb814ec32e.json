@@ -1,0 +1,99 @@
+{
+ "schema": "conform-run/1",
+ "worker": "c2516f48-321d-4399-8801-6afb814ec32e",
+ "subject": "app-shell",
+ "evaluatedAt": "2026-10-18T23:12:37.924300+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [
+  {
+   "context": "studio-shell",
+   "subject": "app-shell",
+   "bundle": "software-engineering",
+   "state": "conformant",
+   "evidence": "app/(studio)/_shell/HeaderBar.tsx:37 The studio shell derives its active navigation state, attention badges, and session-hosted services from owned state and URL routing across a persistent frame.",
+   "techniques": [
+    {
+     "technique": "navigation-model",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/_shell/HeaderBar.tsx:37 Active section is derived directly from the URL pathname using sectionOf, guaranteeing a single owned location value without duplicated active state."
+    },
+    {
+     "technique": "badge-and-attention",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/_shell/HeaderBar.tsx:107 The ledger delta badge derives its count from head facts and persistent seen state, clearing on genuine exposure when on the ledger route."
+    },
+    {
+     "technique": "shell-hosted-services",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/_shell/Providers.tsx:60 Providers establishes the shell's single host region above content, mounting session-lifetime singletons (toasts, keymap, storage eviction, session renewal) with explicit reapers."
+    },
+    {
+     "technique": "nav-hierarchy",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/_shell/HeaderBar.tsx:80 The shell header navigation maintains a flat list of sections using non-interactive visual separators between groups rather than multi-level menus."
+    }
+   ]
+  },
+  {
+   "context": "landing-cosmos-shell",
+   "subject": "app-shell",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/_landing/cosmos/engine/nav.ts:196 Cosmos implements an internal multi-level navigation and back stack within a browser tab without integrating into the browser's history or address, causing the browser Back gesture to leave the application rather than traverse sections.",
+   "techniques": [
+    {
+     "technique": "navigation-model",
+     "verdict": "deviation",
+     "evidence": "app/_landing/cosmos/engine/nav.ts:196 Cosmos maintains a private back-navigation function and HUD button that modifies internal state without updating browser history or listening to popstate, violating the rule that within a browser tab the host's back gesture must consult the shell's history."
+    },
+    {
+     "technique": "nav-hierarchy",
+     "verdict": "deviation",
+     "evidence": "app/_landing/cosmos/engine/nav.ts:16 Cosmos implements a 3-level shell navigation hierarchy (Overview, Type/Family, Template/Category) rendered in the HUD depth indicator, violating the prohibition against a third shell navigation level."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "app-shell",
+   "context": "kit-design-system-specimens",
+   "reason": "The /kit route is a design system specimen catalog with an in-page table of contents (KitNav) for jumping between specimen cards via fragment identifiers (#id), rendered within the studio shell's content area; it is not an application shell, so app-shell does not apply."
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-18T23:12:37.924300+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "app-shell"
+   ],
+   "techniques": [
+    "badge-and-attention",
+    "nav-hierarchy",
+    "navigation-model",
+    "shell-hosted-services"
+   ],
+   "deviations": 0,
+   "context": "studio-shell",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  },
+  {
+   "ts": "2026-10-18T23:12:37.924300+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "app-shell"
+   ],
+   "techniques": [
+    "nav-hierarchy",
+    "navigation-model"
+   ],
+   "deviations": 1,
+   "context": "landing-cosmos-shell",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  }
+ ]
+}
