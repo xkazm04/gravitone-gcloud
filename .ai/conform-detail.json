@@ -7220,6 +7220,170 @@
           "evidence": "app/_landing/cosmos/engine/nav.ts:16 Cosmos implements a 3-level shell navigation hierarchy (Overview, Type/Family, Template/Category) rendered in the HUD depth indicator, violating the prohibition against a third shell navigation level."
         }
       ]
+    },
+    "3eb496e8-52aa-446d-bf75-07dc7c891b16/engine-host-contract": {
+      "context": "kernel-python-protocol",
+      "subject": "engine-host-contract",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T23:23:16.818Z",
+      "worker": "0b371094-9879-4c2c-b3a2-43aded7301c0",
+      "techniques": [
+        {
+          "technique": "contained-async-module-loader",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/py/kernel_store.py:56 Loads a fixed application module through Python, without exposing a guest module-loading hook."
+        },
+        {
+          "technique": "idle-aware-job-loop",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/py/job.py:190 This loop renews a database lease; it does not drain embedded-engine job kinds."
+        },
+        {
+          "technique": "monotonic-and-wall-clock-split",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/py/lease.py:358 Measures a lease-acquisition timeout, without implementing an engine clock seam."
+        },
+        {
+          "technique": "null-and-blocking-executors",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/py/job.py:94 Claims a durable worker job; no language-engine context or shipped executor pair is involved."
+        },
+        {
+          "technique": "spec-mirrored-hook-surface",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/py/job_settle.py:32 The callback reports an application job's ending, rather than implementing a language-specification host operation."
+        },
+        {
+          "technique": "untraceable-jobs-as-roots",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/py/job_record.py:87 Jobs are deserialized records, without an embedded traced guest heap or external guest-value handles."
+        }
+      ]
+    },
+    "0c02b354-237b-44cb-9283-518ed620e846/engine-host-contract": {
+      "context": "job-queue-and-leases",
+      "subject": "engine-host-contract",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T23:23:16.818Z",
+      "worker": "0b371094-9879-4c2c-b3a2-43aded7301c0",
+      "techniques": [
+        {
+          "technique": "contained-async-module-loader",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/process.ts:52 Resolves the application's SQLite store location, without resolving guest module specifiers."
+        },
+        {
+          "technique": "idle-aware-job-loop",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/job-worker.ts:62 The worker schedules database-backed resource lanes, rather than embedded-engine promise, timer, native and cleanup queues."
+        },
+        {
+          "technique": "monotonic-and-wall-clock-split",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/lease.ts:316 This deadline bounds resource-lease acquisition; the context does not implement guest timers or dates."
+        },
+        {
+          "technique": "null-and-blocking-executors",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/job-worker.ts:130 Dispatches an application producer for a durable job, without constructing a language-engine context."
+        },
+        {
+          "technique": "spec-mirrored-hook-surface",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/job-settle.ts:29 Producer settlement is an application callback, without a language specification's host-hook vocabulary."
+        },
+        {
+          "technique": "untraceable-jobs-as-roots",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/job.ts:108 Job state is serialized into SQLite; this code does not manage guest-heap tracing or job capture roots."
+        }
+      ]
+    },
+    "b412ea73-0dc3-4362-93c4-2a9b913f9a61/engine-host-contract": {
+      "context": "v1-import-and-archive",
+      "subject": "engine-host-contract",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T23:23:16.818Z",
+      "worker": "0b371094-9879-4c2c-b3a2-43aded7301c0",
+      "techniques": [
+        {
+          "technique": "contained-async-module-loader",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/archive.ts:167 The import contract accepts studio archives, without guest modules, referrers or module specifiers."
+        },
+        {
+          "technique": "idle-aware-job-loop",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/commit.ts:270 Commits staged application records in a transaction; it does not drain language-engine queues."
+        },
+        {
+          "technique": "monotonic-and-wall-clock-split",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/export.ts:176 Uses a supplied archive timestamp, without an embedded engine's scheduling or date clock interface."
+        },
+        {
+          "technique": "null-and-blocking-executors",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/runs.ts:120 Imports historical run records into storage, without executing guest promise jobs."
+        },
+        {
+          "technique": "spec-mirrored-hook-surface",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/serve.ts:66 The override points concern landed projects and styles, rather than language-specification host decisions."
+        },
+        {
+          "technique": "untraceable-jobs-as-roots",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/bytes.ts:40 Retains staged blob bytes in an ordinary application Map, without guest-heap roots or engine jobs."
+        }
+      ]
+    },
+    "ff0b289f-5f39-4747-acce-5d56797b9c43/engine-host-contract": {
+      "context": "landing-cosmos-paper-raster",
+      "subject": "engine-host-contract",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T23:23:16.818Z",
+      "worker": "0b371094-9879-4c2c-b3a2-43aded7301c0",
+      "techniques": [
+        {
+          "technique": "contained-async-module-loader",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/raster.worker.ts:14 Uses a static application import handled by the platform; no guest-facing loader is implemented."
+        },
+        {
+          "technique": "idle-aware-job-loop",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/raster.ts:192 Yields between painted layers to the browser's existing event loop, without draining embedded-engine job kinds."
+        },
+        {
+          "technique": "monotonic-and-wall-clock-split",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/raster.ts:42 Requests a browser scheduling yield; it does not supply an engine clock or implement guest timer arithmetic."
+        },
+        {
+          "technique": "null-and-blocking-executors",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/raster.ts:77 Selects browser rendering paths, without shipping executors for an embeddable language engine."
+        },
+        {
+          "technique": "spec-mirrored-hook-surface",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/rasterJobs.ts:108 Dispatches an application painting operation, without a language specification's host-hook surface."
+        },
+        {
+          "technique": "untraceable-jobs-as-roots",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/raster.ts:175 Sends structured raster data through browser messaging, without external handles into a separately traced guest heap."
+        }
+      ]
     }
   }
 }

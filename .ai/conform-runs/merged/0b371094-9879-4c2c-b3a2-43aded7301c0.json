@@ -1,0 +1,269 @@
+{
+ "schema": "conform-run/1",
+ "worker": "0b371094-9879-4c2c-b3a2-43aded7301c0",
+ "subject": "engine-host-contract",
+ "evaluatedAt": "2026-10-18T23:23:16.818815+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "kernel-python-protocol",
+   "subject": "engine-host-contract",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/kernel/py/job.py:85 Context searches found none of the listed engine-contract identifiers, and the queue contains durable SQLite records, which the standard explicitly excludes.",
+   "techniques": [
+    {
+     "technique": "contained-async-module-loader",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/py/kernel_store.py:56 Loads a fixed application module through Python, without exposing a guest module-loading hook."
+    },
+    {
+     "technique": "idle-aware-job-loop",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/py/job.py:190 This loop renews a database lease; it does not drain embedded-engine job kinds."
+    },
+    {
+     "technique": "monotonic-and-wall-clock-split",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/py/lease.py:358 Measures a lease-acquisition timeout, without implementing an engine clock seam."
+    },
+    {
+     "technique": "null-and-blocking-executors",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/py/job.py:94 Claims a durable worker job; no language-engine context or shipped executor pair is involved."
+    },
+    {
+     "technique": "spec-mirrored-hook-surface",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/py/job_settle.py:32 The callback reports an application job's ending, rather than implementing a language-specification host operation."
+    },
+    {
+     "technique": "untraceable-jobs-as-roots",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/py/job_record.py:87 Jobs are deserialized records, without an embedded traced guest heap or external guest-value handles."
+    }
+   ],
+   "absenceTerms": [
+    "HostHooks",
+    "JobExecutor",
+    "ModuleLoader",
+    "HostLoadImportedModule"
+   ]
+  },
+  {
+   "context": "job-queue-and-leases",
+   "subject": "engine-host-contract",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/kernel/src/job.ts:194 Context searches found none of the listed engine-contract identifiers, and these persisted vendor jobs belong to the standard's explicitly excluded durable-job coordination scope.",
+   "techniques": [
+    {
+     "technique": "contained-async-module-loader",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/process.ts:52 Resolves the application's SQLite store location, without resolving guest module specifiers."
+    },
+    {
+     "technique": "idle-aware-job-loop",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/job-worker.ts:62 The worker schedules database-backed resource lanes, rather than embedded-engine promise, timer, native and cleanup queues."
+    },
+    {
+     "technique": "monotonic-and-wall-clock-split",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/lease.ts:316 This deadline bounds resource-lease acquisition; the context does not implement guest timers or dates."
+    },
+    {
+     "technique": "null-and-blocking-executors",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/job-worker.ts:130 Dispatches an application producer for a durable job, without constructing a language-engine context."
+    },
+    {
+     "technique": "spec-mirrored-hook-surface",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/job-settle.ts:29 Producer settlement is an application callback, without a language specification's host-hook vocabulary."
+    },
+    {
+     "technique": "untraceable-jobs-as-roots",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/job.ts:108 Job state is serialized into SQLite; this code does not manage guest-heap tracing or job capture roots."
+    }
+   ],
+   "absenceTerms": [
+    "HostHooks",
+    "JobExecutor",
+    "ModuleLoader",
+    "HostLoadImportedModule"
+   ]
+  },
+  {
+   "context": "v1-import-and-archive",
+   "subject": "engine-host-contract",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/import/archive.ts:163 Context searches found none of the listed engine-contract identifiers, and the importer parses application archive data without exposing an embedded language engine.",
+   "techniques": [
+    {
+     "technique": "contained-async-module-loader",
+     "verdict": "not-applicable",
+     "evidence": "lib/import/archive.ts:167 The import contract accepts studio archives, without guest modules, referrers or module specifiers."
+    },
+    {
+     "technique": "idle-aware-job-loop",
+     "verdict": "not-applicable",
+     "evidence": "lib/import/commit.ts:270 Commits staged application records in a transaction; it does not drain language-engine queues."
+    },
+    {
+     "technique": "monotonic-and-wall-clock-split",
+     "verdict": "not-applicable",
+     "evidence": "lib/import/export.ts:176 Uses a supplied archive timestamp, without an embedded engine's scheduling or date clock interface."
+    },
+    {
+     "technique": "null-and-blocking-executors",
+     "verdict": "not-applicable",
+     "evidence": "lib/import/runs.ts:120 Imports historical run records into storage, without executing guest promise jobs."
+    },
+    {
+     "technique": "spec-mirrored-hook-surface",
+     "verdict": "not-applicable",
+     "evidence": "lib/import/serve.ts:66 The override points concern landed projects and styles, rather than language-specification host decisions."
+    },
+    {
+     "technique": "untraceable-jobs-as-roots",
+     "verdict": "not-applicable",
+     "evidence": "lib/import/bytes.ts:40 Retains staged blob bytes in an ordinary application Map, without guest-heap roots or engine jobs."
+    }
+   ],
+   "absenceTerms": [
+    "HostHooks",
+    "JobExecutor",
+    "ModuleLoader",
+    "HostLoadImportedModule"
+   ]
+  },
+  {
+   "context": "landing-cosmos-paper-raster",
+   "subject": "engine-host-contract",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/_landing/cosmos/engine/raster.ts:89 Context searches found none of the listed engine-contract identifiers, and raster execution uses a browser Worker without implementing a language-engine host contract.",
+   "techniques": [
+    {
+     "technique": "contained-async-module-loader",
+     "verdict": "not-applicable",
+     "evidence": "app/_landing/cosmos/engine/raster.worker.ts:14 Uses a static application import handled by the platform; no guest-facing loader is implemented."
+    },
+    {
+     "technique": "idle-aware-job-loop",
+     "verdict": "not-applicable",
+     "evidence": "app/_landing/cosmos/engine/raster.ts:192 Yields between painted layers to the browser's existing event loop, without draining embedded-engine job kinds."
+    },
+    {
+     "technique": "monotonic-and-wall-clock-split",
+     "verdict": "not-applicable",
+     "evidence": "app/_landing/cosmos/engine/raster.ts:42 Requests a browser scheduling yield; it does not supply an engine clock or implement guest timer arithmetic."
+    },
+    {
+     "technique": "null-and-blocking-executors",
+     "verdict": "not-applicable",
+     "evidence": "app/_landing/cosmos/engine/raster.ts:77 Selects browser rendering paths, without shipping executors for an embeddable language engine."
+    },
+    {
+     "technique": "spec-mirrored-hook-surface",
+     "verdict": "not-applicable",
+     "evidence": "app/_landing/cosmos/engine/rasterJobs.ts:108 Dispatches an application painting operation, without a language specification's host-hook surface."
+    },
+    {
+     "technique": "untraceable-jobs-as-roots",
+     "verdict": "not-applicable",
+     "evidence": "app/_landing/cosmos/engine/raster.ts:175 Sends structured raster data through browser messaging, without external handles into a separately traced guest heap."
+    }
+   ],
+   "absenceTerms": [
+    "HostHooks",
+    "JobExecutor",
+    "ModuleLoader",
+    "HostLoadImportedModule"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-18T23:23:16.818815+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "engine-host-contract"
+   ],
+   "techniques": [
+    "contained-async-module-loader",
+    "idle-aware-job-loop",
+    "monotonic-and-wall-clock-split",
+    "null-and-blocking-executors",
+    "spec-mirrored-hook-surface",
+    "untraceable-jobs-as-roots"
+   ],
+   "deviations": 0,
+   "context": "kernel-python-protocol",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-18T23:23:16.818815+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "engine-host-contract"
+   ],
+   "techniques": [
+    "contained-async-module-loader",
+    "idle-aware-job-loop",
+    "monotonic-and-wall-clock-split",
+    "null-and-blocking-executors",
+    "spec-mirrored-hook-surface",
+    "untraceable-jobs-as-roots"
+   ],
+   "deviations": 0,
+   "context": "job-queue-and-leases",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-18T23:23:16.818815+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "engine-host-contract"
+   ],
+   "techniques": [
+    "contained-async-module-loader",
+    "idle-aware-job-loop",
+    "monotonic-and-wall-clock-split",
+    "null-and-blocking-executors",
+    "spec-mirrored-hook-surface",
+    "untraceable-jobs-as-roots"
+   ],
+   "deviations": 0,
+   "context": "v1-import-and-archive",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-18T23:23:16.818815+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "engine-host-contract"
+   ],
+   "techniques": [
+    "contained-async-module-loader",
+    "idle-aware-job-loop",
+    "monotonic-and-wall-clock-split",
+    "null-and-blocking-executors",
+    "spec-mirrored-hook-surface",
+    "untraceable-jobs-as-roots"
+   ],
+   "deviations": 0,
+   "context": "landing-cosmos-paper-raster",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

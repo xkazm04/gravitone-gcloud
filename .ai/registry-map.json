@@ -5832,7 +5832,11 @@
           "revision": 2,
           "changedAt": "2026-09-04",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/kernel/src/job.ts:194 Context searches found none of the listed engine-contract identifiers, and these persisted vendor jobs belong to the standard's explicitly excluded durable-job coordination scope.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:08d3fea13f40733a",
+          "evaluatedRevision": 2
         },
         {
           "subject": "module-design",
@@ -6062,7 +6066,11 @@
           "revision": 2,
           "changedAt": "2026-09-04",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/kernel/py/job.py:85 Context searches found none of the listed engine-contract identifiers, and the queue contains durable SQLite records, which the standard explicitly excludes.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:08d3fea13f40733a",
+          "evaluatedRevision": 2
         },
         {
           "subject": "job-coordination",
@@ -6765,7 +6773,11 @@
           "revision": 2,
           "changedAt": "2026-09-04",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/raster.ts:89 Context searches found none of the listed engine-contract identifiers, and raster execution uses a browser Worker without implementing a language-engine host contract.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:08d3fea13f40733a",
+          "evaluatedRevision": 2
         },
         {
           "subject": "translation-quality-measurement",
@@ -13567,7 +13579,11 @@
           "revision": 2,
           "changedAt": "2026-09-04",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/import/archive.ts:163 Context searches found none of the listed engine-contract identifiers, and the importer parses application archive data without exposing an embedded language engine.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:08d3fea13f40733a",
+          "evaluatedRevision": 2
         },
         {
           "subject": "data-access",
