@@ -1,6 +1,6 @@
 import "server-only";
 
-import { readFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import { z } from "zod";
@@ -153,7 +153,10 @@ export async function readSpend(root: string, kernel: Store | undefined = openSt
     const file = path.join(root, `${cls}.json`);
     let text: string;
     try {
-      text = await readFile(file, "utf8");
+      // Synchronous on purpose: fileStore.writeAtomic retries its rename on a thread-blocking
+      // busy-wait, so an async read still pending would hold the file open through every retry
+      // (EPERM on Windows) - the shape 6ecf6f6b closed for ensureStyles.
+      text = readFileSync(file, "utf8");
     } catch (e) {
       if (e instanceof Error && "code" in e && e.code === "ENOENT") continue;
       return err("unavailable", `spend: reading ${file} failed: ${words(e)}`, { cause: e });
