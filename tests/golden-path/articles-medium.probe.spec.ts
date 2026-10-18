@@ -127,6 +127,34 @@ test("a Markdown table travels as a picture, in story order, and its cells keep 
   expect(text).toContain("<table><thead><tr><th>A</th><th>B <code>c</code></th></tr></thead><tbody><tr><td>x | y</td><td>[2]</td></tr>");
 });
 
+test("a quote is read whole: no empty quote rows, a list is one quote with a break per item; a caption may sit after one blank line", () => {
+  const md = [
+    "> **Rests on.** One sentence",
+    "> that wraps.",
+    ">",
+    "> **Sections:**",
+    ">",
+    "> 1. [First](#first)",
+    "> 2. Second",
+    ">",
+    "> - a bullet",
+    "",
+    "![Long alt text describing the drawing](figures/01-a.png)",
+    "",
+    "Illustration: what it shows. [1]",
+    "",
+    "![Alt two](figures/02-b.png)",
+    "",
+    "A body paragraph with no citation.",
+  ].join("\n");
+  const html = storyBody(md);
+  expect(html).not.toContain("<blockquote></blockquote>");
+  expect(html).toContain("<blockquote><strong>Rests on.</strong> One sentence that wraps.</blockquote>\n<blockquote><strong>Sections:</strong></blockquote>\n<blockquote>1. First<br>2. Second</blockquote>\n<blockquote>• a bullet</blockquote>");
+  expect(splitFigures(html).captions).toEqual(["Illustration: what it shows. [1]", "Alt two"]);
+  expect(html).toContain("<p>A body paragraph with no citation.</p>");
+  expect(html).not.toContain("<p>Illustration:");
+});
+
 test("a figure PNG is the drawing, not the drawing in the corner of a blank canvas", async () => {
   const dir = path.join(box.dir, "svg");
   mkdirSync(dir, { recursive: true });

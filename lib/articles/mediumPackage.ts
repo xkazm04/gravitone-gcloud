@@ -96,6 +96,36 @@ export function withoutPageAnchors(md: string): string {
     .join("\n");
 }
 
+/** One Markdown quote, read whole. Medium holds a quote paragraph by paragraph, and a
+ *  `<blockquote>` per `>` line put an empty quote row where the Markdown had a blank `>`
+ *  line and spread a list one padded row per item (the content preview of the eval-harness
+ *  draft, 2026-10-18). So lines join into paragraphs, a list is one quote with a line
+ *  break per item, and a blank line emits nothing. */
+function quoteBlocks(inner: string[]): string[] {
+  const out: string[] = [];
+  let para: string[] = [];
+  let items: string[] = [];
+  const flush = () => {
+    if (para.length) out.push(`<blockquote>${inline(para.join(" "))}</blockquote>`);
+    if (items.length) out.push(`<blockquote>${items.join("<br>")}</blockquote>`);
+    para = [];
+    items = [];
+  };
+  for (const l of inner) {
+    const li = /^\s*(?:[-*+]|(\d+\.))\s+(.+)$/.exec(l);
+    if (!l.trim()) flush();
+    else if (li) {
+      if (para.length) flush();
+      items.push(`${li[1] ?? "•"} ${inline(li[2])}`);
+    } else {
+      if (items.length) flush();
+      para.push(l.trim());
+    }
+  }
+  flush();
+  return out;
+}
+
 /** A deliberately small Markdown-to-HTML converter: the subset Medium keeps.
  *  A table is a `<table>` (`tables: "html"`, the registry's text form) or a
  *  figure of its PNG (`"figures"`, the form a Medium draft can hold). */
@@ -139,8 +169,22 @@ export function markdownToStory(md: string, opts: { tables?: "html" | "figures" 
       flushPara();
       flushList();
       const next = lines[i + 1]?.trim() ?? "";
-      const caption = next && !/^(#|!\[|```|[-*]\s|\d+\.\s|>)/.test(next) ? next : img[1];
-      if (caption === next && next) i++;
+      // The caption is the line under its image by contract, but writers leave a blank line
+      // between them: 91 of 149 figures across the 12 runs on disk on 2026-10-18. The draft
+      // then showed the image's long alt text as its caption and the real caption as a body
+      // paragraph. So a one-line paragraph after one blank line is the caption when it cites
+      // a source, as a caption must. Measured against each figure's index.html figcaption,
+      // 147 of 149 come out right; the other 2 are one post's "Values as text" paragraphs,
+      // body text by design, one of which cites a source and is taken.
+      const after = !next && !lines[i + 3]?.trim() ? (lines[i + 2]?.trim() ?? "") : "";
+      let caption = img[1];
+      if (next && !/^(#|!\[|```|[-*]\s|\d+\.\s|>)/.test(next)) {
+        caption = next;
+        i++;
+      } else if (after && !/^(#|!\[|```|[-*+]\s|\d+\.\s|>|\|)/.test(after) && /\[\d{1,3}\]/.test(after)) {
+        caption = after;
+        i += 2;
+      }
       out.push(`<figure><img src="${esc(img[2])}" alt="${esc(img[1])}"><figcaption>${inline(caption)}</figcaption></figure>`);
       continue;
     }
@@ -160,11 +204,13 @@ export function markdownToStory(md: string, opts: { tables?: "html" | "figures" 
       );
       continue;
     }
-    const quote = /^>\s?(.*)$/.exec(line);
-    if (quote) {
+    if (/^>/.test(line)) {
       flushPara();
       flushList();
-      out.push(`<blockquote>${inline(quote[1])}</blockquote>`);
+      const inner: string[] = [];
+      for (; i < lines.length && /^>/.test(lines[i]); i++) inner.push(lines[i].replace(/^>\s?/, ""));
+      i--;
+      out.push(...quoteBlocks(inner));
       continue;
     }
     const li = /^\s*(?:([-*+])|(\d+)\.)\s+(.+)$/.exec(line);
