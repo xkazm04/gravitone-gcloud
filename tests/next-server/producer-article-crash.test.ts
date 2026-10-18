@@ -36,12 +36,15 @@ import { ARTICLE_ENV, articleSandbox, type ArticleSandbox } from "../golden-path
 const saved = new Map(ARTICLE_ENV.map((k) => [k, process.env[k]]));
 let box: ArticleSandbox;
 let turnLog: string;
+// The sandbox is a throwaway registry a subprocess builds with fourteen git calls
+// (tests/fixtures/articles/registry-fixture.mjs): 1.2-2.6 s on a quiet box, 51 s measured on a
+// loaded one. The 10 s hook default was a budget for no process at all.
 beforeAll(() => {
   box = articleSandbox();
   turnLog = path.join(box.dir, "turns.log");
   process.env["STUB_AGENT_ARGV_LOG"] = turnLog;
   process.env["STUB_AGENT_COST"] = "0.5";
-});
+}, 120_000);
 afterAll(() => {
   box.cleanup();
   for (const [k, v] of saved) {
