@@ -37,7 +37,7 @@ export type Mutant = {
  * unguarded probe lowers the live count and the same probe asks for this number
  * to be lowered to match, so the gain is kept.
  */
-export const UNGUARDED_PROBE_BUDGET = 164;
+export const UNGUARDED_PROBE_BUDGET = 162;
 
 export const MUTANTS: Mutant[] = [
   {
