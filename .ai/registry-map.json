@@ -5030,7 +5030,11 @@
           "revision": 16,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/runStore.ts:89 writeJsonAtomic in runStore omits durable flushing (fsync), abandons temporary files upon rename failures, returns raw platform errors instead of exhaustion reports, and is paired with an anti-pattern reader retry loop.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:ccc991958e998a93",
+          "evaluatedRevision": 16
         }
       ],
       "governance": "governed"
@@ -6102,7 +6106,11 @@
           "revision": 16,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/kernel/py/lease.py:277 The Python kernel protocol validates the lease fence inside the SQLite write transaction, ensuring stale holders are refused before mutating shared state.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:ccc991958e998a93",
+          "evaluatedRevision": 16
         }
       ],
       "governance": "governed"
@@ -6202,7 +6210,11 @@
           "revision": 16,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/kernel/src/store.ts:234 Every kernel write transaction takes an exclusive database write lock under BEGIN IMMEDIATE before its first read, preventing cross-process read-modify-write interleavings.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:ccc991958e998a93",
+          "evaluatedRevision": 16
         },
         {
           "subject": "usage-event-ingestion",
@@ -10285,7 +10297,11 @@
           "revision": 16,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/producers/src/publish/publish.ts:170 Publishing producers fence outcome persistence with the claim fence inside the store transaction so interrupted uploads cannot overwrite newer state.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:ccc991958e998a93",
+          "evaluatedRevision": 16
         },
         {
           "subject": "multi-provider-gateway-plane",

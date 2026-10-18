@@ -6811,6 +6811,241 @@
         }
       ],
       "registryProposal": "The standard assumes copy quality gates govern multi-locale UI catalogs with discrete keys; extending it to long-form prose synthesis requires distinguishing full-document architectural rhythms from string-level catalog constraints."
+    },
+    "3eb496e8-52aa-446d-bf75-07dc7c891b16/concurrency-guards": {
+      "context": "kernel-python-protocol",
+      "subject": "concurrency-guards",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T22:19:26.106Z",
+      "worker": "955fcd1b-613a-4b9a-99eb-d8206d9a4e72",
+      "techniques": [
+        {
+          "technique": "cross-process-exclusion",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/lease.py:127 decide_claim checks PID liveness and heartbeat expiry to reassign stale locks atomically under BEGIN IMMEDIATE."
+        },
+        {
+          "technique": "fence-inside-write-transaction",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/job.py:221 assert_fence is called inside every write transaction before modifying job state."
+        },
+        {
+          "technique": "attempt-attribution",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/lease.py:143 A strictly monotonic fence generation is minted at acquisition and carried through execution to write sites."
+        },
+        {
+          "technique": "release-guarantees",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/job.py:374 JobRun context manager guarantees that the slot lease is either parked or marked failed and released on any exit path."
+        },
+        {
+          "technique": "guard-key-design",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/lease.py:49 Closed enumeration of resource lanes and slot partitioning ensures independent work does not contend."
+        },
+        {
+          "technique": "idempotency-by-design",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/job_settle.py:41 owed checks event history to ensure job termination notifications are delivered to producers exactly once."
+        },
+        {
+          "technique": "critical-section-across-a-suspension",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/job.py:180 The heartbeat loop sleeps on a timer thread outside transactions, opening short isolated transactions only to ping validity."
+        },
+        {
+          "technique": "single-flight-primitives",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/lease.py:356 Leases provide a unified acquire primitive with FIFO ticketing and busy/queued refusal semantics."
+        },
+        {
+          "technique": "race-catalog-with-two-histories",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/lease_spec.py:34 The specification runs deterministic contender interleavings and asserts write event sequence and final state."
+        },
+        {
+          "technique": "preparation-is-the-staleness-window",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/kernel_meter.py:82 The meter checks the authoritative spend ceiling in the store immediately before issuing the external vendor call."
+        },
+        {
+          "technique": "atomic-file-publish",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/py/styles.py:28 Python protocol delegates file export to Node and writes solely to SQLite."
+        },
+        {
+          "technique": "cache-value-not-handle",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/py/job.py:10 Worker execution is process-level over SQLite without continuation handle sharing."
+        },
+        {
+          "technique": "leadership-is-the-lock",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/py/lease.py:171 SQLite accepts writes from any process, so fencing tokens inside write transactions are used instead."
+        },
+        {
+          "technique": "renewal-deadline-two-thirds-ttl",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/py/job.py:184 Lease scope is per-job/slot rather than cluster-wide active node election."
+        },
+        {
+          "technique": "shared-claims-by-announce-and-verify",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/py/lease.py:189 Transactional SQLite tables provide native mutual exclusion without announce-and-verify keyspaces."
+        }
+      ],
+      "registryProposal": "The boundary between cluster leadership leases and execution/slot leases should explicitly clarify that local SQLite transactions with bounded timeouts provide cross-process exclusion without requiring distributed consensus or cluster fencing tokens."
+    },
+    "7226db68-4ca8-41ee-a2f8-3012d05e4acd/concurrency-guards": {
+      "context": "publish-producers",
+      "subject": "concurrency-guards",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T22:19:26.106Z",
+      "worker": "955fcd1b-613a-4b9a-99eb-d8206d9a4e72",
+      "techniques": [
+        {
+          "technique": "cross-process-exclusion",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/tick.ts:69 The publish tick coordinates cross-process exclusion by running a lease sweep that claims due slots under the store."
+        },
+        {
+          "technique": "fence-inside-write-transaction",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/publish.ts:170 The publication record is committed inside the store transaction conditioned on the claim fence, refusing late writes if the lease was lost."
+        },
+        {
+          "technique": "attempt-attribution",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/publish.ts:89 The upload loop carries the attempt's fence identifier into every heartbeat, verifying tenancy throughout long asynchronous transfers."
+        },
+        {
+          "technique": "release-guarantees",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/tick.ts:83 When an abort signal stops the worker, abandonClaimed structurally records failure for all unstarted claims rather than letting them leak into timeout."
+        },
+        {
+          "technique": "guard-key-design",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/timers.ts:20 Timer resources form a closed type-safe enumeration mapped to exclusive lock keys via timerResource."
+        },
+        {
+          "technique": "idempotency-by-design",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/publish.ts:109 Prior publication is checked against the natural key tuple of item, channel, and mode before planning to prevent duplicate uploads."
+        },
+        {
+          "technique": "critical-section-across-a-suspension",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/publish.ts:152 The long network upload suspends outside database transactions, with periodic heartbeats refreshing the lease rather than holding a transactional lock."
+        },
+        {
+          "technique": "preparation-is-the-staleness-window",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/publish.ts:175 When the post-upload write detects that the claim was superseded during preparation, it returns a distinct lost verdict recording the remote platform identifier."
+        },
+        {
+          "technique": "single-flight-primitives",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/tick.ts:106 Manual publishSlotNow routes single-slot execution through the shared tick sweep to prevent duplicate concurrent publish runs."
+        }
+      ]
+    },
+    "e5b296e2-cccf-47a5-b8bd-ce730d40ace8/concurrency-guards": {
+      "context": "kernel-store-and-events",
+      "subject": "concurrency-guards",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T22:19:26.106Z",
+      "worker": "955fcd1b-613a-4b9a-99eb-d8206d9a4e72",
+      "techniques": [
+        {
+          "technique": "atomic-file-publish",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/blob.ts:56 Blob storage writes to a temporary neighbor file, flushes with sync, and performs atomic replacement with bounded retry on Windows sharing violations."
+        },
+        {
+          "technique": "cross-process-exclusion",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/store.ts:234 BEGIN IMMEDIATE acquires the SQLite write lock before any read occurs, providing cross-process mutual exclusion with bounded busy timeout."
+        },
+        {
+          "technique": "idempotency-by-design",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/events.ts:130 A unique index over natural event keys ensures that re-projecting or replaying facts from external sources is idempotent at the database boundary."
+        },
+        {
+          "technique": "critical-section-across-a-suspension",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/store.ts:190 Transaction bodies are enforced to be synchronous by both type system NotPromise<T> and runtime checking to prevent holding locks across suspension points."
+        },
+        {
+          "technique": "single-flight-primitives",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/ingest.ts:119 takeClaim implements an atomic keyed try-begin claim with TTL in ingest_claims returning explicit win or current owner refusal status."
+        },
+        {
+          "technique": "release-guarantees",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/store.ts:203 The transaction runner wraps execution in try-catch-finally, guaranteeing rollback on failure and resetting active state on every exit path."
+        },
+        {
+          "technique": "guard-key-design",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/ingest.ts:74 identity composes a canonical deduplication key from immutable semantic event axes while omitting local and volatile clock readings."
+        },
+        {
+          "technique": "attempt-attribution",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/events.ts:183 Each event mints a monotonic sequence number and captures the transaction's single timestamp, chaining previous hash to preserve ordering."
+        }
+      ]
+    },
+    "e481098a-3532-46d9-bdc9-de84fbc2ce01/concurrency-guards": {
+      "context": "foundry-forge-store-and-verdicts",
+      "subject": "concurrency-guards",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T22:19:26.106Z",
+      "worker": "955fcd1b-613a-4b9a-99eb-d8206d9a4e72",
+      "techniques": [
+        {
+          "technique": "atomic-file-publish",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/runStore.ts:92 writeJsonAtomic does not flush the temporary file to disk before replacement, does not clean up the temporary file when rename attempts fail, and throws raw platform errors."
+        },
+        {
+          "technique": "cross-process-exclusion",
+          "verdict": "deviation",
+          "evidence": "lib/diskTx.ts:77 When breaking a stale lock in acquireLock, the lock file is unlinked without an atomic replace-if-unchanged primitive and without a loud takeover notification, opening a race between contenders."
+        },
+        {
+          "technique": "release-guarantees",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/runStore.ts:103 Failure during the rename loop escapes writeJsonAtomic without a try-finally or catch cleanup block, permanently leaking orphaned temporary files."
+        },
+        {
+          "technique": "critical-section-across-a-suspension",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/catalogue.ts:143 ensureStyles reads synchronously to avoid holding open file handles across await suspensions during concurrent writes."
+        },
+        {
+          "technique": "guard-key-design",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/runStore.ts:16 Run identifiers are validated against an explicit alphanumeric pattern preventing path traversal."
+        },
+        {
+          "technique": "idempotency-by-design",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/catalogue.ts:132 ensureStyles probes whether the store already contains styles before running import, making repeated initialization idempotent."
+        }
+      ]
     }
   }
 }
