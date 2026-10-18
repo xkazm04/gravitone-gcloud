@@ -43,9 +43,8 @@
 
 import { useEffect } from "react";
 
-import { readBellJobs } from "@/app/(studio)/_shell/bellJobs";
 import { useAuth } from "@/lib/useAuth";
-import { jobCounts } from "@/lib/jobs";
+import { jobCounts, type BellReader } from "@/lib/jobs";
 import { evictIdentity } from "@/lib/identityEviction";
 import { listProjects, projectContents } from "@/lib/projects";
 import { BY_UID, THEMES_STORE, getKeysByIndex, openDb } from "@/lib/studioDb";
@@ -67,7 +66,9 @@ async function themeKeys(uid: string): Promise<IDBValidKey[]> {
   }
 }
 
-export default function HarnessBridge() {
+/** `readJobs` is the bell's server read (app/(studio)/_shell/bellJobs.ts), handed in by
+ *  app/layout.tsx: a component under components/ may not import the app/ route tree. */
+export default function HarnessBridge({ readJobs }: { readJobs: BellReader }) {
   const { user } = useAuth();
 
   useEffect(() => {
@@ -96,7 +97,7 @@ export default function HarnessBridge() {
         // the root layout carries no job stream for a harness nobody may be driving. A
         // refused read (signed out, the kernel down) throws: a count of zero would read as
         // "nothing runs" and let a journey assert past work it never saw settle.
-        const read = await readBellJobs();
+        const read = await readJobs();
         if (!read.ok) throw new Error(`harness snapshot: jobs unreadable - ${read.error.error}`);
         return {
           protocol: 2,
@@ -167,7 +168,7 @@ export default function HarnessBridge() {
     // Re-installed when the account changes, because the uid is captured by value
     // above: a control surface holding last render's uid would read the previous
     // account's shelf and report it as this one's.
-  }, [user]);
+  }, [user, readJobs]);
 
   return null;
 }

@@ -9,6 +9,7 @@ import GravitoneTokens from "@/components/ui/GravitoneTokens";
 import { AuthProvider } from "@/lib/useAuth";
 import { AnnouncerProvider } from "@/lib/announcer";
 import HarnessBridge from "@/components/ui/HarnessBridge";
+import { readBellJobs } from "@/app/(studio)/_shell/bellJobs";
 import DevInspector from "@/app/_dev-inspector/DevInspector";
 
 const instrument = Instrument_Serif({ weight: "400", style: ["normal", "italic"], subsets: ["latin"], variable: "--font-instrument", display: "swap" });
@@ -57,7 +58,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 bundle this component's effect body is unreachable and is dropped;
                 see components/ui/HarnessBridge.tsx and the gate in
                 pipeline/check-bundle.mjs. */}
-            <HarnessBridge />
+            <HarnessBridge readJobs={readBellJobs} />
             {children}
             {/* Click a component, copy its source path - `;` then `i`, then
                 right-click. Dev-only twice over: this condition is a literal
