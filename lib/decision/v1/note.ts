@@ -10,12 +10,17 @@
 // v1's verdicts and encodes it when it applies the kernel's; the article
 // adapter encodes a reject's note the same way. Pure, client-safe.
 
-const REASONS_LINE = /^reasons:\s*([^\n]*)\n?/;
+// `[ \t]*`, not `\s*`: the whitespace after the colon must not reach across the
+// line break, or an empty `reasons:` line would swallow the note below it as its
+// own reasons.
+const REASONS_LINE = /^reasons:[ \t]*([^\n]*)\n?/;
 
 /** A reasons line, then the operator's words; undefined when both are empty. */
 export function encodeNote(reasons: readonly string[], note: string | null): string | undefined {
-  const head = reasons.length > 0 ? `reasons: ${reasons.join(", ")}` : "";
   const body = note?.trim() ?? "";
+  // A note that itself opens on `reasons:` must not be read back as the reasons line. With no
+  // reasons of our own, an EMPTY `reasons:` head says so and keeps the note below it whole.
+  const head = reasons.length > 0 ? `reasons: ${reasons.join(", ")}` : REASONS_LINE.test(body) ? "reasons:" : "";
   const out = [head, body].filter(Boolean).join("\n");
   return out === "" ? undefined : out;
 }
