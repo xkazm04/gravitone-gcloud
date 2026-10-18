@@ -6744,6 +6744,73 @@
           "evidence": "lib/ledger/v1/sync.ts:133 The projection sync only appends events using appendOnce and never performs updates or deletions."
         }
       ]
+    },
+    "0572228c-bd2e-42a3-a146-6a91d10fa08f/copy-quality-gates": {
+      "context": "article-check-and-critique",
+      "subject": "copy-quality-gates",
+      "bundle": "localization",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-18",
+      "evaluatedTs": "2026-10-18T22:04:26.651Z",
+      "worker": "a5d6208b-bc5d-49d3-8123-5e5cc4b9d3d1",
+      "techniques": [
+        {
+          "technique": "anchored-model-review",
+          "verdict": "deviation",
+          "evidence": "lib/articles/critique.ts:191 Critique validation accepts free-form location and suggestion text rather than anchored rule identifiers, verbatim quoted spans, and minimal replacements."
+        },
+        {
+          "technique": "copy-contract-before-drafting",
+          "verdict": "deviation",
+          "evidence": "lib/articles/checks.ts:25 Mechanically checkable constraints and thresholds are shared directly with writer prompts rather than separating prompt guidance from checker enforcement."
+        },
+        {
+          "technique": "deterministic-repair-classes",
+          "verdict": "deviation",
+          "evidence": "lib/articles/checkLoop.ts:23 All check failures, including unambiguous typographic issues, are routed to an LLM agent fix turn instead of being repaired deterministically by script."
+        },
+        {
+          "technique": "enforcement-at-the-write-seams",
+          "verdict": "deviation",
+          "evidence": "lib/articles/checkLoop.ts:81 Remaining check failures after max fix passes do not block the pipeline from completing, yielding execution without diff-scoped write-seam gating."
+        },
+        {
+          "technique": "format-aware-check-catalog",
+          "verdict": "deviation",
+          "evidence": "lib/articles/checksStatic.ts:29 Checks run as a linear imperative array push without a declarative precondition graph to suppress cascading dependent failures."
+        },
+        {
+          "technique": "layered-mechanical-gate",
+          "verdict": "deviation",
+          "evidence": "lib/articles/checksReport.ts:28 Check results are flattened and sorted only by status for human review rather than enforcing layered L1 blocking versus precision-earned L2/L3 warnings."
+        },
+        {
+          "technique": "length-and-render-budgets",
+          "verdict": "deviation",
+          "evidence": "lib/articles/checksRendered.ts:134 Rendered checks inspect page-level viewport scroll rather than evaluating per-surface box clipping budgets or banded ratio-to-source limits."
+        },
+        {
+          "technique": "rendered-string-extraction",
+          "verdict": "deviation",
+          "evidence": "lib/articles/checksText.ts:28 Prose is extracted via regex stripping into a single string rather than extracting discrete addressable units tagged with surface classes and verified coverage counts."
+        },
+        {
+          "technique": "reviewer-calibration-and-sampling",
+          "verdict": "deviation",
+          "evidence": "lib/articles/critique.ts:106 Reviewers are configured by model engine and ID without role separation or qualification on seeded defect sets to measure clean-set edit rates."
+        },
+        {
+          "technique": "severity-as-declared-data",
+          "verdict": "deviation",
+          "evidence": "lib/articles/checksItems.ts:14 Check severities are hardcoded as binary pass/fail status in item constructors rather than declared as external configuration data with a cascading rubric."
+        },
+        {
+          "technique": "source-defects-from-cross-language-agreement",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/checks.ts:28 The article authoring and check pipeline operates strictly on English copy with no target locales, so cross-language agreement does not apply."
+        }
+      ],
+      "registryProposal": "The standard assumes copy quality gates govern multi-locale UI catalogs with discrete keys; extending it to long-form prose synthesis requires distinguishing full-document architectural rhythms from string-level catalog constraints."
     }
   }
 }

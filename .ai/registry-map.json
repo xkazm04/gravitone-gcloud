@@ -1022,7 +1022,11 @@
           "revision": 10,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/checks.ts:14 The article checking pipeline leaves failures advisory for a human gate rather than enforcing layered blocking gates with anchored model reviews and declared severities.",
+          "evaluatedAt": "2026-10-18",
+          "evaluatedAgainst": "sha256-b2:f00a2dbd4e8fdce1",
+          "evaluatedRevision": 10
         },
         {
           "subject": "translation-quality-measurement",

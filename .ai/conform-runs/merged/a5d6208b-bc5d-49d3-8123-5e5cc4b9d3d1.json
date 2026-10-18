@@ -1,0 +1,118 @@
+{
+ "schema": "conform-run/1",
+ "worker": "a5d6208b-bc5d-49d3-8123-5e5cc4b9d3d1",
+ "subject": "copy-quality-gates",
+ "evaluatedAt": "2026-10-18T22:04:26.651374+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [
+  {
+   "context": "article-check-and-critique",
+   "subject": "copy-quality-gates",
+   "bundle": "localization",
+   "state": "deviation",
+   "evidence": "lib/articles/checks.ts:14 The article checking pipeline leaves failures advisory for a human gate rather than enforcing layered blocking gates with anchored model reviews and declared severities.",
+   "techniques": [
+    {
+     "technique": "anchored-model-review",
+     "verdict": "deviation",
+     "evidence": "lib/articles/critique.ts:191 Critique validation accepts free-form location and suggestion text rather than anchored rule identifiers, verbatim quoted spans, and minimal replacements."
+    },
+    {
+     "technique": "copy-contract-before-drafting",
+     "verdict": "deviation",
+     "evidence": "lib/articles/checks.ts:25 Mechanically checkable constraints and thresholds are shared directly with writer prompts rather than separating prompt guidance from checker enforcement."
+    },
+    {
+     "technique": "deterministic-repair-classes",
+     "verdict": "deviation",
+     "evidence": "lib/articles/checkLoop.ts:23 All check failures, including unambiguous typographic issues, are routed to an LLM agent fix turn instead of being repaired deterministically by script."
+    },
+    {
+     "technique": "enforcement-at-the-write-seams",
+     "verdict": "deviation",
+     "evidence": "lib/articles/checkLoop.ts:81 Remaining check failures after max fix passes do not block the pipeline from completing, yielding execution without diff-scoped write-seam gating."
+    },
+    {
+     "technique": "format-aware-check-catalog",
+     "verdict": "deviation",
+     "evidence": "lib/articles/checksStatic.ts:29 Checks run as a linear imperative array push without a declarative precondition graph to suppress cascading dependent failures."
+    },
+    {
+     "technique": "layered-mechanical-gate",
+     "verdict": "deviation",
+     "evidence": "lib/articles/checksReport.ts:28 Check results are flattened and sorted only by status for human review rather than enforcing layered L1 blocking versus precision-earned L2/L3 warnings."
+    },
+    {
+     "technique": "length-and-render-budgets",
+     "verdict": "deviation",
+     "evidence": "lib/articles/checksRendered.ts:134 Rendered checks inspect page-level viewport scroll rather than evaluating per-surface box clipping budgets or banded ratio-to-source limits."
+    },
+    {
+     "technique": "rendered-string-extraction",
+     "verdict": "deviation",
+     "evidence": "lib/articles/checksText.ts:28 Prose is extracted via regex stripping into a single string rather than extracting discrete addressable units tagged with surface classes and verified coverage counts."
+    },
+    {
+     "technique": "reviewer-calibration-and-sampling",
+     "verdict": "deviation",
+     "evidence": "lib/articles/critique.ts:106 Reviewers are configured by model engine and ID without role separation or qualification on seeded defect sets to measure clean-set edit rates."
+    },
+    {
+     "technique": "severity-as-declared-data",
+     "verdict": "deviation",
+     "evidence": "lib/articles/checksItems.ts:14 Check severities are hardcoded as binary pass/fail status in item constructors rather than declared as external configuration data with a cascading rubric."
+    },
+    {
+     "technique": "source-defects-from-cross-language-agreement",
+     "verdict": "not-applicable",
+     "evidence": "lib/articles/checks.ts:28 The article authoring and check pipeline operates strictly on English copy with no target locales, so cross-language agreement does not apply."
+    }
+   ],
+   "registryProposal": "The standard assumes copy quality gates govern multi-locale UI catalogs with discrete keys; extending it to long-form prose synthesis requires distinguishing full-document architectural rhythms from string-level catalog constraints."
+  }
+ ],
+ "declined": [
+  {
+   "subject": "copy-quality-gates",
+   "context": "landing-cosmos-shell",
+   "reason": "This context implements the landing page React shell, stage mounting, keyboard navigation, and cosmos engine state; it does not author or validate a catalog copy pipeline or quality gates."
+  },
+  {
+   "subject": "copy-quality-gates",
+   "context": "decision-and-gates",
+   "reason": "This context implements kernel board packet decisions and production parts pipeline gates, which manage production workflow phases rather than copy quality gates."
+  },
+  {
+   "subject": "copy-quality-gates",
+   "context": "landing-cosmos-paper-raster",
+   "reason": "This context implements 2D canvas paper texture generation, ink definitions, and off-thread rasterization workers, having no copy drafting or copy verification mechanisms."
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-18T22:04:26.651374+00:00",
+   "bundle": "localization",
+   "subjects": [
+    "copy-quality-gates"
+   ],
+   "techniques": [
+    "anchored-model-review",
+    "copy-contract-before-drafting",
+    "deterministic-repair-classes",
+    "enforcement-at-the-write-seams",
+    "format-aware-check-catalog",
+    "layered-mechanical-gate",
+    "length-and-render-budgets",
+    "rendered-string-extraction",
+    "reviewer-calibration-and-sampling",
+    "severity-as-declared-data",
+    "source-defects-from-cross-language-agreement"
+   ],
+   "deviations": 1,
+   "context": "article-check-and-critique",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  }
+ ]
+}
