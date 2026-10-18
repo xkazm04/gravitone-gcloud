@@ -70,7 +70,7 @@ export { NOTE_MAX_CHARS } from "./types";
 export { createRun } from "./runCreate";
 export { getRun, getRunDetail, listArticleRuns, readPatches } from "./runReads";
 export { approveRun, rejectRun } from "./humanActs";
-export { reworkRun, reworkSection } from "./rework";
+export { reworkCritiqueSection, reworkRun, reworkSection } from "./rework";
 export { resumePoint, resumeRun } from "./resume";
 export { driveRun, walk, type WalkReport } from "./drive";
 export { ensureMediumDraft } from "./mediumDraft";

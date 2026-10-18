@@ -13,6 +13,7 @@ import { copyDir, fileExists } from "./files";
 import { standardForPrompt } from "./critiqueTurn";
 import { copyAmendments, copyExperimentText, makeReviewerWorkspace, runTrial } from "./agentSteps";
 import { buildReviewPrompt, loadReviewPromptFile } from "./prompt";
+import { reworkCritiqueSection } from "./rework";
 import { readJsonFile, readRun, readTextFile, runDir, updateRun, writeFileAtomic, writeJsonAtomic } from "./store";
 import { StepError, sumCost } from "./stepFailure";
 import type { Review, ReviewerReceipt, ReviewerSpec } from "./types";
@@ -83,7 +84,9 @@ export async function reviewRound(id: string, round: number, panel: ReviewerPane
             postMd,
             sourcesJson,
             ...(trial ? { trial } : {}),
-          }) + note,
+          }) +
+          (run.rework ? reworkCritiqueSection(run.rework, "reviewer") : "") +
+          note,
         !!trial,
       ),
     ),

@@ -290,6 +290,13 @@ NO INTERNAL IDENTIFIERS. The experiment's files number things for code; a reader
 
 THE TITLE names the contest: `<practice> vs <practice>`, each in the short name the post uses for it, then a colon and a hook that says what is at stake for the reader. THE SUBTITLE says in words what was measured and why a reader should care; it may hint the outcome. Neither carries a number, a percentage or n: the figures are the post's payoff, not its label. (2026-10-18: "One SD as a ranking's only check: a false order in one pair in four", under a 50-word subtitle quoting 25.07 and 0.131 percent.)
 
+THE BACKGROUND WRAPS THE POST: THE OPENING STARTS WITH IT AND THE CLOSE RETURNS TO IT. A practice is a tool for a job, and a reader who has not been told the job cannot weigh two tools for it: a post that compares two practices without it is comparing long division by hand with a calculator and never saying what is being calculated, or why. So before the example's mechanics the opening answers, in plain words for a reader new to the field:
+- what the activity is and why people do it (what an evaluation is for, where an agent's instructions live and who reads them);
+- what is decided with it, and by whom (which model or prompt a product ships, which order a public board prints);
+- what a right call is worth and what a wrong one costs, in the reader's terms (a model that is not better shipped at a higher price, weeks of migration spent chasing noise, a published claim that others buy on);
+- the question the two practices both answer, in the reader's words ("is the order in this table real, or noise?").
+Then the example makes that background concrete, and the two practices arrive as two answers to its question. Only the first lines of it fit before the first section; the first section carries the rest. The close returns to the same background, not only to the example's checklist: what the reader's decision looks like now and what the result is worth to them. (2026-10-18, a second rework: the post opened on "a team has six candidates on one test suite", and the owner asked: candidates for what, what is the team trying to achieve, and what is it worth?)
+
 ONE PRACTICAL EXAMPLE CARRIES THE POST, FROM THE OPENING TO THE CLOSE. A reader cannot care about a number before they can picture the situation it is about, and cannot follow a practice nobody has shown them. Never assume the reader already knows what either practice is or when it is used.
 - The opening is built on one concrete use case the reader can picture: a real one from the research where one exists (a public leaderboard, a vendor's documented workflow, a named benchmark), cited; otherwise a hypothetical said to be one ("Take a team choosing between two support-bot prompts…"), its values marked as invented. It names who is deciding, what they are deciding, what they see on their screen, and what a wrong call costs them.
 - Each practice is explained in plain words through that example before any measured number: what it does to that team's decision, in a sentence a newcomer follows, with an illustration where a picture says it faster. A term of art (a standard deviation, a paired test, a correction for many comparisons) is shown working in the example the first time it appears; one the argument does not need is left out.
@@ -304,14 +311,14 @@ WORDS FOR A READER. The pipeline's words are not the reader's. Never print `gold
 SAY WHAT WAS TESTED, EXACTLY. When the rule is a precondition or a check (it forbids something when it fails) and the trial used it as a decision rule (it permits everything when it passes), the post says so in the setup and scopes the verdict to that reading: a necessary condition was tested as if it were sufficient (2026-10-18: the METHOD lens caught exactly this, after the post had overclaimed it).
 
 The outline's sections, in this order unless the result asks otherwise:
-- `## Opening`: the practical example and its stake, the finding in a line of words, and the preview sentence: the verdict ({{TRIAL_VERDICT}}) in words, `n={{TRIAL_N}} per arm`, and that the measurement was made first-hand for this post, citing [1].
+- `## Opening`: the background in its first lines (the activity, the decision, its worth), the practical example and its stake, the finding in a line of words, and the preview sentence: the verdict ({{TRIAL_VERDICT}}) in words, `n={{TRIAL_N}} per arm`, and that the measurement was made first-hand for this post, citing [1].
 - WHY THIS RULE, AND WHY DOUBT IT: the practice and its promise, the challenger and why it is the one to beat.
 - HOW IT WAS TESTED: the two practices, the metric and why it is the reader's metric, each floor and what it prevents, what was held the same and why, n per arm. Every choice with its reason.
 - WHAT HAPPENED, with at least one figure drawn from `inputs/experiment/results.json` (the per-arm values with their n, the difference against the smallest difference that counts), its caption citing [1].
 - WHY IT HAPPENED: the mechanism, with the research for what the trial cannot show by itself.
 - WHAT IT CHANGES for the recommended practice, in plain words: upheld, challenged or null.
 - WHAT THE TRIAL CANNOT SAY: its limits, the smallest difference that counts, n, the setting, the workloads it did not cover.
-- THE CLOSE returns to the example: what that team does now, and where the result applies and where it does not.
+- THE CLOSE returns to the background and the example: what the reader's decision looks like now and what the result is worth to them, what that team does now, and where the result applies and where it does not.
 
 A `null` verdict is planned as "no difference beyond the band at n={{TRIAL_N}}", never as a tie or a win. No number about the arms goes in the outline unless a claim of source 1 holds it.
 
@@ -321,6 +328,7 @@ THIS POST IS WRITTEN AROUND A TRIAL, measured first-hand before this run existed
 {{TRIAL}}
 
 - THE STORY OF A QUESTION, as in the outline: the situation and its stake, the practice and its promise, the doubt and the challenger, the test with a reason for every choice, then what happened, why, and what changes. Every section opens on the question it answers before any number. Where `inputs/outline.md` reads as a list of results, keep its claims and give each section its why; the room comes from cutting log lines, not from appending.
+- THE BACKGROUND WRAPS THE POST, as in the outline: before the example's mechanics, say in plain words what the activity is and why people do it, what is decided with it and by whom, what a right call is worth and a wrong one costs, and the question both practices answer; the close returns to it with what the reader's decision looks like now and what the result is worth to them. Where `inputs/outline.md` opens straight on the example, add the background in front of it.
 - ONE PRACTICAL EXAMPLE, as in the outline, carries the post: the opening is a use case the reader can picture (a real one from the research where one exists, cited; else a hypothetical said to be one, its values marked invented), each practice is explained in plain words through it before any measured number, and the closing returns to it with what that team does now and where the result applies and where it does not. Never assume the reader knows either practice.
 - THE OPENING is that example and what the measurement found, said in words; apart from the preview's verdict and n it carries no measured number. Never a dated run, an observation or the run's log.
 - PICTURES BEFORE TABLES, as in the outline: an abstract illustration for each section's idea; at most two tables before the closing section; exact breakdowns stay in the record [1].

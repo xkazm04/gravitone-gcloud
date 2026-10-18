@@ -129,3 +129,32 @@ export function reworkSection(rework: ArticleRework): string {
     "",
   ].join("\n");
 }
+
+/**
+ * The same instruction for the critique: each reviewer, and every writer turn after the
+ * draft (the answer, a re-research, the rewrite, a fix). Measured 2026-10-18 on rework 2 of
+ * the eval-harness run: the note reached the draft alone, the reviewers asked for exact
+ * figures and more mechanism, the writer accepted 69 of 74 findings, and the post came back
+ * longer (6,340 to 6,833 words) with "logits" and three-decimal figures the note had cut.
+ * A reviewer judges the post against the instruction; the writer rejects a finding that
+ * would undo it, with the instruction as the reason.
+ */
+export function reworkCritiqueSection(rework: ArticleRework, who: "reviewer" | "writer"): string {
+  const rule =
+    who === "reviewer"
+      ? "Judge the post against it as well as against the lenses above: a place where the post fails the instruction is a finding (`engagement` or `format`). Never ask for what it rules out; a finding that would add precision, a qualifier or a mechanism the instruction moved out of the prose names the record or the cut that pays for it instead."
+      : "It outranks a reviewer's finding. Reject a finding that would undo it (more precision, qualifiers, terms or tables the instruction moved out of the prose) and give the instruction as the reason; a factual error is still corrected, in the instruction's register.";
+  return [
+    "",
+    "---",
+    "",
+    `THIS POST IS REWORK ${rework.count}: THE OPERATOR'S INSTRUCTION FOR IT`,
+    "",
+    `The operator read the previous version at the gate and sent it back with the instruction below. ${rule}`,
+    "",
+    '"""',
+    rework.note,
+    '"""',
+    "",
+  ].join("\n");
+}

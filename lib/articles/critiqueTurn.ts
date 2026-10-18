@@ -12,6 +12,7 @@ import { makeWorkspace, keepOut, runTrial, stageExperimentInputs } from "./agent
 import { copyDir } from "./files";
 import { buildPrompt, loadPromptFile } from "./prompt";
 import { resolveRegistryDir, resolveStandard, standardText } from "./registryRead";
+import { reworkCritiqueSection } from "./rework";
 import { readRun, runDir, updateRun, writeFileAtomic, writeJsonAtomic } from "./store";
 import { StepError, sumCost } from "./stepFailure";
 import type { EngineDeps } from "./engine";
@@ -73,7 +74,8 @@ export async function critiqueTurn(
     // writer still dropped one reviewer whole, twice in a row, in two runs (2026-10-14 `gemini`,
     // 2026-10-18 `gemini4`: two seats with near-identical names). What must be complete is now
     // counted by code and stated, so the agent works from a list instead of a directory listing.
-    + (phase === "critique" ? await reviewManifest(path.join(dir, roundDir(round), "reviews")) : "");
+    + (phase === "critique" ? await reviewManifest(path.join(dir, roundDir(round), "reviews")) : "")
+    + (run.rework ? reworkCritiqueSection(run.rework, "writer") : "");
   const name = opts.name ?? `critique-r${round}-${plan.label}`;
   const who = opts.name ?? `round ${round} ${plan.label}`;
   await writeFileAtomic(path.join(dir, "agent", `${name}-prompt.md`), base);

@@ -20,7 +20,7 @@ import path from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { approveRun, createRun, defaultDeps, driveRun, rejectRun, reworkRun, reworkSection, NOTE_MAX_CHARS } from "@/lib/articles/engine";
+import { approveRun, createRun, defaultDeps, driveRun, rejectRun, reworkCritiqueSection, reworkRun, reworkSection, NOTE_MAX_CHARS } from "@/lib/articles/engine";
 import { ArticleError, canTransition, readRun, runDir, TRANSITIONS } from "@/lib/articles/store";
 import { ARTICLE_STATUSES, type ArticleRun } from "@/lib/articles/types";
 
@@ -131,7 +131,7 @@ test("reworkRun refuses a run not at the gate, an empty note and a note over 200
   expect((await readRun(run.id)).status).toBe("rejected");
 });
 
-test("a rework keeps the research and the outline, re-does draft, critique and check, and the note reaches the draft turn", async () => {
+test("a rework keeps the research and the outline, re-does draft, critique and check, and the note reaches the draft and every critique turn", async () => {
   const log = teeWriter();
   const run = await toGate();
   const dir = runDir(run.id);
@@ -185,8 +185,14 @@ test("a rework keeps the research and the outline, re-does draft, critique and c
   expect(drafts[1].inputs).toContain("previous-post");
   // the critique's reviewers and writer ran a second time
   expect(phases("critique").length).toBeGreaterThanOrEqual(2);
-  // no other turn was handed the note
-  for (const r of seen) if (r.phase !== "draft") expect(r.prompt, r.phase).not.toContain(note);
+  // ...and every turn after the redraft carried the instruction: a note the critique never saw
+  // was undone by it (2026-10-18, the eval-harness run's second rework). Nothing before it did.
+  const redraft = seen.indexOf(drafts[1]);
+  const after = seen.slice(redraft + 1);
+  expect(after.map((r) => r.phase)).toContain("review");
+  for (const r of after) expect(r.prompt, r.phase).toContain("THIS POST IS REWORK 1: THE OPERATOR'S INSTRUCTION FOR IT");
+  for (const r of after) expect(r.prompt, r.phase).toContain(note);
+  for (const r of seen.slice(0, redraft)) expect(r.prompt, r.phase).not.toContain(note);
   expect(readFileSync(path.join(dir, "agent", "draft-prompt.md"), "utf8")).toContain(note);
 
   // a second rework counts, and replaces the note
@@ -211,4 +217,9 @@ test("reworkSection names the instruction apart from the standing brief", () => 
   expect(s).toContain("REWORK 3 OF THIS DRAFT");
   expect(s).toContain('"""\nCut the second section.\n"""');
   expect(s).toContain("inputs/previous-post/");
+  const reviewer = reworkCritiqueSection({ at: "2026-10-07T00:00:00.000Z", note: "Cut the second section.", count: 3 }, "reviewer");
+  const writer = reworkCritiqueSection({ at: "2026-10-07T00:00:00.000Z", note: "Cut the second section.", count: 3 }, "writer");
+  for (const x of [reviewer, writer]) expect(x).toContain('THIS POST IS REWORK 3: THE OPERATOR\'S INSTRUCTION FOR IT');
+  expect(reviewer).toContain("Never ask for what it rules out");
+  expect(writer).toContain("It outranks a reviewer's finding");
 });

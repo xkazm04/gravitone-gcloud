@@ -589,8 +589,15 @@ terminal: a reject throws the piece away, a rework is one piece of work with one
   whole standing brief, headed `REWORK <n> OF THIS DRAFT: THE OPERATOR'S INSTRUCTION`
   (`reworkSection` in the engine). It says the instruction decides what changes, that research and
   sources are kept and not to be redone, and that the output contract and the check's bars still
-  bind. The old post is staged in the workspace as `inputs/previous-post/`. No other turn is given
-  the note. `agent/draft-prompt.md` holds the exact prompt.
+  bind. The old post is staged in the workspace as `inputs/previous-post/`. `agent/draft-prompt.md`
+  holds the exact prompt.
+- **And the critique.** Every reviewer and every writer turn after the redraft (the answer, a
+  re-research, the rewrite, a fix) gets the note too, headed `THIS POST IS REWORK <n>: THE
+  OPERATOR'S INSTRUCTION FOR IT` (`reworkCritiqueSection`). A reviewer judges the post against it
+  and never asks for what it rules out; the writer rejects a finding that would undo it. Until
+  2026-10-18 only the draft saw the note, and on that day's second rework the critique undid it:
+  the reviewers asked for exact figures and more mechanism, the writer accepted 69 of 74 findings,
+  and the post came back longer, with the terms and three-decimal figures the note had cut.
 - **Cost.** No research turn, so no live web and none of the research phase. The draft turn is paid
   again, and the whole critique (four reviewers, the writer's answer, and any revision) and the
   check run again. On the runs of 2026-10 the critique was about three quarters of a run's cost
