@@ -230,3 +230,11 @@ test("brief and lesson: the request a leaf makes, sfx anatomy, loop, reconcile, 
   expect(hand.evidence).toEqual({ n: 2, keepRate: 0.5, meanScore: null, takeIds: ["t-w"] });
   expect(countsOf(judged.nodes)).toEqual({ leaves: 3, rendered: 2, awaiting: 0, failed: 0, winners: 1 });
 });
+
+test("an sfx leaf's `loop:` field is read as a word: one-shot, once and only are not `on`", () => {
+  const asks = (text: string) => loopOf(node({ id: "w", prompt: `event: hit; loop: ${text}` }));
+  for (const yes of ["yes", "Yes.", "true", "on", "seamless", "seamless loop", "loop", "looping", "loopable"]) expect(asks(yes), `loop: ${yes}`).toBe(true);
+  for (const no of ["no", "none", "off", "false", "one-shot", "one shot", "once", "only on impact", "online"]) expect(asks(no), `loop: ${no}`).toBe(false);
+  // and the flag the render sends is that one answer
+  expect(generateRequestFor({ id: "h", kind: "sfx" }, node({ id: "o", prompt: "event: hit; loop: one-shot" })).loop).toBe(false);
+});
