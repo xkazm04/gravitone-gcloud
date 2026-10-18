@@ -200,9 +200,10 @@ checked out on two machines, each with its own Personas and its own project row,
 re-exports `context-map.json` from the LOCAL database. Measured 2026-10-06: a subtree scan on the
 machine whose database was a month behind exported 19 contexts with 12 ungrouped, and nine scans
 were spent before anyone noticed. **Which machine owns the map is a fact in the file, not in this
-text:** read `project.id` and `project.root` from `context-map.json` (since `3e87f6d`, 2026-10-11,
-the map belongs to project `91d8170c` at `C:/Users/mkdol/dolla/gravitone-gcloud`; the kazda checkout
-is project `d57f858b`). Compare the map's `project.root` with `git rev-parse --show-toplevel`, and its
+text:** read `project.id` and `project.root` from `context-map.json` (owner ruling 2026-10-18: the
+map belongs to project `d57f858b` at `C:/Users/kazda/kiro/gravitone-gcloud`, rebuilt there by 28
+subtree scans after the Phase 6 cutover; the mkdol checkout, project `91d8170c`, owned it from
+`3e87f6d`, 2026-10-11, and must no longer scan). Compare the map's `project.root` with `git rev-parse --show-toplevel`, and its
 `project.id` with this checkout's `.personas/project.json`. If they differ, do not scan; log the
 needed scans in `.vault/map-drift.md` for the machine that owns the map. If a scan has already run, restore the map
 with `git checkout -- context-map.json CLAUDE.md`.

@@ -28,8 +28,8 @@ rebuild until the owning machine rescans - `docs/context-map.md`). Build the men
 A context here is **broad** (Personas' scan targets 10-30 files each); when the user names one
 route or step, scope to it inside its context and say you did.
 
-**`context-map.json` is generated and owned by the Personas app** (project `gravitone`, id
-`91d8170c-...`) - export-only, no import path.
+**`context-map.json` is generated and owned by the Personas app** (project `gravitone`; the owning project id is `project.id` in the file -
+`d57f858b`, the kazda checkout, since 2026-10-18) - export-only, no import path.
 
 - **Never hand-edit it.** The next scan overwrites it from the DB, silently. To change the taxonomy,
   change it in the app (Dev Tools -> Context Ledger) and rescan, or ask the user to.

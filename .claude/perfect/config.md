@@ -127,7 +127,7 @@ Director-only. Builders REPORT what they need; the Director applies it once.
 ## Context sources
 
 `context-map.json` at the repo root is **generated and owned by the Personas app** (project
-`gravitone`, id `91d8170c-...`): its scan writes the contexts into Personas' own SQLite DB and then
+`gravitone`; owner = the file's `project.id`, `d57f858b` since 2026-10-18): its scan writes the contexts into Personas' own SQLite DB and then
 EXPORTS this file, plus the managed `<!-- personas:context-map -->` block in `CLAUDE.md`. It is
 **export-only - there is no import path.**
 
@@ -141,8 +141,8 @@ EXPORTS this file, plus the managed `<!-- personas:context-map -->` block in `CL
 - The map's `contexts[].name` values ARE the matching set for the memory outbox: same machine, one
   scan. Confirm through the bridge when it is up rather than trusting a remembered name.
 - Repo is Personas-managed (`.personas/` exists). The map belongs to the machine whose project id is
-  in `context-map.json`'s `project.id` (`91d8170c`, the mkdol checkout, since 2026-10-11); the kazda
-  checkout is `d57f858b` and must not scan it (`docs/context-map.md`).
+  in `context-map.json`'s `project.id` (`d57f858b`, the kazda checkout, since 2026-10-18; before that
+  `91d8170c`, the mkdol checkout, which must no longer scan it - `docs/context-map.md`).
 - A wave that added or moved files leaves the map stale by design - say so and ask for a rescan;
   never patch it.
 

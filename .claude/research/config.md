@@ -82,8 +82,8 @@ in the teardown's first line and mark compressed timings INFERRED.
 ## Reference files
 
 - `context-map.json` (repo root) - always loaded; the relevance-scoring surface. **A Personas app
-  export** (project `gravitone`, id `91d8170c-...`), export-only, never hand-edited: the next scan
-  overwrites it from the DB. Read its size from the file (31 contexts / 8 groups on 2026-10-17, from
+  export** (project `gravitone`; owner = the file's `project.id`, `d57f858b` since 2026-10-18), export-only, never hand-edited: the next scan
+  overwrites it from the DB. Read its size from the file (80 contexts / 2 groups on 2026-10-18; it was 31 / 8 on 2026-10-17, from
   before the Phase 6 deletions); the `keywords` arrays score better than the prose. Five files are unmapped as a known baseline (`README.md`, `AGENTS.md`, `CLAUDE.md`,
   `package.json`, `tsconfig.json`). If it is missing, stop and ask for a scan - never write one.
 - `README.md` - always loaded; the product, the mocked seam, the design language's rules.
