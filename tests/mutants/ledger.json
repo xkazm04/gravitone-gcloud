@@ -1,7 +1,7 @@
 {
   "commit": "15fd570c1676e99555f12e81ae5ce22229a0480e",
-  "totalDurationMs": 273062,
-  "killed": 48,
+  "totalDurationMs": 255594,
+  "killed": 44,
   "survived": 0,
   "stale": 0,
   "broken": 0,
@@ -18,12 +18,6 @@
       "probe": "network-seal.probe.spec.ts",
       "verdict": "killed",
       "durationMs": 5318
-    },
-    {
-      "id": "landing-takes-the-signal-barrel",
-      "probe": "landing-isolation.probe.spec.ts",
-      "verdict": "killed",
-      "durationMs": 5974
     },
     {
       "id": "ad-overlay-fit-ignores-width",
@@ -122,28 +116,10 @@
       "durationMs": 3330
     },
     {
-      "id": "pip-hollow-too-faint",
-      "probe": "pip-contrast.probe.spec.ts",
-      "verdict": "killed",
-      "durationMs": 5346
-    },
-    {
-      "id": "bandtrack-bounds-too-faint",
-      "probe": "bandtrack-contrast.probe.spec.ts",
-      "verdict": "killed",
-      "durationMs": 3089
-    },
-    {
       "id": "signed-out-chip",
       "probe": "session-ended-reason.probe.spec.ts",
       "verdict": "killed",
       "durationMs": 3259
-    },
-    {
-      "id": "upstream-here-name-faint",
-      "probe": "upstream-break-contrast.probe.spec.ts",
-      "verdict": "killed",
-      "durationMs": 3057
     },
     {
       "id": "tally-key-opacity-low",

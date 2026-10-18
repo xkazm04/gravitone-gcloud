@@ -145,17 +145,14 @@ const HINT_HARD_CAP = 25;
  * A named exemption is a decision somebody made; an unnamed one is drift.
  */
 const HINT_EXEMPT = [
-  // v1's <Keycaps> renders its rows inside a Hint. A keymap is a table, not
-  // prose: every row is a key and a verb, there is nothing in it to delete, and
-  // its length is a function of how many keys the surface binds. The README
-  // names this as the one deliberate exemption. It leaves with the v1 kit in
-  // Phase 6 wave C, and the staleness check below fails the day it does.
+  // Empty since v1's components/ui/signal/Keycaps.tsx was deleted (its keymap
+  // table was the one deliberate exemption: every row a key and a verb, its
+  // length a function of how many keys a surface binds).
   //
   // @gt/ui's Keycaps (packages/ui/src/components/keycaps/Keycaps.tsx) needs no
   // entry: it draws its legend in the open, derived from the keymap, and holds
   // no <Hint> at all. An exemption there would exempt nothing, which is the
   // kind of line that outlives its reason.
-  "components/ui/signal/Keycaps.tsx",
 ];
 
 /**

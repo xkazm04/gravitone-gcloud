@@ -1,4 +1,4 @@
-// LANE - Tally and Provenance chip keys clear 4.5:1 on ink (was 2.91 / 2.59).
+// LANE - Tally chip key clear 4.5:1 on ink (was 2.91 / 2.59).
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -24,11 +24,4 @@ const keyRatio = (s: string, opRe: RegExp) => {
 test("Tally key span", () => {
   const s = src("components/ui/signal/Tally.tsx");
   expect(keyRatio(s, /"uppercase opacity-(\d+)"/)).toBeGreaterThanOrEqual(4.5);
-});
-test("Provenance key span", () => {
-  const t = src("components/ui/signal/Tally.tsx");
-  const p = src("components/ui/signal/Provenance.tsx");
-  const tone = alphaOf(t.match(/neutral:\s*"[^"]*?(text-white\/\d+)/)![1]);
-  const op = parseInt(p.match(/className="uppercase opacity-(\d+)"/)![1], 10) / 100;
-  expect(ratio(over(WHITE, tone * op, INK), INK)).toBeGreaterThanOrEqual(4.5);
 });

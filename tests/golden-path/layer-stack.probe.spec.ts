@@ -30,38 +30,10 @@ import {
   trapOwner,
   type LayerEntry,
 } from "@/components/ui/layers";
-import { defineKeymap, LOUPE_MARK, overlayOpen, resolveKey, type KeyLike } from "@/components/ui/signal/keymap";
 
 import { stripComments } from "./_helpers";
 
 const src = (p: string) => stripComments(readFileSync(join(process.cwd(), p), "utf8"));
-
-/** The retired lib/board/keys.ts BOARD_KEYMAP, verbatim: the v1 Board's whole keymap, a
- *  fixture of the resolver now (the v1 Board retired in Phase 6 wave C; the new Board binds
- *  through @gt/ui/keymap, held by packages/ui/test/keymap.test.ts). */
-const BOARD_KEYMAP = defineKeymap<"approve" | "reject" | "clear" | "next" | "prev" | "loupe" | "close" | "undo">({
-  id: "board",
-  bindings: [
-    { keys: ["A"], does: "approve", action: "approve" },
-    { keys: ["X"], does: "reject", action: "reject" },
-    { keys: ["U"], does: "clear", action: "clear" },
-    { keys: ["J"], does: "next", action: "next", repeat: true },
-    { keys: ["K"], does: "previous", action: "prev", repeat: true },
-    { keys: ["Enter"], does: "loupe", action: "loupe" },
-    { keys: ["Esc"], does: "close", action: "close", repeat: true },
-    { keys: ["Z"], does: "undo", action: "undo" },
-  ],
-});
-
-/** lib/board/keys.ts boardKeyAction, verbatim: the Board's guard over the resolver. */
-const boardKeyAction = (e: KeyLike, overlay: boolean, layers?: readonly LayerEntry[]) => resolveKey(BOARD_KEYMAP, e, { overlay, layers });
-
-const press = (key: string, over: Partial<KeyLike> = {}): KeyLike => ({ key, ctrlKey: false, metaKey: false, altKey: false, repeat: false, target: null, ...over });
-const dialog = (loupe: boolean) => ({
-  hasAttribute: () => false,
-  querySelector: (s: string) => (loupe && s === `[${LOUPE_MARK}]` ? {} : null),
-});
-const root = (els: ReturnType<typeof dialog>[]) => ({ querySelectorAll: () => els });
 
 /** A node is just an identity here; `contains` is set membership. */
 const node = (name: string) => ({ name });
@@ -85,37 +57,25 @@ function key(k: string, over: { cancelBubble?: boolean; shiftKey?: boolean } = {
   };
 }
 
-test("1 · an open tray is an overlay to every key guard", () => {
-  expect(overlayOpen(root([]), [{ id: "bell", kind: "tray" }])).toBe(true);
-  expect(overlayOpen(root([]), [])).toBe(false);
-  // The default argument reads the live stack, so the 13 callers of
-  // overlayOpen() that pass nothing see a pushed tray without an edit.
+test("1 · an open tray is on the live stack", () => {
   const remove = pushLayer({ id: "bell", kind: "tray" });
   try {
     expect(openLayers().map((l) => l.id)).toEqual(["bell"]);
-    expect(overlayOpen(root([]))).toBe(true);
-    expect(boardKeyAction(press("a"), overlayOpen(root([])))).toBe(null);
   } finally {
     remove();
   }
   expect(openLayers()).toEqual([]);
-  expect(overlayOpen(root([]))).toBe(false);
 });
 
-test("2 · one Escape closes the top layer only — the Board's close does not also run", () => {
+test("2 · one Escape closes the top layer only", () => {
   const stack = [layer("bell", "tray")];
   expect(escapeTarget(stack, key("Escape"))).toBe("bell");
-  expect(boardKeyAction(press("Escape"), false, stack)).toBe(null);
-  // No layer, no prevention: Escape is still the Board's close.
-  expect(boardKeyAction(press("Escape"), false, [])).toBe("close");
 });
 
-test("2b · a dismissing Escape is preventDefaulted, and the Board yields to it (critic)", () => {
-  expect(boardKeyAction({ ...press("Escape"), defaultPrevented: true }, false, [])).toBe(null);
-
-  // The real hand-off, in order: the stack's document listener pops the tray
-  // first, synchronously; the Board's window listener runs after with the
-  // stack ALREADY empty. Only defaultPrevented carries the news across.
+test("2b · a dismissing Escape is preventDefaulted (critic)", () => {
+  // The hand-off, in order: the stack's document listener pops the tray first,
+  // synchronously; a window listener runs after with the stack ALREADY empty.
+  // Only defaultPrevented carries the news across.
   const s = createLayerStack();
   let closed = 0;
   const remove = s.push(layer("bell", "tray", { dismiss: () => { closed++; remove(); } }));
@@ -124,7 +84,6 @@ test("2b · a dismissing Escape is preventDefaulted, and the Board yields to it 
   expect(closed).toBe(1);
   expect(s.list()).toEqual([]);
   expect(e.defaultPrevented).toBe(true);
-  expect(boardKeyAction(e, false, s.list())).toBe(null);
 
   const ls = src("components/ui/layers.ts");
   const at = ls.indexOf("export function routeKey");
@@ -195,7 +154,7 @@ test("6 · only the top modal traps Tab", () => {
   expect(seen).toEqual(["B"]);
 });
 
-test("7 [guard] · a handled Escape (Hint inside a Modal) closes nothing; the loupe keeps its keys", () => {
+test("7 [guard] · a handled Escape (Hint inside a Modal) closes nothing", () => {
   const s = createLayerStack();
   let closed = 0;
   s.push(layer("A", "modal", { dismiss: () => closed++ }));
@@ -203,7 +162,6 @@ test("7 [guard] · a handled Escape (Hint inside a Modal) closes nothing; the lo
   expect(escapeTarget(s.list(), e)).toBe(null);
   routeKey(s.list(), e);
   expect(closed).toBe(0);
-  expect(overlayOpen(root([dialog(true)]), [])).toBe(false);
 });
 
 test("8 · source ratchet: the stack owns one listener of each kind", () => {
@@ -211,10 +169,4 @@ test("8 · source ratchet: the stack owns one listener of each kind", () => {
   expect(ls.match(/addEventListener\(\s*["']keydown["']/g)?.length ?? 0).toBe(1);
   expect(ls.match(/addEventListener\(\s*["']pointerdown["']/g)?.length ?? 0).toBe(1);
   expect(ls).not.toMatch(/addEventListener\(\s*["']mousedown["']/);
-});
-
-test("9 · wiring: the key guard reads the stack", () => {
-  const keys = src("components/ui/signal/keymap.ts");
-  expect(keys).toMatch(/export function overlayOpen\([^)]*layers[^)]*=\s*openLayers\(\)/);
-  expect(keys).toMatch(/opts\.layers \?\? openLayers\(\)/);
 });
