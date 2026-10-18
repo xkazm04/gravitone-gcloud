@@ -175,6 +175,10 @@ npx tsx pipeline/article.mts trial check <id> --json
   strictness**: read the grading rule in the harness against a few pilot answers (2026-10-18:
   prompt-assembly's whole-token key scored "Foxglove" wrong against "Team Foxglove", and the
   alternative met its 0.9 accuracy guard with no margin);
+- **a precondition tested as a decision rule**: the rule forbids something when it fails, and
+  the golden arm treats its passing as permission for everything (2026-10-18, eval-harness: "no
+  order inside one SD" run as "publish every pair once the spread clears one SD"; three
+  reviewers' METHOD findings followed). Send it back to test what the rule claims;
 - **the golden arm is not the rule as written** (measurement-honesty/the-baseline-is-the-untouched-path),
   or the design keeps a best of several runs (eval-harness/selection-over-noise);
 - **validity is `stale` or `untestable`**, or `trial check` fails.

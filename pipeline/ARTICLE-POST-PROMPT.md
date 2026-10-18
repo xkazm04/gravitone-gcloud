@@ -276,7 +276,13 @@ THIS POST IS WRITTEN AROUND A TRIAL, measured first-hand before this run existed
 
 {{TRIAL}}
 
-THE OPENING IS THE TRIAL'S OWN MEASURED NUMBER, not a third-party incident: one sentence a reader could repeat (the metric, both arms, the gap, n). The outline's sections, in this order unless the result asks otherwise:
+THE OPENING IS THE TRIAL'S OWN MEASURED NUMBER, told as what it means to the reader: one or two sentences a practitioner could repeat to a colleague (what teams do today, what that got wrong or cost when measured, the gap, n). It is not a third-party incident and not the run's log: the harness, the seal, timestamps, exit codes, durations and pilot counts belong in the setup section, never in the opening. (2026-10-18: a trial post opened on "A sealed run of bench.py finished at 23:58:27Z, exit code 0, after 10,556 milliseconds", and two reviewers flagged it as an execution log.)
+
+WORDS FOR A READER. The pipeline's words are not the reader's. Never print `golden`, `alternative`, `arm`, `guard`, `band`, `prereg`, `seal`, a trial id, "the registry" or "golden path" bare. Name each practice by what it does ("the one-SD tie rule", "paired tests with a Holm correction"); call the golden path once "the rule our engineering standards recommend" and then by its name; the band is "the smallest difference decided in advance to count"; a guard is "a floor both had to clear". Verdicts go in a sentence in lower case ("the recommended rule lost"), never as CHALLENGED.
+
+SAY WHAT WAS TESTED, EXACTLY. When the rule is a precondition or a check (it forbids something when it fails) and the trial used it as a decision rule (it permits everything when it passes), the post says so in the setup and scopes the verdict to that reading: a necessary condition was tested as if it were sufficient (2026-10-18: the METHOD lens caught exactly this, after the post had overclaimed it).
+
+The outline's sections, in this order unless the result asks otherwise:
 - `## Opening`: that number in a line, and the preview sentence: the verdict ({{TRIAL_VERDICT}}), `n={{TRIAL_N}} per arm`, and that the measurement was made first-hand for this post, citing [1].
 - A SETUP section: the two arms, the metric and its direction, the guards, the controls, what was held constant, n per arm.
 - A RESULT section with at least one figure drawn from `inputs/experiment/results.json` (the per-arm values with their n, the delta against the band), its caption citing [1].
@@ -291,7 +297,10 @@ THIS POST IS WRITTEN AROUND A TRIAL, measured first-hand before this run existed
 
 {{TRIAL}}
 
-- THE OPENING is the trial's own measured number (the metric, both arms, the gap, n), not a third-party incident.
+- THE OPENING is the trial's own measured number told as what it means to the reader (what teams do today, what that got wrong or cost, the gap, n), not a third-party incident and never the run's log (no timestamp, exit code, duration, seal or pilot count before the setup section).
+- WORDS FOR A READER, as in the outline: no bare `golden`, `alternative`, `arm`, `guard`, `band`, `prereg`, `seal`, trial id, "the registry" or "golden path"; practices are named by what they do, verdicts are said in lower case in a sentence. A table's row labels follow the same rule.
+- A MECHANISM SENTENCE IS CHECKED AGAINST THE TRIAL'S OWN NUMBERS before it is written: if `REPORT.md` or a breakdown in `results.json` shows a quantity moving one way, the mechanism may not say it moves the other (2026-10-18: a draft said adding runs loosens a gate whose measured false-order rate fell as runs were added, and two reviewers raised it as a blocker).
+- WHAT WAS TESTED, EXACTLY: a precondition used as a decision rule is said to be one, and the verdict is scoped to that reading.
 - THE CONTENT PREVIEW states the verdict, the per-arm n written as `n={{TRIAL_N}} per arm`, and that the measurement is first-hand, citing [1]. Code checks the text before the first section (the first `<h2>` of `index.html`, the first `## ` of `post.md`) for `[1]` and for n, in both files.
 - A SETUP section: the arms, the metric and its direction, the guards, the controls, what was held constant.
 - THE RESULT carries at least one figure drawn from `inputs/experiment/results.json`: the per-arm values with their n, and the delta against the band. Its caption cites [1]. Code checks that at least one figure caption cites [1].

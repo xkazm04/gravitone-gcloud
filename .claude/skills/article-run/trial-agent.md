@@ -134,7 +134,13 @@ STEPS
    ```
 
    - `arms[0]` is the golden path EXACTLY as written, the untouched path: no tuning you would not
-     also give the alternative. `arms[1]` is the alternative at its best, as its own documentation
+     also give the alternative. A rule that is a precondition or a check (it FORBIDS something when
+     it fails) is not a decision rule (it does not PERMIT everything when it passes): test it as
+     what it claims (how often it lets a bad case through, how often it blocks a good one), or pair
+     it with the procedure the golden path itself prescribes after it, and say which in frame.md.
+     (2026-10-18: eval-harness tested a "no order inside one SD" precondition as "publish every
+     pair when the spread clears one SD"; the reviewers' METHOD lens called the verdict a test of a
+     reading the rule never made.) `arms[1]` is the alternative at its best, as its own documentation
      describes it.
    - ONE optimized metric, `direction` `higher` or `lower`. Everything else that matters
      (correctness, failures, cost) is a guard in `thresholds` (`op` `>=` or `<=`, a finite value,
