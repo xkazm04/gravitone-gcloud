@@ -5872,7 +5872,11 @@
           "revision": 15,
           "changedAt": "2026-09-17",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/job.ts:194 Enqueue inserts distinct jobs without checking a backlog bound or applying a shed policy, so execution slot limits do not bound waiting work.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:56e509787bc708cd",
+          "evaluatedRevision": 15
         },
         {
           "subject": "priced-authority",
@@ -12335,8 +12339,12 @@
           "revision": 15,
           "changedAt": "2026-09-17",
           "confidence": "probable",
-          "state": "unknown",
-          "arrived": true
+          "state": "deviation",
+          "arrived": true,
+          "evidence": "lib/sound/suno/queue.ts:69 Distinct Suno proposals append jobs without a backlog bound or shed verdict, so the Chrome execution slot cannot prevent growing wait times.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:56e509787bc708cd",
+          "evaluatedRevision": 15
         }
       ],
       "governance": "governed",

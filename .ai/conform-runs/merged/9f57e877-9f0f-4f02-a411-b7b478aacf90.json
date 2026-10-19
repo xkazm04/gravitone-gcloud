@@ -1,0 +1,177 @@
+{
+ "schema": "conform-run/1",
+ "worker": "9f57e877-9f0f-4f02-a411-b7b478aacf90",
+ "subject": "admission-queue",
+ "evaluatedAt": "2026-10-19T01:34:04.088595+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "job-queue-and-leases",
+   "subject": "admission-queue",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/kernel/src/job.ts:194 Enqueue inserts distinct jobs without checking a backlog bound or applying a shed policy, so execution slot limits do not bound waiting work.",
+   "techniques": [
+    {
+     "technique": "admission-vocabulary",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/job.ts:205 Enqueue returns a Job without queue position or wait information; queuePosition is a separate query rather than part of the queued verdict."
+    },
+    {
+     "technique": "depth-bounds-and-shed",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/job.ts:194 The enqueue transaction checks duplicate identity but never checks waiting depth or refuses a distinct arrival because the queue is full."
+    },
+    {
+     "technique": "drain-and-shutdown",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/job-run.ts:251 Shutdown yielding returns work to ordinary queued state and records the fence, without the required parked policy/incarnation metadata or recovery re-admission."
+    },
+    {
+     "technique": "load-aware-admission",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/job-worker.ts:64 Promotion decisions receive slot occupancy and lane holds, but no host-pressure reading or hysteresis gate."
+    },
+    {
+     "technique": "priority-and-fairness",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/job-queue.ts:127 Selection follows operator order and enqueue sequence without aging or per-origin occupancy enforcement."
+    },
+    {
+     "technique": "queue-cardinality",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/job-queue-core.ts:80 An unsupported producer at a lane's head blocks that worker from reaching supported work behind it even when the lane has free capacity, matching the technique's head-of-line failure."
+    },
+    {
+     "technique": "refusal-without-release",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/job.ts:206 Durable submission returns its transaction result; this enqueue API does not retain an expensive long-lived caller session."
+    },
+    {
+     "technique": "self-paced-intake",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/job-worker.ts:130 Each job has its own drive, transactional claim, booking and failure boundary, matching the technique's per-item isolation exemption."
+    },
+    {
+     "technique": "wait-telemetry",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/job-run.ts:190 Claiming records fence and slot, but the inspected queue and status paths do not export a separately measured enqueue-to-promotion duration or oldest-wait gauge."
+    },
+    {
+     "technique": "zero-depth-admission",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/job.ts:21 Submission is asynchronous durable work rather than a caller whose deadline is approximately one service time."
+    }
+   ]
+  },
+  {
+   "context": "suno-driver-queue",
+   "subject": "admission-queue",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/sound/suno/queue.ts:69 Distinct Suno proposals append jobs without a backlog bound or shed verdict, so the Chrome execution slot cannot prevent growing wait times.",
+   "techniques": [
+    {
+     "technique": "admission-vocabulary",
+     "verdict": "deviation",
+     "evidence": "lib/sound/suno/queue.ts:67 An intentional enqueue refusal is thrown as an exception instead of returned as a typed refusal verdict."
+    },
+    {
+     "technique": "admit-on-the-expanded-cost",
+     "verdict": "not-applicable",
+     "evidence": "lib/sound/suno/drivers.ts:16 The generation interface accepts form fields and returns clip references; it does not admit a compressed payload for local materialization."
+    },
+    {
+     "technique": "depth-bounds-and-shed",
+     "verdict": "deviation",
+     "evidence": "lib/sound/suno/queue.ts:69 Distinct proposals are appended after eligibility and deduplication checks without a total waiting-depth check or saturation shed policy."
+    },
+    {
+     "technique": "load-aware-admission",
+     "verdict": "deviation",
+     "evidence": "lib/producers/suno.ts:168 The bound producer's health gate checks vendor/browser reachability; the inspected execution path adds no host-pressure admission check or hysteresis."
+    },
+    {
+     "technique": "queue-cardinality",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/suno/producer.ts:63 Every Suno job targets the same Chrome-profile resource, so a shared resource lane matches the fungible execution capacity."
+    },
+    {
+     "technique": "refusal-without-release",
+     "verdict": "not-applicable",
+     "evidence": "lib/sound/suno/cli.ts:54 The CLI submits durable jobs and returns without retaining a long-lived generation caller whose reconnection would be expensive."
+    },
+    {
+     "technique": "self-paced-intake",
+     "verdict": "not-applicable",
+     "evidence": "packages/producers/src/suno/producer.ts:73 Each model create is an independent paid generation action; combining arrivals cannot eliminate their required create operations."
+    },
+    {
+     "technique": "speculative-work-admission",
+     "verdict": "not-applicable",
+     "evidence": "packages/producers/src/suno/producer.ts:58 Both requested model creates are required missing steps before landing, rather than optional prefetches or first-winner hedge children."
+    },
+    {
+     "technique": "wait-telemetry",
+     "verdict": "deviation",
+     "evidence": "lib/sound/suno/queue.ts:319 The snapshot returns job records and switch/health information without a separate measured queue-wait duration, oldest-wait gauge or depth-against-bound view."
+    },
+    {
+     "technique": "zero-depth-admission",
+     "verdict": "not-applicable",
+     "evidence": "lib/sound/suno/cli.ts:83 Detached background execution supports absent callers and durable waiting; the short-deadline precondition for zero depth is not present."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-19T01:34:04.088595+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "admission-queue"
+   ],
+   "techniques": [
+    "admission-vocabulary",
+    "depth-bounds-and-shed",
+    "drain-and-shutdown",
+    "load-aware-admission",
+    "priority-and-fairness",
+    "queue-cardinality",
+    "refusal-without-release",
+    "self-paced-intake",
+    "wait-telemetry",
+    "zero-depth-admission"
+   ],
+   "deviations": 1,
+   "context": "job-queue-and-leases",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-19T01:34:04.088595+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "admission-queue"
+   ],
+   "techniques": [
+    "admission-vocabulary",
+    "admit-on-the-expanded-cost",
+    "depth-bounds-and-shed",
+    "load-aware-admission",
+    "queue-cardinality",
+    "refusal-without-release",
+    "self-paced-intake",
+    "speculative-work-admission",
+    "wait-telemetry",
+    "zero-depth-admission"
+   ],
+   "deviations": 1,
+   "context": "suno-driver-queue",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
