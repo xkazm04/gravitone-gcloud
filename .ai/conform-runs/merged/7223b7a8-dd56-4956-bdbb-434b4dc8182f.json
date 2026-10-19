@@ -1,0 +1,199 @@
+{
+ "schema": "conform-run/1",
+ "worker": "7223b7a8-dd56-4956-bdbb-434b4dc8182f",
+ "subject": "conformance-checking",
+ "evaluatedAt": "2026-10-19T01:56:32.313715+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "part-port-fixtures",
+   "subject": "conformance-checking",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/_part/fixtureFramesView.ts:164 Context searches found no conformance, proofStamp or ruleRegistry matches, while repository searches located checking elsewhere; these modules validate media content rather than assess repositories against a declared standard.",
+   "techniques": [
+    {
+     "technique": "checker-false-positive-discipline",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureAds.ts:71 The detector validates advertising ideas, not repository-standard findings."
+    },
+    {
+     "technique": "claim-write-back",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/_part/fixture.ts:390 This records a research job's output, not proof from executing a declared repository command."
+    },
+    {
+     "technique": "declared-deviation-register",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureScript.ts:183 The override accepts script content over its editorial gate; it is not an implementation's exception to a claimed specification."
+    },
+    {
+     "technique": "declared-then-proven",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureActs.ts:78 Confirmation lands an editor action's stand-in output rather than proving repository declarations."
+    },
+    {
+     "technique": "derived-expectation-needs-an-evidence-floor",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureFrames.ts:89 The derived values are picture units for an editor, not expectations compared against a published repository manifest."
+    },
+    {
+     "technique": "edition-stratified-conformance",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureFramesView.ts:67 These versions identify stored step schemas; there is no upstream conformance suite stratified by specification edition."
+    },
+    {
+     "technique": "finding-severity-ladder",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureResearch.ts:137 Blocked describes research readiness, not a severity assigned to a repository assessment finding."
+    },
+    {
+     "technique": "fixture-repo-testing",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureResearch.ts:53 The fixtures replay notebook content; they are not project trees supplied to a repository checker."
+    },
+    {
+     "technique": "inline-predicate-rung-inference",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureActs.ts:40 The receipt identifies a project-part action, not a specification claim carrying a verification command."
+    },
+    {
+     "technique": "pass-ratio-comparability",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureFramesView.ts:167 This summarizes shot-review outcomes rather than publishing a repository conformance percentage."
+    },
+    {
+     "technique": "rule-registry-enumerated-fixtures",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/_part/fixture.ts:173 The enumeration collects editor records from project parts, not independent repository-checking rules."
+    }
+   ],
+   "absenceTerms": [
+    "conformance",
+    "proofStamp",
+    "ruleRegistry"
+   ]
+  },
+  {
+   "context": "floor-calendar-port",
+   "subject": "conformance-checking",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/floor/_calendar/real.ts:258 Context searches found no conformance, proofStamp or ruleRegistry matches, while repository searches located checking elsewhere; this port manages publication slots and deployment readiness rather than repository conformance assessments.",
+   "techniques": [
+    {
+     "technique": "checker-false-positive-discipline",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/floor/_calendar/real.ts:205 This checks whether a schedulable Library item exists, not whether a repository satisfies a standard."
+    },
+    {
+     "technique": "claim-write-back",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/floor/_calendar/fixture.ts:223 The write creates a scheduled publication, not a verification stamp for an executed declared command."
+    },
+    {
+     "technique": "declared-deviation-register",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/floor/_calendar/fixture.ts:69 Transitions are checked against the domain machine; no deliberate departure from a claimed external specification was identified."
+    },
+    {
+     "technique": "declared-then-proven",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/floor/_calendar/readiness.ts:87 The row reports channel readiness and a diagnostic command, not proof of a repository-standard clause."
+    },
+    {
+     "technique": "derived-expectation-needs-an-evidence-floor",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/floor/_calendar/real.ts:266 The query supplies schedulable videos; it does not derive an expected declaration for a drift assertion."
+    },
+    {
+     "technique": "edition-stratified-conformance",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/floor/_calendar/readiness.ts:90 Applicability concerns available publishing adapters, not editions of an upstream conformance suite."
+    },
+    {
+     "technique": "finding-severity-ladder",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/floor/_calendar/real.ts:98 Problems describe unavailable calendar data, not graded findings from a repository assessment."
+    },
+    {
+     "technique": "fixture-repo-testing",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/floor/_calendar/fixture.ts:122 The fixture materializes publication-slot rows, not repositories exercised through a checker's entry point."
+    },
+    {
+     "technique": "inline-predicate-rung-inference",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/floor/_calendar/fixture.ts:247 These are channel diagnostic commands, not inline verification predicates attached to specification claims."
+    },
+    {
+     "technique": "pass-ratio-comparability",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/floor/_calendar/real.ts:112 Published numbers measure audience activity, not conformance passes over applicable checks."
+    },
+    {
+     "technique": "rule-registry-enumerated-fixtures",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/floor/_calendar/fixture.ts:236 The registry enumerates publishing channels, not independent checker rules requiring pass/fail fixture pairs."
+    }
+   ],
+   "absenceTerms": [
+    "conformance",
+    "proofStamp",
+    "ruleRegistry"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-19T01:56:32.313715+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "conformance-checking"
+   ],
+   "techniques": [
+    "checker-false-positive-discipline",
+    "claim-write-back",
+    "declared-deviation-register",
+    "declared-then-proven",
+    "derived-expectation-needs-an-evidence-floor",
+    "edition-stratified-conformance",
+    "finding-severity-ladder",
+    "fixture-repo-testing",
+    "inline-predicate-rung-inference",
+    "pass-ratio-comparability",
+    "rule-registry-enumerated-fixtures"
+   ],
+   "deviations": 0,
+   "context": "part-port-fixtures",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-19T01:56:32.313715+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "conformance-checking"
+   ],
+   "techniques": [
+    "checker-false-positive-discipline",
+    "claim-write-back",
+    "declared-deviation-register",
+    "declared-then-proven",
+    "derived-expectation-needs-an-evidence-floor",
+    "edition-stratified-conformance",
+    "finding-severity-ladder",
+    "fixture-repo-testing",
+    "inline-predicate-rung-inference",
+    "pass-ratio-comparability",
+    "rule-registry-enumerated-fixtures"
+   ],
+   "deviations": 0,
+   "context": "floor-calendar-port",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
