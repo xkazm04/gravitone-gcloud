@@ -1,0 +1,84 @@
+{
+  "schema": "conform-run/1",
+  "worker": "fc8110cb-0e57-4fee-9b83-1e74b6b72741",
+  "subject": "long-form-reading-surface",
+  "evaluatedAt": "2026-10-19T09:39:20.152671+00:00",
+  "provider": "codex",
+  "model": "gpt-6.1-sol",
+  "pairs": [
+    {
+      "context": "part-editor-writing-research",
+      "subject": "long-form-reading-surface",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "app/(studio)/projects/[id]/[part]/_edit/Article.tsx:78 For multi-sentence sections, the article displays only the first sentence while presenting word counts computed from the complete bodies, contrary to the technique's visible-body predicate.",
+      "techniques": [
+        {
+          "technique": "anchor-id-single-assigner",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Article.tsx:76 Section navigation consumes supplied record IDs; there are no independently derived heading slugs or contents-link addresses."
+        },
+        {
+          "technique": "fixed-chrome-offset-budget",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/part/Part.module.css:5 The imported workspace allocates header, body and footer separate grid rows, with the primary scrolling internally; these reading views have no overlapping pinned elements requiring a shared offset."
+        },
+        {
+          "technique": "scroll-spy-reading-band",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Article.tsx:30 This is explicit keyboard selection and scrolling through section excerpts, rather than a contents panel claiming the reader's current section or reading progress."
+        },
+        {
+          "technique": "server-parsed-once-reused",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureExplainer.ts:52 The server prepares full-body word counts alongside first-sentence excerpts; Article.tsx:73 and :77 display those counts while :78 renders only the excerpts."
+        }
+      ],
+      "registryProposal": "Clarify whether switching script candidates in a persistent listbox constitutes document navigation requiring focus transfer or comparison-preview selection that should retain focus."
+    }
+  ],
+  "declined": [
+    {
+      "subject": "long-form-reading-surface",
+      "context": "ui-ledger-timeline",
+      "reason": "withdrawn after review: reviewer (sonnet): The not-applicable's anchor, INVENTORY.md:93, is the JsonLine/JsonBlock table row. It sits outside the context's component files and does not show that a navigable prose document is absent; the technique anchors I opened (LedgerLink.tsx:9, Crumbs.tsx:18, TimeStrip.tsx:104) only show those components"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-19T09:39:20.152671+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "long-form-reading-surface"
+      ],
+      "techniques": [
+        "anchor-id-single-assigner",
+        "fixed-chrome-offset-budget",
+        "scroll-spy-reading-band",
+        "server-parsed-once-reused"
+      ],
+      "deviations": 1,
+      "context": "part-editor-writing-research",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-19T09:39:20.152671+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "long-form-reading-surface"
+      ],
+      "techniques": [
+        "anchor-id-single-assigner",
+        "fixed-chrome-offset-budget",
+        "focus-transfer-on-in-place-navigation",
+        "scroll-spy-reading-band",
+        "server-parsed-once-reused"
+      ],
+      "deviations": 0,
+      "context": "ui-ledger-timeline",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    }
+  ]
+}
