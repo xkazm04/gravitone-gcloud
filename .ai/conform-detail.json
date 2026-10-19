@@ -7722,6 +7722,139 @@
         "at": "2026-10-19T00:56:39.749705+00:00",
         "reason": "reviewer (sonnet): The anchor produce.ts:51 is optionCost, a per-unit USD calculation, which doesn't show that a plan or tier precondition is absent. Unpriced.tsx:15 even checks for 'subscription' in a reason string, and the seat's evidence never mentions it. The technique anchors (Receipt mode chip, ModelPicker, Lane"
       }
+    },
+    "e2f6231a-d39f-4d39-9465-0a48436cae92/migrations": {
+      "context": "project-step-store",
+      "subject": "migrations",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T01:04:00.606Z",
+      "worker": "f19836c1-3929-4bbd-960a-4ba0febaa736",
+      "techniques": [
+        {
+          "technique": "dynamic-table-set-migrations",
+          "verdict": "not-applicable",
+          "evidence": "lib/steps/withStore.ts:16 Projects and phases select records in one shared object store, rather than defining physical tables."
+        },
+        {
+          "technique": "idempotent-steps",
+          "verdict": "deviation",
+          "evidence": "lib/studioDb.ts:64 The upgrade skips an existing steps store without verifying its key path or required by-project index, contrary to recognizing only the exact completed shape."
+        },
+        {
+          "technique": "migrate-from-data-shape",
+          "verdict": "not-applicable",
+          "evidence": "lib/steps/saveStep.ts:47 The payload version has an atomic home inside the same stored record as its data."
+        },
+        {
+          "technique": "pre-migration-snapshots",
+          "verdict": "deviation",
+          "evidence": "lib/studioDb.ts:70 The upgrade adds the steps store to an existing database without a preceding snapshot gate; searches of the connection helper and step-store files found no backup implementation."
+        },
+        {
+          "technique": "schema-drift-detection",
+          "verdict": "deviation",
+          "evidence": "lib/steps/withStore.ts:67 Operations proceed after only an object-store existence check, without asserting the key path and index shape established by the upgrade."
+        }
+      ]
+    },
+    "e5b296e2-cccf-47a5-b8bd-ce730d40ace8/migrations": {
+      "context": "kernel-store-and-events",
+      "subject": "migrations",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T01:04:00.606Z",
+      "worker": "f19836c1-3929-4bbd-960a-4ba0febaa736",
+      "techniques": [
+        {
+          "technique": "error-propagation",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/migrate.ts:187 Failure-mark creation occurs inside this post-failure branch; the standard requires setting the durable mark before execution so it survives process death."
+        },
+        {
+          "technique": "idempotent-steps",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/migrate.ts:183 The runner executes SQL and immediately inserts its ledger row without asserting the resulting schema; the inspected core migration SQL supplies no explicit postcondition assertions."
+        },
+        {
+          "technique": "migrate-from-data-shape",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/migrate.ts:182 Each step and its version ledger row share a transaction, so the marker lacks neither an atomic home nor an atomic migration boundary."
+        },
+        {
+          "technique": "pre-migration-snapshots",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/migrate.ts:151 The accepted keepSnapshots value 0 deletes every snapshot, including the newly verified copy, before pending steps run; the standard requires retaining at least the latest boundary."
+        },
+        {
+          "technique": "schema-drift-detection",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/migrate.ts:167 A current ledger returns success without checking live schema shape; convergence tests exist, but schemaOf has no production caller providing the required boot assertion."
+        },
+        {
+          "technique": "transactional-ddl",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/migrate.ts:185 The ledger advance is the last write inside each step's transaction; the inspected migration test verifies that failed DDL and its ledger advance both roll back."
+        }
+      ]
+    },
+    "86dbb3bb-044c-4ed3-810a-93d088bcad64/migrations": {
+      "context": "ledger-v1-sources",
+      "subject": "migrations",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T01:04:00.606Z",
+      "worker": "f19836c1-3929-4bbd-960a-4ba0febaa736",
+      "techniques": [
+        {
+          "technique": "data-migrations",
+          "verdict": "not-applicable",
+          "evidence": "lib/ledger/v1/sources/mv.ts:173 The transformation returns a projection and does not rewrite the source records."
+        },
+        {
+          "technique": "dynamic-table-set-migrations",
+          "verdict": "not-applicable",
+          "evidence": "lib/ledger/v1/sources/roots.ts:28 Runtime selection chooses a source directory, not a table set to alter."
+        },
+        {
+          "technique": "error-propagation",
+          "verdict": "not-applicable",
+          "evidence": "lib/ledger/v1/sources/forge.ts:207 This adapter exposes reading and projection, not a schema migration chain."
+        },
+        {
+          "technique": "expand-deploy-contract",
+          "verdict": "not-applicable",
+          "evidence": "lib/ledger/v1/sources/publish.ts:38 The adapter reads existing files without deploying a source-schema change."
+        },
+        {
+          "technique": "idempotent-steps",
+          "verdict": "not-applicable",
+          "evidence": "lib/ledger/v1/sources/gpu.ts:158 Repeated projection is not replay of in-place migration steps."
+        },
+        {
+          "technique": "migrate-from-data-shape",
+          "verdict": "not-applicable",
+          "evidence": "lib/ledger/v1/sources/training.ts:199 Parsing and projection do not classify records for persistent format conversion."
+        },
+        {
+          "technique": "pre-migration-snapshots",
+          "verdict": "not-applicable",
+          "evidence": "lib/ledger/v1/sources/suno.ts:21 The source read performs no migration requiring a recovery snapshot."
+        },
+        {
+          "technique": "schema-drift-detection",
+          "verdict": "not-applicable",
+          "evidence": "lib/ledger/v1/sources/sound.ts:56 This validates a read projection; it provides neither a fresh-store path nor an upgrade path."
+        },
+        {
+          "technique": "transactional-ddl",
+          "verdict": "not-applicable",
+          "evidence": "lib/ledger/v1/sources/spend.ts:118 Kernel access here is a read transaction without DDL or a migration-ledger advance."
+        }
+      ]
     }
   }
 }

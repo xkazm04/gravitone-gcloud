@@ -6182,7 +6182,11 @@
           "revision": 10,
           "changedAt": "2026-09-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/migrate.ts:191 The durable failure mark is written only after a step reports failure, so process death during the step leaves no standing mark requiring explicit repair.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:b7d5afcb859dfff9",
+          "evaluatedRevision": 10
         },
         {
           "subject": "data-access",
@@ -7759,7 +7763,11 @@
           "revision": 10,
           "changedAt": "2026-09-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/ledger/v1/sources/spend.ts:24 Searches for ALTER TABLE, onupgradeneeded, and schema_version found no adapter hits; these modules read stores and return projections rather than rewrite persistent data in place.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:b7d5afcb859dfff9",
+          "evaluatedRevision": 10
         }
       ],
       "governance": "governed"
@@ -9981,7 +9989,11 @@
           "revision": 10,
           "changedAt": "2026-09-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/steps/withStore.ts:65 The store gate checks existence alone, allowing a steps store with a missing required index to pass without detecting schema drift.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:b7d5afcb859dfff9",
+          "evaluatedRevision": 10
         },
         {
           "subject": "test-harness",
