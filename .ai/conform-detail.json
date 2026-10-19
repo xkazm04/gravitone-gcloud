@@ -8361,6 +8361,82 @@
         "at": "2026-10-19T09:39:58.393689+00:00",
         "reason": "reviewer (sonnet): The not-applicable's anchor, INVENTORY.md:93, is the JsonLine/JsonBlock table row. It sits outside the context's component files and does not show that a navigable prose document is absent; the technique anchors I opened (LedgerLink.tsx:9, Crumbs.tsx:18, TimeStrip.tsx:104) only show those components"
       }
+    },
+    "3f11be96-c51f-4098-8472-341c42362e6d/measurement-honesty": {
+      "context": "sound-hunt-and-measure",
+      "subject": "measurement-honesty",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T09:59:44.241Z",
+      "worker": "c3a819b2-2853-4d5f-b5be-7a5889bd186a",
+      "techniques": [
+        {
+          "technique": "renormalize-over-present",
+          "verdict": "deviation",
+          "evidence": "lib/sound/insights.ts:102 Cell mean score divides by scored takes but drops the scored count, omitting the observed fraction and bypassing sample floors on the present set."
+        },
+        {
+          "technique": "unmeasurable-vs-zero",
+          "verdict": "conformant",
+          "evidence": "lib/sound/measure.ts:156 Flat onsets and non-music takes return null for tempo and key rather than coercing unmeasurable signals to zero or default keys."
+        },
+        {
+          "technique": "minimum-sample-floors",
+          "verdict": "conformant",
+          "evidence": "lib/sound/knowledge.ts:80 Strengths generation filters out cells below MIN_N (3), ensuring keep rates are not claimed over tiny samples."
+        },
+        {
+          "technique": "incomplete-not-verdict",
+          "verdict": "conformant",
+          "evidence": "lib/sound/measureRun.ts:61 Failed audio decodes preserve the error message and leave metrics null rather than emitting zeros."
+        },
+        {
+          "technique": "co-published-numbers-must-reconcile",
+          "verdict": "conformant",
+          "evidence": "lib/sound/lessons.ts:165 Lesson confirmation validates that cited draft evidence figures reconcile with current take counts."
+        },
+        {
+          "technique": "tuning-corpus-disjointness",
+          "verdict": "conformant",
+          "evidence": "lib/sound/rubric.ts:47 Fixture takes are barred from rubric rating and the ledger so demo cases cannot enter the evaluated dataset."
+        },
+        {
+          "technique": "the-baseline-is-the-untouched-path",
+          "verdict": "not-applicable",
+          "evidence": "lib/sound/huntRender.ts:147 Precondition does not hold as the hunt module does not measure intervention savings or compression ratios against a baseline."
+        },
+        {
+          "technique": "speed-figure-names-its-endpoints",
+          "verdict": "not-applicable",
+          "evidence": "lib/sound/measure.ts:155 Precondition does not hold as the sound module publishes audio duration rather than latency or speed figures."
+        },
+        {
+          "technique": "unelidable-measurement",
+          "verdict": "not-applicable",
+          "evidence": "lib/sound/huntEngine.ts:68 Precondition does not hold as audio processing runs work to produce artifacts rather than measuring execution cost in an optimizing harness."
+        },
+        {
+          "technique": "control-failure-is-not-a-datum-state",
+          "verdict": "not-applicable",
+          "evidence": "lib/sound/huntDesk.ts:87 Precondition does not hold as the sound hunt and measure subsystem does not execute controlled A/B experiments across comparison arms."
+        },
+        {
+          "technique": "instrument-exposure-control",
+          "verdict": "not-applicable",
+          "evidence": "lib/sound/hunt.ts:19 Precondition does not hold as this context does not evaluate model capability benchmarks subject to circulation or training exposure."
+        },
+        {
+          "technique": "lower-bound-disclosure",
+          "verdict": "not-applicable",
+          "evidence": "lib/sound/vocabulary.ts:14 Precondition does not hold as the sound pipeline does not publish reach or usage tallies subject to network absorption."
+        },
+        {
+          "technique": "noise-band-and-hysteresis",
+          "verdict": "not-applicable",
+          "evidence": "lib/sound/triageOrder.ts:26 Precondition does not hold as audio triage orders items by queue priority without announcing threshold-crossing classification deltas."
+        }
+      ]
     }
   }
 }

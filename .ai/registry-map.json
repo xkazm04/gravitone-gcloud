@@ -11523,8 +11523,12 @@
           "revision": 11,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown",
-          "arrived": true
+          "state": "deviation",
+          "arrived": true,
+          "evidence": "lib/sound/insights.ts:102 Cell aggregation renormalizes mean scores over only scored takes but discards the count of scored takes, preventing downstream consumers from verifying sample floors on the present set or disclosing the observed fraction.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:b702c58e785c6c51",
+          "evaluatedRevision": 11
         },
         {
           "subject": "sound-effect-generation",
