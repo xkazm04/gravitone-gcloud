@@ -159,6 +159,8 @@ export interface RunManifest {
   candidates: Candidate[];
   log: { at: string; msg: string }[];
   error?: string;
+  /** forge.py's run options; `skip_grade` runs generate plates and grade none. */
+  forge?: { skip_grade?: boolean };
   committed?: { at: string; deleted: number; kept: number; undecided: number };
 }
 

@@ -67,6 +67,12 @@ import {
 //   · grades carry the calibration v1 measured for their grader series
 //     (pipeline/foundry/grader-calibration.json, lib/foundry/calibration.ts):
 //     an inverted craft score is a Grade marked `inverted`, never a bare number.
+//     The file is still this packet's READ side. Its WRITE side now also lands
+//     in the kernel's calibration series: commitRun registers each plate's
+//     grades (lib/foundry/calibrationRegister.ts, keyed by this packet's
+//     decision keys, series = seriesKey) in the commit's own transaction. The
+//     Board's reader moves to that series in a later stage; until then this
+//     read of grader-calibration.json is the only reader that uses the file.
 // Dropped, with the reason: v1's `undecidedAs: "reject"` sweep. The kernel
 // refuses a commit while anything is undecided (decision 5), so every plate
 // in the packet is decided; a plate whose file vanished is not in the packet

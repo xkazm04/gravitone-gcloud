@@ -52,6 +52,7 @@ import type {
 } from "./types";
 import { recordForgeEvidenceIn } from "@gt/kernel/styles/writers";
 
+import { registerRunGrades } from "./calibrationRegister";
 import { exportStyles, OPERATOR, readStyleDefs, styleStore, withCatalogue } from "./catalogue";
 import { planForgeCommit } from "./commitPlan";
 import { graderCalibrationText, graderStamp } from "./calibration";
@@ -289,7 +290,12 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave" = "r
       const by = verdicts[c.id].by;
       return { style: c.style, scene: c.scene, mechanism: c.mechanism, verdict: verdicts[c.id].verdict as Verdict, ...(by ? { by } : {}) };
     });
-    const written = styles.tx((t) => recordForgeEvidenceIn(t, id, at, rows, OPERATOR));
+    // The run's grades go into the calibration series in the same transaction (calibrationRegister.ts).
+    const written = styles.tx((t) => {
+      const evidence = recordForgeEvidenceIn(t, id, at, rows, OPERATOR);
+      registerRunGrades(t, run, OPERATOR.id);
+      return evidence;
+    });
     if (!written.ok) throw new FoundryError(`The commit failed and nothing was deleted: ${written.error.message}`, written.error.code === "refused" ? 409 : 503);
     exportStyles(styles);
 
