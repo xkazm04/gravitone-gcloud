@@ -4990,7 +4990,11 @@
           "revision": 2,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/foundry/verdictLog.ts:163 Context and repository searches found local file logging and SQLite transactions but no consensus write path for Foundry, so the replicated-log precondition does not hold.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:230a37319e1dd059",
+          "evaluatedRevision": 2
         },
         {
           "subject": "data-access",
@@ -6330,7 +6334,11 @@
           "revision": 2,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/kernel/src/store.ts:234 Context and repository searches found direct SQLite transactions and an audit event table but no implemented consensus adapter, so replicated-log transaction rules are not applicable.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:230a37319e1dd059",
+          "evaluatedRevision": 2
         }
       ],
       "governance": "governed"

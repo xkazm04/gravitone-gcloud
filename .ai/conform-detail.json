@@ -8570,6 +8570,98 @@
           "evidence": "packages/ui/src/components/wave/wave.ts:14 Width and height determine waveform drawing geometry, not accepted spatial shapes of a trained network."
         }
       ]
+    },
+    "e481098a-3532-46d9-bdc9-de84fbc2ce01/transactions-over-a-replicated-log": {
+      "context": "foundry-forge-store-and-verdicts",
+      "subject": "transactions-over-a-replicated-log",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T21:46:41.564Z",
+      "worker": "2ce0adb3-0920-446b-8d80-61b134e0790a",
+      "techniques": [
+        {
+          "technique": "capture-index-before-snapshot",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/verdictLog.ts:117 The revision comes from a local JSON document; no applied-log index labels a transaction snapshot."
+        },
+        {
+          "technique": "compose-then-conform",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/fsPort.ts:44 This seam delegates filesystem operations, rather than implementing a transactional storage interface with begin, commit and rollback."
+        },
+        {
+          "technique": "list-verification-by-present-keys",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/catalogue.ts:180 The catalogue list is a native store read, with no buffered-write reconciliation or apply-time list verification."
+        },
+        {
+          "technique": "live-file-is-the-snapshot",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/runStore.ts:95 The rename installs an individually serialized JSON document; no consensus snapshot store or follower installation exists here."
+        },
+        {
+          "technique": "no-writes-no-log",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/verdictLog.ts:155 An unchanged local verdict patch returns early, but this is not a buffered transaction committing through a replicated log."
+        },
+        {
+          "technique": "same-value-still-conflicts",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/verdictLog.ts:181 Conflict detection checks the map revision under the run lock, rather than verifying snapshot read hashes during replicated apply."
+        },
+        {
+          "technique": "snapshot-read-plus-verify-log",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/store.ts:248 The commit executes inside local run and catalogue locks; no consensus round trip requires snapshot reads and a verification entry."
+        }
+      ]
+    },
+    "e5b296e2-cccf-47a5-b8bd-ce730d40ace8/transactions-over-a-replicated-log": {
+      "context": "kernel-store-and-events",
+      "subject": "transactions-over-a-replicated-log",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T21:46:41.564Z",
+      "worker": "2ce0adb3-0920-446b-8d80-61b134e0790a",
+      "techniques": [
+        {
+          "technique": "capture-index-before-snapshot",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/store.ts:235 Transaction metadata records a clock instant, without an observed applied-log index or modified-since filter."
+        },
+        {
+          "technique": "compose-then-conform",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/store.ts:153 The cache holds prepared SQL statements; this context has one SQLite implementation and no transactional data-cache, encoding or view wrapper."
+        },
+        {
+          "technique": "list-verification-by-present-keys",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/events-query.ts:169 Event pagination reads SQL rows within a read transaction, without reconciling buffered writes or emitting list verification hashes."
+        },
+        {
+          "technique": "live-file-is-the-snapshot",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/store.ts:264 Snapshots are explicit SQLite backup copies used by migrations, not consensus compaction or follower catch-up snapshots."
+        },
+        {
+          "technique": "no-writes-no-log",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/store.ts:257 Reads use SQLite query-only transactions; there is no replicated proposal path or buffered-write commit to suppress."
+        },
+        {
+          "technique": "same-value-still-conflicts",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/store.ts:243 Writes execute directly while SQLite holds the write lock, rather than competing through optimistic snapshot verification at log apply."
+        },
+        {
+          "technique": "snapshot-read-plus-verify-log",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/store.ts:190 Transaction bodies run synchronously inside the engine transaction; no consensus round trip separates reads from applying writes."
+        }
+      ]
     }
   }
 }
