@@ -11,6 +11,7 @@ import { projectStateOf, type Project } from "@gt/domain/project";
 import type { ProjectState } from "@gt/domain/project.machine";
 import { canonical, sha256Hex } from "../canonical.ts";
 import type { Reader, Store } from "../store.ts";
+import { digestIn } from "./digest.ts";
 import { modelOptions, unitNounOf } from "./options.ts";
 import { priceLine, placePlan, totalsOf, type PlanLine, type QueueRead } from "./receipt.ts";
 import { etaOf, type SchedItem } from "./schedule.ts";
@@ -301,6 +302,7 @@ export function listProjects(store: Store, ctx: ReadContext, limit = LIST_LIMIT)
       const v = view(m, queue, ctx);
       const updated = r.get("SELECT updated_at FROM projects WHERE id = ?", id)?.["updated_at"];
       const pips = v.parts.map((p) => p.state);
+      const digest = digestIn(r, m.project);
       return {
         id,
         rev: m.project.rev,
@@ -315,6 +317,10 @@ export function listProjects(store: Store, ctx: ReadContext, limit = LIST_LIMIT)
         usd: v.totals.usd,
         unpriced: v.totals.unpriced,
         updatedAt: String(updated ?? m.project.createdAt),
+        poster: digest.poster,
+        runtimeS: digest.runtimeS,
+        targetS: m.project.runtimeS ?? null,
+        text: digest.text,
       };
     });
     return { projects, truncated };

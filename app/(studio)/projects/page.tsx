@@ -10,7 +10,7 @@ import type { Metadata } from "next";
 
 import { produceNow, serverProduce } from "./_port/port.ts";
 import { PRODUCE_PORT } from "./_port/wire.ts";
-import { ordered } from "./_plan/CompositionList.tsx";
+import { ordered } from "./_plan/shelf.ts";
 import { NoPlan } from "./_plan/NoPlan.tsx";
 import { Plan } from "./_plan/Plan.tsx";
 
