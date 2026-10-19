@@ -24,6 +24,7 @@ import { Plate } from "../desk/Plate.tsx";
 import { Keycaps } from "../keycaps/Keycaps.tsx";
 import { StackBar } from "../stackbar/StackBar.tsx";
 import { CullTile, Zoom, kindOf } from "./CullTile.tsx";
+import { SeriesBadge } from "./SeriesBadge.tsx";
 import s from "./Cull.module.css";
 
 export type MatrixCullProps = {
@@ -162,7 +163,12 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
     <DeskFrame
       title={view.title ?? view.id}
       {...(present.meta !== undefined ? { meta: present.meta } : {})}
-      marks={present.oracle !== undefined && <OracleStrip oracle={present.oracle} />}
+      marks={
+        <>
+          {present.oracle !== undefined && <OracleStrip oracle={present.oracle} />}
+          {present.series !== undefined && <SeriesBadge measured={present.series.measured} graded={present.series.graded} />}
+        </>
+      }
       over={
         zoom && at !== undefined && kindOf(mediaOf(at.id).mime) !== "audio" ? (
           <Zoom words={wordsOf(at.id)} media={mediaOf(at.id)} verdict={verdicts[at.id]} position={`${cur + 1}/${cells.length}`} onClose={() => setZoom(false)} specimen={!keys} />
