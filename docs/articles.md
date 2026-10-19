@@ -228,10 +228,12 @@ change.
 
 ### The gate and the registry outcome
 
-The run page shows the trial just before the critique (`app/articles/TrialPanel.tsx`): the verdict,
-the claim, the technique, the alternative and its source, the metric with its band and guards, per
-arm n, mean, sd and guards cleared, the controls, the measured commands, and the contexts here the
-subject governs. A classic run shows a `no trial` chip in its place.
+`getRunDetail` carries the trial (`trial`: the verdict, the claim, the technique, the alternative and
+its source, the metric with its band and guards, per arm n, mean, sd and guards cleared, the
+controls, the measured commands, and the contexts here the subject governs; absent on a classic
+run). The panel that drew it belonged to the v1 `/articles` page and retired with it in Phase 6; the
+Board's article packet does not draw the trial yet, so the gate shows the post, the check and the
+critique, and the measurement is read from `experiment/` and the post itself.
 
 The measurement lands as the registry's own kind of evidence, an **application** of the technique
 under test (`lib/articles/trial/registryRecord.ts`), at `run.trial.applicationPath`
@@ -671,8 +673,9 @@ reviews the real thing.
   through a failure). `post.md` stays the single source: nothing is read back from the draft, so a
   change asked for at the gate goes through Rework.
 - The draft is a convenience, not a precondition. A browser that is not running, a signed-out
-  profile or a refused paste becomes `unavailable` with its reason verbatim, and the in-app
-  preview opens as the fallback.
+  profile or a refused paste becomes `unavailable` with its reason verbatim, and the Board's article
+  packet says so in its meta line (a ready draft shows its url there) while the post itself opens
+  from the served `post/index.html`.
 - `MEDIUM_DRIVER`: `live` drives the profile, `fake` drives nothing (probes), unset is off. It is
   off by default so a probe or a CI run never reaches an account.
 - It cannot publish: no selector for it exists (`lib/medium/selectors.ts`), the page aborts any
@@ -752,7 +755,7 @@ errors and bodies after the door. It is not an auth wrapper.
 | `POST …/approve` `{patches}` | `guardRequest` | `approveRun`, then `launchRun` (landing) |
 | `POST …/reject` `{note}` | `guardAccessOnly` | `rejectRun`. A note is required |
 | `POST …/resume` | `guardRequest` | `resumeRun`, then `launchRun` |
-| `POST …/medium` | `guardRequest` | `ensureMediumDraft`: make the gate's private Medium draft again (the same draft's body is replaced). 409 `bad-transition` off the gate, 409 `draft-in-flight` while one is being made |
+| `POST …/medium` | `route({ guard: "money" })` | `ensureMediumDraft`: make the gate's private Medium draft again (the same draft's body is replaced). 409 `bad-transition` off the gate, 409 `draft-in-flight` while one is being made |
 | `GET …/file/<path>[?k=]` | `guardAccessOnly` | serves files under `post/`, `check/` and `medium/` only. HTML and SVG are sent under `default-src 'none'; … sandbox` |
 
 Errors come back as `{error, code}` from `ArticleError`, word for word. The verbs read the run
