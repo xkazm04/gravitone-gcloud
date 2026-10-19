@@ -1,0 +1,87 @@
+{
+ "schema": "conform-run/1",
+ "worker": "77777452-7788-4491-986e-4ff5f7f4738d",
+ "subject": "platform-format-adaptation",
+ "evaluatedAt": "2026-10-19T01:11:30.986224+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "part-editor-writing-research",
+   "subject": "platform-format-adaptation",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:260 The script review surface displays generic gate findings and permits candidate adoption without exposing the four derived-short checks or a named single-anchor contract.",
+   "techniques": [
+    {
+     "technique": "derived-short-contract",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:260 The candidate checks panel omits the source render's four explicit derived-short review items."
+    },
+    {
+     "technique": "one-anchor-per-clip",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:97 The short-script tool has no named anchor field or second-anchor refusal; adoption submits only the candidate ID."
+    }
+   ]
+  },
+  {
+   "context": "part-port-real-and-contract",
+   "subject": "platform-format-adaptation",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/[id]/_part/scriptView.ts:92 The candidate projection exposes word count while omitting a budget range, delivery mode and source review checks, preventing the editor contract from carrying those short-format obligations.",
+   "techniques": [
+    {
+     "technique": "derived-short-contract",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/scriptView.ts:95 The projection substitutes generic gate results for the render's checks and drops derivation metadata, so the four contract items do not reach the editor."
+    },
+    {
+     "technique": "image-led-vs-narration-led",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/scriptView.ts:92 The complete candidate projection has no budget range or delivery mode; the underlying ScriptRender instead requires scalar wordBudget and wpm fields."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "platform-format-adaptation",
+   "context": "imaging-vendor-providers-and-video",
+   "reason": "not-applicable without the 2+ search terms that prove the absence"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-19T01:11:30.986224+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "platform-format-adaptation"
+   ],
+   "techniques": [
+    "derived-short-contract",
+    "one-anchor-per-clip"
+   ],
+   "deviations": 1,
+   "context": "part-editor-writing-research",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-19T01:11:30.986224+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "platform-format-adaptation"
+   ],
+   "techniques": [
+    "derived-short-contract",
+    "image-led-vs-narration-led"
+   ],
+   "deviations": 1,
+   "context": "part-port-real-and-contract",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
