@@ -31,6 +31,7 @@
     "copy:check": "node .claude/skills/native-copy/scripts/copy-check.mjs",
     "check:bundle": "node pipeline/check-bundle.mjs",
     "suno:browser": "node pipeline/suno-browser.mjs",
+    "dojo:status": "npx tsx pipeline/dojo-status.mts",
     "suno:import": "npx tsx pipeline/suno-import.mts",
     "verify:text": "npx tsx pipeline/verify-text-engine.mts",
     "check:trailer-structure": "npx tsx pipeline/trailer-structure-regression.mts",
