@@ -1,0 +1,129 @@
+{
+ "schema": "conform-run/1",
+ "worker": "ffde029c-8d17-45c1-8fb8-0387bf55ca3b",
+ "subject": "demo-data-plane",
+ "evaluatedAt": "2026-10-19T07:18:49.800248+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [
+  {
+   "context": "library-port",
+   "subject": "demo-data-plane",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/library/_port/port.ts:27 The library data plane is selected from an environment variable at module load time rather than dynamically per call from live session state.",
+   "techniques": [
+    {
+     "technique": "runtime-dispatch-not-build-flag",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/library/_port/port.ts:60 The plane is resolved once from an environment variable at module load time instead of dynamically per call from session state."
+    },
+    {
+     "technique": "one-interface-many-planes",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/library/_port/real.ts:40 The data interface ServerLibrary is declared inside real.ts rather than living in an independent contract module."
+    },
+    {
+     "technique": "network-faithful-mocks",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/library/_port/fixture.ts:198 Fixture mutation writes directly into in-memory global state rather than using per-session copy isolation or shared validation."
+    },
+    {
+     "technique": "seeded-determinism",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_port/fixtureData.ts:111 Corpus generation uses an explicit PRNG with a checked-in seed constant to produce deterministic data across runs."
+    },
+    {
+     "technique": "fixture-self-consistency",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_port/fixtureCorpus.ts:61 All 5,000 fixture records and relations project from a single central generator starting with styles and referencing them throughout."
+    },
+    {
+     "technique": "fake-surface-honesty-contract",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/library/page.tsx:51 The page renders fixture data without presenting any persistent visible marker in the chrome or validating the honesty contract."
+    }
+   ]
+  },
+  {
+   "context": "projects-index-port",
+   "subject": "demo-data-plane",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/_port/port.ts:46 The projects data plane is bound to an environment variable at module load time rather than dynamically resolved per call from live session state.",
+   "techniques": [
+    {
+     "technique": "runtime-dispatch-not-build-flag",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/_port/port.ts:99 Data plane dispatch is determined by an environment variable captured at import time instead of resolving live session state."
+    },
+    {
+     "technique": "one-interface-many-planes",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/_port/port.ts:103 The port exports fixtureProduce() allowing consumers to reach for the fixture implementation directly by name, violating interface decoupling."
+    },
+    {
+     "technique": "network-faithful-mocks",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/_port/fixtureActs.ts:135 Write operations directly mutate shared in-memory fixture objects without per-session copy isolation."
+    },
+    {
+     "technique": "seeded-determinism",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/_port/port.ts:48 Timestamps and schedule placement derive from live Date.now() on each call rather than an anchored reference instant, drifting across renders."
+    },
+    {
+     "technique": "fixture-self-consistency",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/_port/fixtureData.ts:155 Demo entity identifiers are hand-authored strings without a dedicated helper or affixed marker identifying them as fabricated."
+    },
+    {
+     "technique": "fake-surface-honesty-contract",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/page.tsx:37 The projects page renders without any persistent visual marker or disclosure that fixture data is being displayed."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-19T07:18:49.800248+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "demo-data-plane"
+   ],
+   "techniques": [
+    "fake-surface-honesty-contract",
+    "fixture-self-consistency",
+    "network-faithful-mocks",
+    "one-interface-many-planes",
+    "runtime-dispatch-not-build-flag",
+    "seeded-determinism"
+   ],
+   "deviations": 1,
+   "context": "library-port",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  },
+  {
+   "ts": "2026-10-19T07:18:49.800248+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "demo-data-plane"
+   ],
+   "techniques": [
+    "fake-surface-honesty-contract",
+    "fixture-self-consistency",
+    "network-faithful-mocks",
+    "one-interface-many-planes",
+    "runtime-dispatch-not-build-flag",
+    "seeded-determinism"
+   ],
+   "deviations": 1,
+   "context": "projects-index-port",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  }
+ ]
+}
