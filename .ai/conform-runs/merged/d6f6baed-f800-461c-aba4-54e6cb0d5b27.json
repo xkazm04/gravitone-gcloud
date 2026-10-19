@@ -1,0 +1,93 @@
+{
+  "schema": "conform-run/1",
+  "worker": "d6f6baed-f800-461c-aba4-54e6cb0d5b27",
+  "subject": "error-handling",
+  "evaluatedAt": "2026-10-19T00:35:35.055921+00:00",
+  "provider": "agy",
+  "model": "gemini-3.8-flash-high",
+  "pairs": [
+    {
+      "context": "library-port",
+      "subject": "error-handling",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "app/(studio)/library/_port/handoff.ts:16 When opening the kernel store fails, styleHandoff silently returns the raw identifier fallback without routing the error to a log or telemetry door, violating error-doors and swallowed-error-prevention.",
+      "techniques": [
+        {
+          "technique": "error-doors",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/library/_port/handoff.ts:16 Silently returns raw fallback id when kernel store fails without routing to any telemetry or log door."
+        },
+        {
+          "technique": "swallowed-error-prevention",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/library/_port/handoff.ts:17 Swallows style read errors and falls back to id without door routing."
+        },
+        {
+          "technique": "user-facing-mapping",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/library/_port/real.ts:161 Constructs user error messages ad-hoc at call sites without a mapping registry or suggested remediation."
+        },
+        {
+          "technique": "consumer-decides-error-shape",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/library/_port/contract.ts:61 Actions wrap results in an ActionResult envelope carrying the closed AppErrorCode taxonomy."
+        },
+        {
+          "technique": "structured-propagation",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/library/_port/real.ts:127 Propagates kernel store errors as typed Result values without degrading to unclassified strings."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "error-handling",
+      "context": "domain-decision-board-core",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "error-handling",
+      "context": "notebook-contract-validation",
+      "reason": "withdrawn after review: reviewer (sonnet): The deviation is anchored on lib/notebook/corpus.ts (ruleOf, measureCorpus), which is not among the context's files. validate.ts imports failure.ts but nothing in the context calls corpus.ts, so the verdict describes a consumer outside the context. The cited lines are accurate: ruleOf does regex-nor"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-19T00:35:35.055921+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "error-handling"
+      ],
+      "techniques": [
+        "consumer-decides-error-shape",
+        "parse-failure-keeps-identity",
+        "structured-propagation",
+        "swallowed-error-prevention"
+      ],
+      "deviations": 1,
+      "context": "notebook-contract-validation",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-19T00:35:35.055921+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "error-handling"
+      ],
+      "techniques": [
+        "consumer-decides-error-shape",
+        "error-doors",
+        "structured-propagation",
+        "swallowed-error-prevention",
+        "user-facing-mapping"
+      ],
+      "deviations": 1,
+      "context": "library-port",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
+}

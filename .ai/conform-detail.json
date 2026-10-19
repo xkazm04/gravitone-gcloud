@@ -7440,6 +7440,43 @@
           "evidence": "lib/import/steps.ts:11 Ownership maps application records to part kinds, rather than source-code units to editing sessions."
         }
       ]
+    },
+    "c425f431-c0d1-4f34-b736-1a5d70683ef4/error-handling": {
+      "context": "notebook-contract-validation",
+      "subject": "error-handling",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T00:35:35.055Z",
+      "techniques": [
+        {
+          "technique": "consumer-decides-error-shape",
+          "verdict": "deviation",
+          "evidence": "lib/notebook/corpus.ts:54 Corpus evaluation must parse message text with regexes because findings lack a closed enumeration for consumers to branch on."
+        },
+        {
+          "technique": "structured-propagation",
+          "verdict": "deviation",
+          "evidence": "lib/notebook/failure.ts:19 NotebookFinding represents rules as unconstrained string prose rather than typed error categories."
+        },
+        {
+          "technique": "parse-failure-keeps-identity",
+          "verdict": "conformant",
+          "evidence": "lib/notebook/corpus.ts:110 measureCorpus isolates decode failures to individual corpus items identified by path while continuing to read remaining files."
+        },
+        {
+          "technique": "swallowed-error-prevention",
+          "verdict": "conformant",
+          "evidence": "lib/notebook/dialect.ts:288 Unrecognized dialect keys are counted and reported in unmapped rather than silently swallowed during translation."
+        }
+      ],
+      "registryProposal": "When validation frameworks express constraints as path-addressed rules, omitting machine-readable error codes forces downstream consumers into regex prose matching to classify failures.",
+      "withdrawn": {
+        "worker": "d6f6baed-f800-461c-aba4-54e6cb0d5b27",
+        "state": "deviation",
+        "at": "2026-10-19T00:37:36.273263+00:00",
+        "reason": "reviewer (sonnet): The deviation is anchored on lib/notebook/corpus.ts (ruleOf, measureCorpus), which is not among the context's files. validate.ts imports failure.ts but nothing in the context calls corpus.ts, so the verdict describes a consumer outside the context. The cited lines are accurate: ruleOf does regex-nor"
+      }
     }
   }
 }
