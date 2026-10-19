@@ -503,6 +503,78 @@
       "huntId": null,
       "parentId": null,
       "judgedAt": "2026-10-14T17:58:21.761Z"
+    },
+    {
+      "takeId": "st-78f895c4a7",
+      "kind": "music",
+      "provider": "local",
+      "op": "manual",
+      "origin": "import",
+      "technique": [],
+      "terms": {
+        "genre": [],
+        "mood": [],
+        "instrument": [],
+        "sfxCategory": null
+      },
+      "prompt": "",
+      "negative": null,
+      "durationS": null,
+      "verdict": "kept",
+      "ratings": {},
+      "score": null,
+      "reasons": [],
+      "huntId": null,
+      "parentId": null,
+      "judgedAt": "2026-10-14T19:18:17.911Z"
+    },
+    {
+      "takeId": "st-d4379c4a6b",
+      "kind": "music",
+      "provider": "local",
+      "op": "manual",
+      "origin": "import",
+      "technique": [],
+      "terms": {
+        "genre": [],
+        "mood": [],
+        "instrument": [],
+        "sfxCategory": null
+      },
+      "prompt": "",
+      "negative": null,
+      "durationS": null,
+      "verdict": "kept",
+      "ratings": {},
+      "score": null,
+      "reasons": [],
+      "huntId": null,
+      "parentId": null,
+      "judgedAt": "2026-10-14T19:45:18.734Z"
+    },
+    {
+      "takeId": "st-8f085883e7",
+      "kind": "music",
+      "provider": "local",
+      "op": "manual",
+      "origin": "import",
+      "technique": [],
+      "terms": {
+        "genre": [],
+        "mood": [],
+        "instrument": [],
+        "sfxCategory": null
+      },
+      "prompt": "",
+      "negative": null,
+      "durationS": null,
+      "verdict": "kept",
+      "ratings": {},
+      "score": null,
+      "reasons": [],
+      "huntId": null,
+      "parentId": null,
+      "judgedAt": "2026-10-15T08:29:32.804Z"
     }
   ],
   "lessons": []

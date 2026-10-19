@@ -4,15 +4,15 @@ GENERATED from [`pipeline/sound/ledger.json`](../../pipeline/sound/ledger.json) 
 
 **Evidence contract** ([knowledge/README.md](../README.md)): every strength below is **MEASURED** — counted from the ledger by the command above, n beside it — and **nothing with fewer than 3 judged takes is claimed**. Lessons are **INFERRED**: a person's claim, quoted verbatim with the evidence it was confirmed on. Fixture takes never reach the ledger.
 
-As of: 2026-10-14T17:58:21.761Z
+As of: 2026-10-15T08:29:32.804Z
 
 ## Music
 
-Judged takes in the ledger: **21**. Facets counted: genre, mood, instrument, technique.
+Judged takes in the ledger: **24**. Facets counted: genre, mood, instrument, technique.
 
 ### Strengths (MEASURED, n ≥ 3)
 
-No evidence yet: 21 judged takes, and no provider × term cell reaches n=3.
+No evidence yet: 24 judged takes, and no provider × term cell reaches n=3.
 
 ### Lessons (INFERRED)
 
