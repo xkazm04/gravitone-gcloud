@@ -165,6 +165,14 @@ function reviewOf(v1: ArticleV1): ReviewDoc {
 
 const fileUrl = (id: string, rel: string): string => `/api/articles/${encodeURIComponent(id)}/file/${rel.split("/").map(encodeURIComponent).join("/")}`;
 
+/** The private Medium draft the gate made (lib/articles/mediumDraft.ts), named on the packet so the human reads the post as Medium renders it. */
+function draftWords(run: ArticleRun): string {
+  const d = run.mediumDraft;
+  if (d === undefined) return "";
+  if (d.state === "ready" && d.url !== undefined) return ` · Medium draft ${d.url}`;
+  return d.state === "unavailable" ? " · Medium draft unavailable" : "";
+}
+
 function packet(v1: ArticleV1): Result<OpenPlan> {
   const { run, meta, patches } = v1.detail;
   if (run.status !== "awaiting-approval") return err("refused", `only a run awaiting approval is decided; ${run.id} is ${run.status}`);
@@ -205,7 +213,7 @@ function packet(v1: ArticleV1): Result<OpenPlan> {
     present: {
       items,
       rows,
-      meta: `${subject} · ${run.model}${run.rework === undefined ? "" : ` · rework ${run.rework.count}`}`,
+      meta: `${subject} · ${run.model}${run.rework === undefined ? "" : ` · rework ${run.rework.count}`}${draftWords(run)}`,
       review: reviewOf(v1),
       ...(oracle === undefined ? {} : { oracle: { passed: oracle.fails === 0, summary: oracle.summary } }),
     },
