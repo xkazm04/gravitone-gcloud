@@ -8212,6 +8212,67 @@
         "at": "2026-10-19T02:12:00.284165+00:00",
         "reason": "reviewer (sonnet): The anchor (structure.ts:40) is a comment saying the checker has no access to duration, shot count, loudness or image. That says nothing about creator voice or tone. The absence search is the only support for the claim. The context's plan.ts also lets a model rewrite beat `text` and `label` (PATCHAB"
       }
+    },
+    "e5b296e2-cccf-47a5-b8bd-ce730d40ace8/embedded-db": {
+      "context": "kernel-store-and-events",
+      "subject": "embedded-db",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T08:22:01.231Z",
+      "worker": "61ec3936-33ec-4fdf-b6b2-41098a3098d5",
+      "techniques": [
+        {
+          "technique": "analytical-reads-off-the-serving-store",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/events-count.ts:77 Analytical GROUP BY aggregations over facets run directly on the transactional store during user interactions."
+        },
+        {
+          "technique": "connection-pooling",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/store.ts:125 Opens a single unpooled connection where reads and writes contend for one in-process lock without reader/writer separation."
+        },
+        {
+          "technique": "corruption-class-response",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/store.ts:215 Quarantines the handle on all corruption without distinguishing derived from canonical damage and without providing an alternative write sink."
+        },
+        {
+          "technique": "db-self-instrumentation",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/store.ts:198 Transaction runner records no latency measurements, ring buffers, or slow-query counts."
+        },
+        {
+          "technique": "derived-capacity-limits",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/events-query.ts:37 Query capacity limit is a hard-coded constant without written environmental leaf derivations."
+        },
+        {
+          "technique": "extension-lifecycle",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/store.ts:147 Kernel store relies purely on built-in SQLite functionality without loading external extensions."
+        },
+        {
+          "technique": "journal-and-durability-modes",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/store.ts:133 Explicitly sets and queries back WAL journal mode to verify filesystem support at startup."
+        },
+        {
+          "technique": "quiet-window-maintenance",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/store.ts:282 Store lifecycle provides no activity gauge or scheduled maintenance passes for WAL checkpointing or compaction."
+        },
+        {
+          "technique": "single-writer-holder-discipline",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/store.ts:111 Distinguishes external writer lock contention from corruption by returning unavailable with holder attribution."
+        },
+        {
+          "technique": "storage-accounting-and-pruning",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/events.ts:48 The event ledger explicitly defers retention and pruning to the future with no named reaper policy or per-table accounting report."
+        }
+      ]
     }
   }
 }

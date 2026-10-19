@@ -1,0 +1,101 @@
+{
+ "schema": "conform-run/1",
+ "worker": "61ec3936-33ec-4fdf-b6b2-41098a3098d5",
+ "subject": "embedded-db",
+ "evaluatedAt": "2026-10-19T08:22:01.231857+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [
+  {
+   "context": "kernel-store-and-events",
+   "subject": "embedded-db",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/kernel/src/events.ts:78 The kernel store lacks storage accounting and pruning for its unbounded events table, actively prohibiting row deletion with a trigger and deferring retention indefinitely.",
+   "techniques": [
+    {
+     "technique": "analytical-reads-off-the-serving-store",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/events-count.ts:77 Analytical GROUP BY aggregations over facets run directly on the transactional store during user interactions."
+    },
+    {
+     "technique": "connection-pooling",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/store.ts:125 Opens a single unpooled connection where reads and writes contend for one in-process lock without reader/writer separation."
+    },
+    {
+     "technique": "corruption-class-response",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/store.ts:215 Quarantines the handle on all corruption without distinguishing derived from canonical damage and without providing an alternative write sink."
+    },
+    {
+     "technique": "db-self-instrumentation",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/store.ts:198 Transaction runner records no latency measurements, ring buffers, or slow-query counts."
+    },
+    {
+     "technique": "derived-capacity-limits",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/events-query.ts:37 Query capacity limit is a hard-coded constant without written environmental leaf derivations."
+    },
+    {
+     "technique": "extension-lifecycle",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/store.ts:147 Kernel store relies purely on built-in SQLite functionality without loading external extensions."
+    },
+    {
+     "technique": "journal-and-durability-modes",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/store.ts:133 Explicitly sets and queries back WAL journal mode to verify filesystem support at startup."
+    },
+    {
+     "technique": "quiet-window-maintenance",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/store.ts:282 Store lifecycle provides no activity gauge or scheduled maintenance passes for WAL checkpointing or compaction."
+    },
+    {
+     "technique": "single-writer-holder-discipline",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/store.ts:111 Distinguishes external writer lock contention from corruption by returning unavailable with holder attribution."
+    },
+    {
+     "technique": "storage-accounting-and-pruning",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/events.ts:48 The event ledger explicitly defers retention and pruning to the future with no named reaper policy or per-table accounting report."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "embedded-db",
+   "context": "trailer-structure-engine",
+   "reason": "The trailer-structure-engine context does not use an embedded database; it is an in-memory script and narrative structure analysis engine. Per instructions, not-applicable is not accepted from this seat, so this context is declined."
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-19T08:22:01.231857+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "embedded-db"
+   ],
+   "techniques": [
+    "analytical-reads-off-the-serving-store",
+    "connection-pooling",
+    "corruption-class-response",
+    "db-self-instrumentation",
+    "derived-capacity-limits",
+    "extension-lifecycle",
+    "journal-and-durability-modes",
+    "quiet-window-maintenance",
+    "single-writer-holder-discipline",
+    "storage-accounting-and-pruning"
+   ],
+   "deviations": 1,
+   "context": "kernel-store-and-events",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  }
+ ]
+}
