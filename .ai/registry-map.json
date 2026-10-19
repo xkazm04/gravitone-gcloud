@@ -13499,7 +13499,11 @@
           "revision": 9,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/import/commit.ts:270 The import commits application records in a store transaction; searches found no worktree, GIT_INDEX_FILE, pre-commit or intent-ledger references in this context, while repository matches belonged to other tooling.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:de557423d4cf3016",
+          "evaluatedRevision": 9
         },
         {
           "subject": "prompt-assembly",

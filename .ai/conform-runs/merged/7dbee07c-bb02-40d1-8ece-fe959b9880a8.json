@@ -1,0 +1,183 @@
+{
+ "schema": "conform-run/1",
+ "worker": "7dbee07c-bb02-40d1-8ece-fe959b9880a8",
+ "subject": "concurrent-vcs",
+ "evaluatedAt": "2026-10-19T00:29:03.243975+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "v1-import-and-archive",
+   "subject": "concurrent-vcs",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/import/commit.ts:270 The import commits application records in a store transaction; searches found no worktree, GIT_INDEX_FILE, pre-commit or intent-ledger references in this context, while repository matches belonged to other tooling.",
+   "techniques": [
+    {
+     "technique": "commit-time-claim-guard",
+     "verdict": "not-applicable",
+     "evidence": "lib/import/serve.ts:69 Confirmation invokes the archive importer, without constructing a Git commit."
+    },
+    {
+     "technique": "commit-verification",
+     "verdict": "not-applicable",
+     "evidence": "lib/import/commit.ts:278 The reported outcome concerns imported application data, rather than a Git changeset."
+    },
+    {
+     "technique": "integration-door",
+     "verdict": "not-applicable",
+     "evidence": "lib/import/commit.ts:33 The integration target is a kernel Project; no branch integration occurs."
+    },
+    {
+     "technique": "intent-ledgers",
+     "verdict": "not-applicable",
+     "evidence": "lib/import/runs.ts:21 Run history records producer jobs, without declaring editing sessions or their path scopes."
+    },
+    {
+     "technique": "isolated-index-commits",
+     "verdict": "not-applicable",
+     "evidence": "lib/import/bytes.ts:40 Staging collects content-addressed application blobs in a Map, without a Git index."
+    },
+    {
+     "technique": "never-lose-work-rules",
+     "verdict": "not-applicable",
+     "evidence": "lib/import/commit.ts:54 This preservation rule concerns browser data; the context performs no Git housekeeping."
+    },
+    {
+     "technique": "physical-isolation",
+     "verdict": "not-applicable",
+     "evidence": "lib/import/serve.ts:38 The live import binds application stores, without creating or removing working copies."
+    },
+    {
+     "technique": "shared-resource-arbitration",
+     "verdict": "not-applicable",
+     "evidence": "lib/import/commit.ts:45 The resource described is application blob persistence; no editing-session scratch, build or commit resource is managed here."
+    },
+    {
+     "technique": "sub-file-claim-scope",
+     "verdict": "not-applicable",
+     "evidence": "lib/import/steps.ts:11 Ownership maps application records to part kinds, rather than source-code units to editing sessions."
+    }
+   ],
+   "absenceTerms": [
+    "worktree",
+    "GIT_INDEX_FILE",
+    "pre-commit",
+    "intent-ledger"
+   ]
+  },
+  {
+   "context": "studio-shell",
+   "subject": "concurrent-vcs",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/_shell/session.ts:4 The shell coordinates authenticated browser state and application events; searches found no worktree, GIT_INDEX_FILE, pre-commit or intent-ledger references in its directory, with repository matches confined to other contexts.",
+   "techniques": [
+    {
+     "technique": "commit-time-claim-guard",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/_shell/session.ts:31 The session bridge posts authentication state, without guarding Git commits."
+    },
+    {
+     "technique": "commit-verification",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/_shell/HeaderBar.tsx:64 The stored head is an application-event exposure marker, without Git commit readback."
+    },
+    {
+     "technique": "integration-door",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/_shell/liveFeed.ts:5 Refresh integrates server-rendered page data, without merging repository branches."
+    },
+    {
+     "technique": "intent-ledgers",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/_shell/keys.ts:28 The ledger tracks application acts seen by an operator, rather than editing intentions."
+    },
+    {
+     "technique": "isolated-index-commits",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/_shell/Providers.tsx:39 Shell storage uses browser localStorage, without manipulating a staging index."
+    },
+    {
+     "technique": "never-lose-work-rules",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/_shell/Providers.tsx:102 Sign-out evicts identity-scoped browser state; no repository stash, reset or staging operation occurs."
+    },
+    {
+     "technique": "physical-isolation",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/_shell/Handoff.tsx:9 The handoff concerns a browser principal, without allocating an editing workspace."
+    },
+    {
+     "technique": "shared-resource-arbitration",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/_shell/live.ts:23 Caching shares an application read within a request, without arbitrating developer-session machine resources."
+    },
+    {
+     "technique": "sub-file-claim-scope",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/_shell/nav.ts:42 Path matching identifies navigation sections, without granting source-code claims."
+    }
+   ],
+   "absenceTerms": [
+    "worktree",
+    "GIT_INDEX_FILE",
+    "pre-commit",
+    "intent-ledger"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "concurrent-vcs",
+   "context": "foundry-forge-store-and-verdicts",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-19T00:29:03.243975+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "concurrent-vcs"
+   ],
+   "techniques": [
+    "commit-time-claim-guard",
+    "commit-verification",
+    "integration-door",
+    "intent-ledgers",
+    "isolated-index-commits",
+    "never-lose-work-rules",
+    "physical-isolation",
+    "shared-resource-arbitration",
+    "sub-file-claim-scope"
+   ],
+   "deviations": 0,
+   "context": "v1-import-and-archive",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-19T00:29:03.243975+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "concurrent-vcs"
+   ],
+   "techniques": [
+    "commit-time-claim-guard",
+    "commit-verification",
+    "integration-door",
+    "intent-ledgers",
+    "isolated-index-commits",
+    "never-lose-work-rules",
+    "physical-isolation",
+    "shared-resource-arbitration",
+    "sub-file-claim-scope"
+   ],
+   "deviations": 0,
+   "context": "studio-shell",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

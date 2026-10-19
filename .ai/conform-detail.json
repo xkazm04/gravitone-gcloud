@@ -7384,6 +7384,62 @@
           "evidence": "app/_landing/cosmos/engine/raster.ts:175 Sends structured raster data through browser messaging, without external handles into a separately traced guest heap."
         }
       ]
+    },
+    "b412ea73-0dc3-4362-93c4-2a9b913f9a61/concurrent-vcs": {
+      "context": "v1-import-and-archive",
+      "subject": "concurrent-vcs",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T00:29:03.243Z",
+      "worker": "7dbee07c-bb02-40d1-8ece-fe959b9880a8",
+      "techniques": [
+        {
+          "technique": "commit-time-claim-guard",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/serve.ts:69 Confirmation invokes the archive importer, without constructing a Git commit."
+        },
+        {
+          "technique": "commit-verification",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/commit.ts:278 The reported outcome concerns imported application data, rather than a Git changeset."
+        },
+        {
+          "technique": "integration-door",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/commit.ts:33 The integration target is a kernel Project; no branch integration occurs."
+        },
+        {
+          "technique": "intent-ledgers",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/runs.ts:21 Run history records producer jobs, without declaring editing sessions or their path scopes."
+        },
+        {
+          "technique": "isolated-index-commits",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/bytes.ts:40 Staging collects content-addressed application blobs in a Map, without a Git index."
+        },
+        {
+          "technique": "never-lose-work-rules",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/commit.ts:54 This preservation rule concerns browser data; the context performs no Git housekeeping."
+        },
+        {
+          "technique": "physical-isolation",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/serve.ts:38 The live import binds application stores, without creating or removing working copies."
+        },
+        {
+          "technique": "shared-resource-arbitration",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/commit.ts:45 The resource described is application blob persistence; no editing-session scratch, build or commit resource is managed here."
+        },
+        {
+          "technique": "sub-file-claim-scope",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/steps.ts:11 Ownership maps application records to part kinds, rather than source-code units to editing sessions."
+        }
+      ]
     }
   }
 }
