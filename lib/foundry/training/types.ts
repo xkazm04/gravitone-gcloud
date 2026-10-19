@@ -110,6 +110,22 @@ export interface TrainingLedgerRow {
   at: string;
 }
 
+/** One regression pin the reflection step writes: the prompt `surface` (repo-relative
+ *  file) that must still contain `pattern`. */
+export interface TrainingPin {
+  surface: string;
+  pattern: string;
+}
+
+/** The ledger's schema-2 row (lib/foundry/training/ledger.ts reads both shapes):
+ *  `reflected` becomes the reflection's sha and branch, and the pins ride the row. */
+export interface TrainingLedgerRowV2 extends Omit<TrainingLedgerRow, "reflected"> {
+  schema: 2;
+  /** Absent until the loop has proposed an edit; a reject never gets one. */
+  reflection?: { sha: string; branch: string };
+  pins: TrainingPin[];
+}
+
 export interface TrainingCommitResult {
   deleted: number;
   thumbs: string[];
