@@ -193,7 +193,7 @@ export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, b
               </div>
               <div className={s.reasons} role="group" aria-label="items">
                 {ids.map((id, i) => (
-                  <Chip key={id} label={nameOf(i)} casing="lower" value={verdicts[id]?.verdict} tone={verdicts[id] === undefined ? "neutral" : verdicts[id].verdict === "keep" ? "emerald" : "rose"} pressed={i === at} onPress={() => focusItem(i)} />
+                  <Chip key={id} label={nameOf(i)} casing="lower" {...(verdicts[id] === undefined ? {} : { value: verdicts[id].verdict })} tone={verdicts[id] === undefined ? "neutral" : verdicts[id].verdict === "keep" ? "emerald" : "rose"} pressed={i === at} onPress={() => focusItem(i)} />
                 ))}
               </div>
             </>
