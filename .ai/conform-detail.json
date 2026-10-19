@@ -8437,6 +8437,57 @@
           "evidence": "lib/sound/triageOrder.ts:26 Precondition does not hold as audio triage orders items by queue priority without announcing threshold-crossing classification deltas."
         }
       ]
+    },
+    "60361278-9fbe-43c5-add7-454ed78ef0f5/model-call-outcome-integrity": {
+      "context": "imaging-vendor-providers-and-video",
+      "subject": "model-call-outcome-integrity",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T10:14:30.767Z",
+      "techniques": [
+        {
+          "technique": "spend-precedes-the-error",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/providers/leonardo.ts:230 Exceptions thrown during remote generation polling propagate before recording spend that was already charged upon job creation."
+        },
+        {
+          "technique": "credential-posture-at-the-call-door",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/providers/agy.ts:121 Spawning the agy CLI child process does not filter env, passing ambient credentials to an untrusted callee."
+        },
+        {
+          "technique": "declared-call-site-identity",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/types.ts:75 Request interfaces define prompt and image parameters without requiring a purpose identifier at the seam signature."
+        },
+        {
+          "technique": "elimination-reasons-are-a-closed-vocabulary",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/providers/qwen.ts:71 Model rotation loops across fallback models on empty content or rate limits without attaching an elimination trail to the returned outcome."
+        },
+        {
+          "technique": "enforcement-demotion-on-translation-loss",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/providers/google.ts:244 Structured output schemas are sent without verifying target dialect expressiveness, and reported provenance omits enforcement level."
+        },
+        {
+          "technique": "one-deadline-across-attempts",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/providers/qwen.ts:93 Rotation attempts use fixed 120s timeouts per model rather than spending from a single caller-derived wall-clock budget."
+        },
+        {
+          "technique": "unattempted-is-not-failed",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/providers/qwen.ts:97 Content text is checked before finish_reason, and empty responses are treated as bad-response errors rather than checking for length-bounded voids."
+        }
+      ],
+      "withdrawn": {
+        "worker": "540d1ce9-452c-44ca-a02e-1ce9f74e17a8",
+        "state": "deviation",
+        "at": "2026-10-19T10:14:52.703131+00:00",
+        "reason": "reviewer (sonnet): Ledger booking belongs to the router, not the provider: lib/imaging/router.ts:443 settles a failed row when billedOnFailure(err) is true, and errors.ts marks timeout, failed and refused as billed. So the polling throws at leonardo.ts:183 and :230 do reach the spend ledger, and the claimed deviation "
+      }
     }
   }
 }
