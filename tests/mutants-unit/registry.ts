@@ -4598,4 +4598,28 @@ export const MUTANTS: UnitMutant[] = [
     replace: "const HREF = \"/foundry\";",
     why: "Runs' 'open at the weir' for a forge pile goes through a retired page's redirect instead of the Floor's image lane.",
   },
+  {
+    id: "pi-commit-before-all-decided",
+    test: "packages/ui/test/components/packet-items.test.ts",
+    file: "packages/ui/src/components/review/packetItems.ts",
+    find: "commit: after.length === 0",
+    replace: "commit: true",
+    why: "A multi-claim packet commits after the first verdict, so the remaining claims are never decided.",
+  },
+  {
+    id: "pi-decide-first-item",
+    test: "packages/ui/test/components/packet-items.test.ts",
+    file: "packages/ui/src/components/review/packetItems.ts",
+    find: "const id = ids[focus];",
+    replace: "const id = ids[0];",
+    why: "A verdict given on the focused second claim is written against claim one.",
+  },
+  {
+    id: "pi-seed-reasons-dropped",
+    test: "packages/ui/test/components/packet-items.test.ts",
+    file: "packages/ui/src/components/review/packetItems.ts",
+    find: "(verdicts[id]?.reasons ?? [])",
+    replace: "[]",
+    why: "A reject reopened on a claim starts without the reasons already recorded for it.",
+  },
 ];
