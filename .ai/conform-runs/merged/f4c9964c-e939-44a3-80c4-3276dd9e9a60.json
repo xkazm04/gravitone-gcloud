@@ -1,0 +1,107 @@
+{
+ "schema": "conform-run/1",
+ "worker": "f4c9964c-e939-44a3-80c4-3276dd9e9a60",
+ "subject": "client-fetch-cache",
+ "evaluatedAt": "2026-10-19T01:50:47.976421+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [
+  {
+   "context": "ledger-screen",
+   "subject": "client-fetch-cache",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/ledger/_ledger/Ledger.tsx:67 Post-render reads for older ledger pages accumulate strictly in component-scoped React state and are discarded on filter remounts rather than managed by a client fetch cache with SWR, warm remount retention, and in-flight deduplication.",
+   "techniques": [
+    {
+     "technique": "admission-hypothesis",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/ledger/_ledger/feed.ts:6 Live stream events trigger whole-page router refresh rather than entering a client-side cache governed by a stated admission hypothesis."
+    },
+    {
+     "technique": "cache-key-discipline",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/ledger/_ledger/filter.ts:103 Canonical parameter serialization exists for URLs and component keys, but no cache key builder, versioning, or collision discipline exists for client fetch responses."
+    },
+    {
+     "technique": "in-flight-dedup",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/ledger/_ledger/Detail.tsx:50 The fetch layer lacks an in-flight deduplication registry; concurrent identical requests are handled through component-local debouncing and a latest-wins race guard rather than single-flight joining."
+    },
+    {
+     "technique": "parse-and-derive-caches",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/ledger/_ledger/Toolbar.tsx:71 Cost summaries over row collections are recomputed during rendering without a bounded derivation cache keyed by content identity."
+    },
+    {
+     "technique": "plural-policy-claims",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/ledger/_ledger/actions.ts:5 Precondition does not hold: reads run as isolated Server Actions without multiple client call sites competing over shared cache entries or lifetimes."
+    },
+    {
+     "technique": "portable-read-definitions",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/ledger/_ledger/actions.ts:28 Reads are exported as standalone Server Action functions rather than defined as portable read values binding query key, fetcher, and default caching policies."
+    },
+    {
+     "technique": "prefetch-and-defer",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/ledger/_ledger/feed.ts:34 Background connection deferral is scheduled with a fixed 1500 ms setTimeout delay rather than scheduling against an idle callback with fallback, and older list pages lack speculative prefetching."
+    },
+    {
+     "technique": "sibling-entry-warmth",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/ledger/_ledger/Detail.tsx:112 The detail view borrows the list event for instant painting, but defaults the missing subject history count to 1 rather than preserving unknown state until the related read completes."
+    },
+    {
+     "technique": "similarity-keyed-admission",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/ledger/_ledger/filter.ts:240 Precondition does not hold: query execution uses exact identity and substring matching rather than resemblance metrics, embeddings, or fuzzy cut-points."
+    },
+    {
+     "technique": "swr-design",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/ledger/_ledger/Detail.tsx:85 Related events for the selected event are not cached with SWR; switching between events resets the state to null while a new fetch runs instead of painting stale cached data and revalidating."
+    },
+    {
+     "technique": "warm-remount-caches",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/ledger/page.tsx:36 The client component is keyed by filter identity and order, forcing a cold remount that discards all client-fetched older pages and selection state on every filter change instead of using a module-scoped cache."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "client-fetch-cache",
+   "context": "domain-parts-projects-slots",
+   "reason": "The context defines domain schemas, state transition tables, and view projection types in packages/domain with no client transport, fetching, or caching layer; because not-applicable is not accepted from this seat, the pair is declined."
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-19T01:50:47.976421+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "client-fetch-cache"
+   ],
+   "techniques": [
+    "admission-hypothesis",
+    "cache-key-discipline",
+    "in-flight-dedup",
+    "parse-and-derive-caches",
+    "plural-policy-claims",
+    "portable-read-definitions",
+    "prefetch-and-defer",
+    "sibling-entry-warmth",
+    "similarity-keyed-admission",
+    "swr-design",
+    "warm-remount-caches"
+   ],
+   "deviations": 1,
+   "context": "ledger-screen",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  }
+ ]
+}
