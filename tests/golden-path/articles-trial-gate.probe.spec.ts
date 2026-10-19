@@ -21,7 +21,7 @@
 //
 // The registry is the throwaway fixture (./_articles.ts), `gh` a stub, every lead goes to a
 // temp file (ARTICLES_LEADS_FILE), and the trial runs are seeded by
-// tests/fixtures/articles/runStates.ts on a run the stub engine drove to the gate. The REAL
+// tests/fixtures/articles/trialSeeds.ts on a run the stub engine drove to the gate. The REAL
 // registry's knowledge gate over this record is the package's acceptance run by hand on a
 // scratch clone (the spark's build record), never from a probe.
 import { execFileSync } from "node:child_process";
@@ -38,7 +38,7 @@ import { abVerdictOf, appendTrialSection, applicationMarkdown, experimentsMarkdo
 import { readTrialDetail } from "@/lib/articles/trial/store";
 import type { ArticleRun, RegistryPatch, TrialExecRecord } from "@/lib/articles/types";
 
-import { seedTrialStates, writeSeedExperiment } from "../fixtures/articles/runStates";
+import { seedTrialStates, writeSeedExperiment } from "../fixtures/articles/trialSeeds";
 import { keepEnv } from "./_helpers";
 import { ARTICLE_ENV, articleSandbox, type ArticleSandbox } from "./_articles";
 
