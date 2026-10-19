@@ -1,0 +1,42 @@
+{
+  "schema": "conform-run/1",
+  "worker": "c7a94e8e-ad80-40f1-87cf-463119460401",
+  "subject": "creator-voice-and-tone",
+  "evaluatedAt": "2026-10-19T02:11:43.195542+00:00",
+  "provider": "codex",
+  "model": "gpt-6.1-sol",
+  "pairs": [],
+  "declined": [
+    {
+      "subject": "creator-voice-and-tone",
+      "context": "audio-text-producers",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "creator-voice-and-tone",
+      "context": "trailer-structure-engine",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor (structure.ts:40) is a comment saying the checker has no access to duration, shot count, loudness or image. That says nothing about creator voice or tone. The absence search is the only support for the claim. The context's plan.ts also lets a model rewrite beat `text` and `label` (PATCHAB"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-19T02:11:43.195542+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "creator-voice-and-tone"
+      ],
+      "techniques": [
+        "delivery-rate-budgeting",
+        "dial-vs-subject-property",
+        "engine-tone-separation",
+        "reference-world-and-bookends",
+        "spoken-delivery-direction",
+        "voice-profile-from-accepted-work"
+      ],
+      "deviations": 0,
+      "context": "trailer-structure-engine",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    }
+  ]
+}

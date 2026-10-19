@@ -8166,6 +8166,52 @@
           "evidence": "packages/ui/src/components/status/StatusPill.tsx:11 Status presentation derives from supplied state and the local vocabulary, without reading environment configuration."
         }
       ]
+    },
+    "d12a6aa7-39d7-464c-b47d-c4a1670d3bbd/creator-voice-and-tone": {
+      "context": "trailer-structure-engine",
+      "subject": "creator-voice-and-tone",
+      "bundle": "media-generation",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T02:11:43.195Z",
+      "techniques": [
+        {
+          "technique": "delivery-rate-budgeting",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/types.ts:30 The structural model does not set a narration rate or duration budget."
+        },
+        {
+          "technique": "dial-vs-subject-property",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/plan.ts:33 These are explicit structural-edit fields; the searched context exposes no creator-tone dials."
+        },
+        {
+          "technique": "engine-tone-separation",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/cut.ts:3 This module composes structural data rather than rendering prose against a tone profile."
+        },
+        {
+          "technique": "reference-world-and-bookends",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/plan.ts:134 Plan application patches existing beats; searches found no reference-world or signature-bookend machinery."
+        },
+        {
+          "technique": "spoken-delivery-direction",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/types.ts:402 The downstream seam described here concerns shots, with no synthetic-narrator casting or speech-direction path found."
+        },
+        {
+          "technique": "voice-profile-from-accepted-work",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/trailer/ops.ts:269 Rebasing retains structural edits and the campaign budget; no learned voice-profile update path was found."
+        }
+      ],
+      "withdrawn": {
+        "worker": "c7a94e8e-ad80-40f1-87cf-463119460401",
+        "state": "not-applicable",
+        "at": "2026-10-19T02:12:00.284165+00:00",
+        "reason": "reviewer (sonnet): The anchor (structure.ts:40) is a comment saying the checker has no access to duration, shot count, loudness or image. That says nothing about creator voice or tone. The absence search is the only support for the claim. The context's plan.ts also lets a model rewrite beat `text` and `label` (PATCHAB"
+      }
     }
   }
 }
