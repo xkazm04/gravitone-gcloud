@@ -8596,7 +8596,11 @@
           "revision": 1,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/notebook/schema.ts:16 This context validates generated research answers rather than distributing trained models, and searches found none of the five model-package terms in lib/notebook.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:d22f4172adbc5004",
+          "evaluatedRevision": 1
         },
         {
           "subject": "quality-gates",
@@ -13044,7 +13048,11 @@
           "revision": 1,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/INVENTORY.md:93 These modules render ledger records and timeline graphics, and searches found none of the five model-package terms across packages/ui/src/components.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:d22f4172adbc5004",
+          "evaluatedRevision": 1
         },
         {
           "subject": "multi-provider-gateway-plane",
