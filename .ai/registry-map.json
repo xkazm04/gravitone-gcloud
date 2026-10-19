@@ -4790,7 +4790,11 @@
           "revision": 11,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/extract/vocabulary.ts:65 The schema places has_text first as a veto, but scoring and replica adoption ignore it, allowing text-bearing renders to win recipe selection.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:a433b5aafd6813f5",
+          "evaluatedRevision": 11
         },
         {
           "subject": "agent-memory",

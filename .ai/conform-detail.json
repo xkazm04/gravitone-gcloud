@@ -8273,6 +8273,53 @@
           "evidence": "packages/kernel/src/events.ts:48 The event ledger explicitly defers retention and pruning to the future with no named reaper policy or per-table accounting report."
         }
       ]
+    },
+    "0335f0dc-2987-4b19-96e1-58941a70c9d5/generated-output-grading": {
+      "context": "foundry-extract-engine",
+      "subject": "generated-output-grading",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T08:48:21.394Z",
+      "worker": "ee961691-e0b2-4348-b4e0-d86ae6b7fcb0",
+      "techniques": [
+        {
+          "technique": "cross-provider-flip-analysis",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/types.ts:271 Records engines per capability but executes single-generator extractions rather than paired cross-provider flip matrices."
+        },
+        {
+          "technique": "input-channel-parity",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/prompts.ts:120 Generators receive unified prose prompts; there is no comparison across structured or typed channels."
+        },
+        {
+          "technique": "replication-as-comprehension-test",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/extract/vocabulary.ts:200 Ordinal fields like detail_density receive strict binary 1/0 scoring with no partial credit, and recipes are adopted on pooled aggregate means."
+        },
+        {
+          "technique": "trial-matrix-design",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/prompts.ts:26 Uses four neutral descriptive scenes for style transfer rather than a 5-7 visual problem taxonomy."
+        },
+        {
+          "technique": "two-grader-disagreement-rule",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/extract/performReplica.ts:71 Gating decisions like recipe adoption and early target termination rely on a single vision recognition call without a second independent grader."
+        },
+        {
+          "technique": "unconditional-fail-criteria",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/extract/vocabulary.ts:65 has_text is placed first as the veto in the schema but is merely logged as text in performReplica and ignored during scoring and recipe adoption."
+        },
+        {
+          "technique": "vision-model-grading-schema",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/extract/vocabulary.ts:87 Requires fifteen fields on readback and seventeen on critique, exceeding the seven-field budget without short-circuiting on the initial veto field."
+        }
+      ],
+      "registryProposal": "When an unconditional fail criterion (like has_text) is added to a schema, the standard should emphasize requiring the evaluation harness to short-circuit candidate selection and round settlement, preventing harnesses from declaring a veto field that is merely logged while un-vetoed scores drive adoption."
     }
   }
 }
