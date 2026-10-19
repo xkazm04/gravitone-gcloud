@@ -8115,6 +8115,57 @@
         "at": "2026-10-19T01:40:02.387531+00:00",
         "reason": "reviewer (sonnet): The hardcoded-selector table at selectors.ts:81 is real, but the other technique claims don't hold. browser.ts uses a default CDP endpoint that LEONARDO_STUDIO_CDP overrides, so the port isn't hardcoded. driver.ts:261 throws StudioError with a typed class ('failed' or 'signed-out'), which contradict"
       }
+    },
+    "d6ef2aee-128a-4430-80a9-de42991c6316/browser-credential-boundary": {
+      "context": "ui-status-provenance",
+      "subject": "browser-credential-boundary",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T01:46:27.882Z",
+      "worker": "1ac0761a-c431-42cc-8882-0ce193e1306b",
+      "techniques": [
+        {
+          "technique": "aggregate-view-not-base-table",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/tally/Tally.tsx:28 Tally displays supplied numbers; it neither queries identifying rows nor grants access to them."
+        },
+        {
+          "technique": "allowlisted-operator-stream",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/provenance/Provenance.tsx:21 These are presentation fields for provenance, not an emitted record of credential-bearing requests."
+        },
+        {
+          "technique": "broker-proxy-attaches-secret",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/channel/ChannelBadge.tsx:26 The channel component labels a badge and makes no publishing or upstream call."
+        },
+        {
+          "technique": "default-deny-plus-defaulted-owner",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/consequence/ConsequencePanel.tsx:103 Confirmation invokes a supplied callback; the component implements no database write or ownership policy."
+        },
+        {
+          "technique": "omit-the-column-not-the-value",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/facts/Facts.tsx:14 Facts renders supplied display values and defines no public-role database schema."
+        },
+        {
+          "technique": "opaque-upstream-errors",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/upstream/UpstreamBreak.tsx:46 This component displays caller-supplied detail; it is not a broker classifying upstream responses, and this verdict does not establish that callers sanitize their errors."
+        },
+        {
+          "technique": "outbound-fetch-destination-validation",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/facet/FacetRow.tsx:42 Interaction delegates a boolean change to the caller and performs no outbound fetch."
+        },
+        {
+          "technique": "public-vs-server-env-split",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/status/StatusPill.tsx:11 Status presentation derives from supplied state and the local vocabulary, without reading environment configuration."
+        }
+      ]
     }
   }
 }

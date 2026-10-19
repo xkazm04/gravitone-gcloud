@@ -13431,7 +13431,11 @@
           "revision": 3,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/provenance/Provenance.tsx:32 Searches found none of the listed credential terms in the eleven component directories, whose implementations render supplied values and callbacks without owning a credential, database grant, or upstream request.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:d3eef10e9ed8459f",
+          "evaluatedRevision": 3
         },
         {
           "subject": "client-state",

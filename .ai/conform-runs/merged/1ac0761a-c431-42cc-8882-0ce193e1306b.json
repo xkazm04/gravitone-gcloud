@@ -1,0 +1,167 @@
+{
+ "schema": "conform-run/1",
+ "worker": "1ac0761a-c431-42cc-8882-0ce193e1306b",
+ "subject": "browser-credential-boundary",
+ "evaluatedAt": "2026-10-19T01:46:27.882984+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "library-browser-screen",
+   "subject": "browser-credential-boundary",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/library/_port/real.ts:128 Searches found none of the listed credential terms in the Library directory, and the opened implementation reads kernel records through server actions without contacting a privileged upstream.",
+   "techniques": [
+    {
+     "technique": "aggregate-view-not-base-table",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/_port/real.ts:105 Counts are computed by the server's store; no browser-role database grant is involved."
+    },
+    {
+     "technique": "allowlisted-operator-stream",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/_library/DetailView.tsx:48 The inspected detail renders asset content, not captured credential-bearing requests."
+    },
+    {
+     "technique": "broker-proxy-attaches-secret",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/_port/actions.ts:43 The action invokes the local Library implementation and attaches no upstream credential."
+    },
+    {
+     "technique": "default-deny-plus-defaulted-owner",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/_port/actions.ts:53 Writes pass through a server action with a server-resolved principal; the browser does not write directly under database row policies."
+    },
+    {
+     "technique": "omit-the-column-not-the-value",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/_port/real.ts:82 The server reads project choices from its store; this context publishes no database relation to a public role."
+    },
+    {
+     "technique": "opaque-upstream-errors",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/page.tsx:44 This reports a local kernel-query failure, not a credentialed upstream response."
+    },
+    {
+     "technique": "outbound-fetch-destination-validation",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/_library/DetailView.tsx:138 Media addresses are supplied to browser playback; the inspected Library implementation does not fetch data-supplied destinations on the server."
+    },
+    {
+     "technique": "public-vs-server-env-split",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/_port/port.ts:27 The context's environment read selects a server implementation; no browser-read configuration or upstream secret changes sides."
+    }
+   ],
+   "absenceTerms": [
+    "credential",
+    "Authorization",
+    "NEXT_PUBLIC_",
+    "supabase",
+    "apiKey"
+   ]
+  },
+  {
+   "context": "ui-status-provenance",
+   "subject": "browser-credential-boundary",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/provenance/Provenance.tsx:32 Searches found none of the listed credential terms in the eleven component directories, whose implementations render supplied values and callbacks without owning a credential, database grant, or upstream request.",
+   "techniques": [
+    {
+     "technique": "aggregate-view-not-base-table",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/tally/Tally.tsx:28 Tally displays supplied numbers; it neither queries identifying rows nor grants access to them."
+    },
+    {
+     "technique": "allowlisted-operator-stream",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/provenance/Provenance.tsx:21 These are presentation fields for provenance, not an emitted record of credential-bearing requests."
+    },
+    {
+     "technique": "broker-proxy-attaches-secret",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/channel/ChannelBadge.tsx:26 The channel component labels a badge and makes no publishing or upstream call."
+    },
+    {
+     "technique": "default-deny-plus-defaulted-owner",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/consequence/ConsequencePanel.tsx:103 Confirmation invokes a supplied callback; the component implements no database write or ownership policy."
+    },
+    {
+     "technique": "omit-the-column-not-the-value",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/facts/Facts.tsx:14 Facts renders supplied display values and defines no public-role database schema."
+    },
+    {
+     "technique": "opaque-upstream-errors",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/upstream/UpstreamBreak.tsx:46 This component displays caller-supplied detail; it is not a broker classifying upstream responses, and this verdict does not establish that callers sanitize their errors."
+    },
+    {
+     "technique": "outbound-fetch-destination-validation",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/facet/FacetRow.tsx:42 Interaction delegates a boolean change to the caller and performs no outbound fetch."
+    },
+    {
+     "technique": "public-vs-server-env-split",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/status/StatusPill.tsx:11 Status presentation derives from supplied state and the local vocabulary, without reading environment configuration."
+    }
+   ],
+   "absenceTerms": [
+    "credential",
+    "Authorization",
+    "NEXT_PUBLIC_",
+    "supabase",
+    "apiKey"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-19T01:46:27.882984+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "browser-credential-boundary"
+   ],
+   "techniques": [
+    "aggregate-view-not-base-table",
+    "allowlisted-operator-stream",
+    "broker-proxy-attaches-secret",
+    "default-deny-plus-defaulted-owner",
+    "omit-the-column-not-the-value",
+    "opaque-upstream-errors",
+    "outbound-fetch-destination-validation",
+    "public-vs-server-env-split"
+   ],
+   "deviations": 0,
+   "context": "library-browser-screen",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-19T01:46:27.882984+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "browser-credential-boundary"
+   ],
+   "techniques": [
+    "aggregate-view-not-base-table",
+    "allowlisted-operator-stream",
+    "broker-proxy-attaches-secret",
+    "default-deny-plus-defaulted-owner",
+    "omit-the-column-not-the-value",
+    "opaque-upstream-errors",
+    "outbound-fetch-destination-validation",
+    "public-vs-server-env-split"
+   ],
+   "deviations": 0,
+   "context": "ui-status-provenance",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
