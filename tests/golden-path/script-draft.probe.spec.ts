@@ -40,6 +40,7 @@ import { CONSTRAINT_LEDGER, ledgerFor } from "@/lib/script/constraints";
 import { NOTEBOOK } from "@/lib/notebook/notebook";
 import { fixtureSource, sourceOf } from "@/lib/notebook/source";
 import type { Unknown } from "@/lib/notebook/types";
+import { shapeFindings } from "@/lib/notebook/shape";
 
 const sha256 = (s: string) => createHash("sha256").update(s).digest("hex");
 
@@ -210,4 +211,46 @@ test("draft/3: a notebook unknown with no probe is unmeasured, and a note naming
   expect(ledger.rows.find((x) => x.unknownId === "u-novel")!.state).toBe("unmeasured");
   expect(ledger.rows.some((x) => x.unknownId === "u-spot-price")).toBe(false);
   expect(ledger.dangling).toEqual(["u-spot-price"]);
+});
+
+/* ── session 2: `unknown.probe` joins the front of the resolution order ──── */
+
+const NO_NINETIES = { tests: "no $9x figure", forbid: [{ source: "\\$\\s?9\\d" }] };
+const withBeat = (text: string) => {
+  const base = RENDERS[0];
+  return { id: "r-probe", beats: [...base.beats, { ...base.beats[0], at: "9:99", text }] };
+};
+
+test("draft/4a: a notebook unknown carrying a probe is enforced with the fixture PROBES bypassed", () => {
+  const u: Unknown = { id: "u-novel-95", what: "x", why: "y", impact: "never name a $9x figure", probe: NO_NINETIES };
+  const probes = probesFor([u]);
+  expect(Object.keys(probes)).toEqual(["u-novel-95"]);
+  const dirty = runGate(withBeat("It touched $95 once."), { unknowns: [u], probes });
+  expect(dirty.enforced).toBeGreaterThan(0);
+  expect(dirty.findings.filter((f) => f.subject === "u-novel-95").map((f) => f.verdict)).toContain("violation");
+  const clean = runGate(withBeat("It touched nothing."), { unknowns: [u], probes });
+  expect(clean.findings.filter((f) => f.subject === "u-novel-95").map((f) => f.verdict)).toEqual(["pass"]);
+});
+
+test("draft/4b: unknown.probe wins over draft.probes and the fixture table for the same id", () => {
+  const id = Object.keys(PROBES)[0];
+  const u: Unknown = { id, what: "x", why: "y", impact: "z", probe: NO_NINETIES };
+  expect(probesFor([u], { probes: { [id]: { tests: "draft", forbid: ["zzz"] } } })[id].tests).toBe("no $9x figure");
+  expect(probesFor([{ ...u, probe: undefined }], { probes: { [id]: { tests: "draft", forbid: ["zzz"] } } })[id].tests).toBe("draft");
+});
+
+test("draft/4c: validation refuses an unknown whose probe pattern does not compile, naming the id", () => {
+  const bad = { ...NOTEBOOK, unknowns: [...NOTEBOOK.unknowns, { id: "u-bad-probe", what: "x", why: "y", impact: "z", probe: { tests: "t", forbid: [{ source: "(" }] } }] };
+  const found = shapeFindings(bad as never);
+  expect(found.some((f) => f.rule.includes("u-bad-probe") && f.path.endsWith(".probe"))).toBe(true);
+  const good = { ...NOTEBOOK, unknowns: [...NOTEBOOK.unknowns, { id: "u-ok-probe", what: "x", why: "y", impact: "z", probe: NO_NINETIES }] };
+  expect(shapeFindings(good as never).filter((f) => f.rule.includes("u-ok-probe"))).toEqual([]);
+});
+
+test("draft/4d: a fixture notebook with no probes scores exactly as before", () => {
+  expect(NOTEBOOK.unknowns.some((u) => u.probe)).toBe(false);
+  for (const r of RENDERS) {
+    expect(probesFor(NOTEBOOK.unknowns)).toEqual(probesFor(NOTEBOOK.unknowns.map((u) => ({ ...u }))));
+    expect(runGate(r, { probes: probesFor(NOTEBOOK.unknowns) }), r.id).toEqual(runGate(r, { probes: PROBES }));
+  }
 });
