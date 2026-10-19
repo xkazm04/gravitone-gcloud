@@ -1,0 +1,38 @@
+{
+  "schema": "conform-run/1",
+  "worker": "f9ebe6cd-2da8-41bc-ba6f-cb25a251525b",
+  "subject": "background-jobs",
+  "evaluatedAt": "2026-10-19T22:37:07.444319+00:00",
+  "provider": "agy",
+  "model": "gemini-3.8-flash-high",
+  "pairs": [],
+  "declined": [
+    {
+      "subject": "background-jobs",
+      "context": "publish-producers",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchors back only part of the claim: timers.ts shows the closed TIMER_NAMES set, TimerSpec and timerStatusIn, and tick.ts:89 shows the `next` wakeup. Three other claims are unsupported. publish.ts:53 is just the STOPPED_TEXT constant, so it does not show publishing runs as timer ticks rather tha"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-19T22:37:07.444319+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "background-jobs"
+      ],
+      "techniques": [
+        "adaptive-cadence",
+        "job-progress-and-cancellation",
+        "loop-health-telemetry",
+        "loop-supervision",
+        "startup-sweeps",
+        "tick-isolation",
+        "timeout-is-a-status-not-a-consumption"
+      ],
+      "deviations": 0,
+      "context": "publish-producers",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
+}
