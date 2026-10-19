@@ -53,7 +53,15 @@
     ".next-cx-g3/types/**/*.ts",
     ".next-cx-g3/dev/types/**/*.ts",
     ".next-fixtures/types/**/*.ts",
-    ".next-fixtures/dev/types/**/*.ts"
+    ".next-fixtures/dev/types/**/*.ts",
+    ".next-l44/types/**/*.ts",
+    ".next-l44/dev/types/**/*.ts",
+    ".next-l42/types/**/*.ts",
+    ".next-l42/dev/types/**/*.ts",
+    ".next-l53/types/**/*.ts",
+    ".next-l53/dev/types/**/*.ts",
+    ".next-l56/types/**/*.ts",
+    ".next-l56/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

@@ -1,0 +1,101 @@
+{
+  "schema": "conform-run/1",
+  "worker": "fc653f3d-9432-404f-8440-858dc269565e",
+  "subject": "review-iteration-loops",
+  "evaluatedAt": "2026-10-13T10:52:07.689507+00:00",
+  "provider": "agy",
+  "model": "gemini-3.8-flash-high",
+  "pairs": [],
+  "declined": [
+    {
+      "subject": "review-iteration-loops",
+      "context": "production-script-probes",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "review-iteration-loops",
+      "context": "research-run-engine",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "review-iteration-loops",
+      "context": "research-scope-board",
+      "reason": "withdrawn after review: reviewer (sonnet): FollowUpQueue.tsx:82 does show that deepen is a manual toggle. But the claim that kills do not propagate forward is contradicted by scope.ts woundsOf, which takes a `killed` set and wounds whatever depended on a killed fact. The scope.ts:67 anchor is only the Wound.missing field, and it carries no '"
+    },
+    {
+      "subject": "review-iteration-loops",
+      "context": "frames-phase",
+      "reason": "withdrawn after review: reviewer (sonnet): AlternativesView.tsx:34 is only the onAdopt callback that writes a chosen plate back to the frame, so it says nothing about how variants are generated. useAlternatives.ts passes `references` into generation, which contradicts 'unanchored', and I found no amplitude-limit code to confirm that claim ei"
+    },
+    {
+      "subject": "review-iteration-loops",
+      "context": "frames-score-cut",
+      "reason": "withdrawn after review: reviewer (sonnet): alts.ts:21 is only the SceneAlt type (id, plate, createdAt, seeded). It does not show how variants are generated, and generation does pass references. The LayerPanel.tsx:12 anchor is a comment about layer ordering, not deterministic compositing, so the technique evidence does not say what is claimed"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-13T10:52:07.689507+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "review-iteration-loops"
+      ],
+      "techniques": [
+        "anchored-variation-slate",
+        "attribution-share-accounting",
+        "critique-carries-its-fix",
+        "edit-plan-over-regeneration",
+        "follow-up-that-can-kill-a-fact",
+        "gate-record-outlives-the-media",
+        "note-taxonomy-focus-scope-order",
+        "partial-regeneration-seams",
+        "refusal-as-valid-outcome",
+        "scope-vs-preference-signals"
+      ],
+      "deviations": 1,
+      "context": "research-scope-board",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T10:52:07.689507+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "review-iteration-loops"
+      ],
+      "techniques": [
+        "anchored-variation-slate",
+        "attribution-share-accounting",
+        "critique-carries-its-fix",
+        "edit-plan-over-regeneration",
+        "follow-up-that-can-kill-a-fact",
+        "partial-regeneration-seams",
+        "refusal-as-valid-outcome"
+      ],
+      "deviations": 1,
+      "context": "frames-phase",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    },
+    {
+      "ts": "2026-10-13T10:52:07.689507+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "review-iteration-loops"
+      ],
+      "techniques": [
+        "anchored-variation-slate",
+        "attribution-share-accounting",
+        "critique-carries-its-fix",
+        "edit-plan-over-regeneration",
+        "follow-up-that-can-kill-a-fact",
+        "partial-regeneration-seams",
+        "refusal-as-valid-outcome"
+      ],
+      "deviations": 1,
+      "context": "frames-score-cut",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
+}
