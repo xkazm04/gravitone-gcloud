@@ -7855,6 +7855,103 @@
           "evidence": "lib/ledger/v1/sources/spend.ts:118 Kernel access here is a read transaction without DDL or a migration-ledger advance."
         }
       ]
+    },
+    "5b95d7b7-d2b7-4625-a5bb-4585b8ab9dbc/accessibility": {
+      "context": "ui-controls-shell",
+      "subject": "accessibility",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T01:24:56.300Z",
+      "techniques": [
+        {
+          "technique": "a11y-verification",
+          "verdict": "deviation",
+          "evidence": "packages/ui/test/components/controls.test.ts:130 This Toast check asserts static live-region markup, leaving announcement timing, bursts and repeated-message delivery unobserved."
+        },
+        {
+          "technique": "hidden-but-mounted-inertness",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/sheet/LevelSheet.tsx:58 The ordinary sheet initially mounts translated offscreen until requestAnimationFrame sets risen, with no inert boundary; its focus effect already targets the mounted section."
+        },
+        {
+          "technique": "keyboard-navigation-models",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/field/Field.module.css:5 The field removes the focus outline and substitutes a border tint; this selector also outranks the shared :focus-visible outline."
+        },
+        {
+          "technique": "live-region-architecture",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/toast/Toast.tsx:22 Toast owns a separate live region and renders the message directly; the shell receipt store replaces the current message without a drain queue or repeat mutation."
+        },
+        {
+          "technique": "name-and-description-wiring",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/toggle/Toggle.tsx:34 The override replaces the visible label without preserving it: the ledger Toolbar passes visible '{ } jsonl' with accessible name 'agent view, JSON Lines'."
+        },
+        {
+          "technique": "preference-respect",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/button/Button.module.css:3 The button combines a fixed pixel-token height with nonwrapping text, preventing its container from growing and reflowing with enlarged text."
+        },
+        {
+          "technique": "primitive-level-a11y",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/button/Button.tsx:64 Disabled removes only the click callback; with submit=true the native button still submits its form because aria-disabled does not cancel default activation."
+        }
+      ],
+      "withdrawn": {
+        "worker": "dc8dbf29-2572-4da5-94dd-b0a6451fd770",
+        "state": "deviation",
+        "at": "2026-10-19T01:25:24.174250+00:00",
+        "reason": "reviewer (sonnet): The deviation anchors on Toast.tsx:22, and Toast.tsx and LevelSheet.tsx are not among this context's files. The claim that the shell receipt store replaces the message with no drain queue or repeat mutation could not be confirmed: Toast.tsx is the only non-test file that mentions Toast, and I found "
+      }
+    },
+    "5414e8ac-5105-43f0-a153-088e12501c9d/accessibility": {
+      "context": "ui-marks-and-text",
+      "subject": "accessibility",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T01:24:56.300Z",
+      "worker": "dc8dbf29-2572-4da5-94dd-b0a6451fd770",
+      "techniques": [
+        {
+          "technique": "a11y-verification",
+          "verdict": "deviation",
+          "evidence": "tests/live/kit.live.spec.ts:108 The Hint dismissal check observes visual opacity rather than whether the dismissed tooltip contributes an accessibility-tree node."
+        },
+        {
+          "technique": "hidden-but-mounted-inertness",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/hint/Hint.module.css:6 Closed tooltips remain mounted without hidden, visibility:hidden or inert; opacity and pointer-events close neither the tree channel nor element navigation."
+        },
+        {
+          "technique": "keyboard-navigation-models",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/hint/Hint.tsx:46 After Escape dismisses the tooltip while focus stays on its button, Enter and Space cannot reopen it because opening has focus and pointer handlers but no activation handler."
+        },
+        {
+          "technique": "live-region-architecture",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/stalebadge/StaleBadge.tsx:24 Transitioning from live mounts a populated local status region instead of mutating a previously observed shared region."
+        },
+        {
+          "technique": "name-and-description-wiring",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/hint/Hint.tsx:49 Hint requires a name and connects its description to the tooltip through a useId-generated identifier."
+        },
+        {
+          "technique": "preference-respect",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/chip/Chip.module.css:4 Chip fixes its height to a 22px token and forbids wrapping, so enlarged text cannot grow its container and can escape an interactive chip's hit area."
+        },
+        {
+          "technique": "primitive-level-a11y",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/hint/Hint.tsx:36 The shared Hint owns dismissal but omits button activation for reopening after dismissal, propagating that keyboard gap to every consumer."
+        }
+      ]
     }
   }
 }

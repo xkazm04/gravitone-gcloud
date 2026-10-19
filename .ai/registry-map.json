@@ -13205,7 +13205,11 @@
           "revision": 7,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/hint/Hint.module.css:6 A closed Hint hides its mounted tooltip through opacity and pointer events while leaving the tooltip exposed to accessibility-tree navigation.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:5e30485ee0c7c123",
+          "evaluatedRevision": 7
         },
         {
           "subject": "async-ui-states",
