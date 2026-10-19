@@ -8835,6 +8835,57 @@
           "evidence": "packages/ui/src/components/floor/MonthCalendar.tsx:42 The component receives one selected month; its caller manages calendar navigation without a saved reporting-period preference chain."
         }
       ]
+    },
+    "5414e8ac-5105-43f0-a153-088e12501c9d/async-ui-states": {
+      "context": "ui-marks-and-text",
+      "subject": "async-ui-states",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T22:26:28.439Z",
+      "techniques": [
+        {
+          "technique": "empty-state-design",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/empty/Empty.tsx:8 EmptyProps lacks a cause discriminator, allowing call sites to pass arbitrary strings rather than typing empty states by cause."
+        },
+        {
+          "technique": "placeholder-design",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/ghost/Ghost.tsx:12 Ghost renders identical placeholder cards with no deterministic variation across items and no appearance delay window to prevent flashing on fast loads."
+        },
+        {
+          "technique": "failure-states",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/errorline/ErrorLine.tsx:8 ErrorLine accepts only a raw message string without mapping to user-altitude phrasing and provides no retry affordance to reissue the failed request."
+        },
+        {
+          "technique": "action-busy-states",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/chip/Chip.tsx:37 Chip door buttons act as filter or selection toggles rather than initiating asynchronous mutations requiring in-place busy spinners and disarming."
+        },
+        {
+          "technique": "arrival-choreography",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/ghost/Ghost.tsx:10 Leaf non-prose UI vocabulary components do not implement surface-scoped entrance animation cascades or seen-set guards."
+        },
+        {
+          "technique": "windowing-vs-identifying-keys",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/stalebadge/StaleBadge.tsx:16 Presentation tokens and marks consume freshness edge status but do not define compound request keys or classify windowing versus identifying coordinates."
+        },
+        {
+          "technique": "state-model",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/empty/Empty.tsx:12 Component renders display-only markup and does not manage or derive async request lifecycle state."
+        }
+      ],
+      "withdrawn": {
+        "worker": "c32084d6-5fb6-4734-8314-3cc0af138e32",
+        "state": "deviation",
+        "at": "2026-10-19T22:26:54.259528+00:00",
+        "reason": "reviewer (sonnet): The verdict rests on empty/Empty.tsx and errorline/ErrorLine.tsx, and neither file is among the context's listed files (chip, ghost, glyph, hint, heading). The Ghost and Chip anchors do not show the claimed cause-axis deviation. Ghost's own header comment says an act that fills the space belongs to "
+      }
     }
   }
 }
