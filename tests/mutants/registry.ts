@@ -392,4 +392,12 @@ export const MUTANTS: Mutant[] = [
     replace: "\"\"",
     why: "A reject whose own note opens on `reasons:` is read back as reasons: the operator's words are cut from the note and filed as axes.",
   },
+  {
+    id: "medium-rework-orphans-draft",
+    probe: "articles-medium.probe.spec.ts",
+    file: "lib/articles/mediumDraft.ts",
+    find: "...(previous ? { existingUrl: previous } : {}),",
+    replace: "",
+    why: "A rework back at the gate pastes the post into a NEW Medium draft: the operator's Medium fills with one orphaned draft per rework, and the url the gate shows is not the one they last reviewed.",
+  },
 ];
