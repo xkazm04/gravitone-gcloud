@@ -1,0 +1,41 @@
+{
+  "schema": "conform-run/1",
+  "worker": "e3a297a2-615c-47d1-8e70-2ce7cdfa4aa7",
+  "subject": "agent-browser-control",
+  "evaluatedAt": "2026-10-19T01:39:42.293742+00:00",
+  "provider": "agy",
+  "model": "gemini-3.8-flash-high",
+  "pairs": [],
+  "declined": [
+    {
+      "subject": "agent-browser-control",
+      "context": "library-browser-screen",
+      "reason": "The library-browser-screen context implements a Next.js asset-browsing React UI for human operators rather than an agent browser automation tool or daemon. As not-applicable is not accepted from this seat, it is declined."
+    },
+    {
+      "subject": "agent-browser-control",
+      "context": "imaging-vendor-providers-and-video",
+      "reason": "withdrawn after review: reviewer (sonnet): The hardcoded-selector table at selectors.ts:81 is real, but the other technique claims don't hold. browser.ts uses a default CDP endpoint that LEONARDO_STUDIO_CDP overrides, so the port isn't hardcoded. driver.ts:261 throws StudioError with a typed class ('failed' or 'signed-out'), which contradict"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-19T01:39:42.293742+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-browser-control"
+      ],
+      "techniques": [
+        "agent-actionable-errors",
+        "effect-classed-commands",
+        "persistent-browser-daemon",
+        "references-over-selectors",
+        "socket-scoped-surface"
+      ],
+      "deviations": 1,
+      "context": "imaging-vendor-providers-and-video",
+      "via": "curator-multi:agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
+}

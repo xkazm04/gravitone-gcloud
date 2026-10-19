@@ -8074,6 +8074,47 @@
           "evidence": "lib/sound/suno/cli.ts:83 Detached background execution supports absent callers and durable waiting; the short-deadline precondition for zero depth is not present."
         }
       ]
+    },
+    "60361278-9fbe-43c5-add7-454ed78ef0f5/agent-browser-control": {
+      "context": "imaging-vendor-providers-and-video",
+      "subject": "agent-browser-control",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T01:39:42.293Z",
+      "techniques": [
+        {
+          "technique": "references-over-selectors",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/studio/selectors.ts:81 Maintains hardcoded DOM selectors in a static lookup table instead of generating runtime accessibility references with external locators."
+        },
+        {
+          "technique": "persistent-browser-daemon",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/studio/browser.ts:28 Connects to a hardcoded CDP port instead of discovering a managed workspace daemon via an atomic owner-only state file."
+        },
+        {
+          "technique": "effect-classed-commands",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/providers/leonardoStudio.ts:45 Exposes ad-hoc driver methods without declaring an effect-classed command registry distinguishing reads, writes, and meta operations."
+        },
+        {
+          "technique": "agent-actionable-errors",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/studio/driver.ts:261 Throws descriptive failure strings without providing the literal next command or action class required for autonomous recovery."
+        },
+        {
+          "technique": "socket-scoped-surface",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/studio/browser.ts:43 The browser automation is strictly loopback-bound with no remote forwarding tunnel or remote agent surface."
+        }
+      ],
+      "withdrawn": {
+        "worker": "e3a297a2-615c-47d1-8e70-2ce7cdfa4aa7",
+        "state": "deviation",
+        "at": "2026-10-19T01:40:02.387531+00:00",
+        "reason": "reviewer (sonnet): The hardcoded-selector table at selectors.ts:81 is real, but the other technique claims don't hold. browser.ts uses a default CDP endpoint that LEONARDO_STUDIO_CDP overrides, so the port isn't hardcoded. driver.ts:261 throws StudioError with a typed class ('failed' or 'signed-out'), which contradict"
+      }
     }
   }
 }
