@@ -13451,7 +13451,11 @@
           "revision": 1,
           "changedAt": "2026-09-05",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/import/steps.ts:59 Instead of declarative adapter capability tables, the importer relies on imperative branching code to handle foreign version upgrades and mappings.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:4981ff0ea8a59c1b",
+          "evaluatedRevision": 1
         },
         {
           "subject": "agent-memory",

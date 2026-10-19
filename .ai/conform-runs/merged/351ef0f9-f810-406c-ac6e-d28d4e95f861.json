@@ -1,0 +1,148 @@
+{
+ "schema": "conform-run/1",
+ "worker": "351ef0f9-f810-406c-ac6e-d28d4e95f861",
+ "subject": "import-normalization",
+ "evaluatedAt": "2026-10-19T00:42:18.900463+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [
+  {
+   "context": "v1-import-and-archive",
+   "subject": "import-normalization",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/import/steps.ts:59 Instead of declarative adapter capability tables, the importer relies on imperative branching code to handle foreign version upgrades and mappings.",
+   "techniques": [
+    {
+     "technique": "adapter-capability-tables",
+     "verdict": "deviation",
+     "evidence": "lib/import/steps.ts:59 Foreign step lifting and schema migrations use branching procedural code rather than declarative capability tables with mapping grades."
+    },
+    {
+     "technique": "durable-intermediate-representation",
+     "verdict": "not-applicable",
+     "evidence": "lib/import/archive.ts:148 Precondition does not hold as archive parsing is cheap deterministic in-memory NDJSON processing."
+    },
+    {
+     "technique": "format-detection",
+     "verdict": "deviation",
+     "evidence": "lib/import/archive.ts:167 Detection checks only a single header field on line 1 without structural fingerprints, confidence grading, or ambiguity resolution."
+    },
+    {
+     "technique": "import-validation",
+     "verdict": "conformant",
+     "evidence": "lib/import/archive.ts:43 Caps on raw bytes, inflated payload, and lines protect against resource exhaustion prior to deserialization."
+    },
+    {
+     "technique": "intermediate-representation",
+     "verdict": "conformant",
+     "evidence": "lib/import/project.ts:103 Staged internal entities mint fresh IDs from foreign IDs and preserve provenance and loss records as first-class fields."
+    },
+    {
+     "technique": "lossy-conversion-disclosure",
+     "verdict": "conformant",
+     "evidence": "lib/import/steps.ts:32 Conversion fidelity uses a closed 4-grade scale with itemized reasons that persist into the committed import event."
+    },
+    {
+     "technique": "overlay-merge-absence-semantics",
+     "verdict": "not-applicable",
+     "evidence": "lib/import/project.ts:187 Precondition does not hold because re-importing already existing projects skips them rather than executing an overlay merge."
+    },
+    {
+     "technique": "review-before-commit",
+     "verdict": "deviation",
+     "evidence": "lib/import/commit.ts:258 Commit imports all staged projects wholesale without per-entity opt-in parameters, and collision policy silently skips existing records."
+    }
+   ],
+   "registryProposal": "The standard should clarify whether inter-generation legacy archive migrations require full interactive collision resolution (skip/rename/replace) when foreign IDs are deterministic and immutable."
+  },
+  {
+   "context": "plan-and-import",
+   "subject": "import-normalization",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/import/ImportView.tsx:236 The review screen lacks per-entity selection checkboxes and collision policy controls, forcing an all-or-nothing commit of all candidates.",
+   "techniques": [
+    {
+     "technique": "adapter-capability-tables",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/import/ImportView.tsx:30 Precondition does not hold in presentation components as mapping tables belong to parser and transform layers."
+    },
+    {
+     "technique": "durable-intermediate-representation",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/import/ImportView.tsx:156 Precondition does not hold because the client flow operates on transient preview tokens rather than durable intermediate representations."
+    },
+    {
+     "technique": "import-validation",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/import/ImportView.tsx:92 In-browser validation verifies archive integrity and structural validity before any bytes are transmitted to the server door."
+    },
+    {
+     "technique": "intermediate-representation",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/import/ImportView.tsx:97 The client view stages and renders normalized intermediate entities received from the server door without touching raw foreign rows."
+    },
+    {
+     "technique": "lossy-conversion-disclosure",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/import/ImportView.tsx:321 The review screen renders itemized conversion losses at the decision point before commit, displaying entity names, grades, and reasons."
+    },
+    {
+     "technique": "overlay-merge-absence-semantics",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/import/ImportView.tsx:280 Precondition does not hold because collisions with existing records are reported as skips rather than merged via an overlay patch."
+    },
+    {
+     "technique": "review-before-commit",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/import/ImportView.tsx:236 The review gate triggers an all-or-nothing commit across all staged entities without per-entity opt-in selection controls or collision resolution options."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-19T00:42:18.900463+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "import-normalization"
+   ],
+   "techniques": [
+    "adapter-capability-tables",
+    "durable-intermediate-representation",
+    "format-detection",
+    "import-validation",
+    "intermediate-representation",
+    "lossy-conversion-disclosure",
+    "overlay-merge-absence-semantics",
+    "review-before-commit"
+   ],
+   "deviations": 1,
+   "context": "v1-import-and-archive",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  },
+  {
+   "ts": "2026-10-19T00:42:18.900463+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "import-normalization"
+   ],
+   "techniques": [
+    "adapter-capability-tables",
+    "durable-intermediate-representation",
+    "import-validation",
+    "intermediate-representation",
+    "lossy-conversion-disclosure",
+    "overlay-merge-absence-semantics",
+    "review-before-commit"
+   ],
+   "deviations": 1,
+   "context": "plan-and-import",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  }
+ ]
+}
