@@ -1,0 +1,32 @@
+{
+ "schema": "conform-run/1",
+ "worker": "d1c8584b-480c-4dce-8f2a-7a7e6576c01c",
+ "subject": "translation-quality-measurement",
+ "evaluatedAt": "2026-10-19T00:17:52.877455+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "translation-quality-measurement",
+   "context": "article-check-and-critique",
+   "reason": "Not a translation quality measurement pipeline: article-check-and-critique implements deterministic prose structure, text length, and rendered layout checks along with a multi-model critique review loop for drafted English articles and essays; it contains no machine translation engines, language pairs, target locale stores, termbase adherence verification, or MT quality estimation."
+  },
+  {
+   "subject": "translation-quality-measurement",
+   "context": "article-human-gate-and-landing",
+   "reason": "Not a translation pipeline: article-human-gate-and-landing manages the human approval gate, patch diffing, Medium packaging, and git PR publication into ai-registry for drafted English articles; it does not handle localized translation catalogs, pretranslations, or translation quality evaluation."
+  },
+  {
+   "subject": "translation-quality-measurement",
+   "context": "domain-run-job-steps",
+   "reason": "Not a translation pipeline: domain-run-job-steps models media generation production workflows (run and job state machines, lane capacity, plans, cost estimates, and step definitions for research, script, still, frames, parts, record, and finish); it contains no localization, translation catalog, or translation quality measurement infrastructure."
+  },
+  {
+   "subject": "translation-quality-measurement",
+   "context": "landing-cosmos-paper-raster",
+   "reason": "Not a translation pipeline: landing-cosmos-paper-raster handles 2D canvas paper texture generation, ink definitions, seeded RNG, and web worker rasterization for the cosmos visual canvas; it contains no natural language translation, localization catalogs, or translation quality measurement."
+  }
+ ],
+ "consults": []
+}
