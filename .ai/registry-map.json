@@ -3762,7 +3762,11 @@
           "revision": 9,
           "changedAt": "2026-09-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/domain/src/project.ts:54 Domain entities enforce structural and relational invariants at schema doors, status FSMs, and derived state projections without repairing checks or dummy members.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:c6563834f502429c",
+          "evaluatedRevision": 9
         },
         {
           "subject": "structured-output",

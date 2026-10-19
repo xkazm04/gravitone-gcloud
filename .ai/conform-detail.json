@@ -7529,6 +7529,72 @@
         }
       ],
       "registryProposal": "The standard should clarify whether inter-generation legacy archive migrations require full interactive collision resolution (skip/rename/replace) when foreign IDs are deterministic and immutable."
+    },
+    "298a4b92-0268-4d06-99a5-7ad103981170/invariant-placement": {
+      "context": "domain-parts-projects-slots",
+      "subject": "invariant-placement",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T00:49:56.479Z",
+      "worker": "47dad576-301b-4250-9b17-69f62b19b54e",
+      "techniques": [
+        {
+          "technique": "placement-precedes-gate",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/project.ts:54 Project DAG cycles and invalid dependencies are rejected at the schema door rather than caught late at run time."
+        },
+        {
+          "technique": "derived-properties-cannot-be-forged",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/part.ts:13 Part execution state is derived on read rather than declared or stored, eliminating state drift."
+        },
+        {
+          "technique": "consumption-bounds-at-most-once",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/slot.machine.ts:16 The state machine structurally omits publishing-to-scheduled, bounding upload execution to at most once per claim."
+        },
+        {
+          "technique": "indistinguishable-members-do-not-rise",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/part.ts:58 Identifiers are nominally branded at schema doors so the type checker prevents transposition of same-type primitive IDs."
+        },
+        {
+          "technique": "shape-with-a-not-applicable-member",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/partView.ts:65 When a recipe lacks a research part, researchFaceOf returns null rather than polluting the union with a dummy member."
+        },
+        {
+          "technique": "repairing-check-erases-its-evidence",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/publication.ts:13 Unmeasured metrics are kept as null and tagged with lowerBound rather than coerced to zero, preserving absent data evidence."
+        },
+        {
+          "technique": "completeness-at-emission",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/partView.ts:171 Ops for parts produced exclusively by background runs are typed as never, making manual edit emissions impossible."
+        },
+        {
+          "technique": "build-time-evaluation-of-cross-value-invariants",
+          "verdict": "not-applicable",
+          "evidence": "packages/domain/src/project.ts:20 Domain entities do not contain fixed compile-time hardware/layout buffer bounds or quadratic non-overlap constants."
+        },
+        {
+          "technique": "initialization-proof-tokens",
+          "verdict": "not-applicable",
+          "evidence": "packages/domain/src/project.machine.ts:16 Pure domain data types and state machines do not perform subsystem bring-up requiring initialization proof tokens."
+        },
+        {
+          "technique": "occurrence-is-not-a-type",
+          "verdict": "not-applicable",
+          "evidence": "packages/domain/src/slot.machine.ts:39 Domain states and contracts are fully captured by TypeScript types and schema doors."
+        },
+        {
+          "technique": "paired-sites-localize-the-fault",
+          "verdict": "not-applicable",
+          "evidence": "packages/domain/src/publication.ts:46 Pure domain type definitions do not manage pre-operation snapshot pairs across write/read seams."
+        }
+      ]
     }
   }
 }

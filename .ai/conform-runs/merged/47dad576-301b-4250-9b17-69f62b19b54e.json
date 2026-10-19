@@ -1,0 +1,241 @@
+{
+ "schema": "conform-run/1",
+ "worker": "47dad576-301b-4250-9b17-69f62b19b54e",
+ "subject": "invariant-placement",
+ "evaluatedAt": "2026-10-19T00:49:56.479684+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [
+  {
+   "context": "part-port-real-and-contract",
+   "subject": "invariant-placement",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/[id]/_part/researchView.ts:28 When an unrecognized card kind arrives, cardView coerces it to 'fact' rather than refusing it, destroying the evidence that an invalid kind was received.",
+   "techniques": [
+    {
+     "technique": "repairing-check-erases-its-evidence",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/researchView.ts:28 cardView silently repairs unrecognized card kinds to 'fact' rather than refusing them, converting an invalid state to valid."
+    },
+    {
+     "technique": "indistinguishable-members-do-not-rise",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/schema.ts:79 The cue-span operation takes first and last as indistinguishable primitive id strings, distinguished only by property position."
+    },
+    {
+     "technique": "placement-precedes-gate",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/actions.ts:28 Server actions place operation validation at the Zod schema door before invoking serverPart().opPart."
+    },
+    {
+     "technique": "derived-properties-cannot-be-forged",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/realResearch.ts:26 Notebook source digest is restored from stored metadata, and the override carries a written justification at the site."
+    },
+    {
+     "technique": "completeness-at-emission",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/realRecs.ts:14 Unchecked cast of stored records documents that it rests on validated write doors rather than run-time verification."
+    },
+    {
+     "technique": "consumption-bounds-at-most-once",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/real.ts:147 Act launch verifies and consumes a single-use receipt token in one transaction, rejecting stale replayed tokens."
+    },
+    {
+     "technique": "shape-with-a-not-applicable-member",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/kinds.ts:51 Kind definitions partition known kinds without adding an artificial catch-all 'other' or 'none' member."
+    },
+    {
+     "technique": "build-time-evaluation-of-cross-value-invariants",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/_part/hash.ts:7 Runtime hashing of objects; no compile-time cross-constant bounds."
+    },
+    {
+     "technique": "initialization-proof-tokens",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/_part/port.ts:42 No subsystem initialization proof token is required to access part ports."
+    }
+   ]
+  },
+  {
+   "context": "library-port",
+   "subject": "invariant-placement",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/library/_port/actions.ts:34 Library item and project identifiers are typed as unbranded strings at the action boundary, failing to use domain-branded types to prevent transposition.",
+   "techniques": [
+    {
+     "technique": "indistinguishable-members-do-not-rise",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/library/_port/actions.ts:34 Actions accept projectId and id as raw strings, failing to use nominal branded types to prevent accidental swapping."
+    },
+    {
+     "technique": "repairing-check-erases-its-evidence",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/library/_port/real.ts:90 When a project row lacks a valid string title, projectTitle repairs by returning id rather than refusing or signaling."
+    },
+    {
+     "technique": "placement-precedes-gate",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_port/actions.ts:43 Input query constraints are checked at the action schema door before delegating to the server library."
+    },
+    {
+     "technique": "shape-with-a-not-applicable-member",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_port/present.ts:34 Returns undefined for non-export items instead of adding a dummy not-applicable member to a status shape."
+    },
+    {
+     "technique": "derived-properties-cannot-be-forged",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_port/present.ts:46 Visual face property is computed on the fly from media facts and row properties rather than stored as a mutable marker."
+    },
+    {
+     "technique": "build-time-evaluation-of-cross-value-invariants",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/_port/contract.ts:20 No compile-time cross-value invariant evaluations exist in this port."
+    },
+    {
+     "technique": "initialization-proof-tokens",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/_port/port.ts:27 Side is switched by env variable without initialization proof tokens."
+    }
+   ]
+  },
+  {
+   "context": "domain-parts-projects-slots",
+   "subject": "invariant-placement",
+   "bundle": "software-engineering",
+   "state": "conformant",
+   "evidence": "packages/domain/src/project.ts:54 Domain entities enforce structural and relational invariants at schema doors, status FSMs, and derived state projections without repairing checks or dummy members.",
+   "techniques": [
+    {
+     "technique": "placement-precedes-gate",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/project.ts:54 Project DAG cycles and invalid dependencies are rejected at the schema door rather than caught late at run time."
+    },
+    {
+     "technique": "derived-properties-cannot-be-forged",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/part.ts:13 Part execution state is derived on read rather than declared or stored, eliminating state drift."
+    },
+    {
+     "technique": "consumption-bounds-at-most-once",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/slot.machine.ts:16 The state machine structurally omits publishing-to-scheduled, bounding upload execution to at most once per claim."
+    },
+    {
+     "technique": "indistinguishable-members-do-not-rise",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/part.ts:58 Identifiers are nominally branded at schema doors so the type checker prevents transposition of same-type primitive IDs."
+    },
+    {
+     "technique": "shape-with-a-not-applicable-member",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/partView.ts:65 When a recipe lacks a research part, researchFaceOf returns null rather than polluting the union with a dummy member."
+    },
+    {
+     "technique": "repairing-check-erases-its-evidence",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/publication.ts:13 Unmeasured metrics are kept as null and tagged with lowerBound rather than coerced to zero, preserving absent data evidence."
+    },
+    {
+     "technique": "completeness-at-emission",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/partView.ts:171 Ops for parts produced exclusively by background runs are typed as never, making manual edit emissions impossible."
+    },
+    {
+     "technique": "build-time-evaluation-of-cross-value-invariants",
+     "verdict": "not-applicable",
+     "evidence": "packages/domain/src/project.ts:20 Domain entities do not contain fixed compile-time hardware/layout buffer bounds or quadratic non-overlap constants."
+    },
+    {
+     "technique": "initialization-proof-tokens",
+     "verdict": "not-applicable",
+     "evidence": "packages/domain/src/project.machine.ts:16 Pure domain data types and state machines do not perform subsystem bring-up requiring initialization proof tokens."
+    },
+    {
+     "technique": "occurrence-is-not-a-type",
+     "verdict": "not-applicable",
+     "evidence": "packages/domain/src/slot.machine.ts:39 Domain states and contracts are fully captured by TypeScript types and schema doors."
+    },
+    {
+     "technique": "paired-sites-localize-the-fault",
+     "verdict": "not-applicable",
+     "evidence": "packages/domain/src/publication.ts:46 Pure domain type definitions do not manage pre-operation snapshot pairs across write/read seams."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-19T00:49:56.479684+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "invariant-placement"
+   ],
+   "techniques": [
+    "build-time-evaluation-of-cross-value-invariants",
+    "completeness-at-emission",
+    "consumption-bounds-at-most-once",
+    "derived-properties-cannot-be-forged",
+    "indistinguishable-members-do-not-rise",
+    "initialization-proof-tokens",
+    "placement-precedes-gate",
+    "repairing-check-erases-its-evidence",
+    "shape-with-a-not-applicable-member"
+   ],
+   "deviations": 1,
+   "context": "part-port-real-and-contract",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  },
+  {
+   "ts": "2026-10-19T00:49:56.479684+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "invariant-placement"
+   ],
+   "techniques": [
+    "build-time-evaluation-of-cross-value-invariants",
+    "derived-properties-cannot-be-forged",
+    "indistinguishable-members-do-not-rise",
+    "initialization-proof-tokens",
+    "placement-precedes-gate",
+    "repairing-check-erases-its-evidence",
+    "shape-with-a-not-applicable-member"
+   ],
+   "deviations": 1,
+   "context": "library-port",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  },
+  {
+   "ts": "2026-10-19T00:49:56.479684+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "invariant-placement"
+   ],
+   "techniques": [
+    "build-time-evaluation-of-cross-value-invariants",
+    "completeness-at-emission",
+    "consumption-bounds-at-most-once",
+    "derived-properties-cannot-be-forged",
+    "indistinguishable-members-do-not-rise",
+    "initialization-proof-tokens",
+    "occurrence-is-not-a-type",
+    "paired-sites-localize-the-fault",
+    "placement-precedes-gate",
+    "repairing-check-erases-its-evidence",
+    "shape-with-a-not-applicable-member"
+   ],
+   "deviations": 0,
+   "context": "domain-parts-projects-slots",
+   "via": "curator-multi:agy",
+   "model": "gemini-3.8-flash-high"
+  }
+ ]
+}
