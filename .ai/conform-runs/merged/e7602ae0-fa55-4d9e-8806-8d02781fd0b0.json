@@ -1,0 +1,22 @@
+{
+ "schema": "conform-run/1",
+ "worker": "e7602ae0-fa55-4d9e-8806-8d02781fd0b0",
+ "subject": "conversation-orchestration",
+ "evaluatedAt": "2026-10-19T02:07:49.802881+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "conversation-orchestration",
+   "context": "ui-marks-and-text",
+   "reason": "The ui-marks-and-text context implements general UI marks and non-prose text components (Chip, Ghost, Glyph, Hint with twelve-word rule, CapsHeading, Empty, ErrorLine, Keycaps, StaleBadge, SrOnly) for the studio design system rather than resident companion conversation orchestration. Per seat instructions prohibiting not-applicable verdicts, the pair is declined."
+  },
+  {
+   "subject": "conversation-orchestration",
+   "context": "ui-ledger-timeline",
+   "reason": "The ui-ledger-timeline context implements ledger and time-based display components (Crumbs, HeaderChips, EventRow, LedgerLink, Json highlighting, TimeStrip, Waveform) rather than resident companion conversation orchestration. Per seat instructions prohibiting not-applicable verdicts, the pair is declined."
+  }
+ ],
+ "consults": []
+}
