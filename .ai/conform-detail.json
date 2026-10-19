@@ -8662,6 +8662,138 @@
           "evidence": "packages/kernel/src/store.ts:190 Transaction bodies run synchronously inside the engine transaction; no consensus round trip separates reads from applying writes."
         }
       ]
+    },
+    "9c525f5b-e99e-405e-a21d-ba19247ed5a7/untrusted-extension-host": {
+      "context": "plan-and-import",
+      "subject": "untrusted-extension-host",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T22:09:20.464Z",
+      "worker": "9a19f54e-385e-4d58-800b-e9583a283f3d",
+      "techniques": [
+        {
+          "technique": "canonicalizable-privilege-declaration",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/receipt.tsx:119 Confirmation binds a launch receipt, spending ceiling and mode; this context declares no extension privileges."
+        },
+        {
+          "technique": "capability-subtraction-sandbox",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/import/ImportView.tsx:118 The browser exports account data as bytes; no embedded extension runtime is constructed."
+        },
+        {
+          "technique": "declared-schema-extension-storage",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/import/ImportView.tsx:56 This reads the application's existing project store, with no persistence interface exposed to extension code."
+        },
+        {
+          "technique": "derived-capability-inventory",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/compose.tsx:38 Composition submits recipe and source identifiers; it does not load modules written against an extension language."
+        },
+        {
+          "technique": "grant-change-consent",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/import/ImportView.tsx:156 The token confirms an archive preview, not an installed extension's changed grant."
+        },
+        {
+          "technique": "host-api-import-budget",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/import/ImportView.tsx:96 Archive preview is a data request, with no isolated extension execution or extension API import budget."
+        },
+        {
+          "technique": "isolation-tier-independent-extension-api",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/Plan.tsx:94 The port edits application project parts; there are no extension execution tiers sharing this API."
+        },
+        {
+          "technique": "per-callback-failure-policy",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/receipt.tsx:163 This converts an application action result; the callbacks inspected here are not foreign extension registrations."
+        },
+        {
+          "technique": "pluggable-isolation-runner",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/import/ImportView.tsx:74 The import transport posts archive bytes rather than selecting or invoking an extension isolation runner."
+        },
+        {
+          "technique": "safe-mode-registration",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/NoPlan.tsx:34 This is the project's empty state; the context has no installed-extension boot or recovery lifecycle."
+        },
+        {
+          "technique": "two-tier-extension-format",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/import/ImportView.tsx:190 The file picker targets project archives, whose server parser accepts data sections rather than executable extension formats."
+        }
+      ]
+    },
+    "17769afc-f302-4371-8956-63b8f52ada32/untrusted-extension-host": {
+      "context": "asset-library-store",
+      "subject": "untrusted-extension-host",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T22:09:20.464Z",
+      "worker": "9a19f54e-385e-4d58-800b-e9583a283f3d",
+      "techniques": [
+        {
+          "technique": "canonicalizable-privilege-declaration",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/core.ts:160 Canonicalization applies to an asset record, not an extension privilege declaration."
+        },
+        {
+          "technique": "capability-subtraction-sandbox",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/measures.ts:55 This module validates audio measurement data; it constructs no scripting runtime for foreign code."
+        },
+        {
+          "technique": "declared-schema-extension-storage",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/write.ts:118 Writers accept application-defined Library items, not extension collection or index declarations."
+        },
+        {
+          "technique": "derived-capability-inventory",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/core.ts:180 The derived digest describes indexed asset content; there is no extension module or capability inventory to derive."
+        },
+        {
+          "technique": "grant-change-consent",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/write.ts:88 Update comparison detects unchanged index rows, with no installed extension or consented grant involved."
+        },
+        {
+          "technique": "host-api-import-budget",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/clauses.ts:33 The limit bounds query rows, not an isolated extension's wall-clock execution."
+        },
+        {
+          "technique": "isolation-tier-independent-extension-api",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/query.ts:97 This is a validated application query interface, with no extension tiers whose APIs must remain identical."
+        },
+        {
+          "technique": "per-callback-failure-policy",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/write.ts:126 The write transaction invokes a local index writer rather than registered foreign callbacks."
+        },
+        {
+          "technique": "pluggable-isolation-runner",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/query.ts:100 Execution uses the kernel database reader; this context runs no isolated extensions on deployment-specific runners."
+        },
+        {
+          "technique": "safe-mode-registration",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/write.ts:135 Lifecycle cleanup concerns projected asset rows by feed, with no extension registration or boot recovery path."
+        },
+        {
+          "technique": "two-tier-extension-format",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/core.ts:162 Kinds classify Library assets for indexing; they do not assign executable extensions to trust tiers."
+        }
+      ]
     }
   }
 }

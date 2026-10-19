@@ -1810,7 +1810,11 @@
           "revision": 6,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/kernel/src/library/schema.ts:205 Context searches found no extension, plugin or sandbox matches, and the module installs fixed Library migrations rather than accepting runtime-installed extension schemas or code.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:a23407994bc4b9db",
+          "evaluatedRevision": 6
         },
         {
           "subject": "prompt-assembly",
@@ -9713,7 +9717,11 @@
           "revision": 6,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/import/archive.ts:38 Context searches found no extension, plugin or sandbox matches, and tracing the import door showed a closed set of project-data sections rather than an extension installation format.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:a23407994bc4b9db",
+          "evaluatedRevision": 6
         }
       ],
       "governance": "governed"
