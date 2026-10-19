@@ -57,7 +57,20 @@ function req(path: string, opts: { bearer?: string; ip: string; body?: unknown }
 
 /** The money routes driven for 401-without-spending: none since Phase 6 L70 (see the header).
  *  A route that calls a money door and is not listed here fails the derived check below. */
-const ROUTES: [string, string, (r: Request) => Promise<Response>][] = [];
+const ROUTES: [string, string, (r: Request) => Promise<Response>][] = [
+  // Drives the operator's signed-in Medium account (lib/medium). The run it names does not exist,
+  // so an admitted caller meets the store's 404 and nothing is read, built or pasted; the store
+  // is a scratch directory all the same.
+  [
+    "articles/medium",
+    "/api/articles/[runId]/medium",
+    async (r) => {
+      process.env.ARTICLES_STORE_DIR = join(tmpdir(), "gt-auth-articles-none");
+      const { POST } = await import("../../app/api/articles/[runId]/medium/route.ts");
+      return POST(r, { params: Promise.resolve({ runId: "probe-run" }) });
+    },
+  ],
+];
 
 /**
  * Routes that are PUBLIC on purpose, each with the reason it is.
@@ -292,13 +305,35 @@ test("every deliberately-public route reads no environment, transitively", () =>
   }
 });
 
-keepEnv([ACCESS_SECRET_VAR, "NEXT_PUBLIC_DEV_AUTH", RATE_CAPACITY_VAR, RATE_WINDOW_SEC_VAR, RATE_KEY_CAP_VAR]);
+keepEnv([ACCESS_SECRET_VAR, "NEXT_PUBLIC_DEV_AUTH", RATE_CAPACITY_VAR, RATE_WINDOW_SEC_VAR, RATE_KEY_CAP_VAR, "ARTICLES_STORE_DIR"]);
 
 test.beforeEach(() => {
   __resetRateLimit();
   process.env[ACCESS_SECRET_VAR] = SECRET; // gate configured for the run
   delete process.env.NEXT_PUBLIC_DEV_AUTH; // no dev bypass during the probe
 });
+
+// ── The money routes under app/api, one request each ──
+//
+// What the derived check above demands: a route behind the money door is DRIVEN here with a
+// real Request. Nobody presents a credential: 401, and the handler behind the door never runs.
+// The secret presented and the request deliberately unservable: past the door (not 401) and
+// refused as the client's mistake (4xx), before anything is spent.
+for (const [name, path, handler] of ROUTES) {
+  test(`route ${name}: 401 without auth, and nothing behind the door runs`, async () => {
+    const res = await handler(req(path, { ip: `172.16.0.${ROUTES.findIndex((x) => x[0] === name) + 1}` }));
+    console.log(`[auth] ${name} unauthenticated -> ${res.status}`);
+    expect(res.status).toBe(401);
+  });
+
+  test(`route ${name}: a valid secret PASSES the door (4xx for the run that is not there, never 401)`, async () => {
+    const res = await handler(req(path, { ip: `172.16.1.${ROUTES.findIndex((x) => x[0] === name) + 1}`, bearer: SECRET, body: {} }));
+    console.log(`[auth] ${name} authed+no-such-run -> ${res.status}`);
+    expect(res.status).not.toBe(401);
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBeLessThan(500);
+  });
+}
 
 // ── The guard function, in isolation (valid / missing / wrong / unconfigured) ──
 
