@@ -1,0 +1,22 @@
+{
+ "schema": "conform-run/1",
+ "worker": "e4c73805-3328-456e-9100-255eee12af1b",
+ "subject": "optional-dependency-degradation",
+ "evaluatedAt": "2026-10-19T21:14:41.020197+00:00",
+ "provider": "agy",
+ "model": "gemini-3.8-flash-high",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "optional-dependency-degradation",
+   "context": "library-browser-screen",
+   "reason": "The library-browser-screen context implements a Next.js asset-browsing React UI for human operators (composed in Library.tsx with Toolbar, Results, DetailView, block-based virtualization, and URL state sync) reading from an internal library port, with no external service dependencies or deployment environment configuration. The pair is a lexical false positive from keyword matching on 'library', 'route', and 'filters'. Because not-applicable is not accepted from this seat, this context is declined."
+  },
+  {
+   "subject": "optional-dependency-degradation",
+   "context": "asset-library-store",
+   "reason": "The asset-library-store context implements the internal kernel SQLite schema, queries, clause compilation, facet counts, and detail projections for the asset library (packages/kernel/src/library/*.ts) with no external service dependencies, environment variable parsing, or optional package extras. The pair is a lexical false positive from keyword matching on 'library', 'extras', and 'write'. Because not-applicable is not accepted from this seat, this context is declined."
+  }
+ ],
+ "consults": []
+}
