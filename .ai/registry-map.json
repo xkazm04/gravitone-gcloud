@@ -11652,7 +11652,11 @@
           "revision": 7,
           "changedAt": "2026-09-18",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/kernel/src/spend/core.ts:96 Context searches found no entitlement, tierId, or subscriptionId references, and the inspected code enforces vendor-spend ceilings, which the standard explicitly excludes from entitlement gating.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:58f21c0561a86e45",
+          "evaluatedRevision": 7
         },
         {
           "subject": "voice-io",

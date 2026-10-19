@@ -1,0 +1,216 @@
+{
+  "schema": "conform-run/1",
+  "worker": "a87fba3d-c5f1-435b-9093-b39bdf1c12fe",
+  "subject": "plan-entitlements",
+  "evaluatedAt": "2026-10-19T00:56:15.434714+00:00",
+  "provider": "codex",
+  "model": "gpt-6.1-sol",
+  "pairs": [
+    {
+      "context": "spend-and-pricing",
+      "subject": "plan-entitlements",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "packages/kernel/src/spend/core.ts:96 Context searches found no entitlement, tierId, or subscriptionId references, and the inspected code enforces vendor-spend ceilings, which the standard explicitly excludes from entitlement gating.",
+      "techniques": [
+        {
+          "technique": "capability-gate-predicates",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/spend/core.ts:96 This predicate checks a consumption ceiling; the technique explicitly excludes spend ceilings."
+        },
+        {
+          "technique": "deployment-mode-short-circuit",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/spend/v1Port.ts:174 The deployment-dependent refusal protects storage correctness; it is not a commercial capability gate."
+        },
+        {
+          "technique": "entitlement-lifecycle-revocation",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/spend/core.ts:63 The lifecycle belongs to spend reservations; no subscription entitlement lifecycle was found."
+        },
+        {
+          "technique": "id-vs-label-split",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/pricing/table.ts:246 Persistable pricing identity names a vendor, model, and unit; no tenant tier identity was found."
+        },
+        {
+          "technique": "inherited-tier-not-cloned-tier",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/pricing/quote.ts:79 Quotes resolve dependency rates by vendor and model; no customer agreement derived from a tier was found."
+        },
+        {
+          "technique": "live-catalog-edit-is-a-lifecycle-event",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/pricing/quote.ts:62 Catalog validity concerns dated vendor rates, not changes to capabilities promised to subscribers."
+        },
+        {
+          "technique": "price-book-authority",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/pricing/quote.ts:70 This is the cost of a metered dependency, an explicit exclusion in this technique."
+        },
+        {
+          "technique": "provider-publishes-state-not-decision",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/spend/ledger.ts:210 The module enforces its own spend budget rather than serving another product's operator-defined entitlement vocabulary."
+        },
+        {
+          "technique": "subtractive-entitlement",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/spend/ledger.ts:359 Subtraction calculates remaining spend headroom; no inherited capability override layer was found."
+        },
+        {
+          "technique": "tier-model-single-source",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/pricing/table.ts:249 The shared model is a dependency rate table, not a set of commercial tiers."
+        }
+      ],
+      "absenceTerms": [
+        "entitlement",
+        "tierId",
+        "subscriptionId"
+      ]
+    },
+    {
+      "context": "plan-and-import",
+      "subject": "plan-entitlements",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "app/(studio)/projects/_plan/Plan.tsx:127 Context searches found no entitlement, tierId, or subscriptionId references, and the inspected plan and import flows concern project execution receipts and archive migration rather than subscription plans.",
+      "techniques": [
+        {
+          "technique": "capability-gate-predicates",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/Plan.tsx:123 Launch availability checks project draft and request state; no paid-feature gate was found."
+        },
+        {
+          "technique": "deployment-mode-short-circuit",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/receipt.tsx:155 The exposed mode selects dry or live execution, not commercial deployment entitlements."
+        },
+        {
+          "technique": "entitlement-lifecycle-revocation",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/receipt.tsx:124 The handled transition refreshes a stale launch receipt; no subscription grant or revocation handler was found."
+        },
+        {
+          "technique": "id-vs-label-split",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/Plan.tsx:213 The displayed label identifies a production recipe, not a commercial tier."
+        },
+        {
+          "technique": "inherited-tier-not-cloned-tier",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/Plan.tsx:94 Customization edits a project part; no negotiated customer price or derived tier agreement was found."
+        },
+        {
+          "technique": "live-catalog-edit-is-a-lifecycle-event",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/Plan.tsx:114 Renaming changes one project's title, not a subscribed commercial catalog."
+        },
+        {
+          "technique": "price-book-authority",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/Plan.tsx:244 The displayed amount is an estimated production cost, not a price charged for a subscription tier."
+        },
+        {
+          "technique": "provider-publishes-state-not-decision",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/receipt.tsx:119 The contract confirms this product's execution receipt; it does not publish another product's entitlement state."
+        },
+        {
+          "technique": "subtractive-entitlement",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/Plan.tsx:107 The override-like merge coalesces project-part edits; no subscription capability removal layer was found."
+        },
+        {
+          "technique": "tier-model-single-source",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/compose.tsx:38 Composition selects a recipe and source material; these plans are production configurations rather than paid tiers."
+        }
+      ],
+      "absenceTerms": [
+        "entitlement",
+        "tierId",
+        "subscriptionId"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "plan-entitlements",
+      "context": "produce-compose-receipt",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor produce.ts:51 is optionCost, a per-unit USD calculation, which doesn't show that a plan or tier precondition is absent. Unpriced.tsx:15 even checks for 'subscription' in a reason string, and the seat's evidence never mentions it. The technique anchors (Receipt mode chip, ModelPicker, Lane"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-19T00:56:15.434714+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "plan-entitlements"
+      ],
+      "techniques": [
+        "capability-gate-predicates",
+        "deployment-mode-short-circuit",
+        "entitlement-lifecycle-revocation",
+        "id-vs-label-split",
+        "inherited-tier-not-cloned-tier",
+        "live-catalog-edit-is-a-lifecycle-event",
+        "price-book-authority",
+        "provider-publishes-state-not-decision",
+        "subtractive-entitlement",
+        "tier-model-single-source"
+      ],
+      "deviations": 0,
+      "context": "spend-and-pricing",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-19T00:56:15.434714+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "plan-entitlements"
+      ],
+      "techniques": [
+        "capability-gate-predicates",
+        "deployment-mode-short-circuit",
+        "entitlement-lifecycle-revocation",
+        "id-vs-label-split",
+        "inherited-tier-not-cloned-tier",
+        "live-catalog-edit-is-a-lifecycle-event",
+        "price-book-authority",
+        "provider-publishes-state-not-decision",
+        "subtractive-entitlement",
+        "tier-model-single-source"
+      ],
+      "deviations": 0,
+      "context": "plan-and-import",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "ts": "2026-10-19T00:56:15.434714+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "plan-entitlements"
+      ],
+      "techniques": [
+        "capability-gate-predicates",
+        "deployment-mode-short-circuit",
+        "entitlement-lifecycle-revocation",
+        "id-vs-label-split",
+        "inherited-tier-not-cloned-tier",
+        "live-catalog-edit-is-a-lifecycle-event",
+        "price-book-authority",
+        "provider-publishes-state-not-decision",
+        "subtractive-entitlement",
+        "tier-model-single-source"
+      ],
+      "deviations": 0,
+      "context": "produce-compose-receipt",
+      "via": "curator-multi:codex",
+      "model": "gpt-6.1-sol"
+    }
+  ]
+}

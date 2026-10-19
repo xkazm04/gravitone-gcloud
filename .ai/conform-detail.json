@@ -7595,6 +7595,133 @@
           "evidence": "packages/domain/src/publication.ts:46 Pure domain type definitions do not manage pre-operation snapshot pairs across write/read seams."
         }
       ]
+    },
+    "5e00d05c-885e-4eac-ad26-f937df9d612f/plan-entitlements": {
+      "context": "spend-and-pricing",
+      "subject": "plan-entitlements",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T00:56:15.434Z",
+      "worker": "a87fba3d-c5f1-435b-9093-b39bdf1c12fe",
+      "techniques": [
+        {
+          "technique": "capability-gate-predicates",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/spend/core.ts:96 This predicate checks a consumption ceiling; the technique explicitly excludes spend ceilings."
+        },
+        {
+          "technique": "deployment-mode-short-circuit",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/spend/v1Port.ts:174 The deployment-dependent refusal protects storage correctness; it is not a commercial capability gate."
+        },
+        {
+          "technique": "entitlement-lifecycle-revocation",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/spend/core.ts:63 The lifecycle belongs to spend reservations; no subscription entitlement lifecycle was found."
+        },
+        {
+          "technique": "id-vs-label-split",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/pricing/table.ts:246 Persistable pricing identity names a vendor, model, and unit; no tenant tier identity was found."
+        },
+        {
+          "technique": "inherited-tier-not-cloned-tier",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/pricing/quote.ts:79 Quotes resolve dependency rates by vendor and model; no customer agreement derived from a tier was found."
+        },
+        {
+          "technique": "live-catalog-edit-is-a-lifecycle-event",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/pricing/quote.ts:62 Catalog validity concerns dated vendor rates, not changes to capabilities promised to subscribers."
+        },
+        {
+          "technique": "price-book-authority",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/pricing/quote.ts:70 This is the cost of a metered dependency, an explicit exclusion in this technique."
+        },
+        {
+          "technique": "provider-publishes-state-not-decision",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/spend/ledger.ts:210 The module enforces its own spend budget rather than serving another product's operator-defined entitlement vocabulary."
+        },
+        {
+          "technique": "subtractive-entitlement",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/spend/ledger.ts:359 Subtraction calculates remaining spend headroom; no inherited capability override layer was found."
+        },
+        {
+          "technique": "tier-model-single-source",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/pricing/table.ts:249 The shared model is a dependency rate table, not a set of commercial tiers."
+        }
+      ]
+    },
+    "cd263cf6-0195-4db1-820d-2435a3af746c/plan-entitlements": {
+      "context": "produce-compose-receipt",
+      "subject": "plan-entitlements",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T00:56:15.434Z",
+      "techniques": [
+        {
+          "technique": "capability-gate-predicates",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/produce/Receipt.tsx:96 Confirmation is blocked by invalid ceiling input; no paid-plan capability predicate was found."
+        },
+        {
+          "technique": "deployment-mode-short-circuit",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/produce/Receipt.tsx:105 Mode denotes dry or live job execution, not whether a deployment sells capabilities."
+        },
+        {
+          "technique": "entitlement-lifecycle-revocation",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/produce/LaneHold.tsx:45 Acknowledgement addresses an interrupted paid vendor job; no subscription cancellation or recovery lifecycle was found."
+        },
+        {
+          "technique": "id-vs-label-split",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/produce/PlanTable.tsx:44 The selected identity belongs to a vendor-model option, not a tenant tier."
+        },
+        {
+          "technique": "inherited-tier-not-cloned-tier",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/produce/RerouteList.tsx:51 A choice selects a production route; no customer-specific commercial agreement or inherited tier was found."
+        },
+        {
+          "technique": "live-catalog-edit-is-a-lifecycle-event",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/produce/produce.ts:125 Change detection compares individual launch receipts, not catalog edits affecting subscribed tenants."
+        },
+        {
+          "technique": "price-book-authority",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/produce/Receipt.tsx:78 Receipt lines display dependency usage costs, which this technique explicitly excludes."
+        },
+        {
+          "technique": "provider-publishes-state-not-decision",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/produce/RerouteList.tsx:8 The consumed server preview describes production-route deltas, not operator-defined entitlements served to another product."
+        },
+        {
+          "technique": "subtractive-entitlement",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/produce/produce.ts:132 Removed entries are receipt-line differences; they are not exceptions to inherited tier capabilities."
+        },
+        {
+          "technique": "tier-model-single-source",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/produce/ComposeDialog.tsx:88 The rendered catalog contains composition recipes; no commercial tier catalog was found."
+        }
+      ],
+      "withdrawn": {
+        "worker": "a87fba3d-c5f1-435b-9093-b39bdf1c12fe",
+        "state": "not-applicable",
+        "at": "2026-10-19T00:56:39.749705+00:00",
+        "reason": "reviewer (sonnet): The anchor produce.ts:51 is optionCost, a per-unit USD calculation, which doesn't show that a plan or tier precondition is absent. Unpriced.tsx:15 even checks for 'subscription' in a reason string, and the seat's evidence never mentions it. The technique anchors (Receipt mode chip, ModelPicker, Lane"
+      }
     }
   }
 }
