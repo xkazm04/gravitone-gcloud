@@ -11,6 +11,7 @@
 
 import type { Conclusion } from "@/lib/notebook/conclusions";
 import type { Dimension } from "@/lib/notebook/dimensions";
+import type { SerializableProbe } from "@/lib/script/gate";
 
 export type Confidence = "high" | "medium" | "low";
 
@@ -317,6 +318,11 @@ export interface Unknown {
    *  gate.ts change (a resolved unknown whose resolution widens needs its probe
    *  retired with it), and gate.ts is another lot's file. */
   resolvedBy?: string;
+  /** The machine form of `impact`: what the render boundary enforces. Resolves
+   *  ahead of a draft's `probes[id]` and the fixture `PROBES[id]` (gate.ts
+   *  `probesFor`). Patterns travel as `{source, flags}` so a research run can
+   *  author them; an unknown without one is reported `unmeasured`, not honoured. */
+  probe?: SerializableProbe;
 }
 
 /** What the script MUST say — the other half of `Unknown`, beside it rather

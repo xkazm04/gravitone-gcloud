@@ -108,17 +108,15 @@ export function compileProbe(p: SerializableProbe): Probe {
   return out;
 }
 
-/** The probe each unknown is enforced by: the draft's own, else the fixture
- *  table's. (`unknown.probe` joins the front of this order once the notebook
- *  schema carries it — script-phase-A, session 2.) An unknown neither answers
- *  is left out, and `checkConstraints` reports it `unmeasured`. */
+/** The probe each unknown is enforced by: the unknown's own (`u.probe`), else
+ *  the draft's, else the fixture table's. An unknown none answers is left out, and `checkConstraints` reports it `unmeasured`. */
 export function probesFor(
   unknowns: readonly Unknown[],
   draft?: { probes?: Record<string, SerializableProbe> },
 ): Record<string, Probe> {
   const out: Record<string, Probe> = {};
   for (const u of unknowns) {
-    const own = draft?.probes?.[u.id];
+    const own = u.probe ?? draft?.probes?.[u.id];
     const probe = own ? compileProbe(own) : PROBES[u.id];
     if (probe) out[u.id] = probe;
   }
