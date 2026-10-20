@@ -368,6 +368,14 @@ jobs:
       - name: next typecheck
         run: npm run typecheck:next
 
+      # The browser the probes launch (hint-tap, the articles render and landing
+      # probes call chromium.launch(); so do tests/next-server's landing tests
+      # under `next unit`, so this installs before that step), at the version
+      # the committed lockfile pins. Without it those probes fail with "Executable doesn't exist" on a
+      # bare runner; the `live` job installs the same browser for the same reason.
+      - name: install chromium for the probes
+        run: npx playwright install --with-deps chromium
+
       # BLOCKING. Vitest: the packages' own tests and the gate liveness fixtures.
       - name: next unit
         run: npm run test:unit
@@ -376,13 +384,6 @@ jobs:
       # px value in any *.module.css (packages/ui/test seeds each violation).
       - name: next tokens
         run: npm run tokens:check
-
-      # The browser the probes launch (hint-tap, the articles render and landing
-      # probes call chromium.launch()), at the version the committed lockfile
-      # pins. Without it those probes fail with "Executable doesn't exist" on a
-      # bare runner; the `live` job installs the same browser for the same reason.
-      - name: install chromium for the probes
-        run: npx playwright install --with-deps chromium
 
       # BLOCKING. Node-context probes. Not skipped when earlier steps are
       # green-but-uninteresting: this is the rung that refuses.
@@ -544,6 +545,19 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      # Node and `npm ci`, from the committed lockfile: selftest.py's acquire case
+      # writes through the kernel store door (packages/kernel/py/kernel_store.py),
+      # which migrates the SQLite store by spawning workers/runner.mts. Without
+      # the installed packages that spawn dies with ERR_MODULE_NOT_FOUND and the
+      # case fails (red on main since 2026-10-19). Input stays pinned by the lock.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: install
+        run: npm ci
 
       # PINNED, and it is the only input to this job that is not a committed file
       # in this tree. No `cache:` — there is nothing to cache, because there is
