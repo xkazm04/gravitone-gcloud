@@ -13,6 +13,7 @@ import type { Result } from "@gt/domain/errors";
 
 import type { BoardPacket } from "../src/board/port.ts";
 import { ConsequencePanel } from "../src/components/consequence/ConsequencePanel.tsx";
+import { SeriesBadge } from "../src/components/cull/SeriesBadge.tsx";
 import { MatrixCull } from "../src/components/cull/MatrixCull.tsx";
 import { railGroups } from "../src/components/desk/PacketRail.tsx";
 import { BlindPair } from "../src/components/pair/BlindPair.tsx";
@@ -127,5 +128,23 @@ describe("the packet rail", () => {
       ["image", 1, ["pkt:x:1", "pkt:x:2"]],
       ["audio", 1, ["pkt:x:3"]],
     ]);
+  });
+});
+
+describe("the series badge", () => {
+  test("a series mismatch is drawn with both series named; a match draws nothing", () => {
+    const html = renderToStaticMarkup(h(SeriesBadge, { measured: "qwen3-vl@d2", graded: ["qwen3-vl@d1"] }));
+    expect(html).toContain("qwen3-vl@d1");
+    expect(html).toContain("calibration measured on qwen3-vl@d2");
+    expect(renderToStaticMarkup(h(SeriesBadge, { measured: "qwen3-vl@d2", graded: [] }))).toBe("");
+  });
+
+  test("the matrix cull draws it when the packet names a mismatch", () => {
+    const base = packet({ items: [{ ...img("a", "r") }] }, { items: {}, rows: [{ id: "r", label: "r" }] });
+    const props = { verdicts: {}, decide: () => undefined, undo: () => undefined, onCommit: () => undefined, keys: false };
+    const marked = renderToStaticMarkup(h(MatrixCull, { ...props, packet: { ...base, present: { ...base.present, series: { measured: "m@2", graded: ["m@1"] } } } }));
+    const clean = renderToStaticMarkup(h(MatrixCull, { ...props, packet: base }));
+    expect(marked).toContain("grades from m@1");
+    expect(clean).not.toContain("grades from");
   });
 });

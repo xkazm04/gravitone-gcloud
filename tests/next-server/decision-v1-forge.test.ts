@@ -32,7 +32,7 @@ import { CALIBRATION_METHOD, type GraderCalibrationFile } from "../../lib/foundr
 import { __setFoundryFsPort } from "../../lib/foundry/fsPort.ts";
 import { closeKernel, kernel } from "../../lib/kernelStore.ts";
 import type { Candidate, RunManifest, StyleDef, Verdicts } from "../../lib/foundry/types.ts";
-import { forgeAdapter, gradesOf, importVerdict, type ForgeV1 } from "../../lib/decision/v1/sources/forge.ts";
+import { forgeAdapter, gradesOf, measuredSeries, seriesMismatch, importVerdict, type ForgeV1 } from "../../lib/decision/v1/sources/forge.ts";
 import { RecordingPort } from "../golden-path/_effects.ts";
 import { must, openFlow } from "./decision-v1-harness.ts";
 
@@ -194,6 +194,47 @@ describe("forge adapter - the packet (pure)", () => {
     expect(txt?.find((g) => g.field === "has_text")).toMatchObject({ value: 0, series: "qwen3-vl@d1", calibration: { status: "chance" } });
     // No file yet: every grade is honest about being unmeasured.
     expect(gradesOf(CANDS[0] as Candidate, null).every((g) => g.calibration.status === "insufficient")).toBe(true);
+  });
+});
+
+describe("forge adapter - the cull order and the series mismatch (pure)", () => {
+  const fc = (status: "calibrated" | "inverted", auc: number, ci: [number, number]) => ({ n_keep: 20, n_reject: 20, auc, ci, status });
+  const calibratedCraft = (series: string, n: number, craft: ReturnType<typeof fc>): GraderCalibrationFile["series"][string] => ({
+    series,
+    n,
+    other_graders: {},
+    fields: { craft: { all: craft, by_mechanism: {} }, style_score: { all: { n_keep: 0, n_reject: 0, auc: null, ci: null, status: "insufficient", short: "floor" }, by_mechanism: {} }, has_text: { all: { n_keep: 0, n_reject: 0, auc: null, ci: null, status: "insufficient", short: "floor" }, by_mechanism: {} } },
+  });
+  const file = (craft: ReturnType<typeof fc>, extra: GraderCalibrationFile["series"] = {}): GraderCalibrationFile => ({
+    method: CALIBRATION_METHOD,
+    ledger_rows: 40,
+    series: { "qwen3-vl@d1": calibratedCraft("qwen3-vl@d1", 40, craft), ...extra },
+  });
+  // sc0 ref craft .7 (list order first) and sc1 ref craft .9: a calibrated craft ranks sc1 first.
+  const run = () => manifest({ candidates: CANDS.map((c) => (c.id === "sc1/haze--ref--s1" && c.grade?.craft ? { ...c, grade: { ...c.grade, craft: { ...c.grade.craft, score: 0.9 } } } : c)) });
+  const ids = (cal: GraderCalibrationFile | null) => must(forgeAdapter.packet(literal({ run: run(), calibration: cal }))).packet.items.map((c) => c.id);
+  const LIST = ["sc0/haze--ref--s0", "sc0/haze--txt--s0", "sc1/haze--ref--s1", "sc1/haze--txt--s1"];
+
+  it("a calibrated series reorders the plates, best first", () => {
+    expect(ids(file(fc("calibrated", 0.8, [0.7, 0.9])))).toEqual(["sc1/haze--ref--s1", "sc0/haze--ref--s0", "sc0/haze--txt--s0", "sc1/haze--txt--s1"]);
+  });
+
+  it("an inverted series, no calibration, or an empty series keeps the run's list order", () => {
+    expect(ids(file(fc("inverted", 0.29, [0.18, 0.41])))).toEqual(LIST);
+    expect(ids(null)).toEqual(LIST);
+    expect(ids({ method: CALIBRATION_METHOD, ledger_rows: 0, series: {} })).toEqual(LIST);
+  });
+
+  it("a series other than the measured one marks the packet; the measured one does not", () => {
+    const plates = CANDS.filter((c) => c.grade !== null);
+    expect(seriesMismatch(plates, file(fc("calibrated", 0.8, [0.7, 0.9])))).toBeUndefined();
+    expect(seriesMismatch(plates, null)).toBeUndefined();
+    // another grader measured on more rows: the plates' own series no longer match it.
+    const moved = file(fc("calibrated", 0.8, [0.7, 0.9]), { "qwen3-vl@d2": calibratedCraft("qwen3-vl@d2", 90, fc("calibrated", 0.8, [0.7, 0.9])) });
+    expect(measuredSeries(moved)).toBe("qwen3-vl@d2");
+    expect(seriesMismatch(plates, moved)).toEqual({ measured: "qwen3-vl@d2", graded: ["qwen3-vl@d1"] });
+    expect(must(forgeAdapter.packet(literal({ calibration: moved }))).present.series).toEqual({ measured: "qwen3-vl@d2", graded: ["qwen3-vl@d1"] });
+    expect(must(forgeAdapter.packet(literal({ calibration: file(fc("calibrated", 0.8, [0.7, 0.9])) }))).present.series).toBeUndefined();
   });
 });
 

@@ -224,6 +224,9 @@ export type PlanView = {
 export type ProjectGroup = "weir" | "blocked" | "active" | "plans" | "shipped";
 export const PROJECT_GROUPS = ["weir", "blocked", "active", "plans", "shipped"] as const satisfies readonly ProjectGroup[];
 
+/** A project's own picture: a blob by its address (`/api/blob/<sha256>`), the type it is served as. */
+export type ProjectPoster = { readonly sha256: string; readonly mime: string };
+
 export type ProjectSummary = {
   readonly id: string;
   readonly rev: number;
@@ -239,6 +242,14 @@ export type ProjectSummary = {
   readonly usd: number;
   readonly unpriced: number;
   readonly updatedAt: string;
+  /** The adopted still, else the first ready plate of the project's own records; null = none yet. */
+  readonly poster: ProjectPoster | null;
+  /** The cut's length as its records write it, in seconds; null = no cut written (never 0). */
+  readonly runtimeS: number | null;
+  /** The runtime the project was composed for; null = none declared. */
+  readonly targetS: number | null;
+  /** Lower-cased words a search matches: title, topic, notebook, script. Derived at read, bounded. */
+  readonly text: string;
 };
 
 export type ProjectList = {

@@ -73,6 +73,8 @@ export type Presentation = {
   /** A blind pair's question, by pair (row) id. */
   readonly questions?: Readonly<Record<string, string>>;
   readonly oracle?: Oracle;
+  /** Grades registered under graders other than the one the current calibration was measured on. */
+  readonly series?: { readonly measured: string; readonly graded: readonly string[] };
   /** The packet's second line: the run, the bundle, the turn. */
   readonly meta?: string;
   readonly review?: ReviewDoc;
