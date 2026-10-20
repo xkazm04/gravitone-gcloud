@@ -368,4 +368,12 @@ export const MUTANTS: Mutant[] = [
     replace: "",
     why: "The judging queue hears imports and returns before the agent batch somebody is waiting on.",
   },
+  {
+    id: "shelf-runtime-is-the-last-beat",
+    probe: "shelf-digest.probe.spec.ts",
+    file: "packages/kernel/src/records/digest.ts",
+    find: "beats[beats.length - 1]",
+    replace: "beats[0]",
+    why: "The shelf reads a trailer's runtime from its opening beat, so every cut shows as 0:00 long.",
+  },
 ];
