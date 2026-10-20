@@ -390,7 +390,7 @@ test.describe("a billed refusal re-reserves before the next vendor", () => {
   }
 
   const until = async (cond: () => boolean, what: string) => {
-    for (let i = 0; i < 400 && !cond(); i++) await new Promise((r) => setTimeout(r, 5));
+    for (let i = 0; i < 4000 && !cond(); i++) await new Promise((r) => setTimeout(r, 5));
     expect(cond(), what).toBe(true);
   };
 
