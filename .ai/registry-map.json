@@ -5956,7 +5956,11 @@
           "revision": 3,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/kernel/src/lease-core.ts:162 The code grants exclusive execution rights only when the resource is free; context and repository searches found exclusion heartbeats and durable outputs, but no result-retention lease for a waiting peer collector.",
+          "evaluatedAt": "2026-10-20",
+          "evaluatedAgainst": "sha256-b2:5d52f304bfaf51df",
+          "evaluatedRevision": 3
         }
       ],
       "governance": "governed"

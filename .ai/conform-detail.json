@@ -8937,6 +8937,37 @@
         "at": "2026-10-19T22:37:30.959317+00:00",
         "reason": "reviewer (sonnet): The anchors back only part of the claim: timers.ts shows the closed TIMER_NAMES set, TimerSpec and timerStatusIn, and tick.ts:89 shows the `next` wakeup. Three other claims are unsupported. publish.ts:53 is just the STOPPED_TEXT constant, so it does not show publishing runs as timer ticks rather tha"
       }
+    },
+    "0c02b354-237b-44cb-9283-518ed620e846/cross-instance-cache-lease": {
+      "context": "job-queue-and-leases",
+      "subject": "cross-instance-cache-lease",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-20",
+      "evaluatedTs": "2026-10-20T21:30:09.475Z",
+      "worker": "099303c2-2ae5-40ac-a84b-5cc1a5af11ad",
+      "techniques": [
+        {
+          "technique": "a-deadline-is-not-portable-between-clocks",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/lease.ts:234 This checks an exclusion heartbeat using the transaction timestamp, rather than receiving a peer's cache-retention deadline."
+        },
+        {
+          "technique": "monotonic-renewal-never-shortens",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/lease-core.ts:184 Heartbeats belong to the current exclusive grant; this is not a retained result renewed by collectors."
+        },
+        {
+          "technique": "renew-from-arrival-not-from-work",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/job-run.ts:174 The driver claims an execution slot when starting work; queued jobs do not depend on a peer retaining a leased result."
+        },
+        {
+          "technique": "renewal-beats-a-tuned-timeout",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/job-run.ts:332 Results are persisted as job outputs, rather than held in an expiring cache awaiting peer collection."
+        }
+      ]
     }
   }
 }
