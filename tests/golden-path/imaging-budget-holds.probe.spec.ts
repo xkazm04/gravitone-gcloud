@@ -342,7 +342,7 @@ test("8. recognize() under hold takes hold at estimate and releases at settle wi
 // raises as `refused`; Leonardo is the re-route target.
 
 test.describe("a billed refusal re-reserves before the next vendor", () => {
-  keepEnv(["LEONARDO_API_KEY"]);
+  keepEnv(["LEONARDO_API_KEY", "IMAGING_ENV"]);
 
   const LEONARDO = "https://cloud.leonardo.ai/api/rest/v1";
   // An IP literal, so the download guard (lib/imaging/safeUrl.ts) decides it
@@ -399,8 +399,13 @@ test.describe("a billed refusal re-reserves before the next vendor", () => {
    *  finishes without waiting out a poll. */
   const noGeneration = () => json({ sdGenerationJob: {} });
 
+  let ambientEnv = "";
   test.beforeEach(() => {
     process.env.LEONARDO_API_KEY = "probe-leonardo-key";
+    // The dev chain is the one with a Leonardo re-route target; prod is google only, so the case
+    // may not lean on whatever IMAGING_ENV the worker inherited.
+    ambientEnv = `${process.env.IMAGING_ENV}/${process.env.NODE_ENV}`;
+    process.env.IMAGING_ENV = "dev";
   });
 
   test("9. (critic 1) while the re-route target is in flight, its estimate is held", async () => {
@@ -415,7 +420,7 @@ test.describe("a billed refusal re-reserves before the next vendor", () => {
     await until(
       () => chain.leonardoPost === 1,
       () =>
-        `the Leonardo POST was dispatched (google=${chain.google} leonardoPost=${chain.leonardoPost} generate=${
+        `the Leonardo POST was dispatched (google=${chain.google} leonardoPost=${chain.leonardoPost} inherited IMAGING_ENV/NODE_ENV=${ambientEnv} generate=${
           settled instanceof Error ? `${(settled as ImagingError).kind}: ${settled.message}` : String(settled)
         })`,
     );
