@@ -1,0 +1,143 @@
+{
+ "schema": "conform-run/1",
+ "worker": "b28f17ed-4852-4d71-a917-a9733fa8be95",
+ "subject": "self-describing-model-packages",
+ "evaluatedAt": "2026-10-19T21:29:46.213164+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "notebook-contract-validation",
+   "subject": "self-describing-model-packages",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/notebook/schema.ts:16 This context validates generated research answers rather than distributing trained models, and searches found none of the five model-package terms in lib/notebook.",
+   "techniques": [
+    {
+     "technique": "advisory-version-floors",
+     "verdict": "not-applicable",
+     "evidence": "lib/notebook/engineReceipt.ts:9 The receipt describes a research run, not framework versions used to build a distributed model."
+    },
+    {
+     "technique": "config-frozen-artifact",
+     "verdict": "not-applicable",
+     "evidence": "lib/notebook/corpus.ts:78 The corpus reads notebook JSON; it does not export compiled model graphs."
+    },
+    {
+     "technique": "declared-vs-derived-outputs",
+     "verdict": "not-applicable",
+     "evidence": "lib/notebook/retrieval.ts:118 Retrieval processing returns a research notebook and findings, not raw and derived tensor outputs of a model package."
+    },
+    {
+     "technique": "normative-layout-contract",
+     "verdict": "not-applicable",
+     "evidence": "lib/notebook/corpus.ts:41 The discoverable artifacts are tracked research notebooks, not packages containing model weights and metadata."
+    },
+    {
+     "technique": "self-locating-validation-schema",
+     "verdict": "not-applicable",
+     "evidence": "lib/notebook/validate.ts:100 Validation consumes a generated answer rather than metadata accompanying a carried model."
+    },
+    {
+     "technique": "symbolic-shape-constraints",
+     "verdict": "not-applicable",
+     "evidence": "lib/notebook/shape.ts:40 Shape checks concern notebook fields and collections, not spatial tensor dimensions or network forward passes."
+    }
+   ],
+   "absenceTerms": [
+    "weights_path",
+    "torchscript",
+    "onnx",
+    "safetensors",
+    "input_shape"
+   ]
+  },
+  {
+   "context": "ui-ledger-timeline",
+   "subject": "self-describing-model-packages",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/INVENTORY.md:93 These modules render ledger records and timeline graphics, and searches found none of the five model-package terms across packages/ui/src/components.",
+   "techniques": [
+    {
+     "technique": "advisory-version-floors",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/header/HeaderChips.tsx:63 The header computes a financial readout, not model framework compatibility floors."
+    },
+    {
+     "technique": "config-frozen-artifact",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/jsonl/Json.tsx:55 JSON text is rendered as highlighted runs; no compiled model artifact is exported."
+    },
+    {
+     "technique": "declared-vs-derived-outputs",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:96 The displayed provenance qualifies a cost figure, not a network output transformed by model post-processing."
+    },
+    {
+     "technique": "normative-layout-contract",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/ledgerlink/LedgerLink.tsx:9 This component provides ledger navigation rather than locating model-package files."
+    },
+    {
+     "technique": "self-locating-validation-schema",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/jsonl/highlight.ts:24 The JSON scanner highlights text without consuming model metadata or resolving a validation schema."
+    },
+    {
+     "technique": "symbolic-shape-constraints",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/wave/wave.ts:14 Width and height determine waveform drawing geometry, not accepted spatial shapes of a trained network."
+    }
+   ],
+   "absenceTerms": [
+    "weights_path",
+    "torchscript",
+    "onnx",
+    "safetensors",
+    "input_shape"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-19T21:29:46.213164+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "self-describing-model-packages"
+   ],
+   "techniques": [
+    "advisory-version-floors",
+    "config-frozen-artifact",
+    "declared-vs-derived-outputs",
+    "normative-layout-contract",
+    "self-locating-validation-schema",
+    "symbolic-shape-constraints"
+   ],
+   "deviations": 0,
+   "context": "notebook-contract-validation",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  },
+  {
+   "ts": "2026-10-19T21:29:46.213164+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "self-describing-model-packages"
+   ],
+   "techniques": [
+    "advisory-version-floors",
+    "config-frozen-artifact",
+    "declared-vs-derived-outputs",
+    "normative-layout-contract",
+    "self-locating-validation-schema",
+    "symbolic-shape-constraints"
+   ],
+   "deviations": 0,
+   "context": "ui-ledger-timeline",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

@@ -1810,7 +1810,11 @@
           "revision": 6,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/kernel/src/library/schema.ts:205 Context searches found no extension, plugin or sandbox matches, and the module installs fixed Library migrations rather than accepting runtime-installed extension schemas or code.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:a23407994bc4b9db",
+          "evaluatedRevision": 6
         },
         {
           "subject": "prompt-assembly",
@@ -4309,7 +4313,11 @@
           "revision": 6,
           "changedAt": "2026-09-30",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/floor/MonthCalendar.tsx:81 The month view defines period membership inline instead of consuming a shared window with documented exclusive boundaries.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:9b81f64365c4edae",
+          "evaluatedRevision": 6
         },
         {
           "subject": "prompt-assembly",
@@ -4990,7 +4998,11 @@
           "revision": 2,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/foundry/verdictLog.ts:163 Context and repository searches found local file logging and SQLite transactions but no consensus write path for Foundry, so the replicated-log precondition does not hold.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:230a37319e1dd059",
+          "evaluatedRevision": 2
         },
         {
           "subject": "data-access",
@@ -6330,7 +6342,11 @@
           "revision": 2,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/kernel/src/store.ts:234 Context and repository searches found direct SQLite transactions and an audit event table but no implemented consensus adapter, so replicated-log transaction rules are not applicable.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:230a37319e1dd059",
+          "evaluatedRevision": 2
         }
       ],
       "governance": "governed"
@@ -8596,7 +8612,11 @@
           "revision": 1,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/notebook/schema.ts:16 This context validates generated research answers rather than distributing trained models, and searches found none of the five model-package terms in lib/notebook.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:d22f4172adbc5004",
+          "evaluatedRevision": 1
         },
         {
           "subject": "quality-gates",
@@ -9701,7 +9721,11 @@
           "revision": 6,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/import/archive.ts:38 Context searches found no extension, plugin or sandbox matches, and tracing the import door showed a closed set of project-data sections rather than an extension installation format.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:a23407994bc4b9db",
+          "evaluatedRevision": 6
         }
       ],
       "governance": "governed"
@@ -13044,7 +13068,11 @@
           "revision": 1,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/INVENTORY.md:93 These modules render ledger records and timeline graphics, and searches found none of the five model-package terms across packages/ui/src/components.",
+          "evaluatedAt": "2026-10-19",
+          "evaluatedAgainst": "sha256-b2:d22f4172adbc5004",
+          "evaluatedRevision": 1
         },
         {
           "subject": "multi-provider-gateway-plane",

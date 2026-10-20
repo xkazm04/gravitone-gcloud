@@ -1,0 +1,17 @@
+{
+ "schema": "conform-run/1",
+ "worker": "903250af-dfe7-428c-b3b8-3f0ffcacbd44",
+ "subject": "ui-controls",
+ "evaluatedAt": "2026-10-19T21:59:48.300382+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "ui-controls",
+   "context": "ui-controls-shell",
+   "reason": "pair anchor refused: placeholder evidence at packages/ui/src/components/field/Field.tsx:22"
+  }
+ ],
+ "consults": []
+}

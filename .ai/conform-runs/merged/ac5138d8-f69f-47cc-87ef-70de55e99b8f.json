@@ -1,0 +1,71 @@
+{
+ "schema": "conform-run/1",
+ "worker": "ac5138d8-f69f-47cc-87ef-70de55e99b8f",
+ "subject": "analytics-time-windows",
+ "evaluatedAt": "2026-10-19T22:19:16.505915+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "floor-calendar-slots",
+   "subject": "analytics-time-windows",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/ui/src/components/floor/MonthCalendar.tsx:81 The month view defines period membership inline instead of consuming a shared window with documented exclusive boundaries.",
+   "techniques": [
+    {
+     "technique": "baseline-as-window-start",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/floor/SlotDetail.tsx:123 The detail displays lifetime metric readings, not change since a selected period began; tracing metricsOf confirmed that distinction."
+    },
+    {
+     "technique": "calendar-arithmetic",
+     "verdict": "conformant",
+     "evidence": "packages/ui/src/components/floor/calendar.ts:141 Month length comes from calendar components; month navigation uses year/month arithmetic, and grid alignment explicitly starts on Monday."
+    },
+    {
+     "technique": "canonical-zone-single-source",
+     "verdict": "deviation",
+     "evidence": "packages/ui/src/components/floor/slot.ts:47 UTC is explicit and consistent, but its implementation is repeated across slot conversion, calendar helpers and month filtering rather than obtained from the required named zone constant and single accessor."
+    },
+    {
+     "technique": "cohort-matched-comparison",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/floor/MonthCalendar.tsx:116 These are slot counts by current state within the month, not movement across two populations."
+    },
+    {
+     "technique": "half-open-interval-policy",
+     "verdict": "deviation",
+     "evidence": "packages/ui/src/components/floor/MonthCalendar.tsx:81 UTC component equality gives half-open month membership, but bypasses the required shared range constructor and explicit exclusive-end contract."
+    },
+    {
+     "technique": "range-precedence-resolution",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/floor/MonthCalendar.tsx:42 The component receives one selected month; its caller manages calendar navigation without a saved reporting-period preference chain."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-19T22:19:16.505915+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "analytics-time-windows"
+   ],
+   "techniques": [
+    "baseline-as-window-start",
+    "calendar-arithmetic",
+    "canonical-zone-single-source",
+    "cohort-matched-comparison",
+    "half-open-interval-policy",
+    "range-precedence-resolution"
+   ],
+   "deviations": 1,
+   "context": "floor-calendar-slots",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

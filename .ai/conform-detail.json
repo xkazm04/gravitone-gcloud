@@ -8488,6 +8488,455 @@
         "at": "2026-10-19T10:14:52.703131+00:00",
         "reason": "reviewer (sonnet): Ledger booking belongs to the router, not the provider: lib/imaging/router.ts:443 settles a failed row when billedOnFailure(err) is true, and errors.ts marks timeout, failed and refused as billed. So the polling throws at leonardo.ts:183 and :230 do reach the spend ledger, and the claimed deviation "
       }
+    },
+    "c425f431-c0d1-4f34-b736-1a5d70683ef4/self-describing-model-packages": {
+      "context": "notebook-contract-validation",
+      "subject": "self-describing-model-packages",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T21:29:46.213Z",
+      "worker": "b28f17ed-4852-4d71-a917-a9733fa8be95",
+      "techniques": [
+        {
+          "technique": "advisory-version-floors",
+          "verdict": "not-applicable",
+          "evidence": "lib/notebook/engineReceipt.ts:9 The receipt describes a research run, not framework versions used to build a distributed model."
+        },
+        {
+          "technique": "config-frozen-artifact",
+          "verdict": "not-applicable",
+          "evidence": "lib/notebook/corpus.ts:78 The corpus reads notebook JSON; it does not export compiled model graphs."
+        },
+        {
+          "technique": "declared-vs-derived-outputs",
+          "verdict": "not-applicable",
+          "evidence": "lib/notebook/retrieval.ts:118 Retrieval processing returns a research notebook and findings, not raw and derived tensor outputs of a model package."
+        },
+        {
+          "technique": "normative-layout-contract",
+          "verdict": "not-applicable",
+          "evidence": "lib/notebook/corpus.ts:41 The discoverable artifacts are tracked research notebooks, not packages containing model weights and metadata."
+        },
+        {
+          "technique": "self-locating-validation-schema",
+          "verdict": "not-applicable",
+          "evidence": "lib/notebook/validate.ts:100 Validation consumes a generated answer rather than metadata accompanying a carried model."
+        },
+        {
+          "technique": "symbolic-shape-constraints",
+          "verdict": "not-applicable",
+          "evidence": "lib/notebook/shape.ts:40 Shape checks concern notebook fields and collections, not spatial tensor dimensions or network forward passes."
+        }
+      ]
+    },
+    "2e702395-189e-4eb9-910c-dc4b76ff6e9a/self-describing-model-packages": {
+      "context": "ui-ledger-timeline",
+      "subject": "self-describing-model-packages",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T21:29:46.213Z",
+      "worker": "b28f17ed-4852-4d71-a917-a9733fa8be95",
+      "techniques": [
+        {
+          "technique": "advisory-version-floors",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/header/HeaderChips.tsx:63 The header computes a financial readout, not model framework compatibility floors."
+        },
+        {
+          "technique": "config-frozen-artifact",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/jsonl/Json.tsx:55 JSON text is rendered as highlighted runs; no compiled model artifact is exported."
+        },
+        {
+          "technique": "declared-vs-derived-outputs",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:96 The displayed provenance qualifies a cost figure, not a network output transformed by model post-processing."
+        },
+        {
+          "technique": "normative-layout-contract",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/ledgerlink/LedgerLink.tsx:9 This component provides ledger navigation rather than locating model-package files."
+        },
+        {
+          "technique": "self-locating-validation-schema",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/jsonl/highlight.ts:24 The JSON scanner highlights text without consuming model metadata or resolving a validation schema."
+        },
+        {
+          "technique": "symbolic-shape-constraints",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/wave/wave.ts:14 Width and height determine waveform drawing geometry, not accepted spatial shapes of a trained network."
+        }
+      ]
+    },
+    "e481098a-3532-46d9-bdc9-de84fbc2ce01/transactions-over-a-replicated-log": {
+      "context": "foundry-forge-store-and-verdicts",
+      "subject": "transactions-over-a-replicated-log",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T21:46:41.564Z",
+      "worker": "2ce0adb3-0920-446b-8d80-61b134e0790a",
+      "techniques": [
+        {
+          "technique": "capture-index-before-snapshot",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/verdictLog.ts:117 The revision comes from a local JSON document; no applied-log index labels a transaction snapshot."
+        },
+        {
+          "technique": "compose-then-conform",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/fsPort.ts:44 This seam delegates filesystem operations, rather than implementing a transactional storage interface with begin, commit and rollback."
+        },
+        {
+          "technique": "list-verification-by-present-keys",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/catalogue.ts:180 The catalogue list is a native store read, with no buffered-write reconciliation or apply-time list verification."
+        },
+        {
+          "technique": "live-file-is-the-snapshot",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/runStore.ts:95 The rename installs an individually serialized JSON document; no consensus snapshot store or follower installation exists here."
+        },
+        {
+          "technique": "no-writes-no-log",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/verdictLog.ts:155 An unchanged local verdict patch returns early, but this is not a buffered transaction committing through a replicated log."
+        },
+        {
+          "technique": "same-value-still-conflicts",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/verdictLog.ts:181 Conflict detection checks the map revision under the run lock, rather than verifying snapshot read hashes during replicated apply."
+        },
+        {
+          "technique": "snapshot-read-plus-verify-log",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/store.ts:248 The commit executes inside local run and catalogue locks; no consensus round trip requires snapshot reads and a verification entry."
+        }
+      ]
+    },
+    "e5b296e2-cccf-47a5-b8bd-ce730d40ace8/transactions-over-a-replicated-log": {
+      "context": "kernel-store-and-events",
+      "subject": "transactions-over-a-replicated-log",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T21:46:41.564Z",
+      "worker": "2ce0adb3-0920-446b-8d80-61b134e0790a",
+      "techniques": [
+        {
+          "technique": "capture-index-before-snapshot",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/store.ts:235 Transaction metadata records a clock instant, without an observed applied-log index or modified-since filter."
+        },
+        {
+          "technique": "compose-then-conform",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/store.ts:153 The cache holds prepared SQL statements; this context has one SQLite implementation and no transactional data-cache, encoding or view wrapper."
+        },
+        {
+          "technique": "list-verification-by-present-keys",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/events-query.ts:169 Event pagination reads SQL rows within a read transaction, without reconciling buffered writes or emitting list verification hashes."
+        },
+        {
+          "technique": "live-file-is-the-snapshot",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/store.ts:264 Snapshots are explicit SQLite backup copies used by migrations, not consensus compaction or follower catch-up snapshots."
+        },
+        {
+          "technique": "no-writes-no-log",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/store.ts:257 Reads use SQLite query-only transactions; there is no replicated proposal path or buffered-write commit to suppress."
+        },
+        {
+          "technique": "same-value-still-conflicts",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/store.ts:243 Writes execute directly while SQLite holds the write lock, rather than competing through optimistic snapshot verification at log apply."
+        },
+        {
+          "technique": "snapshot-read-plus-verify-log",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/store.ts:190 Transaction bodies run synchronously inside the engine transaction; no consensus round trip separates reads from applying writes."
+        }
+      ]
+    },
+    "9c525f5b-e99e-405e-a21d-ba19247ed5a7/untrusted-extension-host": {
+      "context": "plan-and-import",
+      "subject": "untrusted-extension-host",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T22:09:20.464Z",
+      "worker": "9a19f54e-385e-4d58-800b-e9583a283f3d",
+      "techniques": [
+        {
+          "technique": "canonicalizable-privilege-declaration",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/receipt.tsx:119 Confirmation binds a launch receipt, spending ceiling and mode; this context declares no extension privileges."
+        },
+        {
+          "technique": "capability-subtraction-sandbox",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/import/ImportView.tsx:118 The browser exports account data as bytes; no embedded extension runtime is constructed."
+        },
+        {
+          "technique": "declared-schema-extension-storage",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/import/ImportView.tsx:56 This reads the application's existing project store, with no persistence interface exposed to extension code."
+        },
+        {
+          "technique": "derived-capability-inventory",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/compose.tsx:38 Composition submits recipe and source identifiers; it does not load modules written against an extension language."
+        },
+        {
+          "technique": "grant-change-consent",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/import/ImportView.tsx:156 The token confirms an archive preview, not an installed extension's changed grant."
+        },
+        {
+          "technique": "host-api-import-budget",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/import/ImportView.tsx:96 Archive preview is a data request, with no isolated extension execution or extension API import budget."
+        },
+        {
+          "technique": "isolation-tier-independent-extension-api",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/Plan.tsx:94 The port edits application project parts; there are no extension execution tiers sharing this API."
+        },
+        {
+          "technique": "per-callback-failure-policy",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/receipt.tsx:163 This converts an application action result; the callbacks inspected here are not foreign extension registrations."
+        },
+        {
+          "technique": "pluggable-isolation-runner",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/import/ImportView.tsx:74 The import transport posts archive bytes rather than selecting or invoking an extension isolation runner."
+        },
+        {
+          "technique": "safe-mode-registration",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/_plan/NoPlan.tsx:34 This is the project's empty state; the context has no installed-extension boot or recovery lifecycle."
+        },
+        {
+          "technique": "two-tier-extension-format",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/import/ImportView.tsx:190 The file picker targets project archives, whose server parser accepts data sections rather than executable extension formats."
+        }
+      ]
+    },
+    "17769afc-f302-4371-8956-63b8f52ada32/untrusted-extension-host": {
+      "context": "asset-library-store",
+      "subject": "untrusted-extension-host",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T22:09:20.464Z",
+      "worker": "9a19f54e-385e-4d58-800b-e9583a283f3d",
+      "techniques": [
+        {
+          "technique": "canonicalizable-privilege-declaration",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/core.ts:160 Canonicalization applies to an asset record, not an extension privilege declaration."
+        },
+        {
+          "technique": "capability-subtraction-sandbox",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/measures.ts:55 This module validates audio measurement data; it constructs no scripting runtime for foreign code."
+        },
+        {
+          "technique": "declared-schema-extension-storage",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/write.ts:118 Writers accept application-defined Library items, not extension collection or index declarations."
+        },
+        {
+          "technique": "derived-capability-inventory",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/core.ts:180 The derived digest describes indexed asset content; there is no extension module or capability inventory to derive."
+        },
+        {
+          "technique": "grant-change-consent",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/write.ts:88 Update comparison detects unchanged index rows, with no installed extension or consented grant involved."
+        },
+        {
+          "technique": "host-api-import-budget",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/clauses.ts:33 The limit bounds query rows, not an isolated extension's wall-clock execution."
+        },
+        {
+          "technique": "isolation-tier-independent-extension-api",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/query.ts:97 This is a validated application query interface, with no extension tiers whose APIs must remain identical."
+        },
+        {
+          "technique": "per-callback-failure-policy",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/write.ts:126 The write transaction invokes a local index writer rather than registered foreign callbacks."
+        },
+        {
+          "technique": "pluggable-isolation-runner",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/query.ts:100 Execution uses the kernel database reader; this context runs no isolated extensions on deployment-specific runners."
+        },
+        {
+          "technique": "safe-mode-registration",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/write.ts:135 Lifecycle cleanup concerns projected asset rows by feed, with no extension registration or boot recovery path."
+        },
+        {
+          "technique": "two-tier-extension-format",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/core.ts:162 Kinds classify Library assets for indexing; they do not assign executable extensions to trust tiers."
+        }
+      ]
+    },
+    "1561e25e-0547-4ace-8e3b-6a3407a3b40f/analytics-time-windows": {
+      "context": "floor-calendar-slots",
+      "subject": "analytics-time-windows",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T22:19:16.505Z",
+      "worker": "ac5138d8-f69f-47cc-87ef-70de55e99b8f",
+      "techniques": [
+        {
+          "technique": "baseline-as-window-start",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/floor/SlotDetail.tsx:123 The detail displays lifetime metric readings, not change since a selected period began; tracing metricsOf confirmed that distinction."
+        },
+        {
+          "technique": "calendar-arithmetic",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/floor/calendar.ts:141 Month length comes from calendar components; month navigation uses year/month arithmetic, and grid alignment explicitly starts on Monday."
+        },
+        {
+          "technique": "canonical-zone-single-source",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/floor/slot.ts:47 UTC is explicit and consistent, but its implementation is repeated across slot conversion, calendar helpers and month filtering rather than obtained from the required named zone constant and single accessor."
+        },
+        {
+          "technique": "cohort-matched-comparison",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/floor/MonthCalendar.tsx:116 These are slot counts by current state within the month, not movement across two populations."
+        },
+        {
+          "technique": "half-open-interval-policy",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/floor/MonthCalendar.tsx:81 UTC component equality gives half-open month membership, but bypasses the required shared range constructor and explicit exclusive-end contract."
+        },
+        {
+          "technique": "range-precedence-resolution",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/floor/MonthCalendar.tsx:42 The component receives one selected month; its caller manages calendar navigation without a saved reporting-period preference chain."
+        }
+      ]
+    },
+    "5414e8ac-5105-43f0-a153-088e12501c9d/async-ui-states": {
+      "context": "ui-marks-and-text",
+      "subject": "async-ui-states",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T22:26:28.439Z",
+      "techniques": [
+        {
+          "technique": "empty-state-design",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/empty/Empty.tsx:8 EmptyProps lacks a cause discriminator, allowing call sites to pass arbitrary strings rather than typing empty states by cause."
+        },
+        {
+          "technique": "placeholder-design",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/ghost/Ghost.tsx:12 Ghost renders identical placeholder cards with no deterministic variation across items and no appearance delay window to prevent flashing on fast loads."
+        },
+        {
+          "technique": "failure-states",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/errorline/ErrorLine.tsx:8 ErrorLine accepts only a raw message string without mapping to user-altitude phrasing and provides no retry affordance to reissue the failed request."
+        },
+        {
+          "technique": "action-busy-states",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/chip/Chip.tsx:37 Chip door buttons act as filter or selection toggles rather than initiating asynchronous mutations requiring in-place busy spinners and disarming."
+        },
+        {
+          "technique": "arrival-choreography",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/ghost/Ghost.tsx:10 Leaf non-prose UI vocabulary components do not implement surface-scoped entrance animation cascades or seen-set guards."
+        },
+        {
+          "technique": "windowing-vs-identifying-keys",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/stalebadge/StaleBadge.tsx:16 Presentation tokens and marks consume freshness edge status but do not define compound request keys or classify windowing versus identifying coordinates."
+        },
+        {
+          "technique": "state-model",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/empty/Empty.tsx:12 Component renders display-only markup and does not manage or derive async request lifecycle state."
+        }
+      ],
+      "withdrawn": {
+        "worker": "c32084d6-5fb6-4734-8314-3cc0af138e32",
+        "state": "deviation",
+        "at": "2026-10-19T22:26:54.259528+00:00",
+        "reason": "reviewer (sonnet): The verdict rests on empty/Empty.tsx and errorline/ErrorLine.tsx, and neither file is among the context's listed files (chip, ghost, glyph, hint, heading). The Ghost and Chip anchors do not show the claimed cause-axis deviation. Ghost's own header comment says an act that fills the space belongs to "
+      }
+    },
+    "7226db68-4ca8-41ee-a2f8-3012d05e4acd/background-jobs": {
+      "context": "publish-producers",
+      "subject": "background-jobs",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-19",
+      "evaluatedTs": "2026-10-19T22:37:07.444Z",
+      "techniques": [
+        {
+          "technique": "adaptive-cadence",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/tick.ts:89 publishTick inspects upcoming scheduled slots and returns next to wake earlier when a slot is due before the idle cadence interval."
+        },
+        {
+          "technique": "job-progress-and-cancellation",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/publish/publish.ts:53 Publishing operates under recurring timer ticks above the kernel job model rather than as watched jobs with progress streams or snapshot re-attachment."
+        },
+        {
+          "technique": "loop-health-telemetry",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/timers.ts:75 timerStatusIn provides a queryable current-state surface for registered timers, detecting silence via stale lease heartbeats and surfacing standing failures."
+        },
+        {
+          "technique": "loop-supervision",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/timers.ts:20 Names come from a closed set with explicit TimerSpec registration parameters and lease TTL slack for singleton loops."
+        },
+        {
+          "technique": "startup-sweeps",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/tick.ts:55 downtimeOf attributes slots missed during worker downtime directly to the detected gap window, recording provenance on the missed event."
+        },
+        {
+          "technique": "tick-isolation",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/publish.ts:118 publishClaimed catches throws from adapter sends, converting crashes to recorded failures on the slot so an upload error never kills the tick loop."
+        },
+        {
+          "technique": "timeout-is-a-status-not-a-consumption",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/publish/timers.ts:28 Publishing ticks use deadlines that abandon and fence timed-out runs rather than bounded waits on tracked operations that return a non-consuming give-up status."
+        }
+      ],
+      "withdrawn": {
+        "worker": "f9ebe6cd-2da8-41bc-ba6f-cb25a251525b",
+        "state": "conformant",
+        "at": "2026-10-19T22:37:30.959317+00:00",
+        "reason": "reviewer (sonnet): The anchors back only part of the claim: timers.ts shows the closed TIMER_NAMES set, TimerSpec and timerStatusIn, and tick.ts:89 shows the `next` wakeup. Three other claims are unsupported. publish.ts:53 is just the STOPPED_TEXT constant, so it does not show publishing runs as timer ticks rather tha"
+      }
     }
   }
 }
