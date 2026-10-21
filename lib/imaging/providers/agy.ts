@@ -42,6 +42,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { killTree } from "../../agent/envelope";
 import { canSpawnLocalBinaries } from "../../deployment";
 import { ImagingError, noKey } from "../errors";
 import { priceCall } from "../pricing";
@@ -128,7 +129,9 @@ async function generateOne(prompt: string, ratio: string): Promise<ImageRef> {
 
     let stderr = "";
     const timer = setTimeout(() => {
-      child.kill();
+      // The whole tree: agy can spawn grandchildren that outlive a plain kill
+      // and keep writing into the workspace (same reason as lib/agent/*).
+      killTree(child.pid, () => child.kill());
       reject(
         new ImagingError(
           `agy did not finish within ${GENERATE_TIMEOUT_MS / 1000}s (measured ~57s/image; this run took longer).`,
