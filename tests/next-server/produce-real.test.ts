@@ -33,6 +33,11 @@ const ROOT = vi.hoisted(() => {
   process.env["FOUNDRY_DIR"] = path.join(dir, "catalogue");
   process.env["SOUND_STORE_DIR"] = path.join(dir, "sound");
   process.env["FOUNDRY_RUNS_DIR"] = path.join(dir, "runs");
+  // THE PROCESS KERNEL IS THE TEST'S OWN TOO. The choices read the style store through lib/kernelStore
+  // (the process kernel), which defaults to <cwd>/foundry-out/gravitone.sqlite: on a machine that has
+  // used the studio, that is the operator's live store, so its styles answered in place of this
+  // test's catalogue (and the test opened and migrated that store). It now lives in the temp dir.
+  process.env["GRAVITONE_STORE_PATH"] = path.join(dir, "process-store.sqlite");
   // THE STOCK FRAME IS THE TEST'S OWN. The forge reads a plan's bare `frame` from
   // FOUNDRY_FRAMES_DIR (lib/producers/forge.ts `framesDir`, forge.py `frames_dir`), else from the
   // checkout's pipeline/vlm-probe/frames - which is gitignored, so a clone without the frames
@@ -64,6 +69,7 @@ import type { Producer } from "@gt/kernel/job-core";
 import { list } from "@gt/kernel/job";
 import { recover, runJob } from "@gt/kernel/job-run";
 import { openKernel } from "@gt/kernel/kernel";
+import { closeProcessKernel } from "@gt/kernel/process";
 import type { Store } from "@gt/kernel/store";
 
 import { makeRealProduce } from "../../app/(studio)/projects/_port/real.ts";
@@ -104,6 +110,7 @@ const store: Store = k.value.store;
 const fx = liveEffects(store, blobStore(path.join(ROOT, "blobs")));
 afterAll(() => {
   k.value.close();
+  closeProcessKernel();
   rmSync(ROOT, { recursive: true, force: true });
 });
 
