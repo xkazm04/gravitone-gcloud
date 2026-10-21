@@ -10,7 +10,9 @@ import { err, ok, type Result } from "@gt/domain/errors";
 import type { EventData } from "@gt/domain/event";
 
 import { clipRoot, isClipId } from "../../../../lib/imaging/video/store.ts";
-import { bump, facts, instant, readEach, words } from "../facts.ts";
+import { errorMessage } from "@gt/domain/errors";
+
+import { bump, facts, instant, readEach } from "../facts.ts";
 import type { IngestEvent, LiveJob, ProjectCtx, Projection, Skipped, Source } from "../types.ts";
 import { universeRoot } from "./roots.ts";
 
@@ -65,7 +67,7 @@ export async function readClips(root: string): Promise<Result<ClipsSnapshot>> {
   try {
     names = await readdir(root);
   } catch (e) {
-    if (!(e instanceof Error && "code" in e && e.code === "ENOENT")) return err("unavailable", `clips: listing ${root} failed: ${words(e)}`, { cause: e });
+    if (!(e instanceof Error && "code" in e && e.code === "ENOENT")) return err("unavailable", `clips: listing ${root} failed: ${errorMessage(e)}`, { cause: e });
     names = [];
   }
   const ids = names.filter((n) => n.endsWith(".json") && isClipId(n.slice(0, -5))).map((n) => n.slice(0, -5)).sort().slice(-CLIPS_READ_CAP);

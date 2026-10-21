@@ -40,6 +40,7 @@
 // SERVER ONLY. Reads PRINCIPAL_MODE and the project id per call (like
 // lib/apiAuth.ts), and must never be imported by a client module.
 
+import { errorMessage } from "@gt/domain/errors";
 import type { TokenScope } from "@gt/kernel/token";
 
 import { DEV_UID } from "./devAuth";
@@ -281,7 +282,7 @@ function refresh(now: number): Promise<KeySet> {
       })
       .catch((e: unknown) => {
         lastFailureAt = now;
-        console.log(`[api] principal JWKS fetch failed: ${e instanceof Error ? e.message : String(e)}`);
+        console.log(`[api] principal JWKS fetch failed: ${errorMessage(e)}`);
         throw e;
       })
       .finally(() => {

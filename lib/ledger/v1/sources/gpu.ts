@@ -10,7 +10,9 @@ import { err, ok, type Result } from "@gt/domain/errors";
 import type { EventData } from "@gt/domain/event";
 
 import { gpuBroker, gpuRoot, type GpuStatus } from "../../../../lib/gpu/lease.ts";
-import { bump, facts, instant, words } from "../facts.ts";
+import { errorMessage } from "@gt/domain/errors";
+
+import { bump, facts, instant } from "../facts.ts";
 import type { IngestEvent, LiveJob, ProjectCtx, Projection, Skipped, Source } from "../types.ts";
 
 // THE GPU LEASE, PROJECTED - v1's frozen queue.jsonl as history, and the card's
@@ -90,12 +92,12 @@ async function read(): Promise<Result<GpuSnapshot>> {
   try {
     text = await readFile(file, "utf8");
   } catch (e) {
-    if (!(e instanceof Error && "code" in e && e.code === "ENOENT")) return err("unavailable", `gpu: reading ${file} failed: ${words(e)}`, { cause: e });
+    if (!(e instanceof Error && "code" in e && e.code === "ENOENT")) return err("unavailable", `gpu: reading ${file} failed: ${errorMessage(e)}`, { cause: e });
   }
   try {
     status = await gpuBroker().status();
   } catch (e) {
-    return err("unavailable", `gpu: the broker's status failed: ${words(e)}`, { cause: e });
+    return err("unavailable", `gpu: the broker's status failed: ${errorMessage(e)}`, { cause: e });
   }
   const s = parseAt("gpu status", statusSchema, status);
   if (!s.ok) return s;

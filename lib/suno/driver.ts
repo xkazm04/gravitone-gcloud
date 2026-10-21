@@ -12,6 +12,7 @@
 // Errors thrown here are shown to the operator verbatim: short, and naming the
 // work ("suno refused the create: …"), never the mechanism.
 
+import { errorMessage } from "@gt/domain/errors";
 import type { Page, Request, Response } from "playwright";
 import type { SunoClipRef, SunoDriverHealth, SunoFields, SunoLibraryClip, SunoModel, SunoPhase } from "./types";
 import { SUNO_CDP_PORT, SUNO_MODEL_LABEL } from "./types";
@@ -38,7 +39,7 @@ export async function probeSunoOn(port: number): Promise<SunoDriverHealth> {
     const browser = await attach({ port, spawn: false });
     health = (await isSignedIn(profileContext(browser))) ? { ok: true } : { ok: false, reason: "not signed in to suno" };
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
+    const msg = errorMessage(e);
     health = { ok: false, reason: /not running/.test(msg) ? "suno browser not running" : `suno browser unreachable: ${msg.split("\n")[0]}` };
   }
   probeCache.set(port, { at: Date.now(), health });

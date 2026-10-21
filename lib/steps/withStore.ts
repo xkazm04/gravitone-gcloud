@@ -4,6 +4,8 @@
 //
 // Split out of the stepStore.ts door. Nothing here is exported on the door.
 
+import { errorMessage } from "@gt/domain/errors";
+
 import { STEPS_STORE, openDb } from "@/lib/studioDb";
 
 import { noteStorageOk } from "./okChannel";
@@ -68,7 +70,7 @@ export async function withStore<T>(
     noteStorageOk(op, projectId, phase);
     return { ok: true, value };
   } catch (e) {
-    return trouble(classify(e), e instanceof Error ? e.message : String(e));
+    return trouble(classify(e), errorMessage(e));
   } finally {
     db?.close();
   }

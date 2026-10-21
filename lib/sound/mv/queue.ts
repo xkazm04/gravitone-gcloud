@@ -31,6 +31,7 @@
 
 import { rm } from "node:fs/promises";
 
+import { errorMessage } from "@gt/domain/errors";
 import type { Job } from "@gt/domain/job";
 import { PHASE_OF, isMvStep } from "@gt/producers/mv/plan";
 
@@ -379,7 +380,7 @@ export async function startMvWith(token: string): Promise<{ queue: MvQueueState 
 /** A READ: the studio's reachability and the records with their jobs' running
  *  state. It starts nothing - v1's snapshot kicked the worker; a read is a read. */
 export async function mvSnapshot(): Promise<MvSnapshot> {
-  const driver = await DEFAULT_ENGINES.health().catch((e: unknown) => ({ ok: false, reason: e instanceof Error ? e.message : String(e) }));
+  const driver = await DEFAULT_ENGINES.health().catch((e: unknown) => ({ ok: false, reason: errorMessage(e) }));
   const { file, jobs, interrupted } = await readMvLive();
   return { jobs, queue: { running: file.queue.running, ...(interrupted === undefined ? {} : { interrupted }) }, driver };
 }

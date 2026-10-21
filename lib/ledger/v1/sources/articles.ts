@@ -16,7 +16,9 @@ import { readJsonFile, RUN_ID_RE, storeRoot } from "../../../../lib/articles/sto
 import { pidAlive } from "../../../../lib/gpu/lease.ts";
 import { storeLocation } from "../../../../lib/kernelStore.ts";
 import { WORKING } from "../../../articles/types.ts";
-import { bump, facts, instant, readEach, words } from "../facts.ts";
+import { errorMessage } from "@gt/domain/errors";
+
+import { bump, facts, instant, readEach } from "../facts.ts";
 import type { IngestEvent, LiveJob, ProjectCtx, Projection, Skipped, Source, WeirItem } from "../types.ts";
 import { universeRoot } from "./roots.ts";
 
@@ -116,7 +118,7 @@ export async function readArticles(root: string, held: () => ReadonlySet<string>
   try {
     names = await readdir(root);
   } catch (e) {
-    if (!(e instanceof Error && "code" in e && e.code === "ENOENT")) return err("unavailable", `articles: listing ${root} failed: ${words(e)}`, { cause: e });
+    if (!(e instanceof Error && "code" in e && e.code === "ENOENT")) return err("unavailable", `articles: listing ${root} failed: ${errorMessage(e)}`, { cause: e });
     names = [];
   }
   const ids = names.filter((n) => RUN_ID_RE.test(n)).sort().reverse().slice(0, ARTICLES_READ_CAP);

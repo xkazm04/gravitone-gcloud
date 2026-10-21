@@ -13,7 +13,9 @@ import type { Store } from "@gt/kernel/store";
 
 import { outPath } from "../../../../lib/fixtures/roots.ts";
 import { storeLocation } from "../../../../lib/kernelStore.ts";
-import { bump, facts, words } from "../facts.ts";
+import { errorMessage } from "@gt/domain/errors";
+
+import { bump, facts } from "../facts.ts";
 import type { IngestEvent, LiveSlot, ProjectCtx, Projection, Source } from "../types.ts";
 
 // THE CALENDAR, PROJECTED - <publish store>/schedule.json, publications.json
@@ -118,7 +120,7 @@ async function readOne(name: keyof typeof EMPTY): Promise<Result<unknown>> {
     text = await readFile(file, "utf8");
   } catch (e) {
     if (e instanceof Error && "code" in e && e.code === "ENOENT") return ok(EMPTY[name]);
-    return err("unavailable", `publish: reading ${file} failed: ${words(e)}`, { cause: e });
+    return err("unavailable", `publish: reading ${file} failed: ${errorMessage(e)}`, { cause: e });
   }
   return parseJsonAt(file, anyObject, text);
 }

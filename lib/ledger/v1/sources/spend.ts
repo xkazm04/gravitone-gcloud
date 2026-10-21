@@ -16,7 +16,9 @@ import { spendStoreDir } from "../../../../lib/spend/fileStore.ts";
 import { SQLITE_CLASSES } from "../../../../lib/spend/select.ts";
 import { storeLocation } from "../../../../lib/kernelStore.ts";
 import { pidAlive } from "../../../../lib/gpu/lease.ts";
-import { bump, digest, facts, instant, laneOfEngine, words } from "../facts.ts";
+import { errorMessage } from "@gt/domain/errors";
+
+import { bump, digest, facts, instant, laneOfEngine } from "../facts.ts";
 import type { IngestEvent, LiveHold, ProjectCtx, Projection, Skipped, Source } from "../types.ts";
 import { universeRoot } from "./roots.ts";
 
@@ -159,7 +161,7 @@ export async function readSpend(root: string, kernel: Store | undefined = openSt
       text = readFileSync(file, "utf8");
     } catch (e) {
       if (e instanceof Error && "code" in e && e.code === "ENOENT") continue;
-      return err("unavailable", `spend: reading ${file} failed: ${words(e)}`, { cause: e });
+      return err("unavailable", `spend: reading ${file} failed: ${errorMessage(e)}`, { cause: e });
     }
     const p = parseJsonAt(`spend ${cls}`, fileSchema, text);
     if (!p.ok) {

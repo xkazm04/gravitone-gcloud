@@ -11,6 +11,8 @@
 import { copyFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { errorMessage } from "@gt/domain/errors";
+
 import { readSuno } from "../suno/store";
 import { filePathAbs, SoundError } from "../store";
 import { getTake } from "../takes";
@@ -28,7 +30,7 @@ export const fetchClipBytes: FetchClipFn = async (url) => {
   try {
     res = await fetch(url, { signal: AbortSignal.timeout(CLIP_TIMEOUT_MS) });
   } catch (e) {
-    throw new Error(`the clip's audio could not be downloaded from ${new URL(url).host}: ${e instanceof Error ? e.message : String(e)}`);
+    throw new Error(`the clip's audio could not be downloaded from ${new URL(url).host}: ${errorMessage(e)}`);
   }
   if (!res.ok) throw new Error(`the clip's audio at ${new URL(url).host} answered HTTP ${res.status}`);
   const bytes = new Uint8Array(await res.arrayBuffer());

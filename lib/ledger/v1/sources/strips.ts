@@ -11,7 +11,9 @@ import type { Actor, EventData } from "@gt/domain/event";
 import { listManifests, readJson } from "../../../../lib/foundry/runStore.ts";
 import { stripsRoot as v1StripsRoot } from "../../../../lib/foundry/strips/store.ts";
 import { JUDGEABLE, STRIP_COMMITTABLE } from "../../../../lib/foundry/strips/triage.ts";
-import { bump, facts, instant, seg, words } from "../facts.ts";
+import { errorMessage } from "@gt/domain/errors";
+
+import { bump, facts, instant, seg } from "../facts.ts";
 import type { IngestEvent, LiveJob, ProjectCtx, Projection, Skipped, Source, WeirItem } from "../types.ts";
 
 // CODE-RENDERED STRIPS, PROJECTED - foundry-out/strips/<id>/run.json (written
@@ -102,13 +104,13 @@ export async function readStrips(root: string): Promise<Result<StripsSnapshot>> 
       try {
         rawVerdicts = await readJson<unknown>(path.join(root, name, "verdicts.json"), {});
       } catch (e) {
-        return { ok: false, skip: { id: name, reason: `verdicts.json: ${words(e)}` } };
+        return { ok: false, skip: { id: name, reason: `verdicts.json: ${errorMessage(e)}` } };
       }
       const verdicts = parseAt(`strip run ${name} verdicts`, verdictsSchema, rawVerdicts);
       return verdicts.ok ? { ok: true, run: { run: run.value, verdicts: verdicts.value } } : { ok: false, skip: { id: name, reason: verdicts.error.message } };
     });
   } catch (e) {
-    return err("unavailable", `strips: listing ${root} failed: ${words(e)}`, { cause: e });
+    return err("unavailable", `strips: listing ${root} failed: ${errorMessage(e)}`, { cause: e });
   }
   const runs: StripRun[] = [];
   const skipped: Skipped[] = [...listed.warnings];

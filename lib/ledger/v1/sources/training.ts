@@ -10,7 +10,9 @@ import type { ResourceLane } from "@gt/domain/lane";
 
 import { getCycle, listCycles } from "../../../../lib/foundry/training/store.ts";
 import { cycleKind } from "../../../foundry/plant.ts";
-import { bump, facts, instant, readEach, seg, words } from "../facts.ts";
+import { errorMessage } from "@gt/domain/errors";
+
+import { bump, facts, instant, readEach, seg } from "../facts.ts";
 import type { IngestEvent, LiveJob, ProjectCtx, Projection, Skipped, Source, WeirItem } from "../types.ts";
 
 // THE DOJO, PROJECTED - foundry-out/training/<id>/cycle.json (written by the
@@ -91,7 +93,7 @@ async function read(): Promise<Result<TrainingSnapshot>> {
   try {
     ids = (await listCycles()).slice(0, TRAINING_READ_CAP).map((c) => c.id);
   } catch (e) {
-    return err("unavailable", `dojo: listCycles failed: ${words(e)}`, { cause: e });
+    return err("unavailable", `dojo: listCycles failed: ${errorMessage(e)}`, { cause: e });
   }
   const got = await readEach(ids, getCycle);
   const cycles: Cycle[] = [];

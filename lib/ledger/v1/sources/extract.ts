@@ -11,7 +11,9 @@ import type { ResourceLane } from "@gt/domain/lane";
 import { LEASE_TTL_MS } from "../../../../lib/foundry/extract/lease.ts";
 import { getExtractRun, listExtractRuns } from "../../../../lib/foundry/extract/store.ts";
 import { EXTRACT_COMMITTABLE, EXTRACT_LIVE } from "../../../foundry/plant.ts";
-import { bump, facts, instant, laneOfEngine, readEach, seg, words } from "../facts.ts";
+import { errorMessage } from "@gt/domain/errors";
+
+import { bump, facts, instant, laneOfEngine, readEach, seg } from "../facts.ts";
 import type { IngestEvent, LiveJob, ProjectCtx, Projection, Skipped, Source, WeirItem } from "../types.ts";
 
 // THE STYLE EXTRACTOR, PROJECTED - foundry-out/extract/<id>/run.json (written
@@ -86,7 +88,7 @@ async function read(): Promise<Result<ExtractSnapshot>> {
   try {
     ids = (await listExtractRuns()).slice(0, EXTRACT_READ_CAP).map((r) => r.id);
   } catch (e) {
-    return err("unavailable", `extract: listExtractRuns failed: ${words(e)}`, { cause: e });
+    return err("unavailable", `extract: listExtractRuns failed: ${errorMessage(e)}`, { cause: e });
   }
   const got = await readEach(ids, getExtractRun);
   const runs: ExtractRun[] = [];

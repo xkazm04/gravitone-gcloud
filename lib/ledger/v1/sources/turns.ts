@@ -15,7 +15,9 @@ import type { MediaLane, ResourceLane } from "@gt/domain/lane";
 import { readJson } from "../../../../lib/foundry/runStore.ts";
 import { pidAlive } from "../../../../lib/gpu/lease.ts";
 import { currentBootId, TURN_ID_RE, turnDir } from "../../../../lib/turns/ledger.ts";
-import { bump, facts, instant, laneOfEngine, readEach, words } from "../facts.ts";
+import { errorMessage } from "@gt/domain/errors";
+
+import { bump, facts, instant, laneOfEngine, readEach } from "../facts.ts";
 import type { IngestEvent, LiveJob, ProjectCtx, Projection, Skipped, Source } from "../types.ts";
 import { universeRoot } from "./roots.ts";
 
@@ -103,7 +105,7 @@ export async function readTurns(root: string): Promise<Result<TurnsSnapshot>> {
   try {
     names = await readdir(root);
   } catch (e) {
-    if (!(e instanceof Error && "code" in e && e.code === "ENOENT")) return err("unavailable", `turns: listing ${root} failed: ${words(e)}`, { cause: e });
+    if (!(e instanceof Error && "code" in e && e.code === "ENOENT")) return err("unavailable", `turns: listing ${root} failed: ${errorMessage(e)}`, { cause: e });
     names = [];
   }
   const ids = names.filter((n) => n.endsWith(".json") && TURN_ID_RE.test(n.slice(0, -5))).map((n) => n.slice(0, -5)).sort().slice(-TURNS_READ_CAP);
