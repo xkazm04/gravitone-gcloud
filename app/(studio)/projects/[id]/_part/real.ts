@@ -12,7 +12,7 @@ import { scoreProducer, scoreUnits } from "@/lib/producers/score";
 import { cutProducer, cutUnits } from "@/lib/producers/cut";
 import { framesProducer, framesUnits } from "@/lib/producers/frames";
 import { motionProducer, motionUnits } from "@/lib/producers/motion";
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { EditorKind, PartActKind, PartOp, PartReceipt, PartView } from "@gt/domain/partView";
 
 import type { ServerPart } from "./port.ts";
@@ -119,7 +119,7 @@ export function makeRealPart(deps: RealDeps): ServerPart {
         (r) => {
           if (!r.ok) console.error(`[part-act] ${jobId}: ${r.error.message}`);
         },
-        (e: unknown) => console.error(`[part-act] ${jobId}: ${e instanceof Error ? e.message : String(e)}`),
+        (e: unknown) => console.error(`[part-act] ${jobId}: ${errorMessage(e)}`),
       );
       await Promise.race([drive, new Promise((res) => setTimeout(res, deps.actWaitMs ?? ACT_WAIT_MS).unref())]);
       const view = read(store.value, projectId, key);

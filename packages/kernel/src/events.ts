@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { parseAt, parseJsonAt } from "@gt/domain/door";
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import { eventDataSchema, eventInputSchema, eventSchema, type Event, type EventInput } from "@gt/domain/event";
 import { canonical, chainHash, GENESIS_HASH } from "./canonical.ts";
 import type { ModuleMigrations } from "./migrate.ts";
@@ -250,7 +250,7 @@ export function verifyRows(rows: Iterable<Row>, anchor?: ChainAnchor): VerifyRep
     try {
       expect = chainHash(ev.prevHash, bodyOf(ev));
     } catch (cause) {
-      return { state: "tampered", seq: ev.seq, reason: `unencodable: ${cause instanceof Error ? cause.message : String(cause)}` };
+      return { state: "tampered", seq: ev.seq, reason: `unencodable: ${errorMessage(cause)}` };
     }
     if (expect !== ev.hash) return { state: "tampered", seq: ev.seq, reason: "hash mismatch: the row's content changed after it was written" };
     if (anchor !== undefined && ev.seq === anchor.seq && ev.hash !== anchor.hash) {

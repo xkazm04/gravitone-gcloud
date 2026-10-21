@@ -707,7 +707,7 @@ export async function runAdRender(
     } catch (e) {
       if (encoder !== "h264_nvenc") throw e;
       // Same fallback, same reason, same log line as lib/musicVideoExport.ts.
-      console.warn("[ads/render] h264_nvenc failed, falling back to libx264:", e instanceof Error ? e.message : e);
+      console.warn("[ads/render] h264_nvenc failed, falling back to libx264:", errorMessage(e));
       nvencUnavailable = true;
       encoder = "libx264";
       await deps.ffmpeg(graphFor(encoder).args);
@@ -722,7 +722,7 @@ export async function runAdRender(
         ]);
         loudness = parseEbur128(stderr);
       } catch (e) {
-        console.warn("[ads/render] loudness measurement failed:", e instanceof Error ? e.message : e);
+        console.warn("[ads/render] loudness measurement failed:", errorMessage(e));
       }
     }
 

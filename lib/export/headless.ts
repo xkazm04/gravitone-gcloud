@@ -91,7 +91,7 @@ export async function withEncoderFallback(logTag: string, encode: (encoder: Enco
     await encode("h264_nvenc");
     return "h264_nvenc";
   } catch (e) {
-    console.warn(`[${logTag}] h264_nvenc failed, falling back to libx264:`, e instanceof Error ? e.message : e);
+    console.warn(`[${logTag}] h264_nvenc failed, falling back to libx264:`, errorMessage(e));
     await encode("libx264");
     return "libx264";
   }
