@@ -39,6 +39,7 @@
 // `scrub` strips URL userinfo too. And as a backstop `scrub` blanks any live
 // key VALUE wherever it appears in a string, whatever route put it there.
 
+import { errorMessage } from "@gt/domain/errors";
 import { KEY_VAR } from "./env";
 import type { ImagingErrorKind } from "./errors";
 import type { Capability, ProviderId, ProviderSteer, RerouteStep } from "./types";
@@ -148,7 +149,7 @@ export function logCall(l: CallLog): void {
  * chased by hand — so it is kept, beside the message and nothing else.
  */
 export function logCleanupFailure(provider: ProviderId, remoteId: string, e: unknown): void {
-  const raw = e instanceof Error ? e.message : String(e);
+  const raw = errorMessage(e);
   console.warn(
     `[imaging] cleanup-failed provider=${provider} id=${remoteId} msg="${oneLine(scrub(raw))}"`,
   );

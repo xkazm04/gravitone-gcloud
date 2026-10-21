@@ -30,6 +30,7 @@
 // drive THIS adapter offline too (a stubbed global fetch, a fake resolver, no
 // sleeping).
 
+import { errorMessage } from "@gt/domain/errors";
 import { ImagingError } from "../errors";
 import { isConfigured, keyFor } from "../env";
 import { requestJson } from "../http";
@@ -264,7 +265,7 @@ function describe(e: unknown): string {
     return vendorWords(said ? `${e.message} ${said}` : e.message, 400);
   }
   if (e instanceof BlockedUrlError) return "the vendor pointed at an address this server will not fetch";
-  return vendorWords(e instanceof Error ? e.message : String(e), 300);
+  return vendorWords(errorMessage(e), 300);
 }
 
 /** v1 init-image: ask for a presigned slot, then POST the file into it. The

@@ -31,6 +31,7 @@ import { promisify } from "node:util";
 
 import { chromium, type Browser } from "playwright";
 
+import { errorMessage } from "@gt/domain/errors";
 import { canSpawnLocalBinaries, describePosture, localPosture } from "../deployment";
 
 export const run = promisify(execFile);
@@ -57,7 +58,7 @@ export async function launchHeadless(): Promise<Browser> {
     return await chromium.launch({ headless: true });
   } catch (e) {
     throw new ExportError(
-      `Headless Chromium failed to launch: ${e instanceof Error ? e.message : String(e)}. ` +
+      `Headless Chromium failed to launch: ${errorMessage(e)}. ` +
         `Run "npx playwright install chromium" on this machine.`,
       "playwright-launch-failed",
     );

@@ -56,6 +56,7 @@
 // lands after the cancel — the race between "it answered" and "they pressed
 // stop" — cannot overwrite it.
 
+import { errorMessage } from "@gt/domain/errors";
 import { TextError } from "../text/errors";
 import { reason } from "../text/router";
 import type { TextResult, TurnClass } from "../text/types";
@@ -285,7 +286,7 @@ async function run(
         receipt: served.provenance,
         error: {
           kind: "bad-response",
-          message: e instanceof Error ? e.message : String(e),
+          message: errorMessage(e),
           ...(Array.isArray(findings) ? { findings: findings.map(String) } : {}),
           ...(Array.isArray(items) && items.length ? { items: items as NonNullable<TurnRecord["error"]>["items"] } : {}),
           ...(draft !== undefined ? { draft } : {}),
@@ -319,7 +320,7 @@ async function settleThrown(id: string, ctl: AbortController, e: unknown): Promi
           endedAt: new Date().toISOString(),
           error: {
             kind: e instanceof TextError ? e.kind : "failed",
-            message: e instanceof Error ? e.message : String(e),
+            message: errorMessage(e),
           },
         },
   ).catch((err) => console.error("[turns] could not settle", id, err));

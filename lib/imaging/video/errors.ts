@@ -13,6 +13,7 @@
 // would break a reader of the other, so a video failure answers both, with the
 // same words: `error` = `code`, `message` = `detail`.
 
+import { errorMessage } from "@gt/domain/errors";
 import type { AdErrorBody } from "@/lib/ads/types";
 import { scrub } from "@/lib/imaging/log";
 
@@ -51,6 +52,6 @@ export function videoErrorBody(code: string, message: string): VideoErrorBody {
 export function videoErrorResponse(e: unknown): Response {
   if (e instanceof VideoError) return Response.json(videoErrorBody(e.kind, e.message), { status: e.status });
   // Not one of ours: a bug. The message is scrubbed, never the raw object.
-  console.error(`[video] unexpected ${scrub(e instanceof Error ? e.message : String(e)).slice(0, 240)}`);
+  console.error(`[video] unexpected ${scrub(errorMessage(e)).slice(0, 240)}`);
   return Response.json(videoErrorBody("failed", "The video request failed on the server."), { status: 500 });
 }

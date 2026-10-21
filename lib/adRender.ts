@@ -48,6 +48,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 
+import { errorMessage } from "@gt/domain/errors";
 import { AD_EXPORT_ID_RE, adExportRoot } from "./adExports";
 import { canSpawnLocalBinaries, describePosture, localPosture } from "./deployment";
 import { AD_SHOTS, type AdRenderRecord, type AdRenderRequest } from "./ads/types";
@@ -423,7 +424,7 @@ async function realRenderOverlays(specs: OverlaySpec[], aspect: Aspect): Promise
   try {
     ({ chromium } = await import("playwright"));
   } catch (e) {
-    throw new Error(`playwright is not installed on this machine: ${e instanceof Error ? e.message : String(e)}`);
+    throw new Error(`playwright is not installed on this machine: ${errorMessage(e)}`);
   }
   let browser: import("playwright").Browser | undefined;
   try {
@@ -431,7 +432,7 @@ async function realRenderOverlays(specs: OverlaySpec[], aspect: Aspect): Promise
       browser = await chromium.launch({ headless: true });
     } catch (e) {
       throw new Error(
-        `Headless Chromium failed to launch: ${e instanceof Error ? e.message : String(e)}. Run "npx playwright install chromium" on this machine.`,
+        `Headless Chromium failed to launch: ${errorMessage(e)}. Run "npx playwright install chromium" on this machine.`,
       );
     }
     const page = await browser.newPage({ viewport: { width: Math.min(size.w, 1920), height: Math.min(size.h, 1920) } });
@@ -742,7 +743,7 @@ export async function runAdRender(
     await writeRecord(rec);
     return rec;
   } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
+    const message = errorMessage(e);
     console.error(`[ads/render] ${id} failed:`, message);
     rec = { ...rec, status: "failed", error: message.slice(0, 2000), finishedAt: now() };
     await writeRecord(rec).catch(() => {});

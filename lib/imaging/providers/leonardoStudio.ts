@@ -26,6 +26,7 @@
 // library: the delete path exists in the design (a wire guard that only lets a
 // destructive operation through for this run's ids), and WP1 builds none of it.
 
+import { errorMessage } from "@gt/domain/errors";
 import { ImagingError, invalidRequest } from "../errors";
 import { isConfigured } from "../env";
 import { priceCall } from "../pricing";
@@ -91,7 +92,7 @@ export function studioCreditsOf(p: Provenance): number | undefined {
  *  Generate went out the studio may have billed, and the meter must book it. */
 function toImagingError(e: unknown): ImagingError {
   if (e instanceof ImagingError) return e;
-  const message = e instanceof Error ? e.message : String(e);
+  const message = errorMessage(e);
   if (!(e instanceof StudioError)) return new ImagingError(message, "failed", "leonardo-studio");
   const kind =
     e.kind === "refused" ? "refused" : e.kind === "timeout" ? "timeout" : e.kind === "unreachable" || e.kind === "signed-out" ? "no-key" : "failed";
