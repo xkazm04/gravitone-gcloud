@@ -9,7 +9,7 @@
 
 import { errorMessage } from "@gt/domain/errors";
 
-import { MusicError,statusFor as musicStatus } from "@/lib/music/errors";
+import { MusicError, statusFor as musicStatus } from "@/lib/music/errors";
 import { TextError, statusFor as textStatus } from "@/lib/text/errors";
 
 import { SoundError } from "./store";

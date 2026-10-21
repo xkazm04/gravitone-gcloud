@@ -40,7 +40,7 @@
 // sentence), so a hunt reads the same from the lab, the CLI and a reload.
 
 import { errorMessage } from "@gt/domain/errors";
-import { composeDetailed,draftPlan, generateSfx, toWirePlan } from "@/lib/music/elevenlabs";
+import { composeDetailed, draftPlan, generateSfx, toWirePlan } from "@/lib/music/elevenlabs";
 import { cueDurationS, cueToPlan } from "@/lib/music/plan";
 import type { CueBrief, CuePicture, WirePlan } from "@/lib/music/types";
 
