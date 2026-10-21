@@ -121,6 +121,8 @@ export interface YouTubeClientOptions {
   fetch?: typeof fetch;
   chunkSize?: number;
   maxRetries?: number;
+  /** Per-request deadline for the response head, chunk PUTs included. Default 5 minutes. */
+  requestTimeoutMs?: number;
   sleep?: (ms: number) => Promise<void>;
 }
 
@@ -213,6 +215,15 @@ class SessionGoneError extends Error {
 }
 
 const RETRY_CAP_MS = 64_000;
+const REQUEST_TIMEOUT_MS = 300_000;
+
+/** A request that got no response in time; thrown from `send`, so the retry paths treat it as a network failure. */
+export class YouTubeNetworkTimeout extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "YouTubeNetworkTimeout";
+  }
+}
 const RETRYABLE_403 = new Set(["quotaExceeded", "rateLimitExceeded", "userRateLimitExceeded", "dailyLimitExceeded"]);
 
 export function retryAfterMs(header: string | null, now = Date.now()): number | null {
@@ -528,14 +539,33 @@ export class YouTubeClient {
     const token = await provider.getAccessToken();
     const h: Record<string, string> = { ...headers, Authorization: `Bearer ${token}` };
     delete h["Content-Length"]; // fetch computes it and forbids setting it
-    return this.fetchImpl(url, {
-      method,
-      headers: h,
-      // A 3xx is answered, never followed: a Location from the wire is a destination nobody
-      // validated, and following it would re-send the bytes and the token there.
-      redirect: "manual",
-      body: body === undefined ? undefined : new Uint8Array(typeof body === "string" ? Buffer.from(body) : body),
+    const timeoutMs = this.opts.requestTimeoutMs ?? REQUEST_TIMEOUT_MS;
+    const ctrl = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    // The race, not the signal alone, bounds the wait: a fetch that ignores its signal still rejects.
+    const deadline = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        const err = new YouTubeNetworkTimeout(`${method} ${new URL(url).host} got no response within ${timeoutMs / 1000}s`);
+        reject(err);
+        ctrl.abort(err);
+      }, timeoutMs);
     });
+    try {
+      return await Promise.race([
+        this.fetchImpl(url, {
+          method,
+          headers: h,
+          // A 3xx is answered, never followed: a Location from the wire is a destination nobody
+          // validated, and following it would re-send the bytes and the token there.
+          redirect: "manual",
+          body: body === undefined ? undefined : new Uint8Array(typeof body === "string" ? Buffer.from(body) : body),
+          signal: ctrl.signal,
+        }),
+        deadline,
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   private async ensureOk(res: Response, what: string): Promise<void> {
