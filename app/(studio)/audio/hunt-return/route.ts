@@ -10,7 +10,7 @@
 import { z } from "zod";
 
 import { parseAt } from "@gt/domain/door";
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 
 import { route } from "../../../_server/route.ts";
 import { kernel } from "../../../../lib/kernelStore.ts";
@@ -38,7 +38,7 @@ export const POST = route({ guard: "access", bodyCap: MAX_UPLOAD_BYTES + 1_000_0
   try {
     form = await req.formData();
   } catch (e) {
-    return err("invalid", `expected multipart/form-data with file, hunt, node and op: ${e instanceof Error ? e.message : String(e)}`);
+    return err("invalid", `expected multipart/form-data with file, hunt, node and op: ${errorMessage(e)}`);
   }
   const p = parseAt("hunt return", fields, { hunt: field(form, "hunt"), node: field(form, "node"), op: field(form, "op") });
   if (!p.ok) return p;

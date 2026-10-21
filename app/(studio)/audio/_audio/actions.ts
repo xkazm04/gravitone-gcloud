@@ -15,7 +15,7 @@ import { randomBytes } from "node:crypto";
 
 import { z } from "zod";
 
-import { err, isAppError, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, isAppError, ok, type Result } from "@gt/domain/errors";
 import type { LaunchedRun, Receipt } from "@gt/domain/produce";
 import { ceilingUsdSchema, receiptModeSchema } from "@gt/domain/produce.schema";
 import { dryOnlyFrom } from "@gt/kernel/dryrun";
@@ -40,7 +40,7 @@ const setHandAction = action("audio set hand", handInput, async (i): Promise<Res
     await writeHand(i.id, i.phrase.trim() === "" ? { stance: i.stance } : { stance: i.stance, phrase: i.phrase });
     return ok({ id: i.id });
   } catch (e) {
-    return e instanceof SoundError ? err(e.status === 400 ? "invalid" : "unavailable", e.message) : err("internal", e instanceof Error ? e.message : String(e));
+    return e instanceof SoundError ? err(e.status === 400 ? "invalid" : "unavailable", e.message) : err("internal", errorMessage(e));
   }
 });
 

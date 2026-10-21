@@ -17,7 +17,7 @@ import "server-only";
 // GRAVITONE_DRY_ONLY=1 (the kernel's dry run, packages/kernel/src/dryrun.ts) holds every channel
 // dry whatever PUBLISH_MODE asks: the one switch that means "nothing here spends or sends".
 
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import { CHANNELS, type Channel } from "@gt/domain/slot";
 import { pidAlive, processHolder } from "@gt/kernel/lease";
 import type { SlotRow } from "@gt/kernel/slots/schema";
@@ -79,7 +79,7 @@ export function readinessOf(rows: readonly SlotRow[], store: StoreFacts, env: No
     seam = channelReadiness(env);
     windowMs = missedWindowMs(env);
   } catch (e) {
-    return err("invalid", e instanceof Error ? e.message : String(e), { cause: e });
+    return err("invalid", errorMessage(e), { cause: e });
   }
   const dryOnly = env["GRAVITONE_DRY_ONLY"] === "1";
   const channels: ChannelReady[] = seam.channels.map((c) => {

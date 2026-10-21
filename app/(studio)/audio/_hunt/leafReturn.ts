@@ -10,7 +10,7 @@ import "server-only";
 // the ledger counts a returned leaf along the same terms as a rendered one - v1's own reason.
 //
 // The bytes come through ../hunt-return/route.ts (a route, not an action: a WAV is tens of MB).
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import { appendOnce } from "@gt/kernel/ingest";
 import type { Store } from "@gt/kernel/store";
@@ -31,7 +31,7 @@ async function guarded<T>(fn: () => Promise<Result<T>>): Promise<Result<T>> {
     return await fn();
   } catch (e) {
     if (e instanceof SoundError) return err(STATUS[e.status] ?? "unavailable", e.message);
-    return err("unavailable", e instanceof Error ? e.message : String(e), { cause: e });
+    return err("unavailable", errorMessage(e), { cause: e });
   }
 }
 

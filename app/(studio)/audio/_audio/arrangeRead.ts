@@ -1,5 +1,6 @@
 import "server-only";
 
+import { errorMessage } from "@gt/domain/errors";
 import type { EngineRow } from "@gt/ui/components/audio/EngineList.tsx";
 import type { CardTake } from "@gt/ui/components/audio/TakeCard.tsx";
 import { measuresByItem, type AudioMeasureRow } from "@gt/kernel/library/measures";
@@ -36,7 +37,6 @@ export type ArrangeView = {
   readonly registry: readonly EngineDef[];
 };
 
-const words = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
 export function engineRows(reg: readonly EngineDef[]): EngineRow[] {
   return reg.map((e) => ({ id: e.id, name: e.name, transport: e.transport, state: engineState(e), ops: [...e.ops], withheld: e.withheld.map((w) => ({ ...w })), ...(e.needs === undefined ? {} : { needs: [...e.needs] }) }));
@@ -77,7 +77,7 @@ export async function readArrange(kind: Kind): Promise<ArrangeView> {
   try {
     [takes, groups] = await Promise.all([listTakes({ kind, verdict: "kept", fixtures: FIXTURE_MODE }), readGroups().then((g) => g.groups[kind])]);
   } catch (e) {
-    return { ...base, takes: { ok: false, error: words(e) }, groups: [], measures: null };
+    return { ...base, takes: { ok: false, error: errorMessage(e) }, groups: [], measures: null };
   }
   const k = kernel();
   const m = k.ok ? measuresByItem(k.value.store, takes.map((t) => `audio:${t.id}`)) : k;
@@ -89,6 +89,6 @@ export async function readArrange(kind: Kind): Promise<ArrangeView> {
 export function finalizedCount(kind: Kind): Promise<Read<number>> {
   return listTakes({ kind, verdict: "kept", stage: "finalized", fixtures: FIXTURE_MODE }).then(
     (t) => ({ ok: true, value: t.length }),
-    (e: unknown) => ({ ok: false, error: words(e) }),
+    (e: unknown) => ({ ok: false, error: errorMessage(e) }),
   );
 }
