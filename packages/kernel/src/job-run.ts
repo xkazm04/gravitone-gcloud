@@ -12,6 +12,7 @@ import { holdLaneIn, laneHold } from "./job-queue.ts";
 import { settleAfter } from "./job-settle.ts";
 import { jobEvent, loadJob, loadOutputs, putJob } from "./job.ts";
 import { DEFAULT_TTL_S, fenceLoss, gone, type Alive } from "./lease-core.ts";
+import { sleep as sleepMs } from "./sleep.ts";
 import type { SpendClass } from "./spend/core.ts";
 import { gateContext } from "./parts/gates.ts";
 import { releaseHeldIn } from "./records/write.ts";
@@ -106,8 +107,6 @@ export const defaultBackoff = (streak: number, random: () => number = Math.rando
 
 /** The spend owner of a drive: one process incarnation, so a reused pid is a different owner. */
 export const spendOwner = (h: Holder): string => `${h.host}/${h.pid}/${h.bootId}`;
-
-const sleepMs = (n: number): Promise<void> => new Promise((r) => setTimeout(r, n));
 
 /** Interrupt one orphaned running job, naming its holder and the step in flight; a paid lane holds. */
 function interrupt(t: Tx, job: Job, by: Holder, why: string): Job {
