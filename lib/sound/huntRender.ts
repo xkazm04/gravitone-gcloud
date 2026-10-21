@@ -34,7 +34,7 @@ import { z } from "zod";
 
 import { PART_OPTIONS } from "@gt/catalog/partOptions";
 import { parseAt } from "@gt/domain/door";
-import { AppError, err, ok, type Result } from "@gt/domain/errors";
+import { AppError, err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import { estimateSchema } from "@gt/domain/estimate";
 import type { Actor } from "@gt/domain/event";
 import { LANE_CAPACITY, type ResourceLane } from "@gt/domain/lane";
@@ -201,14 +201,12 @@ const inFlightIn = (r: Reader, huntId: string): boolean => {
 /** Is a render job of this hunt still queued or running? (the read's `reconcile`) */
 export const renderInFlight = (store: Store, huntId: string): Result<boolean> => store.read((r) => inFlightIn(r, huntId));
 
-const words = (e: unknown): string => (e instanceof Error ? e.message : String(e));
-
 async function huntById(huntId: string): Promise<Result<Hunt>> {
   try {
     const h = (await readHunts()).hunts.find((x) => x.id === huntId);
     return h === undefined ? err("not-found", `no hunt ${huntId}`) : ok(h);
   } catch (e) {
-    return err("unavailable", `the hunt store did not read: ${words(e)}`);
+    return err("unavailable", `the hunt store did not read: ${errorMessage(e)}`);
   }
 }
 
@@ -267,7 +265,7 @@ export async function launchHuntRender(store: Store, ask: RenderAsk, actor: Acto
   try {
     await markLeaves(hunt.id, (n) => (mine.has(n.id) && n.state !== "rendered" ? { state: "rendering", error: null } : null));
   } catch (e) {
-    return err("unavailable", `the render is queued (${jobId}); the hunt store did not take its leaves: ${words(e)}`);
+    return err("unavailable", `the render is queued (${jobId}); the hunt store did not take its leaves: ${errorMessage(e)}`);
   }
   return queued;
 }

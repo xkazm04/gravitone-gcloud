@@ -18,7 +18,7 @@
 //     ONE store transaction;
 //   · a retried draft finds the hunt it made (its id is derived from the op), so a double press
 //     or a retry never pays the text engine twice.
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import { appendOnce } from "@gt/kernel/ingest";
 import type { Store } from "@gt/kernel/store";
@@ -30,7 +30,6 @@ import { patchTakeTx } from "./takes.ts";
 import type { Hunt, SoundKind } from "./types.ts";
 
 export const HUNT_DESK_OP_RE = /^[a-z0-9]{6,40}$/;
-const words = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
 const STATUS: Readonly<Record<number, "invalid" | "not-found" | "conflict" | "refused" | "unavailable">> = { 400: "invalid", 404: "not-found", 409: "conflict", 502: "unavailable", 503: "unavailable" };
 
@@ -39,7 +38,7 @@ async function inStore<T>(fn: () => Promise<Result<T>>): Promise<Result<T>> {
     return await fn();
   } catch (e) {
     if (e instanceof SoundError) return err(STATUS[e.status] ?? "internal", e.message);
-    return err("unavailable", words(e), { cause: e });
+    return err("unavailable", errorMessage(e), { cause: e });
   }
 }
 

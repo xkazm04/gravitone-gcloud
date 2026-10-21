@@ -20,7 +20,7 @@
 //   · a fixture is refused (the ledger refuses it too, so its score would teach nothing either);
 //   · every write carries the client's op id, which keys its event (appendOnce): a retried
 //     score records once.
-import { err, ok, type AppErrorCode, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type AppErrorCode, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import { appendOnce } from "@gt/kernel/ingest";
 import type { Store } from "@gt/kernel/store";
@@ -52,7 +52,7 @@ export async function rateTake(kernel: Store, input: RateInput, actor: Actor, no
     });
   } catch (e) {
     if (e instanceof SoundError) return err(STATUS_CODE[e.status] ?? "internal", e.message);
-    return err("internal", e instanceof Error ? e.message : String(e), { cause: e });
+    return err("internal", errorMessage(e), { cause: e });
   }
   if (!landed.ok) return landed;
   const take = landed.value;

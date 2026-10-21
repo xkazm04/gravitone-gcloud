@@ -7,7 +7,9 @@
 // apiAuth's `{ detail, code }` denial (`asContractDenial`) and the JSON body
 // reader went with the JSON routes that used them.
 
-import { MusicError, statusFor as musicStatus } from "@/lib/music/errors";
+import { errorMessage } from "@gt/domain/errors";
+
+import { MusicError,statusFor as musicStatus } from "@/lib/music/errors";
 import { TextError, statusFor as textStatus } from "@/lib/text/errors";
 
 import { SoundError } from "./store";
@@ -24,7 +26,7 @@ export function toErrorResponse(e: unknown): Response {
   if (e instanceof SoundError) return errorResponse(e.message, e.status);
   if (e instanceof MusicError) return errorResponse(e.message, musicStatus(e.kind), e.kind);
   if (e instanceof TextError) return errorResponse(e.message, textStatus(e.kind), e.kind);
-  const msg = e instanceof Error ? e.message : String(e);
+  const msg = errorMessage(e);
   console.error(`[sound] ${msg}`);
   return errorResponse(msg, 500);
 }

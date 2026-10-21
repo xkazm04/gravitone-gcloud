@@ -23,7 +23,7 @@
 // (its verdict ledger is written last, store.ts StoreTx.commit): a crash can lose an event,
 // never record a move the store does not hold. A lost event is re-appended by the retry the
 // operator's toast asks for, under the same key.
-import { err, ok, type AppErrorCode, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type AppErrorCode, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import { appendOnce, hasKey } from "@gt/kernel/ingest";
 import type { Store } from "@gt/kernel/store";
@@ -42,7 +42,7 @@ async function inStore<T>(fn: () => Promise<Result<T>>): Promise<Result<T>> {
     return await fn();
   } catch (e) {
     if (e instanceof SoundError) return err(STATUS_CODE[e.status] ?? "internal", e.message);
-    return err("internal", e instanceof Error ? e.message : String(e), { cause: e });
+    return err("internal", errorMessage(e), { cause: e });
   }
 }
 
