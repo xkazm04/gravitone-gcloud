@@ -27,11 +27,12 @@
 // NOT replaced with an empty one — that would erase a shelf of judged takes —
 // it throws, and the caller reports it.
 
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { acquireLock as acquireDiskLock } from "../diskTx";
 import { outPath, soundLedgerFile } from "../fixtures/roots";
+import { renameRetry, type RetryOptions } from "../renameRetry";
 import type { Hunt, HuntNode, Lesson, SoundGroups, SoundTake } from "./types";
 import type { LedgerVerdict } from "./ledger";
 
@@ -199,22 +200,17 @@ export async function writeJsonAtomic(file: string, value: unknown): Promise<voi
 // within milliseconds. Without a retry the write throws and the tmp stays
 // behind beside a store that never got it: measured 2026-10-12, a
 // takes.json.<pid>.<n>.tmp from 2026-10-10 sat in foundry-out/sound with no takes.json.
-const RENAME_RETRY = new Set(["EPERM", "EBUSY", "EACCES"]);
+// Jittered: a reader polling on a fixed beat would otherwise meet every retry.
+export const JITTERED_RENAME: RetryOptions = {
+  retries: 10,
+  delayMs: (attempt) => Math.min(400, 10 * 2 ** attempt) * (0.5 + Math.random()),
+};
 async function renameInto(tmp: string, file: string): Promise<void> {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      await rename(tmp, file);
-      return;
-    } catch (e) {
-      const code = (e as NodeJS.ErrnoException).code ?? "";
-      // Jittered: a reader polling on a fixed beat would otherwise meet every retry.
-      if (RENAME_RETRY.has(code) && attempt < 10) {
-        await new Promise((r) => setTimeout(r, Math.min(400, 10 * 2 ** attempt) * (0.5 + Math.random())));
-        continue;
-      }
-      await rm(tmp, { force: true }).catch(() => {});
-      throw e;
-    }
+  try {
+    await renameRetry(tmp, file, JITTERED_RENAME);
+  } catch (e) {
+    await rm(tmp, { force: true }).catch(() => {});
+    throw e;
   }
 }
 

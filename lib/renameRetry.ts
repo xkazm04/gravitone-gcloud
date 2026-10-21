@@ -5,9 +5,6 @@
 // EPERM/EBUSY/EACCES and the refusal clears in milliseconds. The stores that
 // speak this retry differ in how long a window they need, so the attempt count
 // and the delay are options; each caller passes the values it measured.
-//
-// lib/sound/store.ts renameInto keeps its own copy: lane lock-via-disktx owns
-// that file.
 
 import { rename } from "node:fs/promises";
 

@@ -28,9 +28,9 @@
 import { mkdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
-import { renameRetry, type RetryOptions } from "../../renameRetry";
+import { renameRetry } from "../../renameRetry";
 import type { MvFileKind, MvFiles, MvJob, MvQueueState } from "./types";
-import { filePathAbs, safeId, SoundError, storeRoot, withStore, writeJsonAtomic } from "../store";
+import { filePathAbs, JITTERED_RENAME, safeId, SoundError, storeRoot, withStore, writeJsonAtomic } from "../store";
 
 /** One worker step. A phase can hold more than one (`treating` writes a
  *  treatment or, for a motion regenerate, only new motion). The thumbnail step
@@ -140,11 +140,7 @@ export function stagingAbs(rel: string): string {
 // Windows refuses a rename onto a file a reader holds open (a <video> seeking
 // the old render, an indexer) with EPERM/EBUSY/EACCES, and the refusal clears
 // in milliseconds - lib/sound/store.ts renameInto measured it on takes.json.
-// The retry is lib/renameRetry.ts; here it waits longer each time, jittered.
-const LAND_RETRY: RetryOptions = {
-  retries: 10,
-  delayMs: (attempt) => Math.min(400, 10 * 2 ** attempt) * (0.5 + Math.random()),
-};
+// The retry is lib/renameRetry.ts, with the sound store's own jittered timing.
 
 /** Move a staged file over its final name: the old file is replaced only now,
  *  when the new one exists whole (a Regenerate keeps the old render until the
@@ -152,7 +148,7 @@ const LAND_RETRY: RetryOptions = {
 export async function landFile(stagedAbs: string, rel: string): Promise<string> {
   const abs = filePathAbs(rel);
   try {
-    await renameRetry(stagedAbs, abs, LAND_RETRY);
+    await renameRetry(stagedAbs, abs, JITTERED_RENAME);
     return rel;
   } catch (e) {
     await rm(stagedAbs, { force: true }).catch(() => {});
