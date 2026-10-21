@@ -13,6 +13,7 @@
 // The key is read lazily per call, like lib/imaging/env.ts: a route handler
 // that booted before .env.local was filled must not hold a stale absence.
 
+import { errorMessage } from "@gt/domain/errors";
 import { releaseMusic, reserveMusic, settleMusic } from "./budget";
 import { MusicError } from "./errors";
 import { logCall } from "./log";
@@ -39,7 +40,12 @@ const OUTPUT_FORMAT = "mp3_44100_128";
 /** Music generation is slow; give the vendor room but not forever. */
 const TIMEOUT_MS = 240_000;
 
-export const MUSIC_KEY_VAR = "ELEVENLABS_API_KEY";
+/** Safe for any thrown value: a null, a string or a name-less object is not an abort. */
+function isAbort(e: unknown): boolean {
+  return typeof e === "object" && e !== null && (e as { name?: unknown }).name === "AbortError";
+}
+
+export const MUSIC_KEY_VAR ="ELEVENLABS_API_KEY";
 
 function keyOrThrow(): string {
   const v = process.env[MUSIC_KEY_VAR];
@@ -234,10 +240,10 @@ async function composeCall(plan: MusicPlan, totalMs: number, timeoutMs: number):
     });
   } catch (e) {
     throw new MusicError(
-      (e as Error).name === "AbortError" ? "timeout" : "failed",
-      (e as Error).name === "AbortError"
+      isAbort(e) ? "timeout" : "failed",
+      isAbort(e)
         ? `The vendor did not answer within ${timeoutMs / 1000}s.`
-        : `The vendor could not be reached: ${(e as Error).message}`,
+        : `The vendor could not be reached: ${errorMessage(e)}`,
     );
   }
 
@@ -259,10 +265,10 @@ async function composeCall(plan: MusicPlan, totalMs: number, timeoutMs: number):
   } catch (e) {
     if (e instanceof MusicError) throw e;
     throw new MusicError(
-      (e as Error).name === "AbortError" ? "timeout" : "bad-response",
-      (e as Error).name === "AbortError"
+      isAbort(e) ? "timeout" : "bad-response",
+      isAbort(e)
         ? `The vendor began answering but did not finish within ${timeoutMs / 1000}s.`
-        : `The vendor's response could not be read: ${(e as Error).message}`,
+        : `The vendor's response could not be read: ${errorMessage(e)}`,
     );
   } finally {
     clearTimeout(timer);
@@ -313,10 +319,10 @@ async function vendorFetch<T>(url: string, body: unknown, read: (res: Response) 
       });
     } catch (e) {
       throw new MusicError(
-        (e as Error).name === "AbortError" ? "timeout" : "failed",
-        (e as Error).name === "AbortError"
+        isAbort(e) ? "timeout" : "failed",
+        isAbort(e)
           ? `The vendor did not answer within ${TIMEOUT_MS / 1000}s.`
-          : `The vendor could not be reached: ${(e as Error).message}`,
+          : `The vendor could not be reached: ${errorMessage(e)}`,
       );
     }
     if (!res.ok) {
@@ -326,7 +332,7 @@ async function vendorFetch<T>(url: string, body: unknown, read: (res: Response) 
     try {
       return await read(res);
     } catch (e) {
-      if ((e as Error).name === "AbortError")
+      if (isAbort(e))
         throw new MusicError("timeout", `The vendor began answering but did not finish within ${TIMEOUT_MS / 1000}s.`);
       throw e;
     }
