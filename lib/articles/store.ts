@@ -18,6 +18,7 @@ import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/p
 import path from "node:path";
 
 import { acquireLock as acquireDiskLock } from "../diskTx";
+import { sleep } from "../sleep";
 
 import { canTransition as canTransitionData, type ArticleRun, type ArticleStatus } from "./types";
 
@@ -166,8 +167,6 @@ export function assertTransition(from: ArticleStatus, to: ArticleStatus): void {
 }
 
 /* ── locking ───────────────────────────────────────────────────────────────── */
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const acquireLock = (dir: string) =>
   acquireDiskLock(path.join(dir, ".lock"), {

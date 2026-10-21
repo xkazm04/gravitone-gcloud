@@ -9,6 +9,7 @@
 // handle: its health, a failure to throw for a given create, the delay, a log
 // of every create it was asked for, and the library listSunoLibrary answers.
 
+import { sleep } from "@/lib/sleep";
 import type { SunoClipRef, SunoDriverHealth, SunoFields, SunoLibraryClip, SunoModel, SunoPhase } from "@/lib/suno/types";
 
 const PHASES: readonly SunoPhase[] = ["attaching", "composing", "creating", "rendering", "collecting"];
@@ -81,8 +82,6 @@ export async function fakeListSunoLibrary(onPage?: (n: number, total: number | n
   onPage?.(FAKE_SUNO.library.length, null);
   return FAKE_SUNO.library.map((c) => ({ ...c, prompt: { ...c.prompt } }));
 }
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export async function fakeProbeSuno(): Promise<SunoDriverHealth> {
   return FAKE_SUNO.health;

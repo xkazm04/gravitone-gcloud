@@ -25,6 +25,7 @@
 
 import { mkdir, open, rm, stat } from "node:fs/promises";
 import path from "node:path";
+import { sleep } from "./sleep";
 
 export interface LockTiming {
   /** A lock file older than this has no living owner and is broken. */
@@ -52,8 +53,6 @@ export interface LockOptions {
   /** Map a timeout to the store's own error. Defaults to LockTimeout. */
   onTimeout?: (lockFile: string, waitMs: number) => Error;
 }
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Take `lockFile` by exclusive create, breaking it when stale; resolves to
  *  the release function. */

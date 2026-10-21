@@ -31,6 +31,7 @@
 // sleeping).
 
 import { errorMessage } from "@gt/domain/errors";
+import { sleep as defaultSleep } from "../../sleep";
 import { ImagingError } from "../errors";
 import { isConfigured, keyFor } from "../env";
 import { requestJson } from "../http";
@@ -154,7 +155,7 @@ export function findVideoUrl(obj: unknown): string | null {
 }
 
 export function leonardoVideoAdapter(opts: LeonardoVideoOptions = {}): VideoAdapter {
-  const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+  const sleep = opts.sleep ?? defaultSleep;
   const pollMs = opts.pollMs ?? POLL_MS;
   const maxPolls = opts.maxPolls ?? MAX_POLLS;
 

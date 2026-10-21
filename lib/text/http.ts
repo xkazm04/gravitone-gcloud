@@ -27,6 +27,7 @@
 // this grows a vendor-specific branch, that is the signal to extract a shared
 // core from both files rather than to keep two.
 
+import { sleep } from "../sleep";
 import { TextError, type TextErrorKind } from "./errors";
 import type { TextProviderId } from "./types";
 
@@ -43,8 +44,6 @@ function kindForStatus(status: number): TextErrorKind {
   if (status === 401 || status === 403) return "no-key";
   return "failed";
 }
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** POST JSON, get JSON, with the vendor's own error text preserved in `detail`
  *  — which the log module then refuses to print. Both are true on purpose: it is
