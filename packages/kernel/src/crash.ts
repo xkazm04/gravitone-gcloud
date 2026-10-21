@@ -77,7 +77,6 @@ function instrument(inner: Effects, log: string[], crashAfter: number | undefine
   };
 }
 
-
 export async function enumerateCrashes<W>(spec: CrashSpec<W>): Promise<CrashReport> {
   const violations: CrashViolation[] = [];
   const effects: string[] = [];
