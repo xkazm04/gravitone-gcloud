@@ -25,7 +25,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useSyncExternalStore, type ReactNode } from "react";
 
-import { AppError } from "@gt/domain/errors";
+import { AppError, errorMessage } from "@gt/domain/errors";
 import { ensureDispatcher } from "@gt/ui/keymap/dispatch";
 import { identityFlip } from "@gt/ui/storage/identity";
 import { createStore, type Store } from "@gt/ui/storage/store";
@@ -89,7 +89,7 @@ export function Providers({ identity, children }: { readonly identity: string | 
       try {
         await run();
       } catch (cause) {
-        failures.push(`${what}: ${cause instanceof Error ? cause.message : String(cause)}`);
+        failures.push(`${what}: ${errorMessage(cause)}`);
       }
     };
     // The server cookie (Lot 8's /api/session) and v1's Firebase client session both end,
