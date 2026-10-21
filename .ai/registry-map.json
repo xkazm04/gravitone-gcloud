@@ -10804,7 +10804,11 @@
           "revision": 5,
           "changedAt": "2026-09-17",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/runs/ResourceSummary.tsx:34 Searches found no context matches for reviewCoverage, changedLines, Co-authored-by or revert; these files display editorial approvals and resource occupancy rather than analytics derived from software change history.",
+          "evaluatedAt": "2026-10-21",
+          "evaluatedAgainst": "sha256-b2:e43700f2d197398b",
+          "evaluatedRevision": 5
         },
         {
           "subject": "mcp-tools",
