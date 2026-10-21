@@ -1,7 +1,7 @@
 import { copyFile, mkdir, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { AppError, err, type Result } from "@gt/domain/errors";
+import { AppError, err, errorMessage, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import { slotItemId, type Channel } from "@gt/domain/slot";
 import { listSlots } from "@gt/kernel/slots/read";
@@ -137,7 +137,7 @@ export async function sendMvToCalendarAct(id: string, ask: MvSlotAsk, by: Actor,
     await rename(staged, path.join(dir, `${exportId}.mp4`));
   } catch (e) {
     await rm(staged, { force: true });
-    return err("unavailable", `the video could not be copied to the exports: ${e instanceof Error ? e.message : String(e)}`, { cause: e });
+    return err("unavailable", `the video could not be copied to the exports: ${errorMessage(e)}`, { cause: e });
   }
   return createSlot(store, { libraryItemId: item, channel: ask.channel, at: ask.publishAt, title: meta.title, description: meta.description, tags: meta.tags }, by, { wired, itemExists: (x) => x === item });
 }

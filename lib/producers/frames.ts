@@ -1,6 +1,6 @@
 import type { BlobRef } from "@gt/domain/blob";
 import { blobStore, type BlobStore } from "@gt/kernel/blob";
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { EventData } from "@gt/domain/event";
 import type { ResourceLane } from "@gt/domain/lane";
 import type { Producer, StepContext, StepOutcome } from "@gt/kernel/job-core";
@@ -278,7 +278,7 @@ function landFrames(plan: ActPlan, made: ReadonlyMap<string, EventData>, s: Part
       return ok({ frames: { ...rec, units: u.units, renderId: u.renderId, direction, proposal: asData(planFromSpecs(frames, landing.specs, rejected, at)), ...(landing.notice === null ? {} : { notice: landing.notice }) } });
     } catch (e) {
       // The engine's answer could not be used at all: the spend lands, the sentence with it.
-      return ok({ frames: { ...rec, units: u.units, renderId: u.renderId, direction, notice: `The engine returned direction this app cannot use: ${e instanceof Error ? e.message : String(e)} Nothing was changed.` } });
+      return ok({ frames: { ...rec, units: u.units, renderId: u.renderId, direction, notice: `The engine returned direction this app cannot use: ${errorMessage(e)} Nothing was changed.` } });
     }
   }
   if (plan.act === "render-alternative") {

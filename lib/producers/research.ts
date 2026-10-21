@@ -5,7 +5,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { parseAt, parseJsonAt } from "@gt/domain/door";
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { EventData } from "@gt/domain/event";
 import type { Job } from "@gt/domain/job";
 import { jobIdSchema } from "@gt/domain/ids";
@@ -241,7 +241,7 @@ async function notebookUnit(ctx: StepContext, unit: ActUnit, engine: Engines, in
     settled = await RESEARCH_SPEC.settle(run.served, prep.input, run.via);
   } catch (e) {
     // The engine answered and the answer is not a notebook: its sentence, every finding. Not retried.
-    return { kind: "fatal", code: "invalid", message: e instanceof Error ? e.message : String(e) };
+    return { kind: "fatal", code: "invalid", message: errorMessage(e) };
   }
   const searched = obj(settled.engine)?.["searched"] === true;
   return madePaid({ notebook: asData(settled.notebook), kind: searched ? "researched" : "reasoned", engine: engineView(ctx.job, run.served.provenance, DRY) }, ctx);

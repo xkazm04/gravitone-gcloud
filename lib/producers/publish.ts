@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { parseAt } from "@gt/domain/door";
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { Holder } from "@gt/domain/job";
 import { exportIdOf, type Channel, type Slot } from "@gt/domain/slot";
 import { blobStore } from "@gt/kernel/blob";
@@ -61,8 +61,6 @@ function request(slot: Slot, file: string): UploadVideoRequest {
 
 const pinnedSchema = z.object({ export: z.object({ id: z.string().min(1), path: z.string().min(1), sha256: z.string().regex(/^[0-9a-f]{64}$/) }), captions: z.string().nullable() });
 
-const said = (e: unknown): string => (e instanceof Error ? e.message : String(e));
-
 /** The YouTube adapter. `fetchImpl` reaches the wire only in `upload` and `stats`, both live-only. */
 export function youtubeAdapter(env: Env, fetchImpl?: typeof fetch): ChannelAdapter {
   return {
@@ -83,7 +81,7 @@ export function youtubeAdapter(env: Env, fetchImpl?: typeof fetch): ChannelAdapt
         canonical(doc);
         return ok({ doc, dryId: up.id });
       } catch (e) {
-        return err("refused", said(e));
+        return err("refused", errorMessage(e));
       }
     },
     async upload(slot, plan, hooks) {
@@ -105,7 +103,7 @@ export function youtubeAdapter(env: Env, fetchImpl?: typeof fetch): ChannelAdapt
         if (pin.value.captions !== null) await yt.insertCaptions(up.id, pin.value.captions, "en", "English");
         return ok({ platformId: up.id, url: `https://www.youtube.com/watch?v=${encodeURIComponent(up.id)}` });
       } catch (e) {
-        return err("unavailable", said(e));
+        return err("unavailable", errorMessage(e));
       }
     },
     forget: (slotId) => removeSession(slotId),
@@ -117,7 +115,7 @@ export function youtubeAdapter(env: Env, fetchImpl?: typeof fetch): ChannelAdapt
         const stats = await yt.fetchStats([...ids]);
         return ok(stats.map((s) => ({ platformId: s.videoId, views: s.viewCount, likes: s.likeCount, comments: s.commentCount })));
       } catch (e) {
-        return err("unavailable", said(e));
+        return err("unavailable", errorMessage(e));
       }
     },
   };
