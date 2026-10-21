@@ -63,7 +63,6 @@
 // The seam note at the bottom of `shotTypes.ts` records why that separation is
 // load-bearing rather than merely cautious.
 
-
 import { atSeconds } from "@/lib/script/trailer/types";
 import {
   ROLE_HINTS,
