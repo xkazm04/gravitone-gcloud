@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { AppError, isAppError, type Result } from "@gt/domain/errors";
+import { AppError, errorMessage, isAppError, type Result } from "@gt/domain/errors";
 import type { EventData } from "@gt/domain/event";
 import type { Holder } from "@gt/domain/job";
 import { append } from "@gt/kernel/events";
@@ -76,7 +76,6 @@ export type Roster = {
 
 type Own = { readonly kind: "mine"; readonly fence: number; readonly gap?: Gap; readonly seeded?: boolean } | { readonly kind: "held"; readonly holder?: Holder };
 
-const messageOf = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
 function lastReleaseAt(t: Tx, resource: string): string | undefined {
   const at = t.get("SELECT at FROM events WHERE subject_id = ? AND type = 'lease.released' ORDER BY seq DESC LIMIT 1", resource)?.["at"];
@@ -162,7 +161,7 @@ export function timerRoster(entries: readonly TimerEntry[], io: RosterIo): Roste
         const wake = r.value.wakeInMs === undefined ? {} : { wakeInMs: r.value.wakeInMs };
         return end(r.value.count > 0 ? "succeeded" : "succeeded-empty", { what: `${r.value.count} ${r.value.what}`, ...wake });
       } catch (e) {
-        return end("crashed", { error: isAppError(e) ? `${e.code}: ${e.message}` : messageOf(e) });
+        return end("crashed", { error: isAppError(e) ? `${e.code}: ${e.message}` : errorMessage(e) });
       }
     })();
     inFlight.set(spec.name, body);

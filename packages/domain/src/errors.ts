@@ -96,3 +96,8 @@ const STATUS: Readonly<Record<AppErrorCode, number>> = {
 export function httpStatus(code: AppErrorCode): number {
   return STATUS[code];
 }
+
+/** The message of a caught value: an Error's own, else the value stringified. */
+export function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
