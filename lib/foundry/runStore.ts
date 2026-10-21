@@ -8,10 +8,14 @@
 // Path safety, atomic serialization, and manifest resilience rules are
 // defined once here and shared by all three stores.
 
-import { mkdir, readFile, readdir, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { catalogueDir } from "../fixtures/roots";
+import { renameRetry, retryTransientFs, type RetryOptions } from "../renameRetry";
+
+/** 10 tries, 5 ms longer each time. */
+const FS_RETRY: RetryOptions = { retries: 9, delayMs: (attempt) => 5 * (attempt + 1) };
 
 export const RUN_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,120}$/;
 export const SERVABLE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".json"]);
@@ -50,21 +54,14 @@ export async function readJson<T>(file: string, fallback: T | null = null): Prom
   // A concurrent writer's rename can make the read fail transiently with
   // EPERM/EBUSY/EACCES on Windows. Retry briefly (mirror of writeJsonAtomic);
   // the last attempt still throws, so a genuinely unreadable file surfaces.
-  for (let attempt = 0; ; attempt++) {
-    let text: string;
-    try {
-      text = await readFile(file, "utf8");
-    } catch (e) {
-      const code = (e as NodeJS.ErrnoException).code;
-      if (code === "ENOENT") return fallback;
-      if ((code === "EPERM" || code === "EBUSY" || code === "EACCES") && attempt < 9) {
-        await new Promise((r) => setTimeout(r, 5 * (attempt + 1)));
-        continue;
-      }
-      throw e;
-    }
-    return JSON.parse(text) as T;
+  let text: string;
+  try {
+    text = await retryTransientFs(() => readFile(file, "utf8"), FS_RETRY);
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return fallback;
+    throw e;
   }
+  return JSON.parse(text) as T;
 }
 
 /** Read a manifest that may be mid-write or damaged. `undefined` means the
@@ -90,19 +87,7 @@ export async function writeJsonAtomic(file: string, data: unknown): Promise<void
   await mkdir(path.dirname(file), { recursive: true });
   const tmp = `${file}.${process.pid}.${++counter}.${Date.now()}.tmp`;
   await writeFile(tmp, JSON.stringify(data, null, 2), "utf8");
-  for (let attempt = 0; attempt < 10; attempt++) {
-    try {
-      await rename(tmp, file);
-      return;
-    } catch (e) {
-      const code = (e as NodeJS.ErrnoException).code;
-      if ((code === "EPERM" || code === "EBUSY" || code === "EACCES") && attempt < 9) {
-        await new Promise((r) => setTimeout(r, 5 * (attempt + 1)));
-        continue;
-      }
-      throw e;
-    }
-  }
+  await renameRetry(tmp, file, FS_RETRY);
 }
 
 /** THE VERSIONED INDICES' ROOT, respecting process.env.FOUNDRY_DIR. */
