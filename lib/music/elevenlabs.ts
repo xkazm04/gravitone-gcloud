@@ -45,7 +45,7 @@ function isAbort(e: unknown): boolean {
   return typeof e === "object" && e !== null && (e as { name?: unknown }).name === "AbortError";
 }
 
-export const MUSIC_KEY_VAR ="ELEVENLABS_API_KEY";
+export const MUSIC_KEY_VAR = "ELEVENLABS_API_KEY";
 
 function keyOrThrow(): string {
   const v = process.env[MUSIC_KEY_VAR];
