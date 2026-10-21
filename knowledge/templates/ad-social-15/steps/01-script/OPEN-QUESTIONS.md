@@ -25,6 +25,15 @@ its basis is the template research and the persona result."
 duplicates by mechanism (or embedding similarity). The registry's `unmeasured-is-not-pass` decision
 rule applies until then: "report the claim as unmeasured until a duplicate count or similarity
 figure stands behind it."
+*Measured 2026-10-21, thinly* (`.ai/apply-2026-10-21/RESULT.md`): the shipped prompt against itself
+minus the per-slot angle, RAINSHELL brief, two seeds per arm, one blind judge. Distinct leaps over 12
+ideas: 12 seeded, 9 unseeded; mechanisms per set 6,6 against 3,4; category-default count unchanged
+(2 and 2). Every count favored seeding, but the per-set leap gap sits inside seed noise (n=2), so
+a2 stays open for a larger run. The same pair showed the persona seed deciding the *content* in both
+arms. Note: the registry has no `ad-concept-ideation` subject on any branch (checked 2026-10-21).
+The nearest is `media-generation/narrative-craft/ad-concept-development`, where two of the six cited
+techniques have counterparts (angle seeding ~ `creativity-template-mechanisms`, divergence ~
+`divergence-against-the-median`); the other four have no registry home.
 
 ### a3 · Who writes the banality floor, and does it persist per category?
 `banality-screen` says to "write the obvious ads first, on purpose", give the floor to a *separate
