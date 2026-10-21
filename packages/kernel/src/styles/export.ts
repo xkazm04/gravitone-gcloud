@@ -1,9 +1,10 @@
-import { readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { z } from "zod";
 import { parseJsonAt } from "@gt/domain/door";
 import { AppError, err, ok, type Result } from "@gt/domain/errors";
 import type { Style } from "@gt/domain/style";
+import { renameRetryingSync, type SyncRetryOptions } from "../renameRetrySync.ts";
 import type { Reader, Store } from "../store.ts";
 import { catalogueRevIn, listStylesIn } from "./driver.ts";
 
@@ -87,22 +88,9 @@ function current(file: string): string | null {
   }
 }
 
-const RENAME_RETRY = new Set(["EPERM", "EBUSY", "EACCES"]);
-
 /** blob.ts's Windows rule, synchronously (the thread blocks): a rename onto a file an indexer or
  *  an editor holds open fails for a few milliseconds, so it is retried, briefly, then reported. */
-function renameRetrying(tmp: string, file: string): void {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      renameSync(tmp, file);
-      return;
-    } catch (e) {
-      const code = e instanceof Error && "code" in e && typeof e.code === "string" ? e.code : "";
-      if (!RENAME_RETRY.has(code) || attempt >= 8) throw e;
-      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10 * 2 ** attempt);
-    }
-  }
-}
+const EXPORT_RENAME: SyncRetryOptions = { retries: 8, delayMs: (attempt) => 10 * 2 ** attempt };
 
 export type ExportReport = { readonly rev: number; readonly changed: boolean; readonly styles: number };
 
@@ -136,7 +124,7 @@ export function writeStylesExport(store: Store, file: string): Result<ExportRepo
   const tmp = path.join(path.dirname(file), `.${path.basename(file)}.${process.pid}.tmp`);
   try {
     writeFileSync(tmp, text, "utf8");
-    renameRetrying(tmp, file);
+    renameRetryingSync(tmp, file, EXPORT_RENAME);
   } catch (e) {
     rmSync(tmp, { force: true });
     throw new AppError("unavailable", `cannot write ${file}`, { cause: e });
