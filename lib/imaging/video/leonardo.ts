@@ -268,6 +268,8 @@ function describe(e: unknown): string {
   return vendorWords(errorMessage(e), 300);
 }
 
+const UPLOAD_TIMEOUT_MS = 120_000;
+
 /** v1 init-image: ask for a presigned slot, then POST the file into it. The
  *  id returned is what `type: "UPLOADED"` refers to. */
 async function upload(input: VideoRenderInput, headers: Record<string, string>, resolve?: Resolver): Promise<string> {
@@ -287,9 +289,23 @@ async function upload(input: VideoRenderInput, headers: Record<string, string>, 
   const bytes = new Uint8Array(input.image);
   form.append("file", new Blob([bytes], { type: input.mime }), `key.${ext}`);
   // An undefined resolver takes safeFetch's default (real DNS).
-  const up = await safeFetch(slot.url, { method: "POST", body: form }, resolve);
-  if (![200, 201, 204].includes(up.status)) throw new Error(`the upload slot answered ${up.status}`);
-  return slot.id;
+  // A storage endpoint that accepts the connection and stalls must not hang the job.
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), UPLOAD_TIMEOUT_MS);
+  try {
+    // The race also bounds a stalled DNS resolver, which the fetch signal cannot reach.
+    const stalled = new Promise<never>((_, reject) => {
+      ctl.signal.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
+    });
+    const up = await Promise.race([safeFetch(slot.url, { method: "POST", body: form, signal: ctl.signal }, resolve), stalled]);
+    if (![200, 201, 204].includes(up.status)) throw new Error(`the upload slot answered ${up.status}`);
+    return slot.id;
+  } catch (e) {
+    if (ctl.signal.aborted) throw new Error(`the upload slot did not answer within ${UPLOAD_TIMEOUT_MS / 1000}s`);
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function download(url: string, resolve?: Resolver): Promise<Uint8Array> {
