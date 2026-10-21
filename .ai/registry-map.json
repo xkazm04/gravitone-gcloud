@@ -5868,7 +5868,11 @@
           "revision": 8,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/job-worker.ts:75 Recovery runs before the worker loop but not periodically within it, so a subsequently crashed worker's running jobs can continue occupying capacity until another recovery runs.",
+          "evaluatedAt": "2026-10-21",
+          "evaluatedAgainst": "sha256-b2:1023ff3ecf23d679",
+          "evaluatedRevision": 8
         },
         {
           "subject": "engine-host-contract",
