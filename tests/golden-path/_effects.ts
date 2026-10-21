@@ -24,7 +24,9 @@
 //
 // A held actor that stops reaching boundaries without finishing is STALLED —
 // it is blocked on something outside the port, which is what a correct lock
-// looks like from here. The scheduler then lets the other actor run instead of
+// looks like from here. "Stops" is measured in idle time (no port call, no fs
+// I/O in flight, the event loop turning on time), never in wall-clock time, so
+// a slow machine reads as slow and only a blocked actor reads as stalled. The scheduler then lets the other actor run instead of
 // hanging, so a fixed store (foundry-engine-A's `withCatalogue`) serializes
 // cleanly under the same schedule that exposes the race today.
 
@@ -141,21 +143,33 @@ interface Waiter {
 
 export type Outcome<T> = { ok: true; value: T } | { ok: false; error: unknown };
 
+/** The most one idle poll may count: a 1 ms timer fires within ~16 ms on an idle Windows box. */
+const IDLE_TICK_MS = 20;
+
+/** An fs (or dns) request still in flight in this process: libuv's request wraps. Handles (pipes,
+ *  timers) are not work, and a log line written to the runner's pipe is not the actor's either. */
+const ioInFlight = (): boolean => process.getActiveResourcesInfo().some((r) => r.startsWith("FSReq") || r.endsWith("ReqWrap"));
+
 export class Interleaver {
   private waiting: Waiter[] = [];
   private finished = new Set<string>();
   /** Every boundary released, in release order — the interleaving that ran. */
   readonly released: Pending[] = [];
 
+  /** Per actor, how many port calls it has made: a call is progress even when it is not a boundary. */
+  private readonly calls = new Map<string, number>();
+
   constructor(
     private readonly isBoundary: (e: Pending) => boolean,
-    /** No boundary reached and not finished for this long = blocked outside the port. */
+    /** This much IDLE time with no boundary reached and not finished = blocked outside the port.
+     *  Idle is counted by quiet(), not by the wall clock, so a loaded machine cannot fake a stall. */
     private readonly stallMs = 300,
     /** Whole-schedule ceiling, so a deadlock fails the probe instead of hanging the lane. */
     private readonly ceilingMs = 15_000,
   ) {}
 
   readonly gate = (e: Pending): Promise<void> => {
+    this.calls.set(e.actor, (this.calls.get(e.actor) ?? 0) + 1);
     if (!this.isBoundary(e)) return Promise.resolve();
     return new Promise<void>((release) => this.waiting.push({ e, release }));
   };
@@ -177,14 +191,31 @@ export class Interleaver {
     w.release();
   }
 
-  /** The actor's oldest held boundary, `null` once it finished, or "stalled". */
+  /** The actor's oldest held boundary, `null` once it finished, or "stalled".
+   *
+   *  A blocked actor (waiting on a lock the other, held actor owns) makes no port call and has no
+   *  I/O in flight, and the event loop keeps turning on time. A WORKING actor between boundaries
+   *  differs on at least one count: it calls the port, it has fs I/O in flight (the run lock's stat,
+   *  blob reads), or it holds the loop in synchronous work (a node:sqlite transaction). So only a
+   *  poll that sees none of these adds to the idle time, and it adds at most IDLE_TICK_MS: on a
+   *  loaded machine, where a 1 ms timer fires 200 ms late, a slow actor is not mistaken for a
+   *  blocked one, while a real stall still reads "stalled" after stallMs of idle time. */
   private async parked(actor: string): Promise<Waiter | null | "stalled"> {
     const t0 = Date.now();
+    let idle = 0;
+    let seen = this.calls.get(actor) ?? 0;
+    let last = Date.now();
     for (;;) {
       const w = this.waiting.find((x) => x.e.actor === actor);
       if (w) return w;
       if (this.finished.has(actor)) return null;
-      if (Date.now() - t0 > this.stallMs) return "stalled";
+      const now = Date.now();
+      const calls = this.calls.get(actor) ?? 0;
+      if (calls !== seen || ioInFlight()) idle = 0;
+      else idle += Math.min(now - last, IDLE_TICK_MS);
+      seen = calls;
+      last = now;
+      if (idle > this.stallMs || now - t0 > this.ceilingMs) return "stalled";
       await new Promise((r) => setTimeout(r, 1));
     }
   }
