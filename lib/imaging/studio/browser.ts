@@ -34,26 +34,26 @@ export function studioEndpoint(raw: string | undefined = process.env.LEONARDO_ST
   return v.replace(/\/+$/, "");
 }
 
-/** Loopback endpoints only may be launched: a remote one is somebody else's
- *  machine, and a probe must never open a window anywhere. */
-function launchablePort(endpoint: string): number | null {
+function parseEndpoint(endpoint: string): { hostname: string; port: number } | null {
   try {
     const u = new URL(endpoint);
-    if (!["127.0.0.1", "localhost", "[::1]"].includes(u.hostname)) return null;
     const port = Number(u.port);
-    return Number.isInteger(port) && port > 0 ? port : null;
+    return Number.isInteger(port) && port > 0 ? { hostname: u.hostname, port } : null;
   } catch {
     return null;
   }
 }
 
+/** Loopback endpoints only may be launched: a remote one is somebody else's
+ *  machine, and a probe must never open a window anywhere. */
+function launchablePort(endpoint: string): number | null {
+  const parsed = parseEndpoint(endpoint);
+  if (!parsed || !["127.0.0.1", "localhost", "[::1]"].includes(parsed.hostname)) return null;
+  return parsed.port;
+}
+
 function portOf(endpoint: string): number | null {
-  try {
-    const port = Number(new URL(endpoint).port);
-    return Number.isInteger(port) && port > 0 ? port : null;
-  } catch {
-    return null;
-  }
+  return parseEndpoint(endpoint)?.port ?? null;
 }
 
 /** The flags the 2026-10-11 run launched with. */
