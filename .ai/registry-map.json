@@ -13308,7 +13308,11 @@
           "revision": 2,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/errorline/ErrorLine.tsx:12 These components render supplied UI text, and searches found no extractText, extract_text, text-extraction, or docx matches in the context directories or repository, so document extraction is outside this context.",
+          "evaluatedAt": "2026-10-21",
+          "evaluatedAgainst": "sha256-b2:ee97c74f3f5e0c28",
+          "evaluatedRevision": 2
         },
         {
           "subject": "image-prompt-composition",

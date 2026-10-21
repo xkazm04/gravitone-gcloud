@@ -9081,6 +9081,62 @@
         }
       ],
       "registryProposal": "Clarify whether atomic-claiming intentionally excludes SQLite BEGIN IMMEDIATE transactions that serialize state checks and writes; the current text explicitly requires a single conditional update and rejects a lock around the read/write pair."
+    },
+    "5414e8ac-5105-43f0-a153-088e12501c9d/document-text-extraction": {
+      "context": "ui-marks-and-text",
+      "subject": "document-text-extraction",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-21",
+      "evaluatedTs": "2026-10-21T23:26:02.367Z",
+      "worker": "576fede1-b18a-46db-ba15-ac0ab50c8a4e",
+      "techniques": [
+        {
+          "technique": "band-calibration-by-construction",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/hint/words.ts:7 This limit governs tooltip length; no extraction quality bands or calibration thresholds occur here."
+        },
+        {
+          "technique": "context-decided-escaping",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/errorline/ErrorLine.tsx:12 The component renders a supplied string as JSX text; it does not convert extracted document text into markup."
+        },
+        {
+          "technique": "escalation-adjudication",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/stalebadge/StaleBadge.tsx:26 This selects a freshness label; there is no second reader or replacement extraction to adjudicate."
+        },
+        {
+          "technique": "extraction-yield-bands",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/chip/Chip.tsx:32 The chip displays an optional caller-supplied value; it measures no document region or extraction yield."
+        },
+        {
+          "technique": "recognition-boundary-and-escalation",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/a11y/SrOnly.tsx:6 The accessibility channel renders supplied text; it exposes neither a text-layer extractor nor optical recognition."
+        },
+        {
+          "technique": "screen-then-confirm-detection",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/hint/Hint.tsx:36 The hint manages a tooltip layer; no document readability screen or confirming extraction exists here."
+        },
+        {
+          "technique": "structural-amplification-caps",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/ghost/Ghost.tsx:11 This repetition creates UI placeholders from a component prop; it does not expand an uploaded document container."
+        },
+        {
+          "technique": "structure-saturation-guard",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/heading/CapsHeading.tsx:16 Heading structure follows an explicit level prop rather than a classifier inferring structure from document text."
+        },
+        {
+          "technique": "unreadable-region-refusal",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/empty/Empty.tsx:13 The empty state displays a supplied label; it neither reads document regions nor reports extraction completeness."
+        }
+      ]
     }
   }
 }
