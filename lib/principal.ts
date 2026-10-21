@@ -237,6 +237,8 @@ export const STALE_READ_MS = 24 * 3600_000;
 const UNKNOWN_KID_REFETCH_MS = 60_000;
 /** After a failed fetch, do not retry for this long. */
 const FAILURE_BACKOFF_MS = 5_000;
+/** A hung socket must fail the shared in-flight fetch, or the backoff never starts. */
+const JWKS_FETCH_TIMEOUT_MS = 4_000;
 
 function ttlFrom(cacheControl: string | null): number {
   const m = /max-age\s*=\s*(\d+)/i.exec(cacheControl ?? "");
@@ -245,7 +247,7 @@ function ttlFrom(cacheControl: string | null): number {
 }
 
 async function fetchKeySet(now: number): Promise<KeySet> {
-  const f: FetchLike = jwksFetch ?? ((url) => fetch(url));
+  const f: FetchLike = jwksFetch ?? ((url) => fetch(url, { signal: AbortSignal.timeout(JWKS_FETCH_TIMEOUT_MS) }));
   const res = await f(SECURETOKEN_JWKS_URL);
   if (!res.ok) throw new Error(`JWKS answered ${res.status}`);
   const body = (await res.json()) as { keys?: unknown };
