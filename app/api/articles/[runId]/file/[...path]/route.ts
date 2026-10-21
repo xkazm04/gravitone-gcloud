@@ -64,7 +64,6 @@ export const GET = route({ guard: "access", bodyCap: 0 }, async ({ req, params }
     // A draft is rewritten in place while the run works: never held, never seeked.
     const res = await serveFile(req, abs, { mime: MIME[ext] ?? "application/octet-stream", cache: "no-store", ranges: false });
     if (res.status === 404) return err("not-found", `run ${runId} has no ${rel}`);
-    res.headers.set("x-content-type-options", "nosniff");
     if (ext === ".html" || ext === ".svg") res.headers.set("content-security-policy", UNTRUSTED_CSP);
     return res;
   } catch (e) {

@@ -45,9 +45,7 @@ const handler = route({ guard: "access", bodyCap: 0, maxDuration, input }, async
   const type = servedType(q.type);
   const at = blobStore(blobRootOf(k.value.store)).pathOf({ sha256: sha.data, bytes: 0, mime: type });
   if (!at.ok) return at;
-  const res = await serveFile(req, at.value, { mime: type, cache: "private, max-age=31536000, immutable" });
-  res.headers.set("x-content-type-options", "nosniff");
-  return res;
+  return serveFile(req, at.value, { mime: type, cache: "private, max-age=31536000, immutable" });
 });
 
 export const GET = handler;

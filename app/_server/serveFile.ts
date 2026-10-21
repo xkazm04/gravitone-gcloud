@@ -134,6 +134,8 @@ export async function serveFile(req: Request, abs: string, opts: ServeOptions): 
   const lastModified = new Date(Math.floor(mtimeMs / 1000) * 1000).toUTCString();
   const base: Record<string, string> = {
     "content-type": opts.mime,
+    // Served bytes are generated or third-party: the declared type is the type.
+    "x-content-type-options": "nosniff",
     "cache-control": opts.cache ?? "private, max-age=3600",
     etag,
     "last-modified": lastModified,
