@@ -41,7 +41,6 @@ export const SHELF_ROWS = 24;
 /** Bars in a take row's waveform (the prototype drew 74 px at 2 px a bar). */
 export const PEAK_BARS = 37;
 
-
 /** The loudest peak in each of `n` equal spans: the strip's shape survives, its size is bounded. */
 export function downsample(peaks: readonly number[], n: number): number[] {
   if (peaks.length <= n) return [...peaks];

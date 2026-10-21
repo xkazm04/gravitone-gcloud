@@ -3,13 +3,11 @@ import "server-only";
 import { z } from "zod";
 
 import { parseAt, type Parsed } from "@gt/domain/door";
-import { err, type Result } from "@gt/domain/errors";
+import { err, errorMessage, type Result } from "@gt/domain/errors";
 import type { Actor, EventData } from "@gt/domain/event";
 import type { JobState } from "@gt/domain/job";
 
 import { readSuno } from "../../../../lib/sound/suno/store.ts";
-import { errorMessage } from "@gt/domain/errors";
-
 import { bump, digest, facts, instant } from "../facts.ts";
 import type { IngestEvent, LiveJob, ProjectCtx, Projection, Source, WeirItem } from "../types.ts";
 

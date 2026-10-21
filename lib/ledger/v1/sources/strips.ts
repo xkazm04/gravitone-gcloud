@@ -5,14 +5,12 @@ import path from "node:path";
 import { z } from "zod";
 
 import { parseAt, type Parsed } from "@gt/domain/door";
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { Actor, EventData } from "@gt/domain/event";
 
 import { listManifests, readJson } from "../../../../lib/foundry/runStore.ts";
 import { stripsRoot as v1StripsRoot } from "../../../../lib/foundry/strips/store.ts";
 import { JUDGEABLE, STRIP_COMMITTABLE } from "../../../../lib/foundry/strips/triage.ts";
-import { errorMessage } from "@gt/domain/errors";
-
 import { bump, facts, instant, seg } from "../facts.ts";
 import type { IngestEvent, LiveJob, ProjectCtx, Projection, Skipped, Source, WeirItem } from "../types.ts";
 

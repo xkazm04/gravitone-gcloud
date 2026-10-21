@@ -61,7 +61,6 @@ export type BatchView = { readonly kind: Kind; readonly engine: Read<{ readonly 
 /** Takes the rubric pile draws: unscored first, then the newest verdicts. */
 export const RUBRIC_ROWS = 60;
 
-
 async function read<T>(fn: () => Promise<T>): Promise<Read<T>> {
   try {
     return { ok: true, value: await fn() };

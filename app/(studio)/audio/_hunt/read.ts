@@ -36,7 +36,6 @@ export type HuntDeskView = {
   readonly known: readonly string[];
 };
 
-
 const leafOf = (n: HuntNode): HuntLeafView => ({
   id: n.id,
   parentId: n.parentId,

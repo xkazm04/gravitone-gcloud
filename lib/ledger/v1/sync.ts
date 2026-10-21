@@ -2,7 +2,7 @@ import "server-only";
 
 import { hostname } from "node:os";
 
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import { countEvents, facetMap } from "@gt/kernel/events-count";
 import { appendOnce, finishClaim, recordSourceOutcome, takeClaim } from "@gt/kernel/ingest";
@@ -10,8 +10,6 @@ import type { Store } from "@gt/kernel/store";
 
 import { FIXTURE_MODE } from "../../../lib/fixtures/mode.ts";
 import { kernel } from "../../kernelStore.ts";
-import { errorMessage } from "@gt/domain/errors";
-
 import { digest, facts, seg } from "./facts.ts";
 import { weirPacketId } from "./packet.ts";
 import { V1_SOURCES } from "./sources.ts";

@@ -139,7 +139,6 @@ export function recordDefs(): readonly RecordDef<object>[] {
 export const isPlainObject = (x: unknown): x is Record<string, unknown> =>
   typeof x === "object" && x !== null && !Array.isArray(x);
 
-
 /** The version a stored object claims. Absent is 1, permanently (ADR rule 1). */
 function storedVersion(stored: Record<string, unknown>): number | RecordRefusal {
   const v = stored.v ?? 1;

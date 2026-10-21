@@ -6,7 +6,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { parseAt, type Parsed } from "@gt/domain/door";
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { Actor, EventData } from "@gt/domain/event";
 import type { JobState } from "@gt/domain/job";
 import { list } from "@gt/kernel/job";
@@ -16,8 +16,6 @@ import { readJsonFile, RUN_ID_RE, storeRoot } from "../../../../lib/articles/sto
 import { pidAlive } from "../../../../lib/gpu/lease.ts";
 import { storeLocation } from "../../../../lib/kernelStore.ts";
 import { WORKING } from "../../../articles/types.ts";
-import { errorMessage } from "@gt/domain/errors";
-
 import { bump, facts, instant, readEach } from "../facts.ts";
 import type { IngestEvent, LiveJob, ProjectCtx, Projection, Skipped, Source, WeirItem } from "../types.ts";
 import { universeRoot } from "./roots.ts";

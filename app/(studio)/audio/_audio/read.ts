@@ -63,7 +63,6 @@ export const SEED_TAKES = 40;
 /** The request's clock for the receipt sheet (read once, outside render). */
 export const audioNow = (): number => Date.now();
 
-
 async function read<T>(fn: () => Promise<T>): Promise<Read<T>> {
   try {
     return { ok: true, value: await fn() };

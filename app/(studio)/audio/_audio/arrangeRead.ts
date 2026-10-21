@@ -37,7 +37,6 @@ export type ArrangeView = {
   readonly registry: readonly EngineDef[];
 };
 
-
 export function engineRows(reg: readonly EngineDef[]): EngineRow[] {
   return reg.map((e) => ({ id: e.id, name: e.name, transport: e.transport, state: engineState(e), ops: [...e.ops], withheld: e.withheld.map((w) => ({ ...w })), ...(e.needs === undefined ? {} : { needs: [...e.needs] }) }));
 }

@@ -3,12 +3,10 @@ import "server-only";
 import { z } from "zod";
 
 import { parseAt, type Parsed } from "@gt/domain/door";
-import { err, type Result } from "@gt/domain/errors";
+import { err, errorMessage, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 
 import { readTakes } from "../../../../lib/sound/store.ts";
-import { errorMessage } from "@gt/domain/errors";
-
 import { bump, facts, instant } from "../facts.ts";
 import type { IngestEvent, ProjectCtx, Projection, Source, WeirItem } from "../types.ts";
 

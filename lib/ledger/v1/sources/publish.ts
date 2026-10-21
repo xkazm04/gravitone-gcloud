@@ -6,15 +6,13 @@ import path from "node:path";
 import { z } from "zod";
 
 import { parseAt, parseJsonAt, type Parsed } from "@gt/domain/door";
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { Actor, EventData } from "@gt/domain/event";
 import { listSlots } from "@gt/kernel/slots/read";
 import type { Store } from "@gt/kernel/store";
 
 import { outPath } from "../../../../lib/fixtures/roots.ts";
 import { storeLocation } from "../../../../lib/kernelStore.ts";
-import { errorMessage } from "@gt/domain/errors";
-
 import { bump, facts } from "../facts.ts";
 import type { IngestEvent, LiveSlot, ProjectCtx, Projection, Source } from "../types.ts";
 

@@ -7,7 +7,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { parseAt, type Parsed } from "@gt/domain/door";
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { EventData } from "@gt/domain/event";
 import type { JobState } from "@gt/domain/job";
 import type { MediaLane, ResourceLane } from "@gt/domain/lane";
@@ -15,8 +15,6 @@ import type { MediaLane, ResourceLane } from "@gt/domain/lane";
 import { readJson } from "../../../../lib/foundry/runStore.ts";
 import { pidAlive } from "../../../../lib/gpu/lease.ts";
 import { currentBootId, TURN_ID_RE, turnDir } from "../../../../lib/turns/ledger.ts";
-import { errorMessage } from "@gt/domain/errors";
-
 import { bump, facts, instant, laneOfEngine, readEach } from "../facts.ts";
 import type { IngestEvent, LiveJob, ProjectCtx, Projection, Skipped, Source } from "../types.ts";
 import { universeRoot } from "./roots.ts";

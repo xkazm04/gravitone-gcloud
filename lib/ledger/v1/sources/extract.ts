@@ -3,7 +3,7 @@ import "server-only";
 import { z } from "zod";
 
 import { parseAt, type Parsed } from "@gt/domain/door";
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { Actor, EventData } from "@gt/domain/event";
 import type { JobState } from "@gt/domain/job";
 import type { ResourceLane } from "@gt/domain/lane";
@@ -11,8 +11,6 @@ import type { ResourceLane } from "@gt/domain/lane";
 import { LEASE_TTL_MS } from "../../../../lib/foundry/extract/lease.ts";
 import { getExtractRun, listExtractRuns } from "../../../../lib/foundry/extract/store.ts";
 import { EXTRACT_COMMITTABLE, EXTRACT_LIVE } from "../../../foundry/plant.ts";
-import { errorMessage } from "@gt/domain/errors";
-
 import { bump, facts, instant, laneOfEngine, readEach, seg } from "../facts.ts";
 import type { IngestEvent, LiveJob, ProjectCtx, Projection, Skipped, Source, WeirItem } from "../types.ts";
 
