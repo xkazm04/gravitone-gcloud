@@ -5,7 +5,7 @@
 ## Arms
 
 - **B** - `pipeline/ADS-IDEAS-PROMPT.md` as shipped, compiled by `lib/ads/concepts.ts::ideasPrompt`
-  for the RAINSHELL brief, ad-social-15, 15s, seeds 11 and 29 (`compile.ts`).
+  for the RAINSHELL brief, ad-social-15, 15s, seeds 11 and 29 (`compile.mts`).
 - **A** - the same text with ONE variable removed: the per-slot angle and the angle definitions
   (`makeA.mjs`; `diff B-11.md A-11.md`). Personas, forced connections, the long-list stages, the
   gates and the schema are unchanged. A still sees the angle enum in the schema, as a post-hoc label.

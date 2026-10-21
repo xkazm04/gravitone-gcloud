@@ -1,5 +1,5 @@
 // Arm B: the shipped ideas prompt, compiled by the shipped assembler at two seeds.
-// Run from the repo root: npx tsx .ai/apply-2026-10-21/compile.ts
+// Run from the repo root: npx tsx .ai/apply-2026-10-21/compile.mts
 // Then `node .ai/apply-2026-10-21/makeA.mjs` derives arm A (no per-slot angle).
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
