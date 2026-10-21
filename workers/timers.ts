@@ -76,7 +76,6 @@ export type Roster = {
 
 type Own = { readonly kind: "mine"; readonly fence: number; readonly gap?: Gap; readonly seeded?: boolean } | { readonly kind: "held"; readonly holder?: Holder };
 
-
 function lastReleaseAt(t: Tx, resource: string): string | undefined {
   const at = t.get("SELECT at FROM events WHERE subject_id = ? AND type = 'lease.released' ORDER BY seq DESC LIMIT 1", resource)?.["at"];
   return typeof at === "string" ? at : undefined;

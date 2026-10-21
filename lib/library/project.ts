@@ -67,7 +67,6 @@ export type SyncOptions = {
   readonly now?: () => Date;
 };
 
-
 /** A file into a blob, re-hashed only when its size or mtime moved. Null when the file is not there. */
 async function ingest(store: Store, blobs: BlobStore, file: { abs: string; mime: string }, memos: IngestMemo[]): Promise<Result<{ sha256: string; bytes: number; mime: string } | null>> {
   let st;

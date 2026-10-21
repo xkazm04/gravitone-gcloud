@@ -80,7 +80,6 @@ export type PublishOutcome =
 
 type Sent = { readonly kind: "dry" } | ({ readonly kind: "live" } & Delivered);
 
-
 /** Keep claims alive: `conflict` (as a throw) when `current` was lost; a pending claim that was
  *  lost is dropped from the list - the tick will not start it. */
 function keeper(store: Store, current: ClaimedSlot, pending: ClaimedSlot[], beat?: () => Promise<void>): () => Promise<void> {
