@@ -746,7 +746,10 @@ export async function runAdRender(
     const message = errorMessage(e);
     console.error(`[ads/render] ${id} failed:`, message);
     rec = { ...rec, status: "failed", error: message.slice(0, 2000), finishedAt: now() };
-    await writeRecord(rec).catch(() => {});
+    await writeRecord(rec).catch((writeErr: unknown) => {
+      // Best-effort, but the record on disk now stays "rendering": say so.
+      console.warn(`[ads/render] ${id} failed-record write failed:`, errorMessage(writeErr));
+    });
     return rec;
   } finally {
     if (workDir) await rm(workDir, { recursive: true, force: true }).catch(() => {});
