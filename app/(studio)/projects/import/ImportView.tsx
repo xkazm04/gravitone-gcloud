@@ -20,6 +20,7 @@ import { useEffect, useRef, useState } from "react";
 import { unknown } from "zod/mini";
 
 import { parseJsonAt } from "@gt/domain/door";
+import { errorMessage } from "@gt/domain/errors";
 
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
@@ -73,7 +74,7 @@ async function post(path: string, body: Blob): Promise<{ readonly status: number
   try {
     r = await fetch(path, { method: "POST", body, headers: { "content-type": "application/octet-stream" } });
   } catch (e) {
-    return { status: 503, json: { error: `the import could not be reached: ${e instanceof Error ? e.message : String(e)}`, code: "unavailable" } };
+    return { status: 503, json: { error: `the import could not be reached: ${errorMessage(e)}`, code: "unavailable" } };
   }
   const text = await r.text();
   const parsed = parseJsonAt("import answer", unknown(), text);
@@ -91,7 +92,7 @@ async function previewOf(name: string, bytes: Blob): Promise<Source | Extract<Ph
     // A file v1 would refuse never leaves the browser.
     await inspectArchive(bytes);
   } catch (e) {
-    return e instanceof ArchiveRefused ? { kind: "refused", name, code: e.code, message: e.message } : { kind: "error", message: e instanceof Error ? e.message : String(e) };
+    return e instanceof ArchiveRefused ? { kind: "refused", name, code: e.code, message: e.message } : { kind: "error", message: errorMessage(e) };
   }
   const r = await post("/api/import?act=preview", bytes);
   if (r.status === 200) return { name, bytes, preview: r.json as Preview };
@@ -101,15 +102,13 @@ async function previewOf(name: string, bytes: Blob): Promise<Source | Extract<Ph
 
 const isSource = (x: Source | Phase): x is Source => "preview" in x && !("kind" in x);
 
-const message = (e: unknown): string => (e instanceof Error ? e.message : String(e));
-
 /** The first door: every v1 account in this browser, exported and previewed one by one. */
 async function readThisBrowser(): Promise<Phase> {
   let uids: string[];
   try {
     uids = await accounts();
   } catch (e) {
-    return { kind: "error", message: message(e) };
+    return { kind: "error", message: errorMessage(e) };
   }
   const sources: Source[] = [];
   for (const uid of uids) {
@@ -117,7 +116,7 @@ async function readThisBrowser(): Promise<Phase> {
     try {
       bytes = await new Response(exportAccount(uid)).blob();
     } catch (e) {
-      return { kind: "error", message: message(e) };
+      return { kind: "error", message: errorMessage(e) };
     }
     const one = await previewOf(uid, bytes);
     if (!isSource(one)) return one;

@@ -18,6 +18,7 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import { errorMessage } from "@gt/domain/errors";
 import { AudioMeasures } from "@gt/ui/components/audio/AudioMeasures.tsx";
 import { AudioPreview } from "@gt/ui/components/audio/AudioPreview.tsx";
 import { AudioPrompt } from "@gt/ui/components/audio/AudioPrompt.tsx";
@@ -107,7 +108,7 @@ export function AudioLane({ view, nowMs, acts, engines, canSend }: { readonly vi
   const copy = (text: string): void => {
     void navigator.clipboard.writeText(text).then(
       () => toast("prompt copied"),
-      (e: unknown) => toast(`clipboard refused: ${e instanceof Error ? e.message : String(e)}`),
+      (e: unknown) => toast(`clipboard refused: ${errorMessage(e)}`),
     );
   };
 

@@ -16,6 +16,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
+import { errorMessage } from "@gt/domain/errors";
 import { ArrangeBoard } from "@gt/ui/components/audio/ArrangeBoard.tsx";
 import { buildBoard, cellKey, cellOf, checkMove, movedSentence, nextStage, REFUSAL_WORDS, rowsFor, stackVersions, STAGES, step, suggestLabel, walk, type Cell, type Dir, type Stack, type Stage } from "@gt/ui/components/audio/arrange.ts";
 import { seedSuggestions, type GroupOp } from "@gt/ui/components/audio/arrangeGroups.ts";
@@ -266,7 +267,7 @@ export function Arrange({ view, acts }: { readonly view: ArrangeView; readonly a
             next={next}
             download={h.src === null ? null : { href: h.src, name: h.fileName ?? h.title }}
             busy={uploading.has(h.id)}
-            onCopyPrompt={h.prompt.trim() === "" ? null : () => void navigator.clipboard.writeText(h.prompt).then(() => toast("prompt copied"), (e: unknown) => setRefusal(`clipboard refused: ${e instanceof Error ? e.message : String(e)}`))}
+            onCopyPrompt={h.prompt.trim() === "" ? null : () => void navigator.clipboard.writeText(h.prompt).then(() => toast("prompt copied"), (e: unknown) => setRefusal(`clipboard refused: ${errorMessage(e)}`))}
             onFile={(file, to) => {
               if (to === "finalized" && (h.label ?? "").trim() === "") setAsk({ id: h.id, to: { stage: "finalized", group: h.group }, file });
               else void upload(stack, file, to, to === "finalized" ? (h.label ?? undefined) : undefined);
