@@ -32,6 +32,7 @@ import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { createReadStream, existsSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import path from "node:path";
+import { errorMessage } from "@gt/domain/errors";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -294,7 +295,7 @@ async function main(): Promise<number> {
 main().then(
   (code) => process.exit(code),
   (e: unknown) => {
-    console.error(`style-contract: ${e instanceof Error ? e.message : String(e)}`);
+    console.error(`style-contract: ${errorMessage(e)}`);
     process.exit(2);
   },
 );

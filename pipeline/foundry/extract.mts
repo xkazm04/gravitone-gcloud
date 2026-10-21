@@ -29,6 +29,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { errorMessage } from "@gt/domain/errors";
 import { pathToFileURL } from "node:url";
 
 type ExtractManifest = import("../../lib/foundry/extract/types.ts").ExtractManifest;
@@ -272,7 +273,7 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
       closeProcessKernel();
     }
   } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
+    const message = errorMessage(e);
     if (e instanceof Usage) {
       io.err(`${message}\n${USAGE}`);
       if (json) doc({ ok: false, usage: message });

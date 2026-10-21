@@ -17,6 +17,7 @@
 
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { errorMessage } from "@gt/domain/errors";
 
 function loadEnv(file = ".env.local") {
   const p = path.join(process.cwd(), file);
@@ -98,7 +99,7 @@ let specs;
 try {
   specs = parseSceneSpecs(run.text, frames, new Set(FACTS.map((f) => f.id)));
 } catch (e) {
-  console.error(`\nREJECTED — ${e instanceof Error ? e.message : String(e)}`);
+  console.error(`\nREJECTED — ${errorMessage(e)}`);
   writeFileSync(path.join(outDir, "raw-rejected.txt"), run.text);
   process.exit(1);
 }

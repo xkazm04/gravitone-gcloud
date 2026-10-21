@@ -13,6 +13,7 @@
 
 import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { errorMessage } from "@gt/domain/errors";
 import { pathToFileURL } from "node:url";
 
 import { chromium, type Browser, type Page } from "playwright";
@@ -313,7 +314,7 @@ export async function renderStrip(opts: { browser: Browser; htmlPath: string; ou
     };
     return { ok: true, gates, files: { mp4: "strip.mp4", webm: "strip.webm", poster: "poster.jpg", sheet: "sheet.png" }, renderMs: Date.now() - t0 };
   } catch (e) {
-    return { ok: false, files: {}, renderMs: Date.now() - t0, error: e instanceof Error ? e.message : String(e) };
+    return { ok: false, files: {}, renderMs: Date.now() - t0, error: errorMessage(e) };
   } finally {
     await page?.close().catch(() => {});
     await cold?.close().catch(() => {});

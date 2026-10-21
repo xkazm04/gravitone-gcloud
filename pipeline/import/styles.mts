@@ -23,6 +23,7 @@ import "../lib-hooks.mts";
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { errorMessage } from "@gt/domain/errors";
 
 const args = process.argv.slice(2);
 const flag = (name: string): boolean => args.includes(name);
@@ -79,7 +80,7 @@ let text: string;
 try {
   text = readFileSync(from, "utf8");
 } catch (e) {
-  out({ error: String(e) }, [`styles: cannot read ${from}: ${e instanceof Error ? e.message : String(e)}`]);
+  out({ error: String(e) }, [`styles: cannot read ${from}: ${errorMessage(e)}`]);
   closeKernel();
   process.exit(1);
 }
@@ -87,7 +88,7 @@ let plan: Awaited<ReturnType<typeof importStylesText>>;
 try {
   plan = await importStylesText(store, text, { dry, by: { kind: "operator", id: "import/styles" } });
 } catch (e) {
-  out({ error: e instanceof Error ? e.message : String(e) }, [`styles: ${e instanceof Error ? e.message : String(e)}`]);
+  out({ error: errorMessage(e) }, [`styles: ${errorMessage(e)}`]);
   closeKernel();
   process.exit(1);
 }
@@ -97,7 +98,7 @@ if (!dry) {
   try {
     exported = exportStyles(store);
   } catch (e) {
-    exportError = e instanceof Error ? e.message : String(e);
+    exportError = errorMessage(e);
   }
 }
 closeKernel();

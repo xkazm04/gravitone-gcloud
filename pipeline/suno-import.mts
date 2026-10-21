@@ -11,6 +11,7 @@
 // Prints `added N, skipped M, total T` and exits 0; a failure prints the
 // driver's sentence and exits 1.
 
+import { errorMessage } from "@gt/domain/errors";
 import { importSunoLibrary } from "../lib/sound/suno/library";
 import { sunoFile } from "../lib/sound/suno/store";
 
@@ -26,7 +27,7 @@ main().then(
   // stays up (the driver never closes it), only this process ends.
   () => process.exit(0),
   (e: unknown) => {
-    console.error(e instanceof Error ? e.message : String(e));
+    console.error(errorMessage(e));
     process.exit(1);
   },
 );

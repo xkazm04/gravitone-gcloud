@@ -74,7 +74,7 @@ const { standingIn } = await import("@gt/producers/publish/standing");
 const { wireSlot, wirePublication } = await import("@gt/producers/publish/wire");
 const { cancelSlot, createSlot, moveSlot } = await import("@gt/kernel/slots/write");
 const { getSlot, listPublicationsIn, listSlotsIn, snapshotsIn } = await import("@gt/kernel/slots/read");
-const { AppError, isAppError } = await import("@gt/domain/errors");
+const { AppError, errorMessage, isAppError } = await import("@gt/domain/errors");
 const { channelSchema, slotItemId } = await import("@gt/domain/slot");
 const { publicationTotals } = await import("@gt/domain/publication");
 type Result<T> = import("@gt/domain/errors").Result<T>;
@@ -113,7 +113,7 @@ function usage(msg?: string): never {
 
 /** A refusal: `invalid` is the caller's input (exit 2, v1's 400), anything else the operation (1). */
 function fail(e: unknown): never {
-  const msg = e instanceof Error ? e.message : String(e);
+  const msg = errorMessage(e);
   if (JSON_OUT) console.log(JSON.stringify({ error: msg }));
   else console.error(`publish: ${msg}`);
   closeKernel();

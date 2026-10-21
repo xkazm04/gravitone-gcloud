@@ -30,6 +30,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync, unlinkSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
+import { errorMessage } from "@gt/domain/errors";
 
 import { makeClip, probe, formatBytes, PROFILES } from "./video/transcode.mjs";
 
@@ -240,7 +241,7 @@ for (const preset of wanted) {
     );
   } catch (e) {
     failed++;
-    console.log(`FAIL  ${preset.id}\n         → ${e instanceof Error ? e.message : String(e)}\n`);
+    console.log(`FAIL  ${preset.id}\n         → ${errorMessage(e)}\n`);
   }
 }
 

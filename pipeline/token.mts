@@ -27,6 +27,7 @@
 
 import { userInfo } from "node:os";
 
+import { errorMessage } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import { listTokens, mintToken, parseTtl, revokeToken, TOKEN_SCOPES, type TokenRecord, type TokenScope } from "@gt/kernel/token";
 
@@ -56,7 +57,7 @@ function operator(): Actor {
     id = userInfo().username || id;
   } catch (e) {
     // A container with no passwd entry: the act is still the operator's.
-    console.error(`[token] no OS username (${e instanceof Error ? e.message : String(e)}); recording the actor as "operator"`);
+    console.error(`[token] no OS username (${errorMessage(e)}); recording the actor as "operator"`);
   }
   return { kind: "operator", id };
 }
