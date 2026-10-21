@@ -6,6 +6,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { parseJsonAt } from "@gt/domain/door";
+import { errorMessage } from "@gt/domain/errors";
 import type { LibraryState } from "@gt/domain/library";
 
 import { resolveRegistryDir } from "../../articles/registryRead.ts";
@@ -157,7 +158,7 @@ export const mvFeed: Feed = {
       try {
         file = await mvFileOf(j.id, "video");
       } catch (e) {
-        skipped.push({ id: j.id, reason: e instanceof Error ? e.message : String(e) });
+        skipped.push({ id: j.id, reason: errorMessage(e) });
       }
       const at = new Date(j.endedAt ?? j.enqueuedAt).toISOString();
       const parent = j.source.kind === "take" ? [{ kind: "library-item" as const, id: `audio:${j.source.id}` }] : [];
@@ -202,7 +203,7 @@ export const registryFeed: Feed = {
       try {
         text = await readFile(path.join(dir, "knowledge", bundle, "index.json"), "utf8");
       } catch (e) {
-        skipped.push({ id: bundle, reason: e instanceof Error ? e.message : String(e) });
+        skipped.push({ id: bundle, reason: errorMessage(e) });
         continue;
       }
       const index = parseJsonAt(`knowledge/${bundle}/index.json`, indexSchema, text);

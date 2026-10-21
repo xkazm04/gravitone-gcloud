@@ -19,7 +19,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { parseJsonAt } from "@gt/domain/door";
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import { importV1Calendar, type ImportOutcome } from "@gt/kernel/slots/import";
 import type { Store } from "@gt/kernel/store";
 import { z } from "zod";
@@ -48,7 +48,7 @@ function readKind(root: string, kind: keyof typeof FILES): Result<unknown> {
   try {
     text = readFileSync(file, "utf8");
   } catch (e) {
-    return err("unavailable", `${file}: ${e instanceof Error ? e.message : String(e)}`, { cause: e });
+    return err("unavailable", `${file}: ${errorMessage(e)}`, { cause: e });
   }
   return parseJsonAt(file, anyObject, text);
 }
@@ -97,7 +97,7 @@ export function importCalendar(store: Store, root: string, opts: { readonly dry:
   try {
     writeFileSync(marker, migratedText(opts.now.toISOString()), { flag: "wx" });
   } catch (e) {
-    return err("unavailable", `the calendar was imported, but ${marker} could not be written: ${e instanceof Error ? e.message : String(e)}`, { cause: e });
+    return err("unavailable", `the calendar was imported, but ${marker} could not be written: ${errorMessage(e)}`, { cause: e });
   }
   return ok({ root, dry: false, outcomes, sideFiles: side, marked: marker, alreadyMarked });
 }

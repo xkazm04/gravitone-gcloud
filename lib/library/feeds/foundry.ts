@@ -5,6 +5,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
+import { errorMessage } from "@gt/domain/errors";
 import type { LibraryState } from "@gt/domain/library";
 import type { StyleFacets } from "@gt/kernel/library/core";
 
@@ -102,7 +103,7 @@ export const forgeFeed: Feed = {
       try {
         detail = await getRun(summary.id);
       } catch (e) {
-        skipped.push({ id: summary.id, reason: e instanceof Error ? e.message : String(e) });
+        skipped.push({ id: summary.id, reason: errorMessage(e) });
         continue;
       }
       const { run, verdicts } = detail;
@@ -170,7 +171,7 @@ export const extractFeed: Feed = {
       try {
         detail = await getExtractRun(summary.id);
       } catch (e) {
-        skipped.push({ id: summary.id, reason: e instanceof Error ? e.message : String(e) });
+        skipped.push({ id: summary.id, reason: errorMessage(e) });
         continue;
       }
       const { run, verdicts } = detail;
@@ -244,7 +245,7 @@ export const dojoFeed: Feed = {
       try {
         detail = await getCycle(summary.id);
       } catch (e) {
-        skipped.push({ id: summary.id, reason: e instanceof Error ? e.message : String(e) });
+        skipped.push({ id: summary.id, reason: errorMessage(e) });
         continue;
       }
       const { cycle, verdicts } = detail;
@@ -260,7 +261,7 @@ export const dojoFeed: Feed = {
         try {
           file = fileOf(existsSync(kept) ? kept : resolveInCycle(cycle.id, imp.thumbnail));
         } catch (e) {
-          skipped.push({ id: `${cycle.id}/${imp.id}`, reason: `thumbnail ${imp.thumbnail}: ${e instanceof Error ? e.message : String(e)}` });
+          skipped.push({ id: `${cycle.id}/${imp.id}`, reason: `thumbnail ${imp.thumbnail}: ${errorMessage(e)}` });
         }
         items.push({
           item: {
@@ -296,7 +297,7 @@ export const stripsFeed: Feed = {
       try {
         detail = await getStripRun(summary.id);
       } catch (e) {
-        skipped.push({ id: summary.id, reason: e instanceof Error ? e.message : String(e) });
+        skipped.push({ id: summary.id, reason: errorMessage(e) });
         continue;
       }
       const { run, verdicts } = detail;

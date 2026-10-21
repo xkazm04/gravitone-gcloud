@@ -21,7 +21,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { parseJsonAt } from "@gt/domain/door";
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 
 import { outPath } from "../fixtures/roots";
 
@@ -51,7 +51,7 @@ export async function readSession(slotId: string, sha256: string): Promise<Resul
     text = await readFile(file.value, "utf8");
   } catch (e) {
     if (e instanceof Error && "code" in e && e.code === "ENOENT") return ok(undefined);
-    return err("unavailable", `${file.value}: ${e instanceof Error ? e.message : String(e)}`, { cause: e });
+    return err("unavailable", `${file.value}: ${errorMessage(e)}`, { cause: e });
   }
   const s = parseJsonAt(file.value, sessionSchema, text);
   // A damaged or foreign file is not resumed; a fresh session is the safe answer, and it is said by
@@ -80,6 +80,6 @@ export async function removeSession(slotId: string): Promise<Result<void>> {
     await rm(file.value, { force: true });
     return ok(undefined);
   } catch (e) {
-    return err("unavailable", `${file.value} was not removed: ${e instanceof Error ? e.message : String(e)}`, { cause: e });
+    return err("unavailable", `${file.value} was not removed: ${errorMessage(e)}`, { cause: e });
   }
 }
