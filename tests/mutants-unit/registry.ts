@@ -3922,7 +3922,7 @@ export const MUTANTS: UnitMutant[] = [
     id: "timer-crash-kills-loop",
     test: "tests/next-server/publish-timers.test.ts",
     file: "workers/timers.ts",
-    find: "return end(\"crashed\", { error: isAppError(e) ? `${e.code}: ${e.message}` : messageOf(e) });",
+    find: "return end(\"crashed\", { error: isAppError(e) ? `${e.code}: ${e.message}` : errorMessage(e) });",
     replace: "throw e;",
     why: "A throwing tick escapes the envelope: its timer is never re-armed and the worker's loop for it dies silently.",
   },
