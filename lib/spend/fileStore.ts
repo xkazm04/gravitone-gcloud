@@ -101,10 +101,14 @@ function writeAtomic(file: string, body: string): void {
         rmSync(tmp, { force: true });
         throw e;
       }
-      const until = Date.now() + 5;
-      while (Date.now() < until);
+      sleepSync(5);
     }
   }
+}
+
+/** Block the thread without burning CPU; the function stays synchronous. */
+function sleepSync(ms: number): void {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
 function readState<R>(file: string): SpendState<R> {
