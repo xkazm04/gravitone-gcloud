@@ -14,8 +14,10 @@
 // one door every status change goes through: `updateRun` refuses an illegal
 // transition before it writes, whoever asked for it.
 
-import { mkdir, open, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
+
+import { acquireLock as acquireDiskLock } from "../diskTx";
 
 import { canTransition as canTransitionData, type ArticleRun, type ArticleStatus } from "./types";
 
@@ -165,35 +167,13 @@ export function assertTransition(from: ArticleStatus, to: ArticleStatus): void {
 
 /* ── locking ───────────────────────────────────────────────────────────────── */
 
-const LOCK_STALE_MS = 30_000;
-const LOCK_WAIT_MS = 10_000;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function acquireLock(dir: string): Promise<() => Promise<void>> {
-  await mkdir(dir, { recursive: true });
-  const lock = path.join(dir, ".lock");
-  const started = Date.now();
-  for (;;) {
-    try {
-      const fh = await open(lock, "wx");
-      await fh.writeFile(JSON.stringify({ pid: process.pid, at: new Date().toISOString() }));
-      await fh.close();
-      return () => rm(lock, { force: true });
-    } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
-      // A mutation is milliseconds of JSON; a lock this old has no living owner.
-      const age = await stat(lock).then((s) => Date.now() - s.mtimeMs).catch(() => 0);
-      if (age > LOCK_STALE_MS) {
-        await rm(lock, { force: true });
-        continue;
-      }
-      if (Date.now() - started > LOCK_WAIT_MS) {
-        throw new ArticleError(`the run is locked (${lock}) and the holder did not release it in ${LOCK_WAIT_MS} ms`, 409, "locked");
-      }
-      await sleep(20 + Math.random() * 30);
-    }
-  }
-}
+const acquireLock = (dir: string) =>
+  acquireDiskLock(path.join(dir, ".lock"), {
+    onTimeout: (lock, waitMs) =>
+      new ArticleError(`the run is locked (${lock}) and the holder did not release it in ${waitMs} ms`, 409, "locked"),
+  });
 
 const queues = new Map<string, Promise<unknown>>();
 
