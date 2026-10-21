@@ -1,4 +1,4 @@
-import { AppError, isAppError, ok, type Result } from "@gt/domain/errors";
+import { AppError, errorMessage, isAppError, ok, type Result } from "@gt/domain/errors";
 import type { Holder } from "@gt/domain/job";
 import { LANE_CAPACITY, RESOURCE_LANES, type ResourceLane } from "@gt/domain/lane";
 import type { Effects } from "./effects.ts";
@@ -135,7 +135,7 @@ export async function workLoop(fx: Effects, producers: ReadonlyMap<ProducerKey, 
         },
         (e: unknown) => {
           // A drive that threw past runJob's own recording is a process-level fault: carried as the drive's error, never lost.
-          const report: Result<RunReport> = { ok: false, error: isAppError(e) ? e : new AppError("internal", e instanceof Error ? e.message : String(e), { cause: e }) };
+          const report: Result<RunReport> = { ok: false, error: isAppError(e) ? e : new AppError("internal", errorMessage(e), { cause: e }) };
           reports.push({ pick, report });
           opts.onReport?.(pick, report);
         },

@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { z } from "zod";
 
 import { parseJsonAt, type Parsed } from "@gt/domain/door";
-import { AppError, err, type ErrorEnvelope, httpStatus, isAppError, type Result, toEnvelope } from "@gt/domain/errors";
+import { AppError, err, errorMessage, type ErrorEnvelope, httpStatus, isAppError, type Result, toEnvelope } from "@gt/domain/errors";
 
 // THE WIRE'S HALF OF THE ERROR TAXONOMY - one envelope, one body reader, one
 // answer for a caller who left. Pure over Request and Response, so the route
@@ -41,7 +41,7 @@ export function publicError(e: AppError, where: string): ErrorEnvelope {
 /** Any throw, classified: an AppError keeps its code, anything else is `internal`. */
 export function asAppError(e: unknown): AppError {
   if (isAppError(e)) return e;
-  return new AppError("internal", e instanceof Error ? e.message : String(e), { cause: e });
+  return new AppError("internal", errorMessage(e), { cause: e });
 }
 
 /** The one error response. */

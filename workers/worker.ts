@@ -1,6 +1,6 @@
 import path from "node:path";
 import { parseArgs } from "node:util";
-import { AppError, type Result } from "@gt/domain/errors";
+import { AppError, errorMessage, type Result } from "@gt/domain/errors";
 import { resourceLaneSchema, RESOURCE_LANES, type ResourceLane } from "@gt/domain/lane";
 import { blobStore } from "@gt/kernel/blob";
 import { dryOnlyFrom } from "@gt/kernel/dryrun";
@@ -80,7 +80,7 @@ function parse(argv: readonly string[]): Result<Args> {
       allowPositionals: false,
     }).values;
   } catch (e) {
-    return { ok: false, error: new AppError("invalid", e instanceof Error ? e.message : String(e)) };
+    return { ok: false, error: new AppError("invalid", errorMessage(e)) };
   }
   const lanes: ResourceLane[] = [];
   for (const raw of (v.lanes ?? RESOURCE_LANES.join(",")).split(",").map((s) => s.trim()).filter((s) => s !== "")) {
