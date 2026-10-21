@@ -376,4 +376,12 @@ export const MUTANTS: Mutant[] = [
     replace: "beats[0]",
     why: "The shelf reads a trailer's runtime from its opening beat, so every cut shows as 0:00 long.",
   },
+  {
+    id: "safefetch-hop-has-no-deadline",
+    probe: "imaging-safefetch-timeout.probe.spec.ts",
+    file: "lib/imaging/safeUrl.ts",
+    find: "const signal = init.signal ?? AbortSignal.timeout(DEFAULT_HOP_TIMEOUT_MS);",
+    replace: "const signal = init.signal;",
+    why: "A vendor URL fetched with no caller signal that accepts the connection and never answers holds the request, and the job behind it, forever.",
+  },
 ];

@@ -43,6 +43,7 @@ const METADATA_HOSTS = new Set([
 
 /** Redirect hops to follow. Enough for a real CDN chain, few enough to bound. */
 export const MAX_HOPS = 5;
+export const DEFAULT_HOP_TIMEOUT_MS = 120_000;
 
 export class BlockedUrlError extends Error {
   constructor(
@@ -147,7 +148,11 @@ export async function safeFetch(
   let target = raw;
   for (let hop = 0; hop <= MAX_HOPS; hop++) {
     await assertFetchable(target, resolve);
-    const res = await fetch(target, { ...init, redirect: "manual" });
+    // A caller's signal is kept as given (every current caller passes one, sized
+    // to its own payload); without one each hop gets this deadline, which also
+    // bounds reading the body.
+    const signal = init.signal ?? AbortSignal.timeout(DEFAULT_HOP_TIMEOUT_MS);
+    const res = await fetch(target, { ...init, signal, redirect: "manual" });
     if (res.status < 300 || res.status > 399) return res;
     const next = res.headers.get("location");
     if (!next) return res; // a 3xx with nowhere to go is the vendor's problem, not a redirect
