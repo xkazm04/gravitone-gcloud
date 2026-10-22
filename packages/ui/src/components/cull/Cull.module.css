@@ -55,4 +55,9 @@
 .k{color:var(--emerald)}
 .x{color:var(--rose)}
 .u{color:var(--muted)}
+/* prototype view switcher (throwaway, TODO(prototype, 2026-10-22)) */
+.proto{display:flex;gap:var(--sp-2);padding:var(--sp-2) var(--sp-6);border-bottom:1px solid var(--hair-2)}
+.protoTab{display:flex;gap:var(--sp-2);align-items:baseline;padding:var(--sp-2) var(--sp-4);border-radius:var(--r-chip);font-size:var(--fs-micro);color:var(--muted)}
+.protoTab b{color:var(--text);font-weight:600}
+.protoTab[aria-selected="true"]{background:var(--ink-3);box-shadow:inset 0 0 0 1px var(--cyan)}
 @media (prefers-reduced-motion: reduce){.nudge{animation:none;box-shadow:0 0 0 var(--ring-halo) var(--rose)}.tile,.badge,.media{transition:none}}

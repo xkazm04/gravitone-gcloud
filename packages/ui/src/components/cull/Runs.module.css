@@ -1,0 +1,42 @@
+/* The run grid (prototype 2026-10-22): RunCard in its two faces, the group headings, the opened run
+   (sheet: the whole desk; band: a strip across the grid). Tokens only. */
+.desk{padding:var(--sp-loose) var(--sp-6) var(--sp-7);display:flex;flex-direction:column;gap:var(--sp-6)}
+.group{display:flex;flex-direction:column;gap:var(--sp-3)}
+.eyebrow{font:600 var(--fs-micro)/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--w-lib-tile-m),1fr));gap:var(--sp-5)}
+.gridDense{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--w-lib-tile-s),1fr));gap:var(--sp-2)}
+
+.card{position:relative;display:flex;flex-direction:column;width:100%;padding:0;border-radius:var(--r-tile);overflow:hidden;background:var(--ink-3);border:var(--stroke-mark) solid transparent;text-align:left;transition:border-color .18s,box-shadow .18s,opacity .25s}
+.face{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:var(--ink-2)}
+.faceText{overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;aspect-ratio:4/3;padding:var(--sp-5);font:600 var(--fs-ui)/1.4 var(--sans);color:var(--text);background:var(--ink-3)}
+.strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--sp-hair);padding:var(--sp-hair)}
+.mini{display:grid;place-items:center;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:var(--r-chip);border:var(--sp-hair) solid transparent;background:var(--ink-2);color:var(--muted);font-size:var(--fs-micro)}
+.miniBlank{border-style:dashed;border-color:var(--hair-2)}
+.miniKeep{border-color:var(--emerald)}
+.miniReject{opacity:.4}
+.foot{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);padding:var(--sp-2) var(--sp-3);min-height:var(--size-badge)}
+.label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;font:500 var(--fs-micro)/1.2 var(--mono);color:var(--text)}
+
+.mosaic .face{aspect-ratio:1/1}
+.mosaic .faceText{aspect-ratio:1/1;-webkit-line-clamp:5;padding-bottom:calc(var(--size-badge) + var(--sp-5))}
+.mosaic .foot{position:absolute;left:0;right:0;bottom:0;background:color-mix(in srgb,var(--ink) 82%,transparent)}
+
+.cur{box-shadow:0 0 0 var(--ring-halo) var(--cyan);z-index:2}
+.kept{border-color:var(--emerald)}
+.rejected{border-color:color-mix(in srgb,var(--rose) 70%,transparent)}
+.rejected .face{filter:grayscale(.85) brightness(.45)}
+.mixed{border-color:var(--amber)}
+.nudge{animation:nudge .9s}
+@keyframes nudge{0%,100%{box-shadow:none}30%,70%{box-shadow:0 0 0 var(--ring-halo) var(--rose)}}
+
+/* the opened run - shared by both views: the reference beside large variants */
+.run{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,3fr);gap:var(--sp-6);align-items:start}
+.runRef{display:flex;flex-direction:column;gap:var(--sp-2)}
+.runRefFace{width:100%;object-fit:contain;border-radius:var(--r-control);border:1px solid var(--hair-2);background:var(--ink-2)}
+.runHead{display:flex;align-items:baseline;gap:var(--sp-4);font:600 var(--fs-h3)/1.3 var(--sans);color:var(--ink-bright)}
+.runPos{font:500 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+.runTiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--w-lib-tile-l),1fr));gap:var(--sp-5)}
+.band{grid-column:1/-1;padding:var(--sp-6);border-radius:var(--r-control);background:var(--ink-2);border:1px solid var(--hair-2)}
+.back{align-self:flex-start;font:500 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+
+@media (prefers-reduced-motion: reduce){.nudge{animation:none;box-shadow:0 0 0 var(--ring-halo) var(--rose)}.card{transition:none}}

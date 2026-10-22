@@ -12,18 +12,17 @@
 // operator pressed, so 1-9, 0, − follow the source's list in order (@gt/domain/source).
 import { useEffect, useRef, useState } from "react";
 
-import { REASON_KEYS } from "@gt/domain/source";
-
 import type { BoardPacket } from "../../board/port.ts";
 import type { BoardVerdict } from "../../board/boardGate.ts";
 import { clamp, cullCells, reasonAct, rowOf, tallyOf, undecidedOf, vertical } from "../../board/cull.ts";
 import { useKeys } from "../../keymap/dispatch.ts";
 import { Chip } from "../chip/Chip.tsx";
-import { CommitButton, DeskFrame, OracleStrip } from "../desk/Desk.tsx";
+import { DeskFrame, OracleStrip } from "../desk/Desk.tsx";
 import { Plate } from "../desk/Plate.tsx";
-import { Keycaps } from "../keycaps/Keycaps.tsx";
-import { StackBar } from "../stackbar/StackBar.tsx";
+import { CullFoot } from "./CullFoot.tsx";
 import { CullTile, Zoom, kindOf } from "./CullTile.tsx";
+import { MatrixCullBand } from "./MatrixCullBand.tsx";
+import { MatrixCullSheet } from "./MatrixCullSheet.tsx";
 import { SeriesBadge } from "./SeriesBadge.tsx";
 import s from "./Cull.module.css";
 
@@ -40,7 +39,7 @@ export type MatrixCullProps = {
   readonly keys?: boolean;
 };
 
-export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = false, announce = () => undefined, keys = true }: MatrixCullProps) {
+function MatrixCullBaseline({ packet, verdicts, decide, undo, onCommit, busy = false, announce = () => undefined, keys = true }: MatrixCullProps) {
   const { view, present } = packet;
   const cells = cullCells(present.rows, view.items);
   const byId = new Map<string, (typeof view.items)[number]>(view.items.map((it) => [it.id, it]));
@@ -176,16 +175,7 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
       }
       foot={
         <>
-          <Keycaps mode="board.cull" label="cull keys" facts={new Set(isAudio ? ["audio"] : [])} only={{ reason: REASON_KEYS.slice(0, view.reasons.list.length) }} />
-          <div className={s.tally}>
-            <div className={s.stack}>
-              <StackBar kept={t.kept} rejected={t.rejected} undecided={t.undecided} label="packet" />
-            </div>
-            <span className={s.counts} aria-hidden="true">
-              <span className={s.k}>{t.kept}</span> · <span className={s.x}>{t.rejected}</span> · <span className={s.u}>{t.undecided}</span>
-            </span>
-          </div>
-          <CommitButton mode="board.cull" refusals={refusals} busy={busy} onPress={commit} {...(t.undecided > 0 ? { waiting: `${t.undecided} undecided` } : {})} />
+          <CullFoot tally={t} reasons={view.reasons.list.length} audio={isAudio} refusals={refusals} busy={busy} onCommit={commit} />
         </>
       }
     >
@@ -230,5 +220,32 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
       </div>
       {isAudio && <audio ref={audio} onEnded={() => setPlaying(null)} />}
     </DeskFrame>
+  );
+}
+
+// TODO(prototype, 2026-10-22): consolidate the MatrixCull view switcher - the run-grid prototype
+// (scout grid view). Throwaway: the winner becomes the sole render and this strip goes.
+const VIEWS = [
+  { id: "rows", label: "rows", sub: "today: a row per run" },
+  { id: "sheet", label: "contact sheet", sub: "run grid, loupe takes the desk" },
+  { id: "band", label: "mosaic + band", sub: "dense grid, run unfolds in place" },
+] as const;
+type View = (typeof VIEWS)[number]["id"];
+
+export function MatrixCull(props: MatrixCullProps) {
+  const [v, setV] = useState<View>("rows");
+  return (
+    <>
+      {props.keys !== false && (
+        <div className={s.proto} role="tablist" aria-label="cull view (prototype)">
+          {VIEWS.map((x) => (
+            <button key={x.id} type="button" role="tab" aria-selected={v === x.id} className={s.protoTab} onMouseDown={(e) => e.preventDefault()} onClick={() => setV(x.id)}>
+              <b>{x.label}</b> <span>{x.sub}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {v === "sheet" ? <MatrixCullSheet {...props} /> : v === "band" ? <MatrixCullBand {...props} /> : <MatrixCullBaseline {...props} />}
+    </>
   );
 }

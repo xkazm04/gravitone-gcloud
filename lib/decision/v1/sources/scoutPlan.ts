@@ -124,7 +124,7 @@ function styleCells(night: Night, c: Candidate & { kind: "style" }, read: StyleR
       words: p.present.items[it.id] ?? { label: it.id },
     });
   }
-  out.rows.push(...p.present.rows.map((r) => ({ ...r, id: under(r.id) })));
+  out.rows.push(...p.present.rows.map((r) => ({ ...r, id: under(r.id), group: "look" })));
   out.initial.push(...p.initial.map((d) => ({ ...d, candidate: under(d.candidate) })));
   out.losses.push(...p.losses.map((l) => ({ ...l, candidate: under(l.candidate ?? "") })));
   out.runs[c.id] = ex;
@@ -157,7 +157,7 @@ function sceneCells(night: Night, c: SceneCandidate, media: ScoutV1["media"], ou
   // the full prompt are each replica's own words, shown in the zoom.
   const label = r === undefined ? `scene ${c.id}` : clip40(`${r.shot} · ${r.camera.split(/[,;]/)[0] ?? r.camera}`);
   out.cells.push(...shown);
-  out.rows.push({ id: c.id, label, ...(key !== undefined && media[key] !== undefined ? { ref: scoutFileUrl(night.id, key) } : {}) });
+  out.rows.push({ id: c.id, label, group: "scene", ...(key !== undefined && media[key] !== undefined ? { ref: scoutFileUrl(night.id, key) } : {}) });
 }
 
 function textCell(night: Night, c: Candidate & { kind: "finding" | "watch" }, out: Mutable): void {
@@ -173,7 +173,7 @@ function textCell(night: Night, c: Candidate & { kind: "finding" | "watch" }, ou
   const words: ItemWords = c.kind === "finding" ? { label: c.claim, meta: `${c.template} · ${c.step}`, prompt: c.quote } : { label: c.entry, meta: "watchlist", prompt: c.why };
   const body = c.kind === "finding" ? `${c.template}/${c.step}\n${c.claim}\n${c.quote}` : `${c.entry}\n${c.why}`;
   out.cells.push({ id: cellId(c.id, "text"), candidate: c.id, kind: c.kind, row: c.id, jobId: c.jobId ?? `scout:${night.id}`, media: textRef(body), grades: [], url: scoutFileUrl(night.id, "night.json"), words });
-  out.rows.push({ id: c.id, label: c.kind === "finding" ? `finding · ${c.template}` : "watch" });
+  out.rows.push({ id: c.id, label: c.kind === "finding" ? `finding · ${c.template}` : "watch", group: c.kind });
 }
 
 type Mutable = { cells: Cell[]; rows: RowWords[]; initial: InitialDecision[]; losses: Loss[]; runs: Record<string, ExtractV1> };
