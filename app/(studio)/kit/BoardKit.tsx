@@ -20,6 +20,7 @@ import { BlindPair } from "@gt/ui/components/pair/BlindPair.tsx";
 import { EditNote } from "@gt/ui/components/review/ArticlePage.tsx";
 import { PacketReview } from "@gt/ui/components/review/PacketReview.tsx";
 import { LevelSheet } from "@gt/ui/components/sheet/LevelSheet.tsx";
+import { ModelViewer } from "@gt/ui/components/model/ModelViewer.tsx";
 
 import type { BoardKitData } from "./boardKitData.ts";
 import { Row, Section, Spec } from "./Spec.tsx";
@@ -34,7 +35,9 @@ const WATCH = { label: "channel: lighting breakdowns - https://example.com/break
 const TEXT_MEDIA = { url: "", mime: "text/plain" };
 
 export function BoardSection({ data }: { readonly data: BoardKitData }) {
-  const { cull: CULL, cullVerdicts: CULL_VERDICTS, audio: AUDIO, pair: PAIR, review: REVIEW, cut: CUT, rail: RAIL, consequence: CONSEQUENCE } = data;
+  const { cull: CULL, cullVerdicts: CULL_VERDICTS, audio: AUDIO, pair: PAIR, review: REVIEW, cut: CUT, rail: RAIL, consequence: CONSEQUENCE, model: MODEL } = data;
+  const modelWords = { label: MODEL.label, meta: MODEL.meta, ...(MODEL.poster === undefined ? {} : { poster: MODEL.poster }) };
+  const modelMedia = { url: MODEL.glb, mime: "model/gltf-binary" };
   const [cur, setCur] = useState(0);
   const words = CULL.present.items["the-exit/signal-ledger"] ?? { label: "signal ledger" };
   return (
@@ -74,6 +77,12 @@ export function BoardSection({ data }: { readonly data: BoardKitData }) {
             <CullTile index={11} words={WATCH} media={TEXT_MEDIA} verdict={{ verdict: "keep", reasons: [] }} current={cur === 11} nudged={false} onPress={setCur} />
           </div>
         </Row>
+        <Row label="model">
+          <div className={b.tiles}>
+            <CullTile index={12} words={modelWords} media={modelMedia} verdict={undefined} current={cur === 12} nudged={false} onPress={setCur} />
+            <CullTile index={13} words={{ label: MODEL.label, meta: MODEL.meta }} media={modelMedia} verdict={{ verdict: "keep", reasons: [] }} current={cur === 13} nudged={false} onPress={setCur} />
+          </div>
+        </Row>
         <Row label="plate">
           <Plate className={b.thumb} src="/presets/blueprint.jpg" alt="blueprint" />
         </Row>
@@ -84,6 +93,15 @@ export function BoardSection({ data }: { readonly data: BoardKitData }) {
         </div>
         <div className={b.lens}>
           <Zoom words={FINDING} media={TEXT_MEDIA} verdict={undefined} position="7/9" onClose={noop} specimen />
+        </div>
+        <div className={b.lens} data-kit="model-zoom">
+          <Zoom words={modelWords} media={modelMedia} verdict={undefined} position="3/4" onClose={noop} specimen />
+        </div>
+      </Spec>
+      <Spec names={["ModelViewer"]} source="spark game-3d-assets · three + r3f, lazy · loading · failed · no poster">
+        <div className={b.models}>
+          <ModelViewer src={MODEL.glb} title={MODEL.label} tris={MODEL.tris} bones={MODEL.bones} {...(MODEL.poster === undefined ? {} : { poster: MODEL.poster })} />
+          <ModelViewer src="data:model/gltf-binary;base64,AAAA" title="a damaged glb" />
         </div>
       </Spec>
       <Spec names={["DeskFrame", "OracleStrip", "CommitButton"]} source="floor.css .desk-top · .desk-foot · .commit .wait .refuse">

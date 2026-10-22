@@ -279,7 +279,7 @@ export function Library({ url: u, page, detail: first, port }: LibraryProps) {
               reading {sel}
             </p>
           ) : (
-            <DetailView key={current.card.id} d={current} busy={busy} onFacet={(g, v, goto) => setFacet(g, v, !(u.f[g] ?? []).includes(v), goto)} onItem={(x) => select(x)} onPin={(on) => act(on ? { act: "pin" } : { act: "unpin" })} onUse={(projectId) => act({ act: "use-in-project", projectId })} />
+            <DetailView key={current.card.id} d={current} busy={busy} onFacet={(g, v, goto) => setFacet(g, v, !(u.f[g] ?? []).includes(v), goto)} onItem={(x) => select(x)} onPin={(on) => act(on ? { act: "pin" } : { act: "unpin" })} onUse={(projectId) => act({ act: "use-in-project", projectId })} onExport={(project) => act({ act: "export", project })} />
           )}
         </DetailPanel>
       </aside>

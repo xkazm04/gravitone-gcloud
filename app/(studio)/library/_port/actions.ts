@@ -8,14 +8,14 @@
 
 import { z } from "zod";
 
-import { LIBRARY_KINDS, LIBRARY_PAGE_MAX, LIBRARY_SORTS } from "@gt/domain/library";
+import { LIBRARY_KINDS, LIBRARY_PAGE_MAX, LIBRARY_SORTS, MODEL_EXPORT_PROJECTS } from "@gt/domain/library";
 
 import { runAction } from "../../../_server/actionCore.ts";
 import { action } from "../../../_server/action.ts";
 import type { Principal } from "../../../../lib/principal.ts";
 import { principal } from "../../../_server/principal.ts";
 import type { LibraryPort } from "./contract.ts";
-import { serverLibrary, type Who } from "./port.ts";
+import { actOn, serverLibrary, type Who } from "./port.ts";
 
 const word = z.string().min(1).max(200);
 const facets = z.record(word, z.array(word).max(200));
@@ -32,6 +32,7 @@ const act = z.discriminatedUnion("act", [
   z.object({ act: z.literal("pin"), collection: word.optional() }),
   z.object({ act: z.literal("unpin"), collection: word.optional() }),
   z.object({ act: z.literal("use-in-project"), projectId: word }),
+  z.object({ act: z.literal("export"), project: z.enum(MODEL_EXPORT_PROJECTS) }),
 ]);
 
 type In<K extends keyof LibraryPort> = Parameters<LibraryPort[K]>[0];
@@ -50,7 +51,7 @@ export async function detail(input: In<"detail">): Out<"detail"> {
 /** The ledger's actor for an act: the principal's uid; the shared secret names nobody. */
 const as = (p: Principal): Who => ("uid" in p ? { who: p.uid } : {});
 
-const actAction = action("library act", z.object({ id, act, facets: facets.optional() }), (i, who) => serverLibrary().act(i.id, i.act, i.facets ?? {}, as(who)));
+const actAction = action("library act", z.object({ id, act, facets: facets.optional() }), (i, who) => actOn(serverLibrary(), i.id, i.act, i.facets ?? {}, as(who)));
 export async function libraryAct(input: In<"act">): Out<"act"> {
   return actAction(input);
 }

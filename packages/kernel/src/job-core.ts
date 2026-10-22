@@ -105,6 +105,14 @@ export type StepContext = {
 /** A producer is data and a step function, never a class. */
 export type Producer = {
   readonly lane: ResourceLane;
+  /**
+   * The local engine its steps load (`comfy`, `blender`, ... @gt/domain/resource ENGINES), when
+   * it loads one. A producer that names an engine is ADMITTED by its measured profile against the
+   * machine's load before its drive starts (job-queue-core `admitPicks`); a producer that names
+   * none is never asked - every vendor call, seat turn and render that ran before admission
+   * existed runs exactly as it did.
+   */
+  readonly engine?: string;
   /** Consecutive vendor failures before the job fails; default BREAKER_LIMIT. */
   readonly breakerLimit?: number;
   plan(job: Job, outputs: Outputs): readonly MissingStep[];

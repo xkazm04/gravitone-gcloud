@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { blobRefSchema } from "./blob.ts";
 import { libraryItemIdSchema, styleIdSchema } from "./ids.ts";
-import { LIBRARY_KINDS, LIBRARY_ORIGINS, LIBRARY_SOURCES, LIBRARY_STATES, type LibraryDetail } from "./library.ts";
+import { LIBRARY_KINDS, LIBRARY_ORIGINS, LIBRARY_SOURCES, LIBRARY_STATES, MODEL_CLASSES, MODEL_TECHNIQUES, type LibraryDetail } from "./library.ts";
 
 // The closed sets live in ./library.ts (zod-free, so the Library route holds them);
 // re-exported here for the readers that already import them from the record.
@@ -79,6 +79,15 @@ const docVocabulary = z.object({
   techniques: z.number().int().nonnegative(),
 });
 
+/** A game asset's finished variant (lib/foundry/mesh): its class's budget, how it was made, whether
+ *  it carries a skeleton, and the triangles it was finished to (absent when never counted). */
+const modelVocabulary = z.object({
+  class: z.enum(MODEL_CLASSES),
+  technique: z.enum(MODEL_TECHNIQUES),
+  rigged: z.boolean(),
+  tris: z.number().int().nonnegative().optional(),
+});
+
 /** What the operator may do with it. A screenshot of somebody's game read for
  *  its look is `reference-only`: it may teach a style, never ship in a cut. */
 export const rightsSchema = z.object({
@@ -117,6 +126,7 @@ export const libraryItemSchema = z
     z.object({ kind: z.literal("audio"), vocabulary: audioVocabulary, ...shared }),
     z.object({ kind: z.literal("video"), vocabulary: videoVocabulary, ...shared }),
     z.object({ kind: z.literal("doc"), vocabulary: docVocabulary, ...shared }),
+    z.object({ kind: z.literal("model"), vocabulary: modelVocabulary, ...shared }),
   ])
   .superRefine((it, ctx) => {
     const issue = (path: string, message: string) => ctx.addIssue({ code: "custom", path: [path], message });

@@ -11,6 +11,7 @@ import { processSignals, runWorker } from "./worker.ts";
 
 const { producers } = await import("../lib/producers/registry.ts");
 const { publishDeps, publishTimers } = await import("../lib/producers/publish.ts");
+const { machineAdmission } = await import("../lib/resources/probe.ts");
 
 process.exitCode = await runWorker(process.argv.slice(2), producers(), {
   out: (line) => void process.stdout.write(`${line}\n`),
@@ -22,4 +23,6 @@ process.exitCode = await runWorker(process.argv.slice(2), producers(), {
     const deps = publishDeps({ store });
     return deps.ok ? { ok: true, value: publishTimers(deps.value) } : deps;
   },
+  // Engine work admitted by the box's measured load (spark game-3d-assets WP1); --no-admission skips it.
+  admission: () => machineAdmission(),
 });

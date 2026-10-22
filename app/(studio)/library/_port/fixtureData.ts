@@ -123,7 +123,12 @@ export type FixtureMedia = { readonly sha: string; readonly mime: string; readon
 
 const mimeOf = (url: string): string => (url.endsWith(".webm") ? "video/webm" : url.endsWith(".webp") ? "image/webp" : url.endsWith(".wav") ? "audio/wav" : "image/jpeg");
 
-const media = new Map<string, FixtureMedia>();
+// On globalThis, beside the universe it serves (./fixture.ts): the universe outlives a hot reload
+// and a second server bundle, and a blob map that did not would answer null for every sha it named.
+declare global {
+  var __gtLibraryFixtureMedia: Map<string, FixtureMedia> | undefined;
+}
+const media: Map<string, FixtureMedia> = (globalThis.__gtLibraryFixtureMedia ??= new Map());
 
 /** The fixture's blob for a public file (registered once; the resolver reads it back by sha). */
 export function fileBlob(url: string, w = 1280, h = 800): FixtureMedia {
@@ -131,6 +136,14 @@ export function fileBlob(url: string, w = 1280, h = 800): FixtureMedia {
   const have = media.get(sha);
   if (have !== undefined) return have;
   const m = { sha, mime: mimeOf(url), url, w, h };
+  media.set(sha, m);
+  return m;
+}
+
+/** The fixture's blob for media made in code (a model's glb): a data: URL, named by its sha. */
+export function dataBlob(url: string, mime: string): FixtureMedia {
+  const sha = createHash("sha256").update(url).digest("hex");
+  const m = media.get(sha) ?? { sha, mime, url, w: 0, h: 0 };
   media.set(sha, m);
   return m;
 }

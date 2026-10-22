@@ -10,6 +10,7 @@ import { laneHold, nextClaimable } from "@gt/kernel/job-queue";
 import { producerKey, type Pick, type ProducerKey } from "@gt/kernel/job-queue-core";
 import type { RunReport } from "@gt/kernel/job-run";
 import { workLoop } from "@gt/kernel/job-worker";
+import type { AdmissionSource } from "@gt/kernel/resources/gate";
 import { pidAlive, processHolder } from "@gt/kernel/lease";
 import { closeProcessKernel, processKernel, storeLocation } from "@gt/kernel/process";
 import { JOB_USD } from "@gt/kernel/spend/meter";
@@ -49,11 +50,18 @@ import { timerRoster, type TimerEntry, type TimerLine } from "./timers.ts";
 // `--no-timers` leaves them to another worker. A stop
 // parks the job loop AND stops the roster (bounded grace, the abandoned named, leases released).
 //
+// ADMISSION BY MEASURED LOAD (spark game-3d-assets WP1): when the host binds a machine probe
+// (`io.admission`; workers/runner.mts binds lib/resources/probe.ts), every head whose producer
+// names a local engine is admitted by that engine's profile against the machine's reading before
+// its drive starts (@gt/domain/resource `admit`). A head it holds is said once per reason on
+// stderr and is not started; a --once drain treats it as it treats a busy head, until a drive of
+// its own ends and changes what is running. `--no-admission` keeps the slots-only path.
+//
 // `--migrate` opens the store and exits: the one door a Python worker uses to
 // bring a store up to date (packages/kernel/py/kernel_store.py), because Python never
 // carries a second copy of the schema.
 
-export const USAGE = "usage: node workers/runner.mts [--lanes gpu.local,seat.text] [--once] [--json] [--idle-ms N] [--no-timers] | --migrate [--json]";
+export const USAGE = "usage: node workers/runner.mts [--lanes gpu.local,seat.text] [--once] [--json] [--idle-ms N] [--no-timers] [--no-admission] | --migrate [--json]";
 
 export type WorkerIo = {
   readonly out: (line: string) => void;
@@ -63,19 +71,21 @@ export type WorkerIo = {
   readonly onSignal?: (stop: (hard: boolean) => void) => () => void;
   /** The recurring work this worker hosts, built over its store (workers/runner.mts binds publish's). */
   readonly timers?: (store: Store) => Result<readonly TimerEntry[]>;
+  /** The machine admission reads; absent (or `--no-admission`), jobs are admitted by lane slots alone. */
+  readonly admission?: () => AdmissionSource;
 };
 
 /** How long a stop waits for a tick in flight before naming it abandoned. */
 const TIMER_GRACE_MS = 15_000;
 
-type Args = { readonly lanes: readonly ResourceLane[]; readonly once: boolean; readonly json: boolean; readonly migrate: boolean; readonly idleMs: number; readonly timers: boolean };
+type Args = { readonly lanes: readonly ResourceLane[]; readonly once: boolean; readonly json: boolean; readonly migrate: boolean; readonly idleMs: number; readonly timers: boolean; readonly admission: boolean };
 
 function parse(argv: readonly string[]): Result<Args> {
   let v;
   try {
     v = parseArgs({
       args: [...argv],
-      options: { lanes: { type: "string" }, once: { type: "boolean" }, json: { type: "boolean" }, migrate: { type: "boolean" }, "idle-ms": { type: "string" }, "no-timers": { type: "boolean" } },
+      options: { lanes: { type: "string" }, once: { type: "boolean" }, json: { type: "boolean" }, migrate: { type: "boolean" }, "idle-ms": { type: "string" }, "no-timers": { type: "boolean" }, "no-admission": { type: "boolean" } },
       strict: true,
       allowPositionals: false,
     }).values;
@@ -91,7 +101,7 @@ function parse(argv: readonly string[]): Result<Args> {
   if (lanes.length === 0) return { ok: false, error: new AppError("invalid", "--lanes names no lane") };
   const idleMs = v["idle-ms"] === undefined ? 1000 : Number(v["idle-ms"]);
   if (!Number.isInteger(idleMs) || idleMs < 10) return { ok: false, error: new AppError("invalid", `--idle-ms ${String(v["idle-ms"])} is not a whole number of ms >= 10`) };
-  return { ok: true, value: { lanes, once: v.once === true, json: v.json === true, migrate: v.migrate === true, idleMs, timers: v["no-timers"] !== true } };
+  return { ok: true, value: { lanes, once: v.once === true, json: v.json === true, migrate: v.migrate === true, idleMs, timers: v["no-timers"] !== true, admission: v["no-admission"] !== true } };
 }
 
 /** The outcomes a --once drain stops waiting on: the head waits on something this process cannot change. */
@@ -172,7 +182,7 @@ export async function runWorker(argv: readonly string[], bound: Result<ReadonlyM
     io.err(`[worker] ${args.error.message}\n${USAGE}`);
     return 2;
   }
-  const { lanes, once, json, migrate, idleMs, timers } = args.value;
+  const { lanes, once, json, migrate, idleMs, timers, admission: admitting } = args.value;
   const say = (human: string, doc: Record<string, unknown>): void => (json ? io.out(JSON.stringify(doc)) : io.out(human));
 
   const location = storeLocation(OUT_DIRNAME, io.env["GRAVITONE_STORE_PATH"]);
@@ -217,8 +227,13 @@ export async function runWorker(argv: readonly string[], bound: Result<ReadonlyM
     if (mine.size === 0) io.err(`[worker] no producer is bound for ${lanes.join(", ")}: nothing here can run (lib/producers/registry.ts BOUND)`);
     const fx: Effects = liveEffects(store, blobStore(location === ":memory:" ? path.resolve("foundry-out", "blobs") : path.join(path.dirname(location), "blobs")));
 
+    // Lazy: nothing is probed until a pick names an engine (`npx tsx pipeline/resources.mts probe` shows the reading).
+    const admission = admitting && io.admission !== undefined ? io.admission() : undefined;
     const ac = new AbortController();
     const waiting = new Set<string>();
+    // Heads admission held at the last look, cleared whenever a drive ends (what runs has changed).
+    const held = new Set<string>();
+    const stalledNow = (): Set<string> => new Set([...waiting, ...held]);
     const said = new Map<string, string>();
     // A DRIVE THAT FOUND ITS LANE TAKEN COOLS FOR ONE IDLE PERIOD. Kernel `workLoop`
     // re-picks a head the moment its drive returns, and a drive that comes back busy,
@@ -269,7 +284,7 @@ export async function runWorker(argv: readonly string[], bound: Result<ReadonlyM
     };
     const drain = once
       ? setInterval(() => {
-          if (!drainable(store, lanes, carries, waiting) && running(store) === 0) ac.abort();
+          if (!drainable(store, lanes, carries, stalledNow()) && running(store) === 0) ac.abort();
         }, idleMs)
       : undefined;
     if (once && !drainable(store, lanes, carries, waiting)) ac.abort();
@@ -279,7 +294,18 @@ export async function runWorker(argv: readonly string[], bound: Result<ReadonlyM
       idleMs,
       spendClasses: [JOB_USD],
       run: { dryOnly: dryOnlyFrom(io.env) },
+      ...(admission === undefined ? {} : {
+        admission,
+        onWait: (pick: Pick, verdict: { readonly resource: string; readonly why: string }) => {
+          held.add(pick.jobId);
+          const outcome = `waiting:${verdict.resource}`;
+          if (said.get(pick.jobId) === outcome) return;
+          said.set(pick.jobId, outcome);
+          io.err(`[worker] ${pick.jobId} (${pick.producer} on ${pick.lane}) waits on ${verdict.resource}: ${verdict.why}`);
+        },
+      }),
       onReport: (pick, report) => {
+        held.clear();
         if (failedOutcome(report)) failures++;
         const stalled = report.ok && WAITING.has(report.value.outcome);
         if (stalled) {

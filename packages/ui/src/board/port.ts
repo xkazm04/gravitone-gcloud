@@ -32,6 +32,8 @@ export type ItemWords = {
   readonly peaks?: readonly number[];
   /** A take is music and may spawn a music video on commit (prototype M). */
   readonly music?: boolean;
+  /** A model's poster render: what its tile and run card draw (a model/* cell's media is its glb). */
+  readonly poster?: string;
 };
 
 /** A matrix row: a scene, a style, a strip. `ref` is a reference image, never output. */

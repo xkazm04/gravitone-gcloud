@@ -4,9 +4,15 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { parseJsonAt } from "../src/door.ts";
+import { libraryItemSchema } from "../src/libraryItem.ts";
 import {
+  FIXED_ORDER,
   KIND_LABELS,
+  LIBRARY_ACTS,
   LIBRARY_KINDS,
+  MEDIA_KINDS,
+  TRIS_BANDS,
+  trisBand,
   normText,
   parseSearch,
   railGroups,
@@ -93,5 +99,24 @@ describe("the observables are the vocab's", () => {
       expect(doc.value.fields[o]?.kind, o).toBe("enum");
       expect(doc.value.fields[o]?.group, o).toBe("style");
     }
+  });
+});
+
+describe("the model kind (spark game-3d-assets)", () => {
+  it("is a media kind with its own rail, chips and a triangle band in vocabulary order", () => {
+    expect(LIBRARY_KINDS).toContain("model");
+    expect(MEDIA_KINDS).toContain("model");
+    expect(VOCAB_GROUPS.model).toEqual(["class", "technique", "rig", "tris"]);
+    expect(FIXED_ORDER["tris"]).toEqual(TRIS_BANDS);
+    expect(LIBRARY_ACTS).toContain("export");
+  });
+  it("bands triangles by PoF's presets: prop 10k, weapon 15k inside 20k, character 40k", () => {
+    expect([0, 10_000, 10_001, 20_000, 40_000, 40_001].map(trisBand)).toEqual(["0–10k", "0–10k", "10–20k", "10–20k", "20–40k", "40k+"]);
+  });
+  it("admits a model record through the door and refuses a class the asset store does not have", () => {
+    const rec = { kind: "model", id: "model:mesh:a:b", title: "a", state: "candidate", collections: [], origin: "mesh", rights: { use: "publishable" }, source: "real", lineage: [], vocabulary: { class: "weapon", technique: "M1", rigged: false, tris: 12_000 } };
+    expect(libraryItemSchema.safeParse(rec).success).toBe(true);
+    expect(libraryItemSchema.safeParse({ ...rec, vocabulary: { ...rec.vocabulary, class: "vehicle" } }).success).toBe(false);
+    expect(libraryItemSchema.safeParse({ ...rec, vocabulary: { class: "weapon", technique: "T9", rigged: false } }).success).toBe(false);
   });
 });

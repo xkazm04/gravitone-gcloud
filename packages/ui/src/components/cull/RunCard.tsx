@@ -1,6 +1,7 @@
 // One RUN on the mosaic: its picture edge to edge, the label and one pip per variant (kept / rejected /
 // open, by shape and hue) laid over it. The face is what the run IS: the reference when it has one,
-// else its first variant - a plate, a clip's first frame, a take's waveform, a finding's claim.
+// else its first variant - a plate, a clip's first frame, a take's waveform, a finding's claim, a
+// model's poster render.
 import type { BoardVerdict } from "../../board/boardGate.ts";
 import type { Cell } from "../../board/cull.ts";
 import type { ItemWords } from "../../board/port.ts";
@@ -43,6 +44,17 @@ export function RunFace({ run, cells, mediaOf, wordsOf }: Pick<RunCardProps, "ru
     );
   }
   if (run.words?.ref !== undefined) return <Plate className={s.face} src={run.words.ref} alt="" lazy />;
+  if (kind === "model") {
+    // A model run is its first variant's poster render; a glb is never drawn on a card.
+    const poster = wordsOf(firstId).poster;
+    return poster === undefined ? (
+      <span className={s.faceText}>
+        <span className={s.clamp}>{wordsOf(firstId).label}</span>
+      </span>
+    ) : (
+      <Plate className={s.face} src={poster} alt="" lazy />
+    );
+  }
   if (kind === "video") return <video className={s.face} src={first.url} muted playsInline preload="metadata" />;
   return <Plate className={s.face} src={first.url} alt="" lazy />;
 }

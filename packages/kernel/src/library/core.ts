@@ -4,6 +4,7 @@ import {
   MEDIA_KINDS,
   normText,
   techniqueBand,
+  trisBand,
   type LibraryExtras,
   type LibraryKindName,
 } from "@gt/domain/library";
@@ -70,11 +71,14 @@ export function bucketPeaks(peaks: readonly number[], n = 64): number[] {
   return out;
 }
 
+/** The row's designed face. A model's poster rides here: its media is a glb, which the cover
+ *  query (./query.ts rowOf) cannot draw, and the poster is a render the mesh store holds as a file. */
 function faceOf(extras: LibraryExtras): string {
   const peaks = extras.audio?.peaks ?? [];
   const palette = extras.palette ?? [];
-  if (peaks.length === 0 && palette.length === 0) return "";
-  return canonical({ ...(peaks.length === 0 ? {} : { peaks: bucketPeaks(peaks) }), ...(palette.length === 0 ? {} : { palette }) });
+  const poster = extras.model?.poster;
+  if (peaks.length === 0 && palette.length === 0 && poster === undefined) return "";
+  return canonical({ ...(peaks.length === 0 ? {} : { peaks: bucketPeaks(peaks) }), ...(palette.length === 0 ? {} : { palette }), ...(poster === undefined ? {} : { poster }) });
 }
 
 const words = (s: string): string => s.replace(/[-_]/g, " ");
@@ -138,6 +142,12 @@ export function facetsOf(item: LibraryItem, ctx: IndexContext): FacetRow[] {
     case "doc":
       add("bundle", item.vocabulary.bundle, item.vocabulary.bundle);
       add("techniques", techniqueBand(item.vocabulary.techniques));
+      break;
+    case "model":
+      add("class", item.vocabulary.class);
+      add("technique", item.vocabulary.technique, item.vocabulary.technique);
+      add("rig", item.vocabulary.rigged ? "rigged" : "static");
+      if (item.vocabulary.tris !== undefined) add("tris", trisBand(item.vocabulary.tris), trisBand(item.vocabulary.tris));
       break;
   }
   for (const c of item.collections) {

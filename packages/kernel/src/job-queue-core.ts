@@ -1,4 +1,5 @@
 import type { ResourceLane } from "@gt/domain/lane";
+import { admit, type Admission, type Baseline, type Costed, type MachineLoad, type MachineProfile, type ResourceCost } from "@gt/domain/resource";
 
 // WHICH JOB RUNS NEXT, PURE - the worker loop's one decision, as a function of
 // what the store says about each lane and what this worker already started.
@@ -80,4 +81,52 @@ export function pickWork(looks: readonly LaneLook[], carries: (producer: string,
     else orphans.push(pick);
   }
   return { picks, orphans };
+}
+
+// ADMISSION, PURE - the second question a pick is asked, after "is there a slot" (spark
+// game-3d-assets, WP1): can the MACHINE pay what the pick's engine costs, beside what is already
+// running? A slot count says two jobs may run on two lanes; it cannot say that ComfyUI holding
+// 55 GB and a Blender bake beside it will page the box (@gt/domain/resource says why, and the
+// rules). The look reads the load once; this decides every pick against it, each admitted pick
+// joining the running set the next one is measured against.
+//
+// A PICK WHOSE PRODUCER NAMES NO ENGINE PASSES UNTOUCHED - not admitted, not refused, not
+// counted. Every producer that ran before admission existed names none, so for them this is the
+// identity: the safety property job.admission.test.ts holds.
+
+/** A refused pick and why; the head stays at the front of its line and is asked again next look. */
+export type Waiting = { readonly pick: Pick; readonly verdict: Extract<Admission, { ok: false }> };
+
+export type Admitted = { readonly admitted: readonly Pick[]; readonly waiting: readonly Waiting[]; readonly tight: boolean };
+
+export function admitPicks(
+  picks: readonly Pick[],
+  engineOf: (pick: Pick) => string | undefined,
+  costs: ReadonlyMap<string, ResourceCost>,
+  running: readonly Costed[],
+  load: MachineLoad,
+  machine: MachineProfile,
+  tight: boolean,
+  base: Baseline = {},
+): Admitted {
+  const admitted: Pick[] = [];
+  const waiting: Waiting[] = [];
+  const set: Costed[] = [...running];
+  let state = tight;
+  for (const pick of picks) {
+    const engine = engineOf(pick);
+    if (engine === undefined) {
+      admitted.push(pick);
+      continue;
+    }
+    const cost = costs.get(engine);
+    const job: Costed = cost === undefined ? { engine } : { engine, cost };
+    const v = admit(job, set, load, machine, state, base);
+    state = v.tight;
+    if (v.ok) {
+      admitted.push(pick);
+      set.push(job);
+    } else waiting.push({ pick, verdict: v });
+  }
+  return { admitted, waiting, tight: state };
 }

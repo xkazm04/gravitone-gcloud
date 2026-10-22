@@ -7,6 +7,7 @@
 export const RESOURCE_LANES = [
   "gpu.local",
   "box.render",
+  "box.blender",
   "box.chrome",
   "seat.text",
   "cloud.google",
@@ -29,6 +30,10 @@ export type ResourceLane = (typeof RESOURCE_LANES)[number];
 export const LANE_CAPACITY: { readonly [L in ResourceLane]: number } = {
   "gpu.local": 1,
   "box.render": 1,
+  // Blender headless (spark game-3d-assets): its own row so a mesh finish never serialises behind
+  // an ffmpeg render on box.render. One at a time; what it may share the box with is admission's
+  // question (./resource.ts), asked in measured memory, not in slots.
+  "box.blender": 1,
   "box.chrome": 1,
   "seat.text": 4,
   "cloud.google": 3,

@@ -46,6 +46,7 @@ const MIME: Readonly<Record<string, string>> = {
   ".wav": "audio/wav",
   ".m4a": "audio/mp4",
   ".ogg": "audio/ogg",
+  ".glb": "model/gltf-binary",
 };
 
 /** A file's mime by its extension, or undefined for one the Library does not draw. */
