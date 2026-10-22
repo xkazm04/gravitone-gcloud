@@ -1,5 +1,5 @@
 # PORTED WITH PROVENANCE (spark game-3d-assets WP2): lynx-bench
-# C:\Users\kazda\ai\lynx-bench\pof3d\round4\characters\work\rig.py, 2026-10-21.
+# ~\ai\lynx-bench\pof3d\round4\characters\work\rig.py, 2026-10-21.
 # Changes from the source, and nothing else:
 #   - the pose-test renders go to <work>/<name>_pose_<k>.png (the source wrote <work>/tmp/)
 #   - glTF export with Draco named OFF

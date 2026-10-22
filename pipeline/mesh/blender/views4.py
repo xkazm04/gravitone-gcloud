@@ -1,5 +1,5 @@
 # PORTED WITH PROVENANCE (spark game-3d-assets WP2): lynx-bench
-# C:\Users\kazda\ai\lynx-bench\pof3d\round4\characters\work\views4.py, 2026-10-21.
+# ~\ai\lynx-bench\pof3d\round4\characters\work\views4.py, 2026-10-21.
 # Changes from the source, and nothing else:
 #   - writes <out>_views.json naming the four views it rendered (front, right, back, left)
 #   - usage unchanged: views4.py -- <glb> <out-prefix>

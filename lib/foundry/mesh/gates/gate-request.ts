@@ -1,4 +1,4 @@
-// PORTED WITH PROVENANCE (spark game-3d-assets WP2): pof (C:\Users\kazda\kiro\pof)
+// PORTED WITH PROVENANCE (spark game-3d-assets WP2): pof (~\kiro\pof)
 // src/lib/visual-gen/gate-request.ts @ 4f5a8f58, copied 2026-10-22. The rule is verbatim; two
 // TYPES it imported are restated here because their PoF homes spawn trimesh (mesh-critique.ts) or
 // carry the stage remedies this port does not need (critique-stage.ts @ 6cf2eb64): `MeshStage`

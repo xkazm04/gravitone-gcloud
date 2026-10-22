@@ -13,9 +13,10 @@
 
 import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 
-export const BLENDER_DEFAULT = "C:\\Users\\kazda\\ai\\tools\\blender-5.2.2-windows-arm64\\blender.exe";
+export const BLENDER_DEFAULT = path.join(os.homedir(), "ai", "tools", "blender-5.2.2-windows-arm64", "blender.exe");
 export const blenderCommand = (env: NodeJS.ProcessEnv = process.env): readonly string[] => [env["BLENDER"]?.trim() || BLENDER_DEFAULT];
 export const SCRIPTS = path.join("pipeline", "mesh", "blender");
 

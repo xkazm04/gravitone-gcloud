@@ -1,5 +1,5 @@
 # PORTED WITH PROVENANCE (spark game-3d-assets WP2): lynx-bench
-# C:\Users\kazda\ai\lynx-bench\pof3d\round4\characters\work\render.py, 2026-10-21.
+# ~\ai\lynx-bench\pof3d\round4\characters\work\render.py, 2026-10-21.
 # Changes from the source, and nothing else:
 #   - writes <outdir>/<name>_render.json naming the files it rendered
 #   - usage unchanged: render.py -- <glb> <outdir> <name> stills|orbit [frames]

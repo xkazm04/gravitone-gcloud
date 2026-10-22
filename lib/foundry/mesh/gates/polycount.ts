@@ -1,4 +1,4 @@
-// PORTED WITH PROVENANCE (spark game-3d-assets WP2): pof (C:\Users\kazda\kiro\pof)
+// PORTED WITH PROVENANCE (spark game-3d-assets WP2): pof (~\kiro\pof)
 // src/lib/visual-gen/polycount-presets.ts @ 4f5a8f58, copied 2026-10-22. The presets table,
 // `polycountFor`, `resolveAssetClass` and `critiqueThresholdsFor` verbatim - what the gate reads.
 // Left in PoF: the generation strategy (`generationPlanFor`), the part budget and

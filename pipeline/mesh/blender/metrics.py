@@ -1,5 +1,5 @@
 # PORTED WITH PROVENANCE (spark game-3d-assets WP2): lynx-bench
-# C:\Users\kazda\ai\lynx-bench\pof3d\round4\characters\work\pofmetrics2.py + met.py, 2026-10-21.
+# ~\ai\lynx-bench\pof3d\round4\characters\work\pofmetrics2.py + met.py, 2026-10-21.
 # Changes from the source, and nothing else:
 #   - met.py's one rule folded into the entry point: bbox reordered to glTF's Y-up [x, height, z],
 #   -   the axes PoF's world-scale and orientation grades read

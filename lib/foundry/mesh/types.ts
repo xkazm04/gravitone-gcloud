@@ -5,7 +5,7 @@
 // finish producers (lib/producers/mesh*.ts, server), the Library's mesh feed, the 3D viewer, the
 // export to a game project, and /scout's asset rows. Nothing here imports Node.
 //
-// The shape is the lynx-bench rounds' result.json (C:\Users\kazda\ai\lynx-bench\pof3d\round*/
+// The shape is the lynx-bench rounds' result.json (~\ai\lynx-bench\pof3d\round*/
 // result.json), which the operator's round reviews were already read against: a variant names its
 // technique, says what it did and what it could not, lists its files, and carries the mesh gate's
 // score, verdict, fails, warns and metrics verbatim. A gate that did not run is ABSENT, and a

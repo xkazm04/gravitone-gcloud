@@ -57,7 +57,7 @@ describe("doctor, the local clip engine", () => {
 
   it("fails a live night when ComfyUI is down, with the script that starts it", async () => {
     const checks = await doctor(input({ fetch: comfy({ down: true }).f }));
-    expect(line(checks, "comfyui")).toMatch(/^FAIL comfyui +ComfyUI at http:\/\/comfy\.test:8188 did not answer \/system_stats: fetch failed -> start ComfyUI with C:\\Users\\kazda\\ai\\ComfyUI\\run_nvidia_gpu\.bat \(it stays up\), or set COMFY_URL/);
+    expect(line(checks, "comfyui")).toMatch(/^FAIL comfyui +ComfyUI at http:\/\/comfy\.test:8188 did not answer \/system_stats: fetch failed -> start ComfyUI with \S+[\\/]ai[\\/]ComfyUI[\\/]run_nvidia_gpu\.bat \(it stays up\), or set COMFY_URL/);
     expect(checks.some((c) => c.name === "ltx weights")).toBe(false);
     expect(blocking(checks).map((c) => c.name)).toEqual(["comfyui"]);
   });

@@ -1,4 +1,5 @@
 import { access, mkdir } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 
 import { probeGoogle, probeLeonardo, type KeyFetch, type KeyProbe } from "../../imaging/keyProbe";
@@ -79,7 +80,7 @@ const PROBES: Readonly<Record<(typeof NIGHT_KEYS)[number], (key: string, f?: Key
 };
 
 /** What starts ComfyUI on this box (`COMFY_START` moves it): the remedy when it is down. */
-const COMFY_START = "C:\\Users\\kazda\\ai\\ComfyUI\\run_nvidia_gpu.bat";
+const COMFY_START = path.join(os.homedir(), "ai", "ComfyUI", "run_nvidia_gpu.bat");
 
 /** The local clip engine's lines: ComfyUI reachable, then the graph's weights present. */
 async function comfyChecks(input: DoctorInput): Promise<Check[]> {

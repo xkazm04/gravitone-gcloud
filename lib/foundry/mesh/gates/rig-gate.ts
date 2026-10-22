@@ -1,4 +1,4 @@
-// PORTED WITH PROVENANCE (spark game-3d-assets WP2): pof (C:\Users\kazda\kiro\pof)
+// PORTED WITH PROVENANCE (spark game-3d-assets WP2): pof (~\kiro\pof)
 // src/lib/visual-gen/rig-gate.ts @ 09e7a90d, copied 2026-10-22. Code verbatim; PoF's 47-line
 // header is condensed to the paragraph below to keep this file under 400 lines.
 // Do not edit the rules here; port a newer PoF commit and bump GATES_VERSION (./version.ts).

@@ -1,5 +1,5 @@
 # PORTED WITH PROVENANCE (spark game-3d-assets WP2): lynx-bench
-# C:\Users\kazda\ai\lynx-bench\pof3d\round4\weapons\work\touchup.py (round-4 M1), 2026-10-21.
+# ~\ai\lynx-bench\pof3d\round4\weapons\work\touchup.py (round-4 M1), 2026-10-21.
 # Changes from the source, and nothing else:
 #   - glTF export with Draco named OFF (PoF's viewer cannot decode it; the read-back proves it)
 #   - usage unchanged: touchup.py -- <src.glb> <concept.png> <outbase> <sword|mace|axe|staff>

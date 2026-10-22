@@ -1,4 +1,4 @@
-// PORTED WITH PROVENANCE (spark game-3d-assets WP2): pof (C:\Users\kazda\kiro\pof)
+// PORTED WITH PROVENANCE (spark game-3d-assets WP2): pof (~\kiro\pof)
 // src/lib/visual-gen/face-budget.ts @ 5b0e018c, copied 2026-10-22. Verbatim.
 // Verdict words, finding codes, reasons and thresholds are PoF's, verbatim: a GateResult's
 // `version` names this file and commit (./version.ts), so a consumer can tell which rules judged it.

@@ -1,5 +1,5 @@
 # PORTED WITH PROVENANCE (spark game-3d-assets WP2): lynx-bench
-# C:\Users\kazda\ai\lynx-bench\pof3d\round4\characters\work\finish_AC.py, 2026-10-21.
+# ~\ai\lynx-bench\pof3d\round4\characters\work\finish_AC.py, 2026-10-21.
 # Changes from the source, and nothing else:
 #   - a 4th argument, the asset class: only a `character` is scaled to 1.8 m tall (a weapon or a prop keeps
 #   -   the generator's scale, centred on x/y with its base at z=0 - its design size is not known here);

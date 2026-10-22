@@ -1,5 +1,5 @@
 // PORTED WITH PROVENANCE (spark game-3d-assets WP2): lynx-bench
-// C:\Users\kazda\ai\lynx-bench\pof3d\round4\characters\work\pofmetrics2.py `compute`, 2026-10-21 -
+// ~\ai\lynx-bench\pof3d\round4\characters\work\pofmetrics2.py `compute`, 2026-10-21 -
 // itself a numpy re-implementation of PoF's scripts/visual-gen/pof_mesh_critique.py metrics, run in
 // Blender's Python because trimesh is not installed there. This is the same arithmetic in TS, for a
 // DRY finish: the stand-in glb is measured here, with no Blender. A LIVE finish is measured by the

@@ -46,6 +46,10 @@ const EXEMPT: Record<string, string> = {
   "app/(studio)/library/_port/fixtureCorpus.ts": STYLE_PALETTE,
   "app/(studio)/library/_port/fixtureData.ts": STYLE_PALETTE,
   "app/(studio)/library/style/_port/fixtureData.ts": STYLE_PALETTE,
+  // A fixture model's poster: an SVG stand-in for the render the real side reads from disk - an
+  // image of the asset (content), never the studio's chrome.
+  "app/(studio)/library/_port/fixtureModels.ts":
+    "A fixture 3D asset's poster render, drawn as an SVG stand-in for the real side's PNG: content, not chrome.",
   "app/_dev-inspector/devInspectorUi.tsx":
     "DEVTOOLS SKIN - dev-only chrome for the inspect overlay, deliberately fixed so that debugging the theme cannot be broken BY the theme. Never in a production bundle. Its own header also claims it renders where <GravitoneTokens> does not; that half is wrong (it mounts inside the root layout) and the exemption stands on debug-independence alone.",
   "app/global-error.tsx":
