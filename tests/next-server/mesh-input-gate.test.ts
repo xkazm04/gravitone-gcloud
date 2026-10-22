@@ -117,3 +117,48 @@ describe("the gate over a file", () => {
     expect((await inputGate(path.join(tmp, "junk.png"))).verdict).toBe("unmeasured");
   });
 });
+
+// Calibrated 2026-10-22 on the operator's round-4 concepts, which the first version refused to a
+// hero: a studio vignette read as foreground at the corners, a fingertip on the frame as an
+// amputation, a grey fur near a grey ground as two subjects.
+describe("the gate on studio concepts (calibration)", () => {
+  const vignette = (x: number, y: number): RGBA => {
+    const d = Math.hypot(x - S / 2, y - S / 2) / (S / 2);
+    const v = Math.round(150 - 40 * d * d);
+    return [v, v, v, 255];
+  };
+
+  it("a figure on a vignetted grey studio ground passes: the gradient is background", () => {
+    const c = canvas(vignette);
+    c.paint(96, 30, 160, 226, RED);
+    expect(gradeConcept(c).verdict).toBe("pass");
+    // The known limit: a vignette 70 levels deep varies faster along the ring than a run can follow,
+    // and still reads busy - measured, not hidden.
+    const deep = canvas((x, y) => {
+      const d = Math.hypot(x - S / 2, y - S / 2) / (S / 2);
+      const v = Math.round(150 - 70 * d * d);
+      return [v, v, v, 255];
+    });
+    deep.paint(96, 30, 160, 226, RED);
+    expect(codes(gradeConcept(deep))).toContain("busy-background");
+  });
+
+  it("a fingertip touching the frame warns `touches-edge`; a limb along the edge still fails", () => {
+    const tip = canvas(WHITE);
+    tip.paint(96, 30, 160, 226, RED);
+    tip.paint(0, 120, 96, 126, RED);
+    const g = gradeConcept(tip);
+    expect([g.verdict, codes(g)]).toEqual(["warn", ["touches-edge"]]);
+    const limb = canvas(WHITE);
+    limb.paint(96, 30, 160, 226, RED);
+    limb.paint(0, 100, 96, 160, RED);
+    expect(codes(gradeConcept(limb))).toContain("subject-cropped");
+  });
+
+  it("one figure split by a colour close to the ground is one subject, two apart are still two", () => {
+    const split = canvas(WHITE);
+    split.paint(96, 30, 160, 120, RED);
+    split.paint(96, 124, 160, 226, RED);
+    expect(codes(gradeConcept(split))).not.toContain("multiple-subjects");
+  });
+});

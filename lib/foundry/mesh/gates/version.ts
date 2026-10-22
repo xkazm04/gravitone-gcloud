@@ -9,4 +9,4 @@ export const SCALE_GATE_VERSION = "pof/world-scale.ts@f87067fe";
 /** PoF gateRig with skeleton-profiles, rig-binding, rig-presets and bone-conform, all @ 09e7a90d. */
 export const RIG_GATE_VERSION = "pof/rig-gate.ts@09e7a90d";
 /** This repo's own concept check (../inputGate.ts); PoF's input gate is a VLM call, not ported. */
-export const INPUT_GATE_VERSION = "gravitone/inputGate.ts@2026-10-22";
+export const INPUT_GATE_VERSION = "gravitone/inputGate.ts@2026-10-22b";

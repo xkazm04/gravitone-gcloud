@@ -5,15 +5,20 @@
 // an amputation - and nothing downstream removes any of it. So three mechanical checks, each one
 // the technique's procedure made deterministic, over the concept decoded to 256 x 256 RGBA:
 //
-//   background  the border ring's colour is uniform (or transparent): `busy-background` fails
-//               below 0.85 of the ring within 24 levels of its median, `uneven-background` warns
-//               below 0.97 - a gradient or a vignette is a depth cue the model reads as surface
+//   background  a SMOOTH field (or transparent): the ring is cut into short runs, each run's median is
+//               the background there, and the field inside is interpolated from the four sides. A
+//               studio gradient or vignette is background; clutter is not: `busy-background` fails
+//               below 0.75 of the ring within 24 levels of its local field, `uneven-background` warns
+//               below 0.97. (Calibrated 2026-10-22 on the operator's round-4 concepts: one median for
+//               the whole ring read a vignette's dark corners as foreground and refused every hero.)
 //   subjects    foreground (over 40 levels from the background, or opaque on a transparent field)
-//               falls into ONE substantial 8-connected component: `multiple-subjects` fails when a
-//               second one holds 8% of the largest; specks under 0.1% of the frame are counted only;
+//               falls into ONE subject - 8-connected regions whose boxes overlap or lie within 3% of
+//               the frame are one subject (a grey fur or metal near a grey ground splits a figure):
+//               `multiple-subjects` fails when a second subject holds 8% of the largest; specks under 0.1% of the frame are counted only;
 //               `no-subject` fails when the largest holds under 0.5% of the frame
-//   in frame    no subject pixel touches the outermost row or column - `subject-cropped`, the
-//               technique's hard fail - and `tight-margin` warns inside 2% of an edge;
+//   in frame    `subject-cropped` (the technique's hard fail) when the subject runs along more than 10%
+//               of any outermost row or column - a limb or a weapon cut by the frame; a touch shorter
+//               than that (a fingertip) warns `touches-edge`; `tight-margin` warns inside 2% of an edge;
 //               `subject-small` warns when the subject spans under a quarter of both axes
 //
 // A pass is not a quality claim: the gate judges reconstructability, never the design. The
@@ -36,12 +41,17 @@ export type Pixels = { readonly width: number; readonly height: number; readonly
 const RING = 3;
 const BG_NEAR = 24;
 const FG_FAR = 40;
-const UNIFORM_FAIL = 0.85;
+const UNIFORM_FAIL = 0.75;
 const UNIFORM_WARN = 0.97;
 const SPECK_SHARE = 0.001;
 const SUBJECT_MIN_SHARE = 0.005;
 const SECOND_SUBJECT_SHARE = 0.08;
 const MARGIN_SHARE = 0.02;
+const CROP_SHARE = 0.1;
+/** Regions whose boxes overlap or lie within this share of the frame are one subject (a grey fur or metal close to a grey ground splits one figure). */
+const JOIN_SHARE = 0.03;
+/** Ring runs the background field is read from, per side. */
+const SEGMENTS = 16;
 const SMALL_SHARE = 0.25;
 
 const median = (xs: number[]): number => {
@@ -57,18 +67,45 @@ export function gradeConcept(px: Pixels): GateResult {
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (x < RING || y < RING || x >= W - RING || y >= H - RING) border.push([x, y]);
 
   const transparent = border.filter(([x, y]) => at(x, y, 3) < 16).length >= 0.9 * border.length;
-  const bg = [0, 1, 2].map((c) => median(border.map(([x, y]) => at(x, y, c))));
-  const dist = (x: number, y: number): number => Math.max(...[0, 1, 2].map((c) => Math.abs(at(x, y, c) - (bg[c] ?? 0))));
+  // The background field: each side's ring cut into SEGMENTS runs, a run's median colour its value,
+  // linear between run centres; inside, the mean of the top-bottom and left-right interpolations.
+  const side = (pts: (i: number) => [number, number][], n: number): number[][] => {
+    const runs = Array.from({ length: SEGMENTS }, (_, k) => {
+      const from = Math.floor((k * n) / SEGMENTS);
+      const to = Math.max(from + 1, Math.floor(((k + 1) * n) / SEGMENTS));
+      const ps: [number, number][] = [];
+      for (let i = from; i < to; i++) ps.push(...pts(i));
+      return [0, 1, 2].map((c) => median(ps.map(([x, y]) => at(x, y, c))));
+    });
+    return Array.from({ length: n }, (_, i) => {
+      const t = (i * SEGMENTS) / n - 0.5;
+      const k0 = Math.max(0, Math.min(SEGMENTS - 1, Math.floor(t)));
+      const k1 = Math.min(SEGMENTS - 1, k0 + 1);
+      const f = Math.max(0, Math.min(1, t - k0));
+      return [0, 1, 2].map((c) => (runs[k0]?.[c] ?? 0) * (1 - f) + (runs[k1]?.[c] ?? 0) * f);
+    });
+  };
+  const ring = (fix: (i: number, r: number) => [number, number]) => (i: number): [number, number][] => Array.from({ length: RING }, (_, r) => fix(i, r));
+  const top = side(ring((i, r) => [i, r]), W);
+  const bottom = side(ring((i, r) => [i, H - 1 - r]), W);
+  const left = side(ring((i, r) => [r, i]), H);
+  const right = side(ring((i, r) => [W - 1 - r, i]), H);
+  const field = (x: number, y: number, c: number): number => {
+    const v = (top[x]?.[c] ?? 0) * (1 - y / (H - 1)) + (bottom[x]?.[c] ?? 0) * (y / (H - 1));
+    const h = (left[y]?.[c] ?? 0) * (1 - x / (W - 1)) + (right[y]?.[c] ?? 0) * (x / (W - 1));
+    return (v + h) / 2;
+  };
+  const dist = (x: number, y: number): number => Math.max(...[0, 1, 2].map((c) => Math.abs(at(x, y, c) - field(x, y, c))));
   const uniformity = transparent ? 1 : border.filter(([x, y]) => dist(x, y) <= BG_NEAR).length / border.length;
   const fg = new Uint8Array(W * H);
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) fg[y * W + x] = (transparent ? at(x, y, 3) >= 128 : at(x, y, 3) >= 16 && dist(x, y) > FG_FAR) ? 1 : 0;
 
   // 8-connected components, iterative flood fill.
   const label = new Int32Array(W * H).fill(-1);
-  const comps: { size: number; x0: number; y0: number; x1: number; y1: number; edge: boolean }[] = [];
+  const comps: { size: number; x0: number; y0: number; x1: number; y1: number; edge: boolean; top: number; bottom: number; left: number; right: number }[] = [];
   for (let start = 0; start < W * H; start++) {
     if (fg[start] !== 1 || label[start] !== -1) continue;
-    const c = { size: 0, x0: W, y0: H, x1: -1, y1: -1, edge: false };
+    const c = { size: 0, x0: W, y0: H, x1: -1, y1: -1, edge: false, top: 0, bottom: 0, left: 0, right: 0 };
     const stack = [start];
     label[start] = comps.length;
     while (stack.length > 0) {
@@ -81,6 +118,10 @@ export function gradeConcept(px: Pixels): GateResult {
       c.y0 = Math.min(c.y0, y);
       c.y1 = Math.max(c.y1, y);
       if (x === 0 || y === 0 || x === W - 1 || y === H - 1) c.edge = true;
+      if (y === 0) c.top++;
+      if (y === H - 1) c.bottom++;
+      if (x === 0) c.left++;
+      if (x === W - 1) c.right++;
       for (let dy = -1; dy <= 1; dy++) {
         for (let dx = -1; dx <= 1; dx++) {
           const nx = x + dx;
@@ -99,7 +140,18 @@ export function gradeConcept(px: Pixels): GateResult {
   const area = W * H;
   const kept = comps.filter((c) => c.size >= SPECK_SHARE * area).sort((a, b) => b.size - a.size);
   const largest = kept[0];
-  const subjects = largest === undefined ? [] : kept.filter((c) => c.size >= SECOND_SUBJECT_SHARE * largest.size);
+  // Join regions whose boxes overlap or nearly touch into one subject, then count subjects.
+  type Box = (typeof comps)[number];
+  const gap = JOIN_SHARE * Math.min(W, H);
+  const near = (a: Box, b: Box): boolean => a.x0 - gap <= b.x1 && b.x0 - gap <= a.x1 && a.y0 - gap <= b.y1 && b.y0 - gap <= a.y1;
+  const joined: Box[] = [];
+  for (const c of kept) {
+    const into = joined.find((j) => near(j, c));
+    if (into === undefined) joined.push({ ...c });
+    else Object.assign(into, { size: into.size + c.size, x0: Math.min(into.x0, c.x0), y0: Math.min(into.y0, c.y0), x1: Math.max(into.x1, c.x1), y1: Math.max(into.y1, c.y1), edge: into.edge || c.edge, top: into.top + c.top, bottom: into.bottom + c.bottom, left: into.left + c.left, right: into.right + c.right });
+  }
+  joined.sort((a, b) => b.size - a.size);
+  const subjects = largest === undefined ? [] : joined.filter((c) => c.size >= SECOND_SUBJECT_SHARE * (joined[0]?.size ?? largest.size));
   const specks = comps.length - kept.length;
 
   const fails: string[] = [];
@@ -112,7 +164,9 @@ export function gradeConcept(px: Pixels): GateResult {
   } else {
     if (subjects.length > 1) fails.push(`multiple-subjects: ${subjects.length} separate regions of ${subjects.map((s) => pct(s.size / area)).join(", ")} of the frame`);
     const box = { x0: Math.min(...subjects.map((s) => s.x0)), y0: Math.min(...subjects.map((s) => s.y0)), x1: Math.max(...subjects.map((s) => s.x1)), y1: Math.max(...subjects.map((s) => s.y1)) };
-    if (subjects.some((s) => s.edge)) fails.push("subject-cropped: the subject touches the frame edge");
+    const along = Math.max(...subjects.map((s) => Math.max(s.top / W, s.bottom / W, s.left / H, s.right / H)));
+    if (along > CROP_SHARE) fails.push(`subject-cropped: the subject runs along ${pct(along)} of a frame edge (over ${pct(CROP_SHARE)})`);
+    else if (subjects.some((s) => s.edge)) warns.push(`touches-edge: the subject touches the frame along ${pct(along)} of an edge`);
     else {
       const margin = Math.min(box.x0, box.y0, W - 1 - box.x1, H - 1 - box.y1);
       if (margin < MARGIN_SHARE * Math.min(W, H)) warns.push(`tight-margin: ${margin} px from the edge at ${W} x ${H} (under ${pct(MARGIN_SHARE)})`);
