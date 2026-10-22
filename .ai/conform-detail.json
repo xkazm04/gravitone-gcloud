@@ -9695,6 +9695,62 @@
           "evidence": "packages/ui/src/components/status/status.ts:162 Status lookup resolves domain state tokens into presentation entries, without constructing HTTP responses from upstream status codes."
         }
       ]
+    },
+    "fe524e46-e5d6-4aba-b475-fe39c41f3819/subprocess-lifecycle": {
+      "context": "run-records-and-slots",
+      "subject": "subprocess-lifecycle",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T21:37:52.959Z",
+      "techniques": [
+        {
+          "technique": "cancellation-needs-a-terminable-unit",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/slots/core.ts:114 Calendar cancellation computes a record transition; it does not cancel executable guest work or own a terminable child."
+        },
+        {
+          "technique": "concurrency-and-slots",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/slots/schema.ts:107 Publishing slots enforce item/channel exclusivity, rather than admission capacity for operating-system children."
+        },
+        {
+          "technique": "decode-child-output-per-line",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/slots/schema.ts:153 This reads stored JSON text; the context captures no child-output bytes requiring decoding."
+        },
+        {
+          "technique": "host-resource-protection",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/records/receipt.ts:158 The receipt ceiling measures monetary exposure, rather than a subprocess execution ceiling or machine-resource budget."
+        },
+        {
+          "technique": "liveness-and-heartbeats",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/slots/outcome.ts:84 The heartbeat renews a fenced publishing claim; it does not supervise progress on a spawned child's output channels."
+        },
+        {
+          "technique": "session-reuse",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/records/receipt.ts:112 This fingerprint confirms receipt inputs and queue state; it does not identify or pool CLI sessions."
+        },
+        {
+          "technique": "spawn-contract",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/records/launch.ts:24 Launch persists records and enqueues jobs; inspection of enqueueIn confirmed a database insert rather than process creation."
+        },
+        {
+          "technique": "termination-and-reaping",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/slots/sweep.ts:120 The sweep fences stale claimants and records interrupted publishing; it owns no child handle to terminate or reap."
+        }
+      ],
+      "withdrawn": {
+        "worker": "be5f76c2-85cc-46c6-82e5-a03f11ed1f51",
+        "state": "not-applicable",
+        "at": "2026-10-22T21:38:24.687681+00:00",
+        "reason": "reviewer (sonnet): The main anchor, records/schema.ts:110, is `insertRun`, which only inserts a row. It does not show that child processes are absent. The context's own records/launch.ts, read.ts and schedule.ts import LANE_CAPACITY and ResourceLane and compute lane admission capacity and ETA for jobs that occupy a GP"
+      }
     }
   }
 }
