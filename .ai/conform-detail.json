@@ -9751,6 +9751,57 @@
         "at": "2026-10-22T21:38:24.687681+00:00",
         "reason": "reviewer (sonnet): The main anchor, records/schema.ts:110, is `insertRun`, which only inserts a row. It does not show that child processes are absent. The context's own records/launch.ts, read.ts and schedule.ts import LANE_CAPACITY and ResourceLane and compute lane admission capacity and ETA for jobs that occupy a GP"
       }
+    },
+    "bd05d347-c5c6-4eb4-8de2-b68a6102ac01/sync-replication": {
+      "context": "ledger-v1-projection-core",
+      "subject": "sync-replication",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T21:48:52.286Z",
+      "techniques": [
+        {
+          "technique": "change-tracking-and-cursors",
+          "verdict": "deviation",
+          "evidence": "lib/ledger/v1/sync.ts:152 The sync loop reads and projects entire source snapshots on every pass instead of maintaining durable per-stream cursors that advance after settlement."
+        },
+        {
+          "technique": "conflict-detection-and-policy",
+          "verdict": "deviation",
+          "evidence": "lib/ledger/v1/sync.ts:138 When existing keys return with altered content, the sync only counts them as drifted and discards the new payload without parking or preserving the conflict."
+        },
+        {
+          "technique": "in-flight-is-per-connection",
+          "verdict": "not-applicable",
+          "evidence": "lib/ledger/v1/types.ts:156 Sources are read directly in-process and written to local SQLite rather than pushed across remote socket connections with retransmission queues."
+        },
+        {
+          "technique": "projection-security",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/facts.ts:65 Outbound events are projected through a single factory that allowlists fields and tags each event with the data universe boundary."
+        },
+        {
+          "technique": "sync-observability",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sync.ts:167 Per-stream failures are isolated and tracked in health records with failure streaks and verbatim error messages without aborting sibling streams."
+        },
+        {
+          "technique": "tombstone-propagation",
+          "verdict": "deviation",
+          "evidence": "lib/ledger/v1/sync.ts:231 The projection sync only appends events and omits tombstone propagation, causing the replica to retain deleted source history indefinitely."
+        },
+        {
+          "technique": "topology-declaration",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sources.ts:23 Mirrored streams are declared in an enumerable registry of read-only projection sources that lack write methods back to the source stores."
+        }
+      ],
+      "withdrawn": {
+        "worker": "97fa5cb7-e4ae-4d06-8e3a-1f5bc52fed98",
+        "state": "deviation",
+        "at": "2026-10-22T21:49:26.928740+00:00",
+        "reason": "reviewer (sonnet): The facts.ts:65 anchor does not allowlist fields (make() spreads f.data and extra and only adds src), and the 'omits tombstone propagation' claim has no anchor (grep finds no tombstone, delete or cursor code). The context is also a one-way idempotent append-only ingest, not replication, so the 'no d"
+      }
     }
   }
 }
