@@ -9296,6 +9296,47 @@
           "evidence": "app/_landing/cosmos/engine/worlds.ts:44 Worlds describe painted scenery; no spoken terms or pronunciation dictionary workflow was found."
         }
       ]
+    },
+    "1561e25e-0547-4ace-8e3b-6a3407a3b40f/people-analytics-ethics": {
+      "context": "floor-calendar-slots",
+      "subject": "people-analytics-ethics",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T02:13:25.198Z",
+      "worker": "43adc5f8-d28a-4054-ba58-a43ec392a0fd",
+      "techniques": [
+        {
+          "technique": "aggregate-vs-individual-split",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/floor/calendar.ts:156 Calendar grouping uses slot dates; there are no organizational and personal engineering measurement views to separate."
+        },
+        {
+          "technique": "contribution-eligibility-floors",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/floor/calendar.ts:77 The ordered population consists of publishing slots, with no per-person distribution or contribution ranking."
+        },
+        {
+          "technique": "naming-population-floor",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/floor/MonthCalendar.tsx:106 The breakdown counts slots by publishing channel and does not name individuals."
+        },
+        {
+          "technique": "private-view-separation",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/floor/schedule.ts:174 The form produces publication scheduling data, not a personal activity report with a scope that could widen into a roster."
+        },
+        {
+          "technique": "producer-enforced-suppression",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/floor/SlotDetail.tsx:123 The displayed metric is a publication view count, with no person-level measurement payload requiring identity suppression."
+        },
+        {
+          "technique": "risk-framing-anonymization",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/floor/SlotRow.tsx:57 Status judgments describe publishing slots rather than assigning risk, deficits, or liability to people."
+        }
+      ]
     }
   }
 }

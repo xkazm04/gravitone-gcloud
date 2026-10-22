@@ -4293,7 +4293,11 @@
           "revision": 3,
           "changedAt": "2026-09-30",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/floor/MonthCalendar.tsx:116 Context searches found no contributor, leaderboard, cohort, suppression, or employee references, and the calendar counts publishing slots by status rather than measuring individuals.",
+          "evaluatedAt": "2026-10-22",
+          "evaluatedAgainst": "sha256-b2:cb03bdda55f3119d",
+          "evaluatedRevision": 3
         },
         {
           "subject": "dependency-declaration",
