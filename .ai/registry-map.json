@@ -13483,7 +13483,11 @@
           "revision": 5,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/tally/Tally.tsx:28 Tally renders numbers directly or interpolates them into ratios, bypassing the required numeric primitive and its locale policy.",
+          "evaluatedAt": "2026-10-22",
+          "evaluatedAgainst": "sha256-b2:bea7b30fd48d528d",
+          "evaluatedRevision": 5
         },
         {
           "subject": "public-claim-provenance",

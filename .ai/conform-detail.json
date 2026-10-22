@@ -9608,6 +9608,42 @@
           "evidence": "lib/import/archive.ts:11 The compatibility target is Gravitone's historical archive format; this is no incomplete standard API package requiring per-API status headers."
         }
       ]
+    },
+    "d6ef2aee-128a-4430-80a9-de42991c6316/status-vocabulary": {
+      "context": "ui-status-provenance",
+      "subject": "status-vocabulary",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T21:06:17.165Z",
+      "worker": "f118e519-be2d-4dec-9e5c-31f666f51a6d",
+      "techniques": [
+        {
+          "technique": "number-formatting",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/tally/Tally.tsx:28 Numeric values and denominators bypass locale-aware formatting; callers must supply any formatted strings themselves."
+        },
+        {
+          "technique": "status-color-mapping",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/status/StatusPill.module.css:4 Idle, awaiting, done and failed retain this identical filled-dot shape; their subsequent rules change color only, violating the required shape redundancy."
+        },
+        {
+          "technique": "timestamp-display",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/facts/Facts.tsx:14 Facts renders values verbatim; its ledger caller supplies the stored timestamp e.at as the recorded field in app/(studio)/ledger/_ledger/vocab.ts:95, bypassing fixed-moment formatting and the complementary hover display."
+        },
+        {
+          "technique": "untrusted-label-rendering",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/facet/FacetRow.module.css:4 Facet labels are escaped as React text, but long labels are ellipsized without a tooltip or expansion to recover the full value; FacetRow also supplies no bidirectional isolation."
+        },
+        {
+          "technique": "vocabulary-chain-integrity",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/source/SourceTag.tsx:19 SourceKind derives from domain vocabularies, but SourceTag displays the machine token directly instead of resolving a label catalog; the exhaustive STATUS tables elsewhere do not repair this path."
+        }
+      ]
     }
   }
 }
