@@ -13,6 +13,9 @@ process.env["SCOUT_STORE_DIR"] = path.join(ROOT, "scout");
 process.env["EXTRACT_STORE_DIR"] = path.join(ROOT, "extract");
 process.env["FOUNDRY_DIR"] = path.join(ROOT, "catalogue");
 process.env["GRAVITONE_STORE_PATH"] = path.join(ROOT, "kernel.sqlite");
+// `open` writes the registry digest; pointed at nothing, it reads no registry and logs no consult
+// into the checkout's .ai/consults.jsonl (the manifest's ../ai-registry exists beside a main checkout).
+process.env["AI_REGISTRY_DIR"] = path.join(ROOT, "no-registry");
 mkdirSync(path.join(ROOT, "catalogue"), { recursive: true });
 writeFileSync(path.join(ROOT, "catalogue", "styles.json"), JSON.stringify({ styles: [] }), "utf8");
 

@@ -124,6 +124,12 @@ export type ScoutSource = {
   readonly found: "watchlist" | "search";
   /** The watchlist line that led here, verbatim, when `found` is `watchlist`. */
   readonly watch?: string;
+  /**
+   * Set when the source teaches a whole mechanism, not one finding: the skill's line on what (spark
+   * registry-feedback-loop). A keep from it queues a `source-rich` lead nominating the URL to the
+   * registry's /intake.
+   */
+  readonly rich?: string;
   readonly rights: "reference-only";
   readonly status: SourceStatus;
   readonly error?: string;
@@ -218,6 +224,12 @@ export type FindingCandidate = CandidateBase & {
   readonly claim: string;
   /** The source's words (a transcript line, a caption) or the skill's measurement, verbatim. */
   readonly quote: string;
+  /**
+   * `<night>/<candidate>` of a finding an earlier night KEPT that this one says again from another
+   * source (spark registry-feedback-loop): kept, it is the second observation (n=2) and queues a
+   * `finding-restated` lead.
+   */
+  readonly restates?: string;
 };
 
 /** A line the skill proposes for knowledge/scout/watchlist.md. */

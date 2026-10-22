@@ -32,7 +32,7 @@ $allowed = @(
   "WebSearch", "WebFetch", "Read", "Write", "Edit", "Glob", "Grep",
   "Bash(npx tsx pipeline/scout.mts*)", "Bash(curl -s https://collectionapi.metmuseum.org/*)",
   "Bash(yt-dlp *)", "Bash(ffmpeg *)", "Bash(mkdir *)", "Bash(rm *.vtt)",
-  "Bash(git status*)", "Bash(git diff*)", "Bash(git add knowledge/*)", "Bash(git commit*)"
+  "Bash(git status*)", "Bash(git diff*)", "Bash(git add knowledge/*)", "Bash(git add .ai/registry-leads.jsonl)", "Bash(git commit*)"
 )
 
 # The night's clips render locally (LTX-2.5 through ComfyUI, the free gpu.local lane). ComfyUI is
@@ -51,7 +51,20 @@ function Confirm-Comfy {
   Write-Output "ComfyUI did not answer at $url within 3 minutes - clips will be refused by doctor"
 }
 
+# The CLI finds ffmpeg through FFMPEG/FFPROBE in .env.local, but the seat also runs `ffmpeg` itself
+# (a contact sheet), and a winget install is not on PATH: the first live night (2026-10-22) stopped
+# at doctor for it. The folder of the configured binary goes on this run's PATH.
+function Add-FfmpegPath {
+  $envFile = Join-Path $repo ".env.local"
+  if (-not (Test-Path $envFile)) { return }
+  $line = Get-Content $envFile | Where-Object { $_ -match '^FFMPEG=' } | Select-Object -First 1
+  if (-not $line) { return }
+  $bin = Split-Path -Parent ($line -replace '^FFMPEG=', '').Trim()
+  if ((Test-Path $bin) -and -not (($env:PATH -split ';') -contains $bin)) { $env:PATH = "$bin;$env:PATH" }
+}
+
 function Invoke-Night {
+  Add-FfmpegPath
   Confirm-Comfy
   $claude = (Get-Command claude -ErrorAction SilentlyContinue).Source
   if (-not $claude) { throw "claude is not on PATH for this user - install Claude Code or add it to PATH." }

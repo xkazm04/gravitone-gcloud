@@ -1,6 +1,7 @@
 ---
 name: scout
 memory: none
+version: 1.1.0
 category: Development
 description: The nightly training loop - search the web and YouTube around knowledge/scout/watchlist.md for art styles, scenes and craft worth learning, bring them onto this box, replicate them as kernel jobs (extracted still styles, scene recipes with Flare replica stills and local LTX clips, craft findings) and brief up to three 3D game assets (concept -> TRELLIS mesh -> Blender finish, made on this box) inside a $15 night, and leave ONE Board packet pkt:scout:<night> for a few minutes of K/X in the morning. Successor of train-style and of dojo's hand-run corpus study. Wraps pipeline/scout.mts; it never keeps, rejects or commits anything on the Board. Invoke with /scout night [--dry] [--until HH:MM], /scout folder <dir> [extract args], /scout status [<night>].
 argument-hint: "night [--dry] [--until HH:MM] | folder <dir> | status [<night>]"
@@ -57,7 +58,22 @@ the operator's hour; the operator may also type it after a workday. Either way:
    `<!-- scout:` marker (read each `git diff` first; anything else in that file is someone's WIP and the
    file is skipped), then `git commit -m "knowledge(scout): <n> findings kept from <nights>"` on the
    current branch. **Never push.** Nothing to commit is fine.
-3. `npx tsx pipeline/scout.mts status --json` - an earlier night still `open` (a killed run) is closed
+3. **File what the operator's verdicts earned for the ai-registry** (spark registry-feedback-loop). The
+   Board's commit queued an event for each keep that earned one: a style turned `proven`, a genre turned
+   publishable, a finding that `restates` one an earlier night kept (n=2), a keep from a source marked
+   `rich`. `npx tsx pipeline/scout.mts leads` lists them (key, kind, night, refs, evidence). For each, write
+   ONE claim in the registry's form - *when X, do Y, because Z* - from its evidence lines only, 12-400
+   characters, and file it: `npx tsx pipeline/scout.mts lead <key> --json <file>` with `{claim, kind:
+   technique|application|subject, nearest?, confidence: low|medium|high}`. `nearest` is a media-generation
+   subject slug (the last night's `registry.md` names the governing ones); omit it when none fits. A
+   `source-rich` event is a `kind: subject` nomination of the URL for the registry's /intake - do not mine
+   it here. A MATURE event files craft only (`lead` refuses a claim carrying a word of the genre's name or
+   use): what cannot be said without the content is not filed. A refused `lead` exits 1 with its reason -
+   fix the claim, never the evidence; a key filed already exits 0 and writes nothing. Then
+   `git add .ai/registry-leads.jsonl` and `git commit -m "leads(scout): <n> filed for the ai-registry"`.
+   **Never push**; the registry's weekly drain collects them. The registry is public: a claim names craft,
+   never a person, a title or a franchise.
+4. `npx tsx pipeline/scout.mts status --json` - an earlier night still `open` (a killed run) is closed
    first: `close <id> --stop failure`. Untriaged packets do not stop tonight; they queue.
 
 ### 1. Open
@@ -66,9 +82,12 @@ the operator's hour; the operator may also type it after a workday. Either way:
 `--live`; `--until` from the argument when given). Note the night id. Then read, in this order:
 `foundry-out/scout/<night>/taste.md` (what the operator kept and threw, with reasons - **a channel or a
 kind of look rejected twice is not searched again, and a use under "refused as a use" is not proposed
-again** unless the night has a new reason it now serves), `knowledge/scout/watchlist.md`, and what the
-Library already holds (`pipeline/foundry/styles.json`: names and recipes - a look already there is not a
-find).
+again** unless the night has a new reason it now serves), `foundry-out/scout/<night>/registry.md` (what
+the ai-registry says about tonight's work: `## Governs tonight` - techniques to follow when a candidate does
+that thing; its ranking is by words, so read a technique's file before calling it governing; `## Gaps` -
+where the registry is thin; `registry: none` means no registry resolved and changes nothing else),
+`knowledge/scout/watchlist.md`, and what the Library already holds (`pipeline/foundry/styles.json`: names
+and recipes - a look already there is not a find).
 
 ### 1b. Game assets - brief them EARLY
 
@@ -103,6 +122,10 @@ so brief them right after `open`, before any search:
 Aim for a packet of **about 20 rows**: ~8 style sources (grouped below into 3-5 extract runs), 3-4 scenes,
 2-4 findings, 0-2 watch lines. Search around each watchlist line first, then outward for what the Library
 lacks (a medium, a palette family, a lighting idiom, a cutting rhythm none of its styles covers).
+**One search line a night goes to one `## Gaps` line of `registry.md`** (operator, 2026-10-22): name it in
+that source's `why` as `gap: <subject>` (or `gap: OPEN-QUESTIONS Qn`). A source that teaches a whole
+mechanism (a talk, a breakdown series), not one finding, carries `rich: "<one line on what>"` (<= 200 chars)
+in its `add-source` item: a keep from it nominates it to the registry's /intake.
 
 - Pictures: an image URL or a page whose pictures carry one coherent look. Video: a trailer, a short, a
   music video whose SHOTS teach something - composition, light, a camera move, a cut rhythm.
@@ -160,7 +183,9 @@ Check `status <night> --json` for the remaining money before each launch.
    belongs to (`knowledge/templates/<template>/steps/<step>/`) - an EXISTING step directory only
    (`ls knowledge/templates/<template>/steps`); camera, staging and shot craft go under `02-frames`
    until the knowledge numbering names motion and cut steps. `finding <night> --json <file>`.
-   A finding the existing PATTERNS.md already states is not a finding.
+   A finding the existing PATTERNS.md already states is not a finding - except a `## Scout findings` line
+   at `n=1` that tonight's source says again independently: give the item `restates: "<night>/<candidate>"`
+   (the marker at the end of that line names both). Kept, its line reads n=2 and it earns a registry lead.
 4. **Watch lines.** A channel or site that produced two or more good sources tonight and is not on the
    watchlist: `watch <night> --entry "<channel - url>" --why "<what it teaches>"`.
 
@@ -177,7 +202,8 @@ reason must say which it was (2026-10-22 rehearsal: a night closed at 15 rows by
 ### 6. The night summary - for the operator, not about yourself
 
 Append to `.vault/Scout/nights.md` (create it): the date, the night id, the packet link
-`/board/pkt:scout:<night>`, counts by kind, settled and held USD, the stop reason, and at most three
+`/board/pkt:scout:<night>`, counts by kind, settled and held USD, the stop reason, `leads: N filed, M
+queued` (step 0, and `leads --json`), and at most three
 lines of what the night could not do (a source that refused, a doctor line). No narration of your process.
 
 ## /scout folder <dir> [extract args]
@@ -202,7 +228,7 @@ rendered / failed / pending, USD, and the packet link for every closed, untriage
   or `keep`/`reject` for a night's asset - the night's asset act and the operator's packet own both.
 - Do not raise a ceiling, a cap or a budget window; do not switch a dry night to live.
 - Do not edit `night.json`, `styles.json` or a PATTERNS.md by hand.
-- Do not push. Do not stage anything outside `knowledge/` in step 0.
+- Do not push. Do not stage anything in step 0 but `knowledge/` and `.ai/registry-leads.jsonl`.
 - Do not re-read a source the doctor or the ingest refused through another tool.
 
 ## Lessons

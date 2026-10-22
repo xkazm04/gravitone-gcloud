@@ -37,15 +37,17 @@ to stderr. Exit `0` done, `1` failed or refused, `2` usage.
 | Command | Does | Spends |
 |---|---|---|
 | `doctor [--dry]` | one line per check: yt-dlp, ffmpeg, ffprobe (`-version`), `GOOGLE_AI_API_KEY` and `LEONARDO_API_KEY` set or unset (never their values), the store and night folders writable, `GRAVITONE_DRY_ONLY`. A failing line carries its remedy; exit 1 when a check the night needs fails (`--dry`: the keys and the dry pin are notes) | no |
-| `open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--until HH:MM] [--live]` | creates the night, writes its `taste.md`, prints its id. `--until` is local time today, or tomorrow once that has passed. Without `--live` the night is dry; `--live` is refused under `GRAVITONE_DRY_ONLY=1` | no |
-| `add-source <night> --json <file\|->` | `[{url, kind, title, channel?, why, found, watch?}]`, validated (below). A URL any earlier night holds is skipped and reported | no |
+| `open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--until HH:MM] [--live]` | creates the night, writes its `taste.md` and `registry.md` (below, "The registry"), prints its id. `--until` is local time today, or tomorrow once that has passed. Without `--live` the night is dry; `--live` is refused under `GRAVITONE_DRY_ONLY=1` | no |
+| `add-source <night> --json <file\|->` | `[{url, kind, title, channel?, why, found, watch?, rich?}]`, validated (below). A URL any earlier night holds is skipped and reported | no |
 | `ingest <night> [--source s-NN] [--retry] [--detach]` | launches the `scout-ingest` job over the pending sources and drives it here; `--retry` first puts the failed sources in scope back to pending | no |
 | `style <night> --sources s-01,s-03 --use "<content>" [--slug x] [--detach]` | an ordinary extract run (`launchExtract`, a gallery of those sources' pictures and keyframes) as one style candidate; its run id and job id go on the candidate | yes |
 | `scene <night> --source s-NN --use "<content>" [--frames k-012.jpg] [--detach]` | a scene candidate read from the chosen keyframe (default the first; ingest keeps one frame per cut, so neighbouring keyframes are different shots), launched through `launchScene` (`lib/producers/scoutScene.ts`) with a clip while the night's clip cap allows | yes |
 | `asset <night> --brief <file\|-> [--detach]` | one game asset from `{class, subject, use, style?, kind?, techniques?}`: its concepts drawn and gated, its mesh asset written and the mesh job QUEUED for the worker (below, "A game asset") | yes |
-| `finding <night> --json <file\|->` | `[{sourceIds, template, step, claim, quote}]`; `knowledge/templates/<template>/` must exist, `step` is `NN-name` and need not exist yet | no |
+| `finding <night> --json <file\|->` | `[{sourceIds, template, step, claim, quote, restates?}]`; `knowledge/templates/<template>/` must exist, `step` is `NN-name` and need not exist yet | no |
 | `watch <night> --entry "..." --why "..." [--sources s-01]` | a proposed watchlist line | no |
 | `close <night> [--stop <reason>]` | settles style candidates from their runs, closes the night, prints the morning: packet id, counts by kind and status, settled and held USD | no |
+| `leads [--json]` | the lead queue's pending events (`foundry-out/scout/leads.json`): key, kind, night, refs, evidence | no |
+| `lead <key> --json <file\|->` | `{claim, kind: technique\|application\|subject, nearest?, confidence: low\|medium\|high}`: one line into `.ai/registry-leads.jsonl`, once per key, and the event marked filed. Refused: an unknown key, a claim outside 12-400 characters, a `nearest` the registry's media-generation index does not hold, a mature event's claim naming its genre | no |
 | `status [<night>]` | every night, or one with its budget, sources and candidates | no |
 | `folder <dir> [extract args]` | the train-style path: `pipeline/foundry/extract.mts <dir> ...` with its output and exit code | as extract |
 
@@ -172,8 +174,34 @@ What a commit writes: kept looks become `candidate` styles through the extract r
 `knowledge/templates/<template>/steps/<step>/PATTERNS.md` under `## Scout findings` and a kept watch line
 to `knowledge/scout/watchlist.md`, each with its `<!-- scout:<night>/<c-NN> -->` marker; every verdict
 with its reasons and note lands in `night.committed`, which is what the next night's `taste.md` reads.
-The next night's skill commits the knowledge lines (never pushes). An untriaged packet waits; nothing is
+A live commit also queues, once by key, what the keeps EARNED for the ai-registry (below); the consequence
+names each (`queues a registry lead: <kind> <ref>`, or `already queued`). The next night's skill commits the
+knowledge lines and the filed leads (never pushes). An untriaged packet waits; nothing is
 ever accepted for want of an answer.
+
+## The registry
+
+The nights read the ai-registry and send it back only what a verdict earned (spark
+`registry-feedback-loop`, 2026-10-22). The registry is public; nothing here writes into it.
+
+- **Read.** `open` writes `<night>/registry.md` (`lib/foundry/scout/registry.ts`) from the registry's
+  `knowledge/media-generation/index.json` - `AI_REGISTRY_DIR`, else `.ai/manifest.yaml` `registry.local`:
+  `## Governs tonight`, at most 12 techniques ranked by word overlap of slug and use_when with the watchlist
+  and the scout vocabulary, tripled inside the subjects scout's acts are governed by (`GOVERNING_SUBJECTS`),
+  at most 4 a subject; `## Gaps`, at most 8 - draft subjects, thin visual-generation / production-ops subjects,
+  the headings of `knowledge/OPEN-QUESTIONS.md`. One search line a night goes to a gap. Each digest appends
+  one `.ai/consults.jsonl` line. No registry: `registry: none (<why>)`, a doctor note, the night unchanged.
+- **Earn.** A live commit queues an event in `foundry-out/scout/leads.json` (`lib/foundry/scout/leads.ts`,
+  `leadEvents.ts`) for: a kept finding whose `restates` names a finding an earlier night kept and committed
+  live (its PATTERNS line reads `n=2`); a keep from a source marked `rich` (a nomination for the registry's
+  /intake); a style turned `proven` and a genre turned publishable - hooks only today, since a scout commit
+  never promotes a style (only the forge's does) and the genre forge is not built. Dry nights queue nothing.
+- **File.** The next night's step 0 writes each event as one claim (*when X, do Y, because Z*) and files it
+  with `lead`: `{ts, bundle: media-generation, nearest?, kind, claim, because, confidence, from: scout@<v>}`,
+  `because` ending `[scout:<key>]`. A mature genre's lead carries craft only.
+- **Drain.** The registry's weekly drain (`ai-registry/scripts/drain-schedule.ps1`, registered by the
+  operator) collects every project's leads, rules at most 12 open media-generation rows and opens one pull
+  request; nothing lands in the registry until the operator merges it.
 
 ## The skill and the schedule
 
@@ -182,7 +210,7 @@ around the watchlist and the taste, groups pictures into looks, picks the shots,
 It never keeps or commits. `pipeline/scout-schedule.ps1` registers the nightly run on Task Scheduler -
 `-Print` shows it, `-Install -At 22:30` registers it, `-Remove` takes it away; the operator installs it.
 The scheduled run is `claude -p "/scout night --until 06:30"` with its tools fenced to search, read,
-the CLI and committing `knowledge/`; logs land in `foundry-out/scout/logs/`.
+the CLI and committing `knowledge/` and `.ai/registry-leads.jsonl`; logs land in `foundry-out/scout/logs/`.
 
 ## Files on disk
 
@@ -191,6 +219,7 @@ the CLI and committing `knowledge/`; logs land in `foundry-out/scout/logs/`.
 | Path | Written by | What |
 |---|---|---|
 | `night.json` | every writer, through `mutateNight` (a lock file, so processes queue) | the manifest: `lib/foundry/scout/types.ts` `Night` |
+| `registry.md` | `open` | the registry digest: governing techniques and gaps, or `registry: none (<why>)` |
 | `taste.md` | `open` | the last seven committed live nights' verdicts: kept and thrown per kind, reasons and notes verbatim, game assets by class and technique, channels kept and thrown |
 | `sources/<s-NN>/p-NNN.<ext>` | ingest | a picture, or a page's pictures |
 | `sources/<s-NN>/k-NNN.jpg` | ingest | a video's gated keyframes (`at` on the source) |

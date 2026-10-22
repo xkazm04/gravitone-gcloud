@@ -5,6 +5,7 @@ import path from "node:path";
 import { probeGoogle, probeLeonardo, type KeyFetch, type KeyProbe } from "../../imaging/keyProbe";
 import { comfyBase, comfyStats, missingModels, type ComfyFetch } from "../../imaging/video/comfyLtx";
 import { binsFrom, lastLines, realSpawn, type Bins, type Spawn } from "./ingest";
+import { REGISTRY_REMEDY, resolveRegistry, techniqueCount } from "./registry";
 
 // THE BOX PREFLIGHT for a /scout night - read-only, nothing spent, nothing
 // installed. One line per check; a failing line carries its remedy, and the
@@ -19,6 +20,8 @@ import { binsFrom, lastLines, realSpawn, type Bins, type Spawn } from "./ingest"
 // unset or `ltx-local`) - the ComfyUI on this box answering at `COMFY_URL` with
 // every model file pipeline/video/ltx-i2v-api.json loads. A dry night
 // (`doctor --dry`) reads those as notes: its clips are stand-ins.
+// The ai-registry is never needed: a night without it opens with `registry: none` in its
+// registry.md, so its line is a note either way (./registry.ts).
 
 export type Check = {
   readonly name: string;
@@ -72,6 +75,8 @@ export type DoctorInput = {
   readonly fetch?: ComfyFetch;
   /** The vendors' key probes (default the global fetch); a test hands a fake. */
   readonly keyFetch?: KeyFetch;
+  /** The repo whose `.ai/manifest.yaml` names the registry (default `process.cwd()`). */
+  readonly repoDir?: string;
 };
 
 const PROBES: Readonly<Record<(typeof NIGHT_KEYS)[number], (key: string, f?: KeyFetch) => Promise<KeyProbe>>> = {
@@ -111,6 +116,13 @@ async function comfyChecks(input: DoctorInput): Promise<Check[]> {
   return out;
 }
 
+/** Where the night's registry digest reads from - a note, never a failure. */
+async function registryCheck(input: DoctorInput): Promise<Check> {
+  const r = await resolveRegistry({ env: input.env, ...(input.repoDir === undefined ? {} : { repoDir: input.repoDir }) });
+  if ("why" in r) return { name: "registry", ok: false, found: `registry: none (${r.why})`, remedy: REGISTRY_REMEDY, needed: false };
+  return { name: "registry", ok: true, found: `found at ${r.dir} with ${techniqueCount(r.index)} techniques`, needed: false };
+}
+
 export async function doctor(input: DoctorInput): Promise<Check[]> {
   const spawn = input.spawn ?? realSpawn;
   const bins = binsFrom(input.env);
@@ -136,6 +148,7 @@ export async function doctor(input: DoctorInput): Promise<Check[]> {
   const pinned = input.env["GRAVITONE_DRY_ONLY"] === "1";
   out.push({ name: "GRAVITONE_DRY_ONLY", ok: !pinned, found: pinned ? "1 (this shell runs dry only)" : "unset", needed: !input.dry, ...(pinned ? { remedy: "unset GRAVITONE_DRY_ONLY for a live night, or open the night without --live" } : {}) });
   out.push(...(await comfyChecks(input)));
+  out.push(await registryCheck(input));
   return out;
 }
 
