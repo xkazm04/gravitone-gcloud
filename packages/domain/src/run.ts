@@ -42,6 +42,10 @@ export const PRODUCERS = [
   "hunt",
   "media-facts",
   "style",
+  // The /scout night (spark media-training-loop): bringing a found picture or video onto this box,
+  // and a found scene read into words, replicated and animated (lib/foundry/scout/).
+  "scout-ingest",
+  "scout-scene",
 ] as const;
 export const producerNameSchema = z.enum(PRODUCERS);
 export type ProducerName = z.output<typeof producerNameSchema>;

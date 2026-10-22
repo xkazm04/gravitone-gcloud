@@ -22,7 +22,7 @@ import { err, ok, type Result } from "./errors.ts";
  *  carried to Phase 4). The first domain also had `triage`; nothing opened a
  *  packet under it, and the word was ambiguous between audio triage (`audio`)
  *  and v1's explainer research scope (not a Weir surface), so it is gone. */
-export const PACKET_SOURCES = ["forge", "extract", "dojo", "strips", "article", "audio", "suno", "mv", "trials", "step", "proof"] as const;
+export const PACKET_SOURCES = ["forge", "extract", "dojo", "strips", "article", "audio", "suno", "mv", "trials", "step", "proof", "scout"] as const;
 export type PacketSource = (typeof PACKET_SOURCES)[number];
 
 export const PACKET_MODES = ["matrix-cull", "blind-pair", "packet-review"] as const;
@@ -90,6 +90,11 @@ export const SOURCES = {
   // matrix cull with a row per trial problem. v1 had no reason list for a proof - only its note,
   // which the atelier shows beside the plate - so a reject is one thing here too.
   proof: { modes: ["matrix-cull"], reasons: [], maxReasons: 0, noteMax: NOTE_SHORT },
+  // One /scout night (spark media-training-loop): a row per candidate - an extracted look, a found
+  // scene's replicas and clip, a craft finding, a watchlist line. The forge's three still axes, then
+  // `motion` for a clip, `rights` for material that should not have been taken, `generic` for a
+  // find that teaches nothing the Library does not already hold.
+  scout: { modes: ["matrix-cull"], reasons: ["style", "subject", "craft", "motion", "rights", "generic"], maxReasons: 3, noteMax: NOTE_SHORT },
 } as const satisfies { readonly [S in PacketSource]: SourceSpec };
 
 /** The keys a reason list is bound to, in order (plan §8: the Board's 1-4 grew to eleven for audio). */
