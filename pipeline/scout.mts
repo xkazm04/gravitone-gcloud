@@ -187,7 +187,10 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
       const { tasteBrief } = await import("../lib/foundry/scout/taste.ts");
       const n = await store.createNight({ dry: !flags.has("live"), ceilingUsd: num("ceiling", DEFAULT_CEILING_USD), target: Math.round(num("target", DEFAULT_TARGET)), clipCap: Math.round(num("clips", DEFAULT_CLIP_CAP)), assetCap: Math.round(num("assets", DEFAULT_ASSET_CAP)), now: now(), ...(until === undefined ? {} : { deadline: deadlineOf(until, now()) }) });
       fs.writeFileSync(path.join(store.nightDir(n.id), "taste.md"), await tasteBrief(n.id), "utf8");
-      if (json) doc({ ok: true, night: n.id, dry: n.dry, ceilingUsd: n.ceilingUsd, target: n.target, clipCap: n.clipCap, assetCap: n.assetCap, ...(n.deadline === undefined ? {} : { deadline: n.deadline }), taste: path.join(store.nightDir(n.id), "taste.md") });
+      // The registry digest beside it (spark registry-feedback-loop): `registry: none` when none resolves.
+      const { registryDigest } = await import("../lib/foundry/scout/registry.ts");
+      fs.writeFileSync(path.join(store.nightDir(n.id), "registry.md"), (await registryDigest()).text, "utf8");
+      if (json) doc({ ok: true, night: n.id, dry: n.dry, ceilingUsd: n.ceilingUsd, target: n.target, clipCap: n.clipCap, assetCap: n.assetCap, ...(n.deadline === undefined ? {} : { deadline: n.deadline }), taste: path.join(store.nightDir(n.id), "taste.md"), registry: path.join(store.nightDir(n.id), "registry.md") });
       else io.out(n.id);
       say(`night ${n.id} · ${n.dry ? "dry" : "LIVE"} · ceiling $${n.ceilingUsd} · target ${n.target} · clips ${n.clipCap} · assets ${n.assetCap ?? DEFAULT_ASSET_CAP}${n.deadline === undefined ? "" : ` · until ${n.deadline}`}`);
       return 0;
