@@ -83,6 +83,12 @@ export type NightCommit = {
   /** Packet cell ids (see `cellId`). */
   readonly kept: readonly string[];
   readonly rejected: readonly string[];
+  /** A rejected cell's reasons (the `scout` source's words), by cell id - the next night's taste. */
+  readonly reasons: Readonly<Record<string, readonly string[]>>;
+  /** A verdict's note, by cell id, where the operator wrote one. */
+  readonly notes: Readonly<Record<string, string>>;
+  /** True when the night was dry: the verdicts are recorded and nothing else was written. */
+  readonly dry: boolean;
 };
 
 /* ── Sources ─────────────────────────────────────────────────────────────── */
@@ -178,6 +184,8 @@ export type SceneCandidate = CandidateBase & {
   readonly recipe?: SceneRecipe;
   /** Night-relative replica stills (`scenes/c-04/replica-1.jpg`). */
   readonly replicas: readonly string[];
+  /** Set when the launch asked for a clip - what the night's clip cap counts, rendered or not. */
+  readonly clipRequested?: true;
   readonly clip?: SceneClip;
 };
 
