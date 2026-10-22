@@ -149,6 +149,16 @@ export const PRICE_TABLE: readonly PriceRow[] = [
       "Billed in Leonardo STUDIO credits from the operator's prepaid plan (71 credits for one 1376x768 High image, read 2026-10-12 off the studio's button), a separate pool from the API's. No USD-per-studio-credit rate has been checked.",
     checked: "2026-10-12",
   },
+  {
+    provider: "leonardo-flare",
+    model: "openai/gpt-image-2.5-flare",
+    unit: "image",
+    usd: 0.01542,
+    per: 1,
+    source:
+      "MEASURED in the bp repo's look-dev log (66 API-reported calls): LOW is 6 credits at 1376x768 and 1024x1024, 8 at 2048x768; 6 credits at USD_PER_CREDIT 0.00257. Fallback only: the API reports credits per call and a reported figure always outranks this one.",
+    checked: "2026-10-22",
+  },
 
   /* ── text (lib/text/pricing.ts), plus imaging's recognition row ──────── */
   ...textUnpriced(

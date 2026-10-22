@@ -263,9 +263,14 @@ export function recipeOf(raw: unknown, ctx: { readonly deny: readonly string[]; 
 
 /* ── Replicas and the clip ───────────────────────────────────────────────── */
 
+/** The imaging vendor a replica still asks for: GPT Image 2.5 Flare, LOW (operator, 2026-10-22). It is
+ *  prefer-only in the router, so naming it is the whole chain: a Flare refusal is the candidate's sentence,
+ *  never a quiet Nano Banana bill. The readback stays on Google (scoutSceneActs.ts `prefer: "google"`). */
+export const REPLICA_GENERATOR = "leonardo-flare" as const;
+
 /** A replica still: the recipe's prompt verbatim, and NO reference image - the source never conditions it. */
 export function replicaRequest(recipe: SceneRecipe, k: number): GenerateRequest {
-  return { prompt: recipe.prompt, negativePrompt: REPLICA_NEGATIVE, aspect: "16:9", count: 1, prefer: "google", seed: k };
+  return { prompt: recipe.prompt, negativePrompt: REPLICA_NEGATIVE, aspect: "16:9", count: 1, prefer: REPLICA_GENERATOR, seed: k };
 }
 
 const EXT: Readonly<Record<string, string>> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" };

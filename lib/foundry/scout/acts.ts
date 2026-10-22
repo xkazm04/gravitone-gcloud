@@ -111,6 +111,9 @@ async function addCandidate<C extends Candidate>(id: NightId, make: (cid: Candid
 const MIME: Readonly<Record<string, ExtractUpload["mime"]>> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp" };
 const EXTRACT_MAX_SOURCES = 60;
 
+/** The imaging vendor a night's style replicas prefer (prefer-only in the router: nothing else is asked). */
+export const STYLE_GENERATOR = "leonardo-flare" as const;
+
 export type StyleResult = { readonly candidate: StyleCandidate; readonly outcome?: string };
 
 /** An extract run over the named sources' pictures and keyframes, as one style candidate. */
@@ -131,7 +134,8 @@ export async function styleAct(ctx: ActContext, id: NightId, sourceIds: readonly
   }
   if (uploads.length === 0) throw new Refusal(`sources ${sourceIds.join(",")} hold no picture extract can read`);
   const b = money(ctx, night);
-  const target = { kind: "gallery" as const, slug: slug ?? `scout-${id}-${sourceIds.join("-")}`, uploads, options: {}, folder: nightDir(id) };
+  // The replicas and transfers are drawn on Flare (operator, 2026-10-22); the reads stay on the plan.
+  const target = { kind: "gallery" as const, slug: slug ?? `scout-${id}-${sourceIds.join("-")}`, uploads, options: { generator: STYLE_GENERATOR }, folder: nightDir(id) };
   const opts = { mode, actor: ctx.actor, dryOnly: ctx.dryOnly, ...(b.remainingUsd > 0 ? { ceilingUsd: b.remainingUsd } : {}) };
   const r0 = await launchExtract(ctx.store, target, opts);
   if (!r0.ok) throw new Refusal(r0.error.message);

@@ -274,7 +274,10 @@ function liveIOBase(id: string): EngineIO {
       return { value: r.json, model: `${r.provenance.provider}/${r.provenance.model}`, costUsd: r.provenance.costUsd, basis: r.provenance.costBasis };
     },
     async generate(prompt, negativePrompt, aspect, seed) {
-      const g = await generate({ prompt, negativePrompt, aspect, count: 1, seed });
+      // The run's own steer, read off its manifest at the call (options.generator):
+      // absent, the router's plan decides; the served vendor lands on `engines` either way.
+      const prefer = readManifestNow(id).options.generator;
+      const g = await generate({ prompt, negativePrompt, aspect, count: 1, seed, ...(prefer === undefined ? {} : { prefer }) });
       return { value: g.images[0], model: `${g.provenance.provider}/${g.provenance.model}`, costUsd: g.provenance.costUsd, basis: g.provenance.costBasis };
     },
     async reason(prompt, schema) {
