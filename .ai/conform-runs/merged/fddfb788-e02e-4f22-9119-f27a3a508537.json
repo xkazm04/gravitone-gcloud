@@ -1,0 +1,77 @@
+{
+ "schema": "conform-run/1",
+ "worker": "fddfb788-e02e-4f22-9119-f27a3a508537",
+ "subject": "realtime-events",
+ "evaluatedAt": "2026-10-22T03:20:18.760106+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "kernel-store-and-events",
+   "subject": "realtime-events",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/kernel/src/events.ts:179 The append schema accepts any grammatically valid event name and generic JSON data, allowing vocabulary drift and payload mismatches into the durable feed.",
+   "techniques": [
+    {
+     "technique": "capacity-packed-subscription-pool",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/store.ts:125 This context opens SQLite connections, with no push provider, topic subscriptions, or provider connection caps."
+    },
+    {
+     "technique": "change-data-capture",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/token.ts:239 These are explicit audit facts appended alongside mutations in the same transaction, rather than a storage-change notification pipeline; no capture hook or delivery channel exists in the context."
+    },
+    {
+     "technique": "coalescing-and-batching",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/events.ts:183 The ledger preserves individual acts with sequence identities; this context contains no consumer render buffer or superseding-state flush."
+    },
+    {
+     "technique": "event-registry",
+     "verdict": "deviation",
+     "evidence": "packages/domain/src/event.ts:60 The schema imported by the append door checks spelling rather than membership in a closed vocabulary; eventDataSchema at line 57 accepts a generic JSON object without binding payload shapes to names."
+    },
+    {
+     "technique": "outbound-fan-out",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/events-query.ts:186 This seam supplies bounded reads after a sequence position, not external delivery subscriptions or settlement; per-subscription watermarks, retries, and dead letters belong to a dispatcher absent from these files."
+    },
+    {
+     "technique": "push-vs-refetch-reconciliation",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/events-query.ts:171 This is an authoritative ledger reader, with no pushed client state, optimistic display, or in-flight UI read reconciliation to judge."
+    },
+    {
+     "technique": "subscription-lifecycle",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/events-query.ts:185 The feed interface is a synchronous pull returning a page; it creates no callback registration, asynchronous subscription handshake, or unsubscribe resource."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-22T03:20:18.760106+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "realtime-events"
+   ],
+   "techniques": [
+    "capacity-packed-subscription-pool",
+    "change-data-capture",
+    "coalescing-and-batching",
+    "event-registry",
+    "outbound-fan-out",
+    "push-vs-refetch-reconciliation",
+    "subscription-lifecycle"
+   ],
+   "deviations": 1,
+   "context": "kernel-store-and-events",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

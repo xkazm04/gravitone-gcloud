@@ -9429,6 +9429,52 @@
         "at": "2026-10-22T02:55:35.023814+00:00",
         "reason": "reviewer (sonnet): The not-applicable anchor (ConsequencePanel.tsx:69) is an incidental line that renders commit-packet chips and does not show that public claims are absent; ConsequencePanel is also not among the listed context files. The 'illustrative' vs 'real' distinction in SourceTag.tsx suggests data-provenance "
       }
+    },
+    "e5b296e2-cccf-47a5-b8bd-ce730d40ace8/realtime-events": {
+      "context": "kernel-store-and-events",
+      "subject": "realtime-events",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T03:20:18.760Z",
+      "worker": "fddfb788-e02e-4f22-9119-f27a3a508537",
+      "techniques": [
+        {
+          "technique": "capacity-packed-subscription-pool",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/store.ts:125 This context opens SQLite connections, with no push provider, topic subscriptions, or provider connection caps."
+        },
+        {
+          "technique": "change-data-capture",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/token.ts:239 These are explicit audit facts appended alongside mutations in the same transaction, rather than a storage-change notification pipeline; no capture hook or delivery channel exists in the context."
+        },
+        {
+          "technique": "coalescing-and-batching",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/events.ts:183 The ledger preserves individual acts with sequence identities; this context contains no consumer render buffer or superseding-state flush."
+        },
+        {
+          "technique": "event-registry",
+          "verdict": "deviation",
+          "evidence": "packages/domain/src/event.ts:60 The schema imported by the append door checks spelling rather than membership in a closed vocabulary; eventDataSchema at line 57 accepts a generic JSON object without binding payload shapes to names."
+        },
+        {
+          "technique": "outbound-fan-out",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/events-query.ts:186 This seam supplies bounded reads after a sequence position, not external delivery subscriptions or settlement; per-subscription watermarks, retries, and dead letters belong to a dispatcher absent from these files."
+        },
+        {
+          "technique": "push-vs-refetch-reconciliation",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/events-query.ts:171 This is an authoritative ledger reader, with no pushed client state, optimistic display, or in-flight UI read reconciliation to judge."
+        },
+        {
+          "technique": "subscription-lifecycle",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/events-query.ts:185 The feed interface is a synchronous pull returning a page; it creates no callback registration, asynchronous subscription handshake, or unsubscribe resource."
+        }
+      ]
     }
   }
 }

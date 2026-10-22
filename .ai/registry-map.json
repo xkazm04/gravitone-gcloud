@@ -6388,7 +6388,11 @@
           "revision": 6,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/events.ts:179 The append schema accepts any grammatically valid event name and generic JSON data, allowing vocabulary drift and payload mismatches into the durable feed.",
+          "evaluatedAt": "2026-10-22",
+          "evaluatedAgainst": "sha256-b2:a0685592373df03f",
+          "evaluatedRevision": 6
         },
         {
           "subject": "transactions-over-a-replicated-log",
