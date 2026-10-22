@@ -1,3 +1,0 @@
-/* The opened run's live model: the viewer at the large tile's media height (Cull.module.css
-   `.large .media`, 62vh), so the cell does not jump when the cursor moves the canvas to it. */
-.stage{height:62vh;min-height:0;padding:var(--sp-2)}

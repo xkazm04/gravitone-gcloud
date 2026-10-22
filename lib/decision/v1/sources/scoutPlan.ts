@@ -16,6 +16,7 @@ import { CANDIDATE_KINDS, cellId, type Asset3dCandidate, type Candidate, type Ca
 import { meshFileUrl } from "../../../library/feeds/mesh.ts";
 import { decisionMap, type Loss } from "../types.ts";
 import { extractAdapter, planLooks, type ExtractV1 } from "./extract.ts";
+import { lookBrief, sceneBrief } from "./scoutBrief.ts";
 
 // THE SCOUT PACKET'S CELLS, PURE - what lib/decision/v1/sources/scout.ts opens,
 // previews and applies, planned from one read of the night. Kept apart from the
@@ -138,7 +139,12 @@ function styleCells(night: Night, c: Candidate & { kind: "style" }, read: StyleR
       words: p.present.items[it.id] ?? { label: it.id },
     });
   }
-  out.rows.push(...p.present.rows.map((r) => ({ ...r, id: under(r.id), group: "art styles" })));
+  out.rows.push(
+    ...p.present.rows.map((r) => {
+      const look = ex.run.styles.find((st) => st.id === r.id);
+      return { ...r, id: under(r.id), group: "art styles", ...(look === undefined ? {} : lookBrief(look)) };
+    }),
+  );
   out.initial.push(...p.initial.map((d) => ({ ...d, candidate: under(d.candidate) })));
   out.losses.push(...p.losses.map((l) => ({ ...l, candidate: under(l.candidate ?? "") })));
   out.runs[c.id] = ex;
@@ -181,7 +187,7 @@ function sceneCells(night: Night, c: SceneCandidate, media: ScoutV1["media"], ou
   // the full prompt are each replica's own words, shown in the zoom.
   const label = r === undefined ? `scene ${c.id}` : clip40(`${r.shot} · ${r.camera.split(/[,;]/)[0] ?? r.camera}`);
   out.cells.push(...shown);
-  out.rows.push({ id: c.id, label, group: "videos", ...(key !== undefined && media[key] !== undefined ? { ref: scoutFileUrl(night.id, key) } : {}) });
+  out.rows.push({ id: c.id, label, group: "videos", ...(r === undefined ? {} : sceneBrief(r)), ...(key !== undefined && media[key] !== undefined ? { ref: scoutFileUrl(night.id, key) } : {}) });
 }
 
 function textCell(night: Night, c: Candidate & { kind: "finding" | "watch" }, out: Mutable): void {

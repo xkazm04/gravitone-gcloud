@@ -1,152 +1,78 @@
 "use client";
 
-// THE MATRIX CULL (prototype index.html :452-572): rows of candidates, a cursor, K / X / U and
-// the source's reason keys, ⇧K / ⇧X on a whole row as ONE act, Z for the lens, ⌫ to take the
-// last act back, and a commit that refuses while anything is open - shaking, jumping to the
-// first open tile and flashing every one (decision 5).
-//
-// The desk owns what is ITS: the cursor, the lens, the flash. A verdict is the caller's
-// (`decide`, the gate: optimistic, windowed, one act per press) and so is the commit (`onCommit`,
-// which previews the consequence before anything is written). Every verb is a keymap row
-// (bindings.ts `board.cull`), bound with `useKeys`; the reason keys are read by the cap the
-// operator pressed, so 1-9, 0, − follow the source's list in order (@gt/domain/source).
+// THE MATRIX CULL - a packet of runs, decided (operator, 2026-10-22). The runs are filed by the KIND
+// of content into tabs - images, videos, audio, ideas - each drawn in the component its content
+// reads best in: a mosaic of square stills, 16:9 clips that play, waveforms, and a dense list of the
+// runs that are only words, decided in place. A picture, clip or take run opens across the whole
+// screen (RunModal): its brief, its variants at most three to a row, a verdict by click under each
+// and on the whole run, a clip with its own bar. Every act is also a key (bindings.ts `board.cull`):
+// K / X / a reason on a run in the mosaic judge it whole, inside a run each variant; ← → ↑ ↓ walk;
+// Z or a click opens; ⌫ undoes; ⏎ commits - refusing while anything is open, and taking the cursor
+// (and the tab) to the first open variant.
 import { useEffect, useRef, useState } from "react";
 
 import type { BoardVerdict } from "../../board/boardGate.ts";
-import { clamp, cullCells, reasonAct, rowOf, tallyOf, undecidedOf, vertical } from "../../board/cull.ts";
-import { useKeys } from "../../keymap/dispatch.ts";
-import { Chip } from "../chip/Chip.tsx";
+import { cullCells, tallyOf } from "../../board/cull.ts";
+import { categoriesOf, categoryOf, columnsOf, runsOf, tabOf, tabsOf, type Run, type Tab } from "../../board/runs.ts";
 import { DeskFrame, OracleStrip } from "../desk/Desk.tsx";
-import { Plate } from "../desk/Plate.tsx";
+import { Seg } from "../seg/Seg.tsx";
 import { CullFoot } from "./CullFoot.tsx";
-import { CullTile, Zoom, kindOf } from "./CullTile.tsx";
-import { MatrixCullMosaic } from "./MatrixCullMosaic.tsx";
+import { IdeaList } from "./IdeaList.tsx";
 import type { MatrixCullProps } from "./props.ts";
+import { RunModal } from "./RunModal.tsx";
+import { RunMosaic } from "./RunMosaic.tsx";
+import { RunView } from "./RunView.tsx";
 import { SeriesBadge } from "./SeriesBadge.tsx";
-import s from "./Cull.module.css";
+import { useRunDesk } from "./useRunDesk.ts";
+import s from "./Runs.module.css";
 
 export type { MatrixCullProps } from "./props.ts";
 
-/** The rows view: a row per run, every variant a tile in it. */
-export function MatrixCullRows({ packet, verdicts, decide, undo, onCommit, busy = false, announce = () => undefined, keys = true }: MatrixCullProps) {
+/** The whole run's verdict, when every variant holds the same one. */
+function runVerdict(run: Run, ids: (i: number) => string, verdicts: Readonly<Record<string, BoardVerdict>>): BoardVerdict | undefined {
+  const vs = run.members.map((i) => verdicts[ids(i)]);
+  const first = vs[0];
+  return first !== undefined && vs.every((v) => v?.verdict === first.verdict) ? { verdict: first.verdict, reasons: first.reasons } : undefined;
+}
+
+export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = false, announce = () => undefined, keys = true }: MatrixCullProps) {
   const { view, present } = packet;
-  const cells = cullCells(present.rows, view.items);
+  const grid = useRef<HTMLDivElement | null>(null);
+  const [cols, setCols] = useState(1);
   const byId = new Map<string, (typeof view.items)[number]>(view.items.map((it) => [it.id, it]));
-  const [cur, setCur] = useState(() => Math.max(0, undecidedOf(cells, verdicts)[0] ?? 0));
-  const [zoom, setZoom] = useState(false);
-  const [nudged, setNudged] = useState<ReadonlySet<number>>(new Set());
-  const [refusals, setRefusals] = useState(0);
-  const [playing, setPlaying] = useState<string | null>(null);
-  const audio = useRef<HTMLAudioElement | null>(null);
-  const t = tallyOf(cells, verdicts);
-  const lane = view.lane;
-  const at = cells[cur];
+  const mediaOf = (id: string) => ({ url: byId.get(id)?.url ?? "", mime: byId.get(id)?.media.mime ?? "image/png" });
+  const cells = cullCells(present.rows, view.items);
+  const firstMime = (run: Run) => mediaOf(cells[run.members[0] ?? -1]?.id ?? "").mime;
+  const tabs = tabsOf(categoriesOf(runsOf(cells, present.rows), firstMime));
+  // The tab shown is the tab of the run under the cursor - there is no second state to keep in step:
+  // picking a tab moves the cursor into it, and the commit's refusal, taking the cursor to the first
+  // open variant, takes the tab with it. The cursor walks its own tab's runs.
+  const tabOfRun = (r: Run | undefined): Tab => (r === undefined ? (tabs[0]?.tab ?? "images") : tabOf(categoryOf(r, firstMime(r))));
+  const orderOf = (t: Tab) => (tabs.find((x) => x.tab === t)?.categories ?? []).flatMap((c) => c.runs.map((r) => r.at));
+  const d = useRunDesk({ packet, verdicts, decide, undo, onCommit, announce, keys, columns: () => cols, arrange: (runs, at) => orderOf(tabOfRun(runs[at])) });
+  const tab = tabOfRun(d.run);
+  const here = tabs.find((t) => t.tab === tab) ?? tabs[0];
+  const { setOpen } = d;
+  // A words-only run never opens: it is decided where it lies.
+  const open = d.open && tab !== "ideas";
 
-  // The flash is one beat (prototype `.nudge`, .9s); cleared so the next refusal replays it.
   useEffect(() => {
-    if (nudged.size === 0) return;
-    const t = setTimeout(() => setNudged(new Set()), 950);
-    return () => clearTimeout(t);
-  }, [nudged]);
+    const el = grid.current;
+    if (el === null || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => setCols(columnsOf(el)));
+    ro.observe(el);
+    setCols(columnsOf(el));
+    return () => ro.disconnect();
+  }, [tab]);
 
-  // The cursor follows its tile into view (prototype `cullMove`'s scrollIntoView).
-  useEffect(() => {
-    document.querySelector(`[data-tile="${cur}"]`)?.scrollIntoView({ block: "nearest" });
-  }, [cur]);
-
-  const wordsOf = (id: string) => present.items[id] ?? { label: id };
-  const mediaOf = (id: string) => {
-    const it = byId.get(id);
-    return { url: it?.url ?? "", mime: it?.media.mime ?? "image/png" };
+  const reasons = view.reasons.list;
+  const foot = <CullFoot tally={tallyOf(d.cells, verdicts)} reasons={reasons.length} audio={view.lane === "audio"} refusals={d.refusals} busy={busy} onCommit={d.commit} />;
+  const idOf = (i: number) => d.cells[i]?.id ?? "";
+  const pick = (t: Tab) => {
+    const first = tabs.find((x) => x.tab === t)?.categories[0]?.runs[0];
+    if (first !== undefined) d.setCur(first.run.members[0] ?? 0);
   };
-  const move = (to: number) => {
-    const next = clamp(cells, to);
-    setCur(next);
-    if (playing !== null) play(next);
-  };
-  const advance = () => {
-    if (cur < cells.length - 1) move(cur + 1);
-  };
-  const mark = (idx: readonly number[], v: BoardVerdict | null) => {
-    const ids = idx.flatMap((i) => {
-      const c = cells[i];
-      return c === undefined ? [] : [c.id];
-    });
-    const first = ids[0];
-    if (first === undefined) return;
-    const label = ids.length > 1 ? `${ids.length} items` : wordsOf(first).label;
-    decide(ids, v, label);
-    announce(`${label} ${v === null ? "undecided" : v.verdict}${v !== null && v.reasons.length > 0 ? `, ${v.reasons.join(", ")}` : ""}`);
-  };
-  function play(i: number) {
-    const id = cells[i]?.id;
-    const el = audio.current;
-    if (id === undefined || el === null) return;
-    if (playing === id) {
-      el.pause();
-      setPlaying(null);
-      return;
-    }
-    el.src = mediaOf(id).url;
-    void el.play().then(
-      () => setPlaying(id),
-      (e: unknown) => announce(`cannot play: ${e instanceof Error ? e.message : "unknown"}`),
-    );
-  }
-  const commit = () => {
-    const open = undecidedOf(cells, verdicts);
-    const first = open[0];
-    if (first === undefined) {
-      onCommit();
-      return;
-    }
-    setRefusals((n) => n + 1);
-    setNudged(new Set(open));
-    move(first);
-    announce(`${open.length} undecided`);
-  };
-
-  useKeys(
-    "board.cull",
-    {
-      keep: () => {
-        mark([cur], { verdict: "keep", reasons: [] });
-        advance();
-      },
-      reject: () => {
-        mark([cur], { verdict: "reject", reasons: [] });
-        advance();
-      },
-      undecide: () => mark([cur], null),
-      reason: ({ cap }) => {
-        if (at === undefined) return;
-        const act = reasonAct(view.reasons.list, view.reasons.max, cap, verdicts[at.id]);
-        if (act.kind === "refuse") {
-          announce(act.why);
-          return;
-        }
-        mark([cur], act.verdict);
-        if (act.advance) advance();
-      },
-      prev: () => move(cur - 1),
-      next: () => move(cur + 1),
-      "row-up": () => move(vertical(cells, cur, -1)),
-      "row-down": () => move(vertical(cells, cur, 1)),
-      "keep-row": () => mark(rowOf(cells, cur), { verdict: "keep", reasons: [] }),
-      "reject-row": () => mark(rowOf(cells, cur), { verdict: "reject", reasons: [] }),
-      zoom: () => setZoom((z) => !z),
-      undo: () => {
-        undo();
-        announce("undone");
-      },
-      play: () => play(cur),
-      commit,
-    },
-    { facts: lane === "audio" ? ["audio"] : [], enabled: keys },
-  );
-
-  const rows = [...new Set(cells.map((c) => c.row))];
-  const isAudio = lane === "audio";
+  const run = d.run;
   return (
     <DeskFrame
       title={view.title ?? view.id}
@@ -157,83 +83,38 @@ export function MatrixCullRows({ packet, verdicts, decide, undo, onCommit, busy 
           {present.series !== undefined && <SeriesBadge measured={present.series.measured} graded={present.series.graded} />}
         </>
       }
+      foot={foot}
       over={
-        zoom && at !== undefined && kindOf(mediaOf(at.id).mime) !== "audio" ? (
-          <Zoom words={wordsOf(at.id)} media={mediaOf(at.id)} verdict={verdicts[at.id]} position={`${cur + 1}/${cells.length}`} onClose={() => setZoom(false)} specimen={!keys} />
+        open && run !== undefined ? (
+          <RunModal
+            category={categoryOf(run, firstMime(run))}
+            label={run.words?.label ?? run.row}
+            position={`${d.runIx + 1}/${d.runs.length}`}
+            {...(run.words?.aim !== undefined ? { aim: run.words.aim } : {})}
+            {...(run.words?.checks !== undefined ? { checks: run.words.checks } : {})}
+            runVerdict={runVerdict(run, idOf, verdicts)}
+            reasons={reasons}
+            maxReasons={view.reasons.max}
+            onRunVerdict={(v) => d.decideCells(run.members, v, run.words?.label ?? run.row)}
+            onClose={() => setOpen(false)}
+            live={keys}
+            foot={foot}
+          >
+            <RunView run={run} cells={d.cells} verdicts={verdicts} mediaOf={mediaOf} wordsOf={d.wordsOf} cur={d.cur} nudged={d.nudged} reasons={reasons} maxReasons={view.reasons.max} onFocus={d.setCur} onVerdict={(i, v) => d.decideCells([i], v)} />
+          </RunModal>
         ) : undefined
       }
-      foot={
-        <>
-          <CullFoot tally={t} reasons={view.reasons.list.length} audio={isAudio} refusals={refusals} busy={busy} onCommit={commit} />
-        </>
-      }
     >
-      <div className={s.matrix} role="grid" aria-label="candidates">
-        {rows.map((row) => {
-          const words = present.rows.find((r) => r.id === row);
-          const members = cells.flatMap((c, i) => (c.row === row ? [i] : []));
-          return (
-            <div key={row} className={s.row} role="row">
-              <div className={s.label}>
-                <span>{words?.label ?? row}</span>
-                {words?.ref !== undefined && (
-                  <>
-                    <Plate className={s.ref} src={words.ref} alt={`reference ${words.label}`} />
-                    <span className={s.refNote}>reference · not output</span>
-                  </>
-                )}
-                {words?.inCatalogue === false && <Chip label="new look" ghost />}
-                {words?.inCatalogue === true && <Chip label="in catalogue" />}
-              </div>
-              <div className={isAudio ? s.tilesAudio : s.tiles}>
-                {members.map((i) => {
-                  const id = cells[i]?.id ?? "";
-                  return (
-                    <CullTile
-                      key={id}
-                      index={i}
-                      words={wordsOf(id)}
-                      media={mediaOf(id)}
-                      verdict={verdicts[id]}
-                      current={i === cur}
-                      nudged={nudged.has(i) && verdicts[id] === undefined}
-                      playing={playing === id}
-                      onPress={move}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      {isAudio && <audio ref={audio} onEnded={() => setPlaying(null)} />}
-    </DeskFrame>
-  );
-}
-
-// TODO(prototype, 2026-10-22): consolidate the MatrixCull view switcher - the mosaic is the operator's
-// default (2026-10-22); "rows" stays selectable until they confirm it can go. Then this strip goes.
-const VIEWS = [
-  { id: "mosaic", label: "mosaic", sub: "runs by category, a run opens full screen" },
-  { id: "rows", label: "rows", sub: "previous: a row per run" },
-] as const;
-type View = (typeof VIEWS)[number]["id"];
-
-export function MatrixCull(props: MatrixCullProps) {
-  const [v, setV] = useState<View>("mosaic");
-  return (
-    <>
-      {props.keys !== false && (
-        <div className={s.proto} role="tablist" aria-label="cull view (prototype)">
-          {VIEWS.map((x) => (
-            <button key={x.id} type="button" role="tab" aria-selected={v === x.id} className={s.protoTab} onMouseDown={(e) => e.preventDefault()} onClick={() => setV(x.id)}>
-              <b>{x.label}</b> <span>{x.sub}</span>
-            </button>
-          ))}
+      {tabs.length > 1 && (
+        <div className={s.tabs}>
+          <Seg label="content" options={tabs.map((t) => ({ value: t.tab, label: t.tab, count: t.categories.reduce((n, c) => n + c.runs.length, 0) }))} value={here?.tab ?? tab} onChange={pick} />
         </div>
       )}
-      {v === "mosaic" ? <MatrixCullMosaic {...props} /> : <MatrixCullRows {...props} />}
-    </>
+      {here?.tab === "ideas" ? (
+        <IdeaList categories={here.categories} cells={d.cells} verdicts={verdicts} wordsOf={d.wordsOf} cur={d.cur} nudged={d.nudged} reasons={reasons} maxReasons={view.reasons.max} onFocus={d.setCur} onVerdict={(i, v) => d.decideCells([i], v)} />
+      ) : here !== undefined ? (
+        <RunMosaic tab={here.tab} categories={here.categories} cells={d.cells} verdicts={verdicts} mediaOf={mediaOf} wordsOf={d.wordsOf} runIx={d.runIx} nudged={d.nudged} onOpen={d.openRun} grid={grid} />
+      ) : null}
+    </DeskFrame>
   );
 }

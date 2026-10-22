@@ -14,7 +14,9 @@ import type { Result } from "@gt/domain/errors";
 import type { BoardPacket } from "../src/board/port.ts";
 import { ConsequencePanel } from "../src/components/consequence/ConsequencePanel.tsx";
 import { SeriesBadge } from "../src/components/cull/SeriesBadge.tsx";
-import { MatrixCull, MatrixCullRows } from "../src/components/cull/MatrixCull.tsx";
+import { IdeaList } from "../src/components/cull/IdeaList.tsx";
+import { MatrixCull } from "../src/components/cull/MatrixCull.tsx";
+import { VariantCard } from "../src/components/cull/VariantCard.tsx";
 import { railGroups } from "../src/components/desk/PacketRail.tsx";
 import { BlindPair } from "../src/components/pair/BlindPair.tsx";
 
@@ -53,11 +55,40 @@ describe("the matrix cull", () => {
   const p = packet({ items: [img("a", "r"), img("b", "r")], title: "Strips 7" }, { items: { a: { label: "poster a" }, b: { label: "poster b" } }, rows: [{ id: "r", label: "concept a" }] });
 
   test("a decided tile says its verdict and reasons aloud; the commit button names what is open", () => {
-    const html = renderToStaticMarkup(h(MatrixCullRows, { packet: p, verdicts: { a: { verdict: "reject", reasons: ["concept", "motion"] } }, decide: noop, undo: noop, onCommit: noop, keys: false }));
-    expect(html).toContain('aria-label="poster a, reject: concept, motion"');
-    expect(html).toContain('aria-label="poster b"');
+    // A variant in the opened run: its verdict spoken in its name, and decided by click - keep and
+    // reject as pressed buttons, the source's reasons as toggles once rejected.
+    const card = (v?: { verdict: "keep" | "reject"; reasons: string[] }) =>
+      renderToStaticMarkup(h(VariantCard, { index: 0, words: { label: "poster a" }, media: { url: "/a.png", mime: "image/png" }, verdict: v, current: false, nudged: false, reasons: SOURCES.strips.reasons, maxReasons: 3, onFocus: noop, onVerdict: noop }));
+    const rejected = card({ verdict: "reject", reasons: ["concept", "motion"] });
+    expect(rejected).toContain('aria-label="poster a, reject: concept, motion"');
+    expect(rejected).toMatch(/aria-pressed="true"[^>]*>(<span[^>]*><\/span>)?reject/);
+    expect(rejected).toMatch(/aria-pressed="true"[^>]*>concept</);
+    expect(rejected).toMatch(/aria-pressed="false"[^>]*>legibility</);
+    expect(card()).not.toContain(">concept<");
+    // The whole packet's bar still names what is open.
+    const html = renderToStaticMarkup(h(MatrixCull, { packet: p, verdicts: { a: { verdict: "reject", reasons: ["concept"] } }, decide: noop, undo: noop, onCommit: noop, keys: false }));
     expect(html).toContain('aria-label="commit packet, 1 undecided"');
-    expect(html).toContain(">concept<");
+  });
+
+  test("words-only runs are decided in place, in the ideas list", () => {
+    const run = { row: "r1", words: { id: "r1", label: "finding" }, members: [0], group: "notes" };
+    const html = renderToStaticMarkup(
+      h(IdeaList, {
+        categories: [{ category: "notes", runs: [{ run, at: 0 }] }],
+        cells: [{ id: "c1", row: "r1" }],
+        verdicts: { c1: { verdict: "keep", reasons: [] } },
+        wordsOf: () => ({ label: "Hold the wide until the subject settles.", prompt: "the push-in reads once the figure stops", meta: "cinematic · 02-frames" }),
+        cur: 0,
+        nudged: new Set<number>(),
+        reasons: [],
+        maxReasons: 0,
+        onFocus: noop,
+        onVerdict: noop,
+      }),
+    );
+    expect(html).toContain("Hold the wide until the subject settles.");
+    expect(html).toContain('aria-label="Hold the wide until the subject settles. cinematic · 02-frames, keep"');
+    expect(html).toMatch(/aria-pressed="true"[^>]*>(<span[^>]*><\/span>)?keep/);
   });
 
   test("the key legend draws only the reason keys this source binds: four for a forge plate, none for Suno", () => {

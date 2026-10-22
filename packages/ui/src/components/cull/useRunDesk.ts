@@ -29,21 +29,23 @@ export type RunDeskInput = {
   readonly keys: boolean;
   /** Runs per grid line now (the variant measures its own grid). */
   readonly columns: () => number;
-  /** The runs in the order they are DRAWN (indices into the packet's runs): ← → ↑ ↓ walk this. */
-  readonly arrange?: (runs: readonly Run[]) => readonly number[];
+  /** The runs in the order they are DRAWN around the current one (indices into the packet's runs):
+   *  ← → ↑ ↓ walk this. Handed the run the cursor is on, so a desk that draws runs in tabs walks
+   *  the cursor's own tab. */
+  readonly arrange?: (runs: readonly Run[], current: number) => readonly number[];
 };
 
 export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce, keys, columns, arrange }: RunDeskInput) {
   const { view, present } = packet;
   const cells = cullCells(present.rows, view.items);
   const runs: Run[] = runsOf(cells, present.rows);
-  const order = arrange?.(runs) ?? runs.map((_, i) => i);
   const [cur, setCur] = useState(() => Math.max(0, undecidedOf(cells, verdicts)[0] ?? 0));
   const [open, setOpen] = useState(false);
   const [nudged, setNudged] = useState<ReadonlySet<number>>(new Set());
   const [refusals, setRefusals] = useState(0);
   const runIx = runAt(runs, cur);
   const run = runs[runIx];
+  const order = arrange?.(runs, runIx) ?? runs.map((_, i) => i);
 
   useEffect(() => {
     if (nudged.size === 0) return;
@@ -52,7 +54,8 @@ export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce,
   }, [nudged]);
 
   useEffect(() => {
-    document.querySelector(open ? `[data-tile="${cur}"]` : `[data-run="${runIx}"]`)?.scrollIntoView({ block: "nearest" });
+    // A run's card on the mosaic, else the variant itself (inside an opened run, and in the ideas list).
+    (document.querySelector(open ? `[data-tile="${cur}"]` : `[data-run="${runIx}"]`) ?? document.querySelector(`[data-tile="${cur}"]`))?.scrollIntoView({ block: "nearest" });
   }, [cur, runIx, open]);
 
   const wordsOf = (id: string) => present.items[id] ?? { label: id };
@@ -147,5 +150,11 @@ export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce,
     toRun(i);
     setOpen(true);
   };
-  return { cells, runs, run, runIx, cur, setCur, open, setOpen, nudged, refusals, commit, wordsOf, openRun };
+  /** A verdict by click on these cells: the same act the keys make, the cursor on the first. */
+  const decideCells = (idx: readonly number[], v: BoardVerdict | null, what?: string) => {
+    const first = idx[0];
+    if (first !== undefined) setCur(first);
+    mark(idx, v, what);
+  };
+  return { cells, runs, run, runIx, cur, setCur, open, setOpen, nudged, refusals, commit, wordsOf, openRun, decideCells };
 }
