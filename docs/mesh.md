@@ -134,3 +134,27 @@ because PoF gives those classes no nominal size.
 
 `<name>` is `<asset>_<variant>` with anything other than letters, digits and underscores replaced
 by `_`.
+
+## First live runs (2026-10-22, this box)
+
+Both ran end to end on the real ComfyUI (TRELLIS.2) and Blender 5.2.2 ARM64, into throwaway stores.
+
+| Asset | Concept | Wall | Gates | Eye |
+|---|---|---|---|---|
+| weapon, rune axe, T1 | round-4 M2 axe (side profile) | 1 min 32 s | input pass 100, mesh pass 100, budget pass (15,000), scale unmeasured | usable; the concept's rust-red accents came out darker (round 4's known colour loss, M1's job) |
+| character, rogue, T2 + rig | round-4 rogue T2 | 13 min 29 s | input warn 85 (touches-edge), mesh warn 85 (not watertight), budget pass (15,874), scale pass, rig pass 100 | the rig deforms (pose tests); the mesh is faceted, the face and hands lost, the quiver gone - not game-ready |
+
+Measured cost of a TRELLIS run over the baseline: GPU memory +10.6 GB (peak 12.7 GB), commit charge
++11.6 GB, CPU at most 55%. A Blender finish of a 37 MB raw mesh: 0.76 GB commit, 0.4 cores, 1.8 s.
+
+The input gate's first version refused EVERY round-4 hero concept the operator had meshed: one median
+background read a studio vignette's dark corners as foreground, a fingertip on the frame as an
+amputation, and a grey fur near a grey ground as two subjects. Recalibrated on that set
+(`INPUT_GATE_VERSION` ...@2026-10-22b): a smooth background field from the border, `subject-cropped`
+only past 10% of an edge (`touches-edge` warns below), regions whose boxes overlap or nearly touch are
+one subject. 9 of the 10 round-4 concepts now pass or warn; barbarian T1 is still refused - its studio
+floor and boot shadow touch the bottom edge (reported as `subject-cropped`; the cause is a ground
+plane, which the concept prompts already forbid).
+
+Structural gates passed (warn) a hero a human would reject: the morning keep is the gate, the gates
+are its evidence (generated-mesh-acceptance: structural is necessary, never sufficient).
