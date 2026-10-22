@@ -51,6 +51,8 @@ export type GateResult = {
   readonly metrics?: Readonly<Record<string, number | boolean | readonly number[]>>;
   /** What it was graded against, verbatim ("Character budget (40000 tri target, ...)"). */
   readonly gradedAs?: string;
+  /** Why a gate reads `unmeasured` (what it could not measure), verbatim. */
+  readonly reason?: string;
 };
 
 /** Asset-relative files. Every path is under the asset's directory. */
@@ -68,6 +70,8 @@ export type VariantFiles = {
 export type MeshVariant = {
   readonly id: string;
   readonly technique: Technique;
+  /** Asset-relative concept this variant was made from, when it is not the asset's (round 4's T2 is its own design). */
+  readonly concept?: string;
   readonly status: VariantStatus;
   readonly error?: string;
   /** What the variant did, one sentence (the round's `approach`). */
@@ -86,6 +90,8 @@ export type MeshVariant = {
 
 export type MeshBrief = {
   readonly class: AssetClass;
+  /** A weapon's kind (sword, mace, axe, staff): the M1 touch-up's geometry rules key on it. */
+  readonly kind?: string;
   /** What it is, in craft words: "hooded archer, leather, chunky silhouette". */
   readonly subject: string;
   readonly style?: string;

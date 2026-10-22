@@ -77,3 +77,18 @@ Profile on a quiet box: the baseline carries whatever was already running. Profi
 representative sample (a TRELLIS prompt the size a night queues), since admission charges every job
 of that engine this footprint. For ComfyUI, the command queues a prompt and waits for it. Never
 `/free` from it while other work is on the queue.
+
+## Engines in use
+
+| Engine | Producer | Lane | What one job does |
+|---|---|---|---|
+| comfy | `mesh` | gpu.local | one TRELLIS.2 run per variant through ComfyUI's API (`pipeline/mesh/trellis-api.json`) |
+| blender | `finish` | box.blender | about six bounded headless Blender steps per variant (`pipeline/mesh/blender/*.py`) |
+
+Profile Blender on a raw mesh:
+`npx tsx pipeline/resources.mts profile blender -- <blender.exe> -b --factory-startup --python-exit-code 1 -P pipeline/mesh/blender/finish.py -- <raw.glb> <outdir> sample character`
+
+Profile ComfyUI on one TRELLIS prompt with the lynx-bench runner, which queues one prompt and waits for it:
+`npx tsx pipeline/resources.mts profile comfy -- node C:/Users/kazda/ai/lynx-bench/media/run-prompt.mjs <trellis api json> profile`
+Only when ComfyUI's queue is otherwise empty - another executor's work would be counted as this engine's.
+

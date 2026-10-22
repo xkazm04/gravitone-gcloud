@@ -30,6 +30,8 @@ import { styleJobProducer } from "./style.ts";
 import { scoutIngestProducer } from "./scoutIngest.ts";
 import { SCOUT_SCENE_LANES, scoutSceneProducer } from "./scoutScene.ts";
 import { profileProducer } from "./profile.ts";
+import { meshProducer } from "./mesh.ts";
+import { finishProducer } from "./finish.ts";
 import { sunoDriver } from "../sound/suno/drivers.ts";
 import { sfxProducer } from "../sound/sfxJob.ts";
 import { huntProducer } from "../sound/huntRender.ts";
@@ -126,6 +128,10 @@ export const BOUND: readonly Bound[] = [
   { name: "hunt", producer: huntProducer() },
   // An engine's measured footprint (spark game-3d-assets WP1): on each lane an engine's work occupies.
   ...PROFILE_LANES.map((lane): Bound => ({ name: "profile", producer: profileProducer(lane) })),
+  // A game asset's mesh (spark game-3d-assets WP2): TRELLIS.2 through ComfyUI on gpu.local (engine comfy),
+  // then the Blender finish on box.blender (engine blender) - two jobs, each admitted by its own engine.
+  { name: "mesh", producer: meshProducer() },
+  { name: "finish", producer: finishProducer() },
   ...stepsBound(),
 ];
 
