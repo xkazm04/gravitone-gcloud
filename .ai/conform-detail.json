@@ -9219,6 +9219,47 @@
           "evidence": "app/_landing/cosmos/engine/raster.worker.ts:85 The owned worker awaits asynchronous PNG encoding directly; no immutable foreign engine requests asynchronously acquired resources through synchronous callbacks."
         }
       ]
+    },
+    "e5f8b2b5-3ac7-422b-9950-c7431117591a/english": {
+      "context": "landing-cosmos-shell",
+      "subject": "english",
+      "bundle": "localization",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T00:51:58.131Z",
+      "worker": "e5cc90eb-df18-48ee-ac52-a2bee294c38d",
+      "techniques": [
+        {
+          "technique": "false-friends-and-collocations",
+          "verdict": "conformant",
+          "evidence": "app/_landing/cosmos/engine/nav.ts:73 EN-ONE-TERM: template breadcrumbs reuse the canonical template label rather than introducing another rendering."
+        },
+        {
+          "technique": "generated-prose-patterns",
+          "verdict": "conformant",
+          "evidence": "app/_landing/parts.tsx:66 The primary CTA states a concrete action and provider without EN-PUFFERY or generation artifacts; no authorship is inferred."
+        },
+        {
+          "technique": "register-and-voice",
+          "verdict": "conformant",
+          "evidence": "app/_landing/parts.tsx:33 EN-WE and EN-YOU: the status reports the change tersely, without corporate narration or blaming the reader."
+        },
+        {
+          "technique": "typography-and-capitalization",
+          "verdict": "deviation",
+          "evidence": "app/_landing/cosmos/engine/layout.ts:352 EN-SPACING requires a nonbreaking space between a number and its unit; fmtDur supplies ordinary spaces to the stage’s duration chips."
+        },
+        {
+          "technique": "ui-and-landing-microcopy",
+          "verdict": "deviation",
+          "evidence": "app/_landing/cosmos/engine/search.ts:43 EN-EMPTY-STATE: renderRes clears the results and renders only matches, leaving an unmatched query without an explanation or recovery instruction."
+        },
+        {
+          "technique": "variant-and-locale-conventions",
+          "verdict": "deviation",
+          "evidence": "app/_landing/cosmos/engine/stage.ts:35 EN-SPELLING includes accessible descriptions: use “stylized” under the declared US variant."
+        }
+      ]
     }
   }
 }
