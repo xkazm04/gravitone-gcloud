@@ -3,13 +3,16 @@
 //
 //   npx tsx pipeline/resources.mts probe [--json]
 //   npx tsx pipeline/resources.mts profiles [--json]
-//   npx tsx pipeline/resources.mts profile <engine> [--label "x"] [--cwd <dir>] [--json] -- <argv...>
+//   npx tsx pipeline/resources.mts profile <engine> [--label "x"] [--cwd <dir>] [--wait] [--json] -- <argv...>
 //
 // `probe` reads the box (commit charge, GPU memory, CPU, ComfyUI's queue) and prints the reading
 // and the machine profile admission would hold it to; it opens no store. `profiles` prints every
 // engine's recorded footprint. `profile` enqueues a profile job for <engine> with <argv> as its
 // command and drives it here: the command runs under the probe, and its peaks over the baseline
-// become the engine's profile (a re-profile replaces it).
+// become the engine's profile (a re-profile replaces it). It starts only on a quiet box
+// (@gt/domain/resource `profileReady`: memory under the low mark, ComfyUI's queue empty for comfy) -
+// refused with the reason, or with --wait read again every 30 s until it is. ComfyUI is profiled
+// with pipeline/mesh/trellis-once.mts as the command (docs/resources.md).
 //
 // READ-ONLY TOWARD COMFYUI: this CLI never POSTs /free and never starts or restarts ComfyUI -
 // other executors share it (ASSET-PIPELINE.md). Profiling ComfyUI work means queueing a prompt
@@ -21,7 +24,7 @@
 import { parseArgs } from "node:util";
 import { errorMessage } from "@gt/domain/errors";
 
-const USAGE = "usage: npx tsx pipeline/resources.mts probe [--json] | profiles [--json] | profile <engine> [--label x] [--cwd dir] [--json] -- <argv...>";
+const USAGE = "usage: npx tsx pipeline/resources.mts probe [--json] | profiles [--json] | profile <engine> [--label x] [--cwd dir] [--wait] [--json] -- <argv...>";
 
 const argv = process.argv.slice(2);
 const dash = argv.indexOf("--");
@@ -30,7 +33,7 @@ const command = dash < 0 ? [] : argv.slice(dash + 1);
 
 let parsed;
 try {
-  parsed = parseArgs({ args: own, options: { json: { type: "boolean" }, label: { type: "string" }, cwd: { type: "string" } }, allowPositionals: true, strict: true });
+  parsed = parseArgs({ args: own, options: { json: { type: "boolean" }, wait: { type: "boolean" }, label: { type: "string" }, cwd: { type: "string" } }, allowPositionals: true, strict: true });
 } catch (e) {
   console.error(`resources: ${errorMessage(e)}\n${USAGE}`);
   process.exit(2);
@@ -80,6 +83,11 @@ async function main(): Promise<number> {
   }
 
   if (verb === "profile" && engine !== undefined && extra.length === 0 && command.length > 0) {
+    const busy = await quietBox(engine, values.wait === true);
+    if (busy !== undefined) {
+      out(`resources: not profiling ${engine}: ${busy}`, { engine, refused: busy });
+      return 1;
+    }
     const { openKernel } = await import("@gt/kernel/kernel");
     const { storeLocation } = await import("../lib/kernelProcess.ts");
     const { driveProfile, launchProfile } = await import("../lib/producers/profile.ts");
@@ -103,6 +111,24 @@ async function main(): Promise<number> {
 
   console.error(USAGE);
   return 2;
+}
+
+const WAIT_MS = 30_000;
+
+/** undefined once the box is quiet enough to profile `engine` on; else why not (after waiting, with --wait). */
+async function quietBox(engine: string, wait: boolean): Promise<string | undefined> {
+  const { machineProbe, machineProfile, nodePorts } = await import("../lib/resources/probe.ts");
+  const { profileReady } = await import("@gt/domain/resource");
+  const probe = machineProbe(nodePorts, { cacheMs: 0 });
+  let said: string | undefined;
+  for (;;) {
+    const reading = await probe.read();
+    const why = profileReady(engine, reading.load, machineProfile(reading.totals).profile);
+    if (why === undefined || !wait) return why;
+    if (why !== said) console.error(`resources: waiting to profile ${engine}: ${why}`);
+    said = why;
+    await nodePorts.sleep(WAIT_MS);
+  }
 }
 
 main().then(

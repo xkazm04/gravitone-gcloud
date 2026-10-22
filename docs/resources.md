@@ -73,7 +73,13 @@ command exits, and records each reading's peak over the baseline in `engine_prof
 again replaces the profile, and the `engine.profiled` event keeps the figures it replaced. A
 command that exits non-zero records nothing. So does a run whose commit charge was never read.
 
-Profile on a quiet box: the baseline carries whatever was already running. Profile with a
+`profile` starts only on a quiet box (`profileReady` in `@gt/domain/resource`). Commit charge and GPU
+memory must sit under the low mark, the CPU under its mark, and for comfy ComfyUI's queue must be empty
+and answering. Otherwise it exits 1 with the reason. `--wait` reads the box again every 30 s until it
+is quiet. Admission alone would not hold it: an engine with no profile starts at any memory level
+once it runs alone.
+
+The baseline carries whatever was already running. Profile with a
 representative sample (a TRELLIS prompt the size a night queues), since admission charges every job
 of that engine this footprint. For ComfyUI, the command queues a prompt and waits for it. Never
 `/free` from it while other work is on the queue.
@@ -92,7 +98,26 @@ money ceiling, not by this machine.
 Profile Blender on a raw mesh:
 `npx tsx pipeline/resources.mts profile blender -- <blender.exe> -b --factory-startup --python-exit-code 1 -P pipeline/mesh/blender/finish.py -- <raw.glb> <outdir> sample character`
 
-Profile ComfyUI on one TRELLIS prompt with the lynx-bench runner, which queues one prompt and waits for it:
-`npx tsx pipeline/resources.mts profile comfy -- node ~/ai/lynx-bench/media/run-prompt.mjs <trellis api json> profile`
-Only when ComfyUI's queue is otherwise empty - another executor's work would be counted as this engine's.
+## Profiling ComfyUI
+
+```bash
+GRAVITONE_STORE_PATH=<store> npx tsx pipeline/resources.mts profile comfy --wait --label "trellis character 40k" --   node pipeline/mesh/trellis-once.mts <concept.png>
+```
+
+`pipeline/mesh/trellis-once.mts` runs one TRELLIS.2 prompt through the mesh producer's own client
+(`runTrellis`, `pipeline/mesh/trellis-api.json`). It decimates to the character budget by default
+(`--faces`) and opens no store. Use any concept that passes the input gate.
+
+Do not profile `mesh.mts new --live` instead: it deadlocks. The profile job holds gpu.local, and the
+mesh job it starts queues behind it on the same lane.
+
+What the figure means:
+- **Warm models are not counted.** It is a peak over the baseline, and ComfyUI keeps models resident
+  between prompts. A ComfyUI that already holds TRELLIS measures less than a cold one. Admission
+  reads the live reading too, so a warm figure is the right charge on a warm box.
+- **It covers LTX clips too.** `scout-scene` names `comfy` and is charged the same figure until
+  engines split per workflow.
+
+Measured by hand on 2026-10-22 (a background sampler, before this path existed): TRELLIS from cold
+took +10.6 GB of GPU memory (peak 12.7 GB) and +11.6 GB of commit charge, with CPU at most 55%.
 
