@@ -32,7 +32,7 @@ $allowed = @(
   "WebSearch", "WebFetch", "Read", "Write", "Edit", "Glob", "Grep",
   "Bash(npx tsx pipeline/scout.mts*)", "Bash(curl -s https://collectionapi.metmuseum.org/*)",
   "Bash(yt-dlp *)", "Bash(ffmpeg *)", "Bash(mkdir *)", "Bash(rm *.vtt)",
-  "Bash(git status*)", "Bash(git diff*)", "Bash(git add knowledge/*)", "Bash(git commit*)"
+  "Bash(git status*)", "Bash(git diff*)", "Bash(git add knowledge/*)", "Bash(git add .ai/registry-leads.jsonl)", "Bash(git commit*)"
 )
 
 # The night's clips render locally (LTX-2.5 through ComfyUI, the free gpu.local lane). ComfyUI is
