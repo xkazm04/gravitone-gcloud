@@ -19,6 +19,8 @@ export type RunCardProps = {
   readonly verdicts: Readonly<Record<string, BoardVerdict>>;
   readonly mediaOf: (id: string) => TileMedia;
   readonly wordsOf: (id: string) => ItemWords;
+  /** square: a still's mosaic; wide: a clip's or a take's 16:9 card. */
+  readonly shape?: "square" | "wide";
   readonly current: boolean;
   readonly nudged: boolean;
   readonly onPress: (at: number) => void;
@@ -47,7 +49,7 @@ export function RunFace({ run, cells, mediaOf, wordsOf }: Pick<RunCardProps, "ru
   return <Plate className={s.face} src={first.url} alt="" lazy />;
 }
 
-export function RunCard({ run, at, cells, verdicts, mediaOf, wordsOf, current, nudged, onPress }: RunCardProps) {
+export function RunCard({ run, at, cells, verdicts, mediaOf, wordsOf, shape = "square", current, nudged, onPress }: RunCardProps) {
   const state = runState(run, cells, verdicts);
   const label = run.words?.label ?? run.row;
   const looks = runLooks(run, cells, verdicts);
@@ -55,7 +57,7 @@ export function RunCard({ run, at, cells, verdicts, mediaOf, wordsOf, current, n
   return (
     <button
       type="button"
-      className={cx(s.card, current && s.cur, s[state], nudged && s.nudge)}
+      className={cx(s.card, shape === "wide" && s.cardWide, current && s.cur, s[state], nudged && s.nudge)}
       data-run={at}
       role="gridcell"
       aria-selected={current}

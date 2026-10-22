@@ -10,6 +10,8 @@ import { useState } from "react";
 
 import { ConsequencePanel } from "@gt/ui/components/consequence/ConsequencePanel.tsx";
 import { CullTile, Zoom } from "@gt/ui/components/cull/CullTile.tsx";
+import { IdeaList } from "@gt/ui/components/cull/IdeaList.tsx";
+import { VariantCard } from "@gt/ui/components/cull/VariantCard.tsx";
 import { MatrixCull } from "@gt/ui/components/cull/MatrixCull.tsx";
 import { CutReview } from "@gt/ui/components/cut/CutReview.tsx";
 import { BoardDesk, CommitButton, DeskFrame, OracleStrip } from "@gt/ui/components/desk/Desk.tsx";
@@ -47,6 +49,27 @@ export function BoardSection({ data }: { readonly data: BoardKitData }) {
             </BoardDesk>
           </LevelSheet>
         </div>
+      </Spec>
+      <Spec names={["VariantCard", "VerdictPick", "VideoBar"]} source="the opened run · a verdict by click · a clip's bar (2026-10-22)" wide>
+        <div className={b.tiles}>
+          <VariantCard index={0} words={words} media={{ url: "/presets/signal-ledger.jpg", mime: "image/jpeg" }} verdict={{ verdict: "keep", reasons: [] }} current nudged={false} reasons={["style", "subject", "craft"]} maxReasons={3} onFocus={noop} onVerdict={noop} />
+          <VariantCard index={1} words={words} media={{ url: "/presets/signal-ledger.jpg", mime: "image/jpeg" }} verdict={{ verdict: "reject", reasons: ["craft"] }} current={false} nudged={false} reasons={["style", "subject", "craft"]} maxReasons={3} onFocus={noop} onVerdict={noop} />
+          <VariantCard index={2} words={{ label: "clip · replica-1", meta: "5s · local · free" }} media={{ url: "/clips/presets/blueprint.webm", mime: "video/webm" }} verdict={undefined} current={false} nudged={false} reasons={["style", "subject", "craft"]} maxReasons={3} onFocus={noop} onVerdict={noop} />
+        </div>
+      </Spec>
+      <Spec names={["IdeaList"]} source="words-only runs, decided in place (2026-10-22)" wide>
+        <IdeaList
+          categories={[{ category: "notes", runs: [{ run: { row: "n1", words: { id: "n1", label: "finding" }, members: [0], group: "notes" }, at: 0 }] }]}
+          cells={[{ id: "n1/text", row: "n1" }]}
+          verdicts={{}}
+          wordsOf={() => ({ label: "Hold a wide shot until the subject settles, then cut.", prompt: "the push-in only reads once the figure stops moving", meta: "cinematic · 02-frames" })}
+          cur={0}
+          nudged={new Set<number>()}
+          reasons={[]}
+          maxReasons={0}
+          onFocus={noop}
+          onVerdict={noop}
+        />
       </Spec>
       <Spec names={["CullTile", "Plate"]} source="index.html CullTile · .cur .keep .reject .nudge · audio take">
         <div className={b.tiles}>

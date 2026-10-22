@@ -53,6 +53,32 @@ export function categoriesOf(runs: readonly Run[], firstMime: (run: Run) => stri
   return CATEGORIES.map((category) => ({ category, runs: runs.flatMap((run, at) => (categoryOf(run, firstMime(run)) === category ? [{ run, at }] : [])) })).filter((c) => c.runs.length > 0);
 }
 
+/**
+ * THE TABS the desk files categories under: one per KIND of content, so each gets the component and
+ * the density it reads best at (operator, 2026-10-22) - pictures as a square mosaic, clips as 16:9
+ * cards that play, takes as waveforms, and anything that is only words (findings, source lines) as
+ * a dense list decided in place. A tab nothing fills is not drawn.
+ */
+export const TABS = ["images", "videos", "audio", "ideas"] as const;
+export type Tab = (typeof TABS)[number];
+
+const TAB_OF: Readonly<Record<Category, Tab>> = {
+  "art styles": "images",
+  "3d": "images",
+  other: "images",
+  videos: "videos",
+  music: "audio",
+  notes: "ideas",
+  sources: "ideas",
+};
+
+export const tabOf = (c: Category): Tab => TAB_OF[c];
+
+/** The categories in each tab that has any, in TABS then CATEGORIES order. */
+export function tabsOf(categories: ReturnType<typeof categoriesOf>): { readonly tab: Tab; readonly categories: ReturnType<typeof categoriesOf> }[] {
+  return TABS.map((tab) => ({ tab, categories: categories.filter((c) => tabOf(c.category) === tab) })).filter((t) => t.categories.length > 0);
+}
+
 /** The run a cell sits in (index into `runs`), or 0. */
 export function runAt(runs: readonly Run[], cell: number): number {
   const i = runs.findIndex((r) => r.members.includes(cell));
