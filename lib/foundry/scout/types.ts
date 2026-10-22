@@ -174,6 +174,8 @@ export type SceneClip = {
   readonly durationS: number;
   /** The replica still it animates - ALWAYS one of `replicas`, never a source file. */
   readonly from: string;
+  /** What rendered it: `ltx-local` on this box's ComfyUI (free, no spend row) or `hailuo` on Leonardo. Absent on a clip written before 2026-10-22. */
+  readonly engine?: "ltx-local" | "hailuo";
   readonly usd?: number;
 };
 

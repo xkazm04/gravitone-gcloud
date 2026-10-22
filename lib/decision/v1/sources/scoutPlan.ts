@@ -11,7 +11,7 @@ import type { ItemWords, RowWords } from "@gt/ui/board/port";
 
 import { EXTRACT_COMMITTABLE } from "../../../foundry/plant.ts";
 import { patternsRel } from "../../../foundry/scout/knowledge.ts";
-import { CANDIDATE_KINDS, cellId, type Candidate, type CandidateId, type Night, type NightCommit, type SceneCandidate } from "../../../foundry/scout/types.ts";
+import { CANDIDATE_KINDS, cellId, type Candidate, type CandidateId, type Night, type NightCommit, type SceneCandidate, type SceneClip } from "../../../foundry/scout/types.ts";
 import { decisionMap, type Loss } from "../types.ts";
 import { extractAdapter, planLooks, type ExtractV1 } from "./extract.ts";
 
@@ -130,6 +130,16 @@ function styleCells(night: Night, c: Candidate & { kind: "style" }, read: StyleR
   out.runs[c.id] = ex;
 }
 
+/**
+ * A clip's meta: its length, and `local · free` when it was rendered on this box. The engine is
+ * what the clip act recorded (lib/producers/scoutSceneActs.ts `ClipRecord`); a local clip books no
+ * spend row, so the absence of a price is only "free" when the record says where it was made.
+ */
+export function clipMeta(clip: SceneClip): string {
+  const engine = (clip as SceneClip & { readonly engine?: string }).engine;
+  return engine === "ltx-local" ? `${clip.durationS}s · local · free` : `${clip.durationS}s`;
+}
+
 function sceneCells(night: Night, c: SceneCandidate, media: ScoutV1["media"], out: Mutable): void {
   const r = c.recipe;
   const jobId = c.jobId ?? `scout:${night.id}`;
@@ -142,7 +152,7 @@ function sceneCells(night: Night, c: SceneCandidate, media: ScoutV1["media"], ou
   const clip = c.clip;
   const cm = clip === undefined ? undefined : media[clip.path];
   if (clip !== undefined && cm !== undefined) {
-    shown.push({ id: cellId(c.id, "clip"), candidate: c.id, kind: "scene", row: c.id, jobId, media: cm, grades: [], url: scoutFileUrl(night.id, clip.path), words: { label: `clip · ${stem(clip.from)}`, meta: `${clip.durationS}s`, ...(r === undefined ? {} : { prompt: `${r.motion} · ${r.rhythm}` }) } });
+    shown.push({ id: cellId(c.id, "clip"), candidate: c.id, kind: "scene", row: c.id, jobId, media: cm, grades: [], url: scoutFileUrl(night.id, clip.path), words: { label: `clip · ${stem(clip.from)}`, meta: clipMeta(clip), ...(r === undefined ? {} : { prompt: `${r.motion} · ${r.rhythm}` }) } });
   }
   for (const f of c.replicas) if (media[f] === undefined) out.losses.push({ candidate: c.id, grade: "dropped", reason: `${f} is not on disk` });
   if (clip !== undefined && cm === undefined) out.losses.push({ candidate: c.id, grade: "dropped", reason: `${clip.path} is not on disk` });

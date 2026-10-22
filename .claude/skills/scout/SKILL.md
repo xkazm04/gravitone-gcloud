@@ -2,7 +2,7 @@
 name: scout
 memory: none
 category: Development
-description: The nightly training loop - search the web and YouTube around knowledge/scout/watchlist.md for art styles, scenes and craft worth learning, bring them onto this box, replicate them as kernel jobs (extracted still styles, scene recipes with replica stills and at most two Hailuo clips, craft findings) inside a $15 night, and leave ONE Board packet pkt:scout:<night> for a few minutes of K/X in the morning. Successor of train-style and of dojo's hand-run corpus study. Wraps pipeline/scout.mts; it never keeps, rejects or commits anything on the Board. Invoke with /scout night [--dry] [--until HH:MM], /scout folder <dir> [extract args], /scout status [<night>].
+description: The nightly training loop - search the web and YouTube around knowledge/scout/watchlist.md for art styles, scenes and craft worth learning, bring them onto this box, replicate them as kernel jobs (extracted still styles, scene recipes with Flare replica stills and local LTX clips, craft findings) inside a $15 night, and leave ONE Board packet pkt:scout:<night> for a few minutes of K/X in the morning. Successor of train-style and of dojo's hand-run corpus study. Wraps pipeline/scout.mts; it never keeps, rejects or commits anything on the Board. Invoke with /scout night [--dry] [--until HH:MM], /scout folder <dir> [extract args], /scout status [<night>].
 argument-hint: "night [--dry] [--until HH:MM] | folder <dir> | status [<night>]"
 allowed-tools: Read, Write, Edit, Bash, PowerShell, Glob, Grep, WebSearch, WebFetch, Monitor
 ---
@@ -20,7 +20,10 @@ truncated-verdict-space). You pre-filter; you never keep.
 
 ## The money and the rights (read before every night)
 
-- **$15 per night, at most two 5-second Hailuo clips** - the operator's standing grant for this loop
+- **$15 per night; clips are local and free** - stills are Leonardo GPT Image 2.5 Flare at LOW (~$0.015 each),
+  clips LTX-2.5 on this box's ComfyUI (~100 s each, $0, `--clips` caps GPU minutes, default 2). ComfyUI's
+  queue is shared with any other session's jobs - a busy card stretches the night, it does not fail it.
+  The operator's standing grant for this loop
   (2026-10-22). The night's ceiling is enforced by the CLI per launch; never raise `--ceiling`, `--clips`,
   `IMAGING_BUDGET_USD_PER_WINDOW` or `VIDEO_BUDGET_USD_PER_WINDOW` on your own. A refused launch is the
   ceiling working: close the night, do not retry around it.

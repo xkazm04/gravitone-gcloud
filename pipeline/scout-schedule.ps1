@@ -35,7 +35,24 @@ $allowed = @(
   "Bash(git status*)", "Bash(git diff*)", "Bash(git add knowledge/*)", "Bash(git commit*)"
 )
 
+# The night's clips render locally (LTX-2.5 through ComfyUI, the free gpu.local lane). ComfyUI is
+# started when it is down and left up: the night is this box's GPU user, and a cold start costs
+# the first clip ~50 s of model load either way (Lynx bench, 2026-10-20).
+function Confirm-Comfy {
+  $url = if ($env:COMFY_URL) { $env:COMFY_URL } else { "http://127.0.0.1:8188" }
+  $bat = if ($env:COMFY_BAT) { $env:COMFY_BAT } else { "C:\Users\kazda\ai\ComfyUI\run_nvidia_gpu.bat" }
+  try { Invoke-RestMethod -Uri "$url/system_stats" -TimeoutSec 5 | Out-Null; return } catch {}
+  if (-not (Test-Path $bat)) { Write-Output "ComfyUI is down and $bat does not exist - clips will be refused by doctor"; return }
+  Start-Process -FilePath $bat -WorkingDirectory (Split-Path -Parent $bat) -WindowStyle Minimized
+  for ($i = 0; $i -lt 36; $i++) {
+    Start-Sleep -Seconds 5
+    try { Invoke-RestMethod -Uri "$url/system_stats" -TimeoutSec 5 | Out-Null; return } catch {}
+  }
+  Write-Output "ComfyUI did not answer at $url within 3 minutes - clips will be refused by doctor"
+}
+
 function Invoke-Night {
+  Confirm-Comfy
   $claude = (Get-Command claude -ErrorAction SilentlyContinue).Source
   if (-not $claude) { throw "claude is not on PATH for this user - install Claude Code or add it to PATH." }
   # A rehearsal points SCOUT_STORE_DIR at a temp root; its logs go there, never into foundry-out/.

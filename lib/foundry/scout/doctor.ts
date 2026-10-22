@@ -1,6 +1,7 @@
 import { access, mkdir } from "node:fs/promises";
 import path from "node:path";
 
+import { comfyBase, comfyStats, missingModels, type ComfyFetch } from "../../imaging/video/comfyLtx";
 import { binsFrom, lastLines, realSpawn, type Bins, type Spawn } from "./ingest";
 
 // THE BOX PREFLIGHT for a /scout night - read-only, nothing spent, nothing
@@ -10,8 +11,11 @@ import { binsFrom, lastLines, realSpawn, type Bins, type Spawn } from "./ingest"
 // night summaries and chats.
 //
 // What a night needs: the three binaries always (ingest runs on every night, dry
-// or live - it is free), and for a LIVE night the two vendor keys and a shell
-// that is not pinned dry. A dry night (`doctor --dry`) reads those as notes.
+// or live - it is free), and for a LIVE night the two vendor keys, a shell that
+// is not pinned dry, and - while its clips render locally (`SCOUT_CLIP_ENGINE`
+// unset or `ltx-local`) - the ComfyUI on this box answering at `COMFY_URL` with
+// every model file pipeline/video/ltx-i2v-api.json loads. A dry night
+// (`doctor --dry`) reads those as notes: its clips are stand-ins.
 
 export type Check = {
   readonly name: string;
@@ -61,7 +65,41 @@ export type DoctorInput = {
   /** A dry night: the keys and the dry pin are notes, not failures. */
   readonly dry: boolean;
   readonly spawn?: Spawn;
+  /** ComfyUI's HTTP API (default the global fetch); a test hands a fake. */
+  readonly fetch?: ComfyFetch;
 };
+
+/** What starts ComfyUI on this box (`COMFY_START` moves it): the remedy when it is down. */
+const COMFY_START = "C:\\Users\\kazda\\ai\\ComfyUI\\run_nvidia_gpu.bat";
+
+/** The local clip engine's lines: ComfyUI reachable, then the graph's weights present. */
+async function comfyChecks(input: DoctorInput): Promise<Check[]> {
+  const env = input.env;
+  const engine = env["SCOUT_CLIP_ENGINE"]?.trim() || "ltx-local";
+  const needed = !input.dry;
+  if (engine === "hailuo") return [{ name: "clip engine", ok: true, found: "hailuo (Leonardo; each clip is paid)", needed }];
+  if (engine !== "ltx-local") return [{ name: "clip engine", ok: false, found: `SCOUT_CLIP_ENGINE=${engine}`, remedy: "set SCOUT_CLIP_ENGINE to ltx-local or hailuo, or unset it (ltx-local)", needed }];
+  const deps = { base: comfyBase(env), ...(input.fetch === undefined ? {} : { fetch: input.fetch }) };
+  const start = env["COMFY_START"]?.trim() || COMFY_START;
+  let stats: string;
+  try {
+    stats = await comfyStats(deps);
+  } catch (e) {
+    return [{ name: "comfyui", ok: false, found: (e as Error).message, remedy: `start ComfyUI with ${start} (it stays up), or set COMFY_URL to where it runs`, needed }];
+  }
+  const out: Check[] = [{ name: "comfyui", ok: true, found: `${deps.base} · ${stats}`, needed }];
+  try {
+    const w = await missingModels(deps);
+    out.push(
+      w.missing.length === 0
+        ? { name: "ltx weights", ok: true, found: `${w.present} model files present`, needed }
+        : { name: "ltx weights", ok: false, found: `missing: ${w.missing.join(", ")}`, remedy: "put the missing files under ComfyUI's models folder; a night never downloads one", needed },
+    );
+  } catch (e) {
+    out.push({ name: "ltx weights", ok: false, found: (e as Error).message, remedy: `ComfyUI answered /system_stats but not /object_info; restart it with ${start}`, needed });
+  }
+  return out;
+}
 
 export async function doctor(input: DoctorInput): Promise<Check[]> {
   const spawn = input.spawn ?? realSpawn;
@@ -78,6 +116,7 @@ export async function doctor(input: DoctorInput): Promise<Check[]> {
   out.push({ name: "nights", ok: nights === null, found: input.scoutRoot, needed: true, ...(nights === null ? {} : { remedy: `the night folder cannot be written (${nights}); set SCOUT_STORE_DIR` }) });
   const pinned = input.env["GRAVITONE_DRY_ONLY"] === "1";
   out.push({ name: "GRAVITONE_DRY_ONLY", ok: !pinned, found: pinned ? "1 (this shell runs dry only)" : "unset", needed: !input.dry, ...(pinned ? { remedy: "unset GRAVITONE_DRY_ONLY for a live night, or open the night without --live" } : {}) });
+  out.push(...(await comfyChecks(input)));
   return out;
 }
 
