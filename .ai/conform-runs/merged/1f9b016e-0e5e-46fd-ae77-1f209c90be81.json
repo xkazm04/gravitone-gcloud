@@ -1,0 +1,76 @@
+{
+ "schema": "conform-run/1",
+ "worker": "1f9b016e-0e5e-46fd-ae77-1f209c90be81",
+ "subject": "engine-binding-surface",
+ "evaluatedAt": "2026-10-22T00:33:28.209852+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "landing-cosmos-paper-raster",
+   "subject": "engine-binding-surface",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/_landing/cosmos/engine/raster.ts:89 The raster service runs repository-owned TypeScript through browser APIs, and context and repository searches found no WebAssembly, PhantomData, or thread_local constructs indicating the foreign binding obligations covered by this subject.",
+   "techniques": [
+    {
+     "technique": "address-sensitive-construction",
+     "verdict": "not-applicable",
+     "evidence": "app/_landing/cosmos/engine/paper.ts:61 Paths are browser-managed objects; the inspected construction code never passes host-allocated storage addresses to a foreign constructor."
+    },
+    {
+     "technique": "ask-the-authority-not-the-shadow",
+     "verdict": "not-applicable",
+     "evidence": "app/_landing/cosmos/engine/palette.ts:32 The palette cache stores deterministically computed artwork, not a foreign runtime's safety-critical authorization state."
+    },
+    {
+     "technique": "capability-deferred-release",
+     "verdict": "not-applicable",
+     "evidence": "app/_landing/cosmos/engine/raster.ts:291 Cleanup explicitly closes received bitmap objects; there is no movable owner whose destructor requires a foreign thread or lock capability."
+    },
+    {
+     "technique": "hierarchy-as-three-relations",
+     "verdict": "not-applicable",
+     "evidence": "app/_landing/cosmos/engine/raster.ts:266 Surface handling distinguishes browser object alternatives without reproducing a foreign inheritance hierarchy or reinterpreting layouts."
+    },
+    {
+     "technique": "phantom-capability-parameter",
+     "verdict": "not-applicable",
+     "evidence": "app/_landing/cosmos/engine/rasterJobs.ts:201 The generic parameter represents the returned surface, and painting requires no entered foreign region or capability state."
+    },
+    {
+     "technique": "pre-resolve-what-the-engine-cannot-await",
+     "verdict": "not-applicable",
+     "evidence": "app/_landing/cosmos/engine/raster.worker.ts:85 The owned worker awaits asynchronous PNG encoding directly; no immutable foreign engine requests asynchronously acquired resources through synchronous callbacks."
+    }
+   ],
+   "absenceTerms": [
+    "WebAssembly",
+    "PhantomData",
+    "thread_local"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-22T00:33:28.209852+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "engine-binding-surface"
+   ],
+   "techniques": [
+    "address-sensitive-construction",
+    "ask-the-authority-not-the-shadow",
+    "capability-deferred-release",
+    "hierarchy-as-three-relations",
+    "phantom-capability-parameter",
+    "pre-resolve-what-the-engine-cannot-await"
+   ],
+   "deviations": 0,
+   "context": "landing-cosmos-paper-raster",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
