@@ -215,15 +215,23 @@ const clock = (s: number): string => `${Math.floor(s / MIN)}m${String(Math.round
 const tooLong = (s: number): string => `the video runs ${clock(s)}; a night takes at most ${clock(MAX_VIDEO_S)}`;
 
 /** Download at <=1080p, one video, never a playlist (ingest.py:57-78). The picture only: frames need no audio. */
+
+/**
+ * YouTube serves its streams only to a client that can run its player script: without a JS
+ * runtime yt-dlp's download answers HTTP 403 (measured 2026-10-22 on yt-dlp 2026.08.19, the
+ * dojo overlay's 2026-08-31 note). Node is already this process's own runtime.
+ */
+const YTDLP_JS = ["--js-runtimes", "node"] as const;
+
 async function download(url: string, media: string, deps: IngestDeps): Promise<string> {
-  const probe = await tool(deps, "ytdlp", ["--no-warnings", "--no-playlist", "--skip-download", "--print", "duration", url], { timeoutMs: 60_000, maxBuffer: 1024 * 1024 });
+  const probe = await tool(deps, "ytdlp", ["--no-warnings", "--no-playlist", ...YTDLP_JS, "--skip-download", "--print", "duration", url], { timeoutMs: 60_000, maxBuffer: 1024 * 1024 });
   const said = Number(probe.stdout.toString("utf8").trim().split(/\r?\n/)[0]);
   if (Number.isFinite(said) && said > MAX_VIDEO_S) throw new SourceFailure(tooLong(said));
   await mkdir(media, { recursive: true });
   const r = await tool(
     deps,
     "ytdlp",
-    ["--no-warnings", "--no-playlist", "-f", "bestvideo[height<=1080]/best[height<=1080]", "--max-filesize", "2G", "-o", path.join(media, "%(id)s.%(ext)s"), "--print", "after_move:filepath", url],
+    ["--no-warnings", "--no-playlist", ...YTDLP_JS, "-f", "bestvideo[height<=1080]/best[height<=1080]", "--max-filesize", "2G", "-o", path.join(media, "%(id)s.%(ext)s"), "--print", "after_move:filepath", url],
     { timeoutMs: 20 * MIN * 1000, maxBuffer: 4 * 1024 * 1024 },
   );
   for (const line of r.stdout.toString("utf8").split(/\r?\n/).reverse()) {
@@ -247,7 +255,7 @@ async function duration(file: string, deps: IngestDeps): Promise<number> {
 async function keyframes(dir: string, s: ScoutSource, file: string, work: string, deps: IngestDeps): Promise<{ files: string[]; at: Record<string, number> }> {
   await mkdir(work, { recursive: true });
   // One frame per CUT, each stamped with its time (ingest.py:91-114).
-  const cut = await tool(deps, "ffmpeg", ["-hide_banner", "-nostdin", "-i", file, "-vf", sceneFilter(), "-vsync", "vfr", "-q:v", "3", path.join(work, "f-%05d.jpg")], {
+  const cut = await tool(deps, "ffmpeg", ["-hide_banner", "-nostdin", "-i", file, "-vf", sceneFilter(), "-fps_mode", "vfr", "-q:v", "3", path.join(work, "f-%05d.jpg")], {
     timeoutMs: 20 * MIN * 1000,
     maxBuffer: 32 * 1024 * 1024,
   });

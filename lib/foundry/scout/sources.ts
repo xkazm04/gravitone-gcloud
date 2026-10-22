@@ -163,7 +163,8 @@ const findingSchema = z
   .strict();
 const findingsSchema = z.array(findingSchema).min(1).max(MAX_SOURCES_PER_NIGHT);
 
-export const knowledgeRoot = (): string => path.join(process.cwd(), "knowledge");
+/** SCOUT_KNOWLEDGE_DIR, else `<cwd>/knowledge` - the same root the knowledge writer appends to (./knowledge.ts). */
+export const knowledgeRoot = (): string => process.env["SCOUT_KNOWLEDGE_DIR"]?.trim() || path.join(process.cwd(), "knowledge");
 
 /** Append findings, each `rendered`: a finding is written, not rendered, and is whole once it passes here. */
 export async function addFindings(nightId: NightId, raw: unknown, opts: { readonly knowledge?: string } = {}): Promise<Result<readonly FindingCandidate[]>> {

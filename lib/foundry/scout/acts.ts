@@ -178,27 +178,44 @@ export async function sceneAct(ctx: ActContext, id: NightId, sourceId: string, f
   const s = night.sources.find((x) => x.id === sourceId);
   if (s === undefined) throw new Refusal(`night ${id} has no source ${sourceId}`);
   if (s.status !== "ingested" || s.files.length === 0) throw new Refusal(`source ${sourceId} is ${s.status}${s.error === undefined ? "" : ` (${s.error})`}; only an ingested source makes a scene`);
-  const keyframes = frames === undefined ? s.files.slice(0, 5) : frames.map((f) => (f.includes("/") ? f : `sources/${sourceId}/${f}`));
+  // Ingest keeps ONE frame per cut, so neighbouring keyframes are different shots (in a video
+  // essay, different films): a scene is read from the frame the skill chose, and absent a choice
+  // from the first. A run of five blended unrelated shots into one recipe (2026-10-22 dry campaign).
+  const keyframes = frames === undefined ? s.files.slice(0, 1) : frames.map((f) => (f.includes("/") ? f : `sources/${sourceId}/${f}`));
   const missing = keyframes.find((f) => !s.files.includes(f));
   if (missing !== undefined) throw new Refusal(`source ${sourceId} holds no ${missing} (it holds ${s.files.map((f) => path.basename(f)).join(", ")})`);
   const b = money(ctx, night);
   if (b.remainingUsd <= 0) throw new Refusal(`scene from ${sourceId}: the night has nothing left - ${budgetLine(b)}; nothing launched`);
-  const clip = b.clipsUsed < b.clipCap;
+  let clip = b.clipsUsed < b.clipCap;
+  let clipWhy = clip ? " with a clip" : " (clip cap spent: stills only)";
   let c: SceneCandidate = await addCandidate(id, (cid) => ({ id: cid, kind: "scene", sourceIds: [sourceId], status: "pending", keyframes, replicas: [] }));
   const fail = async (why: string): Promise<never> => {
     await setCandidate(id, { ...c, status: "failed", error: why });
     throw new Refusal(why);
   };
-  const opts = { mode, ceilingUsd: b.remainingUsd, clip, actor: ctx.actor, dryOnly: ctx.dryOnly };
+  let opts = { mode, ceilingUsd: b.remainingUsd, clip, actor: ctx.actor, dryOnly: ctx.dryOnly };
   const target = { nightId: id, candidateId: c.id };
-  const r0 = await launchScene(ctx.store, target, opts);
+  let r0 = await launchScene(ctx.store, target, opts);
   if (!r0.ok) return fail(r0.error.message);
   if (r0.value.kind === "existing") return { candidate: { ...c, jobId: r0.value.jobId }, outcome: r0.value.state };
   if (r0.value.kind !== "receipt") return fail(`scene launch answered ${r0.value.kind} before its receipt`);
+  // The night's last dollars: a clip's hold no longer fits but the stills do - the scene is still
+  // worth its recipe and two replicas, so it is priced again without the clip rather than refused
+  // (2026-10-22 dry campaign: $0.05 left refused a scene over its $3.84 clip worst case).
+  if (clip && overBudget("", worstOf(r0.value.receipt), b) !== null) {
+    const stills = await launchScene(ctx.store, target, { ...opts, clip: false });
+    if (stills.ok && stills.value.kind === "receipt" && overBudget("", worstOf(stills.value.receipt), b) === null) {
+      clip = false;
+      clipWhy = " (a clip is over the remaining money: stills only)";
+      opts = { ...opts, clip: false };
+      r0 = stills;
+    }
+  }
+  if (!r0.ok || r0.value.kind !== "receipt") return fail("scene launch lost its receipt");
   const rc = r0.value.receipt;
   const refused = overBudget(`scene ${c.id} from ${sourceId}`, worstOf(rc), b);
   if (refused !== null) return fail(refused.message);
-  ctx.say(`receipt (${rc.mode}): scene ${c.id}${clip ? " with a clip" : " (clip cap spent: stills only)"} · worst case ${usd(worstOf(rc))} · ceiling ${usd(b.remainingUsd)}`);
+  ctx.say(`receipt (${rc.mode}): scene ${c.id}${clipWhy} · worst case ${usd(worstOf(rc))} · ceiling ${usd(b.remainingUsd)}`);
   const r1 = await launchScene(ctx.store, target, { ...opts, token: rc.token });
   if (!r1.ok) return fail(r1.error.message);
   if (r1.value.kind !== "launched") return fail(`the receipt moved while it was confirmed (${r1.value.kind}); nothing launched`);

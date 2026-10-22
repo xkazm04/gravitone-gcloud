@@ -111,7 +111,18 @@ const COMMON = new Set(
     "light lights lighting dark night day morning evening dawn dusk sunset sunrise golden hour shadow shadows rain snow fog mist " +
     "smoke fire water sea ocean river lake sky sun moon star stars city street streets road forest wood woods mountain desert " +
     "field room house home window door car train black white red blue green yellow orange purple pink gold silver grey gray brown " +
-    "neon slow fast quiet loud long wide close still motion moving walk run world life love time way end"
+    "neon slow fast quiet loud long wide close still motion moving walk run world life love time way end " +
+    // 2026-10-22 dry campaign: a channel called "Every Frame a Painting" banned "frame" from every
+    // recipe ("hard key from frame left"); the Met's "open access" banned "open". The vocabulary of
+    // framing, shooting, painting and printing, and the plain words of a museum or tutorial title.
+    "every frame frames framing painting paintings paint painted painter take takes oner oners strategy strategies " +
+    "technique techniques tip tips how filmmaking filmmaker shoot shooting shot director directing direct lens lenses " +
+    "angle angles focus depth composition compositions palette print prints printing printed poster posters " +
+    "woodblock woodcut lithograph lithographs etching screenprint art arts artist artwork design study studies sketch " +
+    "landscape portrait still life open access public domain museum collection gallery archive library " +
+    "bridge gorge temple station tower castle village garden park beach hill valley " +
+    "twilight midnight noon winter summer spring autumn fall storm wind cloud clouds thunder " +
+    "perfect perfected secret secrets rule rules guide explained explain analysis essay lesson lessons"
   ).split(" "),
 );
 

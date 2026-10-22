@@ -26,8 +26,13 @@ import type { Night } from "./types";
 //              unknown and keeps counting at its estimate).
 //            A `failed` job promises nothing more until an operator retries it,
 //            and a retry is not the night's act.
-//   clips    scene candidates that asked for a clip (`clipRequested`), rendered or
-//            not: the cap counts the asking, so a failed clip is not retried free.
+//   clips    scene candidates that asked for a clip (`clipRequested`) and did not end
+//            `failed`: a clip the vendor refused leaves its scene `rendered` with
+//            `error: clip: ...` and still counts (a refused clip is not retried free),
+//            while a scene that failed at its read or its stills never reached the
+//            clip step - counting it spent the night's two clips on recipes the door
+//            refused (2026-10-22 dry campaign: two failed reads left the third scene
+//            stills-only).
 
 export type NightBudget = {
   readonly ceilingUsd: number;
@@ -71,6 +76,6 @@ export function nightBudget(store: Store, night: Night): Result<NightBudget> {
   if (!money.ok) return money;
   const settledUsd = usd6(money.value.reduce((a, m) => a + m.settledUsd, 0));
   const heldUsd = usd6(money.value.reduce((a, m) => a + m.heldUsd, 0));
-  const clipsUsed = night.candidates.filter((c) => c.kind === "scene" && c.clipRequested === true).length;
+  const clipsUsed = night.candidates.filter((c) => c.kind === "scene" && c.clipRequested === true && c.status !== "failed").length;
   return ok({ ceilingUsd: night.ceilingUsd, settledUsd, heldUsd, remainingUsd: usd6(Math.max(0, night.ceilingUsd - settledUsd - heldUsd)), clipsUsed, clipCap: night.clipCap });
 }

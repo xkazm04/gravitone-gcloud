@@ -69,7 +69,7 @@ class Usage extends Error {}
 /** A refusal the CLI makes itself; the acts' `Refusal` exits the same way. */
 class Refused extends Error {}
 const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "finding", "watch", "close", "status"]);
-const BOOL = new Set(["json", "live", "detach", "dry", "help"]);
+const BOOL = new Set(["json", "live", "detach", "dry", "help", "retry"]);
 
 /** argv -> positionals and flags. `--json` takes a value (the input file, or `-`) only under add-source and finding. */
 function parse(argv: readonly string[]): { pos: string[]; flags: Map<string, string | true> } {
@@ -222,6 +222,7 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
         if (id === undefined) {
           const nights = await store.listNights();
           if (json) doc({ ok: true, nights });
+          else if (nights.length === 0) io.out(`no nights under ${store.scoutRoot()}`);
           else for (const n of nights) io.out(`${n.id.padEnd(13)} ${n.state.padEnd(9)} ${(n.stop ?? "").padEnd(17)} ${n.dry ? "dry " : "live"}  ${n.rendered} rendered · ${n.failed} failed · ${n.pending} pending · ${n.sources} sources`);
           return 0;
         }
@@ -254,6 +255,16 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
         const id = nightArg();
         const source = str("source");
         await acts.launchable(ctx, id, { spends: false });
+        // --retry: a failed source in scope goes back to pending, its sentence and files dropped -
+        // the only way a source the tools refused is taken again (an ingest plans pending ones).
+        if (flags.has("retry")) {
+          await store.mutateNight(id, (n) => {
+            const again = n.sources.filter((s) => s.status === "failed" && (source === undefined || s.id === source));
+            if (again.length === 0) return n;
+            const ids = new Set(again.map((s) => s.id));
+            return { ...n, sources: n.sources.map((s) => (ids.has(s.id) ? { id: s.id, url: s.url, kind: s.kind, title: s.title, ...(s.channel === undefined ? {} : { channel: s.channel }), why: s.why, found: s.found, ...(s.watch === undefined ? {} : { watch: s.watch }), rights: s.rights, status: "pending" as const, files: [] } : s)) };
+          });
+        }
         const { driveIngest, launchIngest } = await import("../lib/producers/scoutIngest.ts");
         const r = await launchIngest(ctx.store, { nightId: id, ...(source === undefined ? {} : { sourceId: source }) }, { actor: ctx.actor });
         if (!r.ok) throw new Refused(r.error.message);

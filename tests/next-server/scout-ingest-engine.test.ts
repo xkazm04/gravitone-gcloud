@@ -45,7 +45,11 @@ describe("a video", () => {
     // The python's flags, kept: <=1080p, one video, never a playlist; the scene filter with showinfo.
     const dl = t.calls.find((c) => c.bin === "yt-dlp" && !c.args.includes("--skip-download"));
     expect(dl?.args).toEqual(expect.arrayContaining(["--no-playlist", "bestvideo[height<=1080]/best[height<=1080]"]));
-    expect(t.calls.find((c) => c.bin === "ffmpeg" && c.args.includes("-vsync"))?.args).toContain("select='gt(scene,0.3)',showinfo,scale='min(1280,iw)':-2");
+    // ffmpeg 9 removed -vsync (2026-10-22 dry campaign: "Unrecognized option 'vsync'" on every video).
+    expect(t.calls.some((c) => c.bin === "ffmpeg" && c.args.includes("-vsync"))).toBe(false);
+    // YouTube 403s a client that cannot run its player script.
+    expect(t.calls.filter((c) => c.bin === "yt-dlp").every((c) => c.args.join(" ").includes("--js-runtimes node"))).toBe(true);
+    expect(t.calls.find((c) => c.bin === "ffmpeg" && c.args.includes("-fps_mode"))?.args).toContain("select='gt(scene,0.3)',showinfo,scale='min(1280,iw)':-2");
   });
 
   it("a failing tool fails the source with its stderr verbatim, and still deletes the download", async () => {

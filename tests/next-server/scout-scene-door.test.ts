@@ -201,3 +201,16 @@ describe("replicas and the clip-source guard", () => {
     expect(clipRequestOf(night(), scene({ replicas: [] })).ok).toBe(false);
   });
 });
+
+describe("the denylist keeps craft words (2026-10-22 dry campaign)", () => {
+  it("a channel called Every Frame a Painting, or the Met's open access, bans no craft word - and still bans a name", () => {
+    const deny = denylistOf([
+      { title: "The Spielberg Oner", channel: "Every Frame a Painting" },
+      { title: "Snowy Gorge (Met 56683, public domain)", channel: "The Met open access" },
+    ]);
+    for (const w of ["frame", "painting", "oner", "open", "access", "public", "domain", "gorge"]) expect(deny, w).not.toContain(w);
+    expect(deny).toContain("spielberg");
+    expect(namesIn(["hard warm key from frame left, an open doorway, painted flats"], deny)).toEqual([]);
+    expect(namesIn(["a Spielberg-style push-in"], deny)).not.toEqual([]);
+  });
+});

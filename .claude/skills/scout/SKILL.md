@@ -39,7 +39,8 @@ the operator's hour; the operator may also type it after a workday. Either way:
 
 ### 0. Preflight - no spend
 
-1. `npx tsx pipeline/scout.mts doctor`. Exit 1 -> write the failing lines into the night summary
+1. `npx tsx pipeline/scout.mts doctor` - with `--dry` when the night will be dry (the vendor keys and
+   the dry pin are then notes, not failures). Exit 1 -> write the failing lines into the night summary
    (step 6) and stop. Never install, configure or work around a missing binary or key.
 2. **Commit yesterday's kept knowledge.** The Board's apply wrote kept findings into
    `knowledge/templates/**/PATTERNS.md` and kept watch lines into `knowledge/scout/watchlist.md`.
@@ -88,9 +89,13 @@ Check `status <night> --json` for the remaining money before each launch.
    not subject) into 1-4 sources per run: `style <night> --sources s-01,s-04 --slug <look-words>`.
    One extract run per group. The engine reads, replicates from words and transfers; its scores are a
    pre-filter, not a verdict - you do not re-judge them by eye.
-2. **Scenes.** For the 3-4 most instructive shots: `scene <night> --source s-NN --frames k-003.jpg,k-004.jpg`
-   (3-5 consecutive keyframes of ONE shot). The first two scenes in priority order get a clip while the
-   cap allows; put the shot whose MOTION teaches most first.
+2. **Scenes.** Ingest keeps ONE frame per cut, so neighbouring keyframes are different shots (in a
+   video essay, different films). Look at the keyframes first (`Read` them, or a contact sheet:
+   `"$FFMPEG" -v error -i sources/s-NN/k-%03d.jpg -vf "scale=320:-1,tile=6x4" -frames:v 1 <scratch>/sheet.jpg`),
+   then for the 3-4 most instructive shots: `scene <night> --source s-NN --frames k-012.jpg` - one frame
+   per scene. Skip frames that are a talking head, a screenshot, or carry burnt-in text (an essay's
+   captions, a counter). The first two scenes in priority order get a clip while the cap allows; put the
+   shot whose MOTION teaches most first.
 3. **Findings.** From captions you read and the cut timestamps ingest recorded: a claim (<= 140 chars, a
    rule a director could follow) + the verbatim quote or the measurement + the knowledge step it
    belongs to (`knowledge/templates/<template>/steps/<step>/`). `finding <night> --json <file>`.

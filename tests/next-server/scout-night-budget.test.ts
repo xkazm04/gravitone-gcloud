@@ -38,8 +38,11 @@ describe("nightBudget", () => {
       ...base,
       jobs: [live.value.id, dry.value.id, "job:run:never-enqueued"],
       candidates: [
+        // Failed at its read: it never reached the clip step, so it spends no clip.
         { id: "c-01", kind: "scene", sourceIds: ["s-01"], status: "failed", keyframes: [], replicas: [], clipRequested: true },
         { id: "c-02", kind: "scene", sourceIds: ["s-01"], status: "pending", keyframes: [], replicas: [] },
+        // The vendor refused its clip: rendered with the error, and the asking counts.
+        { id: "c-03", kind: "scene", sourceIds: ["s-01"], status: "rendered", keyframes: [], replicas: [], clipRequested: true, error: "clip: refused" },
       ],
     };
     const b = nightBudget(store, night);
