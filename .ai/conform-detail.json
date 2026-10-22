@@ -9475,6 +9475,52 @@
           "evidence": "packages/kernel/src/events-query.ts:185 The feed interface is a synchronous pull returning a page; it creates no callback registration, asynchronous subscription handshake, or unsubscribe resource."
         }
       ]
+    },
+    "f54f23e7-c790-44ff-beaf-a5cb83c8d5c4/scoring-rubrics": {
+      "context": "audio-lessons-measures",
+      "subject": "scoring-rubrics",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T03:59:41.380Z",
+      "worker": "4539048b-e2e9-420e-b9bd-cddb0a8fd198",
+      "techniques": [
+        {
+          "technique": "gap-ranking",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/audio/rubric.ts:89 The rubric returns dimensions, mean, coverage and standing, but no computed gaps with targets, impact, effort or deterministic priority."
+        },
+        {
+          "technique": "normalization",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/audio/rubric.ts:117 New dimension ratings share a fixed 1–10 scale, with out-of-range inputs rejected before storage; heterogeneous audio measurements are displayed separately."
+        },
+        {
+          "technique": "rubric-stability",
+          "verdict": "deviation",
+          "evidence": "lib/sound/ledger.ts:119 Scalar parity tests exist for the UI and ledger means, but stored ledger scores carry no rubric version identifying the contract that produced them."
+        },
+        {
+          "technique": "score-explanation",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/audio/rubric.ts:60 The legacy fallback can produce an sfx mean of 4 from {melody: 4}, while readRubric displays all declared sfx dimensions as absent, leaving the composite unexplained by its breakdown."
+        },
+        {
+          "technique": "unmeasured-honesty",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/audio/rubric.ts:68 Missing dimensions remain null and coverage is shown, but a single measured dimension can confer proven standing without a declared minimum coverage."
+        },
+        {
+          "technique": "weight-design",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/audio/rubric.ts:61 Equal importance is implicit in the arithmetic mean rather than an explicit weight artifact with a stated total and per-dimension rationales."
+        },
+        {
+          "technique": "weight-lenses",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/rubric.ts:47 Music and sfx have distinct dimension sets, and non-loop effects receive a dimension exemption; this is not one shared rubric using population-specific importance budgets."
+        }
+      ]
     }
   }
 }

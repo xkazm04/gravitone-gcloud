@@ -2609,7 +2609,11 @@
           "revision": 3,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/audio/rubric.ts:68 A kept take can become proven with only one of three dimensions measured because the gate checks the mean without a coverage floor.",
+          "evaluatedAt": "2026-10-22",
+          "evaluatedAgainst": "sha256-b2:476078a37f34137d",
+          "evaluatedRevision": 3
         }
       ],
       "governance": "governed"
