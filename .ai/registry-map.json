@@ -13742,7 +13742,11 @@
           "revision": 1,
           "changedAt": "2026-09-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/import/serve.ts:17 This context implements application data migration through HTTP and CLI entry points, and searches of its files and the repository found no embeddable, registrar, or WinterCG constructs requiring standards-layered guest-runtime design.",
+          "evaluatedAt": "2026-10-22",
+          "evaluatedAgainst": "sha256-b2:9cfe5aba03ea1a19",
+          "evaluatedRevision": 1
         },
         {
           "subject": "signed-artifacts",
