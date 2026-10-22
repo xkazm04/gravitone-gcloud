@@ -6,6 +6,7 @@
 #   powershell -NoProfile -ExecutionPolicy Bypass -File pipeline/scout-schedule.ps1 -Install -At 22:30
 #   powershell -NoProfile -ExecutionPolicy Bypass -File pipeline/scout-schedule.ps1 -Remove
 #   powershell -NoProfile -ExecutionPolicy Bypass -File pipeline/scout-schedule.ps1 -Run               # what the task itself invokes
+#   powershell -NoProfile -ExecutionPolicy Bypass -File pipeline/scout-schedule.ps1 -Run -Dry          # the same, a dry night (rehearsal)
 #
 # The task runs as the logged-on user, only when that user is logged on (the seat's credentials
 # are the user's), and wakes nothing. The run is fenced: the seat may only search, read, write its
@@ -18,6 +19,7 @@ param(
   [switch]$Install,
   [switch]$Remove,
   [switch]$Run,
+  [switch]$Dry,
   [string]$At = "22:30",
   [string]$Until = "06:30",
   [string]$TaskName = "Gravitone scout night"
@@ -28,20 +30,23 @@ $repo = Split-Path -Parent $PSScriptRoot
 
 $allowed = @(
   "WebSearch", "WebFetch", "Read", "Write", "Edit", "Glob", "Grep",
-  "Bash(npx tsx pipeline/scout.mts*)",
-  "Bash(yt-dlp *)",
+  "Bash(npx tsx pipeline/scout.mts*)", "Bash(curl -s https://collectionapi.metmuseum.org/*)",
+  "Bash(yt-dlp *)", "Bash(ffmpeg *)", "Bash(mkdir *)", "Bash(rm *.vtt)",
   "Bash(git status*)", "Bash(git diff*)", "Bash(git add knowledge/*)", "Bash(git commit*)"
 )
 
 function Invoke-Night {
   $claude = (Get-Command claude -ErrorAction SilentlyContinue).Source
   if (-not $claude) { throw "claude is not on PATH for this user - install Claude Code or add it to PATH." }
-  $logs = Join-Path $repo "foundry-out/scout/logs"
+  # A rehearsal points SCOUT_STORE_DIR at a temp root; its logs go there, never into foundry-out/.
+  $logs = if ($env:SCOUT_STORE_DIR) { Join-Path $env:SCOUT_STORE_DIR "logs" } else { Join-Path $repo "foundry-out/scout/logs" }
   New-Item -ItemType Directory -Force -Path $logs | Out-Null
   $log = Join-Path $logs ("{0}.log" -f (Get-Date -Format "yyyy-MM-dd-HHmm"))
   Set-Location $repo
-  $argv = @("-p", "/scout night --until $Until", "--output-format", "json", "--permission-mode", "dontAsk", "--max-budget-usd", "20", "--allowed-tools") + $allowed
-  & $claude @argv *> $log
+  $night = if ($Dry) { "/scout night --dry --until $Until" } else { "/scout night --until $Until" }
+  $argv = @("-p", $night, "--output-format", "json", "--permission-mode", "dontAsk", "--max-budget-usd", "20", "--allowed-tools") + $allowed
+  # UTF-8, not the redirect operator's UTF-16: the log is read by tools and by people.
+  & $claude @argv 2>&1 | Out-File -FilePath $log -Encoding utf8
   exit $LASTEXITCODE
 }
 

@@ -68,11 +68,27 @@ lacks (a medium, a palette family, a lighting idiom, a cutting rhythm none of it
 
 - Pictures: an image URL or a page whose pictures carry one coherent look. Video: a trailer, a short, a
   music video whose SHOTS teach something - composition, light, a camera move, a cut rhythm.
-- Read a video's captions for findings when it has them: `yt-dlp --skip-download --write-auto-subs
-  --sub-format vtt -o <scratch>/<id> <url>` - quote verbatim, delete the file after.
+- **Where the sources actually are** (measured 2026-10-22; a plain web search returns articles and
+  AI-image marketing, never a usable picture or a video):
+  - Pictures, rights-clear: museum open-access APIs give direct image URLs. The Met:
+    `curl -s "https://collectionapi.metmuseum.org/public/collection/v1.1/search?hasImages=true&isPublicDomain=true&q=<words>&limit=12"`
+    then `.../public/collection/v1/objects/<id>` for each; its filter is loose, so keep an object only
+    when the object itself says `"isPublicDomain": true` and has `primaryImageSmall` (that URL is the
+    source; the title gets the object id). Strong for print, painting and drawing media.
+  - Video: `yt-dlp --js-runtimes node "ytsearch10:<words>" --flat-playlist --print "%(id)s|%(channel)s|%(duration)s|%(title)s"`
+    - prefer the studio's or the creator's own channel and a duration under 20 minutes.
+  - Not reachable from this box (2026-10-22): the Library of Congress (a Cloudflare challenge) and the
+    Art Institute of Chicago API (504) - do not spend turns on them. Modern print media (riso, screenprint)
+    is rarely public domain; the artist's own site or shop page (`kind: page`) is the source for those.
+  - Never an AI-image gallery or prompt site (they are generated work, not craft), never a re-upload.
+- Read a video's captions for findings when it has them: `yt-dlp --js-runtimes node --skip-download
+  --write-auto-subs --sub-langs en --sub-format vtt -o <scratch>/<id> <url>` - strip the timing lines,
+  quote verbatim, delete the file after. (Without `--js-runtimes node` YouTube answers 403.)
 - One line of `why` per source, in your words: what it would teach that the Library does not have.
 
-Write the sources as JSON (`[{url, kind, title, channel, why, found, watch}]`) to a scratch file and
+Write the sources as JSON (`[{url, kind, title, channel, why, found, watch}]` - `kind` is `image | video | page`,
+`found` is exactly `watchlist` or `search`, and `watch` is the watchlist line verbatim when `found` is
+`watchlist`; where you found it in prose belongs in `why`) to a scratch file and
 `npx tsx pipeline/scout.mts add-source <night> --json <file>`. A URL seen in an earlier night is skipped
 by the CLI; take that as information, not an error.
 
@@ -91,14 +107,16 @@ Check `status <night> --json` for the remaining money before each launch.
    pre-filter, not a verdict - you do not re-judge them by eye.
 2. **Scenes.** Ingest keeps ONE frame per cut, so neighbouring keyframes are different shots (in a
    video essay, different films). Look at the keyframes first (`Read` them, or a contact sheet:
-   `"$FFMPEG" -v error -i sources/s-NN/k-%03d.jpg -vf "scale=320:-1,tile=6x4" -frames:v 1 <scratch>/sheet.jpg`),
+   `ffmpeg -v error -i <night dir>/sources/s-NN/k-%03d.jpg -vf "scale=320:-1,tile=6x4" -frames:v 1 <scratch>/sheet.jpg`),
    then for the 3-4 most instructive shots: `scene <night> --source s-NN --frames k-012.jpg` - one frame
    per scene. Skip frames that are a talking head, a screenshot, or carry burnt-in text (an essay's
    captions, a counter). The first two scenes in priority order get a clip while the cap allows; put the
    shot whose MOTION teaches most first.
 3. **Findings.** From captions you read and the cut timestamps ingest recorded: a claim (<= 140 chars, a
    rule a director could follow) + the verbatim quote or the measurement + the knowledge step it
-   belongs to (`knowledge/templates/<template>/steps/<step>/`). `finding <night> --json <file>`.
+   belongs to (`knowledge/templates/<template>/steps/<step>/`) - an EXISTING step directory only
+   (`ls knowledge/templates/<template>/steps`); camera, staging and shot craft go under `02-frames`
+   until the knowledge numbering names motion and cut steps. `finding <night> --json <file>`.
    A finding the existing PATTERNS.md already states is not a finding.
 4. **Watch lines.** A channel or site that produced two or more good sources tonight and is not on the
    watchlist: `watch <night> --entry "<channel - url>" --why "<what it teaches>"`.
@@ -107,6 +125,10 @@ Check `status <night> --json` for the remaining money before each launch.
 
 Stop launching at the first of: the deadline, a refused launch for money, ~20 rendered rows, three
 consecutive failed launches (`--stop failure`), or nothing left worth studying (`sources-exhausted`).
+Short of ~20 rows with time and money left, search again - another watchlist line, another gap -
+before calling the sources exhausted; a short packet is a night that stopped early, and the stop
+reason must say which it was (2026-10-22 rehearsal: a night closed at 15 rows by choice as
+`sources-exhausted`).
 `npx tsx pipeline/scout.mts close <night> [--stop <reason>]` - it prints the packet id and the counts.
 
 ### 6. The night summary - for the operator, not about yourself
@@ -140,6 +162,6 @@ rendered / failed / pending, USD, and the packet link for every closed, untriage
 
 ## Lessons
 
-Append to `.claude/skills/scout/LESSONS.md` only what would change the next night (a search that
+Append (with Edit - the scheduled run's fence allows no shell write) to `.claude/skills/scout/LESSONS.md` only what would change the next night (a search that
 always returns re-uploads, a source type the gates mangle, a prompt the scene door keeps refusing) and
 the file it argues a change in. A night that went as written writes nothing there.

@@ -87,6 +87,9 @@ export function textRef(text: string): BlobRef {
 
 const ORDER: Readonly<Record<Candidate["kind"], number>> = Object.fromEntries(CANDIDATE_KINDS.map((k, i) => [k, i])) as Record<Candidate["kind"], number>;
 
+/** At most 40 characters, cut on a word with an ellipsis. */
+const clip40 = (s: string): string => (s.length <= 40 ? s : `${s.slice(0, 39).replace(/\s+\S*$/, "")}…`);
+
 /** A night-relative file's tail, for a label: `scenes/c-04/replica-1.jpg` -> `replica-1`. */
 const stem = (rel: string): string => rel.slice(rel.lastIndexOf("/") + 1).replace(/\.[^.]+$/, "");
 
@@ -134,7 +137,7 @@ function sceneCells(night: Night, c: SceneCandidate, media: ScoutV1["media"], ou
   c.replicas.forEach((file, i) => {
     const m = media[file];
     if (m === undefined) return;
-    shown.push({ id: cellId(c.id, `replica-${i + 1}`), candidate: c.id, kind: "scene", row: c.id, jobId, media: m, grades: [], url: scoutFileUrl(night.id, file), words: { label: `replica ${i + 1}`, ...(r === undefined ? {} : { prompt: r.prompt }) } });
+    shown.push({ id: cellId(c.id, `replica-${i + 1}`), candidate: c.id, kind: "scene", row: c.id, jobId, media: m, grades: [], url: scoutFileUrl(night.id, file), words: { label: `replica ${i + 1}`, ...(r === undefined ? {} : { prompt: `${r.composition} · ${r.lighting} · ${r.prompt}` }) } });
   });
   const clip = c.clip;
   const cm = clip === undefined ? undefined : media[clip.path];
@@ -149,7 +152,10 @@ function sceneCells(night: Night, c: SceneCandidate, media: ScoutV1["media"], ou
   }
   if (c.status === "failed" && c.error !== undefined) out.losses.push({ candidate: c.id, grade: "approximate", reason: c.error });
   const key = c.keyframes[0];
-  const label = r === undefined ? `scene ${c.id}` : `${r.shot} · ${r.camera} · ${r.composition} · ${r.lighting}`;
+  // The row's label is the shot and the camera's first clause - the label column is narrow, and the
+  // whole recipe there made one row ~400px tall (2026-10-22 dry campaign). Composition, light and
+  // the full prompt are each replica's own words, shown in the zoom.
+  const label = r === undefined ? `scene ${c.id}` : clip40(`${r.shot} · ${r.camera.split(/[,;]/)[0] ?? r.camera}`);
   out.cells.push(...shown);
   out.rows.push({ id: c.id, label, ...(key !== undefined && media[key] !== undefined ? { ref: scoutFileUrl(night.id, key) } : {}) });
 }

@@ -175,9 +175,9 @@ describe("scout adapter - the packet", () => {
     expect(packet.items.find((c) => c.id === "c-04/text")?.media.mime).toBe("text/plain");
     expect(urls["c-01/inkwash/replica-1"]).toBe(`/api/foundry/file?run=${RUN1}&path=rep%2Fa.jpg&kind=extract`);
     expect(urls["c-03/clip"]).toBe(`/api/foundry/file?run=${NIGHT}&path=scenes%2Fc-03%2Fclip.mp4&kind=scout`);
-    expect(present.rows.find((r) => r.id === "c-03")).toEqual({ id: "c-03", label: "wide · low angle, 24mm · lone figure on the left third · hard key from frame left", ref: `/api/foundry/file?run=${NIGHT}&path=sources%2Fs-01%2Fk-001.jpg&kind=scout` });
+    expect(present.rows.find((r) => r.id === "c-03")).toEqual({ id: "c-03", label: "wide · low angle", ref: `/api/foundry/file?run=${NIGHT}&path=sources%2Fs-01%2Fk-001.jpg&kind=scout` });
     expect(present.items["c-04/text"]).toEqual({ label: "Hold the subject still and let the camera move", meta: "cinematic · 02-frames", prompt: "pick one: the lens or the actor" });
-    expect(present.items["c-03/replica-1"]).toEqual({ label: "replica 1", prompt: "wide low-angle shot of a lone figure" });
+    expect(present.items["c-03/replica-1"]).toEqual({ label: "replica 1", prompt: "lone figure on the left third · hard key from frame left · wide low-angle shot of a lone figure" });
     expect(present.items["c-03/clip"]).toEqual({ label: "clip · replica-1", meta: "5s", prompt: "slow push-in · long holds" });
     // A failed candidate is not a cell: its error rides verbatim in a Loss the gate draws.
     expect(losses).toContainEqual({ candidate: "c-06", grade: "dropped", reason: "gemini answered 429: quota exhausted for the day" });
