@@ -3,7 +3,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { parseAt } from "@gt/domain/door";
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 
 import { BlockedUrlError, assertFetchable, type Resolver } from "../../imaging/safeUrl";
 import { listNights, mutateNight, nextCandidateId, nextSourceId, readNight } from "./store";
@@ -46,6 +46,8 @@ const sourceSchema = z
     why: text(WHY_MAX),
     found: z.enum(["watchlist", "search"]),
     watch: text(300).optional(),
+    /** The source teaches a whole mechanism: the skill's line on what (a keep from it queues a `source-rich` lead). */
+    rich: text(WHY_MAX).optional(),
   })
   .strict()
   .refine((s) => s.found !== "watchlist" || s.watch !== undefined, { message: "a source found from the watchlist quotes its watchlist line in `watch`" });
@@ -138,6 +140,7 @@ export async function addSources(nightId: NightId, raw: unknown, opts: { readonl
         why: s.why,
         found: s.found,
         ...(s.watch === undefined ? {} : { watch: s.watch }),
+        ...(s.rich === undefined ? {} : { rich: s.rich }),
         rights: "reference-only",
         status: "pending",
         files: [],
@@ -159,6 +162,8 @@ const findingSchema = z
     step: z.string().regex(/^\d{2}-[a-z][a-z-]*$/, "a step is NN-name (02-frames, 05-cut)"),
     claim: text(CLAIM_MAX),
     quote: text(QUOTE_MAX),
+    /** `<night>/<candidate>` of a finding an earlier night holds, said again here from another source. */
+    restates: z.string().regex(/^\d{4}-\d{2}-\d{2}(-\d{1,2})?\/c-\d{2,3}$/, "restates names an earlier night's finding as <night>/<candidate>").optional(),
   })
   .strict();
 const findingsSchema = z.array(findingSchema).min(1).max(MAX_SOURCES_PER_NIGHT);
@@ -178,12 +183,19 @@ export async function addFindings(nightId: NightId, raw: unknown, opts: { readon
     if ((await stat(dir).catch(() => null))?.isDirectory() !== true) return err("invalid", `finding ${i + 1}: there is no knowledge/templates/${f.template}/`);
     const missing = f.sourceIds.find((id) => !night.sources.some((s) => s.id === id));
     if (missing !== undefined) return err("invalid", `finding ${i + 1}: night ${nightId} has no source ${missing}`);
+    if (f.restates !== undefined) {
+      const [was, cid] = f.restates.split("/");
+      if (was === nightId) return err("invalid", `finding ${i + 1}: restates names this night; it names a finding an earlier night holds`);
+      const earlier = await readNight(was ?? "").then((n) => n, (e: unknown) => errorMessage(e));
+      if (typeof earlier === "string") return err("invalid", `finding ${i + 1}: restates ${f.restates}: ${earlier}`);
+      if (earlier.candidates.find((c) => c.id === cid)?.kind !== "finding") return err("invalid", `finding ${i + 1}: night ${was ?? ""} has no finding ${cid ?? ""}`);
+    }
   }
   const made: FindingCandidate[] = [];
   await mutateNight(nightId, (n) => {
     let next = n;
     for (const f of parsed.value) {
-      const c: FindingCandidate = { id: nextCandidateId(next), kind: "finding", sourceIds: f.sourceIds, status: "rendered", template: f.template, step: f.step, claim: f.claim, quote: f.quote };
+      const c: FindingCandidate = { id: nextCandidateId(next), kind: "finding", sourceIds: f.sourceIds, status: "rendered", template: f.template, step: f.step, claim: f.claim, quote: f.quote, ...(f.restates === undefined ? {} : { restates: f.restates }) };
       next = { ...next, candidates: [...next.candidates, c] };
       made.push(c);
     }

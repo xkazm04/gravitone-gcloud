@@ -11,10 +11,12 @@ import type { ApplyClaim } from "@gt/kernel/decision/apply";
 import { planExtractCommit } from "../../../foundry/commitPlan.ts";
 import { getExtractRun, patchExtractVerdicts } from "../../../foundry/extract/store.ts";
 import type { ExtractVerdictRecord } from "../../../foundry/extract/types.ts";
+import { leadCell, leadEventsOf, readRestated, verifiedRestates } from "../../../foundry/scout/leadEvents.ts";
+import { leadsFile, queueEvents, readQueue } from "../../../foundry/scout/leads.ts";
 import { FINDINGS_HEADING, WATCH_HEADING, WATCHLIST_REL, appendFinding, appendWatch, knowledgeRoot, knowledgeState, markerOf, patternsRel } from "../../../foundry/scout/knowledge.ts";
 import { meshRoot, mutateAsset, readAsset, resolveInAsset, withVariant } from "../../../foundry/mesh/store.ts";
 import { mutateNight, nightDir, readNight, resolveInNight, scoutRoot } from "../../../foundry/scout/store.ts";
-import type { Night } from "../../../foundry/scout/types.ts";
+import type { Night, NightId } from "../../../foundry/scout/types.ts";
 import { packetIdOf } from "../../../ledger/v1/packet.ts";
 import { modelItemId } from "../../../library/feeds/mesh.ts";
 import { sceneShelf } from "../../../library/feeds/scout.ts";
@@ -54,6 +56,8 @@ import { build, commitOf, extractDecisions, meshKey, sameOutcome, within, type A
 //   watch    scout/knowledge.ts); a kept watch line, a line in the watchlist.
 //   asset3d  each judged variant's `verdict` in its mesh asset (lib/foundry/mesh/store.ts
 //            mutateAsset): kept or rejected, what the Library's mesh feed shelves it by.
+//   leads    what the keeps EARNED for the ai-registry (../../../foundry/scout/
+//            leadEvents.ts) into the lead queue, once by key; the preview names each.
 //   all      every verdict, its reasons and its note into `night.committed`,
 //            state `committed` - LAST, so a night that says committed has had
 //            every other write. Scenes are admitted by that record alone: the
@@ -72,9 +76,12 @@ import { build, commitOf, extractDecisions, meshKey, sameOutcome, within, type A
 /** Repo-relative, forward slashes: the roots a consequence names. */
 const rel = (abs: string): string => path.relative(process.cwd(), abs).replace(/\\/g, "/");
 
+/** The read, with what the registry leads are derived from: the nights its findings restate, the keys already queued. */
+type ScoutRead = ScoutV1 & { readonly earlier: ReadonlyMap<NightId, Night>; readonly queued: readonly string[] };
+
 /* ── read ──────────────────────────────────────────────────────────────────── */
 
-async function read(ref: AdapterRef): Promise<Result<ScoutV1>> {
+async function read(ref: AdapterRef): Promise<Result<ScoutRead>> {
   const id = ref.runId;
   const got = await v1Call(() => readNight(id));
   if (!got.ok) return got;
@@ -129,7 +136,10 @@ async function read(ref: AdapterRef): Promise<Result<ScoutV1>> {
   }
   const media = await mediaRefs(files);
   if (!media.ok) return media;
-  return ok({ night, styles, assets, media: Object.fromEntries(media.value), knowledge, at: { scout: rel(scoutRoot()), knowledge: rel(knowledgeRoot()), mesh: rel(meshRoot()) } });
+  const queue = await v1Call(() => readQueue());
+  if (!queue.ok) return queue;
+  const earlier = await readRestated(night, readNight);
+  return ok({ night, styles, assets, media: Object.fromEntries(media.value), knowledge, at: { scout: rel(scoutRoot()), knowledge: rel(knowledgeRoot()), mesh: rel(meshRoot()) }, earlier, queued: queue.value.events.map((e) => e.key) });
 }
 
 /* ── packet ────────────────────────────────────────────────────────────────── */
@@ -188,15 +198,17 @@ function looksOf(items: readonly { readonly id: string; readonly row?: string | 
 
 const nothingKept = (looks: ReadonlyMap<string, LookDecision>): boolean => looks.size > 0 && [...looks.values()].every((d) => d.verdict === "reject");
 
-function digestOf(v1: ScoutV1): string {
+function digestOf(v1: ScoutRead): string {
   const runs = Object.entries(v1.styles).map(([cid, s]) => [cid, s.kind === "read" ? planExtractCommit(s.v1.run, s.v1.verdicts, { styles: [...s.v1.catalogue.styles] }).token : s.error]);
   const shas = (m: Readonly<Record<string, BlobRef>>) => Object.entries(m).map(([k, b]) => [k, b.sha256]).sort();
   // An asset's variants by status: a finish that lands between the preview and the commit is a different packet.
   const assets = Object.entries(v1.assets).map(([cid, r]) => [cid, r.kind === "read" ? r.asset.variants.map((v) => `${v.id}:${v.status}`) : r.error]);
-  return v1DigestOf({ source: "scout", night: v1.night.id, state: v1.night.state, candidates: v1.night.candidates, media: shas(v1.media), runs: runs.sort(), assets: assets.sort() });
+  // An earlier night committed between the preview and the commit turns a restatement into a lead: a different packet.
+  const restated = [...verifiedRestates(v1.night, v1.earlier).keys()].sort();
+  return v1DigestOf({ source: "scout", night: v1.night.id, state: v1.night.state, candidates: v1.night.candidates, media: shas(v1.media), runs: runs.sort(), assets: assets.sort(), restated });
 }
 
-function consequence(v1: ScoutV1, at: DecisionsAt): Result<Preview> {
+function consequence(v1: ScoutRead, at: DecisionsAt): Result<Preview> {
   const n = v1.night;
   const no = refusal(n);
   if (no !== undefined) return err("refused", `scout night ${n.id}: ${no}`);
@@ -249,6 +261,10 @@ function consequence(v1: ScoutV1, at: DecisionsAt): Result<Preview> {
       const heading = c.kind === "finding" ? FINDINGS_HEADING : WATCH_HEADING;
       parts.writes.push({ kind: "file", target: `${v1.at.knowledge}/${k.rel}`, candidate: cell, detail: k.holds ? "already holds this line" : `${k.exists ? "" : "new file · "}a line under ${heading}` });
     }
+  }
+  for (const e of leadEventsOf({ night: n, kept, earlier: v1.earlier })) {
+    const cell = leadCell(e);
+    parts.writes.push({ kind: "file", target: rel(leadsFile()), ...(cell === undefined ? {} : { candidate: cell }), detail: `${v1.queued.includes(e.key) ? "already queued" : "queues a registry lead"}: ${e.kind} ${e.refs[0] ?? ""}` });
   }
   parts.writes.push({ ...nightFile, detail: "committed: every verdict, its reasons and its note" });
   return ok({ v1Digest, consequence: buildConsequence(at, ids, parts, v1Digest) });
@@ -340,13 +356,17 @@ async function apply(claim: ApplyClaim): Promise<Result<void>> {
 
   if (!night.dry) {
     const kept = new Set(record.kept);
+    const earlier = await readRestated(night, readNight);
+    const restated = verifiedRestates(night, earlier);
     for (const c of night.candidates) {
       if (c.kind === "style" && c.extractRunId !== undefined) {
         const r = await applyStyle(claim, c.id, c.extractRunId);
         if (!r.ok) return r;
       } else if (c.kind === "finding" && kept.has(`${c.id}/text`)) {
         const url = night.sources.find((s) => s.id === c.sourceIds[0])?.url;
-        const r = await v1Call(() => appendFinding(id, c, url));
+        // n=2 only for a restatement the earlier night's record vouches for.
+        const { restates: _said, ...alone } = c;
+        const r = await v1Call(() => appendFinding(id, restated.has(c.id) ? c : alone, url));
         if (!r.ok) return r;
       } else if (c.kind === "watch" && kept.has(`${c.id}/text`)) {
         const r = await v1Call(() => appendWatch(id, c));
@@ -356,6 +376,10 @@ async function apply(claim: ApplyClaim): Promise<Result<void>> {
         if (!r.ok) return r;
       }
     }
+    // Then what the keeps earned: once by key, so a redelivery queues nothing.
+    const leads = leadEventsOf({ night, kept: record.kept, earlier });
+    const queued = leads.length === 0 ? ok([]) : await v1Call(() => queueEvents(leads));
+    if (!queued.ok) return queued;
   }
   // Last: the record that says every write above has happened.
   const after = await v1Call(() => mutateNight(id, (n) => (n.committed !== undefined ? n : { ...n, state: "committed", committed: record })));
@@ -363,4 +387,4 @@ async function apply(claim: ApplyClaim): Promise<Result<void>> {
   return settled(after.value) ?? err("internal", `scout night ${id}: the commit record did not land in ${nightDir(id)}`);
 }
 
-export const scoutAdapter: DecisionAdapter<ScoutV1> = { source: "scout", read, packet, consequence, apply };
+export const scoutAdapter: DecisionAdapter<ScoutRead> = { source: "scout", read, packet, consequence, apply };

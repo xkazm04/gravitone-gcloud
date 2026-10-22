@@ -54,8 +54,15 @@ export const WATCHLIST_REL = "scout/watchlist.md";
 /** One line, whatever the skill's text held: a newline inside a claim would split the bullet. */
 const flat = (s: string): string => s.replace(/\s+/g, " ").trim();
 
+/**
+ * A finding that RESTATES one an earlier night kept is its second observation: `n=2`, and the line
+ * cites the earlier line's marker so a reader can walk from one to the other. The earlier line is
+ * never touched (append-only); the Board's apply hands a `restates` here only once it read that
+ * the earlier finding was kept on a committed night (lib/foundry/scout/leadEvents.ts).
+ */
 export function findingLine(night: NightId, c: FindingCandidate, sourceUrl: string | undefined): string {
-  const where = [`n=1`, `scout ${night}`, ...(sourceUrl === undefined ? [] : [sourceUrl])].join(", ");
+  const again = c.restates === undefined ? [] : [`restates scout:${c.restates}`];
+  const where = [again.length === 0 ? "n=1" : "n=2", `scout ${night}`, ...again, ...(sourceUrl === undefined ? [] : [sourceUrl])].join(", ");
   return `- ${flat(c.claim)} - "${flat(c.quote)}" (${where}) ${markerOf(night, c.id)}`;
 }
 

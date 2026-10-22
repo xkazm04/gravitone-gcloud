@@ -12,6 +12,7 @@
 //   npx tsx pipeline/scout.mts watch <night> --entry "..." --why "..." [--sources s-01,s-02]
 //   npx tsx pipeline/scout.mts close <night> [--stop <reason>]
 //   npx tsx pipeline/scout.mts status [<night>] [--json]
+//   npx tsx pipeline/scout.mts leads [--json] | lead <key> --json <file|->   (lib/foundry/scout/leadFile.ts)
 //   npx tsx pipeline/scout.mts folder <dir> [pipeline/foundry/extract.mts args]
 //
 // THE MONEY. A night is DRY unless it was opened with --live (refused under
@@ -62,30 +63,31 @@ const USAGE = [
   "usage: npx tsx pipeline/scout.mts <command> [--json]",
   "  doctor [--dry]                              the box, the keys, the store",
   "  open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--until HH:MM] [--live]",
-  "  add-source <night> --json <file|->         [{url, kind, title, channel?, why, found, watch?}]",
+  "  add-source <night> --json <file|->         [{url, kind, title, channel?, why, found, watch?, rich?}]",
   "  ingest <night> [--source s-NN] [--detach]",
   "  style <night> --sources s-01,s-03 --use \"<content>\" [--slug x] [--detach]",
   "  scene <night> --source s-NN --use \"<content>\" [--frames k-012.jpg] [--detach]",
   "  asset <night> --brief <file|-> [--detach]  {class, subject, use, style?, kind?, techniques?}",
-  "  finding <night> --json <file|->            [{sourceIds, template, step, claim, quote}]",
+  "  finding <night> --json <file|->            [{sourceIds, template, step, claim, quote, restates?}]",
   '  watch <night> --entry "..." --why "..." [--sources s-01]',
   "  close <night> [--stop deadline|budget|target|failure|sources-exhausted|operator]",
   "  status [<night>]",
+  "  leads · lead <key> --json <file|->         {claim, kind: technique|application|subject, nearest?, confidence}",
   "  folder <dir> [pipeline/foundry/extract.mts args]",
 ].join("\n");
 
 class Usage extends Error {}
 /** A refusal the CLI makes itself; the acts' `Refusal` exits the same way. */
 class Refused extends Error {}
-const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "finding", "watch", "close", "status"]);
+const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "finding", "watch", "close", "status", "leads", "lead"]);
 const BOOL = new Set(["json", "live", "detach", "dry", "help", "retry"]);
 
-/** argv -> positionals and flags. `--json` takes a value (the input file, or `-`) only under add-source and finding. */
+/** argv -> positionals and flags. `--json` takes a value (the input file, or `-`) only under add-source, finding and lead. */
 function parse(argv: readonly string[]): { pos: string[]; flags: Map<string, string | true> } {
   const pos: string[] = [];
   const flags = new Map<string, string | true>();
   const cmd = argv.find((a) => !a.startsWith("--"));
-  const reads = cmd === "add-source" || cmd === "finding";
+  const reads = cmd === "add-source" || cmd === "finding" || cmd === "lead";
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i] ?? "";
     if (!a.startsWith("--")) {
@@ -220,6 +222,15 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
       return 0;
     }
 
+    // The registry leads the Board's commits queued: listed, and filed one claim at a time.
+    if (cmd === "leads" || cmd === "lead") {
+      const { leadsCommand } = await import("../lib/foundry/scout/leadFile.ts");
+      const r = await leadsCommand(cmd === "leads" ? undefined : { key: pos[1] ?? usage("lead needs a key: `scout.mts leads` lists them"), input: await input() }, { env: io.env, now: now() });
+      for (const l of r.lines) say(l);
+      if (json) doc(r.doc);
+      return 0;
+    }
+
     // Everything below reads or launches kernel jobs: the store this process names.
     const { closeProcessKernel, processKernel, storeLocation } = await import("@gt/kernel/process");
     const { OUT_DIRNAME } = await import("../lib/fixtures/mode.ts");
@@ -274,7 +285,7 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
             const again = n.sources.filter((s) => s.status === "failed" && (source === undefined || s.id === source));
             if (again.length === 0) return n;
             const ids = new Set(again.map((s) => s.id));
-            return { ...n, sources: n.sources.map((s) => (ids.has(s.id) ? { id: s.id, url: s.url, kind: s.kind, title: s.title, ...(s.channel === undefined ? {} : { channel: s.channel }), why: s.why, found: s.found, ...(s.watch === undefined ? {} : { watch: s.watch }), rights: s.rights, status: "pending" as const, files: [] } : s)) };
+            return { ...n, sources: n.sources.map((s) => (ids.has(s.id) ? { id: s.id, url: s.url, kind: s.kind, title: s.title, ...(s.channel === undefined ? {} : { channel: s.channel }), why: s.why, found: s.found, ...(s.watch === undefined ? {} : { watch: s.watch }), ...(s.rich === undefined ? {} : { rich: s.rich }), rights: s.rights, status: "pending" as const, files: [] } : s)) };
           });
         }
         const { driveIngest, launchIngest } = await import("../lib/producers/scoutIngest.ts");
