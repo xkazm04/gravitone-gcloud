@@ -554,9 +554,12 @@ export async function runAdRender(
       if (encoder !== "h264_nvenc") throw e;
       // Same fallback, same reason, same log line as lib/musicVideoExport.ts.
       console.warn("[ads/render] h264_nvenc failed, falling back to libx264:", errorMessage(e));
-      nvencUnavailable = true;
       encoder = "libx264";
       await deps.ffmpeg(graphFor(encoder).args);
+      // The libx264 retry is the discriminator: only a failure the software encoder does not
+      // share is evidence about NVENC. If both failed, the cause was the input and the GPU
+      // path stays available to the next render (the throw above skips this line).
+      nvencUnavailable = true;
     }
 
     let loudness: AdRenderReceipt["loudness"] = null;
