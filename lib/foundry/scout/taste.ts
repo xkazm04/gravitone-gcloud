@@ -40,7 +40,7 @@ function label(n: Night, c: Candidate): string {
     case "asset3d":
       return `"${c.brief.subject}" [${c.brief.class}]`;
     default:
-      return from === "" ? c.id : from;
+      return `${from === "" ? c.id : from}${c.use === undefined ? "" : ` - for ${c.use}`}`;
   }
 }
 
@@ -138,6 +138,23 @@ export function tasteOf(nights: readonly Night[]): string {
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
       .map(([ch, k]) => `${ch} ${k}`)
       .join(", ") || "none";
+  // The uses the operator kept, and the ones refused AS uses (the `use case` reason): a direction
+  // refused that way is not tried again until something new makes it worth it.
+  const uses = (pred: (n: Night, cell: string) => boolean): string[] => [
+    ...new Set(
+      nights.flatMap((n) => {
+        const c = n.committed;
+        if (c === undefined || c.dry) return [];
+        return [...c.kept, ...c.rejected].filter((cell) => pred(n, cell)).flatMap((cell) => {
+          const u = candidateOf(n, cell)?.use;
+          return u === undefined ? [] : [u];
+        });
+      }),
+    ),
+  ];
+  const keptUses = uses((n, cell) => n.committed?.kept.includes(cell) === true);
+  const refusedUses = uses((n, cell) => (n.committed?.reasons[cell] ?? []).includes("use case"));
+  lines.push("## Uses", "", `- kept: ${keptUses.join("; ") || "none"}`, `- refused as a use: ${refusedUses.join("; ") || "none"}`, "");
   lines.push(...assetTally(judged));
   lines.push("## Channels", "", `- kept: ${list(kept)}`, `- thrown: ${list(thrown)}`);
   const twice = [...thrown].filter(([ch, k]) => k >= 2 && !kept.has(ch)).map(([ch]) => ch);

@@ -90,7 +90,9 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
             category={categoryOf(run, firstMime(run))}
             label={run.words?.label ?? run.row}
             position={`${d.runIx + 1}/${d.runs.length}`}
+            {...(run.words?.use !== undefined ? { use: run.words.use } : {})}
             {...(run.words?.aim !== undefined ? { aim: run.words.aim } : {})}
+            {...(run.words?.ref !== undefined ? { reference: run.words.ref } : {})}
             {...(run.words?.checks !== undefined ? { checks: run.words.checks } : {})}
             runVerdict={runVerdict(run, idOf, verdicts)}
             reasons={reasons}

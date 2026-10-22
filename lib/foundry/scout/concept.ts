@@ -25,6 +25,7 @@ import { ok, type Result } from "@gt/domain/errors";
 import type { ConceptDesign } from "@gt/producers/scout-asset/define";
 
 import { ASSET_CLASSES, BUDGETS, TECHNIQUES, type AssetClass, type MeshBrief, type Technique } from "../mesh/types";
+import { USE_MAX } from "./types";
 
 /* ── The brief's door ─────────────────────────────────────────────────────── */
 
@@ -36,13 +37,15 @@ const briefSchema = z
     /** What it is, in craft words: "hooded archer, leather jerkin, quiver". */
     subject: words(200),
     style: words(200).optional(),
+    /** What content the asset can serve, one line (every scout run states its use - types.ts USE_MAX). */
+    use: words(USE_MAX).optional(),
     /** A weapon's kind (sword, mace, axe, staff): the M1 touch-up keys on it. */
     kind: words(40).optional(),
     techniques: z.array(z.enum(TECHNIQUES)).min(1).max(TECHNIQUES.length).optional(),
   })
   .strict();
 
-export type BriefInput = { readonly brief: MeshBrief; readonly techniques?: readonly Technique[] };
+export type BriefInput = { readonly brief: MeshBrief; readonly techniques?: readonly Technique[]; readonly use?: string };
 
 /** The skill's brief JSON as a MeshBrief: the class's budget, and a character rigged onto UE5 Mannequin chains. */
 export function parseBrief(raw: unknown): Result<BriefInput> {
@@ -58,7 +61,7 @@ export function parseBrief(raw: unknown): Result<BriefInput> {
     budgetTris: BUDGETS[b.class].tris,
     ...(b.class === "character" ? { rig: "ue5-mannequin" as const } : {}),
   };
-  return ok({ brief, ...(b.techniques === undefined ? {} : { techniques: b.techniques }) });
+  return ok({ brief, ...(b.techniques === undefined ? {} : { techniques: b.techniques }), ...(b.use === undefined ? {} : { use: b.use }) });
 }
 
 /* ── The prompts ──────────────────────────────────────────────────────────── */

@@ -48,6 +48,8 @@ export type RowWords = {
   readonly group?: string;
   readonly aim?: string;
   readonly checks?: readonly string[];
+  /** What content the run can serve, as stated when it was launched. */
+  readonly use?: string;
 };
 
 /** What the machine said before the gate (hitl-approval oracle-before-gate). */

@@ -76,6 +76,22 @@ describe("tasteOf", () => {
     expect(md).toContain("- thrown twice or more, never kept: Thrown Channel");
   });
 
+  it("lists the uses kept, and the uses refused AS uses, so the next night steers away from them", () => {
+    const n = committed("2026-10-04", false);
+    const withUses: Night = {
+      ...n,
+      candidates: [
+        { id: "c-01", kind: "style", sourceIds: ["s-01"], status: "rendered", use: "children's cartoon series" },
+        { id: "c-02", kind: "scene", sourceIds: ["s-02"], status: "rendered", keyframes: [], replicas: [], use: "stock b-roll for anything" },
+      ],
+      committed: { ...(n.committed as NonNullable<Night["committed"]>), reasons: { "c-02/replica-1": ["use case"] } },
+    };
+    const md = tasteOf([withUses]);
+    expect(md).toContain("- kept: children's cartoon series");
+    expect(md).toContain("- refused as a use: stock b-roll for anything");
+    expect(md).toContain("T s-02 (Thrown Channel) - for stock b-roll for anything: use case");
+  });
+
   it("says so when there is nothing to learn from yet", () => {
     expect(tasteOf([])).toContain("No committed live night yet");
   });

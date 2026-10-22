@@ -51,6 +51,8 @@ export const CLIP_SECONDS = 5;
 export const CLAIM_MAX = 140;
 export const QUOTE_MAX = 400;
 export const WHY_MAX = 200;
+/** A run's USE: the content it can serve (a children's cartoon series, a music video, an explainer), one line. */
+export const USE_MAX = 140;
 export const MAX_SOURCES_PER_NIGHT = 60;
 
 /* ── The night ───────────────────────────────────────────────────────────── */
@@ -148,6 +150,10 @@ type CandidateBase = {
   readonly error?: string;
   /** The kernel job that rendered it, when one did (findings and watch lines are written, not rendered). */
   readonly jobId?: string;
+  /** What content the run can help make (operator, 2026-10-22: "we need the use stated" - a run with
+   *  no purpose is a mindless output). Rejected with the `use case` reason, it steers the next nights
+   *  away from that direction (taste.ts). Absent on runs from before the field. */
+  readonly use?: string;
 };
 
 /** A still style: an ordinary extract run over this candidate's source pictures/keyframes. */
