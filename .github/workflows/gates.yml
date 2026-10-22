@@ -343,6 +343,10 @@ jobs:
       - name: ads prompts
         run: npm run check:ads-prompts
 
+      # BLOCKING. Pins the scout scene readback's rules and the recipe door's verdicts - offline, no model.
+      - name: scout scene
+        run: npm run check:scout-scene
+
       # BLOCKING. Pure function over lib/themes - the founding proof must survive
       # a full sheet in the reference window.
       - name: style refs

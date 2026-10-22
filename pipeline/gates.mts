@@ -133,6 +133,13 @@ export const GATES: readonly Gate[] = [
     rationale: "pipeline/ADS-*-PROMPT.md against the registry rules they quote (19 pins), plus lib/ads/validate.ts behavioural cases. Filesystem only, no model.",
   },
   {
+    id: "scout-scene",
+    npmScript: "check:scout-scene",
+    class: "blocking",
+    outcomes: "01",
+    rationale: "pipeline/SCOUT-SCENE-PROMPT.md against its 9 tagged rules, plus lib/foundry/scout/scene.ts recipe-door verdicts on fixed sample answers. Filesystem only, no model.",
+  },
+  {
     id: "style-refs",
     npmScript: "check:style-refs",
     class: "blocking",

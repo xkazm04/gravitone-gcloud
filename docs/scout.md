@@ -108,6 +108,37 @@ or `YTDLP`, `FFMPEG`, `FFPROBE`. Every spawn has a timeout and an output cap. A 
 `failed` with the tool's last stderr lines verbatim (`ffmpeg: ...`, `yt-dlp: ...`); it fails the
 source, not the job.
 
+## A scene
+
+A scene candidate is ONE kernel job (`job:scout-scene:<night>:<c-NN>`, `~2` after a failed one; producer `scout-scene`) waiting on the lane of its expensive half: `cloud.leonardo` when it renders a clip, `cloud.google` when it does not. It reads up to five of the source's keyframes with Gemini, one recognize call each in time order, each handed the earlier answers as words, into a `SceneRecipe` in craft words (`pipeline/SCOUT-SCENE-PROMPT.md`; the door in `lib/foundry/scout/scene.ts` refuses a missing field, a shot size outside the six, a palette colour without a job, and any word of the source's own title or channel or a capital mid-sentence). Shot length and pace come from the source's cut timestamps when it has them. It then draws two replica stills from the recipe's prompt with no reference image attached, and, only when the night's clip cap still allows (the caller's `clip`), animates OUR first replica with hailuo-03 for 5 s; `clipSourceOf` refuses any path that is not this candidate's own replica, so a source frame never reaches a video vendor. **What it costs on its receipt:** each read at extract's $0.002 pre-call estimate (gemini-3.6-flash is unpriced in the kernel table), each still at the table's measured $0.045, and a clip HELD at $3.75 ($0.75/s, the video gate's hold for an unpriced clip): about $3.85 worst case with a clip, about $0.10 without. The vendor's own figure replaces each estimate when it is booked, and the clip's books to the `video-usd` window. **What is held:** the source keyframes stay on this box, reference-only; only words leave them. **What ships into the packet:** the recipe, `scenes/<c-NN>/replica-1..2`, and `scenes/<c-NN>/clip.mp4` with `clip.from` naming the replica it animates. A failed clip leaves the scene `rendered` with its stills and `error: clip: …`; a recipe that names its source, a failed read or replica, or a ceiling before the stills ends it `failed` with that sentence verbatim, and nothing is drawn after it. A dry night writes stand-ins into every cell: a committed preset poster for each replica and a placeholder clip file.
+
+## The morning
+
+A closed, non-dry night with anything rendered is one pile in the Floor's image lane and one packet,
+`/board/pkt:scout:<night>`: a row per candidate - an extracted look (its source as reference, best
+replica and transfer), a scene (keyframe as reference, two replicas, the clip), a finding or a watch
+line (a text tile; Z shows the whole quote). `K` keep, `X` reject with up to three of `style, subject,
+craft, motion, rights, generic` (keys 1-6), `⇧K`/`⇧X` a whole row, `⏎` shows what the commit writes and
+commits. A candidate that failed is listed at the gate with its sentence and is not in the rows.
+
+What a commit writes: kept looks become `candidate` styles through the extract run's own commit
+(publishable, and the ratchet takes them on from there); kept scenes and clips become reference-only
+`motion` items in the Library; a kept finding is appended to
+`knowledge/templates/<template>/steps/<step>/PATTERNS.md` under `## Scout findings` and a kept watch line
+to `knowledge/scout/watchlist.md`, each with its `<!-- scout:<night>/<c-NN> -->` marker; every verdict
+with its reasons and note lands in `night.committed`, which is what the next night's `taste.md` reads.
+The next night's skill commits the knowledge lines (never pushes). An untriaged packet waits; nothing is
+ever accepted for want of an answer.
+
+## The skill and the schedule
+
+`/scout night` (`.claude/skills/scout/SKILL.md`) is the only reader in the loop: it chooses sources
+around the watchlist and the taste, groups pictures into looks, picks the shots, and writes findings.
+It never keeps or commits. `pipeline/scout-schedule.ps1` registers the nightly run on Task Scheduler -
+`-Print` shows it, `-Install -At 22:30` registers it, `-Remove` takes it away; the operator installs it.
+The scheduled run is `claude -p "/scout night --until 06:30"` with its tools fenced to search, read,
+the CLI and committing `knowledge/`; logs land in `foundry-out/scout/logs/`.
+
 ## Files on disk
 
 `foundry-out/scout/<night>/` (`SCOUT_STORE_DIR` moves the root):
