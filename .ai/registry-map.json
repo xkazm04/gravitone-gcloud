@@ -13758,7 +13758,11 @@
           "revision": 2,
           "changedAt": "2026-09-04",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/import/project.ts:203 The token omits staged public-file blob digests, so changing public media between preview and confirmation can change imported bytes without invalidating the token.",
+          "evaluatedAt": "2026-10-22",
+          "evaluatedAgainst": "sha256-b2:387437132971999b",
+          "evaluatedRevision": 2
         },
         {
           "subject": "engine-host-contract",
