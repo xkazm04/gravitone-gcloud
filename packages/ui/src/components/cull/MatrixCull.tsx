@@ -12,7 +12,6 @@
 // operator pressed, so 1-9, 0, − follow the source's list in order (@gt/domain/source).
 import { useEffect, useRef, useState } from "react";
 
-import type { BoardPacket } from "../../board/port.ts";
 import type { BoardVerdict } from "../../board/boardGate.ts";
 import { clamp, cullCells, reasonAct, rowOf, tallyOf, undecidedOf, vertical } from "../../board/cull.ts";
 import { useKeys } from "../../keymap/dispatch.ts";
