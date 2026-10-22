@@ -20,7 +20,9 @@ import { isoOf, mimeOf, type Feed, type FeedItem, type FeedRead } from "./types.
 //
 // Kept STYLES are not here: a style candidate's commit writes the catalogue,
 // and stylesFeed (./foundry.ts) already projects every catalogue style.
-// Findings and watch lines are knowledge files, not media.
+// Findings and watch lines are knowledge files, not media. A game asset (`asset3d`) is
+// shelved by the mesh feed (./mesh.ts) from its own manifest, where the night's apply wrote each
+// variant's verdict - shelving it here too would put one model in the Library twice.
 
 const ORIGIN: LibraryOrigin = "scout";
 

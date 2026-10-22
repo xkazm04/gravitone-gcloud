@@ -10,8 +10,10 @@ import type { InitialDecision } from "@gt/kernel/decision/driver";
 import type { ItemWords, RowWords } from "@gt/ui/board/port";
 
 import { EXTRACT_COMMITTABLE } from "../../../foundry/plant.ts";
+import { TECHNIQUE_LABEL, type GateResult, type MeshAsset } from "../../../foundry/mesh/types.ts";
 import { patternsRel } from "../../../foundry/scout/knowledge.ts";
-import { CANDIDATE_KINDS, cellId, type Candidate, type CandidateId, type Night, type NightCommit, type SceneCandidate, type SceneClip } from "../../../foundry/scout/types.ts";
+import { CANDIDATE_KINDS, cellId, type Asset3dCandidate, type Candidate, type CandidateId, type Night, type NightCommit, type SceneCandidate, type SceneClip } from "../../../foundry/scout/types.ts";
+import { meshFileUrl } from "../../../library/feeds/mesh.ts";
 import { decisionMap, type Loss } from "../types.ts";
 import { extractAdapter, planLooks, type ExtractV1 } from "./extract.ts";
 import { lookBrief, sceneBrief } from "./scoutBrief.ts";
@@ -22,7 +24,7 @@ import { lookBrief, sceneBrief } from "./scoutBrief.ts";
 // under the file bound.
 //
 // THE SHAPE. One row per candidate, in kind order (style, scene, finding,
-// watch), then the night's own order:
+// watch, asset3d), then the night's own order:
 //   style    the extract adapter's own rows and cells (one row per look, the
 //            gallery source its reference), each id under the candidate:
 //            `c-01/<look>/replica-1`. Planned by extract.ts `planLooks`, so the
@@ -33,6 +35,12 @@ import { lookBrief, sceneBrief } from "./scoutBrief.ts";
 //   finding  one TEXT cell `c-07/text`: the claim, the quote under it, the
 //            template and step it would land in.
 //   watch    one TEXT cell `c-09/text`: the entry and why.
+//   asset3d  its concept as the reference, filed under `3d` (the run grid's category); one cell
+//            per FINISHED variant of its mesh asset, `c-05/t2`, whose media is the finished glb
+//            (the rigged one when rigged) and whose tile is its poster render - the viewer mounts
+//            only in the zoom. Its words carry the work: technique, triangles against the class
+//            budget, every gate's verdict and score, the variant's approach. A variant that failed
+//            or has not finished is a Loss with its own sentence.
 // A text cell's media is the content address of its own words (text/plain):
 // the kernel holds candidates by blob, and the words are the thing judged.
 //
@@ -42,17 +50,20 @@ import { lookBrief, sceneBrief } from "./scoutBrief.ts";
 // the gate draws before the commit.
 
 export type StyleRead = { readonly kind: "read"; readonly v1: ExtractV1 } | { readonly kind: "unread"; readonly error: string };
+export type AssetRead = { readonly kind: "read"; readonly asset: MeshAsset } | { readonly kind: "unread"; readonly error: string };
 
 export type ScoutV1 = {
   readonly night: Night;
   /** By style candidate id: its extract run as the extract adapter read it, or why it could not. */
   readonly styles: Readonly<Record<string, StyleRead>>;
-  /** By night-relative file: the content address of every picture or clip a cell or a row may show. */
+  /** By asset3d candidate id: its mesh asset as the mesh store read it, or why it could not. */
+  readonly assets: Readonly<Record<string, AssetRead>>;
+  /** By night-relative file (a mesh file by `meshKey`): the content address of every picture, clip or glb a cell or a row may show. */
   readonly media: Readonly<Record<string, BlobRef>>;
   /** By finding or watch candidate id: the knowledge file its line would land in, as it stands now. */
   readonly knowledge: Readonly<Record<string, { readonly rel: string; readonly exists: boolean; readonly holds: boolean }>>;
   /** Repo-relative roots the consequence names: the night store and the knowledge tree. */
-  readonly at: { readonly scout: string; readonly knowledge: string };
+  readonly at: { readonly scout: string; readonly knowledge: string; readonly mesh: string };
 };
 
 export type Cell = {
@@ -87,6 +98,9 @@ export function textRef(text: string): BlobRef {
 }
 
 const ORDER: Readonly<Record<Candidate["kind"], number>> = Object.fromEntries(CANDIDATE_KINDS.map((k, i) => [k, i])) as Record<Candidate["kind"], number>;
+
+/** The media key of a mesh asset's file: never a night-relative path, so the two stores cannot collide. */
+export const meshKey = (asset: string, rel: string): string => `mesh:${asset}/${rel}`;
 
 /** At most 40 characters, cut on a word with an ellipsis. */
 const clip40 = (s: string): string => (s.length <= 40 ? s : `${s.slice(0, 39).replace(/\s+\S*$/, "")}…`);
@@ -192,6 +206,54 @@ function textCell(night: Night, c: Candidate & { kind: "finding" | "watch" }, ou
   out.rows.push({ id: c.id, label: c.kind === "finding" ? `finding · ${c.template}` : "watch", group: c.kind === "finding" ? "notes" : "sources" });
 }
 
+/** Every gate a variant carries, as its verdict and score: `input pass 100 · mesh warn 85 · rig pass 92`. */
+export const gateWords = (gates: readonly GateResult[]): string => gates.map((g) => `${g.name} ${g.verdict}${g.score === undefined ? "" : ` ${g.score}`}`).join(" · ");
+
+const tris = (n: number): string => n.toLocaleString("en-US");
+
+function assetCells(night: Night, c: Asset3dCandidate, read: AssetRead | undefined, media: ScoutV1["media"], out: Mutable): void {
+  if (read === undefined) {
+    out.losses.push({ candidate: c.id, grade: "dropped", reason: c.error ?? "no mesh asset was written for this brief" });
+    return;
+  }
+  if (read.kind === "unread") {
+    out.losses.push({ candidate: c.id, grade: "dropped", reason: read.error });
+    return;
+  }
+  const a = read.asset;
+  let shown = 0;
+  for (const v of a.variants) {
+    const id = cellId(c.id, v.id);
+    const glb = v.files.rigged ?? v.files.glb;
+    if (v.status !== "finished" || glb === undefined) {
+      const why = v.status === "failed" ? (v.error ?? `${v.id} failed with no error recorded`) : v.status === "finished" ? `${v.id} is finished and names no glb` : `${v.id} is ${v.status}: its ${v.status === "pending" ? "mesh" : "finish"} job has not finished`;
+      out.losses.push({ candidate: id, grade: "dropped", reason: why });
+      continue;
+    }
+    const m = media[meshKey(a.id, glb)];
+    if (m === undefined) {
+      out.losses.push({ candidate: id, grade: "dropped", reason: `${a.id}/${glb} is not on disk` });
+      continue;
+    }
+    const meta = [v.tris === undefined ? `budget ${tris(a.brief.budgetTris)} tris` : `${tris(v.tris)} / ${tris(a.brief.budgetTris)} tris`, gateWords(v.gates)].filter((x) => x !== "").join(" · ");
+    out.cells.push({
+      id,
+      candidate: c.id,
+      kind: "asset3d",
+      row: c.id,
+      jobId: v.jobs.at(-1) ?? c.jobId ?? `scout:${night.id}`,
+      media: m,
+      grades: [],
+      url: meshFileUrl(a.id, glb),
+      words: { label: `${v.technique} · ${TECHNIQUE_LABEL[v.technique]}`, meta, ...(v.approach === undefined ? {} : { prompt: v.approach }), ...(v.files.poster === undefined ? {} : { poster: meshFileUrl(a.id, v.files.poster) }) },
+    });
+    shown++;
+  }
+  if (shown === 0) return;
+  const concept = c.concepts[0];
+  out.rows.push({ id: c.id, label: clip40(`${a.brief.class} · ${a.brief.subject}`), group: "3d", ...(concept !== undefined && media[concept] !== undefined ? { ref: scoutFileUrl(night.id, concept) } : {}) });
+}
+
 type Mutable = { cells: Cell[]; rows: RowWords[]; initial: InitialDecision[]; losses: Loss[]; runs: Record<string, ExtractV1> };
 
 /** Every cell, row, imported verdict and loss of the night's packet. */
@@ -206,6 +268,7 @@ export function build(v1: ScoutV1): Built {
     }
     if (c.kind === "style") styleCells(night, c, v1.styles[c.id], out);
     else if (c.kind === "scene") sceneCells(night, c, v1.media, out);
+    else if (c.kind === "asset3d") assetCells(night, c, v1.assets[c.id], v1.media, out);
     else if (c.status === "failed") out.losses.push({ candidate: c.id, grade: "dropped", reason: c.error ?? "failed with no error recorded" });
     else textCell(night, c, out);
   }

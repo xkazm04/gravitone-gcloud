@@ -17,7 +17,7 @@ function v1(clip: SceneClip): ScoutV1 {
   const scene: SceneCandidate = { id: "c-01", kind: "scene", sourceIds: ["s-01"], status: "rendered", keyframes: ["sources/s-01/k-001.jpg"], recipe, replicas: ["scenes/c-01/replica-1.jpg"], clipRequested: true, clip };
   const night: Night = { id: "2026-10-22", startedAt: "2026-10-22T00:00:00.000Z", ceilingUsd: 15, target: 20, clipCap: 2, dry: false, state: "closed", stop: "target", closedAt: "2026-10-22T05:00:00.000Z", sources: [], candidates: [scene], jobs: [] };
   const media = Object.fromEntries(["sources/s-01/k-001.jpg", "scenes/c-01/replica-1.jpg", "scenes/c-01/clip.mp4"].map((f) => [f, textRef(f)]));
-  return { night, styles: {}, media, knowledge: {}, at: { scout: "foundry-out/scout", knowledge: "knowledge" } };
+  return { night, styles: {}, assets: {}, media, knowledge: {}, at: { scout: "foundry-out/scout", knowledge: "knowledge", mesh: "foundry-out/mesh" } };
 }
 
 const metaOf = (clip: SceneClip): string | undefined => build(v1(clip)).cells.find((c) => c.id === "c-01/clip")?.words.meta;

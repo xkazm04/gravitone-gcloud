@@ -2,7 +2,7 @@
 name: scout
 memory: none
 category: Development
-description: The nightly training loop - search the web and YouTube around knowledge/scout/watchlist.md for art styles, scenes and craft worth learning, bring them onto this box, replicate them as kernel jobs (extracted still styles, scene recipes with Flare replica stills and local LTX clips, craft findings) inside a $15 night, and leave ONE Board packet pkt:scout:<night> for a few minutes of K/X in the morning. Successor of train-style and of dojo's hand-run corpus study. Wraps pipeline/scout.mts; it never keeps, rejects or commits anything on the Board. Invoke with /scout night [--dry] [--until HH:MM], /scout folder <dir> [extract args], /scout status [<night>].
+description: The nightly training loop - search the web and YouTube around knowledge/scout/watchlist.md for art styles, scenes and craft worth learning, bring them onto this box, replicate them as kernel jobs (extracted still styles, scene recipes with Flare replica stills and local LTX clips, craft findings) and brief up to three 3D game assets (concept -> TRELLIS mesh -> Blender finish, made on this box) inside a $15 night, and leave ONE Board packet pkt:scout:<night> for a few minutes of K/X in the morning. Successor of train-style and of dojo's hand-run corpus study. Wraps pipeline/scout.mts; it never keeps, rejects or commits anything on the Board. Invoke with /scout night [--dry] [--until HH:MM], /scout folder <dir> [extract args], /scout status [<night>].
 argument-hint: "night [--dry] [--until HH:MM] | folder <dir> | status [<night>]"
 allowed-tools: Read, Write, Edit, Bash, PowerShell, Glob, Grep, WebSearch, WebFetch, Monitor
 ---
@@ -33,7 +33,13 @@ truncated-verdict-space). You pre-filter; you never keep.
   only frames are kept; nothing is redistributed.
 - **A source seeds words, never pixels.** It is never passed to a generator as a reference; a clip
   animates our own replica still (the scene producer refuses anything else).
-- **Craft, not content.** A recipe, a finding or a watch line never names a person, a title or a franchise.
+- **Craft, not content.** A recipe, a finding, a watch line or an asset brief never names a person, a
+  title, a studio or a franchise.
+- **A game asset is drawn from OUR words, never from a found picture.** Its concept is generated from the
+  brief; a source never becomes a concept or geometry (`rights: publishable` depends on it).
+- **Game assets: at most `--assets` a night** (default 3 while the 3D engines are being profiled), each a
+  few cents of Flare concepts; the mesh and the finish are local and free, admitted by the worker by
+  measured memory and GPU - never raise the cap, never start ComfyUI or Blender yourself.
 
 ## /scout night
 
@@ -63,6 +69,34 @@ kind of look rejected twice is not searched again, and a use under "refused as a
 again** unless the night has a new reason it now serves), `knowledge/scout/watchlist.md`, and what the
 Library already holds (`pipeline/foundry/styles.json`: names and recipes - a look already there is not a
 find).
+
+### 1b. Game assets - brief them EARLY
+
+The meshes run for minutes on the card and in Blender, admitted by the worker while discovery goes on,
+so brief them right after `open`, before any search:
+
+1. **What exists.** `npx tsx pipeline/mesh.mts status --json` - every asset with its class, techniques,
+   verdicts (the Library's 3D models shelf shows the same, faceted by class and technique). The taste's
+   `## Game assets` block says which technique the operator keeps per class and the reasons a variant
+   was thrown (`topology`, `texture`, `rig`, `scale`).
+2. **Choose up to `assetCap` briefs** from that gap and the watchlist: a class the shelf lacks, a
+   technique the taste has not settled (T1 budget generation against T2 game-camera design for a hero),
+   a weapon kind not yet made. Ground each in the registry's game-production knowledge before writing it -
+   `../ai-registry/knowledge/game-production/asset-production/geometry/asset-class-poly-budgeting/`
+   (the class budget is an instruction the generator spends, not a ceiling),
+   `.../sourcing-economics/image-to-3d-input-gating/` (one subject, plain ground, whole in frame,
+   canonical view - the CLI's prompts already say it; your subject must not fight it), and
+   `../ai-registry/knowledge/media-generation/visual-generation/animatable-character-design/`
+   for a character (a silhouette that reads, limbs clear of the body, nothing held, no capes or strands
+   the rig cannot drive).
+3. **Write each brief** to a scratch file and launch it:
+   `{"class": "character|weapon|prop", "subject": "<craft words: what it is, materials, silhouette, palette>", "style": "<optional>", "kind": "<weapon: sword|mace|axe|staff>"}`
+   -> `npx tsx pipeline/scout.mts asset <night> --brief <file> --json`. Leave `techniques` to the class
+   default unless the taste asks a question one technique answers. One subject per brief - "a quiver"
+   is a prop of its own, never part of a character's brief.
+4. Read the answer: a variant written `failed` by the input gate carries its codes - that brief's
+   concept did not reconstruct; do not relaunch it the same night. The mesh job is queued for the
+   worker; you do not wait for it.
 
 ### 2. Discover - your judgement, the night's quality
 
@@ -164,6 +198,8 @@ rendered / failed / pending, USD, and the packet link for every closed, untriage
 
 - Do not keep, reject or commit on the Board, and do not run `pipeline/decide.mts` for a scout packet.
 - Do not pass a source picture or frame to any generator, and do not "improve" a replica by attaching one.
+- Do not make a concept or a mesh from a found picture, by any tool; do not run `pipeline/mesh.mts new`
+  or `keep`/`reject` for a night's asset - the night's asset act and the operator's packet own both.
 - Do not raise a ceiling, a cap or a budget window; do not switch a dry night to live.
 - Do not edit `night.json`, `styles.json` or a PATTERNS.md by hand.
 - Do not push. Do not stage anything outside `knowledge/` in step 0.

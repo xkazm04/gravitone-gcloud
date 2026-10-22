@@ -5,15 +5,19 @@
 //   fixtures-out/scout/<night>/night.json               the manifest
 //   fixtures-out/scout/<night>/sources/s-NN/k-NNN.jpg    a found video's gated keyframes
 //   fixtures-out/scout/<night>/scenes/c-NN/replica-N.jpg a scene's replica stills
+//   fixtures-out/scout/<night>/assets/c-NN/concept-N.png  a game asset's concepts
 //
 // Yesterday's night is CLOSED and waits on the Floor; the night before was COMMITTED
 // (a scene kept as a poster, a finding kept, a watch line rejected with its reason).
 // No style candidate: a scout-owned extract run would leave the extract fixtures'
-// own pile, and those fixtures belong to foundry.ts.
+// own pile, and those fixtures belong to foundry.ts. Yesterday's night also briefed a game asset
+// whose mesh asset is the hooded archer ./mesh.ts writes (its `night` is the same day), so the
+// fixture Board's scout packet has a `3d` row: two finished variants, poster tiles, a viewer in Z.
 
 import { rmSync } from "node:fs";
 
-import type { Night, SceneCandidate, ScoutSource } from "../../lib/foundry/scout/types";
+import { standConcept } from "../../lib/foundry/scout/concept";
+import type { Asset3dCandidate, Night, SceneCandidate, ScoutSource } from "../../lib/foundry/scout/types";
 import { DAY, HOUR, NOW, outFile, plate, writeBytes, writeJson } from "./kit";
 
 const PALETTE = ["#1d2b3a", "#e0a458", "#5c8a8a", "#f2e8cf"];
@@ -65,6 +69,22 @@ function scene(night: string, id: string, src: ScoutSource, clip: boolean): Scen
   };
 }
 
+function asset(night: string, id: string): Asset3dCandidate {
+  const concepts = [`assets/${id}/concept-1.png`, `assets/${id}/concept-2.png`];
+  writeBytes(outFile("scout", night, concepts[0] ?? ""), standConcept("character", "canonical"));
+  writeBytes(outFile("scout", night, concepts[1] ?? ""), standConcept("character", "game-camera"));
+  return {
+    id,
+    kind: "asset3d",
+    sourceIds: [],
+    status: "rendered",
+    jobId: `job:scout-asset:${night}:${id}`,
+    brief: { class: "character", subject: "hooded archer, leather, chunky silhouette", style: "chunky game-camera read, flat leather browns", budgetTris: 40_000, rig: "ue5-mannequin" },
+    concepts,
+    assetId: "hooded-archer",
+  };
+}
+
 function closedNight(): Night {
   const id = dayOf(DAY);
   const s1 = source(id, "s-01", "Fixture trailer one", 4);
@@ -75,6 +95,7 @@ function closedNight(): Night {
     ceilingUsd: 15,
     target: 20,
     clipCap: 2,
+    assetCap: 3,
     dry: false,
     state: "closed",
     stop: "sources-exhausted",
@@ -84,8 +105,9 @@ function closedNight(): Night {
       scene(id, "c-01", s1, true),
       { id: "c-02", kind: "finding", sourceIds: [s1.id], status: "rendered", template: "cinematic", step: "02-frames", claim: "Hold a wide shot until the subject settles, then cut.", quote: "the push-in only reads once the figure stops moving" },
       { id: "c-03", kind: "watch", sourceIds: [s1.id], status: "rendered", entry: "channel: Fixture Studio - https://www.youtube.com/@fixture", why: "two usable long takes in one night" },
+      asset(id, "c-04"),
     ],
-    jobs: ["job:run:scout-ingest:" + id, `job:scout-scene:${id}:c-01`],
+    jobs: ["job:run:scout-ingest:" + id, `job:scout-scene:${id}:c-01`, `job:scout-asset:${id}:c-04`],
   };
 }
 

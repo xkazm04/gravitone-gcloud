@@ -2,11 +2,12 @@
 // an operator may type any line of it. Docs: docs/scout.md.
 //
 //   npx tsx pipeline/scout.mts doctor [--dry] [--json]
-//   npx tsx pipeline/scout.mts open [--ceiling 15] [--target 20] [--clips 2] [--until HH:MM] [--live] [--json]
+//   npx tsx pipeline/scout.mts open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--until HH:MM] [--live] [--json]
 //   npx tsx pipeline/scout.mts add-source <night> --json <file|->
 //   npx tsx pipeline/scout.mts ingest <night> [--source s-NN] [--detach]
 //   npx tsx pipeline/scout.mts style <night> --sources s-01,s-03 --use "<content it serves>" [--slug x] [--detach]
 //   npx tsx pipeline/scout.mts scene <night> --source s-NN --use "<content it serves>" [--frames k-012.jpg] [--detach]
+//   npx tsx pipeline/scout.mts asset <night> --brief <file|-> [--detach]
 //   npx tsx pipeline/scout.mts finding <night> --json <file|->
 //   npx tsx pipeline/scout.mts watch <night> --entry "..." --why "..." [--sources s-01,s-02]
 //   npx tsx pipeline/scout.mts close <night> [--stop <reason>]
@@ -33,11 +34,12 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { errorMessage } from "@gt/domain/errors";
 
-import { DEFAULT_CEILING_USD, DEFAULT_CLIP_CAP, DEFAULT_TARGET } from "../lib/foundry/scout/types.ts";
+import { DEFAULT_ASSET_CAP, DEFAULT_CEILING_USD, DEFAULT_CLIP_CAP, DEFAULT_TARGET } from "../lib/foundry/scout/types.ts";
 
 type IngestDeps = import("../lib/foundry/scout/ingest.ts").IngestDeps;
 type Spawn = import("../lib/foundry/scout/ingest.ts").Spawn;
 type Resolver = import("../lib/imaging/safeUrl.ts").Resolver;
+type AssetEngines = import("../lib/producers/scoutAssetActs.ts").AssetEngines;
 
 /** What a test or a rehearsal injects; production passes none. */
 export type CliPorts = {
@@ -50,6 +52,8 @@ export type CliPorts = {
   readonly run?: (cmd: string, args: readonly string[]) => Promise<number>;
   /** doctor's vendor key probes (lib/imaging/keyProbe.ts); a test hands a fake. */
   readonly keyFetch?: KeyFetch;
+  /** `asset`'s concept vendor and input-gate decoder; a test hands fakes. */
+  readonly asset?: Partial<AssetEngines>;
 };
 export type Io = { readonly env: Readonly<Record<string, string | undefined>>; readonly out: (s: string) => void; readonly err: (s: string) => void; readonly ports?: CliPorts };
 
@@ -57,11 +61,12 @@ const ROOT = path.resolve(import.meta.dirname, "..");
 const USAGE = [
   "usage: npx tsx pipeline/scout.mts <command> [--json]",
   "  doctor [--dry]                              the box, the keys, the store",
-  "  open [--ceiling 15] [--target 20] [--clips 2] [--until HH:MM] [--live]",
+  "  open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--until HH:MM] [--live]",
   "  add-source <night> --json <file|->         [{url, kind, title, channel?, why, found, watch?}]",
   "  ingest <night> [--source s-NN] [--detach]",
   "  style <night> --sources s-01,s-03 --use \"<content>\" [--slug x] [--detach]",
   "  scene <night> --source s-NN --use \"<content>\" [--frames k-012.jpg] [--detach]",
+  "  asset <night> --brief <file|-> [--detach]  {class, subject, use, style?, kind?, techniques?}",
   "  finding <night> --json <file|->            [{sourceIds, template, step, claim, quote}]",
   '  watch <night> --entry "..." --why "..." [--sources s-01]',
   "  close <night> [--stop deadline|budget|target|failure|sources-exhausted|operator]",
@@ -72,7 +77,7 @@ const USAGE = [
 class Usage extends Error {}
 /** A refusal the CLI makes itself; the acts' `Refusal` exits the same way. */
 class Refused extends Error {}
-const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "finding", "watch", "close", "status"]);
+const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "finding", "watch", "close", "status"]);
 const BOOL = new Set(["json", "live", "detach", "dry", "help", "retry"]);
 
 /** argv -> positionals and flags. `--json` takes a value (the input file, or `-`) only under add-source and finding. */
@@ -132,14 +137,14 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
     if (n === undefined) throw new Usage(`${cmd ?? "?"} needs a night id`);
     return n;
   };
-  const input = async (): Promise<unknown> => {
-    const src = flags.get("json");
-    if (typeof src !== "string") throw new Usage(`${cmd ?? "?"} reads its input from --json <file|->`);
+  const input = async (flag = "json"): Promise<unknown> => {
+    const src = flags.get(flag);
+    if (typeof src !== "string") throw new Usage(`${cmd ?? "?"} reads its input from --${flag} <file|->`);
     const text = src === "-" ? await (io.ports?.stdin ?? readStdin)() : fs.readFileSync(path.resolve(src), "utf8");
     try {
       return JSON.parse(text) as unknown;
     } catch (e) {
-      throw new Usage(`--json ${src} is not JSON: ${errorMessage(e)}`);
+      throw new Usage(`--${flag} ${src} is not JSON: ${errorMessage(e)}`);
     }
   };
   const now = (): Date => io.ports?.now?.() ?? new Date();
@@ -180,11 +185,11 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
       if (flags.has("live") && dryOnly) throw new Refused("GRAVITONE_DRY_ONLY=1 pins this shell dry: a live night is refused here (open without --live for a dry one)");
       const until = str("until");
       const { tasteBrief } = await import("../lib/foundry/scout/taste.ts");
-      const n = await store.createNight({ dry: !flags.has("live"), ceilingUsd: num("ceiling", DEFAULT_CEILING_USD), target: Math.round(num("target", DEFAULT_TARGET)), clipCap: Math.round(num("clips", DEFAULT_CLIP_CAP)), now: now(), ...(until === undefined ? {} : { deadline: deadlineOf(until, now()) }) });
+      const n = await store.createNight({ dry: !flags.has("live"), ceilingUsd: num("ceiling", DEFAULT_CEILING_USD), target: Math.round(num("target", DEFAULT_TARGET)), clipCap: Math.round(num("clips", DEFAULT_CLIP_CAP)), assetCap: Math.round(num("assets", DEFAULT_ASSET_CAP)), now: now(), ...(until === undefined ? {} : { deadline: deadlineOf(until, now()) }) });
       fs.writeFileSync(path.join(store.nightDir(n.id), "taste.md"), await tasteBrief(n.id), "utf8");
-      if (json) doc({ ok: true, night: n.id, dry: n.dry, ceilingUsd: n.ceilingUsd, target: n.target, clipCap: n.clipCap, ...(n.deadline === undefined ? {} : { deadline: n.deadline }), taste: path.join(store.nightDir(n.id), "taste.md") });
+      if (json) doc({ ok: true, night: n.id, dry: n.dry, ceilingUsd: n.ceilingUsd, target: n.target, clipCap: n.clipCap, assetCap: n.assetCap, ...(n.deadline === undefined ? {} : { deadline: n.deadline }), taste: path.join(store.nightDir(n.id), "taste.md") });
       else io.out(n.id);
-      say(`night ${n.id} · ${n.dry ? "dry" : "LIVE"} · ceiling $${n.ceilingUsd} · target ${n.target} · clips ${n.clipCap}${n.deadline === undefined ? "" : ` · until ${n.deadline}`}`);
+      say(`night ${n.id} · ${n.dry ? "dry" : "LIVE"} · ceiling $${n.ceilingUsd} · target ${n.target} · clips ${n.clipCap} · assets ${n.assetCap ?? DEFAULT_ASSET_CAP}${n.deadline === undefined ? "" : ` · until ${n.deadline}`}`);
       return 0;
     }
 
@@ -292,6 +297,18 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
         return good ? 0 : 1;
       }
 
+      if (cmd === "asset") {
+        const id = nightArg();
+        const { assetAct } = await import("../lib/foundry/scout/asset.ts");
+        const r = await assetAct(ctx, id, await input("brief"), io.ports?.asset ?? {});
+        const c = r.candidate;
+        const failed = c.status === "failed" || (r.outcome !== undefined && !["done", "detached"].includes(r.outcome));
+        say(`${c.id} asset3d ${c.status}${r.outcome === undefined ? "" : ` · ${r.outcome}`}${c.assetId === undefined ? "" : ` · mesh asset ${c.assetId}`}${c.error === undefined ? "" : ` · ${c.error}`}`);
+        for (const v of r.asset?.variants ?? []) say(`  ${v.id} ${v.technique} ${v.status}${v.error === undefined ? "" : ` · ${v.error}`}`);
+        if (json) doc({ ok: !failed, night: id, candidate: c, ...(r.outcome === undefined ? {} : { outcome: r.outcome }), ...(r.asset === undefined ? {} : { asset: r.asset }), budget: acts.money(ctx, await store.readNight(id)) });
+        return failed ? 1 : 0;
+      }
+
       if (cmd === "style" || cmd === "scene") {
         const id = nightArg();
         // --use: what content the run can serve, one line. A run launched without one says so on the Board.
@@ -361,7 +378,7 @@ const entry = process.argv[1];
 if (entry !== undefined && pathToFileURL(path.resolve(entry)).href.toLowerCase() === import.meta.url.toLowerCase()) {
   loadEnv(ROOT);
   // The stores resolve from process.cwd(); a --json input and a folder are resolved where they were typed, before the move.
-  const args = process.argv.slice(2).map((a, i, all) => ((all[i - 1] === "--json" || all[i - 1] === "folder") && a !== "-" && fs.existsSync(a) ? path.resolve(a) : a));
+  const args = process.argv.slice(2).map((a, i, all) => ((all[i - 1] === "--json" || all[i - 1] === "--brief" || all[i - 1] === "folder") && a !== "-" && fs.existsSync(a) ? path.resolve(a) : a));
   process.chdir(ROOT);
   process.exitCode = await runCli(args, { env: process.env, out: (s) => console.log(s), err: (s) => console.error(s) });
 }

@@ -150,6 +150,7 @@ const MIME: Readonly<Record<string, string>> = {
   ".gif": "image/gif",
   ".mp4": "video/mp4",
   ".webm": "video/webm",
+  ".glb": "model/gltf-binary",
   ".wav": "audio/wav",
   ".mp3": "audio/mpeg",
   ".m4a": "audio/mp4",

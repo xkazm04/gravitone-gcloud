@@ -7,7 +7,9 @@
 // (a picture, a video, a page), the ingest producer brings each onto this box,
 // and the night turns them into CANDIDATES - an extracted still style, a scene
 // recipe with its replica keyframes and at most `clipCap` clips, a craft
-// finding, a watchlist addition. Everything one night made is ONE Board packet,
+// finding, a watchlist addition - and a GAME ASSET briefed in our own words (at most
+// `assetCap` a night): concepts drawn from the brief, then a mesh asset made on this box.
+// Everything one night made is ONE Board packet,
 // `pkt:scout:<nightId>`, and only that packet's commit admits anything.
 //
 // The manifest mirrors foundry-out/scout/<nightId>/night.json. Optional keys
@@ -20,6 +22,8 @@
 // WORDS (a style's recipe, a scene's recipe) and is never sent to a generator
 // as a reference - a clip animates OUR replica still, never a source frame
 // (visual-style-locking / style-onboarding-from-sample).
+
+import type { AssetId, MeshBrief } from "../mesh/types";
 
 /* ── Ids and limits ──────────────────────────────────────────────────────── */
 
@@ -38,6 +42,8 @@ export const CANDIDATE_ID_RE = /^c-\d{2,3}$/;
 export const DEFAULT_CEILING_USD = 15;
 export const DEFAULT_TARGET = 20;
 export const DEFAULT_CLIP_CAP = 2;
+/** Game assets a night briefs while every 3D engine is still being profiled (spark game-3d-assets, wave 3). */
+export const DEFAULT_ASSET_CAP = 3;
 /** Hailuo takes 5 or 10 (lib/imaging/video/types.ts CLIP_DURATIONS); the night renders the short one. */
 export const CLIP_SECONDS = 5;
 
@@ -66,6 +72,11 @@ export type Night = {
   readonly ceilingUsd: number;
   readonly target: number;
   readonly clipCap: number;
+  /**
+   * Game assets the night may brief (`asset3d` candidates that reached the mesh stage or may
+   * still). Absent on a night opened before 2026-10-22: DEFAULT_ASSET_CAP.
+   */
+  readonly assetCap?: number;
   /** A dry night ran on stand-ins; its packet can be triaged but commits nothing. */
   readonly dry: boolean;
   readonly state: NightState;
@@ -126,7 +137,7 @@ export type ScoutSource = {
 
 /* ── Candidates ──────────────────────────────────────────────────────────── */
 
-export const CANDIDATE_KINDS = ["style", "scene", "finding", "watch"] as const;
+export const CANDIDATE_KINDS = ["style", "scene", "finding", "watch", "asset3d"] as const;
 export type CandidateKind = (typeof CANDIDATE_KINDS)[number];
 
 export const CANDIDATE_STATUSES = ["pending", "rendered", "failed"] as const;
@@ -216,14 +227,29 @@ export type WatchCandidate = CandidateBase & {
   readonly why: string;
 };
 
-export type Candidate = StyleCandidate | SceneCandidate | FindingCandidate | WatchCandidate;
+/**
+ * A game asset briefed from the night's gap analysis (spark game-3d-assets WP4): no source - the
+ * brief is OUR words, and a found picture never becomes a concept or geometry. Its job draws the
+ * concepts and hands off to the mesh store (lib/foundry/mesh/); `rendered` means that hand-off
+ * happened, and what the mesh and finish jobs then made is read off the asset, never copied here.
+ */
+export type Asset3dCandidate = CandidateBase & {
+  readonly kind: "asset3d";
+  readonly brief: MeshBrief;
+  /** Night-relative concept images, OURS (`assets/c-05/concept-1.png`), in the request's order. */
+  readonly concepts: readonly string[];
+  /** The mesh asset the hand-off wrote (lib/foundry/mesh/store.ts), once it did. */
+  readonly assetId?: AssetId;
+};
+
+export type Candidate = StyleCandidate | SceneCandidate | FindingCandidate | WatchCandidate | Asset3dCandidate;
 
 /* ── Packet cells ────────────────────────────────────────────────────────── */
 
 /**
  * A packet cell id: `<candidateId>/<part>`. Style cells reuse the extract
  * adapter's own (`c-01/<look>/replica-1`), scene cells are `c-04/replica-1`,
- * `c-04/clip`, a finding or watch line is `c-07/text`. The Board, the apply and
+ * `c-04/clip`, a finding or watch line is `c-07/text`, a game asset's variant `c-05/t2`. The Board, the apply and
  * `NightCommit` all spell it through this one function.
  */
 export const cellId = (candidate: CandidateId, part: string): string => `${candidate}/${part}`;

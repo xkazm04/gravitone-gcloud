@@ -352,13 +352,18 @@ const processStore = (): Result<Store> => {
 /** The producer on one lane; the worker carries one per SCOUT_SCENE_LANES entry (lib/producers/registry.ts). */
 export function scoutSceneProducer(lane: ResourceLane, o: { readonly store?: () => Result<Store>; readonly engines?: SceneEngines } = {}): Producer {
   const store = o.store ?? processStore;
-  return defineScoutScene(lane, {
+  const p = defineScoutScene(lane, {
     request: (job) => {
       const s = store();
       return s.ok ? sceneRequestOf(s.value, job.id) : s;
     },
     ...sceneActs(o.engines ?? LIVE_SCENE_ENGINES),
   });
+  // A scene on the card renders its clip through ComfyUI (LTX-2.5): it names the `comfy` engine,
+  // so the worker ADMITS it by that engine's measured profile against the machine's load
+  // (@gt/domain/resource, spark game-3d-assets WP1) - beside a TRELLIS mesh job, not on top of it.
+  // On Leonardo's lane it loads nothing on this box and names none.
+  return lane === "gpu.local" ? { ...p, engine: "comfy" } : p;
 }
 
 /**

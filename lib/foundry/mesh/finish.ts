@@ -137,7 +137,8 @@ async function liveFinish(a: MeshAsset, v: MeshVariant, e: FinishEngines): Promi
   let finished: string;
   let blend: string | undefined;
   if (v.technique === "M1") {
-    const kind = weaponKind(a.brief.subject);
+    // The brief's own kind when it names one (MeshBrief.kind), else read from the subject's words.
+    const kind = weaponKind(a.brief.kind ?? "") ?? weaponKind(a.brief.subject);
     if (kind === undefined) return err("refused", `the M1 touch-up knows sword, mace, axe and staff; the subject "${a.brief.subject}" names none of them`);
     if (a.concept === undefined) return err("refused", "the M1 touch-up regrades toward the concept, and the asset has none");
     const t = await step("touchup.py", [raw, resolveInAsset(a.id, a.concept), abs(`${name}_touchup`), kind], abs(`${name}_touchup.touchup.json`));

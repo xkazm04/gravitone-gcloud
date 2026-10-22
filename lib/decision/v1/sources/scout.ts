@@ -12,9 +12,11 @@ import { planExtractCommit } from "../../../foundry/commitPlan.ts";
 import { getExtractRun, patchExtractVerdicts } from "../../../foundry/extract/store.ts";
 import type { ExtractVerdictRecord } from "../../../foundry/extract/types.ts";
 import { FINDINGS_HEADING, WATCH_HEADING, WATCHLIST_REL, appendFinding, appendWatch, knowledgeRoot, knowledgeState, markerOf, patternsRel } from "../../../foundry/scout/knowledge.ts";
+import { meshRoot, mutateAsset, readAsset, resolveInAsset, withVariant } from "../../../foundry/mesh/store.ts";
 import { mutateNight, nightDir, readNight, resolveInNight, scoutRoot } from "../../../foundry/scout/store.ts";
 import type { Night } from "../../../foundry/scout/types.ts";
 import { packetIdOf } from "../../../ledger/v1/packet.ts";
+import { modelItemId } from "../../../library/feeds/mesh.ts";
 import { sceneShelf } from "../../../library/feeds/scout.ts";
 import {
   buildConsequence,
@@ -34,7 +36,7 @@ import {
   type Preview,
 } from "../types.ts";
 import { extractAdapter, importVerdict, lookDecision, recordOf, same, type LookDecision } from "./extract.ts";
-import { build, commitOf, extractDecisions, sameOutcome, within, type ScoutV1, type StyleRead } from "./scoutPlan.ts";
+import { build, commitOf, extractDecisions, meshKey, sameOutcome, within, type AssetRead, type ScoutV1, type StyleRead } from "./scoutPlan.ts";
 
 // ONE /scout NIGHT AS A PACKET - foundry-out/scout/<night>/night.json
 // (lib/foundry/scout/store.ts) read through readNight, decided as ONE matrix
@@ -50,6 +52,8 @@ import { build, commitOf, extractDecisions, sameOutcome, within, type ScoutV1, t
 //            rejected candidate must not refuse the whole night.
 //   finding  a kept one, a line in its step's PATTERNS.md (../../../foundry/
 //   watch    scout/knowledge.ts); a kept watch line, a line in the watchlist.
+//   asset3d  each judged variant's `verdict` in its mesh asset (lib/foundry/mesh/store.ts
+//            mutateAsset): kept or rejected, what the Library's mesh feed shelves it by.
 //   all      every verdict, its reasons and its note into `night.committed`,
 //            state `committed` - LAST, so a night that says committed has had
 //            every other write. Scenes are admitted by that record alone: the
@@ -76,6 +80,7 @@ async function read(ref: AdapterRef): Promise<Result<ScoutV1>> {
   if (!got.ok) return got;
   const night = got.value;
   const styles: Record<string, StyleRead> = {};
+  const assets: Record<string, AssetRead> = {};
   const files: { key: string; abs: string }[] = [];
   const knowledge: Record<string, { rel: string; exists: boolean; holds: boolean }> = {};
   for (const c of night.candidates) {
@@ -92,6 +97,28 @@ async function read(ref: AdapterRef): Promise<Result<ScoutV1>> {
           return fromV1(e);
         }
       }
+    } else if (c.kind === "asset3d") {
+      try {
+        for (const f of c.concepts) if (f !== "") files.push({ key: f, abs: resolveInNight(id, f) });
+      } catch (e) {
+        return fromV1(e);
+      }
+      if (c.assetId === undefined) continue;
+      const a = await v1Call(() => readAsset(c.assetId ?? ""));
+      if (!a.ok) {
+        assets[c.id] = { kind: "unread", error: a.error.message };
+        continue;
+      }
+      assets[c.id] = { kind: "read", asset: a.value };
+      for (const v of a.value.variants) {
+        const glb = v.files.rigged ?? v.files.glb;
+        if (v.status !== "finished" || glb === undefined) continue;
+        try {
+          files.push({ key: meshKey(a.value.id, glb), abs: resolveInAsset(a.value.id, glb) });
+        } catch (e) {
+          return fromV1(e);
+        }
+      }
     } else {
       const r = c.kind === "finding" ? await v1Call(async () => patternsRel(c.template, c.step)) : ok(WATCHLIST_REL);
       if (!r.ok) continue;
@@ -102,7 +129,7 @@ async function read(ref: AdapterRef): Promise<Result<ScoutV1>> {
   }
   const media = await mediaRefs(files);
   if (!media.ok) return media;
-  return ok({ night, styles, media: Object.fromEntries(media.value), knowledge, at: { scout: rel(scoutRoot()), knowledge: rel(knowledgeRoot()) } });
+  return ok({ night, styles, assets, media: Object.fromEntries(media.value), knowledge, at: { scout: rel(scoutRoot()), knowledge: rel(knowledgeRoot()), mesh: rel(meshRoot()) } });
 }
 
 /* ── packet ────────────────────────────────────────────────────────────────── */
@@ -164,7 +191,9 @@ const nothingKept = (looks: ReadonlyMap<string, LookDecision>): boolean => looks
 function digestOf(v1: ScoutV1): string {
   const runs = Object.entries(v1.styles).map(([cid, s]) => [cid, s.kind === "read" ? planExtractCommit(s.v1.run, s.v1.verdicts, { styles: [...s.v1.catalogue.styles] }).token : s.error]);
   const shas = (m: Readonly<Record<string, BlobRef>>) => Object.entries(m).map(([k, b]) => [k, b.sha256]).sort();
-  return v1DigestOf({ source: "scout", night: v1.night.id, state: v1.night.state, candidates: v1.night.candidates, media: shas(v1.media), runs: runs.sort() });
+  // An asset's variants by status: a finish that lands between the preview and the commit is a different packet.
+  const assets = Object.entries(v1.assets).map(([cid, r]) => [cid, r.kind === "read" ? r.asset.variants.map((v) => `${v.id}:${v.status}`) : r.error]);
+  return v1DigestOf({ source: "scout", night: v1.night.id, state: v1.night.state, candidates: v1.night.candidates, media: shas(v1.media), runs: runs.sort(), assets: assets.sort() });
 }
 
 function consequence(v1: ScoutV1, at: DecisionsAt): Result<Preview> {
@@ -203,6 +232,16 @@ function consequence(v1: ScoutV1, at: DecisionsAt): Result<Preview> {
     if (c.kind === "scene") {
       const shelf = sceneShelf(n, c, kept);
       if (shelf !== null) parts.promotions.push({ target: shelf.id, candidate: shelf.cell, detail: `a reference-only ${shelf.format} in the Library` });
+    } else if (c.kind === "asset3d") {
+      const r = v1.assets[c.id];
+      if (r?.kind !== "read") continue;
+      for (const v of r.asset.variants) {
+        const cell = `${c.id}/${v.id}`;
+        const d = byCell.get(cell)?.verdict;
+        if (d !== "keep" && d !== "reject") continue;
+        parts.writes.push({ kind: "file", target: `${v1.at.mesh}/${r.asset.id}/asset.json`, candidate: cell, detail: `${v.id}: ${d === "keep" ? "kept" : "rejected"}` });
+        if (d === "keep") parts.promotions.push({ target: modelItemId(r.asset.id, v.id), candidate: cell, detail: "a publishable model in the Library" });
+      }
     } else if (c.kind === "finding" || c.kind === "watch") {
       const cell = `${c.id}/text`;
       const k = v1.knowledge[c.id];
@@ -252,6 +291,29 @@ async function applyStyle(claim: ApplyClaim, cid: string, runId: string): Promis
   return patched.ok ? ok(undefined) : patched;
 }
 
+/**
+ * One asset's judged variants: each cell's verdict as the variant's `verdict`. Setting what is
+ * already set writes nothing (mutateAsset keeps the object), so a second delivery is a no-op and a
+ * crash after some variants leaves a prefix the next one completes.
+ */
+async function applyAsset(assetId: string, cid: string, record: Pick<Night["committed"] & object, "kept" | "rejected">): Promise<Result<void>> {
+  const verdictOf = (variant: string): "kept" | "rejected" | undefined => {
+    const cell = `${cid}/${variant}`;
+    return record.kept.includes(cell) ? "kept" : record.rejected.includes(cell) ? "rejected" : undefined;
+  };
+  const r = await v1Call(() =>
+    mutateAsset(assetId, (a) => {
+      let next = a;
+      for (const v of a.variants) {
+        const verdict = verdictOf(v.id);
+        if (verdict !== undefined && v.verdict !== verdict) next = withVariant(next, { ...v, verdict });
+      }
+      return next;
+    }),
+  );
+  return r.ok ? ok(undefined) : err(r.error.code, `game asset ${cid} (mesh asset ${assetId}): ${r.error.message}`, { cause: r.error });
+}
+
 async function apply(claim: ApplyClaim): Promise<Result<void>> {
   const done = committedOutcome(claim);
   if (!done.ok) return done;
@@ -288,6 +350,9 @@ async function apply(claim: ApplyClaim): Promise<Result<void>> {
         if (!r.ok) return r;
       } else if (c.kind === "watch" && kept.has(`${c.id}/text`)) {
         const r = await v1Call(() => appendWatch(id, c));
+        if (!r.ok) return r;
+      } else if (c.kind === "asset3d" && c.assetId !== undefined) {
+        const r = await applyAsset(c.assetId, c.id, record);
         if (!r.ok) return r;
       }
     }

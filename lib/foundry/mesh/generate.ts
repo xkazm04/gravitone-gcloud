@@ -80,15 +80,18 @@ export async function generateVariant(assetId: string, variantId: string, io: Un
     return finish((x) => generated(x), "generated");
   }
 
-  if (asset.concept === undefined) {
+  // A variant drawn from its own design (round 4's T2, a /scout night's game-camera concept) is
+  // generated from that picture; every other variant from the asset's.
+  const conceptRel = v.concept ?? asset.concept;
+  if (conceptRel === undefined) {
     const why = "the asset has no concept image to generate from";
     return finish((x) => failedWith(x, why), "failed", { error: why });
   }
-  const concept = new Uint8Array(await readFile(resolveInAsset(assetId, asset.concept)));
+  const concept = new Uint8Array(await readFile(resolveInAsset(assetId, conceptRel)));
   const run = await runTrellis(
     e.comfyUrl,
     await e.workflow(),
-    { concept, conceptName: `gravitone_${assetId}${path.extname(asset.concept) || ".png"}`, targetFaces: faces, prefix: `gravitone/${assetId}_${variantId}`, ...(v.seed === undefined ? {} : { seed: v.seed }) },
+    { concept, conceptName: `gravitone_${assetId}_${variantId}${path.extname(conceptRel) || ".png"}`, targetFaces: faces, prefix: `gravitone/${assetId}_${variantId}`, ...(v.seed === undefined ? {} : { seed: v.seed }) },
     e.comfy,
     { ...(e.timeoutMs === undefined ? {} : { timeoutMs: e.timeoutMs }), ...(e.pollMs === undefined ? {} : { pollMs: e.pollMs }) },
   );

@@ -62,7 +62,7 @@ The worker (`npm run worker`) admits by this probe. `--no-admission` keeps the s
 
 ```bash
 GRAVITONE_STORE_PATH=<store> npx tsx pipeline/resources.mts profile blender --label "bake chair" -- \
-  C:/Users/kazda/ai/tools/blender-5.2.2-windows-arm64/blender.exe -b --python bake.py
+  ~/ai/tools/blender-5.2.2-windows-arm64/blender.exe -b --python bake.py
 GRAVITONE_STORE_PATH=<store> npx tsx pipeline/resources.mts profiles
 ```
 
@@ -85,10 +85,14 @@ of that engine this footprint. For ComfyUI, the command queues a prompt and wait
 | comfy | `mesh` | gpu.local | one TRELLIS.2 run per variant through ComfyUI's API (`pipeline/mesh/trellis-api.json`) |
 | blender | `finish` | box.blender | about six bounded headless Blender steps per variant (`pipeline/mesh/blender/*.py`) |
 
+`scout-scene` on gpu.local names `comfy` (its LTX clip renders through ComfyUI); `scout-asset`
+(cloud.leonardo, the Flare concept stills) names none - a metered cloud call is bounded by the night's
+money ceiling, not by this machine.
+
 Profile Blender on a raw mesh:
 `npx tsx pipeline/resources.mts profile blender -- <blender.exe> -b --factory-startup --python-exit-code 1 -P pipeline/mesh/blender/finish.py -- <raw.glb> <outdir> sample character`
 
 Profile ComfyUI on one TRELLIS prompt with the lynx-bench runner, which queues one prompt and waits for it:
-`npx tsx pipeline/resources.mts profile comfy -- node C:/Users/kazda/ai/lynx-bench/media/run-prompt.mjs <trellis api json> profile`
+`npx tsx pipeline/resources.mts profile comfy -- node ~/ai/lynx-bench/media/run-prompt.mjs <trellis api json> profile`
 Only when ComfyUI's queue is otherwise empty - another executor's work would be counted as this engine's.
 

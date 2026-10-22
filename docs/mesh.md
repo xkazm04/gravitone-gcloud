@@ -10,6 +10,11 @@ Code: `lib/foundry/mesh/` (the asset store, the acts, the ported PoF gates under
 `finish.ts` (the bindings), `pipeline/mesh/blender/*.py` (the ported lynx-bench scripts),
 `pipeline/mesh/trellis-api.json` (the TRELLIS workflow), `pipeline/mesh.mts` (the CLI).
 
+A /scout night briefs assets too, from words: `pipeline/scout.mts asset <night> --brief` draws the
+concepts, gates them, writes the asset (`night` set, a T2 variant made from its own `concept`) and
+queues the mesh job; the morning packet's `3d` rows judge the variants and write their `verdict` here.
+See `docs/scout.md`, "A game asset".
+
 ## Making one
 
 ```bash
@@ -83,7 +88,7 @@ variant, and its prompt is left on the queue.
 
 ### Blender
 
-`BLENDER` (default `C:\Users\kazda\ai\tools\blender-5.2.2-windows-arm64\blender.exe`), run as
+`BLENDER` (default `~\ai\tools\blender-5.2.2-windows-arm64\blender.exe`), run as
 `-b --factory-startup --python-exit-code 1 -P <script> -- <args>`, 15 minutes per step. Each script
 writes a JSON result file, which is read instead of stdout.
 

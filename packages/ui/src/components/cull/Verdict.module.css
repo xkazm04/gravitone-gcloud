@@ -57,3 +57,4 @@
 .ideaMeta{font:500 var(--fs-micro)/1.2 var(--mono);color:var(--muted)}
 
 @media (prefers-reduced-motion: reduce){.nudge{animation:none;box-shadow:0 0 0 var(--ring-halo) var(--rose)}}
+.stage{height:56vh;min-height:0;border-radius:var(--r-control);overflow:hidden;background:var(--ink-2)}
