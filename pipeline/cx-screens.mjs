@@ -39,6 +39,8 @@ export const SCREENS = {
   "studio-outputs": { url: `/projects/${PROJECT}` },
   "library": { url: "/library" },
   "library-detail": { url: "/library?kind=style&sel=style-0006" },
+  // a game asset's detail (spark game-3d-assets): the fixture's rigged hero, its 3D viewer, gates and export
+  "library-model": { url: "/library?kind=model&sel=model%3Amesh%3Ahooded-archer%3At2-a" },
   // `playground` and `foundry` retired in Phase 6 wave C with their pages: each URL is a redirect
   // now (`/playground` -> `/audio`, `/foundry` -> `/floor`), and a screen id that photographs a
   // redirect would only duplicate `audio` and `floor` below.

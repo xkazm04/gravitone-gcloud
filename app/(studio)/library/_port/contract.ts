@@ -50,6 +50,8 @@ export type ShownDetail = {
   readonly atelier?: string;
   /** The Calendar's schedule sheet for this item, when it is an export a slot can publish. */
   readonly schedule?: string;
+  /** A model's glb as the viewer loads it, and its poster; absent when the bytes do not decode. */
+  readonly model?: { readonly src: string; readonly poster?: string };
 };
 
 export type ActOutcome = { readonly detail: ShownDetail; readonly said: string };

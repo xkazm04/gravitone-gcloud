@@ -6,7 +6,7 @@ import { DEFAULT_PIN, NEAR_BLACK_LUMA, normText, type LibraryAct, type MediaFact
 import { libraryItemSchema } from "@gt/domain/libraryItem";
 import { append } from "../events.ts";
 import type { Store, Tx } from "../store.ts";
-import { extrasSchema } from "./extras.ts";
+import { extrasSchema, meshFactsSchema } from "./extras.ts";
 import { indexRowOf, type IndexContext, type IndexRow, type LibraryEntry } from "./core.ts";
 
 // WRITING THE INDEX - the projection's upsert and prune, the media-facts writer
@@ -156,6 +156,7 @@ const factsSchema = z.object({
   nearBlack: z.boolean(),
   probedAt: z.iso.datetime(),
   error: z.string().min(1).nullable(),
+  mesh: meshFactsSchema.optional(),
 });
 
 /**
@@ -176,9 +177,9 @@ export function putMediaFacts(store: Store, facts: readonly MediaFacts[]): Resul
   return store.tx((t) => {
     for (const f of rows) {
       t.run(
-        `INSERT INTO media_facts (sha, decodable, mime, w, h, duration_s, poster_sha, mean_luma, near_black, probed_at, error) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO media_facts (sha, decodable, mime, w, h, duration_s, poster_sha, mean_luma, near_black, probed_at, error, mesh) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT (sha) DO UPDATE SET decodable = excluded.decodable, mime = excluded.mime, w = excluded.w, h = excluded.h, duration_s = excluded.duration_s,
-           poster_sha = excluded.poster_sha, mean_luma = excluded.mean_luma, near_black = excluded.near_black, probed_at = excluded.probed_at, error = excluded.error`,
+           poster_sha = excluded.poster_sha, mean_luma = excluded.mean_luma, near_black = excluded.near_black, probed_at = excluded.probed_at, error = excluded.error, mesh = excluded.mesh`,
         f.sha,
         f.decodable ? 1 : 0,
         f.mime,
@@ -190,6 +191,7 @@ export function putMediaFacts(store: Store, facts: readonly MediaFacts[]): Resul
         f.nearBlack ? 1 : 0,
         f.probedAt,
         f.error,
+        f.mesh === undefined ? null : JSON.stringify(f.mesh),
       );
     }
     return rows.length;
@@ -212,14 +214,18 @@ export function factsMissing(store: Store, limit: number): Result<FactsWanted[]>
 
 // ── the operator's acts ─────────────────────────────────────────────────────
 
-const EVENT: { readonly [K in LibraryAct["act"]]: string } = { pin: "library.pinned", unpin: "library.unpinned", "use-in-project": "library.used" };
+/** The acts that are marks on the item. `export` is not one: it writes files outside the store,
+ *  and the store keeps only its event (`recordExport`). */
+export type MarkAct = Exclude<LibraryAct, { readonly act: "export" }>;
+
+const EVENT: { readonly [K in MarkAct["act"]]: string } = { pin: "library.pinned", unpin: "library.unpinned", "use-in-project": "library.used" };
 
 /**
  * Pin, unpin or use an item: the mark, its facet row and the event in one
  * transaction (the state change does not land without its event). Pinning what
  * is pinned is a no-op that writes nothing; so is unpinning what is not.
  */
-export function actOnItem(store: Store, itemId: string, act: LibraryAct, actor: Actor): Result<{ readonly changed: boolean }> {
+export function actOnItem(store: Store, itemId: string, act: MarkAct, actor: Actor): Result<{ readonly changed: boolean }> {
   return store.tx((t) => {
     const item = t.get("SELECT i.seq AS seq, i.kind AS kind FROM library_docs d JOIN library_items i ON i.seq = d.seq WHERE d.id = ?", itemId);
     if (item === undefined) throw new AppError("not-found", `library: no item ${itemId}`);
@@ -239,6 +245,18 @@ export function actOnItem(store: Store, itemId: string, act: LibraryAct, actor: 
     if (changed) refreshVids(t, Number(item["seq"]));
     if (changed) append(t, { actor, type: EVENT[act.act], subject: { kind: "library-item", id: itemId }, data: kind === "project" ? { projectId: ref } : { collection: ref } });
     return { changed };
+  });
+}
+
+
+/**
+ * An export that landed: its event, after the files were written (lib/foundry/mesh/export.ts).
+ * The files are the export; this is the ledger's record of who sent which item where.
+ */
+export function recordExport(store: Store, itemId: string, project: string, wrote: readonly string[], actor: Actor): Result<void> {
+  return store.tx((t) => {
+    if (t.get("SELECT 1 AS x FROM library_docs WHERE id = ?", itemId) === undefined) throw new AppError("not-found", `library: no item ${itemId}`);
+    append(t, { actor, type: "library.exported", subject: { kind: "library-item", id: itemId }, data: { project, wrote: [...wrote] } });
   });
 }
 

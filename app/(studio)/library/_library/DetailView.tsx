@@ -24,9 +24,12 @@ import { Tally } from "@gt/ui/components/tally/Tally.tsx";
 import { AudioMeasures } from "@gt/ui/components/audio/AudioMeasures.tsx";
 import { AudioPreview } from "@gt/ui/components/audio/AudioPreview.tsx";
 import { AudioPrompt } from "@gt/ui/components/audio/AudioPrompt.tsx";
+import { ModelViewer } from "@gt/ui/components/model/ModelViewer.tsx";
+import type { ModelExportProject } from "@gt/domain/library";
 
 import type { ShownDetail } from "../_port/contract.ts";
 import { ledgerFor } from "../../_shell/links.ts";
+import { ExportRow, ModelFacts } from "./ModelDetail.tsx";
 import s from "./library.module.css";
 
 export type DetailViewProps = {
@@ -36,6 +39,7 @@ export type DetailViewProps = {
   readonly onItem: (id: string) => void;
   readonly onPin: (on: boolean) => void;
   readonly onUse: (projectId: string) => void;
+  readonly onExport: (project: ModelExportProject) => void;
 };
 
 function Extras({ d }: { readonly d: ShownDetail }) {
@@ -102,6 +106,7 @@ function Extras({ d }: { readonly d: ShownDetail }) {
       </DetailSection>
     );
   }
+  if (k === "model" && x.model !== undefined) return <ModelFacts model={x.model} mesh={d.media?.mesh} />;
   if (k === "doc" && x.run !== undefined) {
     return (
       <DetailSection title="Article run">
@@ -128,7 +133,7 @@ function Extras({ d }: { readonly d: ShownDetail }) {
   return null;
 }
 
-export function DetailView({ d, busy, onFacet, onItem, onPin, onUse }: DetailViewProps) {
+export function DetailView({ d, busy, onFacet, onItem, onPin, onUse, onExport }: DetailViewProps) {
   const c = d.card;
   const [project, setProject] = useState(d.projects[0]?.value ?? "");
   const audio = c.kind === "audio" ? d.extras.audio : undefined;
@@ -136,6 +141,14 @@ export function DetailView({ d, busy, onFacet, onItem, onPin, onUse }: DetailVie
     <>
       {audio !== undefined ? (
         <AudioPreview src={audio.src} peaks={audio.peaks} title={c.title} durationS={audio.facts.measured?.durationS ?? audio.facts.asked.durationS} />
+      ) : d.model !== undefined ? (
+        <ModelViewer
+          key={d.model.src}
+          src={d.model.src}
+          title={c.title}
+          {...(d.model.poster === undefined ? {} : { poster: d.model.poster })}
+          {...(d.media?.mesh === undefined ? {} : { tris: d.media.mesh.tris, bones: d.media.mesh.bones })}
+        />
       ) : (
         <DetailPreview face={d.preview.face} title={c.title} {...(d.preview.video === undefined ? {} : { video: d.preview.video })} />
       )}
@@ -180,6 +193,7 @@ export function DetailView({ d, busy, onFacet, onItem, onPin, onUse }: DetailVie
               <Button label="Use in project" tone="cyan" disabled={busy || project === ""} onPress={() => onUse(project)} />
             </div>
           )}
+          {d.acts.includes("export") && <ExportRow busy={busy} onExport={onExport} />}
         </div>
       </DetailSection>
     </>

@@ -2,7 +2,7 @@
 // dataset for every surface except Articles:
 //
 //   npm run fixtures                  # wipe fixtures-out/ and regenerate all
-//   npm run fixtures -- --only sound  # one generator (sound | publish | foundry | browser | work | scout)
+//   npm run fixtures -- --only sound  # one generator (sound | publish | foundry | browser | work | scout | mesh)
 //   npm run fixtures -- --keep        # do not wipe first
 //
 // WHAT IT FEEDS (and run it with NEXT_PUBLIC_GRAVITONE_DATA=fixtures, which
@@ -12,6 +12,7 @@
 //   publish.ts  Calendar · Board › Publish                      fixtures-out/publish/, music-video-exports/
 //   foundry.ts  Foundry (forge · extract · dojo) · Board        fixtures-out/runs|extract|training|catalogue/
 //   scout.ts    the /scout nights · Floor · Board · Library      fixtures-out/scout/
+//   mesh.ts     the game assets · Library › 3D models           fixtures-out/mesh/
 //   browser.ts  Library › Styles/Assets · Board › Proofs,
 //               Adoption, Alternatives                          fixtures-out/browser.json
 //   work.ts     the Phase 2 ledger's live work: strips, articles,
@@ -35,7 +36,7 @@ import { OUT } from "./kit";
 // before they are imported, so the generators are loaded dynamically below.
 process.env.NEXT_PUBLIC_GRAVITONE_DATA = "fixtures";
 
-const GENERATORS = ["sound", "publish", "foundry", "browser", "work", "scout"] as const;
+const GENERATORS = ["sound", "publish", "foundry", "browser", "work", "scout", "mesh"] as const;
 type Name = (typeof GENERATORS)[number];
 
 const args = process.argv.slice(2);

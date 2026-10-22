@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { parseJsonAt } from "@gt/domain/door";
 import { NEAR_BLACK_LUMA, type MediaFacts } from "@gt/domain/library";
+import type { GlbRead } from "./glb.ts";
 
 // MEDIA FACTS, THE PURE HALF (Phase 5, COMMON decision 6): what ffprobe's JSON and
 // a 1x1 average say about a blob, as the `media_facts` row. No process is spawned
@@ -74,6 +75,13 @@ export function factsOf(input: {
     nearBlack: luma !== null && luma < NEAR_BLACK_LUMA,
     error: null,
   };
+}
+
+/** A glb's facts (model/gltf-binary): ffprobe knows no glTF, so its own header is the probe
+ *  (./glb.ts). It has no pixels and no length; its poster is a render the mesh store holds. */
+export function meshFactsOf(input: { readonly sha: string; readonly mime: string; readonly read: GlbRead; readonly at: string }): MediaFacts {
+  const base = { sha: input.sha, mime: input.mime, probedAt: input.at, w: null, h: null, durationS: null, posterSha: null, meanLuma: null, nearBlack: false };
+  return input.read.ok ? { ...base, decodable: true, error: null, mesh: input.read.facts } : { ...base, decodable: false, error: input.read.error };
 }
 
 /** The 1x1 gray average ffmpeg writes (`-vf scale=1:1,format=gray -f rawvideo`): one byte. */

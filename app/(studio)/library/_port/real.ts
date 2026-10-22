@@ -18,17 +18,23 @@ import "server-only";
 //                 while a bright one exists), and keeps its swatch when none decodes.
 //   the projects  "Use in project" names the projects the records module lists (not discarded),
 //                 newest first, bounded - read as their titles only, never a plan build per render.
+//   the export    a model's `export` writes files into a game project's checkout (lib/foundry/mesh/
+//                 export.ts) and only then records `library.exported`; a refusal (no checkout, a
+//                 file over the project's cap) is the exporter's sentence, and nothing is recorded.
 
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
-import type { LibraryAct, LibraryQuery, LibraryRow } from "@gt/domain/library";
+import type { AppErrorCode } from "@gt/domain/errors";
+import type { LibraryAct, LibraryQuery, LibraryRow, ModelExportProject } from "@gt/domain/library";
 import type { LibraryItemDetail } from "@gt/domain/libraryItem";
 import { libraryDetail, styleCovers } from "@gt/kernel/library/detail";
 import { queryLibrary } from "@gt/kernel/library/query";
-import { actOnItem } from "@gt/kernel/library/write";
+import { actOnItem, recordExport, type MarkAct } from "@gt/kernel/library/write";
 import type { Store } from "@gt/kernel/store";
 import type { Palette } from "@gt/ui/components/library/Face.tsx";
 
+import { exportVariant, type Exported } from "../../../../lib/foundry/mesh/export.ts";
+import { FoundryError } from "../../../../lib/foundry/runStore.ts";
 import { blobRoute } from "../../../../lib/library/media.ts";
 import { ledgerFor } from "../../_shell/links.ts";
 import type { ActOutcome, Choice, ShownDetail, ShownPage } from "./contract.ts";
@@ -40,8 +46,15 @@ export type Who = { readonly who?: string };
 export type ServerLibrary = {
   readonly query: (q: LibraryQuery) => Result<ShownPage>;
   readonly detail: (id: string, held: Readonly<Record<string, readonly string[] | undefined>>) => Result<ShownDetail>;
-  readonly act: (id: string, act: LibraryAct, held: Readonly<Record<string, readonly string[] | undefined>>, who?: Who) => Result<ActOutcome>;
+  readonly act: (id: string, act: MarkAct, held: Readonly<Record<string, readonly string[] | undefined>>, who?: Who) => Result<ActOutcome>;
+  /** The `export` act: files into a game project, then its event. Async, unlike the marks: it copies. */
+  readonly exportItem: (id: string, project: ModelExportProject, held: Readonly<Record<string, readonly string[] | undefined>>, who?: Who) => Promise<Result<ActOutcome>>;
 };
+
+/** Any act, routed: `export` to its own verb, the marks to `act`. */
+export function actOn(lib: ServerLibrary, id: string, act: LibraryAct, held: Readonly<Record<string, readonly string[] | undefined>>, who?: Who): Promise<Result<ActOutcome>> {
+  return act.act === "export" ? lib.exportItem(id, act.project, held, who) : Promise.resolve(lib.act(id, act, held, who));
+}
 
 /** The most projects "Use in project" offers (registry bounded-enumeration). */
 export const PROJECT_CHOICES = 50;
@@ -58,7 +71,7 @@ type Look = ReturnType<Media["look"]>;
 
 function lookOfRow(row: LibraryRow): Look {
   const palette = paletteOf(row.palette);
-  return { ...(row.peaks === undefined ? {} : { peaks: row.peaks }), ...(palette === undefined ? {} : { palette }) };
+  return { ...(row.peaks === undefined ? {} : { peaks: row.peaks }), ...(palette === undefined ? {} : { palette }), ...(row.poster === undefined ? {} : { poster: row.poster }) };
 }
 
 function lookOfDetail(d: LibraryItemDetail): Look {
@@ -109,7 +122,11 @@ export type RealDeps = {
   readonly store: () => Result<Store>;
   /** The atelier of a style (the route beside this one). */
   readonly atelierOf: (styleId: string) => string;
+  /** Writes a variant into a project (tests pass one over temp roots). */
+  readonly exporter?: (asset: string, variant: string, project: ModelExportProject) => Promise<Exported>;
 };
+
+const FOUNDRY_CODE: Readonly<Record<number, AppErrorCode>> = { 400: "invalid", 404: "not-found", 409: "conflict", 413: "invalid", 503: "unavailable" };
 
 export function makeRealLibrary(deps: RealDeps): ServerLibrary {
   const shown = (store: Store, d: LibraryItemDetail, held: Readonly<Record<string, readonly string[] | undefined>>): Result<ShownDetail> => {
@@ -163,6 +180,26 @@ export function makeRealLibrary(deps: RealDeps): ServerLibrary {
       if (!after.ok) return after;
       const d = shown(store, after.value, held);
       return d.ok ? ok({ detail: d.value, said }) : d;
+    },
+    exportItem: async (id, project, held, who) => {
+      const s = deps.store();
+      if (!s.ok) return s;
+      const store = s.value;
+      const before = libraryDetail(store, id);
+      if (!before.ok) return before;
+      const model = before.value.extras.model;
+      if (before.value.item.kind !== "model" || model === undefined) return err("invalid", `${before.value.row.title} is not a model: only a model is exported to a game project`);
+      let done: Exported;
+      try {
+        done = await (deps.exporter ?? exportVariant)(model.asset, model.variant, project);
+      } catch (e) {
+        if (e instanceof FoundryError) return err(FOUNDRY_CODE[e.status] ?? "internal", e.message);
+        throw e;
+      }
+      const rec = recordExport(store, id, project, done.wrote, actorOf(who));
+      if (!rec.ok) return rec;
+      const d = shown(store, before.value, held);
+      return d.ok ? ok({ detail: d.value, said: `${before.value.row.title} → ${project} · ${done.dir}` }) : d;
     },
   };
 }

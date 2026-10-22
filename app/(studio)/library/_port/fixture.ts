@@ -11,7 +11,8 @@ import "server-only";
 //   · a selected value at 0 is still sent; values in FIXED_ORDER keep it; TOP-N with `more`;
 //   · items that cannot show their media sort last (library.js `bad`), then by the sort;
 //   · `limit` is required and capped (LIBRARY_PAGE_MAX), `offset` is an index into the order;
-//   · an act is an event: pin, unpin and use-in-project write the universe and its act log.
+//   · an act is an event: pin, unpin and use-in-project write the universe and its act log; an
+//     export is logged and writes NO file - the fixture has no game project to write into.
 // State lives for the server process; `resetLibraryFixture` starts it over.
 
 import { parseAt } from "@gt/domain/door";
@@ -40,7 +41,7 @@ import { libraryItemSchema, type LibraryItemDetail } from "@gt/domain/libraryIte
 import { buildCorpus, labelOf, type FixtureRecord } from "./fixtureCorpus.ts";
 import { PROJECTS } from "./fixtureData.ts";
 
-type ActLog = { readonly at: string; readonly type: "library.pinned" | "library.unpinned" | "library.used"; readonly id: string; readonly projectId?: string };
+type ActLog = { readonly at: string; readonly type: "library.pinned" | "library.unpinned" | "library.used" | "library.exported"; readonly id: string; readonly projectId?: string };
 type Universe = { readonly items: FixtureRecord[]; readonly byId: Map<string, FixtureRecord>; readonly order: Map<string, FixtureRecord[]>; readonly acts: ActLog[] };
 
 // On globalThis: Next may load this module once per server bundle (the page, the actions) and
@@ -111,7 +112,7 @@ export function fixtureQuery(q: LibraryQuery): Result<LibraryPage> {
   const active = Object.entries(q.facets ?? {}).flatMap(([g, vs]) => (vs !== undefined && vs.length > 0 ? [[g, new Set(vs)] as const] : []));
   const rail = railGroups(kind ?? "all");
   const counts = new Map<string, Map<string, number>>(rail.map((g) => [g.key, new Map()]));
-  const kindCounts: Record<LibraryKindName | "all", number> = { all: 0, image: 0, plate: 0, style: 0, motion: 0, audio: 0, video: 0, doc: 0 };
+  const kindCounts: Record<LibraryKindName | "all", number> = { all: 0, image: 0, plate: 0, style: 0, motion: 0, audio: 0, video: 0, doc: 0, model: 0 };
   const list: FixtureRecord[] = [];
   for (const x of ordered(u, q.sort ?? "newest")) {
     if (!matches(x, parsed)) continue;
@@ -175,7 +176,7 @@ export function fixtureDetail(id: string): Result<LibraryItemDetail> {
     return vs.length === 0 ? [] : [{ key, label: groupLabel(key), values: vs.map((value) => ({ value, label: labelOf(key, value) })) }];
   });
   const pinned = (x.f["pin"] ?? []).length > 0;
-  return ok({ item: item.value, row: x.row, vocabulary, lineage: x.lineage, extras: x.extras, media: x.media, acts: [pinned ? "unpin" : "pin", "use-in-project"] });
+  return ok({ item: item.value, row: x.row, vocabulary, lineage: x.lineage, extras: x.extras, media: x.media, acts: [pinned ? "unpin" : "pin", "use-in-project", ...(x.row.kind === "model" ? (["export"] as const) : [])] });
 }
 
 /** Presentation extras the index does not carry on a row (a take's peaks, a face's palette, a player's address). */
@@ -204,6 +205,11 @@ export function fixtureAct(id: string, act: LibraryAct, now: () => string): Resu
     x.f["pin"] = [];
     u.acts.push({ at: now(), type: "library.unpinned", id });
     return ok({ said: `Unpinned · ${x.row.title}` });
+  }
+  if (act.act === "export") {
+    if (x.row.kind !== "model") return err("invalid", `${x.row.title} is not a model: only a model is exported to a game project`);
+    u.acts.push({ at: now(), type: "library.exported", id, projectId: act.project });
+    return ok({ said: `${x.row.title} → ${act.project} · fixture, no file written` });
   }
   const p = PROJECTS.find((pr) => pr.id === act.projectId);
   if (p === undefined) return err("not-found", `no project ${act.projectId}`);

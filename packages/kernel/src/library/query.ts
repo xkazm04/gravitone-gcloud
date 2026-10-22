@@ -59,7 +59,7 @@ function chipsFor(r: Reader, rows: readonly Row[]): Map<number, LibraryChip[]> {
   return out;
 }
 
-const faceSchema = z.object({ peaks: z.array(z.number()).optional(), palette: z.array(z.string()).optional() });
+const faceSchema = z.object({ peaks: z.array(z.number()).optional(), palette: z.array(z.string()).optional(), poster: z.string().optional() });
 
 export const ROW_SELECT = `SELECT i.seq, d.id, i.kind, d.title, d.meta, i.state, i.origin, i.source, i.at, i.attention, d.media_sha, d.media_mime, d.face,
   mf.poster_sha AS poster_sha, mf.near_black AS near_black FROM library_items i JOIN library_docs d ON d.seq = i.seq LEFT JOIN media_facts mf ON mf.sha = d.media_sha`;
@@ -90,6 +90,7 @@ export function rowOf(row: Row, chips: readonly LibraryChip[]): LibraryRow {
     chips,
     ...(face?.value.peaks === undefined ? {} : { peaks: face.value.peaks }),
     ...(face?.value.palette === undefined ? {} : { palette: face.value.palette }),
+    ...(face?.value.poster === undefined ? {} : { poster: face.value.poster }),
   };
 }
 

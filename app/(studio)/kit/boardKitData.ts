@@ -12,6 +12,9 @@ import { SOURCES, type PacketSource } from "@gt/domain/source";
 import type { BoardVerdict } from "@gt/ui/board/boardGate";
 import type { BoardPacket } from "@gt/ui/board/port";
 
+import { fixtureUrl } from "../library/_port/fixtureData.ts";
+import { fixtureModels } from "../library/_port/fixtureModels.ts";
+
 const must = <T,>(r: { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: Error }): T => {
   if (!r.ok) throw r.error;
   return r.value;
@@ -172,8 +175,17 @@ export type BoardKitData = {
   readonly cut: BoardPacket;
   readonly rail: readonly PacketSummary[];
   readonly consequence: Consequence;
+  /** A model cell (spark game-3d-assets): its glb as a data: URL made in code, its poster, its counts. */
+  readonly model: { readonly glb: string; readonly poster?: string; readonly label: string; readonly meta: string; readonly tris: number; readonly bones: number };
 };
 
+/** The library fixture's rigged hero, as a Board cell would carry it. */
+function modelCell(): BoardKitData["model"] {
+  const m = fixtureModels()[0];
+  if (m === undefined) throw new Error("kit: the fixture has no model");
+  return { glb: fixtureUrl(m.media.sha256) ?? "", ...(m.poster === undefined ? {} : { poster: m.poster }), label: m.title, meta: m.meta, tris: m.facts.mesh?.tris ?? 0, bones: m.facts.mesh?.bones ?? 0 };
+}
+
 export function boardKitData(): BoardKitData {
-  return { cull: CULL, cullVerdicts: CULL_VERDICTS, audio: AUDIO, pair: PAIR, review: REVIEW, cut: CUT, rail: RAIL, consequence: CONSEQUENCE };
+  return { cull: CULL, cullVerdicts: CULL_VERDICTS, audio: AUDIO, pair: PAIR, review: REVIEW, cut: CUT, rail: RAIL, consequence: CONSEQUENCE, model: modelCell() };
 }
