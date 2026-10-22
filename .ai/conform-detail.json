@@ -9260,6 +9260,42 @@
           "evidence": "app/_landing/cosmos/engine/stage.ts:35 EN-SPELLING includes accessible descriptions: use “stylized” under the declared US variant."
         }
       ]
+    },
+    "076622f1-4906-4cdc-9a76-307df47fdd14/multi-speaker-speech-production": {
+      "context": "landing-cosmos-scenes",
+      "subject": "multi-speaker-speech-production",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T01:33:24.844Z",
+      "worker": "cbb072e6-1c42-42ef-af52-ead5c6c1e86d",
+      "techniques": [
+        {
+          "technique": "chunk-boundary-continuity",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/planes.ts:67 Bands group visual depth planes; no speech script, character cap, or audio joins were found."
+        },
+        {
+          "technique": "inline-direction-dialect",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/banner.ts:26 Names become DOM display text; no script direction passed to a speech engine was found."
+        },
+        {
+          "technique": "line-addressed-re-render",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/scene.ts:80 Render jobs contain image dimensions and paint operations; no spoken-line revision workflow was found."
+        },
+        {
+          "technique": "voice-asset-model-generation-binding",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/medal.ts:49 Stored specifications select seeded visual motifs; no cloned or designed voice assets were found."
+        },
+        {
+          "technique": "world-lexicon-as-pronunciation-dictionary",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/worlds.ts:44 Worlds describe painted scenery; no spoken terms or pronunciation dictionary workflow was found."
+        }
+      ]
     }
   }
 }

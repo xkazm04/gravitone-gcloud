@@ -7087,7 +7087,11 @@
           "revision": 3,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/scene.ts:85 Searches found no speech, speaker, pronunciation, or lexicon matches in the cosmos context; its inspected rendering path produces canvases, so offline multi-speaker speech production does not apply.",
+          "evaluatedAt": "2026-10-22",
+          "evaluatedAgainst": "sha256-b2:7ea2b5e416115e6b",
+          "evaluatedRevision": 3
         },
         {
           "subject": "frame-direction",
