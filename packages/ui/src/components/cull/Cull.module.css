@@ -55,6 +55,10 @@
 .k{color:var(--emerald)}
 .x{color:var(--rose)}
 .u{color:var(--muted)}
+/* the opened run (RunModal): media as tall as the screen allows, whole */
+.large .media{aspect-ratio:auto;height:auto;max-height:62vh;object-fit:contain;background:var(--ink-2)}
+.large video.media{aspect-ratio:16/9}
+.large .textBody{min-height:40vh}
 /* prototype view switcher (throwaway, TODO(prototype, 2026-10-22)) */
 .proto{display:flex;gap:var(--sp-2);padding:var(--sp-2) var(--sp-6);border-bottom:1px solid var(--hair-2)}
 .protoTab{display:flex;gap:var(--sp-2);align-items:baseline;padding:var(--sp-2) var(--sp-4);border-radius:var(--r-chip);font-size:var(--fs-micro);color:var(--muted)}

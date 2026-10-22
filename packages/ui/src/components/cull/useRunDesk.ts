@@ -29,12 +29,15 @@ export type RunDeskInput = {
   readonly keys: boolean;
   /** Runs per grid line now (the variant measures its own grid). */
   readonly columns: () => number;
+  /** The runs in the order they are DRAWN (indices into the packet's runs): ← → ↑ ↓ walk this. */
+  readonly arrange?: (runs: readonly Run[]) => readonly number[];
 };
 
-export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce, keys, columns }: RunDeskInput) {
+export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce, keys, columns, arrange }: RunDeskInput) {
   const { view, present } = packet;
   const cells = cullCells(present.rows, view.items);
   const runs: Run[] = runsOf(cells, present.rows);
+  const order = arrange?.(runs) ?? runs.map((_, i) => i);
   const [cur, setCur] = useState(() => Math.max(0, undecidedOf(cells, verdicts)[0] ?? 0));
   const [open, setOpen] = useState(false);
   const [nudged, setNudged] = useState<ReadonlySet<number>>(new Set());
@@ -53,8 +56,14 @@ export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce,
   }, [cur, runIx, open]);
 
   const wordsOf = (id: string) => present.items[id] ?? { label: id };
+  /** Where a run is drawn, and the run drawn at a position (clamped). */
+  const posOf = (run: number): number => Math.max(0, order.indexOf(run));
+  const toPos = (p: number) => {
+    const r = runs[order[Math.max(0, Math.min(order.length - 1, p))] ?? 0];
+    if (r !== undefined) setCur(r.members[0] ?? 0);
+  };
   const toRun = (i: number) => {
-    const r = runs[Math.max(0, Math.min(runs.length - 1, i))];
+    const r = runs[i];
     if (r !== undefined) setCur(r.members[0] ?? 0);
   };
   const mark = (idx: readonly number[], v: BoardVerdict | null, what?: string) => {
@@ -74,7 +83,7 @@ export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce,
     const pos = run.members.indexOf(cur);
     const after = run.members[pos + 1];
     if (after !== undefined) setCur(after);
-    else toRun(runIx + 1);
+    else toPos(posOf(runIx) + 1);
   };
   const commit = () => {
     const pending = undecidedOf(cells, verdicts);
@@ -95,7 +104,7 @@ export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce,
       nextInRun();
     } else {
       whole(v);
-      toRun(runIx + 1);
+      toPos(posOf(runIx) + 1);
     }
   };
 
@@ -115,13 +124,13 @@ export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce,
           if (act.advance) nextInRun();
         } else {
           whole(act.verdict);
-          if (act.advance) toRun(runIx + 1);
+          if (act.advance) toPos(posOf(runIx) + 1);
         }
       },
-      prev: () => (open ? setCur(clamp(cells, cur - 1)) : toRun(runIx - 1)),
-      next: () => (open ? setCur(clamp(cells, cur + 1)) : toRun(runIx + 1)),
-      "row-up": () => toRun(open ? runIx - 1 : runIx - columns()),
-      "row-down": () => toRun(open ? runIx + 1 : runIx + columns()),
+      prev: () => (open ? setCur(clamp(cells, cur - 1)) : toPos(posOf(runIx) - 1)),
+      next: () => (open ? setCur(clamp(cells, cur + 1)) : toPos(posOf(runIx) + 1)),
+      "row-up": () => toPos(posOf(runIx) - (open ? 1 : columns())),
+      "row-down": () => toPos(posOf(runIx) + (open ? 1 : columns())),
       "keep-row": () => whole({ verdict: "keep", reasons: [] }),
       "reject-row": () => whole({ verdict: "reject", reasons: [] }),
       zoom: () => setOpen((o) => !o),

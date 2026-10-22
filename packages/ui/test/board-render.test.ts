@@ -14,7 +14,7 @@ import type { Result } from "@gt/domain/errors";
 import type { BoardPacket } from "../src/board/port.ts";
 import { ConsequencePanel } from "../src/components/consequence/ConsequencePanel.tsx";
 import { SeriesBadge } from "../src/components/cull/SeriesBadge.tsx";
-import { MatrixCull } from "../src/components/cull/MatrixCull.tsx";
+import { MatrixCull, MatrixCullRows } from "../src/components/cull/MatrixCull.tsx";
 import { railGroups } from "../src/components/desk/PacketRail.tsx";
 import { BlindPair } from "../src/components/pair/BlindPair.tsx";
 
@@ -53,7 +53,7 @@ describe("the matrix cull", () => {
   const p = packet({ items: [img("a", "r"), img("b", "r")], title: "Strips 7" }, { items: { a: { label: "poster a" }, b: { label: "poster b" } }, rows: [{ id: "r", label: "concept a" }] });
 
   test("a decided tile says its verdict and reasons aloud; the commit button names what is open", () => {
-    const html = renderToStaticMarkup(h(MatrixCull, { packet: p, verdicts: { a: { verdict: "reject", reasons: ["concept", "motion"] } }, decide: noop, undo: noop, onCommit: noop, keys: false }));
+    const html = renderToStaticMarkup(h(MatrixCullRows, { packet: p, verdicts: { a: { verdict: "reject", reasons: ["concept", "motion"] } }, decide: noop, undo: noop, onCommit: noop, keys: false }));
     expect(html).toContain('aria-label="poster a, reject: concept, motion"');
     expect(html).toContain('aria-label="poster b"');
     expect(html).toContain('aria-label="commit packet, 1 undecided"');
@@ -66,6 +66,13 @@ describe("the matrix cull", () => {
     expect(keysOf(renderToStaticMarkup(h(MatrixCull, { packet: forge, verdicts: {}, decide: noop, undo: noop, onCommit: noop, keys: false })))).toEqual(["1", "2", "3", "4"]);
     const suno = packet({ source: "suno", lane: "audio", items: [img("a", "r")] }, { items: {}, rows: [] });
     expect(renderToStaticMarkup(h(MatrixCull, { packet: suno, verdicts: {}, decide: noop, undo: noop, onCommit: noop, keys: false }))).not.toContain(" reason</span>");
+  });
+
+  test("the mosaic files the run under its category and says how much of it is decided", () => {
+    const html = renderToStaticMarkup(h(MatrixCull, { packet: p, verdicts: { a: { verdict: "reject", reasons: ["concept"] } }, decide: noop, undo: noop, onCommit: noop, keys: false }));
+    expect(html).toContain('aria-label="art styles, 1 run"');
+    expect(html).toContain('aria-label="concept a, 2 variants, 1 decided"');
+    expect(html).toContain('aria-label="commit packet, 1 undecided"');
   });
 
   test("with nothing open the commit button waits for nothing", () => {

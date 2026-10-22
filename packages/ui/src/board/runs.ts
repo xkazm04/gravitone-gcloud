@@ -25,14 +25,32 @@ export function runsOf(cells: readonly Cell[], rows: readonly RowWords[]): Run[]
   });
 }
 
-/** Runs filed by group, groups in first-seen order. */
-export function groupsOf(runs: readonly Run[]): { readonly group: string; readonly runs: readonly { readonly run: Run; readonly at: number }[] }[] {
-  const out: { group: string; runs: { run: Run; at: number }[] }[] = [];
-  runs.forEach((run, at) => {
-    const g = out.find((x) => x.group === run.group) ?? (out[out.push({ group: run.group, runs: [] }) - 1] as { group: string; runs: { run: Run; at: number }[] });
-    g.runs.push({ run, at });
-  });
-  return out;
+/**
+ * THE CATEGORIES a run is filed under on the mosaic, in the order their rows are drawn. A source may
+ * name its run's category (`RowWords.group`, e.g. a scout night's scene is `videos`); a run that does
+ * not is filed by what its first variant IS. `3d` and `music` are here before anything produces them
+ * so a source that does finds its row waiting (operator, 2026-10-22: art styles and videos now,
+ * music and 3D later).
+ */
+export const CATEGORIES = ["art styles", "videos", "music", "3d", "notes", "sources", "other"] as const;
+export type Category = (typeof CATEGORIES)[number];
+
+const isCategory = (g: string): g is Category => (CATEGORIES as readonly string[]).includes(g);
+
+/** A run's category: its source's word for it, else its first variant's media. */
+export function categoryOf(run: Run, firstMime: string): Category {
+  if (isCategory(run.group)) return run.group;
+  if (firstMime.startsWith("image/")) return "art styles";
+  if (firstMime.startsWith("video/")) return "videos";
+  if (firstMime.startsWith("audio/")) return "music";
+  if (firstMime.startsWith("model/")) return "3d";
+  if (firstMime.startsWith("text/")) return "notes";
+  return "other";
+}
+
+/** Runs filed by category, in CATEGORIES order; an empty category draws no row. */
+export function categoriesOf(runs: readonly Run[], firstMime: (run: Run) => string): { readonly category: Category; readonly runs: readonly { readonly run: Run; readonly at: number }[] }[] {
+  return CATEGORIES.map((category) => ({ category, runs: runs.flatMap((run, at) => (categoryOf(run, firstMime(run)) === category ? [{ run, at }] : [])) })).filter((c) => c.runs.length > 0);
 }
 
 /** The run a cell sits in (index into `runs`), or 0. */

@@ -1040,7 +1040,7 @@ export const MUTANTS: UnitMutant[] = [
   {
     id: "board-commit-button-hides-open",
     test: "packages/ui/test/board-render.test.ts",
-    file: "packages/ui/src/components/cull/MatrixCull.tsx",
+    file: "packages/ui/src/components/cull/CullFoot.tsx",
     find: "{...(t.undecided > 0 ? { waiting: `${t.undecided} undecided` } : {})}",
     replace: "{...({})}",
     why: "The commit button looks ready while candidates are still open, so the refusal shake is the first the operator hears of them.",

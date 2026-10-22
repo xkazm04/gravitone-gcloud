@@ -21,25 +21,15 @@ import { DeskFrame, OracleStrip } from "../desk/Desk.tsx";
 import { Plate } from "../desk/Plate.tsx";
 import { CullFoot } from "./CullFoot.tsx";
 import { CullTile, Zoom, kindOf } from "./CullTile.tsx";
-import { MatrixCullBand } from "./MatrixCullBand.tsx";
-import { MatrixCullSheet } from "./MatrixCullSheet.tsx";
+import { MatrixCullMosaic } from "./MatrixCullMosaic.tsx";
+import type { MatrixCullProps } from "./props.ts";
 import { SeriesBadge } from "./SeriesBadge.tsx";
 import s from "./Cull.module.css";
 
-export type MatrixCullProps = {
-  readonly packet: BoardPacket;
-  readonly verdicts: Readonly<Record<string, BoardVerdict>>;
-  readonly decide: (ids: readonly string[], v: BoardVerdict | null, label: string) => void;
-  readonly undo: () => void;
-  readonly onCommit: () => void;
-  readonly busy?: boolean;
-  /** Say it aloud (the shell's polite region). */
-  readonly announce?: (message: string) => void;
-  /** Off on a /kit specimen, whose keys are not the page's. */
-  readonly keys?: boolean;
-};
+export type { MatrixCullProps } from "./props.ts";
 
-function MatrixCullBaseline({ packet, verdicts, decide, undo, onCommit, busy = false, announce = () => undefined, keys = true }: MatrixCullProps) {
+/** The rows view: a row per run, every variant a tile in it. */
+export function MatrixCullRows({ packet, verdicts, decide, undo, onCommit, busy = false, announce = () => undefined, keys = true }: MatrixCullProps) {
   const { view, present } = packet;
   const cells = cullCells(present.rows, view.items);
   const byId = new Map<string, (typeof view.items)[number]>(view.items.map((it) => [it.id, it]));
@@ -223,17 +213,16 @@ function MatrixCullBaseline({ packet, verdicts, decide, undo, onCommit, busy = f
   );
 }
 
-// TODO(prototype, 2026-10-22): consolidate the MatrixCull view switcher - the run-grid prototype
-// (scout grid view). Throwaway: the winner becomes the sole render and this strip goes.
+// TODO(prototype, 2026-10-22): consolidate the MatrixCull view switcher - the mosaic is the operator's
+// default (2026-10-22); "rows" stays selectable until they confirm it can go. Then this strip goes.
 const VIEWS = [
-  { id: "rows", label: "rows", sub: "today: a row per run" },
-  { id: "sheet", label: "contact sheet", sub: "run grid, loupe takes the desk" },
-  { id: "band", label: "mosaic + band", sub: "dense grid, run unfolds in place" },
+  { id: "mosaic", label: "mosaic", sub: "runs by category, a run opens full screen" },
+  { id: "rows", label: "rows", sub: "previous: a row per run" },
 ] as const;
 type View = (typeof VIEWS)[number]["id"];
 
 export function MatrixCull(props: MatrixCullProps) {
-  const [v, setV] = useState<View>("rows");
+  const [v, setV] = useState<View>("mosaic");
   return (
     <>
       {props.keys !== false && (
@@ -245,7 +234,7 @@ export function MatrixCull(props: MatrixCullProps) {
           ))}
         </div>
       )}
-      {v === "sheet" ? <MatrixCullSheet {...props} /> : v === "band" ? <MatrixCullBand {...props} /> : <MatrixCullBaseline {...props} />}
+      {v === "mosaic" ? <MatrixCullMosaic {...props} /> : <MatrixCullRows {...props} />}
     </>
   );
 }
