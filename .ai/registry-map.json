@@ -6176,7 +6176,11 @@
           "revision": 2,
           "changedAt": "2026-09-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/kernel/py/job.py:122 Context searches found no credential, revoke or certificate matches, while repository searches located token issuance outside this Python context, whose leases coordinate worker slots rather than issued credentials.",
+          "evaluatedAt": "2026-10-22",
+          "evaluatedAgainst": "sha256-b2:9d26f7a6264acd94",
+          "evaluatedRevision": 2
         },
         {
           "subject": "concurrency-guards",
