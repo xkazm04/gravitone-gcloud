@@ -1,0 +1,75 @@
+{
+ "schema": "conform-run/1",
+ "worker": "068fe99a-2775-4e57-8d3d-de510290ae06",
+ "subject": "native-document-format",
+ "evaluatedAt": "2026-10-22T01:57:08.497984+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "part-editor-writing-research",
+   "subject": "native-document-format",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/_part/real.ts:72 Searches for nativeDocument and relink found no matches in the context or repository, and tracing the editors' writes established transactional database records rather than a published native document file contract.",
+   "techniques": [
+    {
+     "technique": "format-generations-are-declared",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:161 These versions restore script state through an operation; they are history snapshots, which the standard explicitly distinguishes from document format generations."
+    },
+    {
+     "technique": "format-is-the-engines-input",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/PartEditor.tsx:87 The editor submits operations to its server port; this save path does not produce a document artifact for an external engine."
+    },
+    {
+     "technique": "ignorable-extensions-must-be-declared",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/_part/realResearch.ts:68 Source metadata belongs to the application's database record, rather than an extension vocabulary embedded in somebody else's document format."
+    },
+    {
+     "technique": "one-writer-per-fact",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Words.tsx:83 Current text is changed through a part operation; this context does not serialize parallel editor and consumer regions into a native document."
+    },
+    {
+     "technique": "reference-or-embed",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/_part/realResearch.ts:64 Notebook content is stored in a managed step record; no portable document's asset embedding or filesystem reference contract is involved."
+    },
+    {
+     "technique": "serialization-is-locale-free",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/parts/driver.ts:109 The traced persistence destination is a database row, outside this subject's native document file scope."
+    }
+   ],
+   "absenceTerms": [
+    "nativeDocument",
+    "relink"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-22T01:57:08.497984+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "native-document-format"
+   ],
+   "techniques": [
+    "format-generations-are-declared",
+    "format-is-the-engines-input",
+    "ignorable-extensions-must-be-declared",
+    "one-writer-per-fact",
+    "reference-or-embed",
+    "serialization-is-locale-free"
+   ],
+   "deviations": 0,
+   "context": "part-editor-writing-research",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
