@@ -49,6 +49,10 @@ export const PRODUCERS = [
   // An engine's measured footprint (spark game-3d-assets): a command run under the machine probe,
   // its peaks over the baseline recorded as the engine's profile that admission charges.
   "profile",
+  // A game asset made on this box (spark game-3d-assets): TRELLIS.2 through ComfyUI makes the mesh,
+  // Blender finishes it to its class's budget, renders and (characters) rigs it (lib/foundry/mesh/).
+  "mesh",
+  "finish",
 ] as const;
 export const producerNameSchema = z.enum(PRODUCERS);
 export type ProducerName = z.output<typeof producerNameSchema>;
