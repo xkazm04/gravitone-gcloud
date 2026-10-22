@@ -120,4 +120,7 @@ What the figure means:
 
 Measured by hand on 2026-10-22 (a background sampler, before this path existed): TRELLIS from cold
 took +10.6 GB of GPU memory (peak 12.7 GB) and +11.6 GB of commit charge, with CPU at most 55%.
+Through this path on 2026-10-23, the rogue concept at 40k faces on a warm ComfyUI: +7.15 GB of commit
+charge, +5.07 GB of GPU memory and 10 cores, over 1373 samples (about 11.5 min). The profile started
+only after waiting about 20 min for commit charge to drop under the low mark.
 

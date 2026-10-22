@@ -125,8 +125,10 @@ async function quietBox(engine: string, wait: boolean): Promise<string | undefin
     const reading = await probe.read();
     const why = profileReady(engine, reading.load, machineProfile(reading.totals).profile);
     if (why === undefined || !wait) return why;
-    if (why !== said) console.error(`resources: waiting to profile ${engine}: ${why}`);
-    said = why;
+    // Said once per kind of reason, not per reading: the figures move every look.
+    const kind = why.replace(/[\d.]+/g, "#");
+    if (kind !== said) console.error(`resources: waiting to profile ${engine}: ${why}`);
+    said = kind;
     await nodePorts.sleep(WAIT_MS);
   }
 }
