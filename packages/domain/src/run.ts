@@ -46,6 +46,9 @@ export const PRODUCERS = [
   // and a found scene read into words, replicated and animated (lib/foundry/scout/).
   "scout-ingest",
   "scout-scene",
+  // An engine's measured footprint (spark game-3d-assets): a command run under the machine probe,
+  // its peaks over the baseline recorded as the engine's profile that admission charges.
+  "profile",
 ] as const;
 export const producerNameSchema = z.enum(PRODUCERS);
 export type ProducerName = z.output<typeof producerNameSchema>;

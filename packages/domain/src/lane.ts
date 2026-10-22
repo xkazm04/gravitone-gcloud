@@ -60,6 +60,7 @@ export function laneOfSlot(resource: string): ResourceLane | undefined {
 export const LANE_PAYS: { readonly [L in ResourceLane]: boolean } = {
   "gpu.local": false,
   "box.render": false,
+  "box.blender": false,
   "box.chrome": true,
   "seat.text": true,
   "cloud.google": true,
