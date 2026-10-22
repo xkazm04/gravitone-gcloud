@@ -1,0 +1,41 @@
+{
+ "schema": "conform-run/1",
+ "worker": "fb9cfbfa-6020-42ec-b164-018ccd674497",
+ "subject": "release-pipeline",
+ "evaluatedAt": "2026-10-22T03:39:03.567653+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "part-port-real-and-contract",
+   "subject": "release-pipeline",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/[id]/_part/scriptView.ts:191 The dispatch sends every remaining face to documentData, so extending ScriptFace can silently produce a document view instead of forcing this reader to handle the added member.",
+   "techniques": [
+    {
+     "technique": "release-level-by-reader-reach",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/scriptView.ts:191 ScriptFace is declared in packages/domain/src/partView.ts:58; this manually maintained reader ends in an acting default rather than explicitly matching document and sending the residue to a never-typed check."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-22T03:39:03.567653+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "release-pipeline"
+   ],
+   "techniques": [
+    "release-level-by-reader-reach"
+   ],
+   "deviations": 1,
+   "context": "part-port-real-and-contract",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
