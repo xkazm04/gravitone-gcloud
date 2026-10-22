@@ -38,10 +38,6 @@ export type CullTileProps = {
   /** Flashed rose: the commit refused while this one is open. */
   readonly nudged: boolean;
   readonly playing?: boolean;
-  /** A clip loops, muted, where it lies (the opened run, where each tile is large). */
-  readonly play?: boolean;
-  /** The opened run's size: the media fills the screen's height, whole (contained), not a 16:9 crop. */
-  readonly large?: boolean;
   readonly onPress: (index: number) => void;
 };
 
@@ -51,12 +47,12 @@ export function spokenTile(words: ItemWords, v: BoardVerdict | undefined): strin
   return `${base}, ${v.verdict}${v.reasons.length > 0 ? `: ${v.reasons.join(", ")}` : ""}`;
 }
 
-export function CullTile({ index, words, media, verdict, current, nudged, playing = false, play = false, large = false, onPress }: CullTileProps) {
+export function CullTile({ index, words, media, verdict, current, nudged, playing = false, onPress }: CullTileProps) {
   const kind = kindOf(media.mime);
   return (
     <button
       type="button"
-      className={cx(s.tile, large && s.large, (kind === "text" || (kind === "model" && words.poster === undefined)) && s.textTile, current && s.cur, verdict?.verdict === "keep" && s.keep, verdict?.verdict === "reject" && s.reject, nudged && s.nudge)}
+      className={cx(s.tile, (kind === "text" || (kind === "model" && words.poster === undefined)) && s.textTile, current && s.cur, verdict?.verdict === "keep" && s.keep, verdict?.verdict === "reject" && s.reject, nudged && s.nudge)}
       data-tile={index}
       role="gridcell"
       aria-selected={current}
@@ -90,7 +86,7 @@ export function CullTile({ index, words, media, verdict, current, nudged, playin
       ) : (
         <>
           {kind === "video" ? (
-            <video className={s.media} src={media.url} muted playsInline preload="metadata" autoPlay={play} loop={play} />
+            <video className={s.media} src={media.url} muted playsInline preload="metadata" />
           ) : (
             <Plate className={s.media} src={kind === "model" ? (words.poster ?? "") : media.url} alt="" lazy />
           )}

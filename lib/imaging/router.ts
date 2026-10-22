@@ -36,6 +36,7 @@ import { KEY_VAR, currentEnv, isConfigured, type ImagingEnv } from "./env";
 import { logCall } from "./log";
 import { agyProvider } from "./providers/agy";
 import { leonardoStudioProvider } from "./providers/leonardoStudio";
+import { leonardoFlareProvider } from "./providers/leonardoFlare";
 import { googleProvider } from "./providers/google";
 import { leonardoProvider } from "./providers/leonardo";
 import { ollamaProvider } from "./providers/ollama";
@@ -115,6 +116,7 @@ const PROVIDERS: Record<ProviderId, () => ImagingProvider> = {
   ollama: ollamaProvider,
   agy: agyProvider,
   "leonardo-studio": leonardoStudioProvider,
+  "leonardo-flare": () => leonardoFlareProvider(),
 };
 
 /**
@@ -129,8 +131,12 @@ const PROVIDERS: Record<ProviderId, () => ImagingProvider> = {
  * request that chose whose credits to spend is not quietly moved onto a
  * vendor billed in dollars because the studio's browser was closed. It fails
  * with the studio's own sentence instead.
+ *
+ * Leonardo Flare (GPT Image 2.5 over the API key) is prefer-only for the same
+ * reason in a different currency: it is the operator's ruling for /scout's
+ * stills (2026-10-22), and no plan row was asked to change for it.
  */
-const PREFER_ONLY: ReadonlySet<ProviderId> = new Set<ProviderId>(["leonardo-studio"]);
+const PREFER_ONLY: ReadonlySet<ProviderId> = new Set<ProviderId>(["leonardo-studio", "leonardo-flare"]);
 
 /** Is this provider reachable only by a request that names it? */
 export const isPreferOnly = (id: ProviderId): boolean => PREFER_ONLY.has(id);

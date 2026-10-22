@@ -16,7 +16,7 @@
 // is the single truth — but the FILE is still the contract: the page polls it
 // while the engine rewrites it.
 
-import type { Aspect } from "@/lib/imaging/types";
+import type { Aspect, ProviderId } from "@/lib/imaging/types";
 
 /* ── The style vocabulary ─────────────────────────────────────────────────── */
 
@@ -228,6 +228,12 @@ export interface ExtractOptions {
    *  applies). Before each unit the scheduler adds that unit's pre-call
    *  estimate to `spend.usd`; a unit that would cross the line is not started. */
   ceilingUsd?: number;
+  /** The imaging vendor this run's replicas and transfers prefer, by provider
+   *  id. ABSENT MEANS THE ROUTER'S PLAN decides, as it always has; set, it is
+   *  the router's `prefer` steer (a prefer-only vendor such as `leonardo-flare`
+   *  is then the only one asked). Reads are never steered by it. /scout's
+   *  style act sets it (operator, 2026-10-22: scout stills on Flare). */
+  generator?: ProviderId;
 }
 
 /** The stage a call's spend is attributed to — one per unit kind that calls a vendor. */

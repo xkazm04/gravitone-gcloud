@@ -111,10 +111,13 @@ async function addCandidate<C extends Candidate>(id: NightId, make: (cid: Candid
 const MIME: Readonly<Record<string, ExtractUpload["mime"]>> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp" };
 const EXTRACT_MAX_SOURCES = 60;
 
+/** The imaging vendor a night's style replicas prefer (prefer-only in the router: nothing else is asked). */
+export const STYLE_GENERATOR = "leonardo-flare" as const;
+
 export type StyleResult = { readonly candidate: StyleCandidate; readonly outcome?: string };
 
 /** An extract run over the named sources' pictures and keyframes, as one style candidate. */
-export async function styleAct(ctx: ActContext, id: NightId, sourceIds: readonly string[], slug?: string): Promise<StyleResult> {
+export async function styleAct(ctx: ActContext, id: NightId, sourceIds: readonly string[], slug?: string, use?: string): Promise<StyleResult> {
   const { night, mode } = await launchable(ctx, id);
   const uploads: ExtractUpload[] = [];
   for (const sid of sourceIds) {
@@ -131,7 +134,8 @@ export async function styleAct(ctx: ActContext, id: NightId, sourceIds: readonly
   }
   if (uploads.length === 0) throw new Refusal(`sources ${sourceIds.join(",")} hold no picture extract can read`);
   const b = money(ctx, night);
-  const target = { kind: "gallery" as const, slug: slug ?? `scout-${id}-${sourceIds.join("-")}`, uploads, options: {}, folder: nightDir(id) };
+  // The replicas and transfers are drawn on Flare (operator, 2026-10-22); the reads stay on the plan.
+  const target = { kind: "gallery" as const, slug: slug ?? `scout-${id}-${sourceIds.join("-")}`, uploads, options: { generator: STYLE_GENERATOR }, folder: nightDir(id) };
   const opts = { mode, actor: ctx.actor, dryOnly: ctx.dryOnly, ...(b.remainingUsd > 0 ? { ceilingUsd: b.remainingUsd } : {}) };
   const r0 = await launchExtract(ctx.store, target, opts);
   if (!r0.ok) throw new Refusal(r0.error.message);
@@ -140,7 +144,7 @@ export async function styleAct(ctx: ActContext, id: NightId, sourceIds: readonly
   const refused = overBudget(`style over ${sourceIds.join(",")}`, worstOf(rc), b);
   if (refused !== null) throw refused;
   ctx.say(`receipt (${rc.mode}): ${uploads.length} picture(s) · worst case ${usd(worstOf(rc))} · ceiling ${usd(b.remainingUsd)}`);
-  let c: StyleCandidate = await addCandidate(id, (cid) => ({ id: cid, kind: "style", sourceIds: [...sourceIds], status: "pending" }));
+  let c: StyleCandidate = await addCandidate(id, (cid) => ({ id: cid, kind: "style", sourceIds: [...sourceIds], status: "pending", ...(use === undefined ? {} : { use }) }));
   const r1 = await launchExtract(ctx.store, target, { ...opts, token: rc.token });
   if (!r1.ok || r1.value.kind !== "launched") {
     const why = !r1.ok ? r1.error.message : `the receipt moved while it was confirmed (${r1.value.kind}); nothing launched`;
@@ -173,7 +177,7 @@ export async function settleStyle(id: NightId, c: StyleCandidate): Promise<Style
 export type SceneResult = { readonly candidate: SceneCandidate; readonly outcome?: string };
 
 /** A scene candidate over one source's keyframes, launched through the scene producer's contract. */
-export async function sceneAct(ctx: ActContext, id: NightId, sourceId: string, frames?: readonly string[]): Promise<SceneResult> {
+export async function sceneAct(ctx: ActContext, id: NightId, sourceId: string, frames?: readonly string[], use?: string): Promise<SceneResult> {
   const { night, mode } = await launchable(ctx, id);
   const s = night.sources.find((x) => x.id === sourceId);
   if (s === undefined) throw new Refusal(`night ${id} has no source ${sourceId}`);
@@ -188,7 +192,7 @@ export async function sceneAct(ctx: ActContext, id: NightId, sourceId: string, f
   if (b.remainingUsd <= 0) throw new Refusal(`scene from ${sourceId}: the night has nothing left - ${budgetLine(b)}; nothing launched`);
   let clip = b.clipsUsed < b.clipCap;
   let clipWhy = clip ? " with a clip" : " (clip cap spent: stills only)";
-  let c: SceneCandidate = await addCandidate(id, (cid) => ({ id: cid, kind: "scene", sourceIds: [sourceId], status: "pending", keyframes, replicas: [] }));
+  let c: SceneCandidate = await addCandidate(id, (cid) => ({ id: cid, kind: "scene", sourceIds: [sourceId], status: "pending", keyframes, replicas: [], ...(use === undefined ? {} : { use }) }));
   const fail = async (why: string): Promise<never> => {
     await setCandidate(id, { ...c, status: "failed", error: why });
     throw new Refusal(why);

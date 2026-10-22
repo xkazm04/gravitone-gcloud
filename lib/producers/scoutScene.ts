@@ -13,7 +13,6 @@ import { queryEvents } from "@gt/kernel/events-query";
 import { enqueueIn, get } from "@gt/kernel/job";
 import type { Producer } from "@gt/kernel/job-core";
 import { runJob, type RunReport } from "@gt/kernel/job-run";
-import { modelOptions } from "@gt/kernel/records/options";
 import { readQueue } from "@gt/kernel/records/read";
 import { receiptFor, type PlanLine } from "@gt/kernel/records/receipt";
 import { TABLES } from "@gt/kernel/router/tables";
@@ -21,16 +20,18 @@ import type { Reader, Store } from "@gt/kernel/store";
 import { DEFAULT_CALL_ESTIMATE_USD } from "@gt/producers/extract/units";
 import { defineScoutScene, parseSceneRequest, SCENE_REQUEST, SCOUT_SCENE, type SceneRequest } from "@gt/producers/scout-scene/define";
 
+import { PRICES } from "../imaging/pricing.ts";
 import { generate, recognize } from "../imaging/router.ts";
+import { LTX_DEFAULTS, LTX_MODEL, renderLtxClip } from "../imaging/video/comfyLtx.ts";
 import { gateHoldUsd } from "../imaging/video/pricing.ts";
 import { kernel } from "../kernelProcess.ts";
 import { FoundryError } from "../foundry/runStore.ts";
 import { pickFrames, SCENE_REPLICAS } from "../foundry/scout/scene.ts";
 import { mutateNight, readNightNow, withCandidate } from "../foundry/scout/store.ts";
 import { CLIP_SECONDS, type CandidateId, type Night, type NightId, type SceneCandidate } from "../foundry/scout/types.ts";
-import { checkCandidate, sceneActs, type SceneEngines } from "./scoutSceneActs.ts";
+import { checkCandidate, CLIP_ENGINES, sceneActs, type ClipEngine, type SceneEngines } from "./scoutSceneActs.ts";
 import { effectsFor } from "./extract.ts";
-import { LIVE_MOTION } from "./motion.ts";
+import { LIVE_MOTION, type ClipRequest, type RenderedClip } from "./motion.ts";
 
 // THE SCOUT SCENE PRODUCER, BOUND (spark media-training-loop WP2) - a scene candidate's acts as
 // one kernel job (packages/producers/src/scout-scene/define.ts says why one job and which lane):
@@ -44,14 +45,27 @@ import { LIVE_MOTION } from "./motion.ts";
 //   read-scene       one recognize per keyframe (3-5). gemini-3.6-flash is UNPRICED in the kernel
 //                    table (its per-token rate is unread); a call is admitted at extract's $0.002
 //                    pre-call estimate and booked at what the router reports.
-//   replicate-scene  two Nano Banana stills at the table's measured $0.045 (1K).
-//   render-clip      one hailuo-03 clip, 5 s, UNPRICED (Leonardo bills credits per generation); it
-//                    is HELD at the video gate's $0.75/s = $3.75 (lib/imaging/video/pricing.ts
-//                    gateHoldUsd), and lib/imaging/video/clips.ts books the vendor's own figure to
-//                    the `video-usd` window when it settles.
-// A night's two clips are therefore $7.50 held of its $15. Whether a scene renders a clip is the
-// CALLER's (the night's clip cap, WP1's budget): `clip: false` prices no clip line, plans no clip
-// step and books nothing to video.
+//   replicate-scene  two GPT Image 2.5 Flare stills on Leonardo (lib/foundry/scout/scene.ts
+//                    `replicaRequest` prefers `leonardo-flare`), LOW, at lib/imaging/pricing.ts's
+//                    per-image fallback ($0.01542, 6 credits); the API's reported credits win.
+//   render-clip      by `SCOUT_CLIP_ENGINE` (operator, 2026-10-22: video on a LOCAL model, tagged free):
+//                    `ltx-local` (the default) - LTX-2.5 distilled through the ComfyUI on this box
+//                    (lib/imaging/video/comfyLtx.ts), $0, no spend row, and the whole job waits on
+//                    `gpu.local` (capacity 1: one GPU job at a time across the kernel);
+//                    `hailuo` - one hailuo-03 clip on Leonardo, 5 s, UNPRICED (credits per
+//                    generation), HELD at the video gate's $0.75/s = $3.75 (lib/imaging/video/
+//                    pricing.ts gateHoldUsd); lib/imaging/video/clips.ts books the vendor's figure
+//                    to the `video-usd` window when it settles.
+// With local clips the night's clip cap limits GPU minutes, not money. Whether a scene renders a
+// clip is the CALLER's (the night's clip cap, WP1's budget): `clip: false` prices no clip line,
+// plans no clip step and books nothing to video.
+//
+// ONE JOB, ITS LANE THE SCARCE HALF'S. A local clip makes the card the scarce thing, so the
+// scene's reads and stills run under the gpu.local slot too - a minute or two of cloud calls
+// while the card idles, against splitting a candidate into two jobs that the night, the budget
+// and the Board would all have to learn to pair. The lane names the engine: the clip act renders
+// locally on gpu.local and on Leonardo anywhere else, so the request carries no second field to
+// drift from it.
 
 export type SceneTarget = { readonly nightId: NightId; readonly candidateId: CandidateId };
 
@@ -65,6 +79,8 @@ export type LaunchSceneOptions = {
   /** Absent: answer with the receipt and launch nothing. */
   readonly token?: string;
   readonly dryOnly: boolean;
+  /** Absent: `SCOUT_CLIP_ENGINE` (default `ltx-local`). */
+  readonly clipEngine?: ClipEngine;
   readonly now?: number;
 };
 
@@ -77,13 +93,29 @@ export type SceneLaunch =
 
 /* ── Lanes and prices ─────────────────────────────────────────────────────── */
 
-/** Every lane a scene job can wait on: the worker binds the producer on each. */
-export const SCOUT_SCENE_LANES: readonly ResourceLane[] = ["cloud.google", "cloud.leonardo"];
-/** The lane of the expensive half: Leonardo's when a clip is asked for, else Gemini's. */
-export const sceneLane = (clip: boolean): ResourceLane => (clip ? "cloud.leonardo" : "cloud.google");
+/** `SCOUT_CLIP_ENGINE`, unset meaning `ltx-local`; any other word is refused with the two it may be. */
+export function clipEngineFrom(env: Readonly<Record<string, string | undefined>> = process.env): Result<ClipEngine> {
+  const v = env["SCOUT_CLIP_ENGINE"]?.trim() ?? "";
+  if (v === "") return ok("ltx-local");
+  const known = CLIP_ENGINES.find((e) => e === v);
+  return known === undefined ? err("invalid", `SCOUT_CLIP_ENGINE=${v} names no clip engine; it is ${CLIP_ENGINES.join(" or ")}`) : ok(known);
+}
+
+/**
+ * Every lane a scene job can wait on: the worker binds the producer on each. cloud.google stays
+ * bound for a scene enqueued before the stills moved to Leonardo (2026-10-22); nothing new goes there.
+ */
+export const SCOUT_SCENE_LANES: readonly ResourceLane[] = ["cloud.google", "cloud.leonardo", "gpu.local"];
+/**
+ * The lane of the scarce half: the card for a local clip; otherwise Leonardo's, whose Flare stills
+ * (and a hosted clip) outweigh the Gemini reads by an order of magnitude.
+ */
+export const sceneLane = (clip: boolean, engine: ClipEngine = "ltx-local"): ResourceLane => (clip && engine === "ltx-local" ? "gpu.local" : "cloud.leonardo");
 
 const READ_SECONDS = 20;
 const CLIP_WAIT_SECONDS = 180;
+/** Wall seconds of one local clip on the card alone, measured (pipeline/video/ltx-i2v-api.md "Timing"). */
+const LOCAL_CLIP_SECONDS = 101;
 
 function readOption(lane: ResourceLane): ModelOption {
   const model = TABLES.image.candidates.find((c) => c.provider === "google")?.models["recognize"] ?? "recognize";
@@ -101,12 +133,45 @@ function readOption(lane: ResourceLane): ModelOption {
   };
 }
 
-function stillOption(lane: ResourceLane, day: string): Result<ModelOption> {
-  const o = modelOptions("frames", day).find((x) => x.provider === "google");
-  return o === undefined ? err("internal", "the frames catalog offers no Google image option to price a replica with") : ok({ ...o, lane, label: "replica still" });
+/** Seconds one Flare still takes: the 2026-10-22 smoke's 15 s, with a poll's slack. */
+const STILL_SECONDS = 20;
+
+/** A replica still on GPT Image 2.5 Flare: the router's `leonardo-flare` row, priced at its per-image fallback. */
+function stillOption(lane: ResourceLane): Result<ModelOption> {
+  const model = TABLES.image.candidates.find((c) => c.provider === "leonardo-flare")?.models["generate"];
+  const price = PRICES.find((p) => p.provider === "leonardo-flare" && p.model === model)?.usdPerImage;
+  if (model === undefined || price === undefined) return err("internal", "the router table or the price table has no leonardo-flare row to price a replica still with");
+  const note = `the per-image fallback (6 credits at USD_PER_CREDIT 0.00257); measured 15 s / 6 credits at LOW 1376x768, 2026-10-22 smoke; the API's reported credits replace it when booked`;
+  return ok({
+    key: `scout-scene/leonardo-flare/${model}`,
+    lane,
+    provider: "leonardo-flare",
+    model,
+    label: "replica still",
+    secondsPerUnit: STILL_SECONDS,
+    usdPerUnit: price,
+    src: "illustrative",
+    basis: { seconds: { src: "illustrative", note: "one LOW still, measured 15 s on 2026-10-22, with a poll's slack" }, usd: { src: "illustrative", note } },
+  });
 }
 
-function clipOption(lane: ResourceLane): ModelOption {
+function clipOption(lane: ResourceLane, engine: ClipEngine): ModelOption {
+  if (engine === "ltx-local") {
+    return {
+      key: `scout-scene/comfyui/${LTX_MODEL}`,
+      lane,
+      provider: "comfyui",
+      model: LTX_MODEL,
+      label: `clip · ${CLIP_SECONDS} s · local`,
+      secondsPerUnit: LOCAL_CLIP_SECONDS,
+      usdPerUnit: 0,
+      src: "real",
+      basis: {
+        seconds: { src: "real", measuredAt: "2026-10-22", note: `one LTX-2.5 distilled clip at ${LTX_DEFAULTS.width}x${LTX_DEFAULTS.height}, upload to download, ComfyUI alone on the card; another session's prompts in its queue stretch it 2-3x (lynx-bench)` },
+        usd: { src: "real", note: "free: a local model on this box's card; no vendor is paid" },
+      },
+    };
+  }
   const usd = gateHoldUsd("hailuo-03", CLIP_SECONDS);
   const note = `a hold, not a price: hailuo-03 is unpriced (Leonardo bills credits per generation); the video gate holds $${usd} for ${CLIP_SECONDS} s until the vendor reports`;
   return {
@@ -129,7 +194,7 @@ const estimateOf = (o: ModelOption): SceneRequest["estimates"]["read"] =>
 
 type Unsigned = Omit<SceneRequest, "by">;
 type Read = { readonly receipt: Receipt; readonly request: Unsigned; readonly lane: ResourceLane };
-type ReadAsk = { readonly mode: ReceiptMode; readonly clip: boolean; readonly ceilingUsd: number; readonly now: number };
+type ReadAsk = { readonly mode: ReceiptMode; readonly clip: boolean; readonly engine: ClipEngine; readonly ceilingUsd: number; readonly now: number };
 
 function nightOf(id: NightId): Result<Night> {
   try {
@@ -147,11 +212,11 @@ function readIn(r: Reader, t: SceneTarget, o: ReadAsk): Result<Read> {
   const c = checkCandidate(night.value, t.candidateId, o.mode);
   if (!c.ok) return c;
   const keyframes = pickFrames(c.value.keyframes);
-  const lane = sceneLane(o.clip);
+  const lane = sceneLane(o.clip, o.engine);
   const read = readOption(lane);
-  const still = stillOption(lane, new Date(o.now).toISOString().slice(0, 10));
+  const still = stillOption(lane);
   if (!still.ok) return still;
-  const clip = clipOption(lane);
+  const clip = clipOption(lane, o.engine);
   // The key names the candidate AT its keyframes: a candidate whose keyframes moved since the
   // receipt reads as a different line, so its token goes stale.
   const at = `scene:${night.value.id}/${c.value.id}@${createHash("sha256").update(keyframes.join("\n")).digest("hex").slice(0, 12)}`;
@@ -223,7 +288,9 @@ export async function launchScene(store: Store, target: SceneTarget, opts: Launc
   const prior = jobsOf(store, target);
   const held = prior.at(-1);
   if (held !== undefined && !FINISHED.has(held.state)) return ok({ kind: "existing", jobId: held.id, state: held.state });
-  const ask: ReadAsk = { mode: opts.mode, clip: opts.clip, ceilingUsd: opts.ceilingUsd, now };
+  const engine = opts.clipEngine === undefined ? clipEngineFrom() : ok(opts.clipEngine);
+  if (!engine.ok) return engine;
+  const ask: ReadAsk = { mode: opts.mode, clip: opts.clip, engine: engine.value, ceilingUsd: opts.ceilingUsd, now };
   const first = store.read((r) => readIn(r, target, ask));
   if (!first.ok) return first;
   if (!first.value.ok) return first.value;
@@ -257,8 +324,17 @@ export async function launchScene(store: Store, target: SceneTarget, opts: Launc
 
 /* ── The binding ──────────────────────────────────────────────────────────── */
 
-export type { SceneEngines };
-export const LIVE_SCENE_ENGINES: SceneEngines = { recognize, generate, clip: LIVE_MOTION.leonardoClip };
+export type { ClipEngine, SceneEngines };
+export { CLIP_ENGINES };
+
+/** OUR replica, animated on this box; the seed is the candidate's, so a retry renders the same clip. */
+async function localClip(req: ClipRequest): Promise<RenderedClip> {
+  const seed = Number.parseInt(createHash("sha256").update(req.projectId).digest("hex").slice(0, 8), 16);
+  const r = await renderLtxClip({ image: { bytes: new Uint8Array(Buffer.from(req.image.base64, "base64")), mime: req.image.mime }, prompt: req.motion, seed });
+  return { bytes: r.bytes, mime: r.mime, model: r.model };
+}
+
+export const LIVE_SCENE_ENGINES: SceneEngines = { recognize, generate, clip: LIVE_MOTION.leonardoClip, localClip };
 
 /** The request a scene job carries: the event its launch wrote beside the enqueue. */
 export function sceneRequestOf(store: Store, jobId: string): Result<SceneRequest> {

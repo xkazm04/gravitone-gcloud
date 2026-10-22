@@ -119,7 +119,7 @@ export const BOUND: readonly Bound[] = [
   { name: "style", producer: styleJobProducer() },
   // The /scout night's ingest (spark media-training-loop): a found picture, page or video brought onto this box.
   { name: "scout-ingest", producer: scoutIngestProducer() },
-  // A /scout scene: one job per candidate, on the lane of its expensive half (clip: Leonardo; else Google).
+  // A /scout scene: one job per candidate, on the lane of its expensive half (a local clip: gpu.local; else Leonardo's, for the Flare stills and a hosted clip).
   ...SCOUT_SCENE_LANES.map((lane): Bound => ({ name: "scout-scene", producer: scoutSceneProducer(lane) })),
   // The desk's effect batch (Phase 6, L66): one run of N clips through the metered call.
   ...lanesOf("sfx").map((lane): Bound => ({ name: "sfx", producer: sfxProducer(lane) })),

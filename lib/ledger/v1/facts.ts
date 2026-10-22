@@ -137,6 +137,7 @@ const VENDORS: Readonly<Record<string, ResourceLane>> = {
   gemini: "cloud.google",
   qwen: "cloud.qwen",
   leonardo: "cloud.leonardo",
+  "leonardo-flare": "cloud.leonardo",
   elevenlabs: "cloud.elevenlabs",
   "claude-cli": "seat.text",
   agy: "seat.text",

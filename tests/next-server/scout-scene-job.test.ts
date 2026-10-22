@@ -2,7 +2,8 @@
 // two-step and driveScene over a temp kernel store and a temp night (SCOUT_STORE_DIR and
 // GRAVITONE_STORE_PATH are set below, before any lib/ module loads). No vendor is reached: a dry
 // job is answered by the stand-ins, and the engines it is handed throw if called; the live drives
-// use fakes that report what a vendor would, and record what they were sent.
+// use fakes that report what a vendor would, and record what they were sent. Both clip engines are
+// driven: `ltx-local` (the default, this box's ComfyUI, free, on gpu.local) and `hailuo` (Leonardo).
 
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -26,8 +27,10 @@ import type { Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import { jobIdSchema } from "@gt/domain/ids";
 import type { Job } from "@gt/domain/job";
+import { AppError } from "@gt/domain/errors";
 import { get } from "@gt/kernel/job";
 import { openKernel, type Kernel } from "@gt/kernel/kernel";
+import { meterOf } from "@gt/kernel/spend/projection";
 import { producerSet } from "@gt/producers/set";
 
 import { createNight, mutateNight, nightDir, readNight } from "../../lib/foundry/scout/store.ts";
@@ -35,7 +38,7 @@ import type { SceneCandidate, ScoutSource } from "../../lib/foundry/scout/types.
 import { ImagingError } from "../../lib/imaging/errors.ts";
 import type { GeneratedImages, Recognition } from "../../lib/imaging/types.ts";
 import type { ClipRequest } from "../../lib/producers/motion.ts";
-import { driveScene, launchScene, SCOUT_SCENE_LANES, scoutSceneProducer, type SceneEngines, type SceneLaunch, type SceneTarget } from "../../lib/producers/scoutScene.ts";
+import { clipEngineFrom, driveScene, launchScene, SCOUT_SCENE_LANES, scoutSceneProducer, type ClipEngine, type SceneEngines, type SceneLaunch, type SceneTarget } from "../../lib/producers/scoutScene.ts";
 
 const LOC = path.join(ROOT, "kernel.sqlite");
 let k: Kernel;
@@ -92,7 +95,7 @@ const sceneOf = async (t: SceneTarget): Promise<SceneCandidate> => {
 const jobOf = (id: string): Job => must(get(k.store, jobIdSchema.parse(id))).job;
 const fileOf = (t: SceneTarget, rel: string): string => path.join(nightDir(t.nightId), rel);
 
-const calls = { recognize: 0, generate: 0, clip: 0 };
+const calls = { recognize: 0, generate: 0, clip: 0, localClip: 0 };
 const NEVER: SceneEngines = {
   recognize: async () => {
     calls.recognize++;
@@ -106,12 +109,16 @@ const NEVER: SceneEngines = {
     calls.clip++;
     throw new Error("a dry scene reached the video vendor");
   },
+  localClip: async () => {
+    calls.localClip++;
+    throw new Error("a dry scene reached the card");
+  },
 };
 
 type Mode = "dry" | "live";
-async function launch(t: SceneTarget, o: { clip: boolean; mode?: Mode; ceilingUsd?: number }): Promise<{ receipt: Extract<SceneLaunch, { kind: "receipt" }>["receipt"]; jobId: string }> {
+async function launch(t: SceneTarget, o: { clip: boolean; mode?: Mode; ceilingUsd?: number; engine?: ClipEngine }): Promise<{ receipt: Extract<SceneLaunch, { kind: "receipt" }>["receipt"]; jobId: string }> {
   const mode = o.mode ?? "dry";
-  const base = { mode, ceilingUsd: o.ceilingUsd ?? 15, clip: o.clip, actor: OP, dryOnly: mode === "dry" };
+  const base = { mode, ceilingUsd: o.ceilingUsd ?? 15, clip: o.clip, actor: OP, dryOnly: mode === "dry", ...(o.engine === undefined ? {} : { clipEngine: o.engine }) };
   const r = must(await launchScene(k.store, t, base));
   if (r.kind !== "receipt") throw new Error(`expected a receipt, got ${r.kind}`);
   const l = must(await launchScene(k.store, t, { ...base, token: r.receipt.token }));
@@ -121,17 +128,40 @@ async function launch(t: SceneTarget, o: { clip: boolean; mode?: Mode; ceilingUs
 
 it("binds as the worker carries it: one producer per lane a scene can wait on", () => {
   const set = must(producerSet(SCOUT_SCENE_LANES.map((lane) => ({ name: "scout-scene" as const, producer: scoutSceneProducer(lane) }))));
-  expect([...set.keys()].sort()).toEqual(["scout-scene@cloud.google", "scout-scene@cloud.leonardo"]);
+  expect([...set.keys()].sort()).toEqual(["scout-scene@cloud.google", "scout-scene@cloud.leonardo", "scout-scene@gpu.local"]);
+});
+
+it("reads the clip engine from SCOUT_CLIP_ENGINE: unset is ltx-local, an unknown word is refused", () => {
+  expect(clipEngineFrom({})).toEqual({ ok: true, value: "ltx-local" });
+  expect(clipEngineFrom({ SCOUT_CLIP_ENGINE: "hailuo" })).toEqual({ ok: true, value: "hailuo" });
+  const bad = clipEngineFrom({ SCOUT_CLIP_ENGINE: "wan" });
+  expect(bad.ok ? "" : bad.error.message).toBe("SCOUT_CLIP_ENGINE=wan names no clip engine; it is ltx-local or hailuo");
 });
 
 describe("a dry scene, end to end", () => {
-  it("prices read, replicas and a held clip, launches one job, and leaves every cell's stand-in", async () => {
+  it("on a local clip: waits on gpu.local, prices the clip at $0, and its dry would-call names ComfyUI, never the card", async () => {
     const t = await seed(true);
     const { receipt, jobId } = await launch(t, { clip: true });
+    expect(receipt.lines.map((l) => [l.label, l.lane, l.provider, l.model, l.usd])).toEqual([
+      ["read-scene · 2 keyframe(s)", "gpu.local", "google", expect.any(String), 0],
+      ["replicate-scene · 2 still(s)", "gpu.local", "leonardo-flare", "openai/gpt-image-2.5-flare", 0.03],
+      ["render-clip · 5 s", "gpu.local", "comfyui", "ltx-2.5-distilled", 0],
+    ]);
+    expect(jobOf(jobId).lane).toBe("gpu.local");
+    const report = must(await driveScene(k.store, LOC, jobId, { dryOnly: true, engines: NEVER }));
+    expect(report.outcome).toBe("done");
+    expect(report.wouldCalls?.at(-1)).toMatchObject({ provider: "comfyui", model: "ltx-2.5-distilled" });
+    expect(calls).toEqual({ recognize: 0, generate: 0, clip: 0, localClip: 0 });
+    expect((await sceneOf(t)).clip).toEqual({ path: "scenes/c-01/clip.mp4", durationS: 5, from: "scenes/c-01/replica-1.jpg", engine: "ltx-local", usd: 0 });
+  });
+
+  it("prices read, replicas and a held clip, launches one job, and leaves every cell's stand-in", async () => {
+    const t = await seed(true);
+    const { receipt, jobId } = await launch(t, { clip: true, engine: "hailuo" });
     expect(receipt.subject).toEqual({ kind: "run", lane: "video" });
     expect(receipt.lines.map((l) => [l.label, l.lane, l.usd])).toEqual([
       ["read-scene · 2 keyframe(s)", "cloud.leonardo", 0],
-      ["replicate-scene · 2 still(s)", "cloud.leonardo", 0.09],
+      ["replicate-scene · 2 still(s)", "cloud.leonardo", 0.03],
       ["render-clip · 5 s", "cloud.leonardo", 3.75],
     ]);
     expect(receipt.ceilingUsd).toBe(15);
@@ -143,7 +173,7 @@ describe("a dry scene, end to end", () => {
     expect(await sceneOf(t)).toMatchObject({ jobId, clipRequested: true, status: "pending" });
 
     // A second launch of an unfinished candidate is that job, never a second one.
-    const again = must(await launchScene(k.store, t, { mode: "dry", ceilingUsd: 15, clip: true, actor: OP, dryOnly: true }));
+    const again = must(await launchScene(k.store, t, { mode: "dry", ceilingUsd: 15, clip: true, actor: OP, dryOnly: true, clipEngine: "hailuo" }));
     expect(again).toEqual({ kind: "existing", jobId, state: "queued" });
 
     const report = must(await driveScene(k.store, LOC, jobId, { dryOnly: true, engines: NEVER }));
@@ -155,7 +185,7 @@ describe("a dry scene, end to end", () => {
       ["imaging-router", "generate"],
       ["leonardo", "hailuo-03"],
     ]);
-    expect(calls).toEqual({ recognize: 0, generate: 0, clip: 0 });
+    expect(calls).toEqual({ recognize: 0, generate: 0, clip: 0, localClip: 0 });
 
     const c = await sceneOf(t);
     expect(c.status).toBe("rendered");
@@ -164,7 +194,7 @@ describe("a dry scene, end to end", () => {
     expect(c.recipe).toMatchObject({ shot: "medium", durationS: 3, rhythm: "4 shots over 10 s, median 1.5 s, 24 cuts a minute; this shot holds 3 s" });
     expect(c.replicas).toEqual(["scenes/c-01/replica-1.jpg", "scenes/c-01/replica-2.jpg"]);
     for (const r of c.replicas) expect(existsSync(fileOf(t, r))).toBe(true);
-    expect(c.clip).toEqual({ path: "scenes/c-01/clip.mp4", durationS: 5, from: "scenes/c-01/replica-1.jpg" });
+    expect(c.clip).toEqual({ path: "scenes/c-01/clip.mp4", durationS: 5, from: "scenes/c-01/replica-1.jpg", engine: "hailuo" });
     expect(readFileSync(fileOf(t, "scenes/c-01/clip.mp4"), "utf8")).toBe("dry-run clip stand-in");
     expect(jobOf(jobId).state).toBe("done");
   });
@@ -174,8 +204,9 @@ describe("a dry scene, end to end", () => {
     const { receipt, jobId } = await launch(t, { clip: false });
     expect(receipt.subject).toEqual({ kind: "run", lane: "image" });
     expect(receipt.lines.map((l) => l.label)).toEqual(["read-scene · 2 keyframe(s)", "replicate-scene · 2 still(s)"]);
-    expect(receipt.totals.usd).toBe(0.09);
-    expect(jobOf(jobId).lane).toBe("cloud.google");
+    // Flare stills at the per-image fallback ($0.01542 each); the job waits on Leonardo's lane, the stills' half.
+    expect(receipt.totals.usd).toBe(0.03);
+    expect(jobOf(jobId).lane).toBe("cloud.leonardo");
     const report = must(await driveScene(k.store, LOC, jobId, { dryOnly: true, engines: NEVER }));
     expect(report.outcome).toBe("done");
     expect(report.wouldCalls?.some((w) => w.provider === "leonardo")).toBe(false);
@@ -188,7 +219,7 @@ describe("a dry scene, end to end", () => {
 
   it("stops at the job's ceiling before a clip it cannot afford: the stills stand, rendered, and the clip's sentence is kept", async () => {
     const t = await seed(true);
-    const { jobId } = await launch(t, { clip: true, ceilingUsd: 1 });
+    const { jobId } = await launch(t, { clip: true, ceilingUsd: 1, engine: "hailuo" });
     const report = must(await driveScene(k.store, LOC, jobId, { dryOnly: true, engines: NEVER }));
     expect(report.outcome).toBe("failed");
     const c = await sceneOf(t);
@@ -227,6 +258,7 @@ const GOOD = {
 const PNG = (seed: number): string => Buffer.from(`replica pixels ${seed}`).toString("base64");
 
 function fakes(o: { answer?: unknown; onGenerate?: (seed: number) => Promise<void>; clipError?: Error } = {}): { engines: SceneEngines; sent: { clips: ClipRequest[]; recognized: number; generated: number } } {
+  // Both engines record into `clips`: which one was called is read off the job's lane and the candidate.
   const sent = { clips: [] as ClipRequest[], recognized: 0, generated: 0 };
   const engines: SceneEngines = {
     recognize: async (): Promise<Recognition> => {
@@ -243,14 +275,20 @@ function fakes(o: { answer?: unknown; onGenerate?: (seed: number) => Promise<voi
       if (o.clipError !== undefined) throw o.clipError;
       return { bytes: new TextEncoder().encode("mp4 bytes"), mime: "video/mp4", model: "hailuo-03", costUsd: 1.2 };
     },
+    localClip: async (req) => {
+      sent.clips.push(req);
+      if (o.clipError !== undefined) throw o.clipError;
+      return { bytes: new TextEncoder().encode("local mp4 bytes"), mime: "video/mp4", model: "ltx-2.5-distilled" };
+    },
   };
   return { engines, sent };
 }
 
 describe("a live scene, on fakes", () => {
-  it("animates OUR first replica: the clip vendor is sent the replica's bytes, never a keyframe's", async () => {
+  it.each(["hailuo", "ltx-local"] as const)("%s animates OUR first replica: the engine is sent the replica's bytes, never a keyframe's", async (engine) => {
     const t = await seed(false);
-    const { jobId } = await launch(t, { clip: true, mode: "live" });
+    const { jobId } = await launch(t, { clip: true, mode: "live", engine });
+    expect(jobOf(jobId).lane).toBe(engine === "hailuo" ? "cloud.leonardo" : "gpu.local");
     const f = fakes();
     const report = must(await driveScene(k.store, LOC, jobId, { dryOnly: false, engines: f.engines }));
     expect(report.outcome).toBe("done");
@@ -261,15 +299,19 @@ describe("a live scene, on fakes", () => {
     for (const kf of KEYFRAMES) expect(sentImage).not.toBe(readFileSync(fileOf(t, kf)).toString("base64"));
     expect(f.sent.clips[0]).toMatchObject({ projectId: `scout:${t.nightId}:c-01`, aspect: "16:9" });
     const c = await sceneOf(t);
-    expect(c).toMatchObject({ status: "rendered", replicas: ["scenes/c-01/replica-1.png", "scenes/c-01/replica-2.png"], clip: { path: "scenes/c-01/clip.mp4", from: "scenes/c-01/replica-1.png", usd: 1.2 } });
+    expect(c).toMatchObject({ status: "rendered", replicas: ["scenes/c-01/replica-1.png", "scenes/c-01/replica-2.png"], clip: { path: "scenes/c-01/clip.mp4", from: "scenes/c-01/replica-1.png", engine, usd: engine === "hailuo" ? 1.2 : 0 } });
     expect(c.recipe?.palette).toEqual(["teal ground", "sodium amber light"]);
+    expect(readFileSync(fileOf(t, "scenes/c-01/clip.mp4"), "utf8")).toBe(engine === "hailuo" ? "mp4 bytes" : "local mp4 bytes");
+    // The local clip books nothing: the job's spend is its two reads and two stills, and no unpriced row stands for the clip.
+    const meter = k.store.read((r) => meterOf(r, jobId));
+    expect(meter.ok ? [meter.value.usd, meter.value.unpriced] : null).toEqual(engine === "hailuo" ? [1.292, 0] : [0.092, 0]);
   });
 
   // A clip failure keeps the stills - but not when the "stills" include a source frame: that
   // candidate is failed, so a source frame can never be kept as a replica either.
-  it("a keyframe smuggled into the replicas is refused at the clip step; the vendor is never called", async () => {
+  it.each(["hailuo", "ltx-local"] as const)("%s: a keyframe smuggled into the replicas is refused at the clip step; the engine is never called", async (engine) => {
     const t = await seed(false);
-    const { jobId } = await launch(t, { clip: true, mode: "live" });
+    const { jobId } = await launch(t, { clip: true, mode: "live", engine });
     // After the first replica lands, night.json is rewritten so the first "replica" is a source frame.
     const f = fakes({
       onGenerate: async (seed) => {
@@ -289,6 +331,7 @@ describe("a live scene, on fakes", () => {
     const t = await seed(false);
     const { jobId } = await launch(t, { clip: true, mode: "live" });
     const f = fakes({ answer: { ...GOOD, composition: "the harbour wall on the right, one figure on the left" } });
+    expect(jobOf(jobId).lane).toBe("gpu.local");
     const report = must(await driveScene(k.store, LOC, jobId, { dryOnly: false, engines: f.engines }));
     expect(report.outcome).toBe("failed");
     expect(f.sent).toMatchObject({ recognized: 1, generated: 0 });
@@ -299,9 +342,22 @@ describe("a live scene, on fakes", () => {
     expect(c.replicas).toEqual([]);
     expect(c.recipe).toBeUndefined();
   });
-  it("a clip the vendor refuses leaves the scene rendered with its stills, no clip, and the vendor's sentence", async () => {
+  it("a local clip ComfyUI fails leaves the scene rendered with its stills, no clip, and ComfyUI's sentence", async () => {
     const t = await seed(false);
     const { jobId } = await launch(t, { clip: true, mode: "live" });
+    const said = "ComfyUI SamplerCustomAdvanced (node 452:428) failed: Allocation on device would exceed allowed memory.";
+    const f = fakes({ clipError: new AppError("unavailable", said) });
+    const report = must(await driveScene(k.store, LOC, jobId, { dryOnly: false, engines: f.engines }));
+    expect(report.outcome).toBe("failed");
+    expect(f.sent.clips).toHaveLength(1);
+    const c = await sceneOf(t);
+    expect(c).toMatchObject({ status: "rendered", error: `clip: ${said}`, clipRequested: true, replicas: ["scenes/c-01/replica-1.png", "scenes/c-01/replica-2.png"] });
+    expect(c.clip).toBeUndefined();
+  });
+
+  it("a clip the vendor refuses leaves the scene rendered with its stills, no clip, and the vendor's sentence", async () => {
+    const t = await seed(false);
+    const { jobId } = await launch(t, { clip: true, mode: "live", engine: "hailuo" });
     const said = "the moderation filter refused this generation";
     const f = fakes({ clipError: new ImagingError(said, "refused", "leonardo") });
     const report = must(await driveScene(k.store, LOC, jobId, { dryOnly: false, engines: f.engines }));

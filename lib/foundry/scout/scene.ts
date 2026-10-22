@@ -122,7 +122,9 @@ const COMMON = new Set(
     "landscape portrait still life open access public domain museum collection gallery archive library " +
     "bridge gorge temple station tower castle village garden park beach hill valley " +
     "twilight midnight noon winter summer spring autumn fall storm wind cloud clouds thunder " +
-    "perfect perfected secret secrets rule rules guide explained explain analysis essay lesson lessons"
+    "perfect perfected secret secrets rule rules guide explained explain analysis essay lesson lessons " +
+    // 2026-10-22 live rehearsal: "How I Lit This Moody Brand Video" banned "lit" from a lighting recipe.
+    "moody brand practical practicals performance concert band interview vlog tutorial"
   ).split(" "),
 );
 
@@ -131,13 +133,14 @@ const ALLOWED_CAPS = new Set(["Dutch", "CGI", "HDR", "VHS", "CRT", "LED", "RGB",
 
 const words = (s: string): string[] => s.match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu) ?? [];
 
-/** The source's own title and channel words a recipe may not repeat (lower case, 3+ letters). */
+/** The source's own title and channel words a recipe may not repeat (lower case, 4+ letters: a
+ *  three-letter title word - lit, set, cut, key - is craft far more often than it is a name). */
 export function denylistOf(sources: readonly Pick<ScoutSource, "title" | "channel">[]): string[] {
   const out = new Set<string>();
   for (const s of sources) {
     for (const w of [...words(s.title), ...words(s.channel ?? "")].flatMap((x) => x.split(/['’-]/))) {
       const lw = w.toLowerCase();
-      if (lw.length >= 3 && !COMMON.has(lw)) out.add(lw);
+      if (lw.length >= 4 && !COMMON.has(lw)) out.add(lw);
     }
   }
   return [...out];
@@ -263,9 +266,14 @@ export function recipeOf(raw: unknown, ctx: { readonly deny: readonly string[]; 
 
 /* ── Replicas and the clip ───────────────────────────────────────────────── */
 
+/** The imaging vendor a replica still asks for: GPT Image 2.5 Flare, LOW (operator, 2026-10-22). It is
+ *  prefer-only in the router, so naming it is the whole chain: a Flare refusal is the candidate's sentence,
+ *  never a quiet Nano Banana bill. The readback stays on Google (scoutSceneActs.ts `prefer: "google"`). */
+export const REPLICA_GENERATOR = "leonardo-flare" as const;
+
 /** A replica still: the recipe's prompt verbatim, and NO reference image - the source never conditions it. */
 export function replicaRequest(recipe: SceneRecipe, k: number): GenerateRequest {
-  return { prompt: recipe.prompt, negativePrompt: REPLICA_NEGATIVE, aspect: "16:9", count: 1, prefer: "google", seed: k };
+  return { prompt: recipe.prompt, negativePrompt: REPLICA_NEGATIVE, aspect: "16:9", count: 1, prefer: REPLICA_GENERATOR, seed: k };
 }
 
 const EXT: Readonly<Record<string, string>> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" };

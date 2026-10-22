@@ -5,8 +5,8 @@
 //   npx tsx pipeline/scout.mts open [--ceiling 15] [--target 20] [--clips 2] [--until HH:MM] [--live] [--json]
 //   npx tsx pipeline/scout.mts add-source <night> --json <file|->
 //   npx tsx pipeline/scout.mts ingest <night> [--source s-NN] [--detach]
-//   npx tsx pipeline/scout.mts style <night> --sources s-01,s-03 [--slug x] [--detach]
-//   npx tsx pipeline/scout.mts scene <night> --source s-NN [--frames k-003.jpg,k-007.jpg] [--detach]
+//   npx tsx pipeline/scout.mts style <night> --sources s-01,s-03 --use "<content it serves>" [--slug x] [--detach]
+//   npx tsx pipeline/scout.mts scene <night> --source s-NN --use "<content it serves>" [--frames k-012.jpg] [--detach]
 //   npx tsx pipeline/scout.mts finding <night> --json <file|->
 //   npx tsx pipeline/scout.mts watch <night> --entry "..." --why "..." [--sources s-01,s-02]
 //   npx tsx pipeline/scout.mts close <night> [--stop <reason>]
@@ -25,6 +25,8 @@
 // EXIT 0 done · 1 failed or refused · 2 usage. Never touches foundry-out/ when
 // GRAVITONE_STORE_PATH and SCOUT_STORE_DIR point elsewhere.
 
+import { USE_MAX } from "../lib/foundry/scout/types.ts";
+import type { KeyFetch } from "../lib/imaging/keyProbe.ts";
 import fs from "node:fs";
 import { spawn } from "node:child_process";
 import path from "node:path";
@@ -46,6 +48,8 @@ export type CliPorts = {
   readonly stdin?: () => Promise<string>;
   /** `folder`'s child: the command and its args, the child's exit code back. */
   readonly run?: (cmd: string, args: readonly string[]) => Promise<number>;
+  /** doctor's vendor key probes (lib/imaging/keyProbe.ts); a test hands a fake. */
+  readonly keyFetch?: KeyFetch;
 };
 export type Io = { readonly env: Readonly<Record<string, string | undefined>>; readonly out: (s: string) => void; readonly err: (s: string) => void; readonly ports?: CliPorts };
 
@@ -56,8 +60,8 @@ const USAGE = [
   "  open [--ceiling 15] [--target 20] [--clips 2] [--until HH:MM] [--live]",
   "  add-source <night> --json <file|->         [{url, kind, title, channel?, why, found, watch?}]",
   "  ingest <night> [--source s-NN] [--detach]",
-  "  style <night> --sources s-01,s-03 [--slug x] [--detach]",
-  "  scene <night> --source s-NN [--frames k-003.jpg,k-007.jpg] [--detach]",
+  "  style <night> --sources s-01,s-03 --use \"<content>\" [--slug x] [--detach]",
+  "  scene <night> --source s-NN --use \"<content>\" [--frames k-012.jpg] [--detach]",
   "  finding <night> --json <file|->            [{sourceIds, template, step, claim, quote}]",
   '  watch <night> --entry "..." --why "..." [--sources s-01]',
   "  close <night> [--stop deadline|budget|target|failure|sources-exhausted|operator]",
@@ -165,7 +169,7 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
       const { blocking, doctor, doctorLine } = await import("../lib/foundry/scout/doctor.ts");
       const { storeLocation } = await import("@gt/kernel/process");
       const { OUT_DIRNAME } = await import("../lib/fixtures/mode.ts");
-      const checks = await doctor({ env: io.env, storePath: storeLocation(OUT_DIRNAME, io.env["GRAVITONE_STORE_PATH"]), scoutRoot: store.scoutRoot(), dry: flags.has("dry"), ...(io.ports?.spawn === undefined ? {} : { spawn: io.ports.spawn }) });
+      const checks = await doctor({ env: io.env, storePath: storeLocation(OUT_DIRNAME, io.env["GRAVITONE_STORE_PATH"]), scoutRoot: store.scoutRoot(), dry: flags.has("dry"), ...(io.ports?.spawn === undefined ? {} : { spawn: io.ports.spawn }), ...(io.ports?.keyFetch === undefined ? {} : { keyFetch: io.ports.keyFetch }) });
       const failed = blocking(checks);
       if (json) doc({ ok: failed.length === 0, checks });
       else for (const c of checks) io.out(doctorLine(c));
@@ -290,10 +294,13 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
 
       if (cmd === "style" || cmd === "scene") {
         const id = nightArg();
+        // --use: what content the run can serve, one line. A run launched without one says so on the Board.
+        const use = str("use")?.trim();
+        if (use !== undefined && (use === "" || use.length > USE_MAX)) usage(`--use is one line of at most ${USE_MAX} characters: the content this run can help make`);
         const r =
           cmd === "style"
-            ? await acts.styleAct(ctx, id, list("sources").length > 0 ? list("sources") : usage("style needs --sources s-01,s-03"), str("slug"))
-            : await acts.sceneAct(ctx, id, str("source") ?? usage("scene needs --source s-NN"), flags.has("frames") ? list("frames") : undefined);
+            ? await acts.styleAct(ctx, id, list("sources").length > 0 ? list("sources") : usage("style needs --sources s-01,s-03"), str("slug"), use)
+            : await acts.sceneAct(ctx, id, str("source") ?? usage("scene needs --source s-NN"), flags.has("frames") ? list("frames") : undefined, use);
         const c = r.candidate;
         const failed = c.status === "failed" || (r.outcome !== undefined && !["done", "detached", "enqueued", "launched", "queued", "running"].includes(r.outcome));
         say(`${c.id} ${c.kind} ${c.status}${r.outcome === undefined ? "" : ` · ${r.outcome}`}${c.error === undefined ? "" : ` · ${c.error}`}`);

@@ -7,6 +7,8 @@
 
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
 
+import { PROVIDER_IDS } from "@/lib/imaging/types";
+
 import { DEFAULT_OPTIONS } from "./engine";
 import { TRANSFER_SCENES } from "./prompts";
 import { clampCeiling } from "./spend";
@@ -52,6 +54,8 @@ export function newManifest(
   // Absent stays absent: an unset ceiling is unlimited, and the key is not written.
   const ceilingUsd = clampCeiling(options.ceilingUsd);
   if (ceilingUsd !== undefined) opts.ceilingUsd = ceilingUsd;
+  // Same rule: an unset generator leaves the plan to the router, and the key is not written.
+  if (options.generator !== undefined && (PROVIDER_IDS as readonly string[]).includes(options.generator)) opts.generator = options.generator;
   const m: ExtractManifest = {
     id,
     slug,

@@ -38,8 +38,19 @@ export type ItemWords = {
 
 /** A matrix row: a scene, a style, a strip. `ref` is a reference image, never output. */
 /** `group`: the kind of run a row is (a scout night's look / scene / finding / watch), for a desk that
- *  files runs into groups; absent, every row is one group. */
-export type RowWords = { readonly id: string; readonly label: string; readonly ref?: string; readonly inCatalogue?: boolean; readonly group?: string };
+ *  files runs into groups; absent, every row is one group. `aim` and `checks`: what the run tried to
+ *  make and the attributes it is judged on, from the run's own record (lib/decision/v1/sources/scoutBrief.ts). */
+export type RowWords = {
+  readonly id: string;
+  readonly label: string;
+  readonly ref?: string;
+  readonly inCatalogue?: boolean;
+  readonly group?: string;
+  readonly aim?: string;
+  readonly checks?: readonly string[];
+  /** What content the run can serve, as stated when it was launched. */
+  readonly use?: string;
+};
 
 /** What the machine said before the gate (hitl-approval oracle-before-gate). */
 export type Oracle = { readonly passed: boolean; readonly summary: string; readonly digest?: string; readonly fixture?: boolean };

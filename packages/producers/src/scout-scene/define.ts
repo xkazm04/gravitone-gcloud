@@ -17,10 +17,11 @@ import type { Ending, MissingStep, Outputs, Producer, StepContext, StepOutcome }
 //   render-clip      `clip`         only when the launch asked for one: OUR first replica animated
 //
 // ONE JOB, ONE LANE, THE EXPENSIVE HALF'S (extract's rule: packages/producers/src/extract/define.ts
-// "ONE LANE FOR A JOB THAT CALLS TWO KINDS OF VENDOR"). A scene with a clip spends dollars on
-// Leonardo (a hailuo-03 clip is held at $3.75) and cents on Gemini, so it waits on a cloud.leonardo
-// slot and its reads and stills route inside the step; a scene without a clip is all Gemini and
-// waits on cloud.google. The producer is bound on both lanes. One job per scene keeps the night's
+// "ONE LANE FOR A JOB THAT CALLS TWO KINDS OF VENDOR"). Since 2026-10-22 a scene's clip renders on
+// this box (LTX-2.5 through ComfyUI, free) and its stills on Leonardo's Flare, so a scene with a
+// local clip waits on the card's gpu.local slot and one without on cloud.leonardo; the reads route
+// inside the step (lib/producers/scoutScene.ts `sceneLane`). cloud.google stays bound for a scene
+// queued before that change. One job per scene keeps the night's
 // arithmetic simple - one job id per candidate on `night.jobs`, one ceiling, one ending - and a
 // clip never needs a second launch the first one's settle would have to make.
 //

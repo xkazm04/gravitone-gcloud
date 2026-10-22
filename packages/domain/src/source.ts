@@ -94,7 +94,8 @@ export const SOURCES = {
   // scene's replicas and clip, a craft finding, a watchlist line. The forge's three still axes, then
   // `motion` for a clip, `rights` for material that should not have been taken, `generic` for a
   // find that teaches nothing the Library does not already hold.
-  scout: { modes: ["matrix-cull"], reasons: ["style", "subject", "craft", "motion", "rights", "generic"], maxReasons: 3, noteMax: NOTE_SHORT },
+  // `use case` (2026-10-22): the run serves no content worth making - the next nights steer away from it.
+  scout: { modes: ["matrix-cull"], reasons: ["style", "subject", "craft", "motion", "rights", "generic", "use case"], maxReasons: 3, noteMax: NOTE_SHORT },
 } as const satisfies { readonly [S in PacketSource]: SourceSpec };
 
 /** The keys a reason list is bound to, in order (plan §8: the Board's 1-4 grew to eleven for audio). */

@@ -13,6 +13,7 @@ import { readStep, type ScenePorts, type SceneRequest } from "@gt/producers/scou
 
 import { ImagingError } from "../imaging/errors.ts";
 import type { GeneratedImages, GenerateRequest, ImageRef, Recognition, RecognizeRequest } from "../imaging/types.ts";
+import { LTX_MODEL } from "../imaging/video/comfyLtx.ts";
 import { VideoError } from "../imaging/video/errors.ts";
 import {
   clipFile,
@@ -33,7 +34,7 @@ import {
   type SceneDraft,
 } from "../foundry/scout/scene.ts";
 import { mutateNight, readNight, resolveInNight, withCandidate } from "../foundry/scout/store.ts";
-import { CLIP_SECONDS, type Night, type SceneCandidate } from "../foundry/scout/types.ts";
+import { CLIP_SECONDS, type Night, type SceneCandidate, type SceneClip } from "../foundry/scout/types.ts";
 import { imageFailure } from "./frames.ts";
 import type { ClipRequest, RenderedClip } from "./motion.ts";
 
@@ -51,7 +52,15 @@ export type SceneEngines = {
   readonly generate: (req: GenerateRequest) => Promise<GeneratedImages>;
   /** Leonardo image-to-video (hailuo-03, 5 s), awaited to its terminal state (lib/producers/motion.ts). */
   readonly clip: (req: ClipRequest) => Promise<RenderedClip>;
+  /** LTX-2.5 image-to-video on this box's ComfyUI (lib/imaging/video/comfyLtx.ts): free, 5 s. */
+  readonly localClip: (req: ClipRequest) => Promise<RenderedClip>;
 };
+
+/** What renders a scene's clip: `ltx-local` on this box's ComfyUI (free, no spend row), `hailuo` on Leonardo. */
+export const CLIP_ENGINES = ["ltx-local", "hailuo"] as const;
+export type ClipEngine = (typeof CLIP_ENGINES)[number];
+/** A clip as the candidate records it, its engine named (SceneClip `engine`, lib/foundry/scout/types.ts). */
+type ClipRecord = SceneClip & { readonly engine: ClipEngine };
 
 type Fatal = "not-found" | "refused" | "invalid" | "unavailable" | "internal";
 const fatal = (code: Fatal, message: string): StepOutcome => ({ kind: "fatal", code, message });
@@ -197,6 +206,13 @@ async function replicateAct(e: SceneEngines, req: SceneRequest, k: number, ctx: 
 
 /* ── render-clip ──────────────────────────────────────────────────────────── */
 
+/**
+ * THE ENGINE IS THE LANE'S (lib/producers/scoutScene.ts `sceneLane`): a job on gpu.local renders
+ * on this box, any other on Leonardo. A LOCAL CLIP IS FREE, so a live one is not a paid call: it
+ * is made directly, books no spend row, and the step reports $0 (`madePaid` with an unused meter).
+ * A dry one is still declared, so a dry job never reaches the card and its would-calls name the
+ * engine it would have used.
+ */
 async function clipAct(e: SceneEngines, req: SceneRequest, ctx: StepContext): Promise<StepOutcome> {
   const { night, c } = await load(req);
   // THE GUARD: the clip's image is whatever `clipRequestOf` lets through, and nothing else is read.
@@ -204,22 +220,30 @@ async function clipAct(e: SceneEngines, req: SceneRequest, ctx: StepContext): Pr
   if (!ask.ok) return fatal("refused", ask.error.message);
   const { from, motion } = ask.value;
   const image = await imageAt(req, from);
-  const clip = await meteredCall<RenderedClip>(ctx, {
-    provider: "leonardo",
-    model: "hailuo-03",
-    payload: { from, motion, aspect: "16:9", durationS: CLIP_SECONDS },
-    estimate: req.estimates.clip,
-    stand: () => ({ bytes: DRY_CLIP, mime: "video/mp4", model: "dry stand-in" }),
-    live: async () => {
-      const r = await e.clip({ projectId: `scout:${night.id}:${c.id}`, image, motion, aspect: "16:9" });
-      return { value: r, ...(r.costUsd === undefined ? { unpriced: "the clip vendor reported no cost; it stays held at its estimate" } : { usd: r.costUsd }) };
-    },
-  });
+  const engine: ClipEngine = ctx.job.lane === "gpu.local" ? "ltx-local" : "hailuo";
+  const local = engine === "ltx-local";
+  const send: ClipRequest = { projectId: `scout:${night.id}:${c.id}`, image, motion, aspect: "16:9" };
+  const clip =
+    local && ctx.job.mode.kind === "live"
+      ? await e.localClip(send)
+      : await meteredCall<RenderedClip>(ctx, {
+          provider: local ? "comfyui" : "leonardo",
+          model: local ? LTX_MODEL : "hailuo-03",
+          payload: { from, motion, aspect: "16:9", durationS: CLIP_SECONDS },
+          estimate: req.estimates.clip,
+          stand: () => ({ bytes: DRY_CLIP, mime: "video/mp4", model: "dry stand-in" }),
+          live: async () => {
+            const r = await e.clip(send);
+            return { value: r, ...(r.costUsd === undefined ? { unpriced: "the clip vendor reported no cost; it stays held at its estimate" } : { usd: r.costUsd }) };
+          },
+        });
+  const usd = local ? 0 : clip.costUsd;
   const rel = clipFile(c.id);
   fence(ctx);
   await writeFileAt(req, rel, clip.bytes);
-  await writeCandidate(req, ctx.job.id, (x) => ({ ...x, clip: { path: rel, durationS: CLIP_SECONDS, from, ...(clip.costUsd === undefined ? {} : { usd: clip.costUsd }) } }));
-  return madePaid(data({ clip: rel, from, model: clip.model, dry: clip.model === "dry stand-in", ...(clip.costUsd === undefined ? {} : { costUsd: clip.costUsd }) }), ctx);
+  const record: ClipRecord = { path: rel, durationS: CLIP_SECONDS, from, engine, ...(usd === undefined ? {} : { usd }) };
+  await writeCandidate(req, ctx.job.id, (x) => ({ ...x, clip: record }));
+  return madePaid(data({ clip: rel, from, engine, provider: local ? "comfyui" : "leonardo", model: clip.model, dry: clip.model === "dry stand-in", ...(usd === undefined ? {} : { costUsd: usd }) }), ctx);
 }
 
 /* ── The ending ───────────────────────────────────────────────────────────── */
