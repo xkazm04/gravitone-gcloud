@@ -85,6 +85,10 @@ of that engine this footprint. For ComfyUI, the command queues a prompt and wait
 | comfy | `mesh` | gpu.local | one TRELLIS.2 run per variant through ComfyUI's API (`pipeline/mesh/trellis-api.json`) |
 | blender | `finish` | box.blender | about six bounded headless Blender steps per variant (`pipeline/mesh/blender/*.py`) |
 
+`scout-scene` on gpu.local names `comfy` (its LTX clip renders through ComfyUI); `scout-asset`
+(cloud.leonardo, the Flare concept stills) names none - a metered cloud call is bounded by the night's
+money ceiling, not by this machine.
+
 Profile Blender on a raw mesh:
 `npx tsx pipeline/resources.mts profile blender -- <blender.exe> -b --factory-startup --python-exit-code 1 -P pipeline/mesh/blender/finish.py -- <raw.glb> <outdir> sample character`
 

@@ -93,8 +93,11 @@ export const SOURCES = {
   // One /scout night (spark media-training-loop): a row per candidate - an extracted look, a found
   // scene's replicas and clip, a craft finding, a watchlist line. The forge's three still axes, then
   // `motion` for a clip, `rights` for material that should not have been taken, `generic` for a
-  // find that teaches nothing the Library does not already hold.
-  scout: { modes: ["matrix-cull"], reasons: ["style", "subject", "craft", "motion", "rights", "generic"], maxReasons: 3, noteMax: NOTE_SHORT },
+  // find that teaches nothing the Library does not already hold. A game asset's variant (spark
+  // game-3d-assets) adds the defects a mesh is thrown for, APPENDED so every earlier key keeps its
+  // binding: `topology` (holes, floaters, fused or thin parts), `texture` (the bake), `rig` (the
+  // weights or the chains), `scale` (world size against the class).
+  scout: { modes: ["matrix-cull"], reasons: ["style", "subject", "craft", "motion", "rights", "generic", "topology", "texture", "rig", "scale"], maxReasons: 3, noteMax: NOTE_SHORT },
 } as const satisfies { readonly [S in PacketSource]: SourceSpec };
 
 /** The keys a reason list is bound to, in order (plan §8: the Board's 1-4 grew to eleven for audio). */

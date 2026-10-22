@@ -53,6 +53,9 @@ export const PRODUCERS = [
   // Blender finishes it to its class's budget, renders and (characters) rigs it (lib/foundry/mesh/).
   "mesh",
   "finish",
+  // A /scout night's game asset (spark game-3d-assets WP4): its concepts drawn from the brief's words,
+  // gated, and handed to the mesh store with the mesh job queued (lib/producers/scoutAsset.ts).
+  "scout-asset",
 ] as const;
 export const producerNameSchema = z.enum(PRODUCERS);
 export type ProducerName = z.output<typeof producerNameSchema>;

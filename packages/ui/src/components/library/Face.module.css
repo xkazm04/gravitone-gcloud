@@ -31,10 +31,15 @@
 .name{font:600 var(--fs-read)/1.15 var(--serif);color:var(--ink-bright);overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
 .tail{font:600 var(--fs-micro)/1.2 var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .designed.tile{padding-bottom:calc(var(--sp-7) + var(--sp-3))}
+/* A tile's face holds two lines of name at M (three at L) and never a cut one: the name does not
+   shrink, so the clamp, not the box, decides where it ends. The tail is the caption's meta line
+   under the thumb, word for word, so the tile drops it rather than squeeze the name for it. */
+.designed.tile .name{flex-shrink:0;-webkit-line-clamp:2}
+.designed.tile .tail{display:none}
 :global([data-density="s"]) .designed.tile{padding:calc(var(--sp-7) + var(--sp-3)) var(--sp-3) calc(var(--sp-7) + var(--sp-1))}
 :global([data-density="s"]) .designed.tile .lead,:global([data-density="s"]) .designed.tile .tail{display:none}
 :global([data-density="s"]) .designed.tile .name{font-size:var(--fs-ui);-webkit-line-clamp:2}
-:global([data-density="l"]) .designed.tile .name{font-size:var(--fs-title)}
+:global([data-density="l"]) .designed.tile .name{font-size:var(--fs-title);-webkit-line-clamp:3}
 .designed.row,.swatch.row{padding:0}
 .designed.row>*,.swatch.row>*{display:none}
 .designed.preview{padding:calc(var(--sp-7) + var(--sp-4)) var(--sp-6) var(--sp-wide)}

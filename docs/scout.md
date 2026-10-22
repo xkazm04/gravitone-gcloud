@@ -3,7 +3,8 @@
 `/scout` is the nightly training loop (spark `media-training-loop`, 2026-10-22). A Claude-seat skill
 (`.claude/skills/scout/SKILL.md`) finds pictures, videos and pages around `knowledge/scout/watchlist.md`;
 `pipeline/scout.mts` brings them onto this box and turns them into **candidates** - an extracted still
-style, a scene recipe with replica stills and at most two clips, a craft finding, a watchlist line -
+style, a scene recipe with replica stills and at most two clips, a craft finding, a watchlist line,
+and up to three **game assets** briefed in our own words (a concept, then a mesh made on this box) -
 inside a **$15 night**. Everything one night made is ONE Board packet, `pkt:scout:<night>`, and only
 that packet's commit admits anything into the Library or `knowledge/`.
 
@@ -12,7 +13,7 @@ The skill reads and writes words; the CLI and the kernel do everything that spen
 ## The night
 
 ```
-open ──> add-source ──> ingest ──> style / scene / finding / watch ──> close ──> (Board) committed
+open ──> asset (early) ──> add-source ──> ingest ──> style / scene / finding / watch ──> close ──> (Board) committed
  │                                    each launch: open? before deadline? worst case <= remaining?
  └─ dry unless --live                 past the deadline: closed, stop "deadline"
 ```
@@ -36,18 +37,19 @@ to stderr. Exit `0` done, `1` failed or refused, `2` usage.
 | Command | Does | Spends |
 |---|---|---|
 | `doctor [--dry]` | one line per check: yt-dlp, ffmpeg, ffprobe (`-version`), `GOOGLE_AI_API_KEY` and `LEONARDO_API_KEY` set or unset (never their values), the store and night folders writable, `GRAVITONE_DRY_ONLY`. A failing line carries its remedy; exit 1 when a check the night needs fails (`--dry`: the keys and the dry pin are notes) | no |
-| `open [--ceiling 15] [--target 20] [--clips 2] [--until HH:MM] [--live]` | creates the night, writes its `taste.md`, prints its id. `--until` is local time today, or tomorrow once that has passed. Without `--live` the night is dry; `--live` is refused under `GRAVITONE_DRY_ONLY=1` | no |
+| `open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--until HH:MM] [--live]` | creates the night, writes its `taste.md`, prints its id. `--until` is local time today, or tomorrow once that has passed. Without `--live` the night is dry; `--live` is refused under `GRAVITONE_DRY_ONLY=1` | no |
 | `add-source <night> --json <file\|->` | `[{url, kind, title, channel?, why, found, watch?}]`, validated (below). A URL any earlier night holds is skipped and reported | no |
 | `ingest <night> [--source s-NN] [--retry] [--detach]` | launches the `scout-ingest` job over the pending sources and drives it here; `--retry` first puts the failed sources in scope back to pending | no |
 | `style <night> --sources s-01,s-03 [--slug x] [--detach]` | an ordinary extract run (`launchExtract`, a gallery of those sources' pictures and keyframes) as one style candidate; its run id and job id go on the candidate | yes |
 | `scene <night> --source s-NN [--frames k-012.jpg] [--detach]` | a scene candidate read from the chosen keyframe (default the first; ingest keeps one frame per cut, so neighbouring keyframes are different shots), launched through `launchScene` (`lib/producers/scoutScene.ts`) with a clip while the night's clip cap allows | yes |
+| `asset <night> --brief <file\|-> [--detach]` | one game asset from `{class, subject, style?, kind?, techniques?}`: its concepts drawn and gated, its mesh asset written and the mesh job QUEUED for the worker (below, "A game asset") | yes |
 | `finding <night> --json <file\|->` | `[{sourceIds, template, step, claim, quote}]`; `knowledge/templates/<template>/` must exist, `step` is `NN-name` and need not exist yet | no |
 | `watch <night> --entry "..." --why "..." [--sources s-01]` | a proposed watchlist line | no |
 | `close <night> [--stop <reason>]` | settles style candidates from their runs, closes the night, prints the morning: packet id, counts by kind and status, settled and held USD | no |
 | `status [<night>]` | every night, or one with its budget, sources and candidates | no |
 | `folder <dir> [extract args]` | the train-style path: `pipeline/foundry/extract.mts <dir> ...` with its output and exit code | as extract |
 
-Every launching command (`ingest`, `style`, `scene`) refuses on a night that is not open, and after the
+Every launching command (`ingest`, `style`, `scene`, `asset`) refuses on a night that is not open, and after the
 deadline (closing the night with `stop: deadline`).
 
 ## The money
@@ -65,6 +67,10 @@ deadline (closing the night with `stop: deadline`).
   `style over s-01: its worst case $0.15 is over the night's remaining $0.01 of $0.01 (settled $0.00, held $0.00) · clips 0/2; nothing launched`.
 - **Clips**: at most `--clips` (default 2, 5 s each) per night. A scene launch asks for a clip while
   `clipsUsed < clipCap`; the asking is what counts (`clipRequested`), rendered or not.
+- **Game assets**: at most `--assets` (default 3 while the 3D engines are being profiled) per night.
+  One counts once it may reach the GPU - pending, or handed off to a mesh asset; one whose concepts the
+  input gate refused, or whose job failed before the hand-off, spent no GPU minute and gives its place
+  back. The check and the candidate's row are one write under the night's lock.
 - **Dry and live.** A night is dry unless opened with `--live`. Its launches inherit its mode: a dry
   night's jobs answer every paid call with a stand-in, spend nothing, and its packet commits nothing.
   `GRAVITONE_DRY_ONLY=1` refuses a live night and every live launch.
@@ -112,13 +118,53 @@ source, not the job.
 
 A scene candidate is ONE kernel job (`job:scout-scene:<night>:<c-NN>`, `~2` after a failed one; producer `scout-scene`) waiting on the lane of its expensive half: `gpu.local` when it renders a local clip (the card, one job at a time), `cloud.leonardo` otherwise. It reads the chosen keyframe (up to five when more than one is named - only useful for frames of one shot) with Gemini, one recognize call each in time order, each handed the earlier answers as words, into a `SceneRecipe` in craft words (`pipeline/SCOUT-SCENE-PROMPT.md`; the door in `lib/foundry/scout/scene.ts` refuses a missing field, a shot size outside the six, a palette colour without a job, and any word of the source's own title or channel or a capital mid-sentence). Shot length and pace come from the source's cut timestamps when it has them. It then draws two replica stills from the recipe's prompt with no reference image attached - Leonardo GPT Image 2.5 Flare, LOW, 1376x768 (`lib/imaging/providers/leonardoFlare.ts`) - and, only when the night's clip cap still allows (the caller's `clip`), animates OUR first replica for 5 s: by default LOCALLY, LTX-2.5 distilled through this box's ComfyUI (`lib/imaging/video/comfyLtx.ts`, graph `pipeline/video/ltx-i2v-api.json`, 960x576 with its x2 pass, ~100 s a clip, free; `SCOUT_CLIP_ENGINE=hailuo` sends it to Leonardo instead); `clipSourceOf` refuses any path that is not this candidate's own replica, so a source frame never reaches a video vendor. **What it costs on its receipt:** each read at extract's $0.002 pre-call estimate (gemini-3.6-flash is unpriced in the kernel table), each still at Flare's measured 6 credits ($0.0154), and a local clip $0 (no spend row; the clip cell reads `5s · local · free`): about $0.04 a scene. A hailuo clip is held at $3.75 and books to `video-usd`. The vendor's own figure replaces each estimate when it is booked. **What is held:** the source keyframes stay on this box, reference-only; only words leave them. **What ships into the packet:** the recipe, `scenes/<c-NN>/replica-1..2`, and `scenes/<c-NN>/clip.mp4` with `clip.from` naming the replica it animates. A failed clip leaves the scene `rendered` with its stills and `error: clip: …`; a recipe that names its source, a failed read or replica, or a ceiling before the stills ends it `failed` with that sentence verbatim, and nothing is drawn after it. A dry night writes stand-ins into every cell: a committed preset poster for each replica and a placeholder clip file.
 
+## A game asset
+
+`asset <night> --brief <file|->` (spark `game-3d-assets` WP4; the mesh store is `docs/mesh.md`). The
+brief is the skill's words, never a found picture: `{class: character|weapon|prop, subject, style?,
+kind?, techniques?}` - `subject` in craft words (materials, silhouette, palette), never a franchise, a
+studio or a person; `kind` a weapon's sword, mace, axe or staff (the M1 touch-up keys on it);
+`techniques` defaulting to the class's (character `T1,T2` rigged onto UE5 Mannequin chains, weapon
+`T1,M1`, prop `T1`). One `asset3d` candidate and ONE kernel job, `job:scout-asset:<night>:<c-NN>`
+(producer `scout-asset`, lane `cloud.leonardo`, `lib/producers/scoutAsset.ts`):
+
+1. **concept** - one GPT Image 2.5 Flare still per concept, from OUR words with no reference image
+   (`lib/foundry/scout/concept.ts`): a character's orthographic front A-pose with open empty hands, a
+   weapon's strict flat side profile with exactly one blade or head on one straight shaft, a prop's
+   front view - each whole in frame on a plain flat light ground. A character whose T2 is asked gets a
+   SECOND concept written for the game camera: chunky proportions, thick solid shapes with no thin
+   parts, flat colour blocks. `assets/<c-NN>/concept-<k>.png` in the night. **Costs** Flare's 6 credits
+   ($0.0154) a concept, on the receipt and under the night's ceiling.
+2. **handoff** (free) - every concept through the image-to-3D input gate (`lib/foundry/mesh/inputGate.ts`);
+   the mesh asset `<night>-<c-NN>-<subject words>` written with one variant per technique, T2 made from
+   its own design. A variant whose concept failed the gate (or could not be decoded) is written
+   `failed` with the gate's codes and never reaches the GPU; M1 rides on T1's. Every concept refused:
+   no asset, no job, the candidate `failed` with the codes. Otherwise the **mesh job is queued, never
+   driven here**: the worker admits it on `gpu.local` by the `comfy` engine's measured profile, its
+   settle queues the Blender finish on `box.blender`, and the night's discovery carries on meanwhile -
+   so the skill launches its assets EARLY.
+
+A dry night draws stand-in concepts (`standConcept`: the class's silhouette on a plain ground, drawn in
+code so the input gate runs on it for real) and its mesh and finish jobs run dry.
+
+**In the packet** each asset is a row under `3d` with its concept as the reference, and each FINISHED
+variant a cell (`c-05/t2`): the tile is the poster render, `Z` orbits the finished glb (the rigged one
+when rigged), and the words carry the work - `T2 · game-camera design`, `18,000 / 40,000 tris · input
+pass 100 · mesh warn 85 · rig pass 92`, the variant's approach. A variant that failed or has not
+finished is listed at the gate with its own sentence. **A commit** writes each judged variant's
+`verdict` into its asset (`kept` / `rejected`), which is what the Library's 3D models shelf reads
+(the scout feed never shelves an asset: the mesh feed does, once); a dry night records the verdicts
+only. `taste.md` tallies the verdicts by class and technique - `character T1: kept 0 · thrown 1
+(topology 1)` beside `character T2: kept 1 · thrown 0` - the T1-against-T2 question the 3D rounds left open.
+
 ## The morning
 
 A closed, non-dry night with anything rendered is one pile in the Floor's image lane and one packet,
 `/board/pkt:scout:<night>`: a row per candidate - an extracted look (its source as reference, best
 replica and transfer), a scene (keyframe as reference, two replicas, the clip), a finding or a watch
 line (a text tile; Z shows the whole quote). `K` keep, `X` reject with up to three of `style, subject,
-craft, motion, rights, generic` (keys 1-6), `⇧K`/`⇧X` a whole row, `⏎` shows what the commit writes and
+craft, motion, rights, generic` (keys 1-6) and, for a game asset's variant, `topology, texture, rig,
+scale` (keys 7-0), `⇧K`/`⇧X` a whole row, `⏎` shows what the commit writes and
 commits. A candidate that failed is listed at the gate with its sentence and is not in the rows.
 
 What a commit writes: kept looks become `candidate` styles through the extract run's own commit
@@ -146,10 +192,11 @@ the CLI and committing `knowledge/`; logs land in `foundry-out/scout/logs/`.
 | Path | Written by | What |
 |---|---|---|
 | `night.json` | every writer, through `mutateNight` (a lock file, so processes queue) | the manifest: `lib/foundry/scout/types.ts` `Night` |
-| `taste.md` | `open` | the last seven committed live nights' verdicts: kept and thrown per kind, reasons and notes verbatim, channels kept and thrown |
+| `taste.md` | `open` | the last seven committed live nights' verdicts: kept and thrown per kind, reasons and notes verbatim, game assets by class and technique, channels kept and thrown |
 | `sources/<s-NN>/p-NNN.<ext>` | ingest | a picture, or a page's pictures |
 | `sources/<s-NN>/k-NNN.jpg` | ingest | a video's gated keyframes (`at` on the source) |
 | `scenes/<c-NN>/` | the scene producer | replica stills and the clip |
+| `assets/<c-NN>/concept-<k>.png` | the asset producer | a game asset's concepts (the asset itself is `foundry-out/mesh/<asset>/`) |
 
 A style candidate's looks live in its extract run, `foundry-out/extract/<runId>/`. The kernel store
 (`foundry-out/gravitone.sqlite`, `GRAVITONE_STORE_PATH` moves it) holds the jobs, their spend, and the

@@ -10,6 +10,11 @@ Code: `lib/foundry/mesh/` (the asset store, the acts, the ported PoF gates under
 `finish.ts` (the bindings), `pipeline/mesh/blender/*.py` (the ported lynx-bench scripts),
 `pipeline/mesh/trellis-api.json` (the TRELLIS workflow), `pipeline/mesh.mts` (the CLI).
 
+A /scout night briefs assets too, from words: `pipeline/scout.mts asset <night> --brief` draws the
+concepts, gates them, writes the asset (`night` set, a T2 variant made from its own `concept`) and
+queues the mesh job; the morning packet's `3d` rows judge the variants and write their `verdict` here.
+See `docs/scout.md`, "A game asset".
+
 ## Making one
 
 ```bash

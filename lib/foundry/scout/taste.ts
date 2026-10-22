@@ -12,6 +12,12 @@ import { CANDIDATE_KINDS, parseCellId, type Candidate, type CandidateKind, type 
 // throw with its reasons (the `scout` source's words) and the operator's note,
 // verbatim; and the channels behind what was kept and what was thrown, so a
 // channel thrown twice stops being searched.
+//
+// GAME ASSETS are tallied across the same nights by class and technique - kept, thrown, and the
+// reasons each was thrown for - because the question the 3D rounds left open is a comparison
+// (operator, 2026-10-22: does T1's budget generation or T2's game-camera design make the better
+// hero?), and a comparison is only readable as counts side by side. A cell `c-05/t2` is the
+// variant whose id is its technique (lib/producers/scoutAssetActs.ts `plannedVariants`).
 
 export const TASTE_NIGHTS = 7;
 
@@ -31,6 +37,8 @@ function label(n: Night, c: Candidate): string {
       return `"${c.claim}" [${c.template}/${c.step}]${from === "" ? "" : ` from ${from}`}`;
     case "watch":
       return `"${c.entry}"`;
+    case "asset3d":
+      return `"${c.brief.subject}" [${c.brief.class}]`;
     default:
       return from === "" ? c.id : from;
   }
@@ -48,6 +56,41 @@ function channelsOf(n: Night, cells: readonly string[]): Map<string, number> {
       if (ch !== undefined) out.set(ch, (out.get(ch) ?? 0) + 1);
     }
   }
+  return out;
+}
+
+type Tally = { kept: number; thrown: number; reasons: Map<string, number> };
+
+/** `## Game assets`: kept and thrown by class and technique, each row's throw reasons counted. Empty when no asset was judged. */
+export function assetTally(nights: readonly Night[]): string[] {
+  const rows = new Map<string, Tally>();
+  for (const n of nights) {
+    const c = n.committed;
+    if (c === undefined) continue;
+    for (const [v, cells] of [["kept", c.kept], ["rejected", c.rejected]] as const) {
+      for (const cell of cells) {
+        const cand = candidateOf(n, cell);
+        // The technique leads the variant id (`t2`, a hand-made `t2-a`).
+        const technique = /^[tm]\d/i.exec(parseCellId(cell)?.part ?? "")?.[0]?.toUpperCase();
+        if (cand?.kind !== "asset3d" || technique === undefined) continue;
+        const key = `${cand.brief.class} ${technique}`;
+        const t = rows.get(key) ?? { kept: 0, thrown: 0, reasons: new Map<string, number>() };
+        if (v === "kept") t.kept += 1;
+        else {
+          t.thrown += 1;
+          for (const r of c.reasons[cell] ?? []) t.reasons.set(r, (t.reasons.get(r) ?? 0) + 1);
+        }
+        rows.set(key, t);
+      }
+    }
+  }
+  if (rows.size === 0) return [];
+  const out = ["## Game assets", ""];
+  for (const [key, t] of [...rows].sort((a, b) => a[0].localeCompare(b[0]))) {
+    const why = [...t.reasons].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([r, k]) => `${r} ${k}`).join(", ");
+    out.push(`- ${key}: kept ${t.kept} · thrown ${t.thrown}${why === "" ? "" : ` (${why})`}`);
+  }
+  out.push("");
   return out;
 }
 
@@ -95,6 +138,7 @@ export function tasteOf(nights: readonly Night[]): string {
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
       .map(([ch, k]) => `${ch} ${k}`)
       .join(", ") || "none";
+  lines.push(...assetTally(judged));
   lines.push("## Channels", "", `- kept: ${list(kept)}`, `- thrown: ${list(thrown)}`);
   const twice = [...thrown].filter(([ch, k]) => k >= 2 && !kept.has(ch)).map(([ch]) => ch);
   if (twice.length > 0) lines.push(`- thrown twice or more, never kept: ${twice.join(", ")}`);

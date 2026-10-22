@@ -6,6 +6,7 @@
 //   taste.md            the prior nights' verdicts, written for the skill
 //   sources/<s-NN>/     what the ingest producer brought onto this box
 //   scenes/<c-NN>/      a scene candidate's replica stills and its clip
+//   assets/<c-NN>/      a game asset's concept images (the asset itself is lib/foundry/mesh's)
 //
 // Every writer goes through `mutateNight`: the ingest and scene producers and
 // the CLI write the same manifest from different processes, and the run lock
@@ -20,6 +21,7 @@ import { outPath } from "../../fixtures/roots";
 import { FoundryError, containedIn, readManifestFile, writeJsonAtomic } from "../runStore";
 import { withRunLock } from "../verdictLog";
 import {
+  DEFAULT_ASSET_CAP,
   DEFAULT_CEILING_USD,
   DEFAULT_CLIP_CAP,
   DEFAULT_TARGET,
@@ -58,6 +60,7 @@ export type NightOptions = {
   readonly ceilingUsd?: number;
   readonly target?: number;
   readonly clipCap?: number;
+  readonly assetCap?: number;
   /** ISO instant. */
   readonly deadline?: string;
   readonly dry: boolean;
@@ -91,6 +94,7 @@ export async function createNight(o: NightOptions): Promise<Night> {
       ceilingUsd: o.ceilingUsd ?? DEFAULT_CEILING_USD,
       target: o.target ?? DEFAULT_TARGET,
       clipCap: o.clipCap ?? DEFAULT_CLIP_CAP,
+      assetCap: o.assetCap ?? DEFAULT_ASSET_CAP,
       dry: o.dry,
       state: "open",
       sources: [],

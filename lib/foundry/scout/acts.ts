@@ -81,22 +81,22 @@ export async function launchable(ctx: ActContext, id: NightId, o: { readonly spe
   return { night, mode: night.dry ? "dry" : "live" };
 }
 
-const worstOf = (r: Receipt): number => r.totals.usdRange?.[1] ?? r.totals.usd;
+export const worstOf = (r: Receipt): number => r.totals.usdRange?.[1] ?? r.totals.usd;
 
-function overBudget(what: string, worst: number, b: NightBudget): Refusal | null {
+export function overBudget(what: string, worst: number, b: NightBudget): Refusal | null {
   if (b.remainingUsd <= 0) return new Refusal(`${what}: the night has nothing left - ${budgetLine(b)}; nothing launched`);
   if (worst > b.remainingUsd) return new Refusal(`${what}: its worst case ${usd(worst)} is over the night's ${budgetLine(b)}; nothing launched`);
   return null;
 }
 
-async function setCandidate(id: NightId, c: Candidate, job?: string): Promise<void> {
+export async function setCandidate(id: NightId, c: Candidate, job?: string): Promise<void> {
   await mutateNight(id, (n) => {
     const next = withCandidate(n, c);
     return job === undefined || next.jobs.includes(job) ? next : { ...next, jobs: [...next.jobs, job] };
   });
 }
 
-async function addCandidate<C extends Candidate>(id: NightId, make: (cid: CandidateId) => C): Promise<C> {
+export async function addCandidate<C extends Candidate>(id: NightId, make: (cid: CandidateId) => C): Promise<C> {
   let made: C | undefined;
   await mutateNight(id, (n) => {
     made = make(nextCandidateId(n));

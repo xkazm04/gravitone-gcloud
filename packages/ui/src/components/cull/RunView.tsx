@@ -7,7 +7,8 @@ import type { ItemWords } from "../../board/port.ts";
 import type { Run } from "../../board/runs.ts";
 import { Plate } from "../desk/Plate.tsx";
 import { cx } from "../cx.ts";
-import { CullTile, type TileMedia } from "./CullTile.tsx";
+import type { TileMedia } from "./CullTile.tsx";
+import { RunModelTile } from "./RunModelTile.tsx";
 import s from "./Runs.module.css";
 
 export type RunViewProps = {
@@ -35,7 +36,7 @@ export function RunView({ run, cells, verdicts, mediaOf, wordsOf, cur, nudged, o
       <div className={cx(s.runTiles, n === 1 && s.cols1, n === 2 && s.cols2)} role="grid" aria-label="variants">
         {run.members.map((i) => {
           const id = cells[i]?.id ?? "";
-          return <CullTile key={id} index={i} words={wordsOf(id)} media={mediaOf(id)} verdict={verdicts[id]} current={i === cur} nudged={nudged.has(i) && verdicts[id] === undefined} onPress={onPress} play large />;
+          return <RunModelTile key={id} index={i} words={wordsOf(id)} media={mediaOf(id)} verdict={verdicts[id]} current={i === cur} nudged={nudged.has(i) && verdicts[id] === undefined} onPress={onPress} play large />;
         })}
       </div>
     </section>
