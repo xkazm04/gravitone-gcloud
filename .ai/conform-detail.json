@@ -9378,6 +9378,57 @@
           "evidence": "packages/kernel/src/lease.ts:245 Release clears resource ownership synchronously inside the transaction; no token child tree or deferred credential teardown requires a revocation marker."
         }
       ]
+    },
+    "d6ef2aee-128a-4430-80a9-de42991c6316/public-claim-provenance": {
+      "context": "ui-status-provenance",
+      "subject": "public-claim-provenance",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T02:54:54.165Z",
+      "techniques": [
+        {
+          "technique": "build-time-derivation-off-the-client-bundle",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/tally/Tally.tsx:28 Renders supplied operational values; this context does not reduce a heavy catalog for a public claim."
+        },
+        {
+          "technique": "degraded-never-claims-live",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/status/status.ts:164 Handles unknown workflow-state tokens, not fetch outcomes or currency badges on public counters."
+        },
+        {
+          "technique": "derived-numerator-authored-denominator",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/stackbar/StackBar.tsx:25 Reports operational decision counts rather than shipped capabilities against an authored public goal."
+        },
+        {
+          "technique": "no-data-source-labelled-inline",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/source/SourceTag.tsx:19 Displays caller-supplied operational source classifications; no hand-authored public measurement is declared here."
+        },
+        {
+          "technique": "presentation-invariants-on-derived-values",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/facet/FacetRow.tsx:59 Clamps a studio filter's supplied share; no public derived count and authored target pair was found."
+        },
+        {
+          "technique": "promise-only-what-ships",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/consequence/ConsequencePanel.tsx:87 Presents an operator's supplied action preview rather than a public success panel promising follow-up."
+        },
+        {
+          "technique": "provenance-as-a-build-gate",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/provenance/Provenance.tsx:32 These chips identify production metadata within the studio; the standard explicitly excludes internal consoles from this public-claim gate."
+        }
+      ],
+      "withdrawn": {
+        "worker": "43567bc3-02a5-4b97-8f60-4908d01f02f7",
+        "state": "not-applicable",
+        "at": "2026-10-22T02:55:35.023814+00:00",
+        "reason": "reviewer (sonnet): The not-applicable anchor (ConsequencePanel.tsx:69) is an incidental line that renders commit-packet chips and does not show that public claims are absent; ConsequencePanel is also not among the listed context files. The 'illustrative' vs 'real' distinction in SourceTag.tsx suggests data-provenance "
+      }
     }
   }
 }
