@@ -214,3 +214,12 @@ describe("the denylist keeps craft words (2026-10-22 dry campaign)", () => {
     expect(namesIn(["a Spielberg-style push-in"], deny)).not.toEqual([]);
   });
 });
+
+describe("the denylist keeps short craft words (2026-10-22 live rehearsal)", () => {
+  it("'How I Lit This Moody Brand Video' bans no lighting word, and still bans a name", () => {
+    const deny = denylistOf([{ title: "How I Lit This Moody Brand Video | Cinematography Breakdown", channel: "Matt Aitia" }]);
+    expect(namesIn(["a moody, low-key frame lit by one practical"], deny)).toEqual([]);
+    expect(deny).toContain("aitia");
+    expect(namesIn(["an Aitia-style setup"], deny)).not.toEqual([]);
+  });
+});
