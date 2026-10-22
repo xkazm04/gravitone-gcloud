@@ -1,0 +1,70 @@
+# THE SCOUT NIGHT ON A SCHEDULE - registers (or removes, or runs) the Windows Task Scheduler entry
+# that starts `/scout night` headless on the operator's Claude seat (spark media-training-loop,
+# wave 2: "scheduled by default, by hand after a workday").
+#
+#   powershell -NoProfile -ExecutionPolicy Bypass -File pipeline/scout-schedule.ps1 -Print            # show what would be registered; changes nothing
+#   powershell -NoProfile -ExecutionPolicy Bypass -File pipeline/scout-schedule.ps1 -Install -At 22:30
+#   powershell -NoProfile -ExecutionPolicy Bypass -File pipeline/scout-schedule.ps1 -Remove
+#   powershell -NoProfile -ExecutionPolicy Bypass -File pipeline/scout-schedule.ps1 -Run               # what the task itself invokes
+#
+# The task runs as the logged-on user, only when that user is logged on (the seat's credentials
+# are the user's), and wakes nothing. The run is fenced: the seat may only search, read, write its
+# scratch, drive pipeline/scout.mts and commit knowledge/ (the skill's step 0); money is held by the
+# night's own ceiling in the CLI, and --max-budget-usd bounds the seat's turns. The operator installs
+# this, never an agent: registering a scheduled task is a change to the machine, not to the repo.
+
+param(
+  [switch]$Print,
+  [switch]$Install,
+  [switch]$Remove,
+  [switch]$Run,
+  [string]$At = "22:30",
+  [string]$Until = "06:30",
+  [string]$TaskName = "Gravitone scout night"
+)
+
+$ErrorActionPreference = "Stop"
+$repo = Split-Path -Parent $PSScriptRoot
+
+$allowed = @(
+  "WebSearch", "WebFetch", "Read", "Write", "Edit", "Glob", "Grep",
+  "Bash(npx tsx pipeline/scout.mts*)",
+  "Bash(yt-dlp *)",
+  "Bash(git status*)", "Bash(git diff*)", "Bash(git add knowledge/*)", "Bash(git commit*)"
+)
+
+function Invoke-Night {
+  $claude = (Get-Command claude -ErrorAction SilentlyContinue).Source
+  if (-not $claude) { throw "claude is not on PATH for this user - install Claude Code or add it to PATH." }
+  $logs = Join-Path $repo "foundry-out/scout/logs"
+  New-Item -ItemType Directory -Force -Path $logs | Out-Null
+  $log = Join-Path $logs ("{0}.log" -f (Get-Date -Format "yyyy-MM-dd-HHmm"))
+  Set-Location $repo
+  $argv = @("-p", "/scout night --until $Until", "--output-format", "json", "--permission-mode", "dontAsk", "--max-budget-usd", "20", "--allowed-tools") + $allowed
+  & $claude @argv *> $log
+  exit $LASTEXITCODE
+}
+
+$self = Join-Path $PSScriptRoot "scout-schedule.ps1"
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$self`" -Run -Until $Until" -WorkingDirectory $repo
+$trigger = New-ScheduledTaskTrigger -Daily -At $At
+$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 9)
+$principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive
+
+if ($Run) { Invoke-Night }
+elseif ($Remove) {
+  Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
+  Write-Output "removed: $TaskName"
+}
+elseif ($Install) {
+  Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Force | Out-Null
+  Write-Output "registered: $TaskName, daily at $At, stops launching at $Until; logs in foundry-out/scout/logs/"
+}
+else {
+  Write-Output "task:      $TaskName"
+  Write-Output "when:      daily at $At (missed runs start when the machine is next available)"
+  Write-Output "runs:      powershell -NoProfile -ExecutionPolicy Bypass -File $self -Run -Until $Until   (in $repo)"
+  Write-Output "seat:      claude -p `"/scout night --until $Until`" --permission-mode dontAsk --max-budget-usd 20"
+  Write-Output "tools:     $($allowed -join ', ')"
+  Write-Output "install:   powershell -NoProfile -ExecutionPolicy Bypass -File pipeline/scout-schedule.ps1 -Install -At $At"
+}

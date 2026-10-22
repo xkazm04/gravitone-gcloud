@@ -212,6 +212,8 @@ scope:
     - technical articles - registry topic in, live-web research, outline, draft and a deterministic check to a human gate; on approval a registry publication PR and a paste-ready Medium package (nothing is sent to Medium)
     # added 2026-10-05 with the critique step (scope amendment 1, docs/articles.md "The critique")
     - multi-model critique of a drafted article - reviewers run read-only with web access through the local claude, codex and agy CLIs on the operator's own logins; the writer answers every finding before the gate
+    # added 2026-10-22 with lib/foundry/scout (docs/scout.md, spark media-training-loop)
+    - a nightly scout - web and YouTube finds replicated as styles, scenes and craft findings, triaged on one Board packet each morning
   does_not:
     - shipping anywhere - no deployment target, no auth, no multi-tenant
     - agent fleets, companions, orchestration

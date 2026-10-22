@@ -1,6 +1,6 @@
 // THE EXTRACT WIRE TYPES — shared by the disk layer (lib/foundry/extract/store.ts,
-// server only), the engine (engine.ts, server only) and the /foundry Extract tab
-// (client). Nothing here imports Node.
+// server only), the engine (engine.ts, server only) and the Board's extract
+// packet (lib/decision/v1/sources/extract.ts). Nothing here imports Node.
 //
 // An EXTRACT RUN is the third foundry module, beside the forge's runs and the
 // cull. Where the forge takes a style the catalogue already names and asks

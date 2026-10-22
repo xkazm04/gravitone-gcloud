@@ -73,7 +73,7 @@ function summary(m: ExtractManifest): string {
   }
   rows.push("", `  files: foundry-out/extract/${m.id}/`);
   if (m.status === "failed") rows.push(`  failed: ${m.error ?? ""}\n  retry with: npx tsx pipeline/foundry/extract.mts --resume ${m.id}`);
-  if (m.status === "done" && !m.dry) rows.push(`  cull: open /foundry → Extract → ${m.id}, or --commit ${m.id} --keep <ids>`);
+  if (m.status === "done" && !m.dry) rows.push(`  cull: /board/pkt:extract:${m.id}, or --commit ${m.id} --keep <ids>`);
   return rows.join("\n");
 }
 
