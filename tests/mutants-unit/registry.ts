@@ -4622,4 +4622,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "[]",
     why: "A reject reopened on a claim starts without the reasons already recorded for it.",
   },
+{
+    id: "scout-ingest-duplicate-gate-off",
+    test: "packages/producers/test/scout-ingest.test.ts",
+    file: "packages/producers/src/scout-ingest/gates.ts",
+    find: "if (seen.some((h) => hamming(h, f.measure.hash) <= DUP_HAMMING)) {",
+    replace: "if (seen.some((h) => hamming(h, f.measure.hash) < 0)) {",
+    why: "A held shot is kept once per cut the detector found in it, so a scene candidate's keyframes are the same composition several times.",
+  },
+  {
+    id: "scout-ingest-replans-booked",
+    test: "packages/producers/test/scout-ingest.test.ts",
+    file: "packages/producers/src/scout-ingest/define.ts",
+    find: "(target.sourceId === undefined || s.id === target.sourceId) && !booked.has(ingestStep(s.id)))",
+    replace: "(target.sourceId === undefined || s.id === target.sourceId))",
+    why: "A unit booked whose source still reads pending is planned again inside the same job, re-downloading a video the job already took.",
+  },
 ];

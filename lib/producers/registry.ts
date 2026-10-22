@@ -26,6 +26,7 @@ import { stripsProducer } from "./strips.ts";
 import { sunoProducer } from "./suno.ts";
 import { mediaFactsBound } from "./media-facts.ts";
 import { styleJobProducer } from "./style.ts";
+import { scoutIngestProducer } from "./scoutIngest.ts";
 import { sunoDriver } from "../sound/suno/drivers.ts";
 import { sfxProducer } from "../sound/sfxJob.ts";
 import { huntProducer } from "../sound/huntRender.ts";
@@ -111,6 +112,8 @@ export const BOUND: readonly Bound[] = [
   { name: "dojo", producer: dojoProducer() },
   { name: "media-facts", producer: mediaFactsBound() },
   { name: "style", producer: styleJobProducer() },
+  // The /scout night's ingest (spark media-training-loop): a found picture, page or video brought onto this box.
+  { name: "scout-ingest", producer: scoutIngestProducer() },
   // The desk's effect batch (Phase 6, L66): one run of N clips through the metered call.
   ...lanesOf("sfx").map((lane): Bound => ({ name: "sfx", producer: sfxProducer(lane) })),
   // A hunt's picked leaves (Phase 6, L72): one Run, a step per leaf, on ElevenLabs only - the leaf's
