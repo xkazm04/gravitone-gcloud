@@ -5951,7 +5951,11 @@
           "revision": 4,
           "changedAt": "2026-09-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/kernel/src/job-run.ts:173 The code grants worker coordination leases on lane slots rather than credential authority, and searches found no cubbyhole or inlineAuth in the context, kernel directory, or repository.",
+          "evaluatedAt": "2026-10-22",
+          "evaluatedAgainst": "sha256-b2:5f06e495d1f48a79",
+          "evaluatedRevision": 4
         },
         {
           "subject": "durable-agent-operations",
