@@ -13567,7 +13567,11 @@
           "revision": 7,
           "changedAt": "2026-10-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/status/StatusPill.tsx:11 Searches for EventSource, ReadableStream, text/event-stream, heartbeat, and reconnect found no matches in the context directories; these components render supplied domain data rather than terminate and re-emit long-lived reads.",
+          "evaluatedAt": "2026-10-22",
+          "evaluatedAgainst": "sha256-b2:35d2934ae538833a",
+          "evaluatedRevision": 7
         },
         {
           "subject": "browser-credential-boundary",

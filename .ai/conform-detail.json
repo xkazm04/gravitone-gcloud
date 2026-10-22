@@ -9644,6 +9644,57 @@
           "evidence": "packages/ui/src/components/source/SourceTag.tsx:19 SourceKind derives from domain vocabularies, but SourceTag displays the machine token directly instead of resolving a label catalog; the exhaustive STATUS tables elsewhere do not repair this path."
         }
       ]
+    },
+    "d6ef2aee-128a-4430-80a9-de42991c6316/stream-proxy-hop": {
+      "context": "ui-status-provenance",
+      "subject": "stream-proxy-hop",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T21:23:14.660Z",
+      "worker": "aa23c7a1-fab3-4d07-833f-88fa5dce4735",
+      "techniques": [
+        {
+          "technique": "abort-versus-unreachable",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/consequence/ConsequencePanel.tsx:102 Cancellation invokes a supplied UI callback; this component owns no long-lived request or upstream error classification."
+        },
+        {
+          "technique": "credential-attachment-at-the-hop",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/channel/ChannelBadge.tsx:26 The channel badge renders a publishing channel's name and mark, without issuing or authenticating requests."
+        },
+        {
+          "technique": "idle-heartbeat-injection",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/status/StatusPill.tsx:16 The pill renders a supplied display entry; it neither maintains a streaming connection nor emits keep-alives."
+        },
+        {
+          "technique": "lifetime-cap-rotation",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/stackbar/StackBar.tsx:29 The component derives visual segment weights from counts and owns no stream lifetime or resume cursor."
+        },
+        {
+          "technique": "origin-non-disclosure",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/upstream/UpstreamBreak.tsx:46 This displays a caller-supplied pipeline failure detail; the module is not a gateway response boundary, and no proxied origin disclosure is established here."
+        },
+        {
+          "technique": "progress-lease-not-wall-clock",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/piprow/PipRow.tsx:37 The operation maps presentation states to pip classes, without byte transfers or liveness deadlines."
+        },
+        {
+          "technique": "reconnect-storm-hygiene",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/facet/FacetRow.tsx:42 Interaction delegates a filter toggle to the caller; these modules own no reconnecting socket, retry timer, or fallback polling."
+        },
+        {
+          "technique": "upstream-status-normalization",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/status/status.ts:162 Status lookup resolves domain state tokens into presentation entries, without constructing HTTP responses from upstream status codes."
+        }
+      ]
     }
   }
 }

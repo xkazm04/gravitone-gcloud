@@ -1,0 +1,90 @@
+{
+ "schema": "conform-run/1",
+ "worker": "aa23c7a1-fab3-4d07-833f-88fa5dce4735",
+ "subject": "stream-proxy-hop",
+ "evaluatedAt": "2026-10-22T21:23:14.660739+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "ui-status-provenance",
+   "subject": "stream-proxy-hop",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/status/StatusPill.tsx:11 Searches for EventSource, ReadableStream, text/event-stream, heartbeat, and reconnect found no matches in the context directories; these components render supplied domain data rather than terminate and re-emit long-lived reads.",
+   "techniques": [
+    {
+     "technique": "abort-versus-unreachable",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/consequence/ConsequencePanel.tsx:102 Cancellation invokes a supplied UI callback; this component owns no long-lived request or upstream error classification."
+    },
+    {
+     "technique": "credential-attachment-at-the-hop",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/channel/ChannelBadge.tsx:26 The channel badge renders a publishing channel's name and mark, without issuing or authenticating requests."
+    },
+    {
+     "technique": "idle-heartbeat-injection",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/status/StatusPill.tsx:16 The pill renders a supplied display entry; it neither maintains a streaming connection nor emits keep-alives."
+    },
+    {
+     "technique": "lifetime-cap-rotation",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/stackbar/StackBar.tsx:29 The component derives visual segment weights from counts and owns no stream lifetime or resume cursor."
+    },
+    {
+     "technique": "origin-non-disclosure",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/upstream/UpstreamBreak.tsx:46 This displays a caller-supplied pipeline failure detail; the module is not a gateway response boundary, and no proxied origin disclosure is established here."
+    },
+    {
+     "technique": "progress-lease-not-wall-clock",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/piprow/PipRow.tsx:37 The operation maps presentation states to pip classes, without byte transfers or liveness deadlines."
+    },
+    {
+     "technique": "reconnect-storm-hygiene",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/facet/FacetRow.tsx:42 Interaction delegates a filter toggle to the caller; these modules own no reconnecting socket, retry timer, or fallback polling."
+    },
+    {
+     "technique": "upstream-status-normalization",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/status/status.ts:162 Status lookup resolves domain state tokens into presentation entries, without constructing HTTP responses from upstream status codes."
+    }
+   ],
+   "absenceTerms": [
+    "EventSource",
+    "ReadableStream",
+    "text/event-stream",
+    "heartbeat",
+    "reconnect"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-22T21:23:14.660739+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "stream-proxy-hop"
+   ],
+   "techniques": [
+    "abort-versus-unreachable",
+    "credential-attachment-at-the-hop",
+    "idle-heartbeat-injection",
+    "lifetime-cap-rotation",
+    "origin-non-disclosure",
+    "progress-lease-not-wall-clock",
+    "reconnect-storm-hygiene",
+    "upstream-status-normalization"
+   ],
+   "deviations": 0,
+   "context": "ui-status-provenance",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
