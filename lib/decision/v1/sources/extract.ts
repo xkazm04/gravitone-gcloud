@@ -160,7 +160,7 @@ export function importVerdict(rec: ExtractVerdictRecord): Imported {
   return { verdict: rec.verdict, reasons, ...(note === "" ? {} : { note }), lost, cut };
 }
 
-type LookDecision = { readonly verdict: "keep" | "reject" | null; readonly reasons: readonly string[]; readonly note?: string; readonly by: Decision["by"]; readonly at: string };
+export type LookDecision = { readonly verdict: "keep" | "reject" | null; readonly reasons: readonly string[]; readonly note?: string; readonly by: Decision["by"]; readonly at: string };
 
 /** A look's verdict from its cells' decisions: kept when any is kept, rejected when every one is. */
 export function lookDecision(all: readonly (Decision | undefined)[], order: readonly string[] = SPEC.reasons): LookDecision {
@@ -177,10 +177,10 @@ export function lookDecision(all: readonly (Decision | undefined)[], order: read
   return { verdict: "reject", reasons, ...(note === "" ? {} : { note }), by, at };
 }
 
-const same = (a: { verdict: string | null; reasons: readonly string[]; note?: string }, b: { verdict: string | null; reasons: readonly string[]; note?: string }): boolean =>
+export const same = (a: { verdict: string | null; reasons: readonly string[]; note?: string }, b: { verdict: string | null; reasons: readonly string[]; note?: string }): boolean =>
   a.verdict === b.verdict && a.reasons.join("\u0000") === b.reasons.join("\u0000") && (a.note ?? "") === (b.note ?? "");
 
-function recordOf(d: LookDecision): ExtractVerdictRecord {
+export function recordOf(d: LookDecision): ExtractVerdictRecord {
   return { verdict: d.verdict === "keep" ? "keep" : "reject", at: d.at, ...(d.reasons.length > 0 ? { reasons: [...d.reasons] } : {}), ...(d.note === undefined ? {} : { note: d.note }), by: v1By(d.by) };
 }
 
@@ -203,9 +203,18 @@ function judgeable(v1: ExtractV1): Cell[] {
 const takenBy = (catalogue: ExtractV1["catalogue"], run: ExtractManifest, id: string): boolean => catalogue.styles.some((s) => s.id === id && s.origin?.source !== run.id);
 
 function packet(v1: ExtractV1): Result<OpenPlan> {
+  const no = refusal(v1.run);
+  if (no !== undefined) return err("refused", `extract run ${v1.run.id}: ${no}`);
+  return planLooks(v1);
+}
+
+/**
+ * The packet without v1's commit refusals: the scout's packet draws a style
+ * candidate's looks through this (lib/decision/v1/sources/scout.ts), and a dry
+ * night's dry run is triaged there though it is never committed.
+ */
+export function planLooks(v1: ExtractV1): Result<OpenPlan> {
   const { run } = v1;
-  const no = refusal(run);
-  if (no !== undefined) return err("refused", `extract run ${run.id}: ${no}`);
   const losses: Loss[] = [];
   const all = run.styles.flatMap((s) => cellsOf(run, s));
   for (const c of all) if (v1.media[c.file] === undefined) losses.push({ candidate: c.id, grade: "dropped", reason: `${c.file} is not on disk` });

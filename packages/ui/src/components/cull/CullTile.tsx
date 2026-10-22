@@ -1,7 +1,10 @@
 // One candidate on the matrix (prototype index.html `CullTile`, `Zoom`): the media, its
 // label and second word, a badge once decided (✓ keep, ✕ reject), the reject's reasons as
 // rose chips, and the cursor ring. An audio take draws its waveform, title, provider line and
-// prompt instead of a plate. The verdict is spoken in the tile's name, never colour alone.
+// prompt instead of a plate. A TEXT cell (a text/* candidate: a scout finding's claim, a
+// watchlist line) draws its words instead: the label is the claim, the prompt the quote under
+// it, the meta where it would land - the same button, keys and spoken name as a plate, and the
+// lens shows the quote whole. The verdict is spoken in the tile's name, never colour alone.
 import { useRef } from "react";
 
 import type { ItemWords } from "../../board/port.ts";
@@ -16,8 +19,8 @@ import s from "./Cull.module.css";
 
 export type TileMedia = { readonly url: string; readonly mime: string };
 
-export const kindOf = (mime: string): "image" | "video" | "audio" | "other" =>
-  mime.startsWith("image/") ? "image" : mime.startsWith("video/") ? "video" : mime.startsWith("audio/") ? "audio" : "other";
+export const kindOf = (mime: string): "image" | "video" | "audio" | "text" | "other" =>
+  mime.startsWith("image/") ? "image" : mime.startsWith("video/") ? "video" : mime.startsWith("audio/") ? "audio" : mime.startsWith("text/") ? "text" : "other";
 
 export type CullTileProps = {
   readonly index: number;
@@ -42,7 +45,7 @@ export function CullTile({ index, words, media, verdict, current, nudged, playin
   return (
     <button
       type="button"
-      className={cx(s.tile, current && s.cur, verdict?.verdict === "keep" && s.keep, verdict?.verdict === "reject" && s.reject, nudged && s.nudge)}
+      className={cx(s.tile, kind === "text" && s.textTile, current && s.cur, verdict?.verdict === "keep" && s.keep, verdict?.verdict === "reject" && s.reject, nudged && s.nudge)}
       data-tile={index}
       role="gridcell"
       aria-selected={current}
@@ -67,6 +70,12 @@ export function CullTile({ index, words, media, verdict, current, nudged, playin
             {words.prompt !== undefined && <div className={s.prompt}>{words.prompt}</div>}
           </div>
         </>
+      ) : kind === "text" ? (
+        <span className={s.textBody}>
+          <span className={s.claim}>{words.label}</span>
+          {words.prompt !== undefined && <span className={s.detail}>{words.prompt}</span>}
+          {words.meta !== undefined && <span className={s.textMeta}>{words.meta}</span>}
+        </span>
       ) : (
         <>
           {kind === "video" ? <video className={s.media} src={media.url} muted playsInline preload="metadata" /> : <Plate className={s.media} src={media.url} alt="" lazy />}
@@ -120,10 +129,19 @@ export function Zoom({ words, media, verdict, position, onClose, specimen = fals
   const kind = kindOf(media.mime);
   return (
     <div ref={panel} className={cx(s.zoom, verdict?.verdict === "keep" && s.zKeep, verdict?.verdict === "reject" && s.zReject)} data-zoom="">
-      {kind === "video" ? <video className={s.zMedia} src={media.url} autoPlay muted loop playsInline /> : <Plate className={s.zMedia} src={media.url} alt={words.label} />}
+      {kind === "text" ? (
+        <div className={s.zText}>
+          <p className={s.zClaim}>{words.label}</p>
+          {words.prompt !== undefined && <blockquote className={s.zQuote}>{words.prompt}</blockquote>}
+        </div>
+      ) : kind === "video" ? (
+        <video className={s.zMedia} src={media.url} autoPlay muted loop playsInline />
+      ) : (
+        <Plate className={s.zMedia} src={media.url} alt={words.label} />
+      )}
       <div className={s.zcap}>
         <span className={s.zPos}>{position}</span>
-        <b className={s.zLabel}>{words.label}</b>
+        {kind !== "text" && <b className={s.zLabel}>{words.label}</b>}
         {words.meta !== undefined && <Chip label={words.meta} />}
         {verdict === undefined ? (
           <Chip label="undecided" ghost />

@@ -96,6 +96,10 @@ export const SCREENS = {
   "floor-schedule": { url: "/floor?cal=1&new=1&day=2030-01-14" },
   board: { url: "/floor", follow: { selector: "a[href^='/board/']", nav: "goto" } },
   "board-sheet": { url: "/floor", follow: { selector: "a[href^='/board/']", nav: "click" } },
+  // board-scout   a /scout night's morning packet (pkt:scout:<night>): the Floor's first scout
+  //               pile, so - like `board` - it photographs whichever closed night THIS machine's
+  //               scout store holds, and refuses when it holds none.
+  "board-scout": { url: "/floor", follow: { selector: "a[href^='/board/pkt%3Ascout%3A']", nav: "goto" } },
   ledger: { url: "/ledger" },
   runs: { url: "/projects/runs" },
   "library-style": { url: "/library/style/painted-3d" },

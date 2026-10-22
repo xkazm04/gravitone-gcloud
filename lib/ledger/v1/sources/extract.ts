@@ -11,6 +11,7 @@ import type { ResourceLane } from "@gt/domain/lane";
 import { LEASE_TTL_MS } from "../../../../lib/foundry/extract/lease.ts";
 import { getExtractRun, listExtractRuns } from "../../../../lib/foundry/extract/store.ts";
 import { EXTRACT_COMMITTABLE, EXTRACT_LIVE } from "../../../foundry/plant.ts";
+import { scoutExtractRunIds } from "../../../foundry/scout/store.ts";
 import { bump, facts, instant, laneOfEngine, readEach, seg } from "../facts.ts";
 import type { IngestEvent, LiveJob, ProjectCtx, Projection, Skipped, Source, WeirItem } from "../types.ts";
 
@@ -70,7 +71,8 @@ const verdictsSchema = z
   .transform((m) => Object.entries(m).map(([key, v]) => ({ key, ...v })));
 
 type ExtractRun = { readonly run: Parsed<z.output<typeof manifestSchema>>; readonly verdicts: Parsed<z.output<typeof verdictsSchema>> };
-export type ExtractSnapshot = { readonly runs: readonly ExtractRun[]; readonly skipped: readonly Skipped[] };
+/** `scoutOwned`: the runs a /scout night launched - decided on the night's packet, never as piles of their own. */
+export type ExtractSnapshot = { readonly runs: readonly ExtractRun[]; readonly skipped: readonly Skipped[]; readonly scoutOwned?: ReadonlySet<string> };
 
 export const EXTRACT_READ_CAP = 500;
 
@@ -98,7 +100,13 @@ async function read(): Promise<Result<ExtractSnapshot>> {
     else if (!verdicts.ok) skipped.push({ id: d.run.id, reason: verdicts.error.message });
     else runs.push({ run: run.value, verdicts: verdicts.value });
   }
-  return ok({ runs, skipped });
+  let scoutOwned: ReadonlySet<string>;
+  try {
+    scoutOwned = await scoutExtractRunIds();
+  } catch (e) {
+    return err("unavailable", `extract: the scout nights could not be read: ${errorMessage(e)}`, { cause: e });
+  }
+  return ok({ runs, skipped, scoutOwned });
 }
 
 /** The unit a status is running, and so the engine (and lane) it occupies. */
@@ -204,9 +212,11 @@ function liveOf({ run }: ExtractRun, nowMs: number): LiveJob | null {
   };
 }
 
-function weirOf({ run, verdicts }: ExtractRun): WeirItem | null {
-  // A dry run's images are stand-ins: nothing to cull, and v1's commit refuses it.
-  if (!EXTRACT_COMMITTABLE.includes(run.status) || run.styles.length === 0 || run.dry === true) return null;
+function weirOf({ run, verdicts }: ExtractRun, scoutOwned: ReadonlySet<string>): WeirItem | null {
+  // A dry run's images are stand-ins: nothing to cull, and v1's commit refuses it. A run a scout
+  // night launched is a row of that night's packet (lib/decision/v1/sources/scout.ts); as a pile
+  // of its own it was decided twice, and one whose looks were all rejected stayed forever.
+  if (!EXTRACT_COMMITTABLE.includes(run.status) || run.styles.length === 0 || run.dry === true || scoutOwned.has(run.id)) return null;
   const judged = new Set(verdicts.map((v) => v.key));
   const decided = run.styles.filter((s) => judged.has(s.id)).length;
   const since = instant(run.finished);
@@ -218,7 +228,7 @@ export function projectExtract(s: ExtractSnapshot, ctx: ProjectCtx): Projection 
   return {
     events: s.runs.flatMap((r) => eventsOf(r, ctx)),
     live: s.runs.map((r) => liveOf(r, nowMs)).filter((j) => j !== null),
-    weir: s.runs.map(weirOf).filter((w) => w !== null),
+    weir: s.runs.map((r) => weirOf(r, s.scoutOwned ?? new Set())).filter((w) => w !== null),
     tally: tallyOf(s.runs),
     skipped: s.skipped,
   };

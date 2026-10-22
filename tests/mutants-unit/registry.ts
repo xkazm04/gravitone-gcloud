@@ -4638,4 +4638,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "(target.sourceId === undefined || s.id === target.sourceId))",
     why: "A unit booked whose source still reads pending is planned again inside the same job, re-downloading a video the job already took.",
   },
+{
+    id: "cull-text-tile-draws-a-plate",
+    test: "packages/ui/test/cull-text.test.ts",
+    file: "packages/ui/src/components/cull/CullTile.tsx",
+    find: ': mime.startsWith("text/") ? "text" : "other";',
+    replace: ': "other";',
+    why: "A scout finding's claim and quote are drawn as a broken image: the operator keeps or rejects a sentence they cannot read.",
+  },
 ];

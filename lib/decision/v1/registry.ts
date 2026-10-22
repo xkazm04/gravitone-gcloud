@@ -11,6 +11,7 @@ import { articleAdapter } from "./sources/article.ts";
 import { audioAdapter } from "./sources/audio.ts";
 import { mvAdapter } from "./sources/mv.ts";
 import { proofAdapter } from "./sources/proof.ts";
+import { scoutAdapter } from "./sources/scout.ts";
 import { sunoAdapter } from "./sources/suno.ts";
 import type { DecisionAdapter } from "./types.ts";
 import { stepAdapter } from "@/lib/parts/gates";
@@ -49,8 +50,8 @@ export const DECISION_ADAPTERS = {
   step: adapter(stepAdapter),
   // Phase 5 (L56): a style's pending proofs, from the Style table
   proof: adapter(proofAdapter),
-  // spark media-training-loop WP0 placeholder; WP3 binds scoutAdapter (./sources/scout.ts).
-  scout: notDecidable("the scout decision source is being built (spark media-training-loop WP3)"),
+  // spark media-training-loop: one /scout night, a row per candidate (./sources/scout.ts).
+  scout: adapter(scoutAdapter),
 } as const satisfies { readonly [S in PacketSource]: AdapterEntry };
 
 /** The adapter that decides `source`, or `refused` with the reason none does. */

@@ -162,6 +162,23 @@ export async function listNights(): Promise<NightSummary[]> {
   return out.sort((a, b) => (a.startedAt < b.startedAt ? 1 : a.startedAt > b.startedAt ? -1 : 0));
 }
 
+/** Every extract run a night's style candidate launched - the extract Weir leaves them to the night's packet. */
+export async function scoutExtractRunIds(): Promise<Set<string>> {
+  let names: string[];
+  try {
+    names = await readdir(scoutRoot());
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return new Set();
+    throw e;
+  }
+  const ids = new Set<string>();
+  for (const id of names.filter((x) => NIGHT_ID_RE.test(x))) {
+    const n = await readManifestFile<Night>(path.join(scoutRoot(), id, NIGHT_FILE), id, "night");
+    if (n) for (const c of n.candidates) if (c.kind === "style" && c.extractRunId !== undefined) ids.add(c.extractRunId);
+  }
+  return ids;
+}
+
 /* ── Write ────────────────────────────────────────────────────────────────── */
 
 /** Write the manifest whole (tmp + rename). Only `createNight` and `mutateNight` call it. */
