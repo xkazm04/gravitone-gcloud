@@ -39,8 +39,8 @@ to stderr. Exit `0` done, `1` failed or refused, `2` usage.
 | `open [--ceiling 15] [--target 20] [--clips 2] [--until HH:MM] [--live]` | creates the night, writes its `taste.md`, prints its id. `--until` is local time today, or tomorrow once that has passed. Without `--live` the night is dry; `--live` is refused under `GRAVITONE_DRY_ONLY=1` | no |
 | `add-source <night> --json <file\|->` | `[{url, kind, title, channel?, why, found, watch?}]`, validated (below). A URL any earlier night holds is skipped and reported | no |
 | `ingest <night> [--source s-NN] [--retry] [--detach]` | launches the `scout-ingest` job over the pending sources and drives it here; `--retry` first puts the failed sources in scope back to pending | no |
-| `style <night> --sources s-01,s-03 [--slug x] [--detach]` | an ordinary extract run (`launchExtract`, a gallery of those sources' pictures and keyframes) as one style candidate; its run id and job id go on the candidate | yes |
-| `scene <night> --source s-NN [--frames k-012.jpg] [--detach]` | a scene candidate read from the chosen keyframe (default the first; ingest keeps one frame per cut, so neighbouring keyframes are different shots), launched through `launchScene` (`lib/producers/scoutScene.ts`) with a clip while the night's clip cap allows | yes |
+| `style <night> --sources s-01,s-03 --use "<content>" [--slug x] [--detach]` | an ordinary extract run (`launchExtract`, a gallery of those sources' pictures and keyframes) as one style candidate; its run id and job id go on the candidate | yes |
+| `scene <night> --source s-NN --use "<content>" [--frames k-012.jpg] [--detach]` | a scene candidate read from the chosen keyframe (default the first; ingest keeps one frame per cut, so neighbouring keyframes are different shots), launched through `launchScene` (`lib/producers/scoutScene.ts`) with a clip while the night's clip cap allows | yes |
 | `finding <night> --json <file\|->` | `[{sourceIds, template, step, claim, quote}]`; `knowledge/templates/<template>/` must exist, `step` is `NN-name` and need not exist yet | no |
 | `watch <night> --entry "..." --why "..." [--sources s-01]` | a proposed watchlist line | no |
 | `close <night> [--stop <reason>]` | settles style candidates from their runs, closes the night, prints the morning: packet id, counts by kind and status, settled and held USD | no |
@@ -118,7 +118,7 @@ A closed, non-dry night with anything rendered is one pile in the Floor's image 
 `/board/pkt:scout:<night>`: a row per candidate - an extracted look (its source as reference, best
 replica and transfer), a scene (keyframe as reference, two replicas, the clip), a finding or a watch
 line (a text tile; Z shows the whole quote). `K` keep, `X` reject with up to three of `style, subject,
-craft, motion, rights, generic` (keys 1-6), `⇧K`/`⇧X` a whole row, `⏎` shows what the commit writes and
+craft, motion, rights, generic, use case` (keys 1-7; `use case`: the run serves no content worth making, and the next nights steer away from it), `⇧K`/`⇧X` a whole row, `⏎` shows what the commit writes and
 commits. A candidate that failed is listed at the gate with its sentence and is not in the rows.
 
 What a commit writes: kept looks become `candidate` styles through the extract run's own commit

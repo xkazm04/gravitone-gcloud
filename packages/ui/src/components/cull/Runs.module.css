@@ -30,27 +30,32 @@
 .nudge{animation:nudge .9s}
 @keyframes nudge{0%,100%{box-shadow:none}30%,70%{box-shadow:0 0 0 var(--ring-halo) var(--rose)}}
 
-/* the opened run, across the whole screen */
-.modal{position:fixed;inset:0;z-index:var(--z-sheet);display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:var(--ink)}
-.modalHead{display:flex;flex-direction:column;gap:var(--sp-3);padding:var(--sp-5) var(--sp-page);border-bottom:1px solid var(--hair)}
-.headLine{display:flex;align-items:center;gap:var(--sp-loose);min-width:0}
-.whole{margin-left:auto}
-.brief{display:flex;flex-direction:column;gap:var(--sp-2);max-width:120ch}
-.aim{margin:0;font-size:var(--fs-body);line-height:1.45;color:var(--text)}
-.checks{margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:var(--sp-2)}
-.check{padding:var(--sp-1) var(--sp-3);border-radius:var(--r-chip);border:1px solid var(--hair-2);font:500 var(--fs-micro)/1.3 var(--mono);color:var(--text)}
+/* the opened run, across the whole screen: head (purpose | reference), body (the variants, as large
+   as the screen leaves them), checks (one full-width row), foot */
+.modal{position:fixed;inset:0;z-index:var(--z-sheet);display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;background:var(--ink)}
+.modalHead{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--sp-7);align-items:start;padding:var(--sp-5) var(--sp-page);border-bottom:1px solid var(--hair)}
+.headWords{display:flex;flex-direction:column;gap:var(--sp-4);min-width:0}
+.headLine{display:flex;align-items:baseline;gap:var(--sp-loose);min-width:0}
 .modalTitle{margin:0;font:600 var(--fs-h2)/1.3 var(--sans);color:var(--ink-bright);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .runPos{font:500 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+.purpose{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--sp-2) var(--sp-4);align-items:baseline}
+.purposeKey{font:600 var(--fs-micro)/1.4 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.purposeVal{margin:0;font-size:var(--fs-body);line-height:1.45;color:var(--text)}
+.purposeNone{margin:0;font:500 var(--fs-control-sm)/1.45 var(--mono);color:var(--amber)}
+.headActs{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4)}
 .close{flex:none}
-.modalBody{overflow:auto;display:grid;align-content:center;padding:var(--sp-6) var(--sp-page)}
+.headRef{margin:0;display:flex;flex-direction:column;align-items:flex-end;gap:var(--sp-2);min-width:0}
+.headRefFace{max-width:100%;max-height:26vh;object-fit:contain;border-radius:var(--r-control);border:1px solid var(--hair-2);background:var(--ink-2)}
+.runRefNote{font:600 var(--fs-micro)/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.modalBody{min-height:0;overflow:auto;padding:var(--sp-5) var(--sp-page)}
+.checksRow{margin:0;list-style:none;display:flex;flex-wrap:wrap;gap:var(--sp-2);padding:var(--sp-3) var(--sp-page);border-top:1px solid var(--hair)}
+.check{padding:var(--sp-1) var(--sp-3);border-radius:var(--r-chip);border:1px solid var(--hair-2);font:500 var(--fs-micro)/1.3 var(--mono);color:var(--text)}
 .modalFoot{display:flex;align-items:center;gap:var(--sp-loose);padding:var(--sp-4) var(--sp-page);border-top:1px solid var(--hair);background:color-mix(in srgb,var(--letterbox) 20%,transparent)}
 
-.run{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,4fr);gap:var(--sp-7);align-items:start}
-.runBare{grid-template-columns:minmax(0,1fr)}
-.runRef{margin:0;display:flex;flex-direction:column;gap:var(--sp-2);position:sticky;top:0}
-.runRefFace{width:100%;max-height:62vh;object-fit:contain;border-radius:var(--r-control);border:1px solid var(--hair-2);background:var(--ink-2)}
-.runRefNote{font:600 var(--fs-micro)/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.runTiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sp-6)}
+/* the variants fill the body: a row of up to three as tall as it is; more than three wrap into rows
+   of their own height, scrolled */
+.runTiles{height:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:var(--sp-6)}
+.runTilesMany{height:auto;grid-auto-rows:minmax(42vh,auto)}
 .cols1{grid-template-columns:minmax(0,1fr)}
 .cols2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .cols1>*,.cols2>*{grid-column:auto}

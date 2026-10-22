@@ -128,7 +128,7 @@ function styleCells(night: Night, c: Candidate & { kind: "style" }, read: StyleR
   out.rows.push(
     ...p.present.rows.map((r) => {
       const look = ex.run.styles.find((st) => st.id === r.id);
-      return { ...r, id: under(r.id), group: "art styles", ...(look === undefined ? {} : lookBrief(look)) };
+      return { ...r, id: under(r.id), group: "art styles", ...(look === undefined ? {} : lookBrief(look)), ...(c.use === undefined ? {} : { use: c.use }) };
     }),
   );
   out.initial.push(...p.initial.map((d) => ({ ...d, candidate: under(d.candidate) })));
@@ -173,7 +173,7 @@ function sceneCells(night: Night, c: SceneCandidate, media: ScoutV1["media"], ou
   // the full prompt are each replica's own words, shown in the zoom.
   const label = r === undefined ? `scene ${c.id}` : clip40(`${r.shot} · ${r.camera.split(/[,;]/)[0] ?? r.camera}`);
   out.cells.push(...shown);
-  out.rows.push({ id: c.id, label, group: "videos", ...(r === undefined ? {} : sceneBrief(r)), ...(key !== undefined && media[key] !== undefined ? { ref: scoutFileUrl(night.id, key) } : {}) });
+  out.rows.push({ id: c.id, label, group: "videos", ...(r === undefined ? {} : sceneBrief(r)), ...(c.use === undefined ? {} : { use: c.use }), ...(key !== undefined && media[key] !== undefined ? { ref: scoutFileUrl(night.id, key) } : {}) });
 }
 
 function textCell(night: Night, c: Candidate & { kind: "finding" | "watch" }, out: Mutable): void {

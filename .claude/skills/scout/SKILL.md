@@ -59,7 +59,8 @@ the operator's hour; the operator may also type it after a workday. Either way:
 `npx tsx pipeline/scout.mts open --live --until 06:30 --json` (a typed `/scout night --dry` drops
 `--live`; `--until` from the argument when given). Note the night id. Then read, in this order:
 `foundry-out/scout/<night>/taste.md` (what the operator kept and threw, with reasons - **a channel or a
-kind of look rejected twice is not searched again**), `knowledge/scout/watchlist.md`, and what the
+kind of look rejected twice is not searched again, and a use under "refused as a use" is not proposed
+again** unless the night has a new reason it now serves), `knowledge/scout/watchlist.md`, and what the
 Library already holds (`pipeline/foundry/styles.json`: names and recipes - a look already there is not a
 find).
 
@@ -104,14 +105,19 @@ download deleted. A failed source keeps its tool sentence; do not retry it by an
 
 Check `status <night> --json` for the remaining money before each launch.
 
+0. **Every run states its USE** (operator, 2026-10-22): the content it can help make - a children's
+   cartoon series, a music video, a short comedy sketch, an explainer, a trailer, a film's mood reel.
+   One concrete line, passed as `--use "<content>"`; it heads the run on the Board. A look or a shot you
+   cannot name a use for is not launched - a run with no purpose is a mindless output, and the operator
+   refuses those with the `use case` reason, which steers the next nights away from that direction.
 1. **Styles.** Group ingested pictures/keyframes that share ONE look (technique, palette roles, finish -
-   not subject) into 1-4 sources per run: `style <night> --sources s-01,s-04 --slug <look-words>`.
+   not subject) into 1-4 sources per run: `style <night> --sources s-01,s-04 --slug <look-words> --use "<content>"`.
    One extract run per group. The engine reads, replicates from words and transfers; its scores are a
    pre-filter, not a verdict - you do not re-judge them by eye.
 2. **Scenes.** Ingest keeps ONE frame per cut, so neighbouring keyframes are different shots (in a
    video essay, different films). Look at the keyframes first (`Read` them, or a contact sheet:
    `ffmpeg -v error -i <night dir>/sources/s-NN/k-%03d.jpg -vf "scale=320:-1,tile=6x4" -frames:v 1 <scratch>/sheet.jpg`),
-   then for the 3-4 most instructive shots: `scene <night> --source s-NN --frames k-012.jpg` - one frame
+   then for the 3-4 most instructive shots: `scene <night> --source s-NN --frames k-012.jpg --use "<content>"` - one frame
    per scene. Skip frames that are a talking head, a screenshot, or carry burnt-in text (an essay's
    captions, a counter). The first two scenes in priority order get a clip while the cap allows; put the
    shot whose MOTION teaches most first.

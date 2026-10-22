@@ -17,7 +17,7 @@
 .sm .opt{padding:var(--sp-1) var(--sp-3);font-size:var(--fs-micro)}
 
 /* the variant, large */
-.card{margin:0;display:flex;flex-direction:column;gap:var(--sp-3);padding:var(--sp-3);border-radius:var(--r-tile);background:var(--ink-3);border:var(--stroke-mark) solid transparent}
+.card{margin:0;min-height:0;display:flex;flex-direction:column;gap:var(--sp-3);padding:var(--sp-3);border-radius:var(--r-tile);background:var(--ink-3);border:var(--stroke-mark) solid transparent}
 .wide{grid-column:1/-1}
 .cur{box-shadow:0 0 0 var(--ring-halo) var(--cyan)}
 .kept{border-color:var(--emerald)}
@@ -25,11 +25,10 @@
 .rejected .frame{filter:grayscale(.85) brightness(.45)}
 .nudge{animation:nudge .9s}
 @keyframes nudge{0%,100%{box-shadow:none}30%,70%{box-shadow:0 0 0 var(--ring-halo) var(--rose)}}
-.media{display:block;width:100%;padding:0;border:0;background:none;border-radius:var(--r-control);overflow:hidden;text-align:left}
-.frame{display:block;width:100%;height:auto;max-height:56vh;object-fit:contain;background:var(--ink-2)}
-video.frame{aspect-ratio:16/9}
+.media{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;width:100%;padding:0;border:0;background:var(--ink-2);border-radius:var(--r-control);overflow:hidden;text-align:left}
+.frame{display:block;width:100%;height:100%;object-fit:contain;background:var(--ink-2)}
 .wave{display:grid;place-items:center;height:var(--h-wavebox);background:var(--wave-ground)}
-.text{display:flex;flex-direction:column;gap:var(--sp-4);padding:var(--sp-5);background:var(--ink-2)}
+.text{align-self:stretch;width:100%;display:flex;flex-direction:column;gap:var(--sp-4);padding:var(--sp-5);background:var(--ink-2);overflow:auto}
 .claim{font:600 var(--fs-h3)/1.35 var(--sans);color:var(--ink-bright)}
 .quote{font-size:var(--fs-read);line-height:1.55;color:var(--text)}
 .player{width:100%}
