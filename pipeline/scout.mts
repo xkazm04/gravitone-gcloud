@@ -25,6 +25,7 @@
 // EXIT 0 done · 1 failed or refused · 2 usage. Never touches foundry-out/ when
 // GRAVITONE_STORE_PATH and SCOUT_STORE_DIR point elsewhere.
 
+import type { KeyFetch } from "../lib/imaging/keyProbe.ts";
 import fs from "node:fs";
 import { spawn } from "node:child_process";
 import path from "node:path";
@@ -46,6 +47,8 @@ export type CliPorts = {
   readonly stdin?: () => Promise<string>;
   /** `folder`'s child: the command and its args, the child's exit code back. */
   readonly run?: (cmd: string, args: readonly string[]) => Promise<number>;
+  /** doctor's vendor key probes (lib/imaging/keyProbe.ts); a test hands a fake. */
+  readonly keyFetch?: KeyFetch;
 };
 export type Io = { readonly env: Readonly<Record<string, string | undefined>>; readonly out: (s: string) => void; readonly err: (s: string) => void; readonly ports?: CliPorts };
 
@@ -165,7 +168,7 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
       const { blocking, doctor, doctorLine } = await import("../lib/foundry/scout/doctor.ts");
       const { storeLocation } = await import("@gt/kernel/process");
       const { OUT_DIRNAME } = await import("../lib/fixtures/mode.ts");
-      const checks = await doctor({ env: io.env, storePath: storeLocation(OUT_DIRNAME, io.env["GRAVITONE_STORE_PATH"]), scoutRoot: store.scoutRoot(), dry: flags.has("dry"), ...(io.ports?.spawn === undefined ? {} : { spawn: io.ports.spawn }) });
+      const checks = await doctor({ env: io.env, storePath: storeLocation(OUT_DIRNAME, io.env["GRAVITONE_STORE_PATH"]), scoutRoot: store.scoutRoot(), dry: flags.has("dry"), ...(io.ports?.spawn === undefined ? {} : { spawn: io.ports.spawn }), ...(io.ports?.keyFetch === undefined ? {} : { keyFetch: io.ports.keyFetch }) });
       const failed = blocking(checks);
       if (json) doc({ ok: failed.length === 0, checks });
       else for (const c of checks) io.out(doctorLine(c));

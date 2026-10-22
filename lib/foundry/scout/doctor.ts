@@ -1,14 +1,16 @@
 import { access, mkdir } from "node:fs/promises";
 import path from "node:path";
 
+import { probeGoogle, probeLeonardo, type KeyFetch, type KeyProbe } from "../../imaging/keyProbe";
 import { comfyBase, comfyStats, missingModels, type ComfyFetch } from "../../imaging/video/comfyLtx";
 import { binsFrom, lastLines, realSpawn, type Bins, type Spawn } from "./ingest";
 
 // THE BOX PREFLIGHT for a /scout night - read-only, nothing spent, nothing
 // installed. One line per check; a failing line carries its remedy, and the
 // CLI (pipeline/scout.mts doctor) exits 1 when a check the night needs fails.
-// Key VALUES are never read past "is it set": a doctor's output is pasted into
-// night summaries and chats.
+// Key VALUES are never printed: a doctor's output is pasted into night summaries and
+// chats. On a LIVE night each key is also tried once against its vendor's free read
+// (lib/imaging/keyProbe.ts) - "set" was not enough: a placeholder is set.
 //
 // What a night needs: the three binaries always (ingest runs on every night, dry
 // or live - it is free), and for a LIVE night the two vendor keys, a shell that
@@ -67,6 +69,13 @@ export type DoctorInput = {
   readonly spawn?: Spawn;
   /** ComfyUI's HTTP API (default the global fetch); a test hands a fake. */
   readonly fetch?: ComfyFetch;
+  /** The vendors' key probes (default the global fetch); a test hands a fake. */
+  readonly keyFetch?: KeyFetch;
+};
+
+const PROBES: Readonly<Record<(typeof NIGHT_KEYS)[number], (key: string, f?: KeyFetch) => Promise<KeyProbe>>> = {
+  GOOGLE_AI_API_KEY: probeGoogle,
+  LEONARDO_API_KEY: probeLeonardo,
 };
 
 /** What starts ComfyUI on this box (`COMFY_START` moves it): the remedy when it is down. */
@@ -107,8 +116,17 @@ export async function doctor(input: DoctorInput): Promise<Check[]> {
   const out: Check[] = [];
   for (const k of ["ytdlp", "ffmpeg", "ffprobe"] as const) out.push(await binary(spawn, bins, k));
   for (const key of NIGHT_KEYS) {
-    const set = (input.env[key]?.trim() ?? "") !== "";
-    out.push({ name: key, ok: set, found: set ? "set" : "unset", needed: !input.dry, ...(set ? {} : { remedy: `add ${key}=... to .env.local (a live night's launches need it)` }) });
+    const value = input.env[key]?.trim() ?? "";
+    if (value === "") {
+      out.push({ name: key, ok: false, found: "unset", needed: !input.dry, remedy: `add ${key}=... to .env.local (a live night's launches need it)` });
+      continue;
+    }
+    if (input.dry) {
+      out.push({ name: key, ok: true, found: "set", needed: false });
+      continue;
+    }
+    const p = await PROBES[key](value, input.keyFetch);
+    out.push(p.ok ? { name: key, ok: true, found: `set · ${p.found}`, needed: true } : { name: key, ok: false, found: `set but refused · ${p.found}`, needed: true, remedy: `replace ${key} in .env.local with a working key` });
   }
   const storeDir = input.storePath === ":memory:" ? null : await writable(path.dirname(input.storePath));
   out.push({ name: "store", ok: storeDir === null, found: input.storePath, needed: true, ...(storeDir === null ? {} : { remedy: `the store's folder cannot be written (${storeDir}); set GRAVITONE_STORE_PATH` }) });

@@ -18,7 +18,9 @@ afterAll(() => rmSync(DIR, { recursive: true, force: true }));
 
 const spawn = async (bin: string): Promise<SpawnResult> => ({ ok: true, stdout: Buffer.from(`${bin} version 9.9\n`), stderr: "" });
 const ENV = { GOOGLE_AI_API_KEY: "set", LEONARDO_API_KEY: "set", COMFY_URL: "http://comfy.test:8188" };
-const input = (o: Partial<DoctorInput> = {}): DoctorInput => ({ env: ENV, storePath: path.join(DIR, "kernel.sqlite"), scoutRoot: path.join(DIR, "scout"), dry: false, spawn, ...o });
+/** Both vendors accept the key: these tests are about ComfyUI, and no test reaches a vendor. */
+const keysOk = async () => ({ ok: true, status: 200, text: async () => "{}" });
+const input = (o: Partial<DoctorInput> = {}): DoctorInput => ({ env: ENV, storePath: path.join(DIR, "kernel.sqlite"), scoutRoot: path.join(DIR, "scout"), dry: false, spawn, keyFetch: keysOk, ...o });
 
 const LOADERS: Record<string, unknown> = {
   UNETLoader: { input: { required: { unet_name: [["ltx-2.5-22b-distilled-transformer-comfy-int8-convrot.safetensors"]] } } },
@@ -78,5 +80,20 @@ describe("doctor, the local clip engine", () => {
     expect(line(checks, "clip engine")).toBe("ok   clip engine         hailuo (Leonardo; each clip is paid)");
     const odd = await doctor(input({ env: { ...ENV, SCOUT_CLIP_ENGINE: "wan" }, fetch: comfy().f }));
     expect(blocking(odd).map((c) => c.name)).toEqual(["clip engine"]);
+  });
+
+  it("a set key the vendor refuses fails a live night, quoting the vendor and never the key", async () => {
+    const secret = "GOOGLE_API_KEY";
+    const refused = async (url: string) =>
+      url.includes("googleapis")
+        ? { ok: false, status: 400, text: async () => JSON.stringify({ error: { message: `API key not valid: ${secret}` } }) }
+        : { ok: true, status: 200, text: async () => JSON.stringify({ user_details: [{ subscriptionTokens: 120, apiPaidTokens: 30 }] }) };
+    const checks = await doctor(input({ env: { ...ENV, GOOGLE_AI_API_KEY: secret }, fetch: comfy().f, keyFetch: refused }));
+    const google = checks.find((c) => c.name === "GOOGLE_AI_API_KEY");
+    expect(google).toMatchObject({ ok: false, needed: true });
+    expect(google?.found).toBe("set but refused · 400: API key not valid: [redacted]");
+    expect(checks.find((c) => c.name === "LEONARDO_API_KEY")?.found).toBe("set · accepted · 150 credits on the account");
+    const dry = await doctor(input({ dry: true, env: { ...ENV, GOOGLE_AI_API_KEY: secret }, fetch: comfy().f, keyFetch: refused }));
+    expect(dry.find((c) => c.name === "GOOGLE_AI_API_KEY")).toMatchObject({ ok: true, found: "set", needed: false });
   });
 });
