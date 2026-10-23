@@ -1,0 +1,31 @@
+/* The night's load against the band. Positions are data: the band's edges ride in as --lo / --hi,
+   a mark's place as --x, a strip slot's mean as --v, all fractions 0..1 of the track. The three
+   cells sit side by side while the desk is wide and stack into rows when it is not. */
+.load{display:flex;flex-direction:column;gap:var(--sp-3);min-width:0}
+.cells{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(var(--w-detail),100%),1fr));gap:var(--sp-3) var(--sp-6);min-width:0}
+.res{display:flex;flex-direction:column;gap:var(--sp-1);min-width:0}
+.head{display:flex;align-items:baseline;gap:var(--sp-3);font:600 var(--fs-micro)/1.35 var(--mono);color:var(--muted);white-space:nowrap}
+.name{font-weight:700;letter-spacing:.1em;text-transform:uppercase;min-width:calc(3 * var(--sp-3))}
+.read b{color:var(--ink-bright);font-weight:700}
+
+/* The 0-100 track: the band shaded and edged, the p95 a thin tick, the average a mark that stands
+   proud of the track so it reads even where it sits on the band's edge. */
+.track{--lo:0;--hi:0;position:relative;height:var(--sp-3);border-radius:var(--r-meter);background:var(--wash-hi);box-shadow:inset 0 0 0 1px var(--hair)}
+.track i{position:absolute;display:block}
+.band{top:0;bottom:0;left:calc(var(--lo) * 100%);width:calc((var(--hi) - var(--lo)) * 100%);background:color-mix(in srgb,var(--emerald) 16%,transparent);border-left:1px solid color-mix(in srgb,var(--emerald) 55%,transparent);border-right:1px solid color-mix(in srgb,var(--emerald) 55%,transparent)}
+.p95{--x:0;top:0;bottom:0;left:calc(var(--x) * 100%);width:1px;background:var(--muted)}
+.avg{--x:0;top:calc(-1 * var(--sp-nudge));bottom:calc(-1 * var(--sp-nudge));left:calc(var(--x) * 100% - var(--stroke-mark) / 2);width:var(--stroke-mark);border-radius:1px}
+.track.unread{background:var(--hatch)}
+
+/* The night: one bar per slot, from a floor; the band drawn behind as a zone at the same heights. */
+.strip{--lo:0;--hi:0;position:relative;display:flex;align-items:flex-end;gap:1px;height:var(--h-tag)}
+.zone{position:absolute;left:0;right:0;bottom:calc(var(--lo) * 100%);height:calc((var(--hi) - var(--lo)) * 100%);background:color-mix(in srgb,var(--emerald) 9%,transparent);border-top:1px solid var(--hair-2);border-bottom:1px solid var(--hair-2)}
+.slot{position:relative;flex:1 1 0;min-width:0;height:100%;display:flex;align-items:flex-end}
+.slot i{--v:0;display:block;width:100%;height:max(1px,calc(var(--v) * 100%))}
+
+/* Where a value sits against the band: under (the box idled), in, over (the night queued itself). */
+.under{background:var(--amber)}
+.in{background:var(--emerald)}
+.over{background:var(--rose)}
+
+.lines{display:flex;flex-wrap:wrap;gap:var(--sp-1) var(--sp-6);font:600 var(--fs-micro)/1.35 var(--mono);color:var(--muted)}

@@ -10,6 +10,7 @@ import "server-only";
 
 
 import type { MediaLane } from "@gt/domain/lane";
+import { LOAD_BAND, LOAD_STRIP_MS, type LoadResource, type LoadSummary } from "@gt/domain/load";
 import type { PacketMode, PacketSource } from "@gt/domain/source";
 import type { Presentation } from "@gt/ui/board/port";
 
@@ -80,6 +81,47 @@ const SCOUT_ITEMS: SeedItem[] = [
   { id: "c-04/text", row: "c-04", url: "", mime: "text/plain" },
 ];
 const SCENE_PROMPT = "wide low-angle shot, 24mm, a lone figure on the left third against a pale sky, long shadow toward camera";
+
+// A night's load as the summary hands it to the desk (@gt/domain/load), built from its strip - one
+// mean per five minutes, -1 where nothing was read - so the averages, the p95 and the share in band
+// agree with the bars the desk draws. The fixture writes no load_samples rows: the kernel table is
+// the real side's, and this literal is the only way a fixture night shows its load.
+const slot2 = (x: number): number => Math.round(Math.max(0, Math.min(0.99, x)) * 100) / 100;
+function loadOf(strip: readonly number[]): LoadResource {
+  const read = strip.filter((v) => v >= 0);
+  const sorted = [...read].sort((a, b) => a - b);
+  const n = read.length;
+  if (n === 0) return { avg: 0, p95: 0, inBand: 0, read: 0, strip };
+  const avg = read.reduce((a, v) => a + v, 0) / n;
+  const inBand = read.filter((v) => v >= LOAD_BAND.low && v <= LOAD_BAND.high).length / n;
+  return { avg, p95: sorted[Math.min(n - 1, Math.ceil(n * 0.95) - 1)] ?? 0, inBand, read: n * (LOAD_STRIP_MS / 60_000), strip };
+}
+function nightLoad(fromMs: number, slots: number, at: { readonly cpu: (i: number) => number; readonly ram: (i: number) => number; readonly gpu: (i: number) => number }, rest: Pick<LoadSummary, "commit" | "waited">): LoadSummary {
+  const strip = (f: (i: number) => number): number[] => Array.from({ length: slots }, (_, i) => slot2(f(i)));
+  return { fromMs, toMs: fromMs + slots * LOAD_STRIP_MS, samples: slots * (LOAD_STRIP_MS / 60_000), band: LOAD_BAND, cpu: loadOf(strip(at.cpu)), ram: loadOf(strip(at.ram)), gpu: loadOf(strip(at.gpu)), ...rest };
+}
+/** 2026-10-21, 22:00 to 06:30 UTC: CPU and RAM mostly in band, the GPU in bursts between the stills. */
+const NIGHT_21 = nightLoad(
+  Date.UTC(2026, 9, 21, 22, 0),
+  102,
+  {
+    cpu: (i) => (i < 4 ? 0.2 + i * 0.12 : 0.67 + 0.13 * Math.sin(i * 0.31) + 0.05 * Math.cos(i * 1.7)),
+    ram: (i) => (i < 4 ? 0.45 + i * 0.06 : 0.71 + 0.07 * Math.sin(i * 0.11)),
+    gpu: (i) => 0.32 + 0.62 * Math.max(0, Math.sin(i * 0.23)),
+  },
+  { commit: { peakGb: 88.4, limitGb: 102 }, waited: { memory: 41, "comfy-queue": 12 } },
+);
+/** 2026-10-20, 23:00 to 04:00 UTC: an under-scoped night - the box sat idle for most of it. */
+const NIGHT_20 = nightLoad(
+  Date.UTC(2026, 9, 20, 23, 0),
+  60,
+  {
+    cpu: (i) => 0.38 + 0.12 * Math.sin(i * 0.4),
+    ram: (i) => 0.52 + 0.05 * Math.sin(i * 0.2),
+    gpu: (i) => (i % 12 < 3 ? 0.9 : 0.04),
+  },
+  { commit: { peakGb: 61.2, limitGb: 102 }, waited: {} },
+);
 
 const DECK = ["discipline-educational", "discipline-free", "discipline-trailer", "engine-adjudication", "engine-derived-short", "template-short-form-clip"];
 const AUDIO = ["smeared-transients", "vocal-garble"];
@@ -275,6 +317,30 @@ export function seeds(): readonly Seed[] {
         ],
         oracle: { passed: true, summary: "4 candidates · 7 cells · 0 failed · stopped: target", fixture: true },
         meta: "scout · 9 sources",
+        load: NIGHT_21,
+      },
+    },
+    {
+      id: "pkt:scout:2026-10-20",
+      lane: "image",
+      source: "scout",
+      mode: "matrix-cull",
+      title: "scout 2026-10-20",
+      runId: "2026-10-20",
+      committed: true,
+      items: SCOUT_ITEMS.slice(0, 2),
+      imported: [
+        { candidate: "c-01/ink-wash/replica-1", verdict: "keep", reasons: [] },
+        { candidate: "c-01/ink-wash/transfer-1", verdict: "reject", reasons: ["style"] },
+      ],
+      present: {
+        items: {
+          "c-01/ink-wash/replica-1": { label: "replica of s-02", meta: "replica · 81%" },
+          "c-01/ink-wash/transfer-1": { label: "transfer · a harbour at dusk", meta: "transfer · 74%" },
+        },
+        rows: [{ id: "c-01/ink-wash", label: "Ink wash · illustration", ref: "/deck-art/discipline-educational.webp", inCatalogue: false }],
+        meta: "scout · 3 sources",
+        load: NIGHT_20,
       },
     },
     {

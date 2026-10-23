@@ -16,7 +16,7 @@ export const SECTIONS = [
   { id: "controls", group: "Controls", title: "Buttons", sub: "tone · size · key · disabled" },
   { id: "inputs", group: "Controls", title: "Choices · fields", sub: "toggle · seg · field · facet · fold" },
   { id: "structure", group: "Structure", title: "Panels · headings · empty", sub: "panel · caps heading · empty" },
-  { id: "runs", group: "Composition", title: "Runs", sub: "day-line · lane chip · resource summary" },
+  { id: "runs", group: "Composition", title: "Runs", sub: "day-line · lane chip · load band · resource summary" },
   { id: "ledger", group: "Composition", title: "Ledger", sub: "time strip · event row · json · stale" },
   { id: "floor", group: "Composition", title: "Floor", sub: "lane · run · pile · shelf · calendar · month · header" },
   { id: "board", group: "Composition", title: "Board", sub: "sheet · rail · cull · pair · review · cut · consequence" },

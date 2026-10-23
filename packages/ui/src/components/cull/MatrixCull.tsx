@@ -73,6 +73,7 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
     <DeskFrame
       title={view.title ?? view.id}
       {...(present.meta !== undefined ? { meta: present.meta } : {})}
+      {...(present.load !== undefined ? { load: present.load } : {})}
       marks={
         <>
           {present.oracle !== undefined && <OracleStrip oracle={present.oracle} />}

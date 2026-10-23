@@ -4,10 +4,13 @@
 // work itself, and a foot with the keys and the one act the packet ends in.
 import type { ReactNode } from "react";
 
+import type { LoadSummary } from "@gt/domain/load";
+
 import type { Oracle } from "../../board/port.ts";
 import { Chip } from "../chip/Chip.tsx";
 import { cx } from "../cx.ts";
 import { Keycap } from "../keycaps/Keycaps.tsx";
+import { LoadBand } from "../load/LoadBand.tsx";
 import s from "./Desk.module.css";
 
 export function BoardDesk({ rail, children }: { readonly rail: ReactNode; readonly children: ReactNode }) {
@@ -27,13 +30,15 @@ export type DeskFrameProps = {
   readonly meta?: string;
   /** Chips beside the title: the oracle, a calibration note. */
   readonly marks?: ReactNode;
+  /** A /scout night's machine load (Presentation.load), drawn under the title and marks; absent, nothing. */
+  readonly load?: LoadSummary;
   readonly foot: ReactNode;
   readonly children: ReactNode;
   /** Drawn over the main area (the zoom lens). */
   readonly over?: ReactNode;
 };
 
-export function DeskFrame({ title, meta, marks, foot, children, over }: DeskFrameProps) {
+export function DeskFrame({ title, meta, marks, load, foot, children, over }: DeskFrameProps) {
   return (
     <>
       <div className={s.top}>
@@ -42,6 +47,11 @@ export function DeskFrame({ title, meta, marks, foot, children, over }: DeskFram
           {meta !== undefined && <span className={s.meta}>{meta}</span>}
         </div>
         {marks}
+        {load !== undefined && (
+          <div className={s.load}>
+            <LoadBand load={load} />
+          </div>
+        )}
       </div>
       <div className={s.main} data-desk-main="">
         {children}

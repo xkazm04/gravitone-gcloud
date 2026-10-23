@@ -247,3 +247,13 @@ Where this port moved from the prototype:
 | Kit name | Replaces (v1) | Pages | States / variants |
 | --- | --- | --- | --- |
 | `ModelViewer` (+ `ModelStage`, its lazy three + @react-three/fiber chunk) | none (PoF's r3f viewer is the reference; no prototype) | Library detail, Board zoom | loading (poster under a loading chip), ready (orbit, wireframe, bones over a rigged model, tris and bones from the scene), failed (the loader's sentence verbatim), no WebGL; pane 16:10 or `fill` (the lens) |
+
+## Load (spark night-load-band)
+
+| Kit name | Replaces (prototype) | Pages | States / variants |
+| --- | --- | --- | --- |
+| `LoadBand` (+ `load/band.ts`) | none (prototype source: none - spark night-load-band; v1's `BandTrack` was never built) | F (a /scout night's desk, open and committed), /kit | per resource (cpu, ram, gpu) a meter: average in band (emerald) / under (amber, the box idled) / over (rose, the night queued itself), p95 tick, `avg 64 · p95 81 · 72% in band`; unread (hatched track, `unread`, no marks, spoken `gpu unread`); the night strip, a bar per 5 min coloured by its own slot's look, a read slot never under a hairline, a slot with no reading a gap (nothing drawn); `commit 88 of 102 GB peak` (no limit: `commit 88 GB peak`; no peak: absent); `waited: memory 41 min · comfy queue 12 min`, longest first (none: absent); no `load`: nothing drawn |
+
+Mounted through `DeskFrame`'s `load` prop (the summary, not a slot): `MatrixCull` passes `present.load`, the
+Board's `DecidedDesk` its packet's `present.load`. The three cells sit side by side on a wide desk and wrap as it
+narrows (a cell is at least `--w-detail`).

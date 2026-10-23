@@ -28,6 +28,7 @@ export function DecidedDesk({ packet, next, onNext, onRedrive }: DecidedDeskProp
   return (
     <DeskFrame
       title={v.title ?? v.id}
+      {...(packet.present.load !== undefined ? { load: packet.present.load } : {})}
       marks={
         <>
           <StatusPill machine="packet" state={v.state} />

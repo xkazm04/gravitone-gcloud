@@ -20,6 +20,7 @@
 .top{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-4) var(--sp-loose);padding:var(--sp-5) var(--sp-6);border-bottom:1px solid var(--hair)}
 .title{font:600 var(--fs-h2)/1.2 var(--sans);color:var(--ink-bright);letter-spacing:-.01em;margin:0}
 .meta{font:500 var(--fs-bar)/1 var(--mono);color:var(--faint)}
+.load{flex:1 0 100%;min-width:0}
 .oracle{display:flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center}
 .main{flex:1;min-height:0;overflow:auto;position:relative}
 .foot{flex:none;display:flex;align-items:center;gap:var(--sp-loose);padding:var(--sp-4) var(--sp-6);border-top:1px solid var(--hair);background:color-mix(in srgb,var(--letterbox) 20%,transparent)}
