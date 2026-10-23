@@ -384,4 +384,12 @@ export const MUTANTS: Mutant[] = [
     replace: "const signal = init.signal;",
     why: "A vendor URL fetched with no caller signal that accepts the connection and never answers holds the request, and the job behind it, forever.",
   },
+  {
+    id: "mcp-initialize-hides-tools",
+    probe: "mcp-conformance.probe.spec.ts",
+    file: "app/_server/mcp/rpc.ts",
+    find: "capabilities: { tools: { listChanged: false } }",
+    replace: "capabilities: {}",
+    why: "initialize names no tools capability, so a conforming MCP client (Athena, Claude Code) never lists or calls a single studio tool.",
+  },
 ];
