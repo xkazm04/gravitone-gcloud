@@ -127,7 +127,7 @@ const reel = (k: number, brief: Record<string, unknown> = {}) => ({
     illustrative: true,
     ...brief,
   },
-  approach: { name: "Harbour ledger", medium: "svg", grammar: "race", density: "medium", direction: "Cranes as bars; the year a tide line rising up the frame.", falsifier: "Reads as a bar chart with boats drawn on it." },
+  approach: { name: "Harbour ledger", medium: "svg", grammar: "morph", density: "mid", direction: "Cranes as bars; the year a tide line rising up the frame.", falsifier: "Reads as a bar chart with boats drawn on it." },
 });
 
 const stats = (title: string, k: number, o: Record<string, unknown> = {}) => ({ title, target: "stats", prompt: "Container throughput as a tide: each port a crane whose arm lengthens with the year; 2008 the one ebb.", anchor: { kind: "free", ref: "" }, use: "a logistics explainer's cold open", reel: reel(k), ...o });
@@ -157,6 +157,14 @@ describe("the reel's door", () => {
     expect(at([stats("b", 1, { reel: reel(1, { hook: "h".repeat(201) }) })])).toMatch(/^idea 1: reel\.brief\.hook: /);
     expect(at([stats("b", 1, { reel: { ...reel(1), approach: { ...reel(1).approach, colour: "red" } } })])).toMatch(/^idea 1: reel\.approach: /);
     expect(at([stats("b", 1, { reel: reel(1, { data: { values: Array(20_000).fill(12.5) } }) })])).toMatch(/^idea 1: reel: a reel is at most 60 KB of JSON/);
+  });
+
+  it("the approach is written in the strips vocabulary, less webgl: a word the step would refuse is refused here", () => {
+    const with_ = (o: Record<string, string>) => stats("b", 1, { reel: { ...reel(1), approach: { ...reel(1).approach, ...o } } });
+    expect(at([with_({ medium: "webgl" })])).toMatch(/^idea 1: reel\.approach\.medium: /);
+    expect(at([with_({ grammar: "race" })])).toMatch(/^idea 1: reel\.approach\.grammar: /);
+    expect(at([with_({ density: "medium" })])).toMatch(/^idea 1: reel\.approach\.density: /);
+    expect(at([with_({ medium: "canvas", grammar: "stepped", density: "high" })])).toBe("ok");
   });
 });
 

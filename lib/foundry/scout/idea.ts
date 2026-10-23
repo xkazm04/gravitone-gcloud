@@ -9,7 +9,7 @@ import type { IdeaEngines } from "../../producers/scoutIdeaActs.ts";
 import { launchReels, reelFiles, SCOUT_REELS_LANE } from "../../producers/scoutReel.ts";
 import { launchable, Refusal, type ActContext } from "./acts.ts";
 import { mutateNight, nextCandidateId, readNight, resolveInNight, withCandidate } from "./store.ts";
-import { DEFAULT_IDEA_CAP, DEFAULT_REEL_CAP, IDEA_ANCHORS, IDEA_PROMPT_MAX, IDEA_TARGETS, IDEA_TITLE_MAX, REEL_KINDS, USE_MAX, type CandidateId, type IdeaCandidate, type Night, type NightId, type ReelBrief } from "./types.ts";
+import { DEFAULT_IDEA_CAP, DEFAULT_REEL_CAP, IDEA_ANCHORS, REEL_DENSITIES, REEL_GRAMMARS, REEL_MEDIA, IDEA_PROMPT_MAX, IDEA_TARGETS, IDEA_TITLE_MAX, REEL_KINDS, USE_MAX, type CandidateId, type IdeaCandidate, type Night, type NightId, type ReelBrief } from "./types.ts";
 
 // THE NIGHT'S IDEAS - what `pipeline/scout.mts ideas <night> --json <file|->` does (spark
 // scout-idea-artboards WP-I2, stats-reels WP-R2). The skill writes a batch of briefs in its own words -
@@ -75,7 +75,7 @@ const reelSchema = z
       .strict(),
     /** The seat's own design, in a strips approach card's fields (pipeline/strips/approaches.json). */
     approach: z
-      .object({ name: text(REEL_LINE_MAX), medium: text(REEL_LINE_MAX), grammar: text(REEL_LINE_MAX), density: text(REEL_LINE_MAX), direction: text(REEL_PARA_MAX), falsifier: text(REEL_PARA_MAX) })
+      .object({ name: text(REEL_LINE_MAX), medium: z.enum(REEL_MEDIA), grammar: z.enum(REEL_GRAMMARS), density: z.enum(REEL_DENSITIES), direction: text(REEL_PARA_MAX), falsifier: text(REEL_PARA_MAX) })
       .strict(),
   })
   .strict()

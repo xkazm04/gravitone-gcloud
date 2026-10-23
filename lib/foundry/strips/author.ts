@@ -44,6 +44,10 @@ export interface AuthorInput {
   timeoutMin?: number;
   /** The strips pipeline directory (CONTRACT.md, vendor/); default `<cwd>/pipeline/strips`. */
   stripsDir?: string;
+  /** Another job's addendum to the contract (a stats reel's REEL.md): files copied into inputs/ beside
+   *  CONTRACT.md under their own names, and the sentence that sends the agent to them, appended to the
+   *  prompt. Absent, the turn is the strips turn byte for byte. */
+  addendum?: { readonly inputs: readonly string[]; readonly prompt: string };
 }
 
 /** One prepared turn: the agent's input, and what a fix turn was shown (to tell whether it changed it). */
@@ -68,6 +72,7 @@ export async function prepareTurn(input: AuthorInput): Promise<StripTurn> {
   await mkdir(out, { recursive: true });
 
   await copyFile(path.join(strips, "CONTRACT.md"), path.join(inputs, "CONTRACT.md"));
+  for (const f of input.addendum?.inputs ?? []) await copyFile(f, path.join(inputs, path.basename(f)));
   await writeFile(path.join(inputs, "brief.json"), JSON.stringify(input.brief, null, 2));
   const card = { ...approach, lane: input.lane, size: input.lane === "edu" ? "1920x1080" : "1080x1920" };
   await writeFile(path.join(inputs, "approach.json"), JSON.stringify(card, null, 2));
@@ -94,9 +99,10 @@ export async function prepareTurn(input: AuthorInput): Promise<StripTurn> {
     before = sha(await readFile(path.join(out, "strip.html"), "utf8"));
   }
 
+  const prompt = input.feedback ? FIX_PROMPT : FIRST_PROMPT;
   const agent: RunAgentInput = {
     cwd: ws,
-    prompt: input.feedback ? FIX_PROMPT : FIRST_PROMPT,
+    prompt: input.addendum === undefined ? prompt : `${prompt} ${input.addendum.prompt}`,
     model: MODEL,
     effort: input.effort,
     tools: ["Read", "Write", "Edit"],
@@ -132,10 +138,17 @@ export async function standInTurn(t: StripTurn): Promise<AgentResult> {
   return { outcome: "completed", final: "dry stand-in: no seat was called", turns: 0, durationMs: 0, exitCode: 0, errors: [] };
 }
 
-export function standInPage(lane: StripLane): string {
+/**
+ * The stand-in page. With `data` (a stats reel's dry turn) it also holds the numbers in the one
+ * `<script id="strip-data">` block and reads it, so the reel's data rule (./lint.ts stripDataRule)
+ * passes on a dry job as it must on a real one; without, it is the strips page byte for byte.
+ */
+export function standInPage(lane: StripLane, data?: unknown): string {
   const [w, h] = lane === "edu" ? [1920, 1080] : [1080, 1920];
-  return `<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#f4f1ea}#t{font:600 64px sans-serif;position:absolute;left:10%;top:40%;transition:none}</style></head><body><div id="t">dry stand-in</div><script>
-window.STRIP = { width: ${w}, height: ${h} };
+  const block = data === undefined ? "" : `<script id="strip-data" type="application/json">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>`;
+  const read = data === undefined ? "" : `window.STRIP_DATA = JSON.parse(document.getElementById("strip-data").textContent);\n`;
+  return `<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#f4f1ea}#t{font:600 64px sans-serif;position:absolute;left:10%;top:40%;transition:none}</style></head><body><div id="t">dry stand-in</div>${block}<script>
+${read}window.STRIP = { width: ${w}, height: ${h} };
 window.renderFrameAt = function (i) { document.getElementById("t").style.opacity = String(0.3 + 0.7 * (i % 60) / 60); };
 window.STRIP_READY = true;
 addEventListener("message", function (e) { if (e.data && e.data.type === "strip-frame") window.renderFrameAt(e.data.i); });

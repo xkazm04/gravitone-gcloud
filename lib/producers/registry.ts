@@ -34,6 +34,7 @@ import { meshProducer } from "./mesh.ts";
 import { finishProducer } from "./finish.ts";
 import { scoutAssetProducer } from "./scoutAsset.ts";
 import { scoutIdeasProducer } from "./scoutIdea.ts";
+import { scoutReelsProducer } from "./scoutReel.ts";
 import { sunoDriver } from "../sound/suno/drivers.ts";
 import { sfxProducer } from "../sound/sfxJob.ts";
 import { huntProducer } from "../sound/huntRender.ts";
@@ -140,6 +141,9 @@ export const BOUND: readonly Bound[] = [
   // A /scout night's idea artboards (spark scout-idea-artboards): one batch, one rough still per idea in the
   // operator's Leonardo studio, on box.chrome - the lane the studio's browser is.
   { name: "scout-ideas", producer: scoutIdeasProducer() },
+  // A /scout night's stats reels (spark stats-reels): one batch, each idea's full strip authored on the Claude
+  // seat and its frame 120 drawn cold, on seat.text - the strips producer's lane.
+  { name: "scout-reels", producer: scoutReelsProducer() },
   ...stepsBound(),
 ];
 

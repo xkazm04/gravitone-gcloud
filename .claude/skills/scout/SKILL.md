@@ -141,7 +141,9 @@ the worker while discovery goes on, so brief them right after the assets. Up to 
 4. **The seat's own approach** - free design, not one of the 20 cards, under
    `../ai-registry/knowledge/media-generation/visual-generation/data-video-art-direction/`:
    `{name, medium, grammar, density, direction, falsifier}` (`pipeline/strips/approaches.json` shows the
-   fields filled), the falsifier written before anything renders. `prompt` is your one-paragraph
+   fields filled; `medium` is one of `svg|canvas|dom|css3d` - never webgl, it renders black -, `grammar`
+   one of `draw-on|morph|camera|stepped|particle|reflow|type`, `density` one of `low|mid|high`; the door
+   refuses any other word), the falsifier written before anything renders. `prompt` is your one-paragraph
    direction to the author turn.
 5. **The batch goes through the ideas door**, target `stats`, `reel: {brief, approach}`:
    `{"title": "<headline, <= 90 chars>", "target": "stats", "prompt": "<direction>", "anchor": {"kind": "watch|gap|free", "ref": "<line or empty>"}, "use": "<content>", "reel": {...}}`

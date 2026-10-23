@@ -66,6 +66,11 @@ export const REEL_DATA_ID = "strip-data";
 /** A reel brief's data shapes (the strips fixtures' two race kinds, and three a stats reel also tells). */
 export const REEL_KINDS = ["level-race", "cumulative-race", "counter", "ranking", "share"] as const;
 export type ReelKind = (typeof REEL_KINDS)[number];
+/** The strips vocabulary a reel's approach is written in (lib/foundry/strips/types.ts), less `webgl`: the
+ *  harness's chromium runs --disable-gpu and draws it black. One list for the ideas door and the reel step. */
+export const REEL_MEDIA = ["svg", "canvas", "dom", "css3d"] as const;
+export const REEL_GRAMMARS = ["draw-on", "morph", "camera", "stepped", "particle", "reflow", "type"] as const;
+export const REEL_DENSITIES = ["low", "mid", "high"] as const;
 
 /** Hailuo takes 5 or 10 (lib/imaging/video/types.ts CLIP_DURATIONS); the night renders the short one. */
 export const CLIP_SECONDS = 5;
@@ -320,9 +325,9 @@ export type ReelBrief = {
   };
   readonly approach: {
     readonly name: string;
-    readonly medium: string;
-    readonly grammar: string;
-    readonly density: string;
+    readonly medium: (typeof REEL_MEDIA)[number];
+    readonly grammar: (typeof REEL_GRAMMARS)[number];
+    readonly density: (typeof REEL_DENSITIES)[number];
     readonly direction: string;
     readonly falsifier: string;
   };
