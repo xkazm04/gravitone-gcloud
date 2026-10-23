@@ -38,15 +38,19 @@ function Invoke-Worker {
   if (-not $node) { throw "node is not on PATH for this user - install Node.js or add it to PATH." }
   $logs = Get-LogDir
   New-Item -ItemType Directory -Force -Path $logs | Out-Null
+  $stamp = Get-Date -Format "yyyy-MM-dd-HHmmss"
   $log = Join-Path $logs ("{0}.log" -f (Get-Date -Format "yyyy-MM-dd"))
+  $out = Join-Path $logs ("{0}.out.log" -f $stamp)
+  $err = Join-Path $logs ("{0}.err.log" -f $stamp)
   Set-Location $repo
-  Add-Content -Path $log -Encoding utf8 -Value ("[worker-service] {0} starting node workers/runner.mts in {1}" -f (Get-Date -Format "s"), $repo)
-  # cmd's redirect, not PowerShell's: under 5.1 a native command's stderr through 2>&1 becomes error records,
-  # which $ErrorActionPreference = Stop turns into a throw on the worker's first stderr line. Appended, so a
-  # restart continues the day's log; the bytes are node's own UTF-8.
-  $line = "`"$node`" workers\runner.mts >> `"$log`" 2>&1"
-  & cmd.exe /d /s /c "`"$line`""
-  $code = $LASTEXITCODE
+  Add-Content -Path $log -Encoding utf8 -Value ("[worker-service] {0} starting node workers/runner.mts in {1} (output {2})" -f (Get-Date -Format "s"), $repo, (Split-Path -Leaf $out))
+  # Start-Process, not a native call: under 5.1 a native command's stderr through 2>&1 becomes error records,
+  # which $ErrorActionPreference = Stop turns into a throw on the worker's first stderr line - and a cmd /c line
+  # quoting "C:\Program Files\nodejs\node.exe" reached cmd with its quotes doubled ("'""C:\Program' is not
+  # recognized", 2026-10-23). Start-Process takes the program and its arguments apart, so nothing is re-quoted.
+  # One output pair a start (Start-Process overwrites, never appends); the day's log lists every start and exit.
+  $p = Start-Process -FilePath $node -ArgumentList "workers\runner.mts" -WorkingDirectory $repo -NoNewWindow -Wait -PassThru -RedirectStandardOutput $out -RedirectStandardError $err
+  $code = $p.ExitCode
   Add-Content -Path $log -Encoding utf8 -Value ("[worker-service] {0} the worker exited with {1}" -f (Get-Date -Format "s"), $code)
   exit $code
 }
