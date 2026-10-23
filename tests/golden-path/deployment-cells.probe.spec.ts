@@ -202,6 +202,8 @@ const EXPECT: Record<string, Expectation> = {
   "app/api/events/stream/route.ts": { door: "access", ok: { GET: "2xx" } },
   // A run file with no run and no path: the store refuses the address.
   "app/api/foundry/file/route.ts": { door: "access", ok: { GET: "4xx" } },
+  // One frame or clip from GRAVITONE_LOCAL_DRAWS: an empty run id (or the folder unset) is the input door's 4xx.
+  "app/api/local-draws/file/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/import/route.ts": { door: "access", ok: { GET: "4xx", POST: "4xx" } },
   // The ledger as JSON Lines for agents (app/api/ledger/route.ts). `format=jsonl` is required,
   // and drive() sends no query, so an admitted caller meets the input door's 400.
