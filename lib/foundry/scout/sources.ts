@@ -7,6 +7,8 @@ import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 
 import { BlockedUrlError, assertFetchable, type Resolver } from "../../imaging/safeUrl";
 import { developedOf, fromIdeaOf, IDEA_REF_RE, keptIdea, type KeptIdea } from "./direction";
+import { knowledgeRoot } from "./knowledge";
+import { activeWing } from "./wingScope";
 import { listNights, mutateNight, mutateNightWith, nextCandidateId, nextSourceId, readNight, resolveInNight } from "./store";
 import {
   CLAIM_MAX,
@@ -232,19 +234,18 @@ const findingSchema = z
   .strict();
 const findingsSchema = z.array(findingSchema).min(1).max(MAX_SOURCES_PER_NIGHT);
 
-/** SCOUT_KNOWLEDGE_DIR, else `<cwd>/knowledge` - the same root the knowledge writer appends to (./knowledge.ts). */
-export const knowledgeRoot = (): string => process.env["SCOUT_KNOWLEDGE_DIR"]?.trim() || path.join(process.cwd(), "knowledge");
-
 /** Append findings, each `rendered`: a finding is written, not rendered, and is whole once it passes here. */
 export async function addFindings(nightId: NightId, raw: unknown, opts: { readonly knowledge?: string } = {}): Promise<Result<readonly FindingCandidate[]>> {
   const parsed = parseAt("scout findings", findingsSchema, raw);
   if (!parsed.ok) return parsed;
   const night = await readNight(nightId);
   if (night.state !== "open") return err("refused", `night ${nightId} is ${night.state}; it takes no more findings`);
+  // The root the knowledge writer appends to (./knowledge.ts), so a finding is checked where it would land.
   const root = opts.knowledge ?? knowledgeRoot();
   for (const [i, f] of parsed.value.entries()) {
+    // A muse finding lands in knowledge/scout-muse/techniques.md (knowledge.ts findingRelOf): it serves no template step.
     const dir = path.join(root, "templates", f.template);
-    if ((await stat(dir).catch(() => null))?.isDirectory() !== true) return err("invalid", `finding ${i + 1}: there is no knowledge/templates/${f.template}/`);
+    if (activeWing() === "scout" && (await stat(dir).catch(() => null))?.isDirectory() !== true) return err("invalid", `finding ${i + 1}: there is no knowledge/templates/${f.template}/`);
     const missing = f.sourceIds.find((id) => !night.sources.some((s) => s.id === id));
     if (missing !== undefined) return err("invalid", `finding ${i + 1}: night ${nightId} has no source ${missing}`);
     if (f.restates !== undefined) {

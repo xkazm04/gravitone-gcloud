@@ -1,6 +1,6 @@
 // THE SEED STORE - server only (spark scout-decision-graph). One directory per batch under
-// <scoutRoot>/seeds/<batchId>/batch.json (./types.ts SeedBatch). SCOUT_STORE_DIR redirects the root per call,
-// as the night store does, so a test or a rehearsal never writes the checkout's.
+// <scoutRoot>/seeds/<batchId>/batch.json (./types.ts SeedBatch). The root is the active wing's, read per call
+// as the night store does (its env var redirects it), so a test or a rehearsal never writes the checkout's.
 //
 // A batch is written WHOLE by one door call (./seeds.ts) and then only its `committed` changes (the Board's
 // apply). Every writer goes through `mutateSeedBatch`, under the batch directory's lock file, so the CLI and

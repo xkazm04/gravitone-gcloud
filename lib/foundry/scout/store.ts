@@ -1,6 +1,7 @@
-// THE SCOUT NIGHT STORE - server only. One directory per night under
-// foundry-out/scout/<nightId>/ (SCOUT_STORE_DIR redirects the root, read per
-// call, so a test or a rehearsal never writes the checkout's):
+// THE SCOUT NIGHT STORE - server only. One directory per night under the
+// active wing's root, foundry-out/scout/<nightId>/ or foundry-out/scout-muse/<nightId>/
+// (SCOUT_STORE_DIR, SCOUT_MUSE_STORE_DIR redirect them, read per call, so a test
+// or a rehearsal never writes the checkout's):
 //
 //   night.json          the manifest (./types.ts Night)
 //   taste.md            the prior nights' verdicts, written for the skill

@@ -2,6 +2,8 @@ import { appendFile, mkdir, readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { manifestRegistryLocal } from "../../articles/registryRead";
+import { watchlistRelOf } from "./knowledge";
+import { activeWing } from "./wingScope";
 
 // THE REGISTRY DIGEST - server only. What the ai-registry says about tonight's work, written
 // into each new night as registry.md beside taste.md (spark registry-feedback-loop, 2026-10-22):
@@ -35,7 +37,7 @@ export type RegistryDigestOptions = {
   readonly registryDir?: string;
   /** The repo whose knowledge/ and .ai/ are read and logged to; default `process.cwd()`. */
   readonly repoDir?: string;
-  /** The night's search directions, verbatim; absent, the lines of `knowledge/scout/watchlist.md` under repoDir. */
+  /** The night's search directions, verbatim; absent, the lines of the active wing's watchlist (`knowledge/scout/watchlist.md`, `knowledge/scout-muse/watchlist.md`) under repoDir. */
   readonly directions?: readonly string[];
 };
 
@@ -278,7 +280,7 @@ export async function registryDigest(o: RegistryDigestOptions = {}): Promise<Reg
   const r = await resolveRegistry({ ...(o.registryDir === undefined ? {} : { registryDir: o.registryDir }), repoDir: repo });
   if ("why" in r) return { text: `# Registry\n\nregistry: none (${r.why})\n`, subjects: [], techniques: [] };
 
-  const watch = o.directions ?? watchlistDirections(await readFile(path.join(repo, "knowledge", "scout", "watchlist.md"), "utf8").catch(() => ""));
+  const watch = o.directions ?? watchlistDirections(await readFile(path.join(repo, "knowledge", ...watchlistRelOf(activeWing()).split("/")), "utf8").catch(() => ""));
   let rows: Row[];
   let gapLines: string[];
   try {
