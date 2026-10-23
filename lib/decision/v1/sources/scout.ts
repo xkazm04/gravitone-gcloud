@@ -38,7 +38,7 @@ import {
   type Preview,
 } from "../types.ts";
 import { extractAdapter, importVerdict, lookDecision, recordOf, same, type LookDecision } from "./extract.ts";
-import { build, commitOf, extractDecisions, meshKey, sameOutcome, within, type AssetRead, type ScoutV1, type StyleRead } from "./scoutPlan.ts";
+import { IDEA_TARGET_WORD, build, commitOf, extractDecisions, ideaCell, meshKey, sameOutcome, within, type AssetRead, type ScoutV1, type StyleRead } from "./scoutPlan.ts";
 
 // ONE /scout NIGHT AS A PACKET - foundry-out/scout/<night>/night.json
 // (lib/foundry/scout/store.ts) read through readNight, decided as ONE matrix
@@ -56,6 +56,7 @@ import { build, commitOf, extractDecisions, meshKey, sameOutcome, within, type A
 //   watch    scout/knowledge.ts); a kept watch line, a line in the watchlist.
 //   asset3d  each judged variant's `verdict` in its mesh asset (lib/foundry/mesh/store.ts
 //            mutateAsset): kept or rejected, what the Library's mesh feed shelves it by.
+//   idea     nothing of its own: the record below is what the next night develops or blocks.
 //   leads    what the keeps EARNED for the ai-registry (../../../foundry/scout/
 //            leadEvents.ts) into the lead queue, once by key; the preview names each.
 //   all      every verdict, its reasons and its note into `night.committed`,
@@ -103,6 +104,12 @@ async function read(ref: AdapterRef): Promise<Result<ScoutRead>> {
         } catch (e) {
           return fromV1(e);
         }
+      }
+    } else if (c.kind === "idea") {
+      try {
+        if (c.image !== undefined) files.push({ key: c.image, abs: resolveInNight(id, c.image) });
+      } catch (e) {
+        return fromV1(e);
       }
     } else if (c.kind === "asset3d") {
       try {
@@ -260,6 +267,9 @@ function consequence(v1: ScoutRead, at: DecisionsAt): Result<Preview> {
       if (!kept.has(cell) || k === undefined) continue;
       const heading = c.kind === "finding" ? FINDINGS_HEADING : WATCH_HEADING;
       parts.writes.push({ kind: "file", target: `${v1.at.knowledge}/${k.rel}`, candidate: cell, detail: k.holds ? "already holds this line" : `${k.exists ? "" : "new file · "}a line under ${heading}` });
+    } else if (c.kind === "idea") {
+      const d = byCell.get(ideaCell(c.id))?.verdict;
+      if (d === "keep" || d === "reject") parts.writes.push({ ...nightFile, candidate: ideaCell(c.id), detail: d === "keep" ? `develops next night as a ${IDEA_TARGET_WORD[c.target]}` : "blocked" });
     }
   }
   for (const e of leadEventsOf({ night: n, kept, earlier: v1.earlier })) {

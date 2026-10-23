@@ -12,7 +12,7 @@ import type { ItemWords, RowWords } from "@gt/ui/board/port";
 import { EXTRACT_COMMITTABLE } from "../../../foundry/plant.ts";
 import { TECHNIQUE_LABEL, type GateResult, type MeshAsset } from "../../../foundry/mesh/types.ts";
 import { patternsRel } from "../../../foundry/scout/knowledge.ts";
-import { CANDIDATE_KINDS, cellId, type Asset3dCandidate, type Candidate, type CandidateId, type Night, type NightCommit, type SceneCandidate, type SceneClip } from "../../../foundry/scout/types.ts";
+import { CANDIDATE_KINDS, cellId, type Asset3dCandidate, type Candidate, type CandidateId, type IdeaCandidate, type IdeaTarget, type Night, type NightCommit, type SceneCandidate, type SceneClip } from "../../../foundry/scout/types.ts";
 import { meshFileUrl } from "../../../library/feeds/mesh.ts";
 import { decisionMap, type Loss } from "../types.ts";
 import { extractAdapter, planLooks, type ExtractV1 } from "./extract.ts";
@@ -24,7 +24,7 @@ import { lookBrief, sceneBrief } from "./scoutBrief.ts";
 // under the file bound.
 //
 // THE SHAPE. One row per candidate, in kind order (style, scene, finding,
-// watch, asset3d), then the night's own order:
+// watch, asset3d, idea), then the night's own order:
 //   style    the extract adapter's own rows and cells (one row per look, the
 //            gallery source its reference), each id under the candidate:
 //            `c-01/<look>/replica-1`. Planned by extract.ts `planLooks`, so the
@@ -41,6 +41,11 @@ import { lookBrief, sceneBrief } from "./scoutBrief.ts";
 //            only in the zoom. Its words carry the work: technique, triangles against the class
 //            budget, every gate's verdict and score, the variant's approach. A variant that failed
 //            or has not finished is a Loss with its own sentence.
+//   idea     ONE cell `c-12/board`, its artboard (`ideas/c-12.png`) the media, filed under
+//            `ideas`: the row is the idea's title and its studio prompt as the aim, the cell's
+//            meta its target and anchor - all the brief's words, verbatim. Kept, it develops
+//            next night into its target; that act reads the night's record, so nothing but
+//            `night.committed` is written for it.
 // A text cell's media is the content address of its own words (text/plain):
 // the kernel holds candidates by blob, and the words are the thing judged.
 //
@@ -254,6 +259,39 @@ function assetCells(night: Night, c: Asset3dCandidate, read: AssetRead | undefin
   out.rows.push({ id: c.id, label: clip40(`${a.brief.class} · ${a.brief.subject}`), group: "3d", ...(concept !== undefined && media[concept] !== undefined ? { ref: scoutFileUrl(night.id, concept) } : {}) });
 }
 
+/** An idea's one cell: the artboard. */
+export const ideaCell = (candidate: CandidateId): string => cellId(candidate, "board");
+
+/** An idea's target as the Board says it: `asset3d` is the act's name, a `3d asset` is the thing. */
+export const IDEA_TARGET_WORD: Readonly<Record<IdeaTarget, string>> = { scene: "scene", style: "style", asset3d: "3d asset" };
+
+/** An idea's target and anchor: `scene · watch: tag: risograph`. A `free` idea names no anchor ref. */
+export const ideaMeta = (c: Pick<IdeaCandidate, "target" | "anchor">): string => `${IDEA_TARGET_WORD[c.target]} · ${c.anchor.kind === "free" ? "free" : `${c.anchor.kind}: ${c.anchor.ref}`}`;
+
+function ideaCells(night: Night, c: IdeaCandidate, media: ScoutV1["media"], out: Mutable): void {
+  if (c.status === "failed") {
+    out.losses.push({ candidate: c.id, grade: "dropped", reason: c.error ?? "failed with no error recorded" });
+    return;
+  }
+  const m = c.image === undefined ? undefined : media[c.image];
+  if (c.image === undefined || m === undefined) {
+    out.losses.push({ candidate: c.id, grade: "dropped", reason: c.image === undefined ? "rendered with no artboard recorded" : `${c.image} is not on disk` });
+    return;
+  }
+  out.cells.push({
+    id: ideaCell(c.id),
+    candidate: c.id,
+    kind: "idea",
+    row: c.id,
+    jobId: c.jobId ?? `scout:${night.id}`,
+    media: m,
+    grades: [],
+    url: scoutFileUrl(night.id, c.image),
+    words: { label: c.title, meta: ideaMeta(c), prompt: c.prompt },
+  });
+  out.rows.push({ id: c.id, label: c.title, group: "ideas", aim: c.prompt, ...(c.use === undefined ? {} : { use: c.use }) });
+}
+
 type Mutable = { cells: Cell[]; rows: RowWords[]; initial: InitialDecision[]; losses: Loss[]; runs: Record<string, ExtractV1> };
 
 /** Every cell, row, imported verdict and loss of the night's packet. */
@@ -269,8 +307,7 @@ export function build(v1: ScoutV1): Built {
     if (c.kind === "style") styleCells(night, c, v1.styles[c.id], out);
     else if (c.kind === "scene") sceneCells(night, c, v1.media, out);
     else if (c.kind === "asset3d") assetCells(night, c, v1.assets[c.id], v1.media, out);
-    // STUB (spark scout-idea-artboards WP-I0): WP-I3 draws an idea as a one-cell run.
-    else if (c.kind === "idea") out.losses.push({ candidate: c.id, grade: "dropped", reason: "idea cells are not drawn on the Board yet" });
+    else if (c.kind === "idea") ideaCells(night, c, v1.media, out);
     else if (c.status === "failed") out.losses.push({ candidate: c.id, grade: "dropped", reason: c.error ?? "failed with no error recorded" });
     else textCell(night, c, out);
   }

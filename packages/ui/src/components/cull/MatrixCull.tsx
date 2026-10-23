@@ -3,7 +3,8 @@
 // THE MATRIX CULL - a packet of runs, decided (operator, 2026-10-22). The runs are filed by the KIND
 // of content into tabs - images, videos, audio, ideas - each drawn in the component its content
 // reads best in: a mosaic of square stills, 16:9 clips that play, waveforms, and a dense list of the
-// runs that are only words, decided in place. A picture, clip or take run opens across the whole
+// runs that are only words, decided in place, under the night's idea artboards (square tiles, as
+// stills are: spark scout-idea-artboards). A picture, clip or take run opens across the whole
 // screen (RunModal): its brief, its variants at most three to a row, a verdict by click under each
 // and on the whole run, a clip with its own bar. Every act is also a key (bindings.ts `board.cull`):
 // K / X / a reason on a run in the mosaic judge it whole, inside a run each variant; ← → ↑ ↓ walk;
@@ -13,7 +14,7 @@ import { useEffect, useRef, useState } from "react";
 
 import type { BoardVerdict } from "../../board/boardGate.ts";
 import { cullCells, tallyOf } from "../../board/cull.ts";
-import { categoriesOf, categoryOf, columnsOf, runsOf, tabOf, tabsOf, type Run, type Tab } from "../../board/runs.ts";
+import { categoriesOf, categoryOf, columnsOf, runsOf, tabOf, tabsOf, wordsOnly, type Run, type Tab } from "../../board/runs.ts";
 import { DeskFrame, OracleStrip } from "../desk/Desk.tsx";
 import { Seg } from "../seg/Seg.tsx";
 import { CullFoot } from "./CullFoot.tsx";
@@ -49,12 +50,16 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
   // open variant, takes the tab with it. The cursor walks its own tab's runs.
   const tabOfRun = (r: Run | undefined): Tab => (r === undefined ? (tabs[0]?.tab ?? "images") : tabOf(categoryOf(r, firstMime(r))));
   const orderOf = (t: Tab) => (tabs.find((x) => x.tab === t)?.categories ?? []).flatMap((c) => c.runs.map((r) => r.at));
-  const d = useRunDesk({ packet, verdicts, decide, undo, onCommit, announce, keys, columns: () => cols, arrange: (runs, at) => orderOf(tabOfRun(runs[at])) });
+  const wordy = (r: Run) => wordsOnly(firstMime(r));
+  // A words-only run is one line of a list: ↑ ↓ move a line, whatever the tiles above it measure.
+  const d = useRunDesk({ packet, verdicts, decide, undo, onCommit, announce, keys, columns: () => (d.run !== undefined && wordy(d.run) ? 1 : cols), arrange: (runs, at) => orderOf(tabOfRun(runs[at])) });
   const tab = tabOfRun(d.run);
   const here = tabs.find((t) => t.tab === tab) ?? tabs[0];
   const { setOpen } = d;
   // A words-only run never opens: it is decided where it lies.
-  const open = d.open && tab !== "ideas";
+  const open = d.open && d.run !== undefined && !wordy(d.run);
+  /** The shown tab's categories, only the runs that are (or are not) words. */
+  const shown = (words: boolean) => (here?.categories ?? []).map((c) => ({ ...c, runs: c.runs.filter((x) => wordy(x.run) === words) })).filter((c) => c.runs.length > 0);
 
   useEffect(() => {
     const el = grid.current;
@@ -113,7 +118,10 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
         </div>
       )}
       {here?.tab === "ideas" ? (
-        <IdeaList categories={here.categories} cells={d.cells} verdicts={verdicts} wordsOf={d.wordsOf} cur={d.cur} nudged={d.nudged} reasons={reasons} maxReasons={view.reasons.max} onFocus={d.setCur} onVerdict={(i, v) => d.decideCells([i], v)} />
+        <>
+          {shown(false).length > 0 && <RunMosaic tab="ideas" categories={shown(false)} cells={d.cells} verdicts={verdicts} mediaOf={mediaOf} wordsOf={d.wordsOf} runIx={d.runIx} nudged={d.nudged} onOpen={d.openRun} grid={grid} />}
+          {shown(true).length > 0 && <IdeaList categories={shown(true)} cells={d.cells} verdicts={verdicts} wordsOf={d.wordsOf} cur={d.cur} nudged={d.nudged} reasons={reasons} maxReasons={view.reasons.max} onFocus={d.setCur} onVerdict={(i, v) => d.decideCells([i], v)} />}
+        </>
       ) : here !== undefined ? (
         <RunMosaic tab={here.tab} categories={here.categories} cells={d.cells} verdicts={verdicts} mediaOf={mediaOf} wordsOf={d.wordsOf} runIx={d.runIx} nudged={d.nudged} onOpen={d.openRun} grid={grid} />
       ) : null}
