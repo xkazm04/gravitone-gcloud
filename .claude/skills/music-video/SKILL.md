@@ -37,7 +37,7 @@ videos, retries, studio credits, text turns). Pass `--yes` only after they agree
 own message already asked for the run with that scope. Never raise the scope past what they agreed
 to; `--again` in particular queues a SECOND video for every finished track.
 
-Never use this skill to delete, Drop, Keep, regenerate or publish. Those are the operator's acts:
+The studio provider deletes each Leonardo generation once its still is downloaded; never use this skill to Drop, Keep, regenerate or publish. Those are the operator's acts:
 Keep / Drop on the Board (`/board/pkt:mv:mv/settled`); Regenerate and Send to Calendar on the
 video's job in Runs (`/projects/runs?job=kernel:job:run:mv.<id>.<stamp>`); the slot then lives on
 the Floor's calendar (`/floor?slot=<id>`). Never close the operator's Chrome.

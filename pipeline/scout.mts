@@ -2,12 +2,13 @@
 // an operator may type any line of it. Docs: docs/scout.md.
 //
 //   npx tsx pipeline/scout.mts doctor [--dry] [--json]
-//   npx tsx pipeline/scout.mts open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--until HH:MM] [--live] [--json]
+//   npx tsx pipeline/scout.mts open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--ideas 25] [--until HH:MM] [--live] [--json]
 //   npx tsx pipeline/scout.mts add-source <night> --json <file|->
 //   npx tsx pipeline/scout.mts ingest <night> [--source s-NN] [--detach]
 //   npx tsx pipeline/scout.mts style <night> --sources s-01,s-03 --use "<content it serves>" [--slug x] [--detach]
 //   npx tsx pipeline/scout.mts scene <night> --source s-NN --use "<content it serves>" [--frames k-012.jpg] [--detach]
 //   npx tsx pipeline/scout.mts asset <night> --brief <file|-> [--detach]
+//   npx tsx pipeline/scout.mts ideas <night> --json <file|-> [--detach]   (lib/foundry/scout/idea.ts)
 //   npx tsx pipeline/scout.mts finding <night> --json <file|->
 //   npx tsx pipeline/scout.mts watch <night> --entry "..." --why "..." [--sources s-01,s-02]
 //   npx tsx pipeline/scout.mts close <night> [--stop <reason>]
@@ -20,10 +21,12 @@
 // jobs answer every paid call with a stand-in. Every launch's job ceiling is what
 // the night has left (lib/foundry/scout/budget.ts); a launch whose worst case is
 // over that, a launch from a closed night, and a launch after the deadline (which
-// closes the night, `stop: deadline`) are refused with the numbers. Ingest is free.
+// closes the night, `stop: deadline`) are refused with the numbers. Ingest is free;
+// an ideas batch is drawn on the Leonardo studio's prepaid credits, which the ceiling
+// does not cap, so it is refused by the night's idea cap and never by its money.
 //
-// --json: one JSON document on stdout, progress on stderr. Under add-source and
-// finding, `--json <file|->` names the INPUT, and the output is JSON as well.
+// --json: one JSON document on stdout, progress on stderr. Under add-source, finding,
+// ideas and lead, `--json <file|->` names the INPUT, and the output is JSON as well.
 // EXIT 0 done · 1 failed or refused · 2 usage. Never touches foundry-out/ when
 // GRAVITONE_STORE_PATH and SCOUT_STORE_DIR point elsewhere.
 
@@ -35,12 +38,13 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { errorMessage } from "@gt/domain/errors";
 
-import { DEFAULT_ASSET_CAP, DEFAULT_CEILING_USD, DEFAULT_CLIP_CAP, DEFAULT_TARGET } from "../lib/foundry/scout/types.ts";
+import { DEFAULT_ASSET_CAP, DEFAULT_CEILING_USD, DEFAULT_CLIP_CAP, DEFAULT_IDEA_CAP, DEFAULT_TARGET, MAX_IDEA_CAP } from "../lib/foundry/scout/types.ts";
 
 type IngestDeps = import("../lib/foundry/scout/ingest.ts").IngestDeps;
 type Spawn = import("../lib/foundry/scout/ingest.ts").Spawn;
 type Resolver = import("../lib/imaging/safeUrl.ts").Resolver;
 type AssetEngines = import("../lib/producers/scoutAssetActs.ts").AssetEngines;
+type IdeaEngines = import("../lib/producers/scoutIdeaActs.ts").IdeaEngines;
 
 /** What a test or a rehearsal injects; production passes none. */
 export type CliPorts = {
@@ -55,6 +59,8 @@ export type CliPorts = {
   readonly keyFetch?: KeyFetch;
   /** `asset`'s concept vendor and input-gate decoder; a test hands fakes. */
   readonly asset?: Partial<AssetEngines>;
+  /** `ideas`' studio still; a test hands a fake (absent: the imaging router). */
+  readonly ideas?: Partial<IdeaEngines>;
 };
 export type Io = { readonly env: Readonly<Record<string, string | undefined>>; readonly out: (s: string) => void; readonly err: (s: string) => void; readonly ports?: CliPorts };
 
@@ -62,12 +68,13 @@ const ROOT = path.resolve(import.meta.dirname, "..");
 const USAGE = [
   "usage: npx tsx pipeline/scout.mts <command> [--json]",
   "  doctor [--dry]                              the box, the keys, the store",
-  "  open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--until HH:MM] [--live]",
+  `  open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--ideas ${DEFAULT_IDEA_CAP}] [--until HH:MM] [--live]`,
   "  add-source <night> --json <file|->         [{url, kind, title, channel?, why, found, watch?, rich?}]",
   "  ingest <night> [--source s-NN] [--detach]",
   "  style <night> --sources s-01,s-03 --use \"<content>\" [--slug x] [--detach]",
   "  scene <night> --source s-NN --use \"<content>\" [--frames k-012.jpg] [--detach]",
   "  asset <night> --brief <file|-> [--detach]  {class, subject, use, style?, kind?, techniques?}",
+  "  ideas <night> --json <file|-> [--detach]   [{title, target: scene|style|asset3d, prompt, anchor: {kind: watch|gap|free, ref}, use?}]",
   "  finding <night> --json <file|->            [{sourceIds, template, step, claim, quote, restates?}]",
   '  watch <night> --entry "..." --why "..." [--sources s-01]',
   "  close <night> [--stop deadline|budget|target|failure|sources-exhausted|operator]",
@@ -79,15 +86,15 @@ const USAGE = [
 class Usage extends Error {}
 /** A refusal the CLI makes itself; the acts' `Refusal` exits the same way. */
 class Refused extends Error {}
-const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "finding", "watch", "close", "status", "leads", "lead"]);
+const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "ideas", "finding", "watch", "close", "status", "leads", "lead"]);
 const BOOL = new Set(["json", "live", "detach", "dry", "help", "retry"]);
 
-/** argv -> positionals and flags. `--json` takes a value (the input file, or `-`) only under add-source, finding and lead. */
+/** argv -> positionals and flags. `--json` takes a value (the input file, or `-`) only under add-source, finding, ideas and lead. */
 function parse(argv: readonly string[]): { pos: string[]; flags: Map<string, string | true> } {
   const pos: string[] = [];
   const flags = new Map<string, string | true>();
   const cmd = argv.find((a) => !a.startsWith("--"));
-  const reads = cmd === "add-source" || cmd === "finding" || cmd === "lead";
+  const reads = cmd === "add-source" || cmd === "finding" || cmd === "ideas" || cmd === "lead";
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i] ?? "";
     if (!a.startsWith("--")) {
@@ -186,15 +193,17 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
     if (cmd === "open") {
       if (flags.has("live") && dryOnly) throw new Refused("GRAVITONE_DRY_ONLY=1 pins this shell dry: a live night is refused here (open without --live for a dry one)");
       const until = str("until");
+      const ideaCap = num("ideas", DEFAULT_IDEA_CAP);
+      if (!Number.isInteger(ideaCap) || ideaCap > MAX_IDEA_CAP) throw new Usage(`--ideas is a whole number from 1 to ${MAX_IDEA_CAP}, got ${ideaCap}`);
       const { tasteBrief } = await import("../lib/foundry/scout/taste.ts");
-      const n = await store.createNight({ dry: !flags.has("live"), ceilingUsd: num("ceiling", DEFAULT_CEILING_USD), target: Math.round(num("target", DEFAULT_TARGET)), clipCap: Math.round(num("clips", DEFAULT_CLIP_CAP)), assetCap: Math.round(num("assets", DEFAULT_ASSET_CAP)), now: now(), ...(until === undefined ? {} : { deadline: deadlineOf(until, now()) }) });
+      const n = await store.createNight({ dry: !flags.has("live"), ceilingUsd: num("ceiling", DEFAULT_CEILING_USD), target: Math.round(num("target", DEFAULT_TARGET)), clipCap: Math.round(num("clips", DEFAULT_CLIP_CAP)), assetCap: Math.round(num("assets", DEFAULT_ASSET_CAP)), ideaCap, now: now(), ...(until === undefined ? {} : { deadline: deadlineOf(until, now()) }) });
       fs.writeFileSync(path.join(store.nightDir(n.id), "taste.md"), await tasteBrief(n.id), "utf8");
       // The registry digest beside it (spark registry-feedback-loop): `registry: none` when none resolves.
       const { registryDigest } = await import("../lib/foundry/scout/registry.ts");
       fs.writeFileSync(path.join(store.nightDir(n.id), "registry.md"), (await registryDigest()).text, "utf8");
-      if (json) doc({ ok: true, night: n.id, dry: n.dry, ceilingUsd: n.ceilingUsd, target: n.target, clipCap: n.clipCap, assetCap: n.assetCap, ...(n.deadline === undefined ? {} : { deadline: n.deadline }), taste: path.join(store.nightDir(n.id), "taste.md"), registry: path.join(store.nightDir(n.id), "registry.md") });
+      if (json) doc({ ok: true, night: n.id, dry: n.dry, ceilingUsd: n.ceilingUsd, target: n.target, clipCap: n.clipCap, assetCap: n.assetCap, ideaCap: n.ideaCap, ...(n.deadline === undefined ? {} : { deadline: n.deadline }), taste: path.join(store.nightDir(n.id), "taste.md"), registry: path.join(store.nightDir(n.id), "registry.md") });
       else io.out(n.id);
-      say(`night ${n.id} · ${n.dry ? "dry" : "LIVE"} · ceiling $${n.ceilingUsd} · target ${n.target} · clips ${n.clipCap} · assets ${n.assetCap ?? DEFAULT_ASSET_CAP}${n.deadline === undefined ? "" : ` · until ${n.deadline}`}`);
+      say(`night ${n.id} · ${n.dry ? "dry" : "LIVE"} · ceiling $${n.ceilingUsd} · target ${n.target} · clips ${n.clipCap} · assets ${n.assetCap ?? DEFAULT_ASSET_CAP} · ideas ${n.ideaCap ?? DEFAULT_IDEA_CAP}${n.deadline === undefined ? "" : ` · until ${n.deadline}`}`);
       return 0;
     }
 
@@ -251,9 +260,11 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
         }
         const n = await store.readNight(id);
         const b = acts.money(ctx, n);
-        if (json) doc({ ok: true, summary: store.summarise(n), budget: b, morning: acts.morning(n, b), night: n });
+        const { ideaCapOf, ideasUsed } = await import("../lib/foundry/scout/idea.ts");
+        const ideas = { used: ideasUsed(n), cap: ideaCapOf(n) };
+        if (json) doc({ ok: true, summary: store.summarise(n), budget: b, ideas, morning: acts.morning(n, b), night: n });
         else {
-          io.out(`night ${n.id} · ${n.state}${n.stop === undefined ? "" : ` (${n.stop})`} · ${n.dry ? "dry" : "live"} · ${acts.budgetLine(b)}`);
+          io.out(`night ${n.id} · ${n.state}${n.stop === undefined ? "" : ` (${n.stop})`} · ${n.dry ? "dry" : "live"} · ${acts.budgetLine(b)} · ideas ${ideas.used}/${ideas.cap}`);
           for (const s of n.sources) io.out(`  ${s.id} ${s.kind.padEnd(5)} ${s.status.padEnd(8)} ${s.files.length} file(s)  ${s.url}${s.error === undefined ? "" : `\n         ${s.error}`}`);
           for (const c of n.candidates) io.out(`  ${c.id} ${c.kind.padEnd(7)} ${c.status.padEnd(8)} ${c.sourceIds.join(",")}${c.jobId === undefined ? "" : `  ${c.jobId}`}${c.error === undefined ? "" : `\n         ${c.error}`}`);
         }
@@ -320,6 +331,18 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
         say(`${c.id} asset3d ${c.status}${r.outcome === undefined ? "" : ` · ${r.outcome}`}${c.assetId === undefined ? "" : ` · mesh asset ${c.assetId}`}${c.error === undefined ? "" : ` · ${c.error}`}`);
         for (const v of r.asset?.variants ?? []) say(`  ${v.id} ${v.technique} ${v.status}${v.error === undefined ? "" : ` · ${v.error}`}`);
         if (json) doc({ ok: !failed, night: id, candidate: c, ...(r.outcome === undefined ? {} : { outcome: r.outcome }), ...(r.asset === undefined ? {} : { asset: r.asset }), budget: acts.money(ctx, await store.readNight(id)) });
+        return failed ? 1 : 0;
+      }
+
+      if (cmd === "ideas") {
+        const id = nightArg();
+        const { ideasAct, ideaCapOf, ideasUsed } = await import("../lib/foundry/scout/idea.ts");
+        const r = await ideasAct(ctx, id, await input(), io.ports?.ideas ?? {});
+        for (const c of r.candidates) say(`  ${c.id} idea ${c.status}${c.image === undefined ? "" : ` · ${c.image}`}${c.error === undefined ? "" : ` · ${c.error}`}`);
+        const failed = r.outcome !== undefined && !["done", "detached"].includes(r.outcome);
+        say(`ideas ${r.jobId ?? ""} · ${r.outcome ?? "?"}`);
+        const n = await store.readNight(id);
+        if (json) doc({ ok: !failed, night: id, ...(r.jobId === undefined ? {} : { jobId: r.jobId }), ...(r.outcome === undefined ? {} : { outcome: r.outcome }), candidates: r.candidates, ideas: { used: ideasUsed(n), cap: ideaCapOf(n) } });
         return failed ? 1 : 0;
       }
 

@@ -6,7 +6,8 @@
 // generation ids are counted, not random, so a probe can name them.
 // `FAKE_LEONARDO_STUDIO` is the probe's handle, the shape FAKE_SUNO set: its
 // health, a failure to throw for a given prompt, the credits one image costs,
-// and a log of every generation it was asked for.
+// a log of every generation it was asked for, and a log of every generation the
+// provider deleted once its still was held (and a failure to throw for a delete).
 
 import { deflateSync, crc32 } from "node:zlib";
 import type { Aspect } from "../types";
@@ -22,6 +23,10 @@ export interface FakeLeonardoStudioControl {
   /** Every generation, in call order. */
   calls: { prompt: string; aspect: Aspect }[];
   seq: number;
+  /** Every generation id the provider deleted, in call order - a failed delete included. */
+  deletes: string[];
+  /** Return a sentence to make this delete throw it, verbatim. */
+  failDelete: (generationId: string) => string | null;
 }
 
 export const FAKE_LEONARDO_STUDIO: FakeLeonardoStudioControl = {
@@ -30,6 +35,8 @@ export const FAKE_LEONARDO_STUDIO: FakeLeonardoStudioControl = {
   credits: 8,
   calls: [],
   seq: 0,
+  deletes: [],
+  failDelete: () => null,
 };
 
 export function resetFakeLeonardoStudio(): void {
@@ -38,6 +45,8 @@ export function resetFakeLeonardoStudio(): void {
   FAKE_LEONARDO_STUDIO.credits = 8;
   FAKE_LEONARDO_STUDIO.calls = [];
   FAKE_LEONARDO_STUDIO.seq = 0;
+  FAKE_LEONARDO_STUDIO.deletes = [];
+  FAKE_LEONARDO_STUDIO.failDelete = () => null;
 }
 
 export const FAKE_STILL_PX = { w: 1280, h: 720 } as const;
@@ -93,4 +102,11 @@ export async function fakeStudioGenerate(prompt: string, aspect: Aspect): Promis
     credits: FAKE_LEONARDO_STUDIO.credits,
     model: STUDIO.model.id,
   };
+}
+
+/** The fake's REST delete: recorded, never sent. */
+export async function fakeStudioDelete(generationId: string): Promise<void> {
+  FAKE_LEONARDO_STUDIO.deletes.push(generationId);
+  const fail = FAKE_LEONARDO_STUDIO.failDelete(generationId);
+  if (fail) throw new Error(fail);
 }

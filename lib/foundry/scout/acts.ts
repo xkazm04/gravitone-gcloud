@@ -265,11 +265,15 @@ export function morning(n: Night, b: NightBudget): Morning {
 
 export const isStopReason = (s: string): s is StopReason => (STOP_REASONS as readonly string[]).includes(s);
 
-/** Settle the night's style candidates from their runs, then close it: the given stop, else target or sources-exhausted. */
+/**
+ * Settle the night's style candidates from their runs, then close it: the given stop, else target or
+ * sources-exhausted. The target counts the plan's rows only: idea artboards are drawn beside it (up
+ * to `ideaCap`), and twenty-five drawn ideas are not a night that studied twenty things.
+ */
 export async function closeAct(ctx: Pick<ActContext, "store" | "now">, id: NightId, stop?: StopReason): Promise<Morning> {
   for (const c of (await readNight(id)).candidates) if (c.kind === "style") await settleStyle(id, c).catch(() => c);
   const n = await readNight(id);
-  const rendered = n.candidates.filter((c) => c.status === "rendered").length;
+  const rendered = n.candidates.filter((c) => c.kind !== "idea" && c.status === "rendered").length;
   const closed = await closeWith(id, stop ?? (rendered >= n.target ? "target" : "sources-exhausted"), ctx.now?.() ?? new Date());
   return morning(closed, money(ctx, closed));
 }

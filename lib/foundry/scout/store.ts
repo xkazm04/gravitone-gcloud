@@ -7,6 +7,7 @@
 //   sources/<s-NN>/     what the ingest producer brought onto this box
 //   scenes/<c-NN>/      a scene candidate's replica stills and its clip
 //   assets/<c-NN>/      a game asset's concept images (the asset itself is lib/foundry/mesh's)
+//   ideas/<c-NN>.png    an idea's artboard, drawn in the Leonardo studio
 //
 // Every writer goes through `mutateNight`: the ingest and scene producers and
 // the CLI write the same manifest from different processes, and the run lock
@@ -24,6 +25,7 @@ import {
   DEFAULT_ASSET_CAP,
   DEFAULT_CEILING_USD,
   DEFAULT_CLIP_CAP,
+  DEFAULT_IDEA_CAP,
   DEFAULT_TARGET,
   NIGHT_ID_RE,
   type Candidate,
@@ -61,6 +63,7 @@ export type NightOptions = {
   readonly target?: number;
   readonly clipCap?: number;
   readonly assetCap?: number;
+  readonly ideaCap?: number;
   /** ISO instant. */
   readonly deadline?: string;
   readonly dry: boolean;
@@ -95,6 +98,7 @@ export async function createNight(o: NightOptions): Promise<Night> {
       target: o.target ?? DEFAULT_TARGET,
       clipCap: o.clipCap ?? DEFAULT_CLIP_CAP,
       assetCap: o.assetCap ?? DEFAULT_ASSET_CAP,
+      ideaCap: o.ideaCap ?? DEFAULT_IDEA_CAP,
       dry: o.dry,
       state: "open",
       sources: [],
@@ -134,8 +138,13 @@ export function readNightNow(id: NightId): Night {
   }
 }
 
+/**
+ * The night's rows by status - what the skill's stop rule (~20 rendered rows) reads. Idea artboards
+ * are drawn beside the plan, not toward it, so they are not counted here (closeAct's `target` does
+ * the same); the morning's `byKind` counts them under `idea`.
+ */
 export function summarise(n: Night): NightSummary {
-  const count = (s: Candidate["status"]): number => n.candidates.filter((c) => c.status === s).length;
+  const count = (s: Candidate["status"]): number => n.candidates.filter((c) => c.kind !== "idea" && c.status === s).length;
   return {
     id: n.id,
     state: n.state,

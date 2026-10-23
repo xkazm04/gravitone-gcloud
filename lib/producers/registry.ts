@@ -33,6 +33,7 @@ import { profileProducer } from "./profile.ts";
 import { meshProducer } from "./mesh.ts";
 import { finishProducer } from "./finish.ts";
 import { scoutAssetProducer } from "./scoutAsset.ts";
+import { scoutIdeasProducer } from "./scoutIdea.ts";
 import { sunoDriver } from "../sound/suno/drivers.ts";
 import { sfxProducer } from "../sound/sfxJob.ts";
 import { huntProducer } from "../sound/huntRender.ts";
@@ -136,6 +137,9 @@ export const BOUND: readonly Bound[] = [
   // A /scout night's game asset (spark game-3d-assets WP4): its concepts on Leonardo's Flare, then the
   // hand-off that writes the mesh asset and queues the mesh job above.
   { name: "scout-asset", producer: scoutAssetProducer() },
+  // A /scout night's idea artboards (spark scout-idea-artboards): one batch, one rough still per idea in the
+  // operator's Leonardo studio, on box.chrome - the lane the studio's browser is.
+  { name: "scout-ideas", producer: scoutIdeasProducer() },
   ...stepsBound(),
 ];
 

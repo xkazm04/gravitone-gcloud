@@ -3,6 +3,8 @@ import os from "node:os";
 import path from "node:path";
 
 import { probeGoogle, probeLeonardo, type KeyFetch, type KeyProbe } from "../../imaging/keyProbe";
+import { leonardoStudioHealth } from "../../imaging/providers/leonardoStudio";
+import type { StudioHealth } from "../../imaging/studio/types";
 import { comfyBase, comfyStats, missingModels, type ComfyFetch } from "../../imaging/video/comfyLtx";
 import { binsFrom, lastLines, realSpawn, type Bins, type Spawn } from "./ingest";
 import { REGISTRY_REMEDY, resolveRegistry, techniqueCount } from "./registry";
@@ -21,7 +23,10 @@ import { REGISTRY_REMEDY, resolveRegistry, techniqueCount } from "./registry";
 // every model file pipeline/video/ltx-i2v-api.json loads. A dry night
 // (`doctor --dry`) reads those as notes: its clips are stand-ins.
 // The ai-registry is never needed: a night without it opens with `registry: none` in its
-// registry.md, so its line is a note either way (./registry.ts).
+// registry.md, so its line is a note either way (./registry.ts). Nor is the Leonardo studio: the
+// night's idea artboards are drawn there, and a studio that is not ready fails those ideas with its
+// own sentence - its line is a note, read through the studio's health, which attaches to a running
+// browser and never launches one.
 
 export type Check = {
   readonly name: string;
@@ -77,6 +82,8 @@ export type DoctorInput = {
   readonly keyFetch?: KeyFetch;
   /** The repo whose `.ai/manifest.yaml` names the registry (default `process.cwd()`). */
   readonly repoDir?: string;
+  /** The Leonardo studio's health (default the provider's, lib/imaging/providers/leonardoStudio.ts); a test hands a fake. */
+  readonly studio?: () => Promise<StudioHealth>;
 };
 
 const PROBES: Readonly<Record<(typeof NIGHT_KEYS)[number], (key: string, f?: KeyFetch) => Promise<KeyProbe>>> = {
@@ -123,6 +130,13 @@ async function registryCheck(input: DoctorInput): Promise<Check> {
   return { name: "registry", ok: true, found: `found at ${r.dir} with ${techniqueCount(r.index)} techniques`, needed: false };
 }
 
+/** Is the studio the night's ideas are drawn in ready - a note, never a failure. */
+async function studioCheck(input: DoctorInput): Promise<Check> {
+  const h = await (input.studio ?? leonardoStudioHealth)().catch((e: unknown): StudioHealth => ({ ok: false, reason: e instanceof Error ? e.message : String(e) }));
+  if (h.ok) return { name: "studio", ok: true, found: "leonardo studio signed in, with credits", needed: false };
+  return { name: "studio", ok: false, found: h.reason ?? "leonardo studio is not ready", remedy: "the night's idea artboards are drawn there: set LEONARDO_STUDIO_CDP and sign its Chrome profile in once (.claude/skills/music-video/SKILL.md)", needed: false };
+}
+
 export async function doctor(input: DoctorInput): Promise<Check[]> {
   const spawn = input.spawn ?? realSpawn;
   const bins = binsFrom(input.env);
@@ -149,6 +163,7 @@ export async function doctor(input: DoctorInput): Promise<Check[]> {
   out.push({ name: "GRAVITONE_DRY_ONLY", ok: !pinned, found: pinned ? "1 (this shell runs dry only)" : "unset", needed: !input.dry, ...(pinned ? { remedy: "unset GRAVITONE_DRY_ONLY for a live night, or open the night without --live" } : {}) });
   out.push(...(await comfyChecks(input)));
   out.push(await registryCheck(input));
+  out.push(await studioCheck(input));
   return out;
 }
 
