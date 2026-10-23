@@ -17,6 +17,7 @@ import { leadsFile, queueEvents, readQueue } from "../../../foundry/scout/leads.
 import { processNightLoad } from "../../../foundry/scout/load.ts";
 import { FINDINGS_HEADING, WATCH_HEADING, WATCHLIST_REL, appendFinding, appendWatch, knowledgeRoot, knowledgeState, markerOf, patternsRel } from "../../../foundry/scout/knowledge.ts";
 import { meshRoot, mutateAsset, readAsset, resolveInAsset, withVariant } from "../../../foundry/mesh/store.ts";
+import { deskAbs, deskCellUrl, readDeskNight, saveDeskNight } from "../../../foundry/local-draws/desk.ts";
 import { mutateNight, nightDir, readNight, resolveInNight, scoutRoot } from "../../../foundry/scout/store.ts";
 import type { Night, NightId } from "../../../foundry/scout/types.ts";
 import { packetIdOf } from "../../../ledger/v1/packet.ts";
@@ -81,15 +82,24 @@ import { DIRECTION_VERDICT, IDEA_TARGET_WORD, build, commitOf, extractDecisions,
 const rel = (abs: string): string => path.relative(process.cwd(), abs).replace(/\\/g, "/");
 
 /** The read, with what the registry leads are derived from (the nights its findings restate, the keys queued) and the night's load (never digested). */
-type ScoutRead = ScoutV1 & { readonly earlier: ReadonlyMap<NightId, Night>; readonly queued: readonly string[]; readonly load?: LoadSummary };
+type ScoutRead = ScoutV1 & { readonly earlier: ReadonlyMap<NightId, Night>; readonly queued: readonly string[]; readonly load?: LoadSummary; readonly desk?: true };
 
 /* ── read ──────────────────────────────────────────────────────────────────── */
 
 async function read(ref: AdapterRef): Promise<Result<ScoutRead>> {
   const id = ref.runId;
   const got = await v1Call(() => readNight(id));
-  if (!got.ok) return got;
-  const night = got.value;
+  // A scout night wins when both exist, so a desk id can never hide one.
+  let desk = false;
+  let night: Night;
+  if (got.ok) night = got.value;
+  else {
+    const alt = await readDeskNight(id);
+    if (alt === null) return got;
+    night = alt;
+    desk = true;
+  }
+  const locate = (rel: string): string => (desk ? deskAbs(id, rel) : resolveInNight(id, rel));
   const styles: Record<string, StyleRead> = {};
   const assets: Record<string, AssetRead> = {};
   const files: { key: string; abs: string }[] = [];
@@ -103,14 +113,14 @@ async function read(ref: AdapterRef): Promise<Result<ScoutRead>> {
       for (const f of c.kind === "scene" ? [c.keyframes[0], ...c.replicas, c.clip?.path] : [c.image]) {
         if (f === undefined) continue;
         try {
-          files.push({ key: f, abs: resolveInNight(id, f) });
+          files.push({ key: f, abs: locate(f) });
         } catch (e) {
           return fromV1(e);
         }
       }
     } else if (c.kind === "asset3d") {
       try {
-        for (const f of c.concepts) if (f !== "") files.push({ key: f, abs: resolveInNight(id, f) });
+        for (const f of c.concepts) if (f !== "") files.push({ key: f, abs: locate(f) });
       } catch (e) {
         return fromV1(e);
       }
@@ -144,7 +154,7 @@ async function read(ref: AdapterRef): Promise<Result<ScoutRead>> {
   if (!queue.ok) return queue;
   const earlier = await readRestated(night, readNight);
   const load = processNightLoad(night);
-  return ok({ ...(load === undefined ? {} : { load }), night, styles, assets, media: Object.fromEntries(media.value), knowledge, at: { scout: rel(scoutRoot()), knowledge: rel(knowledgeRoot()), mesh: rel(meshRoot()) }, earlier, queued: queue.value.events.map((e) => e.key) });
+  return ok({ ...(load === undefined ? {} : { load }), ...(desk ? { desk: true } : {}), night, styles, assets, media: Object.fromEntries(media.value), knowledge, at: { scout: rel(scoutRoot()), knowledge: rel(knowledgeRoot()), mesh: rel(meshRoot()) }, earlier, queued: queue.value.events.map((e) => e.key) });
 }
 
 /* ── packet ────────────────────────────────────────────────────────────────── */
@@ -155,7 +165,7 @@ function refusal(n: Night): string | undefined {
   return undefined;
 }
 
-function packet(v1: ScoutV1 & Pick<ScoutRead, "load">): Result<OpenPlan> {
+function packet(v1: ScoutV1 & Pick<ScoutRead, "load" | "desk">): Result<OpenPlan> {
   const n = v1.night;
   const no = refusal(n);
   if (no !== undefined) return err("refused", `scout night ${n.id}: ${no}`);
@@ -184,7 +194,7 @@ function packet(v1: ScoutV1 & Pick<ScoutRead, "load">): Result<OpenPlan> {
       meta: `scout · ${n.sources.length} sources${n.dry ? " · dry" : ""}`,
       ...(v1.load === undefined ? {} : { load: v1.load }),
     },
-    urls: Object.fromEntries(b.cells.map((c) => [c.id, c.url])),
+    urls: Object.fromEntries(b.cells.map((c) => [c.id, v1.desk ? deskUrl(n, c.candidate, c.url) : c.url])),
     losses: b.losses,
   });
 }
@@ -214,6 +224,12 @@ function digestOf(v1: ScoutRead): string {
   return v1DigestOf({ source: "scout", night: v1.night.id, state: v1.night.state, candidates: v1.night.candidates, media: shas(v1.media), runs: runs.sort(), assets: assets.sort(), restated });
 }
 
+/** A desk night's picture is served from the local-draws route, not the scout file route. */
+function deskUrl(night: Night, candidate: string, fallback: string): string {
+  const c = night.candidates.find((x) => x.id === candidate);
+  return c?.kind === "idea" && c.image !== undefined ? deskCellUrl(night.id, c.image) : fallback;
+}
+
 function consequence(v1: ScoutRead, at: DecisionsAt): Result<Preview> {
   const n = v1.night;
   const no = refusal(n);
@@ -223,6 +239,10 @@ function consequence(v1: ScoutRead, at: DecisionsAt): Result<Preview> {
   const byCell = decisionMap(at.decisions);
   const kept = new Set(ids.filter((id) => byCell.get(id)?.verdict === "keep"));
   const v1Digest = digestOf(v1);
+  // A desk commit names no scout path. Taste, knowledge and the library are not in the write.
+  if (v1.desk) {
+    return ok({ v1Digest, consequence: buildConsequence(at, ids, { writes: [{ kind: "file", target: `local-draws/${n.id}/night.json`, detail: "verdicts stay on this desk; scout taste, knowledge and the library are not written" }] }, v1Digest) });
+  }
   const nightFile = { kind: "file" as const, target: `${v1.at.scout}/${n.id}/night.json` };
   if (n.dry) {
     return ok({ v1Digest, consequence: buildConsequence(at, ids, { writes: [{ ...nightFile, detail: "committed · dry: the verdicts only; no style, scene or knowledge is admitted" }] }, v1Digest) });
@@ -347,7 +367,20 @@ async function apply(claim: ApplyClaim): Promise<Result<void>> {
   if (!runId.ok) return runId;
   const id = runId.value;
   const got = await v1Call(() => readNight(id));
-  if (!got.ok) return got;
+  if (!got.ok) {
+    const desk = await readDeskNight(id);
+    if (desk === null) return got;
+    const items = claim.packet.items.map((it) => it.id);
+    const record = commitOf(desk, items, claim.decisions, new Date().toISOString());
+    if (desk.committed !== undefined) {
+      if (sameOutcome(desk.committed, record)) return ok(undefined);
+      return err("refused", `desk night ${id} was committed with other verdicts`);
+    }
+    if (desk.state === "open") return err("conflict", `desk night ${id}: The night is still running.`);
+    const saved = await v1Call(() => saveDeskNight({ ...desk, state: "committed", committed: record }));
+    if (!saved.ok) return saved;
+    return ok(undefined);
+  }
   const night = got.value;
   const items = claim.packet.items.map((it) => it.id);
   const record = commitOf(night, items, claim.decisions, new Date().toISOString());
