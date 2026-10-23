@@ -269,7 +269,7 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
         else {
           io.out(`night ${m.night} ${m.state}${m.stop === undefined ? "" : ` (${m.stop})`} · packet ${m.packet} · /board/${m.packet}`);
           for (const [k, by] of Object.entries(m.byKind)) io.out(`  ${k.padEnd(8)} ${Object.entries(by).map(([s, v]) => `${v} ${s}`).join(" · ")}`);
-          io.out(`  settled $${m.settledUsd.toFixed(2)} · held $${m.heldUsd.toFixed(2)}`);
+          io.out(`  Gemini settled $${m.settledUsd.toFixed(2)} · held $${m.heldUsd.toFixed(2)} · uncapped $${m.uncappedUsd.toFixed(2)} (Claude seat, Leonardo credits)`);
         }
         return 0;
       }

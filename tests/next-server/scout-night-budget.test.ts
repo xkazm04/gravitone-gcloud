@@ -7,7 +7,7 @@ vi.mock("server-only", () => ({}));
 import { armLive } from "@gt/kernel/dryrun";
 import { enqueue } from "@gt/kernel/job";
 import { closeProcessKernel, processKernel } from "@gt/kernel/process";
-import { nightBudget } from "../../lib/foundry/scout/budget.ts";
+import { capped, nightBudget } from "../../lib/foundry/scout/budget.ts";
 import { tasteOf } from "../../lib/foundry/scout/taste.ts";
 import type { Night, ScoutSource } from "../../lib/foundry/scout/types.ts";
 
@@ -46,7 +46,20 @@ describe("nightBudget", () => {
       ],
     };
     const b = nightBudget(store, night);
-    expect(b).toEqual({ ok: true, value: { ceilingUsd: 15, settledUsd: 0, heldUsd: 4.5, remainingUsd: 10.5, clipsUsed: 1, clipCap: 2 } });
+    expect(b).toEqual({ ok: true, value: { ceilingUsd: 15, settledUsd: 0, uncappedUsd: 0, heldUsd: 4.5, remainingUsd: 10.5, clipsUsed: 1, clipCap: 2 } });
+  });
+});
+
+describe("capped", () => {
+  // The ceiling caps Gemini only (operator, 2026-10-23); the axes are the ones 2026-10-22's live night booked.
+  it("Gemini and an unattributed row count; the Claude seat, Leonardo and the card do not", () => {
+    expect(capped('{"call":"recognize","model":"google/gemini-3.6-flash"}')).toBe(true);
+    expect(capped('{"producer":"scout-scene","provider":"imaging-router"}')).toBe(true);
+    expect(capped("not json")).toBe(true);
+    expect(capped('{"call":"reason","model":"claude-cli/claude-opus-5"}')).toBe(false);
+    expect(capped('{"call":"generate","model":"leonardo-flare/openai/gpt-image-2.5-flare"}')).toBe(false);
+    expect(capped({ producer: "scout-scene", provider: "imaging-router", model: "leonardo-studio/gpt-image-2.5-sunburst" })).toBe(false);
+    expect(capped({ model: "comfyui/ltx-2.5-distilled" })).toBe(false);
   });
 });
 

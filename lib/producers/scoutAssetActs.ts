@@ -95,7 +95,7 @@ async function conceptAct(e: AssetEngines, req: AssetRequest, k: number, ctx: St
     live: async () => {
       const out = await e.generate(gen);
       const p = out.provenance;
-      return { value: { images: out.images, provenance: p }, ...(p.costUsd === undefined ? { unpriced: `${p.provider} reported no cost for the concept still` } : { usd: p.costUsd }) };
+      return { value: { images: out.images, provenance: p }, served: `${p.provider}/${p.model}`, ...(p.costUsd === undefined ? { unpriced: `${p.provider} reported no cost for the concept still` } : { usd: p.costUsd }) };
     },
   });
   const img = got.images[0];

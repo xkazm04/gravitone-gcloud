@@ -50,7 +50,7 @@ export type ActContext = {
 
 const usd = (x: number): string => `$${x.toFixed(2)}`;
 export const budgetLine = (b: NightBudget): string =>
-  `remaining ${usd(b.remainingUsd)} of ${usd(b.ceilingUsd)} (settled ${usd(b.settledUsd)}, held ${usd(b.heldUsd)}) · clips ${b.clipsUsed}/${b.clipCap}`;
+  `remaining ${usd(b.remainingUsd)} of ${usd(b.ceilingUsd)} Gemini (settled ${usd(b.settledUsd)}, held ${usd(b.heldUsd)}) · uncapped ${usd(b.uncappedUsd)} · clips ${b.clipsUsed}/${b.clipCap}`;
 
 export function money(ctx: Pick<ActContext, "store">, night: Night): NightBudget {
   const b = nightBudget(ctx.store, night);
@@ -252,6 +252,7 @@ export type Morning = {
   readonly stop?: StopReason;
   readonly byKind: Readonly<Record<string, Readonly<Record<string, number>>>>;
   readonly settledUsd: number;
+  readonly uncappedUsd: number;
   readonly heldUsd: number;
 };
 
@@ -259,7 +260,7 @@ export function morning(n: Night, b: NightBudget): Morning {
   const byKind = Object.fromEntries(
     CANDIDATE_KINDS.map((k) => [k, Object.fromEntries(CANDIDATE_STATUSES.map((s) => [s, n.candidates.filter((c) => c.kind === k && c.status === s).length]))]),
   );
-  return { night: n.id, packet: `pkt:scout:${n.id}`, state: n.state, ...(n.stop === undefined ? {} : { stop: n.stop }), byKind, settledUsd: b.settledUsd, heldUsd: b.heldUsd };
+  return { night: n.id, packet: `pkt:scout:${n.id}`, state: n.state, ...(n.stop === undefined ? {} : { stop: n.stop }), byKind, settledUsd: b.settledUsd, uncappedUsd: b.uncappedUsd, heldUsd: b.heldUsd };
 }
 
 export const isStopReason = (s: string): s is StopReason => (STOP_REASONS as readonly string[]).includes(s);
