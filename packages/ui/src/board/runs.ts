@@ -99,14 +99,38 @@ export function runLooks(run: Run, cells: readonly Cell[], verdicts: Readonly<Re
   });
 }
 
-export type RunState = "open" | "kept" | "rejected" | "mixed";
+export type RunState = "open" | "kept" | "rejected";
 
+/**
+ * TWO LEVELS, ONE VERDICT (operator, 2026-10-23): a run is judged whole, and an item inside it may
+ * then differ. The run's verdict is read off its items: every item rejected is a rejected run; a
+ * kept item with none left open is a kept run - its rejected items are exceptions inside it (the
+ * subject did not fit, or another reason) - and anything else is still open.
+ */
 export function runState(run: Run, cells: readonly Cell[], verdicts: Readonly<Record<string, BoardVerdict>>): RunState {
   const vs = run.members.map((i) => verdicts[cells[i]?.id ?? ""]?.verdict);
+  if (vs.length > 0 && vs.every((v) => v === "reject")) return "rejected";
   if (vs.some((v) => v === undefined)) return "open";
-  if (vs.every((v) => v === "keep")) return "kept";
-  if (vs.every((v) => v === "reject")) return "rejected";
-  return "mixed";
+  return vs.some((v) => v === "keep") ? "kept" : "open";
+}
+
+/** The run's verdict as one value (its whole-run pick, the base a reason key adds to): kept, the
+ *  first item's rejection with its reasons, or none while it is open. */
+export function runVerdictOf(run: Run, cells: readonly Cell[], verdicts: Readonly<Record<string, BoardVerdict>>): BoardVerdict | undefined {
+  const state = runState(run, cells, verdicts);
+  if (state === "kept") return { verdict: "keep", reasons: [] };
+  if (state === "rejected") return verdicts[cells[run.members[0] ?? -1]?.id ?? ""];
+  return undefined;
+}
+
+/**
+ * The items one item's verdict moves. Keeping an item keeps its run, so the run's items still open
+ * are kept with it (a sibling already rejected stays the run's exception); rejecting or clearing an
+ * item moves that item alone - and once every item is rejected, so is the run.
+ */
+export function itemAct(run: Run, cells: readonly Cell[], verdicts: Readonly<Record<string, BoardVerdict>>, cell: number, v: BoardVerdict | null): number[] {
+  if (v?.verdict !== "keep") return [cell];
+  return [cell, ...run.members.filter((i) => i !== cell && verdicts[cells[i]?.id ?? ""] === undefined)];
 }
 
 /** How many tracks a CSS grid lays out now (↑ / ↓ move a whole line of runs). */

@@ -12,9 +12,8 @@
 // (and the tab) to the first open variant.
 import { useEffect, useRef, useState } from "react";
 
-import type { BoardVerdict } from "../../board/boardGate.ts";
 import { cullCells, tallyOf } from "../../board/cull.ts";
-import { categoriesOf, categoryOf, columnsOf, runsOf, tabOf, tabsOf, wordsOnly, type Run, type Tab } from "../../board/runs.ts";
+import { categoriesOf, categoryOf, columnsOf, runsOf, runVerdictOf, tabOf, tabsOf, wordsOnly, type Run, type Tab } from "../../board/runs.ts";
 import { DeskFrame, OracleStrip } from "../desk/Desk.tsx";
 import { Seg } from "../seg/Seg.tsx";
 import { CullFoot } from "./CullFoot.tsx";
@@ -28,13 +27,6 @@ import { useRunDesk } from "./useRunDesk.ts";
 import s from "./Runs.module.css";
 
 export type { MatrixCullProps } from "./props.ts";
-
-/** The whole run's verdict, when every variant holds the same one. */
-function runVerdict(run: Run, ids: (i: number) => string, verdicts: Readonly<Record<string, BoardVerdict>>): BoardVerdict | undefined {
-  const vs = run.members.map((i) => verdicts[ids(i)]);
-  const first = vs[0];
-  return first !== undefined && vs.every((v) => v?.verdict === first.verdict) ? { verdict: first.verdict, reasons: first.reasons } : undefined;
-}
 
 export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = false, announce = () => undefined, keys = true }: MatrixCullProps) {
   const { view, present } = packet;
@@ -72,7 +64,6 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
 
   const reasons = view.reasons.list;
   const foot = <CullFoot tally={tallyOf(d.cells, verdicts)} reasons={reasons.length} audio={view.lane === "audio"} refusals={d.refusals} busy={busy} onCommit={d.commit} />;
-  const idOf = (i: number) => d.cells[i]?.id ?? "";
   const pick = (t: Tab) => {
     const first = tabs.find((x) => x.tab === t)?.categories[0]?.runs[0];
     if (first !== undefined) d.setCur(first.run.members[0] ?? 0);
@@ -99,7 +90,7 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
             {...(run.words?.aim !== undefined ? { aim: run.words.aim } : {})}
             {...(run.words?.ref !== undefined ? { reference: run.words.ref } : {})}
             {...(run.words?.checks !== undefined ? { checks: run.words.checks } : {})}
-            runVerdict={runVerdict(run, idOf, verdicts)}
+            runVerdict={runVerdictOf(run, d.cells, verdicts)}
             reasons={reasons}
             maxReasons={view.reasons.max}
             onRunVerdict={(v) => d.decideCells(run.members, v, run.words?.label ?? run.row)}
@@ -107,7 +98,7 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
             live={keys}
             foot={foot}
           >
-            <RunView run={run} cells={d.cells} verdicts={verdicts} mediaOf={mediaOf} wordsOf={d.wordsOf} cur={d.cur} nudged={d.nudged} reasons={reasons} maxReasons={view.reasons.max} onFocus={d.setCur} onVerdict={(i, v) => d.decideCells([i], v)} />
+            <RunView run={run} cells={d.cells} verdicts={verdicts} mediaOf={mediaOf} wordsOf={d.wordsOf} cur={d.cur} nudged={d.nudged} reasons={reasons} maxReasons={view.reasons.max} onFocus={d.setCur} onVerdict={(i, v) => d.decideItem(i, v)} />
           </RunModal>
         ) : undefined
       }
@@ -120,7 +111,7 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
       {here?.tab === "ideas" ? (
         <>
           {shown(false).length > 0 && <RunMosaic tab="ideas" categories={shown(false)} cells={d.cells} verdicts={verdicts} mediaOf={mediaOf} wordsOf={d.wordsOf} runIx={d.runIx} nudged={d.nudged} onOpen={d.openRun} grid={grid} />}
-          {shown(true).length > 0 && <IdeaList categories={shown(true)} cells={d.cells} verdicts={verdicts} wordsOf={d.wordsOf} cur={d.cur} nudged={d.nudged} reasons={reasons} maxReasons={view.reasons.max} onFocus={d.setCur} onVerdict={(i, v) => d.decideCells([i], v)} />}
+          {shown(true).length > 0 && <IdeaList categories={shown(true)} cells={d.cells} verdicts={verdicts} wordsOf={d.wordsOf} cur={d.cur} nudged={d.nudged} reasons={reasons} maxReasons={view.reasons.max} onFocus={d.setCur} onVerdict={(i, v) => d.decideItem(i, v)} />}
         </>
       ) : here !== undefined ? (
         <RunMosaic tab={here.tab} categories={here.categories} cells={d.cells} verdicts={verdicts} mediaOf={mediaOf} wordsOf={d.wordsOf} runIx={d.runIx} nudged={d.nudged} onOpen={d.openRun} grid={grid} />
