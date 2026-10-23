@@ -1,10 +1,12 @@
-// THE SEEDS DOOR - server only (spark scout-decision-graph WP-S1). WP-S0 STUB: the signatures are the contract;
+// THE SEEDS DOOR - server only (spark scout-decision-graph WP-S1). WP-S0 STUB except `usableSeed` and `seedsInForce` (complete): the signatures are the contract;
 // WP-S1 fills the bodies. A batch of ~100 one-sentence seeds is validated whole and written by one call; the
 // CLI's `seeds` command and the night's step 0 both go through `addSeedBatch`.
 
-import { err, type Result } from "@gt/domain/errors";
+import { err, ok, type Result } from "@gt/domain/errors";
 
-import type { NightId, SeedBatch, SeedRef } from "./types";
+import { ancestryOf, listSeedBatches, seedOf } from "./seedStore";
+import { pausedUnder, readSteer } from "./steer";
+import { SEED_REF_RE, type NightId, type SeedBatch, type SeedRef } from "./types";
 
 export type SeedBatchOptions = {
   readonly dry: boolean;
@@ -28,8 +30,18 @@ export function seedsInForce(batches: readonly SeedBatch[]): boolean {
  * `parent`): Ok when the ref names a kept seed of a live batch and no paused branch holds it; else the
  * refusal sentence naming the ref and why.
  */
-export async function usableSeed(_ref: SeedRef): Promise<Result<SeedRef>> {
-  return err("refused", "the seeds door is being built (spark scout-decision-graph WP-S1)");
+export async function usableSeed(ref: SeedRef, batches?: readonly SeedBatch[]): Promise<Result<SeedRef>> {
+  if (!SEED_REF_RE.test(ref)) return err("invalid", `not a seed ref: ${ref} (want <batch>/sd-NNN)`);
+  const all = batches ?? (await listSeedBatches());
+  const found = seedOf(all, ref);
+  if (found === undefined) return err("refused", `no seed ${ref}`);
+  const c = found.batch.committed;
+  if (c === undefined) return err("refused", `seed ${ref} is not decided yet: its batch ${found.batch.id} is uncommitted`);
+  if (c.dry) return err("refused", `seed ${ref} was kept on a dry batch; nothing derives from it`);
+  if (!c.kept.includes(found.seed.id)) return err("refused", `seed ${ref} was not kept${c.rejected.includes(found.seed.id) ? ` (rejected: ${(c.reasons[found.seed.id] ?? []).join(", ") || "no reason"})` : ""}`);
+  const paused = pausedUnder(await readSteer(), ancestryOf(all, ref));
+  if (paused !== undefined) return err("refused", `seed ${ref} sits under the paused branch ${paused}; resume it on /scout first`);
+  return ok(ref);
 }
 
 /** The CLI's `seeds` command: `new --json <file|-> [--dry]`, `status [<batch>]`. Lines to print and the --json doc. */

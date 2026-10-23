@@ -95,3 +95,16 @@ describe("the seed store", () => {
     expect(pausedUnder({ paused: [], history: [] }, chain)).toBeUndefined();
   });
 });
+
+describe("the seed door every seed-taking act calls", () => {
+  it("takes a kept live seed, refuses an unkept, a rejected, an unknown and a paused one with the reason", async () => {
+    const { usableSeed } = await import("../../lib/foundry/scout/seeds.ts");
+    expect(await usableSeed("2026-10-23/sd-001")).toEqual({ ok: true, value: "2026-10-23/sd-001" });
+    expect(await usableSeed("2026-10-23/sd-002")).toMatchObject({ ok: false, error: { message: expect.stringContaining("rejected: generic") } });
+    expect(await usableSeed("2026-10-23-2/sd-001")).toMatchObject({ ok: false, error: { message: expect.stringContaining("uncommitted") } });
+    expect(await usableSeed("2026-10-23/sd-099")).toMatchObject({ ok: false, error: { message: expect.stringContaining("no seed") } });
+    await pauseBranch("2026-10-23/sd-001", "operator");
+    expect(await usableSeed("2026-10-23/sd-001")).toMatchObject({ ok: false, error: { message: expect.stringContaining("paused branch 2026-10-23/sd-001") } });
+    await resumeBranch("2026-10-23/sd-001", "operator");
+  });
+});
