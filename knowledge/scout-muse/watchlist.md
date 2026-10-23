@@ -10,6 +10,6 @@ words; it is never passed to the studio.
 - tag: stylised 3D character rendering - subsurface skin, hair shading, toon outlines
 - tag: real-time avatar concept art - turnarounds, expression sheets, dialogue portraits
 - tag: text-only character consistency - identity blocks, one change at a time
-- tag: poster typography space - negative space and eye lines in 4:5 key art
+- tag: poster typography space - negative space and eye lines in 9:16 key art
 
 ## Proposed by the scout

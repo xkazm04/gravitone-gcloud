@@ -429,7 +429,7 @@ the CLI and committing `knowledge/` and `.ai/registry-leads.jsonl`; logs land in
 The loop's second wing (spark `scout-muse`, 2026-10-23; skill `/scout-muse`): an SFW study of how
 fictional adult women are drawn as characters - ultra-photoreal portrait, cinematic still, fashion
 editorial, semi-real painterly, anime/cel, stylised 3D, real-time 3D companion, toon-shaded 3D - crossed
-with character cards as 4:5 posters and 16:9 roleplay-situation scenes. Craft notes:
+with character cards as 9:16 posters and 16:9 roleplay-situation scenes. Craft notes:
 `knowledge/scout-muse/techniques.md`.
 
 - **A wing is a root.** `foundry-out/scout-muse/` (`SCOUT_MUSE_STORE_DIR`) beside `foundry-out/scout/`;
@@ -438,7 +438,7 @@ with character cards as 4:5 posters and 16:9 roleplay-situation scenes. Craft no
   wings (`/scout?wing=muse`); the Board packet is `pkt:scout:muse:<night>`; a Floor pile reads `muse <night>`.
 - **What the muse wing runs:** doctor, open, add-source, ideas, finding, direction, watch, close, status,
   style. Ingest, scenes, clips, assets, reels, seeds and music are refused under `--wing muse`.
-- **Ideas** take `target: style | scene | character`, an `aspect` (muse default 4:5) and, for a character,
+- **Ideas** take `target: style | scene | character`, an `aspect` (muse default 9:16; the studio draws only 16:9, 1:1 and 9:16) and, for a character,
   a `card` `{name, age 25-60, look, personality}`. The door refuses a prompt without `aged NN` (25+), a
   character prompt whose age is not her card's, and youth or nudity words.
 - **The eye.** After the pixels are held, `lib/foundry/scout/judge.ts` reads adult / apparent age /

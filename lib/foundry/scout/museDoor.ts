@@ -30,8 +30,12 @@ import type { ScoutWing } from "./wing.ts";
 /** Every aspect the imaging contract draws (lib/imaging/types.ts), as the door's enum. */
 export const ASPECTS = Object.keys(ASPECT_PX) as [Aspect, ...Aspect[]];
 
-/** What each wing draws when a brief names no aspect: the scout wing's video frame, the muse wing's portrait poster. */
-export const WING_ASPECT: Readonly<Record<ScoutWing, Aspect>> = { scout: "16:9", muse: "4:5" };
+/** What each wing draws when a brief names no aspect: the scout wing's video frame, the muse wing's tall portrait. */
+export const WING_ASPECT: Readonly<Record<ScoutWing, Aspect>> = { scout: "16:9", muse: "9:16" };
+
+/** The aspect radios the studio's generate page offers (read off the page 2026-10-23: 16:9, 1:1, 9:16 - no 4:5;
+ *  the first live muse night failed 32 portraits on it, before any Generate). A muse brief asks for one of these. */
+export const STUDIO_ASPECTS: readonly Aspect[] = ["16:9", "1:1", "9:16"];
 
 /** The targets the muse wing draws. */
 export const MUSE_TARGETS = ["style", "scene", "character"] as const;
@@ -72,6 +76,7 @@ export type MuseBrief = {
   readonly anchor: { readonly ref: string };
   readonly use?: string;
   readonly card?: CharacterCard;
+  readonly aspect?: Aspect;
 };
 
 /** A refusal: the brief's field and the rule it broke, in parseAt's `<path>: <message>` shape. */
@@ -100,6 +105,7 @@ export function wingRefusal(b: MuseBrief, wing: ScoutWing): DoorRefusal | null {
   if (!(MUSE_TARGETS as readonly string[]).includes(b.target)) return { path: "target", message: `${b.target} is not drawn in the muse wing (it draws ${MUSE_TARGETS.join(", ")})` };
   if (b.target === "character" && b.card === undefined) return { path: "card", message: "a character idea carries her card {name, age, look, personality}" };
   if (b.target !== "character" && b.card !== undefined) return { path: "card", message: "only a character idea carries a card" };
+  if (b.aspect !== undefined && !STUDIO_ASPECTS.includes(b.aspect)) return { path: "aspect", message: `the studio draws ${STUDIO_ASPECTS.join(", ")}; it has no ${b.aspect}` };
   for (const [path, s] of texts(b)) {
     const youth = YOUTH_RE.exec(s);
     if (youth !== null) return { path, message: `"${youth[0]}" is a youth word; the muse wing draws adult women only` };

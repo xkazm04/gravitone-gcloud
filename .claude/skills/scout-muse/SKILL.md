@@ -3,7 +3,7 @@ name: scout-muse
 memory: none
 version: 1.0.0
 category: Development
-description: The muse wing of the nightly scout loop - an SFW study of how fictional adult women are drawn as characters, from ultra-photoreal through painterly, anime and 3D concept looks. Researches prompt technique on the web, crosses looks with character cards as posters (4:5) and roleplay-situation scenes in the operator's Leonardo studio at quality Low, has a vision eye clear every still (stated and read adult, never nude, never a real person) and leaves ONE Board packet pkt:scout:muse:<night> for K/X. Kept looks join the shared style catalogue (so /scout may use them); kept characters join knowledge/scout-muse/characters.md. Wraps pipeline/scout.mts --wing muse; it never keeps, rejects or commits anything on the Board, and it never reads or writes the scout wing's nights. Invoke with /scout-muse night [--dry] [--ideas N], /scout-muse status [<night>].
+description: The muse wing of the nightly scout loop - an SFW study of how fictional adult women are drawn as characters, from ultra-photoreal through painterly, anime and 3D concept looks. Researches prompt technique on the web, crosses looks with character cards as tall 9:16 posters and roleplay-situation scenes in the operator's Leonardo studio at quality Low, has a vision eye clear every still (stated and read adult, never nude, never a real person) and leaves ONE Board packet pkt:scout:muse:<night> for K/X. Kept looks join the shared style catalogue (so /scout may use them); kept characters join knowledge/scout-muse/characters.md. Wraps pipeline/scout.mts --wing muse; it never keeps, rejects or commits anything on the Board, and it never reads or writes the scout wing's nights. Invoke with /scout-muse night [--dry] [--ideas N], /scout-muse status [<night>].
 argument-hint: "night [--dry] [--ideas N] | status [<night>]"
 allowed-tools: Read, Write, Edit, Bash, PowerShell, Glob, Grep, WebSearch, WebFetch, Monitor
 ---
@@ -44,7 +44,7 @@ shared catalogue, and a scout look may be tried here.
 - **Spread before you narrow.** Until the operator has kept three looks, a night spans at least six rungs
   of the ladder, at most a quarter of its stills on one rung, and a cast of ages 25-60, many skin tones,
   hair textures and body types.
-- **Posters and scenes.** A poster is 4:5 key art with space for type; a scene is 16:9, one roleplay
+- **Posters and scenes.** A poster is 9:16 key art (the studio draws 16:9, 1:1 and 9:16 only) with space for type; a scene is 16:9, one roleplay
   situation (a cafe date by the window, a rooftop at night, a late gaming session, a rainy bus stop, a
   museum gallery, a bookshop aisle, a kitchen breakfast, a ski-lodge fireplace...) framed so her face reads.
 
@@ -98,7 +98,7 @@ Up to `ideaCap` ideas, one JSON array -> `npx tsx pipeline/scout.mts ideas <nigh
 - `target` - what a keep builds next: `style` (the look joins the catalogue), `scene` (a situation worth
   playing again), or `character` (a new woman's card);
 - `genre` - the look's rung in plain words (`ultra-photoreal portrait`, `anime cel`, `real-time 3D companion`);
-- `aspect` - `4:5` for a poster (the default), `16:9` for a scene;
+- `aspect` - `9:16` for a poster (the default), `16:9` for a scene, `1:1` for a square card - the studio has no other;
 - `card` (target `character` only) - `{name, age, look, personality}`: `look` holds what must not drift
   (face, hair, build, skin, one signature garment or accessory), `personality` the line a scene plays her by;
 - `anchor` - `{kind: watch|gap|free, ref}`; `use` - the aim it serves (`companion portrait`, `roleplay scene`);
@@ -107,7 +107,7 @@ Up to `ideaCap` ideas, one JSON array -> `npx tsx pipeline/scout.mts ideas <nigh
   expression) -> `Avoid:` (short, concrete). A scene's look block holds no framing or backdrop of its own -
   the situation owns them. States `aged NN`. Never a name of anyone real.
 
-A character a night invents is drawn ONCE as a 4:5 portrait with `target: character`; a kept character is
+A character a night invents is drawn ONCE as a 9:16 portrait with `target: character`; a kept character is
 drawn on later nights in other looks and situations with her card restated VERBATIM (`target: style` or
 `scene`). One bad brief refuses the batch: fix it and resend. The eye's verdict lands on each candidate;
 a still it threw shows as failed `judge: <field>` - three throws on one rung tonight means change the

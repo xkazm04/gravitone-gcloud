@@ -58,7 +58,7 @@ import { DEFAULT_IDEA_CAP, DEFAULT_REEL_CAP, GENRE_MAX, IDEA_ANCHORS, REEL_DENSI
 //
 //   THE MUSE WING HAS ITS OWN LINE (spark scout-muse). In the muse wing a brief must also clear
 //   ./museDoor.ts - its targets, a character's card, a stated adult age, no youth or nudity word -
-//   and its still is drawn 4:5 at studio quality low and judged by the eye before it is kept. A
+//   and its still is drawn 9:16 at studio quality low and judged by the eye before it is kept. A
 //   brief may name its `aspect` in either wing; absent, each wing draws its own default.
 //
 // NO MONEY REFUSAL. The studio bills prepaid credits and the seat is reported uncapped; the night's

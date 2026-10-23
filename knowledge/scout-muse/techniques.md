@@ -50,7 +50,7 @@ Each rung is a look family a night spreads across before a direction is confirme
    tungsten and teal), a story moment mid-gesture rather than a pose.
 3. **Fashion editorial / poster** - framing words (mid-thigh up, three-quarter, side profile for the
    silhouette), garment and fabric behaviour (drape, sheen, weight), the eye line, and negative space
-   for type at the top or side of a 4:5 frame.
+   for type at the top or side of a 9:16 frame.
 4. **Semi-real painterly** - blended colour transitions, visible layered strokes on each facial plane,
    a cool or warm rim light tracing the far contour, a contemporary illustration finish.
 5. **Anime / cel** - clean confident line art, two-tone cel shadows, flat graded sky or interior, adult

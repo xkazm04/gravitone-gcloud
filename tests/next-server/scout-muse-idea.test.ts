@@ -1,7 +1,7 @@
 // THE MUSE WING'S IDEAS (spark scout-muse WP2) - `pipeline/scout.mts --wing muse ideas` end to end,
 // every store a temp directory set below before any lib/ module loads: the muse door (its targets, the
 // card, the stated age, the refused words) beside the unchanged scout door; the eye's judge over a fake
-// recognize; and the scout-ideas job of a muse night - its own job id, its stills drawn 4:5 at quality
+// recognize; and the scout-ideas job of a muse night - its own job id, its stills drawn 9:16 at quality
 // low, each one judged before it is written, a failing still never kept. No vendor, no browser, no
 // network: the fake studio records, the eye is scripted, and fetch throws.
 
@@ -114,14 +114,14 @@ const refusal = (raw: unknown, wing: "scout" | "muse"): string => {
 const muse = (o: Record<string, unknown>, k = 2): string => refusal([MUSE[0], ...Array<unknown>(k - 2).fill(MUSE[0]), brief("x", o)], "muse");
 
 describe("the muse door", () => {
-  it("accepts a batch of style, scene and character; each idea draws 4:5 unless it names its aspect, and a character carries her card", () => {
+  it("accepts a batch of style, scene and character; each idea draws 9:16 unless it names its aspect, and a character carries her card", () => {
     const r = parseIdeas([...MUSE, brief("Wide establishing look", { aspect: "16:9" })], "muse");
     expect(r.ok, r.ok ? "" : r.error.message).toBe(true);
     if (!r.ok) return;
     expect(r.value.map((b) => [b.target, b.aspect])).toEqual([
-      ["style", "4:5"],
-      ["scene", "4:5"],
-      ["character", "4:5"],
+      ["style", "9:16"],
+      ["scene", "9:16"],
+      ["character", "9:16"],
       ["style", undefined],
     ]);
     expect(r.value[2]?.card).toEqual(CARD);
@@ -137,6 +137,8 @@ describe("the muse door", () => {
   it("refuses a character without her card, a card on any other idea, and a card's age outside 25..60", () => {
     expect(muse({ target: "character" })).toBe("idea 2: card: a character idea carries her card {name, age, look, personality}");
     expect(muse({ card: CARD })).toBe("idea 2: card: only a character idea carries a card");
+    // The studio's page offers 16:9, 1:1 and 9:16 only (read 2026-10-23): a 4:5 brief would fail at the radio.
+    expect(muse({ aspect: "4:5" })).toBe("idea 2: aspect: the studio draws 16:9, 1:1, 9:16; it has no 4:5");
     expect(muse({ target: "character", card: { ...CARD, age: 24 } })).toBe("idea 2: card.age: her age is a whole number from 25 to 60");
     expect(muse({ target: "character", card: { ...CARD, age: 61 } })).toBe("idea 2: card.age: her age is a whole number from 25 to 60");
   });
@@ -171,8 +173,8 @@ describe("the muse door", () => {
     expect(refusal([brief("a", { card: CARD })], "scout")).toBe("idea 1: card: a character card is the muse wing's (--wing muse)");
     // No age and a refused word pass on the scout wing: its line is its own.
     expect(refusal([brief("a", { prompt: "A teen band on a stage, gouache." })], "scout")).toBe("ok");
-    const wide = parseIdeas([brief("a", { aspect: "4:5" })], "scout");
-    expect(wide.ok && wide.value[0]?.aspect).toBe("4:5");
+    const wide = parseIdeas([brief("a", { aspect: "9:16" })], "scout");
+    expect(wide.ok && wide.value[0]?.aspect).toBe("9:16");
     // Outside any scope the door is the scout wing's.
     expect(parseIdeas([brief("a", { card: CARD })]).ok).toBe(false);
     expect(withWing("muse", () => parseIdeas(MUSE)).ok).toBe(true);
@@ -249,7 +251,7 @@ describe("a muse night's ideas job", () => {
     expect(r.code, r.err).toBe(0);
     expect(r.doc["jobId"]).toBe(`job:scout-ideas:muse:${night}:c-01`);
     const ideas = await withWing("muse", () => ideasOf(night));
-    expect(ideas.map((c) => [c.status, c.aspect, c.judge])).toEqual(Array(3).fill(["rendered", "4:5", STAND_JUDGE]));
+    expect(ideas.map((c) => [c.status, c.aspect, c.judge])).toEqual(Array(3).fill(["rendered", "9:16", STAND_JUDGE]));
     expect(ideas[2]?.card).toEqual(CARD);
     expect(FAKE_LEONARDO_STUDIO.calls).toEqual([]);
 
@@ -265,7 +267,7 @@ describe("a muse night's ideas job", () => {
     expect(existsSync(path.join(ROOT, "scout", night, "ideas", "c-03.png"))).toBe(false);
   });
 
-  it("live on the fake studio: drawn 4:5 at quality low; a failing or unread still is never written, its candidate failed `judge: ...`", async () => {
+  it("live on the fake studio: drawn 9:16 at quality low; a failing or unread still is never written, its candidate failed `judge: ...`", async () => {
     const seen: GenerateRequest[] = [];
     const answers: (() => Promise<Recognition>)[] = [
       async () => ({ text: "", json: read(), provenance: { provider: "ollama", model: "eye", modelBasis: "requested", durationMs: 1 } }),
@@ -290,8 +292,8 @@ describe("a muse night's ideas job", () => {
     const night = await openIn("muse", LIVE, ["--live"]);
     const r = await cli(["--wing", "muse", "ideas", night, "--json", batch(MUSE)], { env: LIVE, ports });
     expect(r.code, r.err).toBe(0);
-    expect(seen.map((g) => [g.aspect, g.quality, g.prefer])).toEqual(Array(3).fill(["4:5", "low", "leonardo-studio"]));
-    expect(FAKE_LEONARDO_STUDIO.calls.map((c) => c.aspect)).toEqual(["4:5", "4:5", "4:5"]);
+    expect(seen.map((g) => [g.aspect, g.quality, g.prefer])).toEqual(Array(3).fill(["9:16", "low", "leonardo-studio"]));
+    expect(FAKE_LEONARDO_STUDIO.calls.map((c) => c.aspect)).toEqual(["9:16", "9:16", "9:16"]);
     // Every studio generation is deleted once held, whatever the eye then said.
     expect(FAKE_LEONARDO_STUDIO.deletes).toEqual(["fake-gen-0001", "fake-gen-0002", "fake-gen-0003"]);
     await withWing("muse", async () => {

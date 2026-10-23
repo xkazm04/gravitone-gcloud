@@ -178,10 +178,10 @@ function universe(x: Ids): { readonly batches: SeedBatch[]; readonly nights: Nig
   };
 }
 
-/** The muse wing's nights: ideas only, each a style, a scene or a character poster at 4:5. */
+/** The muse wing's nights: ideas only, each a style, a scene or a character poster at 9:16. */
 export function fixtureMuse(): Night[] {
   const judge = (apparentAge: number, clothing: "covered" | "revealing") => ({ adult: "yes" as const, apparentAge, clothing, realPerson: "no" as const, hands: "ok" as const, notes: "painterly, warm rim light" });
-  const muse = (i: number, nid: string, over: Pick<IdeaCandidate, "title" | "target"> & Partial<IdeaCandidate>): Candidate => ({ id: cid(i), kind: "idea", sourceIds: [], status: "rendered", prompt: "p", anchor: { kind: "free", ref: "" }, aspect: "4:5", jobId: `job:scout-ideas:muse:${nid}`, ...over });
+  const muse = (i: number, nid: string, over: Pick<IdeaCandidate, "title" | "target"> & Partial<IdeaCandidate>): Candidate => ({ id: cid(i), kind: "idea", sourceIds: [], status: "rendered", prompt: "p", anchor: { kind: "free", ref: "" }, aspect: "9:16", jobId: `job:scout-ideas:muse:${nid}`, ...over });
   const card = { name: "Mara Venn", age: 34, look: "auburn bob, freckles, green wool coat, brass compass on a chain", personality: "dry wit, never in a hurry" };
   const n1 = "2026-10-22";
   const n2 = "2026-10-23";

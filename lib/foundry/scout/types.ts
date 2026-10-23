@@ -353,7 +353,7 @@ export type IdeaCandidate = CandidateBase & {
   readonly image?: string;
   /** A stats idea's strip and its inputs, night-relative under `ideas/<c-id>/` (present only on target `stats`). */
   readonly reel?: ReelFiles;
-  /** The still's aspect when it is not the scout wing's 16:9 (a muse poster is 4:5). Absent: 16:9. */
+  /** The still's aspect when it is not the scout wing's 16:9 (a muse portrait is 9:16). Absent: 16:9. */
   readonly aspect?: Aspect;
   /** A character idea's card (muse wing, target `character`). */
   readonly card?: CharacterCard;
