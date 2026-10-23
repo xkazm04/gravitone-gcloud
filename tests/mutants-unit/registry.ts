@@ -4766,4 +4766,37 @@ export const MUTANTS: UnitMutant[] = [
     replace: 'rig: "The rig fails because the weights are bad or the bone chains are broken somewhere.",',
     why: "A reason's meaning grows past twelve words: the tip on the Board is the app narrating behind a chip.",
   },
+  // spark night-load-band (2026-10-23): the box's load samples, a night's summary, the LoadBand.
+  {
+    id: "load-prune-ignores-retention",
+    test: "packages/kernel/test/load.test.ts",
+    file: "packages/kernel/src/resources/load.ts",
+    find: 'WHERE at_ms < ? AND at_ms < (SELECT max(at_ms) FROM load_samples) - ?", beforeMs, RETENTION_MS',
+    replace: 'WHERE at_ms < ? AND ? > 0", beforeMs, RETENTION_MS',
+    why: "A prune whose cutoff falls inside the thirty days deletes the samples a night's desk and a week's comparison still read.",
+  },
+  {
+    id: "load-p95-is-the-max",
+    test: "packages/domain/test/load.test.ts",
+    file: "packages/domain/src/load.ts",
+    find: "const p95 = sorted[Math.ceil(0.95 * sorted.length) - 1] ?? 0;",
+    replace: "const p95 = sorted[sorted.length - 1] ?? 0;",
+    why: "The p95 tick becomes the night's single worst minute, so one spike reads as a night run over the band.",
+  },
+  {
+    id: "load-gap-drawn-as-idle",
+    test: "packages/domain/test/load.test.ts",
+    file: "packages/domain/src/load.ts",
+    find: "=== 0 ? -1 : r4(",
+    replace: "=== 0 ? 0 : r4(",
+    why: "A slot with no reading is drawn as an idle box, so a dead sampler looks like an under-scoped night.",
+  },
+  {
+    id: "load-unread-read-as-idle",
+    test: "packages/ui/test/components/load.test.ts",
+    file: "packages/ui/src/components/load/band.ts",
+    find: "if (r.read <= 0) return { name, read: false };",
+    replace: "if (r.read < 0) return { name, read: false };",
+    why: "A resource no sample read is drawn as 0% idle: an [N/A] GPU tells the operator to launch GPU work into a probe that cannot see it.",
+  },
 ];
