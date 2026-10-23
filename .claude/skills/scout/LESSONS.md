@@ -172,3 +172,13 @@ subject vocabulary the recipes deliberately exclude. Cosmetic, cull renames.
 **Verdict across the three runs:** extract with singletons when fidelity per source matters or grouping keeps
 failing; extract grouped when the catalogue needs recipes that generalise; either way the cull decides merges —
 run 3's clusters + run 2's rows are complementary evidence over the same gallery.
+
+## 1.2.0 - 2026-10-23 - night 2026-10-23-3
+- A source title the skill writes is read by the scene's craft-not-content check: titling two stop-motion shorts
+  "Stop-motion ... film" made both scene recipes refuse themselves for naming "stop-motion" (c-52, c-53). Keep the
+  medium and the technique OUT of a source's `title` and `channel` (put them in `why`) - argues a change in
+  lib/foundry/scout/scene.ts: a craft word (stop-motion, cel, risograph) is not content and should not trip the check.
+- `ideas` / `style` / `scene` launched with `--detach` are run by the worker only: start the worker with its keys
+  (`node --env-file-if-exists=.env.local workers/runner.mts`) before the first launch, and never restart it mid-night -
+  each restart leaves jobs `interrupted` and their paid lanes held until retried and acknowledged (2026-10-23: the reels
+  and five style runs sat queued behind three lane holds for two hours).
