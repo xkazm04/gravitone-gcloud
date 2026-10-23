@@ -10,7 +10,7 @@ import { quote } from "@gt/kernel/pricing/quote";
 import { recipeSlots } from "../../../../../lib/foundry/adopt.ts";
 import { digest } from "../../../projects/[id]/_part/hash.ts";
 import { door, land, recOf, type Media } from "./fixture.ts";
-import { ADOPT_REPLY, ADOPT_SEEDS, DRY_GRID } from "./fixtureData.ts";
+import { ADOPT_REPLY, ADOPT_SEEDS, DRY_GRID, presetPlate } from "./fixtureData.ts";
 
 // A STYLE ACT IS A RECEIPT, THEN A CONFIRM (Phase 4 COMMON decision 3) - the two acts that call
 // out of the studio:
@@ -136,7 +136,7 @@ async function landed(act: StyleAct, b: Basis, at: string, media: Media): Promis
   let n = s.proofs.length;
   for (const id of act.trialIds) {
     const t = STYLE_TRIALS.find((x) => x.id === id);
-    const m = await media(`/trials/google/${DRY_GRID[s.id] ?? "newsprint-cutout"}/${id}.jpg`);
+    const m = await media(presetPlate(DRY_GRID[s.id] ?? "newsprint-cutout"));
     if (!m.ok) return m;
     n += 1;
     made.push({ id: `pr-${s.id}-${n}`, label: `${t?.label ?? id} · dry stand-in`, media: m.value, state: "pending" as const, trialId: id, blockDigest: d, provider: "dry-run", model: IMAGE.model, costUsd: 0, at });

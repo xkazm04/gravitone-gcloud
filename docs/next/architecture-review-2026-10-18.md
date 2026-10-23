@@ -115,6 +115,16 @@ the money path, so it is an operator/App Master call, not a builder's (see Quest
 **Path scope.** `lib/spend/select.ts`, `packages/kernel/src/spend/v1Port.ts`,
 `lib/ledger/v1/sources/spend.ts`, `packages/kernel/test/spend.v1port.test.ts`.
 
+**Status (2026-10-19).** The operator ruled on 2026-10-18 "text-usd only". `e92204d3` moved
+`text-usd` onto the kernel store (`lib/spend/sqliteStore.ts`, through `v1Port` `spendStoreFor`).
+Every enforcing class (`imaging-usd`, `video-usd`, `music-audio-s` and the rest) stays on
+`lib/spend/fileStore.ts`. Moving any enforcing class is still an open money-path decision for the
+operator, and it reads together with AUP-A, which is operator-only. The constraint that forced the
+ruling: the kernel's spend tables cannot refuse a paid image (see Cost of leaving it), and
+`text-usd` is the one class that is count-only by the operator's ruling (`router/reserve.ts:30-31`),
+so a mistake there refuses nothing. The alternative that lost was a full cutover of the enforcing
+classes, which would put a money-path mistake where a paid call is refused or let through.
+
 ---
 
 ## F3 · Probes and mutants pin code that production no longer runs
@@ -209,6 +219,14 @@ rename out of the transaction is a separate, later lot.
 
 **Path scope.** `lib/ledger/v1/sources/spend.ts`, one new test under `tests/next-server/`.
 
+**Status (2026-10-19).** Landed `ca636fd2`: `lib/ledger/v1/sources/spend.ts` reads class files with
+`readFileSync`, and `tests/next-server/spend-read-interleave.test.ts` runs 50 write/read rounds.
+The rule: in one process, a read of a file that a writer replaces with a BLOCKING rename retry
+(`renameRetrying` or `writeAtomic`'s busy-wait) must be synchronous, as `6ecf6f6b` did for
+`ensureStyles` and `ca636fd2` did for spend. The residual that remains: `writeStylesExport` renames
+inside `store.tx` (`packages/kernel/src/styles/export.ts`). That is a separate lot, being delivered
+now; it has not landed.
+
 ---
 
 ## Milestone 1 against Next: the seam each cluster builds on
@@ -264,6 +282,12 @@ After these three: retire `canRemoveAlt` and `alt-last-one-stays` (F3), then pla
 - **F2 spend cutover (money path).** Should `select.ts` move a class onto the kernel store through
   `v1Port`, starting with count-only `text-usd`? This is a risk on the money path, so it needs the
   operator or the App Master.
+  **Status (2026-10-19):** the operator ruled on 2026-10-18 "text-usd only". `e92204d3` moved
+  `text-usd` onto the kernel store (`lib/spend/sqliteStore.ts` via `v1Port` `spendStoreFor`); every
+  enforcing class (`imaging-usd`, `video-usd`, `music-audio-s` and the rest) stays on
+  `lib/spend/fileStore.ts`. Moving any enforcing class is still an open money-path decision for the
+  operator, read together with AUP-A. A full cutover of the enforcing classes lost to the
+  count-only-first ruling.
 - **AUP-A** (operator-only, "creator data on a server"): its retarget assumes kernel spend enforces
   ceilings. Under F2 it does not yet. The decision and the cutover should be read together.
 - **research-run-engine-B** (operator-only, WebSearch/WebFetch): this blocks the C1/C2 residue at

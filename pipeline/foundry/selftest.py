@@ -550,12 +550,12 @@ def test_dojo_study_beat_binning_153_frames_discrepancy():
     DS = load("dojo_study")
 
     manifests = list((HERE.parent / "vlm-probe" / "frames").glob("*-manifest.json"))
-    if not manifests:
+    if not manifests or not list(DS.PROBE_OUT.glob("*/results.jsonl")):
         # The frame manifests live under the gitignored /pipeline/vlm-probe/frames/*,
         # so a clean checkout (CI) has no corpus to measure. The counts below are a
         # measurement of that local corpus, not an invariant of the tree: asserting
         # them against nothing failed the blocking python job on every push.
-        print("  skip  153-frame corpus discrepancy: no local frame manifests in this checkout")
+        print("  skip  153-frame corpus discrepancy: no local annotation corpus (manifests alone are tracked; vlm-probe-out/ is not)")
         return
     manifest_data = {}
     for m in manifests:
@@ -906,6 +906,8 @@ def test_every_third_party_import_is_declared_in_requirements():
     # is importable before it is committed, and the guard must not call its importer undeclared.
     pipeline_local |= {p.stem for p in (root / "packages" / "kernel" / "py").glob("*.py")}
 
+    blender_host = {"bpy", "bmesh", "mathutils"}
+
     def undeclared(declared):
         out = set()
         for f in files:
@@ -920,6 +922,11 @@ def test_every_third_party_import_is_declared_in_requirements():
                 for m in mods:
                     top = m.split(".")[0]
                     if top in sys.stdlib_module_names or top in local:
+                        continue
+                    # the scripts under pipeline/mesh/blender/ run inside Blender's own
+                    # interpreter (blender -b -P <file>), which supplies these three; pip
+                    # does not provide them, so they are never "undeclared" there
+                    if f.startswith("pipeline/mesh/blender/") and top in blender_host:
                         continue
                     if norm(dist_of.get(top, top)) not in declared:
                         out.add(f"{f}: {top}")

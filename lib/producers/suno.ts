@@ -1,4 +1,4 @@
-import { AppError } from "@gt/domain/errors";
+import { AppError, errorMessage } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import type { Job } from "@gt/domain/job";
 import type { CallIntent } from "@gt/kernel/dryrun";
@@ -165,7 +165,7 @@ export function sunoProducer(binding: { readonly driver: SunoDriver }): Producer
     },
     async health() {
       // v1's pause: a driver that is not ok claims nothing and fails no job.
-      const h = await driver.probe().catch((e: unknown) => ({ ok: false as const, reason: e instanceof Error ? e.message : String(e) }));
+      const h = await driver.probe().catch((e: unknown) => ({ ok: false as const, reason: errorMessage(e) }));
       return h.ok ? { ok: true } : { ok: false, reason: h.reason ?? "Suno is not reachable" };
     },
   });

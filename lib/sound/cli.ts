@@ -14,6 +14,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { errorMessage } from "@gt/domain/errors";
+
 import { generateTake, parseGenerateRequest } from "./generate";
 import { renderParams, renderPatterns } from "./knowledge";
 import { ledgerPath, readLedger, SoundError, storeRoot } from "./store";
@@ -222,7 +224,7 @@ export async function runSoundCli(argv: readonly string[], io: CliIO): Promise<n
       }
       return 2;
     }
-    const msg = e instanceof Error ? e.message : String(e);
+    const msg = errorMessage(e);
     const code = (e as { kind?: string }).kind;
     if (JSON_OUT) json(code ? { error: msg, code } : { error: msg });
     else io.err(`sound: ${msg}`);

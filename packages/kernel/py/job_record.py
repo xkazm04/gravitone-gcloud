@@ -26,9 +26,9 @@ assert_fence, claim_in, connect, fence_loss, heartbeat_in = _lease.assert_fence,
 ms, process_holder, read_row, release_in = _lease.ms, _lease.process_holder, _lease.read_row, _lease.release_in
 
 # @gt/domain/lane LANE_CAPACITY and LANE_PAYS (spec/job.json's slot scenarios hold them equal).
-LANE_CAPACITY = {"gpu.local": 1, "box.render": 1, "box.chrome": 1, "seat.text": 4,
+LANE_CAPACITY = {"gpu.local": 1, "box.render": 1, "box.blender": 1, "box.chrome": 1, "seat.text": 4,
                  "cloud.google": 3, "cloud.elevenlabs": 2, "cloud.leonardo": 2, "cloud.qwen": 1}
-LANE_PAYS = {"gpu.local": False, "box.render": False, "box.chrome": True, "seat.text": True,
+LANE_PAYS = {"gpu.local": False, "box.render": False, "box.blender": False, "box.chrome": True, "seat.text": True,
              "cloud.google": True, "cloud.elevenlabs": True, "cloud.leonardo": True, "cloud.qwen": True}
 # @gt/domain/job.machine.ts
 MACHINE = {"planned": ("queued", "cancelled"), "queued": ("running", "paused", "cancelled"),

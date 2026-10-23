@@ -10,6 +10,8 @@ import { useState } from "react";
 
 import { ConsequencePanel } from "@gt/ui/components/consequence/ConsequencePanel.tsx";
 import { CullTile, Zoom } from "@gt/ui/components/cull/CullTile.tsx";
+import { IdeaList } from "@gt/ui/components/cull/IdeaList.tsx";
+import { VariantCard } from "@gt/ui/components/cull/VariantCard.tsx";
 import { MatrixCull } from "@gt/ui/components/cull/MatrixCull.tsx";
 import { CutReview } from "@gt/ui/components/cut/CutReview.tsx";
 import { BoardDesk, CommitButton, DeskFrame, OracleStrip } from "@gt/ui/components/desk/Desk.tsx";
@@ -20,6 +22,7 @@ import { BlindPair } from "@gt/ui/components/pair/BlindPair.tsx";
 import { EditNote } from "@gt/ui/components/review/ArticlePage.tsx";
 import { PacketReview } from "@gt/ui/components/review/PacketReview.tsx";
 import { LevelSheet } from "@gt/ui/components/sheet/LevelSheet.tsx";
+import { ModelViewer } from "@gt/ui/components/model/ModelViewer.tsx";
 
 import type { BoardKitData } from "./boardKitData.ts";
 import { Row, Section, Spec } from "./Spec.tsx";
@@ -28,8 +31,15 @@ import k from "./kit.module.css";
 
 const noop = (): void => undefined;
 
+/** A scout night's two text cells (lib/decision/v1/sources/scoutPlan.ts): a finding, a watch line. */
+const FINDING = { label: "Hold the subject still and let the camera do the moving", meta: "cinematic · 02-frames", prompt: "\"If the character and the lens both move, nobody knows where to look - pick one.\"" };
+const WATCH = { label: "channel: lighting breakdowns - https://example.com/breakdowns", meta: "watchlist", prompt: "motivated key and practicals, measured contrast ratios" };
+const TEXT_MEDIA = { url: "", mime: "text/plain" };
+
 export function BoardSection({ data }: { readonly data: BoardKitData }) {
-  const { cull: CULL, cullVerdicts: CULL_VERDICTS, audio: AUDIO, pair: PAIR, review: REVIEW, cut: CUT, rail: RAIL, consequence: CONSEQUENCE } = data;
+  const { cull: CULL, cullVerdicts: CULL_VERDICTS, audio: AUDIO, pair: PAIR, review: REVIEW, cut: CUT, rail: RAIL, consequence: CONSEQUENCE, model: MODEL } = data;
+  const modelWords = { label: MODEL.label, meta: MODEL.meta, ...(MODEL.poster === undefined ? {} : { poster: MODEL.poster }) };
+  const modelMedia = { url: MODEL.glb, mime: "model/gltf-binary" };
   const [cur, setCur] = useState(0);
   const words = CULL.present.items["the-exit/signal-ledger"] ?? { label: "signal ledger" };
   return (
@@ -42,6 +52,27 @@ export function BoardSection({ data }: { readonly data: BoardKitData }) {
             </BoardDesk>
           </LevelSheet>
         </div>
+      </Spec>
+      <Spec names={["VariantCard", "VerdictPick", "VideoBar"]} source="the opened run · a verdict by click · a clip's bar (2026-10-22)" wide>
+        <div className={b.tiles}>
+          <VariantCard index={0} words={words} media={{ url: "/presets/signal-ledger.jpg", mime: "image/jpeg" }} verdict={{ verdict: "keep", reasons: [] }} current nudged={false} reasons={["style", "subject", "craft"]} maxReasons={3} onFocus={noop} onVerdict={noop} />
+          <VariantCard index={1} words={words} media={{ url: "/presets/signal-ledger.jpg", mime: "image/jpeg" }} verdict={{ verdict: "reject", reasons: ["craft"] }} current={false} nudged={false} reasons={["style", "subject", "craft"]} maxReasons={3} onFocus={noop} onVerdict={noop} />
+          <VariantCard index={2} words={{ label: "clip · replica-1", meta: "5s · local · free" }} media={{ url: "/clips/presets/blueprint.webm", mime: "video/webm" }} verdict={undefined} current={false} nudged={false} reasons={["style", "subject", "craft"]} maxReasons={3} onFocus={noop} onVerdict={noop} />
+        </div>
+      </Spec>
+      <Spec names={["IdeaList"]} source="words-only runs, decided in place (2026-10-22)" wide>
+        <IdeaList
+          categories={[{ category: "notes", runs: [{ run: { row: "n1", words: { id: "n1", label: "finding" }, members: [0], group: "notes" }, at: 0 }] }]}
+          cells={[{ id: "n1/text", row: "n1" }]}
+          verdicts={{}}
+          wordsOf={() => ({ label: "Hold a wide shot until the subject settles, then cut.", prompt: "the push-in only reads once the figure stops moving", meta: "cinematic · 02-frames" })}
+          cur={0}
+          nudged={new Set<number>()}
+          reasons={[]}
+          maxReasons={0}
+          onFocus={noop}
+          onVerdict={noop}
+        />
       </Spec>
       <Spec names={["CullTile", "Plate"]} source="index.html CullTile · .cur .keep .reject .nudge · audio take">
         <div className={b.tiles}>
@@ -63,6 +94,18 @@ export function BoardSection({ data }: { readonly data: BoardKitData }) {
             <CullTile index={9} words={AUDIO.present.items["take-1"] ?? { label: "take" }} media={{ url: "", mime: "audio/wav" }} verdict={undefined} current={false} nudged={false} playing onPress={noop} />
           </div>
         </Row>
+        <Row label="text">
+          <div className={b.tiles}>
+            <CullTile index={10} words={FINDING} media={TEXT_MEDIA} verdict={undefined} current={cur === 10} nudged={false} onPress={setCur} />
+            <CullTile index={11} words={WATCH} media={TEXT_MEDIA} verdict={{ verdict: "keep", reasons: [] }} current={cur === 11} nudged={false} onPress={setCur} />
+          </div>
+        </Row>
+        <Row label="model">
+          <div className={b.tiles}>
+            <CullTile index={12} words={modelWords} media={modelMedia} verdict={undefined} current={cur === 12} nudged={false} onPress={setCur} />
+            <CullTile index={13} words={{ label: MODEL.label, meta: MODEL.meta }} media={modelMedia} verdict={{ verdict: "keep", reasons: [] }} current={cur === 13} nudged={false} onPress={setCur} />
+          </div>
+        </Row>
         <Row label="plate">
           <Plate className={b.thumb} src="/presets/blueprint.jpg" alt="blueprint" />
         </Row>
@@ -70,6 +113,18 @@ export function BoardSection({ data }: { readonly data: BoardKitData }) {
       <Spec names={["Zoom"]} source="index.html Zoom · the Z lens">
         <div className={b.lens}>
           <Zoom words={words} media={{ url: "/presets/signal-ledger.jpg", mime: "image/jpeg" }} verdict={{ verdict: "reject", reasons: ["style"] }} position="1/8" onClose={noop} specimen />
+        </div>
+        <div className={b.lens}>
+          <Zoom words={FINDING} media={TEXT_MEDIA} verdict={undefined} position="7/9" onClose={noop} specimen />
+        </div>
+        <div className={b.lens} data-kit="model-zoom">
+          <Zoom words={modelWords} media={modelMedia} verdict={undefined} position="3/4" onClose={noop} specimen />
+        </div>
+      </Spec>
+      <Spec names={["ModelViewer"]} source="spark game-3d-assets · three + r3f, lazy · loading · failed · no poster">
+        <div className={b.models}>
+          <ModelViewer src={MODEL.glb} title={MODEL.label} tris={MODEL.tris} bones={MODEL.bones} {...(MODEL.poster === undefined ? {} : { poster: MODEL.poster })} />
+          <ModelViewer src="data:model/gltf-binary;base64,AAAA" title="a damaged glb" />
         </div>
       </Spec>
       <Spec names={["DeskFrame", "OracleStrip", "CommitButton"]} source="floor.css .desk-top · .desk-foot · .commit .wait .refuse">

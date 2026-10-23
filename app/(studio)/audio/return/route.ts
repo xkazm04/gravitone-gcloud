@@ -10,7 +10,7 @@
 import { z } from "zod";
 
 import { parseAt } from "@gt/domain/door";
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import { STAGES } from "@gt/ui/components/audio/arrange.ts";
 
 import { route } from "../../../_server/route.ts";
@@ -42,7 +42,7 @@ export const POST = route({ guard: "access", bodyCap: MAX_UPLOAD_BYTES + 1_000_0
   try {
     form = await req.formData();
   } catch (e) {
-    return err("invalid", `expected multipart/form-data with file, head, stage and op: ${e instanceof Error ? e.message : String(e)}`);
+    return err("invalid", `expected multipart/form-data with file, head, stage and op: ${errorMessage(e)}`);
   }
   const label = field(form, "label");
   const p = parseAt("audio return", fields, { head: field(form, "head"), stage: field(form, "stage"), op: field(form, "op"), ...(label === undefined ? {} : { label }) });

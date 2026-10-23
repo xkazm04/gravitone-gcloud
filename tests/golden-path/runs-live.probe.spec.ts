@@ -95,6 +95,8 @@ function predicates(): Record<string, (() => string[] | Promise<string[]>) | nul
     extract: () => manifests("extract", "run.json").filter((m) => EXTRACT_LIVE.includes(str(m["status"]))).map((m) => str(m["id"])),
     dojo: () => manifests("training", "cycle.json").filter((m) => CYCLE_LIVE.includes(str(m["status"]))).map((m) => str(m["id"])),
     // app/foundry/StripsView.tsx: a strip run is live while `status === "running"`.
+    // A scout night is a pile of finished work; its live jobs show on Runs from the job store.
+    scout: null,
     strips: () => manifests("strips", "run.json").filter((m) => m["status"] === "running").map((m) => str(m["id"])),
     articles: () => manifests("articles", "run.json").filter((m) => ARTICLE_WORKING.includes(str(m["status"]))).map((m) => str(m["id"])),
     // v1's own readers (SOUND_STORE_DIR is read per call, lib/sound/store.ts) and live rules.

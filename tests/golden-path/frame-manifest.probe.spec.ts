@@ -238,16 +238,30 @@ print("OK")
 });
 
 test("Case 8 (critic revision): 153 qwen-annotated frames with manifests: 49 mis-binned by index, 0 mis-binned by runtime", () => {
-  // A MEASUREMENT OVER MACHINE-LOCAL DATA. The frame manifests and the .ingest
-  // rhythms are gitignored (.gitignore's vlm-probe block), so on any checkout
-  // that did not run the ingest — CI, a second machine — this case has nothing
-  // to count and failed with "expected 153 frames, got 0", blocking every push
-  // to main (found merging origin/main, 2026-10-05). Skipped there, by name;
-  // it still runs, and still holds the 153 / 49 / 0 figures, where the corpus is.
-  const corpus = existsSync("pipeline/vlm-probe/frames")
-    ? readdirSync("pipeline/vlm-probe/frames").filter((f) => f.endsWith("-manifest.json"))
-    : [];
-  test.skip(corpus.length === 0, "no local vlm-probe frame manifests (gitignored corpus) on this machine");
+  // A MEASUREMENT OVER MACHINE-LOCAL DATA. What this counts is not the frame
+  // manifests (those may be tracked) but the qwen annotations dojo_study.load()
+  // reads from <repo>/vlm-probe-out/*/results.jsonl and the .ingest rhythms
+  // (pipeline/vlm-probe/.ingest/*-rhythm.json), both gitignored. A checkout
+  // without them (CI, a worktree) has nothing to count and would fail with
+  // "expected 153 frames, got 0" (blocked every push to main, 2026-10-05; again
+  // once the manifests were tracked, 2026-10-19). Skipped there, by name.
+  // Where the corpus is, it still holds 0 mis-binned by runtime, the claim that
+  // matters. The 153 / 49 figures are the original corpus's: 49 of its 153
+  // frames fall in a different beat by filename index than by t_seconds /
+  // duration_s, (measured 2026-10-19 on the full corpus; frames are binned by index only when a manifest lacks duration_s).
+  const has = (dir: string, keep: (f: string) => boolean) =>
+    existsSync(dir) && readdirSync(dir).some(keep);
+  const annotations =
+    existsSync("vlm-probe-out") &&
+    readdirSync("vlm-probe-out", { withFileTypes: true }).some(
+      (e) => e.isDirectory() && existsSync(`vlm-probe-out/${e.name}/results.jsonl`),
+    );
+  const rhythms = has("pipeline/vlm-probe/.ingest", (f) => f.endsWith("-rhythm.json"));
+  const manifests = has("pipeline/vlm-probe/frames", (f) => f.endsWith("-manifest.json"));
+  test.skip(
+    !(annotations && rhythms && manifests),
+    "no local qwen annotations (vlm-probe-out/*/results.jsonl) or .ingest rhythms: the gitignored corpus is absent on this machine",
+  );
   const code = `
 import json
 from pathlib import Path

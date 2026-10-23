@@ -3,11 +3,11 @@ import "server-only";
 import { z } from "zod";
 
 import { parseAt, type Parsed } from "@gt/domain/door";
-import { err, type Result } from "@gt/domain/errors";
+import { err, errorMessage, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 
 import { readTakes } from "../../../../lib/sound/store.ts";
-import { bump, facts, instant, words } from "../facts.ts";
+import { bump, facts, instant } from "../facts.ts";
 import type { IngestEvent, ProjectCtx, Projection, Source, WeirItem } from "../types.ts";
 
 // THE SOUND SHELF, PROJECTED - <sound store>/takes.json (lib/sound/store.ts
@@ -51,7 +51,7 @@ async function read(): Promise<Result<SoundShelf>> {
   try {
     raw = await readTakes();
   } catch (e) {
-    return err("unavailable", `sound: readTakes failed: ${words(e)}`, { cause: e });
+    return err("unavailable", `sound: readTakes failed: ${errorMessage(e)}`, { cause: e });
   }
   return parseAt("takes.json", fileSchema, raw);
 }

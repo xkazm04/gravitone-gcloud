@@ -59,7 +59,7 @@ export const MUTANTS: Mutant[] = [
   {
     id: "ad-overlay-fit-ignores-width",
     probe: "ad-overlay-fit.probe.spec.ts",
-    file: "lib/adRender.ts",
+    file: "lib/adOverlayPage.ts",
     find: "(lines.length > maxLines || widest(lines, size_, weight) > width)",
     replace: "(lines.length > maxLines)",
     why: "An unbreakable URL, handle or compound word keeps the line COUNT in range, so the overlay never shrinks and the text runs past the safe zone on every platform reframe - the defect 7dc56b5 fixed.",
@@ -399,5 +399,21 @@ export const MUTANTS: Mutant[] = [
     find: "...(previous ? { existingUrl: previous } : {}),",
     replace: "",
     why: "A rework back at the gate pastes the post into a NEW Medium draft: the operator's Medium fills with one orphaned draft per rework, and the url the gate shows is not the one they last reviewed.",
+  },
+  {
+    id: "shelf-runtime-is-the-last-beat",
+    probe: "shelf-digest.probe.spec.ts",
+    file: "packages/kernel/src/records/digest.ts",
+    find: "beats[beats.length - 1]",
+    replace: "beats[0]",
+    why: "The shelf reads a trailer's runtime from its opening beat, so every cut shows as 0:00 long.",
+  },
+  {
+    id: "safefetch-hop-has-no-deadline",
+    probe: "imaging-safefetch-timeout.probe.spec.ts",
+    file: "lib/imaging/safeUrl.ts",
+    find: "const signal = init.signal ?? AbortSignal.timeout(DEFAULT_HOP_TIMEOUT_MS);",
+    replace: "const signal = init.signal;",
+    why: "A vendor URL fetched with no caller signal that accepts the connection and never answers holds the request, and the job behind it, forever.",
   },
 ];

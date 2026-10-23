@@ -4,7 +4,7 @@ import { gunzipSync, gzipSync } from "node:zlib";
 import { z } from "zod";
 
 import { parseJsonAt } from "@gt/domain/door";
-import { AppError, err, ok, type Result } from "@gt/domain/errors";
+import { AppError, err, errorMessage, ok, type Result } from "@gt/domain/errors";
 
 // THE `.gravitone` ARCHIVE, READ AND WRITTEN ON THE SERVER (Phase 4 wave D, L42).
 //
@@ -123,13 +123,13 @@ function plainText(bytes: Uint8Array, caps: ArchiveCaps): Result<string> {
       plain = gunzipSync(bytes, { maxOutputLength: caps.plainBytes });
     } catch (e) {
       if (e instanceof RangeError || (e instanceof Error && "code" in e && e.code === "ERR_BUFFER_TOO_LARGE")) return refuse("too-large", `the archive inflates past ${caps.plainBytes} bytes`);
-      return refuse("malformed", `the archive could not be read: ${e instanceof Error ? e.message : String(e)}`);
+      return refuse("malformed", `the archive could not be read: ${errorMessage(e)}`);
     }
   }
   try {
     return ok(new TextDecoder("utf-8", { fatal: true }).decode(plain));
   } catch (e) {
-    return refuse("malformed", `the archive could not be read: ${e instanceof Error ? e.message : String(e)}`);
+    return refuse("malformed", `the archive could not be read: ${errorMessage(e)}`);
   }
 }
 

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { errorMessage } from "@gt/domain/errors";
 import type { AudioFacts } from "@gt/ui/components/audio/audio.ts";
 import type { DraftRow, DraftState } from "@gt/ui/components/audio/DraftList.tsx";
 import type { ReferenceRow } from "@gt/ui/components/audio/ReferenceList.tsx";
@@ -62,13 +63,11 @@ export const SEED_TAKES = 40;
 /** The request's clock for the receipt sheet (read once, outside render). */
 export const audioNow = (): number => Date.now();
 
-const words = (e: unknown): string => (e instanceof Error ? e.message : String(e));
-
 async function read<T>(fn: () => Promise<T>): Promise<Read<T>> {
   try {
     return { ok: true, value: await fn() };
   } catch (e) {
-    return { ok: false, error: words(e) };
+    return { ok: false, error: errorMessage(e) };
   }
 }
 

@@ -5,9 +5,13 @@
 // send an edit plan back (⇧E) for another turn. ↑/↓ walk the sections, E opens a note under
 // the focused one; inside the note Tab cycles the five directives, ⏎ attaches, Esc cancels.
 //
-// Approve and Reject are verdicts on the one item, written through the gate like any other,
+// Approve and Reject are verdicts on the focused item, written through the gate like any other,
 // then the commit flow shows what the commit will do before it does it (decision 6) - the
-// prototype approved in one key and showed nothing. A reject names the source's reasons
+// prototype approved in one key and showed nothing. The review decides EVERY item: a packet of
+// one (an article) commits at once; a packet of several (a Dojo review's claims) shows an item
+// strip in the side panel, decides the focused item, moves on to the next undecided one, and
+// commits only when all hold a verdict. Items are walked by the strip's chips - board.review has
+// no verb for it, and the keymap registry is not this file's to extend. A reject names the source's reasons
 // (CHECK_DIMENSIONS for an article) from the chips in the side panel. The edit plan is the
 // prototype's EditNote list, sent as the structured plan (decision 8); the adapter renders it
 // to v1's rework note.
@@ -34,6 +38,7 @@ import { Keycaps } from "../keycaps/Keycaps.tsx";
 import { PipRow } from "../piprow/PipRow.tsx";
 import { ApproveSchedule } from "./ApproveSchedule.tsx";
 import { ArticlePage, EditNote } from "./ArticlePage.tsx";
+import { seedReasons, stepItems } from "./packetItems.ts";
 import { encodeSchedule, proposeAt, scheduleChannels, type ScheduleIntent } from "./schedule.ts";
 import s from "./Review.module.css";
 
@@ -53,14 +58,17 @@ export type PacketReviewProps = {
 export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, busy = false, announce = () => undefined, keys = true, nowMs }: PacketReviewProps) {
   const { view, present } = packet;
   const doc = present.review;
-  const item = view.items[0];
+  const [at, setAt] = useState(0);
+  const item = view.items[at];
+  const many = view.items.length > 1;
+  const ids = view.items.map((x) => x.id);
   const n = doc?.sections.length ?? 0;
   const [focus, setFocus] = useState(0);
   const [editing, setEditing] = useState<number | null>(null);
   const [directive, setDirective] = useState<EditDirective>("more_weight");
   const [text, setText] = useState("");
   const [plan, setPlan] = useState<readonly Note[]>([]);
-  const [reasons, setReasons] = useState<readonly string[]>(() => (item === undefined ? [] : (verdicts[item.id]?.reasons ?? [])));
+  const [reasons, setReasons] = useState<readonly string[]>(() => seedReasons(verdicts, item?.id));
   const channels = scheduleChannels(view.source);
   const [schedule, setSchedule] = useState<ScheduleIntent | null>(() => {
     const first = channels[0];
@@ -86,9 +94,24 @@ export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, b
   const verdict = (v: "keep" | "reject") => {
     // A second press while a write or a preview is in flight is the same act again, not a new one.
     if (item === undefined || busy) return;
-    decide([item.id], v === "keep" ? keepVerdict() : { verdict: "reject", reasons }, view.title ?? view.id);
-    onCommit();
+    const step = stepItems(ids, verdicts, at);
+    if (step === null) return;
+    const given: BoardVerdict = v === "keep" ? keepVerdict() : { verdict: "reject", reasons };
+    decide([step.decide], given, view.title ?? view.id);
+    if (step.commit) {
+      onCommit();
+      return;
+    }
+    if (step.next !== null) {
+      focusItem(step.next);
+      announce(`${nameOf(step.next)} · next to decide`);
+    }
   };
+  const focusItem = (i: number) => {
+    setAt(i);
+    setReasons(seedReasons(verdicts, ids[i]));
+  };
+  const nameOf = (i: number) => view.items[i] === undefined ? "" : (present.items[view.items[i].id]?.label ?? view.items[i].id);
   // The attached notes ride with the approve, as the prototype's decide({notes}) kept them.
   const keepVerdict = () => {
     if (schedule === null) return { verdict: "keep" as const, reasons: [] };
@@ -162,6 +185,19 @@ export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, b
         </div>
         <aside className={s.side}>
           {schedule !== null && <ApproveSchedule channels={channels} value={schedule} onChange={setSchedule} />}
+          {many && (
+            <>
+              <div className={s.sideHead}>
+                <CapsHeading text="items" />
+                <PipRow looks={ids.map((id) => (verdicts[id] === undefined ? "awaiting" : verdicts[id].verdict === "keep" ? "done" : "failed"))} label={`${ids.filter((id) => verdicts[id] !== undefined).length} of ${ids.length} decided`} />
+              </div>
+              <div className={s.reasons} role="group" aria-label="items">
+                {ids.map((id, i) => (
+                  <Chip key={id} label={nameOf(i)} casing="lower" {...(verdicts[id] === undefined ? {} : { value: verdicts[id].verdict })} tone={verdicts[id] === undefined ? "neutral" : verdicts[id].verdict === "keep" ? "emerald" : "rose"} pressed={i === at} onPress={() => focusItem(i)} />
+                ))}
+              </div>
+            </>
+          )}
           <CapsHeading text="oracle · before gate" />
           {(doc?.checks ?? []).map((c) => (
             <div key={c.name} className={s.checkrow}>

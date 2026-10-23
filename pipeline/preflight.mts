@@ -86,6 +86,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { errorMessage } from "@gt/domain/errors";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 
@@ -255,7 +256,7 @@ function run(cmdline: string): { ok: boolean; out: string } {
     const out = `${r.stdout ?? ""}${r.stderr ?? ""}`.trim();
     return { ok: r.status === 0, out };
   } catch (e) {
-    return { ok: false, out: e instanceof Error ? e.message : String(e) };
+    return { ok: false, out: errorMessage(e) };
   }
 }
 
@@ -582,7 +583,7 @@ const publishGate = (): CapGate => {
     return {
       outcome: "after-action",
       probe: `${PUBLISH_MODE_VAR}=${process.env[PUBLISH_MODE_VAR]?.trim() || "unset"}`,
-      why: `${e instanceof Error ? e.message : String(e)}. Unset it (dry) or set it to live.`,
+      why: `${errorMessage(e)}. Unset it (dry) or set it to live.`,
       source: "lib/publish/channels.ts · publishModeFromEnv()",
       vars: [PUBLISH_MODE_VAR],
     };

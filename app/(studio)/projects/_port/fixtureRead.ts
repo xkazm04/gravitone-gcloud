@@ -159,6 +159,11 @@ export function projectList(u: Universe, now: number): ProjectList {
         usd: totals.usd,
         unpriced: totals.unpriced,
         updatedAt: iso(p.updatedAt),
+        // The fixture universe holds plans, not step records: no picture and no cut to measure.
+        poster: null,
+        runtimeS: null,
+        targetS: p.runtimeS ?? null,
+        text: [p.title, p.topic].filter((x) => x !== undefined).join(" ").toLowerCase(),
       },
     ];
   });

@@ -1,0 +1,17 @@
+{
+ "schema": "conform-run/1",
+ "worker": "30e6f9f3-5028-4420-ada1-a022a65aeb4a",
+ "subject": "dependency-declaration",
+ "evaluatedAt": "2026-10-21T23:04:48.709872+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "dependency-declaration",
+   "context": "floor-calendar-slots",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": []
+}

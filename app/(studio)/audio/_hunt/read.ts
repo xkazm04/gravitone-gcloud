@@ -1,5 +1,6 @@
 import "server-only";
 
+import { errorMessage } from "@gt/domain/errors";
 import { buildTree, countsOf, reconcile, type HuntCardView, type HuntLeafView, type HuntOpenView, type Reach } from "@gt/ui/components/audio/hunt.ts";
 import { measuresByItem, type AudioMeasureRow } from "@gt/kernel/library/measures";
 
@@ -34,8 +35,6 @@ export type HuntDeskView = {
   /** The kind's technique slugs: the only ones a lesson may rest on. */
   readonly known: readonly string[];
 };
-
-const words = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
 const leafOf = (n: HuntNode): HuntLeafView => ({
   id: n.id,
@@ -92,7 +91,7 @@ export async function readHunt(kind: Kind, h: string | null): Promise<HuntDeskVi
   try {
     [hunts, takes] = await Promise.all([readHunts().then((f) => f.hunts.filter((x) => x.kind === kind)), readTakes().then((f) => f.takes)]);
   } catch (e) {
-    const error = `the hunt store did not read: ${words(e)}`;
+    const error = `the hunt store did not read: ${errorMessage(e)}`;
     return { ...base, hunts: { ok: false, error }, open: h === null ? null : { ok: false, error } };
   }
   const k = kernel();

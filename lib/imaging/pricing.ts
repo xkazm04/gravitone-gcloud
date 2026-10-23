@@ -199,6 +199,22 @@ export const PRICES: readonly ModelPrice[] = [
       "credits spent ride on the result's provenance (providers/leonardoStudio.ts, studioCreditsOf).",
     checked: "2026-10-12",
   },
+  // leonardo-flare — GPT Image 2.5 Flare on the API key's pool, so the API's
+  // USD_PER_CREDIT does carry over. A per-image FALLBACK: the adapter sends LOW
+  // only (providers/leonardoFlare.ts), and the API reports its own credits.
+  {
+    provider: "leonardo-flare",
+    model: "openai/gpt-image-2.5-flare",
+    bills: "per-image",
+    usdPerImage: 0.01542,
+    source:
+      "MEASURED in the bp repo, not this one: its look-dev log (kiro/bp docs/concepts/vr-light-table/lookdev/log.jsonl, " +
+      "66 API-reported calls) shows LOW at 6 credits for 1376x768 and 1024x1024 and 8 for 2048x768. This row is the " +
+      "6-credit figure at USD_PER_CREDIT = 0.00257, at the adapter's own sizes (1376x768 for 16:9, confirmed by this " +
+      "repo's smoke of 2026-10-22: 6 credits reported). FALLBACK ONLY: the API " +
+      "reports credits on every call, and a reported figure always outranks this one.",
+    checked: "2026-10-22",
+  },
 ];
 
 const rowFor = (provider: ProviderId, model: string): ModelPrice | undefined =>

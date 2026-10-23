@@ -4,7 +4,7 @@ import { AppError, ok, type Result } from "@gt/domain/errors";
 import { DEFAULT_PIN, groupLabel, railGroups, type LibraryActName, type LibraryCover, type LineageNode, type MediaFacts } from "@gt/domain/library";
 import { libraryItemSchema, type LibraryItem, type LibraryItemDetail } from "@gt/domain/libraryItem";
 import type { Reader, Row, Store } from "../store.ts";
-import { extrasSchema } from "./extras.ts";
+import { extrasSchema, meshFactsSchema } from "./extras.ts";
 import { readMeasure, withMeasure } from "./measures.ts";
 import { ROW_SELECT, rowOf } from "./query.ts";
 
@@ -73,15 +73,18 @@ const factsRow = z.object({
   near_black: z.number(),
   probed_at: z.string(),
   error: z.string().nullable(),
+  mesh: z.string().nullable(),
 });
 
 /** A blob's media facts, or null when it was never probed. */
 export function readFacts(r: Reader, sha: string): MediaFacts | null {
-  const row = r.get("SELECT sha, decodable, mime, w, h, duration_s, poster_sha, mean_luma, near_black, probed_at, error FROM media_facts WHERE sha = ?", sha);
+  const row = r.get("SELECT sha, decodable, mime, w, h, duration_s, poster_sha, mean_luma, near_black, probed_at, error, mesh FROM media_facts WHERE sha = ?", sha);
   if (row === undefined) return null;
   const p = parseAt("media facts row", factsRow, row);
   if (!p.ok) throw p.error;
   const f = p.value;
+  const mesh = f.mesh === null ? undefined : parseJsonAt(`media facts mesh ${sha.slice(0, 12)}`, meshFactsSchema, f.mesh);
+  if (mesh !== undefined && !mesh.ok) throw mesh.error;
   return {
     sha: f.sha,
     decodable: f.decodable === 1,
@@ -94,6 +97,7 @@ export function readFacts(r: Reader, sha: string): MediaFacts | null {
     nearBlack: f.near_black === 1,
     probedAt: f.probed_at,
     error: f.error,
+    ...(mesh === undefined ? {} : { mesh: mesh.value }),
   };
 }
 
@@ -124,7 +128,7 @@ export function libraryDetail(store: Store, id: string): Result<LibraryItemDetai
     if (!rec.ok) throw rec.error;
     const vocabulary = vocabularyOf(r, seq, rec.value.item);
     const pinned = r.get("SELECT 1 AS x FROM library_marks WHERE item_id = ? AND kind = 'pin' AND ref = ?", id, DEFAULT_PIN) !== undefined;
-    const acts: LibraryActName[] = [pinned ? "unpin" : "pin", "use-in-project"];
+    const acts: LibraryActName[] = [pinned ? "unpin" : "pin", "use-in-project", ...(rec.value.item.kind === "model" ? (["export"] as const) : [])];
     // The operator's marks are collections of the item as the detail shows it.
     const marks = r.all("SELECT kind, ref FROM library_marks WHERE item_id = ? ORDER BY kind, ref", id);
     const collections = [...rec.value.item.collections];

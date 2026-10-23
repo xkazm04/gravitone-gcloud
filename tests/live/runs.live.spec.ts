@@ -15,8 +15,8 @@
 import { expect, test, type Page } from "@playwright/test";
 
 // The domain's lanes in drawing order (@gt/domain/lane RESOURCE_LANES; ES modules are not
-// loaded into this lane's spec files, so the eight ids are named here and the page is the check).
-const LANES = ["gpu.local", "box.render", "box.chrome", "seat.text", "cloud.google", "cloud.elevenlabs", "cloud.leonardo", "cloud.qwen"];
+// loaded into this lane's spec files, so the nine ids are named here and the page is the check).
+const LANES = ["gpu.local", "box.render", "box.blender", "box.chrome", "seat.text", "cloud.google", "cloud.elevenlabs", "cloud.leonardo", "cloud.qwen"];
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/projects/runs", { waitUntil: "domcontentloaded" });

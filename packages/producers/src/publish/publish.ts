@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { ok, type Result } from "@gt/domain/errors";
+import { errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import type { Holder, RunMode } from "@gt/domain/job";
 import type { Publication } from "@gt/domain/publication";
@@ -80,8 +80,6 @@ export type PublishOutcome =
 
 type Sent = { readonly kind: "dry" } | ({ readonly kind: "live" } & Delivered);
 
-const messageOf = (e: unknown): string => (e instanceof Error ? e.message : String(e));
-
 /** Keep claims alive: `conflict` (as a throw) when `current` was lost; a pending claim that was
  *  lost is dropped from the list - the tick will not start it. */
 function keeper(store: Store, current: ClaimedSlot, pending: ClaimedSlot[], beat?: () => Promise<void>): () => Promise<void> {
@@ -118,7 +116,7 @@ export async function publishClaimed(deps: PublishDeps, claimed: ClaimedSlot, pe
     out = await send(deps, claimed, a, by, fail, (d) => void (delivered = d), keeper(deps.store, claimed, pending, beat));
   } catch (e) {
     const what = delivered === undefined ? "" : ` (${slot.channel} holds it as ${delivered.platformId})`;
-    return fail(`${messageOf(e)}${what}`);
+    return fail(`${errorMessage(e)}${what}`);
   }
   if (out.kind !== "published" || a.forget === undefined) return out;
   // After the commit and outside the catch: the publication stands whatever the clean-up says.

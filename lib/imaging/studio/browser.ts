@@ -14,12 +14,11 @@
 // lives there), so the operator signs in once in this profile and it stays
 // signed in.
 
-import { spawn } from "node:child_process";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { chromium, type Browser, type BrowserContext } from "playwright";
 import { canSpawnLocalBinaries } from "@/lib/deployment";
-import { cdpAnswers, findChrome } from "@/lib/suno/browser";
+import { cdpAnswers, launchDetachedChrome } from "@/lib/suno/browser";
 import { STUDIO } from "./selectors";
 
 export const LEONARDO_PROFILE_DIR = join(homedir(), ".leonardo-chrome");
@@ -35,26 +34,26 @@ export function studioEndpoint(raw: string | undefined = process.env.LEONARDO_ST
   return v.replace(/\/+$/, "");
 }
 
-/** Loopback endpoints only may be launched: a remote one is somebody else's
- *  machine, and a probe must never open a window anywhere. */
-function launchablePort(endpoint: string): number | null {
+function parseEndpoint(endpoint: string): { hostname: string; port: number } | null {
   try {
     const u = new URL(endpoint);
-    if (!["127.0.0.1", "localhost", "[::1]"].includes(u.hostname)) return null;
     const port = Number(u.port);
-    return Number.isInteger(port) && port > 0 ? port : null;
+    return Number.isInteger(port) && port > 0 ? { hostname: u.hostname, port } : null;
   } catch {
     return null;
   }
 }
 
+/** Loopback endpoints only may be launched: a remote one is somebody else's
+ *  machine, and a probe must never open a window anywhere. */
+function launchablePort(endpoint: string): number | null {
+  const parsed = parseEndpoint(endpoint);
+  if (!parsed || !["127.0.0.1", "localhost", "[::1]"].includes(parsed.hostname)) return null;
+  return parsed.port;
+}
+
 function portOf(endpoint: string): number | null {
-  try {
-    const port = Number(new URL(endpoint).port);
-    return Number.isInteger(port) && port > 0 ? port : null;
-  } catch {
-    return null;
-  }
+  return parseEndpoint(endpoint)?.port ?? null;
 }
 
 /** The flags the 2026-10-11 run launched with. */
@@ -66,20 +65,6 @@ export function leonardoChromeArgs(port: number): string[] {
     "--no-default-browser-check",
     STUDIO.page.generateUrl,
   ];
-}
-
-/** Launch the profile detached (it outlives this process) and wait for CDP. */
-async function launch(port: number, waitMs = 15_000): Promise<void> {
-  const exe = findChrome();
-  if (!exe) throw new Error("leonardo studio browser not running and chrome was not found");
-  const child = spawn(exe, leonardoChromeArgs(port), { detached: true, stdio: "ignore", windowsHide: false });
-  child.unref();
-  const until = Date.now() + waitMs;
-  while (Date.now() < until) {
-    if (await cdpAnswers(port, 1000)) return;
-    await new Promise((r) => setTimeout(r, 500));
-  }
-  throw new Error("leonardo studio browser did not open its debugging port");
 }
 
 type Held = { endpoint: string; browser: Browser };
@@ -109,7 +94,7 @@ export async function attach(opts: AttachOptions = {}): Promise<Browser> {
     if (!(await cdpAnswers(port))) {
       const local = launchablePort(endpoint);
       if (!opts.spawn || local === null || !canSpawnLocalBinaries()) throw new Error("leonardo studio browser not running");
-      await launch(local);
+      await launchDetachedChrome("leonardo studio browser", leonardoChromeArgs(local), local);
     }
     const browser = await chromium.connectOverCDP(endpoint, { timeout: 10_000 });
     g.__gtLeoBrowser = { endpoint, browser };

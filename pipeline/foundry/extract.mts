@@ -29,6 +29,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { errorMessage } from "@gt/domain/errors";
 import { pathToFileURL } from "node:url";
 
 type ExtractManifest = import("../../lib/foundry/extract/types.ts").ExtractManifest;
@@ -70,9 +71,9 @@ function summary(m: ExtractManifest): string {
     if (st.transfers.some((t) => t.readback?.has_text)) text = true;
     rows.push(`  ${st.id.padEnd(30)} ${String(st.members.length).padStart(2)}  ${st.grouped_by.padEnd(10)} ${pct(best)}     ${pct(trm)}     ${text ? "TEXT" : "    "}  ${st.recipe_history.length}`);
   }
-  rows.push("", `  files: foundry-out/extract/${m.id}/`);
+  rows.push("", `  files: ${path.join(process.env["EXTRACT_STORE_DIR"]?.trim() || path.join("foundry-out", "extract"), m.id)}`);
   if (m.status === "failed") rows.push(`  failed: ${m.error ?? ""}\n  retry with: npx tsx pipeline/foundry/extract.mts --resume ${m.id}`);
-  if (m.status === "done" && !m.dry) rows.push(`  cull: open /foundry → Extract → ${m.id}, or --commit ${m.id} --keep <ids>`);
+  if (m.status === "done" && !m.dry) rows.push(`  cull: /board/pkt:extract:${m.id}, or --commit ${m.id} --keep <ids>`);
   return rows.join("\n");
 }
 
@@ -272,7 +273,7 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
       closeProcessKernel();
     }
   } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
+    const message = errorMessage(e);
     if (e instanceof Usage) {
       io.err(`${message}\n${USAGE}`);
       if (json) doc({ ok: false, usage: message });

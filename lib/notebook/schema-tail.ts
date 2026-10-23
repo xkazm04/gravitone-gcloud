@@ -60,6 +60,35 @@ export const TAIL_PROPERTIES = {
         },
         about: { type: "array", items: { type: "string" }, description: "fact ids this constraint is scoped to" },
         resolvedBy: { type: "string" },
+        probe: {
+          type: "object",
+          description: "the machine form of impact, enforced at the render boundary. Optional; an unknown without one is reported unmeasured.",
+          properties: {
+            whenMentions: { type: "array", items: { type: "string" } },
+            forbid: {
+              type: "array",
+              description: "literal strings, or {source, flags} patterns, that may not appear",
+              items: {
+                anyOf: [
+                  { type: "string" },
+                  {
+                    type: "object",
+                    properties: { source: { type: "string" }, flags: { type: "string" } },
+                    required: ["source"],
+                  },
+                ],
+              },
+            },
+            requireOne: { type: "array", items: { type: "string" } },
+            noCausalLink: {
+              type: "object",
+              properties: { a: { type: "array", items: { type: "string" } }, b: { type: "array", items: { type: "string" } } },
+              required: ["a", "b"],
+            },
+            tests: { type: "string", description: "what the probe tests, in a sentence" },
+          },
+          required: ["tests"],
+        },
       },
       required: ["id", "what", "why", "impact"],
     },

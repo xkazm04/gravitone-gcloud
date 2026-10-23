@@ -1,0 +1,71 @@
+{
+ "schema": "conform-run/1",
+ "worker": "58987d77-dc23-46e7-9132-67bd61bcb9da",
+ "subject": "bounded-enumeration",
+ "evaluatedAt": "2026-10-20T21:16:12.086145+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "runs-console",
+   "subject": "bounded-enumeration",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/runs/_runs/load.ts:101 Runs materializes the entire kernel job collection before slicing it to 500 rows, so the display cap does not bound server memory as job history grows.",
+   "techniques": [
+    {
+     "technique": "after-plus-limit-not-cursor",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/runs/_runs/load.ts:99 The kernel listing accepts neither a position nor a limit; its implementation reads and parses every matching job before Runs slices the result."
+    },
+    {
+     "technique": "declare-the-inconsistency",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/runs/_runs/Runs.tsx:101 Runs refreshes its rendered window when events arrive; it does not expose a multi-page collection walk whose cross-page consistency must be documented."
+    },
+    {
+     "technique": "deny-absorbs-and-lowest-limit-wins",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/runs/_runs/load.ts:85 The loader supplies a fixed internal ceiling; this context does not merge listing policies or expose recursive enumeration."
+    },
+    {
+     "technique": "filter-after-return-under-limit",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/runs/_runs/readKeys.ts:13 readKeys selects keyboard bindings, not resource permissions; the inspected listing paths do not hide individual jobs according to caller access."
+    },
+    {
+     "technique": "page-size-from-memory-budget",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/runs/_runs/load.ts:37 The fixed ceiling has no documented memory target, worst-case entry size, overhead calculation, deploy-time override, or stated screen-size rationale."
+    },
+    {
+     "technique": "required-limit-breaks-unaware-clients",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/runs/_runs/load.ts:70 This server-render loader accepts only a clock argument; it does not introduce or parse a client-supplied limit parameter."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-20T21:16:12.086145+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "bounded-enumeration"
+   ],
+   "techniques": [
+    "after-plus-limit-not-cursor",
+    "declare-the-inconsistency",
+    "deny-absorbs-and-lowest-limit-wins",
+    "filter-after-return-under-limit",
+    "page-size-from-memory-budget",
+    "required-limit-breaks-unaware-clients"
+   ],
+   "deviations": 1,
+   "context": "runs-console",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

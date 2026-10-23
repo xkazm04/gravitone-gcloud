@@ -99,6 +99,8 @@ const SOURCES: Record<string, (() => string[]) | null> = {
   sound: null,
   mv: liveInDoc("sound/mv.json", (d) => rows(d, "jobs").filter((j) => QUEUE_LIVE.includes(String(j["state"]))).map((j) => String(j["id"]))),
   publish: null,
+  // A scout night is finished work on disk; its jobs are the kernel's, on Runs.
+  scout: null,
   turns: liveInFiles("turns", "id", (s) => [...TURN_LIVE].some((x) => x === s)),
   spend: null,
   // The card's holder is the kernel lease now (Phase 4 L27); lease.json is history.

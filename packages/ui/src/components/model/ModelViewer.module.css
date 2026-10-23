@@ -1,0 +1,14 @@
+/* The 3D viewer: a 16:10 pane (the Library detail's preview box) or the whole lens (the Board's
+   zoom), the canvas over the model's poster, a bar under it with the counts and the toggles. The
+   stage's colours are tokens the stage reads back off this element (ModelViewer.tsx inkOf). */
+.viewer{--model-bone:var(--amber);--model-light:var(--ink-bright);--model-ground:var(--ink-1);margin:0;display:grid;grid-template-rows:auto auto;gap:var(--sp-2);min-width:0}
+.fill{grid-template-rows:minmax(0,1fr) auto;height:100%;min-height:0}
+.stage{position:relative;aspect-ratio:16/10;border-radius:var(--r);overflow:hidden;border:1px solid var(--hair-2);background:radial-gradient(120% 90% at 50% 20%,var(--ink-3),var(--ink-1) 75%)}
+.fill .stage{aspect-ratio:auto;min-height:0;height:100%}
+.poster{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}
+.canvas{position:absolute;inset:0;touch-action:none;cursor:grab}
+.canvas:active{cursor:grabbing}
+.badge{position:absolute;left:var(--sp-3);top:var(--sp-3)}
+.err{position:absolute;left:var(--sp-3);right:var(--sp-3);bottom:var(--sp-3);padding:var(--sp-2) var(--sp-3);border-radius:var(--r-control);background:var(--ink-veil)}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2);min-height:var(--h-control-sm)}
+.toggles{margin-left:auto;display:flex;gap:var(--sp-2)}

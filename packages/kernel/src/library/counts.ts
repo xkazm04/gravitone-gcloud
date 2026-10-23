@@ -40,7 +40,7 @@ import { isColumnGroup } from "./core.ts";
 // every item - and the probe (lib/library/probe.ts) measures that shape too.
 
 const isKind = (k: string): k is LibraryKindName => (LIBRARY_KINDS as readonly string[]).includes(k);
-const zeroKinds = (): { -readonly [K in keyof LibraryPage["kindCounts"]]: number } => ({ all: 0, image: 0, plate: 0, style: 0, motion: 0, audio: 0, video: 0, doc: 0 });
+const zeroKinds = (): { -readonly [K in keyof LibraryPage["kindCounts"]]: number } => ({ all: 0, image: 0, plate: 0, style: 0, motion: 0, audio: 0, video: 0, doc: 0, model: 0 });
 
 export type Counts = Pick<LibraryPage, "total" | "kindCounts" | "groups" | "truncated">;
 type Tally = Map<string, Map<string, number>>;

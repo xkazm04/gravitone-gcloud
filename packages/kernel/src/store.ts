@@ -1,5 +1,5 @@
 import { DatabaseSync, type SQLInputValue, type SQLOutputValue, type StatementSync } from "node:sqlite";
-import { AppError, err, isAppError, ok, type Result } from "@gt/domain/errors";
+import { AppError, err, errorMessage, isAppError, ok, type Result } from "@gt/domain/errors";
 
 // THE STORE - the one transactional port every kernel module writes through.
 //
@@ -106,7 +106,7 @@ const isCorruption = (code: number | undefined): boolean => code === SQLITE_CORR
 function classify(e: unknown, busyMs: number): AppError {
   if (isAppError(e)) return e;
   const code = errcodeOf(e);
-  const msg = e instanceof Error ? e.message : String(e);
+  const msg = errorMessage(e);
   if (code === SQLITE_BUSY || code === SQLITE_LOCKED) {
     return new AppError("unavailable", `store is held by another writer past ${busyMs} ms: ${msg}`, { cause: e });
   }
@@ -212,12 +212,12 @@ export function openStore(location: string, opts: StoreOptions = {}): Result<Sto
     } catch (e) {
       live = false;
       const code = errcodeOf(e);
-      if (isCorruption(code)) quarantined = e instanceof Error ? e.message : String(e);
+      if (isCorruption(code)) quarantined = errorMessage(e);
       try {
         rollback();
       } catch (rollbackFailure) {
         // The connection is in a state we did not put it in; refuse further use.
-        quarantined ??= `rollback failed: ${rollbackFailure instanceof Error ? rollbackFailure.message : String(rollbackFailure)}`;
+        quarantined ??= `rollback failed: ${errorMessage(rollbackFailure)}`;
       }
       const ae = classify(e, busyMs);
       return { ok: false, error: ae };

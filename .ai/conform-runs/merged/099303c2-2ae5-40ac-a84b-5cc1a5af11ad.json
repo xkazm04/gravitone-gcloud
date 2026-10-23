@@ -1,0 +1,64 @@
+{
+ "schema": "conform-run/1",
+ "worker": "099303c2-2ae5-40ac-a84b-5cc1a5af11ad",
+ "subject": "cross-instance-cache-lease",
+ "evaluatedAt": "2026-10-20T21:30:09.475659+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "job-queue-and-leases",
+   "subject": "cross-instance-cache-lease",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/kernel/src/lease-core.ts:162 The code grants exclusive execution rights only when the resource is free; context and repository searches found exclusion heartbeats and durable outputs, but no result-retention lease for a waiting peer collector.",
+   "techniques": [
+    {
+     "technique": "a-deadline-is-not-portable-between-clocks",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/lease.ts:234 This checks an exclusion heartbeat using the transaction timestamp, rather than receiving a peer's cache-retention deadline."
+    },
+    {
+     "technique": "monotonic-renewal-never-shortens",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/lease-core.ts:184 Heartbeats belong to the current exclusive grant; this is not a retained result renewed by collectors."
+    },
+    {
+     "technique": "renew-from-arrival-not-from-work",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/job-run.ts:174 The driver claims an execution slot when starting work; queued jobs do not depend on a peer retaining a leased result."
+    },
+    {
+     "technique": "renewal-beats-a-tuned-timeout",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/job-run.ts:332 Results are persisted as job outputs, rather than held in an expiring cache awaiting peer collection."
+    }
+   ],
+   "absenceTerms": [
+    "cacheLease",
+    "cachedResult",
+    "retentionTimeout"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-20T21:30:09.475659+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "cross-instance-cache-lease"
+   ],
+   "techniques": [
+    "a-deadline-is-not-portable-between-clocks",
+    "monotonic-renewal-never-shortens",
+    "renew-from-arrival-not-from-work",
+    "renewal-beats-a-tuned-timeout"
+   ],
+   "deviations": 0,
+   "context": "job-queue-and-leases",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

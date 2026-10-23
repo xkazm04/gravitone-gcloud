@@ -1,0 +1,17 @@
+{
+ "schema": "conform-run/1",
+ "worker": "781149e7-e568-46b9-93e6-d70395844a7f",
+ "subject": "durable-agent-operations",
+ "evaluatedAt": "2026-10-21T23:51:35.719428+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "durable-agent-operations",
+   "context": "job-queue-and-leases",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": []
+}

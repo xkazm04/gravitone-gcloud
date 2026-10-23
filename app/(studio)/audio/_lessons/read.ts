@@ -1,5 +1,6 @@
 import "server-only";
 
+import { errorMessage } from "@gt/domain/errors";
 import type { LessonRow } from "@gt/ui/components/audio/LessonList.tsx";
 
 import { listLessons } from "../../../../lib/sound/lessons.ts";
@@ -16,7 +17,7 @@ import type { Read } from "../_audio/read.ts";
 export type LessonsView = { readonly kind: Kind; readonly lessons: Read<readonly LessonRow[]> };
 
 export async function readLessons(kind: Kind): Promise<LessonsView> {
-  const [l, h] = await Promise.all([listLessons(kind), readHunts().then((f) => ({ ok: true as const, value: f.hunts }), (e: unknown) => ({ ok: false as const, error: e instanceof Error ? e.message : String(e) }))]);
+  const [l, h] = await Promise.all([listLessons(kind), readHunts().then((f) => ({ ok: true as const, value: f.hunts }), (e: unknown) => ({ ok: false as const, error: errorMessage(e) }))]);
   if (!l.ok) return { kind, lessons: { ok: false, error: l.error.message } };
   const ideas = new Map(h.ok ? h.value.map((x) => [x.id, x.idea] as const) : []);
   return {

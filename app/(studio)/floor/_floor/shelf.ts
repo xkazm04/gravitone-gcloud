@@ -1,5 +1,6 @@
 import "server-only";
 
+import { errorMessage } from "@gt/domain/errors";
 import { getCatalogue } from "../../../../lib/foundry/store.ts";
 import { articlesRoot, readArticles } from "../../../../lib/ledger/v1/sources/articles.ts";
 import { FIXTURE_MODE } from "../../../../lib/fixtures/mode.ts";
@@ -40,8 +41,6 @@ export const SHELF_ROWS = 24;
 /** Bars in a take row's waveform (the prototype drew 74 px at 2 px a bar). */
 export const PEAK_BARS = 37;
 
-const words = (e: unknown): string => (e instanceof Error ? e.message : String(e));
-
 /** The loudest peak in each of `n` equal spans: the strip's shape survives, its size is bounded. */
 export function downsample(peaks: readonly number[], n: number): number[] {
   if (peaks.length <= n) return [...peaks];
@@ -60,7 +59,7 @@ async function styles(): Promise<Shelf["styles"]> {
     const proven = c.styles.filter((s) => s.status === "proven").map((s) => ({ id: s.id, name: s.name, family: s.family }));
     return { ok: true, value: { proven, candidates: c.styles.length - proven.length } };
   } catch (e) {
-    return { ok: false, error: `styles: ${words(e)}` };
+    return { ok: false, error: `styles: ${errorMessage(e)}` };
   }
 }
 
@@ -101,7 +100,7 @@ async function takes(): Promise<Shelf["takes"]> {
       },
     };
   } catch (e) {
-    return { ok: false, error: `kept takes: ${words(e)}` };
+    return { ok: false, error: `kept takes: ${errorMessage(e)}` };
   }
 }
 

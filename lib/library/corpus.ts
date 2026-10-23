@@ -32,6 +32,8 @@ export const KIND_SHARE: readonly (readonly [LibraryItem["kind"], number])[] = [
   ["audio", 0.225],
   ["video", 0.03],
   ["doc", 0.11],
+  // Not the prototype's: the game assets (spark game-3d-assets) arrived after it, at a sliver.
+  ["model", 0.005],
 ];
 
 /** The prototype's PRNG (library-data.js `rnd`), seeded. */
@@ -239,6 +241,13 @@ export function generateCorpus(n = 50_000, seed = CORPUS_SEED): Corpus {
         meta = `${format}`;
         const m = media(id, "video/mp4");
         item = { kind, ...shared(id, `${pid} · ${format === "ad" ? `ad spot ${1 + Math.floor(rnd() * 12)}` : `cut v${2 + Math.floor(rnd() * 14)}`}`, weighted([["ratified", 0.4], ["rejected", 0.25], ["unjudged", 0.35]] as const), "studio", false), collections: [{ kind: "project", id: pid }], vocabulary: { format, captions: pick(["none", "srt", "vtt"] as const) }, lineage: [{ kind: "project", id: pid }], ...(m === undefined ? {} : { media: m }) };
+      } else if (kind === "model") {
+        const cls = pick(["character", "weapon", "prop"] as const);
+        const technique = pick(["T1", "T2", "M1"] as const);
+        const tris = 2000 + Math.floor(rnd() * 50_000);
+        meta = `${cls} · ${tris} tris · ${technique}`;
+        const m = media(id, "model/gltf-binary");
+        item = { kind, ...shared(id, `${cap(pick(SCENES))} asset · ${technique}`, weighted([["ratified", 0.3], ["rejected", 0.3], ["candidate", 0.4]] as const), "mesh", proj), vocabulary: { class: cls, technique, rigged: cls === "character", tris }, lineage: [], ...(m === undefined ? {} : { media: m }) };
       } else {
         const bundle = pick(BUNDLES);
         const subject = `${pick(TOPIC_WORDS)}-${pick(TOPIC_WORDS)}`;

@@ -89,6 +89,13 @@ describe("extract liveness", () => {
     expect(p.weir).toEqual([{ source: "extract", id: "2026-10-15-railyard", title: "extract railyard", media: "image", kind: "cull", since: "2026-10-15T11:58:00.000Z", decided: 1, pending: 1, href: "/floor?lane=image" }]);
   });
 
+  it("a run a scout night launched is no pile of its own: the night's packet decides it", () => {
+    const done = run({ status: "done", lease: undefined, finished: "2026-10-15T11:58:00.000Z" });
+    const p = projectExtract({ ...one(done), scoutOwned: new Set([done.id]) }, ctx);
+    expect(p.weir).toEqual([]);
+    expect(p.events.length).toBeGreaterThan(0);
+  });
+
   it("draws the lane of the engine the stage runs, and says so when v1's engine has no lane", () => {
     expect(projectExtract(one(run({ status: "grouping" })), ctx).live[0]).toMatchObject({ lane: "seat.text" });
     const openai = projectExtract(one(run({ engines: { vision: "gemini/gemini-3.7-flash", generator: "openai/gpt-image-2.5" } })), ctx).live[0];

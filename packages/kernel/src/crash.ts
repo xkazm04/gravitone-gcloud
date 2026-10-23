@@ -1,3 +1,4 @@
+import { errorMessage } from "@gt/domain/errors";
 import type { Effects } from "./effects.ts";
 
 // CRASH-PREFIX ENUMERATION - the kernel probes' harness (plan §6, Phase 1 exit).
@@ -76,8 +77,6 @@ function instrument(inner: Effects, log: string[], crashAfter: number | undefine
   };
 }
 
-const describe_ = (e: unknown): string => (e instanceof Error ? e.message : String(e));
-
 export async function enumerateCrashes<W>(spec: CrashSpec<W>): Promise<CrashReport> {
   const violations: CrashViolation[] = [];
   const effects: string[] = [];
@@ -105,7 +104,7 @@ export async function enumerateCrashes<W>(spec: CrashSpec<W>): Promise<CrashRepo
           outcome = e === CRASH ? "crashed" : { failed: e };
         }
         if (outcome !== "crashed") {
-          const reason = outcome === "finished" ? "the scenario caught the crash and finished anyway" : `the scenario failed instead of crashing: ${describe_(outcome.failed)}`;
+          const reason = outcome === "finished" ? "the scenario caught the crash and finished anyway" : `the scenario failed instead of crashing: ${errorMessage(outcome.failed)}`;
           violations.push({ k, phase: "scenario", after, reason });
           continue;
         }
@@ -116,7 +115,7 @@ export async function enumerateCrashes<W>(spec: CrashSpec<W>): Promise<CrashRepo
       try {
         await spec.recover(spec.effects(world), world);
       } catch (e) {
-        violations.push({ k, phase: "recovered", after, reason: `recovery failed: ${describe_(e)}` });
+        violations.push({ k, phase: "recovered", after, reason: `recovery failed: ${errorMessage(e)}` });
         continue;
       }
       const recovered = spec.invariant(world, "recovered");

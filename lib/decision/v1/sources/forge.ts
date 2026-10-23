@@ -4,10 +4,11 @@ import { stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { BlobRef } from "@gt/domain/blob";
-import type { Calibration as KernelCalibration, Grade } from "@gt/domain/candidate";
+import type { Calibration as KernelCalibration, Candidate as KernelCandidate, Grade } from "@gt/domain/candidate";
 import type { Decision } from "@gt/domain/decision";
 import { err, ok, type Result } from "@gt/domain/errors";
 import { SOURCES } from "@gt/domain/source";
+import { cullOrder } from "@gt/kernel/calibration/core";
 import type { ApplyClaim } from "@gt/kernel/decision/apply";
 import type { InitialDecision } from "@gt/kernel/decision/driver";
 import type { ItemWords, RowWords } from "@gt/ui/board/port";
@@ -67,6 +68,12 @@ import {
 //   · grades carry the calibration v1 measured for their grader series
 //     (pipeline/foundry/grader-calibration.json, lib/foundry/calibration.ts):
 //     an inverted craft score is a Grade marked `inverted`, never a bare number.
+//     The file is still this packet's READ side. Its WRITE side now also lands
+//     in the kernel's calibration series: commitRun registers each plate's
+//     grades (lib/foundry/calibrationRegister.ts, keyed by this packet's
+//     decision keys, series = seriesKey) in the commit's own transaction. The
+//     Board's reader moves to that series in a later stage; until then this
+//     read of grader-calibration.json is the only reader that uses the file.
 // Dropped, with the reason: v1's `undecidedAs: "reject"` sweep. The kernel
 // refuses a commit while anything is undecided (decision 5), so every plate
 // in the packet is decided; a plate whose file vanished is not in the packet
@@ -182,6 +189,41 @@ export function gradesOf(c: Candidate, file: GraderCalibrationFile | null): Grad
   return out;
 }
 
+/** has_text is a veto: TRUE predicts reject (calibration.ts POLARITY). */
+const polarityOf = (field: string): 1 | -1 => (field === "has_text" ? -1 : 1);
+
+/**
+ * The plates in the order the cull visits them: best first by CALIBRATED grades only
+ * (kernel cullOrder). With no calibrated grade the run's own list order comes back.
+ */
+export function cullOrdered(plates: readonly Candidate[], file: GraderCalibrationFile | null): Candidate[] {
+  const grades = new Map(plates.map((c) => [c.id, gradesOf(c, file)] as const));
+  const order = cullOrder(plates.map((c) => ({ id: c.id as KernelCandidate["id"], grades: grades.get(c.id) ?? [] })), polarityOf);
+  const byId = new Map(plates.map((c) => [c.id, c] as const));
+  return order.flatMap((id) => byId.get(id) ?? []);
+}
+
+/**
+ * The series the current calibration rests on: the one measured on the most ledger rows
+ * (the first by name on a tie). Null before the first commit wrote the file.
+ */
+export function measuredSeries(file: GraderCalibrationFile | null): string | null {
+  const all = Object.values(file?.series ?? {});
+  all.sort((a, b) => b.n - a.n || (a.series < b.series ? -1 : 1));
+  return all[0]?.series ?? null;
+}
+
+/**
+ * The grader series on these plates that differ from the measured one, in name order; the
+ * badge's whole claim. Absent when there is no measured series to differ from, or none differs.
+ */
+export function seriesMismatch(plates: readonly Candidate[], file: GraderCalibrationFile | null): { readonly measured: string; readonly graded: readonly string[] } | undefined {
+  const measured = measuredSeries(file);
+  if (measured === null) return undefined;
+  const graded = [...new Set(plates.flatMap((c) => (c.grade === null ? [] : [seriesKey(c.grade)])))].filter((k) => k !== measured).sort();
+  return graded.length === 0 ? undefined : { measured, graded };
+}
+
 /* ── packet ────────────────────────────────────────────────────────────────── */
 
 function refusal(run: RunManifest): string | undefined {
@@ -203,6 +245,7 @@ function packet(v1: ForgeV1): Result<OpenPlan> {
   });
   if (plates.length === 0) return err("refused", `forge run ${run.id} has no plate on disk to judge`);
   const jobId = `forge:${run.id}`;
+  const ordered = cullOrdered(plates, v1.calibration);
   const minted = mintPacket({
     id: packetIdOf("forge", run.id),
     lane: "image",
@@ -211,7 +254,7 @@ function packet(v1: ForgeV1): Result<OpenPlan> {
     state: "open",
     runId: run.id,
     title: `forge ${run.id}`,
-    items: plates.map((c) => ({ id: c.id, jobId, media: v1.media[c.id], row: c.scene, grades: gradesOf(c, v1.calibration) })),
+    items: ordered.map((c) => ({ id: c.id, jobId, media: v1.media[c.id], row: c.scene, grades: gradesOf(c, v1.calibration) })),
   });
   if (!minted.ok) return minted;
 
@@ -237,6 +280,7 @@ function packet(v1: ForgeV1): Result<OpenPlan> {
     items[c.id] = { label: `${run.styles[c.style]?.name ?? c.style} · ${c.mechanism}`, meta: `seed ${c.seed}${c.status === "unmeasured" ? " · unmeasured" : ""}`, ...(c.prompt ? { prompt: c.prompt } : {}) };
     urls[c.id] = foundryFileUrl(run.id, c.file);
   }
+  const mismatch = seriesMismatch(plates, v1.calibration);
   const unmeasured = plates.filter((c) => c.status === "unmeasured").length;
   const failed = run.candidates.filter((c) => c.status === "failed").length;
   return ok({
@@ -245,6 +289,7 @@ function packet(v1: ForgeV1): Result<OpenPlan> {
     present: {
       items,
       rows,
+      ...(mismatch === undefined ? {} : { series: mismatch }),
       oracle: { passed: failed === 0 && unmeasured === 0, summary: `${plates.length} plates · ${unmeasured} unmeasured · ${failed} failed` },
       meta: `forge · ${run.plan.scenes.length} scenes × ${run.plan.styles.length} styles × ${run.plan.mechanisms.length} mechanisms · ${run.id}`,
     },

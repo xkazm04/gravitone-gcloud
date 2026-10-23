@@ -24,6 +24,7 @@ import {
   type Write,
 } from "./lease-core.ts";
 import type { ModuleMigrations } from "./migrate.ts";
+import { sleep as sleepMs } from "./sleep.ts";
 import type { Reader, Tx } from "./store.ts";
 
 // THE LEASE DRIVER - lease-core.ts's decisions, read from and written to two
@@ -298,8 +299,6 @@ export type AcquireOptions = {
   readonly now?: () => number;
   readonly sleep?: (ms: number) => Promise<void>;
 };
-
-const sleepMs = (n: number): Promise<void> => new Promise((r) => setTimeout(r, n));
 
 /**
  * Take `resource`, waiting in FIFO order up to `waitMs`. A waiter that runs out

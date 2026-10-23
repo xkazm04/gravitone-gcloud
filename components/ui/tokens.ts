@@ -31,7 +31,9 @@
 //     are shown to the user as the palette a style draws in. They are CONTENT,
 //     not chrome. Editing one changes a picture the model makes, not a pixel of
 //     this app's furniture, and each belongs beside the style it describes.
-//     This file must never absorb them.
+//     This file must never absorb them. The same holds for the Library's
+//     `fixtureModels.ts` (spark game-3d-assets): its SVG is a fixture 3D
+//     asset's poster render, a picture of the asset, not chrome.
 //  3. PROSE. A comment that records a measurement ("#67e8f9 on #080a10 is
 //     ~13.7:1") has to name the values it measured, or the measurement cannot
 //     be rechecked.

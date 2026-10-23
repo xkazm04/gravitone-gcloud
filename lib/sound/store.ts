@@ -27,10 +27,12 @@
 // NOT replaced with an empty one — that would erase a shelf of judged takes —
 // it throws, and the caller reports it.
 
-import { mkdir, open, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { acquireLock as acquireDiskLock } from "../diskTx";
 import { outPath, soundLedgerFile } from "../fixtures/roots";
+import { renameRetry, type RetryOptions } from "../renameRetry";
 import type { Hunt, HuntNode, Lesson, SoundGroups, SoundTake } from "./types";
 import type { LedgerVerdict } from "./ledger";
 
@@ -198,22 +200,17 @@ export async function writeJsonAtomic(file: string, value: unknown): Promise<voi
 // within milliseconds. Without a retry the write throws and the tmp stays
 // behind beside a store that never got it: measured 2026-10-12, a
 // takes.json.<pid>.<n>.tmp from 2026-10-10 sat in foundry-out/sound with no takes.json.
-const RENAME_RETRY = new Set(["EPERM", "EBUSY", "EACCES"]);
+// Jittered: a reader polling on a fixed beat would otherwise meet every retry.
+export const JITTERED_RENAME: RetryOptions = {
+  retries: 10,
+  delayMs: (attempt) => Math.min(400, 10 * 2 ** attempt) * (0.5 + Math.random()),
+};
 async function renameInto(tmp: string, file: string): Promise<void> {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      await rename(tmp, file);
-      return;
-    } catch (e) {
-      const code = (e as NodeJS.ErrnoException).code ?? "";
-      // Jittered: a reader polling on a fixed beat would otherwise meet every retry.
-      if (RENAME_RETRY.has(code) && attempt < 10) {
-        await new Promise((r) => setTimeout(r, Math.min(400, 10 * 2 ** attempt) * (0.5 + Math.random())));
-        continue;
-      }
-      await rm(tmp, { force: true }).catch(() => {});
-      throw e;
-    }
+  try {
+    await renameRetry(tmp, file, JITTERED_RENAME);
+  } catch (e) {
+    await rm(tmp, { force: true }).catch(() => {});
+    throw e;
   }
 }
 
@@ -244,35 +241,11 @@ export async function removeFile(rel: string): Promise<void> {
 
 // ── locking (v1 lib/publish/store.ts's, the same two-writer reasoning) ──────
 
-const LOCK_STALE_MS = 30_000;
-const LOCK_WAIT_MS = 10_000;
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-async function acquireLock(): Promise<() => Promise<void>> {
-  const root = storeRoot();
-  await mkdir(root, { recursive: true });
-  const lock = path.join(root, ".lock");
-  const started = Date.now();
-  for (;;) {
-    try {
-      const fh = await open(lock, "wx");
-      await fh.writeFile(JSON.stringify({ pid: process.pid, at: new Date().toISOString() }));
-      await fh.close();
-      return () => rm(lock, { force: true });
-    } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
-      // A mutation is milliseconds of JSON; a lock this old has no living owner.
-      const age = await stat(lock).then((s) => Date.now() - s.mtimeMs).catch(() => 0);
-      if (age > LOCK_STALE_MS) {
-        await rm(lock, { force: true });
-        continue;
-      }
-      if (Date.now() - started > LOCK_WAIT_MS)
-        throw new SoundError(`the sound store is locked (${lock}) and the holder did not release it in ${LOCK_WAIT_MS} ms`, 503);
-      await sleep(20 + Math.random() * 30);
-    }
-  }
-}
+const acquireLock = () =>
+  acquireDiskLock(path.join(storeRoot(), ".lock"), {
+    onTimeout: (lock, waitMs) =>
+      new SoundError(`the sound store is locked (${lock}) and the holder did not release it in ${waitMs} ms`, 503),
+  });
 
 let queue: Promise<unknown> = Promise.resolve();
 

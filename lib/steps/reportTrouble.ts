@@ -5,6 +5,8 @@
 // Split out of the stepStore.ts door, which re-exports the two reporters. The
 // publishing itself is `report` in troubleChannel.ts.
 
+import { errorMessage } from "@gt/domain/errors";
+
 import type { StorageFailure, StorageTrouble } from "./storageOutcome";
 import { report } from "./troubleChannel";
 
@@ -16,7 +18,7 @@ import { report } from "./troubleChannel";
 export function classify(e: unknown): StorageFailure {
   const name = typeof e === "object" && e !== null ? (e as { name?: string }).name : undefined;
   if (name === "QuotaExceededError" || name === "NS_ERROR_DOM_QUOTA_REACHED") return "quota";
-  const message = e instanceof Error ? e.message : String(e);
+  const message = errorMessage(e);
   if (message.includes("another tab")) return "blocked";
   if (message.includes("IndexedDB unavailable")) return "unavailable";
   return "failed";
@@ -49,7 +51,7 @@ export function reportStorageTrouble(
     op,
     projectId,
     phase,
-    message: e instanceof Error ? e.message : String(e),
+    message: errorMessage(e),
     at: Date.now(),
   };
   report(t);
@@ -80,7 +82,7 @@ export function reportTaskTrouble(phase: string, e: unknown): StorageTrouble {
     op: "write",
     projectId: "app",
     phase,
-    message: e instanceof Error ? e.message : String(e),
+    message: errorMessage(e),
     at: Date.now(),
   };
   report(t);

@@ -2,7 +2,7 @@ import "server-only";
 
 import { hostname } from "node:os";
 
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { PacketId } from "@gt/domain/ids";
 import { drainApplies, type Applier, type ApplyReport } from "@gt/kernel/decision/apply";
 import { LEASE_MS } from "@gt/kernel/decision/apply-core";
@@ -82,7 +82,7 @@ export async function drainNow(store: Store, opts: DrainOptions = {}): Promise<R
     });
     return ok(reports);
   } catch (e) {
-    return err("internal", `apply: ${e instanceof Error ? e.message : String(e)}`, { cause: e });
+    return err("internal", `apply: ${errorMessage(e)}`, { cause: e });
   }
 }
 

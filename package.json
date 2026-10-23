@@ -32,6 +32,7 @@
     "check:bundle": "node pipeline/check-bundle.mjs",
     "suno:browser": "node pipeline/suno-browser.mjs",
     "medium:browser": "node pipeline/medium-browser.mjs",
+    "dojo:status": "npx tsx pipeline/dojo-status.mts",
     "suno:import": "npx tsx pipeline/suno-import.mts",
     "verify:text": "npx tsx pipeline/verify-text-engine.mts",
     "check:trailer-structure": "npx tsx pipeline/trailer-structure-regression.mts",
@@ -44,11 +45,12 @@
     "test": "playwright test",
     "test:live": "playwright test -c playwright.live.config.ts",
     "verify": "node pipeline/run-gates.mts",
-    "verify:serial": "npm run typecheck && npm run lint:ratchet && npm run check:manifest && npm run check:notebook && npm run check:type && npm run check:narration && npm run check:clips && npm run check:trailer-structure && npm run check:gate && npm run check:frames-prompt && npm run check:ads-prompts && npm run check:style-refs && npm run check:vocab && npm run next-structure && npm run typecheck:next && npm run test:unit && npm run tokens:check && npm test && npm run build && npm run check:bundle",
+    "verify:serial": "npm run typecheck && npm run lint:ratchet && npm run check:manifest && npm run check:notebook && npm run check:type && npm run check:narration && npm run check:clips && npm run check:trailer-structure && npm run check:gate && npm run check:frames-prompt && npm run check:ads-prompts && npm run check:scout-scene && npm run check:style-refs && npm run check:vocab && npm run next-structure && npm run typecheck:next && npm run test:unit && npm run tokens:check && npm test && npm run build && npm run check:bundle",
     "prepare": "git config core.hooksPath .githooks || exit 0",
     "check:type": "node pipeline/check-type-scale.mjs",
     "check:frames-prompt": "npx tsx pipeline/frames-prompt-regression.mts",
     "check:ads-prompts": "npx tsx pipeline/ads-prompts-regression.mts",
+    "check:scout-scene": "npx tsx pipeline/scout-scene-regression.mts",
     "check:style-refs": "npx tsx pipeline/style-ref-stability.mts",
     "check:narration": "node pipeline/check-narration.mjs",
     "check:clips": "node pipeline/check-clips.mjs",
@@ -56,6 +58,7 @@
     "build:preset-clips": "npx tsx pipeline/build-preset-clips.mts"
   },
   "dependencies": {
+    "@react-three/fiber": "9.6.1",
     "firebase": "^12.17.1",
     "lucide-react": "^1.31.0",
     "motion": "^13.1.1",
@@ -63,6 +66,7 @@
     "playwright": "^1.62.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "three": "0.185.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -71,6 +75,7 @@
     "@types/node": "^24.19.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "0.185.1",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.3.3",
     "fake-indexeddb": "^6.2.5",

@@ -8,7 +8,7 @@ import type { BlobRef } from "@gt/domain/blob";
 import type { Consequence, ConsequenceItem } from "@gt/domain/board";
 import type { Decision } from "@gt/domain/decision";
 import { parseAt } from "@gt/domain/door";
-import { err, ok, type AppErrorCode, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type AppErrorCode, type Result } from "@gt/domain/errors";
 import type { PacketId } from "@gt/domain/ids";
 import { packetSchema, type Packet } from "@gt/domain/packet";
 import type { PacketSource } from "@gt/domain/source";
@@ -150,6 +150,7 @@ const MIME: Readonly<Record<string, string>> = {
   ".gif": "image/gif",
   ".mp4": "video/mp4",
   ".webm": "video/webm",
+  ".glb": "model/gltf-binary",
   ".wav": "audio/wav",
   ".mp3": "audio/mpeg",
   ".m4a": "audio/mp4",
@@ -189,7 +190,7 @@ export async function mediaRef(abs: string): Promise<Result<BlobRef>> {
   try {
     s = await stat(abs);
   } catch (e) {
-    return err("not-found", `${abs}: ${e instanceof Error ? e.message : String(e)}`, { cause: e });
+    return err("not-found", `${abs}: ${errorMessage(e)}`, { cause: e });
   }
   if (!s.isFile()) return err("not-found", `${abs} is not a file`);
   const key = `${abs}\u0000${s.size}\u0000${s.mtimeMs}`;
@@ -198,7 +199,7 @@ export async function mediaRef(abs: string): Promise<Result<BlobRef>> {
     try {
       sha = await sha256File(abs);
     } catch (e) {
-      return err("unavailable", `${abs}: ${e instanceof Error ? e.message : String(e)}`, { cause: e });
+      return err("unavailable", `${abs}: ${errorMessage(e)}`, { cause: e });
     }
     if (digests.size >= DIGEST_CACHE_MAX) digests.clear();
     digests.set(key, sha);
@@ -242,7 +243,7 @@ const BY_STATUS: Readonly<Record<number, AppErrorCode>> = { 400: "invalid", 401:
  * `invalid` or `refused` does not), so the class matters as much as the words.
  */
 export function fromV1(e: unknown): Result<never> {
-  const message = e instanceof Error ? e.message : String(e);
+  const message = errorMessage(e);
   const status = typeof e === "object" && e !== null && "status" in e && typeof e.status === "number" ? e.status : undefined;
   const code: AppErrorCode = status === undefined ? "internal" : (BY_STATUS[status] ?? (status >= 500 ? "unavailable" : "internal"));
   return err(code, message, { cause: e });

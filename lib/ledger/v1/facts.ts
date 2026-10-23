@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 
+import { errorMessage } from "@gt/domain/errors";
 import type { Actor, EventData, Subject } from "@gt/domain/event";
 import type { ResourceLane } from "@gt/domain/lane";
 
@@ -91,9 +92,6 @@ export function bump(m: Record<string, number>, key: string, n = 1): void {
   if (n !== 0) m[key] = (m[key] ?? 0) + n;
 }
 
-/** Any thrown value's own words: a v1 reader's message is reported verbatim. */
-export const words = (e: unknown): string => (e instanceof Error ? e.message : String(e));
-
 /**
  * Read `ids` through `get`, at most `width` at a time, keeping readdir's order.
  * A record whose read throws is skipped with its message - one damaged
@@ -109,7 +107,7 @@ export async function readEach<T>(ids: readonly string[], get: (id: string) => P
       try {
         slots[i] = { ok: true, v: await get(id) };
       } catch (e) {
-        slots[i] = { ok: false, reason: words(e) };
+        slots[i] = { ok: false, reason: errorMessage(e) };
       }
     }
   };
@@ -139,6 +137,7 @@ const VENDORS: Readonly<Record<string, ResourceLane>> = {
   gemini: "cloud.google",
   qwen: "cloud.qwen",
   leonardo: "cloud.leonardo",
+  "leonardo-flare": "cloud.leonardo",
   elevenlabs: "cloud.elevenlabs",
   "claude-cli": "seat.text",
   agy: "seat.text",

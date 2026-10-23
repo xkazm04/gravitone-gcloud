@@ -26,7 +26,7 @@ export function logOffVocabulary(m: ExtractManifest, io: EngineIO, label: string
   if (off.length) log(m, io, `${label}: unmeasured, off-vocabulary — ${off.map((f) => `${f}="${String(rb[f]).slice(0, 40)}"`).join(", ")}`);
 }
 
-export const msg = (e: unknown) => (e instanceof Error ? e.message : String(e));
+export { errorMessage as msg } from "@gt/domain/errors";
 
 /** A unit records a VENDOR's failure on its element and moves on; a throw that
  *  is not an Error is not a vendor's - it is the process ending (the kernel's

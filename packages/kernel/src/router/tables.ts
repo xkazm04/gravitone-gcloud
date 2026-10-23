@@ -107,6 +107,20 @@ export const IMAGE_TABLE: MediumTable = {
       pace: { generate: proto(3, "still on Leonardo over CDP") },
       credential: "LEONARDO_STUDIO_CDP",
     },
+    {
+      // GPT Image 2.5 Flare over the API key (lib/imaging/providers/leonardoFlare.ts):
+      // /scout's stills, by the operator's ruling of 2026-10-22. Prefer-only, so no
+      // plan row moved for it; LOW at the API's smallest sizes is the adapter's only setting.
+      provider: "leonardo-flare",
+      capabilities: ["generate"],
+      lane: "cloud.leonardo",
+      transport: "cloud",
+      honours: [],
+      preferOnly: true,
+      models: { generate: "openai/gpt-image-2.5-flare" },
+      bills: { generate: "image" },
+      credential: "LEONARDO_API_KEY",
+    },
   ],
   plans: {
     dev: { generate: ["agy", "google", "leonardo"], edit: ["google"], recognize: ["ollama", "google"] },

@@ -1,0 +1,63 @@
+/* The mosaic (MatrixCullMosaic, 2026-10-22): category rows of square run cards, and the opened run as
+   a modal across the whole screen, at most three variants to a row. Tokens only. */
+.desk{padding:var(--sp-loose) var(--sp-6) var(--sp-7);display:flex;flex-direction:column;gap:var(--sp-7)}
+
+/* a category row: its own band, headed and counted, so the eye finds art styles apart from videos */
+.category{display:flex;flex-direction:column;gap:var(--sp-4);padding-top:var(--sp-5);border-top:1px solid var(--hair-2)}
+.category:first-child{border-top:0;padding-top:0}
+.categoryHead{display:flex;align-items:baseline;gap:var(--sp-3)}
+.eyebrow{font:600 var(--fs-meta)/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--text)}
+.count{font:500 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+.mosaic{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--w-lib-tile-s),1fr));gap:var(--sp-3)}
+.mosaicWide{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--w-lib-tile-m),1fr));gap:var(--sp-4)}
+.mosaicWave{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--w-tile-audio),1fr));gap:var(--sp-4)}
+.tabs{padding:var(--sp-loose) var(--sp-6) 0}
+
+/* the run card: picture edge to edge, label and pips laid over its foot */
+.card{position:relative;display:block;width:100%;aspect-ratio:1/1;padding:0;border-radius:var(--r-tile);overflow:hidden;background:var(--ink-3);border:var(--stroke-mark) solid transparent;text-align:left;transition:border-color .18s,box-shadow .18s}
+.cardWide{aspect-ratio:16/9}
+.face{display:block;width:100%;height:100%;object-fit:cover;background:var(--ink-2)}
+.faceText{display:block;overflow:hidden;height:100%;padding:var(--sp-5) var(--sp-5) calc(var(--size-badge) + var(--sp-5))}
+.clamp{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;font:600 var(--fs-ui)/1.4 var(--sans);color:var(--text)}
+.faceWave{display:grid;place-items:center;height:100%;padding:var(--sp-3) var(--sp-3) calc(var(--size-badge) + var(--sp-3));background:var(--wave-ground)}
+.foot{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);padding:var(--sp-2) var(--sp-3);min-height:var(--size-badge);background:color-mix(in srgb,var(--ink) 82%,transparent)}
+.label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;font:500 var(--fs-micro)/1.2 var(--mono);color:var(--text)}
+.cur{box-shadow:0 0 0 var(--ring-halo) var(--cyan);z-index:2}
+.kept{border-color:var(--emerald)}
+.rejected{border-color:color-mix(in srgb,var(--rose) 70%,transparent)}
+.rejected .face{filter:grayscale(.85) brightness(.45)}
+.mixed{border-color:var(--amber)}
+.nudge{animation:nudge .9s}
+@keyframes nudge{0%,100%{box-shadow:none}30%,70%{box-shadow:0 0 0 var(--ring-halo) var(--rose)}}
+
+/* the opened run, across the whole screen: head (purpose | reference), body (the variants, as large
+   as the screen leaves them), checks (one full-width row), foot */
+.modal{position:fixed;inset:0;z-index:var(--z-sheet);display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;background:var(--ink)}
+.modalHead{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--sp-7);align-items:start;padding:var(--sp-5) var(--sp-page);border-bottom:1px solid var(--hair)}
+.headWords{display:flex;flex-direction:column;gap:var(--sp-4);min-width:0}
+.headLine{display:flex;align-items:baseline;gap:var(--sp-loose);min-width:0}
+.modalTitle{margin:0;font:600 var(--fs-h2)/1.3 var(--sans);color:var(--ink-bright);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.runPos{font:500 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+.purpose{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--sp-2) var(--sp-4);align-items:baseline}
+.purposeKey{font:600 var(--fs-micro)/1.4 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.purposeVal{margin:0;font-size:var(--fs-body);line-height:1.45;color:var(--text)}
+.purposeNone{margin:0;font:500 var(--fs-control-sm)/1.45 var(--mono);color:var(--amber)}
+.headActs{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4)}
+.close{flex:none}
+.headRef{margin:0;display:flex;flex-direction:column;align-items:flex-end;gap:var(--sp-2);min-width:0}
+.headRefFace{max-width:100%;max-height:26vh;object-fit:contain;border-radius:var(--r-control);border:1px solid var(--hair-2);background:var(--ink-2)}
+.runRefNote{font:600 var(--fs-micro)/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.modalBody{min-height:0;overflow:auto;padding:var(--sp-5) var(--sp-page)}
+.checksRow{margin:0;list-style:none;display:flex;flex-wrap:wrap;gap:var(--sp-2);padding:var(--sp-3) var(--sp-page);border-top:1px solid var(--hair)}
+.check{padding:var(--sp-1) var(--sp-3);border-radius:var(--r-chip);border:1px solid var(--hair-2);font:500 var(--fs-micro)/1.3 var(--mono);color:var(--text)}
+.modalFoot{display:flex;align-items:center;gap:var(--sp-loose);padding:var(--sp-4) var(--sp-page);border-top:1px solid var(--hair);background:color-mix(in srgb,var(--letterbox) 20%,transparent)}
+
+/* the variants fill the body: a row of up to three as tall as it is; more than three wrap into rows
+   of their own height, scrolled */
+.runTiles{height:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:var(--sp-6)}
+.runTilesMany{height:auto;grid-auto-rows:minmax(42vh,auto)}
+.cols1{grid-template-columns:minmax(0,1fr)}
+.cols2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.cols1>*,.cols2>*{grid-column:auto}
+
+@media (prefers-reduced-motion: reduce){.nudge{animation:none;box-shadow:0 0 0 var(--ring-halo) var(--rose)}.card{transition:none}}

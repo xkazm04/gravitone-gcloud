@@ -62,18 +62,19 @@ export function findChrome(): string | null {
   return null;
 }
 
-/** Launch the profile detached (it outlives this process) and wait for CDP. */
-async function launch(port: number, waitMs = 15_000): Promise<void> {
+/** Launch a Chrome profile detached (it outlives this process) and wait for
+ *  CDP. `label` names the browser in the errors ("suno browser", ...). */
+export async function launchDetachedChrome(label: string, args: string[], port: number, waitMs = 15_000): Promise<void> {
   const exe = findChrome();
-  if (!exe) throw new Error("suno browser not running and chrome was not found");
-  const child = spawn(exe, sunoChromeArgs(port), { detached: true, stdio: "ignore", windowsHide: false });
+  if (!exe) throw new Error(`${label} not running and chrome was not found`);
+  const child = spawn(exe, args, { detached: true, stdio: "ignore", windowsHide: false });
   child.unref();
   const until = Date.now() + waitMs;
   while (Date.now() < until) {
     if (await cdpAnswers(port, 1000)) return;
     await new Promise((r) => setTimeout(r, 500));
   }
-  throw new Error("suno browser did not open its debugging port");
+  throw new Error(`${label} did not open its debugging port`);
 }
 
 type Held = { port: number; browser: Browser };
@@ -97,7 +98,7 @@ export async function attach(opts: AttachOptions = {}): Promise<Browser> {
   const run = (async () => {
     if (!(await cdpAnswers(port))) {
       if (!opts.spawn || !canSpawnLocalBinaries()) throw new Error("suno browser not running");
-      await launch(port);
+      await launchDetachedChrome("suno browser", sunoChromeArgs(port), port);
     }
     const browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`, { timeout: 10_000 });
     g.__gtSunoBrowser = { port, browser };

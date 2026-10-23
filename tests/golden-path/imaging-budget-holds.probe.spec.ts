@@ -342,7 +342,7 @@ test("8. recognize() under hold takes hold at estimate and releases at settle wi
 // raises as `refused`; Leonardo is the re-route target.
 
 test.describe("a billed refusal re-reserves before the next vendor", () => {
-  keepEnv(["LEONARDO_API_KEY"]);
+  keepEnv(["LEONARDO_API_KEY", "IMAGING_ENV"]);
 
   const LEONARDO = "https://cloud.leonardo.ai/api/rest/v1";
   // An IP literal, so the download guard (lib/imaging/safeUrl.ts) decides it
@@ -389,9 +389,9 @@ test.describe("a billed refusal re-reserves before the next vendor", () => {
     return chain;
   }
 
-  const until = async (cond: () => boolean, what: string) => {
-    for (let i = 0; i < 400 && !cond(); i++) await new Promise((r) => setTimeout(r, 5));
-    expect(cond(), what).toBe(true);
+  const until = async (cond: () => boolean, what: string | (() => string)) => {
+    for (let i = 0; i < 4000 && !cond(); i++) await new Promise((r) => setTimeout(r, 5));
+    expect(cond(), typeof what === "function" ? what() : what).toBe(true);
   };
 
   /** A start response with no generation id: Leonardo's adapter raises
@@ -399,16 +399,31 @@ test.describe("a billed refusal re-reserves before the next vendor", () => {
    *  finishes without waiting out a poll. */
   const noGeneration = () => json({ sdGenerationJob: {} });
 
+  let ambientEnv = "";
   test.beforeEach(() => {
     process.env.LEONARDO_API_KEY = "probe-leonardo-key";
+    // The dev chain is the one with a Leonardo re-route target; prod is google only, so the case
+    // may not lean on whatever IMAGING_ENV the worker inherited.
+    ambientEnv = `${process.env.IMAGING_ENV}/${process.env.NODE_ENV}`;
+    process.env.IMAGING_ENV = "dev";
   });
 
   test("9. (critic 1) while the re-route target is in flight, its estimate is held", async () => {
     const estimate = estimatePendingUsd(1);
     const chain = stubChain("hold");
 
-    const pending = generate({ prompt: "probe refused", aspect: "16:9", count: 1 }).catch((e) => e);
-    await until(() => chain.leonardoPost === 1, "the Leonardo POST was dispatched");
+    let settled: unknown = "still pending";
+    const pending = generate({ prompt: "probe refused", aspect: "16:9", count: 1 })
+      .catch((e) => e)
+      .then((r) => ((settled = r), r));
+    // The message carries what the chain saw, so a CI-only miss names its cause.
+    await until(
+      () => chain.leonardoPost === 1,
+      () =>
+        `the Leonardo POST was dispatched (google=${chain.google} leonardoPost=${chain.leonardoPost} inherited IMAGING_ENV/NODE_ENV=${ambientEnv} generate=${
+          settled instanceof Error ? `${(settled as ImagingError).kind}: ${settled.message}` : String(settled)
+        })`,
+    );
 
     const s = await budgetStats();
     console.log(`[holds] google refused, leonardo in flight -> held=$${s.heldUsd} spent=$${s.spentUsd}`);

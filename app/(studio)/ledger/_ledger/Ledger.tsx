@@ -21,6 +21,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 
+import { errorMessage } from "@gt/domain/errors";
 import type { Event } from "@gt/domain/event";
 import { useKeys } from "@gt/ui/keymap/dispatch";
 import type { Range } from "@gt/ui/components/timestrip/strip.ts";
@@ -176,7 +177,7 @@ export function Ledger(p: LedgerProps) {
   const copy = (text: string, done: string): void => {
     navigator.clipboard.writeText(text).then(
       () => toast(done),
-      (e: unknown) => toast(`copy refused - ${e instanceof Error ? e.message : String(e)}`),
+      (e: unknown) => toast(`copy refused - ${errorMessage(e)}`),
     );
   };
 

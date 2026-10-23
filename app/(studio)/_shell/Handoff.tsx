@@ -14,6 +14,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { errorMessage } from "@gt/domain/errors";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { useAuth } from "@/lib/useAuth";
 
@@ -41,7 +42,7 @@ export function Handoff() {
           else setRefusal(r.error.message);
         },
         (cause: unknown) => {
-          if (live) setRefusal(cause instanceof Error ? cause.message : String(cause));
+          if (live) setRefusal(errorMessage(cause));
         },
       );
     return () => {

@@ -3,13 +3,13 @@ import "server-only";
 import { z } from "zod";
 
 import { parseAt, type Parsed } from "@gt/domain/door";
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { Actor, EventData } from "@gt/domain/event";
 import type { JobState } from "@gt/domain/job";
 
 import { pidAlive } from "../../../../lib/gpu/lease.ts";
 import { cleanTitle, readMv } from "../../../../lib/sound/mv/store.ts";
-import { bump, digest, facts, instant, words } from "../facts.ts";
+import { bump, digest, facts, instant } from "../facts.ts";
 import type { IngestEvent, LiveJob, ProjectCtx, Projection, Source, WeirItem } from "../types.ts";
 
 // THE MUSIC-VIDEO QUEUE, PROJECTED - <sound store>/mv.json (lib/sound/mv/store.ts),
@@ -85,7 +85,7 @@ async function read(): Promise<Result<MvSnapshot>> {
   try {
     raw = await readMv();
   } catch (e) {
-    return err("unavailable", `mv: readMv failed: ${words(e)}`, { cause: e });
+    return err("unavailable", `mv: readMv failed: ${errorMessage(e)}`, { cause: e });
   }
   const p = parseAt("mv.json", fileSchema, raw);
   if (!p.ok) return p;

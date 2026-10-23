@@ -22,6 +22,7 @@
 // THE SEAM. `setVideoAdapterForTests` swaps the adapter; nothing else in this
 // file knows which vendor is behind it.
 
+import { errorMessage } from "@gt/domain/errors";
 import { scrub } from "@/lib/imaging/log";
 
 import { releaseVideo, reserveVideo, settleVideo, type VideoHold } from "./budget";
@@ -209,7 +210,7 @@ async function run(
     );
     if (outcome.kind === "done") await writeClipBytes(clipId, outcome.bytes);
   } catch (e) {
-    outcome = { kind: "failed", message: `The clip run failed: ${scrub(e instanceof Error ? e.message : String(e)).slice(0, 300)}` };
+    outcome = { kind: "failed", message: `The clip run failed: ${scrub(errorMessage(e)).slice(0, 300)}` };
   }
 
   // Money first, so a record write that throws below cannot leave a hold alive.

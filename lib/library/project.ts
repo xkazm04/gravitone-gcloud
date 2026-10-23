@@ -1,7 +1,7 @@
 import { stat, readFile } from "node:fs/promises";
 import { hostname } from "node:os";
 
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { BlobStore } from "@gt/kernel/blob";
 import { finishClaim, takeClaim } from "@gt/kernel/ingest";
 import type { IndexContext, LibraryEntry, StyleFacets } from "@gt/kernel/library/core";
@@ -67,8 +67,6 @@ export type SyncOptions = {
   readonly now?: () => Date;
 };
 
-const words = (e: unknown): string => (e instanceof Error ? e.message : String(e));
-
 /** A file into a blob, re-hashed only when its size or mtime moved. Null when the file is not there. */
 async function ingest(store: Store, blobs: BlobStore, file: { abs: string; mime: string }, memos: IngestMemo[]): Promise<Result<{ sha256: string; bytes: number; mime: string } | null>> {
   let st;
@@ -85,7 +83,7 @@ async function ingest(store: Store, blobs: BlobStore, file: { abs: string; mime:
   try {
     bytes = new Uint8Array(await readFile(file.abs));
   } catch (e) {
-    return err("unavailable", `library: cannot read ${file.abs}: ${words(e)}`);
+    return err("unavailable", `library: cannot read ${file.abs}: ${errorMessage(e)}`);
   }
   const ref = await blobs.put(bytes, file.mime);
   if (!ref.ok) return ref;
@@ -127,7 +125,7 @@ export async function syncLibrary(store: Store, blobs: BlobStore, feeds: readonl
       try {
         return { feed: f.id, read: await f.read(ctx) };
       } catch (e) {
-        return { feed: f.id, failed: words(e) };
+        return { feed: f.id, failed: errorMessage(e) };
       }
     }),
   );
@@ -199,6 +197,6 @@ export function syncLibrarySoon(store: Store, blobs: BlobStore, feeds: readonly 
       if (!report.ok) console.error(`[library-sync] ${report.error.message}`);
       if (!done.ok) console.error(`[library-sync] the claim could not be closed: ${done.error.message}`);
     })
-    .catch((e: unknown) => console.error(`[library-sync] failed outside its own report: ${words(e)}`));
+    .catch((e: unknown) => console.error(`[library-sync] failed outside its own report: ${errorMessage(e)}`));
   return ok({ started: true });
 }

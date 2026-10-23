@@ -5,8 +5,7 @@
 // door is passed on every write, that a refusal writes nothing, that a token binds the rev, and
 // that adopt -> generate (dry) -> judge -> lock runs end to end.
 import { createHash } from "node:crypto";
-import { existsSync } from "node:fs";
-import path from "node:path";
+import { execFileSync } from "node:child_process";
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -19,7 +18,7 @@ import type { StyleAct, StyleOp, StyleOpOutcome, StyleView } from "@gt/domain/st
 
 import { loadStyle, opStyle, resetStyles, type Media } from "../../app/(studio)/library/style/_port/fixture.ts";
 import { actReceipt, confirmAct } from "../../app/(studio)/library/style/_port/fixtureActs.ts";
-import { ADOPT_SEEDS, DRY_GRID, SEEDS } from "../../app/(studio)/library/style/_port/fixtureData.ts";
+import { ADOPT_SEEDS, DRY_GRID, SEEDS, presetPlate } from "../../app/(studio)/library/style/_port/fixtureData.ts";
 
 const media: Media = async (file): Promise<Result<BlobRef>> => ok({ sha256: createHash("sha256").update(file).digest("hex"), bytes: file.length, mime: "image/jpeg" });
 const NOW = Date.parse("2026-10-16T12:00:00.000Z");
@@ -49,15 +48,16 @@ async function run(act: StyleAct): Promise<StyleView> {
 
 beforeEach(() => resetStyles());
 
-// Every picture the fixture can land is a committed file: a dry render of a trial whose plate is
-// missing from its stand-in grid failed at confirm (measured live: paper-relief has no wish-list).
+// Every picture the fixture can land is a file git tracks, not one that happens to be on disk
+// (public/trials/**/*.jpg is gitignored: a fresh clone lacks it).
 it("names only committed pictures, for every seed and every dry render it can land", () => {
+  const tracked = new Set(execFileSync("git", ["ls-files", "public"], { cwd: process.cwd(), encoding: "utf8" }).split(String.fromCharCode(10)).filter(Boolean));
   const files = [
     ...SEEDS.flatMap((s) => [...s.proofs.map((p) => p.file), ...s.exemplars.map((x) => x.file)]),
     ...Object.values(ADOPT_SEEDS).flatMap((xs) => xs.map((x) => x.file)),
-    ...Object.values(DRY_GRID).flatMap((grid) => STYLE_TRIALS.map((t) => `/trials/google/${grid}/${t.id}.jpg`)),
+    ...Object.values(DRY_GRID).flatMap((grid) => STYLE_TRIALS.map(() => presetPlate(grid))),
   ];
-  expect(files.filter((f) => !existsSync(path.join(process.cwd(), "public", f)))).toEqual([]);
+  expect(files.filter((f) => !tracked.has(`public${f}`))).toEqual([]);
 });
 
 describe("the seeded universe reads through the one ratchet", () => {

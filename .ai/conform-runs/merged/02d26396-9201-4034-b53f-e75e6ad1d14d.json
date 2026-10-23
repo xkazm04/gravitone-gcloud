@@ -1,0 +1,69 @@
+{
+ "schema": "conform-run/1",
+ "worker": "02d26396-9201-4034-b53f-e75e6ad1d14d",
+ "subject": "feed",
+ "evaluatedAt": "2026-10-22T01:12:14.280649+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "runs-console",
+   "subject": "feed",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/runs/_runs/Runs.tsx:293 Runs presents a resource scheduling canvas rather than an occurrence feed; searches found feed references for refresh and freshness plumbing, with no readPosition or unseenCount matches in the context or repository.",
+   "techniques": [
+    {
+     "technique": "event-clustering",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/runs/_runs/view.ts:102 The display maps jobs and Weir piles to duration bars, rather than presenting repetitive atomic occurrences that require clustering."
+    },
+    {
+     "technique": "feed-retention",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/runs/_runs/model.ts:270 This bounds the scheduling canvas around now; it does not create or reap an occurrence feed."
+    },
+    {
+     "technique": "live-prepend",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/runs/RunsDayline.tsx:119 The actual Runs renderer windows a horizontal timeline, so arrivals do not prepend occurrence rows above the reader."
+    },
+    {
+     "technique": "read-position-and-unseen",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/runs/_runs/readKeys.ts:13 readKeys compiles keyboard bindings; the inspected surface exposes job selection and operational state rather than a catch-up or seen/unseen contract."
+    },
+    {
+     "technique": "reverse-chronology-semantics",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/runs/dayline.ts:65 Time determines horizontal position on a continuous axis, rather than newest-first occurrence ordering."
+    }
+   ],
+   "absenceTerms": [
+    "readPosition",
+    "unseenCount"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-22T01:12:14.280649+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "feed"
+   ],
+   "techniques": [
+    "event-clustering",
+    "feed-retention",
+    "live-prepend",
+    "read-position-and-unseen",
+    "reverse-chronology-semantics"
+   ],
+   "deviations": 0,
+   "context": "runs-console",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

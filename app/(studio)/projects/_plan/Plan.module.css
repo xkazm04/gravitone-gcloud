@@ -16,6 +16,8 @@
 .prow[aria-current=page]{background:color-mix(in srgb,var(--cyan) 8%,transparent);box-shadow:inset var(--stroke-mark) 0 0 var(--cyan);color:var(--ink-bright)}
 .prow:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:calc(var(--stroke-mark) * -1)}
 .pic{display:grid;place-items:center;color:var(--muted)}
+.thumb{width:var(--h-chip);height:var(--h-chip);object-fit:cover;border-radius:var(--r-control);display:block}
+.find{padding:var(--sp-2) var(--sp-5)}
 .pic svg{width:calc(var(--size-glyph-btn) - 1px);height:calc(var(--size-glyph-btn) - 1px)}
 .prow[aria-current=page] .pic{color:var(--cyan)}
 .pt{display:flex;flex-direction:column;gap:var(--sp-tight);min-width:0}

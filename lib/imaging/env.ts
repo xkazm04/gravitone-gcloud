@@ -47,6 +47,9 @@ export const KEY_VAR: Record<ProviderId, string> = {
   // counts as configured: the fake needs no browser, and a probe or a dev run
   // with the fake must reach the same router path the real driver does.
   "leonardo-studio": "LEONARDO_STUDIO_CDP",
+  // GPT Image 2.5 Flare over the API (providers/leonardoFlare.ts): the same key
+  // and the same credit pool as Lucid Origin, a different model and adapter.
+  "leonardo-flare": "LEONARDO_API_KEY",
 };
 
 const studioFake = () => process.env.LEONARDO_STUDIO_DRIVER?.trim() === "fake";

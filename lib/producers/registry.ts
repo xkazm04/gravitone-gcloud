@@ -7,6 +7,7 @@ import type { Producer } from "@gt/kernel/job-core";
 import type { Reader } from "@gt/kernel/store";
 import type { ProducerKey } from "@gt/kernel/job-queue-core";
 import { launchOf, modelOptions } from "@gt/kernel/records/options";
+import { PROFILE_LANES } from "@gt/producers/profile/define";
 import { producerSet, type Bound } from "@gt/producers/set";
 
 import { articleProducer } from "./article.ts";
@@ -26,6 +27,12 @@ import { stripsProducer } from "./strips.ts";
 import { sunoProducer } from "./suno.ts";
 import { mediaFactsBound } from "./media-facts.ts";
 import { styleJobProducer } from "./style.ts";
+import { scoutIngestProducer } from "./scoutIngest.ts";
+import { SCOUT_SCENE_LANES, scoutSceneProducer } from "./scoutScene.ts";
+import { profileProducer } from "./profile.ts";
+import { meshProducer } from "./mesh.ts";
+import { finishProducer } from "./finish.ts";
+import { scoutAssetProducer } from "./scoutAsset.ts";
 import { sunoDriver } from "../sound/suno/drivers.ts";
 import { sfxProducer } from "../sound/sfxJob.ts";
 import { huntProducer } from "../sound/huntRender.ts";
@@ -111,11 +118,24 @@ export const BOUND: readonly Bound[] = [
   { name: "dojo", producer: dojoProducer() },
   { name: "media-facts", producer: mediaFactsBound() },
   { name: "style", producer: styleJobProducer() },
+  // The /scout night's ingest (spark media-training-loop): a found picture, page or video brought onto this box.
+  { name: "scout-ingest", producer: scoutIngestProducer() },
+  // A /scout scene: one job per candidate, on the lane of its expensive half (a local clip: gpu.local; else Leonardo's, for the Flare stills and a hosted clip).
+  ...SCOUT_SCENE_LANES.map((lane): Bound => ({ name: "scout-scene", producer: scoutSceneProducer(lane) })),
   // The desk's effect batch (Phase 6, L66): one run of N clips through the metered call.
   ...lanesOf("sfx").map((lane): Bound => ({ name: "sfx", producer: sfxProducer(lane) })),
   // A hunt's picked leaves (Phase 6, L72): one Run, a step per leaf, on ElevenLabs only - the leaf's
   // engine is the map's, never a router's choice, so it is bound on that one lane.
   { name: "hunt", producer: huntProducer() },
+  // An engine's measured footprint (spark game-3d-assets WP1): on each lane an engine's work occupies.
+  ...PROFILE_LANES.map((lane): Bound => ({ name: "profile", producer: profileProducer(lane) })),
+  // A game asset's mesh (spark game-3d-assets WP2): TRELLIS.2 through ComfyUI on gpu.local (engine comfy),
+  // then the Blender finish on box.blender (engine blender) - two jobs, each admitted by its own engine.
+  { name: "mesh", producer: meshProducer() },
+  { name: "finish", producer: finishProducer() },
+  // A /scout night's game asset (spark game-3d-assets WP4): its concepts on Leonardo's Flare, then the
+  // hand-off that writes the mesh asset and queues the mesh job above.
+  { name: "scout-asset", producer: scoutAssetProducer() },
   ...stepsBound(),
 ];
 

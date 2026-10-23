@@ -20,6 +20,8 @@
 // booking that misses the lock is kept and applied late by the kernel, never
 // dropped (lib/spend/meter.ts).
 
+import { errorMessage } from "@gt/domain/errors";
+
 import { SPEND_CLASSES } from "../spend/classes";
 import { createMeter, type CountStats, type MeterAxes, type MeterRow } from "../spend/meter";
 import { spendStoreFor } from "../spend/select";
@@ -95,7 +97,7 @@ export async function bookServedTurn(
       basis: vendor ? "vendor" : "unpriced",
     });
   } catch (e) {
-    console.log(`[text] spend booking failed (turn unaffected): ${e instanceof Error ? e.message : String(e)}`);
+    console.log(`[text] spend booking failed (turn unaffected): ${errorMessage(e)}`);
   }
 }
 
@@ -113,7 +115,7 @@ export async function bookFailedTurn(turn: string, err: unknown): Promise<void> 
       basis: "vendor",
     });
   } catch (e) {
-    console.log(`[text] spend booking failed (turn unaffected): ${e instanceof Error ? e.message : String(e)}`);
+    console.log(`[text] spend booking failed (turn unaffected): ${errorMessage(e)}`);
   }
 }
 

@@ -1,13 +1,16 @@
-// GET /api/foundry/file?run=<id>&path=<run-relative>[&kind=extract|training|strips] —
+// GET /api/foundry/file?run=<id>&path=<run-relative>[&kind=extract|training|strips|scout|mesh] —
 // serve one run file. `kind` names the output root: the forge's runs (default),
 // the Extract module's (foundry-out/extract/), the Dojo's
-// (foundry-out/training/), or the code-rendered strips' (foundry-out/strips/).
-// Same path discipline on all four.
+// (foundry-out/training/), the code-rendered strips' (foundry-out/strips/), or
+// a /scout night's (foundry-out/scout/, `run` is the night id), or a game
+// asset's (foundry-out/mesh/, `run` is the asset id: its posters, renders and
+// glbs - lib/foundry/mesh/store.ts SERVABLE). Same path discipline on all six.
 //
-// VIDEO, FOR STRIPS ONLY. `kind=strips` also serves .mp4 and .webm, with a
-// Range honoured as a 206 — what a <video> asks for to start and to seek. Every
-// other kind keeps runStore's SERVABLE_EXTENSIONS, images and json only. A
-// strip's strip.html is never served here: it is code.
+// VIDEO, FOR STRIPS AND SCOUT ONLY. `kind=strips` and `kind=scout` also serve
+// .mp4 and .webm, with a Range honoured as a 206 — what a <video> asks for to
+// start and to seek (a night's scene clip is one). Every other kind keeps
+// runStore's SERVABLE_EXTENSIONS, images and json only. A strip's strip.html is
+// never served here: it is code.
 //
 // KEPT PAST PHASE 6: the Board's forge, extract, strips and Dojo packets draw
 // their candidates from here (lib/decision/v1/types.ts foundryFileUrl). THE
@@ -33,6 +36,8 @@ import { err, type AppErrorCode } from "@gt/domain/errors";
 
 import { FoundryError, fileStat } from "../../../../lib/foundry/store.ts";
 import { extractFileStat } from "../../../../lib/foundry/extract/store.ts";
+import { meshFileStat } from "../../../../lib/foundry/mesh/store.ts";
+import { scoutFileStat } from "../../../../lib/foundry/scout/store.ts";
 import { stripFileStat } from "../../../../lib/foundry/strips/store.ts";
 import { trainingFileStat } from "../../../../lib/foundry/training/store.ts";
 import { route } from "../../../_server/route.ts";
@@ -48,6 +53,7 @@ const MIME: Record<string, string> = {
   ".json": "application/json",
   ".mp4": "video/mp4",
   ".webm": "video/webm",
+  ".glb": "model/gltf-binary",
 };
 
 const VIDEO = new Set([".mp4", ".webm"]);
@@ -65,11 +71,13 @@ export const GET = route({ guard: "access", bodyCap: 0 }, async ({ req }) => {
       kind === "extract" ? await extractFileStat(run, rel)
       : kind === "training" ? await trainingFileStat(run, rel)
       : kind === "strips" ? await stripFileStat(run, rel)
+      : kind === "scout" ? await scoutFileStat(run, rel)
+      : kind === "mesh" ? await meshFileStat(run, rel)
       : await fileStat(run, rel);
     const ext = path.extname(abs).toLowerCase();
     // Candidates are immutable once written (a re-forge is a new seed or a new
     // run), so the browser may hold them for the session: serveFile's default.
-    return await serveFile(req, abs, { mime: MIME[ext] ?? "application/octet-stream", ranges: kind === "strips" && VIDEO.has(ext) });
+    return await serveFile(req, abs, { mime: MIME[ext] ?? "application/octet-stream", ranges: (kind === "strips" || kind === "scout") && VIDEO.has(ext) });
   } catch (e) {
     if (e instanceof FoundryError) return err(CODE[e.status] ?? "internal", e.message);
     throw e;

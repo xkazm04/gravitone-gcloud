@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { ApplyStatus } from "@gt/domain/board";
 import type { Decision } from "@gt/domain/decision";
 import { parseAt } from "@gt/domain/door";
-import { AppError, err, ok, type AppErrorCode, type Result } from "@gt/domain/errors";
+import { AppError, err, errorMessage, ok, type AppErrorCode, type Result } from "@gt/domain/errors";
 import { packetIdSchema, type PacketId } from "@gt/domain/ids";
 import type { Packet } from "@gt/domain/packet";
 import type { Effects } from "../effects.ts";
@@ -200,7 +200,7 @@ export async function applyNext(fx: Effects, opts: TakeOptions & { readonly appl
       return r.ok ? { ok: true } : { ok: false, error: r.error.message, code: r.error.code };
     } catch (e) {
       const code: AppErrorCode = "internal";
-      return { ok: false, error: e instanceof Error ? e.message : String(e), code };
+      return { ok: false, error: errorMessage(e), code };
     }
   });
   const finished = fx.tx("finish-apply", (t) => finishApply(t, claim, outcome));

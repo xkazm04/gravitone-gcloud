@@ -1,0 +1,22 @@
+{
+ "schema": "conform-run/1",
+ "worker": "3780f12d-1dd3-4188-bd99-9519383309a4",
+ "subject": "guest-execution-bounding",
+ "evaluatedAt": "2026-10-19T09:23:15.470579+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "guest-execution-bounding",
+   "context": "imaging-gateway-and-spend",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "guest-execution-bounding",
+   "context": "foundry-extract-engine",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": []
+}

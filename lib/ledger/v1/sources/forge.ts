@@ -3,12 +3,12 @@ import "server-only";
 import { z } from "zod";
 
 import { parseAt, type Parsed } from "@gt/domain/door";
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { Actor, EventData } from "@gt/domain/event";
 
 import { getRun, listRuns } from "../../../../lib/foundry/store.ts";
 import { COMMITTABLE, LIVE } from "../../../foundry/plant.ts";
-import { bump, facts, instant, readEach, seg, words } from "../facts.ts";
+import { bump, facts, instant, readEach, seg } from "../facts.ts";
 import type { IngestEvent, LiveJob, ProjectCtx, Projection, Skipped, Source, WeirItem } from "../types.ts";
 
 // THE FORGE, PROJECTED - foundry-out/runs/<id>/run.json (written by
@@ -90,7 +90,7 @@ async function read(): Promise<Result<ForgeSnapshot>> {
   try {
     ids = (await listRuns()).slice(0, FORGE_READ_CAP).map((r) => r.id);
   } catch (e) {
-    return err("unavailable", `forge: listRuns failed: ${words(e)}`, { cause: e });
+    return err("unavailable", `forge: listRuns failed: ${errorMessage(e)}`, { cause: e });
   }
   const got = await readEach(ids, getRun);
   const runs: ForgeRun[] = [];

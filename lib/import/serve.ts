@@ -1,4 +1,4 @@
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import { blobStore, type BlobStore } from "@gt/kernel/blob";
 import type { Store } from "@gt/kernel/store";
@@ -78,7 +78,7 @@ async function liveWithStyles(): Promise<Result<Universe>> {
   try {
     await ensureStyles(u.value.store);
   } catch (e) {
-    return err("unavailable", `the style store could not take the catalogue first: ${e instanceof Error ? e.message : String(e)}`);
+    return err("unavailable", `the style store could not take the catalogue first: ${errorMessage(e)}`);
   }
   return u;
 }
@@ -103,7 +103,7 @@ export async function confirmLive(bytes: Uint8Array, token: string, actor: Actor
     try {
       return ok(exportStyles(store));
     } catch (e) {
-      return err("unavailable", e instanceof Error ? e.message : String(e));
+      return err("unavailable", errorMessage(e));
     }
   };
   return confirmImport(u.value, bytes, token, actor, { afterLanded: gates, afterStyles });

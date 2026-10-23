@@ -39,6 +39,7 @@
 // on that node (takeIds, state rendered — or failed with the vendor's own
 // sentence), so a hunt reads the same from the lab, the CLI and a reload.
 
+import { errorMessage } from "@gt/domain/errors";
 import { composeDetailed, draftPlan, generateSfx, toWirePlan } from "@/lib/music/elevenlabs";
 import { cueDurationS, cueToPlan } from "@/lib/music/plan";
 import type { CueBrief, CuePicture, WirePlan } from "@/lib/music/types";
@@ -344,7 +345,7 @@ export async function generateTake(req: GenerateRequest, now = new Date()): Prom
   try {
     r = await render(req);
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
+    const msg = errorMessage(e);
     await markNode(req, null, msg).catch(() => undefined);
     throw e;
   }

@@ -12,6 +12,7 @@
 // Errors thrown here are shown to the operator verbatim: short, and naming the
 // work ("suno refused the create: …"), never the mechanism.
 
+import { errorMessage } from "@gt/domain/errors";
 import type { Page, Request, Response } from "playwright";
 import type { SunoClipRef, SunoDriverHealth, SunoFields, SunoLibraryClip, SunoModel, SunoPhase } from "./types";
 import { SUNO_CDP_PORT, SUNO_MODEL_LABEL } from "./types";
@@ -21,6 +22,8 @@ import { normalizeModelLabel, SELECTORS } from "./selectors";
 const PROBE_TTL_MS = 15_000;
 const RENDER_TIMEOUT_MS = 6 * 60_000;
 const POLL_MS = 5_000;
+/** Both in-page fetches return small JSON (a clip record, one feed page), never audio. */
+const API_FETCH_TIMEOUT_MS = 30_000;
 
 // ── probe ────────────────────────────────────────────────────────────────────
 
@@ -36,7 +39,7 @@ export async function probeSunoOn(port: number): Promise<SunoDriverHealth> {
     const browser = await attach({ port, spawn: false });
     health = (await isSignedIn(profileContext(browser))) ? { ok: true } : { ok: false, reason: "not signed in to suno" };
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
+    const msg = errorMessage(e);
     health = { ok: false, reason: /not running/.test(msg) ? "suno browser not running" : `suno browser unreachable: ${msg.split("\n")[0]}` };
   }
   probeCache.set(port, { at: Date.now(), health });
@@ -335,16 +338,16 @@ export async function createSunoTracks(
 async function fetchClip(page: Page, id: string, headers: Record<string, string>): Promise<RawClip | null> {
   try {
     return await page.evaluate(
-      async ({ url, headers }) => {
+      async ({ url, headers, timeoutMs }) => {
         const clerk = (window as unknown as { Clerk?: { session?: { getToken?: () => Promise<string | null> } } }).Clerk;
         const token = await clerk?.session?.getToken?.().catch(() => null);
         const h: Record<string, string> = { ...headers };
         if (token) h.authorization = `Bearer ${token}`;
         if (!h.authorization) return null;
-        const r = await fetch(url, { headers: h });
+        const r = await fetch(url, { headers: h, signal: AbortSignal.timeout(timeoutMs) });
         return r.ok ? ((await r.json()) as unknown) : null;
       },
-      { url: SELECTORS.api.base + SELECTORS.api.clip(id), headers },
+      { url: SELECTORS.api.base + SELECTORS.api.clip(id), headers, timeoutMs: API_FETCH_TIMEOUT_MS },
     ) as RawClip | null;
   } catch {
     return null;
@@ -435,13 +438,13 @@ export async function listSunoLibrary(onPage?: (n: number, total: number | null)
 
     const fetchPage = (cursor: string | null) =>
       page.evaluate(
-        async ({ url, headers, body }) => {
-          const r = await fetch(url, { method: "POST", headers: { ...headers, "content-type": "application/json" }, body });
+        async ({ url, headers, body, timeoutMs }) => {
+          const r = await fetch(url, { method: "POST", headers: { ...headers, "content-type": "application/json" }, body, signal: AbortSignal.timeout(timeoutMs) });
           if (!r.ok) return { status: r.status, clips: [], next: null, more: false };
           const j = (await r.json()) as { clips?: unknown[]; next_cursor?: string | null; has_more?: boolean };
           return { status: r.status, clips: Array.isArray(j.clips) ? j.clips : [], next: j.next_cursor ?? null, more: j.has_more === true };
         },
-        { url: SELECTORS.api.base + SELECTORS.api.feedUrl, headers, body: JSON.stringify({ cursor, limit: SELECTORS.api.feedPageSize, filters }) },
+        { url: SELECTORS.api.base + SELECTORS.api.feedUrl, headers, body: JSON.stringify({ cursor, limit: SELECTORS.api.feedPageSize, filters }), timeoutMs: API_FETCH_TIMEOUT_MS },
       ) as Promise<FeedAnswer>;
 
     const out = new Map<string, SunoLibraryClip>();

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { MODEL_CLASSES, MODEL_TECHNIQUES } from "@gt/domain/library";
+
 // The detail's per-kind extras (@gt/domain/library `LibraryExtras`) as a door:
 // checked when a source hands them over (./write.ts) and when the detail reads
 // them back (./detail.ts), so a row edited by hand is refused, not drawn.
@@ -18,6 +20,16 @@ export const audioFactsSchema = z.object({
       energy: nul(z.number()),
     })
     .nullable(),
+});
+
+/** A glb's counts (@gt/domain/library MeshFacts), as media_facts.mesh holds them (JSON). */
+export const meshFactsSchema = z.object({
+  tris: z.number().int().nonnegative(),
+  verts: z.number().int().nonnegative(),
+  bones: z.number().int().nonnegative(),
+  clips: z.number().int().nonnegative(),
+  images: z.number().int().nonnegative(),
+  bboxM: z.tuple([z.number(), z.number(), z.number()]).optional(),
 });
 
 export const extrasSchema = z.object({
@@ -51,4 +63,26 @@ export const extrasSchema = z.object({
   file: z.object({ w: z.number().optional(), h: z.number().optional(), path: z.string().optional() }).optional(),
   run: z.object({ id: z.string(), stage: z.string().optional() }).optional(),
   captions: z.number().int().nonnegative().optional(),
+  model: z
+    .object({
+      asset: z.string().min(1),
+      variant: z.string().min(1),
+      class: z.enum(MODEL_CLASSES),
+      technique: z.enum(MODEL_TECHNIQUES),
+      approach: z.string().optional(),
+      budgetTris: z.number().int().positive(),
+      rig: z.literal("ue5-mannequin").optional(),
+      poster: z.string().min(1).optional(),
+      gates: z.array(
+        z.object({
+          name: z.string().min(1),
+          verdict: z.enum(["pass", "warn", "fail", "unmeasured"]),
+          score: z.number().optional(),
+          fails: z.array(z.string()),
+          warns: z.array(z.string()),
+        }),
+      ),
+      limitations: z.array(z.string()),
+    })
+    .optional(),
 });

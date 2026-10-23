@@ -1,4 +1,4 @@
-import { isAppError } from "@gt/domain/errors";
+import { errorMessage, isAppError } from "@gt/domain/errors";
 import type { Job } from "@gt/domain/job";
 import { vendorHealth, type Health, type MissingStep, type Outputs, type Producer, type StepContext, type StepOutcome } from "@gt/kernel/job-core";
 import { fenceLost } from "../mv/producer.ts";
@@ -77,7 +77,7 @@ export function defineSuno(ports: SunoPorts): Producer {
         const message = e.message;
         const worn = await ports.fail(ctx.job, message, ctx).then(
           () => message,
-          (w: unknown) => `${message} (and suno.json could not record it: ${w instanceof Error ? w.message : String(w)})`,
+          (w: unknown) => `${message} (and suno.json could not record it: ${errorMessage(w)})`,
         );
         if (isAppError(e) && e.code === "budget") return { kind: "money-stop", message: worn };
         return { kind: "fatal", code: isAppError(e) ? e.code : "internal", message: worn };

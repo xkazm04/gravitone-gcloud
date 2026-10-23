@@ -308,6 +308,28 @@ describe("the git export (styles.json for the Python readers)", () => {
       dir.dispose();
     }
   });
+  it("replaces the file only after the transaction has committed", () => {
+    const s = store();
+    adopted(s, "p", 1);
+    const dir = scratch("styles-export-after-tx");
+    try {
+      const file = path.join(dir.dir, "styles.json");
+      const seen: boolean[] = [];
+      const spy: Store = {
+        ...s,
+        tx: (fn) => {
+          const r = s.tx(fn);
+          seen.push(existsSync(file));
+          return r;
+        },
+      };
+      expect(must(writeStylesExport(spy, file)).changed).toBe(true);
+      expect(seen).toEqual([false]);
+      expect(existsSync(file)).toBe(true);
+    } finally {
+      dir.dispose();
+    }
+  });
 });
 
 describe("v1's catalogue in (the one-time import, and the hand-edit path after it)", () => {

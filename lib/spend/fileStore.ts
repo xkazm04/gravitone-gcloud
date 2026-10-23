@@ -33,9 +33,10 @@
 // HostedSpendStoreNotBuilt. The question is whether instances share a disk,
 // and LOCAL_BINARIES (whether this box may spawn a CLI) does not answer it.
 
-import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+import { renameRetryingSync } from "@gt/kernel/renameRetrySync";
 import { MANAGED_MARKERS } from "../deployment";
 import { createSerializer, acquireLock, DEFAULT_LOCK_TIMING, type LockTiming } from "../diskTx";
 import { emptyState, SpendStoreBusy, type SpendState, type SpendStore } from "./store";
@@ -91,19 +92,11 @@ function alive(pid: number): boolean {
 function writeAtomic(file: string, body: string): void {
   const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
   writeFileSync(tmp, body);
-  for (let i = 0; ; i++) {
-    try {
-      renameSync(tmp, file);
-      return;
-    } catch (e) {
-      const code = (e as NodeJS.ErrnoException).code;
-      if (i >= 20 || (code !== "EPERM" && code !== "EBUSY" && code !== "EACCES")) {
-        rmSync(tmp, { force: true });
-        throw e;
-      }
-      const until = Date.now() + 5;
-      while (Date.now() < until);
-    }
+  try {
+    renameRetryingSync(tmp, file, { retries: 20, delayMs: () => 5 });
+  } catch (e) {
+    rmSync(tmp, { force: true });
+    throw e;
   }
 }
 

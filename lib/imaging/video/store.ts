@@ -17,9 +17,10 @@
 //   record that has lost one of them.
 
 import { randomBytes } from "node:crypto";
-import { mkdir, readFile, readdir, rename, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { renameRetry, type RetryOptions } from "../../renameRetry";
 import type { ClipRecord } from "./types";
 
 export function clipRoot(): string {
@@ -60,25 +61,13 @@ const tmpOf = (file: string) => `${file}.${process.pid}.${++tmpCounter}.tmp`;
  *  status write lost to a concurrent read closed a healthy clip as failed. The
  *  reader's handle is open for milliseconds, so the rename is retried briefly
  *  rather than reported. */
-const RENAME_RETRYABLE = new Set(["EPERM", "EACCES", "EBUSY"]);
-
-async function renameWithRetry(from: string, to: string): Promise<void> {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      await rename(from, to);
-      return;
-    } catch (e) {
-      if (attempt >= 20 || !RENAME_RETRYABLE.has((e as NodeJS.ErrnoException).code ?? "")) throw e;
-      await new Promise((r) => setTimeout(r, 5 + attempt * 5));
-    }
-  }
-}
+const RENAME_RETRY: RetryOptions = { retries: 20, delayMs: (attempt) => 5 + attempt * 5 };
 
 async function writeAtomic(file: string, data: string | Uint8Array): Promise<void> {
   await mkdir(path.dirname(file), { recursive: true });
   const tmp = tmpOf(file);
   await writeFile(tmp, data);
-  await renameWithRetry(tmp, file);
+  await renameRetry(tmp, file, RENAME_RETRY);
 }
 
 export async function writeClipRecord(rec: ClipRecord): Promise<void> {

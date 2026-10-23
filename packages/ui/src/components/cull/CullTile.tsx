@@ -1,8 +1,14 @@
 // One candidate on the matrix (prototype index.html `CullTile`, `Zoom`): the media, its
 // label and second word, a badge once decided (✓ keep, ✕ reject), the reject's reasons as
 // rose chips, and the cursor ring. An audio take draws its waveform, title, provider line and
-// prompt instead of a plate. The verdict is spoken in the tile's name, never colour alone.
-import { useRef } from "react";
+// prompt instead of a plate. A TEXT cell (a text/* candidate: a scout finding's claim, a
+// watchlist line) draws its words instead: the label is the claim, the prompt the quote under
+// it, the meta where it would land - the same button, keys and spoken name as a plate, and the
+// lens shows the quote whole. A MODEL cell (model/*: a game asset's glb) draws its poster render
+// (`words.poster`), or its words when it has none, and NEVER a canvas: WebGL lives in the lens
+// alone, where Z mounts the 3D viewer over the one candidate being looked at. The verdict is spoken
+// in the tile's name, never colour alone.
+import { lazy, Suspense, useRef } from "react";
 
 import type { ItemWords } from "../../board/port.ts";
 import type { BoardVerdict } from "../../board/boardGate.ts";
@@ -16,8 +22,12 @@ import s from "./Cull.module.css";
 
 export type TileMedia = { readonly url: string; readonly mime: string };
 
-export const kindOf = (mime: string): "image" | "video" | "audio" | "other" =>
-  mime.startsWith("image/") ? "image" : mime.startsWith("video/") ? "video" : mime.startsWith("audio/") ? "audio" : "other";
+// The viewer's shell is itself lazy here: a desk that never zooms into a model carries none of it
+// in its first load (the three chunk behind it was never in it).
+const ModelViewer = lazy(() => import("../model/ModelViewer.tsx").then((m) => ({ default: m.ModelViewer })));
+
+export const kindOf = (mime: string): "image" | "video" | "audio" | "text" | "model" | "other" =>
+  mime.startsWith("model/") ? "model" : mime.startsWith("image/") ? "image" : mime.startsWith("video/") ? "video" : mime.startsWith("audio/") ? "audio" : mime.startsWith("text/") ? "text" : "other";
 
 export type CullTileProps = {
   readonly index: number;
@@ -42,7 +52,7 @@ export function CullTile({ index, words, media, verdict, current, nudged, playin
   return (
     <button
       type="button"
-      className={cx(s.tile, current && s.cur, verdict?.verdict === "keep" && s.keep, verdict?.verdict === "reject" && s.reject, nudged && s.nudge)}
+      className={cx(s.tile, (kind === "text" || (kind === "model" && words.poster === undefined)) && s.textTile, current && s.cur, verdict?.verdict === "keep" && s.keep, verdict?.verdict === "reject" && s.reject, nudged && s.nudge)}
       data-tile={index}
       role="gridcell"
       aria-selected={current}
@@ -67,15 +77,25 @@ export function CullTile({ index, words, media, verdict, current, nudged, playin
             {words.prompt !== undefined && <div className={s.prompt}>{words.prompt}</div>}
           </div>
         </>
+      ) : kind === "text" || (kind === "model" && words.poster === undefined) ? (
+        <span className={s.textBody}>
+          <span className={s.claim}>{words.label}</span>
+          {words.prompt !== undefined && <span className={s.detail}>{words.prompt}</span>}
+          {words.meta !== undefined && <span className={s.textMeta}>{words.meta}</span>}
+        </span>
       ) : (
         <>
-          {kind === "video" ? <video className={s.media} src={media.url} muted playsInline preload="metadata" /> : <Plate className={s.media} src={media.url} alt="" lazy />}
+          {kind === "video" ? (
+            <video className={s.media} src={media.url} muted playsInline preload="metadata" />
+          ) : (
+            <Plate className={s.media} src={kind === "model" ? (words.poster ?? "") : media.url} alt="" lazy />
+          )}
           <span className={s.cap}>
             <span className={s.ell}>{words.label}</span>
             {words.meta !== undefined && (
               <span className={s.capMeta}>
                 {words.meta}
-                {kind === "video" ? " ▶" : ""}
+                {kind === "video" ? " ▶" : kind === "model" ? " · 3D" : ""}
               </span>
             )}
           </span>
@@ -120,10 +140,25 @@ export function Zoom({ words, media, verdict, position, onClose, specimen = fals
   const kind = kindOf(media.mime);
   return (
     <div ref={panel} className={cx(s.zoom, verdict?.verdict === "keep" && s.zKeep, verdict?.verdict === "reject" && s.zReject)} data-zoom="">
-      {kind === "video" ? <video className={s.zMedia} src={media.url} autoPlay muted loop playsInline /> : <Plate className={s.zMedia} src={media.url} alt={words.label} />}
+      {kind === "text" ? (
+        <div className={s.zText}>
+          <p className={s.zClaim}>{words.label}</p>
+          {words.prompt !== undefined && <blockquote className={s.zQuote}>{words.prompt}</blockquote>}
+        </div>
+      ) : kind === "model" ? (
+        <div className={s.zModel}>
+          <Suspense fallback={words.poster === undefined ? null : <Plate className={s.zMedia} src={words.poster} alt={words.label} />}>
+            <ModelViewer key={media.url} src={media.url} title={words.label} fill {...(words.poster === undefined ? {} : { poster: words.poster })} />
+          </Suspense>
+        </div>
+      ) : kind === "video" ? (
+        <video className={s.zMedia} src={media.url} autoPlay muted loop playsInline />
+      ) : (
+        <Plate className={s.zMedia} src={media.url} alt={words.label} />
+      )}
       <div className={s.zcap}>
         <span className={s.zPos}>{position}</span>
-        <b className={s.zLabel}>{words.label}</b>
+        {kind !== "text" && <b className={s.zLabel}>{words.label}</b>}
         {words.meta !== undefined && <Chip label={words.meta} />}
         {verdict === undefined ? (
           <Chip label="undecided" ghost />

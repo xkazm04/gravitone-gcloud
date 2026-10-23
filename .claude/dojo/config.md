@@ -175,6 +175,14 @@ tracking the human better, and record the decision here):
 
 ## Skill improvement log
 
+> **2026-10-22 - the corpus study moved to `/scout`** (spark `media-training-loop`). Finding a source,
+> bringing it onto the box (yt-dlp + gated keyframes, ported from `pipeline/vlm-probe/ingest.py`), the
+> STYLES lane (extract over the frames) and scene recipes now run nightly as kernel jobs and land on one
+> Board packet, `pkt:scout:<night>`. The dojo keeps its A/B cycles (lane 3, the verification instrument);
+> a claim a scout finding suggests is a dojo cycle to plan, not a scout job. The log entries below that
+> describe hand-run studies are history; `extract_frames.py` is `pipeline/vlm-probe/extract_frames.py`.
+
+
 - 2026-08-30 — gate rehearsal without the browser (repointed 2026-10-17, Phase 6
   L67): the gate is the Board's dojo packet (`/board/pkt:dojo:<cycle>`,
   lib/decision/v1/sources/dojo.ts); v1's training routes are gone. Headless, the

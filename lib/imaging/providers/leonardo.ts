@@ -17,6 +17,7 @@
 // reported in provenance, never raised: by then we already hold the pixels,
 // and failing the call would trade the user's image for their tidiness.
 
+import { sleep } from "../../sleep";
 import { ImagingError, invalidRequest } from "../errors";
 import { keyFor } from "../env";
 import { fetchImageBase64, requestJson } from "../http";
@@ -47,8 +48,6 @@ const USD_PER_CREDIT = 0.00257;
  *  rather than as a bare vendor 400. Note the v2 endpoint allows 2000 — budget
  *  to the lower one, because prompt-building is shared. */
 const MAX_PROMPT_CHARS = 1500;
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 interface StartResponse {
   sdGenerationJob?: {

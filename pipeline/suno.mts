@@ -36,6 +36,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { errorMessage } from "@gt/domain/errors";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const argv = process.argv.slice(2);
@@ -71,7 +72,7 @@ try {
   else for (const line of r.lines) console.error(line);
   process.exitCode = r.code;
 } catch (e) {
-  const msg = e instanceof Error ? e.message : String(e);
+  const msg = errorMessage(e);
   if (JSON_OUT) emit(JSON.stringify({ error: msg }));
   else console.error(`suno: ${msg}`);
   process.exitCode = 1;

@@ -68,6 +68,19 @@ const SCENES = [
 
 const forgeItems: SeedItem[] = SCENES.flatMap((sc) => PRESETS.slice(0, 4).map((p) => ({ id: `${sc.id}/${p}`, row: sc.id, url: `/presets/${p}.jpg`, mime: "image/jpeg" })));
 
+// One /scout night (lib/decision/v1/sources/scout.ts): an extracted look's replicas, a found scene's
+// replicas and clip under its keyframe, a finding and a watch line as text cells.
+const SCOUT_ITEMS: SeedItem[] = [
+  { id: "c-01/ink-wash/replica-1", row: "c-01/ink-wash", url: "/presets/chalk-argument.jpg", mime: "image/jpeg" },
+  { id: "c-01/ink-wash/transfer-1", row: "c-01/ink-wash", url: "/presets/paper-relief.jpg", mime: "image/jpeg" },
+  { id: "c-02/replica-1", row: "c-02", url: "/presets/blueprint.jpg", mime: "image/jpeg" },
+  { id: "c-02/replica-2", row: "c-02", url: "/presets/data-neon.jpg", mime: "image/jpeg" },
+  { id: "c-02/clip", row: "c-02", url: "/clips/presets/blueprint.webm", mime: "video/webm" },
+  { id: "c-03/text", row: "c-03", url: "", mime: "text/plain" },
+  { id: "c-04/text", row: "c-04", url: "", mime: "text/plain" },
+];
+const SCENE_PROMPT = "wide low-angle shot, 24mm, a lone figure on the left third against a pale sky, long shadow toward camera";
+
 const DECK = ["discipline-educational", "discipline-free", "discipline-trailer", "engine-adjudication", "engine-derived-short", "template-short-form-clip"];
 const AUDIO = ["smeared-transients", "vocal-garble"];
 
@@ -233,6 +246,35 @@ export function seeds(): readonly Seed[] {
             { t0: 3, t1: 4.5, text: "And the habit pays for the next push." },
           ],
         },
+      },
+    },
+    {
+      id: "pkt:scout:2026-10-21",
+      lane: "image",
+      source: "scout",
+      mode: "matrix-cull",
+      title: "scout 2026-10-21",
+      runId: "2026-10-21",
+      items: SCOUT_ITEMS,
+      imported: [],
+      present: {
+        items: {
+          "c-01/ink-wash/replica-1": { label: "replica of s-02", meta: "replica · 81%" },
+          "c-01/ink-wash/transfer-1": { label: "transfer · a harbour at dusk", meta: "transfer · 74%" },
+          "c-02/replica-1": { label: "replica 1", prompt: SCENE_PROMPT },
+          "c-02/replica-2": { label: "replica 2", prompt: SCENE_PROMPT },
+          "c-02/clip": { label: "clip · replica-1", meta: "5s", prompt: "slow push-in; dust drifts right to left · long holds, one cut per phrase" },
+          "c-03/text": { label: "Hold the subject still and let the camera do the moving", meta: "cinematic · 02-frames", prompt: "\"If the character and the lens both move, nobody knows where to look - pick one.\"" },
+          "c-04/text": { label: "channel: lighting breakdowns - https://example.com/breakdowns", meta: "watchlist", prompt: "motivated key and practicals, measured contrast ratios" },
+        },
+        rows: [
+          { id: "c-01/ink-wash", label: "Ink wash · illustration", ref: "/deck-art/discipline-educational.webp", inCatalogue: false },
+          { id: "c-02", label: "wide · low angle, 24mm · lone figure on the left third · hard key from frame left, cool fill", ref: "/deck-art/template-cinematic.webp" },
+          { id: "c-03", label: "finding · cinematic" },
+          { id: "c-04", label: "watch" },
+        ],
+        oracle: { passed: true, summary: "4 candidates · 7 cells · 0 failed · stopped: target", fixture: true },
+        meta: "scout · 9 sources",
       },
     },
     {

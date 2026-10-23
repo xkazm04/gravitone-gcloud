@@ -25,11 +25,12 @@
 // A CORRUPT FILE THROWS and is never overwritten (as readSuno): an empty
 // replacement would erase finished videos the operator has not judged.
 
-import { mkdir, readFile, rename, rm } from "node:fs/promises";
+import { mkdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
+import { renameRetry } from "../../renameRetry";
 import type { MvFileKind, MvFiles, MvJob, MvQueueState } from "./types";
-import { filePathAbs, safeId, SoundError, storeRoot, withStore, writeJsonAtomic } from "../store";
+import { filePathAbs, JITTERED_RENAME, safeId, SoundError, storeRoot, withStore, writeJsonAtomic } from "../store";
 
 /** One worker step. A phase can hold more than one (`treating` writes a
  *  treatment or, for a motion regenerate, only new motion). The thumbnail step
@@ -139,27 +140,19 @@ export function stagingAbs(rel: string): string {
 // Windows refuses a rename onto a file a reader holds open (a <video> seeking
 // the old render, an indexer) with EPERM/EBUSY/EACCES, and the refusal clears
 // in milliseconds - lib/sound/store.ts renameInto measured it on takes.json.
-// That helper is private to the sound store, so the same retry is spoken here.
-const RENAME_RETRY = new Set(["EPERM", "EBUSY", "EACCES"]);
+// The retry is lib/renameRetry.ts, with the sound store's own jittered timing.
 
 /** Move a staged file over its final name: the old file is replaced only now,
  *  when the new one exists whole (a Regenerate keeps the old render until the
  *  new one lands). A failed rename removes the staged file and throws. */
 export async function landFile(stagedAbs: string, rel: string): Promise<string> {
   const abs = filePathAbs(rel);
-  for (let attempt = 0; ; attempt++) {
-    try {
-      await rename(stagedAbs, abs);
-      return rel;
-    } catch (e) {
-      const code = (e as NodeJS.ErrnoException).code ?? "";
-      if (RENAME_RETRY.has(code) && attempt < 10) {
-        await new Promise((r) => setTimeout(r, Math.min(400, 10 * 2 ** attempt) * (0.5 + Math.random())));
-        continue;
-      }
-      await rm(stagedAbs, { force: true }).catch(() => {});
-      throw e;
-    }
+  try {
+    await renameRetry(stagedAbs, abs, JITTERED_RENAME);
+    return rel;
+  } catch (e) {
+    await rm(stagedAbs, { force: true }).catch(() => {});
+    throw e;
   }
 }
 

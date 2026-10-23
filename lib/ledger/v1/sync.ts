@@ -2,7 +2,7 @@ import "server-only";
 
 import { hostname } from "node:os";
 
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import { countEvents, facetMap } from "@gt/kernel/events-count";
 import { appendOnce, finishClaim, recordSourceOutcome, takeClaim } from "@gt/kernel/ingest";
@@ -10,7 +10,7 @@ import type { Store } from "@gt/kernel/store";
 
 import { FIXTURE_MODE } from "../../../lib/fixtures/mode.ts";
 import { kernel } from "../../kernelStore.ts";
-import { digest, facts, seg, words } from "./facts.ts";
+import { digest, facts, seg } from "./facts.ts";
 import { weirPacketId } from "./packet.ts";
 import { V1_SOURCES } from "./sources.ts";
 import type { IngestEvent, LiveHold, LiveJob, LiveSlot, ProjectCtx, Projection, Source, WeirItem } from "./types.ts";
@@ -96,13 +96,13 @@ async function readOne(src: Source<unknown>, ctx: ProjectCtx): Promise<Read> {
   try {
     snapshot = await src.read();
   } catch (e) {
-    return { source: src.id, failure: { class: "read", error: words(e) } };
+    return { source: src.id, failure: { class: "read", error: errorMessage(e) } };
   }
   if (!snapshot.ok) return { source: src.id, failure: { class: "read", error: snapshot.error.message } };
   try {
     return { source: src.id, projection: src.project(snapshot.value, ctx) };
   } catch (e) {
-    return { source: src.id, failure: { class: "project", error: words(e) } };
+    return { source: src.id, failure: { class: "project", error: errorMessage(e) } };
   }
 }
 
@@ -290,7 +290,7 @@ export function syncSoon(store: Store, sources: readonly Source<unknown>[], ctx:
       if (!report.ok) console.error(`[ledger-sync] ${report.error.message}`);
       if (!done.ok) console.error(`[ledger-sync] the claim could not be closed: ${done.error.message}`);
     })
-    .catch((e: unknown) => console.error(`[ledger-sync] failed outside its own report: ${words(e)}`));
+    .catch((e: unknown) => console.error(`[ledger-sync] failed outside its own report: ${errorMessage(e)}`));
   return ok({ started: true });
 }
 

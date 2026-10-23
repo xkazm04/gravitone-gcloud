@@ -26,6 +26,8 @@
 //
 // No React in this module: the hook is `useRecord.ts`, the writes `patch.ts`.
 
+import { errorMessage } from "@gt/domain/errors";
+
 import type { PhaseKey } from "@/lib/projects";
 
 import { readStep, type ReadOutcome } from "@/lib/steps";
@@ -137,8 +139,6 @@ export function recordDefs(): readonly RecordDef<object>[] {
 export const isPlainObject = (x: unknown): x is Record<string, unknown> =>
   typeof x === "object" && x !== null && !Array.isArray(x);
 
-const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
-
 /** The version a stored object claims. Absent is 1, permanently (ADR rule 1). */
 function storedVersion(stored: Record<string, unknown>): number | RecordRefusal {
   const v = stored.v ?? 1;
@@ -179,7 +179,7 @@ export function decodeRecord<T extends object>(
     try {
       cur = def.migrate[n]({ ...cur });
     } catch (e) {
-      return refused(malformed(`${def.key}: migration v${n}→v${n + 1} failed: ${message(e)}`));
+      return refused(malformed(`${def.key}: migration v${n}→v${n + 1} failed: ${errorMessage(e)}`));
     }
   }
 
@@ -187,7 +187,7 @@ export function decodeRecord<T extends object>(
   try {
     parsed = def.parse(cur);
   } catch (e) {
-    return refused(malformed(`${def.key}: ${message(e)}`));
+    return refused(malformed(`${def.key}: ${errorMessage(e)}`));
   }
   return parsed instanceof RecordRefusal ? refused(parsed) : { ok: true, data: parsed };
 }

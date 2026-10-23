@@ -22,6 +22,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { errorMessage } from "@gt/domain/errors";
 import { fileURLToPath } from "node:url";
 
 import { AdBriefQuestion, AdConceptError, parseIdeas, parseScenarios } from "../lib/ads/validate";
@@ -381,7 +382,7 @@ for (const [name, run, shouldPass, expect] of cases) {
     ok = true;
   } catch (e) {
     ok = false;
-    why = e instanceof AdConceptError ? e.findings.join("; ") : e instanceof Error ? e.message : String(e);
+    why = e instanceof AdConceptError ? e.findings.join("; ") : errorMessage(e);
   }
   // A refusal must be the RIGHT refusal: the finding the case was written for.
   if (ok === shouldPass && (ok || !expect || why.includes(expect))) passed++;

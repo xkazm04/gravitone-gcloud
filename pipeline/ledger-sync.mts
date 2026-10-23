@@ -83,7 +83,7 @@ if (verb === "seed-fixtures") {
   // The generators of the stores lib/ledger/v1/sources.ts reads. A lot that
   // adds a source whose fixtures come from another generator adds it here.
   const seeded: Record<string, string> = {};
-  for (const name of ["foundry", "publish", "work", "sound"]) {
+  for (const name of ["foundry", "publish", "work", "sound", "scout"]) {
     const gen: { generate: () => string } = await import(`./fixtures/${name}.ts`);
     seeded[name] = gen.generate();
   }

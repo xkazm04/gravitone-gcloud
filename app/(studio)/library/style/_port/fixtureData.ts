@@ -12,11 +12,12 @@ import { STYLE_TRIALS, blockDigest, compileStyleBlock } from "@gt/domain/style.r
 // extracted candidate with exemplars and nothing kept at the Weir.
 //
 // The catalogue halves are pipeline/foundry/styles.json's own entries (painted-3d, soft-backlit-
-// bokeh) verbatim; the looks are @gt/catalog's presets. Pictures are the repo's committed renders
-// (public/trials/google/<preset>/<trial>.jpg - the 2026-08-13 Google trial grid - and
-// public/presets/*.jpg), put into the kernel's blob store at seed time; the fixture never claims
-// a plate it shows was rendered for the style it sits on, which is why proofs off another
-// preset's grid say so in their label.
+// bokeh) verbatim; the looks are @gt/catalog's presets. Pictures are the one tracked picture per
+// preset (public/presets/<preset>.jpg), put into the kernel's blob store at seed time. The
+// 2026-08-13 Google trial grid (public/trials/google/<preset>/<trial>.jpg) is gitignored, so a
+// fresh clone does not have it and nothing here may name it: every trial of a preset lands that
+// preset's one picture. The fixture never claims a plate it shows was rendered for the style it
+// sits on, which is why proofs off another preset's picture say so in their label.
 
 export type SeedProof = {
   readonly id: string;
@@ -55,7 +56,9 @@ export type Seed = {
   readonly lock?: { readonly at: string; readonly by: string };
 };
 
-const trialFile = (preset: string, trial: string): string => `/trials/google/${preset}/${trial}.jpg`;
+/** The picture a preset's trial lands as: the preset's tracked picture (the trial plates are not committed). */
+export const presetPlate = (preset: string): string => `/presets/${preset}.jpg`;
+const trialFile = (preset: string, _trial: string): string => presetPlate(preset);
 const preset = (id: string) => {
   const p = PRESETS.find((x) => x.id === id);
   if (p === undefined) throw new Error(`fixture: no preset ${id}`);
@@ -80,8 +83,7 @@ export const ADOPT_SEEDS: Readonly<Record<string, readonly { readonly run: strin
   ],
 };
 
-/** The plate a dry render lands as, per style (a stand-in from the committed grid, said in its label). */
-/** (paper-relief's grid lacks wish-list, so no style stands in on it.) */
+/** The preset whose picture a dry render lands as, per style (a stand-in, said in its label). */
 export const DRY_GRID: Readonly<Record<string, string>> = { "painted-3d": "data-neon", "newsprint-cutout": "newsprint-cutout", "chalk-argument": "chalk-argument", blueprint: "blueprint", "soft-backlit-bokeh": "data-neon" };
 
 const PAINTED_KEEPS: readonly SeedEvidence[] = [

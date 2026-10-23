@@ -139,10 +139,10 @@ describe("queue order and position", () => {
 
 describe("lane slots (decision 5)", () => {
   it("the capacity table is the decision's, and every lane has that many slots", () => {
-    expect(LANE_CAPACITY).toEqual({ "gpu.local": 1, "box.render": 1, "box.chrome": 1, "seat.text": 4, "cloud.google": 3, "cloud.elevenlabs": 2, "cloud.leonardo": 2, "cloud.qwen": 1 });
+    expect(LANE_CAPACITY).toEqual({ "gpu.local": 1, "box.render": 1, "box.blender": 1, "box.chrome": 1, "seat.text": 4, "cloud.google": 3, "cloud.elevenlabs": 2, "cloud.leonardo": 2, "cloud.qwen": 1 });
     for (const l of RESOURCE_LANES) expect(laneSlots(l)).toHaveLength(LANE_CAPACITY[l]);
     expect([...PAID_LANES, ...FREE_LANES].sort()).toEqual([...RESOURCE_LANES].sort());
-    expect(FREE_LANES).toEqual(["gpu.local", "box.render"]);
+    expect(FREE_LANES).toEqual(["gpu.local", "box.render", "box.blender"]);
   });
 
   it("two cloud.elevenlabs jobs run at once on two slots; a third is busy and stays queued", async () => {

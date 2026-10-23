@@ -17,7 +17,7 @@
 
 import { onIdTokenChanged } from "firebase/auth";
 
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import { DEV_AUTH } from "@/lib/devAuth";
 import { authClient, firebaseReady } from "@/lib/firebase";
 import { LOCAL_MODE } from "@/lib/localMode";
@@ -51,6 +51,6 @@ export function subscribeSessionCookie(report: (message: string) => void): () =>
       .then(postSession)
       .then((r) => {
         if (!r.ok) report(r.error.message);
-      }, (cause: unknown) => report(cause instanceof Error ? cause.message : String(cause)));
+      }, (cause: unknown) => report(errorMessage(cause)));
   });
 }

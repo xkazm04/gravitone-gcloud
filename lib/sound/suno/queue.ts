@@ -29,6 +29,7 @@
 import { SUNO_MODEL_LABEL, SUNO_MODELS, type SunoFields, type SunoJob, type SunoLane, type SunoQueueState, type SunoSnapshot } from "@/lib/suno/types";
 
 import { UNGROUPED_LANE } from "@/lib/board/pipeline";
+import { errorMessage } from "@gt/domain/errors";
 import type { Job } from "@gt/domain/job";
 import type { Receipt } from "@gt/domain/produce";
 import { cancelSunoJob, launchSuno, launchSunoNow, pauseSunoJobs, resumeSunoJobs, sunoKernelId, sunoKernelJobs } from "@/lib/producers/suno";
@@ -314,7 +315,7 @@ export async function startSunoWith(token: string): Promise<{ queue: SunoQueueSt
 export async function sunoSnapshot(): Promise<SunoSnapshot> {
   const driver = await sunoDriver()
     .probe()
-    .catch((e: unknown) => ({ ok: false as const, reason: e instanceof Error ? e.message : String(e) }));
+    .catch((e: unknown) => ({ ok: false as const, reason: errorMessage(e) }));
   const { file, jobs, interrupted } = await readSunoLive();
   return { proposals: file.proposals, jobs, clips: file.clips, driver, queue: { running: file.queue.running, ...(interrupted === undefined ? {} : { interrupted }) } };
 }

@@ -14,6 +14,9 @@
 //                switches kind when the facet is not the current kind's (a style's "plates in
 //                this style" lands on Plates); a run also links its Ledger events; a node that
 //                names neither is drawn as text, a library-item that is gone as a ghost.
+//   the model    a glb has no picture: its face is its poster render (the row carries it, a designed
+//                face when none was rendered), and its detail names the glb's address for the 3D
+//                viewer - which only the detail mounts, never a tile.
 //   schedule     an export (`video:export:<id>`, the item a slot names - @gt/domain/slot
 //                slotItemId) opens the Calendar's schedule sheet on itself (L63's carry: v1's
 //                Composer was reached from the Calendar only; the export's own page is where a
@@ -49,6 +52,8 @@ export function faceOf(row: LibraryRow, m: Media): Face {
   const cover = row.cover.blobSha === null || row.attention !== undefined ? null : m.url(row.cover.blobSha, row.cover.mime ?? "image/jpeg");
   if (row.kind === "audio") return { kind: "wave", peaks: look.peaks ?? [] };
   if (row.kind === "doc") return { kind: "paper", title: row.title, foot: row.chips.find((c) => c.group === "bundle")?.label ?? row.meta };
+  const poster = row.poster ?? look.poster;
+  if (row.kind === "model" && poster !== undefined && row.attention === undefined) return { kind: "image", url: poster };
   if (cover !== null) return row.kind === "motion" || row.kind === "video" ? { kind: "poster", url: cover, ...(look.video === undefined ? {} : { video: look.video }) } : { kind: "image", url: cover };
   if (row.kind === "style") return { kind: "swatch", name: row.title, sub: row.chips.map((c) => c.label).slice(1, 3).join(" · "), ...palette };
   return { kind: "designed", lead: kindShort(row.kind), name: row.title, tail: row.meta, ...palette };
@@ -109,6 +114,8 @@ export function detailOf(d: LibraryItemDetail, m: Media, held: Readonly<Record<s
   const usedBy = (d.vocabulary.find((v) => v.key === "project")?.values ?? []).map((v) => ({ value: v.value, label: v.label }));
   const styleId = d.item.kind === "style" ? d.item.vocabulary.styleId : null;
   const schedule = scheduleOf(d.row.id);
+  const glb = d.row.kind === "model" && d.item.media !== undefined && decodes ? m.url(d.item.media.sha256, d.item.media.mime) : null;
+  const poster = d.row.poster ?? look.poster;
   return {
     card,
     origin: d.row.origin,
@@ -123,5 +130,6 @@ export function detailOf(d: LibraryItemDetail, m: Media, held: Readonly<Record<s
     usedBy,
     ...(styleId !== null && atelier !== undefined ? { atelier: atelier(styleId) } : {}),
     ...(schedule === undefined ? {} : { schedule }),
+    ...(glb === null ? {} : { model: { src: glb, ...(poster === undefined ? {} : { poster }) } }),
   };
 }

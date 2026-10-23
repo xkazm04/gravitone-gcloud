@@ -1,5 +1,6 @@
 import "server-only";
 
+import { errorMessage } from "@gt/domain/errors";
 import { measuresByItem, type AudioMeasureRow } from "@gt/kernel/library/measures";
 import { briefCheck, type BriefCheck } from "@gt/ui/components/audio/brief.ts";
 import { readRubric, rubricMean, type RubricRead } from "@gt/ui/components/audio/rubric.ts";
@@ -60,13 +61,11 @@ export type BatchView = { readonly kind: Kind; readonly engine: Read<{ readonly 
 /** Takes the rubric pile draws: unscored first, then the newest verdicts. */
 export const RUBRIC_ROWS = 60;
 
-const words = (e: unknown): string => (e instanceof Error ? e.message : String(e));
-
 async function read<T>(fn: () => Promise<T>): Promise<Read<T>> {
   try {
     return { ok: true, value: await fn() };
   } catch (e) {
-    return { ok: false, error: words(e) };
+    return { ok: false, error: errorMessage(e) };
   }
 }
 
@@ -142,7 +141,7 @@ export async function readRubricPile(kind: Kind): Promise<RubricView> {
   try {
     takes = (await listTakes({ kind, fixtures: FIXTURE_MODE })).filter(judged);
   } catch (e) {
-    return { kind, takes: { ok: false, error: words(e) }, measures: null };
+    return { kind, takes: { ok: false, error: errorMessage(e) }, measures: null };
   }
   const k = kernel();
   const m = k.ok ? measuresByItem(k.value.store, takes.map((t) => `audio:${t.id}`)) : k;

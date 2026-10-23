@@ -9,7 +9,9 @@
     "./*": "./src/*.ts"
   },
   "dependencies": {
-    "@gt/domain": "0.0.0"
+    "@gt/domain": "0.0.0",
+    "three": "0.185.1",
+    "@react-three/fiber": "9.6.1"
   },
   "peerDependencies": {
     "react": "^19"

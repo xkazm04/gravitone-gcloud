@@ -3,6 +3,7 @@ import { mkdir, open, readFile, rename, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import { mimeSchema, type BlobRef } from "@gt/domain/blob";
 import { err, ok, type Result } from "@gt/domain/errors";
+import { sleep } from "./sleep.ts";
 
 // BLOBS - content-addressed bytes on disk, beside the store, never in it.
 //
@@ -42,7 +43,6 @@ const RENAME_ATTEMPTS = 10;
 
 const sha256 = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex");
 const codeOf = (e: unknown): string => (e instanceof Error && "code" in e && typeof e.code === "string" ? e.code : "");
-const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 async function sizeOf(file: string): Promise<number | undefined> {
   try {

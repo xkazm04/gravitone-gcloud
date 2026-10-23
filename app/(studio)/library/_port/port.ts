@@ -13,15 +13,18 @@ import "server-only";
 //
 // The server side speaks the domain's `Result<T>`; ./actions.ts turns it into the wire envelope.
 
-import { ok } from "@gt/domain/errors";
+import { ok, type Result } from "@gt/domain/errors";
+import type { LibraryAct } from "@gt/domain/library";
 
 import { kernel } from "../../../../lib/kernelStore.ts";
 import { ledgerFor } from "../../_shell/links.ts";
 import { fixtureAct, fixtureDetail, fixtureEverything, fixtureLook, fixtureProjects, fixtureQuery } from "./fixture.ts";
 import { fixtureUrl } from "./fixtureData.ts";
+import type { ActOutcome } from "./contract.ts";
 import { cardOf, detailOf, type Media } from "./present.ts";
 import { makeRealLibrary, type ServerLibrary } from "./real.ts";
 
+export { actOn } from "./real.ts";
 export type { ServerLibrary, Who } from "./real.ts";
 
 export const SIDE: "fixture" | "real" = process.env["GRAVITONE_PRODUCE_SIDE"] === "fixture" ? "fixture" : "real";
@@ -30,6 +33,13 @@ export const SIDE: "fixture" | "real" = process.env["GRAVITONE_PRODUCE_SIDE"] ==
 export const atelierOf = (styleId: string): string => `/library/style/${encodeURIComponent(styleId)}`;
 
 const fixtureMedia: Media = { url: (sha) => fixtureUrl(sha), look: fixtureLook, ledger: ledgerFor };
+
+function fixtureActed(id: string, act: LibraryAct, held: Readonly<Record<string, readonly string[] | undefined>>): Result<ActOutcome> {
+  const done = fixtureAct(id, act, () => new Date().toISOString());
+  if (!done.ok) return done;
+  const d = fixtureDetail(id);
+  return d.ok ? ok({ detail: detailOf(d.value, fixtureMedia, held, fixtureProjects(), atelierOf), said: done.value.said }) : d;
+}
 
 const fixture: ServerLibrary = {
   query: (q) => {
@@ -40,12 +50,8 @@ const fixture: ServerLibrary = {
     const d = fixtureDetail(id);
     return d.ok ? ok(detailOf(d.value, fixtureMedia, held, fixtureProjects(), atelierOf)) : d;
   },
-  act: (id, act, held) => {
-    const done = fixtureAct(id, act, () => new Date().toISOString());
-    if (!done.ok) return done;
-    const d = fixtureDetail(id);
-    return d.ok ? ok({ detail: detailOf(d.value, fixtureMedia, held, fixtureProjects(), atelierOf), said: done.value.said }) : d;
-  },
+  act: (id, act, held) => fixtureActed(id, act, held),
+  exportItem: (id, project, held) => Promise.resolve(fixtureActed(id, { act: "export", project }, held)),
 };
 
 const real: ServerLibrary = makeRealLibrary({

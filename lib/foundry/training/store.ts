@@ -53,6 +53,7 @@ import {
   type BlindState,
   type ImprovementBlind,
 } from "./blind";
+import { normalizeLedger, replaceCycleRows } from "./ledger";
 import type {
   CycleManifest,
   Improvement,
@@ -61,6 +62,7 @@ import type {
   TrainingCycleDetail,
   TrainingCycleSummary,
   TrainingLedgerRow,
+  TrainingLedgerRowV2,
   TrainingVerdict,
   TrainingVerdicts,
 } from "./types";
@@ -330,11 +332,11 @@ export async function commitCycle(id: string): Promise<TrainingCommitResult> {
     //     The journal line leads the write; styles.json carries the revision.
     const ledger = await tx.read("training-ledger.json");
     await tx.begin(decided.map((i) => i.id));
-    ledger.rows = (ledger.rows ?? []).filter((r) => r.cycle !== id);
+    const added: TrainingLedgerRow[] = [];
     for (const imp of decided) {
       const human = verdicts[imp.id] as "approve" | "reject";
       const gem = geminiAgreement(imp);
-      ledger.rows.push({
+      added.push({
         cycle: id,
         dimension: cycle.dimension,
         subject: cycle.subject,
@@ -349,6 +351,7 @@ export async function commitCycle(id: string): Promise<TrainingCommitResult> {
         at,
       });
     }
+    ledger.rows = replaceCycleRows(ledger.rows, id, added);
     await tx.write("training-ledger.json");
     await tx.stamp();
 
@@ -387,4 +390,10 @@ export async function commitCycle(id: string): Promise<TrainingCommitResult> {
 
     return { deleted, thumbs, ledger_rows: decided.length };
   }));
+}
+
+/** The tracked ledger as schema-2 rows, whichever shape each row was written in. */
+export async function readTrainingLedger(file = foundryFile("training-ledger.json")): Promise<TrainingLedgerRowV2[]> {
+  const doc = await readJson<{ rows?: unknown[] }>(file, {});
+  return normalizeLedger(doc.rows);
 }

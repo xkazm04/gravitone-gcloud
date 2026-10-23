@@ -27,6 +27,7 @@
 // NOT A TEST and not in `npm run verify` — invoked live it spends the operator's seat.
 
 import { pathToFileURL } from "node:url";
+import { errorMessage } from "@gt/domain/errors";
 
 type Io = { readonly env: Readonly<Record<string, string | undefined>>; readonly out: (s: string) => void; readonly err: (s: string) => void };
 
@@ -219,7 +220,7 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
     }
   } catch (e) {
     const usage = e instanceof Usage;
-    const message = e instanceof Error ? e.message : String(e);
+    const message = errorMessage(e);
     if (json) io.out(JSON.stringify({ ok: false, error: message, ...(usage ? { usage: true } : {}) }, null, 2));
     else io.err(usage ? `${message}\n${USAGE}` : message);
     return usage ? 2 : 1;

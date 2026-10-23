@@ -30,6 +30,7 @@
 // Errors are StudioError with a sentence that names the work, shown verbatim.
 
 import type { Page, Request, Response, Route } from "playwright";
+import { errorMessage } from "@gt/domain/errors";
 import { fetchImageBase64 } from "../http";
 import type { Aspect, ImageRef } from "../types";
 import { attach, isSignedIn, profileContext, studioEndpoint } from "./browser";
@@ -149,7 +150,7 @@ export async function studioHealthOn(endpoint: string): Promise<StudioHealth> {
       health = { ok: false, reason: `leonardo studio is out of credits (${lastSeen.balance} left)` };
     else health = { ok: true };
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
+    const msg = errorMessage(e);
     health = {
       ok: false,
       reason: /not running/.test(msg) ? "leonardo studio browser not running" : `leonardo studio browser unreachable: ${msg.split("\n")[0]}`,
@@ -218,7 +219,7 @@ export async function studioGenerate(prompt: string, aspect: Aspect): Promise<St
   try {
     browser = await attach({ spawn: true });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
+    const msg = errorMessage(e);
     throw new StudioError(/not running/.test(msg) ? "leonardo studio browser not running" : `leonardo studio browser unreachable: ${msg.split("\n")[0]}`, "unreachable");
   }
   const ctx = profileContext(browser);
@@ -318,7 +319,7 @@ export async function studioGenerate(prompt: string, aspect: Aspect): Promise<St
       const { base64, mime } = await fetchImageBase64("leonardo-studio", url);
       image = { base64, mime: mime as ImageRef["mime"], ...dimensionsOf(Buffer.from(base64, "base64")) };
     } catch (e) {
-      throw new StudioError(`leonardo studio image download failed: ${e instanceof Error ? e.message : String(e)}`, "failed", true);
+      throw new StudioError(`leonardo studio image download failed: ${errorMessage(e)}`, "failed", true);
     }
 
     lastSeen.credits = g.credits ?? lastSeen.credits;

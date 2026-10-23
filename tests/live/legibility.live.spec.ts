@@ -164,7 +164,11 @@ test("a disabled control's finding is keyed as disabled; the same control enable
 
 // Screens the lane cannot currently reach, each with its measured reason. A skip is listed
 // here, in the open, rather than silently narrowing the walk.
-const UNREACHABLE: Record<string, string> = {};
+const UNREACHABLE: Record<string, string> = {
+  // The screen follows the Floor's first scout pile, and a fresh store holds no closed night;
+  // reachable once the lane seeds one (spark media-training-loop).
+  "board-scout": "nothing matched: no closed scout night in the lane's store",
+};
 
 for (const id of Object.keys(TABLE)) {
   if (ONLY && !ONLY.includes(id)) continue;

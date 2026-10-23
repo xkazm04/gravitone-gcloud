@@ -1,13 +1,14 @@
-import { AppError, isAppError, ok, type Result } from "@gt/domain/errors";
+import { AppError, errorMessage, isAppError, ok, type Result } from "@gt/domain/errors";
 import type { Holder } from "@gt/domain/job";
 import { LANE_CAPACITY, RESOURCE_LANES, type ResourceLane } from "@gt/domain/lane";
 import type { Effects } from "./effects.ts";
 import type { Producer } from "./job-core.ts";
-import { coolingOf, pickWork, producerKey, type LaneLook, type Pick, type ProducerKey } from "./job-queue-core.ts";
+import { coolingOf, pickWork, producerKey, type LaneLook, type Pick, type ProducerKey, type Waiting } from "./job-queue-core.ts";
 import { laneHold, nextClaimable } from "./job-queue.ts";
 import { recover, runJob, type RunOptions, type RunReport } from "./job-run.ts";
 import type { Alive } from "./lease-core.ts";
 import { processHolder } from "./lease.ts";
+import { admissionGate, type AdmissionSource } from "./resources/gate.ts";
 import type { SpendClass } from "./spend/core.ts";
 
 // THE WORKER LOOP - the driver over job-queue-core's decision: look at every
@@ -45,6 +46,14 @@ export type WorkOptions = {
   readonly now?: () => number;
   /** Called with every drive's outcome, as it lands. */
   readonly onReport?: (pick: Pick, report: Result<RunReport>) => void;
+  /**
+   * Admit by the machine's measured load (spark game-3d-assets): every pick whose producer names an
+   * engine is asked `admit` (@gt/domain/resource) before its drive starts. Absent, nothing is asked
+   * and the loop is the one it was before admission existed.
+   */
+  readonly admission?: AdmissionSource;
+  /** Called with every pick admission refused, at every look that refused it. */
+  readonly onWait?: (pick: Pick, verdict: Waiting["verdict"]) => void;
 };
 
 export type WorkSummary = {
@@ -111,6 +120,8 @@ export async function workLoop(fx: Effects, producers: ReadonlyMap<ProducerKey, 
     now: () => (opts.signal.aborted ? Number.POSITIVE_INFINITY : clock()),
   };
 
+  const gate = opts.admission === undefined ? undefined : admissionGate(fx, producers, opts.admission, holder, opts.onWait);
+
   while (!opts.signal.aborted) {
     const seen = look(fx);
     if (!seen.ok) return seen;
@@ -122,7 +133,13 @@ export async function workLoop(fx: Effects, producers: ReadonlyMap<ProducerKey, 
     // Only a drive actually started skips the idle wait: a pick with no binding (a `carries` that
     // disagreed with the map) started nothing, and looping at once on it is a microtask spin.
     let launched = 0;
-    for (const pick of decided.picks) {
+    let picks = decided.picks;
+    if (gate !== undefined) {
+      const admitted = await gate.filter(picks, [...inFlight.values()].map((f) => f.pick));
+      if (!admitted.ok) return admitted;
+      picks = admitted.value;
+    }
+    for (const pick of picks) {
       const producer = producers.get(producerKey(pick.producer, pick.lane));
       if (producer === undefined) continue;
       started++;
@@ -135,7 +152,7 @@ export async function workLoop(fx: Effects, producers: ReadonlyMap<ProducerKey, 
         },
         (e: unknown) => {
           // A drive that threw past runJob's own recording is a process-level fault: carried as the drive's error, never lost.
-          const report: Result<RunReport> = { ok: false, error: isAppError(e) ? e : new AppError("internal", e instanceof Error ? e.message : String(e), { cause: e }) };
+          const report: Result<RunReport> = { ok: false, error: isAppError(e) ? e : new AppError("internal", errorMessage(e), { cause: e }) };
           reports.push({ pick, report });
           opts.onReport?.(pick, report);
         },

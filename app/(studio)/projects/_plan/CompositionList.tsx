@@ -6,10 +6,13 @@
 // Shared by Plan and Runs: the same list beside both, so moving between the two tabs keeps the
 // operator's place (projects.html drew one `#plist` for both views).
 import Link from "next/link";
+import { useState } from "react";
 
-import type { ProjectGroup, ProjectList, ProjectSummary } from "@gt/domain/produce";
+import type { ProjectList, ProjectSummary } from "@gt/domain/produce";
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
+import { Empty } from "@gt/ui/components/empty/Empty.tsx";
+import { Field } from "@gt/ui/components/field/Field.tsx";
 import { FloorGlyph } from "@gt/ui/components/floor/FloorGlyph.tsx";
 import { Glyph } from "@gt/ui/components/glyph/Glyph.tsx";
 import { Panel } from "@gt/ui/components/panel/Panel.tsx";
@@ -19,14 +22,9 @@ import { STATUS } from "@gt/ui/components/status/status.ts";
 import { Tally } from "@gt/ui/components/tally/Tally.tsx";
 
 import s from "./Plan.module.css";
+import { GROUPS, matches, posterSrc, runtimeWords } from "./shelf.ts";
 
-export const GROUPS: readonly { readonly id: ProjectGroup; readonly label: string; readonly tone: string }[] = [
-  { id: "weir", label: "At the weir", tone: "amber" },
-  { id: "blocked", label: "Blocked", tone: "rose" },
-  { id: "active", label: "Running · queued", tone: "cyan" },
-  { id: "plans", label: "Plans", tone: "faint" },
-  { id: "shipped", label: "Shipped", tone: "emerald" },
-];
+export { GROUPS, ordered } from "./shelf.ts";
 
 /** The recipe's mark by its family (projects.js RECIPE_ICON: film video, album audio, explainer article). */
 export function recipeMark(recipe: string): "video" | "audio" | "article" | "image" {
@@ -36,21 +34,28 @@ export function recipeMark(recipe: string): "video" | "audio" | "article" | "ima
   return "video";
 }
 
-/** The list in the order its keys walk it (↑/↓): group by group. */
-export const ordered = (list: ProjectList): ProjectSummary[] => GROUPS.flatMap((g) => list.projects.filter((p) => p.group === g.id));
-
 export const planHref = (id: string): string => `/projects/${encodeURIComponent(id)}`;
 
 function Row({ p, current, nowMs, href }: { readonly p: ProjectSummary; readonly current: boolean; readonly nowMs: number; readonly href: string }) {
   return (
     <a className={s.prow} href={href} aria-current={current ? "page" : undefined} data-project={p.id}>
       <span className={s.pic}>
-        <FloorGlyph name={recipeMark(p.recipe)} />
+        {p.poster === null ? (
+          <FloorGlyph name={recipeMark(p.recipe)} />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element -- a kernel blob through /api/blob; nothing for next/image to optimise
+          <img className={s.thumb} src={posterSrc(p.poster)} alt="" />
+        )}
       </span>
       <span className={s.pt}>
         <span className={s.ttl}>{p.title}</span>
         <span className={s.meta}>
           <PipRow looks={p.pips.map((x) => STATUS.part[x].look)} label={`${p.pips.length} parts`} />
+          {runtimeWords(p) !== null && (
+            <span className={s.mono} data-runtime={p.runtimeS === null ? "unknown" : String(p.runtimeS)}>
+              {runtimeWords(p)}
+            </span>
+          )}
           {p.etaAt !== null && <span className={s.mono}>{p.group === "plans" ? `~${when(p.etaAt, nowMs)}` : `eta ${when(p.etaAt, nowMs)}`}</span>}
         </span>
       </span>
@@ -75,9 +80,14 @@ export type CompositionListProps = {
 };
 
 export function CompositionList({ list, current, nowMs, onCompose, floorRuns, hrefOf = planHref, others = [] }: CompositionListProps) {
+  const [query, setQuery] = useState("");
+  const shown = query.trim() === "" ? list.projects : list.projects.filter((p) => matches(p, query));
   return (
     <aside className={s.plist} data-component="CompositionList">
       <Panel title="Compositions" tally={{ value: list.projects.length }} toolbar={<Button size="sm" tone="cyan" label="+ Compose" onPress={onCompose} shortcut={{ mode: "projects", verb: "compose" }} />}>
+        <div className={s.find}>
+          <Field label="search projects" value={query} onChange={setQuery} placeholder="title · topic · script" keyfield="projects-search" />
+        </div>
         <Link className={s.prow} href="/projects/runs" aria-current={current === null ? "page" : undefined}>
           <span className={s.pic}>
             <Glyph name="grid" />
@@ -90,7 +100,7 @@ export function CompositionList({ list, current, nowMs, onCompose, floorRuns, hr
           </span>
         </Link>
         {GROUPS.map((g) => {
-          const rows = list.projects.filter((p) => p.group === g.id);
+          const rows = shown.filter((p) => p.group === g.id);
           if (rows.length === 0) return null;
           return (
             <div key={g.id} role="group" aria-label={g.label}>
@@ -103,6 +113,7 @@ export function CompositionList({ list, current, nowMs, onCompose, floorRuns, hr
             </div>
           );
         })}
+        {query.trim() !== "" && shown.length === 0 && <Empty label="no project matches" />}
         {others.length > 0 && (
           <div role="group" aria-label="v1">
             <div className={s.pgroup}>

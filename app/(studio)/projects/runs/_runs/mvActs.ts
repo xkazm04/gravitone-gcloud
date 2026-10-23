@@ -8,7 +8,7 @@
 
 import { z } from "zod";
 
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import type { Receipt } from "@gt/domain/produce";
 import { ceilingUsdSchema, receiptModeSchema } from "@gt/domain/produce.schema";
@@ -33,7 +33,7 @@ async function caught<T>(fn: () => Promise<Result<T>>): Promise<Result<T>> {
     const code = typeof e === "object" && e !== null && "code" in e && typeof e.code === "string" ? e.code : undefined;
     const status = typeof e === "object" && e !== null && "status" in e && typeof e.status === "number" ? e.status : undefined;
     const known = code === "not-found" || code === "conflict" || code === "invalid" || code === "refused" ? code : status === 400 ? "invalid" : status === 404 ? "not-found" : status === 409 ? "conflict" : "internal";
-    return err(known, e instanceof Error ? e.message : String(e), { cause: e });
+    return err(known, errorMessage(e), { cause: e });
   }
 }
 

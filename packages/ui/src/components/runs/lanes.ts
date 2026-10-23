@@ -30,6 +30,7 @@ type LaneLabel = Omit<LaneSpec, "cap">;
 const LABELS: { readonly [L in ResourceLane]: LaneLabel } = {
   "gpu.local": { label: "GPU box", engines: "Flux 2 dev fp8 · Wan 2.2 · qwen3.8:27b", kind: "local" },
   "box.render": { label: "Render box", engines: "ffmpeg · compositor", kind: "local" },
+  "box.blender": { label: "Blender", engines: "mesh finish · bake · poster", kind: "local" },
   "box.chrome": { label: "Render box · Chrome", engines: "Suno v6 · Leonardo (CDP)", kind: "local" },
   "seat.text": { label: "Text seat", engines: "article turns · strips authoring · scripts · CLIs", kind: "seat" },
   "cloud.google": { label: "Google", engines: "Nano Banana · Gemini", kind: "cloud" },
@@ -41,6 +42,7 @@ const LABELS: { readonly [L in ResourceLane]: LaneLabel } = {
 export const LANE_SPECS: { readonly [L in ResourceLane]: LaneSpec } = {
   "gpu.local": { ...LABELS["gpu.local"], cap: LANE_CAPACITY["gpu.local"] },
   "box.render": { ...LABELS["box.render"], cap: LANE_CAPACITY["box.render"] },
+  "box.blender": { ...LABELS["box.blender"], cap: LANE_CAPACITY["box.blender"] },
   "box.chrome": { ...LABELS["box.chrome"], cap: LANE_CAPACITY["box.chrome"] },
   "seat.text": { ...LABELS["seat.text"], cap: LANE_CAPACITY["seat.text"] },
   "cloud.google": { ...LABELS["cloud.google"], cap: LANE_CAPACITY["cloud.google"] },

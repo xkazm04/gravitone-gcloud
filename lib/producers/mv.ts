@@ -1,4 +1,4 @@
-import { AppError, type Result } from "@gt/domain/errors";
+import { AppError, errorMessage, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import type { Job } from "@gt/domain/job";
 import type { CallIntent } from "@gt/kernel/dryrun";
@@ -222,7 +222,7 @@ export function mvProducer(binding: { readonly engines?: Partial<MvEngines> } = 
       const j = f.jobs.find((x) => mvKernelId(x) === head.id);
       // v1's health pause: only a job that BUYS a still waits on the studio.
       if (j === undefined || !buysStill(j, f.progress[j.id] ?? [])) return { ok: true };
-      const h = await eng.health().catch((e: unknown) => ({ ok: false, reason: e instanceof Error ? e.message : String(e) }));
+      const h = await eng.health().catch((e: unknown) => ({ ok: false, reason: errorMessage(e) }));
       return h.ok ? { ok: true } : { ok: false, reason: h.reason ?? "the still vendor is not reachable" };
     },
   });

@@ -204,5 +204,8 @@ export const libraryMigrations: ModuleMigrations = {
   steps: [
     { version: 1, sql: ITEMS },
     { version: 2, sql: MEASURES_DDL },
+    // v3 (spark game-3d-assets): a glb's counts beside its facts. A glb probed before v3 fell
+    // through to ffprobe and was written undecodable; its row is cleared so the job re-probes it.
+    { version: 3, sql: "ALTER TABLE media_facts ADD COLUMN mesh TEXT; DELETE FROM media_facts WHERE mime = 'model/gltf-binary';" },
   ],
 };

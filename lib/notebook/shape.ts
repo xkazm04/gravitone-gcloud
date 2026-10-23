@@ -6,6 +6,7 @@
 // conclusions checks are in shape-columns.ts. Their order of findings is unchanged.
 
 import type { NotebookFinding } from "./failure";
+import { compileProbe, type SerializableProbe } from "@/lib/script/gate";
 import { columnFindings } from "./shape-columns";
 import { arr, CLAIM_MAX, isObj, linked, str } from "./shape-helpers";
 
@@ -153,6 +154,14 @@ export function shapeFindings(nb: Record<string, unknown>): NotebookFinding[] {
       if (!str(raw.id)) say(`${at}.id`, `${at}.id is missing.`);
       if (!str(raw.impact))
         say(`${at}.impact`, `${at}.impact is missing. An unknown with no consequence for the script is a note, not a constraint (rule 8).`);
+      if (raw.probe !== undefined) {
+        if (!isObj(raw.probe)) return say(`${at}.probe`, `${at}.probe (unknown ${String(raw.id)}) is not an object.`, "not an object");
+        try {
+          compileProbe(raw.probe as unknown as SerializableProbe);
+        } catch (e) {
+          say(`${at}.probe`, `${at}.probe (unknown ${String(raw.id)}) has a forbid pattern that does not compile: ${(e as Error).message}`);
+        }
+      }
     });
 
   /* currency — § currency, Phase 8 */

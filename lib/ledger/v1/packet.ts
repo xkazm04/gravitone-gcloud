@@ -32,7 +32,7 @@ export function parsePacketId(id: string): { readonly source: string; readonly r
 
 /**
  * The projection's Weir source (lib/ledger/v1/sources/*, WeirItem.source) to
- * the packet source that decides it. Six are the same word; v1's article store
+ * the packet source that decides it. Seven are the same word; v1's article store
  * projects as `articles` and its packets are `article`, and the sound shelf
  * (takes.json, ./sources/sound.ts) projects as `sound` and is triaged as
  * `audio` (@gt/domain/source).
@@ -47,6 +47,7 @@ const WEIR_TO_PACKET: ReadonlyMap<string, PacketSource> = new Map<string, Packet
   ["suno", "suno"],
   ["mv", "mv"],
   ["sound", "audio"],
+  ["scout", "scout"],
 ]);
 
 /** The packet a Weir pile opens as, or undefined when its source has no decision adapter. */

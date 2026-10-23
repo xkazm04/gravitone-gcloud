@@ -30,6 +30,8 @@
 // drive THIS adapter offline too (a stubbed global fetch, a fake resolver, no
 // sleeping).
 
+import { errorMessage } from "@gt/domain/errors";
+import { sleep as defaultSleep } from "../../sleep";
 import { ImagingError } from "../errors";
 import { isConfigured, keyFor } from "../env";
 import { requestJson } from "../http";
@@ -153,7 +155,7 @@ export function findVideoUrl(obj: unknown): string | null {
 }
 
 export function leonardoVideoAdapter(opts: LeonardoVideoOptions = {}): VideoAdapter {
-  const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+  const sleep = opts.sleep ?? defaultSleep;
   const pollMs = opts.pollMs ?? POLL_MS;
   const maxPolls = opts.maxPolls ?? MAX_POLLS;
 
@@ -264,8 +266,10 @@ function describe(e: unknown): string {
     return vendorWords(said ? `${e.message} ${said}` : e.message, 400);
   }
   if (e instanceof BlockedUrlError) return "the vendor pointed at an address this server will not fetch";
-  return vendorWords(e instanceof Error ? e.message : String(e), 300);
+  return vendorWords(errorMessage(e), 300);
 }
+
+const UPLOAD_TIMEOUT_MS = 120_000;
 
 /** v1 init-image: ask for a presigned slot, then POST the file into it. The
  *  id returned is what `type: "UPLOADED"` refers to. */
@@ -286,9 +290,23 @@ async function upload(input: VideoRenderInput, headers: Record<string, string>, 
   const bytes = new Uint8Array(input.image);
   form.append("file", new Blob([bytes], { type: input.mime }), `key.${ext}`);
   // An undefined resolver takes safeFetch's default (real DNS).
-  const up = await safeFetch(slot.url, { method: "POST", body: form }, resolve);
-  if (![200, 201, 204].includes(up.status)) throw new Error(`the upload slot answered ${up.status}`);
-  return slot.id;
+  // A storage endpoint that accepts the connection and stalls must not hang the job.
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), UPLOAD_TIMEOUT_MS);
+  try {
+    // The race also bounds a stalled DNS resolver, which the fetch signal cannot reach.
+    const stalled = new Promise<never>((_, reject) => {
+      ctl.signal.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
+    });
+    const up = await Promise.race([safeFetch(slot.url, { method: "POST", body: form, signal: ctl.signal }, resolve), stalled]);
+    if (![200, 201, 204].includes(up.status)) throw new Error(`the upload slot answered ${up.status}`);
+    return slot.id;
+  } catch (e) {
+    if (ctl.signal.aborted) throw new Error(`the upload slot did not answer within ${UPLOAD_TIMEOUT_MS / 1000}s`);
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function download(url: string, resolve?: Resolver): Promise<Uint8Array> {

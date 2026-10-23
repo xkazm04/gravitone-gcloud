@@ -80,6 +80,7 @@
 import fs from "node:fs";
 import { userInfo } from "node:os";
 import path from "node:path";
+import { errorMessage } from "@gt/domain/errors";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 
@@ -193,7 +194,7 @@ function positional(): string {
 }
 
 function fail(e: unknown): never {
-  const msg = e instanceof Error ? e.message : String(e);
+  const msg = errorMessage(e);
   if (JSON_OUT) emit(JSON.stringify({ error: msg, ...(e instanceof ArticleError ? { code: e.code } : {}) }));
   else console.error(`article: ${msg}`);
   closeProcessKernel();

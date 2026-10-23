@@ -27,7 +27,7 @@
 // - or, from a client island, the Server Action `confirmLessonAct` in
 // app/(studio)/audio/_lessons/acts.ts with the same object. A triage lesson's evidence is the
 // cell's, as handed; a hunt lesson's is recounted here.
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import { appendOnce, hasKey } from "@gt/kernel/ingest";
 import type { Store } from "@gt/kernel/store";
@@ -41,14 +41,13 @@ import { TECHNIQUES, type Hunt, type Lesson, type ProviderId, type SoundKind, ty
 
 export const LESSON_OP_RE = /^[a-z0-9]{6,40}$/;
 const PROVIDERS: readonly ProviderId[] = ["elevenlabs", "suno", "local"];
-const words = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
 async function inStore<T>(fn: () => Promise<Result<T>>): Promise<Result<T>> {
   try {
     return await fn();
   } catch (e) {
     if (e instanceof SoundError) return err(e.status === 404 ? "not-found" : e.status === 400 ? "invalid" : e.status === 409 ? "conflict" : "unavailable", e.message);
-    return err("internal", words(e), { cause: e });
+    return err("internal", errorMessage(e), { cause: e });
   }
 }
 
@@ -128,7 +127,7 @@ export async function draftLesson(huntId: string, reason: ReasonFn): Promise<Res
     const named = PROVIDERS.find((p) => p === field(out.json, "provider"));
     return ok({ proposal: { ...proposal, claim, technique, provider: named ?? proposal.provider }, key, draftedBy: `${out.provenance.provider} · ${out.provenance.model} · ${out.provenance.rung}`, engineError: null });
   } catch (e) {
-    return ok({ proposal, key, draftedBy: null, engineError: words(e) });
+    return ok({ proposal, key, draftedBy: null, engineError: errorMessage(e) });
   }
 }
 

@@ -22,7 +22,7 @@ import { useEffect, useRef, useState } from "react";
 import { number, object } from "zod/mini";
 
 import { parseJsonAt } from "@gt/domain/door";
-import { AppError } from "@gt/domain/errors";
+import { AppError, errorMessage } from "@gt/domain/errors";
 import { useFreshness } from "@gt/ui/freshness/useFreshness";
 import type { FreshView } from "@gt/ui/freshness/core";
 
@@ -118,7 +118,7 @@ export function useLedgerFeed(after: number, handlers: FeedHandlers): Feed {
         }
       } catch (e) {
         if (cancelled || mine.signal.aborted) return;
-        console.error(`[ledger feed] ${e instanceof Error ? e.message : String(e)}`);
+        console.error(`[ledger feed] ${errorMessage(e)}`);
         feed({ kind: "fail", at: Date.now() });
         schedule(backoff(++failures, retryMs));
       }

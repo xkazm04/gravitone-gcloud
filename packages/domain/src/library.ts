@@ -10,9 +10,13 @@
 // door user text goes through (search: query-parsing), and it folds diacritics,
 // which the prototype's `toLowerCase().replace(/[-_]/g, " ")` did not.
 
+import { TRIS_BANDS, type LibraryExtras, type MediaFacts, type ModelExportProject } from "./libraryMedia.ts";
+
+export * from "./libraryMedia.ts";
+
 // ── the closed sets (moved here from ./libraryItem.ts so the client holds them zod-free) ──
 
-export const LIBRARY_KINDS = ["image", "plate", "style", "motion", "audio", "video", "doc"] as const;
+export const LIBRARY_KINDS = ["image", "plate", "style", "motion", "audio", "video", "doc", "model"] as const;
 export type LibraryKindName = (typeof LIBRARY_KINDS)[number];
 
 /** The Library's shared state facet (library-data.js `STATES`). */
@@ -27,7 +31,7 @@ export const LIBRARY_SOURCES = ["real", "fixture", "derived"] as const;
 export type LibrarySource = (typeof LIBRARY_SOURCES)[number];
 
 /** Which mill or door an item came through. */
-export const LIBRARY_ORIGINS = ["forge", "extract", "dojo", "strips", "suno", "elevenlabs", "studio", "registry", "import", "agent"] as const;
+export const LIBRARY_ORIGINS = ["forge", "extract", "dojo", "strips", "suno", "elevenlabs", "studio", "registry", "import", "agent", "scout", "mesh"] as const;
 export type LibraryOrigin = (typeof LIBRARY_ORIGINS)[number];
 
 /** Why an item cannot lead: its media is gone, or it is there and does not decode
@@ -37,7 +41,7 @@ export type Attention = (typeof ATTENTION)[number];
 
 /** The kinds whose item is its media: one with no blob is `missing`. Audio has a
  *  waveform face and a doc or a style a designed one, so neither is ever missing. */
-export const MEDIA_KINDS: readonly LibraryKindName[] = ["image", "plate", "motion", "video"];
+export const MEDIA_KINDS: readonly LibraryKindName[] = ["image", "plate", "motion", "video", "model"];
 
 /** library-data.js `KINDS`, in rail order. */
 export const KIND_LABELS: readonly { readonly kind: LibraryKindName | "all"; readonly label: string; readonly short: string }[] = [
@@ -49,6 +53,7 @@ export const KIND_LABELS: readonly { readonly kind: LibraryKindName | "all"; rea
   { kind: "audio", label: "Audio", short: "audio" },
   { kind: "video", label: "Video", short: "video" },
   { kind: "doc", label: "Documents", short: "document" },
+  { kind: "model", label: "3D models", short: "model" },
 ];
 
 /**
@@ -71,6 +76,7 @@ export const VOCAB_GROUPS: { readonly [K in LibraryKindName | "all"]: readonly s
   audio: ["type", "genre", "mood", "instrument", "provider", "group", "stage"],
   video: ["format", "captions"],
   doc: ["bundle", "techniques"],
+  model: ["class", "technique", "rig", "tris"],
 };
 export type RailSection = "vocabulary" | "attention" | "state" | "collections" | "origin";
 
@@ -102,7 +108,7 @@ export function railGroups(kind: LibraryKindName | "all"): readonly { readonly s
 
 const GROUP_LABEL: Readonly<Record<string, string>> = {
   ...{ render_mode: "render mode", palette_strategy: "palette", black_handling: "blacks", edge_treatment: "edges" },
-  ...{ detail_density: "detail density", surface_realism: "surface realism", pin: "pinned", project: "projects", run: "runs", hunt: "hunts" },
+  ...{ detail_density: "detail density", surface_realism: "surface realism", pin: "pinned", project: "projects", run: "runs", hunt: "hunts", tris: "triangles" },
 };
 
 export const groupLabel = (key: string): string => GROUP_LABEL[key] ?? key.replace(/[-_]/g, " ");
@@ -113,12 +119,13 @@ export const FIXED_ORDER: Readonly<Record<string, readonly string[]>> = {
   source: LIBRARY_SOURCES,
   attention: ATTENTION,
   techniques: ["1–4", "5–8", "9–15", "16+"],
+  tris: TRIS_BANDS,
 };
 
 /** library.js `CHIPKEYS`: the facets a list row shows, first value of each, at most three. */
 export const CHIP_GROUPS: { readonly [K in LibraryKindName]: readonly string[] } = {
   ...{ image: ["scene", "set"], plate: ["family", "render_mode", "station"], style: ["family", "render_mode", "palette_strategy"] },
-  ...{ motion: ["subject", "format"], audio: ["genre", "mood", "type"], video: ["format", "captions"], doc: ["bundle", "techniques"] },
+  ...{ motion: ["subject", "format"], audio: ["genre", "mood", "type"], video: ["format", "captions"], doc: ["bundle", "techniques"], model: ["class", "technique", "tris"] },
 };
 
 /** A doc's technique count as its facet band (library-data.js `band`). */
@@ -241,6 +248,8 @@ export type LibraryChip = { readonly group: string; readonly value: string; read
   /** A designed face's inputs: an audio item's waveform (0..1, <= 64 buckets), a style's swatch colours. */
   readonly peaks?: readonly number[];
   readonly palette?: readonly string[];
+  /** A model's poster render, as an address (a glb has no picture of its own for the cover query). */
+  readonly poster?: string;
 };
 
 export type LibraryValue = {
@@ -277,29 +286,6 @@ export type LibraryPage = {
 };
 
 // ── the detail ──────────────────────────────────────────────────────────────
-export type MediaFacts = {
-  readonly sha: string;
-  readonly decodable: boolean;
-  readonly mime: string;
-  readonly w: number | null; // pixels; null for audio
-  readonly h: number | null;
-  readonly durationS: number | null;
-  /** A video's keyframe, itself a blob. */
-  readonly posterSha: string | null;
-  /** 0..255, the 1x1 average of the image or the poster. */
-  readonly meanLuma: number | null;
-  readonly nearBlack: boolean;
-  readonly probedAt: string;
-  /** The probe's own words when it could not decode. */
-  readonly error: string | null;
-};
-
-/** Mean luma below this is near-black (measured 2026-10-14 over the Floor's covers, index.html DARK_COVER). */
-export const NEAR_BLACK_LUMA = 16;
-
-/** A video's keyframe is written as this (the media-facts producer's poster). */
-export const POSTER_MIME = "image/jpeg";
-
 export type LineageNode = {
   /** The work's word for the step: source, run, style, lesson, project, bundle, derived from. */
   readonly role: string;
@@ -311,71 +297,16 @@ export type LineageNode = {
   readonly facet?: { readonly group: string; readonly value: string };
 };
 
-export type StyleEvidenceRow = {
-  readonly run: string;
-  readonly scene: string;
-  readonly mechanism?: string;
-  readonly verdict: "keep" | "reject";
-  readonly by?: "operator" | "agent";
-  readonly at?: string;
-};
-
-/**
- * A take's asked-for and measured numbers, 1:1 from v1 lib/sound/types.ts
- * SoundTake / MeasuredSound. Declared HERE because @gt/domain cannot import
- * @gt/ui; the audio components (packages/ui/src/components/audio/audio.ts, L52)
- * alias this one (Director, 2026-10-17). `measured` is null until the take was
- * measured - never zeros standing in for "not measured".
- */
-export type AudioFacts = {
-  readonly asked: { readonly tempoBpm: number | null; readonly key: string | null; readonly durationS: number | null };
-  readonly measured: {
-    readonly tempoBpm: number | null;
-    readonly key: string | null;
-    readonly durationS: number | null;
-    readonly lufs: number | null;
-    readonly truePeakDb: number | null;
-    readonly energy: number | null;
-  } | null;
-};
-
-/** The audio kind's extras, the shape L52's detail components take whole. */
-export type AudioExtras = {
-  readonly prompt: string;
-  readonly negative?: string;
-  readonly reasons: readonly string[];
-  readonly facts: AudioFacts;
-  /** The waveform, 0..1 per bucket; empty when the take was never peaked. */
-  readonly peaks: readonly number[];
-  /** Where the audio is served from (the take's file route), null when it has no file. */
-  readonly src: string | null;
-};
-
-/** Per-kind facts the record does not facet on but the detail shows (library.js `body`). */
-export type LibraryExtras = {
-  readonly meta?: string;
-  /** The text a non-audio item was made from: a forge prompt, a style's recipe. */
-  readonly prompt?: string;
-  readonly negative?: string;
-  readonly observables?: Readonly<Record<string, string | undefined>>;
-  readonly palette?: readonly string[];
-  readonly evidence?: readonly StyleEvidenceRow[];
-  /** Present on audio items only. */
-  readonly audio?: AudioExtras;
-  readonly file?: { readonly w?: number; readonly h?: number; readonly path?: string };
-  /** The run an item came from, as its source names it (a forge run, an article run). */
-  readonly run?: { readonly id: string; readonly stage?: string };
-  readonly captions?: number;
-};
-
-export const LIBRARY_ACTS = ["pin", "unpin", "use-in-project"] as const;
+export const LIBRARY_ACTS = ["pin", "unpin", "use-in-project", "export"] as const;
 export type LibraryActName = (typeof LIBRARY_ACTS)[number];
 
-/** The operator's acts on an item; each is an event (`library.pinned`, `library.unpinned`, `library.used`). */
+/** The operator's acts on an item; each is an event (`library.pinned`, `library.unpinned`, `library.used`,
+ *  `library.exported`). `export` hands a model to a game project's folder: files only, never its git. */
 export type LibraryAct =
   | { readonly act: "pin"; readonly collection?: string }
   | { readonly act: "unpin"; readonly collection?: string }
-  | { readonly act: "use-in-project"; readonly projectId: string };
+  | { readonly act: "use-in-project"; readonly projectId: string }
+  | { readonly act: "export"; readonly project: ModelExportProject };
 
 /** The pin collection an act without one lands in. */
 export const DEFAULT_PIN = "pinned";

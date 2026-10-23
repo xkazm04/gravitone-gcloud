@@ -21,6 +21,7 @@
 // hold and one ledger row. Idempotent reads (polls) and cleanup keep the plain
 // ladder: a repeated GET or DELETE starts no new work.
 
+import { sleep } from "../sleep";
 import { ImagingError, presumedBilled, type ImagingErrorKind } from "./errors";
 import { BlockedUrlError, safeFetch, type Resolver } from "./safeUrl";
 import type { ProviderId } from "./types";
@@ -36,8 +37,6 @@ export interface RequestOptions {
    *  `presumedBilled` calls billed is never re-sent, whatever `attempts` says. */
   billable?: boolean;
 }
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function kindForStatus(status: number): ImagingErrorKind {
   if (status === 429) return "rate-limited";

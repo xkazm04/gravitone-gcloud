@@ -16,6 +16,7 @@ import "../lib-hooks.mts";
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { errorMessage } from "@gt/domain/errors";
 
 const args = process.argv.slice(2);
 const flag = (name: string): boolean => args.includes(name);
@@ -47,7 +48,7 @@ let bytes: Uint8Array;
 try {
   bytes = new Uint8Array(readFileSync(file));
 } catch (e) {
-  fail(`cannot read ${file}: ${e instanceof Error ? e.message : String(e)}`);
+  fail(`cannot read ${file}: ${errorMessage(e)}`);
 }
 
 const { closeKernel, storeLocation } = await import("../../lib/kernelStore.ts");

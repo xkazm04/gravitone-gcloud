@@ -14,7 +14,8 @@
 // THE TYPE: a blob file carries no mime (the ref does - the same bytes under two mimes are one
 // file), so the caller names it with `type`, from the ref it holds. Only MEDIA types are served
 // as themselves; anything else (text/html, an SVG, a script) answers as an octet stream with
-// `nosniff`, so a blob can never become a page on this origin.
+// `nosniff`, so a blob can never become a page on this origin. A glb (`model/gltf-binary`, the
+// Library's model kind) is served as itself: the 3D viewer's loader fetches it by this address.
 
 import { z } from "zod";
 
@@ -29,7 +30,7 @@ import { serveFile } from "../../../_server/serveFile.ts";
 
 export const maxDuration = 60;
 
-const MEDIA = /^(image\/(png|jpeg|webp|gif|avif)|audio\/(wav|x-wav|mpeg|mp4|ogg|flac|webm)|video\/(mp4|webm)|application\/json)$/;
+const MEDIA = /^(image\/(png|jpeg|webp|gif|avif)|audio\/(wav|x-wav|mpeg|mp4|ogg|flac|webm)|video\/(mp4|webm)|model\/gltf-binary|application\/json)$/;
 
 /** The type a blob is served as: the caller's, when it is a media type; never one that renders as a page. */
 const servedType = (asked: string | undefined): string => (asked !== undefined && MEDIA.test(asked) ? asked : "application/octet-stream");
@@ -45,9 +46,7 @@ const handler = route({ guard: "access", bodyCap: 0, maxDuration, input }, async
   const type = servedType(q.type);
   const at = blobStore(blobRootOf(k.value.store)).pathOf({ sha256: sha.data, bytes: 0, mime: type });
   if (!at.ok) return at;
-  const res = await serveFile(req, at.value, { mime: type, cache: "private, max-age=31536000, immutable" });
-  res.headers.set("x-content-type-options", "nosniff");
-  return res;
+  return serveFile(req, at.value, { mime: type, cache: "private, max-age=31536000, immutable" });
 });
 
 export const GET = handler;

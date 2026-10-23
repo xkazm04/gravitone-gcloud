@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { err, ok, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { ProducerRunInput } from "@gt/domain/produce";
 import { dojoRunOf } from "@gt/producers/dojo/plan";
 import { forgeRunOf } from "@gt/producers/forge/plan";
@@ -39,7 +39,6 @@ export const SOURCE_NAMES: readonly SourceName[] = ["forge", "extract", "dojo", 
 
 export type Listed = { readonly runs: readonly V1Run[]; readonly unread: readonly string[] };
 
-const words = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 const job = (x: { job?: string | undefined }) => (x.job === undefined ? {} : { job: x.job });
 const errorOf = (x: { error?: string | undefined }) => (x.error === undefined ? {} : { error: x.error });
 const msIso = (ms: number): string => new Date(ms).toISOString();
@@ -82,7 +81,7 @@ async function forge(c: Collect): Promise<void> {
     try {
       raw = (await getRun(s.id)).run;
     } catch (e) {
-      c.unread.push(`forge ${s.id}: ${words(e)}`);
+      c.unread.push(`forge ${s.id}: ${errorMessage(e)}`);
       continue;
     }
     take(c, "forge", s.id, forgeSchema, raw, (m) => ({ source: "forge", runId: forgeRunOf(m.id), input: { producer: "forge", plan: m.plan.id }, units: Math.max(1, m.candidates.length), at: m.created, state: stateOf(m.status, ["done", "incomplete", "committed"], ["failed"]), ...errorOf(m), ...job(m) }));
@@ -95,7 +94,7 @@ async function extract(c: Collect): Promise<void> {
     try {
       raw = (await getExtractRun(s.id)).run;
     } catch (e) {
-      c.unread.push(`extract ${s.id}: ${words(e)}`);
+      c.unread.push(`extract ${s.id}: ${errorMessage(e)}`);
       continue;
     }
     take(c, "extract", s.id, extractSchema, raw, (m) => {
@@ -111,7 +110,7 @@ async function dojo(c: Collect): Promise<void> {
     try {
       raw = (await getCycle(s.id)).cycle;
     } catch (e) {
-      c.unread.push(`dojo ${s.id}: ${words(e)}`);
+      c.unread.push(`dojo ${s.id}: ${errorMessage(e)}`);
       continue;
     }
     take(c, "dojo", s.id, cycleSchema, raw, (m) => ({ source: "dojo", runId: dojoRunOf(m.id), input: { producer: "dojo", cycle: m.id }, units: Math.max(1, m.improvements.length), at: m.at, state: stateOf(m.status, ["awaiting-gate", "committed"], ["failed"]) }));
@@ -148,7 +147,7 @@ async function article(c: Collect): Promise<void> {
     try {
       raw = await readJsonFile<unknown>(path.join(root, name, "run.json"), null);
     } catch (e) {
-      c.unread.push(`article ${name}: ${words(e)}`);
+      c.unread.push(`article ${name}: ${errorMessage(e)}`);
       continue;
     }
     if (raw === null) continue;
@@ -180,7 +179,7 @@ export async function listV1Runs(sources: readonly SourceName[] = SOURCE_NAMES):
     try {
       await READERS[s](c);
     } catch (e) {
-      return err("unavailable", `${s}: the v1 store could not be listed: ${words(e)}`, { cause: e });
+      return err("unavailable", `${s}: the v1 store could not be listed: ${errorMessage(e)}`, { cause: e });
     }
   }
   return ok(c);

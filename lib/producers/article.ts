@@ -1,7 +1,7 @@
 import path from "node:path";
 
 import { parseAt } from "@gt/domain/door";
-import { err, ok, type AppErrorCode, type Result } from "@gt/domain/errors";
+import { err, errorMessage, ok, type AppErrorCode, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import { jobIdSchema } from "@gt/domain/ids";
 import type { Job, JobState, RunMode } from "@gt/domain/job";
@@ -113,7 +113,7 @@ export function articlePorts(b: ArticleBinding = {}): ArticlePorts<ArticleTurn, 
       try {
         return (base().registry ?? resolveRegistryDir()).dir;
       } catch (e) {
-        return `unresolved (${e instanceof Error ? e.message : String(e)})`;
+        return `unresolved (${errorMessage(e)})`;
       }
     },
   };

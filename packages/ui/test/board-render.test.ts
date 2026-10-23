@@ -13,7 +13,10 @@ import type { Result } from "@gt/domain/errors";
 
 import type { BoardPacket } from "../src/board/port.ts";
 import { ConsequencePanel } from "../src/components/consequence/ConsequencePanel.tsx";
+import { SeriesBadge } from "../src/components/cull/SeriesBadge.tsx";
+import { IdeaList } from "../src/components/cull/IdeaList.tsx";
 import { MatrixCull } from "../src/components/cull/MatrixCull.tsx";
+import { VariantCard } from "../src/components/cull/VariantCard.tsx";
 import { railGroups } from "../src/components/desk/PacketRail.tsx";
 import { BlindPair } from "../src/components/pair/BlindPair.tsx";
 
@@ -52,11 +55,40 @@ describe("the matrix cull", () => {
   const p = packet({ items: [img("a", "r"), img("b", "r")], title: "Strips 7" }, { items: { a: { label: "poster a" }, b: { label: "poster b" } }, rows: [{ id: "r", label: "concept a" }] });
 
   test("a decided tile says its verdict and reasons aloud; the commit button names what is open", () => {
-    const html = renderToStaticMarkup(h(MatrixCull, { packet: p, verdicts: { a: { verdict: "reject", reasons: ["concept", "motion"] } }, decide: noop, undo: noop, onCommit: noop, keys: false }));
-    expect(html).toContain('aria-label="poster a, reject: concept, motion"');
-    expect(html).toContain('aria-label="poster b"');
+    // A variant in the opened run: its verdict spoken in its name, and decided by click - keep and
+    // reject as pressed buttons, the source's reasons as toggles once rejected.
+    const card = (v?: { verdict: "keep" | "reject"; reasons: string[] }) =>
+      renderToStaticMarkup(h(VariantCard, { index: 0, words: { label: "poster a" }, media: { url: "/a.png", mime: "image/png" }, verdict: v, current: false, nudged: false, reasons: SOURCES.strips.reasons, maxReasons: 3, onFocus: noop, onVerdict: noop }));
+    const rejected = card({ verdict: "reject", reasons: ["concept", "motion"] });
+    expect(rejected).toContain('aria-label="poster a, reject: concept, motion"');
+    expect(rejected).toMatch(/aria-pressed="true"[^>]*>(<span[^>]*><\/span>)?reject/);
+    expect(rejected).toMatch(/aria-pressed="true"[^>]*>concept</);
+    expect(rejected).toMatch(/aria-pressed="false"[^>]*>legibility</);
+    expect(card()).not.toContain(">concept<");
+    // The whole packet's bar still names what is open.
+    const html = renderToStaticMarkup(h(MatrixCull, { packet: p, verdicts: { a: { verdict: "reject", reasons: ["concept"] } }, decide: noop, undo: noop, onCommit: noop, keys: false }));
     expect(html).toContain('aria-label="commit packet, 1 undecided"');
-    expect(html).toContain(">concept<");
+  });
+
+  test("words-only runs are decided in place, in the ideas list", () => {
+    const run = { row: "r1", words: { id: "r1", label: "finding" }, members: [0], group: "notes" };
+    const html = renderToStaticMarkup(
+      h(IdeaList, {
+        categories: [{ category: "notes", runs: [{ run, at: 0 }] }],
+        cells: [{ id: "c1", row: "r1" }],
+        verdicts: { c1: { verdict: "keep", reasons: [] } },
+        wordsOf: () => ({ label: "Hold the wide until the subject settles.", prompt: "the push-in reads once the figure stops", meta: "cinematic · 02-frames" }),
+        cur: 0,
+        nudged: new Set<number>(),
+        reasons: [],
+        maxReasons: 0,
+        onFocus: noop,
+        onVerdict: noop,
+      }),
+    );
+    expect(html).toContain("Hold the wide until the subject settles.");
+    expect(html).toContain('aria-label="Hold the wide until the subject settles. cinematic · 02-frames, keep"');
+    expect(html).toMatch(/aria-pressed="true"[^>]*>(<span[^>]*><\/span>)?keep/);
   });
 
   test("the key legend draws only the reason keys this source binds: four for a forge plate, none for Suno", () => {
@@ -65,6 +97,13 @@ describe("the matrix cull", () => {
     expect(keysOf(renderToStaticMarkup(h(MatrixCull, { packet: forge, verdicts: {}, decide: noop, undo: noop, onCommit: noop, keys: false })))).toEqual(["1", "2", "3", "4"]);
     const suno = packet({ source: "suno", lane: "audio", items: [img("a", "r")] }, { items: {}, rows: [] });
     expect(renderToStaticMarkup(h(MatrixCull, { packet: suno, verdicts: {}, decide: noop, undo: noop, onCommit: noop, keys: false }))).not.toContain(" reason</span>");
+  });
+
+  test("the mosaic files the run under its category and says how much of it is decided", () => {
+    const html = renderToStaticMarkup(h(MatrixCull, { packet: p, verdicts: { a: { verdict: "reject", reasons: ["concept"] } }, decide: noop, undo: noop, onCommit: noop, keys: false }));
+    expect(html).toContain('aria-label="art styles, 1 run"');
+    expect(html).toContain('aria-label="concept a, 2 variants, 1 decided"');
+    expect(html).toContain('aria-label="commit packet, 1 undecided"');
   });
 
   test("with nothing open the commit button waits for nothing", () => {
@@ -127,5 +166,23 @@ describe("the packet rail", () => {
       ["image", 1, ["pkt:x:1", "pkt:x:2"]],
       ["audio", 1, ["pkt:x:3"]],
     ]);
+  });
+});
+
+describe("the series badge", () => {
+  test("a series mismatch is drawn with both series named; a match draws nothing", () => {
+    const html = renderToStaticMarkup(h(SeriesBadge, { measured: "qwen3-vl@d2", graded: ["qwen3-vl@d1"] }));
+    expect(html).toContain("qwen3-vl@d1");
+    expect(html).toContain("calibration measured on qwen3-vl@d2");
+    expect(renderToStaticMarkup(h(SeriesBadge, { measured: "qwen3-vl@d2", graded: [] }))).toBe("");
+  });
+
+  test("the matrix cull draws it when the packet names a mismatch", () => {
+    const base = packet({ items: [{ ...img("a", "r") }] }, { items: {}, rows: [{ id: "r", label: "r" }] });
+    const props = { verdicts: {}, decide: () => undefined, undo: () => undefined, onCommit: () => undefined, keys: false };
+    const marked = renderToStaticMarkup(h(MatrixCull, { ...props, packet: { ...base, present: { ...base.present, series: { measured: "m@2", graded: ["m@1"] } } } }));
+    const clean = renderToStaticMarkup(h(MatrixCull, { ...props, packet: base }));
+    expect(marked).toContain("grades from m@1");
+    expect(clean).not.toContain("grades from");
   });
 });

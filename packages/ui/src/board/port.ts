@@ -32,10 +32,25 @@ export type ItemWords = {
   readonly peaks?: readonly number[];
   /** A take is music and may spawn a music video on commit (prototype M). */
   readonly music?: boolean;
+  /** A model's poster render: what its tile and run card draw (a model/* cell's media is its glb). */
+  readonly poster?: string;
 };
 
 /** A matrix row: a scene, a style, a strip. `ref` is a reference image, never output. */
-export type RowWords = { readonly id: string; readonly label: string; readonly ref?: string; readonly inCatalogue?: boolean };
+/** `group`: the kind of run a row is (a scout night's look / scene / finding / watch), for a desk that
+ *  files runs into groups; absent, every row is one group. `aim` and `checks`: what the run tried to
+ *  make and the attributes it is judged on, from the run's own record (lib/decision/v1/sources/scoutBrief.ts). */
+export type RowWords = {
+  readonly id: string;
+  readonly label: string;
+  readonly ref?: string;
+  readonly inCatalogue?: boolean;
+  readonly group?: string;
+  readonly aim?: string;
+  readonly checks?: readonly string[];
+  /** What content the run can serve, as stated when it was launched. */
+  readonly use?: string;
+};
 
 /** What the machine said before the gate (hitl-approval oracle-before-gate). */
 export type Oracle = { readonly passed: boolean; readonly summary: string; readonly digest?: string; readonly fixture?: boolean };
@@ -73,6 +88,8 @@ export type Presentation = {
   /** A blind pair's question, by pair (row) id. */
   readonly questions?: Readonly<Record<string, string>>;
   readonly oracle?: Oracle;
+  /** Grades registered under graders other than the one the current calibration was measured on. */
+  readonly series?: { readonly measured: string; readonly graded: readonly string[] };
   /** The packet's second line: the run, the bundle, the turn. */
   readonly meta?: string;
   readonly review?: ReviewDoc;

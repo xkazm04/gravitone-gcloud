@@ -107,8 +107,8 @@ let cliCache: { name: string; present: boolean }[] | null = null;
 function onPath(bin: string): boolean {
   const finder = process.platform === "win32" ? "where" : "which";
   try {
-    // a literal binary name from the list above — nothing caller-supplied is interpolated
-    const r = spawnSync(`${finder} ${bin}`, { shell: true, encoding: "utf8", timeout: 5_000, windowsHide: true });
+    // where.exe / which are real executables: no shell, the name is a single argv entry
+    const r = spawnSync(finder, [bin], { encoding: "utf8", timeout: 5_000, windowsHide: true });
     return r.status === 0 && Boolean(r.stdout?.trim());
   } catch {
     return false;
@@ -119,7 +119,7 @@ function onPath(bin: string): boolean {
  * ASKED OF THE POSTURE FIRST. Where lib/deployment.ts forbids spawning a local
  * binary (LOCAL_BINARIES=off, a managed platform) nothing here can render, so
  * the answer is `forbidden` and PATH is never probed: the `where`/`which` above
- * runs through a shell, and a managed deployment starts no process at all — the
+ * is a spawned process, and a managed deployment starts no process at all — the
  * deployment-cell lane counted two per Cloud Run cell until 2026-10-06. Checked
  * before the cache, per call, because the posture is (lib/deployment.ts).
  */

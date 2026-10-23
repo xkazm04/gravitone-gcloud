@@ -8,7 +8,9 @@ import { enqueueIn } from "@gt/kernel/job";
 import type { Producer } from "@gt/kernel/job-core";
 import { factsMissing, putMediaFacts } from "@gt/kernel/library/write";
 import type { Store } from "@gt/kernel/store";
-import { factsOf, lumaOf, type ProbeRead } from "./core.ts";
+import { MODEL_MIME } from "@gt/domain/library";
+import { factsOf, lumaOf, meshFactsOf, type ProbeRead } from "./core.ts";
+import { readGlb } from "./glb.ts";
 
 // MEDIA FACTS, THE DRIVER - for each blob a Library item points at that has no
 // facts yet: ffprobe it, cut a poster from a video (a blob of its own), average
@@ -45,6 +47,18 @@ export async function probeMissing(store: Store, blobs: BlobStore, probe: MediaP
     const file = blobs.pathOf({ sha256: w.sha, bytes: 0, mime: w.mime });
     if (!file.ok) {
       failed.push(`${w.sha.slice(0, 12)}: ${file.error.message}`);
+      continue;
+    }
+    if (w.mime === MODEL_MIME) {
+      // A glb is read by its own header, not ffprobe; an unreadable blob is a fact like any other.
+      const bytes = await blobs.read({ sha256: w.sha, bytes: 0, mime: w.mime });
+      const facts = meshFactsOf({ sha: w.sha, mime: w.mime, read: bytes.ok ? readGlb(bytes.value) : { ok: false, error: bytes.error.message }, at: opts.now().toISOString() });
+      if (!facts.decodable) undecodable++;
+      out.push(facts);
+      if (out.length >= BATCH) {
+        const put = putMediaFacts(store, out.splice(0));
+        if (!put.ok) return put;
+      }
       continue;
     }
     const read = await probe.probe(file.value);

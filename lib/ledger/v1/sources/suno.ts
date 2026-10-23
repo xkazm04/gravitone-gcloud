@@ -3,12 +3,12 @@ import "server-only";
 import { z } from "zod";
 
 import { parseAt, type Parsed } from "@gt/domain/door";
-import { err, type Result } from "@gt/domain/errors";
+import { err, errorMessage, type Result } from "@gt/domain/errors";
 import type { Actor, EventData } from "@gt/domain/event";
 import type { JobState } from "@gt/domain/job";
 
 import { readSuno } from "../../../../lib/sound/suno/store.ts";
-import { bump, digest, facts, instant, words } from "../facts.ts";
+import { bump, digest, facts, instant } from "../facts.ts";
 import type { IngestEvent, LiveJob, ProjectCtx, Projection, Source, WeirItem } from "../types.ts";
 
 // THE SUNO QUEUE, PROJECTED - <sound store>/suno.json (lib/sound/suno/store.ts,
@@ -81,7 +81,7 @@ async function read(): Promise<Result<SunoSnapshot>> {
   try {
     raw = await readSuno();
   } catch (e) {
-    return err("unavailable", `suno: readSuno failed: ${words(e)}`, { cause: e });
+    return err("unavailable", `suno: readSuno failed: ${errorMessage(e)}`, { cause: e });
   }
   return parseAt("suno.json", fileSchema, raw);
 }
