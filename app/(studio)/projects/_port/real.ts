@@ -60,7 +60,7 @@ export type RealDeps = {
   readonly mint?: () => string;
 };
 
-const actorOf = (w: Who | undefined): Actor => ({ kind: "operator", id: w?.who ?? "operator" });
+const actorOf = (w: Who | undefined): Actor => ({ kind: w?.kind ?? "operator", id: w?.who ?? "operator" });
 
 /** Run `fn`, keeping a thrown AppError's code (a records read throws not-found for a missing project). */
 function guard<T>(fn: () => Result<T>): Result<T> {
@@ -268,5 +268,6 @@ export function makeRealProduce(deps: RealDeps): ServerProduce {
 
     listJobs: () => withStore((s) => s.read((r) => jobsView(r, deps.now()))),
     listHolds: () => withStore((s) => s.read((r) => holdsView(r, new Map(jobsView(r, deps.now()).map((j) => [j.id, j.title]))))),
+    cancelJob: () => err("unavailable", "cancel is not built yet (spark athena-control-mcp WP2)"),
   };
 }

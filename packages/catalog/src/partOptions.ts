@@ -69,6 +69,8 @@ const proto = (minutes: number, what: string): PaceDecl => ({
 const LOCAL_FREE: UsdDecl = { perUnit: 0, src: "real", note: "runs on this studio's own machine; nobody invoices it" };
 const STRIPS_SEAT: UsdDecl = { unpriced: "each card's author turn bills the text seat, reported after the run (pipeline/strips/run.mts)" };
 const SEAT: UsdDecl = { unpriced: "billed to the operator's text seat; the CLI reports its own cost after the run, not before" };
+/** The unpriced sentences that mean "the operator's Claude seat": an agent may run these live (@gt/domain/mcp isFreeReceipt). */
+export const SEAT_UNPRICED_REASONS: readonly string[] = [SEAT.unpriced, STRIPS_SEAT.unpriced];
 
 /** One Suno prompt makes two clips of about two minutes each (prototype model.js estimate.audio). */
 const SUNO_CREDITS: UsdDecl = { unpriced: "Suno bills subscription credits, not dollars; the driver reads the credits left, never a price" };

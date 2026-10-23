@@ -2,6 +2,7 @@ import "server-only";
 
 import type { Result } from "@gt/domain/errors";
 
+import type { Who } from "../../_port/port.ts";
 import type { PartPort } from "./contract.ts";
 import { loadPart, opPart, undoPart } from "./fixture.ts";
 import { realPart } from "./real.ts";
@@ -17,8 +18,9 @@ type Value<R> = R extends Promise<{ readonly ok: true; readonly value: infer T }
 
 /** A verb may answer at once (the fixture) or after awaiting a job (the real side's `act`
  *  drives its kernel job in-process for a short wait, L37) - callers await either. */
+/** Each verb takes who acts after its input (../../_port/port.ts `Who`); a caller that names no one is the operator. */
 export type ServerPart = {
-  readonly [K in keyof PartPort]: (...args: Parameters<PartPort[K]>) => Result<Value<ReturnType<PartPort[K]>>> | Promise<Result<Value<ReturnType<PartPort[K]>>>>;
+  readonly [K in keyof PartPort]: (...args: [...Parameters<PartPort[K]>, Who?]) => Result<Value<ReturnType<PartPort[K]>>> | Promise<Result<Value<ReturnType<PartPort[K]>>>>;
 };
 
 // The SAME switch as the produce port: a part lives in a project, so the editors and the Plan

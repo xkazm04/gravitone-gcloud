@@ -22,7 +22,7 @@ import { err, ok, type Result } from "./errors.ts";
  *  carried to Phase 4). The first domain also had `triage`; nothing opened a
  *  packet under it, and the word was ambiguous between audio triage (`audio`)
  *  and v1's explainer research scope (not a Weir surface), so it is gone. */
-export const PACKET_SOURCES = ["forge", "extract", "dojo", "strips", "article", "audio", "suno", "mv", "trials", "step", "proof", "scout", "seeds"] as const;
+export const PACKET_SOURCES = ["forge", "extract", "dojo", "strips", "article", "audio", "suno", "mv", "trials", "step", "proof", "scout", "seeds", "spend"] as const;
 export type PacketSource = (typeof PACKET_SOURCES)[number];
 
 export const PACKET_MODES = ["matrix-cull", "blind-pair", "packet-review"] as const;
@@ -110,6 +110,9 @@ export const SOURCES = {
   // audience and format, kept or thrown in one pass. Every reject names why (the operator, wave 3),
   // because a reasoned throw is the ban the next batch steers by; a note may follow the reason.
   seeds: { modes: ["matrix-cull"], reasons: ["generic", "not for us", "audience", "done before", "format"], maxReasons: 2, noteMax: NOTE_SHORT, reasonOnReject: true },
+  // spark athena-control-mcp: a day's live launches an agent asked for (@gt/domain/mcp SpendRequest), a row
+  // per request; K pays at the price on the card, X says why not, and the agent reads the reason back.
+  spend: { modes: ["matrix-cull"], reasons: ["price", "vendor", "timing", "brief", "duplicate", "local"], maxReasons: 2, noteMax: NOTE_SHORT, reasonOnReject: true },
 } as const satisfies { readonly [S in PacketSource]: SourceSpec };
 
 type ReasonOf<S extends PacketSource> = (typeof SOURCES)[S]["reasons"][number];
@@ -195,6 +198,14 @@ export const REASON_MEANING: { readonly [S in PacketSource]: { readonly [R in Re
     audience: "Wrong audience for this genre or type of content.",
     "done before": "Already kept, thrown or made under another seed.",
     format: "Will not hold as a Short or a short video.",
+  },
+  spend: {
+    price: "Costs more than this work is worth right now.",
+    vendor: "The wrong vendor or model for this piece.",
+    timing: "Not now: after another result lands, or another day.",
+    brief: "The brief is wrong: fix what it makes before paying.",
+    duplicate: "Already made, or already asked for on another card.",
+    local: "A free local lane can make this instead.",
   },
 };
 

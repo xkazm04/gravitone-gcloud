@@ -20,6 +20,18 @@ export const composerInputSchema = z.union([
   z.object({ lane: z.literal("video"), text, subject: z.string().trim().min(1) }).strict(),
 ]) satisfies z.ZodType<ComposerInput>;
 
+/** The estimate's door: the composer union with the sentence allowed empty (the receipt is drawn before
+ *  a word is typed; the launch takes `composerInputSchema`). Shared by the Floor's action and the MCP door. */
+const draft = z.string().max(4000);
+const mechanisms = z.array(z.enum(["text", "ref-early"])).min(1);
+export const composerEstimateSchema = z.union([
+  z.object({ lane: z.literal("image"), text: draft, mechanisms, styleId: z.string().min(1) }).strict(),
+  z.object({ lane: z.literal("image"), text: draft, mechanisms, sweep: z.literal(true) }).strict(),
+  z.object({ lane: z.literal("article"), text: draft, topic: z.string().trim().min(1) }).strict(),
+  z.object({ lane: z.literal("audio"), text: draft, kind: z.enum(["music", "sfx"]) }).strict(),
+  z.object({ lane: z.literal("video"), text: draft, subject: z.string().trim().min(1) }).strict(),
+]);
+
 /**
  * A producer's own launch (./produce.ts `ProducerRunInput`). Not pinned by `satisfies`: every
  * branch has optional fields, which zod spells `T | undefined` (see the header), so

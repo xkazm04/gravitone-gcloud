@@ -13,6 +13,7 @@ import { mvAdapter } from "./sources/mv.ts";
 import { proofAdapter } from "./sources/proof.ts";
 import { scoutAdapter } from "./sources/scout.ts";
 import { seedsAdapter } from "./sources/seeds.ts";
+import { spendAdapter } from "./sources/spend.ts";
 import { sunoAdapter } from "./sources/suno.ts";
 import type { DecisionAdapter } from "./types.ts";
 import { stepAdapter } from "@/lib/parts/gates";
@@ -55,6 +56,8 @@ export const DECISION_ADAPTERS = {
   scout: adapter(scoutAdapter),
   // spark scout-decision-graph: a batch of one-sentence seeds, a row per seed (./sources/seeds.ts).
   seeds: adapter(seedsAdapter),
+  // spark athena-control-mcp: a day's agent spend requests, a row per request (./sources/spend.ts).
+  spend: adapter(spendAdapter),
 } as const satisfies { readonly [S in PacketSource]: AdapterEntry };
 
 /** The adapter that decides `source`, or `refused` with the reason none does. */

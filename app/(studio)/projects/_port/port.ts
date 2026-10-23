@@ -1,11 +1,12 @@
 import "server-only";
 
 import { err, type Result } from "@gt/domain/errors";
+import type { ActorKind } from "@gt/domain/event";
 
 import { kernel } from "../../../../lib/kernelStore.ts";
 import { stripsKernel } from "../../../../lib/producers/strips.ts";
 import type { ProducePort } from "./contract.ts";
-import type { LaneHoldView, ProduceJob } from "./contract.ts";
+import type { ActOutcome, LaneHoldView, ProduceJob } from "./contract.ts";
 import * as acts from "./fixtureActs.ts";
 import { universe } from "./fixture.ts";
 import { composeChoices, composerChoices, holdsView, jobsView, planView, projectList } from "./fixtureRead.ts";
@@ -32,8 +33,9 @@ import { makeRealProduce } from "./real.ts";
 
 type Value<R> = R extends Promise<{ readonly ok: true; readonly value: infer T } | { readonly ok: false }> ? T : never;
 
-/** Who acts, as the ledger names the operator. A principal without a uid is the operator. */
-export type Who = { readonly who?: string };
+/** Who acts, as the ledger names them. A principal without a uid is the operator; `kind` is set by a
+ *  caller that is not the operator (the MCP door names an agent: `{who: "athena", kind: "agent"}`). */
+export type Who = { readonly who?: string; readonly kind?: ActorKind };
 
 type Later = "composerReceipt" | "launchRun";
 type Verb<K extends keyof ProducePort> = (...args: [...Parameters<ProducePort[K]>, Who?]) => K extends Later ? Result<Value<ReturnType<ProducePort[K]>>> | Promise<Result<Value<ReturnType<ProducePort[K]>>>> : Result<Value<ReturnType<ProducePort[K]>>>;
@@ -41,6 +43,8 @@ type Verb<K extends keyof ProducePort> = (...args: [...Parameters<ProducePort[K]
 export type ServerProduce = { readonly [K in keyof ProducePort]: Verb<K> } & {
   readonly listJobs: () => Result<readonly ProduceJob[]>;
   readonly listHolds: () => Result<readonly LaneHoldView[]>;
+  /** The kernel's cancel (job.ts), for the agent door; no browser verb calls it (spark athena-control-mcp). */
+  readonly cancelJob: (i: { readonly jobId: string }, w?: Who) => Result<ActOutcome>;
 };
 
 export const SIDE: "fixture" | "real" = process.env["GRAVITONE_PRODUCE_SIDE"] === "fixture" ? "fixture" : "real";
@@ -82,6 +86,7 @@ const fixture: ServerProduce = {
   ackLane: ({ lane }) => acts.ackLane(u(), lane),
   listJobs: () => ({ ok: true, value: jobsView(u(), now()) }),
   listHolds: () => ({ ok: true, value: holdsView(u()) }),
+  cancelJob: () => err("unavailable", "cancel is not built yet (spark athena-control-mcp WP2)"),
 };
 
 const real: ServerProduce = makeRealProduce({
