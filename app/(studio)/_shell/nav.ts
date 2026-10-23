@@ -15,7 +15,7 @@
 // replace them, and are links out of this world until then.
 
 export type Section = {
-  readonly id: "floor" | "projects" | "runs" | "library" | "audio" | "ledger" | "kit";
+  readonly id: "floor" | "projects" | "runs" | "scout" | "library" | "audio" | "ledger" | "kit";
   readonly label: string;
   readonly href: string;
   readonly built: boolean;
@@ -29,6 +29,9 @@ export const SECTIONS: readonly Section[] = [
   // Runs is a Projects view (plan §2.1) the prototype's header also named on its own; it is
   // built in Phase 2 at /projects/runs while /projects is still v1's list.
   { id: "runs", label: "Runs", href: "/projects/runs", built: true, group: "work" },
+  // The /scout night's morning packet (operator, 2026-10-23: "add item in header menu to access the
+  // route"): /scout opens the newest night waiting for its triage on the Board (./../scout/page.tsx).
+  { id: "scout", label: "Scout", href: "/scout", built: true, group: "work" },
   { id: "library", label: "Library", href: "/library", built: true, group: "record" },
   { id: "audio", label: "Audio", href: "/audio", built: true, group: "record" },
   { id: "ledger", label: "Ledger", href: "/ledger", built: true, group: "record" },
@@ -37,6 +40,8 @@ export const SECTIONS: readonly Section[] = [
 
 /** The section a pathname is in: the longest href that prefixes it on a segment boundary. */
 export function sectionOf(pathname: string): Section["id"] | null {
+  // A scout night's packet lives on the Board's address, and is the Scout section's page.
+  if (pathname.startsWith("/board/pkt:scout:") || pathname.startsWith("/board/pkt%3Ascout%3A")) return "scout";
   let best: Section | null = null;
   for (const s of SECTIONS) {
     const hit = pathname === s.href || pathname.startsWith(`${s.href}/`);
