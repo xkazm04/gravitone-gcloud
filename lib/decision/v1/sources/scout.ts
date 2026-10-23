@@ -5,6 +5,7 @@ import path from "node:path";
 import type { BlobRef } from "@gt/domain/blob";
 import type { ConsequenceItem } from "@gt/domain/board";
 import type { Decision } from "@gt/domain/decision";
+import type { LoadSummary } from "@gt/domain/load";
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { ApplyClaim } from "@gt/kernel/decision/apply";
 
@@ -13,6 +14,7 @@ import { getExtractRun, patchExtractVerdicts } from "../../../foundry/extract/st
 import type { ExtractVerdictRecord } from "../../../foundry/extract/types.ts";
 import { leadCell, leadEventsOf, readRestated, verifiedRestates } from "../../../foundry/scout/leadEvents.ts";
 import { leadsFile, queueEvents, readQueue } from "../../../foundry/scout/leads.ts";
+import { processNightLoad } from "../../../foundry/scout/load.ts";
 import { FINDINGS_HEADING, WATCH_HEADING, WATCHLIST_REL, appendFinding, appendWatch, knowledgeRoot, knowledgeState, markerOf, patternsRel } from "../../../foundry/scout/knowledge.ts";
 import { meshRoot, mutateAsset, readAsset, resolveInAsset, withVariant } from "../../../foundry/mesh/store.ts";
 import { mutateNight, nightDir, readNight, resolveInNight, scoutRoot } from "../../../foundry/scout/store.ts";
@@ -78,8 +80,8 @@ import { DIRECTION_VERDICT, IDEA_TARGET_WORD, build, commitOf, extractDecisions,
 /** Repo-relative, forward slashes: the roots a consequence names. */
 const rel = (abs: string): string => path.relative(process.cwd(), abs).replace(/\\/g, "/");
 
-/** The read, with what the registry leads are derived from: the nights its findings restate, the keys already queued. */
-type ScoutRead = ScoutV1 & { readonly earlier: ReadonlyMap<NightId, Night>; readonly queued: readonly string[] };
+/** The read, with what the registry leads are derived from (the nights its findings restate, the keys queued) and the night's load (never digested). */
+type ScoutRead = ScoutV1 & { readonly earlier: ReadonlyMap<NightId, Night>; readonly queued: readonly string[]; readonly load?: LoadSummary };
 
 /* ── read ──────────────────────────────────────────────────────────────────── */
 
@@ -141,7 +143,8 @@ async function read(ref: AdapterRef): Promise<Result<ScoutRead>> {
   const queue = await v1Call(() => readQueue());
   if (!queue.ok) return queue;
   const earlier = await readRestated(night, readNight);
-  return ok({ night, styles, assets, media: Object.fromEntries(media.value), knowledge, at: { scout: rel(scoutRoot()), knowledge: rel(knowledgeRoot()), mesh: rel(meshRoot()) }, earlier, queued: queue.value.events.map((e) => e.key) });
+  const load = processNightLoad(night);
+  return ok({ ...(load === undefined ? {} : { load }), night, styles, assets, media: Object.fromEntries(media.value), knowledge, at: { scout: rel(scoutRoot()), knowledge: rel(knowledgeRoot()), mesh: rel(meshRoot()) }, earlier, queued: queue.value.events.map((e) => e.key) });
 }
 
 /* ── packet ────────────────────────────────────────────────────────────────── */
@@ -152,7 +155,7 @@ function refusal(n: Night): string | undefined {
   return undefined;
 }
 
-function packet(v1: ScoutV1): Result<OpenPlan> {
+function packet(v1: ScoutV1 & Pick<ScoutRead, "load">): Result<OpenPlan> {
   const n = v1.night;
   const no = refusal(n);
   if (no !== undefined) return err("refused", `scout night ${n.id}: ${no}`);
@@ -179,6 +182,7 @@ function packet(v1: ScoutV1): Result<OpenPlan> {
       rows: b.rows,
       oracle: { passed: failed === 0 && n.stop !== "failure", summary: `${shown} candidates · ${b.cells.length} cells · ${failed} failed${n.stop === undefined ? "" : ` · stopped: ${n.stop}`}` },
       meta: `scout · ${n.sources.length} sources${n.dry ? " · dry" : ""}`,
+      ...(v1.load === undefined ? {} : { load: v1.load }),
     },
     urls: Object.fromEntries(b.cells.map((c) => [c.id, c.url])),
     losses: b.losses,

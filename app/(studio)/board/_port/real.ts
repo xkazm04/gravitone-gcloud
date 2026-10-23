@@ -3,6 +3,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 
 import type { PacketSummary } from "@gt/domain/board";
+import type { LoadSummary } from "@gt/domain/load";
 import { canonical } from "@gt/kernel/canonical";
 import { parseAt } from "@gt/domain/door";
 import { err, ok, type Result } from "@gt/domain/errors";
@@ -18,6 +19,7 @@ import type { BoardPacket, Presentation } from "@gt/ui/board/port";
 
 import { adapterFor } from "../../../../lib/decision/v1/registry.ts";
 import { reworkNote } from "../../../../lib/decision/v1/sources/article.ts";
+import { nightLoadOf } from "../../../../lib/foundry/scout/load.ts";
 import type { DecisionAdapter, OpenPlan } from "../../../../lib/decision/v1/types.ts";
 import { parsePacketId } from "../../../../lib/ledger/v1/packet.ts";
 import type { WeirItem } from "../../../../lib/ledger/v1/types.ts";
@@ -83,6 +85,18 @@ function revised(r: Result<PatchOutcome>): Result<{ readonly rev: number }> {
 /** What the desks draw when v1 no longer plans the packet: the candidate ids, which is all a decided desk needs. */
 const bare = (): Presentation => ({ items: {}, rows: [] });
 
+/**
+ * What a decided desk still draws beside the ids, read without the adapter's plan: a /scout night's load
+ * (spark night-load-band). A committed night is refused by the adapter's `packet` - it is decided - but its
+ * load is a measurement of the night, not a judgement in it, and the committed desk shows it as the open one did.
+ */
+async function decidedExtras(store: Store, id: string): Promise<{ readonly load?: LoadSummary }> {
+  const s = sourceOf(id);
+  if (!s.ok || s.value.source !== "scout") return {};
+  const load = await nightLoadOf(store, s.value.runId);
+  return load === undefined ? {} : { load };
+}
+
 export function makeRealBoard(deps: Deps): ServerBoard {
   const adapterOf = deps.adapter ?? adapterFor;
 
@@ -99,11 +113,11 @@ export function makeRealBoard(deps: Deps): ServerBoard {
   }
 
   /** The stored packet's view, with the adapter's words where it still has them. */
-  function view(store: Store, id: string, planned: OpenPlan | undefined): Result<BoardPacket> {
+  function view(store: Store, id: string, planned: OpenPlan | undefined, extras: { readonly load?: LoadSummary } = {}): Result<BoardPacket> {
     const urls = planned?.urls ?? {};
     const v = store.read((r) => readPacketView(r, id, { mediaUrl: (_blob, c) => urls[c] ?? "" }));
     if (!v.ok) return v;
-    const present: Presentation = planned === undefined ? bare() : { ...planned.present, ...(planned.losses.length === 0 ? {} : { losses: planned.losses }) };
+    const present: Presentation = planned === undefined ? { ...bare(), ...extras } : { ...planned.present, ...(planned.losses.length === 0 ? {} : { losses: planned.losses }) };
     if (v.value.mode !== "blind-pair") return ok({ view: v.value, present });
     // A blind arm's words are the machine's tell as much as its pick is: withheld until the
     // operator has judged that pair (ruling 9; L21's fixture does the same).
@@ -118,7 +132,7 @@ export function makeRealBoard(deps: Deps): ServerBoard {
     const held = exists(store, id);
     if (!held.ok) return held;
     const planned = await plan(id);
-    if (held.value) return view(store, id, planned.ok ? planned.value.plan : undefined);
+    if (held.value) return planned.ok ? view(store, id, planned.value.plan) : view(store, id, undefined, await decidedExtras(store, id));
     // Not in the kernel: open it from v1 - or say, in v1's words, why it cannot be.
     if (!planned.ok) return planned.error.code === "not-found" ? planned : err(planned.error.code, `board: ${id}: ${planned.error.message}`, { cause: planned.error });
     const p = planned.value.plan;

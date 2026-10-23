@@ -1,3 +1,5 @@
+import type { LoadResource, LoadSummary } from "@gt/domain/load";
+
 import { developedOf } from "./direction";
 import { listNights, readNight } from "./store";
 import { CANDIDATE_KINDS, parseCellId, type Candidate, type CandidateKind, type IdeaCandidate, type Night } from "./types";
@@ -25,6 +27,12 @@ import { CANDIDATE_KINDS, parseCellId, type Candidate, type CandidateKind, type 
 // the kept ideas no night has developed yet (no source and no candidate names it, ./direction.ts) -
 // once one is brought in it drops off the list; the blocked ideas, the bans of the next ideation; and
 // the genres kept and blocked, counted, so a night spreads across genres until a direction is set.
+//
+// LAST NIGHT'S LOAD (spark night-load-band) opens the brief: the most recent closed or judged night whose
+// window holds load samples (./load.ts), each resource's average and its share in the operator's 60-80%
+// band, the minutes work waited and on what, and the one resource that sat longest under the band - the
+// scope the next night has room to add. A dry night's box still worked (stand-ins skip the vendors, not
+// the probe), so it counts, and is marked dry.
 
 export const TASTE_NIGHTS = 7;
 
@@ -169,10 +177,41 @@ export function directionsAndIdeas(judged: readonly Night[], developed: Readonly
   ];
 }
 
+const pct = (x: number): string => `${Math.round(x * 100)}%`;
+
+/** Share of a resource's read strip slots whose mean sat under the band's low mark; undefined when none was read. */
+function underShare(r: LoadResource, low: number): number | undefined {
+  const read = r.strip.filter((v) => v >= 0);
+  return read.length === 0 ? undefined : read.filter((v) => v < low).length / read.length;
+}
+
+/** `## Last night's load` for one night's summary. */
+export function loadSection(night: Night, s: LoadSummary): string[] {
+  const res = (["cpu", "ram", "gpu"] as const).map((k) => (s[k].read === 0 ? `${k} unread` : `${k} avg ${pct(s[k].avg)} (${pct(s[k].inBand)} in band)`));
+  const waited = Object.entries(s.waited).filter(([, m]) => m !== undefined && m > 0).sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0) || a[0].localeCompare(b[0])).map(([r, m]) => `${r} ${Math.round(m ?? 0)} min`);
+  const hours = ((s.toMs - s.fromMs) / 3_600_000).toFixed(1);
+  const under = (["cpu", "ram", "gpu"] as const).flatMap((k) => {
+    const u = underShare(s[k], s.band.low);
+    return u === undefined ? [] : [{ k, u }];
+  }).sort((a, b) => b.u - a.u)[0];
+  const low = pct(s.band.low);
+  return [
+    "## Last night's load",
+    "",
+    `- ${night.id}${night.dry ? " (dry)" : ""} · ${hours} h · ${s.samples} samples · band ${Math.round(s.band.low * 100)}-${pct(s.band.high)}`,
+    `- ${[...res, ...(waited.length === 0 ? [] : [`waited: ${waited.join(" · ")}`])].join(" · ")}`,
+    `- ${under === undefined || under.u === 0 ? `nothing under ${low}` : `${under.k} under ${low} for ${pct(under.u)} of the night`}`,
+    "",
+  ];
+}
+
+/** A night's load, as the brief is handed it: the night and its summary. */
+export type NightLoad = { readonly night: Night; readonly load: LoadSummary };
+
 /** The brief for nights already read (pure; `tasteBrief` reads them). Nights not committed only say which kept ideas are developed. */
-export function tasteOf(nights: readonly Night[]): string {
+export function tasteOf(nights: readonly Night[], last?: NightLoad): string {
   const judged = nights.filter((n) => n.committed !== undefined && !n.dry && !n.committed.dry).slice(0, TASTE_NIGHTS);
-  const lines = ["# Taste", ""];
+  const lines = ["# Taste", "", ...(last === undefined ? [] : loadSection(last.night, last.load))];
   if (judged.length === 0) return [...lines, "No committed live night yet: nothing kept or thrown to learn from.", ""].join("\n");
   const kept = new Map<string, number>();
   const thrown = new Map<string, number>();
@@ -239,8 +278,12 @@ export function tasteOf(nights: readonly Night[]): string {
   return lines.join("\n");
 }
 
-/** Read every night on disk, newest first, and write the brief. An unreadable night is skipped. Uncommitted nights are read too: their sources say which kept ideas are already developed. */
-export async function tasteBrief(except?: string): Promise<string> {
+/**
+ * Read every night on disk, newest first, and write the brief. An unreadable night is skipped. Uncommitted nights are read
+ * too: their sources say which kept ideas are already developed. `loadOf` reads a night's load (./load.ts nightLoad over the
+ * caller's store); the newest closed or committed night it finds samples for, among the last TASTE_NIGHTS such, opens the brief.
+ */
+export async function tasteBrief(except?: string, loadOf?: (n: Night) => LoadSummary | undefined): Promise<string> {
   const nights: Night[] = [];
   for (const s of await listNights()) {
     if (s.id === except) continue;
@@ -250,5 +293,13 @@ export async function tasteBrief(except?: string): Promise<string> {
       /* a manifest mid-write or damaged: its verdicts wait for the next night */
     }
   }
-  return tasteOf(nights);
+  let last: NightLoad | undefined;
+  for (const night of loadOf === undefined ? [] : nights.filter((n) => n.state !== "open").slice(0, TASTE_NIGHTS)) {
+    const load = loadOf?.(night);
+    if (load !== undefined) {
+      last = { night, load };
+      break;
+    }
+  }
+  return tasteOf(nights, last);
 }

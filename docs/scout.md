@@ -50,7 +50,7 @@ to stderr. Exit `0` done, `1` failed or refused, `2` usage.
 | `close <night> [--stop <reason>]` | settles style candidates from their runs, closes the night, prints the morning: packet id, counts by kind and status, settled and held USD | no |
 | `leads [--json]` | the lead queue's pending events (`foundry-out/scout/leads.json`): key, kind, night, refs, evidence | no |
 | `lead <key> --json <file\|->` | `{claim, kind: technique\|application\|subject, nearest?, confidence: low\|medium\|high}`: one line into `.ai/registry-leads.jsonl`, once per key, and the event marked filed. Refused: an unknown key, a claim outside 12-400 characters, a `nearest` the registry's media-generation index does not hold, a mature event's claim naming its genre | no |
-| `status [<night>]` | every night, or one with its budget, sources and candidates | no |
+| `status [<night>]` | every night, or one with its budget, sources and candidates, its last 15 minutes of load against the band, what waits and the night's interrupted jobs (below, "The load") | no |
 | `folder <dir> [extract args]` | the train-style path: `pipeline/foundry/extract.mts <dir> ...` with its output and exit code | as extract |
 
 Every launching command (`ingest`, `style`, `scene`, `asset`, `ideas`) refuses on a night that is not open, and after the
@@ -230,6 +230,39 @@ A live commit also queues, once by key, what the keeps EARNED for the ai-registr
 names each (`queues a registry lead: <kind> <ref>`, or `already queued`). The next night's skill commits the
 knowledge lines and the filed leads (never pushes). An untriaged packet waits; nothing is
 ever accepted for want of an answer.
+
+## The load
+
+The operator keeps the box's CPU, RAM and GPU in **60-80%** over a night (2026-10-23: "so we can learn
+from each run how to ideally balance scope for whole night period"). The band (`LOAD_BAND`,
+`packages/domain/src/load.ts`) is a TARGET for how much a night launches, apart from admission's
+protective marks (memory 85/75%, CPU 90%, `packages/domain/src/resource.ts`), which still hold the top.
+
+- **Sampled** by the always-on worker's `load-sample` timer, one row a minute into the kernel store's
+  load table (`@gt/kernel/resources/load`; the sampler and the worker service are in
+  `docs/resources.md`): CPU busy, physical RAM used of its total, GPU utilisation, the commit charge and
+  its limit, ComfyUI's queue, and the jobs admission was holding and on what. A reading the probe could
+  not take is absent, never zero.
+- **The window** of a night (`lib/foundry/scout/load.ts nightLoad`) runs from `startedAt` to the latest
+  of `closedAt`, the deadline once passed (or now) for a night still open, and the last move of any job
+  the night launched (its newest kernel event) - work that ran past the close is the night's load. None
+  ends after now.
+- **The summary** (`summarizeLoad`, pure, computed on read and never stored): per resource the average,
+  the nearest-rank p95 and the share of readings inside the band, over the samples that READ it (`read`
+  says how many); a strip of five-minute means, `-1` where nothing was read; the commit peak against
+  its newest limit; the minutes jobs waited, by what held them (one sample's minute per job seen
+  waiting). A night with no samples has no load (a night before the sampler): nothing is drawn.
+- **The desk**: `present.load` on the night's Board packet, open and committed - the adapter puts it on
+  the packet it plans (`lib/decision/v1/sources/scout.ts`), and for a committed night, which the
+  adapter refuses to plan, the Board port reads it itself (`app/(studio)/board/_port/real.ts`).
+- **status** prints `load (15 min) cpu 34% · ram 52% · gpu 8% - band 60-80%`, then `waiting: memory 2 ·
+  comfy-queue 1` from the newest sample when anything waits, and `interrupted: <job ids>` - an
+  interrupted job's outcome is unknown and only the operator retries it. `--json`: `load: {last15: {cpu,
+  ram, gpu} (each absent when unread), band, waiting: [{jobId, resource}], samples}` and `interrupted`.
+- **taste.md** opens with `## Last night's load`: the newest closed or committed night with samples
+  (a dry night too, marked dry - the stand-ins skip vendors, not the box), its averages and time in
+  band, what waited, and the one resource that sat longest under the band (`gpu under 60% for 88% of
+  the night`) - the scope the next night has room to add.
 
 ## The registry
 

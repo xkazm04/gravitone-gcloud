@@ -203,7 +203,16 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
       if (!Number.isInteger(reelCap) || reelCap > MAX_REEL_CAP) throw new Usage(`--reels is a whole number from 1 to ${MAX_REEL_CAP}, got ${reelCap}`);
       const { tasteBrief } = await import("../lib/foundry/scout/taste.ts");
       const n = await store.createNight({ dry: !flags.has("live"), ceilingUsd: num("ceiling", DEFAULT_CEILING_USD), target: Math.round(num("target", DEFAULT_TARGET)), clipCap: Math.round(num("clips", DEFAULT_CLIP_CAP)), assetCap: Math.round(num("assets", DEFAULT_ASSET_CAP)), ideaCap, reelCap, now: now(), ...(until === undefined ? {} : { deadline: deadlineOf(until, now()) }) });
-      fs.writeFileSync(path.join(store.nightDir(n.id), "taste.md"), await tasteBrief(n.id), "utf8");
+      // Last night's load opens the brief (lib/foundry/scout/load.ts): the samples are the kernel store's.
+      const kp = await import("@gt/kernel/process");
+      const { nightLoad } = await import("../lib/foundry/scout/load.ts");
+      const { OUT_DIRNAME } = await import("../lib/fixtures/mode.ts");
+      const k = kp.processKernel(kp.storeLocation(OUT_DIRNAME, io.env["GRAVITONE_STORE_PATH"]));
+      try {
+        fs.writeFileSync(path.join(store.nightDir(n.id), "taste.md"), await tasteBrief(n.id, k.ok ? (x) => nightLoad(k.value.store, x, now().getTime()) : undefined), "utf8");
+      } finally {
+        kp.closeProcessKernel();
+      }
       // The registry digest beside it (spark registry-feedback-loop): `registry: none` when none resolves.
       const { registryDigest } = await import("../lib/foundry/scout/registry.ts");
       fs.writeFileSync(path.join(store.nightDir(n.id), "registry.md"), (await registryDigest()).text, "utf8");
@@ -279,9 +288,18 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
         const { ideaCapOf, ideasUsed, reelCapOf, reelsUsed } = await import("../lib/foundry/scout/idea.ts");
         const ideas = { used: ideasUsed(n), cap: ideaCapOf(n) };
         const reels = { used: reelsUsed(n), cap: reelCapOf(n) };
-        if (json) doc({ ok: true, summary: store.summarise(n), budget: b, ideas, reels, morning: acts.morning(n, b), night: n });
+        // The box against the band over the last 15 minutes, what waits now, and the jobs only the operator retries.
+        const { interruptedOf, recentLine, recentLoad, waitingLine } = await import("../lib/foundry/scout/load.ts");
+        const recent = recentLoad(ctx.store, now().getTime());
+        const interrupted = interruptedOf(ctx.store, n);
+        const load = { last15: recent.avg, band: recent.band, waiting: recent.waiting, samples: recent.samples };
+        if (json) doc({ ok: true, summary: store.summarise(n), budget: b, ideas, reels, load, interrupted, morning: acts.morning(n, b), night: n });
         else {
           io.out(`night ${n.id} · ${n.state}${n.stop === undefined ? "" : ` (${n.stop})`} · ${n.dry ? "dry" : "live"} · ${acts.budgetLine(b)} · ideas ${ideas.used}/${ideas.cap} · reels ${reels.used}/${reels.cap}`);
+          io.out(recentLine(recent));
+          const waiting = waitingLine(recent);
+          if (waiting !== undefined) io.out(waiting);
+          if (interrupted.length > 0) io.out(`interrupted: ${interrupted.join(" · ")}`);
           for (const s of n.sources) io.out(`  ${s.id} ${s.kind.padEnd(5)} ${s.status.padEnd(8)} ${s.files.length} file(s)  ${s.url}${s.error === undefined ? "" : `\n         ${s.error}`}`);
           for (const c of n.candidates) io.out(`  ${c.id} ${c.kind.padEnd(7)} ${c.status.padEnd(8)} ${c.sourceIds.join(",")}${c.jobId === undefined ? "" : `  ${c.jobId}`}${c.error === undefined ? "" : `\n         ${c.error}`}`);
         }

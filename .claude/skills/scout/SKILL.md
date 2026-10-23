@@ -39,6 +39,13 @@ The operator's rulings, 2026-10-23, after the first live night and the first ide
   lighthouse keeper's cat who sabotages the night shift* - for one K or X. A craft finding is at most a
   supporting line about how a shot, a cut or a beat lands in a video, never a measurement for its own
   sake (2026-10-22: two cut-list measurements were rejected `generic`).
+- **The night keeps the box's CPU, RAM and GPU in 60-80%** (operator, 2026-10-23: "so we can learn from
+  each run how to ideally balance scope for whole night period"). Under 60% the box sat idle and the
+  night was under-scoped; over 80% it queued itself. The always-on worker samples the box every minute;
+  `status` reads the last 15 minutes against the band, the morning desk draws the whole night, and
+  `taste.md`'s `## Last night's load` says what sat idle last time. The band steers how much you
+  LAUNCH - it never raises a cap or a ceiling (those are spend decisions), and admission's own marks
+  (memory 85%, CPU 90%) still hold the top.
 
 ## The money and the rights (read before every night)
 
@@ -101,7 +108,8 @@ the operator's hour; the operator may also type it after a workday. Either way:
 
 `npx tsx pipeline/scout.mts open --live --until 06:30 --json` (a typed `/scout night --dry` drops
 `--live`; `--until` from the argument when given). Note the night id. Then read, in this order:
-`foundry-out/scout/<night>/taste.md` (what the operator kept and threw, with reasons - **a channel or a
+`foundry-out/scout/<night>/taste.md` (`## Last night's load` first: how much of the band last night
+filled and what sat under it - scope tonight to fill that; then what the operator kept and threw, with reasons - **a channel or a
 kind of look rejected twice is not searched again, and a use under "refused as a use" is not proposed
 again** unless the night has a new reason it now serves; `## Directions confirmed` are the lanes the
 night works inside, `## Directions refused` are never proposed again, `## Ideas to develop` are tonight's
@@ -251,7 +259,15 @@ download deleted. A failed source keeps its tool sentence; do not retry it by an
 
 ### 4. Make the candidates
 
-Check `status <night> --json` for the remaining money before each launch.
+Check `status <night> --json` before each launch - the remaining money AND `load`:
+
+- **Under 60% on a resource, and money left: launch more work that loads it.** GPU idle - a scene with
+  a clip while the clip cap allows, a game asset (step 1b); CPU idle - ingest the next sources, author a
+  stats reel (step 1c), a style run. RAM follows whichever you add.
+- **Over 80%: hold.** Launch nothing new until the next read is back in the band.
+- `load.waiting` names what admission is holding now and on what (`memory`, `comfy-queue`, ...): work
+  waiting on memory is not helped by launching more of it. A job listed under `interrupted` is the
+  operator's to retry, never yours.
 
 0. **Every run states its USE** (operator, 2026-10-22): the VIDEO it can help make, format first - `a 30 s
    Short: a deadpan animated comedy sketch`, `a 4-minute music video for a slow tango track`, `a 2-minute
@@ -333,7 +349,9 @@ job holds `cloud.google` until the lane is acknowledged on Runs.
 ## /scout status [<night>]
 
 `npx tsx pipeline/scout.mts status [<night>] --json` - render it as a short table: night, state, stop,
-rendered / failed / pending, USD, and the packet link for every closed, untriaged night.
+rendered / failed / pending, USD, and the packet link for every closed, untriaged night. For one night,
+add its load line (`load (15 min) cpu 34% · ram 52% · gpu 8% - band 60-80%`), what waits, and the
+interrupted job ids.
 
 ## What NOT to do
 
