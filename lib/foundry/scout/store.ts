@@ -40,15 +40,22 @@ import {
   type NightSummary,
   type SourceId,
 } from "./types";
+import { WING_OUT_DIR, WING_STORE_ENV, type ScoutWing } from "./wing";
+import { activeWing } from "./wingScope";
 
 const NIGHT_FILE = "night.json";
 
 /** Files a night may serve to the Board: pictures, clips, a track's mp3s, the manifest. */
 const SERVABLE = new Set([".png", ".jpg", ".jpeg", ".webp", ".json", ".mp4", ".webm", ".mp3"]);
 
-/** SCOUT_STORE_DIR, else `<out>/scout`. Read per call. */
+/** The ACTIVE wing's root (wingScope.ts; `scout` outside any scope). Read per call. */
 export function scoutRoot(): string {
-  return process.env["SCOUT_STORE_DIR"]?.trim() || outPath("scout");
+  return rootOf(activeWing());
+}
+
+/** A wing's root: its env var (SCOUT_STORE_DIR, SCOUT_MUSE_STORE_DIR), else `<out>/scout`, `<out>/scout-muse`. */
+export function rootOf(wing: ScoutWing): string {
+  return process.env[WING_STORE_ENV[wing]]?.trim() || outPath(WING_OUT_DIR[wing]);
 }
 
 export function nightDir(id: NightId): string {

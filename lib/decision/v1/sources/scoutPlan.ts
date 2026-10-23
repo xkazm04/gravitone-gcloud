@@ -306,7 +306,7 @@ export function assetUse(a: Pick<Asset3dCandidate, "use" | "serves">): string | 
 export const ideaCell = (candidate: CandidateId): string => cellId(candidate, "board");
 
 /** An idea's target as the Board says it: `asset3d` is the act's name, a `3d asset` is the thing. */
-export const IDEA_TARGET_WORD: Readonly<Record<IdeaTarget, string>> = { scene: "scene", style: "style", asset3d: "3d asset", stats: "stats reel" };
+export const IDEA_TARGET_WORD: Readonly<Record<IdeaTarget, string>> = { scene: "scene", style: "style", asset3d: "3d asset", stats: "stats reel", character: "character" };
 
 /** An idea's target, genre and anchor: `scene · music video · watch: tag: risograph`. A `free` idea names no anchor ref; the first batch has no genre. */
 export const ideaMeta = (c: Pick<IdeaCandidate, "target" | "anchor" | "genre">): string =>

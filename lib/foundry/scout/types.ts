@@ -23,6 +23,8 @@
 // as a reference - a clip animates OUR replica still, never a source frame
 // (visual-style-locking / style-onboarding-from-sample).
 
+import type { Aspect } from "../../imaging/types";
+import type { CharacterCard, MuseJudge } from "./muse";
 import type { AssetId, ExportProject, MeshBrief } from "../mesh/types";
 
 /* ── Ids and limits ──────────────────────────────────────────────────────── */
@@ -51,8 +53,10 @@ export const MAX_IDEA_CAP = 40;
 export const IDEA_TITLE_MAX = 90;
 export const IDEA_PROMPT_MAX = 1500;
 /** What a kept idea becomes on the next night, through the act of that name. `stats` (spark stats-reels): a
- *  data video authored in code - kept, the next night researches its real data and renders the full strip. */
-export const IDEA_TARGETS = ["scene", "style", "asset3d", "stats"] as const;
+ *  data video authored in code - kept, the next night researches its real data and renders the full strip.
+ *  `character` (spark scout-muse, the muse wing only): a fictional adult woman's card - kept, it joins
+ *  knowledge/scout-muse/characters.md and later nights draw her in other looks and situations. */
+export const IDEA_TARGETS = ["scene", "style", "asset3d", "stats", "character"] as const;
 export type IdeaTarget = (typeof IDEA_TARGETS)[number];
 /** Where an idea came from: a watchlist line, a registry gap (registry.md), or neither (`free`). */
 export const IDEA_ANCHORS = ["watch", "gap", "free"] as const;
@@ -349,6 +353,12 @@ export type IdeaCandidate = CandidateBase & {
   readonly image?: string;
   /** A stats idea's strip and its inputs, night-relative under `ideas/<c-id>/` (present only on target `stats`). */
   readonly reel?: ReelFiles;
+  /** The still's aspect when it is not the scout wing's 16:9 (a muse poster is 4:5). Absent: 16:9. */
+  readonly aspect?: Aspect;
+  /** A character idea's card (muse wing, target `character`). */
+  readonly card?: CharacterCard;
+  /** The eye's read of the drawn still (muse wing). A still that failed it was deleted; the candidate says why. */
+  readonly judge?: MuseJudge;
 };
 
 /**

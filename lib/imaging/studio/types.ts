@@ -34,6 +34,9 @@ export class StudioError extends Error {
     message: string,
     readonly kind: "unreachable" | "signed-out" | "no-credits" | "refused" | "timeout" | "failed",
     readonly spent = false,
+    /** The studio's generation, when the page named one before it failed - so a refused or failed
+     *  generation is deleted like a delivered one (spark scout-muse). */
+    readonly generationId?: string,
   ) {
     super(message);
     this.name = "StudioError";

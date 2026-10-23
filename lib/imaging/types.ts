@@ -82,6 +82,9 @@ export interface GenerateRequest extends ProviderSteer {
    *  capped by the provider's own reference window (Google's is 14). */
   references?: ImageRef[];
   seed?: number;
+  /** The studio's quality setting (spark scout-muse: "quality Low to spare credits"). Honoured by
+   *  leonardo-studio only; every other provider ignores it. Absent: the studio's default (medium). */
+  quality?: "low" | "medium";
 }
 
 export interface EditRequest extends ProviderSteer {

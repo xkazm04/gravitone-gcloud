@@ -1,6 +1,7 @@
 // SCOUT - the night's CLI (spark media-training-loop). The /scout skill drives it;
 // an operator may type any line of it. Docs: docs/scout.md.
 //
+//   Every command takes [--wing scout|muse] (spark scout-muse): the root it reads and writes; absent: scout.
 //   npx tsx pipeline/scout.mts doctor [--dry] [--json]
 //   npx tsx pipeline/scout.mts open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--ideas 25] [--reels 6] [--until HH:MM] [--live] [--json]
 //   npx tsx pipeline/scout.mts add-source <night> --json <file|->
@@ -40,6 +41,8 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { errorMessage } from "@gt/domain/errors";
 
+import { MUSE_DEFAULT_CEILING_USD, MUSE_DEFAULT_IDEA_CAP, MUSE_MAX_IDEA_CAP } from "../lib/foundry/scout/muse.ts";
+import { DEFAULT_WING, SCOUT_WINGS, isWing, type ScoutWing } from "../lib/foundry/scout/wing.ts";
 import { DEFAULT_ASSET_CAP, DEFAULT_CEILING_USD, DEFAULT_CLIP_CAP, DEFAULT_IDEA_CAP, DEFAULT_REEL_CAP, DEFAULT_TARGET, DEFAULT_TRACK_CAP, DEFAULT_VISUALIZER_CAP, MAX_IDEA_CAP, MAX_REEL_CAP, MAX_TRACK_CAP, MAX_VISUALIZER_CAP } from "../lib/foundry/scout/types.ts";
 
 type IngestDeps = import("../lib/foundry/scout/ingest.ts").IngestDeps;
@@ -135,7 +138,28 @@ export function deadlineOf(hhmm: string, now: Date): string {
   return d.toISOString();
 }
 
+/** What the muse wing runs (spark scout-muse): no ingest, clips, assets, reels, seeds, music or leads in v1. */
+const MUSE_COMMANDS = new Set(["doctor", "open", "add-source", "ideas", "finding", "direction", "watch", "close", "status", "style"]);
+
+/** `--wing <scout|muse>` picks the root every command reads and writes (lib/foundry/scout/wing.ts); absent: scout. */
 export async function runCli(argv: readonly string[], io: Io): Promise<number> {
+  const at = argv.indexOf("--wing");
+  const w = at < 0 ? DEFAULT_WING : argv[at + 1];
+  if (!isWing(w)) {
+    io.err(`--wing is one of ${SCOUT_WINGS.join(", ")}, got "${w ?? ""}"`);
+    return 2;
+  }
+  const cmd = argv.find((a, i) => !a.startsWith("--") && (at < 0 || i !== at + 1));
+  if (w !== DEFAULT_WING && cmd !== undefined && !MUSE_COMMANDS.has(cmd)) {
+    io.err(`${cmd} is not in the ${w} wing (it runs ${[...MUSE_COMMANDS].join(", ")})`);
+    return 3;
+  }
+  const { withWing } = await import("../lib/foundry/scout/wingScope.ts");
+  return withWing(w, () => runInWing(argv.filter((_, i) => at < 0 || (i !== at && i !== at + 1)), io, w));
+}
+
+async function runInWing(argv: readonly string[], io: Io, wing: ScoutWing): Promise<number> {
+  const muse = wing !== DEFAULT_WING;
   const { pos, flags } = parse(argv);
   const cmd = pos[0];
   const json = flags.has("json");
@@ -206,8 +230,9 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
     if (cmd === "open") {
       if (flags.has("live") && dryOnly) throw new Refused("GRAVITONE_DRY_ONLY=1 pins this shell dry: a live night is refused here (open without --live for a dry one)");
       const until = str("until");
-      const ideaCap = num("ideas", DEFAULT_IDEA_CAP);
-      if (!Number.isInteger(ideaCap) || ideaCap > MAX_IDEA_CAP) throw new Usage(`--ideas is a whole number from 1 to ${MAX_IDEA_CAP}, got ${ideaCap}`);
+      const maxIdeas = muse ? MUSE_MAX_IDEA_CAP : MAX_IDEA_CAP;
+      const ideaCap = num("ideas", muse ? MUSE_DEFAULT_IDEA_CAP : DEFAULT_IDEA_CAP);
+      if (!Number.isInteger(ideaCap) || ideaCap > maxIdeas) throw new Usage(`--ideas is a whole number from 1 to ${maxIdeas}, got ${ideaCap}`);
       const reelCap = num("reels", DEFAULT_REEL_CAP);
       if (!Number.isInteger(reelCap) || reelCap > MAX_REEL_CAP) throw new Usage(`--reels is a whole number from 1 to ${MAX_REEL_CAP}, got ${reelCap}`);
       const trackCap = num("tracks", DEFAULT_TRACK_CAP);
@@ -215,7 +240,8 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
       const visualizerCap = num("visualizers", DEFAULT_VISUALIZER_CAP);
       if (!Number.isInteger(visualizerCap) || visualizerCap < 0 || visualizerCap > MAX_VISUALIZER_CAP) throw new Usage(`--visualizers is a whole number from 0 to ${MAX_VISUALIZER_CAP}, got ${visualizerCap}`);
       const { tasteBrief } = await import("../lib/foundry/scout/taste.ts");
-      const n = await store.createNight({ dry: !flags.has("live"), ceilingUsd: num("ceiling", DEFAULT_CEILING_USD), target: Math.round(num("target", DEFAULT_TARGET)), clipCap: Math.round(num("clips", DEFAULT_CLIP_CAP)), assetCap: Math.round(num("assets", DEFAULT_ASSET_CAP)), ideaCap, reelCap, trackCap, visualizerCap, now: now(), ...(until === undefined ? {} : { deadline: deadlineOf(until, now()) }) });
+      // A muse night draws stills only: no clips, assets, reels, tracks or visualizers, whatever the flags say.
+      const n = await store.createNight({ dry: !flags.has("live"), ceilingUsd: num("ceiling", muse ? MUSE_DEFAULT_CEILING_USD : DEFAULT_CEILING_USD), target: Math.round(num("target", DEFAULT_TARGET)), clipCap: muse ? 0 : Math.round(num("clips", DEFAULT_CLIP_CAP)), assetCap: muse ? 0 : Math.round(num("assets", DEFAULT_ASSET_CAP)), ideaCap, reelCap: muse ? 0 : reelCap, trackCap: muse ? 0 : trackCap, visualizerCap: muse ? 0 : visualizerCap, now: now(), ...(until === undefined ? {} : { deadline: deadlineOf(until, now()) }) });
       // Last night's load opens the brief (lib/foundry/scout/load.ts): the samples are the kernel store's.
       const kp = await import("@gt/kernel/process");
       const { nightLoad } = await import("../lib/foundry/scout/load.ts");
@@ -237,7 +263,7 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
       fs.writeFileSync(path.join(store.nightDir(n.id), "registry.md"), (await registryDigest()).text, "utf8");
       if (json) doc({ ok: true, night: n.id, dry: n.dry, ceilingUsd: n.ceilingUsd, target: n.target, clipCap: n.clipCap, assetCap: n.assetCap, ideaCap: n.ideaCap, reelCap: n.reelCap, ...(n.deadline === undefined ? {} : { deadline: n.deadline }), taste: path.join(store.nightDir(n.id), "taste.md"), registry: path.join(store.nightDir(n.id), "registry.md") });
       else io.out(n.id);
-      say(`night ${n.id} · ${n.dry ? "dry" : "LIVE"} · ceiling $${n.ceilingUsd} · target ${n.target} · clips ${n.clipCap} · assets ${n.assetCap ?? DEFAULT_ASSET_CAP} · ideas ${n.ideaCap ?? DEFAULT_IDEA_CAP} · reels ${n.reelCap ?? DEFAULT_REEL_CAP}${n.deadline === undefined ? "" : ` · until ${n.deadline}`}`);
+      say(`${muse ? `${wing} ` : ""}night ${n.id} · ${n.dry ? "dry" : "LIVE"} · ceiling $${n.ceilingUsd} · target ${n.target} · clips ${n.clipCap} · assets ${n.assetCap ?? DEFAULT_ASSET_CAP} · ideas ${n.ideaCap ?? DEFAULT_IDEA_CAP} · reels ${n.reelCap ?? DEFAULT_REEL_CAP}${n.deadline === undefined ? "" : ` · until ${n.deadline}`}`);
       return 0;
     }
 
