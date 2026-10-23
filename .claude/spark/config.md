@@ -54,6 +54,12 @@ Repo law are the same ones `.claude/perfect/config.md` carries - read that file'
   (measured on v1's `api/foundry/extract` and `api/frames`, both deleted in Phase 6 wave C). Build with Turbopack after a TEMPORARY, never-committed line
   in next.config.ts: `nextConfig.turbopack = { ...nextConfig.turbopack, root: "<main checkout>" }`,
   then `npm run check:bundle`, then restore the file (copy it aside first). Measured 2026-10-05.
+  2026-10-23: that build now SUCCEEDS but `check:bundle` cannot read the worktree's manifest ("COULD NOT RUN: ... names no
+  (studio) layout entry"). Measure on main right after the ff with `NEXT_DIST_DIR=.next-landing npm run build && NEXT_DIST_DIR=.next-landing npm run check:bundle`
+  - the operator's dev server keeps `.next` - and land the budget raise as the next commit.
+- `before merge:` re-run the landing overlap (`git status --short` of the main checkout against the branch's files) before
+  the LAST package, not only at the gate: an unregistered session's uncommitted edit appeared mid-build (2026-10-23) and
+  blocked the ff; tell the operator then.
 
 ## Rituals
 
@@ -89,6 +95,14 @@ See `.claude/perfect/config.md` `## Repo law` verbatim, plus:
   under `packages/*/test` needs a mutant in `tests/mutants-unit/registry.ts` (CRLF) - a changed line a mutant
   `find`s must be re-pointed - verified with `node pipeline/unit-mutants.mts --only <id>` AFTER the commit
   (it runs on HEAD in its own worktree, so an uncommitted edit reads `stale`).
+- **A new packet source or ledger source has four homes no builder brief names by default (promoted 2026-10-23,
+  scout-decision-graph - the third "tree-wide probe" trap):** its row in `tests/golden-path/runs-live.probe.spec.ts`
+  `predicates()` AND `ledger-reconcile.probe.spec.ts` `SOURCES`; real work for it in `pipeline/fixtures/` (ledger-reconcile
+  fails a source that tallies nothing); and every sibling pile that could show the same work twice (a scout-launched Suno
+  take sat in pkt:suno and the Floor's suno pile). A page that stops being a redirect needs its bundle budget raised with
+  the reason.
+- **One builder per shared dispatch file.** When two packages add commands to one CLI (`pipeline/scout.mts`), the Director
+  pre-wires EVERY block in WP-0 and builders fill modules only; otherwise a per-package commit needs a hand-built blob.
 - **A new surface is built in the Watershed from `@gt/ui`** (`packages/ui/src/components/<dir>/`,
   `INVENTORY.md`; specimens at `/kit`), inside `app/(studio)/<route>/` with its `_port`. Dropdowns are
   `@gt/ui`'s `field/Field.tsx` `Select`, never a native `<select>`. (History: v1's Almanac
@@ -110,6 +124,8 @@ One AskUserQuestion call of up to 4 questions per wave.
 - 2026-08-30 (card-decision-engine): on visual/motion ambition the operator picks the BOLDER option — framer-motion physics over the CSS-only recommendation, and “prototype all three art variants behind a switcher, we pick or fuse” over choosing one. Offer the ambitious option as a first-class choice, not a warning-wrapped afterthought; a real dependency cost stated in the option text is an acceptable price, not a veto.
 - 2026-08-30 (card-decision-engine, round 2): showcase card art is for CURATED choices (few, fixed, art-worthy); GENERATED content gets the dense reading face — scannable title in the body font, icon watermark instead of an art zone, metadata behind an expand, front limited to the decision state + the honest downside. “The title carries the idea; the user expands if not certain.” Long generated titles are a data-contract defect to fix at the prompt (claim = headline ≤ 90 chars), with a UI splitter only as the reader for old data.
 
+- 2026-10-23 (scout-decision-graph): the operator stages generated media as a LADDER judged per rung (track -> visualizer -> full video -> Short; a Short never from the cheap rung) - offer the staged option first. Reasons are mandatory even on cheap words, with an optional note; offer `required + note` rather than `optional`.
+
 ## Skill improvement log
 
 - 2026-08-27 · Next 16 refuses a second `next dev` while :3000 is held — builders must smoke via `NEXT_PUBLIC_LOCAL_MODE=1 npm run build && npx next start -p 31xx`; say so in every builder brief. Builder briefs must forbid `git stash` explicitly (one ran it). Bridge auth = header `x-personas-local-token`.
@@ -124,3 +140,4 @@ One AskUserQuestion call of up to 4 questions per wave.
 - 2026-10-23 (stats-reels, 2 builders in a worktree) · Before removing a worktree, count junctions whose target lies outside it in a SEPARATE step and read the count first; build the root with `Resolve-Path` (backslashes) - a `pwd -W` root (forward slashes) never prefixes a junction's target, so every junction reads as outward and the check is noise. Also: an active-runs `BUILDING` entry went stale within the hour (its spark had landed) - check `git log main` for a sibling's WP commits before designing beside it.
 - 2026-10-23 (scout-idea-artboards WP-I4) · Read a gate run's FULL failure list - a head -20 of the log hid access-only-401 behind deployment-cells and I reported the rest green. The operator's purpose doctrine (YouTube video only; notes as direction confirmations) arrived after a triage: for a generative loop, wave 1 should ask what the output is FOR.
 - 2026-10-23 (night-load-band, 3 parallel builders) · `tests/mutants-unit/registry.ts` is a shared file every package's new test needs an entry in - all three builders found it red and proposed an entry they could not write. Name it Director-owned in every brief that adds a package test, and ask each builder to return its entry (find/replace/why, verified by hand) in the report.
+- 2026-10-23 (scout-decision-graph, 3 builders, 4 waves) · Promoted to Repo law: a new packet/ledger source's probe rows, fixture work and sibling piles; one builder per shared CLI dispatch file. Promoted to Gates: check:bundle on main via NEXT_DIST_DIR after the ff; the landing overlap re-checked before the last package. A wave-1 contradiction (a scope pick against a firmness pick) was settled by one synthesis question; the operator's two 'Other' answers were doctrines (mandatory reason + note; a media LADDER judged per rung) and the second split the spark.
