@@ -131,7 +131,7 @@ describe("scout adapter - a muse night", () => {
     must(flow.commit());
     const claim = flow.claim();
     must(await scoutAdapter.apply(claim));
-    expect(knowledge("scout-muse/characters.md")).toContain(`- **Mara Venn**, aged 34 - auburn bob, freckles, green wool coat Plays: dry wit, never in a hurry <!-- scout:${NIGHT}/c-03 -->`);
+    expect(knowledge("scout-muse/characters.md")).toContain(`- **Mara Venn**, aged 34 - auburn bob, freckles, green wool coat. Plays: dry wit, never in a hurry. <!-- scout:${NIGHT}/c-03 -->`);
     expect(knowledge("scout-muse/watchlist.md")).toContain("artist: a painterly portrait channel");
     expect(knowledge("scout-muse/techniques.md")).toContain("Name the age in the subject clause, not the tail");
     expect(existsSync(path.join(ROOT, "knowledge", "scout"))).toBe(false);

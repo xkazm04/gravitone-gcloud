@@ -69,6 +69,12 @@ export function findingRelOf(wing: ScoutWing, template: string, step: string): s
 /** One line, whatever the skill's text held: a newline inside a claim would split the bullet. */
 const flat = (s: string): string => s.replace(/\s+/g, " ").trim();
 
+/** One line that ends as a sentence: a card's look runs straight into "Plays:" otherwise. */
+const sentence = (s: string): string => {
+  const t = flat(s);
+  return /[.!?]$/.test(t) ? t : `${t}.`;
+};
+
 /**
  * A finding that RESTATES one an earlier night kept is its second observation: `n=2`, and the line
  * cites the earlier line's marker so a reader can walk from one to the other. The earlier line is
@@ -159,7 +165,7 @@ export function appendWatch(night: NightId, c: WatchCandidate, o: KnowledgeOptio
 /** A kept character's card, one line: `- **Name**, aged 34 - look. Plays: personality. <marker>`. */
 export function characterLine(night: NightId, c: Pick<IdeaCandidate, "id" | "card">): string {
   if (c.card === undefined) throw new FoundryError(`${c.id} carries no character card.`, 400);
-  return `- **${flat(c.card.name)}**, aged ${c.card.age} - ${flat(c.card.look)} Plays: ${flat(c.card.personality)} ${markerOf(night, c.id)}`;
+  return `- **${flat(c.card.name)}**, aged ${c.card.age} - ${sentence(c.card.look)} Plays: ${sentence(c.card.personality)} ${markerOf(night, c.id)}`;
 }
 
 /** A kept character idea (muse wing) into knowledge/scout-muse/characters.md. */
