@@ -38,12 +38,13 @@ to stderr. Exit `0` done, `1` failed or refused, `2` usage.
 |---|---|---|
 | `doctor [--dry]` | one line per check: yt-dlp, ffmpeg, ffprobe (`-version`), `GOOGLE_AI_API_KEY` and `LEONARDO_API_KEY` set or unset (never their values), the store and night folders writable, `GRAVITONE_DRY_ONLY`. A failing line carries its remedy; exit 1 when a check the night needs fails (`--dry`: the keys and the dry pin are notes). The registry, the Leonardo studio and Playwright's `chromium` (where `chromium.launch` would start it, never launched) are always notes | no |
 | `open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--ideas 25] [--reels 6] [--until HH:MM] [--live]` | creates the night, writes its `taste.md` and `registry.md` (below, "The registry"), prints its id. `--until` is local time today, or tomorrow once that has passed. Without `--live` the night is dry; `--live` is refused under `GRAVITONE_DRY_ONLY=1` | no |
-| `add-source <night> --json <file\|->` | `[{url, kind, title, channel?, why, found, watch?, rich?}]`, validated (below). A URL an earlier night made a candidate from is skipped and reported; one it only held is taken | no |
+| `add-source <night> --json <file\|->` | `[{url, kind, title, channel?, why, found, watch?, rich?} \| {fromIdea: <night>/<c-id>, why?}]`, validated (below). A `fromIdea` item brings a KEPT idea's artboard in as our own source (found `idea`, rights `ours`, already ingested, nothing downloaded) - refused for an idea not kept, a dry night's, or one any night already develops. A URL an earlier night made a candidate from is skipped and reported; one it only held is taken | no |
 | `ingest <night> [--source s-NN] [--retry] [--detach]` | launches the `scout-ingest` job over the pending sources and drives it here; `--retry` first puts the failed sources in scope back to pending | no |
 | `style <night> --sources s-01,s-03 --use "<content>" [--slug x] [--detach]` | an ordinary extract run (`launchExtract`, a gallery of those sources' pictures and keyframes) as one style candidate; its run id and job id go on the candidate | yes |
 | `scene <night> --source s-NN --use "<content>" [--frames k-012.jpg] [--detach]` | a scene candidate read from the chosen keyframe (default the first; ingest keeps one frame per cut, so neighbouring keyframes are different shots), launched through `launchScene` (`lib/producers/scoutScene.ts`) with a clip while the night's clip cap allows | yes |
-| `asset <night> --brief <file\|-> [--detach]` | one game asset from `{class, subject, use, style?, kind?, techniques?}`: its concepts drawn and gated, its mesh asset written and the mesh job QUEUED for the worker (below, "A game asset") | yes |
-| `ideas <night> --json <file\|-> [--detach]` | `[{title, target: scene\|style\|asset3d\|stats, prompt, anchor: {kind: watch\|gap\|free, ref}, use?, reel?}]`, one `idea` candidate each. Scene, style and 3d-asset ideas are ONE `scout-ideas` job drawing a rough artboard each in the Leonardo studio (driven here unless `--detach`); stats ideas carry `reel` and are ONE `scout-reels` job on the Claude seat, always queued for the worker (below, "A stats reel"). One bad brief refuses the batch with its place; a batch over `ideaCap` or `reelCap` writes nothing | studio credits, the seat |
+| `asset <night> --brief <file\|-> [--detach]` | one game asset from `{class, subject, use, style?, kind?, techniques?, fromIdea?}`: its concepts drawn and gated, its mesh asset written and the mesh job QUEUED for the worker (below, "A game asset") | yes |
+| `ideas <night> --json <file\|-> [--detach]` | `[{title, target: scene\|style\|asset3d\|stats, genre, prompt, anchor: {kind: watch\|gap\|free, ref}, use?, reel?}]` (`genre` required, <= 80 chars), one `idea` candidate each. Scene, style and 3d-asset ideas are ONE `scout-ideas` job drawing a rough artboard each in the Leonardo studio (driven here unless `--detach`); stats ideas carry `reel` and are ONE `scout-reels` job on the Claude seat, always queued for the worker (below, "A stats reel"). One bad brief refuses the batch with its place; a batch over `ideaCap` or `reelCap` writes nothing | studio credits, the seat |
+| `direction <night> --json <file\|->` | `{title, format: short\|video, genre, style, tone, audience, premise, basedOn: [<night>/<cell id>], use?}`: one `direction` candidate, words, rendered at once. Every `basedOn` entry must be a cell a LIVE night kept; the refusal names the entry and why | no |
 | `finding <night> --json <file\|->` | `[{sourceIds, template, step, claim, quote, restates?}]`; `knowledge/templates/<template>/` must exist, `step` is `NN-name` and need not exist yet | no |
 | `watch <night> --entry "..." --why "..." [--sources s-01]` | a proposed watchlist line | no |
 | `close <night> [--stop <reason>]` | settles style candidates from their runs, closes the night, prints the morning: packet id, counts by kind and status, settled and held USD | no |
@@ -54,6 +55,18 @@ to stderr. Exit `0` done, `1` failed or refused, `2` usage.
 
 Every launching command (`ingest`, `style`, `scene`, `asset`, `ideas`) refuses on a night that is not open, and after the
 deadline (closing the night with `stop: deadline`).
+
+## What the nights are for
+
+The operator's rulings (2026-10-23): every run, idea and direction serves a **YouTube video** - a Short
+(~30 s) or a short video (up to 5 minutes); a style is only the baseline look of such a video, never a
+print, a book, a painting or image art. Until three directions are confirmed, a night's ideas spread
+across at least eight genres, at most four each. The notes a night leaves are **directions** - what the
+approved decisions add up to, in production words, for one K or X - and at most two craft findings about
+execution in a video. A kept idea is developed on the next night FIRST: its artboard comes in as our own
+source (`add-source {fromIdea}`) and the act its target names builds it. The taste brief carries
+`## Directions confirmed`, `## Directions refused`, `## Ideas to develop`, `## Ideas blocked` (the next
+ideation's bans) and `## Genres`.
 
 ## The money
 

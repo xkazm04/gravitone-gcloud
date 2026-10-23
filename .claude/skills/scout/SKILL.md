@@ -1,9 +1,9 @@
 ---
 name: scout
 memory: none
-version: 1.1.0
+version: 1.2.0
 category: Development
-description: The nightly training loop - search the web and YouTube around knowledge/scout/watchlist.md for art styles, scenes and craft worth learning, bring them onto this box, replicate them as kernel jobs (extracted still styles, scene recipes with Flare replica stills and local LTX clips, craft findings) and brief up to three 3D game assets (concept -> TRELLIS mesh -> Blender finish, made on this box) and up to six stats-reel ideas (a data video authored in code on illustrative numbers) inside a $15 night, and leave ONE Board packet pkt:scout:<night> for a few minutes of K/X in the morning. Successor of train-style and of dojo's hand-run corpus study. Wraps pipeline/scout.mts; it never keeps, rejects or commits anything on the Board. Invoke with /scout night [--dry] [--until HH:MM], /scout folder <dir> [extract args], /scout status [<night>].
+description: The nightly training loop - search the web and YouTube around knowledge/scout/watchlist.md for art styles, scenes and craft worth learning, bring them onto this box, replicate them as kernel jobs (extracted still styles, scene recipes with Flare replica stills and local LTX clips, craft findings) and brief up to three 3D game assets (concept -> TRELLIS mesh -> Blender finish, made on this box) and up to six stats-reel ideas (a data video authored in code on illustrative numbers), 20-30 rough idea artboards in the operator's Leonardo studio and 1-3 directions to confirm - all for YouTube video (Shorts ~30 s, videos up to 5 min) - inside a $15 Gemini night, and leave ONE Board packet pkt:scout:<night> for a few minutes of K/X in the morning. Successor of train-style and of dojo's hand-run corpus study. Wraps pipeline/scout.mts; it never keeps, rejects or commits anything on the Board. Invoke with /scout night [--dry] [--until HH:MM], /scout folder <dir> [extract args], /scout status [<night>].
 argument-hint: "night [--dry] [--until HH:MM] | folder <dir> | status [<night>]"
 allowed-tools: Read, Write, Edit, Bash, PowerShell, Glob, Grep, WebSearch, WebFetch, Monitor
 ---
@@ -18,6 +18,27 @@ in words. Operator doc: `docs/scout.md`. Design: spark `media-training-loop` (20
 **The verdict is never yours.** Nothing this skill does admits a style, a scene or a finding into the
 Library or `knowledge/`: only the operator's commit of `pkt:scout:<night>` does (hitl-approval,
 truncated-verdict-space). You pre-filter; you never keep.
+
+## What the night is for (read before every night)
+
+The operator's rulings, 2026-10-23, after the first live night and the first idea batch:
+
+- **The product is a YouTube video**: a Short (~30 s) or a short video (up to 5 minutes). Every run,
+  idea and direction serves one. A style is only ever the BASELINE LOOK of such a video - nothing here
+  is made to be printed, hung or sold as an image: no picture books, no posters as the product, no
+  paintings, no image art. A look nobody would animate or cut is not a find.
+- **Spread the genres first.** Until the taste brief holds three or more `## Directions confirmed`, a
+  night casts wide: its ideas span at least eight genres, at most four ideas in any one (animated comedy
+  sketch, music video, lyric video, data explainer, title opener, trailer or teaser, animated short for
+  kids, horror micro-short, documentary short, mood reel, product-style ad, loop or ASMR short, and
+  whatever the watchlist and the gaps add). Once directions are confirmed, most of the night works
+  inside them and a third still explores.
+- **Notes confirm a direction; they do not report statistics.** The operator decides on execution in
+  video. A direction (step 4b) says, in production words, what the approved decisions add up to - *an
+  animated comedy sketch, in the kept painted-3D look, dark humour for adults, a story around a
+  lighthouse keeper's cat who sabotages the night shift* - for one K or X. A craft finding is at most a
+  supporting line about how a shot, a cut or a beat lands in a video, never a measurement for its own
+  sake (2026-10-22: two cut-list measurements were rejected `generic`).
 
 ## The money and the rights (read before every night)
 
@@ -82,7 +103,10 @@ the operator's hour; the operator may also type it after a workday. Either way:
 `--live`; `--until` from the argument when given). Note the night id. Then read, in this order:
 `foundry-out/scout/<night>/taste.md` (what the operator kept and threw, with reasons - **a channel or a
 kind of look rejected twice is not searched again, and a use under "refused as a use" is not proposed
-again** unless the night has a new reason it now serves), `foundry-out/scout/<night>/registry.md` (what
+again** unless the night has a new reason it now serves; `## Directions confirmed` are the lanes the
+night works inside, `## Directions refused` are never proposed again, `## Ideas to develop` are tonight's
+first work (step 4), `## Ideas blocked` are the bans of tonight's ideation (step 1d) and `## Genres`
+says which genres the operator keeps and throws), `foundry-out/scout/<night>/registry.md` (what
 the ai-registry says about tonight's work: `## Governs tonight` - techniques to follow when a candidate does
 that thing; its ranking is by words, so read a technique's file before calling it governing; `## Gaps` -
 where the registry is thin; `registry: none` means no registry resolved and changes nothing else),
@@ -155,6 +179,33 @@ the worker while discovery goes on, so brief them right after the assets. Up to 
 `K` on a reel idea records the keep - its real data and full render come on a later night (not built
 yet); `X` blocks it. Either verdict and its reasons land in `night.committed`.
 
+### 1d. Ideas - draw them EARLY
+
+Up to `ideaCap` rough idea artboards a night (`open --ideas`, default 25; the operator: "always 20-30
+ideas on top of the current scope"), drawn one by one in the operator's Leonardo studio on `box.chrome`
+while discovery goes on (~45 s each, studio credits, never against the night's Gemini ceiling; every
+generation is deleted from the studio once its picture is held). An idea is the cheapest question the
+night can ask: one picture of a rough intent, one keystroke to block it or develop it.
+
+1. **Front-load the material** (registry `ad-concept-development/divergence-against-the-median`): the
+   taste brief's directions and genres, the watchlist lines, `registry.md`'s `## Gaps`.
+2. **Name the obvious and ban it.** Write down first the ten most obvious ideas for tonight's anchors
+   (a city skyline poster, a hero on a cliff at sunset, a neon-soaked street...) and every title under
+   the taste's `## Ideas blocked`; nothing you brief tonight is one of them or a near neighbour.
+3. **Spread the genres** (above): at least eight, at most four ideas each, until three directions are
+   confirmed; then mostly inside the confirmed directions, a third still exploring.
+4. **Each idea** - `{title, target, genre, use, anchor, prompt}`:
+   - `title` - the idea as a headline (<= 90 chars): what the video IS, not a technique;
+   - `target` - what a keep builds next night: `scene` (a shot with a clip), `style` (the video's look),
+     `asset3d` (a game asset), or `stats` (a stats reel - step 1c);
+   - `genre` - one genre from the spread, in plain words (`animated comedy sketch`);
+   - `use` - the video it serves, format first: `a 30 s Short: ...` or `a 3-minute video: ...`;
+   - `anchor` - `{kind: watch|gap|free, ref: <the line, or empty>}`;
+   - `prompt` - a concept artboard of that video's key moment, in craft words (never a person, a title, a
+     studio or a franchise): the subject, the staging, the look, the light.
+5. One JSON array -> `npx tsx pipeline/scout.mts ideas <night> --json <file>`. One bad brief refuses the
+   whole batch with its place and reason: fix it and resend. Do not wait for the drawings.
+
 ### 2. Discover - your judgement, the night's quality
 
 Aim for a packet of **about 20 rows**: ~8 style sources (grouped below into 3-5 extract runs), 3-4 scenes,
@@ -165,8 +216,10 @@ that source's `why` as `gap: <subject>` (or `gap: OPEN-QUESTIONS Qn`). A source 
 mechanism (a talk, a breakdown series), not one finding, carries `rich: "<one line on what>"` (<= 200 chars)
 in its `add-source` item: a keep from it nominates it to the registry's /intake.
 
-- Pictures: an image URL or a page whose pictures carry one coherent look. Video: a trailer, a short, a
-  music video whose SHOTS teach something - composition, light, a camera move, a cut rhythm.
+- Pictures: an image URL or a page whose pictures carry one coherent look that a VIDEO could wear -
+  animation key art, film stills, motion-design frames; a print or painting medium only when tonight's
+  idea is to animate it. Video: a trailer, a short, a music video whose SHOTS teach something -
+  composition, light, a camera move, a cut rhythm.
 - **Where the sources actually are** (measured 2026-10-22; a plain web search returns articles and
   AI-image marketing, never a usable picture or a video):
   - Pictures, rights-clear: museum open-access APIs give direct image URLs. The Met:
@@ -200,11 +253,18 @@ download deleted. A failed source keeps its tool sentence; do not retry it by an
 
 Check `status <night> --json` for the remaining money before each launch.
 
-0. **Every run states its USE** (operator, 2026-10-22): the content it can help make - a children's
-   cartoon series, a music video, a short comedy sketch, an explainer, a trailer, a film's mood reel.
-   One concrete line, passed as `--use "<content>"`; it heads the run on the Board. A look or a shot you
+0. **Every run states its USE** (operator, 2026-10-22): the VIDEO it can help make, format first - `a 30 s
+   Short: a deadpan animated comedy sketch`, `a 4-minute music video for a slow tango track`, `a 2-minute
+   data explainer`. Never a book, a print, a poster series or a painting (2026-10-23). One concrete line,
+   passed as `--use "<content>"`; it heads the run on the Board. A look or a shot you
    cannot name a use for is not launched - a run with no purpose is a mindless output, and the operator
    refuses those with the `use case` reason, which steers the next nights away from that direction.
+0b. **Develop the kept ideas FIRST** - every `## Ideas to develop` line of the taste brief, before
+   tonight's own finds. Bring its artboard in as a source - `add-source <night> --json` with
+   `[{"fromIdea": "<night>/<c-id>"}]` (our own picture: rights `ours`, nothing downloaded) - then build its
+   target with the acts below, `--use` from the idea: `scene` -> `scene --source <that s-NN> --frames
+   <its file>`, `style` -> `style --sources <that s-NN>`, `asset3d` -> an `asset` brief carrying
+   `"fromIdea": "<night>/<c-id>"`. The candidate carries `fromIdea`, and the idea leaves the list.
 1. **Styles.** Group ingested pictures/keyframes that share ONE look (technique, palette roles, finish -
    not subject) into 1-4 sources per run: `style <night> --sources s-01,s-04 --slug <look-words> --use "<content>"`.
    One extract run per group. The engine reads, replicates from words and transfers; its scores are a
@@ -216,8 +276,9 @@ Check `status <night> --json` for the remaining money before each launch.
    per scene. Skip frames that are a talking head, a screenshot, or carry burnt-in text (an essay's
    captions, a counter). The first two scenes in priority order get a clip while the cap allows; put the
    shot whose MOTION teaches most first.
-3. **Findings.** From captions you read and the cut timestamps ingest recorded: a claim (<= 140 chars, a
-   rule a director could follow) + the verbatim quote or the measurement + the knowledge step it
+3. **Findings - at most two a night, and only about execution in a video.** A claim a director could
+   act on in a video (<= 140 chars: how a shot, a cut or a beat lands - never a statistic for its own
+   sake) + the verbatim quote or measurement that backs it + the knowledge step it
    belongs to (`knowledge/templates/<template>/steps/<step>/`) - an EXISTING step directory only
    (`ls knowledge/templates/<template>/steps`); camera, staging and shot craft go under `02-frames`
    until the knowledge numbering names motion and cut steps. `finding <night> --json <file>`.
@@ -226,6 +287,21 @@ Check `status <night> --json` for the remaining money before each launch.
    (the marker at the end of that line names both). Kept, its line reads n=2 and it earns a registry lead.
 4. **Watch lines.** A channel or site that produced two or more good sources tonight and is not on the
    watchlist: `watch <night> --entry "<channel - url>" --why "<what it teaches>"`.
+
+### 4b. Directions - the night's notes
+
+One to three DIRECTIONS a night, each the operator's confirmation question in production words: what the
+APPROVED decisions add up to. Read the taste brief's kept runs, kept ideas and confirmed directions; a
+direction combines them into a video someone could start making - `{title, format, genre, style, tone,
+audience, premise, basedOn}`:
+- `title` - one headline: `Animated comedy sketch, dark humour for adults`;
+- `format` - `short` (~30 s) or `video` (up to 5 minutes);
+- `genre`, `style` (a kept look's name, or the look in words), `tone` (`deadpan, dark`), `audience`;
+- `premise` - the story or the bit, in a sentence or two (<= 280 chars);
+- `basedOn` - the committed cells it rests on, `<night>/<cell id>` as the taste brief lists them; the
+  CLI refuses a cell that night did not keep. A direction with nothing approved under it is not proposed.
+`npx tsx pipeline/scout.mts direction <night> --json <file>`. A direction under `## Directions refused` is
+never proposed again; a confirmed one is not re-proposed - work inside it.
 
 ### 5. Stop
 
@@ -240,8 +316,9 @@ reason must say which it was (2026-10-22 rehearsal: a night closed at 15 rows by
 ### 6. The night summary - for the operator, not about yourself
 
 Append to `.vault/Scout/nights.md` (create it): the date, the night id, the packet link
-`/board/pkt:scout:<night>`, counts by kind, settled and held USD, the stop reason, `leads: N filed, M
-queued` (step 0, and `leads --json`), and at most three
+`/board/pkt:scout:<night>`, counts by kind, Gemini settled and held USD and the uncapped line, the stop
+reason, `leads: N filed, M queued` (step 0, and `leads --json`), `ideas: N drawn across G genres, K kept
+ideas developed`, `directions: N proposed`, and at most three
 lines of what the night could not do (a source that refused, a doctor line). No narration of your process.
 
 ## /scout folder <dir> [extract args]
