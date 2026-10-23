@@ -424,6 +424,37 @@ It never keeps or commits. `pipeline/scout-schedule.ps1` registers the nightly r
 The scheduled run is `claude -p "/scout night --until 06:30"` with its tools fenced to search, read,
 the CLI and committing `knowledge/` and `.ai/registry-leads.jsonl`; logs land in `foundry-out/scout/logs/`.
 
+## Muse
+
+The loop's second wing (spark `scout-muse`, 2026-10-23; skill `/scout-muse`): an SFW study of how
+fictional adult women are drawn as characters - ultra-photoreal portrait, cinematic still, fashion
+editorial, semi-real painterly, anime/cel, stylised 3D, real-time 3D companion, toon-shaded 3D - crossed
+with character cards as 4:5 posters and 16:9 roleplay-situation scenes. Craft notes:
+`knowledge/scout-muse/techniques.md`.
+
+- **A wing is a root.** `foundry-out/scout-muse/` (`SCOUT_MUSE_STORE_DIR`) beside `foundry-out/scout/`;
+  every CLI line takes `--wing muse` (`lib/foundry/scout/wing.ts`, the active wing in `wingScope.ts`).
+  Taste, ideas blocked, steer, source dedupe and leads never cross wings. The `/scout` screen switches
+  wings (`/scout?wing=muse`); the Board packet is `pkt:scout:muse:<night>`; a Floor pile reads `muse <night>`.
+- **What the muse wing runs:** doctor, open, add-source, ideas, finding, direction, watch, close, status,
+  style. Ingest, scenes, clips, assets, reels, seeds and music are refused under `--wing muse`.
+- **Ideas** take `target: style | scene | character`, an `aspect` (muse default 4:5) and, for a character,
+  a `card` `{name, age 25-60, look, personality}`. The door refuses a prompt without `aged NN` (25+), a
+  character prompt whose age is not her card's, and youth or nudity words.
+- **The eye.** After the pixels are held, `lib/foundry/scout/judge.ts` reads adult / apparent age /
+  clothing / real-person / hands (`muse.ts` `judgeFailure`). Not adult, read under 21, nude, or a possible
+  real person: the still is deleted and the candidate fails `judge: <field>`. The eye is local first.
+- **Money.** Studio credits at quality Low (refused over 25 credits a still); `--ideas` default 25, max 50;
+  the night's Gemini ceiling defaults to $2 (only a judge fallback spends it). A refused studio generation
+  is deleted like a delivered one.
+- **Landing.** A kept `style` idea develops through the extract into the SHARED catalogue (either wing may
+  use the look); kept findings land in `knowledge/scout-muse/techniques.md`, kept watch lines in its
+  `watchlist.md`, kept characters in `characters.md` (`appendCharacter`). Muse stills are not Library
+  material.
+- **Reasons.** The scout source binds all eleven Board keys, so muse throws ride `craft` (anatomy),
+  `rights` (likeness), `subject` (young, drift - in the note), `style` (plastic - in the note), `generic`.
+- Not scheduled: `pipeline/scout-schedule.ps1` runs `/scout night` only.
+
 ## Files on disk
 
 `foundry-out/scout/<night>/` (`SCOUT_STORE_DIR` moves the root):
