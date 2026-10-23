@@ -8,11 +8,13 @@ import "server-only";
 // developed from kept ideas (a scene whose clip was kept, a style, a game asset, a direction resting on a kept
 // cell, a finding), a track and its visualizer, a night still open with a pending and a failed render, and one
 // family branch paused. Scale N repeats the universe N times under fresh batch and night ids (`-2`, `-3`...): the
-// 10x measure (`SCOUT_FIXTURE_SCALE=10`, read by ./fixture.ts).
+// 10x measure (`SCOUT_FIXTURE_SCALE=10`, read by ./fixture.ts). The muse wing (spark scout-muse) is its own small
+// root beside it, never scaled: a committed night of posters and scenes with a kept character and a still the
+// judge threw, and a closed night still waiting for its morning.
 
 import type { GraphEffort } from "@gt/domain/scoutGraph";
 
-import type { Candidate, Night, SeedAudience, SeedBatch, Steer } from "../../../../lib/foundry/scout/types.ts";
+import type { Candidate, IdeaCandidate, Night, SeedAudience, SeedBatch, Steer } from "../../../../lib/foundry/scout/types.ts";
 
 export const FIXTURE_NOW = new Date("2026-10-24T07:00:00.000Z");
 
@@ -174,6 +176,31 @@ function universe(x: Ids): { readonly batches: SeedBatch[]; readonly nights: Nig
       night(n4, "2026-10-23", open, { state: "closed" }),
     ],
   };
+}
+
+/** The muse wing's nights: ideas only, each a style, a scene or a character poster at 4:5. */
+export function fixtureMuse(): Night[] {
+  const judge = (apparentAge: number, clothing: "covered" | "revealing") => ({ adult: "yes" as const, apparentAge, clothing, realPerson: "no" as const, hands: "ok" as const, notes: "painterly, warm rim light" });
+  const muse = (i: number, nid: string, over: Pick<IdeaCandidate, "title" | "target"> & Partial<IdeaCandidate>): Candidate => ({ id: cid(i), kind: "idea", sourceIds: [], status: "rendered", prompt: "p", anchor: { kind: "free", ref: "" }, aspect: "4:5", jobId: `job:scout-ideas:muse:${nid}`, ...over });
+  const card = { name: "Mara Venn", age: 34, look: "auburn bob, freckles, green wool coat, brass compass on a chain", personality: "dry wit, never in a hurry" };
+  const n1 = "2026-10-22";
+  const n2 = "2026-10-23";
+  const first: Candidate[] = [
+    muse(0, n1, { title: "Gouache harbour portrait, golden hour", target: "style", judge: judge(31, "covered") }),
+    muse(1, n1, { title: "A detective reading a map by lamplight", target: "scene", judge: judge(38, "covered") }),
+    muse(2, n1, { title: "Mara Venn, cartographer", target: "character", card, judge: judge(33, "covered") }),
+    muse(3, n1, { title: "Cel-shaded rooftop chase", target: "scene", status: "failed", error: "judge: adult unsure" }),
+  ];
+  const second: Candidate[] = [
+    muse(0, n2, { title: "Mara Venn at the chart table", target: "character", card, judge: judge(35, "covered") }),
+    muse(1, n2, { title: "Studio-lit 3D concept bust, matte clay", target: "style", judge: judge(42, "covered") }),
+    muse(2, n2, { title: "A tango in an empty ballroom", target: "scene", judge: judge(29, "revealing") }),
+    muse(3, n2, { title: "Anime market at dusk", target: "scene", status: "pending" }),
+  ];
+  return [
+    night(n1, n1, first, { committed: commitOf("2026-10-23", ["c-01/board", "c-03/board"], ["c-02/board"]) }),
+    night(n2, n2, second, { state: "closed" }),
+  ];
 }
 
 /** The universe `scale` times over. */

@@ -73,7 +73,7 @@ export type GraphNode = {
   readonly paused?: true;
   /** The night or batch it was made in (an id, `YYYY-MM-DD[-n]`). */
   readonly at: string;
-  /** Where it is decided: `pkt:seeds:<batch>` or `pkt:scout:<night>`, and its cell when it has one. */
+  /** Where it is decided: `pkt:seeds:<batch>`, `pkt:scout:<night>` or `pkt:scout:muse:<night>`, and its cell when it has one. */
   readonly packet: string;
   readonly cell?: string;
   /** The branch root's facets (a seed's own; a candidate inherits its seed's). Absent: before seeds. */
@@ -83,6 +83,8 @@ export type GraphNode = {
   /** The seed ref a run grows from, when it has one - what the steer's pause and the groups key on. */
   readonly seed?: string;
   readonly effort?: GraphEffort;
+  /** The scout wing that made it (spark scout-muse): `muse`, or absent for the scout loop's own. */
+  readonly wing?: "muse";
 };
 
 export type GraphEdge = { readonly from: string; readonly to: string };

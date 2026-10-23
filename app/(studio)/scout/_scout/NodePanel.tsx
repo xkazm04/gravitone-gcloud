@@ -74,6 +74,7 @@ export function NodePanel({ graph, node, port, onView, onClose }: NodePanelProps
           <EntryPill entry={GRAPH_LOOK[node.state]} />
           {node.paused === true && <EntryPill entry={{ look: "paused", label: "paused" }} />}
           {node.effort?.shared === true && <Chip label="shared" casing="lower" ghost />}
+          {node.wing === "muse" && <Chip label="muse" casing="lower" />}
         </div>
         <Facts facts={factsOf(node)} />
         {from.length > 0 && (

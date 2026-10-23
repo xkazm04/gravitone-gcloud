@@ -5,6 +5,10 @@
 // a /scout night's (foundry-out/scout/, `run` is the night id), or a game
 // asset's (foundry-out/mesh/, `run` is the asset id: its posters, renders and
 // glbs - lib/foundry/mesh/store.ts SERVABLE). Same path discipline on all six.
+// A scout `run` is a night's RUN ID (spark scout-muse): the bare night is the
+// scout wing's, `muse:<night>` the muse wing's (foundry-out/scout-muse/); the
+// file is read inside that wing's scope, and a wing this build does not know
+// is a 404 like any other missing night.
 //
 // VIDEO, FOR STRIPS AND SCOUT ONLY. `kind=strips` and `kind=scout` also serve
 // .mp4 and .webm, with a Range honoured as a 206 — what a <video> asks for to
@@ -38,6 +42,8 @@ import { FoundryError, fileStat } from "../../../../lib/foundry/store.ts";
 import { extractFileStat } from "../../../../lib/foundry/extract/store.ts";
 import { meshFileStat } from "../../../../lib/foundry/mesh/store.ts";
 import { scoutFileStat } from "../../../../lib/foundry/scout/store.ts";
+import { parseWingRunId } from "../../../../lib/foundry/scout/wing.ts";
+import { withWing } from "../../../../lib/foundry/scout/wingScope.ts";
 import { stripFileStat } from "../../../../lib/foundry/strips/store.ts";
 import { trainingFileStat } from "../../../../lib/foundry/training/store.ts";
 import { route } from "../../../_server/route.ts";
@@ -62,6 +68,13 @@ const VIDEO = new Set([".mp4", ".webm"]);
 /** A FoundryError's status as the envelope's code, so the answer keeps the store's status. */
 const CODE: Readonly<Record<number, AppErrorCode>> = { 400: "invalid", 404: "not-found", 409: "conflict", 503: "unavailable" };
 
+/** A scout night's file, in the wing its run id names. */
+function scoutWingFileStat(run: string, rel: string): Promise<{ abs: string; size: number }> {
+  const w = parseWingRunId(run);
+  if (w === null) return Promise.reject(new FoundryError(`No scout wing is named by ${run}.`, 404));
+  return withWing(w.wing, () => scoutFileStat(w.night, rel));
+}
+
 export const GET = route({ guard: "access", bodyCap: 0 }, async ({ req }) => {
   const url = new URL(req.url);
   const run = url.searchParams.get("run") ?? "";
@@ -72,7 +85,7 @@ export const GET = route({ guard: "access", bodyCap: 0 }, async ({ req }) => {
       kind === "extract" ? await extractFileStat(run, rel)
       : kind === "training" ? await trainingFileStat(run, rel)
       : kind === "strips" ? await stripFileStat(run, rel)
-      : kind === "scout" ? await scoutFileStat(run, rel)
+      : kind === "scout" ? await scoutWingFileStat(run, rel)
       : kind === "mesh" ? await meshFileStat(run, rel)
       : await fileStat(run, rel);
     const ext = path.extname(abs).toLowerCase();

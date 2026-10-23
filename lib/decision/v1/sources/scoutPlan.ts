@@ -19,6 +19,7 @@ import { meshFileUrl } from "../../../library/feeds/mesh.ts";
 import { decisionMap, type Loss } from "../types.ts";
 import { extractAdapter, planLooks, type ExtractV1 } from "./extract.ts";
 import { lookBrief, sceneBrief } from "./scoutBrief.ts";
+import { museFacts, scoutFileUrl } from "./scoutWing.ts";
 
 // THE SCOUT PACKET'S CELLS, PURE - what lib/decision/v1/sources/scout.ts opens,
 // previews and applies, planned from one read of the night. Kept apart from the
@@ -109,11 +110,6 @@ export type Built = {
   /** Style candidates whose looks are in the packet, by candidate id: the run they commit through. */
   readonly runs: Readonly<Record<string, ExtractV1>>;
 };
-
-/** v1's file route for a night file (app/api/foundry/file `kind=scout`, lib/foundry/scout/store.ts scoutFileStat). */
-export function scoutFileUrl(night: string, rel: string): string {
-  return `/api/foundry/file?${new URLSearchParams({ run: night, path: rel, kind: "scout" }).toString()}`;
-}
 
 /** The content address of a text cell: its words, as the blob they would be. */
 export function textRef(text: string): BlobRef {
@@ -337,7 +333,7 @@ function ideaCells(night: Night, c: IdeaCandidate, media: ScoutV1["media"], out:
     media: m,
     grades: [],
     url: scoutFileUrl(night.id, c.image),
-    words: { label: c.title, meta: [ideaMeta(c), seedHead(c, seeds)].filter((x) => x !== undefined).join(" · "), prompt: c.prompt },
+    words: { label: c.title, meta: [ideaMeta(c), ...museFacts(c), seedHead(c, seeds)].filter((x) => x !== undefined).join(" · "), prompt: c.prompt },
   });
   out.rows.push({ id: c.id, label: c.title, group: "ideas", aim: c.prompt, ...(c.use === undefined ? {} : { use: c.use }) });
 }

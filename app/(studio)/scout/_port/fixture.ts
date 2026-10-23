@@ -10,7 +10,7 @@ import { err, ok, type Result } from "@gt/domain/errors";
 import { graphOf } from "../../../../lib/foundry/scout/graph.ts";
 import { checkSplit } from "../../../../lib/foundry/scout/steer.ts";
 import { SEED_REF_RE, type Steer, type SteerSplit } from "../../../../lib/foundry/scout/types.ts";
-import { FIXTURE_NOW, fixtureEffort, fixtureSteer, fixtureUniverse } from "./fixtureData.ts";
+import { FIXTURE_NOW, fixtureEffort, fixtureMuse, fixtureSteer, fixtureUniverse } from "./fixtureData.ts";
 import type { ScoutView } from "./contract.ts";
 import type { ServerScout } from "./port.ts";
 
@@ -25,8 +25,14 @@ const world = (() => {
 })();
 let steer: Steer = fixtureSteer(world.batches);
 
+// The muse wing's own root: no seeds, an empty steer; its graph never moves, as nothing on the screen writes it.
+const muse = (() => {
+  const nights = fixtureMuse();
+  return graphOf({ wing: "muse", nights, batches: [], steer: { paused: [], history: [] }, effort: fixtureEffort(nights), now: FIXTURE_NOW });
+})();
+
 const view = (): ScoutView => ({
-  graph: graphOf({ nights: world.nights, batches: world.batches, steer, effort: world.effort, now: FIXTURE_NOW }),
+  graphs: { scout: graphOf({ nights: world.nights, batches: world.batches, steer, effort: world.effort, now: FIXTURE_NOW }), muse },
   ...(steer.split === undefined ? {} : { split: steer.split }),
 });
 

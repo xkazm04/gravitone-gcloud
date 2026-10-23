@@ -19,10 +19,15 @@
 // watchlist line, a registry gap or nothing, and one the studio refused - so the Board's ideas tab
 // has tiles above its words, and the gate a loss with the vendor's sentence. Each idea tries a genre, and
 // the night proposes one DIRECTION standing on the committed night's kept replica (a words cell in notes).
+//
+// THE MUSE WING (spark scout-muse) has its own root, fixtures-out/scout-muse/, and one CLOSED night on the
+// same day as yesterday's scout night - two packets, pkt:scout:<night> and pkt:scout:muse:<night>, one day:
+// a style poster, a scene and a character with her card, each still read by the judge as an adult, covered.
 
 import { rmSync } from "node:fs";
 
 import { standConcept } from "../../lib/foundry/scout/concept";
+import type { MuseJudge } from "../../lib/foundry/scout/muse";
 import type { Asset3dCandidate, DirectionCandidate, IdeaCandidate, Night, SceneCandidate, ScoutSource, Seed, SeedBatch } from "../../lib/foundry/scout/types";
 import { DAY, HOUR, NOW, outFile, plate, writeBytes, writeJson } from "./kit";
 
@@ -174,6 +179,45 @@ function committedNight(): Night {
   };
 }
 
+const MUSE_PALETTE = ["#3a2e39", "#d4a373", "#7f5539", "#faedcd", "#588157"];
+const read = (apparentAge: number, notes: string): MuseJudge => ({ adult: "yes", apparentAge, clothing: "covered", realPerson: "no", hands: "ok", notes });
+
+function museIdea(night: string, id: string, over: Pick<IdeaCandidate, "title" | "target" | "prompt"> & Partial<IdeaCandidate>): IdeaCandidate {
+  const image = `ideas/${id}.png`;
+  writeBytes(outFile("scout-muse", night, image), plate(`scout-muse:${night}:${image}`, MUSE_PALETTE, 320, 400));
+  return { id, kind: "idea", sourceIds: [], status: "rendered", jobId: `job:scout-ideas:muse:${night}`, anchor: { kind: "free", ref: "" }, aspect: "4:5", image, ...over };
+}
+
+function museNight(): Night {
+  const id = dayOf(DAY);
+  return {
+    id,
+    startedAt: at(NOW - DAY - HOUR),
+    ceilingUsd: 2,
+    target: 3,
+    clipCap: 0,
+    ideaCap: 25,
+    dry: false,
+    state: "closed",
+    stop: "target",
+    closedAt: at(NOW - DAY + HOUR),
+    sources: [],
+    candidates: [
+      museIdea(id, "c-01", { title: "Gouache harbour portrait, golden hour", target: "style", genre: "painterly portrait", prompt: "gouache portrait of a woman aged 32 at a harbour wall, golden hour, visible brush texture, warm rim light, wool coat buttoned to the collar", judge: read(31, "gouache, warm rim light, flat paper texture") }),
+      museIdea(id, "c-02", { title: "A cartographer reading a map by lamplight", target: "scene", genre: "roleplay scene", prompt: "a woman aged 38 bent over a chart table by lamplight, ink and brass instruments, long coat, three-quarter view, cinematic still", judge: read(37, "photoreal, low key, one practical lamp") }),
+      museIdea(id, "c-03", {
+        title: "Mara Venn, cartographer",
+        target: "character",
+        genre: "character poster",
+        prompt: "character poster of Mara Venn, a woman aged 34, auburn bob, freckles, green wool coat, brass compass on a chain, standing at a chart table, painterly, 4:5",
+        card: { name: "Mara Venn", age: 34, look: "auburn bob, freckles, green wool coat, brass compass on a chain", personality: "dry wit, never in a hurry" },
+        judge: read(33, "painterly, soft key, the compass reads"),
+      }),
+    ],
+    jobs: [`job:scout-ideas:muse:${id}`],
+  };
+}
+
 /*
  * Two SEED batches (spark scout-decision-graph), under fixtures-out/scout/seeds/<batch>/batch.json: one the
  * operator committed (two kept, one thrown with its reason and a note), and the next one still open on the Weir,
@@ -219,9 +263,12 @@ function seedBatches(): SeedBatch[] {
 
 export function generate(): string {
   rmSync(outFile("scout"), { recursive: true, force: true });
+  rmSync(outFile("scout-muse"), { recursive: true, force: true });
   const nights = [closedNight(), committedNight()];
   for (const n of nights) writeJson(outFile("scout", n.id, "night.json"), n);
+  const muse = museNight();
+  writeJson(outFile("scout-muse", muse.id, "night.json"), muse);
   const batches = seedBatches();
   for (const b of batches) writeJson(outFile("scout", "seeds", b.id, "batch.json"), b);
-  return `${nights.length} scout nights (${nights.map((n) => `${n.id} ${n.state}`).join(", ")}), ${batches.length} seed batches`;
+  return `${nights.length} scout nights (${nights.map((n) => `${n.id} ${n.state}`).join(", ")}), 1 muse night (${muse.id} ${muse.state}), ${batches.length} seed batches`;
 }

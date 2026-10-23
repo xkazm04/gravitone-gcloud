@@ -15,6 +15,10 @@
 //
 // THE BRANCH. A candidate inherits its `fromSeed` seed's facets and sits under that seed's pause; with no
 // seed it is BEFORE_SEEDS. The groups are audience, then `<audience>/<genre>`, then BEFORE_SEEDS last.
+//
+// ONE GRAPH PER WING (spark scout-muse). A wing is a root with its own nights, seeds and steer, so each graph is
+// built inside its wing's scope and never joins the other's: the groups, the open packets and the shares are the
+// wing's own. A muse node carries `wing: "muse"` and is decided on `pkt:scout:muse:<night>`.
 
 import {
   BEFORE_SEEDS,
@@ -35,6 +39,8 @@ import { ancestryOf, listSeedBatches, seedOf, seedsPacketId } from "./seedStore"
 import { pausedUnder, readSteer } from "./steer";
 import { readAllNights } from "./store";
 import { parseCellId, SEED_AUDIENCES, SEED_REF_RE, seedRef, type Candidate, type Night, type SeedBatch, type Steer } from "./types";
+import { DEFAULT_WING, SCOUT_WINGS, wingRunId, type ScoutWing } from "./wing";
+import { activeWing, withWing } from "./wingScope";
 
 export type GraphOptions = {
   /** The kernel store effort is read from (spend rows, job events); absent: no node carries effort. */
@@ -50,21 +56,31 @@ export type GraphInput = {
   /** By `<night>/<c-id>` (./effort.ts effortOf). */
   readonly effort?: ReadonlyMap<string, GraphEffort>;
   readonly now: Date;
+  /** Whose nights these are; absent: the scout wing's. */
+  readonly wing?: ScoutWing;
 };
 
 /** The nights a group's actual share is read over: the newest live ones. */
 export const SHARE_NIGHTS = 7;
 
-const nightPacket = (id: string): string => `pkt:scout:${id}`;
+const nightPacket = (wing: ScoutWing, id: string): string => `pkt:scout:${wingRunId(wing, id)}`;
 const stageAt = (s: GraphStage): number => GRAPH_STAGES.indexOf(s);
 
 export async function buildGraph(o: GraphOptions = {}): Promise<ScoutGraph> {
   const now = o.now ?? new Date();
   const [nights, batches, steer] = await Promise.all([readAllNights(), listSeedBatches(), readSteer()]);
-  if (o.store === undefined) return graphOf({ nights, batches, steer, now });
+  const wing = activeWing();
+  if (o.store === undefined) return graphOf({ nights, batches, steer, now, wing });
   const effort = effortOf(o.store, nights, now);
   if (!effort.ok) throw effort.error;
-  return graphOf({ nights, batches, steer, now, effort: effort.value });
+  return graphOf({ nights, batches, steer, now, wing, effort: effort.value });
+}
+
+/** Every wing's graph, each built inside its own wing's scope. */
+export async function buildGraphs(o: GraphOptions = {}): Promise<Record<ScoutWing, ScoutGraph>> {
+  const now = o.now ?? new Date();
+  const built = await Promise.all(SCOUT_WINGS.map((w) => withWing(w, () => buildGraph({ ...o, now }))));
+  return Object.fromEntries(SCOUT_WINGS.map((w, i) => [w, built[i]])) as Record<ScoutWing, ScoutGraph>;
 }
 
 /* ── Nodes ───────────────────────────────────────────────────────────────── */
@@ -140,6 +156,8 @@ function cellNode(ref: string): string | undefined {
 
 export function graphOf(input: GraphInput): ScoutGraph {
   const { nights, batches, steer } = input;
+  const wing = input.wing ?? DEFAULT_WING;
+  const own = wing === "scout" ? {} : { wing };
   const oldest = <T extends { readonly id: string }>(xs: readonly T[], at: (x: T) => string): T[] => [...xs].sort((a, b) => at(a).localeCompare(at(b)) || a.id.localeCompare(b.id));
   const nodes: GraphNode[] = [];
   const links: GraphEdge[] = [];
@@ -182,7 +200,8 @@ export function graphOf(input: GraphInput): ScoutGraph {
       const branch = {
         ...(pausedAt(c.fromSeed) ? { paused: true as const } : {}),
         at: n.id,
-        packet: nightPacket(n.id),
+        packet: nightPacket(wing, n.id),
+        ...own,
         ...facetsOf(c.fromSeed),
         ...(c.fromSeed === undefined ? {} : { seed: c.fromSeed }),
       };
@@ -230,7 +249,7 @@ export function graphOf(input: GraphInput): ScoutGraph {
     batches: batches.length,
     open: {
       ...(openBatch === undefined ? {} : { seeds: { packet: seedsPacketId(openBatch.id), undecided: openBatch.seeds.length } }),
-      ...(openNight === undefined ? {} : { night: { packet: nightPacket(openNight.id), undecided: openNight.candidates.filter((c) => c.status === "rendered").length } }),
+      ...(openNight === undefined ? {} : { night: { packet: nightPacket(wing, openNight.id), undecided: openNight.candidates.filter((c) => c.status === "rendered").length } }),
     },
     paused: [...steer.paused],
   };

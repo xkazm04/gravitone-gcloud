@@ -15,13 +15,13 @@ import type { ExtractVerdictRecord } from "../../../foundry/extract/types.ts";
 import { leadCell, leadEventsOf, readRestated, verifiedRestates } from "../../../foundry/scout/leadEvents.ts";
 import { leadsFile, queueEvents, readQueue } from "../../../foundry/scout/leads.ts";
 import { processNightLoad } from "../../../foundry/scout/load.ts";
-import { FINDINGS_HEADING, WATCH_HEADING, WATCHLIST_REL, appendFinding, appendWatch, knowledgeRoot, knowledgeState, markerOf, patternsRel } from "../../../foundry/scout/knowledge.ts";
+import { appendCharacter, appendFinding, appendWatch, knowledgeRoot } from "../../../foundry/scout/knowledge.ts";
 import { meshRoot, mutateAsset, readAsset, resolveInAsset, withVariant } from "../../../foundry/mesh/store.ts";
 import { deskAbs, deskCellUrl, readDeskNight, saveDeskNight } from "../../../foundry/local-draws/desk.ts";
 import { mutateNight, nightDir, readNight, resolveInNight, scoutRoot } from "../../../foundry/scout/store.ts";
-import { listSeedBatches, seedOf } from "../../../foundry/scout/seedStore.ts";
-import type { Night, NightId, Seed, TrackCandidate } from "../../../foundry/scout/types.ts";
-import { parseTrackRef } from "../../../foundry/scout/visualizer.ts";
+import type { Night, NightId } from "../../../foundry/scout/types.ts";
+import { wingRunId, type ScoutWing } from "../../../foundry/scout/wing.ts";
+import { activeWing } from "../../../foundry/scout/wingScope.ts";
 import { packetIdOf } from "../../../ledger/v1/packet.ts";
 import { modelItemId } from "../../../library/feeds/mesh.ts";
 import { sceneShelf } from "../../../library/feeds/scout.ts";
@@ -44,6 +44,8 @@ import {
 } from "../types.ts";
 import { extractAdapter, importVerdict, lookDecision, recordOf, same, type LookDecision } from "./extract.ts";
 import { DIRECTION_VERDICT, IDEA_TARGET_WORD, MUSIC_VERDICT, build, commitOf, extractDecisions, ideaCell, meshKey, sameOutcome, visualizerCell, within, type AssetRead, type ScoutV1, type StyleRead } from "./scoutPlan.ts";
+import { musicOf } from "./scoutMusic.ts";
+import { inWing, isCharacter, knowledgeOf, knowledgeWrite, nightOfRun, packetMeta } from "./scoutWing.ts";
 
 // ONE /scout NIGHT AS A PACKET - foundry-out/scout/<night>/night.json
 // (lib/foundry/scout/store.ts) read through readNight, decided as ONE matrix
@@ -81,24 +83,29 @@ import { DIRECTION_VERDICT, IDEA_TARGET_WORD, MUSIC_VERDICT, build, commitOf, ex
 // compared, never overwritten - the same kept and rejected cells is success, a
 // different outcome is a loud refusal. A crash between any two writes leaves a
 // prefix the next delivery completes.
+//
+// EITHER WING (spark scout-muse): `muse:<night>` is a muse night, decided the same way inside its own root
+// (./scoutWing.ts inWing); its findings land in its techniques.md, its watch lines in its watchlist, and a
+// kept character idea's card in its characters.md.
 
 /** Repo-relative, forward slashes: the roots a consequence names. */
 const rel = (abs: string): string => path.relative(process.cwd(), abs).replace(/\\/g, "/");
 
 /** The read, with what the registry leads are derived from (the nights its findings restate, the keys queued) and the night's load (never digested). */
-type ScoutRead = ScoutV1 & { readonly earlier: ReadonlyMap<NightId, Night>; readonly queued: readonly string[]; readonly load?: LoadSummary; readonly desk?: true };
+type ScoutRead = ScoutV1 & { readonly wing: ScoutWing; readonly earlier: ReadonlyMap<NightId, Night>; readonly queued: readonly string[]; readonly load?: LoadSummary; readonly desk?: true };
 
 /* ── read ──────────────────────────────────────────────────────────────────── */
 
 async function read(ref: AdapterRef): Promise<Result<ScoutRead>> {
   const id = ref.runId;
+  const wing = activeWing();
   const got = await v1Call(() => readNight(id));
-  // A scout night wins when both exist, so a desk id can never hide one.
+  // A scout night wins when both exist, so a desk id can never hide one. A desk night is the scout wing's.
   let desk = false;
   let night: Night;
   if (got.ok) night = got.value;
   else {
-    const alt = await readDeskNight(id);
+    const alt = wing === "scout" ? await readDeskNight(id) : null;
     if (alt === null) return got;
     night = alt;
     desk = true;
@@ -107,7 +114,8 @@ async function read(ref: AdapterRef): Promise<Result<ScoutRead>> {
   const styles: Record<string, StyleRead> = {};
   const assets: Record<string, AssetRead> = {};
   const files: { key: string; abs: string }[] = [];
-  const knowledge: Record<string, { rel: string; exists: boolean; holds: boolean }> = {};
+  const knowledge = await knowledgeOf(night);
+  if (!knowledge.ok) return knowledge;
   for (const c of night.candidates) {
     if (c.kind === "style") {
       if (c.extractRunId === undefined) continue;
@@ -151,12 +159,6 @@ async function read(ref: AdapterRef): Promise<Result<ScoutRead>> {
       } catch (e) {
         return fromV1(e);
       }
-    } else if (c.kind !== "direction") {
-      const r = c.kind === "finding" ? await v1Call(async () => patternsRel(c.template, c.step)) : ok(WATCHLIST_REL);
-      if (!r.ok) continue;
-      const s = await v1Call(() => knowledgeState(r.value, markerOf(id, c.id)));
-      if (!s.ok) return s;
-      knowledge[c.id] = { rel: r.value, ...s.value };
     }
   }
   const media = await mediaRefs(files);
@@ -167,37 +169,7 @@ async function read(ref: AdapterRef): Promise<Result<ScoutRead>> {
   const load = processNightLoad(night);
   const music = await musicOf(night);
   if (!music.ok) return music;
-  return ok({ ...(load === undefined ? {} : { load }), ...(desk ? { desk: true } : {}), ...music.value, night, styles, assets, media: Object.fromEntries(media.value), knowledge, at: { scout: rel(scoutRoot()), knowledge: rel(knowledgeRoot()), mesh: rel(meshRoot()) }, earlier, queued: queue.value.events.map((e) => e.key) });
-}
-
-/**
- * The words a candidate's seed and a visualizer's song give its cells (spark scout-decision-graph): every seed the
- * night's candidates grow from, and each visualizer's clip - its title and its track's sentence - from the night
- * that made it. A night or a seed that cannot be read leaves its words out, never the packet.
- */
-async function musicOf(night: Night): Promise<Result<Pick<ScoutV1, "seeds" | "tracks">>> {
-  const refs = new Set(night.candidates.flatMap((c) => (c.fromSeed === undefined ? [] : [c.fromSeed])));
-  const seeds: Record<string, Seed> = {};
-  if (refs.size > 0) {
-    const batches = await v1Call(() => listSeedBatches());
-    if (!batches.ok) return batches;
-    for (const ref of refs) {
-      const s = seedOf(batches.value, ref)?.seed;
-      if (s !== undefined) seeds[ref] = s;
-    }
-  }
-  const tracks: Record<string, { title: string; sentence: string }> = {};
-  const nights = new Map<string, Night | undefined>([[night.id, night]]);
-  for (const c of night.candidates) {
-    if (c.kind !== "visualizer") continue;
-    const p = parseTrackRef(c.track);
-    if (p === null) continue;
-    if (!nights.has(p.night)) nights.set(p.night, await readNight(p.night).catch(() => undefined));
-    const t = nights.get(p.night)?.candidates.find((x): x is TrackCandidate => x.id === p.candidate && x.kind === "track");
-    const clip = t?.clips.find((x) => x.part === p.part);
-    if (t !== undefined && clip !== undefined) tracks[c.track] = { title: clip.title, sentence: t.sentence };
-  }
-  return ok({ seeds, tracks });
+  return ok({ ...(load === undefined ? {} : { load }), ...(desk ? { desk: true } : {}), ...music.value, wing, night, styles, assets, media: Object.fromEntries(media.value), knowledge: knowledge.value, at: { scout: rel(scoutRoot()), knowledge: rel(knowledgeRoot()), mesh: rel(meshRoot()) }, earlier, queued: queue.value.events.map((e) => e.key) });
 }
 
 /* ── packet ────────────────────────────────────────────────────────────────── */
@@ -208,20 +180,21 @@ function refusal(n: Night): string | undefined {
   return undefined;
 }
 
-function packet(v1: ScoutV1 & Pick<ScoutRead, "load" | "desk">): Result<OpenPlan> {
+function packet(v1: ScoutV1 & Pick<ScoutRead, "wing" | "load" | "desk">): Result<OpenPlan> {
   const n = v1.night;
   const no = refusal(n);
   if (no !== undefined) return err("refused", `scout night ${n.id}: ${no}`);
   const b = build(v1);
   if (b.cells.length === 0) return err("refused", `scout night ${n.id} has nothing rendered to judge`);
+  const run = wingRunId(v1.wing, n.id);
   const minted = mintPacket({
-    id: packetIdOf("scout", n.id),
+    id: packetIdOf("scout", run),
     lane: "image",
     source: "scout",
     mode: "matrix-cull",
     state: "open",
-    runId: n.id,
-    title: `scout ${n.id}`,
+    runId: run,
+    title: `${v1.wing} ${n.id}`,
     items: b.cells.map((c) => ({ id: c.id, jobId: c.jobId, media: c.media, row: c.row, grades: c.grades })),
   });
   if (!minted.ok) return minted;
@@ -234,7 +207,7 @@ function packet(v1: ScoutV1 & Pick<ScoutRead, "load" | "desk">): Result<OpenPlan
       items: Object.fromEntries(b.cells.map((c) => [c.id, c.words])),
       rows: b.rows,
       oracle: { passed: failed === 0 && n.stop !== "failure", summary: `${shown} candidates · ${b.cells.length} cells · ${failed} failed${n.stop === undefined ? "" : ` · stopped: ${n.stop}`}` },
-      meta: `scout · ${n.sources.length} sources${n.dry ? " · dry" : ""}`,
+      meta: packetMeta(v1.wing, n),
       ...(v1.load === undefined ? {} : { load: v1.load }),
     },
     urls: Object.fromEntries(b.cells.map((c) => [c.id, v1.desk ? deskUrl(n, c.candidate, c.url) : c.url])),
@@ -326,13 +299,13 @@ function consequence(v1: ScoutRead, at: DecisionsAt): Result<Preview> {
     } else if (c.kind === "finding" || c.kind === "watch") {
       const cell = `${c.id}/text`;
       const k = v1.knowledge[c.id];
-      if (!kept.has(cell) || k === undefined) continue;
-      const heading = c.kind === "finding" ? FINDINGS_HEADING : WATCH_HEADING;
-      parts.writes.push({ kind: "file", target: `${v1.at.knowledge}/${k.rel}`, candidate: cell, detail: k.holds ? "already holds this line" : `${k.exists ? "" : "new file · "}a line under ${heading}` });
+      if (kept.has(cell) && k !== undefined) parts.writes.push(knowledgeWrite(v1.at.knowledge, c, k, cell));
     } else if (c.kind === "idea" || c.kind === "direction") {
       const cell = c.kind === "idea" ? ideaCell(c.id) : `${c.id}/text`;
       const d = byCell.get(cell)?.verdict;
       if (d === "keep" || d === "reject") parts.writes.push({ ...nightFile, candidate: cell, detail: c.kind === "direction" ? DIRECTION_VERDICT[d] : d === "keep" ? `develops next night as a ${IDEA_TARGET_WORD[c.target]}` : "blocked" });
+      const k = v1.knowledge[c.id];
+      if (d === "keep" && k !== undefined) parts.writes.push(knowledgeWrite(v1.at.knowledge, c, k, cell));
     } else if (c.kind === "track" || c.kind === "visualizer") {
       // A kept clip is the next night's visualizer, a kept visualizer the ladder's first rung; both read the record below.
       for (const cell of c.kind === "track" ? c.clips.map((x) => `${c.id}/${x.part}`) : [visualizerCell(c.id)]) {
@@ -415,10 +388,10 @@ async function apply(claim: ApplyClaim): Promise<Result<void>> {
   if (!done.ok) return done;
   const runId = runIdOf(claim);
   if (!runId.ok) return runId;
-  const id = runId.value;
+  const id = nightOfRun(runId.value);
   const got = await v1Call(() => readNight(id));
   if (!got.ok) {
-    const desk = await readDeskNight(id);
+    const desk = activeWing() === "scout" ? await readDeskNight(id) : null;
     if (desk === null) return got;
     const items = claim.packet.items.map((it) => it.id);
     const record = commitOf(desk, items, claim.decisions, new Date().toISOString());
@@ -464,6 +437,9 @@ async function apply(claim: ApplyClaim): Promise<Result<void>> {
       } else if (c.kind === "watch" && kept.has(`${c.id}/text`)) {
         const r = await v1Call(() => appendWatch(id, c));
         if (!r.ok) return r;
+      } else if (isCharacter(c) && kept.has(ideaCell(c.id))) {
+        const r = await v1Call(() => appendCharacter(id, c));
+        if (!r.ok) return r;
       } else if (c.kind === "asset3d" && c.assetId !== undefined) {
         const r = await applyAsset(c.assetId, c.id, record);
         if (!r.ok) return r;
@@ -480,4 +456,4 @@ async function apply(claim: ApplyClaim): Promise<Result<void>> {
   return settled(after.value) ?? err("internal", `scout night ${id}: the commit record did not land in ${nightDir(id)}`);
 }
 
-export const scoutAdapter: DecisionAdapter<ScoutRead> = { source: "scout", read, packet, consequence, apply };
+export const scoutAdapter: DecisionAdapter<ScoutRead> = inWing<ScoutRead>({ source: "scout", read, packet, consequence, apply });

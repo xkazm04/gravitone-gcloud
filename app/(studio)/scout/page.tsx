@@ -5,21 +5,26 @@
 //
 // A Server Component: the graph is built here, on the server, where the stores are (./_port, the fixture or the
 // scout store with the kernel's effort), and handed to one client island (./_scout/Scout.tsx) with the Server
-// Actions that write the steer. A read that fails renders the store's own sentence.
+// Actions that write the steer. A read that fails renders the store's own sentence. `?wing=muse` opens on the muse
+// wing's graph (spark scout-muse); anything else is the scout wing's.
 import type { Metadata } from "next";
 import { connection } from "next/server";
 
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 
+import { isWing } from "../../../lib/foundry/scout/wing.ts";
 import { serverScout } from "./_port/port.ts";
 import { SCOUT_PORT } from "./_port/wire.ts";
 import { Scout } from "./_scout/Scout.tsx";
 
 export const metadata: Metadata = { title: "Gravitone · Scout" };
 
-export default async function ScoutPage() {
+type Search = Promise<Readonly<Record<string, string | string[] | undefined>>>;
+
+export default async function ScoutPage({ searchParams }: { readonly searchParams: Search }) {
   await connection();
-  const view = await serverScout().view();
+  const [q, view] = await Promise.all([searchParams, serverScout().view()]);
   if (!view.ok) return <ErrorLine message={`scout: ${view.error.message}`} live />;
-  return <Scout initial={view.value} port={SCOUT_PORT} />;
+  const asked = Array.isArray(q["wing"]) ? q["wing"][0] : q["wing"];
+  return <Scout initial={view.value} port={SCOUT_PORT} wing={isWing(asked) ? asked : "scout"} />;
 }

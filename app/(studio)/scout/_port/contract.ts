@@ -5,6 +5,7 @@
 import type { ScoutGraph } from "@gt/domain/scoutGraph";
 
 import type { ActionResult } from "../../../_server/actionCore.ts";
+import type { ScoutWing } from "../../../../lib/foundry/scout/wing.ts";
 
 /** The steer's split as the editor sends it: whole percents per audience, and per genre inside an audience. */
 export type SplitInput = {
@@ -12,8 +13,12 @@ export type SplitInput = {
   readonly genre?: Readonly<Record<string, Readonly<Record<string, number>>>>;
 };
 
-/** What the screen draws: the graph, and the split the steer holds now (absent: none set). */
-export type ScoutView = { readonly graph: ScoutGraph; readonly split?: SplitInput };
+/**
+ * What the screen draws: one graph per wing (spark scout-muse - each wing's nights, seeds and steer are its own
+ * root, so the graphs never join), and the split the scout wing's steer holds now (absent: none set). The steer's
+ * acts are the scout wing's: the muse wing has no seeds to pause and no audiences to split.
+ */
+export type ScoutView = { readonly graphs: Readonly<Record<ScoutWing, ScoutGraph>>; readonly split?: SplitInput };
 
 export type ScoutPort = {
   readonly pause: (input: { readonly ref: string }) => Promise<ActionResult<ScoutView>>;

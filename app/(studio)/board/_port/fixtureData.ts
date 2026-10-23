@@ -81,6 +81,13 @@ const SCOUT_ITEMS: SeedItem[] = [
   { id: "c-04/text", row: "c-04", url: "", mime: "text/plain" },
 ];
 const SCENE_PROMPT = "wide low-angle shot, 24mm, a lone figure on the left third against a pale sky, long shadow toward camera";
+// The muse wing's night (spark scout-muse): idea posters only, each cell's meta its target, the card it draws and
+// what the judge read - the same night /scout's fixture graph shows as closed, so "open on Board" lands here.
+const MUSE_ITEMS: SeedItem[] = [
+  { id: "c-01/board", row: "c-01", url: "/deck-art/template-cinematic.webp", mime: "image/webp" },
+  { id: "c-02/board", row: "c-02", url: "/deck-art/discipline-free.webp", mime: "image/webp" },
+  { id: "c-03/board", row: "c-03", url: "/presets/paper-relief.jpg", mime: "image/jpeg" },
+];
 
 // A night's load as the summary hands it to the desk (@gt/domain/load), built from its strip - one
 // mean per five minutes, -1 where nothing was read - so the averages, the p95 and the share in band
@@ -341,6 +348,30 @@ export function seeds(): readonly Seed[] {
         rows: [{ id: "c-01/ink-wash", label: "Ink wash · illustration", ref: "/deck-art/discipline-educational.webp", inCatalogue: false }],
         meta: "scout · 3 sources",
         load: NIGHT_20,
+      },
+    },
+    {
+      id: "pkt:scout:muse:2026-10-23",
+      lane: "image",
+      source: "scout",
+      mode: "matrix-cull",
+      title: "muse 2026-10-23",
+      runId: "muse:2026-10-23",
+      items: MUSE_ITEMS,
+      imported: [],
+      present: {
+        items: {
+          "c-01/board": { label: "Mara Venn at the chart table", meta: "character · free · Mara Venn, 34 · read 35 · covered", prompt: "character poster of Mara Venn, a woman aged 34, auburn bob, freckles, green wool coat, brass compass on a chain" },
+          "c-02/board": { label: "Studio-lit 3D concept bust, matte clay", meta: "style · free · read 42 · covered", prompt: "3D concept bust of a woman aged 42, matte clay, studio three-point light" },
+          "c-03/board": { label: "A tango in an empty ballroom", meta: "scene · free · read 29 · revealing", prompt: "two dancers mid-turn in an empty ballroom, a woman aged 30 in a long evening dress, warm practicals" },
+        },
+        rows: [
+          { id: "c-01", label: "Mara Venn at the chart table", group: "ideas", aim: "character poster of Mara Venn, a woman aged 34" },
+          { id: "c-02", label: "Studio-lit 3D concept bust, matte clay", group: "ideas", aim: "3D concept bust of a woman aged 42, matte clay" },
+          { id: "c-03", label: "A tango in an empty ballroom", group: "ideas", aim: "two dancers mid-turn in an empty ballroom" },
+        ],
+        oracle: { passed: true, summary: "3 candidates · 3 cells · 0 failed", fixture: true },
+        meta: "muse · 4 ideas",
       },
     },
     {
