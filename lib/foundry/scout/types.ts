@@ -188,6 +188,8 @@ export type ScoutSource = {
   readonly rights: "reference-only" | "ours";
   /** `<night>/<c-id>` of the kept idea artboard this source IS (spark scout-idea-artboards WP-I4). */
   readonly fromIdea?: string;
+  /** The kept idea's seed, copied when the idea is brought in, so what develops it inherits the branch (spark scout-decision-graph). */
+  readonly fromSeed?: SeedRef;
   readonly status: SourceStatus;
   readonly error?: string;
   /** Night-relative files: the picture, or a video's gated keyframes (`sources/s-01/k-003.jpg`). */
