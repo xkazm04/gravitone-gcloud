@@ -273,6 +273,9 @@ export interface ArticleRun {
   /** The latest rework; earlier ones are in `rework/<n>/` under the run's directory. */
   rework?: ArticleRework;
   landing?: ArticleLanding;
+  /** The private Medium draft the gate reviews. Absent (the key omitted) until the
+   *  run first reached the gate; never set by anything but `ensureMediumDraft`. */
+  mediumDraft?: MediumDraft;
   /** WHEN THE POST LANDED, as an event: written once, by the `landed`
    *  transition and by nothing else, and absent (not null, not "") before it.
    *  It exists because a retention policy needs a clock that means one thing:
@@ -282,6 +285,27 @@ export interface ArticleRun {
    *  A run that landed before this field existed has none; a reader must say
    *  so rather than substitute `updatedAt`. */
   landedAt?: string;
+  /** The trial this post was written around (a registry subject's claim measured against an
+   *  alternative before the run existed). Absent on a classic run, which the gate labels as
+   *  third-party evidence. Written once, by `createRun`. */
+  trial?: ArticleTrialRef;
+}
+
+/** The Medium draft made for a run at the gate. `ready` carries `url` (the
+ *  editor address) and `shot` (run-relative PNG of the draft as Medium rendered
+ *  it); `unavailable` carries `reason` verbatim and, when an earlier draft
+ *  exists, keeps its `url` so a retry replaces the body instead of starting a
+ *  second draft; `creating` is written first so the gate can say so. Absent fields are omitted, never null. */
+export interface MediumDraft {
+  state: "creating" | "ready" | "unavailable";
+  at: string;
+  url?: string;
+  shot?: string;
+  /** Figures the saved draft holds, read back after a reload… */
+  figures?: number;
+  /** …of the figures the story has; fewer is a draft to fix before publishing. */
+  figuresOf?: number;
+  reason?: string;
 }
 
 /** One numbered source. `took` is what the post took from it, in a clause. */
@@ -327,6 +351,9 @@ export interface RegistryPatch {
   sources: number[];
   /** Run-relative, `patches/<id>.patch`. */
   patchFile: string;
+  /** Lands with the post whatever the approval names: a trial run's own measurement record,
+   *  which the post cites as source 1. Absent on every other patch. */
+  required?: true;
 }
 
 /* ── the check ─────────────────────────────────────────────────────────────── */
@@ -403,6 +430,8 @@ export interface ArticleRunDetail {
   post?: string;
   /** The critique's files, read back; absent before the critique step began. */
   critique?: CritiqueDetail;
+  /** The trial's files under `<run>/experiment/`, read back; absent on a classic run. */
+  trial?: TrialDetail;
 }
 
 /** One critique round as its files hold it. A field is absent until its file
@@ -438,6 +467,9 @@ export interface CreateRunInput {
   topic: ArticleTopic;
   model?: string;
   effort?: EffortLevel;
+  /** A closed trial's id. The topic then comes from the trial's subject and the angle from its
+   *  prereg `question`. */
+  trial?: string;
 }
 
 /** WHAT STARTING A RUN COSTS, so a surface can say it before it spends it.
@@ -506,4 +538,227 @@ export const TRANSITIONS: Record<ArticleStatus, readonly ArticleStatus[]> = {
 
 export function canTransition(from: ArticleStatus, to: ArticleStatus): boolean {
   return from === to || TRANSITIONS[from].includes(to);
+}
+
+/* ── the trial: a measured claim the post is written around ───────────────── */
+//
+// A trial is made BEFORE its run exists, by an agent with a shell working in
+// `<store parent>/article-trials/<id>/` (lib/articles/trial/store.ts):
+//
+//   trial.json     TrialRecord     the manifest
+//   brief/         the subject as the registry holds it, written by `trial open`
+//   frame.md       the prior (written first), the validity check, the alternatives weighed
+//   validity.json  TrialValidity
+//   prereg.json    TrialPrereg     sealed before any measured command
+//   seal.json      TrialSeal
+//   harness/       the code that measures both arms
+//   exec.jsonl     TrialExecRecord per `trial exec`
+//   results.json   TrialResults
+//   verdict.json   TrialVerdict    computed by code from prereg + results
+//   REPORT.md      the agent's account of the experiment
+//
+// A closed trial whose verdict is not `void` becomes a run (`createRun({trial})`),
+// which copies the bundle to `<run>/experiment/` and cites it as source 1.
+
+export const TRIAL_STATUSES = ["open", "framed", "sealed", "closed"] as const;
+export type TrialStatus = (typeof TRIAL_STATUSES)[number];
+
+/** `upheld`: the golden path won. `challenged`: the alternative won. `null`: no difference
+ *  beyond the declared band with every control held. `void`: a control failed or an arm fell
+ *  short of `n`; nothing was measured, so nothing is written. */
+export const TRIAL_VERDICTS = ["upheld", "challenged", "null", "void"] as const;
+export type TrialVerdictKind = (typeof TRIAL_VERDICTS)[number];
+
+export const VALIDITY_STATES = ["current", "stale", "untestable"] as const;
+export type ValidityState = (typeof VALIDITY_STATES)[number];
+
+export const TRIAL_ARM_IDS = ["golden", "alternative"] as const;
+export type TrialArmId = (typeof TRIAL_ARM_IDS)[number];
+
+export interface TrialArm {
+  id: TrialArmId;
+  label: string;
+  description: string;
+}
+
+/** The ONE optimized metric (eval-harness/metric-role-contract): every other number is a guard. */
+export interface TrialMetric {
+  id: string;
+  label: string;
+  unit: string;
+  direction: "higher" | "lower";
+}
+
+/** A guard each arm must clear to be eligible to win. `metric` keys `TrialArmResult.guards`. */
+export interface TrialThreshold {
+  metric: string;
+  op: ">=" | "<=";
+  value: number;
+  label: string;
+}
+
+export interface TrialSourceRef {
+  url: string;
+  title: string;
+  /** ISO date (YYYY, YYYY-MM or YYYY-MM-DD). */
+  date: string;
+}
+
+/** `prereg.json`, declared and sealed before the first measured command. */
+export interface TrialPrereg {
+  schema: "article-trial-prereg/1";
+  subject: { bundle: string; slug: string };
+  /** The technique slug whose rule is under test. */
+  technique: string;
+  /** The rule under test, quoted from the technique or the golden path. */
+  claim: string;
+  alternative: { name: string; description: string; source: TrialSourceRef };
+  /** What the agent expected before its first search (prior-declaration-and-steel-man). */
+  prior: string;
+  /** One sentence; becomes the run's angle. */
+  question: string;
+  /** `golden` first, then `alternative`. */
+  arms: [TrialArm, TrialArm];
+  metric: TrialMetric;
+  /** The smallest difference that counts: an absolute amount, or a share of the golden arm's mean. */
+  minEffect: { kind: "absolute" | "relative"; value: number };
+  thresholds: TrialThreshold[];
+  /** Observations per arm. Also the floor: an arm with fewer is a `void` trial. */
+  n: number;
+  /** Conditions that must hold across both arms (same load, same model, cold cache ...). */
+  controls: { id: string; statement: string }[];
+  /** The application's stack (`node`, `python`, `claude-code` ...). */
+  stack: string;
+  /** `<stack>@<version>`, the application's `verified_against`. */
+  environment: string;
+  budget: { wallMin: number; modelCalls: number };
+}
+
+export interface TrialSeal {
+  /** sha256 (hex) of prereg.json's bytes as sealed. */
+  sha256: string;
+  at: string;
+}
+
+/** One `trial exec`. A pilot runs before the seal and never counts as a measurement. */
+export interface TrialExecRecord {
+  at: string;
+  cmd: string[];
+  pilot: boolean;
+  exitCode: number | null;
+  durationMs: number;
+  timedOut: boolean;
+}
+
+export interface TrialArmResult {
+  id: TrialArmId;
+  /** The optimized metric, one value per observation. */
+  observations: number[];
+  /** One value per threshold metric. */
+  guards: Record<string, number>;
+}
+
+/** `results.json`, written by the harness. */
+export interface TrialResults {
+  schema: "article-trial-results/1";
+  arms: [TrialArmResult, TrialArmResult];
+  controls: { id: string; held: boolean; evidence: string }[];
+  /** Model calls the harness made, against `prereg.budget.modelCalls`. */
+  modelCalls: number;
+  notes?: string;
+}
+
+export interface TrialArmSummary {
+  id: TrialArmId;
+  n: number;
+  mean: number;
+  sd: number;
+  guardsCleared: boolean;
+}
+
+/** `verdict.json`, computed by `computeVerdict` and never written by a model. */
+export interface TrialVerdict {
+  schema: "article-trial-verdict/1";
+  verdict: TrialVerdictKind;
+  reason: string;
+  arms: [TrialArmSummary, TrialArmSummary];
+  /** Alternative mean minus golden mean, signed so that a positive delta favours the alternative. */
+  delta: number;
+  /** The declared minimum effect, resolved to the metric's unit. */
+  band: number;
+  /** Seeded bootstrap interval of `delta`: reported, never decisive. Absent for a void trial. */
+  deltaCi95?: [number, number];
+  at: string;
+}
+
+/** `validity.json`: is the subject's claim still the practice, and can it be tested here? */
+export interface TrialValidity {
+  state: ValidityState;
+  reasons: string[];
+  sources: TrialSourceRef[];
+}
+
+/** `trial.json`. */
+export interface TrialRecord {
+  schema: "article-trial/1";
+  id: string;
+  status: TrialStatus;
+  subject: { bundle: string; slug: string; file: string; digest?: string; revision?: number; changedAt?: string };
+  createdAt: string;
+  updatedAt: string;
+  seal?: TrialSeal;
+  verdict?: TrialVerdictKind;
+  closedAt?: string;
+  /** The run written around this trial, once there is one. */
+  runId?: string;
+}
+
+/** `ArticleRun.trial`: what the run needs to cite and land the trial. */
+export interface ArticleTrialRef {
+  id: string;
+  verdict: Exclude<TrialVerdictKind, "void">;
+  technique: string;
+  /** The alternative's name. */
+  alternative: string;
+  /** The metric's label. */
+  metric: string;
+  n: number;
+  /** The source number the experiment holds in sources.json: always 1. */
+  sourceN: 1;
+  /** Registry-relative path of the application record the post cites. */
+  applicationPath: string;
+}
+
+/** The trial as the gate reads it back from `<run>/experiment/`. */
+export interface TrialDetail {
+  prereg: TrialPrereg;
+  verdict: TrialVerdict;
+  results: TrialResults;
+  validity?: TrialValidity;
+  execs: TrialExecRecord[];
+  /** REPORT.md, verbatim. */
+  report?: string;
+  /** Context names in this repo's `.ai/registry-map.json` that the subject governs. */
+  governsHere: string[];
+}
+
+/** A subject ranked for a trial (`trial candidates`). */
+export interface TrialCandidate {
+  bundle: string;
+  slug: string;
+  title: string;
+  file: string;
+  revision?: number;
+  changedAt?: string;
+  /** Contexts in this repo the subject governs. */
+  governsHere: number;
+  /** Applications whose `ab_verdict` is `not-better`. */
+  contested: number;
+  /** Applications whose currency clock runs out inside the horizon. */
+  atRisk: number;
+  /** The subject's volatile-fact score from `check-currency --volatile`. */
+  volatile: number;
+  score: number;
+  /** The trial or run id that already holds this subject. */
+  claimed?: string;
 }

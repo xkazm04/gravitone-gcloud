@@ -4,7 +4,13 @@
 draft, a multi-model critique, and a deterministic check, then a stop at the human gate. On approval, deterministic code
 writes the post into ai-registry as a structured publication with any approved registry patches,
 runs the registry's gates, pushes a branch, opens a PR, and builds a paste-ready Medium package.
-Nothing is ever sent to Medium.
+At the gate the post is also pasted into a private Medium draft (`lib/medium`, below), so the human
+reads it as Medium renders it. Nothing is ever published to Medium.
+
+A post about a registry subject is written around a **trial** (below): one rule of the subject's
+golden path measured on this machine against the strongest alternative in current use, before the
+run exists. The trial is the post's spine and source 1, research is its supplement, and approval
+lands the measurement in the registry as an application record beside the post.
 
 The post standard is registry content, not this repo's: the `technical-blog-post-authoring`
 recipe and the `technical-writing` knowledge bundle. The prompt references it by address and
@@ -37,8 +43,9 @@ for every read-modify-write, and a corrupt `run.json` is refused, never replaced
 | `sources.json`, `claims.json` | research turn, validated | numbered, dated sources; claims each carried by one source |
 | `outline.md` | outline turn | sections, figures plan, closing |
 | `post/index.html`, `post/post.md`, `post/meta.json`, `post/figures/NN-*.svg` | draft turn | the page, the Medium-ready Markdown, title/subtitle/tags, figures |
-| `patches.json`, `patches/<id>.patch` | engine, from the draft turn's proposals | registry patches offered at the gate; the diff is computed by code |
-| `patches.rejected.json` | engine | proposals refused (outside `knowledge/`/`recipes/`, no source, identical) |
+| `patches.json`, `patches/<id>.patch` | engine, from the draft turn's proposals | registry patches offered at the gate; the diff is computed by code. A trial run's required `t1` is made by code (Trials) |
+| `patches.rejected.json` | engine | proposals refused (outside `knowledge/`/`recipes/`, no source, identical; on a trial run anything but an amendment of the subject's techniques) |
+| `experiment/`, `experiment-source.json` | `createRun`, trial runs only | the trial's files, and source 1 (Trials) |
 | `critique/reviewers.json` | engine | the reviewer panel, snapshotted when the critique began |
 | `critique/round-<n>/reviews/<id>.json` | reviewer, validated | one review per completed reviewer |
 | `critique/round-<n>/receipts/<id>.json` | engine | each reviewer's outcome, attempts, turns, cost when reported, errors, files it wrote |
@@ -50,9 +57,235 @@ for every read-modify-write, and a corrupt `run.json` is refused, never replaced
 | `agent/<step>.json`, `agent/<step>-prompt.md` | engine | each agent turn's outcome, turns, cost and the exact prompt sent |
 | `agent/<step>-out/` | engine | a failed turn's `out/`, kept for inspection |
 | `rework/<n>/before/` | rework | what the n-th rework made stale: the old `steps.json` (costs included), `critique-summary.json`, `critique/round-*`, `checks/`, `check.json`, `check/`, `agent/critique-*` and `agent/fix-*`, and copies of `post/` and the draft's receipt and prompt |
-| `medium/` | landing | `story.html`, `tags.txt`, `README.md`, `figures/*.png` |
+| `medium/` | gate, landing | `story.html`, `tags.txt`, `README.md`, `figures/*.png`; rebuilt at the gate for the draft and again at landing |
+| `medium/draft.png` | gate | the private Medium draft as the editor rendered it |
 | `landing.log` | landing | the registry gates' output |
 | `.lock`, `.driver` | store | the write lock and the one-driver lease |
+
+## Trials
+
+Added 2026-10-18. A post about a registry subject used to be a survey: 17 of 17 posts disclaimed
+any measurement of their own in the preview, 88 to 94 percent of their prose sat in cited
+paragraphs, and 6 angles that promised a first-hand measurement delivered none. Their 17 registry
+patches went 14 to the technical-writing bundle and 0 to the run's own subject, and none was
+adopted. The one measured post, `the-token-tax` (made by hand, its experiments in its own
+`SOURCES.md#experiments`), is the model a trial reaches for.
+
+A **trial** measures one rule of a subject's golden path against the strongest alternative in
+current use, on this machine, and the run is written around its result. It is made BEFORE its run
+exists, by an agent with a shell (the `article-run` skill's Sonnet subagent,
+`.claude/skills/article-run/trial-agent.md`). The engine's writer turns stay shell-less: the agent
+seam and its fence are unchanged.
+
+### The trial store
+
+`<store parent>/article-trials/<id>/` (`foundry-out/article-trials/` by default;
+`ARTICLES_TRIALS_DIR` overrides the root). The id is `<YYYY-MM-DD>-<slug>`, with `-2`, `-3` on a
+collision. The types are in `lib/articles/types.ts` ("the trial"), the store in
+`lib/articles/trial/store.ts`.
+
+| File | Written by | What |
+|---|---|---|
+| `trial.json` | the verbs | `TrialRecord`: status `open -> framed -> sealed -> closed`, the subject (file, digest, revision, changedAt), the seal, the verdict, and `runId` once a run is written around it |
+| `brief/` | `trial open` | `golden-path.md`, `techniques/*.md`, `applications.json` (each application's stack, technique, `ab_verdict`, `verified_on`), `currency.json` (the registry's `check-currency.mjs --volatile` for the subject; absent when it fails), `governs.json` |
+| `frame.md` | agent | the prior (written before the first search), the claim, the alternative, the steel-man, the design's reasoning |
+| `validity.json` | agent | `TrialValidity`: `current`, `stale` or `untestable`, with reasons and dated sources |
+| `prereg.json` | agent | `TrialPrereg`: the claim, the alternative and its dated source, the arms (`golden` is the rule as written, then `alternative`), ONE metric and its direction, `minEffect`, guard thresholds, `n` per arm, controls, stack, environment, and a budget of wall minutes and model calls |
+| `seal.json` | `trial seal` | the sha256 of prereg.json's bytes, and when |
+| `harness/` | agent | the code that measures both arms; every `trial exec` runs in it |
+| `exec.jsonl`, `exec-logs/<k>.log` | `trial exec` | one `TrialExecRecord` per command (pilot or measured, exit code, duration, timed out) and its output |
+| `results.json` | the agent's harness | `TrialResults`: per arm the observations and one value per guard; each control held or not, with its evidence; the model calls made |
+| `verdict.json` | `trial close` | `TrialVerdict`, computed by code, never by a model |
+| `REPORT.md` | orchestrator, from the agent's reply | what ran, the versions, the anomalies, the result read against the prior. The agent returns it as text: the agent harness refuses a subagent's report file |
+| `drop.json` | `trial drop` | `{reason, at}` of a trial closed without a verdict |
+
+### The verbs
+
+```bash
+npx tsx pipeline/article.mts trial candidates [--limit N] [--json]
+npx tsx pipeline/article.mts trial open <bundle/slug> [--json]
+npx tsx pipeline/article.mts trial check <id> [--json]
+npx tsx pipeline/article.mts trial seal <id> [--json]
+npx tsx pipeline/article.mts trial exec <id> [--pilot] -- <cmd...>
+npx tsx pipeline/article.mts trial close <id> [--json]
+npx tsx pipeline/article.mts trial drop <id> --reason "<text>" [--json]
+npx tsx pipeline/article.mts trial status [<id>] [--json]
+```
+
+- `candidates` ranks the subjects of the audience bundles and of the manifest's
+  `knowledge.domains` (technical-writing excluded) for a trial, validity first: applications whose
+  `ab_verdict` is already not-better (the strongest signal), the contexts here the subject governs
+  (`.ai/registry-map.json`), the registry's own at-risk and volatile facts, and the subject's age.
+  The formula and its reasoning are the header of `lib/articles/trial/candidates.ts`. A subject an
+  unclosed trial or a trial run holds is listed in `claimed` and left out. Classic topics keep
+  `topics`.
+- `open` resolves the subject through the registry index (404 `no-subject`) and refuses one that
+  an unclosed trial holds (409 `trial-claimed`).
+- `check` validates prereg.json and validity.json, checks that the prereg names the trial's subject
+  and one of its techniques (the registry index's, else `brief/techniques/`) and a `stack` the
+  subject's bundle accepts for an application (react, rust, sql, node, process, plus the bundle
+  `index.md`'s `stacks:`: the registry's bundle gate would otherwise fail it only at landing), and
+  marks the trial `framed`. Every problem in a file is named at once (400 `bad-prereg`, 400 `bad-validity`). It is
+  the design the orchestrator vets before any money is spent.
+- `seal` validates again and writes `seal.json`. Re-sealing the same bytes is a no-op; different
+  bytes are 409 `already-sealed`.
+- `exec` runs one command in `harness/`, without a shell and one at a time (409 `exec-busy`), under
+  the seat-only environment with every credential-looking variable name stripped, so the seat CLIs
+  work from their own logins and no metered key is visible. At its cap the whole process tree is
+  killed and the record says `timedOut` with no exit code. A `--pilot` runs while the trial is
+  open, framed or sealed, for at most 10 minutes, and never counts. A measured exec needs the seal
+  and an unchanged prereg (409 `not-sealed`, 409 `prereg-changed`); its cap is `budget.wallMin` less
+  the measured time already used (409 `budget-spent`). The exit code is the child's, and the record
+  goes to stderr as one `[trial] {json}` line so the child's stdout stays clean.
+- `close` needs the seal, an unchanged prereg and at least one measured exec after the seal (409
+  `no-measurement`). It validates results.json against the prereg (400 `bad-results`, every
+  problem named), computes the verdict and closes the trial.
+- `drop` closes an open, framed or sealed trial with no verdict (a strawman, a stale or untestable
+  subject, the operator's no) and keeps the reason in `drop.json`.
+- `status <id>` reads a trial back: the record, its directory, which files exist, the exec log,
+  the measured time against the budget, and the verdict or the drop.
+
+Every verb that moves a trial refuses a closed one (409 `trial-closed`). `--json` prints one
+document on stdout. Exit codes are the other verbs' (0 ok, 1 the operation failed, 2 usage or a 400
+refusal), except `exec`, which exits with the child's code.
+
+### The verdict
+
+`lib/articles/trial/verdict.ts` is pure, and its header is the rule:
+
+```
+  void        a control did not hold, or an arm has fewer than `n` observations
+              (measurement-honesty/control-failure-is-not-a-datum-state; minimum-sample-floors),
+              or the harness made more model calls than the prereg budgeted (a protocol breach:
+              the budget was part of what was sealed)
+  band        minEffect.value, or minEffect.value x |golden mean| when relative
+  eligible    an arm clears every threshold
+  challenged  the alternative is eligible AND delta > band
+  upheld      the golden arm is eligible AND (delta < -band OR the alternative is not eligible)
+  null        anything else
+
+delta = alternative mean - golden mean, sign-flipped when the metric's direction is
+"lower", so a positive delta always favours the alternative. `deltaCi95` is a seeded
+bootstrap (fixed seed, 2000 resamples): reported, never decisive.
+```
+
+A `null` is written up (no difference beyond the declared band, every control held, every arm at
+its floor); a `void` is not, because nothing was measured.
+
+### From a trial to a run
+
+```bash
+npx tsx pipeline/article.mts run --trial <id> [--json]
+```
+
+`createRun({topic, trial})` (`lib/articles/runCreate.ts`) validates before it creates anything:
+404 `no-trial`, 409 `trial-not-closed`, 400 `trial-void` (a void verdict, or a dropped trial that
+has none), 409 `trial-taken` (another run holds the trial), 409 `trial-no-report` (no `REPORT.md`: the orchestrator has not yet saved the RUN agent's report, which the agent harness will not let the agent write itself), 400 `trial-mismatch` (a topic that is
+not the trial's subject). The topic is the trial's subject and the angle its prereg's `question`.
+The run then gets:
+
+- `experiment/`: a copy of the trial dir without `node_modules`, `.venv`, `venv`, `__pycache__`,
+  `.git` or any file over 1 MB; what was left out is listed in `experiment/SKIPPED.txt`;
+- `experiment-source.json`: source 1 (`experimentSource` in `lib/articles/trial/record.ts`), the
+  trial's application record at its address on the registry's default branch
+  (`https://github.com/<owner/repo>/blob/main/<applicationPath>`, from `.ai/manifest.yaml`
+  `registry.remote`; `ARTICLES_REGISTRY_REMOTE` overrides it). Like `the-token-tax`'s
+  `SOURCES.md#experiments`, the link resolves once the landing PR merges;
+- `run.trial` (`ArticleTrialRef`), and the trial records the run's id.
+
+The prompts gain `trial-research`, `trial-outline`, `trial-draft` and `trial-writer` in
+`ARTICLE-POST-PROMPT.md` and `trial-review` in `ARTICLE-REVIEW-PROMPT.md`, appended only for a
+trial run, with the trial's summary in their `{{TRIAL}}` slot. What a classic run is sent does not
+change.
+
+- **Research is the supplement**: earlier measurements of the same comparison, both practices'
+  current documentation, counter-evidence to the result. Row 1 of `sources.json` must equal
+  `experiment-source.json` field for field, or the step fails with `source 1 must be the trial's
+  record (experiment-source.json)`. Numbering continues from 2, and every bar on sources holds.
+- **The post is built around the result, told as the story of a question.** It opens on the
+  reader's situation and what the measurement found; the preview states the verdict, the per-arm n
+  and that the measurement is first-hand, citing [1]; then why the rule is recommended and why it
+  was doubted, how it was tested (every choice with its reason), at least one figure drawn from
+  `results.json` whose caption cites [1], the mechanism, what the result changes for the golden
+  path, and what the trial cannot say. The title is `<practice> vs <practice>: <the stake>`, and
+  neither it nor the subtitle carries a number. No internal identifier (observation, run, trial or
+  seed numbers, hashes, harness names) is printed; source 1's title carries none either (owner's
+  review, 2026-10-18). A `null` is "no difference beyond <band> at n=<n>", never a tie or a win.
+  No number about the arms that `results.json` or `verdict.json` does not hold.
+- **Patches.** The draft is staged the subject's golden path, the technique under test and its
+  application file (when one exists) in place of the writing standard's files. A `challenged` or
+  `null` trial may propose at most one amendment to the technique under test, stating the
+  condition under which the rule did not hold; never golden-path text, never the writing standard.
+- **The METHOD lens.** A trial run's reviewers find `experiment/` in their workspace (text files,
+  at most 2 MB) and review it as a fifth lens: confounds, arm fairness (the alternative at its
+  best, not a strawman), whether the controls held, n against the floor, the choice of band,
+  whether the verdict follows from the numbers, and overclaiming. The registry's critique gate
+  accepts a closed set of kinds, so a METHOD finding is `kind: "factual"` with a `location` that
+  starts `METHOD:`. The writer cannot re-measure: it answers a method finding by stating the limit
+  in the post, or rejects it with the reason, and never changes a number about the arms.
+- **The check** adds two truth items for a trial run: `trial-preview` (the text before the first
+  `<h2>` cites [1] and states the per-arm n) and `trial-figure` (a figure caption cites [1]).
+
+### The gate and the registry outcome
+
+`getRunDetail` carries the trial (`trial`: the verdict, the claim, the technique, the alternative and
+its source, the metric with its band and guards, per arm n, mean, sd and guards cleared, the
+controls, the measured commands, and the contexts here the subject governs; absent on a classic
+run). The panel that drew it belonged to the v1 `/articles` page and retired with it in Phase 6; the
+Board's article packet does not draw the trial yet, so the gate shows the post, the check and the
+critique, and the measurement is read from `experiment/` and the post itself.
+
+The measurement lands as the registry's own kind of evidence, an **application** of the technique
+under test (`lib/articles/trial/registryRecord.ts`), at `run.trial.applicationPath`
+(`<subject dir>/applications/<stack>--<technique>.md`): frontmatter `applied: experiment`,
+`ab_verdict` (`upheld` is `better`, `challenged` and `null` are `not-better`), `proof: ab-paired`,
+`verified_on` (the verdict's date) and `verified_against` (the prereg's environment); a body with
+the claim, the alternative, the setup and its measured commands, the per-arm table, the verdict and
+the bootstrap interval. When the file already exists, a dated `## Trial <id> (<date>): <verdict>`
+section is appended and the rest is left as it was: an earlier measurement is evidence too.
+
+- The engine adds it as patch `t1` (`kind: application`, `required: true`, sources [1]) after the
+  draft's own proposals. A required patch is in every approval whatever the caller selected (the
+  CLI, the route and the Board all go through `approveRun`), so a post never lands citing a record
+  that did not land with it.
+- A trial run's own proposals must amend one of the subject's techniques (kind `technique`, a file
+  in the subject's `techniques/`); anything else goes to `patches.rejected.json` with its reason.
+- Landing writes `## Experiments` into the publication's `SOURCES.md` (the question, arms, metric,
+  n, the per-arm table, the measured commands, the environment, the date and the application
+  path), and the PR body carries a Trial block: verdict, metric, n, the application path, the
+  contexts it governs here, and the step after merge, `node scripts/converge.mjs --pending --write`
+  in the registry, which queues the changed subject in every consuming project.
+- No trial rewrites golden-path text. One experiment does not move a stance; two not-better
+  verdicts from different projects are what demote a technique, and the registry decides that
+  through its leads.
+
+**Leads** (`lib/articles/trial/leads.ts`) go to the main checkout's `.ai/registry-leads.jsonl`
+(`ARTICLES_LEADS_FILE` overrides it, and every probe sets it), the consumer-side channel the
+registry's `leads-collect.mjs` folds into its librarian inbox. A lead proposes; it never changes the
+registry. Each is `from: "article-trial@<date>"`.
+
+| When | Kind | Written by |
+|---|---|---|
+| a trial closes `void` | `technique` | `trial close` |
+| a trial whose validity is `stale` is dropped | `subject` | `trial drop` |
+| a trial run is rejected at the gate, so the measurement is not lost | `application` | `rejectRun` |
+| a `challenged` or `null` trial run lands, so `/deepen` weighs the golden path | `technique` | landing |
+
+### The orchestrator, and what classic runs keep
+
+`/article-run` (`.claude/skills/article-run/SKILL.md`) runs trials end to end. It ranks the
+candidates and judges which can be measured on this machine, frames up to three trials in parallel
+with Sonnet subagents, vets each design (no strawman alternative, a metric that measures the claim,
+a band outside the noise, a current subject), asks the operator once with every trial's design and
+cost, then measures, closes, and starts `run --trial` for every trial that is not void. N is the
+smallest of 3, the budget at 100 USD an article, the testable candidates and the slots beside runs
+already driving; it is 1 after a `seat-limit` in the last 24 hours. An article costs about $80 to
+$90 reported: writing about $65 to $67, the trial $5 to $15. The skill never approves, rejects,
+reworks, resumes or lands.
+
+Classic runs are unchanged. `/articles/new`, `run --subject`, `run --topic`, `loop` and
+`/techwriter` write third-party posts with no `run.trial`, with the research brief, prompts, checks
+and patches described in the rest of this document, and the gate labels them `no trial`.
 
 ## The agent seam
 
@@ -90,11 +323,11 @@ check-passing files and spends nothing.
 
 The critique's reviewers run through `runReviewer` in the same seam, on the operator's own CLI
 logins. A reviewer's workspace holds only a copy of `post/`, `sources.json` and `REVIEW.md` (the
-full prompt); the seam refuses one that holds anything else. The review comes back as one JSON
-object in the final message. Nothing a reviewer leaves on disk is read back; the engine records
-any file it wrote in its receipt (`wrote`). The environment is the writer's metered-key strip plus
-every variable whose name looks like a credential (`KEY`, `SECRET`, `TOKEN`, `PASSWORD`,
-`CREDENTIAL`, `AUTH`).
+full prompt), and `experiment/` on a trial run; the seam refuses one that holds anything else. The
+review comes back as one JSON object in the final message. Nothing a reviewer leaves on disk is
+read back; the engine records any file it wrote in its receipt (`wrote`). The environment is the
+writer's metered-key strip plus every variable whose name looks like a credential (`KEY`,
+`SECRET`, `TOKEN`, `PASSWORD`, `CREDENTIAL`, `AUTH`).
 
 | Engine | argv after the binary | Prompt | Proven on 2026-10-05 |
 |---|---|---|---|
@@ -123,7 +356,8 @@ The standard is re-resolved before every agent turn. An unreachable registry fai
 `registry-unreachable: …`; there is no cached standard.
 
 For a registry-subject topic (`<bundle>/<slug>`) the subject's golden path is the research brief's
-background; it contains no external facts, and the post's facts come from research.
+background; it contains no external facts, and the post's facts come from research. A trial run's
+post stands on its own measurement instead, with research as the supplement (Trials).
 
 ## The critique
 
@@ -140,7 +374,8 @@ on this account), each at effort `high` with `timeoutMin` 25. The run snapshots 
 
 1. **Round n.** Every reviewer runs in parallel, blind to the others, with
    `pipeline/ARTICLE-REVIEW-PROMPT.md`. The prompt covers four lenses: accuracy (open the cited
-   pages and check numbers, dates and claims), engagement, insight and format. It inlines the
+   pages and check numbers, dates and claims), engagement, insight and format; a trial run's
+   review adds a fifth, METHOD, over the experiment in its workspace (Trials). It inlines the
    registry standard the way the writer prompt does, along with the post and its sources. It asks
    for one JSON object and forbids rewriting the post. The engine holds the answer to the review
    schema (`{verdict, summary, findings:[{id, kind, severity, location, claim, evidence, suggestion}]}`);
@@ -186,11 +421,11 @@ measured against):
 
 | Dimension | Measured |
 |---|---|
-| structure | content preview before the first `<h2>` listing the sections and stating no read time; no stated reading time anywhere (`read-time`); a summary table in the closing section (`closing-table`); at most 450 words before the first section, preview included (`pre-section-words`); closing list items of at most 50 words (`closing-list-items`); no placeholders |
+| structure | content preview before the first `<h2>` listing the sections and stating no read time; no stated reading time anywhere (`read-time`); a summary table in the closing section (`closing-table`); at most 450 words before the first section, preview included (`pre-section-words`); closing list items of at most 50 words (`closing-list-items`); the skim spine (`skim-spine`): from the first section on, one `**bold**` span per prose paragraph over 45 words, 4 to 25 words with no citation inside, bold at most 15 percent of the section prose (the approved 429 post: 12.3), every span also a `<strong>` in index.html; no placeholders |
 | figures | at least 5 `<figure>`s, every one captioned, every caption citing a source that exists, images resolving inside the post, label-length text inside the SVGs; visual cadence (`visual-cadence`): no run of 3 or more prose paragraphs in `post.md` without an image, table, code block or callout, and in words (`prose-run-words`, at most 300 words of prose between visuals; `padding-paragraphs`, at most 30 percent of the prose in one-sentence paragraphs of 40 words or fewer) |
 | voice | first-person words in prose (outside code and quotes); no em or en dash in `post.md`, `index.html` or a figure (`no-em-dash`) |
 | medium-fidelity | no network resources (static and rendered), highlighted code, a dark scheme, smallest body type at 1440 (>= 18 px) and 390 (>= 17 px), smallest caption/chrome type (>= 13 px), no sideways scroll at 390 |
-| truth | >= 8 sources, >= 3 primary, >= 1 counter; every source dated with an http(s) URL; every `[n]` resolves; every claim's source exists; the Sources list and `sources.json` numbered 1 to N with no gap or repeat (`source-numbering`); item `critique`: at least 2 reviewers completed every round, and every `blocker` `factual` finding has a disposition with a reason |
+| truth | >= 8 sources, >= 3 primary, >= 1 counter; every source dated with an http(s) URL; every `[n]` resolves; every claim's source exists; the Sources list and `sources.json` numbered 1 to N with no gap or repeat (`source-numbering`); item `critique`: at least 2 reviewers completed every round, and every `blocker` `factual` finding has a disposition with a reason; on a trial run also `trial-preview` and `trial-figure` (Trials) |
 | storytelling, depth | not measured: the human's judgement, reported as such and never as a pass |
 
 The rendered items open `post/index.html` in Playwright's chromium with every http(s) request
@@ -230,7 +465,7 @@ the final check step surfaces it.
 ## Topics, the loop and `/techwriter`
 
 Added 2026-10-07 from the first six runs (the `techwriter` skill, `.claude/skills/techwriter/`,
-is the operator's front door; the CLI verbs below are what it calls).
+is the operator's front door for classic posts; the CLI verbs below are what it calls).
 
 ```bash
 npx tsx pipeline/article.mts topics [--limit N] [--include-bundle <bundle>] [--json]
@@ -356,8 +591,15 @@ terminal: a reject throws the piece away, a rework is one piece of work with one
   whole standing brief, headed `REWORK <n> OF THIS DRAFT: THE OPERATOR'S INSTRUCTION`
   (`reworkSection` in the engine). It says the instruction decides what changes, that research and
   sources are kept and not to be redone, and that the output contract and the check's bars still
-  bind. The old post is staged in the workspace as `inputs/previous-post/`. No other turn is given
-  the note. `agent/draft-prompt.md` holds the exact prompt.
+  bind. The old post is staged in the workspace as `inputs/previous-post/`. `agent/draft-prompt.md`
+  holds the exact prompt.
+- **And the critique.** Every reviewer and every writer turn after the redraft (the answer, a
+  re-research, the rewrite, a fix) gets the note too, headed `THIS POST IS REWORK <n>: THE
+  OPERATOR'S INSTRUCTION FOR IT` (`reworkCritiqueSection`). A reviewer judges the post against it
+  and never asks for what it rules out; the writer rejects a finding that would undo it. Until
+  2026-10-18 only the draft saw the note, and on that day's second rework the critique undid it:
+  the reviewers asked for exact figures and more mechanism, the writer accepted 69 of 74 findings,
+  and the post came back longer, with the terms and three-decimal figures the note had cut.
 - **Cost.** No research turn, so no live web and none of the research phase. The draft turn is paid
   again, and the whole critique (four reviewers, the writer's answer, and any revision) and the
   check run again. On the runs of 2026-10 the critique was about three quarters of a run's cost
@@ -370,7 +612,7 @@ terminal: a reject throws the piece away, a rework is one piece of work with one
   `awaiting-approval`. A rework that fails goes `failed` like any run and `resume` goes back to
   `drafting`; the note stays on the run until the draft is done.
 
-`rework <runId> --note "<text>"` is the CLI form: it calls the verb and then drives the run to the
+`rework <runId> --note "<text>"` (or `--note-file <path>`, which a multi-line note needs on Windows: `npx` is a `.cmd` shim and cmd.exe ends an argument at its first newline) is the CLI form: it calls the verb and then drives the run to the
 gate again. Spending the operator's seat, it is the operator's act, as `resume` is.
 
 ## `landedAt`
@@ -387,7 +629,8 @@ landed run with no `landedAt` must say it does not know when it landed rather th
 
 Approval is per post and per patch: `approve <runId> --patches p1,p2` (or the gate's Approve with
 the patch selection) records `approval {at, patches}`, then the engine lands
-(`lib/articles/registryWrite.ts`):
+(`lib/articles/registryWrite.ts`). A trial run's required `t1` is in every approval, and its
+landing adds `## Experiments` to `SOURCES.md` and a Trial block to the PR body (Trials):
 
 1. `git fetch origin` in the registry; a worktree on `article/<slug>` off the remote's default branch
 2. `publications/<slug>/`: `publication.json` (`publication/1`), `post.html`, `post.md`,
@@ -411,23 +654,54 @@ in `run.landing.worktree`), writes `landing.log`, and sets `failed`. No PR is op
 tree. Credentials are the operator's existing git and gh logins; nothing is stored.
 `ARTICLES_GH_BIN` replaces `gh` (the probes use `tests/fixtures/articles/stub-gh.mjs`).
 
+## The Medium draft at the gate
+
+Decided 2026-10-16, reversing the earlier non-goal "no browser automation of Medium". The
+preview the app drew from `post/index.html` could not show how Medium reads the post (headings
+remap, quotes become italic, code is re-highlighted, figures are re-uploaded), so the gate now
+reviews the real thing.
+
+- When a run reaches `awaiting-approval`, `draftAtGate` (`lib/articles/mediumDraft.ts`) rebuilds
+  `medium/`, then `lib/medium` pastes `story.html`'s body into a private draft at
+  `medium.com/new-story` in the operator's signed-in Chrome profile (`~/.medium-chrome`, CDP port
+  9335, opened once with `npm run medium:browser`). Figures are pasted as PNG files and
+  captioned; each Markdown table travels as a PNG figure (`table-NN.png`), because Medium has
+  no table element. The driver reloads the saved draft and records how many figures it holds
+  (`figures` of `figuresOf`). The run records `mediumDraft {state: creating|ready|unavailable, url?, shot?,
+  figures?, reason?, at}`; absent fields are omitted.
+- A rework that returns to the gate replaces the body of the same draft (`url` is kept, also
+  through a failure). `post.md` stays the single source: nothing is read back from the draft, so a
+  change asked for at the gate goes through Rework.
+- The draft is a convenience, not a precondition. A browser that is not running, a signed-out
+  profile or a refused paste becomes `unavailable` with its reason verbatim, and the Board's article
+  packet says so in its meta line (a ready draft shows its url there) while the post itself opens
+  from the served `post/index.html`.
+- `MEDIUM_DRIVER`: `live` drives the profile, `fake` drives nothing (probes), unset is off. It is
+  off by default so a probe or a CI run never reaches an account.
+- It cannot publish: no selector for it exists (`lib/medium/selectors.ts`), the page aborts any
+  request matching `/publish|/schedule|/submit`, and a probe fails on a publish or schedule button
+  name in `lib/medium`. Tags are set at publish time in Medium, so `tags.txt` stays by hand.
+- Recon and the driver's limits: `docs/medium-driver.md`.
+
 ## Headless
 
 ```bash
 npx tsx pipeline/article.mts run (--subject <bundle/slug> | --topic "<text>") [--angle "<text>"] [--model <id>] [--effort <level>] [--reviewers <file>] [--json]
+npx tsx pipeline/article.mts run --trial <id> [--json]
 npx tsx pipeline/article.mts status [<runId>] [--json]
 npx tsx pipeline/article.mts approve <runId> [--patches p1,p2] [--json]
 npx tsx pipeline/article.mts reject <runId> --note "<text>" [--json]
-npx tsx pipeline/article.mts rework <runId> --note "<text>" [--json]
+npx tsx pipeline/article.mts rework <runId> (--note "<text>" | --note-file <path>) [--json]
 npx tsx pipeline/article.mts resume <runId> [--reviewers <file>] [--json]
 ```
 
 Exit 0 ok, 1 the run stopped somewhere else or the operation failed, 2 usage. `--json` prints one
 document on stdout; the per-turn `[agent]` log lines go to stderr. `run` and `status` print the
 critique: each reviewer with its outcome and error, the findings by disposition, and the decision.
-`run --json` carries `critique` beside `{runId, dir, status}`. The `techwriter` skill is the dialogue and
-the loop; the `article-run` skill wraps `run`
-and `status` only and never approves.
+`run --json` carries `critique` beside `{runId, dir, status}`. The `trial` verbs are in Trials. The
+`article-run` skill orchestrates trials (the `trial` verbs, `run --trial` and `status`); the
+`techwriter` skill is the dialogue and the loop for free topics and third-party posts. Neither
+approves, rejects, reworks, resumes or lands.
 
 A dry run against a throwaway registry, spending nothing, with every engine stubbed:
 
@@ -447,7 +721,8 @@ Leaving out one of the four `*_BIN` variables runs that real CLI.
 
 The engine exports what the routes call, so the CLI and the UI cannot disagree:
 `createRun`, `driveRun` / `launchRun` (fire-and-forget for a route), `getRun`, `getRunDetail`
-(run, sources, claims, outline, meta, check, patches with their diffs, post path),
+(run, sources, claims, outline, meta, check, patches with their diffs, post path, and `trial` on a
+trial run, read back from `experiment/`),
 `listArticleRuns`, `approveRun`, `rejectRun`, `reworkRun`, `resumeRun`; `listTopicSubjects`
 (registryRead) feeds the topic picker, and `listUncoveredTopics` (loop.ts) the ranked, titled list. All of `lib/articles/` except `types.ts` is server-only; a client component may
 import `lib/articles/types.ts` and nothing else.
@@ -480,6 +755,7 @@ errors and bodies after the door. It is not an auth wrapper.
 | `POST …/approve` `{patches}` | `guardRequest` | `approveRun`, then `launchRun` (landing) |
 | `POST …/reject` `{note}` | `guardAccessOnly` | `rejectRun`. A note is required |
 | `POST …/resume` | `guardRequest` | `resumeRun`, then `launchRun` |
+| `POST …/medium` | `route({ guard: "money" })` | `ensureMediumDraft`: make the gate's private Medium draft again (the same draft's body is replaced). 409 `bad-transition` off the gate, 409 `draft-in-flight` while one is being made |
 | `GET …/file/<path>[?k=]` | `guardAccessOnly` | serves files under `post/`, `check/` and `medium/` only. HTML and SVG are sent under `default-src 'none'; … sandbox` |
 
 Errors come back as `{error, code}` from `ArticleError`, word for word. The verbs read the run
@@ -498,8 +774,9 @@ Pages:
   If the registry cannot be read, its error is shown word for word and free text still works. No
   client module imports `lib/articles/` beyond `types.ts`.
 - `/articles/<runId>` shows a six-node stepper (research, outline, draft, critique, check, gate),
-  a state banner, and the gate in its fixed order: the draft in a `sandbox=""` iframe, the
-  critique, the check report, sources, patches with diffs, then Approve and Reject.
+  a state banner, and the gate in its fixed order: the draft in a `sandbox=""` iframe, the trial
+  (a `no trial` chip on a classic run), the critique, the check report, sources, patches with
+  diffs, then Approve and Reject.
   - Critique (`app/articles/CritiquePanel.tsx`): the round timeline (completed of the panel,
     findings, the writer's decision and rationale, whether the post was revised and after
     research; a round button switches the view), then the reviewers of that round, each with an
@@ -510,7 +787,8 @@ Pages:
     writer's disposition, reason and action beside it. A finding the writer has not answered says
     `unanswered` in amber. A round that stopped short of quorum says so.
   - Check report: failures first, then the unmeasured dimensions in amber, then passes.
-  - Patches: each gets a checkbox at the gate. After approval it shows approved or declined.
+  - Patches: each gets a checkbox at the gate; a required `t1` is checked and locked. After
+    approval each shows approved or declined.
   - Approve: a confirm that states its consequence.
   - Reject: requires a note.
 
@@ -535,7 +813,7 @@ The Board's `articles` source (`lib/board/sources/articles.ts`, verdicts in
 
 ## Probes
 
-`tests/golden-path/articles-{store,checks,registry,engine,critique,checkloop,ui}.probe.spec.ts`, offline,
+`tests/golden-path/articles-{store,checks,registry,engine,critique,checkloop,ui,trial,trial-gate}.probe.spec.ts`, offline,
 against `tests/fixtures/articles/registry-fixture.mjs` (a bare origin plus a clone; its stub gate
 also knows the `critique` block and directory in outline), the stub agent through the real seam for
 the writer and all four reviewer engines, and a stub `gh`. They never name the real registry.
@@ -548,3 +826,7 @@ post is checked before the next review round, resume is idempotent, plus agy's e
 shorter agy timeout. The v1 `/articles` pages, their routes and `articles-ui` retired in Phase 6: an article is
 launched from the Floor's article lane and approved on the Board (`/board/pkt:article:<runId>`);
 `article-file.test.ts` holds the one kept route, the draft's file door.
+`articles-trial` pins the trial verbs: the verdict table, the seal, the exec environment and wall
+cap, close and its lead, `open` on the fixture registry, and the CLI. `articles-trial-gate` pins a
+trial run's registry outcome: `t1` lands without being selected, `## Experiments`, the Trial block,
+and the leads.

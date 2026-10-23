@@ -16,6 +16,13 @@ writer receives it. A copy pasted here would be a second standard that drifts.
 
 The output contract below is the schema lib/articles/critique.ts validateReview
 holds a review to; change one, change both.
+
+`trial-review` (2026-10-18) is appended after `review` for a run written around
+a trial, and only then: the METHOD lens over the experiment, whose text files
+the engine copies into the workspace as experiment/. A method finding keeps the
+closed kind set (the registry's critique gate accepts no other kind): it is
+`factual`, and its `location` starts `METHOD:`. {{TRIAL}} is the summary code
+renders from the experiment's prereg.json, verdict.json and results.json.
 -->
 
 <!-- section: review -->
@@ -71,3 +78,30 @@ OUTPUT. Your whole final message is ONE JSON object and nothing else — no prea
 {"verdict": "publish" | "revise" | "rework", "summary": "one paragraph: the post's state and the findings that matter most", "findings": [{"id": "f1", "kind": "factual" | "format" | "engagement" | "insight" | "voice", "severity": "blocker" | "major" | "minor", "location": "where in the post: section and paragraph, figure number, or citation", "claim": "what is wrong or missing, specifically", "evidence": ["https://the-page-you-opened"], "suggestion": "what the writer should do instead"}]}
 
 `verdict`: `publish` when nothing is a blocker or major, `revise` when findings need changes the current research supports, `rework` when the post needs new research or a new structure. Finding ids are `f1`, `f2`, … and unique. `location` names a place in the post, never a file path. `findings` is `[]` when there is honestly nothing to find. Order findings by severity, blockers first.
+
+<!-- section: trial-review -->
+LENS: METHOD. This post reports a trial: before the post existed, the claim below was measured first-hand against an alternative under a sealed preregistration, and the verdict was computed by code from the numbers. The experiment's text files are in `experiment/` in your working directory (`prereg.json`, `results.json`, `verdict.json`, `validity.json`, `exec.jsonl`, `REPORT.md`, the harness's code); read them. They are read-only like everything else here.
+
+{{TRIAL}}
+
+A trial post opens on the reader's situation and what the measurement found, not on a third-party incident or a dated run, and its preview states the verdict and the per-arm n citing [1]: for this post that is the rule, not a finding. Source [1] is the trial's record: its link resolves only after the post lands, so check the numbers it carries against `experiment/` instead.
+
+Judge the story as well as the numbers:
+- THE WHY (`engagement`): at every section a reader should know why they are reading it. Flag a section that opens on numbers before the question it answers, a design choice (the setting, the metric, a floor, the smallest difference that counts) stated without its reason, and any stretch that reads as a laboratory log (a run's timestamps, durations, exit codes, seeds, versions, pilot counts). The suggestion names the reason the reader is missing.
+- THE BACKGROUND (`engagement`): before the example, the opening says in plain words what the activity is and why people do it, what is decided with it and by whom, what a right call is worth and a wrong one costs, and the question both practices answer; the close returns to it. Flag an opening that starts on the example's mechanics ("a team has six candidates") without saying what they are candidates for and what the decision is worth, and a close that ends on a checklist without saying what the reader gains.
+- THE EXAMPLE (`engagement`): one practical use case the reader can picture should carry the post: the opening sets it up, each practice is explained in plain words through it before any measured number, and the closing returns to it with what that team does now and where the result applies and where it does not. Flag an opening that reaches a number before the reader knows what both practices do, a term of art used before it is shown working, and a closing with no line on where the result is valid.
+- PICTURES (`format`): flag a body table that an abstract illustration could carry, and more than two tables before the closing section.
+- INTERNAL IDENTIFIERS (`voice`): flag each observation, evaluation, run, trial, row or seed number or id, hash, harness file or command name, and pipeline label ("Table A", "Strip", "golden arm") printed in the post, and say how to describe that case by what it was.
+- THE TITLE AND SUBTITLE (`engagement`): the title is `<practice> vs <practice>: <the stake>`; the subtitle says in words what was measured and why it matters. Flag one that is not that shape or that carries a number, a percentage or n.
+
+Judge the measurement, not only the prose:
+- THE AMENDMENT: when `experiment/proposed-amendments/` holds a diff, it is the text this post proposes to add to the engineering standard, and it lands if the operator approves it. Judge it as strictly as the post: every mechanism it states must agree with the trial's own numbers, and it must claim no more than the trial measured. A finding on it uses a `location` starting `METHOD: amendment <id>`.
+- CONFOUNDS: anything other than the practice under test that differs between the arms (load, model, cache, data, order, version).
+- ARM FAIRNESS: is the alternative a real practice at its best, configured as its own current documentation recommends, or a strawman? Is the golden arm the rule as written?
+- CONTROLS: did each control hold, and does its recorded evidence show it?
+- n AGAINST THE FLOOR: is n per arm enough for what the post claims from it?
+- THE BAND: was the declared smallest difference a reasonable choice for this metric?
+- THE VERDICT: does it follow from the numbers in `verdict.json` and `results.json` under the rule stated above?
+- OVERCLAIM: does the post say more than the trial measured (another workload, version or scale; a null read as a tie or a win)?
+
+A METHOD finding is reported with `kind: "factual"` and a `location` that starts `METHOD:` followed by the place in the post (`"METHOD: setup section, the alternative arm"`). Its `claim` names the file and field in `experiment/` that shows the problem; `evidence` still holds only http(s) URLs you opened. The writer cannot measure again: a method finding is answered by a limit stated in the post or by a reason. It is a `blocker` only when the post's verdict does not follow from the numbers. The OUTPUT above is unchanged.

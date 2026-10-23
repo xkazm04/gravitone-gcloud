@@ -2,7 +2,7 @@
 name: techwriter
 memory: none
 category: Content
-description: Write a technical blog post through the article pipeline, from topic choice to the human gate, using what the first six runs taught. `/techwriter` opens a topic dialogue (uncovered registry subjects, you pick one), then runs research, outline, draft, the check loop and the multi-model critique and reports where the post waits in /articles. `/techwriter --loop N` is the unattended mode for nightly jobs: it covers topics until N are covered, under a budget, with no dialogue. It never approves, rejects, lands or pushes anything. Single headless runs without the dialogue stay with /article-run.
+description: Write a technical blog post through the article pipeline, from topic choice to the human gate, using what the first six runs taught. `/techwriter` opens a topic dialogue (uncovered registry subjects, you pick one), then runs research, outline, draft, the check loop and the multi-model critique and reports where the post waits in /articles. `/techwriter --loop N` is the unattended mode for nightly jobs: it covers topics until N are covered, under a budget, with no dialogue. It never approves, rejects, lands or pushes anything. A post about a registry subject measured first-hand is a trial, started by /article-run; this skill keeps free topics and third-party posts.
 argument-hint: "[--loop N | --loop +N] [--budget USD] [--concurrency 1-5]"
 allowed-tools: Read, Write, Bash, PowerShell, Glob, Grep, AskUserQuestion, Agent
 ---
@@ -13,6 +13,15 @@ The article pipeline (`lib/articles/`, CLI `pipeline/article.mts`) already knows
 and critique a post. This skill is the operator's front door to it: it chooses the topic with you,
 starts the run, watches it, and reports. It owns no logic: every step is one `npx tsx
 pipeline/article.mts ...` call, and the engine is the only thing that changes a run.
+
+## Subject posts are trials now
+
+A post about a registry subject is a **trial** now: `/article-run` measures one rule of the
+subject's golden path against the strongest alternative in current use, and the post is written
+around that result (17 of 17 posts before trials disclaimed any measurement of their own). The
+dialogue and `--loop` below stay for free topics and for third-party posts: they run classic (no
+`run.trial`), the gate shows them as `no trial`, and a classic run's research yield is measured
+with [subject-delta.md](../article-run/subject-delta.md).
 
 ## The one rule
 

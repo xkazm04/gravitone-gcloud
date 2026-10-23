@@ -2,16 +2,17 @@
 // (tools, timeout, turn class). Its own file because every writer turn of the critique,
 // and the fix turns of the check loop, go through this one turn.
 
-import { rm } from "node:fs/promises";
+import { readdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
 import type { AgentTool, AgentTurnClass } from "@/lib/agent/cliSeam";
 
-import type { ReviewerPanel } from "./critique";
-import { makeWorkspace, keepOut } from "./agentSteps";
+import { roundDir, type ReviewerPanel } from "./critique";
+import { makeWorkspace, keepOut, runTrial, stageExperimentInputs } from "./agentSteps";
 import { copyDir } from "./files";
 import { buildPrompt, loadPromptFile } from "./prompt";
 import { resolveRegistryDir, resolveStandard, standardText } from "./registryRead";
+import { reworkCritiqueSection } from "./rework";
 import { readRun, runDir, updateRun, writeFileAtomic, writeJsonAtomic } from "./store";
 import { StepError, sumCost } from "./stepFailure";
 import type { EngineDeps } from "./engine";
@@ -55,6 +56,10 @@ export async function critiqueTurn(
   const run = await readRun(id);
   const std = await standardForPrompt(id, deps);
   const file = await loadPromptFile(deps.root);
+  // A trial run's every writer turn here (the answer, the re-research, the rewrite, the fix)
+  // reads the experiment and carries the trial-writer section: a method finding is answered
+  // from the experiment's files, never by changing a number about the arms.
+  const trial = await runTrial(run, dir);
   const base = buildPrompt(file, phase, {
     topic: run.topic,
     standard: std.text,
@@ -63,7 +68,14 @@ export async function critiqueTurn(
     round,
     maxRounds: panel.maxCritiqueRounds,
     ...(opts.checkFailures !== undefined ? { checkFailures: opts.checkFailures } : {}),
-  });
+    ...(trial ? { trial } : {}),
+  })
+    // The writer's answer must cover every finding of every review. The prompt said so and the
+    // writer still dropped one reviewer whole, twice in a row, in two runs (2026-10-14 `gemini`,
+    // 2026-10-18 `gemini4`: two seats with near-identical names). What must be complete is now
+    // counted by code and stated, so the agent works from a list instead of a directory listing.
+    + (phase === "critique" ? await reviewManifest(path.join(dir, roundDir(round), "reviews")) : "")
+    + (run.rework ? reworkCritiqueSection(run.rework, "writer") : "");
   const name = opts.name ?? `critique-r${round}-${plan.label}`;
   const who = opts.name ?? `round ${round} ${plan.label}`;
   await writeFileAtomic(path.join(dir, "agent", `${name}-prompt.md`), base);
@@ -80,6 +92,7 @@ export async function critiqueTurn(
     const ws = await makeWorkspace(id, `${name}-${attempt}`, deps.now());
     try {
       await stage(ws);
+      if (trial) await stageExperimentInputs(ws, dir);
       if (seed) await copyDir(seed, path.join(ws, "out"));
       const result = await deps.runAgent({ cwd: ws, prompt: base + note, model: run.model, effort: run.effort, tools: plan.tools, timeoutMin: plan.timeoutMin, turn: plan.turn });
       cost = sumCost(cost, result.costUsd);
@@ -107,6 +120,12 @@ export async function critiqueTurn(
         if (phase === "revise-research") {
           seed = path.join(dir, "agent", `${name}-out`);
           note = `\n\nYOUR PREVIOUS ANSWER WAS REJECTED: ${(e as Error).message}. Your previous files are already in out/ (sources.json and claims.json). Correct only what the rejection names, keep every existing source's number and url exactly, and write both files again complete. Do not start the research over.\n`;
+        } else if (phase === "critique") {
+          // A retry that starts over re-answers everything and drops the same reviewer again
+          // (2026-10-18: 53 of 65 both times, $3.28). It starts from its own files and adds
+          // only what the rejection names.
+          seed = path.join(dir, "agent", `${name}-out`);
+          note = `\n\nYOUR PREVIOUS ANSWER WAS REJECTED: ${(e as Error).message}. Your previous dispositions.json and decision.json are already in out/. Keep every disposition already there, add exactly the ones the rejection names (read that reviewer's file in inputs/reviews/), check the count against THE FINDINGS TO ANSWER above, and write both files again complete.\n`;
         } else note = `\n\nYOUR PREVIOUS ANSWER WAS REJECTED: ${(e as Error).message}. Write both files again, correctly.\n`;
       }
     } finally {
@@ -114,4 +133,21 @@ export async function critiqueTurn(
     }
   }
   return cost;
+}
+
+/** The findings a critique answer must cover, counted from the round's review files: one line per
+ *  reviewer (its id is the file name) with its finding ids, and the total. Empty when the round
+ *  holds no reviews. */
+async function reviewManifest(reviewsDir: string): Promise<string> {
+  const files = (await readdir(reviewsDir).catch(() => [] as string[])).filter((f) => f.endsWith(".json")).sort();
+  const rows: string[] = [];
+  let total = 0;
+  for (const f of files) {
+    const review = JSON.parse(await readFile(path.join(reviewsDir, f), "utf8")) as { findings?: { id?: string }[] };
+    const ids = (review.findings ?? []).map((x) => x.id).filter((x): x is string => typeof x === "string");
+    total += ids.length;
+    rows.push(`- \`${f.replace(/\.json$/, "")}\` (inputs/reviews/${f}): ${ids.length ? ids.join(", ") : "no findings"} (${ids.length})`);
+  }
+  if (!rows.length) return "";
+  return `\n\nTHE FINDINGS TO ANSWER, counted by code from inputs/reviews/: ${total} dispositions in total, one per item below. Each reviewer id is its file name; reviewers with similar names (\`gemini\` and \`gemini4\`) are different reviewers, and each needs its own dispositions.\n${rows.join("\n")}\n`;
 }

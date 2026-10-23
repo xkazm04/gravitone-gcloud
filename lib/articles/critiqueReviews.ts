@@ -6,12 +6,14 @@ import { copyFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { REVIEW_PROMPT_FILE as REVIEW_MD } from "@/lib/agent/cliSeam";
+import { REVIEW_EXPERIMENT_DIR } from "@/lib/agent/reviewerEngines";
 
 import { readCritiqueDetail, roundDir, summarizeCritique, type ReviewerPanel, validateReview } from "./critique";
 import { copyDir, fileExists } from "./files";
 import { standardForPrompt } from "./critiqueTurn";
-import { makeReviewerWorkspace } from "./agentSteps";
+import { copyAmendments, copyExperimentText, makeReviewerWorkspace, runTrial } from "./agentSteps";
 import { buildReviewPrompt, loadReviewPromptFile } from "./prompt";
+import { reworkCritiqueSection } from "./rework";
 import { readJsonFile, readRun, readTextFile, runDir, updateRun, writeFileAtomic, writeJsonAtomic } from "./store";
 import { StepError, sumCost } from "./stepFailure";
 import type { Review, ReviewerReceipt, ReviewerSpec } from "./types";
@@ -55,25 +57,37 @@ export async function reviewRound(id: string, round: number, panel: ReviewerPane
   const postMd = (await readTextFile(path.join(dir, "post", "post.md"))) ?? "";
   const sourcesJson = (await readTextFile(path.join(dir, "sources.json"))) ?? "[]";
   if (!postMd.trim()) throw new StepError("there is no post/post.md to review");
+  // A trial run's reviewers judge the measurement too: the METHOD lens, and the experiment's
+  // text files in each workspace.
+  const trial = await runTrial(run, dir);
 
   const pending: ReviewerSpec[] = [];
   for (const spec of panel.reviewers) if (!(await fileExists(path.join(rd, "reviews", `${spec.id}.json`)))) pending.push(spec);
   const costs = await Promise.all(
     pending.map((spec) =>
-      reviewOnce(id, round, spec, deps, (note) =>
-        buildReviewPrompt(file, {
-          reviewer: spec.id,
-          model: spec.model,
-          effort: spec.effort,
-          round,
-          maxRounds: panel.maxCritiqueRounds,
-          topic: run.topic,
-          standard: std.text,
-          standardAddress: std.address,
-          today: deps.now().toISOString().slice(0, 10),
-          postMd,
-          sourcesJson,
-        }) + note,
+      reviewOnce(
+        id,
+        round,
+        spec,
+        deps,
+        (note) =>
+          buildReviewPrompt(file, {
+            reviewer: spec.id,
+            model: spec.model,
+            effort: spec.effort,
+            round,
+            maxRounds: panel.maxCritiqueRounds,
+            topic: run.topic,
+            standard: std.text,
+            standardAddress: std.address,
+            today: deps.now().toISOString().slice(0, 10),
+            postMd,
+            sourcesJson,
+            ...(trial ? { trial } : {}),
+          }) +
+          (run.rework ? reworkCritiqueSection(run.rework, "reviewer") : "") +
+          note,
+        !!trial,
       ),
     ),
   );
@@ -97,8 +111,9 @@ export async function reviewRound(id: string, round: number, panel: ReviewerPane
 
 /** One reviewer, once — plus one retry when its answer is not a review. Writes
  *  its receipt, and its review when it completed. Never throws for the
- *  reviewer's sake: a reviewer that fails is an outcome. */
-async function reviewOnce(id: string, round: number, spec: ReviewerSpec, deps: EngineDeps, prompt: (note: string) => string): Promise<number | undefined> {
+ *  reviewer's sake: a reviewer that fails is an outcome. `experiment`: the
+ *  workspace also gets the trial's text files (a trial run). */
+async function reviewOnce(id: string, round: number, spec: ReviewerSpec, deps: EngineDeps, prompt: (note: string) => string, experiment = false): Promise<number | undefined> {
   const dir = runDir(id);
   const rd = path.join(dir, ...roundDir(round).split("/"));
   let cost: number | undefined;
@@ -116,6 +131,13 @@ async function reviewOnce(id: string, round: number, spec: ReviewerSpec, deps: E
       ws = await makeReviewerWorkspace(id, round, spec.id, attempt, deps.now());
       await copyDir(path.join(dir, "post"), path.join(ws, "post"));
       await copyFile(path.join(dir, "sources.json"), path.join(ws, "sources.json"));
+      if (experiment) {
+        await copyExperimentText(dir, path.join(ws, REVIEW_EXPERIMENT_DIR));
+        // The amendment the post proposes to the standard is reviewed like the post: it is the
+        // text that lands (2026-10-18: a reversed mechanism the reviewers caught in the post stood,
+        // unreviewed, in the amendment).
+        await copyAmendments(dir, path.join(ws, REVIEW_EXPERIMENT_DIR, "proposed-amendments"));
+      }
       await writeFile(path.join(ws, REVIEW_MD), text, "utf8");
       const before = await snapshotTree(ws);
       const result = await deps.runReviewer({ engine: spec.engine, cwd: ws, prompt: text, model: spec.model, effort: spec.effort, timeoutMin: spec.timeoutMin });

@@ -16,7 +16,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { returnPacket } from "@gt/kernel/decision/commit";
@@ -94,6 +94,23 @@ describe("a run at the gate", () => {
     expect(plan.present.oracle?.summary).toMatch(/^check: \d+ fail · \d+ not measured · \d+ pass$/);
     expect(plan.urls["post"]).toBe(`/api/articles/${run.id}/file/post/index.html`);
     expect(plan.urls["patch/p1"]).toBe(`/api/articles/${run.id}/file/patches/p1.patch`);
+  });
+
+  it("a trial run's required patch is no decision: it is not an item, and approving without it is not refused", { timeout: 120_000 }, async () => {
+    const run = await atGate("the required tax");
+    // A trial run proposes one record of its own that lands with the post whatever the approval names.
+    const file = path.join(box.store, run.id, "patches.json");
+    const rows = JSON.parse(readFileSync(file, "utf8")) as { id: string; required?: true }[];
+    writeFileSync(file, JSON.stringify(rows.map((p) => (p.id === "p1" ? { ...p, required: true } : p))));
+    const plan = must(adapter.packet(must(await adapter.read({ runId: run.id }))));
+    expect(plan.packet.items.map((c) => c.id)).toEqual(["post", "patch/p2"]);
+    const flow = await openFlow(adapter, run.id, blobDir());
+    flow.patch([
+      { candidate: "post", verdict: "keep" },
+      { candidate: "patch/p2", verdict: "reject" },
+    ]);
+    const c = must(flow.preview()).consequence;
+    expect(c.writes.map((w) => w.candidate)).toEqual(["post", "post", "post"]);
   });
 
   it("approve: the preview names the push and the PR; the apply lands the kept patch only, once", { timeout: 180_000 }, async () => {

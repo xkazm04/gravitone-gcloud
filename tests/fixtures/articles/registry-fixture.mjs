@@ -109,8 +109,24 @@ export function makeRegistryFixture(dir) {
   }, null, 2) + "\n");
   write(seed, "knowledge/technical-writing/craft/article-structure/article-structure.md", "---\nlayer: golden-path\nsubject: article-structure\n---\n\n# Article structure\n\nA hook, a content preview, a through-line and a closing chapter that wraps.\n");
   write(seed, "knowledge/technical-writing/craft/voice-and-register/voice-and-register.md", "---\nlayer: golden-path\nsubject: voice-and-register\n---\n\n# Voice and register\n\nThird person, impersonal, varied rhythm.\n");
-  write(seed, "knowledge/software-engineering/index.json", JSON.stringify({ meta: { bundle: "software-engineering" }, subjects: { "token-budgeting": { category: "llm-agent", subcategory: null, status: "seed", file: "knowledge/software-engineering/llm-agent/token-budgeting/token-budgeting.md", techniques: [] } }, laws: {} }, null, 2) + "\n");
+  // token-budgeting carries one technique and one measured application, with the index fields
+  // a trial reads (digest, revision, changedAt, ab_verdict), so trial probes share one shape.
+  write(seed, "knowledge/software-engineering/index.json", JSON.stringify({
+    meta: { bundle: "software-engineering" },
+    subjects: {
+      "token-budgeting": {
+        category: "llm-agent", subcategory: null, status: "seed",
+        file: "knowledge/software-engineering/llm-agent/token-budgeting/token-budgeting.md",
+        digest: "sha256-b2:0123456789abcdef", revision: 3, changedAt: "2026-09-01",
+        techniques: [{ slug: "count-before-send", status: "forged", laws: [], shared_with: [], use_when: ["a request may exceed the model's context window"] }],
+        applications: [{ stack: "node", technique: "count-before-send", file: "knowledge/software-engineering/llm-agent/token-budgeting/applications/node--count-before-send.md", verified_on: "2026-08-20" }],
+      },
+    },
+    laws: {},
+  }, null, 2) + "\n");
   write(seed, "knowledge/software-engineering/llm-agent/token-budgeting/token-budgeting.md", "---\nlayer: golden-path\nsubject: token-budgeting\n---\n\n# Token budgeting\n\nBudgets are counted in tokens, not characters.\n");
+  write(seed, "knowledge/software-engineering/llm-agent/token-budgeting/techniques/count-before-send.md", "---\nlayer: technique\ntype: technique\nsubject: token-budgeting\ntechnique: count-before-send\nstatus: forged\n---\n\n# Count before send\n\nCount the request's tokens with the model's own tokenizer before sending it, because a character estimate is wrong by up to a third.\n\n## Decision rules\n\n- When a request may exceed the window, count it with the model's tokenizer first.\n");
+  write(seed, "knowledge/software-engineering/llm-agent/token-budgeting/applications/node--count-before-send.md", "---\nlayer: application\ntype: application\nsubject: token-budgeting\ntechnique: count-before-send\nstack: node\nverified_on: 2026-08-20\napplied: code\nab_verdict: better\nproof: ab-paired\n---\n\n# Counting in a node service\n\n## The measurement\n\n| arm | n | overflows |\n|---|---|---|\n| estimate | 40 | 6 |\n| counted | 40 | 0 |\n");
   write(seed, "scripts/gate.mjs", GATE);
   write(seed, "publications/.keep", "");
 

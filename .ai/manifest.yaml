@@ -105,7 +105,8 @@ capabilities:
   # seat (three agent sessions, research with web tools) and, since the critique step, the
   # operator's claude, codex and agy logins (reviewers), and `approve` pushes a branch and opens a PR
   # in ai-registry, so neither is a capability an agent invokes on its own (.claude/skills/article-run
-  # wraps run and status only). Run 2026-10-05 against a throwaway registry with the stub agent
+  # orchestrates the `trial` verbs, `run --trial` and `status`, and never approve, reject or land;
+  # a trial's `exec` runs the measurement with the seat CLIs under a credential-stripped env). Run 2026-10-05 against a throwaway registry with the stub agent
   # (ARTICLES_AGENT_BIN): run -> awaiting-approval exit 0; approve -> landed with a PR from a stub gh,
   # exit 0; status exit 0. No real agent turn was run. See docs/articles.md.
   article: { command: "npx tsx pipeline/article.mts status", verified: true }

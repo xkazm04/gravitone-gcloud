@@ -10,7 +10,7 @@ import path from "node:path";
 import { THRESHOLDS } from "./checks";
 import { absent, item } from "./checksItems";
 import { citedNumbers, decode, firstPersonHits, htmlProse, ISO_DATE, mdProse, postWords, STATED_READ_TIME, wordCount } from "./checksText";
-import { closingListItemWords, proseRuns, proseStats, sourceListProblems, wordsBeforeFirstSection } from "./checksProse";
+import { closingListItemWords, proseRuns, proseStats, skimSpine, sourceListProblems, wordsBeforeFirstSection } from "./checksProse";
 import type { CheckItem, Claim, Source } from "./types";
 
 /* ── the static items ──────────────────────────────────────────────────────── */
@@ -119,6 +119,20 @@ export function staticItems(input: StaticInput): CheckItem[] {
     const numberingOk = !lp.gaps.length && !lp.repeats.length && !srcGaps.length;
     items.push(item("truth", "source-numbering", "Sources are numbered without gaps", numberingOk, { value: numberingOk ? `${lp.listed} listed` : `gaps in the list: ${lp.gaps.join(", ") || "none"}; repeats: ${lp.repeats.join(", ") || "none"}; gaps in sources.json: ${srcGaps.join(", ") || "none"}`, expected: "post.md's Sources list and sources.json numbered 1 to N with no number missing or repeated (renumber the citations when a source is dropped)" }));
     items.push(item("structure", "length-ceiling", "The post stays under its word ceiling", words <= THRESHOLDS.maxWords, { value: `${words} words`, expected: `≤ ${THRESHOLDS.maxWords} words (replacement, not addition: cut or tighten before adding)` }));
+    const skim = skimSpine(md);
+    // The page carries the same spans: every post.md span, as text, inside some <strong>.
+    const norm = (s: string) => decode(s.replace(/<[^>]+>/g, "").replace(/`/g, "")).replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/\s+/g, " ").trim();
+    const strong = html ? [...html.matchAll(/<strong\b[^>]*>([\s\S]*?)<\/strong>/gi)].map((m) => norm(m[1])) : [];
+    const offPage = html ? skim.spans.filter((s) => !strong.some((t) => t === norm(s))) : [];
+    const share = skim.proseWords ? skim.boldWords / skim.proseWords : 0;
+    const skimOk = !skim.missing.length && !skim.doubled.length && !skim.badSpans.length && !offPage.length && share <= THRESHOLDS.skimMaxShare;
+    items.push(
+      item("structure", "skim-spine", "The bold spans alone carry the argument", skimOk, {
+        value: `${skim.spans.length} spans, ${Math.round(share * 100)} percent of the prose; ${skim.missing.length} long paragraphs without one, ${skim.doubled.length} with two, ${skim.badSpans.length} off-length, ${offPage.length} missing from index.html`,
+        expected: `one bold span per prose paragraph over ${THRESHOLDS.skimMinParagraphWords} words, ${THRESHOLDS.skimSpanWords[0]} to ${THRESHOLDS.skimSpanWords[1]} words, no citation inside, bold ≤ ${Math.round(THRESHOLDS.skimMaxShare * 100)} percent of the prose, the same spans as <strong> in index.html`,
+        ...(skimOk ? {} : { detail: [...skim.missing, ...skim.doubled, ...skim.badSpans, ...offPage.map((s) => `not bold in index.html: "${s.slice(0, 80)}"`), ...(share > THRESHOLDS.skimMaxShare ? [`bold is ${Math.round(share * 100)} percent of the prose`] : [])] }),
+      }),
+    );
     items.push(item("structure", "closing-table", "The close carries a summary table", hasTable, { value: hasTable ? "table present" : "none", expected: "a Markdown table in the last section before Sources (skim readers read the opening and the ending)" }));
   }
 
@@ -194,5 +208,58 @@ export function staticItems(input: StaticInput): CheckItem[] {
   const orphanClaims = claims.filter((c) => !nums.has(c.source)).map((c) => `${c.text.slice(0, 80)} -> [${c.source}]`);
   items.push(item("truth", "claims-resolve", "Every research claim has its source", !orphanClaims.length, { value: `${claims.length - orphanClaims.length}/${claims.length}`, expected: "all", ...(orphanClaims.length ? { detail: orphanClaims.slice(0, 10) } : {}) }));
 
+  return items;
+}
+
+/* ── a trial run's items ───────────────────────────────────────────────────── */
+
+/** The per-arm n as a reader would meet it: `n=20` (any spacing), or `20 per arm`, `20 runs per
+ *  arm`. A bare 20 is not enough: a date before the first section (`2026-10-20`) holds one. */
+export function statesTrialN(text: string, n: number): boolean {
+  return new RegExp(`\\bn\\s*=\\s*${n}(?![\\d.,]?\\d)|(?<![\\d.,])${n}\\s+(?:[A-Za-z-]+\\s+){0,2}per\\s+arm\\b`, "i").test(text);
+}
+
+/** The text of a page or a Markdown post before its first section, tags gone, code kept (a
+ *  writer may set `n=20 per arm` in code type and still state it). */
+function beforeFirstSection(file: "index.html" | "post.md", text: string): string {
+  if (file === "post.md") {
+    const at = text.search(/^## /m);
+    return at < 0 ? text : text.slice(0, at);
+  }
+  const at = text.search(/<h2\b/i);
+  const head = at < 0 ? text : text.slice(0, at);
+  return decode(head.replace(/<!--[\s\S]*?-->/g, " ").replace(/<(script|style|svg|template)\b[\s\S]*?<\/\1>/gi, " ").replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ");
+}
+
+/**
+ * THE TRIAL ITEMS (truth), for a run written around a trial and for no other. A trial post rests
+ * on its own measurement, so its opening says so: `trial-preview`, the text before the first
+ * section of both files cites [1] (the trial's record) and states the per-arm n;
+ * `trial-figure`, at least one figure caption cites [1]. Before trials, 17 of 17 previews
+ * disclaimed any first-hand measurement.
+ */
+export function trialItems(input: { html?: string; md?: string; n: number }): CheckItem[] {
+  const { html, md, n } = input;
+  const items: CheckItem[] = [];
+  const heads = [...(html ? [["index.html", beforeFirstSection("index.html", html)] as const] : []), ...(md ? [["post.md", beforeFirstSection("post.md", md)] as const] : [])];
+  if (!heads.length) items.push(absent("truth", "trial-preview", "Preview cites the trial [1] and its n", "post/index.html and post/post.md are missing"));
+  else {
+    const problems = heads.flatMap(([file, text]) => [
+      ...(citedNumbers(text).includes(1) ? [] : [`${file}: no [1] before the first section`]),
+      ...(statesTrialN(text, n) ? [] : [`${file}: n=${n} is not stated before the first section`]),
+    ]);
+    items.push(
+      item("truth", "trial-preview", "Preview cites the trial [1] and its n", !problems.length, {
+        value: problems.length ? `${problems.length} missing` : `[1] and n=${n} in ${heads.map(([f]) => f).join(" and ")}`,
+        expected: `before the first section of index.html and post.md: [1] cited and the per-arm n stated (n=${n})`,
+        ...(problems.length ? { detail: problems } : {}),
+      }),
+    );
+  }
+  if (html) {
+    const captions = [...html.matchAll(/<figcaption\b[^>]*>([\s\S]*?)<\/figcaption>/gi)].map((m) => htmlProse(m[1]));
+    const citing = captions.filter((c) => citedNumbers(c).includes(1)).length;
+    items.push(item("truth", "trial-figure", "A figure caption cites the trial [1]", citing > 0, { value: `${citing} of ${captions.length} captions`, expected: "≥ 1 figure caption cites [1]" }));
+  } else items.push(absent("truth", "trial-figure", "A figure caption cites the trial [1]", "post/index.html is missing"));
   return items;
 }

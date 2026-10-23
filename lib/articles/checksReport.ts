@@ -11,8 +11,8 @@ import path from "node:path";
 import { critiqueCheckItem, readCritiqueDetail } from "./critique";
 import { absent } from "./checksItems";
 import { renderedItems } from "./checksRendered";
-import { staticItems } from "./checksStatic";
-import type { CheckDimension, CheckItem, CheckReport, Claim, Source } from "./types";
+import { staticItems, trialItems } from "./checksStatic";
+import type { ArticleRun, CheckDimension, CheckItem, CheckReport, Claim, Source } from "./types";
 import { CHECK_DIMENSIONS } from "./types";
 
 /* ── the report ────────────────────────────────────────────────────────────── */
@@ -71,6 +71,10 @@ export async function runCheck(
     figures.push({ name: f.slice("figures/".length), svg: (await readMaybe(path.join(postDir, f))) ?? "" });
   }
   const items = staticItems({ html, md, sources, claims, figures, postFiles });
+  // A run written around a trial opens on its own measurement (run.trial); a classic run
+  // has no trial items at all, so its report is what it was before trials.
+  const trial = (JSON.parse((await readMaybe(path.join(runDir, "run.json"))) ?? "{}") as Partial<ArticleRun>).trial;
+  if (trial) items.push(...trialItems({ html, md, n: trial.n }));
   // The multi-model critique (scope amendment 1): quorum held in every round,
   // every blocker factual finding answered with a reason.
   items.push(critiqueCheckItem(await readCritiqueDetail(runDir)));

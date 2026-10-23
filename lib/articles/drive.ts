@@ -20,6 +20,7 @@ import { checkStep } from "./checkStep";
 import { critiqueStep } from "./critiqueStep";
 import { land } from "./landing";
 import { resumePoint } from "./resume";
+import { draftAtGate } from "./mediumDraft";
 import { StepError } from "./stepFailure";
 
 /** What one walk to a step reports: it finished (or was already done), or the run failed with its sentence. */
@@ -105,6 +106,7 @@ export async function walk(id: string, deps: EngineDeps, until?: StepName | "lan
       case "checking":
         if (!(await run1("check"))) return failed();
         await setStatus(id, "awaiting-approval", deps);
+        await draftAtGate(id, deps);
         if (until === "check") return ok();
         continue;
       case "approved":
