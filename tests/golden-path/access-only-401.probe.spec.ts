@@ -107,6 +107,7 @@ function discover(): { targets: Target[]; routeFiles: number } {
 const PUBLIC: Record<string, string> = {
   "POST app/api/session/route.ts": "exchanges a Firebase ID token for the session cookie: nobody holds a session before it",
   "GET app/api/session/route.ts": "answers whether this browser holds a session: the question a signed-out page asks",
+  "PUT app/api/session/route.ts": "enters locally (lib/localEntry.ts): the door to the local owner, granted only on a loopback Host, unmanaged, legacy mode",
   "DELETE app/api/session/route.ts": "signs out: clears the cookie, which needs no credential to forget",
 };
 
