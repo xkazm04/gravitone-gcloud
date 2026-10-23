@@ -63,8 +63,15 @@ function Invoke-Night {
   $night = if ($Dry) { "/scout night --dry --until $Until" } else { "/scout night --until $Until" }
   $argv = @("-p", $night, "--output-format", "json", "--permission-mode", "dontAsk", "--max-budget-usd", "20", "--allowed-tools") + $allowed
   # UTF-8, not the redirect operator's UTF-16: the log is read by tools and by people.
-  & $claude @argv 2>&1 | Out-File -FilePath $log -Encoding utf8
-  exit $LASTEXITCODE
+  # The task runs Windows PowerShell 5.1, where under "Stop" the first stderr line of a native
+  # command merged by 2>&1 is a terminating NativeCommandError: the night would end at the CLI's
+  # first warning with an empty log and exit 1. Scope "Continue" to this call, log every record as
+  # text, and read the CLI's own exit code before restoring "Stop".
+  $ErrorActionPreference = "Continue"
+  & $claude @argv 2>&1 | ForEach-Object { "$_" } | Out-File -FilePath $log -Encoding utf8
+  $code = $LASTEXITCODE
+  $ErrorActionPreference = "Stop"
+  exit $code
 }
 
 $self = Join-Path $PSScriptRoot "scout-schedule.ps1"
