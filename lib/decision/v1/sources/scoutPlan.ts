@@ -269,6 +269,8 @@ export function build(v1: ScoutV1): Built {
     if (c.kind === "style") styleCells(night, c, v1.styles[c.id], out);
     else if (c.kind === "scene") sceneCells(night, c, v1.media, out);
     else if (c.kind === "asset3d") assetCells(night, c, v1.assets[c.id], v1.media, out);
+    // STUB (spark scout-idea-artboards WP-I0): WP-I3 draws an idea as a one-cell run.
+    else if (c.kind === "idea") out.losses.push({ candidate: c.id, grade: "dropped", reason: "idea cells are not drawn on the Board yet" });
     else if (c.status === "failed") out.losses.push({ candidate: c.id, grade: "dropped", reason: c.error ?? "failed with no error recorded" });
     else textCell(night, c, out);
   }

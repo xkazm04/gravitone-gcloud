@@ -44,6 +44,18 @@ export const DEFAULT_TARGET = 20;
 export const DEFAULT_CLIP_CAP = 2;
 /** Game assets a night briefs while every 3D engine is still being profiled (spark game-3d-assets, wave 3). */
 export const DEFAULT_ASSET_CAP = 3;
+/** Idea artboards a night draws in the Leonardo studio beside its plan (spark scout-idea-artboards: "always 20-30 ideas"). */
+export const DEFAULT_IDEA_CAP = 25;
+export const MAX_IDEA_CAP = 40;
+/** An idea's title is its headline on the Board (question taste 2026-08-30: claim = headline <= 90 chars). */
+export const IDEA_TITLE_MAX = 90;
+export const IDEA_PROMPT_MAX = 1500;
+/** What a kept idea becomes on the next night, through the act of that name. */
+export const IDEA_TARGETS = ["scene", "style", "asset3d"] as const;
+export type IdeaTarget = (typeof IDEA_TARGETS)[number];
+/** Where an idea came from: a watchlist line, a registry gap (registry.md), or neither (`free`). */
+export const IDEA_ANCHORS = ["watch", "gap", "free"] as const;
+export type IdeaAnchorKind = (typeof IDEA_ANCHORS)[number];
 /** Hailuo takes 5 or 10 (lib/imaging/video/types.ts CLIP_DURATIONS); the night renders the short one. */
 export const CLIP_SECONDS = 5;
 
@@ -77,6 +89,8 @@ export type Night = {
    * still). Absent on a night opened before 2026-10-22: DEFAULT_ASSET_CAP.
    */
   readonly assetCap?: number;
+  /** Idea artboards the night may draw (`idea` candidates). Absent on a night opened before 2026-10-23: DEFAULT_IDEA_CAP. */
+  readonly ideaCap?: number;
   /** A dry night ran on stand-ins; its packet can be triaged but commits nothing. */
   readonly dry: boolean;
   readonly state: NightState;
@@ -143,7 +157,7 @@ export type ScoutSource = {
 
 /* ── Candidates ──────────────────────────────────────────────────────────── */
 
-export const CANDIDATE_KINDS = ["style", "scene", "finding", "watch", "asset3d"] as const;
+export const CANDIDATE_KINDS = ["style", "scene", "finding", "watch", "asset3d", "idea"] as const;
 export type CandidateKind = (typeof CANDIDATE_KINDS)[number];
 
 export const CANDIDATE_STATUSES = ["pending", "rendered", "failed"] as const;
@@ -254,7 +268,24 @@ export type Asset3dCandidate = CandidateBase & {
   readonly assetId?: AssetId;
 };
 
-export type Candidate = StyleCandidate | SceneCandidate | FindingCandidate | WatchCandidate | Asset3dCandidate;
+/**
+ * A rough intent drawn in the operator's Leonardo studio (spark scout-idea-artboards): one artboard,
+ * no source - the brief is OUR words, anchored to a watchlist line or a registry gap. Kept, the next
+ * night builds it into its `target` through that act; blocked, its title and reasons are banned from
+ * the next ideation (taste.ts). The studio generation is deleted once the pixels are held.
+ */
+export type IdeaCandidate = CandidateBase & {
+  readonly kind: "idea";
+  readonly title: string;
+  readonly target: IdeaTarget;
+  /** The studio prompt, verbatim. */
+  readonly prompt: string;
+  readonly anchor: { readonly kind: IdeaAnchorKind; readonly ref: string };
+  /** Night-relative artboard, OURS (`ideas/c-12.png`), once drawn. */
+  readonly image?: string;
+};
+
+export type Candidate = StyleCandidate | SceneCandidate | FindingCandidate | WatchCandidate | Asset3dCandidate | IdeaCandidate;
 
 /* ── Packet cells ────────────────────────────────────────────────────────── */
 
