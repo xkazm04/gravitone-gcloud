@@ -194,7 +194,8 @@ export const PRICES: readonly ModelPrice[] = [
     source:
       "Billed in Leonardo STUDIO credits from the operator's prepaid plan (read 2026-10-12 off the studio's " +
       "own button: 71 credits for one GPT Image 2.5 Sunburst image at 1376x768, quality High; the model's " +
-      "schema prices 7 credits per megapixel times 9.5 for High), a separate pool from the API key's. No " +
+      "schema prices 7 credits per megapixel times 9.5 for High; the studio is driven at Medium since " +
+      "2026-10-23, read at 20 credits), a separate pool from the API key's. No " +
       "USD-per-studio-credit rate has been checked; the API's USD_PER_CREDIT prices a different meter. The " +
       "credits spent ride on the result's provenance (providers/leonardoStudio.ts, studioCreditsOf).",
     checked: "2026-10-12",
