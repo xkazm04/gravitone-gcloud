@@ -209,7 +209,9 @@ const EXPECT: Record<string, Expectation> = {
   // The door a session is made at: public by necessity, so it guards itself.
   // GET answers {kind: "none"} with no cookie, DELETE clears one either way,
   // and POST refuses an empty body as `invalid` before any token is judged.
-  "app/api/session/route.ts": { door: "public", ok: { GET: "2xx", POST: "4xx", DELETE: "2xx" } },
+  // PUT is the landing's "Enter locally" (lib/localEntry.ts): it needs a loopback Host header, which
+  // this probe's requests do not carry, so every cell refuses it; tests/next-server/session.test.ts holds the grant.
+  "app/api/session/route.ts": { door: "public", ok: { GET: "2xx", POST: "4xx", PUT: "4xx", DELETE: "2xx" } },
   "app/api/sound/mv/jobs/[id]/file/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/sound/takes/[id]/file/route.ts": { door: "access", ok: { GET: "4xx" } },
 

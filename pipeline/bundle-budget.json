@@ -25,9 +25,11 @@
     "/library/style/[id]": 222895,
     "/playground": 207455,
     "/projects/new": 207455,
-    "/studio/[projectId]": 207455
+    "/studio/[projectId]": 207455,
+    "/scout": 207813
   },
   "phase4": "2026-10-16, L46: measured against a real build of 47b8095. Raised for earned weight - /floor (+9.1 KB: the Floor composers, receipt, LevelSheet), /projects/runs (+13.0 KB: the Runs acts, compose, receipt, Dojo door, re-route, lane hold), /kit (+17.8 KB: specimens of every Phase 4 component); new routes seeded at measurement. A +56 KB regression (lib/jobs.tsx and ImportView.tsx pulling zod's core into every route) was fixed, not budgeted.",
   "phase6": "2026-10-18: rebaselined against a real Turbopack build of 2aded3f7. Every entry set to its measurement; the (studio) routes new since phase4 seeded at measurement (/articles, /articles/[runId], /articles/new, /audio, /board, /calendar, /foundry, /library, /library/style/[id], /playground, /projects/new, /studio/[projectId]). The build retired none of the routes in the file. Raised: /floor +4.5 KB (the Calendar slot and schedule levels, SlotLevel, ScheduleLevel and the Composers: Phase 4 wave A, Phase 6 waves A-B); /kit +50.6 KB (specimens of the components added to @gt/ui since 47b8095: style, audio, arrange, hunt, insight, lesson, library, part, floor-slot, floor-schedule). Lowered to measurement, 1.3-6.2 KB under: /(.)board/[packet], /board/[packet], /ledger, /projects, /projects/[id], /projects/[id]/[part], /projects/import, /projects/runs.",
+  "scout-route": "2026-10-23: /scout seeded at its measured first load (207813 B: only the root layout's shared chunks - the page is a server redirect to the newest night's packet). The ~+358 B every route grew is the landing's Enter locally (lib/useAuth.tsx enterLocally) inside the root layout's AuthProvider, within the 2% slack.",
   "scout-desk": "2026-10-22: measured on a real Turbopack build of the merge 2173e35a (scout/live-engines into main). Raised for earned weight - /board/[packet] and /(.)board/[packet] +7.5 KB (the one-desk cull: RunMosaic, RunModal, VariantCard, VerdictPick, VideoBar, IdeaList, content tabs; MatrixCullSheet, Band and Mosaic deleted; +6.6 KB measured at e471df80 before the merge, +0.9 KB the 3D tile from spark game-3d-assets), /kit +7.9 KB (their specimens plus the model viewer specimen)."
 }
