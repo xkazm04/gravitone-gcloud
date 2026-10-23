@@ -1,10 +1,15 @@
 import { ok, type Result } from "@gt/domain/errors";
 import type { Job } from "@gt/domain/job";
-import { loadJob } from "@gt/kernel/job";
+import type { Estimate } from "@gt/domain/estimate";
+import { queryEvents } from "@gt/kernel/events-query";
+import { loadJob, loadOutputs } from "@gt/kernel/job";
 import { loadRun } from "@gt/kernel/records/schema";
 import { meterOf } from "@gt/kernel/spend/projection";
 import type { Reader, Store } from "@gt/kernel/store";
+import { DEFAULT_CALL_ESTIMATE_USD } from "@gt/producers/extract/units";
+import { parseSceneRequest, readStep, SCENE_REQUEST } from "@gt/producers/scout-scene/define";
 
+import { TRANSFER_SCENES } from "../extract/prompts";
 import type { Night } from "./types";
 
 // THE NIGHT'S MONEY - what is left of its ceiling, read from the kernel's own
@@ -28,6 +33,17 @@ import type { Night } from "./types";
 //            - any job, finished or not, holds its meter reservations still
 //              `held` or `lapsed` (spend/ledger.ts: a lapsed hold's outcome is
 //              unknown and keeps counting at its estimate).
+//              An EXTRACT job holds only the GEMINI share of its worst case
+//              (`extractGeminiWorst`): its receipt is one blended line - Leonardo's
+//              replicas and transfers and the seat's grouping turn priced in with the
+//              Gemini reads - and holding the whole of it against a Gemini ceiling
+//              locked the night: 2026-10-23, three 14-24 frame style runs held $20.23
+//              of $15 while the Gemini they had booked was $0.47 since the night
+//              before (reads and read-backs at $0.002 a call).
+//              A SCOUT SCENE holds the Gemini share of its request (the reads it has not
+//              booked, at their worst case): it has no Run row, so it held its whole
+//              ceiling - which its launch sets to what the night has left - and one
+//              queued $0.03 scene held all $15 of the night (2026-10-23).
 //            A `failed` job promises nothing more until an operator retries it,
 //            and a retry is not the night's act. A receipt prices a job whole (an
 //            extract's is one blended line), so a running job's hold is its whole
@@ -77,10 +93,58 @@ function promiseOf(r: Reader, job: Job): number | undefined {
   return job.ceilingUsd === undefined ? quoted : Math.min(quoted, job.ceilingUsd);
 }
 
+/**
+ * The Gemini an extract run may still spend at most: every recognize call is Gemini (a source's read, and the
+ * read-back of each of its style's rounds and transfers - `extractLine`'s per-source arithmetic in
+ * lib/producers/extract.ts), each at the extract engine's default recognize estimate; its generations
+ * (Leonardo) and its grouping turn (the Claude seat) are not capped and are not held.
+ */
+export function extractGeminiWorst(input: { readonly sources: number; readonly rounds?: number; readonly transfers?: number }): number {
+  // Absent rounds: the launch's default (lib/producers/extract.ts quoteOf, 2); absent transfers: none (the input omits 0).
+  const perStyle = (input.rounds ?? 2) + Math.min(input.transfers ?? 0, TRANSFER_SCENES.length);
+  return usd6(Math.max(1, input.sources) * DEFAULT_CALL_ESTIMATE_USD.recognize * (1 + perStyle));
+}
+
+/** The Gemini share of an extract job's promise, capped by its ceiling; undefined for any other producer. */
+function geminiPromiseOf(r: Reader, job: Job): number | undefined {
+  const row = r.get("SELECT id FROM runs WHERE job_id = ?", job.id);
+  if (row === undefined) return undefined;
+  const input = loadRun(r, String(row["id"])).run.input;
+  if (!("producer" in input) || input.producer !== "extract") return undefined;
+  const worst = extractGeminiWorst(input);
+  return job.ceilingUsd === undefined ? worst : Math.min(worst, job.ceilingUsd);
+}
+
 type JobMoney = { readonly settledUsd: number; readonly uncappedUsd: number; readonly heldUsd: number };
 
+const worstUsd = (e: Estimate): number => e.usdRange?.[1] ?? e.usd ?? 0;
+
+/** A scout scene job's request as the budget reads it: its read estimate and how many keyframes it reads. */
+type SceneAsk = { readonly reads: number; readonly read: Estimate };
+
+/** The scene requests of the night's jobs, read off their launch events (lib/producers/scoutScene.ts sceneRequestOf). */
+function sceneAsks(store: Store, jobIds: readonly string[]): Map<string, SceneAsk> {
+  const out = new Map<string, SceneAsk>();
+  for (const id of jobIds) {
+    if (!id.startsWith("job:scout-scene:")) continue;
+    const page = queryEvents(store, { type: [SCENE_REQUEST], subject: { kind: "job", id }, limit: 1 });
+    const e = page.ok ? page.value.events[0] : undefined;
+    const req = e === undefined ? undefined : parseSceneRequest(e.data);
+    if (req?.ok === true) out.set(id, { reads: req.value.keyframes.length, read: req.value.estimates.read });
+  }
+  return out;
+}
+
+/** What a scene's unbooked reads may still cost in Gemini, capped by its ceiling. */
+function scenePromise(r: Reader, job: Job, ask: SceneAsk): number {
+  const outputs = loadOutputs(r, job.id);
+  let left = 0;
+  for (let k = 1; k <= ask.reads; k++) if (!outputs.has(readStep(k))) left += worstUsd(ask.read);
+  return job.ceilingUsd === undefined ? left : Math.min(left, job.ceilingUsd);
+}
+
 /** One job's Gemini, uncapped and held dollars. A job id the store does not know (a launch that died before its enqueue) is $0. */
-export function jobMoney(r: Reader, jobId: string): JobMoney {
+export function jobMoney(r: Reader, jobId: string, scene?: SceneAsk): JobMoney {
   if (r.get("SELECT 1 AS x FROM jobs WHERE id = ?", jobId) === undefined) return { settledUsd: 0, uncappedUsd: 0, heldUsd: 0 };
   const { job } = loadJob(r, jobId);
   const allUsd = meterOf(r, jobId).usd;
@@ -89,14 +153,17 @@ export function jobMoney(r: Reader, jobId: string): JobMoney {
   const lapsed = num(r.get("SELECT total(amount) AS v FROM spend_reservations WHERE job_id = ? AND state = 'lapsed'", jobId)?.["v"]);
   let heldUsd = open + lapsed;
   if (job.mode.kind === "live" && OPEN.includes(job.state)) {
-    const promise = promiseOf(r, job);
-    if (promise !== undefined) heldUsd = Math.max(heldUsd, promise - allUsd);
+    const gemini = scene !== undefined ? scenePromise(r, job, scene) : geminiPromiseOf(r, job);
+    const promise = gemini ?? promiseOf(r, job);
+    // A Gemini promise is spent down by Gemini only; a blended one by everything the job booked.
+    if (promise !== undefined) heldUsd = Math.max(heldUsd, promise - (gemini === undefined ? allUsd : settledUsd));
   }
   return { settledUsd: usd6(settledUsd), uncappedUsd: usd6(allUsd - settledUsd), heldUsd: usd6(Math.max(0, heldUsd)) };
 }
 
 export function nightBudget(store: Store, night: Night): Result<NightBudget> {
-  const money = store.read((r) => night.jobs.map((id) => jobMoney(r, id)));
+  const scenes = sceneAsks(store, night.jobs);
+  const money = store.read((r) => night.jobs.map((id) => jobMoney(r, id, scenes.get(id))));
   if (!money.ok) return money;
   const settledUsd = usd6(money.value.reduce((a, m) => a + m.settledUsd, 0));
   const uncappedUsd = usd6(money.value.reduce((a, m) => a + m.uncappedUsd, 0));
