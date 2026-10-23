@@ -58,6 +58,19 @@ The operator's rulings, 2026-10-23, after the first live night and the first ide
   LAUNCH - it never raises a cap or a ceiling (those are spend decisions), and admission's own marks
   (memory 85%, CPU 90%) still hold the top.
 
+- **The first seed verdicts (operator, 2026-10-23, 60 kept / 40 thrown):** "I see potential in video/image
+  prompting in DOCUMENTARY and SHORT ANIMATED STORIES from the set" - weight child seeds and ideas toward those.
+  And: "the stories and concepts for adults were often very safe and generic to pass, we will need to involve
+  more RISK and CREATIVITY in ideas for adults." An adult seed or idea must take a creative risk a family one
+  would not: a sharp satirical target, a morally grey or unlikeable lead, an uncomfortable or dark premise, an
+  unreliable narrator, a twist that reframes everything before it, an absurd escalation played straight, an ending
+  that refuses to resolve. Pleasant-and-safe is the adult reject (adult horror went 0/5, sci-fi 0/3, poetry 0/2,
+  all `not for us` or `generic`). The hard limits do not move: no real person's likeness, no minors in anything
+  mature, no sexual content.
+- **Music waits for Suno** (operator, 2026-10-23: Suno's usage limit resets in two weeks, ~2026-11-06): no new
+  music seeds or music ideas, no tracks (`open --tracks 0`), no visualizers. The six kept music seeds are PAUSED on
+  the steer, so their doors refuse; they are resumed on `/scout` when the operator says Suno is back.
+
 ## The money and the rights (read before every night)
 
 - **$15 per night; clips are local and free** - stills are Leonardo GPT Image 2.5 Flare at LOW (~$0.015 each),
