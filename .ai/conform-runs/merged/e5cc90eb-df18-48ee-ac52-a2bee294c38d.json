@@ -1,0 +1,71 @@
+{
+ "schema": "conform-run/1",
+ "worker": "e5cc90eb-df18-48ee-ac52-a2bee294c38d",
+ "subject": "english",
+ "evaluatedAt": "2026-10-22T00:51:58.131325+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "landing-cosmos-shell",
+   "subject": "english",
+   "bundle": "localization",
+   "state": "deviation",
+   "evidence": "app/_landing/cosmos/engine/stage.ts:35 The accessible description uses British \u201cstylised\u201d despite the declared US variant, violating EN-SPELLING.",
+   "techniques": [
+    {
+     "technique": "false-friends-and-collocations",
+     "verdict": "conformant",
+     "evidence": "app/_landing/cosmos/engine/nav.ts:73 EN-ONE-TERM: template breadcrumbs reuse the canonical template label rather than introducing another rendering."
+    },
+    {
+     "technique": "generated-prose-patterns",
+     "verdict": "conformant",
+     "evidence": "app/_landing/parts.tsx:66 The primary CTA states a concrete action and provider without EN-PUFFERY or generation artifacts; no authorship is inferred."
+    },
+    {
+     "technique": "register-and-voice",
+     "verdict": "conformant",
+     "evidence": "app/_landing/parts.tsx:33 EN-WE and EN-YOU: the status reports the change tersely, without corporate narration or blaming the reader."
+    },
+    {
+     "technique": "typography-and-capitalization",
+     "verdict": "deviation",
+     "evidence": "app/_landing/cosmos/engine/layout.ts:352 EN-SPACING requires a nonbreaking space between a number and its unit; fmtDur supplies ordinary spaces to the stage\u2019s duration chips."
+    },
+    {
+     "technique": "ui-and-landing-microcopy",
+     "verdict": "deviation",
+     "evidence": "app/_landing/cosmos/engine/search.ts:43 EN-EMPTY-STATE: renderRes clears the results and renders only matches, leaving an unmatched query without an explanation or recovery instruction."
+    },
+    {
+     "technique": "variant-and-locale-conventions",
+     "verdict": "deviation",
+     "evidence": "app/_landing/cosmos/engine/stage.ts:35 EN-SPELLING includes accessible descriptions: use \u201cstylized\u201d under the declared US variant."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-22T00:51:58.131325+00:00",
+   "bundle": "localization",
+   "subjects": [
+    "english"
+   ],
+   "techniques": [
+    "false-friends-and-collocations",
+    "generated-prose-patterns",
+    "register-and-voice",
+    "typography-and-capitalization",
+    "ui-and-landing-microcopy",
+    "variant-and-locale-conventions"
+   ],
+   "deviations": 1,
+   "context": "landing-cosmos-shell",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

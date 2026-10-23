@@ -8968,6 +8968,840 @@
           "evidence": "packages/kernel/src/job-run.ts:332 Results are persisted as job outputs, rather than held in an expiring cache awaiting peer collection."
         }
       ]
+    },
+    "571eae96-e297-40c6-a556-3a3bf8f48e3f/delivery-analytics": {
+      "context": "review-and-runs-history",
+      "subject": "delivery-analytics",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-21",
+      "evaluatedTs": "2026-10-21T21:25:03.679Z",
+      "worker": "fec33adc-f636-4b08-bde4-02ed060f396b",
+      "techniques": [
+        {
+          "technique": "attribution-channels",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/runs/lanes.ts:15 Engine names label resource capabilities; they do not attribute software changes or calculate tool-authored shares."
+        },
+        {
+          "technique": "batch-size-thresholds",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/runs/dayline.ts:137 Bar width measures time in screen coordinates, with no software change-size measurement or large-change threshold."
+        },
+        {
+          "technique": "delivery-metric-denominators",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/runs/dayline.ts:197 The ratio is instantaneous resource occupancy, outside the standard's delivery-rate population."
+        },
+        {
+          "technique": "line-volume-confounded-with-edit-grammar",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/runs/dayline.ts:194 Text length estimates label geometry; no producer-reported code-line volume is ingested or compared."
+        },
+        {
+          "technique": "off-platform-signal-detection",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/review/PacketReview.tsx:170 Missing article content is disclosed directly; this surface makes no delivery-process inference from absent review artifacts."
+        },
+        {
+          "technique": "path-class-confounded-with-size",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/runs/LaneChip.tsx:23 Classification controls a resource chip's appearance, with no path-glob risk taxonomy or review-depth routing."
+        },
+        {
+          "technique": "post-landing-repair-density",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/review/PacketReview.tsx:126 This sends an editorial edit plan; it does not rank landed software features using subsequent repairs."
+        },
+        {
+          "technique": "revert-linkage",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/runs/thread.ts:53 Failure linkage identifies a blocking job dependency, with no recognition of software undo events or revert-rate calculation."
+        },
+        {
+          "technique": "review-coverage-rate",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/review/PacketReview.tsx:212 This counts reviewer votes on an article, rather than merged software changes approved by another party before merge."
+        }
+      ]
+    },
+    "0c02b354-237b-44cb-9283-518ed620e846/delivery-guarantees": {
+      "context": "job-queue-and-leases",
+      "subject": "delivery-guarantees",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-21",
+      "evaluatedTs": "2026-10-21T22:06:28.636Z",
+      "worker": "899aca73-80fa-46f6-bb84-d52b9954980a",
+      "techniques": [
+        {
+          "technique": "atomic-claiming",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/job.ts:108 BEGIN IMMEDIATE serializes the claim's state check and update, and later writes check the lease fence; nevertheless, the claim uses an update by identity rather than the standard's explicitly required single conditional pending-to-processing write."
+        },
+        {
+          "technique": "co-transactional-consume",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/effects.ts:8 Vendor-job effects cross the queue store boundary; job-run performs the asynchronous step between separate dispatch and booking transactions."
+        },
+        {
+          "technique": "dead-letter-design",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/job.ts:314 Failed and interrupted jobs remain visible and support individual operator retry, but the inspected job APIs and Runs surface lack the required bulk redrive/discard workflow with per-item outcomes and an explicit dead-letter retention policy."
+        },
+        {
+          "technique": "guarantee-selection",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/job-core.ts:90 The producer contract supplies stable identity and documents interruption risk, but leaves vendor deduplication optional and does not name a delivery posture per producer class with the required duplicate-effect analysis."
+        },
+        {
+          "technique": "marker-certifies-what-was-done",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/job-run.ts:331 A step output is recorded only after perform returns a validated produced outcome, within the fenced booking transaction; dispatch records the separate in-flight stage beforehand."
+        },
+        {
+          "technique": "non-delivery-ledgers",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/job.ts:307 Cancellation durably records the actor and transition, but accepts and writes no closed-vocabulary non-delivery reason or explicit replayability classification."
+        },
+        {
+          "technique": "ordered-lane-blocking",
+          "verdict": "not-applicable",
+          "evidence": "packages/domain/src/lane.ts:8 These lanes group resource capacity rather than conversation or document streams; upstream-dependent jobs remain planned until released, while paid-lane crash holds address uncertain spend."
+        },
+        {
+          "technique": "retry-escalation",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/job-core.ts:289 Successful steps reset the failure streak, and attempt increments only on operator retry; the bounded consecutive-failure breaker does not provide the standard's persisted per-item attempt budget across partial progress."
+        },
+        {
+          "technique": "stuck-reaping",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/job-queue-core.ts:77 The worker counts running records against capacity without periodically recovering expired claims, so a full lane containing dead workers' jobs cannot reach claim-triggered recovery; startup recovery alone misses this case."
+        }
+      ],
+      "registryProposal": "Clarify whether atomic-claiming intentionally excludes SQLite BEGIN IMMEDIATE transactions that serialize state checks and writes; the current text explicitly requires a single conditional update and rejects a lock around the read/write pair."
+    },
+    "5414e8ac-5105-43f0-a153-088e12501c9d/document-text-extraction": {
+      "context": "ui-marks-and-text",
+      "subject": "document-text-extraction",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-21",
+      "evaluatedTs": "2026-10-21T23:26:02.367Z",
+      "worker": "576fede1-b18a-46db-ba15-ac0ab50c8a4e",
+      "techniques": [
+        {
+          "technique": "band-calibration-by-construction",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/hint/words.ts:7 This limit governs tooltip length; no extraction quality bands or calibration thresholds occur here."
+        },
+        {
+          "technique": "context-decided-escaping",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/errorline/ErrorLine.tsx:12 The component renders a supplied string as JSX text; it does not convert extracted document text into markup."
+        },
+        {
+          "technique": "escalation-adjudication",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/stalebadge/StaleBadge.tsx:26 This selects a freshness label; there is no second reader or replacement extraction to adjudicate."
+        },
+        {
+          "technique": "extraction-yield-bands",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/chip/Chip.tsx:32 The chip displays an optional caller-supplied value; it measures no document region or extraction yield."
+        },
+        {
+          "technique": "recognition-boundary-and-escalation",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/a11y/SrOnly.tsx:6 The accessibility channel renders supplied text; it exposes neither a text-layer extractor nor optical recognition."
+        },
+        {
+          "technique": "screen-then-confirm-detection",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/hint/Hint.tsx:36 The hint manages a tooltip layer; no document readability screen or confirming extraction exists here."
+        },
+        {
+          "technique": "structural-amplification-caps",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/ghost/Ghost.tsx:11 This repetition creates UI placeholders from a component prop; it does not expand an uploaded document container."
+        },
+        {
+          "technique": "structure-saturation-guard",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/heading/CapsHeading.tsx:16 Heading structure follows an explicit level prop rather than a classifier inferring structure from document text."
+        },
+        {
+          "technique": "unreadable-region-refusal",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/empty/Empty.tsx:13 The empty state displays a supplied label; it neither reads document regions nor reports extraction completeness."
+        }
+      ]
+    },
+    "3eb496e8-52aa-446d-bf75-07dc7c891b16/dynamic-secret-lifecycle": {
+      "context": "kernel-python-protocol",
+      "subject": "dynamic-secret-lifecycle",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T00:11:58.005Z",
+      "worker": "c61d499f-e1e2-4ba9-a037-8ae698cd5a62",
+      "techniques": [
+        {
+          "technique": "expiry-buffer-beyond-lease",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/py/lease.py:288 Renewal updates a local resource heartbeat; there is no remote credential expiry to buffer."
+        },
+        {
+          "technique": "idempotent-revoke-and-give-up",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/py/lease.py:296 Release clears resource ownership locally rather than revoking a minted credential."
+        },
+        {
+          "technique": "lease-vs-native-tracking",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/py/lease.py:248 The tracked objects are resource holders and fences, not issued authentication artifacts."
+        },
+        {
+          "technique": "persist-before-provision",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/py/job.py:140 The claim attaches a coordination lease to a job; no credential provisioning or plaintext handout occurs."
+        },
+        {
+          "technique": "ttl-ladder-derivation",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/py/lease.py:144 This TTL governs worker liveness, not the lifetime granted by a credential issuer."
+        },
+        {
+          "technique": "wal-per-external-side-effect",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/py/kernel_meter.py:85 The external-call wrapper meters vendor work; the inspected context contains no credential creation, expiry mutation or root rotation requiring an issuer witness."
+        }
+      ]
+    },
+    "ff0b289f-5f39-4747-acce-5d56797b9c43/engine-binding-surface": {
+      "context": "landing-cosmos-paper-raster",
+      "subject": "engine-binding-surface",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T00:33:28.209Z",
+      "worker": "1f9b016e-0e5e-46fd-ae77-1f209c90be81",
+      "techniques": [
+        {
+          "technique": "address-sensitive-construction",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/paper.ts:61 Paths are browser-managed objects; the inspected construction code never passes host-allocated storage addresses to a foreign constructor."
+        },
+        {
+          "technique": "ask-the-authority-not-the-shadow",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/palette.ts:32 The palette cache stores deterministically computed artwork, not a foreign runtime's safety-critical authorization state."
+        },
+        {
+          "technique": "capability-deferred-release",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/raster.ts:291 Cleanup explicitly closes received bitmap objects; there is no movable owner whose destructor requires a foreign thread or lock capability."
+        },
+        {
+          "technique": "hierarchy-as-three-relations",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/raster.ts:266 Surface handling distinguishes browser object alternatives without reproducing a foreign inheritance hierarchy or reinterpreting layouts."
+        },
+        {
+          "technique": "phantom-capability-parameter",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/rasterJobs.ts:201 The generic parameter represents the returned surface, and painting requires no entered foreign region or capability state."
+        },
+        {
+          "technique": "pre-resolve-what-the-engine-cannot-await",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/raster.worker.ts:85 The owned worker awaits asynchronous PNG encoding directly; no immutable foreign engine requests asynchronously acquired resources through synchronous callbacks."
+        }
+      ]
+    },
+    "e5f8b2b5-3ac7-422b-9950-c7431117591a/english": {
+      "context": "landing-cosmos-shell",
+      "subject": "english",
+      "bundle": "localization",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T00:51:58.131Z",
+      "worker": "e5cc90eb-df18-48ee-ac52-a2bee294c38d",
+      "techniques": [
+        {
+          "technique": "false-friends-and-collocations",
+          "verdict": "conformant",
+          "evidence": "app/_landing/cosmos/engine/nav.ts:73 EN-ONE-TERM: template breadcrumbs reuse the canonical template label rather than introducing another rendering."
+        },
+        {
+          "technique": "generated-prose-patterns",
+          "verdict": "conformant",
+          "evidence": "app/_landing/parts.tsx:66 The primary CTA states a concrete action and provider without EN-PUFFERY or generation artifacts; no authorship is inferred."
+        },
+        {
+          "technique": "register-and-voice",
+          "verdict": "conformant",
+          "evidence": "app/_landing/parts.tsx:33 EN-WE and EN-YOU: the status reports the change tersely, without corporate narration or blaming the reader."
+        },
+        {
+          "technique": "typography-and-capitalization",
+          "verdict": "deviation",
+          "evidence": "app/_landing/cosmos/engine/layout.ts:352 EN-SPACING requires a nonbreaking space between a number and its unit; fmtDur supplies ordinary spaces to the stage’s duration chips."
+        },
+        {
+          "technique": "ui-and-landing-microcopy",
+          "verdict": "deviation",
+          "evidence": "app/_landing/cosmos/engine/search.ts:43 EN-EMPTY-STATE: renderRes clears the results and renders only matches, leaving an unmatched query without an explanation or recovery instruction."
+        },
+        {
+          "technique": "variant-and-locale-conventions",
+          "verdict": "deviation",
+          "evidence": "app/_landing/cosmos/engine/stage.ts:35 EN-SPELLING includes accessible descriptions: use “stylized” under the declared US variant."
+        }
+      ]
+    },
+    "076622f1-4906-4cdc-9a76-307df47fdd14/multi-speaker-speech-production": {
+      "context": "landing-cosmos-scenes",
+      "subject": "multi-speaker-speech-production",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T01:33:24.844Z",
+      "worker": "cbb072e6-1c42-42ef-af52-ead5c6c1e86d",
+      "techniques": [
+        {
+          "technique": "chunk-boundary-continuity",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/planes.ts:67 Bands group visual depth planes; no speech script, character cap, or audio joins were found."
+        },
+        {
+          "technique": "inline-direction-dialect",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/banner.ts:26 Names become DOM display text; no script direction passed to a speech engine was found."
+        },
+        {
+          "technique": "line-addressed-re-render",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/scene.ts:80 Render jobs contain image dimensions and paint operations; no spoken-line revision workflow was found."
+        },
+        {
+          "technique": "voice-asset-model-generation-binding",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/medal.ts:49 Stored specifications select seeded visual motifs; no cloned or designed voice assets were found."
+        },
+        {
+          "technique": "world-lexicon-as-pronunciation-dictionary",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/worlds.ts:44 Worlds describe painted scenery; no spoken terms or pronunciation dictionary workflow was found."
+        }
+      ]
+    },
+    "1561e25e-0547-4ace-8e3b-6a3407a3b40f/people-analytics-ethics": {
+      "context": "floor-calendar-slots",
+      "subject": "people-analytics-ethics",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T02:13:25.198Z",
+      "worker": "43adc5f8-d28a-4054-ba58-a43ec392a0fd",
+      "techniques": [
+        {
+          "technique": "aggregate-vs-individual-split",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/floor/calendar.ts:156 Calendar grouping uses slot dates; there are no organizational and personal engineering measurement views to separate."
+        },
+        {
+          "technique": "contribution-eligibility-floors",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/floor/calendar.ts:77 The ordered population consists of publishing slots, with no per-person distribution or contribution ranking."
+        },
+        {
+          "technique": "naming-population-floor",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/floor/MonthCalendar.tsx:106 The breakdown counts slots by publishing channel and does not name individuals."
+        },
+        {
+          "technique": "private-view-separation",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/floor/schedule.ts:174 The form produces publication scheduling data, not a personal activity report with a scope that could widen into a roster."
+        },
+        {
+          "technique": "producer-enforced-suppression",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/floor/SlotDetail.tsx:123 The displayed metric is a publication view count, with no person-level measurement payload requiring identity suppression."
+        },
+        {
+          "technique": "risk-framing-anonymization",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/floor/SlotRow.tsx:57 Status judgments describe publishing slots rather than assigning risk, deficits, or liability to people."
+        }
+      ]
+    },
+    "0c02b354-237b-44cb-9283-518ed620e846/priced-authority": {
+      "context": "job-queue-and-leases",
+      "subject": "priced-authority",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T02:31:35.887Z",
+      "worker": "24ed2fed-b074-43f3-8047-770932a44cf0",
+      "techniques": [
+        {
+          "technique": "approver-not-requester",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/job-queue.ts:112 The operator acknowledges interrupted work; this is not second-party approval of a secret read."
+        },
+        {
+          "technique": "inline-auth-cannot-lease",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/lease.ts:317 Acquisition uses a persisted coordination claim and process liveness, without an inline login that creates temporary authentication authority."
+        },
+        {
+          "technique": "never-persisted-token-class",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/lease.ts:275 The worker holder is a process identity, not a login session or an issued stateless credential."
+        },
+        {
+          "technique": "secondary-index-before-primary",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/lease.ts:124 Coordination leases are reached directly by resource; there is no credential parent/accessor revocation index whose separate creation must precede the record."
+        },
+        {
+          "technique": "single-use-cubbyhole-wrap",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/job-run.ts:331 The driver records vendor-step outputs; these files implement no first-credential handoff through an intermediary."
+        },
+        {
+          "technique": "write-ahead-revocation-marker",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/lease.ts:245 Release clears resource ownership synchronously inside the transaction; no token child tree or deferred credential teardown requires a revocation marker."
+        }
+      ]
+    },
+    "d6ef2aee-128a-4430-80a9-de42991c6316/public-claim-provenance": {
+      "context": "ui-status-provenance",
+      "subject": "public-claim-provenance",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T02:54:54.165Z",
+      "techniques": [
+        {
+          "technique": "build-time-derivation-off-the-client-bundle",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/tally/Tally.tsx:28 Renders supplied operational values; this context does not reduce a heavy catalog for a public claim."
+        },
+        {
+          "technique": "degraded-never-claims-live",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/status/status.ts:164 Handles unknown workflow-state tokens, not fetch outcomes or currency badges on public counters."
+        },
+        {
+          "technique": "derived-numerator-authored-denominator",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/stackbar/StackBar.tsx:25 Reports operational decision counts rather than shipped capabilities against an authored public goal."
+        },
+        {
+          "technique": "no-data-source-labelled-inline",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/source/SourceTag.tsx:19 Displays caller-supplied operational source classifications; no hand-authored public measurement is declared here."
+        },
+        {
+          "technique": "presentation-invariants-on-derived-values",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/facet/FacetRow.tsx:59 Clamps a studio filter's supplied share; no public derived count and authored target pair was found."
+        },
+        {
+          "technique": "promise-only-what-ships",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/consequence/ConsequencePanel.tsx:87 Presents an operator's supplied action preview rather than a public success panel promising follow-up."
+        },
+        {
+          "technique": "provenance-as-a-build-gate",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/provenance/Provenance.tsx:32 These chips identify production metadata within the studio; the standard explicitly excludes internal consoles from this public-claim gate."
+        }
+      ],
+      "withdrawn": {
+        "worker": "43567bc3-02a5-4b97-8f60-4908d01f02f7",
+        "state": "not-applicable",
+        "at": "2026-10-22T02:55:35.023814+00:00",
+        "reason": "reviewer (sonnet): The not-applicable anchor (ConsequencePanel.tsx:69) is an incidental line that renders commit-packet chips and does not show that public claims are absent; ConsequencePanel is also not among the listed context files. The 'illustrative' vs 'real' distinction in SourceTag.tsx suggests data-provenance "
+      }
+    },
+    "e5b296e2-cccf-47a5-b8bd-ce730d40ace8/realtime-events": {
+      "context": "kernel-store-and-events",
+      "subject": "realtime-events",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T03:20:18.760Z",
+      "worker": "fddfb788-e02e-4f22-9119-f27a3a508537",
+      "techniques": [
+        {
+          "technique": "capacity-packed-subscription-pool",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/store.ts:125 This context opens SQLite connections, with no push provider, topic subscriptions, or provider connection caps."
+        },
+        {
+          "technique": "change-data-capture",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/token.ts:239 These are explicit audit facts appended alongside mutations in the same transaction, rather than a storage-change notification pipeline; no capture hook or delivery channel exists in the context."
+        },
+        {
+          "technique": "coalescing-and-batching",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/events.ts:183 The ledger preserves individual acts with sequence identities; this context contains no consumer render buffer or superseding-state flush."
+        },
+        {
+          "technique": "event-registry",
+          "verdict": "deviation",
+          "evidence": "packages/domain/src/event.ts:60 The schema imported by the append door checks spelling rather than membership in a closed vocabulary; eventDataSchema at line 57 accepts a generic JSON object without binding payload shapes to names."
+        },
+        {
+          "technique": "outbound-fan-out",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/events-query.ts:186 This seam supplies bounded reads after a sequence position, not external delivery subscriptions or settlement; per-subscription watermarks, retries, and dead letters belong to a dispatcher absent from these files."
+        },
+        {
+          "technique": "push-vs-refetch-reconciliation",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/events-query.ts:171 This is an authoritative ledger reader, with no pushed client state, optimistic display, or in-flight UI read reconciliation to judge."
+        },
+        {
+          "technique": "subscription-lifecycle",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/events-query.ts:185 The feed interface is a synchronous pull returning a page; it creates no callback registration, asynchronous subscription handshake, or unsubscribe resource."
+        }
+      ]
+    },
+    "f54f23e7-c790-44ff-beaf-a5cb83c8d5c4/scoring-rubrics": {
+      "context": "audio-lessons-measures",
+      "subject": "scoring-rubrics",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T03:59:41.380Z",
+      "worker": "4539048b-e2e9-420e-b9bd-cddb0a8fd198",
+      "techniques": [
+        {
+          "technique": "gap-ranking",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/audio/rubric.ts:89 The rubric returns dimensions, mean, coverage and standing, but no computed gaps with targets, impact, effort or deterministic priority."
+        },
+        {
+          "technique": "normalization",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/audio/rubric.ts:117 New dimension ratings share a fixed 1–10 scale, with out-of-range inputs rejected before storage; heterogeneous audio measurements are displayed separately."
+        },
+        {
+          "technique": "rubric-stability",
+          "verdict": "deviation",
+          "evidence": "lib/sound/ledger.ts:119 Scalar parity tests exist for the UI and ledger means, but stored ledger scores carry no rubric version identifying the contract that produced them."
+        },
+        {
+          "technique": "score-explanation",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/audio/rubric.ts:60 The legacy fallback can produce an sfx mean of 4 from {melody: 4}, while readRubric displays all declared sfx dimensions as absent, leaving the composite unexplained by its breakdown."
+        },
+        {
+          "technique": "unmeasured-honesty",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/audio/rubric.ts:68 Missing dimensions remain null and coverage is shown, but a single measured dimension can confer proven standing without a declared minimum coverage."
+        },
+        {
+          "technique": "weight-design",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/audio/rubric.ts:61 Equal importance is implicit in the arithmetic mean rather than an explicit weight artifact with a stated total and per-dimension rationales."
+        },
+        {
+          "technique": "weight-lenses",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/rubric.ts:47 Music and sfx have distinct dimension sets, and non-loop effects receive a dimension exemption; this is not one shared rubric using population-specific importance budgets."
+        }
+      ]
+    },
+    "b412ea73-0dc3-4362-93c4-2a9b913f9a61/signed-artifacts": {
+      "context": "v1-import-and-archive",
+      "subject": "signed-artifacts",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T04:16:49.362Z",
+      "worker": "8ca9d08e-b823-4c29-83cc-726b2daf6c9f",
+      "techniques": [
+        {
+          "technique": "bypass-is-a-versioned-policy",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/runs.ts:107 This imports historical data; dry controls whether records are written, and searches found no unsigned-build installer or signature-verification bypass in this context."
+        },
+        {
+          "technique": "canonical-hashing",
+          "verdict": "conformant",
+          "evidence": "lib/import/archive.ts:197 The reader hashes received row text instead of reserializing parsed rows; the writer hashes the same lines it emits, and the reader checks recomputed section digests against explicitly named sha256 fields."
+        },
+        {
+          "technique": "detached-signatures-and-key-identity",
+          "verdict": "deviation",
+          "evidence": "lib/import/archive.ts:233 The exported archive carries an unkeyed checksum manifest but no detached signature or cryptographically bound signer identity, so its claimed source cannot be authenticated."
+        },
+        {
+          "technique": "import-verification-flow",
+          "verdict": "deviation",
+          "evidence": "lib/import/shelf.ts:161 Preview and commit independently read public-file media, but ItemPreview contains no media digest and previewToken hashes only archive digest and preview summaries; replacing those file bytes can preserve the token while changing what commits."
+        },
+        {
+          "technique": "key-custody",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/bytes.ts:39 The context computes unkeyed content hashes; searches found no application-owned artifact-signing key, generation operation or key store whose custody could be evaluated."
+        },
+        {
+          "technique": "signature-lifecycle",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/export.ts:151 Re-export selects original or current data using content digests; no signature record, sidecar or signer trust state exists here to revoke, delete or re-sign."
+        },
+        {
+          "technique": "verification-ux",
+          "verdict": "deviation",
+          "evidence": "lib/import/serve.ts:46 The preview forwards archive-supplied source metadata without a signer-trust verdict or unverifiable state, and the import UI provides ordinary confirmation without specific acknowledgment of unverifiable provenance."
+        }
+      ]
+    },
+    "b412ea73-0dc3-4362-93c4-2a9b913f9a61/standards-layered-runtime": {
+      "context": "v1-import-and-archive",
+      "subject": "standards-layered-runtime",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T04:31:51.728Z",
+      "worker": "e493fa31-9964-4ffa-b6b5-02548792210f",
+      "techniques": [
+        {
+          "technique": "backend-parameterised-web-api",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/shelf.ts:74 The replaceable I/O callback retrieves application asset bytes; it does not implement a standard API exposed to guest programs."
+        },
+        {
+          "technique": "baseline-plus-extension-tuple",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/project.ts:210 The entry point stages archive data against a store; it installs no baseline or extensions into a guest context."
+        },
+        {
+          "technique": "cli-as-thin-assembler",
+          "verdict": "not-applicable",
+          "evidence": "pipeline/import/runs.mts:63 The related CLI invokes a data importer, not an embeddable language runtime."
+        },
+        {
+          "technique": "crate-per-standards-body",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/steps.ts:92 The modules adapt and validate application records; they implement no guest-runtime conformance claim needing a separate standards package."
+        },
+        {
+          "technique": "re-export-preserves-import-path",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/export.ts:19 Re-export here means serializing project data into an archive, not preserving an API import path during movement between runtime layers."
+        },
+        {
+          "technique": "status-header-per-api",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/archive.ts:11 The compatibility target is Gravitone's historical archive format; this is no incomplete standard API package requiring per-API status headers."
+        }
+      ]
+    },
+    "d6ef2aee-128a-4430-80a9-de42991c6316/status-vocabulary": {
+      "context": "ui-status-provenance",
+      "subject": "status-vocabulary",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T21:06:17.165Z",
+      "worker": "f118e519-be2d-4dec-9e5c-31f666f51a6d",
+      "techniques": [
+        {
+          "technique": "number-formatting",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/tally/Tally.tsx:28 Numeric values and denominators bypass locale-aware formatting; callers must supply any formatted strings themselves."
+        },
+        {
+          "technique": "status-color-mapping",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/status/StatusPill.module.css:4 Idle, awaiting, done and failed retain this identical filled-dot shape; their subsequent rules change color only, violating the required shape redundancy."
+        },
+        {
+          "technique": "timestamp-display",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/facts/Facts.tsx:14 Facts renders values verbatim; its ledger caller supplies the stored timestamp e.at as the recorded field in app/(studio)/ledger/_ledger/vocab.ts:95, bypassing fixed-moment formatting and the complementary hover display."
+        },
+        {
+          "technique": "untrusted-label-rendering",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/facet/FacetRow.module.css:4 Facet labels are escaped as React text, but long labels are ellipsized without a tooltip or expansion to recover the full value; FacetRow also supplies no bidirectional isolation."
+        },
+        {
+          "technique": "vocabulary-chain-integrity",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/source/SourceTag.tsx:19 SourceKind derives from domain vocabularies, but SourceTag displays the machine token directly instead of resolving a label catalog; the exhaustive STATUS tables elsewhere do not repair this path."
+        }
+      ]
+    },
+    "d6ef2aee-128a-4430-80a9-de42991c6316/stream-proxy-hop": {
+      "context": "ui-status-provenance",
+      "subject": "stream-proxy-hop",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T21:23:14.660Z",
+      "worker": "aa23c7a1-fab3-4d07-833f-88fa5dce4735",
+      "techniques": [
+        {
+          "technique": "abort-versus-unreachable",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/consequence/ConsequencePanel.tsx:102 Cancellation invokes a supplied UI callback; this component owns no long-lived request or upstream error classification."
+        },
+        {
+          "technique": "credential-attachment-at-the-hop",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/channel/ChannelBadge.tsx:26 The channel badge renders a publishing channel's name and mark, without issuing or authenticating requests."
+        },
+        {
+          "technique": "idle-heartbeat-injection",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/status/StatusPill.tsx:16 The pill renders a supplied display entry; it neither maintains a streaming connection nor emits keep-alives."
+        },
+        {
+          "technique": "lifetime-cap-rotation",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/stackbar/StackBar.tsx:29 The component derives visual segment weights from counts and owns no stream lifetime or resume cursor."
+        },
+        {
+          "technique": "origin-non-disclosure",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/upstream/UpstreamBreak.tsx:46 This displays a caller-supplied pipeline failure detail; the module is not a gateway response boundary, and no proxied origin disclosure is established here."
+        },
+        {
+          "technique": "progress-lease-not-wall-clock",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/piprow/PipRow.tsx:37 The operation maps presentation states to pip classes, without byte transfers or liveness deadlines."
+        },
+        {
+          "technique": "reconnect-storm-hygiene",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/facet/FacetRow.tsx:42 Interaction delegates a filter toggle to the caller; these modules own no reconnecting socket, retry timer, or fallback polling."
+        },
+        {
+          "technique": "upstream-status-normalization",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/status/status.ts:162 Status lookup resolves domain state tokens into presentation entries, without constructing HTTP responses from upstream status codes."
+        }
+      ]
+    },
+    "fe524e46-e5d6-4aba-b475-fe39c41f3819/subprocess-lifecycle": {
+      "context": "run-records-and-slots",
+      "subject": "subprocess-lifecycle",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T21:37:52.959Z",
+      "techniques": [
+        {
+          "technique": "cancellation-needs-a-terminable-unit",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/slots/core.ts:114 Calendar cancellation computes a record transition; it does not cancel executable guest work or own a terminable child."
+        },
+        {
+          "technique": "concurrency-and-slots",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/slots/schema.ts:107 Publishing slots enforce item/channel exclusivity, rather than admission capacity for operating-system children."
+        },
+        {
+          "technique": "decode-child-output-per-line",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/slots/schema.ts:153 This reads stored JSON text; the context captures no child-output bytes requiring decoding."
+        },
+        {
+          "technique": "host-resource-protection",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/records/receipt.ts:158 The receipt ceiling measures monetary exposure, rather than a subprocess execution ceiling or machine-resource budget."
+        },
+        {
+          "technique": "liveness-and-heartbeats",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/slots/outcome.ts:84 The heartbeat renews a fenced publishing claim; it does not supervise progress on a spawned child's output channels."
+        },
+        {
+          "technique": "session-reuse",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/records/receipt.ts:112 This fingerprint confirms receipt inputs and queue state; it does not identify or pool CLI sessions."
+        },
+        {
+          "technique": "spawn-contract",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/records/launch.ts:24 Launch persists records and enqueues jobs; inspection of enqueueIn confirmed a database insert rather than process creation."
+        },
+        {
+          "technique": "termination-and-reaping",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/slots/sweep.ts:120 The sweep fences stale claimants and records interrupted publishing; it owns no child handle to terminate or reap."
+        }
+      ],
+      "withdrawn": {
+        "worker": "be5f76c2-85cc-46c6-82e5-a03f11ed1f51",
+        "state": "not-applicable",
+        "at": "2026-10-22T21:38:24.687681+00:00",
+        "reason": "reviewer (sonnet): The main anchor, records/schema.ts:110, is `insertRun`, which only inserts a row. It does not show that child processes are absent. The context's own records/launch.ts, read.ts and schedule.ts import LANE_CAPACITY and ResourceLane and compute lane admission capacity and ETA for jobs that occupy a GP"
+      }
+    },
+    "bd05d347-c5c6-4eb4-8de2-b68a6102ac01/sync-replication": {
+      "context": "ledger-v1-projection-core",
+      "subject": "sync-replication",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-22",
+      "evaluatedTs": "2026-10-22T21:48:52.286Z",
+      "techniques": [
+        {
+          "technique": "change-tracking-and-cursors",
+          "verdict": "deviation",
+          "evidence": "lib/ledger/v1/sync.ts:152 The sync loop reads and projects entire source snapshots on every pass instead of maintaining durable per-stream cursors that advance after settlement."
+        },
+        {
+          "technique": "conflict-detection-and-policy",
+          "verdict": "deviation",
+          "evidence": "lib/ledger/v1/sync.ts:138 When existing keys return with altered content, the sync only counts them as drifted and discards the new payload without parking or preserving the conflict."
+        },
+        {
+          "technique": "in-flight-is-per-connection",
+          "verdict": "not-applicable",
+          "evidence": "lib/ledger/v1/types.ts:156 Sources are read directly in-process and written to local SQLite rather than pushed across remote socket connections with retransmission queues."
+        },
+        {
+          "technique": "projection-security",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/facts.ts:65 Outbound events are projected through a single factory that allowlists fields and tags each event with the data universe boundary."
+        },
+        {
+          "technique": "sync-observability",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sync.ts:167 Per-stream failures are isolated and tracked in health records with failure streaks and verbatim error messages without aborting sibling streams."
+        },
+        {
+          "technique": "tombstone-propagation",
+          "verdict": "deviation",
+          "evidence": "lib/ledger/v1/sync.ts:231 The projection sync only appends events and omits tombstone propagation, causing the replica to retain deleted source history indefinitely."
+        },
+        {
+          "technique": "topology-declaration",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sources.ts:23 Mirrored streams are declared in an enumerable registry of read-only projection sources that lack write methods back to the source stores."
+        }
+      ],
+      "withdrawn": {
+        "worker": "97fa5cb7-e4ae-4d06-8e3a-1f5bc52fed98",
+        "state": "deviation",
+        "at": "2026-10-22T21:49:26.928740+00:00",
+        "reason": "reviewer (sonnet): The facts.ts:65 anchor does not allowlist fields (make() spreads f.data and extra and only adds src), and the 'omits tombstone propagation' claim has no anchor (grep finds no tombstone, delete or cursor code). The context is also a one-way idempotent append-only ingest, not replication, so the 'no d"
+      }
     }
   }
 }

@@ -1,0 +1,94 @@
+{
+ "schema": "conform-run/1",
+ "worker": "576fede1-b18a-46db-ba15-ac0ab50c8a4e",
+ "subject": "document-text-extraction",
+ "evaluatedAt": "2026-10-21T23:26:02.367375+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "ui-marks-and-text",
+   "subject": "document-text-extraction",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/errorline/ErrorLine.tsx:12 These components render supplied UI text, and searches found no extractText, extract_text, text-extraction, or docx matches in the context directories or repository, so document extraction is outside this context.",
+   "techniques": [
+    {
+     "technique": "band-calibration-by-construction",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/hint/words.ts:7 This limit governs tooltip length; no extraction quality bands or calibration thresholds occur here."
+    },
+    {
+     "technique": "context-decided-escaping",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/errorline/ErrorLine.tsx:12 The component renders a supplied string as JSX text; it does not convert extracted document text into markup."
+    },
+    {
+     "technique": "escalation-adjudication",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/stalebadge/StaleBadge.tsx:26 This selects a freshness label; there is no second reader or replacement extraction to adjudicate."
+    },
+    {
+     "technique": "extraction-yield-bands",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/chip/Chip.tsx:32 The chip displays an optional caller-supplied value; it measures no document region or extraction yield."
+    },
+    {
+     "technique": "recognition-boundary-and-escalation",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/a11y/SrOnly.tsx:6 The accessibility channel renders supplied text; it exposes neither a text-layer extractor nor optical recognition."
+    },
+    {
+     "technique": "screen-then-confirm-detection",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/hint/Hint.tsx:36 The hint manages a tooltip layer; no document readability screen or confirming extraction exists here."
+    },
+    {
+     "technique": "structural-amplification-caps",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/ghost/Ghost.tsx:11 This repetition creates UI placeholders from a component prop; it does not expand an uploaded document container."
+    },
+    {
+     "technique": "structure-saturation-guard",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/heading/CapsHeading.tsx:16 Heading structure follows an explicit level prop rather than a classifier inferring structure from document text."
+    },
+    {
+     "technique": "unreadable-region-refusal",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/empty/Empty.tsx:13 The empty state displays a supplied label; it neither reads document regions nor reports extraction completeness."
+    }
+   ],
+   "absenceTerms": [
+    "extractText",
+    "extract_text",
+    "docx"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-21T23:26:02.367375+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "document-text-extraction"
+   ],
+   "techniques": [
+    "band-calibration-by-construction",
+    "context-decided-escaping",
+    "escalation-adjudication",
+    "extraction-yield-bands",
+    "recognition-boundary-and-escalation",
+    "screen-then-confirm-detection",
+    "structural-amplification-caps",
+    "structure-saturation-guard",
+    "unreadable-region-refusal"
+   ],
+   "deviations": 0,
+   "context": "ui-marks-and-text",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

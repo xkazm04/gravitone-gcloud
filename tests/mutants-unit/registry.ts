@@ -4726,4 +4726,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: '<Plate className={s.media} src={media.url} alt="" lazy />',
     why: "A model tile asks the browser to draw its glb as an image: every 3D candidate on the Board is a broken picture.",
   },
+  {
+    id: "driver-reclaims-a-failed-job",
+    test: "packages/kernel/test/job.states.test.ts",
+    file: "packages/kernel/src/job-run.ts",
+    find: 'if (job.state !== "queued") return { kind: "report", report: { outcome: "not-queued", job } };',
+    replace: 'if (job.state !== "queued" && job.state !== "failed") return { kind: "report", report: { outcome: "not-queued", job } };',
+    why: "The driver takes a failed job back on its own, so a vendor refusal the operator never saw is retried and paid again with no retry on the record.",
+  },
 ];
