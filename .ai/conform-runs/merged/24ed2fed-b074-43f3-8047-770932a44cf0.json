@@ -1,0 +1,75 @@
+{
+ "schema": "conform-run/1",
+ "worker": "24ed2fed-b074-43f3-8047-770932a44cf0",
+ "subject": "priced-authority",
+ "evaluatedAt": "2026-10-22T02:31:35.887233+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "job-queue-and-leases",
+   "subject": "priced-authority",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/kernel/src/job-run.ts:173 The code grants worker coordination leases on lane slots rather than credential authority, and searches found no cubbyhole or inlineAuth in the context, kernel directory, or repository.",
+   "techniques": [
+    {
+     "technique": "approver-not-requester",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/job-queue.ts:112 The operator acknowledges interrupted work; this is not second-party approval of a secret read."
+    },
+    {
+     "technique": "inline-auth-cannot-lease",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/lease.ts:317 Acquisition uses a persisted coordination claim and process liveness, without an inline login that creates temporary authentication authority."
+    },
+    {
+     "technique": "never-persisted-token-class",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/lease.ts:275 The worker holder is a process identity, not a login session or an issued stateless credential."
+    },
+    {
+     "technique": "secondary-index-before-primary",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/lease.ts:124 Coordination leases are reached directly by resource; there is no credential parent/accessor revocation index whose separate creation must precede the record."
+    },
+    {
+     "technique": "single-use-cubbyhole-wrap",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/job-run.ts:331 The driver records vendor-step outputs; these files implement no first-credential handoff through an intermediary."
+    },
+    {
+     "technique": "write-ahead-revocation-marker",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/lease.ts:245 Release clears resource ownership synchronously inside the transaction; no token child tree or deferred credential teardown requires a revocation marker."
+    }
+   ],
+   "absenceTerms": [
+    "cubbyhole",
+    "inlineAuth"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-22T02:31:35.887233+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "priced-authority"
+   ],
+   "techniques": [
+    "approver-not-requester",
+    "inline-auth-cannot-lease",
+    "never-persisted-token-class",
+    "secondary-index-before-primary",
+    "single-use-cubbyhole-wrap",
+    "write-ahead-revocation-marker"
+   ],
+   "deviations": 0,
+   "context": "job-queue-and-leases",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

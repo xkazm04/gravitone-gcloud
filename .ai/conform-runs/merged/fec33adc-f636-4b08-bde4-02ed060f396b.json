@@ -1,0 +1,95 @@
+{
+ "schema": "conform-run/1",
+ "worker": "fec33adc-f636-4b08-bde4-02ed060f396b",
+ "subject": "delivery-analytics",
+ "evaluatedAt": "2026-10-21T21:25:03.679828+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "review-and-runs-history",
+   "subject": "delivery-analytics",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/runs/ResourceSummary.tsx:34 Searches found no context matches for reviewCoverage, changedLines, Co-authored-by or revert; these files display editorial approvals and resource occupancy rather than analytics derived from software change history.",
+   "techniques": [
+    {
+     "technique": "attribution-channels",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/runs/lanes.ts:15 Engine names label resource capabilities; they do not attribute software changes or calculate tool-authored shares."
+    },
+    {
+     "technique": "batch-size-thresholds",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/runs/dayline.ts:137 Bar width measures time in screen coordinates, with no software change-size measurement or large-change threshold."
+    },
+    {
+     "technique": "delivery-metric-denominators",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/runs/dayline.ts:197 The ratio is instantaneous resource occupancy, outside the standard's delivery-rate population."
+    },
+    {
+     "technique": "line-volume-confounded-with-edit-grammar",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/runs/dayline.ts:194 Text length estimates label geometry; no producer-reported code-line volume is ingested or compared."
+    },
+    {
+     "technique": "off-platform-signal-detection",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/review/PacketReview.tsx:170 Missing article content is disclosed directly; this surface makes no delivery-process inference from absent review artifacts."
+    },
+    {
+     "technique": "path-class-confounded-with-size",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/runs/LaneChip.tsx:23 Classification controls a resource chip's appearance, with no path-glob risk taxonomy or review-depth routing."
+    },
+    {
+     "technique": "post-landing-repair-density",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/review/PacketReview.tsx:126 This sends an editorial edit plan; it does not rank landed software features using subsequent repairs."
+    },
+    {
+     "technique": "revert-linkage",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/runs/thread.ts:53 Failure linkage identifies a blocking job dependency, with no recognition of software undo events or revert-rate calculation."
+    },
+    {
+     "technique": "review-coverage-rate",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/review/PacketReview.tsx:212 This counts reviewer votes on an article, rather than merged software changes approved by another party before merge."
+    }
+   ],
+   "absenceTerms": [
+    "reviewCoverage",
+    "changedLines",
+    "Co-authored-by",
+    "revert"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-21T21:25:03.679828+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "delivery-analytics"
+   ],
+   "techniques": [
+    "attribution-channels",
+    "batch-size-thresholds",
+    "delivery-metric-denominators",
+    "line-volume-confounded-with-edit-grammar",
+    "off-platform-signal-detection",
+    "path-class-confounded-with-size",
+    "post-landing-repair-density",
+    "revert-linkage",
+    "review-coverage-rate"
+   ],
+   "deviations": 0,
+   "context": "review-and-runs-history",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}

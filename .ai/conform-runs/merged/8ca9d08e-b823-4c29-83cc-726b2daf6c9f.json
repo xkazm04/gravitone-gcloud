@@ -1,0 +1,77 @@
+{
+ "schema": "conform-run/1",
+ "worker": "8ca9d08e-b823-4c29-83cc-726b2daf6c9f",
+ "subject": "signed-artifacts",
+ "evaluatedAt": "2026-10-22T04:16:49.362189+00:00",
+ "provider": "codex",
+ "model": "gpt-6.1-sol",
+ "pairs": [
+  {
+   "context": "v1-import-and-archive",
+   "subject": "signed-artifacts",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/import/project.ts:203 The token omits staged public-file blob digests, so changing public media between preview and confirmation can change imported bytes without invalidating the token.",
+   "techniques": [
+    {
+     "technique": "bypass-is-a-versioned-policy",
+     "verdict": "not-applicable",
+     "evidence": "lib/import/runs.ts:107 This imports historical data; dry controls whether records are written, and searches found no unsigned-build installer or signature-verification bypass in this context."
+    },
+    {
+     "technique": "canonical-hashing",
+     "verdict": "conformant",
+     "evidence": "lib/import/archive.ts:197 The reader hashes received row text instead of reserializing parsed rows; the writer hashes the same lines it emits, and the reader checks recomputed section digests against explicitly named sha256 fields."
+    },
+    {
+     "technique": "detached-signatures-and-key-identity",
+     "verdict": "deviation",
+     "evidence": "lib/import/archive.ts:233 The exported archive carries an unkeyed checksum manifest but no detached signature or cryptographically bound signer identity, so its claimed source cannot be authenticated."
+    },
+    {
+     "technique": "import-verification-flow",
+     "verdict": "deviation",
+     "evidence": "lib/import/shelf.ts:161 Preview and commit independently read public-file media, but ItemPreview contains no media digest and previewToken hashes only archive digest and preview summaries; replacing those file bytes can preserve the token while changing what commits."
+    },
+    {
+     "technique": "key-custody",
+     "verdict": "not-applicable",
+     "evidence": "lib/import/bytes.ts:39 The context computes unkeyed content hashes; searches found no application-owned artifact-signing key, generation operation or key store whose custody could be evaluated."
+    },
+    {
+     "technique": "signature-lifecycle",
+     "verdict": "not-applicable",
+     "evidence": "lib/import/export.ts:151 Re-export selects original or current data using content digests; no signature record, sidecar or signer trust state exists here to revoke, delete or re-sign."
+    },
+    {
+     "technique": "verification-ux",
+     "verdict": "deviation",
+     "evidence": "lib/import/serve.ts:46 The preview forwards archive-supplied source metadata without a signer-trust verdict or unverifiable state, and the import UI provides ordinary confirmation without specific acknowledgment of unverifiable provenance."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-22T04:16:49.362189+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "signed-artifacts"
+   ],
+   "techniques": [
+    "bypass-is-a-versioned-policy",
+    "canonical-hashing",
+    "detached-signatures-and-key-identity",
+    "import-verification-flow",
+    "key-custody",
+    "signature-lifecycle",
+    "verification-ux"
+   ],
+   "deviations": 1,
+   "context": "v1-import-and-archive",
+   "via": "curator-multi:codex",
+   "model": "gpt-6.1-sol"
+  }
+ ]
+}
