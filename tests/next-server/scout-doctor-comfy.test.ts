@@ -20,7 +20,9 @@ const spawn = async (bin: string): Promise<SpawnResult> => ({ ok: true, stdout: 
 const ENV = { GOOGLE_AI_API_KEY: "set", LEONARDO_API_KEY: "set", COMFY_URL: "http://comfy.test:8188" };
 /** Both vendors accept the key: these tests are about ComfyUI, and no test reaches a vendor. */
 const keysOk = async () => ({ ok: true, status: 200, text: async () => "{}" });
-const input = (o: Partial<DoctorInput> = {}): DoctorInput => ({ env: ENV, storePath: path.join(DIR, "kernel.sqlite"), scoutRoot: path.join(DIR, "scout"), dry: false, spawn, keyFetch: keysOk, ...o });
+/** A worker that beat a minute ago: these tests are about ComfyUI (the worker's own block is below). */
+const T = Date.parse("2026-10-23T22:00:00.000Z");
+const input = (o: Partial<DoctorInput> = {}): DoctorInput => ({ env: ENV, storePath: path.join(DIR, "kernel.sqlite"), scoutRoot: path.join(DIR, "scout"), dry: false, spawn, keyFetch: keysOk, worker: async () => T - 60_000, now: () => T, ...o });
 
 const LOADERS: Record<string, unknown> = {
   UNETLoader: { input: { required: { unet_name: [["ltx-2.5-22b-distilled-transformer-comfy-int8-convrot.safetensors"]] } } },
@@ -95,5 +97,48 @@ describe("doctor, the local clip engine", () => {
     expect(checks.find((c) => c.name === "LEONARDO_API_KEY")?.found).toBe("set · accepted · 150 credits on the account");
     const dry = await doctor(input({ dry: true, env: { ...ENV, GOOGLE_AI_API_KEY: secret }, fetch: comfy().f, keyFetch: refused }));
     expect(dry.find((c) => c.name === "GOOGLE_AI_API_KEY")).toMatchObject({ ok: true, found: "set", needed: false });
+  });
+});
+
+// THE WORKER LINE (spark night-load-band): the always-on worker's pulse in the store - its newest load
+// sample or its sampler's lease beat - under five minutes is ok; older, or never, fails a live night with
+// the command that starts it, and is a note on a dry one. The pulse is read read-only from a temp store.
+describe("doctor, the always-on worker", () => {
+  const worker = async (at: number | undefined, o: Partial<DoctorInput> = {}) => {
+    const checks = await doctor(input({ fetch: comfy().f, worker: async () => at, ...o }));
+    return { line: line(checks, "worker"), blocked: blocking(checks).map((c) => c.name) };
+  };
+
+  it("ok at 2 min, FAIL at 6 min, FAIL with no heartbeat on record", async () => {
+    expect(await worker(T - 2 * 60_000)).toEqual({ line: `ok   ${"worker".padEnd(19)} last heartbeat 2 min ago`, blocked: [] });
+    expect(await worker(T - 6 * 60_000)).toEqual({ line: `FAIL ${"worker".padEnd(19)} no worker heartbeat in 6 min -> start it: powershell -File pipeline/worker-service.ps1 -Run`, blocked: ["worker"] });
+    expect(await worker(undefined)).toEqual({ line: `FAIL ${"worker".padEnd(19)} no worker heartbeat on record -> start it: powershell -File pipeline/worker-service.ps1 -Run`, blocked: ["worker"] });
+  });
+
+  it("is a note on a dry night, and a store it cannot read fails with the store's own sentence", async () => {
+    expect((await worker(undefined, { dry: true })).blocked).toEqual([]);
+    expect((await worker(undefined, { dry: true })).line).toMatch(/^note worker /);
+    const broken = await doctor(input({ fetch: comfy().f, worker: async () => { throw new Error("database is locked"); } }));
+    expect(line(broken, "worker")).toMatch(/^FAIL worker +the store could not be read: database is locked -> start it/);
+  });
+
+  it("reads the pulse from a real store without migrating it: the newest sample, or the sampler's lease beat", async () => {
+    const { openKernel } = await import("@gt/kernel/kernel");
+    const { recordLoadSampleIn } = await import("@gt/kernel/resources/load");
+    const { workerPulse } = await import("../../lib/foundry/scout/doctor.ts");
+    expect(await workerPulse(path.join(DIR, "never.sqlite"))).toBeUndefined();
+    expect(await workerPulse(":memory:")).toBeUndefined();
+    const at = path.join(DIR, "pulse.sqlite");
+    const k = openKernel(at, { clock: () => new Date(T) });
+    if (!k.ok) throw k.error;
+    expect(await workerPulse(at)).toBeUndefined();
+    const w = k.value.store.tx((t) => recordLoadSampleIn(t, { atMs: T - 120_000, load: { cpuBusy: 0.5 } }));
+    expect(w.ok).toBe(true);
+    expect(await workerPulse(at)).toBe(T - 120_000);
+    // A beat newer than the newest sample (the probe failing, the worker alive) is the pulse.
+    const beat = k.value.store.tx((t) => t.run("INSERT INTO leases (resource, fence, holder_boot, holder_pid, holder_host, acquired_at, heartbeat_at, ttl_s) VALUES ('timer:load-sample', 1, 'b', 1, 'h', ?, ?, 180)", new Date(T - 60_000).toISOString(), new Date(T - 30_000).toISOString()));
+    expect(beat.ok).toBe(true);
+    expect(await workerPulse(at)).toBe(T - 30_000);
+    k.value.close();
   });
 });

@@ -46,7 +46,8 @@ ledger as `job.waiting` (`resource`, `why`, `engine`), and asks again at every l
 | reading | source | absent when |
 | --- | --- | --- |
 | commit charge, RAM | `Win32_OperatingSystem` via one PowerShell CIM call (8 s bound, cached 2 s) | no PowerShell, timeout |
-| GPU memory | `nvidia-smi --query-gpu=memory.used,memory.total` (4 s bound; `[N/A]` devices such as the NPU skipped) | no driver |
+| GPU memory | `nvidia-smi --query-gpu=memory.used,memory.total,utilization.gpu` (4 s bound; `[N/A]` devices such as the NPU skipped) | no driver |
+| GPU busy | `utilization.gpu` from the same call, the busiest device that answered; charged against nothing | no driver, or the device reports `[N/A]` |
 | CPU busy | two `os.cpus()` samples 250 ms apart, every core, foreign load included | never on Node |
 | ComfyUI queue | `GET $COMFY_URL/queue` (default `http://127.0.0.1:8188`, 1 s) | ComfyUI down |
 
@@ -127,3 +128,49 @@ Through this path on 2026-10-23, the rogue concept at 40k faces on a warm ComfyU
 charge, +5.07 GB of GPU memory and 10 cores, over 1373 samples (about 11.5 min). The profile started
 only after waiting about 20 min for commit charge to drop under the low mark.
 
+
+## The always-on worker and the load sampler
+
+A night's detached jobs (scene clips, game assets, stats reels) wait queued until a worker drives
+them, and the night's load band (`@gt/domain/load`: CPU, RAM and GPU held in 60-80 percent) is read
+from samples only the worker takes. So the worker runs at logon, not when someone remembers.
+
+**Env.** `workers/runner.mts` reads `.env` then `.env.local` from the repo root before anything else
+is imported (`lib/envFile.ts` `loadEnvFiles`): comments and blank lines skipped, matching quotes
+stripped, `.env.local` over `.env`, and an exported value always wins. It says the names it read on
+stderr, never the values.
+
+**The table.** Kernel module `load` (`packages/kernel/src/resources/load.ts`):
+`load_samples (seq, at_ms, record)`, one `LoadSample` as JSON per row, indexed on `at_ms`. Rows are
+never updated. The one delete is the prune: rows older than 30 days (`RETENTION_MS`) may go, and a
+trigger refuses any delete within 30 days of the newest row. `readLoadSamples(r, fromMs, toMs)` reads
+a window oldest first through the door.
+
+**The timer.** `load-sample` (`packages/producers/src/publish/timers.ts` `LOAD_SAMPLE`): every 60 s,
+deadline 30 s, first at 5 s, held as the lease `timer:load-sample` like the publish timers
+(`lib/producers/loadSample.ts`). Each tick takes one uncached probe reading (GPU busy included),
+adds RAM used and total and the commit limit, names the jobs admission is holding (queued jobs whose
+latest `job.waiting` no `job.claimed` has answered), and appends the row. Once an hour it prunes
+rows past the retention. A probe that throws writes no row: the tick fails, the roster records
+`timer.fail`, and the worker carries on.
+
+**The install.** `pipeline/worker-service.ps1`:
+
+| switch | does |
+| --- | --- |
+| `-Print` (default) | shows the task it would register |
+| `-Install` | registers the Scheduled Task "Gravitone worker": at logon, the current user, Interactive, no time limit, restarted 3 times 1 min apart |
+| `-Uninstall` | removes it |
+| `-Run` | what the task runs: `node workers/runner.mts` from the repo root, output appended to `foundry-out/worker/logs/<date>.log` (beside `GRAVITONE_STORE_PATH` when set) |
+
+The operator installs it. A second worker on the same store is safe: each timer is a lease, so it
+runs once.
+
+**The doctor line.** `pipeline/scout.mts doctor` reads the store read-only for the worker's pulse,
+the newer of the newest load sample and the `timer:load-sample` lease heartbeat:
+
+- `ok   worker   last heartbeat 2 min ago` under 5 minutes;
+- `FAIL worker   no worker heartbeat in N min -> start it: powershell -File pipeline/worker-service.ps1 -Run`
+  past 5 minutes, or `no worker heartbeat on record`.
+
+It fails a live night and is a note on a dry one.

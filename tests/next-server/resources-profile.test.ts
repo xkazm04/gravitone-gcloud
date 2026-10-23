@@ -44,8 +44,22 @@ describe("the probe's parsers", () => {
 
   it("sums the devices that report memory and skips the ones that report [N/A] (archemond's NPU)", () => {
     expect(parseSmi("1788, 64000\r\n[N/A], [N/A]\r\n")).toEqual({ vramUsedGb: 1.75, vramTotalGb: 62.5 });
+    expect(parseSmi("1788, 64000, 12\r\n[N/A], [N/A], [N/A]\r\n")).toEqual({ vramUsedGb: 1.75, vramTotalGb: 62.5, gpuBusy: 0.12 });
     expect(parseSmi("[N/A], [N/A]")).toBeUndefined();
     expect(parseSmi(undefined)).toBeUndefined();
+  });
+
+  it("reads the card's utilisation as gpuBusy, absent when the device says [N/A] (spark night-load-band)", () => {
+    // MiB over 1024: 13690 MiB is 13.37 GB.
+    expect(parseSmi("13690, 64000, 5")).toEqual({ vramUsedGb: 13.37, vramTotalGb: 62.5, gpuBusy: 0.05 });
+    // A device with no memory of its own is skipped whole, its utilisation with it.
+    expect(parseSmi("[N/A], [N/A], 0")).toBeUndefined();
+    expect(parseSmi("13690, 64000, [N/A]")).toEqual({ vramUsedGb: 13.37, vramTotalGb: 62.5 });
+    expect(parseSmi("13690, 64000, 5\r\n[N/A], [N/A], 0\r\n")).toEqual({ vramUsedGb: 13.37, vramTotalGb: 62.5, gpuBusy: 0.05 });
+    // The busiest device that answered; a percentage off the scale is unread, not clamped.
+    expect(parseSmi("1024, 8192, 30\n1024, 8192, 90")).toEqual({ vramUsedGb: 2, vramTotalGb: 16, gpuBusy: 0.9 });
+    expect(parseSmi("1024, 8192, 130")).toEqual({ vramUsedGb: 1, vramTotalGb: 8 });
+    expect(parseSmi("1024, 8192, 5, 9")).toBeUndefined();
   });
 
   it("counts ComfyUI's running and pending prompts, and nothing that is not its queue", () => {
@@ -68,7 +82,7 @@ const fakePorts = (over: Partial<ProbePorts> = {}): ProbePorts & { runs: string[
     runs,
     run: async (cmd) => {
       runs.push(cmd);
-      return cmd === "powershell" ? "106840040 49390536 36575000 67100000" : "1788, 64000\n[N/A], [N/A]";
+      return cmd === "powershell" ? "106840040 49390536 36575000 67100000" : "1788, 64000, 7\n[N/A], [N/A], [N/A]";
     },
     getJson: async () => ({ queue_running: [], queue_pending: [[1]] }),
     cpus: () => [{ times: { user: 1, nice: 0, sys: 0, idle: 1, irq: 0 } }],
@@ -84,7 +98,7 @@ describe("machineProbe", () => {
     const ports = fakePorts();
     const p = machineProbe(ports);
     const r = await p.read();
-    expect(r.load).toEqual({ vramUsedGb: 1.75, commitUsedGb: 54.79, comfyQueue: 1 });
+    expect(r.load).toEqual({ vramUsedGb: 1.75, gpuBusy: 0.07, commitUsedGb: 54.79, comfyQueue: 1 });
     expect(r.totals).toMatchObject({ commitLimitGb: 101.89, vramTotalGb: 62.5, cores: 1 });
     await p.probe();
     expect(ports.runs.filter((c) => c === "powershell")).toHaveLength(1);

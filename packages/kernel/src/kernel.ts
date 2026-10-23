@@ -8,6 +8,7 @@ import { leaseMigrations } from "./lease.ts";
 import { libraryMigrations } from "./library/schema.ts";
 import { migrate, type MigrateOptions, type MigrateReport, type ModuleMigrations } from "./migrate.ts";
 import { receiptsMigrations } from "./pricing/receipts.ts";
+import { loadMigrations } from "./resources/load.ts";
 import { resourcesMigrations } from "./resources/profiles.ts";
 import { partsMigrations } from "./parts/schema.ts";
 import { recordsMigrations } from "./records/schema.ts";
@@ -59,6 +60,8 @@ const DECLARED: readonly Entry[] = [
   { migrations: slotsMigrations, after: ["events", "lease"] },
   // The engines' measured footprints admission charges (resources/profiles.ts); `engine.profiled` events.
   { migrations: resourcesMigrations, after: ["events"] },
+  // The box's load a minute at a time (resources/load.ts); its sampler reads the jobs admission holds from both.
+  { migrations: loadMigrations, after: ["events", "job"] },
 ];
 
 /** The pure check: `entries` in an order where every module follows what it names. */

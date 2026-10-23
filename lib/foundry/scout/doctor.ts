@@ -1,6 +1,10 @@
+import { existsSync } from "node:fs";
 import { access, mkdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
+
+import { timerResource } from "@gt/producers/publish/timers";
 
 import { probeGoogle, probeLeonardo, type KeyFetch, type KeyProbe } from "../../imaging/keyProbe";
 import { leonardoStudioHealth } from "../../imaging/providers/leonardoStudio";
@@ -20,7 +24,8 @@ import { REGISTRY_REMEDY, resolveRegistry, techniqueCount } from "./registry";
 // or live - it is free), and for a LIVE night the two vendor keys, a shell that
 // is not pinned dry, and - while its clips render locally (`SCOUT_CLIP_ENGINE`
 // unset or `ltx-local`) - the ComfyUI on this box answering at `COMFY_URL` with
-// every model file pipeline/video/ltx-i2v-api.json loads. A dry night
+// every model file pipeline/video/ltx-i2v-api.json loads, and the always-on worker beating in the
+// store (spark night-load-band: it drives the night's detached jobs). A dry night
 // (`doctor --dry`) reads those as notes: its clips are stand-ins.
 // The ai-registry is never needed: a night without it opens with `registry: none` in its
 // registry.md, so its line is a note either way (./registry.ts). Nor is the Leonardo studio: the
@@ -89,6 +94,10 @@ export type DoctorInput = {
   readonly studio?: () => Promise<StudioHealth>;
   /** Where Playwright's chromium would launch from (default its own `executablePath`); a test hands a fake. */
   readonly chromium?: () => Promise<string>;
+  /** The last instant (ms) the always-on worker was seen alive in the store, undefined when never; a test hands a fake. */
+  readonly worker?: () => Promise<number | undefined>;
+  /** The doctor's clock (default Date.now). */
+  readonly now?: () => number;
 };
 
 const PROBES: Readonly<Record<(typeof NIGHT_KEYS)[number], (key: string, f?: KeyFetch) => Promise<KeyProbe>>> = {
@@ -165,6 +174,52 @@ async function chromiumCheck(input: DoctorInput): Promise<Check> {
   }
 }
 
+/** A worker whose newest beat is older than this is not running (its sampler beats once a minute). */
+export const WORKER_STALE_MS = 5 * 60_000;
+const WORKER_START = "powershell -File pipeline/worker-service.ps1 -Run";
+
+/**
+ * The newest of the worker's two pulses in the store at `storePath`: its newest load sample and its
+ * sampler's lease heartbeat (a worker whose probe fails still beats). Opened READ-ONLY with node:sqlite,
+ * not through the kernel: opening a kernel migrates, and a preflight writes nothing. A store with no
+ * such table yet (never opened by a worker of this version) has no pulse.
+ */
+export async function workerPulse(storePath: string): Promise<number | undefined> {
+  if (storePath === ":memory:" || !existsSync(storePath)) return undefined;
+  const db = new DatabaseSync(storePath, { readOnly: true });
+  try {
+    const has = (name: string): boolean => db.prepare("SELECT 1 AS x FROM sqlite_master WHERE type = 'table' AND name = ?").get(name) !== undefined;
+    const sample = has("load_samples") ? db.prepare("SELECT max(at_ms) AS at FROM load_samples").get()?.["at"] : undefined;
+    const beat = has("leases") ? db.prepare("SELECT heartbeat_at AS at FROM leases WHERE resource = ?").get(timerResource("load-sample"))?.["at"] : undefined;
+    const beatMs = typeof beat === "string" ? Date.parse(beat) : Number.NaN;
+    const all = [typeof sample === "number" ? sample : Number.NaN, beatMs].filter((x) => Number.isFinite(x));
+    return all.length === 0 ? undefined : Math.max(...all);
+  } finally {
+    db.close();
+  }
+}
+
+/**
+ * Is the always-on worker running: a failure on a live night, because a night without one runs none of its
+ * detached jobs (scene clips, game assets, stats reels wait queued) and records no load for its desk. A dry
+ * night reads it as a note: its rehearsal is the CLI's, and its stand-ins prove nothing about the worker.
+ */
+async function workerCheck(input: DoctorInput): Promise<Check> {
+  const needed = !input.dry;
+  const remedy = `start it: ${WORKER_START}`;
+  let at: number | undefined;
+  try {
+    at = await (input.worker ?? (() => workerPulse(input.storePath)))();
+  } catch (e) {
+    return { name: "worker", ok: false, found: `the store could not be read: ${(e as Error).message}`, remedy, needed };
+  }
+  if (at === undefined) return { name: "worker", ok: false, found: "no worker heartbeat on record", remedy, needed };
+  const ageMs = (input.now ?? Date.now)() - at;
+  const ageMin = Math.max(0, Math.floor(ageMs / 60_000));
+  if (ageMs < WORKER_STALE_MS) return { name: "worker", ok: true, found: `last heartbeat ${ageMin} min ago`, needed };
+  return { name: "worker", ok: false, found: `no worker heartbeat in ${ageMin} min`, remedy, needed };
+}
+
 export async function doctor(input: DoctorInput): Promise<Check[]> {
   const spawn = input.spawn ?? realSpawn;
   const bins = binsFrom(input.env);
@@ -187,6 +242,7 @@ export async function doctor(input: DoctorInput): Promise<Check[]> {
   out.push({ name: "store", ok: storeDir === null, found: input.storePath, needed: true, ...(storeDir === null ? {} : { remedy: `the store's folder cannot be written (${storeDir}); set GRAVITONE_STORE_PATH` }) });
   const nights = await writable(input.scoutRoot);
   out.push({ name: "nights", ok: nights === null, found: input.scoutRoot, needed: true, ...(nights === null ? {} : { remedy: `the night folder cannot be written (${nights}); set SCOUT_STORE_DIR` }) });
+  out.push(await workerCheck(input));
   const pinned = input.env["GRAVITONE_DRY_ONLY"] === "1";
   out.push({ name: "GRAVITONE_DRY_ONLY", ok: !pinned, found: pinned ? "1 (this shell runs dry only)" : "unset", needed: !input.dry, ...(pinned ? { remedy: "unset GRAVITONE_DRY_ONLY for a live night, or open the night without --live" } : {}) });
   out.push(...(await comfyChecks(input)));
