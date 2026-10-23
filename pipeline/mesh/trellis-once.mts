@@ -10,11 +10,16 @@
 // the profile measures is what a mesh job costs - and it replaces lynx-bench's run-prompt.mjs,
 // which lives outside this repo.
 //
+// A FRESH SEED EVERY RUN unless --seed names one: ComfyUI serves a prompt it has already executed from its
+// cache, so the same concept with the workflow's own seeds answers in ~3 s without sampling - a profile of
+// that run measured 0.44 GB and recorded it as TRELLIS's cost (2026-10-23 12:00). The seed is printed.
+//
 // --faces defaults to the character budget, the heaviest class (lib/foundry/mesh/types.ts BUDGETS);
 // decimation is a sliver of the run, TRELLIS's sampling is the cost. --out keeps the glb (default:
 // it is not written). A SHARED SERVICE: it never POSTs /free, never interrupts, never restarts
 // ComfyUI. EXIT 0 a glb came back · 1 ComfyUI refused or failed · 2 usage.
 
+import { randomInt } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { parseArgs } from "node:util";
@@ -35,8 +40,8 @@ async function main(): Promise<number> {
   const { values, positionals } = parsed;
   const [concept, ...extra] = positionals;
   const faces = values.faces === undefined ? BUDGETS.character.tris : Number(values.faces);
-  const seed = values.seed === undefined ? undefined : Number(values.seed);
-  if (concept === undefined || extra.length > 0 || !Number.isInteger(faces) || faces < 1 || (seed !== undefined && !Number.isInteger(seed))) {
+  const seed = values.seed === undefined ? randomInt(1, 2 ** 31) : Number(values.seed);
+  if (concept === undefined || extra.length > 0 || !Number.isInteger(faces) || faces < 1 || !Number.isInteger(seed)) {
     console.error(USAGE);
     return 2;
   }
@@ -48,7 +53,7 @@ async function main(): Promise<number> {
     conceptName: `gravitone-once-${stem}.png`,
     targetFaces: faces,
     prefix: `gravitone/once_${stem}`,
-    ...(seed === undefined ? {} : { seed }),
+    seed,
   });
   if (!run.ok) {
     console.error(`trellis-once: ${run.message}`);
@@ -58,7 +63,7 @@ async function main(): Promise<number> {
     await mkdir(values.out, { recursive: true });
     await writeFile(path.join(values.out, `${stem}.glb`), run.glb);
   }
-  console.log(`${run.file}: ${run.glb.byteLength} bytes in ${run.seconds} s (prompt ${run.promptId}, ${faces} faces)`);
+  console.log(`${run.file}: ${run.glb.byteLength} bytes in ${run.seconds} s (prompt ${run.promptId}, ${faces} faces, seed ${seed})`);
   return 0;
 }
 

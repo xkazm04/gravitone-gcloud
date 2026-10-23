@@ -107,6 +107,9 @@ GRAVITONE_STORE_PATH=<store> npx tsx pipeline/resources.mts profile comfy --wait
 `pipeline/mesh/trellis-once.mts` runs one TRELLIS.2 prompt through the mesh producer's own client
 (`runTrellis`, `pipeline/mesh/trellis-api.json`). It decimates to the character budget by default
 (`--faces`) and opens no store. Use any concept that passes the input gate.
+It draws a fresh seed every run, unless `--seed` names one, and prints it. ComfyUI answers a prompt it has
+already run from its cache in about 3 s, without sampling, and a profile of that run recorded TRELLIS at
+0.44 GB (2026-10-23).
 
 Do not profile `mesh.mts new --live` instead: it deadlocks. The profile job holds gpu.local, and the
 mesh job it starts queues behind it on the same lane.
