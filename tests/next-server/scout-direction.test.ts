@@ -235,11 +235,11 @@ describe("add-source {fromIdea} - a kept idea brought in as our own source", () 
 
   it("asset --brief records the kept idea it develops, and refuses one not kept before anything is written", async () => {
     const before = (await readNight(night)).candidates.length;
-    const bad = await cli(["asset", night, "--brief", file({ class: "prop", subject: "brass diving helmet", use: "a game trailer's hero prop", fromIdea: `${LIVE}/c-02` }), "--detach"]);
+    const bad = await cli(["asset", night, "--brief", file({ class: "prop", subject: "brass diving helmet", use: "a game trailer's hero prop", serves: { newProject: "a diving-adventure trailer" }, fromIdea: `${LIVE}/c-02` }), "--detach"]);
     expect(bad.code).toBe(1);
     expect(bad.err).toBe(`asset brief: fromIdea: idea ${LIVE}/c-02: night ${LIVE} rejected c-02/board (use case); only a kept idea is developed`);
     expect((await readNight(night)).candidates).toHaveLength(before);
-    const r = await cli(["asset", night, "--brief", file({ class: "prop", subject: "brass diving helmet", use: "a game trailer's hero prop", fromIdea: `${LIVE}/c-04` }), "--detach", "--json"]);
+    const r = await cli(["asset", night, "--brief", file({ class: "prop", subject: "brass diving helmet", use: "a game trailer's hero prop", serves: { newProject: "a diving-adventure trailer" }, fromIdea: `${LIVE}/c-04` }), "--detach", "--json"]);
     expect(r.code, r.err).toBe(0);
     expect(r.doc["candidate"]).toMatchObject({ kind: "asset3d", fromIdea: `${LIVE}/c-04` });
     const c = (await readNight(night)).candidates.find((x) => x.kind === "asset3d");

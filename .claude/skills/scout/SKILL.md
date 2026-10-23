@@ -141,8 +141,12 @@ so brief them right after `open`, before any search:
    for a character (a silhouette that reads, limbs clear of the body, nothing held, no capes or strands
    the rig cannot drive).
 3. **Write each brief** to a scratch file and launch it:
-   `{"class": "character|weapon|prop", "subject": "<craft words: what it is, materials, silhouette, palette>", "style": "<optional>", "kind": "<weapon: sword|mace|axe|staff>"}`
-   -> `npx tsx pipeline/scout.mts asset <night> --brief <file> --json`. Leave `techniques` to the class
+   `{"class": "character|weapon|prop", "subject": "<craft words: what it is, materials, silhouette, palette>", "use": "<what it is for in that project>", "serves": {"project": "pof|mage-arena|bp"} | {"newProject": "<the kind of project it opens>"}, "style": "<optional>", "kind": "<weapon: sword|mace|axe|staff>"}`
+   -> `npx tsx pipeline/scout.mts asset <night> --brief <file> --json`. **Every asset has a purpose**
+   (operator, 2026-10-23, rejecting every asset of the first 3D nights for having none: "we cannot create assets
+   without purpose"): it HELPS an existing game project (`serves.project`) or OPENS a new kind of project
+   (`serves.newProject`, in plain words - "a cozy farming sim"), and `use` says what it is for there ("the
+   starting party's ranged hero"). The door refuses a brief without both; the 3D row leads with them. Leave `techniques` to the class
    default unless the taste asks a question one technique answers. One subject per brief - "a quiver"
    is a prop of its own, never part of a character's brief.
 4. Read the answer: a variant written `failed` by the input gate carries its codes - that brief's

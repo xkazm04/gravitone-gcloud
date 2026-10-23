@@ -23,7 +23,7 @@
 // as a reference - a clip animates OUR replica still, never a source frame
 // (visual-style-locking / style-onboarding-from-sample).
 
-import type { AssetId, MeshBrief } from "../mesh/types";
+import type { AssetId, ExportProject, MeshBrief } from "../mesh/types";
 
 /* ── Ids and limits ──────────────────────────────────────────────────────── */
 
@@ -293,9 +293,18 @@ export type WatchCandidate = CandidateBase & {
  * concepts and hands off to the mesh store (lib/foundry/mesh/); `rendered` means that hand-off
  * happened, and what the mesh and finish jobs then made is read off the asset, never copied here.
  */
+/**
+ * What a game asset is FOR (operator, 2026-10-23, after rejecting every asset of the first 3D nights for having no
+ * stated use: "we cannot create assets without purpose ... either to create new type of project, or helping
+ * existing"): an existing game project it helps (the export targets, lib/foundry/mesh/types.ts EXPORT_PROJECTS),
+ * or a new kind of project it would open. Absent on assets briefed before the field.
+ */
+export type AssetServes = { readonly project: ExportProject } | { readonly newProject: string };
+
 export type Asset3dCandidate = CandidateBase & {
   readonly kind: "asset3d";
   readonly brief: MeshBrief;
+  readonly serves?: AssetServes;
   /** Night-relative concept images, OURS (`assets/c-05/concept-1.png`), in the request's order. */
   readonly concepts: readonly string[];
   /** The mesh asset the hand-off wrote (lib/foundry/mesh/store.ts), once it did. */

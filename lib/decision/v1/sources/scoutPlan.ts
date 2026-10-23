@@ -273,7 +273,19 @@ function assetCells(night: Night, c: Asset3dCandidate, read: AssetRead | undefin
   }
   if (shown === 0) return;
   const concept = c.concepts[0];
-  out.rows.push({ id: c.id, label: clip40(`${a.brief.class} · ${a.brief.subject}`), group: "3d", ...(concept !== undefined && media[concept] !== undefined ? { ref: scoutFileUrl(night.id, concept) } : {}) });
+  const use = assetUse(c);
+  out.rows.push({ id: c.id, label: clip40(`${a.brief.class} · ${a.brief.subject}`), group: "3d", ...(use === undefined ? {} : { use }), ...(concept !== undefined && media[concept] !== undefined ? { ref: scoutFileUrl(night.id, concept) } : {}) });
+}
+
+/**
+ * A game asset's purpose as its row states it: the project first - `for pof` or `new project: <kind>` - then what
+ * it is for there. Absent when the asset was briefed before either field (2026-10-23: the first 3D nights' rows
+ * showed no purpose at all, and the operator rejected every one of them for it).
+ */
+export function assetUse(a: Pick<Asset3dCandidate, "use" | "serves">): string | undefined {
+  const project = a.serves === undefined ? undefined : "project" in a.serves ? `for ${a.serves.project}` : `new project: ${a.serves.newProject}`;
+  const parts = [project, a.use].filter((x): x is string => x !== undefined && x !== "");
+  return parts.length === 0 ? undefined : parts.join(" · ");
 }
 
 /** An idea's one cell: the artboard. */

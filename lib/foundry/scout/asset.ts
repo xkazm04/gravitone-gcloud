@@ -37,7 +37,7 @@ export const assetCapOf = (n: Pick<Night, "assetCap">): number => n.assetCap ?? 
 export async function assetAct(ctx: ActContext, id: NightId, raw: unknown, engines: Partial<AssetEngines> = {}): Promise<AssetResult> {
   const parsed = parseBrief(raw);
   if (!parsed.ok) throw new Refusal(parsed.error.message);
-  const { brief, use } = parsed.value;
+  const { brief, use, serves } = parsed.value;
   const techniques = techniquesFor(brief.class, parsed.value.techniques, brief.rig !== undefined);
   if (!techniques.ok) throw new Refusal(techniques.error.message);
   const { night, mode } = await launchable(ctx, id);
@@ -52,7 +52,7 @@ export async function assetAct(ctx: ActContext, id: NightId, raw: unknown, engin
       full = `night ${id} has briefed ${used} of its ${assetCapOf(n)} game assets; "${brief.subject}" was not launched`;
       return n;
     }
-    made = { id: nextCandidateId(n), kind: "asset3d", sourceIds: [], status: "pending", brief, concepts: [], ...(use === undefined ? {} : { use }) };
+    made = { id: nextCandidateId(n), kind: "asset3d", sourceIds: [], status: "pending", brief, concepts: [], use, serves };
     return { ...n, candidates: [...n.candidates, made] };
   });
   if (full !== undefined) throw new Refusal(full);

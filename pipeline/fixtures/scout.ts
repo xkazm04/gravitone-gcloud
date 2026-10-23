@@ -87,6 +87,8 @@ function asset(night: string, id: string): Asset3dCandidate {
     brief: { class: "character", subject: "hooded archer, leather, chunky silhouette", style: "chunky game-camera read, flat leather browns", budgetTris: 40_000, rig: "ue5-mannequin" },
     concepts,
     assetId: "hooded-archer",
+    use: "the ranged hero of the starting party",
+    serves: { project: "pof" },
   };
 }
 
