@@ -13,17 +13,29 @@ night's marker. Craft, not content: no person, artist, studio or franchise is na
 - Anime and stylised looks drift young. State adult proportions ("proportioned as an adult fashion
   model"), a poised or neutral expression, and adult styling; never lean on "cute" shortcuts.
 
-## The prompt's order
+## The prompt's order (registry media-generation/image-prompt-composition: four blocks)
 
-`identity card -> wardrobe -> situation -> framing -> light -> medium/render -> finish + imperfection -> Avoid:`
+`look (style block) -> card (identity block) -> wardrobe state, situation, framing (action block) -> Avoid: (constraint)`
 
-- The card first, restated verbatim on every prompt that draws her: name is never drawn, but age, face,
-  hair, build, skin and one signature garment or accessory are. The studio takes no reference image, so
-  the card is the only memory she has.
-- Change ONE axis per still (the look, the situation or the wardrobe), never two: a drifted face is
+- **The look first**, restated in full on every still: medium/render, light, lens, finish and imperfection.
+  The block that must survive truncation goes first, so a model that drops the tail still lands on-look.
+  Keep it tight (the golden path: roughly 100-250 words at most).
+- **The card second**, verbatim on every prompt that draws her: age, face, hair, build, skin, one
+  signature garment or accessory - the INVARIANTS only. Her expression, pose and what changes per scene
+  belong in the action block, never in the card (identity split from state).
+- **Change ONE axis per still** (the look, the situation or the wardrobe), never two: a drifted face is
   then attributable.
-- The studio folds the negative into `Avoid:`; keep it short and concrete (text, watermark, extra
-  fingers, warped hands, duplicated straps).
+- The studio folds the negative into `Avoid:`; keep it short and concrete (text, watermark, extra fingers,
+  warped hands) - never a kitchen-sink list.
+
+### What a card can and cannot hold (registry media-generation/character-identity-continuity)
+
+The studio takes no reference image, so the card is prose standing in for a face - the subject's named
+failure mode ("prose as the identity channel"). Its range is stated, not assumed: a card holds a woman
+WITHIN one still and roughly across a night's few stills of her; it does not hold her across a cut or a
+sequence. The `drift` reason is the operator's eye, not an instrument - nothing here measures identity,
+and no number may be published as if it did. A reference-image path (reference admitted late, showing
+only invariants) is the follow-up the day a kept character must come back looking like herself.
 
 ## The look ladder
 
