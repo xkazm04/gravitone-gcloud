@@ -74,7 +74,7 @@ export type Io = { readonly env: Readonly<Record<string, string | undefined>>; r
 const ROOT = path.resolve(import.meta.dirname, "..");
 const USAGE = [
   "usage: npx tsx pipeline/scout.mts <command> [--json]",
-  "  doctor [--dry]                              the box, the keys, the store",
+  "  doctor [--dry] [--tracks N]                 the box, the keys, the store (and the Suno browser when tracks > 0)",
   `  open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--ideas ${DEFAULT_IDEA_CAP}] [--reels ${DEFAULT_REEL_CAP}] [--tracks ${DEFAULT_TRACK_CAP}] [--visualizers ${DEFAULT_VISUALIZER_CAP}] [--until HH:MM] [--live]`,
   "  add-source <night> --json <file|->         [{url, kind, title, channel?, why, found, watch?, rich?} | {fromIdea: <night>/<c-id>, why?}]",
   "  ingest <night> [--source s-NN] [--detach]",
@@ -90,8 +90,8 @@ const USAGE = [
   "  status [<night>]",
   "  seeds new --json <file|-> [--dry]          [{sentence, genre, subgenre, type, audience: kids|family|adult, format: short|video, parent?: <batch>/sd-NNN}]",
   "  seeds status [<batch>]",
-  "  track <night> --seed <batch>/sd-NNN [--detach]",
-  "  visualizer <night> --track <night>/<c-id>/<aN> [--detach]",
+  "  track <night> --seed <batch>/sd-NNN [--detach] · track <night> --collect",
+  "  visualizer <night> --track <night>/<c-id>/<aN> [--detach] · visualizer <night> --collect",
   "  leads · lead <key> --json <file|->         {claim, kind: technique|application|subject, nearest?, confidence}",
   "  folder <dir> [pipeline/foundry/extract.mts args]",
 ].join("\n");
@@ -196,7 +196,7 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
       const { blocking, doctor, doctorLine } = await import("../lib/foundry/scout/doctor.ts");
       const { storeLocation } = await import("@gt/kernel/process");
       const { OUT_DIRNAME } = await import("../lib/fixtures/mode.ts");
-      const checks = await doctor({ env: io.env, storePath: storeLocation(OUT_DIRNAME, io.env["GRAVITONE_STORE_PATH"]), scoutRoot: store.scoutRoot(), dry: flags.has("dry"), ...(io.ports?.spawn === undefined ? {} : { spawn: io.ports.spawn }), ...(io.ports?.keyFetch === undefined ? {} : { keyFetch: io.ports.keyFetch }) });
+      const checks = await doctor({ env: io.env, storePath: storeLocation(OUT_DIRNAME, io.env["GRAVITONE_STORE_PATH"]), scoutRoot: store.scoutRoot(), dry: flags.has("dry"), tracks: num("tracks", DEFAULT_TRACK_CAP), ...(io.ports?.spawn === undefined ? {} : { spawn: io.ports.spawn }), ...(io.ports?.keyFetch === undefined ? {} : { keyFetch: io.ports.keyFetch }) });
       const failed = blocking(checks);
       if (json) doc({ ok: failed.length === 0, checks });
       else for (const c of checks) io.out(doctorLine(c));
@@ -417,6 +417,17 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
       // A kept music seed made into a Suno track, and a kept track clip into a visualizer (spark scout-decision-graph).
       if (cmd === "track" || cmd === "visualizer") {
         const id = nightArg();
+        // --collect: a detached job's results into the night - every pending track (visualizer) whose job is done.
+        if (flags.has("collect")) {
+          const got =
+            cmd === "track"
+              ? await (await import("../lib/foundry/scout/track.ts")).collectTracks(ctx, id, io.ports?.track ?? {})
+              : await (await import("../lib/foundry/scout/visualizer.ts")).collectVisualizers(id);
+          for (const c of got) say(`${c.id} ${c.kind} ${c.status}${c.error === undefined ? "" : ` · ${c.error}`}`);
+          if (got.length === 0) say(`nothing to collect in night ${id}`);
+          if (json) doc({ ok: true, night: id, candidates: got });
+          return 0;
+        }
         const r =
           cmd === "track"
             ? await (await import("../lib/foundry/scout/track.ts")).trackAct(ctx, id, str("seed") ?? usage("track needs --seed <batch>/sd-NNN"), io.ports?.track ?? {})

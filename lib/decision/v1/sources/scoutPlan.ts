@@ -12,7 +12,9 @@ import type { ItemWords, RowWords } from "@gt/ui/board/port";
 import { EXTRACT_COMMITTABLE } from "../../../foundry/plant.ts";
 import { TECHNIQUE_LABEL, type GateResult, type MeshAsset } from "../../../foundry/mesh/types.ts";
 import { patternsRel } from "../../../foundry/scout/knowledge.ts";
-import { CANDIDATE_KINDS, cellId, type Asset3dCandidate, type Candidate, type CandidateId, type DirectionCandidate, type IdeaCandidate, type IdeaTarget, type Night, type NightCommit, type SceneCandidate, type SceneClip } from "../../../foundry/scout/types.ts";
+import { mss } from "../../../foundry/scout/track.ts";
+import { CANDIDATE_KINDS, cellId, type Asset3dCandidate, type Candidate, type CandidateId, type DirectionCandidate, type IdeaCandidate, type IdeaTarget, type Night, type NightCommit, type SceneCandidate, type SceneClip, type Seed, type TrackCandidate, type VisualizerCandidate } from "../../../foundry/scout/types.ts";
+import { stillOf } from "../../../foundry/scout/visualizer.ts";
 import { meshFileUrl } from "../../../library/feeds/mesh.ts";
 import { decisionMap, type Loss } from "../types.ts";
 import { extractAdapter, planLooks, type ExtractV1 } from "./extract.ts";
@@ -50,6 +52,14 @@ import { lookBrief, sceneBrief } from "./scoutBrief.ts";
 //            An idea with a genre names it after its target: `scene · music video · watch: ...`.
 //   direction  one TEXT cell `c-14/text` under `notes`: its title, the brief's own words (format ·
 //            genre · style · tone for audience · premise) and how many kept cells it stands on.
+//   track    (spark scout-decision-graph) one cell per Suno clip `c-15/a1`..`aN`, its mp3 the media,
+//            filed under `music` (the audio tab): the row is the seed's sentence - what Suno was
+//            asked for - and each clip's meta `track · <genre> › <subgenre> · <N> clips` with its
+//            model and length. Kept, a clip is the next night's visualizer.
+//   visualizer  ONE cell `c-16/video`, its mp4 the media, under `videos`: the row is the song's
+//            title, its still the reference, the meta `visualizer · <m:ss> · still: idea|studio`.
+//            A track or a visualizer still collecting when the night closed is a Loss, as any
+//            pending candidate is. An idea grown from a seed names the seed's sentence in its meta.
 // A text cell's media is the content address of its own words (text/plain):
 // the kernel holds candidates by blob, and the words are the thing judged.
 //
@@ -73,6 +83,10 @@ export type ScoutV1 = {
   readonly knowledge: Readonly<Record<string, { readonly rel: string; readonly exists: boolean; readonly holds: boolean }>>;
   /** Repo-relative roots the consequence names: the night store and the knowledge tree. */
   readonly at: { readonly scout: string; readonly knowledge: string; readonly mesh: string };
+  /** By seed ref: every seed a candidate grows from, as the seed store has it (absent: none was read). */
+  readonly seeds?: Readonly<Record<string, Seed>>;
+  /** By track clip ref (`<night>/<c-id>/<aN>`): the clip each visualizer plays - its title and the track's sentence. */
+  readonly tracks?: Readonly<Record<string, { readonly title: string; readonly sentence: string }>>;
 };
 
 export type Cell = {
@@ -298,7 +312,13 @@ export const IDEA_TARGET_WORD: Readonly<Record<IdeaTarget, string>> = { scene: "
 export const ideaMeta = (c: Pick<IdeaCandidate, "target" | "anchor" | "genre">): string =>
   `${IDEA_TARGET_WORD[c.target]}${c.genre === undefined ? "" : ` · ${c.genre}`} · ${c.anchor.kind === "free" ? "free" : `${c.anchor.kind}: ${c.anchor.ref}`}`;
 
-function ideaCells(night: Night, c: IdeaCandidate, media: ScoutV1["media"], out: Mutable): void {
+/** `seed: <first 40 characters of its sentence>`, for a candidate grown from a seed the store still has. */
+const seedHead = (c: Pick<Candidate, "fromSeed">, seeds: ScoutV1["seeds"]): string | undefined => {
+  const s = c.fromSeed === undefined ? undefined : seeds?.[c.fromSeed];
+  return s === undefined ? undefined : `seed: ${clip40(s.sentence)}`;
+};
+
+function ideaCells(night: Night, c: IdeaCandidate, media: ScoutV1["media"], out: Mutable, seeds?: ScoutV1["seeds"]): void {
   if (c.status === "failed") {
     out.losses.push({ candidate: c.id, grade: "dropped", reason: c.error ?? "failed with no error recorded" });
     return;
@@ -317,9 +337,78 @@ function ideaCells(night: Night, c: IdeaCandidate, media: ScoutV1["media"], out:
     media: m,
     grades: [],
     url: scoutFileUrl(night.id, c.image),
-    words: { label: c.title, meta: ideaMeta(c), prompt: c.prompt },
+    words: { label: c.title, meta: [ideaMeta(c), seedHead(c, seeds)].filter((x) => x !== undefined).join(" · "), prompt: c.prompt },
   });
   out.rows.push({ id: c.id, label: c.title, group: "ideas", aim: c.prompt, ...(c.use === undefined ? {} : { use: c.use }) });
+}
+
+/** What a kept track clip and a kept visualizer do, as the preview says it. */
+export const MUSIC_VERDICT = { track: "the next night renders its visualizer", visualizer: "rung 1 of the music ladder: the full video and its Short are next" } as const;
+
+/** A visualizer's one cell. */
+export const visualizerCell = (candidate: CandidateId): string => cellId(candidate, "video");
+
+/** A track clip's meta: `track · synthwave › darksynth · 4 clips · v6-wild · 2:14`. */
+export function trackMeta(c: Pick<TrackCandidate, "fromSeed" | "clips">, clip: TrackCandidate["clips"][number], seeds: ScoutV1["seeds"]): string {
+  const s = c.fromSeed === undefined ? undefined : seeds?.[c.fromSeed];
+  const n = c.clips.length;
+  return ["track", ...(s === undefined ? [] : [`${s.genre} › ${s.subgenre}`]), `${n} clip${n === 1 ? "" : "s"}`, clip.model, ...(clip.durationS === undefined ? [] : [mss(clip.durationS)])].join(" · ");
+}
+
+function trackCells(night: Night, c: TrackCandidate, media: ScoutV1["media"], out: Mutable, seeds?: ScoutV1["seeds"]): void {
+  if (c.status === "failed") {
+    out.losses.push({ candidate: c.id, grade: "dropped", reason: c.error ?? "failed with no error recorded" });
+    return;
+  }
+  let shown = 0;
+  for (const clip of c.clips) {
+    const m = media[clip.path];
+    if (m === undefined) {
+      out.losses.push({ candidate: cellId(c.id, clip.part), grade: "dropped", reason: `${clip.path} is not on disk` });
+      continue;
+    }
+    out.cells.push({ id: cellId(c.id, clip.part), candidate: c.id, kind: "track", row: c.id, jobId: c.jobId ?? `scout:${night.id}`, media: m, grades: [], url: scoutFileUrl(night.id, clip.path), words: { label: clip.title, meta: trackMeta(c, clip, seeds), music: true } });
+    shown++;
+  }
+  if (shown === 0) {
+    if (c.clips.length === 0) out.losses.push({ candidate: c.id, grade: "dropped", reason: c.error ?? "rendered with no clip recorded" });
+    return;
+  }
+  // A clip Suno made with no audio is named here, beside the ones that play.
+  if (c.error !== undefined) out.losses.push({ candidate: c.id, grade: "approximate", reason: c.error });
+  out.rows.push({ id: c.id, label: c.sentence, group: "music", ...(c.use === undefined ? {} : { use: c.use }) });
+}
+
+/** `visualizer · 3:42 · still: idea`. */
+export const visualizerMeta = (c: Pick<VisualizerCandidate, "durationS" | "still">): string => {
+  const still = stillOf(c);
+  return ["visualizer", ...(c.durationS === undefined ? [] : [mss(c.durationS)]), ...(still === undefined ? [] : [`still: ${still}`])].join(" · ");
+};
+
+function visualizerCells(night: Night, c: VisualizerCandidate, v1: Pick<ScoutV1, "media" | "tracks">, out: Mutable): void {
+  if (c.status === "failed") {
+    out.losses.push({ candidate: c.id, grade: "dropped", reason: c.error ?? "failed with no error recorded" });
+    return;
+  }
+  const m = c.video === undefined ? undefined : v1.media[c.video];
+  if (c.video === undefined || m === undefined) {
+    out.losses.push({ candidate: c.id, grade: "dropped", reason: c.video === undefined ? "rendered with no video recorded" : `${c.video} is not on disk` });
+    return;
+  }
+  const song = v1.tracks?.[c.track];
+  out.cells.push({
+    id: visualizerCell(c.id),
+    candidate: c.id,
+    kind: "visualizer",
+    row: c.id,
+    jobId: c.jobId ?? `scout:${night.id}`,
+    media: m,
+    grades: [],
+    url: scoutFileUrl(night.id, c.video),
+    words: { label: song?.title ?? c.track, meta: visualizerMeta(c), ...(song === undefined ? {} : { prompt: song.sentence }) },
+  });
+  const ref = c.still !== undefined && v1.media[c.still] !== undefined ? scoutFileUrl(night.id, c.still) : undefined;
+  out.rows.push({ id: c.id, label: clip40(song?.title ?? `visualizer · ${c.track}`), group: "videos", ...(c.use === undefined ? {} : { use: c.use }), ...(ref === undefined ? {} : { ref }) });
 }
 
 type Mutable = { cells: Cell[]; rows: RowWords[]; initial: InitialDecision[]; losses: Loss[]; runs: Record<string, ExtractV1> };
@@ -331,16 +420,17 @@ export function build(v1: ScoutV1): Built {
   const sorted = [...night.candidates].sort((a, b) => (ORDER[a.kind] ?? 0) - (ORDER[b.kind] ?? 0));
   for (const c of sorted) {
     if (c.status === "pending") {
-      out.losses.push({ candidate: c.id, grade: "dropped", reason: "pending when the night closed: nothing to judge" });
+      const what = c.kind === "track" || c.kind === "visualizer" ? "still collecting" : "pending";
+      out.losses.push({ candidate: c.id, grade: "dropped", reason: `${what} when the night closed: nothing to judge` });
       continue;
     }
     if (c.kind === "style") styleCells(night, c, v1.styles[c.id], out);
     else if (c.kind === "scene") sceneCells(night, c, v1.media, out);
     else if (c.kind === "asset3d") assetCells(night, c, v1.assets[c.id], v1.media, out);
-    else if (c.kind === "idea") ideaCells(night, c, v1.media, out);
+    else if (c.kind === "idea") ideaCells(night, c, v1.media, out, v1.seeds);
     else if (c.kind === "direction") directionCell(night, c, out);
-    // WP-S0 stub (spark scout-decision-graph): WP-S3 draws a track's clips and a visualizer's video.
-    else if (c.kind === "track" || c.kind === "visualizer") out.losses.push({ candidate: c.id, grade: "dropped", reason: `${c.kind} cells are being built (spark scout-decision-graph WP-S3)` });
+    else if (c.kind === "track") trackCells(night, c, v1.media, out, v1.seeds);
+    else if (c.kind === "visualizer") visualizerCells(night, c, v1, out);
     else if (c.status === "failed") out.losses.push({ candidate: c.id, grade: "dropped", reason: c.error ?? "failed with no error recorded" });
     else textCell(night, c, out);
   }

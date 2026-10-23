@@ -11,6 +11,7 @@ import { packetIdOf } from "../../../ledger/v1/packet.ts";
 import { patchClip, readSuno } from "../../../sound/suno/store.ts";
 import { SoundError } from "../../../sound/store.ts";
 import { sunoModelLabel, type SunoClip, type SunoVerdict } from "../../../suno/types.ts";
+import { isScoutSunoJob } from "../../../foundry/scout/types.ts";
 import {
   buildConsequence,
   candidateOf,
@@ -64,7 +65,8 @@ export type SunoV1 = {
   readonly clips: readonly SunoClip[];
 };
 
-const pending = (c: SunoClip): boolean => c.verdict === null;
+// A scout take is judged on its night's packet (pkt:scout:<night>), never here.
+const pending = (c: SunoClip): boolean => c.verdict === null && !isScoutSunoJob(c.jobId);
 
 function pileOf(v1: Pick<SunoV1, "clips" | "cutoff">): SunoClip[] {
   return v1.clips.filter((c) => pending(c) && c.createdAt <= v1.cutoff).sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id));

@@ -465,6 +465,13 @@ export type Candidate =
   | TrackCandidate
   | VisualizerCandidate;
 
+/**
+ * A scout track's Suno job (`sj-scout-<night>-<c-id>`, lib/foundry/scout/track.ts): its clips and the visualizer
+ * rendered from one are judged on the night's packet, so the suno and mv piles leave them out (spark
+ * scout-decision-graph - one place a night's music is judged).
+ */
+export const isScoutSunoJob = (sunoJobId: string | null | undefined): boolean => sunoJobId?.startsWith("sj-scout-") === true;
+
 /* ── Seeds ───────────────────────────────────────────────────────────────── */
 
 /**

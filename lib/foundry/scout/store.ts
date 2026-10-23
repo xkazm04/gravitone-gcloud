@@ -43,8 +43,8 @@ import {
 
 const NIGHT_FILE = "night.json";
 
-/** Files a night may serve to the Board: pictures, clips, the manifest. */
-const SERVABLE = new Set([".png", ".jpg", ".jpeg", ".webp", ".json", ".mp4", ".webm"]);
+/** Files a night may serve to the Board: pictures, clips, a track's mp3s, the manifest. */
+const SERVABLE = new Set([".png", ".jpg", ".jpeg", ".webp", ".json", ".mp4", ".webm", ".mp3"]);
 
 /** SCOUT_STORE_DIR, else `<out>/scout`. Read per call. */
 export function scoutRoot(): string {

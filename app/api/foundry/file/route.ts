@@ -53,6 +53,7 @@ const MIME: Record<string, string> = {
   ".json": "application/json",
   ".mp4": "video/mp4",
   ".webm": "video/webm",
+  ".mp3": "audio/mpeg",
   ".glb": "model/gltf-binary",
 };
 

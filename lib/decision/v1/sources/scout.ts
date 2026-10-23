@@ -19,7 +19,9 @@ import { FINDINGS_HEADING, WATCH_HEADING, WATCHLIST_REL, appendFinding, appendWa
 import { meshRoot, mutateAsset, readAsset, resolveInAsset, withVariant } from "../../../foundry/mesh/store.ts";
 import { deskAbs, deskCellUrl, readDeskNight, saveDeskNight } from "../../../foundry/local-draws/desk.ts";
 import { mutateNight, nightDir, readNight, resolveInNight, scoutRoot } from "../../../foundry/scout/store.ts";
-import type { Night, NightId } from "../../../foundry/scout/types.ts";
+import { listSeedBatches, seedOf } from "../../../foundry/scout/seedStore.ts";
+import type { Night, NightId, Seed, TrackCandidate } from "../../../foundry/scout/types.ts";
+import { parseTrackRef } from "../../../foundry/scout/visualizer.ts";
 import { packetIdOf } from "../../../ledger/v1/packet.ts";
 import { modelItemId } from "../../../library/feeds/mesh.ts";
 import { sceneShelf } from "../../../library/feeds/scout.ts";
@@ -41,7 +43,7 @@ import {
   type Preview,
 } from "../types.ts";
 import { extractAdapter, importVerdict, lookDecision, recordOf, same, type LookDecision } from "./extract.ts";
-import { DIRECTION_VERDICT, IDEA_TARGET_WORD, build, commitOf, extractDecisions, ideaCell, meshKey, sameOutcome, within, type AssetRead, type ScoutV1, type StyleRead } from "./scoutPlan.ts";
+import { DIRECTION_VERDICT, IDEA_TARGET_WORD, MUSIC_VERDICT, build, commitOf, extractDecisions, ideaCell, meshKey, sameOutcome, visualizerCell, within, type AssetRead, type ScoutV1, type StyleRead } from "./scoutPlan.ts";
 
 // ONE /scout NIGHT AS A PACKET - foundry-out/scout/<night>/night.json
 // (lib/foundry/scout/store.ts) read through readNight, decided as ONE matrix
@@ -60,7 +62,9 @@ import { DIRECTION_VERDICT, IDEA_TARGET_WORD, build, commitOf, extractDecisions,
 //   asset3d  each judged variant's `verdict` in its mesh asset (lib/foundry/mesh/store.ts
 //            mutateAsset): kept or rejected, what the Library's mesh feed shelves it by.
 //   idea     nothing of its own: the record below is what the next nights develop or block, and
-//            for a direction what they work inside or steer away from (taste.ts).
+//            for a direction what they work inside or steer away from (taste.ts). A track's
+//   track    kept clip is the next night's visualizer and a kept visualizer the music ladder's first
+//   visualizer  rung (spark scout-decision-graph): both read that record too, nothing else is written.
 //   leads    what the keeps EARNED for the ai-registry (../../../foundry/scout/
 //            leadEvents.ts) into the lead queue, once by key; the preview names each.
 //   all      every verdict, its reasons and its note into `night.committed`,
@@ -140,6 +144,13 @@ async function read(ref: AdapterRef): Promise<Result<ScoutRead>> {
           return fromV1(e);
         }
       }
+    } else if (c.kind === "track" || c.kind === "visualizer") {
+      const own = c.kind === "track" ? c.clips.map((x) => x.path) : [c.video, c.still];
+      try {
+        for (const f of own) if (f !== undefined) files.push({ key: f, abs: locate(f) });
+      } catch (e) {
+        return fromV1(e);
+      }
     } else if (c.kind !== "direction") {
       const r = c.kind === "finding" ? await v1Call(async () => patternsRel(c.template, c.step)) : ok(WATCHLIST_REL);
       if (!r.ok) continue;
@@ -154,7 +165,39 @@ async function read(ref: AdapterRef): Promise<Result<ScoutRead>> {
   if (!queue.ok) return queue;
   const earlier = await readRestated(night, readNight);
   const load = processNightLoad(night);
-  return ok({ ...(load === undefined ? {} : { load }), ...(desk ? { desk: true } : {}), night, styles, assets, media: Object.fromEntries(media.value), knowledge, at: { scout: rel(scoutRoot()), knowledge: rel(knowledgeRoot()), mesh: rel(meshRoot()) }, earlier, queued: queue.value.events.map((e) => e.key) });
+  const music = await musicOf(night);
+  if (!music.ok) return music;
+  return ok({ ...(load === undefined ? {} : { load }), ...(desk ? { desk: true } : {}), ...music.value, night, styles, assets, media: Object.fromEntries(media.value), knowledge, at: { scout: rel(scoutRoot()), knowledge: rel(knowledgeRoot()), mesh: rel(meshRoot()) }, earlier, queued: queue.value.events.map((e) => e.key) });
+}
+
+/**
+ * The words a candidate's seed and a visualizer's song give its cells (spark scout-decision-graph): every seed the
+ * night's candidates grow from, and each visualizer's clip - its title and its track's sentence - from the night
+ * that made it. A night or a seed that cannot be read leaves its words out, never the packet.
+ */
+async function musicOf(night: Night): Promise<Result<Pick<ScoutV1, "seeds" | "tracks">>> {
+  const refs = new Set(night.candidates.flatMap((c) => (c.fromSeed === undefined ? [] : [c.fromSeed])));
+  const seeds: Record<string, Seed> = {};
+  if (refs.size > 0) {
+    const batches = await v1Call(() => listSeedBatches());
+    if (!batches.ok) return batches;
+    for (const ref of refs) {
+      const s = seedOf(batches.value, ref)?.seed;
+      if (s !== undefined) seeds[ref] = s;
+    }
+  }
+  const tracks: Record<string, { title: string; sentence: string }> = {};
+  const nights = new Map<string, Night | undefined>([[night.id, night]]);
+  for (const c of night.candidates) {
+    if (c.kind !== "visualizer") continue;
+    const p = parseTrackRef(c.track);
+    if (p === null) continue;
+    if (!nights.has(p.night)) nights.set(p.night, await readNight(p.night).catch(() => undefined));
+    const t = nights.get(p.night)?.candidates.find((x): x is TrackCandidate => x.id === p.candidate && x.kind === "track");
+    const clip = t?.clips.find((x) => x.part === p.part);
+    if (t !== undefined && clip !== undefined) tracks[c.track] = { title: clip.title, sentence: t.sentence };
+  }
+  return ok({ seeds, tracks });
 }
 
 /* ── packet ────────────────────────────────────────────────────────────────── */
@@ -290,6 +333,13 @@ function consequence(v1: ScoutRead, at: DecisionsAt): Result<Preview> {
       const cell = c.kind === "idea" ? ideaCell(c.id) : `${c.id}/text`;
       const d = byCell.get(cell)?.verdict;
       if (d === "keep" || d === "reject") parts.writes.push({ ...nightFile, candidate: cell, detail: c.kind === "direction" ? DIRECTION_VERDICT[d] : d === "keep" ? `develops next night as a ${IDEA_TARGET_WORD[c.target]}` : "blocked" });
+    } else if (c.kind === "track" || c.kind === "visualizer") {
+      // A kept clip is the next night's visualizer, a kept visualizer the ladder's first rung; both read the record below.
+      for (const cell of c.kind === "track" ? c.clips.map((x) => `${c.id}/${x.part}`) : [visualizerCell(c.id)]) {
+        const d = byCell.get(cell);
+        if (d?.verdict === "keep") parts.writes.push({ ...nightFile, candidate: cell, detail: MUSIC_VERDICT[c.kind] });
+        else if (d?.verdict === "reject") parts.writes.push({ ...nightFile, candidate: cell, detail: `rejected${d.reasons.length === 0 ? "" : `: ${d.reasons.join(", ")}`}` });
+      }
     }
   }
   for (const e of leadEventsOf({ night: n, kept, earlier: v1.earlier })) {

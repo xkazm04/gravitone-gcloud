@@ -8,6 +8,7 @@ import type { Actor, EventData } from "@gt/domain/event";
 import type { JobState } from "@gt/domain/job";
 
 import { readSuno } from "../../../../lib/sound/suno/store.ts";
+import { isScoutSunoJob } from "../../../../lib/foundry/scout/types.ts";
 import { bump, digest, facts, instant } from "../facts.ts";
 import type { IngestEvent, LiveJob, ProjectCtx, Projection, Source, WeirItem } from "../types.ts";
 
@@ -164,7 +165,8 @@ function liveOf(s: SunoSnapshot): LiveJob[] {
 }
 
 function weirOf(s: SunoSnapshot): WeirItem[] {
-  const pending = s.clips.filter((c) => c.verdict === null);
+  // A scout take is judged on its night's packet (pkt:scout:<night>), never in this pile.
+  const pending = s.clips.filter((c) => c.verdict === null && !isScoutSunoJob(c.jobId));
   if (pending.length === 0) return [];
   const oldest = instant(Math.min(...pending.map((c) => c.createdAt)));
   return [{ source: "suno", id: "suno/triage", title: "suno clips to judge", media: "audio", kind: "cull", ...(oldest === null ? {} : { since: oldest }), decided: s.clips.length - pending.length, pending: pending.length, href: HREF }];
