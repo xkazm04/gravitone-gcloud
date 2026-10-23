@@ -309,6 +309,8 @@ export function build(v1: ScoutV1): Built {
     else if (c.kind === "scene") sceneCells(night, c, v1.media, out);
     else if (c.kind === "asset3d") assetCells(night, c, v1.assets[c.id], v1.media, out);
     else if (c.kind === "idea") ideaCells(night, c, v1.media, out);
+    // STUB (spark scout-idea-artboards WP-I4.0): WP-I4b draws a direction as a words cell in notes.
+    else if (c.kind === "direction") out.losses.push({ candidate: c.id, grade: "dropped", reason: "direction cells are not drawn on the Board yet" });
     else if (c.status === "failed") out.losses.push({ candidate: c.id, grade: "dropped", reason: c.error ?? "failed with no error recorded" });
     else textCell(night, c, out);
   }

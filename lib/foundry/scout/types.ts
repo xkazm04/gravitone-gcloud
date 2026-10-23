@@ -72,6 +72,16 @@ export const REEL_MEDIA = ["svg", "canvas", "dom", "css3d"] as const;
 export const REEL_GRAMMARS = ["draw-on", "morph", "camera", "stepped", "particle", "reflow", "type"] as const;
 export const REEL_DENSITIES = ["low", "mid", "high"] as const;
 
+/**
+ * What every night's work is FOR (operator, 2026-10-23): a YouTube video - a Short (~30 s) or a short
+ * video (up to 5 minutes). A style is only ever the baseline look of such a video; nothing here is
+ * made to be printed, hung or sold as an image.
+ */
+export const VIDEO_FORMATS = ["short", "video"] as const;
+export type VideoFormat = (typeof VIDEO_FORMATS)[number];
+/** A direction's premise: the story or the bit in a sentence or two. */
+export const PREMISE_MAX = 280;
+export const GENRE_MAX = 80;
 /** Hailuo takes 5 or 10 (lib/imaging/video/types.ts CLIP_DURATIONS); the night renders the short one. */
 export const CLIP_SECONDS = 5;
 
@@ -153,7 +163,8 @@ export type ScoutSource = {
   readonly channel?: string;
   /** Why the skill picked it - one line, the skill's own words. */
   readonly why: string;
-  readonly found: "watchlist" | "search";
+  /** `idea`: one of OUR kept idea artboards, brought in to be developed (`fromIdea`). */
+  readonly found: "watchlist" | "search" | "idea";
   /** The watchlist line that led here, verbatim, when `found` is `watchlist`. */
   readonly watch?: string;
   /**
@@ -162,7 +173,10 @@ export type ScoutSource = {
    * registry's /intake.
    */
   readonly rich?: string;
-  readonly rights: "reference-only";
+  /** `ours` only for a kept idea's artboard (`fromIdea`): we drew it, so it may be a replica's input. */
+  readonly rights: "reference-only" | "ours";
+  /** `<night>/<c-id>` of the kept idea artboard this source IS (spark scout-idea-artboards WP-I4). */
+  readonly fromIdea?: string;
   readonly status: SourceStatus;
   readonly error?: string;
   /** Night-relative files: the picture, or a video's gated keyframes (`sources/s-01/k-003.jpg`). */
@@ -175,7 +189,7 @@ export type ScoutSource = {
 
 /* ── Candidates ──────────────────────────────────────────────────────────── */
 
-export const CANDIDATE_KINDS = ["style", "scene", "finding", "watch", "asset3d", "idea"] as const;
+export const CANDIDATE_KINDS = ["style", "scene", "finding", "watch", "asset3d", "idea", "direction"] as const;
 export type CandidateKind = (typeof CANDIDATE_KINDS)[number];
 
 export const CANDIDATE_STATUSES = ["pending", "rendered", "failed"] as const;
@@ -192,6 +206,8 @@ type CandidateBase = {
    *  no purpose is a mindless output). Rejected with the `use case` reason, it steers the next nights
    *  away from that direction (taste.ts). Absent on runs from before the field. */
   readonly use?: string;
+  /** `<night>/<c-id>` of the kept idea this candidate develops - it takes the idea off the to-develop list (taste.ts). */
+  readonly fromIdea?: string;
 };
 
 /** A still style: an ordinary extract run over this candidate's source pictures/keyframes. */
@@ -298,6 +314,8 @@ export type IdeaCandidate = CandidateBase & {
   readonly target: IdeaTarget;
   /** The studio prompt, verbatim. */
   readonly prompt: string;
+  /** The genre it tries (`animated comedy sketch`, `music video`, `data explainer`): what the night spreads across. Absent on the first batch. */
+  readonly genre?: string;
   readonly anchor: { readonly kind: IdeaAnchorKind; readonly ref: string };
   /** Night-relative artboard, OURS (`ideas/c-12.png`), once drawn. A stats idea's is its strip's frame 120. */
   readonly image?: string;
@@ -341,7 +359,30 @@ export type ReelFiles = {
   readonly strip?: string;
 };
 
-export type Candidate = StyleCandidate | SceneCandidate | FindingCandidate | WatchCandidate | Asset3dCandidate | IdeaCandidate;
+/**
+ * A DIRECTION to confirm (operator, 2026-10-23: "using Notes more as confirmation of direction - we
+ * are going with animated comedy sketch, with xy artstyle, dark humor for adults, story around xy,
+ * based on the approved decisions"). Words, no render: kept, it is a confirmed direction the next
+ * nights work inside (taste.ts); rejected, a refused one they steer away from.
+ */
+export type DirectionCandidate = CandidateBase & {
+  readonly kind: "direction";
+  /** The direction in one headline: `Animated comedy sketch, dark humour for adults`. */
+  readonly title: string;
+  readonly format: VideoFormat;
+  readonly genre: string;
+  /** The look: a kept style's name, or a style in words. */
+  readonly style: string;
+  /** The register: `deadpan, dark`. */
+  readonly tone: string;
+  readonly audience: string;
+  /** The story or the bit, in a sentence or two. */
+  readonly premise: string;
+  /** The committed cells it rests on (`<night>/<cell id>`), at least one. */
+  readonly basedOn: readonly string[];
+};
+
+export type Candidate = StyleCandidate | SceneCandidate | FindingCandidate | WatchCandidate | Asset3dCandidate | IdeaCandidate | DirectionCandidate;
 
 /* ── Packet cells ────────────────────────────────────────────────────────── */
 
