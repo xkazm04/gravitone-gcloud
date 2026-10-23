@@ -1,7 +1,7 @@
 ---
 name: scout-muse
 memory: none
-version: 1.0.0
+version: 1.1.0
 category: Development
 description: The muse wing of the nightly scout loop - an SFW study of how fictional adult women are drawn as characters, from ultra-photoreal through painterly, anime and 3D concept looks. Researches prompt technique on the web, crosses looks with character cards as tall 9:16 posters and roleplay-situation scenes in the operator's Leonardo studio at quality Low, has a vision eye clear every still (stated and read adult, never nude, never a real person) and leaves ONE Board packet pkt:scout:muse:<night> for K/X. Kept looks join the shared style catalogue (so /scout may use them); kept characters join knowledge/scout-muse/characters.md. Wraps pipeline/scout.mts --wing muse; it never keeps, rejects or commits anything on the Board, and it never reads or writes the scout wing's nights. Invoke with /scout-muse night [--dry] [--ideas N], /scout-muse status [<night>].
 argument-hint: "night [--dry] [--ideas N] | status [<night>]"
@@ -38,12 +38,24 @@ Virtual companions and roleplay situations are the aims a still serves; 3D is a 
 real-time or stylised 3D character), never a mesh. A kept look crosses into the scout wing through the
 shared catalogue, and a scout look may be tried here.
 
-- **The matrix.** A night crosses LOOKS (the ladder in techniques.md: photoreal portrait, cinematic still,
-  fashion editorial, semi-real painterly, anime/cel, stylised 3D, real-time 3D companion, toon-shaded 3D)
-  with CHARACTERS (cards). Change one axis per still.
-- **Spread before you narrow.** Until the operator has kept three looks, a night spans at least six rungs
-  of the ladder, at most a quarter of its stills on one rung, and a cast of ages 25-60, many skin tones,
-  hair textures and body types.
+- **Discovery is one-of-one** (the operator, after the first triage, 2026-10-23: "always unique artstyle
+  direction, always unique character"). While discovering, EVERY still is a new woman (her own card) in a
+  new look direction: no character and no look is drawn twice, in a night or across discovery nights,
+  unless the operator kept it. The first launch crossed 8 characters with 8 rungs, and a few strong
+  characters carried their looks while weak ones sank theirs again and again - one-of-one spreads the
+  chances, so a keep says the PAIR worked and a throw costs one still.
+- **A look direction is specific, not a rung.** The ladder in techniques.md names families; a still's
+  direction is one concrete take inside or between them (a 90s point-and-shoot flash snapshot, a
+  risograph two-colour print, a claymation 3D figure, a gouache storybook plate, a real-time engine
+  character select screen...). Never reuse tonight's or a kept night's direction word for word.
+- **Spread.** Until the operator has kept three looks, a night spans every family of the ladder, at most a
+  quarter of its stills in one family, and a cast of ages 25-60, many skin tones, hair textures and body
+  types.
+- **Scenes come after a keep** (the operator: "scene seems to be important as next step together with use
+  cases how to develop scenes with the character"). A scene is a KEPT character in a situation, and its
+  `use` names the use case the scene develops - a companion chat's opening image, a date-night roleplay
+  beat, a story moment, a morning greeting, a shared hobby. Discovery stills are portraits; scenes are
+  how a kept woman is developed.
 - **Posters and scenes.** A poster is 9:16 key art (the studio draws 16:9, 1:1 and 9:16 only) with space for type; a scene is 16:9, one roleplay
   situation (a cafe date by the window, a rooftop at night, a late gaming session, a rainy bus stop, a
   museum gallery, a bookshop aisle, a kitchen breakfast, a ski-lodge fireplace...) framed so her face reads.
@@ -107,9 +119,11 @@ Up to `ideaCap` ideas, one JSON array -> `npx tsx pipeline/scout.mts ideas <nigh
   expression) -> `Avoid:` (short, concrete). A scene's look block holds no framing or backdrop of its own -
   the situation owns them. States `aged NN`. Never a name of anyone real.
 
-A character a night invents is drawn ONCE as a 9:16 portrait with `target: character`; a kept character is
-drawn on later nights in other looks and situations with her card restated VERBATIM (`target: style` or
-`scene`). One bad brief refuses the batch: fix it and resend. The eye's verdict lands on each candidate;
+**Discovery stills** are `target: character`, 9:16, one card and one look direction each, none repeated
+(above): a keep files her card and marks the look to develop. **Scenes** are `target: scene`, 16:9, on a
+KEPT character only, her card restated VERBATIM, `use` naming the use case it develops; 2-3 scenes per
+kept character a night, each a different situation and use case. A kept look is tried on a NEW character
+before it is trusted (one strong woman must not carry a look alone). One bad brief refuses the batch: fix it and resend. The eye's verdict lands on each candidate;
 a still it threw shows as failed `judge: <field>` - three throws on one rung tonight means change the
 rung's wording, not the eye.
 
@@ -117,9 +131,9 @@ rung's wording, not the eye.
 
 `## Ideas to develop` first: a kept `style` idea -> `add-source --wing muse --json [{"fromIdea":"<night>/<c-id>"}]`
 then `style <night> --wing muse --sources <s-NN> --use "<the aim>"` (the extract writes a subject-free look into
-the shared catalogue); a kept `scene` idea -> next night's scenes play the same situation on another kept
-character; a kept `character` is in `## Kept characters` already - give her 2-3 stills tonight in other
-looks.
+the shared catalogue); a kept `character` is in `## Kept characters` already - give her 2-3 SCENES tonight,
+each a different situation and use case; a kept `scene` -> the next scene of that use case for her (the
+story moves on), or the same use case on another kept character.
 
 ### 5. Stop
 
