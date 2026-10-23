@@ -109,6 +109,7 @@ function batch(body: unknown): string {
 const idea = (title: string, o: Record<string, unknown> = {}) => ({
   title,
   target: "scene",
+  genre: "animated short",
   prompt: `A rough artboard: ${title.toLowerCase()}, loose gouache thumbnail, wide frame, one figure small against the ground.`,
   anchor: { kind: "watch", ref: "- tag: gouache thumbnails" },
   ...o,
@@ -134,6 +135,14 @@ describe("the batch's door", () => {
     expect(at([idea("x".repeat(91))])).toMatch(/^idea 1: title: /);
     expect(at([idea("a"), idea("b", { anchor: { kind: "gap", ref: "  " } })])).toBe("idea 2: anchor.ref: a watch or gap anchor quotes its watchlist line or registry gap in `ref`");
     expect(at([idea("a", { colour: "red" })])).toMatch(/^idea 1: /);
+    // A new brief names its genre (WP-I4a), one line; the first batch's candidates hold none and stay valid.
+    const { genre: _g, ...bare } = idea("a");
+    expect(at([idea("b"), bare])).toMatch(/^idea 2: genre: /);
+    expect(at([idea("a", { genre: "  " })])).toMatch(/^idea 1: genre: /);
+    expect(at([idea("a", { genre: "g".repeat(81) })])).toMatch(/^idea 1: genre: /);
+    expect(at([idea("a", { genre: "music\nvideo" })])).toBe("idea 1: genre: one line");
+    const parsed = parseIdeas([idea("a", { genre: " music video " })]);
+    expect(parsed.ok && parsed.value[0]?.genre).toBe("music video");
     expect(at({ title: "not a list" })).toMatch(/^ideas: the input is a JSON array/);
     expect(at([])).toBe("ideas: the batch holds no brief");
   });
@@ -162,7 +171,7 @@ describe("a dry night draws stand-ins", () => {
       ["c-02", "rendered", "ideas/c-02.png", "style", []],
       ["c-03", "rendered", "ideas/c-03.png", "asset3d", []],
     ]);
-    expect(ideas[2]).toMatchObject({ anchor: { kind: "free", ref: "" }, use: "a mobile game's armoury screen", prompt: THREE[2]?.prompt });
+    expect(ideas[2]).toMatchObject({ anchor: { kind: "free", ref: "" }, use: "a mobile game's armoury screen", prompt: THREE[2]?.prompt, genre: "animated short" });
     for (const c of ideas) expect(readFileSync(resolveInNight(night, c.image ?? "")).subarray(1, 4).toString("ascii")).toBe("PNG");
     expect(FAKE_LEONARDO_STUDIO.calls).toEqual([]);
     expect((await readNight(night)).jobs).toEqual([`job:scout-ideas:${night}:c-01`]);

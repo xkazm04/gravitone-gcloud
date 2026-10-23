@@ -12,7 +12,7 @@ import type { ItemWords, RowWords } from "@gt/ui/board/port";
 import { EXTRACT_COMMITTABLE } from "../../../foundry/plant.ts";
 import { TECHNIQUE_LABEL, type GateResult, type MeshAsset } from "../../../foundry/mesh/types.ts";
 import { patternsRel } from "../../../foundry/scout/knowledge.ts";
-import { CANDIDATE_KINDS, cellId, type Asset3dCandidate, type Candidate, type CandidateId, type IdeaCandidate, type IdeaTarget, type Night, type NightCommit, type SceneCandidate, type SceneClip } from "../../../foundry/scout/types.ts";
+import { CANDIDATE_KINDS, cellId, type Asset3dCandidate, type Candidate, type CandidateId, type DirectionCandidate, type IdeaCandidate, type IdeaTarget, type Night, type NightCommit, type SceneCandidate, type SceneClip } from "../../../foundry/scout/types.ts";
 import { meshFileUrl } from "../../../library/feeds/mesh.ts";
 import { decisionMap, type Loss } from "../types.ts";
 import { extractAdapter, planLooks, type ExtractV1 } from "./extract.ts";
@@ -23,8 +23,8 @@ import { lookBrief, sceneBrief } from "./scoutBrief.ts";
 // adapter so the plan is a function of the read alone, and so each half stays
 // under the file bound.
 //
-// THE SHAPE. One row per candidate, in kind order (style, scene, finding,
-// watch, asset3d, idea), then the night's own order:
+// THE SHAPE. One row per candidate, in kind order (style, scene, finding, watch, asset3d, idea,
+// direction), then the night's own order:
 //   style    the extract adapter's own rows and cells (one row per look, the
 //            gallery source its reference), each id under the candidate:
 //            `c-01/<look>/replica-1`. Planned by extract.ts `planLooks`, so the
@@ -47,6 +47,9 @@ import { lookBrief, sceneBrief } from "./scoutBrief.ts";
 //            next night into its target; that act reads the night's record, so nothing but
 //            `night.committed` is written for it. A stats idea (spark stats-reels) is the same
 //            cell: its tile is its strip's frame 120 at the same path, its meta `stats reel · ...`.
+//            An idea with a genre names it after its target: `scene · music video · watch: ...`.
+//   direction  one TEXT cell `c-14/text` under `notes`: its title, the brief's own words (format ·
+//            genre · style · tone for audience · premise) and how many kept cells it stands on.
 // A text cell's media is the content address of its own words (text/plain):
 // the kernel holds candidates by blob, and the words are the thing judged.
 //
@@ -196,6 +199,19 @@ function sceneCells(night: Night, c: SceneCandidate, media: ScoutV1["media"], ou
   out.rows.push({ id: c.id, label, group: "videos", ...(r === undefined ? {} : sceneBrief(r)), ...(c.use === undefined ? {} : { use: c.use }), ...(key !== undefined && media[key] !== undefined ? { ref: scoutFileUrl(night.id, key) } : {}) });
 }
 
+/** A direction's line: `short · animated comedy sketch · cut-paper · dark humour for adults`. */
+export const directionLine = (c: Pick<DirectionCandidate, "format" | "genre" | "style" | "tone" | "audience">): string => `${c.format} · ${c.genre} · ${c.style} · ${c.tone} for ${c.audience}`;
+
+/** What a direction's verdict does, as the preview says it. */
+export const DIRECTION_VERDICT = { keep: "a confirmed direction: the next nights work inside it", reject: "a refused direction" } as const;
+
+function directionCell(night: Night, c: DirectionCandidate, out: Mutable): void {
+  const words: ItemWords = { label: c.title, meta: `based on ${c.basedOn.length} kept`, prompt: `${directionLine(c)} · ${c.premise}` };
+  const body = [`${c.format} · ${c.genre}`, c.title, c.style, c.tone, c.audience, c.premise, ...c.basedOn].join("\n");
+  out.cells.push({ id: cellId(c.id, "text"), candidate: c.id, kind: "direction", row: c.id, jobId: `scout:${night.id}`, media: textRef(body), grades: [], url: scoutFileUrl(night.id, "night.json"), words });
+  out.rows.push({ id: c.id, label: `direction · ${c.genre}`, group: "notes", ...(c.use === undefined ? {} : { use: c.use }) });
+}
+
 function textCell(night: Night, c: Candidate & { kind: "finding" | "watch" }, out: Mutable): void {
   if (c.kind === "finding") {
     // A line with nowhere to land is not judgeable: a keep could only fail the night's apply.
@@ -266,8 +282,9 @@ export const ideaCell = (candidate: CandidateId): string => cellId(candidate, "b
 /** An idea's target as the Board says it: `asset3d` is the act's name, a `3d asset` is the thing. */
 export const IDEA_TARGET_WORD: Readonly<Record<IdeaTarget, string>> = { scene: "scene", style: "style", asset3d: "3d asset", stats: "stats reel" };
 
-/** An idea's target and anchor: `scene · watch: tag: risograph`. A `free` idea names no anchor ref. */
-export const ideaMeta = (c: Pick<IdeaCandidate, "target" | "anchor">): string => `${IDEA_TARGET_WORD[c.target]} · ${c.anchor.kind === "free" ? "free" : `${c.anchor.kind}: ${c.anchor.ref}`}`;
+/** An idea's target, genre and anchor: `scene · music video · watch: tag: risograph`. A `free` idea names no anchor ref; the first batch has no genre. */
+export const ideaMeta = (c: Pick<IdeaCandidate, "target" | "anchor" | "genre">): string =>
+  `${IDEA_TARGET_WORD[c.target]}${c.genre === undefined ? "" : ` · ${c.genre}`} · ${c.anchor.kind === "free" ? "free" : `${c.anchor.kind}: ${c.anchor.ref}`}`;
 
 function ideaCells(night: Night, c: IdeaCandidate, media: ScoutV1["media"], out: Mutable): void {
   if (c.status === "failed") {
@@ -309,8 +326,7 @@ export function build(v1: ScoutV1): Built {
     else if (c.kind === "scene") sceneCells(night, c, v1.media, out);
     else if (c.kind === "asset3d") assetCells(night, c, v1.assets[c.id], v1.media, out);
     else if (c.kind === "idea") ideaCells(night, c, v1.media, out);
-    // STUB (spark scout-idea-artboards WP-I4.0): WP-I4b draws a direction as a words cell in notes.
-    else if (c.kind === "direction") out.losses.push({ candidate: c.id, grade: "dropped", reason: "direction cells are not drawn on the Board yet" });
+    else if (c.kind === "direction") directionCell(night, c, out);
     else if (c.status === "failed") out.losses.push({ candidate: c.id, grade: "dropped", reason: c.error ?? "failed with no error recorded" });
     else textCell(night, c, out);
   }

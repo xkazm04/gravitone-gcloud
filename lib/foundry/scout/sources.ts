@@ -1,4 +1,4 @@
-import { stat } from "node:fs/promises";
+import { copyFile, mkdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 
@@ -6,7 +6,8 @@ import { parseAt } from "@gt/domain/door";
 import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 
 import { BlockedUrlError, assertFetchable, type Resolver } from "../../imaging/safeUrl";
-import { listNights, mutateNight, nextCandidateId, nextSourceId, readNight } from "./store";
+import { developedOf, fromIdeaOf, IDEA_REF_RE, keptIdea, type KeptIdea } from "./direction";
+import { listNights, mutateNight, mutateNightWith, nextCandidateId, nextSourceId, readNight, resolveInNight } from "./store";
 import {
   CLAIM_MAX,
   MAX_SOURCES_PER_NIGHT,
@@ -36,7 +37,12 @@ import {
 //   - a finding names a knowledge template that exists and a step in the
 //     `NN-name` form (the Board's apply creates the step's PATTERNS.md when the
 //     finding is kept; most templates have only 01-script today);
-//   - lengths are the wire's (./types.ts), so a paragraph cannot pass as a claim.
+//   - lengths are the wire's (./types.ts), so a paragraph cannot pass as a claim;
+//   - a KEPT IDEA comes in as `{fromIdea: "<night>/<c-id>", why?}` (spark scout-idea-artboards
+//     WP-I4a): its artboard is copied from that night into `sources/s-NN/` - ours, so no fetch and no
+//     ingest - as an `image` source, `found: idea`, `rights: ours`. Refused, with the whole batch and
+//     before anything is written: an idea that night did not keep, a dry night's, and one any night
+//     already develops (./direction.ts) - a kept idea is developed once.
 
 const text = (max: number) => z.string().trim().min(1).max(max);
 
@@ -54,9 +60,11 @@ const sourceSchema = z
   })
   .strict()
   .refine((s) => s.found !== "watchlist" || s.watch !== undefined, { message: "a source found from the watchlist quotes its watchlist line in `watch`" });
-const sourcesSchema = z.array(sourceSchema).min(1).max(MAX_SOURCES_PER_NIGHT);
+const ideaSourceSchema = z.object({ fromIdea: z.string().trim().regex(IDEA_REF_RE, "a kept idea's <night>/<c-id>"), why: text(WHY_MAX).optional() }).strict();
+const batchSchema = z.array(z.unknown()).min(1).max(MAX_SOURCES_PER_NIGHT);
 
 export type SourceInput = z.output<typeof sourceSchema>;
+type Planned = { readonly url: SourceInput } | { readonly idea: KeptIdea; readonly ref: string; readonly why?: string };
 
 /**
  * What makes two URLs the same thing: a YouTube video by its id, anything else by
@@ -102,16 +110,48 @@ export async function seenElsewhere(except: NightId): Promise<Map<string, string
 export type Skipped = { readonly url: string; readonly why: string };
 export type AddedSources = { readonly added: readonly ScoutSource[]; readonly skipped: readonly Skipped[] };
 
-/** Validate and append sources. Err only when the batch itself is malformed or the night is not open. */
+/** Every night on disk that can be read, newest first. */
+async function allNights(): Promise<Night[]> {
+  const out: Night[] = [];
+  for (const s of await listNights()) {
+    const n = await readNight(s.id).catch(() => undefined);
+    if (n !== undefined) out.push(n);
+  }
+  return out;
+}
+
+/** The URL a kept idea's source is recorded under: never fetchable, and one per idea. */
+export const ideaUrl = (ref: string): string => `idea:${ref}`;
+
+/** Validate and append sources. Err when the batch itself is malformed, the night is not open, or a kept idea it names cannot be brought in. */
 export async function addSources(nightId: NightId, raw: unknown, opts: { readonly resolve?: Resolver } = {}): Promise<Result<AddedSources>> {
-  const parsed = parseAt("scout sources", sourcesSchema, raw);
-  if (!parsed.ok) return parsed;
+  const batch = parseAt("scout sources", batchSchema, raw);
+  if (!batch.ok) return batch;
   const night = await readNight(nightId);
   if (night.state !== "open") return err("refused", `night ${nightId} is ${night.state}; it takes no more sources`);
+  const items: (SourceInput | { readonly fromIdea: string; readonly why?: string })[] = [];
+  for (const [i, item] of batch.value.entries()) {
+    const ideaShaped = typeof item === "object" && item !== null && "fromIdea" in item;
+    const p = ideaShaped ? parseAt(`source ${i + 1}`, ideaSourceSchema, item) : parseAt(`source ${i + 1}`, sourceSchema, item);
+    if (!p.ok) return p;
+    items.push(p.value);
+  }
+  const developed = items.some((s) => "fromIdea" in s) ? developedOf(await allNights()) : new Map<string, string>();
   const seen = await seenElsewhere(nightId);
   const skipped: Skipped[] = [];
-  const fetchable: SourceInput[] = [];
-  for (const s of parsed.value) {
+  const planned: Planned[] = [];
+  for (const [i, s] of items.entries()) {
+    if ("fromIdea" in s) {
+      const where = developed.get(s.fromIdea);
+      if (where !== undefined) return err("refused", `source ${i + 1}: idea ${s.fromIdea} is already developed as ${where}; a kept idea is brought in once`);
+      const k = await keptIdea(s.fromIdea);
+      if (!k.ok) return err(k.error.code, `source ${i + 1}: ${k.error.message}`);
+      const held = await stat(resolveInNight(k.value.night.id, k.value.idea.image)).catch(() => null);
+      if (held?.isFile() !== true) return err("invalid", `source ${i + 1}: idea ${s.fromIdea}'s artboard ${k.value.idea.image} is not on disk`);
+      developed.set(s.fromIdea, `source ${i + 1} of this batch`);
+      planned.push({ idea: k.value, ref: s.fromIdea, ...(s.why === undefined ? {} : { why: s.why }) });
+      continue;
+    }
     const earlier = seen.get(urlKey(s.url));
     if (earlier !== undefined) {
       skipped.push({ url: s.url, why: `already scouted as ${earlier}` });
@@ -119,44 +159,60 @@ export async function addSources(nightId: NightId, raw: unknown, opts: { readonl
     }
     try {
       await assertFetchable(s.url, opts.resolve);
-      fetchable.push(s);
+      planned.push({ url: s });
     } catch (e) {
       if (!(e instanceof BlockedUrlError)) throw e;
       skipped.push({ url: s.url, why: e.why });
     }
   }
   const added: ScoutSource[] = [];
-  await mutateNight(nightId, (n) => {
+  await mutateNightWith(nightId, async (n) => {
     let next: Night = n;
-    for (const s of fetchable) {
-      if (next.sources.some((x) => urlKey(x.url) === urlKey(s.url))) {
-        skipped.push({ url: s.url, why: "already in this night" });
+    for (const p of planned) {
+      const url = "url" in p ? p.url.url : ideaUrl(p.ref);
+      if (next.sources.some((x) => urlKey(x.url) === urlKey(url) || ("ref" in p && x.fromIdea === p.ref))) {
+        skipped.push({ url, why: "already in this night" });
         continue;
       }
       if (next.sources.length >= MAX_SOURCES_PER_NIGHT) {
-        skipped.push({ url: s.url, why: `the night holds at most ${MAX_SOURCES_PER_NIGHT} sources` });
+        skipped.push({ url, why: `the night holds at most ${MAX_SOURCES_PER_NIGHT} sources` });
         continue;
       }
-      const src: ScoutSource = {
-        id: nextSourceId(next),
-        url: s.url,
-        kind: s.kind,
-        title: s.title,
-        ...(s.channel === undefined ? {} : { channel: s.channel }),
-        why: s.why,
-        found: s.found,
-        ...(s.watch === undefined ? {} : { watch: s.watch }),
-        ...(s.rich === undefined ? {} : { rich: s.rich }),
-        rights: "reference-only",
-        status: "pending",
-        files: [],
-      };
+      const id = nextSourceId(next);
+      const src = "url" in p ? urlSource(id, p.url) : await ideaSource(nightId, id, p);
       next = { ...next, sources: [...next.sources, src] };
       added.push(src);
     }
     return added.length === 0 ? n : next;
   });
   return ok({ added, skipped });
+}
+
+function urlSource(id: string, s: SourceInput): ScoutSource {
+  return {
+    id,
+    url: s.url,
+    kind: s.kind,
+    title: s.title,
+    ...(s.channel === undefined ? {} : { channel: s.channel }),
+    why: s.why,
+    found: s.found,
+    ...(s.watch === undefined ? {} : { watch: s.watch }),
+    ...(s.rich === undefined ? {} : { rich: s.rich }),
+    rights: "reference-only",
+    status: "pending",
+    files: [],
+  };
+}
+
+/** A kept idea's artboard, copied into this night under the night's lock: ingested as it lands, ours. */
+async function ideaSource(nightId: NightId, id: string, p: Extract<Planned, { ref: string }>): Promise<ScoutSource> {
+  const { night, idea } = p.idea;
+  const file = `sources/${id}/${path.basename(idea.image)}`;
+  const to = resolveInNight(nightId, file);
+  await mkdir(path.dirname(to), { recursive: true });
+  await copyFile(resolveInNight(night.id, idea.image), to);
+  return { id, url: ideaUrl(p.ref), kind: "image", title: idea.title, why: p.why ?? `kept idea ${p.ref}: ${idea.target}`, found: "idea", rights: "ours", fromIdea: p.ref, status: "ingested", files: [file] };
 }
 
 /* ── Findings and watch lines ─────────────────────────────────────────────── */
@@ -201,7 +257,7 @@ export async function addFindings(nightId: NightId, raw: unknown, opts: { readon
   await mutateNight(nightId, (n) => {
     let next = n;
     for (const f of parsed.value) {
-      const c: FindingCandidate = { id: nextCandidateId(next), kind: "finding", sourceIds: f.sourceIds, status: "rendered", template: f.template, step: f.step, claim: f.claim, quote: f.quote, ...(f.restates === undefined ? {} : { restates: f.restates }) };
+      const c: FindingCandidate = { id: nextCandidateId(next), kind: "finding", sourceIds: f.sourceIds, status: "rendered", template: f.template, step: f.step, claim: f.claim, quote: f.quote, ...(f.restates === undefined ? {} : { restates: f.restates }), ...fromIdeaOf(next, f.sourceIds) };
       next = { ...next, candidates: [...next.candidates, c] };
       made.push(c);
     }
@@ -222,7 +278,7 @@ export async function addWatch(nightId: NightId, raw: unknown): Promise<Result<W
   if (missing !== undefined) return err("invalid", `night ${nightId} has no source ${missing}`);
   let made: WatchCandidate | undefined;
   await mutateNight(nightId, (n) => {
-    made = { id: nextCandidateId(n), kind: "watch", sourceIds: parsed.value.sourceIds, status: "rendered", entry: parsed.value.entry, why: parsed.value.why };
+    made = { id: nextCandidateId(n), kind: "watch", sourceIds: parsed.value.sourceIds, status: "rendered", entry: parsed.value.entry, why: parsed.value.why, ...fromIdeaOf(n, parsed.value.sourceIds) };
     return { ...n, candidates: [...n.candidates, made] };
   });
   if (made === undefined) return err("internal", "the watch line was not written");

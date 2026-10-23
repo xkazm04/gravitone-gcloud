@@ -10,6 +10,7 @@
 //   npx tsx pipeline/scout.mts asset <night> --brief <file|-> [--detach]
 //   npx tsx pipeline/scout.mts ideas <night> --json <file|-> [--detach]   (lib/foundry/scout/idea.ts)
 //   npx tsx pipeline/scout.mts finding <night> --json <file|->
+//   npx tsx pipeline/scout.mts direction <night> --json <file|->   (lib/foundry/scout/direction.ts)
 //   npx tsx pipeline/scout.mts watch <night> --entry "..." --why "..." [--sources s-01,s-02]
 //   npx tsx pipeline/scout.mts close <night> [--stop <reason>]
 //   npx tsx pipeline/scout.mts status [<night>] [--json]
@@ -27,7 +28,7 @@
 // by the night's idea and reel caps and never by its money.
 //
 // --json: one JSON document on stdout, progress on stderr. Under add-source, finding,
-// ideas and lead, `--json <file|->` names the INPUT, and the output is JSON as well.
+// direction, ideas and lead, `--json <file|->` names the INPUT, and the output is JSON as well.
 // EXIT 0 done · 1 failed or refused · 2 usage. Never touches foundry-out/ when
 // GRAVITONE_STORE_PATH and SCOUT_STORE_DIR point elsewhere.
 
@@ -70,14 +71,15 @@ const USAGE = [
   "usage: npx tsx pipeline/scout.mts <command> [--json]",
   "  doctor [--dry]                              the box, the keys, the store",
   `  open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--ideas ${DEFAULT_IDEA_CAP}] [--reels ${DEFAULT_REEL_CAP}] [--until HH:MM] [--live]`,
-  "  add-source <night> --json <file|->         [{url, kind, title, channel?, why, found, watch?, rich?}]",
+  "  add-source <night> --json <file|->         [{url, kind, title, channel?, why, found, watch?, rich?} | {fromIdea: <night>/<c-id>, why?}]",
   "  ingest <night> [--source s-NN] [--detach]",
   "  style <night> --sources s-01,s-03 --use \"<content>\" [--slug x] [--detach]",
   "  scene <night> --source s-NN --use \"<content>\" [--frames k-012.jpg] [--detach]",
-  "  asset <night> --brief <file|-> [--detach]  {class, subject, use, style?, kind?, techniques?}",
-  "  ideas <night> --json <file|-> [--detach]   [{title, target: scene|style|asset3d|stats, prompt, anchor: {kind: watch|gap|free, ref}, use?, reel?}]",
+  "  asset <night> --brief <file|-> [--detach]  {class, subject, use, style?, kind?, techniques?, fromIdea?}",
+  "  ideas <night> --json <file|-> [--detach]   [{title, target: scene|style|asset3d|stats, genre, prompt, anchor: {kind: watch|gap|free, ref}, use?, reel?}]",
   "                                             reel (stats only): {brief: {case, title, hook, unit, kind, data, steps?, illustrative: true}, approach: {name, medium, grammar, density, direction, falsifier}}",
   "  finding <night> --json <file|->            [{sourceIds, template, step, claim, quote, restates?}]",
+  "  direction <night> --json <file|->          {title, format: short|video, genre, style, tone, audience, premise, basedOn: [<night>/<cell id>], use?}",
   '  watch <night> --entry "..." --why "..." [--sources s-01]',
   "  close <night> [--stop deadline|budget|target|failure|sources-exhausted|operator]",
   "  status [<night>]",
@@ -88,15 +90,15 @@ const USAGE = [
 class Usage extends Error {}
 /** A refusal the CLI makes itself; the acts' `Refusal` exits the same way. */
 class Refused extends Error {}
-const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "ideas", "finding", "watch", "close", "status", "leads", "lead"]);
+const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "ideas", "finding", "direction", "watch", "close", "status", "leads", "lead"]);
 const BOOL = new Set(["json", "live", "detach", "dry", "help", "retry"]);
 
-/** argv -> positionals and flags. `--json` takes a value (the input file, or `-`) only under add-source, finding, ideas and lead. */
+/** argv -> positionals and flags. `--json` takes a value (the input file, or `-`) only under add-source, finding, direction, ideas and lead. */
 function parse(argv: readonly string[]): { pos: string[]; flags: Map<string, string | true> } {
   const pos: string[] = [];
   const flags = new Map<string, string | true>();
   const cmd = argv.find((a) => !a.startsWith("--"));
-  const reads = cmd === "add-source" || cmd === "finding" || cmd === "ideas" || cmd === "lead";
+  const reads = cmd === "add-source" || cmd === "finding" || cmd === "direction" || cmd === "ideas" || cmd === "lead";
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i] ?? "";
     if (!a.startsWith("--")) {
@@ -235,6 +237,16 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
       return 0;
     }
 
+    if (cmd === "direction") {
+      const id = nightArg();
+      const { addDirection } = await import("../lib/foundry/scout/direction.ts");
+      const r = await addDirection(id, await input());
+      if (!r.ok) throw new Refused(r.error.message);
+      say(`  + ${r.value.id} direction ${r.value.status} · ${r.value.format} · ${r.value.genre} · based on ${r.value.basedOn.length} kept`);
+      if (json) doc({ ok: true, night: id, candidate: r.value });
+      return 0;
+    }
+
     // The registry leads the Board's commits queued: listed, and filed one claim at a time.
     if (cmd === "leads" || cmd === "lead") {
       const { leadsCommand } = await import("../lib/foundry/scout/leadFile.ts");
@@ -301,7 +313,7 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
             const again = n.sources.filter((s) => s.status === "failed" && (source === undefined || s.id === source));
             if (again.length === 0) return n;
             const ids = new Set(again.map((s) => s.id));
-            return { ...n, sources: n.sources.map((s) => (ids.has(s.id) ? { id: s.id, url: s.url, kind: s.kind, title: s.title, ...(s.channel === undefined ? {} : { channel: s.channel }), why: s.why, found: s.found, ...(s.watch === undefined ? {} : { watch: s.watch }), ...(s.rich === undefined ? {} : { rich: s.rich }), rights: s.rights, status: "pending" as const, files: [] } : s)) };
+            return { ...n, sources: n.sources.map((s) => (ids.has(s.id) ? { id: s.id, url: s.url, kind: s.kind, title: s.title, ...(s.channel === undefined ? {} : { channel: s.channel }), why: s.why, found: s.found, ...(s.watch === undefined ? {} : { watch: s.watch }), ...(s.rich === undefined ? {} : { rich: s.rich }), rights: s.rights, ...(s.fromIdea === undefined ? {} : { fromIdea: s.fromIdea }), status: "pending" as const, files: [] } : s)) };
           });
         }
         const { driveIngest, launchIngest } = await import("../lib/producers/scoutIngest.ts");
@@ -330,8 +342,15 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
       if (cmd === "asset") {
         const id = nightArg();
         const { assetAct } = await import("../lib/foundry/scout/asset.ts");
-        const r = await assetAct(ctx, id, await input("brief"), io.ports?.asset ?? {});
-        const c = r.candidate;
+        const { briefFromIdea } = await import("../lib/foundry/scout/direction.ts");
+        // `fromIdea`: the kept idea this asset develops. The asset door is the mesh brief's own, so the
+        // ref is checked and taken off here, and set on the candidate once the act has written it.
+        const from = await briefFromIdea(await input("brief"));
+        if (!from.ok) throw new Refused(from.error.message);
+        const { fromIdea } = from.value;
+        const r = await assetAct(ctx, id, from.value.brief, io.ports?.asset ?? {});
+        if (fromIdea !== undefined) await acts.markFromIdea(id, r.candidate.id, fromIdea);
+        const c = fromIdea === undefined ? r.candidate : { ...r.candidate, fromIdea };
         const failed = c.status === "failed" || (r.outcome !== undefined && !["done", "detached"].includes(r.outcome));
         say(`${c.id} asset3d ${c.status}${r.outcome === undefined ? "" : ` · ${r.outcome}`}${c.assetId === undefined ? "" : ` · mesh asset ${c.assetId}`}${c.error === undefined ? "" : ` · ${c.error}`}`);
         for (const v of r.asset?.variants ?? []) say(`  ${v.id} ${v.technique} ${v.status}${v.error === undefined ? "" : ` · ${v.error}`}`);

@@ -113,7 +113,7 @@ async function open(args: string[] = []): Promise<string> {
   return String(r.doc["night"]);
 }
 
-const studio = (title: string) => ({ title, target: "scene", prompt: `A rough artboard: ${title.toLowerCase()}, loose gouache thumbnail.`, anchor: { kind: "watch", ref: "- tag: gouache thumbnails" } });
+const studio = (title: string) => ({ title, target: "scene", genre: "animated short", prompt: `A rough artboard: ${title.toLowerCase()}, loose gouache thumbnail.`, anchor: { kind: "watch", ref: "- tag: gouache thumbnails" } });
 
 const reel = (k: number, brief: Record<string, unknown> = {}) => ({
   brief: {
@@ -130,7 +130,7 @@ const reel = (k: number, brief: Record<string, unknown> = {}) => ({
   approach: { name: "Harbour ledger", medium: "svg", grammar: "morph", density: "mid", direction: "Cranes as bars; the year a tide line rising up the frame.", falsifier: "Reads as a bar chart with boats drawn on it." },
 });
 
-const stats = (title: string, k: number, o: Record<string, unknown> = {}) => ({ title, target: "stats", prompt: "Container throughput as a tide: each port a crane whose arm lengthens with the year; 2008 the one ebb.", anchor: { kind: "free", ref: "" }, use: "a logistics explainer's cold open", reel: reel(k), ...o });
+const stats = (title: string, k: number, o: Record<string, unknown> = {}) => ({ title, target: "stats", genre: "data explainer", prompt: "Container throughput as a tide: each port a crane whose arm lengthens with the year; 2008 the one ebb.", anchor: { kind: "free", ref: "" }, use: "a logistics explainer's cold open", reel: reel(k), ...o });
 
 const ideasOf = async (night: string): Promise<IdeaCandidate[]> => (await readNight(night)).candidates.filter((c): c is IdeaCandidate => c.kind === "idea");
 

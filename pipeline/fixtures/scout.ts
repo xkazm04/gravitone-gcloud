@@ -16,12 +16,13 @@
 // fixture Board's scout packet has a `3d` row: two finished variants, poster tiles, a viewer in Z.
 // And it drew idea artboards (spark scout-idea-artboards): one per target, each anchored to a
 // watchlist line, a registry gap or nothing, and one the studio refused - so the Board's ideas tab
-// has tiles above its words, and the gate a loss with the vendor's sentence.
+// has tiles above its words, and the gate a loss with the vendor's sentence. Each idea tries a genre, and
+// the night proposes one DIRECTION standing on the committed night's kept replica (a words cell in notes).
 
 import { rmSync } from "node:fs";
 
 import { standConcept } from "../../lib/foundry/scout/concept";
-import type { Asset3dCandidate, IdeaCandidate, Night, SceneCandidate, ScoutSource } from "../../lib/foundry/scout/types";
+import type { Asset3dCandidate, DirectionCandidate, IdeaCandidate, Night, SceneCandidate, ScoutSource } from "../../lib/foundry/scout/types";
 import { DAY, HOUR, NOW, outFile, plate, writeBytes, writeJson } from "./kit";
 
 const PALETTE = ["#1d2b3a", "#e0a458", "#5c8a8a", "#f2e8cf"];
@@ -98,6 +99,24 @@ function idea(night: string, id: string, over: Pick<IdeaCandidate, "title" | "ta
   return { id, kind: "idea", sourceIds: [], status: "rendered", jobId: `job:scout-ideas:${night}`, ...(drawn ? { image } : {}), ...over };
 }
 
+function direction(id: string, basedOn: readonly string[]): DirectionCandidate {
+  return {
+    id,
+    kind: "direction",
+    sourceIds: [],
+    status: "rendered",
+    title: "Lantern-lit mystery short, slow reveals",
+    format: "short",
+    genre: "animated mystery short",
+    style: "warm amber against cold slate, one motivated key",
+    tone: "quiet, uneasy",
+    audience: "adults",
+    premise: "A night watchman follows a lantern that climbs the stairwell ahead of him, three steps at a time, and never lets him catch up.",
+    basedOn,
+    use: "a 30-second YouTube Short",
+  };
+}
+
 function closedNight(): Night {
   const id = dayOf(DAY);
   const s1 = source(id, "s-01", "Fixture trailer one", 4);
@@ -119,10 +138,11 @@ function closedNight(): Night {
       { id: "c-02", kind: "finding", sourceIds: [s1.id], status: "rendered", template: "cinematic", step: "02-frames", claim: "Hold a wide shot until the subject settles, then cut.", quote: "the push-in only reads once the figure stops moving" },
       { id: "c-03", kind: "watch", sourceIds: [s1.id], status: "rendered", entry: "channel: Fixture Studio - https://www.youtube.com/@fixture", why: "two usable long takes in one night" },
       asset(id, "c-04"),
-      idea(id, "c-05", { title: "Lantern-lit stairwell, the light climbing ahead of the figure", target: "scene", anchor: { kind: "watch", ref: "channel: Fixture Studio" }, prompt: "rough storyboard frame, a narrow stairwell lit by one lantern held high, the light reaching three steps ahead of a cloaked figure, deep shadow below, warm amber against cold slate", use: "a beat for a slow reveal" }),
-      idea(id, "c-06", { title: "Cut-paper harbour at dusk", target: "style", anchor: { kind: "gap", ref: "paper-craft looks" }, prompt: "layered cut-paper diorama of a harbour at dusk, visible paper edges and soft drop shadows between layers, five flat tones, no gradients" }),
-      idea(id, "c-07", { title: "Brass diving helmet with one cracked porthole", target: "asset3d", anchor: { kind: "free", ref: "" }, prompt: "concept sheet of a brass diving helmet, one porthole cracked, rivets and a dented crown, chunky readable silhouette, neutral grey ground" }),
-      idea(id, "c-08", { title: "Rain on a neon market awning", target: "scene", anchor: { kind: "watch", ref: "tag: neon noir" }, prompt: "rain sheeting off a striped market awning under neon signs", status: "failed", error: "leonardo answered 429: generation quota exhausted for this hour" }),
+      idea(id, "c-05", { title: "Lantern-lit stairwell, the light climbing ahead of the figure", target: "scene", genre: "animated mystery short", anchor: { kind: "watch", ref: "channel: Fixture Studio" }, prompt: "rough storyboard frame, a narrow stairwell lit by one lantern held high, the light reaching three steps ahead of a cloaked figure, deep shadow below, warm amber against cold slate", use: "a beat for a slow reveal" }),
+      idea(id, "c-06", { title: "Cut-paper harbour at dusk", target: "style", genre: "music video", anchor: { kind: "gap", ref: "paper-craft looks" }, prompt: "layered cut-paper diorama of a harbour at dusk, visible paper edges and soft drop shadows between layers, five flat tones, no gradients" }),
+      idea(id, "c-07", { title: "Brass diving helmet with one cracked porthole", target: "asset3d", genre: "game trailer", anchor: { kind: "free", ref: "" }, prompt: "concept sheet of a brass diving helmet, one porthole cracked, rivets and a dented crown, chunky readable silhouette, neutral grey ground" }),
+      idea(id, "c-08", { title: "Rain on a neon market awning", target: "scene", genre: "title opener", anchor: { kind: "watch", ref: "tag: neon noir" }, prompt: "rain sheeting off a striped market awning under neon signs", status: "failed", error: "leonardo answered 429: generation quota exhausted for this hour" }),
+      direction("c-09", [`${dayOf(2 * DAY)}/c-01/replica-1`]),
     ],
     jobs: ["job:run:scout-ingest:" + id, `job:scout-scene:${id}:c-01`, `job:scout-asset:${id}:c-04`, `job:scout-ideas:${id}`],
   };

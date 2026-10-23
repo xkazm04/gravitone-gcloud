@@ -208,9 +208,18 @@ export const saveNight = (n: Night): Promise<void> => writeJsonAtomic(path.join(
  * returning the same object writes nothing.
  */
 export async function mutateNight(id: NightId, fn: (n: Night) => Night): Promise<Night> {
+  return mutateNightWith(id, async (n) => fn(n));
+}
+
+/**
+ * `mutateNight` whose change does file work first under the same lock (add-source copying a kept
+ * idea's artboard into `sources/s-NN/`): the id it takes and the file it writes cannot be raced by
+ * a second writer. A throw writes no manifest.
+ */
+export async function mutateNightWith(id: NightId, fn: (n: Night) => Promise<Night>): Promise<Night> {
   return withRunLock(nightDir(id), async () => {
     const before = await readNight(id);
-    const after = fn(before);
+    const after = await fn(before);
     if (after !== before) await saveNight(after);
     return after;
   });

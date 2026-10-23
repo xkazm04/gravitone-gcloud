@@ -133,7 +133,9 @@ async function readAct(e: SceneEngines, req: SceneRequest, k: number, ctx: StepC
   if (file === undefined) return fatal("internal", `${c.id} has no keyframe ${k} on its request`);
   const n = req.keyframes.length;
   const timing = sceneTiming(night, { ...c, keyframes: req.keyframes });
-  const deny = denylistOf(night.sources.filter((s) => c.sourceIds.includes(s.id)));
+  // Our own kept idea (rights `ours`) is not a found source: its title is our words, and a recipe read
+  // off our own artboard may say them (spark scout-idea-artboards WP-I4).
+  const deny = denylistOf(night.sources.filter((s) => c.sourceIds.includes(s.id) && s.rights !== "ours"));
   const prior: SceneDraft[] = [];
   for (let i = 1; i < k; i++) {
     const d = draftOf(ctx.outputs.get(readStep(i))?.value["draft"], deny);

@@ -12,6 +12,7 @@ import { launchScene } from "../../producers/scoutScene.ts";
 import { getExtractRun } from "../extract/store.ts";
 import type { ExtractUpload } from "../extract/types.ts";
 import { nightBudget, type NightBudget } from "./budget.ts";
+import { fromIdeaOf } from "./direction.ts";
 import { MAX_PICTURE_BYTES } from "./ingest.ts";
 import { mutateNight, nextCandidateId, nightDir, readNight, resolveInNight, withCandidate } from "./store.ts";
 import { CANDIDATE_KINDS, CANDIDATE_STATUSES, STOP_REASONS, type Candidate, type CandidateId, type Night, type NightId, type SceneCandidate, type StopReason, type StyleCandidate } from "./types.ts";
@@ -27,7 +28,8 @@ import { CANDIDATE_KINDS, CANDIDATE_STATUSES, STOP_REASONS, type Candidate, type
 //      the sentence. A job ceiling is a stop point (Director's ruling, Phase 4);
 //      the NIGHT's ceiling is a promise, so a launch that could break it is not made;
 //   2. the job's ceiling is the night's remaining money;
-//   3. the candidate row, its job id on `night.jobs`, and its outcome.
+//   3. the candidate row, its job id on `night.jobs`, and its outcome - the row carrying
+//      `fromIdea` when a source it is made from is a kept idea brought in (./direction.ts).
 //
 // The CLI confirms its own receipt (COMMON decision 3, as pipeline/foundry/extract.mts
 // does): invoking a night's act is the consent, inside the operator's standing $15
@@ -96,6 +98,14 @@ export async function setCandidate(id: NightId, c: Candidate, job?: string): Pro
   });
 }
 
+/** `fromIdea` on a candidate the night holds, for an act whose own door takes none (the asset brief's). */
+export async function markFromIdea(id: NightId, cid: CandidateId, fromIdea: string): Promise<void> {
+  await mutateNight(id, (n) => {
+    const c = n.candidates.find((x) => x.id === cid);
+    return c === undefined || c.fromIdea === fromIdea ? n : withCandidate(n, { ...c, fromIdea });
+  });
+}
+
 export async function addCandidate<C extends Candidate>(id: NightId, make: (cid: CandidateId) => C): Promise<C> {
   let made: C | undefined;
   await mutateNight(id, (n) => {
@@ -144,7 +154,7 @@ export async function styleAct(ctx: ActContext, id: NightId, sourceIds: readonly
   const refused = overBudget(`style over ${sourceIds.join(",")}`, worstOf(rc), b);
   if (refused !== null) throw refused;
   ctx.say(`receipt (${rc.mode}): ${uploads.length} picture(s) · worst case ${usd(worstOf(rc))} · ceiling ${usd(b.remainingUsd)}`);
-  let c: StyleCandidate = await addCandidate(id, (cid) => ({ id: cid, kind: "style", sourceIds: [...sourceIds], status: "pending", ...(use === undefined ? {} : { use }) }));
+  let c: StyleCandidate = await addCandidate(id, (cid) => ({ id: cid, kind: "style", sourceIds: [...sourceIds], status: "pending", ...(use === undefined ? {} : { use }), ...fromIdeaOf(night, sourceIds) }));
   const r1 = await launchExtract(ctx.store, target, { ...opts, token: rc.token });
   if (!r1.ok || r1.value.kind !== "launched") {
     const why = !r1.ok ? r1.error.message : `the receipt moved while it was confirmed (${r1.value.kind}); nothing launched`;
@@ -192,7 +202,7 @@ export async function sceneAct(ctx: ActContext, id: NightId, sourceId: string, f
   if (b.remainingUsd <= 0) throw new Refusal(`scene from ${sourceId}: the night has nothing left - ${budgetLine(b)}; nothing launched`);
   let clip = b.clipsUsed < b.clipCap;
   let clipWhy = clip ? " with a clip" : " (clip cap spent: stills only)";
-  let c: SceneCandidate = await addCandidate(id, (cid) => ({ id: cid, kind: "scene", sourceIds: [sourceId], status: "pending", keyframes, replicas: [], ...(use === undefined ? {} : { use }) }));
+  let c: SceneCandidate = await addCandidate(id, (cid) => ({ id: cid, kind: "scene", sourceIds: [sourceId], status: "pending", keyframes, replicas: [], ...(use === undefined ? {} : { use }), ...fromIdeaOf(night, [sourceId]) }));
   const fail = async (why: string): Promise<never> => {
     await setCandidate(id, { ...c, status: "failed", error: why });
     throw new Refusal(why);

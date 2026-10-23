@@ -9,11 +9,11 @@ import type { IdeaEngines } from "../../producers/scoutIdeaActs.ts";
 import { launchReels, reelFiles, SCOUT_REELS_LANE } from "../../producers/scoutReel.ts";
 import { launchable, Refusal, type ActContext } from "./acts.ts";
 import { mutateNight, nextCandidateId, readNight, resolveInNight, withCandidate } from "./store.ts";
-import { DEFAULT_IDEA_CAP, DEFAULT_REEL_CAP, IDEA_ANCHORS, REEL_DENSITIES, REEL_GRAMMARS, REEL_MEDIA, IDEA_PROMPT_MAX, IDEA_TARGETS, IDEA_TITLE_MAX, REEL_KINDS, USE_MAX, type CandidateId, type IdeaCandidate, type Night, type NightId, type ReelBrief } from "./types.ts";
+import { DEFAULT_IDEA_CAP, DEFAULT_REEL_CAP, GENRE_MAX, IDEA_ANCHORS, REEL_DENSITIES, REEL_GRAMMARS, REEL_MEDIA, IDEA_PROMPT_MAX, IDEA_TARGETS, IDEA_TITLE_MAX, REEL_KINDS, USE_MAX, type CandidateId, type IdeaCandidate, type Night, type NightId, type ReelBrief } from "./types.ts";
 
 // THE NIGHT'S IDEAS - what `pipeline/scout.mts ideas <night> --json <file|->` does (spark
 // scout-idea-artboards WP-I2, stats-reels WP-R2). The skill writes a batch of briefs in its own words -
-// `{title, target, prompt, anchor: {kind, ref}, use?, reel?}` - and this act turns each into an `idea`
+// `{title, target, genre, prompt, anchor: {kind, ref}, use?, reel?}` - and this act turns each into an `idea`
 // candidate (no source: the words are ours). The batch splits by target into at most two jobs:
 //
 //   scene, style, asset3d   ONE scout-ideas job that draws every such idea as one rough still in the
@@ -86,6 +86,9 @@ const ideaSchema = z
     /** The idea's headline on the Board. */
     title: text(IDEA_TITLE_MAX),
     target: z.enum(IDEA_TARGETS),
+    /** The genre it tries (`animated comedy sketch`, `music video`): what a night spreads its ideas across before a
+     *  direction is confirmed (WP-I4a). Required on every new brief; the first batch's candidates hold none. */
+    genre: text(GENRE_MAX).refine((s) => !/[\r\n]/.test(s), { message: "one line" }),
     /** The studio prompt, verbatim. A stats idea's is the seat's one-paragraph direction for its author turn. */
     prompt: text(IDEA_PROMPT_MAX),
     anchor: z
@@ -100,18 +103,18 @@ const ideaSchema = z
   .refine((b) => b.target !== "stats" || b.reel !== undefined, { message: "a stats idea carries its reel: {brief, approach}", path: ["reel"] })
   .refine((b) => b.target === "stats" || b.reel === undefined, { message: "only a stats idea carries a reel", path: ["reel"] });
 
-export type IdeaBrief = Pick<IdeaCandidate, "title" | "target" | "prompt" | "anchor" | "use"> & { readonly reel?: ReelBrief };
+export type IdeaBrief = Pick<IdeaCandidate, "title" | "target" | "prompt" | "anchor" | "use"> & { readonly genre: string; readonly reel?: ReelBrief };
 
 /** The skill's batch as briefs, or the first bad brief's place and reason; nothing is written here. */
 export function parseIdeas(raw: unknown): Result<IdeaBrief[]> {
-  if (!Array.isArray(raw)) return err("invalid", "ideas: the input is a JSON array of briefs {title, target, prompt, anchor: {kind, ref}, use?, reel?}");
+  if (!Array.isArray(raw)) return err("invalid", "ideas: the input is a JSON array of briefs {title, target, genre, prompt, anchor: {kind, ref}, use?, reel?}");
   if (raw.length === 0) return err("invalid", "ideas: the batch holds no brief");
   const out: IdeaBrief[] = [];
   for (const [i, item] of raw.entries()) {
     const r = parseAt(`idea ${i + 1}`, ideaSchema, item);
     if (!r.ok) return r;
     const b = r.value;
-    out.push({ title: b.title, target: b.target, prompt: b.prompt, anchor: { kind: b.anchor.kind, ref: b.anchor.ref }, ...(b.use === undefined ? {} : { use: b.use }), ...(b.reel === undefined ? {} : { reel: b.reel as ReelBrief }) });
+    out.push({ title: b.title, target: b.target, genre: b.genre, prompt: b.prompt, anchor: { kind: b.anchor.kind, ref: b.anchor.ref }, ...(b.use === undefined ? {} : { use: b.use }), ...(b.reel === undefined ? {} : { reel: b.reel as ReelBrief }) });
   }
   return ok(out);
 }

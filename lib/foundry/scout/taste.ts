@@ -1,5 +1,6 @@
+import { developedOf } from "./direction";
 import { listNights, readNight } from "./store";
-import { CANDIDATE_KINDS, parseCellId, type Candidate, type CandidateKind, type Night } from "./types";
+import { CANDIDATE_KINDS, parseCellId, type Candidate, type CandidateKind, type IdeaCandidate, type Night } from "./types";
 
 // THE TASTE BRIEF - the operator's last verdicts, written into each new night as
 // taste.md for the skill to read before it searches (spark media-training-loop:
@@ -18,6 +19,12 @@ import { CANDIDATE_KINDS, parseCellId, type Candidate, type CandidateKind, type 
 // (operator, 2026-10-22: does T1's budget generation or T2's game-camera design make the better
 // hero?), and a comparison is only readable as counts side by side. A cell `c-05/t2` is the
 // variant whose id is its technique (lib/producers/scoutAssetActs.ts `plannedVariants`).
+//
+// DIRECTIONS AND IDEAS (spark scout-idea-artboards WP-I4a) are read off the same nights, each in the
+// brief's own words, verbatim: the directions confirmed (what the next nights work inside) and refused;
+// the kept ideas no night has developed yet (no source and no candidate names it, ./direction.ts) -
+// once one is brought in it drops off the list; the blocked ideas, the bans of the next ideation; and
+// the genres kept and blocked, counted, so a night spreads across genres until a direction is set.
 
 export const TASTE_NIGHTS = 7;
 
@@ -39,6 +46,10 @@ function label(n: Night, c: Candidate): string {
       return `"${c.entry}"`;
     case "asset3d":
       return `"${c.brief.subject}" [${c.brief.class}]`;
+    case "idea":
+      return `"${c.title}" [${c.target}${c.genre === undefined ? "" : ` · ${c.genre}`}]`;
+    case "direction":
+      return `"${c.title}" [${c.format} · ${c.genre}]`;
     default:
       return `${from === "" ? c.id : from}${c.use === undefined ? "" : ` - for ${c.use}`}`;
   }
@@ -94,7 +105,71 @@ export function assetTally(nights: readonly Night[]): string[] {
   return out;
 }
 
-/** The brief for nights already read (pure; `tasteBrief` reads them). */
+type Judged<C extends Candidate> = { readonly n: Night; readonly c: C; readonly cell: string; readonly reasons: readonly string[]; readonly note?: string };
+
+/** Every judged cell of `kind`, kept or rejected, with its night, reasons and note - newest night first, then the night's order. */
+function judgedOf<K extends Candidate["kind"]>(nights: readonly Night[], kind: K, verdict: Verdict): Judged<Extract<Candidate, { kind: K }>>[] {
+  return nights.flatMap((n) => {
+    const r = n.committed;
+    if (r === undefined) return [];
+    return (verdict === "kept" ? r.kept : r.rejected).flatMap((cell) => {
+      const c = candidateOf(n, cell);
+      if (c?.kind !== kind) return [];
+      const note = r.notes[cell];
+      return [{ n, c: c as Extract<Candidate, { kind: K }>, cell, reasons: r.reasons[cell] ?? [], ...(note === undefined ? {} : { note }) }];
+    });
+  });
+}
+
+const why = (j: Pick<Judged<Candidate>, "reasons" | "note">): string => `${j.reasons.length > 0 ? j.reasons.join(", ") : "no reason given"}${j.note === undefined ? "" : ` - note: ${j.note}`}`;
+const none = (xs: readonly string[]): readonly string[] => (xs.length === 0 ? ["- none"] : xs);
+
+/**
+ * `## Directions confirmed` / `refused`, `## Ideas to develop` / `blocked`, `## Genres`, over the judged
+ * nights. `developed` is every kept idea some night already develops (./direction.ts developedOf).
+ */
+export function directionsAndIdeas(judged: readonly Night[], developed: ReadonlyMap<string, string>): string[] {
+  const confirmed = judgedOf(judged, "direction", "kept").flatMap(({ n, c }) => [
+    `- "${c.title}" (${n.id}/${c.id}) · ${c.format} · ${c.genre} · style: ${c.style} · tone: ${c.tone} · audience: ${c.audience}`,
+    `  ${c.premise}`,
+  ]);
+  const refused = judgedOf(judged, "direction", "rejected").map((j) => `- "${j.c.title}" (${j.n.id}/${j.c.id}): ${why(j)}`);
+  const kept = judgedOf(judged, "idea", "kept");
+  const toDevelop = kept
+    .filter(({ n, c }) => !developed.has(`${n.id}/${c.id}`))
+    .flatMap(({ n, c }) => [`- ${n.id}/${c.id} · ${c.target} · ${c.genre ?? "-"} · ${c.title}`, `  ${c.prompt}`]);
+  const blocked = judgedOf(judged, "idea", "rejected");
+  const genres = (js: readonly Judged<IdeaCandidate>[]): string => {
+    const by = new Map<string, number>();
+    for (const { c } of js) if (c.genre !== undefined) by.set(c.genre, (by.get(c.genre) ?? 0) + 1);
+    return [...by].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([g, k]) => `${g} ${k}`).join(", ") || "none";
+  };
+  return [
+    "## Directions confirmed",
+    "",
+    ...none(confirmed),
+    "",
+    "## Directions refused",
+    "",
+    ...none(refused),
+    "",
+    "## Ideas to develop",
+    "",
+    ...none(toDevelop),
+    "",
+    "## Ideas blocked",
+    "",
+    ...none(blocked.map((j) => `- "${j.c.title}" (${j.n.id}/${j.c.id}): ${why(j)}`)),
+    "",
+    "## Genres",
+    "",
+    `- kept: ${genres(kept)}`,
+    `- blocked: ${genres(blocked)}`,
+    "",
+  ];
+}
+
+/** The brief for nights already read (pure; `tasteBrief` reads them). Nights not committed only say which kept ideas are developed. */
 export function tasteOf(nights: readonly Night[]): string {
   const judged = nights.filter((n) => n.committed !== undefined && !n.dry && !n.committed.dry).slice(0, TASTE_NIGHTS);
   const lines = ["# Taste", ""];
@@ -154,6 +229,7 @@ export function tasteOf(nights: readonly Night[]): string {
   ];
   const keptUses = uses((n, cell) => n.committed?.kept.includes(cell) === true);
   const refusedUses = uses((n, cell) => (n.committed?.reasons[cell] ?? []).includes("use case"));
+  lines.push(...directionsAndIdeas(judged, developedOf(nights)));
   lines.push("## Uses", "", `- kept: ${keptUses.join("; ") || "none"}`, `- refused as a use: ${refusedUses.join("; ") || "none"}`, "");
   lines.push(...assetTally(judged));
   lines.push("## Channels", "", `- kept: ${list(kept)}`, `- thrown: ${list(thrown)}`);
@@ -163,11 +239,11 @@ export function tasteOf(nights: readonly Night[]): string {
   return lines.join("\n");
 }
 
-/** Read every night on disk, newest first, and write the brief. An unreadable night is skipped. */
+/** Read every night on disk, newest first, and write the brief. An unreadable night is skipped. Uncommitted nights are read too: their sources say which kept ideas are already developed. */
 export async function tasteBrief(except?: string): Promise<string> {
   const nights: Night[] = [];
   for (const s of await listNights()) {
-    if (s.id === except || s.state !== "committed") continue;
+    if (s.id === except) continue;
     try {
       nights.push(await readNight(s.id));
     } catch {
