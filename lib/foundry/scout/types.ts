@@ -50,12 +50,23 @@ export const MAX_IDEA_CAP = 40;
 /** An idea's title is its headline on the Board (question taste 2026-08-30: claim = headline <= 90 chars). */
 export const IDEA_TITLE_MAX = 90;
 export const IDEA_PROMPT_MAX = 1500;
-/** What a kept idea becomes on the next night, through the act of that name. */
-export const IDEA_TARGETS = ["scene", "style", "asset3d"] as const;
+/** What a kept idea becomes on the next night, through the act of that name. `stats` (spark stats-reels): a
+ *  data video authored in code - kept, the next night researches its real data and renders the full strip. */
+export const IDEA_TARGETS = ["scene", "style", "asset3d", "stats"] as const;
 export type IdeaTarget = (typeof IDEA_TARGETS)[number];
 /** Where an idea came from: a watchlist line, a registry gap (registry.md), or neither (`free`). */
 export const IDEA_ANCHORS = ["watch", "gap", "free"] as const;
 export type IdeaAnchorKind = (typeof IDEA_ANCHORS)[number];
+/** Stats-reel ideas a night authors beside its artboards (spark stats-reels, wave 1: "up to 6"). They count
+ *  toward this cap only - not the idea cap, the ~20-row target or the clip cap. */
+export const DEFAULT_REEL_CAP = 6;
+export const MAX_REEL_CAP = 12;
+/** The one inline block a reel's strip holds ALL its numbers in, so a kept reel's real data swaps in whole. */
+export const REEL_DATA_ID = "strip-data";
+/** A reel brief's data shapes (the strips fixtures' two race kinds, and three a stats reel also tells). */
+export const REEL_KINDS = ["level-race", "cumulative-race", "counter", "ranking", "share"] as const;
+export type ReelKind = (typeof REEL_KINDS)[number];
+
 /** Hailuo takes 5 or 10 (lib/imaging/video/types.ts CLIP_DURATIONS); the night renders the short one. */
 export const CLIP_SECONDS = 5;
 
@@ -91,6 +102,8 @@ export type Night = {
   readonly assetCap?: number;
   /** Idea artboards the night may draw (`idea` candidates). Absent on a night opened before 2026-10-23: DEFAULT_IDEA_CAP. */
   readonly ideaCap?: number;
+  /** Stats-reel ideas the night may author (`idea` candidates with target `stats`). Absent: DEFAULT_REEL_CAP. */
+  readonly reelCap?: number;
   /** A dry night ran on stand-ins; its packet can be triaged but commits nothing. */
   readonly dry: boolean;
   readonly state: NightState;
@@ -281,8 +294,46 @@ export type IdeaCandidate = CandidateBase & {
   /** The studio prompt, verbatim. */
   readonly prompt: string;
   readonly anchor: { readonly kind: IdeaAnchorKind; readonly ref: string };
-  /** Night-relative artboard, OURS (`ideas/c-12.png`), once drawn. */
+  /** Night-relative artboard, OURS (`ideas/c-12.png`), once drawn. A stats idea's is its strip's frame 120. */
   readonly image?: string;
+  /** A stats idea's strip and its inputs, night-relative under `ideas/<c-id>/` (present only on target `stats`). */
+  readonly reel?: ReelFiles;
+};
+
+/**
+ * What the skill writes for a stats idea (the `ideas` door's `reel` field, spark stats-reels). The brief is
+ * ILLUSTRATIVE on the night that proposes it (wave 2: triage ideas, not datasets) - plausible numbers in the
+ * shape a real fixture would have (pipeline/strips/data/*.json), the source line on screen saying so. The
+ * approach is the seat's own design (wave 2: topic + free design), in a strips approach card's fields.
+ */
+export type ReelBrief = {
+  readonly brief: {
+    readonly case: string;
+    readonly title: string;
+    readonly hook: string;
+    readonly unit: string;
+    readonly kind: ReelKind;
+    /** The numbers, in the fixture's shape: free JSON the strip reads from its REEL_DATA_ID block. */
+    readonly data: unknown;
+    readonly steps?: readonly string[];
+    readonly illustrative: true;
+  };
+  readonly approach: {
+    readonly name: string;
+    readonly medium: string;
+    readonly grammar: string;
+    readonly density: string;
+    readonly direction: string;
+    readonly falsifier: string;
+  };
+};
+
+/** Where a stats idea's files live, night-relative. */
+export type ReelFiles = {
+  readonly brief: string;
+  readonly approach: string;
+  /** Present once the author turn wrote a strip that passed the lint. */
+  readonly strip?: string;
 };
 
 export type Candidate = StyleCandidate | SceneCandidate | FindingCandidate | WatchCandidate | Asset3dCandidate | IdeaCandidate;

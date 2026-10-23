@@ -263,7 +263,7 @@ function assetCells(night: Night, c: Asset3dCandidate, read: AssetRead | undefin
 export const ideaCell = (candidate: CandidateId): string => cellId(candidate, "board");
 
 /** An idea's target as the Board says it: `asset3d` is the act's name, a `3d asset` is the thing. */
-export const IDEA_TARGET_WORD: Readonly<Record<IdeaTarget, string>> = { scene: "scene", style: "style", asset3d: "3d asset" };
+export const IDEA_TARGET_WORD: Readonly<Record<IdeaTarget, string>> = { scene: "scene", style: "style", asset3d: "3d asset", stats: "stats reel" };
 
 /** An idea's target and anchor: `scene · watch: tag: risograph`. A `free` idea names no anchor ref. */
 export const ideaMeta = (c: Pick<IdeaCandidate, "target" | "anchor">): string => `${IDEA_TARGET_WORD[c.target]} · ${c.anchor.kind === "free" ? "free" : `${c.anchor.kind}: ${c.anchor.ref}`}`;

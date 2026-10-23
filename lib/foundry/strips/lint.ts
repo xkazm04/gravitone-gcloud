@@ -79,4 +79,25 @@ export function lintStrip(html: string): LintFinding[] {
   return out;
 }
 
+/**
+ * A STATS REEL'S DATA RULE (spark stats-reels): every number the strip shows lives in ONE inline
+ * `<script id="strip-data" type="application/json">` block the page reads, so a kept reel's real data
+ * replaces the illustrative numbers whole and the motion is not authored again. Static, like the rest:
+ * exactly one block, its body parses as JSON, and the page reads it by id.
+ */
+export function stripDataRule(html: string, id = "strip-data"): LintFinding[] {
+  const blocks = [...html.matchAll(new RegExp(`<script\\b[^>]*\\bid\\s*=\\s*["']${id}["'][^>]*>([\\s\\S]*?)</script>`, "gi"))];
+  if (blocks.length !== 1) return [{ rule: `data: exactly one <script id="${id}"> block holds the numbers`, excerpt: `found ${blocks.length}` }];
+  const block = blocks[0];
+  const out: LintFinding[] = [];
+  if (!/type\s*=\s*["']application\/json["']/i.test(block?.[0].slice(0, block[0].indexOf(">")) ?? "")) out.push({ rule: `data: the ${id} block is type="application/json"`, excerpt: "" });
+  try {
+    JSON.parse(block?.[1] ?? "");
+  } catch (e) {
+    out.push({ rule: `data: the ${id} block is not valid JSON`, excerpt: e instanceof Error ? e.message.slice(0, 80) : "" });
+  }
+  if (!new RegExp(`getElementById\\(\\s*["']${id}["']\\s*\\)|querySelector\\(\\s*["']#${id}["']\\s*\\)`).test(html)) out.push({ rule: `data: the page never reads the ${id} block`, excerpt: "" });
+  return out;
+}
+
 export const formatLint = (f: LintFinding[]) => f.map((x) => (x.excerpt ? `${x.rule} — ${x.excerpt}` : x.rule));
