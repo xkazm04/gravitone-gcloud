@@ -4,9 +4,11 @@ import { parseAt, type Parsed } from "@gt/domain/door";
 import { AppError, type Result } from "@gt/domain/errors";
 
 import { clientIp, presentedSecret, rateLimit, resolvePrincipal } from "../../lib/apiAuth.ts";
+import { localEntryGranted } from "../../lib/localEntry.ts";
+import { LOCAL_ENTRY_COOKIE } from "../../lib/localMode.ts";
 import { isRefusal, presentedIdToken, principalRateKey, type KeyUse, type Principal, type Refusal, type Resolution } from "../../lib/principal.ts";
 import { asAppError, clientGone, envelope, queryOf, readJson, resultResponse, sameOrigin } from "./http.ts";
-import { cookieValue, SESSION_COOKIE, verifySession } from "./session.ts";
+import { cookieValue, resolveSession, SESSION_COOKIE, verifySession } from "./session.ts";
 
 // route() - THE ONE WRAPPER every handler under app/api goes through, and the
 // only HTTP surface the rebuild keeps: CLIs, agents and file bytes (plan §3.4).
@@ -94,9 +96,13 @@ export async function guardOf(req: Request, guard: Exclude<Guard, "public">): Pr
   let who: Resolution = await resolvePrincipal(req, { use });
   let viaCookie = false;
   if (isRefusal(who) && presentedSecret(req) === undefined && presentedIdToken(req) === undefined) {
-    const token = cookieValue(req.headers.get("cookie"), SESSION_COOKIE);
-    if (token !== undefined) {
-      who = await verifySession(token, use);
+    const jar = req.headers.get("cookie");
+    const token = cookieValue(jar, SESSION_COOKIE);
+    // The landing's local entry rides the same way (lib/localEntry.ts): an <img> or a fetch from the
+    // studio carries the choice cookie and nothing else, and the grant is re-judged for this request.
+    const local = localEntryGranted(cookieValue(jar, LOCAL_ENTRY_COOKIE), req.headers.get("host"));
+    if (token !== undefined || local) {
+      who = token !== undefined ? await verifySession(token, use) : await resolveSession(undefined, use, undefined, true);
       viaCookie = true;
     }
   }

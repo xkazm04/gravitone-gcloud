@@ -4,6 +4,7 @@ import { z } from "zod";
 import { ok } from "@gt/domain/errors";
 
 import { runAction } from "../../app/_server/actionCore.ts";
+import { guardOf } from "../../app/_server/route.ts";
 import { clearedCookie, cookieValue, isLoopbackHost, resolveSession, SESSION_COOKIE, sessionCookie, verifySession } from "../../app/_server/session.ts";
 import { localEntryAvailable, localEntryCookie, localEntryGranted } from "../../lib/localEntry.ts";
 import { LOCAL_ENTRY_COOKIE, localEntryChosen } from "../../lib/localMode.ts";
@@ -106,6 +107,14 @@ describe("local entry (lib/localEntry.ts)", () => {
     expect(localEntryCookie(false)).toContain("Max-Age=0");
     expect(localEntryChosen(`a=1; ${LOCAL_ENTRY_COOKIE}=1`)).toBe(true);
     expect(localEntryChosen(`${LOCAL_ENTRY_COOKIE}=10`)).toBe(false);
+  });
+
+  it("the route guard admits the choice on a loopback Host - an <img> of the studio carries nothing else - and only there", async () => {
+    const req = (host: string) => new Request("http://localhost/api/foundry/file?kind=scout", { headers: { cookie: `${LOCAL_ENTRY_COOKIE}=1`, host } });
+    const here = await guardOf(req("localhost:3000"), "access");
+    expect("who" in here && here.who.kind).toBe("local-owner");
+    const away = await guardOf(req("192.168.1.20:3000"), "access");
+    expect("refusal" in away && away.refusal.status).toBe(401);
   });
 });
 
