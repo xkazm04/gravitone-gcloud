@@ -417,5 +417,9 @@ if (entry !== undefined && pathToFileURL(path.resolve(entry)).href.toLowerCase()
   // The stores resolve from process.cwd(); a --json input and a folder are resolved where they were typed, before the move.
   const args = process.argv.slice(2).map((a, i, all) => ((all[i - 1] === "--json" || all[i - 1] === "--brief" || all[i - 1] === "folder") && a !== "-" && fs.existsSync(a) ? path.resolve(a) : a));
   process.chdir(ROOT);
-  process.exitCode = await runCli(args, { env: process.env, out: (s) => console.log(s), err: (s) => console.error(s) });
+  const code = await runCli(args, { env: process.env, out: (s) => console.log(s), err: (s) => console.error(s) });
+  // The studio's CDP socket (lib/imaging/studio/browser.ts) is never closed - closing it closes the
+  // operator's Chrome - and it keeps node alive after the doctor's studio line or an `ideas` batch
+  // (2026-10-23: a doctor that printed nothing and never exited). Leave once stdout has drained.
+  process.stdout.write("", () => process.exit(code));
 }
