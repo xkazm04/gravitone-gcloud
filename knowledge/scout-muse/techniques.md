@@ -6,7 +6,7 @@ night's marker. Craft, not content: no person, artist, studio or franchise is na
 
 ## The line (never a taste)
 
-- Every woman is a fictional adult. The prompt states `aged NN` with NN 25-60; the eye must read her as
+- Every woman is a fictional adult. The prompt states `aged NN` with NN 25-50; the eye must read her as
   21 or older or the still is deleted before the Board.
 - Nothing nude, no sexual act, no real person or lookalike. Suggestive is a wardrobe and pose question
   the operator judges; nude is a refusal the door and the eye make.
@@ -70,8 +70,9 @@ Each rung is a look family a night spreads across before a direction is confirme
 - Roleplay situations test a character, not a set: a cafe date by the window, a rooftop at night, a
   late gaming session, a rainy bus stop, a museum gallery, a bookshop aisle, a kitchen breakfast, a
   ski-lodge fireplace. One situation per still, framed for a face that can be read.
-- Spread the cast: ages 25-60, many skin tones, hair textures and body types; a night that draws one
-  type of woman learns one thing.
+- Spread the cast across skin tones, hair colours and textures, faces and styles; a night that draws one
+  type of woman learns one thing. Every woman is conventionally attractive (the operator, 2026-10-24):
+  aged 25-50, slim, slender, athletic or curvy-and-fit, never plus-size, with no age marks.
 
 ## Reasons a still is thrown, on the scout source's keys
 

@@ -8,7 +8,8 @@
 
 /** The youngest age a prompt may state. Anime and stylised looks drift young; the floor sits well above 18. */
 export const MUSE_MIN_AGE = 25;
-export const MUSE_MAX_AGE = 60;
+/** The oldest age a card or prompt may state - the operator, 2026-10-24: conventionally attractive, never over 50. */
+export const MUSE_MAX_AGE = 50;
 /** The youngest age the eye may READ before a still is thrown, whatever the prompt said. */
 export const MUSE_MIN_APPARENT_AGE = 21;
 

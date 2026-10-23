@@ -1,7 +1,7 @@
 ---
 name: scout-muse
 memory: none
-version: 1.1.0
+version: 1.2.0
 category: Development
 description: The muse wing of the nightly scout loop - an SFW study of how fictional adult women are drawn as characters, from ultra-photoreal through painterly, anime and 3D concept looks. Researches prompt technique on the web, crosses looks with character cards as tall 9:16 posters and roleplay-situation scenes in the operator's Leonardo studio at quality Low, has a vision eye clear every still (stated and read adult, never nude, never a real person) and leaves ONE Board packet pkt:scout:muse:<night> for K/X. Kept looks join the shared style catalogue (so /scout may use them); kept characters join knowledge/scout-muse/characters.md. Wraps pipeline/scout.mts --wing muse; it never keeps, rejects or commits anything on the Board, and it never reads or writes the scout wing's nights. Invoke with /scout-muse night [--dry] [--ideas N], /scout-muse status [<night>].
 argument-hint: "night [--dry] [--ideas N] | status [<night>]"
@@ -21,7 +21,7 @@ character. You pre-filter; you never keep.
 
 ## The line (read before every night - it is not a taste)
 
-- **Fictional adults only.** Every prompt states `aged NN`, NN 25-60; a character prompt's age is her
+- **Fictional adults only.** Every prompt states `aged NN`, NN 25-50 (the door refuses older); a character prompt's age is her
   card's. The door refuses youth words and nudity words; the eye deletes a still it reads under 21, nude,
   or as a real person, before the Board sees it. Anime and stylised looks drift young: state adult
   proportions and a poised or neutral expression, every time.
@@ -49,8 +49,13 @@ shared catalogue, and a scout look may be tried here.
   risograph two-colour print, a claymation 3D figure, a gouache storybook plate, a real-time engine
   character select screen...). Never reuse tonight's or a kept night's direction word for word.
 - **Spread.** Until the operator has kept three looks, a night spans every family of the ladder, at most a
-  quarter of its stills in one family, and a cast of ages 25-60, many skin tones, hair textures and body
-  types.
+  quarter of its stills in one family, and a cast of many skin tones, hair colours and textures.
+- **Conventionally attractive, every card** (the operator, 2026-10-24, after triaging 2026-10-23-3: "include
+  only conventionally attractive characters (for example not fat, age over 50)"). A card is aged 25-50,
+  most of a night 25-40; her build is slim, slender, athletic or curvy-and-fit - never plus-size, plump
+  or heavy, and no age marks such as grey hair, wrinkles or laugh lines. Variety lives in skin tone, hair,
+  face, style and personality, not in age or weight. A look direction that distorts her (claymation's
+  lumpy sculpt, a caricature, a grotesque) does not suit this wing.
 - **Scenes come after a keep** (the operator: "scene seems to be important as next step together with use
   cases how to develop scenes with the character"). A scene is a KEPT character in a situation, and its
   `use` names the use case the scene develops - a companion chat's opening image, a date-night roleplay

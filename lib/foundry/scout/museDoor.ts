@@ -116,6 +116,8 @@ export function wingRefusal(b: MuseBrief, wing: ScoutWing): DoorRefusal | null {
   if (ages.length === 0) return { path: "prompt", message: `states no age; a muse prompt says "aged NN", ${MUSE_MIN_AGE} or older` };
   const young = ages.find((a) => a < MUSE_MIN_AGE);
   if (young !== undefined) return { path: "prompt", message: `"aged ${young}" is under ${MUSE_MIN_AGE}, the youngest a muse prompt may state` };
+  const old = ages.find((a) => a > MUSE_MAX_AGE);
+  if (old !== undefined) return { path: "prompt", message: `"aged ${old}" is over ${MUSE_MAX_AGE}, the oldest a muse prompt may state` };
   const other = b.card === undefined ? undefined : ages.find((a) => a !== b.card?.age);
   if (other !== undefined) return { path: "prompt", message: `"aged ${other}" is not her card's age, ${b.card?.age ?? ""}` };
   return null;

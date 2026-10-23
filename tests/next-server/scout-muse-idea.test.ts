@@ -134,19 +134,20 @@ describe("the muse door", () => {
     expect(stats.startsWith("idea 2: reel.") ? "the reel fixture no longer parses" : stats).toBe("idea 2: target: stats is not drawn in the muse wing (it draws style, scene, character)");
   });
 
-  it("refuses a character without her card, a card on any other idea, and a card's age outside 25..60", () => {
+  it("refuses a character without her card, a card on any other idea, and a card's age outside 25..50", () => {
     expect(muse({ target: "character" })).toBe("idea 2: card: a character idea carries her card {name, age, look, personality}");
     expect(muse({ card: CARD })).toBe("idea 2: card: only a character idea carries a card");
     // The studio's page offers 16:9, 1:1 and 9:16 only (read 2026-10-23): a 4:5 brief would fail at the radio.
     expect(muse({ aspect: "4:5" })).toBe("idea 2: aspect: the studio draws 16:9, 1:1, 9:16; it has no 4:5");
-    expect(muse({ target: "character", card: { ...CARD, age: 24 } })).toBe("idea 2: card.age: her age is a whole number from 25 to 60");
-    expect(muse({ target: "character", card: { ...CARD, age: 61 } })).toBe("idea 2: card.age: her age is a whole number from 25 to 60");
+    expect(muse({ target: "character", card: { ...CARD, age: 24 } })).toBe("idea 2: card.age: her age is a whole number from 25 to 50");
+    expect(muse({ target: "character", card: { ...CARD, age: 51 } })).toBe("idea 2: card.age: her age is a whole number from 25 to 50");
   });
 
-  it("refuses a prompt that states no age, an age under 25, and a character prompt whose age is not her card's", () => {
+  it("refuses a prompt that states no age, an age under 25 or over 50, and a character prompt whose age is not her card's", () => {
     expect(muse({ prompt: "A poster of a woman in a trench coat, painterly." })).toBe('idea 2: prompt: states no age; a muse prompt says "aged NN", 25 or older');
     expect(muse({ prompt: "A poster of a woman aged 22, painterly." })).toBe('idea 2: prompt: "aged 22" is under 25, the youngest a muse prompt may state');
     expect(muse({ prompt: "Two women aged 30 and aged 19, painterly." })).toBe('idea 2: prompt: "aged 19" is under 25, the youngest a muse prompt may state');
+    expect(muse({ prompt: "A poster of a woman aged 55, painterly." })).toBe('idea 2: prompt: "aged 55" is over 50, the oldest a muse prompt may state');
     expect(muse({ target: "character", card: CARD, prompt: "Mara Veil, aged 31, auburn bob." })).toBe('idea 2: prompt: "aged 31" is not her card\'s age, 34');
     expect(muse({ prompt: "A woman Aged 40, painterly." })).toBe("ok");
   });
