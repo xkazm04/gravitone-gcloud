@@ -2,7 +2,7 @@
 // (operator, 2026-10-22), each a VariantCard - its media, its caption and its verdict by click.
 // The reference sits in the modal's head, beside the run's purpose.
 import type { BoardVerdict } from "../../board/boardGate.ts";
-import type { Cell } from "../../board/cull.ts";
+import { stillOpen, type Cell } from "../../board/cull.ts";
 import type { ItemWords } from "../../board/port.ts";
 import type { Run } from "../../board/runs.ts";
 import { cx } from "../cx.ts";
@@ -39,7 +39,7 @@ export function RunView({ run, cells, verdicts, mediaOf, wordsOf, cur, nudged, r
             media={mediaOf(id)}
             verdict={verdicts[id]}
             current={i === cur}
-            nudged={nudged.has(i) && verdicts[id] === undefined}
+            nudged={nudged.has(i) && stillOpen(verdicts[id], reasons.required === true)}
             reasons={reasons}
             onFocus={onFocus}
             onVerdict={(v) => onVerdict(i, v)}

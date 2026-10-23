@@ -48,6 +48,7 @@ const WEIR_TO_PACKET: ReadonlyMap<string, PacketSource> = new Map<string, Packet
   ["mv", "mv"],
   ["sound", "audio"],
   ["scout", "scout"],
+  ["seeds", "seeds"],
 ]);
 
 /** The packet a Weir pile opens as, or undefined when its source has no decision adapter. */

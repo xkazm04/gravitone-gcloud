@@ -5,7 +5,7 @@ import { AppError, type Result } from "@gt/domain/errors";
 import type { CandidateId } from "@gt/domain/ids";
 import { type Packet, packetSchema } from "@gt/domain/packet";
 import type { Reader } from "../store.ts";
-import { currentOf, pairOutcomes, planCommit, type CommitPlan, type Current, type UndecidedAs } from "./core.ts";
+import { commitRulesOf, currentOf, pairOutcomes, planCommit, type CommitPlan, type Current, type UndecidedAs } from "./core.ts";
 import { DECISION_COLUMNS, readDecisionRow, readItemRow, readPacketHead, toDecision, type DecisionRow, type ItemRow, type PacketHead } from "./schema.ts";
 
 // THE DECISION READS - every way a surface or an agent can look at a packet.
@@ -163,5 +163,5 @@ export function revealPicks(r: Reader, packetId: string): ReadonlyMap<string, Re
 export function previewCommit(r: Reader, packetId: string, undecidedAs?: UndecidedAs): { readonly rev: number; readonly plan: Result<CommitPlan> } {
   const h = head(r, packetId);
   if (h.state !== "open") throw new AppError("refused", `decision: packet ${packetId} is ${h.state}`);
-  return { rev: h.rev, plan: planCommit(h.mode, items(r, packetId).map((i) => i.candidate_id), currentOf(rows(r, packetId)), undecidedAs) };
+  return { rev: h.rev, plan: planCommit(h.mode, items(r, packetId).map((i) => i.candidate_id), currentOf(rows(r, packetId)), undecidedAs, commitRulesOf(h.source)) };
 }

@@ -8,7 +8,7 @@ import { canonical } from "../canonical.ts";
 import { append } from "../events.ts";
 import type { Tx } from "../store.ts";
 import { consequenceToken } from "./consequence.ts";
-import { currentOf, planCommit, type UndecidedAs } from "./core.ts";
+import { commitRulesOf, currentOf, planCommit, type UndecidedAs } from "./core.ts";
 import { actorOf, candidateId, write, type Author } from "./driver.ts";
 import { currentDecisions, head, items, rows } from "./read.ts";
 
@@ -78,7 +78,7 @@ export function commit(t: Tx, input: CommitInput): Result<CommitResult> {
   const h = head(t, input.packetId);
   const to = packetMachine.assert(h.state, "committed");
   if (!to.ok) return err("refused", `decision: packet ${h.id} is ${h.state} and cannot be committed`);
-  const plan = planCommit(h.mode, items(t, h.id).map((i) => i.candidate_id), currentOf(rows(t, h.id)), input.undecidedAs);
+  const plan = planCommit(h.mode, items(t, h.id).map((i) => i.candidate_id), currentOf(rows(t, h.id)), input.undecidedAs, commitRulesOf(h.source));
   if (!plan.ok) return plan;
   const token = consequenceToken(currentDecisions(t, h.id).decisions, input.v1Digest);
   if (token !== input.token) return err("conflict", `decision: what packet ${h.id} would commit changed since its preview; preview again`, { detail: "stale-preview" });

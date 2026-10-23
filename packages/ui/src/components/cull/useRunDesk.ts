@@ -15,11 +15,21 @@
 //
 // ⌫ and ⏎ are the same in both: the gate's undo, and the commit that refuses while anything is
 // open - jumping to the first open variant's run, opened, and flashing what is open.
+//
+// EVERY X NEEDS A REASON where the source says so (spark scout-decision-graph, the vocabulary's
+// `required`): a reasonless reject is OPEN to the commit as an undecided tile is (flashed, jumped to,
+// announced `<n> need a reason`); X rejects and STAYS, the row's reason chips open under it, and the
+// reason key that follows sets it and moves on.
+//
+// A NOTE (E, a source with `noteMax`): the one-line field opens on the tile under the cursor - a
+// words-only row's one cell, the run's first variant on the mosaic (the run is opened to hold the
+// field), the variant itself inside an opened run. ⏎ saves it as that decision's note, Esc leaves.
+// A note rides its verdict: K, X and a reason key carry the note the tile holds; U clears both.
 import { useEffect, useState } from "react";
 
 import type { BoardPacket } from "../../board/port.ts";
 import type { BoardVerdict } from "../../board/boardGate.ts";
-import { clamp, cullCells, reasonAct, undecidedOf } from "../../board/cull.ts";
+import { clamp, cullCells, keepingNote, noteAct, notDoneOf, notDoneWords, reasonAct, undecidedOf } from "../../board/cull.ts";
 import { itemAct, runAt, runsOf, runVerdictOf, type Run } from "../../board/runs.ts";
 import { useKeys } from "../../keymap/dispatch.ts";
 
@@ -37,16 +47,23 @@ export type RunDeskInput = {
    *  ← → ↑ ↓ walk this. Handed the run the cursor is on, so a desk that draws runs in tabs walks
    *  the cursor's own tab. */
   readonly arrange?: (runs: readonly Run[], current: number) => readonly number[];
+  /** A run that is only words: decided, and noted, where it lies - never opened. */
+  readonly wordy?: (run: Run) => boolean;
 };
 
-export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce, keys, columns, arrange }: RunDeskInput) {
+export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce, keys, columns, arrange, wordy }: RunDeskInput) {
   const { view, present } = packet;
+  const required = view.reasons.required === true;
+  const noteMax = view.reasons.noteMax;
   const cells = cullCells(present.rows, view.items);
   const runs: Run[] = runsOf(cells, present.rows);
   const [cur, setCur] = useState(() => Math.max(0, undecidedOf(cells, verdicts)[0] ?? 0));
   const [open, setOpen] = useState(false);
   const [nudged, setNudged] = useState<ReadonlySet<number>>(new Set());
   const [refusals, setRefusals] = useState(0);
+  /** The tile whose note is being written, and its draft. */
+  const [noting, setNoting] = useState<number | null>(null);
+  const [draft, setDraft] = useState("");
   const runIx = runAt(runs, cur);
   const run = runs[runIx];
   const order = arrange?.(runs, runIx) ?? runs.map((_, i) => i);
@@ -78,7 +95,14 @@ export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce,
     const first = ids[0];
     if (first === undefined) return;
     const label = what ?? (ids.length > 1 ? `${ids.length} items` : wordsOf(first).label);
-    decide(ids, v, label);
+    // Each tile keeps the note it holds: tiles holding the same one are one write (in a run with no note,
+    // the whole act is one write, as before).
+    const groups = new Map<string, string[]>();
+    for (const id of ids) {
+      const key = keepingNote(verdicts[id], v)?.note ?? "";
+      groups.set(key, [...(groups.get(key) ?? []), id]);
+    }
+    for (const group of groups.values()) decide(group, keepingNote(verdicts[group[0] ?? ""], v), label);
     announce(`${label} ${v === null ? "undecided" : v.verdict}${v !== null && v.reasons.length > 0 ? `, ${v.reasons.join(", ")}` : ""}`);
   };
   const whole = (v: BoardVerdict) => {
@@ -93,17 +117,38 @@ export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce,
     else toPos(posOf(runIx) + 1);
   };
   const commit = () => {
-    const pending = undecidedOf(cells, verdicts);
-    const first = pending[0];
+    const left = notDoneOf(cells, verdicts, required);
+    const first = left.all[0];
     if (first === undefined) {
       onCommit();
       return;
     }
     setRefusals((n) => n + 1);
-    setNudged(new Set(pending));
+    setNudged(new Set(left.all));
     setCur(first);
     setOpen(true);
-    announce(`${pending.length} undecided`);
+    announce(notDoneWords(left));
+  };
+  /** The tile a note is written on: the cursor's (on the mosaic, the cursor rides its run's first variant). */
+  const startNote = () => {
+    if (noteMax <= 0 || run === undefined) return;
+    const id = cells[cur]?.id ?? "";
+    const v = verdicts[id];
+    if (v === undefined) return announce(`${wordsOf(id).label}: a note rides a verdict, keep or reject it first`);
+    setDraft(v.note ?? "");
+    setNoting(cur);
+    // A words-only row holds its field in place; a picture run is opened to hold it.
+    if (wordy?.(run) !== true) setOpen(true);
+  };
+  const saveNote = () => {
+    if (noting === null) return;
+    const id = cells[noting]?.id ?? "";
+    const act = noteAct(verdicts[id], draft, noteMax);
+    setNoting(null);
+    if (act.kind === "refuse") return announce(act.why);
+    const label = wordsOf(id).label;
+    decide([id], act.verdict, label);
+    announce(act.cleared ? `${label}: note cleared` : `${label}: note saved`);
   };
   /** The keys' verdict: always the whole run, then the next run (opened, when one is). */
   const judge = (v: BoardVerdict) => {
@@ -122,11 +167,12 @@ export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce,
     "board.cull",
     {
       keep: () => judge({ verdict: "keep", reasons: [] }),
-      reject: () => judge({ verdict: "reject", reasons: [] }),
+      // Where a reject needs a reason, X stays on the row with its reasons open; the reason key moves on.
+      reject: () => (required ? whole({ verdict: "reject", reasons: [] }) : judge({ verdict: "reject", reasons: [] })),
       undecide: () => run !== undefined && mark(run.members, null, run.words?.label ?? run.row),
       reason: ({ cap }) => {
         if (run === undefined) return;
-        const act = reasonAct(view.reasons.list, view.reasons.max, cap, runVerdictOf(run, cells, verdicts));
+        const act = reasonAct(view.reasons.list, view.reasons.max, cap, runVerdictOf(run, cells, verdicts), required);
         if (act.kind === "refuse") return announce(act.why);
         whole(act.verdict);
         if (act.advance) toPos(posOf(runIx) + 1);
@@ -147,13 +193,16 @@ export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce,
         nextInRun();
       },
       zoom: () => setOpen((o) => !o),
+      note: startNote,
+      "save-note": saveNote,
+      "cancel-note": () => setNoting(null),
       undo: () => {
         undo();
         announce("undone");
       },
       commit,
     },
-    { enabled: keys },
+    { enabled: keys, facts: noteMax > 0 ? ["notes"] : [] },
   );
 
   const openRun = (i: number) => {
@@ -171,5 +220,8 @@ export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce,
     setCur(i);
     item(i, v);
   };
-  return { cells, runs, run, runIx, cur, setCur, open, setOpen, nudged, refusals, commit, wordsOf, openRun, decideCells, decideItem };
+  /** The note being written, while it is: the tile, its draft and the field's acts. */
+  const note = noting === null ? undefined : { cell: noting, draft, setDraft, save: saveNote, max: noteMax };
+  const cancelNote = () => setNoting(null);
+  return { cells, runs, run, runIx, cur, setCur, open, setOpen, nudged, refusals, commit, wordsOf, openRun, decideCells, decideItem, note, cancelNote, reasonless: notDoneOf(cells, verdicts, required).reasonless.length };
 }

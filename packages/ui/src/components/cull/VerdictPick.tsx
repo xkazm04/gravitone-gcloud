@@ -24,8 +24,9 @@ export type VerdictPickProps = {
   readonly seededTip?: string;
 };
 
-/** The slice of a packet view's vocabulary a verdict by click needs (PacketView.reasons is one). */
-export type VerdictReasons = Pick<ReasonVocabulary, "list" | "max" | "meaning">;
+/** The slice of a packet view's vocabulary a verdict by click needs (PacketView.reasons is one); `required`
+ *  marks a source whose reject is not done until it names a reason. */
+export type VerdictReasons = Pick<ReasonVocabulary, "list" | "max" | "meaning" | "required">;
 
 export function VerdictPick({ label, verdict, reasons, onChange, size = "md", seededTip }: VerdictPickProps) {
   const v = verdict?.verdict;

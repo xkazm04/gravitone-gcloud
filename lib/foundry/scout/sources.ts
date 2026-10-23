@@ -42,7 +42,8 @@ import {
 //     WP-I4a): its artboard is copied from that night into `sources/s-NN/` - ours, so no fetch and no
 //     ingest - as an `image` source, `found: idea`, `rights: ours`. Refused, with the whole batch and
 //     before anything is written: an idea that night did not keep, a dry night's, and one any night
-//     already develops (./direction.ts) - a kept idea is developed once.
+//     already develops (./direction.ts) - a kept idea is developed once. The idea's `fromSeed` is copied
+//     onto the source, so every candidate made over it carries the seed too (spark scout-decision-graph).
 
 const text = (max: number) => z.string().trim().min(1).max(max);
 
@@ -212,7 +213,8 @@ async function ideaSource(nightId: NightId, id: string, p: Extract<Planned, { re
   const to = resolveInNight(nightId, file);
   await mkdir(path.dirname(to), { recursive: true });
   await copyFile(resolveInNight(night.id, idea.image), to);
-  return { id, url: ideaUrl(p.ref), kind: "image", title: idea.title, why: p.why ?? `kept idea ${p.ref}: ${idea.target}`, found: "idea", rights: "ours", fromIdea: p.ref, status: "ingested", files: [file] };
+  // The idea's seed rides with it (spark scout-decision-graph): what develops this source inherits the branch.
+  return { id, url: ideaUrl(p.ref), kind: "image", title: idea.title, why: p.why ?? `kept idea ${p.ref}: ${idea.target}`, found: "idea", rights: "ours", fromIdea: p.ref, ...(idea.fromSeed === undefined ? {} : { fromSeed: idea.fromSeed }), status: "ingested", files: [file] };
 }
 
 /* ── Findings and watch lines ─────────────────────────────────────────────── */

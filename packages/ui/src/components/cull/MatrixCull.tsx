@@ -9,7 +9,8 @@
 // and on the whole run, a clip with its own bar. Every act is also a key (bindings.ts `board.cull`):
 // K / X / a reason on a run in the mosaic judge it whole, inside a run each variant; ← → ↑ ↓ walk;
 // Z or a click opens; ⌫ undoes; ⏎ commits - refusing while anything is open, and taking the cursor
-// (and the tab) to the first open variant.
+// (and the tab) to the first open variant. Where the source keeps a note, E writes one on the decision
+// under the cursor: in place on a words row, in the opened run's head on a picture run.
 import { useEffect, useRef, useState } from "react";
 
 import { cullCells, tallyOf } from "../../board/cull.ts";
@@ -18,6 +19,7 @@ import { DeskFrame, OracleStrip } from "../desk/Desk.tsx";
 import { Seg } from "../seg/Seg.tsx";
 import { CullFoot } from "./CullFoot.tsx";
 import { IdeaList } from "./IdeaList.tsx";
+import { NoteField, NoteText } from "./NoteField.tsx";
 import type { MatrixCullProps } from "./props.ts";
 import { RunModal } from "./RunModal.tsx";
 import { RunMosaic } from "./RunMosaic.tsx";
@@ -44,7 +46,7 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
   const orderOf = (t: Tab) => (tabs.find((x) => x.tab === t)?.categories ?? []).flatMap((c) => c.runs.map((r) => r.at));
   const wordy = (r: Run) => wordsOnly(firstMime(r));
   // A words-only run is one line of a list: ↑ ↓ move a line, whatever the tiles above it measure.
-  const d = useRunDesk({ packet, verdicts, decide, undo, onCommit, announce, keys, columns: () => (d.run !== undefined && wordy(d.run) ? 1 : cols), arrange: (runs, at) => orderOf(tabOfRun(runs[at])) });
+  const d = useRunDesk({ packet, verdicts, decide, undo, onCommit, announce, keys, columns: () => (d.run !== undefined && wordy(d.run) ? 1 : cols), arrange: (runs, at) => orderOf(tabOfRun(runs[at])), wordy });
   const tab = tabOfRun(d.run);
   const here = tabs.find((t) => t.tab === tab) ?? tabs[0];
   const { setOpen } = d;
@@ -63,7 +65,11 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
   }, [tab]);
 
   const reasons = view.reasons;
-  const foot = <CullFoot tally={tallyOf(d.cells, verdicts)} reasons={reasons} audio={view.lane === "audio"} refusals={d.refusals} busy={busy} onCommit={d.commit} />;
+  const foot = <CullFoot tally={tallyOf(d.cells, verdicts)} reasonless={d.reasonless} reasons={reasons} audio={view.lane === "audio"} refusals={d.refusals} busy={busy} onCommit={d.commit} />;
+  const note = d.note;
+  const noteField =
+    note === undefined ? undefined : <NoteField key={note.cell} label={d.wordsOf(d.cells[note.cell]?.id ?? "").label} value={note.draft} max={note.max} onChange={note.setDraft} onSave={note.save} />;
+  const curNote = verdicts[d.cells[d.cur]?.id ?? ""]?.note;
   const pick = (t: Tab) => {
     const first = tabs.find((x) => x.tab === t)?.categories[0]?.runs[0];
     if (first !== undefined) d.setCur(first.run.members[0] ?? 0);
@@ -94,7 +100,11 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
             runVerdict={runVerdictOf(run, d.cells, verdicts)}
             reasons={reasons}
             onRunVerdict={(v) => d.decideCells(run.members, v, run.words?.label ?? run.row)}
-            onClose={() => setOpen(false)}
+            {...(note !== undefined && run.members.includes(note.cell) ? { note: noteField } : curNote !== undefined ? { note: <NoteText text={curNote} /> } : {})}
+            onClose={() => {
+              setOpen(false);
+              d.cancelNote();
+            }}
             live={keys}
             foot={foot}
           >
@@ -111,7 +121,20 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
       {here?.tab === "ideas" ? (
         <>
           {shown(false).length > 0 && <RunMosaic tab="ideas" categories={shown(false)} cells={d.cells} verdicts={verdicts} mediaOf={mediaOf} wordsOf={d.wordsOf} runIx={d.runIx} nudged={d.nudged} onOpen={d.openRun} grid={grid} />}
-          {shown(true).length > 0 && <IdeaList categories={shown(true)} cells={d.cells} verdicts={verdicts} wordsOf={d.wordsOf} cur={d.cur} nudged={d.nudged} reasons={reasons} onFocus={d.setCur} onVerdict={(i, v) => d.decideItem(i, v)} />}
+          {shown(true).length > 0 && (
+            <IdeaList
+              categories={shown(true)}
+              cells={d.cells}
+              verdicts={verdicts}
+              wordsOf={d.wordsOf}
+              cur={d.cur}
+              nudged={d.nudged}
+              reasons={reasons}
+              onFocus={d.setCur}
+              onVerdict={(i, v) => d.decideItem(i, v)}
+              {...(note === undefined ? {} : { noting: { cell: note.cell, field: noteField } })}
+            />
+          )}
         </>
       ) : here !== undefined ? (
         <RunMosaic tab={here.tab} categories={here.categories} cells={d.cells} verdicts={verdicts} mediaOf={mediaOf} wordsOf={d.wordsOf} runIx={d.runIx} nudged={d.nudged} onOpen={d.openRun} grid={grid} />

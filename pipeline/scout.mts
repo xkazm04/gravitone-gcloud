@@ -78,9 +78,9 @@ const USAGE = [
   `  open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--ideas ${DEFAULT_IDEA_CAP}] [--reels ${DEFAULT_REEL_CAP}] [--tracks ${DEFAULT_TRACK_CAP}] [--visualizers ${DEFAULT_VISUALIZER_CAP}] [--until HH:MM] [--live]`,
   "  add-source <night> --json <file|->         [{url, kind, title, channel?, why, found, watch?, rich?} | {fromIdea: <night>/<c-id>, why?}]",
   "  ingest <night> [--source s-NN] [--detach]",
-  "  style <night> --sources s-01,s-03 --use \"<content>\" [--slug x] [--detach]",
-  "  scene <night> --source s-NN --use \"<content>\" [--frames k-012.jpg] [--detach]",
-  "  asset <night> --brief <file|-> [--detach]  {class, subject, use, style?, kind?, techniques?, fromIdea?}",
+  "  style <night> --sources s-01,s-03 --use \"<content>\" [--slug x] [--seed <batch>/sd-NNN] [--detach]",
+  "  scene <night> --source s-NN --use \"<content>\" [--frames k-012.jpg] [--seed <batch>/sd-NNN] [--detach]",
+  "  asset <night> --brief <file|-> [--seed <batch>/sd-NNN] [--detach]  {class, subject, use, style?, kind?, techniques?, fromIdea?}",
   "  ideas <night> --json <file|-> [--detach]   [{title, target: scene|style|asset3d|stats, genre, prompt, anchor: {kind: watch|gap|free, ref}, use?, reel?}]",
   "                                             reel (stats only): {brief: {case, title, hook, unit, kind, data, steps?, illustrative: true}, approach: {name, medium, grammar, density, direction, falsifier}}",
   "  finding <night> --json <file|->            [{sourceIds, template, step, claim, quote, restates?}]",
@@ -102,12 +102,12 @@ class Refused extends Error {}
 const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "ideas", "finding", "direction", "watch", "close", "status", "leads", "lead", "seeds", "track", "visualizer"]);
 const BOOL = new Set(["json", "live", "detach", "dry", "help", "retry"]);
 
-/** argv -> positionals and flags. `--json` takes a value (the input file, or `-`) only under add-source, finding, direction, ideas and lead. */
+/** argv -> positionals and flags. `--json` takes a value (the input file, or `-`) only under add-source, finding, direction, ideas, lead and seeds new. */
 function parse(argv: readonly string[]): { pos: string[]; flags: Map<string, string | true> } {
   const pos: string[] = [];
   const flags = new Map<string, string | true>();
   const cmd = argv.find((a) => !a.startsWith("--"));
-  const reads = cmd === "add-source" || cmd === "finding" || cmd === "direction" || cmd === "ideas" || cmd === "lead";
+  const reads = cmd === "add-source" || cmd === "finding" || cmd === "direction" || cmd === "ideas" || cmd === "lead" || (cmd === "seeds" && argv.includes("new"));
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i] ?? "";
     if (!a.startsWith("--")) {
@@ -382,15 +382,18 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
       if (cmd === "asset") {
         const id = nightArg();
         const { assetAct } = await import("../lib/foundry/scout/asset.ts");
-        const { briefFromIdea } = await import("../lib/foundry/scout/direction.ts");
+        const { briefFromIdea, originWith } = await import("../lib/foundry/scout/direction.ts");
         // `fromIdea`: the kept idea this asset develops. The asset door is the mesh brief's own, so the
         // ref is checked and taken off here, and set on the candidate once the act has written it.
         const from = await briefFromIdea(await input("brief"));
         if (!from.ok) throw new Refused(from.error.message);
-        const { fromIdea } = from.value;
-        const r = await assetAct(ctx, id, from.value.brief, io.ports?.asset ?? {});
-        if (fromIdea !== undefined) await acts.markFromIdea(id, r.candidate.id, fromIdea);
-        const c = fromIdea === undefined ? r.candidate : { ...r.candidate, fromIdea };
+        // --seed: the kept seed it grows from, checked against the idea's own before anything is launched.
+        const { brief, ...idea } = from.value;
+        const origin = await originWith(idea, str("seed"));
+        if (!origin.ok) throw new Refused(origin.error.message);
+        const r = await assetAct(ctx, id, brief, io.ports?.asset ?? {});
+        if (origin.value.fromIdea !== undefined || origin.value.fromSeed !== undefined) await acts.markOrigin(id, r.candidate.id, origin.value);
+        const c = { ...r.candidate, ...origin.value };
         const failed = c.status === "failed" || (r.outcome !== undefined && !["done", "detached"].includes(r.outcome));
         say(`${c.id} asset3d ${c.status}${r.outcome === undefined ? "" : ` · ${r.outcome}`}${c.assetId === undefined ? "" : ` · mesh asset ${c.assetId}`}${c.error === undefined ? "" : ` · ${c.error}`}`);
         for (const v of r.asset?.variants ?? []) say(`  ${v.id} ${v.technique} ${v.status}${v.error === undefined ? "" : ` · ${v.error}`}`);
@@ -432,8 +435,8 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
         if (use !== undefined && (use === "" || use.length > USE_MAX)) usage(`--use is one line of at most ${USE_MAX} characters: the content this run can help make`);
         const r =
           cmd === "style"
-            ? await acts.styleAct(ctx, id, list("sources").length > 0 ? list("sources") : usage("style needs --sources s-01,s-03"), str("slug"), use)
-            : await acts.sceneAct(ctx, id, str("source") ?? usage("scene needs --source s-NN"), flags.has("frames") ? list("frames") : undefined, use);
+            ? await acts.styleAct(ctx, id, list("sources").length > 0 ? list("sources") : usage("style needs --sources s-01,s-03"), str("slug"), use, str("seed"))
+            : await acts.sceneAct(ctx, id, str("source") ?? usage("scene needs --source s-NN"), flags.has("frames") ? list("frames") : undefined, use, str("seed"));
         const c = r.candidate;
         const failed = c.status === "failed" || (r.outcome !== undefined && !["done", "detached", "enqueued", "launched", "queued", "running"].includes(r.outcome));
         say(`${c.id} ${c.kind} ${c.status}${r.outcome === undefined ? "" : ` · ${r.outcome}`}${c.error === undefined ? "" : ` · ${c.error}`}`);

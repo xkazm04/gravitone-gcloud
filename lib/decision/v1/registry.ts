@@ -12,6 +12,7 @@ import { audioAdapter } from "./sources/audio.ts";
 import { mvAdapter } from "./sources/mv.ts";
 import { proofAdapter } from "./sources/proof.ts";
 import { scoutAdapter } from "./sources/scout.ts";
+import { seedsAdapter } from "./sources/seeds.ts";
 import { sunoAdapter } from "./sources/suno.ts";
 import type { DecisionAdapter } from "./types.ts";
 import { stepAdapter } from "@/lib/parts/gates";
@@ -52,8 +53,8 @@ export const DECISION_ADAPTERS = {
   proof: adapter(proofAdapter),
   // spark media-training-loop: one /scout night, a row per candidate (./sources/scout.ts).
   scout: adapter(scoutAdapter),
-  // spark scout-decision-graph: a batch of one-sentence seeds. WP-S0 stub; WP-S1 binds ./sources/seeds.ts.
-  seeds: notDecidable("the seeds adapter is being built (spark scout-decision-graph WP-S1)"),
+  // spark scout-decision-graph: a batch of one-sentence seeds, a row per seed (./sources/seeds.ts).
+  seeds: adapter(seedsAdapter),
 } as const satisfies { readonly [S in PacketSource]: AdapterEntry };
 
 /** The adapter that decides `source`, or `refused` with the reason none does. */

@@ -62,6 +62,11 @@ const board: Binding[] = [
   { mode: "board.cull", keys: ["⇧K"], verb: "keep-item", does: "item" },
   { mode: "board.cull", keys: ["⇧X"], verb: "reject-item", does: "item" },
   { mode: "board.cull", keys: ["Z"], verb: "zoom", does: "zoom" },
+  // A note on the decision under the cursor (spark scout-decision-graph), for a source that keeps one:
+  // E opens the row's one-line field, ⏎ in it saves the note with the verdict, Esc leaves it unsaved.
+  { mode: "board.cull", keys: ["E"], verb: "note", does: "note", when: "notes" },
+  { mode: "board.cull", keys: ["⏎"], verb: "save-note", does: "save", field: "note", onControl: true },
+  { mode: "board.cull", keys: ["Esc"], verb: "cancel-note", does: "cancel", field: "note" },
   { mode: "board.cull", keys: ["⌫"], alias: ["⌘Z"], verb: "undo", does: "undo" },
   { mode: "board.cull", keys: ["Space"], verb: "play", does: "play", when: "audio" },
   { mode: "board.cull", keys: ["M"], verb: "spawn-mv", does: "spawn MV", when: "audio" },

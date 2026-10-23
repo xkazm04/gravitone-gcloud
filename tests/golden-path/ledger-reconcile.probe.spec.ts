@@ -101,6 +101,7 @@ const SOURCES: Record<string, (() => string[]) | null> = {
   publish: null,
   // A scout night is finished work on disk; its jobs are the kernel's, on Runs.
   scout: null,
+  seeds: null,
   turns: liveInFiles("turns", "id", (s) => [...TURN_LIVE].some((x) => x === s)),
   spend: null,
   // The card's holder is the kernel lease now (Phase 4 L27); lease.json is history.

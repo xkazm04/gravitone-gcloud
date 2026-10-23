@@ -55,6 +55,11 @@
 .ideaClaim{margin:0;font:600 var(--fs-body)/1.4 var(--sans);color:var(--ink-bright)}
 .ideaQuote{margin:0;font-size:var(--fs-control-sm);line-height:1.5;color:var(--text);overflow-wrap:anywhere}
 .ideaMeta{font:500 var(--fs-micro)/1.2 var(--mono);color:var(--muted)}
+/* a decision's note (spark scout-decision-graph): the saved one in the work's words, and the field that writes it */
+.ideaNote{margin:0;padding-left:var(--sp-3);border-left:var(--stroke-mark) solid var(--amber);font-size:var(--fs-control-sm);line-height:1.5;color:var(--text);overflow-wrap:anywhere}
+.noteField{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;margin-top:var(--sp-2)}
+.noteField input{flex:1 1 0;min-width:0}
+.noteCount{font:500 var(--fs-micro)/1 var(--mono);color:var(--muted)}
 
 @media (prefers-reduced-motion: reduce){.nudge{animation:none;box-shadow:0 0 0 var(--ring-halo) var(--rose)}}
 .stage{height:56vh;min-height:0;border-radius:var(--r-control);overflow:hidden;background:var(--ink-2)}

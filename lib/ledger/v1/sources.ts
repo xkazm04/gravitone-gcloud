@@ -8,6 +8,7 @@ import { gpuSource } from "./sources/gpu.ts";
 import { mvSource } from "./sources/mv.ts";
 import { publishSource } from "./sources/publish.ts";
 import { scoutSource } from "./sources/scout.ts";
+import { seedsSource } from "./sources/seeds.ts";
 import { soundSource } from "./sources/sound.ts";
 import { spendSource } from "./sources/spend.ts";
 import { stripsSource } from "./sources/strips.ts";
@@ -36,4 +37,5 @@ export const V1_SOURCES: readonly Source<unknown>[] = [
   gpuSource,
   clipsSource,
   scoutSource,
+  seedsSource,
 ];

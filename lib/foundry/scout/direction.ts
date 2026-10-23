@@ -3,8 +3,9 @@ import { z } from "zod";
 import { parseAt } from "@gt/domain/door";
 import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 
+import { usableSeed } from "./seeds";
 import { mutateNight, nextCandidateId, readNight } from "./store";
-import { GENRE_MAX, IDEA_TITLE_MAX, NIGHT_ID_RE, PREMISE_MAX, USE_MAX, VIDEO_FORMATS, cellId, type DirectionCandidate, type IdeaCandidate, type Night, type NightId } from "./types";
+import { GENRE_MAX, IDEA_TITLE_MAX, NIGHT_ID_RE, PREMISE_MAX, SEED_REF_RE, USE_MAX, VIDEO_FORMATS, cellId, type DirectionCandidate, type IdeaCandidate, type Night, type NightId, type SeedRef } from "./types";
 
 // WHAT A NIGHT STANDS ON - the refs that tie it to an earlier night's verdicts (spark
 // scout-idea-artboards WP-I4a, the operator 2026-10-23: "using Notes more as confirmation of
@@ -15,11 +16,14 @@ import { GENRE_MAX, IDEA_TITLE_MAX, NIGHT_ID_RE, PREMISE_MAX, USE_MAX, VIDEO_FOR
 //                 `direction` candidate, `rendered` at once (words, no job), like a finding. Every
 //                 `basedOn` entry is `<night>/<cell id>` of a cell that night KEPT: an approved
 //                 decision is the only ground a direction may stand on, so an entry naming anything
-//                 else refuses the brief, with the entry and why.
+//                 else refuses the brief, with the entry and why. An optional `seed`
+//                 (`<batch>/sd-NNN`, ./seeds.ts usableSeed) is the branch it confirms,
+//                 recorded as `fromSeed` (spark scout-decision-graph).
 //   A KEPT IDEA   `<night>/<c-id>`: an idea artboard that night kept, live. add-source brings it in
 //                 as our own source (./sources.ts), an act over that source carries the ref
 //                 (`fromIdea`), and once any night holds it, it is off the taste brief's
-//                 to-develop list (./taste.ts).
+//                 to-develop list (./taste.ts). The idea's `fromSeed` rides on the source
+//                 and onto every candidate over it (`fromIdeaOf`).
 
 /** A direction's style, tone and audience: one line each. */
 export const DIRECTION_LINE_MAX = 140;
@@ -45,6 +49,7 @@ const directionSchema = z
     premise: z.string().trim().min(1).max(PREMISE_MAX),
     basedOn: z.array(z.string().trim().min(1).max(200)).min(1, "a direction stands on at least one kept cell: `<night>/<cell id>`").max(24),
     use: line(USE_MAX).optional(),
+    seed: z.string().trim().regex(SEED_REF_RE, "a kept seed's <batch>/sd-NNN").optional(),
   })
   .strict();
 
@@ -95,10 +100,14 @@ export async function addDirection(nightId: NightId, raw: unknown): Promise<Resu
     const why = notKept(n, p.rest);
     if (why !== undefined) return err("refused", `${at}: ${why}; a direction stands only on a kept cell`);
   }
+  if (b.seed !== undefined) {
+    const u = await usableSeed(b.seed);
+    if (!u.ok) return err(u.error.code, `direction: seed: ${u.error.message}`);
+  }
   let made: DirectionCandidate | undefined;
   await mutateNight(nightId, (n) => {
     if (n.state !== "open") return n;
-    made = { id: nextCandidateId(n), kind: "direction", sourceIds: [], status: "rendered", title: b.title, format: b.format, genre: b.genre, style: b.style, tone: b.tone, audience: b.audience, premise: b.premise, basedOn, ...(b.use === undefined ? {} : { use: b.use }) };
+    made = { id: nextCandidateId(n), kind: "direction", sourceIds: [], status: "rendered", title: b.title, format: b.format, genre: b.genre, style: b.style, tone: b.tone, audience: b.audience, premise: b.premise, basedOn, ...(b.use === undefined ? {} : { use: b.use }), ...(b.seed === undefined ? {} : { fromSeed: b.seed }) };
     return { ...n, candidates: [...n.candidates, made] };
   });
   if (made === undefined) return err("refused", `night ${nightId} closed while the direction was checked; it takes no more directions`);
@@ -132,20 +141,43 @@ export function developedOf(nights: readonly Night[]): Map<string, string> {
   return out;
 }
 
-/** `{fromIdea}` for a candidate over these sources when one of them is a kept idea brought in (the first such), else nothing. */
-export function fromIdeaOf(n: Pick<Night, "sources">, sourceIds: readonly string[]): { readonly fromIdea?: string } {
-  const f = n.sources.find((s) => sourceIds.includes(s.id) && s.fromIdea !== undefined)?.fromIdea;
-  return f === undefined ? {} : { fromIdea: f };
+/** Where a candidate grows from: the kept idea and the seed its sources carry. */
+export type Origin = { readonly fromIdea?: string; readonly fromSeed?: SeedRef };
+
+/**
+ * `{fromIdea, fromSeed}` for a candidate over these sources: the first source that is a kept idea brought in,
+ * and the first that carries a seed (the same source, when the idea grew from one); either absent when none does.
+ */
+export function fromIdeaOf(n: Pick<Night, "sources">, sourceIds: readonly string[]): Origin {
+  const mine = n.sources.filter((s) => sourceIds.includes(s.id));
+  const f = mine.find((s) => s.fromIdea !== undefined)?.fromIdea;
+  const seed = mine.find((s) => s.fromSeed !== undefined)?.fromSeed;
+  return { ...(f === undefined ? {} : { fromIdea: f }), ...(seed === undefined ? {} : { fromSeed: seed }) };
 }
 
 /**
  * An asset brief's `fromIdea`, checked as a kept idea's ref, and the brief without it - the asset door
  * (./concept.ts) is the mesh brief's own and takes no such key. A brief without one passes through.
  */
-export async function briefFromIdea(raw: unknown): Promise<Result<{ readonly brief: unknown; readonly fromIdea?: string }>> {
+export async function briefFromIdea(raw: unknown): Promise<Result<{ readonly brief: unknown } & Origin>> {
   if (typeof raw !== "object" || raw === null || Array.isArray(raw) || !("fromIdea" in raw)) return ok({ brief: raw });
   const { fromIdea: ref, ...brief } = raw as Record<string, unknown>;
   if (typeof ref !== "string") return err("invalid", "asset brief: fromIdea: a kept idea's <night>/<c-id>");
   const k = await keptIdea(ref.trim());
-  return k.ok ? ok({ brief, fromIdea: ref.trim() }) : err(k.error.code, `asset brief: fromIdea: ${k.error.message}`);
+  if (!k.ok) return err(k.error.code, `asset brief: fromIdea: ${k.error.message}`);
+  const seed = k.value.idea.fromSeed;
+  return ok({ brief, fromIdea: ref.trim(), ...(seed === undefined ? {} : { fromSeed: seed }) });
+}
+
+/**
+ * The seed an act was handed (`--seed`), checked at the seed door and against the seed its kept idea already
+ * carries: an idea-born run grows from that idea's branch, so a `--seed` naming another branch is refused.
+ * Ok with the origin to record (the idea's, `--seed` added); the refusal's sentence otherwise. Writes nothing.
+ */
+export async function originWith(origin: Origin, seed: string | undefined): Promise<Result<Origin>> {
+  if (seed === undefined) return ok(origin);
+  if (origin.fromSeed !== undefined && origin.fromSeed !== seed) return err("refused", `--seed ${seed} disagrees with ${origin.fromSeed}, the seed of kept idea ${origin.fromIdea ?? "?"} this run develops`);
+  const u = await usableSeed(seed);
+  if (!u.ok) return err(u.error.code, `--seed: ${u.error.message}`);
+  return ok({ ...origin, fromSeed: seed });
 }

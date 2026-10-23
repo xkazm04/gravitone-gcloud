@@ -8,8 +8,10 @@ import { driveIdeas, launchIdeas, LIVE_IDEA_ENGINES } from "../../producers/scou
 import type { IdeaEngines } from "../../producers/scoutIdeaActs.ts";
 import { launchReels, reelFiles, SCOUT_REELS_LANE } from "../../producers/scoutReel.ts";
 import { launchable, Refusal, type ActContext } from "./acts.ts";
+import { listSeedBatches } from "./seedStore.ts";
+import { seedsInForce, usableSeed } from "./seeds.ts";
 import { mutateNight, nextCandidateId, readNight, resolveInNight, withCandidate } from "./store.ts";
-import { DEFAULT_IDEA_CAP, DEFAULT_REEL_CAP, GENRE_MAX, IDEA_ANCHORS, REEL_DENSITIES, REEL_GRAMMARS, REEL_MEDIA, IDEA_PROMPT_MAX, IDEA_TARGETS, IDEA_TITLE_MAX, REEL_KINDS, USE_MAX, type CandidateId, type IdeaCandidate, type Night, type NightId, type ReelBrief } from "./types.ts";
+import { DEFAULT_IDEA_CAP, DEFAULT_REEL_CAP, GENRE_MAX, IDEA_ANCHORS, REEL_DENSITIES, REEL_GRAMMARS, REEL_MEDIA, IDEA_PROMPT_MAX, IDEA_TARGETS, IDEA_TITLE_MAX, REEL_KINDS, SEED_REF_RE, USE_MAX, type CandidateId, type IdeaCandidate, type Night, type NightId, type ReelBrief, type SeedRef } from "./types.ts";
 
 // THE NIGHT'S IDEAS - what `pipeline/scout.mts ideas <night> --json <file|->` does (spark
 // scout-idea-artboards WP-I2, stats-reels WP-R2). The skill writes a batch of briefs in its own words -
@@ -44,6 +46,12 @@ import { DEFAULT_IDEA_CAP, DEFAULT_REEL_CAP, GENRE_MAX, IDEA_ANCHORS, REEL_DENSI
 //   datasets, and a kept reel's real data is researched on a later night and swapped into the strip's
 //   one data block whole (./types.ts ReelBrief, REEL_DATA_ID). The brief and the approach are written
 //   to `ideas/<c-NN>/` before the reel job is launched - the job reads them there.
+//
+//   AN IDEA GROWS FROM A SEED (spark scout-decision-graph). A brief may name the kept seed it develops,
+//   `seed: <batch>/sd-NNN` (./seeds.ts usableSeed: kept on a live batch, under no paused branch), and the
+//   candidate carries it as `fromSeed`. Once any live batch has kept a seed, every new brief must name one
+//   - an idea from nowhere would be work the branch graph cannot place. Checked with the rest of the door,
+//   before a candidate exists.
 //
 // NO MONEY REFUSAL. The studio bills prepaid credits and the seat is reported uncapped; the night's
 // ceiling caps Gemini only (./budget.ts), so a batch is never refused for the dollars the night has
@@ -96,6 +104,8 @@ const ideaSchema = z
       .strict()
       .refine((a) => a.kind === "free" || a.ref !== "", { message: "a watch or gap anchor quotes its watchlist line or registry gap in `ref`", path: ["ref"] }),
     use: text(USE_MAX).optional(),
+    /** The kept seed this idea grows from (spark scout-decision-graph); required once a seed has been kept. */
+    seed: z.string().trim().regex(SEED_REF_RE, "a kept seed's <batch>/sd-NNN").optional(),
     /** A stats idea's illustrative brief and its approach: required on target `stats`, refused on any other. */
     reel: reelSchema.optional(),
   })
@@ -103,7 +113,7 @@ const ideaSchema = z
   .refine((b) => b.target !== "stats" || b.reel !== undefined, { message: "a stats idea carries its reel: {brief, approach}", path: ["reel"] })
   .refine((b) => b.target === "stats" || b.reel === undefined, { message: "only a stats idea carries a reel", path: ["reel"] });
 
-export type IdeaBrief = Pick<IdeaCandidate, "title" | "target" | "prompt" | "anchor" | "use"> & { readonly genre: string; readonly reel?: ReelBrief };
+export type IdeaBrief = Pick<IdeaCandidate, "title" | "target" | "prompt" | "anchor" | "use"> & { readonly genre: string; readonly reel?: ReelBrief; readonly seed?: SeedRef };
 
 /** The skill's batch as briefs, or the first bad brief's place and reason; nothing is written here. */
 export function parseIdeas(raw: unknown): Result<IdeaBrief[]> {
@@ -114,9 +124,27 @@ export function parseIdeas(raw: unknown): Result<IdeaBrief[]> {
     const r = parseAt(`idea ${i + 1}`, ideaSchema, item);
     if (!r.ok) return r;
     const b = r.value;
-    out.push({ title: b.title, target: b.target, genre: b.genre, prompt: b.prompt, anchor: { kind: b.anchor.kind, ref: b.anchor.ref }, ...(b.use === undefined ? {} : { use: b.use }), ...(b.reel === undefined ? {} : { reel: b.reel as ReelBrief }) });
+    out.push({ title: b.title, target: b.target, genre: b.genre, prompt: b.prompt, anchor: { kind: b.anchor.kind, ref: b.anchor.ref }, ...(b.use === undefined ? {} : { use: b.use }), ...(b.reel === undefined ? {} : { reel: b.reel as ReelBrief }), ...(b.seed === undefined ? {} : { seed: b.seed }) });
   }
   return ok(out);
+}
+
+/**
+ * Every brief's seed through the seed door, and - once a seed has been kept on a live batch - a seed on every
+ * brief; the first refused one's place and why. Reads the seed batches and the steer; writes nothing.
+ */
+export async function checkIdeaSeeds(briefs: readonly IdeaBrief[]): Promise<Result<void>> {
+  const batches = await listSeedBatches();
+  const required = seedsInForce(batches);
+  for (const [i, b] of briefs.entries()) {
+    if (b.seed === undefined) {
+      if (required) return err("invalid", `idea ${i + 1}: names no seed; a kept seed is in force, so every idea grows from one (seed: <batch>/sd-NNN)`);
+      continue;
+    }
+    const u = await usableSeed(b.seed, batches);
+    if (!u.ok) return err(u.error.code, `idea ${i + 1}: seed: ${u.error.message}`);
+  }
+  return ok(undefined);
 }
 
 const isReel = (c: Pick<IdeaCandidate, "target">): boolean => c.target === "stats";
@@ -166,6 +194,8 @@ export async function ideasAct(ctx: ActContext, id: NightId, raw: unknown, engin
   const parsed = parseIdeas(raw);
   if (!parsed.ok) throw new Refusal(parsed.error.message);
   const briefs = parsed.value;
+  const seeded = await checkIdeaSeeds(briefs);
+  if (!seeded.ok) throw new Refusal(seeded.error.message);
   const { mode } = await launchable(ctx, id);
   const askedReels = briefs.filter(isReel).length;
 
@@ -176,10 +206,10 @@ export async function ideasAct(ctx: ActContext, id: NightId, raw: unknown, engin
     if (full !== undefined) return n;
     let next = n;
     made = [];
-    for (const { reel, ...b } of briefs) {
+    for (const { reel, seed, ...b } of briefs) {
       const cid = nextCandidateId(next);
       const files = reelFiles(cid);
-      const c: IdeaCandidate = { id: cid, kind: "idea", sourceIds: [], status: "pending", ...b, ...(reel === undefined ? {} : { reel: { brief: files.brief, approach: files.approach } }) };
+      const c: IdeaCandidate = { id: cid, kind: "idea", sourceIds: [], status: "pending", ...b, ...(seed === undefined ? {} : { fromSeed: seed }), ...(reel === undefined ? {} : { reel: { brief: files.brief, approach: files.approach } }) };
       next = { ...next, candidates: [...next.candidates, c] };
       made.push(c);
     }

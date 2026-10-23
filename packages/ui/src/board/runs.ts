@@ -31,9 +31,10 @@ export function runsOf(cells: readonly Cell[], rows: readonly RowWords[]): Run[]
  * not is filed by what its first variant IS. `3d` and `music` are here before anything produces them
  * so a source that does finds its row waiting (operator, 2026-10-22: art styles and videos now,
  * music and 3D later). `ideas` - a scout night's idea artboards, one picture each - is drawn before
- * the words in the same tab (spark scout-idea-artboards).
+ * the words in the same tab (spark scout-idea-artboards). `seeds` - a batch's one-sentence seeds (spark
+ * scout-decision-graph) - are words, filed in that tab under their own name.
  */
-export const CATEGORIES = ["art styles", "videos", "music", "3d", "ideas", "notes", "sources", "other"] as const;
+export const CATEGORIES = ["art styles", "videos", "music", "3d", "ideas", "seeds", "notes", "sources", "other"] as const;
 export type Category = (typeof CATEGORIES)[number];
 
 const isCategory = (g: string): g is Category => (CATEGORIES as readonly string[]).includes(g);
@@ -71,6 +72,7 @@ const TAB_OF: Readonly<Record<Category, Tab>> = {
   videos: "videos",
   music: "audio",
   ideas: "ideas",
+  seeds: "ideas",
   notes: "ideas",
   sources: "ideas",
 };

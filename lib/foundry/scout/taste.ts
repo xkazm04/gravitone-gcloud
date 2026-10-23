@@ -1,8 +1,11 @@
 import type { LoadResource, LoadSummary } from "@gt/domain/load";
 
 import { developedOf } from "./direction";
+import { ancestryOf, listSeedBatches, seedOf } from "./seedStore";
+import { seedFacets } from "./seeds";
+import { EMPTY_STEER, pausedUnder, readSteer } from "./steer";
 import { listNights, readNight } from "./store";
-import { CANDIDATE_KINDS, parseCellId, type Candidate, type CandidateKind, type IdeaCandidate, type Night } from "./types";
+import { CANDIDATE_KINDS, SEED_AUDIENCES, parseCellId, seedRef, type Candidate, type CandidateKind, type IdeaCandidate, type Night, type SeedBatch, type Steer } from "./types";
 
 // THE TASTE BRIEF - the operator's last verdicts, written into each new night as
 // taste.md for the skill to read before it searches (spark media-training-loop:
@@ -27,6 +30,13 @@ import { CANDIDATE_KINDS, parseCellId, type Candidate, type CandidateKind, type 
 // the kept ideas no night has developed yet (no source and no candidate names it, ./direction.ts) -
 // once one is brought in it drops off the list; the blocked ideas, the bans of the next ideation; and
 // the genres kept and blocked, counted, so a night spreads across genres until a direction is set.
+//
+// SEEDS (spark scout-decision-graph) follow the load, read off every LIVE committed seed batch and the
+// steer: the kept seeds still to develop, each with what it lacks (2 child seeds, 1 idea grown from it -
+// a seed that has both is not listed), the rejected ones with their reasons and notes (the bans of the
+// next batch, newest first, at most SEEDS_BLOCKED_MAX), the branches paused, and kept against rejected
+// per audience then genre. Then the `extra` lines a caller hands in (the graph's branches, the tracks to
+// visualize), then the nights. Absent entirely while no live batch is committed and nothing is paused.
 //
 // LAST NIGHT'S LOAD (spark night-load-band) opens the brief: the most recent closed or judged night whose
 // window holds load samples (./load.ts), each resource's average and its share in the operator's 60-80%
@@ -208,10 +218,82 @@ export function loadSection(night: Night, s: LoadSummary): string[] {
 /** A night's load, as the brief is handed it: the night and its summary. */
 export type NightLoad = { readonly night: Night; readonly load: LoadSummary };
 
+/* ── seeds ─────────────────────────────────────────────────────────────────── */
+
+/** The rejected seeds the brief lists, newest first: the bans a batch of ~100 is written against. */
+export const SEEDS_BLOCKED_MAX = 200;
+/** A kept seed has its children once it has this many. */
+export const SEED_CHILDREN_WANTED = 2;
+
+/** What the brief reads besides the nights: the seed batches (newest first) and the steer. */
+export type TasteSeeds = { readonly batches: readonly SeedBatch[]; readonly steer: Steer };
+
+type Count = { kept: number; rejected: number };
+
+/**
+ * `## Seeds to develop`, `## Seeds blocked`, `## Paused`, `## Seed genres` over every live committed batch.
+ * A child seed counts toward its parent from any batch but a dry one; an idea counts from any night but a dry one.
+ */
+export function seedSections(nights: readonly Night[], { batches, steer }: TasteSeeds): string[] {
+  const live = batches.filter((b) => b.committed !== undefined && !b.dry && !b.committed.dry);
+  if (live.length === 0 && steer.paused.length === 0) return [];
+  const children = new Map<string, number>();
+  for (const b of batches) if (!b.dry) for (const s of b.seeds) if (s.parent !== undefined) children.set(s.parent, (children.get(s.parent) ?? 0) + 1);
+  const ideas = new Set(nights.filter((n) => !n.dry).flatMap((n) => n.candidates.flatMap((c) => (c.kind === "idea" && c.fromSeed !== undefined ? [c.fromSeed] : []))));
+  const develop: string[] = [];
+  const blocked: string[] = [];
+  const genres = new Map<string, Map<string, Count>>();
+  for (const b of live) {
+    const c = b.committed;
+    if (c === undefined) continue;
+    for (const s of b.seeds) {
+      const ref = seedRef(b.id, s.id);
+      const kept = c.kept.includes(s.id);
+      const rejected = c.rejected.includes(s.id);
+      if (kept || rejected) {
+        const by = genres.get(s.audience) ?? new Map<string, Count>();
+        const t = by.get(s.genre) ?? { kept: 0, rejected: 0 };
+        if (kept) t.kept += 1;
+        else t.rejected += 1;
+        by.set(s.genre, t);
+        genres.set(s.audience, by);
+      }
+      if (kept && pausedUnder(steer, ancestryOf(batches, ref)) === undefined) {
+        const needs = [...((children.get(ref) ?? 0) < SEED_CHILDREN_WANTED ? ["child seeds"] : []), ...(ideas.has(ref) ? [] : ["ideas"])];
+        if (needs.length > 0) develop.push(`- ${ref} · ${seedFacets(s)} (needs: ${needs.join(", ")}) — ${s.sentence}`);
+      }
+      if (rejected && blocked.length < SEEDS_BLOCKED_MAX) {
+        const reasons = c.reasons[s.id] ?? [];
+        const note = c.notes[s.id];
+        blocked.push(`- "${s.sentence}" · ${reasons.length > 0 ? reasons.join(", ") : "no reason given"}${note === undefined ? "" : ` · note: ${note}`}`);
+      }
+    }
+  }
+  const paused = steer.paused.map((ref) => `- ${ref} — ${seedOf(batches, ref)?.seed.sentence ?? "no such seed on disk"}`);
+  const count = (t: Count): string => `kept ${t.kept} · rejected ${t.rejected}`;
+  const sum = (by: Map<string, Count>): Count => [...by.values()].reduce((a, t) => ({ kept: a.kept + t.kept, rejected: a.rejected + t.rejected }), { kept: 0, rejected: 0 });
+  const genreLines = SEED_AUDIENCES.flatMap((a) => {
+    const by = genres.get(a);
+    if (by === undefined) return [];
+    return [`- ${a}: ${count(sum(by))}`, ...[...by].sort((x, y) => x[0].localeCompare(y[0])).map(([g, t]) => `  - ${g}: ${count(t)}`)];
+  });
+  return ["## Seeds to develop", "", ...none(develop), "", "## Seeds blocked", "", ...none(blocked), "", "## Paused", "", ...none(paused), "", "## Seed genres", "", ...none(genreLines), ""];
+}
+
+export type TasteOptions = {
+  /** The seed batches and the steer; absent: no seed section. */
+  readonly seeds?: TasteSeeds;
+  /**
+   * Lines a caller adds after the seed sections, whole sections with their own headings - the slot the graph's
+   * `branchesSection` (./graph.ts) and the tracks' `tracksSection` (./track.ts) are wired into.
+   */
+  readonly extra?: readonly string[];
+};
+
 /** The brief for nights already read (pure; `tasteBrief` reads them). Nights not committed only say which kept ideas are developed. */
-export function tasteOf(nights: readonly Night[], last?: NightLoad): string {
+export function tasteOf(nights: readonly Night[], last?: NightLoad, o: TasteOptions = {}): string {
   const judged = nights.filter((n) => n.committed !== undefined && !n.dry && !n.committed.dry).slice(0, TASTE_NIGHTS);
-  const lines = ["# Taste", "", ...(last === undefined ? [] : loadSection(last.night, last.load))];
+  const lines = ["# Taste", "", ...(last === undefined ? [] : loadSection(last.night, last.load)), ...(o.seeds === undefined ? [] : seedSections(nights, o.seeds)), ...(o.extra ?? [])];
   if (judged.length === 0) return [...lines, "No committed live night yet: nothing kept or thrown to learn from.", ""].join("\n");
   const kept = new Map<string, number>();
   const thrown = new Map<string, number>();
@@ -282,8 +364,10 @@ export function tasteOf(nights: readonly Night[], last?: NightLoad): string {
  * Read every night on disk, newest first, and write the brief. An unreadable night is skipped. Uncommitted nights are read
  * too: their sources say which kept ideas are already developed. `loadOf` reads a night's load (./load.ts nightLoad over the
  * caller's store); the newest closed or committed night it finds samples for, among the last TASTE_NIGHTS such, opens the brief.
+ * The seed batches and the steer are read too (a steer mid-write reads as empty: the brief is advice); `extra` is
+ * TasteOptions.extra.
  */
-export async function tasteBrief(except?: string, loadOf?: (n: Night) => LoadSummary | undefined): Promise<string> {
+export async function tasteBrief(except?: string, loadOf?: (n: Night) => LoadSummary | undefined, extra?: readonly string[]): Promise<string> {
   const nights: Night[] = [];
   for (const s of await listNights()) {
     if (s.id === except) continue;
@@ -301,5 +385,6 @@ export async function tasteBrief(except?: string, loadOf?: (n: Night) => LoadSum
       break;
     }
   }
-  return tasteOf(nights, last);
+  const seeds: TasteSeeds = { batches: await listSeedBatches(), steer: await readSteer().catch(() => EMPTY_STEER) };
+  return tasteOf(nights, last, { seeds, ...(extra === undefined ? {} : { extra }) });
 }

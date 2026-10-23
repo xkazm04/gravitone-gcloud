@@ -2,8 +2,9 @@
 
 // The opened run across the WHOLE screen (operator, 2026-10-22). Four bands, top to bottom:
 //   head    left half: the run's category, label and place among the packet's runs, its USE (the
-//           content it can serve, as stated at launch), what it tried to make (`aim`) and a verdict on
-//           the whole run by click; right half: the reference it was read from - not output.
+//           content it can serve, as stated at launch), what it tried to make (`aim`), a verdict on
+//           the whole run by click and the note on the variant under the cursor (saved, or its field
+//           while E is open); right half: the reference it was read from - not output.
 //   body    the variants, as large as the screen leaves them (RunView).
 //   checks  the attributes the run is judged on, one row across the full width.
 //   foot    the cull's own bar.
@@ -31,6 +32,8 @@ export type RunModalProps = {
   readonly runVerdict: BoardVerdict | undefined;
   readonly reasons: VerdictReasons;
   readonly onRunVerdict: (v: BoardVerdict | null) => void;
+  /** The note on the variant under the cursor: its words, or its field while it is being written. */
+  readonly note?: ReactNode;
   readonly onClose: () => void;
   /** Off on a /kit specimen. */
   readonly live?: boolean;
@@ -38,7 +41,7 @@ export type RunModalProps = {
   readonly children: ReactNode;
 };
 
-export function RunModal({ category, label, position, use, aim, checks, reference, runVerdict, reasons, onRunVerdict, onClose, live = true, foot, children }: RunModalProps) {
+export function RunModal({ category, label, position, use, aim, checks, reference, runVerdict, reasons, onRunVerdict, note, onClose, live = true, foot, children }: RunModalProps) {
   const panel = useRef<HTMLDivElement | null>(null);
   useLayer(live, { kind: "zoom", panelRef: panel, onClose });
   return (
@@ -66,6 +69,7 @@ export function RunModal({ category, label, position, use, aim, checks, referenc
               <Keycap mode="board.cull" verb="zoom" />
             </button>
           </div>
+          {note}
         </div>
         {reference !== undefined && (
           <figure className={s.headRef}>
