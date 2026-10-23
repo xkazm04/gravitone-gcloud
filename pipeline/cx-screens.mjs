@@ -102,6 +102,9 @@ export const SCREENS = {
   //               pile, so - like `board` - it photographs whichever closed night THIS machine's
   //               scout store holds, and refuses when it holds none.
   "board-scout": { url: "/floor", follow: { selector: "a[href^='/board/pkt%3Ascout%3A']", nav: "goto" } },
+  // scout          the scout's decision graph (spark scout-decision-graph): every branch's bands, stage columns,
+  //                effort and the split. Reads the produce port's side: the fixture universe on the fixture lane.
+  scout: { url: "/scout" },
   ledger: { url: "/ledger" },
   runs: { url: "/projects/runs" },
   "library-style": { url: "/library/style/painted-3d" },

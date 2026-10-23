@@ -22,6 +22,7 @@ import { boardKitData } from "./boardKitData.ts";
 import { ContractSection } from "./Contract.tsx";
 import { ControlSections } from "./Controls.tsx";
 import { FloorSection } from "./FloorKit.tsx";
+import { GraphSection } from "./GraphKit.tsx";
 import { KitNav } from "./KitNav.tsx";
 import { LedgerSections } from "./LedgerKit.tsx";
 import { LibrarySection } from "./LibraryKit.tsx";
@@ -62,6 +63,7 @@ export default function KitPage() {
         <ProduceSection />
         <PartSection />
         <AudioSection />
+        <GraphSection />
         <LibrarySection />
         <StyleSection />
         <ContractSection />

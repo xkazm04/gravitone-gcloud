@@ -178,6 +178,7 @@ Where this port moved from the prototype:
 | `OracleStrip` | index.html `Oracle` | F | pass / fail, summary, digest, fixture |
 | `CommitButton` | `.commit`, `.commit.wait`, `.commit.refuse` + `@keyframes shake` | F | ready / waiting (`N undecided`, `N left`) / refusal replayed per press; cap from the mode's `commit` row |
 | `MatrixCull` (+ `RunMosaic`, `RunCard`, `RunModal`, `RunView`, `VariantCard`, `VerdictPick`, `VideoBar`, `IdeaList`, `CullFoot`, `useRunDesk`, board `runs.ts`) | the run grid (2026-10-22, operator-designed; no prototype source) | F | runs filed in tabs by content kind (images · videos · audio · ideas) and category rows; a run card per run (picture, label, a pip per variant); a run opens across the whole screen with its brief (aim, checks), at most three variants a row, a verdict by click under each and on the whole run, each reject reason opening its meaning as a `Tip` (and each reason key in `CullFoot`), a clip's play / sound / volume bar; words-only runs decided in place in the ideas list; every act also a key |
+| `NoteField`, `NoteText` | — (no prototype; spark scout-decision-graph WP-S1) | B | a one-line note on a cull decision: @gt/ui `Field` keyed `note`, opened by E, saved with ⏎ and dropped with Esc in `board.cull`; `NoteText` the saved note under its row, in the operator's words |
 | `CullTile`, `Zoom` | index.html `CullTile`, `Zoom`; `.tiles`, `.badge`, `.reason`, `.nudge`, `.wavebox`, `.take-tile-body`, `.zoom` | F | tile image / video / audio take / text; cur / keep / reject / nudge; reasons as rose chips; the lens over a desk; a `model/*` cell (spark game-3d-assets): the tile its poster (`ItemWords.poster`) or its words, never a canvas, the lens the `ModelViewer`; in an opened run the current model cell is the live viewer (`VariantCard`, one canvas at a time) |
 | `Plate` | every `<img>` a desk draws | F | lazy or eager; the one exemption from next/image (a candidate is judged as its own bytes) |
 | `BlindPair` | index.html `BlindPair`; `.pair-q`, `.pair-arms`, `.arm` (+ `.picked .dropped .bad`), `.armcap`, `.masked`, `.agree-banner` | F | masked arms / revealed for a beat (agrees, differs, not comparable) / summary with agreement tally |
@@ -257,3 +258,17 @@ Where this port moved from the prototype:
 Mounted through `DeskFrame`'s `load` prop (the summary, not a slot): `MatrixCull` passes `present.load`, the
 Board's `DecidedDesk` its packet's `present.load`. The three cells sit side by side on a wide desk and wrap as it
 narrows (a cell is at least `--w-detail`).
+
+## Scout graph (spark scout-decision-graph WP-S2)
+
+| Kit name | Replaces (prototype) | Pages | States / variants |
+| --- | --- | --- | --- |
+| `StageGraph` (+ `StageHead`, `GraphNodeButton`, `graph/stageGraph.ts`) | none (prototype source: none; the geometry is the day-line's shared-anchor rule, `runs/dayline.ts`) | /scout, /kit | five columns by `GRAPH_STAGES` (seed · derived · idea · run · output); a node per decision as a button, its mark the verdict's Look (`GRAPH_LOOK`: kept done, open awaiting, pending running, rejected and failed failed); dead (rejected, failed) in the faint role - faint words, dashed edge, never opacity; paused (the paused bars, dotted edge and links); selected (cyan, its links lit); `all` / `live` (the dead and their links hidden, each column head `+N`); links as cubic beziers from the node boxes, a loop for a link inside one column |
+| `ShareMeter` | none | /scout, /kit | a group's share of the runs (fill) against the split's target (tick): under, at, over (amber fill), no split set (no tick); one image named `kids: took 29% of runs, split 50%` |
+
+Pure module beside them: `graph/stageGraph.ts` (`GEOMETRY` from the tokens, `layout` - columns ordered by
+the barycentre of what each node grows from -, `nodeBox`, `linkPath`, `visibleOf`, `spokenNode`, `spokenGraph`).
+
+Not a StackBar: StackBar's segments are kept / rejected / undecided and speak those words; a share against a
+target is one quantity and a mark (ShareMeter's header says why). The graph is not windowed: /scout draws only
+unfolded bands, and the 10x fixture measure (WP-S2 report) decides whether a column needs `window/useWindow`.

@@ -1062,6 +1062,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "A seeds packet commits a reject that names no reason, so the ban the next batch steers by is empty.",
   },
   {
+    id: "stage-graph-live-shows-the-dead",
+    test: "packages/ui/test/components/graph.test.ts",
+    file: "packages/ui/src/components/graph/stageGraph.ts",
+    find: 'return view === "all" ? [...nodes] : nodes.filter((n) => !isDeadNode(n));',
+    replace: 'return view === "all" ? [...nodes] : [...nodes];',
+    why: "Under `live` the rejected and failed nodes stay drawn and nothing is counted behind each column's +N, so the operator cannot see which branches are still alive.",
+  },
+  {
     id: "board-legend-draws-every-reason-key",
     test: "packages/ui/test/board-render.test.ts",
     file: "packages/ui/src/components/keycaps/caps.ts",

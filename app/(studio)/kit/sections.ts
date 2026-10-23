@@ -23,6 +23,7 @@ export const SECTIONS = [
   { id: "produce", group: "Composition", title: "Produce", sub: "composer · receipt · plan · compose · re-route · hold" },
   { id: "part", group: "Composition", title: "Part workspace", sub: "workspace · rail · verdict · part tabs" },
   { id: "audio", group: "Composition", title: "Audio", sub: "preview · prompt · measured · terms · composer · variations · drafts · references" },
+  { id: "graph", group: "Composition", title: "Scout graph", sub: "stage graph · column head · node · share meter" },
   { id: "library", group: "Composition", title: "Library", sub: "rail · tile · row · detail · lineage · summary" },
   { id: "style", group: "Composition", title: "Style atelier", sub: "proof sheet · trial matrix · ratchet · slots · palette · evidence · plates" },
   { id: "contract", group: "Contract", title: "Style contract", sub: "docs/next/style-contract · each page's own words" },

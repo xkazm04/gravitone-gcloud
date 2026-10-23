@@ -1,0 +1,9 @@
+/* ShareMeter.tsx: the share a group took (fill) against the split's target (tick). Data rides in --share and --at
+   (0..1); every design value is a token. Over its target the fill turns amber: the branch took more than set. */
+.meter{display:inline-flex;align-items:center;gap:var(--sp-2);min-width:0}
+.rail{position:relative;flex:none;width:var(--w-pile);height:var(--h-meter);border-radius:var(--r-meter);background:var(--hair-2)}
+.fill{--share:0;position:absolute;left:0;top:0;bottom:0;width:calc(var(--share) * 100%);border-radius:var(--r-meter);background:var(--cyan)}
+.over{background:var(--amber)}
+.tick{--at:0;position:absolute;top:calc(var(--sp-1) * -1);bottom:calc(var(--sp-1) * -1);left:calc(var(--at) * 100%);width:var(--stroke-mark);background:var(--ink-bright)}
+.nums{font:600 var(--fs-micro)/1 var(--mono);color:var(--text);white-space:nowrap}
+.target{color:var(--muted)}

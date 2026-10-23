@@ -222,7 +222,13 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
       const { OUT_DIRNAME } = await import("../lib/fixtures/mode.ts");
       const k = kp.processKernel(kp.storeLocation(OUT_DIRNAME, io.env["GRAVITONE_STORE_PATH"]));
       try {
-        fs.writeFileSync(path.join(store.nightDir(n.id), "taste.md"), await tasteBrief(n.id, k.ok ? (x) => nightLoad(k.value.store, x, now().getTime()) : undefined), "utf8");
+        // The graph's branches and the tracks waiting for a visualizer close the brief (spark scout-decision-graph).
+        const { branchesSection, buildGraph } = await import("../lib/foundry/scout/graph.ts");
+        const { readSteer } = await import("../lib/foundry/scout/steer.ts");
+        const { tracksSection } = await import("../lib/foundry/scout/track.ts");
+        const graph = await buildGraph({ ...(k.ok ? { store: k.value.store } : {}), now: now() });
+        const extra = [...branchesSection(graph, await readSteer()), ...tracksSection((await store.readAllNights()).filter((x) => x.id !== n.id))];
+        fs.writeFileSync(path.join(store.nightDir(n.id), "taste.md"), await tasteBrief(n.id, k.ok ? (x) => nightLoad(k.value.store, x, now().getTime()) : undefined, extra), "utf8");
       } finally {
         kp.closeProcessKernel();
       }

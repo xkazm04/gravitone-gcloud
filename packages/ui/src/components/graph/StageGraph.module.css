@@ -1,0 +1,40 @@
+/* The stage graph (StageGraph.tsx). Positions are data (--x --y --w --h, from stageGraph.ts); everything else is
+   a token. A dead node is the faint role - faint words, a dashed edge - never an opacity; a paused one the
+   paused bars and a dotted link. */
+.scroll{overflow-x:auto;overflow-y:hidden;max-width:100%;padding-bottom:var(--sp-3)}
+.canvas{--w:0;--h:0;position:relative;width:var(--w);height:var(--h)}
+
+.head{--x:0;position:absolute;top:0;left:var(--x);width:var(--w-lane);height:var(--h-row);display:flex;align-items:center;gap:var(--sp-2);font:600 var(--fs-micro)/1 var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-bottom:1px solid var(--hair)}
+.more{font-weight:700;color:var(--faint)}
+
+.links{position:absolute;top:0;left:0;pointer-events:none;overflow:visible}
+.link{fill:none;stroke:var(--muted);stroke-width:1.4}
+.dead{stroke:var(--faint);stroke-dasharray:4 3}
+.held{stroke:var(--faint);stroke-dasharray:1 3}
+.lit{stroke:var(--cyan);stroke-width:2.2;stroke-dasharray:none}
+
+.node{--x:0;--y:0;position:absolute;left:var(--x);top:var(--y);width:var(--w-lane);height:var(--h-field);display:flex;align-items:center;gap:var(--sp-2);padding:0 var(--sp-3);border-radius:var(--r-chip);border:1px solid var(--hair-2);background:var(--ink-2);color:var(--text);font:500 var(--fs-bar)/1 var(--sans);text-align:left;cursor:pointer;z-index:1}
+.node:hover{background:var(--ink-3);border-color:var(--hair-3)}
+.node:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}
+.node[aria-pressed="true"]{border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan);z-index:2}
+.label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kind{flex:none;font:500 var(--fs-micro)/1 var(--mono);color:var(--faint)}
+
+/* the verdict's look: the edge carries the colour beside the mark */
+.s-done{border-color:color-mix(in srgb,var(--emerald) 40%,transparent)}
+.s-awaiting{border-color:color-mix(in srgb,var(--amber) 40%,transparent)}
+.s-running{border-color:color-mix(in srgb,var(--cyan) 50%,transparent)}
+.mark{flex:none;width:var(--size-dot);height:var(--size-dot);border-radius:50%;background:var(--faint)}
+.m-done{background:var(--emerald)}
+.m-awaiting{background:var(--amber)}
+.m-running{background:var(--cyan);animation:pulse 1.4s infinite}
+.m-failed{background:var(--rose)}
+@keyframes pulse{50%{box-shadow:0 0 0 var(--sp-1) color-mix(in srgb,var(--cyan) 15%,transparent)}}
+
+/* dead: the faint role */
+.gone{border:1px dashed var(--faint);background:var(--ink-1);color:var(--faint)}
+/* paused: the branch is held - the paused bars, the edge dotted */
+.paused{border-style:dotted;border-color:var(--faint);color:var(--muted)}
+.bars{flex:none;width:var(--sp-hair);height:var(--size-dot);border-left:var(--stroke-bar) solid var(--muted);border-right:var(--stroke-bar) solid var(--muted)}
+
+@media (prefers-reduced-motion:reduce){.m-running{animation:none}}

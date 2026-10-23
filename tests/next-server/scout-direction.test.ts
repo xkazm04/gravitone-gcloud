@@ -252,6 +252,8 @@ describe("add-source {fromIdea} - a kept idea brought in as our own source", () 
     const develop = md.slice(md.indexOf("## Ideas to develop"), md.indexOf("## Ideas blocked"));
     expect(develop).toBe("## Ideas to develop\n\n- none\n\n");
     expect(md).toContain(`- "A poster of a lighthouse" (${LIVE}/c-02): use case - note: we never print`);
+    // The decision graph's branches close the brief: these nights' work has no seed yet.
+    expect(md).toMatch(/## Branches\r?\n[\s\S]*before seeds/);
   });
 });
 
