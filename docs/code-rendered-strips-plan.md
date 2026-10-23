@@ -1,6 +1,7 @@
 # Code-rendered strips: 20 + 20 approaches, triaged in /foundry
 
-*2026-10-06. Plan, not yet built. Origin: the intake of "Claude Now Does Video
+*2026-10-06. Built: strips run as a kernel job on the text seat (L33, 6d5f3baa); a /scout night
+proposes stats reels through it (docs/scout.md, "A stats reel"). Origin: the intake of "Claude Now Does Video
 (FOR FREE) Thanks To JavaScript" (registry note
 `librarian/sources/2026-10-06-claude-javascript-video.md`, run `in-rscb-1006`).
 Goal set by the operator: compose **statistical** (StatReel-shaped) and

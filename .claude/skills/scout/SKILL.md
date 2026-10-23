@@ -3,7 +3,7 @@ name: scout
 memory: none
 version: 1.1.0
 category: Development
-description: The nightly training loop - search the web and YouTube around knowledge/scout/watchlist.md for art styles, scenes and craft worth learning, bring them onto this box, replicate them as kernel jobs (extracted still styles, scene recipes with Flare replica stills and local LTX clips, craft findings) and brief up to three 3D game assets (concept -> TRELLIS mesh -> Blender finish, made on this box) inside a $15 night, and leave ONE Board packet pkt:scout:<night> for a few minutes of K/X in the morning. Successor of train-style and of dojo's hand-run corpus study. Wraps pipeline/scout.mts; it never keeps, rejects or commits anything on the Board. Invoke with /scout night [--dry] [--until HH:MM], /scout folder <dir> [extract args], /scout status [<night>].
+description: The nightly training loop - search the web and YouTube around knowledge/scout/watchlist.md for art styles, scenes and craft worth learning, bring them onto this box, replicate them as kernel jobs (extracted still styles, scene recipes with Flare replica stills and local LTX clips, craft findings) and brief up to three 3D game assets (concept -> TRELLIS mesh -> Blender finish, made on this box) and up to six stats-reel ideas (a data video authored in code on illustrative numbers) inside a $15 night, and leave ONE Board packet pkt:scout:<night> for a few minutes of K/X in the morning. Successor of train-style and of dojo's hand-run corpus study. Wraps pipeline/scout.mts; it never keeps, rejects or commits anything on the Board. Invoke with /scout night [--dry] [--until HH:MM], /scout folder <dir> [extract args], /scout status [<night>].
 argument-hint: "night [--dry] [--until HH:MM] | folder <dir> | status [<night>]"
 allowed-tools: Read, Write, Edit, Bash, PowerShell, Glob, Grep, WebSearch, WebFetch, Monitor
 ---
@@ -116,6 +116,42 @@ so brief them right after `open`, before any search:
 4. Read the answer: a variant written `failed` by the input gate carries its codes - that brief's
    concept did not reconstruct; do not relaunch it the same night. The mesh job is queued for the
    worker; you do not wait for it.
+
+### 1c. Stats reels - brief them EARLY
+
+Each stats idea is authored as a full 8 s strip in code on the Claude seat (~15 min an idea), queued for
+the worker while discovery goes on, so brief them right after the assets. Up to `reelCap` a night
+(`open --reels`, default 6; `status --json` -> `reels` says how many are left). Never raise it.
+
+1. **The topic passes the gates first** -
+   `../ai-registry/knowledge/media-generation/narrative-craft/data-video-virality/data-video-virality.md`
+   and its `techniques/`: **continuity** (fine-grained steps, or a long series of many entities, the
+   screen changing at every step), **path over conclusion** (overtakes, crashes, comebacks - write the
+   keep-watching reason down with names and dates; a payoff only in the last frame fails), **dated
+   accelerators** (5-15 real events the data reacts to). Never a single-value ladder, a record list or
+   a winners list, however famous the topic.
+2. **Its `use`** - the content it serves, one line, as every run's (step 4.0) - and **its anchor**: a
+   watchlist line, a `## Gaps` line of `registry.md`, or `free`.
+3. **An ILLUSTRATIVE brief** in a strips fixture's shape. Read one first (`pipeline/strips/data/*.json`:
+   `f1-wins.json` is a `cumulative-race`, `gdp-top.json` a `level-race`) and write the same shape of
+   `data` with plausible numbers - `{case, title, hook, unit, kind, data, steps?, illustrative: true}`,
+   `kind` one of `level-race | cumulative-race | counter | ranking | share`, `case` a lower-case slug.
+   No source block and no research tonight: the night triages ideas, not datasets, and the strip's
+   source line says "illustrative data". Under 60 KB of JSON with the approach.
+4. **The seat's own approach** - free design, not one of the 20 cards, under
+   `../ai-registry/knowledge/media-generation/visual-generation/data-video-art-direction/`:
+   `{name, medium, grammar, density, direction, falsifier}` (`pipeline/strips/approaches.json` shows the
+   fields filled), the falsifier written before anything renders. `prompt` is your one-paragraph
+   direction to the author turn.
+5. **The batch goes through the ideas door**, target `stats`, `reel: {brief, approach}`:
+   `{"title": "<headline, <= 90 chars>", "target": "stats", "prompt": "<direction>", "anchor": {"kind": "watch|gap|free", "ref": "<line or empty>"}, "use": "<content>", "reel": {...}}`
+   in a JSON array -> `npx tsx pipeline/scout.mts ideas <night> --json <file>`. One bad brief refuses
+   the whole batch with its place and reason: fix that brief, resend the batch. The reels job is
+   always queued, never driven here; its tile (frame 120) reaches the packet's ideas tab when the
+   worker has authored it. Do not wait for it.
+
+`K` on a reel idea records the keep - its real data and full render come on a later night (not built
+yet); `X` blocks it. Either verdict and its reasons land in `night.committed`.
 
 ### 2. Discover - your judgement, the night's quality
 
@@ -230,6 +266,8 @@ rendered / failed / pending, USD, and the packet link for every closed, untriage
 - Do not edit `night.json`, `styles.json` or a PATTERNS.md by hand.
 - Do not push. Do not stage anything in step 0 but `knowledge/` and `.ai/registry-leads.jsonl`.
 - Do not re-read a source the doctor or the ingest refused through another tool.
+- Do not research a stats idea's real data on the night that proposes it, and never send a brief that is
+  not `illustrative: true`.
 
 ## Lessons
 

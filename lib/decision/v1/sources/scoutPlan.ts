@@ -45,7 +45,8 @@ import { lookBrief, sceneBrief } from "./scoutBrief.ts";
 //            `ideas`: the row is the idea's title and its studio prompt as the aim, the cell's
 //            meta its target and anchor - all the brief's words, verbatim. Kept, it develops
 //            next night into its target; that act reads the night's record, so nothing but
-//            `night.committed` is written for it.
+//            `night.committed` is written for it. A stats idea (spark stats-reels) is the same
+//            cell: its tile is its strip's frame 120 at the same path, its meta `stats reel · ...`.
 // A text cell's media is the content address of its own words (text/plain):
 // the kernel holds candidates by blob, and the words are the thing judged.
 //

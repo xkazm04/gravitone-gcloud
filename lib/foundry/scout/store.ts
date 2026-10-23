@@ -7,7 +7,9 @@
 //   sources/<s-NN>/     what the ingest producer brought onto this box
 //   scenes/<c-NN>/      a scene candidate's replica stills and its clip
 //   assets/<c-NN>/      a game asset's concept images (the asset itself is lib/foundry/mesh's)
-//   ideas/<c-NN>.png    an idea's artboard, drawn in the Leonardo studio
+//   ideas/<c-NN>.png    an idea's tile: its artboard drawn in the Leonardo studio, or a stats
+//                       idea's strip at frame 120
+//   ideas/<c-NN>/       a stats idea's brief.json and approach.json (the ideas door), its strip
 //
 // Every writer goes through `mutateNight`: the ingest and scene producers and
 // the CLI write the same manifest from different processes, and the run lock
@@ -26,6 +28,7 @@ import {
   DEFAULT_CEILING_USD,
   DEFAULT_CLIP_CAP,
   DEFAULT_IDEA_CAP,
+  DEFAULT_REEL_CAP,
   DEFAULT_TARGET,
   NIGHT_ID_RE,
   type Candidate,
@@ -64,6 +67,7 @@ export type NightOptions = {
   readonly clipCap?: number;
   readonly assetCap?: number;
   readonly ideaCap?: number;
+  readonly reelCap?: number;
   /** ISO instant. */
   readonly deadline?: string;
   readonly dry: boolean;
@@ -99,6 +103,7 @@ export async function createNight(o: NightOptions): Promise<Night> {
       clipCap: o.clipCap ?? DEFAULT_CLIP_CAP,
       assetCap: o.assetCap ?? DEFAULT_ASSET_CAP,
       ideaCap: o.ideaCap ?? DEFAULT_IDEA_CAP,
+      reelCap: o.reelCap ?? DEFAULT_REEL_CAP,
       dry: o.dry,
       state: "open",
       sources: [],

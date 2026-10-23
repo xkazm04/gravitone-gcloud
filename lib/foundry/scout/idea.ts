@@ -3,72 +3,135 @@ import { z } from "zod";
 import { parseAt } from "@gt/domain/door";
 import { err, ok, type Result } from "@gt/domain/errors";
 
+import { writeJsonAtomic } from "../runStore.ts";
 import { driveIdeas, launchIdeas, LIVE_IDEA_ENGINES } from "../../producers/scoutIdea.ts";
 import type { IdeaEngines } from "../../producers/scoutIdeaActs.ts";
+import { launchReels, reelFiles, SCOUT_REELS_LANE } from "../../producers/scoutReel.ts";
 import { launchable, Refusal, type ActContext } from "./acts.ts";
-import { mutateNight, nextCandidateId, readNight, withCandidate } from "./store.ts";
-import { DEFAULT_IDEA_CAP, IDEA_ANCHORS, IDEA_PROMPT_MAX, IDEA_TARGETS, IDEA_TITLE_MAX, USE_MAX, type IdeaCandidate, type Night, type NightId } from "./types.ts";
+import { mutateNight, nextCandidateId, readNight, resolveInNight, withCandidate } from "./store.ts";
+import { DEFAULT_IDEA_CAP, DEFAULT_REEL_CAP, IDEA_ANCHORS, IDEA_PROMPT_MAX, IDEA_TARGETS, IDEA_TITLE_MAX, REEL_KINDS, USE_MAX, type CandidateId, type IdeaCandidate, type Night, type NightId, type ReelBrief } from "./types.ts";
 
-// THE NIGHT'S IDEA ARTBOARDS - what `pipeline/scout.mts ideas <night> --json <file|->` does (spark
-// scout-idea-artboards WP-I2). The skill writes a batch of briefs in its own words - `{title, target,
-// prompt, anchor: {kind, ref}, use?}` - and this act turns each into an `idea` candidate (no source:
-// the words are ours) and the batch into ONE scout-ideas job that draws every idea as one rough still
-// in the operator's Leonardo studio (lib/producers/scoutIdea.ts). The night's rules are the other
-// launches' (./acts.ts): refused when the night is not open or past its deadline - and two of its own:
+// THE NIGHT'S IDEAS - what `pipeline/scout.mts ideas <night> --json <file|->` does (spark
+// scout-idea-artboards WP-I2, stats-reels WP-R2). The skill writes a batch of briefs in its own words -
+// `{title, target, prompt, anchor: {kind, ref}, use?, reel?}` - and this act turns each into an `idea`
+// candidate (no source: the words are ours). The batch splits by target into at most two jobs:
+//
+//   scene, style, asset3d   ONE scout-ideas job that draws every such idea as one rough still in the
+//                           operator's Leonardo studio (lib/producers/scoutIdea.ts), driven here
+//                           unless --detach.
+//   stats                   ONE scout-reels job on the Claude seat that authors every stats idea as a
+//                           full strip in code and renders its frame 120 as the tile
+//                           (lib/producers/scoutReel.ts) - ALWAYS left queued for the worker: an
+//                           author turn is ~15 min an idea, and the night's discovery goes on meanwhile.
+//
+// The night's rules are the other launches' (./acts.ts): refused when the night is not open or past
+// its deadline - and three of its own:
 //
 //   THE DOOR IS THE BATCH'S. One bad brief refuses the whole batch, naming its place (1-based) and the
 //   reason, before a candidate exists - a night never holds half of what the skill meant to draw.
 //   The words are craft, not content: like the game asset's brief (./concept.ts), no door here reads
 //   a name out of a prompt - the skill writes the brief, and docs/scout.md holds it to that.
 //
-//   THE IDEA CAP. A night draws at most `ideaCap` ideas (DEFAULT_IDEA_CAP when the night predates the
-//   field). Every idea candidate counts, a failed one too: a studio failure may still have spent its
-//   credits. The check and the candidates' rows are one write under the night's lock, so two batches
-//   at once cannot both take the last places.
+//   TWO CAPS. A night draws at most `ideaCap` studio ideas (DEFAULT_IDEA_CAP when the night predates
+//   the field) and authors at most `reelCap` stats ideas (DEFAULT_REEL_CAP likewise); each idea counts
+//   toward its own cap only. Every candidate counts, a failed one too: a studio failure may still have
+//   spent its credits, a failed author turn its seat minutes. Both checks and the candidates' rows are
+//   one write under the night's lock, so two batches at once cannot both take the last places, and a
+//   batch over EITHER cap writes nothing.
 //
-// NO MONEY REFUSAL. The studio bills prepaid credits and the night's ceiling caps Gemini only
-// (./budget.ts), so a batch is never refused for the dollars the night has left - its receipt is
-// unpriced, and says so.
+//   A STATS IDEA'S BRIEF IS ILLUSTRATIVE. Its `reel` holds plausible numbers in a strips fixture's
+//   shape (pipeline/strips/data/*.json) and must say `illustrative: true`: the night triages ideas, not
+//   datasets, and a kept reel's real data is researched on a later night and swapped into the strip's
+//   one data block whole (./types.ts ReelBrief, REEL_DATA_ID). The brief and the approach are written
+//   to `ideas/<c-NN>/` before the reel job is launched - the job reads them there.
+//
+// NO MONEY REFUSAL. The studio bills prepaid credits and the seat is reported uncapped; the night's
+// ceiling caps Gemini only (./budget.ts), so a batch is never refused for the dollars the night has
+// left - its receipts are unpriced, and say so.
 
 const text = (max: number) => z.string().trim().min(1).max(max);
+
+/** A reel's JSON, serialized, is held under this: the strip carries its data inline, in one block. */
+export const REEL_JSON_MAX = 60_000;
+const REEL_LINE_MAX = 200;
+const REEL_PARA_MAX = 400;
+const REEL_STEPS_MAX = 12;
+
+const reelSchema = z
+  .object({
+    brief: z
+      .object({
+        /** The fixture's name once kept: `pipeline/strips/data/<case>.json`. */
+        case: z.string().regex(/^[a-z0-9][a-z0-9-]{0,79}$/, "a lower-case slug of at most 80 characters (the fixture's file name once kept)"),
+        title: text(REEL_LINE_MAX),
+        hook: text(REEL_LINE_MAX),
+        unit: text(REEL_LINE_MAX),
+        kind: z.enum(REEL_KINDS),
+        /** The numbers, in the fixture's shape: any JSON but null. */
+        data: z.unknown().refine((v) => v !== undefined && v !== null, { message: "the brief's numbers, in a strips fixture's shape (pipeline/strips/data/*.json)" }),
+        steps: z.array(text(REEL_PARA_MAX)).min(1).max(REEL_STEPS_MAX).optional(),
+        illustrative: z.literal(true, { message: "a night's stats brief is illustrative: `illustrative: true` (its real data is researched once kept)" }),
+      })
+      .strict(),
+    /** The seat's own design, in a strips approach card's fields (pipeline/strips/approaches.json). */
+    approach: z
+      .object({ name: text(REEL_LINE_MAX), medium: text(REEL_LINE_MAX), grammar: text(REEL_LINE_MAX), density: text(REEL_LINE_MAX), direction: text(REEL_PARA_MAX), falsifier: text(REEL_PARA_MAX) })
+      .strict(),
+  })
+  .strict()
+  .refine((r) => Buffer.byteLength(JSON.stringify(r), "utf8") <= REEL_JSON_MAX, { message: `a reel is at most ${REEL_JSON_MAX / 1000} KB of JSON: a reel's data, not a dataset` });
 
 const ideaSchema = z
   .object({
     /** The idea's headline on the Board. */
     title: text(IDEA_TITLE_MAX),
     target: z.enum(IDEA_TARGETS),
-    /** The studio prompt, verbatim. */
+    /** The studio prompt, verbatim. A stats idea's is the seat's one-paragraph direction for its author turn. */
     prompt: text(IDEA_PROMPT_MAX),
     anchor: z
       .object({ kind: z.enum(IDEA_ANCHORS), ref: z.string().trim().max(300) })
       .strict()
       .refine((a) => a.kind === "free" || a.ref !== "", { message: "a watch or gap anchor quotes its watchlist line or registry gap in `ref`", path: ["ref"] }),
     use: text(USE_MAX).optional(),
+    /** A stats idea's illustrative brief and its approach: required on target `stats`, refused on any other. */
+    reel: reelSchema.optional(),
   })
-  .strict();
+  .strict()
+  .refine((b) => b.target !== "stats" || b.reel !== undefined, { message: "a stats idea carries its reel: {brief, approach}", path: ["reel"] })
+  .refine((b) => b.target === "stats" || b.reel === undefined, { message: "only a stats idea carries a reel", path: ["reel"] });
 
-export type IdeaBrief = Pick<IdeaCandidate, "title" | "target" | "prompt" | "anchor" | "use">;
+export type IdeaBrief = Pick<IdeaCandidate, "title" | "target" | "prompt" | "anchor" | "use"> & { readonly reel?: ReelBrief };
 
 /** The skill's batch as briefs, or the first bad brief's place and reason; nothing is written here. */
 export function parseIdeas(raw: unknown): Result<IdeaBrief[]> {
-  if (!Array.isArray(raw)) return err("invalid", "ideas: the input is a JSON array of briefs {title, target, prompt, anchor: {kind, ref}, use?}");
+  if (!Array.isArray(raw)) return err("invalid", "ideas: the input is a JSON array of briefs {title, target, prompt, anchor: {kind, ref}, use?, reel?}");
   if (raw.length === 0) return err("invalid", "ideas: the batch holds no brief");
   const out: IdeaBrief[] = [];
   for (const [i, item] of raw.entries()) {
     const r = parseAt(`idea ${i + 1}`, ideaSchema, item);
     if (!r.ok) return r;
     const b = r.value;
-    out.push({ title: b.title, target: b.target, prompt: b.prompt, anchor: { kind: b.anchor.kind, ref: b.anchor.ref }, ...(b.use === undefined ? {} : { use: b.use }) });
+    out.push({ title: b.title, target: b.target, prompt: b.prompt, anchor: { kind: b.anchor.kind, ref: b.anchor.ref }, ...(b.use === undefined ? {} : { use: b.use }), ...(b.reel === undefined ? {} : { reel: b.reel as ReelBrief }) });
   }
   return ok(out);
 }
 
-/** Idea candidates the night holds, whatever became of them. */
-export const ideasUsed = (n: Pick<Night, "candidates">): number => n.candidates.filter((c) => c.kind === "idea").length;
+const isReel = (c: Pick<IdeaCandidate, "target">): boolean => c.target === "stats";
+
+/** Studio ideas the night holds, whatever became of them; a stats idea counts toward the reel cap only. */
+export const ideasUsed = (n: Pick<Night, "candidates">): number => n.candidates.filter((c) => c.kind === "idea" && !isReel(c)).length;
 
 export const ideaCapOf = (n: Pick<Night, "ideaCap">): number => n.ideaCap ?? DEFAULT_IDEA_CAP;
 
-export type IdeasResult = { readonly candidates: readonly IdeaCandidate[]; readonly jobId?: string; readonly outcome?: string };
+/** Stats ideas the night holds, whatever became of them. */
+export const reelsUsed = (n: Pick<Night, "candidates">): number => n.candidates.filter((c) => c.kind === "idea" && isReel(c)).length;
+
+export const reelCapOf = (n: Pick<Night, "reelCap">): number => n.reelCap ?? DEFAULT_REEL_CAP;
+
+export type IdeasResult = { readonly candidates: readonly IdeaCandidate[]; readonly jobId?: string; readonly reelsJobId?: string; readonly outcome?: string };
+
+/** What a test injects: the studio still, and the reels launcher (absent: lib/producers/scoutReel.ts's). */
+export type IdeasEngines = Partial<IdeaEngines> & { readonly launchReels?: typeof launchReels };
 
 /** Re-read the batch's candidates, in order. */
 async function batchOf(id: NightId, cids: readonly string[]): Promise<IdeaCandidate[]> {
@@ -76,26 +139,44 @@ async function batchOf(id: NightId, cids: readonly string[]): Promise<IdeaCandid
   return cids.map((cid) => n.candidates.find((c): c is IdeaCandidate => c.id === cid && c.kind === "idea")).filter((c): c is IdeaCandidate => c !== undefined);
 }
 
-export async function ideasAct(ctx: ActContext, id: NightId, raw: unknown, engines: Partial<IdeaEngines> = {}): Promise<IdeasResult> {
+const spanOf = (cids: readonly string[]): string => (cids.length === 1 ? (cids[0] ?? "") : `${cids[0] ?? ""}..${cids[cids.length - 1] ?? ""}`);
+
+/** The cap a batch would cross, in the night's numbers, or undefined. */
+function over(id: NightId, what: string, used: number, cap: number, asked: number): string | undefined {
+  const left = Math.max(0, cap - used);
+  return asked > left ? `night ${id} holds ${used} of its ${cap} ${what}; ${left} left, and the batch has ${asked} - nothing was drawn` : undefined;
+}
+
+/** The pending ones of `cids` failed with `why`: a launch that did not happen leaves no idea waiting on it. */
+async function failPending(id: NightId, cids: readonly CandidateId[], why: string): Promise<void> {
+  const ids = new Set(cids);
+  await mutateNight(id, (n) => {
+    let m = n;
+    for (const c of n.candidates) if (ids.has(c.id) && c.kind === "idea" && c.status === "pending") m = withCandidate(m, { ...c, status: "failed", error: why });
+    return m;
+  });
+}
+
+type Launched = { readonly jobId: string } | { readonly why: string };
+
+export async function ideasAct(ctx: ActContext, id: NightId, raw: unknown, engines: IdeasEngines = {}): Promise<IdeasResult> {
   const parsed = parseIdeas(raw);
   if (!parsed.ok) throw new Refusal(parsed.error.message);
   const briefs = parsed.value;
   const { mode } = await launchable(ctx, id);
+  const askedReels = briefs.filter(isReel).length;
 
   let made: IdeaCandidate[] = [];
   let full: string | undefined;
   await mutateNight(id, (n) => {
-    const used = ideasUsed(n);
-    const cap = ideaCapOf(n);
-    const left = Math.max(0, cap - used);
-    if (briefs.length > left) {
-      full = `night ${id} holds ${used} of its ${cap} ideas; ${left} left, and the batch has ${briefs.length} - nothing was drawn`;
-      return n;
-    }
+    full = over(id, "ideas", ideasUsed(n), ideaCapOf(n), briefs.length - askedReels) ?? over(id, "stats reels", reelsUsed(n), reelCapOf(n), askedReels);
+    if (full !== undefined) return n;
     let next = n;
     made = [];
-    for (const b of briefs) {
-      const c: IdeaCandidate = { id: nextCandidateId(next), kind: "idea", sourceIds: [], status: "pending", ...b };
+    for (const { reel, ...b } of briefs) {
+      const cid = nextCandidateId(next);
+      const files = reelFiles(cid);
+      const c: IdeaCandidate = { id: cid, kind: "idea", sourceIds: [], status: "pending", ...b, ...(reel === undefined ? {} : { reel: { brief: files.brief, approach: files.approach } }) };
       next = { ...next, candidates: [...next.candidates, c] };
       made.push(c);
     }
@@ -103,35 +184,73 @@ export async function ideasAct(ctx: ActContext, id: NightId, raw: unknown, engin
   });
   if (full !== undefined) throw new Refusal(full);
   if (made.length === 0) throw new Error(`night ${id}: the idea candidates were not written`);
-  const cids = made.map((c) => c.id);
-  const span = cids.length === 1 ? (cids[0] ?? "") : `${cids[0] ?? ""}..${cids[cids.length - 1] ?? ""}`;
-  const fail = async (why: string): Promise<never> => {
-    await mutateNight(id, (n) => {
-      let m = n;
-      for (const c of made) {
-        const now = m.candidates.find((x): x is IdeaCandidate => x.id === c.id && x.kind === "idea");
-        if (now?.status === "pending") m = withCandidate(m, { ...now, status: "failed", error: why });
-      }
-      return m;
-    });
+  const all = made.map((c) => c.id);
+  const studio = made.filter((c) => !isReel(c)).map((c) => c.id);
+  const reels = made.filter(isReel).map((c) => c.id);
+  const opts = { mode, actor: ctx.actor, dryOnly: ctx.dryOnly };
+
+  // The reels' inputs, where their job reads them - before it is launched.
+  try {
+    for (const [k, b] of briefs.entries()) {
+      const cid = all[k];
+      if (b.reel === undefined || cid === undefined) continue;
+      const files = reelFiles(cid);
+      await writeJsonAtomic(resolveInNight(id, files.brief), b.reel.brief);
+      await writeJsonAtomic(resolveInNight(id, files.approach), b.reel.approach);
+    }
+  } catch (e) {
+    const why = `the stats ideas' briefs were not written: ${e instanceof Error ? e.message : String(e)}`;
+    await failPending(id, all, why);
     throw new Refusal(why);
+  }
+
+  const launchStudio = async (): Promise<Launched> => {
+    const span = spanOf(studio);
+    const target = { nightId: id, candidateIds: studio };
+    const r0 = await launchIdeas(ctx.store, target, opts);
+    if (!r0.ok) return { why: r0.error.message };
+    if (r0.value.kind !== "receipt") return { why: `ideas launch answered ${r0.value.kind} before its receipt` };
+    const rc = r0.value.receipt;
+    const line = rc.lines[0];
+    ctx.say(`receipt (${rc.mode}): ideas ${span} · ${studio.length} artboard(s) on ${line?.lane ?? "box.chrome"} · ${line?.provider ?? "leonardo-studio"} · unpriced (${line?.unpricedReason ?? "studio credits"}) · ~${Math.ceil((line?.seconds ?? 0) / 60)} min`);
+    const r1 = await launchIdeas(ctx.store, target, { ...opts, token: rc.token });
+    if (!r1.ok) return { why: r1.error.message };
+    if (r1.value.kind !== "launched") return { why: `the receipt moved while it was confirmed (${r1.value.kind}); nothing launched` };
+    ctx.say(`launched ${span} as ${r1.value.jobId}`);
+    return { jobId: r1.value.jobId };
+  };
+  const launchReelJob = async (): Promise<Launched> => {
+    const launch = engines.launchReels ?? launchReels;
+    const span = spanOf(reels);
+    const target = { nightId: id, candidateIds: reels };
+    const r0 = await launch(ctx.store, target, opts);
+    if (!r0.ok) return { why: r0.error.message };
+    if (r0.value.kind !== "receipt") return { why: `reels launch answered ${r0.value.kind} before its receipt` };
+    const rc = r0.value.receipt;
+    ctx.say(`receipt (${rc.mode}): reels ${span} · ${reels.length} strip(s) on ${rc.lines[0]?.lane ?? SCOUT_REELS_LANE} · claude seat · ~${Math.ceil(rc.totals.seconds / 60)} min`);
+    const r1 = await launch(ctx.store, target, { ...opts, token: rc.token });
+    if (!r1.ok) return { why: r1.error.message };
+    if (r1.value.kind !== "launched") return { why: `the reels receipt moved while it was confirmed (${r1.value.kind}); nothing launched` };
+    ctx.say(`launched ${span} as ${r1.value.jobId} · queued for the worker`);
+    return { jobId: r1.value.jobId };
   };
 
-  const target = { nightId: id, candidateIds: cids };
-  const opts = { mode, actor: ctx.actor, dryOnly: ctx.dryOnly };
-  const r0 = await launchIdeas(ctx.store, target, opts);
-  if (!r0.ok) return fail(r0.error.message);
-  if (r0.value.kind !== "receipt") return fail(`ideas launch answered ${r0.value.kind} before its receipt`);
-  const rc = r0.value.receipt;
-  const line = rc.lines[0];
-  ctx.say(`receipt (${rc.mode}): ideas ${span} · ${cids.length} artboard(s) on ${line?.lane ?? "box.chrome"} · ${line?.provider ?? "leonardo-studio"} · unpriced (${line?.unpricedReason ?? "studio credits"}) · ~${Math.ceil((line?.seconds ?? 0) / 60)} min`);
-  const r1 = await launchIdeas(ctx.store, target, { ...opts, token: rc.token });
-  if (!r1.ok) return fail(r1.error.message);
-  if (r1.value.kind !== "launched") return fail(`the receipt moved while it was confirmed (${r1.value.kind}); nothing launched`);
-  const jobId = r1.value.jobId;
-  ctx.say(`launched ${span} as ${jobId}`);
-  if (ctx.detach) return { candidates: await batchOf(id, cids), jobId, outcome: "detached" };
+  // Each job launches on its own: one that is refused fails its own ideas, never the other job's.
+  const s = studio.length === 0 ? undefined : await launchStudio();
+  const r = reels.length === 0 ? undefined : await launchReelJob();
+  const jobId = s !== undefined && "jobId" in s ? s.jobId : undefined;
+  const reelsJobId = r !== undefined && "jobId" in r ? r.jobId : undefined;
+  const refused: string[] = [];
+  for (const [l, cids, what] of [[s, studio, "ideas"], [r, reels, "reels"]] as const) {
+    if (l === undefined || !("why" in l)) continue;
+    await failPending(id, cids, l.why);
+    // A batch of one target says its refusal verbatim; a split batch names whose it is.
+    refused.push(studio.length === 0 || reels.length === 0 ? l.why : `${what} ${spanOf(cids)}: ${l.why}`);
+  }
+  if (refused.length > 0) throw new Refusal([...refused, ...[jobId, reelsJobId].filter((j) => j !== undefined).map((j) => `${j} launched`)].join("; "));
+  const jobs = { ...(jobId === undefined ? {} : { jobId }), ...(reelsJobId === undefined ? {} : { reelsJobId }) };
+  if (ctx.detach || jobId === undefined) return { candidates: await batchOf(id, all), ...jobs, outcome: "detached" };
 
-  const r = await driveIdeas(ctx.store, ctx.location, jobId, { dryOnly: ctx.dryOnly, engines: { generate: engines.generate ?? LIVE_IDEA_ENGINES.generate } });
-  return { candidates: await batchOf(id, cids), jobId, outcome: r.ok ? r.value.outcome : r.error.message };
+  const d = await driveIdeas(ctx.store, ctx.location, jobId, { dryOnly: ctx.dryOnly, engines: { generate: engines.generate ?? LIVE_IDEA_ENGINES.generate } });
+  return { candidates: await batchOf(id, all), ...jobs, outcome: d.ok ? d.value.outcome : d.error.message };
 }

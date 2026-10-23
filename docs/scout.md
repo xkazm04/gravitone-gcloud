@@ -36,13 +36,14 @@ to stderr. Exit `0` done, `1` failed or refused, `2` usage.
 
 | Command | Does | Spends |
 |---|---|---|
-| `doctor [--dry]` | one line per check: yt-dlp, ffmpeg, ffprobe (`-version`), `GOOGLE_AI_API_KEY` and `LEONARDO_API_KEY` set or unset (never their values), the store and night folders writable, `GRAVITONE_DRY_ONLY`. A failing line carries its remedy; exit 1 when a check the night needs fails (`--dry`: the keys and the dry pin are notes) | no |
-| `open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--until HH:MM] [--live]` | creates the night, writes its `taste.md` and `registry.md` (below, "The registry"), prints its id. `--until` is local time today, or tomorrow once that has passed. Without `--live` the night is dry; `--live` is refused under `GRAVITONE_DRY_ONLY=1` | no |
+| `doctor [--dry]` | one line per check: yt-dlp, ffmpeg, ffprobe (`-version`), `GOOGLE_AI_API_KEY` and `LEONARDO_API_KEY` set or unset (never their values), the store and night folders writable, `GRAVITONE_DRY_ONLY`. A failing line carries its remedy; exit 1 when a check the night needs fails (`--dry`: the keys and the dry pin are notes). The registry, the Leonardo studio and Playwright's `chromium` (where `chromium.launch` would start it, never launched) are always notes | no |
+| `open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--ideas 25] [--reels 6] [--until HH:MM] [--live]` | creates the night, writes its `taste.md` and `registry.md` (below, "The registry"), prints its id. `--until` is local time today, or tomorrow once that has passed. Without `--live` the night is dry; `--live` is refused under `GRAVITONE_DRY_ONLY=1` | no |
 | `add-source <night> --json <file\|->` | `[{url, kind, title, channel?, why, found, watch?, rich?}]`, validated (below). A URL an earlier night made a candidate from is skipped and reported; one it only held is taken | no |
 | `ingest <night> [--source s-NN] [--retry] [--detach]` | launches the `scout-ingest` job over the pending sources and drives it here; `--retry` first puts the failed sources in scope back to pending | no |
 | `style <night> --sources s-01,s-03 --use "<content>" [--slug x] [--detach]` | an ordinary extract run (`launchExtract`, a gallery of those sources' pictures and keyframes) as one style candidate; its run id and job id go on the candidate | yes |
 | `scene <night> --source s-NN --use "<content>" [--frames k-012.jpg] [--detach]` | a scene candidate read from the chosen keyframe (default the first; ingest keeps one frame per cut, so neighbouring keyframes are different shots), launched through `launchScene` (`lib/producers/scoutScene.ts`) with a clip while the night's clip cap allows | yes |
 | `asset <night> --brief <file\|-> [--detach]` | one game asset from `{class, subject, use, style?, kind?, techniques?}`: its concepts drawn and gated, its mesh asset written and the mesh job QUEUED for the worker (below, "A game asset") | yes |
+| `ideas <night> --json <file\|-> [--detach]` | `[{title, target: scene\|style\|asset3d\|stats, prompt, anchor: {kind: watch\|gap\|free, ref}, use?, reel?}]`, one `idea` candidate each. Scene, style and 3d-asset ideas are ONE `scout-ideas` job drawing a rough artboard each in the Leonardo studio (driven here unless `--detach`); stats ideas carry `reel` and are ONE `scout-reels` job on the Claude seat, always queued for the worker (below, "A stats reel"). One bad brief refuses the batch with its place; a batch over `ideaCap` or `reelCap` writes nothing | studio credits, the seat |
 | `finding <night> --json <file\|->` | `[{sourceIds, template, step, claim, quote, restates?}]`; `knowledge/templates/<template>/` must exist, `step` is `NN-name` and need not exist yet | no |
 | `watch <night> --entry "..." --why "..." [--sources s-01]` | a proposed watchlist line | no |
 | `close <night> [--stop <reason>]` | settles style candidates from their runs, closes the night, prints the morning: packet id, counts by kind and status, settled and held USD | no |
@@ -51,7 +52,7 @@ to stderr. Exit `0` done, `1` failed or refused, `2` usage.
 | `status [<night>]` | every night, or one with its budget, sources and candidates | no |
 | `folder <dir> [extract args]` | the train-style path: `pipeline/foundry/extract.mts <dir> ...` with its output and exit code | as extract |
 
-Every launching command (`ingest`, `style`, `scene`, `asset`) refuses on a night that is not open, and after the
+Every launching command (`ingest`, `style`, `scene`, `asset`, `ideas`) refuses on a night that is not open, and after the
 deadline (closing the night with `stop: deadline`).
 
 ## The money
@@ -73,6 +74,10 @@ deadline (closing the night with `stop: deadline`).
   One counts once it may reach the GPU - pending, or handed off to a mesh asset; one whose concepts the
   input gate refused, or whose job failed before the hand-off, spent no GPU minute and gives its place
   back. The check and the candidate's row are one write under the night's lock.
+- **Ideas and stats reels**: at most `--ideas` studio artboards (default 25) and `--reels` stats ideas
+  (default 6, at most 12) per night, each counted toward its own cap only and never toward `--target` or
+  the clips; a failed one still counts. Both are uncapped by the ceiling (studio credits, the seat), so a
+  batch is refused by its caps and never by the night's money.
 - **Dry and live.** A night is dry unless opened with `--live`. Its launches inherit its mode: a dry
   night's jobs answer every paid call with a stand-in, spend nothing, and its packet commits nothing.
   `GRAVITONE_DRY_ONLY=1` refuses a live night and every live launch.
@@ -159,6 +164,40 @@ finished is listed at the gate with its own sentence. **A commit** writes each j
 only. `taste.md` tallies the verdicts by class and technique - `character T1: kept 0 · thrown 1
 (topology 1)` beside `character T2: kept 1 · thrown 0` - the T1-against-T2 question the 3D rounds left open.
 
+## A stats reel
+
+A stats idea (spark `stats-reels`) is a data video the seat judged worth making, proposed in the same
+`ideas` batch as the artboards with `target: "stats"` and a `reel` the door requires on that target and
+refuses on any other:
+
+- `reel.brief` - `{case, title, hook, unit, kind, data, steps?, illustrative: true}` in a strips
+  fixture's shape (`pipeline/strips/data/*.json`); `kind` is `level-race`, `cumulative-race`, `counter`,
+  `ranking` or `share`, `case` a lower-case slug (the fixture's name once kept).
+- `reel.approach` - the seat's own design, `{name, medium, grammar, density, direction, falsifier}`, the
+  fields of a strips approach card (`pipeline/strips/approaches.json`).
+- `prompt` - the seat's one-paragraph direction to the author turn.
+
+Strings are bounded (200 characters a line, 400 a direction, falsifier or step, at most 12 steps) and the
+whole reel is at most 60 KB of JSON.
+
+**The illustrative rule.** A night triages ideas, not datasets: the brief's numbers are plausible, not
+researched, and `illustrative: false` or an absent mark is refused. The strip holds every number in ONE
+inline `<script id="strip-data" type="application/json">` block and its source line reads "illustrative
+data", so a kept reel's real data swaps in whole.
+
+**What is written where.** The door writes `ideas/<c-NN>/brief.json` and `ideas/<c-NN>/approach.json` and
+sets the candidate's `reel` to those paths before the job is launched. The job,
+`job:scout-reels:<night>:<first c-NN>` (producer `scout-reels`, lane `seat.text`, `lib/producers/scoutReel.ts`),
+is always left queued for the worker - an author turn is ~15 minutes an idea - with its receipt said
+like the artboards': `receipt (live): reels c-05..c-07 · 3 strip(s) on seat.text · claude seat · ~N min`.
+Per idea it authors the strip (`ideas/<c-NN>/strip.html`), lints it, and renders frame 120 to
+`ideas/<c-NN>.png`, the idea's tile; a failed turn fails that idea with its sentence, and the batch goes on.
+
+**In the packet** a stats idea is one tile in the ideas tab like an artboard, its meta `stats reel ·
+<anchor>`. `K` records the keep (`develops next night as a stats reel`); developing it - the real data
+researched into a fixture, the block swapped, the full 240-frame render with its gates - is not built yet.
+`X` blocks it. Both land in `night.committed` with their reasons.
+
 ## The morning
 
 A closed, non-dry night with anything rendered is one pile in the Floor's image lane and one packet,
@@ -225,6 +264,9 @@ the CLI and committing `knowledge/` and `.ai/registry-leads.jsonl`; logs land in
 | `sources/<s-NN>/k-NNN.jpg` | ingest | a video's gated keyframes (`at` on the source) |
 | `scenes/<c-NN>/` | the scene producer | replica stills and the clip |
 | `assets/<c-NN>/concept-<k>.png` | the asset producer | a game asset's concepts (the asset itself is `foundry-out/mesh/<asset>/`) |
+| `ideas/<c-NN>.png` | the ideas and reels producers | an idea's tile: its studio artboard, or a stats idea's frame 120 |
+| `ideas/<c-NN>/brief.json`, `approach.json` | `ideas` | a stats idea's illustrative brief and approach, as sent |
+| `ideas/<c-NN>/strip.html` | the reels producer | a stats idea's strip, once it passed the lint |
 
 A style candidate's looks live in its extract run, `foundry-out/extract/<runId>/`. The kernel store
 (`foundry-out/gravitone.sqlite`, `GRAVITONE_STORE_PATH` moves it) holds the jobs, their spend, and the
