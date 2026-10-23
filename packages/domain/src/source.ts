@@ -22,7 +22,7 @@ import { err, ok, type Result } from "./errors.ts";
  *  carried to Phase 4). The first domain also had `triage`; nothing opened a
  *  packet under it, and the word was ambiguous between audio triage (`audio`)
  *  and v1's explainer research scope (not a Weir surface), so it is gone. */
-export const PACKET_SOURCES = ["forge", "extract", "dojo", "strips", "article", "audio", "suno", "mv", "trials", "step", "proof", "scout"] as const;
+export const PACKET_SOURCES = ["forge", "extract", "dojo", "strips", "article", "audio", "suno", "mv", "trials", "step", "proof", "scout", "seeds"] as const;
 export type PacketSource = (typeof PACKET_SOURCES)[number];
 
 export const PACKET_MODES = ["matrix-cull", "blind-pair", "packet-review"] as const;
@@ -37,6 +37,13 @@ export type SourceSpec = {
   readonly maxReasons: number;
   /** The longest note a verdict may carry; 0 means v1 had no note to keep it in. */
   readonly noteMax: number;
+  /**
+   * A reject must name at least one reason before the packet COMMITS (spark scout-decision-graph:
+   * "every X needs a reason"). Enforced at the commit - the cull's gate and the kernel's planCommit -
+   * never at the verdict write, so X then a reason key stays two keystrokes. Absent: a bare reject
+   * commits, as every source before `seeds` did.
+   */
+  readonly reasonOnReject?: true;
 };
 
 /** v1's note bound where v1 had one (lib/articles/types.ts NOTE_MAX_CHARS, lib/sound/takes.ts `str(b.note, 2000)`). */
@@ -99,6 +106,10 @@ export const SOURCES = {
   // every earlier key keeps its binding: `topology` (holes, floaters, fused or thin parts), `texture`
   // (the bake), `rig` (the weights or the chains), `scale` (world size against the class).
   scout: { modes: ["matrix-cull"], reasons: ["style", "subject", "craft", "motion", "rights", "generic", "use case", "topology", "texture", "rig", "scale"], maxReasons: 3, noteMax: NOTE_SHORT },
+  // A batch of one-sentence SEEDS (spark scout-decision-graph): genre, subgenre, type of content,
+  // audience and format, kept or thrown in one pass. Every reject names why (the operator, wave 3),
+  // because a reasoned throw is the ban the next batch steers by; a note may follow the reason.
+  seeds: { modes: ["matrix-cull"], reasons: ["generic", "not for us", "audience", "done before", "format"], maxReasons: 2, noteMax: NOTE_SHORT, reasonOnReject: true },
 } as const satisfies { readonly [S in PacketSource]: SourceSpec };
 
 type ReasonOf<S extends PacketSource> = (typeof SOURCES)[S]["reasons"][number];
@@ -178,6 +189,13 @@ export const REASON_MEANING: { readonly [S in PacketSource]: { readonly [R in Re
     rig: "The rig fails: bad weights or broken bone chains.",
     scale: "Its size in the world is wrong for its class.",
   },
+  seeds: {
+    generic: "The obvious take: nothing here we would make differently.",
+    "not for us": "A genre or content type this channel will not make.",
+    audience: "Wrong audience for this genre or type of content.",
+    "done before": "Already kept, thrown or made under another seed.",
+    format: "Will not hold as a Short or a short video.",
+  },
 };
 
 /** A source's vocabulary as the Board holds it (PacketView.reasons): the reasons in key order, how
@@ -188,12 +206,14 @@ export type ReasonVocabulary = {
   readonly noteMax: number;
   /** One sentence per reason; a reason absent here draws no tip. */
   readonly meaning: Readonly<Record<string, string>>;
+  /** Set when a reject must name a reason before the packet commits (SourceSpec.reasonOnReject). */
+  readonly required?: true;
 };
 
 /** The one builder of a packet view's vocabulary, so the meanings travel with the list they define. */
 export function reasonVocabulary(source: PacketSource): ReasonVocabulary {
   const spec: SourceSpec = SOURCES[source];
-  return { list: spec.reasons, max: spec.maxReasons, noteMax: spec.noteMax, meaning: REASON_MEANING[source] };
+  return { list: spec.reasons, max: spec.maxReasons, noteMax: spec.noteMax, meaning: REASON_MEANING[source], ...(spec.reasonOnReject === true ? { required: true as const } : {}) };
 }
 
 /** The keys a reason list is bound to, in order (plan §8: the Board's 1-4 grew to eleven for audio). */

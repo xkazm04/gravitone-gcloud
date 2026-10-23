@@ -85,6 +85,13 @@ export const GENRE_MAX = 80;
 /** Hailuo takes 5 or 10 (lib/imaging/video/types.ts CLIP_DURATIONS); the night renders the short one. */
 export const CLIP_SECONDS = 5;
 
+/** Suno tracks a night makes from kept music seeds (spark scout-decision-graph): one create each, ~4 clips. */
+export const DEFAULT_TRACK_CAP = 4;
+export const MAX_TRACK_CAP = 8;
+/** Full-song visualizers a night renders from kept track clips (~20-30 min each on box.render). */
+export const DEFAULT_VISUALIZER_CAP = 2;
+export const MAX_VISUALIZER_CAP = 4;
+
 /** A finding is a headline, not a paragraph; its quote is the evidence, verbatim. */
 export const CLAIM_MAX = 140;
 export const QUOTE_MAX = 400;
@@ -119,6 +126,10 @@ export type Night = {
   readonly ideaCap?: number;
   /** Stats-reel ideas the night may author (`idea` candidates with target `stats`). Absent: DEFAULT_REEL_CAP. */
   readonly reelCap?: number;
+  /** Suno tracks the night may make (`track` candidates). Absent on a night opened before 2026-10-23: DEFAULT_TRACK_CAP. */
+  readonly trackCap?: number;
+  /** Visualizers the night may render (`visualizer` candidates). Absent: DEFAULT_VISUALIZER_CAP. */
+  readonly visualizerCap?: number;
   /** A dry night ran on stand-ins; its packet can be triaged but commits nothing. */
   readonly dry: boolean;
   readonly state: NightState;
@@ -189,7 +200,7 @@ export type ScoutSource = {
 
 /* ── Candidates ──────────────────────────────────────────────────────────── */
 
-export const CANDIDATE_KINDS = ["style", "scene", "finding", "watch", "asset3d", "idea", "direction"] as const;
+export const CANDIDATE_KINDS = ["style", "scene", "finding", "watch", "asset3d", "idea", "direction", "track", "visualizer"] as const;
 export type CandidateKind = (typeof CANDIDATE_KINDS)[number];
 
 export const CANDIDATE_STATUSES = ["pending", "rendered", "failed"] as const;
@@ -208,6 +219,12 @@ type CandidateBase = {
   readonly use?: string;
   /** `<night>/<c-id>` of the kept idea this candidate develops - it takes the idea off the to-develop list (taste.ts). */
   readonly fromIdea?: string;
+  /**
+   * The kept SEED this candidate grows from (spark scout-decision-graph): `<batch>/sd-NNN`. Set by the door
+   * that takes it (ideas, track, direction) and copied from the idea onto whatever develops it, so every
+   * run's effort rolls up to a branch. Absent on work from before seeds existed ("before seeds").
+   */
+  readonly fromSeed?: SeedRef;
 };
 
 /** A still style: an ordinary extract run over this candidate's source pictures/keyframes. */
@@ -391,7 +408,148 @@ export type DirectionCandidate = CandidateBase & {
   readonly basedOn: readonly string[];
 };
 
-export type Candidate = StyleCandidate | SceneCandidate | FindingCandidate | WatchCandidate | Asset3dCandidate | IdeaCandidate | DirectionCandidate;
+/** One Suno clip of a track, held in the night (`tracks/c-NN/a1.mp3`). Part `a1`..`a4` is its packet cell. */
+export type TrackClip = {
+  readonly part: string;
+  readonly path: string;
+  /** The Suno model that rendered it (`v6`, `v6-wild`). */
+  readonly model: string;
+  readonly title: string;
+  readonly durationS?: number;
+  /** suno.json's clip id (`sc-...`): what a visualizer enqueues from. */
+  readonly clipId: string;
+};
+
+/**
+ * A kept music seed made into a TRACK (spark scout-decision-graph): one Suno create from the seed's
+ * sentence (both models, ~4 clips), each clip a cell in the audio tab. Kept, a clip is the next night's
+ * visualizer; the video starts only once the song is final (registry music-video-production).
+ */
+export type TrackCandidate = CandidateBase & {
+  readonly kind: "track";
+  /** The seed's sentence, verbatim: what Suno was asked for. */
+  readonly sentence: string;
+  /** The Suno job (`suno.json` `sj-...`) the create ran as. */
+  readonly sunoJobId?: string;
+  readonly clips: readonly TrackClip[];
+};
+
+/**
+ * A kept track clip rendered as a full-song VISUALIZER (the music-video pipeline: one still, particles,
+ * low-band edge light, 1080p). Kept, it is the first rung of the music ladder (sibling spark
+ * music-video-ladder builds the full video and its Short on top).
+ */
+export type VisualizerCandidate = CandidateBase & {
+  readonly kind: "visualizer";
+  /** `<night>/<c-id>/<part>` of the kept track clip it plays. */
+  readonly track: string;
+  /** The mv record (`lib/sound/mv` queue id) the render ran as. */
+  readonly mvId?: string;
+  /** Night-relative mp4 (`visualizers/c-NN/visualizer.mp4`) once collected. */
+  readonly video?: string;
+  /** The still it used: a kept idea artboard under the same seed (ours), or the studio's (`visualizers/c-NN/still.png`). */
+  readonly still?: string;
+  readonly durationS?: number;
+};
+
+export type Candidate =
+  | StyleCandidate
+  | SceneCandidate
+  | FindingCandidate
+  | WatchCandidate
+  | Asset3dCandidate
+  | IdeaCandidate
+  | DirectionCandidate
+  | TrackCandidate
+  | VisualizerCandidate;
+
+/* ── Seeds ───────────────────────────────────────────────────────────────── */
+
+/**
+ * A SEED (spark scout-decision-graph): one sentence naming a genre, a subgenre, a type of content, an
+ * audience and a format - the cheapest question the loop asks. ~100 a batch, triaged on their own packet
+ * `pkt:seeds:<batch>`, every reject with a reason. A kept seed is a branch root: the next night derives
+ * 2-3 narrower child seeds (`parent`) and draws 1-2 idea artboards on it (`fromSeed`), and everything
+ * built from those records it. Words only: a batch is written by the seat, no job, no spend.
+ *
+ * Stored under `<scoutRoot>/seeds/<batch>/batch.json` (./seedStore.ts). A batch id is a night-shaped id
+ * (`YYYY-MM-DD`, `-2`...), its own sequence; listNights never sees it (NIGHT_ID_RE on the root only).
+ */
+export type SeedBatchId = string;
+/** `sd-001`, `sd-002`, ... in the batch's order. */
+export type SeedId = string;
+/** `<batch>/sd-NNN`. */
+export type SeedRef = string;
+
+export const SEED_BATCH_ID_RE = NIGHT_ID_RE;
+export const SEED_ID_RE = /^sd-\d{3}$/;
+export const SEED_REF_RE = /^\d{4}-\d{2}-\d{2}(-\d{1,2})?\/sd-\d{3}$/;
+export const seedRef = (batch: SeedBatchId, seed: SeedId): SeedRef => `${batch}/${seed}`;
+
+/** Who a seed is for - the graph's first grouping and the split's first level (wave 3: "children content vs other"). */
+export const SEED_AUDIENCES = ["kids", "family", "adult"] as const;
+export type SeedAudience = (typeof SEED_AUDIENCES)[number];
+export const SEED_SENTENCE_MAX = 200;
+export const DEFAULT_SEED_BATCH = 100;
+export const MAX_SEED_BATCH = 150;
+
+export type Seed = {
+  readonly id: SeedId;
+  /** The one sentence: the seed as the operator reads it on the Board. */
+  readonly sentence: string;
+  readonly genre: string;
+  readonly subgenre: string;
+  /** The type of content (`animated comedy sketch`, `music video`, `lyric video`, `data explainer`). */
+  readonly type: string;
+  readonly audience: SeedAudience;
+  readonly format: VideoFormat;
+  /** The kept seed this one narrows (a child seed); absent on a fresh one. */
+  readonly parent?: SeedRef;
+};
+
+export type SeedCommit = {
+  readonly at: string;
+  readonly by: string;
+  /** Seed ids (the packet's cell ids). */
+  readonly kept: readonly SeedId[];
+  readonly rejected: readonly SeedId[];
+  /** Every rejected seed's reasons (the `seeds` source requires at least one). */
+  readonly reasons: Readonly<Record<SeedId, readonly string[]>>;
+  readonly notes: Readonly<Record<SeedId, string>>;
+  readonly dry: boolean;
+};
+
+export type SeedBatch = {
+  readonly id: SeedBatchId;
+  readonly createdAt: string;
+  /** The night that wrote it at its start, absent for a batch written by day (`/scout seeds`). */
+  readonly night?: NightId;
+  /** A dry batch is triaged like any other and its verdicts kept, but nothing derives from it. */
+  readonly dry: boolean;
+  readonly seeds: readonly Seed[];
+  /** Written by the Board's apply (lib/decision/v1/sources/seeds.ts). */
+  readonly committed?: SeedCommit;
+};
+
+/**
+ * THE OPERATOR'S STEER (spark scout-decision-graph waves 2-4), `<scoutRoot>/steer.json` (./steer.ts):
+ * an ADVISORY split of a night's runs - shares per audience (summing to 100) and per genre within an
+ * audience (summing to 100) - that the next night's brief carries, and the branches PAUSED (a seed ref;
+ * the doors that take a seed refuse one under it). Every change is appended to `history`, so a split can
+ * be read back and re-applied a month later (registry budget-reallocation-prescription).
+ */
+export type SteerSplit = {
+  readonly audience: Readonly<Partial<Record<SeedAudience, number>>>;
+  readonly genre?: Readonly<Partial<Record<SeedAudience, Readonly<Record<string, number>>>>>;
+};
+export type SteerEntry =
+  | { readonly at: string; readonly by: string; readonly act: "split"; readonly split: SteerSplit }
+  | { readonly at: string; readonly by: string; readonly act: "pause" | "resume"; readonly ref: SeedRef };
+export type Steer = {
+  readonly split?: SteerSplit;
+  readonly paused: readonly SeedRef[];
+  readonly history: readonly SteerEntry[];
+};
 
 /* ── Packet cells ────────────────────────────────────────────────────────── */
 

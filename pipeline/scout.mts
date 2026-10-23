@@ -40,13 +40,15 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { errorMessage } from "@gt/domain/errors";
 
-import { DEFAULT_ASSET_CAP, DEFAULT_CEILING_USD, DEFAULT_CLIP_CAP, DEFAULT_IDEA_CAP, DEFAULT_REEL_CAP, DEFAULT_TARGET, MAX_IDEA_CAP, MAX_REEL_CAP } from "../lib/foundry/scout/types.ts";
+import { DEFAULT_ASSET_CAP, DEFAULT_CEILING_USD, DEFAULT_CLIP_CAP, DEFAULT_IDEA_CAP, DEFAULT_REEL_CAP, DEFAULT_TARGET, DEFAULT_TRACK_CAP, DEFAULT_VISUALIZER_CAP, MAX_IDEA_CAP, MAX_REEL_CAP, MAX_TRACK_CAP, MAX_VISUALIZER_CAP } from "../lib/foundry/scout/types.ts";
 
 type IngestDeps = import("../lib/foundry/scout/ingest.ts").IngestDeps;
 type Spawn = import("../lib/foundry/scout/ingest.ts").Spawn;
 type Resolver = import("../lib/imaging/safeUrl.ts").Resolver;
 type AssetEngines = import("../lib/producers/scoutAssetActs.ts").AssetEngines;
 type IdeasEngines = import("../lib/foundry/scout/idea.ts").IdeasEngines;
+type TrackEngines = import("../lib/foundry/scout/track.ts").TrackEngines;
+type VisualizerEngines = import("../lib/foundry/scout/visualizer.ts").VisualizerEngines;
 
 /** What a test or a rehearsal injects; production passes none. */
 export type CliPorts = {
@@ -63,6 +65,9 @@ export type CliPorts = {
   readonly asset?: Partial<AssetEngines>;
   /** `ideas`' studio still and its reels launcher; a test hands fakes (absent: the imaging router, lib/producers/scoutReel.ts). */
   readonly ideas?: IdeasEngines;
+  /** `track`'s Suno browser and clip download; `visualizer`'s mv queue, launch and drive. A test hands fakes. */
+  readonly track?: TrackEngines;
+  readonly visualizer?: VisualizerEngines;
 };
 export type Io = { readonly env: Readonly<Record<string, string | undefined>>; readonly out: (s: string) => void; readonly err: (s: string) => void; readonly ports?: CliPorts };
 
@@ -70,7 +75,7 @@ const ROOT = path.resolve(import.meta.dirname, "..");
 const USAGE = [
   "usage: npx tsx pipeline/scout.mts <command> [--json]",
   "  doctor [--dry]                              the box, the keys, the store",
-  `  open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--ideas ${DEFAULT_IDEA_CAP}] [--reels ${DEFAULT_REEL_CAP}] [--until HH:MM] [--live]`,
+  `  open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--ideas ${DEFAULT_IDEA_CAP}] [--reels ${DEFAULT_REEL_CAP}] [--tracks ${DEFAULT_TRACK_CAP}] [--visualizers ${DEFAULT_VISUALIZER_CAP}] [--until HH:MM] [--live]`,
   "  add-source <night> --json <file|->         [{url, kind, title, channel?, why, found, watch?, rich?} | {fromIdea: <night>/<c-id>, why?}]",
   "  ingest <night> [--source s-NN] [--detach]",
   "  style <night> --sources s-01,s-03 --use \"<content>\" [--slug x] [--detach]",
@@ -83,6 +88,10 @@ const USAGE = [
   '  watch <night> --entry "..." --why "..." [--sources s-01]',
   "  close <night> [--stop deadline|budget|target|failure|sources-exhausted|operator]",
   "  status [<night>]",
+  "  seeds new --json <file|-> [--dry]          [{sentence, genre, subgenre, type, audience: kids|family|adult, format: short|video, parent?: <batch>/sd-NNN}]",
+  "  seeds status [<batch>]",
+  "  track <night> --seed <batch>/sd-NNN [--detach]",
+  "  visualizer <night> --track <night>/<c-id>/<aN> [--detach]",
   "  leads · lead <key> --json <file|->         {claim, kind: technique|application|subject, nearest?, confidence}",
   "  folder <dir> [pipeline/foundry/extract.mts args]",
 ].join("\n");
@@ -90,7 +99,7 @@ const USAGE = [
 class Usage extends Error {}
 /** A refusal the CLI makes itself; the acts' `Refusal` exits the same way. */
 class Refused extends Error {}
-const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "ideas", "finding", "direction", "watch", "close", "status", "leads", "lead"]);
+const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "ideas", "finding", "direction", "watch", "close", "status", "leads", "lead", "seeds", "track", "visualizer"]);
 const BOOL = new Set(["json", "live", "detach", "dry", "help", "retry"]);
 
 /** argv -> positionals and flags. `--json` takes a value (the input file, or `-`) only under add-source, finding, direction, ideas and lead. */
@@ -201,8 +210,12 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
       if (!Number.isInteger(ideaCap) || ideaCap > MAX_IDEA_CAP) throw new Usage(`--ideas is a whole number from 1 to ${MAX_IDEA_CAP}, got ${ideaCap}`);
       const reelCap = num("reels", DEFAULT_REEL_CAP);
       if (!Number.isInteger(reelCap) || reelCap > MAX_REEL_CAP) throw new Usage(`--reels is a whole number from 1 to ${MAX_REEL_CAP}, got ${reelCap}`);
+      const trackCap = num("tracks", DEFAULT_TRACK_CAP);
+      if (!Number.isInteger(trackCap) || trackCap < 0 || trackCap > MAX_TRACK_CAP) throw new Usage(`--tracks is a whole number from 0 to ${MAX_TRACK_CAP}, got ${trackCap}`);
+      const visualizerCap = num("visualizers", DEFAULT_VISUALIZER_CAP);
+      if (!Number.isInteger(visualizerCap) || visualizerCap < 0 || visualizerCap > MAX_VISUALIZER_CAP) throw new Usage(`--visualizers is a whole number from 0 to ${MAX_VISUALIZER_CAP}, got ${visualizerCap}`);
       const { tasteBrief } = await import("../lib/foundry/scout/taste.ts");
-      const n = await store.createNight({ dry: !flags.has("live"), ceilingUsd: num("ceiling", DEFAULT_CEILING_USD), target: Math.round(num("target", DEFAULT_TARGET)), clipCap: Math.round(num("clips", DEFAULT_CLIP_CAP)), assetCap: Math.round(num("assets", DEFAULT_ASSET_CAP)), ideaCap, reelCap, now: now(), ...(until === undefined ? {} : { deadline: deadlineOf(until, now()) }) });
+      const n = await store.createNight({ dry: !flags.has("live"), ceilingUsd: num("ceiling", DEFAULT_CEILING_USD), target: Math.round(num("target", DEFAULT_TARGET)), clipCap: Math.round(num("clips", DEFAULT_CLIP_CAP)), assetCap: Math.round(num("assets", DEFAULT_ASSET_CAP)), ideaCap, reelCap, trackCap, visualizerCap, now: now(), ...(until === undefined ? {} : { deadline: deadlineOf(until, now()) }) });
       // Last night's load opens the brief (lib/foundry/scout/load.ts): the samples are the kernel store's.
       const kp = await import("@gt/kernel/process");
       const { nightLoad } = await import("../lib/foundry/scout/load.ts");
@@ -254,6 +267,15 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
       say(`  + ${r.value.id} direction ${r.value.status} · ${r.value.format} · ${r.value.genre} · based on ${r.value.basedOn.length} kept`);
       if (json) doc({ ok: true, night: id, candidate: r.value });
       return 0;
+    }
+
+    // A batch of one-sentence seeds (spark scout-decision-graph): words only, no kernel job.
+    if (cmd === "seeds") {
+      const { seedsCommand } = await import("../lib/foundry/scout/seeds.ts");
+      const r = await seedsCommand(pos[1], { ...(pos[2] === undefined ? {} : { batch: pos[2] }), input: () => input(), dry: flags.has("dry"), now: now() });
+      for (const l of r.lines) say(l);
+      if (json) doc(r.doc);
+      return r.code;
     }
 
     // The registry leads the Board's commits queued: listed, and filed one claim at a time.
@@ -386,6 +408,20 @@ export async function runCli(argv: readonly string[], io: Io): Promise<number> {
         if (r.reelsJobId !== undefined) say(`reels ${r.reelsJobId} · detached`);
         const n = await store.readNight(id);
         if (json) doc({ ok: !failed, night: id, ...(r.jobId === undefined ? {} : { jobId: r.jobId }), ...(r.reelsJobId === undefined ? {} : { reelsJobId: r.reelsJobId }), ...(r.outcome === undefined ? {} : { outcome: r.outcome }), candidates: r.candidates, ideas: { used: ideasUsed(n), cap: ideaCapOf(n) }, reels: { used: reelsUsed(n), cap: reelCapOf(n) } });
+        return failed ? 1 : 0;
+      }
+
+      // A kept music seed made into a Suno track, and a kept track clip into a visualizer (spark scout-decision-graph).
+      if (cmd === "track" || cmd === "visualizer") {
+        const id = nightArg();
+        const r =
+          cmd === "track"
+            ? await (await import("../lib/foundry/scout/track.ts")).trackAct(ctx, id, str("seed") ?? usage("track needs --seed <batch>/sd-NNN"), io.ports?.track ?? {})
+            : await (await import("../lib/foundry/scout/visualizer.ts")).visualizerAct(ctx, id, str("track") ?? usage("visualizer needs --track <night>/<c-id>/<aN>"), io.ports?.visualizer ?? {});
+        const c = r.candidate;
+        const failed = c.status === "failed" || (r.outcome !== undefined && !["done", "detached", "enqueued", "launched", "queued", "running"].includes(r.outcome));
+        say(`${c.id} ${c.kind} ${c.status}${r.outcome === undefined ? "" : ` · ${r.outcome}`}${c.error === undefined ? "" : ` · ${c.error}`}`);
+        if (json) doc({ ok: !failed, night: id, candidate: c, ...(r.outcome === undefined ? {} : { outcome: r.outcome }), budget: acts.money(ctx, await store.readNight(id)) });
         return failed ? 1 : 0;
       }
 

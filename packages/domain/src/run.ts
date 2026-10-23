@@ -62,6 +62,11 @@ export const PRODUCERS = [
   // A /scout night's stats-reel ideas (spark stats-reels): each authored as a full 8 s strip in code on the
   // Claude seat, linted, and its frame 120 rendered as the idea's tile (lib/producers/scoutReel.ts).
   "scout-reels",
+  // A /scout night's music (spark scout-decision-graph): a kept seed's sentence made into a Suno track on the
+  // signed-in browser (lib/producers/scoutTrack.ts), and a kept clip rendered as a full-song visualizer
+  // through the music-video pipeline (lib/producers/scoutVisualizer.ts).
+  "scout-track",
+  "scout-visualizer",
 ] as const;
 export const producerNameSchema = z.enum(PRODUCERS);
 export type ProducerName = z.output<typeof producerNameSchema>;

@@ -30,6 +30,8 @@ import {
   DEFAULT_IDEA_CAP,
   DEFAULT_REEL_CAP,
   DEFAULT_TARGET,
+  DEFAULT_TRACK_CAP,
+  DEFAULT_VISUALIZER_CAP,
   NIGHT_ID_RE,
   type Candidate,
   type CandidateId,
@@ -68,6 +70,8 @@ export type NightOptions = {
   readonly assetCap?: number;
   readonly ideaCap?: number;
   readonly reelCap?: number;
+  readonly trackCap?: number;
+  readonly visualizerCap?: number;
   /** ISO instant. */
   readonly deadline?: string;
   readonly dry: boolean;
@@ -104,6 +108,8 @@ export async function createNight(o: NightOptions): Promise<Night> {
       assetCap: o.assetCap ?? DEFAULT_ASSET_CAP,
       ideaCap: o.ideaCap ?? DEFAULT_IDEA_CAP,
       reelCap: o.reelCap ?? DEFAULT_REEL_CAP,
+      trackCap: o.trackCap ?? DEFAULT_TRACK_CAP,
+      visualizerCap: o.visualizerCap ?? DEFAULT_VISUALIZER_CAP,
       dry: o.dry,
       state: "open",
       sources: [],
@@ -178,6 +184,19 @@ export async function listNights(): Promise<NightSummary[]> {
     if (n) out.push(summarise(n));
   }
   return out.sort((a, b) => (a.startedAt < b.startedAt ? 1 : a.startedAt > b.startedAt ? -1 : 0));
+}
+
+/**
+ * Every night on disk that can be read, newest first - the whole history (spark scout-decision-graph: the
+ * graph and the seed doors read it). A night mid-write is skipped, never fatal.
+ */
+export async function readAllNights(): Promise<Night[]> {
+  const out: Night[] = [];
+  for (const s of await listNights()) {
+    const n = await readNight(s.id).catch(() => undefined);
+    if (n !== undefined) out.push(n);
+  }
+  return out;
 }
 
 /** Every extract run a night's style candidate launched - the extract Weir leaves them to the night's packet. */
