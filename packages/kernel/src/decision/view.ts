@@ -6,7 +6,7 @@ import { AppError } from "@gt/domain/errors";
 import { packetIdSchema, runIdSchema, type CandidateId } from "@gt/domain/ids";
 import { mediaLaneSchema, type MediaLane } from "@gt/domain/lane";
 import { packetModeSchema, packetSourceSchema, packetStateSchema, type PacketState } from "@gt/domain/packet";
-import { SOURCES } from "@gt/domain/source";
+import { reasonVocabulary } from "@gt/domain/source";
 import type { Reader } from "../store.ts";
 import { applyStatus } from "./apply.ts";
 import { returnedPlan } from "./commit.ts";
@@ -37,7 +37,6 @@ export function readPacketView(r: Reader, packetId: string, opts: ViewOptions): 
   const all = rows(r, packetId);
   const decisions = currentDecisions(r, packetId).decisions;
   const decided = decisions.filter((d) => d.verdict !== null).length;
-  const spec = SOURCES[p.source];
   const pairs: PairView[] = [];
   if (p.mode === "blind-pair") {
     const arms = pairsOf(items(r, packetId));
@@ -67,7 +66,7 @@ export function readPacketView(r: Reader, packetId: string, opts: ViewOptions): 
     decisions,
     undecided: p.items.length - decided,
     canUndo: h.state === "open" && planUndo(all) !== undefined,
-    reasons: { list: spec.reasons, max: spec.maxReasons, noteMax: spec.noteMax },
+    reasons: reasonVocabulary(p.source),
     pairs,
     ...(returned === undefined ? {} : { returned: must(returned).plan }),
     ...(apply === undefined ? {} : { apply }),

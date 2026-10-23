@@ -18,7 +18,7 @@ import { Plate } from "../desk/Plate.tsx";
 import { cx } from "../cx.ts";
 import { Wave } from "../wave/Wave.tsx";
 import { kindOf, spokenTile, type TileMedia } from "./CullTile.tsx";
-import { VerdictPick } from "./VerdictPick.tsx";
+import { VerdictPick, type VerdictReasons } from "./VerdictPick.tsx";
 import { VideoBar } from "./VideoBar.tsx";
 import s from "./Verdict.module.css";
 
@@ -31,13 +31,12 @@ export type VariantCardProps = {
   readonly verdict: BoardVerdict | undefined;
   readonly current: boolean;
   readonly nudged: boolean;
-  readonly reasons: readonly string[];
-  readonly maxReasons: number;
+  readonly reasons: VerdictReasons;
   readonly onFocus: (index: number) => void;
   readonly onVerdict: (v: BoardVerdict | null) => void;
 };
 
-export function VariantCard({ index, words, media, verdict, current, nudged, reasons, maxReasons, onFocus, onVerdict }: VariantCardProps) {
+export function VariantCard({ index, words, media, verdict, current, nudged, reasons, onFocus, onVerdict }: VariantCardProps) {
   const kind = kindOf(media.mime);
   const video = useRef<HTMLVideoElement | null>(null);
   const live = kind === "model" && current;
@@ -74,7 +73,7 @@ export function VariantCard({ index, words, media, verdict, current, nudged, rea
         {!wordsOnly && <span className={s.capLabel}>{words.label}</span>}
         {words.meta !== undefined && <span className={s.capMeta}>{words.meta}</span>}
       </figcaption>
-      <VerdictPick label={words.label} verdict={verdict} reasons={reasons} maxReasons={maxReasons} onChange={onVerdict} />
+      <VerdictPick label={words.label} verdict={verdict} reasons={reasons} onChange={onVerdict} />
     </figure>
   );
 }

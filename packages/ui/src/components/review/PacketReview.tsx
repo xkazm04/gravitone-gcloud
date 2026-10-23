@@ -22,7 +22,7 @@
 // carries the schedule as the verdict's note. The applier makes the slot from that note in the
 // commit's own apply; nothing is scheduled before the commit, and a schedule changed after the
 // preview is a stale preview like any other decision.
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 
 import type { EditDirective, EditNote as Note } from "@gt/domain/board";
 
@@ -34,6 +34,7 @@ import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
 import { DeskFrame, OracleStrip } from "../desk/Desk.tsx";
 import { CapsHeading } from "../heading/CapsHeading.tsx";
+import { Tip } from "../hint/Tip.tsx";
 import { Keycaps } from "../keycaps/Keycaps.tsx";
 import { PipRow } from "../piprow/PipRow.tsx";
 import { ApproveSchedule } from "./ApproveSchedule.tsx";
@@ -234,9 +235,17 @@ export function PacketReview({ packet, verdicts, decide, onCommit, onSendPlan, b
             <>
               <CapsHeading text="reject reasons" />
               <div className={s.reasons} role="group" aria-label="reject reasons">
-                {view.reasons.list.map((r) => (
-                  <Chip key={r} label={r} casing="lower" tone={reasons.includes(r) ? "rose" : "neutral"} pressed={reasons.includes(r)} onPress={() => toggle(r)} />
-                ))}
+                {view.reasons.list.map((r) => {
+                  const chip = (describedBy?: string) => <Chip label={r} casing="lower" tone={reasons.includes(r) ? "rose" : "neutral"} pressed={reasons.includes(r)} onPress={() => toggle(r)} {...(describedBy === undefined ? {} : { describedBy })} />;
+                  const meaning = view.reasons.meaning[r];
+                  return meaning === undefined ? (
+                    <Fragment key={r}>{chip()}</Fragment>
+                  ) : (
+                    <Tip key={r} text={meaning} above>
+                      {chip}
+                    </Tip>
+                  );
+                })}
               </div>
             </>
           )}

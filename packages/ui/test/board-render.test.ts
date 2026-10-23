@@ -8,7 +8,7 @@ import { describe, expect, test } from "vitest";
 import type { Consequence, PacketView, PairView } from "@gt/domain/board";
 import { parseAt } from "@gt/domain/door";
 import { candidateIdSchema, packetIdSchema } from "@gt/domain/ids";
-import { SOURCES } from "@gt/domain/source";
+import { reasonVocabulary } from "@gt/domain/source";
 import type { Result } from "@gt/domain/errors";
 
 import type { BoardPacket } from "../src/board/port.ts";
@@ -29,7 +29,6 @@ const PID = must(parseAt("test", packetIdSchema, "pkt:test:1"));
 const img = (id: string, row: string) => ({ id: cid(id), row, url: `/${id}.png`, media: { sha256: "0".repeat(64), bytes: 1, mime: "image/png" }, grades: [] });
 
 function packet(over: Partial<PacketView>, present: BoardPacket["present"]): BoardPacket {
-  const spec = SOURCES[over.source ?? "strips"];
   return {
     view: {
       id: PID,
@@ -42,7 +41,7 @@ function packet(over: Partial<PacketView>, present: BoardPacket["present"]): Boa
       decisions: [],
       undecided: 0,
       canUndo: false,
-      reasons: { list: spec.reasons, max: spec.maxReasons, noteMax: spec.noteMax },
+      reasons: reasonVocabulary(over.source ?? "strips"),
       pairs: [],
       ...over,
     },
@@ -58,7 +57,7 @@ describe("the matrix cull", () => {
     // A variant in the opened run: its verdict spoken in its name, and decided by click - keep and
     // reject as pressed buttons, the source's reasons as toggles once rejected.
     const card = (v?: { verdict: "keep" | "reject"; reasons: string[] }) =>
-      renderToStaticMarkup(h(VariantCard, { index: 0, words: { label: "poster a" }, media: { url: "/a.png", mime: "image/png" }, verdict: v, current: false, nudged: false, reasons: SOURCES.strips.reasons, maxReasons: 3, onFocus: noop, onVerdict: noop }));
+      renderToStaticMarkup(h(VariantCard, { index: 0, words: { label: "poster a" }, media: { url: "/a.png", mime: "image/png" }, verdict: v, current: false, nudged: false, reasons: reasonVocabulary("strips"), onFocus: noop, onVerdict: noop }));
     const rejected = card({ verdict: "reject", reasons: ["concept", "motion"] });
     expect(rejected).toContain('aria-label="poster a, reject: concept, motion"');
     expect(rejected).toMatch(/aria-pressed="true"[^>]*>(<span[^>]*><\/span>)?reject/);
@@ -80,8 +79,7 @@ describe("the matrix cull", () => {
         wordsOf: () => ({ label: "Hold the wide until the subject settles.", prompt: "the push-in reads once the figure stops", meta: "cinematic · 02-frames" }),
         cur: 0,
         nudged: new Set<number>(),
-        reasons: [],
-        maxReasons: 0,
+        reasons: reasonVocabulary("suno"),
         onFocus: noop,
         onVerdict: noop,
       }),
@@ -92,7 +90,9 @@ describe("the matrix cull", () => {
   });
 
   test("the key legend draws only the reason keys this source binds: four for a forge plate, none for Suno", () => {
-    const keysOf = (html: string) => [...(/<span[^>]*>((?:<kbd[^>]*>[^<]*<\/kbd>)+) reason<\/span>/.exec(html)?.[1] ?? "").matchAll(/<kbd[^>]*>([^<]*)<\/kbd>/g)].map((m) => m[1]);
+    // A reason cap is wrapped in its tip (Tip): unwrap it, and drop the tip's words, to read the row.
+    const bare = (html: string) => html.replace(/<span[^>]*role="tooltip"[^>]*>.*?<\/span>/g, "").replace(/<span class="[^"]*"[^>]*>(<kbd[^>]*>[^<]*<\/kbd>)<\/span>/g, "$1");
+    const keysOf = (html: string) => [...(/<span[^>]*>((?:<kbd[^>]*>[^<]*<\/kbd>)+) reason<\/span>/.exec(bare(html))?.[1] ?? "").matchAll(/<kbd[^>]*>([^<]*)<\/kbd>/g)].map((m) => m[1]);
     const forge = packet({ source: "forge", items: [img("a", "r")] }, { items: {}, rows: [] });
     expect(keysOf(renderToStaticMarkup(h(MatrixCull, { packet: forge, verdicts: {}, decide: noop, undo: noop, onCommit: noop, keys: false })))).toEqual(["1", "2", "3", "4"]);
     const suno = packet({ source: "suno", lane: "audio", items: [img("a", "r")] }, { items: {}, rows: [] });

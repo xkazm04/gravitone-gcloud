@@ -101,6 +101,101 @@ export const SOURCES = {
   scout: { modes: ["matrix-cull"], reasons: ["style", "subject", "craft", "motion", "rights", "generic", "use case", "topology", "texture", "rig", "scale"], maxReasons: 3, noteMax: NOTE_SHORT },
 } as const satisfies { readonly [S in PacketSource]: SourceSpec };
 
+type ReasonOf<S extends PacketSource> = (typeof SOURCES)[S]["reasons"][number];
+
+// The forge's four, which the extractor shares (above): a plate is a still, so craft names a still's faults.
+const STILL_MEANING = {
+  style: "The look is wrong for the video we are making.",
+  subject: "What is shown does not fit: the wrong subject or content.",
+  text: "Type in the plate rendered as garbled glyphs.",
+  craft: "Poorly executed: anatomy, composition, artefacts or framing.",
+} as const;
+
+/**
+ * WHAT EACH REASON MEANS (operator, 2026-10-23: "explain on hover in one sentence the meaning of
+ * the reason in case the one word is not clear"). One sentence, at most twelve words, the work as
+ * its subject; the Board shows it as the reason's tip, carried in PacketView.reasons. The type
+ * holds every source's every reason to a meaning (a reason added above without one is a compile
+ * error) and refuses a word the list does not have; the twelve-word bound is the domain test's.
+ * Taken from where each list is defined: the comments above, the registry's generated-audio defect
+ * taxonomy (lib/sound/types.ts DEFECTS) and the article check's seven dimensions (docs/articles.md).
+ * The dojo's two and the strips' eight had no recorded definition and are the plainest reading.
+ */
+export const REASON_MEANING: { readonly [S in PacketSource]: { readonly [R in ReasonOf<S>]: string } } = {
+  forge: STILL_MEANING,
+  extract: STILL_MEANING,
+  dojo: {
+    technique: "The claimed technique itself does not improve the work.",
+    execution: "The technique is sound but was applied badly here.",
+  },
+  strips: {
+    concept: "The idea does not land: the wrong chart form or story.",
+    legibility: "Text or data is too small, tilted, or outside the safe box.",
+    motion: "The movement is wrong: too many cues, or none selling a beat.",
+    craft: "Poorly executed: easing, spacing, timing or finish.",
+    identity: "Off the channel's look: palette, type or style module.",
+    "too-busy": "Too much at once: the frame crowds its one beat.",
+    generic: "A template look, nothing specific to this story.",
+    broken: "Fails to render or play: blank, frozen or glitched frames.",
+  },
+  article: {
+    structure: "The shape is off: preview, sections, closing table or length.",
+    storytelling: "The post does not carry the reader through a story.",
+    depth: "Too shallow: the insight a practitioner needs is missing.",
+    figures: "Too few figures, uncaptioned or unsourced, or long prose between them.",
+    voice: "Not the author's voice: no first person, or em dashes.",
+    "medium-fidelity": "Will not read well on Medium: type, scroll or resources.",
+    truth: "Claims outrun their sources: too few, undated or unresolved.",
+  },
+  audio: {
+    "smeared-transients": "Drums without edges: mush where an attack should be.",
+    "vocal-garble": "Syllables melt, or words are invented mid-line.",
+    "section-bleed": "One section's elements leak into the section before it.",
+    "tempo-instability": "The grid drifts or a bar hiccups.",
+    "broken-ending": "An unbriefed abrupt stop, or a fade where a hard out was.",
+    "loop-seam": "An audible joint where the material repeats.",
+    "spectral-imbalance": "No low end, harsh highs, or hollow mids.",
+    "phase-width": "Swimmy stereo that vanishes in mono.",
+    "confident-hallucination": "An instrument or voice nobody briefed, mixed as if intended.",
+    "off-brief": "Pleasant, but the wrong piece for the brief.",
+    "wrong-event": "The sound reads as a different event than the one briefed.",
+  },
+  suno: {},
+  mv: {},
+  trials: {},
+  step: {},
+  proof: {},
+  scout: {
+    style: STILL_MEANING.style,
+    subject: STILL_MEANING.subject,
+    craft: STILL_MEANING.craft,
+    motion: "The movement is wrong: drift, jitter, or an unmotivated camera.",
+    rights: "Material we should not have taken, or may not use.",
+    generic: "Teaches nothing new: the median, or already in the Library.",
+    "use case": "Serves no video worth making; later nights steer away.",
+    topology: "The mesh is broken: holes, floaters, fused or too-thin parts.",
+    texture: "The texture bake is wrong: seams, smears, wrong materials.",
+    rig: "The rig fails: bad weights or broken bone chains.",
+    scale: "Its size in the world is wrong for its class.",
+  },
+};
+
+/** A source's vocabulary as the Board holds it (PacketView.reasons): the reasons in key order, how
+ *  many a verdict may carry, the note bound, and each reason's meaning. */
+export type ReasonVocabulary = {
+  readonly list: readonly string[];
+  readonly max: number;
+  readonly noteMax: number;
+  /** One sentence per reason; a reason absent here draws no tip. */
+  readonly meaning: Readonly<Record<string, string>>;
+};
+
+/** The one builder of a packet view's vocabulary, so the meanings travel with the list they define. */
+export function reasonVocabulary(source: PacketSource): ReasonVocabulary {
+  const spec: SourceSpec = SOURCES[source];
+  return { list: spec.reasons, max: spec.maxReasons, noteMax: spec.noteMax, meaning: REASON_MEANING[source] };
+}
+
 /** The keys a reason list is bound to, in order (plan §8: the Board's 1-4 grew to eleven for audio). */
 export const REASON_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-"] as const;
 export type ReasonKey = (typeof REASON_KEYS)[number];

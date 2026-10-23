@@ -8,7 +8,7 @@ import type { ItemWords } from "../../board/port.ts";
 import type { Run } from "../../board/runs.ts";
 import { cx } from "../cx.ts";
 import { spokenTile } from "./CullTile.tsx";
-import { VerdictPick } from "./VerdictPick.tsx";
+import { VerdictPick, type VerdictReasons } from "./VerdictPick.tsx";
 import s from "./Verdict.module.css";
 
 export type IdeaListProps = {
@@ -18,13 +18,12 @@ export type IdeaListProps = {
   readonly wordsOf: (id: string) => ItemWords;
   readonly cur: number;
   readonly nudged: ReadonlySet<number>;
-  readonly reasons: readonly string[];
-  readonly maxReasons: number;
+  readonly reasons: VerdictReasons;
   readonly onFocus: (cell: number) => void;
   readonly onVerdict: (cell: number, v: BoardVerdict | null) => void;
 };
 
-export function IdeaList({ categories, cells, verdicts, wordsOf, cur, nudged, reasons, maxReasons, onFocus, onVerdict }: IdeaListProps) {
+export function IdeaList({ categories, cells, verdicts, wordsOf, cur, nudged, reasons, onFocus, onVerdict }: IdeaListProps) {
   return (
     <div className={s.ideas} role="grid" aria-label="ideas">
       {categories.map((c) => (
@@ -53,7 +52,7 @@ export function IdeaList({ categories, cells, verdicts, wordsOf, cur, nudged, re
                     {w.prompt !== undefined && <p className={s.ideaQuote}>{w.prompt}</p>}
                     {w.meta !== undefined && <span className={s.ideaMeta}>{w.meta}</span>}
                   </div>
-                  <VerdictPick label={w.label} verdict={v} reasons={reasons} maxReasons={maxReasons} onChange={(nv) => onVerdict(i, nv)} size="sm" />
+                  <VerdictPick label={w.label} verdict={v} reasons={reasons} onChange={(nv) => onVerdict(i, nv)} size="sm" />
                 </article>
               );
             }),

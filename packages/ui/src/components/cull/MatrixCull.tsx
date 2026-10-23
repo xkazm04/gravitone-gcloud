@@ -62,8 +62,8 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
     return () => ro.disconnect();
   }, [tab]);
 
-  const reasons = view.reasons.list;
-  const foot = <CullFoot tally={tallyOf(d.cells, verdicts)} reasons={reasons.length} audio={view.lane === "audio"} refusals={d.refusals} busy={busy} onCommit={d.commit} />;
+  const reasons = view.reasons;
+  const foot = <CullFoot tally={tallyOf(d.cells, verdicts)} reasons={reasons} audio={view.lane === "audio"} refusals={d.refusals} busy={busy} onCommit={d.commit} />;
   const pick = (t: Tab) => {
     const first = tabs.find((x) => x.tab === t)?.categories[0]?.runs[0];
     if (first !== undefined) d.setCur(first.run.members[0] ?? 0);
@@ -92,13 +92,12 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
             {...(run.words?.checks !== undefined ? { checks: run.words.checks } : {})}
             runVerdict={runVerdictOf(run, d.cells, verdicts)}
             reasons={reasons}
-            maxReasons={view.reasons.max}
             onRunVerdict={(v) => d.decideCells(run.members, v, run.words?.label ?? run.row)}
             onClose={() => setOpen(false)}
             live={keys}
             foot={foot}
           >
-            <RunView run={run} cells={d.cells} verdicts={verdicts} mediaOf={mediaOf} wordsOf={d.wordsOf} cur={d.cur} nudged={d.nudged} reasons={reasons} maxReasons={view.reasons.max} onFocus={d.setCur} onVerdict={(i, v) => d.decideItem(i, v)} />
+            <RunView run={run} cells={d.cells} verdicts={verdicts} mediaOf={mediaOf} wordsOf={d.wordsOf} cur={d.cur} nudged={d.nudged} reasons={reasons} onFocus={d.setCur} onVerdict={(i, v) => d.decideItem(i, v)} />
           </RunModal>
         ) : undefined
       }
@@ -111,7 +110,7 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
       {here?.tab === "ideas" ? (
         <>
           {shown(false).length > 0 && <RunMosaic tab="ideas" categories={shown(false)} cells={d.cells} verdicts={verdicts} mediaOf={mediaOf} wordsOf={d.wordsOf} runIx={d.runIx} nudged={d.nudged} onOpen={d.openRun} grid={grid} />}
-          {shown(true).length > 0 && <IdeaList categories={shown(true)} cells={d.cells} verdicts={verdicts} wordsOf={d.wordsOf} cur={d.cur} nudged={d.nudged} reasons={reasons} maxReasons={view.reasons.max} onFocus={d.setCur} onVerdict={(i, v) => d.decideItem(i, v)} />}
+          {shown(true).length > 0 && <IdeaList categories={shown(true)} cells={d.cells} verdicts={verdicts} wordsOf={d.wordsOf} cur={d.cur} nudged={d.nudged} reasons={reasons} onFocus={d.setCur} onVerdict={(i, v) => d.decideItem(i, v)} />}
         </>
       ) : here !== undefined ? (
         <RunMosaic tab={here.tab} categories={here.categories} cells={d.cells} verdicts={verdicts} mediaOf={mediaOf} wordsOf={d.wordsOf} runIx={d.runIx} nudged={d.nudged} onOpen={d.openRun} grid={grid} />

@@ -8,3 +8,5 @@
 .tiles{display:grid;grid-template-columns:repeat(3,minmax(var(--w-tile),1fr));gap:var(--sp-4);width:100%}
 .thumb{width:var(--w-pair-thumb);border-radius:var(--r-sm)}
 .note{width:100%}
+/* The open reason tip stands over its chip: room for it above the verdict, inside the specimen. */
+.pick{padding-top:var(--sp-page-end)}

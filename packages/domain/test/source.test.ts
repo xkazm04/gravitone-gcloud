@@ -2,7 +2,7 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 
 import { checkEditPlan, EDIT_DIRECTIVES, pickVerdicts, PICK_OUTCOMES, type EditPlan } from "../src/board.ts";
 import { editPlanSchema } from "../src/decision.ts";
-import { checkVerdict, PACKET_SOURCES, reasonForKey, REASON_KEYS, SOURCES, type PacketSource } from "../src/source.ts";
+import { checkVerdict, PACKET_SOURCES, reasonForKey, REASON_KEYS, REASON_MEANING, reasonVocabulary, SOURCES, type PacketSource } from "../src/source.ts";
 
 // Reasons belong to the source (Phase 3 decision 4). These pin each list to the
 // v1 vocabulary it was taken from, the key binding, and the verdict door.
@@ -31,6 +31,44 @@ describe("packet sources", () => {
     expect(reasonForKey("forge", "5")).toBeUndefined();
     expect(reasonForKey("suno", "1")).toBeUndefined();
     for (const s of PACKET_SOURCES) expect(SOURCES[s].reasons.length, s).toBeLessThanOrEqual(REASON_KEYS.length);
+  });
+});
+
+// A reason's meaning is the Board's tip on that reason (operator, 2026-10-23). The bound is the
+// Hint's (packages/ui/src/components/hint/words.ts HINT_WORDS = 12), restated: @gt/domain sits below @gt/ui.
+const MEANING_WORDS = 12;
+const words = (s: string) => s.split(/\s+/).filter((w) => w.length > 0).length;
+
+describe("what each reason means", () => {
+  it("every source's every reason has one sentence of at most twelve words, and no word the list lacks", () => {
+    for (const s of PACKET_SOURCES) {
+      const meaning: Readonly<Record<string, string>> = REASON_MEANING[s];
+      expect(Object.keys(meaning).sort(), s).toEqual([...SOURCES[s].reasons].sort());
+      for (const r of SOURCES[s].reasons) {
+        const m = meaning[r] ?? "";
+        expect(words(m), `${s} · ${r}: ${m}`).toBeGreaterThan(0);
+        expect(words(m), `${s} · ${r}: ${m}`).toBeLessThanOrEqual(MEANING_WORDS);
+        expect(m, `${s} · ${r}: one sentence`).toMatch(/^[A-Z][^.!?]*[.]$/);
+      }
+    }
+  });
+
+  it("the view's vocabulary carries the meanings with the list they define", () => {
+    const v = reasonVocabulary("scout");
+    expect(v.list).toBe(SOURCES.scout.reasons);
+    expect([v.max, v.noteMax]).toEqual([SOURCES.scout.maxReasons, SOURCES.scout.noteMax]);
+    expect(v.meaning["style"]).toBe("The look is wrong for the video we are making.");
+    expect(v.meaning["use case"]).toBe("Serves no video worth making; later nights steer away.");
+    expect(reasonVocabulary("suno").meaning).toEqual({});
+  });
+
+  it("the table's type holds a source to a meaning for each of its reasons, and only those", () => {
+    type Forge = (typeof REASON_MEANING)["forge"];
+    // @ts-expect-error - a forge reason with no meaning
+    const missing: Forge = { style: "a", subject: "b", text: "c" };
+    // @ts-expect-error - a word the forge's list does not have
+    const extra: Forge = { style: "a", subject: "b", text: "c", craft: "d", motion: "e" };
+    expect([missing, extra]).toHaveLength(2);
   });
 });
 

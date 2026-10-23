@@ -20,7 +20,7 @@ const cells = [
 const run = { row: "c-05", words: { id: "c-05", label: "character · hooded archer", group: "3d" }, members: [0, 1], group: "3d" };
 const mediaOf = (id: string) => ({ url: `/api/foundry/file?kind=mesh&run=hero&path=${id.slice(5)}.glb`, mime: "model/gltf-binary" });
 const wordsOf = (id: string) => ({ label: id.endsWith("t1") ? "T1 · budget generation" : "T2 · game-camera design", meta: "18,000 / 40,000 tris", poster: POSTER });
-const view = (cur: number) => renderToStaticMarkup(h(RunView, { run, cells, verdicts: {}, mediaOf, wordsOf, cur, nudged: new Set<number>(), reasons: [], maxReasons: 3, onFocus: () => undefined, onVerdict: () => undefined }));
+const view = (cur: number) => renderToStaticMarkup(h(RunView, { run, cells, verdicts: {}, mediaOf, wordsOf, cur, nudged: new Set<number>(), reasons: { list: [], max: 3, meaning: {} }, onFocus: () => undefined, onVerdict: () => undefined }));
 const live = (html: string): string[] => [...html.matchAll(/data-tile="(\d+)"(?:(?!data-tile=).)*?data-live-model=""/gs)].map((m) => m[1] ?? "");
 
 describe("the opened run's live model", () => {
@@ -45,7 +45,7 @@ describe("the opened run's live model", () => {
   });
 
   test("a non-model cell under the cursor is the ordinary tile", () => {
-    const html = renderToStaticMarkup(h(RunView, { run, cells, verdicts: {}, mediaOf: () => ({ url: "/a.png", mime: "image/png" }), wordsOf, cur: 0, nudged: new Set<number>(), reasons: [], maxReasons: 3, onFocus: () => undefined, onVerdict: () => undefined }));
+    const html = renderToStaticMarkup(h(RunView, { run, cells, verdicts: {}, mediaOf: () => ({ url: "/a.png", mime: "image/png" }), wordsOf, cur: 0, nudged: new Set<number>(), reasons: { list: [], max: 3, meaning: {} }, onFocus: () => undefined, onVerdict: () => undefined }));
     expect(live(html)).toEqual([]);
   });
 

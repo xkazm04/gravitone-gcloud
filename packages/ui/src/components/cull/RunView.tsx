@@ -8,6 +8,7 @@ import type { Run } from "../../board/runs.ts";
 import { cx } from "../cx.ts";
 import type { TileMedia } from "./CullTile.tsx";
 import { VariantCard } from "./VariantCard.tsx";
+import type { VerdictReasons } from "./VerdictPick.tsx";
 import s from "./Runs.module.css";
 
 export type RunViewProps = {
@@ -18,13 +19,12 @@ export type RunViewProps = {
   readonly wordsOf: (id: string) => ItemWords;
   readonly cur: number;
   readonly nudged: ReadonlySet<number>;
-  readonly reasons: readonly string[];
-  readonly maxReasons: number;
+  readonly reasons: VerdictReasons;
   readonly onFocus: (cell: number) => void;
   readonly onVerdict: (cell: number, v: BoardVerdict | null) => void;
 };
 
-export function RunView({ run, cells, verdicts, mediaOf, wordsOf, cur, nudged, reasons, maxReasons, onFocus, onVerdict }: RunViewProps) {
+export function RunView({ run, cells, verdicts, mediaOf, wordsOf, cur, nudged, reasons, onFocus, onVerdict }: RunViewProps) {
   const label = run.words?.label ?? run.row;
   const n = Math.min(3, run.members.length);
   return (
@@ -41,7 +41,6 @@ export function RunView({ run, cells, verdicts, mediaOf, wordsOf, cur, nudged, r
             current={i === cur}
             nudged={nudged.has(i) && verdicts[id] === undefined}
             reasons={reasons}
-            maxReasons={maxReasons}
             onFocus={onFocus}
             onVerdict={(v) => onVerdict(i, v)}
           />

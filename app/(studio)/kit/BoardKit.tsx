@@ -8,10 +8,12 @@
 
 import { useState } from "react";
 
+import { reasonVocabulary } from "@gt/domain/source";
 import { ConsequencePanel } from "@gt/ui/components/consequence/ConsequencePanel.tsx";
 import { CullTile, Zoom } from "@gt/ui/components/cull/CullTile.tsx";
 import { IdeaList } from "@gt/ui/components/cull/IdeaList.tsx";
 import { VariantCard } from "@gt/ui/components/cull/VariantCard.tsx";
+import { VerdictPick } from "@gt/ui/components/cull/VerdictPick.tsx";
 import { MatrixCull } from "@gt/ui/components/cull/MatrixCull.tsx";
 import { CutReview } from "@gt/ui/components/cut/CutReview.tsx";
 import { BoardDesk, CommitButton, DeskFrame, OracleStrip } from "@gt/ui/components/desk/Desk.tsx";
@@ -35,6 +37,9 @@ const noop = (): void => undefined;
 const FINDING = { label: "Hold the subject still and let the camera do the moving", meta: "cinematic · 02-frames", prompt: "\"If the character and the lens both move, nobody knows where to look - pick one.\"" };
 const WATCH = { label: "channel: lighting breakdowns - https://example.com/breakdowns", meta: "watchlist", prompt: "motivated key and practicals, measured contrast ratios" };
 const TEXT_MEDIA = { url: "", mime: "text/plain" };
+/** A /scout night's vocabulary: three still axes of eleven, with every reason's meaning. */
+const SCOUT = reasonVocabulary("scout");
+const STILL = { ...SCOUT, list: SCOUT.list.slice(0, 3) };
 
 export function BoardSection({ data }: { readonly data: BoardKitData }) {
   const { cull: CULL, cullVerdicts: CULL_VERDICTS, audio: AUDIO, pair: PAIR, review: REVIEW, cut: CUT, rail: RAIL, consequence: CONSEQUENCE, model: MODEL } = data;
@@ -55,9 +60,14 @@ export function BoardSection({ data }: { readonly data: BoardKitData }) {
       </Spec>
       <Spec names={["VariantCard", "VerdictPick", "VideoBar"]} source="the opened run · a verdict by click · a clip's bar (2026-10-22)" wide>
         <div className={b.tiles}>
-          <VariantCard index={0} words={words} media={{ url: "/presets/signal-ledger.jpg", mime: "image/jpeg" }} verdict={{ verdict: "keep", reasons: [] }} current nudged={false} reasons={["style", "subject", "craft"]} maxReasons={3} onFocus={noop} onVerdict={noop} />
-          <VariantCard index={1} words={words} media={{ url: "/presets/signal-ledger.jpg", mime: "image/jpeg" }} verdict={{ verdict: "reject", reasons: ["craft"] }} current={false} nudged={false} reasons={["style", "subject", "craft"]} maxReasons={3} onFocus={noop} onVerdict={noop} />
-          <VariantCard index={2} words={{ label: "clip · replica-1", meta: "5s · local · free" }} media={{ url: "/clips/presets/blueprint.webm", mime: "video/webm" }} verdict={undefined} current={false} nudged={false} reasons={["style", "subject", "craft"]} maxReasons={3} onFocus={noop} onVerdict={noop} />
+          <VariantCard index={0} words={words} media={{ url: "/presets/signal-ledger.jpg", mime: "image/jpeg" }} verdict={{ verdict: "keep", reasons: [] }} current nudged={false} reasons={STILL} onFocus={noop} onVerdict={noop} />
+          <VariantCard index={1} words={words} media={{ url: "/presets/signal-ledger.jpg", mime: "image/jpeg" }} verdict={{ verdict: "reject", reasons: ["craft"] }} current={false} nudged={false} reasons={STILL} onFocus={noop} onVerdict={noop} />
+          <VariantCard index={2} words={{ label: "clip · replica-1", meta: "5s · local · free" }} media={{ url: "/clips/presets/blueprint.webm", mime: "video/webm" }} verdict={undefined} current={false} nudged={false} reasons={STILL} onFocus={noop} onVerdict={noop} />
+        </div>
+      </Spec>
+      <Spec names={["VerdictPick", "Tip"]} source="a reason's meaning, on hover and focus (2026-10-23)" wide>
+        <div className={b.pick}>
+          <VerdictPick label="replica 2" verdict={{ verdict: "reject", reasons: ["craft"] }} reasons={SCOUT} onChange={noop} seededTip="use case" />
         </div>
       </Spec>
       <Spec names={["IdeaList"]} source="words-only runs, decided in place (2026-10-22)" wide>
@@ -68,8 +78,7 @@ export function BoardSection({ data }: { readonly data: BoardKitData }) {
           wordsOf={() => ({ label: "Hold a wide shot until the subject settles, then cut.", prompt: "the push-in only reads once the figure stops moving", meta: "cinematic · 02-frames" })}
           cur={0}
           nudged={new Set<number>()}
-          reasons={[]}
-          maxReasons={0}
+          reasons={reasonVocabulary("suno")}
           onFocus={noop}
           onVerdict={noop}
         />

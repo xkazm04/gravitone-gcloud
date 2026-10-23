@@ -44,7 +44,7 @@ function fakePort() {
         decisions,
         undecided: IDS.length - decisions.length,
         canUndo: state.acts.some((a) => !a.undone),
-        reasons: { list: ["style"], max: 1, noteMax: 0 },
+        reasons: { list: ["style"], max: 1, noteMax: 0, meaning: {} },
         pairs: [],
       },
       present: { items: {}, rows: [] },

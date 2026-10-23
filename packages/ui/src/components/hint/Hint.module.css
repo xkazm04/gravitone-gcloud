@@ -7,3 +7,10 @@
 /* The bridge: the gap between glyph and tip is part of the tip, so the pointer can cross it. */
 .tip::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:calc(var(--sp-2) + 1px)}
 .hint[data-open]>.tip{opacity:1;pointer-events:auto}
+/* A tip on a bar at the foot of the screen opens above it (Tip `above`); the bridge flips with it. */
+.above>.tip{top:auto;bottom:calc(100% + var(--sp-2))}
+.above>.tip::before{bottom:auto;top:100%}
+/* A Tip starts at its trigger's left edge unless centred (the Hint's glyph). */
+.start>.tip{left:0;transform:none}
+/* What a bare trigger stands for (a key cap's reason), before its meaning. */
+.term{font-weight:700}

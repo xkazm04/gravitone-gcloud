@@ -1,28 +1,39 @@
 // The cull's bottom bar - the keymap's caps, the packet's tally and the commit - one copy for every
 // view of the matrix (the row desk and the run grid alike), so the operator's fingers meet the same
 // bar whichever view the packet is drawn in.
-import { REASON_KEYS } from "@gt/domain/source";
+import { REASON_KEYS, type ReasonVocabulary } from "@gt/domain/source";
 
 import type { Tally } from "../../board/cull.ts";
 import { CommitButton } from "../desk/Desk.tsx";
-import { Keycaps } from "../keycaps/Keycaps.tsx";
+import { Keycaps, type CapTip } from "../keycaps/Keycaps.tsx";
 import { StackBar } from "../stackbar/StackBar.tsx";
 import s from "./Cull.module.css";
 
 export type CullFootProps = {
   readonly tally: Tally;
-  /** How many reason keys the source binds (1-9, 0, − in order). */
-  readonly reasons: number;
+  /** The source's reasons, bound to 1-9, 0, − in order; each key's cap tips its reason's meaning. */
+  readonly reasons: Pick<ReasonVocabulary, "list" | "meaning">;
   readonly audio?: boolean;
   readonly refusals: number;
   readonly busy: boolean;
   readonly onCommit: () => void;
 };
 
+/** Each bound reason key's tip, by cap; a reason with no meaning draws a bare cap. */
+export function reasonTips(reasons: Pick<ReasonVocabulary, "list" | "meaning">): Readonly<Record<string, CapTip>> {
+  return Object.fromEntries(
+    reasons.list.flatMap((r, i) => {
+      const key = REASON_KEYS[i];
+      const text = reasons.meaning[r];
+      return key === undefined || text === undefined ? [] : [[key, { term: r, text }]];
+    }),
+  );
+}
+
 export function CullFoot({ tally: t, reasons, audio = false, refusals, busy, onCommit }: CullFootProps) {
   return (
     <>
-      <Keycaps mode="board.cull" label="cull keys" facts={new Set(audio ? ["audio"] : [])} only={{ reason: REASON_KEYS.slice(0, reasons) }} />
+      <Keycaps mode="board.cull" label="cull keys" facts={new Set(audio ? ["audio"] : [])} only={{ reason: REASON_KEYS.slice(0, reasons.list.length) }} tips={{ reason: reasonTips(reasons) }} />
       <div className={s.tally}>
         <div className={s.stack}>
           <StackBar kept={t.kept} rejected={t.rejected} undecided={t.undecided} label="packet" />

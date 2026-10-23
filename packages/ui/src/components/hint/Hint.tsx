@@ -21,37 +21,23 @@
 //   · Dismissed stays dismissed: Escape closes it with the pointer still over it, and it
 //     reopens only on the next enter or focus, never on a stray pointermove.
 //   · Blur closes it only when focus leaves the wrapper, not when it moves inside it.
-import { useId, useRef, useState, type FocusEvent } from "react";
-import { useLayer } from "../../layers/useLayer.ts";
+//
+// The mechanism is ./Tip.tsx (2026-10-23), which a reason chip also opens on itself; a Hint is
+// a Tip around the glyph, and adds only the glyph and the twelve-word type.
 import type { TwelveWords } from "./words.ts";
+import { Tip } from "./Tip.tsx";
 import s from "./Hint.module.css";
 
 export type HintProps<S extends string> = { readonly text: S; readonly name: string } & TwelveWords<S>;
 
 export function Hint<const S extends string>({ text, name }: HintProps<S>) {
-  const id = useId();
-  const [open, setOpen] = useState(false);
-  const glyph = useRef<HTMLButtonElement>(null);
-  const tip = useRef<HTMLSpanElement>(null);
-  useLayer(open, { kind: "tooltip", panelRef: tip, anchorRef: glyph, onClose: () => setOpen(false) });
-  const onBlur = (e: FocusEvent<HTMLSpanElement>): void => {
-    if (!(e.relatedTarget instanceof Node && e.currentTarget.contains(e.relatedTarget))) setOpen(false);
-  };
   return (
-    <span
-      className={s.hint}
-      data-open={open ? "" : undefined}
-      onPointerEnter={() => setOpen(true)}
-      onPointerLeave={() => setOpen(false)}
-      onFocus={() => setOpen(true)}
-      onBlur={onBlur}
-    >
-      <button ref={glyph} type="button" className={s.glyph} aria-label={name} aria-describedby={id}>
-        ?
-      </button>
-      <span ref={tip} role="tooltip" id={id} className={s.tip}>
-        {text}
-      </span>
-    </span>
+    <Tip text={text} centered>
+      {(id) => (
+        <button type="button" className={s.glyph} aria-label={name} aria-describedby={id}>
+          ?
+        </button>
+      )}
+    </Tip>
   );
 }

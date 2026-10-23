@@ -4742,4 +4742,28 @@ export const MUTANTS: UnitMutant[] = [
     replace: '<Plate className={s.media} src={media.url} alt="" lazy />',
     why: "A model tile asks the browser to draw its glb as an image: every 3D candidate on the Board is a broken picture.",
   },
+  {
+    id: "reason-chip-described-by-its-meaning",
+    test: "packages/ui/test/components/reason-tip.test.ts",
+    file: "packages/ui/src/components/cull/VerdictPick.tsx",
+    find: "aria-pressed={picked.includes(r)} aria-describedby={describedBy}",
+    replace: "aria-pressed={picked.includes(r)}",
+    why: "A reason chip is no longer described by its tip: a screen reader hears `craft` and never what craft means.",
+  },
+  {
+    id: "cull-foot-reason-keys-tip-their-meaning",
+    test: "packages/ui/test/components/reason-tip.test.ts",
+    file: "packages/ui/src/components/cull/CullFoot.tsx",
+    find: " tips={{ reason: reasonTips(reasons) }}",
+    replace: "",
+    why: "The foot draws `1 2 3 … reason` with no tips: the operator cannot learn which key is which reason, or what it means, without pressing it.",
+  },
+  {
+    id: "reason-meaning-held-to-twelve-words",
+    test: "packages/domain/test/source.test.ts",
+    file: "packages/domain/src/source.ts",
+    find: 'rig: "The rig fails: bad weights or broken bone chains.",',
+    replace: 'rig: "The rig fails because the weights are bad or the bone chains are broken somewhere.",',
+    why: "A reason's meaning grows past twelve words: the tip on the Board is the app narrating behind a chip.",
+  },
 ];

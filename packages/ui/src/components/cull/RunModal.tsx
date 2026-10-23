@@ -15,7 +15,7 @@ import type { BoardVerdict } from "../../board/boardGate.ts";
 import { useLayer } from "../../layers/useLayer.ts";
 import { Plate } from "../desk/Plate.tsx";
 import { Keycap } from "../keycaps/Keycaps.tsx";
-import { VerdictPick } from "./VerdictPick.tsx";
+import { VerdictPick, type VerdictReasons } from "./VerdictPick.tsx";
 import s from "./Runs.module.css";
 
 export type RunModalProps = {
@@ -29,8 +29,7 @@ export type RunModalProps = {
   readonly reference?: string;
   /** The whole run's verdict when every variant agrees, else undefined. */
   readonly runVerdict: BoardVerdict | undefined;
-  readonly reasons: readonly string[];
-  readonly maxReasons: number;
+  readonly reasons: VerdictReasons;
   readonly onRunVerdict: (v: BoardVerdict | null) => void;
   readonly onClose: () => void;
   /** Off on a /kit specimen. */
@@ -39,7 +38,7 @@ export type RunModalProps = {
   readonly children: ReactNode;
 };
 
-export function RunModal({ category, label, position, use, aim, checks, reference, runVerdict, reasons, maxReasons, onRunVerdict, onClose, live = true, foot, children }: RunModalProps) {
+export function RunModal({ category, label, position, use, aim, checks, reference, runVerdict, reasons, onRunVerdict, onClose, live = true, foot, children }: RunModalProps) {
   const panel = useRef<HTMLDivElement | null>(null);
   useLayer(live, { kind: "zoom", panelRef: panel, onClose });
   return (
@@ -62,7 +61,7 @@ export function RunModal({ category, label, position, use, aim, checks, referenc
             )}
           </dl>
           <div className={s.headActs}>
-            <VerdictPick label="the whole run" verdict={runVerdict} reasons={reasons} maxReasons={maxReasons} onChange={onRunVerdict} size="sm" />
+            <VerdictPick label="the whole run" verdict={runVerdict} reasons={reasons} onChange={onRunVerdict} size="sm" />
             <button type="button" className={s.close} onClick={onClose} aria-label="back to the runs">
               <Keycap mode="board.cull" verb="zoom" />
             </button>
