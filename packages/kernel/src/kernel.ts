@@ -13,6 +13,7 @@ import { resourcesMigrations } from "./resources/profiles.ts";
 import { partsMigrations } from "./parts/schema.ts";
 import { recordsMigrations } from "./records/schema.ts";
 import { slotsMigrations } from "./slots/schema.ts";
+import { spendRequestMigrations } from "./spend-requests/schema.ts";
 import { spendMigrations } from "./spend/ledger.ts";
 import { stylesMigrations } from "./styles/schema.ts";
 import { openStore, type Store, type StoreOptions } from "./store.ts";
@@ -62,6 +63,8 @@ const DECLARED: readonly Entry[] = [
   { migrations: resourcesMigrations, after: ["events"] },
   // The box's load a minute at a time (resources/load.ts); its sampler reads the jobs admission holds from both.
   { migrations: loadMigrations, after: ["events", "job"] },
+  // An agent's asks to spend, held for the operator's verdict on `pkt:spend:<day>`; `spend.*` events per move.
+  { migrations: spendRequestMigrations, after: ["events"] },
 ];
 
 /** The pure check: `entries` in an order where every module follows what it names. */

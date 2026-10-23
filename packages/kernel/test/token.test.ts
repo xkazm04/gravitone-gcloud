@@ -14,6 +14,7 @@ import {
   readToken,
   revokeToken,
   scopeAdmits,
+  TOKEN_SCOPES,
   tokenMigrations,
   touchToken,
   verifyToken,
@@ -75,9 +76,12 @@ describe("token mint", () => {
     expect(parseTtl("1w").ok).toBe(false);
   });
 
-  it("refuses a name that is not a caller name, a scope that is not money|read, and a short random source", () => {
+  it("refuses a name that is not a caller name, a scope that is not money|read|act, and a short random source", () => {
     expect(mintPlan({ ...MONEY, name: "Has Spaces" }, NOW, counting()).ok).toBe(false);
     expect(mintPlan({ ...MONEY, name: "" }, NOW, counting()).ok).toBe(false);
+    const scope = mintPlan({ ...MONEY, scope: "admin" as "money" }, NOW, counting());
+    expect(!scope.ok && scope.error.message).toBe('token scope "admin" is not money|read|act');
+    expect(mintPlan({ name: "athena", scope: "act" }, NOW, counting()).ok).toBe(true);
     const short = mintPlan(MONEY, NOW, () => new Uint8Array(0));
     expect(short.ok).toBe(false);
   });
@@ -127,11 +131,13 @@ describe("token verify", () => {
     expect(!ghost.ok && ghost.error.code).toBe("not-found");
   });
 
-  it("a read token admits a read door only; a money token admits both", () => {
-    expect(scopeAdmits("money", "money")).toBe(true);
-    expect(scopeAdmits("money", "read")).toBe(true);
-    expect(scopeAdmits("read", "read")).toBe(true);
-    expect(scopeAdmits("read", "money")).toBe(false);
+  it("money admits every door; act admits act and read doors; read admits read doors only", () => {
+    const table = TOKEN_SCOPES.map((scope) => [scope, (["money", "act", "read"] as const).map((use) => scopeAdmits(scope, use))]);
+    expect(table).toEqual([
+      ["money", [true, true, true]],
+      ["read", [false, false, true]],
+      ["act", [false, true, true]],
+    ]);
   });
 
   it("a corrupt row refuses (err), it never reads as a token with no limits", () => {
