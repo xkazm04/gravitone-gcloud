@@ -7,6 +7,7 @@
 //   fixtures-out/scout/<night>/scenes/c-NN/replica-N.jpg a scene's replica stills
 //   fixtures-out/scout/<night>/assets/c-NN/concept-N.png  a game asset's concepts
 //   fixtures-out/scout/<night>/ideas/c-NN.png             an idea's artboard
+//   fixtures-out/scout/seeds/<batch>/batch.json           a seed batch (one committed, one open)
 //
 // Yesterday's night is CLOSED and waits on the Floor; the night before was COMMITTED
 // (a scene kept as a poster, a finding kept, a watch line rejected with its reason).
@@ -22,7 +23,7 @@
 import { rmSync } from "node:fs";
 
 import { standConcept } from "../../lib/foundry/scout/concept";
-import type { Asset3dCandidate, DirectionCandidate, IdeaCandidate, Night, SceneCandidate, ScoutSource } from "../../lib/foundry/scout/types";
+import type { Asset3dCandidate, DirectionCandidate, IdeaCandidate, Night, SceneCandidate, ScoutSource, Seed, SeedBatch } from "../../lib/foundry/scout/types";
 import { DAY, HOUR, NOW, outFile, plate, writeBytes, writeJson } from "./kit";
 
 const PALETTE = ["#1d2b3a", "#e0a458", "#5c8a8a", "#f2e8cf"];
@@ -173,9 +174,54 @@ function committedNight(): Night {
   };
 }
 
+/*
+ * Two SEED batches (spark scout-decision-graph), under fixtures-out/scout/seeds/<batch>/batch.json: one the
+ * operator committed (two kept, one thrown with its reason and a note), and the next one still open on the Weir,
+ * holding a child of a kept seed beside fresh ones.
+ */
+const seed = (id: string, sentence: string, genre: string, subgenre: string, type: string, audience: Seed["audience"], format: Seed["format"], parent?: string): Seed => ({
+  id,
+  sentence,
+  genre,
+  subgenre,
+  type,
+  audience,
+  format,
+  ...(parent === undefined ? {} : { parent }),
+});
+
+function seedBatches(): SeedBatch[] {
+  const first = dayOf(3 * DAY);
+  const next = dayOf(DAY);
+  return [
+    {
+      id: first,
+      createdAt: at(NOW - 3 * DAY),
+      dry: false,
+      seeds: [
+        seed("sd-001", "A slow tango danced by two coats on a coat rack after the ball.", "music", "tango", "music video", "adult", "video"),
+        seed("sd-002", "A shy cloud that rains only on the one flower nobody waters.", "kids animation", "nature friendship", "animated short", "kids", "video"),
+        seed("sd-003", "A city skyline at sunset with the title over it.", "trailer", "teaser", "title opener", "family", "short"),
+      ],
+      committed: { at: at(NOW - 2 * DAY - 6 * HOUR), by: "operator", kept: ["sd-001", "sd-002"], rejected: ["sd-003"], reasons: { "sd-003": ["generic"] }, notes: { "sd-003": "every channel opens on this" }, dry: false },
+    },
+    {
+      id: next,
+      createdAt: at(NOW - DAY),
+      dry: false,
+      seeds: [
+        seed("sd-001", "The same tango, its lyrics stitched into the coats' linings verse by verse.", "music", "tango", "lyric video", "adult", "video", `${first}/sd-001`),
+        seed("sd-002", "Ten ducklings count themselves across a puddle and forget the one counting.", "kids animation", "preschool counting", "animated short", "kids", "short"),
+      ],
+    },
+  ];
+}
+
 export function generate(): string {
   rmSync(outFile("scout"), { recursive: true, force: true });
   const nights = [closedNight(), committedNight()];
   for (const n of nights) writeJson(outFile("scout", n.id, "night.json"), n);
-  return `${nights.length} scout nights (${nights.map((n) => `${n.id} ${n.state}`).join(", ")})`;
+  const batches = seedBatches();
+  for (const b of batches) writeJson(outFile("scout", "seeds", b.id, "batch.json"), b);
+  return `${nights.length} scout nights (${nights.map((n) => `${n.id} ${n.state}`).join(", ")}), ${batches.length} seed batches`;
 }
