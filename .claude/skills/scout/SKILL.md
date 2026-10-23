@@ -150,7 +150,7 @@ in its `add-source` item: a keep from it nominates it to the registry's /intake.
 Write the sources as JSON (`[{url, kind, title, channel, why, found, watch}]` - `kind` is `image | video | page`,
 `found` is exactly `watchlist` or `search`, and `watch` is the watchlist line verbatim when `found` is
 `watchlist`; where you found it in prose belongs in `why`) to a scratch file and
-`npx tsx pipeline/scout.mts add-source <night> --json <file>`. A URL seen in an earlier night is skipped
+`npx tsx pipeline/scout.mts add-source <night> --json <file>`. A URL an earlier night launched a candidate from is skipped
 by the CLI; take that as information, not an error.
 
 ### 3. Ingest

@@ -28,8 +28,11 @@ import {
 //   - a source URL is http or https and passes `assertFetchable` NOW (scheme,
 //     literal address, resolved address: lib/imaging/safeUrl.ts), so a video URL
 //     yt-dlp will fetch is held to the rule safeFetch holds a picture's to;
-//   - a URL any EARLIER night already holds is skipped and reported - the same
-//     thing is never scouted twice (a YouTube video by its id, whatever its URL);
+//   - a URL an EARLIER night made a candidate from is skipped and reported - the
+//     same thing is never scouted twice (a YouTube video by its id, whatever its
+//     URL). A source a night held and launched nothing from was never scouted:
+//     a paused night (2026-10-23, closed past its deadline with 14 sources and no
+//     run from any) hands its sources to the next night instead of burying them;
 //   - a finding names a knowledge template that exists and a step in the
 //     `NN-name` form (the Board's apply creates the step's PATTERNS.md when the
 //     finding is kept; most templates have only 01-script today);
@@ -79,13 +82,16 @@ export function urlKey(raw: string): string {
   return href;
 }
 
-/** Every URL key earlier nights hold, with where. A night whose manifest cannot be read is skipped. */
+/** Every URL key earlier nights made a candidate from - failed ones included, a launch was tried - with
+ *  where. A night whose manifest cannot be read is skipped. */
 export async function seenElsewhere(except: NightId): Promise<Map<string, string>> {
   const out = new Map<string, string>();
   for (const s of await listNights()) {
     if (s.id === except) continue;
     try {
-      for (const src of (await readNight(s.id)).sources) if (!out.has(urlKey(src.url))) out.set(urlKey(src.url), `${s.id}/${src.id}`);
+      const n = await readNight(s.id);
+      const used = new Set(n.candidates.flatMap((c) => c.sourceIds));
+      for (const src of n.sources) if (used.has(src.id) && !out.has(urlKey(src.url))) out.set(urlKey(src.url), `${s.id}/${src.id}`);
     } catch {
       /* unreadable: it cannot vouch for or against a URL */
     }

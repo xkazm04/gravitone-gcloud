@@ -141,6 +141,15 @@ describe("the night, dry, end to end", () => {
     expect((await readNight(id)).candidates).toEqual([]);
   });
 
+  it("a URL an earlier night held but launched nothing from is taken by the next night", async () => {
+    // The refused launch above left its night with s-01 ingested and no candidate from it.
+    const next = String((await cli(["open", "--json"])).doc["night"]);
+    const r = await cli(["add-source", next, "--json", file("held.json", [{ ...SOURCES[0], url: "https://art.example/one.png?v=2" }])]);
+    expect(r.code).toBe(0);
+    expect(r.doc["skipped"]).toEqual([]);
+    expect((r.doc["added"] as { url: string }[]).map((s) => s.url)).toEqual(["https://art.example/one.png?v=2"]);
+  });
+
   it("a URL an earlier night holds is skipped by add-source", async () => {
     const next = String((await cli(["open", "--json"])).doc["night"]);
     const r = await cli(["add-source", next, "--json", file("again.json", [{ ...SOURCES[2], url: "https://youtu.be/abc123" }])]);
