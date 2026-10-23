@@ -212,9 +212,9 @@ async function clickIfPresent(page: Page, selector: string): Promise<boolean> {
   return true;
 }
 
-/** One still. Resolves once the image bytes are held; the generation stays in
- *  the operator's studio (WP1 deletes nothing). */
-export async function studioGenerate(prompt: string, aspect: Aspect): Promise<StudioRun> {
+/** One still. Resolves once the image bytes are held; the generation stays in the operator's studio
+ *  (the provider deletes it), and a failure after `Generate` named it carries its id for that delete. */
+export async function studioGenerate(prompt: string, aspect: Aspect, quality?: "low" | "medium"): Promise<StudioRun> {
   let browser;
   try {
     browser = await attach({ spawn: true });
@@ -254,7 +254,7 @@ export async function studioGenerate(prompt: string, aspect: Aspect): Promise<St
   page.on("response", onResponse);
 
   try {
-    await page.goto(STUDIO.page.imageUrl(aspect), { waitUntil: "domcontentloaded", timeout: 45_000 });
+    await page.goto(STUDIO.page.imageUrl(aspect, quality), { waitUntil: "domcontentloaded", timeout: 45_000 });
     if (STUDIO.page.signedOutPath.test(new URL(page.url()).pathname)) throw new StudioError("not signed in to leonardo", "signed-out");
 
     const box = page.locator(STUDIO.form.prompt).filter({ visible: true }).first();
@@ -291,9 +291,9 @@ export async function studioGenerate(prompt: string, aspect: Aspect): Promise<St
     while (!gen && Date.now() - armedAt < STUDIO.limits.generateAnswerMs) await page.waitForTimeout(250);
     const g = gen as { id?: string; credits?: number; status: number; error: string | null } | null;
     if (!g) throw new StudioError("leonardo studio did not answer the generate", "failed", true);
-    if (g.status === 402 || (g.error && looksLikeCredits(g.error))) throw new StudioError("leonardo studio is out of credits", "no-credits", true);
+    if (g.status === 402 || (g.error && looksLikeCredits(g.error))) throw new StudioError("leonardo studio is out of credits", "no-credits", true, g.id);
     if (g.status >= 400 || g.error || !g.id)
-      throw new StudioError(`leonardo studio refused the generate: ${g.error ?? `HTTP ${g.status}`}`, "failed", true);
+      throw new StudioError(`leonardo studio refused the generate: ${g.error ?? `HTTP ${g.status}`}`, "failed", true, g.id);
     const id = g.id;
 
     const want = STUDIO.cdn.imageOf(id);
@@ -307,10 +307,10 @@ export async function studioGenerate(prompt: string, aspect: Aspect): Promise<St
       }
       if (url) break;
       const status = statuses.get(id) ?? "";
-      if (STUDIO.api.refusedStatus.test(status)) throw new StudioError("leonardo declined this prompt on safety grounds", "refused", true);
-      if (STUDIO.api.failedStatus.test(status)) throw new StudioError(`leonardo studio failed generation ${id}`, "failed", true);
+      if (STUDIO.api.refusedStatus.test(status)) throw new StudioError("leonardo declined this prompt on safety grounds", "refused", true, id);
+      if (STUDIO.api.failedStatus.test(status)) throw new StudioError(`leonardo studio failed generation ${id}`, "failed", true, id);
       if (Date.now() > deadline)
-        throw new StudioError(`leonardo studio did not finish in ${STUDIO.limits.renderTimeoutMs / 60_000} min (generation ${id})`, "timeout", true);
+        throw new StudioError(`leonardo studio did not finish in ${STUDIO.limits.renderTimeoutMs / 60_000} min (generation ${id})`, "timeout", true, id);
       await page.waitForTimeout(POLL_MS);
     }
 
@@ -319,7 +319,7 @@ export async function studioGenerate(prompt: string, aspect: Aspect): Promise<St
       const { base64, mime } = await fetchImageBase64("leonardo-studio", url);
       image = { base64, mime: mime as ImageRef["mime"], ...dimensionsOf(Buffer.from(base64, "base64")) };
     } catch (e) {
-      throw new StudioError(`leonardo studio image download failed: ${errorMessage(e)}`, "failed", true);
+      throw new StudioError(`leonardo studio image download failed: ${errorMessage(e)}`, "failed", true, id);
     }
 
     lastSeen.credits = g.credits ?? lastSeen.credits;

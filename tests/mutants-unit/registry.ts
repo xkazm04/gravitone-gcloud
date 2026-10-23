@@ -4823,4 +4823,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "if (r.read < 0) return { name, read: false };",
     why: "A resource no sample read is drawn as 0% idle: an [N/A] GPU tells the operator to launch GPU work into a probe that cannot see it.",
   },
+  {
+    id: "scout-ideas-request-scout-cap-off",
+    test: "packages/producers/test/scout-ideas-request.test.ts",
+    file: "packages/producers/src/scout-ideas/define.ts",
+    find: "r.ideas.length <= SCOUT_REQUEST_MAX,",
+    replace: "r.ideas.length <= MUSE_REQUEST_MAX,",
+    why: "A scout-wing request would draw up to 50 ideas, past the scout night's 40-idea cap its receipt was sized for.",
+  },
 ];

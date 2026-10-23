@@ -20,9 +20,11 @@ import type { Reader, Store } from "@gt/kernel/store";
 import { defineScoutIdeas, IDEAS_REQUEST, parseIdeasRequest, SCOUT_IDEAS, STUDIO_CREDIT, type IdeasRequest } from "@gt/producers/scout-ideas/define";
 
 import { mutateNight, readNightNow, withCandidate } from "../foundry/scout/store.ts";
+import { wingRunId, type ScoutWing } from "../foundry/scout/wing.ts";
+import { activeWing, withWing } from "../foundry/scout/wingScope.ts";
 import type { CandidateId, IdeaCandidate, Night, NightId } from "../foundry/scout/types.ts";
 import { FoundryError } from "../foundry/runStore.ts";
-import { generate } from "../imaging/router.ts";
+import { generate, recognize } from "../imaging/router.ts";
 import { kernel } from "../kernelProcess.ts";
 import { effectsFor } from "./extract.ts";
 import { ideaActs, type IdeaEngines } from "./scoutIdeaActs.ts";
@@ -40,10 +42,19 @@ import { ideaActs, type IdeaEngines } from "./scoutIdeaActs.ts";
 // books none; a ceiling would only make the night hold its whole remainder while the batch draws
 // (budget.ts `promiseOf` holds an unfinished live job's ceiling when its receipt has no price).
 //
-// ONE JOB PER BATCH, on box.chrome: `job:scout-ideas:<night>:<first c-NN>`. night.json names it on
+// ONE JOB PER BATCH, on box.chrome: `job:scout-ideas:<night>:<first c-NN>`, and a muse batch's
+// `job:scout-ideas:muse:<night>:<first c-NN>` - the two wings number their nights and candidates
+// apart, so the same day's first batch in each would otherwise be one id. night.json names it on
 // every idea of the batch and on `night.jobs` once the job exists.
 
-export type IdeasTarget = { readonly nightId: NightId; readonly candidateIds: readonly CandidateId[] };
+export type IdeasTarget = {
+  readonly nightId: NightId;
+  readonly candidateIds: readonly CandidateId[];
+  /** The wing whose night it is; absent: the active one (lib/foundry/scout/wingScope.ts). */
+  readonly wing?: ScoutWing;
+  /** The studio quality every still of the batch is drawn at; absent: the studio's default. */
+  readonly quality?: "low" | "medium";
+};
 
 export type LaunchIdeasOptions = {
   readonly mode: ReceiptMode;
@@ -121,17 +132,18 @@ function readIn(r: Reader, t: IdeasTarget, o: ReadAsk): Result<{ readonly receip
   if (!ideas.ok) return ideas;
   const option = ideaOption();
   if (!option.ok) return option;
-  const asks = ideas.value.map((c) => ({ candidateId: c.id, prompt: c.prompt }));
+  const asks = ideas.value.map((c) => ({ candidateId: c.id, prompt: c.prompt, ...(c.aspect === undefined || c.aspect === "16:9" ? {} : { aspect: c.aspect }) }));
   // The key names the batch AT its prompts: a prompt that changed since the receipt is a different line.
   const at = `ideas:${night.value.id}/${t.candidateIds[0] ?? ""}@${createHash("sha256").update(asks.map((a) => `${a.candidateId}\n${a.prompt}`).join("\n")).digest("hex").slice(0, 12)}`;
   const line: PlanLine = { key: `${at}/idea`, label: `idea · ${asks.length} artboard(s)`, lane: SCOUT_IDEAS_LANE, units: asks.length, option: option.value, after: [], order: 0, status: "pending" };
   const receipt = receiptFor({ subject: { kind: "run", lane: "image" }, lines: [line], plan: [line], queue: readQueue(r), capacity: LANE_CAPACITY, now: o.now, mode: o.mode });
-  return ok({ receipt, request: { nightId: night.value.id, ideas: asks, estimates: { idea: { seconds: IDEA_SECONDS, usd: null, unpricedReason: STUDIO_CREDIT } } } });
+  const wing = t.wing === "muse" ? { wing: t.wing } : {};
+  return ok({ receipt, request: { nightId: night.value.id, ...wing, ideas: asks, ...(t.quality === undefined ? {} : { quality: t.quality }), estimates: { idea: { seconds: IDEA_SECONDS, usd: null, unpricedReason: STUDIO_CREDIT } } } });
 }
 
 /* ── Launch: receipt, then confirm ────────────────────────────────────────── */
 
-export const ideasJobId = (t: IdeasTarget): string => `job:scout-ideas:${t.nightId}:${t.candidateIds[0] ?? ""}`;
+export const ideasJobId = (t: IdeasTarget): string => `job:scout-ideas:${wingRunId(t.wing ?? activeWing(), t.nightId)}:${t.candidateIds[0] ?? ""}`;
 
 function jobOf(store: Store, id: string): Job | undefined {
   const parsed = parseAt("job id", jobIdSchema, id);
@@ -142,8 +154,13 @@ function jobOf(store: Store, id: string): Job | undefined {
   throw r.error;
 }
 
-/** The batch's receipt (no token), or its confirm - lib/producers/scoutAsset.ts `launchAsset`'s contract. */
-export async function launchIdeas(store: Store, target: IdeasTarget, opts: LaunchIdeasOptions): Promise<Result<IdeasLaunch>> {
+/** The batch's receipt (no token), or its confirm - lib/producers/scoutAsset.ts `launchAsset`'s contract - read and written in the target's wing. */
+export function launchIdeas(store: Store, t: IdeasTarget, opts: LaunchIdeasOptions): Promise<Result<IdeasLaunch>> {
+  const wing = t.wing ?? activeWing();
+  return withWing(wing, () => launchIn(store, { ...t, wing }, opts));
+}
+
+async function launchIn(store: Store, target: IdeasTarget, opts: LaunchIdeasOptions): Promise<Result<IdeasLaunch>> {
   const now = opts.now ?? Date.now();
   const jobId = ideasJobId(target);
   const held = jobOf(store, jobId);
@@ -160,7 +177,7 @@ export async function launchIdeas(store: Store, target: IdeasTarget, opts: Launc
     if (read.value.receipt.token !== token) return ok({ kind: "stale", fresh: read.value.receipt });
     const mode = opts.mode === "dry" ? ok(DRY) : armLive(opts.actor, t.at, `ideas receipt ${token.slice(0, 12)} confirmed`, { dryOnly: opts.dryOnly });
     if (!mode.ok) return mode;
-    enqueueIn(t, { id: jobId, of: { kind: "run", id: `scout:${target.nightId}/ideas-${target.candidateIds[0] ?? ""}` }, producer: SCOUT_IDEAS, lane: SCOUT_IDEAS_LANE, mode: mode.value }, opts.actor);
+    enqueueIn(t, { id: jobId, of: { kind: "run", id: `scout:${wingRunId(target.wing ?? activeWing(), target.nightId)}/ideas-${target.candidateIds[0] ?? ""}` }, producer: SCOUT_IDEAS, lane: SCOUT_IDEAS_LANE, mode: mode.value }, opts.actor);
     append(t, { actor: opts.actor, type: IDEAS_REQUEST, subject: { kind: "job", id: jobId }, data: { ...read.value.request, by: opts.actor.id } });
     return ok({ kind: "launched", jobId, receipt: read.value.receipt });
   });
@@ -177,7 +194,7 @@ export async function launchIdeas(store: Store, target: IdeasTarget, opts: Launc
 
 /* ── The binding ──────────────────────────────────────────────────────────── */
 
-export const LIVE_IDEA_ENGINES: IdeaEngines = { generate };
+export const LIVE_IDEA_ENGINES: IdeaEngines = { generate, recognize };
 
 /** The request an ideas job carries: the event its launch wrote beside the enqueue. */
 export function ideasRequestOf(store: Store, jobId: string): Result<IdeasRequest> {

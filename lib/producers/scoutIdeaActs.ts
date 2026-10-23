@@ -13,9 +13,14 @@ import type { IdeasPorts, IdeasRequest } from "@gt/producers/scout-ideas/define"
 
 import { ImagingError } from "../imaging/errors.ts";
 import { studioCreditsOf } from "../imaging/providers/leonardoStudio.ts";
-import type { GeneratedImages, GenerateRequest, ImageRef } from "../imaging/types.ts";
+import { recognize as LIVE_RECOGNIZE } from "../imaging/router.ts";
+import type { GeneratedImages, GenerateRequest, ImageRef, Recognition, RecognizeRequest } from "../imaging/types.ts";
+import { judgeStill, STAND_JUDGE } from "../foundry/scout/judge.ts";
+import { judgeFailure, type MuseJudge } from "../foundry/scout/muse.ts";
 import { mutateNight, readNight, resolveInNight, withCandidate } from "../foundry/scout/store.ts";
 import type { CandidateId, IdeaCandidate } from "../foundry/scout/types.ts";
+import { DEFAULT_WING } from "../foundry/scout/wing.ts";
+import { withWing } from "../foundry/scout/wingScope.ts";
 import { imageFailure } from "./frames.ts";
 
 // THE IDEAS' ACTS - the ports of packages/producers/src/scout-ideas/define.ts over the imaging
@@ -29,9 +34,18 @@ import { imageFailure } from "./frames.ts";
 //   ended  a failed job's sentence on every idea of it still pending, verbatim
 //
 // Every night write is fenced against the job's slot first (the scene and asset acts' `fence`).
+//
+// A MUSE REQUEST (spark scout-muse) runs every act inside its wing, so each read and write lands in
+// the muse root, draws at the request's studio quality and the idea's aspect, and puts each still
+// before the eye (lib/foundry/scout/judge.ts) while it is still only in memory: a still that fails
+// the line, or that the eye could not read, is never written to the night - the candidate fails
+// `judge: <field>` and holds the read when there was one. The eye is a declared call like the
+// studio's, so a dry job books a would-call and judges its stand-in as STAND_JUDGE.
 
 export type IdeaEngines = {
   readonly generate: (req: GenerateRequest) => Promise<GeneratedImages>;
+  /** The muse wing's eye; absent: the imaging router's (judge.ts). */
+  readonly recognize?: (req: RecognizeRequest) => Promise<Recognition>;
 };
 
 const data = (x: unknown): EventData => JSON.parse(JSON.stringify(x)) as EventData;
@@ -113,13 +127,13 @@ async function ideaAct(e: IdeaEngines, req: IdeasRequest, k: number, ctx: StepCo
   // A drive that died between the picture and the booking: the picture is the idea's.
   if (c.status === "rendered" && c.image !== undefined) return madePaid(data({ idea: c.id, file: c.image, held: true }), ctx);
 
-  const gen: GenerateRequest = { prompt: ask.prompt, aspect: "16:9", count: 1, prefer: "leonardo-studio" };
+  const gen: GenerateRequest = { prompt: ask.prompt, aspect: ask.aspect ?? "16:9", count: 1, prefer: "leonardo-studio", ...(req.quality === undefined ? {} : { quality: req.quality }) };
   let got: { images: ImageRef[]; provenance?: GeneratedImages["provenance"] };
   try {
     got = await meteredCall<{ images: ImageRef[]; provenance?: GeneratedImages["provenance"] }>(ctx, {
       provider: "imaging-router",
       model: "generate",
-      payload: { prompt: gen.prompt, aspect: gen.aspect, count: gen.count, prefer: gen.prefer },
+      payload: { prompt: gen.prompt, aspect: gen.aspect, count: gen.count, prefer: gen.prefer, ...(gen.quality === undefined ? {} : { quality: gen.quality }) },
       estimate: req.estimates.idea,
       stand: () => ({ images: [{ base64: standIdea(k).toString("base64"), mime: "image/png" }] }),
       live: async () => {
@@ -152,16 +166,43 @@ async function ideaAct(e: IdeaEngines, req: IdeasRequest, k: number, ctx: StepCo
     await writeIdeas(req, ctx.job.id, [c.id], failed(why));
     return madePaid(data({ idea: c.id, failed: why }), ctx);
   }
+  let judge: MuseJudge | undefined;
+  if (req.wing === "muse") {
+    const read = await judgeStill(img, { recognize: (r) => meteredEye(e, req, r, ctx) });
+    fence(ctx);
+    const why = read.ok ? judgeFailure(read.value) : `unavailable - ${read.error.message}`;
+    if (why !== null) {
+      const failure = `judge: ${why}`;
+      await writeIdeas(req, ctx.job.id, [c.id], (x) => ({ ...failed(failure)(x), ...(read.ok ? { judge: read.value } : {}) }));
+      return madePaid(data({ idea: c.id, failed: failure, ...(read.ok ? { judge: read.value } : {}) }), ctx);
+    }
+    if (read.ok) judge = read.value;
+  }
   const rel = ideaFile(c.id, img.mime);
   const abs = resolveInNight(req.nightId, rel);
   await mkdir(path.dirname(abs), { recursive: true });
   await writeFile(abs, Buffer.from(img.base64, "base64"));
   await writeIdeas(req, ctx.job.id, [c.id], (x) => {
     const { error: _e, ...base } = x;
-    return { ...base, status: "rendered", image: rel };
+    return { ...base, status: "rendered", image: rel, ...(judge === undefined ? {} : { judge }) };
   });
   const p = got.provenance;
-  return madePaid(data({ idea: c.id, file: rel, dry: p === undefined, ...(p === undefined ? {} : { provider: p.provider, model: p.model, ...(p.cleanup === undefined ? {} : { cleanup: p.cleanup }) }) }), ctx);
+  return madePaid(data({ idea: c.id, file: rel, dry: p === undefined, ...(p === undefined ? {} : { provider: p.provider, model: p.model, ...(p.cleanup === undefined ? {} : { cleanup: p.cleanup }) }), ...(judge === undefined ? {} : { judge }) }), ctx);
+}
+
+/** One read by the eye, declared to the step's meter: a dry job answers with STAND_JUDGE and asks no eye. */
+function meteredEye(e: IdeaEngines, req: IdeasRequest, r: RecognizeRequest, ctx: StepContext): Promise<{ readonly json?: unknown }> {
+  return meteredCall<{ readonly json?: unknown }>(ctx, {
+    provider: "imaging-router",
+    model: "recognize",
+    payload: { instruction: r.instruction, schema: r.schema, night: req.nightId },
+    stand: () => ({ json: { ...STAND_JUDGE } }),
+    live: async () => {
+      const out = await (e.recognize ?? LIVE_RECOGNIZE)(r);
+      const p = out.provenance;
+      return { value: { json: out.json }, served: `${p.provider}/${p.model}`, ...(p.costUsd === undefined ? { unpriced: `${p.provider} reported no cost for a judge read` } : { usd: p.costUsd }) };
+    },
+  });
 }
 
 /* ── The ending ───────────────────────────────────────────────────────────── */
@@ -178,15 +219,17 @@ async function ended(req: IdeasRequest, job: Job, ending: string): Promise<void>
   if (open.length > 0) await writeIdeas(req, job.id, open, failed(why));
 }
 
+/** Every act of a request runs in its wing: the worker is another process, and the request is all it has. */
 export function ideaActs(e: IdeaEngines): Pick<IdeasPorts, "idea" | "ended"> {
   return {
-    idea: async (req, k, ctx) => {
-      try {
-        return await ideaAct(e, req, k, ctx);
-      } catch (x) {
-        return imageFailure(x);
-      }
-    },
-    ended,
+    idea: (req, k, ctx) =>
+      withWing(req.wing ?? DEFAULT_WING, async () => {
+        try {
+          return await ideaAct(e, req, k, ctx);
+        } catch (x) {
+          return imageFailure(x);
+        }
+      }),
+    ended: (req, job, ending) => withWing(req.wing ?? DEFAULT_WING, () => ended(req, job, ending)),
   };
 }

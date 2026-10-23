@@ -186,7 +186,10 @@ export const PRICES: readonly ModelPrice[] = [
   },
   // leonardo-studio — billed from a different meter than the `leonardo` row:
   // the web studio's prepaid plan credits, not the API pool. The API row's
-  // USD_PER_CREDIT prices the API pool and does not carry over.
+  // USD_PER_CREDIT prices the API pool and does not carry over. The muse
+  // wing draws at quality Low (spark scout-muse, studio/selectors.ts imageUrl):
+  // its credits are not read yet, so the source below names Medium only until
+  // the first live run's button price is recorded here.
   {
     provider: "leonardo-studio",
     model: "openai/gpt-image-2.5-sunburst",

@@ -51,9 +51,14 @@ export const STUDIO = {
      *  the treatment forbids. (Lucid Origin, the first model: model=lucid-origin
      *  at SMALL read "Generate 8".) MEDIUM since 2026-10-23 (operator: "use
      *  'Medium' quality setting instead of 'High', it will be good enough"): 20
-     *  credits an image instead of 71. */
-    imageUrl: (aspect: string) =>
-      `https://app.leonardo.ai/generate?model=${encodeURIComponent(MODEL_ID)}&aspectRatio=${encodeURIComponent(aspect)}&quantity=1&size=SMALL&quality=MEDIUM&promptEnhance=OFF`,
+     *  credits an image instead of 71. LOW (spark scout-muse, 2026-10-23: the
+     *  muse wing's first launch draws 50 stills "at quality Low to spare
+     *  credits") is UNVERIFIED: the URL value is the MEDIUM/HIGH spelling's
+     *  sibling, never read off the page, and neither is its price. The first
+     *  live run reads the price off the Generate button; the 25-credit ceiling
+     *  below holds whatever the value turns out to buy. */
+    imageUrl: (aspect: string, quality: "low" | "medium" = "medium") =>
+      `https://app.leonardo.ai/generate?model=${encodeURIComponent(MODEL_ID)}&aspectRatio=${encodeURIComponent(aspect)}&quantity=1&size=SMALL&quality=${quality === "low" ? "LOW" : "MEDIUM"}&promptEnhance=OFF`,
     /** UNVERIFIED 2026-10-12 — a signed-out visit is redirected to an auth page. */
     signedOutPath: /\/(auth|login|sign-?in)\b/i,
   },

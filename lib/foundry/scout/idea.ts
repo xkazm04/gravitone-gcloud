@@ -8,18 +8,21 @@ import { driveIdeas, launchIdeas, LIVE_IDEA_ENGINES } from "../../producers/scou
 import type { IdeaEngines } from "../../producers/scoutIdeaActs.ts";
 import { launchReels, reelFiles, SCOUT_REELS_LANE } from "../../producers/scoutReel.ts";
 import { launchable, Refusal, type ActContext } from "./acts.ts";
+import { ASPECTS, cardSchema, WING_ASPECT, wingRefusal } from "./museDoor.ts";
 import { listSeedBatches } from "./seedStore.ts";
 import { seedsInForce, usableSeed } from "./seeds.ts";
 import { mutateNight, nextCandidateId, readNight, resolveInNight, withCandidate } from "./store.ts";
+import { activeWing } from "./wingScope.ts";
+import type { ScoutWing } from "./wing.ts";
 import { DEFAULT_IDEA_CAP, DEFAULT_REEL_CAP, GENRE_MAX, IDEA_ANCHORS, REEL_DENSITIES, REEL_GRAMMARS, REEL_MEDIA, IDEA_PROMPT_MAX, IDEA_TARGETS, IDEA_TITLE_MAX, REEL_KINDS, SEED_REF_RE, USE_MAX, type CandidateId, type IdeaCandidate, type Night, type NightId, type ReelBrief, type SeedRef } from "./types.ts";
 
 // THE NIGHT'S IDEAS - what `pipeline/scout.mts ideas <night> --json <file|->` does (spark
 // scout-idea-artboards WP-I2, stats-reels WP-R2). The skill writes a batch of briefs in its own words -
-// `{title, target, genre, prompt, anchor: {kind, ref}, use?, reel?}` - and this act turns each into an `idea`
+// `{title, target, genre, prompt, anchor: {kind, ref}, use?, reel?, aspect?, card?}` - and this act turns each into an `idea`
 // candidate (no source: the words are ours). The batch splits by target into at most two jobs:
 //
-//   scene, style, asset3d   ONE scout-ideas job that draws every such idea as one rough still in the
-//                           operator's Leonardo studio (lib/producers/scoutIdea.ts), driven here
+//   scene, style, asset3d,  ONE scout-ideas job that draws every such idea as one rough still in the
+//   character               operator's Leonardo studio (lib/producers/scoutIdea.ts), driven here
 //                           unless --detach.
 //   stats                   ONE scout-reels job on the Claude seat that authors every stats idea as a
 //                           full strip in code and renders its frame 120 as the tile
@@ -52,6 +55,11 @@ import { DEFAULT_IDEA_CAP, DEFAULT_REEL_CAP, GENRE_MAX, IDEA_ANCHORS, REEL_DENSI
 //   candidate carries it as `fromSeed`. Once any live batch has kept a seed, every new brief must name one
 //   - an idea from nowhere would be work the branch graph cannot place. Checked with the rest of the door,
 //   before a candidate exists.
+//
+//   THE MUSE WING HAS ITS OWN LINE (spark scout-muse). In the muse wing a brief must also clear
+//   ./museDoor.ts - its targets, a character's card, a stated adult age, no youth or nudity word -
+//   and its still is drawn 4:5 at studio quality low and judged by the eye before it is kept. A
+//   brief may name its `aspect` in either wing; absent, each wing draws its own default.
 //
 // NO MONEY REFUSAL. The studio bills prepaid credits and the seat is reported uncapped; the night's
 // ceiling caps Gemini only (./budget.ts), so a batch is never refused for the dollars the night has
@@ -108,15 +116,19 @@ const ideaSchema = z
     seed: z.string().trim().regex(SEED_REF_RE, "a kept seed's <batch>/sd-NNN").optional(),
     /** A stats idea's illustrative brief and its approach: required on target `stats`, refused on any other. */
     reel: reelSchema.optional(),
+    /** The still's aspect; absent, the wing's own (./museDoor.ts WING_ASPECT). */
+    aspect: z.enum(ASPECTS).optional(),
+    /** A character idea's card (the muse wing's, ./museDoor.ts). */
+    card: cardSchema.optional(),
   })
   .strict()
   .refine((b) => b.target !== "stats" || b.reel !== undefined, { message: "a stats idea carries its reel: {brief, approach}", path: ["reel"] })
   .refine((b) => b.target === "stats" || b.reel === undefined, { message: "only a stats idea carries a reel", path: ["reel"] });
 
-export type IdeaBrief = Pick<IdeaCandidate, "title" | "target" | "prompt" | "anchor" | "use"> & { readonly genre: string; readonly reel?: ReelBrief; readonly seed?: SeedRef };
+export type IdeaBrief = Pick<IdeaCandidate, "title" | "target" | "prompt" | "anchor" | "use" | "aspect" | "card"> & { readonly genre: string; readonly reel?: ReelBrief; readonly seed?: SeedRef };
 
-/** The skill's batch as briefs, or the first bad brief's place and reason; nothing is written here. */
-export function parseIdeas(raw: unknown): Result<IdeaBrief[]> {
+/** The skill's batch as briefs for `wing` (absent: the active one), or the first bad brief's place and reason; nothing is written here. */
+export function parseIdeas(raw: unknown, wing: ScoutWing = activeWing()): Result<IdeaBrief[]> {
   if (!Array.isArray(raw)) return err("invalid", "ideas: the input is a JSON array of briefs {title, target, genre, prompt, anchor: {kind, ref}, use?, reel?}");
   if (raw.length === 0) return err("invalid", "ideas: the batch holds no brief");
   const out: IdeaBrief[] = [];
@@ -124,7 +136,11 @@ export function parseIdeas(raw: unknown): Result<IdeaBrief[]> {
     const r = parseAt(`idea ${i + 1}`, ideaSchema, item);
     if (!r.ok) return r;
     const b = r.value;
-    out.push({ title: b.title, target: b.target, genre: b.genre, prompt: b.prompt, anchor: { kind: b.anchor.kind, ref: b.anchor.ref }, ...(b.use === undefined ? {} : { use: b.use }), ...(b.reel === undefined ? {} : { reel: b.reel as ReelBrief }), ...(b.seed === undefined ? {} : { seed: b.seed }) });
+    const refused = wingRefusal(b, wing);
+    if (refused !== null) return err("invalid", `idea ${i + 1}: ${refused.path}: ${refused.message}`, { detail: `idea ${i + 1}` });
+    // The candidate holds an aspect only when it is not the scout frame's: every older idea reads 16:9.
+    const aspect = b.aspect ?? WING_ASPECT[wing];
+    out.push({ title: b.title, target: b.target, genre: b.genre, prompt: b.prompt, anchor: { kind: b.anchor.kind, ref: b.anchor.ref }, ...(b.use === undefined ? {} : { use: b.use }), ...(b.reel === undefined ? {} : { reel: b.reel as ReelBrief }), ...(b.seed === undefined ? {} : { seed: b.seed }), ...(aspect === "16:9" ? {} : { aspect }), ...(b.card === undefined ? {} : { card: b.card }) });
   }
   return ok(out);
 }
@@ -237,9 +253,12 @@ export async function ideasAct(ctx: ActContext, id: NightId, raw: unknown, engin
     throw new Refusal(why);
   }
 
+  // The request is the only carrier of the wing to the worker: a muse batch names it, and draws at
+  // the studio's low quality (each idea's aspect rides on its candidate).
+  const wing = activeWing();
   const launchStudio = async (): Promise<Launched> => {
     const span = spanOf(studio);
-    const target = { nightId: id, candidateIds: studio };
+    const target = { nightId: id, candidateIds: studio, ...(wing === "muse" ? { wing, quality: "low" as const } : {}) };
     const r0 = await launchIdeas(ctx.store, target, opts);
     if (!r0.ok) return { why: r0.error.message };
     if (r0.value.kind !== "receipt") return { why: `ideas launch answered ${r0.value.kind} before its receipt` };
@@ -284,6 +303,6 @@ export async function ideasAct(ctx: ActContext, id: NightId, raw: unknown, engin
   const jobs = { ...(jobId === undefined ? {} : { jobId }), ...(reelsJobId === undefined ? {} : { reelsJobId }) };
   if (ctx.detach || jobId === undefined) return { candidates: await batchOf(id, all), ...jobs, outcome: "detached" };
 
-  const d = await driveIdeas(ctx.store, ctx.location, jobId, { dryOnly: ctx.dryOnly, engines: { generate: engines.generate ?? LIVE_IDEA_ENGINES.generate } });
+  const d = await driveIdeas(ctx.store, ctx.location, jobId, { dryOnly: ctx.dryOnly, engines: { generate: engines.generate ?? LIVE_IDEA_ENGINES.generate, recognize: engines.recognize ?? LIVE_IDEA_ENGINES.recognize } });
   return { candidates: await batchOf(id, all), ...jobs, outcome: d.ok ? d.value.outcome : d.error.message };
 }

@@ -34,6 +34,13 @@
 // returned, `cleanup: "failed"` on the provenance and one scrubbed log line
 // naming the id, so the generation can be chased by hand. The fake driver
 // records its deletes on FAKE_LEONARDO_STUDIO and never reaches the network.
+//
+// A REFUSED OR FAILED GENERATION IS DELETED TOO (spark scout-muse). Once the
+// page's `Generate` named the generation, a failure after it (the studio's
+// safety refusal, a failed render, a timeout, a lost download) carries that id
+// on the StudioError, and the same never-throwing delete runs before the error
+// is mapped: a still the studio refused to show is not left in the operator's
+// library either. A failure before the id was named has nothing to delete.
 
 import { errorMessage } from "@gt/domain/errors";
 import { ImagingError, invalidRequest } from "../errors";
@@ -53,8 +60,9 @@ const MAX_PROMPT_CHARS = 1500;
 /** LEONARDO_STUDIO_DRIVER=fake selects the fake (no browser, no spend). */
 export const studioDriverIsFake = (): boolean => process.env.LEONARDO_STUDIO_DRIVER?.trim() === "fake";
 
-interface StudioDriver {
-  generate(prompt: string, aspect: Aspect): Promise<StudioRun>;
+export interface StudioDriver {
+  /** `quality` absent: the studio's default (selectors.ts imageUrl). */
+  generate(prompt: string, aspect: Aspect, quality?: "low" | "medium"): Promise<StudioRun>;
   health(): Promise<StudioHealth>;
   /** Delete one generation from the operator's library; throws on any failure. */
   remove(generationId: string): Promise<void>;
@@ -81,7 +89,7 @@ export async function deleteStudioGeneration(generationId: string): Promise<void
  *  image call in the app, and only a call that names the studio should load
  *  Playwright to make it. */
 const REAL: StudioDriver = {
-  generate: async (prompt, aspect) => (await import("../studio/driver")).studioGenerate(prompt, aspect),
+  generate: async (prompt, aspect, quality) => (await import("../studio/driver")).studioGenerate(prompt, aspect, quality),
   health: async () => (await import("../studio/driver")).studioHealth(),
   remove: deleteStudioGeneration,
 };
@@ -103,11 +111,11 @@ export async function leonardoStudioHealth(): Promise<StudioHealth> {
   }
 }
 
-/** Remove a generation whose still is held. Never throws: the caller already
- *  has the bytes, and a tidy-up failure is a log line, not an outcome. */
-export async function cleanupStudioGeneration(generationId: string): Promise<"deleted" | "failed"> {
+/** Remove a generation whose still is held, or that failed after it was named.
+ *  Never throws: a tidy-up failure is a log line, not an outcome. */
+export async function cleanupStudioGeneration(generationId: string, d: StudioDriver = driver()): Promise<"deleted" | "failed"> {
   try {
-    await driver().remove(generationId);
+    await d.remove(generationId);
     return "deleted";
   } catch (e) {
     logCleanupFailure("leonardo-studio", generationId, e);
@@ -142,7 +150,8 @@ function toImagingError(e: unknown): ImagingError {
   return err;
 }
 
-export function leonardoStudioProvider(): ImagingProvider {
+/** `o.driver` is the test seam: a driver whose failures a probe scripts (absent: the fake or the real one, per call). */
+export function leonardoStudioProvider(o: { readonly driver?: StudioDriver } = {}): ImagingProvider {
   return {
     id: "leonardo-studio",
     capabilities: ["generate"],
@@ -164,10 +173,12 @@ export function leonardoStudioProvider(): ImagingProvider {
           `The prompt is ${prompt.length} characters; Leonardo accepts ${MAX_PROMPT_CHARS}. Shorten it or the negative prompt.`,
         );
 
+      const d = o.driver ?? driver();
       let run: StudioRun;
       try {
-        run = await driver().generate(prompt, req.aspect);
+        run = await d.generate(prompt, req.aspect, req.quality);
       } catch (e) {
+        if (e instanceof StudioError && e.generationId !== undefined) await cleanupStudioGeneration(e.generationId, d);
         throw toImagingError(e);
       }
 
@@ -177,7 +188,7 @@ export function leonardoStudioProvider(): ImagingProvider {
       try {
         price = priceCall({ provider: "leonardo-studio", model: run.model, images: 1 });
       } finally {
-        cleanup = await cleanupStudioGeneration(run.generationId);
+        cleanup = await cleanupStudioGeneration(run.generationId, d);
       }
       const provenance: StudioProvenance = {
         provider: "leonardo-studio",

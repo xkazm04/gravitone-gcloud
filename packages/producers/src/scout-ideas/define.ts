@@ -24,6 +24,12 @@ import type { Ending, MissingStep, Outputs, Producer, StepContext, StepOutcome }
 // The pause holds what the resume needs (the scene and asset producers' rule): the launch records the
 // request - each idea's candidate and prompt, and one still's estimate - as an event beside the
 // enqueue, in one transaction.
+//
+// A MUSE BATCH (spark scout-muse) says so on its request, because the worker runs its steps in
+// another process and the request is the only thing that reaches it: `wing: "muse"` (absent: the
+// scout wing, every request written before the wings), the studio quality it draws at, and each
+// idea's aspect when it is not 16:9. The bound acts run every step inside that wing and judge each
+// still before it is kept.
 
 export const SCOUT_IDEAS = "scout-ideas";
 /** The event that carries an ideas job's request (subject: the job). */
@@ -36,19 +42,31 @@ export const STUDIO_CREDIT = "studio credits, prepaid";
 
 const id = z.string().min(1).max(200);
 
+/** The most ideas one scout-wing request draws (lib/foundry/scout/types.ts MAX_IDEA_CAP). */
+export const SCOUT_REQUEST_MAX = 40;
+/** The most one muse-wing request draws (lib/foundry/scout/muse.ts MUSE_MAX_IDEA_CAP). */
+export const MUSE_REQUEST_MAX = 50;
+/** The imaging contract's aspects (lib/imaging/types.ts Aspect). */
+export const IDEA_ASPECTS = ["16:9", "9:16", "1:1", "4:5"] as const;
+
 export const ideasRequestSchema = z
   .object({
     nightId: id,
-    /** The ideas the receipt priced, in step order (at most lib/foundry/scout/types.ts MAX_IDEA_CAP). */
+    /** The scout wing's request names none. */
+    wing: z.literal("muse").optional(),
+    /** The ideas the receipt priced, in step order; each one's aspect when it is not 16:9. */
     ideas: z
-      .array(z.object({ candidateId: id, prompt: z.string().min(1).max(1500) }).strict())
+      .array(z.object({ candidateId: id, prompt: z.string().min(1).max(1500), aspect: z.enum(IDEA_ASPECTS).optional() }).strict())
       .min(1)
-      .max(40),
+      .max(MUSE_REQUEST_MAX),
+    /** The studio's quality setting (absent: its default). */
+    quality: z.enum(["low", "medium"]).optional(),
     /** One still's estimate: unpriced, its reason the studio's prepaid credits. */
     estimates: z.object({ idea: estimateSchema }).strict(),
     by: id,
   })
-  .strict();
+  .strict()
+  .refine((r) => r.wing === "muse" || r.ideas.length <= SCOUT_REQUEST_MAX, { message: `a scout-wing request draws at most ${SCOUT_REQUEST_MAX} ideas`, path: ["ideas"] });
 export type IdeasRequest = Parsed<z.output<typeof ideasRequestSchema>>;
 
 export const parseIdeasRequest = (raw: unknown): Result<IdeasRequest> => parseAt("ideas request", ideasRequestSchema, raw);
