@@ -36,15 +36,19 @@ to stderr. Exit `0` done, `1` failed or refused, `2` usage.
 
 | Command | Does | Spends |
 |---|---|---|
-| `doctor [--dry]` | one line per check: yt-dlp, ffmpeg, ffprobe (`-version`), `GOOGLE_AI_API_KEY` and `LEONARDO_API_KEY` set or unset (never their values), the store and night folders writable, `GRAVITONE_DRY_ONLY`. A failing line carries its remedy; exit 1 when a check the night needs fails (`--dry`: the keys and the dry pin are notes). The registry, the Leonardo studio and Playwright's `chromium` (where `chromium.launch` would start it, never launched) are always notes | no |
-| `open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--ideas 25] [--reels 6] [--until HH:MM] [--live]` | creates the night, writes its `taste.md` and `registry.md` (below, "The registry"), prints its id. `--until` is local time today, or tomorrow once that has passed. Without `--live` the night is dry; `--live` is refused under `GRAVITONE_DRY_ONLY=1` | no |
+| `doctor [--dry] [--tracks N]` | one line per check: yt-dlp, ffmpeg, ffprobe (`-version`), `GOOGLE_AI_API_KEY` and `LEONARDO_API_KEY` set or unset (never their values), the store and night folders writable, `GRAVITONE_DRY_ONLY`. A failing line carries its remedy; exit 1 when a check the night needs fails (`--dry`: the keys and the dry pin are notes). The registry, the Leonardo studio and Playwright's `chromium` (where `chromium.launch` would start it, never launched) are always notes | no |
+| `open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--ideas 25] [--reels 6] [--tracks 4] [--visualizers 2] [--until HH:MM] [--live]` | creates the night, writes its `taste.md` and `registry.md` (below, "The registry"), prints its id. `--until` is local time today, or tomorrow once that has passed. Without `--live` the night is dry; `--live` is refused under `GRAVITONE_DRY_ONLY=1` | no |
 | `add-source <night> --json <file\|->` | `[{url, kind, title, channel?, why, found, watch?, rich?} \| {fromIdea: <night>/<c-id>, why?}]`, validated (below). A `fromIdea` item brings a KEPT idea's artboard in as our own source (found `idea`, rights `ours`, already ingested, nothing downloaded) - refused for an idea not kept, a dry night's, or one any night already develops. A URL an earlier night made a candidate from is skipped and reported; one it only held is taken | no |
 | `ingest <night> [--source s-NN] [--retry] [--detach]` | launches the `scout-ingest` job over the pending sources and drives it here; `--retry` first puts the failed sources in scope back to pending | no |
-| `style <night> --sources s-01,s-03 --use "<content>" [--slug x] [--detach]` | an ordinary extract run (`launchExtract`, a gallery of those sources' pictures and keyframes) as one style candidate; its run id and job id go on the candidate | yes |
-| `scene <night> --source s-NN --use "<content>" [--frames k-012.jpg] [--detach]` | a scene candidate read from the chosen keyframe (default the first; ingest keeps one frame per cut, so neighbouring keyframes are different shots), launched through `launchScene` (`lib/producers/scoutScene.ts`) with a clip while the night's clip cap allows | yes |
-| `asset <night> --brief <file\|-> [--detach]` | one game asset from `{class, subject, use, serves: {project: pof|mage-arena|bp} | {newProject}, style?, kind?, techniques?, fromIdea?}` - `use` and `serves` required: an asset helps an existing game or opens a new kind of project, and its 3D row leads with both: its concepts drawn and gated, its mesh asset written and the mesh job QUEUED for the worker (below, "A game asset") | yes |
-| `ideas <night> --json <file\|-> [--detach]` | `[{title, target: scene\|style\|asset3d\|stats, genre, prompt, anchor: {kind: watch\|gap\|free, ref}, use?, reel?}]` (`genre` required, <= 80 chars), one `idea` candidate each. Scene, style and 3d-asset ideas are ONE `scout-ideas` job drawing a rough artboard each in the Leonardo studio (driven here unless `--detach`); stats ideas carry `reel` and are ONE `scout-reels` job on the Claude seat, always queued for the worker (below, "A stats reel"). One bad brief refuses the batch with its place; a batch over `ideaCap` or `reelCap` writes nothing | studio credits, the seat |
+| `style <night> --sources s-01,s-03 --use "<content>" [--slug x] [--seed <batch>/sd-NNN] [--detach]` | an ordinary extract run (`launchExtract`, a gallery of those sources' pictures and keyframes) as one style candidate; its run id and job id go on the candidate | yes |
+| `scene <night> --source s-NN --use "<content>" [--frames k-012.jpg] [--seed <batch>/sd-NNN] [--detach]` | a scene candidate read from the chosen keyframe (default the first; ingest keeps one frame per cut, so neighbouring keyframes are different shots), launched through `launchScene` (`lib/producers/scoutScene.ts`) with a clip while the night's clip cap allows | yes |
+| `asset <night> --brief <file\|-> [--seed <batch>/sd-NNN] [--detach]` | one game asset from `{class, subject, use, serves: {project: pof|mage-arena|bp} | {newProject}, style?, kind?, techniques?, fromIdea?}` - `use` and `serves` required: an asset helps an existing game or opens a new kind of project, and its 3D row leads with both: its concepts drawn and gated, its mesh asset written and the mesh job QUEUED for the worker (below, "A game asset") | yes |
+| `ideas <night> --json <file\|-> [--detach]` | `[{title, target: scene\|style\|asset3d\|stats, genre, prompt, anchor: {kind: watch\|gap\|free, ref}, seed?, use?, reel?}]` (`genre` required, <= 80 chars; `seed` required once any live batch kept a seed - the candidate's `fromSeed`), one `idea` candidate each. Scene, style and 3d-asset ideas are ONE `scout-ideas` job drawing a rough artboard each in the Leonardo studio (driven here unless `--detach`); stats ideas carry `reel` and are ONE `scout-reels` job on the Claude seat, always queued for the worker (below, "A stats reel"). One bad brief refuses the batch with its place; a batch over `ideaCap` or `reelCap` writes nothing | studio credits, the seat |
 | `direction <night> --json <file\|->` | `{title, format: short\|video, genre, style, tone, audience, premise, basedOn: [<night>/<cell id>], use?}`: one `direction` candidate, words, rendered at once. Every `basedOn` entry must be a cell a LIVE night kept; the refusal names the entry and why | no |
+| `seeds new --json <file\|-> [--dry]` | `[{sentence, genre, subgenre, type, audience: kids\|family\|adult, format: short\|video, parent?: <batch>/sd-NNN}]`, 1..150 seeds written whole as `seeds/<batch>/batch.json` and decided on `/board/pkt:seeds:<batch>` (below, "Seeds"). One bad seed refuses the batch with its place: a facet over its bound or on two lines, a sentence any batch already holds (case- and whitespace-folded), a `parent` the seed door refuses | no |
+| `seeds status [<batch>]` | every batch newest first (seeds, kept, rejected, undecided, dry), or one batch's seeds with verdicts, reasons and notes | no |
+| `track <night> --seed <batch>/sd-NNN [--detach]` · `track <night> --collect` | one Suno create from a kept seed's sentence (below, "Music") | Suno credits |
+| `visualizer <night> --track <night>/<c-id>/<aN> [--detach]` · `visualizer <night> --collect` | a full-song visualizer of a KEPT track clip (below, "Music") | studio credits unless a kept idea's artboard is the still |
 | `finding <night> --json <file\|->` | `[{sourceIds, template, step, claim, quote, restates?}]`; `knowledge/templates/<template>/` must exist, `step` is `NN-name` and need not exist yet | no |
 | `watch <night> --entry "..." --why "..." [--sources s-01]` | a proposed watchlist line | no |
 | `close <night> [--stop <reason>]` | settles style candidates from their runs, closes the night, prints the morning: packet id, counts by kind and status, settled and held USD | no |
@@ -53,8 +57,131 @@ to stderr. Exit `0` done, `1` failed or refused, `2` usage.
 | `status [<night>]` | every night, or one with its budget, sources and candidates, its last 15 minutes of load against the band, what waits and the night's interrupted jobs (below, "The load") | no |
 | `folder <dir> [extract args]` | the train-style path: `pipeline/foundry/extract.mts <dir> ...` with its output and exit code | as extract |
 
-Every launching command (`ingest`, `style`, `scene`, `asset`, `ideas`) refuses on a night that is not open, and after the
+`style`, `scene`, `asset`, `ideas`, `direction` and `track` take a seed only through the seed door (`seeds.ts usableSeed`): kept on a live batch, outside any paused branch; a `--seed` that names another branch than the kept idea it develops is refused. `add-source {fromIdea}` copies the idea's `fromSeed` onto the source, so what develops it inherits the branch.
+
+Every launching command (`ingest`, `style`, `scene`, `asset`, `ideas`, `track`, `visualizer`) refuses on a night that is not open, and after the
 deadline (closing the night with `stop: deadline`).
+
+## Seeds
+
+A SEED is one sentence naming a genre, a subgenre, a type of content, an audience (`kids`, `family`,
+`adult`) and a format (`short`, `video`) - the cheapest question the loop asks. ~100 a batch, written by
+`seeds new` (or the night's step 0), triaged on their own packet `pkt:seeds:<batch>`: one words row per
+seed, the sentence its label, its facets the meta (`adult · comedy › office satire · animated comedy
+sketch · short`), and a child seed's first line the parent it narrows (`from: <parent sentence>`, cut at
+60). On the Floor an uncommitted live batch is one pile; a dry one opens by its id only.
+
+EVERY X NEEDS A REASON. On this packet a reject is not done until it names one of `generic`, `not for us`,
+`audience`, `done before`, `format` (at most two): X rejects and stays, the row's reason chips open, and a
+reason key (1-5) sets it and moves on. The commit refuses a reasonless reject - the desk counts it beside
+the undecided (`<n> need a reason`, flashed, the cursor on the first) and the kernel's commit refuses
+`decision: <n> rejected need a reason: sd-004, sd-019` (`@gt/domain/source` `reasonOnReject`, enforced in
+`planCommit`). E writes a one-line note on the row under the cursor (⏎ saves, Esc leaves); the note rides
+the verdict and reads back in the next night's brief.
+
+The commit writes `batch.committed` {at, by, kept, rejected, reasons, notes, dry} once. A kept seed is a
+BRANCH ROOT: the next night derives 2-3 narrower child seeds (`parent`) and draws 1-2 idea artboards on it
+(`seed` on the idea brief), and everything built from those records it (`fromSeed`). A rejected seed is a
+ban the next batch is written against. A dry batch's keeps derive nothing (`usableSeed` refuses them).
+
+`taste.md` gains, after the load and before the nights, over every live committed batch and the steer:
+
+| Section | Lists |
+|---|---|
+| `## Seeds to develop` | each kept seed outside a paused branch with what it still lacks: `<ref> · <facets> (needs: child seeds, ideas) — <sentence>`; a seed with 2 child seeds lacks no children, one with an idea grown from it (a live night's) lacks no ideas, and one lacking neither is not listed |
+| `## Seeds blocked` | each rejected seed, newest batch first, at most 200: `"<sentence>" · <reasons> · note: <note>` |
+| `## Paused` | each paused ref with its sentence |
+| `## Seed genres` | kept against rejected per audience, then per genre inside it |
+
+Then any `extra` lines the caller wires in (`tasteBrief(except, loadOf, extra)` /
+`tasteOf(nights, last, {seeds, extra})`: the graph's `## Branches`, the tracks' `## Tracks to visualize`).
+The four sections are absent while no live batch is committed and nothing is paused.
+
+## The decision graph (`/scout`)
+
+`/scout` is no longer a redirect: it is the graph of every decision the loop ever made (spark
+scout-decision-graph WP-S2). Its header holds the two packets a morning opens next - the newest uncommitted
+seeds batch (`pkt:seeds:<batch>`, its seeds undecided) and the newest closed night (`pkt:scout:<night>`, its
+rendered candidates undecided), each a link to the Board, a zero when none is open.
+
+**Nodes, by stage** (`packages/domain/src/scoutGraph.ts`, built by `lib/foundry/scout/graph.ts`):
+
+| Stage | Node | State |
+| --- | --- | --- |
+| seed / derived | `seed:<batch>/sd-NNN` (derived: it has a `parent`) | its batch's commit: kept, rejected, else open |
+| idea | `cand:<night>/<c-id>` idea artboard; a stats idea is kind `reel` | two-level triage: any kept cell kept, every cell rejected rejected; uncommitted: its render's `pending` / `failed`, else open |
+| run | style, scene, asset3d, direction, finding, watch, track | as above |
+| output | a kept visualizer; `out:<night>/<c-id>` for what a kept run left that is real - a style's `look`, a scene's kept clip (`c-NN/clip`), an asset's `mesh`, a finding's or watch line's `knowledge` | kept. A dry commit leaves none; a kept reel, direction or track leaves none |
+
+Links: parent seed -> child seed, seed -> idea (`fromSeed`), idea -> what develops it (`fromIdea`), seed -> a
+run that names a seed but no idea, each `basedOn` cell's candidate -> its direction, a restated finding -> the
+finding, a track's clip -> its visualizer, a kept run -> its output. A candidate inherits its `fromSeed` seed's
+audience, genre and subgenre and sits under that seed's pause; a candidate with no seed is **before seeds**.
+
+**Bands**: an audience, its genres inside it, then *before seeds* last. Each band says how many nodes it holds,
+how far its live nodes reached (live = open, pending or kept, not paused; dead = rejected or failed), its share
+of the last 7 live nights' run-stage candidates against the split's target (a genre's target is its audience's
+share times the genre's), and its effort. A band with no live node starts folded; a folded band draws nothing.
+`live | all`: live hides the dead and their links, each column's head counting what it hid (`+N`).
+
+**Effort** (`lib/foundry/scout/effort.ts`, from the kernel store, never from a night's own figures): per
+candidate `geminiUsd` = its job's spend rows the night ceiling caps (`budget.ts jobMoney` settled),
+`uncappedUsd` the rest of its booked rows, `gpuMin` = `job.claimed` to `job.done | failed | stopped | yielded |
+interrupted` of its job on `gpu.local` (an open claim counts to now), read through `@gt/kernel/events-query`;
+`runs` = 1 per candidate. A job that served a batch (the ideas job, the reels job: every candidate carrying its
+id) is divided evenly and each share marked `shared`.
+
+**The steer, on this screen**: select a node (click, or Enter on it) for its words, stage, verdict, packet,
+branch and effort, `open on Board`, and **Pause** its seed - or **Resume** the paused seed above it that holds
+it. The split editor sets a whole percent per audience and per genre inside it; Save goes through `steer.ts
+setSplit` and a refusal is its sentence verbatim (`the audience split sums to 105; it must sum to 100`). Every
+change is appended to `steer.json`'s history. The split is advisory: the next night's brief carries it as
+`## Branches` (`graph.ts branchesSection`):
+
+```
+## Branches
+
+- kids · live 11 · dead 0 · reached output · kept 8 · 6 runs, 15 GPU min, $0.15 Gemini · split 60% / took 29%
+  - kids/comedy · live 11 · dead 0 · reached output · kept 8 · 6 runs, 15 GPU min, $0.15 Gemini · split 60% / took 29%
+- before seeds · live 5 · dead 2 · reached output · kept 5 · 0 runs, 0 GPU min, $0.00 Gemini
+```
+
+(a group the split names no target for omits `split ... / took ...`; one with no live node says `reached nothing
+live`). The brief's effort is only what `branchesSection` is handed: build the graph with the kernel store
+(`buildGraph({ store })`) or every line says `0 runs`.
+
+Rehearsal: `GRAVITONE_PRODUCE_SIDE=fixture` draws a generated universe (~200 nodes: every verdict, a paused family
+branch, a shared ideas job, work before seeds) through the same builder; `SCOUT_FIXTURE_SCALE=N` repeats it N
+times (15 = ~3,000 nodes, the scale measure). The screen id is `scout` (`pipeline/cx-screens.mjs`).
+
+## Music
+
+The song is the clock: a track is made and judged on one night, and its visualizer only on a later one, once the track is final (registry music-video-production).
+
+| command | what it does |
+|---|---|
+| `track <night> --seed <batch>/sd-NNN [--detach]` | One Suno create (v6 + v6-wild, about 4 clips) from a kept seed's sentence. The seed goes through `usableSeed`, so it must be kept, on a live batch, and outside any paused branch. Refused past the night's `--tracks` cap (default 4, max 8). The Suno producer's own job is the job (`job:run:suno.sj-scout-<night>-<c-id>`, on box.chrome). Each clip lands in `tracks/<c-id>/a<N>.mp3`. |
+| `track <night> --collect` | Collects every pending track whose Suno job is done, for a detached one. |
+| `visualizer <night> --track <night>/<c-id>/<aN> [--detach]` | A full-song visualizer of a track clip that a live night's commit KEPT. Refused for any other clip, for a clip a visualizer already plays, and past `--visualizers` (default 2, max 4). Runs as the mv producer's own job on box.render. The mp4 lands in `visualizers/<c-id>/visualizer.mp4`, with `visualizer - youtube.txt` beside it. |
+| `visualizer <night> --collect` | Collects every pending visualizer whose mv job is done. |
+
+**Money.** Suno and the studio bill credits, which the night's ceiling does not cap. Both jobs launch with no job ceiling, so an open job holds none of the night's Gemini. A track's proposal turn (sentence -> Suno form) runs before its job exists, so no meter could book it. It is therefore pinned to the Claude seat (`avoid: "google"`): a seat that is down fails the track with the router's sentence. A visualizer's two text turns run inside its mv job, so a Gemini fallback books a spend row on a job the night lists, and `budget.ts` counts it. A track or a visualizer is refused by its cap, never by the night's money.
+
+**Dry.** A dry track asks no turn (the sentence stands in) and runs on the Suno producer's stand-in refs. Collect writes `STAND_MP3` for each clip: one second of a 440 Hz tone, plainly not a song.
+
+**The still.** The visualizer looks for a kept idea artboard under the same seed (ours). If it finds one, it copies it to `visualizers/<c-id>/still.<ext>` and hands it over as the mv record's `stillFrom`, so no studio credits are spent. If it finds none, the studio buys a still, and collect copies it to `visualizers/<c-id>/studio.<ext>`.
+
+**On the Board.**
+- A track is one run under `music` (the audio tab). Its row is the seed's sentence. Each clip is a cell `<c-id>/aN` (audio/mpeg) with the meta `track · <genre> › <subgenre> · <N> clips · <model> · <m:ss>`.
+- A visualizer is one run under `videos`. Its cell is `<c-id>/video`, its row is the song's title, its still is the reference, and its meta is `visualizer · <m:ss> · still: idea|studio`.
+- Kept track clip: "the next night renders its visualizer". Kept visualizer: "rung 1 of the music ladder: the full video and its Short are next". Rejects keep their reasons.
+- Nothing is written but `night.committed`.
+- A track or visualizer still collecting at close is a loss: "still collecting when the night closed".
+- An idea grown from a seed shows `seed: <first 40 chars>` in its meta.
+
+**Brief.** `tracksSection(nights)` writes the next night's `## Tracks to visualize`. It lists each kept clip of a live night that no visualizer plays yet, as `<night>/<c-id>/<aN> · <model> · <m:ss> - <sentence>`.
+
+**Doctor.** The `suno` line attaches to the Suno Chrome on 9334 (read-only, never launched). It is a FAIL only for a live doctor with `tracks > 0`. Otherwise it is a note and no browser is asked.
 
 ## What the nights are for
 
@@ -305,7 +432,7 @@ the CLI and committing `knowledge/` and `.ai/registry-leads.jsonl`; logs land in
 |---|---|---|
 | `night.json` | every writer, through `mutateNight` (a lock file, so processes queue) | the manifest: `lib/foundry/scout/types.ts` `Night` |
 | `registry.md` | `open` | the registry digest: governing techniques and gaps, or `registry: none (<why>)` |
-| `taste.md` | `open` | the last seven committed live nights' verdicts: kept and thrown per kind, reasons and notes verbatim, game assets by class and technique, channels kept and thrown |
+| `taste.md` | `open` | the seed sections, the last seven committed live nights' verdicts: kept and thrown per kind, reasons and notes verbatim, game assets by class and technique, channels kept and thrown |
 | `sources/<s-NN>/p-NNN.<ext>` | ingest | a picture, or a page's pictures |
 | `sources/<s-NN>/k-NNN.jpg` | ingest | a video's gated keyframes (`at` on the source) |
 | `scenes/<c-NN>/` | the scene producer | replica stills and the clip |
@@ -313,6 +440,10 @@ the CLI and committing `knowledge/` and `.ai/registry-leads.jsonl`; logs land in
 | `ideas/<c-NN>.png` | the ideas and reels producers | an idea's tile: its studio artboard, or a stats idea's frame 120 |
 | `ideas/<c-NN>/brief.json`, `approach.json` | `ideas` | a stats idea's illustrative brief and approach, as sent |
 | `ideas/<c-NN>/strip.html` | the reels producer | a stats idea's strip, once it passed the lint |
+| `tracks/<c-NN>/a<N>.mp3` | `track` (collect) | a track's Suno clips, ours |
+| `visualizers/<c-NN>/visualizer.mp4`, `visualizer - youtube.txt`, `still.<ext>` or `studio.<ext>` | `visualizer` (collect) | a full-song visualizer, its YouTube text and the still it played over |
+| `../seeds/<batch>/batch.json` | `seeds new` (whole, once); the Board's apply (`committed`, once) - under the batch's lock | one seed batch: `SeedBatch` |
+| `../steer.json` | `/scout`'s actions | the operator's split and paused seeds, every change in `history` |
 
 A style candidate's looks live in its extract run, `foundry-out/extract/<runId>/`. The kernel store
 (`foundry-out/gravitone.sqlite`, `GRAVITONE_STORE_PATH` moves it) holds the jobs, their spend, and the

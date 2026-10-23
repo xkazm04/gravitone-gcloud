@@ -1,10 +1,10 @@
 ---
 name: scout
 memory: none
-version: 1.2.0
+version: 1.3.0
 category: Development
-description: The nightly training loop - search the web and YouTube around knowledge/scout/watchlist.md for art styles, scenes and craft worth learning, bring them onto this box, replicate them as kernel jobs (extracted still styles, scene recipes with Flare replica stills and local LTX clips, craft findings) and brief up to three 3D game assets (concept -> TRELLIS mesh -> Blender finish, made on this box) and up to six stats-reel ideas (a data video authored in code on illustrative numbers), 20-30 rough idea artboards in the operator's Leonardo studio and 1-3 directions to confirm - all for YouTube video (Shorts ~30 s, videos up to 5 min) - inside a $15 Gemini night, and leave ONE Board packet pkt:scout:<night> for a few minutes of K/X in the morning. Successor of train-style and of dojo's hand-run corpus study. Wraps pipeline/scout.mts; it never keeps, rejects or commits anything on the Board. Invoke with /scout night [--dry] [--until HH:MM], /scout folder <dir> [extract args], /scout status [<night>].
-argument-hint: "night [--dry] [--until HH:MM] | folder <dir> | status [<night>]"
+description: The nightly training loop - search the web and YouTube around knowledge/scout/watchlist.md for art styles, scenes and craft worth learning, bring them onto this box, replicate them as kernel jobs (extracted still styles, scene recipes with Flare replica stills and local LTX clips, craft findings) and brief up to three 3D game assets (concept -> TRELLIS mesh -> Blender finish, made on this box) and up to six stats-reel ideas (a data video authored in code on illustrative numbers), ~100 one-sentence seeds (genre, subgenre, type, audience, format) on their own packet, 20-30 rough idea artboards grown from kept seeds in the operator's Leonardo studio, Suno tracks from kept music seeds and full-song visualizers from kept tracks, and 1-3 directions to confirm - all for YouTube video (Shorts ~30 s, videos up to 5 min) - inside a $15 Gemini night, and leave ONE Board packet pkt:scout:<night> for a few minutes of K/X in the morning. Successor of train-style and of dojo's hand-run corpus study. Wraps pipeline/scout.mts; it never keeps, rejects or commits anything on the Board. Invoke with /scout night [--dry] [--until HH:MM], /scout seeds [--dry], /scout folder <dir> [extract args], /scout status [<night>].
+argument-hint: "night [--dry] [--until HH:MM] | seeds [--dry] | folder <dir> | status [<night>]"
 allowed-tools: Read, Write, Edit, Bash, PowerShell, Glob, Grep, WebSearch, WebFetch, Monitor
 ---
 
@@ -27,6 +27,17 @@ The operator's rulings, 2026-10-23, after the first live night and the first ide
   idea and direction serves one. A style is only ever the BASELINE LOOK of such a video - nothing here
   is made to be printed, hung or sold as an image: no picture books, no posters as the product, no
   paintings, no image art. A look nobody would animate or cut is not a find.
+- **Seeds come first, and they are the branches** (operator, 2026-10-23: "more generated items in text/idea
+  stage for quick triage ... pushing for example 100 of main genre/directions items to evaluate, so we can
+  nightly create derivations of that"). A SEED is one sentence naming a genre, a subgenre, a type of
+  content, an audience (`kids`, `family`, `adult`) and a format. Each night writes ~100 (step 1a), the
+  operator keeps or throws each with a reason on `pkt:seeds:<batch>`, and every kept seed is a BRANCH:
+  the next night derives 2-3 narrower child seeds from it and draws 1-2 idea artboards on it, and every
+  idea, run and track records the seed it grows from. `/scout` draws the whole tree with each branch's
+  effort; the operator pauses branches there and sets an ADVISORY split by audience, then genre - the
+  brief's `## Branches` says each branch's target against the share it took. Steer tonight's fresh seeds
+  and runs toward the targets; a paused branch gets nothing (its doors refuse). The spread below now holds
+  for the SEED batch: at least fifteen genres, all three audiences, at most ten seeds a genre.
 - **Spread the genres first.** Until the taste brief holds three or more `## Directions confirmed`, a
   night casts wide: its ideas span at least eight genres, at most four ideas in any one (animated comedy
   sketch, music video, lyric video, data explainer, title opener, trailer or teaser, animated short for
@@ -114,12 +125,37 @@ kind of look rejected twice is not searched again, and a use under "refused as a
 again** unless the night has a new reason it now serves; `## Directions confirmed` are the lanes the
 night works inside, `## Directions refused` are never proposed again, `## Ideas to develop` are tonight's
 first work (step 4), `## Ideas blocked` are the bans of tonight's ideation (step 1d) and `## Genres`
-says which genres the operator keeps and throws), `foundry-out/scout/<night>/registry.md` (what
+says which genres the operator keeps and throws; `## Seeds to develop` are tonight's child seeds and ideas
+(steps 1a, 1d), `## Seeds blocked` the bans of tonight's seed batch, `## Paused` the branches nothing grows
+on, `## Seed genres` what the operator keeps and throws per audience and genre, `## Branches` every
+branch's depth, effort and split target against the share it took, `## Tracks to visualize` tonight's
+visualizers (step 4c)), `foundry-out/scout/<night>/registry.md` (what
 the ai-registry says about tonight's work: `## Governs tonight` - techniques to follow when a candidate does
 that thing; its ranking is by words, so read a technique's file before calling it governing; `## Gaps` -
 where the registry is thin; `registry: none` means no registry resolved and changes nothing else),
 `knowledge/scout/watchlist.md`, and what the Library already holds (`pipeline/foundry/styles.json`: names
 and recipes - a look already there is not a find).
+
+### 1a. Seeds - write the batch FIRST
+
+Words only: no job, no spend, allowed on a dry night. ~100 seeds (`seeds new` takes up to 150):
+
+1. **Children first.** For every `## Seeds to develop` line that `needs: child seeds`, 2-3 child seeds
+   with `parent: <its ref>`: the same branch narrowed - a subgenre, an angle, a format, an audience
+   variant. A child is a new question, not a rewording of its parent.
+2. **Fresh seeds fill the batch** to ~100, spread (above): at least fifteen genres, all three audiences,
+   at most ten a genre; the split's audience and genre targets (`## Branches`) weight where the fresh ones
+   go. Music is a genre like any other - a music seed's type is `music video`, `lyric video` or
+   `visualizer`, and its sentence is the song as much as the picture (`a slow tango for two coats on a
+   coat rack`).
+3. **Bans.** Nothing under `## Seeds blocked` or `## Ideas blocked` again, nor a near neighbour; nothing
+   under `## Paused` (the door refuses a child of it).
+4. **Each seed** - `{sentence, genre, subgenre, type, audience, format, parent?}`: the sentence (<= 200
+   chars, one line) is the video in one line, what it IS and for whom - not a technique and never a
+   person's, a studio's or a franchise's name.
+5. One JSON array -> `npx tsx pipeline/scout.mts seeds new --json <file>` (`--dry` on a dry night). One bad
+   seed refuses the batch with its place: fix it and resend. Note the batch id and its packet link for the
+   summary (step 6).
 
 ### 1b. Game assets - brief them EARLY
 
@@ -204,9 +240,11 @@ night can ask: one picture of a rough intent, one keystroke to block it or devel
 2. **Name the obvious and ban it.** Write down first the ten most obvious ideas for tonight's anchors
    (a city skyline poster, a hero on a cliff at sunset, a neon-soaked street...) and every title under
    the taste's `## Ideas blocked`; nothing you brief tonight is one of them or a near neighbour.
-3. **Spread the genres** (above): at least eight, at most four ideas each, until three directions are
-   confirmed; then mostly inside the confirmed directions, a third still exploring.
-4. **Each idea** - `{title, target, genre, use, anchor, prompt}`:
+3. **Grow them from kept seeds.** Every `## Seeds to develop` line that `needs: ideas` gets 1-2 ideas
+   first; the rest of the cap goes to kept seeds by the split's targets, mostly inside confirmed
+   directions, a third still exploring. Spread the genres (above) when no seed is kept yet.
+4. **Each idea** - `{title, target, genre, seed, use, anchor, prompt}` (`seed: <batch>/sd-NNN` - required
+   once any seed is kept; the door refuses an unkept or paused one):
    - `title` - the idea as a headline (<= 90 chars): what the video IS, not a technique;
    - `target` - what a keep builds next night: `scene` (a shot with a clip), `style` (the video's look),
      `asset3d` (a game asset), or `stats` (a stats reel - step 1c);
@@ -308,6 +346,19 @@ Check `status <night> --json` before each launch - the remaining money AND `load
 4. **Watch lines.** A channel or site that produced two or more good sources tonight and is not on the
    watchlist: `watch <night> --entry "<channel - url>" --why "<what it teaches>"`.
 
+### 4c. Music - tracks, then visualizers
+
+The song is the clock: a track is made and judged one night, its visualizer only on a later one.
+1. **Tracks** - up to `trackCap` (`open --tracks`, default 4), each from a kept seed whose type is music:
+   `track <night> --seed <batch>/sd-NNN --detach`. One Suno create (both models, ~4 clips) on the
+   operator's signed-in Suno browser, on `box.chrome` beside the artboards - they queue, so launch tracks
+   after the ideas batch. The doctor's `suno` line must pass on a live night with tracks.
+2. **Visualizers** - up to `visualizerCap` (`--visualizers`, default 2), one per `## Tracks to visualize`
+   line: `visualizer <night> --track <night>/<c-id>/<aN> --detach` (~20-30 min each on box.render; a
+   kept idea artboard of the same seed is the still when one exists).
+3. Before closing, `track <night> --collect` and `visualizer <night> --collect`: a track or visualizer
+   still collecting at close is a loss on the packet.
+
 ### 4b. Directions - the night's notes
 
 One to three DIRECTIONS a night, each the operator's confirmation question in production words: what the
@@ -325,7 +376,7 @@ never proposed again; a confirmed one is not re-proposed - work inside it.
 
 ### 5. Stop
 
-Stop launching at the first of: the deadline, a refused launch for money, ~20 rendered rows, three
+Collect the music first (step 4c.3). Stop launching at the first of: the deadline, a refused launch for money, ~20 rendered rows, three
 consecutive failed launches (`--stop failure`), or nothing left worth studying (`sources-exhausted`).
 Short of ~20 rows with time and money left, search again - another watchlist line, another gap -
 before calling the sources exhausted; a short packet is a night that stopped early, and the stop
@@ -337,9 +388,16 @@ reason must say which it was (2026-10-22 rehearsal: a night closed at 15 rows by
 
 Append to `.vault/Scout/nights.md` (create it): the date, the night id, the packet link
 `/board/pkt:scout:<night>`, counts by kind, Gemini settled and held USD and the uncapped line, the stop
-reason, `leads: N filed, M queued` (step 0, and `leads --json`), `ideas: N drawn across G genres, K kept
-ideas developed`, `directions: N proposed`, and at most three
+reason, `leads: N filed, M queued` (step 0, and `leads --json`), `seeds: batch <id> · N (C children,
+F fresh) · /board/pkt:seeds:<batch>`, `ideas: N drawn across G genres from S seeds, K kept ideas developed`,
+`music: N tracks, V visualizers`, `directions: N proposed`, and at most three
 lines of what the night could not do (a source that refused, a doctor line). No narration of your process.
+
+## /scout seeds [--dry]
+
+A seed batch by day, so the next night already grows from the operator's keeps. No night is opened: read
+the newest night's `taste.md` (its seed sections, `## Branches`) and `seeds status --json`, write the batch
+exactly as step 1a, and print the packet link `/board/pkt:seeds:<batch>`.
 
 ## /scout folder <dir> [extract args]
 
