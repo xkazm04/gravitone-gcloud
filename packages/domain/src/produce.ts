@@ -116,6 +116,9 @@ export type Receipt = {
 /** A stale confirm: nothing launched, and the receipt as it reads now. */
 export type StaleReceipt = { readonly kind: "stale"; readonly fresh: Receipt };
 
+/** A confirm's answer: launched (with what it made), or stale with the fresh receipt. */
+export type Confirmed<T> = ({ readonly kind: "launched" } & T) | StaleReceipt;
+
 /* ── the plan ─────────────────────────────────────────────────────────────── */
 
 /** Gate parts are not jobs: each is a Board packet (COMMON decision 10). */

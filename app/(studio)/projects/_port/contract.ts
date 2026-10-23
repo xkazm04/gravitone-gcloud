@@ -22,20 +22,7 @@
 
 import type { MediaLane, ResourceLane } from "@gt/domain/lane";
 import type { JobState } from "@gt/domain/job.machine";
-import type {
-  ComposeInput,
-  ComposerInput,
-  FigureSource,
-  LaunchedProject,
-  LaunchedRun,
-  PartPatch,
-  PlanView,
-  ProjectList,
-  Receipt,
-  ReceiptMode,
-  RerouteOption,
-  StaleReceipt,
-} from "@gt/domain/produce";
+import type { ComposeInput, ComposerInput, Confirmed, FigureSource, LaunchedProject, LaunchedRun, PartPatch, PlanView, ProjectList, Receipt, ReceiptMode, RerouteOption, StaleReceipt } from "@gt/domain/produce";
 
 import type { ActionResult } from "../../../_server/actionCore.ts";
 
@@ -98,7 +85,7 @@ export type ActOutcome = { readonly jobId: string; readonly note: string };
 export type RerouteResult = { readonly kind: "receipt"; readonly receipt: Receipt } | { readonly kind: "done"; readonly act: ActOutcome } | StaleReceipt;
 
 /** A receipt's confirm: launched, or the receipt as it reads now. */
-export type Confirmed<T> = ({ readonly kind: "launched" } & T) | StaleReceipt;
+export type { Confirmed };
 
 type R<T> = Promise<ActionResult<T>>;
 

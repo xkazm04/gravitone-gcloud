@@ -11,7 +11,9 @@ import { decideSpendRequest, listSpendRequests, markSpendFailed, markSpendLaunch
 import type { Store } from "@gt/kernel/store";
 
 import { kernel } from "../../../kernelStore.ts";
+import { LANE_DOORS, mintSuffix, type LaunchContext } from "../../../produce/laneDoors.ts";
 import { preflightOf } from "../../../producers/registry.ts";
+import { stripsKernel } from "../../../producers/strips.ts";
 import type { Launched, SpendDeps, SpendDoors, SpendStore } from "./spend.ts";
 import type { Priced } from "./spendWords.ts";
 
@@ -24,13 +26,10 @@ import type { Priced } from "./spendWords.ts";
 // `planReceipt`, `launchPlan`), and its DRY_ONLY from the same env (a live launch in a dry-only process
 // is refused by the kernel's armLive, `dry-only`, and the request is failed with that sentence).
 //
-// A RUN is NOT bound here. A Floor run's receipt and launch are its lane's door - strips, forge, Suno,
-// the records' door - and those doors live in app/(studio)/projects/_port/realLaunch.ts LANE_DOORS,
-// which lib/ may not import (tests/golden-path/no-app-imports.probe.spec.ts). Until that door moves to
-// lib/ (the Director's call), a run request prices and launches as `unavailable` with the reason below:
-// its card shows the filed price and that sentence, and a K on it fails the request, spending nothing.
+// A RUN is the Floor's own lane door (lib/produce/laneDoors.ts LANE_DOORS - strips, forge, Suno, the
+// records' door), read LIVE with the same launch context the real produce port builds (real.ts
+// `launchCtx`): the process kernel, the strips kernel, the process's cwd and its DRY_ONLY.
 
-export const RUN_DOOR_UNBOUND = "a run's live receipt is its lane's door (app/(studio)/projects/_port/realLaunch.ts LANE_DOORS), which lib/ cannot reach yet";
 
 const processStore = (): Result<Store> => {
   const k = kernel();
@@ -62,10 +61,14 @@ type Env = () => Readonly<Record<string, string | undefined>>;
 
 export function kernelSpendDoors(store: () => Result<Store>, env: Env = () => process.env, now: () => number = Date.now): SpendDoors {
   const ctx = () => gateFacts(now());
+  const launchCtx = (st: Store): LaunchContext => ({ store: st, strips: stripsKernel, now: now(), dryOnly: dryOnlyFrom(env()), cwd: process.cwd(), mint: mintSuffix });
   async function price(subject: SpendSubject): Promise<Result<Priced>> {
-    if (subject.kind === "run") return err("unavailable", RUN_DOOR_UNBOUND);
     const s = store();
     if (!s.ok) return s;
+    if (subject.kind === "run") {
+      const r = await LANE_DOORS[subject.input.lane].receipt(launchCtx(s.value), subject.input, { mode: "live" });
+      return r.ok ? ok({ receipt: r.value }) : r;
+    }
     return caught(() => {
       const plan = readProject(s.value, subject.id, ctx());
       if (!plan.ok) return plan;
@@ -76,9 +79,13 @@ export function kernelSpendDoors(store: () => Result<Store>, env: Env = () => pr
     });
   }
   async function launch(subject: SpendSubject, receipt: { readonly token: string }, ceilingUsd: number | undefined, actor: Actor): Promise<Result<Launched>> {
-    if (subject.kind === "run") return err("unavailable", RUN_DOOR_UNBOUND);
     const s = store();
     if (!s.ok) return s;
+    if (subject.kind === "run") {
+      const l = await LANE_DOORS[subject.input.lane].launch(launchCtx(s.value), subject.input, receipt.token, { mode: "live", ...(ceilingUsd === undefined ? {} : { ceilingUsd }) }, actor);
+      if (!l.ok) return l;
+      return ok(l.value.kind === "stale" ? { kind: "stale", fresh: l.value.fresh } : { kind: "launched", jobIds: [l.value.jobId] });
+    }
     return caught((): Result<Launched> => {
       const l = launchProject(s.value, { id: subject.id, baseRev: subject.rev, token: receipt.token, mode: "live", ...(ceilingUsd === undefined ? {} : { ceilingUsd }) }, actor, { ...ctx(), dryOnly: dryOnlyFrom(env()), preflightOf });
       if (l.ok) return ok({ kind: "launched", jobIds: l.value.jobIds });
