@@ -71,6 +71,17 @@ describe("a scout scene's hold", () => {
   });
 });
 
+describe("a scout asset's hold", () => {
+  it("is nothing: its concepts are Leonardo's and its gate, mesh and finish local, whatever ceiling it was launched with", () => {
+    const arm = armLive(OP, new Date().toISOString(), "scout budget test", { dryOnly: false });
+    if (!arm.ok) throw arm.error;
+    const j = enqueue(store, { id: "job:scout-asset:2026-10-02:c-10", of: { kind: "run", id: "scout:2026-10-02/c-10" }, producer: "scout-asset", lane: "cloud.leonardo", mode: arm.value, ceilingUsd: 14.8 }, OP);
+    if (!j.ok) throw j.error;
+    const b = nightBudget(store, { ...base, jobs: [j.value.id] });
+    expect(b.ok && b.value.heldUsd).toBe(0);
+  });
+});
+
 describe("extractGeminiWorst", () => {
   // 2026-10-23: a 24-frame style run's receipt said $3.44 (Leonardo stills and the seat's turn in it); its
   // Gemini is one read a source plus a read-back a round and a transfer.

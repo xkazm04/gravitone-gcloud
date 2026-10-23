@@ -44,6 +44,8 @@ import type { Night } from "./types";
 //              booked, at their worst case): it has no Run row, so it held its whole
 //              ceiling - which its launch sets to what the night has left - and one
 //              queued $0.03 scene held all $15 of the night (2026-10-23).
+//              A SCOUT ASSET holds nothing: it calls no Gemini, and holding its ceiling
+//              held the night's remainder once more (2026-10-23).
 //            A `failed` job promises nothing more until an operator retries it,
 //            and a retry is not the night's act. A receipt prices a job whole (an
 //            extract's is one blended line), so a running job's hold is its whole
@@ -153,7 +155,8 @@ export function jobMoney(r: Reader, jobId: string, scene?: SceneAsk): JobMoney {
   const lapsed = num(r.get("SELECT total(amount) AS v FROM spend_reservations WHERE job_id = ? AND state = 'lapsed'", jobId)?.["v"]);
   let heldUsd = open + lapsed;
   if (job.mode.kind === "live" && OPEN.includes(job.state)) {
-    const gemini = scene !== undefined ? scenePromise(r, job, scene) : geminiPromiseOf(r, job);
+    // A game asset calls no Gemini: its concepts are Leonardo's, its gate, mesh and finish local.
+    const gemini = scene !== undefined ? scenePromise(r, job, scene) : job.producer === "scout-asset" ? 0 : geminiPromiseOf(r, job);
     const promise = gemini ?? promiseOf(r, job);
     // A Gemini promise is spent down by Gemini only; a blended one by everything the job booked.
     if (promise !== undefined) heldUsd = Math.max(heldUsd, promise - (gemini === undefined ? allUsd : settledUsd));
