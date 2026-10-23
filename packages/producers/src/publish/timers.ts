@@ -17,7 +17,8 @@ import type { Reader } from "@gt/kernel/store";
 // are `timer.*` events on the same subject; a quiet healthy tick writes no event, because a
 // thirty-second loop that announced itself would bury the ledger in "still here".
 
-export const TIMER_NAMES = ["publish-tick", "metrics-refresh"] as const;
+// `load-sample` (spark night-load-band): the box's load, one reading a minute, for a night's band.
+export const TIMER_NAMES = ["publish-tick", "metrics-refresh", "load-sample"] as const;
 export type TimerName = (typeof TIMER_NAMES)[number];
 
 export type TimerSpec = {

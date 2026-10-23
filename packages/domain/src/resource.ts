@@ -53,6 +53,9 @@ export type MachineLoad = {
   readonly commitUsedGb?: number;
   /** 0..1 over every core, foreign load included (other sessions' builds share this box). */
   readonly cpuBusy?: number;
+  /** 0..1 GPU utilisation (nvidia-smi utilization.gpu) - whether the card WORKED, which memory alone cannot say
+   *  (spark night-load-band). Absent when the device reports [N/A]. */
+  readonly gpuBusy?: number;
   /** Prompts running or pending on the shared ComfyUI, whoever queued them. */
   readonly comfyQueue?: number;
 };

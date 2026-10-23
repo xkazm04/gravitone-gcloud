@@ -18,6 +18,7 @@
 
 import type { Consequence, EditPlan, PacketList, PacketView, PickOutcome } from "@gt/domain/board";
 import type { ErrorEnvelope } from "@gt/domain/errors";
+import type { LoadSummary } from "@gt/domain/load";
 
 export type PortResult<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: ErrorEnvelope };
 
@@ -97,6 +98,9 @@ export type Presentation = {
   /** What v1 holds that this packet cannot carry whole (import-normalization: lossy-conversion
    *  disclosure), shown at the gate so the operator sees it before committing (wave B ruling 8). */
   readonly losses?: readonly Loss[];
+  /** A /scout night's machine load against the operator's band (spark night-load-band): drawn by the LoadBand on
+   *  the night's desk, open and committed. Absent: the night has no samples (before the sampler, or none read). */
+  readonly load?: LoadSummary;
 };
 
 /** One thing the v1 -> kernel conversion could not carry whole, graded. */
