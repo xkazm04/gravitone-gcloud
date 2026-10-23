@@ -25,7 +25,9 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { FoundryError, containedIn } from "../runStore";
-import type { CandidateId, FindingCandidate, NightId, WatchCandidate } from "./types";
+import type { CandidateId, FindingCandidate, IdeaCandidate, NightId, WatchCandidate } from "./types";
+import { WING_KNOWLEDGE_DIR, type ScoutWing } from "./wing";
+import { activeWing } from "./wingScope";
 
 export const FINDINGS_HEADING = "## Scout findings";
 export const WATCH_HEADING = "## Proposed by the scout";
@@ -50,6 +52,19 @@ export function patternsRel(template: string, step: string): string {
 }
 
 export const WATCHLIST_REL = "scout/watchlist.md";
+
+/** A wing's watchlist (spark scout-muse): `scout/watchlist.md`, `scout-muse/watchlist.md`. */
+export const watchlistRelOf = (wing: ScoutWing): string => `${WING_KNOWLEDGE_DIR[wing]}/watchlist.md`;
+
+/** The muse wing's craft notes and kept characters (knowledge/scout-muse/). */
+export const MUSE_TECHNIQUES_REL = "scout-muse/techniques.md";
+export const MUSE_CHARACTERS_REL = "scout-muse/characters.md";
+export const CHARACTERS_HEADING = "## Kept characters";
+
+/** Where a kept finding lands: the scout wing's step PATTERNS.md; the muse wing's techniques.md (it serves no template step). */
+export function findingRelOf(wing: ScoutWing, template: string, step: string): string {
+  return wing === "scout" ? patternsRel(template, step) : MUSE_TECHNIQUES_REL;
+}
 
 /** One line, whatever the skill's text held: a newline inside a claim would split the bullet. */
 const flat = (s: string): string => s.replace(/\s+/g, " ").trim();
@@ -131,14 +146,25 @@ async function appendTo(rel: string, heading: string, line: string, marker: stri
   return { file, rel, wrote: next !== null, created: before === null };
 }
 
-/** A kept finding into its step's PATTERNS.md. */
+/** A kept finding into its step's PATTERNS.md (the muse wing: its techniques.md). */
 export function appendFinding(night: NightId, c: FindingCandidate, sourceUrl: string | undefined, o: KnowledgeOptions = {}): Promise<Appended> {
-  return appendTo(patternsRel(c.template, c.step), FINDINGS_HEADING, findingLine(night, c, sourceUrl), markerOf(night, c.id), `# ${c.template} - ${c.step}`, o);
+  return appendTo(findingRelOf(activeWing(), c.template, c.step), FINDINGS_HEADING, findingLine(night, c, sourceUrl), markerOf(night, c.id), `# ${c.template} - ${c.step}`, o);
 }
 
-/** A kept watch line into the watchlist. */
+/** A kept watch line into the active wing's watchlist. */
 export function appendWatch(night: NightId, c: WatchCandidate, o: KnowledgeOptions = {}): Promise<Appended> {
-  return appendTo(WATCHLIST_REL, WATCH_HEADING, watchLine(night, c), markerOf(night, c.id), "# Scout watchlist", o);
+  return appendTo(watchlistRelOf(activeWing()), WATCH_HEADING, watchLine(night, c), markerOf(night, c.id), "# Scout watchlist", o);
+}
+
+/** A kept character's card, one line: `- **Name**, aged 34 - look. Plays: personality. <marker>`. */
+export function characterLine(night: NightId, c: Pick<IdeaCandidate, "id" | "card">): string {
+  if (c.card === undefined) throw new FoundryError(`${c.id} carries no character card.`, 400);
+  return `- **${flat(c.card.name)}**, aged ${c.card.age} - ${flat(c.card.look)} Plays: ${flat(c.card.personality)} ${markerOf(night, c.id)}`;
+}
+
+/** A kept character idea (muse wing) into knowledge/scout-muse/characters.md. */
+export function appendCharacter(night: NightId, c: Pick<IdeaCandidate, "id" | "card">, o: KnowledgeOptions = {}): Promise<Appended> {
+  return appendTo(MUSE_CHARACTERS_REL, CHARACTERS_HEADING, characterLine(night, c), markerOf(night, c.id), "# Muse characters", o);
 }
 
 /** For a consequence: whether the file a line would land in exists, and whether it already holds the line. */
