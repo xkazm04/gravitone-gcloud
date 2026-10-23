@@ -10,7 +10,7 @@ import type { LaunchedProject, ReceiptMode } from "@gt/domain/produce";
 import { projectSchema } from "@gt/domain/project";
 import { dryOnlyFrom } from "@gt/kernel/dryrun";
 import type { Effects } from "@gt/kernel/effects";
-import { get, pause, resume, retry } from "@gt/kernel/job";
+import { cancel, get, pause, resume, retry } from "@gt/kernel/job";
 import { ackLane, move } from "@gt/kernel/job-queue";
 import { launchProject, planReceipt, rerouteOptions } from "@gt/kernel/records/launch";
 import { listProjects, readProject, type ReadContext } from "@gt/kernel/records/read";
@@ -39,8 +39,9 @@ import { confirmReroute, rerouteReceipt } from "./realReroute.ts";
 //   confirms  the receipt is recomputed from what the confirm reads and its token compared
 //             before anything is written (records/launch.ts, one transaction): a stale token
 //             answers the fresh receipt and launches nothing;
-//   acts      pause, resume, retry, earlier/later and acknowledge are the kernel's verbs
-//             (job.ts, job-queue.ts), as the operator: their events name who acted.
+//   acts      pause, resume, retry, earlier/later, acknowledge and cancel are the kernel's verbs
+//             (job.ts, job-queue.ts), as whoever acts (the operator, or the MCP door's agent):
+//             their events name who acted.
 // Nothing here performs a step. The worker (`npm run worker`) or a producer's CLI drives what a
 // launch enqueued; a part whose kind no producer binds yet waits queued, reported by the worker
 // as `unknown` (the kernel's word for work nobody here can do), never failed by it.
@@ -268,6 +269,15 @@ export function makeRealProduce(deps: RealDeps): ServerProduce {
 
     listJobs: () => withStore((s) => s.read((r) => jobsView(r, deps.now()))),
     listHolds: () => withStore((s) => s.read((r) => holdsView(r, new Map(jobsView(r, deps.now()).map((j) => [j.id, j.title]))))),
-    cancelJob: () => err("unavailable", "cancel is not built yet (spark athena-control-mcp WP2)"),
+    // The kernel's cancel (job.ts), refused by its machine for a job that already ended.
+    cancelJob: ({ jobId: raw }, who) =>
+      withStore((s) => {
+        const id = jobId(raw);
+        if (!id.ok) return id;
+        const before = jobOf(s, id.value);
+        if (!before.ok) return before;
+        const r = cancel(s, id.value, actorOf(who));
+        return r.ok ? ok({ jobId: raw, note: `cancelled · was ${before.value.state}` }) : r;
+      }),
   };
 }

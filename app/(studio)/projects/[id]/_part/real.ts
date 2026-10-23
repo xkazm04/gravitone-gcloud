@@ -13,11 +13,12 @@ import { cutProducer, cutUnits } from "@/lib/producers/cut";
 import { framesProducer, framesUnits } from "@/lib/producers/frames";
 import { motionProducer, motionUnits } from "@/lib/producers/motion";
 import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
+import type { Actor } from "@gt/domain/event";
 import type { EditorKind, PartActKind, PartOp, PartReceipt, PartView } from "@gt/domain/partView";
 
 import type { ServerPart } from "./port.ts";
 import { receiptOf } from "./fixtureActs.ts";
-import { basisOf, OPERATOR, opPlan, sceneOf, unwrap, viewOf, type OpPlan, type Scene } from "./realScene.ts";
+import { actorOfWho, basisOf, opPlan, sceneOf, unwrap, viewOf, type OpPlan, type Scene } from "./realScene.ts";
 
 // THE REAL PART SIDE (L36) - the PartPort over the kernel's `parts` module: the part's records
 // are rows under their v1 keys, every edit is a row in an append-only op log, undo appends the
@@ -81,12 +82,12 @@ export function makeRealPart(deps: RealDeps): ServerPart {
 
   return {
     loadPart: ({ projectId, key }) => withStore((store) => read(store, projectId, key)),
-    opPart: ({ projectId, key, baseRev, op }) => {
-      const w = write(projectId, key, baseRev, op, (_t, s) => opPlan(s, op));
+    opPart: ({ projectId, key, baseRev, op }, who) => {
+      const w = write(projectId, key, baseRev, op, (_t, s) => opPlan(s, op, actorOfWho(who)));
       if (!w.ok) return w;
       return ok(w.value.outcome.kind === "conflict" ? { kind: "conflict", current: w.value.view } : { kind: "applied", view: w.value.view });
     },
-    undoPart: ({ projectId, key, baseRev }) =>
+    undoPart: ({ projectId, key, baseRev }, who) =>
       withStore((store) => {
         const at = store.read((r) => {
           const s = sceneOf(r, projectId, key, deps.now());
@@ -94,7 +95,7 @@ export function makeRealPart(deps: RealDeps): ServerPart {
         });
         const partId = unwrap(at);
         if (!partId.ok) return partId;
-        const u = undoPart(store, { projectId, partId: partId.value, baseRev, by: OPERATOR });
+        const u = undoPart(store, { projectId, partId: partId.value, baseRev, by: actorOfWho(who) });
         if (!u.ok) return u;
         kick(store, projectId);
         const view = read(store, projectId, key);
@@ -102,10 +103,10 @@ export function makeRealPart(deps: RealDeps): ServerPart {
         return ok(u.value.kind === "conflict" ? { kind: "conflict", current: view.value } : { kind: "applied", view: view.value });
       }),
     actReceipt: ({ projectId, key, act, target }) => receiptFor(deps, projectId, key, act, target),
-    act: async ({ projectId, key, act, token, target }) => {
+    act: async ({ projectId, key, act, token, target }, who) => {
       const store = deps.store();
       if (!store.ok) return store;
-      const launched = launchAct(deps, store.value, projectId, key, act, token, target);
+      const launched = launchAct(deps, store.value, projectId, key, act, token, actorOfWho(who), target);
       if (!launched.ok) return launched;
       if (launched.value.kind === "stale") return ok(launched.value);
       const { jobId, kind_: kind } = launched.value;
@@ -136,7 +137,7 @@ export function makeRealPart(deps: RealDeps): ServerPart {
  * the chosen option's lane; the receipt's mode decides dry or live (live needs an arm, refused
  * under GRAVITONE_DRY_ONLY).
  */
-function launchAct(deps: RealDeps, store: Store, projectId: string, key: string, act: PartActKind, token: string, target?: string): Result<{ kind: "stale"; fresh: PartReceipt } | { kind: "go"; jobId: string; kind_: EditorKind }> {
+function launchAct(deps: RealDeps, store: Store, projectId: string, key: string, act: PartActKind, token: string, actor: Actor, target?: string): Result<{ kind: "stale"; fresh: PartReceipt } | { kind: "go"; jobId: string; kind_: EditorKind }> {
   const now = deps.now();
   const scene = unwrap(store.read((r) => sceneOf(r, projectId, key, now)));
   if (!scene.ok) return scene;
@@ -144,7 +145,7 @@ function launchAct(deps: RealDeps, store: Store, projectId: string, key: string,
   const units = UNITS[kind];
   if (units === undefined) return err("unavailable", `no producer is bound for a ${kind} part yet`);
   const ref = { projectId, partId: scene.value.part.id, act, ...(target === undefined ? {} : { target }) };
-  const l = launchPartAct(store, ref, units, { mode: "dry", now, token, actor: OPERATOR });
+  const l = launchPartAct(store, ref, units, { mode: "dry", now, token, actor });
   if (!l.ok) return l;
   return l.value.kind === "stale" ? ok({ kind: "stale", fresh: partReceiptOf(l.value.fresh, act) }) : ok({ kind: "go", jobId: l.value.jobId, kind_: kind });
 }

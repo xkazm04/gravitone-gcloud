@@ -86,7 +86,7 @@ const fixture: ServerProduce = {
   ackLane: ({ lane }) => acts.ackLane(u(), lane),
   listJobs: () => ({ ok: true, value: jobsView(u(), now()) }),
   listHolds: () => ({ ok: true, value: holdsView(u()) }),
-  cancelJob: () => err("unavailable", "cancel is not built yet (spark athena-control-mcp WP2)"),
+  cancelJob: () => err("unavailable", "the fixture universe holds no kernel job to cancel"),
 };
 
 const real: ServerProduce = makeRealProduce({

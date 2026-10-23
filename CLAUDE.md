@@ -40,6 +40,7 @@ End every session that touched the tree with one line: `map: N contexts, M ungro
   `app/page.tsx` + `app/_landing/`; `app/_dev-inspector/` is dev tooling. Nothing else lives in `app/`
   but the API routes agents and the screens still call (`/api/{blob,events/stream,session,import,ledger}`
   and four file doors). The music-video compositor is `lib/sound/mv/compositor.ts`.
+- `app/api/mcp` - the agent door: MCP over one stateless JSON-RPC POST, tools in `app/_server/mcp/`, an `act` token; an agent never spends (`docs/mcp.md`).
 - `lib/` - adapters over v1 stores and vendors, the bound producers (`lib/producers/`), the Board's
   sources (`lib/decision/v1/sources/`), the Ledger's (`lib/ledger/v1/sources/`), the Library's feeds.
 - `workers/` - the job worker and its timers (publish tick, metrics). `pipeline/` - CLIs and gates.

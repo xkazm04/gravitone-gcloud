@@ -130,6 +130,7 @@ const FLOOR: readonly string[] = [
   "GET app/api/import/route.ts",
   "POST app/api/import/route.ts",
   "GET app/api/ledger/route.ts",
+  "POST app/api/mcp/route.ts",
   "GET app/api/sound/mv/jobs/[id]/file/route.ts",
   "GET app/api/sound/takes/[id]/file/route.ts",
 ];

@@ -11,6 +11,7 @@ import type { Actor } from "@gt/domain/event";
 import type { WorkPlanPart } from "@gt/domain/produce";
 import { OPS_SHOWN, actBelongs, isEditorKind, opLabel, type EditorKind, type PartActKind, type PartOp, type PartProject, type PartRef, type PartRunning, type PartView, type ResearchOp, type ScriptOp } from "@gt/domain/partView";
 
+import type { Who } from "../../_port/port.ts";
 import { RESEARCH, type ResearchRec } from "./fixtureResearch.ts";
 import { SCRIPT, type ScriptRec } from "./fixtureScript.ts";
 import type { ActBasis, Ctx } from "./fixture.ts";
@@ -26,6 +27,10 @@ import { scriptOf, scriptRecords } from "./realScript.ts";
 export type Scene = { readonly read: ProjectRead; readonly ctx: KCtx; readonly part: WorkPlanPart; readonly kind: EditorKind; readonly snap: Pick<PartSnapshot, "records" | "rev"> };
 
 export const OPERATOR: Actor = { kind: "operator", id: "operator" };
+
+/** Who acts, as the part's op log and its act's job name them: the operator unless a caller says
+ *  otherwise (the MCP door names its agent, ../../_port/port.ts `Who`). */
+export const actorOfWho = (w: Who | undefined): Actor => (w === undefined ? OPERATOR : { kind: w.kind ?? "operator", id: w.who ?? "operator" });
 
 export function unwrap<T>(r: Result<Result<T>>): Result<T> {
   return r.ok ? r.value : r;
@@ -110,20 +115,20 @@ function nextOf(s: Scene, f: { research: (rec: ResearchRec) => Result<ResearchRe
 
 /** A later kind's op as the driver writes it: the module's next record mapped to the step records
  *  it changes (the kernel refuses a key the part neither owns nor grows). */
-function laterOp(s: Scene, op: PartOp): OpPlan {
-  if (!isLaterKind(s.kind)) return { act: "op", label: op.op, by: OPERATOR, raw: op, next: err("internal", `${s.kind} is not a later kind`) };
+function laterOp(s: Scene, op: PartOp, by: Actor): OpPlan {
+  if (!isLaterKind(s.kind)) return { act: "op", label: op.op, by, raw: op, next: err("internal", `${s.kind} is not a later kind`) };
   const m = later(s.kind);
   const applied = m.apply(s.ctx, op);
-  return { act: "op", label: applied.ok ? applied.value.label : op.op, by: OPERATOR, raw: op, next: applied.ok ? ok(m.writes(s.ctx, applied.value.next)) : applied };
+  return { act: "op", label: applied.ok ? applied.value.label : op.op, by, raw: op, next: applied.ok ? ok(m.writes(s.ctx, applied.value.next)) : applied };
 }
 
-/** The operator's op on any editor kind, as the driver writes it. */
-export function opPlan(s: Scene, op: PartOp): OpPlan {
-  if (isLaterKind(s.kind)) return laterOp(s, op);
+/** An op on any editor kind, as the driver writes it, by the operator unless `by` names another. */
+export function opPlan(s: Scene, op: PartOp, by: Actor = OPERATOR): OpPlan {
+  if (isLaterKind(s.kind)) return laterOp(s, op, by);
   return {
     act: "op",
     label: opLabel(op),
-    by: OPERATOR,
+    by,
     raw: op,
     next: nextOf(s, {
       research: (rec) => (isResearchOp(op) ? RESEARCH.apply(s.ctx, rec, op) : nope("research")),

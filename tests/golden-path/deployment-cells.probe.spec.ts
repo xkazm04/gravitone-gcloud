@@ -208,6 +208,10 @@ const EXPECT: Record<string, Expectation> = {
   // The ledger as JSON Lines for agents (app/api/ledger/route.ts). `format=jsonl` is required,
   // and drive() sends no query, so an admitted caller meets the input door's 400.
   "app/api/ledger/route.ts": { door: "access", ok: { GET: "4xx" } },
+  // The agent door (app/api/mcp/route.ts): only a presented CLI token speaks there, so every
+  // authorised caller this lane has (the shared secret, the dev fixture) is refused 403
+  // `mcp-needs-token` before the body is read. No GET: Next answers it 405.
+  "app/api/mcp/route.ts": { door: "access", ok: { POST: "4xx" } },
   // The door a session is made at: public by necessity, so it guards itself.
   // GET answers {kind: "none"} with no cookie, DELETE clears one either way,
   // and POST refuses an empty body as `invalid` before any token is judged.
