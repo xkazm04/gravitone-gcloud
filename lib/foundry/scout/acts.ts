@@ -16,6 +16,8 @@ import { fromIdeaOf, originWith, splitRef, type Origin } from "./direction.ts";
 import { MAX_PICTURE_BYTES } from "./ingest.ts";
 import { mutateNight, nextCandidateId, nightDir, readNight, resolveInNight, withCandidate } from "./store.ts";
 import { CANDIDATE_KINDS, CANDIDATE_STATUSES, STOP_REASONS, type Candidate, type CandidateId, type Night, type NightId, type SceneCandidate, type SeedRef, type StopReason, type StyleCandidate } from "./types.ts";
+import { activeWing } from "./wingScope";
+import { wingRunId } from "./wing";
 
 // THE NIGHT'S LAUNCHING ACTS - what pipeline/scout.mts `style`, `scene` and `close`
 // do, as functions a test drives without a process. Each launch is an ORDINARY
@@ -298,7 +300,7 @@ export function morning(n: Night, b: NightBudget): Morning {
   const byKind = Object.fromEntries(
     CANDIDATE_KINDS.map((k) => [k, Object.fromEntries(CANDIDATE_STATUSES.map((s) => [s, n.candidates.filter((c) => c.kind === k && c.status === s).length]))]),
   );
-  return { night: n.id, packet: `pkt:scout:${n.id}`, state: n.state, ...(n.stop === undefined ? {} : { stop: n.stop }), byKind, settledUsd: b.settledUsd, uncappedUsd: b.uncappedUsd, heldUsd: b.heldUsd };
+  return { night: n.id, packet: `pkt:scout:${wingRunId(activeWing(), n.id)}`, state: n.state, ...(n.stop === undefined ? {} : { stop: n.stop }), byKind, settledUsd: b.settledUsd, uncappedUsd: b.uncappedUsd, heldUsd: b.heldUsd };
 }
 
 export const isStopReason = (s: string): s is StopReason => (STOP_REASONS as readonly string[]).includes(s);

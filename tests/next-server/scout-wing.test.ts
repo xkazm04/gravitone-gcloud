@@ -25,6 +25,8 @@ const ROOT = vi.hoisted(() => {
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+import { morning } from "../../lib/foundry/scout/acts.ts";
+import type { NightBudget } from "../../lib/foundry/scout/budget.ts";
 import { blocking, doctor, type DoctorInput } from "../../lib/foundry/scout/doctor.ts";
 import { registryDigest } from "../../lib/foundry/scout/registry.ts";
 import { createSeedBatch, listSeedBatches, mutateSeedBatch } from "../../lib/foundry/scout/seedStore.ts";
@@ -76,6 +78,14 @@ describe("the wing's root", () => {
     expect(wingRunId("muse", DAY)).toBe(`muse:${DAY}`);
     expect(parseWingRunId(`bogus:${DAY}`)).toBeNull();
     expect(parseWingRunId(`scout:${DAY}`)).toBeNull();
+  });
+
+  it("the close's packet names the wing: a muse night's link is pkt:scout:muse:<night>, the scout night's is unchanged", () => {
+    // The first live muse close printed pkt:scout:<night> - a link into the scout wing's night of the same id.
+    const n = { id: "2026-10-23-2", state: "closed", candidates: [] } as unknown as Night;
+    const b = { settledUsd: 0, uncappedUsd: 0, heldUsd: 0 } as unknown as NightBudget;
+    expect(withWing("muse", () => morning(n, b).packet)).toBe("pkt:scout:muse:2026-10-23-2");
+    expect(morning(n, b).packet).toBe("pkt:scout:2026-10-23-2");
   });
 
   it("two concurrent scopes do not leak into each other across an await", async () => {
