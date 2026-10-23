@@ -1,7 +1,9 @@
 import "server-only";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
+import { localEntryGranted } from "../../lib/localEntry.ts";
+import { LOCAL_ENTRY_COOKIE } from "../../lib/localMode.ts";
 import type { KeyUse, Resolution } from "../../lib/principal.ts";
 import { resolveSession, SESSION_COOKIE } from "./session.ts";
 
@@ -18,5 +20,6 @@ import { resolveSession, SESSION_COOKIE } from "./session.ts";
 
 export async function principal(use: KeyUse = "read"): Promise<Resolution> {
   const jar = await cookies();
-  return resolveSession(jar.get(SESSION_COOKIE)?.value, use);
+  const local = localEntryGranted(jar.get(LOCAL_ENTRY_COOKIE)?.value, (await headers()).get("host"));
+  return resolveSession(jar.get(SESSION_COOKIE)?.value, use, undefined, local);
 }

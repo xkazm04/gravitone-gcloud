@@ -34,7 +34,7 @@ import {
 // unlikely.
 import { authClient, firebaseReady, googleProvider } from "./firebase";
 import { DEV_AUTH, DEV_USER } from "./devAuth";
-import { LOCAL_MODE, LOCAL_USER } from "./localMode";
+import { LOCAL_MODE, LOCAL_USER, localEntryChosen } from "./localMode";
 // The eviction OWNER. It imports every user-scoped store; nothing it clears
 // imports it, and this context does not own the list — see lib/identityEviction.ts
 // for the enumerated triggers and the one deliberate exclusion.
@@ -76,6 +76,8 @@ type AuthState = {
   /** Why the last identity transition happened, or null if none has. */
   lastTransition: EvictionReason | null;
   signIn: () => Promise<void>;
+  /** Step past Google as the local owner (lib/localEntry.ts); the server refuses it off localhost. */
+  enterLocally: () => Promise<void>;
   signOut: () => Promise<void>;
   error: string | null;
 };
@@ -96,13 +98,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    *  compares against it inside a callback registered once, and a state read there
    *  would be the value captured at subscribe time — always null. */
   const heldUid = useRef<string | null>(null);
+  /** This browser entered locally (the `gt_local` choice). Read once, at mount: leaving it reloads the page. */
+  const localEntry = useRef(false);
 
   useEffect(() => {
     // LOCAL MODE — the self-hosted single-user posture (lib/localMode.ts).
     // Resolves immediately as the stable local owner; no Firebase involved,
     // in any build. Checked FIRST so a checkout that sets both flags runs as
     // the mode a real person opted into, not as the automation fixture.
-    if (LOCAL_MODE) {
+    // LOCAL ENTRY - the same owner, chosen at runtime on the landing (lib/localEntry.ts). The cookie
+    // is only the hint: every server read re-earns the grant, and off localhost it is refused there.
+    localEntry.current = localEntryChosen(document.cookie);
+    if (LOCAL_MODE || localEntry.current) {
       heldUid.current = LOCAL_USER.uid;
       setUser(LOCAL_USER);
       setLoading(false);
@@ -201,7 +208,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const enterLocally = useCallback(async () => {
+    setError(null);
+    try {
+      const r = await fetch("/api/session", { method: "PUT" });
+      if (!r.ok) {
+        const body = (await r.json().catch(() => null)) as { error?: string } | null;
+        setError(body?.error ?? `entering locally answered ${r.status}`);
+        return;
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "entering locally failed");
+      return;
+    }
+    // A full load: the provider resolves the local owner at mount, and the studio renders server-side.
+    window.location.assign(new URL("/projects", window.location.origin).href);
+  }, []);
+
   const signOut = useCallback(async () => {
+    // A runtime local entry ends with the cookie /api/session DELETE clears (the shell calls it);
+    // there is no Firebase session to end, and no shelf of another identity to evict.
+    if (localEntry.current) return;
     // In local mode "sign out" would be a lie twice over: there is no session
     // to end, and the eviction that follows a real sign-out would wipe the
     // local shelf — the only copy of the owner's work. The menu's sign-out is
@@ -255,10 +282,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       authResolved,
       lastTransition,
       signIn,
+      enterLocally,
       signOut,
       error,
     }),
-    [user, profile, loading, authResolved, lastTransition, signIn, signOut, error],
+    [user, profile, loading, authResolved, lastTransition, signIn, enterLocally, signOut, error],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

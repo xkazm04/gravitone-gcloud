@@ -5,6 +5,8 @@ import { ok } from "@gt/domain/errors";
 
 import { runAction } from "../../app/_server/actionCore.ts";
 import { clearedCookie, cookieValue, isLoopbackHost, resolveSession, SESSION_COOKIE, sessionCookie, verifySession } from "../../app/_server/session.ts";
+import { localEntryAvailable, localEntryCookie, localEntryGranted } from "../../lib/localEntry.ts";
+import { LOCAL_ENTRY_COOKIE, localEntryChosen } from "../../lib/localMode.ts";
 import { refuse, type Resolution } from "../../lib/principal.ts";
 import { installSigner, nowS, PROJECT, uninstallSigner, type Signer } from "./tokens.ts";
 
@@ -58,6 +60,52 @@ describe("resolveSession", () => {
 
   it("no cookie and no posture is missing-token, never a guess", async () => {
     expect(kindOf(await resolveSession(undefined, "read"))).toBe("refused:missing-token");
+  });
+
+  it("a granted local entry is the local owner, a presented token still speaks for itself, and verified mode refuses it", async () => {
+    expect(kindOf(await resolveSession(undefined, "read", undefined, true))).toBe("local-owner");
+    expect(kindOf(await resolveSession(await signer.sign({ exp: nowS() - 1 }), "read", undefined, true))).toBe("refused:expired");
+    process.env["PRINCIPAL_MODE"] = "verified";
+    try {
+      expect(kindOf(await resolveSession(undefined, "read", undefined, true))).toBe("refused:local-owner-unverifiable");
+    } finally {
+      delete process.env["PRINCIPAL_MODE"];
+    }
+  });
+});
+
+describe("local entry (lib/localEntry.ts)", () => {
+  const env = (k: string, v: string | undefined, run: () => void): void => {
+    const was = process.env[k];
+    if (v === undefined) delete process.env[k];
+    else process.env[k] = v;
+    try {
+      run();
+    } finally {
+      if (was === undefined) delete process.env[k];
+      else process.env[k] = was;
+    }
+  };
+
+  it("is available on a loopback host only", () => {
+    for (const h of ["localhost:3000", "127.0.0.1:3000", "[::1]:3000", "localhost"]) expect(localEntryAvailable(h)).toBe(true);
+    for (const h of ["192.168.1.20:3000", "studio.example", "localhost.evil.example:3000", "", null, undefined]) expect(localEntryAvailable(h)).toBe(false);
+  });
+
+  it("is withdrawn by LOCAL_ENTRY=off, a managed platform and verified mode", () => {
+    env("LOCAL_ENTRY", "off", () => expect(localEntryAvailable("localhost:3000")).toBe(false));
+    env("K_SERVICE", "gravitone", () => expect(localEntryAvailable("localhost:3000")).toBe(false));
+    env("PRINCIPAL_MODE", "verified", () => expect(localEntryAvailable("localhost:3000")).toBe(false));
+  });
+
+  it("is granted only for the choice AND an available request; the cookie is a Strict choice with no secret", () => {
+    expect(localEntryGranted("1", "localhost:3000")).toBe(true);
+    expect(localEntryGranted(undefined, "localhost:3000")).toBe(false);
+    expect(localEntryGranted("1", "10.0.0.5:3000")).toBe(false);
+    expect(localEntryCookie(true)).toBe(`${LOCAL_ENTRY_COOKIE}=1; Path=/; SameSite=Strict; Max-Age=2592000`);
+    expect(localEntryCookie(false)).toContain("Max-Age=0");
+    expect(localEntryChosen(`a=1; ${LOCAL_ENTRY_COOKIE}=1`)).toBe(true);
+    expect(localEntryChosen(`${LOCAL_ENTRY_COOKIE}=10`)).toBe(false);
   });
 });
 
