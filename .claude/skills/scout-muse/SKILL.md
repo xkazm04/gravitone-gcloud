@@ -102,8 +102,10 @@ Up to `ideaCap` ideas, one JSON array -> `npx tsx pipeline/scout.mts ideas <nigh
 - `card` (target `character` only) - `{name, age, look, personality}`: `look` holds what must not drift
   (face, hair, build, skin, one signature garment or accessory), `personality` the line a scene plays her by;
 - `anchor` - `{kind: watch|gap|free, ref}`; `use` - the aim it serves (`companion portrait`, `roleplay scene`);
-- `prompt` - in techniques.md's order: card -> wardrobe -> situation -> framing -> light -> medium/render ->
-  finish and imperfection -> `Avoid:` (short, concrete). States `aged NN`. Never a name of anyone real.
+- `prompt` - the four blocks in techniques.md's order: the LOOK (medium/render, light, lens, finish and
+  imperfection) -> the CARD (her invariants, verbatim) -> the ACTION (wardrobe state, situation, framing,
+  expression) -> `Avoid:` (short, concrete). A scene's look block holds no framing or backdrop of its own -
+  the situation owns them. States `aged NN`. Never a name of anyone real.
 
 A character a night invents is drawn ONCE as a 4:5 portrait with `target: character`; a kept character is
 drawn on later nights in other looks and situations with her card restated VERBATIM (`target: style` or
