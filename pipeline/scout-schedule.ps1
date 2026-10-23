@@ -11,7 +11,7 @@
 # The task runs as the logged-on user, only when that user is logged on (the seat's credentials
 # are the user's), and wakes nothing. The run is fenced: the seat may only search, read, write its
 # scratch, drive pipeline/scout.mts and commit knowledge/ (the skill's step 0); money is held by the
-# night's own ceiling in the CLI, and --max-budget-usd bounds the seat's turns. The operator installs
+# night's own ceiling in the CLI; the seat runs to the deadline, unbudgeted. The operator installs
 # this, never an agent: registering a scheduled task is a change to the machine, not to the repo.
 
 param(
@@ -74,7 +74,9 @@ function Invoke-Night {
   $log = Join-Path $logs ("{0}.log" -f (Get-Date -Format "yyyy-MM-dd-HHmm"))
   Set-Location $repo
   $night = if ($Dry) { "/scout night --dry --until $Until" } else { "/scout night --until $Until" }
-  $argv = @("-p", $night, "--output-format", "json", "--permission-mode", "dontAsk", "--max-budget-usd", "20", "--allowed-tools") + $allowed
+  # No --max-budget-usd: the seat is not the night's cost (operator, 2026-10-23: "do not limit Claude runs to
+  # the budget, only Gemini is the real cost"); the deadline bounds the run, the CLI's ceiling bounds vendor money.
+  $argv = @("-p", $night, "--output-format", "json", "--permission-mode", "dontAsk", "--allowed-tools") + $allowed
   # UTF-8, not the redirect operator's UTF-16: the log is read by tools and by people.
   & $claude @argv 2>&1 | Out-File -FilePath $log -Encoding utf8
   exit $LASTEXITCODE
@@ -99,7 +101,7 @@ else {
   Write-Output "task:      $TaskName"
   Write-Output "when:      daily at $At (missed runs start when the machine is next available)"
   Write-Output "runs:      powershell -NoProfile -ExecutionPolicy Bypass -File $self -Run -Until $Until   (in $repo)"
-  Write-Output "seat:      claude -p `"/scout night --until $Until`" --permission-mode dontAsk --max-budget-usd 20"
+  Write-Output "seat:      claude -p `"/scout night --until $Until`" --permission-mode dontAsk (no seat budget)"
   Write-Output "tools:     $($allowed -join ', ')"
   Write-Output "install:   powershell -NoProfile -ExecutionPolicy Bypass -File pipeline/scout-schedule.ps1 -Install -At $At"
 }
