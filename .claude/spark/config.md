@@ -83,6 +83,12 @@ See `.claude/perfect/config.md` `## Repo law` verbatim, plus:
   spell a server-only env var NAME, not even in a dev fixture or a label (`check:bundle`; a dynamic
   import behind an inline NODE_ENV test did NOT keep the chunk out). All three surfaced only at the
   Director's verify on 2026-10-05, after six builders reported green.
+- **Two more tree-wide probes a builder never opens (promoted 2026-10-23, bitten twice that day):** a new
+  exported method on an API route needs its row in `tests/golden-path/deployment-cells.probe.spec.ts` AND, when
+  `guard: "public"`, its stated reason in `tests/golden-path/access-only-401.probe.spec.ts`; and every test file
+  under `packages/*/test` needs a mutant in `tests/mutants-unit/registry.ts` (CRLF) - a changed line a mutant
+  `find`s must be re-pointed - verified with `node pipeline/unit-mutants.mts --only <id>` AFTER the commit
+  (it runs on HEAD in its own worktree, so an uncommitted edit reads `stale`).
 - **A new surface is built in the Watershed from `@gt/ui`** (`packages/ui/src/components/<dir>/`,
   `INVENTORY.md`; specimens at `/kit`), inside `app/(studio)/<route>/` with its `_port`. Dropdowns are
   `@gt/ui`'s `field/Field.tsx` `Select`, never a native `<select>`. (History: v1's Almanac
@@ -116,3 +122,4 @@ One AskUserQuestion call of up to 4 questions per wave.
 - 2026-10-22 (game-3d-assets WP1, worktree) · A node_modules JUNCTION to the main checkout makes @gt/* resolve to MAIN's packages/, so tsc/vitest in a worktree never see the worktree's package edits (typecheck:next failed on a lane the worktree added). The builder rebuilt node_modules as per-entry junctions with @gt/{catalog,domain,kernel,producers,ui} pointing at the worktree's packages. Do that at worktree creation. Also: when the main checkout is on another session's branch, land a fast-forward with `git fetch . <branch>:main` - no checkout touched.
 - 2026-10-23 (registry-feedback-loop, 3 builders, one in a sibling repo) · The brief hung an event on a function that does not exist (`planExtractCommit().promotions`); the builder stubbed it as a hook rather than invent it - liveness rule 6 should name the function for every EVENT, not just every field. Two builders hand-rolled a second reader of the sibling repo's location; name the existing reader (`lib/articles/registryRead` `manifestRegistryLocal`) in the brief. An agent shell's `npm run verify` lacks the winget ffmpeg: put the `.env.local` FFMPEG folder on PATH first (3 false reds otherwise).
 - 2026-10-23 (stats-reels, 2 builders in a worktree) · Before removing a worktree, count junctions whose target lies outside it in a SEPARATE step and read the count first; build the root with `Resolve-Path` (backslashes) - a `pwd -W` root (forward slashes) never prefixes a junction's target, so every junction reads as outward and the check is noise. Also: an active-runs `BUILDING` entry went stale within the hour (its spark had landed) - check `git log main` for a sibling's WP commits before designing beside it.
+- 2026-10-23 (scout-idea-artboards WP-I4) · Read a gate run's FULL failure list - a head -20 of the log hid access-only-401 behind deployment-cells and I reported the rest green. The operator's purpose doctrine (YouTube video only; notes as direction confirmations) arrived after a triage: for a generative loop, wave 1 should ask what the output is FOR.
