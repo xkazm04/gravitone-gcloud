@@ -19,8 +19,6 @@ export const isWing = (s: unknown): s is ScoutWing => typeof s === "string" && (
 
 /** The wing's folder under the out dir (`foundry-out/scout`, `foundry-out/scout-muse`). */
 export const WING_OUT_DIR: Readonly<Record<ScoutWing, string>> = { scout: "scout", muse: "scout-muse" };
-/** The env var that moves the wing's root (tests point it at a temp dir). */
-export const WING_STORE_ENV: Readonly<Record<ScoutWing, string>> = { scout: "SCOUT_STORE_DIR", muse: "SCOUT_MUSE_STORE_DIR" };
 /** The wing's folder under `knowledge/` (watchlist; muse also techniques.md and characters.md). */
 export const WING_KNOWLEDGE_DIR: Readonly<Record<ScoutWing, string>> = { scout: "scout", muse: "scout-muse" };
 

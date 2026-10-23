@@ -105,6 +105,8 @@ export const SCREENS = {
   // scout          the scout's decision graph (spark scout-decision-graph): every branch's bands, stage columns,
   //                effort and the split. Reads the produce port's side: the fixture universe on the fixture lane.
   scout: { url: "/scout" },
+  // scout-muse     the same graph on the muse wing (spark scout-muse): its own nights, the wing Seg on muse.
+  "scout-muse": { url: "/scout?wing=muse" },
   ledger: { url: "/ledger" },
   runs: { url: "/projects/runs" },
   "library-style": { url: "/library/style/painted-3d" },

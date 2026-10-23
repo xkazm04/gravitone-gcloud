@@ -13,7 +13,8 @@ import { comfyBase, comfyStats, missingModels, type ComfyFetch } from "../../ima
 import { SUNO_CDP_PORT, type SunoDriverHealth } from "../../suno/types";
 import { binsFrom, lastLines, realSpawn, type Bins, type Spawn } from "./ingest";
 import { REGISTRY_REMEDY, resolveRegistry, techniqueCount } from "./registry";
-import { WING_STORE_ENV, type ScoutWing } from "./wing";
+import { WING_STORE_ENV } from "./store";
+import type { ScoutWing } from "./wing";
 import { activeWing } from "./wingScope";
 
 // THE BOX PREFLIGHT for a /scout night - read-only, nothing spent, nothing

@@ -41,7 +41,7 @@ import {
   type NightSummary,
   type SourceId,
 } from "./types";
-import { WING_OUT_DIR, WING_STORE_ENV, type ScoutWing } from "./wing";
+import { WING_OUT_DIR, type ScoutWing } from "./wing";
 import { activeWing } from "./wingScope";
 
 const NIGHT_FILE = "night.json";
@@ -53,6 +53,10 @@ const SERVABLE = new Set([".png", ".jpg", ".jpeg", ".webp", ".json", ".mp4", ".w
 export function scoutRoot(): string {
   return rootOf(activeWing());
 }
+
+/** The env var that moves a wing's root (tests point it at a temp dir). Server-only: wing.ts is client-safe
+ *  and must not spell an env var's name (check:bundle). */
+export const WING_STORE_ENV: Readonly<Record<ScoutWing, string>> = { scout: "SCOUT_STORE_DIR", muse: "SCOUT_MUSE_STORE_DIR" };
 
 /** A wing's root: its env var (SCOUT_STORE_DIR, SCOUT_MUSE_STORE_DIR), else `<out>/scout`, `<out>/scout-muse`. */
 export function rootOf(wing: ScoutWing): string {
