@@ -17,14 +17,14 @@
 // the button reads busy.
 import type { ReactNode } from "react";
 
-import type { Receipt } from "@gt/domain/produce";
+import type { Receipt, ReceiptLine } from "@gt/domain/produce";
 
 import { FIELD_ATTR } from "../../keymap/target.ts";
 import { cx } from "../cx.ts";
 import { ErrorLine } from "../errorline/ErrorLine.tsx";
 import { Keycap } from "../keycaps/Keycaps.tsx";
 import { SourceTag } from "../source/SourceTag.tsx";
-import { costWords, fmtDur, totalPriced } from "./produce.ts";
+import { costWords, fmtDur, totalPriced, unpricedKind } from "./produce.ts";
 import { Unpriced } from "./Unpriced.tsx";
 import s from "./Composer.module.css";
 
@@ -68,7 +68,11 @@ export function Estimate({ receipt, noun, error }: EstimateProps) {
   }
   const t = receipt.totals;
   const units = receipt.lines.reduce((n, l) => n + l.units, 0);
-  const unpriced = receipt.lines.find((l) => l.usd === null);
+  // One chip per unpriced KIND, each with its first line's reason: a seat line and a credits line
+  // are two vendors billing two ways, and the first one found must not stand for both.
+  const byKind = new Map<string, ReceiptLine>();
+  for (const l of receipt.lines) if (l.usd === null && !byKind.has(unpricedKind(l.unpricedReason))) byKind.set(unpricedKind(l.unpricedReason), l);
+  const unpriced = [...byKind.values()];
   const priced = totalPriced(receipt);
   return (
     <div className={s.estimate} data-component="Estimate" aria-live="polite">
@@ -83,7 +87,9 @@ export function Estimate({ receipt, noun, error }: EstimateProps) {
           <b>{costWords(t)}</b>
         </span>
       )}
-      {unpriced !== undefined && <Unpriced reason={unpriced.unpricedReason} />}
+      {unpriced.map((l) => (
+        <Unpriced key={l.key} reason={l.unpricedReason} />
+      ))}
       <span>
         queue <b>#{receipt.queuePos}</b>
       </span>

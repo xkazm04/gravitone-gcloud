@@ -182,6 +182,13 @@ describe("markup", () => {
     expect(html).toContain("#2");
   });
 
+  test("an estimate over a seat line and a credits line draws both kinds, once each", () => {
+    const SEAT = opt("article/claude-seat/c4", "seat.text", "lib/articles", 2280, null, { unpricedReason: "billed to the text seat" });
+    const html = renderToStaticMarkup(h(Estimate, { receipt: receipt([line("score", SUNO, 1, 1, 0), line("article", SEAT, 1, 1, 0), line("score2", SUNO, 1, 1, 0)]), noun: "run" }));
+    expect(html.match(/unpriced · credits/g)?.length).toBe(1);
+    expect(html.match(/unpriced · seat/g)?.length).toBe(1);
+  });
+
   test("an unpriced estimate says unpriced and speaks its reason; it never prints a dollar", () => {
     const html = renderToStaticMarkup(h(Estimate, { receipt: receipt([line("score", SUNO, 1, 1, 0)]), noun: "prompt" }));
     expect(html).toContain("unpriced");
