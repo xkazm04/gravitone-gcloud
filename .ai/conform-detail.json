@@ -11134,6 +11134,192 @@
           "evidence": "lib/steps/withStore.ts:18 Key-value IndexedDB with no query language. The one key builder is the single authority."
         }
       ]
+    },
+    "8c6c65cc-6679-4c2c-8951-670d77b8ad7c/generative-provider-routing": {
+      "context": "imaging-gateway-and-spend",
+      "subject": "generative-provider-routing",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T05:10:57.531Z",
+      "worker": "3a1f0b57-7a0d-48be-9303-bc57b4eaa2ac",
+      "techniques": [
+        {
+          "technique": "capability-to-vendor-plan",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/router.ts:90 The chokepoint and the prefer/avoid asymmetry (orderFor, noAlternative) conform, but a new vendor entered AHEAD of the incumbent with no usable-output comparison, which breaks the 'enters behind the incumbent' rule."
+        },
+        {
+          "technique": "cost-per-usable-economics",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/router.ts:84 The Google-vs-Leonardo grid (7/30 vs 26/30, $0.110 vs $0.052 per usable) is recorded above the plan row, but the row's top entry is justified by a live check rather than cost per usable; the pricing table leaves agy unpriced, so it has no figure at all. The pre-call gate (reserve before walk) does conform."
+        },
+        {
+          "technique": "refusal-reroute-hop",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/errors.ts:112 Refusal is its own kind and reroutable; failed/bad-response/over-budget/invalid-request throw. The comment explains why each was left out."
+        },
+        {
+          "technique": "non-silent-elimination",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/router.ts:400 Four elimination kinds pushed to the trail as each decision is made. The trail lands on provenance, in the thrown error (the constraint outranks the vendor error at lines 476-488) and in logCall."
+        },
+        {
+          "technique": "vendor-fact-ledger",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/pricing.ts:10 Every row has a source and a checked date. Rates are bound to atSize. The vendor-reported/estimated/unpriced basis travels on Provenance, and the pre-call estimate takes the dearest rate."
+        },
+        {
+          "technique": "unspent-budget-is-a-defect",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/router.ts:177 Plan-top reachability is reported per window, and budget.ts declares a floor band with an underFloor report that is never enforced."
+        },
+        {
+          "technique": "resolution-as-stage-property",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/types.ts:33 GenerateRequest pins the aspect but carries no size or stage field. Pixel size is one table per aspect, and Google's image_size is one env knob, so filmstrip drafts (count>1) and winners render at the same size."
+        }
+      ]
+    },
+    "311e06b8-6aea-4a5b-867f-c93a256bc44d/generative-provider-routing": {
+      "context": "vendor-routing-and-calibration",
+      "subject": "generative-provider-routing",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T05:10:57.531Z",
+      "worker": "3a1f0b57-7a0d-48be-9303-bc57b4eaa2ac",
+      "techniques": [
+        {
+          "technique": "capability-to-vendor-plan",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/router/tables.ts:126 Per-environment plans live side by side, and tableProblems catches table bugs. But the plan's first entry is a vendor that never went through a usable-output comparison."
+        },
+        {
+          "technique": "cost-per-usable-economics",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/router/tables.ts:10 The cited grid compares only Google and Leonardo, so it cannot justify agy's lead. The gate side does conform: reserve.ts routes, then reserves at the dearest rate before any call."
+        },
+        {
+          "technique": "non-silent-elimination",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/router/route.ts:140 Every elimination, now including steered-out and steerDropped, carries a closed-vocabulary kind plus a sentence. A request-level constraint outranks other causes in the exhausted message."
+        },
+        {
+          "technique": "refusal-reroute-hop",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/router/route.ts:58 Only refusal and rate-limit walk. Other failures are refused as 'stopped'. Each provider is tried at most once, via facts.attempts."
+        }
+      ]
+    },
+    "94e6b933-0f6a-4631-b2f0-4c98b0799c28/generative-provider-routing": {
+      "context": "text-reasoning-engine",
+      "subject": "generative-provider-routing",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T05:10:57.531Z",
+      "worker": "3a1f0b57-7a0d-48be-9303-bc57b4eaa2ac",
+      "techniques": [
+        {
+          "technique": "capability-to-vendor-plan",
+          "verdict": "conformant",
+          "evidence": "lib/text/router.ts:93 One table per posture (local and cloud), with turn classes as the capability vocabulary. reason() is the only entry point, and the cloud row is deliberately short, with a reason given."
+        },
+        {
+          "technique": "non-silent-elimination",
+          "verdict": "conformant",
+          "evidence": "lib/text/router.ts:426 The descent trail is kept on provenance, in the final error and in logTurn. Rung and transport travel with every answer."
+        },
+        {
+          "technique": "refusal-reroute-hop",
+          "verdict": "conformant",
+          "evidence": "lib/text/providers/google.ts:325 A 200 that carries a safety block is raised as reroutable 'refused'. An empty answer becomes bad-response, which is a failure but does not re-route, so it is not a false success (see notes)."
+        },
+        {
+          "technique": "vendor-fact-ledger",
+          "verdict": "conformant",
+          "evidence": "lib/text/pricing.ts:3 Cloud rows are unpriced on purpose, with reasons and checked dates. The CLI's own total_cost_usd is booked as vendor-reported."
+        },
+        {
+          "technique": "cost-per-usable-economics",
+          "verdict": "deviation",
+          "evidence": "lib/text/spend.ts:5 'Gate before, not after' is not realized. This was the operator's ruling of 2026-10-07 ('count only, refuse nothing'), but the standard does not bend to it."
+        },
+        {
+          "technique": "resolution-as-stage-property",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/router.ts:1 Text turns have no output-resolution dimension."
+        }
+      ],
+      "registryProposal": "The subject's scope is image and video generation, yet its techniques (plan, trail, refusal hop) bind just as cleanly to an LLM reasoning chain. Either state that the subject covers any generative chain, or point text routing at model-routing explicitly."
+    },
+    "5e00d05c-885e-4eac-ad26-f937df9d612f/generative-provider-routing": {
+      "context": "spend-and-pricing",
+      "subject": "generative-provider-routing",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T05:10:57.531Z",
+      "worker": "3a1f0b57-7a0d-48be-9303-bc57b4eaa2ac",
+      "techniques": [
+        {
+          "technique": "unspent-budget-is-a-defect",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/spend/core.ts:44 A grep for floor/band/underFloor across packages/kernel/src/spend finds nothing. SpendStats (ledger.ts:341-351) exposes ceiling and remaining only."
+        },
+        {
+          "technique": "cost-per-usable-economics",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/spend/core.ts:8 Calls are reserved before the vendor and refused before dispatch. Unpriced is never booked as zero."
+        },
+        {
+          "technique": "vendor-fact-ledger",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/pricing/table.ts:11 The zod schema requires a source and a checked date. A validUntil date retires a rate. A vendor figure wins over the table, and a zero vendor figure counts as missing."
+        },
+        {
+          "technique": "resolution-as-stage-property",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/pricing/quote.ts:14 Only the pricing interaction was judged here: a size with no row quotes as unpriced. The stage ladder itself lives outside this context."
+        }
+      ]
+    },
+    "60361278-9fbe-43c5-add7-454ed78ef0f5/generative-provider-routing": {
+      "context": "imaging-vendor-providers-and-video",
+      "subject": "generative-provider-routing",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T05:10:57.531Z",
+      "worker": "3a1f0b57-7a0d-48be-9303-bc57b4eaa2ac",
+      "techniques": [
+        {
+          "technique": "resolution-as-stage-property",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/providers/google.ts:53 One global size, with no draft/proof/final rung per request and no promotion step."
+        },
+        {
+          "technique": "refusal-reroute-hop",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/providers/google.ts:327 An empty Google result is treated as refused. Leonardo's NSFW status maps to refused. Note: Leonardo's 'COMPLETE but no images' (leonardo.ts:244) maps to bad-response, not refused."
+        },
+        {
+          "technique": "non-silent-elimination",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/providers/leonardo.ts:117 Each adapter declares whether it reads references and which negative-prompt channel it uses, so the router enforces the constraint and no adapter silently drops a field."
+        },
+        {
+          "technique": "vendor-fact-ledger",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/video/pricing.ts:78 The credit-to-USD rate is declared twice (here and leonardo.ts:44), against the ledger's one-copy rule. Otherwise strong: the video table is unpriced with dated reasons, and costFromVendor treats an unknown unit or a zero as unpriced."
+        },
+        {
+          "technique": "cost-per-usable-economics",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/video/budget.ts:8 The video gate reserves before the adapter is touched and holds a high figure (UNPRICED_HOLD_USD_PER_S) for unpriced clips."
+        }
+      ]
     }
   }
 }

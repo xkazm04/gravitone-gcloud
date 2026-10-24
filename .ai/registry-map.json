@@ -5559,7 +5559,11 @@
           "revision": 11,
           "changedAt": "2026-09-17",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/imaging/router.ts:90 The dev generate plan puts agy, which is unpriced and was only checked to work live, ahead of Google, the measured cost-per-usable winner, so for unreferenced requests the plan order is a belief and not a measurement, even though the router mechanics (steer, trail, refusal walk, pre-call gate, plan-top reachability) all follow the standard.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
+          "evaluatedRevision": 11
         },
         {
           "subject": "module-design",
@@ -5781,7 +5785,11 @@
           "revision": 11,
           "changedAt": "2026-09-17",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/imaging/providers/google.ts:53 Output size is one process-wide env knob for every Google generate, so drafts and promoted winners bill at the same rung, which is the flat-rate resolution failure; refusal reading, adapter constraint declarations and unpriced video rows otherwise conform.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
+          "evaluatedRevision": 11
         },
         {
           "subject": "video-assembly",
@@ -11912,7 +11920,11 @@
           "revision": 11,
           "changedAt": "2026-09-17",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/spend/core.ts:44 The kernel's SpendClass and SpendStats carry only a ceiling and the remaining amount, with no floor or band, so the rebuilt spend authority looks only upward; v1's floorOf/underFloor (lib/spend, outside this context) was not carried into it.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
+          "evaluatedRevision": 11
         },
         {
           "subject": "module-design",
@@ -12804,7 +12816,11 @@
           "revision": 11,
           "changedAt": "2026-09-17",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/text/spend.ts:5 Text spend is count-only with no pre-call ceiling, so the metered Google fallback can spend without any gate, which the standard calls a report, not a control; the routing, trail, refusal and pricing rules otherwise conform.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
+          "evaluatedRevision": 11
         },
         {
           "subject": "agent-cli-transport",
@@ -14024,7 +14040,11 @@
           "revision": 11,
           "changedAt": "2026-09-17",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/router/tables.ts:126 The kernel table copied v1's plan faithfully, including agy at the top of dev generate with no usable-output measurement, while its comment cites the Google/Leonardo grid as the reason for the order; meanwhile route.ts realizes the steer, constraint and refusal-walk rules as a pure function.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
+          "evaluatedRevision": 11
         },
         {
           "subject": "prompt-assembly",
