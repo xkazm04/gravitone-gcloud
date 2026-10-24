@@ -12429,6 +12429,46 @@
           "evidence": "packages/domain/src/project.ts:48 A discarded draft keeps its row (archival as a state), but domain types hold no tab set or per-project view state."
         }
       ]
+    },
+    "0572228c-bd2e-42a3-a146-6a91d10fa08f/translation-quality-measurement": {
+      "context": "article-check-and-critique",
+      "subject": "translation-quality-measurement",
+      "bundle": "localization",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:40:40.621Z",
+      "worker": "98a1fd3a-150a-42ee-956b-1419b36bc263",
+      "techniques": []
+    },
+    "e660bf0f-199c-4cd9-91e1-1a13e318e55f/translation-quality-measurement": {
+      "context": "article-human-gate-and-landing",
+      "subject": "translation-quality-measurement",
+      "bundle": "localization",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:40:40.621Z",
+      "worker": "98a1fd3a-150a-42ee-956b-1419b36bc263",
+      "techniques": []
+    },
+    "f770abb6-6609-4c9f-959f-a31407dc501f/translation-quality-measurement": {
+      "context": "domain-run-job-steps",
+      "subject": "translation-quality-measurement",
+      "bundle": "localization",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:40:40.621Z",
+      "worker": "98a1fd3a-150a-42ee-956b-1419b36bc263",
+      "techniques": []
+    },
+    "ff0b289f-5f39-4747-acce-5d56797b9c43/translation-quality-measurement": {
+      "context": "landing-cosmos-paper-raster",
+      "subject": "translation-quality-measurement",
+      "bundle": "localization",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:40:40.621Z",
+      "worker": "98a1fd3a-150a-42ee-956b-1419b36bc263",
+      "techniques": []
     }
   }
 }

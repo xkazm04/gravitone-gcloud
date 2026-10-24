@@ -1048,7 +1048,11 @@
           "revision": 6,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/articles/checks.ts:1 The checks and critique measure an original English draft from the article pipeline, not a machine-translated store; a case-insensitive search of lib/articles for translat, i18n, termbase, glossary and targetLang found nothing, so there is no source/target pair, translation engine or derived store for this subject to govern.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:a50db88f6aef4acb",
+          "evaluatedRevision": 8
         },
         {
           "subject": "eval-harness",
@@ -1346,7 +1350,11 @@
           "revision": 6,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/articles/mediumPackage.ts:257 The landing package is hard-coded to one language (lang=\"en\") and no translated locale is ever built; a search of lib/articles for translat, i18n, termbase, glossary and targetLang found nothing, so the human gate reviews original English prose, never machine pretranslations.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:a50db88f6aef4acb",
+          "evaluatedRevision": 8
         },
         {
           "subject": "supply-chain",
@@ -4111,7 +4119,11 @@
           "revision": 6,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/domain/src/steps/registry.ts:23 The step registry lists every production step (still, research, script, frames, parts, finish), and none of them is a translation or localization step; a case-insensitive search of packages/domain/src for translat, i18n, termbase, glossary and targetLang found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:a50db88f6aef4acb",
+          "evaluatedRevision": 8
         }
       ],
       "governance": "governed"
@@ -7082,7 +7094,11 @@
           "revision": 6,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/raster.ts:1 This context paints paper textures off the main thread and contains no text-translation code; searches for i18n, termbase, glossary, targetLang and 'machine translation' found nothing (the only 'translate' hits are canvas and CSS transforms, so that term was left out of absence_terms).",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:a50db88f6aef4acb",
+          "evaluatedRevision": 8
         },
         {
           "subject": "test-harness",

@@ -1,0 +1,120 @@
+{
+ "schema": "conform-run/1",
+ "worker": "98a1fd3a-150a-42ee-956b-1419b36bc263",
+ "subject": "translation-quality-measurement",
+ "evaluatedAt": "2026-10-24T23:40:40.621895+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "article-check-and-critique",
+   "subject": "translation-quality-measurement",
+   "bundle": "localization",
+   "state": "not-applicable",
+   "evidence": "lib/articles/checks.ts:1 The checks and critique measure an original English draft from the article pipeline, not a machine-translated store; a case-insensitive search of lib/articles for translat, i18n, termbase, glossary and targetLang found nothing, so there is no source/target pair, translation engine or derived store for this subject to govern.",
+   "techniques": [],
+   "absenceTerms": [
+    "translat",
+    "i18n",
+    "termbase",
+    "glossary",
+    "targetLang"
+   ]
+  },
+  {
+   "context": "article-human-gate-and-landing",
+   "subject": "translation-quality-measurement",
+   "bundle": "localization",
+   "state": "not-applicable",
+   "evidence": "lib/articles/mediumPackage.ts:257 The landing package is hard-coded to one language (lang=\"en\") and no translated locale is ever built; a search of lib/articles for translat, i18n, termbase, glossary and targetLang found nothing, so the human gate reviews original English prose, never machine pretranslations.",
+   "techniques": [],
+   "absenceTerms": [
+    "translat",
+    "i18n",
+    "termbase",
+    "glossary",
+    "targetLang"
+   ]
+  },
+  {
+   "context": "domain-run-job-steps",
+   "subject": "translation-quality-measurement",
+   "bundle": "localization",
+   "state": "not-applicable",
+   "evidence": "packages/domain/src/steps/registry.ts:23 The step registry lists every production step (still, research, script, frames, parts, finish), and none of them is a translation or localization step; a case-insensitive search of packages/domain/src for translat, i18n, termbase, glossary and targetLang found nothing.",
+   "techniques": [],
+   "absenceTerms": [
+    "translat",
+    "i18n",
+    "termbase",
+    "glossary",
+    "targetLang"
+   ]
+  },
+  {
+   "context": "landing-cosmos-paper-raster",
+   "subject": "translation-quality-measurement",
+   "bundle": "localization",
+   "state": "not-applicable",
+   "evidence": "app/_landing/cosmos/engine/raster.ts:1 This context paints paper textures off the main thread and contains no text-translation code; searches for i18n, termbase, glossary, targetLang and 'machine translation' found nothing (the only 'translate' hits are canvas and CSS transforms, so that term was left out of absence_terms).",
+   "techniques": [],
+   "absenceTerms": [
+    "i18n",
+    "termbase",
+    "glossary",
+    "targetLang"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-24T23:40:40.621895+00:00",
+   "bundle": "localization",
+   "subjects": [
+    "translation-quality-measurement"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "article-check-and-critique",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T23:40:40.621895+00:00",
+   "bundle": "localization",
+   "subjects": [
+    "translation-quality-measurement"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "article-human-gate-and-landing",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T23:40:40.621895+00:00",
+   "bundle": "localization",
+   "subjects": [
+    "translation-quality-measurement"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "domain-run-job-steps",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T23:40:40.621895+00:00",
+   "bundle": "localization",
+   "subjects": [
+    "translation-quality-measurement"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "landing-cosmos-paper-raster",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
