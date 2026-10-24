@@ -1,9 +1,9 @@
 "use client";
 
-// THE CONTROLS, live (kit.js "Controls"). These take callbacks, so this is the sheet's one
-// client island: each specimen holds its own state and does what it shows - a toggle
-// toggles, a fold folds, a facet counts - because a control drawn in a state it cannot
-// leave is a picture of a control.
+// THE CONTROLS, live (kit.js "Controls"). These take callbacks, so this file is a client
+// island (as is every kit file whose specimens hold state): each specimen holds its own state
+// and does what it shows - a toggle toggles, a fold folds, a facet counts - because a control
+// drawn in a state it cannot leave is a picture of a control.
 //
 // Not drawn from kit.js: the forced `hover-demo` and `focus-demo` buttons. They painted a
 // state onto a button through a class the kit page owned; @gt/ui's Button takes no class

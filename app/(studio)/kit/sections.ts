@@ -1,7 +1,7 @@
 // The kit's sections, in reading order (kit.js `SECTIONS`): one list the nav and the body both
 // read, so a section cannot be in one and missing from the other. The prototype's Floor,
 // Composition and Routes groups showed page compositions (RunRow, Pile, CullTile, the job
-// bar, live Library and Ledger frames); those arrive with their phases and join the kit then.
+// bar, live Library and Ledger frames); each joined the kit with its phase, under Composition.
 
 export const SECTIONS = [
   { id: "colour", group: "Tokens", title: "Colour", sub: "tokens/source.json · ground · signal · roles" },

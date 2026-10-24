@@ -1,6 +1,6 @@
 /* The kit page's own layout (prototype kit.css). Specimens are drawn by @gt/ui's modules;
    this file only places them on the sheet. Where kit.css used a value no token holds, the
-   nearest rung is used and the delta is in the Lot 9 report; the three marked PAGE MEASURE
+   nearest rung is used and the delta is in the Lot 9 report; the two marked PAGE MEASURE
    are typographic lengths (em) waiting on the Director's local-constant ruling. */
 
 .kit{flex:1;min-height:0;display:grid;grid-template-columns:max-content minmax(0,1fr)}
