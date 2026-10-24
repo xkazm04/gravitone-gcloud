@@ -20,14 +20,14 @@
 //     every writer turn and reviewer reads the experiment, the trial prompt
 //     sections and the two trial check items; a void, unclosed, dropped, taken,
 //     missing or mismatched trial creates nothing
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync, rmSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 
 import { test, expect } from "@playwright/test";
 
 import { agentArgs, assertIsolatedWorkspace, classifyOutcome, parseEnvelope, runAgent } from "@/lib/agent/cliSeam";
-import { approveRun, createRun, defaultDeps, driveRun, getRunDetail, rejectRun, resumeRun } from "@/lib/articles/engine";
+import { approveRun, createRun, defaultDeps, driveRun, getRunDetail, rejectRun, resumeRun, walk } from "@/lib/articles/engine";
 import { ingestPatches } from "@/lib/articles/ingestDraft";
 import { EXPERIMENT_SOURCE_FILE, readExperimentSource } from "@/lib/articles/ingestSources";
 import { markdownToStoryHtml } from "@/lib/articles/mediumPackage";
@@ -234,6 +234,26 @@ test("agent failures: errored and seat-limit fail the step by name; resume re-ru
   // cost accumulates per step across attempts that reported one
   expect(done.steps.find((s) => s.name === "research")?.costUsd).toBe(0.25);
   expect(done.steps.find((s) => s.name === "check")?.costUsd).toBeUndefined();
+});
+
+test("walk: a step booked done while its status never moved is walked past, and a step that never finished is not", async () => {
+  const run = await createRun({ topic: { kind: "free", text: "walk guards" } }, deps());
+  const first = await walk(run.id, deps(), "research");
+  expect(first).toMatchObject({ ok: true, skipped: false, run: { status: "drafting" } });
+  const receipt = statSync(path.join(runDir(run.id), "agent", "research.json")).mtimeMs;
+  // A driver that died between booking the step and moving the status: research done, still researching.
+  const manifest = path.join(runDir(run.id), "run.json");
+  writeFileSync(manifest, JSON.stringify({ ...JSON.parse(readFileSync(manifest, "utf8")), status: "researching" }, null, 2));
+  const again = await walk(run.id, deps(), "research");
+  expect(again.ok).toBe(true);
+  expect(again.run.status, "the status moves on; the run is not left at researching").toBe("drafting");
+  expect(statSync(path.join(runDir(run.id), "agent", "research.json")).mtimeMs, "research is not run a second time").toBe(receipt);
+  // A run past a step's status whose record of that step is not done: refused by name, nothing driven.
+  const hole = JSON.parse(readFileSync(manifest, "utf8"));
+  writeFileSync(manifest, JSON.stringify({ ...hole, steps: hole.steps.filter((s: { name: string }) => s.name !== "research") }, null, 2));
+  const refused = await walk(run.id, deps(), "research");
+  expect(refused).toMatchObject({ ok: false, message: expect.stringMatching(/its research step never finished/) });
+  expect((await readRun(run.id)).steps.map((s) => s.name)).toEqual([]);
 });
 
 test("a proposal outside knowledge/ and recipes/ never becomes a patch", async () => {
