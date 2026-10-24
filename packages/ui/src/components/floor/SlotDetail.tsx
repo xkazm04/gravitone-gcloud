@@ -234,9 +234,11 @@ export function SlotDetail({ view, nowMs, busy, error, asked, onMove, onCancel, 
                   {problem !== null && <ErrorLine message={problem} />}
                 </form>
               )}
-              {error !== undefined && confirm === null && <ErrorLine message={error} live />}
             </section>
           )}
+          {/* Outside the verbs: a refusal on a slot that moved under the press (the caller re-reads
+              it on a conflict) is drawn beside the slot as it now is, even when no verb is left. */}
+          {error !== undefined && confirm === null && <ErrorLine message={error} live />}
         </div>
       </div>
       {confirm !== null && (

@@ -147,6 +147,16 @@ describe("the slot's record", () => {
     expect(html).not.toContain("Cancel slot");
   });
 
+  test("a refusal stays drawn when the slot it was refused on has no verb left (a tick took it mid-press)", () => {
+    const { error: _e, ...ok } = view().slot;
+    const refused = "a publishing slot cannot be cancelled";
+    for (const status of ["publishing", "published", "cancelled"] as const) {
+      const html = renderToStaticMarkup(h(SlotDetail, { view: view({ slot: { ...ok, status } }), nowMs: NOW, busy: null, error: refused, onMove: () => undefined, onCancel: () => undefined, onPublishNow: () => undefined }));
+      expect(html, status).not.toContain("Cancel slot");
+      expect(html, status).toContain(refused);
+    }
+  });
+
   test("the confirm names the object and the consequence, never just asks", () => {
     const html = renderToStaticMarkup(h(SlotConfirm, { verb: "Cancel slot", object: "Chokepoint explainer · youtube", consequences: ["final · it never publishes"], tone: "rose", busy: false, onConfirm: () => undefined, onCancel: () => undefined, specimen: true }));
     expect(html).toContain("Chokepoint explainer · youtube");
