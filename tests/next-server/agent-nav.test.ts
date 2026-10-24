@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { NAV_TOOLS, hereOf, sectionHref, studioPath } from "../../app/(studio)/_shell/agentNav.ts";
+import { NAV_TOOLS, arrived, hereOf, sectionHref, studioPath } from "../../app/(studio)/_shell/agentNav.ts";
 import { SECTIONS } from "../../app/(studio)/_shell/nav.ts";
 
 describe("the studio's in-page navigation tools (athena page bridge)", () => {
@@ -34,5 +34,12 @@ describe("the studio's in-page navigation tools (athena page bridge)", () => {
 
   it("answers the section an address is in", () => {
     expect(hereOf("/projects/runs?job=j", "Runs", null)).toEqual({ path: "/projects/runs?job=j", section: "runs", heading: null, title: "Runs" });
+  });
+
+  it("counts a page's own added query as arrived, never another path or a changed value", () => {
+    expect(arrived("/ledger", "/ledger?ev=34")).toBe(true);
+    expect(arrived("/projects/runs?job=j1", "/projects/runs?job=j1&zoom=day")).toBe(true);
+    expect(arrived("/projects/runs?job=j1", "/projects/runs?job=j2")).toBe(false);
+    expect(arrived("/library", "/ledger")).toBe(false);
   });
 });

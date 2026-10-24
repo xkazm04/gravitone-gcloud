@@ -12,7 +12,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-import { NAV_TOOLS, SECTION_LIST, hereOf, sectionHref, studioPath, type Here, type NavToolName } from "./agentNav.ts";
+import { NAV_TOOLS, SECTION_LIST, arrived, hereOf, sectionHref, studioPath, type Here, type NavToolName } from "./agentNav.ts";
 
 /** Below inject.js's 30 s per-call timeout, so a slow page answers `still loading` rather than `timeout`. */
 const ARRIVE_MS = 20_000;
@@ -28,7 +28,7 @@ async function arrive(target: string, signal: AbortSignal): Promise<Here | { rea
   const until = Date.now() + ARRIVE_MS;
   while (Date.now() < until && !signal.aborted) {
     // The new address AND a drawn page, not just the URL: the main region holds the new route's content.
-    if (currentPath() === target && (document.querySelector("main#content")?.childElementCount ?? 0) > 0) return here();
+    if (arrived(target, currentPath()) && (document.querySelector("main#content")?.childElementCount ?? 0) > 0) return here();
     await new Promise((r) => setTimeout(r, POLL_MS));
   }
   return { error: `${target} was not on screen after ${ARRIVE_MS / 1000} s (now ${currentPath()})` };

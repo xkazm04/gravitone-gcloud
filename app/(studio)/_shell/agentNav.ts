@@ -87,3 +87,16 @@ export function hereOf(path: string, title: string, heading: string | null): Her
 
 /** The sections `where_am_i` lists beside the answer. */
 export const SECTION_LIST: readonly { readonly id: Section["id"]; readonly label: string; readonly href: string }[] = SECTIONS.filter((s) => s.built).map((s) => ({ id: s.id, label: s.label, href: s.href }));
+
+/**
+ * Whether the screen has reached `target`: the same path, carrying every query parameter the target
+ * named. A page may add its own (the Ledger selects its newest event as `?ev=<seq>`), and that is
+ * still the address asked for; a parameter the target named with another value is not.
+ */
+export function arrived(target: string, current: string): boolean {
+  const t = new URL(target, "http://studio.invalid");
+  const c = new URL(current, "http://studio.invalid");
+  if (t.pathname !== c.pathname) return false;
+  for (const [k, v] of t.searchParams) if (c.searchParams.get(k) !== v) return false;
+  return true;
+}
