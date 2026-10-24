@@ -89,8 +89,12 @@ export async function workLoop(fx: Effects, producers: ReadonlyMap<ProducerKey, 
   const coolLanes = new Map<ResourceLane, number>();
   const coolProducers = new Map<ProducerKey, number>();
   const cool = (pick: Pick, report: Result<RunReport>): void => {
-    if (!report.ok) return;
-    const c = coolingOf(report.value.outcome, pick);
+    // A drive REFUSED at its claim (a live head under dry-only) moved nothing, as a busy one did
+    // not: the head stays first in line and was refused again at the loop's speed - measured 1655
+    // claims in 300 ms at idleMs 60. It cools its lane like busy.
+    const outcome = report.ok ? report.value.outcome : report.error.code === "refused" ? "busy" : undefined;
+    if (outcome === undefined) return;
+    const c = coolingOf(outcome, pick);
     const until = clock() + idleMs;
     if (c.lane !== undefined) coolLanes.set(c.lane, until);
     if (c.producer !== undefined) coolProducers.set(c.producer, until);

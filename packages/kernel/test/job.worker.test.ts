@@ -191,6 +191,32 @@ describe("workLoop", () => {
     w.store.close();
   }, 20_000);
 
+  // A drive that comes back as an ERROR changed nothing either: a dry-only worker refuses a live
+  // head at the claim, the head stays first in line, and the next look picked it again at once.
+  it("cools a lane whose head the claim refuses (a live job under dry-only) instead of re-driving it at the speed of the loop", async () => {
+    const w = world();
+    must(enqueue(w.store, { id: "l1", of: { kind: "run", id: "l1" }, producer: "gpu", lane: "gpu.local", mode: LIVE }, operator));
+    let claims = 0;
+    const fx: Effects = {
+      ...w.fx,
+      tx: (name, fn) => {
+        if (name === "claim") claims++;
+        return w.fx.tx(name, fn);
+      },
+    };
+    const gpu = gated("gpu.local");
+    const stop = new AbortController();
+    const loop = workLoop(fx, new Map([[producerKey("gpu", "gpu.local"), gpu.p]]), { signal: stop.signal, holder: hostA, alive: () => true, idleMs: 60, run: { dryOnly: true } });
+    await new Promise((r) => setTimeout(r, 300));
+    stop.abort();
+    const summary = must(await loop);
+    expect(claims).toBeGreaterThan(0);
+    expect(claims).toBeLessThanOrEqual(8);
+    expect(summary.reports.every((r) => !r.report.ok && r.report.error.detail === "dry-only")).toBe(true);
+    expect(must(get(w.store, jobId("l1"))).job.state).toBe("queued");
+    w.store.close();
+  }, 20_000);
+
   it("recovers first, and on stop parks a drive at its next step boundary: the step booked, the job back in the queue", async () => {
     const w = world();
     must(enqueue(w.store, { id: "dead", of: { kind: "run", id: "dead" }, producer: "gpu", lane: "gpu.local" }, operator));
