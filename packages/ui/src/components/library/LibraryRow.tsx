@@ -50,8 +50,10 @@ export function LibraryRow({ card, selected, domId, onSelect, onOpen }: LibraryR
         <span className={s.ell}>{kindShort(card.kind)}</span>
       </span>
       <span className={s.facets} aria-hidden="true">
-        {card.chips.slice(0, 3).map((c) => (
-          <Chip key={c} label={c} casing="lower" />
+        {/* Keyed by place: a chip is the first value of its group, in CHIP_GROUPS order, and two
+            groups may share a label (a plate's family and render_mode both `collage`). */}
+        {card.chips.slice(0, 3).map((c, i) => (
+          <Chip key={`${i}:${c}`} label={c} casing="lower" />
         ))}
       </span>
       <span aria-hidden="true">

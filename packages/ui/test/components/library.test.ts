@@ -2,7 +2,7 @@
 // fold, the blocks a window asks for, what each key does to the selection, the Esc cascade - and
 // what the parts expose, rendered with react-dom/server (Vitest runs without a DOM; the route is
 // driven live in tests/live/library.live.spec.ts).
-import { createElement as h } from "react";
+import { createElement as h, isValidElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
@@ -123,6 +123,22 @@ describe("what the parts expose", () => {
       expect(out).not.toMatch(/tabindex/i);
       expect(out).toContain("media unreadable");
     }
+  });
+
+  test("a row's facet chips keep distinct keys when two groups share a label (plate: family collage, render_mode collage)", () => {
+    // The fixture corpus has 382 of 5,000 rows like this; keyed by label, React drops or duplicates a chip on update.
+    const keysUnder = (node: unknown, out: string[][] = []): string[][] => {
+      if (Array.isArray(node)) {
+        out.push(node.flatMap((n) => (isValidElement(n) && n.key !== null ? [n.key] : [])));
+        for (const n of node) keysUnder(n, out);
+      } else if (isValidElement<{ children?: unknown }>(node)) keysUnder(node.props.children, out);
+      return out;
+    };
+    const plate: LibraryCard = { ...c, id: "plate-0004", kind: "plate", chips: ["collage", "collage", "forge"] };
+    const lists = keysUnder(LibraryRow({ card: plate, selected: false, domId: "z", onSelect: noop, onOpen: noop }));
+    const chipKeys = lists.find((l) => l.length === 3);
+    expect(chipKeys).toBeDefined();
+    expect(new Set(chipKeys).size).toBe(3);
   });
 
   test("a detail facet chip says when it is in the filter; a lineage node of the item is current", () => {
