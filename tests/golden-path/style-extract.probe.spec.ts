@@ -14,6 +14,7 @@ import { test, expect } from "@playwright/test";
 
 import { doneUnits, totalUnits, BREAKER_LIMIT, hasFailures, newManifest, next, pruneFailures, runToEnd, settleReason, step, type EngineIO } from "@/lib/foundry/extract/engine";
 import { bestRound, scoreOf } from "@/lib/foundry/extract/helpers";
+import { usableFix as producerUsableFix } from "@gt/producers/extract/units";
 import { PALETTE_AS_ROLES, singletonInstruction, synthesisPrompt } from "@/lib/foundry/extract/prompts";
 import { CRITIQUE_SCHEMA, deriveFamily, nearDuplicates, partition, styleScore, usableFix, validateSynthesis } from "@/lib/foundry/extract/vocabulary";
 import type { ExtractManifest, ExtractSource, Observables, Readback, ReplicaRound } from "@/lib/foundry/extract/types";
@@ -104,6 +105,13 @@ test("styleScore: render_mode and medium count double; a null readback is unmeas
   expect(styleScore(painterly, null).score).toBeNull();
   expect(usableFix({ ...rb(painterly), critique: "", recipe_fix: "short" }, "the recipe")).toBeNull();
   expect(usableFix({ ...rb(painterly), critique: "", recipe_fix: "The Recipe" }, "the recipe")).toBeNull(); // same words again
+});
+
+test("usableFix: the step machine and the job's plan read ONE rule, not two copies", () => {
+  // performReplica takes the critic's fix by vocabulary.usableFix; the job's plan
+  // settles the loop by the producers' usableFix. Two copies could disagree on
+  // whether a round "had a usable fix" - the loop would end where v1 retries.
+  expect(usableFix).toBe(producerUsableFix);
 });
 
 test("styleScore: a word OUTSIDE the vocabulary is unmeasured too — not a miss", () => {
