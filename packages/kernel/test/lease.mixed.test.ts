@@ -122,27 +122,31 @@ describe.skipIf(python === undefined)("a Python waiter while Node holds", () => 
     const held = must(await acquire(fx, "gpu.local", { waitMs: 1_000, ttlS: 30 }));
     try {
       const code = [
-        "import sqlite3, sys",
+        "import sqlite3, sys, time, types",
         `sys.path.insert(0, ${JSON.stringify(path.join(here, "..", "py"))})`,
         "import lease",
-        "real, polls = lease.claim_in, []",
+        // The first poll is real and queues; the second finds the store busy with the deadline
+        // passed (the module's clock is moved, not the machine's, so load cannot reorder the two).
+        "real, polls, late = lease.claim_in, [], [0.0]",
+        "lease.time = types.SimpleNamespace(monotonic=lambda: time.monotonic() + late[0], sleep=time.sleep)",
         "def busy_after_first(*a):",
         "    polls.append(1)",
         "    if len(polls) == 1:",
         "        return real(*a)",
+        "    late[0] = 3600.0",
         "    raise sqlite3.OperationalError('database is locked')",
         "lease.claim_in = busy_after_first",
         `l = lease.Leases(${JSON.stringify(db)})`,
         "try:",
-        "    l.acquire('gpu.local', wait_s=0.3, ttl_s=30, poll_s=0.02)",
+        "    l.acquire('gpu.local', wait_s=60, ttl_s=30, poll_s=0.02)",
         "    print('GRANTED')",
         "except sqlite3.OperationalError as e:",
-        "    print('RAISED %s' % e)",
+        "    print('RAISED %s after %d polls' % (e, len(polls)))",
         "finally:",
         "    l.close()",
       ].join("\n");
       const r = await run(python ?? "python", ["-I", "-c", code]);
-      expect({ out: r.out.trim(), stderr: r.errText }).toEqual({ out: "RAISED database is locked", stderr: "" });
+      expect({ out: r.out.trim(), stderr: r.errText }).toEqual({ out: "RAISED database is locked after 2 polls", stderr: "" });
       const left = must(s.read((q) => q.get("SELECT count(*) AS n FROM lease_waiters WHERE resource = 'gpu.local'")?.["n"]));
       expect(left, "the Python ticket is still queued").toBe(0);
     } finally {
