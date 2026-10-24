@@ -8688,7 +8688,11 @@
           "revision": 4,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/sound/mv/types.ts:3 The pipeline takes finished tracks and makes visuals and metadata from them; a search of lib/sound/mv/ for sfx, 'sound effect', riser, whoosh and generateSfx found no hit, so it never generates or briefs a sound effect.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:4138f0757b58efac",
+          "evaluatedRevision": 5
         },
         {
           "subject": "voice-io",
@@ -11738,7 +11742,11 @@
           "revision": 4,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/sound/sfxJob.ts:127 Every effect the engine makes is a one-call composite, and the only way to get another is to reroll the same whole brief N times; no step generates layer elements, stacks them or keeps an assembly note, so a take that fails on one quality axis cannot keep the axes that worked.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:4138f0757b58efac",
+          "evaluatedRevision": 5
         },
         {
           "subject": "video-assembly",
@@ -11941,7 +11949,11 @@
           "revision": 4,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/sound/huntEngine.ts:43 The canned hunt map tags a single composite prompt ('with a soft low thump') as layered-element-assembly, and no part of the hunt or measure flow assembles separately rendered element leaves into a stack. Lessons learned along the technique axis therefore credit the composite form with the technique's name.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:4138f0757b58efac",
+          "evaluatedRevision": 5
         },
         {
           "subject": "eval-harness",
@@ -12658,7 +12670,11 @@
           "revision": 4,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/sound/suno/queue.ts:124 An sfx hunt leaf sent to Suno always has at least two tags (its category plus 'sound effect', line 120), so the envelope-first prompt is thrown away and replaced by a music-style comma tag line like 'ui, sound effect'. Duration is not carried either, so the effect is briefed like music, the failure the golden path opens with.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:4138f0757b58efac",
+          "evaluatedRevision": 5
         },
         {
           "subject": "agent-memory",
@@ -13104,7 +13120,11 @@
           "revision": 4,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/script/trailer/types.ts:369 The trailer model's only audio is the music cue (a TrailerCut is cue + movements + beats); a search of lib/script/trailer/ for sfx, 'sound effect', riser, whoosh and generateSfx found no hit, so this context neither generates effects nor plans an effects pass.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:4138f0757b58efac",
+          "evaluatedRevision": 5
         },
         {
           "subject": "voice-io",

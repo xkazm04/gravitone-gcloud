@@ -12203,6 +12203,94 @@
       "evaluatedTs": "2026-10-24T22:54:15.633Z",
       "worker": "7808b69e-995c-48e2-ae1d-255366334d7c",
       "techniques": []
+    },
+    "f6a26c60-230a-4e2d-811f-4ecef7a2cad1/sound-effect-generation": {
+      "context": "sound-generation-engine",
+      "subject": "sound-effect-generation",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:06:30.274Z",
+      "worker": "f401ddc7-3112-4ca7-bc38-09e7e4036e2d",
+      "techniques": [
+        {
+          "technique": "envelope-first-briefing",
+          "verdict": "conformant",
+          "evidence": "lib/sound/generate.ts:153 Duration must be stated and is checked against the 0.5-30 s effect window before anything is sent. The adherence dial (promptInfluence, generate.ts:166-175) is exposed and refused on music. The envelope fields themselves (event/material/space) are composed in @gt/ui batch.ts, outside this context."
+        },
+        {
+          "technique": "loop-seam-acceptance",
+          "verdict": "conformant",
+          "evidence": "lib/sound/generate.ts:315 Loop intent is sent to the vendor's loop flag at generation. Acceptance has a loop_seam rubric dimension (types.ts:42) and a loop-seam defect code (types.ts:54). No code enforces the listen-twice-through check; it is a score a person gives."
+        },
+        {
+          "technique": "layered-element-assembly",
+          "verdict": "deviation",
+          "evidence": "lib/sound/sfxJob.ts:127 The technique exists only as a tag slug (types.ts:84). No element role, stack, attack-aligned trim or assembly exists anywhere in lib/sound."
+        }
+      ]
+    },
+    "3f11be96-c51f-4098-8472-341c42362e6d/sound-effect-generation": {
+      "context": "sound-hunt-and-measure",
+      "subject": "sound-effect-generation",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:06:30.274Z",
+      "worker": "f401ddc7-3112-4ca7-bc38-09e7e4036e2d",
+      "techniques": [
+        {
+          "technique": "envelope-first-briefing",
+          "verdict": "conformant",
+          "evidence": "lib/sound/hunt.ts:122 The sfx section of pipeline/SOUND-HUNT-PROMPT.md is appended to the drafting prompt. That section requires labelled event/attack/body/tail/space/duration/loop fields. askOf (hunt.ts:212-217) drops any tempo or key on an effect. Hunt renders leave promptInfluence null (vendor default), which suits exploration."
+        },
+        {
+          "technique": "loop-seam-acceptance",
+          "verdict": "conformant",
+          "evidence": "lib/sound/huntRender.ts:102 The leaf's drafted loop flag is carried into the generate request, so loop intent is declared at generation. No seam measurement exists in measure.ts or measureRun.ts."
+        },
+        {
+          "technique": "layered-element-assembly",
+          "verdict": "deviation",
+          "evidence": "lib/sound/huntEngine.ts:43 This line is the stub engine (SOUND_HUNT_ENGINE=stub). The real drafting prompt does ask for separate low/transient/air leaves, but nothing assembles them."
+        }
+      ]
+    },
+    "ab872012-f902-4f43-b9c7-f13137e36f24/sound-effect-generation": {
+      "context": "suno-driver-queue",
+      "subject": "sound-effect-generation",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:06:30.274Z",
+      "worker": "f401ddc7-3112-4ca7-bc38-09e7e4036e2d",
+      "techniques": [
+        {
+          "technique": "envelope-first-briefing",
+          "verdict": "deviation",
+          "evidence": "lib/sound/suno/queue.ts:124 Tags replace the labelled attack/body/tail/space prompt. fieldsOfLeaf (lines 133-137) carries no duration."
+        }
+      ]
+    },
+    "30a879d3-b06e-4530-a9fa-051ee66769dd/sound-effect-generation": {
+      "context": "music-video-pipeline",
+      "subject": "sound-effect-generation",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:06:30.274Z",
+      "worker": "f401ddc7-3112-4ca7-bc38-09e7e4036e2d",
+      "techniques": []
+    },
+    "d12a6aa7-39d7-464c-b47d-c4a1670d3bbd/sound-effect-generation": {
+      "context": "trailer-structure-engine",
+      "subject": "sound-effect-generation",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:06:30.274Z",
+      "worker": "f401ddc7-3112-4ca7-bc38-09e7e4036e2d",
+      "techniques": []
     }
   }
 }
