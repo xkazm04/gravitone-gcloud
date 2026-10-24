@@ -10192,7 +10192,11 @@
           "revision": 26,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/golden-path/dal-real-engine.probe.spec.ts:258 The probes that hold lib/steps' guarantees (latest-wins, failed-read honesty, storage-trouble clearing) have no seeded mutant: no tests/mutants/registry.ts entry names dal-real-engine, storage-remedy or step-records. They are among the 159 unguarded probes, and only the coupling case records that it was ever seen to fail, so the others remain unvalidated instruments.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:c96e1ee699a88119",
+          "evaluatedRevision": 27
         },
         {
           "subject": "data-access",

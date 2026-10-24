@@ -10307,6 +10307,47 @@
           "evidence": "lib/articles/checkLoop.ts:60 The run advances with remaining failures written into per-pass records, which reach the human gate."
         }
       ]
+    },
+    "e2f6231a-d39f-4d39-9465-0a48436cae92/test-harness": {
+      "context": "project-step-store",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T02:06:29.486Z",
+      "worker": "ad6effbb-9115-45b0-bbe3-0e053c442889",
+      "techniques": [
+        {
+          "technique": "negative-control-tests",
+          "verdict": "deviation",
+          "evidence": "tests/golden-path/dal-real-engine.probe.spec.ts:258 No mutant and no comment naming a proving mutation. Only the coupling case records a measured vacuous first version (line 228)."
+        },
+        {
+          "technique": "pin-the-call-not-the-name",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/storage-remedy.probe.spec.ts:62 The source pin reads withStore with its comments stripped (line 58), keeps only the success path, and matches the call with its arguments rather than the bare name."
+        },
+        {
+          "technique": "fixture-economics",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/dal-real-engine.probe.spec.ts:61 The per-test wipe takes its store list from the engine, not from a hand-kept list. A hand-kept list once missed `uploads`."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/dal-real-engine.probe.spec.ts:70 The serial node lane resets the module-level save slots before each test, along with the full store wipe."
+        },
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/dal-real-engine.probe.spec.ts:274 The ordering claim is checked through the mechanism's own superseded flag and the landed value, with no timing bound."
+        },
+        {
+          "technique": "recorded-interaction-fixtures",
+          "verdict": "not-applicable",
+          "evidence": "tests/golden-path/dal-real-engine.probe.spec.ts:15 The dependency is a locally hostable real engine, not a remote service, which is the technique's own 'when not to use'."
+        }
+      ]
     }
   }
 }
