@@ -126,7 +126,10 @@ export function FrameCanvas(p: FrameCanvasProps) {
               onPointerUp={up(l)}
             >
               <span className={s.elLabel}>{l.label || l.role}</span>
-              {on && editable && p.onResize !== undefined && <span className={s.handle} aria-hidden="true" onPointerDown={down(l, "size")} onPointerMove={move} onPointerUp={up(l)} />}
+              {/* The handle takes the press (and stops it, so the element does not start a move);
+                  its moves and its lift bubble to the element's own handlers. Wiring them here as
+                  well ran `up` twice off one render's state and sent every resize twice. */}
+              {on && editable && p.onResize !== undefined && <span className={s.handle} aria-hidden="true" onPointerDown={down(l, "size")} />}
             </div>
           ) : (
             <div

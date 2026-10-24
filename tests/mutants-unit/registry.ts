@@ -2465,6 +2465,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "X would be claimed on a research face with no card selected, and the legend would offer an act there is nothing to apply to.",
   },
   {
+    id: "frame-canvas-resize-sends-twice",
+    test: "packages/ui/test/components/frame-canvas.test.ts",
+    file: "packages/ui/src/components/part/FrameCanvas.tsx",
+    find: 'onPointerDown={down(l, "size")} />}',
+    replace: 'onPointerDown={down(l, "size")} onPointerMove={move} onPointerUp={up(l)} />}',
+    why: "The handle's lift would run `up` and then bubble into the element's `up` off the same render's drag, so every resize would leave two resize-layer edits for one gesture.",
+  },
+  {
     id: "produce-strips-run-renamed-at-confirm",
     test: "tests/next-server/produce-real.test.ts",
     file: "lib/produce/laneDoors.ts",
