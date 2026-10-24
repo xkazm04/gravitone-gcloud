@@ -123,12 +123,12 @@ describe.skipIf(python === undefined)("events verified by Python", () => {
       const db = path.join(odd, "s.sqlite");
       copyFileSync(s.location, db);
       expect(runVerifier(db)).toEqual({ status: 0, report: node });
-      // kernel_store.missing_tables and styles' table probe open the same read-only URI form.
+      // kernel_store.missing_tables (the job protocol's tables, and styles.py's) opens the same read-only URI form.
       const code = [
         "import json, sys",
         `sys.path.append(${JSON.stringify(path.join(here, "..", "py"))})`,
         "import kernel_store, styles",
-        `print(json.dumps([kernel_store.missing_tables(${JSON.stringify(db)}), kernel_store.missing_tables(${JSON.stringify(s.location)}), styles._missing(${JSON.stringify(db)})]))`,
+        `print(json.dumps([kernel_store.missing_tables(${JSON.stringify(db)}), kernel_store.missing_tables(${JSON.stringify(s.location)}), kernel_store.missing_tables(${JSON.stringify(db)}, styles.STYLE_TABLES)]))`,
       ].join("\n");
       const r = spawnSync(python ?? "python", ["-I", "-c", code], { encoding: "utf8" });
       expect(r.stderr).toBe("");

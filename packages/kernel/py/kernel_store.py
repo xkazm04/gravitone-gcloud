@@ -83,33 +83,33 @@ def store_location(out_dir=None, override=None, cwd=None):
     return v if v == ":memory:" else os.path.abspath(os.path.join(cwd or os.getcwd(), v))
 
 
-def missing_tables(path):
-    """The REQUIRED tables `path` lacks (all of them when the file does not exist)."""
+def missing_tables(path, required=REQUIRED):
+    """The `required` tables `path` lacks (all of them when the file does not exist)."""
     if not os.path.exists(path):
-        return list(REQUIRED)
+        return list(required)
     db = sqlite3.connect(ro_uri(path), uri=True)
     try:
         have = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
     finally:
         db.close()
-    return [t for t in REQUIRED if t not in have]
+    return [t for t in required if t not in have]
 
 
-def ensure_store(path, node=None, timeout_s=120):
-    """Return `path` once it holds every table the Python protocol needs, running the Node
-    worker's `--migrate` against it first when it does not."""
+def ensure_store(path, node=None, timeout_s=120, required=REQUIRED):
+    """Return `path` once it holds every `required` table (by default every one the job and lease
+    protocol needs; styles.py adds its own), running the Node worker's `--migrate` first when not."""
     if path == ":memory:":
         raise StoreError("a Python process cannot share an in-memory store with Node; name a file")
-    if not missing_tables(path):
+    if not missing_tables(path, required):
         return path
     node = node or shutil.which("node")
     if node is None:
         raise StoreError("store %s is not migrated (missing %s) and node is not on PATH to migrate it; "
-                         "start the app or `npm run worker -- --migrate` once" % (path, ", ".join(missing_tables(path))))
+                         "start the app or `npm run worker -- --migrate` once" % (path, ", ".join(missing_tables(path, required))))
     env = dict(os.environ, **{STORE_PATH_VAR: path})
     r = subprocess.run([node, str(RUNNER), "--migrate", "--json"], cwd=str(REPO), env=env,
                        capture_output=True, text=True, timeout=timeout_s)
-    left = missing_tables(path)
+    left = missing_tables(path, required)
     if r.returncode != 0 or left:
         raise StoreError("migrating %s through %s failed (exit %s): %s" % (
             path, RUNNER.name, r.returncode, (r.stderr or r.stdout).strip()[-400:] or "missing " + ", ".join(left)))
