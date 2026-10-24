@@ -15,6 +15,7 @@
 //   · a cell of the strengths table may draft a lesson too (L66), held to the same evidence
 //     floor the table draws (n < 3 is "waiting for evidence", not a finding to sign).
 import { buildTree, type HuntNodeView } from "./hunt.ts";
+import { MIN_N } from "./strengths.ts";
 
 export type LessonKind = "music" | "sfx";
 export type LessonSource = "triage" | "hunt";
@@ -38,8 +39,9 @@ export type LessonProposal = {
 };
 
 export const CLAIM_MAX = 600;
-/** Below this many judged takes a strengths cell is "waiting for evidence" (v1 triage cellView). */
-export const EVIDENCE_FLOOR = 3;
+/** Below this many judged takes a strengths cell is "waiting for evidence" (v1 triage cellView):
+ *  the table's own floor, read from it, so the cell that draws pips is the cell refused here. */
+export const EVIDENCE_FLOOR = MIN_N;
 
 /* ── what a hunt measured ───────────────────────────────────────────────── */
 
