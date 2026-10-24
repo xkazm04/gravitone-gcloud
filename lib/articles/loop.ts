@@ -50,6 +50,7 @@ import type { RunAgentInput, AgentResult } from "@/lib/agent/cliSeam";
 import { createRun, defaultDeps, type EngineDeps } from "./engine";
 import { listTopicSubjects, resolveRegistryDir, resolveTopicSubject } from "./registryRead";
 import { ArticleError, listRuns, storeRoot, writeJsonAtomic } from "./store";
+import { refusedTurn } from "./turns";
 import { uniqueDir } from "./tempDir";
 import type { ArticleRun, ArticleStatus, TopicSubject } from "./types";
 
@@ -254,8 +255,6 @@ interface RunBox {
   tripped?: string;
 }
 
-const refusal = (reason: string): AgentResult => ({ outcome: "errored", final: "", turns: 0, durationMs: 0, exitCode: null, errors: [reason] });
-
 /** The deps for one run: the base deps with every agent turn behind the guard. */
 export function guardedDeps(base: EngineDeps, ledger: Ledger, box: RunBox, ceilings: Ceilings): EngineDeps {
   const why = (): string | undefined => {
@@ -274,7 +273,7 @@ export function guardedDeps(base: EngineDeps, ledger: Ledger, box: RunBox, ceili
       const stop = why();
       if (stop) {
         box.tripped ??= stop;
-        return refusal(stop);
+        return refusedTurn({ kind: "writer", input }, stop);
       }
       box.turns++;
       const cap = Math.min(input.maxBudgetUsd ?? Infinity, ceilings.turnUsd, ceilings.runUsd - box.cost);
@@ -286,7 +285,7 @@ export function guardedDeps(base: EngineDeps, ledger: Ledger, box: RunBox, ceili
       const stop = why();
       if (stop) {
         box.tripped ??= stop;
-        return { ...refusal(stop), outcome: "unavailable" };
+        return refusedTurn({ kind: "reviewer", call }, stop);
       }
       box.turns++;
       const r = await base.runReviewer(call);
