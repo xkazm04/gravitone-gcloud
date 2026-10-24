@@ -24,7 +24,8 @@ export type LaneState = "open" | "focused" | "folded";
 export type LaneProps = {
   readonly lane: FloorLane;
   readonly state: LaneState;
-  /** Focus this lane, or show all lanes again when it is the focused one (⇧1-4 runs the same). */
+  /** Focus this lane, or show all lanes again when it is the focused one (⇧1-4 runs the same):
+   *  a toggle, named for its lane in both states. */
   readonly onFocus: () => void;
   readonly foundry: ReactNode;
   readonly weir: ReactNode;
@@ -41,7 +42,9 @@ export function Lane({ lane, state, onFocus, foundry, weir, shelf, shelfEmpty = 
         {cap !== undefined && <kbd className={cx(keycap.cap, s.key)}>{cap}</kbd>}
         <FloorGlyph name={lane.id} className={s.mark} />
         <span className={s.name}>{lane.name}</span>
-        <button type="button" className={s.focus} onClick={onFocus} aria-pressed={state === "focused"} aria-label={state === "focused" ? "show all lanes" : `focus ${lane.name} lane`}>
+        {/* One name in both states: aria-pressed says whether it is on, so a reader and a voice
+            command meet the same control (a name that rewrote itself read as a second one). */}
+        <button type="button" className={s.focus} onClick={onFocus} aria-pressed={state === "focused"} aria-label={`focus ${lane.name} lane`}>
           <FloorGlyph name={state === "focused" ? "collapse" : "expand"} className={s.focusMark} />
         </button>
       </div>

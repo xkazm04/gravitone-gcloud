@@ -163,9 +163,13 @@ describe("components", () => {
     expect(html).toContain('aria-label="Audio lane"');
     expect(html).toContain(">3</kbd>");
     expect(html).toContain('aria-label="focus Audio lane"');
+    expect(html).toContain('aria-pressed="false"');
+    // A toggle keeps its name and lets aria-pressed carry the state (registry accessibility,
+    // name-and-description-wiring): a name that rewrites itself reads as a second control.
     const focused = renderToStaticMarkup(h(Lane, { lane, state: "focused", onFocus: () => undefined, foundry: null, weir: null, shelf: null }));
-    expect(focused).toContain('aria-label="show all lanes"');
+    expect(focused).toContain('aria-label="focus Audio lane"');
     expect(focused).toContain('aria-pressed="true"');
+    expect(focused).not.toContain("show all lanes");
   });
 
   test("a pile links its packet, says its size and desk, and the NEXT one says so", () => {
