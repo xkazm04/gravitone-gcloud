@@ -302,6 +302,7 @@ export function Arrange({ view, acts }: { readonly view: ArrangeView; readonly a
     <section className={s.arrange} aria-label="arrange">
       {refusal !== null && <ErrorLine message={refusal} live />}
       {view.measures !== null && <ErrorLine message={`measures: ${view.measures}`} />}
+      {view.rows !== null && <ErrorLine message={`rows: ${view.rows}`} />}
       {stacks.length === 0 ? (
         <Empty label="no kept takes of this kind" action={{ label: "Triage", href: "/floor?lane=audio" }} />
       ) : (
