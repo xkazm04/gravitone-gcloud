@@ -40,7 +40,10 @@ import { adapterFor } from "./registry.ts";
 export const APPLY_CLAIM = "decision-apply";
 /** How often a reader may start a sweep. Shorter than the first backoff (30 s): a failed row is retried by the next render after it is due. */
 export const APPLY_INTERVAL_MS = 15_000;
-/** How long a sweep may hold the claim before it counts as dead: a full drain at the lease each. */
+/** How long a sweep may hold the claim before it counts as dead: two leases, NOT a full drain at
+ *  the lease each (RENDER_MAX x LEASE_MS would be 16 min). A sweep slower than this loses the claim
+ *  and another reader may sweep beside it - safe, each row is claimed on its own - and the late
+ *  close is logged; a crashed reader holds the renders' sweeps off for 4 min, not 16. */
 const APPLY_TTL_MS = LEASE_MS * 2;
 /** Rows one render's sweep tries (bounded-enumeration: a render must return). */
 export const RENDER_MAX = 8;
