@@ -12,7 +12,7 @@ import { AudioPreview, mediaErrorWords } from "../../src/components/audio/AudioP
 import { AudioPrompt } from "../../src/components/audio/AudioPrompt.tsx";
 import { DraftList } from "../../src/components/audio/DraftList.tsx";
 import { SeedComposer } from "../../src/components/audio/SeedComposer.tsx";
-import { BLANK_SEED, addTo, compose, fitTo, handsOf, removeFrom, sortTerms, sunoCut, sunoFieldsOf, termId, type Seed, type Term } from "../../src/components/audio/recipe.ts";
+import { BLANK_SEED, addTo, avoidFloats, compose, fitTo, handsOf, preferredFloats, removeFrom, sortTerms, sunoCut, sunoFieldsOf, termId, type Seed, type Term } from "../../src/components/audio/recipe.ts";
 import { conceptFor, keyRelation, tempoError, variationsOfSeed } from "../../src/components/audio/variations.ts";
 
 const term = (facet: Term["facet"], t: string, n: number, kept: number, over: Partial<Term> = {}): Term => ({
@@ -116,6 +116,12 @@ describe("the recipe", () => {
     expect(addTo(addTo(SEED, "moods", "tense"), "moods", "tense").moods).toEqual(["light", "tense"]);
     expect(addTo(SEED, "moods", "  ").moods).toEqual(["light"]);
     expect(removeFrom(SEED, "instruments", "kazoo").instruments).toEqual(["pizzicato"]);
+    // The same word in another case is the same term (termId lower-cases): never a second chip, never a second float.
+    expect(addTo(SEED, "instruments", "Kazoo ").instruments).toEqual(["pizzicato", "kazoo"]);
+    expect(addTo({ ...SEED, avoid: ["Vocals"] }, "avoid", "vocals").avoid).toEqual(["Vocals"]);
+    const piano = term("instrument", "piano", 5, 4, { stance: "prefer" });
+    const vox = term("instrument", "vocals", 5, 0, { stance: "avoid" });
+    expect([preferredFloats([piano], "instrument", ["Piano"]), avoidFloats([vox], ["Vocals"])]).toEqual([[], []]);
     const one = term("genre", "solo", 1, 1);
     const nine = term("genre", "steady", 10, 9);
     expect(sortTerms([one, nine], "rate").map((t) => t.term)).toEqual(["steady", "solo"]);

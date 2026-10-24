@@ -180,17 +180,24 @@ export function sortTerms(list: readonly Term[], k: TermSort): Term[] {
     );
 }
 
+/** A word already in a list, in any case: a term is keyed lower-cased (`termId`), so "Piano" and
+ *  "piano" are one term and must never be two chips, two floats or "Piano, piano" in a style line. */
+const holds = (have: readonly string[], word: string): boolean => {
+  const w = word.trim().toLowerCase();
+  return have.some((x) => x.trim().toLowerCase() === w);
+};
+
 /** The preferred terms of a facet not yet in the seed's list: v1's ★ floats. */
 export const preferredFloats = (terms: readonly Term[], facet: TermFacet, have: readonly string[]): Term[] =>
-  terms.filter((t) => t.facet === facet && t.stance === "prefer" && !have.includes(t.term));
+  terms.filter((t) => t.facet === facet && t.stance === "prefer" && !holds(have, t.term));
 
 /** The avoided terms not yet fenced: v1's ⊘ floats. */
-export const avoidFloats = (terms: readonly Term[], have: readonly string[]): Term[] => terms.filter((t) => t.stance === "avoid" && !have.includes(t.term));
+export const avoidFloats = (terms: readonly Term[], have: readonly string[]): Term[] => terms.filter((t) => t.stance === "avoid" && !holds(have, t.term));
 
 /** Add a word to a seed list, once. */
 export function addTo(seed: Seed, list: SeedList | "avoid", word: string): Seed {
   const w = word.trim();
-  if (w === "" || seed[list].includes(w)) return seed;
+  if (w === "" || holds(seed[list], w)) return seed;
   return { ...seed, [list]: [...seed[list], w] };
 }
 
