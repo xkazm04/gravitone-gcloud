@@ -11,7 +11,8 @@ import { AudioMeasures } from "../../src/components/audio/AudioMeasures.tsx";
 import { AudioPreview, mediaErrorWords } from "../../src/components/audio/AudioPreview.tsx";
 import { AudioPrompt } from "../../src/components/audio/AudioPrompt.tsx";
 import { DraftList } from "../../src/components/audio/DraftList.tsx";
-import { BLANK_SEED, addTo, compose, fitTo, handsOf, removeFrom, sortTerms, sunoFieldsOf, termId, type Seed, type Term } from "../../src/components/audio/recipe.ts";
+import { SeedComposer } from "../../src/components/audio/SeedComposer.tsx";
+import { BLANK_SEED, addTo, compose, fitTo, handsOf, removeFrom, sortTerms, sunoCut, sunoFieldsOf, termId, type Seed, type Term } from "../../src/components/audio/recipe.ts";
 import { conceptFor, keyRelation, tempoError, variationsOfSeed } from "../../src/components/audio/variations.ts";
 
 const term = (facet: Term["facet"], t: string, n: number, kept: number, over: Partial<Term> = {}): Term => ({
@@ -212,5 +213,19 @@ describe("the detail components' markup", () => {
     expect(html).toContain('href="/board"');
     expect(html).toContain("returned");
     expect(html).not.toMatch(/>\s*(Keep|Reject)\s*</);
+  });
+});
+
+describe("the composer's markup", () => {
+  const props = { terms: [], hands: {}, from: "blank", onSeed: () => {}, onSend: () => {}, busy: false, onCopy: () => {}, keys: [] };
+  test("a seed past Suno's limits says how many of its words the form drops", () => {
+    const long = { ...SEED, instruments: Array.from({ length: 40 }, (_, i) => `instrument-${i}`) };
+    const n = sunoCut(long, {});
+    // 40 instruments of ~13 chars against 200: most of them, plus the tempo and key after them.
+    expect(n).toBeGreaterThan(20);
+    expect(sunoFieldsOf(long, {})?.style.split(", ").length).toBe(long.genres.length + long.moods.length + long.instruments.length + 2 - n);
+    expect(/>cut<b[^>]*>(\d+)<\/b>/.exec(renderToStaticMarkup(h(SeedComposer, { ...props, seed: long })))?.[1]).toBe(String(n));
+    expect(sunoCut(SEED, {})).toBe(0);
+    expect(renderToStaticMarkup(h(SeedComposer, { ...props, seed: SEED }))).not.toContain(">cut<");
   });
 });

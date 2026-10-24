@@ -18,7 +18,7 @@ import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
 import { CapsHeading } from "../heading/CapsHeading.tsx";
 import { Seg } from "../seg/Seg.tsx";
-import { addTo, avoidFloats, compose, FACET_OF, preferredFloats, removeFrom, SEED_LISTS, sunoFieldsOf, type Hand, type Seed, type SeedList, type Target, type Term } from "./recipe.ts";
+import { addTo, avoidFloats, compose, FACET_OF, preferredFloats, removeFrom, SEED_LISTS, sunoCut, sunoFieldsOf, type Hand, type Seed, type SeedList, type Target, type Term } from "./recipe.ts";
 import s from "./Composer.module.css";
 
 function AddWord({ label, list, onAdd }: { readonly label: string; readonly list: string; readonly onAdd: (w: string) => void }) {
@@ -62,6 +62,7 @@ export function SeedComposer({ seed, terms, hands, from, onSeed, onSend, busy, o
   const dl = (f: string): string => `audio-composer-${f}`;
   const text = compose(seed, target, hands);
   const fields = sunoFieldsOf(seed, hands);
+  const cut = target === "suno" ? sunoCut(seed, hands) : 0;
   const row = (list: SeedList, label: string) => (
     <div className={s.facet} key={list}>
       <span className={s.facetLabel}>{label}</span>
@@ -136,6 +137,7 @@ export function SeedComposer({ seed, terms, hands, from, onSeed, onSend, busy, o
       </pre>
       <div className={s.acts}>
         <span className={s.count}>{text.length} chars</span>
+        {cut > 0 && <Chip label="cut" value={cut} tone="amber" casing="lower" name={`${cut} seed term${cut === 1 ? "" : "s"} past Suno's limit`} />}
         <span className={s.grow} />
         <Button label="Copy" size="sm" onPress={() => onCopy(text)} />
         <Button label="Send to Suno" tone="cyan" disabled={busy || fields === null} onPress={onSend} />

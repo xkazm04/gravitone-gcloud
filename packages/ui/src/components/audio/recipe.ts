@@ -121,6 +121,36 @@ export function fitTo(text: string, max: number): string {
   return (at > max / 2 ? cut.slice(0, at) : cut).replace(/[\s,]+$/, "");
 }
 
+/** The style line's words in Suno's order, each phrased through the hand. */
+function sunoParts(seed: Seed, hands: Readonly<Record<string, Hand>>): { readonly g: string[]; readonly mo: string[]; readonly ins: string[]; readonly tk: string[] } {
+  return {
+    g: seed.genres.map((t) => phraseOf(hands, "genre", t)),
+    mo: seed.moods.map((t) => phraseOf(hands, "mood", t)),
+    ins: seed.instruments.map((t) => phraseOf(hands, "instrument", t)),
+    tk: tempoKey(seed).map((x) => x.replace(/ BPM$/, " bpm")),
+  };
+}
+
+const whole = (t: string): string => fitTo(t, Number.MAX_SAFE_INTEGER);
+
+/** How many of `parts` a field held to `max` does not carry whole (a word cut mid-phrase counts). */
+function dropped(parts: readonly string[], max: number): number {
+  const fitted = fitTo(parts.join(", "), max);
+  let kept = 0;
+  while (kept < parts.length) {
+    const head = whole(parts.slice(0, kept + 1).join(", "));
+    if (fitted !== head && !fitted.startsWith(`${head}, `)) break;
+    kept++;
+  }
+  return parts.length - kept;
+}
+
+/** The seed's style words and fences Suno's form drops at STYLE_MAX / EXCLUDE_MAX; 0 when it all fits. */
+export function sunoCut(seed: Seed, hands: Readonly<Record<string, Hand>>): number {
+  const { g, mo, ins, tk } = sunoParts(seed, hands);
+  return dropped([...g, ...mo, ...ins, ...tk], STYLE_MAX) + dropped(seed.avoid, EXCLUDE_MAX);
+}
+
 export type SunoFieldsDraft = { readonly title?: string; readonly style: string; readonly lyrics: string; readonly exclude?: string };
 
 /**
@@ -129,10 +159,7 @@ export type SunoFieldsDraft = { readonly title?: string; readonly style: string;
  * An empty style is `null` - a seed with no words is not a prompt, and the door refuses it.
  */
 export function sunoFieldsOf(seed: Seed, hands: Readonly<Record<string, Hand>>, title?: string): SunoFieldsDraft | null {
-  const g = seed.genres.map((t) => phraseOf(hands, "genre", t));
-  const mo = seed.moods.map((t) => phraseOf(hands, "mood", t));
-  const ins = seed.instruments.map((t) => phraseOf(hands, "instrument", t));
-  const tk = tempoKey(seed).map((x) => x.replace(/ BPM$/, " bpm"));
+  const { g, mo, ins, tk } = sunoParts(seed, hands);
   const style = fitTo([...g, ...mo, ...ins, ...tk].join(", "), STYLE_MAX);
   if (style === "") return null;
   const exclude = fitTo(seed.avoid.join(", "), EXCLUDE_MAX);
