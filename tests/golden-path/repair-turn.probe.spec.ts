@@ -162,6 +162,28 @@ test("every NOTEBOOK_SCHEMA node set to the wrong type is refused with a finding
   expect(silent).toEqual([]);
 });
 
+test("every key NOTEBOOK_SCHEMA requires, removed, and every enum given a non-member, is refused", () => {
+  const nodes = schemaNodes();
+  const missing = nodes.filter((n) => n.requiredByParent);
+  const enums = nodes.filter((n) => n.node.enum);
+  expect(missing.length, "the walk found no required keys").toBeGreaterThan(40);
+  expect(enums.length, "the walk found no enums").toBeGreaterThan(8);
+  const silent: string[] = [];
+  const check = (what: string, nb: Obj) => {
+    if (!notebookFindings(nb, TOPIC).length) silent.push(what);
+  };
+  for (const n of missing) check(`missing ${label(n.path)}`, mutated(n.path, (h, k) => void delete h[k as never]));
+  for (const n of enums) check(`off-enum ${label(n.path)}`, mutated(n.path, (h, k) => void (h[k as never] = "not-a-member" as never)));
+  console.log(`[repair] required ${missing.length}, enums ${enums.length}, silent ${silent.length}`);
+  expect(silent).toEqual([]);
+});
+
+test("a notebook the door accepts can be dealt: no steelMan.evidence is a finding, not a crash on the board", () => {
+  const nb = valid();
+  delete (nb.steelMan as Obj).evidence;
+  expect(findingsOf(nb).map((f) => f.path)).toContain("steelMan.evidence");
+});
+
 test("a `killed` that is not an array of tombstones is refused, not thrown", () => {
   expect(findingsOf({ ...valid(), killed: "f-1" }).map((f) => f.path)).toContain("killed");
 });

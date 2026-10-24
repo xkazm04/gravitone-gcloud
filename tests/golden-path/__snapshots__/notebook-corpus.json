@@ -3,6 +3,10 @@
     "dialect": "schema",
     "verdict": "rejected",
     "findings": {
+      "`analogyCandidates[].quality` must be one of strong, medium, weak": 2,
+      "`engineFit[].fit` must be one of excellent, good, poor": 1,
+      "`engineFit[].label` is required": 7,
+      "`tension.strength` must be one of high, moderate, weak": 1,
       "engineFit[].hazard is missing.": 1,
       "facts[].claim is N characters; the budget is 90": 22
     },
@@ -20,6 +24,9 @@
     "dialect": "schema",
     "verdict": "rejected",
     "findings": {
+      "`analogyCandidates[].quality` must be one of strong, medium, weak": 2,
+      "`engineFit[].fit` must be one of excellent, good, poor": 1,
+      "`engineFit[].label` is required": 7,
       "`facts[].subject` must be a string": 7,
       "`sources[]` must be a string": 16,
       "`subjectDomain` must be an array": 1,
@@ -44,6 +51,9 @@
     "dialect": "schema",
     "verdict": "rejected",
     "findings": {
+      "`analogyCandidates[].quality` must be one of strong, medium, weak": 1,
+      "`engineFit[].fit` must be one of excellent, good, poor": 2,
+      "`engineFit[].label` is required": 7,
       "`facts[].subject` must be a string": 5,
       "`sources[]` must be a string": 11,
       "`subjectDomain` must be an array": 1,
@@ -67,6 +77,9 @@
     "dialect": "schema",
     "verdict": "rejected",
     "findings": {
+      "`analogyCandidates[].quality` must be one of strong, medium, weak": 1,
+      "`engineFit[].fit` must be one of excellent, good, poor": 4,
+      "`engineFit[].label` is required": 7,
       "`facts[].subject` must be a string": 10,
       "`sources[]` must be a string": 6,
       "`subjectDomain` must be an array": 1,
@@ -93,7 +106,12 @@
     "dialect": "schema",
     "verdict": "rejected",
     "findings": {
+      "`analogyCandidates[].quality` must be one of strong, medium, weak": 3,
+      "`engineFit[].label` is required": 4,
+      "`facts[].confidence` must be one of high, medium, low": 3,
+      "`scaleConversions[].for` is required": 6,
       "`steelMan.provenance` must be `found`, `found-adjacent` or `constructed`.": 1,
+      "`tension.strength` must be one of high, moderate, weak": 1,
       "engineFit[].hazard is missing.": 4,
       "facts[].claim is N characters; the budget is 90": 16,
       "facts[].sources is empty.": 21,

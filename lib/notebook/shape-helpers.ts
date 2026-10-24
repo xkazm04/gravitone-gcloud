@@ -39,6 +39,8 @@ export interface SchemaNode {
   properties?: Readonly<Record<string, SchemaNode>>;
   items?: SchemaNode;
   anyOf?: readonly SchemaNode[];
+  required?: readonly string[];
+  enum?: readonly string[];
 }
 
 const KIND: Readonly<Record<string, (v: unknown) => boolean>> = {
@@ -63,6 +65,10 @@ const kindOf = (v: unknown) => (v === null ? "null" : Array.isArray(v) ? "array"
  * paid-for draft and the repair loop died mid-attempt. Measured over every
  * schema node mutated to a wrong type: 16 such throws.
  *
+ * Its `required` and `enum` are read too, because on the prompted rung (the local
+ * CLI has no output_config.format) nothing else enforces them: an answer with no
+ * `steelMan.evidence` passed this door and then crashed `scopeSummary`, and a
+ * `confidence: "High"` passes as a string while every `=== "high"` reader skips it.
  * Only present keys are walked; an absent optional key is not a finding here.
  */
 export function schemaFindings(
@@ -82,9 +88,14 @@ export function schemaFindings(
   }
   const is = node.type ? KIND[node.type] : undefined;
   if (is && !is(value)) return say(path, `\`${path}\` must be ${/^[aeiou]/.test(node.type ?? "") ? "an" : "a"} ${node.type} (NOTEBOOK_SCHEMA).`, kindOf(value));
-  if (node.type === "object" && isObj(value) && node.properties)
+  if (node.enum && !node.enum.includes(value as string))
+    return say(path, `\`${path}\` must be one of ${node.enum.join(", ")} (NOTEBOOK_SCHEMA).`, String(value));
+  if (node.type === "object" && isObj(value) && node.properties) {
+    for (const k of node.required ?? [])
+      if (value[k] === undefined) say(path ? `${path}.${k}` : k, `\`${path ? `${path}.${k}` : k}\` is required (NOTEBOOK_SCHEMA).`, "missing");
     for (const [k, child] of Object.entries(node.properties))
       if (value[k] !== undefined) schemaFindings(value[k], child, path ? `${path}.${k}` : k, say);
+  }
   if (node.type === "array" && arr(value) && node.items)
     value.forEach((item, i) => schemaFindings(item, node.items as SchemaNode, `${path}[${i}]`, say));
 }
