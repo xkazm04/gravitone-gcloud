@@ -1,0 +1,170 @@
+{
+ "schema": "conform-run/1",
+ "worker": "f33be498-c49d-4fa5-aa98-decaf03f1d07",
+ "subject": "voice-io",
+ "evaluatedAt": "2026-10-24T00:23:15.564430+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "bound-producers",
+   "subject": "voice-io",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/producers/voice.ts:75 The bound voice producer is a DRY-only stand-in: its only output is a silent WAV sized from the word count, and any live call is rejected with NO_VOICE_ENGINE. Nothing in lib/producers listens or speaks. A search found 0 hits for speechSynthesis, getUserMedia, SpeechRecognition, microphone or utterance; the one 'transcri' hit is research.ts text about transcribed research answers, not audio.",
+   "techniques": [
+    {
+     "technique": "engine-abstraction",
+     "verdict": "not-applicable",
+     "evidence": "lib/producers/voice.ts:53 no synthesis engine exists to abstract over; the slot is null by design"
+    },
+    {
+     "technique": "render-acceptance",
+     "verdict": "not-applicable",
+     "evidence": "lib/producers/voice.ts:74 no generative render ever happens; the take is a deterministic silent buffer, so there is no runaway render to detect"
+    }
+   ],
+   "absenceTerms": [
+    "speechSynthesis",
+    "getUserMedia",
+    "SpeechRecognition",
+    "microphone",
+    "utterance"
+   ]
+  },
+  {
+   "context": "audio-text-producers",
+   "subject": "voice-io",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/producers/src/voice/define.ts:24 The pure voice producer refuses every live job at plan time because no speech engine exists. The other producers here (mv, score, suno, words, script, article, dojo, forge) produce music, text or plans, which the golden path puts outside voice-io. A search of packages/producers/src found 0 hits for speechSynthesis, getUserMedia, SpeechRecognition, microphone or utterance; the one 'transcri' hit is research follow-up text.",
+   "techniques": [
+    {
+     "technique": "engine-abstraction",
+     "verdict": "not-applicable",
+     "evidence": "packages/producers/src/voice/define.ts:19 the code itself declares that no TTS engine is installed or reachable"
+    }
+   ],
+   "absenceTerms": [
+    "speechSynthesis",
+    "getUserMedia",
+    "SpeechRecognition",
+    "microphone",
+    "utterance"
+   ]
+  },
+  {
+   "context": "audio-arrange-desk",
+   "subject": "voice-io",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/audio/_audio/useTransport.ts:3 The desk auditions and arranges music takes through one <audio> element. Nothing here captures speech or synthesizes it; this is media playback and music arrangement, not a voice channel. A search of app/(studio)/audio found 0 hits for speechSynthesis, getUserMedia, SpeechRecognition, microphone, transcri, utterance or dictat.",
+   "techniques": [],
+   "absenceTerms": [
+    "speechSynthesis",
+    "getUserMedia",
+    "SpeechRecognition",
+    "microphone",
+    "transcri"
+   ]
+  },
+  {
+   "context": "studio-shell",
+   "subject": "voice-io",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/_shell/toast.ts:1 The shell (header, nav, toasts, job bell, live re-read feed) has no audio capture or speech output. A search of app/(studio)/_shell found 0 hits for speechSynthesis, getUserMedia, SpeechRecognition, microphone, transcri, utterance or dictat, so no voice-io technique has a construct to govern.",
+   "techniques": [],
+   "absenceTerms": [
+    "speechSynthesis",
+    "getUserMedia",
+    "SpeechRecognition",
+    "microphone",
+    "transcri"
+   ]
+  },
+  {
+   "context": "sound-generation-engine",
+   "subject": "voice-io",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/sound/engines.ts:25 lib/sound's engines make music and sound-effect takes (compose, plan, section-edit, sfx). The golden path names producing music and sound design as a separate craft outside voice-io, and nothing here speaks or listens. A search of lib/sound found 0 hits for speechSynthesis, getUserMedia, SpeechRecognition, microphone, transcri, utterance or dictat.",
+   "techniques": [],
+   "absenceTerms": [
+    "speechSynthesis",
+    "getUserMedia",
+    "SpeechRecognition",
+    "microphone",
+    "transcri"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-24T00:23:15.564430+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "voice-io"
+   ],
+   "techniques": [
+    "engine-abstraction",
+    "render-acceptance"
+   ],
+   "deviations": 0,
+   "context": "bound-producers",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T00:23:15.564430+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "voice-io"
+   ],
+   "techniques": [
+    "engine-abstraction"
+   ],
+   "deviations": 0,
+   "context": "audio-text-producers",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T00:23:15.564430+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "voice-io"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "audio-arrange-desk",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T00:23:15.564430+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "voice-io"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "studio-shell",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T00:23:15.564430+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "voice-io"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "sound-generation-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

@@ -9894,6 +9894,53 @@
       "evaluatedTs": "2026-10-24T00:00:33.219Z",
       "worker": "ba3058d1-f41e-4b1d-854f-7d77adf8c0ac",
       "techniques": []
+    },
+    "13ee868d-574a-4147-b72e-11339db0250d/voice-io": {
+      "context": "bound-producers",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T00:23:15.564Z",
+      "worker": "f33be498-c49d-4fa5-aa98-decaf03f1d07",
+      "techniques": [
+        {
+          "technique": "engine-abstraction",
+          "verdict": "not-applicable",
+          "evidence": "lib/producers/voice.ts:53 no synthesis engine exists to abstract over; the slot is null by design"
+        },
+        {
+          "technique": "render-acceptance",
+          "verdict": "not-applicable",
+          "evidence": "lib/producers/voice.ts:74 no generative render ever happens; the take is a deterministic silent buffer, so there is no runaway render to detect"
+        }
+      ]
+    },
+    "970bf5b7-6aa6-407d-97c3-cbe87f301ec5/voice-io": {
+      "context": "audio-text-producers",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T00:23:15.564Z",
+      "worker": "f33be498-c49d-4fa5-aa98-decaf03f1d07",
+      "techniques": [
+        {
+          "technique": "engine-abstraction",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/voice/define.ts:19 the code itself declares that no TTS engine is installed or reachable"
+        }
+      ]
+    },
+    "f6a26c60-230a-4e2d-811f-4ecef7a2cad1/voice-io": {
+      "context": "sound-generation-engine",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T00:23:15.564Z",
+      "worker": "f33be498-c49d-4fa5-aa98-decaf03f1d07",
+      "techniques": []
     }
   }
 }

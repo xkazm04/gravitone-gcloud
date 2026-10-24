@@ -2651,7 +2651,11 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/producers/src/voice/define.ts:24 The pure voice producer refuses every live job at plan time because no speech engine exists. The other producers here (mv, score, suno, words, script, article, dojo, forge) produce music, text or plans, which the golden path puts outside voice-io. A search of packages/producers/src found 0 hits for speechSynthesis, getUserMedia, SpeechRecognition, microphone or utterance; the one 'transcri' hit is research follow-up text.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "generated-music-acceptance",
@@ -3172,7 +3176,11 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/producers/voice.ts:75 The bound voice producer is a DRY-only stand-in: its only output is a silent WAV sized from the word count, and any live call is rejected with NO_VOICE_ENGINE. Nothing in lib/producers listens or speaks. A search found 0 hits for speechSynthesis, getUserMedia, SpeechRecognition, microphone or utterance; the one 'transcri' hit is research.ts text about transcribed research answers, not audio.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "fleet-orchestration",
@@ -11454,7 +11462,11 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/sound/engines.ts:25 lib/sound's engines make music and sound-effect takes (compose, plan, section-edit, sfx). The golden path names producing music and sound design as a separate craft outside voice-io, and nothing here speaks or listens. A search of lib/sound found 0 hits for speechSynthesis, getUserMedia, SpeechRecognition, microphone, transcri, utterance or dictat.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:29f8b158c4d44054",
+          "evaluatedRevision": 23
         },
         {
           "subject": "sound-effect-generation",
