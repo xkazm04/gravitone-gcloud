@@ -10,6 +10,13 @@ import path from "node:path";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
+// The text router is never a test's engine: a drive handed its own (DriveHooks.reason) must ask that one.
+vi.mock("../../lib/text/router.ts", async (load) => ({
+  ...(await load<typeof import("../../lib/text/router.ts")>()),
+  reason: async () => {
+    throw new Error("the text router was asked; the drive's own engine was skipped");
+  },
+}));
 
 import { ok, type Result } from "@gt/domain/errors";
 import type { Holder } from "@gt/domain/job";
@@ -27,6 +34,7 @@ import { driveStep, effectsOf, launchPartAct, partActReceipt } from "../../lib/p
 import { partVerdict } from "../../lib/parts/verdict.ts";
 import { ImagingError } from "../../lib/imaging/errors.ts";
 import type { GenerateRequest, GeneratedImages } from "../../lib/imaging/types.ts";
+import type { TextRequest, TextResult } from "../../lib/text/types.ts";
 
 const dirs: string[] = [];
 afterAll(() => {
@@ -189,6 +197,20 @@ describe("direct the cut", () => {
     expect(fr.proposal?.units.length).toBe(2);
     expect(fr.direction?.runs).toBe(1);
     expect(fr.units).toEqual(before);
+  });
+
+  it("LIVE, the direction turn asks the engine the drive was handed (DriveHooks.reason), never the router", async () => {
+    const { store } = universe("fl", [unit("u1", "0:00"), unit("u2", "0:05")]);
+    const asked: string[] = [];
+    const reason = async (req: TextRequest): Promise<TextResult> => {
+      asked.push(req.turn);
+      const scenes = ["0:00", "0:05"].map((beatAt) => ({ beatAt, subject: "a wide quiet plate of soft shapes in even light, nothing in focus", motion: "a slow drift of the shapes toward the right edge", rationale: "fake engine", elements: [], texts: [] }));
+      return { text: JSON.stringify({ scenes }), provenance: { provider: "anthropic", model: "fake-direction", transport: "cloud-api", rung: "primary", turn: "scene-direction", schemaEnforcement: "none", durationMs: 1, costUsd: 0.01 } } as unknown as TextResult;
+    };
+    const jobId = await confirm(store, "fl", "direct-cut", { live: true });
+    const run = must(await driveStep(framesProducer, store, jobId, { dryOnly: false, hooks: { reason } }));
+    expect(run.outcome === "done" ? asked : must(get(store, jobId as never)).job.error?.message).toEqual(["scene-direction"]);
+    expect(framesOf(store, "fl").proposal?.units.length).toBe(2);
   });
 
   it("an act the part cannot do is refused on its receipt, before anything is priced to run", () => {

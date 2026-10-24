@@ -25,11 +25,10 @@ import type { GenerateRequest, GeneratedImages, ImageRef } from "@/lib/imaging/t
 import type { Fact } from "@/lib/notebook/types";
 import type { ScriptRender } from "@/lib/script/types";
 import { compilePrompt, NEGATIVE_PROMPT } from "@/lib/stylePrompt";
-import { reason } from "@/lib/text/router";
 import type { TextRequest } from "@/lib/text/types";
 import { FRAMES_SPEC, type FramesResult } from "@/lib/turns/kinds/frames";
 
-import { activeSourceOf, adTemplateOf, asData, blobRootOf, engineView, field, meteredText, must, partFacts, priceOf, recOf, stepKernel, TEXT_SEAT, text, textFailure, written, type DriveHooks, type PartFacts, type UnitsFn, withRecords, preflightFrom } from "./research.ts";
+import { activeSourceOf, adTemplateOf, asData, blobRootOf, engineView, field, meteredText, must, partFacts, priceOf, recOf, stepKernel, TEXT_SEAT, text, textFailure, written, enginesOf, type DriveHooks, type Engines, type PartFacts, type UnitsFn, withRecords, preflightFrom } from "./research.ts";
 
 // THE FRAMES PRODUCER, BOUND (Phase 4 wave C, L37) - packages/producers/src/frames's ports over
 // v1's engines: the imaging router (`generate`: a plate, an alternative, an ads take), the
@@ -192,14 +191,14 @@ function directionInput(s: PartSnapshot, f: PartFacts, frames: Frame[]) {
 const dryScenes = (frames: Frame[]): string =>
   JSON.stringify({ scenes: frames.map((x) => ({ beatAt: x.at, subject: "a wide quiet plate of soft shapes in even light, nothing in focus", motion: "a slow drift of the shapes toward the right edge", rationale: "dry run: no model was asked", elements: [], texts: [] })) });
 
-async function directionUnit(ctx: StepContext, unit: ActUnit, s: PartSnapshot, f: PartFacts): Promise<StepOutcome> {
+async function directionUnit(ctx: StepContext, unit: ActUnit, s: PartSnapshot, f: PartFacts, engine: Engines): Promise<StepOutcome> {
   const u = unitsOf(s);
   if (u === null) return { kind: "fatal", code: "refused", message: "direct the cut needs picture units" };
   const frames = framesFromUnits(u.units);
   const prep = await FRAMES_SPEC.prepare(directionInput(s, f, frames));
   const req: TextRequest = { prompt: prep.prompt, turn: "scene-direction" };
   const out = await meteredText<FramesResult | null>(ctx, unit, req, () => null, async () => {
-    const served = await reason(req);
+    const served = await engine.reason(req);
     return { value: await FRAMES_SPEC.settle(served, prep.input), provenance: served.provenance };
   });
   if (out === null) return madeFree(asData({ raw: dryScenes(frames), engine: engineView(ctx.job, undefined, DRY), bill: {} }));
@@ -230,12 +229,12 @@ function plateRequest(u: PictureUnit, look: ProjectLook): { req: GenerateRequest
   return { subject, req: { prompt: compilePrompt(look.block, subject), negativePrompt: NEGATIVE_PROMPT, aspect: "16:9", count: 1 } };
 }
 
-async function performFrames(ctx: StepContext, unit: ActUnit, eng: ImagingEngines, blobs: () => BlobStore): Promise<StepOutcome> {
+async function performFrames(ctx: StepContext, unit: ActUnit, eng: ImagingEngines, blobs: () => BlobStore, turns: Engines): Promise<StepOutcome> {
   const s = must(partSnapshot(ctx));
   // The look is read at the unit, from the store as it is now: a lock is frozen, so a locked
   // style draws exactly what the receipt named; an unlocked one draws its current block.
   const f = must(partFacts(ctx));
-  if (unit.name === "direction") return directionUnit(ctx, unit, s, f);
+  if (unit.name === "direction") return directionUnit(ctx, unit, s, f, turns);
   const drawn: Drawn = { look: f.look, images: await lookImages(f.look, blobs) };
   if (unit.name.startsWith("take:")) {
     const shot = pickedScenario(s)?.shots.find((x) => x.id === unit.input["shotId"]);
@@ -307,6 +306,8 @@ function landFrames(plan: ActPlan, made: ReadonlyMap<string, EventData>, s: Part
 
 /** `blobs`: where the look's references are read (default: the kernel's own, opened lazily). */
 export function framesProducer(lane: ResourceLane = "cloud.google", hooks: DriveHooks = {}, engines: ImagingEngines = LIVE_IMAGING, blobs: () => BlobStore = kernelBlobs): Producer {
+  // The direction turn's engine: the drive's own when it hands one (a test's fake vendor), else the router.
+  const turns = enginesOf(hooks);
   return defineFrames(lane, {
     // Held at the release, not failed by the worker, while its act waits on a human act (L45).
     preflight: preflightFrom(framesUnits),
@@ -324,7 +325,7 @@ export function framesProducer(lane: ResourceLane = "cloud.google", hooks: Drive
     },
     async perform(_job, _plan, unit, ctx) {
       try {
-        return await performFrames(ctx, unit, engines, blobs);
+        return await performFrames(ctx, unit, engines, blobs, turns);
       } catch (e) {
         return e instanceof ImagingError ? imageFailure(e, () => earliestExpiry()) : textFailure(e);
       }
