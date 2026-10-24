@@ -5353,4 +5353,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "else inBand.has(e.target.id);",
     why: "Scrolling back up out of a /kit section leaves the nav marking the section below, not the one being read.",
   },
+  {
+    id: "agy-workspace-removed",
+    test: "tests/next-server/imaging-agy.test.ts",
+    file: "lib/imaging/providers/agy.ts",
+    find: "rm(ws, { recursive: true, force: true }).catch(() => {});",
+    replace: "void rm;",
+    why: "Every agy call leaves its agy-img-* workspace in tmp, with whatever the agent wrote into it.",
+  },
 ];
