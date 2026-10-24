@@ -5875,4 +5875,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "if (!x.row.id.toLowerCase().startsWith(t.value.toLowerCase())) return false;",
     why: "The fixture Library reads id:0042 as a prefix and finds nothing, where the kernel reads it as a substring and finds the six items numbered 0042.",
   },
+  {
+    id: "library-fixture-query-skips-door",
+    test: "tests/next-server/library-fixture-parity.test.ts",
+    file: "app/(studio)/library/_port/fixture.ts",
+    find: "  const door = parseAt(\"library query\", querySchema, input);",
+    replace: "  const door = ok(input);",
+    why: "The fixture Library answers an empty page for a facet group no rail holds or an offset past the index's bound, where the kernel's door refuses both as invalid.",
+  },
 ];

@@ -132,3 +132,20 @@ describe("a key:value token matches what the index's clause matches", () => {
     });
   }
 });
+
+describe("a query the index's door refuses, the fixture refuses", () => {
+  // kernel library/clauses.ts querySchema: a facet key is a rail group, an offset at most 1,000,000.
+  const REFUSED: readonly [string, LibraryQuery][] = [
+    ["a group no rail holds", { facets: { nope: ["x"] }, limit: 10 }],
+    ["an offset past the index's bound", { offset: 2_000_000, limit: 10 }],
+    ["an empty facet value", { kind: "audio", facets: { mood: [""] }, limit: 10 }],
+    ["a fractional limit", { limit: 1.5 }],
+  ];
+  for (const [name, q] of REFUSED) {
+    it(name, () => {
+      const f = fixtureQuery(q);
+      const r = queryLibrary(k.store, q);
+      expect(f.ok ? "ok" : [f.error.code, f.error.message]).toEqual(r.ok ? "ok" : [r.error.code, r.error.message]);
+    });
+  }
+});

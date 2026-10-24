@@ -10,7 +10,8 @@ import "server-only";
 //     the kind counts honour only the shared groups (library.js `compute`, the disjunctive count);
 //   · a selected value at 0 is still sent; values in FIXED_ORDER keep it; TOP-N with `more`;
 //   · items that cannot show their media sort last (library.js `bad`), then by the sort;
-//   · `limit` is required and capped (LIBRARY_PAGE_MAX), `offset` is an index into the order;
+//   · the query through the index's own door (querySchema): `limit` required and capped, a facet
+//     key a rail group, `offset` bounded and an index into the order;
 //   · an act is an event: pin, unpin and use-in-project write the universe and its act log; an
 //     export is logged and writes NO file - the fixture has no game project to write into.
 // State lives for the server process; `resetLibraryFixture` starts it over.
@@ -25,7 +26,6 @@ import {
   KIND_LABELS,
   LIBRARY_GROUP_TOP,
   LIBRARY_KINDS,
-  LIBRARY_PAGE_MAX,
   normText,
   parseSearch,
   railGroups,
@@ -37,6 +37,7 @@ import {
   type ParsedSearch,
 } from "@gt/domain/library";
 import { libraryItemSchema, type LibraryItemDetail } from "@gt/domain/libraryItem";
+import { querySchema } from "@gt/kernel/library/clauses";
 
 import { buildCorpus, labelOf, type FixtureRecord } from "./fixtureCorpus.ts";
 import { PROJECTS } from "./fixtureData.ts";
@@ -107,10 +108,13 @@ export function matches(x: FixtureRecord, p: ParsedSearch): boolean {
   return true;
 }
 
-export function fixtureQuery(q: LibraryQuery): Result<LibraryPage> {
-  const limit = Math.floor(q.limit);
-  const offset = Math.max(0, Math.floor(q.offset ?? 0));
-  if (!(limit >= 0 && limit <= LIBRARY_PAGE_MAX)) return err("invalid", `limit is 0..${LIBRARY_PAGE_MAX}`);
+export function fixtureQuery(input: LibraryQuery): Result<LibraryPage> {
+  // Through the index's own door, so the fixture refuses what the kernel refuses, in its words.
+  const door = parseAt("library query", querySchema, input);
+  if (!door.ok) return door;
+  const q = door.value;
+  const limit = q.limit;
+  const offset = q.offset ?? 0;
   const u = universe();
   const kind = q.kind;
   const parsed = parseSearch(q.q ?? "");
