@@ -29,7 +29,10 @@ export const stepPacketId = (gatePartId: string): string => `pkt:step:${gatePart
 export function gatePacketFact(r: Reader, gatePartId: string): PacketFact | undefined {
   const base = stepPacketId(gatePartId);
   let best: { id: string; n: number; state: string; mode: string } | undefined;
-  for (const row of r.all("SELECT id, state, mode FROM packets WHERE id = ? OR substr(id, 1, ?) = ?", base, base.length + 1, `${base}#`)) {
+  // `<base>` or `<base>#...` as a range on the primary key (`#` is 0x23, `$` the next code point):
+  // two index seeks, where a substr() match scanned every packet ever opened, once per gate part
+  // per plan read (packets are never deleted).
+  for (const row of r.all("SELECT id, state, mode FROM packets WHERE id = ? OR (id >= ? AND id < ?)", base, `${base}#`, `${base}$`)) {
     const id = String(row["id"]);
     const n = id === base ? 1 : Number(id.slice(base.length + 1));
     if (Number.isInteger(n) && (best === undefined || n > best.n)) best = { id, n, state: String(row["state"]), mode: String(row["mode"]) };
