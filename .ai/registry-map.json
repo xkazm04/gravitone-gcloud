@@ -1278,7 +1278,11 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/articles/humanActs.ts:25 The gate records human acts, diffs files and lands an approved post through git/gh (registryWrite.ts execFile with a cwd-bound git env). runAgent, cliSeam, plugin, mcp and registerHook appear in none of its eight files, so this context makes no model call and has no hook chain; the agent turns live in the sibling engine files of lib/articles.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "test-harness",
@@ -1396,7 +1400,11 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/drive.ts:143 When a dead driver left a step `running`, the next walk overwrites that record with a fresh `running` record and a new startedAt and carries only the cost a finished attempt reported, so the interrupted metered turn is never closed as indeterminate in run.json and its spend never reaches the step's cost (the kernel job's `interrupted` state, outside this context, is the only honest closure).",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "prompt-assembly",
@@ -5027,7 +5035,11 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/foundry/store.ts:3 This context is the disk layer over runs the Python forge writes, plus the verdict log, commit planning and calibration. plugin, mcp, checkpoint and registerHook do not appear in lib/foundry and runAgent and cliSeam appear in none of the context's own files (only in lib/foundry/strips, another context), so no agent runtime is assembled here.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "quality-gates",

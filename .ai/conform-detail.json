@@ -10863,6 +10863,98 @@
       "evaluatedTs": "2026-10-24T03:48:08.658Z",
       "worker": "25f8dc2d-3f9b-423b-aaf8-9e317b0a395b",
       "techniques": []
+    },
+    "14632859-df56-4340-9e16-c420ff681ee3/agent-runtime-assembly": {
+      "context": "article-run-engine",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:05:46.301Z",
+      "worker": "3965b210-8a9d-4794-82ff-800b10703618",
+      "techniques": [
+        {
+          "technique": "indeterminate-closure-on-interruption",
+          "verdict": "deviation",
+          "evidence": "lib/articles/drive.ts:143 An orphaned `running` step is re-issued in place: no indeterminate status on the run record, and the killed metered turn's spend is not reconciled (drive.ts:165 counts only attempts that reported a figure). resume.ts:22 says such a run is 'resumable as it stands'. The kernel job does hold a first-class `interrupted` state and makes retry an operator act (lib/producers/article.ts:344, off-context)."
+        },
+        {
+          "technique": "guard-input-custody",
+          "verdict": "conformant",
+          "evidence": "lib/articles/loop.ts:275 The loop that grants the turn computes the ceiling in its own memory and passes it to the CLI as --max-budget-usd. The agent in its temp workspace can spend it but cannot raise it. Registry inputs are staged as copies (agentSteps.ts:144)."
+        },
+        {
+          "technique": "session-scoped-capability",
+          "verdict": "conformant",
+          "evidence": "lib/articles/dryAgent.ts:8 Dry vs live resolves from the job's own declaration, not a process env slot (the v1 ARTICLES_AGENT_BIN trick is retired), so a dry job and a live job can share a process."
+        },
+        {
+          "technique": "semantic-hook-placement",
+          "verdict": "conformant",
+          "evidence": "lib/articles/agentSteps.ts:83 This is a small chain written only by the host: the loop guard plus the kernel meter, with no extension surface. The record of each turn is written outside the refusing guard, so a refused turn (returned as a result, loop.ts:252) still lands in agent/<name>.json and the ledger has no gap. The reason is written down at loop.ts:23-26."
+        },
+        {
+          "technique": "operator-tier-code-loading",
+          "verdict": "conformant",
+          "evidence": "lib/articles/dryAgent.ts:36 The only key that names code to spawn comes from the process environment (operator tier). The service-writable run input is a model id that runCreate.ts:40 validates against MODEL_RE, so it cannot name code."
+        },
+        {
+          "technique": "additive-input-at-the-call-boundary",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/rework.ts:49 Operator input arrives only at the gate, after the unit finished. Mid-unit input is refused, never cancel-and-restart."
+        },
+        {
+          "technique": "bounded-projection-of-external-work",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/agentSteps.ts:28 The agent's tool roster has no remote long-running operation and no handle to poll. Each turn is awaited with its own timeout."
+        },
+        {
+          "technique": "checkpoint-mode-custody",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/store.ts:224 Run state is one full, self-contained run.json, rewritten under a lock. There is no graph checkpointer and no full/delta mode to freeze."
+        },
+        {
+          "technique": "assembly-identity",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/agentSteps.ts:69 One deployment. The run records the prompt sha, the standard bundleHash, the model and the effort, but nobody asks for a digest comparing assemblies across deployments."
+        }
+      ],
+      "registryProposal": "indeterminate-closure-on-interruption could say what to do when two records describe one unit: the job record holds an honest `interrupted` state while the domain record it drives (a step row) is re-issued in place. Does the closure obligation fall on each record, or only on the authority?"
+    },
+    "e660bf0f-199c-4cd9-91e1-1a13e318e55f/agent-runtime-assembly": {
+      "context": "article-human-gate-and-landing",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:05:46.301Z",
+      "worker": "3965b210-8a9d-4794-82ff-800b10703618",
+      "techniques": []
+    },
+    "e481098a-3532-46d9-bdc9-de84fbc2ce01/agent-runtime-assembly": {
+      "context": "foundry-forge-store-and-verdicts",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:05:46.301Z",
+      "worker": "3965b210-8a9d-4794-82ff-800b10703618",
+      "techniques": []
+    },
+    "8c6c65cc-6679-4c2c-8951-670d77b8ad7c/agent-runtime-assembly": {
+      "context": "imaging-gateway-and-spend",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:05:46.301Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "3965b210-8a9d-4794-82ff-800b10703618",
+        "state": "not-applicable",
+        "at": "2026-10-24T04:06:16.045183+00:00",
+        "reason": "reviewer (sonnet): The claim that no agent loop exists in lib/imaging is contradicted: router.ts:37 imports agyProvider, and providers/agy.ts spawns the agentic `agy` CLI (`-p`, `--sandbox`, an empty workspace, killTree). The verdict only searched for runAgent, cliSeam, plugin, mcp and registerHook, so it missed this."
+      }
     }
   }
 }
