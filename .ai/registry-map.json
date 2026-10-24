@@ -1007,7 +1007,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/checksStatic.ts:174 The `source-primary` (≥3) and `source-counter` (≥1) items count `primary`/`counter` booleans that the research agent writes itself into sources.json; ingestSources.ts:44-45 copies them through unverified, so the gated party supplies the very evidence the floor is judged on.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:0d8378dd13155e59",
+          "evaluatedRevision": 54
         },
         {
           "subject": "copy-quality-gates",

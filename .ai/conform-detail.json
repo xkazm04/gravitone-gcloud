@@ -10211,6 +10211,102 @@
           "evidence": "lib/sound/mv/steps.ts:62 The only generation is one still image, with no model-emitted sound channel."
         }
       ]
+    },
+    "0572228c-bd2e-42a3-a146-6a91d10fa08f/quality-gates": {
+      "context": "article-check-and-critique",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T01:50:27.860Z",
+      "worker": "0b3c4026-ce3b-4611-a382-9fcf24840a98",
+      "techniques": [
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "deviation",
+          "evidence": "lib/articles/checksStatic.ts:174 The floor counts flags written by the gated agent (ingestSources.ts:44 `primary: o.primary === true`). Nothing upstream of the record checks whether a source is actually primary."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "lib/articles/checksReport.ts:25 A dimension with no measured item is reported as not-measured and listed, never as pass: an announced, counted SKIP."
+        },
+        {
+          "technique": "gate-liveness",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/articles-checks.probe.spec.ts:60 Every static item is driven red with a seeded defect. A browser that cannot launch yields not-measured rather than pass (checksRendered.ts:81)."
+        },
+        {
+          "technique": "severity-by-construction",
+          "verdict": "conformant",
+          "evidence": "lib/articles/checks.ts:19 The label is honest: the check is advisory to the human gate and claims no blocking power. The blocking rung is said to be the registry gate."
+        },
+        {
+          "technique": "gate-laddering",
+          "verdict": "conformant",
+          "evidence": "lib/articles/checks.ts:21 Between-turn check, final check step, then the registry's blocking gate at landing: the same rules at rising cost, with the binding rung last."
+        },
+        {
+          "technique": "blocking-by-input-determinism",
+          "verdict": "conformant",
+          "evidence": "lib/articles/checks.ts:3 The deterministic check is kept apart from the model critique. Only deterministic mechanical rules block, at the registry."
+        },
+        {
+          "technique": "policy-projection",
+          "verdict": "conformant",
+          "evidence": "lib/articles/checks.ts:29 One THRESHOLDS table feeds both the enforcement and the prompt's description of it, so the writer is told exactly the bars it is measured against."
+        },
+        {
+          "technique": "false-positive-economics",
+          "verdict": "conformant",
+          "evidence": "lib/articles/checks.ts:52 Bars are calibrated against the real population before use. The author is a machine, so a misfire costs one fix turn."
+        },
+        {
+          "technique": "decidable-in-a-window",
+          "verdict": "conformant",
+          "evidence": "lib/articles/checks.ts:6 Rules no pattern can decide get no fake checker. Only count- and regex-decidable bars are mechanised."
+        },
+        {
+          "technique": "match-the-resolved-artifact",
+          "verdict": "conformant",
+          "evidence": "lib/articles/checksRendered.ts:36 Type sizes and network use are read from the rendered page in a real browser, not by grepping the CSS source."
+        },
+        {
+          "technique": "oracle-frozen-during-repair",
+          "verdict": "conformant",
+          "evidence": "lib/articles/checkLoop.ts:107 The fix turn runs in a copied workspace and only post/ is ingested back (ingestPost), so the fixer cannot write the check code, sources.json or claims.json."
+        },
+        {
+          "technique": "instrument-answers-only-its-own-question",
+          "verdict": "conformant",
+          "evidence": "lib/articles/checkLoop.ts:23 The between-turn loop does not treat the critique item as its own question. With rendering off, the rendered items are not-measured rather than inherited from the static green (checksReport.ts:87)."
+        },
+        {
+          "technique": "refusal-names-a-reachable-remedy",
+          "verdict": "conformant",
+          "evidence": "lib/articles/checksStatic.ts:121 Each item carries measured value, bar and a remedy that can be carried out inside the post."
+        },
+        {
+          "technique": "prose-rule-drift",
+          "verdict": "conformant",
+          "evidence": "lib/articles/checksStatic.ts:154 A written house rule is mechanised as an item rather than left as prose."
+        },
+        {
+          "technique": "waiver-names-its-finding",
+          "verdict": "conformant",
+          "evidence": "lib/articles/critique.ts:227 Each disposition must name one reviewer/finding by identity, exactly once. One that names nothing is refused and reported."
+        },
+        {
+          "technique": "fabrication-economics",
+          "verdict": "conformant",
+          "evidence": "lib/articles/critique.ts:378 Only presence of a reason is checked, but the writer chose the disposition and can produce a true reason cheaply, so this is the ordinary-rule cell, not the fabrication cell."
+        },
+        {
+          "technique": "advancement-evidence-fields",
+          "verdict": "conformant",
+          "evidence": "lib/articles/checkLoop.ts:60 The run advances with remaining failures written into per-pass records, which reach the human gate."
+        }
+      ]
     }
   }
 }
