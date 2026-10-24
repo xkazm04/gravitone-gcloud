@@ -102,6 +102,19 @@ describe("acquire", () => {
     expect(once).toMatchObject({ ok: false, error: { code: "unavailable", message: "database is locked" } });
   });
 
+  it("a store busy past the deadline still gives up the place it queued for", async () => {
+    const s = tpl.fresh();
+    must(s.tx((t) => claimIn(t, { resource: "gpu.local", holder: A, ticket: "a", ttlS: 60, wait: false }, live)));
+    const live0 = fx(s);
+    let claims = 0;
+    const flaky: typeof live0 = { ...live0, tx: (name, fn) => (name === "lease.claim" && ++claims > 1 ? err("unavailable", "database is locked") : live0.tx(name, fn)) };
+    let clock = 0;
+    const got = await acquire(flaky, "gpu.local", { holder: B, alive: live, waitMs: 10, now: () => clock, sleep: async () => void (clock = 100) });
+    expect(got).toMatchObject({ ok: false, error: { code: "unavailable", message: "database is locked" } });
+    // A ticket left behind is a live waiter ahead of every newcomer until its TTL runs out.
+    expect(must(s.read((r) => r.get("SELECT count(*) AS n FROM lease_waiters")?.["n"]))).toBe(0);
+  });
+
   it("one try is one try: busy without queueing", async () => {
     const s = tpl.fresh();
     must(s.tx((t) => claimIn(t, { resource: "gpu.local", holder: A, ticket: "a", ttlS: 60, wait: false }, live)));
