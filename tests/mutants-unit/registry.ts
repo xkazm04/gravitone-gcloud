@@ -5803,4 +5803,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "(false ? [] :",
     why: "The fixture Library's free words find every item by its source (\"fixture\" finds 5,000) where the kernel's index, which does not search that column, finds none.",
   },
+  {
+    id: "library-detail-chips-pressed-at-fetch",
+    test: "tests/next-server/library-screen.test.ts",
+    file: "app/(studio)/library/_library/Library.tsx",
+    find: "lines: pressedBy(held.lines, u.f)",
+    replace: "lines: held.lines",
+    why: "A facet chip pressed from the detail panel stays drawn unpressed for the rest of the visit, and its next press removes the value it says is not in the filter.",
+  },
+  {
+    id: "library-pressed-by-keeps-server-mark",
+    test: "tests/next-server/library-screen.test.ts",
+    file: "app/(studio)/library/_library/url.ts",
+    find: "pressed: (f[l.group] ?? []).includes(v.value)",
+    replace: "pressed: v.pressed",
+    why: "The detail's chips keep the filter they were fetched under: pressing or removing a facet never moves their mark.",
+  },
 ];

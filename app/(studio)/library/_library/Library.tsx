@@ -37,7 +37,7 @@ import { DetailView } from "./DetailView.tsx";
 import { Results, type ResultsHandle } from "./Results.tsx";
 import { Toolbar } from "./Toolbar.tsx";
 import { useNarrow } from "./useNarrow.ts";
-import { hrefOf, identity, queryOf, toggled, withKind, type LibraryUrl } from "./url.ts";
+import { hrefOf, identity, pressedBy, queryOf, toggled, withKind, type LibraryUrl } from "./url.ts";
 import s from "./library.module.css";
 
 export type LibraryProps = { readonly url: LibraryUrl; readonly page: ShownPage; readonly detail: ShownDetail | null; readonly port: LibraryPort };
@@ -92,7 +92,8 @@ export function Library({ url: u, page, detail: first, port }: LibraryProps) {
       live = false;
     };
   }, [sel, details, port, u.f, toast]);
-  const current = sel === null ? null : (details.get(sel) ?? null);
+  const held = sel === null ? null : (details.get(sel) ?? null);
+  const current = useMemo(() => (held === null ? null : { ...held, lines: pressedBy(held.lines, u.f) }), [held, u.f]);
 
   // ⏎/↓ from the search selects the first item OF THE ANSWER: when the search just changed, that
   // is the next render's first row, not the one on screen while the query is in flight.

@@ -7,6 +7,10 @@
 //   1. Every port call the screen makes answers. A Server Action that rejects (the server gone,
 //      the network dropped) never answered `.then`: the acts stayed disabled by `busy`, the
 //      detail read "reading" and a block stayed empty for good. Each call goes through `settle`.
+//   2. A detail's facet chips are pressed by the filter in the address now. The detail is kept by
+//      id for the visit with the `pressed` the server drew under the filter it was fetched with,
+//      so a chip pressed from the panel stayed drawn unpressed (and named without "in the
+//      filter") while its next press removed the value.
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -17,6 +21,8 @@ vi.mock("server-only", () => ({}));
 
 import type { ActionResult } from "../../app/_server/actionCore.ts";
 import { settle } from "../../app/(studio)/library/_library/blocks.ts";
+import { DEFAULT_URL, pressedBy, toggled } from "../../app/(studio)/library/_library/url.ts";
+import type { FacetLine } from "@gt/ui/components/library/DetailPanel.tsx";
 import { stripComments } from "../golden-path/_pure.ts";
 
 const DIR = path.join(import.meta.dirname, "../../app/(studio)/library/_library");
@@ -43,5 +49,26 @@ describe("1. every port call the screen makes answers", () => {
     // The walk read the three verbs the screen calls; a silent miss would read as clean.
     expect(calls.sort()).toEqual(["Library.tsx:act", "Library.tsx:detail", "blocks.ts:query"]);
     expect(bare).toEqual([]);
+  });
+});
+
+describe("2. a detail's facet chips are pressed by the filter in the address now", () => {
+  // As the server drew them for a detail fetched with no filter.
+  const lines: readonly FacetLine[] = [
+    { group: "mood", label: "Mood", values: [{ value: "tense", label: "tense", pressed: false }, { value: "warm", label: "warm", pressed: false }] },
+    { group: "type", label: "Type", values: [{ value: "sfx", label: "sfx", pressed: false }] },
+  ];
+  const pressed = (ls: readonly FacetLine[]): string[] => ls.flatMap((l) => l.values.filter((v) => v.pressed).map((v) => `${l.group}:${v.value}`));
+
+  it("a value pressed into the filter is drawn pressed, and drawn unpressed once it leaves", () => {
+    const on = toggled(DEFAULT_URL, "mood", "tense", true);
+    expect(pressed(pressedBy(lines, on.f))).toEqual(["mood:tense"]);
+    const both = toggled(on, "type", "sfx", true);
+    expect(pressed(pressedBy(lines, both.f))).toEqual(["mood:tense", "type:sfx"]);
+    expect(pressed(pressedBy(pressedBy(lines, both.f), toggled(both, "mood", "tense", false).f))).toEqual(["type:sfx"]);
+  });
+
+  it("the panel draws the held detail through it", () => {
+    expect(code("Library.tsx")).toMatch(/lines:\s*pressedBy\(\s*held\.lines,\s*u\.f\s*\)/);
   });
 });
