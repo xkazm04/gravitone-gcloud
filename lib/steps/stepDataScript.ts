@@ -1,8 +1,9 @@
 // THE SCRIPT, CUT AND SCORE STEPS' RECORD SHAPES: script-adopted, script-trailer,
 // the Cut's clip offsets and the Score's spots.
 //
-// Types only. Split out of the stepStore.ts door, which re-exports every name here,
-// so importers keep using the door. Each record is its own phase key, as the
+// Types only. Split out of v1's stepStore.ts; the door is now index.ts, which
+// re-exports every name here, so importers keep using it. `frames.ts`, `useTrailerCut`,
+// the Cut step and `app/_phases/` below are v1's step editors, retired in Phase 6. Each record is its own phase key, as the
 // comments on each interface say.
 
 import type { ScoreSpot } from "@/lib/score/spots";
@@ -92,7 +93,7 @@ export interface CutStepData {
  *
  *  WHY IT IS THE WHOLE LIST AND NOT A DIFF AGAINST THE PROPOSAL. Spots are
  *  seeded once — proposed from the script's movements the first time this step
- *  meets a project with a picture (app/_phases/score/spots.ts), saved, and
+ *  meets a project with a picture (v1's app/_phases/score/spots.ts), saved, and
  *  after that they are the creator's. A record that stored only the edits would
  *  have to re-derive the proposal on every load to know what the edits were
  *  against, which makes a change upstream silently rewrite work downstream. The

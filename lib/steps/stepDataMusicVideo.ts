@@ -1,8 +1,8 @@
 // THE MUSIC-VIDEO SOURCE RECORD (phase key `music-video-source`), and the two
 // helpers that read and replace the fields keyed to its attached track.
 //
-// Split out of the stepStore.ts door, which re-exports every name here. The helpers
-// are functions, not types, but they describe only this record's fields.
+// Split out of v1's stepStore.ts; the door is now index.ts, which re-exports every
+// name here. The helpers are functions, not types, but they describe only this record's fields.
 
 /** THE MUSIC-VIDEO DISCIPLINE'S WHOLE RESEARCH OUTPUT, under phase key
  *  `"music-video-source"` — a sibling of `research`/`research-beats`/etc.,
@@ -14,11 +14,11 @@
  *  `posterAssetId` is Frames' (WP3) to fill once the poster generates, `seed`
  *  and `effectParams` are the effects-studio's (also WP3) determinism inputs.
  *  All three stay `undefined` here — absence, never a placeholder — exactly
- *  the convention `Asset.meta` already uses elsewhere in this file.
+ *  the convention v1's `Asset.meta` used.
  *
  *  `sourceAssetId` points at the Asset row `assetFromUpload` wrote (kind
  *  `"audio"`); the bytes themselves live in `UPLOADS_STORE` behind that
- *  asset's `upload:` pointer (lib/assets.ts) and are never duplicated here. */
+ *  asset's `upload:` pointer (v1's retired lib/assets.ts) and are never duplicated here. */
 export interface MusicVideoSourceStepData {
   /** The attached track's Asset id, or absent if none has been attached yet. */
   sourceAssetId?: string;
@@ -34,7 +34,7 @@ export interface MusicVideoSourceStepData {
   /** The effects-studio's (WP3) compositor parameters — not this package's to
    *  fill. */
   effectParams?: Record<string, unknown>;
-  /** The last poster turn (lib/turns/kinds/poster.ts) whose answer was taken —
+  /** The last poster turn (v1's retired lib/turns/kinds/poster.ts) whose answer was taken —
    *  landed, or found failed. A poster lands at most once per turn id, across a
    *  watcher, a later mount and a reload. Keyed to the track like the poster. */
   posterTurn?: string;

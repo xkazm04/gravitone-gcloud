@@ -3,7 +3,7 @@
 //
 // noteStorageOk clears the trouble slot through resolveTroubleWhere in
 // troubleChannel.ts, because the slot and its listener Set are owned there. Split
-// out of the stepStore.ts door.
+// out of v1's stepStore.ts; the door is now index.ts.
 //
 // It used to also keep a set of ok-listeners (`onStorageOk`) for the v1 bell's
 // trouble ledger, which had to learn which of its accumulated troubles a success
@@ -21,7 +21,7 @@ import { resolveTroubleWhere } from "./troubleChannel";
  * op, project and step, and only a storage-shaped one.
  *
  * SCOPED, NOT GLOBAL, because the slot has many producers: an asset blob that
- * hit the quota (reportStorageTrouble from lib/assets, projectId "") must not be
+ * hit the quota (reportStorageTrouble from v1's lib/assets, projectId "") must not be
  * declared fixed by a 200-byte step record saving somewhere else — that would be
  * the same false resolution `dismiss` used to commit, made by a keystroke. And
  * `non-storage` is never resolved by a save: nothing about it was a save.

@@ -1,7 +1,8 @@
 // THE PATCH: a read and its successor written in ONE readwrite transaction.
 // StepDecision and PatchStepOutcome are its vocabulary; patchStep is the operation.
 //
-// Split out of the stepStore.ts door, which re-exports all three names.
+// Split out of v1's stepStore.ts; the door is now index.ts, which re-exports all
+// three names.
 
 import { STEPS_STORE, runTx } from "@/lib/studioDb";
 
@@ -36,8 +37,8 @@ export type PatchStepOutcome =
  * the seeded default when nothing is stored, and a throw from it aborts the
  * transaction and reports as a write failure.
  *
- * Exported for `records/patch.ts`, which supplies the version check and the
- * parse; a call site wants `patchRecord`, not this.
+ * Exported for v1's `records/patch.ts` (app/_phases/_shared/records, retired in
+ * Phase 6), which supplied the version check and the parse through `patchRecord`.
  */
 export function patchStep(
   projectId: string,

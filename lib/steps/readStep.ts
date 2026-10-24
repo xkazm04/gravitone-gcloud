@@ -1,7 +1,7 @@
 // THE READ PATH: readStep, the honest read that tells a never-written key from a
 // failed read, and loadStep, the flattened read its callers use.
 //
-// Split out of the stepStore.ts door, which re-exports both.
+// Split out of v1's stepStore.ts; the door is now index.ts, which re-exports both.
 
 import { STEPS_STORE } from "@/lib/studioDb";
 
@@ -27,7 +27,7 @@ export async function readStep<T = ResearchStepData>(
   return { ok: true, data: (r.value ?? seededFor(projectId, phase)) as T | undefined };
 }
 
-/** The flattened read, unchanged for its five callers: the stored value, or the
+/** The flattened read v1's step hooks used: the stored value, or the
  *  seeded default when nothing is stored. A FAILED read also lands here as the
  *  seeded default — it is reported through `onStorageTrouble`, and a caller that
  *  needs to tell the two apart calls `readStep` instead. */

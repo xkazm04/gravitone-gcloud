@@ -1,5 +1,6 @@
 // THE RECORD VERSION stamped on every write (SCHEMA_VERSION), with the policy that
-// governs it. Split out of the stepStore.ts door, which re-exports the constant.
+// governs it. Split out of v1's stepStore.ts; the door is now index.ts, which
+// re-exports the constant.
 
 /** The shape version stamped on every record this build writes.
  *
@@ -32,7 +33,7 @@
  *      one ships in the same commit as the shape change that needs it.
  *
  *  Rules 3 and 4 are built at the RECORD seam, not here (2026-10-05):
- *  `app/_phases/_shared/records/registry.ts` reads `v` (absent = 1), refuses a
+ *  `./recordRegistry.ts` reads `v` (absent = 1), refuses a
  *  record from the future, chains a def's migrations, and parses. A record with
  *  a def is written with ITS version through the `v` option below; this constant
  *  stays the stamp for every write that has no def yet, and both are 1 today.

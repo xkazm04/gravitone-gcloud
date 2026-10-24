@@ -1,7 +1,7 @@
 // THE WHOLE-RECORD SAVE. saveStep never rejects: it resolves to an outcome, and every
 // failure is also published to the trouble channel by withStore.
 //
-// Split out of the stepStore.ts door, which re-exports saveStep.
+// Split out of v1's stepStore.ts; the door is now index.ts, which re-exports saveStep.
 
 import { STEPS_STORE, runTx } from "@/lib/studioDb";
 
@@ -17,12 +17,12 @@ export async function saveStep<T>(
   projectId: string,
   phase: string,
   data: T,
-  /** `v`: the record version to stamp — a record def's own (records/patch.ts).
+  /** `v`: the record version to stamp — a record def's own (recordRegistry.ts).
    *  Absent means `SCHEMA_VERSION`, which is every caller without a def. */
   opts?: { v?: number },
 ): Promise<SaveOutcome> {
   // Ticket taken HERE — at call time, in issue order — not inside the write,
-  // which would be the same race one layer down. See the block above.
+  // which would be the same race one layer down. See saveOrder.ts.
   const slot = claimSaveSlot(projectId, phase);
 
   return inIssueOrder<SaveOutcome>(key(projectId, phase), async () => {
