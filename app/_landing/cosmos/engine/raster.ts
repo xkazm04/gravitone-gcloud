@@ -71,14 +71,19 @@ export class Raster {
   private seq = 0;
   private pumping = false;
   private dead = false;
+  /** the worker is still saying hello: a job asked for now waits for it, and is
+   *  not painted here (`mode` reads "main" until the worker answers) */
+  private starting: boolean;
   readonly ready: Promise<Hello>;
 
   constructor(forceMain: boolean) {
+    this.starting = !forceMain;
     this.ready = forceMain ? Promise.resolve(this.startMain()) : this.startWorker();
   }
 
   private startMain(): Hello {
     this.mode = "main";
+    this.starting = false;
     return { ren: probeRendererMain(), grain: mainGrain() };
   }
 
@@ -121,6 +126,7 @@ export class Raster {
           settled = true;
           this.mode = "worker";
           this.worker = w;
+          this.starting = false;
           resolve({ ren: m.ren ?? null, grain: m.grain ? blobGrain(m.grain) : mainGrain() });
           this.pump();
           return;
@@ -167,7 +173,7 @@ export class Raster {
   }
 
   private pump(): void {
-    if (this.dead) return;
+    if (this.dead || this.starting) return;
     if (this.worker) {
       while (this.live.size < 2 && this.q.length) {
         const p = this.q.shift()!;

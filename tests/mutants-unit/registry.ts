@@ -5401,4 +5401,13 @@ export const MUTANTS: UnitMutant[] = [
     replace: "className={k.glyphCell} title={n}>",
     why: "A screen reader walking the Floor's marks row hears twelve empty cells: each glyph is aria-hidden and its cell names nothing.",
   },
+  // ---- the landing's Paper Cosmos engine (app/_landing/cosmos/engine)
+  {
+    id: "cosmos-raster-paints-during-handshake",
+    test: "tests/next-server/landing-cosmos-engine.test.ts",
+    file: "app/_landing/cosmos/engine/raster.ts",
+    find: "if (this.dead || this.starting) return;",
+    replace: "if (this.dead) return;",
+    why: "A resize in the landing's first moments paints the whole overview on the main thread while the worker is still starting, and two drainers then race for one queue.",
+  },
 ];
