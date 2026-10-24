@@ -129,7 +129,7 @@ export async function readHunt(kind: Kind, h: string | null): Promise<HuntDeskVi
         nodes: one.nodes,
         takes: Object.fromEntries(mine.map((t) => [t.id, auditionOf(t, by.get(`audio:${t.id}`))])),
         lesson: lesson === null ? null : { id: lesson.id, claim: lesson.claim, technique: [...lesson.technique], n: lesson.evidence.n, keepRate: lesson.evidence.keepRate, confirmedAt: lesson.confirmedAt },
-        inFlight: squared.find((s) => s.hunt.id === h)?.nodes.some((n) => n.state === "rendering") ?? false,
+        inFlight: one.nodes.some((n) => n.state === "rendering"),
         measures: m.ok ? null : m.error.message,
       },
     },

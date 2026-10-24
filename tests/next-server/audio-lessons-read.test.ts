@@ -62,6 +62,7 @@ describe("the hunt's lesson part", () => {
   it("draws the hunt's signed lesson", async () => {
     const v = await readHunt("music", "hn-1");
     expect(v.open?.ok && v.open.value.lesson?.id).toBe("ls-1");
+    expect(v.open?.ok && v.open.value.inFlight).toBe(false);
     expect(v.lessonError).toBeNull();
   });
 
