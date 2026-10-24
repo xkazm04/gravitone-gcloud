@@ -144,8 +144,9 @@ export function staticItems(input: StaticInput): CheckItem[] {
   if (md || html) items.push(item("voice", "first-person", "No first person in prose", !fp.length, { value: fp.length, expected: "0", ...(fp.length ? { detail: fp.slice(0, 12) } : {}) }));
   if (md || html) {
     const where: string[] = [];
+    // Decoded first: `&mdash;`, `&#8212;` and `&#x2013;` render as the characters the rule forbids.
     const scan = (label: string, text: string) => {
-      const n = (text.match(/[\u2014\u2013]/g) ?? []).length;
+      const n = (decode(text).match(/[\u2014\u2013]/g) ?? []).length;
       if (n) where.push(`${label}: ${n}`);
     };
     scan("post.md", md ?? "");

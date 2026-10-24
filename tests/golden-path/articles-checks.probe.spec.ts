@@ -367,3 +367,14 @@ test("entities: decoded once, hex and dash names read, an impossible code point 
   expect(() => htmlProse("<p>x &#99999999; y</p>")).not.toThrow();
   expect(htmlProse("<p>x &#99999999; y &#x110000; z</p>")).toBe("x &#99999999; y &#x110000; z");
 });
+
+// The no-em-dash rule reads what renders: a dash spelled as an entity is the same dash.
+test("no em dash: an entity-spelled dash in the page, the Markdown or a figure fails the item", () => {
+  const base = { md, sources: SOURCES, claims: [{ text: "x", source: 1 }], figures: figures(), postFiles: files() };
+  const page1 = byId(staticItems({ ...base, html: page().replace("holds across", "holds &mdash; across") }), "no-em-dash");
+  expect(page1).toMatchObject({ status: "fail", detail: ["index.html: 1"] });
+  expect(byId(staticItems({ ...base, html: page().replace("holds across", "holds &#x2013; across") }), "no-em-dash").status).toBe("fail");
+  expect(byId(staticItems({ ...base, html: page(), md: md.replace("holds across", "holds &#8212; across") }), "no-em-dash").status).toBe("fail");
+  expect(byId(staticItems({ ...base, html: page(), figures: figures(5, "a &ndash; b") }), "no-em-dash").status).toBe("fail");
+  expect(byId(staticItems({ ...base, html: page() }), "no-em-dash").status).toBe("pass");
+});
