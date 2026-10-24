@@ -1182,6 +1182,22 @@ export const MUTANTS: UnitMutant[] = [
     why: "The worker starts more jobs on a lane than it has slots, and the extra claims fail or overrun a one-card GPU.",
   },
   {
+    id: "audio-accept-unmeasured-passes",
+    test: "packages/domain/test/audio.test.ts",
+    file: "packages/domain/src/audio.accept.ts",
+    find: "  if (m.integratedLufs === null) reasons.push(\"loudness not measured\");\n  else if",
+    replace: "  if (m.integratedLufs === null) void 0;\n  else if",
+    why: "A take the sidecar could not measure is recorded as an accepted one, so the Ledger says pass for audio nobody checked.",
+  },
+  {
+    id: "audio-fx-pitch-unbounded",
+    test: "packages/domain/test/audio.test.ts",
+    file: "packages/domain/src/audio.fx.ts",
+    find: "semitones: num(-12, 12)",
+    replace: "semitones: num(-48, 48)",
+    why: "An LLM-written chain pitches a narration four octaves down and the door lets it through to the renderer.",
+  },
+  {
     id: "lane-free-gpu-pays",
     test: "packages/domain/test/lane.test.ts",
     file: "packages/domain/src/lane.ts",
