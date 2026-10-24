@@ -13,6 +13,9 @@
 //    routes' access-header half retired with them.
 // 8. GUARD (declared, green before): commitRun(id, 'leave') still leaves undecided candidates' files on disk and out of ledger.json.
 // 9. (Critic revision): Bind confirm to preview via token: token = (await previewCommit(run)).token (or previewExtractCommit); if verdicts/manifest change before commit, e.g. putVerdicts flips one keep to reject, calling commitRun(run, 'reject', token) rejects with FoundryError 409 and candidate files, ledger.json and styles.json remain byte-identical.
+// 10. (sweep 2026-10-24) the token sees WHO kept: a model's keep becoming a human's changes the
+//     plan's promotions, so it must change the token too, or a preview that showed no promotion
+//     commits one; a record with no `by` and one with by:"human" (both a human's) keep one token.
 
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -25,6 +28,7 @@ import { OBSERVABLE_FIELDS } from "@/lib/foundry/extract/types";
 import type { ExtractManifest, ExtractedStyle, Observables } from "@/lib/foundry/extract/types";
 import { OUT_ROOT, resolveInRun, FoundryError, commitRun, previewCommit, putVerdicts } from "@/lib/foundry/store";
 import type { Candidate, RunManifest, StyleDef, Verdicts } from "@/lib/foundry/types";
+import { planForgeCommit } from "@/lib/foundry/commitPlan";
 
 import { keepEnv, probeFoundryDir } from "./_helpers";
 
@@ -454,4 +458,21 @@ test("Case 9: Bind confirm to preview via token: token = (await previewCommit(ru
   } finally {
     cleanupRun(runId);
   }
+});
+
+test("Case 10: the token changes when a model's keep becomes a human's, because the promotions do", () => {
+  const cand = (scene: string): Candidate => ({ id: `${scene}/haze--text--s1`, scene, style: "haze", mechanism: "text", seed: 1, file: `${scene}.png`, sidecar: `${scene}.json`, status: "graded", grade: null, error: null });
+  const run = { id: "probe-token-by", status: "done", candidates: [cand("sc1")] } as unknown as RunManifest;
+  // One human keep of `haze` on another run's scene already: a second human-kept scene proves it.
+  const haze: StyleDef = { ...styleDef("haze"), evidence: [{ run: "older", scene: "sc0", mechanism: "text", verdict: "keep", at: "t0" }] };
+  const plan = (by?: "human" | "model") => planForgeCommit(run, { "sc1/haze--text--s1": { verdict: "keep", at: "t1", ...(by ? { by } : {}) } }, { styles: [haze], ledger: [] }, "leave");
+
+  const model = plan("model");
+  const human = plan("human");
+  const legacy = plan();
+  console.log(`[token] model promotions=${model.promotions.join(",") || "none"} human promotions=${human.promotions.join(",") || "none"} same token=${model.token === human.token}`);
+  expect(model.promotions).toEqual([]);
+  expect(human.promotions).toEqual(["haze"]);
+  expect(human.token, "a by-only change that moves the promotions must move the token").not.toBe(model.token);
+  expect(legacy.token, "no `by` reads as a human's: one token, as before").toBe(human.token);
 });

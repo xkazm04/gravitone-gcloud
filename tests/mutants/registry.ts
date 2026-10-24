@@ -37,7 +37,7 @@ export type Mutant = {
  * unguarded probe lowers the live count and the same probe asks for this number
  * to be lowered to match, so the gain is kept.
  */
-export const UNGUARDED_PROBE_BUDGET = 158;
+export const UNGUARDED_PROBE_BUDGET = 157;
 
 export const MUTANTS: Mutant[] = [
   {
@@ -455,6 +455,14 @@ export const MUTANTS: Mutant[] = [
     find: "if (!COMMITTABLE.includes(run.status)) throw",
     replace: "if (![\"done\", \"incomplete\", \"failed\"].includes(run.status)) throw",
     why: "The forge commit door carries its own copy of the committable statuses again, and a change to the plant's set reaches the Board and the ledger but not the server.",
+  },
+  {
+    id: "forge-token-blind-to-by",
+    probe: "foundry-commit-plan.probe.spec.ts",
+    file: "lib/foundry/commitPlan.ts",
+    find: "${verdicts[k]?.verdict}${verdicts[k]?.by === \"model\" ? \":model\" : \"\"}",
+    replace: "${verdicts[k]?.verdict}",
+    why: "A model's keep turning into a human's leaves the commit token unchanged, so a preview that showed no promotion commits one and the Board's consequence never reads as stale.",
   },
   {
     id: "extract-text-round-wins-recipe",

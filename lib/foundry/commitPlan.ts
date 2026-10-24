@@ -120,9 +120,13 @@ export function planForgeCommit(
     }
   }
 
+  // WHO kept is part of the plan: a model's keep is evidence, a human's a vote
+  // (humanKeep), so a by-only change moves `promotions` and must move the token.
+  // Only `model` is spelled: absent and `human` both read as a human's, so a map
+  // with no model verdict keeps the token it had before `by` was bound.
   const verdictPayload = Object.keys(verdicts)
     .sort()
-    .map((k) => `${k}:${verdicts[k]?.verdict}`)
+    .map((k) => `${k}:${verdicts[k]?.verdict}${verdicts[k]?.by === "model" ? ":model" : ""}`)
     .join("|");
   const candidatePayload = run.candidates
     .map((c) => `${c.id}:${c.status}:${c.deleted ? 1 : 0}:${c.file}`)
