@@ -49,6 +49,7 @@ export const DECISION_ADAPTERS = {
   mv: adapter(mvAdapter),
   // No v1 surface
   trials: notDecidable("the prototype's mechanism trials have no v1 store; nothing opens a trials packet from v1"),
+  // Phase 4 (L36): a part's step gate, from the part records (lib/parts/gates.ts).
   step: adapter(stepAdapter),
   // Phase 5 (L56): a style's pending proofs, from the Style table
   proof: adapter(proofAdapter),
