@@ -186,7 +186,7 @@ export function fixtureDetail(id: string): Result<LibraryItemDetail> {
     const vs = x.f[key] ?? [];
     return vs.length === 0 ? [] : [{ key, label: groupLabel(key), values: vs.map((value) => ({ value, label: labelOf(key, value) })) }];
   });
-  const pinned = (x.f["pin"] ?? []).length > 0;
+  const pinned = (x.f["pin"] ?? []).includes(DEFAULT_PIN);
   return ok({ item: item.value, row: x.row, vocabulary, lineage: x.lineage, extras: x.extras, media: x.media, acts: [pinned ? "unpin" : "pin", "use-in-project", ...(x.row.kind === "model" ? (["export"] as const) : [])] });
 }
 
@@ -204,16 +204,18 @@ export function fixtureAct(id: string, act: LibraryAct, now: () => string): Resu
   const u = universe();
   const x = u.byId.get(id);
   if (x === undefined) return gone(id);
+  // A pin is a mark per collection, the default one what the detail's Pin presses (kernel write.ts).
   const pins = x.f["pin"] ?? [];
+  const into = act.act === "pin" || act.act === "unpin" ? (act.collection ?? DEFAULT_PIN) : DEFAULT_PIN;
   if (act.act === "pin") {
-    if (pins.length > 0) return err("conflict", `${x.row.title} is already pinned`);
-    x.f["pin"] = [act.collection ?? DEFAULT_PIN];
+    if (pins.includes(into)) return err("conflict", `${x.row.title} is already pinned`);
+    x.f["pin"] = [...pins, into];
     u.acts.push({ at: now(), type: "library.pinned", id });
     return ok({ said: `Pinned · ${x.row.title}` });
   }
   if (act.act === "unpin") {
-    if (pins.length === 0) return err("conflict", `${x.row.title} is not pinned`);
-    x.f["pin"] = [];
+    if (!pins.includes(into)) return err("conflict", `${x.row.title} is not pinned`);
+    x.f["pin"] = pins.filter((c) => c !== into);
     u.acts.push({ at: now(), type: "library.unpinned", id });
     return ok({ said: `Unpinned · ${x.row.title}` });
   }

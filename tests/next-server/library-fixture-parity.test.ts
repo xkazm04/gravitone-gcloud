@@ -215,4 +215,16 @@ describe("an act answers what the kernel answers, and leaves the events it leave
     const gone = both(id, { act: "use-in-project", projectId: "prj-nope" });
     expect(gone.fixture).toBe(gone.real);
   });
+
+  it("a pin into a named collection is its own mark; the default pin still answers", () => {
+    const id = image(2);
+    for (const act of [{ act: "pin", collection: "moodboard" }, { act: "pin" }, { act: "unpin", collection: "moodboard" }] as const) {
+      const a = both(id, act);
+      expect(a.fixture, JSON.stringify(act)).toBe(a.real);
+    }
+    const d = fixtureDetail(id);
+    const r = lib.detail(id, {});
+    expect(d.ok && d.value.acts).toEqual(r.ok && r.value.acts);
+    expect(fixtureEvents(id)).toEqual(realEvents(id));
+  });
 });

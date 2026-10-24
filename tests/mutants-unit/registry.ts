@@ -5939,4 +5939,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "",
     why: "Sorted by name, the set summary's Newest row shows the alphabet's first pictures under a heading that says they are the newest.",
   },
+  {
+    id: "library-fixture-one-pin-slot",
+    test: "tests/next-server/library-fixture-parity.test.ts",
+    file: "app/(studio)/library/_port/fixture.ts",
+    find: "    if (pins.includes(into)) return err(",
+    replace: "    if (pins.length > 0) return err(",
+    why: "The fixture Library holds one pin an item, so a default pin after a pin into a named collection is refused as already pinned where the kernel marks it.",
+  },
 ];
