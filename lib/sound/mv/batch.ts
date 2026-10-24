@@ -24,6 +24,7 @@
 //   failed     retried from its failed step
 //   queued / active   left alone; the drain runs it
 //   none / cancelled  queued
+//   skip-unimportable an empty file, or one past the upload cap: the import makes no take of it
 // Past `limit`, a track that would be queued or retried is `skip-limit`.
 // Versions: a file whose track title ends "(instrumental)" is the
 // instrumental; every other file is the main version (./store.ts trackTitle).
@@ -33,7 +34,7 @@
 // the batch's own output, and a re-run after a regenerate must hand over the
 // new video, not keep the old one.
 
-import { copyFile, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { copyFile, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { Receipt, ReceiptMode } from "@gt/domain/produce";
@@ -42,7 +43,7 @@ import { driveMv, launchMvNow, mvKernelId, mvKernelJobs, resumeMvJobs } from "@/
 import { OPERATOR } from "@/lib/producers/sound";
 
 import { SoundError } from "../store";
-import { expandHome, IMPORT_EXTS, importFolder } from "./importFolder";
+import { expandHome, importFolder, trackFiles, unimportable } from "./importFolder";
 import { enqueueMv, readMvLive, retryMv } from "./queue";
 import { filePathAbs } from "../store";
 import { isLookId, MV_LOOK_IDS, type MvLookId } from "./looks";
@@ -58,7 +59,7 @@ export const BATCH_VERSIONS: readonly BatchVersions[] = ["all", "main", "instrum
  *  figure; the spend each job made is on its still's provenance. */
 export const CREDITS_PER_STILL = 71;
 
-export type BatchAction = "queue" | "retry" | "running" | "skip-done" | "skip-version" | "skip-limit";
+export type BatchAction = "queue" | "retry" | "running" | "skip-done" | "skip-version" | "skip-limit" | "skip-unimportable";
 
 export interface BatchRow {
   /** Absolute path of the source file. */
@@ -144,11 +145,7 @@ const versionOf = (title: string): BatchRow["version"] => (/\(instrumental\)$/i.
 async function audioFiles(dir: string): Promise<string[]> {
   const st = await stat(dir).catch(() => null);
   if (!st?.isDirectory()) throw new SoundError(`there is no folder at ${dir}`, 400);
-  return (await readdir(dir, { withFileTypes: true }))
-    .filter((e) => e.isFile() && IMPORT_EXTS.includes(path.extname(e.name).toLowerCase()))
-    .map((e) => e.name)
-    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-    .map((n) => path.join(dir, n));
+  return trackFiles(dir);
 }
 
 /** What a run over `dirIn` would do. Reads only. */
@@ -174,6 +171,8 @@ export async function planBatch(dirIn: string, optsIn: BatchOptions = {}): Promi
       : undefined;
     let action: BatchAction;
     if (versions !== "all" && version !== versions) action = "skip-version";
+    // The import makes no take of it (./importFolder.ts unimportable): nothing to queue, nothing to price.
+    else if (takeId === undefined && unimportable(bytes)) action = "skip-unimportable";
     else if (newest?.state === "queued" || newest?.state === "active") action = "running";
     else if (newest?.state === "done" && !opts.again) action = "skip-done";
     else if (newest?.state === "failed" && !opts.again) action = "retry";

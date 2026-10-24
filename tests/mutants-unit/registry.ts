@@ -5546,4 +5546,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "\"add-cue\": () => send({ op: \"cue-add\" }),",
     why: "N on a score with no picture reaches the store, which answers \"every scene has a cue\" of a film with no scenes, where the add cue button beside it is disabled.",
   },
+  {
+    id: "mv-plan-prices-unimportable-file",
+    test: "tests/next-server/mv-pipeline-edges.test.ts",
+    file: "lib/sound/mv/batch.ts",
+    find: "    else if (takeId === undefined && unimportable(bytes)) action = \"skip-unimportable\";",
+    replace: "    else if (takeId === undefined && unimportable(-1)) action = \"skip-unimportable\";",
+    why: "An empty or oversize file in an album folder is planned and priced as a new video that the import never makes a take of, and the run then drops it without a word.",
+  },
 ];

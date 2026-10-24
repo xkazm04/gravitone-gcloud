@@ -48,29 +48,38 @@ const HOME_PREFIX = path.sep === "\\" ? /^~[\\/]/ : /^~\//;
  *  The one spelling of it: the batch's plan (./batch.ts resolveDir) reads it too. */
 export const expandHome = (dir: string): string => (dir === "~" || HOME_PREFIX.test(dir) ? path.join(homedir(), dir.slice(1)) : dir);
 
+/** The folder's tracks, in running order: every audio file directly in `dir`
+ *  (absolute paths). The one listing: the batch's plan reads it too. */
+export async function trackFiles(dir: string): Promise<string[]> {
+  return (await readdir(dir, { withFileTypes: true }))
+    .filter((e) => e.isFile() && IMPORT_EXTS.includes(path.extname(e.name).toLowerCase()))
+    .map((e) => e.name)
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+    .map((n) => path.join(dir, n));
+}
+
+/** A file of this size the import makes no take of: an empty file is not a
+ *  track, and createTake refuses past its cap. The batch's plan asks the same
+ *  question, so it never prices a video the import will not start. */
+export const unimportable = (bytes: number): boolean => bytes === 0 || bytes > MAX_UPLOAD_BYTES;
+
 export async function importFolder(dirIn: string, now = Date.now()): Promise<MvImportResult> {
   const dir = path.resolve(expandHome(dirIn));
   const st = await stat(dir).catch(() => null);
   if (!st) throw new SoundError(`there is no folder at ${dir}`, 400);
   if (!st.isDirectory()) throw new SoundError(`${dir} is a file, not a folder`, 400);
 
-  const names = (await readdir(dir, { withFileTypes: true }))
-    .filter((e) => e.isFile() && IMPORT_EXTS.includes(path.extname(e.name).toLowerCase()))
-    .map((e) => e.name)
-    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-
   const out: MvImportResult = { added: 0, skipped: 0, takeIds: [] };
   const known = new Map((await readMv()).imports.map((r) => [r.path.toLowerCase(), r.bytes]));
-  for (const name of names) {
-    const abs = path.join(dir, name);
+  for (const abs of await trackFiles(dir)) {
+    const name = path.basename(abs);
     const bytes = (await stat(abs)).size;
     if (known.get(abs.toLowerCase()) === bytes) {
       out.skipped++;
       continue;
     }
-    if (bytes === 0 || bytes > MAX_UPLOAD_BYTES) {
-      // An empty file is not a track, and createTake refuses past its cap;
-      // either one is skipped rather than aborting the other nineteen.
+    if (unimportable(bytes)) {
+      // Skipped rather than aborting the other nineteen.
       console.warn(`[mv] import skipped ${abs}: ${bytes} bytes`);
       out.skipped++;
       continue;

@@ -19,13 +19,13 @@ const ROOT = vi.hoisted(() => {
   return dir;
 });
 
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 
 import { closeProcessKernel } from "@gt/kernel/process";
 
-import { resolveDir } from "../../lib/sound/mv/batch.ts";
+import { CREDITS_PER_STILL, planBatch, resolveDir } from "../../lib/sound/mv/batch.ts";
 import { importFolder } from "../../lib/sound/mv/importFolder.ts";
 import { isLookId, MV_LOOK_IDS } from "../../lib/sound/mv/looks.ts";
 import { writeMetadata } from "../../lib/sound/mv/metadata.ts";
@@ -101,5 +101,24 @@ describe("an album folder spelled from home", () => {
     expect(resolveDir("~")).toBe(homedir());
     // The import resolves the same spelling to the same folder: its refusal names it.
     await expect(importFolder(`~${path.sep}gt-no-such-album-${process.pid}`)).rejects.toThrow(path.join(homedir(), `gt-no-such-album-${process.pid}`));
+  });
+});
+
+describe("the album plan and the import", () => {
+  it("agree on which files are tracks: one the import refuses is never planned as a new video", async () => {
+    const dir = mkdtempSync(path.join(ROOT, "album-"));
+    writeFileSync(path.join(dir, "01_Walls Unwind.mp3"), "ID3 fake audio");
+    writeFileSync(path.join(dir, "02_Bounced Wrong.mp3"), "");
+    writeFileSync(path.join(dir, "cover.jpg"), "not a track");
+    const plan = await planBatch(dir);
+    expect(plan.rows.map((r) => [path.basename(r.file), r.action])).toEqual([
+      ["01_Walls Unwind.mp3", "queue"],
+      ["02_Bounced Wrong.mp3", "skip-unimportable"],
+    ]);
+    expect(plan.newJobs).toBe(1);
+    expect(plan.estimatedCredits).toBe(CREDITS_PER_STILL);
+    // What the import then takes is exactly what the plan queued.
+    const imported = await importFolder(dir);
+    expect({ added: imported.added, skipped: imported.skipped }).toEqual({ added: 1, skipped: 1 });
   });
 });
