@@ -17,7 +17,7 @@ import { err, ok, type Result } from "@gt/domain/errors";
 import type { Receipt, ReceiptMode } from "@gt/domain/produce";
 import { ceilingUsdSchema, receiptModeSchema } from "@gt/domain/produce.schema";
 import { dryOnlyFrom } from "@gt/kernel/dryrun";
-import { COUNT, DURATION, TECHNIQUES, type BatchForm } from "@gt/ui/components/audio/batch.ts";
+import { COUNT, DURATION, TECHNIQUES, TEMPO, type BatchForm } from "@gt/ui/components/audio/batch.ts";
 import { SCORE_MAX, SCORE_MIN } from "@gt/ui/components/audio/rubric.ts";
 
 import type { ActionResult } from "../../../_server/actionCore.ts";
@@ -76,7 +76,7 @@ const form = z
     promptInfluence: z.number().min(0).max(1).nullable(),
     durationS: z.number().min(DURATION.sfx.min).max(DURATION.music.max),
     count: z.number().int().min(COUNT.min).max(COUNT.max),
-    tempoBpm: z.number().min(40).max(220).nullable(),
+    tempoBpm: z.number().min(TEMPO.min).max(TEMPO.max).nullable(),
     key: z.string().max(40).nullable(),
   })
   .strict();
