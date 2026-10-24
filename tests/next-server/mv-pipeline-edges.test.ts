@@ -30,6 +30,7 @@ import { fetchClipBytes } from "../../lib/sound/mv/fetchAudio.ts";
 import { importFolder } from "../../lib/sound/mv/importFolder.ts";
 import { isLookId, MV_LOOK_IDS } from "../../lib/sound/mv/looks.ts";
 import { writeMetadata } from "../../lib/sound/mv/metadata.ts";
+import { labelSections } from "../../lib/sound/mv/sections.ts";
 import { treatmentInput, writeTreatment } from "../../lib/sound/mv/treatment.ts";
 import type { MvAnalysis } from "../../lib/sound/mv/types.ts";
 import type { TextRequest, TextResult } from "../../lib/text/types.ts";
@@ -128,5 +129,27 @@ describe("a Suno clip's audio URL", () => {
   it("that cannot be parsed fails with the download's own sentence, not a bare 'Invalid URL'", async () => {
     // Refused by fetch before any connection is made: nothing leaves the box.
     await expect(fetchClipBytes("suno clip without a scheme")).rejects.toThrow(/^the clip's audio could not be downloaded from suno clip without a scheme: /);
+  });
+});
+
+describe("the section words the chapters print", () => {
+  // labelSections over each section's mean energy (lib/sound/mv/sections.ts):
+  // loud (top 30% of the track's range) is a chorus; a quiet first / last of
+  // three or more is the intro / outro; a non-loud section with two choruses
+  // behind it and one ahead is the bridge; everything else is a verse.
+  it("name a bridge only between the second chorus and a later one", () => {
+    expect(labelSections([0.4, 0.9, 0.4, 0.9, 0.5, 0.95])).toEqual(["intro", "chorus", "verse", "chorus", "bridge", "chorus"]);
+    // Two choruses behind and none ahead is a verse, then the quiet last is the outro.
+    expect(labelSections([0.4, 0.9, 0.4, 0.9, 0.55, 0.6])).toEqual(["intro", "chorus", "verse", "chorus", "verse", "outro"]);
+  });
+
+  it("keep intro and outro for tracks of three sections or more", () => {
+    expect(labelSections([0.2, 0.9])).toEqual(["verse", "chorus"]);
+    expect(labelSections([0.2, 0.9, 0.2])).toEqual(["intro", "chorus", "outro"]);
+  });
+
+  it("call a section a chorus only in the top 30% of the track's range", () => {
+    expect(labelSections([0.2, 0.62, 1.0, 0.2])).toEqual(["intro", "verse", "chorus", "outro"]);
+    expect(labelSections([0.2, 0.8, 1.0, 0.2])).toEqual(["intro", "chorus", "chorus", "outro"]);
   });
 });

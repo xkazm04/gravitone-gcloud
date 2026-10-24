@@ -5651,4 +5651,28 @@ export const MUTANTS: UnitMutant[] = [
     replace: "    throw new Error(`the clip's audio could not be downloaded from ${new URL(url).host}: ${errorMessage(e)}`);",
     why: "A Suno clip whose audio URL does not parse fails its music-video job with a bare 'Invalid URL', naming neither the clip's download nor the URL.",
   },
+  {
+    id: "mv-sections-no-bridge",
+    test: "tests/next-server/mv-pipeline-edges.test.ts",
+    file: "lib/sound/mv/sections.ts",
+    find: "    if (before >= 2 && after >= 1) return \"bridge\";",
+    replace: "    if (before >= 2 && after >= 0) return \"bridge\";",
+    why: "The verse after a track's last chorus is chaptered as a bridge, so the YouTube chapters call the closing verse something it is not.",
+  },
+  {
+    id: "mv-sections-intro-under-three",
+    test: "tests/next-server/mv-pipeline-edges.test.ts",
+    file: "lib/sound/mv/sections.ts",
+    find: "    if (n >= 3 && !loud[i] && r < 0.5 && i === 0) return \"intro\";",
+    replace: "    if (!loud[i] && r < 0.5 && i === 0) return \"intro\";",
+    why: "A two-part track's quiet first half is chaptered as an intro, a word the labelling keeps for tracks with at least three sections.",
+  },
+  {
+    id: "mv-sections-loud-line",
+    test: "tests/next-server/mv-pipeline-edges.test.ts",
+    file: "lib/sound/mv/sections.ts",
+    find: "  const loud = rel.map((r) => !flat && r >= 0.7);",
+    replace: "  const loud = rel.map((r) => !flat && r >= 0.5);",
+    why: "A mid-level verse is chaptered as a chorus: the loud line that names choruses drops from the top 30% of the track's range to its upper half.",
+  },
 ];
