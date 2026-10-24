@@ -2102,6 +2102,22 @@ export const MUTANTS: UnitMutant[] = [
     why: "A committed step packet does not read as ratified, so the plan never moves past its gate.",
   },
   {
+    id: "parts-gate-fact-scans",
+    test: "packages/kernel/test/parts.gates.test.ts",
+    file: "packages/kernel/src/parts/gates.ts",
+    find: "\"SELECT id, state, mode FROM packets WHERE id = ? OR (id >= ? AND id < ?)\", base, `${base}#`, `${base}$`",
+    replace: "\"SELECT id, state, mode FROM packets WHERE id = ? OR substr(id, 1, ?) = ?\", base, base.length + 1, `${base}#`",
+    why: "The gate fact goes back to scanning every packet ever opened, once per gate part per plan read.",
+  },
+  {
+    id: "decision-rail-drops-apply",
+    test: "packages/kernel/test/decision.view.test.ts",
+    file: "packages/kernel/src/decision/view.ts",
+    find: "      s.apply_act === null || s.apply_state === null",
+    replace: "      true || s.apply_state === null",
+    why: "The rail drops the joined outbox row, so a stuck apply never shows on the Board or the Floor.",
+  },
+  {
     id: "parts-frames-stale-ready",
     test: "tests/next-server/parts-verdict.test.ts",
     file: "lib/parts/verdict.ts",
