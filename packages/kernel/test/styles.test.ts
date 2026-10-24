@@ -95,6 +95,19 @@ describe("the forge commit's catalogue half (v1 commitRun, kept)", () => {
     expect(must(readStyle(s, "a")).style.evidence).toHaveLength(2);
     expect(count(s, "SELECT count(*) AS n FROM events")).toBe(events);
   });
+  it("a retry after ANOTHER run committed is still the same write: no revision, no event, the order kept", () => {
+    const s = store();
+    must(s.tx((t) => createStyleIn(t, draft("a"), FORGE, { kind: "test", replace: false })));
+    must(s.tx((t) => recordForgeEvidenceIn(t, "run-1", t.at, [keep("a", "x")], FORGE)));
+    must(s.tx((t) => recordForgeEvidenceIn(t, "run-2", t.at, [keep("a", "y")], FORGE)));
+    const before = must(readStyle(s, "a"));
+    const events = count(s, "SELECT count(*) AS n FROM events");
+    const again = must(s.tx((t) => recordForgeEvidenceIn(t, "run-1", t.at, [keep("a", "x")], FORGE)));
+    expect(again.touched).toEqual([]);
+    expect(must(readStyle(s, "a")).rev).toBe(before.rev);
+    expect(must(readStyle(s, "a")).style.evidence.map((e) => e.run)).toEqual(["run-1", "run-2"]);
+    expect(count(s, "SELECT count(*) AS n FROM events")).toBe(events);
+  });
   it("refuses a commit naming a style the store does not hold, writing nothing", () => {
     const s = store();
     const r = s.tx((t) => recordForgeEvidenceIn(t, "run-1", t.at, [keep("ghost", "x")], FORGE));
