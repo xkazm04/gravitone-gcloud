@@ -3655,6 +3655,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "On a decided packet's desk, [ skips the last open pile and lands on the one before it, so the operator stepping back through the Weir never reaches the last pile from there.",
   },
   {
+    id: "floor-level-rejection-stays-busy",
+    test: "tests/next-server/floor-settle.test.ts",
+    file: "app/(studio)/floor/_floor/settle.ts",
+    find: "(e: unknown): ActionResult<T> => ({ ok: false, error: { error: errorMessage(e), code: \"unavailable\" } }),",
+    replace: "(e: unknown): ActionResult<T> => { throw e; },",
+    why: "A slot verb or a schedule send whose Server Action rejects leaves the level armed and busy for good: the verb never answers, every later press is refused by the stale ref, and nothing says why until a reload.",
+  },
+  {
     id: "board-redrive-rejection-unsaid",
     test: "tests/next-server/board-redrive.test.ts",
     file: "app/(studio)/board/_board/redrive.ts",
