@@ -21,11 +21,13 @@
 // Case 7 below guards exactly that edge.
 
 import { test, expect } from "@playwright/test";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { keepEnv, stripComments } from "./_helpers";
 import { spendRows, __resetBudget, BUDGET_VAR, WINDOW_VAR, FLOOR_VAR } from "@/lib/imaging/budget";
 import { ImagingError, presumedBilled } from "@/lib/imaging/errors";
+import { ollamaProvider } from "@/lib/imaging/providers/ollama";
 import { billedOnFailure, generate } from "@/lib/imaging/router";
 
 const realFetch = globalThis.fetch;
@@ -38,6 +40,8 @@ keepEnv([
   "GOOGLE_AI_API_KEY",
   "LEONARDO_API_KEY",
   "OLLAMA_HOST",
+  "OLLAMA_LEASE_WAIT_MS",
+  "GRAVITONE_STORE_PATH",
   "IMAGING_ENV",
 ]);
 
@@ -230,6 +234,55 @@ test("12. leonardo started the generation, then its poll reports FAILED -> `fail
   expect(count(LEONARDO, "POST")).toBe(1);
   const rows = await spendRows();
   expect(rows.map((r) => r.outcome)).toEqual(["failed"]);
+});
+
+/** The Ollama eye takes the card's lease from the kernel store: a temp store per case. */
+async function withLeaseStore(fn: () => Promise<void>): Promise<void> {
+  const dir = mkdtempSync(join(tmpdir(), "billed-ollama-"));
+  process.env.GRAVITONE_STORE_PATH = join(dir, "gravitone.sqlite");
+  process.env.OLLAMA_HOST = "http://ollama.probe";
+  process.env.OLLAMA_LEASE_WAIT_MS = "0";
+  try {
+    await fn();
+  } finally {
+    const { closeProcessKernel } = await import("@gt/kernel/process");
+    closeProcessKernel();
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+const RECOGNIZE = { image: { base64: "AQID", mime: "image/png" as const }, instruction: "describe" };
+
+test("13. ollama daemon unreachable -> 1 dispatch attempt, not a second one without `think`", async () => {
+  // The retry without `think` exists for ONE answer: a model with no thinking mode
+  // rejecting the key. A host that never answered is not that answer.
+  await withLeaseStore(async () => {
+    stubFetch(() => Promise.reject(new TypeError("fetch failed")));
+    const err = await failure(ollamaProvider().recognize!(RECOGNIZE));
+    expect(err.kind).toBe("failed");
+    expect(err.dispatched).toBe(false);
+    expect(count("ollama.probe"), "an unreachable daemon was asked twice").toBe(1);
+  });
+});
+
+test("14. [guard] ollama rejects `think` with a 400 -> one retry without it, served", async () => {
+  await withLeaseStore(async () => {
+    const bodies: string[] = [];
+    calls = [];
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      calls.push({ method: (init?.method ?? "GET").toUpperCase(), url });
+      bodies.push(String(init?.body ?? ""));
+      return calls.length === 1
+        ? json({ error: '"qwen3.8:27b" does not support thinking' }, 400)
+        : json({ message: { content: "a local answer" } });
+    }) as typeof fetch;
+    const out = await ollamaProvider().recognize!(RECOGNIZE);
+    expect(out.text).toBe("a local answer");
+    expect(count("ollama.probe")).toBe(2);
+    expect(JSON.parse(bodies[0]).think).toBe(false);
+    expect("think" in JSON.parse(bodies[1])).toBe(false);
+  });
 });
 
 test("9. one authority: the router's billing predicate IS errors.ts's presumedBilled", () => {
