@@ -37,8 +37,10 @@ export async function settleAfter<R extends Report>(fx: Effects, producer: Produ
   );
   if (threw === undefined) return r;
   const logged = fx.tx("settle-failed", (t) => jobEvent(t, actor, loadJob(t, jobId).job, "job.settle-failed", { ending: end.ending, message: threw }));
-  if (!logged.ok) return logged;
-  return r.ok ? ok({ ...r.value, settle: { ok: false, message: threw } }) : r;
+  // The hook copies a fact and cannot undo one - nor can a ledger that refused to record the
+  // copy failing: the drive's outcome stands, and the report carries both sentences.
+  const message = logged.ok ? threw : `${threw}; job.settle-failed was not recorded: ${logged.error.message}`;
+  return r.ok ? ok({ ...r.value, settle: { ok: false, message } }) : r;
 }
 
 /** The job a drive ENDED, and how - or undefined when it ended nothing (a yield, a busy claim). */

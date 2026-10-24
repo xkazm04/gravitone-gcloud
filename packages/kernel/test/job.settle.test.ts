@@ -1,5 +1,6 @@
 import path from "node:path";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
+import { AppError } from "@gt/domain/errors";
 import type { Job } from "@gt/domain/job";
 import { blobStore } from "../src/blob.ts";
 import { liveEffects } from "../src/effects.ts";
@@ -87,6 +88,18 @@ describe("settle", () => {
     expect(r).toMatchObject({ outcome: "done", settle: { ok: false, message: "run.json is locked" } });
     expect(must(get(w.store, jobId("t1"))).job.state).toBe("done");
     expect(eventTypes(w.store, "t1").at(-1)).toBe("job.settle-failed");
+  });
+
+  it("a settle failure the ledger cannot take still leaves the drive's outcome standing, with both sentences", async () => {
+    const w = world();
+    must(enqueue(w.store, { id: "t2", of: { kind: "run", id: "t2" }, producer: "p", lane: "gpu.local" }, operator));
+    const { p } = settling(producer("gpu.local", ["a"]).p, "run.json is locked");
+    const fx: World["fx"] = { ...w.fx, tx: (name, fn) => (name === "settle-failed" ? { ok: false, error: new AppError("unavailable", "database is locked") } : w.fx.tx(name, fn)) };
+    const r = must(await runJob(fx, p, "t2", RUN));
+    expect(r).toMatchObject({ outcome: "done", job: { state: "done" } });
+    expect(r.settle?.message).toContain("run.json is locked");
+    expect(r.settle?.message).toContain("database is locked");
+    expect(must(get(w.store, jobId("t2"))).job.state).toBe("done");
   });
 });
 
