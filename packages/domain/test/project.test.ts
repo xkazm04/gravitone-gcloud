@@ -45,6 +45,11 @@ describe("project", () => {
     p.parts[1]!.after = [];
     refuse(projectPlanSchema, p, "unique");
   });
+  it("refuses a discarded project that was launched: only a draft is discarded (kernel records/write.ts discard)", () => {
+    const { launchedAt: _l, ...draft } = glassHarborTrailer().project;
+    accept(projectSchema, { ...draft, discardedAt: "2026-10-13T17:00:00Z" });
+    refuse(projectSchema, { ...glassHarborTrailer().project, discardedAt: "2026-10-13T17:00:00Z" }, "discarded");
+  });
   it("refuses a caller-shaped revision", () => {
     refuse(projectSchema, { ...glassHarborTrailer().project, rev: 0 }, "rev");
   });

@@ -295,6 +295,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "The project table calls ratified final while a missed or cancelled slot sends the project back to its gate, so anything that treats a ratified project as done stops watching one that needs a person.",
   },
   {
+    id: "project-door-admits-a-launched-tombstone",
+    test: "packages/domain/test/project.test.ts",
+    file: "packages/domain/src/project.ts",
+    find: "if (p.discardedAt !== undefined && p.launchedAt !== undefined)",
+    replace: "if (p.discardedAt !== undefined && p.launchedAt === \"never\")",
+    why: "A launched project can be stored as discarded, and every list stops showing a project whose jobs are still running and spending.",
+  },
+  {
     id: "template-fallback-shifts",
     test: "packages/catalog/test/catalog.test.ts",
     file: "packages/catalog/src/projects.ts",
