@@ -115,20 +115,24 @@ export const MUSIC_PRICES: readonly MusicPriceRow[] = [
     op: "compose",
     model: "music_v2",
     bills: "credits",
-    // UNPRICED ON PURPOSE.
+    // MEASURED IN CREDITS, not dollars: the account's credit balance read before and after, settled
+    // (the balance lags a render by 10-60 s). The dollar value of a credit depends on the plan and
+    // is not read here, so usdPerCredit stays undeclared and the quote stays unpriced in dollars.
+    creditsPerSecond: 13.75,
     source:
-      "Same endpoint family as `generate` and presumed to bill the same way, but the detailed endpoint also stores the render for inpainting (`store_for_inpainting`), and whether storage bills separately has not been checked. Presumed-equal is not measured, so this row stays its own row rather than aliasing the generate one.",
-    checked: "2026-08-29",
+      "Measured 2026-10-24 on a Creator-tier account (spark audio-labelling): 9 compose renders, 540 s asked, 7,425 credits; then 5 compose + 8 plan renders (plan renders through this endpoint), 825 s asked, 11,344 credits - 13.75 credits per asked second both times. Inpainting storage (`store_for_inpainting`) was not separated out.",
+    checked: "2026-10-24",
   },
   {
     vendor: "elevenlabs",
     op: "sfx",
     model: "eleven_text_to_sound_v2",
     bills: "credits",
-    // UNPRICED ON PURPOSE.
+    // MEASURED IN CREDITS (as compose above); not assumed to match music, and it does not.
+    creditsPerSecond: 11,
     source:
-      "Never measured here, and NOT assumed to match music: text-to-sound is a different model on a different endpoint, and its requests run 0.5..30s where music runs 3s..600s. Fill it the same way — one call of known length, credit delta, divide.",
-    checked: "2026-08-29",
+      "Measured 2026-10-24 (spark audio-labelling): 7 effects, 20 s asked, 220 credits; then 15 effects incl. 10 loops, 183 s asked, 2,013 credits - 11.0 credits per asked second both times.",
+    checked: "2026-10-24",
   },
   {
     vendor: "elevenlabs",
