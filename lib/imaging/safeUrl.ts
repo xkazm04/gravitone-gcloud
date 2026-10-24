@@ -55,17 +55,60 @@ export class BlockedUrlError extends Error {
   }
 }
 
+/** An IPv6 address as its eight 16-bit groups, or null when it is not one.
+ *  Accepts `::` compression and a trailing dotted quad (`::ffff:1.2.3.4`). */
+function hextets(addr: string): number[] | null {
+  let s = addr;
+  const tail: number[] = [];
+  const quad = /^(.*:)(\d{1,3}(?:\.\d{1,3}){3})$/.exec(s);
+  if (quad) {
+    const p = quad[2]!.split(".").map(Number);
+    if (p.some((n) => n > 255)) return null;
+    tail.push((p[0]! << 8) | p[1]!, (p[2]! << 8) | p[3]!);
+    s = quad[1]!.endsWith("::") ? quad[1]! : quad[1]!.slice(0, -1);
+  }
+  const parts = s.split("::");
+  if (parts.length > 2) return null;
+  const groups = (x: string) => (x === "" ? [] : x.split(":"));
+  let all: string[];
+  if (parts.length === 2) {
+    const head = groups(parts[0]!);
+    const rest = groups(parts[1]!);
+    const fill = 8 - tail.length - head.length - rest.length;
+    if (fill < 1) return null;
+    all = [...head, ...Array<string>(fill).fill("0"), ...rest];
+  } else {
+    all = groups(parts[0]!);
+    if (all.length + tail.length !== 8) return null;
+  }
+  if (!all.every((g) => /^[0-9a-f]{1,4}$/.test(g))) return null;
+  return [...all.map((g) => parseInt(g, 16)), ...tail];
+}
+
 /** True for an address no outbound vendor download has any business reaching. */
 export function isPrivateAddress(ip: string): boolean {
   const a = ip.trim().toLowerCase();
 
   // IPv6, including the forms that carry a v4 address inside them.
+  //
+  // Judged on the EXPANDED address, never on its spelling. `new URL()` hands
+  // assertFetchable the compressed hex form - `[::ffff:127.0.0.1]` arrives as
+  // `::ffff:7f00:1` - so a rule written against the dotted spelling matched only
+  // what a resolver returns and admitted every literal a vendor could write.
   if (a.includes(":")) {
-    if (a === "::" || a === "::1") return true;
-    if (a.startsWith("fe80") || a.startsWith("fec0")) return true; // link-local, site-local
-    if (/^f[cd][0-9a-f]{2}:/.test(a)) return true; // unique-local fc00::/7
-    const mapped = /(?:^::ffff:|^::)((?:\d{1,3}\.){3}\d{1,3})$/.exec(a);
-    if (mapped) return isPrivateAddress(mapped[1]!);
+    const h = hextets(a);
+    if (!h) return true; // unparseable is not safe
+    const zeroTo = (n: number) => h.slice(0, n).every((x) => x === 0);
+    if (zeroTo(7) && h[7]! <= 1) return true; // :: and ::1
+    if ((h[0]! & 0xffc0) === 0xfe80 || (h[0]! & 0xffc0) === 0xfec0) return true; // link-local, site-local (/10)
+    if ((h[0]! & 0xfe00) === 0xfc00) return true; // unique-local fc00::/7
+    if (h[0]! >= 0xff00) return true; // multicast
+    // The forms that carry a v4 address: mapped ::ffff:0:0/96, compatible ::/96,
+    // NAT64 64:ff9b::/96 (each in the low 32 bits) and 6to4 2002::/16 (bits 16-47).
+    const v4 = (hi: number, lo: number) => `${hi >> 8}.${hi & 0xff}.${lo >> 8}.${lo & 0xff}`;
+    if ((zeroTo(5) && (h[5] === 0xffff || h[5] === 0)) || (h[0] === 0x64 && h[1] === 0xff9b && h.slice(2, 6).every((x) => x === 0)))
+      return isPrivateAddress(v4(h[6]!, h[7]!));
+    if (h[0] === 0x2002) return isPrivateAddress(v4(h[1]!, h[2]!));
     return false;
   }
 
