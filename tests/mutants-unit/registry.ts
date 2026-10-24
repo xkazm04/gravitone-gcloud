@@ -888,6 +888,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "A row whose expires_at is not an instant reaches judge instead of refusing at the door as corruption.",
   },
   {
+    id: "events-verify-anchor-rechained",
+    test: "packages/kernel/test/events.test.ts",
+    file: "packages/kernel/src/events.ts",
+    find: "if (anchor !== undefined && ev.seq === anchor.seq && ev.hash !== anchor.hash) {",
+    replace: "if (false) {",
+    why: "A tail cut and re-appended as a fresh valid chain reaches past the anchor's seq, so verify against the anchor reads it intact.",
+  },
+  {
     id: "token-read-scope-spends",
     test: "packages/kernel/test/token.test.ts",
     file: "packages/kernel/src/token.ts",
