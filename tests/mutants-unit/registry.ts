@@ -2473,6 +2473,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "The handle's lift would run `up` and then bubble into the element's `up` off the same render's drag, so every resize would leave two resize-layer edits for one gesture.",
   },
   {
+    id: "frame-canvas-cancel-keeps-the-drag",
+    test: "packages/ui/test/components/frame-canvas.test.ts",
+    file: "packages/ui/src/components/part/FrameCanvas.tsx",
+    find: "const cancel = (): void => { setDrag(null); setLive(null); };",
+    replace: "const cancel = (): void => undefined;",
+    why: "A drag the browser cancelled would keep its local position, so the layer would be drawn where no edit ever put it until the next press.",
+  },
+  {
     id: "produce-strips-run-renamed-at-confirm",
     test: "tests/next-server/produce-real.test.ts",
     file: "lib/produce/laneDoors.ts",

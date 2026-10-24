@@ -108,4 +108,13 @@ describe("the frame canvas's gesture", () => {
     c.fire("onPointerUp", c.onLayer, ev(20, 10));
     expect(c.calls.move).toEqual([[20, 30]]);
   });
+
+  test("a cancelled drag (the browser took the pointer) leaves no edit and draws the layer where it is", () => {
+    const c = mount();
+    c.fire("onPointerDown", c.onLayer, ev(0, 0));
+    c.fire("onPointerMove", c.onLayer, ev(20, 10));
+    c.fire("onPointerCancel", c.onLayer, ev(20, 10));
+    expect((c.layer().props["style"] as { left: string; top: string })).toMatchObject({ left: "10%", top: "20%" });
+    expect(c.calls.move).toEqual([]);
+  });
 });
