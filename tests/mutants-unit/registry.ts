@@ -5329,4 +5329,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: ".playFade{animation:fadeUp .35s var(--ease)}",
     why: "The kit's fadeUp plays a motion no component ships, half again slower than the Library detail's, and a retune reads off the wrong specimen.",
   },
+  {
+    id: "py-cli-usage-indexed-again",
+    test: "packages/kernel/test/py.cli.test.ts",
+    file: "packages/kernel/py/job.py",
+    find: "    print(usage(__doc__), file=sys.stderr)",
+    replace: "    print(__doc__.strip().splitlines()[3].strip(), file=sys.stderr)",
+    why: "`python job.py` asked wrong exits 2 with an empty stderr again - the index lands on the blank line beside the usage, and an operator at the store sees nothing to correct.",
+  },
 ];

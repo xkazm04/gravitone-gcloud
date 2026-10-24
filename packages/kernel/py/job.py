@@ -55,7 +55,7 @@ from job_record import (BREAKER_LIMIT, DEFAULT_TTL_S, ERROR_CODES, HOLD_SENTENCE
                         claim_in, connect, dry_only_from, fence_loss, heartbeat_in, interrupt, job_event, lane_hold,
                         lane_slots, load, meter_of, move, ms, outputs_of, pid_alive, process_holder, put, read_row,
                         release_in, running_on, without_stage)
-from verify_events import canonical  # noqa: E402
+from verify_events import canonical, usage  # noqa: E402
 from kernel_records import release_held_in  # noqa: E402
 import job_settle  # noqa: E402
 
@@ -392,7 +392,7 @@ def main(argv):
         finally:
             jobs.close()
         return 0
-    print(__doc__.strip().splitlines()[3].strip(), file=sys.stderr)  # the usage line
+    print(usage(__doc__), file=sys.stderr)
     return 2
 
 

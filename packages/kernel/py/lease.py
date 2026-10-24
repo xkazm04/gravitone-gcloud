@@ -42,6 +42,7 @@ if _HERE not in sys.path:
     sys.path.append(_HERE)  # behind the caller's entries: to a GPU tenant `lease` is pipeline/gpu's
 from kernel_ledger import append, machine  # noqa: E402
 from lease_pid import pid_alive  # noqa: E402
+from verify_events import usage  # noqa: E402
 
 DEFAULT_TTL_S = 120
 BUSY_TIMEOUT_S = 10.0
@@ -391,7 +392,7 @@ def main(argv):
         finally:
             leases.close()
         return 0
-    print(__doc__.strip().splitlines()[2].strip(), file=sys.stderr)  # the usage line
+    print(usage(__doc__), file=sys.stderr)
     return 2
 
 

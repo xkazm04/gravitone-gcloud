@@ -37,6 +37,12 @@ OPTIONAL = [("occurred_at", "occurredAt"), ("at_src", "atSrc"), ("key", "key")]
 _REPR = re.compile(r"^(\d+)(?:\.(\d+))?(?:e([+-]?\d+))?$")
 
 
+def usage(doc):
+    """The usage line(s) of a script's docstring: every line that starts `python `. Searched, not
+    indexed - a docstring that gains a line above its usage would print a blank one instead."""
+    return "\n".join(line.strip() for line in doc.splitlines() if line.strip().startswith("python "))
+
+
 def es_number(x):
     """ECMAScript Number::toString for a finite float or an int."""
     if isinstance(x, bool):
@@ -139,7 +145,7 @@ def verify(rows, anchor=None, extra=OPTIONAL):
 
 def main(argv):
     if len(argv) not in (2, 4) or (len(argv) == 4 and argv[2] != "--anchor"):
-        print(__doc__.strip().splitlines()[2].strip(), file=sys.stderr)
+        print(usage(__doc__), file=sys.stderr)
         return 2
     anchor = None
     if len(argv) == 4:

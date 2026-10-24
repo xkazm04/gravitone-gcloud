@@ -16,6 +16,7 @@ from datetime import datetime, timedelta, timezone
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lease import (FenceConflict, LeaseError, LeaseLost, Tx, assert_fence, claim_in, connect,  # noqa: E402
                    heartbeat_in, holder_data, leave_in, release_in, status_in)
+from verify_events import usage  # noqa: E402
 
 
 def run_scenario(spec, sc, template, workdir, index):
@@ -93,6 +94,6 @@ def run_spec(spec_path, template):
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        print(__doc__.strip().splitlines()[2].strip(), file=sys.stderr)
+        print(usage(__doc__), file=sys.stderr)
         sys.exit(2)
     sys.exit(run_spec(sys.argv[1], sys.argv[2]))
