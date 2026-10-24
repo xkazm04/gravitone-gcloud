@@ -1136,7 +1136,11 @@
           "revision": 14,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "docs/articles.md:366 Refactor 1f6e3e5d (2026-10-11) moved critiqueStep into lib/articles/critiqueStep.ts:57 and did not touch docs/articles.md. engine.ts does not re-export it (only drive.ts imports it), so the coupled guide names a location that has been false since that change, and nothing in the change boundary caught it.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:fd96220db75846a1",
+          "evaluatedRevision": 14
         },
         {
           "subject": "video-assembly",

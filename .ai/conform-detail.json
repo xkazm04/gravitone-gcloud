@@ -11993,6 +11993,47 @@
           "evidence": "lib/notebook/schema-facts.ts:21 The closed value domains are carried in the request schema, so Gemini's constrained decoding enforces them on the native rung. The validator's failure to re-check them is recorded under schema-validation-and-repair."
         }
       ]
+    },
+    "0572228c-bd2e-42a3-a146-6a91d10fa08f/docs-sync": {
+      "context": "article-check-and-critique",
+      "subject": "docs-sync",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:08:50.214Z",
+      "worker": "2939ff64-fef5-4b19-9294-bd3b3d20d218",
+      "techniques": [
+        {
+          "technique": "same-change-enforcement",
+          "verdict": "deviation",
+          "evidence": "docs/articles.md:366 The split commit 1f6e3e5d changed lib/articles/critiqueStep.ts and engine.ts, and its stat shows no docs/ file. The doc has been edited since (7dad8b6e) and still names engine.ts."
+        },
+        {
+          "technique": "named-duplication-points",
+          "verdict": "deviation",
+          "evidence": "docs/articles.md:434 The prompt is derived from THRESHOLDS (checks.ts:29), which is right. The guide still hand-copies literal values (7,000; 450; 300; 45; 15 percent; 8/3/1 at lines 424-434) that a machine could compare, and no checker reads docs/articles.md."
+        },
+        {
+          "technique": "doc-rot-detection",
+          "verdict": "conformant",
+          "evidence": "lib/articles/checks.ts:7 A post dimension the check cannot measure is not counted as clean."
+        },
+        {
+          "technique": "checked-vs-skipped-denominators",
+          "verdict": "conformant",
+          "evidence": "lib/articles/checksReport.ts:25 The report carries notMeasured separately from pass/fail, and a browser that cannot launch yields not-measured items with the reason."
+        },
+        {
+          "technique": "rendered-surface-coupling",
+          "verdict": "conformant",
+          "evidence": "lib/articles/checksRendered.ts:99 The check opens the rendered post at two widths and reads the text inside the figure SVGs (checksStatic.ts:91), so it does not judge pictures it never opened."
+        },
+        {
+          "technique": "dated-corrections",
+          "verdict": "conformant",
+          "evidence": "lib/articles/checks.ts:47 Thresholds carry their date, measurement and n (e.g. maxWords set 2026-10-06 from 6,942 and 6,497)."
+        }
+      ]
     }
   }
 }
