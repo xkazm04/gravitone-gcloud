@@ -3623,6 +3623,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "On a decided packet's desk, [ skips the last open pile and lands on the one before it, so the operator stepping back through the Weir never reaches the last pile from there.",
   },
   {
+    id: "board-redrive-rejection-unsaid",
+    test: "tests/next-server/board-redrive.test.ts",
+    file: "app/(studio)/board/_board/redrive.ts",
+    find: "(e: unknown) => say(e instanceof Error ? e.message : \"the redrive did not land\"),",
+    replace: "(e: unknown) => void e,",
+    why: "A redrive whose Server Action never answers is an unhandled rejection: no toast, no re-read, and the decided desk still says stuck as if the button had not been pressed.",
+  },
+  {
     id: "l61-narration-skips-gt-ui",
     test: "tests/next-gates/narration-gate.test.ts",
     file: "pipeline/check-narration.mjs",

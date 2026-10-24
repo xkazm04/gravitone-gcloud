@@ -14,7 +14,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { PacketSummary } from "@gt/domain/board";
 import { createBoardGate, verdictsOfView, type BoardVerdict } from "@gt/ui/board/boardGate";
-import type { BoardPacket, BoardPort, PortResult, VerdictChange } from "@gt/ui/board/port";
+import type { BoardPacket, BoardPort, VerdictChange } from "@gt/ui/board/port";
 import { useGate } from "@gt/ui/board/useGate";
 import { SrOnly } from "@gt/ui/components/a11y/SrOnly.tsx";
 import { MatrixCull } from "@gt/ui/components/cull/MatrixCull.tsx";
@@ -32,6 +32,7 @@ import { CommitLayer, useCommitFlow } from "./commitFlow.tsx";
 import { DecidedDesk } from "./DecidedDesk.tsx";
 import { Losses } from "./Losses.tsx";
 import { stepTarget } from "./rail.ts";
+import { redriveAndSay, type Redrive } from "./redrive.ts";
 
 /** pagehide: what is still queued leaves with the page (the keepalive route, ../[packet]/keepalive). */
 function beacon(id: string, rev: number, changes: readonly VerdictChange[]): void {
@@ -55,7 +56,7 @@ export type BoardProps = {
    *  that imported them would walk the bundler into the port's zod doors. */
   readonly port: BoardPort;
   /** The decided desk's way back from a stuck v1 apply (../_port/actions.ts `redrive`). */
-  readonly redrive?: (input: { readonly id: string }) => Promise<PortResult<{ readonly id: string }>>;
+  readonly redrive?: Redrive;
   /** A host page that draws the desk in its own route (/scout's Runs tab): the place the sheet's way out and
    *  its only crumb name, and the address of each rail row. The caller passes the rail already narrowed. */
   readonly home?: { readonly label: string; readonly href: string; readonly railBase: string };
@@ -173,11 +174,7 @@ function BoardIsland({ id, initial, rail, kind, port, redrive, home }: BoardProp
         {...(redrive === undefined
           ? {}
           : {
-              onRedrive: () =>
-                void redrive({ id }).then((r) => {
-                  toast(r.ok ? "v1 apply · redriven" : r.error.error);
-                  refresh();
-                }),
+              onRedrive: () => void redriveAndSay(redrive, id, toast, refresh),
             })}
       />
     ) : packet.view.mode === "matrix-cull" ? (
