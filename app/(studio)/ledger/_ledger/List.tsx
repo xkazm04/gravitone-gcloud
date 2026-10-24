@@ -42,6 +42,9 @@ export type ListProps = {
   readonly sel: number | null;
   readonly fresh: ReadonlySet<number>;
   readonly capped: boolean;
+  /** Rows the last page read examined, and whether that reached the end of the match. */
+  readonly scanned: number;
+  readonly exhausted: boolean;
   readonly loading: boolean;
   readonly onOlder: () => void;
   readonly onSelect: (seq: number, open?: boolean) => void;
@@ -115,6 +118,11 @@ export function List({ ref, ...p }: ListProps) {
         {p.rows.length === 0 ? (
           p.head === 0 ? (
             <Empty label="nothing recorded yet" />
+          ) : !p.exhausted ? (
+            // A text search that stopped at its scan budget found nothing in the part it read;
+            // "0 events" would claim the whole ledger (audit-querying: an empty result must be
+            // distinguishable from a partial one). "older" below continues the scan.
+            <Empty label={`0 in the ${p.filter.order === "asc" ? "oldest" : "newest"} ${p.scanned}`} action={{ label: "clear filters", size: "sm", onPress: p.onReset }} />
           ) : isFiltered(p.filter) ? (
             <Empty label="0 events" action={{ label: "clear filters", size: "sm", onPress: p.onReset }} />
           ) : (

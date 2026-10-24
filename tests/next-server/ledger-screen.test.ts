@@ -6,6 +6,7 @@ import type { FacetCount } from "@gt/kernel/events-count";
 
 import { Facets } from "../../app/(studio)/ledger/_ledger/Facets.tsx";
 import { EMPTY, type LedgerFilter } from "../../app/(studio)/ledger/_ledger/filter.ts";
+import { List } from "../../app/(studio)/ledger/_ledger/List.tsx";
 import type { Facets as Counts } from "../../app/(studio)/ledger/_ledger/read.ts";
 import { Toolbar } from "../../app/(studio)/ledger/_ledger/Toolbar.tsx";
 
@@ -82,5 +83,39 @@ describe("the toolbar", () => {
   it("names the end a stopped text search examined: the newest acts, or the oldest", () => {
     expect(bar(f({ q: "plate" }))).toContain('aria-label="text search examined the newest 5000 events"');
     expect(bar(f({ q: "plate", order: "asc" }))).toContain('aria-label="text search examined the oldest 5000 events"');
+  });
+});
+
+describe("the list", () => {
+  const list = (filter: LedgerFilter, answer: { capped: boolean; scanned: number; exhausted: boolean }) =>
+    renderToStaticMarkup(
+      h(List, {
+        ref: null,
+        filter,
+        rows: [],
+        head: 40,
+        view: "table",
+        sel: null,
+        fresh: new Set<number>(),
+        ...answer,
+        loading: false,
+        onOlder: () => undefined,
+        onSelect: () => undefined,
+        onOpen: () => undefined,
+        onOrder: () => undefined,
+        onReset: () => undefined,
+        onCopy: () => undefined,
+        onFocusChange: () => undefined,
+      }),
+    );
+  const empty = (html: string): string => /role="status"[^>]*>([\s\S]*?)<\/div>/.exec(html)?.[1]?.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() ?? "";
+
+  it("an empty answer from a text search that stopped early says how far it looked, not that nothing matched", () => {
+    expect(empty(list(f({ q: "plate" }), { capped: true, scanned: 5000, exhausted: false }))).toMatch(/^0 in the newest 5000 /);
+    expect(empty(list(f({ q: "plate", order: "asc" }), { capped: true, scanned: 5000, exhausted: false }))).toMatch(/^0 in the oldest 5000 /);
+  });
+
+  it("an empty answer that examined everything is 0 events", () => {
+    expect(empty(list(f({ q: "plate" }), { capped: false, scanned: 40, exhausted: true }))).toMatch(/^0 events /);
   });
 });

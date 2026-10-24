@@ -236,6 +236,8 @@ export function Ledger(p: LedgerProps) {
           sel={sel}
           fresh={fresh}
           capped={tail.capped}
+          scanned={tail.scanned}
+          exhausted={tail.exhausted}
           loading={loading}
           onOlder={() => void loadOlder()}
           onSelect={select}
