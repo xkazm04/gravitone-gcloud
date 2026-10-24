@@ -51,6 +51,39 @@ export function mediaErrorWords(code: number | undefined, src: string): string {
   return `${code === undefined ? "MEDIA_ERR" : (MEDIA_ERR[code] ?? `MEDIA_ERR ${code}`)} · ${src.split("?")[0] ?? src}`;
 }
 
+/** What one press of the play control touches: the element, its watchdog, its failure line. */
+export type PressPort = {
+  readonly el: Pick<HTMLMediaElement, "paused" | "pause" | "play">;
+  readonly arm: () => void;
+  readonly calm: () => void;
+  readonly fail: (words: string) => void;
+};
+
+/**
+ * One press. A pause calms the watchdog its play armed: a take paused while it still loads is
+ * the user's stillness, not a player that never answered (transport-contract, paused vs
+ * stalled). A play's rejection speaks only while that play is still the newest press - a pause
+ * or a newer play has superseded it, and the browser's AbortError ("interrupted by a call to
+ * pause()") IS that supersession, not the file's fault (media-playback: a superseded request
+ * discards its own result). Exported so the presses are driven without a DOM.
+ */
+export function pressPlay(p: PressPort, seq: { n: number }): void {
+  const mine = ++seq.n;
+  p.calm();
+  if (!p.el.paused) {
+    p.el.pause();
+    return;
+  }
+  p.arm();
+  void p.el.play().catch((e: unknown) => {
+    if (seq.n !== mine) return;
+    p.calm();
+    if (e instanceof Error && e.name === "AbortError") return;
+    // An autoplay refusal is the browser's words, not the file's fault: shown verbatim.
+    p.fail(e instanceof Error ? `${e.name} · ${e.message}` : String(e));
+  });
+}
+
 const W = 300;
 const H = 80;
 
@@ -71,6 +104,7 @@ export function PlayMark({ on, className = s.mark }: { readonly on: boolean; rea
 function Preview({ src, peaks, title, durationS, illustrative = false }: AudioPreviewProps) {
   const el = useRef<HTMLAudioElement | null>(null);
   const dog = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const presses = useRef({ n: 0 });
   const [playing, setPlaying] = useState(false);
   const [clock, setClock] = useState({ at: 0, of: 0 });
   const [failed, setFailed] = useState<string | null>(null);
@@ -96,17 +130,10 @@ function Preview({ src, peaks, title, durationS, illustrative = false }: AudioPr
   const toggle = (): void => {
     const a = el.current;
     if (a === null || src === null) return;
-    if (!a.paused) {
-      a.pause();
-      return;
-    }
-    calm();
-    dog.current = setTimeout(() => setFailed(`no answer from the player after ${PLAY_WATCHDOG_MS / 1000} s · ${src.split("?")[0] ?? src}`), PLAY_WATCHDOG_MS);
-    void a.play().catch((e: unknown) => {
-      calm();
-      // An autoplay refusal is the browser's words, not the file's fault: shown verbatim.
-      setFailed(e instanceof Error ? `${e.name} · ${e.message}` : String(e));
-    });
+    const arm = (): void => {
+      dog.current = setTimeout(() => setFailed(`no answer from the player after ${PLAY_WATCHDOG_MS / 1000} s · ${src.split("?")[0] ?? src}`), PLAY_WATCHDOG_MS);
+    };
+    pressPlay({ el: a, arm, calm, fail: setFailed }, presses.current);
   };
 
   const seek = (frac: number): void => {

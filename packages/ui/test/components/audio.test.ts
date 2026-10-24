@@ -8,7 +8,7 @@ import { describe, expect, test } from "vitest";
 
 import { disagreements, energyBand, fmtDur, measureCells, type AudioFacts } from "../../src/components/audio/audio.ts";
 import { AudioMeasures } from "../../src/components/audio/AudioMeasures.tsx";
-import { AudioPreview, mediaErrorWords } from "../../src/components/audio/AudioPreview.tsx";
+import { AudioPreview, mediaErrorWords, pressPlay } from "../../src/components/audio/AudioPreview.tsx";
 import { AudioPrompt } from "../../src/components/audio/AudioPrompt.tsx";
 import { DraftList } from "../../src/components/audio/DraftList.tsx";
 import { SeedComposer } from "../../src/components/audio/SeedComposer.tsx";
@@ -196,6 +196,54 @@ describe("the detail components' markup", () => {
     expect(file).toContain('aria-label="play Salt"');
     expect(file).toContain('aria-label="seek Salt"');
     expect(file).toContain("2:34");
+  });
+
+  // A press against a fake element: play() hangs until the case settles it, as a source still
+  // loading does, so the order of presses and the promise's answer are the case's to choose.
+  const transport = () => {
+    let paused = true;
+    const settle: { reject: (e: unknown) => void }[] = [];
+    const log = { armed: 0, failed: [] as string[] };
+    const el = {
+      get paused() {
+        return paused;
+      },
+      pause() {
+        paused = true;
+      },
+      play() {
+        paused = false;
+        return new Promise<void>((_, reject) => settle.push({ reject }));
+      },
+    };
+    const port = { el, arm: () => void (log.armed = 1), calm: () => void (log.armed = 0), fail: (w: string) => void log.failed.push(w) };
+    return { port, settle, log, seq: { n: 0 } };
+  };
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+  const abort = Object.assign(new Error("The play() request was interrupted by a call to pause()."), { name: "AbortError" });
+
+  test("a take paused while it loads is the user's stillness: no watchdog left armed, no failure", async () => {
+    const t = transport();
+    pressPlay(t.port, t.seq);
+    expect(t.log.armed).toBe(1);
+    pressPlay(t.port, t.seq);
+    expect(t.log.armed).toBe(0);
+    t.settle[0]?.reject(abort);
+    await tick();
+    expect(t.log.failed).toEqual([]);
+  });
+
+  test("a play superseded by a newer press keeps its rejection to itself; the newest one speaks", async () => {
+    const t = transport();
+    pressPlay(t.port, t.seq);
+    pressPlay(t.port, t.seq);
+    pressPlay(t.port, t.seq);
+    t.settle[0]?.reject(new Error("late"));
+    await tick();
+    expect(t.log).toEqual({ armed: 1, failed: [] });
+    t.settle[1]?.reject(Object.assign(new Error("play() failed because the user didn't interact with the document first."), { name: "NotAllowedError" }));
+    await tick();
+    expect(t.log).toEqual({ armed: 0, failed: ["NotAllowedError · play() failed because the user didn't interact with the document first."] });
   });
 
   test("a media error reads in the element's own code", () => {
