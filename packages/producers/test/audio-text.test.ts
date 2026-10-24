@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { PART_OPTIONS, type OptionDecl } from "@gt/catalog/partOptions";
 import { AppError } from "@gt/domain/errors";
 import type { Job } from "@gt/domain/job";
 import type { MissingStep, Producer, StepContext } from "@gt/kernel/job-core";
-import { defineMv } from "../src/mv/producer.ts";
-import { defineSuno } from "../src/suno/producer.ts";
+import { defineMv, STUDIO_CREDITS, TEXT_TURN } from "../src/mv/producer.ts";
+import { TEXT_SEAT } from "../src/research/facts.ts";
+import { defineSuno, SUNO_CREDITS } from "../src/suno/producer.ts";
 import { producerSet } from "../src/set.ts";
 
 // The music-video and Suno definitions' FAILURE DOOR over fake ports, driven through `perform`
@@ -112,5 +114,31 @@ describe("the producer set", () => {
   it("refuses a name the domain does not know before any job is claimed - a job could never name it", () => {
     const r = producerSet([{ name: "research", producer: stub }, { name: "reserch" as never, producer: stub }]);
     expect(r.ok ? "accepted" : r.error).toMatchObject({ code: "invalid", message: 'producers: "reserch" is not a producer the domain names' });
+  });
+});
+
+// A credit-priced call carries its reason twice: the catalog's option (what the receipt says
+// before the job) and the producer's constant (what the meter books on the job). They are two
+// hand-copied literals in two packages, so a reword of one leaves the receipt and the ledger
+// telling the operator different things about the same bill.
+describe("the credit sentences agree with the catalog", () => {
+  const unpricedOf = (provider: string): string[] =>
+    Object.values(PART_OPTIONS)
+      .flatMap((k) => k.options)
+      .filter((o: OptionDecl) => o.provider === provider)
+      .map((o) => (o.via === "router" ? o.fallback : o.usd))
+      .flatMap((u) => (u !== undefined && "unpriced" in u ? [u.unpriced] : []));
+
+  it.each([
+    ["leonardo-studio", STUDIO_CREDITS],
+    ["suno", SUNO_CREDITS],
+  ])("%s: every catalog option's reason is the producer's", (provider, sentence) => {
+    const reasons = unpricedOf(provider);
+    expect(reasons.length, `the catalog prices no ${provider} option as unpriced`).toBeGreaterThan(0);
+    expect(new Set(reasons)).toEqual(new Set([sentence]));
+  });
+
+  it("the music video's text turn is the research producers' text seat, word for word", () => {
+    expect(TEXT_TURN).toBe(TEXT_SEAT);
   });
 });
