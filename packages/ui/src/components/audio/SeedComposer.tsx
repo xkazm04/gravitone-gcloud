@@ -19,7 +19,7 @@ import { Chip } from "../chip/Chip.tsx";
 import { CapsHeading } from "../heading/CapsHeading.tsx";
 import { Seg } from "../seg/Seg.tsx";
 import { TEMPO, tempoProblem } from "./batch.ts";
-import { addTo, avoidFloats, compose, FACET_OF, preferredFloats, removeFrom, SEED_LISTS, sunoCut, sunoFieldsOf, type Hand, type Seed, type SeedList, type Target, type Term } from "./recipe.ts";
+import { addTo, avoidFloats, BLANK_SEED, compose, FACET_OF, preferredFloats, removeFrom, SEED_LISTS, sunoCut, sunoFieldsOf, type Hand, type Seed, type SeedList, type Target, type Term } from "./recipe.ts";
 import s from "./Composer.module.css";
 
 function AddWord({ label, list, onAdd }: { readonly label: string; readonly list: string; readonly onAdd: (w: string) => void }) {
@@ -90,7 +90,7 @@ export function SeedComposer({ seed, terms, hands, from, onSeed, onSend, busy, o
         <CapsHeading text="composer" variant="section" />
         <Chip label="from" value={from} casing="lower" />
         <span className={s.grow} />
-        <Button label="Blank" size="sm" onPress={() => onSeed({ genres: [], moods: [], instruments: [], bpm: null, key: null, avoid: [] })} />
+        <Button label="Blank" size="sm" onPress={() => onSeed(BLANK_SEED)} />
       </div>
       <div className={s.facets}>
       {SEED_LISTS.map(({ list, label }) => row(list, label))}
