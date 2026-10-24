@@ -11861,6 +11861,107 @@
           "evidence": "packages/producers/src/motion/define.ts:7 Motion is proposed from a single still plate. No reference footage is sampled for a motion signature."
         }
       ]
+    },
+    "8c6c65cc-6679-4c2c-8951-670d77b8ad7c/multi-provider-gateway-plane": {
+      "context": "imaging-gateway-and-spend",
+      "subject": "multi-provider-gateway-plane",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:25:50.452Z",
+      "worker": "d61df12d-90b6-498c-9719-f2c8f20f22ba",
+      "techniques": [
+        {
+          "technique": "router-versus-candidate-failure",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/router.ts:433 No sweep happens because `failed` is not reroutable, but there is no attribution marker: a plane-side exception is filed as the candidate's failure (provider=id, trail why=failed), which is the misfiling the technique names. The `unsupported`-at-position-0 throw and the `no-alternative` type do give partial router-side arms."
+        },
+        {
+          "technique": "exclusive-authorship-of-a-measured-decision",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/router.ts:400 The served provider and the eliminated (decided-first) candidates sit on the same provenance record, so a fallback is visible in the output. unreachedPlanTops (router.ts:177) checks at window level whether the measured plan top is ever served."
+        },
+        {
+          "technique": "policy-verdict-in-the-status-space",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/errors.ts:112 The fallback loop branches on a typed kind, not on an operator list of status integers, and the budget refusal is raised before any candidate and is not reroutable. The callers (probes, kernel jobs) read the body `code`. No consumer has to match on integers, so the technique's precondition does not hold; 402 for over-budget is mapped at errors.ts:236."
+        },
+        {
+          "technique": "strategy-tree-with-inherited-policy",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/router.ts:90 The plan is a flat ordered list per capability and environment, with one policy scope (one budget hold per request). The technique's 'one candidate set and one policy' exclusion applies."
+        },
+        {
+          "technique": "named-members-over-a-uniform-collection",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/router.ts:112 Providers are used only on the request path, where the technique says a uniform collection is right. There is no inventory aggregate built from the providers."
+        },
+        {
+          "technique": "upstream-identity-before-inventory",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/env.ts:29 Each upstream speaks its own dialect and is configured by id, so the dialect is the identity. No shared wire protocol and no discovered endpoints."
+        },
+        {
+          "technique": "join-breadth-follows-the-wrong-match-cost",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/pricing.ts:221 The only catalog join is exact equality on provider and model strings the adapters themselves supply. There is no fuzzy join against an upstream's naming scheme, and a miss surfaces as `unpriced` rather than being deleted silently."
+        },
+        {
+          "technique": "caller-scoped-normalization-strictness",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/types.ts:1 The published contract is the repo's own and serves first-party callers. The technique's 'contract is your own / one consumer population' exclusion applies."
+        },
+        {
+          "technique": "per-provider-stream-framing",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/handlers.ts:89 Every capability returns a settled answer. A grep of lib/imaging for stream/getReader/text/event-stream found no streaming path."
+        },
+        {
+          "technique": "one-typed-carrier-for-echoed-state",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/types.ts:166 The plane keeps vendor-side state on its own provenance record. Nothing is round-tripped through a client's next request."
+        }
+      ]
+    },
+    "d6ef2aee-128a-4430-80a9-de42991c6316/multi-provider-gateway-plane": {
+      "context": "ui-status-provenance",
+      "subject": "multi-provider-gateway-plane",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:25:50.452Z",
+      "worker": "d61df12d-90b6-498c-9719-f2c8f20f22ba",
+      "techniques": []
+    },
+    "8c854c7a-5467-4ddc-80ed-76f19b1f5094/multi-provider-gateway-plane": {
+      "context": "board-decision-adapters",
+      "subject": "multi-provider-gateway-plane",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:25:50.452Z",
+      "worker": "d61df12d-90b6-498c-9719-f2c8f20f22ba",
+      "techniques": []
+    },
+    "7226db68-4ca8-41ee-a2f8-3012d05e4acd/multi-provider-gateway-plane": {
+      "context": "publish-producers",
+      "subject": "multi-provider-gateway-plane",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:25:50.452Z",
+      "worker": "d61df12d-90b6-498c-9719-f2c8f20f22ba",
+      "techniques": []
+    },
+    "2e702395-189e-4eb9-910c-dc4b76ff6e9a/multi-provider-gateway-plane": {
+      "context": "ui-ledger-timeline",
+      "subject": "multi-provider-gateway-plane",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:25:50.452Z",
+      "worker": "d61df12d-90b6-498c-9719-f2c8f20f22ba",
+      "techniques": []
     }
   }
 }

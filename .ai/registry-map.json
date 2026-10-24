@@ -2890,7 +2890,11 @@
           "revision": 9,
           "changedAt": "2026-09-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/decision/v1/registry.ts:60 Each packet source is pinned to exactly one adapter over its own v1 store, and a source with no adapter is refused, so there is no set of interchangeable upstreams, no candidate selection and no fallback. A grep of lib/decision/v1 found no failover/reroute/gateway; `fallback` appears only as a timestamp default (types.ts:135 instantOr).",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:f268193750c0a517",
+          "evaluatedRevision": 9
         },
         {
           "subject": "module-design",
@@ -5627,7 +5631,11 @@
           "revision": 9,
           "changedAt": "2026-09-09",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/imaging/router.ts:433 Any non-ImagingError raised inside the candidate call, including a bug in the plane's own adapter or response translation, is turned into a `failed` error stamped with the candidate's provider id and logged in `trail`/logCall against that vendor; errors.ts:91-92 admits `failed` mixes vendor 4xx/5xx, unreachable hosts and 'a bug in our own adapter', so the plane's own failures are blamed on a provider, and no router-versus-candidate axis exists.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:f268193750c0a517",
+          "evaluatedRevision": 9
         },
         {
           "subject": "cost-metering",
@@ -10685,7 +10693,11 @@
           "revision": 9,
           "changedAt": "2026-09-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/producers/src/publish/adapter.ts:65 A slot names its destination channel and adapterFor selects exactly that channel's adapter or refuses; channels are destinations, not interchangeable upstreams, so there is no candidate tree or fallback. A grep of the publish directory for failover/fallback/reroute/gateway found no hits.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:f268193750c0a517",
+          "evaluatedRevision": 9
         },
         {
           "subject": "measurement-honesty",
@@ -13418,7 +13430,11 @@
           "revision": 9,
           "changedAt": "2026-09-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:15 These are display components over domain event types; they make no network calls and front no upstreams. A grep of these directories for failover/reroute/gateway/candidate found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:f268193750c0a517",
+          "evaluatedRevision": 9
         },
         {
           "subject": "self-describing-model-packages",
@@ -13699,7 +13715,11 @@
           "revision": 9,
           "changedAt": "2026-09-09",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/provenance/Provenance.tsx:13 These are presentational components that render fields they are handed; they front no upstreams. A grep of these directories for failover/reroute/gateway found nothing. `candidate` and `upstream` do appear, but as UI vocabulary (status tones, the UpstreamBreak shape), and no file calls fetch.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:f268193750c0a517",
+          "evaluatedRevision": 9
         },
         {
           "subject": "quality-gates",
