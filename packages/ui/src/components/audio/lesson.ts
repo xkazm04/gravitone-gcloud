@@ -106,6 +106,13 @@ export function huntLessonBlock(nodes: readonly HuntNodeView[]): string | null {
   return null;
 }
 
+/**
+ * The evidence's two figures in the words of what was counted: a hunt's n is the leaves HEARD
+ * and its rate the share CROWNED (`handLesson`); a strengths cell's n is the takes JUDGED and its
+ * rate the share KEPT (`cellLesson`). The sign and the signed list read the same words.
+ */
+export const evidenceWords = (source: LessonSource): { readonly n: string; readonly rate: string } => (source === "hunt" ? { n: "heard", rate: "won" } : { n: "judged", rate: "kept" });
+
 /** The evidence's identity: a confirm signed over another count is refused, never saved. */
 export function evidenceKey(e: LessonEvidence): string {
   return `${e.n}|${e.keepRate ?? "-"}|${[...e.takeIds].sort().join(",")}`;

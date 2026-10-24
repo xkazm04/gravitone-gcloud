@@ -4,6 +4,7 @@
 // surface (`pipeline/sound.mts lessons` printed them); the next hunt's prompt quotes these.
 import { Chip } from "../chip/Chip.tsx";
 import { Tally } from "../tally/Tally.tsx";
+import { evidenceWords } from "./lesson.ts";
 import s from "./Lesson.module.css";
 
 export type LessonRow = {
@@ -26,8 +27,8 @@ export function LessonList({ lessons, huntHref }: { readonly lessons: readonly L
         <li key={l.id} className={s.row}>
           <p className={s.said}>{l.claim}</p>
           <div className={s.meta}>
-            <Tally value={l.n} label="judged" />
-            {l.keepRate !== null && <Chip label="kept" value={`${Math.round(l.keepRate * 100)}%`} tone="emerald" />}
+            <Tally value={l.n} label={evidenceWords(l.source).n} />
+            {l.keepRate !== null && <Chip label={evidenceWords(l.source).rate} value={`${Math.round(l.keepRate * 100)}%`} tone="emerald" />}
             {l.meanScore !== null && <Chip label="mean" value={l.meanScore} />}
             <Chip label={l.source} casing="lower" />
             {l.provider !== null && <Chip label={l.provider} casing="lower" />}
