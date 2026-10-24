@@ -128,6 +128,34 @@ describe("migrations", () => {
     s.close();
   });
 
+  it("a second process that planned the same step before the first applied it converges, and marks nothing", () => {
+    // Two processes boot one store after a release (the app and the worker):
+    // both read the ledger and plan probe v2..v3, and the first commits them
+    // before the second reaches its step. The second's stamp read (a read with
+    // no statement, so it holds no lock) is where the first process runs.
+    const a = fileStore();
+    must(migrate(a, [upTo(probe, 1)]));
+    let calls = 0;
+    let armed = false;
+    const b = must(
+      openStore(a.location, {
+        clock: () => {
+          if (armed && ++calls === 3) must(migrate(a, [probe]));
+          return new Date("2026-10-15T12:00:00.000Z");
+        },
+      }),
+    );
+    armed = true;
+    const r = migrate(b, [probe]);
+    armed = false;
+    expect(r.ok && r.value.applied).toEqual([]);
+    expect(must(b.read((x) => x.all("SELECT module FROM _migration_failures")))).toEqual([]);
+    expect(ledgerOf(b).map((x) => x["version"])).toEqual([1, 2, 3]);
+    expect(must(migrate(b, [probe])).applied).toEqual([]);
+    a.close();
+    b.close();
+  });
+
   it("snapshots a file store before the first pending step, holding the pre-migration state", () => {
     const s = fileStore();
     must(migrate(s, [upTo(probe, 1)]));

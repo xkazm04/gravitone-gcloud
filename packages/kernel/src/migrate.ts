@@ -2,7 +2,7 @@ import { readdirSync, rmSync } from "node:fs";
 import path from "node:path";
 import { z } from "zod";
 import { parseAt } from "@gt/domain/door";
-import { err, ok, type Result } from "@gt/domain/errors";
+import { AppError, err, ok, type Result } from "@gt/domain/errors";
 import { sha256Hex } from "./canonical.ts";
 import type { Store } from "./store.ts";
 
@@ -179,11 +179,22 @@ export function migrate(store: Store, modules: readonly ModuleMigrations[], opts
 
   const applied: Applied[] = [];
   for (const p of pending) {
-    const step = store.tx((t) => {
+    const step = store.tx((t): boolean => {
+      // The plan was read outside this lock. Another process booting the same
+      // store (the app and the worker after one release) may have committed
+      // this step since; re-running its DDL would fail ("table already
+      // exists") and mark a failure that refuses every later open.
+      const held = t.get("SELECT digest FROM _migrations WHERE module = ? AND version = ?", p.module, p.step.version);
+      if (held !== undefined) {
+        if (held["digest"] !== p.digest) throw new AppError("refused", `migrations: ${p.module} v${p.step.version} was applied by another process with a different digest; append a new step instead`);
+        return false;
+      }
       t.exec(p.step.sql);
       // The ledger row is the LAST write of the step's transaction.
       t.run("INSERT INTO _migrations (module, version, digest, at) VALUES (?, ?, ?, ?)", p.module, p.step.version, p.digest, t.at);
+      return true;
     });
+    if (step.ok && !step.value) continue;
     if (!step.ok) {
       // The mark is written OUTSIDE the failed step's transaction, or its
       // rollback would erase it; it stops every later run until cleared.
