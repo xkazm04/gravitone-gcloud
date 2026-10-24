@@ -145,6 +145,17 @@ describe("variations and references", () => {
     expect([keyRelation("A minor", "A minor"), keyRelation("D minor", "F major"), keyRelation("G minor", "F major")]).toEqual(["exact", "relative", "wrong"]);
   });
 
+  test("every key the tracker can write has its relative, and a relative in another spelling is still relative", () => {
+    // lib/sound/measure.ts NOTES x major/minor: the 24 keys a measured reference or take can carry.
+    const notes = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
+    const keys = notes.flatMap((n) => [`${n} major`, `${n} minor`]);
+    const withRelative = keys.filter((k) => variationsOfSeed({ ...SEED, key: k }, []).some((x) => x.axis === "key"));
+    expect(withRelative).toEqual(keys);
+    expect(variationsOfSeed({ ...SEED, key: "F# minor" }, []).find((x) => x.axis === "key")?.seed.key).toBe("A major");
+    expect(variationsOfSeed({ ...SEED, key: "E major" }, []).find((x) => x.axis === "key")?.seed.key).toBe("C# minor");
+    expect([keyRelation("F# minor", "A major"), keyRelation("C# major", "Db major"), keyRelation("Bb minor", "Db major"), keyRelation("A minor", "E minor")]).toEqual(["relative", "exact", "relative", "wrong"]);
+  });
+
   test("a reference's concept: proven counts double, a rejection counts against", () => {
     const t = (verdict: "kept" | "rejected", proven: boolean, genre: string[]) => ({ referenceTrackId: "ref-a", verdict, proven, terms: { genre, mood: [], instrument: [] } });
     const c = conceptFor("ref-a", { tempo: 112.3, key: "G minor" }, [t("kept", true, ["house"]), t("kept", false, ["disco"]), t("rejected", false, ["disco", "trance"]), { ...t("kept", true, ["polka"]), referenceTrackId: "other" }]);
