@@ -80,6 +80,10 @@ describe("the plan", () => {
     expect(parseArticleJob("job:run:2026-10-16-tax:rework-3")).toEqual({ runId: "2026-10-16-tax", act: { kind: "rework", n: 3 } });
     expect(parseArticleJob("job:run:2026-10-16-tax:landing").act).toEqual({ kind: "landing" });
     for (const bad of ["job:part:x", "job:run:Bad_Id", "job:run:a:rework-0", "job:run:a:landing:x"]) expect(() => parseArticleJob(bad)).toThrow(/not an article job/);
+    // Minting is the inverse of reading: every id it mints reads back to its act, and an act the
+    // grammar cannot spell is refused at the mint, not at the job's first plan.
+    for (const n of [1, 9999]) expect(parseArticleJob(articleJobId("t", { kind: "rework", n })).act).toEqual({ kind: "rework", n });
+    for (const n of [0, 10_000, 1.5]) expect(() => articleJobId("t", { kind: "rework", n })).toThrow(/a rework is numbered/);
   });
 
   it("is the missing outputs, in v1's step order, per act", () => {
