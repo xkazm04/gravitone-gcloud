@@ -32,7 +32,7 @@ import { useKeys } from "@gt/ui/keymap/dispatch";
 
 import { useShell } from "../../_shell/Providers.tsx";
 import type { LibraryPort, ShownDetail, ShownPage } from "../_port/contract.ts";
-import { useBlocks } from "./blocks.ts";
+import { settle, useBlocks } from "./blocks.ts";
 import { DetailView } from "./DetailView.tsx";
 import { Results, type ResultsHandle } from "./Results.tsx";
 import { Toolbar } from "./Toolbar.tsx";
@@ -83,7 +83,7 @@ export function Library({ url: u, page, detail: first, port }: LibraryProps) {
   useEffect(() => {
     if (sel === null || details.has(sel)) return;
     let live = true;
-    void port.detail({ id: sel, facets: u.f }).then((r) => {
+    void settle(port.detail({ id: sel, facets: u.f })).then((r) => {
       if (!live) return;
       if (r.ok) setDetails((m) => new Map(m).set(sel, r.value));
       else toast(`library: ${r.error.error}`);
@@ -140,7 +140,7 @@ export function Library({ url: u, page, detail: first, port }: LibraryProps) {
     if (sel === null) return;
     const target = sel;
     setBusy(true);
-    void port.act({ id: target, act: a, facets: u.f }).then((r) => {
+    void settle(port.act({ id: target, act: a, facets: u.f })).then((r) => {
       setBusy(false);
       if (!r.ok) return toast(`library: ${r.error.error}`);
       setDetails((m) => new Map(m).set(target, r.value.detail));

@@ -5779,4 +5779,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "group === \"pin\" || group === \"set\"",
     why: "The fixture Library labels a hunt and a bundle in words the kernel's index never writes, so the rail is designed against labels the real side cannot draw.",
   },
+  {
+    id: "library-block-query-unsettled",
+    test: "tests/next-server/library-screen.test.ts",
+    file: "app/(studio)/library/_library/blocks.ts",
+    find: "const p = settle(port.query(query(b * BLOCK, BLOCK))).then((r) => {",
+    replace: "const p = port.query(query(b * BLOCK, BLOCK)).then((r) => {",
+    why: "A block query whose round trip never comes back stays the block's answer as a rejected promise: its slots draw empty for the life of the result and nothing asks for them again.",
+  },
+  {
+    id: "library-settle-rejection-escapes",
+    test: "tests/next-server/library-screen.test.ts",
+    file: "app/(studio)/library/_library/blocks.ts",
+    find: "(e: unknown): ActionResult<T> => ({ ok: false, error: { error: `the studio did not answer: ${errorMessage(e)}`, code: \"unavailable\" } }),",
+    replace: "(e: unknown): ActionResult<T> => { throw e; },",
+    why: "settle passes a rejection on instead of answering it: a pin whose request dropped leaves the acts disabled by busy until a reload.",
+  },
 ];
