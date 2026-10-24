@@ -208,6 +208,22 @@ Where this port moved from the prototype:
   the review side's ground is `--panel-ground` (.14 where it wrote .15) and its scroll room
   60px (40px); the article page's side inset is 28px (30px).
 
+## Produce parts (Phase 4, L28)
+
+| Kit name | Replaces (prototype) | Pages | States / variants |
+| --- | --- | --- | --- |
+| `Composer`, `ComposerSelect`, `Estimate`, `LaunchButton` | index.html `IdeaComposer`, `Estimate`, floor.css `.comp-row`, `.comp-sel`, `.comp-text`, `.launch`; projects.css `.launch-plan` | F P | Estimate: reading (dashes hold the line), error verbatim, units · ~time · cost (or one `Unpriced` per kind) · queue #n · source; the cost is the receipt's totals, never a second sum. LaunchButton `row` / `plan`, busy, detail figures; it opens a receipt |
+| `Receipt` | none (NEW, COMMON decision 3; the prototype launched on the press) | F P | dry / live; per line lane, provider · model, units, time, cost or `Unpriced`, source, queue, start; totals (no cost chip when nothing is priced); stale: every moved cell and total ringed and spoken `(changed)`, `changed N`, added `new`, removed `− label`; ceiling field (bad amount disarms the confirm), `may stop at ceiling` over the band's top; refusal verbatim |
+| `PlanTable`, `PlanRow`, `ModelPicker` | projects.js `PlanRow`, `optLabel`; projects.css `.plan-t`, `.model-sel`, `.units-in`, `.dep`, `.pdot` | P | draft (picker + units field) / launched (fixed); gate row `◆ judged part` with no model; slot row; cost a figure, a band or `Unpriced` (no Hint) with its source |
+| `RerouteList` | projects.js Inspector `alt`; projects.css `.alts`, `.alt` | P | current (dashed, unchoosable) / option with time · cost, `eta ±Δ`, `±$`, `q#n`, tone read off the delta's words; busy disarms the list; choosing opens the option's receipt |
+| `LaneHold` | the inspector's `.err` block, given a lane | P | a paid lane on hold: lane, `hold`, since, job (link or text) and stage, v1's sentence verbatim, Acknowledge |
+| `Unpriced` | none (the prototype priced these $0) | F P | `unpriced · seat` / `credits` / `no price`, the reason its name and Hint; `hint={false}` in a narrow column |
+| `ComposeDialog` | projects.js `renderCompose`; projects.css `.compose-pop`, `.cp`, `.recipe`, `.cp-src` | P | popover on the stack / in place (specimen); recipes 1-3 keyed, the rest below; style · take · topic sources from the port; busy; error verbatim |
+
+Pure module beside them: `produce/produce.ts` (`fmtDur`, `fmtUsd`, `fmtRange` - a band's ends rounded
+outward -, `costWords`, `optionCost`, `optionLabel`, `relDur`, `relUsd`, `leanOf`, `receiptChanges`,
+`totalPriced`, `parseCeiling`, `mayStopAtCeiling`, `overWords`, `unpricedKind`, `when`).
+
 ## Library parts (Phase 5, L50)
 
 | Kit name | Replaces (prototype) | Pages | States / variants |
