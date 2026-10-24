@@ -12,7 +12,8 @@
 // sentence stays over the board until the next success. One write per card at a time - a second
 // gesture on a card whose first is in flight is refused here, because the first's rollback would
 // land on top of it (v1's rule). A request with no answer in ANSWER_MS resolves to refused with
-// that sentence and the page re-reads the store, so nothing floats provisional forever.
+// that sentence and the page re-reads the store, so nothing floats provisional forever - and a
+// request that REJECTS (the action's round trip failed) is refused with its words the same way.
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -56,8 +57,27 @@ function withPending(takes: readonly CardTake[], pending: ReadonlyMap<string, Pe
   });
 }
 
-function answered<T>(p: Promise<T>, ms: number): Promise<T | "no-answer"> {
-  return Promise.race([p, new Promise<"no-answer">((r) => setTimeout(() => r("no-answer"), ms))]);
+/** A write that threw: the words it threw with. */
+export type Threw = { readonly threw: string };
+const threw = (v: unknown): v is Threw => typeof v === "object" && v !== null && "threw" in v;
+
+/**
+ * A write's answer within `ms`: its own, "no-answer" past the wait, or the words of a write that
+ * REJECTED (a Server Action whose request never came back rejects; it does not answer `ok: false`).
+ * Never a rejection itself, so the caller's settle always runs, and the timer goes with the answer.
+ */
+export async function answered<T>(p: Promise<T>, ms: number): Promise<T | "no-answer" | Threw> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      p.catch((e: unknown): Threw => ({ threw: errorMessage(e) })),
+      new Promise<"no-answer">((r) => {
+        timer = setTimeout(() => r("no-answer"), ms);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export function Arrange({ view, acts }: { readonly view: ArrangeView; readonly acts: ArrangeActs }) {
@@ -123,13 +143,13 @@ export function Arrange({ view, acts }: { readonly view: ArrangeView; readonly a
     setAsk(null);
     settle(h.id, { to, ...(c.patch.label === undefined ? {} : { label: c.patch.label }), landed: false });
     const r = await answered(acts.moveCard({ id: h.id, from, to, opId: opId(), ...(c.patch.label === undefined ? {} : { label: c.patch.label }) }), ANSWER_MS);
-    if (r !== "no-answer" && r.ok) {
+    if (r !== "no-answer" && !threw(r) && r.ok) {
       settle(h.id, { to, ...(c.patch.label === undefined ? {} : { label: c.patch.label }), landed: true });
       setRefusal(null);
       toast(movedSentence(h.title, to));
     } else {
       settle(h.id, null);
-      const words = r === "no-answer" ? `no answer from the sound store in ${ANSWER_MS / 1000} s` : r.error.error;
+      const words = r === "no-answer" ? `no answer from the sound store in ${ANSWER_MS / 1000} s` : threw(r) ? r.threw : r.error.error;
       setRefusal(`${h.title} · refused · ${words}`);
       toast(`${h.title} · refused`);
     }
@@ -156,12 +176,12 @@ export function Arrange({ view, acts }: { readonly view: ArrangeView; readonly a
   const edit = async (op: GroupOp): Promise<void> => {
     if (rowsBusy) return;
     setRowsBusy(true);
-    const r = await acts.editRows({ kind: view.kind, op, opId: opId() });
+    const r = await answered(acts.editRows({ kind: view.kind, op, opId: opId() }), ANSWER_MS);
     setRowsBusy(false);
-    if (r.ok) {
+    if (r !== "no-answer" && !threw(r) && r.ok) {
       setRefusal(null);
       toast(r.value.carried > 0 ? `rows · ${r.value.carried} filed` : "rows saved");
-    } else setRefusal(`rows · refused · ${r.error.error}`);
+    } else setRefusal(`rows · refused · ${r === "no-answer" ? `no answer from the sound store in ${ANSWER_MS / 1000} s` : threw(r) ? r.threw : r.error.error}`);
     router.refresh();
   };
 
