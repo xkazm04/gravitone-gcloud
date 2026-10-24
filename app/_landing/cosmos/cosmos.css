@@ -34,7 +34,7 @@
  * Until the engine has chosen, the root has no data-tier: first paint is the
  * CSS sky below (.sky0) and the hero wordmark, and the canvases fade in over it.
  *
- * The Enter pill is parts.tsx's EnterButton (appearance="paper"): .pc-enter*
+ * The Enter pill is parts.tsx's EnterButton: .pc-enter*
  * below draws it as the variant's #enter.
  */
 .pc{

@@ -1,14 +1,15 @@
 // The registries → the Galaxy the landing draws.
 //
 // Every list here is READ from the registry that owns it, never copied: a
-// discipline appended to lib/projects DISCIPLINES, a template to TEMPLATES, an
-// area to app/library/areas.ts or a preset to PRESETS appears on the landing
-// with no landing edit. That is the whole point of the redesign (spark
+// discipline appended to DISCIPLINES or a template to TEMPLATES
+// (packages/catalog/src/projects.ts), an area to LIBRARY_AREAS
+// (packages/catalog/src/libraryAreas.ts) or a preset to PRESETS
+// (packages/catalog/src/presets.ts) appears on the landing with no landing edit. That is the whole point of the redesign (spark
 // landing-galaxy): the old atlas was hand-placed for four constellations and was
 // already three disciplines and three templates behind the app when it was
 // replaced.
 //
-// Art comes from the deck-art manifest (app/_studio/deckArt.ts) by its
+// Art comes from the deck-art manifest (packages/catalog/src/deckArt.ts) by its
 // `<family>-<id>` key; an entry without art gets `null`, and the engine draws it.
 
 import { DECK_ART } from "@gt/catalog/deckArt";
