@@ -5418,4 +5418,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "subs.length > 1 &&",
     why: "A Ledger filtered by a full type whose group lists no other type draws no pressed row in the facet rail, so the filter narrowing the list cannot be seen or unpressed there.",
   },
+  {
+    id: "cosmos-raster-destroy-leaves-handshake",
+    test: "tests/next-server/landing-cosmos-engine.test.ts",
+    file: "app/_landing/cosmos/engine/raster.ts",
+    find: "this.abortStart?.();",
+    replace: "void 0;",
+    why: "Leaving the landing while its raster worker is still starting leaves the worker running, and its hello then creates a WebGL context and paints the grain on the main thread for a page that is gone.",
+  },
 ];

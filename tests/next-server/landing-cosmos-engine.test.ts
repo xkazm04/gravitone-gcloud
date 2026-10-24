@@ -8,6 +8,11 @@
 //   1. raster.ts: "the main thread only places them". A job asked for while the worker
 //      is still saying hello (a resize in the first moments of the page) waited for no
 //      one: `mode` starts as "main", so pump() painted it on the main thread instead.
+//   2. life.ts: everything with a lifetime stops at destroy(). The handshake's worker is
+//      held only in startWorker's closure until hello, and its 4 s timer is a bare
+//      setTimeout, so destroy() during the handshake (React's strict-mode remount does it
+//      on every dev mount) left the worker running, and its hello or the timer then ran
+//      the main-thread fallback - a WebGL context and the grain - for a page that was gone.
 //
 // raster.ts is loaded natively (ESM) because it spells `new URL(..., import.meta.url)`
 // for the bundler, which the Playwright node lane cannot load as CommonJS.
@@ -98,5 +103,20 @@ describe("raster.ts: the worker paints, the main thread places", () => {
     expect(w.posted.map((m) => m.job)).toEqual([JOB]);
     expect(doc.made).toEqual([]);
     r.destroy();
+  });
+
+  test("destroyed during the handshake, the raster stops its worker and starts nothing on the main thread", async () => {
+    withWorker();
+    const doc = countingDocument();
+    const r = new Raster(false);
+    const w = FakeWorker.last!;
+    r.destroy();
+    expect(w.terminated, "destroy() stops the worker it is still waiting on").toBe(true);
+    const hello = await Promise.race([r.ready, tick(50).then(() => "pending" as const)]);
+    expect(hello, "ready settles, with nothing to show").toEqual({ ren: null, grain: "" });
+    // a hello already in flight when it was terminated changes nothing
+    w.say(HELLO);
+    await tick();
+    expect(doc.made, "no WebGL probe and no grain painted for a page that is gone").toEqual([]);
   });
 });

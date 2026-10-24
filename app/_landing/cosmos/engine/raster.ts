@@ -74,6 +74,7 @@ export class Raster {
   /** the worker is still saying hello: a job asked for now waits for it, and is
    *  not painted here (`mode` reads "main" until the worker answers) */
   private starting: boolean;
+  private abortStart: (() => void) | null = null;
   readonly ready: Promise<Hello>;
 
   constructor(forceMain: boolean) {
@@ -100,11 +101,17 @@ export class Raster {
       const fallback = () => {
         if (settled) return;
         settled = true;
+        clearTimeout(t);
+        this.abortStart = null;
         w.terminate();
         this.worker = null;
+        // destroyed while the worker was starting: no fallback for a page that is gone
+        if (this.dead) return resolve({ ren: null, grain: "" });
         resolve(this.startMain());
         this.pump();
       };
+      // until hello the worker lives only in this closure; destroy() ends it through here
+      this.abortStart = fallback;
       const t = setTimeout(fallback, 4000);
       w.onerror = () => {
         clearTimeout(t);
@@ -124,6 +131,7 @@ export class Raster {
           clearTimeout(t);
           if (!m.ok || this.dead) return fallback();
           settled = true;
+          this.abortStart = null;
           this.mode = "worker";
           this.worker = w;
           this.starting = false;
@@ -237,6 +245,7 @@ export class Raster {
 
   destroy(): void {
     this.dead = true;
+    this.abortStart?.();
     this.worker?.terminate();
     this.worker = null;
     for (const p of this.q) p.res(null);
