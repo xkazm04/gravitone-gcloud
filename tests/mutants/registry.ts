@@ -37,7 +37,7 @@ export type Mutant = {
  * unguarded probe lowers the live count and the same probe asks for this number
  * to be lowered to match, so the gain is kept.
  */
-export const UNGUARDED_PROBE_BUDGET = 157;
+export const UNGUARDED_PROBE_BUDGET = 156;
 
 export const MUTANTS: Mutant[] = [
   {
@@ -463,6 +463,14 @@ export const MUTANTS: Mutant[] = [
     find: "${verdicts[k]?.verdict}${verdicts[k]?.by === \"model\" ? \":model\" : \"\"}",
     replace: "${verdicts[k]?.verdict}",
     why: "A model's keep turning into a human's leaves the commit token unchanged, so a preview that showed no promotion commits one and the Board's consequence never reads as stale.",
+  },
+  {
+    id: "calibration-ties-count-zero",
+    probe: "foundry-calibration.probe.spec.ts",
+    file: "lib/foundry/calibration.ts",
+    find: "s2 += 2 * below[v] + count[v];",
+    replace: "s2 += 2 * below[v];",
+    why: "A tie between a kept and a rejected plate counts as the reject winning, so every grade field on a coarse scale reads lower than it is and a chance field can read inverted.",
   },
   {
     id: "extract-text-round-wins-recipe",

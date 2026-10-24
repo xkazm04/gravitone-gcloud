@@ -134,26 +134,50 @@ function prng(seed: number): () => number {
   };
 }
 
-/** P(keep outscores reject), ties half, over index multisets into `win`. */
-function aucOf(win: number[][], ki: ArrayLike<number>, ri: ArrayLike<number>): number {
-  let s = 0;
-  for (let i = 0; i < ki.length; i++) {
-    const row = win[ki[i]];
-    for (let j = 0; j < ri.length; j++) s += row[ri[j]];
+/**
+ * P(keep outscores reject), ties half, over index multisets into the keep and
+ * reject values - by RANK, not by pair. Each value is replaced by its rank among
+ * the distinct values; the sampled rejects become a count per rank, a prefix
+ * sum gives "rejects below" per rank, and each sampled keep then adds
+ * 2·below + equal. That is O(keeps + rejects + ranks) per call where the pair
+ * matrix it replaced was O(keeps × rejects): measured on synthetic ledgers,
+ * 2.3 s at 1,000 rows and 16 s at 2,000, inside the forge commit's catalogue
+ * lock. The figure is the same to the bit: the doubled sum is an integer, and
+ * halving it is exact, so `s2 / 2` is the very sum of 1, 0.5 and 0 the pair
+ * walk accumulated.
+ */
+function aucByRank(kr: Uint32Array, rr: Uint32Array, count: Float64Array, below: Float64Array, ki: ArrayLike<number>, ri: ArrayLike<number>): number {
+  const ranks = count.length;
+  count.fill(0);
+  for (let j = 0; j < ri.length; j++) count[rr[ri[j]]]++;
+  for (let v = 0, acc = 0; v < ranks; v++) {
+    below[v] = acc;
+    acc += count[v];
   }
-  return s / (ki.length * ri.length);
+  let s2 = 0;
+  for (let i = 0; i < ki.length; i++) {
+    const v = kr[ki[i]];
+    s2 += 2 * below[v] + count[v];
+  }
+  return s2 / 2 / (ki.length * ri.length);
 }
 
 function measure(keep: number[], reject: number[], floor: number, resamples: number, seed: number): FieldCalibration {
   const base = { n_keep: keep.length, n_reject: reject.length };
   if (keep.length < floor || reject.length < floor) return { ...base, auc: null, ci: null, status: "insufficient", short: "floor" };
-  if (new Set([...keep, ...reject]).size < 2) return { ...base, auc: null, ci: null, status: "insufficient", short: "constant" };
+  const values = [...new Set([...keep, ...reject])].sort((x, y) => x - y);
+  if (values.length < 2) return { ...base, auc: null, ci: null, status: "insufficient", short: "constant" };
 
-  // win[i][j]: what keep i against reject j contributes. Computed once; every
-  // resample is then a sum over sampled indices.
-  const win = keep.map((k) => reject.map((r) => (k > r ? 1 : k === r ? 0.5 : 0)));
+  // Every value's rank among the distinct values, computed once; every
+  // resample is then a count over sampled indices.
+  const rankOf = new Map(values.map((v, i) => [v, i] as const));
+  const kr = Uint32Array.from(keep, (v) => rankOf.get(v)!);
+  const rr = Uint32Array.from(reject, (v) => rankOf.get(v)!);
+  // Scratch for the per-rank counts, reused by every resample.
+  const count = new Float64Array(values.length);
+  const below = new Float64Array(values.length);
+  const aucOf = (ki: ArrayLike<number>, ri: ArrayLike<number>) => aucByRank(kr, rr, count, below, ki, ri);
   const auc = aucOf(
-    win,
     keep.map((_, i) => i),
     reject.map((_, j) => j),
   );
@@ -167,7 +191,7 @@ function measure(keep: number[], reject: number[], floor: number, resamples: num
   for (let b = 0; b < resamples; b++) {
     for (let i = 0; i < ki.length; i++) ki[i] = Math.floor(rand() * keep.length);
     for (let j = 0; j < ri.length; j++) ri[j] = Math.floor(rand() * reject.length);
-    draws.push(aucOf(win, ki, ri));
+    draws.push(aucOf(ki, ri));
   }
   draws.sort((x, y) => x - y);
   const tail = (1 - CALIBRATION_METHOD.level) / 2;
