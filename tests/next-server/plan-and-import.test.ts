@@ -11,7 +11,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { settledOutcome } from "../../app/(studio)/projects/_plan/receipt.tsx";
+import { onOpen, settledOutcome } from "../../app/(studio)/projects/_plan/receipt.tsx";
 
 const ROOT = path.resolve(import.meta.dirname, "..", "..");
 const PROJECTS = path.join(ROOT, "app", "(studio)", "projects");
@@ -38,5 +38,25 @@ describe("the receipt flow - every await settles", () => {
     expect(src.match(/await (st\.)?spec\.(read|confirm)\(/g) ?? []).toEqual([]);
     expect(src.match(/await settled\((st\.)?spec\.read\(/g) ?? []).toHaveLength(2);
     expect(src.match(/await settledOutcome\(st\.spec\.confirm\(/g) ?? []).toHaveLength(1);
+  });
+});
+
+describe("the receipt flow - an answer lands on the sheet as it now reads", () => {
+  type Sheet = NonNullable<Parameters<ReturnType<typeof onOpen>>[0]>;
+  const sheet = { ceiling: "", busy: true } as unknown as Sheet;
+
+  it("a ceiling typed while a re-read or a confirm was in flight survives its answer", () => {
+    const typed = { ...sheet, ceiling: "2.50" };
+    expect(onOpen({ busy: false, error: "refused" })(typed)).toMatchObject({ ceiling: "2.50", busy: false, error: "refused" });
+  });
+
+  it("a sheet closed while the answer travelled stays closed", () => {
+    expect(onOpen({ busy: false })(null)).toBeNull();
+  });
+
+  it("no setSt after an await spreads the copy the await started from", () => {
+    const src = code("_plan/receipt.tsx");
+    expect(src.match(/setSt\(\{\s*\.\.\.(st|rest)\b/g) ?? []).toEqual([]);
+    expect((src.match(/setSt\(onOpen\(/g) ?? []).length).toBeGreaterThanOrEqual(4);
   });
 });
