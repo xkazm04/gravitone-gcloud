@@ -167,6 +167,14 @@ describe("the parts draw what the rules say", () => {
     expect(html).toContain("suno return");
     expect(renderToStaticMarkup(h(TakeCard, { stack: s, focused: false, pending: false, playing: null, open: false, onFocus: none, onPointerDown: none, onPlay: none, onVersions: none }))).not.toContain("aria-busy");
   });
+  test("a card spells a take's length as the hunt does: a sub-second effect is not 0:01", () => {
+    const card = (lengthS: number | null): string => {
+      const [s] = stackVersions([ct("fx", { kind: "sfx", lengthS })]);
+      if (s === undefined) throw new Error("no stack");
+      return renderToStaticMarkup(h(TakeCard, { stack: s, focused: false, pending: false, playing: null, open: false, onFocus: none, onPointerDown: none, onPlay: none, onVersions: none }));
+    };
+    for (const [len, said] of [[0.6, "0.6s"], [4.25, "4.3s"], [125, "2:05"], [null, "–"]] as const) expect(card(len), String(len)).toContain(`<span>${said}</span>`);
+  });
   test("every cell carries its key for the drag, and the lit one is marked", () => {
     const stacks = stackVersions([ct("a")]);
     const rows = rowsFor([], stacks);
