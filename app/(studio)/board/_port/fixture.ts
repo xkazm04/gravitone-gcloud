@@ -15,7 +15,8 @@ import "server-only";
 //     matches the decisions and v1's state (`conflict`, detail "stale-preview"), and is
 //     idempotent on its ticket;
 //   · only a packet review is returned, with a checked edit plan.
-// State lives for the server process; `resetFixture` starts it over.
+// State lives for the server process; `resetFixture` starts it over (nothing calls it today:
+// SIDE in ./port.ts is "real", so this whole side is unreached - see the note there).
 
 import { createHash } from "node:crypto";
 
@@ -72,7 +73,7 @@ function open(seed: Seed): Pile {
   return { seed, state: seed.committed === true ? "committed" : "open", acts, digest: `fixture:${seed.id}:${universe().epoch}` };
 }
 
-/** Start every pile over (the live lane's reset). */
+/** Start every pile over. */
 export function resetFixture(): void {
   const u = universe();
   u.epoch++;
