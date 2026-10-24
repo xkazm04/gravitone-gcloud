@@ -36,6 +36,12 @@ function TakeRow({ t, acts, busy }: { readonly t: TakeView; readonly acts: TakeA
   const [section, setSection] = useState(t.revision?.section ?? 0);
   const [note, setNote] = useState(t.revision?.note ?? "");
   const c = cost(t);
+  // A note belongs to a section: picking another carries the note there. It used to move only the
+  // chip, so the note stayed on the old section and "revise §N" kept naming it.
+  const pick = (i: number): void => {
+    setSection(i);
+    if (note.trim() !== "" && i !== t.revision?.section) acts.note?.(t.id, i, note);
+  };
   return (
     <div className={s.take} {...(t.active ? { "data-active": "" } : {})} data-mark={t.mark ?? "none"} data-take={t.id}>
       <div className={s.row}>
@@ -60,7 +66,7 @@ function TakeRow({ t, acts, busy }: { readonly t: TakeView; readonly acts: TakeA
         <div className={s.sect}>
           <div className={s.sections} role="radiogroup" aria-label={`sections of ${t.label}`}>
             {t.sections.map((x) => (
-              <Chip key={x.index} label={x.name} value={`${clock(x.startS)}–${clock(x.endS)}`} casing="lower" pressed={x.index === section} onPress={() => setSection(x.index)} />
+              <Chip key={x.index} label={x.name} value={`${clock(x.startS)}–${clock(x.endS)}`} casing="lower" pressed={x.index === section} onPress={() => pick(x.index)} />
             ))}
           </div>
           <input

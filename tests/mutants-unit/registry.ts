@@ -5554,4 +5554,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "    else if (takeId === undefined && unimportable(-1)) action = \"skip-unimportable\";",
     why: "An empty or oversize file in an album folder is planned and priced as a new video that the import never makes a take of, and the run then drops it without a word.",
   },
+  {
+    id: "score-take-section-strands-its-note",
+    test: "tests/next-server/part-editor-media.test.ts",
+    file: "app/(studio)/projects/[id]/[part]/_edit/ScoreTakes.tsx",
+    find: "onPress={() => pick(x.index)}",
+    replace: "onPress={() => setSection(x.index)}",
+    why: "Picking the chorus for a take's revision note moves the chip and leaves the note on the intro, so the revise that follows rewrites the section nobody meant.",
+  },
 ];

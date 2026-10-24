@@ -36,7 +36,7 @@ vi.mock("@/lib/sound/mv/compositor", () => ({
 
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 
-import type { AdFinishData, AdsClips, AdsTakes, BedData, PartOp, PartView, RenderData, SpottingData } from "@gt/domain/partView";
+import type { AdFinishData, AdsClips, AdsTakes, BedData, PartOp, PartView, RenderData, SpottingData, TakeView } from "@gt/domain/partView";
 import { BINDINGS } from "@gt/ui/keymap/bindings";
 import { keyTable, type KeyRow } from "@gt/ui/keymap/keymap";
 
@@ -46,6 +46,7 @@ import type { EditorProps, Frame } from "../../app/(studio)/projects/[id]/[part]
 import { RenderEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Render.tsx";
 import { ScoreEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Score.tsx";
 import { ScoreBed } from "../../app/(studio)/projects/[id]/[part]/_edit/ScoreBed.tsx";
+import { ScoreTakes } from "../../app/(studio)/projects/[id]/[part]/_edit/ScoreTakes.tsx";
 import { AdsClipsEditor, AdsTakesEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Takes.tsx";
 import { harness } from "../golden-path/_studio/hooks.ts";
 import { compile } from "@gt/ui/keymap/keymap";
@@ -254,5 +255,62 @@ describe("the score's N is the add cue button", () => {
   it("with picture and nothing in flight N adds a cue", async () => {
     const scenes = [{ id: "u1", index: 1, label: "open", mood: "", startS: 0, durS: 4 }];
     expect((await pressN(spotting(scenes), false)).sent).toEqual([{ op: "cue-add" }]);
+  });
+});
+
+/* ── a take's section note (ScoreTakes.tsx) ────────────────────────────── */
+
+/** Every element in a tree whose props match `pick`. */
+function all(node: ReactNode, pick: (p: Record<string, unknown>) => boolean, out: ReactElement[] = []): ReactElement[] {
+  if (Array.isArray(node)) {
+    for (const n of node) all(n, pick, out);
+    return out;
+  }
+  if (!isValidElement(node)) return out;
+  const p = node.props as Record<string, unknown>;
+  if (pick(p)) out.push(node);
+  all(p.children as ReactNode, pick, out);
+  return out;
+}
+
+describe("a take's section note goes where the section is picked", () => {
+  const take = (revision?: TakeView["revision"]): TakeView => ({
+    id: "t1",
+    label: "take 1",
+    at: null,
+    mark: null,
+    active: true,
+    held: true,
+    seconds: 30,
+    sections: [
+      { index: 0, name: "intro", startS: 0, endS: 8 },
+      { index: 1, name: "verse", startS: 8, endS: 20 },
+      { index: 2, name: "chorus", startS: 20, endS: 30 },
+    ],
+    ...(revision === undefined ? {} : { revision }),
+  });
+  async function pick(t: TakeView, name: string): Promise<[string, number, string][]> {
+    const notes: [string, number, string][] = [];
+    const list = ScoreTakes({ takes: [t], busy: false, acts: { use: () => {}, mark: () => {}, note: (id, section, note) => void notes.push([id, section, note]) } }) as ReactElement<{ children: ReactElement[] }>;
+    const row = list.props.children[0];
+    if (row === undefined) throw new Error("no take row");
+    const h = harness(() => (row.type as (p: unknown) => ReactElement)(row.props));
+    const chip = all(await h.settleUp(), (p) => p.label === name && typeof p.onPress === "function")[0];
+    if (chip === undefined) throw new Error(`no ${name} chip`);
+    (chip.props as { onPress: () => void }).onPress();
+    await h.settleUp();
+    return notes;
+  }
+
+  it("a note standing on the intro moves to the chorus when the chorus is picked", async () => {
+    expect(await pick(take({ section: 0, note: "darker" }), "chorus")).toEqual([["t1", 2, "darker"]]);
+  });
+
+  it("picking a section with no note writes nothing", async () => {
+    expect(await pick(take(), "chorus")).toEqual([]);
+  });
+
+  it("picking the section the note already stands on writes nothing", async () => {
+    expect(await pick(take({ section: 2, note: "darker" }), "chorus")).toEqual([]);
   });
 });
