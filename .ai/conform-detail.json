@@ -11758,6 +11758,109 @@
       "evaluatedTs": "2026-10-24T06:38:35.278Z",
       "worker": "7ea0c467-6d22-44ef-bd88-385bc2d3c793",
       "techniques": []
+    },
+    "da2b8086-0019-48a6-91bf-5c3f95187072/visual-style-locking": {
+      "context": "domain-style-library-assets",
+      "subject": "visual-style-locking",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:12:29.637Z",
+      "worker": "d0838674-8922-4f45-8042-7c817769c5eb",
+      "techniques": [
+        {
+          "technique": "draft-proofing-locked-ratchet",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/style.ratchet.ts:217 ratchetBlocker refuses unlocking, a changed locked block and a demotion. lockBlocker requires zero pending proofs and at least one approval. Status is also stored on the record, but the door (style.ts superRefine) refuses any status that differs from statusOf, so the stored copy cannot drift."
+        },
+        {
+          "technique": "approved-reference-sheet",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/style.ratchet.ts:56 The send count is a named constant, separate from PROOF_CAP (the window, counted over approved proofs). styleRefs sends only approved proofs under the current block. Each proof records model, provider and costUsd. Selection is founding approvals plus newest, not closest element vocabulary, so that soft preference rule is not realized."
+        },
+        {
+          "technique": "rejections-as-negative-evidence",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/styleView.ts:292 Rejections take no window capacity. The proof schema keeps a rejected proof with an optional note, and rejections are never in styleRefs."
+        },
+        {
+          "technique": "style-onboarding-from-sample",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/style.ts:106 The origin is recorded on the artifact. A readback carries a signature and an edited flag, so the vision readback stays a hypothesis until a human edits it."
+        },
+        {
+          "technique": "style-block-restated-every-call",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/style.ratchet.ts:95 The style is a four-slot structured record with role-assigned palette, compiled by one function. Whether every call path uses it is judged on visual-producers."
+        }
+      ]
+    },
+    "543cb8a9-abee-46e1-a06e-f5dfc6ed4fb2/visual-style-locking": {
+      "context": "style-store",
+      "subject": "visual-style-locking",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:12:29.637Z",
+      "worker": "d0838674-8922-4f45-8042-7c817769c5eb",
+      "techniques": [
+        {
+          "technique": "draft-proofing-locked-ratchet",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/styles/core.ts:123 A duplicate keeps the block, empties the sheet and restarts as a candidate. The lock op refuses through lockBlocker (core.ts:115), and the status is re-derived on every plan."
+        },
+        {
+          "technique": "rejections-as-negative-evidence",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/styles/core.ts:100 remove-proof refuses a rejected proof. Caveat: judge-proof can move a rejected proof back to pending, which remove-proof then accepts. The reject evidence row and the append-only style_ops log (which holds the note) survive, but the plate and its on-sheet note do not."
+        },
+        {
+          "technique": "approved-reference-sheet",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/styles/writers.ts:117 Proofs land only under the current block digest, so each sheet image carries its lineage. The v1 import keeps model, provider and cost, and reports missing lineage as unknown."
+        },
+        {
+          "technique": "style-onboarding-from-sample",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/styles/writers.ts:79 A readback or extract lands as a candidate with its origin recorded in the event. A style that already has evidence is never overwritten."
+        }
+      ]
+    },
+    "038cd727-793d-43fe-b86b-a39ef50c7334/visual-style-locking": {
+      "context": "visual-producers",
+      "subject": "visual-style-locking",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T21:12:29.637Z",
+      "worker": "d0838674-8922-4f45-8042-7c817769c5eb",
+      "techniques": [
+        {
+          "technique": "style-block-restated-every-call",
+          "verdict": "deviation",
+          "evidence": "lib/producers/motion.ts:43 Frames and proofs restate the block through compilePrompt (lib/producers/frames.ts:230, style.ts:137), and the Google provider labels references as STYLE REFERENCES. The motion hop has no slot for the block at all."
+        },
+        {
+          "technique": "draft-proofing-locked-ratchet",
+          "verdict": "deviation",
+          "evidence": "packages/producers/src/frames/look.ts:95 One resolution point with named misses (unset, missing, no-block; look.ts:71) is conformant. But production draws in an unlocked style and only marks it 'not locked' on the receipt; the standard allows only locked styles to anchor production. Project choices also offer proven styles (app/(studio)/projects/_port/realChoices.ts:60)."
+        },
+        {
+          "technique": "approved-reference-sheet",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/frames/look.ts:78 Frames send the ratchet's approved-only selection, capped at SEND_REFS. A fallback look sends no refs."
+        },
+        {
+          "technique": "style-onboarding-from-sample",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/style/define.ts:77 Adopt reads the look back into the grammar slots (technique, subject, finish, a three-colour role palette). Seeded plates land as PENDING proofs for the operator to judge. Extract reads, groups, replicates and transfers onto other scenes."
+        },
+        {
+          "technique": "motion-sampled-under-a-frame-budget",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/motion/define.ts:7 Motion is proposed from a single still plate. No reference footage is sampled for a motion signature."
+        }
+      ]
     }
   }
 }

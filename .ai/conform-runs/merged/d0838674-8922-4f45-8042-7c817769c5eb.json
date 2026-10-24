@@ -1,0 +1,215 @@
+{
+ "schema": "conform-run/1",
+ "worker": "d0838674-8922-4f45-8042-7c817769c5eb",
+ "subject": "visual-style-locking",
+ "evaluatedAt": "2026-10-24T21:12:29.637731+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "domain-style-library-assets",
+   "subject": "visual-style-locking",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "packages/domain/src/style.ratchet.ts:128 The style's status comes from its evidence and its lock event through one pure ratchet that the door, the kernel writes and the view all share, and that same module holds the lock gate, the one-way ratchet, the approvals-only window and the send count.",
+   "techniques": [
+    {
+     "technique": "draft-proofing-locked-ratchet",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/style.ratchet.ts:217 ratchetBlocker refuses unlocking, a changed locked block and a demotion. lockBlocker requires zero pending proofs and at least one approval. Status is also stored on the record, but the door (style.ts superRefine) refuses any status that differs from statusOf, so the stored copy cannot drift."
+    },
+    {
+     "technique": "approved-reference-sheet",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/style.ratchet.ts:56 The send count is a named constant, separate from PROOF_CAP (the window, counted over approved proofs). styleRefs sends only approved proofs under the current block. Each proof records model, provider and costUsd. Selection is founding approvals plus newest, not closest element vocabulary, so that soft preference rule is not realized."
+    },
+    {
+     "technique": "rejections-as-negative-evidence",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/styleView.ts:292 Rejections take no window capacity. The proof schema keeps a rejected proof with an optional note, and rejections are never in styleRefs."
+    },
+    {
+     "technique": "style-onboarding-from-sample",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/style.ts:106 The origin is recorded on the artifact. A readback carries a signature and an edited flag, so the vision readback stays a hypothesis until a human edits it."
+    },
+    {
+     "technique": "style-block-restated-every-call",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/style.ratchet.ts:95 The style is a four-slot structured record with role-assigned palette, compiled by one function. Whether every call path uses it is judged on visual-producers."
+    }
+   ]
+  },
+  {
+   "context": "style-store",
+   "subject": "visual-style-locking",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "packages/kernel/src/styles/schema.ts:57 Every style write goes through the door and ratchetBlocker in one transaction, and a SQL trigger refuses a demotion even from a writer that skips both, so a locked style cannot be unlocked or changed underneath frames built on it.",
+   "techniques": [
+    {
+     "technique": "draft-proofing-locked-ratchet",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/styles/core.ts:123 A duplicate keeps the block, empties the sheet and restarts as a candidate. The lock op refuses through lockBlocker (core.ts:115), and the status is re-derived on every plan."
+    },
+    {
+     "technique": "rejections-as-negative-evidence",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/styles/core.ts:100 remove-proof refuses a rejected proof. Caveat: judge-proof can move a rejected proof back to pending, which remove-proof then accepts. The reject evidence row and the append-only style_ops log (which holds the note) survive, but the plate and its on-sheet note do not."
+    },
+    {
+     "technique": "approved-reference-sheet",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/styles/writers.ts:117 Proofs land only under the current block digest, so each sheet image carries its lineage. The v1 import keeps model, provider and cost, and reports missing lineage as unknown."
+    },
+    {
+     "technique": "style-onboarding-from-sample",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/styles/writers.ts:79 A readback or extract lands as a candidate with its origin recorded in the event. A style that already has evidence is never overwritten."
+    }
+   ]
+  },
+  {
+   "context": "visual-producers",
+   "subject": "visual-style-locking",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/producers/motion.ts:43 The motion producer's clip call (bound at lib/producers/motion.ts:183 and sent as `prompt: rec.motion` in lib/imaging/video/clips.ts) carries the plate and the motion sentence but no compiled style block, so the still-to-motion hop drops the text half of the style lock, which the standard says lets the look drift mid-clip.",
+   "techniques": [
+    {
+     "technique": "style-block-restated-every-call",
+     "verdict": "deviation",
+     "evidence": "lib/producers/motion.ts:43 Frames and proofs restate the block through compilePrompt (lib/producers/frames.ts:230, style.ts:137), and the Google provider labels references as STYLE REFERENCES. The motion hop has no slot for the block at all."
+    },
+    {
+     "technique": "draft-proofing-locked-ratchet",
+     "verdict": "deviation",
+     "evidence": "packages/producers/src/frames/look.ts:95 One resolution point with named misses (unset, missing, no-block; look.ts:71) is conformant. But production draws in an unlocked style and only marks it 'not locked' on the receipt; the standard allows only locked styles to anchor production. Project choices also offer proven styles (app/(studio)/projects/_port/realChoices.ts:60)."
+    },
+    {
+     "technique": "approved-reference-sheet",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/frames/look.ts:78 Frames send the ratchet's approved-only selection, capped at SEND_REFS. A fallback look sends no refs."
+    },
+    {
+     "technique": "style-onboarding-from-sample",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/style/define.ts:77 Adopt reads the look back into the grammar slots (technique, subject, finish, a three-colour role palette). Seeded plates land as PENDING proofs for the operator to judge. Extract reads, groups, replicates and transfers onto other scenes."
+    },
+    {
+     "technique": "motion-sampled-under-a-frame-budget",
+     "verdict": "not-applicable",
+     "evidence": "packages/producers/src/motion/define.ts:7 Motion is proposed from a single still plate. No reference footage is sampled for a motion signature."
+    }
+   ]
+  },
+  {
+   "context": "style-atelier",
+   "subject": "visual-style-locking",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "app/(studio)/library/style/[id]/_atelier/Atelier.tsx:203 The atelier offers lock only when the server-side gate admits it, offers duplicate as the way to change a look, refuses to send a rejection without a reason, and shows the send count apart from the window.",
+   "techniques": [
+    {
+     "technique": "draft-proofing-locked-ratchet",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/style/[id]/_atelier/Atelier.tsx:203 Otherwise it shows a 'lock held' chip naming the blocker. A locked style gets no judge controls. Duplicate is always offered once a block exists."
+    },
+    {
+     "technique": "rejections-as-negative-evidence",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/style/[id]/_atelier/Atelier.tsx:120 A rejection is only sent with a non-empty reason."
+    },
+    {
+     "technique": "approved-reference-sheet",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/style/[id]/_atelier/Dossier.tsx:103 The send count is drawn separately from the window. When full, the fixture act answers 'reject an approval to make room' (fixtureActs.ts:69). That uses a literal 14 and counts stale approvals, unlike the view; the surface also simply hides the render controls when full."
+    },
+    {
+     "technique": "style-onboarding-from-sample",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/style/[id]/_atelier/Dossier.tsx:46 The origin (readback, extracted, preset, and so on) and its source are shown on the style document."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "visual-style-locking",
+   "context": "style-trials-cull",
+   "reason": "conformant below the evidence floor: 3 distinct anchors for 7 techniques, 4 needed"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-24T21:12:29.637731+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "visual-style-locking"
+   ],
+   "techniques": [
+    "approved-reference-sheet",
+    "draft-proofing-locked-ratchet",
+    "rejections-as-negative-evidence",
+    "style-block-restated-every-call",
+    "style-onboarding-from-sample"
+   ],
+   "deviations": 0,
+   "context": "domain-style-library-assets",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T21:12:29.637731+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "visual-style-locking"
+   ],
+   "techniques": [
+    "approved-reference-sheet",
+    "draft-proofing-locked-ratchet",
+    "rejections-as-negative-evidence",
+    "style-onboarding-from-sample"
+   ],
+   "deviations": 0,
+   "context": "style-store",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T21:12:29.637731+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "visual-style-locking"
+   ],
+   "techniques": [
+    "approved-reference-sheet",
+    "draft-proofing-locked-ratchet",
+    "motion-sampled-under-a-frame-budget",
+    "style-block-restated-every-call",
+    "style-onboarding-from-sample"
+   ],
+   "deviations": 1,
+   "context": "visual-producers",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T21:12:29.637731+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "visual-style-locking"
+   ],
+   "techniques": [
+    "approved-reference-sheet",
+    "draft-proofing-locked-ratchet",
+    "rejections-as-negative-evidence",
+    "style-onboarding-from-sample"
+   ],
+   "deviations": 0,
+   "context": "style-atelier",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

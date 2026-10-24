@@ -4121,7 +4121,11 @@
           "revision": 8,
           "changedAt": "2026-09-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/domain/src/style.ratchet.ts:128 The style's status comes from its evidence and its lock event through one pure ratchet that the door, the kernel writes and the view all share, and that same module holds the lock gate, the one-way ratchet, the approvals-only window and the send count.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:281e1e4a619b1b07",
+          "evaluatedRevision": 8
         },
         {
           "subject": "retrieval",
@@ -12370,7 +12374,11 @@
           "revision": 8,
           "changedAt": "2026-09-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/kernel/src/styles/schema.ts:57 Every style write goes through the door and ratchetBlocker in one transaction, and a SQL trigger refuses a demotion even from a writer that skips both, so a locked style cannot be unlocked or changed underneath frames built on it.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:281e1e4a619b1b07",
+          "evaluatedRevision": 8
         },
         {
           "subject": "image-prompt-composition",
@@ -14200,7 +14208,11 @@
           "revision": 8,
           "changedAt": "2026-09-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/producers/motion.ts:43 The motion producer's clip call (bound at lib/producers/motion.ts:183 and sent as `prompt: rec.motion` in lib/imaging/video/clips.ts) carries the plate and the motion sentence but no compiled style block, so the still-to-motion hop drops the text half of the style lock, which the standard says lets the look drift mid-clip.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:281e1e4a619b1b07",
+          "evaluatedRevision": 8
         },
         {
           "subject": "frame-direction",
