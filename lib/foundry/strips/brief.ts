@@ -191,7 +191,10 @@ export function captionOf(json: string | undefined): CaptionRead {
 
 /* ── the prompt addendum ───────────────────────────────────────────────── */
 
-export const stripComments = (md: string): string => md.replace(/<!--[\s\S]*?-->/g, "").trim();
+// A checkout under core.autocrlf hands the prompt over with CRLF line ends; every reader of it
+// (the worked-example blocks, the stage lines, the model) expects LF, so line ends are normalised
+// first. Measured 2026-10-24: on a CRLF checkout the voice-fx regression found 0 worked examples.
+export const stripComments = (md: string): string => md.replace(/\r\n?/g, "\n").replace(/<!--[\s\S]*?-->/g, "").trim();
 
 /** The explainer section appended to the author and fix prompts (author.ts `prepareTurn`). */
 export async function explainerAddendum(root: string = process.cwd()): Promise<string> {

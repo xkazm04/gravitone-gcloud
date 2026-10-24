@@ -61,7 +61,10 @@ export const FX_SCHEMA: Record<string, unknown> = {
 };
 
 /** The prompt file as it is sent: its comments stripped. */
-export const stripComments = (md: string): string => md.replace(/<!--[\s\S]*?-->/g, "").trim();
+// A checkout under core.autocrlf hands the prompt over with CRLF line ends; every reader of it
+// (the worked-example blocks, the stage lines, the model) expects LF, so line ends are normalised
+// first. Measured 2026-10-24: on a CRLF checkout the voice-fx regression found 0 worked examples.
+export const stripComments = (md: string): string => md.replace(/\r\n?/g, "\n").replace(/<!--[\s\S]*?-->/g, "").trim();
 
 export async function promptText(at: string = path.join(process.cwd(), PROMPT_FILE)): Promise<Result<string>> {
   try {
