@@ -22,6 +22,9 @@ function u32be(b: Uint8Array, at: number): number {
 function u16be(b: Uint8Array, at: number): number {
   return (b[at] << 8) | b[at + 1];
 }
+function u16le(b: Uint8Array, at: number): number {
+  return b[at] | (b[at + 1] << 8);
+}
 function u24le(b: Uint8Array, at: number): number {
   return b[at] | (b[at + 1] << 8) | (b[at + 2] << 16);
 }
@@ -73,7 +76,10 @@ function webp(b: Uint8Array): Dims | null {
     const bits = b[21] | (b[22] << 8) | (b[23] << 16) | (b[24] << 24);
     return { width: (bits & 0x3fff) + 1, height: ((bits >> 14) & 0x3fff) + 1 };
   }
-  if (chunk === "VP8 ") return { width: u16be(b, 27) & 0x3fff, height: u16be(b, 29) & 0x3fff };
+  // Lossy: frame tag (20-22), start code 9d 01 2a (23-25), then width and height
+  // as 16-bit LITTLE-endian at 26 and 28, the top two bits of each a scale. Read
+  // big-endian one byte late, a 300x500 portrait came back 500x318, landscape.
+  if (chunk === "VP8 ") return { width: u16le(b, 26) & 0x3fff, height: u16le(b, 28) & 0x3fff };
   return null;
 }
 
