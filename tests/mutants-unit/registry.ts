@@ -5683,4 +5683,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "role=\"radiogroup\" aria-label={`sections of ${t.label}`}",
     why: "A screen reader announces a radio group over a take's sections and then finds no radio in it - the chips are toggle buttons.",
   },
+  {
+    id: "mv-tags-counted-without-quotes",
+    test: "tests/next-server/mv-pipeline-edges.test.ts",
+    file: "lib/sound/mv/metadata.ts",
+    find: "snippetProblem({ title: \"t\", description: \"\", tags }) === null;",
+    replace: "tags.join(\",\").length <= 500;",
+    why: "Tags with spaces are trimmed to a count YouTube's validator does not use, and a proposal that passed the trim is refused by the Calendar's send and the uploader.",
+  },
 ];

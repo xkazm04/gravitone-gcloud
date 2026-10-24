@@ -29,7 +29,8 @@ import { CREDITS_PER_STILL, planBatch, resolveDir } from "../../lib/sound/mv/bat
 import { fetchClipBytes } from "../../lib/sound/mv/fetchAudio.ts";
 import { importFolder } from "../../lib/sound/mv/importFolder.ts";
 import { isLookId, MV_LOOK_IDS } from "../../lib/sound/mv/looks.ts";
-import { writeMetadata } from "../../lib/sound/mv/metadata.ts";
+import { snippetProblem } from "../../lib/publish/youtube.ts";
+import { fitTags, writeMetadata } from "../../lib/sound/mv/metadata.ts";
 import { labelSections } from "../../lib/sound/mv/sections.ts";
 import { treatmentInput, writeTreatment } from "../../lib/sound/mv/treatment.ts";
 import type { MvAnalysis } from "../../lib/sound/mv/types.ts";
@@ -151,5 +152,20 @@ describe("the section words the chapters print", () => {
   it("call a section a chorus only in the top 30% of the track's range", () => {
     expect(labelSections([0.2, 0.62, 1.0, 0.2])).toEqual(["intro", "verse", "chorus", "outro"]);
     expect(labelSections([0.2, 0.8, 1.0, 0.2])).toEqual(["intro", "chorus", "chorus", "outro"]);
+  });
+});
+
+describe("the proposal's tags", () => {
+  it("are trimmed to exactly what YouTube's validator accepts, a tag with a space counted with its quotes", () => {
+    // 15 tags of 30 characters with a space: 15 x (30 + 2 quotes) + 14 commas = 494 - fits;
+    // one longer tag in front pushes the count past 500, so the last one goes.
+    const spaced = Array.from({ length: 15 }, (_, i) => `ambient night drives ${String(i).padStart(2, "0")} slowly`);
+    expect(spaced.every((t) => t.length === 30)).toBe(true);
+    expect(fitTags(spaced)).toEqual(spaced);
+    const over = [`${"a".repeat(35)} b`, ...spaced.slice(0, 14)];
+    const kept = fitTags(over);
+    expect(snippetProblem({ title: "t", description: "", tags: kept })).toBeNull();
+    expect(snippetProblem({ title: "t", description: "", tags: over })).toBe("tags exceed 500 characters");
+    expect(kept).toEqual(over.slice(0, 14));
   });
 });
