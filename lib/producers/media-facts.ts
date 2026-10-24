@@ -7,9 +7,11 @@ import type { Producer } from "@gt/kernel/job-core";
 import { processKernel, storeLocation } from "@gt/kernel/process";
 import { factsPlan, MEDIA_FACTS_LANE, mediaFactsProducer, type MediaProbe } from "@gt/producers/media-facts/run";
 
-import { measureFile, sidecarDoctor } from "../audio/sidecar.ts";
+import { measureFile, sidecarDoctor, triageFile } from "../audio/sidecar.ts";
 import { OUT_DIRNAME } from "../fixtures/mode.ts";
-import { ffmpegDecode, measureMissing, type Decode, type Loudness } from "../sound/measureRun.ts";
+import { ffmpegDecode, measureMissing, triageTakes, type Decode, type Loudness, type Triager } from "../sound/measureRun.ts";
+import { readTakes } from "../sound/store.ts";
+import type { SoundTake } from "../sound/types.ts";
 
 // THE MEDIA-FACTS PORT, BOUND TO THIS BOX (Phase 5): ffprobe for what a blob is,
 // ffmpeg for a video's keyframe and for the 1x1 average that is its mean luma.
@@ -77,6 +79,21 @@ export function sidecarLoudness(): Loudness {
 }
 
 /**
+ * The audio sidecar as the triage pass's port (spark audio-triage WP3): the doctor once per step,
+ * and only when a take is owed a triage (lib/sound/measureRun.ts `triageTakes` asks `ready`
+ * first), then one `triage` spawn per owed file.
+ */
+export function sidecarTriage(): Triager {
+  return { ready: () => sidecarDoctor(), triage: (file, context) => triageFile(file, context) };
+}
+
+/** The triage pass's two ports: the detectors and the takes whose briefs they judge against. */
+export type TriageBinding = { readonly port: () => Triager; readonly takes: () => Promise<readonly SoundTake[]> };
+
+/** The sound store's takes (SOUND_STORE_DIR, read per call) and the sidecar. */
+export const SIDECAR_TRIAGE: TriageBinding = { port: sidecarTriage, takes: async () => (await readTakes()).takes };
+
+/**
  * The producer as the worker binds it (lib/producers/registry.ts BOUND): the store and the blob
  * directory are the PROCESS's (the worker's GRAVITONE_STORE_PATH, as lib/producers/strips.ts
  * `stripsKernel`), opened when a step runs rather than when the registry is imported, so a CLI
@@ -89,9 +106,15 @@ export function sidecarLoudness(): Loudness {
  * the facts already landed and stand. The same holds one level down for the audio sidecar's
  * loudness figures (`loudness` = null leaves them out): a sidecar that is missing or fails is
  * `loudnessFailed` in the output and NULL figures in the row, never a failed step.
+ *
+ * THEN THE TRIAGE (spark audio-triage WP3; `triage` = null leaves it out): the sound takes' blobs
+ * the sidecar's detectors have not judged against the take's current brief. The same rule again:
+ * a sidecar that is not installed is `triageUnavailable` with its doctor's sentence and no row; a
+ * file it failed on is counted in `triageErrors`, its sentence in `triageFailed`, and no row; the
+ * step stands on its facts either way.
  */
-export function mediaFactsBound(limit?: number, decode: Decode = ffmpegDecode(), loudness: (() => Loudness) | null = sidecarLoudness): Producer {
-  const lazy = (): { readonly producer: Producer; readonly measure: () => ReturnType<typeof measureMissing> } | { readonly error: string } => {
+export function mediaFactsBound(limit?: number, decode: Decode = ffmpegDecode(), loudness: (() => Loudness) | null = sidecarLoudness, triage: TriageBinding | null = SIDECAR_TRIAGE): Producer {
+  const lazy = (): { readonly producer: Producer; readonly measure: () => ReturnType<typeof measureMissing>; readonly triage: () => ReturnType<typeof triageTakes> | null } | { readonly error: string } => {
     const location = storeLocation(OUT_DIRNAME);
     const k = processKernel(location);
     if (!k.ok) return { error: k.error.message };
@@ -99,6 +122,7 @@ export function mediaFactsBound(limit?: number, decode: Decode = ffmpegDecode(),
     return {
       producer: mediaFactsProducer({ store: k.value.store, blobs, probe: ffmpegProbe(), ...(limit === undefined ? {} : { limit }) }),
       measure: () => measureMissing(k.value.store, blobs, decode, { limit: limit ?? 500, now: () => new Date(), ...(loudness === null ? {} : { loudness: loudness() }) }),
+      triage: () => (triage === null ? null : triageTakes(k.value.store, blobs, triage.takes, triage.port(), { limit: limit ?? 500, now: () => new Date() })),
     };
   };
   return {
@@ -112,7 +136,14 @@ export function mediaFactsBound(limit?: number, decode: Decode = ffmpegDecode(),
       const m = await p.measure();
       const loud = m.ok && m.value.loudness !== undefined ? { loudnessMeasured: m.value.loudness.measured, loudnessFailed: [...m.value.loudness.failed] } : {};
       const measures = m.ok ? { measured: m.value.measured, measureFailed: [...m.value.failed], ...loud } : { measured: 0, measureFailed: [m.error.message] };
-      return { ...facts, output: { ...facts.output, ...measures } };
+      const t = await p.triage();
+      const triaged =
+        t === null
+          ? {}
+          : t.ok
+            ? { triaged: t.value.triaged, triageErrors: t.value.errors, triageFailed: [...t.value.failed], ...(t.value.unavailable === undefined ? {} : { triageUnavailable: t.value.unavailable }) }
+            : { triaged: 0, triageErrors: 0, triageFailed: [t.error.message] };
+      return { ...facts, output: { ...facts.output, ...measures, ...triaged } };
     },
   };
 }

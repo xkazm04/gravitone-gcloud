@@ -126,7 +126,7 @@ describe("the v3 migration", () => {
       for (const [sha, mime] of [["a".repeat(64), "model/gltf-binary"], ["b".repeat(64), "image/png"]] as const)
         must(s.tx((t) => t.run("INSERT INTO media_facts (sha, decodable, mime, near_black, probed_at, error) VALUES (?, 0, ?, 0, ?, ?)", sha, mime, "2026-10-01T00:00:00.000Z", "ffprobe found no video stream")));
       const report = must(migrate(s, [libraryMigrations], { snapshotDir: tmp.dir }));
-      expect(report.applied).toEqual([{ module: "library", version: 3 }, { module: "library", version: 4 }]);
+      expect(report.applied).toEqual([{ module: "library", version: 3 }, { module: "library", version: 4 }, { module: "library", version: 5 }]);
       expect(must(s.read((r) => r.all("SELECT mime, mesh FROM media_facts")))).toEqual([{ mime: "image/png", mesh: null }]);
       s.close();
     } finally {

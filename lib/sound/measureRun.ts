@@ -1,12 +1,16 @@
 import { execFile } from "node:child_process";
 
 import type { AudioMeasureFull } from "@gt/domain/audio.accept";
-import { err, ok, type Result } from "@gt/domain/errors";
+import type { Triage, TriageContext } from "@gt/domain/audio.triage";
+import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { BlobStore } from "@gt/kernel/blob";
 import { loudnessMissing, measuresMissing, putAudioMeasures, putLoudness, type AudioLoudness, type AudioMeasureRow } from "@gt/kernel/library/measures";
+import { putTriage, triageDigest, triageMissing, type TriageRow } from "@gt/kernel/library/triage";
 import type { Store } from "@gt/kernel/store";
 
 import { MEASURE_RATE, measureSignal, samplesOf } from "./measure.ts";
+import { triageContextOf } from "./triageContext.ts";
+import type { SoundTake } from "./types.ts";
 
 // THE MEASURE PASS - the driver of ./measure.ts: for each audio blob a Library item points at
 // that decodes and has no measure, ffmpeg decodes it to mono f32 at MEASURE_RATE, the pure core
@@ -23,6 +27,12 @@ import { MEASURE_RATE, measureSignal, samplesOf } from "./measure.ts";
 // The decoder and the sidecar are PARAMETERS (ports, with the ffmpeg binding below and the
 // sidecar's in lib/producers/media-facts.ts), so the pass is tested on generated PCM without a
 // binary; the clock is one too.
+//
+// THE TRIAGE PASS (spark audio-triage WP3, `triageTakes` below) runs after the two above: each
+// sound take's bytes judged by the sidecar's detectors against the take's own brief
+// (./triageContext.ts), one kernel row per (sha, brief digest, detector version)
+// (@gt/kernel/library/triage). The sound store's takes are a port too, so the pass is tested
+// over literal takes without a takes.json.
 
 /** Mono f32le PCM of a file at MEASURE_RATE, or the decoder's own words. */
 export type Decode = (file: string) => Promise<Result<Uint8Array>>;
@@ -148,4 +158,75 @@ async function backfill(store: Store, blobs: BlobStore, port: Loudness, loud: Re
   if (rows.length === 0) return ok(written);
   const put = putLoudness(store, rows);
   return put.ok ? ok(written + put.value) : put;
+}
+
+/**
+ * The audio sidecar's triage (lib/audio/sidecar.ts `triageFile`, bound in
+ * lib/producers/media-facts.ts). `ready` is asked ONCE per run, and only when a take is owed a
+ * triage, so a box without the sidecar spawns one doctor and no detector.
+ */
+export type Triager = {
+  readonly ready: () => Promise<Result<unknown>>;
+  readonly triage: (file: string, context: TriageContext) => Promise<Result<Triage>>;
+};
+
+/**
+ * `errors` counts every file the sidecar failed on; `failed` keeps each distinct sentence once
+ * (FAILED_KEPT). `unavailable` is the doctor's sentence when the sidecar cannot run here: then
+ * nothing was asked, and nothing is owed but the install.
+ */
+export type TriageRun = { readonly triaged: number; readonly errors: number; readonly failed: readonly string[]; readonly unavailable?: string };
+
+/**
+ * Triage the sound takes' blobs that have no row for (sha, the digest of the take's brief,
+ * TRIAGE_VERSION). A take whose brief changed is owed again under its new digest; the old row
+ * stays and nobody reads it. A sidecar that is not installed writes no row and fails nothing (the
+ * loudness backfill's rule); a file it failed on writes no row either - absence reads "not
+ * triaged", never "clean" - and is asked again next run.
+ */
+export async function triageTakes(store: Store, blobs: BlobStore, takes: () => Promise<readonly SoundTake[]>, port: Triager, opts: { readonly limit: number; readonly now: () => Date }): Promise<Result<TriageRun>> {
+  let listed: readonly SoundTake[];
+  try {
+    listed = await takes();
+  } catch (e) {
+    return err("unavailable", `sound store: ${errorMessage(e)}`);
+  }
+  const briefs = new Map<string, { readonly context: TriageContext; readonly digest: string }>();
+  for (const t of listed) {
+    if (t.file === null) continue;
+    const context = triageContextOf(t);
+    briefs.set(`audio:${t.id}`, { context, digest: triageDigest(context) });
+  }
+  const owed = triageMissing(store, [...briefs].map(([itemId, b]) => ({ itemId, contextDigest: b.digest })), opts.limit);
+  if (!owed.ok) return owed;
+  if (owed.value.length === 0) return ok({ triaged: 0, errors: 0, failed: [] });
+  const ready = await port.ready();
+  if (!ready.ok) return ok({ triaged: 0, errors: 0, failed: [], unavailable: ready.error.message });
+  const rows: TriageRow[] = [];
+  const failed = new Map<string, string>();
+  let errors = 0;
+  let triaged = 0;
+  const flush = (): Result<number> => putTriage(store, rows.splice(0));
+  for (const w of owed.value) {
+    const brief = briefs.get(w.itemId);
+    if (brief === undefined) continue;
+    const file = blobs.pathOf({ sha256: w.sha, bytes: 0, mime: w.mime });
+    const r = file.ok ? await port.triage(file.value, brief.context) : file;
+    if (!r.ok) {
+      errors += 1;
+      if (!failed.has(r.error.message) && failed.size < FAILED_KEPT) failed.set(r.error.message, `${w.sha.slice(0, 12)}: ${r.error.message}`);
+      continue;
+    }
+    rows.push({ sha: w.sha, contextDigest: w.contextDigest, triage: r.value, at: opts.now().toISOString() });
+    triaged += 1;
+    if (rows.length >= BATCH) {
+      const put = flush();
+      if (!put.ok) return put;
+    }
+  }
+  if (rows.length > 0) {
+    const put = flush();
+    if (!put.ok) return put;
+  }
+  return ok({ triaged, errors, failed: [...failed.values()] });
 }

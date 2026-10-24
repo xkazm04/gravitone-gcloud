@@ -121,7 +121,7 @@ describe("the v2 migration", () => {
       for (const f of [facts(SHA("a")), facts(SHA("b"), { mime: "image/png", w: 4, h: 4, durationS: null, meanLuma: 120 })])
         must(s.tx((t) => t.run("INSERT INTO media_facts (sha, decodable, mime, w, h, duration_s, poster_sha, mean_luma, near_black, probed_at, error) VALUES (?, 1, ?, ?, ?, ?, NULL, ?, 0, ?, NULL)", f.sha, f.mime, f.w, f.h, f.durationS, f.meanLuma, f.probedAt)));
       const report = must(migrate(s, [libraryMigrations], { snapshotDir: tmp.dir }));
-      expect(report.applied).toEqual([{ module: "library", version: 2 }, { module: "library", version: 3 }, { module: "library", version: 4 }]);
+      expect(report.applied).toEqual([{ module: "library", version: 2 }, { module: "library", version: 3 }, { module: "library", version: 4 }, { module: "library", version: 5 }]);
       const left = must(s.read((r) => r.all("SELECT mime FROM media_facts ORDER BY mime").map((x) => String(x["mime"]))));
       expect(left).toEqual(["image/png"]);
       s.close();

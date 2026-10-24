@@ -76,7 +76,7 @@ describe("the v4 migration", () => {
       // Written as a v3 store held it: no loudness columns exist yet.
       must(s.tx((t) => t.run("INSERT INTO audio_measures (sha, peaks, energy, duration_s, tempo_bpm, music_key, measured_at, error) VALUES (?, '[0.5]', 0.2, 12, NULL, NULL, ?, NULL)", SHA("a"), AT)));
       const report = must(migrate(s, [libraryMigrations], { snapshotDir: tmp.dir }));
-      expect(report.applied).toEqual([{ module: "library", version: 4 }]);
+      expect(report.applied).toEqual([{ module: "library", version: 4 }, { module: "library", version: 5 }]);
       const m = must(s.read((r) => readMeasure(r, SHA("a"))));
       expect(m).toMatchObject({ peaks: [0.5], durationS: 12, lufs: null, truePeakDb: null, lra: null, clippedSamples: null, tailSilenceS: null });
       s.close();
