@@ -79,13 +79,14 @@ export function EnterButton({ className = "" }: { className?: string }) {
         <button onClick={() => {
           setSeen(true);
           void signIn();
-        }} disabled={loading} className="cursor-pointer pc-enter">
+        }} disabled={loading} className="cursor-pointer pc-enter" aria-label="Sign in with Google">
           <svg viewBox="-10 -10 20 20" aria-hidden="true" className="pc-enter-g">
             <path d="M5.3-5.3A7.5 7.5 0 1 0 7.4 1.3L2.4 1.3" fill="none" stroke="currentColor" strokeWidth="1.4" />
             <circle cx="5.3" cy="-5.3" r="1.7" fill="currentColor" />
             <circle cx="2.4" cy="1.3" r="2" fill="currentColor" />
           </svg>
-          Sign in with Google
+          {/* under ~480 px the long half yields to the wordmark (cosmos.css .pc-enter-long); the mark says whose sign-in it is */}
+          Sign in<span className="pc-enter-long"> with Google</span>
         </button>
       )}
       {!user && local && (

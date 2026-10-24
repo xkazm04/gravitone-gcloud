@@ -358,6 +358,8 @@
 /* portrait: the family's name sits on its ream, not on a tab above it */
 .pc.portrait .ream .tab{height:auto;background:none!important;box-shadow:none!important;padding:0;color:var(--pc-print-ink);font-size:max(15px,calc(var(--S)*.0158));font-weight:700}
 .pc.portrait .pc-enter{padding:0 18px 0 20px}
+/* a phone: "Sign in with Google" is ~280 px with the search button, and the wordmark ends at ~167 px, so the pill sat over it by 53-104 px (360-412 wide); the G mark keeps the name, the button's aria-label keeps all of it */
+@media (max-width:479px){.pc .pc-enter-long{display:none}}
 @media (prefers-reduced-motion:reduce){
   .pc .sway,.pc .drift,.pc .pulse,.pc .med .bob{animation:none!important}
   .pc .pp,.pc .med,.pc .ream,.pc #world,.pc .view,.pc .lsheet,.pc #banner,.pc .sv-side{transition-duration:.15s!important;transition-delay:0s!important}
