@@ -180,8 +180,19 @@ describe("markup", () => {
     const a = receipt([line("frames", FLUX, 24, 2, 10)]);
     const b = receipt([line("frames", FLUX, 24, 3, 40)], { token: "t2", queuePos: 3 });
     const html = renderToStaticMarkup(h(Receipt, { receipt: b, changes: receiptChanges(a, b), ceiling: "", onCeiling: noop, onConfirm: noop, busy: false, nowMs: NOW }));
-    expect(html.match(/\(changed\)/g)?.length).toBe(2);
+    // two line cells (queue, start) and the totals' queue: every mark the eye gets, a reader gets.
+    expect(html.match(/\(changed\)/g)?.length).toBe(3);
     expect(html).toContain('aria-label="2 changes since you read it"');
+  });
+
+  test("every moved total speaks its mark, not only the ring: mode, work, cost, queue, eta", () => {
+    const a = receipt([line("frames", NANO, 24, 2, 10)]);
+    const b = receipt([line("frames", NANO, 48, 2, 10)], { token: "t2", mode: "live", queuePos: 4, etaAt: at(240), totals: { seconds: 21 * 48, usd: 1.92, unpriced: 0, src: "illustrative" } });
+    const c = receiptChanges(a, b);
+    expect([...c.totals].sort()).toEqual(["cost", "etaAt", "mode", "queuePos", "seconds"]);
+    const html = renderToStaticMarkup(h(Receipt, { receipt: b, changes: c, ceiling: "", onCeiling: noop, onConfirm: noop, busy: false, nowMs: NOW }));
+    // the line's units, time and cost cells, plus the five totals.
+    expect(html.match(/\(changed\)/g)?.length).toBe(3 + 5);
   });
 
   test("a ceiling under the worst case is a stop point: the confirm stays armed and the receipt says may stop", () => {

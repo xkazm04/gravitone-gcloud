@@ -25,7 +25,7 @@ import { FIELD_ATTR } from "../../keymap/target.ts";
 import { Keycap } from "../keycaps/Keycaps.tsx";
 import { LaneChip } from "../runs/LaneChip.tsx";
 import { SourceTag } from "../source/SourceTag.tsx";
-import { changeCount, costWords, fmtDur, fmtUsd, NO_CHANGES, mayStopAtCeiling, parseCeiling, totalPriced, when, type LineField, type ReceiptChanges } from "./produce.ts";
+import { changeCount, costWords, fmtDur, fmtUsd, NO_CHANGES, mayStopAtCeiling, parseCeiling, totalPriced, when, type LineField, type ReceiptChanges, type TotalField } from "./produce.ts";
 import { Unpriced } from "./Unpriced.tsx";
 import s from "./Receipt.module.css";
 
@@ -97,24 +97,28 @@ export function Receipt({ receipt: r, changes = NO_CHANGES, ceiling, onCeiling, 
   const worst = r.totals.usdRange?.[1] ?? r.totals.usd;
   const moved = changeCount(changes);
   const t = r.totals;
-  const mark = (f: "seconds" | "cost" | "queuePos" | "etaAt" | "mode"): string | undefined => (changes.totals.has(f) ? s.moved : undefined);
+  const mark = (f: TotalField): string | undefined => (changes.totals.has(f) ? s.moved : undefined);
+  // The totals' marks speak to every reader, as the lines' cells do (Cell): the ring is for the eye.
+  const said = (f: TotalField): ReactNode => changes.totals.has(f) && <SrOnly text=" (changed)" />;
   return (
     <section className={s.receipt} data-component="Receipt" data-mode={r.mode} aria-label={`receipt, ${r.lines.length} lines, ${r.mode}`}>
       <div className={s.head}>
         <span className={mark("mode")}>
           <Chip label={r.mode} tone={r.mode === "live" ? "rose" : "cyan"} dot name={`mode ${r.mode}`} />
+          {said("mode")}
         </span>
         {moved > 0 && <Chip label="changed" value={moved} tone="amber" name={`${moved} changes since you read it`} />}
         <span className={s.totals}>
           <span className={mark("seconds")}>
             <Chip label="work" value={fmtDur(t.seconds)} />
+            {said("seconds")}
           </span>
-          {totalPriced(r) && (
-            <span className={mark("cost")}>
-              <Chip label="cost" value={t.usdRange !== undefined ? costWords(t) : fmtUsd(t.usd)} />
-            </span>
-          )}
-          {t.unpriced > 0 && <Chip label="unpriced" value={t.unpriced} tone="violet" />}
+          {/* One mark over the priced total and the unpriced count: `cost` moves when either does. */}
+          <span className={cx(s.group, mark("cost"))}>
+            {totalPriced(r) && <Chip label="cost" value={t.usdRange !== undefined ? costWords(t) : fmtUsd(t.usd)} />}
+            {t.unpriced > 0 && <Chip label="unpriced" value={t.unpriced} tone="violet" />}
+            {said("cost")}
+          </span>
           <SourceTag kind={t.src} />
         </span>
       </div>
@@ -150,9 +154,15 @@ export function Receipt({ receipt: r, changes = NO_CHANGES, ceiling, onCeiling, 
       <div className={s.foot}>
         <dl className={s.facts}>
           <dt>queue</dt>
-          <dd className={mark("queuePos")}>#{r.queuePos}</dd>
+          <dd className={mark("queuePos")}>
+            #{r.queuePos}
+            {said("queuePos")}
+          </dd>
           <dt>eta</dt>
-          <dd className={mark("etaAt")}>{when(r.etaAt, nowMs)}</dd>
+          <dd className={mark("etaAt")}>
+            {when(r.etaAt, nowMs)}
+            {said("etaAt")}
+          </dd>
         </dl>
         <label className={s.ceiling}>
           <span>ceiling $</span>

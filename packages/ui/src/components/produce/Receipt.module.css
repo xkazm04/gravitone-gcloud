@@ -5,6 +5,7 @@
 .receipt{display:flex;flex-direction:column;min-height:0;min-width:0;flex:1 1 auto}
 .head{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2);padding:var(--sp-4) var(--sp-wide);border-bottom:1px solid var(--hair)}
 .totals{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2);margin-left:auto}
+.group{display:inline-flex;align-items:center;gap:var(--sp-2)}
 .scroll{flex:0 1 auto;min-height:0;overflow:auto;padding:var(--sp-2) var(--sp-wide) var(--sp-5)}
 .table{width:100%;border-collapse:separate;border-spacing:0;font-size:var(--fs-ui)}
 .table th{position:sticky;top:0;z-index:1;background:var(--sheet-ground);text-align:left;padding:var(--sp-control) var(--sp-3);font:600 var(--fs-micro)/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--hair-2);white-space:nowrap}
