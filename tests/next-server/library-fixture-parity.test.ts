@@ -1,0 +1,75 @@
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("server-only", () => ({}));
+
+import type { LibraryPage, LibraryQuery, MediaFacts } from "@gt/domain/library";
+import { openKernel, type Kernel } from "@gt/kernel/kernel";
+import { queryLibrary } from "@gt/kernel/library/query";
+import { putMediaFacts, upsertItems } from "@gt/kernel/library/write";
+
+import { fixtureQuery, resetLibraryFixture } from "../../app/(studio)/library/_port/fixture.ts";
+import { buildCorpus } from "../../app/(studio)/library/_port/fixtureCorpus.ts";
+import { PROJECTS, STYLES } from "../../app/(studio)/library/_port/fixtureData.ts";
+
+// THE FIXTURE INDEX ANSWERS WHAT THE KERNEL'S INDEX ANSWERS, OVER THE SAME ITEMS. GRAVITONE_PRODUCE_SIDE
+// =fixture is how the Library is built and photographed, so a count, a label, an order or a refusal
+// the fixture gives and the kernel cannot is a screen designed against a port that does not exist.
+// The fixture's own corpus is loaded into a kernel in memory through the projection's door
+// (upsertItems, and the media facts it carries), and each case asks BOTH sides the same question.
+
+let k: Kernel;
+
+beforeAll(() => {
+  const opened = openKernel(":memory:");
+  if (!opened.ok) throw opened.error;
+  k = opened.value;
+  const corpus = buildCorpus();
+  const up = upsertItems(
+    k.store,
+    corpus.map((x) => ({ item: x.raw, meta: x.row.meta, extras: x.extras, feed: "fixture" })),
+    {
+      styleOf: (id) => {
+        const s = STYLES.find((st) => st.id === id);
+        return s === undefined ? undefined : { name: s.name, family: s.family, observables: s.obs };
+      },
+      projectTitle: (id) => PROJECTS.find((p) => p.id === id)?.title,
+    },
+  );
+  if (!up.ok) throw up.error;
+  // One fact a blob: the corpus names one public file under one sha for many items.
+  const facts = new Map<string, MediaFacts>();
+  for (const x of corpus) if (x.media !== null && !facts.has(x.media.sha)) facts.set(x.media.sha, x.media);
+  const f = putMediaFacts(k.store, [...facts.values()]);
+  if (!f.ok) throw f.error;
+});
+afterAll(() => k.close());
+beforeEach(() => resetLibraryFixture());
+
+function pages(q: LibraryQuery): { readonly fixture: LibraryPage; readonly real: LibraryPage } {
+  const f = fixtureQuery(q);
+  const r = queryLibrary(k.store, q);
+  if (!f.ok) throw f.error;
+  if (!r.ok) throw r.error;
+  return { fixture: f.value, real: r.value };
+}
+
+const RAILS: readonly [string, LibraryQuery][] = [
+  ["everything", { limit: 0 }],
+  ["audio", { kind: "audio", limit: 0 }],
+  ["plates", { kind: "plate", limit: 0 }],
+  ["documents", { kind: "doc", limit: 0 }],
+  ["models", { kind: "model", limit: 0 }],
+  ["characters", { kind: "character", limit: 0 }],
+];
+
+describe("a rail value is labelled as the index labels it", () => {
+  // The index labels a value from what the projection wrote: a hunt and a bundle by their ids, an
+  // attention value by its own word (kernel library/core.ts facetsOf, counts.ts fallbackLabel).
+  const labels = (p: LibraryPage): string[] => p.groups.flatMap((g) => g.values.map((v) => `${g.key}:${v.value} = ${v.label}`)).sort();
+  for (const [name, q] of RAILS) {
+    it(name, () => {
+      const { fixture, real } = pages(q);
+      expect(labels(fixture)).toEqual(labels(real));
+    });
+  }
+});

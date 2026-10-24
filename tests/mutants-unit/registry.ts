@@ -5771,4 +5771,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "const r = await run();",
     why: "A part edit whose round trip never comes back is an unhandled rejection: the error line stays empty and the operator reads the edit as taken.",
   },
+  {
+    id: "library-fixture-labels-hunt-by-words",
+    test: "tests/next-server/library-fixture-parity.test.ts",
+    file: "app/(studio)/library/_port/fixtureCorpus.ts",
+    find: "group === \"hunt\" || group === \"pin\" || group === \"set\" || group === \"bundle\"",
+    replace: "group === \"pin\" || group === \"set\"",
+    why: "The fixture Library labels a hunt and a bundle in words the kernel's index never writes, so the rail is designed against labels the real side cannot draw.",
+  },
 ];

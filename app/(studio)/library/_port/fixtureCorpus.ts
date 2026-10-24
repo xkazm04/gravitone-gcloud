@@ -50,13 +50,16 @@ const words = (v: string): string => v.replace(/[-_]/g, " ");
 const cap = (v: string): string => v.replace(/^\w/, (c) => c.toUpperCase());
 const styleOf = (id: string) => STYLES.find((s) => s.id === id);
 
-/** A value's label: a style by its name, a project by its title, a hunt by its idea, else the words. */
+/**
+ * A value's label, by the index's rule (kernel library/core.ts `facetsOf`, counts.ts `fallbackLabel`):
+ * a style by its name, a project by its title, a collection, set or bundle by its id, an attention
+ * value by its own word, else the words. A hunt is labelled by its id: the projection has no title
+ * for one, so a fixture that drew the hunt's idea here painted a rail the kernel cannot.
+ */
 export function labelOf(group: string, value: string): string {
   if (group === "style") return styleOf(value)?.name ?? words(value);
   if (group === "project") return PROJECTS.find((p) => p.id === value)?.title ?? value;
-  if (group === "hunt") return HUNTS.find((h) => h.id === value)?.label ?? value;
-  if (group === "run" || group === "set" || group === "state" || group === "source" || group === "origin") return value;
-  if (group === "attention") return value === "missing" ? "media missing" : "media unreadable";
+  if (group === "run" || group === "hunt" || group === "pin" || group === "set" || group === "bundle" || group === "attention" || group === "state" || group === "source" || group === "origin") return value;
   return words(value);
 }
 
