@@ -126,9 +126,20 @@ describe("the receipt's changes", () => {
   test("a re-routed line marks its lane, model, time and cost; added and removed lines are named", () => {
     const b = receipt([line("frames", NANO, 24, 1, 10), line("cut", FLUX, 1, 1, 50)], { token: "t2" });
     const c = receiptChanges(a, b);
-    expect([...(c.lines.get("frames") ?? [])].sort()).toEqual(["cost", "lane", "model", "queuePos", "seconds"]);
+    expect([...(c.lines.get("frames") ?? [])].sort()).toEqual(["cost", "lane", "model", "queuePos", "seconds", "src"]);
     expect(c.added).toEqual(["cut"]);
     expect(c.removed).toEqual(["score"]);
+  });
+
+  test("a figure's source and an unpriced line's kind are what the operator reads, so a move in either is marked", () => {
+    const measured = { ...line("frames", FLUX, 24, 2, 10), src: "real" as const };
+    const b = receipt([measured, { ...line("score", SUNO, 2, 1, 10), unpricedReason: "billed to the text seat" }], { token: "t2", totals: { ...a.totals, src: "real" } });
+    const c = receiptChanges(a, b);
+    expect([...(c.lines.get("frames") ?? [])]).toEqual(["src"]);
+    expect([...(c.lines.get("score") ?? [])]).toEqual(["cost"]);
+    expect([...c.totals]).toEqual(["src"]);
+    const html = renderToStaticMarkup(h(Receipt, { receipt: b, changes: c, ceiling: "", onCeiling: noop, onConfirm: noop, busy: false, nowMs: NOW }));
+    expect(html.match(/\(changed\)/g)?.length).toBe(3);
   });
 });
 

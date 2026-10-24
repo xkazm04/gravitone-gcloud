@@ -92,8 +92,8 @@ export const isWork = (p: PlanPart): p is WorkPlanPart => p.kind !== "gate" && p
 
 /* ── the receipt ──────────────────────────────────────────────────────────── */
 
-export type LineField = "lane" | "model" | "units" | "seconds" | "cost" | "queuePos" | "start";
-export type TotalField = "seconds" | "cost" | "queuePos" | "etaAt" | "mode";
+export type LineField = "lane" | "model" | "units" | "seconds" | "cost" | "src" | "queuePos" | "start";
+export type TotalField = "seconds" | "cost" | "src" | "queuePos" | "etaAt" | "mode";
 
 export type ReceiptChanges = {
   readonly lines: ReadonlyMap<string, ReadonlySet<LineField>>;
@@ -104,7 +104,16 @@ export type ReceiptChanges = {
 
 export const NO_CHANGES: ReceiptChanges = { lines: new Map(), added: [], removed: [], totals: new Set() };
 
-const sameCost = (a: Cost, b: Cost): boolean => costWords(a) === costWords(b);
+/** The short kind of an unpriced figure, from its reason (what the `Unpriced` chip draws). */
+export function unpricedKind(reason: string | undefined): "seat" | "credits" | "no price" {
+  const r = (reason ?? "").toLowerCase();
+  if (r.includes("seat")) return "seat";
+  if (r.includes("credit") || r.includes("subscription")) return "credits";
+  return "no price";
+}
+
+/** Two costs read the same: the same words, and for an unpriced one the same drawn kind. */
+const sameCost = (a: Cost, b: Cost): boolean => costWords(a) === costWords(b) && (a.usd !== null || unpricedKind(a.unpricedReason) === unpricedKind(b.unpricedReason));
 
 function lineDiff(a: ReceiptLine, b: ReceiptLine): Set<LineField> {
   const out = new Set<LineField>();
@@ -113,6 +122,7 @@ function lineDiff(a: ReceiptLine, b: ReceiptLine): Set<LineField> {
   if (a.units !== b.units) out.add("units");
   if (fmtDur(a.seconds) !== fmtDur(b.seconds)) out.add("seconds");
   if (!sameCost(a, b)) out.add("cost");
+  if (a.src !== b.src) out.add("src");
   if (a.queuePos !== b.queuePos) out.add("queuePos");
   if (a.start !== b.start) out.add("start");
   return out;
@@ -137,6 +147,7 @@ export function receiptChanges(before: Receipt, after: Receipt): ReceiptChanges 
   const totals = new Set<TotalField>();
   if (fmtDur(before.totals.seconds) !== fmtDur(after.totals.seconds)) totals.add("seconds");
   if (!sameCost(before.totals, after.totals) || before.totals.unpriced !== after.totals.unpriced) totals.add("cost");
+  if (before.totals.src !== after.totals.src) totals.add("src");
   if (before.queuePos !== after.queuePos) totals.add("queuePos");
   if (before.etaAt !== after.etaAt) totals.add("etaAt");
   if (before.mode !== after.mode) totals.add("mode");

@@ -77,9 +77,9 @@ function Line({ l, marks, added, nowMs }: { readonly l: ReceiptLine; readonly ma
       <Cell field="cost" marks={marks} className={s.num}>
         {l.usd === null && l.usdRange === undefined ? <Unpriced reason={l.unpricedReason} /> : costWords(l)}
       </Cell>
-      <td>
+      <Cell field="src" marks={marks}>
         <SourceTag kind={l.src} />
-      </td>
+      </Cell>
       <Cell field="queuePos" marks={marks} className={s.num}>
         #{l.queuePos}
       </Cell>
@@ -119,7 +119,10 @@ export function Receipt({ receipt: r, changes = NO_CHANGES, ceiling, onCeiling, 
             {t.unpriced > 0 && <Chip label="unpriced" value={t.unpriced} tone="violet" />}
             {said("cost")}
           </span>
-          <SourceTag kind={t.src} />
+          <span className={mark("src")}>
+            <SourceTag kind={t.src} />
+            {said("src")}
+          </span>
         </span>
       </div>
       <div className={s.scroll}>
