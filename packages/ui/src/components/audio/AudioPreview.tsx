@@ -65,7 +65,8 @@ export type PressPort = {
  * stalled). A play's rejection speaks only while that play is still the newest press - a pause
  * or a newer play has superseded it, and the browser's AbortError ("interrupted by a call to
  * pause()") IS that supersession, not the file's fault (media-playback: a superseded request
- * discards its own result). Exported so the presses are driven without a DOM.
+ * discards its own result). The count is the whole guard: every pause is a press, and the
+ * reaper's own pause lands on an unmounted panel. Exported so presses run without a DOM.
  */
 export function pressPlay(p: PressPort, seq: { n: number }): void {
   const mine = ++seq.n;
@@ -78,7 +79,6 @@ export function pressPlay(p: PressPort, seq: { n: number }): void {
   void p.el.play().catch((e: unknown) => {
     if (seq.n !== mine) return;
     p.calm();
-    if (e instanceof Error && e.name === "AbortError") return;
     // An autoplay refusal is the browser's words, not the file's fault: shown verbatim.
     p.fail(e instanceof Error ? `${e.name} · ${e.message}` : String(e));
   });
