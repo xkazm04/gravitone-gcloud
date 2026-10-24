@@ -10,7 +10,7 @@
 // `reason` as an injected dependency, so no vendor, no spawn, no spend.
 import { test, expect } from "@playwright/test";
 
-import { NotebookError, parseNotebook, type NotebookFinding } from "@/lib/notebook/validate";
+import { NOTEBOOK_SCHEMA, NotebookError, notebookFindings, parseNotebook, type NotebookFinding } from "@/lib/notebook/validate";
 import { changedPaths, guardRepair, MAX_REPAIR_ATTEMPTS, pathTokens, repairTurn } from "@/lib/text/repair";
 import { planFor } from "@/lib/text/router";
 import type { TextProvenance, TextRequest, TextResult } from "@/lib/text/types";
@@ -84,6 +84,86 @@ test("a notebook missing tension.strength is refused at the path tension.strengt
 
 test("the fixture answer itself passes, so the cases below start from a notebook that is only broken where they break it", () => {
   expect(findingsOf(valid())).toEqual([]);
+});
+
+/* ── 1b. every schema node, mutated: a finding, never a TypeError ────────────── */
+//
+// THE POPULATION IS NOTEBOOK_SCHEMA, walked, not a list: each node at each depth
+// (one sample element per array level) is set to a value of the wrong type, and
+// the door must answer with a NotebookFinding. A TypeError out of the validator is
+// not a refusal: research.ts rethrows it as an outage, the paid-for draft is lost
+// and repairTurn dies mid-attempt. Measured before the fix: 16 of 257 mutations
+// threw, 81 passed silently.
+
+type Node = { type?: string; properties?: Record<string, Node>; items?: Node; required?: readonly string[]; enum?: readonly string[] };
+type Step = string | 0;
+
+function schemaNodes(): { path: Step[]; node: Node; requiredByParent: boolean }[] {
+  const out: { path: Step[]; node: Node; requiredByParent: boolean }[] = [];
+  const visit = (s: Node, path: Step[]) => {
+    if (s.type === "object" && s.properties)
+      for (const [k, v] of Object.entries(s.properties)) {
+        out.push({ path: [...path, k], node: v, requiredByParent: !!s.required?.includes(k) });
+        visit(v, [...path, k]);
+      }
+    if (s.type === "array" && s.items) {
+      out.push({ path: [...path, 0], node: s.items, requiredByParent: false });
+      visit(s.items, [...path, 0]);
+    }
+  };
+  visit(NOTEBOOK_SCHEMA as unknown as Node, []);
+  return out;
+}
+
+/** The smallest value the schema accepts at this node. */
+function sampleOf(s: Node): unknown {
+  if (s.type === "object") return Object.fromEntries((s.required ?? []).map((k) => [k, sampleOf(s.properties![k])]));
+  if (s.type === "array") return s.items ? [sampleOf(s.items)] : [];
+  if (s.type === "boolean") return true;
+  return s.enum ? s.enum[0] : "x";
+}
+
+/** valid(), with `edit` applied to the container that holds the node at `path`
+ *  (built from schema samples where the answer has none). */
+function mutated(path: Step[], edit: (holder: Obj, key: Step) => void): Obj {
+  const nb = valid();
+  let holder: Obj = nb;
+  let s = NOTEBOOK_SCHEMA as unknown as Node;
+  for (let i = 0; i < path.length - 1; i++) {
+    s = path[i] === 0 ? s.items! : s.properties![path[i] as string];
+    const k = path[i] as never;
+    if (typeof holder[k] !== "object" || holder[k] === null) holder[k] = sampleOf(s) as never;
+    const next = holder[k] as unknown as Obj & unknown[];
+    if (Array.isArray(next) && next.length === 0) next.push(sampleOf(s.items!));
+    holder = next;
+  }
+  edit(holder, path[path.length - 1]);
+  return nb;
+}
+
+const label = (p: Step[]) => p.map((k) => (k === 0 ? "[0]" : `.${k}`)).join("").replace(/^\./, "");
+const WRONG: Record<string, unknown> = { string: 5, boolean: "yes", array: 5, object: 5 };
+
+test("every NOTEBOOK_SCHEMA node set to the wrong type is refused with a finding, never thrown", () => {
+  const nodes = schemaNodes().filter((n) => n.node.type && n.node.type in WRONG);
+  expect(nodes.length, "the walk read nothing").toBeGreaterThan(100);
+  const thrown: string[] = [];
+  const silent: string[] = [];
+  for (const n of nodes) {
+    const nb = mutated(n.path, (h, k) => void (h[k as never] = WRONG[n.node.type!] as never));
+    try {
+      if (!notebookFindings(nb, TOPIC).length) silent.push(label(n.path));
+    } catch (e) {
+      thrown.push(`${label(n.path)}: ${(e as Error).message}`);
+    }
+  }
+  console.log(`[repair] wrong-type mutations: ${nodes.length}, thrown ${thrown.length}, silent ${silent.length}`);
+  expect(thrown).toEqual([]);
+  expect(silent).toEqual([]);
+});
+
+test("a `killed` that is not an array of tombstones is refused, not thrown", () => {
+  expect(findingsOf({ ...valid(), killed: "f-1" }).map((f) => f.path)).toContain("killed");
 });
 
 test("the refusal carries the draft it refused", () => {

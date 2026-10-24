@@ -20,6 +20,9 @@
     "dialect": "schema",
     "verdict": "rejected",
     "findings": {
+      "`facts[].subject` must be a string": 7,
+      "`sources[]` must be a string": 16,
+      "`subjectDomain` must be an array": 1,
       "engineFit[].hazard is missing.": 1,
       "facts[].claim ends in a period; a headline carries none": 11,
       "facts[].claim is N characters; the budget is 90": 11
@@ -41,6 +44,9 @@
     "dialect": "schema",
     "verdict": "rejected",
     "findings": {
+      "`facts[].subject` must be a string": 5,
+      "`sources[]` must be a string": 11,
+      "`subjectDomain` must be an array": 1,
       "engineFit[].hazard is missing.": 3,
       "facts[] is `kind: \"\"` with no searchScope.": 4,
       "facts[].claim is N characters; the budget is 90": 16
@@ -61,6 +67,9 @@
     "dialect": "schema",
     "verdict": "rejected",
     "findings": {
+      "`facts[].subject` must be a string": 10,
+      "`sources[]` must be a string": 6,
+      "`subjectDomain` must be an array": 1,
       "facts[].claim ends in a period; a headline carries none": 26,
       "facts[].claim is N characters; the budget is 90": 28
     },

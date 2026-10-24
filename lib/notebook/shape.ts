@@ -7,8 +7,9 @@
 
 import type { NotebookFinding } from "./failure";
 import { compileProbe, type SerializableProbe } from "@/lib/script/gate";
+import { NOTEBOOK_SCHEMA } from "./schema";
 import { columnFindings } from "./shape-columns";
-import { arr, CLAIM_MAX, isObj, linked, str } from "./shape-helpers";
+import { arr, CLAIM_MAX, isObj, linked, schemaFindings, str, type SchemaNode } from "./shape-helpers";
 
 /* ─────────────────────────────── the shape half ──────────────────────────── */
 
@@ -186,6 +187,29 @@ export function shapeFindings(nb: Record<string, unknown>): NotebookFinding[] {
   const gaps = nb.researchGaps;
   if (!arr(gaps) || gaps.length === 0)
     say("researchGaps", "`researchGaps` is empty. A notebook claiming no gaps did not look hard enough (Phase 9).", "empty");
+
+  // `killed` is not in the schema (a follow-up revision writes it, not a run),
+  // but the answer is spread whole by `normalise`, and the graph pass maps it.
+  if (nb.killed !== undefined && !(arr(nb.killed) && nb.killed.every(isObj)))
+    say("killed", "`killed` must be an array of tombstone objects when present.");
+
+  // The schema's own types, after the hand rules, at the paths they left alone:
+  // a path already refused (or its ancestor) is not reported twice. WIDER holds
+  // the three fields where types.ts admits more than the schema asks for, and the
+  // readers handle it: a conclusion's typed `Falsifier` object (shape-columns.ts
+  // accepts it), the legacy string counter-position (buildCards deals it), and a
+  // reversal that turns on no mechanism (`mechanismId: string | null`).
+  const told = out.map((f) => f.path);
+  const fresh = (p: string) => !told.some((q) => p === q || p.startsWith(`${q}.`) || p.startsWith(`${q}[`));
+  const WIDER: readonly [RegExp, string][] = [
+    [/^conclusions\[\d+\]\.falsifiableBy$/, "object"],
+    [/^counterPositions\[\d+\]$/, "string"],
+    [/^reversals\[\d+\]\.mechanismId$/, "null"],
+  ];
+  const wider = (p: string, kind = "") => WIDER.some(([re, k]) => re.test(p) && k === kind);
+  schemaFindings(nb, NOTEBOOK_SCHEMA as unknown as SchemaNode, "", (path, rule, observed) => {
+    if (fresh(path) && !wider(path, observed)) say(path, rule, observed);
+  });
 
   return out;
 }
