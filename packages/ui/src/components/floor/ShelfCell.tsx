@@ -33,7 +33,7 @@ export function ShelfCell({ title, href, tallies = [], extra, children }: ShelfC
           <span className={s.t}>{title}</span>
         ) : (
           <a className={cx(s.t, s.door)} href={href}>
-            {title} ›
+            {title} <span aria-hidden="true">›</span>
           </a>
         )}
         {tallies.map((t) => (

@@ -15,6 +15,7 @@ import { Lane } from "../../src/components/floor/Lane.tsx";
 import { MonthCalendar, MAX_PER_DAY } from "../../src/components/floor/MonthCalendar.tsx";
 import { Pile } from "../../src/components/floor/Pile.tsx";
 import { RunRow } from "../../src/components/floor/RunRow.tsx";
+import { ShelfCell, ShelfRow, ShelfStyle } from "../../src/components/floor/ShelfCell.tsx";
 import { SlotRow } from "../../src/components/floor/SlotRow.tsx";
 import { ledgerDelta, spendParts } from "../../src/components/header/header.ts";
 import { LedgerDelta, NextButton, SpendChip } from "../../src/components/header/HeaderChips.tsx";
@@ -191,6 +192,17 @@ describe("components", () => {
     expect(html).toContain("3/20");
     expect(html).toContain("replicate");
     expect(html).toContain("lease lost: holder pid 4410 gone");
+  });
+
+  test("a shelf's door names its shelf, its chevron unspoken; an empty shelf is its head alone", () => {
+    const door = renderToStaticMarkup(h(ShelfCell, { title: "Library · styles", href: "/library", tallies: [{ value: 0, label: "proven" }] }));
+    expect(door).toMatch(/<a [^>]*href="\/library"[^>]*>Library · styles <span aria-hidden="true">›<\/span><\/a>/);
+    expect(door).toContain("proven");
+    const plain = renderToStaticMarkup(h(ShelfCell, { title: "Library · posts" }));
+    expect(plain).not.toContain("<a ");
+    expect(plain).not.toContain("›");
+    expect(renderToStaticMarkup(h(ShelfStyle, { name: "ghibli", href: "/library?s=g" }))).toMatch(/<a [^>]*data-component="ShelfStyle"[^>]*>[\s\S]*ghibli/);
+    expect(renderToStaticMarkup(h(ShelfRow, { lead: null, title: "rain", fact: "0:42" }))).toContain("rain<span");
   });
 
   test("a failed slot shows its error verbatim; an unknown channel speaks its id", () => {
