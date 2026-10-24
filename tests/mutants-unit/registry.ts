@@ -2357,6 +2357,14 @@ export const MUTANTS: UnitMutant[] = [
     replace: "serverPart().opPart(i)",
     why: "Every part edit's op log names a blanket operator instead of the signed-in caller who made it.",
   },
+  {
+    id: "part-door-drops-an-op",
+    test: "tests/next-server/parts-real.test.ts",
+    file: "app/(studio)/projects/[id]/_part/schema.ts",
+    find: "  o({ op: z.literal(\"rederive\") }),",
+    replace: "",
+    why: "The frames editor's rederive is refused at the action door though the frames module takes it.",
+  },
   // ── Phase 4 wave C, L38: the part view contract and the part workspace ──
   {
     id: "partview-core-op-dropped-from-the-trail",

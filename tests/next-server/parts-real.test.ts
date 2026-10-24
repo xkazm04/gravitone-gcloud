@@ -16,6 +16,8 @@ import { fixtureSource } from "../../lib/notebook/source.ts";
 import type { Store } from "@gt/kernel/store";
 
 import { makeRealPart } from "../../app/(studio)/projects/[id]/_part/real.ts";
+import { LATER } from "../../app/(studio)/projects/[id]/_part/kinds.ts";
+import { partOpSchema, researchOpSchema, scriptOpSchema } from "../../app/(studio)/projects/[id]/_part/schema.ts";
 
 // THE REAL PART SIDE (L36) end to end over a kernel store: L38's PartPort verbs, answered from
 // part records + the op log, with L38's per-kind intelligence called on this project's records.
@@ -142,6 +144,29 @@ describe("a scope decided on the notebook's own digest is not orphaned by storag
     await must(writePart(store, { projectId: "imported", partId: "imported/research", baseRev: "current", act: "land", op: { import: "v1" }, label: "import", by: { kind: "machine", id: "import" }, next: () => ok({ "research-notebook": nb, "research-scope": { scope: {}, confirmed: {}, digest: src.digest } }) }));
     const v = await must(port.loadPart({ projectId: "imported", key: "research" }));
     expect(v.verdict).toMatchObject({ state: "ready", codes: [{ code: "scope-confirmed" }] });
+  });
+});
+
+/** The `op` literals of a zod union of op objects (a union of unions is walked). */
+function opNames(schema: unknown): string[] {
+  const options = (schema as { options?: readonly unknown[] }).options ?? [];
+  return options.flatMap((o) => {
+    const op = (o as { shape?: { op?: { value?: unknown } } }).shape?.op?.value;
+    return typeof op === "string" ? [op] : opNames(o);
+  });
+}
+
+describe("the door every part edit passes (schema.ts)", () => {
+  // The door is a hand copy of the PartOp union: an op it lacks is an edit no editor can send,
+  // an op no side takes is a door to a refusal. Both are read off the sides' own lists.
+  it("admits exactly the ops research, script and every later kind's module accept", () => {
+    const door = opNames(partOpSchema);
+    const research = opNames(researchOpSchema);
+    const script = opNames(scriptOpSchema);
+    const later = Object.values(LATER).flatMap((m) => [...m.ops]);
+    expect(research.length * script.length * later.length).toBeGreaterThan(0);
+    expect(new Set(door).size).toBe(door.length);
+    expect([...door].sort()).toEqual([...research, ...script, ...later].sort());
   });
 });
 
