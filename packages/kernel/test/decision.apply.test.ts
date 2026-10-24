@@ -2,7 +2,7 @@ import path from "node:path";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { err, ok } from "@gt/domain/errors";
 import { blobStore } from "../src/blob.ts";
-import { applyNext, applyStatus, finishApply, redriveApply, takeApply, type Applier } from "../src/decision/apply.ts";
+import { applyNext, applyStatus, drainApplies, finishApply, redriveApply, takeApply, type Applier } from "../src/decision/apply.ts";
 import { BACKOFF_MS, LEASE_MS, MAX_ATTEMPTS, planFinish, planTake, type ApplyRow } from "../src/decision/apply-core.ts";
 import { commit, returnPacket } from "../src/decision/commit.ts";
 import { openPacket, patchMany } from "../src/decision/driver.ts";
@@ -144,5 +144,30 @@ describe("kernel/decision - the apply outbox", () => {
     let seen: unknown;
     await applyNext(fx(s), { holder: "a", apply: async (c) => { seen = c.outcome.act === "return" ? c.outcome.result.plan : undefined; return ok(undefined); } });
     expect(seen).toEqual(plan);
+  });
+
+  // fail-loud-classification-default: a row whose claim cannot be read takes the severe bucket
+  // (stuck, with the reason), it does not throw out of the take. Before, the throw rolled the
+  // claim back, the row kept its place at the head of the due order, and every later drain
+  // threw on it again: one unreadable packet held every other packet's apply behind it.
+  it("a claim that cannot be read is stuck with its reason, and the drain reaches the next packet", async () => {
+    const s = tpl.fresh();
+    for (const id of ["run-0411", "run-0412"]) {
+      const p = pid(id);
+      must(s.tx((t) => openPacket(t, { packet: cull(id) }, agent)));
+      must(s.tx((t) => patchMany(t, { ...operator, packetId: p, baseRev: 0, changes: ALL.map((c) => ({ key: `${id}::${c}`, verdict: "keep" as const })) })));
+      const shown = preview(s, p);
+      must(must(s.tx((t) => commit(t, { ...operator, packetId: p, ticket: `t-${id}`, ...shown }))));
+    }
+    must(s.tx((t) => t.run("UPDATE packets SET body = ? WHERE id = ?", '{"id":"run-0411"}', "run-0411")));
+    const reports = await drainApplies(fx(s), { holder: "a", apply: fine });
+    expect(reports).toEqual([{ packetId: P, attempt: 1, result: "applied" }]);
+    const poisoned = must(s.read((r) => r.get("SELECT state, attempts, last_error AS lastError, holder FROM packet_applies WHERE packet_id = ?", "run-0411")));
+    expect(poisoned).toMatchObject({ state: "stuck", attempts: 1, holder: null });
+    expect(String(poisoned?.["lastError"])).toContain("run-0411");
+    const stuck = types(s, "decision.apply-stuck");
+    expect(stuck).toHaveLength(1);
+    expect(String(stuck[0]?.["data"])).toContain('"unreadable":true');
+    expect(await drainApplies(fx(s), { holder: "a", apply: fine }), "a stuck row is not retaken").toEqual([]);
   });
 });
