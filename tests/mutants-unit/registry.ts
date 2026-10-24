@@ -2340,8 +2340,8 @@ export const MUTANTS: UnitMutant[] = [
     id: "metrics-readings-ordered-by-spelling",
     test: "packages/domain/test/publication.test.ts",
     file: "packages/domain/src/publication.ts",
-    find: "Date.parse(a.at) - Date.parse(b.at)",
-    replace: "a.at.localeCompare(b.at)",
+    find: ".sort((a, b) => a[0] - b[0])",
+    replace: ".sort((a, b) => a[1].at.localeCompare(b[1].at))",
     why: "A reading stamped to the millisecond sorts before a second-precision one of the same second, so a publication's total is an older count and its day's delta is wrong.",
   },
   {

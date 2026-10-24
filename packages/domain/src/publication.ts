@@ -69,22 +69,31 @@ export type MetricKey = (typeof METRIC_KEYS)[number];
 //     makes the sum a lower bound.
 
 // By instant, not by spelling: the door admits any precision, and a collation puts
-// "…09:00:00.500Z" before "…09:00:00Z" ('.' sorts below 'Z'), so the later reading lost.
-const byAt = (a: { at: string }, b: { at: string }): number => Date.parse(a.at) - Date.parse(b.at);
+// "…09:00:00.500Z" before "…09:00:00Z" ('.' sorts below 'Z'), so the later reading lost. Each
+// stamp is parsed once per sort (a comparator that parses is ~8x slower over a year of readings).
+const byAt = <T extends { readonly at: string }>(xs: readonly T[]): T[] =>
+  xs
+    .map((x) => [Date.parse(x.at), x] as const)
+    .sort((a, b) => a[0] - b[0])
+    .map(([, x]) => x);
 
-/** One publication's snapshots, oldest first. */
-export function snapshotsOf(publicationId: string, snapshots: readonly MetricSnapshot[]): MetricSnapshot[] {
-  return snapshots.filter((s) => s.publicationId === publicationId).sort(byAt);
-}
-
-/** The latest non-null value of a lifetime metric; null when it was never measured. */
-export function latestValue(snaps: readonly MetricSnapshot[], key: MetricKey): number | null {
-  const sorted = [...snaps].sort(byAt);
+/** The last measured value in readings already oldest first. */
+function lastMeasured(sorted: readonly MetricSnapshot[], key: MetricKey): number | null {
   for (let i = sorted.length - 1; i >= 0; i--) {
     const v = sorted[i]?.[key];
     if (typeof v === "number") return v;
   }
   return null;
+}
+
+/** One publication's snapshots, oldest first. */
+export function snapshotsOf(publicationId: string, snapshots: readonly MetricSnapshot[]): MetricSnapshot[] {
+  return byAt(snapshots.filter((s) => s.publicationId === publicationId));
+}
+
+/** The latest non-null value of a lifetime metric; null when it was never measured. */
+export function latestValue(snaps: readonly MetricSnapshot[], key: MetricKey): number | null {
+  return lastMeasured(byAt(snaps), key);
 }
 
 export type DailyPoint = {
@@ -100,7 +109,7 @@ export type DailyPoint = {
  *  snapshots (a refresh appends); the day's LAST measured value stands for it. */
 export function dailySeries(snaps: readonly MetricSnapshot[], key: MetricKey): DailyPoint[] {
   const byDay = new Map<string, number | null>();
-  for (const s of [...snaps].sort(byAt)) {
+  for (const s of byAt(snaps)) {
     const day = s.at.slice(0, 10);
     const v = s[key];
     if (typeof v === "number") byDay.set(day, v);
@@ -129,7 +138,7 @@ export type PublicationTotals = {
 export function publicationTotals(pub: Publication, snapshots: readonly MetricSnapshot[]): PublicationTotals {
   const snaps = snapshotsOf(pub.id, snapshots);
   const totals: Record<MetricKey, number | null> = { views: null, watchTimeS: null, avgViewDurationS: null, likes: null, comments: null, shares: null, subsDelta: null };
-  for (const k of METRIC_KEYS) totals[k] = latestValue(snaps, k);
+  for (const k of METRIC_KEYS) totals[k] = lastMeasured(snaps, k);
   const data: MetricsData = pub.dry ? "dry-run" : snaps.length > 0 ? "platform" : "not-pulled";
   return { publicationId: pub.id, data, totals };
 }
@@ -157,7 +166,7 @@ export function groupSums(
     const key = keyOf(p);
     const g = groups.get(key) ?? { publications: 0, value: null, measured: 0, unmeasured: 0 };
     g.publications++;
-    const v = latestValue(snapshotsOf(p.id, snapshots), metric);
+    const v = lastMeasured(snapshotsOf(p.id, snapshots), metric);
     if (v === null) g.unmeasured++;
     else {
       g.value = (g.value ?? 0) + v;
