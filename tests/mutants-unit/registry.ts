@@ -5675,4 +5675,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "  const loud = rel.map((r) => !flat && r >= 0.5);",
     why: "A mid-level verse is chaptered as a chorus: the loud line that names choruses drops from the top 30% of the track's range to its upper half.",
   },
+  {
+    id: "score-take-sections-radiogroup-without-radios",
+    test: "tests/next-server/part-editor-media.test.ts",
+    file: "app/(studio)/projects/[id]/[part]/_edit/ScoreTakes.tsx",
+    find: "role=\"group\" aria-label={`sections of ${t.label}`}",
+    replace: "role=\"radiogroup\" aria-label={`sections of ${t.label}`}",
+    why: "A screen reader announces a radio group over a take's sections and then finds no radio in it - the chips are toggle buttons.",
+  },
 ];

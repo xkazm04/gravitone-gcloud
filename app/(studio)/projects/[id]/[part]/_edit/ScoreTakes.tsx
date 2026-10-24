@@ -64,7 +64,7 @@ function TakeRow({ t, acts, busy }: { readonly t: TakeView; readonly acts: TakeA
       <Provenance {...(t.engine === undefined ? {} : { model: t.engine.model, vendor: t.engine.provider })} {...(c === undefined ? {} : { cost: c })} {...(t.at === null ? {} : { step: t.at.slice(0, 16).replace("T", " ") })} />
       {acts.note !== undefined && t.sections.length > 0 && (
         <div className={s.sect}>
-          <div className={s.sections} role="radiogroup" aria-label={`sections of ${t.label}`}>
+          <div className={s.sections} role="group" aria-label={`sections of ${t.label}`}>
             {t.sections.map((x) => (
               <Chip key={x.index} label={x.name} value={`${clock(x.startS)}–${clock(x.endS)}`} casing="lower" pressed={x.index === section} onPress={() => pick(x.index)} />
             ))}

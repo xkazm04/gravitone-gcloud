@@ -312,6 +312,15 @@ describe("a take's section note goes where the section is picked", () => {
     expect(await pick(take(), "chorus")).toEqual([]);
   });
 
+  it("the sections are a group of toggle chips, not a radiogroup with no radios in it", async () => {
+    const list = ScoreTakes({ takes: [take()], busy: false, acts: { use: () => {}, mark: () => {}, note: () => {} } }) as ReactElement<{ children: ReactElement[] }>;
+    const row = list.props.children[0];
+    if (row === undefined) throw new Error("no take row");
+    const tree = await harness(() => (row.type as (p: unknown) => ReactElement)(row.props)).settleUp();
+    const box = all(tree, (p) => p["aria-label"] === "sections of take 1")[0];
+    expect((box?.props as { role?: string } | undefined)?.role).toBe("group");
+  });
+
   it("picking the section the note already stands on writes nothing", async () => {
     expect(await pick(take({ section: 2, note: "darker" }), "chorus")).toEqual([]);
   });
