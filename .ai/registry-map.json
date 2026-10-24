@@ -7305,7 +7305,11 @@
           "revision": 14,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_landing/cosmos/Cosmos.tsx:3 The public landing is a canvas/DOM shadow-box of medallions and cards with no tabular surface: a search of app/_landing for <table, columnheader, aria-sort, gridcell, paginat and csv found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:c587a204413d5373",
+          "evaluatedRevision": 14
         },
         {
           "subject": "app-shell",
@@ -13914,7 +13918,11 @@
           "revision": 14,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/import/archive.ts:12 This server-side import/export of v1's NDJSON archive renders no table and writes no CSV: a search of lib/import for csv, <table, columnheader, aria-sort, gridcell and paginat found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:c587a204413d5373",
+          "evaluatedRevision": 14
         },
         {
           "subject": "standards-layered-runtime",

@@ -11330,6 +11330,26 @@
       "evaluatedTs": "2026-10-24T05:28:51.579Z",
       "worker": "fd41b0a1-4489-4002-abee-9bb0d0028dc3",
       "techniques": []
+    },
+    "e5f8b2b5-3ac7-422b-9950-c7431117591a/table": {
+      "context": "landing-cosmos-shell",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T05:45:33.728Z",
+      "worker": "4dd4e440-425c-42be-bdc6-9bb02d7c7c94",
+      "techniques": []
+    },
+    "b412ea73-0dc3-4362-93c4-2a9b913f9a61/table": {
+      "context": "v1-import-and-archive",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T05:45:33.728Z",
+      "worker": "4dd4e440-425c-42be-bdc6-9bb02d7c7c94",
+      "techniques": []
     }
   }
 }
