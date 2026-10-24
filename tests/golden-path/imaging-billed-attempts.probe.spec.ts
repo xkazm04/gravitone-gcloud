@@ -189,6 +189,28 @@ test("8. [guard] leonardo poll GET with one transient 500 then COMPLETE -> serve
   expect(polls).toBe(2);
 });
 
+test("11. google answers 200 and the body breaks mid-read -> `failed` dispatched, 1 failed row, no second dispatch", async () => {
+  // The headers arrived, so the vendor took the request and ran it; only the
+  // download of its answer failed. That is not "could not be reached".
+  stubFetch(
+    () =>
+      new Response(
+        new ReadableStream({
+          start(c) {
+            c.error(new TypeError("terminated"));
+          },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+  );
+  const err = await failure(generate({ prompt: "probe body cut", aspect: "16:9", count: 1 }));
+  expect(count(INTERACTIONS)).toBe(1);
+  expect(err.kind).toBe("failed");
+  expect(err.dispatched, "a request the vendor answered was booked as never sent").toBe(true);
+  const rows = await spendRows();
+  expect(rows.map((r) => r.outcome)).toEqual(["failed"]);
+});
+
 test("9. one authority: the router's billing predicate IS errors.ts's presumedBilled", () => {
   expect(billedOnFailure).toBe(presumedBilled);
 });
