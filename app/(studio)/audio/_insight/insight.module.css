@@ -15,7 +15,7 @@
 .lessonMeta{font:500 var(--fs-micro)/1.3 var(--mono);color:var(--faint)}
 .pile,.batch{flex:1;min-height:0;overflow:auto;padding:var(--sp-5) var(--sp-loose) var(--sp-page-end);display:grid;grid-auto-rows:max-content;gap:var(--sp-4);align-content:start;min-width:0}
 .batch{max-width:calc(var(--w-detail) * 3)}
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(calc(var(--w-tile-audio) * 1.6),1fr));gap:var(--sp-3)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,calc(var(--w-tile-audio) * 1.6)),1fr));gap:var(--sp-3)}
 @media (max-width:1100px){
   .split{display:flex;flex-direction:column;overflow:auto}
   .main,.side{overflow:visible;flex:none}
