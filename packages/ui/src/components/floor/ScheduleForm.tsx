@@ -26,7 +26,7 @@ import { ErrorLine } from "../errorline/ErrorLine.tsx";
 import fieldCss from "../field/Field.module.css";
 import { Ghost } from "../ghost/Ghost.tsx";
 import { CapsHeading } from "../heading/CapsHeading.tsx";
-import { clock, dayKey, dayLabel, type RailSlot } from "./calendar.ts";
+import { clock, whenUtc as at, type RailSlot } from "./calendar.ts";
 import { canSchedule, channelDefault, checkSchedule, holds, itemDefault, scheduleWarnings, splitTags, whenDefault, DESCRIPTION_MAX, TITLE_MAX, type ChannelReady, type ScheduleDraft, type ScheduleItem, type ScheduleWarning } from "./schedule.ts";
 import { SlotMark } from "./SlotRow.tsx";
 import { STATE_WORDS } from "./ChannelReadiness.tsx";
@@ -50,11 +50,6 @@ export type ScheduleFormProps = {
   /** The engine's refusal, verbatim. */
   readonly refusal?: string;
   readonly onSchedule: (draft: ScheduleDraft) => void;
-};
-
-const at = (iso: string): string => {
-  const t = Date.parse(iso);
-  return `${dayLabel(dayKey(t))} · ${clock(t)} UTC`;
 };
 
 function Warning({ w }: { readonly w: ScheduleWarning }) {

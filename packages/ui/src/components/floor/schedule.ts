@@ -26,7 +26,7 @@
 import { SLOT_HOLDS } from "@gt/domain/slot.machine";
 
 import type { RailSlot } from "./calendar.ts";
-import { nextFullHour, toUtcInput } from "./slot.ts";
+import { fromUtcInput, nextFullHour, toUtcInput } from "./slot.ts";
 
 const MIN_MS = 60_000;
 
@@ -168,13 +168,6 @@ export function itemDefault(items: readonly ScheduleItem[], slots: readonly Rail
  */
 export const holds = (s: Pick<RailSlot, "status" | "dry">): boolean => SLOT_HOLDS.includes(s.status) && !(s.status === "published" && s.dry === true);
 
-/** The UTC instant a `datetime-local` text names, or null. */
-function instantOf(when: string): string | null {
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(when)) return null;
-  const t = Date.parse(`${when}:00.000Z`);
-  return Number.isNaN(t) ? null : new Date(t).toISOString();
-}
-
 export type Blocked = { readonly field: "item" | "channel" | "when" | "title" | "description" | "tags"; readonly words: string };
 
 /**
@@ -183,7 +176,7 @@ export type Blocked = { readonly field: "item" | "channel" | "when" | "title" | 
  */
 export function checkSchedule(f: ScheduleForm, channels: readonly ChannelReady[]): { readonly blocked: readonly Blocked[]; readonly draft: ScheduleDraft | null } {
   const blocked: Blocked[] = [];
-  const at = instantOf(f.when);
+  const at = fromUtcInput(f.when);
   const ch = channels.find((c) => c.channel === f.channel);
   const title = f.title.trim();
   if (f.item === null) blocked.push({ field: "item", words: "no export" });
@@ -216,7 +209,7 @@ export type ScheduleWarning =
  */
 export function scheduleWarnings(f: Pick<ScheduleForm, "item" | "channel" | "when">, slots: readonly RailSlot[], nowMs: number): ScheduleWarning[] {
   const out: ScheduleWarning[] = [];
-  const at = instantOf(f.when);
+  const at = fromUtcInput(f.when);
   if (at !== null && Date.parse(at) < nowMs - MIN_MS) out.push({ kind: "past", at });
   if (at !== null && f.channel !== null) {
     const minute = Math.floor(Date.parse(at) / MIN_MS);

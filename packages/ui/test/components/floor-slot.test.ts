@@ -6,7 +6,7 @@ import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import { needsDecision, railOf, type RailSlot } from "../../src/components/floor/calendar.ts";
+import { needsDecision, railOf, whenUtc, type RailSlot } from "../../src/components/floor/calendar.ts";
 import { MonthCalendar } from "../../src/components/floor/MonthCalendar.tsx";
 import { SlotConfirm } from "../../src/components/floor/SlotConfirm.tsx";
 import { SlotDetail, type SlotView } from "../../src/components/floor/SlotDetail.tsx";
@@ -77,6 +77,12 @@ describe("words from fields", () => {
   test("a missed slot says when its window closed, from missedAt", () => {
     expect(missedWords({ missedAt: "2026-10-12T18:15:00.000Z" })).toBe("missed 18:15 UTC");
     expect(missedWords({})).toBeNull();
+    expect(missedWords({ missedAt: "later" })).toBeNull();
+  });
+
+  test("an instant reads as its UTC day and hour, and a text that is not one reads as itself", () => {
+    expect(whenUtc("2026-10-15T09:12:00.000Z")).toBe("Thu 15 Oct · 09:12 UTC");
+    expect(whenUtc("soon")).toBe("soon");
   });
 
   test("the publish chain breaks where the sentence says: credentials at auth, quota and interruption at upload", () => {

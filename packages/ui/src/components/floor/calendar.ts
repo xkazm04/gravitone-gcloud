@@ -48,6 +48,12 @@ export function dayLabel(key: string): string {
   return `${DOW[d.getUTCDay()] ?? ""} ${d.getUTCDate()} ${(MONTHS[d.getUTCMonth()] ?? "").slice(0, 3)}`;
 }
 
+/** `Thu 15 Oct · 09:12 UTC` for an instant; the text itself when it is not one (dayKey would throw). */
+export function whenUtc(iso: string): string {
+  const t = Date.parse(iso);
+  return Number.isNaN(t) ? iso : `${dayLabel(dayKey(t))} · ${clock(t)} UTC`;
+}
+
 export const isBad = (s: Pick<RailSlot, "status">): boolean => s.status === "failed" || s.status === "missed";
 
 /** What a person owes a slot (v1 calendarModel needsDecision): failed, missed, or a scheduled

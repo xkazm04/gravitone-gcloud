@@ -22,7 +22,7 @@
 
 import { SLOT_MOVABLE } from "@gt/domain/slot.machine";
 
-import type { RailSlot } from "./calendar.ts";
+import { clock, type RailSlot } from "./calendar.ts";
 
 const HOUR_MS = 3_600_000;
 const pad = (n: number): string => String(n).padStart(2, "0");
@@ -81,9 +81,7 @@ export const DRIFT_WORDS: Readonly<Record<NonNullable<RailSlot["drift"]>, string
 export function missedWords(s: Pick<RailSlot, "missedAt">): string | null {
   if (s.missedAt === undefined) return null;
   const t = Date.parse(s.missedAt);
-  if (Number.isNaN(t)) return null;
-  const d = new Date(t);
-  return `missed ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`;
+  return Number.isNaN(t) ? null : `missed ${clock(t)} UTC`;
 }
 
 /* ── the publish chain the error broke ───────────────────────────────────── */

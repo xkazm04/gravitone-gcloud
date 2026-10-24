@@ -32,7 +32,7 @@ import type { Look } from "../status/status.ts";
 import { StatusPill } from "../status/StatusPill.tsx";
 import { Tally } from "../tally/Tally.tsx";
 import { UpstreamBreak } from "../upstream/UpstreamBreak.tsx";
-import { clock, dayLabel, dayKey, isBad, type RailSlot } from "./calendar.ts";
+import { isBad, whenUtc as when, type RailSlot } from "./calendar.ts";
 import { PUBLISH_CHAIN, breakOf, canCancel, canMove, canPublishNow, duration, figure, fromUtcInput, missedWords, moveDefault, moveProblem, signed, DRIFT_WORDS } from "./slot.ts";
 import { SlotConfirm } from "./SlotConfirm.tsx";
 import { SlotMark } from "./SlotRow.tsx";
@@ -86,11 +86,6 @@ export type SlotDetailProps = {
   readonly onCancel: () => void;
   readonly onPublishNow: () => void;
   readonly specimen?: boolean;
-};
-
-const when = (iso: string): string => {
-  const t = Date.parse(iso);
-  return Number.isNaN(t) ? iso : `${dayLabel(dayKey(t))} · ${clock(t)} UTC`;
 };
 
 function Media({ view }: { readonly view: SlotView }) {
