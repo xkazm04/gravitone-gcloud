@@ -35,6 +35,9 @@ BASE_COLUMNS = ["seq", "at", "actor_kind", "actor_id", "type", "subject_kind", "
 # Optional covered fields: column -> the key it carries in the hash input.
 OPTIONAL = [("occurred_at", "occurredAt"), ("at_src", "atSrc"), ("key", "key")]
 _REPR = re.compile(r"^(\d+)(?:\.(\d+))?(?:e([+-]?\d+))?$")
+# An anchor is a row: a seq from 1 and its 64-hex hash. Anything else is a typo, and a typo read
+# as an anchor would answer 1 (tampered) about an intact ledger, or, at seq 0, check nothing.
+_ANCHOR = re.compile(r"^([1-9]\d*):([0-9a-f]{64})$")
 
 
 def usage(doc):
@@ -149,8 +152,11 @@ def main(argv):
         return 2
     anchor = None
     if len(argv) == 4:
-        seq, _, digest = argv[3].partition(":")
-        anchor = (int(seq), digest)
+        m = _ANCHOR.match(argv[3])
+        if m is None:
+            print("%s\n--anchor %r is not SEQ:HASH (a seq from 1, a 64-hex hash)" % (usage(__doc__), argv[3]), file=sys.stderr)
+            return 2
+        anchor = (int(m.group(1)), m.group(2))
     try:
         # Read-only, through the URI form, so a verifier can never write the store it checks.
         db = sqlite3.connect("file:%s?mode=ro" % argv[1].replace("\\", "/"), uri=True)

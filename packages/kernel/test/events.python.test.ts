@@ -107,4 +107,20 @@ describe.skipIf(python === undefined)("events verified by Python", () => {
     const out = runVerifier(s.location, `${head.seq}:${head.hash}`);
     expect(out.report).toEqual(node);
   });
+
+  it("answers an anchor that is not SEQ:HASH with 2 (could not run), never 1 (tampered)", () => {
+    const s = tpl.fresh();
+    must(s.tx((t) => {
+      for (let i = 0; i < 3; i++) append(t, { ...tricky, data: { i } });
+    }));
+    const head = must(chainHead(s));
+    if (head === null) throw new Error("expected a head");
+    s.close();
+    expect(runVerifier(s.location, `${head.seq}:${head.hash}`).status).toBe(0);
+    // A typo in the anchor is the operator's, not the ledger's: the chain above is intact.
+    for (const bad of ["abc", `${head.seq}`, `${head.seq}:`, `${head.seq}:${head.hash.slice(1)}`, `x:${head.hash}`, `0:${head.hash}`]) {
+      const out = runVerifier(s.location, bad);
+      expect({ anchor: bad, status: out.status, said: JSON.stringify(out.report).includes("tampered") }).toEqual({ anchor: bad, status: 2, said: false });
+    }
+  });
 });
