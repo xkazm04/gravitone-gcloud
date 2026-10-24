@@ -5619,4 +5619,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "onPress={() => setSection(x.index)}",
     why: "Picking the chorus for a take's revision note moves the chip and leaves the note on the intro, so the revise that follows rewrites the section nobody meant.",
   },
+  {
+    id: "voice-rail-draws-a-gone-take-recorded",
+    test: "tests/next-server/part-editor-media.test.ts",
+    file: "app/(studio)/projects/[id]/[part]/_edit/Voice.tsx",
+    find: "<span className={isRecorded(l) ? s.ok : s.rose}>",
+    replace: "<span className={l.activeTakeId === null ? s.rose : s.ok}>",
+    why: "A voice line whose take's bytes are gone is drawn green in the rail beside a lines-recorded tally that does not count it.",
+  },
 ];

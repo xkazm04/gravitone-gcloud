@@ -40,7 +40,11 @@ export function VoiceEditor({ frame, send, busy, error, act, view }: EditorProps
     },
     { facts: line === null ? [] : ["line"] },
   );
-  const recorded = d.lines.filter((l) => l.takes.some((t) => t.active && t.held)).length;
+  // One rule for the tally and the rail: a line is recorded when its take in use is in hand. The
+  // rail read activeTakeId alone, so a line whose take's bytes were gone was drawn recorded beside
+  // a tally that did not count it.
+  const isRecorded = (l: VoiceData["lines"][number]): boolean => l.takes.some((t) => t.active && t.held);
+  const recorded = d.lines.filter(isRecorded).length;
   return (
     <PartWorkspace
       {...frame}
@@ -74,7 +78,7 @@ export function VoiceEditor({ frame, send, busy, error, act, view }: EditorProps
                   <div className={s.rr}>
                     <div className={s.rrTop}>
                       <span>{l.card ?? l.id}</span>
-                      <span className={l.activeTakeId === null ? s.rose : s.ok}>{l.takes.length === 0 ? "not recorded" : `${l.takes.length} take${l.takes.length === 1 ? "" : "s"}`}</span>
+                      <span className={isRecorded(l) ? s.ok : s.rose}>{l.takes.length === 0 ? "not recorded" : `${l.takes.length} take${l.takes.length === 1 ? "" : "s"}`}</span>
                     </div>
                     <div className={s.rrTitle}>{l.text}</div>
                   </div>

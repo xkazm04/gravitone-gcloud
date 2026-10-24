@@ -36,7 +36,7 @@ vi.mock("@/lib/sound/mv/compositor", () => ({
 
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 
-import type { AdFinishData, AdsClips, AdsTakes, BedData, PartOp, PartView, RenderData, SpottingData, TakeView } from "@gt/domain/partView";
+import type { AdFinishData, AdsClips, AdsTakes, BedData, PartOp, PartView, RenderData, SpottingData, TakeView, VoiceData, VoiceLineView } from "@gt/domain/partView";
 import { BINDINGS } from "@gt/ui/keymap/bindings";
 import { keyTable, type KeyRow } from "@gt/ui/keymap/keymap";
 
@@ -48,6 +48,8 @@ import { ScoreEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Score
 import { ScoreBed } from "../../app/(studio)/projects/[id]/[part]/_edit/ScoreBed.tsx";
 import { ScoreTakes } from "../../app/(studio)/projects/[id]/[part]/_edit/ScoreTakes.tsx";
 import { AdsClipsEditor, AdsTakesEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Takes.tsx";
+import { VoiceEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Voice.tsx";
+import cut from "../../app/(studio)/projects/[id]/[part]/_edit/Cut.module.css";
 import { harness } from "../golden-path/_studio/hooks.ts";
 import { compile } from "@gt/ui/keymap/keymap";
 
@@ -312,5 +314,35 @@ describe("a take's section note goes where the section is picked", () => {
 
   it("picking the section the note already stands on writes nothing", async () => {
     expect(await pick(take({ section: 2, note: "darker" }), "chorus")).toEqual([]);
+  });
+});
+
+/* ── the voice rail and its tally say the same thing (Voice.tsx) ───────── */
+
+describe("a voice line whose take is gone is not drawn recorded", () => {
+  const line = (id: string, held: boolean): VoiceLineView => ({
+    id,
+    text: `line ${id}`,
+    card: null,
+    activeTakeId: "t1",
+    takes: [{ id: "t1", label: "take 1", at: null, mark: null, active: true, held, seconds: 4, sections: [] }],
+  });
+  async function rail(d: VoiceData): Promise<{ tally: unknown; marks: string[] }> {
+    const p = { ...props(undefined), view: { data: d } as PartView<"voice"> };
+    const ws = (await harness(() => VoiceEditor(p), { settleWhen: "stable" }).settleUp()) as ReactElement<{ rail: { children: ReactNode } }>;
+    const tally = all(ws.props.rail.children, (q) => q.label === "lines recorded")[0];
+    const list = all(ws.props.rail.children, (q) => typeof q.row === "function")[0];
+    if (tally === undefined || list === undefined) throw new Error("no rail tally or list");
+    const row = (list.props as { row: (l: VoiceLineView) => ReactNode }).row;
+    const marks = d.lines.map((l) => {
+      const mark = all(row(l), (q) => q.className === cut.ok || q.className === cut.rose)[0];
+      return mark === undefined ? "none" : (mark.props as { className: string }).className === cut.ok ? "recorded" : "not recorded";
+    });
+    return { tally: (tally.props as { value: number }).value, marks };
+  }
+
+  it("the rail marks the line the tally does not count", async () => {
+    const r = await rail({ face: "voice", voice: "narrator", lines: [line("a", true), line("b", false)] });
+    expect(r).toEqual({ tally: 1, marks: ["recorded", "not recorded"] });
   });
 });
