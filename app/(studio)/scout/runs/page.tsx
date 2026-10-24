@@ -5,6 +5,7 @@ import { connection } from "next/server";
 
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 
+import { scoutHeaderFacts } from "../../_shell/headerFacts.ts";
 import { serverBoard } from "../../board/_port/port.ts";
 import { isScoutPacket, runFor, ScoutHead } from "../_scout/ScoutHead.tsx";
 import s from "../_scout/scout.module.css";
@@ -20,7 +21,7 @@ export default async function ScoutRuns() {
   if (to !== undefined) redirect(runFor(to.id));
   return (
     <div className={s.page}>
-      <ScoutHead current="runs" undecided={0} />
+      <ScoutHead current="runs" undecided={0} facts={await scoutHeaderFacts()} />
       <ErrorLine message="scout: no night or seed batch has opened a packet yet" />
     </div>
   );

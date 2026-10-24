@@ -10,7 +10,7 @@ await vi.hoisted(async () => {
   process.env["GRAVITONE_STORE_PATH"] = join(mkdtempSync(join(tmpdir(), "floor-test-")), "store.sqlite");
 });
 
-import { nextPile, pileOrder, spendOf } from "../../app/(studio)/_shell/facts.ts";
+import { nextPile, nextScoutPile, pileOrder, spendOf } from "../../app/(studio)/_shell/facts.ts";
 import { SLOTS } from "../../app/(studio)/floor/_calendar/fixtureData.ts";
 import { applyCancel, applyMove, applyPublishNow, fixtureAct, fixtureFacts, fixtureItems, fixtureSchedule, fixtureSlots, seedRow, viewOf, type FixtureRow } from "../../app/(studio)/floor/_calendar/fixture.ts";
 import { byLane, floorRunsOf, floorSearch, levelOver, parseFloorUrl, scheduleHref, slotHref } from "../../app/(studio)/floor/_floor/model.ts";
@@ -56,6 +56,31 @@ describe("NEXT", () => {
   it("is null when the weir is clear", () => {
     expect(nextPile([])).toBeNull();
     expect(nextPile([pile("forge", "done", "image", "2026-10-15T08:00:00Z", 0, 9)])).toBeNull();
+  });
+});
+
+// The Scout header's NEXT (spark scout-storyboards WP2): the same order over the scout's piles only - a night of
+// either wing (a muse night is source `scout`, id `muse:<night>`) and a seed batch.
+describe("the Scout header's NEXT", () => {
+  it("is the oldest scout or seeds pile; an older pile of any other source is not the scout's", () => {
+    const weir = [
+      pile("suno", "old-take", "audio", "2026-10-10T08:00:00Z"),
+      pile("forge", "older-plates", "image", "2026-10-11T08:00:00Z"),
+      pile("scout", "2026-10-14", "image", "2026-10-14T06:00:00Z"),
+      pile("seeds", "2026-10-13", "image", "2026-10-13T06:00:00Z"),
+      pile("scout", "muse:2026-10-15", "image", "2026-10-15T06:00:00Z"),
+    ];
+    expect(nextPile(weir)?.id).toBe("old-take");
+    expect(nextScoutPile(weir)?.id).toBe("2026-10-13");
+  });
+
+  it("names a muse night when it is the oldest, and skips a scout pile with nothing pending", () => {
+    const weir = [pile("scout", "2026-10-12", "image", "2026-10-12T06:00:00Z", 0, 40), pile("scout", "muse:2026-10-13", "image", "2026-10-13T06:00:00Z"), pile("seeds", "2026-10-14", "image", "2026-10-14T06:00:00Z")];
+    expect(nextScoutPile(weir)?.id).toBe("muse:2026-10-13");
+  });
+
+  it("is null when only other sources wait", () => {
+    expect(nextScoutPile([pile("suno", "t", "audio", "2026-10-10T08:00:00Z"), pile("proof", "p", "image", "2026-10-11T08:00:00Z")])).toBeNull();
   });
 });
 

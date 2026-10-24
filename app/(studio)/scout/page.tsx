@@ -13,6 +13,7 @@ import { connection } from "next/server";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 
 import { isWing } from "../../../lib/foundry/scout/wing.ts";
+import { scoutHeaderFacts } from "../_shell/headerFacts.ts";
 import { serverScout } from "./_port/port.ts";
 import { SCOUT_PORT } from "./_port/wire.ts";
 import { Scout } from "./_scout/Scout.tsx";
@@ -26,9 +27,9 @@ type Search = Promise<Readonly<Record<string, string | string[] | undefined>>>;
 
 export default async function ScoutPage({ searchParams }: { readonly searchParams: Search }) {
   await connection();
-  const [q, view, packets] = await Promise.all([searchParams, serverScout().view(), serverBoard().listPackets()]);
+  const [q, view, packets, facts] = await Promise.all([searchParams, serverScout().view(), serverBoard().listPackets(), scoutHeaderFacts()]);
   const undecided = packets.ok ? packets.value.packets.filter((p) => isScoutPacket(p) && p.state === "open").length : 0;
-  const head = <ScoutHead current="graph" undecided={undecided} />;
+  const head = <ScoutHead current="graph" undecided={undecided} facts={facts} />;
   if (!view.ok) {
     return (
       <div className={s.page}>

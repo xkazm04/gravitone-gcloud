@@ -4,6 +4,11 @@
 /* the page: the title section over the view */
 .page{flex:1;min-height:0;display:flex;flex-direction:column}
 .head{flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:var(--sp-5);padding:var(--sp-3) var(--sp-5);border-bottom:1px solid var(--hair)}
+/* the head's right end: the spend and the NEXT scout pile; on a narrow screen it wraps to its own row, left. NEXT's
+   ⏎ keycap is the Floor's binding (open-next), which this page does not hold, so it is not drawn here. */
+.headEnd{margin-left:auto;display:flex;align-items:center;flex-wrap:wrap;gap:var(--sp-3);min-width:0}
+.headNext{display:flex;min-width:0}
+.headNext kbd{display:none}
 .scout{flex:1;min-height:0;display:flex;flex-direction:column}
 .top{flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:var(--sp-3);padding:var(--sp-3) var(--sp-5);border-bottom:1px solid var(--hair)}
 .grow{flex:1}

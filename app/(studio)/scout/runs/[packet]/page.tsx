@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 
+import { scoutHeaderFacts } from "../../../_shell/headerFacts.ts";
 import { Board } from "../../../board/_board/Board.tsx";
 import { loadBoard } from "../../../board/_board/load.ts";
 import { BOARD_PORT, BOARD_REDRIVE } from "../../../board/_port/wire.ts";
@@ -16,8 +17,8 @@ export const metadata: Metadata = { title: "Gravitone · Scout runs" };
 const HOME = { label: "Scout", href: "/scout", railBase: "/scout/runs" } as const;
 
 export default async function ScoutRun({ params }: { readonly params: Promise<{ readonly packet: string }> }) {
-  const r = await loadBoard(params);
-  const head = (undecided?: number) => <ScoutHead current="runs" {...(undecided === undefined ? {} : { undecided })} />;
+  const [r, facts] = await Promise.all([loadBoard(params), scoutHeaderFacts()]);
+  const head = (undecided?: number) => <ScoutHead current="runs" facts={facts} {...(undecided === undefined ? {} : { undecided })} />;
   if (!r.ok) {
     return (
       <div className={s.page}>
