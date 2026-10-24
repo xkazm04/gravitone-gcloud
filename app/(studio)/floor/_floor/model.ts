@@ -84,6 +84,16 @@ export function floorSearch(u: FloorUrl): string {
   return s === "" ? "" : `?${s.replace(/%2C/g, ",")}`;
 }
 
+/**
+ * Whether a level is over the Floor, so the Floor's own keys are not live: the month, a slot's
+ * record, or the schedule sheet - which is drawn only when the calendar's side could say what
+ * each channel can do (`calendarRead`). A `?new=1` the sheet could not open is not a level: the
+ * month closed over it must hand the keys back.
+ */
+export function levelOver(u: FloorUrl, calendarRead: boolean): boolean {
+  return u.cal || u.slot !== null || (u.schedule !== null && calendarRead);
+}
+
 /** The slot level's address: the month stays open beneath it when it was. */
 export const slotHref = (id: string, cal = true): string => `/floor?${cal ? "cal=1&" : ""}slot=${encodeURIComponent(id)}`;
 

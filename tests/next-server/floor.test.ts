@@ -13,7 +13,7 @@ await vi.hoisted(async () => {
 import { nextPile, pileOrder, spendOf } from "../../app/(studio)/_shell/facts.ts";
 import { SLOTS } from "../../app/(studio)/floor/_calendar/fixtureData.ts";
 import { applyCancel, applyMove, applyPublishNow, fixtureAct, fixtureFacts, fixtureItems, fixtureSchedule, fixtureSlots, seedRow, viewOf, type FixtureRow } from "../../app/(studio)/floor/_calendar/fixture.ts";
-import { byLane, floorRunsOf, floorSearch, parseFloorUrl, scheduleHref, slotHref } from "../../app/(studio)/floor/_floor/model.ts";
+import { byLane, floorRunsOf, floorSearch, levelOver, parseFloorUrl, scheduleHref, slotHref } from "../../app/(studio)/floor/_floor/model.ts";
 import type { ProduceJob } from "../../app/(studio)/projects/_port/contract.ts";
 import { downsample } from "../../app/(studio)/floor/_floor/shelf.ts";
 import type { LiveJob, WeirItem } from "../../lib/ledger/v1/types.ts";
@@ -144,6 +144,19 @@ function must<T>(r: { readonly ok: true; readonly value: T } | { readonly ok: fa
   if (!r.ok) throw r.error;
   return r.value;
 }
+
+describe("a level over the Floor", () => {
+  const at = (q: Record<string, string>) => parseFloorUrl(q);
+  it("is the month, a slot's record, or the schedule sheet - and then the Floor's keys wait", () => {
+    expect(levelOver(at({}), true)).toBe(false);
+    expect([levelOver(at({ cal: "1" }), true), levelOver(at({ slot: "sl-x" }), true), levelOver(at({ new: "1" }), true)]).toEqual([true, true, true]);
+  });
+
+  it("is not a schedule sheet the calendar could not open: the month closed over a `?new=1` hands the keys back", () => {
+    expect(levelOver(at({ new: "1", item: "video:export:x" }), false)).toBe(false);
+    expect(levelOver(at({ cal: "1", new: "1" }), false)).toBe(true);
+  });
+});
 
 describe("the fixture calendar", () => {
   it("every fixture row passes the slot schema, and together they hold every state and channel", () => {
