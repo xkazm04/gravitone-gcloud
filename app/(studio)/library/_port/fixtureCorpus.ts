@@ -226,7 +226,7 @@ export function buildCorpus(): readonly FixtureRecord[] {
         const provider = type === "sfx" ? ("elevenlabs" as const) : weighted([["suno", 0.8], ["local", 0.2]] as const);
         const group = pick(type === "sfx" ? SOUND.sfxGroups : SOUND.musicGroups);
         const stage = pick(SOUND.stages);
-        const hunt = r() < 0.2 ? pick(HUNTS).id : undefined;
+        const hunt = r() < 0.2 ? pick(HUNTS) : undefined;
         const durationS = type === "sfx" ? 2 + Math.floor(r() * 6) : 40 + Math.floor(r() * 160);
         const tempoBpm = type === "music" ? 70 + Math.floor(r() * 70) : undefined;
         const key = type === "music" ? pick(SOUND.keys) : undefined;
