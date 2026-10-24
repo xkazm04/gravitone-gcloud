@@ -5955,4 +5955,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "const DETAIL = \"(max-width: 1439px)\";",
     why: "Between 1360px and 1439px the keys think the detail is a drawer the stylesheet draws as a column: Esc closes a panel that was never a drawer instead of deselecting, and ⏎ on a narrow-only path misfires.",
   },
+  {
+    id: "library-fixture-detail-values-unsorted",
+    test: "tests/next-server/library-fixture-parity.test.ts",
+    file: "app/(studio)/library/_port/fixture.ts",
+    find: "values: [...(x.f[key] ?? [])].sort().map(",
+    replace: "values: (x.f[key] ?? []).map(",
+    why: "The fixture Library's detail lists a group's values in the order the corpus drew them, where the kernel lists them in value order, so a mood or a style line reads differently on the two sides.",
+  },
+  {
+    id: "library-fixture-plate-no-scene",
+    test: "tests/next-server/library-fixture-parity.test.ts",
+    file: "app/(studio)/library/_port/fixtureCorpus.ts",
+    find: "mechanism: [mechanism], scene: [scene], run: [run],",
+    replace: "mechanism: [mechanism], run: [run],",
+    why: "A fixture plate holds no scene facet though its vocabulary names one and the kernel indexes it, so its detail drops the scene line and a scene word misses 49 plates.",
+  },
 ];

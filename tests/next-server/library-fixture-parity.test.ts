@@ -6,6 +6,7 @@ import { ok, type Result } from "@gt/domain/errors";
 import type { LibraryPage, LibraryQuery, MediaFacts } from "@gt/domain/library";
 import { queryEvents } from "@gt/kernel/events-query";
 import { openKernel, type Kernel } from "@gt/kernel/kernel";
+import { libraryDetail } from "@gt/kernel/library/detail";
 import { queryLibrary } from "@gt/kernel/library/query";
 import { putMediaFacts, upsertItems, type MarkAct } from "@gt/kernel/library/write";
 
@@ -91,7 +92,7 @@ describe("a free word finds what the index's search text holds", () => {
   // The index searches the title, the meta and its haystack: the id, every facet value and label,
   // the lineage ids, the state and the origin (kernel library/core.ts indexRowOf) - not the source,
   // not the attention column, and nothing the projection never wrote.
-  const WORDS = ["fixture", "derived", "media", "chalk", "rain city", "ratified", "suno", "image 0003", "plate-0001"];
+  const WORDS = ["fixture", "derived", "media", "chalk", "rain city", "ratified", "suno", "image 0003", "plate-0001", "flywheel"];
   for (const q of WORDS) {
     it(q, () => {
       const { fixture, real } = pages({ q, limit: 500 });
@@ -227,4 +228,21 @@ describe("an act answers what the kernel answers, and leaves the events it leave
     expect(d.ok && d.value.acts).toEqual(r.ok && r.value.acts);
     expect(fixtureEvents(id)).toEqual(realEvents(id));
   });
+});
+
+describe("a detail lists the vocabulary the index lists", () => {
+  // kernel library/detail.ts vocabularyOf: every facet group the item holds, in rail order, each
+  // group's values in value order; the row's chips are the first of each (query.ts chipsFor).
+  const KINDS = ["image", "plate", "style", "motion", "audio", "video", "doc", "model", "character"] as const;
+  for (const kind of KINDS) {
+    it(kind, () => {
+      const ids = corpus.filter((x) => x.raw.kind === kind).slice(0, 40).map((x) => x.raw.id);
+      const shown = (id: string, side: "fixture" | "real") => {
+        const d = side === "fixture" ? fixtureDetail(id) : libraryDetail(k.store, id);
+        if (!d.ok) throw d.error;
+        return { id, vocabulary: d.value.vocabulary, chips: d.value.row.chips };
+      };
+      expect(ids.map((id) => shown(id, "fixture"))).toEqual(ids.map((id) => shown(id, "real")));
+    });
+  }
 });

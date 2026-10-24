@@ -19,6 +19,7 @@ import "server-only";
 import { parseAt } from "@gt/domain/door";
 import { err, ok, type Result } from "@gt/domain/errors";
 import {
+  COLUMN_GROUPS,
   DEFAULT_PIN,
   FIXED_ORDER,
   groupLabel,
@@ -173,19 +174,20 @@ export const fixtureEverything = (): number => universe().items.length;
 /** An id the index does not hold, in the kernel's words (kernel library/detail.ts, write.ts). */
 const gone = (id: string): Result<never> => err("not-found", `library: no item ${id}`);
 
-/** The vocabulary lines a detail lists: the kind's groups, then its collections (library.js `body`). */
-const DETAIL_SHARED = ["project", "run", "hunt"];
+/** Groups the index keeps as columns of the item: a detail lists none of them (kernel library/detail.ts). */
+const COLUMNS: ReadonlySet<string> = new Set<string>(COLUMN_GROUPS);
 
 export function fixtureDetail(id: string): Result<LibraryItemDetail> {
   const x = universe().byId.get(id);
   if (x === undefined) return gone(id);
   const item = parseAt(`fixture library item ${id}`, libraryItemSchema, x.raw);
   if (!item.ok) return item;
-  const keys = [...railGroups(x.row.kind).filter((g) => g.section === "vocabulary").map((g) => g.key), ...DETAIL_SHARED];
-  const vocabulary = keys.flatMap((key) => {
-    const vs = x.f[key] ?? [];
-    return vs.length === 0 ? [] : [{ key, label: groupLabel(key), values: vs.map((value) => ({ value, label: labelOf(key, value) })) }];
-  });
+  // The index's vocabularyOf: every facet group the item holds, in rail order (the rest after, by
+  // name), each group's values in value order.
+  const order = railGroups(x.row.kind).map((g) => g.key);
+  const rank = (key: string): number => (order.includes(key) ? order.indexOf(key) : 1e3);
+  const keys = Object.keys(x.f).filter((key) => !COLUMNS.has(key) && (x.f[key] ?? []).length > 0).sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+  const vocabulary = keys.map((key) => ({ key, label: groupLabel(key), values: [...(x.f[key] ?? [])].sort().map((value) => ({ value, label: labelOf(key, value) })) }));
   const pinned = (x.f["pin"] ?? []).includes(DEFAULT_PIN);
   return ok({ item: item.value, row: x.row, vocabulary, lineage: x.lineage, extras: x.extras, media: x.media, acts: [pinned ? "unpin" : "pin", "use-in-project", ...(x.row.kind === "model" ? (["export"] as const) : [])] });
 }

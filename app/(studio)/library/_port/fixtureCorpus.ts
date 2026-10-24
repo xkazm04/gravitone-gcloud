@@ -113,7 +113,7 @@ export function buildCorpus(): readonly FixtureRecord[] {
     const cover = raw.kind === "audio" || raw.kind === "doc" || raw.kind === "model" || raw.media === undefined || attention !== undefined ? null : raw.media;
     const posterSha = d.media?.posterSha ?? null;
     const coverSha = raw.kind === "video" || raw.kind === "motion" ? posterSha : (cover?.sha256 ?? null);
-    const chips = CHIP_GROUPS[raw.kind].flatMap((g) => (f[g] ?? []).slice(0, 1).map((v) => ({ group: g, value: v, label: labelOf(g, v) }))).slice(0, 3);
+    const chips = CHIP_GROUPS[raw.kind].flatMap((g) => [...(f[g] ?? [])].sort().slice(0, 1).map((v) => ({ group: g, value: v, label: labelOf(g, v) }))).slice(0, 3);
     const row: LibraryRow = {
       id: raw.id,
       kind: raw.kind,
@@ -191,7 +191,7 @@ export function buildCorpus(): readonly FixtureRecord[] {
         const run = pick(station === "forge" ? RUNS.forge : station === "extract" ? RUNS.extract : RUNS.dojo);
         const mechanism = pick(MECHANISMS);
         const lesson = station === "dojo" ? pick(LESSONS) : undefined;
-        const f: Record<string, string[]> = { style: [st], family: [style?.family ?? "graphic"], station: [station], mechanism: [mechanism], run: [run], project: proj(0.2), ...(lesson === undefined ? {} : { lesson: [lesson] }), ...(missing ? { attention: ["missing"] } : {}) };
+        const f: Record<string, string[]> = { style: [st], family: [style?.family ?? "graphic"], station: [station], mechanism: [mechanism], scene: [scene], run: [run], project: proj(0.2), ...(lesson === undefined ? {} : { lesson: [lesson] }), ...(missing ? { attention: ["missing"] } : {}) };
         for (const [k, v] of Object.entries(style?.obs ?? {})) f[k] = [v];
         const dark = r() < 0.02;
         const state = weighted([["ratified", 0.26], ["rejected", 0.3], ["unjudged", 0.44]] as const);
