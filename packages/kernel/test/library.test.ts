@@ -260,4 +260,13 @@ describe("libraryDetail", () => {
     const missing = libraryDetail(s, "nope");
     expect(!missing.ok && missing.error.code).toBe("not-found");
   });
+  it("draws the detail's card with the chips the grid draws for the same item", () => {
+    const s = store();
+    must(upsertItems(s, [plate("p1"), audio("a1", ["tense", "calm"])], CTX));
+    for (const [id, kind] of [["p1", "plate"], ["a1", "audio"]] as const) {
+      const grid = page(s, { kind, limit: 10 }).items.find((x) => x.id === id);
+      expect(grid?.chips.length).toBeGreaterThan(0);
+      expect(must(libraryDetail(s, id)).row.chips).toEqual(grid?.chips);
+    }
+  });
 });

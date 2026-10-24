@@ -6,7 +6,7 @@ import { libraryItemSchema, type LibraryItem, type LibraryItemDetail } from "@gt
 import type { Reader, Row, Store } from "../store.ts";
 import { extrasSchema, meshFactsSchema } from "./extras.ts";
 import { readMeasure, withMeasure } from "./measures.ts";
-import { ROW_SELECT, rowOf } from "./query.ts";
+import { chipsFor, ROW_SELECT, rowOf } from "./query.ts";
 
 // ONE ITEM, WHOLE - the detail panel's read: the record, every facet labelled in
 // rail order, the lineage resolved against the index, the media facts and the
@@ -138,7 +138,8 @@ export function libraryDetail(store: Store, id: string): Result<LibraryItemDetai
       if (!collections.some((c) => c.kind === kind && c.id === ref)) collections.push({ kind, id: ref });
     }
     const item = { ...rec.value.item, collections };
-    const chips = vocabulary.flatMap((g) => g.values.slice(0, 1).map((v) => ({ group: g.key, value: v.value, label: v.label }))).slice(0, 3);
+    // The grid's rule (CHIP_GROUPS), not a second one: the card the detail leads with is the tile it was opened from.
+    const chips = chipsFor(r, [row]).get(seq) ?? [];
     return {
       item,
       row: rowOf(row, chips),

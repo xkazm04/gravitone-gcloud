@@ -33,7 +33,8 @@ const ORDER: { readonly [K in (typeof LIBRARY_SORTS)[number]]: string } = {
   kind: "i.bad, i.kind_ord, i.at DESC, i.seq DESC",
 };
 
-function chipsFor(r: Reader, rows: readonly Row[]): Map<number, LibraryChip[]> {
+/** The grid's chips per row: CHIP_GROUPS[kind], the first value of each, at most three. */
+export function chipsFor(r: Reader, rows: readonly Row[]): Map<number, LibraryChip[]> {
   const out = new Map<number, LibraryChip[]>();
   if (rows.length === 0) return out;
   const groups = [...new Set(Object.values(CHIP_GROUPS).flat())];
