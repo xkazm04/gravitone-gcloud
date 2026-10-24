@@ -7,6 +7,7 @@ import { DatabaseSync } from "node:sqlite";
 import { timerResource } from "@gt/producers/publish/timers";
 
 import { probeGoogle, probeLeonardo, type KeyFetch, type KeyProbe } from "../../imaging/keyProbe";
+import { missingFluxModels } from "../../imaging/local/flux2";
 import { leonardoStudioHealth } from "../../imaging/providers/leonardoStudio";
 import type { StudioHealth } from "../../imaging/studio/types";
 import { comfyBase, comfyStats, missingModels, type ComfyFetch } from "../../imaging/video/comfyLtx";
@@ -44,7 +45,9 @@ import { activeWing } from "./wingScope";
 // The MUSE wing (spark scout-muse) draws studio stills only - it runs no ingest, clip, asset or track - so
 // its binaries, its clip engine and its Suno line are notes whatever the night; the studio line is as above.
 // (This preflight has no TRELLIS or Blender line for either wing: a game asset's mesh job meets those on
-// the worker, lib/foundry/mesh.)
+// the worker, lib/foundry/mesh.) The STORYBOARDS' Flux files (spark scout-storyboards) are read off the same
+// ComfyUI once it answers, as a note: a missing file fails those storyboards' frames with ComfyUI's own
+// sentence, and the night goes on.
 
 export type Check = {
   readonly name: string;
@@ -150,7 +153,19 @@ async function comfyChecks(input: DoctorInput): Promise<Check[]> {
   } catch (e) {
     out.push({ name: "ltx weights", ok: false, found: (e as Error).message, remedy: `ComfyUI answered /system_stats but not /object_info; restart it with ${start}`, needed });
   }
+  out.push(await fluxCheck(deps, start));
   return out;
+}
+
+/** The storyboards' Flux 2 files listed by ComfyUI (lib/imaging/local/flux2.ts FLUX_FILES): always a note. */
+async function fluxCheck(deps: { readonly base: string; readonly fetch?: ComfyFetch }, start: string): Promise<Check> {
+  try {
+    const w = await missingFluxModels(deps);
+    if (w.missing.length === 0) return { name: "flux weights", ok: true, found: `${w.present} model files present`, needed: false };
+    return { name: "flux weights", ok: false, found: `missing: ${w.missing.join(", ")}`, remedy: "put the missing files under ComfyUI's models folder; without them a storyboard draws no frame", needed: false };
+  } catch (e) {
+    return { name: "flux weights", ok: false, found: (e as Error).message, remedy: `ComfyUI answered /system_stats but not /object_info; restart it with ${start}`, needed: false };
+  }
 }
 
 /** Where the night's registry digest reads from - a note, never a failure. */

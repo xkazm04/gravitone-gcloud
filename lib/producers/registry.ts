@@ -35,6 +35,7 @@ import { finishProducer } from "./finish.ts";
 import { scoutAssetProducer } from "./scoutAsset.ts";
 import { scoutIdeasProducer } from "./scoutIdea.ts";
 import { scoutReelsProducer } from "./scoutReel.ts";
+import { scoutStoryboardProducer } from "./scoutStoryboard.ts";
 import { sunoDriver } from "../sound/suno/drivers.ts";
 import { sfxProducer } from "../sound/sfxJob.ts";
 import { huntProducer } from "../sound/huntRender.ts";
@@ -144,6 +145,9 @@ export const BOUND: readonly Bound[] = [
   // A /scout night's stats reels (spark stats-reels): one batch, each idea's full strip authored on the Claude
   // seat and its frame 120 drawn cold, on seat.text - the strips producer's lane.
   { name: "scout-reels", producer: scoutReelsProducer() },
+  // A /scout night's storyboards (spark scout-storyboards): one job per kept idea's storyboard, its frames drawn by Flux 2
+  // on this box's ComfyUI, on gpu.local (engine comfy).
+  { name: "scout-storyboard", producer: scoutStoryboardProducer() },
   ...stepsBound(),
 ];
 

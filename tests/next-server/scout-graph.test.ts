@@ -304,3 +304,25 @@ describe("branchesSection - the next night's brief", () => {
     expect(lines).toContain("- kids · live 11 · dead 0 · reached output · kept 8 · 1 runs, 12.3 GPU min, $0.13 Gemini · split 60% / took 29%");
   });
 });
+
+// THE BOARD COLUMN (spark scout-storyboards): a storyboard sits at stage `board`, between its idea and the runs,
+// linked from the idea it composes (not from the seed again), labelled by its title; kept, it leaves no output
+// node - nothing real exists until a full video is made from it.
+describe("graphOf - storyboards", () => {
+  it("places a storyboard in the board column, linked from its idea, with no output", () => {
+    const board = (id: string, fromIdea: string, more: Partial<Candidate> = {}): Candidate => ({ id, kind: "storyboard", sourceIds: [], status: "rendered", fromIdea, fromSeed: `${A}/sd-001`, title: `board ${id}`, paragraph: "p", bullets: ["a", "b", "c"], panels: ["p1"], ...more }) as Candidate;
+    const N4 = "2026-10-24";
+    const withBoards = [...nights, night(N4, "2026-10-24T20:00:00.000Z", [board("c-01", `${N1}/c-01`), board("c-02", `${N1}/c-03`, { status: "pending" })], { committed: commit(["c-01/words", "c-01/panel-1"], []) })];
+    const g = graphOf({ nights: withBoards, batches, steer, now: NOW });
+    expect(node(g.nodes, `cand:${N4}/c-01`)).toMatchObject({ stage: "board", kind: "storyboard", state: "kept", label: "board c-01", seed: `${A}/sd-001` });
+    expect(node(g.nodes, `cand:${N4}/c-02`)).toMatchObject({ stage: "board", state: "pending" });
+    const e = g.edges.map((x) => `${x.from} > ${x.to}`);
+    expect(e).toContain(`cand:${N1}/c-01 > cand:${N4}/c-01`);
+    expect(e).not.toContain(`seed:${A}/sd-001 > cand:${N4}/c-01`);
+    expect(g.nodes.some((n) => n.id === `out:${N4}/c-01`)).toBe(false);
+    // The board column is between idea and run: a run outreaches it, and a branch whose deepest live node is a storyboard reaches `board`.
+    const only = graphOf({ nights: [nights[1] as Night, withBoards[4] as Night], batches, steer: { paused: [], history: [] }, now: NOW });
+    expect(only.groups.find((x) => x.key === "kids")?.depth).toBe("run");
+    expect(graphOf({ nights: [withBoards[4] as Night], batches, steer: { paused: [], history: [] }, now: NOW }).groups.find((x) => x.key === "kids")?.depth).toBe("board");
+  });
+});

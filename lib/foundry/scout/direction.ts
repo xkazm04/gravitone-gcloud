@@ -133,11 +133,15 @@ export async function keptIdea(ref: string, cache: Nights = new Map()): Promise<
   return ok({ night: n, idea: { ...c, image: c.image } });
 }
 
-/** Every kept idea some night already develops, with where: a source brought in from it (`<night>/<s-id>`), else a candidate that names it. */
+/**
+ * Every kept idea some night already develops, with where: a source brought in from it (`<night>/<s-id>`), else a candidate that names it.
+ * A STORYBOARD does not develop its idea (spark scout-storyboards): it composes the idea as a video, and the idea's scene, style or
+ * asset act stays on "Ideas to develop" beside it - the two rungs are independent.
+ */
 export function developedOf(nights: readonly Night[]): Map<string, string> {
   const out = new Map<string, string>();
   for (const n of nights) for (const s of n.sources) if (s.fromIdea !== undefined && !out.has(s.fromIdea)) out.set(s.fromIdea, `${n.id}/${s.id}`);
-  for (const n of nights) for (const c of n.candidates) if (c.fromIdea !== undefined && !out.has(c.fromIdea)) out.set(c.fromIdea, `${n.id}/${c.id}`);
+  for (const n of nights) for (const c of n.candidates) if (c.kind !== "storyboard" && c.fromIdea !== undefined && !out.has(c.fromIdea)) out.set(c.fromIdea, `${n.id}/${c.id}`);
   return out;
 }
 

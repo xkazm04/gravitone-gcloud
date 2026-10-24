@@ -19,6 +19,8 @@
 // watchlist line, a registry gap or nothing, and one the studio refused - so the Board's ideas tab
 // has tiles above its words, and the gate a loss with the vendor's sentence. Each idea tries a genre, and
 // the night proposes one DIRECTION standing on the committed night's kept replica (a words cell in notes).
+// And it composed a STORYBOARD (spark scout-storyboards) from the committed night's kept idea: four local
+// Flux frames, a paragraph and four bullets - the rung a full video must grow from.
 //
 // THE MUSE WING (spark scout-muse) has its own root, fixtures-out/scout-muse/, and one CLOSED night on the
 // same day as yesterday's scout night - two packets, pkt:scout:<night> and pkt:scout:muse:<night>, one day:
@@ -28,7 +30,7 @@ import { rmSync } from "node:fs";
 
 import { standConcept } from "../../lib/foundry/scout/concept";
 import type { MuseJudge } from "../../lib/foundry/scout/muse";
-import type { Asset3dCandidate, DirectionCandidate, IdeaCandidate, Night, SceneCandidate, ScoutSource, Seed, SeedBatch } from "../../lib/foundry/scout/types";
+import type { Asset3dCandidate, DirectionCandidate, IdeaCandidate, Night, SceneCandidate, ScoutSource, Seed, SeedBatch, StoryboardCandidate } from "../../lib/foundry/scout/types";
 import { DAY, HOUR, NOW, outFile, plate, writeBytes, writeJson } from "./kit";
 
 const PALETTE = ["#1d2b3a", "#e0a458", "#5c8a8a", "#f2e8cf"];
@@ -125,6 +127,37 @@ function direction(id: string, basedOn: readonly string[]): DirectionCandidate {
   };
 }
 
+function storyboard(night: string, id: string, fromIdea: string): StoryboardCandidate {
+  const images = [1, 2, 3, 4].map((k) => `storyboards/${id}/panel-${k}.png`);
+  for (const f of images) writeBytes(outFile("scout", night, f), plate(`scout:${night}:${f}`, IDEA_PALETTE, 384, 216));
+  return {
+    id,
+    kind: "storyboard",
+    sourceIds: [],
+    status: "rendered",
+    jobId: `job:scout-storyboard:${night}:${id}`,
+    fromIdea,
+    title: "The lantern that keeps three steps ahead",
+    paragraph: "A night watchman climbs a stairwell after a lantern that will not let him catch it. Each landing is darker than the last, the light always three steps up, until the top floor opens on a window and the lantern hangs outside it, over the city.",
+    bullets: [
+      "beats: the lantern moves, the chase, the last landing, the window",
+      "format: a 30 s vertical short, one shot per beat",
+      "audience: adults who like quiet mysteries",
+      "look: warm amber against cold slate, one held light, deep shadow below",
+    ],
+    panels: [
+      "rough storyboard frame, a watchman at the foot of a stairwell, a lantern glowing three steps above him, cold slate walls",
+      "rough storyboard frame, the watchman mid-climb, the lantern still three steps ahead, his shadow long on the stairs",
+      "rough storyboard frame, a dark landing, only the lantern's warm pool of light ahead",
+      "rough storyboard frame, an open window at the top of the stairs, the lantern hanging outside over a night city",
+    ],
+    use: "short: a slow-reveal mystery Short",
+    app: "short",
+    images,
+    seeds: [118, 2307, 4410, 9003],
+  };
+}
+
 function closedNight(): Night {
   const id = dayOf(DAY);
   const s1 = source(id, "s-01", "Fixture trailer one", 4);
@@ -151,8 +184,9 @@ function closedNight(): Night {
       idea(id, "c-07", { title: "Brass diving helmet with one cracked porthole", target: "asset3d", genre: "game trailer", anchor: { kind: "free", ref: "" }, prompt: "concept sheet of a brass diving helmet, one porthole cracked, rivets and a dented crown, chunky readable silhouette, neutral grey ground", use: "videogame: diving-suit prop for a salvage game", app: "videogame", aim: "fill the prop layer of the asset graph, which holds no diving gear" }),
       idea(id, "c-08", { title: "Rain on a neon market awning", target: "scene", genre: "title opener", anchor: { kind: "watch", ref: "tag: neon noir" }, prompt: "rain sheeting off a striped market awning under neon signs", use: "genre-video: neon-noir title opener", app: "genre-video", aim: "harden the neon-noir style with a rain scene", status: "failed", error: "leonardo answered 429: generation quota exhausted for this hour" }),
       direction("c-09", [`${dayOf(2 * DAY)}/c-01/replica-1`]),
+      storyboard(id, "c-10", `${dayOf(2 * DAY)}/c-03`),
     ],
-    jobs: ["job:run:scout-ingest:" + id, `job:scout-scene:${id}:c-01`, `job:scout-asset:${id}:c-04`, `job:scout-ideas:${id}`],
+    jobs: ["job:run:scout-ingest:" + id, `job:scout-scene:${id}:c-01`, `job:scout-asset:${id}:c-04`, `job:scout-ideas:${id}`, `job:scout-storyboard:${id}:c-10`],
   };
 }
 
@@ -173,9 +207,10 @@ function committedNight(): Night {
     candidates: [
       scene(id, "c-01", s1, false),
       { id: "c-02", kind: "watch", sourceIds: [s1.id], status: "rendered", entry: "site: fixture-gallery.example", why: "one coherent look" },
+      idea(id, "c-03", { title: "A lantern that climbs the stairs ahead of a watchman", target: "scene", genre: "animated mystery short", anchor: { kind: "free", ref: "" }, prompt: "rough frame, a watchman on a stairwell, a lantern glowing three steps above him, warm amber against cold slate", use: "short: a slow-reveal mystery Short", app: "short", aim: "see whether one moving light carries a whole short" }),
     ],
-    jobs: ["job:run:scout-ingest:" + id, `job:scout-scene:${id}:c-01`],
-    committed: { at: at(NOW - DAY - 12 * HOUR), by: "operator", kept: ["c-01/replica-1"], rejected: ["c-01/replica-2", "c-02/text"], reasons: { "c-02/text": ["generic"] }, notes: {}, dry: false },
+    jobs: ["job:run:scout-ingest:" + id, `job:scout-scene:${id}:c-01`, `job:scout-ideas:${id}`],
+    committed: { at: at(NOW - DAY - 12 * HOUR), by: "operator", kept: ["c-01/replica-1", "c-03/board"], rejected: ["c-01/replica-2", "c-02/text"], reasons: { "c-02/text": ["generic"] }, notes: {}, dry: false },
   };
 }
 

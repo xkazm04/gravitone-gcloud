@@ -6,6 +6,7 @@ import { ancestryOf, listSeedBatches, seedOf } from "./seedStore";
 import { seedFacets } from "./seeds";
 import { EMPTY_STEER, pausedUnder, readSteer } from "./steer";
 import { listNights, readAllNights, readNight } from "./store";
+import { storyboardSections } from "./storyboardKept";
 import { museSections } from "./tasteMuse";
 import { CANDIDATE_KINDS, SEED_AUDIENCES, parseCellId, seedRef, type Candidate, type CandidateKind, type IdeaCandidate, type Night, type SeedBatch, type Steer } from "./types";
 import { activeWing } from "./wingScope";
@@ -32,7 +33,8 @@ import { activeWing } from "./wingScope";
 // brief's own words, verbatim: the directions confirmed (what the next nights work inside) and refused;
 // the kept ideas no night has developed yet (no source and no candidate names it, ./direction.ts) -
 // once one is brought in it drops off the list; the blocked ideas, the bans of the next ideation; and
-// the genres kept and blocked, counted, so a night spreads across genres until a direction is set.
+// the genres kept and blocked, counted, so a night spreads across genres until a direction is set. Then the
+// STORYBOARDS (./storyboardKept.ts): kept ideas with none yet, and the kept ones - the roots a full video needs.
 //
 // SEEDS (spark scout-decision-graph) follow the load, read off every LIVE committed seed batch and the
 // steer: the kept seeds still to develop, each with what it lacks (2 child seeds, 1 idea grown from it -
@@ -71,6 +73,8 @@ function label(n: Night, c: Candidate): string {
       return `"${c.title}" [${c.target}${c.genre === undefined ? "" : ` · ${c.genre}`}${c.look === undefined ? "" : ` · look: ${c.look}`}]`;
     case "direction":
       return `"${c.title}" [${c.format} · ${c.genre}]`;
+    case "storyboard":
+      return `"${c.title}" [storyboard of ${c.fromIdea} · ${c.panels.length} frame(s)]`;
     default:
       return `${from === "" ? c.id : from}${c.use === undefined ? "" : ` - for ${c.use}`}`;
   }
@@ -353,7 +357,7 @@ export function tasteOf(nights: readonly Night[], last?: NightLoad, o: TasteOpti
   ];
   const keptUses = uses((n, cell) => n.committed?.kept.includes(cell) === true);
   const refusedUses = uses((n, cell) => (n.committed?.reasons[cell] ?? []).includes("use case"));
-  lines.push(...directionsAndIdeas(judged, developedOf(nights)));
+  lines.push(...directionsAndIdeas(judged, developedOf(nights)), ...storyboardSections(judged, nights));
   lines.push("## Uses", "", `- kept: ${keptUses.join("; ") || "none"}`, `- refused as a use: ${refusedUses.join("; ") || "none"}`, "");
   lines.push(...assetTally(judged));
   lines.push("## Channels", "", `- kept: ${list(kept)}`, `- thrown: ${list(thrown)}`);

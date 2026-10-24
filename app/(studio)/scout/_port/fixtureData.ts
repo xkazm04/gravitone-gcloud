@@ -6,8 +6,8 @@ import "server-only";
 // not this file's. What it holds, at scale 1 (~300 nodes): a seedless night (before seeds), a batch of 60 seeds
 // most of them rejected, a batch of child seeds, an open batch, ideas drawn on kept seeds by one shared job, runs
 // developed from kept ideas (a scene whose clip was kept, a style, a game asset, a direction resting on a kept
-// cell, a finding), a track and its visualizer, a night still open with a pending and a failed render, and one
-// family branch paused. Scale N repeats the universe N times under fresh batch and night ids (`-2`, `-3`...): the
+// cell, a finding), two storyboards composed from kept ideas (one kept, one thrown: the board column), a track
+// and its visualizer, a night still open with a pending and a failed render, and one family branch paused. Scale N repeats the universe N times under fresh batch and night ids (`-2`, `-3`...): the
 // 10x measure (`SCOUT_FIXTURE_SCALE=10`, read by ./fixture.ts). The muse wing (spark scout-muse) is its own small
 // root beside it, never scaled: a committed night of posters and scenes with a kept character and a still the
 // judge threw, and a closed night still waiting for its morning.
@@ -149,6 +149,26 @@ function universe(x: Ids): { readonly batches: SeedBatch[]; readonly nights: Nig
   const n2Cands = [...runs, viz, dir];
   const n2Kept = n2Cands.filter((_, i) => i % 4 !== 3).flatMap((c) => (c.kind === "scene" ? [`${c.id}/replica-1`, `${c.id}/clip`] : [`${c.id}/v`]));
   const n2Rej = n2Cands.filter((_, i) => i % 4 === 3).map((c) => `${c.id}/v`);
+  // Two kept ideas composed as storyboards (spark scout-storyboards): the first kept whole, the second thrown.
+  const boards: Candidate[] = keptIdeas.slice(0, 2).map((c, i): Candidate => {
+    const sid = cid(n2Cands.length + i);
+    return {
+      id: sid,
+      kind: "storyboard",
+      sourceIds: [],
+      status: "rendered",
+      fromIdea: `${n1}/${c.id}`,
+      ...(c.fromSeed === undefined ? {} : { fromSeed: c.fromSeed }),
+      title: `${pick(SUBJECTS, i * 2)}, in five frames`,
+      paragraph: "p",
+      bullets: ["beats", "format", "look"],
+      panels: ["p1", "p2", "p3", "p4", "p5"],
+      images: [1, 2, 3, 4, 5].map((k) => `storyboards/${sid}/panel-${k}.png`),
+      jobId: `job:fx-board:${n2}:${i}`,
+    };
+  });
+  const boardKept = boards.slice(0, 1).flatMap((b) => [`${b.id}/words`, `${b.id}/panel-1`]);
+  const boardRej = boards.slice(1).map((b) => `${b.id}/words`);
 
   // Ideas on the kept child seeds, and a last night still waiting for its morning.
   const n3 = id("2026-10-21", x);
@@ -171,7 +191,7 @@ function universe(x: Ids): { readonly batches: SeedBatch[]; readonly nights: Nig
     nights: [
       night(n0, "2026-10-12", before, { committed: commitOf("2026-10-13", n0Kept, n0Rej) }),
       night(n1, "2026-10-15", [...ideas, track], { committed: commitOf("2026-10-16", [...n1Kept, `${track.id}/a1`], n1Rej) }),
-      night(n2, "2026-10-18", n2Cands, { committed: commitOf("2026-10-19", n2Kept, n2Rej) }),
+      night(n2, "2026-10-18", [...n2Cands, ...boards], { committed: commitOf("2026-10-19", [...n2Kept, ...boardKept], [...n2Rej, ...boardRej]) }),
       night(n3, "2026-10-21", childIdeas, { committed: commitOf("2026-10-22", n3Kept, n3Rej) }),
       night(n4, "2026-10-23", open, { state: "closed" }),
     ],
@@ -235,7 +255,7 @@ export function fixtureEffort(nights: readonly Night[]): Map<string, GraphEffort
     for (const c of n.candidates) {
       const k = c.jobId === undefined ? 1 : (by.get(c.jobId) ?? 1);
       const whole =
-        c.kind === "idea" ? { gpuMin: 0, geminiUsd: 0.4, uncappedUsd: 2.4 } : c.kind === "scene" ? { gpuMin: 14, geminiUsd: 0.012, uncappedUsd: 0.06 } : c.kind === "asset3d" ? { gpuMin: 38, geminiUsd: 0, uncappedUsd: 0.12 } : c.kind === "visualizer" ? { gpuMin: 26, geminiUsd: 0, uncappedUsd: 0.05 } : c.kind === "style" ? { gpuMin: 0, geminiUsd: 0.05, uncappedUsd: 0.9 } : { gpuMin: 0, geminiUsd: 0, uncappedUsd: 0 };
+        c.kind === "idea" ? { gpuMin: 0, geminiUsd: 0.4, uncappedUsd: 2.4 } : c.kind === "scene" ? { gpuMin: 14, geminiUsd: 0.012, uncappedUsd: 0.06 } : c.kind === "asset3d" ? { gpuMin: 38, geminiUsd: 0, uncappedUsd: 0.12 } : c.kind === "visualizer" ? { gpuMin: 26, geminiUsd: 0, uncappedUsd: 0.05 } : c.kind === "storyboard" ? { gpuMin: 8, geminiUsd: 0, uncappedUsd: 0 } : c.kind === "style" ? { gpuMin: 0, geminiUsd: 0.05, uncappedUsd: 0.9 } : { gpuMin: 0, geminiUsd: 0, uncappedUsd: 0 };
       const r = (v: number): number => Math.round((v / k) * 1e4) / 1e4;
       out.set(`${n.id}/${c.id}`, { runs: 1, gpuMin: r(whole.gpuMin), geminiUsd: r(whole.geminiUsd), uncappedUsd: r(whole.uncappedUsd), ...(k > 1 ? { shared: true as const } : {}) });
     }

@@ -100,6 +100,38 @@ describe("doctor, the local clip engine", () => {
   });
 });
 
+// THE FLUX LINE (spark scout-storyboards): the storyboards' three Flux 2 files, read off the same ComfyUI once it
+// answers - always a note, never a block: a missing file fails those storyboards' frames, not the night.
+describe("doctor, the storyboards' Flux weights", () => {
+  const FLUX = { UNETLoader: "flux2_dev_fp8mixed.safetensors", CLIPLoader: "mistral_3_small_flux2_fp8.safetensors", VAELoader: "flux2-vae.safetensors" } as const;
+  /** The fake ComfyUI with the Flux files listed beside the LTX ones, less `without`. */
+  const withFlux = (without?: string): ComfyFetch => {
+    const base = comfy().f;
+    return async (url, init) => {
+      const r = await base(url, init);
+      const cls = decodeURIComponent(new URL(url).pathname.replace("/object_info/", "")) as keyof typeof FLUX;
+      if (!(cls in FLUX)) return r;
+      const doc = (await r.json()) as Record<string, { input: { required: Record<string, unknown[]> } }>;
+      for (const v of Object.values(doc[cls]?.input.required ?? {})) if (Array.isArray(v[0])) v[0] = [...(v[0] as string[]), FLUX[cls]].filter((x) => x !== without);
+      return Response.json(doc);
+    };
+  };
+
+  it("names the three files present", async () => {
+    const checks = await doctor(input({ fetch: withFlux() }));
+    expect(line(checks, "flux weights")).toBe("ok   flux weights        3 model files present");
+    expect(blocking(checks)).toEqual([]);
+  });
+
+  it("notes a missing one with the remedy, and blocks nothing", async () => {
+    const checks = await doctor(input({ fetch: withFlux("flux2-vae.safetensors") }));
+    expect(line(checks, "flux weights")).toBe("note flux weights        missing: flux2-vae.safetensors -> put the missing files under ComfyUI's models folder; without them a storyboard draws no frame");
+    expect(blocking(checks)).toEqual([]);
+    // The LTX fake alone lists none of them.
+    expect(line(await doctor(input({ fetch: comfy().f })), "flux weights")).toMatch(/^note flux weights +missing: flux2_dev_fp8mixed\.safetensors, mistral_3_small_flux2_fp8\.safetensors, flux2-vae\.safetensors/);
+  });
+});
+
 // THE WORKER LINE (spark night-load-band): the always-on worker's pulse in the store - its newest load
 // sample or its sampler's lease beat - under five minutes is ok; older, or never, fails a live night with
 // the command that starts it, and is a note on a dry one. The pulse is read read-only from a temp store.

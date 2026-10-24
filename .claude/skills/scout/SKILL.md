@@ -1,9 +1,9 @@
 ---
 name: scout
 memory: none
-version: 1.3.0
+version: 1.4.0
 category: Development
-description: The nightly training loop - search the web and YouTube around knowledge/scout/watchlist.md for art styles, scenes and craft worth learning, bring them onto this box, replicate them as kernel jobs (extracted still styles, scene recipes with Flare replica stills and local LTX clips, craft findings) and brief up to three 3D game assets (concept -> TRELLIS mesh -> Blender finish, made on this box) and up to six stats-reel ideas (a data video authored in code on illustrative numbers), ~100 one-sentence seeds (genre, subgenre, type, audience, format) on their own packet, 20-30 rough idea artboards grown from kept seeds in the operator's Leonardo studio, Suno tracks from kept music seeds and full-song visualizers from kept tracks, and 1-3 directions to confirm - all for YouTube video (Shorts ~30 s, videos up to 5 min) - inside a $15 Gemini night, and leave ONE Board packet pkt:scout:<night> for a few minutes of K/X in the morning. Successor of train-style and of dojo's hand-run corpus study. Wraps pipeline/scout.mts; it never keeps, rejects or commits anything on the Board. Invoke with /scout night [--dry] [--until HH:MM], /scout seeds [--dry], /scout folder <dir> [extract args], /scout status [<night>].
+description: The nightly training loop - search the web and YouTube around knowledge/scout/watchlist.md for art styles, scenes and craft worth learning, bring them onto this box, replicate them as kernel jobs (extracted still styles, scene recipes with Flare replica stills and local LTX clips, craft findings) and brief up to three 3D game assets (concept -> TRELLIS mesh -> Blender finish, made on this box) and up to six stats-reel ideas (a data video authored in code on illustrative numbers), ~100 one-sentence seeds (genre, subgenre, type, audience, format) on their own packet, 20-30 rough idea artboards grown from kept seeds in the operator's Leonardo studio, storyboards of kept ideas (up to five local Flux frames, a paragraph and bullets - the root any full video needs), Suno tracks from kept music seeds and full-song visualizers from kept tracks, and 1-3 directions to confirm - all for YouTube video (Shorts ~30 s, videos up to 5 min) - inside a $15 Gemini night, and leave ONE Board packet pkt:scout:<night> for a few minutes of K/X in the morning. Successor of train-style and of dojo's hand-run corpus study. Wraps pipeline/scout.mts; it never keeps, rejects or commits anything on the Board. Invoke with /scout night [--dry] [--until HH:MM], /scout seeds [--dry], /scout folder <dir> [extract args], /scout status [<night>].
 argument-hint: "night [--dry] [--until HH:MM] | seeds [--dry] | folder <dir> | status [<night>]"
 allowed-tools: Read, Write, Edit, Bash, PowerShell, Glob, Grep, WebSearch, WebFetch, Monitor
 ---
@@ -271,6 +271,32 @@ night can ask: one picture of a rough intent, one keystroke to block it or devel
 5. One JSON array -> `npx tsx pipeline/scout.mts ideas <night> --json <file>`. One bad brief refuses the
    whole batch with its place and reason: fix it and resend. Do not wait for the drawings.
 
+### 1e. Storyboards - compose the kept ideas
+
+A kept idea is one picture of an intent; a storyboard proves it can become a whole video. Up to
+`storyboardCap` a night (`open --storyboards`, default 6, at most 12), one per line of the taste brief's
+`## Storyboards to make` (kept ideas of live committed nights that no night has composed yet), oldest
+first. Each is up to five rough frames drawn by Flux 2 dev on this box's ComfyUI (gpu.local, $0, ~8 GPU
+min for five frames, beside the night's clips and meshes) and the words below, judged WHOLE on the
+packet. The idea's artboard is read as WORDS - its prompt under the brief line - never as a reference.
+
+1. **Each storyboard** - `{fromIdea, title, paragraph, bullets, panels, use?, aim?}`:
+   - `fromIdea` - the line's `<night>/<c-id>`; the door refuses an idea that is not kept on a live
+     committed night, and a second storyboard for one idea (unless the first failed);
+   - `title` - the video as a headline (<= 90 chars);
+   - `paragraph` - the video's vision in one short paragraph (<= 480 chars): what happens, start to end;
+   - `bullets` - 3-6 lines (<= 140 chars each): the beats, the format and length (`a 30 s vertical short`,
+     `a 3-minute video`), the audience, the look in words, the hook;
+   - `panels` - 1-5 Flux prompts, one per beat, in order, words only: the subject, the staging, the
+     framing, the light. The idea's aspect carries over (a portrait idea draws 9:16 frames);
+   - `use` / `aim` - optional; absent, the idea's `use` carries over.
+   The words are craft, not content: no person, studio, title or franchise. In the `panels` write lower
+   case after each sentence's first word - the door refuses a capital mid-sentence there as a name.
+2. One JSON array -> `npx tsx pipeline/scout.mts storyboard <night> --json <file|->`; `--detach` leaves
+   the jobs to the worker (the card is shared with the night's clips). One bad brief refuses the whole
+   batch with its place and reason. On a dry night the storyboards are written as words only, no frame
+   drawn. Before closing, `storyboard <night> --collect` settles any detached job.
+
 ### 2. Discover - your judgement, the night's quality
 
 Aim for a packet of **about 20 rows**: ~8 style sources (grouped below into 3-5 extract runs), 3-4 scenes,
@@ -405,7 +431,7 @@ Append to `.vault/Scout/nights.md` (create it): the date, the night id, the pack
 `/board/pkt:scout:<night>`, counts by kind, Gemini settled and held USD and the uncapped line, the stop
 reason, `leads: N filed, M queued` (step 0, and `leads --json`), `seeds: batch <id> · N (C children,
 F fresh) · /board/pkt:seeds:<batch>`, `ideas: N drawn across G genres from S seeds, K kept ideas developed`,
-`music: N tracks, V visualizers`, `directions: N proposed`, and at most three
+`storyboards: N composed (F frames)`, `music: N tracks, V visualizers`, `directions: N proposed`, and at most three
 lines of what the night could not do (a source that refused, a doctor line). No narration of your process.
 
 ## /scout seeds [--dry]
@@ -442,6 +468,9 @@ interrupted job ids.
 - Do not re-read a source the doctor or the ingest refused through another tool.
 - Do not research a stats idea's real data on the night that proposes it, and never send a brief that is
   not `illustrative: true`.
+- **Do not run a full-video act for an idea without a kept storyboard** - the idea must be under
+  `## Ready for full video` in the taste brief (lib/foundry/scout/storyboard.ts `keptStoryboardFor`), and
+  the act names that storyboard. A scene clip is not a full video and stays ungated.
 
 ## Lessons
 

@@ -338,6 +338,53 @@ Per idea it authors the strip (`ideas/<c-NN>/strip.html`), lints it, and renders
 researched into a fixture, the block swapped, the full 240-frame render with its gates - is not built yet.
 `X` blocks it. Both land in `night.committed` with their reasons.
 
+## Storyboards
+
+The rung between a kept idea and a full video (spark `scout-storyboards`): an idea is one picture of an
+intent, and clips are made in isolation; a storyboard proves the idea can become a whole video before one
+is made. A storyboard grows from a KEPT idea - the next night, one per idea - and holds up to five rough
+frames and the seat's words: a title, a paragraph of the vision (<= 480 characters) and 3-6 bullets
+(<= 140 each: the beats, the format and length, the audience, the look, the hook).
+
+**The act.** `scout.mts storyboard <night> --json <file|->` takes a batch
+`[{fromIdea, title, paragraph, bullets, panels, use?, aim?}]` (`lib/foundry/scout/storyboard.ts`). The door
+is the batch's: one bad brief refuses it whole, before a candidate exists - `fromIdea` not kept on a live
+committed night (`direction.ts keptIdea`), a second storyboard for one idea (unless the first failed),
+bounds broken, more than five panels, or a name in the words (`scene.ts namesIn`: no person, studio or
+franchise; a capital mid-sentence reads as one). The candidate copies the idea's `fromSeed` and its
+aspect (a portrait idea draws 9:16 frames, any other 16:9).
+
+**The cap.** At most `storyboardCap` a night (`open --storyboards N`, default 6, at most 12; the muse
+wing has none), every storyboard counting, a failed one too; checked under the night's lock.
+
+**The frames.** One job per storyboard, `job:scout-storyboard:<night>:<c-NN>` (producer `scout-storyboard`,
+`lib/producers/scoutStoryboard.ts`), steps `panel:1..N`, on `gpu.local` naming the `comfy` engine, so it is
+admitted beside the night's LTX clips and TRELLIS meshes, never on top of them. Each panel is one Flux 2 dev
+frame (`lib/imaging/local/flux2.ts`: `flux2_dev_fp8mixed`, the Mistral 3 small text encoder, the Flux 2
+VAE, 20 steps, 1280x720 or 720x1280) from the panel's words alone - the idea's artboard is read as words,
+never handed in as a reference: the frames are a plan, not the final video's baseline. Each panel's seed is
+chosen at launch and recorded, so a retry draws the same frame. **$0**: a local model, priced
+`free: a local model` on the receipt, no spend row, never against the night's Gemini ceiling; the cost is
+**GPU minutes** (~96 s a frame, illustrative until measured: ~8 min for five), which the decision graph's
+effort reads off the job's gpu.local events. A panel ComfyUI refused leaves its frame empty and its
+sentence in `error` (`panel N: ...`); the storyboard goes on. With no frame at all it is `failed`. Frames
+land in `storyboards/<c-NN>/panel-N.png`; `storyboard <night> --collect` settles detached jobs. The client
+never POSTs `/free` - the ComfyUI is shared. `doctor` lists the three Flux files as a note.
+
+**A dry night** writes its storyboards `rendered` with no frame and launches nothing: the packet triages
+the words alone.
+
+**The gate.** A storyboard is judged WHOLE: its frames are `c-NN/panel-N` cells and its words `c-NN/words`.
+It is kept when its words cell is kept, or when any cell is kept and none rejected, on a live committed
+night (a night committed in parts counts only its committed cells). A kept storyboard is the root any
+full-video act must name - `keptStoryboardFor(nights, <night>/<c-id>)` is the code check, and the skill's
+rule is that no full-video act runs for an idea not under `## Ready for full video`. No full-video act
+exists yet; scene clips stay ungated. The taste brief lists `## Storyboards to make` (kept ideas with no
+storyboard) and `## Ready for full video` (kept storyboards, with their idea, title and paragraph). A
+storyboard does not take its idea off `## Ideas to develop`: the idea's scene, style or asset act is
+independent of it. On the graph a storyboard sits in its own `board` column between idea and run, linked
+from its idea; a kept one leaves no output node (nothing real exists until the video is made).
+
 ## The morning
 
 A closed, non-dry night with anything rendered is one pile in the Floor's image lane and one packet,
@@ -472,6 +519,7 @@ with character cards as 9:16 posters and 16:9 roleplay-situation scenes. Craft n
 | `ideas/<c-NN>.png` | the ideas and reels producers | an idea's tile: its studio artboard, or a stats idea's frame 120 |
 | `ideas/<c-NN>/brief.json`, `approach.json` | `ideas` | a stats idea's illustrative brief and approach, as sent |
 | `ideas/<c-NN>/strip.html` | the reels producer | a stats idea's strip, once it passed the lint |
+| `storyboards/<c-NN>/panel-<k>.png` | the storyboard producer | a storyboard's Flux frames, ours |
 | `tracks/<c-NN>/a<N>.mp3` | `track` (collect) | a track's Suno clips, ours |
 | `visualizers/<c-NN>/visualizer.mp4`, `visualizer - youtube.txt`, `still.<ext>` or `studio.<ext>` | `visualizer` (collect) | a full-song visualizer, its YouTube text and the still it played over |
 | `../seeds/<batch>/batch.json` | `seeds new` (whole, once); the Board's apply (`committed`, once) - under the batch's lock | one seed batch: `SeedBatch` |

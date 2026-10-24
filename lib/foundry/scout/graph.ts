@@ -6,12 +6,13 @@
 // THE NODES. A seed is `seed:<batch>/sd-NNN` (stage `seed`, or `derived` when it narrows a parent), its state
 // its batch's commit. A candidate is `cand:<night>/<c-id>`: an idea artboard (a stats idea is a `reel`) at
 // stage `idea`; a style, scene, game asset, direction, finding, watch line or track at stage `run`; a
-// visualizer at stage `output` - kept, it IS the output. Its state is the two-level triage rule (the Board's
+// visualizer at stage `output` - kept, it IS the output; a storyboard at stage `board`, linked from its idea. Its state is the two-level triage rule (the Board's
 // runVerdictOf): any kept cell keeps it, every cell rejected rejects it; an uncommitted candidate is its
 // render's (`pending`, `failed`) or `open`. What a kept run LEFT that is real is `out:<night>/<c-id>`: a
 // kept style's look, a scene's kept clip, a kept game asset's mesh, a kept finding's or watch line's
-// knowledge line. A dry commit admitted nothing, so it leaves no output; a kept reel, direction or track
-// leaves none either (a reel's real data, a direction's nights, a track's visualizer are later work).
+// knowledge line. A dry commit admitted nothing, so it leaves no output; a kept reel, direction, track or
+// storyboard leaves none either (a reel's real data, a direction's nights, a track's visualizer, a
+// storyboard's full video are later work).
 //
 // THE BRANCH. A candidate inherits its `fromSeed` seed's facets and sits under that seed's pause; with no
 // seed it is BEFORE_SEEDS. The groups are audience, then `<audience>/<genre>`, then BEFORE_SEEDS last.
@@ -88,6 +89,8 @@ export async function buildGraphs(o: GraphOptions = {}): Promise<Record<ScoutWin
 function stageKind(c: Candidate): { readonly stage: GraphStage; readonly kind: GraphKind } {
   if (c.kind === "idea") return { stage: "idea", kind: c.target === "stats" ? "reel" : "idea" };
   if (c.kind === "visualizer") return { stage: "output", kind: "visualizer" };
+  // A kept idea composed as frames + words before any full video (spark scout-storyboards): its own column.
+  if (c.kind === "storyboard") return { stage: "board", kind: "storyboard" };
   return { stage: "run", kind: c.kind };
 }
 
@@ -115,6 +118,7 @@ function labelOf(c: Candidate, n: Night, nights: readonly Night[]): string {
   switch (c.kind) {
     case "idea":
     case "direction":
+    case "storyboard":
       return c.title;
     case "finding":
       return c.claim;
