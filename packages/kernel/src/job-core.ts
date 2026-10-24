@@ -269,7 +269,7 @@ export type Booked = {
  */
 /**
  * `metered`, when given, is the job's spend as the meter has it AFTER this
- * step was booked there (spend/meter.ts `meterOf`), and it replaces the
+ * step was booked there (spend/projection.ts `meterOf`), and it replaces the
  * arithmetic below: the record is the meter's projection (decision 7). The
  * arithmetic stays as the pure statement of what each outcome costs, which the
  * meter's own booking (`chargeOutcome`) follows.
