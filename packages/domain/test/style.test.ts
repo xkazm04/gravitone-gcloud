@@ -164,6 +164,11 @@ describe("the view a screen is handed", () => {
     expect(styleView(sheet(0), 1, "2026-10-17T11:00:00.000Z").sheet).toMatchObject({ approved: PROOF_CAP, full: true });
     expect(styleView(sheet(1), 1, "2026-10-17T11:00:00.000Z").sheet).toMatchObject({ approved: PROOF_CAP, full: false });
   });
+  it("covers a tile with an approval that is still sent: before lineage yes, stale never", () => {
+    const old = proof("old", {}, false);
+    expect(styleSummary(style({ proofs: [old] }), 1, "2026-10-17T11:00:00.000Z").cover).toEqual(old.media);
+    expect(styleSummary(style({ proofs: [proof("s", { blockDigest: "00000000" })] }), 1, "2026-10-17T11:00:00.000Z").cover).toBeNull();
+  });
   it("counts an operator's keep and shows an agent's", () => {
     const v = styleView(style({ evidence: [kept("a"), kept("b", "agent")] }), 1, "2026-10-17T11:00:00.000Z");
     expect(v.evidence.map((e) => [e.by, e.counts])).toEqual([["operator", true], ["agent", false]]);
