@@ -181,9 +181,15 @@ describe("components", () => {
     expect(html).toContain("sweep-01");
   });
 
-  test("an article pile is paper with its title; an audio pile is waveforms", () => {
+  test("an article pile is paper with its title; an audio pile is waveforms when its peaks are known", () => {
     expect(renderToStaticMarkup(h(Pile, { title: "Agent budgets", media: "article", mode: "packet-review", source: "articles", runId: "r1", decided: 0, pending: 1, href: "/b" }))).toContain("Agent budgets");
-    expect(renderToStaticMarkup(h(Pile, { title: "suno", media: "audio", mode: "matrix-cull", source: "suno", runId: "suno/triage", decided: 0, pending: 3, href: "/b" })).match(/<svg/g)?.length).toBe(4);
+    const audio = { title: "suno", media: "audio", mode: "matrix-cull", source: "suno", runId: "suno/triage", decided: 0, pending: 3, href: "/b" } as const;
+    expect(renderToStaticMarkup(h(Pile, { ...audio, peaks: [[0.2, 0.8], [0.5], [0.1, 0.4]] })).match(/<svg/g)?.length).toBe(4);
+    // No peaks (the Floor's Weir read carries none): the pile's own data, never three blank strips.
+    const bare = renderToStaticMarkup(h(Pile, audio));
+    expect(bare.match(/<svg/g)?.length).toBe(1);
+    expect(bare).toContain(">suno/triage<");
+    expect(renderToStaticMarkup(h(Pile, { ...audio, peaks: [[], [], []] })).match(/<svg/g)?.length).toBe(1);
   });
 
   test("a run row draws its state in the job vocabulary and v1's error verbatim", () => {

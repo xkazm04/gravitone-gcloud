@@ -3,11 +3,11 @@
 // title, how far the operator is through it, and which desk it opens. The NEXT pile - the
 // oldest thing waiting on the operator - wears the amber ring.
 //
-// FACES. An article is paper (its title set on the top sheet), audio is three waveform sheets,
-// image and video piles draw the prototype's designed face - the source and the run id - because
-// v1's Weir item names no cover (lib/ledger/v1 WeirItem), and the prototype's own rule for a
-// pile with no readable cover was "a pile's own data, never a blank". A cover arrives with the
-// packet view (Phase 3 wave B); the face that draws it is added with the data that feeds it.
+// FACES. An article is paper (its title set on the top sheet), audio with known peaks is three
+// waveform sheets, and every other pile draws the prototype's designed face - the source and the
+// run id - because v1's Weir item names no cover and no peaks (lib/ledger/v1 WeirItem), and the
+// prototype's own rule for a pile with no readable cover was "a pile's own data, never a blank".
+// The face that draws a cover is added with the data that feeds it.
 //
 // THE RAIL. v1 counts a pile's decided items but not how they split (lib/ledger/v1 WeirItem
 // `decided`), so the rail is decided against pending - a solid run and the hatch - not the
@@ -106,7 +106,9 @@ function Face({ media, title, source, runId, peaks }: PileProps) {
       </>
     );
   }
-  if (media === "audio") {
+  // Waveform sheets only over peaks that were read: the Floor's Weir item carries none, and three
+  // dashed midlines are a picture of nothing, so a bare audio pile wears the designed face.
+  if (media === "audio" && peaks?.some((p) => p.length > 0) === true) {
     return (
       <>
         {[0, 1, 2].map((i) => (
