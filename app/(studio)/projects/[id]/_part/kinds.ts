@@ -38,7 +38,7 @@ export const asObj = (o: object): Obj => ({ ...o });
 export type Recs = ReadonlyMap<string, Obj>;
 
 /** The later kinds' working records, ONE LINE PER KIND, added with the kind's EDITOR_KINDS entry
- *  (L39: frames, motion, still; L40: score, cut, words, render, voice, article, strips). A kind in
+ *  (L39: frames, motion; L40: score, cut, words, render, voice, article, strips). A kind in
  *  EDITOR_KINDS without its line here fails the type of `RecOf` - the forcing function. */
 export type LaterRecs = L39Recs & L40Recs;
 /* L39 */

@@ -153,8 +153,8 @@ export function makeRealPart(deps: RealDeps): ServerPart {
  * transaction reads, a stale token answers the fresh receipt and writes nothing, and only then is
  * the act's job enqueued (L37 `enqueueActIn`: the same act on the same unit while its job is live
  * is that job - a double click is one purchase). The job runs under the part kind's producer on
- * the chosen option's lane; the receipt's mode decides dry or live (live needs an arm, refused
- * under GRAVITONE_DRY_ONLY).
+ * the chosen option's lane, and always DRY: the editor cannot arm live yet (receiptFor's
+ * decision 4), so no confirm here can spend.
  */
 function launchAct(deps: RealDeps, store: Store, projectId: string, key: string, act: PartActKind, token: string, actor: Actor, target?: string): Result<{ kind: "stale"; fresh: PartReceipt } | { kind: "go"; jobId: string; kind_: EditorKind }> {
   const now = deps.now();

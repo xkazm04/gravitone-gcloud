@@ -7,8 +7,9 @@
 //                as it is now - the editor redraws from the truth and nothing was written.
 //   undoPart     revert the last op still in effect, at a rev; same conflict rule.
 //   actReceipt   the price of a generating act before anything runs (COMMON decision 3).
-//   act          the receipt's confirm with its token: launched (the job id and the view after
-//                its dry landing), or stale with the fresh receipt and nothing launched.
+//   act          the receipt's confirm with its token: launched (the job id and the view once
+//                the job landed, or with it `running` when it outlasts the confirm's wait), or
+//                stale with the fresh receipt and nothing launched.
 //
 // Every verb answers the action core's envelope (app/_server/actionCore.ts), never a throw.
 
