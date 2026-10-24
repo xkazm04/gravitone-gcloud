@@ -211,6 +211,27 @@ test("11. google answers 200 and the body breaks mid-read -> `failed` dispatched
   expect(rows.map((r) => r.outcome)).toEqual(["failed"]);
 });
 
+test("12. leonardo started the generation, then its poll reports FAILED -> `failed` dispatched, 1 failed row", async () => {
+  // Leonardo charges at the start (the credit figure rides on the start answer), so a
+  // generation the poll later reports FAILED was billed. providers/leonardoFlare.ts books
+  // the same terminal status as dispatched; the Lucid Origin adapter must agree.
+  test.setTimeout(30_000); // one real 3 s poll interval
+  delete process.env.GOOGLE_AI_API_KEY;
+  process.env.LEONARDO_API_KEY = "probe-leonardo-key";
+  stubFetch((_n, url, method) => {
+    if (method === "POST") return json({ sdGenerationJob: { generationId: "gen-failed", apiCreditCost: 10 } });
+    if (method === "DELETE") return json({});
+    return json({ generations_by_pk: { status: "FAILED" } });
+  });
+  const err = await failure(generate({ prompt: "probe poll failed", aspect: "16:9", count: 1 }));
+  expect(err.provider).toBe("leonardo");
+  expect(err.kind).toBe("failed");
+  expect(err.dispatched, "a generation Leonardo started and charged for was booked as never sent").toBe(true);
+  expect(count(LEONARDO, "POST")).toBe(1);
+  const rows = await spendRows();
+  expect(rows.map((r) => r.outcome)).toEqual(["failed"]);
+});
+
 test("9. one authority: the router's billing predicate IS errors.ts's presumedBilled", () => {
   expect(billedOnFailure).toBe(presumedBilled);
 });

@@ -225,8 +225,14 @@ async function poll(id: string, headers: Record<string, string>): Promise<string
 
     const job = res.generations_by_pk;
     const status = job?.status?.toUpperCase();
-    if (status === "FAILED")
-      throw new ImagingError("Leonardo reported the generation failed.", "failed", "leonardo", res);
+    // Dispatched: the start already charged (its answer carries the credit figure),
+    // so a generation that later fails was billed, and the meter must book it
+    // (errors.ts presumedBilled). leonardoFlare.ts marks the same status the same way.
+    if (status === "FAILED") {
+      const err = new ImagingError("Leonardo reported the generation failed.", "failed", "leonardo", res);
+      err.dispatched = true;
+      throw err;
+    }
     // Leonardo surfaces a safety block as its own terminal status rather than
     // an error — same meaning as a Google refusal, so same kind.
     if (status === "NSFW")
