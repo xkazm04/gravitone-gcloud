@@ -5795,4 +5795,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "(e: unknown): ActionResult<T> => { throw e; },",
     why: "settle passes a rejection on instead of answering it: a pin whose request dropped leaves the acts disabled by busy until a reload.",
   },
+  {
+    id: "library-fixture-searches-columns",
+    test: "tests/next-server/library-fixture-parity.test.ts",
+    file: "app/(studio)/library/_port/fixtureCorpus.ts",
+    find: "(g === \"source\" || g === \"attention\" ? [] :",
+    replace: "(false ? [] :",
+    why: "The fixture Library's free words find every item by its source (\"fixture\" finds 5,000) where the kernel's index, which does not search that column, finds none.",
+  },
 ];

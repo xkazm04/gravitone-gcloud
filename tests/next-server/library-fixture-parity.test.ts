@@ -73,3 +73,16 @@ describe("a rail value is labelled as the index labels it", () => {
     });
   }
 });
+
+describe("a free word finds what the index's search text holds", () => {
+  // The index searches the title, the meta and its haystack: the id, every facet value and label,
+  // the lineage ids, the state and the origin (kernel library/core.ts indexRowOf) - not the source,
+  // not the attention column, and nothing the projection never wrote.
+  const WORDS = ["fixture", "derived", "media", "chalk", "rain city", "ratified", "suno", "image 0003", "plate-0001"];
+  for (const q of WORDS) {
+    it(q, () => {
+      const { fixture, real } = pages({ q, limit: 500 });
+      expect({ total: fixture.total, kinds: fixture.kindCounts }).toEqual({ total: real.total, kinds: real.kindCounts });
+    });
+  }
+});

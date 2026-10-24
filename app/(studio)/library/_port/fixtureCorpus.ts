@@ -63,6 +63,16 @@ export function labelOf(group: string, value: string): string {
   return words(value);
 }
 
+/**
+ * The search text, by the index's rule (kernel library/core.ts `indexRowOf`, searched with the title
+ * and the meta): the id, every facet value and its label, the lineage ids, the state and the origin.
+ * The source and the attention are columns the index does not search.
+ */
+function hayOf(raw: Raw, meta: string, f: Readonly<Record<string, readonly string[]>>): string {
+  const vals = Object.entries(f).flatMap(([g, vs]) => (g === "source" || g === "attention" ? [] : vs.flatMap((v) => [v, labelOf(g, v)])));
+  return normText([raw.title, meta, raw.id, ...vals, ...(raw.lineage ?? []).map((l) => l.id)].join(" "));
+}
+
 const T0 = Date.parse("2025-11-03T00:00:00Z");
 const T1 = Date.parse("2026-10-13T20:00:00Z");
 
@@ -118,8 +128,7 @@ export function buildCorpus(): readonly FixtureRecord[] {
       chips,
       ...(raw.kind === "model" && d.poster !== undefined ? { poster: d.poster } : {}),
     };
-    const vals = Object.entries(f).flatMap(([g, vs]) => vs.flatMap((v) => [v, labelOf(g, v)]));
-    const hay = normText([raw.title, raw.id, d.meta, ...vals].join(" "));
+    const hay = hayOf(raw, d.meta, f);
     const { meta: _meta, ...rest } = d;
     void _meta;
     out.push({ ...rest, row, hay, t: raw.at === undefined ? 0 : Date.parse(raw.at) });
@@ -302,10 +311,12 @@ function derive(all: FixtureRecord[], r: () => number): FixtureRecord[] {
     const parent = all.find((p, j) => j < i && p.raw.kind === x.raw.kind && p.raw.source === "fixture");
     if (parent === undefined) return x;
     const f = { ...x.f, source: ["derived"] };
+    const raw: Raw = { ...x.raw, source: "derived", lineage: [{ kind: "library-item", id: parent.raw.id }] };
     return {
       ...x,
       f,
-      raw: { ...x.raw, source: "derived", lineage: [{ kind: "library-item", id: parent.raw.id }] },
+      raw,
+      hay: hayOf(raw, x.row.meta, f),
       row: { ...x.row, source: "derived" },
       lineage: [{ role: "derived from", ref: { kind: "library-item", id: parent.raw.id }, label: parent.raw.title, itemId: parent.raw.id }, ...x.lineage],
     };
