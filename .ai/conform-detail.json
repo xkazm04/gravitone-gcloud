@@ -9941,6 +9941,41 @@
       "evaluatedTs": "2026-10-24T00:23:15.564Z",
       "worker": "f33be498-c49d-4fa5-aa98-decaf03f1d07",
       "techniques": []
+    },
+    "0335f0dc-2987-4b19-96e1-58941a70c9d5/mcp-tools": {
+      "context": "foundry-extract-engine",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T00:41:42.048Z",
+      "worker": "b1e51a97-1bb9-40ec-818c-e1b7f2455e43",
+      "techniques": []
+    },
+    "e481098a-3532-46d9-bdc9-de84fbc2ce01/mcp-tools": {
+      "context": "foundry-forge-store-and-verdicts",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T00:41:42.048Z",
+      "worker": "b1e51a97-1bb9-40ec-818c-e1b7f2455e43",
+      "techniques": []
+    },
+    "8c6c65cc-6679-4c2c-8951-670d77b8ad7c/mcp-tools": {
+      "context": "imaging-gateway-and-spend",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T00:41:42.048Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "b1e51a97-1bb9-40ec-818c-e1b7f2455e43",
+        "state": "not-applicable",
+        "at": "2026-10-24T00:42:09.337856+00:00",
+        "reason": "reviewer (sonnet): The anchor (handlers.ts:5) only says the routes were retired and does not show that no tool surface exists, and lib/imaging/providers/agy.ts prompts an agent CLI to call its own generate_image tool, so \"publishes no tool catalog and consumes no tool results\" is not cleanly supported."
+      }
     }
   }
 }

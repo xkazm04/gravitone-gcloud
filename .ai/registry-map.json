@@ -4778,7 +4778,11 @@
           "revision": 34,
           "changedAt": "2026-10-15",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:4 The extract engine is a resumable step machine driven by a CLI, a route kick and a kernel job, and it calls vision/image vendors directly; a grep of lib/foundry/extract for mcp, modelcontextprotocol, tools/call, inputSchema and tool_use found no tool protocol or function-calling surface.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ed8e615f51454325",
+          "evaluatedRevision": 34
         },
         {
           "subject": "voice-io",
@@ -4963,7 +4967,11 @@
           "revision": 34,
           "changedAt": "2026-10-15",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/foundry/store.ts:4 The forge store, verdict log, commit plan and catalogue are a server-side disk and kernel-store layer behind the human cull, with no tool server or client; a grep of lib/foundry for mcp, modelcontextprotocol, tools/call, inputSchema and jsonrpc returned no hits.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ed8e615f51454325",
+          "evaluatedRevision": 34
         },
         {
           "subject": "agent-runtime-assembly",
