@@ -5867,4 +5867,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "return y.t - x.t || x.row.id.localeCompare(y.row.id);",
     why: "The fixture Library breaks a tie on the date by id where the kernel breaks it by the newer write, so the newest page leads with a different character and the undated documents run backwards.",
   },
+  {
+    id: "library-fixture-id-token-prefix",
+    test: "tests/next-server/library-fixture-parity.test.ts",
+    file: "app/(studio)/library/_port/fixture.ts",
+    find: "if (!x.row.id.toLowerCase().includes(t.value.toLowerCase())) return false;",
+    replace: "if (!x.row.id.toLowerCase().startsWith(t.value.toLowerCase())) return false;",
+    why: "The fixture Library reads id:0042 as a prefix and finds nothing, where the kernel reads it as a substring and finds the six items numbered 0042.",
+  },
 ];

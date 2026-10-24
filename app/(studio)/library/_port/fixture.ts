@@ -85,7 +85,7 @@ function ordered(u: Universe, sort: NonNullable<LibraryQuery["sort"]>): FixtureR
   return a;
 }
 
-const kindWords = (k: string): string => `${k} ${normText(KIND_LABELS.find((x) => x.kind === k)?.short ?? k)}`;
+const kindMatches = (k: string, v: string): boolean => k.includes(v) || normText(KIND_LABELS.find((x) => x.kind === k)?.short ?? k).includes(v);
 
 /** Does the item answer the parsed search? Words prefix a word of its text; tokens hit a field. */
 export function matches(x: FixtureRecord, p: ParsedSearch): boolean {
@@ -94,10 +94,11 @@ export function matches(x: FixtureRecord, p: ParsedSearch): boolean {
     for (const w of p.words) if (!ws.some((h) => h.startsWith(w))) return false;
   }
   for (const t of p.tokens) {
+    // `kind:` and `id:` match a substring, as the kernel's clauses do (kernel library/clauses.ts).
     if (t.key === "kind") {
-      if (!kindWords(x.row.kind).split(" ").some((h) => h.startsWith(t.value))) return false;
+      if (!kindMatches(x.row.kind, t.value)) return false;
     } else if (t.key === "id") {
-      if (!x.row.id.toLowerCase().startsWith(t.value.toLowerCase())) return false;
+      if (!x.row.id.toLowerCase().includes(t.value.toLowerCase())) return false;
     } else {
       const vals = x.f[t.key] ?? [];
       if (!vals.some((v) => normText(v).includes(t.value) || normText(labelOf(t.key, v)).includes(t.value))) return false;

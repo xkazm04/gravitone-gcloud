@@ -120,3 +120,15 @@ describe("a page is the same window of the same order", () => {
     });
   }
 });
+
+describe("a key:value token matches what the index's clause matches", () => {
+  // kernel library/clauses.ts clausesOf: `id:` is a substring of the id, `kind:` a substring of a
+  // kind or its short label, a column token a substring of the column's value alone.
+  const TOKENS = ["id:0042", "id:MODEL:mesh", "kind:ate", "kind:doc", "attention:media", "attention:miss", "state:rat", "mood:ten"];
+  for (const q of TOKENS) {
+    it(q, () => {
+      const { fixture, real } = pages({ q, limit: 500 });
+      expect({ total: fixture.total, kinds: fixture.kindCounts, ids: fixture.items.map((r) => r.id) }).toEqual({ total: real.total, kinds: real.kindCounts, ids: real.items.map((r) => r.id) });
+    });
+  }
+});
