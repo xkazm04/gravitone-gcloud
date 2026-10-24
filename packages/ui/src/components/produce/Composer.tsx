@@ -24,7 +24,7 @@ import { cx } from "../cx.ts";
 import { ErrorLine } from "../errorline/ErrorLine.tsx";
 import { Keycap } from "../keycaps/Keycaps.tsx";
 import { SourceTag } from "../source/SourceTag.tsx";
-import { costWords, fmtDur } from "./produce.ts";
+import { costWords, fmtDur, totalPriced } from "./produce.ts";
 import { Unpriced } from "./Unpriced.tsx";
 import s from "./Composer.module.css";
 
@@ -69,7 +69,7 @@ export function Estimate({ receipt, noun, error }: EstimateProps) {
   const t = receipt.totals;
   const units = receipt.lines.reduce((n, l) => n + l.units, 0);
   const unpriced = receipt.lines.find((l) => l.usd === null);
-  const priced = t.usdRange !== undefined || t.unpriced < receipt.lines.length;
+  const priced = totalPriced(receipt);
   return (
     <div className={s.estimate} data-component="Estimate" aria-live="polite">
       <span>

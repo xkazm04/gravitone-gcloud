@@ -167,6 +167,15 @@ describe("markup", () => {
     expect(html).not.toContain("$");
   });
 
+  test("an all-unpriced receipt draws no cost total: credits work never reads $0", () => {
+    const credits = receipt([line("score", SUNO, 2, 1, 0)]);
+    const html = renderToStaticMarkup(h(Receipt, { receipt: credits, ceiling: "", onCeiling: noop, onConfirm: noop, busy: false, nowMs: NOW }));
+    expect(html).toContain("unpriced");
+    expect(html).not.toMatch(/\$\d/);
+    const mixed = renderToStaticMarkup(h(Receipt, { receipt: receipt([line("frames", NANO, 24, 1, 0), line("score", SUNO, 2, 1, 0)]), ceiling: "", onCeiling: noop, onConfirm: noop, busy: false, nowMs: NOW }));
+    expect(mixed).toContain("$0.96");
+  });
+
   test("a stale receipt marks its moved cells for every reader, and counts them", () => {
     const a = receipt([line("frames", FLUX, 24, 2, 10)]);
     const b = receipt([line("frames", FLUX, 24, 3, 40)], { token: "t2", queuePos: 3 });

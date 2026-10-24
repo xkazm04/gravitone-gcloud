@@ -148,6 +148,13 @@ export function receiptChanges(before: Receipt, after: Receipt): ReceiptChanges 
   };
 }
 
+/**
+ * Does the receipt's total carry a price at all? Not when every line is unpriced: then its `usd`
+ * is a 0 nobody measured, and an unpriced figure is never a dollar sign. The Estimate and the
+ * Receipt both read this, so the line above Launch and the receipt behind it cannot disagree.
+ */
+export const totalPriced = (r: Pick<Receipt, "totals" | "lines">): boolean => r.totals.usdRange !== undefined || r.totals.unpriced < r.lines.length;
+
 export const changeCount = (c: ReceiptChanges): number => c.lines.size + c.added.length + c.removed.length + c.totals.size;
 
 /** The ceiling field's text as dollars: empty is no ceiling; anything else must be an amount >= 0. */

@@ -25,7 +25,7 @@ import { FIELD_ATTR } from "../../keymap/target.ts";
 import { Keycap } from "../keycaps/Keycaps.tsx";
 import { LaneChip } from "../runs/LaneChip.tsx";
 import { SourceTag } from "../source/SourceTag.tsx";
-import { changeCount, costWords, fmtDur, fmtUsd, NO_CHANGES, mayStopAtCeiling, parseCeiling, when, type LineField, type ReceiptChanges } from "./produce.ts";
+import { changeCount, costWords, fmtDur, fmtUsd, NO_CHANGES, mayStopAtCeiling, parseCeiling, totalPriced, when, type LineField, type ReceiptChanges } from "./produce.ts";
 import { Unpriced } from "./Unpriced.tsx";
 import s from "./Receipt.module.css";
 
@@ -109,9 +109,11 @@ export function Receipt({ receipt: r, changes = NO_CHANGES, ceiling, onCeiling, 
           <span className={mark("seconds")}>
             <Chip label="work" value={fmtDur(t.seconds)} />
           </span>
-          <span className={mark("cost")}>
-            <Chip label="cost" value={t.usdRange !== undefined ? costWords(t) : fmtUsd(t.usd)} />
-          </span>
+          {totalPriced(r) && (
+            <span className={mark("cost")}>
+              <Chip label="cost" value={t.usdRange !== undefined ? costWords(t) : fmtUsd(t.usd)} />
+            </span>
+          )}
           {t.unpriced > 0 && <Chip label="unpriced" value={t.unpriced} tone="violet" />}
           <SourceTag kind={t.src} />
         </span>
