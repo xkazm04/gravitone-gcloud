@@ -1,7 +1,8 @@
 import "server-only";
 
 // THE FIXTURE CALENDAR - the slots the Floor's rail, month and slot level are built, driven and
-// photographed against while the slot store is not yet the kernel's (wave A of Phase 6). Every
+// photographed against in the fixture universe (GRAVITONE_PRODUCE_SIDE=fixture, ./port.ts); the
+// real side has read the kernel's slot store since Phase 6 wave B (./real.ts). Every
 // row is a domain Slot (@gt/domain/slot) and goes through `slotSchema` at the door
 // (./fixture.ts), so a fixture that breaks an invariant - a failed slot with no sentence, a
 // claim on a slot that is not publishing - fails at boot rather than drawing a state the

@@ -214,6 +214,6 @@ function ShelfBody({ lane, shelf }: { readonly lane: FloorLane; readonly shelf: 
       </ShelfCell>
     );
   }
-  // Projects live in the browser until Phase 4 (./shelf.ts); the column is their door.
+  // Projects are not read into this column yet (./shelf.ts); the column is their door.
   return <ShelfCell title={lane.shelf} href="/projects" extra={<Chip label="runs ›" tone="cyan" href="/projects/runs" />} />;
 }

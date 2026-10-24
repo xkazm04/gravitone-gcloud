@@ -18,9 +18,9 @@ import { ledgerFor } from "../../_shell/links.ts";
 //            fixture store (lib/ledger/v1/sources/roots.ts says why v1's own reader cannot).
 //   audio    kept takes (lib/sound/takes.ts listTakes, verdict `kept`), fixture takes only in
 //            the fixture universe, as v1's own filter rule has it.
-//   video    PROJECTS. v1 keeps projects in the browser (IndexedDB, lib/studioArchive.ts), so
-//            the server cannot list them until Phase 4 imports them; the column draws its head
-//            and a door to /projects, and no count - a count of zero would be a false claim.
+//   video    PROJECTS. The kernel has held them since Phase 4 (the produce port's listProjects,
+//            ../../projects/_port), but this column does not read them yet: it draws its head
+//            and a door to /projects, and no count - a count it did not read would be a false claim.
 //
 // Each read fails on its own: one unreadable store is a line in that shelf, not a blank floor.
 
