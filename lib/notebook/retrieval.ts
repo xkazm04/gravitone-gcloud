@@ -60,7 +60,10 @@ function citedUrls(sources: readonly { url?: string; locator?: string }[] | unde
   const out: string[] = [];
   for (const s of sources ?? []) {
     if (typeof s.url === "string" && /^https?:\/\//i.test(s.url.trim())) out.push(s.url.trim());
-    if (typeof s.locator === "string") for (const m of s.locator.matchAll(/https?:\/\/[^\s)"'<>]+/gi)) out.push(m[0]);
+    // A locator is prose, so the sentence's own punctuation after an address
+    // ("…/report, p. 4", "…/report.") is not part of the page's path.
+    if (typeof s.locator === "string")
+      for (const m of s.locator.matchAll(/https?:\/\/[^\s)"'<>]+/gi)) out.push(m[0].replace(/[.,;:!?]+$/, ""));
   }
   return [...new Set(out)];
 }

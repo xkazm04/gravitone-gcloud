@@ -224,6 +224,19 @@ test("retrieve cross-check: a high fact citing an unfetched URL is downgraded, w
   expect(nb.facts.find((f) => f.id === "f-recalled")!.confidence).toBe("high");
 });
 
+test("retrieve cross-check: a fetched page cited in prose is fetched, whatever punctuation follows it", () => {
+  // A locator is prose ("page 4", "table 2"), and the URL inside it is followed
+  // by whatever the sentence needed. The page this run fetched is the same page.
+  const nb = parseNotebook(NOTEBOOK, "harbour dredging costs");
+  const receipt = { url: "https://example.org/report", query: null, fetchedAt: "2026-10-24T00:00:00Z" } as never;
+  const locators = ["https://example.org/report, p. 4", "see https://example.org/report.", "https://example.org/report; table 2", "(https://example.org/report)"];
+  const downgraded = locators.filter((locator) => {
+    const fact = { ...nb.facts[0], confidence: "high" as const, sources: [{ name: "report", evidenceClass: "primary" as const, locator }] };
+    return crossCheckRetrieval({ ...nb, facts: [fact] }, [receipt]).notebook.facts[0].confidence !== "high";
+  });
+  expect(downgraded).toEqual([]);
+});
+
 /* ── case 4: no tool call, no "researched" ───────────────────────────────── */
 
 test("retrieve cross-check: zero receipts still requires researchGaps[0] to name the missing search", () => {
