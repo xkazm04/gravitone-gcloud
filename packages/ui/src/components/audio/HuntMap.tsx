@@ -94,7 +94,7 @@ function Leaf({ leaf, p }: { readonly leaf: HuntLeafView; readonly p: HuntMapPro
   const hand = p.reach[leaf.provider] === "hand";
   const on = take !== undefined && p.playing === take.id;
   return (
-    <div className={cx(s.leaf, s[`leaf_${leaf.state}`], picked && s.picked, leaf.winner && s.won)} data-leaf={leaf.id}>
+    <div className={cx(s.leaf, s[`leaf_${leaf.state}`], picked && s.picked, leaf.winner && s.won)} data-leaf={leaf.id} role="group" aria-label={leaf.label}>
       <div className={s.leafHead}>
         <button type="button" className={s.pick} aria-pressed={picked} onClick={(e) => p.onPick(leaf.id, { shift: e.shiftKey, toggle: e.metaKey || e.ctrlKey })}>
           <span className={cx(s.box, picked && s.boxOn)} aria-hidden="true" />

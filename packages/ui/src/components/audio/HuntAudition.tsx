@@ -55,7 +55,7 @@ export function HuntAudition({ heard, takes, playing, crowning, onPlay, onCrown 
         if (take === undefined) return null;
         const on = playing === take.id;
         return (
-          <div key={leaf.id} className={cx(s.take, on && s.takeOn, leaf.winner && s.won)}>
+          <div key={leaf.id} className={cx(s.take, on && s.takeOn, leaf.winner && s.won)} role="group" aria-label={leaf.label}>
             <span className={s.takeAxis}>{leaf.axis}</span>
             <div className={s.takeHead}>
               {take.src !== null && (

@@ -7,7 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
 import { admitCrown, buildTree, headTake, INTERRUPTED, reconcile, renderPlan, type AuditionTake, type HuntLeafView } from "../../src/components/audio/hunt.ts";
-import { carryFrom, stepTake } from "../../src/components/audio/HuntAudition.tsx";
+import { carryFrom, HuntAudition, stepTake } from "../../src/components/audio/HuntAudition.tsx";
 import { HuntMap } from "../../src/components/audio/HuntMap.tsx";
 import { HuntShelf } from "../../src/components/audio/HuntShelf.tsx";
 import { HuntRenderBar } from "../../src/components/audio/HuntRenderBar.tsx";
@@ -165,6 +165,18 @@ describe("drawn", () => {
     expect(html).toContain('aria-label="return the Suno file for c"');
     expect(html.match(/return the Suno file for/g)).toHaveLength(1);
     expect(html).toMatch(/aria-pressed="true"[^>]*><span[^>]*><\/span><span[^>]*>d</);
+  });
+
+  test("each leaf's Crown and Copy prompt, on the map and in the audition, sit in a group named for the leaf", () => {
+    const acts = (html: string): [string, string[]][] =>
+      html.split(/(?=role="group" aria-label=")/).flatMap((part) => {
+        const name = /^role="group" aria-label="([^"]*)"/.exec(part)?.[1];
+        return name === undefined ? [] : [[name, [...part.matchAll(/>(Crown|Uncrown|Copy prompt)</g)].map((m) => m[1] ?? "")]];
+      });
+    expect(acts(renderToStaticMarkup(h(HuntMap, props)))).toEqual([["hunt map", []], ["a", ["Uncrown"]], ["b", ["Crown"]], ["c", ["Copy prompt"]], ["d", []]]);
+    const heard = buildTree(MAP).leaves.filter((l) => l.state === "rendered");
+    const aud = renderToStaticMarkup(h(HuntAudition, { heard, takes: props.takes, playing: null, crowning: new Set<string>(), onPlay: () => undefined, onCrown: () => undefined }));
+    expect(acts(aud)).toEqual([["audition", []], ["a", ["Uncrown"]], ["b", ["Crown"]]]);
   });
 
   test("the render bar counts the seconds and disarms with nothing to render", () => {
