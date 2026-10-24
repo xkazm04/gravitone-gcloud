@@ -30,7 +30,7 @@ import { TimeStrip } from "@gt/ui/components/timestrip/TimeStrip.tsx";
 import type { ActionResult } from "../../../_server/actionCore.ts";
 import { useShell } from "../../_shell/Providers.tsx";
 import { subjectLink } from "../../_shell/links.ts";
-import { Detail } from "./Detail.tsx";
+import { Detail, settled } from "./Detail.tsx";
 import { Facets as FacetRail } from "./Facets.tsx";
 import { useLedgerFeed } from "./feed.ts";
 import { EMPTY, isFiltered, toSearch, type LedgerFilter } from "./filter.ts";
@@ -92,7 +92,7 @@ export function Ledger(p: LedgerProps) {
   const loadOlder = useCallback(async () => {
     if (tail.cursor === undefined || loading) return;
     setLoading(true);
-    const r = await p.older({ search: p.search, cursor: tail.cursor });
+    const r = await settled(p.older({ search: p.search, cursor: tail.cursor }));
     setLoading(false);
     if (!r.ok) return toast(`ledger: ${r.error.error}`);
     setMore((m) => withOlder(m, p.page.events, r.value));

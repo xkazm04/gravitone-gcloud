@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Event } from "@gt/domain/event";
 
 import { ledgerFor, sourceOf, subjectLink } from "../../app/(studio)/_shell/links.ts";
+import { settled } from "../../app/(studio)/ledger/_ledger/Detail.tsx";
 import { rowsOf, withOlder } from "../../app/(studio)/ledger/_ledger/Ledger.tsx";
 import { EMPTY, identity, matchesPost, parseParams, parseQuery, splitFilter, toSearch, windowOf, type LedgerFilter } from "../../app/(studio)/ledger/_ledger/filter.ts";
 import { backoff, parseFrames } from "../../app/(studio)/ledger/_ledger/sse.ts";
@@ -179,5 +180,16 @@ describe("the rows drawn", () => {
     const more = withOlder(withOlder(null, run(10, 6), page(run(5, 3))), run(10, 6), page(run(2, 1)));
     expect(rowsOf(run(10, 6), more).map((x) => x.seq)).toEqual([10, 9, 8, 7, 6, 5, 4, 3, 2, 1]);
     expect(rowsOf(run(10, 6), null).map((x) => x.seq)).toEqual([10, 9, 8, 7, 6]);
+  });
+});
+
+describe("the page's two reads after render", () => {
+  it("a Server Action that rejects answers as a refusal with its words, never as a rejection", async () => {
+    // A request that never came back (a dropped connection, a redeploy) REJECTS; it does not
+    // answer ok: false. Unsettled, "older" stays disabled on "reading" and related never draws.
+    const r = await settled(Promise.reject(new TypeError("Failed to fetch")));
+    expect(r).toEqual({ ok: false, error: { error: "Failed to fetch", code: "unavailable" } });
+    const fine = await settled(Promise.resolve({ ok: true as const, value: 3 }));
+    expect(fine).toEqual({ ok: true, value: 3 });
   });
 });
