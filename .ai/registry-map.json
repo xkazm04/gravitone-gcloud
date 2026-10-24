@@ -10073,7 +10073,11 @@
           "revision": 15,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/produce/produce.ts:153 mayStopAtCeiling holds only the priced total against the operator's ceiling. A job made of unpriced lines (credits, seats) is therefore presented as never able to reach its ceiling, and unknown cost counts as zero under the ceiling, which is what price-tables' 'never zero' rule forbids.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7247db31eb8f3dce",
+          "evaluatedRevision": 15
         },
         {
           "subject": "test-harness",
@@ -11936,7 +11940,11 @@
           "revision": 15,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/spend/ledger.ts:197 reserve() dedupes a caller-minted id against a prior reservation in any state, so a retry with an id whose hold was already released (or settled) gets ok with no live hold and the vendor is called against a debit that no longer exists; this is the closed-attempt free pass the reversible-debit technique exists to name.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7247db31eb8f3dce",
+          "evaluatedRevision": 15
         },
         {
           "subject": "generative-provider-routing",
@@ -12748,7 +12756,11 @@
           "revision": 15,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/text/spend.ts:108 A failed reasoning turn gets a ledger row only when its error carries a vendor cost, and no adapter attaches one. In practice every failed turn that reached Claude or Google leaves no row, so the ledger under-reads during retry storms.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7247db31eb8f3dce",
+          "evaluatedRevision": 15
         },
         {
           "subject": "voice-io",

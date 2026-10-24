@@ -11526,6 +11526,145 @@
           "evidence": "packages/producers/src/research/followUp.ts:17 The notebook is discrete text records, so there are no continuous-media seams."
         }
       ]
+    },
+    "5e00d05c-885e-4eac-ad26-f937df9d612f/cost-metering": {
+      "context": "spend-and-pricing",
+      "subject": "cost-metering",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:20:18.918Z",
+      "worker": "5a748112-d404-451a-b4bc-3bd16bca942e",
+      "techniques": [
+        {
+          "technique": "reversible-debit-and-settle",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/spend/ledger.ts:197 Release, settle and lapse are a real lifecycle, and the comment in core.ts cites this technique. But the dedupe never checks prior.state, so it does not report an open-vs-closed dedupe and never walks to a fresh attempt id. stepMeter mints random UUIDs, but meteredCall takes the caller's id."
+        },
+        {
+          "technique": "budget-enforcement",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/spend/ledger.ts:210 The refusal happens before any vendor call. It is counted and evented in the same transaction, and it is machine-readable (scope, ceiling, spent, held, lapsed). Null means count-only and 0 means spend nothing, both explicit."
+        },
+        {
+          "technique": "usage-ledgers",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/spend/ledger.ts:248 Strong on append-only triggers, failed rows, the window as a query and counted late writes. But an unpriced entry's row drops its outcome (served/failed), and no row stores raw units or a model column."
+        },
+        {
+          "technique": "price-tables",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/spend/ledger.ts:253 The table itself is exemplary: one key, dated rows, validUntil, a vendor figure that wins. But the ledger row stores only the currency amount and basis, with no units and no rate or checked date, so it is an orphan number after a reprice. An unknown model is booked as unpriced (null) rather than at a declared conservative default."
+        },
+        {
+          "technique": "preflight-estimation",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/spend/ledger.ts:291 Hard gate on the reserved estimate (dearestRate errs high). Each settle event records the estimate (held) beside the actual (total). No monitor of that gap was found in this context."
+        },
+        {
+          "technique": "spend-attribution",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/spend/ledger.ts:243 The job and step run axis is captured at write time. A row booked without an axis just gets NULL, and the kernel has no counted unattributed bucket. grep for 'unattributed' in packages/kernel/src/spend finds nothing."
+        },
+        {
+          "technique": "spend-observability",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/spend/ledger.ts:360 stats() returns the window boundary with the totals, plus counters for refusals, bookedFailed and failed, unpriced, lapsed and lateWrites."
+        },
+        {
+          "technique": "unit-classes-are-open",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/pricing/quote.ts:16 quote() returns null (unpriced, with its reason) for any billed unit without a figure, never a partial cost, and the ledger counts it."
+        },
+        {
+          "technique": "whole-prompt-denominator",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/pricing/table.ts:35 The kernel has no cached-token unit and computes no hit ratio, so there is nothing to subtract."
+        }
+      ],
+      "registryProposal": "price-tables requires a deliberately high default for an unknown model, while unit-classes-are-open prefers a null cost with the floor propagated. This repo prices every deliberately-unread rate (credit plans, seats, unread token rates) as null plus a counted reason. The corpus does not say which rule governs a KNOWN model whose rate is deliberately unread, and that case falls between the two techniques."
+    },
+    "94e6b933-0f6a-4631-b2f0-4c98b0799c28/cost-metering": {
+      "context": "text-reasoning-engine",
+      "subject": "cost-metering",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:20:18.918Z",
+      "worker": "5a748112-d404-451a-b4bc-3bd16bca942e",
+      "techniques": [
+        {
+          "technique": "usage-ledgers",
+          "verdict": "deviation",
+          "evidence": "lib/text/spend.ts:108 Failed turns without a vendor figure are dropped. A booking failure is also swallowed with only a console line (line 100), not counted."
+        },
+        {
+          "technique": "price-tables",
+          "verdict": "deviation",
+          "evidence": "lib/text/pricing.ts:64 A third live table (google.ts imports priceTurn from it) beside the kernel's merged table. Also, estimated and unpriced turns book no row at all (spend.ts:92), not a default-priced row. The CLI's vendor figure is kept verbatim (claudeCli.ts:118)."
+        },
+        {
+          "technique": "budget-enforcement",
+          "verdict": "deviation",
+          "evidence": "lib/text/spend.ts:5 text-usd is count-only by a recorded operator decision (2026-10-07), so no metered reasoning path consults any ceiling. It is honestly labelled, but it is still an unenforced spend path."
+        },
+        {
+          "technique": "spend-attribution",
+          "verdict": "conformant",
+          "evidence": "lib/text/spend.ts:56 Turn class, provider and model are written at settle time. A failed turn writes model 'unknown' (line 113), a sentinel rather than a counted bucket."
+        },
+        {
+          "technique": "unit-classes-are-open",
+          "verdict": "deviation",
+          "evidence": "lib/text/providers/google.ts:223 The decoder reads only promptTokenCount, candidatesTokenCount and thoughtsTokenCount; thoughts are nested into output, with the nesting declared. Any other reported class (cachedContentTokenCount, toolUsePromptTokenCount) is silently ignored, with no residual."
+        },
+        {
+          "technique": "whole-prompt-denominator",
+          "verdict": "conformant",
+          "evidence": "lib/text/providers/google.ts:366 Input is the whole-prompt count, with nothing subtracted."
+        },
+        {
+          "technique": "spend-observability",
+          "verdict": "conformant",
+          "evidence": "lib/text/spend.ts:128 Window totals and counters, plus spend by turn, provider, model and outcome, are exposed for a surface."
+        }
+      ]
+    },
+    "cd263cf6-0195-4db1-820d-2435a3af746c/cost-metering": {
+      "context": "produce-compose-receipt",
+      "subject": "cost-metering",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:20:18.918Z",
+      "worker": "5a748112-d404-451a-b4bc-3bd16bca942e",
+      "techniques": [
+        {
+          "technique": "price-tables",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/produce/produce.ts:153 Unpriced is counted, not priced at a declared conservative default, so it is free under the ceiling."
+        },
+        {
+          "technique": "budget-enforcement",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/produce/produce.ts:157 The per-run ceiling is a stop point, and the worst case (top of the band) is held against it before confirm."
+        },
+        {
+          "technique": "preflight-estimation",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/produce/Composer.tsx:83 The estimate is the receipt's own totals, shown before launch, with the basis tag beside it."
+        },
+        {
+          "technique": "unit-classes-are-open",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/produce/Receipt.tsx:113 The domain says totals.usd is a lower bound whenever unpriced > 0. The Receipt renders it with fmtUsd, so an all-unpriced receipt reads 'cost $0', not a floor. Composer guards this case with `priced`; Receipt does not."
+        },
+        {
+          "technique": "spend-observability",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/produce/Unpriced.tsx:23 An unpriced figure is a distinct shape carrying its reason, never a dollar amount, on the plan, the receipt and the composer."
+        }
+      ]
     }
   }
 }
