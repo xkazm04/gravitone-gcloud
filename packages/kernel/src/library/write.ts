@@ -50,7 +50,7 @@ function vidOf(t: Tx, grp: string, value: string, label: string): number {
   return Number(t.get("SELECT vid FROM library_values WHERE grp = ? AND value = ?", grp, value)?.["vid"]);
 }
 
-/** Pack value ids as uint32 little-endian (counts.ts `unpack` reads them). */
+/** Pack value ids as uint32 little-endian (counts.ts `fromScope` reads them back, a DataView over the blob). */
 export function packVids(ids: readonly number[]): Uint8Array {
   const out = new Uint8Array(ids.length * 4);
   const view = new DataView(out.buffer);
