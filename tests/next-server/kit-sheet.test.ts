@@ -31,6 +31,8 @@
 //   8. A glyph drawn alone in a specimen cell has an accessible name. The glyphs are aria-hidden
 //      (the control around one names it); the Library's kinds row named each cell role="img", the
 //      Floor's marks row only carried a `title` on a generic span, which no reader is bound to read.
+//   9. The Library's rail and its set summary count one set. The screen hands both the same
+//      kindCounts (library/_library/Library.tsx); the kit handed them two objects that disagreed.
 
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
@@ -288,3 +290,19 @@ describe("/kit: a glyph drawn alone is named", () => {
     expect(unnamed).toEqual([]);
   });
 });
+
+describe("/kit: the Library's rail and summary count one set", () => {
+  test("the rail's All is the sum of its kinds, and each kind counts the same in both", () => {
+    const html = renderToStaticMarkup(h(LibrarySection));
+    const railAt = html.indexOf('aria-label="Kind"');
+    const rail = new Map([...html.slice(railAt, html.indexOf("</section>", railAt)).matchAll(/class="_label_\w+">([^<]+)<\/span><span[^>]*aria-hidden="true">[^<]*<\/span><span class="[^"]+">, (\d+)<\/span>/g)].map((m) => [m[1] ?? "", Number(m[2])]));
+    const summary = new Map([...html.matchAll(/class="_ell_\w+">([^<]+)<\/span><span class="_n_\w+">([\d,]+)<\/span>/g)].map((m) => [m[1] ?? "", Number((m[2] ?? "").replaceAll(",", ""))]));
+    expect(rail.size, "the rail draws no kind").toBeGreaterThan(5);
+    const shared = [...summary.keys()].filter((label) => rail.has(label));
+    expect(shared.length, "the rail and the summary name no kind alike").toBeGreaterThan(5);
+    const kinds = [...rail].filter(([label]) => label !== "All").reduce((a, [, n]) => a + n, 0);
+    expect(rail.get("All"), "the rail's All against its kinds").toBe(kinds);
+    expect(shared.filter((label) => rail.get(label) !== summary.get(label)).map((label) => `${label}: rail ${rail.get(label)}, summary ${summary.get(label)}`)).toEqual([]);
+  });
+});
+

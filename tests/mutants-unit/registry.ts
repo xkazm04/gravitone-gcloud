@@ -5426,4 +5426,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "void 0;",
     why: "Leaving the landing while its raster worker is still starting leaves the worker running, and its hello then creates a WebGL context and paints the grain on the main thread for a page that is gone.",
   },
+  {
+    id: "kit-library-rail-counts-another-set",
+    test: "tests/next-server/kit-sheet.test.ts",
+    file: "app/(studio)/kit/LibraryKit.tsx",
+    find: "kindCounts={KIND_COUNTS}",
+    replace: "kindCounts={{ ...KIND_COUNTS, doc: 0 }}",
+    why: "The kit's Library rail counts no documents and an All its kinds do not add up to, beside a summary that counts 550 of them in the same set.",
+  },
 ];

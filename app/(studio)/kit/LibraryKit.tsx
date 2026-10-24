@@ -56,6 +56,9 @@ const GROUPS: readonly RailGroup[] = [
   { key: "source", label: "source", section: "origin", values: [v("fixture", 1013), v("derived", 112)] },
 ];
 
+/** One set's kinds, for the rail and the summary alike, as the screen hands both page.kindCounts. */
+const KIND_COUNTS = { all: 4875, image: 850, plate: 1841, style: 9, motion: 350, audio: 1125, video: 150, doc: 550 };
+
 const LINEAGE = [
   { role: "run", refs: [{ kind: "facet" as const, group: "run", value: "2026-09-01-dojo-cycle-7", label: "2026-09-01-dojo-cycle-7", ledger: "/ledger?q=2026-09-01-dojo-cycle-7", mono: true }] },
   { role: "this", self: true, refs: [{ kind: "text" as const, label: "plate" }] },
@@ -77,7 +80,7 @@ export function LibrarySection() {
         <div className={k.frame} data-role="lib-rail" style={{ ["--frame" as string]: "17em" }}>
           <Rail
             kind={kind}
-            kindCounts={{ all: 4875, image: 850, plate: 1841, style: 9, motion: 350, audio: 1125, video: 150, doc: 0 }}
+            kindCounts={KIND_COUNTS}
             groups={GROUPS}
             closed={closed}
             expanded={expanded}
@@ -165,7 +168,7 @@ export function LibrarySection() {
             of={4875}
             kind="all"
             states={{ reference: 1400, candidate: 3, ratified: 961, rejected: 1132, unjudged: 1379 }}
-            kinds={{ image: 850, plate: 1841, style: 9, motion: 350, audio: 1125, video: 150, doc: 550 }}
+            kinds={KIND_COUNTS}
             newest={CARDS.flatMap((c) => (c.face.kind === "image" ? [{ id: c.id, title: c.title, url: c.face.url }] : []))}
             onState={() => {}}
             onKind={setKind}
