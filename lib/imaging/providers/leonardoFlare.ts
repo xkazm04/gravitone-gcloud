@@ -325,13 +325,17 @@ export function leonardoFlareProvider(o: FlareOptions = {}): ImagingProvider {
   };
 
   async function poll(id: string, headers: Record<string, string>, key: string): Promise<{ url: string; job: Json }> {
+    // The last poll that errored, for the give-up: polls that all failed must not read as slow.
+    let lastPollError: string | null = null;
     for (let i = 0; i < maxPolls; i++) {
       await wait(pollMs);
       let res: Json;
       try {
         res = await requestJson<Json>("leonardo-flare", `${API}/v1/generations/${encodeURIComponent(id)}`, { headers, attempts: 1 });
-      } catch {
-        continue; // one bad poll is not a failed generation
+        lastPollError = null;
+      } catch (e) {
+        lastPollError = vendorError(e, key, "poll").message; // one bad poll is not a failed generation
+        continue;
       }
       const job = isObj(res.generations_by_pk) ? res.generations_by_pk : isObj(res.generation) ? res.generation : {};
       const status = String(job.status ?? "").toUpperCase();
@@ -348,7 +352,8 @@ export function leonardoFlareProvider(o: FlareOptions = {}): ImagingProvider {
         return { url, job };
       }
     }
-    throw new ImagingError(`Leonardo Flare did not finish generation ${id} within ${Math.round((maxPolls * pollMs) / 1000)} s.`, "timeout", "leonardo-flare");
+    const last = lastPollError === null ? "" : ` The last poll failed: ${lastPollError}`;
+    throw new ImagingError(`Leonardo Flare did not finish generation ${id} within ${Math.round((maxPolls * pollMs) / 1000)} s.${last}`, "timeout", "leonardo-flare");
   }
 }
 

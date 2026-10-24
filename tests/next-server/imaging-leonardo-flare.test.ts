@@ -175,6 +175,16 @@ describe("one generation, offline", () => {
     expect((await failure(provider().generate!(REQ))).message).toBe("Leonardo Flare did not finish generation g-1 within 180 s.");
   });
 
+  it("when every poll errors, the give-up carries the last poll's sentence, key redacted", async () => {
+    const w = fakeLeonardo({ ...happy(started()), [`GET ${API}/v1/generations/g-1`]: [{ status: 401, json: { error: `Invalid authentication token ${KEY}` } }] });
+    vi.stubGlobal("fetch", w.fetch);
+    const e = await failure(provider(15_000).generate!(REQ));
+    expect(e.kind).toBe("timeout");
+    expect(e.message).toMatch(/^Leonardo Flare did not finish generation g-1 within 15 s\./);
+    expect(e.message).toMatch(/Invalid authentication token/);
+    expect(e.message).not.toContain(KEY);
+  });
+
   it("refuses more than one image and an over-long prompt before anything is sent", async () => {
     const w = fakeLeonardo(happy(started()));
     vi.stubGlobal("fetch", w.fetch);
