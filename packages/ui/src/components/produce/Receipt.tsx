@@ -101,7 +101,7 @@ export function Receipt({ receipt: r, changes = NO_CHANGES, ceiling, onCeiling, 
   // The totals' marks speak to every reader, as the lines' cells do (Cell): the ring is for the eye.
   const said = (f: TotalField): ReactNode => changes.totals.has(f) && <SrOnly text=" (changed)" />;
   return (
-    <section className={s.receipt} data-component="Receipt" data-mode={r.mode} aria-label={`receipt, ${r.lines.length} lines, ${r.mode}`}>
+    <section className={s.receipt} data-component="Receipt" data-mode={r.mode} aria-label={`receipt, ${r.lines.length} ${r.lines.length === 1 ? "line" : "lines"}, ${r.mode}`}>
       <div className={s.head}>
         <span className={mark("mode")}>
           <Chip label={r.mode} tone={r.mode === "live" ? "rose" : "cyan"} dot name={`mode ${r.mode}`} />

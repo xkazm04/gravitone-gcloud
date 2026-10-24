@@ -233,6 +233,7 @@ describe("markup", () => {
     const under = renderToStaticMarkup(h(Receipt, { receipt: banded, ceiling: "92", onCeiling: noop, onConfirm: noop, busy: false, nowMs: NOW }));
     expect(under).not.toContain("may stop at ceiling");
     expect(under).toContain('data-mode="dry"');
+    expect(under).toContain('aria-label="receipt, 1 line, dry"');
     const bad = renderToStaticMarkup(h(Receipt, { receipt: banded, ceiling: "ten", onCeiling: noop, onConfirm: noop, busy: false, nowMs: NOW }));
     expect(bad).toMatch(/<button[^>]*aria-disabled="true"[^>]*>Confirm/);
   });
