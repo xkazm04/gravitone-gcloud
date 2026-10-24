@@ -120,6 +120,30 @@ describe("readPage", () => {
     expect(r.value.events.map((e) => e.subject.id).sort()).toEqual(["Cycle-07", "Cycle-07/imp-1"]);
   });
 
+  it("continues a lone-id page by the same index: page 2 answers the id, never a substring of it", () => {
+    const s = store();
+    // `r10` is a different record whose id CONTAINS `r1`; its acts are older than all of r1's.
+    fill(s, [
+      ...Array.from({ length: 20 }, (_, i) => ({ at: minute(i), subject: "r10" })),
+      ...Array.from({ length: PAGE + 5 }, (_, i) => ({ at: minute(i + 20), subject: "r1" })),
+    ]);
+    const one = readPage(s, f({ q: "r1" }));
+    if (!one.ok) throw one.error;
+    expect(one.value.byId).toBe(true);
+    expect(one.value.capped).toBe(true);
+    if (one.value.cursor === undefined) throw new Error("a capped page carries its cursor");
+    const two = readPage(s, f({ q: "r1" }), one.value.cursor);
+    if (!two.ok) throw two.error;
+    expect(two.value.byId).toBe(true);
+    expect(two.value.events.map((e) => e.subject.id)).toEqual(Array.from({ length: 5 }, () => "r1"));
+    expect(two.value.exhausted).toBe(true);
+    expect(two.value.cursor).toBeUndefined();
+    // A word that is no record's id still continues as the text scan it started as.
+    const scan = readPage(s, f({ q: "r" }));
+    if (!scan.ok) throw scan.error;
+    expect(scan.value.byId).toBe(false);
+  });
+
   it("applies every indexed facet in the store, not over the page", () => {
     const s = store();
     fill(s, [

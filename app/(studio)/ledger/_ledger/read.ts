@@ -66,15 +66,27 @@ function loneId(f: LedgerFilter, post: Post): string | null {
   return /\s/.test(raw) || parseQuery(raw).words.length !== 1 ? null : raw;
 }
 
-function byIdPage(store: Store, kernel: KernelFilter, id: string, order: "asc" | "desc"): Result<Page | null> {
-  const base = { ...kernel, by: "time" as const, order, limit: PAGE };
+/**
+ * The lone-id page: the id as a subject and as a run, merged. Null when the word names no
+ * record under the filter - then it is a text word and the scan answers it. A continuation
+ * (`cursor`) stays on this path whenever the word names a record at all, even with nothing
+ * left past the cursor, so page 2 answers the same predicate page 1 did: never the text
+ * scan, which would match every record whose id merely contains this one (`r1` in `r10`).
+ */
+function byIdPage(store: Store, kernel: KernelFilter, id: string, order: "asc" | "desc", cursor?: TimeCursor): Result<Page | null> {
+  const base = { ...kernel, by: "time" as const, order, limit: PAGE, ...(cursor === undefined ? {} : { cursor }) };
   const bySubject = queryEvents(store, { ...base, subject: { ...kernel.subject, id } });
   if (!bySubject.ok) return bySubject;
   const byRun = queryEvents(store, { ...base, run: id });
   if (!byRun.ok) return byRun;
   const seen = new Map<number, Event>();
   for (const e of [...bySubject.value.events, ...byRun.value.events]) seen.set(e.seq, e);
-  if (seen.size === 0) return ok(null);
+  if (seen.size === 0) {
+    if (cursor === undefined) return ok(null);
+    const named = byIdPage(store, kernel, id, order);
+    if (!named.ok) return named;
+    return ok(named.value === null ? null : { events: [], capped: false, scanned: 0, exhausted: true, byId: true });
+  }
   const merged = [...seen.values()].sort((a, b) => (order === "asc" ? later(a, b) : later(b, a)));
   const events = merged.slice(0, PAGE);
   // Each half read at most PAGE; the merge is complete only when neither was capped.
@@ -93,9 +105,9 @@ export function readPage(store: Store, f: LedgerFilter, cursor?: TimeCursor): Re
     const { events, capped } = r.value;
     return ok({ events, capped, ...(r.value.cursor === undefined ? {} : { cursor: r.value.cursor }), scanned: events.length, exhausted: !capped, byId: false });
   }
-  const id = cursor === undefined ? loneId(f, post) : null;
+  const id = loneId(f, post);
   if (id !== null) {
-    const hit = byIdPage(store, kernel, id, order);
+    const hit = byIdPage(store, kernel, id, order, cursor);
     if (!hit.ok) return hit;
     if (hit.value !== null) return ok(hit.value);
   }
