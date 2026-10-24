@@ -10693,6 +10693,43 @@
           "evidence": "lib/text/router.ts:24 The chain is a fallback ladder: one engine answers each call. No N-model panel is convened."
         }
       ]
+    },
+    "e2f6231a-d39f-4d39-9465-0a48436cae92/supply-chain": {
+      "context": "project-step-store",
+      "subject": "supply-chain",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T03:27:27.054Z",
+      "worker": "4a516d29-3448-4079-bbe3-e012183e5dfb",
+      "techniques": [
+        {
+          "technique": "archive-extraction-safety",
+          "verdict": "not-applicable",
+          "evidence": "lib/steps/withStore.ts:18 Records are keyed by projectId:phase in a local store. Nothing is unpacked."
+        }
+      ]
+    },
+    "f8036604-75f5-4f7d-898c-734511ac5e86/supply-chain": {
+      "context": "script-composition-and-validation",
+      "subject": "supply-chain",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T03:27:27.054Z",
+      "worker": "4a516d29-3448-4079-bbe3-e012183e5dfb",
+      "techniques": [
+        {
+          "technique": "unsafe-deserialization-off-by-default",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/validate.ts:291 JSON has no permissive type-instantiating mode, so the precondition does not hold."
+        },
+        {
+          "technique": "reading-is-not-running",
+          "verdict": "not-applicable",
+          "evidence": "lib/script/compose.ts:26 Prompt docs and params.json are read as text and parsed; nothing is evaluated. They are the repo's own files, not a foreign tree."
+        }
+      ]
     }
   }
 }

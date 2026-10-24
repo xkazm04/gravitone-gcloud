@@ -10155,7 +10155,11 @@
           "revision": 6,
           "changedAt": "2026-09-25",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/steps/withStore.ts:1 This context only persists the browser's own step records in IndexedDB. Its imports are relative modules plus @/lib and @gt/domain, with no third-party package. Searching lib/steps for gunzip, unzip, pickle, child_process, lockfile and tarfile found nothing, so no supply-chain crossing happens here.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:f5666db1094acd9f",
+          "evaluatedRevision": 6
         },
         {
           "subject": "prompt-assembly",
@@ -11392,7 +11396,11 @@
           "revision": 6,
           "changedAt": "2026-09-25",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/script/validate.ts:291 The model's answer is parsed as plain JSON data, then checked shape by shape. Prompt documents are read as text from the repo's own knowledge/ tree (compose.ts:26). Searching lib/script for gunzip, unzip, pickle, child_process, lockfile and tarfile found nothing; 'advisory' does appear, but only as a trailer-rule name. So no archive, object-graph loader, executed content or dependency gate is in scope.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:f5666db1094acd9f",
+          "evaluatedRevision": 6
         },
         {
           "subject": "mcp-tools",
