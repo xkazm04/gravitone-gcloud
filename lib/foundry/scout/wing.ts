@@ -9,6 +9,7 @@
 //
 // Pure and client-safe: no Node. The scope that picks the active root is wingScope.ts (server).
 
+import { partRunId, splitPart } from "./parts";
 import type { NightId } from "./types";
 
 export const SCOUT_WINGS = ["scout", "muse"] as const;
@@ -26,18 +27,22 @@ export const WING_KNOWLEDGE_DIR: Readonly<Record<ScoutWing, string>> = { scout: 
  * A night's run id on the Board and in the ledger: the scout wing's is the bare night (every packet
  * minted before the wings keeps its id), any other wing's is `<wing>:<night>` - so `pkt:scout:muse:2026-10-24`.
  * parsePacketId takes everything after the source as the run id, colons included.
+ *
+ * A REMAINDER PACKET (spark scout-storyboards, ./parts.ts) adds its part: `2026-10-24:2`, `muse:2026-10-24:2`.
  */
-export function wingRunId(wing: ScoutWing, night: NightId): string {
-  return wing === DEFAULT_WING ? night : `${wing}:${night}`;
+export function wingRunId(wing: ScoutWing, night: NightId, part = 1): string {
+  return partRunId(wing === DEFAULT_WING ? night : `${wing}:${night}`, part);
 }
 
-/** The inverse: a bare id is the scout wing's; `<wing>:<rest>` names a known wing, else null. */
-export function parseWingRunId(runId: string): { wing: ScoutWing; night: string } | null {
-  const i = runId.indexOf(":");
-  if (i < 0) return { wing: DEFAULT_WING, night: runId };
-  const w = runId.slice(0, i);
+/** The inverse: a bare id is the scout wing's; `<wing>:<rest>` names a known wing, else null. A trailing `:<n>` (n >= 2) is the part. */
+export function parseWingRunId(runId: string): { wing: ScoutWing; night: string; part?: number } | null {
+  const { run, part } = splitPart(runId);
+  const i = run.indexOf(":");
+  const at = part === 1 ? {} : { part };
+  if (i < 0) return { wing: DEFAULT_WING, night: run, ...at };
+  const w = run.slice(0, i);
   if (!isWing(w) || w === DEFAULT_WING) return null;
-  return { wing: w, night: runId.slice(i + 1) };
+  return { wing: w, night: run.slice(i + 1), ...at };
 }
 
 /** The word a packet title, a pile and a node carry for the wing (`scout 2026-10-24`, `muse 2026-10-24`). */

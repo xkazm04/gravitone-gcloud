@@ -142,6 +142,22 @@ describe("the real Board port over the fixture universe", () => {
     }
   });
 
+  it("a commit in parts is only for a source that commits in parts (spark scout-storyboards): refused here, drawn there", async () => {
+    const [id] = await weirIds("forge");
+    if (id === undefined) throw new Error("no forge pile");
+    const p = must(await board.loadPacket({ id }, who));
+    expect(p.present.partial).toBeUndefined();
+    const refused = await board.commit({ id, rev: p.view.rev, token: "t", ticket: "ticket-forge-parts", undecidedAs: "leave" }, who);
+    expect(refused.ok ? "" : [refused.error.code, refused.error.message]).toEqual(["refused", `board: packet ${id} commits only whole; its source does not commit in parts`]);
+    const parted = makeRealBoard({ store: () => ok(store), weir: async () => [], kick: () => {}, adapter: () => ok({ partial: true, read: async () => err("unavailable", "not read") } as never) });
+    const said = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      expect(must(await parted.loadPacket({ id }, who)).present.partial).toBe(true);
+    } finally {
+      said.mockRestore();
+    }
+  });
+
   it("patch, undo, preview and commit are one kernel act each; the commit re-reads v1 and kicks the apply", async () => {
     const [id] = await weirIds("forge");
     if (id === undefined) throw new Error("no forge pile");

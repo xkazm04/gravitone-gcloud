@@ -13,7 +13,7 @@ import { EXTRACT_COMMITTABLE } from "../../../foundry/plant.ts";
 import { TECHNIQUE_LABEL, type GateResult, type MeshAsset } from "../../../foundry/mesh/types.ts";
 import { patternsRel } from "../../../foundry/scout/knowledge.ts";
 import { mss } from "../../../foundry/scout/track.ts";
-import { CANDIDATE_KINDS, cellId, type Asset3dCandidate, type Candidate, type CandidateId, type DirectionCandidate, type IdeaCandidate, type IdeaTarget, type Night, type NightCommit, type SceneCandidate, type SceneClip, type Seed, type TrackCandidate, type VisualizerCandidate } from "../../../foundry/scout/types.ts";
+import { CANDIDATE_KINDS, cellId, parseCellId, type Asset3dCandidate, type Candidate, type CandidateId, type DirectionCandidate, type IdeaCandidate, type IdeaTarget, type Night, type NightCommit, type SceneCandidate, type SceneClip, type Seed, type TrackCandidate, type VisualizerCandidate } from "../../../foundry/scout/types.ts";
 import { stillOf } from "../../../foundry/scout/visualizer.ts";
 import { meshFileUrl } from "../../../library/feeds/mesh.ts";
 import { decisionMap, type Loss } from "../types.ts";
@@ -473,17 +473,35 @@ export function extractDecisions(decisions: readonly Decision[], packetId: strin
 
 /* ── the night's record ────────────────────────────────────────────────────── */
 
-/** What `night.committed` holds after this outcome: every verdict on the packet's cells, in packet order. */
+/**
+ * What `night.committed` holds after this outcome: every verdict on the packet's cells, in packet order.
+ *
+ * A COMMIT IN PARTS (spark scout-storyboards): a cell left undecided goes to `open`, for the remainder packet. A
+ * STYLE candidate is decided whole or not at all: its looks commit through the extract run's own commit, which is
+ * final and refuses a second one (lib/decision/v1/sources/extract.ts apply), so a style with any cell undecided
+ * holds EVERY cell in `open` - its decided looks reach v1 as verdicts only, and its remainder cells open with
+ * them imported (./scout.ts holdStyle). Every other kind's writes are per cell, and split freely.
+ */
 export function commitOf(night: Night, items: readonly string[], decisions: readonly Decision[], at: string): NightCommit {
   const byCell = decisionMap(decisions);
+  const decided = (id: string): boolean => {
+    const v = byCell.get(id)?.verdict;
+    return v === "keep" || v === "reject";
+  };
   const kept: string[] = [];
   const rejected: string[] = [];
+  const open: string[] = [];
   const reasons: Record<string, readonly string[]> = {};
   const notes: Record<string, string> = {};
+  const held = heldStyles(night, items, decided);
   let operator = false;
   for (const id of items) {
     const d = byCell.get(id);
-    if (d === undefined || d.verdict === null) continue;
+    const c = parseCellId(id)?.candidate;
+    if (d === undefined || d.verdict === null || (c !== undefined && held.has(c))) {
+      open.push(id);
+      continue;
+    }
     if (d.by === "operator") operator = true;
     if (d.verdict === "keep") kept.push(id);
     else {
@@ -492,7 +510,18 @@ export function commitOf(night: Night, items: readonly string[], decisions: read
     }
     if (d.note !== undefined) notes[id] = d.note;
   }
-  return { at, by: operator ? "operator" : "agent", kept, rejected, reasons, notes, dry: night.dry };
+  return { at, by: operator ? "operator" : "agent", kept, rejected, reasons, notes, dry: night.dry, ...(open.length === 0 ? {} : { open }) };
+}
+
+/** The style candidates of the packet with a cell still undecided: held whole for the remainder (commitOf). */
+export function heldStyles(night: Pick<Night, "candidates">, items: readonly string[], decided: (id: string) => boolean): ReadonlySet<string> {
+  const styles = new Set(night.candidates.filter((c) => c.kind === "style").map((c) => c.id));
+  const out = new Set<string>();
+  for (const id of items) {
+    const c = parseCellId(id)?.candidate;
+    if (c !== undefined && styles.has(c) && !decided(id)) out.add(c);
+  }
+  return out;
 }
 
 /** Two records hold the same outcome: the same cells kept and rejected, whenever and by whomever. */

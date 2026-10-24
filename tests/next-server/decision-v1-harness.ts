@@ -34,8 +34,8 @@ export type Flow<V> = {
   pick(pair: string, outcome: PickOutcome): void;
   /** The adapter's consequence over the kernel's current decisions. */
   preview(v1?: V): Result<Preview>;
-  /** Preview, then commit with the preview's token. */
-  commit(v1?: V): Result<unknown>;
+  /** Preview, then commit with the preview's token; `undecidedAs: "leave"` commits a partial packet with cells undecided. */
+  commit(v1?: V, undecidedAs?: "leave"): Result<unknown>;
   /** The outbox row's claim, as the applier would receive it. */
   claim(): ApplyClaim;
   /** One delivery through the kernel's own applier. */
@@ -69,10 +69,10 @@ export async function openFlow<V>(adapter: DecisionAdapter<V>, runId: string, bl
       if (!out.ok) throw new Error(`pick refused: ${out.error.message}`);
     },
     preview,
-    commit(over) {
+    commit(over, undecidedAs) {
       const p = preview(over);
       if (!p.ok) return p;
-      return must(store.tx((t) => commit(t, { ...operator, packetId: id, ticket: "ticket-1", token: p.value.consequence.token, v1Digest: p.value.v1Digest })));
+      return must(store.tx((t) => commit(t, { ...operator, packetId: id, ticket: "ticket-1", token: p.value.consequence.token, v1Digest: p.value.v1Digest, ...(undecidedAs === undefined ? {} : { undecidedAs }) })));
     },
     claim() {
       const c = must(store.tx((t) => takeApply(t, { holder: "harness", leaseMs: 1 })));

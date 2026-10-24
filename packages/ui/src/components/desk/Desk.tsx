@@ -82,21 +82,25 @@ export type CommitButtonProps = {
   /** Bumped on each refusal, to replay the shake. */
   readonly refusals: number;
   readonly busy?: boolean;
+  /** A commit in parts (spark scout-storyboards): `now` decided cells commit, `later` go on to the remainder packet. */
+  readonly split?: { readonly now: number; readonly later: number };
   readonly onPress: () => void;
 };
 
 /** The one act a packet ends in. It is never disabled: pressed early, it refuses and says why. */
-export function CommitButton({ mode, waiting, refusals, busy = false, onPress }: CommitButtonProps) {
+export function CommitButton({ mode, waiting, refusals, busy = false, split, onPress }: CommitButtonProps) {
+  const parts = split === undefined ? "" : `${split.now} · ${split.later} later`;
   return (
     <button
       key={refusals}
       type="button"
       className={cx(s.commit, waiting !== undefined && s.wait, refusals > 0 && s.refuse)}
-      aria-label={`commit packet${waiting === undefined ? "" : `, ${waiting}`}`}
+      aria-label={`commit packet${parts === "" ? "" : `, ${parts}`}${waiting === undefined ? "" : `, ${waiting}`}`}
       aria-busy={busy || undefined}
       onClick={onPress}
     >
-      Commit packet {waiting !== undefined && <Chip label={waiting} />}
+      Commit {split === undefined ? "packet" : split.now} {split !== undefined && <Chip label={`${split.later} later`} />}
+      {waiting !== undefined && <Chip label={waiting} />}
       <Keycap mode={mode} verb="commit" />
     </button>
   );

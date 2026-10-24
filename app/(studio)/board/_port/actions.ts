@@ -59,7 +59,7 @@ export async function pick(input: In<"pick">): Out<"pick"> {
   return pickAction(input);
 }
 
-const commitAction = action("board commit", z.object({ id, rev, token: z.string().min(1).max(200), ticket: z.string().min(8).max(100) }), (i, who) => serverBoard().commit(i, actorOf(who)));
+const commitAction = action("board commit", z.object({ id, rev, token: z.string().min(1).max(200), ticket: z.string().min(8).max(100), undecidedAs: z.literal("leave").optional() }), (i, who) => serverBoard().commit(i, actorOf(who)));
 export async function commit(input: In<"commit">): Out<"commit"> {
   return commitAction(input);
 }

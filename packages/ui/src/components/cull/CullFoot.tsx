@@ -13,6 +13,9 @@ export type CullFootProps = {
   readonly tally: Tally;
   /** Rejects still owing their reason (a source whose reject requires one): not done, as the undecided are. */
   readonly reasonless?: number;
+  /** A packet committing in parts (cull.ts `commitGate` go): the undecided that go on to the remainder packet. They
+   *  do not hold the commit, so the button says how many commit now and how many later. */
+  readonly later?: number;
   /** The source's reasons; keys 2-4 name the first three of the current run's group order, and each of
    *  those caps tips its reason's meaning. A source that keeps a note (`noteMax`) draws E. */
   readonly reasons: Pick<ReasonVocabulary, "list" | "meaning"> & Partial<Pick<ReasonVocabulary, "noteMax" | "by">>;
@@ -40,8 +43,8 @@ export function reasonTips(reasons: Pick<ReasonVocabulary, "list" | "meaning"> &
   );
 }
 
-export function CullFoot({ tally: t, reasonless = 0, reasons, group, audio = false, refusals, busy, onCommit }: CullFootProps) {
-  const waiting = [t.undecided > 0 ? `${t.undecided} undecided` : "", reasonless > 0 ? `${reasonless} need a reason` : ""].filter((x) => x !== "").join(" · ");
+export function CullFoot({ tally: t, reasonless = 0, later = 0, reasons, group, audio = false, refusals, busy, onCommit }: CullFootProps) {
+  const waiting = [t.undecided > 0 && later === 0 ? `${t.undecided} undecided` : "", reasonless > 0 ? `${reasonless} need a reason` : ""].filter((x) => x !== "").join(" · ");
   return (
     <>
       <Keycaps mode="board.cull" label="cull keys" facts={new Set([...(audio ? ["audio"] : []), ...((reasons.noteMax ?? 0) > 0 ? ["notes"] : [])])} only={{ reason: reasonKeys(reasons) }} tips={{ reason: reasonTips(reasons, group) }} />
@@ -53,7 +56,7 @@ export function CullFoot({ tally: t, reasonless = 0, reasons, group, audio = fal
           <span className={s.k}>{t.kept}</span> · <span className={s.x}>{t.rejected}</span> · <span className={s.u}>{t.undecided}</span>
         </span>
       </div>
-      <CommitButton mode="board.cull" refusals={refusals} busy={busy} onPress={onCommit} {...(waiting === "" ? {} : { waiting })} />
+      <CommitButton mode="board.cull" refusals={refusals} busy={busy} onPress={onCommit} {...(waiting === "" ? {} : { waiting })} {...(later > 0 ? { split: { now: t.kept + t.rejected, later } } : {})} />
     </>
   );
 }

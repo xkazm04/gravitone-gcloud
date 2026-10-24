@@ -3,6 +3,7 @@ import "server-only";
 import { errorMessage, err, ok, type Result } from "@gt/domain/errors";
 import type { Actor, EventData } from "@gt/domain/event";
 
+import { nextPart, openOf, partsOf } from "../../../foundry/scout/parts.ts";
 import { listNights, readNight } from "../../../foundry/scout/store.ts";
 import type { Night } from "../../../foundry/scout/types.ts";
 import { wingRunId, type ScoutWing } from "../../../foundry/scout/wing.ts";
@@ -32,6 +33,10 @@ import type { IngestEvent, ProjectCtx, Projection, Source, WeirItem } from "../t
 // A muse night's record id, subject and run id are its RUN ID `muse:<night>` -
 // the same day's scout night is a different record - its events' data carry
 // `wing: "muse"`, and its pile is `muse <night>`, opening pkt:scout:muse:<night>.
+//
+// IN PARTS (spark scout-storyboards, lib/foundry/scout/parts.ts): a night committed with cells left undecided stays
+// `closed`, and its ONE pile is the remainder - `<run>:<n>`, pending the cells still open - never the base again.
+// Part 1 is the `commit` fact (key unchanged); part n is `commit.<n>`, at its own instant.
 
 /** `nights` are the scout wing's; `muse` the muse wing's (absent in a snapshot taken before the wings). */
 export type ScoutSnapshot = { readonly nights: readonly Night[]; readonly muse?: readonly Night[]; readonly skipped: readonly { readonly id: string; readonly reason: string }[] };
@@ -80,7 +85,11 @@ function eventsOf(wing: ScoutWing, n: Night, ctx: ProjectCtx): IngestEvent[] {
   }
   const c = n.committed;
   if (c !== undefined) {
-    out.push(f.recorded(run, "commit", c.at, { actor: c.by === "agent" ? AGENT : OPERATOR, type: "commit", subject, data: { ...data, kept: c.kept.length, rejected: c.rejected.length } }));
+    const actor = c.by === "agent" ? AGENT : OPERATOR;
+    const parts = partsOf(c);
+    const split = parts > 1 || openOf(c).length > 0 ? { parts } : {};
+    out.push(f.recorded(run, "commit", c.at, { actor, type: "commit", subject, data: { ...data, kept: c.kept.length, rejected: c.rejected.length, ...split } }));
+    for (let p = 2; p <= parts; p++) out.push(f.recorded(run, `commit.${p}`, c.partAt?.[p - 2], { actor, type: "commit", subject, data: { ...data, part: p, open: openOf(c).length } }));
   }
   return out;
 }
@@ -93,15 +102,19 @@ function tallyOf(nights: readonly Night[]): Projection["tally"] {
     bump(fs, "run.start");
     bump(fs, "run.status");
     if (n.closedAt !== undefined) bump(fs, "run.end");
-    if (n.committed !== undefined) bump(fs, "commit");
+    for (let p = 1; p <= partsOf(n.committed); p++) bump(fs, p === 1 ? "commit" : `commit.${p}`);
   }
   return { records, facts: fs };
 }
 
 function weirOf(wing: ScoutWing, n: Night): WeirItem | null {
   if (n.state !== "closed" || n.dry || rendered(n) === 0) return null;
-  const since = instant(n.closedAt);
-  return { source: "scout", id: wingRunId(wing, n.id), title: `${wing} ${n.id}`, media: "image", kind: "cull", ...(since === null ? {} : { since }), decided: 0, pending: rendered(n), href: HREF };
+  // Committed in part: the remainder, pending what is still open, since the last part landed.
+  const part = n.committed === undefined ? 1 : nextPart(n.committed);
+  if (part === undefined) return null;
+  const since = instant(part === 1 ? n.closedAt : (n.committed?.partAt?.at(-1) ?? n.committed?.at));
+  const pending = part === 1 ? rendered(n) : openOf(n.committed).length;
+  return { source: "scout", id: wingRunId(wing, n.id, part), title: `${wing} ${n.id}${part === 1 ? "" : ` · part ${part}`}`, media: "image", kind: "cull", ...(since === null ? {} : { since }), decided: 0, pending, href: HREF };
 }
 
 export function projectScout(s: ScoutSnapshot, ctx: ProjectCtx): Projection {

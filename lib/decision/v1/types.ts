@@ -94,6 +94,13 @@ export type Preview = { readonly consequence: Consequence; readonly v1Digest: st
  */
 export interface DecisionAdapter<V1> {
   readonly source: PacketSource;
+  /**
+   * A COMMIT IN PARTS (spark scout-storyboards): the packet may commit with cells left undecided (the kernel's
+   * `undecidedAs: "leave"`), and the adapter opens the rest as a remainder packet `<packetId>:<n>`
+   * (lib/foundry/scout/parts.ts). Opt-in: an adapter without it refuses a commit while anything is undecided, as
+   * every source did before.
+   */
+  readonly partial?: true;
   /** v1 record(s) behind a Weir pile, through v1's own readers (bounded, read-only). */
   read(ref: AdapterRef): Promise<Result<V1>>;
   /** Pure. An err when the v1 record is not decidable as a packet (nothing judgeable, not committable). */

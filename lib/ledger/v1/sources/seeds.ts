@@ -3,6 +3,7 @@ import "server-only";
 import { errorMessage, err, ok, type Result } from "@gt/domain/errors";
 import type { Actor, EventData } from "@gt/domain/event";
 
+import { isWhole, nextPart, openOf, partRunId, partsOf } from "../../../foundry/scout/parts.ts";
 import { listSeedBatches } from "../../../foundry/scout/seedStore.ts";
 import type { SeedBatch } from "../../../foundry/scout/types.ts";
 import { SCOUT_WINGS, wingRunId, type ScoutWing } from "../../../foundry/scout/wing.ts";
@@ -25,6 +26,10 @@ import type { IngestEvent, ProjectCtx, Projection, Source, WeirItem } from "../t
 // seeds command), so its root holds none; were one there, its events would be keyed `muse:<batch>` and carry
 // `wing: "muse"`, and it would make no pile - the seeds packet (lib/decision/v1/sources/seeds.ts) is the scout
 // wing's alone.
+//
+// IN PARTS (spark scout-storyboards, lib/foundry/scout/parts.ts): a batch committed with seeds left undecided is still
+// open, and its ONE pile is the remainder `<batch>:<n>`, pending the seeds still open. Part 1 is the `commit` fact,
+// part n `commit.<n>` at its own instant.
 
 /** `batches` are the scout wing's; `muse` the muse wing's (absent in a snapshot taken before the wings). */
 export type SeedsSnapshot = { readonly batches: readonly SeedBatch[]; readonly muse?: readonly SeedBatch[] };
@@ -50,12 +55,19 @@ function eventsOf(wing: ScoutWing, b: SeedBatch, ctx: ProjectCtx): IngestEvent[]
   const run = wingRunId(wing, b.id);
   const subject = { kind: "run", id: `seeds:${run}` };
   const data: EventData = { runId: run, ...(wing === "scout" ? {} : { wing }), ...(b.dry ? { dry: true } : {}), ...(b.night === undefined ? {} : { night: b.night }) };
+  const status = isWhole(b.committed) ? "committed" : "open";
   const out: IngestEvent[] = [
     f.recorded(run, "run.start", b.createdAt, { actor: SEAT, type: "run.start", subject, data: { ...data, seeds: b.seeds.length } }),
-    f.observed(run, `state.${b.committed === undefined ? "open" : "committed"}`, { actor: SEAT, type: "run.status", subject, data: { ...data, status: b.committed === undefined ? "open" : "committed" } }),
+    f.observed(run, `state.${status}`, { actor: SEAT, type: "run.status", subject, data: { ...data, status } }),
   ];
   const c = b.committed;
-  if (c !== undefined) out.push(f.recorded(run, "commit", c.at, { actor: c.by === "agent" ? AGENT : OPERATOR, type: "commit", subject, data: { ...data, kept: c.kept.length, rejected: c.rejected.length } }));
+  if (c !== undefined) {
+    const actor = c.by === "agent" ? AGENT : OPERATOR;
+    const parts = partsOf(c);
+    const split = parts > 1 || openOf(c).length > 0 ? { parts } : {};
+    out.push(f.recorded(run, "commit", c.at, { actor, type: "commit", subject, data: { ...data, kept: c.kept.length, rejected: c.rejected.length, ...split } }));
+    for (let p = 2; p <= parts; p++) out.push(f.recorded(run, `commit.${p}`, c.partAt?.[p - 2], { actor, type: "commit", subject, data: { ...data, part: p, open: openOf(c).length } }));
+  }
   return out;
 }
 
@@ -63,18 +75,22 @@ function tallyOf(batches: readonly SeedBatch[]): Projection["tally"] {
   const records: Record<string, number> = {};
   const fs: Record<string, number> = {};
   for (const b of batches) {
-    bump(records, `batch.${b.committed === undefined ? "open" : "committed"}`);
+    bump(records, `batch.${isWhole(b.committed) ? "committed" : "open"}`);
     bump(fs, "run.start");
     bump(fs, "run.status");
-    if (b.committed !== undefined) bump(fs, "commit");
+    for (let p = 1; p <= partsOf(b.committed); p++) bump(fs, p === 1 ? "commit" : `commit.${p}`);
   }
   return { records, facts: fs };
 }
 
 function weirOf(b: SeedBatch): WeirItem | null {
-  if (b.committed !== undefined || b.dry || b.seeds.length === 0) return null;
-  const since = instant(b.createdAt);
-  return { source: "seeds", id: b.id, title: `seeds ${b.id}`, media: "image", kind: "cull", ...(since === null ? {} : { since }), decided: 0, pending: b.seeds.length, href: HREF };
+  if (b.dry || b.seeds.length === 0) return null;
+  // Committed in part: the remainder, pending the seeds still open, since the last part landed.
+  const part = b.committed === undefined ? 1 : nextPart(b.committed);
+  if (part === undefined) return null;
+  const since = instant(part === 1 ? b.createdAt : (b.committed?.partAt?.at(-1) ?? b.committed?.at));
+  const pending = part === 1 ? b.seeds.length : openOf(b.committed).length;
+  return { source: "seeds", id: partRunId(b.id, part), title: `seeds ${b.id}${part === 1 ? "" : ` · part ${part}`}`, media: "image", kind: "cull", ...(since === null ? {} : { since }), decided: 0, pending, href: HREF };
 }
 
 export function projectSeeds(s: SeedsSnapshot, ctx: ProjectCtx): Projection {

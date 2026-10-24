@@ -36,6 +36,7 @@ import {
 import type { Store } from "@gt/kernel/store";
 
 import { effortOf, sumEffort } from "./effort";
+import { nextPart, openOf, partRunId } from "./parts";
 import { ancestryOf, listSeedBatches, seedOf, seedsPacketId } from "./seedStore";
 import { pausedUnder, readSteer } from "./steer";
 import { readAllNights } from "./store";
@@ -64,7 +65,10 @@ export type GraphInput = {
 /** The nights a group's actual share is read over: the newest live ones. */
 export const SHARE_NIGHTS = 7;
 
-const nightPacket = (wing: ScoutWing, id: string): string => `pkt:scout:${wingRunId(wing, id)}`;
+/** Where a night's open cells are decided: its own packet, or - committed in part - its remainder (./parts.ts). */
+const nightPacket = (wing: ScoutWing, id: string, part = 1): string => `pkt:scout:${wingRunId(wing, id, part)}`;
+/** Where a batch's open seeds are decided: its own packet, or its remainder. */
+const batchPacket = (b: SeedBatch): string => seedsPacketId(partRunId(b.id, nextPart(b.committed) ?? 1));
 const stageAt = (s: GraphStage): number => GRAPH_STAGES.indexOf(s);
 
 export async function buildGraph(o: GraphOptions = {}): Promise<ScoutGraph> {
@@ -94,9 +98,11 @@ function stageKind(c: Candidate): { readonly stage: GraphStage; readonly kind: G
   return { stage: "run", kind: c.kind };
 }
 
-/** The candidate's verdict, by the two-level rule; uncommitted, its render's. */
+/** The candidate's verdict, by the two-level rule; uncommitted, its render's. A cell still waiting on a remainder
+ *  packet (a commit in parts, ./parts.ts) keeps its candidate open, whatever its other cells were given. */
 export function candidateState(n: Night, c: Candidate): GraphState {
   const mine = (ids: readonly string[]): boolean => ids.some((id) => parseCellId(id)?.candidate === c.id);
+  if (mine(openOf(n.committed))) return "open";
   if (n.committed !== undefined) {
     if (mine(n.committed.kept)) return "kept";
     if (mine(n.committed.rejected)) return "rejected";
@@ -184,7 +190,7 @@ export function graphOf(input: GraphInput): ScoutGraph {
         state,
         ...(pausedAt(ref) ? { paused: true as const } : {}),
         at: b.id,
-        packet: seedsPacketId(b.id),
+        packet: state === "open" ? batchPacket(b) : seedsPacketId(b.id),
         cell: s.id,
         audience: s.audience,
         genre: s.genre,
@@ -204,7 +210,7 @@ export function graphOf(input: GraphInput): ScoutGraph {
       const branch = {
         ...(pausedAt(c.fromSeed) ? { paused: true as const } : {}),
         at: n.id,
-        packet: nightPacket(wing, n.id),
+        packet: nightPacket(wing, n.id, state === "open" ? (nextPart(n.committed) ?? 1) : 1),
         ...own,
         ...facetsOf(c.fromSeed),
         ...(c.fromSeed === undefined ? {} : { seed: c.fromSeed }),
@@ -242,7 +248,7 @@ export function graphOf(input: GraphInput): ScoutGraph {
   });
 
   const newest = <T extends { readonly id: string }>(xs: readonly T[], at: (x: T) => string): T[] => oldest(xs, at).reverse();
-  const openBatch = newest(batches, (x) => x.createdAt).find((b) => b.committed === undefined);
+  const openBatch = newest(batches, (x) => x.createdAt).find((b) => b.committed === undefined || nextPart(b.committed) !== undefined);
   const openNight = newest(nights, (x) => x.startedAt).find((n) => n.state === "closed");
   return {
     builtAt: input.now.toISOString(),
@@ -252,8 +258,8 @@ export function graphOf(input: GraphInput): ScoutGraph {
     nights: nights.length,
     batches: batches.length,
     open: {
-      ...(openBatch === undefined ? {} : { seeds: { packet: seedsPacketId(openBatch.id), undecided: openBatch.seeds.length } }),
-      ...(openNight === undefined ? {} : { night: { packet: nightPacket(wing, openNight.id), undecided: openNight.candidates.filter((c) => c.status === "rendered").length } }),
+      ...(openBatch === undefined ? {} : { seeds: { packet: batchPacket(openBatch), undecided: openBatch.committed === undefined ? openBatch.seeds.length : openOf(openBatch.committed).length } }),
+      ...(openNight === undefined ? {} : { night: { packet: nightPacket(wing, openNight.id, nextPart(openNight.committed) ?? 1), undecided: openNight.committed === undefined ? openNight.candidates.filter((c) => c.status === "rendered").length : openOf(openNight.committed).length } }),
     },
     paused: [...steer.paused],
   };

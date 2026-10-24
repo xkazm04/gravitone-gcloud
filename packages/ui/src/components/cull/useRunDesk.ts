@@ -20,7 +20,9 @@
 // it), and a run whose every item is rejected is rejected.
 //
 // ⌫ and ⏎ are the same in both: the gate's undo, and the commit that refuses while anything is
-// open - jumping to the first open variant's run, opened, and flashing what is open.
+// open - jumping to the first open variant's run, opened, and flashing what is open. A packet whose source
+// commits in PARTS (`present.partial`, spark scout-storyboards) commits what is decided and leaves the rest
+// for the remainder packet (cull.ts `commitGate`); it still refuses a reasonless reject, and an empty commit.
 //
 // EVERY REJECT NEEDS A REASON where the source says so (spark scout-decision-graph, the vocabulary's
 // `required`): a reasonless reject is OPEN to the commit as an undecided tile is (flashed, jumped to,
@@ -35,7 +37,7 @@ import { useEffect, useState } from "react";
 
 import type { BoardPacket } from "../../board/port.ts";
 import type { BoardVerdict } from "../../board/boardGate.ts";
-import { chipThen, clamp, cullCells, keepingNote, nextOpen, noteAct, notDoneOf, notDoneWords, runKeyAct, undecidedOf } from "../../board/cull.ts";
+import { chipThen, clamp, commitGate, cullCells, keepingNote, nextOpen, noteAct, notDoneOf, notDoneWords, runKeyAct, undecidedOf } from "../../board/cull.ts";
 import { itemAct, runAt, runsOf, runVerdictOf, type Run } from "../../board/runs.ts";
 import { useKeys } from "../../keymap/dispatch.ts";
 
@@ -60,6 +62,8 @@ export type RunDeskInput = {
 export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce, keys, columns, arrange, wordy }: RunDeskInput) {
   const { view, present } = packet;
   const required = view.reasons.required === true;
+  /** The source commits in parts: undecided runs go on to the remainder packet instead of blocking the commit. */
+  const partial = present.partial === true;
   const noteMax = view.reasons.noteMax;
   const cells = cullCells(present.rows, view.items);
   const runs: Run[] = runsOf(cells, present.rows);
@@ -130,12 +134,15 @@ export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce,
     else toPos(posOf(runIx) + 1);
   };
   const commit = () => {
-    const left = notDoneOf(cells, verdicts, required);
-    const first = left.all[0];
-    if (first === undefined) {
+    const gate = commitGate(cells, verdicts, required, partial);
+    if (gate.kind === "go") {
+      if (gate.later > 0) announce(`commit ${cells.length - gate.later} · ${gate.later} later`);
       onCommit();
       return;
     }
+    const left = gate.left;
+    const first = left.all[0];
+    if (first === undefined) return;
     setRefusals((n) => n + 1);
     setNudged(new Set(left.all));
     setCur(first);
@@ -252,5 +259,6 @@ export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce,
   /** The note being written, while it is: the tile, its draft and the field's acts. */
   const note = noting === null ? undefined : { cell: noting, draft, setDraft, save: saveNote, max: noteMax };
   const cancelNote = () => setNoting(null);
-  return { cells, runs, run, runIx, cur, setCur, open, setOpen, nudged, refusals, commit, wordsOf, openRun, decideCells, decideItem, note, cancelNote, reasonless: notDoneOf(cells, verdicts, required).reasonless.length, reasonsFor, ask };
+  const gate = commitGate(cells, verdicts, required, partial);
+  return { cells, runs, run, runIx, cur, setCur, open, setOpen, nudged, refusals, commit, wordsOf, openRun, decideCells, decideItem, note, cancelNote, reasonless: notDoneOf(cells, verdicts, required).reasonless.length, later: gate.kind === "go" ? gate.later : 0, reasonsFor, ask };
 }

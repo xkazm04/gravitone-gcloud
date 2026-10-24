@@ -4,6 +4,7 @@ import { err, ok, type Result } from "@gt/domain/errors";
 import type { ConsequenceItem } from "@gt/domain/board";
 
 import { CHARACTERS_HEADING, FINDINGS_HEADING, MUSE_CHARACTERS_REL, WATCH_HEADING, findingRelOf, knowledgeState, markerOf, watchlistRelOf } from "../../../foundry/scout/knowledge.ts";
+import { partRunId } from "../../../foundry/scout/parts.ts";
 import type { Candidate, IdeaCandidate, Night, NightId } from "../../../foundry/scout/types.ts";
 import { parseWingRunId, wingRunId, wingWord, type ScoutWing } from "../../../foundry/scout/wing.ts";
 import { activeWing, withWing } from "../../../foundry/scout/wingScope.ts";
@@ -19,17 +20,24 @@ import { v1Call, type DecisionAdapter } from "../types.ts";
 // root, and two Board requests for the two wings never see each other's.
 //
 // THE FILE ROUTE carries the run id, not the bare night: app/api/foundry/file parses it back into the wing.
+//
+// A REMAINDER PACKET (spark scout-storyboards) names its part after the night - `2026-10-24:2`,
+// `muse:2026-10-24:2` (lib/foundry/scout/parts.ts): the wrapper strips the wing and hands the adapter
+// `<night>:<n>`, which ./scout.ts splits; every file it serves is still the bare night's.
 
-export type WingRef = { readonly wing: ScoutWing; readonly night: string };
+export type WingRef = { readonly wing: ScoutWing; readonly night: string; readonly part: number };
 
-/** The wing and night a scout run id names; a wing this build does not know is not found. */
+/** The wing, night and part a scout run id names; a wing this build does not know is not found. */
 export function wingOfRun(runId: string): Result<WingRef> {
   const w = parseWingRunId(runId);
-  return w === null ? err("not-found", `scout: ${runId} names no scout wing`) : ok(w);
+  return w === null ? err("not-found", `scout: ${runId} names no scout wing`) : ok({ wing: w.wing, night: w.night, part: w.part ?? 1 });
 }
 
-/** The night of a run id the wrapper below already admitted. */
+/** The night of a run id the wrapper below already admitted (its part dropped). */
 export const nightOfRun = (runId: string): NightId => parseWingRunId(runId)?.night ?? runId;
+
+/** The part a run id names: 1 for the night's own packet, n for its remainder `<run>:<n>`. */
+export const partOfRun = (runId: string): number => parseWingRunId(runId)?.part ?? 1;
 
 /** v1's file route for a night file of the ACTIVE wing (app/api/foundry/file `kind=scout`, lib/foundry/scout/store.ts scoutFileStat). */
 export function scoutFileUrl(night: string, rel: string): string {
@@ -84,9 +92,10 @@ export function knowledgeWrite(root: string, c: Candidate, k: KnowledgeAt, cell:
 export function inWing<V extends { readonly wing: ScoutWing }>(a: DecisionAdapter<V>): DecisionAdapter<V> {
   return {
     source: a.source,
+    ...(a.partial === true ? { partial: true as const } : {}),
     read: async (ref) => {
       const w = wingOfRun(ref.runId);
-      return w.ok ? withWing(w.value.wing, () => a.read({ ...ref, runId: w.value.night })) : w;
+      return w.ok ? withWing(w.value.wing, () => a.read({ ...ref, runId: partRunId(w.value.night, w.value.part) })) : w;
     },
     packet: (v1) => withWing(v1.wing, () => a.packet(v1)),
     consequence: (v1, at) => withWing(v1.wing, () => a.consequence(v1, at)),

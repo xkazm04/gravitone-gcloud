@@ -12,6 +12,9 @@
 //   · THE TICKET. A commit carries an idempotency ticket minted once per preview token, so a
 //     retried commit whose first attempt landed gets the first answer back, never a second
 //     commit (kernel decision/driver.ts `commit`).
+//   · A COMMIT IN PARTS (spark scout-storyboards). A packet whose source commits in parts (`present.partial`)
+//     is committed with `undecidedAs: "leave"` when the preview the operator confirmed counted cells undecided -
+//     they go on to the remainder packet. Any other packet sends no sweep, and the kernel refuses its undecided.
 //   · THE BEACON. A Server Action cannot outlive its page; the pagehide flush goes out
 //     through `beacon` (navigator.sendBeacon to the board's keepalive route).
 
@@ -62,10 +65,14 @@ export function createBoardGate(port: BoardPort, beacon: Beacon, mintTicket: () 
   const revs = new Map<string, number>();
   const previews = new Map<string, Consequence>();
   const tickets = new Map<string, string>();
+  /** The packets whose source commits in parts, from their last load. */
+  const partial = new Set<string>();
 
   const load = async (id: string): Promise<BoardPacket> => {
     const p = value(await port.loadPacket({ id }));
     revs.set(id, p.view.rev);
+    if (p.present.partial === true) partial.add(id);
+    else partial.delete(id);
     return p;
   };
   const revOf = async (id: string): Promise<number> => revs.get(id) ?? (await load(id)).view.rev;
@@ -101,7 +108,8 @@ export function createBoardGate(port: BoardPort, beacon: Beacon, mintTicket: () 
       if (token === undefined || seen === undefined || seen.token !== token) throw new AppError("refused", "commit: preview the consequence first");
       const ticket = tickets.get(token) ?? mintTicket();
       tickets.set(token, ticket);
-      return value(await port.commit({ id, rev: seen.rev, token, ticket }));
+      const leave = partial.has(id) && seen.counts.undecided > 0;
+      return value(await port.commit({ id, rev: seen.rev, token, ticket, ...(leave ? { undecidedAs: "leave" as const } : {}) }));
     },
     history: {
       async undo(id) {

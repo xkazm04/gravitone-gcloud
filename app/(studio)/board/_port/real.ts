@@ -48,6 +48,11 @@ import type { ServerBoard } from "./port.ts";
 // THE COMMIT RE-READS v1. The preview's token folds in the digest of the v1 state it was
 // planned from; the commit recomputes that digest from a fresh read and hands it to the
 // kernel, which refuses with `conflict` / "stale-preview" when either side moved (decision 6).
+//
+// A COMMIT IN PARTS (spark scout-storyboards): a source whose adapter is `partial` is drawn with `present.partial`,
+// and its commit may carry `undecidedAs: "leave"` - the kernel commits the decided cells and records the rest as
+// undecided; the adapter opens them as the remainder packet. Any other source's commit with a sweep is refused here,
+// before the kernel sees it.
 
 export type Deps = {
   readonly store: () => Result<Store>;
@@ -116,12 +121,21 @@ export function makeRealBoard(deps: Deps): ServerBoard {
     return p.ok ? ok({ adapter: a.value, v1: v1.value, plan: p.value }) : p;
   }
 
+  /** Whether the source a packet id names commits in parts (its adapter's `partial`). */
+  const partialOf = (id: string): boolean => {
+    const s = sourceOf(id);
+    if (!s.ok) return false;
+    const a = adapterOf(s.value.source);
+    return a.ok && a.value.partial === true;
+  };
+
   /** The stored packet's view, with the adapter's words where it still has them. */
   function view(store: Store, id: string, planned: OpenPlan | undefined, extras: { readonly load?: LoadSummary } = {}): Result<BoardPacket> {
     const urls = planned?.urls ?? {};
     const v = store.read((r) => readPacketView(r, id, { mediaUrl: (_blob, c) => urls[c] ?? "" }));
     if (!v.ok) return v;
-    const present: Presentation = planned === undefined ? { ...bare(), ...extras } : { ...planned.present, ...(planned.losses.length === 0 ? {} : { losses: planned.losses }) };
+    const drawn: Presentation = planned === undefined ? { ...bare(), ...extras } : { ...planned.present, ...(planned.losses.length === 0 ? {} : { losses: planned.losses }) };
+    const present: Presentation = partialOf(id) ? { ...drawn, partial: true } : drawn;
     if (v.value.mode !== "blind-pair") return ok({ view: v.value, present });
     // A blind arm's words are the machine's tell as much as its pick is: withheld until the
     // operator has judged that pair (ruling 9; L21's fixture does the same).
@@ -200,12 +214,13 @@ export function makeRealBoard(deps: Deps): ServerBoard {
     return c.ok ? ok(c.value.consequence) : c;
   }
 
-  async function commit({ id, token, ticket }: { readonly id: string; readonly rev: number; readonly token: string; readonly ticket: string }, who?: Who) {
+  async function commit({ id, token, ticket, undecidedAs }: { readonly id: string; readonly rev: number; readonly token: string; readonly ticket: string; readonly undecidedAs?: "leave" }, who?: Who) {
     const k = deps.store();
     if (!k.ok) return k;
     const store = k.value;
     const packetId = pid(id);
     if (!packetId.ok) return packetId;
+    if (undecidedAs !== undefined && !partialOf(id)) return err("refused", `board: packet ${id} commits only whole; its source does not commit in parts`);
     const at = store.read((r) => ({ head: head(r, id), decisions: currentDecisions(r, id).decisions }));
     if (!at.ok) return at;
     // A decided packet is not re-read from v1 (it may refuse now that the outcome landed):
@@ -218,13 +233,14 @@ export function makeRealBoard(deps: Deps): ServerBoard {
       if (!fresh.ok) return fresh;
       v1Digest = fresh.value.v1Digest;
     }
-    const done = store.tx((t) => kernelCommit(t, { ...author(who), packetId: packetId.value, ticket, token, v1Digest }));
+    const done = store.tx((t) => kernelCommit(t, { ...author(who), packetId: packetId.value, ticket, token, v1Digest, ...(undecidedAs === undefined ? {} : { undecidedAs }) }));
     if (!done.ok) return done;
     const r = done.value;
     if (!r.ok) return r;
     deps.kick(store, packetId.value);
     const apply = store.read((rd) => applyStatus(rd, id));
-    return ok({ packetId: id, rev: r.value.rev, kept: r.value.kept.length, rejected: r.value.rejected.length, at: r.value.at, ...(apply.ok && apply.value !== undefined ? { apply: apply.value } : {}) });
+    const later = r.value.undecided.length;
+    return ok({ packetId: id, rev: r.value.rev, kept: r.value.kept.length, rejected: r.value.rejected.length, ...(later === 0 ? {} : { undecided: later }), at: r.value.at, ...(apply.ok && apply.value !== undefined ? { apply: apply.value } : {}) });
   }
 
   async function returnPacket({ id, rev, plan: editPlan }: { readonly id: string; readonly rev: number; readonly plan: Parameters<ServerBoard["returnPacket"]>[0]["plan"] }, who?: Who) {

@@ -186,6 +186,8 @@ export type NightCommit = {
   readonly open?: readonly string[];
   /** How many parts have committed (absent: one). */
   readonly parts?: number;
+  /** The instant of parts 2..n, in order (`at` is part 1's). Merged by ./parts.ts mergePart. */
+  readonly partAt?: readonly string[];
 };
 
 /* ── Sources ─────────────────────────────────────────────────────────────── */
@@ -596,6 +598,8 @@ export type SeedCommit = {
   /** Seed ids still undecided after the last part (NightCommit.open's rule). */
   readonly open?: readonly SeedId[];
   readonly parts?: number;
+  /** The instant of parts 2..n (NightCommit.partAt's rule). */
+  readonly partAt?: readonly string[];
 };
 
 export type SeedBatch = {

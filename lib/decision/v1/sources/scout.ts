@@ -18,6 +18,7 @@ import { processNightLoad } from "../../../foundry/scout/load.ts";
 import { appendCharacter, appendFinding, appendWatch, knowledgeRoot } from "../../../foundry/scout/knowledge.ts";
 import { meshRoot, mutateAsset, readAsset, resolveInAsset, withVariant } from "../../../foundry/mesh/store.ts";
 import { deskAbs, deskCellUrl, readDeskNight, saveDeskNight } from "../../../foundry/local-draws/desk.ts";
+import { openOf, remainderLine, splitPart } from "../../../foundry/scout/parts.ts";
 import { mutateNight, nightDir, readNight, resolveInNight, scoutRoot } from "../../../foundry/scout/store.ts";
 import type { Night, NightId } from "../../../foundry/scout/types.ts";
 import { wingRunId, type ScoutWing } from "../../../foundry/scout/wing.ts";
@@ -45,7 +46,8 @@ import {
 import { extractAdapter, importVerdict, lookDecision, recordOf, same, type LookDecision } from "./extract.ts";
 import { DIRECTION_VERDICT, IDEA_TARGET_WORD, MUSIC_VERDICT, build, commitOf, extractDecisions, ideaCell, meshKey, sameOutcome, visualizerCell, within, type AssetRead, type ScoutV1, type StyleRead } from "./scoutPlan.ts";
 import { musicOf } from "./scoutMusic.ts";
-import { inWing, isCharacter, knowledgeOf, knowledgeWrite, nightOfRun, packetMeta } from "./scoutWing.ts";
+import { nightRefusal, partOfBuilt, partWords, settledPart, withPart } from "./scoutPart.ts";
+import { inWing, isCharacter, knowledgeOf, knowledgeWrite, nightOfRun, packetMeta, partOfRun } from "./scoutWing.ts";
 
 // ONE /scout NIGHT AS A PACKET - foundry-out/scout/<night>/night.json
 // (lib/foundry/scout/store.ts) read through readNight, decided as ONE matrix
@@ -87,25 +89,30 @@ import { inWing, isCharacter, knowledgeOf, knowledgeWrite, nightOfRun, packetMet
 // EITHER WING (spark scout-muse): `muse:<night>` is a muse night, decided the same way inside its own root
 // (./scoutWing.ts inWing); its findings land in its techniques.md, its watch lines in its watchlist, and a
 // kept character idea's card in its characters.md.
+//
+// IN PARTS (spark scout-storyboards, ./scoutPart.ts, lib/foundry/scout/parts.ts): the night commits with cells left
+// undecided, and they open as the remainder packet `pkt:scout:<run>:<n>`. Each part's writes run for its own
+// cells; the record merges every part, and the night is `committed` once nothing is left open. A style is decided
+// whole: one with an undecided look holds every look for the remainder, its decided looks written as verdicts only.
 
 /** Repo-relative, forward slashes: the roots a consequence names. */
 const rel = (abs: string): string => path.relative(process.cwd(), abs).replace(/\\/g, "/");
 
 /** The read, with what the registry leads are derived from (the nights its findings restate, the keys queued) and the night's load (never digested). */
-type ScoutRead = ScoutV1 & { readonly wing: ScoutWing; readonly earlier: ReadonlyMap<NightId, Night>; readonly queued: readonly string[]; readonly load?: LoadSummary; readonly desk?: true };
+type ScoutRead = ScoutV1 & { readonly wing: ScoutWing; readonly earlier: ReadonlyMap<NightId, Night>; readonly queued: readonly string[]; readonly load?: LoadSummary; readonly desk?: true; /** The part this read opens (absent: 1, the night's own packet). */ readonly part?: number };
 
 /* ── read ──────────────────────────────────────────────────────────────────── */
 
 async function read(ref: AdapterRef): Promise<Result<ScoutRead>> {
-  const id = ref.runId;
+  const { run: id, part } = splitPart(ref.runId);
   const wing = activeWing();
   const got = await v1Call(() => readNight(id));
-  // A scout night wins when both exist, so a desk id can never hide one. A desk night is the scout wing's.
+  // A scout night wins when both exist, so a desk id can never hide one. A desk night is the scout wing's, and whole.
   let desk = false;
   let night: Night;
   if (got.ok) night = got.value;
   else {
-    const alt = wing === "scout" ? await readDeskNight(id) : null;
+    const alt = wing === "scout" && part === 1 ? await readDeskNight(id) : null;
     if (alt === null) return got;
     night = alt;
     desk = true;
@@ -169,24 +176,19 @@ async function read(ref: AdapterRef): Promise<Result<ScoutRead>> {
   const load = processNightLoad(night);
   const music = await musicOf(night);
   if (!music.ok) return music;
-  return ok({ ...(load === undefined ? {} : { load }), ...(desk ? { desk: true } : {}), ...music.value, wing, night, styles, assets, media: Object.fromEntries(media.value), knowledge: knowledge.value, at: { scout: rel(scoutRoot()), knowledge: rel(knowledgeRoot()), mesh: rel(meshRoot()) }, earlier, queued: queue.value.events.map((e) => e.key) });
+  return ok({ ...(load === undefined ? {} : { load }), ...(desk ? { desk: true } : {}), ...(part === 1 ? {} : { part }), ...music.value, wing, night, styles, assets, media: Object.fromEntries(media.value), knowledge: knowledge.value, at: { scout: rel(scoutRoot()), knowledge: rel(knowledgeRoot()), mesh: rel(meshRoot()) }, earlier, queued: queue.value.events.map((e) => e.key) });
 }
 
 /* ── packet ────────────────────────────────────────────────────────────────── */
 
-function refusal(n: Night): string | undefined {
-  if (n.state === "open") return "The night is still running.";
-  if (n.state === "committed" || n.committed !== undefined) return "This night is already committed.";
-  return undefined;
-}
-
-function packet(v1: ScoutV1 & Pick<ScoutRead, "wing" | "load" | "desk">): Result<OpenPlan> {
+function packet(v1: ScoutV1 & Pick<ScoutRead, "wing" | "load" | "desk" | "part">): Result<OpenPlan> {
   const n = v1.night;
-  const no = refusal(n);
+  const part = v1.part ?? 1;
+  const no = nightRefusal(n, part);
   if (no !== undefined) return err("refused", `scout night ${n.id}: ${no}`);
-  const b = build(v1);
+  const b = partOfBuilt(build(v1), n, part);
   if (b.cells.length === 0) return err("refused", `scout night ${n.id} has nothing rendered to judge`);
-  const run = wingRunId(v1.wing, n.id);
+  const run = wingRunId(v1.wing, n.id, part);
   const minted = mintPacket({
     id: packetIdOf("scout", run),
     lane: "image",
@@ -194,7 +196,7 @@ function packet(v1: ScoutV1 & Pick<ScoutRead, "wing" | "load" | "desk">): Result
     mode: "matrix-cull",
     state: "open",
     runId: run,
-    title: `${v1.wing} ${n.id}`,
+    title: `${v1.wing} ${n.id}${part === 1 ? "" : ` · part ${part}`}`,
     items: b.cells.map((c) => ({ id: c.id, jobId: c.jobId, media: c.media, row: c.row, grades: c.grades })),
   });
   if (!minted.ok) return minted;
@@ -237,7 +239,8 @@ function digestOf(v1: ScoutRead): string {
   const assets = Object.entries(v1.assets).map(([cid, r]) => [cid, r.kind === "read" ? r.asset.variants.map((v) => `${v.id}:${v.status}`) : r.error]);
   // An earlier night committed between the preview and the commit turns a restatement into a lead: a different packet.
   const restated = [...verifiedRestates(v1.night, v1.earlier).keys()].sort();
-  return v1DigestOf({ source: "scout", night: v1.night.id, state: v1.night.state, candidates: v1.night.candidates, media: shas(v1.media), runs: runs.sort(), assets: assets.sort(), restated });
+  // A part that landed between the preview and the commit is a different packet too: the record is read.
+  return v1DigestOf({ source: "scout", night: v1.night.id, state: v1.night.state, candidates: v1.night.candidates, media: shas(v1.media), runs: runs.sort(), assets: assets.sort(), restated, part: v1.part ?? 1, committed: v1.night.committed ?? null });
 }
 
 /** A desk night's picture is served from the local-draws route, not the scout file route. */
@@ -248,20 +251,28 @@ function deskUrl(night: Night, candidate: string, fallback: string): string {
 
 function consequence(v1: ScoutRead, at: DecisionsAt): Result<Preview> {
   const n = v1.night;
-  const no = refusal(n);
+  const part = v1.part ?? 1;
+  const no = nightRefusal(n, part);
   if (no !== undefined) return err("refused", `scout night ${n.id}: ${no}`);
-  const b = build(v1);
+  const b = partOfBuilt(build(v1), n, part);
   const ids = b.cells.map((c) => c.id);
   const byCell = decisionMap(at.decisions);
   const kept = new Set(ids.filter((id) => byCell.get(id)?.verdict === "keep"));
   const v1Digest = digestOf(v1);
-  // A desk commit names no scout path. Taste, knowledge and the library are not in the write.
+  // What this part leaves for the next: its undecided cells, and every cell of a style still holding one (commitOf).
+  const left = openOf(commitOf(n, ids, at.decisions, "")).length;
+  if (ids.length > 0 && left === ids.length) return err("refused", `scout night ${n.id}: nothing decided; ${left} undecided`);
+  const next = packetIdOf("scout", wingRunId(v1.wing, n.id, part + 1));
+  const nightFile = { kind: "file" as const, target: `${v1.at.scout}/${n.id}/night.json` };
+  const remainder = left === 0 ? [] : [{ ...nightFile, detail: remainderLine(left, next) }];
+  // A desk commit names no scout path. Taste, knowledge and the library are not in the write. A desk night is whole.
   if (v1.desk) {
+    if (left > 0) return err("refused", `desk night ${n.id} commits whole: ${left} undecided`);
     return ok({ v1Digest, consequence: buildConsequence(at, ids, { writes: [{ kind: "file", target: `local-draws/${n.id}/night.json`, detail: "verdicts stay on this desk; scout taste, knowledge and the library are not written" }] }, v1Digest) });
   }
-  const nightFile = { kind: "file" as const, target: `${v1.at.scout}/${n.id}/night.json` };
   if (n.dry) {
-    return ok({ v1Digest, consequence: buildConsequence(at, ids, { writes: [{ ...nightFile, detail: "committed · dry: the verdicts only; no style, scene or knowledge is admitted" }] }, v1Digest) });
+    const dry = part === 1 && left === 0 ? "committed · dry: the verdicts only; no style, scene or knowledge is admitted" : `${partWords(part, left)} · dry: the verdicts only`;
+    return ok({ v1Digest, consequence: buildConsequence(at, ids, { writes: [{ ...nightFile, detail: dry }, ...remainder] }, v1Digest) });
   }
   type Mut<T> = T extends readonly (infer U)[] ? U[] : never;
   const parts: { [K in "writes" | "promotions" | "renames" | "nearDuplicates"]: Mut<NonNullable<ConsequenceParts[K]>> } = { writes: [], promotions: [], renames: [], nearDuplicates: [] };
@@ -269,6 +280,10 @@ function consequence(v1: ScoutRead, at: DecisionsAt): Result<Preview> {
   for (const [cid, ex] of Object.entries(b.runs)) {
     const items = b.cells.filter((c) => c.candidate === cid).map((c) => ({ id: within(cid, c.id) ?? c.id, row: within(cid, c.row) ?? c.row }));
     const decisions = extractDecisions(at.decisions, at.packetId, cid);
+    if (items.some((it) => (byCell.get(`${cid}/${it.id}`)?.verdict ?? null) === null)) {
+      parts.writes.push({ kind: "file", target: `foundry-out/extract/${ex.run.id}/verdicts.json`, candidate: cid, detail: `a look undecided: the decided looks' verdicts only, every look to ${next}` });
+      continue;
+    }
     if (nothingKept(looksOf(items, decisions))) {
       parts.writes.push({ kind: "file", target: `foundry-out/extract/${ex.run.id}/verdicts.json`, candidate: cid, detail: "every look rejected: the verdicts only, the run stays uncommitted" });
       continue;
@@ -315,11 +330,14 @@ function consequence(v1: ScoutRead, at: DecisionsAt): Result<Preview> {
       }
     }
   }
-  for (const e of leadEventsOf({ night: n, kept, earlier: v1.earlier })) {
+  // What the keeps earn, over every part's keeps; a later part names only the leads it adds.
+  for (const e of leadEventsOf({ night: n, kept: new Set([...kept, ...(n.committed?.kept ?? [])]), earlier: v1.earlier })) {
     const cell = leadCell(e);
-    parts.writes.push({ kind: "file", target: rel(leadsFile()), ...(cell === undefined ? {} : { candidate: cell }), detail: `${v1.queued.includes(e.key) ? "already queued" : "queues a registry lead"}: ${e.kind} ${e.refs[0] ?? ""}` });
+    const queued = v1.queued.includes(e.key);
+    if (queued && part > 1) continue;
+    parts.writes.push({ kind: "file", target: rel(leadsFile()), ...(cell === undefined ? {} : { candidate: cell }), detail: `${queued ? "already queued" : "queues a registry lead"}: ${e.kind} ${e.refs[0] ?? ""}` });
   }
-  parts.writes.push({ ...nightFile, detail: "committed: every verdict, its reasons and its note" });
+  parts.writes.push({ ...nightFile, detail: partWords(part, left) }, ...remainder);
   return ok({ v1Digest, consequence: buildConsequence(at, ids, parts, v1Digest) });
 }
 
@@ -341,13 +359,32 @@ async function applyStyle(claim: ApplyClaim, cid: string, runId: string): Promis
     return r.ok ? r : err(r.error.code, `style ${cid} (extract run ${runId}): ${r.error.message}`, { cause: r.error });
   }
   // Every look rejected: v1's verdicts, and no commit (v1 refuses one that keeps nothing).
+  return verdictsOnly(runId, looks);
+}
+
+/**
+ * A style held for the remainder (a look still undecided, commitOf): the looks this part decided reach v1 as
+ * verdicts and the run stays uncommitted, so the remainder packet opens every look with them imported.
+ */
+async function holdStyle(claim: ApplyClaim, cid: string, runId: string): Promise<Result<void>> {
+  const items = claim.packet.items.flatMap((it) => {
+    const id = within(cid, it.id);
+    return id === null ? [] : [{ id, row: within(cid, it.row ?? "") ?? id.slice(0, id.lastIndexOf("/")) }];
+  });
+  const looks = looksOf(items, extractDecisions(claim.decisions, claim.packetId, cid));
+  return verdictsOnly(runId, new Map([...looks].filter(([, d]) => d.verdict !== null)));
+}
+
+/** Looks' verdicts written to an extract run, no commit; a committed run must already hold the same keeps. */
+async function verdictsOnly(runId: string, looks: ReadonlyMap<string, LookDecision>): Promise<Result<void>> {
   const fresh = await v1Call(() => getExtractRun(runId));
   if (!fresh.ok) return fresh;
   const { run, verdicts } = fresh.value;
   if (run.status === "committed") {
-    const differ = (run.committed?.kept ?? []).filter((look) => looks.has(look));
+    const kept = new Set(run.committed?.kept ?? []);
+    const differ = [...looks].filter(([look, d]) => (d.verdict === "keep") !== kept.has(look)).map(([look]) => look);
     if (differ.length === 0) return ok(undefined);
-    return err("refused", `extract run ${runId} was committed in v1 with other verdicts: ${differ.map((l) => `${l} is kept in v1, reject here`).join("; ")}`);
+    return err("refused", `extract run ${runId} was committed in v1 with other verdicts: ${differ.map((l) => `${l} is ${kept.has(l) ? "kept" : "not kept"} in v1, ${looks.get(l)?.verdict ?? "undecided"} here`).join("; ")}`);
   }
   const set: Record<string, ExtractVerdictRecord> = {};
   for (const [look, d] of looks) {
@@ -405,17 +442,13 @@ async function apply(claim: ApplyClaim): Promise<Result<void>> {
     return ok(undefined);
   }
   const night = got.value;
+  const part = partOfRun(runId.value);
   const items = claim.packet.items.map((it) => it.id);
+  // This part's own record: its decided cells, and `open` = what it leaves (a style holding an undecided look whole).
   const record = commitOf(night, items, claim.decisions, new Date().toISOString());
+  const held = new Set(openOf(record));
 
-  const settled = (n: Night): Result<void> | undefined => {
-    if (n.committed === undefined) return undefined;
-    if (sameOutcome(n.committed, record)) return ok(undefined);
-    const word = (r: Pick<Night["committed"] & object, "kept" | "rejected">, c: string): string => (r.kept.includes(c) ? "keep" : r.rejected.includes(c) ? "reject" : "undecided");
-    const was = n.committed;
-    const differ = [...new Set([...items, ...was.kept, ...was.rejected])].filter((c) => word(was, c) !== word(record, c));
-    return err("refused", `scout night ${id} was committed with other verdicts: ${differ.map((c) => `${c} is ${word(was, c)} in v1, ${word(record, c)} here`).join("; ")}`);
-  };
+  const settled = (n: Night): Result<void> | undefined => settledPart(id, n.committed, record, part);
   const before = settled(night);
   if (before !== undefined) return before;
   if (night.state === "open") return err("conflict", `scout night ${id}: The night is still running.`);
@@ -426,7 +459,8 @@ async function apply(claim: ApplyClaim): Promise<Result<void>> {
     const restated = verifiedRestates(night, earlier);
     for (const c of night.candidates) {
       if (c.kind === "style" && c.extractRunId !== undefined) {
-        const r = await applyStyle(claim, c.id, c.extractRunId);
+        const holding = items.some((it) => it.startsWith(`${c.id}/`) && held.has(it));
+        const r = holding ? await holdStyle(claim, c.id, c.extractRunId) : await applyStyle(claim, c.id, c.extractRunId);
         if (!r.ok) return r;
       } else if (c.kind === "finding" && kept.has(`${c.id}/text`)) {
         const url = night.sources.find((s) => s.id === c.sourceIds[0])?.url;
@@ -445,15 +479,16 @@ async function apply(claim: ApplyClaim): Promise<Result<void>> {
         if (!r.ok) return r;
       }
     }
-    // Then what the keeps earned: once by key, so a redelivery queues nothing.
-    const leads = leadEventsOf({ night, kept: record.kept, earlier });
+    // Then what the keeps earned, over every part's keeps: once by key, so a redelivery queues nothing.
+    const leads = leadEventsOf({ night, kept: [...(night.committed?.kept ?? []), ...record.kept], earlier });
     const queued = leads.length === 0 ? ok([]) : await v1Call(() => queueEvents(leads));
     if (!queued.ok) return queued;
   }
-  // Last: the record that says every write above has happened.
-  const after = await v1Call(() => mutateNight(id, (n) => (n.committed !== undefined ? n : { ...n, state: "committed", committed: record })));
+  // Last: the record that says every write above has happened - this part merged into the night's, the night
+  // `committed` only once nothing is left open.
+  const after = await v1Call(() => mutateNight(id, (n) => withPart(n, record, part)));
   if (!after.ok) return after;
   return settled(after.value) ?? err("internal", `scout night ${id}: the commit record did not land in ${nightDir(id)}`);
 }
 
-export const scoutAdapter: DecisionAdapter<ScoutRead> = inWing<ScoutRead>({ source: "scout", read, packet, consequence, apply });
+export const scoutAdapter: DecisionAdapter<ScoutRead> = inWing<ScoutRead>({ source: "scout", partial: true, read, packet, consequence, apply });

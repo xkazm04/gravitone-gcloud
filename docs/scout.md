@@ -405,6 +405,30 @@ names each (`queues a registry lead: <kind> <ref>`, or `already queued`). The ne
 knowledge lines and the filed leads (never pushes). An untriaged packet waits; nothing is
 ever accepted for want of an answer.
 
+### Commit in parts
+
+A large night need not be decided in one sitting (spark scout-storyboards). On a scout, muse or seeds
+packet the commit does not wait for the undecided: the bar reads `Commit 40 · 30 later`, the consequence
+names the remainder (`30 undecided → pkt:scout:<night>:2`), and the kernel commits the decided cells with
+`undecidedAs: "leave"`. A reasonless reject still holds the commit, and a packet with nothing decided does
+not commit. Every other source still refuses while anything is undecided, at the desk and at the server.
+
+The undecided cells open as a NEW packet, `pkt:scout:<night>:2` (then `:3`; a muse night's
+`pkt:scout:muse:<night>:2`, a batch's `pkt:seeds:<batch>:2`): each part is its own kernel packet,
+committed once. On the Floor and the Runs rail the night is then ONE pile, the remainder, pending what is
+still open; the base packet does not open again. The decided desk of a part links its remainder.
+
+`night.committed` stays one record: kept, rejected, reasons and notes are the union of every part, `open`
+the cells still waiting, `parts` how many landed, `partAt` the instant of parts 2..n (`at` is part 1's). The
+night stays `closed` until `open` is empty, then turns `committed`. Each part runs its own cells' writes
+(knowledge lines, mesh verdicts, leads once by key); a redelivered part writes nothing, and a part that
+contradicts a verdict already in the record is refused naming the cell. A style is decided whole: its looks
+commit through the extract run's own commit, which is final, so a style with an undecided look holds every
+look for the remainder, its decided looks written as verdicts only and imported there. Readers see the
+union: taste, the graph (a candidate with a cell in `open` is open, and points at the remainder), the
+Library, a kept seed (usable from the part that kept it). The ledger records `commit` for part 1 and
+`commit.<n>` for each later part.
+
 ## The load
 
 The operator keeps the box's CPU, RAM and GPU in **60-80%** over a night (2026-10-23: "so we can learn

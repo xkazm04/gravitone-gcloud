@@ -15,6 +15,7 @@ import { z } from "zod";
 import { parseAt } from "@gt/domain/door";
 import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 
+import { nextPart, partRunId } from "./parts";
 import { ancestryOf, createSeedBatch, listSeedBatches, readSeedBatch, seedOf, seedsPacketId } from "./seedStore";
 import { pausedUnder, readSteer } from "./steer";
 import { GENRE_MAX, MAX_SEED_BATCH, SEED_AUDIENCES, SEED_REF_RE, SEED_SENTENCE_MAX, VIDEO_FORMATS, seedRef, type NightId, type Seed, type SeedBatch, type SeedRef } from "./types";
@@ -171,7 +172,10 @@ export async function seedsCommand(
       return refused(errorMessage(e));
     }
     const c = batchCounts(b);
-    const head = `batch ${b.id} · ${c.seeds} seeds · ${c.kept} kept · ${c.rejected} rejected · ${c.undecided} undecided · ${b.dry ? "dry" : "live"}${b.committed === undefined ? ` · /board/${seedsPacketId(b.id)}` : ` · committed ${b.committed.at.slice(0, 10)} by ${b.committed.by}`}`;
+    // Committed in part (spark scout-storyboards): the rest is decided on the remainder packet.
+    const part = nextPart(b.committed);
+    const where = b.committed === undefined ? ` · /board/${seedsPacketId(b.id)}` : `${part === undefined ? "" : ` · /board/${seedsPacketId(partRunId(b.id, part))}`} · committed ${b.committed.at.slice(0, 10)} by ${b.committed.by}`;
+    const head = `batch ${b.id} · ${c.seeds} seeds · ${c.kept} kept · ${c.rejected} rejected · ${c.undecided} undecided · ${b.dry ? "dry" : "live"}${where}`;
     return { lines: [head, ...b.seeds.map((s) => seedLine(b, s))], doc: { ok: true, batch: b }, code: 0 };
   }
   return refused(`seeds takes new or status${sub === undefined ? "" : `, not ${sub}`}`, 2);

@@ -189,6 +189,29 @@ describe("the commit", () => {
       { id: PID, rev: 1, token: "tok-1", ticket: "ticket-1" },
     ]);
   });
+
+  test("a packet committing in parts sends the sweep only when its preview counted cells undecided (spark scout-storyboards)", async () => {
+    for (const [partial, undecided, sweep] of [[true, 2, true], [true, 0, false], [false, 2, false]] as const) {
+      const f = fakePort();
+      const port: BoardPort = {
+        ...f.port,
+        loadPacket: async (i) => {
+          const r = await f.port.loadPacket(i);
+          return r.ok && partial ? { ok: true, value: { ...r.value, present: { ...r.value.present, partial: true } } } : r;
+        },
+        preview: async (i) => {
+          const r = await f.port.preview(i);
+          return r.ok ? { ok: true, value: { ...r.value, counts: { kept: 1, rejected: 0, undecided } } } : r;
+        },
+      };
+      const gate = createGate(createBoardGate(port, () => undefined, () => "ticket-1").gatePort, { windowMs: 30 });
+      await gate.select(PID);
+      gate.decide("a", keep);
+      await gate.prepareCommit();
+      await gate.commit();
+      expect(f.calls.commit, `partial ${partial}, ${undecided} undecided`).toEqual([{ id: PID, rev: 1, token: "tok-1", ticket: "ticket-1", ...(sweep ? { undecidedAs: "leave" } : {}) }]);
+    }
+  });
 });
 
 describe("a closing tab", () => {

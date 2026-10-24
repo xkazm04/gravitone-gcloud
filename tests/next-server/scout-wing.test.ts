@@ -36,7 +36,8 @@ import { EMPTY_STEER, readSteer, setSplit } from "../../lib/foundry/scout/steer.
 import { createNight, listNights, mutateNight, readAllNights, rootOf, scoutRoot } from "../../lib/foundry/scout/store.ts";
 import { tasteBrief } from "../../lib/foundry/scout/taste.ts";
 import { MUSE_FINDINGS_HEADING } from "../../lib/foundry/scout/tasteMuse.ts";
-import type { IdeaCandidate, Night } from "../../lib/foundry/scout/types.ts";
+import { mergePart, nextPart, partRefusal, splitPart } from "../../lib/foundry/scout/parts.ts";
+import type { IdeaCandidate, Night, NightCommit } from "../../lib/foundry/scout/types.ts";
 import { parseWingRunId, wingRunId, type ScoutWing } from "../../lib/foundry/scout/wing.ts";
 import { activeWing, withWing } from "../../lib/foundry/scout/wingScope.ts";
 import type { SpawnResult } from "../../lib/foundry/scout/ingest.ts";
@@ -78,6 +79,33 @@ describe("the wing's root", () => {
     expect(wingRunId("muse", DAY)).toBe(`muse:${DAY}`);
     expect(parseWingRunId(`bogus:${DAY}`)).toBeNull();
     expect(parseWingRunId(`scout:${DAY}`)).toBeNull();
+  });
+
+  it("a remainder packet's run names its part after the night, in either wing (spark scout-storyboards)", () => {
+    expect([wingRunId("scout", DAY, 2), wingRunId("muse", DAY, 3), wingRunId("scout", DAY, 1)]).toEqual([`${DAY}:2`, `muse:${DAY}:3`, DAY]);
+    expect(parseWingRunId(`${DAY}:2`)).toEqual({ wing: "scout", night: DAY, part: 2 });
+    expect(parseWingRunId(`muse:${DAY}:2`)).toEqual({ wing: "muse", night: DAY, part: 2 });
+    // `:1` is never spelled; it is not a part, and the id names no night of the wing.
+    expect(parseWingRunId(`muse:${DAY}:1`)).toEqual({ wing: "muse", night: `${DAY}:1` });
+    expect(parseWingRunId(`bogus:${DAY}:2`)).toBeNull();
+  });
+
+  it("a part merges into the night's record: union, open, parts, a redelivery, a contradiction, a part out of turn", () => {
+    const rec = (kept: string[], rejected: string[], open?: string[], at = "t1"): NightCommit => ({ at, by: "operator", kept, rejected, reasons: {}, notes: {}, dry: false, ...(open === undefined ? {} : { open }) });
+    const one = mergePart(undefined, rec(["a"], ["b"], ["c", "d"]), 1);
+    if (one.kind !== "write") throw new Error(one.kind);
+    expect(one.next).toEqual({ ...rec(["a"], ["b"], ["c", "d"]), parts: 1 });
+    expect(mergePart(undefined, rec(["a"], ["b"]), 1)).toEqual({ kind: "write", next: rec(["a"], ["b"]) });
+    expect(mergePart(undefined, rec(["c"], []), 2)).toMatchObject({ kind: "refuse" });
+    const two = mergePart(one.next, rec(["c"], [], ["d"], "t2"), 2);
+    if (two.kind !== "write") throw new Error(two.kind);
+    expect(two.next).toMatchObject({ kept: ["a", "c"], rejected: ["b"], open: ["d"], parts: 2, partAt: ["t2"], at: "t1" });
+    expect(mergePart(two.next, rec(["c"], [], ["d"], "t9"), 2)).toEqual({ kind: "same" });
+    expect(mergePart(two.next, rec(["a"], ["b"], ["c", "d"]), 1)).toEqual({ kind: "same" });
+    expect(mergePart(two.next, rec([], ["c"], ["d"]), 2)).toEqual({ kind: "differ", why: "c is keep in v1, reject here" });
+    expect(mergePart(two.next, rec(["d"], []), 4)).toEqual({ kind: "refuse", why: "part 4 does not follow part 2" });
+    expect([nextPart(two.next), partRefusal(two.next, 3), partRefusal(two.next, 2), partRefusal(rec(["a"], []), 2)]).toEqual([3, undefined, "part 2 is not the next part (3)", "already committed"]);
+    expect([splitPart("2026-10-24:12"), splitPart("2026-10-24"), splitPart("x:0")]).toEqual([{ run: "2026-10-24", part: 12 }, { run: "2026-10-24", part: 1 }, { run: "x:0", part: 1 }]);
   });
 
   it("the close's packet names the wing: a muse night's link is pkt:scout:muse:<night>, the scout night's is unchanged", () => {

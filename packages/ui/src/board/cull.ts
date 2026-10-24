@@ -86,6 +86,24 @@ export function notDoneWords(n: Pick<NotDone, "undecided" | "reasonless">): stri
   return [n.undecided.length > 0 ? `${n.undecided.length} undecided` : "", n.reasonless.length > 0 ? `${n.reasonless.length} need a reason` : ""].filter((x) => x !== "").join(" · ");
 }
 
+/**
+ * What the commit key does (spark scout-storyboards, "allow to commit partial packets"):
+ *   go      every tile decided - or, on a packet whose source commits in PARTS (`partial`), something decided and
+ *           no reject still owing its reason: the undecided go on to the remainder packet (`later` of them);
+ *   refuse  what is open, flashed and jumped to - a partial packet refuses only on its reasonless rejects, and when
+ *           nothing at all is decided.
+ */
+export type CommitGate = { readonly kind: "go"; readonly later: number } | { readonly kind: "refuse"; readonly left: NotDone };
+
+export function commitGate(cells: readonly Cell[], verdicts: Readonly<Record<string, BoardVerdict>>, required: boolean, partial = false): CommitGate {
+  const left = notDoneOf(cells, verdicts, required);
+  if (left.all.length === 0) return { kind: "go", later: 0 };
+  if (!partial) return { kind: "refuse", left };
+  if (left.reasonless.length > 0) return { kind: "refuse", left: { undecided: [], reasonless: left.reasonless, all: left.reasonless } };
+  if (left.undecided.length === cells.length) return { kind: "refuse", left };
+  return { kind: "go", later: left.undecided.length };
+}
+
 /** The reason slot a drawn reject key holds: 2 -> 0, 3 -> 1, 4 -> 2; -1 for any other cap. */
 export function reasonSlot(cap: string): number {
   return REJECT_KEYS.findIndex((k) => k === cap);

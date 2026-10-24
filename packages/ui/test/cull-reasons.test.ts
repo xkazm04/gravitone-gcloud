@@ -10,7 +10,8 @@ import { describe, expect, test } from "vitest";
 import { reasonsOf, reasonVocabulary } from "@gt/domain/source";
 
 import type { BoardVerdict } from "../src/board/boardGate.ts";
-import { chipThen, keepingNote, nextOpen, noteAct, notDoneOf, notDoneWords, reasonAct, runKeyAct, stillOpen, type Cell, type KeyAct } from "../src/board/cull.ts";
+import { chipThen, commitGate, keepingNote, nextOpen, noteAct, notDoneOf, notDoneWords, reasonAct, runKeyAct, stillOpen, type Cell, type KeyAct } from "../src/board/cull.ts";
+import { remainderOf } from "../src/board/port.ts";
 import { categoryOf, tabOf } from "../src/board/runs.ts";
 import { CullFoot } from "../src/components/cull/CullFoot.tsx";
 import { IdeaList } from "../src/components/cull/IdeaList.tsx";
@@ -110,6 +111,23 @@ describe("the commit gate on a source whose reject needs a reason", () => {
   test("the bar's commit names both what is undecided and what needs a reason", () => {
     const html = renderToStaticMarkup(h(CullFoot, { tally: { kept: 1, rejected: 2, undecided: 1 }, reasonless: 2, reasons: SEEDS, refusals: 0, busy: false, onCommit: noop }));
     expect(html).toContain("1 undecided · 2 need a reason");
+  });
+
+  test("a commit in parts: undecided go on to the remainder, a reasonless reject and an empty commit still refuse", () => {
+    const v = { "sd-001": keep, "sd-002": reject("generic") };
+    expect(commitGate(cells, v, true, true)).toEqual({ kind: "go", later: 2 });
+    // Not partial: the undecided hold the commit, as on every other source.
+    expect(commitGate(cells, v, true, false)).toEqual({ kind: "refuse", left: { undecided: [2, 3], reasonless: [], all: [2, 3] } });
+    // A reasonless reject holds a partial commit; only it is flashed.
+    expect(commitGate(cells, { ...v, "sd-003": reject() }, true, true)).toEqual({ kind: "refuse", left: { undecided: [], reasonless: [2], all: [2] } });
+    expect(commitGate(cells, {}, true, true)).toMatchObject({ kind: "refuse", left: { undecided: [0, 1, 2, 3] } });
+    expect(commitGate(cells, { ...v, "sd-003": keep, "sd-004": keep }, true, false)).toEqual({ kind: "go", later: 0 });
+    // The bar says how many commit now and how many later, and stops waiting on the undecided.
+    const html = renderToStaticMarkup(h(CullFoot, { tally: { kept: 1, rejected: 1, undecided: 2 }, later: 2, reasons: SEEDS, refusals: 0, busy: false, onCommit: noop }));
+    expect(html).toContain("2 later");
+    expect(html).toContain("commit packet, 2 · 2 later");
+    expect(html).not.toContain("2 undecided");
+    expect([remainderOf("pkt:scout:2026-10-24"), remainderOf("pkt:scout:2026-10-24:2"), remainderOf("pkt:scout:muse:2026-10-24"), remainderOf("pkt:seeds:2026-10-24-2")]).toEqual(["pkt:scout:2026-10-24:2", "pkt:scout:2026-10-24:3", "pkt:scout:muse:2026-10-24:2", "pkt:seeds:2026-10-24-2:2"]);
   });
 
   test("a reasonless reject flashes on the list as an undecided row does; a reasoned one does not", () => {

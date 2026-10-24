@@ -166,3 +166,39 @@ describe("seeds projection", () => {
     expect(p.tally.facts).toEqual({ "run.start": 3, "run.status": 3, commit: 1 });
   });
 });
+
+describe("seeds adapter - a batch committed in parts (spark scout-storyboards)", () => {
+  it("a reasonless reject still blocks; the undecided go to pkt:seeds:<batch>:2, which commits the rest", async () => {
+    fresh();
+    const flow = await openFlow(seedsAdapter, BATCH, blobDir);
+    flow.patch([
+      { candidate: "sd-001", verdict: "keep" },
+      { candidate: "sd-002", verdict: "reject" },
+    ]);
+    const bare = flow.commit(undefined, "leave");
+    expect(!bare.ok && bare.error.message).toBe("decision: 1 rejected need a reason: sd-002");
+    flow.patch([{ candidate: "sd-002", verdict: "reject", reasons: ["generic"] }]);
+    const p = must(flow.preview()).consequence;
+    expect(p.writes.slice(-2).map((w) => w.detail)).toEqual(["part 1: every verdict, its reasons and its note", `1 undecided → pkt:seeds:${BATCH}:2`]);
+    must(flow.commit(undefined, "leave"));
+    must(await seedsAdapter.apply(flow.claim()));
+    expect(batchNow().committed).toMatchObject({ kept: ["sd-001"], rejected: ["sd-002"], open: ["sd-003"], parts: 1 });
+    const ctx = { now: new Date("2026-10-24T00:00:00.000Z"), universe: "real" as const };
+    expect(projectSeeds({ batches: [batchNow()] }, ctx).weir.map((w) => [w.id, w.pending, weirPacketId(w)])).toEqual([[`${BATCH}:2`, 1, `pkt:seeds:${BATCH}:2`]]);
+    // The base packet does not open again.
+    expect(seedsAdapter.packet(must(await seedsAdapter.read({ runId: BATCH }))).ok).toBe(false);
+
+    const two = await openFlow(seedsAdapter, `${BATCH}:2`, blobDir);
+    expect([two.plan.packet.id, two.plan.packet.title, two.plan.packet.items.map((c) => c.id)]).toEqual([`pkt:seeds:${BATCH}:2`, `seeds ${BATCH} · part 2`, ["sd-003"]]);
+    two.patch([{ candidate: "sd-003", verdict: "keep" }]);
+    expect(must(two.preview()).consequence.writes.at(-1)?.detail).toBe("part 2 · committed: every verdict, its reasons and its note");
+    must(two.commit());
+    const claim2 = two.claim();
+    must(await seedsAdapter.apply(claim2));
+    expect(batchNow().committed).toMatchObject({ kept: ["sd-001", "sd-003"], rejected: ["sd-002"], open: [], parts: 2 });
+    must(await seedsAdapter.apply(claim2));
+    const p2 = projectSeeds({ batches: [batchNow()] }, ctx);
+    expect(p2.weir).toEqual([]);
+    expect(p2.events.filter((e) => e.type === "commit").map((e) => e.key)).toEqual([`seeds:${BATCH}:commit`, `seeds:${BATCH}:commit.2`]);
+  });
+});
