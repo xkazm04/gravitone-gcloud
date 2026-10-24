@@ -230,6 +230,13 @@ export function similarity(a: Observables, b: Observables): number {
   return got / total;
 }
 
+/** The partition's pairing rule: render_mode AND medium agree and the weighted
+ *  similarity is at least `threshold`. Also what places a source read after the
+ *  styles exist (performGroup.ts placeLate). */
+export function sameStyle(a: Observables, b: Observables, threshold = 0.8): boolean {
+  return a.render_mode === b.render_mode && a.medium === b.medium && similarity(a, b) >= threshold;
+}
+
 /**
  * Deterministic grouping: two sources share a style when their render_mode
  * AND medium agree and their weighted similarity is at least `threshold` —
@@ -257,7 +264,7 @@ export function partition(readbacks: (Observables | null)[], threshold = 0.8): n
     for (let j = i + 1; j < readbacks.length; j++) {
       const b = readbacks[j];
       if (!b) continue;
-      if (a.render_mode === b.render_mode && a.medium === b.medium && similarity(a, b) >= threshold) union(i, j);
+      if (sameStyle(a, b, threshold)) union(i, j);
     }
   }
   const groups = new Map<number, number[]>();

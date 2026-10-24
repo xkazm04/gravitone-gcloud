@@ -334,6 +334,54 @@ test("engine: three consecutive vendor failures trip the breaker — the run sto
   expect(m.styles[0].replicas.every((r) => r.rounds.length >= 1 && r.rounds[0].n === 1)).toBe(true);
 });
 
+test("engine: a source refused at read and taken again by a retry AFTER grouping lands in exactly one style", async () => {
+  // One refused frame does not trip the breaker, so the run groups the other
+  // two and finishes. A retry prunes the refusal and reads s03 - but the
+  // styles already exist, so `group` is never taken again. Every source lands
+  // in exactly one style (types.ts ExtractedStyle.members); a late reader
+  // must still be placed, by the partition rule, without discarding the
+  // styles whose replicas were already paid for.
+  const m = manifest({ rounds: 1, replicas: 2, transfers: 0 });
+  const script: Script = { roundScore: () => painterly, refuseRead: new Set(["s03"]) };
+  const io = fakeIO(m, script, []);
+  await runToEnd(m, io);
+  expect(m.status).toBe("done");
+  expect(m.sources.find((s) => s.id === "s03")?.error).toMatch(/refused/);
+  const before = m.styles.map((s) => s.id);
+
+  expect(pruneFailures(m)).toBe(1);
+  await runToEnd(m, io);
+  expect(m.status).toBe("done");
+  const homes = (id: string) => m.styles.filter((s) => s.members.includes(id)).length;
+  for (const s of m.sources) expect({ source: s.id, styles: homes(s.id) }).toEqual({ source: s.id, styles: 1 });
+  // The styles grouped before the retry are kept, replicas and all.
+  for (const id of before) expect(m.styles.find((s) => s.id === id)?.replicas.length).toBeGreaterThan(0);
+  // s03 reads cel, unlike s01/s02 - it is a style of its own, and it is replicated.
+  const late = m.styles.find((s) => s.members.includes("s03"))!;
+  expect(late.members).toEqual(["s03"]);
+  expect(late.replicas.map((r) => r.source)).toEqual(["s03"]);
+});
+
+test("engine: a late reader that matches an existing style joins it rather than standing alone", async () => {
+  const m = manifest({ rounds: 1, replicas: 2, transfers: 0 });
+  const script: Script = { roundScore: () => painterly, refuseRead: new Set(["s02"]) };
+  const io = fakeIO(m, script, []);
+  // With s02 refused the engine's grouping names s02 as a member; script one that covers what was read.
+  io.reason = async () => ({
+    value: { styles: [
+      { id: "painted-haze", name: "Painted Haze", family: "game", members: ["s01"], ...painterly, recipe: "Painterly rendering with matte brushwork, heavy haze, one hard key, crushed blacks, soft edges.", negative: "photo" },
+      { id: "flat-cel", name: "Flat Cel", family: "animation", members: ["s03"], ...cel, recipe: "Cel-shaded flat fills with crisp ink lines, saturated palette, no atmosphere, deep neutral blacks.", negative: "grain" },
+    ] },
+    model: "fake/words",
+  });
+  await runToEnd(m, io);
+  expect(pruneFailures(m)).toBe(1);
+  await runToEnd(m, io);
+  expect(m.styles.map((s) => s.id)).toEqual(["painted-haze", "flat-cel"]);
+  expect(m.styles[0].members).toEqual(["s01", "s02"]); // s02 reads painterly, as s01 does
+  expect(m.styles[0].replicas.map((r) => r.source)).toEqual(["s01", "s02"]);
+});
+
 test("progress: the strip can actually reach its total — replicas are counted at the real number, not at the ceiling", async () => {
   // `options.replicas` is a CEILING on how many members a style replicates. The
   // fixture's second style has ONE member, so it takes one replica however high
