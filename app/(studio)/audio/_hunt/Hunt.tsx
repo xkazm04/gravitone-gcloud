@@ -11,7 +11,8 @@
 // THE REQUEST POSTURE. Every write is the server's, through one Server Action per gesture, and
 // the page re-reads after it (router.refresh): the island holds only what is not the store's - the
 // selection, the open lesson draft, which crowns are in flight. v1 held the hunt's whole node list
-// here and PATCHed it back per gesture, which is how two gestures overwrote each other.
+// here and PATCHed it back per gesture, which is how two gestures overwrote each other. A write
+// whose round trip fails rejects; each one waits through ./settled.ts, so its busy flag still clears.
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
@@ -37,6 +38,7 @@ import type { confirmLessonAct } from "../_lessons/acts.ts";
 import type { crownTake, draftHuntLesson, draftHuntMap, renderLeaves } from "./acts.ts";
 import type { HuntDeskView } from "./read.ts";
 import { uploadLeafReturn } from "./returnClient.ts";
+import { settled } from "./settled.ts";
 import { huntHref } from "./url.ts";
 import s from "./hunt.module.css";
 
@@ -131,7 +133,7 @@ function OpenHunt({ hunt, view, acts, nowMs }: { readonly hunt: HuntOpenView; re
   const crown = (leaf: HuntLeafView, takeId: string, on: boolean): void => {
     if (crowning.has(leaf.id)) return;
     setCrowning((c) => new Set(c).add(leaf.id));
-    void acts.crownTake({ huntId: hunt.id, nodeId: leaf.id, takeId, on, opId: opId() }).then((r) => {
+    void settled(acts.crownTake({ huntId: hunt.id, nodeId: leaf.id, takeId, on, opId: opId() })).then((r) => {
       setCrowning((c) => {
         const n = new Set(c);
         n.delete(leaf.id);
@@ -151,7 +153,7 @@ function OpenHunt({ hunt, view, acts, nowMs }: { readonly hunt: HuntOpenView; re
     if (asking) return;
     setAsking(true);
     setSignError(null);
-    void acts.draftHuntLesson({ huntId: hunt.id, engine }).then((r) => {
+    void settled(acts.draftHuntLesson({ huntId: hunt.id, engine })).then((r) => {
       setAsking(false);
       if (r.ok) setDraft(r.value);
       else setRefusal(r.error.error);
@@ -162,7 +164,7 @@ function OpenHunt({ hunt, view, acts, nowMs }: { readonly hunt: HuntOpenView; re
     if (signing) return;
     setSigning(true);
     const p = d.proposal;
-    void acts.confirmLessonAct({ kind: p.kind, source: p.source, provider: p.provider, huntId: p.huntId, claim, technique: [...technique], evidence: { ...p.evidence, takeIds: [...p.evidence.takeIds] }, opId: opId(), key: d.key }).then((r) => {
+    void settled(acts.confirmLessonAct({ kind: p.kind, source: p.source, provider: p.provider, huntId: p.huntId, claim, technique: [...technique], evidence: { ...p.evidence, takeIds: [...p.evidence.takeIds] }, opId: opId(), key: d.key })).then((r) => {
       setSigning(false);
       if (!r.ok) {
         setSignError(r.error.error);
@@ -237,7 +239,7 @@ export function Hunt({ view, acts, nowMs }: { readonly view: HuntDeskView; reado
     if (drafting) return;
     setDrafting(true);
     setError(null);
-    void acts.draftHuntMap({ kind: view.kind, idea, opId: opId() }).then((r) => {
+    void settled(acts.draftHuntMap({ kind: view.kind, idea, opId: opId() })).then((r) => {
       setDrafting(false);
       if (!r.ok) {
         setError(r.error.error);
