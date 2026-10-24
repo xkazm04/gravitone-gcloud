@@ -85,6 +85,18 @@ function words(p: StyleProof, digest: string | null): ItemWords {
   return { label: p.label, meta };
 }
 
+/** Whether one verdict may land on the style as it stands: v1's refusal, `held` when the proof
+ *  already carries it, or undefined when the op may run. */
+function standing(row: StyleRow, id: string, state: ProofState): Result<never> | "held" | undefined {
+  const p = row.style.proofs.find((x) => x.id === id);
+  if (p === undefined) return err("refused", "That proof is no longer on the sheet.");
+  // A redelivery finds its own verdict and writes nothing; another verdict is the atelier's, and stands.
+  if (p.state === state) return "held";
+  if (row.style.lock !== undefined) return err("refused", "This style is locked; its proofs are final.");
+  if (p.state !== "pending") return err("refused", `proof ${id} is ${p.state} in the atelier; this packet would have it ${state} - judge it there`);
+  return undefined;
+}
+
 export function makeProofAdapter(deps: ProofDeps): DecisionAdapter<ProofV1> {
   async function read(ref: AdapterRef): Promise<Result<ProofV1>> {
     const s = deps.store();
@@ -180,12 +192,20 @@ export function makeProofAdapter(deps: ProofDeps): DecisionAdapter<ProofV1> {
     if (!ref.ok) return ref;
     if (!ref.value.ok) return ref.value;
     const styleId = ref.value.value.row.style.id;
-    for (const d of claim.decisions) {
-      if (d.verdict === null) continue;
-      const id = candidateOf(d);
-      const state: ProofState = d.verdict === "keep" ? "approved" : "rejected";
-      const note = d.note?.trim().slice(0, NOTE_MAX);
+    const verdicts = claim.decisions.flatMap((d) => (d.verdict === null ? [] : [{ d, id: candidateOf(d), state: (d.verdict === "keep" ? "approved" : "rejected") as ProofState }]));
+    // Every verdict is checked against the style as it stands BEFORE the first op: a refusal parks
+    // the row stuck, and it must leave the style's log as the commit found it, not holding the
+    // verdicts that came before the refused one.
+    const first = store.read((r) => readStyleIn(r, styleId));
+    if (!first.ok) return first;
+    if (first.value === undefined) return err("not-found", "That style no longer exists.");
+    for (const { d, id, state } of verdicts) {
       if (d.by !== "operator") return err("refused", `proof ${id}: a proof is judged by an operator; an agent's verdict is no keep`);
+      const no = standing(first.value, id, state);
+      if (no !== undefined && no !== "held") return no;
+    }
+    for (const { d, id, state } of verdicts) {
+      const note = d.note?.trim().slice(0, NOTE_MAX);
       // An op at the style's CURRENT rev; a conflict means another write landed between the read
       // and the op - read again (bounded), the verdict is still the same act.
       for (let attempt = 0; ; attempt++) {
@@ -193,12 +213,9 @@ export function makeProofAdapter(deps: ProofDeps): DecisionAdapter<ProofV1> {
         if (!now.ok) return now;
         const row = now.value;
         if (row === undefined) return err("not-found", "That style no longer exists.");
-        const p = row.style.proofs.find((x) => x.id === id);
-        if (p === undefined) return err("refused", "That proof is no longer on the sheet.");
-        // A redelivery finds its own verdict and writes nothing; another verdict is the atelier's, and stands.
-        if (p.state === state) break;
-        if (row.style.lock !== undefined) return err("refused", "This style is locked; its proofs are final.");
-        if (p.state !== "pending") return err("refused", `proof ${id} is ${p.state} in the atelier; this packet would have it ${state} - judge it there`);
+        const no = standing(row, id, state);
+        if (no === "held") break;
+        if (no !== undefined) return no;
         const out = applyStyleOp(store, { styleId, baseRev: row.rev, op: { kind: "judge-proof", proofId: id, state, ...(note ? { note } : {}) } }, OPERATOR);
         if (!out.ok) return out;
         if (out.value.kind === "applied") break;

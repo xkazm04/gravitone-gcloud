@@ -191,5 +191,8 @@ describe("the apply: the atelier's judge-proof op, at the style's rev", () => {
     const r = await w.adapter.apply(claim);
     expect(r.ok ? "" : `${r.error.code}: ${r.error.message}`).toBe("refused: proof p3 is approved in the atelier; this packet would have it rejected - judge it there");
     expect(stateOf(w, "p3")).toBe("approved");
+    // p1 and p2 came before the refused verdict: a refused outcome lands none of itself.
+    expect(["p1", "p2"].map((id) => stateOf(w, id))).toEqual(["pending", "pending"]);
+    expect(must(readStyle(w.store, ID)).rev).toBe(row.rev + 1);
   });
 });
