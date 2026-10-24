@@ -19,7 +19,22 @@ import { FIELD_ATTR } from "@gt/ui/keymap/target";
 import type { EditorProps } from "./PartEditor.tsx";
 import s from "./Cut.module.css";
 
-function Counted({ label, value, limit, area = false, commit }: { readonly label: string; readonly value: string; readonly limit: number; readonly area?: boolean; readonly commit: (v: string) => void }) {
+// The platform's counts (lib/publish/youtube.ts `snippetProblem`, API-NOTES "Video resource"): a
+// title in characters, a description in UTF-8 bytes, the tags with a comma between each and
+// quotes around a tag holding a space. The tags are counted as the op will land them (trimmed,
+// empties dropped, repeats once - the words kind's apply), not as the draft spells them.
+const tagsOf = (v: string): readonly string[] => [...new Set(v.split(",").map((t) => t.trim()).filter((t) => t !== ""))];
+const BYTES = new TextEncoder();
+const COUNT = {
+  title: (v: string): number => [...v].length,
+  description: (v: string): number => BYTES.encode(v).length,
+  tags: (v: string): number => {
+    const tags = tagsOf(v);
+    return tags.reduce((n, t) => n + t.length + (t.includes(" ") ? 2 : 0), 0) + Math.max(0, tags.length - 1);
+  },
+} as const;
+
+function Counted({ label, value, limit, count: measure, area = false, commit }: { readonly label: string; readonly value: string; readonly limit: number; readonly count: (v: string) => number; readonly area?: boolean; readonly commit: (v: string) => void }) {
   const [v, setV] = useState(value);
   const [base, setBase] = useState(value);
   if (base !== value) {
@@ -29,7 +44,8 @@ function Counted({ label, value, limit, area = false, commit }: { readonly label
   const done = (): void => {
     if (v !== value) commit(v);
   };
-  const count = <span className={cx(s.count, v.length > limit && s.over)}>{`${v.length} / ${limit}`}</span>;
+  const n = measure(v);
+  const count = <span className={cx(s.count, n > limit && s.over)}>{`${n} / ${limit}`}</span>;
   return (
     <label className={s.field}>
       <span className={s.row}>
@@ -80,9 +96,9 @@ export function WordsEditor({ frame, send, error, view }: EditorProps<PartView<"
               </div>
             )}
             <div className={s.form}>
-              <Counted label="title" value={d.title} limit={WORDS_LIMITS.title} commit={(value) => send({ op: "words-field", field: "title", value })} />
-              <Counted label="description" value={d.description} limit={WORDS_LIMITS.description} area commit={(value) => send({ op: "words-field", field: "description", value })} />
-              <Counted label="tags · comma separated" value={d.tags.join(", ")} limit={WORDS_LIMITS.tags} commit={(v) => send({ op: "words-tags", tags: v.split(",") })} />
+              <Counted label="title" value={d.title} limit={WORDS_LIMITS.title} count={COUNT.title} commit={(value) => send({ op: "words-field", field: "title", value })} />
+              <Counted label="description" value={d.description} limit={WORDS_LIMITS.description} count={COUNT.description} area commit={(value) => send({ op: "words-field", field: "description", value })} />
+              <Counted label="tags · comma separated" value={d.tags.join(", ")} limit={WORDS_LIMITS.tags} count={COUNT.tags} commit={(v) => send({ op: "words-tags", tags: v.split(",") })} />
               <div className={s.row}>
                 {d.tags.map((t) => (
                   <Chip key={t} label={t} casing="lower" />

@@ -5699,4 +5699,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "void stop;",
     why: "A kept still whose bytes do not load leaves the poster preview a blank canvas still named \"poster preview\", with nothing saying the still is the problem.",
   },
+  {
+    id: "words-description-counted-in-utf16",
+    test: "tests/next-server/part-editor-writing.test.ts",
+    file: "app/(studio)/projects/[id]/[part]/_edit/Words.tsx",
+    find: "description: (v: string): number => BYTES.encode(v).length,",
+    replace: "description: (v: string): number => v.length,",
+    why: "A description in an accented language reads 3000 / 5000 in the editor and is refused by YouTube's 5000-byte limit at the upload.",
+  },
 ];
