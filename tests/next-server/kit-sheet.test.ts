@@ -8,11 +8,20 @@
 //      globals.css's blanket rule reaches `html` and every animation and transition, never a
 //      module's own `scroll-behavior` - the kit's body scrolled smoothly for a person who asked
 //      for no motion on every nav click (WCAG 2.3.3).
+//   2. Every keyed row of the keymap is drawn in a legend - its field's rows too. keyTable draws
+//      a field's rows only when asked for that field, so one legend per mode hid every key that
+//      fires inside a field (save a note, clear a search, rename): 21 of 170 rows.
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 
+import { createElement as h } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
+
+import { BINDINGS } from "@gt/ui/keymap/bindings";
+
+import { SignalSections } from "../../app/(studio)/kit/Signal.tsx";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
 const CSS_ROOTS = ["app", "components", "packages/ui/src"];
@@ -59,5 +68,32 @@ describe("/kit: motion honours reduced motion", () => {
       .filter((f) => !reducedBlocks(css(f)).some((b) => /scroll-behavior\s*:\s*auto/.test(b)))
       .map((f) => path.relative(ROOT, f).replaceAll("\\", "/"));
     expect(unguarded).toEqual([]);
+  });
+});
+
+/** A rendered fragment's words: tags dropped, the five entities React writes decoded. */
+const words = (html: string): string =>
+  html
+    .replace(/<[^>]+>/g, " ")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#x27;", "'")
+    .replaceAll("&amp;", "&");
+
+describe("/kit: the key legends draw the whole keymap", () => {
+  test("every keyed row is drawn in its mode's legend, or its mode's legend for that field", () => {
+    const html = renderToStaticMarkup(h(SignalSections));
+    const legends = new Map<string, string>();
+    for (const m of html.matchAll(/role="group" aria-label="([^"]+) keys">([\s\S]*?)<\/div>/g)) legends.set(m[1] ?? "", words(m[2] ?? ""));
+    const keyed = BINDINGS.filter((b) => b.keys.length > 0);
+    expect(keyed.length, "the keymap holds no keyed row").toBeGreaterThan(100);
+    const missing = keyed
+      .filter((b) => {
+        const legend = legends.get(b.field === undefined ? b.mode : `${b.mode} · ${b.field}`);
+        return legend === undefined || !legend.includes(b.does ?? b.verb);
+      })
+      .map((b) => `${b.mode}/${b.verb}${b.field === undefined ? "" : `@${b.field}`}`);
+    expect(missing).toEqual([]);
   });
 });

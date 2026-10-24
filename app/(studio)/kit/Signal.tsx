@@ -28,10 +28,15 @@ import { Row, Section, Spec } from "./Spec.tsx";
 import k from "./kit.module.css";
 
 const MODES: readonly string[] = [...new Set(BINDINGS.map((b) => b.mode))];
-// Every row of a mode, its conditional rows included: a legend drawn with no facts hides the
+// One legend per mode, and one per field a mode's rows fire inside: keyTable draws a field's
+// rows only when asked for that field, so a legend per mode alone hid every in-field key.
+type Legend = { readonly mode: string; readonly field: string | undefined };
+const LEGENDS: readonly Legend[] = [...new Map(BINDINGS.map((b) => [`${b.mode} ${b.field ?? ""}`, { mode: b.mode, field: b.field }])).values()];
+// Every row of a legend, its conditional rows included: a legend drawn with no facts hides the
 // rows that only exist with a selection (Runs' pause is all of `projects.runs`).
-const factsOf = (mode: string): ReadonlySet<string> =>
-  new Set(BINDINGS.filter((b) => b.mode === mode && b.when !== undefined && !b.when.startsWith("!")).map((b) => b.when ?? ""));
+const factsOf = ({ mode, field }: Legend): ReadonlySet<string> =>
+  new Set(BINDINGS.filter((b) => b.mode === mode && b.field === field && b.when !== undefined && !b.when.startsWith("!")).map((b) => b.when ?? ""));
+const nameOf = ({ mode, field }: Legend): string => (field === undefined ? mode : `${mode} · ${field}`);
 // A take's peaks, shaped like a track's: quiet intro, a build, the drop, a tail.
 const PEAKS: readonly number[] = Array.from({ length: 64 }, (_, i) => Math.min(1, 0.18 + 0.7 * Math.abs(Math.sin(i / 5)) * (i < 16 ? i / 16 : i > 52 ? (64 - i) / 12 : 1)));
 
@@ -85,9 +90,9 @@ export function SignalSections() {
       </Section>
 
       <Section id="keys">
-        {MODES.map((m) => (
-          <Spec key={m} names={["Keycaps"]} source={`mode ${m}`}>
-            <Keycaps mode={m} label={`${m} keys`} facts={factsOf(m)} />
+        {LEGENDS.map((l) => (
+          <Spec key={nameOf(l)} names={["Keycaps"]} source={l.field === undefined ? `mode ${l.mode}` : `mode ${l.mode} · field ${l.field}`}>
+            <Keycaps mode={l.mode} label={`${nameOf(l)} keys`} facts={factsOf(l)} {...(l.field !== undefined ? { field: l.field } : {})} />
           </Spec>
         ))}
         <Spec names={["Keycap"]} source="keycaps/Keycaps.tsx">

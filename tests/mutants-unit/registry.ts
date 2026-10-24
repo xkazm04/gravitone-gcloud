@@ -5297,4 +5297,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "@media (prefers-reduced-motion:reduce){.body{}}",
     why: "Every /kit nav click glides the page for a person who asked for no motion: the blanket rule never reaches a module's own scroller.",
   },
+  {
+    id: "kit-legends-drop-field-rows",
+    test: "tests/next-server/kit-sheet.test.ts",
+    file: "app/(studio)/kit/Signal.tsx",
+    find: "{...(l.field !== undefined ? { field: l.field } : {})}",
+    replace: "",
+    why: "The kit's key legends draw none of the keys that fire inside a field - save a note, clear a search, rename - though the page claims the whole keymap.",
+  },
 ];
