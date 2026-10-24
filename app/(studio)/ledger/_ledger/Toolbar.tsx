@@ -119,7 +119,7 @@ export function Toolbar(p: ToolbarProps) {
         />
       )}
       {p.rows.some(isFixture) && <Chip label="fixture" tone="amber" casing="lower" name="fixture universe" />}
-      {post && !p.exhausted && <Chip label="searched" value={p.scanned} tone="amber" casing="lower" name={`text search examined the newest ${p.scanned} events`} />}
+      {post && !p.exhausted && <Chip label="searched" value={p.scanned} tone="amber" casing="lower" name={`text search examined the ${f.order === "asc" ? "oldest" : "newest"} ${p.scanned} events`} />}
       {p.ignored.map((x) => (
         <Chip key={x} label={`ignored ${x}`} tone="amber" casing="lower" ghost />
       ))}

@@ -7,6 +7,7 @@ import type { FacetCount } from "@gt/kernel/events-count";
 import { Facets } from "../../app/(studio)/ledger/_ledger/Facets.tsx";
 import { EMPTY, type LedgerFilter } from "../../app/(studio)/ledger/_ledger/filter.ts";
 import type { Facets as Counts } from "../../app/(studio)/ledger/_ledger/read.ts";
+import { Toolbar } from "../../app/(studio)/ledger/_ledger/Toolbar.tsx";
 
 // The Ledger's surfaces rendered without a browser: what each one draws for a given
 // filter and answer - the states a filter can put them in, read off the markup.
@@ -54,5 +55,32 @@ describe("the facet rail", () => {
   it("leaves a lone unpressed type folded into its group", () => {
     const html = renderToStaticMarkup(h(Facets, { filter: f(), facets: counts(), onApply: () => undefined }));
     expect(rows(html).filter((r) => r.startsWith("verdict"))).toEqual(["verdict=false"]);
+  });
+});
+
+describe("the toolbar", () => {
+  const bar = (filter: LedgerFilter) =>
+    renderToStaticMarkup(
+      h(Toolbar, {
+        filter,
+        facets: counts(),
+        rows: [],
+        capped: true,
+        scanned: 5000,
+        exhausted: false,
+        ignored: [],
+        live: { edge: "live", since: 0, armed: false },
+        view: "table",
+        facetsOpen: false,
+        onFacets: () => undefined,
+        onApply: () => undefined,
+        onView: () => undefined,
+        onRows: () => undefined,
+      }),
+    );
+
+  it("names the end a stopped text search examined: the newest acts, or the oldest", () => {
+    expect(bar(f({ q: "plate" }))).toContain('aria-label="text search examined the newest 5000 events"');
+    expect(bar(f({ q: "plate", order: "asc" }))).toContain('aria-label="text search examined the oldest 5000 events"');
   });
 });
