@@ -448,6 +448,28 @@ export const PROBLEM_OF: Record<BeatKind, string> = {
   close: "reframe",
 };
 
+/** One spelled number word. Teens included: "sixteen months" is a number. */
+const NUMBER_WORD =
+  "(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)";
+const SCALE_WORD = "(?:hundred|thousand|million|billion)";
+
+/** A spelled magnitude: two or more number words, `point` and `percent`
+ *  included. "and" joins only after a scale word ("a hundred AND twenty"),
+ *  because between two plain numbers it is a list ("candidates one, two and
+ *  three"), and a lone trailing "and" ("two and a half") is not a number at all.
+ *  A leading "a" before a scale word is part of the magnitude: "a hundred and
+ *  twenty six thousand" is 126,000, and dropping the "a hundred and" read it as
+ *  26,000. */
+const SPELLED_FIGURE = new RegExp(
+  `(?:\\ba[\\s-]+(?=${SCALE_WORD}\\b))?\\b${NUMBER_WORD}\\b` +
+    `(?:(?:(?<=${SCALE_WORD})[\\s-]+and)?[\\s-]+(?:${NUMBER_WORD}|point|percent)\\b)+`,
+  "i",
+);
+
+/** A digit figure: the number, then its unit when it has one. Never part of a
+ *  word or an ordinal ("6th"), and never with the sentence's comma on it. */
+const DIGIT_FIGURE = /(?<![\w.,])\d+(?:[.,]\d+)*(?:\s*%|\s*(?:percent|million|billion|thousand)\b)?(?![\w%])/gi;
+
 /** Pull the first hard number out of a line, if it has one. What a figure layer
  *  is FOR — and the thing that must never be drawn by a model. */
 function figureIn(text: string): string | null {
@@ -457,17 +479,19 @@ function figureIn(text: string): string | null {
   // hit one hundred and twenty six thousand dollars", which is the date rather
   // than the number the sentence is about. Spelled-out magnitudes are what this
   // script's own style guide asks for, so they are searched for first.
-  const spelled = text.match(
-    /\b(?:one|two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)(?:[\s-]+(?:and|one|two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion|point|percent))+\b/i,
-  );
-  if (spelled) return spelled[0].trim().replace(/\s+/g, " ").slice(0, 30);
+  //
+  // Not truncated: a cap of 30 characters drew "one hundred and twenty six tho".
+  const spelled = text.match(SPELLED_FIGURE);
+  if (spelled) return spelled[0].trim().replace(/\s+/g, " ");
 
-  // Bare digits, but never an ordinal date ("6th") and never a bare year.
-  const digits = text.match(/\b\d[\d,.]*\s*(?:percent|%|million|billion|thousand)?\b/i);
-  if (!digits) return null;
-  const raw = digits[0].trim();
-  if (/^(19|20)\d{2}$/.test(raw)) return null;
-  return raw.slice(0, 30);
+  // Bare digits, never a bare year. A year is SKIPPED, not the end of the
+  // search: "By 2024 there were 21 million" has a figure, and it is the second
+  // number in the line.
+  for (const m of text.matchAll(DIGIT_FIGURE)) {
+    const raw = m[0].trim().replace(/\s+/g, " ");
+    if (!/^(19|20)\d{2}$/.test(raw)) return raw;
+  }
+  return null;
 }
 
 /** A short kicker from the beat's own label — never invented prose. */
