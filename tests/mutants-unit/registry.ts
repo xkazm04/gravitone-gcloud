@@ -1462,6 +1462,22 @@ export const MUTANTS: UnitMutant[] = [
     why: "A resumed job performs every step again from research.",
   },
   {
+    id: "mv-failure-budget-is-a-breaker-count",
+    test: "packages/producers/test/audio-text.test.ts",
+    file: "packages/producers/src/mv/producer.ts",
+    find: "if (isAppError(e) && e.code === \"budget\") return { kind: \"money-stop\", message: worn };",
+    replace: "if (isAppError(e) && e.code === \"budget\") return { kind: \"vendor-failure\", message: worn };",
+    why: "A spend-window refusal on a music-video step counts toward the breaker and is retried with backoff, instead of stopping the job for money until the operator raises the window.",
+  },
+  {
+    id: "mv-failure-records-after-a-lost-fence",
+    test: "packages/producers/test/audio-text.test.ts",
+    file: "packages/producers/src/mv/producer.ts",
+    find: "    if (fenceLost(e)) throw e;",
+    replace: "    if (fenceLost(e) && false) throw e;",
+    why: "A driver whose slot was taken over writes its failure into mv.json and books a fatal over the new holder's job.",
+  },
+  {
     id: "article-walk-re-runs-a-done-step",
     test: "tests/next-server/producer-article-crash.test.ts",
     file: "lib/articles/drive.ts",
@@ -3629,6 +3645,14 @@ export const MUTANTS: UnitMutant[] = [
     find: "(e: unknown) => say(e instanceof Error ? e.message : \"the redrive did not land\"),",
     replace: "(e: unknown) => void e,",
     why: "A redrive whose Server Action never answers is an unhandled rejection: no toast, no re-read, and the decided desk still says stuck as if the button had not been pressed.",
+  },
+  {
+    id: "board-rail-failure-silent",
+    test: "tests/next-server/board-load.test.ts",
+    file: "app/(studio)/board/_board/load.ts",
+    find: "  if (!list.ok) console.error(`[board] rail: ${list.error.message}`);",
+    replace: "",
+    why: "A rail the store could not list draws empty and leaves no log line, so the decided desk's `weir clear` chip is the only account of a failure nobody can find afterwards.",
   },
   {
     id: "l61-narration-skips-gt-ui",

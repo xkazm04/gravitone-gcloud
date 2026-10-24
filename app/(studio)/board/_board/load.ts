@@ -43,5 +43,7 @@ export async function loadBoard(params: Promise<{ readonly packet: string }>): P
   if (!packet.ok) return { ok: false, id, error: publicError(packet.error, "board load") };
   if (packet.value.view.id !== id) redirect(boardFor(packet.value.view.id));
   const list = await board.listPackets();
+  // The desk still draws without its rail, but an empty rail reads as a clear Weir: say why it is empty.
+  if (!list.ok) console.error(`[board] rail: ${list.error.message}`);
   return { ok: true, id, packet: packet.value, rail: list.ok ? list.value.packets : [] };
 }
