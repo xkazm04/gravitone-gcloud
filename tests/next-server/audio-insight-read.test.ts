@@ -20,20 +20,24 @@ const gate = vi.hoisted(() => {
     now--;
     return v;
   };
-  return { takesFail: false, wait, max: () => max, reset: () => ((now = 0), (max = 0)) };
+  return { takesFail: false, takes: [] as unknown[], rubricReads: 0, wait, max: () => max, reset: () => ((now = 0), (max = 0)) };
 });
 
 vi.mock("../../lib/sound/takes.ts", async (orig) => ({
   ...(await orig<object>()),
   listTakes: async () => {
-    const v = await gate.wait([]);
+    const v = await gate.wait(gate.takes);
     if (gate.takesFail) throw new Error("takes.json: Unexpected end of JSON input");
     return v;
   },
 }));
+vi.mock("@gt/ui/components/audio/rubric.ts", async (orig) => {
+  const m = await orig<typeof import("@gt/ui/components/audio/rubric.ts")>();
+  return { ...m, readRubric: (...a: Parameters<typeof m.readRubric>) => (gate.rubricReads++, m.readRubric(...a)) };
+});
 vi.mock("../../lib/sound/store.ts", async (orig) => ({ ...(await orig<object>()), readLedger: () => gate.wait({ verdicts: [], lessons: [] }) }));
 
-import { readStrengths } from "../../app/(studio)/audio/_insight/read.ts";
+import { readStrengths, unscoredCount } from "../../app/(studio)/audio/_insight/read.ts";
 
 describe("readStrengths", () => {
   it("an unreadable takes file is the evidence's refusal, and the table still reads", async () => {
@@ -53,5 +57,17 @@ describe("readStrengths", () => {
   it("readable takes are the evidence", async () => {
     const v = await readStrengths("music");
     expect(v.evidence).toEqual({ ok: true, value: [] });
+  });
+});
+
+describe("unscoredCount - the rubric tab's tally", () => {
+  it("counts the judged takes with a dimension unscored, reading each take's rubric once", async () => {
+    const take = (id: string, verdict: string, ratings: Record<string, number>) => ({ id, kind: "music", verdict, loop: null, ratings });
+    gate.takes = [take("a", "kept", {}), take("b", "rejected", {}), take("c", "unjudged", {})];
+    gate.rubricReads = 0;
+    const r = await unscoredCount("music");
+    gate.takes = [];
+    expect(r).toEqual({ ok: true, value: 2 });
+    expect(gate.rubricReads).toBe(2);
   });
 });

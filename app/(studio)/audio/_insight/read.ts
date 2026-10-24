@@ -152,7 +152,10 @@ export async function readRubricPile(kind: Kind): Promise<RubricView> {
 
 /** How many judged takes of a kind still have a dimension unscored: the rubric tab's tally. */
 export async function unscoredCount(kind: Kind): Promise<Read<number>> {
-  return read(async () => (await listTakes({ kind, fixtures: FIXTURE_MODE })).filter(judged).filter((t) => readRubric(t).scored < readRubric(t).of).length);
+  return read(async () => (await listTakes({ kind, fixtures: FIXTURE_MODE })).filter(judged).filter((t) => {
+    const r = readRubric(t);
+    return r.scored < r.of;
+  }).length);
 }
 
 export function readBatch(kind: Kind, reg: readonly EngineDef[]): BatchView {
