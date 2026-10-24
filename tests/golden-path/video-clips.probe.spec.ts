@@ -56,7 +56,7 @@ const MP4 = new Uint8Array([0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0
 
 let dir = "";
 
-keepEnv(["CLIP_STORE_DIR", VIDEO_BUDGET_VAR, "LEONARDO_API_KEY"]);
+keepEnv(["CLIP_STORE_DIR", VIDEO_BUDGET_VAR, "LEONARDO_API_KEY", "SPEND_STORE"]);
 
 test.beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "video-clips-"));
@@ -285,6 +285,37 @@ test("an adapter that throws closes the clip as failed and releases nothing it n
   expect(rec.error).toMatch(/socket hang up/);
   expect((await videoBudgetStats()).held).toBe(0);
   expect((await videoBudgetStats()).spent).toBe(0);
+});
+
+test("a ledger that refuses the settle does not strand a delivered clip: `done` resolves, the record is terminal", async () => {
+  // The vendor took the job and delivered; only the money write fails (here: the spend
+  // store becomes unselectable between the reserve and the settle). The clip's ending
+  // stands - `done` "never rejects" - and the record does not sit `rendering` for
+  // readClip to misreport later as a server that stopped.
+  setVideoAdapterForTests({
+    id: "fake",
+    configured: () => true,
+    render: async (_input, onAccepted) => {
+      await onAccepted({ vendorJobId: "gen-ledger", costUsd: 1.2, costBasis: "estimated" });
+      process.env.SPEND_STORE = "unselectable-probe";
+      return { kind: "done", bytes: MP4 };
+    },
+  });
+  const run = await startClip(body());
+  let rec: ClipRecord | null = null;
+  try {
+    rec = await run.done;
+  } catch (e) {
+    rec = null;
+    expect.soft(String(e), "the run's promise rejected").toBe("");
+  } finally {
+    process.env.SPEND_STORE = "memory";
+  }
+  expect(rec?.status).toBe("done");
+  const stored = await readClipRecord(run.clipId);
+  expect(stored?.status, "the record was left non-terminal").toBe("done");
+  expect(stored?.vendorJobId).toBe("gen-ledger");
+  expect((await clipFileStat(run.clipId))?.size).toBe(MP4.length);
 });
 
 test("a clip left rendering by a process that is gone reads as failed, not rendering forever", async () => {
