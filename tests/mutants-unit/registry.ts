@@ -5907,4 +5907,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "err(\"not-found\", `no library item ${id}`)",
     why: "The fixture Library refuses an id it does not hold in its own words, so the detail's error line is designed against a sentence the kernel never writes.",
   },
+  {
+    id: "library-page-detail-refusal-swallowed",
+    test: "tests/next-server/library-page.test.ts",
+    file: "app/(studio)/library/page.tsx",
+    find: "const refused = detail !== null && !detail.ok && detail.error.code !== \"not-found\" ? detail.error.message : null;",
+    replace: "const refused = null as string | null;",
+    why: "A store or projects-read failure on a selected item opens the Library on the set with the selection dropped and no word of why: a shared link to an item reads as a link to nothing.",
+  },
+  {
+    id: "library-page-gone-item-reads-as-error",
+    test: "tests/next-server/library-page.test.ts",
+    file: "app/(studio)/library/page.tsx",
+    find: "&& detail.error.code !== \"not-found\" ?",
+    replace: "?",
+    why: "An item the index no longer holds (deleted, pruned) draws an error line over the set on every open of an old link, though nothing failed.",
+  },
 ];
