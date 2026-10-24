@@ -49,7 +49,7 @@ function CardRow({ c }: { readonly c: ResearchCard }) {
   );
 }
 
-function Inspector({ c, cards, send, onSelect }: { readonly c: ResearchCard; readonly cards: ReadonlyMap<string, ResearchCard>; readonly send: EditorProps<unknown>["send"]; readonly onSelect: (id: string) => void }) {
+function Inspector({ c, cards, send, busy, onSelect }: { readonly c: ResearchCard; readonly cards: ReadonlyMap<string, ResearchCard>; readonly send: EditorProps<unknown>["send"]; readonly busy: boolean; readonly onSelect: (id: string) => void }) {
   const link = (ids: readonly string[], label: string) =>
     ids.length === 0 ? null : (
       <div className={s.sect}>
@@ -95,10 +95,10 @@ function Inspector({ c, cards, send, onSelect }: { readonly c: ResearchCard; rea
       {link(c.contests, "contests")}
       {link(c.qualifies, "qualifies")}
       <div className={s.acts}>
-        {c.required && c.scope === "in" ? <Chip label="required" tone="violet" casing="lower" /> : <Button label={c.scope === "in" ? "descope" : "restore"} size="sm" tone={c.scope === "in" ? "rose" : "emerald"} shortcut={{ mode: "part.research", verb: "descope" }} onPress={() => send({ op: c.scope === "in" ? "descope" : "restore", cardId: c.id })} />}
-        <Button label={c.liked ? "unlike" : "like"} size="sm" shortcut={{ mode: "part.research", verb: "like" }} onPress={() => send({ op: "like", cardId: c.id, on: !c.liked })} />
-        <Button label={c.deepen ? "undeepen" : "deepen"} size="sm" shortcut={{ mode: "part.research", verb: "deepen" }} onPress={() => send({ op: "deepen", cardId: c.id, on: !c.deepen })} />
-        <Button label="follow up" size="sm" tone="cyan" onPress={() => send({ op: "queue-follow-up", prompt: "", cardId: c.id })} />
+        {c.required && c.scope === "in" ? <Chip label="required" tone="violet" casing="lower" /> : <Button label={c.scope === "in" ? "descope" : "restore"} size="sm" tone={c.scope === "in" ? "rose" : "emerald"} shortcut={{ mode: "part.research", verb: "descope" }} disabled={busy} onPress={() => send({ op: c.scope === "in" ? "descope" : "restore", cardId: c.id })} />}
+        <Button label={c.liked ? "unlike" : "like"} size="sm" shortcut={{ mode: "part.research", verb: "like" }} disabled={busy} onPress={() => send({ op: "like", cardId: c.id, on: !c.liked })} />
+        <Button label={c.deepen ? "undeepen" : "deepen"} size="sm" shortcut={{ mode: "part.research", verb: "deepen" }} disabled={busy} onPress={() => send({ op: "deepen", cardId: c.id, on: !c.deepen })} />
+        <Button label="follow up" size="sm" tone="cyan" disabled={busy} onPress={() => send({ op: "queue-follow-up", prompt: "", cardId: c.id })} />
       </div>
     </>
   );
@@ -124,14 +124,14 @@ function FollowUps({ d, send, busy }: { readonly d: NotebookBoard; readonly send
         }}
       >
         <input className={cx(s.input, s.grow)} aria-label="question" value={q} onChange={(e) => setQ(e.currentTarget.value)} {...{ [FIELD_ATTR]: "follow-up" }} />
-        <Button label="queue" size="sm" submit />
+        <Button label="queue" size="sm" disabled={busy} submit />
       </form>
       {d.followUps.map((f) => (
         <div key={f.id} className={s.fu} data-follow-up={f.id}>
           <div className={s.row}>
             <Chip label={f.status} casing="lower" tone={f.status === "returned" ? "emerald" : f.status === "unanswered" ? "rose" : "neutral"} />
             <span className={cx(s.mono, s.ell, s.grow)}>{f.cardId ?? "question"}</span>
-            {f.status === "queued" && <Button label="drop" size="sm" onPress={() => send({ op: "drop-follow-up", id: f.id })} />}
+            {f.status === "queued" && <Button label="drop" size="sm" disabled={busy} onPress={() => send({ op: "drop-follow-up", id: f.id })} />}
           </div>
           <p className={cx(s.work, s.clamp2)}>{f.prompt}</p>
           {f.result !== undefined && (
@@ -143,8 +143,8 @@ function FollowUps({ d, send, busy }: { readonly d: NotebookBoard; readonly send
                   <Chip label={e.landing} casing="lower" tone={e.landing === "landed" ? "emerald" : e.landing === "pending" ? "amber" : "neutral"} />
                   {e.landing === "pending" && (
                     <>
-                      <Button label="apply" size="sm" tone="emerald" onPress={() => send({ op: "decide-effect", followUpId: f.id, index: e.index, decision: "applied" })} />
-                      <Button label="reject" size="sm" tone="rose" onPress={() => send({ op: "decide-effect", followUpId: f.id, index: e.index, decision: "rejected" })} />
+                      <Button label="apply" size="sm" tone="emerald" disabled={busy} onPress={() => send({ op: "decide-effect", followUpId: f.id, index: e.index, decision: "applied" })} />
+                      <Button label="reject" size="sm" tone="rose" disabled={busy} onPress={() => send({ op: "decide-effect", followUpId: f.id, index: e.index, decision: "rejected" })} />
                     </>
                   )}
                 </div>
@@ -204,7 +204,7 @@ export function NotebookEditor({ view, frame, send, busy, error, data: d }: Edit
   const canConfirm = d.source !== null && t.requiredGone.length === 0 && (!d.scope.confirmed || d.scope.moved > 0 || d.scope.orphan !== undefined);
   const acts = (
     <>
-      {canConfirm && <Button label="confirm scope" size="sm" tone="emerald" tally={{ value: t.kept, of: t.total, label: "kept" }} onPress={() => send({ op: "confirm-scope" })} />}
+      {canConfirm && <Button label="confirm scope" size="sm" tone="emerald" tally={{ value: t.kept, of: t.total, label: "kept" }} disabled={busy} onPress={() => send({ op: "confirm-scope" })} />}
       {frame.acts}
     </>
   );
@@ -254,7 +254,7 @@ export function NotebookEditor({ view, frame, send, busy, error, data: d }: Edit
               </div>
               {d.scope.moved > 0 && <Chip label="moved" value={d.scope.moved} tone="amber" />}
               {d.scope.orphan !== undefined && <Chip label="orphaned scope" value={d.scope.orphan.decisions} tone="amber" />}
-              {view.data.offers.length > 1 && <Button label="beats" size="sm" onPress={() => send({ op: "set-face", face: "beats" })} />}
+              {view.data.offers.length > 1 && <Button label="beats" size="sm" disabled={busy} onPress={() => send({ op: "set-face", face: "beats" })} />}
             </div>
             {d.source === null ? (
               <div className={s.empty}>
@@ -282,7 +282,7 @@ export function NotebookEditor({ view, frame, send, busy, error, data: d }: Edit
         label: "card",
         children: (
           <div tabIndex={-1} data-region="inspector">
-            {card === undefined ? <Empty label="no card selected" /> : <Inspector c={card} cards={byId} send={send} onSelect={select} />}
+            {card === undefined ? <Empty label="no card selected" /> : <Inspector c={card} cards={byId} send={send} busy={busy} onSelect={select} />}
           </div>
         ),
       }}

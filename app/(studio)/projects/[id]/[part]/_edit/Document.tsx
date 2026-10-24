@@ -114,7 +114,7 @@ export function DocumentEditor({ frame, send, busy, error, data: d }: EditorProp
   const over = (x: Candidate): boolean => d.targetS !== null && x.durationS > d.targetS * 1.25;
   const acts = (
     <>
-      {c !== undefined && <Button label={d.adopted === c.id ? "unadopt" : "adopt"} size="sm" tone="emerald" shortcut={{ mode: "part.script", verb: "adopt" }} onPress={() => void adopt()} />}
+      {c !== undefined && <Button label={d.adopted === c.id ? "unadopt" : "adopt"} size="sm" tone="emerald" shortcut={{ mode: "part.script", verb: "adopt" }} disabled={busy} onPress={() => void adopt()} />}
       {frame.acts}
     </>
   );
@@ -158,7 +158,7 @@ export function DocumentEditor({ frame, send, busy, error, data: d }: EditorProp
                 <div key={v.id} className={s.row}>
                   <span className={cx(s.mono, s.grow, s.ell)}>{v.label}</span>
                   {v.override !== undefined && <Chip label="override" tone="amber" casing="lower" />}
-                  {i < d.versions.length - 1 && d.staged === undefined && <Button label="restore" size="sm" onPress={() => send({ op: "restore-version", versionId: v.id })} />}
+                  {i < d.versions.length - 1 && d.staged === undefined && <Button label="restore" size="sm" disabled={busy} onPress={() => send({ op: "restore-version", versionId: v.id })} />}
                 </div>
               ))}
               <h3 className={s.h}>
@@ -167,7 +167,7 @@ export function DocumentEditor({ frame, send, busy, error, data: d }: EditorProp
               {d.notes.map((n) => (
                 <div key={n.id} className={s.row} data-note={n.id}>
                   <span className={cx(s.grow, s.ell)}>{`${n.cardTitle} · ${n.label}`}</span>
-                  <Button label="remove" size="sm" onPress={() => send({ op: "note-remove", noteId: n.id })} />
+                  <Button label="remove" size="sm" disabled={busy} onPress={() => send({ op: "note-remove", noteId: n.id })} />
                 </div>
               ))}
             </div>
@@ -194,11 +194,11 @@ export function DocumentEditor({ frame, send, busy, error, data: d }: EditorProp
                   <Chip label={d.staged.label} tone="amber" casing="lower" />
                   <span className={cx(s.mono, s.grow)}>{d.staged.gate.blocked ? `gate blocks on ${d.staged.gate.blocking.join(", ")}` : "gate clean"}</span>
                   {d.staged.gate.blocked ? (
-                    <Button label="accept over the gate" size="sm" tone="amber" onPress={() => send({ op: "accept-over-gate", versionId: d.staged?.id ?? "" })} />
+                    <Button label="accept over the gate" size="sm" tone="amber" disabled={busy} onPress={() => send({ op: "accept-over-gate", versionId: d.staged?.id ?? "" })} />
                   ) : (
-                    <Button label="accept" size="sm" tone="emerald" onPress={() => send({ op: "accept", versionId: d.staged?.id ?? "" })} />
+                    <Button label="accept" size="sm" tone="emerald" disabled={busy} onPress={() => send({ op: "accept", versionId: d.staged?.id ?? "" })} />
                   )}
-                  <Button label="discard" size="sm" onPress={() => send({ op: "discard-staged", versionId: d.staged?.id ?? "" })} />
+                  <Button label="discard" size="sm" disabled={busy} onPress={() => send({ op: "discard-staged", versionId: d.staged?.id ?? "" })} />
                 </div>
                 {d.staged.refusals.map((r) => (
                   <p key={r} className={s.risk}>

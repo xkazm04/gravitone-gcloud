@@ -59,7 +59,7 @@ export function ScenariosEditor({ frame, send, busy, error, data: d }: EditorPro
   );
   const acts = (
     <>
-      {sc !== undefined && sc.id !== d.picked && <Button label="pick" size="sm" tone="emerald" shortcut={{ mode: "part.script", verb: "adopt" }} onPress={() => void pick()} />}
+      {sc !== undefined && sc.id !== d.picked && <Button label="pick" size="sm" tone="emerald" shortcut={{ mode: "part.script", verb: "adopt" }} disabled={busy} onPress={() => void pick()} />}
       {frame.acts}
     </>
   );

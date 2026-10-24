@@ -5739,4 +5739,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "if (q.trim() === \"\") return;",
     why: "A question typed and queued while another write is in flight is cleared from the field and never queued: the island declines the op and the words are gone.",
   },
+  {
+    id: "notebook-descope-live-in-flight",
+    test: "tests/next-server/part-editor-writing.test.ts",
+    file: "app/(studio)/projects/[id]/[part]/_edit/Notebook.tsx",
+    find: "shortcut={{ mode: \"part.research\", verb: \"descope\" }} disabled={busy} onPress=",
+    replace: "shortcut={{ mode: \"part.research\", verb: \"descope\" }} onPress=",
+    why: "The descope button reads as pressable while another write is in flight; the island drops the op and the press looks taken and does nothing, where X is declined.",
+  },
 ];

@@ -189,7 +189,7 @@ export function AdsBriefEditor({ frame, send, busy, error, data: d }: EditorProp
               )}
               <p className={s.risk}>{`risk — ${idea.risk}`}</p>
               <div className={s.acts}>
-                {idea.id === d.picked ? <Chip label="picked" tone="emerald" casing="lower" /> : <Button label="pick" size="sm" tone="emerald" shortcut={{ mode: "part.research", verb: "open" }} onPress={() => pick(idea.id)} />}
+                {idea.id === d.picked ? <Chip label="picked" tone="emerald" casing="lower" /> : <Button label="pick" size="sm" tone="emerald" shortcut={{ mode: "part.research", verb: "open" }} disabled={busy} onPress={() => pick(idea.id)} />}
               </div>
             </>
           ),

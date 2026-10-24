@@ -10,10 +10,14 @@ vi.mock("@gt/ui/keymap/dispatch", async (orig) => ({ ...(await orig<object>()), 
 
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 
-import type { NotebookBoard, PartOp, PartView, ResearchCard, ResearchData, WordsData } from "@gt/domain/partView";
+import type { Candidate, NotebookBoard, PartOp, PartView, ResearchCard, ResearchData, ScriptData, ScriptDocument, WordsData } from "@gt/domain/partView";
 
+import { AdsBriefEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/AdsBrief.tsx";
+import { BeatsEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Beats.tsx";
+import { DocumentEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Document.tsx";
 import { NotebookEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Notebook.tsx";
 import type { EditorProps, Frame } from "../../app/(studio)/projects/[id]/[part]/_edit/PartEditor.tsx";
+import { ScenariosEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Scenarios.tsx";
 import { WordsEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Words.tsx";
 import cut from "../../app/(studio)/projects/[id]/[part]/_edit/Cut.module.css";
 import { harness } from "../golden-path/_studio/hooks.ts";
@@ -161,4 +165,91 @@ describe("a follow-up typed while a write is in flight", () => {
   it("with nothing in flight is queued and the field clears", async () => {
     expect(await ask(false)).toEqual({ sent: [{ op: "queue-follow-up", prompt: "who salted the road?" }], left: "" });
   });
+});
+
+/* ── a write button and its key say the same thing while a write is in flight ── */
+
+// Every editor's keys already decline while `busy` (the island answers one write at a time); a
+// Button that still looks pressable sends an op the island drops without a word.
+
+const LOCAL = new Set(["Inspector", "FollowUps", "Usage"]);
+/** The Buttons an editor draws, its own sub-components rendered (the kit's are not). */
+async function buttons(run: () => ReactElement): Promise<{ label: string; disabled: boolean }[]> {
+  const out: ReactElement[] = [];
+  const walk = (node: ReactNode): void => {
+    for (const el of all(node, (x) => named("Button")(x) || (typeof x.type === "function" && LOCAL.has(x.type.name)))) {
+      if (named("Button")(el)) out.push(el);
+      else walk((el.type as (q: unknown) => ReactNode)(el.props));
+    }
+  };
+  await harness(
+    () => {
+      out.length = 0;
+      walk(run());
+      return null;
+    },
+    { settleWhen: "stable" },
+  ).settleUp();
+  return out.map((b) => ({ label: (b.props as { label: string }).label, disabled: (b.props as { disabled?: boolean }).disabled === true }));
+}
+const live = (bs: { label: string; disabled: boolean }[]): string[] => bs.filter((b) => !b.disabled).map((b) => b.label);
+
+const gate = { blocked: false, violations: 0, passes: 1, unmeasured: 0, notEngaged: 0, enforced: 100, findings: [] };
+const candidate = (id: string): Candidate => ({ id, title: `cand ${id}`, engine: "e", durationS: 60, words: 120, beats: [], weakness: "thin", gate, ledger: [], usage: [] });
+const version = (id: string): ScriptDocument["versions"][number] => ({ id, label: id, basedOn: null, at: "t", notes: 0 });
+const script = (data: ScriptData, busy: boolean) => ({ view: { data } as PartView<"script">, frame, send: () => {}, busy, error: null, act: () => {} }) satisfies EditorProps<PartView<"script">>;
+
+const EDITORS: readonly [string, (busy: boolean) => ReactElement][] = [
+  [
+    "the notebook",
+    (busy) => {
+      const d = notebook([card("c1")], [{ id: "fu-1", kind: "question", prompt: "why", status: "queued" }, { id: "fu-2", kind: "question", prompt: "how", status: "returned", result: { verdict: "strengthened", summary: "", sources: [], effects: [{ index: 0, kind: "add", target: "c1", note: "", landing: "pending" }] } }]);
+      const p = research(d, busy, []);
+      return NotebookEditor({ ...p, data: d as never }) as ReactElement;
+    },
+  ],
+  [
+    "the ads brief",
+    (busy) => {
+      const d: ResearchData = { offers: ["notebook"], face: "ads", brief: { product: "coat", audience: "", proposition: "", tone: "", mustInclude: [], cta: "", platform: "" }, missing: [], ideas: [{ id: "i1", angle: "rain", title: "dry", hook: "h", twist: "t", whyItWorks: "w", risk: "r", gateNotes: [] }], picked: null, briefChanged: false };
+      const p = research(d, busy, []);
+      return AdsBriefEditor({ ...p, data: d as never }) as ReactElement;
+    },
+  ],
+  [
+    "the beat board",
+    (busy) => {
+      const v = { id: "v1", kind: "open", connector: null, at: "0:00", label: "cold open", text: "t", rationale: "r", raises: [], spends: 0 } as const;
+      const d: ResearchData = { offers: ["notebook", "beats"], face: "beats", slots: [{ id: "s1", label: "open", role: "open", pick: "v1", variants: [v] }], picked: 1, spine: { composed: false, moved: false }, origin: "generated" };
+      const p = research(d, busy, []);
+      return BeatsEditor({ ...p, data: d as never }) as ReactElement;
+    },
+  ],
+  [
+    "the beat document",
+    (busy) => {
+      const d: ScriptData = { face: "document", targetS: 60, writtenAgainst: { claims: 0, loadBearing: 0, mechanisms: 0, reversals: 0, kept: 0 }, candidates: [candidate("k1")], adopted: null, rollup: { enforced: 100, blocking: [] }, versions: [version("v1"), version("v2")], staged: { ...version("v3"), gate: { blocked: false, blocking: [] }, refusals: [] }, notes: [{ id: "n1", cardId: "c1", cardTitle: "c1", kind: "more-focus", label: "more focus" }], noteKinds: [], conflicts: [] };
+      const p = script(d, busy);
+      return DocumentEditor({ ...p, data: d as never }) as ReactElement;
+    },
+  ],
+  [
+    "the ad's scenarios",
+    (busy) => {
+      const d: ScriptData = { face: "ads", idea: null, ideaChanged: false, targetS: 15, range: [10, 20], scenarios: [{ id: "x1", title: "rain", logline: "l", shots: [], endCard: { cta: "buy", line: null, holdS: 2 }, runtimeS: 12, musicMood: "warm" }], picked: null };
+      const p = script(d, busy);
+      return ScenariosEditor({ ...p, data: d as never }) as ReactElement;
+    },
+  ],
+];
+
+describe("while a write is in flight no write button reads as pressable", () => {
+  for (const [name, run] of EDITORS) {
+    it(name, async () => {
+      const bs = await buttons(() => run(true));
+      expect(bs.length).toBeGreaterThan(0);
+      expect(live(bs)).toEqual([]);
+      expect(live(await buttons(() => run(false)))).toEqual(bs.map((b) => b.label));
+    });
+  }
 });

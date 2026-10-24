@@ -73,7 +73,7 @@ export function BeatsEditor({ view, frame, send, busy, error, data: d }: EditorP
   const acts = (
     <>
       <PipRow looks={d.slots.map((x) => (x.pick === null ? "idle" : "done"))} label={`${d.picked} of ${d.slots.length} parts picked`} />
-      {missing === 0 && d.slots.length > 0 && (!d.spine.composed || d.spine.moved) && <Button label="compose spine" size="sm" tone="emerald" onPress={() => send({ op: "compose-spine" })} />}
+      {missing === 0 && d.slots.length > 0 && (!d.spine.composed || d.spine.moved) && <Button label="compose spine" size="sm" tone="emerald" disabled={busy} onPress={() => send({ op: "compose-spine" })} />}
       {frame.acts}
     </>
   );
@@ -99,7 +99,7 @@ export function BeatsEditor({ view, frame, send, busy, error, data: d }: EditorP
             )}
             <div className={s.bar}>
               {d.slots.length > 0 && <SourceTag kind={d.origin === "fixture" ? "illustrative" : "model"} />}
-              {view.data.offers.length > 1 && <Button label="notebook" size="sm" onPress={() => send({ op: "set-face", face: "notebook" })} />}
+              {view.data.offers.length > 1 && <Button label="notebook" size="sm" disabled={busy} onPress={() => send({ op: "set-face", face: "notebook" })} />}
             </div>
             {d.slots.length === 0 ? (
               <div className={s.empty}>
@@ -159,7 +159,7 @@ export function BeatsEditor({ view, frame, send, busy, error, data: d }: EditorP
                 <p className={cx(s.work, s.faint)}>{variant.rationale}</p>
                 {variant.risk !== undefined && <p className={s.risk}>{`risk — ${variant.risk}`}</p>}
               </div>
-              <Button label={slot.pick === variant.id ? "unpick" : "pick"} size="sm" tone="emerald" shortcut={{ mode: "part.research", verb: "open" }} onPress={() => pick(slot, variant.id)} />
+              <Button label={slot.pick === variant.id ? "unpick" : "pick"} size="sm" tone="emerald" shortcut={{ mode: "part.research", verb: "open" }} disabled={busy} onPress={() => pick(slot, variant.id)} />
             </>
           ),
       }}
