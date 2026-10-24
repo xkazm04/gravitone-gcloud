@@ -16,6 +16,14 @@ export function resumePoint(run: ArticleRun): ArticleStatus {
   return "checking";
 }
 
+/** A failed run as it stands once resumed: back at its resume point, its error cleared. The one
+ *  spelling of the rule, for `resumeRun` and for the drive's retry of a failed job (drive.ts). */
+export function resumed(r: ArticleRun): ArticleRun {
+  const out: ArticleRun = { ...r, status: resumePoint(r) };
+  delete out.error;
+  return out;
+}
+
 const RESUMABLE: ArticleStatus[] = ["queued", "researching", "drafting", "critiquing", "checking", "approved", "landing"];
 
 /** Make a run drivable again. A `failed` run goes back to its resume point; a
@@ -27,12 +35,7 @@ export async function resumeRun(id: string, deps: EngineDeps = defaultDeps()): P
   return updateRun(
     id,
     (r) => {
-      if (r.status === "failed") {
-        const next = resumePoint(r);
-        const out: ArticleRun = { ...r, status: next };
-        delete out.error;
-        return out;
-      }
+      if (r.status === "failed") return resumed(r);
       if (RESUMABLE.includes(r.status)) return r;
       throw new ArticleError(`a run that is ${r.status} cannot be resumed`, 409, "bad-transition");
     },
