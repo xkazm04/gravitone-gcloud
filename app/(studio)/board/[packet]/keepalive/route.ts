@@ -10,7 +10,7 @@
 import { z } from "zod";
 
 import { route } from "../../../../_server/route.ts";
-import { packetParam } from "../../_port/param.ts";
+import { flushKeepalive } from "../../_port/keepalive.ts";
 import { serverBoard } from "../../_port/port.ts";
 import { verdictChanges } from "../../_port/verdict.ts";
 
@@ -21,11 +21,4 @@ const input = z.object({
   changes: verdictChanges,
 });
 
-export const POST = route({ guard: "money", bodyCap: 256_000, maxDuration, input }, async ({ input: body, params }) => {
-  const raw = (await params)["packet"];
-  const id = packetParam(typeof raw === "string" ? raw : "");
-  const board = serverBoard();
-  const now = await board.loadPacket({ id });
-  if (!now.ok) return now;
-  return board.patch({ id, baseRev: now.value.view.rev, changes: body.changes });
-});
+export const POST = route({ guard: "money", bodyCap: 256_000, maxDuration, input }, async (ctx) => flushKeepalive(serverBoard(), ctx));

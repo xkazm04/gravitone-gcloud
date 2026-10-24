@@ -23,6 +23,7 @@ import { nightLoadOf } from "../../../../lib/foundry/scout/load.ts";
 import type { DecisionAdapter, OpenPlan } from "../../../../lib/decision/v1/types.ts";
 import { parsePacketId } from "../../../../lib/ledger/v1/packet.ts";
 import type { WeirItem } from "../../../../lib/ledger/v1/types.ts";
+import type { Principal } from "../../../../lib/principal.ts";
 import type { ServerBoard } from "./port.ts";
 
 // THE REAL BOARD - the BoardPort over the kernel's decision driver and each source's v1
@@ -60,6 +61,9 @@ export type Deps = {
 
 /** Who wrote it, as the ledger names the actor. A principal without a uid (the shared secret) is the operator. */
 export type Who = { readonly who?: string };
+
+/** The ledger's actor for a principal: its uid; the shared secret (and a public door's null) names nobody. */
+export const actorOf = (p: Principal | null): Who => (p !== null && "uid" in p ? { who: p.uid } : {});
 
 const SURFACE = "board";
 const author = (w: Who | undefined): Author => ({ by: "operator", surface: SURFACE, ...(w?.who === undefined ? {} : { who: w.who }) });

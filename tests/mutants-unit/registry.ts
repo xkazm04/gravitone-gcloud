@@ -3607,6 +3607,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "A skill's v1 /board?src=articles link lands on the whole Floor instead of the article lane where the drafts wait.",
   },
   {
+    id: "board-keepalive-drops-actor",
+    test: "tests/next-server/board-keepalive.test.ts",
+    file: "app/(studio)/board/_port/keepalive.ts",
+    find: "changes: input.changes }, actor);",
+    replace: "changes: input.changes });",
+    why: "A verdict that leaves with a closing tab is recorded with no actor, while the same verdict sent a moment earlier through the patch action names the operator's uid: the decision log cannot say who made it.",
+  },
+  {
     id: "l61-narration-skips-gt-ui",
     test: "tests/next-gates/narration-gate.test.ts",
     file: "pipeline/check-narration.mjs",
