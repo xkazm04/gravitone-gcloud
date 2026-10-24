@@ -343,6 +343,26 @@ describe("the git export (styles.json for the Python readers)", () => {
       dir.dispose();
     }
   });
+  it("reads the catalogue once per export: one list, one revision", () => {
+    const s = store();
+    adopted(s, "p", 1);
+    must(s.tx((t) => createStyleIn(t, draft("q"), FORGE, { kind: "test", replace: false })));
+    const dir = scratch("styles-export-reads");
+    try {
+      const file = path.join(dir.dir, "styles.json");
+      const sql: string[] = [];
+      const spy: Store = {
+        ...s,
+        tx: (fn) => s.tx((t) => fn({ ...t, at: t.at, get: (q, ...p) => (sql.push(q), t.get(q, ...p)), all: (q, ...p) => (sql.push(q), t.all(q, ...p)) })),
+      };
+      expect(must(writeStylesExport(spy, file))).toMatchObject({ changed: true, styles: 2 });
+      expect(readFileSync(file, "utf8")).toBe(must(exportStylesJson(s)));
+      expect(sql.filter((q) => q.includes("FROM styles"))).toHaveLength(1);
+      expect(sql.filter((q) => q.includes("FROM style_ops"))).toHaveLength(1);
+    } finally {
+      dir.dispose();
+    }
+  });
 });
 
 describe("v1's catalogue in (the one-time import, and the hand-edit path after it)", () => {
