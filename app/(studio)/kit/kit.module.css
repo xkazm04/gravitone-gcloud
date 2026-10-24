@@ -10,7 +10,6 @@
 .nav a{display:flex;justify-content:space-between;gap:var(--sp-5);padding:var(--sp-2) var(--sp-4);border-radius:var(--r-sm);font-size:var(--fs-ui);color:var(--muted)}
 .nav a:hover{background:var(--wash);color:var(--ink-bright)}
 .nav a[aria-current=location]{color:var(--ink-bright);background:color-mix(in srgb,var(--cyan) 8%,transparent);box-shadow:inset var(--stroke-mark) 0 0 var(--cyan)}
-.count{font:500 var(--fs-micro)/1.5 var(--mono);color:var(--faint)}
 
 .body{overflow:auto;padding:var(--sp-6) var(--sp-7) calc(var(--sp-7) * 5);scroll-behavior:smooth}
 /* globals.css's reduced-motion rule reaches `html` and every animation, never this scroller. */
