@@ -13,6 +13,7 @@
 import { test, expect } from "@playwright/test";
 
 import { doneUnits, totalUnits, BREAKER_LIMIT, hasFailures, newManifest, next, pruneFailures, runToEnd, settleReason, step, type EngineIO } from "@/lib/foundry/extract/engine";
+import { bestRound, scoreOf } from "@/lib/foundry/extract/helpers";
 import { PALETTE_AS_ROLES, singletonInstruction, synthesisPrompt } from "@/lib/foundry/extract/prompts";
 import { CRITIQUE_SCHEMA, deriveFamily, nearDuplicates, partition, styleScore, usableFix, validateSynthesis } from "@/lib/foundry/extract/vocabulary";
 import type { ExtractManifest, ExtractSource, Observables, Readback, ReplicaRound } from "@/lib/foundry/extract/types";
@@ -149,6 +150,10 @@ interface Script {
   recipeFix?: (round: number) => string;
   /** Singleton mode: the readback carries the style entry too. */
   singleton?: boolean;
+  /** A generated image reads back as carrying text, by generate ordinal. */
+  textOn?: (round: number) => boolean;
+  /** Sources whose NEXT read is refused (each id once). */
+  refuseRead?: Set<string>;
 }
 
 function fakeIO(m: ExtractManifest, script: Script, calls: string[]): EngineIO {
@@ -166,6 +171,7 @@ function fakeIO(m: ExtractManifest, script: Script, calls: string[]): EngineIO {
     async recognize(img, _instruction, schema) {
       calls.push(`recognize:${img.base64}`);
       if (img.base64.startsWith("src:")) {
+        if (script.refuseRead?.delete(img.base64.slice(4))) throw new Error("the vision vendor refused this frame");
         // Sources s01/s02 are painterly, s03 is cel.
         const o = img.base64 === "src:s03" ? cel : painterly;
         const extra = script.singleton
@@ -178,7 +184,8 @@ function fakeIO(m: ExtractManifest, script: Script, calls: string[]): EngineIO {
       const isCritique = schema === CRITIQUE_SCHEMA;
       const obs = script.roundScore(round);
       const fix = script.recipeFix ? script.recipeFix(round) : `Revised recipe ${round}: softer edges and heavier haze throughout the frame, matte brushwork.`;
-      const value = isCritique ? { ...rb(obs), critique: "edges too crisp", recipe_fix: fix } : rb(obs);
+      const text = { has_text: script.textOn?.(round) ?? false };
+      const value = isCritique ? { ...rb(obs, text), critique: "edges too crisp", recipe_fix: fix } : rb(obs, text);
       return { value, model: "fake/eyes" };
     },
     async generate(_prompt, _negative, aspect, seed) {
@@ -266,6 +273,24 @@ test("engine: a round at or over the target ends the loop early; the best-scorin
   expect(painted.replicas[0].rounds.map((r) => r.score)).toEqual([0.846, 1]);
   expect(painted.recipe).toMatch(/^Revised recipe/); // the fix scored higher and was adopted
   expect(m.status).toBe("done");
+});
+
+test("engine: a round that drew text is vetoed — its score cannot make its recipe the recipe in force", async () => {
+  // has_text is the veto in every grader this repo runs (prompts.ts NO_TEXT;
+  // generated-output-grading / unconditional-fail-criteria): no score elsewhere
+  // buys a text-bearing render back. Same run as above, except round 2 - the
+  // exact one - carries text.
+  const m = manifest({ rounds: 3, replicas: 1 });
+  const io = fakeIO(m, {
+    roundScore: (n) => (n % 2 === 1 ? { ...painterly, edge_treatment: "crisp", atmospherics: "none" } : painterly),
+    textOn: (n) => n === 2,
+  }, []);
+  await runToEnd(m, io);
+  const painted = m.styles[0];
+  expect(painted.replicas[0].rounds[1].critique?.has_text).toBe(true);
+  expect(painted.recipe).toMatch(/^Painterly rendering/); // not the vetoed round's recipe
+  expect(bestRound(painted)?.critique?.has_text).not.toBe(true);
+  expect(scoreOf(painted, painted.replicas[0].rounds[1].recipe)).toBeNull(); // a vetoed round measures nothing
 });
 
 test("engine: when the reasoning turn fails the deterministic partition stands and the run still completes", async () => {

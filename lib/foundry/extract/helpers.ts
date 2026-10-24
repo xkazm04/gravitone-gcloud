@@ -15,16 +15,21 @@ import { clampCeiling } from "./spend";
 import type { ExtractManifest, ExtractOptions, ExtractedStyle, ReplicaRound } from "./types";
 import { totalUnits } from "./units";
 
+/** A round whose image read back carrying text is VETOED: text is the veto in
+ *  every grader this repo runs (prompts.ts NO_TEXT), so its score elsewhere buys
+ *  nothing back - it neither wins the recipe in force nor counts toward one. */
+export const textVetoed = (round: Pick<ReplicaRound, "critique">): boolean => round.critique?.has_text === true;
+
 export function bestRound(st: ExtractedStyle): ReplicaRound | null {
   let best: ReplicaRound | null = null;
-  for (const r of st.replicas) for (const round of r.rounds) if (typeof round.score === "number" && (best === null || round.score > best.score!)) best = round;
+  for (const r of st.replicas) for (const round of r.rounds) if (typeof round.score === "number" && !textVetoed(round) && (best === null || round.score > best.score!)) best = round;
   return best;
 }
 
-/** Mean score of every round generated with this exact recipe, or null. */
+/** Mean score of every unvetoed round generated with this exact recipe, or null. */
 export function scoreOf(st: ExtractedStyle, recipe: string): number | null {
   const xs: number[] = [];
-  for (const r of st.replicas) for (const round of r.rounds) if (round.recipe === recipe && typeof round.score === "number") xs.push(round.score);
+  for (const r of st.replicas) for (const round of r.rounds) if (round.recipe === recipe && typeof round.score === "number" && !textVetoed(round)) xs.push(round.score);
   return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
 }
 
