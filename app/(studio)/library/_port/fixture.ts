@@ -112,7 +112,7 @@ export function fixtureQuery(q: LibraryQuery): Result<LibraryPage> {
   const active = Object.entries(q.facets ?? {}).flatMap(([g, vs]) => (vs !== undefined && vs.length > 0 ? [[g, new Set(vs)] as const] : []));
   const rail = railGroups(kind ?? "all");
   const counts = new Map<string, Map<string, number>>(rail.map((g) => [g.key, new Map()]));
-  const kindCounts: Record<LibraryKindName | "all", number> = { all: 0, image: 0, plate: 0, style: 0, motion: 0, audio: 0, video: 0, doc: 0, model: 0 };
+  const kindCounts: Record<LibraryKindName | "all", number> = { all: 0, image: 0, plate: 0, style: 0, motion: 0, audio: 0, video: 0, doc: 0, model: 0, character: 0 };
   const list: FixtureRecord[] = [];
   for (const x of ordered(u, q.sort ?? "newest")) {
     if (!matches(x, parsed)) continue;

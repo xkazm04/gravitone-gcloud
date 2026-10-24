@@ -218,6 +218,7 @@ Where this port moved from the prototype:
 | `FaceView` | library.js `face`, `vface`; `.wv`, `.paper`, `.swatch`, `.vf` | L | image, poster, wave, paper, swatch, designed face; row / tile / preview sizes; palette as data |
 | `LibraryGlyph` (+ `KINDS`) | shell.js `I.ref|image|style|motion|doc|play|pause` | L | one mark per kind; the kinds' order and words from `@gt/domain/library` KIND_LABELS; play/pause for the Cull's VideoBar |
 | `DetailPanel`, `DetailSection`, `DetailTitle`, `DetailChips`, `DetailFacets`, `DetailPreview` | library.js `detHead`, `body`, `preview`; `.det`, `.dbody`, `.pv`, `.dtitle`, `.did`, `.dchips`, `.det h4`, `.fdl` | L | head with kind, i / N, prev / next, close `]`; facets as pressed chips that filter; a clip loops muted, an export plays |
+| `LookStrip` | none (spark scout-use-aim: a character's kept stills had no shape; a row of captions was the only spelling) | L (a character's detail), /kit | portrait thumbnails 9:16 under their look slug and genre rung; a door (pressed lit) filters by the look, a figure when a legacy night kept no look; the picture named `look · genre` |
 | `Lineage` | library.js `lineage`, `node`; `.lin`, `.lnode`, `button.lk` | L | one line per role; item door (thumb or kind mark), facet door (+ ledger link for a run), text, ghost for a parent that is gone; THIS lit |
 | `SetSummary` | library.js `summary`; `.sumh`, `.stbar`, `.stl`, `.kbar`, `.recent`, `.keys-d` | L | count of N; state bar and state doors; kind bars on All; newest pictures; the library keymap |
 

@@ -29,6 +29,7 @@ import type { ModelExportProject } from "@gt/domain/library";
 
 import type { ShownDetail } from "../_port/contract.ts";
 import { ledgerFor } from "../../_shell/links.ts";
+import { CharacterFacts } from "./CharacterDetail.tsx";
 import { ExportRow, ModelFacts } from "./ModelDetail.tsx";
 import s from "./library.module.css";
 
@@ -42,7 +43,7 @@ export type DetailViewProps = {
   readonly onExport: (project: ModelExportProject) => void;
 };
 
-function Extras({ d }: { readonly d: ShownDetail }) {
+function Extras({ d, onFacet }: { readonly d: ShownDetail; readonly onFacet: (group: string, value: string) => void }) {
   const k = d.card.kind;
   const x = d.extras;
   if (k === "audio" && x.audio !== undefined) {
@@ -107,6 +108,7 @@ function Extras({ d }: { readonly d: ShownDetail }) {
     );
   }
   if (k === "model" && x.model !== undefined) return <ModelFacts model={x.model} mesh={d.media?.mesh} />;
+  if (k === "character" && x.character !== undefined) return <CharacterFacts character={x.character} lines={d.lines} onFacet={onFacet} />;
   if (k === "doc" && x.run !== undefined) {
     return (
       <DetailSection title="Article run">
@@ -176,7 +178,7 @@ export function DetailView({ d, busy, onFacet, onItem, onPin, onUse, onExport }:
       <DetailSection title="Lineage">
         <Lineage nodes={d.lineage} onItem={onItem} onFacet={onFacet} />
       </DetailSection>
-      <Extras d={d} />
+      <Extras d={d} onFacet={(g, v) => onFacet(g, v)} />
       <DetailSection title="Acts">
         <div className={s.acts}>
           <div className={s.actRow}>

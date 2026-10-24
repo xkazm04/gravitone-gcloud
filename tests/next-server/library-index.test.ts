@@ -123,7 +123,7 @@ function queries(n: number): LibraryQuery[] {
   const pick = <T>(a: readonly T[]): T => a[Math.floor(rnd() * a.length)] as T;
   const out: LibraryQuery[] = [];
   for (let i = 0; i < n; i++) {
-    const kind = rnd() < 0.3 ? undefined : pick(["image", "plate", "style", "motion", "audio", "video", "doc"] as const);
+    const kind = rnd() < 0.3 ? undefined : pick(["image", "plate", "style", "motion", "audio", "video", "doc", "character"] as const);
     const pool = ref.filter((r) => kind === undefined || r.kind === kind);
     const facets: Record<string, string[]> = {};
     const groups = railGroups(kind ?? "all").map((g) => g.key);

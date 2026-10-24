@@ -5111,4 +5111,28 @@ export const MUTANTS: UnitMutant[] = [
     replace: "    else if (closed.value) console.error(",
     why: "A render sweep that outlived its claim, so two sweeps ran at once, leaves no trace, and a lease too short for the drain is never noticed.",
   },
+  {
+    id: "library-character-age-band-edge",
+    test: "packages/domain/test/library-character.test.ts",
+    file: "packages/domain/src/libraryCharacter.ts",
+    find: "return n < 30 ? \"under 30\" : n < 35",
+    replace: "return n <= 30 ? \"under 30\" : n < 35",
+    why: "A 30-year-old is filed under 30, so the age facet counts her in the wrong band.",
+  },
+  {
+    id: "library-character-core-prompt-cut",
+    test: "packages/domain/test/library-character.test.ts",
+    file: "packages/domain/src/libraryCharacter.ts",
+    find: "const cut = Math.max(before.lastIndexOf(\". \"), before.lastIndexOf(\"! \"), before.lastIndexOf(\"? \"));",
+    replace: "const cut = -1;",
+    why: "The core prompt keeps the look sentences that precede her restated card, so her identity block is repeated inside the look block.",
+  },
+  {
+    id: "library-character-application-facet",
+    test: "packages/kernel/test/library-character.test.ts",
+    file: "packages/kernel/src/library/core.ts",
+    find: "for (const a of item.vocabulary.applications) add(\"application\", a);",
+    replace: "",
+    why: "A character's applications are never indexed, so the application rail and its search key find nobody.",
+  },
 ];

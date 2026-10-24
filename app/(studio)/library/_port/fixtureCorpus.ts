@@ -9,8 +9,9 @@ import "server-only";
 // The prototype padded its 254 real items with "illustrative" ones; a stored record may not be
 // illustrative (@gt/domain/libraryItem), so here every item is `fixture` - honest about being a
 // fixture universe - except a tenth that are `derived` and name the item they came from.
-// Four game-asset `model` items (./fixtureModels.ts) take the last four documents' places, so the
-// corpus stays 5,000 and every record drawn before them is the one it always was.
+// Four game-asset `model` items (./fixtureModels.ts) and six muse `character` items
+// (./fixtureCharacters.ts) take the last documents' places, so the corpus stays 5,000 and every
+// record drawn before them is the one it always was.
 // A few items carry the media trouble the index measures at ingest (an export that does not
 // decode, a plate whose file is gone), so the attention facet has something to find.
 
@@ -19,6 +20,7 @@ import type { z } from "zod";
 import { CHIP_GROUPS, normText, techniqueBand, type Attention, type LibraryExtras, type LibraryRow, type LineageNode, type MediaFacts } from "@gt/domain/library";
 import type { libraryItemSchema } from "@gt/domain/libraryItem";
 
+import { fixtureCharacters } from "./fixtureCharacters.ts";
 import { fixtureModels } from "./fixtureModels.ts";
 import { BUNDLES, CLIPS, DECK, fileBlob, HUNTS, LESSONS, MECHANISMS, PALETTES, peaksOf, PROJECTS, rng, RUNS, SCENES, SOUND, STYLES, SUBJECTS, TOPICS, TRIAL_STYLES, type FixtureMedia } from "./fixtureData.ts";
 
@@ -129,6 +131,7 @@ export function buildCorpus(): readonly FixtureRecord[] {
 
   const quota = SHARE.map(([k, w]) => [k, Math.round(TOTAL * w)] as const);
   const models = fixtureModels();
+  const characters = fixtureCharacters();
   const sum = quota.reduce((s, q) => s + q[1], 0);
 
   // ── styles first: every other kind points at them ──
@@ -154,7 +157,7 @@ export function buildCorpus(): readonly FixtureRecord[] {
   for (const [kind, n0] of quota) {
     // Plates absorb the rounding and the style quota the nine catalogue styles do not fill.
     const styleQuota = quota.find(([k]) => k === "style")?.[1] ?? 0;
-    const n = kind === "plate" ? n0 + (TOTAL - sum) + styleQuota - STYLES.length : kind === "style" ? 0 : kind === "doc" ? n0 - models.length : n0;
+    const n = kind === "plate" ? n0 + (TOTAL - sum) + styleQuota - STYLES.length : kind === "style" ? 0 : kind === "doc" ? n0 - models.length - characters.length : n0;
     for (let i = 0; i < n; i++) {
       if (kind === "image") {
         const deck = r() < 0.5;
@@ -280,13 +283,19 @@ export function buildCorpus(): readonly FixtureRecord[] {
     const b = { ...base("model", m.title, m.state, "mesh", m.f, m.at), id: m.id };
     add({ raw: { kind: "model", vocabulary: m.vocabulary, ...b, media: m.media }, f: m.f, meta: m.meta, extras: { model: m.extras }, lineage: [runNode(m.night), self(m.id, "model")], media: m.facts, ...(m.poster === undefined ? {} : { poster: m.poster }) });
   }
+  // The characters after them, drawing nothing from the stream either: one item per woman, her stills' runs and the styles two of them became in her lineage.
+  for (const c of characters) {
+    const b = { ...base("character", c.title, c.state, "scout", c.f, c.at), id: c.id, rights: { use: "publishable" as const } };
+    const styles = c.styleIds.map((id): LineageNode => ({ role: "look", ref: { kind: "style", id }, label: labelOf("style", id), ...(styleItem.has(id) ? { itemId: styleItem.get(id) ?? "" } : {}) }));
+    add({ raw: { kind: "character", vocabulary: c.vocabulary, ...b, media: c.media }, f: c.f, meta: c.meta, extras: { character: c.extras }, lineage: [...c.runs.map(runNode), self(c.id, "character"), ...styles], media: { sha: c.facts.sha, decodable: true, mime: c.facts.mime, w: c.facts.w, h: c.facts.h, durationS: null, posterSha: null, meanLuma: 90, nearBlack: false, probedAt: "2026-10-24T09:00:00.000Z", error: null } });
+  }
   return derive(out, r);
 }
 
 /** A tenth of the corpus becomes `derived`: same vocabulary, and a lineage node naming its parent. */
 function derive(all: FixtureRecord[], r: () => number): FixtureRecord[] {
   return all.map((x, i) => {
-    if (i < STYLES.length || x.raw.kind === "model" || r() > 0.1) return x;
+    if (i < STYLES.length || x.raw.kind === "model" || x.raw.kind === "character" || r() > 0.1) return x;
     const parent = all.find((p, j) => j < i && p.raw.kind === x.raw.kind && p.raw.source === "fixture");
     if (parent === undefined) return x;
     const f = { ...x.f, source: ["derived"] };

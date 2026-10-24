@@ -9,6 +9,7 @@ import { queueFacts } from "@gt/producers/media-facts/run";
 
 import { FIXTURE_MODE, OUT_DIRNAME } from "../fixtures/mode.ts";
 import { kernel } from "../kernelStore.ts";
+import { characterFeed } from "./feeds/character.ts";
 import { dojoFeed, extractFeed, forgeFeed, stripsFeed, stylesFeed } from "./feeds/foundry.ts";
 import { kernelFeed } from "./feeds/kernel.ts";
 import { meshFeed } from "./feeds/mesh.ts";
@@ -23,7 +24,7 @@ import { syncLibrarySoon, type Freshness } from "./project.ts";
 // same sync (project.ts collects the styles before any upsert, whatever the order).
 
 /** Every source the Library projects (scout-library.md §3), one line each. */
-export const LIBRARY_FEEDS: readonly Feed[] = [stylesFeed, forgeFeed, extractFeed, dojoFeed, stripsFeed, takesFeed, sunoFeed, mvFeed, clipsFeed, exportsFeed, kernelFeed, registryFeed, scoutFeed, meshFeed];
+export const LIBRARY_FEEDS: readonly Feed[] = [stylesFeed, forgeFeed, extractFeed, dojoFeed, stripsFeed, takesFeed, sunoFeed, mvFeed, clipsFeed, exportsFeed, kernelFeed, registryFeed, scoutFeed, meshFeed, characterFeed];
 
 export const libraryCtx = (store?: Store): FeedCtx => ({ universe: FIXTURE_MODE ? "fixture" : "real", ...(store === undefined ? {} : { store }) });
 

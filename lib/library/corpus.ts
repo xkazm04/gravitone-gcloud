@@ -34,6 +34,8 @@ export const KIND_SHARE: readonly (readonly [LibraryItem["kind"], number])[] = [
   ["doc", 0.11],
   // Not the prototype's: the game assets (spark game-3d-assets) arrived after it, at a sliver.
   ["model", 0.005],
+  // Not the prototype's either: the kept muse characters (spark scout-use-aim).
+  ["character", 0.003],
 ];
 
 /** The prototype's PRNG (library-data.js `rnd`), seeded. */
@@ -70,6 +72,10 @@ const KEYS = ["C minor", "A minor", "D major", "F# minor", "E♭ major", "G majo
 const SFX_GROUPS = ["risers", "impacts", "whooshes", "ambiences", "ui"];
 const BUNDLES = ["software-engineering", "media-generation", "localization"];
 const TOPIC_WORDS = ["search", "table", "retry", "caching", "migrations", "facets", "tracing", "queues", "accessibility", "motion", "tokens", "leases", "ledgers", "budgets"];
+const MUSE_NAMES = ["Mara", "Sofia", "Hana", "Nadia", "Iris", "Leila", "Katya", "Noor", "Anika", "Rosa"];
+const MUSE_BUILDS = ["slim", "slender", "athletic", "lean", "curvy"];
+const MUSE_LOOKS = ["risograph-two-colour", "anime-cel", "gouache-portrait", "35mm-anamorphic", "real-time-3d", "ink-wash"];
+const MUSE_APPS = ["videogame", "dating-sim", "roleplay", "companion-chat", "genre-video", "short"];
 const PROJECTS = Array.from({ length: 12 }, (_, i) => `proj-${String(i + 1).padStart(2, "0")}`);
 
 const T0 = Date.parse("2025-11-03T00:00:00Z");
@@ -248,6 +254,13 @@ export function generateCorpus(n = 50_000, seed = CORPUS_SEED): Corpus {
         meta = `${cls} · ${tris} tris · ${technique}`;
         const m = media(id, "model/gltf-binary");
         item = { kind, ...shared(id, `${cap(pick(SCENES))} asset · ${technique}`, weighted([["ratified", 0.3], ["rejected", 0.3], ["candidate", 0.4]] as const), "mesh", proj), vocabulary: { class: cls, technique, rigged: cls === "character", tris }, lineage: [], ...(m === undefined ? {} : { media: m }) };
+      } else if (kind === "character") {
+        const age = 25 + Math.floor(rnd() * 26);
+        const build = pick(MUSE_BUILDS);
+        const looks = some(MUSE_LOOKS, 1, 3);
+        meta = `aged ${age} · ${build} build`;
+        const m = media(id, "image/png");
+        item = { kind, ...shared(id, pick(MUSE_NAMES), "ratified", "scout", false), vocabulary: { age, build, looks, applications: some(MUSE_APPS, 1, 2) }, lineage: [], ...(m === undefined ? {} : { media: m }) };
       } else {
         const bundle = pick(BUNDLES);
         const subject = `${pick(TOPIC_WORDS)}-${pick(TOPIC_WORDS)}`;

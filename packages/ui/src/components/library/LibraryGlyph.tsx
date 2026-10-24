@@ -68,6 +68,13 @@ export function LibraryGlyph({ name, className }: { readonly name: LibraryGlyphN
           <path d="M3.5 6.25L10 10l6.5-3.75M10 10v7.5" />
         </svg>
       );
+    case "character":
+      return (
+        <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <circle cx="10" cy="6.5" r="3" />
+          <path d="M4 17c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" />
+        </svg>
+      );
     case "play":
       return (
         <svg className={className} viewBox="0 0 10 10" fill="currentColor" aria-hidden="true">

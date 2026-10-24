@@ -26,8 +26,8 @@ import { isoOf, mimeOf, type Feed, type FeedCtx, type FeedItem, type FeedRead } 
 // variant's verdict - shelving it here too would put one model in the Library twice.
 //
 // THE SCOUT WING ONLY (spark scout-muse), pinned by name rather than left to whatever scope a caller
-// runs in: the muse wing's stills are a study of how characters are drawn, judged and triaged on the
-// Board, and the brief keeps them off the Library's shelves in v1. A kept muse look still reaches the
+// runs in. The muse wing's kept characters are shelved by their own feed (./character.ts, one
+// `character` item per woman); its other stills stay on the Board. A kept muse look reaches the
 // catalogue through the extract path, and stylesFeed shelves it from there.
 
 const ORIGIN: LibraryOrigin = "scout";

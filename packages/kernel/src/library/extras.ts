@@ -63,6 +63,22 @@ export const extrasSchema = z.object({
   file: z.object({ w: z.number().optional(), h: z.number().optional(), path: z.string().optional() }).optional(),
   run: z.object({ id: z.string(), stage: z.string().optional() }).optional(),
   captions: z.number().int().nonnegative().optional(),
+  character: z
+    .object({
+      card: z.object({ name: z.string().min(1), age: z.number().int().nonnegative(), look: z.string(), personality: z.string() }),
+      prompt: z.string(),
+      looks: z.array(
+        z.object({
+          night: z.string().min(1),
+          cell: z.string().min(1),
+          look: z.string().min(1).optional(),
+          genre: z.string().min(1).optional(),
+          image: z.string().min(1),
+          styleId: z.string().min(1).optional(),
+        }),
+      ),
+    })
+    .optional(),
   model: z
     .object({
       asset: z.string().min(1),

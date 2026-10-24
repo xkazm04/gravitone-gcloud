@@ -450,7 +450,8 @@ with character cards as 9:16 posters and 16:9 roleplay-situation scenes. Craft n
 - **Landing.** A kept `style` idea develops through the extract into the SHARED catalogue (either wing may
   use the look); kept findings land in `knowledge/scout-muse/techniques.md`, kept watch lines in its
   `watchlist.md`, kept characters in `characters.md` (`appendCharacter`). Muse stills are not Library
-  material.
+  material through the scout feed; kept characters reach the Library as the `character` kind
+  (`lib/library/feeds/character.ts`), one item per woman, her stills as its looks.
 - **Reasons.** The scout source binds all eleven Board keys, so muse throws ride `craft` (anatomy),
   `rights` (likeness), `subject` (young, drift - in the note), `style` (plastic - in the note), `generic`.
 - Not scheduled: `pipeline/scout-schedule.ps1` runs `/scout night` only.

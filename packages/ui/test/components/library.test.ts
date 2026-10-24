@@ -13,7 +13,9 @@ import { DetailFacets, DetailPanel } from "../../src/components/library/DetailPa
 import { backStep, blocksFor, BLOCK, foldValues, layoutFor, orderValues, SIZES, stepTo, tileBox, type FacetValue } from "../../src/components/library/library.ts";
 import { LibraryRow } from "../../src/components/library/LibraryRow.tsx";
 import { cardName, LibraryTile, type LibraryCard } from "../../src/components/library/LibraryTile.tsx";
+import { KINDS, LibraryGlyph } from "../../src/components/library/LibraryGlyph.tsx";
 import { Lineage } from "../../src/components/library/Lineage.tsx";
+import { LookStrip } from "../../src/components/library/LookStrip.tsx";
 import { Rail, type RailGroup } from "../../src/components/library/Rail.tsx";
 import { SetSummary } from "../../src/components/library/SetSummary.tsx";
 import { columnsFor, windowOf } from "../../src/window/core.ts";
@@ -203,5 +205,36 @@ describe("the set and the detail head", () => {
     const still = html(h(DetailPanel, { kind: "set", onClose: noop, children: null }));
     expect(still).not.toContain('aria-label="next item"');
     expect(still).toContain('aria-label="close detail"');
+  });
+});
+
+describe("a character's looks (spark scout-use-aim)", () => {
+  const looks = [
+    { key: "risograph-two-colour", image: "/a.png", label: "risograph-two-colour", sub: "risograph two-colour print" },
+    { key: "35mm-anamorphic", image: "/b.png", label: "35mm-anamorphic", pressed: true },
+    { key: "2026-10-23-2", image: "/c.png", label: "2026-10-23-2", inert: true },
+  ];
+
+  test("a look is a door that says when it is pressed; a night that kept no look is a figure, never a door", () => {
+    const out = html(h(LookStrip, { looks, onPress: noop }));
+    expect(out.match(/<button/g)).toHaveLength(2);
+    expect(out.match(/<figure/g)).toHaveLength(1);
+    expect(out).toContain('aria-pressed="true"');
+    expect(out).toContain('aria-pressed="false"');
+  });
+
+  test("with no door at all every look is a figure, and the picture is named by its look and genre rung", () => {
+    const out = html(h(LookStrip, { looks }));
+    expect(out).not.toContain("<button");
+    expect(out.match(/<figure/g)).toHaveLength(3);
+    expect(out).toContain('alt="risograph-two-colour · risograph two-colour print"');
+    expect(out).toContain('alt="35mm-anamorphic"');
+  });
+
+  test("the character kind has a mark, a rail row and a word", () => {
+    expect(KINDS.at(-1)).toEqual({ id: "character", label: "Characters", short: "character" });
+    const out = html(h(LibraryGlyph, { name: "character" }));
+    expect(out).toContain("<svg");
+    expect(out).toContain('aria-hidden="true"');
   });
 });
