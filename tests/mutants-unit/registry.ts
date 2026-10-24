@@ -3012,8 +3012,8 @@ export const MUTANTS: UnitMutant[] = [
     id: "frames-stale-plate-reads-current",
     test: "tests/next-server/parts-frames.test.ts",
     file: "app/(studio)/projects/[id]/_part/fixtureFramesView.ts",
-    find: "p.subject.trim() !== p.renderedSubject.trim();",
-    replace: "false;",
+    find: "const stale = isStalePlate(frameOfUnit(u));",
+    replace: "const stale = false;",
     why: "A plate whose subject moved since it was rendered reads as current on the ledger.",
   },
   {
