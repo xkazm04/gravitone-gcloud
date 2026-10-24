@@ -27,8 +27,9 @@ import path from "node:path";
 import { test, expect } from "@playwright/test";
 
 import { createRun, defaultDeps, driveRun } from "@/lib/articles/engine";
-import { EXCLUDED_BUNDLES, listUncoveredTopics, loopsRoot, rankUncovered, runLoop, suggestAngle } from "@/lib/articles/loop";
-import { readRun } from "@/lib/articles/store";
+import { coverage, EXCLUDED_BUNDLES, listUncoveredTopics, loopsRoot, rankUncovered, runLoop, suggestAngle } from "@/lib/articles/loop";
+import { readRun, writeNewRun } from "@/lib/articles/store";
+import type { ArticleRun } from "@/lib/articles/types";
 import { loopDriver } from "@/lib/producers/article";
 
 import { keepEnv } from "./_helpers";
@@ -107,6 +108,28 @@ test("topics: a run at the gate and a publication cover their subject; a failed 
   expect(left).not.toContain("agent-operations/delta-topic");
   expect(left).toContain("software-engineering/beta-topic");
   expect(after.covered.map((c) => c.key)).toEqual(expect.arrayContaining(["software-engineering/alpha-topic", "agent-operations/delta-topic"]));
+});
+
+/** A run.json on disk at `status`, with no turns behind it: what `coverage` reads. */
+async function runAt(id: string, bundle: string, subject: string, status: ArticleRun["status"]) {
+  const at = "2026-10-01T00:00:00.000Z";
+  await writeNewRun({ id, status, topic: { kind: "subject", bundle, subject, text: subject }, promptRef: { file: "p", sha: "s" }, standard: { recipe: "r", bundle: "technical-writing", subjects: [] }, model: "m", effort: "high", steps: [], createdAt: at, updatedAt: at } as unknown as ArticleRun);
+}
+function publication(slug: string, bundle: string, subject: string, runId: string) {
+  mkdirSync(path.join(box.registry, "publications", slug), { recursive: true });
+  writeFileSync(path.join(box.registry, "publications", slug, "publication.json"), JSON.stringify({ topic: { kind: "subject", bundle, subject }, status: "approved", run: { id: runId } }));
+}
+
+test("coverage: a topic counts once however many posts cover it, and a run id that prefixes another hides nothing", async () => {
+  // one subject, two posts: a run at the gate and the publication of an earlier run of it
+  await runAt("2026-10-01-alpha-topic-2", "software-engineering", "alpha-topic", "awaiting-approval");
+  publication("alpha-one", "software-engineering", "alpha-topic", "2026-10-01-alpha-topic");
+  // a run whose id is a prefix of another subject's publication's run id
+  await runAt("2026-10-01-delta", "agent-operations", "delta", "awaiting-approval");
+  publication("delta-topic-one", "agent-operations", "delta-topic", "2026-10-01-delta-topic");
+  const cov = await coverage(box.registry);
+  const keys = cov.covered.map((c) => c.key).sort();
+  expect(keys).toEqual(["agent-operations/delta", "agent-operations/delta-topic", "software-engineering/alpha-topic"]);
 });
 
 test("loop: refuses to start without a budget or with an unclear target", async () => {

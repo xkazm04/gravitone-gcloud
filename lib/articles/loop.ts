@@ -88,7 +88,7 @@ const topicKey = (t: ArticleRun["topic"]) => (t.kind === "subject" && t.bundle &
 
 /** Read the publications lane directly: publications/<slug>/publication.json carries the topic
  *  (publications/index.json leaves it out). A lane that is absent or unreadable is empty. */
-async function publicationItems(registryDir: string): Promise<{ item: CoveredItem; runId?: string }[]> {
+async function publicationItems(registryDir: string): Promise<CoveredItem[]> {
   const root = path.join(registryDir, "publications");
   let names: string[] = [];
   try {
@@ -96,7 +96,7 @@ async function publicationItems(registryDir: string): Promise<{ item: CoveredIte
   } catch {
     return [];
   }
-  const out: { item: CoveredItem; runId?: string }[] = [];
+  const out: CoveredItem[] = [];
   for (const slug of names.sort()) {
     try {
       const p = JSON.parse(await fs.readFile(path.join(root, slug, "publication.json"), "utf8")) as {
@@ -106,7 +106,7 @@ async function publicationItems(registryDir: string): Promise<{ item: CoveredIte
       };
       const t = p.topic ?? {};
       const key = t.kind === "subject" && t.bundle && t.subject ? `${t.bundle}/${t.subject}` : freeKey(t.text ?? slug);
-      out.push({ item: { key, source: "publication", ref: slug, status: p.status ?? "approved" }, runId: p.run?.id });
+      out.push({ key, source: "publication", ref: slug, status: p.status ?? "approved" });
     } catch {
       /* a publication that cannot be read covers nothing */
     }
@@ -121,19 +121,23 @@ export async function coverage(registryDir: string = resolveRegistryDir().dir, d
   const covered: CoveredItem[] = [];
   const claimed: string[] = [];
   const orphaned: string[] = [];
+  // A TOPIC is covered, not a post: the target counts topics, so a subject with a run at the gate
+  // and the publication of an earlier run (or of the same run, once it landed) is one item. The
+  // first item per key wins, so a run's row is kept over its publication's.
+  const keys = new Set<string>();
   for (const r of runs) {
     const key = topicKey(r.topic);
-    if (COVERING_STATUSES.includes(r.status)) covered.push({ key, source: "run", ref: r.id, status: r.status });
-    else if (!NOT_RUNNING.includes(r.status)) {
+    if (COVERING_STATUSES.includes(r.status)) {
+      if (!keys.has(key)) covered.push({ key, source: "run", ref: r.id, status: r.status });
+      keys.add(key);
+    } else if (!NOT_RUNNING.includes(r.status)) {
       claimed.push(key);
       if (!(await driven(r.id))) orphaned.push(r.id);
     }
   }
-  const have = new Set(covered.map((c) => c.ref));
-  for (const { item, runId } of await publicationItems(registryDir)) {
-    // A landed run is also a publication: count the post once.
-    if (runId && [...have].some((ref) => runId.startsWith(ref))) continue;
-    if (covered.some((c) => c.key === item.key && c.source === "run" && c.status === "landed")) continue;
+  for (const item of await publicationItems(registryDir)) {
+    if (keys.has(item.key)) continue;
+    keys.add(item.key);
     covered.push(item);
   }
   return { covered, claimed: [...new Set(claimed)].sort(), orphaned };
