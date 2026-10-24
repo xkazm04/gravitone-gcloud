@@ -15,9 +15,10 @@ import type { ScoutV1 } from "./scoutPlan.ts";
 /**
  * The words a candidate's seed and a visualizer's song give its cells (spark scout-decision-graph): every seed the
  * night's candidates grow from, and each visualizer's clip - its title and its track's sentence - from the night
- * that made it. A night or a seed that cannot be read leaves its words out, never the packet.
+ * that made it. A night or a seed that cannot be read leaves its words out, never the packet. And each storyboard's
+ * idea title (spark scout-storyboards), from the night that drew the idea.
  */
-export async function musicOf(night: Night): Promise<Result<Pick<ScoutV1, "seeds" | "tracks">>> {
+export async function musicOf(night: Night): Promise<Result<Pick<ScoutV1, "seeds" | "tracks" | "ideas">>> {
   const refs = new Set(night.candidates.flatMap((c) => (c.fromSeed === undefined ? [] : [c.fromSeed])));
   const seeds: Record<string, Seed> = {};
   if (refs.size > 0) {
@@ -39,5 +40,15 @@ export async function musicOf(night: Night): Promise<Result<Pick<ScoutV1, "seeds
     const clip = t?.clips.find((x) => x.part === p.part);
     if (t !== undefined && clip !== undefined) tracks[c.track] = { title: clip.title, sentence: t.sentence };
   }
-  return ok({ seeds, tracks });
+  const ideas: Record<string, string> = {};
+  for (const c of night.candidates) {
+    if (c.kind !== "storyboard") continue;
+    const at = c.fromIdea.lastIndexOf("/");
+    if (at <= 0) continue;
+    const from = c.fromIdea.slice(0, at);
+    if (!nights.has(from)) nights.set(from, await readNight(from).catch(() => undefined));
+    const idea = nights.get(from)?.candidates.find((x) => x.id === c.fromIdea.slice(at + 1) && x.kind === "idea");
+    if (idea?.kind === "idea") ideas[c.fromIdea] = idea.title;
+  }
+  return ok({ seeds, tracks, ideas });
 }

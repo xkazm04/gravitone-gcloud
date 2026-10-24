@@ -1166,6 +1166,22 @@ export const MUTANTS: UnitMutant[] = [
     why: "Keys 2-4 name the row group's reasons one place off (spark scout-storyboards): 2 gives reason #2 and 4 names nothing.",
   },
   {
+    id: "storyboard-bullets-read-as-paragraph",
+    test: "packages/ui/test/storyboard-words.test.ts",
+    file: "packages/ui/src/components/cull/WordsBody.tsx",
+    find: "const item = ITEM.exec(raw);",
+    replace: "const item = null as RegExpExecArray | null;",
+    why: "A storyboard's bullets run together into its paragraph: the beats, format and hook read as one sentence (spark scout-storyboards).",
+  },
+  {
+    id: "storyboard-gate-ignores-kept-words",
+    test: "tests/next-server/decision-v1-scout-storyboard.test.ts",
+    file: "lib/foundry/scout/storyboardKept.ts",
+    find: "part === WORDS_PART)) return \"kept\";",
+    replace: "part === \"no-such-part\")) return \"kept\";",
+    why: "A storyboard kept whole on the Board never opens its full video: the gate reads its kept words cell as nothing.",
+  },
+  {
     id: "board-reason-over-cap",
     test: "packages/ui/test/board-desk.test.ts",
     file: "packages/ui/src/board/cull.ts",

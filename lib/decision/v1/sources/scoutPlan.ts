@@ -13,7 +13,8 @@ import { EXTRACT_COMMITTABLE } from "../../../foundry/plant.ts";
 import { TECHNIQUE_LABEL, type GateResult, type MeshAsset } from "../../../foundry/mesh/types.ts";
 import { patternsRel } from "../../../foundry/scout/knowledge.ts";
 import { mss } from "../../../foundry/scout/track.ts";
-import { CANDIDATE_KINDS, cellId, parseCellId, type Asset3dCandidate, type Candidate, type CandidateId, type DirectionCandidate, type IdeaCandidate, type IdeaTarget, type Night, type NightCommit, type SceneCandidate, type SceneClip, type Seed, type TrackCandidate, type VisualizerCandidate } from "../../../foundry/scout/types.ts";
+import { CANDIDATE_KINDS, cellId, parseCellId, type Asset3dCandidate, type Candidate, type CandidateId, type DirectionCandidate, type IdeaCandidate, type IdeaTarget, type Night, type NightCommit, type SceneCandidate, type SceneClip, type Seed, type StoryboardCandidate, type TrackCandidate, type VisualizerCandidate } from "../../../foundry/scout/types.ts";
+import { WORDS_PART } from "../../../foundry/scout/storyboardKept.ts";
 import { stillOf } from "../../../foundry/scout/visualizer.ts";
 import { meshFileUrl } from "../../../library/feeds/mesh.ts";
 import { decisionMap, type Loss } from "../types.ts";
@@ -61,6 +62,12 @@ import { museFacts, scoutFileUrl } from "./scoutWing.ts";
 //            title, its still the reference, the meta `visualizer · <m:ss> · still: idea|studio`.
 //            A track or a visualizer still collecting when the night closed is a Loss, as any
 //            pending candidate is. An idea grown from a seed names the seed's sentence in its meta.
+//   storyboard  (spark scout-storyboards) ONE run under `storyboards`, judged whole: a cell per frame on disk,
+//            `c-10/panel-N` (N its panel index, 1-based), then ONE text cell `c-10/words` - the paragraph, a
+//            blank line, the bullets as `- ` lines - so the run's face is a still. The row is its title and its
+//            paragraph; the words cell's meta the idea it composes, the frame count, `local · free` and its seed.
+//            A dry or words-only board is the words cell alone; a failed board is a Loss. The cell ids are what
+//            lib/foundry/scout/storyboardKept.ts parses: the words kept, or any cell kept and none rejected.
 // A text cell's media is the content address of its own words (text/plain):
 // the kernel holds candidates by blob, and the words are the thing judged.
 //
@@ -88,6 +95,8 @@ export type ScoutV1 = {
   readonly seeds?: Readonly<Record<string, Seed>>;
   /** By track clip ref (`<night>/<c-id>/<aN>`): the clip each visualizer plays - its title and the track's sentence. */
   readonly tracks?: Readonly<Record<string, { readonly title: string; readonly sentence: string }>>;
+  /** By idea ref (`<night>/<c-id>`): the title of each idea a storyboard composes, where its night was readable. */
+  readonly ideas?: Readonly<Record<string, string>>;
 };
 
 export type Cell = {
@@ -407,6 +416,43 @@ function visualizerCells(night: Night, c: VisualizerCandidate, v1: Pick<ScoutV1,
   out.rows.push({ id: c.id, label: clip40(song?.title ?? `visualizer · ${c.track}`), group: "videos", ...(c.use === undefined ? {} : { use: c.use }), ...(ref === undefined ? {} : { ref }) });
 }
 
+/** What a kept storyboard does, as the preview says it. */
+export const STORYBOARD_VERDICT = { keep: "ready for a full video", reject: "refused: no full video grows from it" } as const;
+
+/** A storyboard's frame cell (`c-10/panel-2`) and its words cell (`c-10/words`). */
+export const panelCell = (candidate: CandidateId, i: number): string => cellId(candidate, `panel-${i + 1}`);
+export const wordsCell = (candidate: CandidateId): string => cellId(candidate, WORDS_PART);
+
+/** A storyboard's words as the card reads them: the paragraph, a blank line, then each bullet as a `- ` line. */
+export const storyboardBody = (c: Pick<StoryboardCandidate, "paragraph" | "bullets">): string => [c.paragraph, "", ...c.bullets.map((b) => `- ${b}`)].join("\n");
+
+function storyboardCells(night: Night, c: StoryboardCandidate, v1: Pick<ScoutV1, "media" | "seeds" | "ideas">, out: Mutable): void {
+  if (c.status === "failed") {
+    out.losses.push({ candidate: c.id, grade: "dropped", reason: c.error ?? "failed with no error recorded" });
+    return;
+  }
+  const jobId = c.jobId ?? `scout:${night.id}`;
+  let frames = 0;
+  (c.images ?? []).forEach((file, i) => {
+    if (file === null) return;
+    const m = v1.media[file];
+    if (m === undefined) {
+      out.losses.push({ candidate: panelCell(c.id, i), grade: "dropped", reason: `${file} is not on disk` });
+      return;
+    }
+    out.cells.push({ id: panelCell(c.id, i), candidate: c.id, kind: "storyboard", row: c.id, jobId, media: m, grades: [], url: scoutFileUrl(night.id, file), words: { label: `frame ${i + 1}`, ...(c.panels[i] === undefined ? {} : { prompt: c.panels[i] }) } });
+    frames++;
+  });
+  // A panel the engine refused names itself in `error` (`panel N: ...`), beside the frames that drew.
+  if (c.error !== undefined) out.losses.push({ candidate: c.id, grade: "approximate", reason: c.error });
+  const body = storyboardBody(c);
+  const framesWord = frames === c.panels.length ? `${frames} frame${frames === 1 ? "" : "s"}` : `${frames} of ${c.panels.length} frames`;
+  const idea = v1.ideas?.[c.fromIdea];
+  const meta = [`idea: ${idea === undefined ? c.fromIdea : clip40(idea)}`, framesWord, "local · free", seedHead(c, v1.seeds)].filter((x) => x !== undefined).join(" · ");
+  out.cells.push({ id: wordsCell(c.id), candidate: c.id, kind: "storyboard", row: c.id, jobId, media: textRef(body), grades: [], url: scoutFileUrl(night.id, "night.json"), words: { label: c.title, meta, prompt: body } });
+  out.rows.push({ id: c.id, label: c.title, group: "storyboards", prompt: c.paragraph, ...(c.aim === undefined ? {} : { aim: c.aim }), ...(c.use === undefined ? {} : { use: c.use }) });
+}
+
 type Mutable = { cells: Cell[]; rows: RowWords[]; initial: InitialDecision[]; losses: Loss[]; runs: Record<string, ExtractV1> };
 
 /** Every cell, row, imported verdict and loss of the night's packet. */
@@ -427,8 +473,7 @@ export function build(v1: ScoutV1): Built {
     else if (c.kind === "direction") directionCell(night, c, out);
     else if (c.kind === "track") trackCells(night, c, v1.media, out, v1.seeds);
     else if (c.kind === "visualizer") visualizerCells(night, c, v1, out);
-    // WP0 stub (spark scout-storyboards): WP4 draws a storyboard's frames and words as one run.
-    else if (c.kind === "storyboard") out.losses.push({ candidate: c.id, grade: "dropped", reason: "storyboards are not drawn on the packet yet" });
+    else if (c.kind === "storyboard") storyboardCells(night, c, v1, out);
     else if (c.status === "failed") out.losses.push({ candidate: c.id, grade: "dropped", reason: c.error ?? "failed with no error recorded" });
     else textCell(night, c, out);
   }

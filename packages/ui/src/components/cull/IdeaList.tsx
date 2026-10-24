@@ -14,6 +14,7 @@ import { cx } from "../cx.ts";
 import { spokenTile } from "./CullTile.tsx";
 import { NoteText } from "./NoteField.tsx";
 import { VerdictPick, type VerdictReasons } from "./VerdictPick.tsx";
+import { WordsBody } from "./WordsBody.tsx";
 import s from "./Verdict.module.css";
 
 export type IdeaListProps = {
@@ -30,12 +31,14 @@ export type IdeaListProps = {
   readonly asked?: number;
   /** The row being noted, and its field (./NoteField.tsx). */
   readonly noting?: { readonly cell: number; readonly field: ReactNode };
+  /** The tab it lists (its grid's name): `ideas`, or `storyboards` for a words-only board. */
+  readonly label?: string;
 };
 
-export function IdeaList({ categories, cells, verdicts, wordsOf, cur, nudged, reasons, asked, onFocus, onVerdict, noting }: IdeaListProps) {
+export function IdeaList({ categories, cells, verdicts, wordsOf, cur, nudged, reasons, asked, onFocus, onVerdict, noting, label = "ideas" }: IdeaListProps) {
   const required = reasons.required === true;
   return (
-    <div className={s.ideas} role="grid" aria-label="ideas">
+    <div className={s.ideas} role="grid" aria-label={label}>
       {categories.map((c) => (
         <section key={c.category} className={s.ideaGroup} aria-label={`${c.category}, ${c.runs.length}`}>
           <header className={s.ideaHead}>
@@ -59,7 +62,7 @@ export function IdeaList({ categories, cells, verdicts, wordsOf, cur, nudged, re
                 >
                   <div className={s.ideaWords}>
                     <p className={s.ideaClaim}>{w.label}</p>
-                    {w.prompt !== undefined && <p className={s.ideaQuote}>{w.prompt}</p>}
+                    {w.prompt !== undefined && <WordsBody text={w.prompt} className={s.ideaQuote} />}
                     {w.meta !== undefined && <span className={s.ideaMeta}>{w.meta}</span>}
                     {noting?.cell === i ? noting.field : v?.note !== undefined && <NoteText text={v.note} />}
                   </div>

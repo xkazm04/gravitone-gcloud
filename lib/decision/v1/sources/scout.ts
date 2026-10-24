@@ -44,7 +44,7 @@ import {
   type Preview,
 } from "../types.ts";
 import { extractAdapter, importVerdict, lookDecision, recordOf, same, type LookDecision } from "./extract.ts";
-import { DIRECTION_VERDICT, IDEA_TARGET_WORD, MUSIC_VERDICT, build, commitOf, extractDecisions, ideaCell, meshKey, sameOutcome, visualizerCell, within, type AssetRead, type ScoutV1, type StyleRead } from "./scoutPlan.ts";
+import { DIRECTION_VERDICT, IDEA_TARGET_WORD, MUSIC_VERDICT, STORYBOARD_VERDICT, build, commitOf, extractDecisions, ideaCell, meshKey, sameOutcome, visualizerCell, within, wordsCell, type AssetRead, type ScoutV1, type StyleRead } from "./scoutPlan.ts";
 import { musicOf } from "./scoutMusic.ts";
 import { nightRefusal, partOfBuilt, partWords, settledPart, withPart } from "./scoutPart.ts";
 import { inWing, isCharacter, knowledgeOf, knowledgeWrite, nightOfRun, packetMeta, partOfRun } from "./scoutWing.ts";
@@ -69,6 +69,8 @@ import { inWing, isCharacter, knowledgeOf, knowledgeWrite, nightOfRun, packetMet
 //            for a direction what they work inside or steer away from (taste.ts). A track's
 //   track    kept clip is the next night's visualizer and a kept visualizer the music ladder's first
 //   visualizer  rung (spark scout-decision-graph): both read that record too, nothing else is written.
+//   storyboard  nothing of its own either (spark scout-storyboards): kept whole, the record makes it the root a
+//            full-video act names (keptStoryboardFor); the preview says so on its words cell.
 //   leads    what the keeps EARNED for the ai-registry (../../../foundry/scout/
 //            leadEvents.ts) into the lead queue, once by key; the preview names each.
 //   all      every verdict, its reasons and its note into `night.committed`,
@@ -159,8 +161,9 @@ async function read(ref: AdapterRef): Promise<Result<ScoutRead>> {
           return fromV1(e);
         }
       }
-    } else if (c.kind === "track" || c.kind === "visualizer") {
-      const own = c.kind === "track" ? c.clips.map((x) => x.path) : [c.video, c.still];
+    } else if (c.kind === "track" || c.kind === "visualizer" || c.kind === "storyboard") {
+      // Every cell file must be listed here, or media misses it: a storyboard's frames too (a failed panel is null).
+      const own = c.kind === "track" ? c.clips.map((x) => x.path) : c.kind === "storyboard" ? (c.images ?? []).map((f) => f ?? undefined) : [c.video, c.still];
       try {
         for (const f of own) if (f !== undefined) files.push({ key: f, abs: locate(f) });
       } catch (e) {
@@ -328,6 +331,13 @@ function consequence(v1: ScoutRead, at: DecisionsAt): Result<Preview> {
         if (d?.verdict === "keep") parts.writes.push({ ...nightFile, candidate: cell, detail: MUSIC_VERDICT[c.kind] });
         else if (d?.verdict === "reject") parts.writes.push({ ...nightFile, candidate: cell, detail: `rejected${d.reasons.length === 0 ? "" : `: ${d.reasons.join(", ")}`}` });
       }
+    } else if (c.kind === "storyboard") {
+      // Judged whole (lib/foundry/scout/storyboardKept.ts): its words kept, or a cell kept and none rejected.
+      const mine = ids.filter((id) => id.startsWith(`${c.id}/`)).map((id) => [id, byCell.get(id)?.verdict] as const);
+      const words = wordsCell(c.id);
+      const rejected = mine.some(([, v]) => v === "reject");
+      const verdict = kept.has(words) || (mine.some(([, v]) => v === "keep") && !rejected) ? "keep" : rejected ? "reject" : undefined;
+      if (verdict !== undefined) parts.writes.push({ ...nightFile, candidate: words, detail: STORYBOARD_VERDICT[verdict] });
     }
   }
   // What the keeps earn, over every part's keeps; a later part names only the leads it adds.

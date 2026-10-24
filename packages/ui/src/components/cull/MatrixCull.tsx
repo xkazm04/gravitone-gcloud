@@ -1,10 +1,11 @@
 "use client";
 
 // THE MATRIX CULL - a packet of runs, decided (operator, 2026-10-22). The runs are filed by the KIND
-// of content into tabs - images, videos, audio, ideas - each drawn in the component its content
+// of content into tabs - images, videos, audio, ideas, storyboards - each drawn in the component its content
 // reads best in: a mosaic of square stills, 16:9 clips that play, waveforms, and a dense list of the
 // runs that are only words, decided in place, under the night's idea artboards (square tiles, as
-// stills are: spark scout-idea-artboards). A picture, clip or take run opens across the whole
+// stills are: spark scout-idea-artboards). Any tab draws its words-only runs as that list under its mosaic:
+// a dry night's storyboard is its words alone (spark scout-storyboards). A picture, clip or take run opens across the whole
 // screen (RunModal): its brief, its variants at most three to a row, a verdict by click under each
 // and on the whole run, a clip with its own bar. Every act is also a key (bindings.ts `board.cull`):
 // 1 / 2-4 / 5 on a run judge it whole, ⇧1 / ⇧2 inside a run each variant; ← → ↑ ↓ walk;
@@ -14,7 +15,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { cullCells, tallyOf } from "../../board/cull.ts";
-import { categoriesOf, categoryOf, columnsOf, runsOf, runVerdictOf, tabOf, tabsOf, wordsOnly, type Run, type Tab } from "../../board/runs.ts";
+import { categoriesOf, categoryOf, columnsOf, inWordsCard, runsOf, runVerdictOf, tabOf, tabsOf, wordsOnly, type Run, type Tab } from "../../board/runs.ts";
 import { DeskFrame, OracleStrip } from "../desk/Desk.tsx";
 import { Seg } from "../seg/Seg.tsx";
 import { CullFoot } from "./CullFoot.tsx";
@@ -95,7 +96,7 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
             position={`${d.runIx + 1}/${d.runs.length}`}
             {...(run.words?.use !== undefined ? { use: run.words.use } : {})}
             {...(run.words?.aim !== undefined ? { aim: run.words.aim } : {})}
-            {...(run.words?.prompt !== undefined ? { prompt: run.words.prompt } : {})}
+            {...(run.words?.prompt !== undefined && !inWordsCard(run, d.cells, (id) => mediaOf(id).mime, d.wordsOf, run.words.prompt) ? { prompt: run.words.prompt } : {})}
             {...(run.words?.ref !== undefined ? { reference: run.words.ref } : {})}
             {...(run.words?.checks !== undefined ? { checks: run.words.checks } : {})}
             runVerdict={runVerdictOf(run, d.cells, verdicts)}
@@ -120,9 +121,9 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
           <Seg label="content" options={tabs.map((t) => ({ value: t.tab, label: t.tab, count: t.categories.reduce((n, c) => n + c.runs.length, 0) }))} value={here?.tab ?? tab} onChange={pick} />
         </div>
       )}
-      {here?.tab === "ideas" ? (
+      {here !== undefined && (
         <>
-          {shown(false).length > 0 && <RunMosaic tab="ideas" categories={shown(false)} cells={d.cells} verdicts={verdicts} mediaOf={mediaOf} wordsOf={d.wordsOf} runIx={d.runIx} nudged={d.nudged} onOpen={d.openRun} grid={grid} />}
+          {shown(false).length > 0 && <RunMosaic tab={here.tab} categories={shown(false)} cells={d.cells} verdicts={verdicts} mediaOf={mediaOf} wordsOf={d.wordsOf} runIx={d.runIx} nudged={d.nudged} onOpen={d.openRun} grid={grid} />}
           {shown(true).length > 0 && (
             <IdeaList
               categories={shown(true)}
@@ -132,6 +133,7 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
               cur={d.cur}
               nudged={d.nudged}
               reasons={reasons}
+              label={here.tab}
               {...(d.ask && run !== undefined ? { asked: run.members[0] ?? -1 } : {})}
               onFocus={d.setCur}
               onVerdict={(i, v) => d.decideItem(i, v)}
@@ -139,9 +141,7 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
             />
           )}
         </>
-      ) : here !== undefined ? (
-        <RunMosaic tab={here.tab} categories={here.categories} cells={d.cells} verdicts={verdicts} mediaOf={mediaOf} wordsOf={d.wordsOf} runIx={d.runIx} nudged={d.nudged} onOpen={d.openRun} grid={grid} />
-      ) : null}
+      )}
     </DeskFrame>
   );
 }

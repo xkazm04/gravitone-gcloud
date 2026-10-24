@@ -6,7 +6,7 @@
 import type { Look } from "../components/status/status.ts";
 import type { BoardVerdict } from "./boardGate.ts";
 import type { Cell } from "./cull.ts";
-import type { RowWords } from "./port.ts";
+import type { ItemWords, RowWords } from "./port.ts";
 
 export type Run = {
   readonly row: string;
@@ -32,9 +32,10 @@ export function runsOf(cells: readonly Cell[], rows: readonly RowWords[]): Run[]
  * so a source that does finds its row waiting (operator, 2026-10-22: art styles and videos now,
  * music and 3D later). `ideas` - a scout night's idea artboards, one picture each - is drawn before
  * the words in the same tab (spark scout-idea-artboards). `seeds` - a batch's one-sentence seeds (spark
- * scout-decision-graph) - are words, filed in that tab under their own name.
+ * scout-decision-graph) - are words, filed in that tab under their own name. `storyboards` - a kept idea's
+ * frames and its words, one run judged whole (spark scout-storyboards) - has a tab of its own.
  */
-export const CATEGORIES = ["art styles", "videos", "music", "3d", "ideas", "seeds", "notes", "sources", "other"] as const;
+export const CATEGORIES = ["art styles", "videos", "music", "3d", "ideas", "storyboards", "seeds", "notes", "sources", "other"] as const;
 export type Category = (typeof CATEGORIES)[number];
 
 const isCategory = (g: string): g is Category => (CATEGORIES as readonly string[]).includes(g);
@@ -59,10 +60,11 @@ export function categoriesOf(runs: readonly Run[], firstMime: (run: Run) => stri
  * THE TABS the desk files categories under: one per KIND of content, so each gets the component and
  * the density it reads best at (operator, 2026-10-22) - pictures as a square mosaic, clips as 16:9
  * cards that play, takes as waveforms, and anything that is only words (findings, source lines) as
- * a dense list decided in place - under the night's idea artboards, square tiles like a still's. A
- * tab nothing fills is not drawn.
+ * a dense list decided in place - under the night's idea artboards, square tiles like a still's - and a
+ * storyboard's frames with its words as one 16:9 card (spark scout-storyboards). A tab nothing fills is
+ * not drawn.
  */
-export const TABS = ["images", "videos", "audio", "ideas"] as const;
+export const TABS = ["images", "videos", "audio", "ideas", "storyboards"] as const;
 export type Tab = (typeof TABS)[number];
 
 const TAB_OF: Readonly<Record<Category, Tab>> = {
@@ -72,6 +74,7 @@ const TAB_OF: Readonly<Record<Category, Tab>> = {
   videos: "videos",
   music: "audio",
   ideas: "ideas",
+  storyboards: "storyboards",
   seeds: "ideas",
   notes: "ideas",
   sources: "ideas",
@@ -81,6 +84,17 @@ export const tabOf = (c: Category): Tab => TAB_OF[c];
 
 /** A run that is only words (its first variant text/*): decided where it lies, never opened. */
 export const wordsOnly = (firstMime: string): boolean => firstMime.startsWith("text/");
+
+/**
+ * Whether `text` is already on screen in one of the run's words cards (a text variant whose words hold it): a
+ * storyboard's paragraph is its words card's first block, so the opened run's head need not say it twice.
+ */
+export function inWordsCard(run: Run, cells: readonly Cell[], mimeOf: (id: string) => string, wordsOf: (id: string) => ItemWords, text: string): boolean {
+  return run.members.some((i) => {
+    const id = cells[i]?.id ?? "";
+    return wordsOnly(mimeOf(id)) && (wordsOf(id).prompt ?? "").includes(text);
+  });
+}
 
 /** The categories in each tab that has any, in TABS then CATEGORIES order. */
 export function tabsOf(categories: ReturnType<typeof categoriesOf>): { readonly tab: Tab; readonly categories: ReturnType<typeof categoriesOf> }[] {

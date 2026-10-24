@@ -1,7 +1,7 @@
 // The MOSAIC for a tab of pictures, clips or takes: its categories as row bands, each run one card.
 // The card's shape is the content's own (operator, 2026-10-22: "tailored components and efficient
 // density"): square stills, 16:9 clips, wide waveforms. In the ideas tab it draws the night's idea
-// artboards, square, above the words.
+// artboards, square, above the words; in the storyboards tab each board as a 16:9 card, its first frame the face.
 import type { RefObject } from "react";
 
 import type { BoardVerdict } from "../../board/boardGate.ts";
@@ -26,7 +26,7 @@ export type RunMosaicProps = {
   readonly grid: RefObject<HTMLDivElement | null>;
 };
 
-const GRID: Readonly<Record<Tab, string | undefined>> = { images: s.mosaic, videos: s.mosaicWide, audio: s.mosaicWave, ideas: s.mosaic };
+const GRID: Readonly<Record<Tab, string | undefined>> = { images: s.mosaic, videos: s.mosaicWide, audio: s.mosaicWave, ideas: s.mosaic, storyboards: s.mosaicWide };
 
 export function RunMosaic({ tab, categories, cells, verdicts, mediaOf, wordsOf, runIx, nudged, onOpen, grid }: RunMosaicProps) {
   return (
