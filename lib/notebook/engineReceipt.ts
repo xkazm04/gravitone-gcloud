@@ -1,6 +1,6 @@
-// The receipt a research run saves beside its notebook. A plain interface, kept
-// out of the React store (research/run/live.ts re-exports it) so the notebook,
-// script and trailer modules can name it without pulling the store in.
+// The receipt a research run saves beside its notebook. A plain interface with no
+// imports but a type, so the notebook, script and trailer modules can name it
+// without pulling a store or a turn in.
 
 import type { SourceReceipt } from "@/lib/text/types";
 

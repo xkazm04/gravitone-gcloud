@@ -120,12 +120,11 @@ export const DIMENSIONS: Dimension[] = MARKET_DIMENSIONS;
  *  a domain: it carries no purpose and holds nothing on merit. Emptying it is
  *  the goal; hiding it is what we did before.
  *
- *  BOTH BOARDS RENDER IT (2026-08-14) — through `columnsFor` below, which
- *  shipped with zero callers and has two now: research/ResearchTriageBoard.tsx
- *  and script/_matrix/MatrixCoverage.tsx. An untagged card is on the screen of
- *  the reviewer who can fix it, not only in `notebookIssues()`'s dev-console
- *  report and `npx tsx pipeline/check-notebook.mts`. Those still run; the column
- *  is the second place the same fact shows up, not a replacement for the first.
+ *  NO BOARD RENDERS IT TODAY. The two v1 boards that did (2026-08-14, through
+ *  `columnsFor` below) retired at the Phase 6 cutover, and `columnsFor` has no
+ *  caller again: lib/research/scope.ts::scopeSummary rolls `byDim` up over
+ *  `source.dimensions`, which never holds this bucket. `notebookIssues()`'s
+ *  dev-console report and `npx tsx pipeline/check-notebook.mts` still run.
  *
  *  Anti-shape: pointing the fallback at any column that also means something. */
 export const UNTAGGED_DIMENSION: Dimension = {
@@ -151,10 +150,10 @@ export const UNTAGGED_DIMENSION: Dimension = {
  *  uses; the two agree because `buildCards` assigns the bucket from the same
  *  table. A healthy notebook gets no eighth column.
  *
- *  TWO CALLERS: research/ResearchTriageBoard.tsx and
- *  script/_matrix/MatrixCoverage.tsx. Anything that renders a column list should
- *  come through here rather than mapping `DIMENSIONS` directly — that is what
- *  left an untagged card renderable by nothing.
+ *  NO CALLER since the Phase 6 cutover retired the two v1 boards. Anything that
+ *  renders a column list should come through here rather than mapping a source's
+ *  `dimensions` directly — that is what leaves an untagged card renderable by
+ *  nothing, and it is what scopeSummary's `byDim` does today.
  *
  *  A column returned from here may omit the deprecated `emptyMeans` (the
  *  untagged bucket does). Read it through `emptyMeansOf()`, never `d.emptyMeans`

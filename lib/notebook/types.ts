@@ -6,7 +6,7 @@
 // pipeline/runs/2026-08-11-why-bitcoin-price-does-not-rise/, retyped.
 //
 // Render-side shapes (beats, checks, script renders) are NOT here — they belong
-// to the Script step and live in app/_phases/script/types.ts. A type used by one
+// to the Script step and live in lib/script/types.ts. A type used by one
 // step is that step's business.
 
 import type { Conclusion } from "@/lib/notebook/conclusions";
@@ -465,9 +465,10 @@ export interface CounterPosition {
  *  a card class the UI lets the user annotate — a note on a `c-*` card would
  *  name a card the model has never seen.
  *
- *  `app/api/recalibrate/route.ts` DOES. It imports `CONCLUSIONS` and sends them
- *  in their own block beside the notebook, with the separation intact and
- *  out-of-scope conclusions named rather than dropped. This paragraph said the
+ *  lib/turns/assemble/recalibrate.ts DOES (the payload left
+ *  `app/api/recalibrate/route.ts` at AIO-B). It sends the caller's conclusions,
+ *  never the fixture's `CONCLUSIONS`, in their own block beside the notebook, with
+ *  the separation intact and out-of-scope conclusions named rather than dropped. This paragraph said the
  *  opposite until 2026-09-06 — it described the route's payload as containing
  *  "no conclusions at all" and offered the one-line fix, months after that fix
  *  had landed. A comment asserting a defect the code no longer has is read as a
