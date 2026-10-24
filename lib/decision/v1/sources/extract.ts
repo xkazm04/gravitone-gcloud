@@ -31,6 +31,7 @@ import {
   mediaRefs,
   mintPacket,
   runIdOf,
+  sameVerdict,
   v1By,
   v1Call,
   v1DigestOf,
@@ -177,8 +178,8 @@ export function lookDecision(all: readonly (Decision | undefined)[], order: read
   return { verdict: "reject", reasons, ...(note === "" ? {} : { note }), by, at };
 }
 
-export const same = (a: { verdict: string | null; reasons: readonly string[]; note?: string }, b: { verdict: string | null; reasons: readonly string[]; note?: string }): boolean =>
-  a.verdict === b.verdict && a.reasons.join("\u0000") === b.reasons.join("\u0000") && (a.note ?? "") === (b.note ?? "");
+/** The import comparator, under the name ./scout.ts reads it by. */
+export const same = sameVerdict;
 
 export function recordOf(d: LookDecision): ExtractVerdictRecord {
   return { verdict: d.verdict === "keep" ? "keep" : "reject", at: d.at, ...(d.reasons.length > 0 ? { reasons: [...d.reasons] } : {}), ...(d.note === undefined ? {} : { note: d.note }), by: v1By(d.by) };

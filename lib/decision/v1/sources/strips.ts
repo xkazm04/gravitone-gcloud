@@ -26,6 +26,7 @@ import {
   mediaRef,
   mintPacket,
   runIdOf,
+  sameVerdict,
   v1Call,
   v1DigestOf,
   type AdapterRef,
@@ -112,9 +113,6 @@ export function importVerdict(v: StripVerdict): Imported {
   const note = [moved.length > 0 ? `chips: ${moved.join(", ")}` : "", v.note ?? ""].filter((s) => s.trim() !== "").join("\n");
   return { verdict: v.verdict, reasons, ...(note === "" ? {} : { note }), moved };
 }
-
-const same = (a: { verdict: string | null; reasons: readonly string[]; note?: string }, b: { verdict: string | null; reasons: readonly string[]; note?: string }): boolean =>
-  a.verdict === b.verdict && a.reasons.join("\u0000") === b.reasons.join("\u0000") && (a.note ?? "") === (b.note ?? "");
 
 function recordOf(d: Decision): StripVerdict {
   const chips = STRIP_CHIPS.filter((c) => d.reasons.includes(c));
@@ -218,7 +216,7 @@ function effectiveVerdicts(v1: StripsV1, at: DecisionsAt, items: ReadonlySet<str
 
 /** What apply leaves in v1 for one card: v1's own record when the decision is still the imported one. */
 function writtenOf(current: StripVerdict | undefined, d: Decision): StripVerdict {
-  return current !== undefined && same(importVerdict(current), d) ? current : recordOf(d);
+  return current !== undefined && sameVerdict(importVerdict(current), d) ? current : recordOf(d);
 }
 
 function digestOf(v1: StripsV1): string {

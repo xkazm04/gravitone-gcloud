@@ -34,6 +34,7 @@ import {
   mediaRefs,
   mintPacket,
   runIdOf,
+  sameVerdict,
   v1By,
   v1Call,
   v1DigestOf,
@@ -148,9 +149,6 @@ export function importVerdict(rec: VerdictRecord): Imported {
   const kept = cut ? `${text.slice(0, SPEC.noteMax - 1)}…` : text;
   return { verdict: rec.verdict, reasons: known, ...(kept === "" ? {} : { note: kept }), lost, cut };
 }
-
-const sameDecision = (a: { verdict: string | null; reasons: readonly string[]; note?: string }, b: { verdict: string | null; reasons: readonly string[]; note?: string }): boolean =>
-  a.verdict === b.verdict && a.reasons.join("\u0000") === b.reasons.join("\u0000") && (a.note ?? "") === (b.note ?? "");
 
 /** The v1 record a kernel decision writes: reasons back into the note's leading line. */
 function recordOf(d: Decision): VerdictRecord {
@@ -386,7 +384,7 @@ async function apply(claim: ApplyClaim): Promise<Result<void>> {
       continue;
     }
     // The operator left the imported verdict as it was: v1's record stays byte-identical.
-    if (current !== undefined && sameDecision(importVerdict(current), d)) continue;
+    if (current !== undefined && sameVerdict(importVerdict(current), d)) continue;
     set[c] = recordOf(d);
   }
   if (Object.keys(set).length > 0 || clear.length > 0) {

@@ -122,6 +122,16 @@ export function decisionMap(decisions: readonly Decision[]): ReadonlyMap<string,
   return new Map(decisions.map((d) => [candidateOf(d), d]));
 }
 
+/** A verdict as an import and a kernel decision both spell it: what `sameVerdict` compares. */
+export type VerdictWords = { readonly verdict: string | null; readonly reasons: readonly string[]; readonly note?: string };
+
+/**
+ * Whether a kernel decision still IS the v1 record it was imported from: verdict, reasons in
+ * order, note. Apply leaves v1's record byte-identical when it is (the forge, extract, strips and
+ * scout adapters' rule - one copy, so the four cannot drift on what "unchanged" means).
+ */
+export const sameVerdict = (a: VerdictWords, b: VerdictWords): boolean => a.verdict === b.verdict && a.reasons.join("\u0000") === b.reasons.join("\u0000") && (a.note ?? "") === (b.note ?? "");
+
 /** v1's `by` words to the ledger's actor words. Absent = a record older than the field: a human's. */
 export const byOf = (v1: "human" | "model" | undefined): By => (v1 === "model" ? "agent" : "operator");
 /** And back: the word v1's verdict writers take. */
