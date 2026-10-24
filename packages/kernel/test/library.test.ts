@@ -268,6 +268,28 @@ describe("libraryDetail", () => {
     const missing = libraryDetail(s, "nope");
     expect(!missing.ok && missing.error.code).toBe("not-found");
   });
+  it("resolves each lineage pointer with one statement", () => {
+    const s = store();
+    const style: LibraryEntry = {
+      item: { kind: "style", id: "style:painted-3d", title: "Painted 3D", state: "ratified", collections: [], origin: "extract", rights: { use: "publishable" }, source: "real", lineage: [], vocabulary: { styleId: "painted-3d", derivation: "readback" } },
+      meta: "animation",
+      extras: {},
+      feed: "test",
+    };
+    must(upsertItems(s, [plate("src"), plate("p1", { source: "derived", lineage: [{ kind: "library-item", id: "src" }, { kind: "library-item", id: "gone" }, { kind: "run", id: "run-1" }] }), style], CTX));
+    const sql: string[] = [];
+    const counted: Store = { ...s, tx: (fn) => s.tx(fn), read: (fn) => s.read((r) => fn({ at: r.at, get: (q, ...p) => (sql.push(q), r.get(q, ...p)), all: (q, ...p) => (sql.push(q), r.all(q, ...p)) })) };
+    const d = must(libraryDetail(counted, "p1"));
+    expect(d.lineage.map((n) => [n.role, n.label, n.itemId ?? null])).toEqual([
+      ["derived from", "Plate src", "src"],
+      ["derived from", "gone", null],
+      ["run", "run-1", null],
+      ["this", "Plate p1", null],
+      ["style", "Painted 3D", "style:painted-3d"],
+    ]);
+    // Three pointers that name an item (src, gone, the style): three lookups.
+    expect(sql.filter((q) => /FROM library_docs WHERE id = \?/.test(q))).toHaveLength(3);
+  });
   it("gives every style its cover from ONE read, one statement a style", () => {
     const s = store();
     const at = (h: number) => `2026-10-0${h}T00:00:00.000Z`;

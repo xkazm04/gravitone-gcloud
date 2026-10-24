@@ -36,16 +36,17 @@ const BEFORE_SELF = new Set(["library-item", "run", "job", "candidate"]);
 export const styleItemId = (styleId: string): string => `style:${styleId}`;
 
 function lineageOf(r: Reader, item: LibraryItem): LineageNode[] {
-  const has = (id: string): boolean => r.get("SELECT 1 AS x FROM library_docs WHERE id = ?", id) !== undefined;
-  const labelOf = (id: string): string => {
+  // One lookup a pointer: the title is both the proof the index holds it and its label.
+  const titleOf = (id: string): string | undefined => {
     const t = r.get("SELECT title FROM library_docs WHERE id = ?", id)?.["title"];
-    return typeof t === "string" ? t : id;
+    return typeof t === "string" ? t : undefined;
   };
   const node = (l: LibraryItem["lineage"][number]): LineageNode => {
     const role = item.source === "derived" && l.kind === "library-item" ? "derived from" : (ROLE[l.kind] ?? l.kind);
     const target = l.kind === "library-item" ? l.id : l.kind === "style" ? styleItemId(l.id) : undefined;
-    const base = { role, ref: { kind: l.kind, id: l.id }, label: target !== undefined && has(target) ? labelOf(target) : l.id };
-    if (target !== undefined && has(target)) return { ...base, itemId: target };
+    const title = target === undefined ? undefined : titleOf(target);
+    const base = { role, ref: { kind: l.kind, id: l.id }, label: title ?? l.id };
+    if (target !== undefined && title !== undefined) return { ...base, itemId: target };
     if (l.kind === "project" || l.kind === "run") return { ...base, facet: { group: l.kind, value: l.id } };
     return base;
   };
