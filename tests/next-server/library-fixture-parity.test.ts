@@ -86,3 +86,18 @@ describe("a free word finds what the index's search text holds", () => {
     });
   }
 });
+
+describe("the kind counts are the index's: under the shared groups and the search only", () => {
+  // @gt/domain/library LibraryPage.kindCounts; kernel library/counts.ts kindCountsOf.
+  const CASES: readonly [string, LibraryQuery][] = [
+    ["a kind and its own vocabulary", { kind: "audio", facets: { mood: ["tense"] }, limit: 0 }],
+    ["a kind, vocabulary and a shared group", { kind: "plate", facets: { station: ["forge"], state: ["ratified"] }, limit: 0 }],
+    ["a kind, vocabulary and a word", { kind: "doc", q: "search", facets: { bundle: ["software-engineering"] }, limit: 0 }],
+  ];
+  for (const [name, q] of CASES) {
+    it(name, () => {
+      const { fixture, real } = pages(q);
+      expect(fixture.kindCounts).toEqual(real.kindCounts);
+    });
+  }
+});

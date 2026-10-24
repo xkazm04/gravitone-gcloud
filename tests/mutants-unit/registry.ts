@@ -5827,4 +5827,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "pressed: v.pressed",
     why: "The detail's chips keep the filter they were fetched under: pressing or removing a facet never moves their mark.",
   },
+  {
+    id: "library-fixture-kind-count-narrowed",
+    test: "tests/next-server/library-fixture-parity.test.ts",
+    file: "app/(studio)/library/_port/fixture.ts",
+    find: "let truncated = false;",
+    replace: "if (kind !== undefined) kindCounts[kind] = list.length; let truncated = false;",
+    why: "The fixture Library counts the open kind under its own vocabulary where the kernel counts it under the shared groups only, so the kind rail reads 263 audio on the fixture and 1,125 on the real side.",
+  },
 ];

@@ -140,7 +140,6 @@ export function fixtureQuery(q: LibraryQuery): Result<LibraryPage> {
       for (const v of x.f[g.key] ?? []) m.set(v, (m.get(v) ?? 0) + 1);
     }
   }
-  if (kind !== undefined) kindCounts[kind] = list.length;
   let truncated = false;
   const groups: LibraryGroup[] = [];
   for (const g of rail) {
