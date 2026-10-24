@@ -227,7 +227,6 @@ export type PlanView = {
 
 /** The prototype's list groups, in its order. */
 export type ProjectGroup = "weir" | "blocked" | "active" | "plans" | "shipped";
-export const PROJECT_GROUPS = ["weir", "blocked", "active", "plans", "shipped"] as const satisfies readonly ProjectGroup[];
 
 /** A project's own picture: a blob by its address (`/api/blob/<sha256>`), the type it is served as. */
 export type ProjectPoster = { readonly sha256: string; readonly mime: string };
