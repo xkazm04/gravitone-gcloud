@@ -30,6 +30,7 @@ import { TabRail } from "@gt/ui/components/tabrail/TabRail.tsx";
 import { useKeys } from "@gt/ui/keymap/dispatch";
 import { FIELD_ATTR } from "@gt/ui/keymap/target";
 
+import { settled } from "../../audio/_hunt/settled.ts";
 import { useShell } from "../../_shell/Providers.tsx";
 import type { ComposeChoices, ProducePort } from "../_port/contract.ts";
 import { CompositionList, ordered } from "./CompositionList.tsx";
@@ -91,7 +92,7 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
     const [partId, patch] = next.value;
     queue.current.delete(partId);
     busy.current = true;
-    const r = await port.setPart({ id: p.id, rev: rev.current, partId, patch });
+    const r = await settled(port.setPart({ id: p.id, rev: rev.current, partId, patch }));
     busy.current = false;
     if (r.ok) {
       rev.current = r.value.project.rev;
@@ -111,7 +112,7 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
   const commitTitle = (): void => {
     const t = title.trim();
     if (!draft || t === "" || t === p.title) return;
-    void port.rename({ id: p.id, rev: p.rev, title: t }).then((r) => {
+    void settled(port.rename({ id: p.id, rev: p.rev, title: t })).then((r) => {
       if (r.ok) {
         setView(r.value);
         router.refresh();
@@ -142,7 +143,7 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
   };
 
   const discard = (): void => {
-    void port.discard({ id: p.id, rev: p.rev }).then((r) => {
+    void settled(port.discard({ id: p.id, rev: p.rev })).then((r) => {
       if (!r.ok) return setErr(r.error.error);
       toast(`${p.title} · discarded`, { href: `/ledger?q=${encodeURIComponent(p.id)}`, subject: p.title });
       const next = ordered(list).find((x) => x.id !== p.id);

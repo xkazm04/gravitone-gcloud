@@ -41,6 +41,24 @@ describe("the receipt flow - every await settles", () => {
   });
 });
 
+describe("the Plan's and Compose's writes go through settled", () => {
+  // A rejected setPart left Plan's `busy` ref up for good: every later model or units change
+  // queued behind it and was never sent, with nothing on screen.
+  it("Plan: the units/model queue, rename and discard", () => {
+    const src = code("_plan/Plan.tsx");
+    expect(src.length).toBeGreaterThan(1000);
+    // launchPlan is awaited inside the receipt's confirm, which settles it (settledOutcome).
+    expect(src.match(/(await|void) port\.(?!launchPlan\()\w+\(/g) ?? []).toEqual([]);
+    expect((src.match(/settled\(port\.(setPart|rename|discard)\(/g) ?? []).sort()).toEqual(["settled(port.discard(", "settled(port.rename(", "settled(port.setPart("]);
+  });
+
+  it("Compose: the recipe pick", () => {
+    const src = code("_plan/compose.tsx");
+    expect(src.match(/void port\s*\.\s*compose\(/g) ?? []).toEqual([]);
+    expect(src.match(/settled\(\s*port\.compose\(/g) ?? []).toHaveLength(1);
+  });
+});
+
 describe("the receipt flow - an answer lands on the sheet as it now reads", () => {
   type Sheet = NonNullable<Parameters<ReturnType<typeof onOpen>>[0]>;
   const sheet = { ceiling: "", busy: true } as unknown as Sheet;

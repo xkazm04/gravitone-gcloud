@@ -12,6 +12,7 @@ import { useRef, useState, type ReactNode } from "react";
 
 import { ComposeDialog, type ComposeSources } from "@gt/ui/components/produce/ComposeDialog.tsx";
 
+import { settled } from "../../audio/_hunt/settled.ts";
 import type { ComposeChoices, ProducePort } from "../_port/contract.ts";
 
 export type ComposeHost = { readonly open: () => void; readonly dialog: ReactNode };
@@ -34,8 +35,9 @@ export function useCompose(port: ProducePort, choices: ComposeChoices | null, in
     inflight.current = true;
     setBusy(true);
     setError(undefined);
-    void port
-      .compose({ recipe, ...(value.styleId === "" ? {} : { styleId: value.styleId }), ...(value.takeId === "" ? {} : { takeId: value.takeId }), ...(value.topic === "" ? {} : { topic: value.topic }) })
+    void settled(
+      port.compose({ recipe, ...(value.styleId === "" ? {} : { styleId: value.styleId }), ...(value.takeId === "" ? {} : { takeId: value.takeId }), ...(value.topic === "" ? {} : { topic: value.topic }) }),
+    )
       .then((r) => {
         if (r.ok) {
           setOpen(false);
