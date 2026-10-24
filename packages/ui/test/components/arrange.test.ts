@@ -11,6 +11,7 @@ import { ArrangeBoard } from "../../src/components/audio/ArrangeBoard.tsx";
 import { EngineList } from "../../src/components/audio/EngineList.tsx";
 import { RoundTrip } from "../../src/components/audio/RoundTrip.tsx";
 import { TakeCard, type CardTake } from "../../src/components/audio/TakeCard.tsx";
+import { RowFoot, RowHead } from "../../src/components/audio/RowHead.tsx";
 import { applyGroupOp, carriedBy, deleteGroup, moveGroup, renameGroup, seedSuggestions, type Groups } from "../../src/components/audio/arrangeGroups.ts";
 
 type T = ArrangeTake & { readonly verdict: string };
@@ -174,6 +175,16 @@ describe("the parts draw what the rules say", () => {
       return renderToStaticMarkup(h(TakeCard, { stack: s, focused: false, pending: false, playing: null, open: false, onFocus: none, onPointerDown: none, onPlay: none, onVersions: none }));
     };
     for (const [len, said] of [[0.6, "0.6s"], [4.25, "4.3s"], [125, "2:05"], [null, "–"]] as const) expect(card(len), String(len)).toContain(`<span>${said}</span>`);
+  });
+  test("a row's head offers only the edits its row may take", () => {
+    const names = (row: { key: string; name: string | null; orphan: boolean }, held: number, first: boolean, last: boolean): string[] =>
+      [...renderToStaticMarkup(h(RowHead, { row, held, first, last, onEdit: none })).matchAll(/aria-label="([^"]*)"/g)].map((m) => m[1] ?? "");
+    expect(names({ key: UNGROUPED_KEY, name: null, orphan: false }, 3, false, true)).toEqual([]);
+    expect(names({ key: "g:zeta", name: "zeta", orphan: true }, 1, false, false)).toEqual(["adopt zeta as a row"]);
+    expect(names({ key: "g:ambient", name: "ambient", orphan: false }, 0, true, false)).toEqual(["rename ambient", "move ambient down", "delete ambient"]);
+    expect(names({ key: "g:ambient", name: "ambient", orphan: false }, 2, false, true)).toEqual(["rename ambient", "move ambient up"]);
+    const foot = renderToStaticMarkup(h(RowFoot, { suggestions: [{ name: "lofi", n: 3 }], busy: false, onEdit: none }));
+    expect([...foot.matchAll(/aria-label="([^"]*)"/g)].map((m) => m[1])).toEqual(["new row", "make lofi a row, filing 3"]);
   });
   test("every cell carries its key for the drag, and the lit one is marked", () => {
     const stacks = stackVersions([ct("a")]);
