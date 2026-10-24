@@ -85,4 +85,11 @@ describe("each island's writes wait through settled", () => {
     expect(src.match(/settled\(acts\.scoreTake\(/g) ?? []).toHaveLength(1);
     expect(src.match(/await acts\.scoreTake\(/g) ?? []).toEqual([]);
   });
+
+  it("the strengths: a cell's sign", () => {
+    const src = code("_insight/Strengths.tsx");
+    expect(src.length).toBeGreaterThan(1000);
+    expect(src.match(/settled\(door\(/g) ?? []).toHaveLength(1);
+    expect(src.match(/await door\(/g) ?? []).toEqual([]);
+  });
 });

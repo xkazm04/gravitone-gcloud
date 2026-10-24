@@ -9,7 +9,8 @@
 // cell under the evidence floor offers no sign at all.
 //
 // The page reads on the server (./read.ts); this island owns the facet, the sort, the picked
-// cell and the claim being written.
+// cell and the claim being written. The sign waits through ../_hunt/settled.ts: a door whose
+// round trip fails rejects, and the button must not stay busy behind it.
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
@@ -22,6 +23,7 @@ import { StrengthHead, StrengthTable } from "@gt/ui/components/audio/Strengths.t
 import { cellKey, cellView, claimDraft, evidenceFor, FACETS, type Facet, type Sort, type StrengthCell } from "@gt/ui/components/audio/strengths.ts";
 
 import { useShell } from "../../_shell/Providers.tsx";
+import { settled } from "../_hunt/settled.ts";
 import type { LessonDoor } from "./lesson.ts";
 import type { StrengthsView } from "./read.ts";
 import s from "./insight.module.css";
@@ -41,7 +43,7 @@ function Detail({ cell, view, door }: { readonly cell: StrengthCell; readonly vi
   const sign = async (): Promise<void> => {
     setBusy(true);
     setError(null);
-    const r = await door({
+    const r = await settled(door({
       kind: cell.kind,
       source: "triage",
       provider: cell.provider,
@@ -50,7 +52,7 @@ function Detail({ cell, view, door }: { readonly cell: StrengthCell; readonly vi
       technique: cell.facet === "technique" ? [cell.value] : [],
       evidence: { n: ev.n, keepRate: ev.keepRate, meanScore: ev.meanScore, takeIds: [...ev.takeIds] },
       opId: opId(),
-    });
+    }));
     setBusy(false);
     if (!r.ok) {
       setError(r.error.error);
