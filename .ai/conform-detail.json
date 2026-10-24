@@ -10099,6 +10099,118 @@
       "evaluatedTs": "2026-10-24T01:07:42.727Z",
       "worker": "96a69ed5-d8aa-4f1d-bdab-91a1195e1e46",
       "techniques": []
+    },
+    "158d061e-feaa-4660-a1d3-6e8774b1f152/video-assembly": {
+      "context": "frames-picture-composition",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T01:31:44.072Z",
+      "worker": "819cc5a8-4033-4b20-a243-2ab1f092d935",
+      "techniques": [
+        {
+          "technique": "cut-compiled-from-source",
+          "verdict": "conformant",
+          "evidence": "lib/frames/directionPlan.ts:19 The machine assistant emits named composition ops (setSubject, setMotion, upsertText…), not pixels, and the ops are reversible from a checkpoint."
+        },
+        {
+          "technique": "derived-turn-markers",
+          "verdict": "conformant",
+          "evidence": "lib/frames/frames.ts:17 Frame positions come from the beat's own timecode (atS via secondsOf), never retyped."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "conformant",
+          "evidence": "lib/frames/frames.ts:75 Refusal and emptiness are first-class plate states; isStalePlate re-derives staleness from renderedSubject against subject."
+        },
+        {
+          "technique": "silent-defects-get-a-code-or-an-error",
+          "verdict": "conformant",
+          "evidence": "lib/frames/sceneSpec.ts:180 An unsourced figure, an unknown fact id, or text asked of a plate is a named error, collected per scene, not a quiet default."
+        },
+        {
+          "technique": "multitrack-timeline-discipline",
+          "verdict": "conformant",
+          "evidence": "lib/frames/frames.ts:250 A frame's hold is computed from the gap to the next beat on the one clock; null when it can't be placed, never an invented number."
+        },
+        {
+          "technique": "alignment-names-its-text",
+          "verdict": "not-applicable",
+          "evidence": "lib/frames/frames.ts:125 A frame holds for its whole beat line, so its timing is a duration and needs no position inside a narration alignment (the technique's own exclusion)."
+        },
+        {
+          "technique": "storyboard-grid-conditioning",
+          "verdict": "not-applicable",
+          "evidence": "lib/frames/shots.ts:62 The shot decomposition generates nothing, so no multi-shot generation is briefed from this library."
+        },
+        {
+          "technique": "unreferenced-channels-resample",
+          "verdict": "not-applicable",
+          "evidence": "lib/frames/shotPrompt.ts:1 The library briefs only text-to-image prompts, and no sound-bearing generation call is made here."
+        }
+      ]
+    },
+    "30a879d3-b06e-4530-a9fa-051ee66769dd/video-assembly": {
+      "context": "music-video-pipeline",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T01:31:44.072Z",
+      "worker": "819cc5a8-4033-4b20-a243-2ab1f092d935",
+      "techniques": [
+        {
+          "technique": "seek-stable-composition-authoring",
+          "verdict": "conformant",
+          "evidence": "lib/sound/mv/compositor.ts:245 Particle state is arithmetic over frameIndex and the flash cap is a whole-track pass, with no state carried between frames."
+        },
+        {
+          "technique": "cut-compiled-from-source",
+          "verdict": "conformant",
+          "evidence": "lib/sound/mv/treatment.ts:253 A motion regenerate edits one named property of the treatment. The still prompt is kept by construction and the video is recompiled."
+        },
+        {
+          "technique": "derived-turn-markers",
+          "verdict": "conformant",
+          "evidence": "lib/sound/mv/sections.ts:208 Chapter marks come from a novelty curve over the track's features, snapped to onsets, and the downbeat-proxy limit is stated."
+        },
+        {
+          "technique": "generated-shot-sourcing",
+          "verdict": "conformant",
+          "evidence": "lib/sound/mv/render.ts:190 Rung zero: an accepted still moved by the compositor, with no video model sampled."
+        },
+        {
+          "technique": "silent-defects-get-a-code-or-an-error",
+          "verdict": "conformant",
+          "evidence": "lib/sound/mv/render.ts:165 A bad envelope is a coded error, and an empty still throws (steps.ts:134). The duration falls back silently when ffprobe fails (render.ts:247-255)."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "conformant",
+          "evidence": "lib/sound/mv/queue.ts:91 A failed job keeps its error on the record, and an interrupted one names the possible spent still (line 72)."
+        },
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "not-applicable",
+          "evidence": "lib/sound/mv/render.ts:191 The track is the whole piece, so there are no cues to spot (the technique's one-continuous-sound-world exclusion)."
+        },
+        {
+          "technique": "drift-correction",
+          "verdict": "not-applicable",
+          "evidence": "lib/sound/mv/render.ts:231 Frames are generated at the audio envelope's own rate and count, so no clip sits against a mark."
+        },
+        {
+          "technique": "alignment-names-its-text",
+          "verdict": "not-applicable",
+          "evidence": "lib/sound/mv/treatment.ts:8 No narration and no text are aligned to the audio."
+        },
+        {
+          "technique": "unreferenced-channels-resample",
+          "verdict": "not-applicable",
+          "evidence": "lib/sound/mv/steps.ts:62 The only generation is one still image, with no model-emitted sound channel."
+        }
+      ]
     }
   }
 }

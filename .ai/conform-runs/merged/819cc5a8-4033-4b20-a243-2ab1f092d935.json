@@ -1,0 +1,235 @@
+{
+ "schema": "conform-run/1",
+ "worker": "819cc5a8-4033-4b20-a243-2ab1f092d935",
+ "subject": "video-assembly",
+ "evaluatedAt": "2026-10-24T01:31:44.072785+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "frames-picture-composition",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "lib/frames/directionPlan.ts:19 The direction pass's answer becomes typed composition ops that are shown, accepted per beat and reverted, never applied wholesale. Frames are a declarative source (plate, vector elements, texts) derived from the script's beats, with refusals and stale plates kept as states.",
+   "techniques": [
+    {
+     "technique": "cut-compiled-from-source",
+     "verdict": "conformant",
+     "evidence": "lib/frames/directionPlan.ts:19 The machine assistant emits named composition ops (setSubject, setMotion, upsertText\u2026), not pixels, and the ops are reversible from a checkpoint."
+    },
+    {
+     "technique": "derived-turn-markers",
+     "verdict": "conformant",
+     "evidence": "lib/frames/frames.ts:17 Frame positions come from the beat's own timecode (atS via secondsOf), never retyped."
+    },
+    {
+     "technique": "gap-and-refusal-honesty",
+     "verdict": "conformant",
+     "evidence": "lib/frames/frames.ts:75 Refusal and emptiness are first-class plate states; isStalePlate re-derives staleness from renderedSubject against subject."
+    },
+    {
+     "technique": "silent-defects-get-a-code-or-an-error",
+     "verdict": "conformant",
+     "evidence": "lib/frames/sceneSpec.ts:180 An unsourced figure, an unknown fact id, or text asked of a plate is a named error, collected per scene, not a quiet default."
+    },
+    {
+     "technique": "multitrack-timeline-discipline",
+     "verdict": "conformant",
+     "evidence": "lib/frames/frames.ts:250 A frame's hold is computed from the gap to the next beat on the one clock; null when it can't be placed, never an invented number."
+    },
+    {
+     "technique": "alignment-names-its-text",
+     "verdict": "not-applicable",
+     "evidence": "lib/frames/frames.ts:125 A frame holds for its whole beat line, so its timing is a duration and needs no position inside a narration alignment (the technique's own exclusion)."
+    },
+    {
+     "technique": "storyboard-grid-conditioning",
+     "verdict": "not-applicable",
+     "evidence": "lib/frames/shots.ts:62 The shot decomposition generates nothing, so no multi-shot generation is briefed from this library."
+    },
+    {
+     "technique": "unreferenced-channels-resample",
+     "verdict": "not-applicable",
+     "evidence": "lib/frames/shotPrompt.ts:1 The library briefs only text-to-image prompts, and no sound-bearing generation call is made here."
+    }
+   ]
+  },
+  {
+   "context": "part-editor-media-cut-score",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:52 The poster preview is documented as 'the poster as the export will draw it', but it renders with a fixed seed of 7, the default effect params, the low band as its high band and no look. The export (lib/sound/mv/render.ts:223-227) uses seedFor(motion), the motion-scaled bloom, the look's hue and its scene, so the cheap rung isn't a stand-in for the render it gates.",
+   "techniques": [
+    {
+     "technique": "verify-cheapest-artifact-first",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:52 'A cheap rung is only representative of what it can reproduce': the preview's inputs differ from the export's, and the preview is silent while rung 5 calls for sound."
+    },
+    {
+     "technique": "drift-correction",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:110 The only nudge step is \u00b150 ms, more than one frame at 24/25/30 fps, where the standard asks for sub-frame steps well under a frame. The signed offset readout and snap-to-mark (line 114) do conform."
+    },
+    {
+     "technique": "multitrack-timeline-discipline",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:198 Blocks are drawn at their true start and length on one shared ruler, in fixed lanes: picture, voice, music (Cut.tsx LANES)."
+    },
+    {
+     "technique": "gap-and-refusal-honesty",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:85 A missing plate is drawn as a hole and kept apart from a dry stand-in; unplaced items are listed with their reason."
+    },
+    {
+     "technique": "music-spotting-against-picture",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Score.tsx:38 A cue's span is bound to its first and last scene, so a retime re-derives its in and out. Each cue carries a purpose, a tempo and a takes state."
+    },
+    {
+     "technique": "derived-turn-markers",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Score.tsx:255 The turn mark is read from the view's derived turn and drawn on the shared clock, never typed. Its derivation lives in the port, outside this context."
+    }
+   ],
+   "registryProposal": "drift-correction says 'increments of a few tens of milliseconds' while the golden path says 'well under the frame'. A 50 ms step satisfies the first wording and breaches the second at every common frame rate. The technique should state one bound, e.g. at most half a frame at the cut's rate."
+  },
+  {
+   "context": "music-video-pipeline",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "lib/sound/mv/compositor.ts:245 Every frame is computed from (seed, frameIndex) and precomputed arrays, so the headless export and a scrub draw the same frame for the same index. Sections are derived from the track's own envelope, and the generated still is moved by code (rung zero), not by a video model.",
+   "techniques": [
+    {
+     "technique": "seek-stable-composition-authoring",
+     "verdict": "conformant",
+     "evidence": "lib/sound/mv/compositor.ts:245 Particle state is arithmetic over frameIndex and the flash cap is a whole-track pass, with no state carried between frames."
+    },
+    {
+     "technique": "cut-compiled-from-source",
+     "verdict": "conformant",
+     "evidence": "lib/sound/mv/treatment.ts:253 A motion regenerate edits one named property of the treatment. The still prompt is kept by construction and the video is recompiled."
+    },
+    {
+     "technique": "derived-turn-markers",
+     "verdict": "conformant",
+     "evidence": "lib/sound/mv/sections.ts:208 Chapter marks come from a novelty curve over the track's features, snapped to onsets, and the downbeat-proxy limit is stated."
+    },
+    {
+     "technique": "generated-shot-sourcing",
+     "verdict": "conformant",
+     "evidence": "lib/sound/mv/render.ts:190 Rung zero: an accepted still moved by the compositor, with no video model sampled."
+    },
+    {
+     "technique": "silent-defects-get-a-code-or-an-error",
+     "verdict": "conformant",
+     "evidence": "lib/sound/mv/render.ts:165 A bad envelope is a coded error, and an empty still throws (steps.ts:134). The duration falls back silently when ffprobe fails (render.ts:247-255)."
+    },
+    {
+     "technique": "gap-and-refusal-honesty",
+     "verdict": "conformant",
+     "evidence": "lib/sound/mv/queue.ts:91 A failed job keeps its error on the record, and an interrupted one names the possible spent still (line 72)."
+    },
+    {
+     "technique": "music-spotting-against-picture",
+     "verdict": "not-applicable",
+     "evidence": "lib/sound/mv/render.ts:191 The track is the whole piece, so there are no cues to spot (the technique's one-continuous-sound-world exclusion)."
+    },
+    {
+     "technique": "drift-correction",
+     "verdict": "not-applicable",
+     "evidence": "lib/sound/mv/render.ts:231 Frames are generated at the audio envelope's own rate and count, so no clip sits against a mark."
+    },
+    {
+     "technique": "alignment-names-its-text",
+     "verdict": "not-applicable",
+     "evidence": "lib/sound/mv/treatment.ts:8 No narration and no text are aligned to the audio."
+    },
+    {
+     "technique": "unreferenced-channels-resample",
+     "verdict": "not-applicable",
+     "evidence": "lib/sound/mv/steps.ts:62 The only generation is one still image, with no model-emitted sound channel."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "video-assembly",
+   "context": "visual-producers",
+   "reason": "evidence leans on cut/define.ts, which is not a tracked file"
+  },
+  {
+   "subject": "video-assembly",
+   "context": "part-editor-writing-research",
+   "reason": "These are text-side editors (scripts, articles, beats, research, metadata words), so the subject's precondition likely doesn't hold. A not-applicable verdict can't survive the absence search, though: the context's files share the _edit/ directory with Cut.tsx, CutClock.tsx and Score.tsx, where the subject's own terms (timeline, cue, nudge, gap) appear. I didn't judge it by assumption."
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-24T01:31:44.072785+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [
+    "alignment-names-its-text",
+    "cut-compiled-from-source",
+    "derived-turn-markers",
+    "gap-and-refusal-honesty",
+    "multitrack-timeline-discipline",
+    "silent-defects-get-a-code-or-an-error",
+    "storyboard-grid-conditioning",
+    "unreferenced-channels-resample"
+   ],
+   "deviations": 0,
+   "context": "frames-picture-composition",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T01:31:44.072785+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [
+    "derived-turn-markers",
+    "drift-correction",
+    "gap-and-refusal-honesty",
+    "multitrack-timeline-discipline",
+    "music-spotting-against-picture",
+    "verify-cheapest-artifact-first"
+   ],
+   "deviations": 1,
+   "context": "part-editor-media-cut-score",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T01:31:44.072785+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [
+    "alignment-names-its-text",
+    "cut-compiled-from-source",
+    "derived-turn-markers",
+    "drift-correction",
+    "gap-and-refusal-honesty",
+    "generated-shot-sourcing",
+    "music-spotting-against-picture",
+    "seek-stable-composition-authoring",
+    "silent-defects-get-a-code-or-an-error",
+    "unreferenced-channels-resample"
+   ],
+   "deviations": 0,
+   "context": "music-video-pipeline",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
