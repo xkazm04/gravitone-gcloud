@@ -32,6 +32,7 @@ import { engineOf as adEngineOf, ideasPrompt } from "@/lib/ads/concepts";
 import type { AdBrief, AdTemplateId } from "@/lib/ads/types";
 import { assignAngles, IDEAS_SCHEMA, parseIdeas } from "@/lib/ads/validate";
 import { OUT_DIRNAME } from "@/lib/fixtures/mode";
+import { blobRootOf } from "@/lib/kernelProcess";
 import { fixtureSource, sourceOf, type NotebookSource } from "@/lib/notebook/source";
 import type { Notebook } from "@/lib/notebook/types";
 import { GLASS_HARBOR_SLOTS } from "@/lib/studio/trailerFixtures";
@@ -61,8 +62,8 @@ export type { ActLaunched, PartActRef, PartFacts, ReceiptOptions, StepReceipt, U
 export type StepKernel = { readonly store: Store; readonly fx: Effects };
 
 /** The blob root beside a store - the one lib/parts/gates.ts reads (a plate a job lands is a
- *  candidate the gate packet points at). */
-export const blobRootOf = (store: Store): string => (store.location === ":memory:" ? path.resolve(OUT_DIRNAME, "blobs") : path.join(path.dirname(store.location), "blobs"));
+ *  candidate the gate packet points at): lib/kernelProcess.ts's, the one spelling of that rule. */
+export { blobRootOf };
 
 export const effectsOf = (store: Store): Effects => liveEffects(store, blobStore(blobRootOf(store)));
 

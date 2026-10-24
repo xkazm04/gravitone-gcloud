@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto";
-import path from "node:path";
 
 import { parseAt } from "@gt/domain/door";
 import { AppError, err, ok, type Result } from "@gt/domain/errors";
@@ -27,6 +26,7 @@ import type { Critique, ExtractManifest, ExtractOptions, ExtractUpload } from ".
 import { next } from "../foundry/extract/units.ts";
 import { ENUMS } from "../foundry/extract/vocabulary.ts";
 import { FoundryError } from "../foundry/runStore.ts";
+import { blobRootOf } from "../kernelProcess.ts";
 
 // THE EXTRACT PRODUCER'S PORTS, BOUND TO v1 (Phase 4, L29) - the definition
 // (packages/producers/src/extract/define.ts) over lib/foundry/extract: the
@@ -325,9 +325,10 @@ export async function launchExtract(store: Store, target: ExtractTarget, opts: L
 
 /* ── Drive ─────────────────────────────────────────────────────────────────── */
 
-/** The effect port over a store, blobs beside it - the worker's binding (workers/worker.ts). */
-export function effectsFor(store: Store, location: string): Effects {
-  return liveEffects(store, blobStore(location === ":memory:" ? path.resolve("foundry-out", "blobs") : path.join(path.dirname(location), "blobs")));
+/** The effect port over a store, blobs beside it - the worker's binding (workers/worker.ts). `_location`
+ *  is the path `store` was opened at, kept for the callers; the root is lib/kernelProcess.ts's. */
+export function effectsFor(store: Store, _location: string): Effects {
+  return liveEffects(store, blobStore(blobRootOf(store)));
 }
 
 export type DriveOptions = RunOptions & {

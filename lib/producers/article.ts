@@ -1,5 +1,3 @@
-import path from "node:path";
-
 import { parseAt } from "@gt/domain/door";
 import { err, errorMessage, ok, type AppErrorCode, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
@@ -34,6 +32,7 @@ import { cappedTurn, depsThrough, describeTurn, liveTurn, refusedTurn, standInTu
 import { landBlogOnKernel } from "@/lib/decision/v1/sources/articleSlot";
 import { WORKING, type ArticleRun, type ArticleTopic, type CreateRunInput } from "@/lib/articles/types";
 import { OUT_DIRNAME } from "@/lib/fixtures/mode";
+import { blobRootOf } from "@/lib/kernelProcess";
 
 // THE ARTICLE PRODUCER, BOUND (Phase 4, L30) - packages/producers/src/article's ports tied to
 // lib/articles' engine, and the acts every entry point shares: the CLI, the routes, the loop
@@ -66,8 +65,7 @@ export function articleKernel(): Result<ArticleKernel> {
   const location = storeLocation(OUT_DIRNAME);
   const k = processKernel(location);
   if (!k.ok) return k;
-  const blobs = blobStore(location === ":memory:" ? path.resolve(OUT_DIRNAME, "blobs") : path.join(path.dirname(location), "blobs"));
-  return ok({ store: k.value.store, fx: liveEffects(k.value.store, blobs) });
+  return ok({ store: k.value.store, fx: liveEffects(k.value.store, blobStore(blobRootOf(k.value.store))) });
 }
 
 const kernelOf = (b: ArticleBinding): Result<ArticleKernel> => (b.kernel === undefined ? articleKernel() : ok(b.kernel));

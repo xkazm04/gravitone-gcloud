@@ -1,5 +1,4 @@
 import { execFile } from "node:child_process";
-import path from "node:path";
 
 import { err, ok } from "@gt/domain/errors";
 import { blobStore } from "@gt/kernel/blob";
@@ -8,6 +7,7 @@ import { processKernel, storeLocation } from "@gt/kernel/process";
 import { factsPlan, MEDIA_FACTS_LANE, mediaFactsProducer, type MediaProbe } from "@gt/producers/media-facts/run";
 
 import { OUT_DIRNAME } from "../fixtures/mode.ts";
+import { blobRootOf } from "../kernelProcess.ts";
 import { ffmpegDecode, measureMissing, type Decode } from "../sound/measureRun.ts";
 
 // THE MEDIA-FACTS PORT, BOUND TO THIS BOX (Phase 5): ffprobe for what a blob is,
@@ -77,7 +77,7 @@ export function mediaFactsBound(limit?: number, decode: Decode = ffmpegDecode())
     const location = storeLocation(OUT_DIRNAME);
     const k = processKernel(location);
     if (!k.ok) return { error: k.error.message };
-    const blobs = blobStore(location === ":memory:" ? path.resolve(OUT_DIRNAME, "blobs") : path.join(path.dirname(location), "blobs"));
+    const blobs = blobStore(blobRootOf(k.value.store));
     return {
       producer: mediaFactsProducer({ store: k.value.store, blobs, probe: ffmpegProbe(), ...(limit === undefined ? {} : { limit }) }),
       measure: () => measureMissing(k.value.store, blobs, decode, { limit: limit ?? 500, now: () => new Date() }),

@@ -23,6 +23,7 @@ import { cardWorstUsd, RENDER_ESTIMATE, TURN_ESTIMATE } from "@gt/producers/stri
 
 import { runAgent, type AgentResult, type RunAgentInput } from "../agent/cliSeam.ts";
 import { OUT_DIRNAME } from "../fixtures/mode.ts";
+import { blobRootOf } from "../kernelProcess.ts";
 import { makeAsset, standInTurn, type StripTurn } from "../foundry/strips/author.ts";
 import { FoundryError } from "../foundry/runStore.ts";
 import { DEFAULT_OPTIONS, loadApproaches, selectCards, type CardSelection } from "../foundry/strips/cards.ts";
@@ -62,8 +63,7 @@ export function stripsKernel(): Result<StripsKernel> {
   const location = storeLocation(OUT_DIRNAME);
   const k = processKernel(location);
   if (!k.ok) return k;
-  const blobs = blobStore(location === ":memory:" ? path.resolve(OUT_DIRNAME, "blobs") : path.join(path.dirname(location), "blobs"));
-  return ok({ store: k.value.store, fx: liveEffects(k.value.store, blobs) });
+  return ok({ store: k.value.store, fx: liveEffects(k.value.store, blobStore(blobRootOf(k.value.store))) });
 }
 
 const kernelOf = (b: StripsBinding): Result<StripsKernel> => (b.kernel === undefined ? stripsKernel() : ok(b.kernel));
