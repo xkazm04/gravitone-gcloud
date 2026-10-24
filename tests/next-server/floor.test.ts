@@ -13,7 +13,8 @@ await vi.hoisted(async () => {
 import { nextPile, pileOrder, spendOf } from "../../app/(studio)/_shell/facts.ts";
 import { SLOTS } from "../../app/(studio)/floor/_calendar/fixtureData.ts";
 import { applyCancel, applyMove, applyPublishNow, fixtureAct, fixtureFacts, fixtureItems, fixtureSchedule, fixtureSlots, seedRow, viewOf, type FixtureRow } from "../../app/(studio)/floor/_calendar/fixture.ts";
-import { byLane, floorSearch, parseFloorUrl, scheduleHref, slotHref } from "../../app/(studio)/floor/_floor/model.ts";
+import { byLane, floorRunsOf, floorSearch, parseFloorUrl, scheduleHref, slotHref } from "../../app/(studio)/floor/_floor/model.ts";
+import type { ProduceJob } from "../../app/(studio)/projects/_port/contract.ts";
 import { downsample } from "../../app/(studio)/floor/_floor/shelf.ts";
 import type { LiveJob, WeirItem } from "../../lib/ledger/v1/types.ts";
 
@@ -69,6 +70,25 @@ describe("lanes", () => {
     expect(lanes.audio.piles.map((p) => p.id)).toEqual(["suno/triage"]);
     expect(lanes.article.piles).toEqual([]);
     expect(lanes.video).toEqual({ jobs: [], piles: [] });
+  });
+});
+
+describe("the composers' runs on the floor", () => {
+  const run = (id: string, over: Partial<ProduceJob> = {}): ProduceJob => ({ id, title: id, lane: "gpu.local", state: "queued", media: "image", after: [], s: Date.UTC(2026, 9, 15, 9), e: Date.UTC(2026, 9, 15, 10), queuePos: 1, blocked: false, held: false, attempt: 1, model: "m", units: 1, noun: "plate", seconds: 60, usd: null, src: "model", mode: "dry", reroutable: false, ...over });
+
+  it("draws a lane's own runs, each a door to its job in Runs; a running one says since when", () => {
+    const [q, r] = floorRunsOf([run("j-q"), run("j r", { state: "running", media: "audio" })]);
+    expect(q).toEqual({ source: "produce", id: "j-q", title: "j-q", lane: "gpu.local", media: "image", state: "queued", attempt: 1, href: "/projects/runs?job=kernel%3Aj-q" });
+    expect([r?.media, r?.startedAt, r?.href]).toEqual(["audio", "2026-10-15T09:00:00.000Z", "/projects/runs?job=kernel%3Aj%20r"]);
+  });
+
+  it("keeps a failed run with its sentence: it is still owed on the floor", () => {
+    expect(floorRunsOf([run("j-f", { state: "failed", error: "comfy: out of memory" })])).toMatchObject([{ id: "j-f", state: "failed", error: "comfy: out of memory" }]);
+  });
+
+  it("leaves out a run with no medium, a project's run, and a done or cancelled one", () => {
+    const { media: _m, ...bare } = run("j-none");
+    expect(floorRunsOf([bare, run("j-proj", { projectId: "glass-harbor" }), run("j-done", { state: "done" }), run("j-x", { state: "cancelled" })])).toEqual([]);
   });
 });
 
