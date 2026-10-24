@@ -5434,4 +5434,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "kindCounts={{ ...KIND_COUNTS, doc: 0 }}",
     why: "The kit's Library rail counts no documents and an All its kinds do not add up to, beside a summary that counts 550 of them in the same set.",
   },
+  {
+    id: "kit-floor-month-arrows-inert",
+    test: "tests/next-server/kit-sheet.test.ts",
+    file: "app/(studio)/kit/FloorKit.tsx",
+    find: "setMonth((m) => shiftMonth(m, by));",
+    replace: "void by;",
+    why: "The kit's month calendar draws its arrows and turns nothing when they are pressed, though the Floor's turn a month and close the open day.",
+  },
 ];

@@ -20,7 +20,7 @@ import { ShelfCell, ShelfGrid, ShelfList, ShelfRow, ShelfStyle } from "@gt/ui/co
 import { SlotConfirm } from "@gt/ui/components/floor/SlotConfirm.tsx";
 import { SlotDetail, type SlotView } from "@gt/ui/components/floor/SlotDetail.tsx";
 import { SlotMark, SlotRow } from "@gt/ui/components/floor/SlotRow.tsx";
-import { railOf, type RailSlot } from "@gt/ui/components/floor/calendar.ts";
+import { railOf, shiftMonth, type RailSlot, type YearMonth } from "@gt/ui/components/floor/calendar.ts";
 import { FLOOR_LANES, type FloorLane } from "@gt/ui/components/floor/floor.ts";
 import { LedgerDelta, NextButton, SpendChip } from "@gt/ui/components/header/HeaderChips.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
@@ -85,8 +85,12 @@ const POST: SlotView = {
   mode: "dry",
 };
 
+/** NOW's month (m is 0-based). */
+const MONTH: YearMonth = { y: 2026, m: 9 };
+
 export function FloorSection() {
   const [focus, setFocus] = useState(false);
+  const [month, setMonth] = useState<YearMonth>(MONTH);
   const [day, setDay] = useState<string | null>(null);
   const [off, setOff] = useState<ReadonlySet<string>>(() => new Set());
   const rail = railOf(SLOTS, NOW);
@@ -212,11 +216,17 @@ export function FloorSection() {
           <MonthCalendar
             slots={SLOTS}
             nowMs={NOW}
-            month={{ y: 2026, m: 9 }}
+            month={month}
             day={day}
             channelsOff={off}
-            onMonth={() => undefined}
-            onToday={() => setDay("2026-10-15")}
+            onMonth={(by) => {
+              setMonth((m) => shiftMonth(m, by));
+              setDay(null);
+            }}
+            onToday={() => {
+              setMonth(MONTH);
+              setDay("2026-10-15");
+            }}
             onDay={setDay}
             onChannel={(c) =>
               setOff((cur) => {

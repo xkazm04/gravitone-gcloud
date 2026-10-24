@@ -33,6 +33,8 @@
 //      Floor's marks row only carried a `title` on a generic span, which no reader is bound to read.
 //   9. The Library's rail and its set summary count one set. The screen hands both the same
 //      kindCounts (library/_library/Library.tsx); the kit handed them two objects that disagreed.
+//  10. The Floor month's controls turn the month, as the header says they are live. Its ‹ › were
+//      wired to nothing; they now turn it the way floor/_floor/Month.tsx does (and close the day).
 
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
@@ -58,6 +60,7 @@ import { StyleSection } from "../../app/(studio)/kit/StyleKit.tsx";
 import { SignalSections } from "../../app/(studio)/kit/Signal.tsx";
 import { DRAWN_GROUPS, TokenSections } from "../../app/(studio)/kit/Tokens.tsx";
 import { KitNav } from "../../app/(studio)/kit/KitNav.tsx";
+import { MonthCalendar } from "@gt/ui/components/floor/MonthCalendar.tsx";
 import { harness } from "../golden-path/_studio/hooks.ts";
 
 // boardKitData is a server module (it mints ids at the zod door); the guard is Next's, not node's.
@@ -306,3 +309,36 @@ describe("/kit: the Library's rail and summary count one set", () => {
   });
 });
 
+/** The first element of `type` in a rendered tree (a shallow render: components are not called). */
+function find(node: unknown, type: unknown): { readonly props: Record<string, unknown> } | undefined {
+  if (Array.isArray(node)) {
+    for (const n of node) {
+      const hit = find(n, type);
+      if (hit !== undefined) return hit;
+    }
+    return undefined;
+  }
+  if (node === null || typeof node !== "object" || !("props" in node)) return undefined;
+  const el = node as { readonly type: unknown; readonly props: Record<string, unknown> };
+  return el.type === type ? el : find(el.props.children, type);
+}
+
+describe("/kit: the Floor month's controls are live", () => {
+  test("the arrows turn the month and close the day; today comes back to NOW's month", async () => {
+    const floor = harness(() => FloorSection(), { settleWhen: "stable" });
+    const month = async () => {
+      const el = find(await floor.settleUp(), MonthCalendar);
+      if (el === undefined) throw new Error("the Floor kit draws no MonthCalendar");
+      return el.props as { readonly month: unknown; readonly day: unknown; readonly onMonth: (by: number) => void; readonly onToday: () => void; readonly onDay: (d: string) => void };
+    };
+    expect((await month()).month).toEqual({ y: 2026, m: 9 });
+    (await month()).onDay("2026-10-20");
+    (await month()).onMonth(1);
+    expect(await month()).toMatchObject({ month: { y: 2026, m: 10 }, day: null });
+    (await month()).onMonth(3);
+    expect((await month()).month, "past December").toEqual({ y: 2027, m: 1 });
+    (await month()).onToday();
+    expect(await month()).toMatchObject({ month: { y: 2026, m: 9 }, day: "2026-10-15" });
+    floor.unmount();
+  });
+});
