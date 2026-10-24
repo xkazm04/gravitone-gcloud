@@ -154,6 +154,17 @@ test("loop: two loops started in the same second keep their own report and log",
   }
 });
 
+test("coverage and the loop report name a run whose run.json does not parse", async () => {
+  publication("covered-one", "software-engineering", "token-budgeting", "2026-10-01-token-budgeting");
+  mkdirSync(path.join(box.store, "2026-10-01-broken"), { recursive: true });
+  writeFileSync(path.join(box.store, "2026-10-01-broken", "run.json"), '{"id": "2026-10-01-broken", "topic": ');
+  expect((await coverage(box.registry)).damaged).toEqual(["2026-10-01-broken"]);
+  const idle = { start: () => Promise.reject(new Error("no launch")), resume: () => Promise.reject(new Error("no resume")), driven: async () => false };
+  const report = await runLoop({ target: 1, budgetUsd: 10 }, deps(), undefined, idle);
+  expect(report.damaged).toEqual(["2026-10-01-broken"]);
+  expect(readFileSync(path.join(loopsRoot(), report.id, "events.log"), "utf8")).toMatch(/DAMAGED 2026-10-01-broken/);
+});
+
 test("loop: refuses to start without a budget or with an unclear target", async () => {
   await expect(runLoop({ target: 2 } as never, deps())).rejects.toMatchObject({ code: "no-budget" });
   await expect(runLoop({ budgetUsd: 0, target: 2 }, deps())).rejects.toMatchObject({ code: "no-budget" });

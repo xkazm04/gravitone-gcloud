@@ -83,6 +83,9 @@ export interface Coverage {
   claimed: string[];
   /** Runs that are neither finished nor driven by anyone (a killed process). */
   orphaned: string[];
+  /** Run directories whose run.json does not parse: their topic is unknown, so it is neither
+   *  covered nor claimed, and a loop may start a second article on it. Named so that shows. */
+  damaged: string[];
 }
 
 const freeKey = (text: string) => `free:${text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60)}`;
@@ -119,7 +122,7 @@ async function publicationItems(registryDir: string): Promise<CoveredItem[]> {
 /** `driven` answers whether something holds a run that is not finished (its job is queued or running);
  *  without one every such run counts as orphaned. */
 export async function coverage(registryDir: string = resolveRegistryDir().dir, driven: (runId: string) => Promise<boolean> = async () => false): Promise<Coverage> {
-  const { runs } = await listRuns();
+  const { runs, damaged } = await listRuns();
   const covered: CoveredItem[] = [];
   const claimed: string[] = [];
   const orphaned: string[] = [];
@@ -142,7 +145,7 @@ export async function coverage(registryDir: string = resolveRegistryDir().dir, d
     keys.add(item.key);
     covered.push(item);
   }
-  return { covered, claimed: [...new Set(claimed)].sort(), orphaned };
+  return { covered, claimed: [...new Set(claimed)].sort(), orphaned, damaged };
 }
 
 /* ── ranking ───────────────────────────────────────────────────────────────── */
@@ -365,6 +368,8 @@ export interface LoopReport {
   spentUsd: number;
   runs: LoopRunReport[];
   orphaned: string[];
+  /** Coverage's `damaged` at the start: runs whose subject the loop could not see. */
+  damaged: string[];
   /** Cost is the engine's reported cost: codex and agy turns report none. */
   note: string;
 }
@@ -407,6 +412,7 @@ export async function runLoop(opts: LoopOptions, baseDeps: EngineDeps = defaultD
     spentUsd: 0,
     runs: [],
     orphaned: start.orphaned,
+    damaged: start.damaged,
     note: NOTE,
   };
   const event = async (line: string) => {
@@ -415,6 +421,7 @@ export async function runLoop(opts: LoopOptions, baseDeps: EngineDeps = defaultD
   };
   const save = () => writeJsonAtomic(path.join(dir, "loop.json"), report);
   await event(`START ${id} target ${target} (covered ${start.covered.length}) budget $${opts.budgetUsd} concurrency ${concurrency}`);
+  if (start.damaged.length) await event(`DAMAGED ${start.damaged.join(" ")}: run.json does not parse; their topics are not counted or claimed`);
 
   const ledger: Ledger = { spent: 0 };
   let inflight = 0;
