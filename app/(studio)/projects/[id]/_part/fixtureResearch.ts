@@ -264,6 +264,10 @@ function apply(ctx: Ctx, r: ResearchRec, op: ResearchOp): Result<ResearchRec> {
     case "pick-idea":
       if (!r.ideas.some((i) => i.id === op.ideaId)) return no(`no idea ${op.ideaId}`);
       return op.ideaId === r.picked ? no(`${op.ideaId} is already picked`) : ok({ ...r, picked: op.ideaId });
+    // The zod door admits every editor's op on every key: another kind's op reaches here at run
+    // time, and the real side's words for it (realScene.ts `nope`) are the answer, not a fall-through.
+    default:
+      return no("not a research op");
   }
 }
 

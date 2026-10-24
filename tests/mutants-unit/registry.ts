@@ -5707,4 +5707,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "description: (v: string): number => v.length,",
     why: "A description in an accented language reads 3000 / 5000 in the editor and is refused by YouTube's 5000-byte limit at the upload.",
   },
+  {
+    id: "fixture-research-op-falls-through",
+    test: "tests/next-server/parts-fixture-parity.test.ts",
+    file: "app/(studio)/projects/[id]/_part/fixtureResearch.ts",
+    find: "return no(\"not a research op\");",
+    replace: "return undefined as never;",
+    why: "A script op sent to a research key throws a TypeError on the fixture side where the real side refuses it as invalid, so the editors are built against a crash the product never shows.",
+  },
 ];
