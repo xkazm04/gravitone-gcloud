@@ -3382,7 +3382,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/decision/commit.ts:79 The commit transition checks only the packet's state, never whether the author is the operator, so a caller whose `by` is 'agent' can commit a packet, and gates.ts then reads it as a ratified gate part that releases held jobs.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "test-harness",
@@ -11392,7 +11396,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/script/versions.ts:136 The receipt for accepting a version over a blocking gate records when, which violations and how much of the gate was enforced, but not who overrode it, so the record cannot attribute the decision.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "live-system-demo-film",

@@ -10348,6 +10348,68 @@
           "evidence": "tests/golden-path/dal-real-engine.probe.spec.ts:15 The dependency is a locally hostable real engine, not a remote service, which is the technique's own 'when not to use'."
         }
       ]
+    },
+    "431b1607-266c-4fcb-93e8-b7f91e5a0ebc/hitl-approval": {
+      "context": "decision-and-gates",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T02:20:26.823Z",
+      "worker": "ddc614dd-6987-4152-8d35-b65b37686391",
+      "techniques": [
+        {
+          "technique": "gate-state-machines",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/decision/commit.ts:79 durable, enumerated packet states, but pending->committed is not limited to a human path; Author.by ('operator'|'agent', driver.ts:37) is self-declared by the caller"
+        },
+        {
+          "technique": "decision-records",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/decision/schema.ts:76 append-only rows with verdict, reasons, note, rev, by, surface and at; commit is pinned to what the operator saw via consequenceToken (consequence.ts:29)"
+        },
+        {
+          "technique": "resume-after-decision",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/decision/commit.ts:93 continuation is an outbox row written in the decision's own transaction, idempotent by ticket, with lease, retry and stuck states (apply-core.ts)"
+        },
+        {
+          "technique": "review-queues",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/decision/view.ts:106 the rail is a query over the packets table with its decided count in the same read; it is bounded and reports truncation"
+        }
+      ]
+    },
+    "f8036604-75f5-4f7d-898c-734511ac5e86/hitl-approval": {
+      "context": "script-composition-and-validation",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T02:20:26.823Z",
+      "worker": "ddc614dd-6987-4152-8d35-b65b37686391",
+      "techniques": [
+        {
+          "technique": "decision-records",
+          "verdict": "deviation",
+          "evidence": "lib/script/versions.ts:136 frozen at the click and carried on the version (good), but has no decider field"
+        },
+        {
+          "technique": "fail-loud-classification-default",
+          "verdict": "conformant",
+          "evidence": "lib/script/gate.ts:27 'unmeasured' is its own counted verdict and enforced% is reported; the weakest render is used, not the mean"
+        },
+        {
+          "technique": "oracle-before-gate",
+          "verdict": "conformant",
+          "evidence": "lib/script/gate.ts:67 the person accepting sees probes checked against the notebook's facts; where no probe exists that is shown, not assumed honoured"
+        },
+        {
+          "technique": "resume-after-decision",
+          "verdict": "conformant",
+          "evidence": "lib/script/history.ts:21 a staged candidate survives reload only if its baseline and notebook have not moved, otherwise it is reported lost with the reason"
+        }
+      ]
     }
   }
 }
