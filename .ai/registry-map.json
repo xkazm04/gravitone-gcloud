@@ -5912,7 +5912,11 @@
           "revision": 28,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/job-queue-core.ts:78 The worker counts store rows in `running` against lane capacity on every look, but its only staleness sweep (`recover`) runs once at loop start and the per-slot orphan sweep runs only inside a claim. A job left `running` by a dead process outside the worker (a CLI or a route drive) fills a capacity-1 lane (gpu.local, box.render), so no claim is ever attempted and the ghost is never swept until the worker restarts: there is no upper bound on how long a dead job can pose as a working one.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:93bd71853ab468b1",
+          "evaluatedRevision": 28
         },
         {
           "subject": "delivery-guarantees",
@@ -12704,7 +12708,11 @@
           "revision": 28,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/text/router.ts:1 lib/text is a per-call router that walks one provider ladder for one turn and keeps no registry, roster or dispatch of sessions. A search of lib/text and lib/text/providers for harvest, hibernat, sweeper, fan-out and heartbeat found nothing, so the fleet layer lives in the kernel, not here.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:93bd71853ab468b1",
+          "evaluatedRevision": 28
         },
         {
           "subject": "agent-memory",

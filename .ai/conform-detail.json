@@ -10621,6 +10621,78 @@
           "evidence": "packages/kernel/py/lease_pid.py:19 The ctypes FFI is confined to one module behind pid_alive and stays minimal, and each magic value carries the fact that makes it valid (lines 21 and 26 too)."
         }
       ]
+    },
+    "0c02b354-237b-44cb-9283-518ed620e846/fleet-orchestration": {
+      "context": "job-queue-and-leases",
+      "subject": "fleet-orchestration",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T03:13:49.144Z",
+      "worker": "d6bca970-2131-404f-b98e-516d2fbe882b",
+      "techniques": [
+        {
+          "technique": "lifecycle-signals",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/job-queue-core.ts:78 Tier one (heartbeat, step events) exists. Tier two runs only at startup and on a claim, never periodically, so a ghost `running` row on a full lane blocks the pick that would have swept it."
+        },
+        {
+          "technique": "session-registry",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/job-core.ts:212 Every job transition goes through one door against the closed jobMachine table. The holder carries a bootId, so a reused pid counts as a different incarnation."
+        },
+        {
+          "technique": "durable-fleet-state",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/job-worker.ts:84 The SQLite store is authoritative and transitions commit in transactions. Recovery reconciles `running` claims before the loop admits anything."
+        },
+        {
+          "technique": "evidence-outranks-a-liveness-claim",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/job-run.ts:212 Liveness is a renewable lease with its own renewal timer at TTL/3, and every booking tx presents its fence (assertFence, line 324). That is the lease rung the technique says to stop at."
+        },
+        {
+          "technique": "absent-status-passthrough",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/lease.ts:285 Narrow case. The same-host pid probe has two values: any probe error other than EPERM reads as dead (`gone`), not unknown. Foreign-host holders are correctly left to TTL."
+        },
+        {
+          "technique": "parallel-dispatch",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/job-run.ts:172 The slot cap is enforced at the one claim door as per-slot leases. A run total (ceilingUsd frozen at enqueue) is checked before each step in job-core next(). The supervisory third number is not in this context."
+        },
+        {
+          "technique": "hibernation-and-resume",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/job-run.ts:248 A yield parks the job with its outputs kept and releases the slot. The next drive claims under the same job id with a new fence."
+        },
+        {
+          "technique": "result-harvest",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/job-core.ts:192 Done is derived from booked outputs (the plan's missing steps), not from a producer's claim. An ending is done/failed/interrupted/stopped, never folded."
+        },
+        {
+          "technique": "outbound-compute-plane",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/job-worker.ts:71 Executors are co-located and read one shared store. The technique calls the outbound discipline ceremony in this case."
+        }
+      ]
+    },
+    "94e6b933-0f6a-4631-b2f0-4c98b0799c28/fleet-orchestration": {
+      "context": "text-reasoning-engine",
+      "subject": "fleet-orchestration",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T03:13:49.144Z",
+      "worker": "d6bca970-2131-404f-b98e-516d2fbe882b",
+      "techniques": [
+        {
+          "technique": "heterogeneous-model-panels",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/router.ts:24 The chain is a fallback ladder: one engine answers each call. No N-model panel is convened."
+        }
+      ]
     }
   }
 }
