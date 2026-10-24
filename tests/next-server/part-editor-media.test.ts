@@ -154,8 +154,9 @@ function find(node: ReactNode, name: string): ReactElement | null {
   return null;
 }
 
-/** Drive the preview for one second of a display refreshing at `hz`; the frames it drew. */
-async function previewAt(hz: number): Promise<number[]> {
+/** Drive the preview for one second of a display refreshing at `hz`; the frames it drew, and
+ *  what it drew last. `loads: false` is a still whose bytes do not decode. */
+async function preview(hz: number, loads = true): Promise<{ frames: number[]; tree: ReactNode }> {
   const frames: ((now: number) => void)[] = [];
   vi.stubGlobal("requestAnimationFrame", (cb: (now: number) => void) => frames.push(cb));
   vi.stubGlobal("cancelAnimationFrame", () => {});
@@ -167,27 +168,30 @@ async function previewAt(hz: number): Promise<number[]> {
       naturalWidth = 1920;
       naturalHeight = 1080;
       onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
       set src(_: string) {
-        this.onload?.();
+        if (loads) this.onload?.();
+        else this.onerror?.();
       }
     },
   );
   const data: RenderData = { face: "render", track: { title: "Salt lines", durationS: 180 }, still: { label: "still", blob: "abc" }, words: null, res: "1080p", exports: [], envelope: Array.from({ length: 5400 }, (_, i) => (i % 7) / 7) };
   const page = RenderEditor({ ...props(undefined), view: { data } as PartView<"render"> }) as ReactElement<{ primary: { children: ReactNode } }>;
-  const preview = find(page.props.primary.children, "Preview");
-  if (preview === null) throw new Error("no Preview in the render editor's primary");
-  const Preview = preview.type as (p: unknown) => ReactElement<{ ref: { current: unknown } }>;
+  const el = find(page.props.primary.children, "Preview");
+  if (el === null) throw new Error("no Preview in the render editor's primary");
+  const Preview = el.type as (p: unknown) => ReactElement<{ ref?: { current: unknown } }>;
   const h = harness(() => {
-    const el = Preview(preview.props);
-    el.props.ref.current = { getContext: () => ({}) };
-    return el;
+    const out = Preview(el.props);
+    if (out.props.ref !== undefined) out.props.ref.current = { getContext: () => ({}) };
+    return out;
   });
-  await h.settleUp();
+  const tree = await h.settleUp();
   const start = 1000;
   for (let k = 0; k <= hz; k++) frames.shift()?.(start + (k * 1000) / hz);
   h.unmount();
-  return [...drawn];
+  return { frames: [...drawn], tree };
 }
+const previewAt = async (hz: number): Promise<number[]> => (await preview(hz)).frames;
 
 describe("the poster preview plays the envelope at its own 30 fps", () => {
   it("one second on a 60 Hz display draws 30 envelope frames, not 60", async () => {
@@ -198,6 +202,12 @@ describe("the poster preview plays the envelope at its own 30 fps", () => {
   it("one second on a 120 Hz display draws the same 30", async () => {
     const f = await previewAt(120);
     expect(Math.max(...f)).toBe(30);
+  });
+
+  it("a still whose bytes do not load says so, where the canvas stayed blank", async () => {
+    const r = await preview(60, false);
+    expect(r.frames).toEqual([]);
+    expect(all(r.tree, (p) => typeof p.message === "string").map((e) => (e.props as { message: string }).message)).toEqual(["kept still abc did not load"]);
   });
 });
 

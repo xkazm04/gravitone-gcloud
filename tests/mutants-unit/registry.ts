@@ -5691,4 +5691,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "tags.join(\",\").length <= 500;",
     why: "Tags with spaces are trimmed to a count YouTube's validator does not use, and a proposal that passed the trim is refused by the Calendar's send and the uploader.",
   },
+  {
+    id: "render-preview-blank-on-an-unreadable-still",
+    test: "tests/next-server/part-editor-media.test.ts",
+    file: "app/(studio)/projects/[id]/[part]/_edit/Render.tsx",
+    find: "if (!stop) setUnreadable(true);",
+    replace: "void stop;",
+    why: "A kept still whose bytes do not load leaves the poster preview a blank canvas still named \"poster preview\", with nothing saying the still is the problem.",
+  },
 ];
