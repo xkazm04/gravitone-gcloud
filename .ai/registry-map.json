@@ -1258,7 +1258,11 @@
           "revision": 31,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/articles/registryWrite.ts:3 The gate and landing code is deterministic: it records human acts and notes, builds diffs and the Medium package, and opens the registry PR. It authors, injects and launches no instruction file. Searching lib/articles for CLAUDE.md, AGENTS.md and SKILL.md found 0 hits.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:25b61236a62604b0",
+          "evaluatedRevision": 31
         },
         {
           "subject": "agent-runtime-assembly",
@@ -1472,7 +1476,11 @@
           "revision": 31,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/agentSteps.ts:83 Each turn's record holds outcome, turns, duration, exit code, cost and errors, but not the instruction files the session loaded. Isolation is shown only by where the workspace sits (os.tmpdir, agentSteps.ts:36) and what it holds (assertIsolatedWorkspace). If an ancestor or user-level brief ever loads, for example after a CLI change to `--safe-mode`, posts and trial critiques would change and nothing in the run record would show why.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:25b61236a62604b0",
+          "evaluatedRevision": 31
         },
         {
           "subject": "hitl-approval",
