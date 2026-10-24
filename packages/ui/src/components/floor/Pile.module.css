@@ -4,6 +4,8 @@
 .pile:hover{background:color-mix(in srgb,var(--amber) 7%,transparent)}
 .pile:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}
 .next{background:color-mix(in srgb,var(--amber) 9%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--amber) 35%,transparent)}
+/* .pile:hover outranks .next, so the hovered NEXT pile fell back to 7%, dimmer than at rest. */
+.next:hover{background:color-mix(in srgb,var(--amber) 12%,transparent)}
 @keyframes pileIn{from{opacity:0;transform:translateX(calc(-1 * var(--sp-7) - var(--sp-loose)))}}
 @media (prefers-reduced-motion:reduce){.pile{animation:none}}
 
