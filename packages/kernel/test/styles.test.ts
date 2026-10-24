@@ -343,6 +343,19 @@ describe("the git export (styles.json for the Python readers)", () => {
       dir.dispose();
     }
   });
+  it("answers a file it cannot write as `unavailable`, never a throw, and leaves no temp", () => {
+    const s = store();
+    adopted(s, "p", 1);
+    const dir = scratch("styles-export-unwritable");
+    try {
+      const file = path.join(dir.dir, "no-such-dir", "styles.json");
+      const r = writeStylesExport(s, file);
+      expect(r.ok ? "" : `${r.error.code}: ${r.error.message}`).toBe(`unavailable: cannot write ${file}`);
+      expect(existsSync(path.dirname(file))).toBe(false);
+    } finally {
+      dir.dispose();
+    }
+  });
   it("reads the catalogue once per export: one list, one revision", () => {
     const s = store();
     adopted(s, "p", 1);

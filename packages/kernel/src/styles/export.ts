@@ -2,7 +2,7 @@ import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { z } from "zod";
 import { parseJsonAt } from "@gt/domain/door";
-import { AppError, err, ok, type Result } from "@gt/domain/errors";
+import { err, ok, type Result } from "@gt/domain/errors";
 import type { Style } from "@gt/domain/style";
 import { renameRetryingSync, type SyncRetryOptions } from "../renameRetrySync.ts";
 import type { Reader, Store } from "../store.ts";
@@ -133,7 +133,9 @@ export function writeStylesExport(store: Store, file: string): Result<ExportRepo
     renameRetryingSync(tmp, file, EXPORT_RENAME);
   } catch (e) {
     rmSync(tmp, { force: true });
-    throw new AppError("unavailable", `cannot write ${file}`, { cause: e });
+    // An answer, not a throw: the store has committed, and the caller (lib/foundry/catalogue.ts
+    // unwrap, pipeline/import/styles.mts) says so in its own words only when it gets a Result.
+    return err("unavailable", `cannot write ${file}`, { cause: e });
   }
   return ok(report);
 }
