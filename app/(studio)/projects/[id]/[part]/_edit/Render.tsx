@@ -46,14 +46,18 @@ function Preview({ blob, envelope }: { readonly blob: string; readonly envelope:
       const bloom = buildBloomTexture(mask, DEFAULT_EFFECT_PARAMS);
       const low = envelope.length > 0 ? limitFlashRate([...envelope], FPS) : [0];
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      let i = 0;
-      const tick = (): void => {
+      // The frame is the one closest to now at the envelope's FPS (renderFrame's contract), read
+      // off the frame loop's own timestamp. Counting ticks instead played the envelope at the
+      // display's refresh rate: twice the export's speed at 60 Hz, four times at 120.
+      let t0: number | null = null;
+      const tick = (now: number): void => {
         if (stop) return;
+        t0 ??= now;
+        const i = Math.floor(((now - t0) / 1000) * FPS);
         renderFrame(ctx, { poster: img, posterWidth: img.naturalWidth, posterHeight: img.naturalHeight, bloomTexture: bloom, seed: 7, effectParams: DEFAULT_EFFECT_PARAMS, fps: FPS, boundedLow: low, highBand: low, frameIndex: i % Math.max(1, low.length), reducedMotion: reduced, fit: "cover" });
-        i++;
         raf = requestAnimationFrame(tick);
       };
-      tick();
+      raf = requestAnimationFrame(tick);
     };
     img.src = `/api/blob/${blob}`;
     return () => {

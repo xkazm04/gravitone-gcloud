@@ -5506,4 +5506,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "typeof v === \"string\" && v in MV_LOOKS;",
     why: "An album file or a --look naming \"toString\" passes as a look, and the render reads a function as its light and weather.",
   },
+  {
+    id: "render-preview-counts-refreshes",
+    test: "tests/next-server/part-editor-media.test.ts",
+    file: "app/(studio)/projects/[id]/[part]/_edit/Render.tsx",
+    find: "const i = Math.floor(((now - t0) / 1000) * FPS);",
+    replace: "const i = Math.floor(((now - t0) / 1000) * FPS * 2);",
+    why: "The poster preview plays the envelope faster than the export will - the particles and the low-band light run at twice the speed the mp4 has.",
+  },
 ];
