@@ -3,22 +3,35 @@
 // fails on its own - "an unreadable ledger is a line over the table, not a blank page", and an
 // unreadable takes file is a line too, never an empty evidence list that reads as "0 takes" under
 // a cell the ledger counts three for (the sign then sends n=0 and the door refuses it with words
-// that name the wrong cause).
+// that name the wrong cause). The two reads share nothing, so they wait together: each stand-in
+// counts the reads in flight while it waits (before the fix, one after the other: 1 of 2).
 
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-const gate = vi.hoisted(() => ({ takesFail: false }));
+const gate = vi.hoisted(() => {
+  let now = 0;
+  let max = 0;
+  const wait = async <T,>(v: T): Promise<T> => {
+    now++;
+    max = Math.max(max, now);
+    await new Promise((r) => setTimeout(r, 5));
+    now--;
+    return v;
+  };
+  return { takesFail: false, wait, max: () => max, reset: () => ((now = 0), (max = 0)) };
+});
 
 vi.mock("../../lib/sound/takes.ts", async (orig) => ({
   ...(await orig<object>()),
   listTakes: async () => {
+    const v = await gate.wait([]);
     if (gate.takesFail) throw new Error("takes.json: Unexpected end of JSON input");
-    return [];
+    return v;
   },
 }));
-vi.mock("../../lib/sound/store.ts", async (orig) => ({ ...(await orig<object>()), readLedger: async () => ({ verdicts: [], lessons: [] }) }));
+vi.mock("../../lib/sound/store.ts", async (orig) => ({ ...(await orig<object>()), readLedger: () => gate.wait({ verdicts: [], lessons: [] }) }));
 
 import { readStrengths } from "../../app/(studio)/audio/_insight/read.ts";
 
@@ -29,6 +42,12 @@ describe("readStrengths", () => {
     gate.takesFail = false;
     expect(v.cells.ok).toBe(true);
     expect(v.evidence).toEqual({ ok: false, error: "takes.json: Unexpected end of JSON input" });
+  });
+
+  it("waits for the ledger and the takes together", async () => {
+    gate.reset();
+    await readStrengths("music");
+    expect(gate.max()).toBe(2);
   });
 
   it("readable takes are the evidence", async () => {
