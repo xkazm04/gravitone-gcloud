@@ -3615,6 +3615,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "A verdict that leaves with a closing tab is recorded with no actor, while the same verdict sent a moment earlier through the patch action names the operator's uid: the decision log cannot say who made it.",
   },
   {
+    id: "board-rail-step-from-outside",
+    test: "tests/next-server/board-rail.test.ts",
+    file: "app/(studio)/board/_board/rail.ts",
+    find: "const at = i < 0 ? (dir === 1 ? 0 : list.length - 1) : (i + dir + list.length) % list.length;",
+    replace: "const at = (i + dir + list.length) % list.length;",
+    why: "On a decided packet's desk, [ skips the last open pile and lands on the one before it, so the operator stepping back through the Weir never reaches the last pile from there.",
+  },
+  {
     id: "l61-narration-skips-gt-ui",
     test: "tests/next-gates/narration-gate.test.ts",
     file: "pipeline/check-narration.mjs",

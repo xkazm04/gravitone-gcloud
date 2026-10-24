@@ -31,6 +31,7 @@ import { useShell } from "../../_shell/Providers.tsx";
 import { CommitLayer, useCommitFlow } from "./commitFlow.tsx";
 import { DecidedDesk } from "./DecidedDesk.tsx";
 import { Losses } from "./Losses.tsx";
+import { stepTarget } from "./rail.ts";
 
 /** pagehide: what is still queued leaves with the page (the keepalive route, ../[packet]/keepalive). */
 function beacon(id: string, rev: number, changes: readonly VerdictChange[]): void {
@@ -113,10 +114,8 @@ function BoardIsland({ id, initial, rail, kind, port, redrive, home }: BoardProp
     [kind, router, hrefOf],
   );
   const step = (dir: 1 | -1) => {
-    const list = open.length > 0 ? open : rail;
-    const i = list.findIndex((p) => p.id === id);
-    const to = list[(i + dir + list.length) % list.length];
-    if (to !== undefined && to.id !== id) go(to.id);
+    const to = stepTarget(rail, id, dir);
+    if (to !== undefined) go(to);
   };
   const nextOpen = open.find((p) => p.id !== id);
   useKeys(
