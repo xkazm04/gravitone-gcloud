@@ -140,6 +140,13 @@ export const GATES: readonly Gate[] = [
     rationale: "pipeline/SCOUT-SCENE-PROMPT.md against its 9 tagged rules, plus lib/foundry/scout/scene.ts recipe-door verdicts on fixed sample answers. Filesystem only, no model.",
   },
   {
+    id: "voice-fx",
+    npmScript: "check:voice-fx",
+    class: "blocking",
+    outcomes: "01",
+    rationale: "pipeline/VOICE-FX-PROMPT.md against the stage kinds and bounds read off @gt/domain/audio.fx, its worked examples through the chain door, and proposeChain's refusals on a stub agent's recorded answers. Filesystem only, no model.",
+  },
+  {
     id: "style-refs",
     npmScript: "check:style-refs",
     class: "blocking",

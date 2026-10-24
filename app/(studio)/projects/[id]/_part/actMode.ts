@@ -13,7 +13,15 @@ import type { EditorKind } from "@gt/domain/partView";
 // Pure and client-free so its test pins it over every act of every kind (tests/next-server
 // parts-act-mode.test.ts); real.ts reads the environment and passes it in.
 
-export const LIVE_ACTS: ReadonlySet<string> = new Set(["voice:record-line"]);
+//
+// `fx-line` (the voice FX act, WP3) is the second: its render is local and free, and its one cost
+// is the chain the text router writes from the operator's description (rung 1 the operator's own
+// seat, rung 2 a metered API under its own key - lib/text/router.ts). A dry fx-line renders a
+// stand-in reverb and never asks a model, which would make "describe the voice" a control that
+// cannot do what it says. It needs no ElevenLabs key: nothing is spoken.
+export const LIVE_ACTS: ReadonlySet<string> = new Set(["voice:record-line", "voice:fx-line"]);
+/** The live acts that bill the music vendor, so are live only when its key is configured. */
+const KEYED_ACTS: ReadonlySet<string> = new Set(["voice:record-line"]);
 
 export type ArmFacts = {
   /** GRAVITONE_DRY_ONLY=1: this process may only run dry. */
@@ -23,5 +31,6 @@ export type ArmFacts = {
 };
 
 export function actModeOf(kind: EditorKind, act: string, facts: ArmFacts): "dry" | "live" {
-  return !facts.dryOnly && facts.keyed && LIVE_ACTS.has(`${kind}:${act}`) ? "live" : "dry";
+  const at = `${kind}:${act}`;
+  return !facts.dryOnly && LIVE_ACTS.has(at) && (facts.keyed || !KEYED_ACTS.has(at)) ? "live" : "dry";
 }

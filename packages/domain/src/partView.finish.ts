@@ -11,6 +11,7 @@
 //     pair, so a drag that snaps to scene marks and the ordinal fields are one op.
 //   · Cut kept its offsets in a 50-deep session undo; a nudge is an op on the part's log.
 
+import type { FxChain } from "./audio.fx.ts";
 import type { EngineView } from "./partView.data.ts";
 
 /* ── one clock (lib/cut/deriveTimeline.ts, shared by score and cut) ──────── */
@@ -36,6 +37,11 @@ export type TakeView = {
   readonly sections: readonly { readonly index: number; readonly name: string; readonly startS: number; readonly endS: number }[];
   /** A section note waiting for "revise" (the section-edit request's direction). */
   readonly revision?: { readonly section: number; readonly note: string };
+  /** A voice line's FX version: the take it was rendered from, the words it was asked for, and
+   *  the chain that rendered them (label it with audio.fx.label `chainLabel`). Absent elsewhere. */
+  readonly fx?: { readonly of: string; readonly describe: string; readonly chain: FxChain };
+  /** The take's advisory acceptance verdict (audio.accept.ts), when it was measured. */
+  readonly accept?: { readonly verdict: "pass" | "fail"; readonly reasons: readonly string[] };
 };
 
 /* ── score ────────────────────────────────────────────────────────────────── */

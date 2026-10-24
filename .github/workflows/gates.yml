@@ -347,6 +347,11 @@ jobs:
       - name: scout scene
         run: npm run check:scout-scene
 
+      # BLOCKING. Holds the voice-fx chain prompt to the schema that judges its answers (kinds,
+      # bounds, worked examples through the door) and pins the door's refusals - offline, no model.
+      - name: voice fx
+        run: npm run check:voice-fx
+
       # BLOCKING. Pure function over lib/themes - the founding proof must survive
       # a full sheet in the reference window.
       - name: style refs

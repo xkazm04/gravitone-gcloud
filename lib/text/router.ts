@@ -106,6 +106,7 @@ const PLAN: Record<TextEnv, Record<TurnClass, TextProviderId[]>> = {
     "ad-ideas": ["claude-cli", "google"],
     "ad-scenarios": ["claude-cli", "google"],
     repair: ["claude-cli", "google"],
+    "voice-fx": ["claude-cli", "google"],
     probe: ["claude-cli"],
   },
   cloud: {
@@ -123,6 +124,7 @@ const PLAN: Record<TextEnv, Record<TurnClass, TextProviderId[]>> = {
     "ad-ideas": ["google"],
     "ad-scenarios": ["google"],
     repair: ["google"],
+    "voice-fx": ["google"],
     probe: ["google"],
   },
 };
@@ -216,6 +218,9 @@ const DEFAULT_TIMEOUT_MS: Record<TurnClass, number> = {
   // writes), so it gets the long ceiling even though it is flash-class: the
   // output is as long as the research turn's, the thinking is not.
   repair: 600_000,
+  // One sentence in, one chain of at most eight stages out: the smallest
+  // answer any turn writes, so the sound turns' ceiling is generous.
+  "voice-fx": 300_000,
   probe: 30_000,
 };
 

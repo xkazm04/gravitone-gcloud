@@ -5,19 +5,27 @@
 // (use · keep · reject · hear); the header prices recording the selected line. v1 had no speech
 // engine at all - its cut drew every line "written, not recorded" - and this part is where that
 // state is cleared, take by take.
+//
+// VOICE FX (WP3): under the takes, the words a take is re-voiced as. Submitting them writes the
+// ask (op `voice-fx-ask`) and, once that op has applied, opens the `fx-line` act's receipt for
+// the line; the result is a new take beside the source, never made active. An ask that has not
+// rendered yet (a declined receipt, a failed render) stays on the line as a chip with the act
+// beside it, so the words are not lost and the operator can run it again.
 import { useState } from "react";
 
-import type { PartView, VoiceData } from "@gt/domain/partView";
+import type { PartView, VoiceData, VoiceLineView } from "@gt/domain/partView";
 import { Button } from "@gt/ui/components/button/Button.tsx";
+import { Chip } from "@gt/ui/components/chip/Chip.tsx";
 import { Empty } from "@gt/ui/components/empty/Empty.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
+import { Field, Select } from "@gt/ui/components/field/Field.tsx";
 import { PartWorkspace } from "@gt/ui/components/part/PartWorkspace.tsx";
 import { RailList } from "@gt/ui/components/part/RailList.tsx";
 import { walk } from "@gt/ui/components/part/part.ts";
 import { Tally } from "@gt/ui/components/tally/Tally.tsx";
 import { useKeys } from "@gt/ui/keymap/dispatch";
 
-import type { EditorProps } from "./PartEditor.tsx";
+import type { EditorProps, Launch, Send } from "./PartEditor.tsx";
 import { ScoreField } from "./ScoreField.tsx";
 import { ScoreTakes } from "./ScoreTakes.tsx";
 import s from "./Cut.module.css";
@@ -102,7 +110,10 @@ export function VoiceEditor({ frame, send, busy, error, act, view }: EditorProps
                 {line.takes.length === 0 ? (
                   <Empty label="not recorded" />
                 ) : (
-                  <ScoreTakes takes={line.takes} busy={busy} acts={{ use: (takeId) => send({ op: "voice-use", lineId: line.id, takeId }), mark: (takeId, mark) => send({ op: "voice-mark", lineId: line.id, takeId, mark }) }} />
+                  <>
+                    <ScoreTakes takes={line.takes} busy={busy} acts={{ use: (takeId) => send({ op: "voice-use", lineId: line.id, takeId }), mark: (takeId, mark) => send({ op: "voice-mark", lineId: line.id, takeId, mark }) }} />
+                    <VoiceFx key={line.id} line={line} send={send} act={act} busy={busy} />
+                  </>
                 )}
               </div>
             )}
@@ -111,5 +122,41 @@ export function VoiceEditor({ frame, send, busy, error, act, view }: EditorProps
       }}
       inspector={null}
     />
+  );
+}
+
+/** The FX ask for one line: which take, what words; then the act that renders it. */
+function VoiceFx({ line, send, act, busy }: { readonly line: VoiceLineView; readonly send: Send; readonly act: Launch; readonly busy: boolean }) {
+  const [from, setFrom] = useState(line.activeTakeId ?? line.takes[0]?.id ?? "");
+  const [words, setWords] = useState("");
+  const run = (): void => act("fx-line", "voice fx", line.id);
+  const take = line.takes.some((t) => t.id === from) ? from : (line.takes[0]?.id ?? "");
+  const describe = words.trim();
+  return (
+    <div className={s.sect}>
+      <h3 className={s.h}>voice fx</h3>
+      {line.fxAsk !== undefined && (
+        <div className={s.row}>
+          <span className={`${s.grow} ${s.ell}`}>
+            <Chip label="asked" value={line.fxAsk.describe} tone="amber" casing="lower" name={`voice fx asked: ${line.fxAsk.describe}`} />
+          </span>
+          <Button label="render fx" size="sm" tone="cyan" disabled={busy} onPress={run} />
+        </div>
+      )}
+      <form
+        className={s.fxAsk}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (busy || describe === "" || take === "") return;
+          // The act reads the ask, so it opens only once the op has applied.
+          send({ op: "voice-fx-ask", lineId: line.id, takeId: take, describe }, run);
+          setWords("");
+        }}
+      >
+        <Select label="voice fx from take" options={line.takes.map((t) => ({ value: t.id, label: t.label }))} value={take} onChange={setFrom} />
+        <Field label="describe the voice" value={words} onChange={setWords} placeholder="a ghost in a stairwell" />
+        <Button label="voice fx" size="sm" tone="cyan" submit disabled={busy} />
+      </form>
+    </div>
   );
 }

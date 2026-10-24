@@ -1,11 +1,14 @@
 import "server-only";
 
+import { expectedSecondsOf, judgeAcceptance, type Acceptance } from "@gt/domain/audio.accept";
+import type { FxChain } from "@gt/domain/audio.fx";
 import type { BlobRef } from "@gt/domain/blob";
 import { err, ok, type Result } from "@gt/domain/errors";
-import { albumOpLabel, type ArticleData, type EngineView, type PartActView, type PartVerdict, type StripsData, type VoiceData } from "@gt/domain/partView";
+import { albumOpLabel, type ArticleData, type EngineView, type PartActView, type PartVerdict, type StripsData, type TakeView, type VoiceData } from "@gt/domain/partView";
 
 import type { DerivedCut } from "@/lib/cut/deriveTimeline";
 import { explainerCut as deriveExplainerCut, linesOf as cardLines, spokenS, words } from "@/lib/cut/explainer";
+import { FX_STAND_IN } from "@/lib/sound/voiceFx/standIn";
 
 import { engineOf, held, takeView, type TakeRec } from "./fixtureScoreRecs.ts";
 import { asObj, type KCtx, type KindModule } from "./kinds.ts";
@@ -29,11 +32,17 @@ export type ArticleRec = { readonly title: string | null; readonly sections: rea
 export type StripCard = { readonly id: string; readonly section: string; readonly title: string; readonly caption: string; readonly state: "drawn" | "pending" | "refused"; readonly blob?: BlobRef; readonly why?: string };
 export type StripsRec = { readonly cards: readonly StripCard[]; readonly engine?: EngineView };
 
+/** A narration take: a score take's fields, and an FX version's (packages/domain/src/steps/parts.ts). */
+export type VoiceTakeRec = TakeRec & { readonly fxOf?: string; readonly describe?: string; readonly chain?: FxChain; readonly accept?: Acceptance };
+export type FxAskRec = { readonly from: string; readonly describe: string };
+
 export type VoiceRec = {
   /** The operator's rewrite of a line; absent = the card's caption. */
   readonly text: Readonly<Record<string, string>>;
-  readonly takes: Readonly<Record<string, TakeRec>>;
+  readonly takes: Readonly<Record<string, VoiceTakeRec>>;
   readonly byLine: Readonly<Record<string, { readonly takeIds: readonly string[]; readonly active: string | null }>>;
+  /** A voice fx asked for and not yet rendered, per line (absent = none). */
+  readonly fxAsk?: Readonly<Record<string, FxAskRec>>;
 };
 
 const no = (m: string): Result<never> => err("invalid", m);
@@ -160,7 +169,75 @@ function voiceApply(ctx: KCtx, v: VoiceRec, op: Parameters<KindModule<"voice">["
       if (t === undefined || !slot.takeIds.includes(op.takeId)) return no(`no take ${op.takeId} on this line`);
       return t.mark === op.mark ? no("unchanged") : ok({ ...v, takes: { ...v.takes, [t.id]: { ...t, mark: op.mark } } });
     }
+    case "voice-fx-ask": {
+      if (v.takes[op.takeId] === undefined || !slot.takeIds.includes(op.takeId)) return no(`no take ${op.takeId} on this line`);
+      const describe = op.describe.trim();
+      if (describe === "") return no("a voice fx needs a description");
+      if (describe.length > FX_DESCRIBE_MAX) return no(`a voice fx description is at most ${FX_DESCRIBE_MAX} characters`);
+      const was = v.fxAsk?.[line.id];
+      if (was?.from === op.takeId && was.describe === describe) return no("unchanged");
+      return ok({ ...v, fxAsk: { ...v.fxAsk, [line.id]: { from: op.takeId, describe } } });
+    }
   }
+}
+
+/** lib/sound/voiceFx/propose.ts DESCRIBE_MAX, the VOICE record's own bound on the words. */
+const FX_DESCRIBE_MAX = 400;
+
+/** Why `fx-line` cannot run on a line, in the producer's words (packages/producers/src/voice/define.ts `fxPlan`). */
+function fxRefusal(ctx: KCtx, v: VoiceRec, target: string | undefined): string | null {
+  if (target === undefined) return "voice fx names a line";
+  if (!linesOf(ctx, v).some((l) => l.id === target)) return `no line ${target}`;
+  const ask = v.fxAsk?.[target];
+  if (ask === undefined) return `no voice fx is asked for ${target}`;
+  return (v.byLine[target]?.takeIds ?? []).includes(ask.from) ? null : `take ${ask.from} is not a take of ${target}`;
+}
+
+/**
+ * The fixture's FX landing: the stand-in chain over the source take, a new take beside it (not
+ * made active), the ask cleared. Its verdict is what the judge says of the stand-in's real
+ * content - a dry stand-in is silence, and silence measures as no loudness, no peak and a tail
+ * as long as the take - so the editor's failed-acceptance state is drawn from a true measure.
+ * The real side does NOT measure a dry stand-in (lib/producers/voiceFx.ts): there a verdict is a
+ * Ledger row, and a row for silence would teach that narration fails; here nothing is written.
+ */
+function landFxLine(ctx: KCtx, v: VoiceRec, at: number, target: string | undefined): Result<VoiceRec> {
+  const why = fxRefusal(ctx, v, target);
+  const ask = target === undefined ? undefined : v.fxAsk?.[target];
+  if (why !== null || target === undefined || ask === undefined) return no(why ?? "voice fx names a line");
+  const slot = v.byLine[target] ?? { takeIds: [], active: null };
+  const line = linesOf(ctx, v).find((l) => l.id === target);
+  const secs = v.takes[ask.from]?.seconds ?? spokenS(line?.text ?? "");
+  const id = `vtake-${at.toString(36)}-${Object.keys(v.takes).length + 1}`;
+  const silence = { integratedLufs: null, truePeakDb: null, lra: null, clippedSamples: 0, leadSilenceS: secs, tailSilenceS: secs, durationS: secs };
+  const t: VoiceTakeRec = {
+    id,
+    label: ask.describe,
+    at,
+    seconds: secs,
+    mark: null,
+    engine: engineOf(ctx, "voice", 0),
+    sections: [{ name: "line", startMs: 0, endMs: Math.round(secs * 1000) }],
+    fxOf: ask.from,
+    describe: ask.describe,
+    chain: FX_STAND_IN,
+    accept: judgeAcceptance(silence, "voice-take", expectedSecondsOf(line?.text ?? "")),
+  };
+  const asks = Object.fromEntries(Object.entries(v.fxAsk ?? {}).filter(([k]) => k !== target));
+  const { fxAsk: _answered, ...rest } = v;
+  void _answered;
+  return ok({ ...rest, ...(Object.keys(asks).length === 0 ? {} : { fxAsk: asks }), takes: { ...v.takes, [id]: t }, byLine: { ...v.byLine, [target]: { takeIds: [...slot.takeIds, id], active: slot.active } } });
+}
+
+/** A take's view, with its FX version and its verdict when it has them. */
+function voiceTakeView(t: VoiceTakeRec | undefined, id: string, active: boolean): TakeView {
+  const base = takeView(t, id, active);
+  if (t === undefined) return base;
+  return {
+    ...base,
+    ...(t.fxOf === undefined || t.describe === undefined || t.chain === undefined ? {} : { fx: { of: t.fxOf, describe: t.describe, chain: t.chain } }),
+    ...(t.accept === undefined ? {} : { accept: { verdict: t.accept.verdict, reasons: t.accept.reasons } }),
+  };
 }
 
 /** Recording is per line: the editor offers it for the selected line (with its target), so the
@@ -168,17 +245,22 @@ function voiceApply(ctx: KCtx, v: VoiceRec, op: Parameters<KindModule<"voice">["
 const voiceActs = (_ctx: KCtx, _v: VoiceRec): PartActView[] => [];
 
 export const VOICE_KIND: KindModule<"voice"> = {
-  ops: ["voice-use", "voice-mark", "voice-line"],
+  ops: ["voice-use", "voice-mark", "voice-line", "voice-fx-ask"],
   seed: () => ({ text: {}, takes: {}, byLine: {} }),
   apply: voiceApply,
   label: (op) => albumOpLabel(op),
   verdict: voiceVerdict,
   acts: voiceActs,
   units: (ctx, v, act, target) => {
+    if (act === "fx-line") {
+      const why = fxRefusal(ctx, v, target);
+      return why === null ? ok(1) : no(why);
+    }
     if (act !== "record-line") return no(`${act} is not a voice act`);
     return linesOf(ctx, v).some((l) => l.id === target) ? ok(1) : no(target === undefined ? "record names a line" : `no line ${target}`);
   },
   land: (ctx, v, act, at, _jobId, target) => {
+    if (act === "fx-line") return landFxLine(ctx, v, at, target);
     const line = linesOf(ctx, v).find((l) => l.id === target);
     if (act !== "record-line" || line === undefined) return no("record names a line");
     const slot = v.byLine[line.id] ?? { takeIds: [], active: null };
@@ -192,10 +274,11 @@ export const VOICE_KIND: KindModule<"voice"> = {
     voice: engineOf(ctx, "voice", 0).model,
     lines: linesOf(ctx, v).map((l) => {
       const slot = v.byLine[l.id] ?? { takeIds: [], active: null };
-      return { id: l.id, text: l.text, card: l.card, takes: slot.takeIds.map((id) => takeView(v.takes[id], id, id === slot.active)), activeTakeId: slot.active };
+      const ask = v.fxAsk?.[l.id];
+      return { id: l.id, text: l.text, card: l.card, takes: slot.takeIds.map((id) => voiceTakeView(v.takes[id], id, id === slot.active)), activeTakeId: slot.active, ...(ask === undefined ? {} : { fxAsk: { from: ask.from, describe: ask.describe } }) };
     }),
   }),
-  actLabel: () => "line take",
+  actLabel: (act) => (act === "fx-line" ? "voice fx take" : "line take"),
   fromRecords: (recs) => ({ text: {}, takes: {}, byLine: {}, ...(recs.get("voice") as Partial<VoiceRec> | undefined) }),
   toRecords: (v) => ({ voice: asObj(v) }),
 };

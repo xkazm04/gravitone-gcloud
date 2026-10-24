@@ -60,17 +60,20 @@ function universe(recipe: string, id: string): { store: Store; port: ReturnType<
 }
 
 describe("which act may be priced live", () => {
-  it("is voice record-line alone, over every act of every editor kind", () => {
+  it("is the voice part's two acts alone, over every act of every editor kind", () => {
     const live: string[] = [];
     for (const kind of Object.keys(PART_ACTS) as EditorKind[])
       for (const act of PART_ACTS[kind]) if (actModeOf(kind, act, { dryOnly: false, keyed: true }) === "live") live.push(`${kind}:${act}`);
-    expect(live).toEqual(["voice:record-line"]);
-    expect([...LIVE_ACTS]).toEqual(["voice:record-line"]);
+    expect(live.sort()).toEqual(["voice:fx-line", "voice:record-line"]);
+    expect([...LIVE_ACTS].sort()).toEqual(["voice:fx-line", "voice:record-line"]);
   });
 
   it("is dry under GRAVITONE_DRY_ONLY, and dry with no vendor key", () => {
     expect(actModeOf("voice", "record-line", { dryOnly: true, keyed: true })).toBe("dry");
     expect(actModeOf("voice", "record-line", { dryOnly: false, keyed: false })).toBe("dry");
+    // fx-line speaks nothing: it is live without the vendor key, and dry under GRAVITONE_DRY_ONLY.
+    expect(actModeOf("voice", "fx-line", { dryOnly: false, keyed: false })).toBe("live");
+    expect(actModeOf("voice", "fx-line", { dryOnly: true, keyed: true })).toBe("dry");
   });
 });
 

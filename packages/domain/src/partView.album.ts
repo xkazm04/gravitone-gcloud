@@ -85,6 +85,9 @@ export type VoiceLineView = {
   readonly card: string | null;
   readonly takes: readonly TakeView[];
   readonly activeTakeId: string | null;
+  /** A voice fx asked for and not yet rendered (`voice-fx-ask`): the take it starts from and the
+   *  words. Absent = none pending; the `fx-line` act renders it and clears it. */
+  readonly fxAsk?: { readonly from: string; readonly describe: string };
 };
 
 export type VoiceData = {
@@ -101,13 +104,16 @@ export type AlbumOp =
 export type ExplainerOp =
   | { readonly op: "voice-use"; readonly lineId: string; readonly takeId: string }
   | { readonly op: "voice-mark"; readonly lineId: string; readonly takeId: string; readonly mark: "kept" | "rejected" | null }
-  | { readonly op: "voice-line"; readonly lineId: string; readonly text: string };
+  | { readonly op: "voice-line"; readonly lineId: string; readonly text: string }
+  /** Ask for a take of this line re-voiced as `describe` (1..400 characters): the `fx-line` act
+   *  writes the chain and renders it as a new take beside `takeId`. */
+  | { readonly op: "voice-fx-ask"; readonly lineId: string; readonly takeId: string; readonly describe: string };
 
 export const WORDS_ACTS = ["write-words"] as const;
 export const RENDER_ACTS = ["render-video"] as const;
 export const ARTICLE_ACTS = ["write-article"] as const;
 export const STRIPS_ACTS = ["draw-strips"] as const;
-export const VOICE_ACTS = ["record-line"] as const;
+export const VOICE_ACTS = ["record-line", "fx-line"] as const;
 
 export function albumOpLabel(op: AlbumOp | ExplainerOp): string {
   switch (op.op) {
@@ -123,5 +129,7 @@ export function albumOpLabel(op: AlbumOp | ExplainerOp): string {
       return op.mark === null ? `undecide ${op.takeId}` : `${op.mark === "kept" ? "keep" : "reject"} ${op.takeId}`;
     case "voice-line":
       return `line ${op.lineId}`;
+    case "voice-fx-ask":
+      return `fx · ${op.describe.length > 40 ? `${op.describe.slice(0, 40)}…` : op.describe}`;
   }
 }

@@ -208,6 +208,15 @@ export interface SourceReceipt {
  *                        it into `research` or `edit-plan` could not say how much
  *                        a validator costs. Flash-class: it edits a given object,
  *                        it does not author one.
+ *   · `voice-fx`         lib/sound/voiceFx/propose.ts — an operator's words for a
+ *                        character voice ("a ghost in a stairwell") in, ONE
+ *                        effect chain out, held to @gt/domain/audio.fx at the
+ *                        door and refused (never clamped) past a bound. Prompt:
+ *                        pipeline/VOICE-FX-PROMPT.md. Its own word because it
+ *                        is the only turn whose answer is rendered by a local
+ *                        DSP rather than read: a spend chart can say what a
+ *                        re-voiced line costs apart from what a script does.
+ *                        Flash-class: a short brief, a small closed answer.
  */
 export type TurnClass =
   | "edit-plan"
@@ -224,6 +233,7 @@ export type TurnClass =
   | "ad-ideas"
   | "ad-scenarios"
   | "repair"
+  | "voice-fx"
   | "probe";
 
 /**

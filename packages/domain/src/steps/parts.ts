@@ -121,6 +121,10 @@ export const VOICE = defineStepRecord({
       text: z.record(z.string(), z.string()).default({}),
       takes: z.record(z.string(), voiceTakeSchema).default({}),
       byLine: z.record(z.string(), z.looseObject({ takeIds: z.array(z.string()), active: textOrNull })).default({}),
+      /** A voice fx asked for and not yet rendered, per line (op `voice-fx-ask`; the `fx-line`
+       *  act renders it as a new take and clears it). OPTIONAL, not defaulted: a writer that
+       *  never asks keeps compiling, and an absent key is "no ask". */
+      fxAsk: z.record(z.string(), z.looseObject({ from: z.string().min(1), describe: z.string().trim().min(1).max(400) })).optional(),
     })
     // A line's take list names takes this record holds, and its active one is among them: a
     // dangling id would draw a take the cut cannot find (v1's score held the same rule per spot).

@@ -105,6 +105,16 @@
       "owner": "gravity"
     },
     {
+      "key": "text.voice-fx",
+      "name": "Write a voice-fx chain from a description",
+      "description": "Turns the operator's words for a character voice (an echo, a ghost, a broken radio) into ONE effect chain of at most eight stages (pipeline/VOICE-FX-PROMPT.md), held to @gt/domain/audio.fx's stage kinds and bounds at the door - an out-of-bounds answer is refused with its path, never clamped - and rendered by the audio sidecar as a new take on the same line.",
+      "kind": "generation",
+      "status": "active",
+      "component": "lib/sound/voiceFx/propose.ts::proposeChain -> lib/text/router.ts::reason()",
+      "expected_models": ["claude-opus-5", "gemini-3.6-flash"],
+      "owner": "gravity"
+    },
+    {
       "key": "text.repair",
       "name": "Repair an answer that failed its validator",
       "description": "Hands a paid-for answer that failed validation back to the model with the path-addressed findings that refused it: change only those paths, return the whole object. Capped at two attempts; a repair that edits outside the listed paths or removes facts is refused, and the repaired object re-enters the same validator.",

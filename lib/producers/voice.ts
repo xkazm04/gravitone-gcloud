@@ -18,13 +18,16 @@ import { madeFree, madePaid, type ActAsk, type ActPlan } from "@gt/producers/res
 import { landPart, projectOf } from "@gt/producers/research/partJob";
 import { defineVoice, NO_VOICE_ENGINE, voicePlan, type LinePrice, type VoiceLine } from "@gt/producers/voice/define";
 
+import { blobStore } from "@gt/kernel/blob";
+
 import { recordAcceptance } from "@/lib/audio/acceptLedger";
-import { measureFile } from "@/lib/audio/sidecar";
+import { applyChain, measureFile } from "@/lib/audio/sidecar";
 import { linesOf, spokenS, type ExplainerCard } from "@/lib/cut/explainer";
 import { speak, ttsCharacters, type SpokenLine } from "@/lib/music/elevenlabs";
 
-import { asData, field, partFactsIn, priceOf, text, written, type DriveHooks, type PartFacts } from "./research.ts";
+import { asData, blobRootOf, field, partFactsIn, priceOf, stepKernel, text, textFailure, written, type DriveHooks, type PartFacts } from "./research.ts";
 import { musicFailure } from "./score.ts";
+import { fxUnits, landFx, performFx, type FxEngines } from "./voiceFx.ts";
 
 // THE VOICE PRODUCER, BOUND (Phase 4 wave C, L37; spoken 2026-10-24, spark audio-postproduction
 // -research WP2). A line is a strip card's caption or the operator's rewrite of it, keyed
@@ -46,13 +49,18 @@ import { musicFailure } from "./score.ts";
 //            no sidecar, a decode it refused - lands with NO verdict and NO row: absent, never a
 //            fabricated pass. A take's id derives from the job and the unit, so a re-land writes
 //            nothing new (the record is unchanged, the rows dedupe on their key).
+//
+// `fx-line` - one take re-voiced as a character, landed as a new take beside it - is this
+// producer's second act, bound in ./voiceFx.ts (its header says what it plans, renders and lands,
+// and why a crash there holds this paid lane); the three ports below dispatch on the act.
 
-/** What a live unit calls and what measures its bytes - a test's fake vendor and fake sidecar. */
+/** What a live unit calls and what measures its bytes - a test's fake vendor and fake sidecar;
+ *  `render` and `blobs` are the fx act's sidecar render and the source take's bytes. */
 export type VoiceEngines = {
   readonly speak: (text: string, o: { readonly voiceId: string; readonly modelId: string }) => Promise<SpokenLine>;
   readonly measure: (file: string) => Promise<Result<AudioMeasureFull>>;
-};
-const LIVE: VoiceEngines = { speak, measure: (file) => measureFile(file) };
+} & Pick<FxEngines, "render" | "blobs">;
+const LIVE: VoiceEngines = { speak, measure: (file) => measureFile(file), render: (i, c, o) => applyChain(i, c, o), blobs: () => blobStore(blobRootOf(stepKernel().store)) };
 
 /** The option that speaks (packages/kernel/src/router/tables.ts `elevenlabs-voice`). */
 const SPEAKS = "elevenlabs-voice";
@@ -110,6 +118,7 @@ export function linePrice(option: ModelOption, on: string = new Date().toISOStri
 }
 
 export function voiceUnits(_s: unknown, f: PartFacts, ask: Pick<ActAsk, "act" | "target">, dry = true): Result<ActPlan> {
+  if (ask.act === "fx-line") return fxUnits(f.records, linesIn(f.records), ask.target);
   const voice = voiceOf("voice", f.option.provider);
   return voicePlan({ lines: linesIn(f.records), engine: engineOf(f.option), dry }, ask.act, linePrice(f.option), ask.target, (l) => ({
     chars: ttsCharacters(l.text),
@@ -235,7 +244,15 @@ export function voiceProducer(lane: ResourceLane = "cloud.elevenlabs", hooks: Dr
       const r = ctx.fx.tx("voice.plan", (t) => voiceUnits(null, partFactsIn(t, projectOf(job), job.of.id, Date.parse(t.at)), ask, job.mode.kind === "dry"));
       return r.ok ? r.value : r;
     },
-    async perform(_job, _plan, unit, ctx) {
+    async perform(_job, plan, unit, ctx) {
+      if (plan.act === "fx-line") {
+        try {
+          return await performFx(ctx, unit, { ...eng, ...(hooks.reason === undefined ? {} : { reason: hooks.reason }) });
+        } catch (e) {
+          // The chain's turn: a router that may answer next time retries; a refused answer is the door's sentence.
+          return textFailure(e);
+        }
+      }
       try {
         return await performLine(ctx, unit, eng);
       } catch (e) {
@@ -245,7 +262,7 @@ export function voiceProducer(lane: ResourceLane = "cloud.elevenlabs", hooks: Dr
     async land(job, plan, made, ctx) {
       let rows: readonly AcceptRow[] = [];
       const l = landPart(ctx, plan.act, (s) => {
-        const r = landVoice(projectOf(job), job.id, plan, made, s.records.get("voice"));
+        const r = plan.act === "fx-line" ? landFx(projectOf(job), (u) => takeIdOf(job.id, u), plan, made, s.records.get("voice")) : landVoice(projectOf(job), job.id, plan, made, s.records.get("voice"));
         rows = r.rows;
         return ok({ voice: r.voice });
       });

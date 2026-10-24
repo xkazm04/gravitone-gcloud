@@ -147,6 +147,8 @@ const MODEL_FOR_TURN: Record<TextRequest["turn"], string> = {
   // Flash: a repair edits the listed paths of an object it is handed; the
   // judgement was spent on the turn that produced the draft.
   repair: process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
+  // Flash: one sentence in, one closed chain out, every bound checked at the door.
+  "voice-fx": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
   probe: process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
 };
 

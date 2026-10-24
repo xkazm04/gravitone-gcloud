@@ -147,6 +147,7 @@ export const TURN_CLASSES = [
   "ad-ideas",
   "ad-scenarios",
   "repair",
+  "voice-fx",
   "probe",
 ] as const;
 export type TurnClass = (typeof TURN_CLASSES)[number];

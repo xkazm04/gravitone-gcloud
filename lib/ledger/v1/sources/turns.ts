@@ -84,7 +84,7 @@ const PROVIDER_LANES: Readonly<Record<string, ResourceLane>> = { "leonardo-studi
 
 // What a turn class works on (lib/text/types.ts TurnClass, ledger.ts WorkTurn).
 const MEDIA: Readonly<Record<string, MediaLane>> = {
-  "sound-hunt": "audio", "sound-lesson": "audio", "suno-propose": "audio", "suno-riff": "audio",
+  "sound-hunt": "audio", "sound-lesson": "audio", "suno-propose": "audio", "suno-riff": "audio", "voice-fx": "audio",
   "style-synthesis": "image", "image-generate": "image",
 };
 

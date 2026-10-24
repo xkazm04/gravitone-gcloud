@@ -51,6 +51,7 @@ const REAL_TURNS: TurnClass[] = [
   "mv-metadata",
   "ad-ideas",
   "ad-scenarios",
+  "voice-fx",
 ];
 
 keepEnv(["TEXT_ENV", "LOCAL_BINARIES", "GOOGLE_AI_API_KEY"]);

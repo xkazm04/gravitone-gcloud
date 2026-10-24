@@ -5,7 +5,7 @@ import type { Output } from "@gt/kernel/job-core";
 import { researchPlan, type ResearchView } from "../src/research/define.ts";
 import { actSteps, askOf, bookedPlan, FREE, partJobId, unitOf, type UnitPrice } from "../src/research/partAct.ts";
 import { scriptPlan, type ScriptView } from "../src/script/define.ts";
-import { NO_LINES, NO_VOICE_ENGINE, voicePlan } from "../src/voice/define.ts";
+import { fxPlan, NO_LINES, NO_VOICE_ENGINE, voicePlan, type FxSource } from "../src/voice/define.ts";
 import { wordsPlan } from "../src/words/define.ts";
 
 // The studio step producers' pure halves on literal inputs (L37): the part job's id grammar, the
@@ -102,6 +102,21 @@ describe("script acts", () => {
 });
 
 describe("album words and explainer voice", () => {
+  it("fx-line is one free unit for the line's pending ask, refused before the plan when the line lacks one", () => {
+    const lines = [{ id: "line-c1", text: "Bitcoin is scarce." }, { id: "line-c2", text: "Scarcity is not price." }];
+    const blob = { sha256: "a".repeat(64), bytes: 10, mime: "audio/wav" };
+    const takes: Record<string, FxSource> = { t1: { id: "t1", lineId: "line-c1", blob, engine: { mode: "live" } }, t2: { id: "t2", lineId: "line-c2" }, t3: { id: "t3", lineId: "line-c2", blob } };
+    const view = (asks: Record<string, { from: string; describe: string }>) => ({ lines, asks, take: (id: string) => takes[id] });
+    const why = (r: ReturnType<typeof fxPlan>): string => (r.ok ? "" : r.error.message);
+    const p = fxPlan(view({ "line-c1": { from: "t1", describe: "a ghost" } }), "line-c1");
+    expect(p).toMatchObject({ ok: true, value: { act: "fx-line", units: [{ name: "fx:line-c1:t1", estimate: { usd: 0 }, input: { id: "line-c1", from: "t1", describe: "a ghost", text: "Bitcoin is scarce.", blob, engine: { mode: "live" } } }] } });
+    expect(why(fxPlan(view({}), undefined))).toBe("voice fx names a line");
+    expect(why(fxPlan(view({}), "line-c9"))).toBe("no line line-c9");
+    expect(why(fxPlan(view({}), "line-c1"))).toBe("no voice fx is asked for line-c1");
+    expect(why(fxPlan(view({ "line-c1": { from: "t3", describe: "a ghost" } }), "line-c1"))).toBe("take t3 is not a take of line-c1");
+    expect(why(fxPlan(view({ "line-c2": { from: "t2", describe: "a ghost" } }), "line-c2"))).toBe("take t2 holds no audio to put through a chain");
+  });
+
   it("words are one turn, whatever the recipe's units; live needs an analysed track, dry stands in", () => {
     expect(wordsPlan({ title: "08 Stay", analysed: true, dry: false }, null, SEAT)).toMatchObject({ ok: true, value: { units: [{ name: "metadata" }] } });
     const live = wordsPlan({ title: "08 Stay", analysed: false, dry: false }, null, SEAT);

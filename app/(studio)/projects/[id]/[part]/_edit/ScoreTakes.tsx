@@ -3,9 +3,12 @@
 // A CUE'S (OR A LINE'S) TAKES (v1 CueTakes.tsx): use one, keep or reject each, hear it, read who
 // made it, and put a note on one section for a revision. v1's "not kept past a reload" hint and
 // its paragraph explaining an absent vendor are gone: a take's provenance is drawn when it
-// exists and nothing is drawn when it does not; a take whose bytes are gone says "gone".
+// exists and nothing is drawn when it does not; a take whose bytes are gone says "gone". A voice
+// line's FX take (WP3) carries its words as its label and its chain as a second line, and a
+// measured take its verdict - a failed one names every reason in its accessible name.
 import { useState } from "react";
 
+import { chainLabel } from "@gt/domain/audio.fx.label";
 import type { TakeView } from "@gt/domain/partView";
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
@@ -41,9 +44,21 @@ function TakeRow({ t, acts, busy }: { readonly t: TakeView; readonly acts: TakeA
       <div className={s.row}>
         <strong className={`${s.grow} ${s.ell}`}>{t.label}</strong>
         {t.seconds !== null && <span className={s.mono}>{secs(t.seconds)}</span>}
+        {t.accept !== undefined &&
+          (t.accept.verdict === "fail" ? (
+            <Chip label="accept" value="fail" tone="rose" casing="lower" name={`acceptance failed: ${t.accept.reasons.join("; ")}`} />
+          ) : (
+            <Chip label="accept" value="pass" tone="emerald" casing="lower" name="acceptance passed" />
+          ))}
         {!t.held && <Chip label="gone" tone="rose" casing="lower" />}
         {t.active ? <Chip label="in use" tone="emerald" casing="lower" /> : <Button label="use" size="sm" disabled={busy} onPress={() => acts.use(t.id)} />}
       </div>
+      {t.fx !== undefined && (
+        <div className={s.row}>
+          <Chip label="fx" tone="violet" casing="lower" />
+          <span className={`${s.mono} ${s.grow} ${s.ell}`}>{chainLabel(t.fx.chain)}</span>
+        </div>
+      )}
       <Seg<Mark>
         label={`decision on ${t.label}`}
         options={[
