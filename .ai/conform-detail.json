@@ -10730,6 +10730,139 @@
           "evidence": "lib/script/compose.ts:26 Prompt docs and params.json are read as text and parsed; nothing is evaluated. They are the repo's own files, not a foreign tree."
         }
       ]
+    },
+    "158d061e-feaa-4660-a1d3-6e8774b1f152/image-prompt-composition": {
+      "context": "frames-picture-composition",
+      "subject": "image-prompt-composition",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T03:48:08.658Z",
+      "worker": "25f8dc2d-3f9b-423b-aaf8-9e317b0a395b",
+      "techniques": [
+        {
+          "technique": "two-block-style-and-action",
+          "verdict": "conformant",
+          "evidence": "lib/frames/shotPrompt.ts:237 promptsForShots needs a StyleBlock and compiles style plus action, and shotReview checks that each prompt restates compileStyleBlock's own output."
+        },
+        {
+          "technique": "style-first-token-ordering",
+          "verdict": "conformant",
+          "evidence": "lib/frames/shotPrompt.ts:215 The order is style, then action, then the constraint. I checked it against lib/stylePrompt.ts:62, which is outside this context."
+        },
+        {
+          "technique": "shape-language-over-nouns",
+          "verdict": "conformant",
+          "evidence": "lib/frames/frames.ts:533 subjectFor builds the subject from the beat's role as countable geometry, never from the beat's sentence. The comment cites the reservation-book leak measured on 6 of 6 styles."
+        },
+        {
+          "technique": "prompt-budget-limits",
+          "verdict": "conformant",
+          "evidence": "lib/frames/shotReview.ts:483 The vendor's character ceiling is checked before the call, using the compiler's own constant rather than a copy."
+        },
+        {
+          "technique": "default-look-attractor",
+          "verdict": "conformant",
+          "evidence": "lib/frames/shotPrompt.ts:150 The model's default framing was sampled (a dojo A/B) and is overruled one axis at a time with attitude sentences. The lighting clauses name what stays dark."
+        },
+        {
+          "technique": "verbatim-text-locking",
+          "verdict": "not-applicable",
+          "evidence": "lib/frames/sceneSpec.ts:137 This is a composited-plate architecture: text goes to the vector layer, and a subject that asks for text is refused."
+        }
+      ]
+    },
+    "0335f0dc-2987-4b19-96e1-58941a70c9d5/image-prompt-composition": {
+      "context": "foundry-extract-engine",
+      "subject": "image-prompt-composition",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T03:48:08.658Z",
+      "worker": "25f8dc2d-3f9b-423b-aaf8-9e317b0a395b",
+      "techniques": [
+        {
+          "technique": "assigned-colour-roles",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/extract/vocabulary.ts:366 The fallback recipe lists colours. The engine path requires roles (prompts.ts:19-20), so the two paths disagree."
+        },
+        {
+          "technique": "two-block-style-and-action",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/extract/prompts.ts:120 The full recipe is restated on every replica and transfer, followed by the shot and the constraint."
+        },
+        {
+          "technique": "style-first-token-ordering",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/extract/prompts.ts:4 The recipe leads, the depiction or scene follows, and NO_TEXT is last."
+        },
+        {
+          "technique": "medium-vocabulary-locking",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/extract/prompts.ts:102 The recipe opens with the medium in the generator's own words, and this rule rests on a measured failure."
+        },
+        {
+          "technique": "shape-language-over-nouns",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/extract/prompts.ts:40 Depictions that would attract text are rewritten as shapes, after a measured veto."
+        },
+        {
+          "technique": "negative-prompting",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/extract/performReplica.ts:48 Each style's negative is written once with its recipe, always contains text and watermark, and is sent verbatim on every call."
+        },
+        {
+          "technique": "prompt-budget-limits",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/extract/prompts.ts:56 The style block's word share is sized here. The hard character ceiling is enforced at the provider layer, outside this context (leonardo.ts:133). usableFix sets no upper bound on a recipe_fix."
+        },
+        {
+          "technique": "verbatim-text-locking",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/prompts.ts:12 Every generation bans text, so the model never sets words."
+        },
+        {
+          "technique": "reference-role-map",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/performTransfer.ts:4 Replicas and transfers are text-only and carry no reference attachments."
+        }
+      ]
+    },
+    "13ee868d-574a-4147-b72e-11339db0250d/image-prompt-composition": {
+      "context": "bound-producers",
+      "subject": "image-prompt-composition",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T03:48:08.658Z",
+      "worker": "25f8dc2d-3f9b-423b-aaf8-9e317b0a395b",
+      "techniques": [
+        {
+          "technique": "shape-language-over-nouns",
+          "verdict": "deviation",
+          "evidence": "lib/producers/still.ts:28 The subject is the project title verbatim, with no translation into geometry. The NO_TEXT clause cannot outweigh the noun."
+        },
+        {
+          "technique": "negative-prompting",
+          "verdict": "deviation",
+          "evidence": "lib/producers/style.ts:138 NEGATIVE_PROMPT includes opposites of a flat-vector look (photorealistic, 3D render, glow, gradient) and is sent with every style, including photoreal or glow-lit extracted styles. A negative not derived from the style's own contract fights it."
+        },
+        {
+          "technique": "two-block-style-and-action",
+          "verdict": "conformant",
+          "evidence": "lib/producers/frames.ts:230 Frame plates, ad shots and stills all go through compilePrompt with the project's look block."
+        }
+      ]
+    },
+    "4eeb2f28-43ae-4d58-a8da-b25c6f4d4867/image-prompt-composition": {
+      "context": "audio-composer-briefs",
+      "subject": "image-prompt-composition",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T03:48:08.658Z",
+      "worker": "25f8dc2d-3f9b-423b-aaf8-9e317b0a395b",
+      "techniques": []
     }
   }
 }

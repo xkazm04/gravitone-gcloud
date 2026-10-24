@@ -2066,7 +2066,11 @@
           "revision": 14,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/brief.ts:20 The briefs and prompts here are music and sound-effect briefs only. A case-insensitive search of packages/ui/src/components/audio for image, palette, diffusion and negativePrompt found nothing, so no image-generation prompt is composed in this context.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:d254a22feb4a9423",
+          "evaluatedRevision": 14
         },
         {
           "subject": "generated-music-acceptance",
@@ -3340,7 +3344,11 @@
           "revision": 14,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/producers/still.ts:28 An album still's whole subject is the project title, a proper noun, passed to the image model raw. This is the text magnet the technique names: it invites the model to letter the title onto the plate instead of describing shapes.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:d254a22feb4a9423",
+          "evaluatedRevision": 14
         }
       ],
       "governance": "governed"
@@ -4842,7 +4850,11 @@
           "revision": 14,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/extract/vocabulary.ts:366 When the engine's answer is unusable, fallbackStyle writes the palette as a plain list of up to five dominant colours, with no ground/figure/accent role. That is the listed palette the technique says gets re-cast on every generation, while the engine path (PALETTE_AS_ROLES) does assign roles.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:d254a22feb4a9423",
+          "evaluatedRevision": 14
         },
         {
           "subject": "generative-provider-routing",
@@ -5373,7 +5385,11 @@
           "revision": 14,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/frames/shotPrompt.ts:237 Every shot prompt is built by the one style compiler with a required StyleBlock. The action half comes from the shot's own fields, so no call can skip or reword the style half.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:d254a22feb4a9423",
+          "evaluatedRevision": 14
         },
         {
           "subject": "prompt-assembly",
