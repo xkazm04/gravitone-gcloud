@@ -41,6 +41,13 @@ function fileOf(abs: string): FeedItem["file"] {
 
 const withFile = (file: FeedItem["file"]): { file?: NonNullable<FeedItem["file"]> } => (file === undefined ? {} : { file });
 
+/** A lister's newest RUN_CAP runs (every lister here sorts newest first). The cap is said in the
+ *  report, as the kernel feed says its own: the runs past it are not read, so their items prune. */
+function newest<T>(all: readonly T[], feed: string, skipped: { id: string; reason: string }[]): readonly T[] {
+  if (all.length > RUN_CAP) skipped.push({ id: feed, reason: `${all.length - RUN_CAP} of ${all.length} runs, older than the newest ${RUN_CAP}, are not read` });
+  return all.slice(0, RUN_CAP);
+}
+
 type Aspect = "16:9" | "3:2" | "4:3" | "1:1";
 const isAspect = (a: string): a is Aspect => a === "16:9" || a === "3:2" || a === "4:3" || a === "1:1";
 
@@ -99,7 +106,7 @@ export const forgeFeed: Feed = {
     const items: FeedItem[] = [];
     const skipped: { id: string; reason: string }[] = [];
     const held: string[] = [];
-    for (const summary of (await listRuns()).slice(0, RUN_CAP)) {
+    for (const summary of newest(await listRuns(), "forge", skipped)) {
       let detail;
       try {
         detail = await getRun(summary.id);
@@ -169,7 +176,7 @@ export const extractFeed: Feed = {
     const items: FeedItem[] = [];
     const skipped: { id: string; reason: string }[] = [];
     const held: string[] = [];
-    for (const summary of (await listExtractRuns()).slice(0, RUN_CAP)) {
+    for (const summary of newest(await listExtractRuns(), "extract", skipped)) {
       let detail;
       try {
         detail = await getExtractRun(summary.id);
@@ -245,7 +252,7 @@ export const dojoFeed: Feed = {
     const items: FeedItem[] = [];
     const skipped: { id: string; reason: string }[] = [];
     const held: string[] = [];
-    for (const summary of (await listCycles()).slice(0, RUN_CAP)) {
+    for (const summary of newest(await listCycles(), "dojo", skipped)) {
       let detail;
       try {
         detail = await getCycle(summary.id);
@@ -299,7 +306,7 @@ export const stripsFeed: Feed = {
     const items: FeedItem[] = [];
     const skipped: { id: string; reason: string }[] = [];
     const held: string[] = [];
-    for (const summary of (await listStripRuns()).slice(0, RUN_CAP)) {
+    for (const summary of newest(await listStripRuns(), "strips", skipped)) {
       let detail;
       try {
         detail = await getStripRun(summary.id);

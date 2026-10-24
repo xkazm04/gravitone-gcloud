@@ -114,6 +114,17 @@ describe("stripsFeed", () => {
     const p = queryLibrary(k.store, { limit: 5 });
     expect(p.ok && p.value.items.map((i) => i.id)).toEqual(["motion:strips:2026-10-01-edu:c1:poster"]);
   });
+
+  it("says its run cap: the runs past the newest 200 are named in the report, not silently left out", async () => {
+    const root = process.env["STRIPS_STORE_DIR"] ?? "";
+    for (let i = 0; i < 201; i++) {
+      const id = `2026-01-01-r${String(i).padStart(3, "0")}`;
+      mkdirSync(path.join(root, id), { recursive: true });
+      write(path.join(root, id, "run.json"), { id, at: new Date(Date.parse("2026-01-01T00:00:00Z") + i * 60_000).toISOString(), status: "done", cards: [] });
+    }
+    const r = await stripsFeed.read(ctx);
+    expect(r.skipped).toEqual([{ id: "strips", reason: "1 of 201 runs, older than the newest 200, are not read" }]);
+  });
 });
 
 describe("clipsFeed and exportsFeed", () => {
