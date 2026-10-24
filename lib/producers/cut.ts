@@ -30,7 +30,7 @@ import type { ScoreSpot } from "@/lib/score/spots";
 import { getTake } from "@/lib/sound/takes";
 
 import { asData, field, must, partFacts, priceOf, recOf, text, withRecords, written, type DriveHooks, type PartFacts, type UnitsFn, preflightFrom } from "./research.ts";
-import { pickedScenario } from "./score.ts";
+import { pickedScenario } from "./frames.ts";
 
 // THE CUT PRODUCER, BOUND (Phase 4 wave C, L37) - packages/producers/src/cut's ports over v1's
 // two renders:

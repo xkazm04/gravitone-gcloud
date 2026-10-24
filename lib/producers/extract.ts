@@ -1,16 +1,13 @@
 import { createHash } from "node:crypto";
 
-import { parseAt } from "@gt/domain/door";
 import { AppError, err, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
-import { jobIdSchema } from "@gt/domain/ids";
 import type { Job } from "@gt/domain/job";
 import type { ProducerRunInput, Receipt, ReceiptMode } from "@gt/domain/produce";
 import { blobStore } from "@gt/kernel/blob";
 import { armLive } from "@gt/kernel/dryrun";
 import { liveEffects, type Effects } from "@gt/kernel/effects";
 import type { Producer } from "@gt/kernel/job-core";
-import { get } from "@gt/kernel/job";
 import { runJob, type RunOptions, type RunReport } from "@gt/kernel/job-run";
 import { modelOptions } from "@gt/kernel/records/options";
 import { launchRun, runReceipt, type RunQuote } from "@gt/kernel/records/launch";
@@ -27,6 +24,8 @@ import { next } from "../foundry/extract/units.ts";
 import { ENUMS } from "../foundry/extract/vocabulary.ts";
 import { FoundryError } from "../foundry/runStore.ts";
 import { blobRootOf } from "../kernelProcess.ts";
+
+import { jobOf } from "./forge.ts";
 
 // THE EXTRACT PRODUCER'S PORTS, BOUND TO v1 (Phase 4, L29) - the definition
 // (packages/producers/src/extract/define.ts) over lib/foundry/extract: the
@@ -237,15 +236,6 @@ export type ExtractLaunch =
   | { readonly kind: "existing"; readonly runId: string; readonly jobId: string; readonly state: Job["state"] };
 
 const jobBase = (runId: string): string => `job:run:${runId}`;
-
-function jobOf(store: Store, id: string): Job | undefined {
-  const parsed = parseAt("job id", jobIdSchema, id);
-  if (!parsed.ok) throw parsed.error;
-  const r = get(store, parsed.value);
-  if (r.ok) return r.value.job;
-  if (r.error.code === "not-found") return undefined;
-  throw r.error;
-}
 
 /** A free job id for a run: the base, else `~2`, `~3`... (a re-run of a done run is a new job). */
 function freeJobId(store: Store, runId: string): string {

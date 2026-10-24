@@ -21,7 +21,7 @@ import { readClip, startClip } from "@/lib/imaging/video/clips";
 import { clipPath } from "@/lib/imaging/video/store";
 
 import { adsShotsFor, imageFailure, LIVE_IMAGING, pickedScenario, unitsOf, type ImagingEngines } from "./frames.ts";
-import { adTemplateOf, asData, blobRootOf, field, must, partFacts, priceOf, stepKernel, text, written, type DriveHooks, type PartFacts, type UnitsFn, withRecords, preflightFrom } from "./research.ts";
+import { adTemplateOf, asData, blobRootOf, field, must, partFacts, priceOf, recOf, stepKernel, text, written, type DriveHooks, type PartFacts, type UnitsFn, withRecords, preflightFrom } from "./research.ts";
 
 // THE MOTION PRODUCER, BOUND (Phase 4 wave C, L37) - packages/producers/src/motion's ports over
 // v1's engines: the two recognize passes of app/_phases/motion/direction.ts `directMotion` (READ,
@@ -103,8 +103,6 @@ const blobOf = (plate: object): BlobRef | undefined => {
   const b = field(written<Record<string, unknown>>(plate)["blob"]);
   return b === undefined ? undefined : written<BlobRef>(b);
 };
-
-const recOf = (s: PartSnapshot, key: string): Readonly<Record<string, unknown>> => s.records.get(key) ?? {};
 
 function motionUnitsOf(s: PartSnapshot, f: PartFacts, ask: Pick<ActAsk, "act" | "target">): Result<ActPlan> {
   return motionPlan(motionView(s, f), { act: ask.act, ...(ask.target === undefined ? {} : { target: ask.target }) }, { read: READ_PRICE, clip: priceOf(f.option) });

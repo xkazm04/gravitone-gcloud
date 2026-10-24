@@ -3,16 +3,14 @@ import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
-import { parseAt } from "@gt/domain/door";
 import { AppError, err, isAppError, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
-import { jobIdSchema } from "@gt/domain/ids";
 import type { Job } from "@gt/domain/job";
 import type { ModelOption, Receipt, ReceiptMode } from "@gt/domain/produce";
 import { blobStore } from "@gt/kernel/blob";
 import { liveEffects, type Effects } from "@gt/kernel/effects";
 import type { Producer } from "@gt/kernel/job-core";
-import { get, list } from "@gt/kernel/job";
+import { list } from "@gt/kernel/job";
 import { runJob, type RunOptions, type RunReport } from "@gt/kernel/job-run";
 import { processKernel, storeLocation } from "@gt/kernel/process";
 import { launchRun, runReceipt } from "@gt/kernel/records/launch";
@@ -23,7 +21,7 @@ import { cardWorstUsd, RENDER_ESTIMATE, TURN_ESTIMATE } from "@gt/producers/stri
 
 import { runAgent, type AgentResult, type RunAgentInput } from "../agent/cliSeam.ts";
 import { OUT_DIRNAME } from "../fixtures/mode.ts";
-import { codeRoot } from "./forge.ts";
+import { codeRoot, jobOf } from "./forge.ts";
 import { blobRootOf } from "../kernelProcess.ts";
 import { makeAsset, standInTurn, type StripTurn } from "../foundry/strips/author.ts";
 import { FoundryError } from "../foundry/runStore.ts";
@@ -175,15 +173,6 @@ export type StripsLaunch =
   /** The run has a job that is not finished: that job, never a second. */
   | { readonly kind: "existing"; readonly runId: string; readonly jobId: string; readonly state: Job["state"] };
 
-export function jobOf(store: Store, id: string): Job | undefined {
-  const parsed = parseAt("job id", jobIdSchema, id);
-  if (!parsed.ok) throw parsed.error;
-  const r = get(store, parsed.value);
-  if (r.ok) return r.value.job;
-  if (r.error.code === "not-found") return undefined;
-  throw r.error;
-}
-
 /** A free job id for a run: `job:run:<id>`, else `~2`, `~3`... (a launch after a finished job). */
 function freeJobId(store: Store, runId: string): string {
   for (let k = 1; k < 1000; k++) {
@@ -324,4 +313,4 @@ export function stripsJobs(store: Store): Result<Job[]> {
   return all.ok ? ok(all.value.filter((j) => j.producer === "strips")) : all;
 }
 
-export { stripsRoot };
+export { jobOf, stripsRoot };

@@ -1,4 +1,4 @@
-import { AppError, errorMessage, type Result } from "@gt/domain/errors";
+import { AppError, errorMessage } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import type { Job } from "@gt/domain/job";
 import type { CallIntent } from "@gt/kernel/dryrun";
@@ -78,11 +78,6 @@ const running = (x: MvJob): void => {
   delete x.error;
 };
 
-const unwrap = <T>(r: Result<T>): T => {
-  if (!r.ok) throw r.error;
-  return r.value;
-};
-
 /**
  * The two paid engines, through the step's meter: declared (so a DRY job is
  * answered by the stand-in and books a would-call), booked on the job when
@@ -105,7 +100,7 @@ function metered(eng: MvEngines, ctx: StepContext): MvEngines {
         stand: standStill,
       };
       const credits: SettleEntry = { amount: undefined, outcome: "served", basis: "credits", axes, reason: STUDIO_CREDITS };
-      return unwrap(await ctx.meter.paid(JOB_USD, 0, intent, async () => ({ value: await eng.still(req), entries: [credits] })));
+      return must(await ctx.meter.paid(JOB_USD, 0, intent, async () => ({ value: await eng.still(req), entries: [credits] })));
     },
     async reason(req: TextRequest) {
       const ask = eng.reason ?? routerReason;
@@ -118,7 +113,7 @@ function metered(eng: MvEngines, ctx: StepContext): MvEngines {
         subject,
         stand: () => standText(req),
       };
-      return unwrap(
+      return must(
         await ctx.meter.paid(JOB_USD, 0, intent, async () => {
           const out = await ask(req);
           const usd = out.provenance.costUsd;
