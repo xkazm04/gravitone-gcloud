@@ -177,6 +177,16 @@ describe("rows and the month", () => {
     expect(html).toContain('data-slot="sl-a"');
   });
 
+  test("the month's next agenda is the rail's Next: an overdue slot kept first, the count not capped by the rows", () => {
+    // Twelve waiting slots, given latest first; the earliest is past its hour and no tick has settled it.
+    const slots = Array.from({ length: 12 }, (_, i) => slot(`n${11 - i}`, new Date(Date.UTC(2026, 9, 15, 8 + (11 - i))).toISOString(), "scheduled"));
+    const html = renderToStaticMarkup(h(MonthCalendar, { slots, nowMs: NOW, month: { y: 2026, m: 9 }, day: null, channelsOff: new Set<string>(), onMonth: () => undefined, onToday: () => undefined, onDay: () => undefined, onChannel: () => undefined, onClose: () => undefined }));
+    const agenda = html.slice(html.indexOf('aria-label="month agenda"'));
+    const ids = [...agenda.matchAll(/data-slot="([^"]+)"/g)].map((m) => m[1]);
+    expect(ids).toEqual(["n0", "n1", "n2", "n3", "n4", "n5", "n6", "n7"]);
+    expect(agenda).toMatch(/>next <span[^>]*><span aria-hidden="true">12</);
+  });
+
   test("the month hides a toggled-off channel and draws a cancelled slot's error", () => {
     const slots = [slot("yt", "2026-10-14T06:00:00.000Z", "cancelled", { title: "struck", error: "upload: 400 invalid_container" }), slot("tt", "2026-10-14T07:00:00.000Z", "scheduled", { channel: "tiktok", title: "vertical cut" })];
     const props = { slots, nowMs: NOW, month: { y: 2026, m: 9 }, day: null, onMonth: () => undefined, onToday: () => undefined, onDay: () => undefined, onChannel: () => undefined, onClose: () => undefined };
