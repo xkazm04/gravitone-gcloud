@@ -10,6 +10,7 @@ import { MEDIA_LANES } from "@gt/domain/lane";
 import { BADGE_CHANNELS, ChannelBadge, isBadgeChannel } from "../../src/components/channel/ChannelBadge.tsx";
 import { byDay, clock, dayLabel, monthCells, moveDay, nextRows, railOf, shiftMonth, type RailSlot } from "../../src/components/floor/calendar.ts";
 import { FLOOR_LANES, isFloorLane, laneAt, laneRows, modeOf, progressShare } from "../../src/components/floor/floor.ts";
+import { CalendarColumn } from "../../src/components/floor/CalendarColumn.tsx";
 import { Lane } from "../../src/components/floor/Lane.tsx";
 import { MonthCalendar, MAX_PER_DAY } from "../../src/components/floor/MonthCalendar.tsx";
 import { Pile } from "../../src/components/floor/Pile.tsx";
@@ -107,6 +108,16 @@ describe("the rail", () => {
     const rows = nextRows(rail).map((r) => (r.kind === "now" ? "NOW" : r.kind === "day" ? r.day : r.slot.id));
     expect(rows).toEqual(["2026-10-15", "overdue", "NOW", "soon", "2026-10-16", "later"]);
     expect(nextRows(railOf([slot("a", "2026-10-16T10:00:00.000Z", "scheduled")], NOW))[0]).toEqual({ kind: "now" });
+  });
+
+  test("the column draws Next with NOW after the overdue, and Published counted in full though six are drawn", () => {
+    const many = Array.from({ length: 8 }, (_, i) => slot(`pub${i}`, new Date(Date.UTC(2026, 9, 10 + i % 4, 6 + i)).toISOString(), "published"));
+    const html = renderToStaticMarkup(h(CalendarColumn, { rail: railOf([...slots, ...many], NOW), nowMs: NOW, open: false, onOpen: () => undefined, slotHref: (id: string) => `/floor?slot=${id}` }));
+    const order = [...html.matchAll(/data-slot="([^"]+)"|data-now=""/g)].map((m) => m[1] ?? "NOW");
+    expect(order.slice(0, 4)).toEqual(["overdue", "NOW", "soon", "later"]);
+    expect(html).toContain("NOW 09:12 UTC");
+    expect(order.filter((id) => id === "out" || id.startsWith("pub"))).toHaveLength(6);
+    expect(html).toMatch(/Published <span[^>]*><span aria-hidden="true">9</);
   });
 });
 

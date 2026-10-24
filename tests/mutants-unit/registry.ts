@@ -1053,6 +1053,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "The month grid starts its weeks on Sunday under Monday-first column heads, so every slot is drawn one weekday off from the day it publishes.",
   },
   {
+    id: "rail-published-uncapped",
+    test: "packages/ui/test/components/floor.test.ts",
+    file: "packages/ui/src/components/floor/CalendarColumn.tsx",
+    find: "rail.published.slice(0, publishedShown)",
+    replace: "rail.published",
+    why: "The rail draws every slot ever published under Published, so Next and the failures are pushed below a column that only grows.",
+  },
+  {
     id: "rail-now-before-overdue",
     test: "packages/ui/test/components/floor.test.ts",
     file: "packages/ui/src/components/floor/calendar.ts",
