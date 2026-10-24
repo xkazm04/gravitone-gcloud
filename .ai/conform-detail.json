@@ -11320,6 +11320,16 @@
           "evidence": "lib/imaging/video/budget.ts:8 The video gate reserves before the adapter is touched and holds a high figure (UNPRICED_HOLD_USD_PER_S) for unpriced clips."
         }
       ]
+    },
+    "9b613e95-e69b-49f7-9cb5-e2e64b448cb1/retrieval": {
+      "context": "floor-lanes-runs",
+      "subject": "retrieval",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T05:28:51.579Z",
+      "worker": "fd41b0a1-4489-4002-abee-9bb0d0028dc3",
+      "techniques": []
     }
   }
 }

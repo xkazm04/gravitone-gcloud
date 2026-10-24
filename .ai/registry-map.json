@@ -4688,7 +4688,11 @@
           "revision": 19,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/floor/floor.ts:5 Here a \"lane\" is a media production lane of the Floor's work-in-flight view, not a retrieval lane. A grep of packages/ui/src/components/floor for embedding, rerank, retriev, cosine and bm25 found zero hits, so there is no corpus, query or ranked slice for the subject to govern.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:a49d27f889212d3f",
+          "evaluatedRevision": 19
         },
         {
           "subject": "table",
