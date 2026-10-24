@@ -5337,4 +5337,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "    print(__doc__.strip().splitlines()[3].strip(), file=sys.stderr)",
     why: "`python job.py` asked wrong exits 2 with an empty stderr again - the index lands on the blank line beside the usage, and an operator at the store sees nothing to correct.",
   },
+  {
+    id: "kit-draws-a-group-the-source-lacks",
+    test: "tests/next-server/kit-sheet.test.ts",
+    file: "app/(studio)/kit/Tokens.tsx",
+    find: "const FRAME = [\"frame\", \"roles-layer\", \"board\", \"library\"];",
+    replace: "const FRAME = [\"frame\", \"roles-layer\", \"roles-component\", \"board\", \"library\"];",
+    why: "The kit's list of drawn token groups names a group source.json does not hold, so the page's placement check reads a list that is not what the sheet draws.",
+  },
 ];

@@ -15,6 +15,10 @@
 //      the same timing. CSS modules scope keyframes, so the kit redefines them, and the copy
 //      drifted - its fadeUp ran .35s where the Library detail's runs .22s. Acts nothing ships
 //      are named in UNSHIPPED_ACTS, and the list can only shrink.
+//   4. The token sheet draws every token of source.json exactly once, and the groups it says it
+//      draws (DRAWN_GROUPS, which page.tsx checks the source against) are the source's groups -
+//      no more, no fewer. `roles-component` was listed and is no group: a page check reading
+//      that list could pass for a group nothing drew.
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
@@ -24,8 +28,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
 import { BINDINGS } from "@gt/ui/keymap/bindings";
+import { parseSource } from "@gt/ui/tokenSource";
 
 import { SignalSections } from "../../app/(studio)/kit/Signal.tsx";
+import { DRAWN_GROUPS, TokenSections } from "../../app/(studio)/kit/Tokens.tsx";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
 const CSS_ROOTS = ["app", "components", "packages/ui/src"];
@@ -152,5 +158,19 @@ describe("/kit: the Motion card plays what ships", () => {
     }
     expect(drift).toEqual([]);
     expect(unshipped).toEqual(UNSHIPPED_ACTS);
+  });
+});
+
+describe("/kit: the token sheet draws source.json whole", () => {
+  test("every token is drawn exactly once, and the drawn groups are the source's groups", () => {
+    const source = parseSource(readFileSync(path.join(ROOT, "packages/ui/tokens/source.json"), "utf8"));
+    if (!source.ok) throw new Error(source.error.message);
+    const groups = source.value.groups;
+    expect([...DRAWN_GROUPS].sort()).toEqual(groups.map((g) => g.id).sort());
+    const html = renderToStaticMarkup(h(TokenSections, { groups }));
+    const drawn = [...html.matchAll(/data-token="([^"]+)"/g)].map((m) => m[1] ?? "");
+    const tokens = groups.flatMap((g) => g.tokens.map((t) => t.name));
+    expect(tokens.length, "source.json holds no token").toBeGreaterThan(100);
+    expect(drawn.sort()).toEqual(tokens.sort());
   });
 });
