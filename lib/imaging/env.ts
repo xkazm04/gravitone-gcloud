@@ -38,8 +38,10 @@ export const KEY_VAR: Record<ProviderId, string> = {
   // `canSpawnLocalBinaries()` AND a live `agy --version` presence probe
   // (providers/agy.ts#agyAvailable) — both `keyFor` and `isConfigured` below
   // special-case "agy" rather than reading this string as a variable name.
-  // The entry exists only so this Record stays exhaustive.
-  agy: "agy (presence-checked, not an env var)",
+  // The entry exists so this Record stays exhaustive, and it is the clause the
+  // router's no-key sentence ends with (errors.ts noKey), so it says what agy
+  // needs - the kernel router's spelling of the same fact.
+  agy: "the `agy` CLI, installed and authenticated (presence-probed)",
   // The Leonardo WEB STUDIO's credit pool, reached by driving a signed-in
   // Chrome profile over CDP (providers/leonardoStudio.ts). The "key" is the
   // CDP endpoint; set = this machine opted in. A separate pool from the API

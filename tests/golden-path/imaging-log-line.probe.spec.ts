@@ -180,3 +180,19 @@ test("log: one line means one line — newlines collapse and length is bounded",
   expect(line.length).toBeLessThan(400);
   expect(line).toContain("…");
 });
+
+test("log: a no-key sentence names a variable only where there is one to set", async () => {
+  const { noKey } = await import("@/lib/imaging/errors");
+  const { PROVIDER_IDS } = await import("@/lib/imaging/types");
+  const told: string[] = [];
+  for (const id of PROVIDER_IDS) {
+    const msg = noKey(id, KEY_VAR[id]).message;
+    const isVar = /^[A-Z][A-Z0-9_]*$/.test(KEY_VAR[id]);
+    if (isVar) expect(msg, id).toContain(`Set ${KEY_VAR[id]} in .env.local`);
+    else if (msg.includes(".env.local")) told.push(`${id}: ${msg}`);
+  }
+  // agy has no variable: it is a CLI on PATH, presence-probed. Telling the
+  // operator to "set" its description in .env.local sends them nowhere.
+  expect(told, "a sentence told the operator to set a non-variable in .env.local").toEqual([]);
+  expect(noKey("agy", KEY_VAR.agy).message).toMatch(/^agy is not configured: .*`agy` CLI/);
+});

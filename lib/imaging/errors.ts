@@ -172,9 +172,14 @@ export function presumedBilled(err: ImagingError): boolean {
   }
 }
 
+/** `envVar` is a variable name for a keyed vendor, or - for one with no key to
+ *  hold, like agy's presence-probed CLI - what it needs instead, which is not
+ *  something to set in .env.local. */
 export const noKey = (provider: ProviderId, envVar: string) =>
   new ImagingError(
-    `No API key for ${provider}. Set ${envVar} in .env.local — see .env.example.`,
+    /^[A-Z][A-Z0-9_]*$/.test(envVar)
+      ? `No API key for ${provider}. Set ${envVar} in .env.local — see .env.example.`
+      : `${provider} is not configured: ${envVar}.`,
     "no-key",
     provider,
   );
