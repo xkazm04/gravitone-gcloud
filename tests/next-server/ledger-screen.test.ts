@@ -30,6 +30,7 @@ const counts = (over: Partial<Counts> = {}): Counts => ({
   type: facet("type", { "verdict.keep": 2, "run.end": 1 }),
   lane: facet("lane", {}),
   source: facet("source", { forge: 3 }),
+  project: {},
   ...over,
 });
 
@@ -52,6 +53,12 @@ describe("the facet rail", () => {
     const c = counts({ typeGroup: facet("typeGroup", { run: 1 }), type: facet("type", { "run.end": 1 }) });
     const html = renderToStaticMarkup(h(Facets, { filter: f({ type: ["verdict.keep"] }), facets: c, onApply: () => undefined }));
     expect(rows(html)).toContain("verdict.keep=true");
+  });
+
+  it("each held project shows its own count, however many are held", () => {
+    const html = renderToStaticMarkup(h(Facets, { filter: f({ project: ["p1", "p2"] }), facets: counts({ project: { p1: 2, p2: 1 } }), onApply: () => undefined }));
+    const n = (pid: string): string | undefined => new RegExp(`>${pid}</span>[\\s\\S]*?, (\\d+)<`).exec(html)?.[1];
+    expect([n("p1"), n("p2")]).toEqual(["2", "1"]);
   });
 
   it("leaves a lone unpressed type folded into its group", () => {

@@ -147,6 +147,8 @@ export type Facets = {
   readonly type: FacetCount;
   readonly lane: FacetCount;
   readonly source: FacetCount;
+  /** Each project the filter holds, counted on its own under the rest of the filter. */
+  readonly project: Readonly<Record<string, number>>;
 };
 
 const facet = (all: readonly FacetCount[], name: FacetCount["facet"]): FacetCount =>
@@ -154,8 +156,23 @@ const facet = (all: readonly FacetCount[], name: FacetCount["facet"]): FacetCoun
 
 /** The total and every facet, each with its own filter left out (countEvents). */
 export function readFacets(store: Store, f: LedgerFilter): Result<Facets> {
-  const r = countEvents(store, splitFilter(f).kernel);
+  const { kernel, post } = splitFilter(f);
+  const r = countEvents(store, kernel);
   if (!r.ok) return r;
+  // Project has no kernel facet (events-count.ts counts seven columns, project_id is not
+  // one), and the kernel's `project` takes one value - several go to the rows (filter.ts).
+  // So each held project is counted on its own under the rest of the filter: the other
+  // facets' rule, one value at a time. One held project is the total itself.
+  const held = post.projects ?? (kernel.project === undefined ? [] : [kernel.project]);
+  const project: Record<string, number> = {};
+  if (held.length === 1 && held[0] !== undefined) project[held[0]] = r.value.total;
+  else {
+    for (const pid of held) {
+      const c = countEvents(store, { ...kernel, project: pid });
+      if (!c.ok) return c;
+      project[pid] = c.value.total;
+    }
+  }
   const all = r.value.facets;
   const kinds = facet(all, "actorKind");
   const n = (k: string): number => kinds.values.find((v) => v.value === k)?.n ?? 0;
@@ -167,6 +184,7 @@ export function readFacets(store: Store, f: LedgerFilter): Result<Facets> {
     type: facet(all, "type"),
     lane: facet(all, "lane"),
     source: facet(all, "source"),
+    project,
   });
 }
 

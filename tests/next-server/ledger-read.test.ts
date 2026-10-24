@@ -27,7 +27,7 @@ function store(): Store {
   return k.value.store;
 }
 
-type Spec = { kind?: ActorKind; type?: string; subject?: string; run?: string; at: string; key?: string; note?: string; lane?: string };
+type Spec = { kind?: ActorKind; type?: string; subject?: string; run?: string; at: string; key?: string; note?: string; lane?: string; project?: string };
 
 function fill(s: Store, specs: readonly Spec[]): void {
   const r = s.tx((t) => {
@@ -37,7 +37,7 @@ function fill(s: Store, specs: readonly Spec[]): void {
         type: x.type ?? "run.log",
         subject: { kind: "run", id: x.subject ?? "r1" },
         ...(x.lane === undefined ? {} : { lane: x.lane }),
-        data: { ...(x.run === undefined ? {} : { runId: x.run }), ...(x.note === undefined ? {} : { note: x.note }), src: "fixture" },
+        data: { ...(x.run === undefined ? {} : { runId: x.run }), ...(x.note === undefined ? {} : { note: x.note }), ...(x.project === undefined ? {} : { projectId: x.project }), src: "fixture" },
         occurredAt: x.at,
         atSrc: "recorded",
         key: x.key ?? `forge:${x.subject ?? "r1"}:f${i}`,
@@ -184,6 +184,25 @@ describe("readFacets", () => {
     if (!direct.ok) throw direct.error;
     expect(facetMap(direct.value, "type")).toEqual(Object.fromEntries(r.value.type.values.map((v) => [v.value, v.n])));
     expect(r.value.head).toBe(4);
+  });
+
+  it("counts each project the filter holds on its own - one or several", () => {
+    const s = store();
+    fill(s, [
+      { at: minute(0), project: "p1" },
+      { at: minute(1), project: "p1" },
+      { at: minute(2), project: "p2" },
+      { at: minute(3), project: "p3" },
+    ]);
+    const two = readFacets(s, f({ project: ["p1", "p2"] }));
+    if (!two.ok) throw two.error;
+    expect(two.value.project).toEqual({ p1: 2, p2: 1 });
+    const one = readFacets(s, f({ project: ["p1"] }));
+    if (!one.ok) throw one.error;
+    expect(one.value.project).toEqual({ p1: 2 });
+    const none = readFacets(s, f());
+    if (!none.ok) throw none.error;
+    expect(none.value.project).toEqual({});
   });
 });
 

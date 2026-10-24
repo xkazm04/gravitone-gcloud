@@ -9,7 +9,8 @@
 // (zero under the other sections) is drawn anyway at 0, so a pressed filter can always be
 // unpressed - an option list built from the matching rows would hide it. Project has no
 // kernel facet yet (events-count.ts counts seven columns, project_id is not one): its
-// section appears only while a project filter is set, so that filter is never invisible.
+// section appears only while a project filter is set, so that filter is never invisible,
+// and each held project carries its own count (read.ts readFacets).
 
 import type { FacetCount } from "@gt/kernel/events-count";
 import { CapsHeading } from "@gt/ui/components/heading/CapsHeading.tsx";
@@ -87,7 +88,7 @@ export function Facets({ filter: f, facets: c, onApply }: { readonly filter: Led
         <div className={s.sec}>
           {head("project", "project")}
           {f.project.map((pid) => (
-            <FacetRow key={pid} mark="rail" label={pid} count={f.project.length === 1 ? c.total : 0} pressed onToggle={(on) => toggle("project", pid, on)} />
+            <FacetRow key={pid} mark="rail" label={pid} count={c.project[pid] ?? 0} pressed onToggle={(on) => toggle("project", pid, on)} />
           ))}
         </div>
       )}
