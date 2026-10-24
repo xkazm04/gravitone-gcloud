@@ -202,7 +202,9 @@ export function migrate(store: Store, modules: readonly ModuleMigrations[], opts
         t.run("INSERT OR REPLACE INTO _migration_failures (module, version, at, reason) VALUES (?, ?, ?, ?)", p.module, p.step.version, t.at, step.error.message);
       });
       const tail = mark.ok ? "" : ` (and its failure mark could not be written: ${mark.error.message})`;
-      return err(step.error.code, `migrations: ${p.module} v${p.step.version} failed after ${applied.length} step(s) applied: ${step.error.message}${tail}`, { cause: step.error });
+      // The restore point travels with the error (migrations: error-propagation).
+      const restore = snapshot === undefined ? "" : `; the pre-migration snapshot is ${snapshot}`;
+      return err(step.error.code, `migrations: ${p.module} v${p.step.version} failed after ${applied.length} step(s) applied: ${step.error.message}${tail}${restore}`, { cause: step.error });
     }
     applied.push({ module: p.module, version: p.step.version });
   }

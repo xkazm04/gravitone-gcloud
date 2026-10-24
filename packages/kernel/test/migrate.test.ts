@@ -128,6 +128,17 @@ describe("migrations", () => {
     s.close();
   });
 
+  it("a failed step's error names the snapshot taken before it, so the restore point is in the message", () => {
+    const s = fileStore();
+    must(migrate(s, [upTo(probe, 1)]));
+    const broken: ModuleMigrations = { module: "probe", steps: [probe.steps[0], { version: 2, sql: "INSERT INTO no_such_table VALUES (1);" }].filter((x) => x !== undefined) };
+    const r = migrate(s, [broken]);
+    const snaps = readdirSync(tmp.dir).filter((f) => f.startsWith(`${path.basename(s.location)}.pre-migrate.`));
+    expect(snaps).toHaveLength(1);
+    expect(!r.ok && r.error.message).toContain(path.join(tmp.dir, snaps[0] ?? "?"));
+    s.close();
+  });
+
   it("a second process that planned the same step before the first applied it converges, and marks nothing", () => {
     // Two processes boot one store after a release (the app and the worker):
     // both read the ledger and plan probe v2..v3, and the first commits them
