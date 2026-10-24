@@ -132,6 +132,16 @@ test("coverage: a topic counts once however many posts cover it, and a run id th
   expect(keys).toEqual(["agent-operations/delta", "agent-operations/delta-topic", "software-engineering/alpha-topic"]);
 });
 
+test("create: two runs on one topic at once both get a run, each under its own id", async () => {
+  const topic = { kind: "free" as const, text: "One topic asked for twice" };
+  const made = await Promise.allSettled([createRun({ topic }, deps()), createRun({ topic }, deps()), createRun({ topic }, deps())]);
+  const refused = made.filter((m) => m.status === "rejected").map((m) => String((m as PromiseRejectedResult).reason?.message));
+  expect(refused, "no create is refused because a sibling minted the same id").toEqual([]);
+  const ids = made.map((m) => (m as PromiseFulfilledResult<ArticleRun>).value.id);
+  expect(new Set(ids).size).toBe(3);
+  for (const id of ids) expect((await readRun(id)).topic.text).toBe(topic.text);
+});
+
 test("loop: refuses to start without a budget or with an unclear target", async () => {
   await expect(runLoop({ target: 2 } as never, deps())).rejects.toMatchObject({ code: "no-budget" });
   await expect(runLoop({ budgetUsd: 0, target: 2 }, deps())).rejects.toMatchObject({ code: "no-budget" });
