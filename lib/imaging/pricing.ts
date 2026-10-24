@@ -83,13 +83,15 @@ interface ModelPrice {
 }
 
 /**
- * THE TABLE. Three priced rows, five deliberately unpriced ones.
+ * THE TABLE. Every row is priced or deliberately unpriced, and its `source`
+ * says which and why — count them off the rows, not off this comment.
  *
- * Neither priced figure is a vendor list price — both are this repo's own bill
- * divided by its own renders, from the 6-style x 5-beat trial grid (60 graded
- * cells, `docs/imaging.md` § The provider verdict, restated at
- * `lib/imaging/router.ts` PLAN). That makes them good estimates and bad
- * receipts, which is exactly how `basis` labels them.
+ * No priced figure is a vendor list price. The google and leonardo figures are
+ * this repo's own bill divided by its own renders, from the 6-style x 5-beat
+ * trial grid (60 graded cells, `docs/imaging.md` § The provider verdict,
+ * restated at `lib/imaging/router.ts` PLAN); leonardo-flare's is credits a
+ * sibling repo's API reported; ollama's $0 is local inference. That makes them
+ * good estimates and bad receipts, which is exactly how `basis` labels them.
  */
 export const PRICES: readonly ModelPrice[] = [
   {
