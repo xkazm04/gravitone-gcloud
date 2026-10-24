@@ -3,7 +3,6 @@ import "server-only";
 import { err, ok, type Result } from "@gt/domain/errors";
 import { RENDER_RES, WORDS_LIMITS, albumOpLabel, type EngineView, type PartActView, type PartVerdict, type RenderData, type RenderRes, type WordsData } from "@gt/domain/partView";
 
-import { KEPT_TAKES } from "../../_port/fixtureData.ts";
 import type { Ctx } from "./fixture.ts";
 import { engineOf } from "./fixtureScoreRecs.ts";
 import type { ExportRec } from "./fixtureCut.ts";
@@ -40,7 +39,7 @@ const no = (m: string): Result<never> => err("invalid", m);
 export function trackOf(ctx: Ctx): { title: string; durationS: number | null } | null {
   const id = ctx.plan.project.takeId;
   if (id === undefined) return null;
-  const t = KEPT_TAKES.find((x) => x.id === id);
+  const t = ctx.take(id);
   return t === undefined ? { title: id, durationS: null } : { title: t.title, durationS: t.durationS };
 }
 

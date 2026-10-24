@@ -12,6 +12,7 @@ import type { WorkPlanPart } from "@gt/domain/produce";
 import { OPS_SHOWN, actBelongs, isEditorKind, opLabel, type EditorKind, type PartOp, type PartProject, type PartRef, type PartRunning, type PartView, type ResearchOp, type ScriptOp } from "@gt/domain/partView";
 
 import type { Who } from "../../_port/port.ts";
+import { keptTakes } from "../../_port/realChoices.ts";
 import { RESEARCH, type ResearchRec } from "./fixtureResearch.ts";
 import { SCRIPT, type ScriptRec } from "./fixtureScript.ts";
 import type { Ctx } from "./fixture.ts";
@@ -46,7 +47,9 @@ export function sceneOf(r: Reader, projectId: string, key: string, now: number):
   const snap = readPartIn(r, { projectId, partId: part.id });
   const p = read.plan.project;
   const project: PartProject = { id: p.id, title: p.title, recipe: p.recipe, recipeLabel: p.recipeLabel, discipline: read.discipline, targetS: read.targetS };
-  const base: Ctx = { project, plan: read.plan, now, research: () => researchOf(project, snap.records), look: projectLookIn(r, p.styleId) };
+  // The Library's takes, read once per scene and only by a part that asks (an album's track).
+  let takes: ReturnType<typeof keptTakes> | undefined;
+  const base: Ctx = { project, plan: read.plan, now, research: () => researchOf(project, snap.records), look: projectLookIn(r, p.styleId), take: (id) => (takes ??= keptTakes()).find((t) => t.id === id) };
   const ctx: KCtx = { ...base, rec: recReader({ research: base.research, script: () => scriptOf(snap.records), later: (k) => later(k).fromRecords(snap.records, base) }), records: () => snap.records };
   return ok({ read, ctx, part, kind, snap });
 }

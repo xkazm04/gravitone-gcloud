@@ -21,6 +21,7 @@ import {
 } from "@gt/domain/partView";
 
 import { fixtureProduce } from "../../_port/port.ts";
+import { KEPT_TAKES } from "../../_port/fixtureData.ts";
 import { RESEARCH, type ResearchRec } from "./fixtureResearch.ts";
 import { SCRIPT, type ScriptRec } from "./fixtureScript.ts";
 import { encodeRecord } from "@gt/domain/steps/registry";
@@ -96,6 +97,9 @@ export type Ctx = {
   /** What the project's pictures are drawn in (@gt/producers/frames/look): the real side reads
    *  the Style store; the fixture universe has none, so a bound style reads as `missing`. */
   readonly look: ProjectLook;
+  /** A music take by id, out of THIS side's takes (the fixture's seed list; the real side's
+   *  Library), so an album names its track without either side reading the other's. */
+  readonly take: (id: string) => { readonly title: string; readonly durationS: number | null } | undefined;
 };
 
 function disciplineFor(plan: PlanView): Discipline {
@@ -118,7 +122,7 @@ function contextOf(projectId: string, now: number): Result<Ctx> {
     discipline: disciplineFor(plan.value),
     targetS,
   };
-  const ctx: Ctx = { project, plan: plan.value, now, research: () => recOf(ctx, "research").data, look: lookOf(plan.value.project.styleId, undefined) };
+  const ctx: Ctx = { project, plan: plan.value, now, research: () => recOf(ctx, "research").data, look: lookOf(plan.value.project.styleId, undefined), take: (id) => KEPT_TAKES.find((t) => t.id === id) };
   return ok(ctx);
 }
 

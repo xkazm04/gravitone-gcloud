@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -142,6 +142,39 @@ describe("a dry stand-in's pixels", () => {
       }
     }
     expect(takeUrl("dry:shot-1:7", undefined)).toBe(dryPreset(7, "jpg"));
+  });
+});
+
+describe("an album's track", () => {
+  // Each side names the take its project was composed from out of its OWN takes: the fixture's
+  // seed list, the real side's Library (lib/sound/store.ts takes.json). A module never falls back
+  // to a fixture (kinds.ts), so a real take the fixture never heard of is not shown as its id.
+  it("is the take's own title and length on each side", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "gt-parity-"));
+    dirs.push(dir);
+    writeFileSync(path.join(dir, "takes.json"), JSON.stringify({ takes: [{ id: "st-harbour", kind: "music", title: "Harbour lights", verdict: "kept", durationS: 201 }] }));
+    const k = openKernel(path.join(dir, "k.sqlite"));
+    if (!k.ok) throw k.error;
+    open.push(k.value);
+    const store = k.value.store;
+    const c = compose(store, { recipe: "album-video", takeId: "st-harbour" }, OP, { id: "a1" });
+    if (!c.ok) throw c.error;
+    const real = makeRealPart({ store: () => ok(store), now: () => NOW, gates: { store: () => ok(store), blobs: () => blobStore(path.join(dir, "blobs")), now: () => NOW } });
+    const was = process.env["SOUND_STORE_DIR"];
+    process.env["SOUND_STORE_DIR"] = dir;
+    try {
+      const r = await real.loadPart({ projectId: "a1", key: "words" });
+      expect(r.ok && r.value.kind === "words" ? r.value.data.track : null).toEqual({ title: "Harbour lights", durationS: 201 });
+    } finally {
+      if (was === undefined) delete process.env["SOUND_STORE_DIR"];
+      else process.env["SOUND_STORE_DIR"] = was;
+    }
+    loadPart("none", "research", NOW);
+    const list = fixtureProduce().listProjects();
+    if (!list.ok) throw list.error;
+    const id = list.value.projects.find((p) => p.title === "Salt lines — album video")?.id ?? "";
+    const f = loadPart(id, "words", NOW);
+    expect(f.ok && f.value.kind === "words" ? f.value.data.track : null).toEqual({ title: "Salt lines", durationS: 154 });
   });
 });
 
