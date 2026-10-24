@@ -23,6 +23,7 @@ import { keyFor } from "../env";
 import { fetchImageBase64, requestJson } from "../http";
 import { logCleanupFailure } from "../log";
 import { priceCall } from "../pricing";
+import { USD_PER_CREDIT } from "../video/pricing";
 import {
   ASPECT_PX,
   type GenerateRequest,
@@ -39,9 +40,9 @@ const LUCID_ORIGIN = "7b592283-e8a7-4c5a-9ba6-d18c31f258b9";
 const POLL_INTERVAL_MS = 3_000;
 const MAX_POLLS = 60; // 3 minutes, matching the reference client's ceiling
 
-/** Leonardo bills in credits; this is the reference implementation's USD
- *  conversion, kept so the studio's cost line means the same thing here. */
-const USD_PER_CREDIT = 0.00257;
+// USD_PER_CREDIT (imported above): Leonardo bills in credits, and the reference
+// implementation's USD conversion is declared once, in video/pricing.ts, for
+// every adapter on the API pool (this one, leonardoFlare.ts, the clip adapter).
 
 /** v1 Create Generation rejects prompts past 1500 characters. Checked locally
  *  so a long style block fails with a message that says what to shorten,

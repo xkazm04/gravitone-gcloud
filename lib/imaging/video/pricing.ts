@@ -72,9 +72,10 @@ export function gateHoldUsd(model: VideoModel, durationS: ClipDuration): number 
   return CLIP_PRICE_USD[model][durationS] ?? UNPRICED_HOLD_USD_PER_S * durationS;
 }
 
-/** Leonardo's credits→USD conversion, the one lib/imaging/providers/leonardo.ts
- *  carries (USD_PER_CREDIT, from the reference client it was lifted from). A
- *  converted figure is an estimate, and is labelled one. */
+/** Leonardo's credits→USD conversion, from the reference client the image
+ *  adapter was lifted from - declared once, here; providers/leonardo.ts and
+ *  providers/leonardoFlare.ts import it. A converted figure is an estimate, and
+ *  is labelled one here. */
 export const USD_PER_CREDIT = 0.00257;
 
 const USD_PER_UNIT: Readonly<Record<string, { usd: number; basis: CostBasis }>> = {
