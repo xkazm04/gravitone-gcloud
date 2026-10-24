@@ -31,8 +31,22 @@ export function fmtUsd(n: number): string {
   return `$${Math.round(n)}`;
 }
 
-/** A band as the prototype drew it: `$47–92`. */
-export const fmtRange = (r: readonly [number, number]): string => `$${Math.round(r[0])}–${Math.round(r[1])}`;
+/**
+ * One end of a band, rounded OUTWARD (`down` for the low end, up for the high one), in fmtUsd's
+ * grain: whole dollars from $10, cents under it, `<$0.01` for a sub-cent end. A band is a bound,
+ * and a bound rounded inward is a smaller worst case than the one the job may spend: the old
+ * `Math.round` drew a $6.80-54.40 band as `$7–54` and a sub-dollar one as `$0–0`.
+ */
+function bandEnd(n: number, down: boolean): string {
+  if (n === 0) return "$0";
+  if (n < 0.01) return down ? "<$0.01" : "$0.01";
+  const grain = n < 10 ? 100 : 1;
+  const v = (down ? Math.floor : Math.ceil)(Math.round(n * grain * 1e6) / 1e6) / grain;
+  return v < 10 ? `$${v.toFixed(2)}` : `$${v}`;
+}
+
+/** A band as the prototype drew it: `$47–92`; under $10 in cents (`$1.70–6.80`), never `$0–0`. */
+export const fmtRange = (r: readonly [number, number]): string => `${bandEnd(r[0], true)}–${bandEnd(r[1], false).slice(1)}`;
 
 export type Cost = { readonly usd: number | null; readonly usdRange?: readonly [number, number]; readonly unpricedReason?: string };
 

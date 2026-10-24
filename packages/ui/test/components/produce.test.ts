@@ -86,6 +86,16 @@ describe("figures", () => {
     expect(optionCost(SUNO, 2).unpricedReason).toBe("Suno bills subscription credits");
   });
 
+  test("a band is a bound: its ends round outward, under $10 in cents, and a sub-dollar band never reads $0–0", () => {
+    // strips TURN_ESTIMATE [1.7, 6.8] a turn; a stats reel is two turns, four reels eight.
+    expect(costWords({ usd: 3.2, usdRange: [1.7, 6.8] })).toBe("$1.70–6.80");
+    expect(costWords({ usd: 30.6, usdRange: [6.8, 54.4] })).toBe("$6.80–55");
+    expect(costWords({ usd: 0.08, usdRange: [0.04, 0.12] })).toBe("$0.04–0.12");
+    expect(costWords({ usd: 0.07, usdRange: [0.07, 0.07] })).toBe("$0.07–0.07");
+    expect(costWords({ usd: 0.01, usdRange: [0.004, 0.02] })).toBe("<$0.01–0.02");
+    expect(costWords({ usd: 69.5, usdRange: [47.6, 91.2] })).toBe("$47–92");
+  });
+
   test("an unpriced figure is drawn by its kind; the reason is its name, never the cell's text", () => {
     expect([unpricedKind("billed to the text seat"), unpricedKind("Suno bills subscription credits"), unpricedKind(undefined)]).toEqual(["seat", "credits", "no price"]);
     const html = renderToStaticMarkup(h(Estimate, { receipt: receipt([line("score", SUNO, 1, 1, 0)]), noun: "prompt" }));
