@@ -118,7 +118,7 @@ Up to `ideaCap` ideas, one JSON array -> `npx tsx pipeline/scout.mts ideas <nigh
 - `aspect` - `9:16` for a poster (the default), `16:9` for a scene, `1:1` for a square card - the studio has no other;
 - `card` (target `character` only) - `{name, age, look, personality}`: `look` holds what must not drift
   (face, hair, build, skin, one signature garment or accessory), `personality` the line a scene plays her by;
-- `anchor` - `{kind: watch|gap|free, ref}`; `use` - the aim it serves (`companion portrait`, `roleplay scene`);
+- `anchor` - `{kind: watch|gap|free, ref}`; `app` (one of `videogame|dating-sim|roleplay|companion-chat|genre-video|short|other`) + `appTarget` (the specific target, `a dating sim, first-meeting greeting card`, `a roleplay scene, rooftop at night`; the door stores `use` as `<app>: <appTarget>`); `aim` - ONE sentence, WHY this still: extract a new artstyle, test technique X on a face, make a scene the baseline of a genre video, harden a look already kept, or fill a layer the graph lacks (many characters and nothing to do with them; too few looks to vary a genre). It is never the prompt: the prompt rides its own field and is read after triage; `look` - the look direction as a slug (`risograph-two-colour`), required on a character brief; the door refuses a card name or a look already drawn in ANY earlier muse night, kept ones excepted;
 - `prompt` - the four blocks in techniques.md's order: the LOOK (medium/render, light, lens, finish and
   imperfection) -> the CARD (her invariants, verbatim) -> the ACTION (wardrobe state, situation, framing,
   expression) -> `Avoid:` (short, concrete). A scene's look block holds no framing or backdrop of its own -

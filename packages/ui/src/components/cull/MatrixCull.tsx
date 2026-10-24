@@ -95,6 +95,7 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
             position={`${d.runIx + 1}/${d.runs.length}`}
             {...(run.words?.use !== undefined ? { use: run.words.use } : {})}
             {...(run.words?.aim !== undefined ? { aim: run.words.aim } : {})}
+            {...(run.words?.prompt !== undefined ? { prompt: run.words.prompt } : {})}
             {...(run.words?.ref !== undefined ? { reference: run.words.ref } : {})}
             {...(run.words?.checks !== undefined ? { checks: run.words.checks } : {})}
             runVerdict={runVerdictOf(run, d.cells, verdicts)}

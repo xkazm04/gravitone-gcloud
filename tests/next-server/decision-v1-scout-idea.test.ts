@@ -1,6 +1,6 @@
 // A NIGHT'S IDEA ARTBOARDS ON THE BOARD (spark scout-idea-artboards WP-I3) - lib/decision/v1/sources/
 // scout.ts over `idea` candidates: a ONE-CELL run per drawn idea (`c-01/board`, its artboard the
-// media, filed under `ideas`), its title the row's label, its prompt the aim, its target and anchor
+// media, filed under `ideas`), its title the row's label, its aim (absent on a legacy idea) beside its prompt, its target and anchor
 // the cell's meta; a failed idea, or one with no artboard on disk, a Loss with its own sentence.
 // The preview names what each verdict does - kept, developed next night into its target; rejected,
 // blocked - and the commit writes nothing but the night's record, which carries every idea verdict.
@@ -51,7 +51,7 @@ const idea = (id: string, over: Partial<IdeaCandidate>): IdeaCandidate => ({ id,
 function candidates(): Candidate[] {
   const { image: _none, ...unheld } = idea("c-05", {});
   return [
-    idea("c-01", { title: "Lantern-lit stairwell", target: "scene", anchor: { kind: "watch", ref: "channel: lighting breakdowns" }, prompt: "rough frame, a stairwell lit by one lantern held high, warm amber against cold slate", use: "a beat for a slow reveal", jobId: "job:scout-ideas:x" }),
+    idea("c-01", { title: "Lantern-lit stairwell", target: "scene", anchor: { kind: "watch", ref: "channel: lighting breakdowns" }, prompt: "rough frame, a stairwell lit by one lantern held high, warm amber against cold slate", use: "short: slow-reveal beat", app: "short", aim: "see whether one held light carries a reveal", jobId: "job:scout-ideas:x" }),
     idea("c-02", { title: "Cut-paper harbour", target: "style", anchor: { kind: "gap", ref: "paper-craft looks" } }),
     idea("c-03", { title: "Brass diving helmet", target: "asset3d" }),
     idea("c-04", { status: "failed", error: "leonardo answered 429: generation quota exhausted for this hour" }),
@@ -99,11 +99,12 @@ describe("scout adapter - an idea is a one-cell run", () => {
     ]);
     expect(urls["c-01/board"]).toBe(`/api/foundry/file?run=${NIGHT}&path=ideas%2Fc-01.png&kind=scout`);
     // The brief's words, verbatim: the title is the row, the prompt the aim, target and anchor the cell's meta.
-    expect(present.rows.find((r) => r.id === "c-01")).toEqual({ id: "c-01", label: "Lantern-lit stairwell", group: "ideas", aim: "rough frame, a stairwell lit by one lantern held high, warm amber against cold slate", use: "a beat for a slow reveal" });
+    expect(present.rows.find((r) => r.id === "c-01")).toEqual({ id: "c-01", label: "Lantern-lit stairwell", group: "ideas", prompt: "rough frame, a stairwell lit by one lantern held high, warm amber against cold slate", aim: "see whether one held light carries a reveal", use: "short: slow-reveal beat" });
     expect(present.items["c-01/board"]).toEqual({ label: "Lantern-lit stairwell", meta: "scene · watch: channel: lighting breakdowns", prompt: "rough frame, a stairwell lit by one lantern held high, warm amber against cold slate" });
     expect(present.items["c-02/board"]?.meta).toBe("style · gap: paper-craft looks");
     expect(present.items["c-03/board"]?.meta).toBe("3d asset · free");
-    expect(present.rows.find((r) => r.id === "c-02")).not.toHaveProperty("use");
+    // A legacy idea has no aim and no use; its prompt still rides the row.
+    expect(present.rows.find((r) => r.id === "c-02")).toEqual({ id: "c-02", label: "Cut-paper harbour", group: "ideas", prompt: "prompt c-02" });
     expect(losses).toEqual([
       { candidate: "c-04", grade: "dropped", reason: "leonardo answered 429: generation quota exhausted for this hour" },
       { candidate: "c-05", grade: "dropped", reason: "rendered with no artboard recorded" },

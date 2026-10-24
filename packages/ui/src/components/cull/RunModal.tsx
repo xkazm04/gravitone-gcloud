@@ -25,6 +25,8 @@ export type RunModalProps = {
   readonly position: string;
   readonly use?: string;
   readonly aim?: string;
+  /** The prompt the run was drawn from (an idea's studio prompt), after the aim. */
+  readonly prompt?: string;
   readonly checks?: readonly string[];
   /** The reference the run was read from (third-party, reference-only). */
   readonly reference?: string;
@@ -41,7 +43,7 @@ export type RunModalProps = {
   readonly children: ReactNode;
 };
 
-export function RunModal({ category, label, position, use, aim, checks, reference, runVerdict, reasons, onRunVerdict, note, onClose, live = true, foot, children }: RunModalProps) {
+export function RunModal({ category, label, position, use, aim, prompt, checks, reference, runVerdict, reasons, onRunVerdict, note, onClose, live = true, foot, children }: RunModalProps) {
   const panel = useRef<HTMLDivElement | null>(null);
   useLayer(live, { kind: "zoom", panelRef: panel, onClose });
   return (
@@ -60,6 +62,12 @@ export function RunModal({ category, label, position, use, aim, checks, referenc
               <>
                 <dt className={s.purposeKey}>aim</dt>
                 <dd className={s.purposeVal}>{aim}</dd>
+              </>
+            )}
+            {prompt !== undefined && (
+              <>
+                <dt className={s.purposeKey}>prompt</dt>
+                <dd className={s.purposeVal}>{prompt}</dd>
               </>
             )}
           </dl>

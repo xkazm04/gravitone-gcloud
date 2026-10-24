@@ -84,7 +84,7 @@ const USAGE = [
   "  style <night> --sources s-01,s-03 --use \"<content>\" [--slug x] [--seed <batch>/sd-NNN] [--detach]",
   "  scene <night> --source s-NN --use \"<content>\" [--frames k-012.jpg] [--seed <batch>/sd-NNN] [--detach]",
   "  asset <night> --brief <file|-> [--seed <batch>/sd-NNN] [--detach]  {class, subject, use, style?, kind?, techniques?, fromIdea?}",
-  "  ideas <night> --json <file|-> [--detach]   [{title, target: scene|style|asset3d|stats, genre, prompt, anchor: {kind: watch|gap|free, ref}, use?, reel?}]",
+  "  ideas <night> --json <file|-> [--detach]   [{title, target: scene|style|asset3d|stats, genre, prompt, anchor: {kind: watch|gap|free, ref}, app, appTarget, aim, look?, reel?}]",
   "                                             reel (stats only): {brief: {case, title, hook, unit, kind, data, steps?, illustrative: true}, approach: {name, medium, grammar, density, direction, falsifier}}",
   "  finding <night> --json <file|->            [{sourceIds, template, step, claim, quote, restates?}]",
   "  direction <night> --json <file|->          {title, format: short|video, genre, style, tone, audience, premise, basedOn: [<night>/<cell id>], use?}",

@@ -108,7 +108,7 @@ async function open(): Promise<string> {
   return String(r.doc["night"]);
 }
 
-const idea = (title: string, o: Record<string, unknown> = {}) => ({ title, target: "scene", genre: "music video", prompt: `A rough artboard: ${title}.`, anchor: { kind: "free", ref: "" }, ...o });
+const idea = (title: string, o: Record<string, unknown> = {}) => ({ title, target: "scene", genre: "music video", prompt: `A rough artboard: ${title}.`, anchor: { kind: "free", ref: "" }, app: "genre-video", appTarget: "music-video baseline", aim: "set a scene as a genre-video baseline", ...o });
 const seed = (id: string, sentence: string): Seed => ({ id, sentence, genre: "music", subgenre: "lo-fi", type: "music video", audience: "family", format: "video" });
 
 describe("the ideas door", () => {

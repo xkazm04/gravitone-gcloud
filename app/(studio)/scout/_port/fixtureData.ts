@@ -126,7 +126,7 @@ function universe(x: Ids): { readonly batches: SeedBatch[]; readonly nights: Nig
   const ideasJob = `job:fx-ideas:${n1}`;
   const ideas: Candidate[] = keptRefs.flatMap((ref, k) =>
     [0, 1].map(
-      (j): Candidate => ({ id: cid(k * 2 + j), kind: "idea", sourceIds: [], status: "rendered", title: `${pick(SUBJECTS, k * 2 + j)}, as a ${pick(TYPES, k)}`, target: j === 1 && k % 4 === 0 ? "stats" : "scene", prompt: "p", anchor: { kind: "free", ref: "" }, fromSeed: ref, jobId: ideasJob }),
+      (j): Candidate => ({ id: cid(k * 2 + j), kind: "idea", sourceIds: [], status: "rendered", title: `${pick(SUBJECTS, k * 2 + j)}, as a ${pick(TYPES, k)}`, target: j === 1 && k % 4 === 0 ? "stats" : "scene", prompt: "p", use: "genre-video: scene baseline", app: "genre-video", aim: "set a scene as a genre-video baseline", anchor: { kind: "free", ref: "" }, fromSeed: ref, jobId: ideasJob }),
     ),
   );
   const music = keptRefs.find((r) => r.endsWith("sd-001")) ?? keptRefs[0] ?? `${b1.id}/sd-001`;
@@ -152,7 +152,7 @@ function universe(x: Ids): { readonly batches: SeedBatch[]; readonly nights: Nig
 
   // Ideas on the kept child seeds, and a last night still waiting for its morning.
   const n3 = id("2026-10-21", x);
-  const childIdeas: Candidate[] = childRefs.map((ref, i): Candidate => ({ id: cid(i), kind: "idea", sourceIds: [], status: i === childRefs.length - 1 ? "failed" : "rendered", ...(i === childRefs.length - 1 ? { error: "studio: the generation was refused (content filter)" } : {}), title: `${pick(SUBJECTS, i + 3)}, smaller`, target: "scene", prompt: "p", anchor: { kind: "free", ref: "" }, fromSeed: ref, jobId: `job:fx-ideas:${n3}` }));
+  const childIdeas: Candidate[] = childRefs.map((ref, i): Candidate => ({ id: cid(i), kind: "idea", sourceIds: [], status: i === childRefs.length - 1 ? "failed" : "rendered", ...(i === childRefs.length - 1 ? { error: "studio: the generation was refused (content filter)" } : {}), title: `${pick(SUBJECTS, i + 3)}, smaller`, target: "scene", prompt: "p", use: "short: smaller scene beat", app: "short", aim: "try the kept seed at a smaller scale", anchor: { kind: "free", ref: "" }, fromSeed: ref, jobId: `job:fx-ideas:${n3}` }));
   const n3Kept = childIdeas.filter((c, i) => c.status !== "failed" && i % 2 === 0).map((c) => `${c.id}/idea`);
   const n3Rej = childIdeas.filter((c, i) => c.status !== "failed" && i % 2 === 1).map((c) => `${c.id}/idea`);
 
@@ -188,11 +188,11 @@ export function fixtureMuse(): Night[] {
   const first: Candidate[] = [
     muse(0, n1, { title: "Gouache harbour portrait, golden hour", target: "style", judge: judge(31, "covered") }),
     muse(1, n1, { title: "A detective reading a map by lamplight", target: "scene", judge: judge(38, "covered") }),
-    muse(2, n1, { title: "Mara Venn, cartographer", target: "character", card, judge: judge(33, "covered") }),
+    muse(2, n1, { title: "Mara Venn, cartographer", target: "character", use: "dating-sim: first-meeting greeting card", app: "dating-sim", aim: "a character poster technique: a prop that carries her trade", look: "painterly-soft-key", card, judge: judge(33, "covered") }),
     muse(3, n1, { title: "Cel-shaded rooftop chase", target: "scene", status: "failed", error: "judge: adult unsure" }),
   ];
   const second: Candidate[] = [
-    muse(0, n2, { title: "Mara Venn at the chart table", target: "character", card, judge: judge(35, "covered") }),
+    muse(0, n2, { title: "Mara Venn at the chart table", target: "character", use: "visual novel: a chart-room sprite", app: "other", aim: "learn a sprite pose against a chart table", look: "chart-room-sprite", card, judge: judge(35, "covered") }),
     muse(1, n2, { title: "Studio-lit 3D concept bust, matte clay", target: "style", judge: judge(42, "covered") }),
     muse(2, n2, { title: "A tango in an empty ballroom", target: "scene", judge: judge(29, "revealing") }),
     muse(3, n2, { title: "Anime market at dusk", target: "scene", status: "pending" }),

@@ -10,15 +10,16 @@ import { launchReels, reelFiles, SCOUT_REELS_LANE } from "../../producers/scoutR
 import { launchable, Refusal, type ActContext } from "./acts.ts";
 import { ASPECTS, cardSchema, WING_ASPECT, wingRefusal } from "./museDoor.ts";
 import { listSeedBatches } from "./seedStore.ts";
+import { repeatRefusal } from "./ideaRepeat.ts";
 import { seedsInForce, usableSeed } from "./seeds.ts";
-import { mutateNight, nextCandidateId, readNight, resolveInNight, withCandidate } from "./store.ts";
+import { mutateNight, nextCandidateId, readAllNights, readNight, resolveInNight, withCandidate } from "./store.ts";
 import { activeWing } from "./wingScope.ts";
 import type { ScoutWing } from "./wing.ts";
-import { DEFAULT_IDEA_CAP, DEFAULT_REEL_CAP, GENRE_MAX, IDEA_ANCHORS, REEL_DENSITIES, REEL_GRAMMARS, REEL_MEDIA, IDEA_PROMPT_MAX, IDEA_TARGETS, IDEA_TITLE_MAX, REEL_KINDS, SEED_REF_RE, USE_MAX, type CandidateId, type IdeaCandidate, type Night, type NightId, type ReelBrief, type SeedRef } from "./types.ts";
+import { DEFAULT_IDEA_CAP, DEFAULT_REEL_CAP, GENRE_MAX, IDEA_ANCHORS, REEL_DENSITIES, REEL_GRAMMARS, REEL_MEDIA, IDEA_PROMPT_MAX, IDEA_TARGETS, IDEA_TITLE_MAX, REEL_KINDS, SEED_REF_RE, USE_MAX, USE_APPS, AIM_MAX, LOOK_SLUG, type CandidateId, type IdeaCandidate, type Night, type NightId, type ReelBrief, type SeedRef } from "./types.ts";
 
 // THE NIGHT'S IDEAS - what `pipeline/scout.mts ideas <night> --json <file|->` does (spark
 // scout-idea-artboards WP-I2, stats-reels WP-R2). The skill writes a batch of briefs in its own words -
-// `{title, target, genre, prompt, anchor: {kind, ref}, use?, reel?, aspect?, card?}` - and this act turns each into an `idea`
+// `{title, target, genre, prompt, anchor: {kind, ref}, app, appTarget, aim, look?, reel?, aspect?, card?}` - and this act turns each into an `idea`
 // candidate (no source: the words are ours). The batch splits by target into at most two jobs:
 //
 //   scene, style, asset3d,  ONE scout-ideas job that draws every such idea as one rough still in the
@@ -97,6 +98,14 @@ const reelSchema = z
   .strict()
   .refine((r) => Buffer.byteLength(JSON.stringify(r), "utf8") <= REEL_JSON_MAX, { message: `a reel is at most ${REEL_JSON_MAX / 1000} KB of JSON: a reel's data, not a dataset` });
 
+const squash = (s: string): string => s.toLowerCase().replace(/\s+/g, " ").trim();
+/** The aim is the prompt, or holds it whole, or sits whole inside it. */
+const sameWords = (aim: string, prompt: string): boolean => {
+  const a = squash(aim);
+  const p = squash(prompt);
+  return a === p || a.includes(p) || p.includes(a);
+};
+
 const ideaSchema = z
   .object({
     /** The idea's headline on the Board. */
@@ -111,7 +120,13 @@ const ideaSchema = z
       .object({ kind: z.enum(IDEA_ANCHORS), ref: z.string().trim().max(300) })
       .strict()
       .refine((a) => a.kind === "free" || a.ref !== "", { message: "a watch or gap anchor quotes its watchlist line or registry gap in `ref`", path: ["ref"] }),
-    use: text(USE_MAX).optional(),
+    /** What the output is for: the closed list; its specific target rides in `appTarget` (the candidate's `use` is `<app>: <appTarget>`). */
+    app: z.enum(USE_APPS),
+    appTarget: text(USE_MAX).refine((s) => !/[\r\n]/.test(s), { message: "one line" }),
+    /** WHY this run was chosen, one sentence; never the image prompt. */
+    aim: text(AIM_MAX),
+    /** The look direction's slug: required on a muse character, the key of the repeat guard (./ideaRepeat.ts). */
+    look: z.string().trim().regex(LOOK_SLUG, "a slug of 3 to 40 lower-case letters, digits and hyphens").optional(),
     /** The kept seed this idea grows from (spark scout-decision-graph); required once a seed has been kept. */
     seed: z.string().trim().regex(SEED_REF_RE, "a kept seed's <batch>/sd-NNN").optional(),
     /** A stats idea's illustrative brief and its approach: required on target `stats`, refused on any other. */
@@ -122,14 +137,15 @@ const ideaSchema = z
     card: cardSchema.optional(),
   })
   .strict()
+  .refine((b) => !sameWords(b.aim, b.prompt), { message: "the aim says why the run was chosen; it is not the image prompt", path: ["aim"] })
   .refine((b) => b.target !== "stats" || b.reel !== undefined, { message: "a stats idea carries its reel: {brief, approach}", path: ["reel"] })
   .refine((b) => b.target === "stats" || b.reel === undefined, { message: "only a stats idea carries a reel", path: ["reel"] });
 
-export type IdeaBrief = Pick<IdeaCandidate, "title" | "target" | "prompt" | "anchor" | "use" | "aspect" | "card"> & { readonly genre: string; readonly reel?: ReelBrief; readonly seed?: SeedRef };
+export type IdeaBrief = Pick<IdeaCandidate, "title" | "target" | "prompt" | "anchor" | "use" | "app" | "aim" | "look" | "aspect" | "card"> & { readonly genre: string; readonly reel?: ReelBrief; readonly seed?: SeedRef };
 
 /** The skill's batch as briefs for `wing` (absent: the active one), or the first bad brief's place and reason; nothing is written here. */
 export function parseIdeas(raw: unknown, wing: ScoutWing = activeWing()): Result<IdeaBrief[]> {
-  if (!Array.isArray(raw)) return err("invalid", "ideas: the input is a JSON array of briefs {title, target, genre, prompt, anchor: {kind, ref}, use?, reel?}");
+  if (!Array.isArray(raw)) return err("invalid", "ideas: the input is a JSON array of briefs {title, target, genre, prompt, anchor: {kind, ref}, app, appTarget, aim, look?, reel?}");
   if (raw.length === 0) return err("invalid", "ideas: the batch holds no brief");
   const out: IdeaBrief[] = [];
   for (const [i, item] of raw.entries()) {
@@ -140,7 +156,7 @@ export function parseIdeas(raw: unknown, wing: ScoutWing = activeWing()): Result
     if (refused !== null) return err("invalid", `idea ${i + 1}: ${refused.path}: ${refused.message}`, { detail: `idea ${i + 1}` });
     // The candidate holds an aspect only when it is not the scout frame's: every older idea reads 16:9.
     const aspect = b.aspect ?? WING_ASPECT[wing];
-    out.push({ title: b.title, target: b.target, genre: b.genre, prompt: b.prompt, anchor: { kind: b.anchor.kind, ref: b.anchor.ref }, ...(b.use === undefined ? {} : { use: b.use }), ...(b.reel === undefined ? {} : { reel: b.reel as ReelBrief }), ...(b.seed === undefined ? {} : { seed: b.seed }), ...(aspect === "16:9" ? {} : { aspect }), ...(b.card === undefined ? {} : { card: b.card }) });
+    out.push({ title: b.title, target: b.target, genre: b.genre, prompt: b.prompt, anchor: { kind: b.anchor.kind, ref: b.anchor.ref }, use: `${b.app}: ${b.appTarget}`, app: b.app, aim: b.aim, ...(b.look === undefined ? {} : { look: b.look }), ...(b.reel === undefined ? {} : { reel: b.reel as ReelBrief }), ...(b.seed === undefined ? {} : { seed: b.seed }), ...(aspect === "16:9" ? {} : { aspect }), ...(b.card === undefined ? {} : { card: b.card }) });
   }
   return ok(out);
 }
@@ -212,13 +228,17 @@ export async function ideasAct(ctx: ActContext, id: NightId, raw: unknown, engin
   const briefs = parsed.value;
   const seeded = await checkIdeaSeeds(briefs);
   if (!seeded.ok) throw new Refusal(seeded.error.message);
+  const wingNow = activeWing();
+  const others = (await readAllNights()).filter((n) => n.id !== id);
+  const repeated = repeatRefusal(briefs, [...others, await readNight(id)], wingNow);
+  if (repeated !== undefined) throw new Refusal(repeated);
   const { mode } = await launchable(ctx, id);
   const askedReels = briefs.filter(isReel).length;
 
   let made: IdeaCandidate[] = [];
   let full: string | undefined;
   await mutateNight(id, (n) => {
-    full = over(id, "ideas", ideasUsed(n), ideaCapOf(n), briefs.length - askedReels) ?? over(id, "stats reels", reelsUsed(n), reelCapOf(n), askedReels);
+    full = repeatRefusal(briefs, [...others, n], wingNow) ?? over(id, "ideas", ideasUsed(n), ideaCapOf(n), briefs.length - askedReels) ?? over(id, "stats reels", reelsUsed(n), reelCapOf(n), askedReels);
     if (full !== undefined) return n;
     let next = n;
     made = [];

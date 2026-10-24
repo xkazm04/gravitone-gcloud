@@ -98,6 +98,10 @@ const brief = (title: string, o: Record<string, unknown> = {}) => ({
   genre: "character poster",
   prompt: `A poster of a woman aged 34, ${title.toLowerCase()}, painterly finish, three-quarter view, soft rim light.`,
   anchor: { kind: "watch", ref: "- look: painterly portraits" },
+  app: "roleplay",
+  appTarget: "avatar portrait for a companion",
+  aim: "extract a new artstyle: painterly finish",
+  look: "painterly-noir",
   ...o,
 });
 const MUSE = [
@@ -105,6 +109,8 @@ const MUSE = [
   brief("Rain-lit station farewell", { target: "scene", prompt: "Two women aged 29 and 41 share an umbrella on a rain-lit platform, anime cel shading, wide frame." }),
   brief("Mara Veil", { target: "character", card: CARD, prompt: "Mara Veil, aged 34, auburn bob, grey eyes, freckles, long camel trench coat, photoreal portrait." }),
 ];
+// The live night draws a woman the dry night did not: the repeat guard (lib/foundry/scout/ideaRepeat.ts) refuses a card or look drawn on an earlier night.
+const LIVE_MUSE = [MUSE[0], MUSE[1], brief("Ines Roca", { target: "character", card: { ...CARD, name: "Ines Roca" }, look: "painterly-ines", prompt: "Ines Roca, aged 34, auburn bob, grey eyes, freckles, long camel trench coat, photoreal portrait." })];
 const SCOUT = [brief("Lantern fishers at low tide", { target: "scene", prompt: "Lantern fishers at low tide, loose gouache thumbnail, wide frame." })];
 
 const refusal = (raw: unknown, wing: "scout" | "muse"): string => {
@@ -128,7 +134,7 @@ describe("the muse door", () => {
   });
 
   it("refuses a target the wing does not draw", () => {
-    expect(muse({ target: "asset3d", use: "a game's armoury" })).toBe("idea 2: target: asset3d is not drawn in the muse wing (it draws style, scene, character)");
+    expect(muse({ target: "asset3d", app: "videogame", appTarget: "a game's armoury" })).toBe("idea 2: target: asset3d is not drawn in the muse wing (it draws style, scene, character)");
     const reel = { brief: { case: "c", title: "t", hook: "h", unit: "u", kind: "counter", data: [1], illustrative: true }, approach: { name: "n", medium: "svg", grammar: "stepped", density: "low", direction: "d", falsifier: "f" } };
     const stats = muse({ target: "stats", reel });
     expect(stats.startsWith("idea 2: reel.") ? "the reel fixture no longer parses" : stats).toBe("idea 2: target: stats is not drawn in the muse wing (it draws style, scene, character)");
@@ -158,7 +164,7 @@ describe("the muse door", () => {
     expect(muse({ genre: "schoolgirl drama" })).toMatch(/^idea 2: genre: "schoolgirl" is a youth word/);
     expect(muse({ target: "character", card: { ...CARD, look: "petite girl, freckles" }, prompt: "Mara Veil, aged 34." })).toMatch(/^idea 2: card\.look: "petite girl" is a youth word/);
     expect(muse({ prompt: "A woman aged 30 in lingerie, painterly." })).toBe('idea 2: prompt: "lingerie" is a nudity or sexual word; the muse wing is SFW');
-    expect(muse({ use: "an NSFW pin-up" })).toMatch(/^idea 2: use: "NSFW" is a nudity or sexual word/);
+    expect(muse({ appTarget: "an NSFW pin-up" })).toMatch(/^idea 2: appTarget: "NSFW" is a nudity or sexual word/);
     expect(muse({ anchor: { kind: "watch", ref: "- look: topless beach" } })).toMatch(/^idea 2: anchor\.ref: "topless" is a nudity or sexual word/);
     expect(muse({ prompt: "His girlfriend, aged 33, laughs at a kidney-shaped pool, painterly." })).toBe("ok");
   });
@@ -169,7 +175,7 @@ describe("the muse door", () => {
 
   it("leaves the scout door as it was, and refuses a card or a character there", () => {
     const r = parseIdeas(SCOUT, "scout");
-    expect(r.ok && r.value[0]).toEqual({ title: SCOUT[0]?.title, target: "scene", genre: "character poster", prompt: SCOUT[0]?.prompt, anchor: SCOUT[0]?.anchor });
+    expect(r.ok && r.value[0]).toEqual({ title: SCOUT[0]?.title, target: "scene", genre: "character poster", prompt: SCOUT[0]?.prompt, anchor: SCOUT[0]?.anchor, use: "roleplay: avatar portrait for a companion", app: "roleplay", aim: "extract a new artstyle: painterly finish", look: "painterly-noir" });
     expect(refusal([brief("a", { target: "character", card: CARD })], "scout")).toBe("idea 1: target: character is the muse wing's target (--wing muse)");
     expect(refusal([brief("a", { card: CARD })], "scout")).toBe("idea 1: card: a character card is the muse wing's (--wing muse)");
     // No age and a refused word pass on the scout wing: its line is its own.
@@ -291,7 +297,7 @@ describe("a muse night's ideas job", () => {
       },
     };
     const night = await openIn("muse", LIVE, ["--live"]);
-    const r = await cli(["--wing", "muse", "ideas", night, "--json", batch(MUSE)], { env: LIVE, ports });
+    const r = await cli(["--wing", "muse", "ideas", night, "--json", batch(LIVE_MUSE)], { env: LIVE, ports });
     expect(r.code, r.err).toBe(0);
     expect(seen.map((g) => [g.aspect, g.quality, g.prefer])).toEqual(Array(3).fill(["9:16", "low", "leonardo-studio"]));
     expect(FAKE_LEONARDO_STUDIO.calls.map((c) => c.aspect)).toEqual(["9:16", "9:16", "9:16"]);

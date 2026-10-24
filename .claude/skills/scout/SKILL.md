@@ -231,7 +231,7 @@ the worker while discovery goes on, so brief them right after the assets. Up to 
    refuses any other word), the falsifier written before anything renders. `prompt` is your one-paragraph
    direction to the author turn.
 5. **The batch goes through the ideas door**, target `stats`, `reel: {brief, approach}`:
-   `{"title": "<headline, <= 90 chars>", "target": "stats", "prompt": "<direction>", "anchor": {"kind": "watch|gap|free", "ref": "<line or empty>"}, "use": "<content>", "reel": {...}}`
+   `{"title": "<headline, <= 90 chars>", "target": "stats", "prompt": "<direction>", "anchor": {"kind": "watch|gap|free", "ref": "<line or empty>"}, "app": "<application>", "appTarget": "<what it must fit>", "aim": "<why this run>", "reel": {...}}`
    in a JSON array -> `npx tsx pipeline/scout.mts ideas <night> --json <file>`. One bad brief refuses
    the whole batch with its place and reason: fix that brief, resend the batch. The reels job is
    always queued, never driven here; its tile (frame 120) reaches the packet's ideas tab when the
@@ -256,13 +256,15 @@ night can ask: one picture of a rough intent, one keystroke to block it or devel
 3. **Grow them from kept seeds.** Every `## Seeds to develop` line that `needs: ideas` gets 1-2 ideas
    first; the rest of the cap goes to kept seeds by the split's targets, mostly inside confirmed
    directions, a third still exploring. Spread the genres (above) when no seed is kept yet.
-4. **Each idea** - `{title, target, genre, seed, use, anchor, prompt}` (`seed: <batch>/sd-NNN` - required
+4. **Each idea** - `{title, target, genre, seed, app, appTarget, aim, anchor, prompt}` (`seed: <batch>/sd-NNN` - required
    once any seed is kept; the door refuses an unkept or paused one):
    - `title` - the idea as a headline (<= 90 chars): what the video IS, not a technique;
    - `target` - what a keep builds next night: `scene` (a shot with a clip), `style` (the video's look),
      `asset3d` (a game asset), or `stats` (a stats reel - step 1c);
    - `genre` - one genre from the spread, in plain words (`animated comedy sketch`);
-   - `use` - the video it serves, format first: `a 30 s Short: ...` or `a 3-minute video: ...`;
+   - `app` - the application the output is for, one of `videogame|dating-sim|roleplay|companion-chat|genre-video|short|other`;
+   - `appTarget` - the specific target inside it, format first: `a 30 s Short: ...`, `a 3-minute video: ...`, `a visual novel, first-meeting card` (the door stores `use` as `<app>: <appTarget>`);
+   - `aim` - ONE sentence, WHY this idea and not another: extract a new artstyle, test a technique, build a scene as the baseline of a genre video, harden an existing look, or fill a graph layer the nights lack (many characters and nothing to do with them; too few artstyles to vary a genre). Read the graph's gaps first and name the layer. It is never the prompt: the prompt travels in its own field and the operator reads it only after triage;
    - `anchor` - `{kind: watch|gap|free, ref: <the line, or empty>}`;
    - `prompt` - a concept artboard of that video's key moment, in craft words (never a person, a title, a
      studio or a franchise): the subject, the staging, the look, the light.

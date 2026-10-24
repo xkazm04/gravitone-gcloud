@@ -112,9 +112,12 @@ const idea = (title: string, o: Record<string, unknown> = {}) => ({
   genre: "animated short",
   prompt: `A rough artboard: ${title.toLowerCase()}, loose gouache thumbnail, wide frame, one figure small against the ground.`,
   anchor: { kind: "watch", ref: "- tag: gouache thumbnails" },
+  app: "short",
+  appTarget: "animated short cold open",
+  aim: "extract a new artstyle from gouache thumbnails",
   ...o,
 });
-const THREE = [idea("Lantern fishers at low tide"), idea("Salt flats under a green dusk", { target: "style", anchor: { kind: "gap", ref: "palette: dusk greens" } }), idea("Moth-wing shield", { target: "asset3d", anchor: { kind: "free", ref: "" }, use: "a mobile game's armoury screen" })];
+const THREE = [idea("Lantern fishers at low tide"), idea("Salt flats under a green dusk", { target: "style", anchor: { kind: "gap", ref: "palette: dusk greens" } }), idea("Moth-wing shield", { target: "asset3d", anchor: { kind: "free", ref: "" }, app: "videogame", appTarget: "a mobile game's armoury screen" })];
 
 async function open(args: string[] = [], env: Record<string, string | undefined> = DRY): Promise<string> {
   const r = await cli(["open", "--json", ...args], { env });
@@ -171,7 +174,7 @@ describe("a dry night draws stand-ins", () => {
       ["c-02", "rendered", "ideas/c-02.png", "style", []],
       ["c-03", "rendered", "ideas/c-03.png", "asset3d", []],
     ]);
-    expect(ideas[2]).toMatchObject({ anchor: { kind: "free", ref: "" }, use: "a mobile game's armoury screen", prompt: THREE[2]?.prompt, genre: "animated short" });
+    expect(ideas[2]).toMatchObject({ anchor: { kind: "free", ref: "" }, use: "videogame: a mobile game's armoury screen", app: "videogame", aim: "extract a new artstyle from gouache thumbnails", prompt: THREE[2]?.prompt, genre: "animated short" });
     for (const c of ideas) expect(readFileSync(resolveInNight(night, c.image ?? "")).subarray(1, 4).toString("ascii")).toBe("PNG");
     expect(FAKE_LEONARDO_STUDIO.calls).toEqual([]);
     expect((await readNight(night)).jobs).toEqual([`job:scout-ideas:${night}:c-01`]);

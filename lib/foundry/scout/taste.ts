@@ -1,10 +1,11 @@
 import type { LoadResource, LoadSummary } from "@gt/domain/load";
 
 import { developedOf } from "./direction";
+import { alreadyDrawn } from "./ideaRepeat";
 import { ancestryOf, listSeedBatches, seedOf } from "./seedStore";
 import { seedFacets } from "./seeds";
 import { EMPTY_STEER, pausedUnder, readSteer } from "./steer";
-import { listNights, readNight } from "./store";
+import { listNights, readAllNights, readNight } from "./store";
 import { museSections } from "./tasteMuse";
 import { CANDIDATE_KINDS, SEED_AUDIENCES, parseCellId, seedRef, type Candidate, type CandidateKind, type IdeaCandidate, type Night, type SeedBatch, type Steer } from "./types";
 import { activeWing } from "./wingScope";
@@ -67,7 +68,7 @@ function label(n: Night, c: Candidate): string {
     case "asset3d":
       return `"${c.brief.subject}" [${c.brief.class}]`;
     case "idea":
-      return `"${c.title}" [${c.target}${c.genre === undefined ? "" : ` · ${c.genre}`}]`;
+      return `"${c.title}" [${c.target}${c.genre === undefined ? "" : ` · ${c.genre}`}${c.look === undefined ? "" : ` · look: ${c.look}`}]`;
     case "direction":
       return `"${c.title}" [${c.format} · ${c.genre}]`;
     default:
@@ -389,6 +390,7 @@ export async function tasteBrief(except?: string, loadOf?: (n: Night) => LoadSum
     }
   }
   const seeds: TasteSeeds = { batches: await listSeedBatches(), steer: await readSteer().catch(() => EMPTY_STEER) };
-  const all = [...(activeWing() === "muse" ? await museSections() : []), ...(extra ?? [])];
+  // Every night on disk, the open and the uncommitted too: a card thrown last night is a name the next author must not draw again.
+  const all = [...(activeWing() === "muse" ? [...(await museSections()), ...alreadyDrawn(await readAllNights())] : []), ...(extra ?? [])];
   return tasteOf(nights, last, { seeds, ...(all.length === 0 ? {} : { extra: all }) });
 }

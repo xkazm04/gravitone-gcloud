@@ -45,7 +45,7 @@ import { museFacts, scoutFileUrl } from "./scoutWing.ts";
 //            budget, every gate's verdict and score, the variant's approach. A variant that failed
 //            or has not finished is a Loss with its own sentence.
 //   idea     ONE cell `c-12/board`, its artboard (`ideas/c-12.png`) the media, filed under
-//            `ideas`: the row is the idea's title and its studio prompt as the aim, the cell's
+//            `ideas`: the row is the idea's title, its aim (a new idea's one-sentence why; a legacy idea has none), its use and its studio prompt, the cell's
 //            meta its target and anchor - all the brief's words, verbatim. Kept, it develops
 //            next night into its target; that act reads the night's record, so nothing but
 //            `night.committed` is written for it. A stats idea (spark stats-reels) is the same
@@ -335,7 +335,7 @@ function ideaCells(night: Night, c: IdeaCandidate, media: ScoutV1["media"], out:
     url: scoutFileUrl(night.id, c.image),
     words: { label: c.title, meta: [ideaMeta(c), ...museFacts(c), seedHead(c, seeds)].filter((x) => x !== undefined).join(" · "), prompt: c.prompt },
   });
-  out.rows.push({ id: c.id, label: c.title, group: "ideas", aim: c.prompt, ...(c.use === undefined ? {} : { use: c.use }) });
+  out.rows.push({ id: c.id, label: c.title, group: "ideas", prompt: c.prompt, ...(c.aim === undefined ? {} : { aim: c.aim }), ...(c.use === undefined ? {} : { use: c.use }) });
 }
 
 /** What a kept track clip and a kept visualizer do, as the preview says it. */

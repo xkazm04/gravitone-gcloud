@@ -75,6 +75,9 @@ export type MuseBrief = {
   readonly prompt: string;
   readonly anchor: { readonly ref: string };
   readonly use?: string;
+  readonly appTarget?: string;
+  readonly aim?: string;
+  readonly look?: string;
   readonly card?: CharacterCard;
   readonly aspect?: Aspect;
 };
@@ -91,6 +94,8 @@ function texts(b: MuseBrief): [string, string][] {
     ["anchor.ref", b.anchor.ref],
   ];
   if (b.use !== undefined) out.push(["use", b.use]);
+  if (b.appTarget !== undefined) out.push(["appTarget", b.appTarget]);
+  if (b.aim !== undefined) out.push(["aim", b.aim]);
   if (b.card !== undefined) out.push(["card.name", b.card.name], ["card.look", b.card.look], ["card.personality", b.card.personality]);
   return out;
 }
@@ -104,6 +109,7 @@ export function wingRefusal(b: MuseBrief, wing: ScoutWing): DoorRefusal | null {
   }
   if (!(MUSE_TARGETS as readonly string[]).includes(b.target)) return { path: "target", message: `${b.target} is not drawn in the muse wing (it draws ${MUSE_TARGETS.join(", ")})` };
   if (b.target === "character" && b.card === undefined) return { path: "card", message: "a character idea carries her card {name, age, look, personality}" };
+  if (b.target === "character" && b.look === undefined) return { path: "look", message: "a character idea names her look direction as a slug (the repeat guard's key)" };
   if (b.target !== "character" && b.card !== undefined) return { path: "card", message: "only a character idea carries a card" };
   if (b.aspect !== undefined && !STUDIO_ASPECTS.includes(b.aspect)) return { path: "aspect", message: `the studio draws ${STUDIO_ASPECTS.join(", ")}; it has no ${b.aspect}` };
   for (const [path, s] of texts(b)) {

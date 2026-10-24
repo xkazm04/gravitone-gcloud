@@ -366,9 +366,9 @@ export function seeds(): readonly Seed[] {
           "c-03/board": { label: "A tango in an empty ballroom", meta: "scene · free · read 29 · revealing", prompt: "two dancers mid-turn in an empty ballroom, a woman aged 30 in a long evening dress, warm practicals" },
         },
         rows: [
-          { id: "c-01", label: "Mara Venn at the chart table", group: "ideas", aim: "character poster of Mara Venn, a woman aged 34" },
-          { id: "c-02", label: "Studio-lit 3D concept bust, matte clay", group: "ideas", aim: "3D concept bust of a woman aged 42, matte clay" },
-          { id: "c-03", label: "A tango in an empty ballroom", group: "ideas", aim: "two dancers mid-turn in an empty ballroom" },
+          { id: "c-01", label: "Mara Venn at the chart table", group: "ideas", use: "other: visual novel, chart-room sprite", aim: "learn a sprite pose against a chart table", prompt: "character poster of Mara Venn, a woman aged 34" },
+          { id: "c-02", label: "Studio-lit 3D concept bust, matte clay", group: "ideas", use: "companion-chat: avatar bust", aim: "extract a new artstyle: matte clay under three-point light", prompt: "3D concept bust of a woman aged 42, matte clay" },
+          { id: "c-03", label: "A tango in an empty ballroom", group: "ideas", use: "genre-video: ballroom dance scene", aim: "a scene as a genre-video baseline", prompt: "two dancers mid-turn in an empty ballroom" },
         ],
         oracle: { passed: true, summary: "3 candidates · 3 cells · 0 failed", fixture: true },
         meta: "muse · 4 ideas",
