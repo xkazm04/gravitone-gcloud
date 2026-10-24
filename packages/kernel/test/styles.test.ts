@@ -14,7 +14,7 @@ import type { StyleDraft } from "../src/styles/core.ts";
 import { applyStyleOp, catalogueRevIn, putStyleIn, readStyle } from "../src/styles/driver.ts";
 import { draftFromV1Theme, importV1ThemeIn } from "../src/styles/v1theme.ts";
 import { exportStylesJson, writeStylesExport } from "../src/styles/export.ts";
-import { draftFromV1, importV1In, readV1Catalogue } from "../src/styles/v1.ts";
+import { draftFromV1, importV1In, planImportV1In, readV1Catalogue } from "../src/styles/v1.ts";
 import { addProofsIn, adoptStyleIn, createStyleIn, recordForgeEvidenceIn } from "../src/styles/writers.ts";
 import { must, scratch, steppingClock } from "./helpers.ts";
 
@@ -416,6 +416,17 @@ describe("v1's catalogue in (the one-time import, and the hand-edit path after i
     const out = must(s.tx((t) => importV1In(t, edited.styles.map((x) => draftFromV1(x, media, "2026-10-17T00:00:00.000Z")), OP)));
     expect(out.map((o) => o.result)).toEqual(["edited", "same"]);
     expect(must(readStyle(s, "painted-3d")).style).toMatchObject({ recipe: "Paint, thicker.", evidence: [{ run: "r1" }, { run: "r2" }] });
+  });
+  it("names a second entry under an id already read, so the dry run and the run agree", () => {
+    const s = store();
+    const doc = JSON.parse(v1) as { styles: Record<string, unknown>[] };
+    const twice = JSON.stringify({ styles: [doc.styles[0], { ...doc.styles[0], recipe: "Paint, again." }] });
+    const cat = must(readV1Catalogue(twice));
+    expect(cat.refused.map((r) => [r.index, r.message])).toEqual([[1, "styles.json styles[1]: painted-3d is already styles[0]"]]);
+    const reports = cat.styles.map((x) => draftFromV1(x, () => undefined, "2026-10-17T00:00:00.000Z"));
+    const dry = must(s.read((r) => planImportV1In(r, reports))).map((o) => o.result);
+    expect(must(s.tx((t) => importV1In(t, reports, OP))).map((o) => o.result)).toEqual(dry);
+    expect(must(readStyle(s, "painted-3d")).style.recipe).toBe("Paint.");
   });
 });
 

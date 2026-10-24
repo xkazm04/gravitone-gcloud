@@ -55,16 +55,22 @@ export type V1Style = Parsed<z.output<typeof v1StyleSchema>>;
 
 const v1File = z.object({ styles: z.array(z.unknown()) });
 
-/** styles.json's text, entry by entry: a malformed entry is named, the rest still read. */
+/** styles.json's text, entry by entry: a malformed entry is named, the rest still read. A second
+ *  entry under an id already read is malformed too: importing it would edit the first in the same
+ *  run, while the dry run (planImportV1In reads the store, not its own plan) says "create" twice. */
 export function readV1Catalogue(text: string): Result<{ styles: V1Style[]; refused: { index: number; message: string }[] }> {
   const doc = parseJsonAt("styles.json", v1File, text);
   if (!doc.ok) return doc;
   const styles: V1Style[] = [];
   const refused: { index: number; message: string }[] = [];
+  const first = new Map<string, number>();
   doc.value.styles.forEach((raw, index) => {
     const s = parseAt(`styles.json styles[${index}]`, v1StyleSchema, raw);
-    if (s.ok) styles.push(s.value);
-    else refused.push({ index, message: s.error.message });
+    if (!s.ok) return void refused.push({ index, message: s.error.message });
+    const held = first.get(s.value.id);
+    if (held !== undefined) return void refused.push({ index, message: `styles.json styles[${index}]: ${s.value.id} is already styles[${held}]` });
+    first.set(s.value.id, index);
+    styles.push(s.value);
   });
   return ok({ styles, refused });
 }
