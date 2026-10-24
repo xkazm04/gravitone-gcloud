@@ -84,7 +84,11 @@ export async function ingestPatches(ws: string, dir: string, registry?: Registry
   }
   const accepted: RegistryPatch[] = [];
   const rejected: { entry: unknown; reason: string }[] = [];
-  for (const entry of Array.isArray(proposed) ? proposed.slice(0, MAX_PATCHES * 2) : []) {
+  // At most twice the limit is read; what lies past it is still named, as one row, so a proposal
+  // the gate never shows is counted where the refused ones are.
+  const read = MAX_PATCHES * 2;
+  if (Array.isArray(proposed) && proposed.length > read) rejected.push({ entry: { unread: proposed.length - read }, reason: `${proposed.length - read} more proposals past the first ${read} were not read` });
+  for (const entry of Array.isArray(proposed) ? proposed.slice(0, read) : []) {
     const o = (entry ?? {}) as Record<string, unknown>;
     const reason = patchProblem(o, nums, accepted) ?? (trial ? trialPatchProblem(o, trial) : undefined);
     if (reason) {

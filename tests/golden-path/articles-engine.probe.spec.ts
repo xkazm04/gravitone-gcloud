@@ -28,7 +28,9 @@ import { test, expect } from "@playwright/test";
 
 import { agentArgs, assertIsolatedWorkspace, classifyOutcome, parseEnvelope, runAgent } from "@/lib/agent/cliSeam";
 import { approveRun, createRun, defaultDeps, driveRun, getRunDetail, rejectRun, resumeRun } from "@/lib/articles/engine";
+import { ingestPatches } from "@/lib/articles/ingestDraft";
 import { markdownToStoryHtml } from "@/lib/articles/mediumPackage";
+import { MAX_PATCHES } from "@/lib/articles/prompt";
 import { patchIsSafe } from "@/lib/articles/registryWrite";
 import { ArticleError, readRun, runDir } from "@/lib/articles/store";
 import type { CreateRunInput, TrialExecRecord, TrialPrereg, TrialRecord, TrialResults, TrialSeal, TrialValidity, TrialVerdict } from "@/lib/articles/types";
@@ -243,6 +245,21 @@ test("a proposal outside knowledge/ and recipes/ never becomes a patch", async (
   expect(patchIsSafe("--- a/scripts/gate.mjs\n+++ b/scripts/gate.mjs\n").ok).toBe(false);
   expect(patchIsSafe("--- a/knowledge/x/../../scripts/a.md\n+++ b/knowledge/x/../../scripts/a.md\n").ok).toBe(false);
   expect(patchIsSafe("--- /dev/null\n+++ b/knowledge/t/a.md\n").ok).toBe(true);
+});
+
+test("proposals past the ones read are named in patches.rejected.json, never dropped unsaid", async () => {
+  const dir = path.join(box.dir, "ingest-run");
+  const ws = path.join(box.dir, "ingest-ws");
+  mkdirSync(dir, { recursive: true });
+  mkdirSync(path.join(ws, "out"), { recursive: true });
+  writeFileSync(path.join(dir, "sources.json"), JSON.stringify([{ n: 1 }]));
+  const proposed = Array.from({ length: MAX_PATCHES * 2 + 3 }, (_, i) => ({ id: `bad-${i}`, target: "knowledge/x.md", kind: "technique", rationale: "r", sources: [1] }));
+  writeFileSync(path.join(ws, "out", "patches.json"), JSON.stringify(proposed));
+  await ingestPatches(ws, dir);
+  const rejected = JSON.parse(readFileSync(path.join(dir, "patches.rejected.json"), "utf8")) as { reason: string }[];
+  expect(rejected.filter((r) => /^id must be/.test(r.reason))).toHaveLength(MAX_PATCHES * 2);
+  expect(rejected.map((r) => r.reason)).toContain(`3 more proposals past the first ${MAX_PATCHES * 2} were not read`);
+  expect(JSON.parse(readFileSync(path.join(dir, "patches.json"), "utf8"))).toEqual([]);
 });
 
 test("a run on a registry subject records the subject and reads its golden path", async () => {
