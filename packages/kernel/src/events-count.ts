@@ -74,7 +74,10 @@ export function countEvents(store: Store, input: Omit<EventQuery, "limit">): Res
     const facets: FacetCount[] = GROUPS.map((g) => {
       const { where, params } = whereOf(clauses.filter((c) => c.facet !== g.facet));
       const args: Param[] = [...params, TOP + 1];
-      const rows = r.all(`SELECT ${g.column} AS value, count(*) AS n FROM events${where} GROUP BY ${g.column} ORDER BY n DESC, value LIMIT ?`, ...args);
+      // The NULL group is `none`, counted below; left in, it would take one of the TOP + 1 slots
+      // ahead of the values and hide that the facet was cut.
+      const valuedOnly = `${where === "" ? " WHERE" : `${where} AND`} ${g.column} IS NOT NULL`;
+      const rows = r.all(`SELECT ${g.column} AS value, count(*) AS n FROM events${valuedOnly} GROUP BY ${g.column} ORDER BY n DESC, value LIMIT ?`, ...args);
       const sum = r.get(`SELECT count(*) AS n, count(${g.column}) AS valued FROM events${where}`, ...params);
       const values: FacetValue[] = [];
       for (const row of rows) {

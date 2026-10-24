@@ -131,4 +131,13 @@ describe("countEvents", () => {
     expect(type).toMatchObject({ truncated: true, other: 10 });
     expect(type?.values).toHaveLength(50);
   });
+
+  it("rows with no value never take one of the shown slots: 60 lanes beside many laneless rows is still cut", () => {
+    const wide = tpl.fresh();
+    must(wide.tx((t) => Array.from({ length: 60 }, (_, i) => append(t, { ...own(i), lane: `lane-${String(i).padStart(2, "0")}` }))));
+    must(wide.tx((t) => Array.from({ length: 100 }, (_, i) => append(t, { ...own(i), lane: undefined }))));
+    const lane = must(countEvents(wide, {})).facets.find((f) => f.facet === "lane");
+    expect(lane).toMatchObject({ truncated: true, other: 10, none: 100 });
+    expect(lane?.values).toHaveLength(50);
+  });
 });
