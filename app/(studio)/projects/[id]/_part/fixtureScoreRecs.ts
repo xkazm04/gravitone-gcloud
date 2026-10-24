@@ -13,7 +13,6 @@ import type { ScoreSpot } from "@/lib/score/spots";
 import { sceneClock } from "@/lib/studio/score";
 import type { Scene } from "@/lib/studio/projectTypes";
 
-import type { Ctx } from "./fixture.ts";
 import type { KCtx, Obj, Recs } from "./kinds.ts";
 
 // THE SCORE PART'S RECORDS AND WHAT THE CUT SHARES WITH IT (L40): the working record and its
@@ -85,12 +84,8 @@ export function pictureOf(ctx: KCtx): Picture | null {
   return { scenes: p.scenes, clock: sceneClock(p.scenes), totalS: p.totalS };
 }
 
-/** The engine a dry act's stand-in lands under: the part's chosen option, marked dry. */
-export function engineOf(ctx: Ctx, kind: string, seconds: number): EngineView {
-  const part = ctx.plan.parts.find((p) => p.kind === kind);
-  const o = part !== undefined && "options" in part ? part.options.find((x) => x.key === part.chosen) : undefined;
-  return { provider: o?.provider ?? "dry", model: o?.model ?? "stand-in", usd: null, unpricedReason: "dry run", seconds, mode: "dry" };
-}
+/** The engine a dry act's stand-in lands under: research's and script's one function, for every kind. */
+export { dryEngine as engineOf } from "./fixtureResearch.ts";
 
 /** A take is IN HAND when its bytes are (a blob ref) or it is a dry stand-in, which says so. */
 export const held = (t: TakeRec | undefined): boolean => t !== undefined && (t.blob !== undefined || t.engine?.mode === "dry");
