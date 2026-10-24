@@ -2264,6 +2264,15 @@ export const MUTANTS: UnitMutant[] = [
     typecheck: true,
   },
   {
+    id: "partview-part-kinds-drift-from-the-record",
+    test: "packages/domain/test/partView.test.ts",
+    file: "packages/domain/src/partView.ts",
+    find: "export type PartKind = WorkKind | OperatorKind;",
+    replace: "export type PartKind = WorkKind | \"gate\";",
+    why: "The part rail's kind union loses a kind the record door admits, so a tab for a slot part is typed as a kind no view knows and the plan's last step has no ◆.",
+    typecheck: true,
+  },
+  {
     id: "partview-free-choice-ignored",
     test: "packages/domain/test/partView.test.ts",
     file: "packages/domain/src/partView.ts",

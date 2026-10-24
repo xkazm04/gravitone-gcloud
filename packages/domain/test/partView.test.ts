@@ -1,11 +1,12 @@
 // The part view contract's few values (Phase 4 wave C, L38): which kinds have an editor, which
 // face a discipline's editors wear, which acts a kind may launch, and the op trail's words.
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
 import { DISCIPLINES } from "@gt/catalog/projects";
 import { RECIPES } from "@gt/catalog/recipes";
 
-import { EDITOR_KINDS, PART_ACTS, actBelongs, isEditorKind, opLabel, researchFaceOf, scriptFaceOf, type ResearchOp, type ScriptOp } from "../src/partView.ts";
+import { EDITOR_KINDS, PART_ACTS, actBelongs, isEditorKind, opLabel, researchFaceOf, scriptFaceOf, type PartKind, type ResearchOp, type ScriptOp } from "../src/partView.ts";
+import type { PartKind as RecordPartKind } from "../src/part.ts";
 
 describe("editor kinds", () => {
   // Wave C grew the list: L39 frames and motion, L40 score, cut and the album and explainer parts.
@@ -23,6 +24,12 @@ describe("editor kinds", () => {
     for (const r of RECIPES.filter((x) => x.family === "film")) plans(r.id, ["research", "script", "frames", "motion", "score", "cut"]);
     plans("album-video", ["words", "render"]);
     plans("explainer", ["article", "strips", "voice", "cut"]);
+  });
+});
+
+describe("part kinds", () => {
+  test("the view names the same part kinds as the record door (one source: @gt/catalog/recipes)", () => {
+    expectTypeOf<PartKind>().toEqualTypeOf<RecordPartKind>();
   });
 });
 

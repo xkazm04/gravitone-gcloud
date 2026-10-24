@@ -19,7 +19,7 @@
 //   · Generation is a job behind a receipt (COMMON decision 3): a `PartAct` is priced first and
 //     confirmed second; nothing a model writes lands without one.
 
-import type { WorkKind } from "@gt/catalog/recipes";
+import type { OperatorKind, WorkKind } from "@gt/catalog/recipes";
 import type { Discipline } from "@gt/catalog/projects";
 
 import type { Receipt } from "./produce.ts";
@@ -36,7 +36,7 @@ export * from "./partView.album.ts";
 /* ── kinds ────────────────────────────────────────────────────────────────── */
 
 /** Every part kind a recipe plans (`@gt/catalog/recipes` WORK_KINDS + OPERATOR_KINDS). */
-export type PartKind = WorkKind | "gate" | "slot";
+export type PartKind = WorkKind | OperatorKind;
 
 /** The kinds whose editor exists. Frames, motion, score and cut join in later lots, each adding
  *  its entry to `PartData`; until then their route is a 404, never an empty editor. */
