@@ -42,6 +42,8 @@ import type { TextProvenance, TextRequest, TextResult } from "@/lib/text/types";
 import { PromptUnavailable, topicRefusal } from "@/lib/turns/assemble/research";
 import { RESEARCH_SPEC, type ResearchResult } from "@/lib/turns/kinds/research";
 
+import { codeRoot } from "./forge.ts";
+
 
 // THE RESEARCH PRODUCER, BOUND (Phase 4 wave C, L37) - packages/producers/src/research's ports
 // over v1's engines, and, first, THE GLUE EVERY STUDIO STEP BINDING SHARES (the kernel this
@@ -71,6 +73,15 @@ export function stepKernel(): StepKernel {
   const k = processKernel(storeLocation(OUT_DIRNAME));
   if (!k.ok) throw k.error;
   return { store: k.value.store, fx: effectsOf(k.value.store) };
+}
+
+/** A prompt document the code ships (`pipeline/<name>`), found from the CHECKOUT, not the cwd (forge.ts
+ *  `codeRoot`: a server may run in a data universe). Unreadable, it is the turn's PromptUnavailable - a
+ *  broken install, the job's sentence, never a retry (`textFailure`). */
+export async function promptDoc(name: string, code: string = codeRoot()): Promise<string> {
+  return readFile(path.join(code, "pipeline", name), "utf8").catch(() => {
+    throw new PromptUnavailable(`The prompt could not be read from pipeline/${name}.`);
+  });
 }
 
 export function must<T>(r: Result<T>): T {
@@ -275,9 +286,7 @@ async function ideasUnit(ctx: StepContext, unit: ActUnit, s: PartSnapshot, f: Pa
   if (brief === undefined) return { kind: "fatal", code: "invalid", message: "the brief is empty" };
   const template = adTemplateOf(f.plan.project.recipe);
   const request = { brief, template, targetS: template === "ad-spot-30" ? 30 : 15 };
-  const doc = await readFile(path.join(process.cwd(), "pipeline", "ADS-IDEAS-PROMPT.md"), "utf8").catch(() => {
-    throw new PromptUnavailable("The prompt could not be read from pipeline/ADS-IDEAS-PROMPT.md.");
-  });
+  const doc = await promptDoc("ADS-IDEAS-PROMPT.md");
   // Deterministic per job and attempt-stable: the angle draw is the job's, not Math.random's.
   const seed = parseInt(createHash("sha256").update(ctx.key).digest("hex").slice(0, 7), 16);
   const req: TextRequest = { prompt: ideasPrompt(doc, request, seed), turn: "ad-ideas", schema: IDEAS_SCHEMA };

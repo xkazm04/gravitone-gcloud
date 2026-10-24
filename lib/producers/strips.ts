@@ -23,6 +23,7 @@ import { cardWorstUsd, RENDER_ESTIMATE, TURN_ESTIMATE } from "@gt/producers/stri
 
 import { runAgent, type AgentResult, type RunAgentInput } from "../agent/cliSeam.ts";
 import { OUT_DIRNAME } from "../fixtures/mode.ts";
+import { codeRoot } from "./forge.ts";
 import { blobRootOf } from "../kernelProcess.ts";
 import { makeAsset, standInTurn, type StripTurn } from "../foundry/strips/author.ts";
 import { FoundryError } from "../foundry/runStore.ts";
@@ -194,9 +195,11 @@ function freeJobId(store: Store, runId: string): string {
 
 const FINISHED: readonly Job["state"][] = ["done", "cancelled"];
 
-/** Every brief a card needs is on disk: refused at the receipt, before a turn is bought for a card that cannot be authored. */
+/** Every brief a card needs is in the checkout (forge.ts `codeRoot`, not the cwd): refused at the receipt, before a turn
+ *  is bought for a card that cannot be authored. */
 function missingBriefs(cases: Iterable<string>): string[] {
-  return [...new Set(cases)].filter((c) => !existsSync(path.join(process.cwd(), "pipeline", "strips", "data", `${c}.json`)));
+  const code = codeRoot();
+  return [...new Set(cases)].filter((c) => !existsSync(path.join(code, "pipeline", "strips", "data", `${c}.json`)));
 }
 
 export async function launchStrips(target: StripsTarget, opts: LaunchStripsOptions): Promise<Result<StripsLaunch>> {
