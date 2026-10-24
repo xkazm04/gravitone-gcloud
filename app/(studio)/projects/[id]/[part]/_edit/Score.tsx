@@ -132,7 +132,9 @@ function Spotting(p: P & { readonly data: SpottingData }) {
       },
       "nudge-span": ({ index }) => (cue === null ? false : shift(cue, index === 0 ? -1 : 1)),
       render: () => (cue === null || cue.bpm === null ? false : render(cue)),
-      "add-cue": () => send({ op: "cue-add" }),
+      // The add cue button's own guard: with no picture the press used to reach the store, which
+      // answered "every scene has a cue" of a film with no scenes.
+      "add-cue": () => (busy || d.scenes.length === 0 ? false : send({ op: "cue-add" })),
       zoom: ({ index }) => setZoom((z) => ZOOMS[Math.max(0, Math.min(ZOOMS.length - 1, ZOOMS.indexOf(z) + (index === 0 ? 1 : -1)))] ?? "1"),
       deselect: () => setSel(null),
     },

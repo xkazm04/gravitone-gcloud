@@ -11,12 +11,13 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-type Registered = { mode: string; verbs: Set<string>; facts: readonly string[] };
+type Handler = (hit: { cap: string; index: number }) => void | false;
+type Registered = { mode: string; verbs: Set<string>; facts: readonly string[]; handlers: Record<string, Handler> };
 const registered = vi.hoisted((): Registered[] => []);
 vi.mock("@gt/ui/keymap/dispatch", async (orig) => ({
   ...(await orig<object>()),
-  useKeys: (mode: string, handlers: Record<string, unknown>, opts: { facts?: readonly string[] } = {}) => {
-    registered.push({ mode, verbs: new Set(Object.keys(handlers)), facts: opts.facts ?? [] });
+  useKeys: (mode: string, handlers: Record<string, Handler>, opts: { facts?: readonly string[] } = {}) => {
+    registered.push({ mode, verbs: new Set(Object.keys(handlers)), facts: opts.facts ?? [], handlers });
   },
 }));
 
@@ -35,7 +36,7 @@ vi.mock("@/lib/sound/mv/compositor", () => ({
 
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 
-import type { AdFinishData, AdsClips, AdsTakes, BedData, PartView, RenderData } from "@gt/domain/partView";
+import type { AdFinishData, AdsClips, AdsTakes, BedData, PartOp, PartView, RenderData, SpottingData } from "@gt/domain/partView";
 import { BINDINGS } from "@gt/ui/keymap/bindings";
 import { keyTable, type KeyRow } from "@gt/ui/keymap/keymap";
 
@@ -43,6 +44,7 @@ import { useTransport } from "../../app/(studio)/projects/[id]/[part]/_edit/CutC
 import { CutFinish } from "../../app/(studio)/projects/[id]/[part]/_edit/CutFinish.tsx";
 import type { EditorProps, Frame } from "../../app/(studio)/projects/[id]/[part]/_edit/PartEditor.tsx";
 import { RenderEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Render.tsx";
+import { ScoreEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Score.tsx";
 import { ScoreBed } from "../../app/(studio)/projects/[id]/[part]/_edit/ScoreBed.tsx";
 import { AdsClipsEditor, AdsTakesEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Takes.tsx";
 import { harness } from "../golden-path/_studio/hooks.ts";
@@ -222,5 +224,35 @@ describe("the transport at the end of the film", () => {
   it("a shuttle from the end starts again from the top, like play", async () => {
     const r = await atTheEnd((tr) => tr.shuttle(2));
     expect(r).toEqual({ t: 0.2, playing: true });
+  });
+});
+
+/* ── a key and its button say the same thing ───────────────────────────── */
+
+describe("the score's N is the add cue button", () => {
+  const spotting = (scenes: SpottingData["scenes"]): SpottingData => ({ face: "spotting", totalS: 0, targetS: null, scenes, cues: [], proposal: { pending: false, unplaced: [] }, gaps: [], coveredS: 0, turn: null, lab: [] });
+  async function pressN(d: SpottingData, busy: boolean): Promise<{ answer: void | false; sent: PartOp[] }> {
+    const sent: PartOp[] = [];
+    const p = { ...props(undefined), busy, send: (op: PartOp) => void sent.push(op), view: { data: d } as PartView<"score"> };
+    const face = ScoreEditor(p) as ReactElement; // the Spotting face, called as the function it is
+    await harness(() => (face.type as (q: unknown) => ReactElement)(face.props), { settleWhen: "stable" }).settleUp();
+    const n = registered.find((r) => r.mode === "part.score")?.handlers["add-cue"];
+    if (n === undefined) throw new Error("the score registered no add-cue");
+    return { answer: n({ cap: "N", index: 0 }), sent };
+  }
+
+  it("with no picture on the clock N is declined, where the button is disabled", async () => {
+    // The fixture side answered such a press "every scene has a cue" - of a film with no scenes.
+    expect(await pressN(spotting([]), false)).toEqual({ answer: false, sent: [] });
+  });
+
+  it("while a write is in flight N is declined, where the button is disabled", async () => {
+    const scenes = [{ id: "u1", index: 1, label: "open", mood: "", startS: 0, durS: 4 }];
+    expect(await pressN(spotting(scenes), true)).toEqual({ answer: false, sent: [] });
+  });
+
+  it("with picture and nothing in flight N adds a cue", async () => {
+    const scenes = [{ id: "u1", index: 1, label: "open", mood: "", startS: 0, durS: 4 }];
+    expect((await pressN(spotting(scenes), false)).sent).toEqual([{ op: "cue-add" }]);
   });
 });

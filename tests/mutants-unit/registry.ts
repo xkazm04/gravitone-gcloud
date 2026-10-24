@@ -5538,4 +5538,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "const HOME_PREFIX = /^~\\//;",
     why: "On Windows an album folder typed as ~\\Music\\Misu resolves under the server's cwd, and the batch and the import both report there is no folder.",
   },
+  {
+    id: "score-n-adds-past-a-disabled-button",
+    test: "tests/next-server/part-editor-media.test.ts",
+    file: "app/(studio)/projects/[id]/[part]/_edit/Score.tsx",
+    find: "\"add-cue\": () => (busy || d.scenes.length === 0 ? false : send({ op: \"cue-add\" })),",
+    replace: "\"add-cue\": () => send({ op: \"cue-add\" }),",
+    why: "N on a score with no picture reaches the store, which answers \"every scene has a cue\" of a film with no scenes, where the add cue button beside it is disabled.",
+  },
 ];
