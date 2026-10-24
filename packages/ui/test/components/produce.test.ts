@@ -285,6 +285,8 @@ describe("markup", () => {
   test("a held lane says v1's sentence verbatim and offers one act", () => {
     const html = renderToStaticMarkup(h(LaneHold, { lane: "box.chrome", job: "Hunt", stage: "submit · 2 of 4", nowMs: NOW, onAck: noop, busy: false }));
     expect(html).toContain(HOLD_SENTENCE);
+    // the group is named as its chip draws the lane, never by the lane's id.
+    expect(html).toContain('aria-label="Render box · Chrome on hold"');
     expect(HOLD_SENTENCE).toBe("credits may be spent - look first");
     expect(html).toContain("Acknowledge");
   });
