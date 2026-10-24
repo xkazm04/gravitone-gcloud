@@ -222,6 +222,15 @@ export const PRICES: readonly ModelPrice[] = [
       "reports credits on every call, and a reported figure always outranks this one.",
     checked: "2026-10-22",
   },
+  // comfy-flux2 - Flux 2 dev on this box's ComfyUI (providers/comfyFlux.ts): no vendor, no meter.
+  {
+    provider: "comfy-flux2",
+    model: "flux2-dev-fp8",
+    bills: "per-image",
+    usdPerImage: 0,
+    source: "A local model on this box's GPU: no vendor bills it. The card's minutes are the cost, recorded as the job's gpu.local effort, not in USD.",
+    checked: "2026-10-25",
+  },
 ];
 
 const rowFor = (provider: ProviderId, model: string): ModelPrice | undefined =>

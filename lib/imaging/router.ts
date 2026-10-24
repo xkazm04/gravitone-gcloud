@@ -37,6 +37,7 @@ import { logCall } from "./log";
 import { agyProvider } from "./providers/agy";
 import { leonardoStudioProvider } from "./providers/leonardoStudio";
 import { leonardoFlareProvider } from "./providers/leonardoFlare";
+import { comfyFluxProvider } from "./providers/comfyFlux";
 import { googleProvider } from "./providers/google";
 import { leonardoProvider } from "./providers/leonardo";
 import { ollamaProvider } from "./providers/ollama";
@@ -118,6 +119,7 @@ const PROVIDERS: Record<ProviderId, () => ImagingProvider> = {
   agy: agyProvider,
   "leonardo-studio": leonardoStudioProvider,
   "leonardo-flare": () => leonardoFlareProvider(),
+  "comfy-flux2": () => comfyFluxProvider(),
 };
 
 /**
@@ -137,7 +139,7 @@ const PROVIDERS: Record<ProviderId, () => ImagingProvider> = {
  * reason in a different currency: it is the operator's ruling for /scout's
  * stills (2026-10-22), and no plan row was asked to change for it.
  */
-const PREFER_ONLY: ReadonlySet<ProviderId> = new Set<ProviderId>(["leonardo-studio", "leonardo-flare"]);
+const PREFER_ONLY: ReadonlySet<ProviderId> = new Set<ProviderId>(["leonardo-studio", "leonardo-flare", "comfy-flux2"]);
 
 /** Is this provider reachable only by a request that names it? */
 export const isPreferOnly = (id: ProviderId): boolean => PREFER_ONLY.has(id);
