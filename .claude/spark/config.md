@@ -135,3 +135,10 @@ One AskUserQuestion call of up to 4 questions per wave.
   purpose needs a live call (fx-line shipped dry until review). Mutant entries returned as scratch `mutants.ts` and merged
   by the Director: zero registry collisions across 5 builders. Resuming a finished builder with SendMessage for a test
   rework cost a fraction of a new brief.
+- 2026-10-24 (explainer-real-article-strips) · A gate shipped green in the previous spark was red on main: its builder
+  wrote the prompt LF in the worktree, a checkout gives CRLF, the parser matched only 
+. **After every ff-merge, re-run
+  the spark's new check:* gates in the MAIN checkout** (fresh files from git), and prove any text-parsing gate on a CRLF
+  copy. Also: a fan-out of a priced act must state in the brief how the confirmed ceiling divides (a builder copied it
+  to every job); one real unit at the go-gate ($2.67) surfaced a gate near-miss no fake could (rounds 1 -> 2); inline
+  nested quoting mangled paths three times in one session - write scripts to files.
