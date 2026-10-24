@@ -136,7 +136,14 @@ export function makeRealBoard(deps: Deps): ServerBoard {
     const held = exists(store, id);
     if (!held.ok) return held;
     const planned = await plan(id);
-    if (held.value) return planned.ok ? view(store, id, planned.value.plan) : view(store, id, undefined, await decidedExtras(store, id));
+    if (held.value) {
+      if (planned.ok) return view(store, id, planned.value.plan);
+      const v = view(store, id, undefined, await decidedExtras(store, id));
+      // A decided packet v1 refuses to plan is the expected case; an OPEN one draws bare ids and
+      // empty media on a desk still taking verdicts, and v1's reason must survive somewhere.
+      if (v.ok && v.value.view.state === "open") console.error(`[board] ${id}: open, and v1 does not plan it: ${planned.error.message}`);
+      return v;
+    }
     // Not in the kernel: open it from v1 - or say, in v1's words, why it cannot be.
     if (!planned.ok) return planned.error.code === "not-found" ? planned : err(planned.error.code, `board: ${id}: ${planned.error.message}`, { cause: planned.error });
     const p = planned.value.plan;

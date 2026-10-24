@@ -121,6 +121,27 @@ describe("the real Board port over the fixture universe", () => {
     expect(eventTypes(id)).toEqual(["decision.opened"]);
   });
 
+  it("an open packet v1 no longer plans still draws, and the server log says why", async () => {
+    const [id] = await weirIds("forge");
+    if (id === undefined) throw new Error("no forge pile");
+    must(await board.loadPacket({ id }, who));
+    const blind = makeRealBoard({
+      store: () => ok(store),
+      weir: async () => [],
+      kick: () => {},
+      adapter: () => ok({ read: async () => err("unavailable", "forge: verdicts.json is unreadable") } as never),
+    });
+    const said = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const p = must(await blind.loadPacket({ id }, who));
+      expect(p.view.state).toBe("open");
+      expect(p.present.items).toEqual({});
+      expect(said.mock.calls.map((c) => String(c[0]))).toEqual([`[board] ${id}: open, and v1 does not plan it: forge: verdicts.json is unreadable`]);
+    } finally {
+      said.mockRestore();
+    }
+  });
+
   it("patch, undo, preview and commit are one kernel act each; the commit re-reads v1 and kicks the apply", async () => {
     const [id] = await weirIds("forge");
     if (id === undefined) throw new Error("no forge pile");
