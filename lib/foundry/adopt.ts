@@ -3,9 +3,9 @@
 //
 // The catalogue holds no palette and a StyleBlock needs three coloured roles,
 // so the palette is READ off one plate a human kept (the style's first kept
-// ledger row, which is the row the card shows: proven styles have no exemplars,
-// so heroOf takes kept[0]). One plate, never a merge: three plates' palettes
-// averaged is a colour nobody saw.
+// ledger row, `palettePlate` below, which the Library's style port also reads
+// to say whether a style can be adopted at all). One plate, never a merge:
+// three plates' palettes averaged is a colour nobody saw.
 //
 // NO PALETTE, NO THEME. A recognizer that throws, a plate that is not on this
 // machine, a reply that is not exactly one entry per role — each is a draft

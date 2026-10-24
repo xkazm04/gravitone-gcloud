@@ -50,9 +50,10 @@
 // a grader change hide inside the drift it is meant to detect. Rows written
 // before the stamp existed form the `unstamped` series.
 //
-// Pure: no Node, no fetch -- the /foundry page runs this over the catalogue's
-// ledger in the browser, and pipeline/foundry/calibrate.mts runs it to write
-// pipeline/foundry/grader-calibration.json.
+// Pure: no Node, no fetch -- the forge commit (lib/foundry/store.ts) and
+// pipeline/foundry/calibrate.mts both write pipeline/foundry/grader-calibration.json
+// through it, and the Board's forge source (lib/decision/v1/sources/forge.ts)
+// reads that file's series by `seriesKey`.
 
 import type { Candidate, LedgerRow } from "./types";
 
