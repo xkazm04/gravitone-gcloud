@@ -117,4 +117,13 @@ describe("the frame canvas's gesture", () => {
     expect((c.layer().props["style"] as { left: string; top: string })).toMatchObject({ left: "10%", top: "20%" });
     expect(c.calls.move).toEqual([]);
   });
+
+  test("a layer is a button a click alone selects - a screen reader's activation sends no pointer press", () => {
+    const text: CanvasLayer = { ...LAYER, id: "t1", layer: "text", role: "caption" };
+    const c = mount({ selected: null, layers: [LAYER, text] });
+    c.fire("onClick", c.onLayer, ev(0, 0));
+    c.fire("onClick", (e) => e.props["data-layer"] === "text:t1", ev(0, 0));
+    expect(c.calls.select).toEqual(["element:e1", "text:t1"]);
+    expect(c.calls.move).toEqual([]);
+  });
 });

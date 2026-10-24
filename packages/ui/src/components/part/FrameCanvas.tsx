@@ -89,6 +89,9 @@ export function FrameCanvas(p: FrameCanvasProps) {
   // The browser took the pointer (a system gesture, a lost capture): no lift will come, so the
   // local drag is dropped and the layer is drawn where its record says it is - no edit leaves.
   const cancel = (): void => { setDrag(null); setLive(null); };
+  // A layer is a button, so a click alone selects it: a screen reader's activation sends a click
+  // with no pointer press before it. After a press it re-selects the same layer, which is nothing.
+  const pick = (k: string) => () => p.onSelect?.(k);
   const at = (l: CanvasLayer) => {
     const k = layerKey(l);
     const d = drag?.key === k ? drag.kind : null;
@@ -128,6 +131,7 @@ export function FrameCanvas(p: FrameCanvasProps) {
               onPointerMove={move}
               onPointerUp={up(l)}
               onPointerCancel={cancel}
+              onClick={pick(k)}
             >
               <span className={s.elLabel}>{l.label || l.role}</span>
               {/* The handle takes the press (and stops it, so the element does not start a move);
@@ -149,6 +153,7 @@ export function FrameCanvas(p: FrameCanvasProps) {
               onPointerMove={move}
               onPointerUp={up(l)}
               onPointerCancel={cancel}
+              onClick={pick(k)}
             >
               {l.unsourced && (
                 <span className={s.unsourced} aria-hidden="true">

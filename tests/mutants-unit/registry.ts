@@ -2481,6 +2481,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "A drag the browser cancelled would keep its local position, so the layer would be drawn where no edit ever put it until the next press.",
   },
   {
+    id: "frame-canvas-click-selects-nothing",
+    test: "packages/ui/test/components/frame-canvas.test.ts",
+    file: "packages/ui/src/components/part/FrameCanvas.tsx",
+    find: "const pick = (k: string) => () => p.onSelect?.(k);",
+    replace: "const pick = (_k: string) => () => undefined;",
+    why: "A layer's button would do nothing on a screen reader's activation, which sends a click with no pointer press before it.",
+  },
+  {
     id: "produce-strips-run-renamed-at-confirm",
     test: "tests/next-server/produce-real.test.ts",
     file: "lib/produce/laneDoors.ts",
