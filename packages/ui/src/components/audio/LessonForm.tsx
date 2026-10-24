@@ -16,7 +16,7 @@ import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
 import { ErrorLine } from "../errorline/ErrorLine.tsx";
 import { Tally } from "../tally/Tally.tsx";
-import { claimProblem, evidenceWords, type LessonProposal } from "./lesson.ts";
+import { CLAIM_MAX, claimProblem, evidenceWords, type LessonProposal } from "./lesson.ts";
 import s from "./Lesson.module.css";
 
 export const CLAIM_FIELD = "lesson-claim";
@@ -95,7 +95,7 @@ export function LessonForm({ proposal, axes = [], techniques = [], known, drafte
         ref={field}
         className={s.claim}
         value={claim}
-        maxLength={600}
+        maxLength={CLAIM_MAX}
         placeholder="when X, brief Y, because Z"
         aria-label="the lesson, one sentence"
         onChange={(ev) => {
