@@ -10,8 +10,9 @@ vi.mock("@gt/ui/keymap/dispatch", async (orig) => ({ ...(await orig<object>()), 
 
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 
-import type { PartOp, PartView, WordsData } from "@gt/domain/partView";
+import type { NotebookBoard, PartOp, PartView, ResearchCard, ResearchData, WordsData } from "@gt/domain/partView";
 
+import { NotebookEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Notebook.tsx";
 import type { EditorProps, Frame } from "../../app/(studio)/projects/[id]/[part]/_edit/PartEditor.tsx";
 import { WordsEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Words.tsx";
 import cut from "../../app/(studio)/projects/[id]/[part]/_edit/Cut.module.css";
@@ -119,5 +120,45 @@ describe("a tag edit sends the tags as they will land", () => {
     const f = await fields(words({ tags: ["lofi", "rain"] }));
     await (await f.field("tags")).type("lofi, rain,, night ");
     expect(f.sent).toEqual([{ op: "words-tags", tags: ["lofi", "rain", "night"] }]);
+  });
+});
+
+/* ── research · the notebook (Notebook.tsx) ────────────────────────────── */
+
+const card = (id: string, c: Partial<ResearchCard> = {}): ResearchCard => ({ id, kind: "fact", dimension: "d1", title: `claim ${id}`, loadBearing: false, required: false, hottest: false, dependsOn: [], contests: [], qualifies: [], scope: "in", liked: false, deepen: false, moved: false, ...c });
+const notebook = (cards: readonly ResearchCard[], followUps: NotebookBoard["followUps"] = []): ResearchData => ({
+  offers: ["notebook", "beats"],
+  face: "notebook",
+  topic: "salt",
+  source: { kind: "replay", digest: "dg", claims: cards.length },
+  dimensions: [{ id: "d1", label: "history", kept: cards.filter((c) => c.scope === "in").length, total: cards.length }],
+  cards,
+  tally: { kept: 1, total: cards.length, descoped: 0, notTaken: 0, liked: 0, deepen: 0, wounded: 0, broken: 0, requiredGone: [] },
+  scope: { confirmed: false, moved: 0 },
+  followUps,
+});
+const research = (data: ResearchData, busy: boolean, sent: PartOp[]) => ({ view: { data } as PartView<"research">, frame, send: (op: PartOp) => void sent.push(op), busy, error: null, act: () => {} }) satisfies EditorProps<PartView<"research">>;
+
+describe("a follow-up typed while a write is in flight", () => {
+  async function ask(busy: boolean): Promise<{ sent: PartOp[]; left: unknown }> {
+    const sent: PartOp[] = [];
+    const p = research(notebook([card("c1")]), busy, sent);
+    const ws = (await harness(() => NotebookEditor({ ...p, data: p.view.data as never }), { settleWhen: "stable" }).settleUp()) as ReactElement;
+    const el = all(ws, named("FollowUps"))[0];
+    if (el === undefined) throw new Error("no follow-ups");
+    const h = harness(() => (el.type as (q: unknown) => ReactElement)(el.props));
+    const input = (t: ReactNode) => all(t, (_, q) => q["aria-label"] === "question")[0]?.props as { value: string; onChange: (e: unknown) => void };
+    input(await h.settleUp()).onChange({ currentTarget: { value: "who salted the road?" } });
+    const form = all(await h.settleUp(), (x) => x.type === "form")[0]?.props as { onSubmit: (e: unknown) => void };
+    form.onSubmit({ preventDefault: () => {} });
+    return { sent, left: input(await h.settleUp()).value };
+  }
+
+  it("stays in the field and is not sent", async () => {
+    expect(await ask(true)).toEqual({ sent: [], left: "who salted the road?" });
+  });
+
+  it("with nothing in flight is queued and the field clears", async () => {
+    expect(await ask(false)).toEqual({ sent: [{ op: "queue-follow-up", prompt: "who salted the road?" }], left: "" });
   });
 });

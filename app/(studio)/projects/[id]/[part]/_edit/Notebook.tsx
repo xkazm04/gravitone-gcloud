@@ -104,10 +104,12 @@ function Inspector({ c, cards, send, onSelect }: { readonly c: ResearchCard; rea
   );
 }
 
-function FollowUps({ d, send }: { readonly d: NotebookBoard; readonly send: EditorProps<unknown>["send"] }) {
+function FollowUps({ d, send, busy }: { readonly d: NotebookBoard; readonly send: EditorProps<unknown>["send"]; readonly busy: boolean }) {
   const [q, setQ] = useState("");
   const queue = (): void => {
-    if (q.trim() === "") return;
+    // The island declines a second write while one is in flight; the question stays in the
+    // field rather than being cleared for an op that was never sent.
+    if (busy || q.trim() === "") return;
     send({ op: "queue-follow-up", prompt: q.trim() });
     setQ("");
   };
@@ -228,7 +230,7 @@ export function NotebookEditor({ view, frame, send, busy, error, data: d }: Edit
                 </button>
               ))}
             </div>
-            <FollowUps d={d} send={send} />
+            <FollowUps d={d} send={send} busy={busy} />
           </>
         ),
       }}

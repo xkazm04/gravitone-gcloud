@@ -5731,4 +5731,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "const out = await st.spec.confirm(st.receipt.token, c.value, st.receipt.mode);",
     why: "A launch confirm whose round trip fails leaves the receipt sheet busy with Confirm dead and no words, on every receipt in the studio.",
   },
+  {
+    id: "notebook-follow-up-cleared-in-flight",
+    test: "tests/next-server/part-editor-writing.test.ts",
+    file: "app/(studio)/projects/[id]/[part]/_edit/Notebook.tsx",
+    find: "if (busy || q.trim() === \"\") return;",
+    replace: "if (q.trim() === \"\") return;",
+    why: "A question typed and queued while another write is in flight is cleared from the field and never queued: the island declines the op and the words are gone.",
+  },
 ];
