@@ -45,16 +45,12 @@ export type CosmosTier = Tier;
 export interface CosmosOptions {
   /** forced tier; omitted = probe + governor decide */
   tier?: CosmosTier;
-  /** called with the path of the item under attention when Enter is pressed
-   *  inside the scene (keyboard), so the host can route it */
-  onEnter?: (path: string[]) => void;
-  /** reports tier decisions and measurements, for tests and diagnostics */
-  onTier?: (tier: CosmosTier, why: string) => void;
 }
 
+/** the tier and its reason are read from the root (data-tier, data-tier-why), which is
+ *  what pipeline/cosmos-perf.mjs does */
 export interface CosmosHandle {
   destroy(): void;
-  tier(): CosmosTier;
 }
 
 const FILLED = ["scene", "world", "typeView", "stageView", "libView", "crumbs", "depth", "res"] as const;
@@ -92,7 +88,6 @@ function setTier(cx: Cx, tier: CosmosTier, why: string): void {
     cx.RM = true;
     endIntro(cx);
   }
-  cx.opts.onTier?.(tier, why);
 }
 
 export function mountCosmos(root: HTMLElement, galaxy: Galaxy, opts: CosmosOptions = {}): CosmosHandle {
@@ -102,7 +97,7 @@ export function mountCosmos(root: HTMLElement, galaxy: Galaxy, opts: CosmosOptio
   const raster = new Raster(query.get("raster") === "main");
   life.own(() => raster.destroy());
   const RM = reducedMotion();
-  const cx = createCx(root, galaxy, life, opts, opts.tier ?? (RM ? "still" : "full"), els, raster, RM);
+  const cx = createCx(root, galaxy, life, opts.tier ?? (RM ? "still" : "full"), els, raster, RM);
   applyMeasure(cx);
   life.own(() => dropPrewarm(cx));
 
@@ -153,9 +148,7 @@ export function mountCosmos(root: HTMLElement, galaxy: Galaxy, opts: CosmosOptio
     void boot(cx);
   });
 
-  const tier = () => cx.tier;
   return {
-    tier,
     destroy() {
       if (life.dead) return;
       life.destroy();

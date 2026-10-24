@@ -55,13 +55,6 @@ export function setLv(cx: Cx, lv: Level): void {
   renderNav(cx);
 }
 
-export function currentPath(cx: Cx): string[] {
-  const { ST } = cx;
-  if (ST.type) return ST.tpl ? [ST.type, ST.tpl] : [ST.type];
-  if (ST.fam) return ST.cat ? [ST.fam, ST.cat] : [ST.fam];
-  return [];
-}
-
 export function renderNav(cx: Cx): void {
   const { ST } = cx;
   type Crumb = { root?: boolean; label: string; go?: () => void; cur?: boolean };
