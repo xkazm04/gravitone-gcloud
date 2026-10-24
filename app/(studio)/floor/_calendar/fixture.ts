@@ -30,6 +30,7 @@ import { canCancel, canPublishNow, moveProblem } from "@gt/ui/components/floor/s
 import type { SlotView } from "@gt/ui/components/floor/SlotDetail.tsx";
 
 import { ledgerFor } from "../../_shell/links.ts";
+import { ARTICLE_CLI, PUBLISH_CLI } from "./readiness.ts";
 import { exportOnly, railOfSlot } from "./real.ts";
 import type { CalendarFacts } from "./contract.ts";
 import { CHANNEL_SEED, ITEMS, PROJECTS, SLOTS, type FixtureMetric, type FixtureSlot } from "./fixtureData.ts";
@@ -237,7 +238,7 @@ function fixtureChannels(table: ReadonlyMap<string, FixtureRow>): ChannelReady[]
       state: c.state,
       env: c.env.map((name) => ({ name, present: false })),
       ...(c.note === undefined ? {} : { note: c.note }),
-      command: c.channel === "blog" ? "node pipeline/article.mts status" : "npx tsx pipeline/publish.mts channels --json",
+      command: c.channel === "blog" ? ARTICLE_CLI : PUBLISH_CLI,
       ...(out === undefined ? {} : { lastOut: out }),
       ...(fail?.slot.error === undefined ? {} : { lastFailure: { at: fail.slot.at, error: fail.slot.error, inARow: fails.length } }),
     };
