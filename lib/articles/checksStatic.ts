@@ -116,8 +116,11 @@ export function staticItems(input: StaticInput): CheckItem[] {
     const srcNums = sources.map((s) => s.n);
     const srcGaps: number[] = [];
     for (let k = 1; k <= Math.max(0, ...srcNums); k++) if (!srcNums.includes(k)) srcGaps.push(k);
-    const numberingOk = !lp.gaps.length && !lp.repeats.length && !srcGaps.length;
-    items.push(item("truth", "source-numbering", "Sources are numbered without gaps", numberingOk, { value: numberingOk ? `${lp.listed} listed` : `gaps in the list: ${lp.gaps.join(", ") || "none"}; repeats: ${lp.repeats.join(", ") || "none"}; gaps in sources.json: ${srcGaps.join(", ") || "none"}`, expected: "post.md's Sources list and sources.json numbered 1 to N with no number missing or repeated (renumber the citations when a source is dropped)" }));
+    // N is sources.json's count: a list that stops short (or a page with no `#src-n` for a source)
+    // is a source the reader cannot find, however cleanly what is there is numbered.
+    const unanchored = html ? srcNums.filter((n) => !new RegExp(`id=["']src-${n}["']`).test(html)) : [];
+    const numberingOk = !lp.gaps.length && !lp.repeats.length && !srcGaps.length && lp.listed === sources.length && !unanchored.length;
+    items.push(item("truth", "source-numbering", "Sources are numbered without gaps", numberingOk, { value: numberingOk ? `${lp.listed} listed` : `post.md lists ${lp.listed} of ${sources.length}; gaps in the list: ${lp.gaps.join(", ") || "none"}; repeats: ${lp.repeats.join(", ") || "none"}; gaps in sources.json: ${srcGaps.join(", ") || "none"}; no #src-n in index.html for: ${unanchored.join(", ") || "none"}`, expected: "post.md's Sources list and sources.json numbered 1 to N with no number missing or repeated, and index.html carrying #src-1 to #src-N (renumber the citations when a source is dropped)" }));
     items.push(item("structure", "length-ceiling", "The post stays under its word ceiling", words <= THRESHOLDS.maxWords, { value: `${words} words`, expected: `≤ ${THRESHOLDS.maxWords} words (replacement, not addition: cut or tighten before adding)` }));
     const skim = skimSpine(md);
     // The page carries the same spans: every post.md span, as text, inside some <strong>.
