@@ -93,7 +93,7 @@ export function unimported(root: string): Problem | null {
 
 export async function realSlots(): Promise<{ readonly slots: readonly RailSlot[]; readonly problems: readonly Problem[]; readonly facts?: CalendarFacts }> {
   const pending = unimported(v1Root());
-  const c = ctx();
+  const c = ctx(true);
   const problems = pending === null ? [] : [pending];
   if (!c.ok) return { slots: [], problems: [...problems, { source: "calendar", error: c.error.message }] };
   const { channels, mode, lastChannel, tick } = c.value.ready;
@@ -178,11 +178,17 @@ function answer(store: Store, ready: Readiness, verb: string, r: Result<SlotRow>
 
 type Ctx = { readonly store: Store; readonly rows: readonly SlotRow[]; readonly ready: Readiness };
 
-/** The store, the calendar as it stands, and the readiness read against it - once per act. */
-function ctx(): Result<Ctx> {
+/**
+ * The store and the readiness read against it - once per act. The calendar as it stands
+ * (`rows`) is read only for the rail and the month: a record or a verb needs its channel's mode
+ * and the missed window, never every slot, and every slot is what a calendar's history grows by
+ * (3000 slots: 25 ms a record before this, measured). Without the rows, `lastChannel` - the
+ * schedule form's default, which no verb reads - is null.
+ */
+function ctx(withRows = false): Result<Ctx> {
   const s = store();
   if (!s.ok) return s;
-  const rows = listSlots(s.value);
+  const rows = withRows ? listSlots(s.value) : ok<SlotRow[]>([]);
   if (!rows.ok) return rows;
   const facts = s.value.read(storeFactsIn);
   if (!facts.ok) return facts;
