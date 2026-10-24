@@ -21,7 +21,21 @@ const POLL_MS = 100;
 type Registry = { registerTool: (tool: Record<string, unknown>, options?: { signal?: AbortSignal }) => void };
 
 const currentPath = (): string => `${window.location.pathname}${window.location.search}`;
-const heading = (): string | null => document.querySelector("main#content h1, main#content h2")?.textContent?.trim() || null;
+/** A heading's words without the chips drawn inside it (a Panel's h2 carries a Tally whose numerals
+ *  are aria-hidden and whose spoken twin repeats them): its own text nodes, else its text minus what
+ *  is hidden from the accessibility tree. Found by athena-portable's live journey: "Compositions00". */
+function wordsOf(el: Element): string {
+  const own = [...el.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE).map((n) => n.textContent ?? "").join(" ").replace(/\s+/g, " ").trim();
+  if (own !== "") return own;
+  const copy = el.cloneNode(true) as Element;
+  for (const hidden of copy.querySelectorAll('[aria-hidden="true"]')) hidden.remove();
+  return (copy.textContent ?? "").replace(/\s+/g, " ").trim();
+}
+/** The page's own heading: its h1, else the first h2 (a side panel's title is an h2 that can come first). */
+const heading = (): string | null => {
+  const el = document.querySelector("main#content h1") ?? document.querySelector("main#content h2");
+  return el === null ? null : wordsOf(el) || null;
+};
 const here = (): Here => hereOf(currentPath(), document.title, heading());
 
 async function arrive(target: string, signal: AbortSignal): Promise<Here | { readonly error: string }> {
