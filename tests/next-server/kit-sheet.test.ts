@@ -28,6 +28,9 @@
 //      reads `git ls-files`, not the disk, so the operator's own regenerated plates cannot hide it.
 //   7. The Ledger strip's readout counts the bars it draws. The specimen passed a literal 212 for
 //      a range whose days hold 127 events, and kept saying 212 after any drag picked another range.
+//   8. A glyph drawn alone in a specimen cell has an accessible name. The glyphs are aria-hidden
+//      (the control around one names it); the Library's kinds row named each cell role="img", the
+//      Floor's marks row only carried a `title` on a generic span, which no reader is bound to read.
 
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
@@ -274,5 +277,14 @@ describe("/kit: the Ledger strip's readout counts its own bars", () => {
     expect(sum, "the range covers no event").toBeGreaterThan(0);
     const html = renderToStaticMarkup(h(LedgerSections));
     expect(html.match(/(\d+) events/)?.[1]).toBe(String(sum));
+  });
+});
+
+describe("/kit: a glyph drawn alone is named", () => {
+  test("every glyph cell a screen kit draws is an image with a label", () => {
+    const cells = SCREENS.flatMap(([screen, el]) => [...renderToStaticMarkup(el()).matchAll(/<span([^>]*class="[^"]*glyphCell[^"]*"[^>]*)>/g)].map((m) => [screen, m[1] ?? ""] as const));
+    expect(cells.length, "no screen kit draws a glyph cell").toBeGreaterThan(10);
+    const unnamed = cells.filter(([, attrs]) => !(/role="img"/.test(attrs) && /aria-label="[^"]+"/.test(attrs))).map(([screen, attrs]) => `${screen}:${attrs}`);
+    expect(unnamed).toEqual([]);
   });
 });

@@ -133,7 +133,7 @@ export function FloorSection() {
         </div>
         <Row label="marks">
           {(["image", "article", "audio", "video", "matrix-cull", "blind-pair", "packet-review", "lock", "expand", "collapse", "chevL", "chevR"] as const).map((n) => (
-            <span key={n} className={k.glyphCell} title={n}>
+            <span key={n} className={k.glyphCell} role="img" aria-label={n}>
               <FloorGlyph name={n} className={k.glyph} />
             </span>
           ))}

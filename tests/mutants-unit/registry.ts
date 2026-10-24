@@ -5393,4 +5393,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: 'const pending = (t: Take): boolean => t.verdict === "unjudged";',
     why: "The audio triage pile counts demo fixture takes, which have no file and nobody judges, so the Floor offers a pile that can never empty.",
   },
+  {
+    id: "kit-floor-marks-unnamed",
+    test: "tests/next-server/kit-sheet.test.ts",
+    file: "app/(studio)/kit/FloorKit.tsx",
+    find: 'className={k.glyphCell} role="img" aria-label={n}>',
+    replace: "className={k.glyphCell} title={n}>",
+    why: "A screen reader walking the Floor's marks row hears twelve empty cells: each glyph is aria-hidden and its cell names nothing.",
+  },
 ];
