@@ -19,6 +19,9 @@ export function wireKeyboard(cx: Cx): void {
       if (e.key !== "Escape") return;
     }
     if (cx.searchOpen) {
+      // an input method's Enter commits its candidate and its arrows walk its own list; Safari
+      // ends a composition with a keydown that says keyCode 229 and not isComposing
+      if (e.isComposing || e.keyCode === 229) return;
       if (e.key === "Escape") {
         e.preventDefault();
         closeSearch(cx);

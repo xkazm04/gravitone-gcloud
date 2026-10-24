@@ -758,3 +758,56 @@ describe("search.ts: closing the slip gives the focus back", () => {
     expect(DOC.activeElement).toBe(cx.els.searchBtn);
   });
 });
+
+describe("keyboard.ts: an input method's keys are its own", () => {
+  //  10. With the search slip open the window's keydown took Enter and the arrows for the results,
+  //      including the Enter an IME (Japanese, Chinese, Korean...) sends to commit its candidate:
+  //      typing a query that way flew to the first result before the query was written.
+  async function keyed(isComposing: boolean, keyCode = 0) {
+    const root = shellDom();
+    stub("window", {});
+    const { wireKeyboard } = await import("../../app/_landing/cosmos/engine/keyboard.ts");
+    let onKey: ((e: unknown) => void) | null = null;
+    const els = { search: kid(root), q: kid(root, "input"), res: kid(root, "ul"), searchBtn: kid(root, "button"), banner: kid(root) };
+    const hit = { k: "fam", id: "nowhere", label: "Styles", sub: "", col: "", l: "styles" };
+    const cx = {
+      root,
+      els,
+      introOn: false,
+      searchOpen: true,
+      searchFrom: null,
+      sres: [hit, hit],
+      sel: 0,
+      ST: { lv: "root" },
+      famById: new Map(),
+      life: { on: (_t: unknown, _type: string, fn: (e: unknown) => void) => ((onKey = fn), () => {}) },
+    };
+    wireKeyboard(cx as never);
+    let prevented = 0;
+    const press = (key: string) => onKey!({ key, isComposing, keyCode, target: els.q, preventDefault: () => void prevented++ });
+    return { cx, press, prevented: () => prevented };
+  }
+
+  test("Enter and the arrows while composing pick and move nothing", async () => {
+    const { cx, press, prevented } = await keyed(true);
+    press("ArrowDown");
+    press("Enter");
+    expect(cx.searchOpen, "still open: the Enter committed the candidate").toBe(true);
+    expect(cx.sel).toBe(0);
+    expect(prevented(), "the IME gets its keys").toBe(0);
+  });
+
+  test("Safari's composition Enter (keyCode 229, isComposing false) picks nothing either", async () => {
+    const { cx, press } = await keyed(false, 229);
+    press("Enter");
+    expect(cx.searchOpen).toBe(true);
+  });
+
+  test("outside a composition, ArrowDown moves the choice and Enter picks it", async () => {
+    const { cx, press } = await keyed(false);
+    press("ArrowDown");
+    expect(cx.sel).toBe(1);
+    press("Enter");
+    expect(cx.searchOpen).toBe(false);
+  });
+});
