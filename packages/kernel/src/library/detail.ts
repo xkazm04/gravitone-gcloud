@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { parseAt, parseJsonAt } from "@gt/domain/door";
-import { AppError, ok, type Result } from "@gt/domain/errors";
+import { AppError, type Result } from "@gt/domain/errors";
 import { DEFAULT_PIN, groupLabel, railGroups, type LibraryActName, type LibraryCover, type LineageNode, type MediaFacts } from "@gt/domain/library";
 import { libraryItemSchema, type LibraryItem, type LibraryItemDetail } from "@gt/domain/libraryItem";
 import type { Reader, Row, Store } from "../store.ts";
@@ -161,17 +161,23 @@ export function libraryDetail(store: Store, id: string): Result<LibraryItemDetai
  */
 export function chooseCover(store: Store, itemIds: readonly string[]): Result<string | null> {
   return store.read((r) => {
-    let fallback: string | null = null;
-    for (const id of itemIds) {
-      const row = r.get(`${ROW_SELECT} WHERE d.id = ?`, id);
-      if (row === undefined) continue;
-      const c = rowOf(row, []);
-      if (c.cover.blobSha === null || c.attention !== undefined) continue;
-      if (!c.cover.nearBlack) return id;
-      fallback ??= id;
-    }
-    return fallback;
+    const pick = coverOf(itemIds, (id) => r.get(`${ROW_SELECT} WHERE d.id = ?`, id));
+    return pick === null ? null : String(pick["id"]);
   });
+}
+
+/** chooseCover's rule, in the order given; `rowFor` reads lazily, so the first bright one ends it. */
+function coverOf<K>(keys: readonly K[], rowFor: (key: K) => Row | undefined): Row | null {
+  let fallback: Row | null = null;
+  for (const key of keys) {
+    const row = rowFor(key);
+    if (row === undefined) continue;
+    const c = rowOf(row, []);
+    if (c.cover.blobSha === null || c.attention !== undefined) continue;
+    if (!c.cover.nearBlack) return row;
+    fallback ??= row;
+  }
+  return fallback;
 }
 
 /** How many of a style's plates its cover is chosen from (the newest kept first). */
@@ -184,29 +190,20 @@ export const STYLE_COVER_POOL = 12;
  * has none, and its tile keeps its swatch.
  */
 export function styleCovers(store: Store, styleIds: readonly string[]): Result<ReadonlyMap<string, LibraryCover>> {
-  const pools = store.read((r) =>
-    styleIds.map((styleId) => ({
-      styleId,
-      ids: r
-        .all(
-          `SELECT d.id FROM library_facets f JOIN library_items i ON i.seq = f.item_seq JOIN library_docs d ON d.seq = f.item_seq
-            WHERE f.grp = 'style' AND f.value = ? AND f.kind = 'plate' ORDER BY i.state = 'ratified' DESC, i.at DESC, i.seq DESC LIMIT ?`,
-          styleId,
-          STYLE_COVER_POOL,
-        )
-        .map((x) => String(x["id"])),
-    })),
-  );
-  if (!pools.ok) return pools;
-  const out = new Map<string, LibraryCover>();
-  for (const p of pools.value) {
-    const pick = chooseCover(store, p.ids);
-    if (!pick.ok) return pick;
-    if (pick.value === null) continue;
-    const id = pick.value;
-    const row = store.read((r) => r.get(`${ROW_SELECT} WHERE d.id = ?`, id));
-    if (!row.ok) return row;
-    if (row.value !== undefined) out.set(p.styleId, rowOf(row.value, []).cover);
-  }
-  return ok(out);
+  // One snapshot, and the pool read as whole rows: it was a read for the pools, then per style a
+  // read per pooled plate (chooseCover) and another for the pick - 1 + 2 reads a style.
+  return store.read((r) => {
+    const out = new Map<string, LibraryCover>();
+    for (const styleId of styleIds) {
+      const pool = r.all(
+        `${ROW_SELECT} JOIN library_facets f ON f.item_seq = i.seq
+          WHERE f.grp = 'style' AND f.value = ? AND f.kind = 'plate' ORDER BY i.state = 'ratified' DESC, i.at DESC, i.seq DESC LIMIT ?`,
+        styleId,
+        STYLE_COVER_POOL,
+      );
+      const pick = coverOf(pool, (row) => row);
+      if (pick !== null) out.set(styleId, rowOf(pick, []).cover);
+    }
+    return out as ReadonlyMap<string, LibraryCover>;
+  });
 }

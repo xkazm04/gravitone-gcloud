@@ -3,7 +3,7 @@ import type { MediaFacts } from "@gt/domain/library";
 import type { LibraryItemInput } from "@gt/domain/libraryItem";
 import { events } from "./library.fixtures.ts";
 import { bucketPeaks, ftsExpression, type IndexContext, type LibraryEntry } from "../src/library/core.ts";
-import { chooseCover, libraryDetail } from "../src/library/detail.ts";
+import { chooseCover, libraryDetail, styleCovers } from "../src/library/detail.ts";
 import { queryLibrary } from "../src/library/query.ts";
 import { actOnItem, factsMissing, pruneFeed, putMediaFacts, upsertItems } from "../src/library/write.ts";
 import { openKernel, type Kernel } from "../src/kernel.ts";
@@ -259,6 +259,28 @@ describe("libraryDetail", () => {
     expect(must(libraryDetail(s, "style:painted-3d")).extras.prompt).toBe("painted");
     const missing = libraryDetail(s, "nope");
     expect(!missing.ok && missing.error.code).toBe("not-found");
+  });
+  it("gives every style its cover from ONE read, one statement a style", () => {
+    const s = store();
+    const at = (h: number) => `2026-10-0${h}T00:00:00.000Z`;
+    must(upsertItems(s, [plate("p1", { at: at(1) }, SHA("a")), plate("p2", { at: at(2) }, SHA("b")), plate("q1", { vocabulary: { station: "forge", styleId: "ink", mechanism: "text" } }, SHA("c"))], CTX));
+    must(putMediaFacts(s, [facts(SHA("a")), facts(SHA("b"), { meanLuma: 3, nearBlack: true }), facts(SHA("c"))]));
+    let reads = 0;
+    let statements = 0;
+    const counted: Store = {
+      ...s,
+      tx: (fn) => s.tx(fn),
+      read: (fn) => {
+        reads++;
+        return s.read((r) => fn({ at: r.at, get: (q, ...p) => (statements++, r.get(q, ...p)), all: (q, ...p) => (statements++, r.all(q, ...p)) }));
+      },
+    };
+    const covers = must(styleCovers(counted, ["painted-3d", "ink", "none"]));
+    // p2 is newer but near-black: the bright p1 leads.
+    expect(covers.get("painted-3d")?.blobSha).toBe(SHA("a"));
+    expect(covers.get("ink")?.blobSha).toBe(SHA("c"));
+    expect(covers.has("none")).toBe(false);
+    expect({ reads, statements }).toEqual({ reads: 1, statements: 3 });
   });
   it("draws the detail's card with the chips the grid draws for the same item", () => {
     const s = store();
