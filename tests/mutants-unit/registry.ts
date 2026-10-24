@@ -5498,4 +5498,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "const facts = shot === undefined ? [] : [\"unit\", \"takes\"];",
     why: "A shot with no takes draws 1-9 adopt take in its legend, and every one of those keys is declined.",
   },
+  {
+    id: "mv-look-id-inherited-names",
+    test: "tests/next-server/mv-pipeline-edges.test.ts",
+    file: "lib/sound/mv/looks.ts",
+    find: "typeof v === \"string\" && Object.hasOwn(MV_LOOKS, v);",
+    replace: "typeof v === \"string\" && v in MV_LOOKS;",
+    why: "An album file or a --look naming \"toString\" passes as a look, and the render reads a function as its light and weather.",
+  },
 ];
