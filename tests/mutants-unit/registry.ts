@@ -5987,4 +5987,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "        const m = fileBlob(`/trials/google/${st}/${scene}.jpg`, 1920, 1080);",
     why: "Every fixture plate is drawn from a gitignored trial render, so on a fresh clone the Library's largest kind is a grid of broken images whose facts say they decode.",
   },
+  {
+    id: "run-table-pause-is-not-a-move",
+    test: "packages/domain/test/machines.test.ts",
+    file: "packages/domain/src/run.machine.ts",
+    find: "running: [\"awaiting_gate\", \"blocked\", \"queued\", \"cancelled\"],",
+    replace: "running: [\"awaiting_gate\", \"blocked\"],",
+    why: "The run table forbids the moves a paused or aborted job makes its run take (running -> queued, running -> cancelled), so the table describes a machine runStateOf never runs.",
+  },
 ];

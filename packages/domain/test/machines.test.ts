@@ -7,7 +7,8 @@ import { runMachine, runStateSchema } from "../src/run.ts";
 import { slotMachine, slotStateSchema } from "../src/slot.ts";
 import { styleMachine, styleStatusSchema } from "../src/style.ts";
 import type { Machine } from "../src/transitions.ts";
-import { partStatesOf, projectStateOf, type PartFacts, type PlanNode } from "../src/plan.ts";
+import { partStatesOf, projectStateOf, runStateOf, type PartFacts, type PlanNode } from "../src/plan.ts";
+import type { RunState } from "../src/run.machine.ts";
 import * as jobTable from "../src/job.machine.ts";
 import * as packetTable from "../src/packet.machine.ts";
 import * as partTable from "../src/part.machine.ts";
@@ -196,5 +197,22 @@ describe("the derived states move along the table", () => {
         { launched: true, cut: "done", packet: "committed", slotted: true },
       ]),
     ).toEqual([]);
+  });
+});
+
+// A Floor run's state is derived from its one job (plan.ts runStateOf), so every edge of the job
+// table, read through the derivation, must be an edge of the run table. A run's pile has a packet
+// only once its job is done, so the job's moves are walked without one and the Weir's after.
+describe("a run's derived state moves along the run table", () => {
+  it("every job edge, as the run reads it, is declared", () => {
+    const undeclared: string[] = [];
+    const check = (why: string, from: RunState, to: RunState) => {
+      if (from !== to && !runMachine.can(from, to)) undeclared.push(`${why}: run ${from} -> ${to}`);
+    };
+    for (const from of jobMachine.states) for (const to of jobMachine.next(from)) check(`job ${from} -> ${to}`, runStateOf(from), runStateOf(to));
+    check("the pile is opened", runStateOf("done"), runStateOf("done", "open"));
+    check("the pile is committed", runStateOf("done", "open"), runStateOf("done", "committed"));
+    check("the pile is rejected", runStateOf("done", "open"), runStateOf("done", "rejected"));
+    expect(undeclared).toEqual([]);
   });
 });

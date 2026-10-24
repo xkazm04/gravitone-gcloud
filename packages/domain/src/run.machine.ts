@@ -17,11 +17,15 @@ import { defineMachine } from "./transitions.ts";
  * The reason lives on the Job and the Decision, not in more Run states.
  * `awaiting_gate -> running` is a packet sent back for another turn (v1's
  * article `awaiting-approval -> drafting`, lib/articles/types.ts TRANSITIONS).
+ * A Run's state is derived from its job (plan.ts runStateOf), so the table holds every move the
+ * job's own table makes it take: `running -> queued` is the job's Stop-between-steps
+ * (`running -> paused`, which a run reads as waiting), `running -> cancelled` a turn aborted
+ * mid-flight. test/machines.test.ts walks every job edge through the derivation.
  */
 export const runMachine = defineMachine({
   draft: ["queued", "cancelled"],
   queued: ["running", "cancelled"],
-  running: ["awaiting_gate", "blocked"],
+  running: ["awaiting_gate", "blocked", "queued", "cancelled"],
   awaiting_gate: ["ratified", "blocked", "running"],
   blocked: ["queued", "cancelled"],
   ratified: [],
