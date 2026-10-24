@@ -25,6 +25,7 @@ transaction, through the hash chain that verify_events.py re-derives; a heartbea
 and a waiter's poll are liveness pings and write none.
 """
 
+import contextlib
 import json
 import os
 import socket
@@ -362,6 +363,8 @@ class Leases:
                 # Busy past the connection timeout is contention, not a fault (the
                 # Node acquire says why); poll again while the wait has time left.
                 if ("locked" not in str(e) and "busy" not in str(e)) or time.monotonic() >= deadline:
+                    with contextlib.suppress(sqlite3.Error), self.tx() as t:  # lease.ts `acquire`: an error gives up the place too, best effort
+                        leave_in(t, resource, ticket)  # a queued ticket is a live waiter ahead of every newcomer until its TTL
                     raise
                 time.sleep(poll_s)
                 continue

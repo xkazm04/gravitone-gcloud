@@ -110,5 +110,45 @@ describe.skipIf(python === undefined)("a Python waiter while Node holds", () => 
       s.close();
     }
   });
+
+  // src/lease.ts `acquire` leaves the queue on this path too (98d4de7f): a ticket left behind is
+  // a live waiter (the pid is alive) ahead of every newcomer, so each Node drive's slot claim
+  // reads busy until the waiter's TTL drops it.
+  it("gives up its place in the queue when the store refuses a poll past the deadline", async () => {
+    const db = path.join(tmp.dir, "held-busy.sqlite");
+    const s = must(openStore(db));
+    must(migrate(s, [eventsMigrations, leaseMigrations], { snapshotDir: tmp.dir }));
+    const fx = liveEffects(s, blobStore(`${db}.blobs`));
+    const held = must(await acquire(fx, "gpu.local", { waitMs: 1_000, ttlS: 30 }));
+    try {
+      const code = [
+        "import sqlite3, sys",
+        `sys.path.insert(0, ${JSON.stringify(path.join(here, "..", "py"))})`,
+        "import lease",
+        "real, polls = lease.claim_in, []",
+        "def busy_after_first(*a):",
+        "    polls.append(1)",
+        "    if len(polls) == 1:",
+        "        return real(*a)",
+        "    raise sqlite3.OperationalError('database is locked')",
+        "lease.claim_in = busy_after_first",
+        `l = lease.Leases(${JSON.stringify(db)})`,
+        "try:",
+        "    l.acquire('gpu.local', wait_s=0.3, ttl_s=30, poll_s=0.02)",
+        "    print('GRANTED')",
+        "except sqlite3.OperationalError as e:",
+        "    print('RAISED %s' % e)",
+        "finally:",
+        "    l.close()",
+      ].join("\n");
+      const r = await run(python ?? "python", ["-I", "-c", code]);
+      expect({ out: r.out.trim(), stderr: r.errText }).toEqual({ out: "RAISED database is locked", stderr: "" });
+      const left = must(s.read((q) => q.get("SELECT count(*) AS n FROM lease_waiters WHERE resource = 'gpu.local'")?.["n"]));
+      expect(left, "the Python ticket is still queued").toBe(0);
+    } finally {
+      must(s.tx((t) => releaseIn(t, "gpu.local", held.fence)));
+      s.close();
+    }
+  });
 });
 
