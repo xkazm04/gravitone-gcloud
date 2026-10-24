@@ -362,7 +362,8 @@ async function waitingIds(): Promise<string[]> {
   return (await readMvLive()).jobs.filter((j) => j.state === "queued" && !kernel.has(mvKernelId(j))).map((j) => j.id);
 }
 
-/** What Start would launch, as a receipt (decision 3): GET /api/sound/mv/run. */
+/** What Start would launch, as a receipt (decision 3). Its route,
+ *  /api/sound/mv/run, retired with the v1 Settled column (Phase 6 L67). */
 export async function mvStartReceipt(): Promise<Receipt> {
   const r = await launchMv(await waitingIds(), { mode: columnMode(), actor: OPERATOR });
   if (r.kind !== "receipt") throw new SoundError("a receipt read launched something", 500);
