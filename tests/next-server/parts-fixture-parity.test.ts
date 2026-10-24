@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,8 +13,8 @@ import { compose } from "@gt/kernel/records/write";
 
 import { makeRealPart } from "../../app/(studio)/projects/[id]/_part/real.ts";
 import { loadPart, opPart, resetParts, undoPart } from "../../app/(studio)/projects/[id]/_part/fixture.ts";
-import { owes, type UnitRec } from "../../app/(studio)/projects/[id]/_part/fixtureFrames.ts";
-import { plateView } from "../../app/(studio)/projects/[id]/_part/fixtureFramesView.ts";
+import { DRY_STILLS, dryPreset, owes, type UnitRec } from "../../app/(studio)/projects/[id]/_part/fixtureFrames.ts";
+import { plateView, takeUrl } from "../../app/(studio)/projects/[id]/_part/fixtureFramesView.ts";
 import { fixtureProduce } from "../../app/(studio)/projects/_port/port.ts";
 import { isStalePlate } from "../../lib/frames/frames.ts";
 import { frameOfUnit } from "../../lib/frames/picture/unit.ts";
@@ -128,5 +128,18 @@ describe("a plate the next render owes", () => {
     const stale = isStalePlate(frameOfUnit(u));
     expect(owes(u)).toBe(needsPlate({ id: u.id, plate: state, stale }));
     expect(plateView(u).stale).toBe(stale);
+  });
+});
+
+describe("a dry stand-in's pixels", () => {
+  it("are a shipped preset, still and clip, from the one list frames, its takes and motion read", () => {
+    for (const [i, name] of DRY_STILLS.entries()) {
+      for (const ext of ["jpg", "webm"] as const) {
+        const url = dryPreset(i, ext);
+        expect(url).toBe(`/clips/presets/${name}.${ext}`);
+        expect(existsSync(path.join(process.cwd(), "public", url))).toBe(true);
+      }
+    }
+    expect(takeUrl("dry:shot-1:7", undefined)).toBe(dryPreset(7, "jpg"));
   });
 });

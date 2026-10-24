@@ -15,7 +15,7 @@ import { blobRouteUrl } from "@/lib/parts/gates";
 import { partVerdict } from "@/lib/parts/verdict";
 
 import { cardsOf } from "./fixtureResearch.ts";
-import { chainOf, subjectOf, unitsOf, type FramesRec, type UnitRec } from "./fixtureFrames.ts";
+import { chainOf, dryPreset, subjectOf, unitsOf, type FramesRec, type UnitRec } from "./fixtureFrames.ts";
 import type { KCtx, Obj } from "./kinds.ts";
 
 // What the frames editor DRAWS, from the working record (./fixtureFrames.ts) and the v1 functions
@@ -44,7 +44,7 @@ export function takeUrl(id: string, blobs: Readonly<Record<string, BlobRef>> | u
   const b = blobs?.[id];
   if (b !== undefined) return blobRouteUrl(b);
   const m = /^dry:.*:(\d+)$/.exec(id);
-  return m === null ? null : `/clips/presets/${["signal-ledger", "blueprint", "newsprint-cutout", "paper-relief", "data-neon", "chalk-argument"][Number(m[1]) % 6] ?? "signal-ledger"}.jpg`;
+  return m === null ? null : dryPreset(Number(m[1]), "jpg");
 }
 
 export function plateView(u: UnitRec): PlateView {

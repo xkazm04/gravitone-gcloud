@@ -54,9 +54,11 @@ export type FramesRec = {
 
 const EMPTY: FramesRec = { units: null, renderId: null, direction: { runs: 0, costUsd: 0, unpriced: 0 }, proposal: null, checkpoint: null, alts: {}, adsScenario: null, adsShots: {} };
 
-/** The style sample stills a dry plate stands in with (public/clips/presets). */
+/** The style samples a dry plate, take or clip stands in with (public/clips/presets: each name
+ *  ships as a .jpg still and a .webm clip). The one list: frames, its view and motion read it. */
 export const DRY_STILLS = ["signal-ledger", "blueprint", "newsprint-cutout", "paper-relief", "data-neon", "chalk-argument"] as const;
-const dryStill = (n: number): string => `/clips/presets/${DRY_STILLS[Math.abs(n) % DRY_STILLS.length] ?? "signal-ledger"}.jpg`;
+export const dryPreset = (n: number, ext: "jpg" | "webm"): string => `/clips/presets/${DRY_STILLS[Math.abs(n) % DRY_STILLS.length] ?? "signal-ledger"}.${ext}`;
+const dryStill = (n: number): string => dryPreset(n, "jpg");
 const hashOf = (s: string): number => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7);
 
 /* ── the chain and its units ──────────────────────────────────────────────── */
