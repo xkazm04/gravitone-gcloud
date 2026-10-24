@@ -172,7 +172,7 @@ export function errorResponse(e: unknown, now: number = Date.now()): Response {
     return Response.json({ detail: e.message, code: "idempotency-conflict" }, { status: 409 });
 
   // SCRUBBED, for the reason log.ts already gives about the same string: an
-  // ImagingError's `message` READS as ours, but providers/google.ts:130 splices
+  // ImagingError's `message` READS as ours, but providers/google.ts#assertUsable splices
   // the vendor's own `error.message` into it verbatim, so it is not provably
   // free of vendor-supplied text — and a vendor that echoes our key back puts
   // that key in this response body.

@@ -22,7 +22,7 @@
 // (GOOGLE_IMAGE_MODEL) — a model name, not a credential, and scrubbed anyway.
 //
 // NOT SAFE, therefore scrubbed: the error MESSAGE. It reads as ours, but
-// providers/google.ts:130 splices the vendor's own `error.message` into it
+// providers/google.ts#assertUsable splices the vendor's own `error.message` into it
 // verbatim, so a message is not provably free of vendor-supplied text. Every
 // message goes through `scrub` and is collapsed to a single truncated line.
 //
@@ -142,7 +142,7 @@ export function logCall(l: CallLog): void {
  * hands Node the whole ImagingError, and Node prints its own fields — including
  * `detail`, which http.ts fills with up to 600 characters of raw vendor
  * response body. That is exactly the object this module's header says may never
- * reach a log, and api.ts:129 already records the same mistake being removed
+ * reach a log, and api.ts#errorResponse already records the same mistake being removed
  * from the catch-all. This is the second door.
  *
  * The remote id is the point of the line — it is what lets a failed deletion be

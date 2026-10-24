@@ -72,7 +72,7 @@ interface ModelPrice {
    * The `image_size` the figure was measured at. When set, a request at any
    * OTHER size — or one that pins no size at all and takes the vendor's default
    * — is unpriced rather than quoted at this rate. Nano Banana's price roughly
-   * doubles per size step (providers/google.ts:50-52), so carrying a 1K figure
+   * doubles per size step (providers/google.ts IMAGE_SIZE), so carrying a 1K figure
    * over to a 2K render would not be a rounding error, it would be a fiction.
    */
   atSize?: string;
@@ -88,7 +88,7 @@ interface ModelPrice {
  * Neither priced figure is a vendor list price — both are this repo's own bill
  * divided by its own renders, from the 6-style x 5-beat trial grid (60 graded
  * cells, `docs/imaging.md` § The provider verdict, restated at
- * `lib/imaging/router.ts:46-47`). That makes them good estimates and bad
+ * `lib/imaging/router.ts` PLAN). That makes them good estimates and bad
  * receipts, which is exactly how `basis` labels them.
  */
 export const PRICES: readonly ModelPrice[] = [
@@ -99,7 +99,7 @@ export const PRICES: readonly ModelPrice[] = [
     usdPerImage: 0.045,
     atSize: "1K",
     source:
-      "MEASURED in this repo: 30 Google cells of the style-trial grid at 1K, 16:9 — $0.0450/render (docs/imaging.md § The provider verdict; lib/imaging/router.ts:46-47). Google publishes no per-image list price for this model, so this is our spend over our render count, not a rate card.",
+      "MEASURED in this repo: 30 Google cells of the style-trial grid at 1K, 16:9 — $0.0450/render (docs/imaging.md § The provider verdict; lib/imaging/router.ts PLAN). Google publishes no per-image list price for this model, so this is our spend over our render count, not a rate card.",
     checked: "2026-08-13",
   },
   {
@@ -108,7 +108,7 @@ export const PRICES: readonly ModelPrice[] = [
     bills: "per-image",
     // UNPRICED ON PURPOSE.
     source:
-      "Never measured here — the repo runs the full model, because Lite supports object references only and cannot hold style-lock (providers/google.ts:37-46). Lite is known to be cheaper than NB2 and by no established amount, and 'cheaper' is not a number. Measure a batch or read Google's rate card, then price this row.",
+      "Never measured here — the repo runs the full model, because Lite supports object references only and cannot hold style-lock (providers/google.ts IMAGE_MODEL). Lite is known to be cheaper than NB2 and by no established amount, and 'cheaper' is not a number. Measure a batch or read Google's rate card, then price this row.",
     checked: "2026-08-14",
   },
   {
@@ -128,13 +128,13 @@ export const PRICES: readonly ModelPrice[] = [
     // No `atSize`: our Leonardo calls always send an ASPECT_PX size (~1.2MP),
     // and the measurement was taken at one of them.
     source:
-      "MEASURED in this repo: 30 Leonardo cells of the same grid at 1472x832 — $0.0257/render, which is the 10-credit charge at USD_PER_CREDIT = 0.00257 (providers/leonardo.ts:39-41). FALLBACK ONLY: Leonardo reports its own cost on the start response, and a reported figure always outranks this one. Sound only for the sizes ASPECT_PX declares — Leonardo bills by pixel count.",
+      "MEASURED in this repo: 30 Leonardo cells of the same grid at 1472x832 — $0.0257/render, which is the 10-credit charge at USD_PER_CREDIT = 0.00257 (providers/leonardo.ts USD_PER_CREDIT). FALLBACK ONLY: Leonardo reports its own cost on the start response, and a reported figure always outranks this one. Sound only for the sizes ASPECT_PX declares — Leonardo bills by pixel count.",
     checked: "2026-08-13",
   },
   // Qwen — the direction asked for "the same treatment or an explicit recorded
   // reason why it cannot". This is the reason, and it is recorded three times
   // because the adapter rotates across three SKUs on quota
-  // (providers/qwen.ts:29-31) and one per-call figure could not be right for
+  // (providers/qwen.ts MODELS) and one per-call figure could not be right for
   // all three even if we had it.
   // Ollama — local inference on this machine's GPU. No vendor bill exists,
   // which is a real price, not a missing one.
