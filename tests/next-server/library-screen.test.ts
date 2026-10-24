@@ -13,6 +13,8 @@
 //      filter") while its next press removed the value.
 //   3. A detail whose read failed says so in the panel. The refusal went to a toast and the panel
 //      read "reading <id>" for good once the toast faded; moving away and back asks again.
+//   4. A block's error leaves once that block reads. The alert under the results stood for the
+//      life of the result, over rows that had since landed.
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -22,7 +24,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 import type { ActionResult } from "../../app/_server/actionCore.ts";
-import { settle } from "../../app/(studio)/library/_library/blocks.ts";
+import { landed, settle } from "../../app/(studio)/library/_library/blocks.ts";
 import { panelOf } from "../../app/(studio)/library/_library/Library.tsx";
 import { DEFAULT_URL, pressedBy, toggled } from "../../app/(studio)/library/_library/url.ts";
 import type { FacetLine } from "@gt/ui/components/library/DetailPanel.tsx";
@@ -94,5 +96,20 @@ describe("3. a detail whose read failed says so in the panel", () => {
     const src = code("Library.tsx");
     expect(src).toMatch(/else setFailed\(\{ id: sel, text: r\.error\.error \}\)/);
     expect(src).toMatch(/const panel = panelOf\(sel, current !== null, failed\)/);
+  });
+});
+
+describe("4. a block's error leaves once that block reads", () => {
+  const e = { identity: "q1", block: 3, text: "the studio did not answer: Failed to fetch" };
+
+  it("the refused block landing clears it; another block or another query leaves it standing", () => {
+    expect(landed(e, "q1", 3)).toBeNull();
+    expect(landed(e, "q1", 4)).toBe(e);
+    expect(landed(e, "q2", 3)).toBe(e);
+    expect(landed(null, "q1", 3)).toBeNull();
+  });
+
+  it("a block that lands passes through it", () => {
+    expect(code("blocks.ts")).toContain("setError((e) => landed(e, identity, b));");
   });
 });

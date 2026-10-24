@@ -5883,4 +5883,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "  const door = ok(input);",
     why: "The fixture Library answers an empty page for a facet group no rail holds or an offset past the index's bound, where the kernel's door refuses both as invalid.",
   },
+  {
+    id: "library-block-error-outlives-landing",
+    test: "tests/next-server/library-screen.test.ts",
+    file: "app/(studio)/library/_library/blocks.ts",
+    find: "setError((e) => landed(e, identity, b));",
+    replace: "void landed;",
+    why: "A refused block that reads on its next ask leaves its alert standing under the rows it says failed, for the life of the result.",
+  },
+  {
+    id: "library-block-error-cleared-by-any-block",
+    test: "tests/next-server/library-screen.test.ts",
+    file: "app/(studio)/library/_library/blocks.ts",
+    find: "e.identity === identity && e.block === b ? null : e",
+    replace: "e.identity === identity ? null : e",
+    why: "Any block landing hides another block's refusal while that block's slots stay empty.",
+  },
 ];

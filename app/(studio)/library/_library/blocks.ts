@@ -47,9 +47,19 @@ export type Blocks = {
 
 type Held = { readonly identity: string; readonly rows: ReadonlyMap<number, readonly LibraryCard[]> };
 
+type BlockError = { readonly identity: string; readonly block: number; readonly text: string };
+
+/**
+ * The block error once block `b` of `identity` has landed: gone when it was that block's, which
+ * now reads (a refused block is asked again when the window next reaches it). Another block's
+ * error, or another query's, is left standing. Before this the alert stood under the rows it said had
+ * failed, for the life of the result.
+ */
+export const landed = (e: BlockError | null, identity: string, b: number): BlockError | null => (e !== null && e.identity === identity && e.block === b ? null : e);
+
 export function useBlocks(port: LibraryPort, identity: string, query: (offset: number, limit: number) => LibraryQuery, first: readonly LibraryCard[]): Blocks {
   const [state, setState] = useState<Held>(() => ({ identity, rows: new Map([[0, first]]) }));
-  const [error, setError] = useState<{ readonly identity: string; readonly text: string } | null>(null);
+  const [error, setError] = useState<BlockError | null>(null);
   const [seenFirst, setSeenFirst] = useState(first);
   // Asked blocks by `<identity>#<block>`: a block asked for under an old query is never mistaken
   // for one of the new query's.
@@ -74,11 +84,12 @@ export function useBlocks(port: LibraryPort, identity: string, query: (offset: n
       const p = settle(port.query(query(b * BLOCK, BLOCK))).then((r) => {
         if (!r.ok) {
           asked.current.delete(key);
-          setError({ identity, text: r.error.error });
+          setError({ identity, block: b, text: r.error.error });
           return undefined;
         }
         // Lands only in the cache of the query that asked for it.
         setState((h) => (h.identity === identity ? { identity, rows: new Map(h.rows).set(b, r.value.items) } : h));
+        setError((e) => landed(e, identity, b));
         return r.value.items;
       });
       asked.current.set(key, p);
