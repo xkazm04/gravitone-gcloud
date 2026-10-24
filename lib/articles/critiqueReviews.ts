@@ -122,6 +122,12 @@ async function reviewOnce(id: string, round: number, spec: ReviewerSpec, deps: E
   let note = "";
   const wrote = new Set<string>();
   let receipt: ReviewerReceipt | undefined;
+  // What the attempts so far spent and wrote, on every receipt: one that throws on its retry
+  // still paid for its first attempt, and the registry's critique block reads cost from here.
+  const spent = () => ({
+    ...(cost !== undefined ? { costUsd: Math.round(cost * 1_000_000) / 1_000_000 } : {}),
+    ...(wrote.size ? { wrote: [...wrote].sort().slice(0, 20) } : {}),
+  });
 
   for (let attempt = 1; attempt <= 2 && !receipt; attempt++) {
     const text = prompt(note);
@@ -154,8 +160,7 @@ async function reviewOnce(id: string, round: number, spec: ReviewerSpec, deps: E
         attempts: attempt,
         turns,
         durationMs,
-        ...(cost !== undefined ? { costUsd: Math.round(cost * 1_000_000) / 1_000_000 } : {}),
-        ...(wrote.size ? { wrote: [...wrote].sort().slice(0, 20) } : {}),
+        ...spent(),
       };
       if (result.outcome !== "completed") {
         receipt = { ...base, outcome: result.outcome, errors: result.errors.length ? result.errors : [`the reviewer ${result.outcome}`] };
@@ -171,7 +176,7 @@ async function reviewOnce(id: string, round: number, spec: ReviewerSpec, deps: E
         else note = `\n\nYOUR PREVIOUS ANSWER WAS REJECTED: ${msg}. Answer again. Your whole final message is ONE JSON object matching OUTPUT above, and nothing else.\n`;
       }
     } catch (e) {
-      receipt = { id: spec.id, engine: spec.engine, model: spec.model, effort: spec.effort, round, attempts: attempt, turns, durationMs, outcome: "errored", errors: [(e as Error).message] };
+      receipt = { id: spec.id, engine: spec.engine, model: spec.model, effort: spec.effort, round, attempts: attempt, turns, durationMs, ...spent(), outcome: "errored", errors: [(e as Error).message] };
     } finally {
       if (ws) await rm(ws, { recursive: true, force: true }).catch(() => undefined);
     }

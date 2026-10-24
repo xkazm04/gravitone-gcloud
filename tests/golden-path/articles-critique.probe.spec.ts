@@ -462,6 +462,25 @@ test("a malformed review gets one retry; twice malformed is errored; a reviewer'
   expect(json(run.id, "critique/round-1/receipts/gemini4.json")).toMatchObject({ outcome: "completed", attempts: 1, dropped: 1 });
 });
 
+test("a reviewer whose retry throws keeps on its receipt what its first attempt spent", async () => {
+  // gpt (codex) answers garbage for $0.5, then its retry fails before it can answer at all
+  let codexCalls = 0;
+  const d = defaultDeps({
+    render: false,
+    runReviewer: async (c) => {
+      if (c.engine !== "codex") return runReviewer(c);
+      codexCalls++;
+      if (codexCalls === 1) return { outcome: "completed", final: "not a review", turns: 1, costUsd: 0.5, durationMs: 1, exitCode: 0, errors: [] };
+      throw new Error("the workspace went away");
+    },
+  });
+  const created = await createRun({ topic: { kind: "free", text: "the token tax" } }, d);
+  const run = await driveRun(created.id, d);
+  expect(run.status, run.error).toBe("awaiting-approval");
+  expect(json(run.id, "critique/round-1/receipts/gpt.json")).toMatchObject({ outcome: "errored", attempts: 2, costUsd: 0.5, errors: ["the workspace went away"] });
+  expect(run.critique?.reviewers.find((r) => r.id === "gpt")).toMatchObject({ outcome: "errored", costUsd: 0.5 });
+});
+
 /* ── the check item and the registry ─────────────────────────────────── */
 
 test("check item: quorum in every round and every blocker factual answered", () => {
