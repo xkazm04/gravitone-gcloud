@@ -16,7 +16,8 @@ import { AdsBriefEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Ad
 import { BeatsEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Beats.tsx";
 import { DocumentEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Document.tsx";
 import { NotebookEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Notebook.tsx";
-import type { EditorProps, Frame } from "../../app/(studio)/projects/[id]/[part]/_edit/PartEditor.tsx";
+import { PartEditor, type EditorProps, type Frame } from "../../app/(studio)/projects/[id]/[part]/_edit/PartEditor.tsx";
+import type { PartPort } from "../../app/(studio)/projects/[id]/_part/contract.ts";
 import { ScenariosEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Scenarios.tsx";
 import { WordsEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Words.tsx";
 import cut from "../../app/(studio)/projects/[id]/[part]/_edit/Cut.module.css";
@@ -287,5 +288,29 @@ describe("a card's row in the scope board", () => {
     expect(s).toContain("in scope");
     expect(s).toContain("liked");
     expect(s).toContain("deepen");
+  });
+});
+
+/* ── the island (PartEditor.tsx): a write whose round trip fails ───────── */
+
+// A Server Action whose request never comes back REJECTS (app/(studio)/audio/_hunt/settled.ts):
+// the envelope's `ok: false` never arrives, so the island must turn the rejection into its own
+// error line - the rule every other island write (Hunt, Rubric, Strengths, Plan, Compose, the
+// receipt) already keeps.
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: () => {}, refresh: () => {} }) }));
+vi.mock("../../app/(studio)/_shell/Providers.tsx", () => ({ useShell: () => ({ toast: () => {} }) }));
+
+describe("an op whose round trip fails", () => {
+  it("is named on the error line, not left an unhandled rejection", async () => {
+    const first = { projectId: "p1", partId: "p1/words", key: "words", kind: "words", rev: 1, project: { title: "Salt" }, verdict: { state: "empty", codes: [] }, upstream: { missing: [] }, tabs: [], ops: [], acts: [], running: [], data: words() } as unknown as PartView;
+    const port = { opPart: () => Promise.reject(new TypeError("Failed to fetch")) } as unknown as PartPort;
+    const h = harness(() => PartEditor({ first, port, nowMs: 0 }), { settleWhen: "stable" });
+    const pick = async (): Promise<{ send: (op: PartOp) => void; error: string | null }> => {
+      const el = all(await h.settleUp(), (_, q) => typeof q.send === "function" && "error" in q)[0];
+      if (el === undefined) throw new Error("no editor under the island");
+      return el.props as { send: (op: PartOp) => void; error: string | null };
+    };
+    (await pick()).send({ op: "words-field", field: "title", value: "Salt lines" });
+    expect((await pick()).error).toBe("the studio did not answer: Failed to fetch");
   });
 });

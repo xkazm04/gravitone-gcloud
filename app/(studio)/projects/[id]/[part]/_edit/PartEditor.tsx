@@ -25,6 +25,7 @@ import { stepTab } from "@gt/ui/components/part/part.ts";
 import type { PartWorkspaceProps } from "@gt/ui/components/part/PartWorkspace.tsx";
 import { useKeys } from "@gt/ui/keymap/dispatch";
 
+import { settled } from "../../../../audio/_hunt/settled.ts";
 import { useShell } from "../../../../_shell/Providers.tsx";
 import { outcomeOf, useReceipt } from "../../../_plan/receipt.tsx";
 import type { PartPort } from "../../_part/contract.ts";
@@ -66,7 +67,8 @@ export function PartEditor({ first, port, nowMs }: { readonly first: PartView; r
     inflight.current = true;
     setBusy(true);
     try {
-      const r = await run();
+      // A round trip that never comes back rejects; it is the refusal it is, on the error line.
+      const r = await settled(run());
       if (!r.ok) {
         setError(r.error.error);
         return;

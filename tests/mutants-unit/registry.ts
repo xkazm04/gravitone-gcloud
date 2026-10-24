@@ -5755,4 +5755,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "<SrOnly text=\"\" />",
     why: "A screen reader walking the scope board hears a descoped card exactly as an in-scope one: the strike-through and the glyphs are the only place its scope, like and deepen are drawn.",
   },
+  {
+    id: "part-op-rejection-unhandled",
+    test: "tests/next-server/part-editor-writing.test.ts",
+    file: "app/(studio)/projects/[id]/[part]/_edit/PartEditor.tsx",
+    find: "const r = await settled(run());",
+    replace: "const r = await run();",
+    why: "A part edit whose round trip never comes back is an unhandled rejection: the error line stays empty and the operator reads the edit as taken.",
+  },
 ];
