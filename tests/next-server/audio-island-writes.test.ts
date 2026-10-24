@@ -12,6 +12,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { settled } from "../../app/(studio)/audio/_hunt/settled.ts";
+import { chainOn } from "../../app/(studio)/audio/_insight/Rubric.tsx";
 
 const ROOT = path.resolve(import.meta.dirname, "..", "..");
 const AUDIO = path.join(ROOT, "app", "(studio)", "audio");
@@ -36,6 +37,38 @@ describe("settled - an island write's wait", () => {
   });
 });
 
+describe("chainOn - one take's scores, in order", () => {
+  it("a write that rejects does not stop the next one on the same take", async () => {
+    const chains = new Map<string, Promise<void>>();
+    const sent: string[] = [];
+    const first = chainOn(chains, "t1", async () => {
+      sent.push("first");
+      throw new Error("Failed to fetch");
+    });
+    const second = chainOn(chains, "t1", async () => {
+      sent.push("second");
+    });
+    await first.catch(() => undefined);
+    await second;
+    expect(sent).toEqual(["first", "second"]);
+  });
+
+  it("the second write waits for the first to settle", async () => {
+    const chains = new Map<string, Promise<void>>();
+    const seen: string[] = [];
+    let open: () => void = () => {};
+    void chainOn(chains, "t1", () => new Promise<void>((r) => (open = () => (seen.push("first done"), r()))));
+    const second = chainOn(chains, "t1", async () => {
+      seen.push("second");
+    });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(seen).toEqual([]);
+    open();
+    await second;
+    expect(seen).toEqual(["first done", "second"]);
+  });
+});
+
 describe("each island's writes wait through settled", () => {
   it("the hunt: map draft, crown, lesson draft and sign", () => {
     const src = code("_hunt/Hunt.tsx");
@@ -44,5 +77,12 @@ describe("each island's writes wait through settled", () => {
     expect((src.match(/settled\(acts\.(draftHuntMap|crownTake|draftHuntLesson|confirmLessonAct)\(/g) ?? []).sort()).toEqual(
       ["settled(acts.confirmLessonAct(", "settled(acts.crownTake(", "settled(acts.draftHuntLesson(", "settled(acts.draftHuntMap("],
     );
+  });
+
+  it("the rubric: each score", () => {
+    const src = code("_insight/Rubric.tsx");
+    expect(src.length).toBeGreaterThan(1000);
+    expect(src.match(/settled\(acts\.scoreTake\(/g) ?? []).toHaveLength(1);
+    expect(src.match(/await acts\.scoreTake\(/g) ?? []).toEqual([]);
   });
 });
