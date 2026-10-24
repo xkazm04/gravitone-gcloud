@@ -79,6 +79,20 @@ describe("the ledger by time", () => {
     expect(oct.events.every((e) => e.type === "job.done")).toBe(true);
   });
 
+  it("a window bound means its instant, whatever precision it is written in", () => {
+    const one = tpl.fresh();
+    const [e] = must(one.tx((t) => [append(t, own(1))]));
+    const at = e?.at ?? "";
+    expect(at).toMatch(/\.\d{3}Z$/);
+    const whole = at.replace(/\.\d{3}Z$/, "Z");
+    expect(at.endsWith(".000Z")).toBe(true);
+    // since is inclusive, until exclusive: the row at 00:00:00.000 is in [00:00:00Z, ...) and not in [..., 00:00:00Z).
+    expect(must(queryEvents(one, { since: whole, limit: 10 })).events).toHaveLength(1);
+    expect(must(queryEvents(one, { until: whole, limit: 10 })).events).toHaveLength(0);
+    expect(must(countEvents(one, { since: whole })).total).toBe(1);
+    expect(must(queryEvents(one, { since: at.replace(/Z$/, "000Z"), limit: 10 })).events).toHaveLength(1);
+  });
+
   it("filters by source, project, run and a list of subjects", () => {
     const forge = must(queryEvents(s, { source: ["forge"], limit: 1000 })).events;
     expect(forge.length).toBe(all.filter((e) => e.key?.startsWith("forge:")).length);
