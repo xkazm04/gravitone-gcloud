@@ -1,0 +1,195 @@
+{
+ "schema": "conform-run/1",
+ "worker": "950657ee-324f-44b9-8484-6ad829af7ce1",
+ "subject": "agent-cli-transport",
+ "evaluatedAt": "2026-10-24T23:20:28.938889+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "text-reasoning-engine",
+   "subject": "agent-cli-transport",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/text/providers/claudeCliRetrieve.ts:181 Both Claude CLI rungs collapse unparseable or result-less output into an opaque 'failed' with no bounded prefix of the raw stdout, accumulate stdout without a byte cap, and accept an empty `result` as a successful answer, so a login prompt, rate-limit notice or empty envelope all reach the router as the same undiagnosable failure or as success.",
+   "techniques": [
+    {
+     "technique": "output-normalization",
+     "verdict": "deviation",
+     "evidence": "lib/claudeCli.ts:323 No raw-text prefix is kept on a parse failure. `out += c` (line 405) has no cap. Line 328 `String(j.result ?? \"\")` lets an empty answer through, and the router does not re-check it. The envelope subtype only reaches the caller inside the message text, never as a value it can branch on. Stream hygiene is good: separate stderr and a guarded stdin write."
+    },
+    {
+     "technique": "subscription-auth-selection",
+     "verdict": "deviation",
+     "evidence": "lib/claudeCli.ts:146 The strip is at the single door (spawnTurn and the probe both use seatOnlyEnv), which is good. But the list holds only the four ANTHROPIC_* vars. It leaves out the provider-routing switches (CLAUDE_CODE_USE_BEDROCK/VERTEX) and the vendor's session markers (CLAUDECODE, CLAUDE_CODE_ENTRYPOINT); grep finds no hit for any of them anywhere in the repo, although the technique requires stripping them."
+    },
+    {
+     "technique": "availability-probe",
+     "verdict": "conformant",
+     "evidence": "lib/text/providers/claudeCli.ts:84 Policy and platform posture are checked before any spawn (line 69). The probe uses the same shell predicate and seatOnlyEnv as the run, records the version, and its detail says it cannot prove login. Caveat: the version is not compared against the dated capability row."
+    },
+    {
+     "technique": "dated-capability-matrix",
+     "verdict": "conformant",
+     "evidence": "lib/text/providers/claudeCli.ts:60 The capability carries its version, date and method, and the router reads it to decide whether to append a schema instruction. Partial: the cells are inline comments, not a matrix keyed to the probed version."
+    },
+    {
+     "technique": "fallback-ladder",
+     "verdict": "conformant",
+     "evidence": "lib/text/router.ts:441 Preferred, then alternate, then honest refusal. The router records each descent reason, and the rung travels in provenance. No deterministic floor, by a stated decision (header lines 40-54)."
+    },
+    {
+     "technique": "permission-stance-enforcement",
+     "verdict": "conformant",
+     "evidence": "lib/text/providers/claudeCliRetrieve.ts:85 The retrieve rung has three layers: tool existence, the allow list with dontAsk, and safe-mode/strict-mcp, plus a stream fence. The reasoning door relies on `--allowed-tools \"\"` and `--max-turns 1`, and spawnTurn sets no neutral cwd, so ambient project instructions can load in generate mode."
+    },
+    {
+     "technique": "child-observed-posture",
+     "verdict": "deviation",
+     "evidence": "lib/text/providers/claudeCliRetrieve.ts:213 The tool stance is taken from the child's init event (line 215 breach), and an argv probe spec exists. But billing direction is never observed from the child: the init handler reads only `tools`, and the probe is `--version`, which reports no auth method. So the seat promise is the host's intent only."
+    },
+    {
+     "technique": "host-routed-approval-round-trip",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/providers/claudeCliRetrieve.ts:88 Unattended batch turns with a pre-set stance; no person is reachable inside the child's turn."
+    },
+    {
+     "technique": "thread-custody-across-resume",
+     "verdict": "not-applicable",
+     "evidence": "lib/text/providers/claudeCli.ts:120 The session id is recorded as provenance only. It is never passed back (no --resume anywhere in lib/text)."
+    }
+   ]
+  },
+  {
+   "context": "article-run-engine",
+   "subject": "agent-cli-transport",
+   "bundle": "software-engineering",
+   "state": "conformant",
+   "evidence": "lib/articles/agentSteps.ts:36 Every writer step runs a fresh headless turn in an isolated temp workspace holding only inputs/ and out/. A non-completed outcome or a missing or empty out/ file fails the step by name, and dry runs are answered by a labeled stand-in rather than the seat. The context consumes the transport correctly; the spawn door itself lives in lib/agent and lib/claudeCli.ts.",
+   "techniques": [
+    {
+     "technique": "permission-stance-enforcement",
+     "verdict": "conformant",
+     "evidence": "lib/articles/agentSteps.ts:36 Edit stance is contained: an isolated temp worktree, per-step tool lists (STEP_PLAN, line 28), and dontAsk rather than bypass in the seam's argv. The registry is staged as read-only copies."
+    },
+    {
+     "technique": "output-normalization",
+     "verdict": "conformant",
+     "evidence": "lib/articles/ingestSources.ts:18 Answer-file dialect: a missing file, invalid JSON or an empty array each fail the step by name. A non-completed outcome throws with the tool's errors (agentSteps.ts:93)."
+    },
+    {
+     "technique": "fallback-ladder",
+     "verdict": "conformant",
+     "evidence": "lib/articles/turns.ts:26 A writer turn has no heuristic substitute, so a refused turn is an honest refusal that carries its reason. Dry mode is a labeled stand-in (standInTurn, line 24) that is a property of the job and never enters the seat."
+    },
+    {
+     "technique": "thread-custody-across-resume",
+     "verdict": "not-applicable",
+     "evidence": "lib/articles/engine.ts:13 Resume is host-side state (resume.ts resumePoint over step status); no child thread id is stored or passed back."
+    },
+    {
+     "technique": "host-routed-approval-round-trip",
+     "verdict": "not-applicable",
+     "evidence": "lib/articles/agentSteps.ts:82 Unattended turns; the human gate is a post-hoc Board approval, not a mid-turn answer channel."
+    }
+   ]
+  },
+  {
+   "context": "suno-driver-queue",
+   "subject": "agent-cli-transport",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/sound/suno/propose.ts:18 A case-insensitive search of lib/sound/suno for spawn, child_process, claude, seatOnlyEnv and --output-format found nothing. Proposals reach a model only through the text router's contract, and generation goes through a browser driver, so this context spawns no agent CLI.",
+   "techniques": [],
+   "absenceTerms": [
+    "child_process",
+    "spawn",
+    "seatOnlyEnv",
+    "--output-format",
+    "claude"
+   ]
+  },
+  {
+   "context": "review-and-runs-history",
+   "subject": "agent-cli-transport",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/runs/lanes.ts:16 A case-insensitive search of packages/ui/src/components/review and runs for spawn, child_process, claude, seatOnlyEnv and --output-format found nothing. These are client UI components and pure models over @gt/domain types, with no process or agent transport.",
+   "techniques": [],
+   "absenceTerms": [
+    "child_process",
+    "spawn",
+    "seatOnlyEnv",
+    "--output-format",
+    "claude"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-24T23:20:28.938889+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-cli-transport"
+   ],
+   "techniques": [
+    "availability-probe",
+    "child-observed-posture",
+    "dated-capability-matrix",
+    "fallback-ladder",
+    "host-routed-approval-round-trip",
+    "output-normalization",
+    "permission-stance-enforcement",
+    "subscription-auth-selection",
+    "thread-custody-across-resume"
+   ],
+   "deviations": 1,
+   "context": "text-reasoning-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T23:20:28.938889+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-cli-transport"
+   ],
+   "techniques": [
+    "fallback-ladder",
+    "host-routed-approval-round-trip",
+    "output-normalization",
+    "permission-stance-enforcement",
+    "thread-custody-across-resume"
+   ],
+   "deviations": 0,
+   "context": "article-run-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T23:20:28.938889+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-cli-transport"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "suno-driver-queue",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T23:20:28.938889+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-cli-transport"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "review-and-runs-history",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

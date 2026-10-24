@@ -12291,6 +12291,118 @@
       "evaluatedTs": "2026-10-24T23:06:30.274Z",
       "worker": "f401ddc7-3112-4ca7-bc38-09e7e4036e2d",
       "techniques": []
+    },
+    "94e6b933-0f6a-4631-b2f0-4c98b0799c28/agent-cli-transport": {
+      "context": "text-reasoning-engine",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:20:28.938Z",
+      "worker": "950657ee-324f-44b9-8484-6ad829af7ce1",
+      "techniques": [
+        {
+          "technique": "output-normalization",
+          "verdict": "deviation",
+          "evidence": "lib/claudeCli.ts:323 No raw-text prefix is kept on a parse failure. `out += c` (line 405) has no cap. Line 328 `String(j.result ?? \"\")` lets an empty answer through, and the router does not re-check it. The envelope subtype only reaches the caller inside the message text, never as a value it can branch on. Stream hygiene is good: separate stderr and a guarded stdin write."
+        },
+        {
+          "technique": "subscription-auth-selection",
+          "verdict": "deviation",
+          "evidence": "lib/claudeCli.ts:146 The strip is at the single door (spawnTurn and the probe both use seatOnlyEnv), which is good. But the list holds only the four ANTHROPIC_* vars. It leaves out the provider-routing switches (CLAUDE_CODE_USE_BEDROCK/VERTEX) and the vendor's session markers (CLAUDECODE, CLAUDE_CODE_ENTRYPOINT); grep finds no hit for any of them anywhere in the repo, although the technique requires stripping them."
+        },
+        {
+          "technique": "availability-probe",
+          "verdict": "conformant",
+          "evidence": "lib/text/providers/claudeCli.ts:84 Policy and platform posture are checked before any spawn (line 69). The probe uses the same shell predicate and seatOnlyEnv as the run, records the version, and its detail says it cannot prove login. Caveat: the version is not compared against the dated capability row."
+        },
+        {
+          "technique": "dated-capability-matrix",
+          "verdict": "conformant",
+          "evidence": "lib/text/providers/claudeCli.ts:60 The capability carries its version, date and method, and the router reads it to decide whether to append a schema instruction. Partial: the cells are inline comments, not a matrix keyed to the probed version."
+        },
+        {
+          "technique": "fallback-ladder",
+          "verdict": "conformant",
+          "evidence": "lib/text/router.ts:441 Preferred, then alternate, then honest refusal. The router records each descent reason, and the rung travels in provenance. No deterministic floor, by a stated decision (header lines 40-54)."
+        },
+        {
+          "technique": "permission-stance-enforcement",
+          "verdict": "conformant",
+          "evidence": "lib/text/providers/claudeCliRetrieve.ts:85 The retrieve rung has three layers: tool existence, the allow list with dontAsk, and safe-mode/strict-mcp, plus a stream fence. The reasoning door relies on `--allowed-tools \"\"` and `--max-turns 1`, and spawnTurn sets no neutral cwd, so ambient project instructions can load in generate mode."
+        },
+        {
+          "technique": "child-observed-posture",
+          "verdict": "deviation",
+          "evidence": "lib/text/providers/claudeCliRetrieve.ts:213 The tool stance is taken from the child's init event (line 215 breach), and an argv probe spec exists. But billing direction is never observed from the child: the init handler reads only `tools`, and the probe is `--version`, which reports no auth method. So the seat promise is the host's intent only."
+        },
+        {
+          "technique": "host-routed-approval-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/providers/claudeCliRetrieve.ts:88 Unattended batch turns with a pre-set stance; no person is reachable inside the child's turn."
+        },
+        {
+          "technique": "thread-custody-across-resume",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/providers/claudeCli.ts:120 The session id is recorded as provenance only. It is never passed back (no --resume anywhere in lib/text)."
+        }
+      ]
+    },
+    "14632859-df56-4340-9e16-c420ff681ee3/agent-cli-transport": {
+      "context": "article-run-engine",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:20:28.938Z",
+      "worker": "950657ee-324f-44b9-8484-6ad829af7ce1",
+      "techniques": [
+        {
+          "technique": "permission-stance-enforcement",
+          "verdict": "conformant",
+          "evidence": "lib/articles/agentSteps.ts:36 Edit stance is contained: an isolated temp worktree, per-step tool lists (STEP_PLAN, line 28), and dontAsk rather than bypass in the seam's argv. The registry is staged as read-only copies."
+        },
+        {
+          "technique": "output-normalization",
+          "verdict": "conformant",
+          "evidence": "lib/articles/ingestSources.ts:18 Answer-file dialect: a missing file, invalid JSON or an empty array each fail the step by name. A non-completed outcome throws with the tool's errors (agentSteps.ts:93)."
+        },
+        {
+          "technique": "fallback-ladder",
+          "verdict": "conformant",
+          "evidence": "lib/articles/turns.ts:26 A writer turn has no heuristic substitute, so a refused turn is an honest refusal that carries its reason. Dry mode is a labeled stand-in (standInTurn, line 24) that is a property of the job and never enters the seat."
+        },
+        {
+          "technique": "thread-custody-across-resume",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/engine.ts:13 Resume is host-side state (resume.ts resumePoint over step status); no child thread id is stored or passed back."
+        },
+        {
+          "technique": "host-routed-approval-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/agentSteps.ts:82 Unattended turns; the human gate is a post-hoc Board approval, not a mid-turn answer channel."
+        }
+      ]
+    },
+    "ab872012-f902-4f43-b9c7-f13137e36f24/agent-cli-transport": {
+      "context": "suno-driver-queue",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:20:28.938Z",
+      "worker": "950657ee-324f-44b9-8484-6ad829af7ce1",
+      "techniques": []
+    },
+    "571eae96-e297-40c6-a556-3a3bf8f48e3f/agent-cli-transport": {
+      "context": "review-and-runs-history",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T23:20:28.938Z",
+      "worker": "950657ee-324f-44b9-8484-6ad829af7ce1",
+      "techniques": []
     }
   }
 }
