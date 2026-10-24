@@ -12,6 +12,7 @@ import { AudioPreview, mediaErrorWords } from "../../src/components/audio/AudioP
 import { AudioPrompt } from "../../src/components/audio/AudioPrompt.tsx";
 import { DraftList } from "../../src/components/audio/DraftList.tsx";
 import { SeedComposer } from "../../src/components/audio/SeedComposer.tsx";
+import { TermRail } from "../../src/components/audio/TermRail.tsx";
 import { BLANK_SEED, addTo, avoidFloats, compose, fitTo, handsOf, preferredFloats, removeFrom, sortTerms, sunoCut, sunoFieldsOf, termId, type Seed, type Term } from "../../src/components/audio/recipe.ts";
 import { conceptFor, keyRelation, tempoError, variationsOfSeed } from "../../src/components/audio/variations.ts";
 
@@ -243,5 +244,14 @@ describe("the composer's markup", () => {
     const bpms = [218, 42, 220, 40].flatMap((bpm) => variationsOfSeed({ ...SEED, bpm }, []).filter((v) => v.axis === "tempo").map((v) => v.seed.bpm ?? 0));
     expect(bpms.filter((b) => b < 40 || b > 220)).toEqual([]);
     expect(variationsOfSeed({ ...SEED, bpm: 218 }, []).filter((v) => v.axis === "tempo").map((v) => v.diff[0])).toEqual(["-6 BPM"]);
+  });
+});
+
+describe("the term rail's markup", () => {
+  test("a word the seed can carry is a press that adds it; an effect category is no press at all", () => {
+    const html = renderToStaticMarkup(h(TermRail, { terms: [term("instrument", "cello", 4, 3), term("sfxCategory", "impact", 3, 2)], onPick: () => {}, onHand: () => {} }));
+    expect(html).toContain('aria-label="add cello to the seed"');
+    expect(html).not.toContain('aria-label="add impact to the seed"');
+    expect(html).toContain("impact");
   });
 });
