@@ -1,0 +1,136 @@
+{
+  "schema": "conform-run/1",
+  "worker": "0807eb84-ba07-435c-beb3-6622bd3af9a2",
+  "subject": "settings",
+  "evaluatedAt": "2026-10-24T06:27:37.352530+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "ledger-screen",
+      "subject": "settings",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "app/(studio)/ledger/_ledger/filter.ts:9 The Ledger screen keeps its only user-chosen state (facets, query, order, view) in URL search params as transient view filters and reads the kernel event store, so there is no settings store here; a grep of app/(studio)/ledger for setting, preference, localStorage and getSetting found nothing.",
+      "techniques": [],
+      "absenceTerms": [
+        "setting",
+        "preference",
+        "localStorage",
+        "getSetting"
+      ]
+    },
+    {
+      "context": "ui-controls-shell",
+      "subject": "settings",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "packages/ui/src/components/toggle/Toggle.tsx:4 The primitives are controlled, stateless components whose caller owns the value, so they hold no settings store or save path; save-experience would apply to a settings surface built from them, not to the primitives, and a grep of packages/ui/src/components for setting, preference and getSetting found nothing.",
+      "techniques": [],
+      "absenceTerms": [
+        "setting",
+        "preference",
+        "getSetting"
+      ]
+    },
+    {
+      "context": "ledger-v1-projection-core",
+      "subject": "settings",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/ledger/v1/types.ts:12 The projection contract defines read-only Source adapters and pure event projection into the kernel event store, with no settings key space, accessor or configuration resolution; a grep of lib/ledger/v1 for setting, preference, localStorage and getSetting found nothing, and the core files contain no process.env read.",
+      "techniques": [],
+      "absenceTerms": [
+        "setting",
+        "preference",
+        "localStorage",
+        "getSetting"
+      ]
+    },
+    {
+      "context": "ledger-v1-sources",
+      "subject": "settings",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "lib/ledger/v1/sources/roots.ts:27 Each v1 store root is resolved through a three-rung chain (v1's env override, then the fixture universe's fixtures-out, then v1's own root), but universeRoot returns a bare path and records nowhere which rung answered, so 'the Ledger shows fixture articles while v1 shows real ones' on one host cannot be traced to its source without reading the environment by hand.",
+      "techniques": [
+        {
+          "technique": "cross-source-precedence-chain",
+          "verdict": "deviation",
+          "evidence": "lib/ledger/v1/sources/roots.ts:27 The order is declared in the header comment (lines 19-22) and absent or blank skips, but there is no provenance: no startup line or diagnostic names the winning source. An override that is set also labels the rows src from the universe, not from the rung that answered."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "settings",
+      "context": "project-step-store",
+      "reason": "withdrawn after review: reviewer (sonnet): lib/steps/stepDataResearch.ts:102-110 persists GuidedModeStepData, a user-chosen guided/expert mode, durably in this store under the `research-mode` and `script-mode` keys. I could not confirm that the subject's boundary treats this as client-state rather than a setting. The cited anchor, index.ts:8"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-10-24T06:27:37.352530+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "settings"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "project-step-store",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T06:27:37.352530+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "settings"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "ledger-screen",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T06:27:37.352530+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "settings"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "ui-controls-shell",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T06:27:37.352530+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "settings"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "ledger-v1-projection-core",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-10-24T06:27:37.352530+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "settings"
+      ],
+      "techniques": [
+        "cross-source-precedence-chain"
+      ],
+      "deviations": 1,
+      "context": "ledger-v1-sources",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

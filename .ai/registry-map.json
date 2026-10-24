@@ -7707,7 +7707,11 @@
           "revision": 13,
           "changedAt": "2026-09-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/ledger/v1/types.ts:12 The projection contract defines read-only Source adapters and pure event projection into the kernel event store, with no settings key space, accessor or configuration resolution; a grep of lib/ledger/v1 for setting, preference, localStorage and getSetting found nothing, and the core files contain no process.env read.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:85c48ec5bdb5581f",
+          "evaluatedRevision": 13
         },
         {
           "subject": "test-harness",
@@ -7995,7 +7999,11 @@
           "revision": 13,
           "changedAt": "2026-09-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/ledger/v1/sources/roots.ts:27 Each v1 store root is resolved through a three-rung chain (v1's env override, then the fixture universe's fixtures-out, then v1's own root), but universeRoot returns a bare path and records nowhere which rung answered, so 'the Ledger shows fixture articles while v1 shows real ones' on one host cannot be traced to its source without reading the environment by hand.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:85c48ec5bdb5581f",
+          "evaluatedRevision": 13
         },
         {
           "subject": "agent-runtime-assembly",
@@ -13247,7 +13255,11 @@
           "revision": 13,
           "changedAt": "2026-09-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/toggle/Toggle.tsx:4 The primitives are controlled, stateless components whose caller owns the value, so they hold no settings store or save path; save-experience would apply to a settings surface built from them, not to the primitives, and a grep of packages/ui/src/components for setting, preference and getSetting found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:85c48ec5bdb5581f",
+          "evaluatedRevision": 13
         }
       ],
       "governance": "governed"

@@ -11665,6 +11665,57 @@
           "evidence": "packages/ui/src/components/produce/Unpriced.tsx:23 An unpriced figure is a distinct shape carrying its reason, never a dollar amount, on the plan, the receipt and the composer."
         }
       ]
+    },
+    "e2f6231a-d39f-4d39-9465-0a48436cae92/settings": {
+      "context": "project-step-store",
+      "subject": "settings",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:27:37.352Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "0807eb84-ba07-435c-beb3-6622bd3af9a2",
+        "state": "not-applicable",
+        "at": "2026-10-24T06:27:56.359805+00:00",
+        "reason": "reviewer (sonnet): lib/steps/stepDataResearch.ts:102-110 persists GuidedModeStepData, a user-chosen guided/expert mode, durably in this store under the `research-mode` and `script-mode` keys. I could not confirm that the subject's boundary treats this as client-state rather than a setting. The cited anchor, index.ts:8"
+      }
+    },
+    "5b95d7b7-d2b7-4625-a5bb-4585b8ab9dbc/settings": {
+      "context": "ui-controls-shell",
+      "subject": "settings",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:27:37.352Z",
+      "worker": "0807eb84-ba07-435c-beb3-6622bd3af9a2",
+      "techniques": []
+    },
+    "bd05d347-c5c6-4eb4-8de2-b68a6102ac01/settings": {
+      "context": "ledger-v1-projection-core",
+      "subject": "settings",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:27:37.352Z",
+      "worker": "0807eb84-ba07-435c-beb3-6622bd3af9a2",
+      "techniques": []
+    },
+    "86dbb3bb-044c-4ed3-810a-93d088bcad64/settings": {
+      "context": "ledger-v1-sources",
+      "subject": "settings",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T06:27:37.352Z",
+      "worker": "0807eb84-ba07-435c-beb3-6622bd3af9a2",
+      "techniques": [
+        {
+          "technique": "cross-source-precedence-chain",
+          "verdict": "deviation",
+          "evidence": "lib/ledger/v1/sources/roots.ts:27 The order is declared in the header comment (lines 19-22) and absent or blank skips, but there is no provenance: no startup line or diagnostic names the winning source. An override that is set also labels the rows src from the universe, not from the rung that answered."
+        }
+      ]
     }
   }
 }
