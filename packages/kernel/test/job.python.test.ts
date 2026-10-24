@@ -6,18 +6,19 @@ import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { parseJsonAt } from "@gt/domain/door";
-import type { Result } from "@gt/domain/errors";
+import type { AppErrorCode, Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
-import { holderSchema, type Holder } from "@gt/domain/job";
-import { resourceLaneSchema } from "@gt/domain/lane";
+import { holderSchema, jobMachine, type Holder } from "@gt/domain/job";
+import { LANE_CAPACITY, LANE_PAYS, RESOURCE_LANES, resourceLaneSchema } from "@gt/domain/lane";
 import { blobStore } from "../src/blob.ts";
 import { verify } from "../src/events.ts";
 import { liveEffects, type Effects } from "../src/effects.ts";
-import type { Producer, StepOutcome } from "../src/job-core.ts";
+import { BREAKER_LIMIT, type Producer, type StepOutcome } from "../src/job-core.ts";
 import { ackLane } from "../src/job-queue.ts";
 import { recover, runJob, type RunReport } from "../src/job-run.ts";
 import { enqueue, loadJob, loadOutputs, pause, release, retry } from "../src/job.ts";
 import { openKernel } from "../src/kernel.ts";
+import { DEFAULT_TTL_S } from "../src/lease-core.ts";
 import { launchProject, planReceipt } from "../src/records/launch.ts";
 import { compose } from "../src/records/write.ts";
 import { reconcileJobSpend } from "../src/spend/projection.ts";
@@ -305,4 +306,48 @@ describe.skipIf(python === undefined)("the Python heartbeat meets a store error"
       expect({ out: r.stdout.trim(), traceback: r.stderr.includes("Traceback") }).toEqual({ out: c.expect, traceback: false });
     });
   }
+});
+
+// THE TABLES PYTHON COPIES (job_record.py, lease.py). spec/job.json's scenarios reach four of the
+// nine lanes, so a capacity or a pays bit could drift on the other five with every table green -
+// measured: cloud.google 3 -> 2 and box.chrome pays -> free passed all 88 Python-driving cases.
+// Here each copy is read from the module and compared whole with the one it copies. The error
+// codes are spelled as an exhaustive record, so a code added to @gt/domain/errors fails tsc here
+// until it is added (and then this comparison, until Python has it).
+const CODES: { readonly [K in AppErrorCode]: K } = {
+  invalid: "invalid",
+  "not-found": "not-found",
+  conflict: "conflict",
+  unauthenticated: "unauthenticated",
+  refused: "refused",
+  unavailable: "unavailable",
+  budget: "budget",
+  internal: "internal",
+};
+describe.skipIf(python === undefined)("the tables the Python protocol copies equal the ones it copies", () => {
+  it("lanes, capacities, pays, the job machine, the error codes, the breaker and the TTL", () => {
+    const code = [
+      "import json, sys",
+      `sys.path.append(${JSON.stringify(path.join(here, "..", "py"))})`,
+      "import job_record",
+      "from kernel_store import kernel_lease",
+      "lease = kernel_lease()",
+      "print(json.dumps({'lanes': list(lease.RESOURCE_LANES), 'capacity': job_record.LANE_CAPACITY, 'pays': job_record.LANE_PAYS,",
+      "                  'machine': {k: list(v) for k, v in job_record.MACHINE.items()}, 'codes': sorted(job_record.ERROR_CODES),",
+      "                  'breaker': job_record.BREAKER_LIMIT, 'ttl': lease.DEFAULT_TTL_S, 'leaseTtl': job_record.DEFAULT_TTL_S}))",
+    ].join("\n");
+    const r = spawnSync(python ?? "python", ["-I", "-c", code], { encoding: "utf8" });
+    expect(r.stderr).toBe("");
+    const got = must(parseJsonAt("python tables", z.unknown(), r.stdout.trim()));
+    expect(got).toEqual({
+      lanes: [...RESOURCE_LANES],
+      capacity: { ...LANE_CAPACITY },
+      pays: { ...LANE_PAYS },
+      machine: Object.fromEntries(jobMachine.states.map((st) => [st, [...jobMachine.next(st)]])),
+      codes: Object.keys(CODES).sort(),
+      breaker: BREAKER_LIMIT,
+      ttl: DEFAULT_TTL_S,
+      leaseTtl: DEFAULT_TTL_S,
+    });
+  });
 });
