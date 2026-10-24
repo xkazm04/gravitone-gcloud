@@ -128,6 +128,10 @@ describe("what is drawn", () => {
     expect(html).toContain("YT_TOKEN · unset");
     expect(html).toContain("auth: invalid_grant");
     expect(html).toContain("npx tsx pipeline/publish.mts channels --json");
+    // Every calendar instant names its zone (calendar.ts whenUtc), the readiness hours too.
+    expect(html).toContain("failed · Wed 14 Oct · 09:00 UTC");
+    const out = renderToStaticMarkup(h(ChannelReadiness, { channels: [ch("youtube", "live", { lastOut: "2026-10-13T18:30:00.000Z" })] }));
+    expect(out).toContain("out · Tue 13 Oct · 18:30 UTC");
   });
 
   test("the month: a toggle on an unwired channel says so; the agenda carries the readiness; Schedule is offered", () => {
