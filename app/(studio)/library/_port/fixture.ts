@@ -170,12 +170,15 @@ export function fixtureQuery(input: LibraryQuery): Result<LibraryPage> {
 /** Everything the universe holds, before any query. */
 export const fixtureEverything = (): number => universe().items.length;
 
+/** An id the index does not hold, in the kernel's words (kernel library/detail.ts, write.ts). */
+const gone = (id: string): Result<never> => err("not-found", `library: no item ${id}`);
+
 /** The vocabulary lines a detail lists: the kind's groups, then its collections (library.js `body`). */
 const DETAIL_SHARED = ["project", "run", "hunt"];
 
 export function fixtureDetail(id: string): Result<LibraryItemDetail> {
   const x = universe().byId.get(id);
-  if (x === undefined) return err("not-found", `no library item ${id}`);
+  if (x === undefined) return gone(id);
   const item = parseAt(`fixture library item ${id}`, libraryItemSchema, x.raw);
   if (!item.ok) return item;
   const keys = [...railGroups(x.row.kind).filter((g) => g.section === "vocabulary").map((g) => g.key), ...DETAIL_SHARED];
@@ -200,7 +203,7 @@ export const fixtureProjects = (): readonly { readonly value: string; readonly l
 export function fixtureAct(id: string, act: LibraryAct, now: () => string): Result<{ readonly said: string }> {
   const u = universe();
   const x = u.byId.get(id);
-  if (x === undefined) return err("not-found", `no library item ${id}`);
+  if (x === undefined) return gone(id);
   const pins = x.f["pin"] ?? [];
   if (act.act === "pin") {
     if (pins.length > 0) return err("conflict", `${x.row.title} is already pinned`);

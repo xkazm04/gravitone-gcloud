@@ -5899,4 +5899,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "e.identity === identity ? null : e",
     why: "Any block landing hides another block's refusal while that block's slots stay empty.",
   },
+  {
+    id: "library-fixture-gone-own-words",
+    test: "tests/next-server/library-fixture-parity.test.ts",
+    file: "app/(studio)/library/_port/fixture.ts",
+    find: "err(\"not-found\", `library: no item ${id}`)",
+    replace: "err(\"not-found\", `no library item ${id}`)",
+    why: "The fixture Library refuses an id it does not hold in its own words, so the detail's error line is designed against a sentence the kernel never writes.",
+  },
 ];
