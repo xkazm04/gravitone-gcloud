@@ -33,7 +33,8 @@ export type StrengthsView = {
   readonly cells: Read<readonly StrengthCell[]>;
   /** Takes the ledger holds a verdict on, of this kind: the only total the table has. */
   readonly judged: number;
-  readonly evidence: readonly EvidenceTake[];
+  /** The judged takes behind the cells; unread, a cell has no evidence to sign on. */
+  readonly evidence: Read<readonly EvidenceTake[]>;
   readonly lessons: Read<readonly LessonRow[]>;
 };
 
@@ -89,7 +90,7 @@ export async function readStrengths(kind: Kind): Promise<StrengthsView> {
     kind,
     cells: ledger.ok && insights !== null ? { ok: true, value: insights.cells } : { ok: false, error: ledger.ok ? "no insights" : ledger.error },
     judged: insights?.judged ?? 0,
-    evidence: takes.ok ? takes.value.filter(judged).map(evidenceOf) : [],
+    evidence: takes.ok ? { ok: true, value: takes.value.filter(judged).map(evidenceOf) } : takes,
     lessons: ledger.ok
       ? {
           ok: true,

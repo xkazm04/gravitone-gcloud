@@ -34,7 +34,7 @@ const pct = (r: number | null): string => (r === null ? "—" : `${Math.round(r 
 function Detail({ cell, view, door }: { readonly cell: StrengthCell; readonly view: StrengthsView; readonly door: LessonDoor }) {
   const router = useRouter();
   const { toast } = useShell();
-  const ev = useMemo(() => evidenceFor(view.evidence, cell), [view.evidence, cell]);
+  const ev = useMemo(() => evidenceFor(view.evidence.ok ? view.evidence.value : [], cell), [view.evidence, cell]);
   const [claim, setClaim] = useState(() => claimDraft(cell));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,19 +65,25 @@ function Detail({ cell, view, door }: { readonly cell: StrengthCell; readonly vi
   return (
     <section className={s.detail} aria-label="selected cell">
       <StrengthHead cell={cell} />
-      <span className={s.figs}>
-        <Tally value={ev.n} label="takes" />
-        <Tally value={pct(ev.keepRate)} label="kept" />
-        <Tally value={ev.meanScore === null ? "—" : ev.meanScore.toFixed(1)} label="mean" />
-      </span>
-      {enough ? (
-        <>
-          <textarea className={s.claim} aria-label="lesson claim" rows={4} value={claim} disabled={signed} onChange={(e) => setClaim(e.currentTarget.value)} />
-          {error !== null && <ErrorLine message={error} live />}
-          <Button label={signed ? "Signed" : "Sign lesson"} tone="emerald" disabled={busy || signed || claim.trim() === ""} onPress={() => void sign()} />
-        </>
+      {!view.evidence.ok ? (
+        <ErrorLine message={`takes: ${view.evidence.error}`} />
       ) : (
-        <Ghost count={2} label={`${cell.n} of 3 judged takes; no lesson until the floor`} />
+        <>
+          <span className={s.figs}>
+            <Tally value={ev.n} label="takes" />
+            <Tally value={pct(ev.keepRate)} label="kept" />
+            <Tally value={ev.meanScore === null ? "—" : ev.meanScore.toFixed(1)} label="mean" />
+          </span>
+          {enough ? (
+            <>
+              <textarea className={s.claim} aria-label="lesson claim" rows={4} value={claim} disabled={signed} onChange={(e) => setClaim(e.currentTarget.value)} />
+              {error !== null && <ErrorLine message={error} live />}
+              <Button label={signed ? "Signed" : "Sign lesson"} tone="emerald" disabled={busy || signed || claim.trim() === ""} onPress={() => void sign()} />
+            </>
+          ) : (
+            <Ghost count={2} label={`${cell.n} of 3 judged takes; no lesson until the floor`} />
+          )}
+        </>
       )}
     </section>
   );
