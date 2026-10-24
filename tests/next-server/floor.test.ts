@@ -193,6 +193,11 @@ describe("the fixture calendar's engine refusals", () => {
     expect(words(fixtureSchedule({ ...draft, channel: "blog" }, NOW))).toMatch(/approve on the Board/);
   });
 
+  it("refuses a Library item that is not an export on a video channel, in the adapter's words", () => {
+    const r = fixtureSchedule({ ...draft, item: "article:run:art-2026-10-16-routing" }, NOW);
+    expect(r.ok ? null : [r.error.code, r.error.message]).toEqual(["refused", "article:run:art-2026-10-16-routing is not an export; youtube publishes exports"]);
+  });
+
   it("refuses a verb sent on a revision the slot has moved past, and writes nothing", () => {
     const first = must(fixtureAct("sl-tariff-yt-later", NOW, (r) => applyMove(r, "2026-10-28T10:00:00.000Z", NOW), 1));
     expect(first.rev).toBe(2);

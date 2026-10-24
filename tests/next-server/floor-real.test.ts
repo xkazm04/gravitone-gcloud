@@ -200,6 +200,13 @@ describe("the verbs, at the slot's revision", () => {
     expect(words(realSchedule({ ...d, channel: "blog" }, OP))).toMatch(/approve on the Board/);
   });
 
+  it("refuses a Library item that is not an export, even one the index holds: the youtube adapter would refuse it at its tick", () => {
+    const clip = "video:clip:dddd4444";
+    must(upsertItems(store, [{ item: video(clip, sha("e")), meta: "clip · 1.0 MB", extras: {}, feed: "t" }], { styleOf: () => undefined }));
+    const r = realSchedule({ item: clip, channel: "youtube", at: iso(240), title: "a clip", description: "", tags: [] }, OP);
+    expect(r.ok ? null : [r.error.code, r.error.message]).toEqual(["refused", `${clip} is not an export; youtube publishes exports`]);
+  });
+
   it("a move on a stale revision writes nothing and says what the slot is now; on its own revision it moves", () => {
     const made = must(realSchedule({ item: B, channel: "youtube", at: iso(300), title: "Chokepoint again", description: "", tags: [] }, OP));
     const moved = must(realMove({ id: made.slot.id, at: iso(400), baseRev: 1, nowMs: Date.now(), who: OP }));

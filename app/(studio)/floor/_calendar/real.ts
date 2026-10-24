@@ -248,6 +248,9 @@ export function realPublishNow(v: VerbIn): Result<SlotView> {
   return answer(st, ready, "publish", publishNow(st, v.id, actorOf(v.who), { now: v.nowMs, ready: engineReady(c.value) }, opts(v)), v.id);
 }
 
+/** A video channel's refusal of an item that is not an export (the adapter's sentence). */
+export const exportOnly = (item: string, channel: string): string => `${item} is not an export; ${channel} publishes exports`;
+
 export function realSchedule(d: ScheduleDraft, who: Who): Result<SlotView> {
   const c = ctx();
   if (!c.ok) return c;
@@ -255,6 +258,9 @@ export function realSchedule(d: ScheduleDraft, who: Who): Result<SlotView> {
   const channel = channelSchema.safeParse(d.channel);
   if (!channel.success) return err("invalid", `${d.channel} is not a channel`);
   if (channel.data === "blog") return err("refused", "a blog slot is made by its article's approve on the Board, not here");
+  // Every other channel publishes an export (lib/producers/publish.ts youtubeAdapter refuses
+  // anything else at its tick, in these words): another Library item would be a slot that can only fail.
+  if (exportIdOf(d.item) === undefined) return err("refused", exportOnly(d.item, channel.data));
   const made = createSlot(st, { libraryItemId: d.item, channel: channel.data, at: d.at, title: d.title, description: d.description, tags: d.tags }, actorOf(who), engineReady(c.value));
   return made.ok ? viewOfRow(st, made.value, modeFor(ready, channel.data)) : made;
 }

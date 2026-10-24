@@ -23,13 +23,14 @@ import "server-only";
 
 import { err, ok, type Result } from "@gt/domain/errors";
 import { parseAt } from "@gt/domain/door";
-import { channelSchema, slotMachine, slotSchema, type Slot, type SlotState } from "@gt/domain/slot";
+import { channelSchema, exportIdOf, slotMachine, slotSchema, type Slot, type SlotState } from "@gt/domain/slot";
 import type { RailSlot } from "@gt/ui/components/floor/calendar.ts";
 import { canSchedule, type ChannelReady, type ScheduleDraft, type ScheduleItem } from "@gt/ui/components/floor/schedule.ts";
 import { canCancel, canPublishNow, moveProblem } from "@gt/ui/components/floor/slot.ts";
 import type { SlotView } from "@gt/ui/components/floor/SlotDetail.tsx";
 
 import { ledgerFor } from "../../_shell/links.ts";
+import { exportOnly } from "./real.ts";
 import type { CalendarFacts } from "./contract.ts";
 import { CHANNEL_SEED, ITEMS, PROJECTS, SLOTS, type FixtureMetric, type FixtureSlot } from "./fixtureData.ts";
 
@@ -215,6 +216,7 @@ export function fixtureSchedule(d: ScheduleDraft, nowMs: number): Result<SlotVie
   const ch = fixtureChannels(t.value).find((c) => c.channel === d.channel);
   if (!channel.success || ch === undefined) return err("invalid", `${d.channel} is not a channel`);
   if (ch.state === "act") return err("refused", "a blog slot is made by its article's approve on the Board, not here");
+  if (exportIdOf(d.item) === undefined) return err("refused", exportOnly(d.item, d.channel));
   if (!canSchedule(ch)) return err("conflict", `${d.channel} is not wired`, { detail: "channel_not_wired" });
   if (ITEMS[d.item] === undefined) return err("conflict", `unknown item ${d.item}`, { detail: "export_missing" });
   const held = [...t.value.values()].find((r) => r.slot.libraryItemId === d.item && r.slot.channel === d.channel && HOLDS.includes(r.slot.state));
