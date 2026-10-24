@@ -41,9 +41,9 @@ const fixture: ServerCalendar = {
     return { slots: s.ok ? s.value : [], problems, ...(f.ok ? { facts: f.value } : {}) };
   },
   detail: fixtureDetail,
-  move: (id, at, a) => fixtureAct(id, a.nowMs, (row) => applyMove(row, at, a.nowMs), a.baseRev),
-  cancel: (id, a) => fixtureAct(id, a.nowMs, applyCancel, a.baseRev),
-  publishNow: (id, a) => fixtureAct(id, a.nowMs, (row) => applyPublishNow(row, a.nowMs), a.baseRev),
+  move: (id, at, a) => fixtureAct("move", id, a.nowMs, (row) => applyMove(row, at, a.nowMs), a.baseRev),
+  cancel: (id, a) => fixtureAct("cancel", id, a.nowMs, applyCancel, a.baseRev),
+  publishNow: (id, a) => fixtureAct("publish", id, a.nowMs, (row) => applyPublishNow(row, a.nowMs), a.baseRev),
   schedule: (d, a) => fixtureSchedule(d, a.nowMs),
   items: () => ({ ok: true, value: fixtureItems() }),
 };

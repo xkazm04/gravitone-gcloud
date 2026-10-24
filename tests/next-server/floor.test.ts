@@ -163,9 +163,10 @@ describe("the fixture calendar", () => {
     expect(viewOf(p).dry).toBe(true);
   });
 
-  it("publish now refuses a drifted slot and a blog slot", () => {
-    expect(applyPublishNow(row("sl-chokepoint-tt-drift"), NOW).ok).toBe(false);
-    expect(applyPublishNow(row("sl-routing-blog"), NOW).ok).toBe(false);
+  it("publish now refuses a drifted slot and a blog slot, in the real side's words", () => {
+    const words = (r: { ok: boolean; error?: { message: string } }) => (r.ok ? null : (r.error?.message ?? ""));
+    expect(words(applyPublishNow(row("sl-chokepoint-tt-drift"), NOW))).toBe("publish Chokepoint explainer · vertical: a drifted (export_missing) tiktok slot is not published from here");
+    expect(words(applyPublishNow(row("sl-routing-blog"), NOW))).toBe("publish Generative provider routing: a scheduled blog slot is not published from here");
   });
 
   it("the record shows a blog post as its PR, a clip as its player, and metrics with null kept null", () => {
@@ -199,18 +200,18 @@ describe("the fixture calendar's engine refusals", () => {
   });
 
   it("a slot published dry holds nothing: the rail marks it, and the same export may be scheduled on its channel again", () => {
-    must(fixtureAct("sl-harbor-teaser-tt", NOW, (r) => applyPublishNow(r, NOW)));
+    must(fixtureAct("publish", "sl-harbor-teaser-tt", NOW, (r) => applyPublishNow(r, NOW)));
     expect(must(fixtureSlots(NOW)).find((x) => x.id === "sl-harbor-teaser-tt")).toMatchObject({ status: "published", dry: true });
     expect(must(fixtureSchedule({ ...draft, item: "video:export:glass-harbor-teaser", channel: "tiktok" }, NOW)).slot).toMatchObject({ status: "scheduled", item: "video:export:glass-harbor-teaser", channel: "tiktok" });
     expect(must(fixtureSlots(NOW)).find((x) => x.id === "sl-harbor-yt-out")).not.toHaveProperty("dry");
   });
 
   it("refuses a verb sent on a revision the slot has moved past, and writes nothing", () => {
-    const first = must(fixtureAct("sl-tariff-yt-later", NOW, (r) => applyMove(r, "2026-10-28T10:00:00.000Z", NOW), 1));
+    const first = must(fixtureAct("move", "sl-tariff-yt-later", NOW, (r) => applyMove(r, "2026-10-28T10:00:00.000Z", NOW), 1));
     expect(first.rev).toBe(2);
-    const stale = fixtureAct("sl-tariff-yt-later", NOW, applyCancel, 1);
-    expect(stale.ok ? null : [stale.error.code, stale.error.message]).toEqual(["conflict", "The quiet tariff: it changed since it was opened - now scheduled for 2026-10-28T10:00:00.000Z"]);
-    expect(must(fixtureAct("sl-tariff-yt-later", NOW, (r) => ({ ok: true, value: r }))).slot.status).toBe("scheduled");
+    const stale = fixtureAct("cancel", "sl-tariff-yt-later", NOW, applyCancel, 1);
+    expect(stale.ok ? null : [stale.error.code, stale.error.message]).toEqual(["conflict", "cancel The quiet tariff: it changed since it was opened - now scheduled for 2026-10-28T10:00:00.000Z"]);
+    expect(must(fixtureAct("cancel", "sl-tariff-yt-later", NOW, (r) => ({ ok: true, value: r }))).slot.status).toBe("scheduled");
   });
 
   it("says what each channel can do: YouTube dry, Instagram not wired, blog by its approve; names only", () => {

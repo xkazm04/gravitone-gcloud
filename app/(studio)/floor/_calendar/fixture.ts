@@ -31,7 +31,7 @@ import type { SlotView } from "@gt/ui/components/floor/SlotDetail.tsx";
 
 import { ledgerFor } from "../../_shell/links.ts";
 import { ARTICLE_CLI, PUBLISH_CLI } from "./readiness.ts";
-import { exportOnly, railOfSlot } from "./real.ts";
+import { exportOnly, notPublishedText, railOfSlot, staleText } from "./real.ts";
 import type { CalendarFacts } from "./contract.ts";
 import { CHANNEL_SEED, ITEMS, PROJECTS, SLOTS, type FixtureMetric, type FixtureSlot } from "./fixtureData.ts";
 
@@ -103,7 +103,7 @@ export function applyCancel(row: FixtureRow): Result<FixtureRow> {
 
 export function applyPublishNow(row: FixtureRow, nowMs: number): Result<FixtureRow> {
   const s = row.slot;
-  if (!canPublishNow({ status: s.state, channel: s.channel, ...(s.drift === undefined ? {} : { drift: s.drift }) })) return err("refused", `publish ${s.id}: a ${s.drift === undefined ? s.state : "drifted"} ${s.channel} slot is not published from here`);
+  if (!canPublishNow({ status: s.state, channel: s.channel, ...(s.drift === undefined ? {} : { drift: s.drift }) })) return err("refused", notPublishedText(s));
   const path: readonly SlotState[] = s.state === "scheduled" ? ["publishing", "published"] : ["scheduled", "publishing", "published"];
   const to = walk(s.state, path);
   if (!to.ok) return to;
@@ -183,12 +183,12 @@ export function fixtureDetail(id: string, nowMs: number): Result<SlotView> {
 }
 
 /** Apply one verb to the table and answer the slot as it now is; a stale `baseRev` writes nothing. */
-export function fixtureAct(id: string, nowMs: number, act: (row: FixtureRow) => Result<FixtureRow>, baseRev?: number): Result<SlotView> {
+export function fixtureAct(verb: string, id: string, nowMs: number, act: (row: FixtureRow) => Result<FixtureRow>, baseRev?: number): Result<SlotView> {
   const t = rows(nowMs);
   if (!t.ok) return t;
   const row = t.value.get(id);
   if (row === undefined) return err("not-found", `slot ${id}: not in the fixture calendar`);
-  if (baseRev !== undefined && baseRev !== row.rev) return err("conflict", `${row.slot.title}: it changed since it was opened - now ${row.slot.state} for ${row.slot.at}`, { detail: "stale" });
+  if (baseRev !== undefined && baseRev !== row.rev) return err("conflict", staleText(verb, row.slot), { detail: "stale" });
   const next = act(row);
   if (!next.ok) return next;
   const landed = { ...next.value, rev: row.rev + 1 };

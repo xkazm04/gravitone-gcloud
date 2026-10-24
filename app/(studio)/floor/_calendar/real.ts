@@ -166,6 +166,13 @@ export function viewOfRow(store: Store, row: SlotRow, mode: "dry" | "live"): Res
 /** The channel's own mode: live only where the readiness seam says this channel uploads. */
 const modeFor = (ready: Readiness, channel: string): "dry" | "live" => (ready.channels.find((c) => c.channel === channel)?.state === "live" ? "live" : "dry");
 
+/** A verb sent on a revision the slot has moved past, said from the slot as it now is (both sides). */
+export const staleText = (verb: string, s: Pick<Slot, "title" | "state" | "at">): string => `${verb} ${s.title}: it changed since it was opened - now ${s.state} for ${s.at}`;
+
+/** Publish-now refused for a slot it cannot take (@gt/ui slot.ts canPublishNow), both sides. */
+export const notPublishedText = (s: Pick<Slot, "title" | "state" | "channel" | "drift">): string =>
+  `publish ${s.title}: a ${s.drift === undefined ? s.state : `drifted (${s.drift})`} ${s.channel} slot is not published from here`;
+
 /** A verb's answer, read back and drawn; a stale revision re-worded from the slot as it now is. */
 function answer(store: Store, ready: Readiness, verb: string, r: Result<SlotRow>, id: string): Result<SlotView> {
   if (r.ok) return viewOfRow(store, r.value, modeFor(ready, r.value.slot.channel));
@@ -173,7 +180,7 @@ function answer(store: Store, ready: Readiness, verb: string, r: Result<SlotRow>
   const now = getSlot(store, id);
   if (!now.ok) return r;
   const n = now.value.slot;
-  return err("conflict", `${verb} ${n.title}: it changed since it was opened - now ${n.state} for ${n.at}`, { detail: "stale" });
+  return err("conflict", staleText(verb, n), { detail: "stale" });
 }
 
 type Ctx = { readonly store: Store; readonly rows: readonly SlotRow[]; readonly ready: Readiness };
@@ -249,7 +256,7 @@ export function realPublishNow(v: VerbIn): Result<SlotView> {
   // A blog slot goes out as its article approve's pull request (owner ruling 4): publish-now
   // would only make it due for a tick that never claims it, and it would be marked missed.
   if (!canPublishNow({ status: s.state, channel: s.channel, ...(s.drift === undefined ? {} : { drift: s.drift }) })) {
-    return err("refused", `publish ${s.title}: a ${s.drift ?? s.state} ${s.channel} slot is not published from here`);
+    return err("refused", notPublishedText(s));
   }
   return answer(st, ready, "publish", publishNow(st, v.id, actorOf(v.who), { now: v.nowMs, ready: engineReady(c.value) }, opts(v)), v.id);
 }
