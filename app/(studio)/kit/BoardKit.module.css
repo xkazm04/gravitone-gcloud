@@ -5,7 +5,9 @@
 .frame{display:flex;flex-direction:column;position:relative;border:1px solid var(--hair);border-radius:var(--r);overflow:hidden}
 .lens{position:relative;height:48vh;border-radius:var(--r);overflow:hidden}
 .models{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,calc(var(--w-tile) * 2)),1fr));gap:var(--sp-5);width:100%}
-.tiles{display:grid;grid-template-columns:repeat(3,minmax(var(--w-tile),1fr));gap:var(--sp-4);width:100%}
+/* Three across where the card is wide; a narrow card (the CullTile one) stacks them rather than
+   spilling three --w-tile columns past its edge. */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,var(--w-tile)),1fr));gap:var(--sp-4);width:100%}
 .thumb{width:var(--w-pair-thumb);border-radius:var(--r-sm)}
 .note{width:100%}
 /* The open reason tip stands over its chip: room for it above the verdict, inside the specimen. */
