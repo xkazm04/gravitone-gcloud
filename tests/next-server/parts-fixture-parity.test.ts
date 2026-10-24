@@ -92,3 +92,23 @@ describe("an undo with nothing left to undo", () => {
     expect(f.ok ? null : { code: f.error.code, message: f.error.message }).toEqual(r.ok ? null : { code: r.error.code, message: r.error.message });
   });
 });
+
+describe("an op that changes nothing", () => {
+  it("is refused on both sides, and leaves no line on the undo trail", async () => {
+    const real = realAd();
+    const id = fixtureAd();
+    const op: PartOp = { op: "set-brief", field: "mustInclude", value: ["logo on the end card"] };
+    const v0 = loadPart(id, "research", NOW);
+    const fixtureRev = v0.ok ? v0.value.rev : 0;
+    // The real side starts from an empty brief: give it the fixture's list first, so both hold it.
+    const first = await real.opPart({ projectId: "ad1", key: "research", baseRev: 1, op });
+    expect(first.ok && first.value.kind).toBe("applied");
+    const r = await real.opPart({ projectId: "ad1", key: "research", baseRev: 2, op });
+    const f = opPart(id, "research", fixtureRev, op, NOW);
+    const shape = (x: Result<unknown>) => (x.ok ? "applied" : { code: x.error.code, message: x.error.message });
+    expect(shape(r)).toEqual({ code: "invalid", message: "brief mustInclude: changes nothing" });
+    expect(shape(f)).toEqual(shape(r));
+    const after = loadPart(id, "research", NOW);
+    expect(after.ok ? { rev: after.value.rev, ops: after.value.ops.length } : null).toEqual({ rev: fixtureRev, ops: 0 });
+  });
+});

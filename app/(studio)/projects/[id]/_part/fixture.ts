@@ -196,6 +196,15 @@ function write<R extends object>(rec: Rec<R>, next: R, meta: { readonly label: s
   rec.rev++;
 }
 
+/** An operator's edit: the kernel refuses one that changes nothing (@gt/kernel/parts/driver.ts
+ *  writePartIn, `<label>: changes nothing`) - no rev, no undo line - and so does this side. The
+ *  real side compares the records by JSON (realRecs.ts `changed`); this compares the working record. */
+function opWrite<R extends object>(rec: Rec<R>, next: R, label: string, at: number): Result<null> {
+  if (JSON.stringify(next) === JSON.stringify(rec.data)) return err("invalid", `${label}: changes nothing`);
+  write(rec, next, { label, by: "operator", kind: "op", at });
+  return ok(null);
+}
+
 const effective = <R>(rec: Rec<R>): Entry<R>[] => rec.log.filter((e) => e.kind === "op" && !e.undone).reverse();
 
 /* ── the view ─────────────────────────────────────────────────────────────── */
@@ -295,23 +304,18 @@ export function opPart(projectId: string, key: string, baseRev: number, op: Part
       if (rec.rev !== baseRev) return ((stale = true), ok(null));
       const next = later(kind).apply(kctxOf(ctx), op);
       if (!next.ok) return next;
-      write(rec, asRec(next.value.next), { label: next.value.label, by: "operator", kind: "op", at: now });
-      return ok(null);
+      return opWrite(rec, asRec(next.value.next), next.value.label, now);
     }
     if (kind === "research") {
       const rec = recOf(ctx, "research");
       if (rec.rev !== baseRev) return ((stale = true), ok(null));
       const next = RESEARCH.apply(ctx, rec.data, op as PartOp<"research">);
-      if (!next.ok) return next;
-      write(rec, next.value, { label: opLabel(op), by: "operator", kind: "op", at: now });
-    } else {
-      const rec = recOf(ctx, "script");
-      if (rec.rev !== baseRev) return ((stale = true), ok(null));
-      const next = SCRIPT.apply(ctx, rec.data, op as PartOp<"script">);
-      if (!next.ok) return next;
-      write(rec, next.value, { label: opLabel(op), by: "operator", kind: "op", at: now });
+      return next.ok ? opWrite(rec, next.value, opLabel(op), now) : next;
     }
-    return ok(null);
+    const rec = recOf(ctx, "script");
+    if (rec.rev !== baseRev) return ((stale = true), ok(null));
+    const next = SCRIPT.apply(ctx, rec.data, op as PartOp<"script">);
+    return next.ok ? opWrite(rec, next.value, opLabel(op), now) : next;
   });
   if (!done.ok) return done;
   const view = viewOf(done.value.ctx, done.value.kind);
