@@ -200,12 +200,14 @@ export function putMediaFacts(store: Store, facts: readonly MediaFacts[]): Resul
 
 export type FactsWanted = { readonly sha: string; readonly mime: string };
 
-/** Blobs an item points at that have no facts yet: the media-facts producer's queue. */
+/** Blobs an item points at that have no facts yet: the media-facts producer's queue. One row a
+ *  blob (./measures.ts `measuresMissing`'s shape): a DISTINCT over (sha, mime) queued the same
+ *  bytes twice when two items named them under two mimes, and the limit counted items. */
 export function factsMissing(store: Store, limit: number): Result<FactsWanted[]> {
   return store.read((r) =>
     r
       .all(
-        "SELECT DISTINCT d.media_sha AS sha, d.media_mime AS mime FROM library_docs d WHERE d.media_sha IS NOT NULL AND NOT EXISTS (SELECT 1 FROM media_facts f WHERE f.sha = d.media_sha) LIMIT ?",
+        "SELECT d.media_sha AS sha, max(d.media_mime) AS mime FROM library_docs d WHERE d.media_sha IS NOT NULL AND NOT EXISTS (SELECT 1 FROM media_facts f WHERE f.sha = d.media_sha) GROUP BY d.media_sha LIMIT ?",
         limit,
       )
       .map((row) => ({ sha: String(row["sha"]), mime: String(row["mime"] ?? "application/octet-stream") })),

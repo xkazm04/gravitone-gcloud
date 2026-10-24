@@ -165,6 +165,14 @@ describe("media facts", () => {
     must(putMediaFacts(s, [facts(SHA("b"))]));
     expect(page(s, { kind: "plate", facets: { attention: ["unreadable"] }, limit: 10 }).total).toBe(0);
   });
+  it("queues a blob once, however many items name it and under whatever mime", () => {
+    const s = store();
+    const twin = plate("twin", { media: { sha256: SHA("a"), bytes: 10, mime: "image/x-png" } });
+    must(upsertItems(s, [plate("one", {}, SHA("a")), twin, plate("other", {}, SHA("b"))], CTX));
+    expect(must(factsMissing(s, 10)).map((f) => f.sha).sort()).toEqual([SHA("a"), SHA("b")]);
+    // The limit counts blobs, not items: a limit of 2 is the whole queue here.
+    expect(must(factsMissing(s, 2))).toHaveLength(2);
+  });
   it("holds nearBlack to the luma rule and an undecodable blob to its words", () => {
     const s = store();
     expect(putMediaFacts(s, [facts(SHA("c"), { meanLuma: 9, nearBlack: false })]).ok).toBe(false);
