@@ -4444,8 +4444,8 @@ export const MUTANTS: UnitMutant[] = [
     id: "l74-schedule-dry-publication-holds",
     test: "packages/ui/test/components/floor-schedule.test.ts",
     file: "packages/ui/src/components/floor/schedule.ts",
-    find: "(s.status === \"published\" && s.dry !== true)",
-    replace: "s.status === \"published\"",
+    find: "!(s.status === \"published\" && s.dry === true)",
+    replace: "true",
     why: "A rehearsal holds its export: the form skips past an item that never went out and warns it is held, though the engine would make its live slot.",
   },
   {

@@ -20,15 +20,17 @@
 //     window and is never a claim on its own - the publish takes the claim and releases it.
 //   · UTC throughout, as the rest of the calendar (./calendar.ts says why); v1 was local.
 
+import { SLOT_MOVABLE } from "@gt/domain/slot.machine";
+
 import type { RailSlot } from "./calendar.ts";
 
 const HOUR_MS = 3_600_000;
 const pad = (n: number): string => String(n).padStart(2, "0");
 
-type Status = RailSlot["status"];
 type Movable = Pick<RailSlot, "status">;
 
-const OPEN: readonly Status[] = ["scheduled", "missed", "failed"];
+/** The machine's own list (v1 RESCHEDULABLE and CANCELLABLE), the one the engine's verbs check. */
+const OPEN = SLOT_MOVABLE;
 export const canMove = (s: Movable): boolean => OPEN.includes(s.status);
 export const canCancel = (s: Movable): boolean => OPEN.includes(s.status);
 /**

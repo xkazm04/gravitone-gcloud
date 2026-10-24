@@ -23,6 +23,8 @@
 //   · `blog` is a channel the form cannot pick: its slot is made by the article approve on the
 //     Board and goes out as that approve's pull request (owner ruling 4), never by this form.
 
+import { SLOT_HOLDS } from "@gt/domain/slot.machine";
+
 import type { RailSlot } from "./calendar.ts";
 import { nextFullHour, toUtcInput } from "./slot.ts";
 
@@ -164,7 +166,7 @@ export function itemDefault(items: readonly ScheduleItem[], slots: readonly Rail
  * still counts as placed on its Plan, @gt/kernel/slots/read.ts slottedIn: that is the part's gate,
  * not the item's channel.)
  */
-export const holds = (s: Pick<RailSlot, "status" | "dry">): boolean => s.status === "scheduled" || s.status === "publishing" || (s.status === "published" && s.dry !== true);
+export const holds = (s: Pick<RailSlot, "status" | "dry">): boolean => SLOT_HOLDS.includes(s.status) && !(s.status === "published" && s.dry === true);
 
 /** The UTC instant a `datetime-local` text names, or null. */
 function instantOf(when: string): string | null {
