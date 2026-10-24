@@ -6,7 +6,6 @@
 import { STEPS_STORE, runTx } from "@/lib/studioDb";
 
 import { claimSaveSlot, inIssueOrder } from "./saveOrder";
-import { saveWatchers } from "./saveWatchers";
 import { SCHEMA_VERSION } from "./schemaVersion";
 import type { SaveOutcome } from "./storageOutcome";
 import { key, withStore } from "./withStore";
@@ -25,7 +24,6 @@ export async function saveStep<T>(
   // Ticket taken HERE — at call time, in issue order — not inside the write,
   // which would be the same race one layer down. See the block above.
   const slot = claimSaveSlot(projectId, phase);
-  saveWatchers.forEach((w) => w(projectId, phase, data));
 
   return inIssueOrder<SaveOutcome>(key(projectId, phase), async () => {
     // An early out for the common overtaking case, so a superseded keystroke does

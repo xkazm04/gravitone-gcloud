@@ -128,12 +128,6 @@ export function defineRecord<T extends object>(spec: RecordSpec<T>): RecordDef<T
   return def;
 }
 
-/** Every def declared so far in this module graph — for the lineage stage and
- *  the ratchet, which need the population rather than one def. */
-export function recordDefs(): readonly RecordDef<object>[] {
-  return [...REGISTRY.values()];
-}
-
 /* ──────────────────────────────── decoding ───────────────────────────────── */
 
 export const isPlainObject = (x: unknown): x is Record<string, unknown> =>
@@ -144,13 +138,6 @@ function storedVersion(stored: Record<string, unknown>): number | RecordRefusal 
   const v = stored.v ?? 1;
   if (typeof v !== "number" || !Number.isInteger(v) || v < 1) return malformed(`v is ${JSON.stringify(stored.v)}`);
   return v;
-}
-
-/** Is this stored object from a build newer than the def? Cheap — no parse. */
-export function isFromTheFuture(def: RecordDef<object>, stored: unknown): boolean {
-  if (!isPlainObject(stored)) return false;
-  const v = storedVersion(stored);
-  return typeof v === "number" && v > def.version;
 }
 
 /**

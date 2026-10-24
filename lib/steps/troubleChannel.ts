@@ -3,8 +3,8 @@
 // `listeners` is owned by this file and nowhere else: every subscriber
 // (onStorageTrouble, useStorageTrouble) and every notifier (report, clearStorageTrouble,
 // resolveTroubleWhere) reads this one Set. Split out of the stepStore.ts door, which
-// re-exports the public names. `report` and `serverTrouble` are exported for the
-// sibling files that publish and snapshot; they are not on the door.
+// re-exports the public names. `report` and `resolveTroubleWhere` are exported for
+// the sibling files that publish and resolve; they are not on the door.
 
 import type { StorageTrouble } from "./storageOutcome";
 
@@ -24,12 +24,6 @@ export function onStorageTrouble(listener: () => void): () => void {
  *  it is a valid `useSyncExternalStore` snapshot. */
 export function lastStorageTrouble(): StorageTrouble | null {
   return latest;
-}
-
-/** Nothing has failed on the server, and nothing can: there is no IndexedDB
- *  there. A constant, so hydration does not tear. */
-export function serverTrouble(): StorageTrouble | null {
-  return null;
 }
 
 export function clearStorageTrouble(): void {
