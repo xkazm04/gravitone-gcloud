@@ -115,6 +115,20 @@ describe("stripsFeed", () => {
     expect(p.ok && p.value.items.map((i) => i.id)).toEqual(["motion:strips:2026-10-01-edu:c1:poster"]);
   });
 
+  it("reads a card's verdict as its state: keep is ratified, reject is rejected, none is unjudged", async () => {
+    const run = path.join(process.env["STRIPS_STORE_DIR"] ?? "", "2026-10-02-edu");
+    mkdirSync(run, { recursive: true });
+    const card = (id: string) => ({ id, lane: "edu", case: "tides", approach: "diagram", status: "rendered", files: { poster: "poster.png" } });
+    write(path.join(run, "run.json"), { id: "2026-10-02-edu", at: "2026-10-02T00:00:00.000Z", status: "done", cards: [card("k"), card("r"), card("n")] });
+    write(path.join(run, "verdicts.json"), { k: { verdict: "keep", at: "2026-10-02T01:00:00.000Z" }, r: { verdict: "reject", at: "2026-10-02T01:00:00.000Z" } });
+    const r = await stripsFeed.read(ctx);
+    expect(r.items.map((i) => [i.item.id.split(":")[3], i.item.state])).toEqual([
+      ["k", "ratified"],
+      ["r", "rejected"],
+      ["n", "unjudged"],
+    ]);
+  });
+
   it("says its run cap: the runs past the newest 200 are named in the report, not silently left out", async () => {
     const root = process.env["STRIPS_STORE_DIR"] ?? "";
     for (let i = 0; i < 201; i++) {
