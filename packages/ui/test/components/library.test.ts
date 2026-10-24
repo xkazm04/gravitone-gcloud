@@ -9,12 +9,13 @@ import { createElement as h, isValidElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import { DetailFacets } from "../../src/components/library/DetailPanel.tsx";
+import { DetailFacets, DetailPanel } from "../../src/components/library/DetailPanel.tsx";
 import { backStep, blocksFor, BLOCK, foldValues, layoutFor, orderValues, SIZES, stepTo, tileBox, type FacetValue } from "../../src/components/library/library.ts";
 import { LibraryRow } from "../../src/components/library/LibraryRow.tsx";
 import { cardName, LibraryTile, type LibraryCard } from "../../src/components/library/LibraryTile.tsx";
 import { Lineage } from "../../src/components/library/Lineage.tsx";
 import { Rail, type RailGroup } from "../../src/components/library/Rail.tsx";
+import { SetSummary } from "../../src/components/library/SetSummary.tsx";
 import { columnsFor, windowOf } from "../../src/window/core.ts";
 
 const html = (el: Parameters<typeof renderToStaticMarkup>[0]): string => renderToStaticMarkup(el);
@@ -171,5 +172,36 @@ describe("what the parts expose", () => {
     expect(facets).toContain("format: ad, in the filter");
     const lin = html(h(Lineage, { nodes: [{ role: "project", refs: [{ kind: "facet", group: "project", value: "p", label: "Peak and Fall" }] }, { role: "this", self: true, refs: [{ kind: "text", label: "video" }] }], onItem: noop, onFacet: noop }));
     expect(lin).toContain('aria-current="true"');
+  });
+});
+
+describe("the set and the detail head", () => {
+  const sum = { total: 1204, of: 5000, newest: [], onState: noop, onKind: noop, onItem: noop };
+
+  test("a state with no items is no door, and the bar names what it holds - or that it holds nothing", () => {
+    const out = html(h(SetSummary, { ...sum, kind: "plate", states: { ratified: 1200, rejected: 4, unjudged: 0 }, kinds: { plate: 1204 } }));
+    expect(out).toContain('aria-label="ratified 1200, rejected 4"');
+    expect(out).toContain('aria-label="filter: ratified, 1200"');
+    expect(out).not.toContain("filter: unjudged");
+    expect(out).toContain("1,204");
+    expect(out).not.toContain('aria-label="Kinds"');
+    expect(html(h(SetSummary, { ...sum, total: 0, kind: "plate", states: {}, kinds: {} }))).toContain('aria-label="no items"');
+  });
+
+  test("the kinds' bars appear on All only, one per kind that holds something", () => {
+    const out = html(h(SetSummary, { ...sum, kind: "all", states: { ratified: 1204 }, kinds: { all: 1204, plate: 1200, doc: 4, audio: 0 } }));
+    expect(out).toContain('aria-label="Kinds"');
+    expect(out).toContain("Plates");
+    expect(out).toContain("Documents");
+    expect(out).not.toContain("Audio");
+  });
+
+  test("the detail head counts from one and offers previous / next only when it can step", () => {
+    const stepping = html(h(DetailPanel, { kind: "plate", position: { index: 2, total: 1204 }, onStep: noop, onClose: noop, children: null }));
+    expect(stepping).toContain("3 / 1,204");
+    expect(stepping).toContain('aria-label="previous item"');
+    const still = html(h(DetailPanel, { kind: "set", onClose: noop, children: null }));
+    expect(still).not.toContain('aria-label="next item"');
+    expect(still).toContain('aria-label="close detail"');
   });
 });
