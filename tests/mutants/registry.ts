@@ -449,6 +449,14 @@ export const MUTANTS: Mutant[] = [
     why: "The extract commit door carries its own copy of the committable statuses again, and a change to the plant's set reaches the Board and the ledger but not the server.",
   },
   {
+    id: "forge-commit-own-status-list",
+    probe: "extract-commit-gate.probe.spec.ts",
+    file: "lib/foundry/store.ts",
+    find: "if (!COMMITTABLE.includes(run.status)) throw",
+    replace: "if (![\"done\", \"incomplete\", \"failed\"].includes(run.status)) throw",
+    why: "The forge commit door carries its own copy of the committable statuses again, and a change to the plant's set reaches the Board and the ledger but not the server.",
+  },
+  {
     id: "extract-text-round-wins-recipe",
     probe: "style-extract.probe.spec.ts",
     file: "lib/foundry/extract/helpers.ts",

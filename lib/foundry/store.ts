@@ -55,6 +55,7 @@ import { recordForgeEvidenceIn } from "@gt/kernel/styles/writers";
 import { registerRunGrades } from "./calibrationRegister";
 import { exportStyles, OPERATOR, readStyleDefs, styleStore, withCatalogue } from "./catalogue";
 import { planForgeCommit } from "./commitPlan";
+import { COMMITTABLE } from "./plant";
 import { graderCalibrationText, graderStamp } from "./calibration";
 import {
   patchVerdictMap,
@@ -252,11 +253,11 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave" = "r
     const run = await readManifest(id);
     if (run.status === "committed") throw new FoundryError("This run is already committed.", 409);
     // `incomplete` belongs here for the same reason `failed` does: the run stopped
-    // early with every plate it did generate on disk, and this button is the only
-    // way to reach them. Keep this array and COMMITTABLE in app/foundry/parts.tsx
-    // equal — tests/golden-path/commit-gate-parity.probe.spec.ts reads this one off
-    // disk and fails if they drift.
-    if (!["done", "incomplete", "failed"].includes(run.status)) throw new FoundryError("The forge is still running this run.", 409);
+    // early with every plate it did generate on disk, and this commit is the only
+    // way to reach them. The plant's one set (lib/foundry/plant.ts), which the
+    // Board's gate and the ledger read too; extract-commit-gate.probe.spec.ts
+    // holds this door to it.
+    if (!COMMITTABLE.includes(run.status)) throw new FoundryError("The forge is still running this run.", 409);
     const verdicts = await readVerdicts(id);
     // Read once, inside the lock: the plan, the token and the writes below all
     // see these same bytes.
