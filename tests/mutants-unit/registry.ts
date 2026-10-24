@@ -5715,4 +5715,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "return undefined as never;",
     why: "A script op sent to a research key throws a TypeError on the fixture side where the real side refuses it as invalid, so the editors are built against a crash the product never shows.",
   },
+  {
+    id: "words-tags-respelling-sent",
+    test: "tests/next-server/part-editor-writing.test.ts",
+    file: "app/(studio)/projects/[id]/[part]/_edit/Words.tsx",
+    find: "if (tags.join(\",\") !== d.tags.join(\",\")) send({ op: \"words-tags\", tags });",
+    replace: "send({ op: \"words-tags\", tags });",
+    why: "Respelling the same tags (a space, a trailing comma) sends an unchanged list, the words kind refuses it, and the refusal stands on the error line over an edit that changed nothing.",
+  },
 ];

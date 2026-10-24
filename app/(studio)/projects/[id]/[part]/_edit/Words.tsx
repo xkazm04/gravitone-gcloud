@@ -64,6 +64,12 @@ function Counted({ label, value, limit, count: measure, area = false, commit }: 
 export function WordsEditor({ frame, send, error, view }: EditorProps<PartView<"words">>) {
   const d: WordsData = view.data;
   const e = d.engine;
+  // A respelling of the same list (spaces, a trailing comma) is no edit: the kind refuses an
+  // unchanged list, and that refusal would stand on the error line.
+  const commitTags = (v: string): void => {
+    const tags = tagsOf(v);
+    if (tags.join(",") !== d.tags.join(",")) send({ op: "words-tags", tags });
+  };
   return (
     <PartWorkspace
       {...frame}
@@ -98,7 +104,7 @@ export function WordsEditor({ frame, send, error, view }: EditorProps<PartView<"
             <div className={s.form}>
               <Counted label="title" value={d.title} limit={WORDS_LIMITS.title} count={COUNT.title} commit={(value) => send({ op: "words-field", field: "title", value })} />
               <Counted label="description" value={d.description} limit={WORDS_LIMITS.description} count={COUNT.description} area commit={(value) => send({ op: "words-field", field: "description", value })} />
-              <Counted label="tags · comma separated" value={d.tags.join(", ")} limit={WORDS_LIMITS.tags} count={COUNT.tags} commit={(v) => send({ op: "words-tags", tags: v.split(",") })} />
+              <Counted label="tags · comma separated" value={d.tags.join(", ")} limit={WORDS_LIMITS.tags} count={COUNT.tags} commit={commitTags} />
               <div className={s.row}>
                 {d.tags.map((t) => (
                   <Chip key={t} label={t} casing="lower" />

@@ -107,3 +107,17 @@ describe("the words are counted as the platform counts them", () => {
     expect(await f.count()).toBe("12 / 500");
   });
 });
+
+describe("a tag edit sends the tags as they will land", () => {
+  it("respelling the same tags sends nothing (the kind refuses an unchanged list on the error line)", async () => {
+    const f = await fields(words({ tags: ["lofi", "rain"] }));
+    await (await f.field("tags")).type("lofi,rain, ");
+    expect(f.sent).toEqual([]);
+  });
+
+  it("a new tag sends the list trimmed, empties dropped", async () => {
+    const f = await fields(words({ tags: ["lofi", "rain"] }));
+    await (await f.field("tags")).type("lofi, rain,, night ");
+    expect(f.sent).toEqual([{ op: "words-tags", tags: ["lofi", "rain", "night"] }]);
+  });
+});
