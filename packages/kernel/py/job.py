@@ -39,7 +39,7 @@ here releases the planned jobs behind it in the finishing transaction (kernel_re
 
 A STEP BOOKS NO MONEY. A step is booked at $0 real and the record's spend re-projected from the
 meter (`meter_of`), so spend reconciles for a Python job by construction; a priced call made
-under a job goes through kernel_meter.py (reserve, call, settle), never through a step's book.
+under a job goes through kernel_meter.py (refuse first, call, book once), never through a step's book.
 """
 import json
 import os
