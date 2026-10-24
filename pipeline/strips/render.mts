@@ -284,6 +284,10 @@ export async function renderStrip(opts: { browser: Browser; htmlPath: string; ou
       "-frames:v", "1", "-update", "1", path.join(outDir, "sheet.png"),
     ]);
     await copyFile(fname(0), path.join(outDir, "frame0.png")).catch(() => {});
+    // The full-size poster an explainer card lands as its picture (lib/producers/stripCards.ts):
+    // the LAST frame, lossless, at the lane's own size - a draw-on strip at frame 120 shows half
+    // its steps, and poster.jpg (half width, above) stays what the Strips tab and the Ledger read.
+    await copyFile(fname(STRIP_FRAMES - 1), path.join(outDir, "poster.png"));
 
     // 5. Gates, recorded.
     const maxSeek = Math.max(...seekDiffs);

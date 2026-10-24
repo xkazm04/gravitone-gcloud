@@ -69,7 +69,7 @@ export function stripsKernel(): Result<StripsKernel> {
 const kernelOf = (b: StripsBinding): Result<StripsKernel> => (b.kernel === undefined ? stripsKernel() : ok(b.kernel));
 
 /** The real capture: one headless Chromium per call, closed after (render.mts says why its flags). */
-async function realCapture(): Promise<Capture> {
+export async function realCapture(): Promise<Capture> {
   const r = await import(/* webpackIgnore: true */ /* turbopackIgnore: true */ "../../pipeline/strips/render.mts");
   const withBrowser = async <T,>(fn: (b: Awaited<ReturnType<typeof r.launchHeadless>>) => Promise<T>): Promise<T> => {
     const browser = await r.launchHeadless();

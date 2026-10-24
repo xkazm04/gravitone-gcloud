@@ -56,6 +56,9 @@ export const PRODUCERS = [
   // A /scout night's game asset (spark game-3d-assets WP4): its concepts drawn from the brief's words,
   // gated, and handed to the mesh store with the mesh job queued (lib/producers/scoutAsset.ts).
   "scout-asset",
+  // An explainer's strips part (spark explainer-real-article-strips WP-B): one foundry strip per
+  // article section, its poster and caption landed in the part's STRIPS record (lib/producers/stripCards.ts).
+  "strip-cards",
 ] as const;
 export const producerNameSchema = z.enum(PRODUCERS);
 export type ProducerName = z.output<typeof producerNameSchema>;

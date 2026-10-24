@@ -56,7 +56,7 @@ import { RESEARCH_SPEC, type ResearchResult } from "@/lib/turns/kinds/research";
 import { partFacts, preflightFrom, priceOf, shortDigest, withRecords, type PartFacts } from "@gt/producers/research/facts";
 export { followUpPrompt, parseFollowUp } from "@gt/producers/research/followUp";
 export { actReceiptIn, disciplineFor, launchPartAct, partActReceipt, partFacts, partFactsIn, preflightFrom, priceOf, shortDigest, TEXT_SEAT, withRecords } from "@gt/producers/research/facts";
-export type { ActLaunched, PartActRef, PartFacts, ReceiptOptions, StepReceipt, UnitsFn } from "@gt/producers/research/facts";
+export type { ActLaunched, PartActRef, PartFacts, ReceiptOptions, SplitFn, StepReceipt, UnitsFn } from "@gt/producers/research/facts";
 
 export type StepKernel = { readonly store: Store; readonly fx: Effects };
 

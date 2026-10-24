@@ -4,7 +4,7 @@ import { kernel } from "@/lib/kernelStore";
 import { LIVE_GATES, openReadyGates, type GateDeps } from "@/lib/parts/gates";
 import { undoPart, writePartIn } from "@gt/kernel/parts/driver";
 import type { Reader, Store } from "@gt/kernel/store";
-import { driveStep, launchPartAct, partActReceipt, researchProducer, researchUnits, withRecords, type StepFactory, type StepReceipt, type UnitsFn } from "@/lib/producers/research";
+import { driveStep, launchPartAct, partActReceipt, researchProducer, researchUnits, withRecords, type SplitFn, type StepFactory, type StepReceipt, type UnitsFn } from "@/lib/producers/research";
 import { scriptProducer, scriptUnits } from "@/lib/producers/script";
 import { voiceProducer, voiceUnits } from "@/lib/producers/voice";
 import { wordsProducer, wordsUnits } from "@/lib/producers/words";
@@ -12,6 +12,7 @@ import { scoreProducer, scoreUnits } from "@/lib/producers/score";
 import { cutProducer, cutUnits } from "@/lib/producers/cut";
 import { framesProducer, framesUnits } from "@/lib/producers/frames";
 import { motionProducer, motionUnits } from "@/lib/producers/motion";
+import { stripCardsProducer, stripCardsSplit, stripCardsUnits } from "@/lib/producers/stripCards";
 import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import { dryOnlyFrom } from "@gt/kernel/dryrun";
 import { isMusicConfigured } from "@/lib/music/elevenlabs";
@@ -73,7 +74,7 @@ function articleErr(e: unknown): Result<never> {
 /** The scene with the article inputs read before it (none for another kind). */
 const withInputs = (s: Scene, a: ArticleInputs | undefined): Scene => (a === undefined ? s : { ...s, ctx: { ...s.ctx, article: a } });
 
-/** The mode an act is priced and launched in: `live` for the voice act alone (./actMode.ts). */
+/** The mode an act is priced and launched in: `live` for the acts ./actMode.ts names alone. */
 const modeOf = (kind: EditorKind, act: PartActKind): "dry" | "live" => actModeOf(kind, act, { dryOnly: dryOnlyFrom(process.env), keyed: isMusicConfigured() });
 
 /** A dry act lands in milliseconds; a live turn takes minutes and is answered as running. */
@@ -81,8 +82,15 @@ const ACT_WAIT_MS = 2500;
 
 /** The producer each editor kind's acts run under (L37), built for the job's own lane, and the
  *  units its receipt and its job's plan step share. A kind absent here has no producer bound yet. */
-const FACTORIES: Readonly<Partial<Record<EditorKind, StepFactory>>> = { research: researchProducer, script: scriptProducer, words: wordsProducer, voice: voiceProducer, score: scoreProducer, cut: cutProducer, frames: framesProducer, motion: motionProducer };
-const UNITS: Readonly<Partial<Record<EditorKind, UnitsFn>>> = { research: withRecords(researchUnits), script: withRecords(scriptUnits), words: wordsUnits, voice: voiceUnits, score: scoreUnits, cut: cutUnits, frames: framesUnits, motion: motionUnits };
+const FACTORIES: Readonly<Partial<Record<EditorKind, StepFactory>>> = { research: researchProducer, script: scriptProducer, words: wordsProducer, voice: voiceProducer, score: scoreProducer, cut: cutProducer, frames: framesProducer, motion: motionProducer, strips: stripCardsProducer };
+const UNITS: Readonly<Partial<Record<EditorKind, UnitsFn>>> = { research: withRecords(researchUnits), script: withRecords(scriptUnits), words: wordsUnits, voice: voiceUnits, score: scoreUnits, cut: cutUnits, frames: framesUnits, motion: motionUnits, strips: stripCardsUnits };
+/** The kinds whose untargeted act fans out to one targeted job per unit, in the one confirm: a
+ *  strips part draws a card a job (spark explainer-real-article-strips), so the cards run in
+ *  parallel up to seat.text's slots, and a targeted `draw-strips` (a section id) redraws one card.
+ *  The receipt is the whole act's: the sum of every card's. A confirm here names no ceiling, so
+ *  every job runs uncapped as an unsplit act's does; a caller that passes one gets it SPLIT across
+ *  the jobs, never copied (research/facts.ts `splitCeiling`). */
+const SPLITS: Readonly<Partial<Record<EditorKind, SplitFn>>> = { strips: stripCardsSplit };
 
 export function makeRealPart(deps: RealDeps): ServerPart {
   const withStore = <T,>(fn: (s: Store) => Result<T>): Result<T> => {
@@ -186,20 +194,24 @@ export function makeRealPart(deps: RealDeps): ServerPart {
       const launched = launchAct(deps, store.value, projectId, key, act, token, target);
       if (!launched.ok) return launched;
       if (launched.value.kind === "stale") return ok(launched.value);
-      const { jobId, kind_: kind } = launched.value;
+      const { jobIds, kind_: kind } = launched.value;
       // The job is the act (decision 3): driven here so a studio with no worker running still
       // lands it, and fenced by the lane slot so a worker that claims it first wins and this drive
       // reads `busy`. The confirm answers when the job ends or the wait runs out, whichever is
       // first; a longer act shows in the view's `running` and lands where the editor reads it.
+      // A split act's jobs are driven side by side (each holds its own slot on the lane).
       const factory = FACTORIES[kind];
       if (factory === undefined) return err("unavailable", `no producer is bound for a ${kind} part yet`);
-      const drive = driveStep(factory, store.value, jobId, { hooks: { onSettled: async () => kick(store.value, projectId) } }).then(
-        (r) => {
-          if (!r.ok) console.error(`[part-act] ${jobId}: ${r.error.message}`);
-        },
-        (e: unknown) => console.error(`[part-act] ${jobId}: ${errorMessage(e)}`),
+      const drives = jobIds.map((jobId) =>
+        driveStep(factory, store.value, jobId, { hooks: { onSettled: async () => kick(store.value, projectId) } }).then(
+          (r) => {
+            if (!r.ok) console.error(`[part-act] ${jobId}: ${r.error.message}`);
+          },
+          (e: unknown) => console.error(`[part-act] ${jobId}: ${errorMessage(e)}`),
+        ),
       );
-      await Promise.race([drive, new Promise((res) => setTimeout(res, deps.actWaitMs ?? ACT_WAIT_MS).unref())]);
+      await Promise.race([Promise.all(drives), new Promise((res) => setTimeout(res, deps.actWaitMs ?? ACT_WAIT_MS).unref())]);
+      const jobId = jobIds[0] ?? "";
       const a = await inputsFor(store.value, projectId, key);
       if (!a.ok) return a;
       const view = read(store.value, projectId, key, a.value);
@@ -216,7 +228,7 @@ export function makeRealPart(deps: RealDeps): ServerPart {
  * the chosen option's lane; the receipt's mode decides dry or live (live needs an arm, refused
  * under GRAVITONE_DRY_ONLY).
  */
-function launchAct(deps: RealDeps, store: Store, projectId: string, key: string, act: PartActKind, token: string, target?: string): Result<{ kind: "stale"; fresh: PartReceipt } | { kind: "go"; jobId: string; kind_: EditorKind }> {
+function launchAct(deps: RealDeps, store: Store, projectId: string, key: string, act: PartActKind, token: string, target?: string): Result<{ kind: "stale"; fresh: PartReceipt } | { kind: "go"; jobIds: readonly string[]; kind_: EditorKind }> {
   const now = deps.now();
   const scene = unwrap(store.read((r) => sceneOf(r, projectId, key, now)));
   if (!scene.ok) return scene;
@@ -224,9 +236,11 @@ function launchAct(deps: RealDeps, store: Store, projectId: string, key: string,
   const units = UNITS[kind];
   if (units === undefined) return err("unavailable", `no producer is bound for a ${kind} part yet`);
   const ref = { projectId, partId: scene.value.part.id, act, ...(target === undefined ? {} : { target }) };
-  const l = launchPartAct(store, ref, units, { mode: modeOf(kind, act), now, token, actor: OPERATOR });
+  const split = SPLITS[kind];
+  const confirm = { mode: modeOf(kind, act), now, token, actor: OPERATOR };
+  const l = launchPartAct(store, ref, units, split === undefined ? confirm : { ...confirm, split });
   if (!l.ok) return l;
-  return l.value.kind === "stale" ? ok({ kind: "stale", fresh: partReceiptOf(l.value.fresh, act) }) : ok({ kind: "go", jobId: l.value.jobId, kind_: kind });
+  return l.value.kind === "stale" ? ok({ kind: "stale", fresh: partReceiptOf(l.value.fresh, act) }) : ok({ kind: "go", jobIds: l.value.jobIds, kind_: kind });
 }
 
 /** The lib receipt in the editor contract's words (its act is this editor's own). */
@@ -239,8 +253,8 @@ function partReceiptOf(r: StepReceipt, act: PartActKind): PartReceipt {
  * An act's receipt. A kind with a bound producer (L37) is priced from THAT producer's units - the
  * same function its job's plan step books - placed among the live queue (lib/producers
  * `partActReceipt`). A kind whose producer is not bound yet keeps the editor side's static receipt.
- * Every receipt reads `dry` but the voice act's, which reads `live` where this process may spend
- * (./actMode.ts): its confirm is the arm (decision 4: a confirm of a live receipt).
+ * Every receipt reads `dry` but the live acts' (./actMode.ts: the voice acts and `draw-strips`),
+ * which read `live` where this process may spend: the confirm is the arm (decision 4).
  */
 function receiptFor(deps: RealDeps, projectId: string, key: string, act: PartActKind, target?: string): Result<PartReceipt> {
   const k = deps.store();
