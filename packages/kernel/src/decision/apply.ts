@@ -159,6 +159,10 @@ export function finishApply(t: Tx, claim: Pick<ApplyClaim, "packetId" | "holder"
   const held = "WHERE packet_id = ? AND state = 'pending' AND holder = ?";
   switch (plan.kind) {
     case "lost":
+      // The row is someone else's now, so nothing about it changes; but the late report is the
+      // only evidence the lease was too short (the reaper's event says "never reported"), and a
+      // failure's sentence lives nowhere else.
+      append(t, { actor: machine(claim.holder), type: "decision.apply-late", subject, data: { act: row.act, ticket: row.ticket, holder: claim.holder, ...(outcome.ok ? { ok: true } : { ok: false, error: outcome.error, code: outcome.code }) } });
       return "lost";
     case "applied":
       t.run(`UPDATE packet_applies SET state = 'applied', holder = NULL, lease_until = NULL, done_at = ? ${held}`, t.at, row.packetId, claim.holder);

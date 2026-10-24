@@ -117,8 +117,11 @@ describe("kernel/decision - the apply outbox", () => {
     const b = must(s.tx((t) => takeApply(t, { holder: "b" })));
     expect([b?.holder, b?.attempt]).toEqual(["b", 2]);
     expect(types(s, "decision.apply-failed")).toHaveLength(1);
-    expect(must(s.tx((t) => finishApply(t, { packetId: P, holder: "a" }, { ok: true })))).toBe("lost");
+    expect(must(s.tx((t) => finishApply(t, { packetId: P, holder: "a" }, { ok: false, error: "EBUSY: verdicts.json", code: "unavailable" })))).toBe("lost");
     expect(row(s)).toMatchObject({ state: "pending", holder: "b" });
+    const late = types(s, "decision.apply-late");
+    expect(late, "the late report leaves a trace").toHaveLength(1);
+    expect(String(late[0]?.["data"])).toContain("EBUSY: verdicts.json");
     expect(must(s.tx((t) => finishApply(t, { packetId: P, holder: "b" }, { ok: true })))).toBe("applied");
     expect(types(s, "decision.applied")).toHaveLength(1);
   });
