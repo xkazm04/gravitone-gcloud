@@ -46,6 +46,7 @@ import type { EngineIO } from "./engine";
 import { imageDims, nearestAspect } from "./imageDims";
 import { exportStyles, extractRoot, OPERATOR, readStyleDefs, styleStore } from "../catalogue";
 import { planExtractCommit } from "../commitPlan";
+import { EXTRACT_COMMITTABLE } from "../plant";
 import { foundryFs } from "../fsPort";
 import type {
   ExtractCommitPlan,
@@ -386,8 +387,8 @@ export async function commitExtractRun(
     if (run.dry) throw new FoundryError("This run was dry: its images are stand-ins, and a dry run is never committed.", 409);
     // `failed` is committable, as the forge's is: a breaker or budget stop leaves
     // finished styles the operator can judge, and exemplars carry `settled`.
-    // Keep this array and EXTRACT_COMMITTABLE in app/foundry/parts.tsx identical.
-    if (!["done", "failed"].includes(run.status)) throw new FoundryError("The extract is still running this run.", 409);
+    // The plant's one set (lib/foundry/plant.ts), which the Board's gate and the ledger read too.
+    if (!EXTRACT_COMMITTABLE.includes(run.status)) throw new FoundryError("The extract is still running this run.", 409);
     if (verdictsIn) await replaceVerdictMapHeld(verdictSpec(id), run, verdictsIn, "commit");
     const verdicts = await readVerdicts(id);
 
