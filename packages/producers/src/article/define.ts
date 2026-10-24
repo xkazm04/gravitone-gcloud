@@ -110,7 +110,10 @@ export function meteredTurns<I, R extends TurnReport>(ctx: StepContext, ports: A
     });
     if (!r.ok) throw r.error;
     const out = await r.value;
-    stepUsd += out.costUsd ?? 0;
+    // A dry turn is the stand-in's, and the meter books nothing for it (spend/meter.ts `paid`), so a
+    // figure the stand-in reports is no spend: counted here it would stop a dry job at its ceiling
+    // inside a step while the same figure across steps (`job.spend`) stays $0.
+    if (ctx.job.mode.kind !== "dry") stepUsd += out.costUsd ?? 0;
     return out;
   };
   return { turn, tripped: () => trip, used: () => count };
