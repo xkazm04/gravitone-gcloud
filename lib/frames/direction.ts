@@ -67,15 +67,24 @@ export function landDirection(raw: string, frames: Frame[], facts: readonly Fact
   for (const r of report.rejected) if (inScript.has(r.beatAt)) rejections[r.beatAt] = r.reason;
   for (const at of report.missing) rejections[at] = "The pass returned no scene for this beat.";
 
+  // The pass lands as a PROPOSAL (planFromSpecs, accepted per row) - nothing is
+  // applied here, so the summary says "proposed". An invented timestamp is not
+  // a beat, so it is named once, not also counted among the rejected beats.
   const orphans = report.rejected.filter((r) => !inScript.has(r.beatAt));
+  const onRows = report.rejected.length - orphans.length;
   let notice: string | null = null;
   if (report.rejected.length || report.missing.length) {
     const parts = [`${report.specs.length} of ${frames.length} beats directed`];
-    if (report.rejected.length) parts.push(`${report.rejected.length} rejected`);
+    if (onRows) parts.push(`${onRows} rejected`);
     if (report.missing.length) parts.push(`${report.missing.length} with no scene returned`);
-    notice = `${parts.join(" · ")}. ${
-      report.specs.length ? "The reasons are on those rows; every other beat was applied." : "Nothing was applied."
-    }${orphans.length ? ` The engine also invented ${orphans.map((o) => `"${o.beatAt}"`).join(", ")}.` : ""}`;
+    const rest = !report.specs.length
+      ? "Nothing was proposed."
+      : onRows || report.missing.length
+        ? "The reasons are on those rows; every other beat is in the proposal."
+        : "Every beat is in the proposal.";
+    notice = `${parts.join(" · ")}. ${rest}${
+      orphans.length ? ` The engine also invented ${orphans.map((o) => `"${o.beatAt}"`).join(", ")}.` : ""
+    }`;
   }
   return { specs: report.specs, rejections, notice };
 }
