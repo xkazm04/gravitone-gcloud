@@ -209,6 +209,18 @@ describe("migrations", () => {
     s.close();
   });
 
+  it("refuses a snapshot budget under one before anything runs, rather than delete the snapshot it just took", () => {
+    const s = fileStore();
+    must(migrate(s, [upTo(probe, 1)]));
+    for (const keepSnapshots of [0, -1, 1.5]) {
+      const r = migrate(s, [probe], { keepSnapshots });
+      expect(!r.ok && r.error.code).toBe("invalid");
+    }
+    expect(ledgerOf(s).map((x) => x["version"])).toEqual([1]);
+    expect(readdirSync(tmp.dir).filter((f) => f.startsWith(`${path.basename(s.location)}.pre-migrate.`))).toEqual([]);
+    s.close();
+  });
+
   it("a snapshot's name stays short however many modules are pending, and tells two plans apart", () => {
     const many = Array.from({ length: 40 }, (_, i) => ({ module: `a-rather-long-module-name-${i}`, step: { version: 1, sql: "" }, digest: "" }));
     const at = "2026-10-15T12:00:00.000Z";

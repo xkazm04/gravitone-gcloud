@@ -159,6 +159,9 @@ function rotate(dir: string, base: string, keep: number): void {
  * snapshot would be an empty file per fresh store (every test, every new cell).
  */
 export function migrate(store: Store, modules: readonly ModuleMigrations[], opts: MigrateOptions = {}): Result<MigrateReport> {
+  const keep = opts.keepSnapshots ?? KEEP_SNAPSHOTS;
+  // Rotation runs right after the snapshot: a budget under one would delete the restore point it just took.
+  if (!Number.isInteger(keep) || keep < 1) return err("invalid", `migrations: keepSnapshots must be a whole number of at least 1, not ${keep}`);
   const ledger = readLedger(store);
   if (!ledger.ok) return ledger;
   const plan = planMigrations(modules, ledger.value.recorded, ledger.value.failures);
@@ -174,7 +177,7 @@ export function migrate(store: Store, modules: readonly ModuleMigrations[], opts
     snapshot = path.join(dir, snapshotName(path.basename(store.location), pending, stamp.value));
     const snap = store.snapshot(snapshot);
     if (!snap.ok) return err("refused", `migrations: no step ran, the pre-migration snapshot failed: ${snap.error.message}`, { cause: snap.error });
-    rotate(dir, path.basename(store.location), opts.keepSnapshots ?? KEEP_SNAPSHOTS);
+    rotate(dir, path.basename(store.location), keep);
   }
 
   const applied: Applied[] = [];
