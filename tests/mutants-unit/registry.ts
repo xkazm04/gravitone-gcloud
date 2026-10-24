@@ -5442,4 +5442,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "void by;",
     why: "The kit's month calendar draws its arrows and turns nothing when they are pressed, though the Floor's turn a month and close the open day.",
   },
+  {
+    id: "cosmos-raster-worker-fail-silent",
+    test: "tests/next-server/landing-cosmos-engine.test.ts",
+    file: "app/_landing/cosmos/engine/raster.ts",
+    find: "console.warn(\"[cosmos raster] the worker could not paint a job:\", m.err);",
+    replace: "void m.err;",
+    why: "A picture the worker could not paint is simply missing from the landing, and nothing anywhere says what the worker threw.",
+  },
+  {
+    id: "cosmos-raster-main-fail-silent",
+    test: "tests/next-server/landing-cosmos-engine.test.ts",
+    file: "app/_landing/cosmos/engine/raster.ts",
+    find: "console.warn(\"[cosmos raster] the main thread could not paint a job:\", err);",
+    replace: "void err;",
+    why: "On a browser without OffscreenCanvas a picture that throws while painting is simply missing, with no error on the console to say why.",
+  },
 ];

@@ -13,10 +13,14 @@
 //      setTimeout, so destroy() during the handshake (React's strict-mode remount does it
 //      on every dev mount) left the worker running, and its hello or the timer then ran
 //      the main-thread fallback - a WebGL context and the grain - for a page that was gone.
+//   3. A failure says why. The worker posts its paint error and raster.ts dropped it; the
+//      main path's catch dropped its own; a worker that could not paint fell back to the
+//      main thread with the tier line saying only "raster main". Each now reports its
+//      reason on the console; run() still resolves null.
 //
 // raster.ts is loaded natively (ESM) because it spells `new URL(..., import.meta.url)`
 // for the bundler, which the Playwright node lane cannot load as CommonJS.
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { Raster } from "../../app/_landing/cosmos/engine/raster.ts";
 import type { Job } from "../../app/_landing/cosmos/engine/rasterJobs.ts";
@@ -118,5 +122,55 @@ describe("raster.ts: the worker paints, the main thread places", () => {
     w.say(HELLO);
     await tick();
     expect(doc.made, "no WebGL probe and no grain painted for a page that is gone").toEqual([]);
+  });
+});
+
+describe("raster.ts: a failure says why", () => {
+  const warned = () => {
+    const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    return { said: () => spy.mock.calls.map((c) => c.map(String).join(" ")), done: () => spy.mockRestore() };
+  };
+
+  test("a job the worker could not paint resolves null and reports the worker's error", async () => {
+    withWorker();
+    countingDocument();
+    const log = warned();
+    const r = new Raster(false);
+    const w = FakeWorker.last!;
+    w.say(HELLO);
+    await r.ready;
+    const p = r.run(JOB, 0, "scene");
+    const { id } = w.posted[0];
+    w.say({ t: "fail", id, err: "RangeError: canvas too large" });
+    expect(await p).toBeNull();
+    expect(log.said().some((s) => s.includes("RangeError: canvas too large"))).toBe(true);
+    log.done();
+    r.destroy();
+  });
+
+  test("a job the main thread could not paint resolves null and reports the error", async () => {
+    countingDocument();
+    const log = warned();
+    const r = new Raster(true);
+    await r.ready;
+    // a medallion builds Path2D, which this lane has not got: the paint throws
+    const p = r.run({ rs: 1, layers: [{ w: 8, h: 8, ops: [{ p: "medal", id: "x", D: 8 }] }] }, 0, "scene");
+    expect(await p).toBeNull();
+    expect(log.said().some((s) => s.includes("Path2D"))).toBe(true);
+    log.done();
+    r.destroy();
+  });
+
+  test("a worker that cannot paint falls back to the main thread and says so", async () => {
+    withWorker();
+    countingDocument();
+    const log = warned();
+    const r = new Raster(false);
+    FakeWorker.last!.say({ ...HELLO, ok: false });
+    await r.ready;
+    expect(r.mode).toBe("main");
+    expect(log.said().some((s) => s.includes("main thread"))).toBe(true);
+    log.done();
+    r.destroy();
   });
 });

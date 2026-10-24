@@ -98,7 +98,7 @@ export class Raster {
     }
     return new Promise<Hello>((resolve) => {
       let settled = false;
-      const fallback = () => {
+      const fallback = (why?: string) => {
         if (settled) return;
         settled = true;
         clearTimeout(t);
@@ -107,29 +107,31 @@ export class Raster {
         this.worker = null;
         // destroyed while the worker was starting: no fallback for a page that is gone
         if (this.dead) return resolve({ ren: null, grain: "" });
+        console.warn("[cosmos raster] painting on the main thread:", why);
         resolve(this.startMain());
         this.pump();
       };
       // until hello the worker lives only in this closure; destroy() ends it through here
-      this.abortStart = fallback;
-      const t = setTimeout(fallback, 4000);
+      this.abortStart = () => fallback();
+      const t = setTimeout(() => fallback("the worker did not answer in 4 s"), 4000);
       w.onerror = () => {
         clearTimeout(t);
-        if (!settled) return fallback();
+        if (!settled) return fallback("the worker failed to start");
         // the worker died after it started: what was painting there is lost,
         // what is still queued paints on the main thread
         w.terminate();
         this.worker = null;
         this.mode = "main";
+        console.warn("[cosmos raster] the worker died; what was painting there is lost");
         mainGrain();
         this.failAll();
         this.pump();
       };
       w.onmessage = (e: MessageEvent) => {
-        const m = e.data as { t: string; ok?: boolean; ren?: string | null; grain?: Blob | null; id?: number; i?: number; bmp?: ImageBitmap; out?: ImageBitmap[]; blobs?: Blob[]; ret?: number[] };
+        const m = e.data as { t: string; ok?: boolean; ren?: string | null; grain?: Blob | null; id?: number; i?: number; bmp?: ImageBitmap; out?: ImageBitmap[]; blobs?: Blob[]; ret?: number[]; err?: string };
         if (m.t === "hello") {
           clearTimeout(t);
-          if (!m.ok || this.dead) return fallback();
+          if (!m.ok || this.dead) return fallback("the worker cannot paint here (OffscreenCanvas 2D, Path2D, DOMMatrix or a pattern)");
           settled = true;
           this.abortStart = null;
           this.mode = "worker";
@@ -153,7 +155,10 @@ export class Raster {
         this.live.delete(p.id);
         if (m.t === "done" && m.out) {
           p.res({ out: m.out, urls: (m.blobs || []).map((b) => URL.createObjectURL(b)), ret: m.ret || [] });
-        } else p.res(null);
+        } else {
+          if (m.t === "fail") console.warn("[cosmos raster] the worker could not paint a job:", m.err);
+          p.res(null);
+        }
         this.pump();
       };
     });
@@ -231,7 +236,8 @@ export class Raster {
           const blobs = await Promise.all(out.map((c) => new Promise<Blob | null>((r) => c.toBlob(r, "image/png"))));
           p.res({ out: [], urls: blobs.map((b) => (b ? URL.createObjectURL(b) : "")), ret });
         } else p.res({ out, urls: [], ret });
-      } catch {
+      } catch (err) {
+        console.warn("[cosmos raster] the main thread could not paint a job:", err);
         p.res(null);
       }
     }
