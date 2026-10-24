@@ -44,6 +44,7 @@ import type { BlobRef } from "@gt/domain/blob";
 import { DEFAULT_CALL_ESTIMATE_USD, newManifest, settleReason } from "./engine";
 import type { EngineIO } from "./engine";
 import { imageDims, imageFormat, nearestAspect } from "./imageDims";
+import { slugify } from "./vocabulary";
 import { exportStyles, extractRoot, OPERATOR, readStyleDefs, styleStore } from "../catalogue";
 import { planExtractCommit } from "../commitPlan";
 import { EXTRACT_COMMITTABLE } from "../plant";
@@ -152,11 +153,7 @@ async function reserveRunDir(slug: string): Promise<{ id: string; dir: string }>
 }
 
 export async function createRun(slug: string, uploads: ExtractUpload[], options: Partial<ExtractOptions> = {}): Promise<ExtractManifest> {
-  const clean = slug
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 40);
+  const clean = slugify(slug).slice(0, 40);
   if (!clean) throw new FoundryError("A slug is required.", 400);
   if (!uploads.length) throw new FoundryError("At least one image is required.", 400);
   if (uploads.length > MAX_SOURCES) throw new FoundryError(`At most ${MAX_SOURCES} images per run.`, 400);
