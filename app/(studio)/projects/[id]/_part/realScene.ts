@@ -9,12 +9,12 @@ import { runningActs } from "@gt/producers/research/partJob";
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import type { WorkPlanPart } from "@gt/domain/produce";
-import { OPS_SHOWN, actBelongs, isEditorKind, opLabel, type EditorKind, type PartActKind, type PartOp, type PartProject, type PartRef, type PartRunning, type PartView, type ResearchOp, type ScriptOp } from "@gt/domain/partView";
+import { OPS_SHOWN, actBelongs, isEditorKind, opLabel, type EditorKind, type PartOp, type PartProject, type PartRef, type PartRunning, type PartView, type ResearchOp, type ScriptOp } from "@gt/domain/partView";
 
 import type { Who } from "../../_port/port.ts";
 import { RESEARCH, type ResearchRec } from "./fixtureResearch.ts";
 import { SCRIPT, type ScriptRec } from "./fixtureScript.ts";
-import type { ActBasis, Ctx } from "./fixture.ts";
+import type { Ctx } from "./fixture.ts";
 import { isLaterKind, later, recReader, type KCtx } from "./kinds.ts";
 import { changed, type Obj } from "./realRecs.ts";
 import { researchOf, researchRecords } from "./realResearch.ts";
@@ -22,7 +22,7 @@ import { scriptOf, scriptRecords } from "./realScript.ts";
 
 // THE REAL SIDE'S SCENE (L36; split out of ./real.ts by L43): one part read from the kernel in
 // one reader - its project's plan, its records mapped to every editor kind's working record - and
-// what the port derives from it: the view, the next records an op writes, an act's basis.
+// what the port derives from it: the view and the next records an op writes.
 
 export type Scene = { readonly read: ProjectRead; readonly ctx: KCtx; readonly part: WorkPlanPart; readonly kind: EditorKind; readonly snap: Pick<PartSnapshot, "records" | "rev"> };
 
@@ -135,18 +135,4 @@ export function opPlan(s: Scene, op: PartOp, by: Actor = OPERATOR): OpPlan {
       script: (rec) => (isScriptOp(op) ? SCRIPT.apply(s.ctx, rec, op) : nope("script")),
     }),
   };
-}
-
-/** The act's subject as the receipt prices it: L38's ActBasis, built from the kernel's part. */
-export function basisOf(r: Reader, projectId: string, key: string, act: PartActKind, now: number, target?: string): Result<ActBasis> {
-  const s = sceneOf(r, projectId, key, now);
-  if (!s.ok) return s;
-  if (isLaterKind(s.value.kind)) {
-    const u = later(s.value.kind).units(s.value.ctx, act, target);
-    if (!u.ok) return u;
-    return ok({ ctx: s.value.ctx, kind: s.value.kind, part: s.value.part, rev: s.value.snap.rev, units: u.value, ...(target === undefined ? {} : { target }) });
-  }
-  const units = s.value.kind === "research" ? RESEARCH.units(s.value.ctx, s.value.ctx.research(), act) : SCRIPT.units(s.value.ctx, scriptOf(s.value.snap.records), act);
-  if (!units.ok) return units;
-  return ok({ ctx: s.value.ctx, kind: s.value.kind, part: s.value.part, rev: s.value.snap.rev, units: units.value });
 }

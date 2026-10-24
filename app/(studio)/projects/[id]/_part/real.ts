@@ -17,8 +17,7 @@ import type { Actor } from "@gt/domain/event";
 import type { EditorKind, PartActKind, PartOp, PartReceipt, PartView } from "@gt/domain/partView";
 
 import type { ServerPart } from "./port.ts";
-import { receiptOf } from "./fixtureActs.ts";
-import { actorOfWho, basisOf, opPlan, sceneOf, unwrap, viewOf, type OpPlan, type Scene } from "./realScene.ts";
+import { actorOfWho, opPlan, sceneOf, unwrap, viewOf, type OpPlan, type Scene } from "./realScene.ts";
 
 // THE REAL PART SIDE (L36) - the PartPort over the kernel's `parts` module: the part's records
 // are rows under their v1 keys, every edit is a row in an append-only op log, undo appends the
@@ -43,9 +42,24 @@ export type RealDeps = {
 const ACT_WAIT_MS = 2500;
 
 /** The producer each editor kind's acts run under (L37), built for the job's own lane, and the
- *  units its receipt and its job's plan step share. A kind absent here has no producer bound yet. */
-const FACTORIES: Readonly<Partial<Record<EditorKind, StepFactory>>> = { research: researchProducer, script: scriptProducer, words: wordsProducer, voice: voiceProducer, score: scoreProducer, cut: cutProducer, frames: framesProducer, motion: motionProducer };
-const UNITS: Readonly<Partial<Record<EditorKind, UnitsFn>>> = { research: withRecords(researchUnits), script: withRecords(scriptUnits), words: wordsUnits, voice: voiceUnits, score: scoreUnits, cut: cutUnits, frames: framesUnits, motion: motionUnits };
+ *  units its receipt and its job's plan step share - ONE row per kind, so a kind can never be
+ *  priced and enqueued with no producer to drive it. A kind absent here has no producer bound yet. */
+type Bound = { readonly factory: StepFactory; readonly units: UnitsFn };
+const BOUND: Readonly<Partial<Record<EditorKind, Bound>>> = {
+  research: { factory: researchProducer, units: withRecords(researchUnits) },
+  script: { factory: scriptProducer, units: withRecords(scriptUnits) },
+  words: { factory: wordsProducer, units: wordsUnits },
+  voice: { factory: voiceProducer, units: voiceUnits },
+  score: { factory: scoreProducer, units: scoreUnits },
+  cut: { factory: cutProducer, units: cutUnits },
+  frames: { factory: framesProducer, units: framesUnits },
+  motion: { factory: motionProducer, units: motionUnits },
+};
+/** The receipt and the confirm refuse an unbound kind with the same words. */
+const boundOf = (kind: EditorKind): Result<Bound> => {
+  const b = BOUND[kind];
+  return b === undefined ? err("unavailable", `no producer is bound for a ${kind} part yet`) : ok(b);
+};
 
 export function makeRealPart(deps: RealDeps): ServerPart {
   const withStore = <T,>(fn: (s: Store) => Result<T>): Result<T> => {
@@ -119,9 +133,9 @@ export function makeRealPart(deps: RealDeps): ServerPart {
       // lands it, and fenced by the lane slot so a worker that claims it first wins and this drive
       // reads `busy`. The confirm answers when the job ends or the wait runs out, whichever is
       // first; a longer act shows in the view's `running` and lands where the editor reads it.
-      const factory = FACTORIES[kind];
-      if (factory === undefined) return err("unavailable", `no producer is bound for a ${kind} part yet`);
-      const drive = driveStep(factory, store.value, jobId, { hooks: { onSettled: async () => kick(store.value, projectId) } }).then(
+      const bound = boundOf(kind);
+      if (!bound.ok) return bound;
+      const drive = driveStep(bound.value.factory, store.value, jobId, { hooks: { onSettled: async () => kick(store.value, projectId) } }).then(
         (r) => {
           if (!r.ok) console.error(`[part-act] ${jobId}: ${r.error.message}`);
         },
@@ -147,10 +161,10 @@ function launchAct(deps: RealDeps, store: Store, projectId: string, key: string,
   const scene = unwrap(store.read((r) => sceneOf(r, projectId, key, now)));
   if (!scene.ok) return scene;
   const kind = scene.value.kind;
-  const units = UNITS[kind];
-  if (units === undefined) return err("unavailable", `no producer is bound for a ${kind} part yet`);
+  const bound = boundOf(kind);
+  if (!bound.ok) return bound;
   const ref = { projectId, partId: scene.value.part.id, act, ...(target === undefined ? {} : { target }) };
-  const l = launchPartAct(store, ref, units, { mode: "dry", now, token, actor });
+  const l = launchPartAct(store, ref, bound.value.units, { mode: "dry", now, token, actor });
   if (!l.ok) return l;
   return l.value.kind === "stale" ? ok({ kind: "stale", fresh: partReceiptOf(l.value.fresh, act) }) : ok({ kind: "go", jobId: l.value.jobId, kind_: kind });
 }
@@ -164,7 +178,8 @@ function partReceiptOf(r: StepReceipt, act: PartActKind): PartReceipt {
 /**
  * An act's receipt. A kind with a bound producer (L37) is priced from THAT producer's units - the
  * same function its job's plan step books - placed among the live queue (lib/producers
- * `partActReceipt`). A kind whose producer is not bound yet keeps the editor side's static receipt.
+ * `partActReceipt`). A kind whose producer is not bound yet is refused here as its confirm refuses
+ * it: the editor side's static receipt was a price for a purchase the confirm could never launch.
  * Every receipt reads `dry` until the editor can arm live (decision 4: a confirm of a live receipt).
  */
 function receiptFor(deps: RealDeps, projectId: string, key: string, act: PartActKind, target?: string): Result<PartReceipt> {
@@ -173,13 +188,10 @@ function receiptFor(deps: RealDeps, projectId: string, key: string, act: PartAct
   const now = deps.now();
   const scene = unwrap(k.value.read((r) => sceneOf(r, projectId, key, now)));
   if (!scene.ok) return scene;
-  const units = UNITS[scene.value.kind];
-  if (units !== undefined) {
-    const r = partActReceipt(k.value, { projectId, partId: scene.value.part.id, act, ...(target === undefined ? {} : { target }) }, units, { mode: "dry", now });
-    return r.ok ? ok(partReceiptOf(r.value, act)) : r;
-  }
-  const b = unwrap(k.value.read((r) => basisOf(r, projectId, key, act, now, target)));
-  return b.ok ? ok(receiptOf(b.value, act)) : b;
+  const bound = boundOf(scene.value.kind);
+  if (!bound.ok) return bound;
+  const r = partActReceipt(k.value, { projectId, partId: scene.value.part.id, act, ...(target === undefined ? {} : { target }) }, bound.value.units, { mode: "dry", now });
+  return r.ok ? ok(partReceiptOf(r.value, act)) : r;
 }
 
 export const realPart: ServerPart = makeRealPart({

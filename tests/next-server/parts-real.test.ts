@@ -145,6 +145,21 @@ describe("a scope decided on the notebook's own digest is not orphaned by storag
   });
 });
 
+describe("an act whose kind has no producer bound", () => {
+  // The receipt is the first half of the confirm (decision 3): a price the confirm can never
+  // launch is refused at the receipt, in the confirm's own words.
+  it("is refused at the receipt as the confirm refuses it, and a bound kind still prices", async () => {
+    const { port } = universe("explainer", "ex1");
+    const r = await port.actReceipt({ projectId: "ex1", key: "article", act: "write-article" });
+    expect(r.ok ? "priced" : { code: r.error.code, message: r.error.message }).toEqual({ code: "unavailable", message: "no producer is bound for a article part yet" });
+    const go = await port.act({ projectId: "ex1", key: "article", act: "write-article", token: "0123456789abcdef" });
+    expect(go.ok ? "launched" : { code: go.error.code, message: go.error.message }).toEqual(r.ok ? "priced" : { code: r.error.code, message: r.error.message });
+    const album = universe("album-video", "a1");
+    const words = await album.port.actReceipt({ projectId: "a1", key: "words", act: "write-words" });
+    expect(words.ok).toBe(true);
+  });
+});
+
 describe("a gate that throws after an edit", () => {
   // The edit's gate check runs after the answer (real.ts `kick`): a throw inside it is the
   // part-gates log line, never an unhandled rejection in the server process.
