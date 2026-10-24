@@ -84,11 +84,11 @@ export const evidenceOf = (t: SoundTake): EvidenceTake => ({
 
 export async function readStrengths(kind: Kind): Promise<StrengthsView> {
   const [ledger, takes] = await Promise.all([read(() => readLedger()), read(() => listTakes({ kind, fixtures: false }))]);
-  const insights = ledger.ok ? computeInsights(ledger.value.verdicts, kind) : null;
+  const insights = ledger.ok ? { ok: true as const, value: computeInsights(ledger.value.verdicts, kind) } : ledger;
   return {
     kind,
-    cells: ledger.ok && insights !== null ? { ok: true, value: insights.cells } : { ok: false, error: ledger.ok ? "no insights" : ledger.error },
-    judged: insights?.judged ?? 0,
+    cells: insights.ok ? { ok: true, value: insights.value.cells } : insights,
+    judged: insights.ok ? insights.value.judged : 0,
     evidence: takes.ok ? { ok: true, value: takes.value.filter(judged).map(evidenceOf) } : takes,
     lessons: ledger.ok
       ? {
