@@ -148,8 +148,8 @@ export function Receipt({ receipt: r, changes = NO_CHANGES, ceiling, onCeiling, 
         </table>
         {changes.removed.length > 0 && (
           <div className={s.removed}>
-            {changes.removed.map((k) => (
-              <Chip key={k} label={`− ${k}`} tone="rose" casing="lower" />
+            {changes.removed.map((l) => (
+              <Chip key={l.key} label={`− ${l.label}`} tone="rose" casing="lower" />
             ))}
           </div>
         )}

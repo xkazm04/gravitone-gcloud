@@ -103,7 +103,9 @@ export type TotalField = "seconds" | "cost" | "src" | "queuePos" | "etaAt" | "mo
 export type ReceiptChanges = {
   readonly lines: ReadonlyMap<string, ReadonlySet<LineField>>;
   readonly added: readonly string[];
-  readonly removed: readonly string[];
+  /** A line the fresh receipt no longer has, named as the operator read it (its label, not its
+   *  key: a project's part key is `<projectId>/<part>`). */
+  readonly removed: readonly { readonly key: string; readonly label: string }[];
   readonly totals: ReadonlySet<TotalField>;
 };
 
@@ -159,7 +161,7 @@ export function receiptChanges(before: Receipt, after: Receipt): ReceiptChanges 
   return {
     lines,
     added: [...now.keys()].filter((k) => !was.has(k)),
-    removed: [...was.keys()].filter((k) => !now.has(k)),
+    removed: before.lines.filter((l) => !now.has(l.key)).map((l) => ({ key: l.key, label: l.label })),
     totals,
   };
 }

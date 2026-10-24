@@ -128,7 +128,18 @@ describe("the receipt's changes", () => {
     const c = receiptChanges(a, b);
     expect([...(c.lines.get("frames") ?? [])].sort()).toEqual(["cost", "lane", "model", "queuePos", "seconds", "src"]);
     expect(c.added).toEqual(["cut"]);
-    expect(c.removed).toEqual(["score"]);
+    expect(c.removed).toEqual([{ key: "score", label: "score" }]);
+  });
+
+  test("a removed line is named by its label, never by its key (a part key is <projectId>/<part>)", () => {
+    const named = (key: string, label: string): ReceiptLine => ({ ...line(key, FLUX, 24, 1, 10), label });
+    const before = receipt([named("prj_7f3a/frames", "frames"), named("prj_7f3a/score", "score")]);
+    const after = receipt([named("prj_7f3a/frames", "frames")], { token: "t2" });
+    const c = receiptChanges(before, after);
+    expect(c.removed).toEqual([{ key: "prj_7f3a/score", label: "score" }]);
+    const html = renderToStaticMarkup(h(Receipt, { receipt: after, changes: c, ceiling: "", onCeiling: noop, onConfirm: noop, busy: false, nowMs: NOW }));
+    expect(html).toContain("− score");
+    expect(html).not.toContain("− prj_7f3a");
   });
 
   test("a figure's source and an unpriced line's kind are what the operator reads, so a move in either is marked", () => {
