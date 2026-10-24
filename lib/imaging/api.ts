@@ -187,12 +187,12 @@ export function errorResponse(e: unknown, now: number = Date.now()): Response {
   // `e.detail` — up to 600 chars of raw vendor body, which can echo the user's
   // own prompt — has never been in this response and must not be added.
   if (e instanceof ImagingError) {
-    const isOverBudget = e.kind === "over-budget" || (e.kind as string) === "budget";
-    const status = isOverBudget ? 402 : statusFor(e.kind);
-    const code = isOverBudget ? "over-budget" : e.kind;
+    // statusFor owns the mapping, over-budget -> 402 included: `kind` is a
+    // closed union, so no second spelling of a refusal can reach this branch.
+    const status = statusFor(e.kind);
     const body: Record<string, unknown> = {
       detail: scrub(e.message),
-      code,
+      code: e.kind,
       provider: e.provider,
     };
     const headers: Record<string, string> = {};
