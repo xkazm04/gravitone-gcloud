@@ -13,6 +13,8 @@
 .count{font:500 var(--fs-micro)/1.5 var(--mono);color:var(--faint)}
 
 .body{overflow:auto;padding:var(--sp-6) var(--sp-7) calc(var(--sp-7) * 5);scroll-behavior:smooth}
+/* globals.css's reduced-motion rule reaches `html` and every animation, never this scroller. */
+@media (prefers-reduced-motion:reduce){.body{scroll-behavior:auto}}
 /* PAGE MEASURE: kit.css capped a section at 1400px. */
 .sec{max-width:93em;margin:0 auto calc(var(--sp-6) * 2);scroll-margin-top:var(--sp-5)}
 .sec>h2{display:flex;align-items:baseline;gap:var(--sp-5);font:600 var(--fs-h2)/1.2 var(--sans);color:var(--ink-bright);padding-bottom:var(--sp-4);margin-bottom:var(--sp-loose);border-bottom:1px solid var(--hair)}

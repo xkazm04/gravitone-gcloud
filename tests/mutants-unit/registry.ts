@@ -5289,4 +5289,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "<Tally value={l.n} label=\"judged\" />",
     why: "A hunt's signed lesson calls its heard leaves 'judged' under a sign that called them 'heard' - one figure, two names on one screen.",
   },
+  {
+    id: "kit-body-glides-under-reduced-motion",
+    test: "tests/next-server/kit-sheet.test.ts",
+    file: "app/(studio)/kit/kit.module.css",
+    find: "@media (prefers-reduced-motion:reduce){.body{scroll-behavior:auto}}",
+    replace: "@media (prefers-reduced-motion:reduce){.body{}}",
+    why: "Every /kit nav click glides the page for a person who asked for no motion: the blanket rule never reaches a module's own scroller.",
+  },
 ];
