@@ -32,9 +32,15 @@ export const takesFeed: Feed = {
   id: "takes",
   async read(ctx): Promise<FeedRead> {
     const items: FeedItem[] = [];
+    const skipped: { id: string; reason: string }[] = [];
     for (const t of await listTakes()) {
       const durationS = t.measured?.durationS ?? t.durationS;
-      if (durationS === null || durationS <= 0) continue;
+      // The suno feed's rule for the same gap: an audio item without a length is not drawn, and
+      // the take is named in the report rather than vanishing from it.
+      if (durationS === null || durationS <= 0) {
+        skipped.push({ id: t.id, reason: "the take has no length, asked or measured" });
+        continue;
+      }
       const fixture = ctx.universe === "fixture" || t.origin === "fixture";
       const at = isoOf(t.createdAt);
       const group = t.group ?? t.terms.sfxCategory ?? undefined;
@@ -83,7 +89,7 @@ export const takesFeed: Feed = {
         ...(t.file === null ? {} : { file: { abs: filePathAbs(t.file.path), mime: t.file.mime } }),
       });
     }
-    return { items, skipped: [] };
+    return { items, skipped };
   },
 };
 

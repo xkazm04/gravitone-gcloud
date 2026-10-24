@@ -16,7 +16,7 @@ import { runJob } from "@gt/kernel/job-run";
 import { mediaFactsProducer, queueFacts, type MediaProbe } from "@gt/producers/media-facts/run";
 
 import { kernelFeed } from "../../lib/library/feeds/kernel.ts";
-import { sunoFeed } from "../../lib/library/feeds/sound.ts";
+import { sunoFeed, takesFeed } from "../../lib/library/feeds/sound.ts";
 import { clipsFeed, exportsFeed } from "../../lib/library/feeds/studio.ts";
 import type { FeedItem } from "../../lib/library/feeds/types.ts";
 import { syncLibrary } from "../../lib/library/project.ts";
@@ -77,6 +77,21 @@ describe("sunoFeed", () => {
     expect(kept?.extras.audio).toMatchObject({ prompt: "tense strings, pulse", src: "https://cdn/song-kept.mp3" });
     expect(kept?.file).toBeUndefined();
     expect(r.skipped).toEqual([{ id: "sc-wait", reason: "Suno has not reported its length yet" }]);
+  });
+});
+
+describe("takesFeed", () => {
+  it("admits a take with a length and names the one it cannot draw without one", async () => {
+    const sound = process.env["SOUND_STORE_DIR"] ?? "";
+    const take = (id: string, over: object = {}) => ({
+      ...{ id, kind: "music", title: id, provider: "local", origin: "studio", prompt: "warm pad", negative: null, terms: { genre: [], mood: [], instrument: [] }, tempoBpm: null, key: null, durationS: null },
+      ...{ file: null, peaks: null, measured: null, verdict: "unjudged", reasons: [], stage: null, group: null, label: null, parentId: null, huntId: null, projectId: null, songId: null, createdAt: "2026-10-01T00:00:00.000Z" },
+      ...over,
+    });
+    write(path.join(sound, "takes.json"), { version: 1, takes: [take("t-long", { durationS: 30 }), take("t-none")] });
+    const r = await takesFeed.read(ctx);
+    expect(r.items.map((i) => i.item.id)).toEqual(["audio:t-long"]);
+    expect(r.skipped).toEqual([{ id: "t-none", reason: "the take has no length, asked or measured" }]);
   });
 });
 
