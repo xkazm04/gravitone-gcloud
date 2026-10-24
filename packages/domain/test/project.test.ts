@@ -1,7 +1,9 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 
 import { type PartId, type ProjectId } from "../src/ids.ts";
-import { partSchema } from "../src/part.ts";
+import { OPERATOR_KINDS, WORK_KINDS } from "@gt/catalog/recipes";
+
+import { isWork, partSchema } from "../src/part.ts";
 import { projectPlanSchema, projectSchema, projectStateOf, recipeSchema, type ProjectPlan } from "../src/project.ts";
 import { PRODUCERS, runSchema } from "../src/run.ts";
 import { accept, glassHarborTrailer, PRICED, refuse } from "./_records.ts";
@@ -76,6 +78,13 @@ describe("part", () => {
     const work = { id: "cut", kind: "cut", option: "cut/ffmpeg/ffmpeg-compositor", units: 1, after: ["motion"] };
     refuse(partSchema, { ...work, after: ["cut"] }, "itself");
     refuse(partSchema, { ...work, after: ["motion", "motion"] }, "once");
+  });
+  it("is work exactly when its kind is one of the catalogue's work kinds", () => {
+    for (const kind of WORK_KINDS) expect(isWork(accept(partSchema, { id: "p", kind, option: "x/y/z", units: 1, after: [] })), kind).toBe(true);
+    for (const kind of OPERATOR_KINDS) {
+      const p = kind === "gate" ? { id: "gate:cut", kind, judges: "cut", verdict: "pick", after: ["cut"] } : { id: "p", kind, after: [] };
+      expect(isWork(accept(partSchema, p)), kind).toBe(false);
+    }
   });
   it("refuses a work part with no option, and an operator kind with one", () => {
     refuse(partSchema, { id: "cut", kind: "cut", units: 1, after: [] }, "option");
