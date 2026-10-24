@@ -37,7 +37,7 @@ export type Mutant = {
  * unguarded probe lowers the live count and the same probe asks for this number
  * to be lowered to match, so the gain is kept.
  */
-export const UNGUARDED_PROBE_BUDGET = 159;
+export const UNGUARDED_PROBE_BUDGET = 158;
 
 export const MUTANTS: Mutant[] = [
   {
@@ -431,5 +431,29 @@ export const MUTANTS: Mutant[] = [
     find: "import { blobRootOf } from \"@/lib/kernelProcess\";",
     replace: "import { blobRootOf } from \"@/lib/parts/gates\";",
     why: "The worker's producer list loads lib/parts/gates and four more server-only modules at import again, so any process importing the registry without a server-only shim refuses to start.",
+  },
+  {
+    id: "extract-webp-size-read-big-endian",
+    probe: "extract-image-dims.probe.spec.ts",
+    file: "lib/foundry/extract/imageDims.ts",
+    find: "u16le(b, 26) & 0x3fff",
+    replace: "u16be(b, 27) & 0x3fff",
+    why: "A lossy WebP's frame size is read big-endian one byte late, so a 300x500 portrait source reads 500x318 and every replica of it is generated at 16:9.",
+  },
+  {
+    id: "extract-commit-own-status-list",
+    probe: "extract-commit-gate.probe.spec.ts",
+    file: "lib/foundry/extract/store.ts",
+    find: "if (!EXTRACT_COMMITTABLE.includes(run.status)) throw",
+    replace: "if (![\"done\", \"failed\"].includes(run.status)) throw",
+    why: "The extract commit door carries its own copy of the committable statuses again, and a change to the plant's set reaches the Board and the ledger but not the server.",
+  },
+  {
+    id: "extract-text-round-wins-recipe",
+    probe: "style-extract.probe.spec.ts",
+    file: "lib/foundry/extract/helpers.ts",
+    find: "!textVetoed(round) && (best === null",
+    replace: "(best === null",
+    why: "A replica that drew text can score best and become the style's recipe in force, so the catalogue ships a recipe whose best evidence is a vetoed render.",
   },
 ];
