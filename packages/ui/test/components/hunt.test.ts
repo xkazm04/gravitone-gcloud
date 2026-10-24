@@ -6,7 +6,7 @@ import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import { admitCrown, buildTree, headTake, INTERRUPTED, reconcile, renderPlan, type AuditionTake, type HuntLeafView } from "../../src/components/audio/hunt.ts";
+import { admitCrown, buildTree, headTake, INTERRUPTED, lengthOf, reconcile, renderPlan, type AuditionTake, type HuntLeafView } from "../../src/components/audio/hunt.ts";
 import { carryFrom, HuntAudition, stepTake } from "../../src/components/audio/HuntAudition.tsx";
 import { HuntMap } from "../../src/components/audio/HuntMap.tsx";
 import { HuntShelf } from "../../src/components/audio/HuntShelf.tsx";
@@ -71,6 +71,12 @@ describe("the tree", () => {
     const hung = [...MAP, leaf({ id: "u", parentId: "w" }), leaf({ id: "v", parentId: "u" }), leaf({ id: "w", parentId: "v" }), leaf({ id: "under", parentId: "v" })];
     expect(drawn(hung)).toEqual(hung.map((n) => n.id).sort());
     expect(buildTree(hung).leaves.map((l) => l.id)).toContain("under");
+  });
+});
+
+describe("a length", () => {
+  test("one spelling either side of ten seconds: the tenth is taken before the threshold", () => {
+    expect([9.94, 9.96, 10, 10.4].map(lengthOf)).toEqual(["9.9s", "0:10", "0:10", "0:10"]);
   });
 });
 
