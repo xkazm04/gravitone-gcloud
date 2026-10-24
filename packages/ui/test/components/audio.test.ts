@@ -208,6 +208,9 @@ describe("the detail components' markup", () => {
     expect(html).toContain("tempo-instability");
     expect(html).toContain("broken-ending");
     expect(renderToStaticMarkup(h(AudioPrompt, { prompt: "", reasons: [] }))).toContain("no prompt recorded");
+    // The rose minus is spoken as "excluded" through the sr-only channel; an aria-label on a role-less <b> is not read.
+    expect(html).not.toContain('<b aria-label=');
+    expect(html).toMatch(/<span class="[^"]*sr[^"]*">excluded<\/span>/);
   });
 
   test("a draft's returns link to the triage that judges them; nothing here keeps or rejects", () => {
@@ -220,6 +223,8 @@ describe("the detail components' markup", () => {
     expect(html).toContain('href="/board"');
     expect(html).toContain("returned");
     expect(html).not.toMatch(/>\s*(Keep|Reject)\s*</);
+    const fenced = renderToStaticMarkup(h(DraftList, { triageHref: "/board", drafts: [{ id: "sp-2", title: "t", style: "strings", exclude: "vocals", origin: "custom", state: "proposed", at: "2026-10-16T09:00:00.000Z", clips: [] }] }));
+    expect(fenced).toMatch(/<span class="[^"]*sr[^"]*">excluded<\/span>/);
   });
 });
 
