@@ -219,6 +219,13 @@ describe("rows and the month", () => {
     expect(renderToStaticMarkup(h(MonthCalendar, { ...props, channelsOff: new Set(["tiktok"]) }))).not.toContain("vertical cut");
   });
 
+  test("the month's owed agenda is the rail's: last month's failure and next month's drift are on it", () => {
+    const slots = [slot("sep", "2026-09-30T22:00:00.000Z", "failed", { error: "upload: 403 quotaExceeded" }), slot("nov", "2026-11-05T10:00:00.000Z", "scheduled", { drift: "export_missing" }), slot("oct", "2026-10-02T10:00:00.000Z", "missed", { missedAt: "2026-10-02T11:00:00.000Z" })];
+    const html = renderToStaticMarkup(h(MonthCalendar, { slots, nowMs: NOW, month: { y: 2026, m: 9 }, day: null, channelsOff: new Set<string>(), onMonth: () => undefined, onToday: () => undefined, onDay: () => undefined, onChannel: () => undefined, onClose: () => undefined }));
+    const agenda = html.slice(html.indexOf('aria-label="month agenda"'));
+    expect([...agenda.matchAll(/data-slot="([^"]+)"/g)].map((m) => m[1])).toEqual(["nov", "oct", "sep"]);
+  });
+
   test("a day speaks its count in the singular for one slot", () => {
     const props = { slots: [slot("one", "2026-10-20T06:00:00.000Z", "scheduled")], nowMs: NOW, month: { y: 2026, m: 9 }, day: null, channelsOff: new Set<string>(), onMonth: () => undefined, onToday: () => undefined, onDay: () => undefined, onChannel: () => undefined, onClose: () => undefined };
     const html = renderToStaticMarkup(h(MonthCalendar, props));
