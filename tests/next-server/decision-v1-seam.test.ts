@@ -9,7 +9,9 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 import type { AppErrorCode } from "@gt/domain/errors";
+import { openKernel } from "@gt/kernel/kernel";
 
+import { APPLY_CLAIM, reconcileApplies } from "../../lib/decision/v1/applier.ts";
 import { fromV1, v1Call } from "../../lib/decision/v1/types.ts";
 
 /** What v1's writers throw: FoundryError, SoundError, ArticleError - an Error with an HTTP status. */
@@ -46,5 +48,32 @@ describe("fromV1: v1's status, in the one taxonomy", () => {
     expect(thrown.ok ? "ok" : [thrown.error.code, thrown.error.message]).toEqual(["conflict", "This run is already committed."]);
     const fine = await v1Call(() => Promise.resolve(7));
     expect(fine).toEqual({ ok: true, value: 7 });
+  });
+});
+
+describe("the render sweep's claim (lib/decision/v1/applier.ts reconcileApplies)", () => {
+  it("a sweep that outlived its claim says so; one that closed it says nothing", async () => {
+    const k = openKernel(":memory:");
+    if (!k.ok) throw k.error;
+    const store = k.value.store;
+    const said = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const closed = reconcileApplies(store, { holder: "reader-a" });
+      if (!closed.ok || !closed.value.started) throw new Error("the first sweep should take the claim");
+      expect((await closed.value.done).ok).toBe(true);
+      expect(said).not.toHaveBeenCalled();
+
+      // The claim reopens after the interval; this sweep's is taken by another reader before it reports.
+      const owner = (o: string) => store.tx((t) => t.run("UPDATE ingest_claims SET next_at = ?, owner = ? WHERE name = ?", "1970-01-01T00:00:00.000Z", o, APPLY_CLAIM));
+      owner("reader-a");
+      const lost = reconcileApplies(store, { holder: "reader-a" });
+      if (!lost.ok || !lost.value.started) throw new Error("the second sweep should take the claim");
+      owner("reader-b");
+      expect((await lost.value.done).ok).toBe(true);
+      expect(said.mock.calls.map((c) => String(c[0]))).toEqual([expect.stringMatching(/the sweep outlived its claim .*another reader holds decision-apply now/)]);
+    } finally {
+      said.mockRestore();
+      k.value.close();
+    }
   });
 });

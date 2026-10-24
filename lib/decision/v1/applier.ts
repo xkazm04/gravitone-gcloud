@@ -111,6 +111,9 @@ export function reconcileApplies(store: Store, opts: Omit<DrainOptions, "packetI
     const report = r.ok ? r.value.map((x) => ({ packetId: x.packetId, attempt: x.attempt, result: x.result })) : { error: r.error.message };
     const closed = finishClaim(store, APPLY_CLAIM, owner, APPLY_INTERVAL_MS, report);
     if (!closed.ok) console.error(`[decision-apply] the sweep claim could not be closed: ${closed.error.message}`);
+    // finishClaim matched no row: the claim passed its TTL mid-sweep and another reader took it, so
+    // two sweeps ran at once (safe - each row is claimed on its own - but the rate limit failed).
+    else if (!closed.value) console.error(`[decision-apply] the sweep outlived its claim (${APPLY_TTL_MS / 1000} s); another reader holds ${APPLY_CLAIM} now`);
     logged("sweep")(r);
     return r;
   });

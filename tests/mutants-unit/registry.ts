@@ -4967,4 +4967,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: '("internal")',
     why: "A v1 store that is down reads as a defect in the outbox's record, and the only code logged as a bug is spent on an outage.",
   },
+  {
+    id: "decision-apply-sweep-lost-silent",
+    test: "tests/next-server/decision-v1-seam.test.ts",
+    file: "lib/decision/v1/applier.ts",
+    find: "    else if (!closed.value) console.error(",
+    replace: "    else if (closed.value) console.error(",
+    why: "A render sweep that outlived its claim, so two sweeps ran at once, leaves no trace, and a lease too short for the drain is never noticed.",
+  },
 ];
