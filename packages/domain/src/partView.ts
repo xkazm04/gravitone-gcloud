@@ -38,8 +38,8 @@ export * from "./partView.album.ts";
 /** Every part kind a recipe plans (`@gt/catalog/recipes` WORK_KINDS + OPERATOR_KINDS). */
 export type PartKind = WorkKind | OperatorKind;
 
-/** The kinds whose editor exists. Frames, motion, score and cut join in later lots, each adding
- *  its entry to `PartData`; until then their route is a 404, never an empty editor. */
+/** The kinds whose editor exists, each with its entry in `PartData`. Any other work kind (still,
+ *  sfx, track, extract, forge, dojo) has none: its route is a 404, never an empty editor. */
 /* L39 (frames, motion) - its own block; partView.frames.ts holds their data, ops and acts. */
 const L39_KINDS = ["frames", "motion"] as const;
 /* L40 (score, cut; the album's words and render; the explainer's article, strips and voice) -
