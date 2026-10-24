@@ -26,8 +26,8 @@ import type { ProjectState } from "./project.machine.ts";
  * `illustrative` the prototype's placeholder, kept so the screen has a shape, and marked as one.
  * A total is as weak as its weakest line: one illustrative figure makes the sum illustrative.
  */
-export type FigureSource = "real" | "model" | "illustrative";
-export const FIGURE_SOURCES = ["real", "model", "illustrative"] as const satisfies readonly FigureSource[];
+export const FIGURE_SOURCES = ["real", "model", "illustrative"] as const;
+export type FigureSource = (typeof FIGURE_SOURCES)[number];
 
 /** One figure's provenance: its source and, for `real`, the date and what was measured. An
  *  UNPRICED usd basis is `real` with the reason as its note: the absence is the fact on record. */
@@ -57,7 +57,9 @@ export type ModelOption = {
 
 /* ── the receipt ──────────────────────────────────────────────────────────── */
 
-export type ReceiptMode = "dry" | "live";
+/** How a launch may spend: the one list every receipt door and record reads (./produce.schema.ts, steps/parts.ts). */
+export const RECEIPT_MODES = ["dry", "live"] as const;
+export type ReceiptMode = (typeof RECEIPT_MODES)[number];
 
 export type ReceiptLine = {
   /** A part id for a project, a step name for a run. */

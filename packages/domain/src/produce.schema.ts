@@ -2,7 +2,7 @@ import { UNIT_INPUTS } from "@gt/catalog/recipes";
 import { z } from "zod";
 
 import { usdSchema } from "./estimate.ts";
-import type { ComposerInput, NativeProducer } from "./produce.ts";
+import { RECEIPT_MODES, type ComposerInput, type NativeProducer } from "./produce.ts";
 
 // THE DOORS for the produce contract (./produce.ts, zod-free). Kept apart so a client that only
 // holds the shapes never loads zod; a server action parses here before the kernel sees anything.
@@ -88,4 +88,4 @@ export const partPatchSchema = z
   .refine((p) => p.option !== undefined || p.units !== undefined, { message: "a part change names an option, units, or both" });
 
 export const ceilingUsdSchema = usdSchema.positive().max(10_000);
-export const receiptModeSchema = z.enum(["dry", "live"]);
+export const receiptModeSchema = z.enum(RECEIPT_MODES);
