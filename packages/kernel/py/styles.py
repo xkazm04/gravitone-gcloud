@@ -44,7 +44,7 @@ if _HERE not in sys.path:
     sys.path.append(_HERE)  # behind the caller's entries: kernel_ledger.py says why
 from kernel_ledger import append  # noqa: E402
 from kernel_store import REPO, RUNNER, STORE_PATH_VAR, StoreError, ensure_store  # noqa: E402
-from verify_events import canonical  # noqa: E402
+from verify_events import canonical, ro_uri  # noqa: E402
 
 STYLE_TABLES = ("styles", "style_ops")
 EXPORT_CLI = os.path.join(str(REPO), "pipeline", "import", "styles.mts")
@@ -62,7 +62,7 @@ def _iso(dt=None):
 
 
 def _missing(path):
-    db = sqlite3.connect("file:%s?mode=ro" % path.replace("\\", "/"), uri=True)
+    db = sqlite3.connect(ro_uri(path), uri=True)
     try:
         have = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
     finally:

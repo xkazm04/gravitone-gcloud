@@ -32,6 +32,11 @@ import sqlite3
 import subprocess
 from pathlib import Path
 
+_HERE = os.path.dirname(os.path.abspath(__file__))
+if _HERE not in sys.path:
+    sys.path.append(_HERE)  # behind the caller's entries: kernel_ledger.py says why
+from verify_events import ro_uri  # noqa: E402
+
 STORE_FILE = "gravitone.sqlite"
 STORE_PATH_VAR = "GRAVITONE_STORE_PATH"
 REPO = Path(__file__).resolve().parents[3]
@@ -82,7 +87,7 @@ def missing_tables(path):
     """The REQUIRED tables `path` lacks (all of them when the file does not exist)."""
     if not os.path.exists(path):
         return list(REQUIRED)
-    db = sqlite3.connect("file:%s?mode=ro" % path.replace("\\", "/"), uri=True)
+    db = sqlite3.connect(ro_uri(path), uri=True)
     try:
         have = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
     finally:

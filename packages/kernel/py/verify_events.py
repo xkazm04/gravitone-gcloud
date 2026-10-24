@@ -29,6 +29,7 @@ import json
 import re
 import sqlite3
 import sys
+import urllib.parse
 
 GENESIS = "0" * 64
 BASE_COLUMNS = ["seq", "at", "actor_kind", "actor_id", "type", "subject_kind", "subject_id", "lane", "cost_usd", "cost_src", "data", "prev_hash", "hash"]
@@ -38,6 +39,13 @@ _REPR = re.compile(r"^(\d+)(?:\.(\d+))?(?:e([+-]?\d+))?$")
 # An anchor is a row: a seq from 1 and its 64-hex hash. Anything else is a typo, and a typo read
 # as an anchor would answer 1 (tampered) about an intact ledger, or, at seq 0, check nothing.
 _ANCHOR = re.compile(r"^([1-9]\d*):([0-9a-f]{64})$")
+
+
+def ro_uri(path):
+    """A read-only SQLite URI for a file path. The path is percent-encoded: a raw `#`, `?` or `%`
+    in it would end or reshape the URI, and SQLite would open (and create) a DIFFERENT file
+    read-write - a truncated name beside the store - and report the store empty."""
+    return "file:%s?mode=ro" % urllib.parse.quote(path.replace("\\", "/"), safe="/:")
 
 
 def usage(doc):
@@ -159,7 +167,7 @@ def main(argv):
         anchor = (int(m.group(1)), m.group(2))
     try:
         # Read-only, through the URI form, so a verifier can never write the store it checks.
-        db = sqlite3.connect("file:%s?mode=ro" % argv[1].replace("\\", "/"), uri=True)
+        db = sqlite3.connect(ro_uri(argv[1]), uri=True)
         try:
             have = {r[1] for r in db.execute("PRAGMA table_info(events)")}
             extra = [(c, n) for c, n in OPTIONAL if c in have]
