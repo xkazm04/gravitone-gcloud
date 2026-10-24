@@ -16,6 +16,9 @@ import { isWing } from "../../../lib/foundry/scout/wing.ts";
 import { serverScout } from "./_port/port.ts";
 import { SCOUT_PORT } from "./_port/wire.ts";
 import { Scout } from "./_scout/Scout.tsx";
+import s from "./_scout/scout.module.css";
+import { isScoutPacket, ScoutHead } from "./_scout/ScoutHead.tsx";
+import { serverBoard } from "../board/_port/port.ts";
 
 export const metadata: Metadata = { title: "Gravitone · Scout" };
 
@@ -23,8 +26,22 @@ type Search = Promise<Readonly<Record<string, string | string[] | undefined>>>;
 
 export default async function ScoutPage({ searchParams }: { readonly searchParams: Search }) {
   await connection();
-  const [q, view] = await Promise.all([searchParams, serverScout().view()]);
-  if (!view.ok) return <ErrorLine message={`scout: ${view.error.message}`} live />;
+  const [q, view, packets] = await Promise.all([searchParams, serverScout().view(), serverBoard().listPackets()]);
+  const undecided = packets.ok ? packets.value.packets.filter((p) => isScoutPacket(p) && p.state === "open").length : 0;
+  const head = <ScoutHead current="graph" undecided={undecided} />;
+  if (!view.ok) {
+    return (
+      <div className={s.page}>
+        {head}
+        <ErrorLine message={`scout: ${view.error.message}`} live />
+      </div>
+    );
+  }
   const asked = Array.isArray(q["wing"]) ? q["wing"][0] : q["wing"];
-  return <Scout initial={view.value} port={SCOUT_PORT} wing={isWing(asked) ? asked : "scout"} />;
+  return (
+    <div className={s.page}>
+      {head}
+      <Scout initial={view.value} port={SCOUT_PORT} wing={isWing(asked) ? asked : "scout"} />
+    </div>
+  );
 }

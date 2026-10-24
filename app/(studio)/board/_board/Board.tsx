@@ -55,6 +55,9 @@ export type BoardProps = {
   readonly port: BoardPort;
   /** The decided desk's way back from a stuck v1 apply (../_port/actions.ts `redrive`). */
   readonly redrive?: (input: { readonly id: string }) => Promise<PortResult<{ readonly id: string }>>;
+  /** A host page that draws the desk in its own route (/scout's Runs tab): the place the sheet's way out and
+   *  its only crumb name, and the address of each rail row. The caller passes the rail already narrowed. */
+  readonly home?: { readonly label: string; readonly href: string; readonly railBase: string };
 };
 
 /**
@@ -70,7 +73,7 @@ export function Board(props: BoardProps) {
   return <BoardIsland {...props} />;
 }
 
-function BoardIsland({ id, initial, rail, kind, port, redrive }: BoardProps) {
+function BoardIsland({ id, initial, rail, kind, port, redrive, home }: BoardProps) {
   const router = useRouter();
   const { toast } = useShell();
   const [said, setSaid] = useState("");
@@ -97,6 +100,7 @@ function BoardIsland({ id, initial, rail, kind, port, redrive }: BoardProps) {
   }, [gate, id, router]);
   const flow = useCommitFlow(gate, { onDone: refresh, toast, announce });
 
+  const hrefOf = useCallback((to: string) => (home === undefined ? boardFor(to) : `${home.railBase}/${encodeURIComponent(to)}`), [home]);
   const open = useMemo(() => rail.filter((p) => p.state === "open"), [rail]);
   // On the sheet, another packet is a soft replace (intercepted again, the Floor stays under
   // it). On the full page a soft navigation would be intercepted too and stack a sheet over the
@@ -104,9 +108,9 @@ function BoardIsland({ id, initial, rail, kind, port, redrive }: BoardProps) {
   const go = useCallback(
     (to: string) => {
       if (kind === "sheet") router.replace(boardFor(to), { scroll: false });
-      else window.location.assign(boardFor(to));
+      else window.location.assign(hrefOf(to));
     },
-    [kind, router],
+    [kind, router, hrefOf],
   );
   const step = (dir: 1 | -1) => {
     const list = open.length > 0 ? open : rail;
@@ -188,21 +192,25 @@ function BoardIsland({ id, initial, rail, kind, port, redrive }: BoardProps) {
     );
 
   const lane = packet.view.lane;
-  const close = () => (kind === "sheet" ? router.back() : router.push("/floor"));
+  const close = () => (kind === "sheet" ? router.back() : router.push(home?.href ?? "/floor"));
   return (
     <LevelSheet
-      trail={[
-        { label: "Floor", onPress: close },
-        { label: "Board", onPress: () => go(nextOpen?.id ?? id) },
-        { label: `${lane.slice(0, 1).toUpperCase()}${lane.slice(1)}`, onPress: () => router.push(`/floor?lane=${lane}`) },
-      ]}
+      trail={
+        home === undefined
+          ? [
+              { label: "Floor", onPress: close },
+              { label: "Board", onPress: () => go(nextOpen?.id ?? id) },
+              { label: `${lane.slice(0, 1).toUpperCase()}${lane.slice(1)}`, onPress: () => router.push(`/floor?lane=${lane}`) },
+            ]
+          : [{ label: home.label, onPress: close }]
+      }
       here={packet.view.title ?? packet.view.id}
       mode={deskMode(packet)}
-      back="Floor"
+      back={home?.label ?? "Floor"}
       onClose={close}
       full={kind === "full"}
     >
-      <BoardDesk rail={<PacketRail packets={rail} current={id} hrefOf={boardFor} onOpen={go} />}>
+      <BoardDesk rail={<PacketRail packets={rail} current={id} hrefOf={hrefOf} onOpen={go} />}>
         {packet.view.state === "open" && packet.present.losses !== undefined && <Losses losses={packet.present.losses} />}
         {desk}
         {flow.open && <CommitLayer flow={flow} />}

@@ -107,6 +107,8 @@ export const SCREENS = {
   scout: { url: "/scout" },
   // scout-muse     the same graph on the muse wing (spark scout-muse): its own nights, the wing Seg on muse.
   "scout-muse": { url: "/scout?wing=muse" },
+  // scout-runs   the Runs tab: every scout night and seed batch on the rail, the newest open one on the Board desk.
+  "scout-runs": { url: "/scout/runs" },
   ledger: { url: "/ledger" },
   runs: { url: "/projects/runs" },
   "library-style": { url: "/library/style/painted-3d" },
