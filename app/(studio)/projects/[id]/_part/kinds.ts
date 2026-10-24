@@ -13,7 +13,7 @@ import { SCORE_KIND } from "./fixtureScore.ts";
 import type { ScoreRec } from "./fixtureScoreRecs.ts";
 import { CUT_KIND, type CutRec } from "./fixtureCut.ts";
 import { RENDER_KIND, WORDS_KIND, type RenderRec, type WordsRec } from "./fixtureAlbum.ts";
-import { ARTICLE_KIND, STRIPS_KIND, VOICE_KIND, type ArticleRec, type StripsRec, type VoiceRec } from "./fixtureExplainer.ts";
+import { ARTICLE_KIND, STRIPS_KIND, VOICE_KIND, type ArticleInputs, type ArticleRec, type StripsRec, type VoiceRec } from "./fixtureExplainer.ts";
 
 // THE PART KINDS AFTER RESEARCH AND SCRIPT (Phase 4 wave C, L39 + L40): one contract every later
 // editor kind's module meets, and one registry the two sides dispatch through, so a lot adds a
@@ -59,7 +59,13 @@ export function isLaterKind(kind: string): kind is LaterKind {
  *  later kind's `toRecords` plus script's ads-scenarios) - what lib/parts/verdict reads, so a
  *  verdict is computed one way on both sides. A module's SEED must not call `records()`: it maps
  *  every planned kind, and a kind still seeding would be asked for itself. */
-export type KCtx = Ctx & { readonly rec: <K extends EditorKind>(kind: K) => RecOf[K]; readonly records: () => Recs };
+export type KCtx = Ctx & {
+  readonly rec: <K extends EditorKind>(kind: K) => RecOf[K];
+  readonly records: () => Recs;
+  /** The article part's inputs the side read before this call (the adoptable posts, the post an
+   *  adopt names): async reads, so they are loaded outside the store's reader and handed in. */
+  readonly article?: ArticleInputs;
+};
 
 /** One later editor kind. Every function is pure; `at` and `jobId` are parameters. */
 export type KindModule<K extends LaterKind> = {

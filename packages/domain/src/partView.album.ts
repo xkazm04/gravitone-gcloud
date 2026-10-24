@@ -48,6 +48,21 @@ export type RenderData = {
 
 /* ── explainer: article and strips ────────────────────────────────────────── */
 
+/** Where a finished post is read from: an article run on this machine, or the registry's
+ *  publications lane (lib/articles/adoptable.ts). */
+export type AdoptSource = "run" | "publication";
+
+/** A finished post the article part may adopt, as the explainer would cut it. */
+export type AdoptableView = {
+  readonly source: AdoptSource;
+  readonly id: string;
+  readonly title: string;
+  /** The run's status, or the publication's. */
+  readonly status?: string;
+  readonly sections: number;
+  readonly words: number;
+};
+
 export type ArticleData = {
   readonly face: "article";
   readonly title: string | null;
@@ -56,6 +71,10 @@ export type ArticleData = {
   /** The run's steps as the producer reports them (research, outline, draft, check, critique). */
   readonly steps: readonly { readonly name: string; readonly state: "done" | "waiting" | "failed"; readonly usd: number | null }[];
   readonly engine?: EngineView;
+  /** The finished posts this machine holds (empty = none to adopt). */
+  readonly adoptable: readonly AdoptableView[];
+  /** The post the sections were adopted from, by its digest at the adopt. Absent = not adopted. */
+  readonly from?: { readonly source: AdoptSource; readonly id: string; readonly sha: string };
 };
 
 export type StripCardView = {
@@ -100,6 +119,10 @@ export type AlbumOp =
   | { readonly op: "words-field"; readonly field: "title" | "description"; readonly value: string }
   | { readonly op: "words-tags"; readonly tags: readonly string[] }
   | { readonly op: "render-res"; readonly res: RenderRes };
+
+/** Adopt a finished post as the article: its sections, cut by the server from the post it reads
+ *  (the op carries the address, never the text). */
+export type ArticleOp = { readonly op: "article-adopt"; readonly source: AdoptSource; readonly id: string };
 
 export type ExplainerOp =
   | { readonly op: "voice-use"; readonly lineId: string; readonly takeId: string }

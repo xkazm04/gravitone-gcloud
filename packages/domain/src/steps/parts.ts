@@ -15,8 +15,9 @@ import { defineStepRecord, engineField, textOrNull, versionField } from "./recor
 //   words   - the platform's title, description and tags, and what the metadata turn wrote, so an
 //             edit since stays visible;
 //   render  - the chosen resolution and every export (a blob ref, never base64);
-//   article - the article run's sections; strips - the strips run's cards (their producers' runs
-//             write these; the editor edits neither);
+//   article - the article's sections: an article run's, or a finished post's adopted by the
+//             editor's one op (`from` names the post); strips - the strips run's cards (its
+//             producer's run writes them; the editor does not edit them);
 //   voice   - per line the operator's rewrite, its takes and the one in use.
 // An absent field is the empty decision a fresh part starts from, so the defaults below are the
 // editor's own seeds: a record written by an older build that never held one reads as untouched.
@@ -61,6 +62,10 @@ export const ARTICLE = defineStepRecord({
     title: textOrNull.default(null),
     sections: z.array(z.looseObject({ id: z.string().min(1), heading: z.string(), body: z.string() })).default([]),
     engine: engineField.optional(),
+    /** The finished post the sections were adopted from (op `article-adopt`), by its digest at the
+     *  adopt. OPTIONAL, not defaulted: a record written by a run, or before adoption existed,
+     *  omits it, and an absent key is "not adopted". */
+    from: z.looseObject({ source: z.enum(["run", "publication"]), id: z.string().min(1), sha: z.string().min(1) }).optional(),
   }),
 });
 

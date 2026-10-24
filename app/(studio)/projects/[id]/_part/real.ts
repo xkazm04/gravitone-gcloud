@@ -15,12 +15,16 @@ import { motionProducer, motionUnits } from "@/lib/producers/motion";
 import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import { dryOnlyFrom } from "@gt/kernel/dryrun";
 import { isMusicConfigured } from "@/lib/music/elevenlabs";
-import type { EditorKind, PartActKind, PartOp, PartReceipt, PartView } from "@gt/domain/partView";
+import { listAdoptable, readAdoptable, type Adoptable, type AdoptedPost } from "@/lib/articles/adoptable";
+import { explainerSectionsOf } from "@/lib/articles/sections";
+import { ArticleError } from "@/lib/articles/store";
+import type { AdoptSource, ArticleOp, EditorKind, PartActKind, PartOp, PartReceipt, PartView } from "@gt/domain/partView";
 
 import type { ServerPart } from "./port.ts";
 import { actModeOf } from "./actMode.ts";
 import { receiptOf } from "./fixtureActs.ts";
 import { basisOf, OPERATOR, opPlan, sceneOf, unwrap, viewOf, type OpPlan, type Scene } from "./realScene.ts";
+import type { AdoptPost, ArticleInputs } from "./fixtureExplainer.ts";
 
 // THE REAL PART SIDE (L36) - the PartPort over the kernel's `parts` module: the part's records
 // are rows under their v1 keys, every edit is a row in an append-only op log, undo appends the
@@ -32,6 +36,21 @@ import { basisOf, OPERATOR, opPlan, sceneOf, unwrap, viewOf, type OpPlan, type S
 // reads one part in one reader - this project's plan and records, and nothing else.
 //
 // Every act is a kernel job under the part kind's producer (L37); its output lands the same way.
+//
+// THE ARTICLE PART READS DISK BEFORE THE STORE: the posts it may adopt are files
+// (lib/articles/adoptable.ts - article runs, the registry's publications), read with async calls
+// that never run inside a store reader or transaction. So a verb on an article part reads them
+// first - the list for its view, and for `article-adopt` the one post it names, cut into sections
+// (lib/articles/sections.ts) - and hands them to the pure apply and the view through the scene's
+// context (`ctx.article`). The op log keeps `{ op, source, id, postSha }`: the post's address and
+// the digest it had when it was adopted, never its text. An id that names no final post is refused
+// with lib/articles' own sentence before anything is written.
+
+/** The finished posts an article part adopts, and one post's text (lib/articles/adoptable.ts). */
+export type ArticleReads = {
+  readonly list: () => Promise<readonly Adoptable[]>;
+  readonly read: (source: AdoptSource, id: string) => Promise<AdoptedPost>;
+};
 
 export type RealDeps = {
   readonly store: () => Result<Store>;
@@ -39,7 +58,20 @@ export type RealDeps = {
   readonly gates: GateDeps;
   /** How long a confirm waits for its job to end before answering with it running (default ACT_WAIT_MS). */
   readonly actWaitMs?: number;
+  /** Where an article part's adoptable posts are read (default: this machine's, lib/articles). */
+  readonly articles?: ArticleReads;
 };
+
+const ARTICLES: ArticleReads = { list: listAdoptable, read: readAdoptable };
+
+/** A lib/articles refusal in the taxonomy: a post that is not there, or not final, is the op's input. */
+function articleErr(e: unknown): Result<never> {
+  if (e instanceof ArticleError) return err(e.status === 409 ? "refused" : e.status < 500 ? "invalid" : "unavailable", e.message);
+  return err("unavailable", errorMessage(e));
+}
+
+/** The scene with the article inputs read before it (none for another kind). */
+const withInputs = (s: Scene, a: ArticleInputs | undefined): Scene => (a === undefined ? s : { ...s, ctx: { ...s.ctx, article: a } });
 
 /** The mode an act is priced and launched in: `live` for the voice act alone (./actMode.ts). */
 const modeOf = (kind: EditorKind, act: PartActKind): "dry" | "live" => actModeOf(kind, act, { dryOnly: dryOnlyFrom(process.env), keyed: isMusicConfigured() });
@@ -62,51 +94,91 @@ export function makeRealPart(deps: RealDeps): ServerPart {
       if (!r.ok) console.error(`[part-gates] ${projectId}: ${r.error.message}`);
     });
   };
-  const read = (store: Store, projectId: string, key: string): Result<PartView> =>
+  const articles = deps.articles ?? ARTICLES;
+  /** An article part's inputs, read before the store is; `adopt` also reads and cuts its post. */
+  const inputsFor = async (store: Store, projectId: string, key: string, adopt?: ArticleOp): Promise<Result<ArticleInputs | undefined>> => {
+    const kind = unwrap(
+      store.read((r) => {
+        const s = sceneOf(r, projectId, key, deps.now());
+        return s.ok ? ok(s.value.kind) : s;
+      }),
+    );
+    if (!kind.ok) return kind;
+    if (kind.value !== "article") return ok(undefined);
+    try {
+      const adoptable = await articles.list();
+      const got = adopt === undefined ? undefined : await articles.read(adopt.source, adopt.id);
+      const cut: AdoptPost | undefined = adopt === undefined || got === undefined ? undefined : { source: adopt.source, id: adopt.id, title: got.title, sha: got.sha, sections: explainerSectionsOf(got.markdown) };
+      return ok({ adoptable, post: (source, id) => (cut !== undefined && cut.source === source && cut.id === id ? cut : undefined) });
+    } catch (e) {
+      return articleErr(e);
+    }
+  };
+  const read = (store: Store, projectId: string, key: string, a?: ArticleInputs): Result<PartView> =>
     unwrap(
       store.read((r) => {
         const s = sceneOf(r, projectId, key, deps.now());
-        return s.ok ? ok(viewOf(r, s.value)) : s;
+        return s.ok ? ok(viewOf(r, withInputs(s.value, a))) : s;
       }),
     );
-  const write = (projectId: string, key: string, baseRev: number, op: PartOp | null, run: (t: Reader, s: Scene) => OpPlan) =>
+  const write = (projectId: string, key: string, baseRev: number, op: PartOp | null, run: (t: Reader, s: Scene) => OpPlan, a?: ArticleInputs) =>
     withStore((store) => {
       const w = store.tx((t) => {
         const s = sceneOf(t, projectId, key, deps.now());
         if (!s.ok) return s;
-        const plan = run(t, s.value);
+        const plan = run(t, withInputs(s.value, a));
         return writePartIn(t, { projectId, partId: s.value.part.id, baseRev: op === null ? "current" : baseRev, act: plan.act, op: plan.raw, label: plan.label, by: plan.by, next: () => plan.next });
       });
       const o = unwrap(w);
       if (!o.ok) return o;
       kick(store, projectId);
-      const view = read(store, projectId, key);
+      const view = read(store, projectId, key, a);
       if (!view.ok) return view;
       return ok({ outcome: o.value, view: view.value });
     });
 
   return {
-    loadPart: ({ projectId, key }) => withStore((store) => read(store, projectId, key)),
-    opPart: ({ projectId, key, baseRev, op }) => {
-      const w = write(projectId, key, baseRev, op, (_t, s) => opPlan(s, op));
+    loadPart: async ({ projectId, key }) => {
+      const k = deps.store();
+      if (!k.ok) return k;
+      const a = await inputsFor(k.value, projectId, key);
+      return a.ok ? read(k.value, projectId, key, a.value) : a;
+    },
+    opPart: async ({ projectId, key, baseRev, op }) => {
+      const k = deps.store();
+      if (!k.ok) return k;
+      const adopt = op.op === "article-adopt" ? op : undefined;
+      const a = await inputsFor(k.value, projectId, key, adopt);
+      if (!a.ok) return a;
+      // The log line is the op and the digest of the post it adopted - the post itself is a file.
+      const sha = adopt === undefined ? undefined : a.value?.post(adopt.source, adopt.id)?.sha;
+      const plan = (s: Scene): OpPlan => {
+        const p = opPlan(s, op);
+        return sha === undefined ? p : { ...p, raw: { ...op, postSha: sha } };
+      };
+      const w = write(projectId, key, baseRev, op, (_t, s) => plan(s), a.value);
       if (!w.ok) return w;
       return ok(w.value.outcome.kind === "conflict" ? { kind: "conflict", current: w.value.view } : { kind: "applied", view: w.value.view });
     },
-    undoPart: ({ projectId, key, baseRev }) =>
-      withStore((store) => {
-        const at = store.read((r) => {
-          const s = sceneOf(r, projectId, key, deps.now());
-          return s.ok ? ok(s.value.part.id) : s;
-        });
-        const partId = unwrap(at);
-        if (!partId.ok) return partId;
-        const u = undoPart(store, { projectId, partId: partId.value, baseRev, by: OPERATOR });
-        if (!u.ok) return u;
-        kick(store, projectId);
-        const view = read(store, projectId, key);
-        if (!view.ok) return view;
-        return ok(u.value.kind === "conflict" ? { kind: "conflict", current: view.value } : { kind: "applied", view: view.value });
-      }),
+    undoPart: async ({ projectId, key, baseRev }) => {
+      const k = deps.store();
+      if (!k.ok) return k;
+      const store = k.value;
+      const a = await inputsFor(store, projectId, key);
+      if (!a.ok) return a;
+      const at = store.read((r) => {
+        const s = sceneOf(r, projectId, key, deps.now());
+        return s.ok ? ok(s.value.part.id) : s;
+      });
+      const partId = unwrap(at);
+      if (!partId.ok) return partId;
+      const u = undoPart(store, { projectId, partId: partId.value, baseRev, by: OPERATOR });
+      if (!u.ok) return u;
+      kick(store, projectId);
+      const view = read(store, projectId, key, a.value);
+      if (!view.ok) return view;
+      return ok(u.value.kind === "conflict" ? { kind: "conflict", current: view.value } : { kind: "applied", view: view.value });
+    },
     actReceipt: ({ projectId, key, act, target }) => receiptFor(deps, projectId, key, act, target),
     act: async ({ projectId, key, act, token, target }) => {
       const store = deps.store();
@@ -128,7 +200,9 @@ export function makeRealPart(deps: RealDeps): ServerPart {
         (e: unknown) => console.error(`[part-act] ${jobId}: ${errorMessage(e)}`),
       );
       await Promise.race([drive, new Promise((res) => setTimeout(res, deps.actWaitMs ?? ACT_WAIT_MS).unref())]);
-      const view = read(store.value, projectId, key);
+      const a = await inputsFor(store.value, projectId, key);
+      if (!a.ok) return a;
+      const view = read(store.value, projectId, key, a.value);
       return view.ok ? ok({ kind: "launched", jobId, view: view.value }) : view;
     },
   };
