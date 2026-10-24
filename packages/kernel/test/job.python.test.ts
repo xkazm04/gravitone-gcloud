@@ -351,3 +351,42 @@ describe.skipIf(python === undefined)("the tables the Python protocol copies equ
     });
   });
 });
+
+// job_settle.py `settle` after an ending committed: the producer is told, then `job.settled` (or
+// `job.settle-failed`) is recorded in a transaction of its own. When the store refuses THAT
+// write, the ending already stands - Node's settleAfter keeps the drive's outcome and carries both
+// sentences (8d6075db). Python let the store's error escape the call that ended the job: a run
+// whose finish() committed `done` raised to its worker as if the finish had failed, and a claim()
+// that settled a taken-over orphan lost the granted run it had just committed (the job stayed
+// `running` on its slot until the TTL).
+describe.skipIf(python === undefined)("a settle the ledger cannot record", () => {
+  it("leaves the ending and the call that made it standing, and says so on stderr", () => {
+    const db = path.join(tmp.dir, "settle-unrecorded.sqlite");
+    copyFileSync(template, db);
+    const k = must(openKernel(db, { snapshotDir: tmp.dir }));
+    must(enqueue(k.store, { id: "su", of: { kind: "run", id: "run-su" }, producer: "forge", lane: "gpu.local" }, operator));
+    k.close();
+    const code = [
+      "import sqlite3, sys",
+      `sys.path.append(${JSON.stringify(path.join(here, "..", "py"))})`,
+      "import job, job_settle",
+      "told = []",
+      "def refused(*a, **kw):",
+      "    raise sqlite3.OperationalError('database is locked')",
+      "job_settle.job_event = refused",
+      `jobs = job.Jobs(${JSON.stringify(db)}, settles={'forge': lambda j, ending: told.append(ending)})`,
+      "run = jobs.claim('su', dry_only=True)",
+      "run.start('a')",
+      "run.book('a', {'made': 'a'})",
+      "try:",
+      "    run.finish()",
+      "    print('FINISHED %s told=%s' % (jobs.get('su')['state'], ','.join(told)))",
+      "except Exception as e:",
+      "    print('RAISED %s: %s' % (type(e).__name__, e))",
+      "jobs.close()",
+    ].join("\n");
+    const r = spawnSync(python ?? "python", ["-I", "-c", code], { encoding: "utf8", timeout: 30_000 });
+    expect(r.stdout.trim()).toBe("FINISHED done told=done");
+    expect(r.stderr).toContain("job.settled was not recorded: database is locked");
+  });
+});
