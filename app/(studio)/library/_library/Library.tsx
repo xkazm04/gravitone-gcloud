@@ -22,6 +22,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import type { LibraryAct, LibraryKindName } from "@gt/domain/library";
+import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { Panel } from "@gt/ui/components/panel/Panel.tsx";
 import { DetailPanel } from "@gt/ui/components/library/DetailPanel.tsx";
 import { backStep, count, stepTo, type Density, type Step, type View } from "@gt/ui/components/library/library.ts";
@@ -42,7 +43,20 @@ import s from "./library.module.css";
 
 export type LibraryProps = { readonly url: LibraryUrl; readonly page: ShownPage; readonly detail: ShownDetail | null; readonly port: LibraryPort };
 
-const STEP: Readonly<Record<string, Step>> = { "←": "left", "→": "right", "↑": "up", "↓": "down", PgUp: "page-up", PgDn: "page-down", Home: "first", End: "last" };
+type Failed = { readonly id: string; readonly text: string };
+
+/**
+ * What the detail panel draws: the set's summary with nothing selected, the item once its detail
+ * is held, its refusal when the read failed, and "reading" only while the read is in flight - a
+ * failed read used to say "reading" for good, the toast that carried its error long gone.
+ */
+export function panelOf(sel: string | null, held: boolean, failed: Failed | null): { readonly is: "set" | "item" | "reading" } | { readonly is: "failed"; readonly text: string } {
+  if (sel === null) return { is: "set" };
+  if (held) return { is: "item" };
+  return failed !== null && failed.id === sel ? { is: "failed", text: failed.text } : { is: "reading" };
+}
+
+const STEP: Readonly<Record<string, Step>> ={ "←": "left", "→": "right", "↑": "up", "↓": "down", PgUp: "page-up", PgDn: "page-down", Home: "first", End: "last" };
 
 export function Library({ url: u, page, detail: first, port }: LibraryProps) {
   const router = useRouter();
@@ -80,18 +94,24 @@ export function Library({ url: u, page, detail: first, port }: LibraryProps) {
   // ── details, by id ──
   const [details, setDetails] = useState<ReadonlyMap<string, ShownDetail>>(() => new Map(first === null ? [] : [[first.card.id, first]]));
   const [busy, setBusy] = useState(false);
+  // The last detail that failed to read, drawn in the panel in its own words. Not asked again
+  // while it stays selected (that would loop); a later detail that reads clears it, so coming
+  // back to the item asks again.
+  const [failed, setFailed] = useState<Failed | null>(null);
   useEffect(() => {
-    if (sel === null || details.has(sel)) return;
+    if (sel === null || details.has(sel) || failed?.id === sel) return;
     let live = true;
     void settle(port.detail({ id: sel, facets: u.f })).then((r) => {
       if (!live) return;
-      if (r.ok) setDetails((m) => new Map(m).set(sel, r.value));
-      else toast(`library: ${r.error.error}`);
+      if (r.ok) {
+        setDetails((m) => new Map(m).set(sel, r.value));
+        setFailed((f) => (f !== null && f.id !== sel ? null : f));
+      } else setFailed({ id: sel, text: r.error.error });
     });
     return () => {
       live = false;
     };
-  }, [sel, details, port, u.f, toast]);
+  }, [sel, details, failed, port, u.f]);
   const held = sel === null ? null : (details.get(sel) ?? null);
   const current = useMemo(() => (held === null ? null : { ...held, lines: pressedBy(held.lines, u.f) }), [held, u.f]);
 
@@ -199,6 +219,7 @@ export function Library({ url: u, page, detail: first, port }: LibraryProps) {
     root.current?.setAttribute("data-ready", "true");
   }, []);
 
+  const panel = panelOf(sel, current !== null, failed);
   const position = current === null || sel === null ? undefined : blocks.indexOf(sel);
   const summaryStates = Object.fromEntries((page.groups.find((g) => g.key === "state")?.values ?? []).map((v) => [v.value, (u.f["state"]?.length ?? 0) > 0 && !v.selected ? 0 : v.count]));
   const newest = page.items.flatMap((c) => (c.face.kind === "image" ? [{ id: c.id, title: c.title, url: c.face.url }] : [])).slice(0, 6);
@@ -273,9 +294,11 @@ export function Library({ url: u, page, detail: first, port }: LibraryProps) {
           {...(sel === null ? {} : { onStep: (d: -1 | 1) => move(d < 0 ? "prev" : "next") })}
           onClose={() => setDetailPref(false)}
         >
-          {sel === null ? (
+          {panel.is === "set" ? (
             <SetSummary total={page.total} of={page.everything} kind={u.kind} states={summaryStates} kinds={page.kindCounts} newest={newest} onState={(st) => setFacet("state", st, true)} onKind={setKind} onItem={(x) => select(x)} />
-          ) : current === null ? (
+          ) : panel.is === "failed" ? (
+            <ErrorLine message={`library: ${panel.text}`} live />
+          ) : panel.is === "reading" || current === null ? (
             <p className={s.reading} role="status">
               reading {sel}
             </p>

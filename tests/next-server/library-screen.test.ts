@@ -11,6 +11,8 @@
 //      id for the visit with the `pressed` the server drew under the filter it was fetched with,
 //      so a chip pressed from the panel stayed drawn unpressed (and named without "in the
 //      filter") while its next press removed the value.
+//   3. A detail whose read failed says so in the panel. The refusal went to a toast and the panel
+//      read "reading <id>" for good once the toast faded; moving away and back asks again.
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -21,6 +23,7 @@ vi.mock("server-only", () => ({}));
 
 import type { ActionResult } from "../../app/_server/actionCore.ts";
 import { settle } from "../../app/(studio)/library/_library/blocks.ts";
+import { panelOf } from "../../app/(studio)/library/_library/Library.tsx";
 import { DEFAULT_URL, pressedBy, toggled } from "../../app/(studio)/library/_library/url.ts";
 import type { FacetLine } from "@gt/ui/components/library/DetailPanel.tsx";
 import { stripComments } from "../golden-path/_pure.ts";
@@ -70,5 +73,26 @@ describe("2. a detail's facet chips are pressed by the filter in the address now
 
   it("the panel draws the held detail through it", () => {
     expect(code("Library.tsx")).toMatch(/lines:\s*pressedBy\(\s*held\.lines,\s*u\.f\s*\)/);
+  });
+});
+
+describe("3. a detail whose read failed says so in the panel", () => {
+  const failed = { id: "audio-7", text: "the studio did not answer: Failed to fetch" };
+
+  it("the set with nothing selected, the item once held, reading only while the read is in flight", () => {
+    expect(panelOf(null, false, failed)).toEqual({ is: "set" });
+    expect(panelOf("audio-7", true, failed)).toEqual({ is: "item" });
+    expect(panelOf("audio-8", false, failed)).toEqual({ is: "reading" });
+    expect(panelOf("audio-7", false, null)).toEqual({ is: "reading" });
+  });
+
+  it("a failed read is the refusal in its own words, not reading", () => {
+    expect(panelOf("audio-7", false, failed)).toEqual({ is: "failed", text: failed.text });
+  });
+
+  it("the read's refusal is what the panel is drawn from", () => {
+    const src = code("Library.tsx");
+    expect(src).toMatch(/else setFailed\(\{ id: sel, text: r\.error\.error \}\)/);
+    expect(src).toMatch(/const panel = panelOf\(sel, current !== null, failed\)/);
   });
 });

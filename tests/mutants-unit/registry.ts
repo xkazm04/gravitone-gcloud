@@ -5835,4 +5835,20 @@ export const MUTANTS: UnitMutant[] = [
     replace: "if (kind !== undefined) kindCounts[kind] = list.length; let truncated = false;",
     why: "The fixture Library counts the open kind under its own vocabulary where the kernel counts it under the shared groups only, so the kind rail reads 263 audio on the fixture and 1,125 on the real side.",
   },
+  {
+    id: "library-failed-detail-reads-reading",
+    test: "tests/next-server/library-screen.test.ts",
+    file: "app/(studio)/library/_library/Library.tsx",
+    find: "return failed !== null && failed.id === sel ? { is: \"failed\", text: failed.text } : { is: \"reading\" };",
+    replace: "return { is: \"reading\" };",
+    why: "A detail whose read failed says 'reading' for good once the toast fades: the operator waits on a read that already came back refused.",
+  },
+  {
+    id: "library-detail-refusal-toast-only",
+    test: "tests/next-server/library-screen.test.ts",
+    file: "app/(studio)/library/_library/Library.tsx",
+    find: "} else setFailed({ id: sel, text: r.error.error });",
+    replace: "} else toast(`library: ${r.error.error}`);",
+    why: "The detail's refusal goes back to a toast: the panel says 'reading' after the toast is gone.",
+  },
 ];
