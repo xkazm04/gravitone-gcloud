@@ -1489,6 +1489,22 @@ export const MUTANTS: UnitMutant[] = [
     why: "The fixture's FX take of silence reads as an accepted take: the failed-acceptance state the editor must draw is never shown, and a pass is fabricated.",
   },
   {
+    id: "triage-words-says-passes",
+    test: "packages/domain/test/audio.triage.test.ts",
+    file: "packages/domain/src/audio.triage.words.ts",
+    find: "t.findings.filter((f) => f.verdict === \"flag\").map(said)",
+    replace: "t.findings.filter((f) => f.verdict !== \"skip\").map(said)",
+    why: "The Board line lists every measured check, passes included: a clean take reads like a defective one and the flagged evidence drowns.",
+  },
+  {
+    id: "triage-context-loose",
+    test: "packages/domain/test/audio.triage.test.ts",
+    file: "packages/domain/src/audio.triage.ts",
+    find: "export const triageContextSchema = z.strictObject({",
+    replace: "export const triageContextSchema = z.looseObject({",
+    why: "A context with a misspelt key (loopy for loop) passes the door and the seam check silently skips a take briefed as a loop.",
+  },
+  {
     id: "audio-accept-unmeasured-passes",
     test: "packages/domain/test/audio.test.ts",
     file: "packages/domain/src/audio.accept.ts",

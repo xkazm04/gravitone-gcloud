@@ -9,6 +9,7 @@ import type { AudioMeasureFull } from "@gt/domain/audio.accept";
 import { parseJsonAt } from "@gt/domain/door";
 import { err, ok, type Result } from "@gt/domain/errors";
 import type { FxChain } from "@gt/domain/audio.fx";
+import { triageAnswerSchema, type Triage, type TriageContext } from "@gt/domain/audio.triage";
 
 import { canSpawnLocalBinaries, describePosture } from "../deployment.ts";
 
@@ -141,6 +142,25 @@ export async function applyChain(inPath: string, chain: FxChain, outPath: string
     await writeFile(file, JSON.stringify(chain), "utf8");
     const r = await call("fx", ["--in", inPath, "--chain", file, "--out", outPath], fxSchema, opts.timeoutMs ?? TIMEOUT_MS);
     return r.ok ? ok({ durationS: r.value.durationS }) : r;
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * The triage findings for one file, judged against the brief it was made from (spark
+ * audio-triage; @gt/domain/audio.triage holds the checks, units and thresholds). The context goes
+ * to the sidecar as a temp file, never argv, for applyChain's reason. A check whose context was
+ * not committed comes back `skip`, never guessed.
+ */
+export async function triageFile(file: string, context: TriageContext, opts: SidecarOptions = {}): Promise<Result<Triage>> {
+  if (!canSpawnLocalBinaries()) return err("unavailable", `audio sidecar triage: ${describePosture()}`);
+  const dir = await mkdtemp(path.join(os.tmpdir(), "gt-triage-"));
+  try {
+    const ctx = path.join(dir, "context.json");
+    await writeFile(ctx, JSON.stringify(context), "utf8");
+    const r = await call("triage", ["--in", file, "--context", ctx], triageAnswerSchema, opts.timeoutMs ?? TIMEOUT_MS);
+    return r.ok ? ok(r.value.triage as Triage) : r;
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
