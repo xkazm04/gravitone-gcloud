@@ -122,7 +122,10 @@ export function generateCorpus(n = 50_000, seed = CORPUS_SEED): Corpus {
   const plateStyles = styleIds.slice(0, 60);
   const runs = Array.from({ length: Math.max(20, Math.round(n / 160)) }, (_, i) => `2026-${String(1 + (i % 10)).padStart(2, "0")}-run-${i}`);
 
-  const quota = KIND_SHARE.map(([k, w]) => [k, Math.round(n * w)] as [LibraryItem["kind"], number]);
+  // From 100 items up every kind is drawn at least once (the check below holds it to that), so a
+  // sliver share that rounds to nought takes its one item from the plates; at n >= 167 no share
+  // rounds to nought and the corpus is the same, byte for byte, as before the floor.
+  const quota = KIND_SHARE.map(([k, w]) => [k, n < 100 ? Math.round(n * w) : Math.max(1, Math.round(n * w))] as [LibraryItem["kind"], number]);
   const plateQ = quota.find((q) => q[0] === "plate");
   if (plateQ !== undefined) plateQ[1] += n - quota.reduce((s, q) => s + q[1], 0);
 
@@ -271,6 +274,7 @@ export function generateCorpus(n = 50_000, seed = CORPUS_SEED): Corpus {
       entries.push({ item, meta, extras, feed: "corpus" });
     }
   }
-  if (entries.length !== n || !LIBRARY_KINDS.every((k) => entries.some((e) => e.item.kind === k) || n < 100)) throw new AppError("internal", `corpus: generated ${entries.length} of ${n}`);
+  const absent = n < 100 ? [] : LIBRARY_KINDS.filter((k) => !entries.some((e) => e.item.kind === k));
+  if (entries.length !== n || absent.length > 0) throw new AppError("internal", `corpus: generated ${entries.length} of ${n}${absent.length === 0 ? "" : `, no ${absent.join(", ")}`}`);
   return { entries, facts, ctx: { styleOf: (sid) => styles.get(sid) } };
 }
