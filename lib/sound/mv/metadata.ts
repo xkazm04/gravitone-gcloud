@@ -27,7 +27,8 @@ import type { TurnClass } from "@/lib/text/types";
 import { snippetProblem } from "@/lib/publish/youtube";
 
 import { SoundError } from "../store";
-import { analysisText, clock, fill, promptSections, type ReasonFn, type TreatmentInput } from "./treatment";
+import { fill } from "../hunt";
+import { analysisText, clock, promptSections, type ReasonFn, type TreatmentInput } from "./treatment";
 import type { MvAnalysis, MvChapter, MvMetadata, MvPatchRequest } from "./types";
 
 export const METADATA_TURN: TurnClass = "mv-metadata";

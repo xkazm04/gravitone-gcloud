@@ -47,7 +47,7 @@ import { codeRoot } from "@/lib/producers/forge";
 import { reason as routerReason } from "@/lib/text/router";
 import type { TextRequest, TextResult, TurnClass } from "@/lib/text/types";
 
-import { sectionsOf } from "../hunt";
+import { fill, sectionsOf } from "../hunt";
 import { SoundError } from "../store";
 import type { MvAnalysis, MvChapter, MvMotion, MvTreatment } from "./types";
 
@@ -127,8 +127,6 @@ export async function promptSections(file: string, needs: readonly string[], cod
   if (missing.length) throw new SoundError(`${file} needs the section(s) ${missing.map((m) => `"${m}"`).join(", ")}`, 500);
   return s;
 }
-
-export const fill = (tpl: string, slots: Record<string, string>) => tpl.replace(/\{\{([A-Z_]+)\}\}/g, (all, k: string) => (k in slots ? slots[k] : all));
 
 const motionText = (m: MvMotion) => `particleDensity=${m.particleDensity}, particleHue=${m.particleHue}, pulseStrength=${m.pulseStrength}`;
 
