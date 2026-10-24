@@ -33,7 +33,7 @@ import { test, expect } from "@playwright/test";
 import { ACCESS_SECRET_VAR } from "@/lib/apiAuth";
 import { GET as fileGET } from "@/app/api/foundry/file/route";
 import { triage, type Capture } from "@/lib/foundry/strips/steps";
-import { commitStripRun, previewStripCommit, putStripVerdicts, stripPageFile } from "@/lib/foundry/strips/store";
+import { commitStripRun, listStripRuns, previewStripCommit, putStripVerdicts, stripPageFile } from "@/lib/foundry/strips/store";
 import { verdictErrorResponse } from "@/lib/foundry/verdictLog";
 import type { MotionStylesDoc, StripCommitPlan, StripCommitResult, StripsLedgerDoc } from "@/lib/foundry/strips/triage";
 import type { StripCard, StripRun } from "@/lib/foundry/strips/types";
@@ -294,6 +294,27 @@ test("commit: kept into motion-styles, rejected media gone, a ledger row per dec
   const motion = JSON.parse(readFileSync(path.join(fdir, "motion-styles.json"), "utf8")) as { _rev?: number };
   expect(motion._rev ?? 0).toBeGreaterThanOrEqual(1);
   expect(existsSync(path.join(fdir, "catalogue-journal.jsonl")), "no journal is written any more").toBe(false);
+});
+
+test("a damaged verdicts.json: the list names the run, the preview and the commit answer 503", async () => {
+  // The forge's 503 for the file beside the manifest (0e371252). The list keeps the run (the
+  // Library's strips feed holds it), and names it: the read used to be swallowed in silence.
+  writeFileSync(path.join(ROOT, runId, "verdicts.json"), '{"edu-edu-01--E01": {"verdict": "ke', "utf8");
+  const warned: string[] = [];
+  const orig = console.warn;
+  console.warn = (...args: unknown[]) => warned.push(args.map(String).join(" "));
+  try {
+    const listed = (await listStripRuns()).find((r) => r.id === runId);
+    const preview = await answer(() => previewStripCommit(runId)).catch((e: Error) => ({ status: `bare ${e.name}` }));
+    const commit = await answer(() => commitStripRun(runId)).catch((e: Error) => ({ status: `bare ${e.name}` }));
+    console.log(`[strips] torn verdicts.json -> list ${listed ? `listed (decided ${listed.decided})` : "skipped"}, preview ${preview.status}, commit ${commit.status}`);
+    expect(listed?.decided, "listed, so the Library feed holds it rather than pruning it").toBe(0);
+    expect(warned.some((w) => w.includes(runId) && w.includes("verdicts.json is unreadable"))).toBe(true);
+    expect(preview.status).toBe(503);
+    expect(commit.status).toBe(503);
+  } finally {
+    console.warn = orig;
+  }
 });
 
 test("commit: a replica whose sheet matched its original's (noise 0) still commits, and the findings say so", async () => {

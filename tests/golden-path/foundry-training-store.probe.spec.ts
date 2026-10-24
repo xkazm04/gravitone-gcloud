@@ -96,6 +96,40 @@ test("listCycles: a corrupt cycle.json is skipped with warning, returning valid 
   }
 });
 
+test("a damaged verdicts.json: listCycles lists and names the cycle, the commit answers a FoundryError 503", async () => {
+  // The forge's 503 for the file beside the manifest (0e371252). The list keeps the cycle, so the
+  // Library's dojo feed can hold its items (its getCycle fails) instead of pruning them.
+  const id = `probe-torn-verdicts-${Date.now().toString(36)}`;
+  const { dir } = setupProbeCycle(id);
+  writeFileSync(path.join(dir, "verdicts.json"), '{"imp-1": "appr', "utf8");
+  const warned: string[] = [];
+  const orig = console.warn;
+  console.warn = (...args: unknown[]) => warned.push(args.map(String).join(" "));
+  try {
+    let listed: string;
+    try {
+      const cycles = await listCycles();
+      listed = cycles.some((c) => c.id === id && c.decided === 0) ? "listed" : "skipped";
+    } catch (e) {
+      listed = `threw ${(e as Error).name}`;
+    }
+    let committed: string;
+    try {
+      await commitCycle(id);
+      committed = "committed";
+    } catch (e) {
+      committed = e instanceof FoundryError ? `FoundryError ${e.status}` : `bare ${(e as Error).name}`;
+    }
+    console.log(`[training] torn verdicts.json -> list ${listed}, commit ${committed}`);
+    expect(listed, "one damaged map never fails the whole list").toBe("listed");
+    expect(warned.some((w) => w.includes(id) && w.includes("verdicts.json is unreadable"))).toBe(true);
+    expect(committed).toBe("FoundryError 503");
+  } finally {
+    console.warn = orig;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("readCycle: malformed cycle.json throws FoundryError with status 503", async () => {
   const corruptId = `probe-corrupt-manifest-${Date.now().toString(36)}`;
   const dir = path.join(TRAINING_ROOT, corruptId);

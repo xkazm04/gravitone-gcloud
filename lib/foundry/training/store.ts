@@ -70,6 +70,7 @@ import {
   patchVerdictMap,
   readVerdictState,
   replaceVerdictMap,
+  unreadableVerdicts,
   withRunLock,
   type VerdictPatch,
   type VerdictSpec,
@@ -107,7 +108,9 @@ export async function readCycle(id: string): Promise<CycleManifest> {
 }
 
 async function readTrainingVerdicts(id: string): Promise<TrainingVerdicts> {
-  return readJson<TrainingVerdicts>(path.join(cycleDir(id), "verdicts.json"), {});
+  return readJson<TrainingVerdicts>(path.join(cycleDir(id), "verdicts.json"), {}).catch((e: unknown) => {
+    throw e instanceof SyntaxError ? unreadableVerdicts(cycleDir(id)) : e;
+  });
 }
 
 const decidedCount = (v: TrainingVerdicts) => Object.values(v).filter((x) => x === "approve" || x === "reject").length;
@@ -116,7 +119,17 @@ const decidedCount = (v: TrainingVerdicts) => Object.values(v).filter((x) => x =
 
 export async function listCycles(): Promise<TrainingCycleSummary[]> {
   const { items } = await listManifests<CycleManifest, TrainingCycleSummary>(OUT_ROOT, "cycle.json", async (name, m) => {
-    const v = await readJson<TrainingVerdicts>(path.join(OUT_ROOT, name, "verdicts.json"), {});
+    let v: TrainingVerdicts;
+    try {
+      v = await readJson<TrainingVerdicts>(path.join(OUT_ROOT, name, "verdicts.json"), {});
+    } catch (e) {
+      // Listed and named, never a failure of the whole list. Still LISTED: the Library's dojo
+      // feed holds a listed cycle whose detail read (getCycle, a 503 here) fails, and would prune
+      // one the list dropped (lib/library/feeds/foundry.ts `held`).
+      if (!(e instanceof SyntaxError)) throw e;
+      console.warn(`[foundry] ${name}: verdicts.json is unreadable — listed with nothing decided`);
+      v = {};
+    }
     return {
       id: m.id,
       at: m.at,

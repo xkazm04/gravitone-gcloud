@@ -53,6 +53,7 @@ import {
   patchVerdictMap,
   readVerdictState,
   replaceVerdictMap,
+  unreadableVerdicts,
   withRunLock,
   type VerdictPatch,
   type VerdictSpec,
@@ -157,7 +158,9 @@ export function readStripRunNow(id: string): StripRun {
 export const saveStripRun = (m: StripRun): Promise<void> => writeJsonAtomic(path.join(runDir(m.id), "run.json"), m);
 
 async function readStripVerdicts(id: string): Promise<StripVerdicts> {
-  return readJson<StripVerdicts>(path.join(runDir(id), "verdicts.json"), {});
+  return readJson<StripVerdicts>(path.join(runDir(id), "verdicts.json"), {}).catch((e: unknown) => {
+    throw e instanceof SyntaxError ? unreadableVerdicts(runDir(id)) : e;
+  });
 }
 
 const isDecided = (v: StripVerdict | undefined): v is StripVerdict => v?.verdict === "keep" || v?.verdict === "reject";
@@ -167,7 +170,16 @@ const isDecided = (v: StripVerdict | undefined): v is StripVerdict => v?.verdict
 export async function listStripRuns(): Promise<StripRunSummary[]> {
   const root = stripsRoot();
   const { items } = await listManifests<StripRun, StripRunSummary>(root, "run.json", async (name, m) => {
-    const v = await readJson<StripVerdicts>(path.join(root, name, "verdicts.json"), {}).catch(() => ({}) as StripVerdicts);
+    let v: StripVerdicts;
+    try {
+      v = await readJson<StripVerdicts>(path.join(root, name, "verdicts.json"), {});
+    } catch (e) {
+      // Still LISTED (the Library's strips feed holds a listed run whose getStripRun fails, and
+      // would prune one the list dropped), but NAMED: the read used to be swallowed in silence.
+      if (!(e instanceof SyntaxError)) throw e;
+      console.warn(`[foundry] ${name}: verdicts.json is unreadable — listed with nothing decided`);
+      v = {};
+    }
     const cards = Array.isArray(m.cards) ? m.cards : [];
     const lane = (l: "edu" | "stat") => {
       const cs = cards.filter((c) => c.lane === l);
