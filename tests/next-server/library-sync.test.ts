@@ -3,12 +3,13 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { blobStore } from "@gt/kernel/blob";
+import { blobStore, type BlobStore } from "@gt/kernel/blob";
+import { claimState } from "@gt/kernel/ingest";
 import { openKernel, type Kernel } from "@gt/kernel/kernel";
 import { queryLibrary } from "@gt/kernel/library/query";
 
 import type { Feed, FeedItem } from "../../lib/library/feeds/types.ts";
-import { syncLibrary } from "../../lib/library/project.ts";
+import { LIBRARY_CLAIM, LIBRARY_SYNC_TTL_MS, syncLibrary, syncLibrarySoon } from "../../lib/library/project.ts";
 
 // THE PROJECTION'S CONTRACT over stand-in feeds and real files in a temp dir:
 // idempotent (a second sync writes nothing and re-hashes nothing), a feed that
@@ -134,5 +135,24 @@ describe("syncLibrary", () => {
     if (!clean.ok) throw clean.error;
     expect(clean.value.feeds[0]).toMatchObject({ pruned: 2 });
     expect(ids()).toEqual(["plate:forge:r1:a"]);
+  });
+
+  it("closes the claim with the error when a background sync throws past its own report", async () => {
+    const { k, dir } = setup();
+    const a = path.join(dir, "a.png");
+    writeFileSync(a, "bytes");
+    const blobs = { put: async () => { throw new Error("disk gone"); } } as unknown as BlobStore;
+    const started = syncLibrarySoon(k.store, blobs, [feed("forge", () => [plate("p1", a)])], ctx);
+    expect(started).toEqual({ ok: true, value: { started: true } });
+    let state = claimState(k.store, LIBRARY_CLAIM);
+    for (let i = 0; i < 100 && state.ok && state.value?.finished_at === null; i++) {
+      await new Promise((r) => setTimeout(r, 10));
+      state = claimState(k.store, LIBRARY_CLAIM);
+    }
+    if (!state.ok || state.value === null) throw new Error("no claim");
+    expect(state.value.finished_at).not.toBeNull();
+    expect(JSON.parse(state.value.report ?? "null")).toEqual({ error: "disk gone" });
+    // Closed to the interval, not left to the TTL.
+    expect(Date.parse(state.value.next_at) - Date.parse(state.value.claimed_at)).toBeLessThan(LIBRARY_SYNC_TTL_MS);
   });
 });

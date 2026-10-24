@@ -209,6 +209,13 @@ export function syncLibrarySoon(store: Store, blobs: BlobStore, feeds: readonly 
       if (!report.ok) console.error(`[library-sync] ${report.error.message}`);
       if (!done.ok) console.error(`[library-sync] the claim could not be closed: ${done.error.message}`);
     })
-    .catch((e: unknown) => console.error(`[library-sync] failed outside its own report: ${errorMessage(e)}`));
+    .catch((e: unknown) => {
+      // A sync that threw past its own report still closes the claim, with the error as the report:
+      // left open, the claim would block the next sync for the whole TTL and keep the last report.
+      const message = errorMessage(e);
+      console.error(`[library-sync] failed outside its own report: ${message}`);
+      const done = finishClaim(store, LIBRARY_CLAIM, owner, LIBRARY_SYNC_INTERVAL_MS, { error: message });
+      if (!done.ok) console.error(`[library-sync] the claim could not be closed: ${done.error.message}`);
+    });
   return ok({ started: true });
 }
