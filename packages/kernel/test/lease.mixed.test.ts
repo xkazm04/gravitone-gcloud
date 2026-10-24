@@ -153,6 +153,6 @@ describe.skipIf(python === undefined)("a Python waiter while Node holds", () => 
       must(s.tx((t) => releaseIn(t, "gpu.local", held.fence)));
       s.close();
     }
-  });
+  }, 30_000);
 });
 

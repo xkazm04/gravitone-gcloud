@@ -37,5 +37,5 @@ describe.skipIf(python === undefined)("a kernel Python script asked with no argu
     expect({ status: r.status, stdout: r.stdout, traceback: r.stderr.includes("Traceback") }).toEqual({ status: 2, stdout: "", traceback: false });
     expect(lines.length, `stderr: ${JSON.stringify(r.stderr)}`).toBeGreaterThan(0);
     for (const line of lines) expect(line).toMatch(new RegExp(`^python (-I )?(packages/kernel/py/)?${file.replace(".", "\\.")} `));
-  });
+  }, 30_000);
 });

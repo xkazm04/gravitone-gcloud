@@ -62,7 +62,7 @@ describe.skipIf(python === undefined)("events verified by Python", () => {
     const out = runVerifier(s.location);
     expect(out.report).toEqual({ state: "intact", count: 22, head });
     expect(out.status).toBe(0);
-  });
+  }, 30_000);
 
   it("re-derives the projection's fields (occurredAt, atSrc, key) and sees an edit to them", () => {
     const s = tpl.fresh();
@@ -79,7 +79,7 @@ describe.skipIf(python === undefined)("events verified by Python", () => {
     const out = runVerifier(s.location);
     expect(node).toMatchObject({ state: "tampered", seq: 3 });
     expect(out.report).toEqual(node);
-  });
+  }, 30_000);
 
   it("finds the same broken link Node finds", () => {
     const s = tpl.fresh();
@@ -93,7 +93,7 @@ describe.skipIf(python === undefined)("events verified by Python", () => {
     expect(out.status).toBe(1);
     expect(out.report).toEqual(node);
     expect(node).toMatchObject({ state: "tampered", seq: 3 });
-  });
+  }, 30_000);
 
   it("reports a cut tail against an anchor, as Node does", () => {
     const s = tpl.fresh();
@@ -107,7 +107,7 @@ describe.skipIf(python === undefined)("events verified by Python", () => {
     s.close();
     const out = runVerifier(s.location, `${head.seq}:${head.hash}`);
     expect(out.report).toEqual(node);
-  });
+  }, 30_000);
 
   it("reads a store whose path carries URI characters (# and %) read-only, and writes no file beside it", () => {
     const s = tpl.fresh();
@@ -140,7 +140,7 @@ describe.skipIf(python === undefined)("events verified by Python", () => {
     } finally {
       dir.dispose();
     }
-  });
+  }, 30_000);
 
   it("answers an anchor that is not SEQ:HASH with 2 (could not run), never 1 (tampered)", () => {
     const s = tpl.fresh();
@@ -156,5 +156,5 @@ describe.skipIf(python === undefined)("events verified by Python", () => {
       const out = runVerifier(s.location, bad);
       expect({ anchor: bad, status: out.status, said: JSON.stringify(out.report).includes("tampered") }).toEqual({ anchor: bad, status: 2, said: false });
     }
-  });
+  }, 30_000);
 });

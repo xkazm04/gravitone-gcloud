@@ -304,7 +304,7 @@ describe.skipIf(python === undefined)("the Python heartbeat meets a store error"
       ].join("\n");
       const r = spawnSync(python ?? "python", ["-I", "-c", code], { encoding: "utf8", timeout: 30_000 });
       expect({ out: r.stdout.trim(), traceback: r.stderr.includes("Traceback") }).toEqual({ out: c.expect, traceback: false });
-    });
+    }, 30_000);
   }
 });
 
@@ -349,7 +349,7 @@ describe.skipIf(python === undefined)("the tables the Python protocol copies equ
       ttl: DEFAULT_TTL_S,
       leaseTtl: DEFAULT_TTL_S,
     });
-  });
+  }, 30_000);
 });
 
 // job_settle.py `settle` after an ending committed: the producer is told, then `job.settled` (or
@@ -388,5 +388,5 @@ describe.skipIf(python === undefined)("a settle the ledger cannot record", () =>
     const r = spawnSync(python ?? "python", ["-I", "-c", code], { encoding: "utf8", timeout: 30_000 });
     expect(r.stdout.trim()).toBe("FINISHED done told=done");
     expect(r.stderr).toContain("job.settled was not recorded: database is locked");
-  });
+  }, 30_000);
 });

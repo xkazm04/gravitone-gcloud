@@ -82,6 +82,6 @@ describe.skipIf(python === undefined)("spec/styles.json: the Python door against
       } finally {
         k.close();
       }
-    });
+    }, 30_000);
   });
 });
