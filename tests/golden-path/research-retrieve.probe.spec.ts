@@ -236,6 +236,10 @@ test("retrieve cross-check: zero receipts still requires researchGaps[0] to name
   }
   expect(err, "a no-search run whose gaps do not say so was accepted").toBeInstanceOf(NotebookError);
   expect((err as NotebookError).messages.join(" ")).toMatch(/researchGaps\[0\]/);
+  // Addressed and kept like every other refusal: the finding names the one path a
+  // repair may touch, and the paid-for answer rides on the error as its draft.
+  expect((err as NotebookError).findings.map((f) => f.path)).toEqual(["researchGaps[0]"]);
+  expect((err as NotebookError).draft, "the refused answer was dropped").toEqual(nb);
 
   const honest: Notebook = { ...nb, researchGaps: ["No search was run in this session; every source is recalled", ...nb.researchGaps] };
   const { notebook, findings } = crossCheckRetrieval(honest, []);
