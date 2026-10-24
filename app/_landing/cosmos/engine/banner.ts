@@ -36,11 +36,14 @@ export function showBanner(cx: Cx, o: BannerSpec): void {
    * errs a pixel or two wide, which the torn edge absorbs) */
   const maxW = W * (portrait ? 0.92 : 0.6);
   if (w > maxW) {
+    // the name's box is read with the rest, before the smaller size is written:
+    // read after it, it is a second layout and already the shrunk height
     const k = (maxW / w) * 0.97,
-      nmW = nm.offsetWidth;
+      nmW = nm.offsetWidth,
+      nmH = nm.offsetHeight;
     bannerEl.style.setProperty("--bnfs", fs * k + "px");
     w = w - nmW * (1 - k);
-    h = h - nm.offsetHeight * (1 - k);
+    h = h - nmH * (1 - k);
   }
   bannerEl.style.setProperty("--bn1", P ? P.t("paper", -1) : "var(--pc-bone)");
   bannerEl.style.setProperty("--bn2", P ? P.k.acc : "var(--pc-coral)");

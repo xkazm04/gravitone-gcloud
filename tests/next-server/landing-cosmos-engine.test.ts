@@ -21,6 +21,9 @@
 //      matching prewarm and otherwise painted the opened world beside it, leaving the
 //      other prewarm painting and its full-viewport layers held in cx.worldPre until the
 //      next hover.
+//   5. banner.ts: "one read, then only writes". A name too wide for the stage wrote its
+//      smaller size and then read the name's height: a second synchronous layout on the
+//      hover, and the height it read was already the shrunk one the formula subtracts from.
 //
 // raster.ts is loaded natively (ESM) because it spells `new URL(..., import.meta.url)`
 // for the bundler, which the Playwright node lane cannot load as CommonJS.
@@ -260,5 +263,55 @@ describe("worlds.ts: one prewarm at a time, and a world nobody opened is let go"
     expect([a0.closed, a1.closed], "A's landed layers are released").toEqual([true, true]);
     a.part!(2, a2);
     expect(a2.closed, "a layer of A that lands later is released too").toBe(true);
+  });
+});
+
+describe("banner.ts: one read, then only writes", () => {
+  /** elements whose box reads force a layout when a write came before them */
+  function layoutCounter() {
+    const st = { dirty: true, layouts: 0 };
+    const node = (wh: [number, number]) => {
+      const style = new Proxy({ setProperty: () => void (st.dirty = true) } as Record<string, unknown>, {
+        set: (t, k, v) => ((st.dirty = true), (t[k as string] = v), true),
+      });
+      const read = (v: number) => {
+        if (st.dirty) st.layouts++;
+        st.dirty = false;
+        return v;
+      };
+      return {
+        style,
+        classList: { add: () => void (st.dirty = true) },
+        set textContent(_v: string) {
+          st.dirty = true;
+        },
+        set innerHTML(_v: string) {
+          st.dirty = true;
+        },
+        get offsetWidth() {
+          return read(wh[0]);
+        },
+        get offsetHeight() {
+          return read(wh[1]);
+        },
+      };
+    };
+    const parts: Record<string, ReturnType<typeof node>> = {
+      ".bn-name": node([900, 100]),
+      ".bn-meta": node([0, 0]),
+      ".bn-front": node([1000, 120]),
+      ".bn-back": node([1000, 120]),
+    };
+    const own = node([0, 0]);
+    const banner = { style: own.style, classList: own.classList, querySelector: (sel: string) => parts[sel] };
+    return { st, banner };
+  }
+
+  test("a name too wide for the stage is measured in one layout, not two", async () => {
+    const { showBanner } = await import("../../app/_landing/cosmos/engine/banner.ts");
+    const { st, banner } = layoutCounter();
+    const cx = { g: { W: 1280, H: 800, S: 800, portrait: false }, els: { banner } };
+    showBanner(cx as never, { name: "A name far wider than sixty per cent of the stage", x: 640, y: 400 });
+    expect(st.layouts).toBe(1);
   });
 });

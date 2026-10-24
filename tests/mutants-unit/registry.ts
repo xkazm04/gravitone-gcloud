@@ -5466,4 +5466,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "// (no drop)",
     why: "A visitor who hovers one medallion and clicks another holds the first world's full-viewport layers (~42 MB at 1080p) and its paint job for nothing until the next hover.",
   },
+  {
+    id: "cosmos-banner-second-layout",
+    test: "tests/next-server/landing-cosmos-engine.test.ts",
+    file: "app/_landing/cosmos/engine/banner.ts",
+    find: "    h = h - nmH * (1 - k);",
+    replace: "    h = h - nm.offsetHeight * (1 - k);",
+    why: "Hovering a medallion or a category with a long name forces a second synchronous layout, and its torn bottom edge is cut below the paper.",
+  },
 ];
