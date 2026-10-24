@@ -60,6 +60,20 @@ describe("reconcile", () => {
   });
 });
 
+describe("the tree", () => {
+  const drawn = (nodes: readonly HuntLeafView[]): string[] => {
+    const t = buildTree(nodes);
+    return [...(t.root === null ? [] : [t.root.id]), ...t.columns.flatMap((c) => [...(c.id.startsWith("axis:") ? [] : [c.id]), ...c.rows.map((r) => r.id)])].sort();
+  };
+
+  test("a parentId cycle is cut, never dropped: every node on it and under it is drawn", () => {
+    expect(drawn([leaf({ id: "p", parentId: "q" }), leaf({ id: "q", parentId: "p" })])).toEqual(["p", "q"]);
+    const hung = [...MAP, leaf({ id: "u", parentId: "w" }), leaf({ id: "v", parentId: "u" }), leaf({ id: "w", parentId: "v" }), leaf({ id: "under", parentId: "v" })];
+    expect(drawn(hung)).toEqual(hung.map((n) => n.id).sort());
+    expect(buildTree(hung).leaves.map((l) => l.id)).toContain("under");
+  });
+});
+
 describe("render plan", () => {
   test("only a leaf renders: a selected branch or root is never a unit", () => {
     const plan = renderPlan(MAP, ["root", "br", "d"], () => "render");

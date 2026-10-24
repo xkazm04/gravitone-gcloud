@@ -110,10 +110,25 @@ export type HuntTree<N extends HuntNodeView = HuntNodeView> = {
 
 export function buildTree<N extends HuntNodeView>(nodes: readonly N[]): HuntTree<N> {
   const byId = new Map(nodes.map((n) => [n.id, n] as const));
+  const parent = new Map<string, string | null>(nodes.map((n) => [n.id, n.parentId !== null && n.parentId !== n.id && byId.has(n.parentId) ? n.parentId : null] as const));
+  // A parentId cycle (a hand-patched map: the store checks only that a parent exists) has no top,
+  // so every node on it, and under it, was never reached and vanished. The cycle's first node in
+  // list order is cut to a top; a walk that loops without returning to its start is under a cycle
+  // another node's cut will open.
+  for (const n of nodes) {
+    const seen = new Set<string>();
+    for (let up = parent.get(n.id) ?? null; up !== null && !seen.has(up); up = parent.get(up) ?? null) {
+      if (up === n.id) {
+        parent.set(n.id, null);
+        break;
+      }
+      seen.add(up);
+    }
+  }
   const kids = new Map<string, N[]>();
   const tops: N[] = [];
   for (const n of nodes) {
-    const p = n.parentId !== null && n.parentId !== n.id && byId.has(n.parentId) ? n.parentId : null;
+    const p = parent.get(n.id) ?? null;
     if (p === null) tops.push(n);
     else kids.set(p, [...(kids.get(p) ?? []), n]);
   }
