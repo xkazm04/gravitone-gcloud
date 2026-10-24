@@ -279,6 +279,22 @@ export const MUTANTS: UnitMutant[] = [
     why: "A project with a part waiting at the Weir shows as running while anything else runs, so the gate waits unseen by the operator.",
   },
   {
+    id: "part-table-gate-never-waits",
+    test: "packages/domain/test/machines.test.ts",
+    file: "packages/domain/src/part.machine.ts",
+    find: "queued: [\"running\", \"awaiting_gate\", \"paused\", \"blocked\"],",
+    replace: "queued: [\"running\", \"paused\", \"blocked\"],",
+    why: "The part table forbids the step every gate and slot part takes (queued straight to the Weir), so the table describes a machine partStatesOf never runs and a status reader trusting it is wrong for every gate.",
+  },
+  {
+    id: "project-table-ratified-is-the-end",
+    test: "packages/domain/test/machines.test.ts",
+    file: "packages/domain/src/project.machine.ts",
+    find: "ratified: [\"awaiting_gate\"],",
+    replace: "ratified: [],",
+    why: "The project table calls ratified final while a missed or cancelled slot sends the project back to its gate, so anything that treats a ratified project as done stops watching one that needs a person.",
+  },
+  {
     id: "template-fallback-shifts",
     test: "packages/catalog/test/catalog.test.ts",
     file: "packages/catalog/src/projects.ts",
