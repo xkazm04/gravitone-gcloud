@@ -12163,6 +12163,46 @@
           "evidence": "packages/producers/src/research/define.ts:21 Research comes before a runtime target exists; the view carries topic, notebook and queue, no seconds. The technique excludes this phase."
         }
       ]
+    },
+    "e5f8b2b5-3ac7-422b-9950-c7431117591a/repository-landing-document": {
+      "context": "landing-cosmos-shell",
+      "subject": "repository-landing-document",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:54:15.633Z",
+      "worker": "7808b69e-995c-48e2-ae1d-255366334d7c",
+      "techniques": []
+    },
+    "076622f1-4906-4cdc-9a76-307df47fdd14/repository-landing-document": {
+      "context": "landing-cosmos-scenes",
+      "subject": "repository-landing-document",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:54:15.633Z",
+      "worker": "7808b69e-995c-48e2-ae1d-255366334d7c",
+      "techniques": []
+    },
+    "ff0b289f-5f39-4747-acce-5d56797b9c43/repository-landing-document": {
+      "context": "landing-cosmos-paper-raster",
+      "subject": "repository-landing-document",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:54:15.633Z",
+      "worker": "7808b69e-995c-48e2-ae1d-255366334d7c",
+      "techniques": []
+    },
+    "cc39e764-df6c-4508-a8a9-e13944674461/repository-landing-document": {
+      "context": "style-trials-cull",
+      "subject": "repository-landing-document",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:54:15.633Z",
+      "worker": "7808b69e-995c-48e2-ae1d-255366334d7c",
+      "techniques": []
     }
   }
 }

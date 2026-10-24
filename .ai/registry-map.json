@@ -7017,7 +7017,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/paper.ts:2 Canvas paint, RNG and worker raster code produce pixels for the app's landing page and hold no repository front-page prose, badges or host metadata; a search of app/_landing for README, shields, README.md and markdown found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:6f6a6c4541bc949b",
+          "evaluatedRevision": 4
         },
         {
           "subject": "canvas-graph",
@@ -7191,7 +7195,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/scene.ts:1 Scene composition and camera code for the app's own animated landing page has no repository front-page document in it; a search of app/_landing for README, shields, README.md and markdown found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:6f6a6c4541bc949b",
+          "evaluatedRevision": 4
         },
         {
           "subject": "voice-io",
@@ -7349,7 +7357,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_landing/cosmos/Cosmos.tsx:3 This context is a page the app renders itself (a React and canvas client component), not the repository's front-page document, and the golden path leaves claims an application renders out of scope; a search of app/_landing for README, shields, README.md and markdown found nothing, and the only 'badge' hit is the app's StaleBadge UI component.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:6f6a6c4541bc949b",
+          "evaluatedRevision": 4
         },
         {
           "subject": "table",
@@ -12592,7 +12604,11 @@
           "revision": 3,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/style/LockGate.tsx:22 These are @gt/ui React components for culling and locking styles inside the studio, not a repository front page; a search of the style, cull, cut and pair component directories for README, shields, README.md and markdown found nothing (the 'badge' hits are CSS class names, and the figcaption hits are app UI, not a landing document).",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:6f6a6c4541bc949b",
+          "evaluatedRevision": 4
         }
       ],
       "governance": "governed"

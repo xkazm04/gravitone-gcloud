@@ -1,0 +1,144 @@
+{
+ "schema": "conform-run/1",
+ "worker": "7808b69e-995c-48e2-ae1d-255366334d7c",
+ "subject": "repository-landing-document",
+ "evaluatedAt": "2026-10-24T22:54:15.633204+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "landing-cosmos-shell",
+   "subject": "repository-landing-document",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/_landing/cosmos/Cosmos.tsx:3 This context is a page the app renders itself (a React and canvas client component), not the repository's front-page document, and the golden path leaves claims an application renders out of scope; a search of app/_landing for README, shields, README.md and markdown found nothing, and the only 'badge' hit is the app's StaleBadge UI component.",
+   "techniques": [],
+   "absenceTerms": [
+    "README",
+    "shields",
+    "README.md",
+    "markdown"
+   ]
+  },
+  {
+   "context": "landing-cosmos-scenes",
+   "subject": "repository-landing-document",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/_landing/cosmos/engine/scene.ts:1 Scene composition and camera code for the app's own animated landing page has no repository front-page document in it; a search of app/_landing for README, shields, README.md and markdown found nothing.",
+   "techniques": [],
+   "absenceTerms": [
+    "README",
+    "shields",
+    "README.md",
+    "markdown"
+   ]
+  },
+  {
+   "context": "style-atelier",
+   "subject": "repository-landing-document",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/library/style/[id]/page.tsx:8 A studio detail route built on a data port is an application screen, not a repository landing document; a search of app/(studio)/library/style for README, shields, badge, README.md and markdown found nothing.",
+   "techniques": [],
+   "absenceTerms": [
+    "README",
+    "shields",
+    "badge",
+    "README.md",
+    "markdown"
+   ]
+  },
+  {
+   "context": "landing-cosmos-paper-raster",
+   "subject": "repository-landing-document",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/_landing/cosmos/engine/paper.ts:2 Canvas paint, RNG and worker raster code produce pixels for the app's landing page and hold no repository front-page prose, badges or host metadata; a search of app/_landing for README, shields, README.md and markdown found nothing.",
+   "techniques": [],
+   "absenceTerms": [
+    "README",
+    "shields",
+    "README.md",
+    "markdown"
+   ]
+  },
+  {
+   "context": "style-trials-cull",
+   "subject": "repository-landing-document",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/style/LockGate.tsx:22 These are @gt/ui React components for culling and locking styles inside the studio, not a repository front page; a search of the style, cull, cut and pair component directories for README, shields, README.md and markdown found nothing (the 'badge' hits are CSS class names, and the figcaption hits are app UI, not a landing document).",
+   "techniques": [],
+   "absenceTerms": [
+    "README",
+    "shields",
+    "README.md",
+    "markdown"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-24T22:54:15.633204+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "repository-landing-document"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "landing-cosmos-shell",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T22:54:15.633204+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "repository-landing-document"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "landing-cosmos-scenes",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T22:54:15.633204+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "repository-landing-document"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "style-atelier",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T22:54:15.633204+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "repository-landing-document"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "landing-cosmos-paper-raster",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T22:54:15.633204+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "repository-landing-document"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "style-trials-cull",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
