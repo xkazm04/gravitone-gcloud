@@ -15,7 +15,7 @@
 // rebuilt.
 
 import { GRAIN_N, paintGrain, setGrainSource } from "./paper";
-import { paintLayer, sharedRng, type Job } from "./rasterJobs";
+import { paintLayer, rendererOf, sharedRng, type Job } from "./rasterJobs";
 
 export type Surface = ImageBitmap | HTMLCanvasElement;
 export interface Painted {
@@ -268,12 +268,7 @@ function blobGrain(b: Blob): string {
 /** the main thread's renderer probe, for when no worker can ask */
 function probeRendererMain(): string | null {
   try {
-    const gl = document.createElement("canvas").getContext("webgl");
-    if (!gl) return null;
-    const ext = gl.getExtension("WEBGL_debug_renderer_info");
-    const ren = String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
-    gl.getExtension("WEBGL_lose_context")?.loseContext();
-    return ren;
+    return rendererOf(document.createElement("canvas").getContext("webgl"));
   } catch {
     return null;
   }

@@ -36,7 +36,7 @@ import path from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { Raster } from "../../app/_landing/cosmos/engine/raster.ts";
-import type { Job } from "../../app/_landing/cosmos/engine/rasterJobs.ts";
+import { rendererOf, type Job } from "../../app/_landing/cosmos/engine/rasterJobs.ts";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
 
@@ -137,6 +137,27 @@ describe("raster.ts: the worker paints, the main thread places", () => {
     w.say(HELLO);
     await tick();
     expect(doc.made, "no WebGL probe and no grain painted for a page that is gone").toEqual([]);
+  });
+});
+
+describe("rasterJobs.ts: the one renderer probe both raster paths ask", () => {
+  const gl = (unmasked: boolean) => {
+    const lost: string[] = [];
+    const ctx = {
+      RENDERER: 1,
+      getExtension: (n: string) =>
+        n === "WEBGL_debug_renderer_info" ? (unmasked ? { UNMASKED_RENDERER_WEBGL: 2 } : null) : n === "WEBGL_lose_context" ? { loseContext: () => lost.push("lost") } : null,
+      getParameter: (p: number) => (p === 2 ? "ANGLE (NVIDIA)" : "WebKit WebGL"),
+    };
+    return { ctx: ctx as unknown as WebGLRenderingContext, lost };
+  };
+  test("names the unmasked renderer where it may, the masked one otherwise, and lets the context go", () => {
+    const a = gl(true),
+      b = gl(false);
+    expect(rendererOf(a.ctx)).toBe("ANGLE (NVIDIA)");
+    expect(rendererOf(b.ctx)).toBe("WebKit WebGL");
+    expect([a.lost, b.lost]).toEqual([["lost"], ["lost"]]);
+    expect(rendererOf(null)).toBeNull();
   });
 });
 

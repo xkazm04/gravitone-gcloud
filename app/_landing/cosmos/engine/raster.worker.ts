@@ -11,7 +11,7 @@
 // Typed against the DOM lib (this repo compiles no webworker lib): the few
 // worker-scope members used are declared below.
 
-import { paintLayer, sharedRng, type Job } from "./rasterJobs";
+import { paintLayer, rendererOf, sharedRng, type Job } from "./rasterJobs";
 import { GRAIN_N, paintGrain, setGrainSource, type Ctx2D } from "./paper";
 
 interface Scope {
@@ -22,12 +22,7 @@ const scope = self as unknown as Scope;
 
 function probeRenderer(): string | null {
   try {
-    const gl = new OffscreenCanvas(1, 1).getContext("webgl") as WebGLRenderingContext | null;
-    if (!gl) return null;
-    const ext = gl.getExtension("WEBGL_debug_renderer_info");
-    const ren = String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
-    gl.getExtension("WEBGL_lose_context")?.loseContext();
-    return ren;
+    return rendererOf(new OffscreenCanvas(1, 1).getContext("webgl") as WebGLRenderingContext | null);
   } catch {
     return null;
   }
