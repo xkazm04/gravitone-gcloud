@@ -3199,6 +3199,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "palette:warm-cool-split is read as a free word: the prototype's alias is lost.",
   },
   {
+    id: "library-search-quoted-key-case",
+    test: "packages/domain/test/library.contract.test.ts",
+    file: "packages/domain/src/library.ts",
+    find: 'const TOKEN_RE = /[a-z_]+:"[^"]*"|"[^"]*"|\\S+/gi;',
+    replace: 'const TOKEN_RE = /[a-z_]+:"[^"]*"|"[^"]*"|\\S+/g;',
+    why: "Mood:\"dark ambient\" splits at the space: the search matches mood:dark plus a stray word, while Mood:dark alone was already a token.",
+  },
+  {
     id: "library-counts-trigger-delete",
     test: "packages/kernel/test/library.test.ts",
     file: "packages/kernel/src/library/schema.ts",

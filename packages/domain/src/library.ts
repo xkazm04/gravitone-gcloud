@@ -163,7 +163,9 @@ export type ParsedSearch = {
   readonly tokens: readonly SearchToken[];
 };
 
-const TOKEN_RE = /[a-z_]+:"[^"]*"|"[^"]*"|\S+/g;
+// Case-blind like KV_RE's lowercased input: without `i`, `Mood:"dark ambient"` split at the
+// space into a one-word token and a stray word, while `Mood:dark` was already a token.
+const TOKEN_RE = /[a-z_]+:"[^"]*"|"[^"]*"|\S+/gi;
 const KV_RE = /^([a-z_]+):(.+)$/;
 
 /**
