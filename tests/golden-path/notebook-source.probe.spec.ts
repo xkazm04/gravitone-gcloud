@@ -312,6 +312,19 @@ test("stage 2 (d): parseNotebook refuses a malformed dimensions or conclusions v
   expect(bad({ conclusions: [{ ...conclusion("c-one"), restsOn: "f-volume" }] })).toMatch(/conclusions\[0\]\.restsOn/);
 });
 
+test("stage 2 (d): a typed falsifier the gate cannot read is refused at the door, not thrown at the gate", () => {
+  // conclusionIssues (lib/script/gate.ts's reader) calls falsifierText(c).trim():
+  // an object with no string `test` threw there, after the door had accepted it.
+  const typed = (falsifiableBy: unknown) => ({ conclusions: [{ ...conclusion("c-one"), falsifiableBy }] });
+  const bad = (patch: Record<string, unknown>) => rejection(() => parseNotebook({ ...declared(), ...patch }, "x")).join(" ");
+  expect(bad(typed({}))).toMatch(/conclusions\[0\]\.falsifiableBy\.test/);
+  expect(bad(typed({ test: 5, kind: "record", binds: "whole-claim" }))).toMatch(/conclusions\[0\]\.falsifiableBy\.test/);
+  expect(bad(typed({ test: "a filing", kind: "rumour", binds: "whole-claim" }))).toMatch(/conclusions\[0\]\.falsifiableBy\.kind/);
+  expect(bad(typed({ test: "a filing", kind: "document" }))).toMatch(/conclusions\[0\]\.falsifiableBy\.binds/);
+  const ok = parseNotebook({ ...declared(), ...typed({ test: "a filing", kind: "document", binds: "whole-claim" }) }, "x");
+  expect(ok.conclusions?.[0].falsifiableBy).toEqual({ test: "a filing", kind: "document", binds: "whole-claim" });
+});
+
 // ------------------------------------- (e) the fixture is the control
 
 test("stage 2 (e): the fixture declares neither field, so it keeps its own tables and a clean graph", () => {

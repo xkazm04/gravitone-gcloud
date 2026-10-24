@@ -4,6 +4,8 @@
 // Split out of the shape half so shape.ts and shape-columns.ts can both import them
 // without importing each other. These are plain helpers with no state.
 
+import type { FalsifierKind } from "@/lib/notebook/conclusions";
+
 export const isObj = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
 
@@ -18,6 +20,8 @@ export const CLAIM_MAX = 90;
 
 export const LEAPS: readonly string[] = ["near", "moderate", "far", "unhinged"];
 export const USES: readonly string[] = ["thesis", "reversal", "reframe", "steel-man", "colour", "boundary"];
+/** conclusions.ts::FalsifierKind, as data. `satisfies` holds the two together. */
+export const FALSIFIER_KINDS: readonly string[] = ["document", "record", "measurement", "event"] satisfies readonly FalsifierKind[];
 
 /** The link words a mechanism chain may use.
  *
