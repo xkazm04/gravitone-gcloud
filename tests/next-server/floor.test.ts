@@ -12,7 +12,7 @@ await vi.hoisted(async () => {
 
 import { nextPile, pileOrder, spendOf } from "../../app/(studio)/_shell/facts.ts";
 import { SLOTS } from "../../app/(studio)/floor/_calendar/fixtureData.ts";
-import { applyCancel, applyMove, applyPublishNow, fixtureAct, fixtureFacts, fixtureItems, fixtureSchedule, seedRow, viewOf, type FixtureRow } from "../../app/(studio)/floor/_calendar/fixture.ts";
+import { applyCancel, applyMove, applyPublishNow, fixtureAct, fixtureFacts, fixtureItems, fixtureSchedule, fixtureSlots, seedRow, viewOf, type FixtureRow } from "../../app/(studio)/floor/_calendar/fixture.ts";
 import { byLane, floorSearch, parseFloorUrl, scheduleHref, slotHref } from "../../app/(studio)/floor/_floor/model.ts";
 import { downsample } from "../../app/(studio)/floor/_floor/shelf.ts";
 import type { LiveJob, WeirItem } from "../../lib/ledger/v1/types.ts";
@@ -196,6 +196,13 @@ describe("the fixture calendar's engine refusals", () => {
   it("refuses a Library item that is not an export on a video channel, in the adapter's words", () => {
     const r = fixtureSchedule({ ...draft, item: "article:run:art-2026-10-16-routing" }, NOW);
     expect(r.ok ? null : [r.error.code, r.error.message]).toEqual(["refused", "article:run:art-2026-10-16-routing is not an export; youtube publishes exports"]);
+  });
+
+  it("a slot published dry holds nothing: the rail marks it, and the same export may be scheduled on its channel again", () => {
+    must(fixtureAct("sl-harbor-teaser-tt", NOW, (r) => applyPublishNow(r, NOW)));
+    expect(must(fixtureSlots(NOW)).find((x) => x.id === "sl-harbor-teaser-tt")).toMatchObject({ status: "published", dry: true });
+    expect(must(fixtureSchedule({ ...draft, item: "video:export:glass-harbor-teaser", channel: "tiktok" }, NOW)).slot).toMatchObject({ status: "scheduled", item: "video:export:glass-harbor-teaser", channel: "tiktok" });
+    expect(must(fixtureSlots(NOW)).find((x) => x.id === "sl-harbor-yt-out")).not.toHaveProperty("dry");
   });
 
   it("refuses a verb sent on a revision the slot has moved past, and writes nothing", () => {

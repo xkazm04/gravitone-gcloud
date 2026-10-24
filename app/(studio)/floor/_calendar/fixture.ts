@@ -25,12 +25,12 @@ import { err, ok, type Result } from "@gt/domain/errors";
 import { parseAt } from "@gt/domain/door";
 import { channelSchema, exportIdOf, slotMachine, slotSchema, type Slot, type SlotState } from "@gt/domain/slot";
 import type { RailSlot } from "@gt/ui/components/floor/calendar.ts";
-import { canSchedule, type ChannelReady, type ScheduleDraft, type ScheduleItem } from "@gt/ui/components/floor/schedule.ts";
+import { canSchedule, holds, type ChannelReady, type ScheduleDraft, type ScheduleItem } from "@gt/ui/components/floor/schedule.ts";
 import { canCancel, canPublishNow, moveProblem } from "@gt/ui/components/floor/slot.ts";
 import type { SlotView } from "@gt/ui/components/floor/SlotDetail.tsx";
 
 import { ledgerFor } from "../../_shell/links.ts";
-import { exportOnly } from "./real.ts";
+import { exportOnly, railOfSlot } from "./real.ts";
 import type { CalendarFacts } from "./contract.ts";
 import { CHANNEL_SEED, ITEMS, PROJECTS, SLOTS, type FixtureMetric, type FixtureSlot } from "./fixtureData.ts";
 
@@ -128,18 +128,10 @@ function rows(nowMs: number): Result<Map<string, FixtureRow>> {
   return ok(out);
 }
 
-export function railOfRow({ slot: s }: FixtureRow): RailSlot {
-  return {
-    id: s.id,
-    title: s.title,
-    channel: s.channel,
-    publishAt: s.at,
-    status: s.state,
-    ...(s.error === undefined ? {} : { error: s.error }),
-    ...(s.drift === undefined ? {} : { drift: s.drift }),
-    ...(s.missedAt === undefined ? {} : { missedAt: s.missedAt }),
-    item: s.libraryItemId,
-  };
+/** The real side's rail mapping, over the fixture row: a dry publish-now is marked, as the slot
+ *  store marks it, so neither the schedule form nor this table reads it as holding its item. */
+export function railOfRow({ slot, extra }: FixtureRow): RailSlot {
+  return railOfSlot({ slot, ...(extra.dry === true ? { dry: true } : {}) });
 }
 
 export function viewOf(row: FixtureRow): SlotView {
@@ -205,7 +197,6 @@ export function fixtureAct(id: string, nowMs: number, act: (row: FixtureRow) => 
 
 /* ── putting something on the calendar ─────────────────────────────────── */
 
-const HOLDS: readonly SlotState[] = ["scheduled", "publishing", "published"];
 let minted = 0;
 
 /** A new slot, as the engine would take it (@gt/kernel/slots/write createSlot's refusals). */
@@ -219,7 +210,7 @@ export function fixtureSchedule(d: ScheduleDraft, nowMs: number): Result<SlotVie
   if (exportIdOf(d.item) === undefined) return err("refused", exportOnly(d.item, d.channel));
   if (!canSchedule(ch)) return err("conflict", `${d.channel} is not wired`, { detail: "channel_not_wired" });
   if (ITEMS[d.item] === undefined) return err("conflict", `unknown item ${d.item}`, { detail: "export_missing" });
-  const held = [...t.value.values()].find((r) => r.slot.libraryItemId === d.item && r.slot.channel === d.channel && HOLDS.includes(r.slot.state));
+  const held = [...t.value.values()].find((r) => r.slot.libraryItemId === d.item && r.slot.channel === d.channel && holds(railOfRow(r)));
   if (held !== undefined) return err("conflict", `${d.item} is already on ${d.channel} (slot ${held.slot.id}, ${held.slot.state} for ${held.slot.at})`);
   minted += 1;
   const slot = door({ id: `sl-new-${minted}`, libraryItemId: d.item, channel: channel.data, at: d.at, state: "scheduled", title: d.title, description: d.description, tags: [...d.tags] });
