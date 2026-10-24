@@ -7,6 +7,7 @@ a reader holds at once; job.py re-exports what a worker catches.
 
 import json
 import os
+import sqlite3
 import sys
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -69,6 +70,23 @@ class Stopped(JobError):
     def __init__(self, job):
         super().__init__("job %s is %s; the drive stops and gives its slot back" % (job["id"], job["state"]))
         self.state = job["state"]
+
+
+def beat_once(conn, clock, slot, fence):
+    """One beat of a run's heartbeat thread (job.py `start_heartbeat`), as lease-renewal has it:
+    a store busy past its timeout misses this beat (False) and the next renews - the ttl/3 cadence
+    is that margin; a lost slot raises LeaseLost; so does any other failure, naming it, because a
+    slot that cannot be renewed is lost to the run (Node's beat carries a throw to its loop too)."""
+    try:
+        with Tx(conn, clock) as t:
+            heartbeat_in(t, slot, fence)
+    except LeaseLost:
+        raise
+    except Exception as e:  # noqa: BLE001 - classified here, never swallowed
+        if isinstance(e, sqlite3.OperationalError) and ("locked" in str(e) or "busy" in str(e)):
+            return False
+        raise LeaseLost("the heartbeat on %s failed: %s" % (slot, e)) from e
+    return True
 
 
 def lane_slots(lane):

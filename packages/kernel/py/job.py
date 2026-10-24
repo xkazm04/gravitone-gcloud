@@ -50,7 +50,7 @@ import uuid
 _HERE = os.path.dirname(os.path.abspath(__file__))
 if _HERE not in sys.path:
     sys.path.append(_HERE)  # behind the caller's entries: job_record.py says why
-from job_record import (BREAKER_LIMIT, DEFAULT_TTL_S, ERROR_CODES, HOLD_SENTENCE, FenceConflict, JobError,  # noqa: E402,F401
+from job_record import (BREAKER_LIMIT, DEFAULT_TTL_S, ERROR_CODES, HOLD_SENTENCE, FenceConflict, JobError, beat_once,  # noqa: E402,F401
                         LaneHeld, LeaseError, LeaseLost, NotQueued, Refused, SlotsBusy, Stopped, Tx, assert_fence,
                         claim_in, connect, dry_only_from, fence_loss, heartbeat_in, interrupt, job_event, lane_hold,
                         lane_slots, load, meter_of, move, ms, outputs_of, pid_alive, process_holder, put, read_row,
@@ -189,8 +189,7 @@ class JobRun:
             try:
                 while not stop.wait(every):
                     try:
-                        with Tx(conn, self.jobs.clock) as t:
-                            heartbeat_in(t, self.slot, self.fence)
+                        beat_once(conn, self.jobs.clock, self.slot, self.fence)  # busy misses one beat; a loss raises
                     except LeaseLost as e:
                         self._lost = LeaseLost("job %s lost %s: %s" % (self.job_id, self.slot, e))
                         return

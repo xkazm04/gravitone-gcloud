@@ -1,4 +1,4 @@
-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { spawn, spawnSync, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { copyFileSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline";
@@ -254,5 +254,55 @@ describe.skipIf(python === undefined)("spec/job.json: Node and Python drive jobs
         k.close();
       }
     }, 30_000);
+  }
+});
+
+// job.py's heartbeat is a daemon thread (lease-renewal: every ttl/3, never per unit). Two ways it
+// can meet the store, measured from Python with the thread's own beats counted:
+//   - busy (`database is locked`): one beat missed is what the ttl/3 cadence is for; the thread
+//     beats again, and the run never hears of it;
+//   - anything else (`disk I/O error`): the slot can no longer be renewed, so the run's next call
+//     raises - the loss reaches the work loop, as Node's beat carries a throw (job-run.ts).
+// A thread that died on either one stopped renewing while the run went on writing, unwarned.
+describe.skipIf(python === undefined)("the Python heartbeat meets a store error", () => {
+  const cases = [
+    { name: "a busy store misses one beat and the thread keeps renewing", error: "database is locked", expect: "BEATING" },
+    { name: "any other store error stops the run at its next call", error: "disk I/O error", expect: "STOPPED" },
+  ] as const;
+  for (const [n, c] of cases.entries()) {
+    it(c.name, () => {
+      const db = path.join(tmp.dir, `heartbeat-${n}.sqlite`);
+      copyFileSync(template, db);
+      const k = must(openKernel(db, { snapshotDir: tmp.dir }));
+      must(enqueue(k.store, { id: "hb", of: { kind: "run", id: "run-hb" }, producer: "forge", lane: "gpu.local" }, operator));
+      k.close();
+      const code = [
+        "import sqlite3, sys, time",
+        `sys.path.append(${JSON.stringify(path.join(here, "..", "py"))})`,
+        "import job, job_record",
+        "calls = []",
+        "real = job_record.heartbeat_in",
+        "def flaky(*a):",
+        "    calls.append(1)",
+        `    if ${c.expect === "BEATING" ? "len(calls) == 1" : "True"}:`,
+        `        raise sqlite3.OperationalError(${JSON.stringify(c.error)})`,
+        "    return real(*a)",
+        "job.heartbeat_in = job_record.heartbeat_in = flaky",
+        `jobs = job.Jobs(${JSON.stringify(db)})`,
+        "run = jobs.claim('hb', dry_only=True)",
+        "run.start_heartbeat(every_s=0.02)",
+        "time.sleep(1.0)",
+        "alive = run._beat[1].is_alive()",
+        "try:",
+        "    run.start('a')",
+        "    print('BEATING' if alive and len(calls) > 2 else 'DEAD after %d beat(s)' % len(calls))",
+        "except job.LeaseError as e:",
+        "    print('STOPPED' if not alive else 'RAISED with the thread alive: %s' % e)",
+        "run._stop_heartbeat()",
+        "jobs.close()",
+      ].join("\n");
+      const r = spawnSync(python ?? "python", ["-I", "-c", code], { encoding: "utf8", timeout: 30_000 });
+      expect({ out: r.stdout.trim(), traceback: r.stderr.includes("Traceback") }).toEqual({ out: c.expect, traceback: false });
+    });
   }
 });
