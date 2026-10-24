@@ -8,7 +8,7 @@ import { mediaLaneSchema, type MediaLane } from "@gt/domain/lane";
 import { packetModeSchema, packetSourceSchema, packetStateSchema, type PacketState } from "@gt/domain/packet";
 import { reasonVocabulary } from "@gt/domain/source";
 import type { Reader } from "../store.ts";
-import { applyStatus } from "./apply.ts";
+import { applyStatus, applyStatusOf } from "./apply.ts";
 import { returnedPlan } from "./commit.ts";
 import { pairOutcomes, planUndo } from "./core.ts";
 import { currentDecisions, head, items, must, pairsOf, readPacket, revealPicks, rows } from "./read.ts";
@@ -95,6 +95,11 @@ const summaryRow = z.object({
   items: z.number().int().nonnegative(),
   decided: z.number().int().nonnegative(),
   opened_at: z.string(),
+  apply_act: z.enum(["commit", "return"]).nullable(),
+  apply_state: z.enum(["pending", "applied", "stuck"]).nullable(),
+  apply_attempts: z.number().int().nonnegative().nullable(),
+  apply_last_error: z.string().nullable(),
+  apply_next_at: z.string().nullable(),
 });
 
 /**
@@ -113,8 +118,10 @@ export function listPacketSummaries(r: Reader, opts: ListOptions = {}): PacketLi
             (SELECT count(*) FROM packet_items i WHERE i.packet_id = p.id) AS items,
             (SELECT count(*) FROM decisions d
               WHERE d.packet_id = p.id AND d.verdict IS NOT NULL
-                AND d.seq = (SELECT max(d2.seq) FROM decisions d2 WHERE d2.packet_id = d.packet_id AND d2.candidate_id = d.candidate_id)) AS decided
+                AND d.seq = (SELECT max(d2.seq) FROM decisions d2 WHERE d2.packet_id = d.packet_id AND d2.candidate_id = d.candidate_id)) AS decided,
+            a.act AS apply_act, a.state AS apply_state, a.attempts AS apply_attempts, a.last_error AS apply_last_error, a.next_at AS apply_next_at
        FROM packets p
+       LEFT JOIN packet_applies a ON a.packet_id = p.id
       WHERE (? IS NULL OR p.state = ?) AND (? IS NULL OR json_extract(p.body, '$.lane') = ?)
       ORDER BY p.state = 'open' DESC, p.opened_at DESC, p.id
       LIMIT ?`,
@@ -122,7 +129,12 @@ export function listPacketSummaries(r: Reader, opts: ListOptions = {}): PacketLi
   );
   const packets: PacketSummary[] = found.slice(0, limit).map((x) => {
     const s = must(parseAt("packet summary", summaryRow, x));
-    const apply = applyStatus(r, s.id);
+    // The outbox row rides the rail's one query: asked per packet it was 1 + N reads (ledger-sync
+    // asks for 500 twice). The row is all-or-nothing, so its key column says whether there is one.
+    const apply =
+      s.apply_act === null || s.apply_state === null || s.apply_attempts === null || s.apply_next_at === null
+        ? undefined
+        : applyStatusOf({ act: s.apply_act, state: s.apply_state, attempts: s.apply_attempts, lastError: s.apply_last_error, nextAt: s.apply_next_at });
     return {
       id: s.id,
       lane: s.lane,

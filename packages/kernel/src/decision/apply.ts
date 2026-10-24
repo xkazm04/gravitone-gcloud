@@ -189,7 +189,11 @@ export function redriveApply(t: Tx, input: Author & { readonly packetId: PacketI
 /** A surface's view of one packet's apply, or undefined before its commit. */
 export function applyStatus(r: Reader, packetId: string): ApplyStatus | undefined {
   const row = rowOf(r, packetId);
-  if (row === undefined) return undefined;
+  return row === undefined ? undefined : applyStatusOf(row);
+}
+
+/** The status of an outbox row already read (the rail joins it rather than asking per packet). */
+export function applyStatusOf(row: Pick<ApplyRow, "act" | "state" | "attempts" | "lastError" | "nextAt">): ApplyStatus {
   return {
     act: row.act,
     state: row.state,
