@@ -23,11 +23,12 @@
 // be the first crack in it. A surface that needs a price before the call gets
 // it through a prop or the API, never through an import.
 //
-// THE BROWSER'S ROUTE INTO THIS TABLE is `GET /api/imaging/pricing`, served by
-// `priceTable()` at the bottom of this file. It exists because the alternative
-// was a component restating a number this table owns — app/library/Playground.tsx
-// carried its own `0.045` — and a price declared twice is a price that rots.
-// What crosses that wire is audited in the route handler, and the audit rests on
+// THE WIRE SHAPE OF THIS TABLE is `priceTable()` at the bottom of this file,
+// served by pricingHandler.ts. Its v1 route, `GET /api/imaging/pricing`, retired
+// with the v1 pages (Phase 6 L70); it existed because a component had restated
+// a number this table owns — the v1 Playground carried its own `0.045` — and a
+// price declared twice is a price that rots. A public route that serves it again
+// is admitted through imaging-auth's DELIBERATELY_PUBLIC, whose audit rests on
 // one property of this module: **it reads no `process.env` and imports nothing
 // that does.** Its only import is type-only and therefore erased. Keep it that
 // way; a `keyFor()` or an `isConfigured()` in here would put the seam's whole
@@ -288,7 +289,7 @@ export function priceCall(args: {
 // Everything above prices a call that already happened. A surface that is about
 // to spend money needs the figure BEFORE the click, and it cannot import this
 // file to get it (see the header). So the two functions below are the wire
-// shape, served by app/api/imaging/pricing/route.ts.
+// shape, served by pricingHandler.ts.
 //
 // They are deliberately derived from `PRICES` alone. Nothing here reads the
 // environment, asks which vendors are configured, or consults the router's

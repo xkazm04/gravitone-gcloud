@@ -13,7 +13,8 @@
 // lib/imaging/ may.
 //
 // SERVER ONLY. Every provider holds an API key. Nothing here may be imported
-// from a component — the seam is app/api/imaging/*.
+// from a component — the studio reaches imaging through kernel jobs (the
+// producers call router.ts), never through an import.
 
 // Type-only, and it must stay that way: errors.ts imports this file back, so a
 // value import here would be a runtime cycle. `import type` is erased.
