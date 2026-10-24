@@ -3647,6 +3647,22 @@ export const MUTANTS: UnitMutant[] = [
     why: "A redrive whose Server Action never answers is an unhandled rejection: no toast, no re-read, and the decided desk still says stuck as if the button had not been pressed.",
   },
   {
+    id: "board-rail-failure-silent",
+    test: "tests/next-server/board-load.test.ts",
+    file: "app/(studio)/board/_board/load.ts",
+    find: "  if (!list.ok) console.error(`[board] rail: ${list.error.message}`);",
+    replace: "",
+    why: "A rail the store could not list draws empty and leaves no log line, so the decided desk's `weir clear` chip is the only account of a failure nobody can find afterwards.",
+  },
+  {
+    id: "board-open-unplanned-silent",
+    test: "tests/next-server/board-real.test.ts",
+    file: "app/(studio)/board/_port/real.ts",
+    find: "if (v.ok && v.value.view.state === \"open\") console.error(",
+    replace: "if (false) console.error(",
+    why: "An open packet whose v1 record will not read draws bare ids and empty media on a desk still taking verdicts, and v1's reason is lost: nothing in the server log says why the plates are blank.",
+  },
+  {
     id: "l61-narration-skips-gt-ui",
     test: "tests/next-gates/narration-gate.test.ts",
     file: "pipeline/check-narration.mjs",
