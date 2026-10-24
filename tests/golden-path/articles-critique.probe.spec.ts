@@ -229,6 +229,9 @@ test("schema: a review is held to the contract; the panel says who reviewed", ()
   // a reviewer quoting its workspace path does not carry a home path into the registry
   expect(scrubHomePaths("see C:\\Users\\someone\\AppData\\Local\\Temp\\ws\\post\\post.md and /home/al/x/y")).toBe("see ~/AppData\\Local\\Temp\\ws\\post\\post.md and ~/x/y");
   expect(validateReview(JSON.stringify({ verdict: "publish", summary: "read C:/Users/someone/ws/post.md", findings: [] }), spec).review.summary).toBe("read ~/ws/post.md");
+  // the same profile as a Windows shell spells it: lower-case drive, Git Bash, WSL
+  expect(scrubHomePaths("c:\\users\\someone\\ws and /c/Users/someone/AppData/x and /mnt/d/Users/al/y")).toBe("~/ws and ~/AppData/x and ~/y");
+  expect(scrubHomePaths("posts/c/Users-guide/x and https://h.example/c/Users/z/")).toBe("posts/c/Users-guide/x and https://h.example/c/Users/z/");
   expect(() => extractJsonObject("[1,2]")).toThrow();
 });
 

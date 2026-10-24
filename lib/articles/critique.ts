@@ -153,10 +153,14 @@ export function isWebUrl(s: unknown): s is string {
 
 /** A machine home path never leaves this machine in a review: the registry's
  *  privacy rule fails a publication that carries one, and a reviewer may quote
- *  its workspace path. Replaced, not rejected — the content stays. */
+ *  its workspace path. Replaced, not rejected — the content stays.
+ *  Wider than the registry gate's two patterns (its check-publications.mjs PROFILE): a Windows
+ *  profile path is case-blind, and a reviewer's shell may print it Git Bash style
+ *  (`/c/Users/<name>/`) or WSL style (`/mnt/c/Users/<name>/`), neither of which the gate sees. */
 export function scrubHomePaths(s: string): string {
   return s
-    .replace(/(?<![A-Za-z])[A-Za-z]:[\\/]{1,2}Users[\\/]{1,2}[^\\/\s`'"<>|:*?]+[\\/]/g, "~/")
+    .replace(/(?<![A-Za-z])[A-Za-z]:[\\/]{1,2}Users[\\/]{1,2}[^\\/\s`'"<>|:*?]+[\\/]/gi, "~/")
+    .replace(/(?<![\w.~:/-])(?:\/mnt)?\/[A-Za-z]\/Users\/[^/\s`'"<>|:*?]+\//gi, "~/")
     .replace(/(?<![\w.~:-])\/(?:home|Users)\/[^/\s`'"<>|:*?]+\//g, "~/");
 }
 
