@@ -50,6 +50,7 @@ import type { RunAgentInput, AgentResult } from "@/lib/agent/cliSeam";
 import { createRun, defaultDeps, type EngineDeps } from "./engine";
 import { listTopicSubjects, resolveRegistryDir, resolveTopicSubject } from "./registryRead";
 import { ArticleError, listRuns, storeRoot, writeJsonAtomic } from "./store";
+import { uniqueDir } from "./tempDir";
 import type { ArticleRun, ArticleStatus, TopicSubject } from "./types";
 
 /* ── covered topics ────────────────────────────────────────────────────────── */
@@ -392,9 +393,10 @@ export async function runLoop(opts: LoopOptions, baseDeps: EngineDeps = defaultD
     ? opts.topics.filter((t) => !start.covered.some((c) => c.key === t.subject) && !start.claimed.includes(t.subject))
     : rankUncovered(await listTopicSubjects(registry), start, { onlyBundles: AUDIENCE_BUNDLES }).map((t) => ({ subject: `${t.bundle}/${t.slug}` }));
 
-  const id = `loop-${new Date().toISOString().replace(/[-:]/g, "").replace(/\..*$/, "")}`;
-  const dir = path.join(loopsRoot(), id);
-  await fs.mkdir(dir, { recursive: true });
+  // The stamp is to the second, so two loops started in one second named one directory and wrote
+  // one loop.json and one events.log; uniqueDir appends a suffix the file system guarantees.
+  const dir = await uniqueDir(loopsRoot(), `loop-${new Date().toISOString().replace(/[-:]/g, "").replace(/\..*$/, "")}`);
+  const id = path.basename(dir);
   const report: LoopReport = {
     schema: "article-loop/1",
     id,

@@ -142,6 +142,18 @@ test("create: two runs on one topic at once both get a run, each under its own i
   for (const id of ids) expect((await readRun(id)).topic.text).toBe(topic.text);
 });
 
+test("loop: two loops started in the same second keep their own report and log", async () => {
+  publication("covered-one", "software-engineering", "token-budgeting", "2026-10-01-token-budgeting");
+  // The target is already met, so neither loop launches a run: the driver is never asked.
+  const idle = { start: () => Promise.reject(new Error("no launch")), resume: () => Promise.reject(new Error("no resume")), driven: async () => false };
+  const [a, b] = await Promise.all([runLoop({ target: 1, budgetUsd: 10 }, deps(), undefined, idle), runLoop({ target: 1, budgetUsd: 10 }, deps(), undefined, idle)]);
+  expect(a.id).not.toBe(b.id);
+  for (const r of [a, b]) {
+    expect(JSON.parse(readFileSync(path.join(loopsRoot(), r.id, "loop.json"), "utf8")).id).toBe(r.id);
+    expect(readFileSync(path.join(loopsRoot(), r.id, "events.log"), "utf8").match(/^.* START /gm)).toHaveLength(1);
+  }
+});
+
 test("loop: refuses to start without a budget or with an unclear target", async () => {
   await expect(runLoop({ target: 2 } as never, deps())).rejects.toMatchObject({ code: "no-budget" });
   await expect(runLoop({ budgetUsd: 0, target: 2 }, deps())).rejects.toMatchObject({ code: "no-budget" });
