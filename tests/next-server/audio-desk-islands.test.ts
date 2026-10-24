@@ -5,6 +5,9 @@
 // its answer, one that never answers is "no-answer" at the wait, and one that REJECTS - a Server
 // Action whose round trip failed rejects rather than answering `ok: false` - is its words, never a
 // rejection that skips the caller's settle and strands the card (and, for the rows, `rowsBusy`).
+// And one write per card at a time, `inFlight`: a move and a Suno return are both writes, and
+// either one in flight refuses the other (before, the return consulted nothing and the move
+// only another move).
 //
 // THE CARD DRAG (./useCardDrag.ts), driven through the node lane's one hook dispatcher
 // (tests/golden-path/_studio/hooks.ts) over EventTarget stand-ins for the card and the document:
@@ -24,7 +27,7 @@ vi.mock("../../app/(studio)/_shell/Providers.tsx", () => ({ useShell: () => ({ t
 
 import type { PointerEvent as ReactPointerEvent } from "react";
 
-import { answered } from "../../app/(studio)/audio/_audio/Arrange.tsx";
+import { answered, inFlight } from "../../app/(studio)/audio/_audio/Arrange.tsx";
 import { useCardDrag } from "../../app/(studio)/audio/_audio/useCardDrag.ts";
 import { useTransport } from "../../app/(studio)/audio/_audio/useTransport.ts";
 import { harness } from "../golden-path/_studio/hooks.ts";
@@ -51,6 +54,21 @@ describe("answered - every board write's wait", () => {
   it("a write that rejects resolves to its words, so the caller settles the card", async () => {
     const r = await answered(Promise.reject(new Error("Failed to fetch")), 15_000).catch((e: unknown) => ({ rejected: String(e) }));
     expect(r).toEqual({ threw: "Failed to fetch" });
+  });
+});
+
+describe("inFlight - one write per card", () => {
+  const none = new Map<string, { landed: boolean }>();
+  it("a card with nothing in flight, or whose move has landed, takes the next write", () => {
+    expect(inFlight(none, new Set(), "a")).toBeNull();
+    expect(inFlight(new Map([["a", { landed: true }]]), new Set(), "a")).toBeNull();
+  });
+  it("a move not yet answered refuses the next write, a return included", () => {
+    expect(inFlight(new Map([["a", { landed: false }]]), new Set(), "a")).toBe("a move is still in flight");
+  });
+  it("a return uploading refuses the next write, a move included", () => {
+    expect(inFlight(none, new Set(["a"]), "a")).toBe("a return is still uploading");
+    expect(inFlight(none, new Set(["b"]), "a")).toBeNull();
   });
 });
 

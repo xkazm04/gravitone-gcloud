@@ -11,7 +11,7 @@
 // it settles and is said once in the toast region; refused, the card returns and the store's own
 // sentence stays over the board until the next success. One write per card at a time - a second
 // gesture on a card whose first is in flight is refused here, because the first's rollback would
-// land on top of it (v1's rule). A request with no answer in ANSWER_MS resolves to refused with
+// land on top of it (v1's rule); a move and a Suno return are both writes (`inFlight`). A request with no answer in ANSWER_MS resolves to refused with
 // that sentence and the page re-reads the store, so nothing floats provisional forever - and a
 // request that REJECTS (the action's round trip failed) is refused with its words the same way.
 import { useRouter } from "next/navigation";
@@ -49,6 +49,13 @@ type Ask = { readonly id: string; readonly to: Cell; readonly file?: File };
 
 const DIR: Readonly<Record<string, Dir>> = { "←": "left", "→": "right", "↑": "up", "↓": "down", "⇧←": "left", "⇧→": "right", "⇧↑": "up", "⇧↓": "down" };
 const opId = (): string => crypto.randomUUID().replace(/-/g, "").slice(0, 20);
+
+/** The write a card has in flight, in words, or null: a move not yet answered, or a return uploading. */
+export function inFlight(pending: ReadonlyMap<string, { readonly landed: boolean }>, uploading: ReadonlySet<string>, id: string): string | null {
+  if (pending.get(id)?.landed === false) return "a move is still in flight";
+  if (uploading.has(id)) return "a return is still uploading";
+  return null;
+}
 
 function withPending(takes: readonly CardTake[], pending: ReadonlyMap<string, Pending>): CardTake[] {
   return takes.map((t) => {
@@ -126,8 +133,9 @@ export function Arrange({ view, acts }: { readonly view: ArrangeView; readonly a
 
   const move = async (stack: Stack<CardTake>, to: Cell, label?: string): Promise<void> => {
     const h = stack.head;
-    if (pending.has(h.id) && pending.get(h.id)?.landed === false) {
-      setRefusal(`${h.title} · a move is still in flight`);
+    const busy = inFlight(pending, uploading, h.id);
+    if (busy !== null) {
+      setRefusal(`${h.title} · ${busy}`);
       return;
     }
     const c = checkMove(stack, to, rows, label);
@@ -158,6 +166,11 @@ export function Arrange({ view, acts }: { readonly view: ArrangeView; readonly a
 
   const upload = async (stack: Stack<CardTake>, file: File, to: Stage, label?: string): Promise<void> => {
     const h = stack.head;
+    const busy = inFlight(pending, uploading, h.id);
+    if (busy !== null) {
+      setRefusal(`${h.title} · ${busy}`);
+      return;
+    }
     setAsk(null);
     setUploading((u) => new Set(u).add(h.id));
     const r = await uploadReturn({ head: h.id, stage: to, file, op: opId(), ...(label === undefined ? {} : { label }) });
