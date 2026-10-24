@@ -1601,7 +1601,7 @@ export const MUTANTS: UnitMutant[] = [
     id: "mv-dry-still-reaches-the-studio",
     test: "tests/next-server/producer-mv.test.ts",
     file: "lib/producers/mv.ts",
-    find: "      return unwrap(await ctx.meter.paid(JOB_USD, 0, intent, async () => ({ value: await eng.still(req), entries: [credits] })));",
+    find: "      return must(await ctx.meter.paid(JOB_USD, 0, intent, async () => ({ value: await eng.still(req), entries: [credits] })));",
     replace: "      return eng.still(req);",
     why: "A dry job buys a real studio still.",
   },

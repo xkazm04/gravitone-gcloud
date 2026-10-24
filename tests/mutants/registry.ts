@@ -424,4 +424,12 @@ export const MUTANTS: Mutant[] = [
     replace: "capabilities: {}",
     why: "initialize names no tools capability, so a conforming MCP client (Athena, Claude Code) never lists or calls a single studio tool.",
   },
+  {
+    id: "registry-graph-pulls-server-only",
+    probe: "producer-registry-loads.probe.spec.ts",
+    file: "lib/producers/style.ts",
+    find: "import { blobRootOf } from \"@/lib/kernelProcess\";",
+    replace: "import { blobRootOf } from \"@/lib/parts/gates\";",
+    why: "The worker's producer list loads lib/parts/gates and four more server-only modules at import again, so any process importing the registry without a server-only shim refuses to start.",
+  },
 ];
