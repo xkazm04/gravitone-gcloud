@@ -101,9 +101,14 @@ export function compose(seed: Seed, target: Target, hands: Readonly<Record<strin
     if (seed.avoid.length) s += ` No ${seed.avoid.join(", no ")}.`;
     return s;
   }
-  const lines = [`Style: ${[...g, ...mo, ...ins, ...tk].join(", ")}`];
-  if (seed.avoid.length) lines.push(`Exclude: ${seed.avoid.join(", ")}`);
-  lines.push("", INSTRUMENTAL);
+  // Suno's dialect is drawn FROM the form `sunoFieldsOf` sends, not written a second time: it was,
+  // and the drawn line said "108 BPM" and ran past STYLE_MAX while the sent one said "108 bpm" and
+  // was cut at 200 - the composer showed words Suno never received.
+  const f = sunoFieldsOf(seed, hands);
+  const exclude = fitTo(seed.avoid.join(", "), EXCLUDE_MAX);
+  const lines = [`Style: ${f?.style ?? ""}`];
+  if (exclude !== "") lines.push(`Exclude: ${exclude}`);
+  lines.push("", f?.lyrics ?? INSTRUMENTAL);
   return lines.join("\n");
 }
 

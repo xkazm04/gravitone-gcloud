@@ -95,7 +95,20 @@ describe("the recipe", () => {
   test("the two dialects (v1 compose), each phrased through the hand", () => {
     const hands = handsOf(terms);
     expect(compose(SEED, "elevenlabs", hands)).toBe("Light chamber instrumental, 108 BPM, G major. Built on plucked strings and kazoo.");
-    expect(compose({ ...SEED, avoid: ["brass"] }, "suno", hands).split("\n")).toEqual(["Style: chamber, light, plucked strings, kazoo, 108 BPM, G major", "Exclude: brass", "", "[Instrumental]"]);
+    expect(compose({ ...SEED, avoid: ["brass"] }, "suno", hands).split("\n")).toEqual(["Style: chamber, light, plucked strings, kazoo, 108 bpm, G major", "Exclude: brass", "", "[Instrumental]"]);
+  });
+
+  test("the Suno prompt drawn is the form sent: the same style line and fence, cut to the same limits", () => {
+    const hands = handsOf(terms);
+    const long = { ...SEED, instruments: Array.from({ length: 40 }, (_, i) => `instrument-${i}`), avoid: Array.from({ length: 40 }, (_, i) => `fence-${i}`) };
+    for (const seed of [SEED, { ...SEED, avoid: ["brass"] }, long]) {
+      const f = sunoFieldsOf(seed, hands);
+      const lines = compose(seed, "suno", hands).split("\n");
+      expect(lines[0]).toBe(`Style: ${f?.style ?? ""}`);
+      expect(lines.find((l) => l.startsWith("Exclude: "))).toBe(f?.exclude === undefined ? undefined : `Exclude: ${f.exclude}`);
+    }
+    // A seed of fences alone still draws its fence, though there is no style to send.
+    expect(compose({ ...BLANK_SEED, avoid: ["vocals"] }, "suno", {}).split("\n")).toEqual(["Style: ", "Exclude: vocals", "", "[Instrumental]"]);
   });
 
   test("a word is added once and removed by name; the keep rate is smoothed", () => {
