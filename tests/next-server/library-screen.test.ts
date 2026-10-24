@@ -17,6 +17,9 @@
 //      life of the result, over rows that had since landed.
 //   5. The set summary's "Newest" row is the newest pictures. It drew the answer's first pictures
 //      whatever the sort, so sorted by name it showed the alphabet's first under "Newest".
+//   6. The widths the keys read are the widths the stylesheet draws. useNarrow.ts says it reads
+//      "the same breakpoints the stylesheet uses" so Esc's cascade closes the drawer that is
+//      drawn; the two were two literals each, and nothing held them together.
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -133,5 +136,22 @@ describe("5. the set summary's Newest row is the newest pictures", () => {
 
   it("the summary is handed it", () => {
     expect(code("Library.tsx")).toContain("const newest = newestOf(u.sort, page.items);");
+  });
+});
+
+describe("6. the widths the keys read are the widths the stylesheet draws", () => {
+  it("useNarrow's detail and rail queries are library.module.css's drawer breakpoints", () => {
+    const hook = code("useNarrow.ts");
+    const queries = new Map([...hook.matchAll(/const (DETAIL|RAIL) = "\(max-width: (\d+)px\)"/g)].map((m) => [m[1], Number(m[2])]));
+    const q = (name: string): number => queries.get(name) ?? NaN;
+    const css = readFileSync(path.join(DIR, "library.module.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    // The two steps that make a drawer: the detail's (.det absolute) and the rail's (.nav absolute).
+    const blocks = [...css.matchAll(/@media \(max-width:(\d+)px\)\{([\s\S]*?)\r?\n\}/g)].map((m) => ({ at: Number(m[1]), rules: m[2] ?? "" }));
+    const absolute: Record<string, RegExp> = { ".det": /\.det[^{]*\{[^}]*position:absolute/, ".nav": /\.nav\{[^}]*position:absolute/ };
+    const drawerAt = (sel: ".det" | ".nav"): number[] => blocks.filter((b) => absolute[sel]?.test(b.rules) === true).map((b) => b.at);
+    // The walk read both queries and both drawer steps; a silent miss would read as agreement.
+    expect(queries.size).toBe(2);
+    expect(drawerAt(".det")).toEqual([q("DETAIL")]);
+    expect(drawerAt(".nav")).toEqual([q("RAIL")]);
   });
 });

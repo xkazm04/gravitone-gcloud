@@ -5947,4 +5947,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "    if (pins.length > 0) return err(",
     why: "The fixture Library holds one pin an item, so a default pin after a pin into a named collection is refused as already pinned where the kernel marks it.",
   },
+  {
+    id: "library-narrow-detail-drifts-from-css",
+    test: "tests/next-server/library-screen.test.ts",
+    file: "app/(studio)/library/_library/useNarrow.ts",
+    find: "const DETAIL = \"(max-width: 1359px)\";",
+    replace: "const DETAIL = \"(max-width: 1439px)\";",
+    why: "Between 1360px and 1439px the keys think the detail is a drawer the stylesheet draws as a column: Esc closes a panel that was never a drawer instead of deselecting, and ⏎ on a narrow-only path misfires.",
+  },
 ];
