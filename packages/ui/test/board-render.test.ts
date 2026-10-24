@@ -17,6 +17,7 @@ import { SeriesBadge } from "../src/components/cull/SeriesBadge.tsx";
 import { IdeaList } from "../src/components/cull/IdeaList.tsx";
 import { MatrixCull } from "../src/components/cull/MatrixCull.tsx";
 import { VariantCard } from "../src/components/cull/VariantCard.tsx";
+import { CommitButton } from "../src/components/desk/Desk.tsx";
 import { railGroups } from "../src/components/desk/PacketRail.tsx";
 import { BlindPair } from "../src/components/pair/BlindPair.tsx";
 
@@ -109,6 +110,24 @@ describe("the matrix cull", () => {
   test("with nothing open the commit button waits for nothing", () => {
     const html = renderToStaticMarkup(h(MatrixCull, { packet: p, verdicts: { a: { verdict: "keep", reasons: [] }, b: { verdict: "keep", reasons: [] } }, decide: noop, undo: noop, onCommit: noop, keys: false }));
     expect(html).toContain('aria-label="commit packet"');
+  });
+});
+
+describe("the commit button", () => {
+  // A refused press replays the shake. A changed `key` would replay it by REMOUNTING the button,
+  // and the node holding focus would be destroyed: a keyboard press refused drops focus to the
+  // document (registry accessibility/keyboard-navigation-models). The button keeps its identity
+  // across refusals and restarts the animation by alternating its class instead.
+  type Btn = { readonly key: string | null; readonly props: { readonly className: string } };
+  const at = (refusals: number) => CommitButton({ mode: "board.cull", waiting: "3 undecided", refusals, onPress: noop }) as unknown as Btn;
+
+  test("a refusal replays the shake without remounting the button", () => {
+    expect([0, 1, 2, 3].map((n) => at(n).key)).toEqual([null, null, null, null]);
+    expect(at(0).props.className).not.toMatch(/refuse/);
+    expect(at(1).props.className).toMatch(/refuse/);
+    expect(at(2).props.className).toMatch(/refuse/);
+    expect(at(1).props.className).not.toBe(at(2).props.className);
+    expect(at(1).props.className).toBe(at(3).props.className);
   });
 });
 

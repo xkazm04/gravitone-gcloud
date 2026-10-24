@@ -2489,6 +2489,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "A layer's button would do nothing on a screen reader's activation, which sends a click with no pointer press before it.",
   },
   {
+    id: "commit-button-remounts-on-refusal",
+    test: "packages/ui/test/board-render.test.ts",
+    file: "packages/ui/src/components/desk/Desk.tsx",
+    find: "className={cx(s.commit, waiting !== undefined && s.wait, refusals > 0 && s.refuse, refusals > 0 && refusals % 2 === 0 && s.again)}",
+    replace: "key={refusals} className={cx(s.commit, waiting !== undefined && s.wait, refusals > 0 && s.refuse, refusals > 0 && refusals % 2 === 0 && s.again)}",
+    why: "Each refused press would remount the commit button, so a keyboard user who pressed it early would lose focus to the document body.",
+  },
+  {
     id: "produce-strips-run-renamed-at-confirm",
     test: "tests/next-server/produce-real.test.ts",
     file: "lib/produce/laneDoors.ts",

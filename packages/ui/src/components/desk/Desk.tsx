@@ -91,10 +91,12 @@ export type CommitButtonProps = {
 export function CommitButton({ mode, waiting, refusals, busy = false, split, onPress }: CommitButtonProps) {
   const parts = split === undefined ? "" : `${split.now} · ${split.later} later`;
   return (
+    // Each refusal restarts the shake by swapping between two identical animations (a changed
+    // animation-name restarts it). A changed `key` did it by remounting, and the press that was
+    // refused lost focus with the node it was on.
     <button
-      key={refusals}
       type="button"
-      className={cx(s.commit, waiting !== undefined && s.wait, refusals > 0 && s.refuse)}
+      className={cx(s.commit, waiting !== undefined && s.wait, refusals > 0 && s.refuse, refusals > 0 && refusals % 2 === 0 && s.again)}
       aria-label={`commit packet${parts === "" ? "" : `, ${parts}`}${waiting === undefined ? "" : `, ${waiting}`}`}
       aria-busy={busy || undefined}
       onClick={onPress}

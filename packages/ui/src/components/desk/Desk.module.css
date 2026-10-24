@@ -28,5 +28,7 @@
 .commit:hover{background:color-mix(in srgb,var(--emerald) 22%,transparent)}
 .wait{border-color:var(--hair-2);background:color-mix(in srgb,var(--wash) 75%,transparent);color:var(--muted)}
 .refuse{border-color:color-mix(in srgb,var(--rose) 60%,transparent);background:var(--rose-a);animation:shake .4s}
+.refuse.again{animation-name:shake-again}
 @keyframes shake{25%{transform:translateX(calc(-1 * var(--sp-tight)))}75%{transform:translateX(var(--sp-tight))}}
-@media (prefers-reduced-motion: reduce){.refuse{animation:none}}
+@keyframes shake-again{25%{transform:translateX(calc(-1 * var(--sp-tight)))}75%{transform:translateX(var(--sp-tight))}}
+@media (prefers-reduced-motion: reduce){.refuse,.refuse.again{animation:none}}
