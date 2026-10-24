@@ -10447,6 +10447,180 @@
       "evaluatedTs": "2026-10-24T02:37:17.740Z",
       "worker": "f98b025d-2a46-4121-94c3-420353024a33",
       "techniques": []
+    },
+    "8c6c65cc-6679-4c2c-8951-670d77b8ad7c/module-design": {
+      "context": "imaging-gateway-and-spend",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T02:59:21.806Z",
+      "worker": "313ef69f-8e31-455c-97a5-3d1bf190c21a",
+      "techniques": [
+        {
+          "technique": "marked-unverifiable-region",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/http.ts:95 Generic unchecked cast inside the one HTTP door every provider uses: not minimal, not marked, and no written fact makes it valid. Contrast api.ts:41, which narrows only after a guard."
+        },
+        {
+          "technique": "module-depth",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/router.ts:3 Callers learn only the capability and an optional steer. Vendor choice, fallback, keys and the trail stay hidden behind generate/edit/recognize."
+        },
+        {
+          "technique": "locality-and-leverage",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/router.ts:4 The dev/prod vendor-plan decision lives in one table (PLAN), so that change class lands in one place."
+        },
+        {
+          "technique": "seams-and-adapters",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/router.ts:112 Each vendor is an adapter of one ImagingProvider interface, reached through a single door table. Caveat: the table is closed, and tests substitute vendors by stubbing globalThis.fetch beneath the adapters."
+        },
+        {
+          "technique": "concurrency-at-the-edge",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/receipts.ts:13 In receipts.ts, joining a single flight is the module's own logic: a sequential version would have to rebuild the coordination by hand, so the concurrency belongs there."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/budget.ts:389 Budget decisions take time as a parameter. Weaker spot: receipts.ts:158 swaps a module-level clock through a test hook (__setReceiptClock) instead of passing time in."
+        },
+        {
+          "technique": "declarative-or-sequential",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/router.ts:334 The fallback walk mixes effects (trail pushes, throws, logs) into classification, and its branches do different work, so an explicit loop is the right form."
+        }
+      ]
+    },
+    "f770abb6-6609-4c9f-959f-a31407dc501f/module-design": {
+      "context": "domain-run-job-steps",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T02:59:21.806Z",
+      "worker": "313ef69f-8e31-455c-97a5-3d1bf190c21a",
+      "techniques": [
+        {
+          "technique": "marked-unverifiable-region",
+          "verdict": "deviation",
+          "evidence": "packages/domain/src/steps/registry.ts:57 Unmarked cast with no written reason it is valid. transitions.ts:19 shows the checked form, `filter((k): k is S => k in table)`, so the hatch was not needed. Low blast radius today."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/transitions.ts:26 The domain is transition functions returning Result. A grep across the context's files found no clock, fetch or env reads."
+        },
+        {
+          "technique": "declarative-or-sequential",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/run.machine.ts:21 The state machine is declared as a data table, and adding a state is one edit."
+        },
+        {
+          "technique": "module-depth",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/transitions.ts:3 A four-member interface (states, can, assert, next) hides the table, and every machine shares it."
+        },
+        {
+          "technique": "locality-and-leverage",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/lane.capacity.ts:27 Five scattered copies of lane capacity were collapsed into one table that both the lease and the view read."
+        }
+      ]
+    },
+    "13ee868d-574a-4147-b72e-11339db0250d/module-design": {
+      "context": "bound-producers",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T02:59:21.806Z",
+      "worker": "313ef69f-8e31-455c-97a5-3d1bf190c21a",
+      "techniques": [
+        {
+          "technique": "marked-unverifiable-region",
+          "verdict": "deviation",
+          "evidence": "lib/producers/research.ts:129 The hatch was enlarged for convenience and carries its invariant once at the definition, not at each use. cut.ts:177 `written<Aspect>(String(unit.input[\"aspect\"]))` and cut.ts:128 `written<BlobRef>(ref)` fall outside the stated fact."
+        },
+        {
+          "technique": "module-depth",
+          "verdict": "deviation",
+          "evidence": "lib/producers/research.ts:48 Temporal decomposition: the glue every step binding shares (must, asData, written, partFacts, meteredText, driveStep) lives in research.ts because research runs first. cut, frames, motion, score, script, still, voice and words all import it from there."
+        },
+        {
+          "technique": "seams-and-adapters",
+          "verdict": "conformant",
+          "evidence": "lib/producers/still.ts:37 Vendor engines and the blob store are injected adapters with live defaults, so a test substitutes them at the binding."
+        },
+        {
+          "technique": "locality-and-leverage",
+          "verdict": "conformant",
+          "evidence": "lib/producers/registry.ts:44 Adding a producer is one file plus one registry line. Lanes are read from the catalog join, so there is no second list to keep (line 59)."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "lib/producers/registry.ts:100 Lane derivation takes the day as a parameter and does no I/O."
+        },
+        {
+          "technique": "declarative-or-sequential",
+          "verdict": "conformant",
+          "evidence": "lib/producers/registry.ts:108 A pure transformation written as a composition."
+        }
+      ]
+    },
+    "3eb496e8-52aa-446d-bf75-07dc7c891b16/module-design": {
+      "context": "kernel-python-protocol",
+      "subject": "module-design",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T02:59:21.806Z",
+      "worker": "313ef69f-8e31-455c-97a5-3d1bf190c21a",
+      "techniques": [
+        {
+          "technique": "seams-and-adapters",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/lease_spec.py:6 Two producers of one protocol held to one parity table, as the technique prescribes."
+        },
+        {
+          "technique": "io-free-core",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/lease.py:127 The claim decision takes rows, time and a liveness callback as inputs. Tx and Leases inject the clock, and the spec drives a fake clock."
+        },
+        {
+          "technique": "module-depth",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/lease.py:9 The worker's surface is acquire, heartbeat, release and assert_fence over FIFO tickets, fences and the hash-chained ledger."
+        },
+        {
+          "technique": "declarative-or-sequential",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/lease.py:146 One pass produces two outputs, the outcome and the write list, so explicit sequential code is the right form."
+        },
+        {
+          "technique": "concurrency-at-the-edge",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/job.py:200 The heartbeat thread lives in the JobRun driver. The *_in protocol functions stay sequential."
+        },
+        {
+          "technique": "state-carrier-decides-the-lane",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/job.py:183 The forked heartbeat lane takes its own connection, and the docstring states the one shared field (the loss) and how it merges back at the join."
+        },
+        {
+          "technique": "borrowed-surface",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/lease.py:330 Lease forwards nothing of Leases or the connection. It exposes only fenced heartbeat and release, each enforcing the fence."
+        },
+        {
+          "technique": "marked-unverifiable-region",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/lease_pid.py:19 The ctypes FFI is confined to one module behind pid_alive and stays minimal, and each magic value carries the fact that makes it valid (lines 21 and 26 too)."
+        }
+      ]
     }
   }
 }

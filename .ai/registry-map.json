@@ -3224,7 +3224,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/producers/research.ts:129 A generic unchecked-cast helper, named like a door, is exported to every step binding and used well beyond the invariant its doc comment states (records this binding's own landing wrote), e.g. casting a job's unit input string to an Aspect union at cut.ts:177.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "video-assembly",
@@ -3991,7 +3995,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/domain/src/steps/registry.ts:57 This is an unchecked key-union assertion with no stated invariant, in a package whose own record door says 'never cast' and whose transitions.ts does the same Object.keys narrowing through a checked type predicate. The hatch was opened where the checked path could already express the operation.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "quality-gates",
@@ -5531,7 +5539,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/imaging/http.ts:95 The shared vendor HTTP helper returns every provider's response body as a caller-chosen T with no runtime check and no stated invariant, so every adapter's typed view of a foreign party's bytes is an unmarked assertion rather than a checked surface.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "multi-provider-gateway-plane",
@@ -6170,7 +6182,11 @@
           "revision": 18,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/kernel/py/lease_spec.py:6 The Python lease, job and style modules are second implementations of TypeScript kernel protocols, and a shared JSON spec run against both holds them to one contract. The decision logic is a pure function, with the clock, the pid probe and threads kept at the driver edge.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7c8008f2207b1946",
+          "evaluatedRevision": 18
         },
         {
           "subject": "engine-host-contract",

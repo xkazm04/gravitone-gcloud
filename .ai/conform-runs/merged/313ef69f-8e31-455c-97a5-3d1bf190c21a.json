@@ -1,0 +1,263 @@
+{
+ "schema": "conform-run/1",
+ "worker": "313ef69f-8e31-455c-97a5-3d1bf190c21a",
+ "subject": "module-design",
+ "evaluatedAt": "2026-10-24T02:59:21.806184+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "imaging-gateway-and-spend",
+   "subject": "module-design",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/imaging/http.ts:95 The shared vendor HTTP helper returns every provider's response body as a caller-chosen T with no runtime check and no stated invariant, so every adapter's typed view of a foreign party's bytes is an unmarked assertion rather than a checked surface.",
+   "techniques": [
+    {
+     "technique": "marked-unverifiable-region",
+     "verdict": "deviation",
+     "evidence": "lib/imaging/http.ts:95 Generic unchecked cast inside the one HTTP door every provider uses: not minimal, not marked, and no written fact makes it valid. Contrast api.ts:41, which narrows only after a guard."
+    },
+    {
+     "technique": "module-depth",
+     "verdict": "conformant",
+     "evidence": "lib/imaging/router.ts:3 Callers learn only the capability and an optional steer. Vendor choice, fallback, keys and the trail stay hidden behind generate/edit/recognize."
+    },
+    {
+     "technique": "locality-and-leverage",
+     "verdict": "conformant",
+     "evidence": "lib/imaging/router.ts:4 The dev/prod vendor-plan decision lives in one table (PLAN), so that change class lands in one place."
+    },
+    {
+     "technique": "seams-and-adapters",
+     "verdict": "conformant",
+     "evidence": "lib/imaging/router.ts:112 Each vendor is an adapter of one ImagingProvider interface, reached through a single door table. Caveat: the table is closed, and tests substitute vendors by stubbing globalThis.fetch beneath the adapters."
+    },
+    {
+     "technique": "concurrency-at-the-edge",
+     "verdict": "conformant",
+     "evidence": "lib/imaging/receipts.ts:13 In receipts.ts, joining a single flight is the module's own logic: a sequential version would have to rebuild the coordination by hand, so the concurrency belongs there."
+    },
+    {
+     "technique": "io-free-core",
+     "verdict": "conformant",
+     "evidence": "lib/imaging/budget.ts:389 Budget decisions take time as a parameter. Weaker spot: receipts.ts:158 swaps a module-level clock through a test hook (__setReceiptClock) instead of passing time in."
+    },
+    {
+     "technique": "declarative-or-sequential",
+     "verdict": "conformant",
+     "evidence": "lib/imaging/router.ts:334 The fallback walk mixes effects (trail pushes, throws, logs) into classification, and its branches do different work, so an explicit loop is the right form."
+    }
+   ]
+  },
+  {
+   "context": "domain-run-job-steps",
+   "subject": "module-design",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/domain/src/steps/registry.ts:57 This is an unchecked key-union assertion with no stated invariant, in a package whose own record door says 'never cast' and whose transitions.ts does the same Object.keys narrowing through a checked type predicate. The hatch was opened where the checked path could already express the operation.",
+   "techniques": [
+    {
+     "technique": "marked-unverifiable-region",
+     "verdict": "deviation",
+     "evidence": "packages/domain/src/steps/registry.ts:57 Unmarked cast with no written reason it is valid. transitions.ts:19 shows the checked form, `filter((k): k is S => k in table)`, so the hatch was not needed. Low blast radius today."
+    },
+    {
+     "technique": "io-free-core",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/transitions.ts:26 The domain is transition functions returning Result. A grep across the context's files found no clock, fetch or env reads."
+    },
+    {
+     "technique": "declarative-or-sequential",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/run.machine.ts:21 The state machine is declared as a data table, and adding a state is one edit."
+    },
+    {
+     "technique": "module-depth",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/transitions.ts:3 A four-member interface (states, can, assert, next) hides the table, and every machine shares it."
+    },
+    {
+     "technique": "locality-and-leverage",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/lane.capacity.ts:27 Five scattered copies of lane capacity were collapsed into one table that both the lease and the view read."
+    }
+   ]
+  },
+  {
+   "context": "bound-producers",
+   "subject": "module-design",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/producers/research.ts:129 A generic unchecked-cast helper, named like a door, is exported to every step binding and used well beyond the invariant its doc comment states (records this binding's own landing wrote), e.g. casting a job's unit input string to an Aspect union at cut.ts:177.",
+   "techniques": [
+    {
+     "technique": "marked-unverifiable-region",
+     "verdict": "deviation",
+     "evidence": "lib/producers/research.ts:129 The hatch was enlarged for convenience and carries its invariant once at the definition, not at each use. cut.ts:177 `written<Aspect>(String(unit.input[\"aspect\"]))` and cut.ts:128 `written<BlobRef>(ref)` fall outside the stated fact."
+    },
+    {
+     "technique": "module-depth",
+     "verdict": "deviation",
+     "evidence": "lib/producers/research.ts:48 Temporal decomposition: the glue every step binding shares (must, asData, written, partFacts, meteredText, driveStep) lives in research.ts because research runs first. cut, frames, motion, score, script, still, voice and words all import it from there."
+    },
+    {
+     "technique": "seams-and-adapters",
+     "verdict": "conformant",
+     "evidence": "lib/producers/still.ts:37 Vendor engines and the blob store are injected adapters with live defaults, so a test substitutes them at the binding."
+    },
+    {
+     "technique": "locality-and-leverage",
+     "verdict": "conformant",
+     "evidence": "lib/producers/registry.ts:44 Adding a producer is one file plus one registry line. Lanes are read from the catalog join, so there is no second list to keep (line 59)."
+    },
+    {
+     "technique": "io-free-core",
+     "verdict": "conformant",
+     "evidence": "lib/producers/registry.ts:100 Lane derivation takes the day as a parameter and does no I/O."
+    },
+    {
+     "technique": "declarative-or-sequential",
+     "verdict": "conformant",
+     "evidence": "lib/producers/registry.ts:108 A pure transformation written as a composition."
+    }
+   ]
+  },
+  {
+   "context": "kernel-python-protocol",
+   "subject": "module-design",
+   "bundle": "software-engineering",
+   "state": "conformant",
+   "evidence": "packages/kernel/py/lease_spec.py:6 The Python lease, job and style modules are second implementations of TypeScript kernel protocols, and a shared JSON spec run against both holds them to one contract. The decision logic is a pure function, with the clock, the pid probe and threads kept at the driver edge.",
+   "techniques": [
+    {
+     "technique": "seams-and-adapters",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/py/lease_spec.py:6 Two producers of one protocol held to one parity table, as the technique prescribes."
+    },
+    {
+     "technique": "io-free-core",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/py/lease.py:127 The claim decision takes rows, time and a liveness callback as inputs. Tx and Leases inject the clock, and the spec drives a fake clock."
+    },
+    {
+     "technique": "module-depth",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/py/lease.py:9 The worker's surface is acquire, heartbeat, release and assert_fence over FIFO tickets, fences and the hash-chained ledger."
+    },
+    {
+     "technique": "declarative-or-sequential",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/py/lease.py:146 One pass produces two outputs, the outcome and the write list, so explicit sequential code is the right form."
+    },
+    {
+     "technique": "concurrency-at-the-edge",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/py/job.py:200 The heartbeat thread lives in the JobRun driver. The *_in protocol functions stay sequential."
+    },
+    {
+     "technique": "state-carrier-decides-the-lane",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/py/job.py:183 The forked heartbeat lane takes its own connection, and the docstring states the one shared field (the loss) and how it merges back at the join."
+    },
+    {
+     "technique": "borrowed-surface",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/py/lease.py:330 Lease forwards nothing of Leases or the connection. It exposes only fenced heartbeat and release, each enforcing the fence."
+    },
+    {
+     "technique": "marked-unverifiable-region",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/py/lease_pid.py:19 The ctypes FFI is confined to one module behind pid_alive and stays minimal, and each magic value carries the fact that makes it valid (lines 21 and 26 too)."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "module-design",
+   "context": "decision-and-gates",
+   "reason": "evidence leans on parts/core.ts, which is not a tracked file"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-24T02:59:21.806184+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "module-design"
+   ],
+   "techniques": [
+    "concurrency-at-the-edge",
+    "declarative-or-sequential",
+    "io-free-core",
+    "locality-and-leverage",
+    "marked-unverifiable-region",
+    "module-depth",
+    "seams-and-adapters"
+   ],
+   "deviations": 1,
+   "context": "imaging-gateway-and-spend",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T02:59:21.806184+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "module-design"
+   ],
+   "techniques": [
+    "declarative-or-sequential",
+    "io-free-core",
+    "locality-and-leverage",
+    "marked-unverifiable-region",
+    "module-depth"
+   ],
+   "deviations": 1,
+   "context": "domain-run-job-steps",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T02:59:21.806184+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "module-design"
+   ],
+   "techniques": [
+    "declarative-or-sequential",
+    "io-free-core",
+    "locality-and-leverage",
+    "marked-unverifiable-region",
+    "module-depth",
+    "seams-and-adapters"
+   ],
+   "deviations": 1,
+   "context": "bound-producers",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T02:59:21.806184+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "module-design"
+   ],
+   "techniques": [
+    "borrowed-surface",
+    "concurrency-at-the-edge",
+    "declarative-or-sequential",
+    "io-free-core",
+    "marked-unverifiable-region",
+    "module-depth",
+    "seams-and-adapters",
+    "state-carrier-decides-the-lane"
+   ],
+   "deviations": 0,
+   "context": "kernel-python-protocol",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
