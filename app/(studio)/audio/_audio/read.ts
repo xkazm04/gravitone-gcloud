@@ -98,16 +98,17 @@ function draftState(j: SunoJob | undefined): DraftState {
   return j.state === "active" ? "running" : j.state;
 }
 
-export async function readAudio(): Promise<AudioView> {
-  const all = await read(() => listTakes({ fixtures: FIXTURE_MODE }));
-  const music = all.ok ? all.value.filter((t) => t.kind === "music") : [];
-  const terms = await read(async () => {
+function readTerms(): Promise<Read<Term[]>> {
+  return read(async () => {
     const [ledger, hands] = await Promise.all([readLedger(), readHands()]);
     return deriveVocabulary(computeInsights(ledger.verdicts).cells, hands)
       .filter((e) => e.n > 0)
       .map((e): Term => ({ id: e.id, term: e.term, facet: e.facet, n: e.n, kept: e.kept, rejected: e.rejected, keepRate: e.keepRate, stance: e.stance, phrase: e.phrase, topDefect: e.topDefect }));
   });
-  const drafts = await read(async () => {
+}
+
+function readDrafts(): Promise<Read<DraftRow[]>> {
+  return read(async () => {
     const { file, jobs } = await readSunoLive();
     return [...file.proposals]
       .sort((a, b) => b.createdAt - a.createdAt)
@@ -131,6 +132,12 @@ export async function readAudio(): Promise<AudioView> {
         };
       });
   });
+}
+
+export async function readAudio(): Promise<AudioView> {
+  // The three reads share nothing, so they wait together; each still fails on its own.
+  const [all, terms, drafts] = await Promise.all([read(() => listTakes({ fixtures: FIXTURE_MODE })), readTerms(), readDrafts()]);
+  const music = all.ok ? all.value.filter((t) => t.kind === "music") : [];
   const concept: ConceptTake[] = music.map((t) => ({
     referenceTrackId: t.referenceTrackId,
     verdict: t.verdict,
