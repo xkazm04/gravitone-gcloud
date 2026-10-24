@@ -6,13 +6,12 @@ import { err, ok, type Result } from "@gt/domain/errors";
 import type { ApplyClaim } from "@gt/kernel/decision/apply";
 import type { Store } from "@gt/kernel/store";
 import { decodeSchedule, scheduleWords } from "@gt/ui/components/review/schedule.ts";
-import type { ItemWords, ReviewCheck, ReviewDoc, Reviewer, RowWords } from "@gt/ui/board/port";
+import type { ItemWords, ReviewCheck, ReviewDoc, ReviewSection, Reviewer, RowWords } from "@gt/ui/board/port";
 
 import { approveRun, rejectRun } from "../../../articles/humanActs.ts";
 import { reworkRun } from "../../../articles/rework.ts";
 import { getRunDetail } from "../../../articles/runReads.ts";
 import { defaultDeps, type EngineDeps } from "../../../articles/engine.ts";
-import { sectionsOf } from "../../../articles/sections.ts";
 import { inRun, readRun, readTextFile, slugify } from "../../../articles/store.ts";
 import { continueArticle } from "../../../producers/article.ts";
 import { NOTE_MAX_CHARS, type ArticleRun, type ArticleRunDetail, type ArticleStatus } from "../../../articles/types.ts";
@@ -117,9 +116,28 @@ async function read(ref: AdapterRef): Promise<Result<ArticleV1>> {
 
 /* ── packet ────────────────────────────────────────────────────────────────── */
 
-/** post.md cut at its `## ` headings - lib/articles/sections.ts, where the explainer's cut of the
- *  same post lives beside it; re-exported so this source's callers and its pinned test read on. */
-export { sectionsOf };
+/** post.md cut at its `## ` headings (the cut lib/articles/checksProse.ts reads
+ *  the closing section by). A section's id is its heading, so the rework note
+ *  rendered from an edit plan names sections the way the writer reads them. */
+export function sectionsOf(md: string): ReviewSection[] {
+  const parts = md.split(/^## /m);
+  const seen = new Map<string, number>();
+  const named = (h: string): string => {
+    const n = (seen.get(h) ?? 0) + 1;
+    seen.set(h, n);
+    return n === 1 ? h : `${h} (${n})`;
+  };
+  const out: ReviewSection[] = [];
+  const opening = (parts[0] ?? "").replace(/^# [^\n]*\n?/, "").trim();
+  if (opening !== "") out.push({ id: named("Opening"), heading: "Opening", text: opening });
+  for (const p of parts.slice(1)) {
+    const nl = p.indexOf("\n");
+    const heading = (nl < 0 ? p : p.slice(0, nl)).trim();
+    if (heading === "") continue;
+    out.push({ id: named(heading), heading, text: nl < 0 ? "" : p.slice(nl + 1).trim() });
+  }
+  return out;
+}
 
 /** v1's machine pick, in its words (lib/board/sources/articles.ts articleEntry). */
 function checkSummary(d: ArticleRunDetail): { fails: number; summary: string } | undefined {

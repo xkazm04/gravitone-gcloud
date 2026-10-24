@@ -124,13 +124,4 @@ export function launchOf(kind: WorkKind, key: string, on: string): { option: Mod
   return { option: e.option, producer: e.decl.producer ?? PART_OPTIONS[kind].producer, routed: e.decl.via === "router" };
 }
 
-/** `launchOf` for a project's PART: the producer is the kind's `partProducer` when the catalog
- *  names one (a strips part runs `strip-cards`; a strip run of the same kind and option, launched
- *  through `launchOf`, stays `strips`). Every part launch reads this one: Plan, part act, import. */
-export function partLaunchOf(kind: WorkKind, key: string, on: string): { option: ModelOption; producer: string; routed: boolean } | undefined {
-  const l = launchOf(kind, key, on);
-  const own = PART_OPTIONS[kind].partProducer;
-  return l === undefined || own === undefined ? l : { ...l, producer: own };
-}
-
 export const unitNounOf = (kind: WorkKind): string => PART_OPTIONS[kind].unitNoun;

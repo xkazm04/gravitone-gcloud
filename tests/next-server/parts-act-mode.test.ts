@@ -1,7 +1,6 @@
-// LIVE IS A NAMED FEW (spark audio-postproduction-research WP2, WP3; explainer-real-article-strips):
-// the voice part's `record-line` and `fx-line` and the strips part's `draw-strips` are the only part
-// acts whose receipt may read `live`, and only where this process may spend (no GRAVITONE_DRY_ONLY)
-// and, for `record-line`, the vendor's key is configured. Every other act of every kind is priced
+// LIVE IS ONE ACT (spark audio-postproduction-research WP2): the voice part's `record-line` is the
+// only part act whose receipt may read `live`, and only where this process may spend (no
+// GRAVITONE_DRY_ONLY) and the vendor's key is configured. Every other act of every kind is priced
 // and launched `dry` whatever the environment says - real.ts is shared code, and a mistake there
 // opens spend for every part. Pinned twice: the pure rule over every act the editors offer, and
 // the real side's receipts and confirm over a kernel store. Nothing here confirms a live act.
@@ -61,12 +60,12 @@ function universe(recipe: string, id: string): { store: Store; port: ReturnType<
 }
 
 describe("which act may be priced live", () => {
-  it("is the voice part's two acts and the strips draw alone, over every act of every editor kind", () => {
+  it("is the voice part's two acts alone, over every act of every editor kind", () => {
     const live: string[] = [];
     for (const kind of Object.keys(PART_ACTS) as EditorKind[])
       for (const act of PART_ACTS[kind]) if (actModeOf(kind, act, { dryOnly: false, keyed: true }) === "live") live.push(`${kind}:${act}`);
-    expect(live.sort()).toEqual(["strips:draw-strips", "voice:fx-line", "voice:record-line"]);
-    expect([...LIVE_ACTS].sort()).toEqual(["strips:draw-strips", "voice:fx-line", "voice:record-line"]);
+    expect(live.sort()).toEqual(["voice:fx-line", "voice:record-line"]);
+    expect([...LIVE_ACTS].sort()).toEqual(["voice:fx-line", "voice:record-line"]);
   });
 
   it("is dry under GRAVITONE_DRY_ONLY, and dry with no vendor key", () => {
@@ -75,10 +74,6 @@ describe("which act may be priced live", () => {
     // fx-line speaks nothing: it is live without the vendor key, and dry under GRAVITONE_DRY_ONLY.
     expect(actModeOf("voice", "fx-line", { dryOnly: false, keyed: false })).toBe("live");
     expect(actModeOf("voice", "fx-line", { dryOnly: true, keyed: true })).toBe("dry");
-    // draw-strips is a seat turn and a local capture: live without the vendor key, dry under GRAVITONE_DRY_ONLY.
-    expect(actModeOf("strips", "draw-strips", { dryOnly: false, keyed: false })).toBe("live");
-    expect(actModeOf("strips", "draw-strips", { dryOnly: true, keyed: true })).toBe("dry");
-    expect(actModeOf("article", "write-article", { dryOnly: false, keyed: true })).toBe("dry");
   });
 });
 

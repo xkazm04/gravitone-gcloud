@@ -147,13 +147,6 @@ export const GATES: readonly Gate[] = [
     rationale: "pipeline/VOICE-FX-PROMPT.md against the stage kinds and bounds read off @gt/domain/audio.fx, its worked examples through the chain door, and proposeChain's refusals on a stub agent's recorded answers. Filesystem only, no model.",
   },
   {
-    id: "strip-explainer",
-    npmScript: "check:strip-explainer",
-    class: "blocking",
-    outcomes: "01",
-    rationale: "pipeline/STRIP-EXPLAINER-PROMPT.md against the caption and step bounds read off lib/foundry/strips/brief.ts, its worked example through the caption's door, and that door's refusals on fixed answers. Filesystem only, no model.",
-  },
-  {
     id: "style-refs",
     npmScript: "check:style-refs",
     class: "blocking",

@@ -15,7 +15,7 @@ import { recordImportedJobIn } from "@gt/kernel/job";
 import { digestOf } from "@gt/kernel/parts/core";
 import { projectRecords, writePartIn } from "@gt/kernel/parts/driver";
 import { stepPacketId } from "@gt/kernel/parts/gates";
-import { modelOptions, partLaunchOf } from "@gt/kernel/records/options";
+import { launchOf, modelOptions } from "@gt/kernel/records/options";
 import { loadParts, loadProject, putPart, putProject } from "@gt/kernel/records/schema";
 import type { StyleFacets } from "@gt/kernel/library/core";
 import { upsertItems } from "@gt/kernel/library/write";
@@ -145,7 +145,7 @@ function land(t: Tx, location: string, s: StagedProject, put: Put, actor: Actor)
     const part = row.part;
     const key = part.id.slice(p.id.length + 1);
     if (!isWork(part) || !p.done.includes(key)) continue;
-    const picked = partLaunchOf(part.kind, part.option, day) ?? partLaunchOf(part.kind, modelOptions(part.kind, day)[0]?.key ?? "", day);
+    const picked = launchOf(part.kind, part.option, day) ?? launchOf(part.kind, modelOptions(part.kind, day)[0]?.key ?? "", day);
     if (picked === undefined) throw new AppError("internal", `import: a ${part.kind} part has no option`);
     const jobId = `job:part:${part.id}`;
     // A terminal job for work v1 did, through the job machine (kernel `recordImportedJobIn`): the

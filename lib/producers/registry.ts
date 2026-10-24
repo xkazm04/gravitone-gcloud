@@ -6,7 +6,7 @@ import type { ProducerName } from "@gt/domain/run";
 import type { Producer } from "@gt/kernel/job-core";
 import type { Reader } from "@gt/kernel/store";
 import type { ProducerKey } from "@gt/kernel/job-queue-core";
-import { launchOf, modelOptions, partLaunchOf } from "@gt/kernel/records/options";
+import { launchOf, modelOptions } from "@gt/kernel/records/options";
 import { PROFILE_LANES } from "@gt/producers/profile/define";
 import { producerSet, type Bound } from "@gt/producers/set";
 
@@ -24,7 +24,6 @@ import { wordsProducer } from "./words.ts";
 import { voiceProducer } from "./voice.ts";
 import { mvProducer } from "./mv.ts";
 import { stripsProducer } from "./strips.ts";
-import { stripCardsProducer } from "./stripCards.ts";
 import { sunoProducer } from "./suno.ts";
 import { mediaFactsBound } from "./media-facts.ts";
 import { styleJobProducer } from "./style.ts";
@@ -95,19 +94,13 @@ const STEPS: readonly (readonly [ProducerName, StepFactory])[] = [
   ["still", stillProducer],
   ["words", wordsProducer],
   ["voice", voiceProducer],
-  // A strips part's cards (spark explainer-real-article-strips): on seat.text, the lane its one option's router candidate names.
-  ["strip-cards", stripCardsProducer],
 ];
 
 /** Every lane some part option runs `name` on, in catalog order (the lane is the router's, not the day's). */
 export function lanesOf(name: ProducerName, day: string = new Date().toISOString().slice(0, 10)): ResourceLane[] {
   const lanes: ResourceLane[] = [];
   for (const kind of WORK_KINDS) {
-    for (const o of modelOptions(kind, day)) {
-      // A run's producer, or a part's (`partLaunchOf`: a strips part runs `strip-cards`).
-      const runs = launchOf(kind, o.key, day)?.producer === name || partLaunchOf(kind, o.key, day)?.producer === name;
-      if (runs && !lanes.includes(o.lane)) lanes.push(o.lane);
-    }
+    for (const o of modelOptions(kind, day)) if (launchOf(kind, o.key, day)?.producer === name && !lanes.includes(o.lane)) lanes.push(o.lane);
   }
   return lanes;
 }

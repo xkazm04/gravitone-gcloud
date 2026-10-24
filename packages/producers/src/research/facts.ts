@@ -11,7 +11,7 @@ import { armLive, DRY as DRY_MODE, dryOnlyFrom } from "@gt/kernel/dryrun";
 import type { StepContext } from "@gt/kernel/job-core";
 import { gateContext } from "@gt/kernel/parts/gates";
 import { projectRecords, readPartIn, type PartSnapshot } from "@gt/kernel/parts/driver";
-import { partLaunchOf } from "@gt/kernel/records/options";
+import { launchOf } from "@gt/kernel/records/options";
 import { planViewIn, readQueue } from "@gt/kernel/records/read";
 import { receiptFor, type PlanLine } from "@gt/kernel/records/receipt";
 import type { Reader, Store } from "@gt/kernel/store";
@@ -152,88 +152,26 @@ export function partActReceipt(store: Store, ref: PartActRef, units: UnitsFn, o:
   return r.ok ? r.value : r;
 }
 
-const usd2 = (cents: number): string => `$${(cents / 100).toFixed(2)}`;
-
-/**
- * A confirmed ceiling split across a split act's jobs, in proportion to each job's own worst case
- * (its receipt), in whole cents rounded down - so the shares never sum past the ceiling - and no
- * share below its job's worst case: a job capped under its own estimate would stop mid-card with
- * money the operator confirmed still unspent. A ceiling that cannot cover every worst case is
- * refused with the shortfall; one over jobs priced at nothing is split evenly.
- */
-export function splitCeiling(ceilingUsd: number, worstUsd: readonly number[]): Result<number[]> {
-  const total = Math.floor(ceilingUsd * 100 + 1e-6);
-  const worst = worstUsd.map((w) => Math.ceil(w * 100 - 1e-6));
-  const need = worst.reduce((a, b) => a + b, 0);
-  if (total < need) return err("refused", `the ceiling ${usd2(total)} does not cover the ${worst.length} jobs' worst case ${usd2(need)}: ${usd2(need - total)} short`);
-  const shares = need === 0 ? worst.map(() => Math.floor(total / worst.length)) : worst.map((w) => Math.floor((total * w) / need));
-  if (shares.some((c) => c <= 0)) return err("refused", `the ceiling ${usd2(total)} leaves a job of ${worst.length} with nothing to spend`);
-  return ok(shares.map((c) => c / 100));
-}
-
-/** `jobIds`: every job the confirm made or adopted (one, unless the act was split by unit). */
-export type ActLaunched = { readonly kind: "stale"; readonly fresh: StepReceipt } | { readonly kind: "launched"; readonly jobId: string; readonly jobIds: readonly string[]; readonly adopted: boolean; readonly receipt: StepReceipt };
-
-/** The units an untargeted act fans out to, one job each (`launchPartAct` `split`). */
-export type SplitFn = (plan: ActPlan) => readonly string[];
+export type ActLaunched = { readonly kind: "stale"; readonly fresh: StepReceipt } | { readonly kind: "launched"; readonly jobId: string; readonly adopted: boolean; readonly receipt: StepReceipt };
 
 /**
  * Confirm an act's receipt: ONE transaction recomputes it, answers a stale token with the fresh
  * receipt (nothing written), else enqueues the act's job (`enqueueActIn`: a live job for the same
  * act and unit is adopted - a double click is one purchase). Live needs an arm and is refused
  * under GRAVITONE_DRY_ONLY. The job is the part kind's producer on the chosen option's lane.
- *
- * SPLIT (spark explainer-real-article-strips): an untargeted act whose kind runs ONE JOB PER UNIT
- * (a strips part: a card a job, so the cards draw in parallel up to the lane's slots) passes
- * `split`, which names the targets the act's plan covers. The receipt and its token stay the
- * whole act's - the operator confirms one price, the sum of every target's units - and the same
- * transaction enqueues one targeted job per target, each planning only its own units.
- *
- * THE CEILING IS SPLIT, NEVER COPIED: a ceiling is each job's own, so N jobs each holding the
- * confirmed figure could together spend N times what the operator confirmed. Under a ceiling each
- * job gets its share (`splitCeiling`) and the shares never sum past it; a ceiling that cannot cover
- * every target's own worst case refuses the confirm, naming the shortfall, before anything is
- * enqueued. With NO ceiling nothing changes: every job runs uncapped, as an unsplit act's does.
  */
-export function launchPartAct(store: Store, ref: PartActRef, units: UnitsFn, o: ReceiptOptions & { readonly token: string; readonly actor: Actor; readonly dryOnly?: boolean; readonly split?: SplitFn }): Result<ActLaunched> {
+export function launchPartAct(store: Store, ref: PartActRef, units: UnitsFn, o: ReceiptOptions & { readonly token: string; readonly actor: Actor; readonly dryOnly?: boolean }): Result<ActLaunched> {
   const r = store.tx((t): Result<ActLaunched> => {
     const fresh = actReceiptIn(t, ref, units, o);
     if (!fresh.ok) return fresh;
     if (fresh.value.token !== o.token) return ok({ kind: "stale", fresh: fresh.value });
     const f = partFactsIn(t, ref.projectId, ref.partId, o.now);
-    const picked = partLaunchOf(f.part.kind, f.option.key, new Date(o.now).toISOString().slice(0, 10));
+    const picked = launchOf(f.part.kind, f.option.key, new Date(o.now).toISOString().slice(0, 10));
     const mode = o.mode === "live" ? armLive(o.actor, t.at, `receipt ${o.token.slice(0, 12)} confirmed`, { dryOnly: o.dryOnly ?? dryOnlyFrom(process.env) }) : ok(DRY_MODE);
     if (!mode.ok) return mode;
-    let targets: readonly (string | undefined)[] = [ref.target];
-    const snap = (): PartSnapshot | null => (isStepKind(f.part.kind) ? readPartIn(t, { projectId: ref.projectId, partId: ref.partId }) : null);
-    const splitting = ref.target === undefined && o.split !== undefined;
-    if (splitting && o.split !== undefined) {
-      const plan = units(snap(), f, { act: ref.act });
-      if (!plan.ok) return plan;
-      targets = o.split(plan.value);
-      if (targets.length === 0) return err("internal", `${ref.act}: the plan names no unit to split into`);
-    }
-    let ceilings: readonly (number | undefined)[] = targets.map(() => o.ceilingUsd);
-    if (o.ceilingUsd !== undefined && splitting) {
-      const s = snap();
-      const worsts: number[] = [];
-      for (const target of targets) {
-        const p = units(s, f, { act: ref.act, ...(target === undefined ? {} : { target }) });
-        if (!p.ok) return p;
-        worsts.push(p.value.units.reduce((n, u) => n + (u.estimate.usd ?? 0), 0));
-      }
-      const shares = splitCeiling(o.ceilingUsd, worsts);
-      if (!shares.ok) return shares;
-      ceilings = shares.value;
-    }
-    const jobs = targets.map((target, i) => {
-      const ask = { partId: ref.partId, act: ref.act, rev: fresh.value.subject.rev, ...(target === undefined ? {} : { target }) };
-      const ceilingUsd = ceilings[i];
-      return enqueueActIn(t, { ask, projectId: ref.projectId, producer: picked?.producer ?? f.part.kind, lane: f.option.lane, mode: mode.value, ...(ceilingUsd === undefined ? {} : { ceilingUsd }) }, o.actor);
-    });
-    const first = jobs[0];
-    if (first === undefined) return err("internal", `${ref.act}: no job was enqueued`);
-    return ok({ kind: "launched", jobId: first.jobId, jobIds: jobs.map((q) => q.jobId), adopted: jobs.every((q) => q.adopted), receipt: fresh.value });
+    const ask = { partId: ref.partId, act: ref.act, rev: fresh.value.subject.rev, ...(ref.target === undefined ? {} : { target: ref.target }) };
+    const q = enqueueActIn(t, { ask, projectId: ref.projectId, producer: picked?.producer ?? f.part.kind, lane: f.option.lane, mode: mode.value, ...(o.ceilingUsd === undefined ? {} : { ceilingUsd: o.ceilingUsd }) }, o.actor);
+    return ok({ kind: "launched", jobId: q.jobId, adopted: q.adopted, receipt: fresh.value });
   });
   return r.ok ? r.value : r;
 }

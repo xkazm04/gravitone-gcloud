@@ -83,10 +83,6 @@ export type KindOptions = {
   readonly route?: { readonly medium: string; readonly capability: string };
   /** The `@gt/producers` name a job of this kind runs under, unless the option names its own. */
   readonly producer: string;
-  /** The producer a project's PART of this kind runs under when it is not the kind's run producer
-   *  (it overrides every option's): a strips part draws cards for its article under `strip-cards`,
-   *  while a strip RUN of the same kind stays `strips` (kernel records/options.ts `partLaunchOf`). */
-  readonly partProducer?: string;
   readonly options: readonly OptionDecl[];
 };
 
@@ -255,10 +251,6 @@ export const PART_OPTIONS: Readonly<Record<WorkKind, KindOptions>> = {
     unitNoun: "card",
     route: { medium: "video", capability: "strip-render" },
     producer: "strips",
-    // A strips PART runs under `strip-cards` (one foundry strip per article section, landed in the
-    // part's STRIPS record - lib/producers/stripCards.ts); `strips` stays a strip RUN's producer,
-    // whose plan reads run.json by a run id a part id is not (spark explainer-real-article-strips).
-    partProducer: "strip-cards",
     options: [{ via: "router", provider: "strips", label: "strips · HTML/SVG 240f", fallback: STRIPS_SEAT }],
   },
   render: {

@@ -352,11 +352,6 @@ jobs:
       - name: voice fx
         run: npm run check:voice-fx
 
-      # BLOCKING. Holds the strip explainer addendum to the caption door that judges what the author
-      # turn writes under it (bounds read off the code, the worked example through the door) - offline, no model.
-      - name: strip explainer
-        run: npm run check:strip-explainer
-
       # BLOCKING. Pure function over lib/themes - the founding proof must survive
       # a full sheet in the reference window.
       - name: style refs

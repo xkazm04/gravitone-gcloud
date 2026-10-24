@@ -25,7 +25,6 @@ import { RESEARCH, type ResearchRec } from "./fixtureResearch.ts";
 import { SCRIPT, type ScriptRec } from "./fixtureScript.ts";
 import { encodeRecord } from "@gt/domain/steps/registry";
 import { isLaterKind, later, type KCtx, type LaterKind, type RecOf as KindRecOf } from "./kinds.ts";
-import { FIXTURE_ARTICLE } from "./fixturePosts.ts";
 
 // THE FIXTURE PART UNIVERSE - per project, one revisioned record per editor part and its op
 // log, in memory, with the rules L36's server side will keep (STEPS-DESIGN §3, COMMON 3/4):
@@ -161,8 +160,6 @@ function laterRec(ctx: Ctx, kind: LaterKind): Rec<object> {
 export function kctxOf(ctx: Ctx): KCtx {
   const k: KCtx = {
     ...ctx,
-    // The fixture universe's finished posts (./fixturePosts.ts), the real side's lib/articles reads.
-    article: FIXTURE_ARTICLE,
     rec: (kind) => recOf(ctx, kind).data,
     // Through each record's DOOR as the kernel stores them: both sides' readers read one shape.
     records: () => {

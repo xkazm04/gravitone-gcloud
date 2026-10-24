@@ -105,11 +105,7 @@ export const albumOpSchema = z.discriminatedUnion("op", [
   o({ op: z.literal("voice-fx-ask"), lineId: id, takeId: id, describe: z.string().trim().min(1).max(400) }),
 ]);
 
-// The article's one op: adopt a finished post by its address (the server reads and cuts the post;
-// lib/articles/adoptable.ts holds the id to a run id's shape before it becomes a path).
-export const articleOpSchema = z.discriminatedUnion("op", [o({ op: z.literal("article-adopt"), source: z.enum(["run", "publication"]), id })]);
-
-export const partOpSchema = z.union([researchOpSchema, scriptOpSchema, /* L39 */ framesOpSchema, motionOpSchema, /* L40 */ scoreOpSchema, cutOpSchema, albumOpSchema, articleOpSchema]);
+export const partOpSchema = z.union([researchOpSchema, scriptOpSchema, /* L39 */ framesOpSchema, motionOpSchema, /* L40 */ scoreOpSchema, cutOpSchema, albumOpSchema]);
 export const partActSchema = z.enum([
   ...PART_ACTS.research,
   ...PART_ACTS.script,

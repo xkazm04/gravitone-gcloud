@@ -3,7 +3,7 @@ import { PART_OPTIONS } from "@gt/catalog/partOptions";
 import { WORK_KINDS } from "@gt/catalog/recipes";
 import { LANE_CAPACITY, RESOURCE_LANES } from "@gt/domain/lane";
 import type { ModelOption } from "@gt/domain/produce";
-import { launchOf, modelOptions, partLaunchOf } from "../src/records/options.ts";
+import { launchOf, modelOptions } from "../src/records/options.ts";
 import { priceLine, receiptFor, rerouteDelta, tokenOf, type PlanLine, type QueueRead } from "../src/records/receipt.ts";
 import { schedule, type SchedItem } from "../src/records/schedule.ts";
 import { TABLES } from "../src/router/tables.ts";
@@ -78,15 +78,6 @@ describe("model options", () => {
     expect(launchOf("score", opt("score", "suno").key, DAY)).toMatchObject({ producer: "suno", routed: true });
     expect(launchOf("score", opt("score", "elevenlabs").key, DAY)).toMatchObject({ producer: "score", routed: true });
     expect(launchOf("frames", opt("frames", "comfy").key, DAY)).toMatchObject({ producer: "frames", routed: false });
-  });
-
-  it("a strips PART draws its cards under strip-cards, while a strip RUN of the same option stays strips", () => {
-    const strips = opt("strips", "strips").key;
-    expect(launchOf("strips", strips, DAY)).toMatchObject({ producer: "strips", routed: true });
-    expect(partLaunchOf("strips", strips, DAY)).toMatchObject({ producer: "strip-cards", routed: true, option: { lane: "seat.text" } });
-    // Every other kind's part runs what its run would.
-    expect(partLaunchOf("score", opt("score", "suno").key, DAY)?.producer).toBe("suno");
-    expect(partLaunchOf("voice", opt("voice", "elevenlabs-voice").key, DAY)?.producer).toBe("voice");
   });
 });
 

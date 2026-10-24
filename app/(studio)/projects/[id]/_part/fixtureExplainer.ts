@@ -4,7 +4,7 @@ import { expectedSecondsOf, judgeAcceptance, type Acceptance } from "@gt/domain/
 import type { FxChain } from "@gt/domain/audio.fx";
 import type { BlobRef } from "@gt/domain/blob";
 import { err, ok, type Result } from "@gt/domain/errors";
-import { albumOpLabel, type AdoptSource, type AdoptableView, type ArticleData, type ArticleOp, type EngineView, type PartActView, type PartVerdict, type StripsData, type TakeView, type VoiceData } from "@gt/domain/partView";
+import { albumOpLabel, type ArticleData, type EngineView, type PartActView, type PartVerdict, type StripsData, type TakeView, type VoiceData } from "@gt/domain/partView";
 
 import type { DerivedCut } from "@/lib/cut/deriveTimeline";
 import { explainerCut as deriveExplainerCut, linesOf as cardLines, spokenS, words } from "@/lib/cut/explainer";
@@ -22,22 +22,12 @@ import { asObj, type KCtx, type KindModule } from "./kinds.ts";
 //
 // THE RECORDS (L43): each part keeps its working record as its own step record (`article`,
 // `strips`, `voice` in @gt/domain/steps); the voice editor's ops write it on the real side. The
-// article and strips producers still book their outputs on their jobs (L37). The article's one op
-// adopts a FINISHED post (an approved article run, or a registry publication): the side reads the
-// post and cuts it BEFORE the op (lib/articles/adoptable.ts, ./real.ts) and hands the cut to the
-// pure apply through the context (`ctx.article`), so the op log keeps the post's address and
-// digest, never its text. On the fixture side each dry act lands a stand-in that says what it is
-// by its engine (`mode: "dry"`), never a borrowed project's; its adoptable posts are
-// ./fixturePosts.ts.
+// article and strips producers still book their outputs on their jobs (L37) - nothing lands those
+// two records yet but an import. On the fixture side each dry act lands a stand-in that says what
+// it is by its engine (`mode: "dry"`), never a borrowed project's.
 
 export type ArticleSection = { readonly id: string; readonly heading: string; readonly body: string };
-export type ArticleRec = { readonly title: string | null; readonly sections: readonly ArticleSection[]; readonly engine?: EngineView; readonly from?: { readonly source: AdoptSource; readonly id: string; readonly sha: string } };
-
-/** A finished post as the side read and cut it for an adopt (lib/articles/sections.ts `explainerSectionsOf`). */
-export type AdoptPost = { readonly source: AdoptSource; readonly id: string; readonly title: string; readonly sha: string; readonly sections: readonly ArticleSection[] };
-/** What the article part reads beside its record: the posts this machine holds, and the one an
- *  adopt names, read by the side before the op (absent = none read, and an adopt is refused). */
-export type ArticleInputs = { readonly adoptable: readonly AdoptableView[]; readonly post: (source: AdoptSource, id: string) => AdoptPost | undefined };
+export type ArticleRec = { readonly title: string | null; readonly sections: readonly ArticleSection[]; readonly engine?: EngineView };
 
 export type StripCard = { readonly id: string; readonly section: string; readonly title: string; readonly caption: string; readonly state: "drawn" | "pending" | "refused"; readonly blob?: BlobRef; readonly why?: string };
 export type StripsRec = { readonly cards: readonly StripCard[]; readonly engine?: EngineView };
@@ -64,40 +54,25 @@ const topicOf = (ctx: KCtx): string => ctx.project.title;
 const STEPS = ["research", "outline", "draft", "check", "critique"] as const;
 const HEADINGS = ["What it is", "How it works", "Where it breaks", "What to do"] as const;
 
-function articleData(ctx: KCtx, a: ArticleRec): ArticleData {
+function articleData(_ctx: KCtx, a: ArticleRec): ArticleData {
   return {
     face: "article",
     title: a.title,
     sections: a.sections.map((s) => ({ id: s.id, heading: s.heading, words: words(s.body), lead: s.body.split(/(?<=\.)\s/)[0] ?? "" })),
     words: a.sections.reduce((n, s) => n + words(s.body), 0),
-    // An adopted post's steps ran in ITS run, not this part's: none is reported here as done.
-    steps: a.title === null || a.from !== undefined ? [] : STEPS.map((name) => ({ name, state: "done" as const, usd: null })),
+    steps: a.title === null ? [] : STEPS.map((name) => ({ name, state: "done" as const, usd: null })),
     ...(a.engine === undefined ? {} : { engine: a.engine }),
-    adoptable: ctx.article?.adoptable ?? [],
-    ...(a.from === undefined ? {} : { from: a.from }),
   };
-}
-
-const whereOf = (source: AdoptSource): string => (source === "run" ? "article run" : "publication");
-
-/** Adopt a finished post: the record becomes its title and sections, and names the post it came
- *  from. The post was read by the side before the op; one it did not read is refused here. */
-function articleApply(ctx: KCtx, a: ArticleRec, op: ArticleOp): Result<ArticleRec> {
-  const p = ctx.article?.post(op.source, op.id);
-  if (p === undefined) return no(`no ${whereOf(op.source)} ${op.id} to adopt`);
-  if (p.sections.length === 0) return no(`${whereOf(op.source)} ${op.id} has no sections`);
-  if (a.from !== undefined && a.from.source === p.source && a.from.id === p.id && a.from.sha === p.sha) return no(`${whereOf(op.source)} ${op.id} is adopted already`);
-  return ok({ title: p.title, sections: p.sections, from: { source: p.source, id: p.id, sha: p.sha } });
 }
 
 const articleVerdict = (_ctx: KCtx, a: ArticleRec): PartVerdict =>
   a.sections.length === 0 ? { state: "empty", codes: [{ code: "no-article", text: "no article written" }] } : { state: "ready", codes: [{ code: "article-written", text: `${a.sections.length} sections · ${a.sections.reduce((n, s) => n + words(s.body), 0)} words` }] };
 
 export const ARTICLE_KIND: KindModule<"article"> = {
-  ops: ["article-adopt"],
+  ops: [],
   seed: () => ({ title: null, sections: [] }),
-  apply: articleApply,
-  label: (op) => `adopt ${op.id}`,
+  apply: () => no("an article is its run's: nothing in it is edited here"),
+  label: () => "article",
   verdict: articleVerdict,
   acts: (_ctx, a) => [{ act: "write-article", label: a.title === null ? "write article" : "write again", needs: [] }],
   units: (_ctx, _a, act) => (act === "write-article" ? ok(1) : no(`${act} is not an article act`)),

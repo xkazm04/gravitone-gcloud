@@ -26,7 +26,7 @@ import type { Receipt } from "./produce.ts";
 import type { AdBriefField, Connector, NoteKind, ResearchData, ScriptData } from "./partView.data.ts";
 import { FRAMES_ACTS, MOTION_ACTS, type FramesData, type FramesOp, type MotionData, type MotionOp } from "./partView.frames.ts";
 import { CUT_ACTS, SCORE_ACTS, type CutData, type CutOp, type ScoreData, type ScoreOp } from "./partView.finish.ts";
-import { ARTICLE_ACTS, RENDER_ACTS, STRIPS_ACTS, VOICE_ACTS, WORDS_ACTS, type AlbumOp, type ArticleData, type ArticleOp, type ExplainerOp, type RenderData, type StripsData, type VoiceData, type WordsData } from "./partView.album.ts";
+import { ARTICLE_ACTS, RENDER_ACTS, STRIPS_ACTS, VOICE_ACTS, WORDS_ACTS, type AlbumOp, type ArticleData, type ExplainerOp, type RenderData, type StripsData, type VoiceData, type WordsData } from "./partView.album.ts";
 
 export type * from "./partView.data.ts";
 export * from "./partView.frames.ts";
@@ -167,9 +167,8 @@ export type ScriptOp =
   | { readonly op: "pick-scenario"; readonly scenarioId: string };
 
 export type PartOps = { readonly research: ResearchOp; readonly script: ScriptOp } & L39Ops & L40Ops;
-/* L40 - the explainer's strips are their producer's run: no edit lands on them here. The article's
-   one edit is adopting a finished post (`article-adopt`); its words are the post's, never edited. */
-type L40Ops = { readonly score: ScoreOp; readonly cut: CutOp; readonly words: AlbumOp; readonly render: AlbumOp; readonly article: ArticleOp; readonly strips: never; readonly voice: ExplainerOp };
+/* L40 - the explainer's article and strips are their producers' runs: no edit lands on them here. */
+type L40Ops = { readonly score: ScoreOp; readonly cut: CutOp; readonly words: AlbumOp; readonly render: AlbumOp; readonly article: never; readonly strips: never; readonly voice: ExplainerOp };
 /* L39 */
 type L39Ops = { readonly frames: FramesOp; readonly motion: MotionOp };
 export type PartOp<K extends EditorKind = EditorKind> = PartOps[K];

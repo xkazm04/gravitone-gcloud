@@ -12,7 +12,7 @@ import { armLive, DRY } from "../dryrun.ts";
 import { append } from "../events.ts";
 import { enqueueIn } from "../job.ts";
 import type { Reader, Store, Tx } from "../store.ts";
-import { launchOf, modelOptions, partLaunchOf } from "./options.ts";
+import { launchOf, modelOptions } from "./options.ts";
 import { projectModel, readQueue, type ProjectModel, type ReadContext } from "./read.ts";
 import { priceLine, receiptFor, rerouteDelta, type PlanLine } from "./receipt.ts";
 import { runPlanOf, type RunPlan } from "./runplan.ts";
@@ -115,7 +115,7 @@ export function launchProject(store: Store, input: { id: string; baseRev: number
     for (const row of loadParts(t, input.id)) {
       const p = row.part;
       if (!isWork(p) || !toLaunch(m, p.id)) continue;
-      const picked = partLaunchOf(p.kind, p.option, day) ?? fallbackLaunch(p.kind, day);
+      const picked = launchOf(p.kind, p.option, day) ?? fallbackLaunch(p.kind, day);
       const est = priceLine(p.units, picked.option);
       const jobId = `job:part:${p.id}`;
       enqueueIn(
@@ -159,7 +159,7 @@ export function launchProject(store: Store, input: { id: string; baseRev: number
 /** A part whose option the catalog dropped launches on its kind's first option, as the plan priced it. */
 function fallbackLaunch(kind: WorkKind, day: string): NonNullable<ReturnType<typeof launchOf>> {
   const first = modelOptions(kind, day)[0];
-  const picked = first === undefined ? undefined : partLaunchOf(kind, first.key, day);
+  const picked = first === undefined ? undefined : launchOf(kind, first.key, day);
   if (picked === undefined) throw new AppError("internal", `launch: part kind ${kind} has no option`);
   return picked;
 }
