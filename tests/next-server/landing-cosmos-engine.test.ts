@@ -715,3 +715,46 @@ describe("stage.ts: Previous and Next keep the focus they were pressed with", ()
     expect(DOC.activeElement).toBe(DOC.body);
   });
 });
+
+describe("search.ts: closing the slip gives the focus back", () => {
+  //   9. #search is display:none once closed, so its input took the focus with it to <body>: Esc
+  //      (or the scrim, or the search button) left a keyboard user at the top of the page, not on
+  //      the medallion or the button the slip was opened from.
+  function searchCx(root: DomEl) {
+    const els = { search: kid(root), q: kid(root, "input"), res: kid(root, "ul"), searchBtn: kid(root, "button"), banner: kid(root) };
+    return { root, els, searchOpen: false, SIDX: null, sres: [], sel: 0, types: [], library: [], templates: [], typeById: new Map(), searchFrom: null };
+  }
+
+  test("Esc after '/' on a medallion puts the focus back on the medallion", async () => {
+    const root = shellDom();
+    const { closeSearch, openSearch } = await import("../../app/_landing/cosmos/engine/search.ts");
+    const cx = searchCx(root);
+    const med = kid(root, "button");
+    med.focus();
+    openSearch(cx as never);
+    expect(DOC.activeElement, "the slip takes the focus").toBe(cx.els.q);
+    closeSearch(cx as never);
+    expect(DOC.activeElement).toBe(med);
+  });
+
+  test("opened with nothing focused, closing it lands on the search button, not on <body>", async () => {
+    const root = shellDom();
+    const { closeSearch, openSearch } = await import("../../app/_landing/cosmos/engine/search.ts");
+    const cx = searchCx(root);
+    openSearch(cx as never);
+    closeSearch(cx as never);
+    expect(DOC.activeElement).toBe(cx.els.searchBtn);
+  });
+
+  test("an opener that a rebuild has since removed is not focused", async () => {
+    const root = shellDom();
+    const { closeSearch, openSearch } = await import("../../app/_landing/cosmos/engine/search.ts");
+    const cx = searchCx(root);
+    const med = kid(root, "button");
+    med.focus();
+    openSearch(cx as never);
+    med.remove();
+    closeSearch(cx as never);
+    expect(DOC.activeElement).toBe(cx.els.searchBtn);
+  });
+});

@@ -126,6 +126,8 @@ export interface Cx {
   hotEl: HTMLElement | null;
   lastPtr: string;
   searchOpen: boolean;
+  /** what had the focus when the search slip opened; it gets it back when the slip closes unpicked */
+  searchFrom: HTMLElement | null;
   SIDX: SearchEntry[] | null;
   sel: number;
   sres: SearchEntry[];
@@ -192,6 +194,7 @@ export function createCx(root: HTMLElement, galaxy: Galaxy, life: Life, opts: Co
     hotEl: null,
     lastPtr: "mouse",
     searchOpen: false,
+    searchFrom: null,
     SIDX: null,
     sel: 0,
     sres: [],

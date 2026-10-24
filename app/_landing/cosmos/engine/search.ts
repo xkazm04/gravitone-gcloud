@@ -61,6 +61,8 @@ export function renderRes(cx: Cx): void {
 export function openSearch(cx: Cx): void {
   if (cx.searchOpen) return;
   if (!cx.SIDX) cx.SIDX = buildIndex(cx);
+  const from = document.activeElement as HTMLElement | null;
+  cx.searchFrom = from && from !== cx.els.q && cx.root.contains(from) ? from : null;
   cx.searchOpen = true;
   cx.els.search.classList.add("on");
   const q = cx.els.q;
@@ -71,14 +73,20 @@ export function openSearch(cx: Cx): void {
   hideBanner(cx);
 }
 
-export function closeSearch(cx: Cx): void {
+/** closes the slip. #search is display:none then and its input takes the focus with it to <body>,
+ *  so it goes back to what the slip was opened from (else the search button); a pick passes
+ *  `refocus` false, because the level it flies to places the focus itself */
+export function closeSearch(cx: Cx, refocus = true): void {
   if (!cx.searchOpen) return;
   cx.searchOpen = false;
   cx.els.search.classList.remove("on");
+  const to = cx.searchFrom?.isConnected ? cx.searchFrom : cx.els.searchBtn;
+  cx.searchFrom = null;
+  if (refocus) to.focus({ preventScroll: true });
 }
 
 export function pickRes(cx: Cx, e: SearchEntry): void {
-  closeSearch(cx);
+  closeSearch(cx, false);
   if (e.k === "type") void navTo(cx, { lv: "type", type: e.id }, { fast: true });
   else if (e.k === "tpl") void navTo(cx, { lv: "tpl", type: e.type, tpl: e.id }, { fast: true });
   else if (e.k === "fam") void navTo(cx, { lv: "fam", fam: e.id }, { fast: true });
