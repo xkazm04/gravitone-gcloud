@@ -197,6 +197,16 @@ export function mayStopAtCeiling(r: Pick<Receipt, "totals">, ceiling: number | u
   return top > ceiling + 1e-9;
 }
 
+/**
+ * The worst case and the ceiling it crosses, as two figures that differ: in fmtUsd's grain when
+ * that tells them apart, else both in cents - `$54 over $54` is a crossing that reads as none.
+ */
+export function overWords(worst: number, ceiling: number): readonly [string, string] {
+  const a = fmtUsd(worst);
+  const b = fmtUsd(ceiling);
+  return a !== b ? [a, b] : [`$${worst.toFixed(2)}`, `$${ceiling.toFixed(2)}`];
+}
+
 /** `09:12` today, `Thu 09:12` on another day, both UTC (the day-line's clock). */
 export function when(iso: string, nowMs: number): string {
   const t = Date.parse(iso);

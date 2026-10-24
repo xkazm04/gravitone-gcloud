@@ -25,7 +25,7 @@ import { FIELD_ATTR } from "../../keymap/target.ts";
 import { Keycap } from "../keycaps/Keycaps.tsx";
 import { LaneChip } from "../runs/LaneChip.tsx";
 import { SourceTag } from "../source/SourceTag.tsx";
-import { changeCount, costWords, fmtDur, fmtUsd, NO_CHANGES, mayStopAtCeiling, parseCeiling, totalPriced, when, type LineField, type ReceiptChanges, type TotalField } from "./produce.ts";
+import { changeCount, costWords, fmtDur, fmtUsd, NO_CHANGES, mayStopAtCeiling, overWords, parseCeiling, totalPriced, when, type LineField, type ReceiptChanges, type TotalField } from "./produce.ts";
 import { Unpriced } from "./Unpriced.tsx";
 import s from "./Receipt.module.css";
 
@@ -181,7 +181,7 @@ export function Receipt({ receipt: r, changes = NO_CHANGES, ceiling, onCeiling, 
           />
         </label>
         {!parsed.ok && <ErrorLine message={parsed.error} />}
-        {over && <Chip label="may stop at ceiling" tone="amber" name={`worst case ${fmtUsd(worst)} over the ceiling ${parsed.ok && parsed.value !== undefined ? fmtUsd(parsed.value) : ""}`} />}
+        {over && parsed.ok && parsed.value !== undefined && <Chip label="may stop at ceiling" tone="amber" name={`worst case ${overWords(worst, parsed.value)[0]} over the ceiling ${overWords(worst, parsed.value)[1]}`} />}
         <button
           type="button"
           className={cx(s.confirm, busy && s.busy)}

@@ -234,6 +234,10 @@ describe("markup", () => {
     expect(under).not.toContain("may stop at ceiling");
     expect(under).toContain('data-mode="dry"');
     expect(under).toContain('aria-label="receipt, 1 line, dry"');
+    // four reels' band tops out at $54.40: a $54.20 ceiling is crossed, and the name says by what.
+    const reels = receipt([line("reels", ARTICLE, 1, 1, 0)], { totals: { seconds: 1, usd: 30.6, usdRange: [6.8, 54.4], unpriced: 0, src: "model" } });
+    const close = renderToStaticMarkup(h(Receipt, { receipt: reels, ceiling: "54.20", onCeiling: noop, onConfirm: noop, busy: false, nowMs: NOW }));
+    expect(close).toContain('aria-label="worst case $54.40 over the ceiling $54.20"');
     const bad = renderToStaticMarkup(h(Receipt, { receipt: banded, ceiling: "ten", onCeiling: noop, onConfirm: noop, busy: false, nowMs: NOW }));
     expect(bad).toMatch(/<button[^>]*aria-disabled="true"[^>]*>Confirm/);
   });
