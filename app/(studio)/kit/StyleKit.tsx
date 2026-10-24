@@ -6,7 +6,9 @@
 // under an earlier block; a gate held, open, locked). The prototype draws a style only inside the
 // Library's detail (library.js `body` for kind style: Evidence tallies + .evt, Recipe, Plates),
 // so those three keep its values and the rest are kit tokens set beside them. The pictures are
-// the repo's committed trial grid. Nothing a control does here leaves the specimen.
+// the presets' tracked plates (public/presets/*.jpg): the trial grid under public/trials is
+// gitignored, so every trial lands this style's one picture, as the atelier's fixture does.
+// Nothing a control does here leaves the specimen.
 
 import { useState } from "react";
 
@@ -23,15 +25,16 @@ import { Row, Section, Spec } from "./Spec.tsx";
 
 // A specimen's blob is its public file: the sha is the file's index in this list (a stand-in
 // key), the address the committed plate.
+const PLATE = "/presets/newsprint-cutout.jpg";
 const FILES: readonly string[] = [
-  ...STYLE_TRIALS.map((t) => `/trials/google/newsprint-cutout/${t.id}.jpg`),
+  PLATE,
   "/presets/data-neon.jpg",
   "/presets/signal-ledger.jpg",
   "/presets/chalk-argument.jpg",
 ];
 const ref = (file: string): BlobRef => ({ sha256: FILES.indexOf(file).toString(16).padStart(64, "0"), bytes: 1, mime: "image/jpeg" });
 const srcOf = (r: BlobRef): string => FILES[Number.parseInt(r.sha256, 16)] ?? "";
-const plate = (t: string): BlobRef => ref(`/trials/google/newsprint-cutout/${t}.jpg`);
+const plate = (_trial: string): BlobRef => ref(PLATE);
 
 const AT = "2026-09-02T09:40:00.000Z";
 const P = (id: string, trialId: string, state: ProofState, extra: Partial<StyleProofView> = {}): StyleProofView => {

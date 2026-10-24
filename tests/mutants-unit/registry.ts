@@ -5369,4 +5369,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "void rm;",
     why: "Every agy call leaves its agy-img-* workspace in tmp, with whatever the agent wrote into it.",
   },
+  {
+    id: "kit-draws-a-gitignored-trial-plate",
+    test: "tests/next-server/kit-sheet.test.ts",
+    file: "app/(studio)/kit/LibraryKit.tsx",
+    find: 'url: "/presets/chalk-argument.jpg" }, chips: ["hand made"',
+    replace: 'url: "/trials/google/chalk-argument/flywheel.jpg" }, chips: ["hand made"',
+    why: "A fresh clone's /kit draws a broken picture where the plate tile stands: the trial grid is gitignored and only the operator's disk has it.",
+  },
 ];

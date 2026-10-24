@@ -30,7 +30,7 @@ const card = (id: string, over: Partial<LibraryCard> & Pick<LibraryCard, "kind" 
 
 const CARDS: readonly LibraryCard[] = [
   card("image-0001", { kind: "image", title: "The exit · frame 0546", meta: "import · the-exit", state: "reference", face: { kind: "image", url: "/deck-art/template-cinematic.webp" }, chips: ["the exit", "deck-art"] }),
-  card("plate-0256", { kind: "plate", title: "Chalk Argument · build key flip", meta: "prompt-only · s450", state: "ratified", face: { kind: "image", url: "/trials/google/chalk-argument/flywheel.jpg" }, chips: ["hand made", "chalk", "dojo"] }),
+  card("plate-0256", { kind: "plate", title: "Chalk Argument · build key flip", meta: "prompt-only · s450", state: "ratified", face: { kind: "image", url: "/presets/chalk-argument.jpg" }, chips: ["hand made", "chalk", "dojo"] }),
   card("style-0006", { kind: "style", title: "Data Neon", meta: "graphic · extracted", state: "ratified", locked: true, face: { kind: "image", url: "/presets/data-neon.jpg" }, chips: ["graphic", "flat vector", "saturated vivid"] }),
   card("style-0008", { kind: "style", title: "Glass Harbor", meta: "cinematic · readback", state: "candidate", face: { kind: "swatch", name: "Glass Harbor", sub: "photoreal · complementary split", palette: ["#6a2d1f", "#1f5a43"] }, chips: ["cinematic", "photoreal"] }),
   card("audio-0457", { kind: "audio", title: "Melancholic risers · take 8", meta: "0:02", state: "ratified", source: "derived", face: { kind: "wave", peaks: Array.from({ length: 48 }, (_, i) => 0.25 + 0.7 * Math.abs(Math.sin(i * 0.41) * Math.cos(i * 0.13))) }, chips: ["melancholic", "sfx"] }),
@@ -70,7 +70,7 @@ export function LibrarySection() {
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const [pressed, setPressed] = useState(false);
   const [look, setLook] = useState("35mm-anamorphic");
-  const face: Face = { kind: "image", url: "/trials/google/chalk-argument/flywheel.jpg" };
+  const face: Face = { kind: "image", url: "/presets/chalk-argument.jpg" };
   return (
     <Section id="library">
       <Spec names={["Rail", "FacetGroup", "LibraryGlyph"]} source="library/Rail.tsx">

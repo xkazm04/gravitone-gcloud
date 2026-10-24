@@ -22,21 +22,39 @@
 //   5. The nav marks a section that is still in view. KitNav set the mark only on a section
 //      ENTERING its band and ignored one leaving it, so scrolling back up out of the section
 //      below left the mark on that section while the reader looked at the one above.
+//   6. Every picture a screen kit draws is a file git tracks. public/trials/**/*.jpg is
+//      gitignored (a fresh clone lacks it); the style atelier's fixture was moved off it
+//      (f03cf366) and the kit, its twin, still drew six plates a clone does not have. The case
+//      reads `git ls-files`, not the disk, so the operator's own regenerated plates cannot hide it.
 
+import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import { BINDINGS } from "@gt/ui/keymap/bindings";
 import { parseSource } from "@gt/ui/tokenSource";
 
+import { AudioSection } from "../../app/(studio)/kit/AudioKit.tsx";
+import { BoardSection } from "../../app/(studio)/kit/BoardKit.tsx";
+import { boardKitData } from "../../app/(studio)/kit/boardKitData.ts";
+import { FloorSection } from "../../app/(studio)/kit/FloorKit.tsx";
+import { LedgerSections } from "../../app/(studio)/kit/LedgerKit.tsx";
+import { LibrarySection } from "../../app/(studio)/kit/LibraryKit.tsx";
+import { PartSection } from "../../app/(studio)/kit/PartKit.tsx";
+import { ProduceSection } from "../../app/(studio)/kit/ProduceKit.tsx";
+import { RunsSection } from "../../app/(studio)/kit/RunsKit.tsx";
+import { StyleSection } from "../../app/(studio)/kit/StyleKit.tsx";
 import { SignalSections } from "../../app/(studio)/kit/Signal.tsx";
 import { DRAWN_GROUPS, TokenSections } from "../../app/(studio)/kit/Tokens.tsx";
 import { KitNav } from "../../app/(studio)/kit/KitNav.tsx";
 import { harness } from "../golden-path/_studio/hooks.ts";
+
+// boardKitData is a server module (it mints ids at the zod door); the guard is Next's, not node's.
+vi.mock("server-only", () => ({}));
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
 const CSS_ROOTS = ["app", "components", "packages/ui/src"];
@@ -217,5 +235,33 @@ describe("/kit: the nav marks the section in view", () => {
       g.document = saved.document;
       g.IntersectionObserver = saved.IntersectionObserver;
     }
+  });
+});
+
+/** The screen kits, each rendered as the page renders it. */
+const SCREENS: readonly (readonly [string, () => ReturnType<typeof h>])[] = [
+  ["runs", () => h(RunsSection)],
+  ["ledger", () => h(LedgerSections)],
+  ["floor", () => h(FloorSection)],
+  ["board", () => h(BoardSection, { data: boardKitData() })],
+  ["produce", () => h(ProduceSection)],
+  ["part", () => h(PartSection)],
+  ["audio", () => h(AudioSection)],
+  ["library", () => h(LibrarySection)],
+  ["style", () => h(StyleSection)],
+];
+
+describe("/kit: the screen kits draw only committed pictures", () => {
+  test("every src, poster and url() a screen kit renders is a file git tracks", () => {
+    const tracked = new Set(execFileSync("git", ["ls-files", "public"], { cwd: ROOT, encoding: "utf8" }).split(String.fromCharCode(10)).filter(Boolean));
+    expect(tracked.size, "git tracks nothing under public").toBeGreaterThan(10);
+    const named = new Map<string, string>();
+    for (const [screen, el] of SCREENS) {
+      const html = renderToStaticMarkup(el());
+      for (const m of html.matchAll(/(?:src|poster)="(\/[^"?#]*)"|url\((?:&quot;|&#x27;|['"])?(\/[^)"'&?#]+)/g)) named.set(m[1] ?? m[2] ?? "", screen);
+    }
+    expect(named.size, "the screen kits draw no picture").toBeGreaterThan(5);
+    const untracked = [...named].filter(([file]) => !tracked.has(`public${file}`)).map(([file, screen]) => `${screen}: ${file}`);
+    expect(untracked).toEqual([]);
   });
 });
