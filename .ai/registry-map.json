@@ -1064,7 +1064,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/critique.ts:378 The truth-dimension `critique` item passes once the writer (the reviewed candidate) has written a disposition with any non-empty reason for each blocker factual finding. It reads the writer's own account of how a finding was handled, never the revised post. Nothing checks those dispositions against the post, and the last round's rewrite is not re-reviewed (critique.ts:244), so a green critique row can stand over an artifact no reviewer saw.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "review-iteration-loops",
@@ -10905,7 +10909,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/review/PacketReview.tsx:205 The human gate draws each check row in one of two tones. The ReviewCheck type carries only `ok: boolean`, and the article adapter (lib/decision/v1/sources/article.ts:153) sets ok whenever the status is not \"fail\", so a not-measured item is drawn in the emerald pass tone. That is the green row nobody measured that lib/articles/checks.ts says must never read as passed; only the value text says \"not measured\".",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "agent-runtime-assembly",
@@ -11076,7 +11084,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/kernel/src/records/schema.ts:11 The context stores production run records (launch receipts, plans, reroutes, DRY or live mode, cost ceilings) and calendar publish slots. A search of packages/kernel/src/records and packages/kernel/src/slots found no rubric, benchmark, pass-rate or eval construct. The only `judge` hit is a gate part's `judges` field (read.ts:211) naming the part an operator gate waits on, and the only `scenario` hit is the ads-scenarios record key in digest.ts. No scenario suite is run or scored.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:7ccead00b7f92aba",
+          "evaluatedRevision": 37
         },
         {
           "subject": "data-access",

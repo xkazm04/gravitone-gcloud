@@ -1,0 +1,148 @@
+{
+ "schema": "conform-run/1",
+ "worker": "45b07cb8-b0ea-44d8-82f5-bd5a39515db1",
+ "subject": "eval-harness",
+ "evaluatedAt": "2026-10-24T04:25:32.793347+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "article-check-and-critique",
+   "subject": "eval-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/articles/critique.ts:378 The truth-dimension `critique` item passes once the writer (the reviewed candidate) has written a disposition with any non-empty reason for each blocker factual finding. It reads the writer's own account of how a finding was handled, never the revised post. Nothing checks those dispositions against the post, and the last round's rewrite is not re-reviewed (critique.ts:244), so a green critique row can stand over an artifact no reviewer saw.",
+   "techniques": [
+    {
+     "technique": "monitor-inside-the-loop",
+     "verdict": "deviation",
+     "evidence": "lib/articles/critique.ts:378 The reviewers read the artifact (critiqueReviews.ts:132), but the gate that feeds the human reads the writer's story about the artifact. There is no second reviewer that checks the story against the revised post."
+    },
+    {
+     "technique": "assertion-vs-judgment",
+     "verdict": "conformant",
+     "evidence": "lib/articles/checks.ts:3 Deterministic prose, static and rendered checks form their own layer. Model judgment is limited to the critique, and its reviews are held to a schema (validateReview) with URL evidence."
+    },
+    {
+     "technique": "failure-signatures-beside-the-pass-rate",
+     "verdict": "conformant",
+     "evidence": "lib/articles/checksReport.ts:25 A dimension that has no measured item goes to notMeasured instead of reading as a pass. checks.ts:7 states the rule."
+    },
+    {
+     "technique": "judge-stability",
+     "verdict": "conformant",
+     "evidence": "lib/articles/critique.ts:5 The panel spans claude, agy/gemini and codex/gpt with concrete model ids, reviews stay per reviewer and are never averaged, and each reviewer's prompt is snapshotted. Gaps: the receipt stamps the configured model, not the model the call resolved to, and there is no anchor-set drift check (there is also no trend line here)."
+    },
+    {
+     "technique": "eval-economics",
+     "verdict": "conformant",
+     "evidence": "lib/articles/critique.ts:59 Critique rounds are capped at 2 and the panel at 8. Each reviewer has a timeout, and per-reviewer cost is summed on the receipts."
+    },
+    {
+     "technique": "candidate-write-access",
+     "verdict": "conformant",
+     "evidence": "lib/articles/critiqueReviews.ts:144 Each reviewer works in a temp workspace that holds only copies, and whatever it wrote is enumerated onto its receipt. The checks run over the run directory after ingest, not inside the workspace."
+    },
+    {
+     "technique": "selection-over-noise",
+     "verdict": "not-applicable",
+     "evidence": "lib/articles/critiqueReviews.ts:126 A reviewer is retried only when its answer is malformed, never to keep a better review, and the receipt records the attempts. Nothing selects a best-of-N result."
+    }
+   ]
+  },
+  {
+   "context": "review-and-runs-history",
+   "subject": "eval-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/ui/src/components/review/PacketReview.tsx:205 The human gate draws each check row in one of two tones. The ReviewCheck type carries only `ok: boolean`, and the article adapter (lib/decision/v1/sources/article.ts:153) sets ok whenever the status is not \"fail\", so a not-measured item is drawn in the emerald pass tone. That is the green row nobody measured that lib/articles/checks.ts says must never read as passed; only the value text says \"not measured\".",
+   "techniques": [
+    {
+     "technique": "failure-signatures-beside-the-pass-rate",
+     "verdict": "deviation",
+     "evidence": "packages/ui/src/components/review/PacketReview.tsx:205 The report's three states (pass, fail, not measured) become two tones at the gate, so a detector that could not fire is drawn like a passing one."
+    },
+    {
+     "technique": "judge-stability",
+     "verdict": "conformant",
+     "evidence": "packages/ui/src/components/review/PacketReview.tsx:212 Each reviewer's vote and note is shown separately before any count, so the panel's disagreement stays visible instead of being averaged away."
+    }
+   ]
+  },
+  {
+   "context": "run-records-and-slots",
+   "subject": "eval-harness",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/kernel/src/records/schema.ts:11 The context stores production run records (launch receipts, plans, reroutes, DRY or live mode, cost ceilings) and calendar publish slots. A search of packages/kernel/src/records and packages/kernel/src/slots found no rubric, benchmark, pass-rate or eval construct. The only `judge` hit is a gate part's `judges` field (read.ts:211) naming the part an operator gate waits on, and the only `scenario` hit is the ads-scenarios record key in digest.ts. No scenario suite is run or scored.",
+   "techniques": [],
+   "absenceTerms": [
+    "rubric",
+    "benchmark",
+    "passRate",
+    "eval"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "eval-harness",
+   "context": "style-trials-cull",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "eval-harness",
+   "context": "article-run-engine",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-10-24T04:25:32.793347+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "eval-harness"
+   ],
+   "techniques": [
+    "assertion-vs-judgment",
+    "candidate-write-access",
+    "eval-economics",
+    "failure-signatures-beside-the-pass-rate",
+    "judge-stability",
+    "monitor-inside-the-loop",
+    "selection-over-noise"
+   ],
+   "deviations": 1,
+   "context": "article-check-and-critique",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T04:25:32.793347+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "eval-harness"
+   ],
+   "techniques": [
+    "failure-signatures-beside-the-pass-rate",
+    "judge-stability"
+   ],
+   "deviations": 1,
+   "context": "review-and-runs-history",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-10-24T04:25:32.793347+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "eval-harness"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "run-records-and-slots",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

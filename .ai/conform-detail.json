@@ -10955,6 +10955,83 @@
         "at": "2026-10-24T04:06:16.045183+00:00",
         "reason": "reviewer (sonnet): The claim that no agent loop exists in lib/imaging is contradicted: router.ts:37 imports agyProvider, and providers/agy.ts spawns the agentic `agy` CLI (`-p`, `--sandbox`, an empty workspace, killTree). The verdict only searched for runAgent, cliSeam, plugin, mcp and registerHook, so it missed this."
       }
+    },
+    "0572228c-bd2e-42a3-a146-6a91d10fa08f/eval-harness": {
+      "context": "article-check-and-critique",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:25:32.793Z",
+      "worker": "45b07cb8-b0ea-44d8-82f5-bd5a39515db1",
+      "techniques": [
+        {
+          "technique": "monitor-inside-the-loop",
+          "verdict": "deviation",
+          "evidence": "lib/articles/critique.ts:378 The reviewers read the artifact (critiqueReviews.ts:132), but the gate that feeds the human reads the writer's story about the artifact. There is no second reviewer that checks the story against the revised post."
+        },
+        {
+          "technique": "assertion-vs-judgment",
+          "verdict": "conformant",
+          "evidence": "lib/articles/checks.ts:3 Deterministic prose, static and rendered checks form their own layer. Model judgment is limited to the critique, and its reviews are held to a schema (validateReview) with URL evidence."
+        },
+        {
+          "technique": "failure-signatures-beside-the-pass-rate",
+          "verdict": "conformant",
+          "evidence": "lib/articles/checksReport.ts:25 A dimension that has no measured item goes to notMeasured instead of reading as a pass. checks.ts:7 states the rule."
+        },
+        {
+          "technique": "judge-stability",
+          "verdict": "conformant",
+          "evidence": "lib/articles/critique.ts:5 The panel spans claude, agy/gemini and codex/gpt with concrete model ids, reviews stay per reviewer and are never averaged, and each reviewer's prompt is snapshotted. Gaps: the receipt stamps the configured model, not the model the call resolved to, and there is no anchor-set drift check (there is also no trend line here)."
+        },
+        {
+          "technique": "eval-economics",
+          "verdict": "conformant",
+          "evidence": "lib/articles/critique.ts:59 Critique rounds are capped at 2 and the panel at 8. Each reviewer has a timeout, and per-reviewer cost is summed on the receipts."
+        },
+        {
+          "technique": "candidate-write-access",
+          "verdict": "conformant",
+          "evidence": "lib/articles/critiqueReviews.ts:144 Each reviewer works in a temp workspace that holds only copies, and whatever it wrote is enumerated onto its receipt. The checks run over the run directory after ingest, not inside the workspace."
+        },
+        {
+          "technique": "selection-over-noise",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/critiqueReviews.ts:126 A reviewer is retried only when its answer is malformed, never to keep a better review, and the receipt records the attempts. Nothing selects a best-of-N result."
+        }
+      ]
+    },
+    "571eae96-e297-40c6-a556-3a3bf8f48e3f/eval-harness": {
+      "context": "review-and-runs-history",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:25:32.793Z",
+      "worker": "45b07cb8-b0ea-44d8-82f5-bd5a39515db1",
+      "techniques": [
+        {
+          "technique": "failure-signatures-beside-the-pass-rate",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/review/PacketReview.tsx:205 The report's three states (pass, fail, not measured) become two tones at the gate, so a detector that could not fire is drawn like a passing one."
+        },
+        {
+          "technique": "judge-stability",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/review/PacketReview.tsx:212 Each reviewer's vote and note is shown separately before any count, so the panel's disagreement stays visible instead of being averaged away."
+        }
+      ]
+    },
+    "fe524e46-e5d6-4aba-b475-fe39c41f3819/eval-harness": {
+      "context": "run-records-and-slots",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T04:25:32.793Z",
+      "worker": "45b07cb8-b0ea-44d8-82f5-bd5a39515db1",
+      "techniques": []
     }
   }
 }
