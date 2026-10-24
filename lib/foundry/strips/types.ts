@@ -113,8 +113,9 @@ export interface StripRun {
   cards: StripCard[];
   /** Replica discrimination per approach that has a replica: approach-to-
    *  approach sheet distance over author-to-author distance. >= 1.5 may author
-   *  registry content; below it the picks are still picks. */
-  discrimination?: Record<string, number>;
+   *  registry content; below it the picks are still picks. `null`: the replica's
+   *  sheet matched the original's, so there is no noise floor to divide by. */
+  discrimination?: Record<string, number | null>;
   status: "running" | "awaiting-triage" | "committed";
   /** The kernel job driving this run (Phase 4, lib/producers/strips.ts); absent on a v1 run. */
   job?: string;

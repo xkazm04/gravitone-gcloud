@@ -369,7 +369,8 @@ export function stripFindings(run: StripRun, verdicts: StripVerdicts, at: string
 
   if (run.discrimination && Object.keys(run.discrimination).length) {
     rows.push("## replica discrimination", "");
-    for (const [a, d] of Object.entries(run.discrimination)) rows.push(`- ${a}: ${d.toFixed(2)}${d >= 1.5 ? "" : " (below 1.5 — picks only)"}`);
+    for (const [a, d] of Object.entries(run.discrimination))
+      rows.push(typeof d === "number" && Number.isFinite(d) ? `- ${a}: ${d.toFixed(2)}${d >= 1.5 ? "" : " (below 1.5 — picks only)"}` : `- ${a}: no noise floor (the replica's sheet matched the original's)`);
     rows.push("");
   }
 

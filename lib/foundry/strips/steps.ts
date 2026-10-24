@@ -267,7 +267,7 @@ export async function asset(runId: string, approachId: string, call: (c: AssetCa
 /** Replica discrimination (v1, unchanged), then the run is the operator's: awaiting triage. */
 export async function triage(runId: string, io: StepIO, capture: () => Promise<Capture>): Promise<EventData> {
   const m = readStripRunNow(runId);
-  const disc: Record<string, number> = { ...(m.discrimination ?? {}) };
+  const disc: Record<string, number | null> = { ...(m.discrimination ?? {}) };
   if (!io.dry) {
     for (const rep of m.cards.filter((c) => c.replicaOf && c.id.endsWith("--r2") && c.status === "rendered")) {
       const orig = m.cards.find((c) => c.id === rep.replicaOf && c.status === "rendered");
@@ -279,7 +279,9 @@ export async function triage(runId: string, io: StepIO, capture: () => Promise<C
       const row = d[0] ?? [];
       const noise = row[1] ?? 0;
       const between = row.slice(2).reduce((s, x) => s + x, 0) / peers.length;
-      disc[orig.approach] = noise > 0 ? Math.round((between / noise) * 100) / 100 : Infinity;
+      // A replica identical to its original leaves no noise floor to divide by. JSON has no
+      // Infinity (it wrote null and the findings crashed on it), so the gap is written as null.
+      disc[orig.approach] = noise > 0 ? Math.round((between / noise) * 100) / 100 : null;
     }
   }
   const rendered = m.cards.filter((c) => c.status === "rendered").length;

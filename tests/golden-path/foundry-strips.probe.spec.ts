@@ -32,6 +32,7 @@ import { test, expect } from "@playwright/test";
 
 import { ACCESS_SECRET_VAR } from "@/lib/apiAuth";
 import { GET as fileGET } from "@/app/api/foundry/file/route";
+import { triage, type Capture } from "@/lib/foundry/strips/steps";
 import { commitStripRun, previewStripCommit, putStripVerdicts, stripPageFile } from "@/lib/foundry/strips/store";
 import { verdictErrorResponse } from "@/lib/foundry/verdictLog";
 import type { MotionStylesDoc, StripCommitPlan, StripCommitResult, StripsLedgerDoc } from "@/lib/foundry/strips/triage";
@@ -293,4 +294,29 @@ test("commit: kept into motion-styles, rejected media gone, a ledger row per dec
   const motion = JSON.parse(readFileSync(path.join(fdir, "motion-styles.json"), "utf8")) as { _rev?: number };
   expect(motion._rev ?? 0).toBeGreaterThanOrEqual(1);
   expect(existsSync(path.join(fdir, "catalogue-journal.jsonl")), "no journal is written any more").toBe(false);
+});
+
+test("commit: a replica whose sheet matched its original's (noise 0) still commits, and the findings say so", async () => {
+  // The triage step divides by the replica's distance; at 0 the ratio has no finite value, and
+  // run.json (JSON) cannot hold Infinity - it reads back as null, which the findings formatted.
+  const runFile = path.join(ROOT, runId, "run.json");
+  const run = JSON.parse(readFileSync(runFile, "utf8")) as StripRun;
+  run.cards.push(card("edu-edu-01--E01--r2", { replicaOf: "edu-edu-01--E01" }));
+  writeFileSync(runFile, JSON.stringify(run, null, 2));
+  const capture = async (): Promise<Capture> => ({
+    render: async () => ({ ok: true, files: {}, renderMs: 0 }),
+    distances: async (sheets) => sheets.map((_, i) => sheets.map((__, j) => (i === j || i + j === 1 ? 0 : 4))),
+  });
+  await triage(runId, { dry: false, stillHeld: () => {} }, capture);
+  const triaged = JSON.parse(readFileSync(runFile, "utf8")) as StripRun;
+  console.log(`[strips] noise-0 discrimination on disk -> ${JSON.stringify(triaged.discrimination)}`);
+  expect(triaged.status).toBe("awaiting-triage");
+  expect(Object.keys(triaged.discrimination ?? {})).toEqual(["E01"]);
+
+  expect((await put({ verdicts: { "edu-edu-01--E01": { verdict: "reject", at: "2026-10-06T00:00:00Z" } } })).status).toBe(200);
+  const res = await answer(() => commitStripRun(runId));
+  console.log(`[strips] commit after a noise-0 triage -> ${res.status} ${res.detail ?? ""}`);
+  expect(res.status, "the commit lands").toBe(200);
+  expect(JSON.parse(readFileSync(runFile, "utf8")).status).toBe("committed");
+  expect(readFileSync(path.join(ROOT, runId, "findings.md"), "utf8")).toMatch(/^- E01: no noise floor/m);
 });
