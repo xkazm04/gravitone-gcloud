@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Event } from "@gt/domain/event";
 
 import { ledgerFor, sourceOf, subjectLink } from "../../app/(studio)/_shell/links.ts";
+import { rowsOf, withOlder } from "../../app/(studio)/ledger/_ledger/Ledger.tsx";
 import { EMPTY, identity, matchesPost, parseParams, parseQuery, splitFilter, toSearch, windowOf, type LedgerFilter } from "../../app/(studio)/ledger/_ledger/filter.ts";
 import { backoff, parseFrames } from "../../app/(studio)/ledger/_ledger/sse.ts";
 import { costOf, relative, toneOf, trailOf } from "../../app/(studio)/ledger/_ledger/vocab.ts";
@@ -158,5 +159,25 @@ describe("the stream's wire", () => {
 
   it("backs off from the server's hint, doubling, capped", () => {
     expect([1, 2, 3, 10].map((n) => backoff(n, 2000))).toEqual([2000, 4000, 8000, 30000]);
+  });
+});
+
+describe("the rows drawn", () => {
+  const ev = (seq: number): Event => e({ seq, key: `k${seq}` });
+  const run = (hi: number, lo: number): Event[] => Array.from({ length: hi - lo + 1 }, (_, i) => ev(hi - i));
+  const page = (events: Event[]) => ({ events, capped: true, scanned: events.length, exhausted: false, byId: false });
+
+  it("a refresh that shifts the first page leaves no gap before the older pages read since", () => {
+    // Newest first: rows 1000..501, then "older" read 500..1. Three acts land and the
+    // refreshed first page is 1003..504 - rows 503..501 left it, and must still be drawn.
+    const more = withOlder(null, run(1000, 501), page(run(500, 1)));
+    const seqs = rowsOf(run(1003, 504), more).map((x) => x.seq);
+    expect(seqs).toEqual(Array.from({ length: 1003 }, (_, i) => 1003 - i));
+  });
+
+  it("draws each act once, in the first page's place", () => {
+    const more = withOlder(withOlder(null, run(10, 6), page(run(5, 3))), run(10, 6), page(run(2, 1)));
+    expect(rowsOf(run(10, 6), more).map((x) => x.seq)).toEqual([10, 9, 8, 7, 6, 5, 4, 3, 2, 1]);
+    expect(rowsOf(run(10, 6), null).map((x) => x.seq)).toEqual([10, 9, 8, 7, 6]);
   });
 });

@@ -54,6 +54,26 @@ export type LedgerProps = {
   readonly related: (input: { seq: number }) => Promise<ActionResult<Related & { readonly event: Event }>>;
 };
 
+/** The older pages read since the first render, and the last of them (its cursor continues). */
+export type Older = { readonly events: readonly Event[]; readonly page: Page };
+
+/**
+ * The state after one more older page. The first older read keeps `first` - this render's
+ * first page - with it: a live refresh redraws the first page from the newest act, and the
+ * rows it pushes off its end are not in the older pages either (those start at the old
+ * page's cursor), so without them a refresh opened a gap of exactly the arrivals' size.
+ */
+export function withOlder(more: Older | null, first: readonly Event[], page: Page): Older {
+  return { events: [...(more?.events ?? first), ...page.events], page };
+}
+
+/** The rows drawn: this render's first page, then the older pages it does not already hold. */
+export function rowsOf(first: readonly Event[], more: Older | null): readonly Event[] {
+  if (more === null) return first;
+  const have = new Set(first.map((e) => e.seq));
+  return [...first, ...more.events.filter((e) => !have.has(e.seq))];
+}
+
 /** How long a burst of arrivals may run before the page redraws (realtime-events: coalescing). */
 const COALESCE_MS = 700;
 const FRESH_MS = 1300;
@@ -65,12 +85,8 @@ export function Ledger(p: LedgerProps) {
   const f = p.filter;
 
   // ── rows: this render's page, then any older pages read since ──
-  const [more, setMore] = useState<{ readonly events: readonly Event[]; readonly page: Page } | null>(null);
-  const rows = useMemo(() => {
-    if (more === null) return p.page.events;
-    const have = new Set(p.page.events.map((e) => e.seq));
-    return [...p.page.events, ...more.events.filter((e) => !have.has(e.seq))];
-  }, [p.page.events, more]);
+  const [more, setMore] = useState<Older | null>(null);
+  const rows = useMemo(() => rowsOf(p.page.events, more), [p.page.events, more]);
   const tail = more?.page ?? p.page;
   const [loading, setLoading] = useState(false);
   const loadOlder = useCallback(async () => {
@@ -79,7 +95,7 @@ export function Ledger(p: LedgerProps) {
     const r = await p.older({ search: p.search, cursor: tail.cursor });
     setLoading(false);
     if (!r.ok) return toast(`ledger: ${r.error.error}`);
-    setMore((m) => ({ events: [...(m?.events ?? []), ...r.value.events], page: r.value }));
+    setMore((m) => withOlder(m, p.page.events, r.value));
   }, [tail.cursor, loading, p, toast]);
 
   // ── windowing state: selection and view, kept in the URL without a render ──
