@@ -85,6 +85,13 @@ describe("strengths: the evidence floor", () => {
     expect(html).toContain("75%");
     expect(html).toContain("ElevenLabs on ambient: kept 75% of 4, mean 7.3");
   });
+
+  test("a facet nobody judged keeps the table's column heads, every one named, n included", () => {
+    const heads = (cells: readonly StrengthCell[]) =>
+      [...renderToStaticMarkup(h(StrengthTable, { kind: "music", cells, facet: "mood", sort: { key: "n", provider: null, dir: "desc" }, picked: null, onFacet: () => {}, onSort: () => {}, onPick: () => {} })).matchAll(/<span role="columnheader"[^>]*>(.*?)<\/span>/g)].map((m) => (m[1] ?? "").replace(/<[^>]+>/g, "").replace(/\s*[↑↓]$/, ""));
+    expect(heads([])).toEqual(["mood", "ElevenLabs", "Suno", "n"]);
+    expect(heads([cell({ facet: "mood", value: "calm", n: 1 })])).toEqual(["mood", "ElevenLabs", "Suno", "n"]);
+  });
 });
 
 describe("rubric", () => {
