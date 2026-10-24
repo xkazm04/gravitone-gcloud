@@ -14,6 +14,7 @@ import { describe, expect, it } from "vitest";
 import { onOpen, settledOutcome } from "../../app/(studio)/projects/_plan/receipt.tsx";
 import { clock } from "../../app/(studio)/projects/_plan/shelf.ts";
 import { titleGate } from "../../app/(studio)/projects/_plan/title.ts";
+import { post } from "../../app/(studio)/projects/import/answer.ts";
 
 const ROOT = path.resolve(import.meta.dirname, "..", "..");
 const PROJECTS = path.join(ROOT, "app", "(studio)", "projects");
@@ -119,6 +120,37 @@ describe("the Plan title - one rename per ⏎, none on Esc", () => {
     expect(src.match(/titles\.cancel\(\)/g) ?? []).toHaveLength(1);
     expect(src.match(/rev: p\.rev\b/g) ?? []).toEqual([]);
     expect(src.match(/rev: rev\.current/g) ?? []).toHaveLength(4);
+  });
+});
+
+describe("the import door's answer never rejects", () => {
+  const body = new Blob(["x"]);
+  const answering = (status: number, text: () => Promise<string>) => async () => ({ status, text }) as unknown as Response;
+
+  it("an answer is its status and its JSON", async () => {
+    expect(await post("/api/import?act=preview", body, answering(200, async () => '{"token":"t"}'))).toEqual({ status: 200, json: { token: "t" } });
+  });
+
+  it("a request that never reaches the route is a 503 in the route's envelope", async () => {
+    const r = await post("/api/import?act=preview", body, async () => {
+      throw new TypeError("Failed to fetch");
+    });
+    expect(r).toEqual({ status: 503, json: { error: "the import could not be reached: Failed to fetch", code: "unavailable" } });
+  });
+
+  it("an answer whose body breaks off while it is read is a 503 too, never a rejection", async () => {
+    const r = await post(
+      "/api/import?act=commit&token=t",
+      body,
+      answering(200, async () => {
+        throw new TypeError("network error");
+      }),
+    ).catch((e: unknown) => ({ rejected: String(e) }));
+    expect(r).toEqual({ status: 503, json: { error: "the import's answer (200) broke off: network error", code: "unavailable" } });
+  });
+
+  it("a body that is not JSON is the route's words, trimmed", async () => {
+    expect(await post("/api/import?act=preview", body, answering(502, async () => "Bad Gateway"))).toEqual({ status: 502, json: { error: "Bad Gateway", code: "internal" } });
   });
 });
 

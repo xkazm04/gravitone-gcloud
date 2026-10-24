@@ -17,9 +17,6 @@
 // words. v1's rows are never written: this import is their last reader.
 
 import { useEffect, useRef, useState } from "react";
-import { unknown } from "zod/mini";
-
-import { parseJsonAt } from "@gt/domain/door";
 import { errorMessage } from "@gt/domain/errors";
 
 import { Button } from "@gt/ui/components/button/Button.tsx";
@@ -35,6 +32,7 @@ import type { ItemPreview, ThemePreview } from "@/lib/import/shelf";
 import { ArchiveRefused, exportAccount, inspectArchive } from "@/lib/studioArchive";
 import { BY_UID, PROJECTS_STORE, openDb } from "@/lib/studioDb";
 
+import { post } from "./answer.ts";
 import s from "./Import.module.css";
 
 type Source = { readonly name: string; readonly bytes: Blob; readonly preview: Preview };
@@ -66,19 +64,6 @@ async function accounts(): Promise<string[]> {
   } finally {
     db.close();
   }
-}
-
-/** The route's answer; a network failure is answered as a 503 in the route's own envelope. */
-async function post(path: string, body: Blob): Promise<{ readonly status: number; readonly json: unknown }> {
-  let r: Response;
-  try {
-    r = await fetch(path, { method: "POST", body, headers: { "content-type": "application/octet-stream" } });
-  } catch (e) {
-    return { status: 503, json: { error: `the import could not be reached: ${errorMessage(e)}`, code: "unavailable" } };
-  }
-  const text = await r.text();
-  const parsed = parseJsonAt("import answer", unknown(), text);
-  return { status: r.status, json: parsed.ok ? parsed.value : { error: text.slice(0, 300) || `the import answered ${r.status}`, code: "internal" } };
 }
 
 const envelopeOf = (x: unknown): Envelope => (typeof x === "object" && x !== null ? (x as Envelope) : {});
