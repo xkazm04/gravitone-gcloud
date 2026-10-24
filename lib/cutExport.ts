@@ -86,7 +86,7 @@ export interface CutBlobs {
 export interface CutExportRequest {
   document: CutDocument;
   projectId: string | null;
-  /** Where voice blobs are read; absent = the blob store beside this process's kernel store. */
+  /** Where voice and strip-card blobs are read; absent = the blob store beside this process's kernel store. */
   blobs?: CutBlobs;
 }
 
@@ -228,10 +228,23 @@ export function cutExportArgs(
 
 const IMAGE_EXT: Record<string, string> = { "image/png": "png", "image/jpeg": "jpg", "image/jpg": "jpg", "image/webp": "webp" };
 
+/** An image's type by its leading bytes: a blob is named by digest, not by the mime it was put with. */
+const sniffImage = (b: Uint8Array, at = (i: number, n: number) => String.fromCharCode(...b.subarray(i, i + n))): string | undefined =>
+  b[0] === 0x89 && at(1, 3) === "PNG" ? "png" : b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff ? "jpg" : at(0, 4) === "RIFF" && at(8, 4) === "WEBP" ? "webp" : undefined;
+
 /** A plate's bytes on disk for ffmpeg, or why the server cannot reach it. A
  *  plate is a data: URL or a public path (frames.ts `Plate.src`); a public
- *  path is held inside `public/`. */
-async function resolvePlate(src: string, workDir: string, name: string): Promise<string | { why: string }> {
+ *  path is held inside `public/`. A strip card's is its kernel blob (`sha256:`,
+ *  lib/cut/explainer.ts), re-hashed on read: a gone or damaged card is a gap. */
+async function resolvePlate(src: string, workDir: string, name: string, blobs: CutBlobs): Promise<string | { why: string }> {
+  const blob = /^sha256:([0-9a-f]{64})$/.exec(src);
+  if (blob) {
+    const bytes = await blobs.read(blob[1]);
+    const ext = bytes.ok ? sniffImage(bytes.value) : undefined;
+    if (!bytes.ok || !ext) return { why: bytes.ok ? "plate blob is not a PNG, JPEG or WebP image" : bytes.error.message };
+    const file = path.join(workDir, `${name}.${ext}`);
+    return writeFile(file, bytes.value).then(() => file);
+  }
   const data = /^data:([^;,]+);base64,([A-Za-z0-9+/=]*)$/.exec(src);
   if (data) {
     const ext = IMAGE_EXT[data[1].toLowerCase()];
@@ -246,7 +259,7 @@ async function resolvePlate(src: string, workDir: string, name: string): Promise
     if (!file.startsWith(pub + path.sep)) return { why: "plate path leaves public/" };
     return file;
   }
-  return { why: "plate is not a data: URL or a public path" };
+  return { why: "plate is not a data: URL, a public path or a blob digest" };
 }
 
 /** The blob root beside the store this process drives - the same rule as
@@ -334,10 +347,11 @@ export async function runCutExport(req: CutExportRequest): Promise<CutExportResu
   const workDir = await makeWorkDir("cut-export-");
   try {
     const unreachable: CutExportResult["unreachable"] = [];
+    const blobs = req.blobs ?? defaultBlobs();
     const stills: Record<string, string> = {};
     for (const [i, p] of doc.picture.entries()) {
       if (p.kind !== "still") continue;
-      const got = await resolvePlate(p.layers.plate, workDir, `still-${i}`);
+      const got = await resolvePlate(p.layers.plate, workDir, `still-${i}`, blobs);
       if (typeof got === "string") stills[p.unitRef] = got;
       else unreachable.push({ unitRef: p.unitRef, why: got.why });
     }
@@ -353,7 +367,7 @@ export async function runCutExport(req: CutExportRequest): Promise<CutExportResu
         unreachable.push({ takeId: a.takeId, why: "take gone from the store" });
       }
     }
-    const voices = await resolveVoices(doc, req.blobs ?? defaultBlobs(), workDir, unreachable);
+    const voices = await resolveVoices(doc, blobs, workDir, unreachable);
     const sound = cutAudioGraph(doc, { takes, voices }, 0);
 
     await mkdir(root, { recursive: true });

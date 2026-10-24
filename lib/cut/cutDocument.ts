@@ -54,7 +54,8 @@ export const CUT_DOCUMENT_VERSION = 1;
 
 /** What a still composites, in FrameCanvas's order: plate, marks, words. */
 export interface LayerSnapshot {
-  /** The plate's `src` as the frame holds it: a data: URL or a public path. */
+  /** The plate's `src` as the frame holds it: a data: URL or a public path - or,
+   *  for an explainer's strip card, its image's kernel blob as `sha256:<digest>`. */
   plate: string;
   elements: FrameElement[];
   texts: FrameText[];
@@ -129,9 +130,20 @@ function picture(cut: DerivedCut): PictureSegment[] {
         },
       };
     }
+    // An explainer's strip card (lib/cut/explainer.ts) has no frame: its
+    // rendered image IS the whole picture, held as a kernel blob, so it is a
+    // still with no marks or words over it. Only a content address qualifies -
+    // a frameless clip with any other src is the fixture's, and stays a gap.
+    if (clip && clip.status !== "missing" && clip.src && !frame && BLOB_SRC.test(clip.src)) {
+      return { ...base, kind: "still", layers: { plate: clip.src, elements: [], texts: [] } };
+    }
     // The fixture's scenes have a gradient and no frame; a project's scene
-    // without a held plate has the clip's reason. Either way, no picture.
-    return { ...base, kind: "gap", why: clip?.why ?? (frame ? "no plate" : "no frame behind this scene") };
+    // without a held plate has the clip's reason. Either way, no picture. A
+    // project scene with no frame is a strip card drawn with no image in hand
+    // (a film's every scene has its frame: deriveTimeline builds both from one
+    // unit list), and says so in the card's terms.
+    const frameless = cut.origin === "fixture" ? "no frame behind this scene" : "card has no rendered image";
+    return { ...base, kind: "gap", why: clip?.why ?? (frame ? "no plate" : frameless) };
   });
 }
 
