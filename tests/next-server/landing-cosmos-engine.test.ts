@@ -811,3 +811,27 @@ describe("keyboard.ts: an input method's keys are its own", () => {
     expect(cx.searchOpen).toBe(false);
   });
 });
+
+describe("cosmos.css: the first paint stays until there is something to replace it", () => {
+  //  11. boot() catches a scene build that throws (intro.ts) and goes on: the intro's timers still
+  //      add `booted`, and `.pc.booted .sky0{visibility:hidden}` then took away the dusk sky that
+  //      was the page's first paint, leaving the flat app ground behind the HUD. data-ready is set
+  //      only once a build has placed the scene (intro.ts ready()), so the sky waits for it.
+  test("every rule that hides .sky0 also asks for [data-ready]", () => {
+    const css = readFileSync(path.join(ROOT, "app/_landing/cosmos/cosmos.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    const hides: string[] = [];
+    for (const [, sel, body] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      if (!/visibility\s*:\s*hidden|display\s*:\s*none|opacity\s*:\s*0(?![.\d])/.test(body)) continue;
+      for (const s of sel.split(",")) if (/\.sky0\b/.test(s)) hides.push(s.trim());
+    }
+    // a walk that finds no rule would pass in a voice indistinguishable from success
+    expect(hides.length, "the stylesheet still hides the sky once the scene is up").toBeGreaterThan(0);
+    expect(hides.filter((s) => !s.includes("[data-ready]"))).toEqual([]);
+  });
+
+  test("data-ready is set only by a build that placed the scene", () => {
+    const src = readFileSync(path.join(ROOT, "app/_landing/cosmos/engine/intro.ts"), "utf8");
+    expect(src).toMatch(/if \(built\) ready\(cx\);/);
+    expect(src).toMatch(/if \(!\(await buildScene\(cx, "swap"\)\)\) return false;\r?\n\s*ready\(cx\);/);
+  });
+});

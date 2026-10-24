@@ -64,7 +64,8 @@
 /* first paint: the dusk before any canvas (the sky plane covers it once painted) */
 .pc .sky0{position:absolute;inset:0;pointer-events:none;background:linear-gradient(var(--pc-sky-0) 0%,var(--pc-sky-1) 9%,var(--pc-sky-2) 25%,var(--pc-sky-3) 37%,var(--pc-sky-4) 49%,var(--pc-sky-5) 61%,var(--pc-sky-6) 72%,var(--pc-sky-7) 78.5%,var(--pc-sky-7) 79.5%,var(--pc-ground) 79.5%)}
 .pc.portrait .sky0{background:linear-gradient(var(--pc-sky-0) 0%,var(--pc-sky-1) 12%,var(--pc-sky-2) 24%,var(--pc-sky-3) 33%,var(--pc-sky-4) 43%,var(--pc-sky-5) 52%,var(--pc-sky-6) 61%,var(--pc-sky-7) 66%,var(--pc-sky-7) 67%,var(--pc-ground) 67%)}
-.pc.booted .sky0{visibility:hidden}
+/* only once a build has placed the scene (data-ready): a boot whose build threw keeps its dusk */
+.pc.booted[data-ready] .sky0{visibility:hidden}
 .pc:not([data-tier]) #hero{opacity:1;transform:translate(-50%,-50%) scale(1)}
 /* one build of the overview (or a world): a rebuild fades in over the last */
 .pc .stack{position:absolute;inset:0}
