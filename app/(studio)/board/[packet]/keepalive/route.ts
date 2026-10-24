@@ -12,22 +12,13 @@ import { z } from "zod";
 import { route } from "../../../../_server/route.ts";
 import { packetParam } from "../../_port/param.ts";
 import { serverBoard } from "../../_port/port.ts";
+import { verdictChanges } from "../../_port/verdict.ts";
 
 export const maxDuration = 10;
 
 const input = z.object({
   rev: z.number().int().nonnegative(),
-  changes: z
-    .array(
-      z.object({
-        candidate: z.string().min(1).max(400),
-        verdict: z.enum(["keep", "reject"]).nullable(),
-        reasons: z.array(z.string().min(1).max(64)).max(11),
-        note: z.string().min(1).max(2000).optional(),
-      }),
-    )
-    .min(1)
-    .max(500),
+  changes: verdictChanges,
 });
 
 export const POST = route({ guard: "money", bodyCap: 256_000, maxDuration, input }, async ({ input: body, params }) => {

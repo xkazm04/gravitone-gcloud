@@ -22,15 +22,10 @@ import { action } from "../../../_server/action.ts";
 import { principal } from "../../../_server/principal.ts";
 import type { Principal } from "../../../../lib/principal.ts";
 import { serverBoard } from "./port.ts";
+import { verdictChanges } from "./verdict.ts";
 
 const id = z.string().min(1).max(400);
 const rev = z.number().int().nonnegative();
-const change = z.object({
-  candidate: z.string().min(1).max(400),
-  verdict: z.enum(["keep", "reject"]).nullable(),
-  reasons: z.array(z.string().min(1).max(64)).max(11),
-  note: z.string().min(1).max(2000).optional(),
-});
 
 type In<K extends keyof BoardPort> = Parameters<BoardPort[K]>[0];
 type Out<K extends keyof BoardPort> = ReturnType<BoardPort[K]>;
@@ -52,7 +47,7 @@ export async function preview(input: In<"preview">): Out<"preview"> {
   return runAction("board preview", reader, z.object({ id }), (i) => serverBoard().preview(i), input);
 }
 
-const patchAction = action("board patch", z.object({ id, baseRev: rev, changes: z.array(change).min(1).max(500) }), (i, who) => serverBoard().patch(i, as(who)));
+const patchAction = action("board patch", z.object({ id, baseRev: rev, changes: verdictChanges }), (i, who) => serverBoard().patch(i, as(who)));
 export async function patch(input: In<"patch">): Out<"patch"> {
   return patchAction(input);
 }
