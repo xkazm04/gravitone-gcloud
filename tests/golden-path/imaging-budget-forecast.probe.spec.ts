@@ -154,3 +154,16 @@ test("8. budgetHandler answers the window and the quote, and asking it spends no
   const after = (await (await budgetHandler(new Request("http://localhost/api/imaging/budget"))).json()) as Record<string, unknown>;
   expect(after["spentUsd"]).toBe(before);
 });
+
+test("9. budgetHandler answers a ledger it cannot open in the routes' one error shape, not a thrown promise", async () => {
+  const prev = process.env.SPEND_STORE;
+  process.env.SPEND_STORE = "probe-not-a-store";
+  try {
+    const res = await budgetHandler(new Request("http://localhost/api/imaging/budget"));
+    expect(res.status).toBe(502);
+    expect(((await res.json()) as Record<string, unknown>)["code"]).toBe("failed");
+  } finally {
+    if (prev === undefined) delete process.env.SPEND_STORE;
+    else process.env.SPEND_STORE = prev;
+  }
+});
