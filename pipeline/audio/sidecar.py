@@ -4,6 +4,8 @@
       -> {"ok":true,"measure":{integratedLufs,truePeakDb,lra,clippedSamples,leadSilenceS,tailSilenceS,durationS}}
     python pipeline/audio/sidecar.py fx --in <wav> --chain <chain.json | inline JSON> --out <wav> --json
       -> {"ok":true,"durationS":n,"gainDb":g,"truePeakDb":tp,"rate":r,"channels":c,"notes":[...]}
+    python pipeline/audio/sidecar.py triage --in <file> --context <context.json> --json
+      -> {"ok":true,"triage":{"version":1,"findings":[{check,defect?,verdict,value,threshold,unit,atS?,note?}],"flagged":n}}
     python pipeline/audio/sidecar.py doctor --json
       -> {"ok":true,"python":"<sys.version>","modules":[...],"missing":[...],"errors":{...},"versions":{...},"ffmpeg":path|null}
 
@@ -12,8 +14,9 @@ The one consumer is lib/audio/sidecar.ts; docs/audio-sidecar.md is the operator'
 CONTRACT: stdout's LAST line is one JSON object, whatever happened. A failure is
 {"ok":false,"error":"<the underlying tool's own sentence>","kind":...} and exit code 1, where
 kind is "missing-module" (an import failed: the error IS Python's ImportError sentence),
-"refused" (the chain or the arguments), or "failed" (decode, render, write). Nothing is
-paraphrased: an operator reading the Node error reads what soundfile, ffmpeg or pedalboard said.
+"refused" (the chain, the triage context, or the arguments), or "failed" (decode, render,
+write). Nothing is paraphrased: an operator reading the Node error reads what soundfile, ffmpeg
+or pedalboard said.
 
 Only the standard library is imported at module top, so `doctor` and a missing-module failure
 still answer in JSON on a Python with none of the requirements installed.
@@ -161,6 +164,24 @@ def cmd_fx(a):
     })
 
 
+def cmd_triage(a):
+    import triage
+
+    try:
+        with open(a.context, encoding="utf-8") as f:
+            text = f.read()
+    except OSError as e:
+        raise Failure(f"context file: {e}", "refused") from None
+    try:
+        ctx = triage.validate_context(json.loads(text))
+    except json.JSONDecodeError as e:
+        raise Failure(f"context is not JSON: {e}", "refused") from None
+    except triage.ContextRefused as e:
+        raise Failure(f"context {e}", "refused") from None
+    data, rate = read_audio(a.input)
+    emit({"ok": True, "triage": triage.run(data, rate, ctx)})
+
+
 def _dist_version(name):
     from importlib import metadata
 
@@ -196,10 +217,14 @@ def main(argv):
     f.add_argument("--chain", required=True)
     f.add_argument("--out", required=True)
     f.add_argument("--json", action="store_true")
+    t = sub.add_parser("triage")
+    t.add_argument("--in", dest="input", required=True)
+    t.add_argument("--context", required=True)
+    t.add_argument("--json", action="store_true")
     d = sub.add_parser("doctor")
     d.add_argument("--json", action="store_true")
     a = p.parse_args(argv)
-    run = {"measure": cmd_measure, "fx": cmd_fx, "doctor": cmd_doctor}[a.verb]
+    run = {"measure": cmd_measure, "fx": cmd_fx, "triage": cmd_triage, "doctor": cmd_doctor}[a.verb]
     try:
         run(a)
     except Failure as e:

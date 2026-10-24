@@ -51,14 +51,22 @@ export type TriageKind = (typeof TRIAGE_KINDS)[number];
  *   dead-air          longest silence (< -50 dBFS, 50 ms windows) strictly INSIDE the take,
  *                     lead and tail excluded (s)
  *   duration          |measured - asked| / asked (ratio); skips without an asked length
- *   broken-ending     the last 50 ms against the 2 s before it (dB): near 0 = the take stops at
- *                     body level, cut mid-signal. Also flags a silent tail longer than `tailS`.
- *                     Skips a take briefed as a loop (a loop's end is its seam)
+ *   broken-ending     the final 10 ms of the audible take against the median level of its active
+ *                     10 ms frames in the 2 s before (dB) - the audible end being the last frame
+ *                     above the take's own floor, 45 dB under its 95th-percentile frame: near 0 =
+ *                     the take stops at body level, cut mid-signal. An envelope falling 30 dB/s or
+ *                     more over its last 300 ms has ended, not been cut, and passes. Also flags a
+ *                     silent tail of `tailS` or more. Skips a take briefed as a loop (its end is
+ *                     its seam)
  *   tempo-instability |tempo of the first third - tempo of the last third| (bpm); music only
  *   section-boundary  the largest distance from a planned section boundary to the nearest
  *                     novelty peak (s); skips without sections
- *   loop-seam         the step across the wrap, last 100 ms -> first 100 ms: the larger of the
- *                     level step and the spectral step, both in dB; skips unless briefed as a loop
+ *   loop-seam         the step the end makes into the start, judged against the take itself (dB):
+ *                     a loop with a rhythm - the drift of its repeats across its length, in level
+ *                     and in four band groups; a texture - the step from its last 0.5 s into its
+ *                     first, over the median such step inside it; or the waveform jump across the
+ *                     wrap over the take's 99.9th-percentile sample step - the largest. Skips
+ *                     unless briefed as a loop
  *   mono-fold         integrated loudness lost when L+R are summed to mono (dB); skips mono files
  */
 export const TRIAGE_THRESHOLDS = {

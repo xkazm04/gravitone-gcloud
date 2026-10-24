@@ -1,18 +1,22 @@
 # The audio sidecar
 
-`pipeline/audio/sidecar.py` measures an audio file in delivery units and renders a voice-fx chain
-over a take. It is a CLI in this box's Python, reached from Node through one door,
+`pipeline/audio/sidecar.py` measures an audio file in delivery units, renders a voice-fx chain
+over a take, and triages a take against its brief. It is a CLI in this box's Python, reached from Node through one door,
 `lib/audio/sidecar.ts`. Nothing is sent anywhere and nothing is spent: it is local DSP.
 
 | File | Holds |
 | --- | --- |
-| `pipeline/audio/sidecar.py` | the CLI: `measure`, `fx`, `doctor`, the decode, the JSON contract. |
+| `pipeline/audio/sidecar.py` | the CLI: `measure`, `fx`, `triage`, `doctor`, the decode, the JSON contract. |
 | `pipeline/audio/loudness.py` | integrated loudness, true peak, loudness range, clipping, edge silence. |
 | `pipeline/audio/fxchain.py` | the chain's re-validation (`STAGES`) and the pedalboard render. |
-| `lib/audio/sidecar.ts` | `measureFile()`, `applyChain()`, `sidecarDoctor()`. Server-only. |
+| `pipeline/audio/triage.py` | the triage contract: thresholds, units, the context's re-validation, the flag rule. |
+| `pipeline/audio/triage_detect.py` | the triage detectors (numpy/scipy), but for the two below. |
+| `pipeline/audio/triage_edges.py` | `broken-ending` and `loop-seam`, and the corpus measurements behind their methods. |
+| `lib/audio/sidecar.ts` | `measureFile()`, `applyChain()`, `triageFile()`, `sidecarDoctor()`. Server-only. |
 | `lib/producers/media-facts.ts` | `sidecarLoudness()`: the sidecar as the measure pass's port. |
 | `packages/domain/src/audio.fx.ts` | `fxChainSchema`, the chain's one definition. |
 | `packages/domain/src/audio.accept.ts` | `AudioMeasureFull`, the profiles a measure is judged against. |
+| `packages/domain/src/audio.triage.ts` | the triage checks, units, `TRIAGE_THRESHOLDS`, the context and finding schemas. |
 
 ## Installing
 
@@ -54,7 +58,7 @@ stdout's LAST line is one JSON object, whatever happened. A failure is
 | `kind` | When | Node code |
 | --- | --- | --- |
 | `missing-module` | an import failed; `error` is Python's ImportError sentence | `unavailable` |
-| `refused` | the chain, a bound, a missing file, a bad argument | `invalid` |
+| `refused` | the chain, the triage context, a bound, a missing file, a bad argument | `invalid` |
 | `failed` | a decode, a render or a write; `error` is soundfile's, ffmpeg's or pedalboard's words | `unavailable` |
 
 A run that printed no JSON (a crash before the contract could answer, a timeout) is reported by
@@ -115,6 +119,54 @@ strip and the acceptance length check were planned against the take's length. Wh
 true peak is above -1 dBTP, a final gain sets it to -1.1 dBTP (the 0.1 dB is room for the
 16-bit write); `gainDb` is that gain, 0 when none was needed, and `truePeakDb` is measured on the
 file as written. A lowpass above Nyquist is set just under it and `notes` says so.
+
+### triage
+
+```bash
+python pipeline/audio/sidecar.py triage --in take.wav --context context.json --json
+```
+
+```json
+{"ok": true, "triage": {"version": 1, "flagged": 2, "findings": [
+  {"check": "clipping", "verdict": "flag", "value": 12, "threshold": 3, "unit": "samples", "atS": 3.0},
+  {"check": "duration", "verdict": "skip", "value": null, "threshold": 0.1, "unit": "ratio", "note": "no asked length"},
+  {"check": "broken-ending", "defect": "broken-ending", "verdict": "flag", "value": 0.0, "threshold": -12, "unit": "dB", "atS": 10.0},
+  "..."]}}
+```
+
+`--context` is the brief the take was made from, as a file (what `triageFile()` writes):
+`{kind: "music"|"sfx"|"voice", durationS?, tempoBpm?, loop?, sections?: [{name, startMs, endMs}]}`,
+validated again in `triage.py` with `triageContextSchema`'s rules (`@gt/domain/audio.triage`). An
+unknown key or a bad value is refused with its path (`context (root): unrecognized key 'loopy'`). A
+key that is absent was never committed, and every check that needs it comes back `skip` with a
+`note` and a null `value`; nothing is guessed. One finding per check, always in the same order;
+`flagged` counts the `flag`s. A structural check carries the `DEFECTS` code it evidences
+(`lib/sound/types.ts`). The decode is `measure`'s.
+
+A value AT its threshold flags: the threshold is where the defect begins. `loudness-range` is the
+one exception, a band where the bounds themselves pass. The thresholds are per kind and live in
+`TRIAGE_THRESHOLDS`; `triage.py` holds a copy (the CLI takes none and the context is strict), and
+`tests/next-server/audio-triage.test.ts` fails when the two differ.
+
+| Check | Method | Unit | music / sfx / voice |
+| --- | --- | --- | --- |
+| `clipping` | longest run of consecutive samples at abs 0.999 or more, in one channel; `atS` its start | samples | 3 |
+| `true-peak-over` | `measure`'s 4x-oversampled true peak; skips a file with no signal | dBTP | 0 |
+| `loudness-range` | `measure`'s integrated loudness outside the band; null (silent, under 400 ms) flags | LUFS | -30..-6 / -40..-6 / -30..-10 |
+| `dead-air` | longest run of silent 50 ms windows (under -50 dBFS) between the first and last loud one | s | 2 / 1.5 / 1.5 |
+| `duration` | abs(decoded - `durationS`) / `durationS`; skips without `durationS` | ratio | 0.1 / 0.1 / 0.35 |
+| `broken-ending` | the last 10 ms frame above the take's own floor (95th-percentile frame minus 45 dB) against the median active level of the 2 s before; an envelope falling 30 dB/s or more over the last 300 ms passes; a silent tail flags at 3 / 2 / 2 s, with a note; skips a loop | dB | -12 |
+| `tempo-instability` | dB spectral flux per channel, autocorrelation comb over 60..200 bpm; first third against last third, each within 10 % of the whole file's tempo; music only; skips with no steady pulse | bpm | 3 |
+| `section-boundary` | novelty = RMS over 24 log bands of the mean band level 3 s before against 3 s after; largest distance from a planned boundary to its nearest peak; skips without two `sections` | s | 2 |
+| `loop-seam` | the step the end makes into the start, against the take itself: with a rhythm, the drift of its repeats across its length (level, four band groups); a texture, its last 0.5 s into its first over the median such step inside; or the waveform jump at the wrap over the 99.9th-percentile sample step; only when `loop: true` | dB | 3 |
+| `mono-fold` | LUFS(L, R) - LUFS(M, M), M = (L+R)/2; a fold to silence flags with a null value; skips mono | dB | 3 |
+
+`triage.py`'s header gives the method in full, and the reason behind each constant is in a
+comment beside it in `triage_detect.py` and `triage_edges.py`. One example is the onset floor
+that keeps a steady pad from reading as a beat. `triage_edges.py` also records what WP2's seeded
+corpus measured against the first cuts of `broken-ending` and `loop-seam`. Measured on this box
+(2026-10-24, the box loaded by other jobs), a 5-minute mp3 triages in 7.8 to 8.9 s against
+5.9 s for `measure`. Most of that time is the decode and the loudness.
 
 ## The stage map
 
