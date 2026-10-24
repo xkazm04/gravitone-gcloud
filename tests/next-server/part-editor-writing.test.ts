@@ -253,3 +253,39 @@ describe("while a write is in flight no write button reads as pressable", () => 
     });
   }
 });
+
+/* ── a card's row says its scope out loud (Notebook.tsx CardRow) ───────── */
+
+/** The text a node draws, aria-hidden subtrees left out (what a screen reader is handed). */
+function spoken(node: ReactNode): string {
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(spoken).join(" ");
+  if (!isValidElement(node)) return "";
+  const p = node.props as Record<string, unknown>;
+  if (p["aria-hidden"] === "true" || p["aria-hidden"] === true) return "";
+  if (typeof node.type === "function" && node.type.name === "SrOnly") return String(p.text);
+  return spoken(p.children as ReactNode);
+}
+
+describe("a card's row in the scope board", () => {
+  async function said(c: ResearchCard): Promise<string> {
+    const d = notebook([c]);
+    const p = research(d, false, []);
+    const ws = (await harness(() => NotebookEditor({ ...p, data: d as never }), { settleWhen: "stable" }).settleUp()) as ReactElement;
+    const list = all(ws, named("RailList"))[0];
+    if (list === undefined) throw new Error("no card list");
+    const row = (list.props as { row: (x: ResearchCard) => ReactElement }).row(c);
+    return spoken((row.type as (q: unknown) => ReactNode)(row.props));
+  }
+
+  it("speaks a descoped card as descoped, as the strike-through draws it", async () => {
+    expect(await said(card("c1", { scope: "descoped" }))).toContain("descoped");
+  });
+
+  it("speaks the like and the deepen the glyphs draw", async () => {
+    const s = await said(card("c1", { liked: true, deepen: true }));
+    expect(s).toContain("in scope");
+    expect(s).toContain("liked");
+    expect(s).toContain("deepen");
+  });
+});

@@ -11,6 +11,7 @@
 import { useMemo, useState } from "react";
 
 import type { NotebookBoard, PartView, ResearchCard, ResearchData } from "@gt/domain/partView";
+import { SrOnly } from "@gt/ui/components/a11y/SrOnly.tsx";
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
 import { Empty } from "@gt/ui/components/empty/Empty.tsx";
@@ -28,6 +29,8 @@ import s from "./Editors.module.css";
 
 type Data = Extract<ResearchData, { face: "notebook" }>;
 
+const SCOPE_SAID: Readonly<Record<ResearchCard["scope"], string>> = { in: "in scope", descoped: "descoped", "not-taken": "not taken" };
+
 function CardRow({ c }: { readonly c: ResearchCard }) {
   return (
     <div className={cx(s.card, c.scope !== "in" && s.out)} data-card={c.id} data-scope={c.scope}>
@@ -43,6 +46,8 @@ function CardRow({ c }: { readonly c: ResearchCard }) {
           {c.deepen && <span className={s.on}>⤓</span>}
           <span>{c.scope === "in" ? "●" : "○"}</span>
         </span>
+        {/* The glyphs and the strike-through, spoken: the inspector's words for the same state. */}
+        <SrOnly text={[SCOPE_SAID[c.scope], ...(c.liked ? ["liked"] : []), ...(c.deepen ? ["deepen"] : [])].join(", ")} />
       </div>
       <div className={cx(s.rrTitle, s.clamp2)}>{c.title}</div>
     </div>
@@ -66,7 +71,7 @@ function Inspector({ c, cards, send, busy, onSelect }: { readonly c: ResearchCar
       <div className={s.bar}>
         <Chip label={c.kind} casing="lower" />
         {c.confidence !== undefined && <Chip label="confidence" value={c.confidence} casing="lower" tone={c.confidence === "low" ? "amber" : "neutral"} />}
-        <Chip label={c.scope === "in" ? "in scope" : c.scope === "descoped" ? "descoped" : "not taken"} casing="lower" tone={c.scope === "in" ? "emerald" : "amber"} />
+        <Chip label={SCOPE_SAID[c.scope]} casing="lower" tone={c.scope === "in" ? "emerald" : "amber"} />
       </div>
       <div className={s.sect}>
         <p className={s.claim}>{c.title}</p>

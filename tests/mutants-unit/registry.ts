@@ -5747,4 +5747,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "shortcut={{ mode: \"part.research\", verb: \"descope\" }} onPress=",
     why: "The descope button reads as pressable while another write is in flight; the island drops the op and the press looks taken and does nothing, where X is declined.",
   },
+  {
+    id: "notebook-card-scope-unspoken",
+    test: "tests/next-server/part-editor-writing.test.ts",
+    file: "app/(studio)/projects/[id]/[part]/_edit/Notebook.tsx",
+    find: "<SrOnly text={[SCOPE_SAID[c.scope], ...(c.liked ? [\"liked\"] : []), ...(c.deepen ? [\"deepen\"] : [])].join(\", \")} />",
+    replace: "<SrOnly text=\"\" />",
+    why: "A screen reader walking the scope board hears a descoped card exactly as an in-scope one: the strike-through and the glyphs are the only place its scope, like and deepen are drawn.",
+  },
 ];
