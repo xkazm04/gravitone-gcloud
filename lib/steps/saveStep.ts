@@ -26,13 +26,15 @@ export async function saveStep<T>(
   // which would be the same race one layer down. See the block above.
   const slot = claimSaveSlot(projectId, phase);
   saveWatchers.forEach((w) => w(projectId, phase, data));
-  // An early out for the common overtaking case, so a superseded keystroke does
-  // not even open the database. It is an optimisation, not the guard: the guard
-  // is the check inside the transaction callback, which is the only one that
-  // cannot be raced.
-  if (!slot.stillNewest()) return { ok: true, superseded: true };
 
-  return inIssueOrder(key(projectId, phase), async () => {
+  return inIssueOrder<SaveOutcome>(key(projectId, phase), async () => {
+    // An early out for the common overtaking case, so a superseded keystroke does
+    // not even open the database. It runs when this save's turn in the chain comes
+    // up, not at call time: the slot was claimed a line above the call, so a check
+    // there could never be false (measured: three saves in one tick opened three
+    // connections). It is an optimisation, not the guard: the guard is the check
+    // inside the transaction callback, which is the only one that cannot be raced.
+    if (!slot.stillNewest()) return { ok: true, superseded: true };
     let wrote = false;
     const r = await withStore("write", projectId, phase, (db) =>
       runTx(db, STEPS_STORE, "readwrite", (store) => {

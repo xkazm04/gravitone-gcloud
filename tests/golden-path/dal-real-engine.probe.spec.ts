@@ -274,6 +274,35 @@ test("latest-wins: through the REAL store, the newer keystroke is what lands", a
   expect("superseded" in a && a.superseded).toBe(true);
 });
 
+test("latest-wins: a save superseded while it waits its turn never opens the database", async () => {
+  // saveStep's early out is the promise that an overtaken save "does not even open
+  // the database". Checked at CALL time it can never fire (the slot was claimed one
+  // line earlier), so the check has to run when the save's turn in the issue-order
+  // chain comes up. Three saves in one tick: the first two are overtaken while queued.
+  const factory = globalThis.indexedDB;
+  const real = factory.open.bind(factory);
+  let opens = 0;
+  factory.open = ((...args: Parameters<IDBFactory["open"]>) => {
+    opens++;
+    return real(...args);
+  }) as IDBFactory["open"];
+  try {
+    const outcomes = await Promise.all([
+      saveStep("p1", "script", { topic: "one" }),
+      saveStep("p1", "script", { topic: "two" }),
+      saveStep("p1", "script", { topic: "three" }),
+    ]);
+    const landed = opens;
+    console.log(`[dal] three saves in one tick opened the database ${landed} time(s)`);
+    expect(outcomes.map((o) => o.ok && "superseded" in o && o.superseded === true)).toEqual([true, true, false]);
+    expect(landed, "only the save still newest at its turn may open a connection").toBe(1);
+  } finally {
+    delete (factory as unknown as { open?: unknown }).open;
+  }
+  const read = await readStep<{ topic: string }>("p1", "script");
+  expect(read.ok && read.data?.topic).toBe("three");
+});
+
 test("eviction: through the REAL store, one account's rows go and the other's stay", async () => {
   const db = await openDb();
   await runTx(db, [PROJECTS_STORE, THEMES_STORE, ASSETS_STORE], "readwrite", (projects, tx) => {
