@@ -212,6 +212,8 @@ function OpenHunt({ hunt, view, acts, nowMs }: { readonly hunt: HuntOpenView; re
         <CapsHeading text="lesson" level={3} />
         {hunt.lesson !== null ? (
           <LessonList lessons={[{ id: hunt.lesson.id, claim: hunt.lesson.claim, source: "hunt", provider: null, technique: hunt.lesson.technique, n: hunt.lesson.n, keepRate: hunt.lesson.keepRate, meanScore: null, confirmedAt: hunt.lesson.confirmedAt }]} huntHref={(id) => huntHref(view.kind, id)} />
+        ) : view.lessonError !== null ? (
+          <ErrorLine message={view.lessonError} />
         ) : draft !== null ? (
           <LessonForm key={draft.key + (draft.draftedBy ?? "hand")} proposal={draft.proposal} axes={ev.axes} techniques={ev.techniques} known={view.known} draftedBy={draft.draftedBy} engineError={draft.engineError} busy={signing} error={signError} onSign={(c, t) => sign(draft, c, t)} onDiscard={() => setDraft(null)} />
         ) : block !== null ? (

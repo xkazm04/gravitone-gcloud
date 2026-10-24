@@ -34,6 +34,8 @@ export type HuntDeskView = {
   readonly liveBlock: string | null;
   /** The kind's technique slugs: the only ones a lesson may rest on. */
   readonly known: readonly string[];
+  /** Why the open hunt's signed lesson could not be read, when it could not: never "no lesson". */
+  readonly lessonError: string | null;
 };
 
 const leafOf = (n: HuntNode): HuntLeafView => ({
@@ -85,7 +87,7 @@ export async function readHunt(kind: Kind, h: string | null): Promise<HuntDeskVi
   const reg = deskEngines();
   const block = liveBlock(reg, kind) ?? null;
   const reach: Record<string, Reach> = { elevenlabs: "render", suno: "hand", local: "none" };
-  const base = { kind, reach, liveBlock: block, known: TECHNIQUES[kind] };
+  const base = { kind, reach, liveBlock: block, known: TECHNIQUES[kind], lessonError: null };
   let hunts: Hunt[];
   let takes: SoundTake[];
   try {
@@ -114,6 +116,7 @@ export async function readHunt(kind: Kind, h: string | null): Promise<HuntDeskVi
   const lesson = one.hunt.lessonId === null || !lessons.ok ? null : (lessons.value.find((l) => l.id === one.hunt.lessonId) ?? null);
   return {
     ...base,
+    lessonError: lessons.ok ? null : `lessons: ${lessons.error.message}`,
     hunts: { ok: true, value: cards },
     open: {
       ok: true,
