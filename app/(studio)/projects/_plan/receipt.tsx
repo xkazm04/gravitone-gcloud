@@ -28,6 +28,7 @@ import { parseCeiling, receiptChanges, type ReceiptChanges } from "@gt/ui/compon
 import { useKeys } from "@gt/ui/keymap/dispatch";
 
 import type { ActionResult } from "../../../_server/actionCore.ts";
+import { settled } from "../../audio/_hunt/settled.ts";
 
 /** What a confirm came to: launched (with the toast's words), stale (with the fresh receipt), or refused. */
 export type Outcome = { readonly kind: "done"; readonly note: string; readonly ledger?: ToastLedger } | { readonly kind: "stale"; readonly fresh: ReceiptValue } | { readonly kind: "error"; readonly message: string };
@@ -72,7 +73,7 @@ export function useReceipt(nowMs: number): ReceiptFlow {
     inflight.current = true;
     setReading(true);
     try {
-      const r = await spec.read("dry");
+      const r = await settled(spec.read("dry"));
       gen.current++;
       if (r.ok) setSt({ spec, receipt: r.value, ceiling: "", busy: false });
       else spec.failed(r.error.error);
@@ -95,7 +96,7 @@ export function useReceipt(nowMs: number): ReceiptFlow {
       const mine = gen.current;
       setSt({ ...st, busy: true });
       try {
-        const r = await st.spec.read(mode);
+        const r = await settled(st.spec.read(mode));
         if (gen.current !== mine) return;
         if (r.ok) {
           const { error: _error, changes: _changes, ...rest } = st;
@@ -116,7 +117,7 @@ export function useReceipt(nowMs: number): ReceiptFlow {
     const mine = gen.current;
     setSt({ ...st, busy: true });
     try {
-      const out = await st.spec.confirm(st.receipt.token, c.value, st.receipt.mode);
+      const out = await settledOutcome(st.spec.confirm(st.receipt.token, c.value, st.receipt.mode));
       if (out.kind === "done") st.spec.done(out.note, out.ledger);
       if (gen.current !== mine) return;
       if (out.kind === "done") {
@@ -156,6 +157,13 @@ export function useReceipt(nowMs: number): ReceiptFlow {
       </LevelSheet>
     );
   return { open, reading, sheet };
+}
+
+/** A confirm whose round trip failed (a Server Action that REJECTS, not one that answers no) is
+ * an `error` in settled's words, so the sheet leaves busy and names it rather than going dead. */
+export async function settledOutcome(p: Promise<Outcome>): Promise<Outcome> {
+  const r = await settled<Outcome>(p.then((value) => ({ ok: true as const, value })));
+  return r.ok ? r.value : { kind: "error", message: r.error.error };
 }
 
 /** An action's envelope as an Outcome: refused is `error` with the server's words verbatim. */

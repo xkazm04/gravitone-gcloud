@@ -5723,4 +5723,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "send({ op: \"words-tags\", tags });",
     why: "Respelling the same tags (a space, a trailing comma) sends an unchanged list, the words kind refuses it, and the refusal stands on the error line over an edit that changed nothing.",
   },
+  {
+    id: "receipt-confirm-unsettled",
+    test: "tests/next-server/plan-and-import.test.ts",
+    file: "app/(studio)/projects/_plan/receipt.tsx",
+    find: "const out = await settledOutcome(st.spec.confirm(st.receipt.token, c.value, st.receipt.mode));",
+    replace: "const out = await st.spec.confirm(st.receipt.token, c.value, st.receipt.mode);",
+    why: "A launch confirm whose round trip fails leaves the receipt sheet busy with Confirm dead and no words, on every receipt in the studio.",
+  },
 ];
