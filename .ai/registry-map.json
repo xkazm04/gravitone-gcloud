@@ -2383,7 +2383,11 @@
           "revision": 2,
           "changedAt": "2026-09-28",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/hunt.ts:1 These are pure models and boards for auditioning and arranging generated music takes. Nothing here captures or narrates a software demo, and a search of packages/ui/src/components/audio for recorder, screencast, playwright, recordVideo and 'demo film' found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ef4fc3b78116e73b",
+          "evaluatedRevision": 2
         },
         {
           "subject": "structured-output",
@@ -2642,7 +2646,11 @@
           "revision": 2,
           "changedAt": "2026-09-28",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/rubric.ts:1 This context scores generated audio takes and records lessons from them; no demo film is produced. A search of packages/ui/src/components/audio for recorder, screencast, playwright, recordVideo and 'demo film' found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ef4fc3b78116e73b",
+          "evaluatedRevision": 2
         },
         {
           "subject": "scoring-rubrics",
@@ -9818,7 +9826,11 @@
           "revision": 2,
           "changedAt": "2026-09-28",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/part/part.ts:1 These are workspace and Board-desk UI rules (verdicts, tabs, clocks, keyboard walk) for a film part. Nothing here drives or records the system as a demo, and a search of packages/ui/src/components/part and packages/ui/src/components/desk for recorder, screencast, playwright, recordVideo and 'demo film' found nothing.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ef4fc3b78116e73b",
+          "evaluatedRevision": 2
         },
         {
           "subject": "data-access",
@@ -11600,7 +11612,11 @@
           "revision": 2,
           "changedAt": "2026-09-28",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/script/types.ts:1 lib/script writes the narration for generated factual films from notebook cards. It never drives or records the software as a demo, and a search of lib/script for recorder, screencast, playwright, recordVideo and 'demo film' found nothing, so the subject's precondition (a demo film of a working software system) does not hold here.",
+          "evaluatedAt": "2026-10-24",
+          "evaluatedAgainst": "sha256-b2:ef4fc3b78116e73b",
+          "evaluatedRevision": 2
         },
         {
           "subject": "review-iteration-loops",

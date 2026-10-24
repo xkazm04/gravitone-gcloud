@@ -12091,6 +12091,47 @@
       "evaluatedTs": "2026-10-24T22:19:22.265Z",
       "worker": "1951f6e7-3f9d-4896-bb73-a099f7e658b8",
       "techniques": []
+    },
+    "f8036604-75f5-4f7d-898c-734511ac5e86/live-system-demo-film": {
+      "context": "script-composition-and-validation",
+      "subject": "live-system-demo-film",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:31:10.573Z",
+      "worker": "cd721550-d90c-43ce-8484-fc0bf3d478cd",
+      "techniques": [],
+      "registryProposal": "This context has beats, narration word budgets (renders.ts:154 '150 wpm') and staleness/impact tracking, so the ranker's token score pairs it with this subject. The golden path could say outright that a narrated generated film about a topic is not a live-system demo, which would stop audio-first pacing and script-as-single-source being applied here by token overlap."
+    },
+    "c909310e-6f47-45b3-b06e-b18cfb3ab27c/live-system-demo-film": {
+      "context": "audio-hunt-arrange",
+      "subject": "live-system-demo-film",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:31:10.573Z",
+      "worker": "cd721550-d90c-43ce-8484-fc0bf3d478cd",
+      "techniques": []
+    },
+    "f54f23e7-c790-44ff-beaf-a5cb83c8d5c4/live-system-demo-film": {
+      "context": "audio-lessons-measures",
+      "subject": "live-system-demo-film",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:31:10.573Z",
+      "worker": "cd721550-d90c-43ce-8484-fc0bf3d478cd",
+      "techniques": []
+    },
+    "430ace14-ef3a-4ef0-acd0-71c989368950/live-system-demo-film": {
+      "context": "part-workspace-desk",
+      "subject": "live-system-demo-film",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T22:31:10.573Z",
+      "worker": "cd721550-d90c-43ce-8484-fc0bf3d478cd",
+      "techniques": []
     }
   }
 }
