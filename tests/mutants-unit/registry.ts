@@ -5931,4 +5931,12 @@ export const MUTANTS: UnitMutant[] = [
     replace: "  if (!used.includes(p.id) || true) {",
     why: "The fixture Library logs a second library.used for an item already in the project, where the kernel writes the mark once and no second event.",
   },
+  {
+    id: "library-newest-under-any-sort",
+    test: "tests/next-server/library-screen.test.ts",
+    file: "app/(studio)/library/_library/Library.tsx",
+    find: "  if (sort !== \"newest\") return [];",
+    replace: "",
+    why: "Sorted by name, the set summary's Newest row shows the alphabet's first pictures under a heading that says they are the newest.",
+  },
 ];

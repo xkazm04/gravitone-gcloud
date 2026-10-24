@@ -15,6 +15,8 @@
 //      read "reading <id>" for good once the toast faded; moving away and back asks again.
 //   4. A block's error leaves once that block reads. The alert under the results stood for the
 //      life of the result, over rows that had since landed.
+//   5. The set summary's "Newest" row is the newest pictures. It drew the answer's first pictures
+//      whatever the sort, so sorted by name it showed the alphabet's first under "Newest".
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -25,9 +27,10 @@ vi.mock("server-only", () => ({}));
 
 import type { ActionResult } from "../../app/_server/actionCore.ts";
 import { landed, settle } from "../../app/(studio)/library/_library/blocks.ts";
-import { panelOf } from "../../app/(studio)/library/_library/Library.tsx";
+import { newestOf, panelOf } from "../../app/(studio)/library/_library/Library.tsx";
 import { DEFAULT_URL, pressedBy, toggled } from "../../app/(studio)/library/_library/url.ts";
 import type { FacetLine } from "@gt/ui/components/library/DetailPanel.tsx";
+import type { LibraryCard } from "@gt/ui/components/library/LibraryTile.tsx";
 import { stripComments } from "../golden-path/_pure.ts";
 
 const DIR = path.join(import.meta.dirname, "../../app/(studio)/library/_library");
@@ -111,5 +114,24 @@ describe("4. a block's error leaves once that block reads", () => {
 
   it("a block that lands passes through it", () => {
     expect(code("blocks.ts")).toContain("setError((e) => landed(e, identity, b));");
+  });
+});
+
+describe("5. the set summary's Newest row is the newest pictures", () => {
+  const card = (id: string, face: LibraryCard["face"]): LibraryCard => ({ id, kind: "image", title: id, meta: "", state: "unjudged", source: "fixture", date: "2026-10-01", face, chips: [] }) as unknown as LibraryCard;
+  const items = [card("a", { kind: "image", url: "/a.jpg" }), card("b", { kind: "swatch" } as LibraryCard["face"]), card("c", { kind: "image", url: "/c.jpg" })];
+
+  it("sorted newest, the answer's first pictures, six at most", () => {
+    expect(newestOf("newest", items).map((x) => x.id)).toEqual(["a", "c"]);
+    expect(newestOf("newest", Array.from({ length: 9 }, (_, i) => card(`p${i}`, { kind: "image", url: `/${i}.jpg` }))).length).toBe(6);
+  });
+
+  it("sorted any other way, no Newest row", () => {
+    expect(newestOf("name", items)).toEqual([]);
+    expect(newestOf("kind", items)).toEqual([]);
+  });
+
+  it("the summary is handed it", () => {
+    expect(code("Library.tsx")).toContain("const newest = newestOf(u.sort, page.items);");
   });
 });

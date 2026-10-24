@@ -21,7 +21,8 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 
-import type { LibraryAct, LibraryKindName } from "@gt/domain/library";
+import type { LibraryAct, LibraryKindName, LibrarySort } from "@gt/domain/library";
+import type { LibraryCard } from "@gt/ui/components/library/LibraryTile.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { Panel } from "@gt/ui/components/panel/Panel.tsx";
 import { DetailPanel } from "@gt/ui/components/library/DetailPanel.tsx";
@@ -56,7 +57,17 @@ export function panelOf(sel: string | null, held: boolean, failed: Failed | null
   return failed !== null && failed.id === sel ? { is: "failed", text: failed.text } : { is: "reading" };
 }
 
-const STEP: Readonly<Record<string, Step>> ={ "←": "left", "→": "right", "↑": "up", "↓": "down", PgUp: "page-up", PgDn: "page-down", Home: "first", End: "last" };
+/**
+ * The set summary's "Newest" pictures: the first pictures of the answer, which are the newest
+ * only while the answer is sorted newest. Sorted by name or kind they were the alphabet's first,
+ * under a heading that said otherwise; then there is no Newest row.
+ */
+export function newestOf(sort: LibrarySort, items: readonly LibraryCard[]): readonly { readonly id: string; readonly title: string; readonly url: string }[] {
+  if (sort !== "newest") return [];
+  return items.flatMap((c) => (c.face.kind === "image" ? [{ id: c.id, title: c.title, url: c.face.url }] : [])).slice(0, 6);
+}
+
+const STEP: Readonly<Record<string, Step>> = { "←": "left", "→": "right", "↑": "up", "↓": "down", PgUp: "page-up", PgDn: "page-down", Home: "first", End: "last" };
 
 export function Library({ url: u, page, detail: first, port }: LibraryProps) {
   const router = useRouter();
@@ -222,7 +233,7 @@ export function Library({ url: u, page, detail: first, port }: LibraryProps) {
   const panel = panelOf(sel, current !== null, failed);
   const position = current === null || sel === null ? undefined : blocks.indexOf(sel);
   const summaryStates = Object.fromEntries((page.groups.find((g) => g.key === "state")?.values ?? []).map((v) => [v.value, (u.f["state"]?.length ?? 0) > 0 && !v.selected ? 0 : v.count]));
-  const newest = page.items.flatMap((c) => (c.face.kind === "image" ? [{ id: c.id, title: c.title, url: c.face.url }] : [])).slice(0, 6);
+  const newest = newestOf(u.sort, page.items);
   return (
     <div ref={root} className={s.lib} data-component="Library" data-detail={detailOn} data-rail={railOpen} data-narrow={narrow}>
       <aside className={s.nav} id="lib-rail" aria-label="Library vocabulary">
