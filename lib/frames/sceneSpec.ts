@@ -88,7 +88,9 @@ const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "obj
  *  that comes back carrying letters is not a nicer plate, it is an unusable one.
  *  The same is true of a move described as "the label slides in" — our text
  *  layer is vector and ours, so no generated frame may be asked to carry it. */
-const ASKS_FOR_TEXT = /\b(text|label(l)?ed|caption|write|written|word|letter|number|digit|title)\b/i;
+// Plurals and noun forms are spelled out: a word boundary after "letter" does
+// not match inside "letters", so "a wall covered in letters" used to pass.
+const ASKS_FOR_TEXT = /\b(texts?|labels?|label(l)?ed|captions?|writes?|writing|written|words?|letters?|lettering|numbers?|digits?|titles?)\b/i;
 
 /** One scene the parser refused, and the sentence that says why.
  *

@@ -40,6 +40,21 @@ test("scene-element-citation: an uncited element still passes (back-compat)", ()
   expect(r.specs[0].elements[0].factId).toBeUndefined();
 });
 
+test("scene-element-citation: a subject or motion asking for glyphs is refused in the plural too", () => {
+  // The word list is held with a word boundary on both sides, so its singular
+  // forms never matched their plurals: "letters", "numbers" and "words" passed.
+  const scene = JSON.parse(sceneWith({})).scenes[0];
+  const words = ["text", "texts", "labels", "captions", "words", "letters", "lettering", "numbers", "digits", "titles", "writing"];
+  for (const w of words) {
+    const subject = reviewSceneSpecs(JSON.stringify({ scenes: [{ ...scene, subject: `A wall of pale blocks covered in ${w}, wide and quiet.` }] }), frames, ids);
+    expect(subject.rejected.map((x) => x.reason), `subject: ${w}`).toEqual(["The subject asks the model for text. Plates carry no glyphs."]);
+    const motion = reviewSceneSpecs(JSON.stringify({ scenes: [{ ...scene, motion: `the ${w} slide in from the left` }] }), frames, ids);
+    expect(motion.rejected, `motion: ${w}`).toHaveLength(1);
+  }
+  // And a picture with no glyph in it still passes.
+  expect(reviewSceneSpecs(sceneWith({}), frames, ids).rejected).toEqual([]);
+});
+
 test("scene-element-citation: a null scene, element or text is a finding, not a lost pass", () => {
   // The engine's JSON is a request, not a guarantee. A `null` in any of its
   // three lists used to throw a TypeError out of the review, discarding every
