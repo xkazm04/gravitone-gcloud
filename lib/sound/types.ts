@@ -57,6 +57,13 @@ export const DEFECTS = [
   "confident-hallucination",
   "off-brief",
   "wrong-event",
+  // Technical (2026-10-24, spark audio-labelling): the human label for what the triage detectors
+  // measure (@gt/domain/audio.triage CHECK_DEFECT) - clipping or true-peak overs, a level out of
+  // its usable range, dead air inside the take, a length off the brief.
+  "clipping",
+  "level",
+  "dead-air",
+  "wrong-length",
 ] as const;
 export type DefectCode = (typeof DEFECTS)[number];
 

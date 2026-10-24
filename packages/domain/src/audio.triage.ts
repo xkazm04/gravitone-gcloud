@@ -36,12 +36,17 @@ export const EXPERIMENTAL_CHECKS: ReadonlySet<TriageCheck> = new Set<TriageCheck
 
 /** The human defect code (lib/sound/types.ts DEFECTS) a structural check evidences. */
 export const CHECK_DEFECT = {
+  clipping: "clipping",
+  "true-peak-over": "clipping",
+  "loudness-range": "level",
+  "dead-air": "dead-air",
+  duration: "wrong-length",
   "broken-ending": "broken-ending",
   "tempo-instability": "tempo-instability",
   "section-boundary": "off-brief",
   "loop-seam": "loop-seam",
   "mono-fold": "phase-width",
-} as const satisfies Partial<Record<TriageCheck, string>>;
+} as const satisfies Record<TriageCheck, string>;
 
 export const TRIAGE_KINDS = ["music", "sfx", "voice"] as const;
 export type TriageKind = (typeof TRIAGE_KINDS)[number];

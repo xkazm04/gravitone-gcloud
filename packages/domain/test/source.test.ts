@@ -17,16 +17,18 @@ describe("packet sources", () => {
     expect(SOURCES.strips.reasons).toEqual(["concept", "legibility", "motion", "craft", "identity", "too-busy", "generic", "broken"]);
     expect(SOURCES.strips.maxReasons).toBe(3);
     expect(SOURCES.article.reasons).toEqual(["structure", "storytelling", "depth", "figures", "voice", "medium-fidelity", "truth"]);
-    expect(SOURCES.audio.reasons).toHaveLength(11);
+    expect(SOURCES.audio.reasons).toHaveLength(15);
     expect(SOURCES.dojo.reasons).toEqual(["technique", "execution"]);
     expect(SOURCES.forge.reasons).toEqual(["style", "subject", "text", "craft"]);
   });
 
-  it("binds keys 1-9, 0, - to a source's list in order; eleven audio defects use all eleven keys", () => {
-    expect(REASON_KEYS).toHaveLength(11);
+  it("binds keys 1-9, 0, -, Q W E R to a source's list in order; fifteen audio defects use all fifteen keys", () => {
+    expect(REASON_KEYS).toHaveLength(15);
     expect(reasonForKey("audio", "1")).toBe("smeared-transients");
     expect(reasonForKey("audio", "0")).toBe("off-brief");
     expect(reasonForKey("audio", "-")).toBe("wrong-event");
+    expect(reasonForKey("audio", "Q")).toBe("clipping");
+    expect(reasonForKey("audio", "R")).toBe("wrong-length");
     expect(reasonForKey("forge", "4")).toBe("craft");
     expect(reasonForKey("forge", "5")).toBeUndefined();
     expect(reasonForKey("suno", "1")).toBeUndefined();

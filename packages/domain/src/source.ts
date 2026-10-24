@@ -66,12 +66,13 @@ export const SOURCES = {
   // lib/articles/types.ts:337 CHECK_DIMENSIONS, the Board's reject axes for
   // articles (lib/board/sources/articles.ts:569). A reject may name all seven.
   article: { modes: ["packet-review"], reasons: ["structure", "storytelling", "depth", "figures", "voice", "medium-fidelity", "truth"], maxReasons: 7, noteMax: NOTE_LONG },
-  // lib/sound/types.ts:48 DEFECTS - eleven codes, which is exactly 1-9, 0, -.
+  // lib/sound/types.ts:48 DEFECTS - fifteen codes: 1-9, 0, - and Q W E R for the four technical ones
+  // (clipping, level, dead-air, wrong-length) that the triage detectors evidence.
   // takes.ts reasonsOf de-duplicated and capped nothing, so all eleven may stand.
   audio: {
     modes: ["matrix-cull"],
-    reasons: ["smeared-transients", "vocal-garble", "section-bleed", "tempo-instability", "broken-ending", "loop-seam", "spectral-imbalance", "phase-width", "confident-hallucination", "off-brief", "wrong-event"],
-    maxReasons: 11,
+    reasons: ["smeared-transients", "vocal-garble", "section-bleed", "tempo-instability", "broken-ending", "loop-seam", "spectral-imbalance", "phase-width", "confident-hallucination", "off-brief", "wrong-event", "clipping", "level", "dead-air", "wrong-length"],
+    maxReasons: 15,
     noteMax: NOTE_LONG,
   },
   // lib/suno/types.ts:88 and lib/sound/mv/types.ts:46: keep | drop, nothing more.
@@ -102,7 +103,9 @@ export const SOURCES = {
 } as const satisfies { readonly [S in PacketSource]: SourceSpec };
 
 /** The keys a reason list is bound to, in order (plan §8: the Board's 1-4 grew to eleven for audio). */
-export const REASON_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-"] as const;
+// Q W E R (the row under 1-4) hold reasons 12-15: audio grew four technical codes on 2026-10-24
+// (spark audio-labelling) so the operator can label what the triage detectors claim.
+export const REASON_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "Q", "W", "E", "R"] as const;
 export type ReasonKey = (typeof REASON_KEYS)[number];
 
 export function sourceSpec(source: PacketSource): SourceSpec {

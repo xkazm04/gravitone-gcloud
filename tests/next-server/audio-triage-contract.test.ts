@@ -4,12 +4,12 @@
 // a Board that quietly shows a code the cull's reasons cannot hold.
 import { describe, expect, it } from "vitest";
 
-import { CHECK_DEFECT, STRUCTURAL_CHECKS } from "@gt/domain/audio.triage";
+import { CHECK_DEFECT, TRIAGE_CHECKS } from "@gt/domain/audio.triage";
 
 import { DEFECTS } from "../../lib/sound/types.ts";
 
 describe("triage -> defect codes", () => {
-  it("every structural check names a defect the human vocabulary holds", () => {
-    for (const c of STRUCTURAL_CHECKS) expect(DEFECTS as readonly string[]).toContain(CHECK_DEFECT[c]);
+  it("every check names a defect the human vocabulary holds (technical codes since 2026-10-24)", () => {
+    for (const c of TRIAGE_CHECKS) expect(DEFECTS as readonly string[]).toContain(CHECK_DEFECT[c]);
   });
 });

@@ -95,6 +95,11 @@ STRUCTURAL_CHECKS = ("broken-ending", "tempo-instability", "section-boundary", "
 TRIAGE_CHECKS = TECHNICAL_CHECKS + STRUCTURAL_CHECKS
 
 CHECK_DEFECT = {
+    "clipping": "clipping",
+    "true-peak-over": "clipping",
+    "loudness-range": "level",
+    "dead-air": "dead-air",
+    "duration": "wrong-length",
     "broken-ending": "broken-ending",
     "tempo-instability": "tempo-instability",
     "section-boundary": "off-brief",
