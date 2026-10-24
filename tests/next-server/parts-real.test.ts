@@ -145,6 +145,39 @@ describe("a scope decided on the notebook's own digest is not orphaned by storag
   });
 });
 
+describe("a gate that throws after an edit", () => {
+  // The edit's gate check runs after the answer (real.ts `kick`): a throw inside it is the
+  // part-gates log line, never an unhandled rejection in the server process.
+  it("is logged, and the edit still answers applied", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "gt-parts-"));
+    dirs.push(dir);
+    const k = openKernel(path.join(dir, "k.sqlite"));
+    if (!k.ok) throw k.error;
+    open.push(k.value);
+    const store = k.value.store;
+    const c = compose(store, { recipe: "film/ad-social-15" }, OP, { id: "ad1" });
+    if (!c.ok) throw c.error;
+    const gone = (): never => {
+      throw new Error("clock gone");
+    };
+    const port = makeRealPart({ store: () => ok(store), now: () => NOW, gates: { store: () => ok(store), blobs: () => blobStore(path.join(dir, "blobs")), now: gone } });
+    const unhandled: unknown[] = [];
+    const onUnhandled = (e: unknown): void => void unhandled.push(e);
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    process.on("unhandledRejection", onUnhandled);
+    try {
+      const v = await applied(port.opPart({ projectId: "ad1", key: "research", baseRev: 1, op: { op: "set-brief", field: "product", value: "Rainshell" } }));
+      expect(v.rev).toBe(2);
+      await new Promise((res) => setTimeout(res, 50));
+      expect(unhandled).toEqual([]);
+      expect(logged.mock.calls.map((a) => String(a[0]))).toContain("[part-gates] ad1: clock gone");
+    } finally {
+      process.off("unhandledRejection", onUnhandled);
+      logged.mockRestore();
+    }
+  });
+});
+
 function v0Never(): never {
   throw new Error("expected a launched act");
 }

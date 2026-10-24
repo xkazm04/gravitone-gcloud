@@ -2341,6 +2341,14 @@ export const MUTANTS: UnitMutant[] = [
     replace: "baseRev: \"current\",",
     why: "The real side writes every op at the current revision, so a stale editor overwrites silently.",
   },
+  {
+    id: "parts-real-gate-throw-unhandled",
+    test: "tests/next-server/parts-real.test.ts",
+    file: "app/(studio)/projects/[id]/_part/real.ts",
+    find: "(e: unknown) => console.error(`[part-gates] ${projectId}: ${errorMessage(e)}`),",
+    replace: "",
+    why: "A gate check that throws after an edit is an unhandled rejection in the server process, not a log line.",
+  },
   // ── Phase 4 wave C, L38: the part view contract and the part workspace ──
   {
     id: "partview-core-op-dropped-from-the-trail",

@@ -53,9 +53,14 @@ export function makeRealPart(deps: RealDeps): ServerPart {
     return k.ok ? fn(k.value) : k;
   };
   const kick = (store: Store, projectId: string): void => {
-    void openReadyGates({ ...deps.gates, store: () => ok(store) }, projectId, { by: "agent", surface: "parts", who: "part-gates" }).then((r) => {
-      if (!r.ok) console.error(`[part-gates] ${projectId}: ${r.error.message}`);
-    });
+    // After the answer, so a gate that THROWS (a blob root, a clock) is this log line too - never
+    // an unhandled rejection in the server process.
+    void openReadyGates({ ...deps.gates, store: () => ok(store) }, projectId, { by: "agent", surface: "parts", who: "part-gates" }).then(
+      (r) => {
+        if (!r.ok) console.error(`[part-gates] ${projectId}: ${r.error.message}`);
+      },
+      (e: unknown) => console.error(`[part-gates] ${projectId}: ${errorMessage(e)}`),
+    );
   };
   const read = (store: Store, projectId: string, key: string): Result<PartView> =>
     unwrap(
