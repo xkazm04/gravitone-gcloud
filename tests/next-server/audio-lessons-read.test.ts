@@ -50,6 +50,7 @@ vi.mock("../../lib/sound/store.ts", async (orig) => ({
 import { rmSync } from "node:fs";
 
 import { readHunt } from "../../app/(studio)/audio/_hunt/read.ts";
+import { readLessons } from "../../app/(studio)/audio/_lessons/read.ts";
 import { closeKernel } from "../../lib/kernelStore.ts";
 
 afterAll(() => {
@@ -70,5 +71,21 @@ describe("the hunt's lesson part", () => {
     gate.ledgerFail = false;
     expect(v.open?.ok).toBe(true);
     expect(v.lessonError).toBe("lessons: ledger.json: Unexpected end of JSON input");
+  });
+});
+
+describe("the lessons section", () => {
+  it("each lesson names the hunt it came from", async () => {
+    const v = await readLessons("music");
+    expect(v.lessons.ok && v.lessons.value.map((l) => l.hunt)).toEqual([{ id: "hn-1", idea: "a drone that never resolves" }]);
+    expect(v.hunts).toBeNull();
+  });
+
+  it("an unreadable hunt store is named; the lessons still read", async () => {
+    gate.huntsFail = true;
+    const v = await readLessons("music");
+    gate.huntsFail = false;
+    expect(v.lessons.ok && v.lessons.value.map((l) => l.id)).toEqual(["ls-1"]);
+    expect(v.hunts).toBe("hunts: hunts.json: Unexpected token");
   });
 });
