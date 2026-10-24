@@ -10,7 +10,7 @@ import { runMachine } from "./run.machine.ts";
 // what the Foundry column lists and what a Weir pile points back to. The machine underneath it is
 // its one Job (`job:run:<id>`); a Run's state is what the Floor shows, in the design's words
 // (docs/next/prototype/app/model.js: draft | running | awaiting_gate | ratified | blocked), and
-// like a Part's it is DERIVED from the job at read (packages/kernel/src/records/state.ts), never
+// like a Part's it is DERIVED from the job (./plan.ts runStateOf; a Part's is read in kernel records/read.ts), never
 // written - so the stored record carries no state and no queue position (a position is computed,
 // COMMON decision 5). A Project's Part is NOT a Run: it is a part row with its own job.
 

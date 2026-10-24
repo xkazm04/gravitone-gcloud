@@ -8,7 +8,7 @@ import type { ComposerInput, NativeProducer } from "./produce.ts";
 // holds the shapes never loads zod; a server action parses here before the kernel sees anything.
 // The composer union is pinned to its contract type by `satisfies`; the two optional-field shapes
 // cannot be (zod's output spells an optional as `T | undefined`, which exactOptionalPropertyTypes
-// keeps apart from an absent key), so test/produce.test.ts holds them to the contract instead.
+// keeps apart from an absent key), so test/plan.test.ts holds them to the contract instead.
 
 const text = z.string().trim().min(1).max(4000);
 
