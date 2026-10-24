@@ -51,7 +51,7 @@ describe("layout", () => {
     expect(ids).not.toContain("s2");
     expect(ids).not.toContain("r1");
     expect(ids).toContain("i3"); // paused is not dead
-    expect(l.columns.map((c) => c.hidden)).toEqual([1, 0, 0, 1, 0]);
+    expect(l.columns.map((c) => c.hidden)).toEqual([1, 0, 0, 0, 1, 0]);
     expect(l.links.map((k) => k.key)).not.toContain("i1>r1");
     expect(layout(NODES, EDGES, "all").columns.every((c) => c.hidden === 0)).toBe(true);
   });

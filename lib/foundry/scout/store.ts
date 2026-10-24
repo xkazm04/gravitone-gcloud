@@ -32,6 +32,7 @@ import {
   DEFAULT_REEL_CAP,
   DEFAULT_TARGET,
   DEFAULT_TRACK_CAP,
+  DEFAULT_STORYBOARD_CAP,
   DEFAULT_VISUALIZER_CAP,
   NIGHT_ID_RE,
   type Candidate,
@@ -84,6 +85,7 @@ export type NightOptions = {
   readonly reelCap?: number;
   readonly trackCap?: number;
   readonly visualizerCap?: number;
+  readonly storyboardCap?: number;
   /** ISO instant. */
   readonly deadline?: string;
   readonly dry: boolean;
@@ -122,6 +124,7 @@ export async function createNight(o: NightOptions): Promise<Night> {
       reelCap: o.reelCap ?? DEFAULT_REEL_CAP,
       trackCap: o.trackCap ?? DEFAULT_TRACK_CAP,
       visualizerCap: o.visualizerCap ?? DEFAULT_VISUALIZER_CAP,
+      storyboardCap: o.storyboardCap ?? DEFAULT_STORYBOARD_CAP,
       dry: o.dry,
       state: "open",
       sources: [],

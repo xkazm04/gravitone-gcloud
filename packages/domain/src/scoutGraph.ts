@@ -7,7 +7,7 @@
 // every seed batch, the steer and the kernel's spend and job events; the screen only draws it.
 //
 // STAGES are the columns, left to right: a SEED (a branch root), a DERIVED child seed, an IDEA artboard, a
-// RUN (a style, a scene, a game asset, a stats reel, a direction, a track...), and an OUTPUT - what a kept
+// STORYBOARD (spark scout-storyboards), a RUN (a style, a scene, a game asset, a stats reel, a direction, a track...), and an OUTPUT - what a kept
 // run left that is real (a Library look, a clip, a mesh, a knowledge line, a visualizer). How far right a
 // branch's live nodes reach is how far its decisions developed.
 //
@@ -15,7 +15,7 @@
 // `failed` are a render's, `kept` and `rejected` the operator's. `paused` is the steer's and marks a node
 // whose branch the operator paused. Effort is what the kernel recorded, absent when nothing ran.
 
-export const GRAPH_STAGES = ["seed", "derived", "idea", "run", "output"] as const;
+export const GRAPH_STAGES = ["seed", "derived", "idea", "board", "run", "output"] as const;
 export type GraphStage = (typeof GRAPH_STAGES)[number];
 
 export const GRAPH_KINDS = [
@@ -23,6 +23,8 @@ export const GRAPH_KINDS = [
   "seed",
   // stage idea
   "idea",
+  // stage board (spark scout-storyboards): a kept idea composed as frames + words before any full video
+  "storyboard",
   // stage run
   "style",
   "scene",

@@ -44,6 +44,13 @@ export type SourceSpec = {
    * commits, as every source before `seeds` did.
    */
   readonly reasonOnReject?: true;
+  /**
+   * The reasons in key order PER ROW GROUP (spark scout-storyboards: "1 keep, 2-4 reject with reason 1-3
+   * in order"): a desk binds keys 2, 3 and 4 to the first three of the row's group, so a 3D row's keys
+   * name a mesh's defects and an idea's an idea's. Each list is an ORDER over this source's own
+   * `reasons` (the domain test refuses a word outside it); a group absent here keys off `reasons`.
+   */
+  readonly reasonsBy?: Readonly<Record<string, readonly string[]>>;
 };
 
 /** v1's note bound where v1 had one (lib/articles/types.ts NOTE_MAX_CHARS, lib/sound/takes.ts `str(b.note, 2000)`). */
@@ -105,7 +112,24 @@ export const SOURCES = {
   // A game asset's variant (spark game-3d-assets) adds the defects a mesh is thrown for, APPENDED so
   // every earlier key keeps its binding: `topology` (holes, floaters, fused or thin parts), `texture`
   // (the bake), `rig` (the weights or the chains), `scale` (world size against the class).
-  scout: { modes: ["matrix-cull"], reasons: ["style", "subject", "craft", "motion", "rights", "generic", "use case", "topology", "texture", "rig", "scale"], maxReasons: 3, noteMax: NOTE_SHORT },
+  // `story` (spark scout-storyboards): a storyboard's frames do not add up to a video worth making - APPENDED.
+  // reasonsBy: the first three of each row group are keys 2-4 (RowWords.group, lib/decision/v1/sources/scoutPlan.ts).
+  scout: {
+    modes: ["matrix-cull"],
+    reasons: ["style", "subject", "craft", "motion", "rights", "generic", "use case", "topology", "texture", "rig", "scale", "story"],
+    maxReasons: 3,
+    noteMax: NOTE_SHORT,
+    reasonsBy: {
+      ideas: ["generic", "use case", "subject"],
+      storyboards: ["story", "generic", "use case"],
+      videos: ["craft", "motion", "style"],
+      "art styles": ["style", "generic", "craft"],
+      "3d": ["topology", "texture", "rig"],
+      music: ["craft", "generic", "use case"],
+      notes: ["generic", "use case", "subject"],
+      sources: ["generic", "use case", "subject"],
+    },
+  },
   // A batch of one-sentence SEEDS (spark scout-decision-graph): genre, subgenre, type of content,
   // audience and format, kept or thrown in one pass. Every reject names why (the operator, wave 3),
   // because a reasoned throw is the ban the next batch steers by; a note may follow the reason.
@@ -191,6 +215,7 @@ export const REASON_MEANING: { readonly [S in PacketSource]: { readonly [R in Re
     texture: "The texture bake is wrong: seams, smears, wrong materials.",
     rig: "The rig fails: bad weights or broken bone chains.",
     scale: "Its size in the world is wrong for its class.",
+    story: "The frames do not add up to a video worth making.",
   },
   seeds: {
     generic: "The obvious take: nothing here we would make differently.",
@@ -219,12 +244,20 @@ export type ReasonVocabulary = {
   readonly meaning: Readonly<Record<string, string>>;
   /** Set when a reject must name a reason before the packet commits (SourceSpec.reasonOnReject). */
   readonly required?: true;
+  /** The list's order per row group (SourceSpec.reasonsBy); `reasonsOf` reads it. */
+  readonly by?: Readonly<Record<string, readonly string[]>>;
 };
+
+/** The reasons a row of `group` offers, in key order: its group's order first, then the rest of the list. */
+export function reasonsOf(v: ReasonVocabulary, group: string | undefined): readonly string[] {
+  const first = group === undefined ? undefined : v.by?.[group];
+  return first === undefined ? v.list : [...first, ...v.list.filter((r) => !first.includes(r))];
+}
 
 /** The one builder of a packet view's vocabulary, so the meanings travel with the list they define. */
 export function reasonVocabulary(source: PacketSource): ReasonVocabulary {
   const spec: SourceSpec = SOURCES[source];
-  return { list: spec.reasons, max: spec.maxReasons, noteMax: spec.noteMax, meaning: REASON_MEANING[source], ...(spec.reasonOnReject === true ? { required: true as const } : {}) };
+  return { list: spec.reasons, max: spec.maxReasons, noteMax: spec.noteMax, meaning: REASON_MEANING[source], ...(spec.reasonOnReject === true ? { required: true as const } : {}), ...(spec.reasonsBy === undefined ? {} : { by: spec.reasonsBy }) };
 }
 
 /** The keys a reason list is bound to, in order (plan §8: the Board's 1-4 grew to eleven for audio). */

@@ -427,6 +427,8 @@ export function build(v1: ScoutV1): Built {
     else if (c.kind === "direction") directionCell(night, c, out);
     else if (c.kind === "track") trackCells(night, c, v1.media, out, v1.seeds);
     else if (c.kind === "visualizer") visualizerCells(night, c, v1, out);
+    // WP0 stub (spark scout-storyboards): WP4 draws a storyboard's frames and words as one run.
+    else if (c.kind === "storyboard") out.losses.push({ candidate: c.id, grade: "dropped", reason: "storyboards are not drawn on the packet yet" });
     else if (c.status === "failed") out.losses.push({ candidate: c.id, grade: "dropped", reason: c.error ?? "failed with no error recorded" });
     else textCell(night, c, out);
   }

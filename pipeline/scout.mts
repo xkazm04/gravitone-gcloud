@@ -43,7 +43,7 @@ import { errorMessage } from "@gt/domain/errors";
 
 import { MUSE_DEFAULT_CEILING_USD, MUSE_DEFAULT_IDEA_CAP, MUSE_MAX_IDEA_CAP } from "../lib/foundry/scout/muse.ts";
 import { DEFAULT_WING, SCOUT_WINGS, isWing, type ScoutWing } from "../lib/foundry/scout/wing.ts";
-import { DEFAULT_ASSET_CAP, DEFAULT_CEILING_USD, DEFAULT_CLIP_CAP, DEFAULT_IDEA_CAP, DEFAULT_REEL_CAP, DEFAULT_TARGET, DEFAULT_TRACK_CAP, DEFAULT_VISUALIZER_CAP, MAX_IDEA_CAP, MAX_REEL_CAP, MAX_TRACK_CAP, MAX_VISUALIZER_CAP } from "../lib/foundry/scout/types.ts";
+import { DEFAULT_ASSET_CAP, DEFAULT_CEILING_USD, DEFAULT_CLIP_CAP, DEFAULT_IDEA_CAP, DEFAULT_REEL_CAP, DEFAULT_TARGET, DEFAULT_STORYBOARD_CAP, DEFAULT_TRACK_CAP, DEFAULT_VISUALIZER_CAP, MAX_IDEA_CAP, MAX_REEL_CAP, MAX_STORYBOARD_CAP, MAX_TRACK_CAP, MAX_VISUALIZER_CAP } from "../lib/foundry/scout/types.ts";
 
 type IngestDeps = import("../lib/foundry/scout/ingest.ts").IngestDeps;
 type Spawn = import("../lib/foundry/scout/ingest.ts").Spawn;
@@ -52,6 +52,7 @@ type AssetEngines = import("../lib/producers/scoutAssetActs.ts").AssetEngines;
 type IdeasEngines = import("../lib/foundry/scout/idea.ts").IdeasEngines;
 type TrackEngines = import("../lib/foundry/scout/track.ts").TrackEngines;
 type VisualizerEngines = import("../lib/foundry/scout/visualizer.ts").VisualizerEngines;
+type StoryboardEngines = import("../lib/foundry/scout/storyboard.ts").StoryboardEngines;
 
 /** What a test or a rehearsal injects; production passes none. */
 export type CliPorts = {
@@ -71,6 +72,8 @@ export type CliPorts = {
   /** `track`'s Suno browser and clip download; `visualizer`'s mv queue, launch and drive. A test hands fakes. */
   readonly track?: TrackEngines;
   readonly visualizer?: VisualizerEngines;
+  /** `storyboard`'s Flux frame; a test hands a fake (absent: the scout-storyboard producer on gpu.local). */
+  readonly storyboard?: StoryboardEngines;
 };
 export type Io = { readonly env: Readonly<Record<string, string | undefined>>; readonly out: (s: string) => void; readonly err: (s: string) => void; readonly ports?: CliPorts };
 
@@ -78,7 +81,7 @@ const ROOT = path.resolve(import.meta.dirname, "..");
 const USAGE = [
   "usage: npx tsx pipeline/scout.mts <command> [--json]",
   "  doctor [--dry] [--tracks N]                 the box, the keys, the store (and the Suno browser when tracks > 0)",
-  `  open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--ideas ${DEFAULT_IDEA_CAP}] [--reels ${DEFAULT_REEL_CAP}] [--tracks ${DEFAULT_TRACK_CAP}] [--visualizers ${DEFAULT_VISUALIZER_CAP}] [--until HH:MM] [--live]`,
+  `  open [--ceiling 15] [--target 20] [--clips 2] [--assets 3] [--ideas ${DEFAULT_IDEA_CAP}] [--reels ${DEFAULT_REEL_CAP}] [--tracks ${DEFAULT_TRACK_CAP}] [--visualizers ${DEFAULT_VISUALIZER_CAP}] [--storyboards ${DEFAULT_STORYBOARD_CAP}] [--until HH:MM] [--live]`,
   "  add-source <night> --json <file|->         [{url, kind, title, channel?, why, found, watch?, rich?} | {fromIdea: <night>/<c-id>, why?}]",
   "  ingest <night> [--source s-NN] [--detach]",
   "  style <night> --sources s-01,s-03 --use \"<content>\" [--slug x] [--seed <batch>/sd-NNN] [--detach]",
@@ -95,6 +98,7 @@ const USAGE = [
   "  seeds status [<batch>]",
   "  track <night> --seed <batch>/sd-NNN [--detach] · track <night> --collect",
   "  visualizer <night> --track <night>/<c-id>/<aN> [--detach] · visualizer <night> --collect",
+  "  storyboard <night> [--json <briefs|->] [--detach] · storyboard <night> --collect",
   "  leads · lead <key> --json <file|->         {claim, kind: technique|application|subject, nearest?, confidence}",
   "  folder <dir> [pipeline/foundry/extract.mts args]",
 ].join("\n");
@@ -102,7 +106,7 @@ const USAGE = [
 class Usage extends Error {}
 /** A refusal the CLI makes itself; the acts' `Refusal` exits the same way. */
 class Refused extends Error {}
-const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "ideas", "finding", "direction", "watch", "close", "status", "leads", "lead", "seeds", "track", "visualizer"]);
+const COMMANDS = new Set(["doctor", "open", "add-source", "ingest", "style", "scene", "asset", "ideas", "finding", "direction", "watch", "close", "status", "leads", "lead", "seeds", "track", "visualizer", "storyboard"]);
 const BOOL = new Set(["json", "live", "detach", "dry", "help", "retry"]);
 
 /** argv -> positionals and flags. `--json` takes a value (the input file, or `-`) only under add-source, finding, direction, ideas, lead and seeds new. */
@@ -239,9 +243,11 @@ async function runInWing(argv: readonly string[], io: Io, wing: ScoutWing): Prom
       if (!Number.isInteger(trackCap) || trackCap < 0 || trackCap > MAX_TRACK_CAP) throw new Usage(`--tracks is a whole number from 0 to ${MAX_TRACK_CAP}, got ${trackCap}`);
       const visualizerCap = num("visualizers", DEFAULT_VISUALIZER_CAP);
       if (!Number.isInteger(visualizerCap) || visualizerCap < 0 || visualizerCap > MAX_VISUALIZER_CAP) throw new Usage(`--visualizers is a whole number from 0 to ${MAX_VISUALIZER_CAP}, got ${visualizerCap}`);
+      const storyboardCap = num("storyboards", DEFAULT_STORYBOARD_CAP);
+      if (!Number.isInteger(storyboardCap) || storyboardCap < 0 || storyboardCap > MAX_STORYBOARD_CAP) throw new Usage(`--storyboards is a whole number from 0 to ${MAX_STORYBOARD_CAP}, got ${storyboardCap}`);
       const { tasteBrief } = await import("../lib/foundry/scout/taste.ts");
       // A muse night draws stills only: no clips, assets, reels, tracks or visualizers, whatever the flags say.
-      const n = await store.createNight({ dry: !flags.has("live"), ceilingUsd: num("ceiling", muse ? MUSE_DEFAULT_CEILING_USD : DEFAULT_CEILING_USD), target: Math.round(num("target", DEFAULT_TARGET)), clipCap: muse ? 0 : Math.round(num("clips", DEFAULT_CLIP_CAP)), assetCap: muse ? 0 : Math.round(num("assets", DEFAULT_ASSET_CAP)), ideaCap, reelCap: muse ? 0 : reelCap, trackCap: muse ? 0 : trackCap, visualizerCap: muse ? 0 : visualizerCap, now: now(), ...(until === undefined ? {} : { deadline: deadlineOf(until, now()) }) });
+      const n = await store.createNight({ dry: !flags.has("live"), ceilingUsd: num("ceiling", muse ? MUSE_DEFAULT_CEILING_USD : DEFAULT_CEILING_USD), target: Math.round(num("target", DEFAULT_TARGET)), clipCap: muse ? 0 : Math.round(num("clips", DEFAULT_CLIP_CAP)), assetCap: muse ? 0 : Math.round(num("assets", DEFAULT_ASSET_CAP)), ideaCap, reelCap: muse ? 0 : reelCap, trackCap: muse ? 0 : trackCap, visualizerCap: muse ? 0 : visualizerCap, storyboardCap: muse ? 0 : storyboardCap, now: now(), ...(until === undefined ? {} : { deadline: deadlineOf(until, now()) }) });
       // Last night's load opens the brief (lib/foundry/scout/load.ts): the samples are the kernel store's.
       const kp = await import("@gt/kernel/process");
       const { nightLoad } = await import("../lib/foundry/scout/load.ts");
@@ -443,6 +449,25 @@ async function runInWing(argv: readonly string[], io: Io, wing: ScoutWing): Prom
         if (r.reelsJobId !== undefined) say(`reels ${r.reelsJobId} · detached`);
         const n = await store.readNight(id);
         if (json) doc({ ok: !failed, night: id, ...(r.jobId === undefined ? {} : { jobId: r.jobId }), ...(r.reelsJobId === undefined ? {} : { reelsJobId: r.reelsJobId }), ...(r.outcome === undefined ? {} : { outcome: r.outcome }), candidates: r.candidates, ideas: { used: ideasUsed(n), cap: ideaCapOf(n) }, reels: { used: reelsUsed(n), cap: reelCapOf(n) } });
+        return failed ? 1 : 0;
+      }
+
+      // A kept idea composed as a storyboard: up to five local Flux frames + the seat's words (spark scout-storyboards).
+      if (cmd === "storyboard") {
+        const id = nightArg();
+        const sb = await import("../lib/foundry/scout/storyboard.ts");
+        if (flags.has("collect")) {
+          const got = await sb.collectStoryboards(id);
+          for (const c of got) say(`${c.id} storyboard ${c.status}${c.error === undefined ? "" : ` · ${c.error}`}`);
+          if (got.length === 0) say(`nothing to collect in night ${id}`);
+          if (json) doc({ ok: true, night: id, candidates: got });
+          return 0;
+        }
+        const r = await sb.storyboardAct(ctx, id, await input(), io.ports?.storyboard ?? {});
+        for (const c of r.candidates) say(`  ${c.id} storyboard ${c.status} · ${c.fromIdea}${c.error === undefined ? "" : ` · ${c.error}`}`);
+        const failed = r.outcome !== undefined && !["done", "detached"].includes(r.outcome);
+        const n = await store.readNight(id);
+        if (json) doc({ ok: !failed, night: id, jobIds: r.jobIds, ...(r.outcome === undefined ? {} : { outcome: r.outcome }), candidates: r.candidates, storyboards: { used: sb.storyboardsUsed(n), cap: sb.storyboardCapOf(n) } });
         return failed ? 1 : 0;
       }
 

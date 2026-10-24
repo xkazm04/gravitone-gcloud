@@ -2,7 +2,7 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 
 import { checkEditPlan, EDIT_DIRECTIVES, pickVerdicts, PICK_OUTCOMES, type EditPlan } from "../src/board.ts";
 import { editPlanSchema } from "../src/decision.ts";
-import { checkVerdict, PACKET_SOURCES, reasonForKey, REASON_KEYS, REASON_MEANING, reasonVocabulary, SOURCES, type PacketSource } from "../src/source.ts";
+import { checkVerdict, PACKET_SOURCES, reasonForKey, REASON_KEYS, REASON_MEANING, reasonsOf, reasonVocabulary, SOURCES, type PacketSource, type SourceSpec } from "../src/source.ts";
 
 // Reasons belong to the source (Phase 3 decision 4). These pin each list to the
 // v1 vocabulary it was taken from, the key binding, and the verdict door.
@@ -30,7 +30,25 @@ describe("packet sources", () => {
     expect(reasonForKey("forge", "4")).toBe("craft");
     expect(reasonForKey("forge", "5")).toBeUndefined();
     expect(reasonForKey("suno", "1")).toBeUndefined();
-    for (const s of PACKET_SOURCES) expect(SOURCES[s].reasons.length, s).toBeLessThanOrEqual(REASON_KEYS.length);
+    // scout outgrew the eleven keys with `story` (spark scout-storyboards): its rows key off reasonsBy instead.
+    for (const s of PACKET_SOURCES) if (!("reasonsBy" in SOURCES[s])) expect(SOURCES[s].reasons.length, s).toBeLessThanOrEqual(REASON_KEYS.length);
+  });
+
+  it("orders a row group's reasons from the source's own list, three at least, no repeats", () => {
+    for (const s of PACKET_SOURCES) {
+      const spec: SourceSpec = SOURCES[s];
+      for (const [group, order] of Object.entries(spec.reasonsBy ?? {})) {
+        expect(order.length, `${s}/${group}`).toBeGreaterThanOrEqual(3);
+        expect(new Set(order).size, `${s}/${group}`).toBe(order.length);
+        for (const r of order) expect(spec.reasons, `${s}/${group}`).toContain(r);
+      }
+    }
+    const v = reasonVocabulary("scout");
+    expect(reasonsOf(v, "3d").slice(0, 3)).toEqual(["topology", "texture", "rig"]);
+    expect(reasonsOf(v, "storyboards").slice(0, 3)).toEqual(["story", "generic", "use case"]);
+    expect(reasonsOf(v, "ideas")).toHaveLength(v.list.length);
+    expect(reasonsOf(v, "no such group")).toEqual(v.list);
+    expect(reasonsOf(reasonVocabulary("audio"), "music")).toEqual(SOURCES.audio.reasons);
   });
 });
 

@@ -96,6 +96,16 @@ export const MAX_TRACK_CAP = 8;
 export const DEFAULT_VISUALIZER_CAP = 2;
 export const MAX_VISUALIZER_CAP = 4;
 
+/** Storyboards a night draws from kept ideas (spark scout-storyboards): up to five local Flux stills each, ~8 GPU min. */
+export const DEFAULT_STORYBOARD_CAP = 6;
+export const MAX_STORYBOARD_CAP = 12;
+/** A storyboard's frames: at most five stills, the operator's number. */
+export const STORYBOARD_PANELS_MAX = 5;
+export const STORYBOARD_PARAGRAPH_MAX = 480;
+export const STORYBOARD_BULLETS_MIN = 3;
+export const STORYBOARD_BULLETS_MAX = 6;
+export const STORYBOARD_BULLET_MAX = 140;
+
 /** A finding is a headline, not a paragraph; its quote is the evidence, verbatim. */
 export const CLAIM_MAX = 140;
 export const QUOTE_MAX = 400;
@@ -141,6 +151,8 @@ export type Night = {
   readonly trackCap?: number;
   /** Visualizers the night may render (`visualizer` candidates). Absent: DEFAULT_VISUALIZER_CAP. */
   readonly visualizerCap?: number;
+  /** Storyboards the night may draw (`storyboard` candidates). Absent on a night opened before 2026-10-24: DEFAULT_STORYBOARD_CAP. */
+  readonly storyboardCap?: number;
   /** A dry night ran on stand-ins; its packet can be triaged but commits nothing. */
   readonly dry: boolean;
   readonly state: NightState;
@@ -166,6 +178,14 @@ export type NightCommit = {
   readonly notes: Readonly<Record<string, string>>;
   /** True when the night was dry: the verdicts are recorded and nothing else was written. */
   readonly dry: boolean;
+  /**
+   * A commit in PARTS (spark scout-storyboards): the cell ids still undecided after the last part - they
+   * wait on the remainder packet (`<packetId>:<n>`). Absent or empty: every cell is decided and the night
+   * is `committed`. kept/rejected/reasons/notes above are the union of every part so far.
+   */
+  readonly open?: readonly string[];
+  /** How many parts have committed (absent: one). */
+  readonly parts?: number;
 };
 
 /* ── Sources ─────────────────────────────────────────────────────────────── */
@@ -213,7 +233,7 @@ export type ScoutSource = {
 
 /* ── Candidates ──────────────────────────────────────────────────────────── */
 
-export const CANDIDATE_KINDS = ["style", "scene", "finding", "watch", "asset3d", "idea", "direction", "track", "visualizer"] as const;
+export const CANDIDATE_KINDS = ["style", "scene", "finding", "watch", "asset3d", "idea", "direction", "track", "visualizer", "storyboard"] as const;
 export type CandidateKind = (typeof CANDIDATE_KINDS)[number];
 
 export const CANDIDATE_STATUSES = ["pending", "rendered", "failed"] as const;
@@ -477,6 +497,29 @@ export type VisualizerCandidate = CandidateBase & {
   readonly durationS?: number;
 };
 
+/**
+ * A kept idea composed as a video before any video is made (spark scout-storyboards): up to five rough
+ * frames drawn by the local Flux model from OUR words (the idea's artboard is read as words, never as a
+ * reference - the frames are a plan, not the final video's baseline), a paragraph and bullets saying the
+ * vision. Judged whole; kept, it is the root any full-video act must name (`keptStoryboardFor`).
+ */
+export type StoryboardCandidate = CandidateBase & {
+  readonly kind: "storyboard";
+  /** `<night>/<c-id>` of the kept idea it composes - required. */
+  readonly fromIdea: string;
+  readonly title: string;
+  readonly paragraph: string;
+  readonly bullets: readonly string[];
+  /** One Flux prompt per frame, in order (1..STORYBOARD_PANELS_MAX), seat-written. */
+  readonly panels: readonly string[];
+  /** The frames' aspect: the idea's. Absent: 16:9. */
+  readonly aspect?: Aspect;
+  /** Night-relative stills (`storyboards/c-NN/panel-1.png`), by panel index; null where that panel failed. */
+  readonly images?: readonly (string | null)[];
+  /** The Flux seed each panel drew with, by panel index. */
+  readonly seeds?: readonly number[];
+};
+
 export type Candidate =
   | StyleCandidate
   | SceneCandidate
@@ -486,7 +529,8 @@ export type Candidate =
   | IdeaCandidate
   | DirectionCandidate
   | TrackCandidate
-  | VisualizerCandidate;
+  | VisualizerCandidate
+  | StoryboardCandidate;
 
 /**
  * A scout track's Suno job (`sj-scout-<night>-<c-id>`, lib/foundry/scout/track.ts): its clips and the visualizer
@@ -549,6 +593,9 @@ export type SeedCommit = {
   readonly reasons: Readonly<Record<SeedId, readonly string[]>>;
   readonly notes: Readonly<Record<SeedId, string>>;
   readonly dry: boolean;
+  /** Seed ids still undecided after the last part (NightCommit.open's rule). */
+  readonly open?: readonly SeedId[];
+  readonly parts?: number;
 };
 
 export type SeedBatch = {

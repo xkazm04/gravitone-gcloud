@@ -62,6 +62,9 @@ export const PRODUCERS = [
   // A /scout night's stats-reel ideas (spark stats-reels): each authored as a full 8 s strip in code on the
   // Claude seat, linted, and its frame 120 rendered as the idea's tile (lib/producers/scoutReel.ts).
   "scout-reels",
+  // A /scout night's storyboards (spark scout-storyboards): a kept idea's frames drawn by Flux 2 on this
+  // box's ComfyUI, one job per storyboard (lib/producers/scoutStoryboard.ts).
+  "scout-storyboard",
 ] as const;
 export const producerNameSchema = z.enum(PRODUCERS);
 export type ProducerName = z.output<typeof producerNameSchema>;
