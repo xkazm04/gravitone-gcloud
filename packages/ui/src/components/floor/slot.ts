@@ -92,10 +92,14 @@ export const PUBLISH_CHAIN = ["scheduled", "auth", "upload", "live"] as const;
  * Which node of PUBLISH_CHAIN a channel's sentence broke at (prototype SlotDetail `brkAt`): a
  * credential sentence at auth; quota, insert, upload, an interruption or a refused container
  * at upload; anything else is drawn as failing at the last step, where the platform answered.
+ * The adapter's own refusals before any request (lib/publish/youtube.ts snippetProblem, an
+ * empty file; lib/producers/publish.ts plan: not an export, an export gone; no adapter) never
+ * reached the platform, so they break at upload, not live.
  * The sentence is drawn verbatim beside it; this only places the mark.
  */
 export function breakOf(error: string): number {
   if (/token|oauth|access|credential|unauthori[sz]ed|forbidden/i.test(error)) return 1;
+  if (/exceed|may not contain|is empty|not an export|no longer exists|no publishing adapter/i.test(error)) return 2;
   if (/quota|insert|upload|interrupted|format|container|codec/i.test(error)) return 2;
   return 3;
 }

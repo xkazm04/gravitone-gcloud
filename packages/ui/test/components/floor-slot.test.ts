@@ -86,6 +86,23 @@ describe("words from fields", () => {
     expect(breakOf("the platform rejected the video after processing")).toBe(3);
   });
 
+  test("the adapter's own refusals before any request break at upload: the platform never answered", () => {
+    // Verbatim from lib/publish/youtube.ts (snippetProblem, uploadVideo), lib/producers/publish.ts
+    // (plan) and @gt/producers/publish/adapter.ts adapterFor.
+    for (const said of [
+      "title is empty",
+      "title exceeds 100 characters",
+      "title/description may not contain '<' or '>'",
+      "description exceeds 5000 bytes",
+      "tags exceed 500 characters",
+      "video file is empty: C:/exports/a.mp4",
+      "video:export:a is not an export; youtube publishes exports",
+      "export a no longer exists",
+      "youtube has no publishing adapter",
+    ])
+      expect(breakOf(said), said).toBe(2);
+  });
+
   test("null is unmeasured, never 0; a figure over gaps is a floor", () => {
     expect(figure(null)).toBe("—");
     expect(figure(0)).toBe("0");
