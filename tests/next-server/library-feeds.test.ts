@@ -16,7 +16,7 @@ import { runJob } from "@gt/kernel/job-run";
 import { mediaFactsProducer, queueFacts, type MediaProbe } from "@gt/producers/media-facts/run";
 
 import { stripsFeed } from "../../lib/library/feeds/foundry.ts";
-import { kernelFeed } from "../../lib/library/feeds/kernel.ts";
+import { KERNEL_BLOB_CAP, kernelFeed } from "../../lib/library/feeds/kernel.ts";
 import { sunoFeed, takesFeed } from "../../lib/library/feeds/sound.ts";
 import { clipsFeed, exportsFeed } from "../../lib/library/feeds/studio.ts";
 import type { FeedItem } from "../../lib/library/feeds/types.ts";
@@ -184,6 +184,21 @@ describe("kernelFeed", () => {
     });
     // Without a store the feed says so instead of reading nothing silently.
     expect((await kernelFeed.read(ctx)).skipped).toEqual([{ id: "kernel", reason: "no kernel store in this sync" }]);
+  });
+
+  it("says its cap in refs, and the refs past it are the same ones on the next read", async () => {
+    const k = kernel();
+    const units = Array.from({ length: KERNEL_BLOB_CAP + 1 }, (_, i) => ({ blob: { sha256: i.toString(16).padStart(64, "0"), bytes: 1, mime: "image/png" } }));
+    const w = k.store.tx((t) => {
+      t.run("INSERT INTO projects (id, rev, listed, updated_at, record) VALUES ('p-1', 1, 1, '2026-10-01T00:00:00.000Z', '{}')");
+      t.run("INSERT INTO part_records (project_id, key, part_id, rev, data) VALUES ('p-1', 'frames', 'p-1/frames', 1, ?)", JSON.stringify({ units }));
+    });
+    if (!w.ok) throw w.error;
+    const one = await kernelFeed.read({ ...ctx, store: k.store });
+    expect(one.items).toHaveLength(KERNEL_BLOB_CAP);
+    expect(one.skipped).toEqual([{ id: "kernel", reason: `more than ${KERNEL_BLOB_CAP} blob refs; the refs past the cap are not read` }]);
+    const two = await kernelFeed.read({ ...ctx, store: k.store });
+    expect(two.items.map((i) => i.item.id)).toEqual(one.items.map((i) => i.item.id));
   });
 });
 
