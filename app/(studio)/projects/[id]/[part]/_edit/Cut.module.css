@@ -100,7 +100,6 @@ a.checkLabel:hover{color:var(--ink-bright)}
 .aspects{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--w-tile),1fr));gap:var(--sp-3);margin-bottom:var(--sp-5)}
 .aspect{display:flex;flex-direction:column;gap:var(--sp-2);padding:var(--sp-3);border:1px solid var(--hair-2);border-radius:var(--r-tile);background:var(--ink-1)}
 .aspect[data-on]{border-color:color-mix(in srgb,var(--cyan) 40%,transparent)}
-.frameBox{background:var(--letterbox);border:1px solid var(--hair-2);border-radius:var(--r-xs);width:100%}
 
 /* ── album / explainer ────────────────────────────────────────────────── */
 .form{display:flex;flex-direction:column;gap:var(--sp-5);max-width:calc(var(--w-detail) * 2)}
