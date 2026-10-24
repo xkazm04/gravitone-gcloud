@@ -9849,6 +9849,51 @@
         "at": "2026-10-23T21:12:30.838444+00:00",
         "reason": "reviewer (sonnet): The anchor (timestrip/TimeStrip.tsx) and the techniques at timestrip/strip.ts and wave/Wave.tsx are not among the context's listed files (crumbs, header, eventrow, ledgerlink, jsonl), and Wave is an audio component. I confirmed the comments as written, but I could not confirm that the timestrip and "
       }
+    },
+    "d067e4e3-6739-4666-9103-06dac7f825ac/agent-memory": {
+      "context": "library-projection-feeds",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T00:00:33.219Z",
+      "worker": "ba3058d1-f41e-4b1d-854f-7d77adf8c0ac",
+      "techniques": []
+    },
+    "e2f6231a-d39f-4d39-9465-0a48436cae92/agent-memory": {
+      "context": "project-step-store",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T00:00:33.219Z",
+      "worker": "ba3058d1-f41e-4b1d-854f-7d77adf8c0ac",
+      "techniques": []
+    },
+    "e481098a-3532-46d9-bdc9-de84fbc2ce01/agent-memory": {
+      "context": "foundry-forge-store-and-verdicts",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T00:00:33.219Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "ba3058d1-f41e-4b1d-854f-7d77adf8c0ac",
+        "state": "not-applicable",
+        "at": "2026-10-24T00:00:56.990991+00:00",
+        "reason": "reviewer (sonnet): The claim that no agent recalls this context's verdicts is contradicted. verdictLog.ts is the shared verdict writer that lib/foundry/scout/store.ts and lib/foundry/training/store.ts use. scout/taste.ts reads the operator's last verdicts back into each new night as taste.md for the skill (\"rejections"
+      }
+    },
+    "b412ea73-0dc3-4362-93c4-2a9b913f9a61/agent-memory": {
+      "context": "v1-import-and-archive",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-10-24",
+      "evaluatedTs": "2026-10-24T00:00:33.219Z",
+      "worker": "ba3058d1-f41e-4b1d-854f-7d77adf8c0ac",
+      "techniques": []
     }
   }
 }
