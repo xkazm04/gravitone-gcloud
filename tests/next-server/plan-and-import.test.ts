@@ -14,7 +14,7 @@ import { describe, expect, it } from "vitest";
 import { onOpen, settledOutcome } from "../../app/(studio)/projects/_plan/receipt.tsx";
 import { clock } from "../../app/(studio)/projects/_plan/shelf.ts";
 import { titleGate } from "../../app/(studio)/projects/_plan/title.ts";
-import { commitAll, post, type Answer, type Source } from "../../app/(studio)/projects/import/answer.ts";
+import { commitAll, lastDoor, post, type Answer, type Source } from "../../app/(studio)/projects/import/answer.ts";
 
 const ROOT = path.resolve(import.meta.dirname, "..", "..");
 const PROJECTS = path.join(ROOT, "app", "(studio)", "projects");
@@ -189,9 +189,39 @@ describe("the import confirm keeps what landed", () => {
 
   it("ImportView confirms through commitAll and draws what landed in every phase that carries it", () => {
     const view = code("import/ImportView.tsx");
-    expect(view.match(/await commitAll\(sources, post, prior\)/g) ?? []).toHaveLength(1);
+    expect(view.match(/commitAll\(sources, post, prior\)/g) ?? []).toHaveLength(1);
     expect(view.match(/act=commit/g) ?? []).toEqual([]);
     expect(view.match(/<Outcomes landed=\{landed\} \/>/g) ?? []).toHaveLength(1);
+  });
+});
+
+describe("the import's doors - only the newest one lands", () => {
+  const later = <T,>(v: T, ms: number) => new Promise<T>((r) => setTimeout(() => r(v), ms));
+
+  it("a slow browser read that answers after a picked file does not replace the file's preview", async () => {
+    const landed: string[] = [];
+    const doors = lastDoor<string>((v) => landed.push(v));
+    doors.open(later("this browser", 20));
+    doors.open(later("picked file", 1));
+    await later(null, 40);
+    expect(landed).toEqual(["picked file"]);
+  });
+
+  it("an answer still travelling when the screen closes lands nowhere", async () => {
+    const landed: string[] = [];
+    const doors = lastDoor<string>((v) => landed.push(v));
+    doors.open(later("this browser", 5));
+    doors.close();
+    await later(null, 20);
+    expect(landed).toEqual([]);
+  });
+
+  it("ImportView opens every door through it", () => {
+    const view = code("import/ImportView.tsx");
+    expect(view.match(/\.then\(setPhase\)/g) ?? []).toEqual([]);
+    // readThisBrowser awaits each account's previewOf inside its own door; the component awaits none.
+    expect(view.match(/await (readThisBrowser\(|commitAll\(|previewOf\(f\.)/g) ?? []).toEqual([]);
+    expect(view.match(/doors\.open\(/g) ?? []).toHaveLength(4);
   });
 });
 

@@ -33,7 +33,7 @@ import type { ItemPreview, ThemePreview } from "@/lib/import/shelf";
 import { ArchiveRefused, exportAccount, inspectArchive } from "@/lib/studioArchive";
 import { BY_UID, PROJECTS_STORE, openDb } from "@/lib/studioDb";
 
-import { commitAll, envelopeOf, landedAny, post, type Landed, type Source } from "./answer.ts";
+import { commitAll, envelopeOf, landedAny, lastDoor, post, type Landed, type Source } from "./answer.ts";
 import s from "./Import.module.css";
 
 // `landed`: what earlier confirms of this screen already committed (a stale round, or a later
@@ -111,29 +111,32 @@ async function readThisBrowser(): Promise<Phase> {
 
 export function ImportView() {
   const [phase, setPhase] = useState<Phase>({ kind: "reading" });
+  const [doors] = useState(() => lastDoor<Phase>(setPhase));
   const file = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    let live = true;
-    void readThisBrowser().then((next) => {
-      if (live) setPhase(next);
-    });
-    return () => {
-      live = false;
-    };
-  }, []);
+    doors.open(readThisBrowser());
+    return doors.close;
+  }, [doors]);
 
-  const readFile = async (f: File) => {
+  const readBrowser = (): void => {
     setPhase({ kind: "reading" });
-    const one = await previewOf(f.name, f);
-    setPhase(isSource(one) ? { kind: "preview", sources: [one] } : one);
+    doors.open(readThisBrowser());
   };
 
-  const confirm = async (sources: readonly Source[], prior?: Landed) => {
+  const readFile = (f: File): void => {
+    setPhase({ kind: "reading" });
+    doors.open(previewOf(f.name, f).then((one): Phase => (isSource(one) ? { kind: "preview", sources: [one] } : one)));
+  };
+
+  const confirm = (sources: readonly Source[], prior?: Landed): void => {
     setPhase({ kind: "committing", sources, ...(prior === undefined ? {} : { landed: prior }) });
-    const c = await commitAll(sources, post, prior);
-    if (c.failed !== undefined) setPhase({ kind: "error", message: c.failed.message, name: c.failed.name, landed: c.landed });
-    else setPhase(c.fresh.length > 0 ? { kind: "preview", sources: c.fresh, landed: c.landed } : { kind: "done", ...c.landed });
+    doors.open(
+      commitAll(sources, post, prior).then((c): Phase => {
+        if (c.failed !== undefined) return { kind: "error", message: c.failed.message, name: c.failed.name, landed: c.landed };
+        return c.fresh.length > 0 ? { kind: "preview", sources: c.fresh, landed: c.landed } : { kind: "done", ...c.landed };
+      }),
+    );
   };
 
   const sources = phase.kind === "preview" || phase.kind === "committing" ? phase.sources : [];
@@ -147,10 +150,7 @@ export function ImportView() {
       <header className={s.top}>
         <h1 className={s.title}>Import</h1>
         <div className={s.doors}>
-          <Button label="This browser" size="sm" onPress={() => {
-              setPhase({ kind: "reading" });
-              void readThisBrowser().then(setPhase);
-            }} disabled={phase.kind === "reading" || phase.kind === "committing"} />
+          <Button label="This browser" size="sm" onPress={readBrowser} disabled={phase.kind === "reading" || phase.kind === "committing"} />
           <Button label="Open a .gravitone" size="sm" onPress={() => file.current?.click()} disabled={phase.kind === "committing"} />
           <input
             ref={file}
@@ -161,7 +161,7 @@ export function ImportView() {
             onChange={(e) => {
               const f = e.currentTarget.files?.[0];
               e.currentTarget.value = "";
-              if (f !== undefined) void readFile(f);
+              if (f !== undefined) readFile(f);
             }}
           />
         </div>
@@ -208,7 +208,7 @@ export function ImportView() {
             <Tally value={going.reduce((n, p) => n + p.held, 0)} label="records" />
             {bytes > 0 && <Tally value={mb(bytes)} label="blobs" />}
             {shelfGoing > 0 && <Tally value={shelfGoing} label="shelf" />}
-            <Button label={phase.kind === "committing" ? "Importing…" : `Import ${going.length + shelfGoing}`} tone="emerald" disabled={going.length + shelfGoing === 0 || phase.kind === "committing"} onPress={() => void confirm(sources, landed)} />
+            <Button label={phase.kind === "committing" ? "Importing…" : `Import ${going.length + shelfGoing}`} tone="emerald" disabled={going.length + shelfGoing === 0 || phase.kind === "committing"} onPress={() => confirm(sources, landed)} />
           </footer>
         </>
       )}

@@ -80,3 +80,25 @@ export async function commitAll(
   }
   return { landed, fresh };
 }
+
+/**
+ * The screen's doors - this browser's read (on arrival and on its button), a picked file, a
+ * confirm - each answer later, and only the NEWEST one opened may land: a slow read of this
+ * browser's accounts that answers after the operator picked a file must not replace the file's
+ * preview (and a confirm made on that file must not be overwritten by it). `close` (unmount)
+ * drops whatever is still travelling.
+ */
+export function lastDoor<T>(land: (v: T) => void): { readonly open: (answer: Promise<T>) => void; readonly close: () => void } {
+  let newest = 0;
+  return {
+    open: (answer) => {
+      const mine = ++newest;
+      void answer.then((v) => {
+        if (newest === mine) land(v);
+      });
+    },
+    close: () => {
+      newest++;
+    },
+  };
+}
