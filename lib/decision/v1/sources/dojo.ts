@@ -2,7 +2,6 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 import { stat } from "node:fs/promises";
-import path from "node:path";
 
 import type { BlobRef } from "@gt/domain/blob";
 import type { ConsequenceItem } from "@gt/domain/board";
@@ -14,6 +13,7 @@ import type { ItemWords, RowWords } from "@gt/ui/board/port";
 
 import { applyBlindEdit, blindComplete, blindKey, claimAllowed, ledgerVerdict, measureBlind, pickToArm, pickedCount, type Arm, type BlindPick, type BlindState } from "../../../foundry/training/blind.ts";
 import { commitCycle, getCycle, patchBlind, patchTrainingVerdicts, trainingFileStat } from "../../../foundry/training/store.ts";
+import { keeperThumb } from "../../../foundry/training/ledger.ts";
 import type { CycleManifest, Improvement, PairResult, TrainingVerdict, TrainingVerdicts } from "../../../foundry/training/types.ts";
 import { packetIdOf } from "../../../ledger/v1/packet.ts";
 import { decidedInV1, reviewClaims, reviewed, reviewPacket, shown, type Claim, type DojoV1 } from "./dojoReview.ts";
@@ -327,8 +327,11 @@ function consequence(v1: DojoV1, at: DecisionsAt): Result<Preview> {
     return { kind: "index-row" as const, target: "pipeline/foundry/training-ledger.json", candidate: i.id, detail: `${i.technique}: ${human} → ${v}${asIs?.anchored ? " (anchored)" : ""}${why}` };
   });
   const thumbs = decided
-    .filter((i) => verdicts[i.id] === "approve" && i.thumbnail)
-    .map((i) => ({ kind: "file" as const, target: `pipeline/foundry/training/thumbs/${cycle.id}--${i.id}${path.extname(i.thumbnail ?? "").toLowerCase()}`, candidate: i.id, detail: "the kept thumbnail, copied into git" }));
+    .filter((i) => verdicts[i.id] === "approve")
+    .flatMap((i) => {
+      const keeper = keeperThumb(cycle.id, i);
+      return keeper === undefined ? [] : [{ kind: "file" as const, target: keeper.rel, candidate: i.id, detail: "the kept thumbnail, copied into git" }];
+    });
   const v1Digest = digestOf(v1);
   return ok({
     v1Digest,

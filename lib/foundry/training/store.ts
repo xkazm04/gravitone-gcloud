@@ -53,7 +53,7 @@ import {
   type BlindState,
   type ImprovementBlind,
 } from "./blind";
-import { normalizeLedger, replaceCycleRows } from "./ledger";
+import { keeperThumb, normalizeLedger, replaceCycleRows } from "./ledger";
 import type {
   CycleManifest,
   Improvement,
@@ -79,8 +79,6 @@ import {
 const OUT_ROOT = outPath("training");
 /** The blind gate's picks, beside verdicts.json (lib/foundry/training/blind.ts). */
 const BLIND_FILE = "blind.json";
-/** Ledger `thumb` paths are repo-relative with forward slashes on every OS. */
-const THUMBS_REL = "pipeline/foundry/training/thumbs";
 
 function cycleDir(id: string): string {
   return runRoot(OUT_ROOT, id, "cycle");
@@ -311,17 +309,17 @@ export async function commitCycle(id: string): Promise<TrainingCommitResult> {
     const thumbs: string[] = [];
     const trackedThumb = new Map<string, string>();
     for (const imp of decided) {
-      if (verdicts[imp.id] !== "approve" || !imp.thumbnail) continue;
-      const fileName = `${id}--${imp.id}${path.extname(imp.thumbnail).toLowerCase()}`;
-      const rel = `${THUMBS_REL}/${fileName}`;
-      const dst = path.join(thumbsDir, fileName);
+      const keeper = verdicts[imp.id] === "approve" ? keeperThumb(id, imp) : undefined;
+      if (keeper === undefined) continue;
+      const { rel } = keeper;
+      const dst = path.join(thumbsDir, keeper.name);
       // existsSync's semantics: any stat failure reads as "absent".
       const present = await fs.stat(dst).then(
         () => true,
         () => false,
       );
       if (!present) {
-        const src = resolveInCycle(id, imp.thumbnail);
+        const src = resolveInCycle(id, keeper.src);
         await fs.copyFile(src, dst);
       }
       trackedThumb.set(imp.id, rel);
