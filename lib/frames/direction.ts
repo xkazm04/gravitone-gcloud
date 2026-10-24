@@ -1,11 +1,10 @@
 // A SETTLED SCENE-DIRECTION TURN, TAKEN ONTO THE CUT. Pure.
 //
-// Lifted out of useFrames when the pass moved onto the server's turn ledger
-// (AIO-A stage 3): the answer no longer arrives in the closure that asked for
-// it, so the code that turns `{ raw, engine }` into frames, row findings and a
-// summary has to run wherever the answer is picked up — on the watched turn
-// ending, or on a remount that finds one done. One function, so both paths
-// stage the same thing.
+// Lifted out of v1's useFrames when the pass moved onto the server's turn
+// ledger (AIO-A stage 3): the answer no longer arrives in the closure that
+// asked for it, so the code that turns `{ raw, engine }` into specs, row
+// findings and a summary runs wherever the answer is picked up - today the
+// frames producer's `direct-cut` landing (lib/producers/frames.ts).
 
 import type { SceneSpec, SceneSpecReport } from "@/lib/frames/sceneSpec";
 import { reviewSceneSpecs } from "@/lib/frames/sceneSpec";

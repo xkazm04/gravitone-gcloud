@@ -20,8 +20,8 @@
 //
 // STAGES 1-2 OF frames-phase-A, and what is deliberately NOT here yet: trailer
 // units generate no plates (stage 3 — `shotPrompt.ts` is the subject), and the
-// direction pass still keys scenes by `at` (stage 4, with `/api/frames`). Score
-// and Cut read units (stage 2, ./read.ts); the Frames step itself still draws
+// direction pass still keys scenes by `at` (stage 4). Score and Cut read units
+// (stage 2); the Frames step itself still draws
 // only BEAT units as frames, so `framesFromUnits` projects beat units only — a
 // shot unit is on the clock, has an identity and is saved, and nothing in the
 // Frames step draws it as a frame yet.
@@ -119,12 +119,13 @@ function ordinals<T>(items: readonly T[], keyOf: (t: T) => string): { ordinal: n
 /**
  * Frames → beat units, KEEPING each frame's id.
  *
- * Two callers, one rule. The migration reads a v1 record through this, and the
- * hook's save writes through it. Neither may re-identify a frame: a stored id is
- * what kept alternatives (`frames-alts.byFrame`), Score spots (`sceneIds`) and
- * board items already point at, and a v1 record is only ever reused for the
- * render it was derived from (`useFrames` re-derives on a different `renderId`),
- * so its positional ids cannot cross renders. New derivations get derived ids
+ * Two callers, one rule: the importer's v1 walk (./migrate.ts) and the Cut's
+ * timeline over a frame list (lib/cut/deriveTimeline.ts). Neither may
+ * re-identify a frame: a stored id is what kept alternatives
+ * (`frames-alts.byFrame`), Score spots (`sceneIds`) and board items already
+ * point at, and a v1 record was only ever reused for the render it was derived
+ * from (v1's `useFrames` re-derived on a different `renderId`), so its
+ * positional ids cannot cross renders. New derivations get derived ids
  * from `unitsFromRender`; old records keep theirs.
  *
  * `totalS` closes the last beat, exactly as `durationOf` does. Null when the

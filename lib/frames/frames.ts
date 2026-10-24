@@ -109,17 +109,16 @@ export const pendingReceipt = (plate: Plate): string | undefined =>
 /* ── The clip ─────────────────────────────────────────────────────────────── */
 
 /**
- * What the plate DOES — the fourth layer, and the only one nothing in this app
- * can render.
+ * What the plate DOES — the fourth layer.
  *
- * HONESTY, and it is the whole design of this type: there is no video provider
- * here. `lib/imagingClient.ts` exposes generate / edit / recognize and all three
- * return stills. So a clip in this app is AUTHORED, never rendered, and
- * `status` can only ever hold `"not-started"`. The field exists anyway, typed
- * against the SAME `ClipStatus` the lifecycle fixtures use rather than a second
- * private enum, so that the day a render seam is built the model does not have
- * to be reshaped around it — but until that day, every surface reading this must
- * say "not rendered" and mean it. No progress bar. No fake preview.
+ * HONESTY, and it is the whole design of this type: this file AUTHORS a clip
+ * and never renders one - it only ever seeds `status: "not-started"`. The
+ * render seam this type was shaped for now exists: the motion producer
+ * (lib/producers/motion.ts) moves `status` to `"rendered"` when a clip lands,
+ * which is why the field is typed against the SAME `ClipStatus` the lifecycle
+ * fixtures use rather than a second private enum. A surface reads the status it
+ * finds and says "not rendered" for anything short of `"rendered"`, and means
+ * it. No progress bar. No fake preview.
  *
  * There is deliberately NO duration field. A frame already knows how long it
  * holds — `durationOf()` derives it from the gap to the next beat, which is a
@@ -178,8 +177,9 @@ export interface Frame {
  * The art-direction pass's spend, persisted with the step.
  *
  * It exists because the header used to show a dollar figure that omitted the
- * single most expensive call in the step: `/api/frames` computes and returns the
- * pass's cost, and the client dropped it on the floor. A money number that
+ * single most expensive call in the step: v1's `/api/frames` computed and
+ * returned the pass's cost, and its client dropped it on the floor. The
+ * direction turn's bill now lands through `addDirectionSpend` (./direction.ts). A money number that
  * silently undercounts is worse than no number.
  *
  * It ACCUMULATES across passes, because the money did. And `unpriced` is why
@@ -312,11 +312,11 @@ export function framesLane(
  *
  * WHICH FIXTURE ARRIVES HERE IS THE PROJECT'S OWN CHOICE NOW. The record this
  * comment used to name as missing exists: `ScriptAdoptionStepData` under phase
- * key `"script-adopted"`, written by the Candidates duel and resolved by the
- * ONE rule in `app/_phases/script/candidates/adoption.ts`
- * (`resolveExplainerRender` — absent, cleared and unknown all fall back to the
- * positional default, `RENDERS[0]`, so a project that never adopted keeps the
- * behaviour this slice always had). Picking by `project.template` instead
+ * key `"script-adopted"`, written by the Candidates duel and resolved by ONE
+ * rule, `adoptedOf` in lib/producers/frames.ts: the adopted candidate out of
+ * `script-versions`, and with none adopted no explainer units at all (v1's
+ * `resolveExplainerRender` fell back to `RENDERS[0]`; it retired with
+ * app/_phases). Picking by `project.template` instead
  * would still be wrong for the same reason as before: `short-form-clip`
  * matches `derived-short`, six beats rather than sixteen, and an explainer's
  * frame count changing UNDER a project that decided nothing is the one thing
@@ -518,7 +518,7 @@ export function framesFromRender(render: ScriptRender): Frame[] {
       device: b.device,
       plate: { state: "empty" as PlateState },
       // Seeded empty on purpose. A motion guessed from the beat's kind is the
-      // same lookup table `/api/frames` exists to replace — nine roles, nine
+      // same lookup table the direction pass exists to replace — nine roles, nine
       // canned moves — and it would read as authored when nobody authored it.
       clip: emptyClip(),
       elements,

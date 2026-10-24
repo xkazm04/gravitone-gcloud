@@ -1,7 +1,7 @@
 // The scene-spec contract — what the authoring engine must return, and the
 // validator that refuses anything else.
 //
-// Shaped like app/_phases/script/editPlan.ts: the engine is driven headlessly
+// Shaped like lib/script/editPlan.ts: the engine is driven headlessly
 // and cannot be given a response schema, so its output is a REQUEST rather than
 // a guarantee. Everything here exists because a plausible-but-wrong spec is
 // worse than a failed run — it silently produces sixteen frames that look
