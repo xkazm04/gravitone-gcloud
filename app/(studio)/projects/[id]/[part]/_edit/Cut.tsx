@@ -21,13 +21,12 @@ import { clock, secs } from "@gt/ui/components/part/part.ts";
 import { Seg } from "@gt/ui/components/seg/Seg.tsx";
 import { useKeys } from "@gt/ui/keymap/dispatch";
 
-import { CutClock, useTransport, type ClockLane } from "./CutClock.tsx";
+import { CLOCK_ZOOM_OPTIONS, CutClock, useTransport, zoomStep, type ClockLane, type ClockZoom } from "./CutClock.tsx";
 import { CutFinish } from "./CutFinish.tsx";
 import type { EditorProps, Send } from "./PartEditor.tsx";
 import s from "./Cut.module.css";
 
 type P = EditorProps<PartView<"cut">>;
-const ZOOMS = ["0", "1", "2", "4"] as const;
 const LANES = [
   { id: "video", label: "picture" },
   { id: "vo", label: "voice" },
@@ -128,7 +127,7 @@ function Timeline(p: P & { readonly data: TimelineData }) {
   const [sel, setSel] = useState<string | null>(null);
   const [aspect, setAspect] = useState<"16:9" | "9:16">("16:9");
   const [safe, setSafe] = useState(false);
-  const [zoom, setZoom] = useState<(typeof ZOOMS)[number]>("1");
+  const [zoom, setZoom] = useState<ClockZoom>("1");
   const tr = useTransport(d.totalS);
   const clip = d.clips.find((c) => c.id === sel) ?? null;
   const step = (dt: number): void => tr.seek(tr.t + dt);
@@ -154,7 +153,7 @@ function Timeline(p: P & { readonly data: TimelineData }) {
       },
       edge: ({ index }) => tr.seek(index === 0 ? 0 : d.totalS),
       nudge: ({ index }) => (clip === null || busy ? false : send({ op: "nudge", clipId: clip.id, ms: index === 0 ? -50 : 50 })),
-      zoom: ({ index }) => setZoom((z) => ZOOMS[Math.max(0, Math.min(ZOOMS.length - 1, ZOOMS.indexOf(z) + (index === 0 ? 1 : -1)))] ?? "1"),
+      zoom: ({ index }) => setZoom((z) => zoomStep(z, index)),
       deselect: () => setSel(null),
     },
     { facts },
@@ -222,7 +221,7 @@ function Timeline(p: P & { readonly data: TimelineData }) {
                     <span className={s.read}>{tc(tr.t, d.fps)}</span>
                     <span className={s.mono}>{`/ ${tc(d.totalS, d.fps)} · ${d.fps}fps`}</span>
                     {d.targetS !== null && <span className={s.mono}>{`target ${clock(d.targetS)}`}</span>}
-                    <Seg label="zoom" options={ZOOMS.map((z) => ({ value: z, label: z === "0" ? "fit" : `${z}×` }))} value={zoom} onChange={setZoom} />
+                    <Seg label="zoom" options={CLOCK_ZOOM_OPTIONS} value={zoom} onChange={setZoom} />
                   </div>
                 </div>
                 <CutClock label="lanes" totalS={d.totalS} scenes={d.scenes} lanes={lanes} zoom={Number(zoom)} t={tr.t} selected={sel} sceneLane={false} marks={d.turn === null ? [] : [{ atS: d.turn.atS, label: d.turn.label }]} onSeek={tr.seek} onSelect={setSel} />

@@ -40,7 +40,7 @@ import type { AdFinishData, AdsClips, AdsTakes, BedData, PartOp, PartView, Rende
 import { BINDINGS } from "@gt/ui/keymap/bindings";
 import { keyTable, type KeyRow } from "@gt/ui/keymap/keymap";
 
-import { useTransport } from "../../app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx";
+import { CLOCK_ZOOMS, useTransport, zoomStep } from "../../app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx";
 import { CutFinish } from "../../app/(studio)/projects/[id]/[part]/_edit/CutFinish.tsx";
 import type { EditorProps, Frame } from "../../app/(studio)/projects/[id]/[part]/_edit/PartEditor.tsx";
 import { RenderEditor } from "../../app/(studio)/projects/[id]/[part]/_edit/Render.tsx";
@@ -344,5 +344,12 @@ describe("a voice line whose take is gone is not drawn recorded", () => {
   it("the rail marks the line the tally does not count", async () => {
     const r = await rail({ face: "voice", voice: "narrator", lines: [line("a", true), line("b", false)] });
     expect(r).toEqual({ tally: 1, marks: ["recorded", "not recorded"] });
+  });
+});
+
+describe("the clock's zoom, one table for the cut and the score", () => {
+  it("Z steps in and ⇧Z out, held at fit and at 4×", () => {
+    expect(CLOCK_ZOOMS.map((z) => zoomStep(z, 0))).toEqual(["1", "2", "4", "4"]);
+    expect(CLOCK_ZOOMS.map((z) => zoomStep(z, 1))).toEqual(["0", "0", "1", "2"]);
   });
 });

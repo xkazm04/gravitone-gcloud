@@ -37,6 +37,15 @@ const CELL = Number.parseFloat(tokens["w-thumb"]);
 const LABEL = Number.parseFloat(tokens["w-timecode"]) + Number.parseFloat(tokens["sp-5"]);
 const STEPS = [1, 2, 5, 10, 15, 30, 60, 120, 300];
 
+/** The clock's zoom steps, one table for the cut and the score: fit, then multiples of the
+ *  readable scale (see `pps` below). */
+export const CLOCK_ZOOMS = ["0", "1", "2", "4"] as const;
+export type ClockZoom = (typeof CLOCK_ZOOMS)[number];
+export const CLOCK_ZOOM_OPTIONS = CLOCK_ZOOMS.map((z) => ({ value: z, label: z === "0" ? "fit" : `${z}×` }));
+/** The `zoom` verb: Z (index 0) in, ⇧Z out, held at both ends. */
+export const zoomStep = (z: ClockZoom, index: number): ClockZoom =>
+  CLOCK_ZOOMS[Math.max(0, Math.min(CLOCK_ZOOMS.length - 1, CLOCK_ZOOMS.indexOf(z) + (index === 0 ? 1 : -1)))] ?? "1";
+
 /** Seconds per ruler tick so ticks sit at least two cells apart. */
 const tickOf = (pps: number): number => STEPS.find((x) => x * pps >= CELL * 2) ?? 600;
 
