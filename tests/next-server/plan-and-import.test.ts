@@ -14,7 +14,7 @@ import { describe, expect, it } from "vitest";
 import { onOpen, settledOutcome } from "../../app/(studio)/projects/_plan/receipt.tsx";
 import { clock } from "../../app/(studio)/projects/_plan/shelf.ts";
 import { titleGate } from "../../app/(studio)/projects/_plan/title.ts";
-import { post } from "../../app/(studio)/projects/import/answer.ts";
+import { commitAll, post, type Answer, type Source } from "../../app/(studio)/projects/import/answer.ts";
 
 const ROOT = path.resolve(import.meta.dirname, "..", "..");
 const PROJECTS = path.join(ROOT, "app", "(studio)", "projects");
@@ -151,6 +151,47 @@ describe("the import door's answer never rejects", () => {
 
   it("a body that is not JSON is the route's words, trimmed", async () => {
     expect(await post("/api/import?act=preview", body, answering(502, async () => "Bad Gateway"))).toEqual({ status: 502, json: { error: "Bad Gateway", code: "internal" } });
+  });
+});
+
+describe("the import confirm keeps what landed", () => {
+  const src = (name: string, token: string) => ({ name, bytes: new Blob([name]), preview: { token, projects: [], themes: [], items: [] } }) as unknown as Source;
+  const outcome = (v1Id: string) => ({ v1Id, id: `p-${v1Id}`, title: v1Id, outcome: "imported" });
+  const landedOf = (v1Id: string) => ({ outcomes: [outcome(v1Id)], styles: [], items: [] });
+  // One answer per source, by the token in the path.
+  const route =
+    (answers: Record<string, Answer>) =>
+    async (path: string): Promise<Answer> =>
+      answers[new URL(path, "http://x").searchParams.get("token") ?? ""] ?? { status: 500, json: {} };
+
+  it("a later source's refusal is named beside the earlier source's outcomes, not instead of them", async () => {
+    const c = await commitAll([src("acct-a", "ta"), src("acct-b", "tb")], route({ ta: { status: 200, json: landedOf("a1") }, tb: { status: 503, json: { error: "the import could not be reached: Failed to fetch" } } }));
+    expect(c.landed.outcomes.map((o) => o.v1Id)).toEqual(["a1"]);
+    expect(c.failed).toEqual({ name: "acct-b", message: "the import could not be reached: Failed to fetch" });
+  });
+
+  it("a stale source comes back fresh while the source that committed keeps its outcomes", async () => {
+    const fresh = { fresh: [], themes: [], items: [], token: "tb2" };
+    const c = await commitAll([src("acct-a", "ta"), src("acct-b", "tb")], route({ ta: { status: 200, json: landedOf("a1") }, tb: { status: 409, json: { error: "stale", fresh } } }));
+    expect(c.landed.outcomes.map((o) => o.v1Id)).toEqual(["a1"]);
+    expect(c.fresh.map((x) => [x.name, x.preview.token])).toEqual([["acct-b", "tb2"]]);
+    expect(c.failed).toBeUndefined();
+    // The second round adds to what the first landed.
+    const again = await commitAll(c.fresh, route({ tb2: { status: 200, json: landedOf("b1") } }), c.landed);
+    expect(again.landed.outcomes.map((o) => o.v1Id)).toEqual(["a1", "b1"]);
+  });
+
+  it("a 409 with no fresh preview is a refusal in its words, not a source that disappears", async () => {
+    const c = await commitAll([src("acct-a", "ta")], route({ ta: { status: 409, json: { error: "the archive or the studio changed since this preview" } } }));
+    expect(c.fresh).toEqual([]);
+    expect(c.failed).toEqual({ name: "acct-a", message: "the archive or the studio changed since this preview" });
+  });
+
+  it("ImportView confirms through commitAll and draws what landed in every phase that carries it", () => {
+    const view = code("import/ImportView.tsx");
+    expect(view.match(/await commitAll\(sources, post, prior\)/g) ?? []).toHaveLength(1);
+    expect(view.match(/act=commit/g) ?? []).toEqual([]);
+    expect(view.match(/<Outcomes landed=\{landed\} \/>/g) ?? []).toHaveLength(1);
   });
 });
 

@@ -17,6 +17,7 @@
 // words. v1's rows are never written: this import is their last reader.
 
 import { useEffect, useRef, useState } from "react";
+
 import { errorMessage } from "@gt/domain/errors";
 
 import { Button } from "@gt/ui/components/button/Button.tsx";
@@ -25,26 +26,25 @@ import type { Tone } from "@gt/ui/components/chip/tone.ts";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { Tally } from "@gt/ui/components/tally/Tally.tsx";
 
-import type { ImportOutcome, ShelfOutcome } from "@/lib/import/commit";
+import type { ImportOutcome } from "@/lib/import/commit";
 import type { ProjectPreview } from "@/lib/import/project";
 import type { Preview } from "@/lib/import/serve";
 import type { ItemPreview, ThemePreview } from "@/lib/import/shelf";
 import { ArchiveRefused, exportAccount, inspectArchive } from "@/lib/studioArchive";
 import { BY_UID, PROJECTS_STORE, openDb } from "@/lib/studioDb";
 
-import { post } from "./answer.ts";
+import { commitAll, envelopeOf, landedAny, post, type Landed, type Source } from "./answer.ts";
 import s from "./Import.module.css";
 
-type Source = { readonly name: string; readonly bytes: Blob; readonly preview: Preview };
+// `landed`: what earlier confirms of this screen already committed (a stale round, or a later
+// source's refusal), drawn beside the fresh preview or the error so it is never lost from view.
 type Phase =
   | { readonly kind: "reading" }
   | { readonly kind: "refused"; readonly name: string; readonly code: string; readonly message: string }
-  | { readonly kind: "preview"; readonly sources: readonly Source[] }
-  | { readonly kind: "committing"; readonly sources: readonly Source[] }
-  | { readonly kind: "done"; readonly outcomes: readonly ImportOutcome[]; readonly styles: readonly ShelfOutcome[]; readonly items: readonly ShelfOutcome[] }
-  | { readonly kind: "error"; readonly message: string };
-
-type Envelope = { readonly error?: string; readonly code?: string; readonly detail?: string };
+  | { readonly kind: "preview"; readonly sources: readonly Source[]; readonly landed?: Landed }
+  | { readonly kind: "committing"; readonly sources: readonly Source[]; readonly landed?: Landed }
+  | ({ readonly kind: "done" } & Landed)
+  | { readonly kind: "error"; readonly message: string; readonly name?: string; readonly landed?: Landed };
 
 /** Every account this browser's v1 database holds projects for (a keys-only walk of `by-uid`). */
 async function accounts(): Promise<string[]> {
@@ -66,7 +66,6 @@ async function accounts(): Promise<string[]> {
   }
 }
 
-const envelopeOf = (x: unknown): Envelope => (typeof x === "object" && x !== null ? (x as Envelope) : {});
 const mb = (n: number): string => (n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`);
 
 const OUTCOME_TONE: Readonly<Record<ProjectPreview["outcome"] | ImportOutcome["outcome"], Tone>> = { import: "cyan", imported: "emerald", skip: "neutral", skipped: "neutral", refuse: "rose", refused: "rose" };
@@ -130,29 +129,15 @@ export function ImportView() {
     setPhase(isSource(one) ? { kind: "preview", sources: [one] } : one);
   };
 
-  const confirm = async (sources: readonly Source[]) => {
-    setPhase({ kind: "committing", sources });
-    const outcomes: ImportOutcome[] = [];
-    const styles: ShelfOutcome[] = [];
-    const items: ShelfOutcome[] = [];
-    const fresh: Source[] = [];
-    for (const src of sources) {
-      const r = await post(`/api/import?act=commit&token=${src.preview.token}`, src.bytes);
-      if (r.status === 409) {
-        const f = (r.json as { fresh?: { fresh: readonly ProjectPreview[]; themes: readonly ThemePreview[]; items: readonly ItemPreview[]; token: string } }).fresh;
-        if (f !== undefined) fresh.push({ ...src, preview: { ...src.preview, projects: f.fresh, themes: f.themes, items: f.items, token: f.token } });
-        continue;
-      }
-      if (r.status !== 200) return setPhase({ kind: "error", message: envelopeOf(r.json).error ?? `the import answered ${r.status}` });
-      const done = r.json as { outcomes: readonly ImportOutcome[]; styles: readonly ShelfOutcome[]; items: readonly ShelfOutcome[] };
-      outcomes.push(...done.outcomes);
-      styles.push(...done.styles);
-      items.push(...done.items);
-    }
-    setPhase(fresh.length > 0 ? { kind: "preview", sources: fresh } : { kind: "done", outcomes, styles, items });
+  const confirm = async (sources: readonly Source[], prior?: Landed) => {
+    setPhase({ kind: "committing", sources, ...(prior === undefined ? {} : { landed: prior }) });
+    const c = await commitAll(sources, post, prior);
+    if (c.failed !== undefined) setPhase({ kind: "error", message: c.failed.message, name: c.failed.name, landed: c.landed });
+    else setPhase(c.fresh.length > 0 ? { kind: "preview", sources: c.fresh, landed: c.landed } : { kind: "done", ...c.landed });
   };
 
   const sources = phase.kind === "preview" || phase.kind === "committing" ? phase.sources : [];
+  const landed = phase.kind === "done" ? phase : phase.kind === "preview" || phase.kind === "committing" || phase.kind === "error" ? phase.landed : undefined;
   const going = sources.flatMap((x) => x.preview.projects).filter((p) => p.outcome === "import");
   const bytes = going.reduce((n, p) => n + p.bytes, 0);
   const shelfGoing = sources.reduce((n, x) => n + x.preview.themes.filter((t) => t.outcome === "import").length + x.preview.items.filter((i) => i.outcome === "import").length, 0);
@@ -190,8 +175,14 @@ export function ImportView() {
           <ErrorLine message={phase.message} live />
         </section>
       )}
-      {phase.kind === "error" && <ErrorLine message={phase.message} live />}
+      {phase.kind === "error" && (
+        <section className={s.refused} aria-label="error">
+          {phase.name !== undefined && <span className={s.mono}>{phase.name}</span>}
+          <ErrorLine message={phase.message} live />
+        </section>
+      )}
       {phase.kind === "preview" && sources.length === 0 && <p className={s.quiet}>no v1 projects in this browser</p>}
+      {landed !== undefined && landedAny(landed) && <Outcomes landed={landed} />}
 
       {sources.length > 0 && (
         <>
@@ -217,21 +208,29 @@ export function ImportView() {
             <Tally value={going.reduce((n, p) => n + p.held, 0)} label="records" />
             {bytes > 0 && <Tally value={mb(bytes)} label="blobs" />}
             {shelfGoing > 0 && <Tally value={shelfGoing} label="shelf" />}
-            <Button label={phase.kind === "committing" ? "Importing…" : `Import ${going.length + shelfGoing}`} tone="emerald" disabled={going.length + shelfGoing === 0 || phase.kind === "committing"} onPress={() => void confirm(sources)} />
+            <Button label={phase.kind === "committing" ? "Importing…" : `Import ${going.length + shelfGoing}`} tone="emerald" disabled={going.length + shelfGoing === 0 || phase.kind === "committing"} onPress={() => void confirm(sources, landed)} />
           </footer>
         </>
       )}
 
-      {phase.kind === "done" && (phase.styles.length > 0 || phase.items.length > 0) && (
+    </main>
+  );
+}
+
+/** What has landed: the shelf's counts, then a row per project with its outcome and its Plan. */
+function Outcomes({ landed: l }: { readonly landed: Landed }) {
+  return (
+    <>
+      {(l.styles.length > 0 || l.items.length > 0) && (
         <section className={s.tallies} aria-label="shelf outcomes">
-          <Tally value={phase.styles.filter((x) => x.outcome === "imported").length} of={phase.styles.length} label="styles" />
-          <Tally value={phase.items.filter((x) => x.outcome === "imported").length} of={phase.items.length} label="library items" />
+          <Tally value={l.styles.filter((x) => x.outcome === "imported").length} of={l.styles.length} label="styles" />
+          <Tally value={l.items.filter((x) => x.outcome === "imported").length} of={l.items.length} label="library items" />
           <Button label="Library" size="sm" href="/library" glyphAfter="chevR" />
         </section>
       )}
-      {phase.kind === "done" && (
+      {l.outcomes.length > 0 && (
         <ul className={s.rows} aria-label="outcomes">
-          {phase.outcomes.map((o) => (
+          {l.outcomes.map((o) => (
             <li key={o.v1Id} className={s.row} data-outcome={o.outcome}>
               <span className={s.name}>{o.title}</span>
               <Chip label={o.outcome} tone={OUTCOME_TONE[o.outcome]} />
@@ -241,7 +240,7 @@ export function ImportView() {
           ))}
         </ul>
       )}
-    </main>
+    </>
   );
 }
 

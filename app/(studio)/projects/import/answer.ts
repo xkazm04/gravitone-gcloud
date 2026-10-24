@@ -10,6 +10,11 @@ import { unknown } from "zod/mini";
 import { parseJsonAt } from "@gt/domain/door";
 import { errorMessage } from "@gt/domain/errors";
 
+import type { ImportOutcome, ShelfOutcome } from "@/lib/import/commit";
+import type { ProjectPreview } from "@/lib/import/project";
+import type { Preview } from "@/lib/import/serve";
+import type { ItemPreview, ThemePreview } from "@/lib/import/shelf";
+
 export type Answer = { readonly status: number; readonly json: unknown };
 
 type Fetch = (input: string, init: RequestInit) => Promise<Response>;
@@ -31,4 +36,47 @@ export async function post(path: string, body: Blob, fetchImpl: Fetch = fetch): 
   }
   const parsed = parseJsonAt("import answer", unknown(), text);
   return { status, json: parsed.ok ? parsed.value : { error: text.slice(0, 300) || `the import answered ${status}`, code: "internal" } };
+}
+
+/** One archive on the screen: where it came from, its bytes (sent again on the confirm), its preview. */
+export type Source = { readonly name: string; readonly bytes: Blob; readonly preview: Preview };
+
+/** What the confirms so far have landed - every source's outcomes, kept across a stale round. */
+export type Landed = { readonly outcomes: readonly ImportOutcome[]; readonly styles: readonly ShelfOutcome[]; readonly items: readonly ShelfOutcome[] };
+export const NOTHING_LANDED: Landed = { outcomes: [], styles: [], items: [] };
+export const landedAny = (l: Landed): boolean => l.outcomes.length + l.styles.length + l.items.length > 0;
+
+type Envelope = { readonly error?: string; readonly code?: string; readonly detail?: string };
+export const envelopeOf = (x: unknown): Envelope => (typeof x === "object" && x !== null ? (x as Envelope) : {});
+
+type Fresh = { readonly fresh: readonly ProjectPreview[]; readonly themes: readonly ThemePreview[]; readonly items: readonly ItemPreview[]; readonly token: string };
+
+/**
+ * Confirm each source on its token, in order. Each source's commit is its own on the server, so
+ * what one landed has landed whatever the next one answers: a later refusal stops the loop and
+ * is named BESIDE what landed (never instead of it), and a stale source comes back as its fresh
+ * preview while the sources that did commit keep their outcomes. A 409 that carries no fresh
+ * preview is a refusal in its own words, not a source that silently disappears.
+ */
+export async function commitAll(
+  sources: readonly Source[],
+  send: (path: string, body: Blob) => Promise<Answer> = post,
+  prior: Landed = NOTHING_LANDED,
+): Promise<{ readonly landed: Landed; readonly fresh: readonly Source[]; readonly failed?: { readonly name: string; readonly message: string } }> {
+  let landed = prior;
+  const fresh: Source[] = [];
+  for (const src of sources) {
+    const r = await send(`/api/import?act=commit&token=${src.preview.token}`, src.bytes);
+    if (r.status === 409) {
+      const f = (r.json as { fresh?: Fresh }).fresh;
+      if (f !== undefined) {
+        fresh.push({ ...src, preview: { ...src.preview, projects: f.fresh, themes: f.themes, items: f.items, token: f.token } });
+        continue;
+      }
+    }
+    if (r.status !== 200) return { landed, fresh, failed: { name: src.name, message: envelopeOf(r.json).error ?? `the import answered ${r.status}` } };
+    const done = r.json as Landed;
+    landed = { outcomes: [...landed.outcomes, ...done.outcomes], styles: [...landed.styles, ...done.styles], items: [...landed.items, ...done.items] };
+  }
+  return { landed, fresh };
 }
