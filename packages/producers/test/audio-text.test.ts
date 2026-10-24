@@ -4,6 +4,7 @@ import type { Job } from "@gt/domain/job";
 import type { MissingStep, Producer, StepContext } from "@gt/kernel/job-core";
 import { defineMv } from "../src/mv/producer.ts";
 import { defineSuno } from "../src/suno/producer.ts";
+import { producerSet } from "../src/set.ts";
 
 // The music-video and Suno definitions' FAILURE DOOR over fake ports, driven through `perform`
 // with no kernel: what a thrown step becomes for the job, and what the record is told. The
@@ -102,5 +103,14 @@ describe.each(DOORS)("the $name failure door", (d) => {
     const r = rig(d, () => new Error("unreachable"));
     expect(await r.perform("paint")).toMatchObject({ kind: "fatal", code: "invalid" });
     expect(r.worn).toEqual([]);
+  });
+});
+
+describe("the producer set", () => {
+  const stub: Producer = { lane: "seat.text", plan: () => [], perform: async () => ({ kind: "produced", output: {} }) };
+
+  it("refuses a name the domain does not know before any job is claimed - a job could never name it", () => {
+    const r = producerSet([{ name: "research", producer: stub }, { name: "reserch" as never, producer: stub }]);
+    expect(r.ok ? "accepted" : r.error).toMatchObject({ code: "invalid", message: 'producers: "reserch" is not a producer the domain names' });
   });
 });
